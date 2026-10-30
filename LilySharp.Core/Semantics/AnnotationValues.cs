@@ -396,8 +396,16 @@ public static class AnnotationValues
         out Music.ChordStructure? structure, int keySharps = 0)
     {
         structure = null;
-        if (ChordAnnotation.Of(mark) is not { } chord)
-            return null;
+        return ChordAnnotation.Of(mark) is { } chord ? Chord(chord, spelling, out structure, keySharps) : null;
+    }
+
+    /// <summary>The symbol <paramref name="chord"/>'s words print — the reading of
+    /// <see cref="Chord(MusicMarkSyntax, ChordSpelling, out Music.ChordStructure?, int)"/>, for
+    /// words that come from no mark: a <c>chord(…)</c> item's (owner's decision 2026-10-31).</summary>
+    public static Music.ChordSymbolText? Chord(ChordAnnotation chord, ChordSpelling spelling,
+        out Music.ChordStructure? structure, int keySharps = 0)
+    {
+        structure = null;
 
         // No argument at all: a bare '@chord' derives its symbol from the notes it sits
         // on, and '@chord()' is the state the completion leaves behind. Both are known

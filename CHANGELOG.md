@@ -31,13 +31,17 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[lang]` **A bare `@diagram` on a `<…>` chord draws the chord's own notes as fretted**
   (`<g b d' f'>1@diagram` draws xx5431). The fingering is found on the part's strings: no crossed
   strings, the lowest position, the fewest fingers. The `.ly` twin draws the same shape.
-- `[lang]` ⚠️ **A chord from a shape is written `diagram(C x32010)1`**; it was `chord(C x32010)1`.
-  - The item now draws its shape's diagram, with no name, on the page and in the twin.
-    `chordDiagrams none` turns it off, and an `@chord` or `@diagram` on it draws only one.
-  - `chord(…)` is no longer read at all: rename the word to `diagram`.
-  - `diagram` is now reserved in music instead of `chord`, so a phrase may be named `chord`.
-  - Ctrl+Shift+Up/Down still steps the item's shape, and completion inside `diagram(` still
-    offers the chord symbols.
+- `[lang]` ⚠️ **A chord from a shape has two words: the word says what is seen**
+  (docs/chord-syntax-design.md).
+  - `chord(F 133211)1` sounds the shape and prints its NAME, with the diagram of the shape
+    written. Before, `chord(…)` printed neither. `chord(x02210)` names itself from its notes (Am).
+  - `diagram(F 133211)1` sounds the shape and draws its diagram, with no name.
+  - Both draw on the page, in the twin and in the MusicXML (`<harmony>` and `<frame>` for
+    `chord(…)`); `chordDiagrams none` turns the diagrams off, and an `@chord` or `@diagram` on
+    the item draws only one.
+  - `chord` and `diagram` are both reserved in music: a phrase cannot be named either.
+  - Ctrl+Shift+Up/Down steps either item's shape, and completion inside the parentheses offers
+    the chord symbols.
   - Spread in `<< >>`, the item draws its diagram once, over its first note, on the page and
     in the twin. Before, it drew one over every note.
 - `[editor]` **Ctrl+Shift+Up/Down steps a `diagram(…)` item with no symbol** (`diagram(x32010)`).

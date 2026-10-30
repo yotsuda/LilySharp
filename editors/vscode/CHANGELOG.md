@@ -20,9 +20,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **LYS2019 stands where the extra bars begin**: "Bar 57 starts here", or inside the phrase there.
 - **A voice that runs past the others is drawn**: the staff runs on to its end, and the other
   parts are shown as empty bars there. The section's CodeLens and LYS2007 say those parts are short.
-- ⚠️ **A chord from a shape is written `diagram(C x32010)1`** (was `chord(…)`), and it draws its
-  diagram. The old word is no longer read. Ctrl+Shift+Up/Down steps the shape
-  and completion offers chord symbols inside `diagram(`, both as before.
+- ⚠️ **A chord from a shape: `chord(F 133211)1` prints its name and diagram, `diagram(F 133211)1`
+  the diagram alone**, and both sound the shape. Both words are coloured as keywords;
+  Ctrl+Shift+Up/Down steps the shape and completion offers chord symbols inside the parentheses.
 - **Ctrl+Shift+Up/Down steps a `diagram(…)` item with no symbol** (`diagram(x32010)`) through the
   other shapes of the chord it sounds. x32010 is C, and only the shape changes.
 - **With shapes for two instruments written** (`@chord(C x32010 0003)`), Ctrl+Shift+Up/Down steps

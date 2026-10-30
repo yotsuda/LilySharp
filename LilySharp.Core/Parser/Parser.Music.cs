@@ -348,7 +348,7 @@ internal sealed partial class Parser
             // here like `q`, so `chord` is reserved in a music stream only (a phrase cannot
             // be named it — RejectUnreachablePhraseName) and stays an ordinary word elsewhere;
             // `@chord` is read after its '@' and never reaches this switch.
-            SyntaxKind.Identifier when Current.Text == ShapeChordWord => ParseShapeChord(),
+            SyntaxKind.Identifier when IsShapeChordWord(Current.Text) => ParseShapeChord(),
 
             // `drums { hats  back  kick }` — a drum chart, its lines played together
             // (Parser.Drums). Claimed only before a `{`, so a phrase may still be named
@@ -934,9 +934,17 @@ internal sealed partial class Parser
 
     /// <summary>The word that opens a chord from a shape in a music stream: <c>diagram(C x32010)1</c>
     /// (owner's decision 2026-10-30 — what is written is the diagram, the notes come from it; it was
-    /// <c>chord(…)</c>, read as a chord's NAME beside <c>@chord(…)</c>, and was dropped outright:
-    /// no one wrote it yet).</summary>
+    /// <c>chord(…)</c>, which since 2026-10-31 is the same item printing its name too,
+    /// <see cref="NamedShapeChordWord"/>).</summary>
     internal const string ShapeChordWord = "diagram";
+
+    /// <summary>The word of the same item that also prints its NAME: <c>chord(F 133211)4</c> —
+    /// the name, the diagram of a shape written with it, and the notes (owner's decision
+    /// 2026-10-31, docs/chord-syntax-design.md: the word says what is seen).</summary>
+    internal const string NamedShapeChordWord = "chord";
+
+    /// <summary>Whether <paramref name="text"/> opens a chord from a shape: <c>diagram</c> or <c>chord</c>.</summary>
+    internal static bool IsShapeChordWord(string text) => text is ShapeChordWord or NamedShapeChordWord;
 
     /// <summary>
     /// <c>diagram(SYMBOL SHAPE)</c> + the tail a <c>&lt;…&gt;</c> chord takes — duration, dots,
@@ -985,8 +993,8 @@ internal sealed partial class Parser
         {
             // Zero-width stand-ins carry no trivia (Expect's own rule), so the round trip holds.
             _diagnostics.Error(new TextSpan(wordStart, word.Text.Length), DiagnosticCodes.ExpectedToken,
-                $"'{ShapeChordWord}' in music writes the notes of a chord shape: {ShapeChordWord}(C x32010)4 - a chord "
-                + $"symbol and a shape in parentheses. (A phrase cannot be named '{ShapeChordWord}'.)");
+                $"'{word.Text}' in music writes the notes of a chord shape: {word.Text}(C x32010)4 - a chord "
+                + $"symbol and a shape in parentheses. (A phrase cannot be named '{word.Text}'.)");
             openParen = new SyntaxToken(SyntaxKind.OpenParen, "", null, null);
             closeParen = new SyntaxToken(SyntaxKind.CloseParen, "", null, null);
         }
@@ -1060,7 +1068,7 @@ internal sealed partial class Parser
                 members.Add(ParseChord());
             }
             else if (Current.Kind == SyntaxKind.Identifier
-                     && Current.Text == ShapeChordWord)
+                     && IsShapeChordWord(Current.Text))
             {
                 // A chord from a shape: its notes are spread across the group (ArpeggioSpread).
                 members.Add(ParseShapeChord(inGroup: true));

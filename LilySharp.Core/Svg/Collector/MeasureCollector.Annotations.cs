@@ -122,32 +122,60 @@ public sealed partial class MeasureCollector
         // the grace column (ElementCoordinator.LeadingGraceColumnHeadLeftX), and the run's
         // springs price it (GraceColumnInfo.ChordName, stamped through _v.GraceChordNames by
         // DeriveGraceColumns). Until then this returned at `_v.GraceDepth > 0`.
-        bool graceTime = _v.GraceDepth > 0;
         var articulations = ArticulationsOf(node);
 
         foreach (var child in articulations)
+            if (child is MusicMarkSyntax markSyntax && Semantics.ChordAnnotation.Of(markSyntax) is { } markWords)
+                CollectChordName(node, markSyntax, markWords, measureIndex, itemIndex, anchorTiming);
+        // A chord(…) item prints its name as a bare @chord on it would (owner's decision
+        // 2026-10-31, docs/chord-syntax-design.md) — unless an @chord on it names it already;
+        // spread in a << >> group, once, over its first note.
+        // In a << >> group the name is the group's, read here at its start: its first chord(…) member.
+        var item = node switch
         {
-            if (child is not MusicMarkSyntax markSyntax)
-                continue;
+            ChordSyntax { ShowsName: true } named when IsFirstSpreadNote(named) => named,
+            ArpeggioSyntax group => group.DescendantNodes<ChordSyntax>().FirstOrDefault(c => c.ShowsName),
+            _ => null,
+        };
+        if (item != null && !articulations.Any(a => a is MusicMarkSyntax { Name: "chord" })
+            && Music.ShapeChords.Words(item) is { IsBare: false } itemWords)
+            CollectChordName(node, item, itemWords with { Problems = [], FromShapeItem = true },
+                measureIndex, itemIndex, anchorTiming);
+    }
 
+    /// <summary>Whether <paramref name="chord"/> is not being spread in a <c>&lt;&lt; &gt;&gt;</c>
+    /// group (<see cref="Music.ArpeggioSpread"/>, lowest first), or is at its first note there:
+    /// what the item draws over itself, it draws once.</summary>
+    private bool IsFirstSpreadNote(ChordSyntax chord)
+        => _v.SpreadNote is not { } spread || !ReferenceEquals(spread.Item, chord.Green)
+           || spread.Note == Music.ShapeChords.Notes(chord, _partShapeTuning,
+               _partSoundingShift - _chordSpelling.Capo, WrittenKeySharps()).MinBy(n => n.SoundingMidi);
+
+    /// <summary>One chord name at <paramref name="site"/> — an <c>@chord</c> mark, or a
+    /// <c>chord(…)</c> item — read from <paramref name="words"/>; see
+    /// <see cref="CollectChordNames"/>.</summary>
+    private void CollectChordName(SyntaxNode node, SyntaxNode site, Semantics.ChordAnnotation words,
+        int measureIndex, int itemIndex, Fraction anchorTiming)
+    {
+        bool graceTime = _v.GraceDepth > 0;
+        {
             // The chord diagram (owner's decisions 2026-09-28, HANDOFF §2 K): drawn where a
             // shape is WRITTEN — and, in a `chordDiagrams … all` score, for every name, the
             // default shape when none is written (a bare @chord's derived name included) — on the
             // tuning the score's layout names, else the part's fretted instrument's, else the
             // guitar's (ChordDiagramsKey.Resolve); `chordDiagrams none` draws none.
-            var words = Semantics.ChordAnnotation.Of(markSyntax);
             var diagramTuning = Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning);
             // The layout's shape table lists chords that draw wherever they are named, per the
             // section the mark is WRITTEN in (ChordShapeTable); read only when a table exists.
-            string? section = _chordDiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(markSyntax) : null;
+            string? section = _chordDiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(site) : null;
             Music.ChosenShape? DiagramFor(Music.ChordStructure? derived)
-                => words != null && diagramTuning is { } dt
+                => diagramTuning is { } dt
                     ? words.Drawn(dt, _chordDiagramsAll, derived, _chordDiagramTable, section, _chordSpelling.Capo) : null;
 
             // The key as written here spells a capo score's pressed name (ChordStructure.Pressed).
             int keySharps = WrittenKeySharps();
             var chordSymbol = Semantics.AnnotationValues.Chord(
-                markSyntax, _chordSpelling, out var structure, keySharps);
+                words, _chordSpelling, out var structure, keySharps);
             if (chordSymbol is not { } sym)
             {
                 // @chord(x32010): a shape with no symbol. The diagram draws (on a diagram
@@ -162,19 +190,19 @@ public sealed partial class MeasureCollector
                         naming.Frets, naming.Tuning, WrittenKeySharps());
                     var diagram = DiagramFor(fromFrets);
                     if (diagram != null)
-                        AddChordDiagram(markSyntax, diagram.FrameSpec, measureIndex, itemIndex);
+                        AddChordDiagram(site, diagram.FrameSpec, measureIndex, itemIndex);
                     if (fromFrets != null)
                     {
                         var named = fromFrets.PrintedSymbol(_chordSpelling, keySharps);
                         var shapeSymbol = _chordNameCollector.AddInline(
-                            named.Text, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
+                            named.Text, measureIndex, itemIndex, anchorTiming, site.SourceStart,
                             _v.Cursor.StaffIndex, fromFrets, named.SuperFrom, named.BracketSuperFrom,
                             diagram?.FrameSpec, _v.Cursor.VoiceIndex);
                         if (graceTime)
                             (_v.GraceChordNames ??= new())[itemIndex] = shapeSymbol;
                     }
                 }
-                continue;
+                return;
             }
             string chordText = sym.Text;
             int superFrom = sym.SuperFrom;
@@ -189,7 +217,7 @@ public sealed partial class MeasureCollector
             {
                 structure = NameFromNotes(node);
                 if (structure == null)
-                    continue;
+                    return;
                 var derived = structure.PrintedSymbol(_chordSpelling, keySharps);
                 chordText = derived.Text;
                 superFrom = derived.SuperFrom;
@@ -202,13 +230,13 @@ public sealed partial class MeasureCollector
             // shape for the tuning. Quoted text names no chord: never a diagram.
             var drawn = DiagramFor(structure);
             var symbol = _chordNameCollector.AddInline(
-                chordText, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
+                chordText, measureIndex, itemIndex, anchorTiming, site.SourceStart,
                 _v.Cursor.StaffIndex, structure, superFrom, bracketSuperFrom, drawn?.FrameSpec,
                 _v.Cursor.VoiceIndex);
             if (graceTime)
                 (_v.GraceChordNames ??= new())[itemIndex] = symbol;
             if (drawn != null)
-                AddChordDiagram(markSyntax, drawn.FrameSpec, measureIndex, itemIndex);
+                AddChordDiagram(site, drawn.FrameSpec, measureIndex, itemIndex);
         }
     }
 
@@ -229,7 +257,7 @@ public sealed partial class MeasureCollector
     /// placement word after <c>@text</c> and <c>@diagram</c> only), and a diagram under the
     /// staff with its name over it would not be a chord symbol any more.
     /// </remarks>
-    private void AddChordDiagram(MusicMarkSyntax markSyntax, string frameSpec,
+    private void AddChordDiagram(SyntaxNode markSyntax, string frameSpec,
         int measureIndex, int itemIndex)
     {
         _articulations.Add(new ArticulationItem(
@@ -718,13 +746,12 @@ public sealed partial class MeasureCollector
                 // A chord from a shape draws its shape (owner's decision 2026-10-30: written
                 // diagram(C x32010), the item IS its diagram) — save where an @chord on it draws
                 // its name and diagram, an @diagram another, or the score draws none
-                // (`chordDiagrams none`: the notes alone).
-                if (chord.IsShapeChord && !graceTime
+                // (`chordDiagrams none`: the notes alone). A chord(…) item draws it under its name
+                // (CollectChordNames), as an @chord on it would.
+                if (chord.IsShapeChord && !chord.ShowsName && !graceTime
                     && !chord.Articulations.Any(a => a is MusicMarkSyntax { Name: "chord" or "diagram" })
                     // Spread in a << >> group (ArpeggioSpread, lowest first): once, over its first note.
-                    && (_v.SpreadNote is not { } spread || !ReferenceEquals(spread.Item, chord.Green)
-                        || spread.Note == Music.ShapeChords.Notes(chord, _partShapeTuning,
-                            _partSoundingShift - _chordSpelling.Capo, WrittenKeySharps()).MinBy(n => n.SoundingMidi))
+                    && IsFirstSpreadNote(chord)
                     && Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning) is not null
                     && Music.ShapeChords.ShapeFor(Music.ShapeChords.Words(chord), _partFrettedTuning ?? TuningType.Guitar) is { } shape
                     && Music.ChordShapes.TryRead(shape, out var shapeFrets, out _))

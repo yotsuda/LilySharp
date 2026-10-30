@@ -88,7 +88,7 @@ internal sealed class ShapeChordValidator : ISemanticValidator
                 string message = ShapeChords.NoShape(written, words.Symbol, part.Word, strings.Length,
                     !words.Shapes.IsEmpty, example);
                 if (said.Add(message))
-                    _diagnostics.Warning(new TextSpan(item.SourceStart, Parser.Parser.ShapeChordWord.Length),
+                    _diagnostics.Warning(new TextSpan(item.SourceStart, item.ShapeWordLength),
                         DiagnosticCodes.ShapeChordNoShape, message);
                 continue;
             }

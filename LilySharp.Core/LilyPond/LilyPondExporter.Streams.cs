@@ -191,7 +191,8 @@ public sealed partial class LilyPondExporter
         if (render == null)
             return;
         var root = tree.GetRoot();
-        if (!root.DescendantNodes<MusicMarkSyntax>().Any(m => m.Name == "chord"))
+        if (!root.DescendantNodes<MusicMarkSyntax>().Any(m => m.Name == "chord")
+            && !root.DescendantNodes<ChordSyntax>().Any(c => c.ShowsName))   // a chord(…) item names itself
             return;
         if (PageModel(tree, render) is not { } score)
             return;

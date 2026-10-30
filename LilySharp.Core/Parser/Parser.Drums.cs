@@ -95,6 +95,6 @@ internal sealed partial class Parser
     /// (<see cref="IsBareReferenceKind"/>).</summary>
     private static bool IsDrumsLineName(SyntaxToken token)
         => token.Kind == SyntaxKind.Identifier
-            ? !DrumNameRegistry.Contains(token.Text) && token.Text is not ("q" or ShapeChordWord)
+            ? !DrumNameRegistry.Contains(token.Text) && token.Text is not ("q" or ShapeChordWord or NamedShapeChordWord)
             : IsBareReferenceKind(token.Kind);
 }

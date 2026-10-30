@@ -110,17 +110,35 @@ public class ShapeChordItemTests
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
 
-    /// <summary>Owner's decisions 2026-10-30: the item's word is <c>diagram</c>, and the old
-    /// <c>chord(…)</c> was dropped outright (no one wrote it yet) — it is no item, and the word
-    /// is free again for a phrase.</summary>
+    /// <summary>Owner's decision 2026-10-31 (docs/chord-syntax-design.md): the word says what is
+    /// seen. <c>chord(…)</c> is the item that prints its NAME and the diagram of the shape written
+    /// with it; <c>diagram(…)</c> the diagram alone. Both sound the same notes; spread in a
+    /// group, the name and the diagram stand once; the page, the twin and the MusicXML agree.</summary>
     [Fact]
-    public void TheOldWord_IsNoItem_AndFreeForAPhrase()
+    public void TheChordItem_PrintsItsName_AndTheDiagramOfItsShape()
     {
-        string book = Book("instrument guitar", "chord(G 320003)1 |");
-        Assert.DoesNotContain(SyntaxTree.Parse(book).GetNodes<ChordSyntax>(), c => c.IsShapeChord);
-        Assert.Contains(Diagnostics(book), d => d.Severity == DiagnosticSeverity.Error);
-        Assert.DoesNotContain(SyntaxTree.Parse("phrase chord { c'4 d' e' f' | }\n").Diagnostics,
-            d => d.Severity == DiagnosticSeverity.Error);
+        string book = Book("instrument guitar", "chord(F 133211)2 diagram(F 133211)2 |");
+        Assert.True(Item(book).ShowsName);
+        Assert.DoesNotContain(Diagnostics(book), d => d.Severity != DiagnosticSeverity.Info);
+        Assert.Equal(new[] { "F" }, Collected(book).ChordNames.Select(n => n.ChordText));
+        Assert.Equal(new[] { "133211", "133211" }, Frames(book));
+        Assert.Equal(MidiPitches(Book("instrument guitar", "diagram(F 133211)2 diagram(F 133211)2 |")), MidiPitches(book));
+        string ly = new LilyPondExporter().Export(SyntaxTree.Parse(book));
+        Assert.Contains("\\new ChordNames", ly);
+        Assert.Equal(2, Regex.Matches(ly, "fret-diagram-terse").Count);
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(book)).ToXml().ToString();
+        Assert.Single(Regex.Matches(xml, "<harmony"));
+        Assert.Single(Regex.Matches(xml, "<frame>"));
+
+        // A shape alone names itself from its notes.
+        Assert.Equal("Am", Assert.Single(Collected(Book("instrument guitar", "chord(x02210)1 |")).ChordNames).ChordText);
+        // Spread in a group: once.
+        string spread = Book("instrument guitar", "<< chord(G 320003) >>1 |");
+        Assert.Single(Collected(spread).ChordNames);
+        Assert.Single(Frames(spread));
+        Assert.Single(Regex.Matches(new MusicXmlExporter().Export(SyntaxTree.Parse(spread)).ToXml().ToString(), "<harmony"));
+        // An @chord on it names it once, as written.
+        Assert.Single(Collected(Book("instrument guitar", "chord(Am x02210)1@chord |")).ChordNames);
     }
 
     private static List<string?> Frames(string book)

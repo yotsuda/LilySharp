@@ -973,6 +973,15 @@ public sealed class ChordSyntax : SyntaxNode
     /// (<see cref="MarkArgument.SpansOf"/>).</summary>
     public IReadOnlyList<TextSpan> ShapeWordSpans => MarkArgument.SpansOf(ShapeTokens);
 
+    /// <summary>The length of a shape chord's opening word, <c>diagram</c> or <c>chord</c>; 0 for
+    /// a <c>&lt;…&gt;</c> chord.</summary>
+    public int ShapeWordLength => IsShapeChord && GetChild(0) is SyntaxTokenNode word ? word.Text.Length : 0;
+
+    /// <summary>A shape chord opened by <c>chord</c>: it prints its NAME — as a bare <c>@chord</c>
+    /// on a <c>diagram(…)</c> item does — and the diagram of a shape written with it (owner's
+    /// decision 2026-10-31, docs/chord-syntax-design.md).</summary>
+    public bool ShowsName => IsShapeChord && GetChild(0) is SyntaxTokenNode { Text: "chord" };
+
     /// <summary>The <c>'</c> / <c>,</c> tokens written after a shape chord's <c>)</c> — refused
     /// by the parser, kept so the tree spells the source.</summary>
     public IEnumerable<SyntaxTokenNode> ShapeOctaveMarks

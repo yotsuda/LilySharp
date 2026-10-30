@@ -556,8 +556,8 @@ internal sealed partial class Parser
                 ? "'q' repeats the previous chord in a music stream, so it can never be "
                   + "read as a phrase to play"
             // Reserved 2026-09-28 with the chord-from-a-shape item (Parser.ParseShapeChord).
-            : text == ShapeChordWord
-                ? $"'{ShapeChordWord}' opens a chord from a shape in a music stream ({ShapeChordWord}(C x32010)4), so "
+            : IsShapeChordWord(text)
+                ? $"'{text}' opens a chord from a shape in a music stream ({text}(C x32010)4), so "
                   + "it can never be read as a phrase to play"
             : DrumNameRegistry.Contains(text)
                 ? $"'{text}' is a drum-kit name, so a music stream reads it as a drum note "

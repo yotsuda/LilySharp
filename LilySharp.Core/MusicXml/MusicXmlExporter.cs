@@ -4234,6 +4234,16 @@ public sealed class MusicXmlExporter
         _justAutoClosedPickup = false;
         _lastEmittedHost = chord.SourceStart;
 
+        // A chord(…) item names itself as a bare @chord on it would (owner's decision 2026-10-31):
+        // its <harmony>, and the <frame> of a shape written with it, before its notes.
+        // Spread in a << >> group, once, over its first (lowest) note.
+        if (chord.ShowsName && !chord.Articulations.Any(a => a is MusicMarkSyntax { Name: "chord" })
+            && (_spreadNote is not { } spreadAt || !ReferenceEquals(spreadAt.Item, chord.Green)
+                || spreadAt.Note == Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
+                    _partTransposeSemitones - DiagramCapo, _keyFifths).MinBy(n => n.SoundingMidi))
+            && LilySharp.Core.Music.ShapeChords.Words(chord) is { IsBare: false } itemWords)
+            WriteHarmony(itemWords with { Problems = [], FromShapeItem = true }, chord);
+
         var pitches = chord.Pitches.ToList();
         // diagram(SYMBOL SHAPE): the shape's strings on the part's tuning (Music.ShapeChords —
         // the page's reading), each with its <technical><string>. No usable shape: a rest-
@@ -5518,13 +5528,39 @@ public sealed class MusicXmlExporter
         // nothing there is no <harmony> for the <frame> to live in (MusicXML has no
         // free-standing frame) and nothing is written.
         if (_currentMeasure != null
-            && LilySharp.Core.Semantics.ChordAnnotation.Of(mark) is { } words)
+            && LilySharp.Core.Semantics.ChordAnnotation.Of(mark) is { } words
+            && WriteHarmony(words, mark))
+            return;
+
+        // Figured bass is read from the annotation too, and for the same reason: it is a
+        // sub-language, so it parses the argument TOKENS (§9.5.3 ⑴). This used to sit in
+        // the default arm of the dotted-name switch below, which is now left with the
+        // marks that really are named by a dotted name.
+        if (_currentMeasure != null
+            && LilySharp.Core.Semantics.AnnotationValues.Figures(mark) is { } figures
+            && BuildFiguredBass(figures) is { } figuredBass)
+        {
+            // <figured-bass> sits before its bass note, like <harmony>.
+            _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = figuredBass });
+            return;
+        }
+        ProcessOtherDirectionMark(mark);
+    }
+
+    /// <summary>The <c>&lt;harmony&gt;</c> (and its <c>&lt;frame&gt;</c>) <paramref name="words"/>
+    /// write at <paramref name="site"/> — an <c>@chord</c> mark's, or a <c>chord(…)</c> item's
+    /// (owner's decision 2026-10-31) — as <see cref="ProcessDirectionMark"/> describes; false when
+    /// they name nothing to write.</summary>
+    private bool WriteHarmony(LilySharp.Core.Semantics.ChordAnnotation words, SyntaxNode site)
+    {
+        if (_currentMeasure == null)
+            return false;
         {
             var diagramTuning = DiagramTuning();
             LilySharp.Core.Music.ChordStructure? derived = null;
             string? chordText =
                 LilySharp.Core.Semantics.AnnotationValues.Chord(
-                    mark, LilySharp.Core.Semantics.ChordSpelling.Canonical, out var named)
+                    words, LilySharp.Core.Semantics.ChordSpelling.Canonical, out var named)
                     is { Text.Length: > 0 } chordSymbol
                     ? chordSymbol.Text
                     : words.NamingShape(diagramTuning, _partTuning) is { } naming
@@ -5537,7 +5573,7 @@ public sealed class MusicXmlExporter
             // layout's shape table lists draws the table's shape (per the section the mark is in).
             var diagram = diagramTuning is { } dt
                 ? words.Drawn(dt, DiagramsAll, derived, DiagramTable,
-                    DiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(mark) : null, DiagramCapo)
+                    DiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(site) : null, DiagramCapo)
                 : null;
             if (chordText != null)
             {
@@ -5552,22 +5588,16 @@ public sealed class MusicXmlExporter
                         harmony.Add(frameEl);
                     _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = harmony });
                 }
-                return;
+                return true;
             }
         }
+        return false;
+    }
 
-        // Figured bass is read from the annotation too, and for the same reason: it is a
-        // sub-language, so it parses the argument TOKENS (§9.5.3 ⑴). This used to sit in
-        // the default arm of the dotted-name switch below, which is now left with the
-        // marks that really are named by a dotted name.
-        if (_currentMeasure != null
-            && LilySharp.Core.Semantics.AnnotationValues.Figures(mark) is { } figures
-            && BuildFiguredBass(figures) is { } figuredBass)
-        {
-            // <figured-bass> sits before its bass note, like <harmony>.
-            _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = figuredBass });
-            return;
-        }
+    /// <summary>The direction-family marks after the chord symbol and the figures
+    /// (<see cref="ProcessDirectionMark"/>): free text, a rehearsal mark, the dotted names.</summary>
+    private void ProcessOtherDirectionMark(MusicMarkSyntax mark)
+    {
 
         // Free text and the rehearsal mark ON A NOTE (2026-09-29, HANDOFF §1.1 第672's hole:
         // both fell through to the one-word table below, whose names they are not, and
