@@ -724,6 +724,27 @@ public static class CompositionChecks
                 yield return $"{kit.Key}: the kick and the snare play one beat in every section ({names}), only the cymbals change — let "
                     + "a section change the beat itself: half-time in a bridge or a breakdown (the snare on 3), the kick driving harder "
                     + "in the last chorus.";
+            // The same bar over and over, no fill and no crash between (owner's review 2026-10-30: a rock
+            // trio's drums played one bar sixteen times running through its verse, and again in its last
+            // chorus) — the groove is right, the phrases go unmarked.
+            int run = 0, longest = 0, longestEnd = 0;
+            string? last = null;
+            for (int i = 0; i < barList.Count; i++)
+            {
+                int next = i + 1 < barList.Count ? barList[i + 1] : midi.EndTick;
+                string bar = string.Join(";", kit.Where(n => n.StartTick >= barList[i] && n.StartTick < next)
+                    .OrderBy(n => n.StartTick).ThenBy(n => n.Pitch).Select(n => $"{n.StartTick - barList[i]}:{n.Pitch}"));
+                run = bar.Length > 0 && bar == last ? run + 1 : bar.Length > 0 ? 1 : 0;
+                last = bar;
+                if (run > longest)
+                    (longest, longestEnd) = (run, i);
+            }
+            // Bars as the page numbers them: a pickup is bar 0.
+            int shift = barList.Count >= 3 && barList[1] - barList[0] < barList[2] - barList[1] ? 0 : 1;
+            if (longest >= SameDrumBarsFewest)
+                yield return $"{kit.Key}: the same bar {longest} times running (bars {longestEnd - longest + 1 + shift}-{longestEnd + shift}, as the form "
+                    + "plays them) — a drummer marks the phrases: a fill in the last bar of each four or eight leading into the next, a crash "
+                    + "on its first beat, the groove kept between.";
         }
     }
 
@@ -1248,6 +1269,8 @@ public static class CompositionChecks
             .Where(n => lineParts.Contains(n.Part))
             .GroupBy(n => (n.Part, n.StartTick)).Select(g => (g.Key.Part, g.Key.StartTick, Single: g.Count() == 1)).ToList();
         var lines = lineParts.ToDictionary(p => p, _ => new HashSet<int>(), System.StringComparer.Ordinal);
+        // Bars of single notes alone, one or two of them: a tune in long notes when they run on.
+        var held = lineParts.ToDictionary(p => p, _ => new HashSet<int>(), System.StringComparer.Ordinal);
         int played = 0;
         for (int b = 0; b < barList.Count; b++)
         {
@@ -1259,7 +1282,17 @@ public static class CompositionChecks
             foreach (var g in inBar.GroupBy(o => o.Part))
                 if (g.Count() >= 3 && g.Count(o => o.Single) >= g.Count() * TuneSingleShare)
                     lines[g.Key].Add(b);
+                else if (g.All(o => o.Single))
+                    held[g.Key].Add(b);
         }
+        // A tune that sings in half and whole notes — as the rhythm finding asks of one over a band's
+        // eighths — has bars of one or two notes (owner's review 2026-10-30: a rock trio's tune in
+        // halves and quarters was counted in 23 of its 32 bars). Such a bar is the tune's when it
+        // runs on from, or into, another bar of the tune or of single notes.
+        foreach (var (part, bars) in held)
+            foreach (int b in bars)
+                if (bars.Contains(b - 1) || bars.Contains(b + 1) || lines[part].Contains(b - 1) || lines[part].Contains(b + 1))
+                    lines[part].Add(b);
         return (lines, played);
     }
 
@@ -1442,6 +1475,9 @@ public static class CompositionChecks
 
     // Notes of the key misspelled in a part this many times: a habit, not a slip.
     private const int MisspelledFewest = 4;
+
+    // A drum part's same bar played this many times running, no fill between: its phrases unmarked.
+    private const int SameDrumBarsFewest = 16;
 
     // Naturals out of the key written with a foreign accidental this many times (a leading tone comes
     // seldom, and one `ces` for B in C minor is already a misreading).

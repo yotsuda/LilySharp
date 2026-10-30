@@ -896,6 +896,36 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Book("fis minor", "eis")), f => f.Contains("naturals out of the key"));
     }
 
+    // Owner's review 2026-10-30: a rock trio's tune in halves and quarters was counted in 23 of its
+    // 32 bars (bars of two notes were no tune's); its drums played one bar sixteen times running.
+    static string Trio16(string gt, string kit) => "title \"Run\"\ntime 4/4\noctave absolute\n"
+        + "part gt \"Guitar\" { instrument guitar midiInstrument \"overdriven guitar\" }\npart bs \"Bass\" { instrument bass }\n"
+        + "part kit \"Drums\" { clef percussion }\n"
+        + $"section A {{\n  gt {{ {gt} }}\n  bs {{ {string.Concat(Enumerable.Repeat("a,8@mf a, a, a, a, a, a, a, | ", 16))} }}\n"
+        + $"  kit {{ {kit} }}\n}}\nform {{ ~A }}\nscore {{ staff gt staff bs staff kit }}\n";
+
+    [Fact]
+    public void ATuneInLongNotes_IsCountedAsATune()
+    {
+        string tune = string.Concat(Enumerable.Repeat("a'2@mf c''2 | b'4 a' g' a' | ", 8));
+        string beat = string.Concat(Enumerable.Repeat("hh8@mf hh hh hh hh hh hh hh | ", 16));
+        Assert.DoesNotContain(CompositionChecks.Of(Trio16(tune, beat)), f => f.StartsWith("A tune is played in only"));
+        // Chords in two notes are no tune, however few.
+        string chords = string.Concat(Enumerable.Repeat("<a e'>2@mf <c' g'>2 | ", 16));
+        Assert.Contains(CompositionChecks.Of(Trio16(chords, beat)), f => f.StartsWith("A tune is played in only"));
+    }
+
+    [Fact]
+    public void TheDrumsPlayingOneBarSixteenTimesRunning_AreToldToMarkThePhrases()
+    {
+        string tune = string.Concat(Enumerable.Repeat("a'2@mf c''2 | b'4 a' g' a' | ", 8));
+        string bar = "<hh bd>8@mf hh <hh sn> hh <hh bd> hh <hh sn> hh | ";
+        Assert.Contains(CompositionChecks.Of(Trio16(tune, string.Concat(Enumerable.Repeat(bar, 16)))),
+            f => f.StartsWith("kit: the same bar 16 times running (bars 1-16, as the form plays them)"));
+        string filled = string.Concat(Enumerable.Repeat(string.Concat(Enumerable.Repeat(bar, 7)) + "sn8 sn tomh tomh toml toml bd bd | ", 2));
+        Assert.DoesNotContain(CompositionChecks.Of(Trio16(tune, filled)), f => f.Contains("the same bar"));
+    }
+
     [Fact]
     public void APartRunningOnUnderTheOthersLastHeldChord_IsToldSo()
     {

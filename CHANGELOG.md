@@ -43,6 +43,9 @@ workflow attaches that section to the GitHub Release verbatim.
   - A section that plays an earlier one again, note for note in every part, with only its levels
     and marks changed. This is caught even when the copy is written out in phrases with new names,
     and when a bar or two differ (nine bars in ten the same).
+  - A drum part playing one bar sixteen times running, with no fill or crash between.
+  - A tune in long notes now counts as a tune: one or two single notes a bar, running on. Before,
+    such bars were counted as no tune at all.
   - A natural out of the key written with an accidental the key does not use, such as the leading
     tone B written `ces` in C minor. The grammar for LLMs now says that a note's name is its
     pitch: the key never changes it.
