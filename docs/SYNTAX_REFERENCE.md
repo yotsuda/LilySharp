@@ -2709,6 +2709,13 @@ written or not — does nothing (the status bar says why). The same where that s
 table lists the chord (*Listed chords*): the name alone shows the table's shape, `Up` writes
 the shape after it, and `Down` at the written table shape removes it (the page keeps showing it).
 
+A `diagram(…)` item with **no symbol** steps too (2026-10-31): `diagram(x32010)` walks the order
+of the chord the shape sounds on the part's tuning (x32010 is C; above a capo, the pressed
+shape's sounding chord), and only the shape is rewritten, no symbol added. The status bar names
+the chord (`C: shape 2 of N`). `Down` at its first shape keeps it. A shape whose notes name no
+chord is not stepped, and the status bar says to write its symbol. (A symbol-less
+`@chord(x32010)` is different: the keys step the note it is on.)
+
 **Hover** a `@chord` or a `chords` row entry with no shape: one line says how to add a diagram
 and what it would be — `Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)`; in an `all` score,
 the usual shape it draws instead — `guitar: 320003 (default) — shape 1 of N`; for a chord the

@@ -38,6 +38,11 @@ workflow attaches that section to the GitHub Release verbatim.
   - `diagram` is now reserved in music instead of `chord`, so a phrase may be named `chord`.
   - Ctrl+Shift+Up/Down still steps the item's shape, and completion inside `diagram(` still
     offers the chord symbols.
+  - Spread in `<< >>`, the item draws its diagram once, over its first note, on the page and
+    in the twin. Before, it drew one over every note.
+- `[editor]` **Ctrl+Shift+Up/Down steps a `diagram(…)` item with no symbol** (`diagram(x32010)`).
+  It walks the other shapes of the chord the shape sounds, rewriting the shape only: x32010 is C,
+  and the status bar says *C: shape 2 of …*. Down at the first shape keeps it.
 - `[lang]` **A chord its player cannot hold warns** (LYS1055).
   - On a guitar, bass, ukulele or banjo, it warns when no string per note within a hand's reach
     (four frets) fits the chord. The warning names a voicing of the same notes that can be held,

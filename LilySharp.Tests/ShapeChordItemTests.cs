@@ -679,6 +679,31 @@ public class ShapeChordItemTests
             Step(uke, uke.IndexOf("diagram(C", StringComparison.Ordinal) + 9, +1).After);
     }
 
+    /// <summary>Owner's request 2026-10-31: a shape with no symbol steps too — through the order
+    /// of the chord its notes sound (x32010 is C), writing shapes only; Down at the first keeps
+    /// it. (A symbol-less @chord steps its note instead: StepRequestTests.)</summary>
+    [Fact]
+    public void TheStep_OnAShapeWithNoSymbol_WalksTheChordItSounds()
+    {
+        string text = Book("instrument guitar", "diagram(x32010)1 |");
+        int caret = text.IndexOf("x32010", StringComparison.Ordinal) + 2;
+        var (after, up) = Step(text, caret, +1);
+        Assert.Matches(@"diagram\([x0-9-]+\)1 \|", after);
+        Assert.DoesNotContain("x32010", after);
+        Assert.StartsWith("C: shape 2 of", up.Message);
+        Assert.NotEmpty(up.Pitches);   // the new shape sounds, as a named one does
+        var (same, down) = Step(text, caret, -1);
+        Assert.Equal(text, same);
+        Assert.Contains("keeps its shape", down.Message);
+        // Back down from the second shape is the first again.
+        Assert.Equal(text, Step(after, after.IndexOf("diagram(", StringComparison.Ordinal) + 9, -1).After);
+
+        string am = Book("instrument guitar", "diagram(x02210)1 |");
+        var (amAfter, said) = Step(am, am.IndexOf("x02210", StringComparison.Ordinal) + 2, +1);
+        Assert.DoesNotContain("x02210", amAfter);
+        Assert.StartsWith("Am: shape 2 of", said.Message);
+    }
+
     [Fact]
     public void Completion_InsideTheItem_IsTheChordSymbols()
     {

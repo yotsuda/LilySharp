@@ -974,9 +974,26 @@ public static partial class NoteStepper
         var (word, note) = StepTuning(node);
         var tuningType = Tablature.Tunings.Parse(word);
         var tuning = Tablature.Tunings.GetTuning(tuningType);
-        var (_, order) = ShapeOrder(node, site.Chord, includeStretch);
+        bool unnamed = site.Unnamed;
+        if (unnamed)
+        {
+            // A diagram(…) item with no symbol (owner's request 2026-10-31): the chord is the one
+            // the written shape sounds on this tuning, above the capo — the name a bare @chord
+            // would print — and the step walks that chord's order, writing shapes only.
+            var shape = site.Words.FirstOrDefault(w => Music.ChordShapes.StartsShape(w.Text)
+                && Music.ChordShapes.StringCount(w.Text) == tuning.Length).Text;
+            if (shape == null)
+                return (null, $"no {word} shape written to step{note}.", true);
+            int capo = CapoOf(node);
+            if (ChordAnnotation.NameFromFrets(Music.ChordShapes.Frets(shape), [.. tuning.Select(p => p + capo)], 0)
+                is not { } sounded)
+                return (null, $"'{shape}' names no chord on {word} - write its symbol to step it{note}.", true);
+            site = site with { Symbol = sounded.DisplayName(ChordSpelling.Canonical), Chord = sounded };
+        }
+        var chord = site.Chord!;
+        var (_, order) = ShapeOrder(node, chord, includeStretch);
         // Under a capo the shapes are the PRESSED chord's (ChordStructure.Pressed), as the order is.
-        var pressedChord = site.Chord.Pressed(CapoOf(node), 0);
+        var pressedChord = chord.Pressed(CapoOf(node), 0);
         string symbol = site.Symbol;
         if (order.Count == 0)
             return (null, $"{symbol}: no shape to step through on {word}{note}.", true);
@@ -1002,7 +1019,8 @@ public static partial class NoteStepper
         // Down at a written default removes it (below), the name alone drawing it all the same.
         // The same where the score's layout TABLE lists the chord (2026-09-29): the name alone
         // draws the table's shape, and the step counts from it.
-        var nameAlone = ShapeOfNameAlone(node, site.Chord);
+        // A symbol-less shape has no name to stand alone: its shape is all there is.
+        var nameAlone = unnamed ? null : ShapeOfNameAlone(node, chord);
         bool drawsAll = nameAlone != null && DrawsEveryChord(node);
         string shows = drawsAll ? "this score draws every chord, so it shows the default"
             : "this score's layout table lists it, so it shows";
@@ -1051,11 +1069,14 @@ public static partial class NoteStepper
                     : "this score's layout table lists it, so the name alone still shows it")} "
                 + $"({Music.ChordVoicings.Spell(order[at])}){note}", true);
         }
-        else if (dir < 0 && at == 0 && site.IsItem)
+        else if (dir < 0 && at == 0 && (site.IsItem || unnamed))
         {
             // A diagram(…) item's shape IS its notes (required, owner's decision 2026-09-28):
-            // Down stops at the default instead of leaving a spacer.
-            return (null, ShapeMessage(symbol, 0, order) + " - the first; a diagram(...) item keeps its shape" + note, true);
+            // Down stops at the default instead of leaving a spacer. A shape with no symbol is
+            // all its words say, so it stays too.
+            return (null, ShapeMessage(symbol, 0, order) + (unnamed
+                ? " - the first; a shape with no symbol keeps its shape"
+                : " - the first; a diagram(...) item keeps its shape") + note, true);
         }
         else if (dir < 0 && at == 0)
         {
@@ -1079,9 +1100,16 @@ public static partial class NoteStepper
     /// its chord, the words after it with their spans, the first problem of those words, where
     /// the symbol ends and, for a row entry, its parenthesised group.
     /// </summary>
-    private sealed record ShapeSite(string Symbol, Music.ChordStructure Chord,
+    /// <remarks>A <c>diagram(…)</c> item with NO symbol — <c>diagram(x32010)</c> (owner's
+    /// request 2026-10-31) — has a null <see cref="Chord"/> and every word in
+    /// <see cref="Words"/>: <see cref="VoicingEdit"/> names it from the notes the shape sounds
+    /// on the step's tuning, and steps through that chord's order with no symbol written.</remarks>
+    private sealed record ShapeSite(string Symbol, Music.ChordStructure? Chord,
         List<(string Text, int Start, int End)> Words, List<string> Problems, int SymbolEnd,
-        (int Open, int OpenEnd, int Close)? Group, bool IsRow, bool IsItem = false);
+        (int Open, int OpenEnd, int Close)? Group, bool IsRow, bool IsItem = false)
+    {
+        public bool Unnamed => Chord is null;
+    }
 
     /// <summary>The site a step at <paramref name="node"/> rewrites, or null with the refusal
     /// to show (null refusal: not steppable at all — the key's own command runs).</summary>
@@ -1091,20 +1119,24 @@ public static partial class NoteStepper
         if (node is ChordSyntax { IsShapeChord: true } item)
         {
             var itemWords = Music.ShapeChords.Words(item);
-            if (itemWords is not { Symbol: { } itemSymbol, Structure: { } itemChord })
-                return (null, null);
             var itemSpans = item.ShapeWordSpans;
             var itemArgs = item.ShapeArguments;
             if (itemSpans.Count != itemArgs.Length || itemSpans.Count == 0)
                 return (null, null);
+            bool itemNamed = itemWords is { Symbol: not null, Structure: not null };
+            if (!itemNamed && itemWords.Symbol != null)
+                return (null, null);
             var itemList = new List<(string, int, int)>();
-            for (int i = 1; i < itemSpans.Count; i++)
+            for (int i = itemNamed ? 1 : 0; i < itemSpans.Count; i++)
                 itemList.Add((itemArgs[i].Text, itemSpans[i].Start, itemSpans[i].End));
-            return (new ShapeSite(itemSymbol, itemChord, itemList, [.. itemWords.Problems.Select(p => p.Message)],
-                itemSpans[0].End, null, IsRow: false, IsItem: true), null);
+            return (new ShapeSite(itemWords.Symbol ?? "", itemWords.Structure, itemList,
+                [.. itemWords.Problems.Select(p => p.Message)],
+                itemNamed ? itemSpans[0].End : itemSpans[0].Start, null, IsRow: false, IsItem: true), null);
         }
         if (node is MusicMarkSyntax mark)
         {
+            // A symbol-less @chord(x3x546) is no site: the keys step the note it is on (owner's
+            // request 2026-10-17, StepRequestTests.AShapeWithNoSymbol_StepsItsNote).
             if (ChordAnnotation.Of(mark) is not { Symbol: { } symbol, Structure: { } chord } words)
                 return (null, null);
             var spans = ChordAnnotation.WordSpans(mark);
