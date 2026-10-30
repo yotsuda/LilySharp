@@ -831,6 +831,12 @@ export function isEmptyScore(text: string): boolean {
  *  or minor as the music asks (owner's report 2026-10-29: two "bright waltzes" drew C minor and F♯
  *  minor, set the draw aside as the wrong mode, and fell back on G major both times). */
 const HINT_TONICS = ['C', 'G', 'D', 'A', 'E', 'B', 'F♯', 'D♭', 'A♭', 'E♭', 'B♭', 'F'];
+
+/** A drawn tonic's minor as it is written: D♭ minor and A♭ minor have eight and seven flats, a
+ *  double flat in the signature, so their minors are C♯ and G♯ (owner's review 2026-10-30: drawn
+ *  D♭, a rock trio was written in D♭ minor, its every A a B𝄫). */
+const MINOR_SPELLING: Record<string, string> = { 'D♭': 'C♯', 'A♭': 'G♯' };
+const minorOf = (tonic: string) => MINOR_SPELLING[tonic] ?? tonic;
 // Weighted: 4/4 most of the time, 3/4 seldom (owner's request 2026-10-29: rock and pop are nearly
 // always in 4/4; a three is to come only now and then).
 const HINT_METERS = ['4/4', '4/4', '4/4', '4/4', '4/4', '4/4', '6/8', '12/8', '2/4', '3/4'];
@@ -922,6 +928,8 @@ export function guidePages(text: string, limit: number, firstLimit: number = lim
  */
 export function compositionHint(random: () => number = Math.random): string {
     const pick = <T>(xs: readonly T[]) => xs[Math.min(xs.length - 1, Math.floor(random() * xs.length))];
+    const tonic = pick(HINT_TONICS);
+    const spelled = minorOf(tonic) === tonic ? '' : ` (its minor written as ${minorOf(tonic)} minor)`;
     // Followed wherever the request is silent, and not spoken of (owner's decision 2026-10-30: told to
     // take what suits, the AI left the drawn key for G or F in every gentle piano piece; told to say
     // why, it would speak to the musician of a starting point they never saw).
@@ -929,7 +937,7 @@ export function compositionHint(random: () => number = Math.random): string {
         + `so wherever the request itself says nothing of it: whatever the request says (a key, a meter, a form, a length, `
         + `a style) comes first, and a band's music — rock, pop — keeps its 4/4 whatever meter is drawn; it is yours `
         + `alone, unseen by the musician — do not speak of it: `
-        + `the key on ${pick(HINT_TONICS)}, major or minor as the music asks; ${pick(HINT_METERS)}; ${pick(HINT_FORMS)}; `
+        + `the key on ${tonic}, major or minor as the music asks${spelled}; ${pick(HINT_METERS)}; ${pick(HINT_FORMS)}; `
         + `opening with ${pick(HINT_OPENINGS)}.`;
 }
 
@@ -960,7 +968,7 @@ export function drawnKeyNote(text: string, tonic: string | undefined): string | 
     if (/\b[A-G][#♯b♭]?[- ]?(major|minor|dur|moll)\b|[ハニホヘトイロ][嬰変]?[長短]調|[A-G][#♯b♭]?(メジャー|マイナー)|\bkey\b|調で/i.test(asked)) {
         return undefined;
     }
-    return `The key: write the piece on ${tonic} (${tonic} major or ${tonic} minor, as the music asks), the starting point drawn for `
+    return `The key: write the piece on ${tonic} (${tonic} major or ${minorOf(tonic)} minor, as the music asks), the starting point drawn for `
         + 'it — the request names no key.';
 }
 

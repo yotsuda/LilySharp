@@ -1511,9 +1511,20 @@ public static class DiagnosticCodes
     public const string SpanEndName = "LYS4032";
 
     /// <summary>Warning: a later voice of a <c>voice { } { }</c> span or a <c>drums { }</c> chart runs
-    /// more bars than the span's first voice, and plays on alone after the other parts stop (owner's
-    /// report 2026-10-30; <c>Semantics.VoiceSpanLengthValidator</c>).</summary>
+    /// more bars than the span's first voice; the section runs on to its end, the others silent there
+    /// (owner's report and decision 2026-10-30; <c>Semantics.VoiceSpanLengthValidator</c>).</summary>
     public const string VoiceRunsPastSpan = "LYS2019";
+
+    /// <summary>Warning: a key whose signature has more than seven sharps or flats — <c>key des
+    /// minor</c> is eight flats, B double-flat in the signature — named with the enharmonic key that
+    /// sounds the same (<c>key cis minor</c>, four sharps). Owner's review 2026-10-30: a composed
+    /// piece in D-flat minor wrote every A as B double-flat. <c>Semantics.KeyTonicValidator</c>.</summary>
+    public const string TheoreticalKey = "LYS4034";
+
+    /// <summary>Warning: a hairpin whose next level goes the other way — <c>@decresc</c> leading to a
+    /// louder level than the one it starts from, <c>@cresc</c> to a softer one (owner's review
+    /// 2026-10-30: <c>@decresc … @fff</c> after <c>@ff</c>). <c>Semantics.HairpinTargetValidator</c>.</summary>
+    public const string HairpinAgainstItsLevel = "LYS4035";
 
     /// <summary>Warning: a drum staff's voices write two different levels at one moment —
     /// <c>@f</c> on the hands' line and <c>@p</c> on the feet's (owner's decision 2026-10-30).

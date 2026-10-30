@@ -166,7 +166,7 @@ describe('a starting point drawn at random', () => {
     // Owner's report 2026-10-29: two "bright waltzes" drew minor keys, set them aside, and both fell
     // back on G major — the tonic alone is drawn, its mode left to the music; all twelve come.
     it('draws a tonic alone, every one of the twelve, the mode left to the music', () => {
-        const tonics = new Set(Array.from({ length: 2000 }, () => /the key on ([A-G][♯♭]?), major or minor as the music asks;/.exec(compositionHint())![1]));
+        const tonics = new Set(Array.from({ length: 2000 }, () => /the key on ([A-G][♯♭]?), major or minor as the music asks( \(its minor written as [A-G]♯ minor\))?;/.exec(compositionHint())![1]));
         assert.equal(tonics.size, 12);
         assert.ok(!/major;|minor;/.test(compositionHint().replace('major or minor as the music asks;', '')));
     });
@@ -194,6 +194,13 @@ describe('a starting point drawn at random', () => {
         assert.equal(drawnKeyNote(piece('g major', 'ト長調でピアノ曲を'), 'A'), undefined);
         assert.equal(drawnKeyNote(piece('g major', 'a waltz in G major'), 'A'), undefined);
         assert.equal(drawnKeyNote(piece('g major'), undefined), undefined);
+        // D♭'s and A♭'s minors are written C♯ and G♯ (owner's review 2026-10-30: D♭ minor, every A a B𝄫).
+        assert.equal(drawnKeyNote(piece('e minor'), 'D♭'),
+            'The key: write the piece on D♭ (D♭ major or C♯ minor, as the music asks), the starting point drawn for it — the request names no key.');
+        assert.equal(drawnKeyNote(piece('cis minor'), 'D♭'), undefined);
+        assert.equal(drawnKeyNote(piece('gis minor'), 'A♭'), undefined);
+        const flat = Array.from({ length: 400 }, () => compositionHint()).find(h => hintTonic(h) === 'D♭')!;
+        assert.match(flat, /the key on D♭, major or minor as the music asks \(its minor written as C♯ minor\);/);
         assert.equal(drawnKeyNote('// Asked: x\ntitle "A"\n', 'A'), undefined);
     });
     it('differs from piece to piece', () => {

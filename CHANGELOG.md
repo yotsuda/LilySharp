@@ -28,6 +28,11 @@ workflow attaches that section to the GitHub Release verbatim.
   parts are padded with empty bars (LYS2007 and the section's CodeLens say they are short). This
   holds on the page, in the LilyPond and MusicXML exports and in the MIDI. Before, those bars were
   heard after the song ended and drawn nowhere.
+- `[lang]` **A key past seven sharps or flats warns** (LYS4034), naming the key that sounds the
+  same: `key des minor` (eight flats, every A a B𝄫) → `key cis minor`.
+- `[lang]` **A hairpin whose next level goes the other way warns** (LYS4035): `@decresc` leading to
+  a louder level than it starts from, `@cresc` to a softer one.
+- `[ai]` **A drawn D♭ or A♭ asks for its minor as C♯ or G♯ minor**.
 - `[lang]` **LYS2007 says where a longer part runs on**: when one part writes more bars than the
   others, the warning gives the line and column where its first extra bar begins. Before, a line
   of 57 phrase names did not say which one was the 58th.

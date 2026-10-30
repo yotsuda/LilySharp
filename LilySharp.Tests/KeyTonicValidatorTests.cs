@@ -68,7 +68,8 @@ public class KeyTonicValidatorTests
     public void TheSuggestionIsASpellingThatCompiles(string key, string suggested)
     {
         Assert.Contains(Check(key), d => d.Message.Contains($"Did you mean '{suggested}'?"));
-        Assert.Empty(Check($"{suggested} major"));
+        // Compiles: a key past seven accidentals is warned for its spelling (LYS4034), not refused.
+        Assert.Empty(Check($"{suggested} major").Where(d => d.Code != DiagnosticCodes.TheoreticalKey));
     }
 
     /// <summary>A word this cannot repair is refused without a guess.</summary>
@@ -109,7 +110,8 @@ public class KeyTonicValidatorTests
     [InlineData("deses major")] [InlineData("cisis major")] [InlineData("ees, major")]
     [InlineData("custom fis cis")]
     public void EveryKeyTheLanguageCanSpell_IsStillAccepted(string key) =>
-        Assert.Empty(Check(key));
+        // Accepted: a key past seven accidentals is warned for its spelling (LYS4034), not refused.
+        Assert.Empty(Check(key).Where(d => d.Code != DiagnosticCodes.TheoreticalKey));
 
     /// <summary>
     /// A key written in a PART HEADER or mid-music is checked too — the validator walks the

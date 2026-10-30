@@ -195,6 +195,11 @@ continues in E♭ must say `key ees major` again, and that line is not engraved)
 anyway, put `!` right after the keyword: `key! ees major`, `time! 3/4`, `clef! bass`. A `!`
 after the value is the dashed barline (`key ees major !` = a key, then a dashed bar).
 
+A key has at most seven sharps or flats: D♭ minor (eight flats, every A a B𝄫) is written
+`key cis minor`, G♯ major `key aes major`, F♭ major `key e major` — the key that sounds the same
+(LYS4034 warns otherwise). A hairpin goes the way its next level does: `@ff … @decresc … @fff`
+warns (LYS4035) — a decrescendo leads to a softer level, a crescendo to a louder one.
+
 A mid-music `time` is the **score's** meter, not just its part's: written at the start of a bar
 in one part, it holds for every part to the end of the section, so the other parts need not
 restate it — a part that writes nothing there is padded with bars of that meter. Two parts

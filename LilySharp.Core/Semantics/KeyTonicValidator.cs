@@ -51,7 +51,8 @@ namespace LilySharp.Core.Semantics;
 /// ⚠️ A KEY PAST SEVEN FIFTHS IS NOT THIS. <c>key gis major</c> is eight sharps and engraves
 /// them (ledger key.signature.glyphs.tonic-past-the-table); only a tonic that is not a note
 /// AT ALL is refused. The two used to fail the same way, which is why they read as one
-/// defect and are two.
+/// defect and are two. The key past seven is warned, with the key that sounds the same
+/// (LYS4034, <see cref="Theoretical"/>).
 /// </para>
 /// </remarks>
 internal sealed class KeyTonicValidator : ISemanticValidator
@@ -70,7 +71,12 @@ internal sealed class KeyTonicValidator : ISemanticValidator
                 continue;
 
             string written = pitch.PitchName;
-            if (written.Length == 0 || KeySpelling.TonicFifths(written) is not null)
+            if (written.Length > 0 && KeySpelling.TonicFifths(written) is not null)
+            {
+                Theoretical(key, written);
+                continue;
+            }
+            if (written.Length == 0)
                 continue;
 
             _diagnostics.Error(pitch.Span, DiagnosticCodes.UnknownSymbolCase,
@@ -79,6 +85,31 @@ internal sealed class KeyTonicValidator : ISemanticValidator
                 + "flat (e.g. 'key ees major', 'key fis minor')."
                 + DidYouMean(written));
         }
+    }
+
+    /// <summary>
+    /// A key past seven sharps or flats is legal and engraved (see the remarks), but no player reads
+    /// one: its signature carries a double flat or sharp, and every note of that degree is written
+    /// so (owner's review 2026-10-30: in <c>key des minor</c> a composed piece wrote each A as
+    /// <c>beses</c>). Warned with the key twelve fifths away, the same sounds (LYS4034).
+    /// </summary>
+    private void Theoretical(KeySignatureSyntax key, string written)
+    {
+        string mode = key.Mode.Text;
+        if (KeySpelling.SharpsFor(written, mode) is not int sharps || System.Math.Abs(sharps) <= 7)
+            return;
+        int wanted = sharps - 12 * System.Math.Sign(sharps);
+        var other = new[] { 'c', 'd', 'e', 'f', 'g', 'a', 'b' }
+            .SelectMany(l => new[] { $"{l}", $"{l}is", $"{l}es" })
+            .FirstOrDefault(t => KeySpelling.SharpsFor(t, mode) == wanted);
+        if (other is null)
+            return;
+        // ASCII punctuation only: the CLI prints this to legacy-codepage consoles.
+        _diagnostics.Warning(key.Pitch.Span, DiagnosticCodes.TheoreticalKey,
+            $"'key {written} {mode}' has {System.Math.Abs(sharps)} {(sharps < 0 ? "flats" : "sharps")} - a double "
+            + $"{(sharps < 0 ? "flat" : "sharp")} in the signature, and every note of that degree written so: no player reads it. "
+            + $"Write 'key {other} {mode}' ({System.Math.Abs(wanted)} {(wanted < 0 ? "flats" : "sharps")}), the same sounds, "
+            + "and spell the notes in it");
     }
 
     /// <summary>
