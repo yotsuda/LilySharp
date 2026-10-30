@@ -123,6 +123,19 @@ public static class CompositionChecks
                 findings.Add("A band piece has an electric bass: add a part with `instrument bass` and `midiInstrument \"electric bass (finger)\"` that locks with the kick drum.");
             if (!roles.Any(r => r.Chords))
                 findings.Add("A band piece has a guitar or keyboards for the chords: add one (`instrument guitar` with an electric `midiInstrument`, or keyboards).");
+            // A drummer's levels too, when the band's move (owner's trial 2026-10-30: guitar and bass went
+            // from @p to @ff, the drums had no level, the same loudness through a quiet bridge).
+            var kits = parts.Where(p => RoleOf(p).Drums).Select(p => p.Name.Text).ToList();
+            var levelledParts = DynamicLevelsByPart(root);
+            string[] order = ["pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff"];
+            var levels = root.DescendantNodes<PartBlockSyntax>().Where(b => !kits.Contains(b.PartName.Text))
+                .SelectMany(b => b.DescendantNodes<DynamicSyntax>()).Select(d => System.Array.IndexOf(order, d.DynamicToken.Text))
+                .Where(i => i >= 0).ToList();
+            var unlevelled = kits.Where(k => !levelledParts.Contains(k)).ToList();
+            if (unlevelled.Count > 0 && levels.Count > 0 && levels.Max() - levels.Min() >= 2)
+                findings.Add($"{string.Join(", ", unlevelled)}: no level, while the others go from @{order[levels.Min()]} to "
+                    + $"@{order[levels.Max()]} — write the drummer's levels too (`@p` on the first note of a quiet section, "
+                    + "`@f` where the band comes in full), with the hairpins the others play.");
             int tempos = midi.Tracks.SelectMany(t => t.TempoChanges).Select(t => t.MicrosecondsPerBeat).Distinct().Count();
             if (tempos > 1)
                 findings.Add("A band piece keeps one tempo from start to end: write one `tempo` at the top and none in the sections.");

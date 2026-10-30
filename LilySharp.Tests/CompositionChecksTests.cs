@@ -374,6 +374,19 @@ public class CompositionChecksTests
             f => f.Contains("played the same each time"));
     }
 
+    // Owner's trial 2026-10-30: guitar and bass went from @p to @ff, the drums with no level.
+    [Fact]
+    public void ABandsDrumsWithNoLevel_WhileTheOthersMove_AreSaid()
+    {
+        string Rock(string kitLevel, string loud) => Band(Guitar + "\n" + Bass + "\n" + Drums,
+            $"  gtr {{ e'4@p g' b' e'' | e'4{loud} g' b' e'' | }}\n  bass {{ e,1@p | e,1{loud} | }}\n"
+            + $"  kit {{ voice {{ hh8{kitLevel} hh hh hh hh hh hh hh | hh8 hh hh hh hh hh hh hh | }} {{ bd4 sn bd sn | bd4 sn bd sn | }} }}",
+            "staff gtr  staff bass  staff kit");
+        Assert.Contains(CompositionChecks.Of(Rock("", "@ff")), f => f.StartsWith("kit: no level, while the others go from @p to @ff — "));
+        Assert.DoesNotContain(CompositionChecks.Of(Rock("@p", "@ff")), f => f.StartsWith("kit: no level"));
+        Assert.DoesNotContain(CompositionChecks.Of(Rock("", "@mp")), f => f.StartsWith("kit: no level"));
+    }
+
     // Owner's report 2026-10-29: a rock trio's Chorus2 was its Chorus again, every part.
     [Fact]
     public void ASectionWrittenTwice_IsToldToBeNamedAgain()

@@ -82,7 +82,9 @@ What makes it music:
   round C3, its right hand round C5).
 - **A band** (rock, pop, funk, metal, … — any request naming an electric guitar, an electric
   bass, drums or band keyboards): the whole rhythm section plays, whichever members were named —
-  **drums** (a `clef percussion` part: a groove, fills at the section ends), an **electric
+  **drums** (a `clef percussion` part: a groove that changes with the section — closed hi-hat in
+  the verse, the ride or crashes and open hi-hat in the chorus, half-time or toms in a quiet bridge —
+  fills at the section ends, and levels of its own that follow the song's), an **electric
   bass** (`instrument bass` with `midiInstrument "electric bass (finger)"`, locked to the
   kick drum) and a **guitar or keyboards** for the chords (`instrument guitar` with
   `midiInstrument "overdriven guitar"` or `"electric guitar (clean)"`; keyboards on
@@ -143,9 +145,8 @@ What makes it music:
   notes on the chord's root with the kick (an octave or a fifth now and then, a run at a fill), never
   leaping more than an octave from note to note; a guitar solo is a line with a shape of its own —
   long notes held and bent (`@bend`), a motif repeated higher, a run climbing to its peak — not the
-  chord's tones broken in eighths bar after bar; verse and chorus in a
-  guitar-friendly key (E, A, D, G), an instrumental break (a guitar solo over the verse's chords)
-  before the last chorus.
+  chord's tones broken in eighths bar after bar; any key (a power chord is one shape on every
+  fret); an instrumental break (a guitar solo over the verse's chords) before the last chorus.
 - **Gospel**: a piano (or an organ: `midiInstrument "drawbar organ"`) under a solo voice, a choir
   (`choirStaff`, soprano–alto–tenor–bass in close harmony), or both in call and response — the
   soloist sings a line, the choir answers it. Rich chords (added 9ths and 7ths, a dominant with a
