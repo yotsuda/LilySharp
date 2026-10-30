@@ -18,6 +18,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   in the editor, unsaved changes and all, with no "Allow reading file outside of workspace?" — and
   what Lily# warns of in it, the spot on a long line quoted, so nothing is counted in a terminal.
 - **LYS2019 stands where the extra bars begin**: "Bar 57 starts here", or inside the phrase there.
+- **A chat proposal whose bars do not add up goes back even when the score already had them wrong**:
+  a drum line cut by 2 of its 18 extra bars was shown before, its warnings fewer than the score's.
 - **Every value in a `layout { }` steps with Ctrl+Shift+Up / Down**: the line thicknesses and stem length
   by a small step, PageUp / PageDown by a large one; `voltaBracket N` and `barNumbers every N` by a bar,
   four on PageUp / PageDown; a capo's fret; `voltaBracket` and `chordDiagrams`' words. The pre-filled

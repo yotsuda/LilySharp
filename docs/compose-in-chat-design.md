@@ -31,7 +31,8 @@ next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
    - **A bar that does not add up** goes back, every time. This covers LYS2001, 2002, 2004 and
      2006; **LYS2007**, a section longer in one part than in another; and **LYS2019**, a later voice
      of a `voice { } { }` span or `drums { }` chart running past the first, which would play on
-     after the song ends (`BAR_LENGTH_CODES`).
+     after the song ends (`BAR_LENGTH_CODES`). It goes back even when the score had it before the
+     proposal: a revision that leaves it (fewer warnings in all) is not shown either.
    - **The first proposal of a new piece** is checked as music once (`musicCheckedFor`). The
      compiler's warnings, `CompositionChecks.Of`'s findings (through LSP `lilysharp/compositionCheck`),
      the header-language note and the drawn-key note go back together, unseen by the musician.
