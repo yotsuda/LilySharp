@@ -485,6 +485,28 @@ public sealed record MultiStaffScore
         }
     }
 
+    /// <summary>
+    /// Whether the row at <paramref name="staffIndex"/> draws the lead sheet's bar lines.
+    /// <see cref="GridBarlineRowIndex"/>'s row always; on a CHORDS-ONLY grid every chords
+    /// row besides it — each row is a cell of its own (owner's report 2026-11-01: a second
+    /// <c>chords prog as roman</c> row under the first stood bare). The meter, the bar number
+    /// and a Score-level mark keep the first grid row.
+    /// </summary>
+    public bool IsGridBarlineRow(int staffIndex)
+    {
+        int first = GridBarlineRowIndex;
+        if (first < 0)
+            return false;
+        if (staffIndex == first)
+            return true;
+        if (Lyrics.Any(l => l.IsLyricsRow))
+            return false;
+        foreach (var (_, staff, idx) in EnumerateStaves())
+            if (idx == staffIndex)
+                return staff.IsTextRow && !staff.IsLyricsTextRow;
+        return false;
+    }
+
     /// <summary>Gets all voices across all staves.</summary>
     public IEnumerable<Voice> AllVoices
     {

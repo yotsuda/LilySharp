@@ -1782,6 +1782,9 @@ public sealed partial class MeasureCollector
             EnsureSectionStartsForRows(tree.GetRoot());
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
+        // The (track, diagram tuning) pairs the score has placed: a second row of the same
+        // track on the same tuning draws no diagram (ChordNameCollector.RepeatsPlacedRow).
+        var placedRows = new HashSet<(string Track, Syntax.TuningType? Tuning)>();
         foreach (var (rowName, rowIdx, rowMode, rowFor) in pendingChordRows)
         {
             // A row's diagrams draw on the instrument of the staff it stands directly above
@@ -1789,6 +1792,8 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowStaffTuning =
                 Semantics.ChordDiagramScores.RowStaffWord(tree.GetRoot(), renderSpec, rowName) is { } rowWord
                     ? Tablature.Tunings.Parse(rowWord) : null;
+            _chordNameCollector.RepeatsPlacedRow = !placedRows.Add((rowName,
+                Semantics.ChordDiagramsKey.Resolve(_chordDiagramScope, _chordTuningWord, _chordNameCollector.RowStaffTuning)));
             // (renderSpec is never null on this road — a null test here made the flow analysis
             // doubt it for the rest of the pass: six CS8602/CS8604 from one `== null`.)
             _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), rowName, rowFor);

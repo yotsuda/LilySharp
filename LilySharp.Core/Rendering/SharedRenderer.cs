@@ -774,7 +774,9 @@ internal static partial class SharedRenderer
                 // barlines around the words (maintainer feedback: the short
                 // ticks read as stray marks); a chords-only grid keeps the
                 // short ticks the chord symbols hang on.
-                if (leadSheet && globalIdx == barlineRowIdx)
+                // ★ EVERY chords row of a chords-only grid is a cell (MultiStaffScore
+                // .IsGridBarlineRow, 2026-11-01); the meter is engraved on the FIRST grid row.
+                if (leadSheet && score.IsGridBarlineRow(globalIdx))
                 {
                     // The grid row is "a staff with the lines removed": its
                     // barlines run the ordinary staff height — extended by one
@@ -850,6 +852,8 @@ internal static partial class SharedRenderer
                     // before a line that opens with one (GetSystemEndTimeChange, the width
                     // LineEndCourtesyWidth reserved). Until then the header's 3/2 widened the
                     // bars and showed nothing.
+                    if (globalIdx != barlineRowIdx)
+                        continue;   // a second cell row: bars only, the meter is the first row's
                     double meterY = rowTopY - meterH / 2 + StaffMiddleLineDrop;
                     var startTimeChange = GetSystemStartTimeChange(staff, system);
                     var prefixMeter = isFirstSystem ? score.TimeSignature : startTimeChange?.NewTime;

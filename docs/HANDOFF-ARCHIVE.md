@@ -1,3 +1,15 @@
+## 第1036 ⑯ 譜表なし譜面の行の積み方の逐語 ← §1 の 20,000 字の門を超えたので出した
+
+> §1.1 第1036 ⑯（2026-10-31〜11-01、commit `16f45ff0d`・`106748df3`・`4518cb55e`＋次便）の語り。結論は §1.1 の ⑯ に残してある。
+
+- **ユーザー決定 2026-10-31**: ①「床なし＝LP の連鎖・スナップショットは費用でない」②A「セルが図を包む」。原因は `TextRowPairGap 0.6`（テキスト行の対は skyline を見ない帯の隙間・図は帯の外 ~6 ss）。
+- **LP の規則を移植**＝spaceable が無い本は先頭の行を spaceable に（`MeasureCollector`・`page-layout-problem.cc:728-730` `mark_as_spaceable(elts[0])`・計測 `audit/lp-geometry/probes/staffless-fretboards.ly` SFL1〜5: ChordNames の aff=#f・Lyrics は related 5.5・FretBoards は Staff 同様 spaceable で padding 0.5）。それで対は `InterGroupSpec` の spaceable→UP（5.5／0.5）になり、`TextRowPairGap` は削除。
+- 付随: `StaffLayout.IsTextRow`（spaceable≠行でなくなった＝`OutsideStaffStacker` の文字行判定と幻のクレフ門・`MusicMarkEngraver.AnchorRowLayout`／`AnchorIsASpaceableStaff` は種類で判定）・`StaffAffinity.TopNotationStaff`（bar number の宿主と stacker の譜表なし門は「本物の譜表」を問う）・`BuildLooseChainEnds` は `RefpointBelowTop`（halfStaff 固定をやめた）・**グリッドの bar line は行のインク**＝歌詞行は `LyricGridBand`（verse 1 の上・最終 verse の下の 2 片を `RowBlockSkylines`／`BuildVerseSkylines` へ・箱 1 つにすると verse 2 が帯の足の下へ落ちた）・chords グリッドは `ChordNameEngraver.GridCellHeight`（`RowSkylines` と描画で同じ）・描画の歌詞 bar の高さは描いた verse から（`LyricGridRowHeight`）・**loose/loose の対は理想値を取らない**（`PairRestLength`／`idealApplies`・nonstaff-nonstaff の basicDistance は LP で不活性＝`VocabularyPerturbationTests`）・**`ApplySolvedRowPositions` の移動が page の複製に届いていなかった**（`PagesWithSystems`・行が bar を描く本で初めて見えた）。
+- 網 `RowsOnlyDiagramStackTests`・台帳 `staffless.chords-lyrics.refpoint-step`（5.5）・スナップショット 3 枚再ベース（lead-sheet／rows-song-sheet は名前が 1.4 上へ・sings-chorus-row は紙の下端 1.8 短く＝帯の過剰予約が消えた）。⚠️ 残り: 歌詞行の帯 `StaffLayout.Height` は平らな 3.2 刻みのまま（描画と skyline は verse から）。
+- **⑯′（2026-11-01「歌詞の y が小節線に対してセンタリングされていない」）**: `LyricGridBand` の 2 片を行のインク（`LyricEngraver.RowInkExtent`＝行の全音節の up／down の最大）で割る＝上下の余白を等しく（かな行は上 ~3.0／下 ~1.0・ラテン行は ~2.65／1.35）。帯の模型（`LyricRowBaseline` 2.6＝`StaffLayout.Y`）は触らず、bar の描き始めを `LyricGridBarTopAboveBandTop` だけ持ち上げ、グリッド行のラベル／テンポの床（`TextRowLabelFrameBottomAboveBandMiddle`）と bar number の基準にも同じ量を足す。台帳 `barnumber.rows-only.row-to-ink-bottom` は 2.6→2.659。
+- **⑯″（chordsOnly）**: セルは「名前の一番高いインクの上の余白＝図の足の下の余白」（`GridCellHeight(fonts, staffHeight, GridLineSymbol…)`＝baseline 2.9＋深さ＋(2.9−inkTop)・図の無い段は 4.0 のまま）、拍子記号はセル全体の中央（`meterH = h`）。
+- **⑯‴（`chords prog`＋`chords prog as roman`）**: chords だけのグリッドは全部の chords 行がセル（`MultiStaffScore.IsGridBarlineRow`・拍子・bar number・ラベルは先頭の grid 行 `GridBarlineRowIndex` のまま・描画と `RowSkylines` の両方が読む）。同じ track を同じ調弦で 2 度置いたら図は 1 度目だけ（`MeasureCollector` の `placedRows`→`ChordNameCollector.RepeatsPlacedRow`→`DiagramOf` が null・`DrawnShape` は残る）。網 `ChordsOnlyGrid_ATrackPlacedTwice_EveryRowIsACell_AndTheDiagramDrawsOnce`。
+
 ## 第1036 の後半（同日の追加依頼 13 件）の逐語 ← §1 の 20,000 字の門を超えたので出した
 
 > §1.1 第1036 の、文法の整理のあとに同じ日に受けた依頼と報告の語り。結論と commit は §1.1 の一覧に残してある。

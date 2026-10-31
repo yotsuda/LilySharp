@@ -4316,7 +4316,7 @@ internal sealed class MultiStaffLayouter
                                 score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
                                 staff.PrimaryVoice.Measures,
                                 joinedInline: InlineChordStavesOnRow(score, thisStaff),
-                                gridCellStaffHeight: score.IsLeadSheet && thisStaff == score.GridBarlineRowIndex
+                                gridCellStaffHeight: score.IsGridBarlineRow(thisStaff)
                                     ? _options.StaffHeight : null);
                         sky.Up.Merge(rowInk.Up);
                         sky.Down.Merge(rowInk.Down);

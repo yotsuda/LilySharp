@@ -89,6 +89,15 @@ internal sealed class ChordNameCollector
     /// (<see cref="DiagramOf"/>).</summary>
     public int RowShift { get; set; }
 
+    /// <summary>
+    /// True while a row is collected that is the SAME track on the SAME tuning as a row this
+    /// score already placed (<c>chords prog</c> over <c>chords prog as roman</c>): its entries
+    /// draw no diagram — the first row's diagrams are the shapes, and the second row would
+    /// print each of them again (owner's request 2026-11-01). Set by the collector before each
+    /// row; a different tuning (a row over a ukulele part) is a different diagram and draws.
+    /// </summary>
+    public bool RepeatsPlacedRow { get; set; }
+
     /// <summary>The <c>@todo</c> a chords-row entry or rest carries (docs/todo-memo-design.md §5),
     /// as <see cref="ChordNameItem.TodoKey"/> / <see cref="ChordNameItem.TodoMemo"/> /
     /// <see cref="ChordNameItem.TodoBelow"/> hold it — read the way a note's is
@@ -113,7 +122,8 @@ internal sealed class ChordNameCollector
     private string? DiagramOf(ChordEntrySyntax entry, LilySharp.Core.Music.ChordStructure? structure)
     {
         var words = entry.ShapeWords;
-        if ((words.Count == 0 && !DiagramsAll && Table == null)
+        if (RepeatsPlacedRow
+            || (words.Count == 0 && !DiagramsAll && Table == null)
             || Semantics.ChordDiagramsKey.Resolve(DiagramScope, TuningWord, RowStaffTuning) is not { } tuning)
             return null;
         // Under the file's `shift` the written shapes are the WRITTEN chord's (FileShift's
