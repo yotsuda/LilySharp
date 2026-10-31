@@ -2791,8 +2791,8 @@ notes.
 
 **A `chords` row entry on `Ctrl+Shift+PageUp`/`PageDown`** (2026-10-31) walks the SEVENTH chords of
 the key in force instead of the shape: in C major `Cmaj7` → `Dm7` → `Em7` → `Fmaj7` → `G7` →
-`Am7` → `Bm7-5` and round again, from the degree the symbol's root stands on (`C`, `C7` and
-`Cmaj7` all stand on I; the status bar says `Dm7: IIm7 of c major (2 of 7)`). A minor key walks
+`Am7` → `Bm7-5`, stopping at I and at VII, from the degree the symbol's root stands on (`C`, `C7`
+and `Cmaj7` all stand on I; the status bar says `Dm7: IIm7 of c major (2 of 7)`). A minor key walks
 its natural-minor sevenths; with no `key` written, C major. A shape the entry wrote goes with the
 old chord. A root outside the key, or a Roman degree, steps nothing and says why.
 

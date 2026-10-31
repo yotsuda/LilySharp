@@ -22,9 +22,9 @@ namespace LilySharp.Core.Editing;
 /// <summary>
 /// The octave pair (Ctrl+Shift+PageUp / PageDown) on a <c>chords</c> row entry (owner's request
 /// 2026-10-31): the entry's symbol walks the SEVENTH chords of the key in force — in C major
-/// Cmaj7, Dm7, Em7, Fmaj7, G7, Am7, Bm7-5 — round again at the ends, from the degree whose root
-/// the symbol stands on (Cmaj7, C and C7 all stand on I). The semitone pair (Up / Down) keeps
-/// stepping the entry's shape, as it did.
+/// Cmaj7, Dm7, Em7, Fmaj7, G7, Am7, Bm7-5 — from the degree whose root the symbol stands on
+/// (Cmaj7, C and C7 all stand on I), stopping at I and at VII (owner's decision the same day:
+/// no going round). The semitone pair (Up / Down) keeps stepping the entry's shape, as it did.
 /// </summary>
 /// <remarks>
 /// The key is the one written for the entry (<see cref="WrittenKeyAt"/>: the section's, the
@@ -69,7 +69,12 @@ public static partial class NoteStepper
             return (null, $"{symbol}: its root is not a tone of {keyName} - the keys walk the key's seventh chords "
                 + $"({string.Join(" ", chords.Select(c => c.SeventhSymbol))}).");
 
-        int next = ((at + dir) % 7 + 7) % 7;
+        // The walk stops at the ends (owner's decision 2026-10-31: I at the bottom, VII at the
+        // top — no going round), and says where it stands.
+        int next = at + dir;
+        if (next < 0 || next >= chords.Length)
+            return (null, $"{symbol}: {chords[at].RomanSeventhSymbol} is the {(next < 0 ? "first" : "last")} chord of {keyName} "
+                + $"({string.Join(" ", chords.Select(c => c.SeventhSymbol))}).");
         var chord = chords[next];
         // The whole entry — its shapes included: they held the old chord — becomes the new symbol;
         // a `@todo` after it stays (EntryEnd stops at the symbol or its ')').

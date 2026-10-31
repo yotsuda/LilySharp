@@ -352,8 +352,9 @@ public class StepRequestTests
 
     /// <summary>The octave pair (Ctrl+Shift+PageUp / PageDown) on a row entry walks the key's
     /// SEVENTH chords (owner's request 2026-10-31): in C major Cmaj7 → Dm7 → Em7 → Fmaj7 → G7 →
-    /// Am7 → Bm7-5 → Cmaj7, from the degree the symbol's root stands on; a written shape goes
-    /// with the old chord; a minor key walks its own; a root off the key, or a degree, says so.</summary>
+    /// Am7 → Bm7-5, from the degree the symbol's root stands on, stopping at I and VII (the
+    /// owner: no going round); a written shape goes with the old chord; a minor key walks its
+    /// own; a root off the key, or a degree, says so.</summary>
     [Fact]
     public void ARowEntry_OnTheOctavePair_WalksTheKeysSeventhChords()
     {
@@ -372,17 +373,25 @@ public class StepRequestTests
         Assert.Equal(InKey("c major", "Dm7 | C |"), after);
         Assert.Equal("Dm7: IIm7 of c major (2 of 7)", up.Message);
         Assert.NotEmpty(up.Pitches);   // the stepped entry sounds
-        // Round the scale and back to the start.
+        // Up the scale to VII, where it stops; Down at I stops too.
         var walked = new List<string>();
         string symbol = "Cmaj7";
-        for (int i = 0; i < 7; i++)
+        for (int i = 0; i < 6; i++)
         {
             string stepped = Step(InKey("c major", symbol + "‸ | C |"), +1).After;
             symbol = stepped.Substring(stepped.IndexOf("chords prog { ", StringComparison.Ordinal) + 14).Split(' ')[0];
             walked.Add(symbol);
         }
-        Assert.Equal(["Dm7", "Em7", "Fmaj7", "G7", "Am7", "Bm7-5", "Cmaj7"], walked);
-        Assert.Equal(InKey("c major", "Bm7-5 | C |"), Step(InKey("c major", "Cmaj7‸ | C |"), -1).After);
+        Assert.Equal(["Dm7", "Em7", "Fmaj7", "G7", "Am7", "Bm7-5"], walked);
+        var (top, atTop) = Step(InKey("c major", "Bm7-5‸ | C |"), +1);
+        Assert.Empty(top.Edits);
+        Assert.Equal(InKey("c major", "Bm7-5 | C |"), atTop);
+        Assert.Contains("VIIm7-5 is the last chord of c major", top.Message);
+        var (bottom, atBottom) = Step(InKey("c major", "Cmaj7‸ | C |"), -1);
+        Assert.Empty(bottom.Edits);
+        Assert.Equal(InKey("c major", "Cmaj7 | C |"), atBottom);
+        Assert.Contains("Imaj7 is the first chord of c major", bottom.Message);
+        Assert.Equal(InKey("c major", "Am7 | C |"), Step(InKey("c major", "Bm7-5‸ | C |"), -1).After);
         // A triad or a seventh stands on its degree; the shape written for it goes with it.
         Assert.Equal(InKey("c major", "Dm7 | C |"), Step(InKey("c major", "C‸ | C |"), +1).After);
         Assert.Equal(InKey("c major", "Am7 | C |"), Step(InKey("c major", "G7(320001)‸ | C |"), +1).After);

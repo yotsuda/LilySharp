@@ -17,8 +17,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **The preview lights a `chord(…)` / `diagram(…)` item's notes with the caret anywhere on the
   item** — inside its parentheses and on its duration too; only its word lit them before.
 - **Ctrl+Shift+PageUp / PageDown on a `chords` row entry walks the key's seventh chords**: in C
-  major `Cmaj7` → `Dm7` → `Em7` → `Fmaj7` → `G7` → `Am7` → `Bm7-5` and round again, from the
-  degree the name's root stands on; the status bar says `Dm7: IIm7 of c major (2 of 7)`.
+  major `Cmaj7` → `Dm7` → `Em7` → `Fmaj7` → `G7` → `Am7` → `Bm7-5`, stopping at I and at VII,
+  from the degree the name's root stands on; the status bar says `Dm7: IIm7 of c major (2 of 7)`.
   Ctrl+Shift+Up / Down keep writing and stepping the shape. A minor key walks its own; a name
   outside the key stays and says so.
 - **`@diagram` completes as the bare word**: it used to glue `(x32010)` on. Bare, the mark
