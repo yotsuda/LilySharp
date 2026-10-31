@@ -7,17 +7,17 @@
   <rect x="0" y="0" width="119.50" height="42.57" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="424">Rows sheet</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <rect x="8.54" y="20.88" width="0.19" height="4.00"/>
-  <rect x="38.10" y="20.88" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="56.72" y="20.88" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="80.02" y="20.88" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="102.24" y="20.88" width="0.19" height="4.00" data-pos="0"/>
-  <text class="music" x="9.34" y="22.88" font-size="4.00" data-pos="442"></text>
-  <rect x="0.00" y="32.88" width="0.19" height="4.00"/>
-  <rect x="26.30" y="32.88" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="51.75" y="32.88" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="80.29" y="32.88" width="0.19" height="4.00" data-pos="0"/>
-  <rect x="102.24" y="32.88" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="8.54" y="20.82" width="0.19" height="4.00"/>
+  <rect x="38.10" y="20.82" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="56.72" y="20.82" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="80.02" y="20.82" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="102.24" y="20.82" width="0.19" height="4.00" data-pos="0"/>
+  <text class="music" x="9.34" y="22.82" font-size="4.00" data-pos="442"></text>
+  <rect x="0.00" y="32.82" width="0.19" height="4.00"/>
+  <rect x="26.30" y="32.82" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="51.75" y="32.82" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="80.29" y="32.82" width="0.19" height="4.00" data-pos="0"/>
+  <rect x="102.24" y="32.82" width="0.19" height="4.00" data-pos="0"/>
   <text x="14.79" y="23.48" font-size="2.47" text-anchor="middle" data-pos="536">Twin</text>
   <text x="21.57" y="23.48" font-size="2.47" text-anchor="middle" data-pos="542">kle</text>
   <text x="28.33" y="23.48" font-size="2.47" text-anchor="middle" data-pos="546">twin</text>
@@ -55,7 +55,7 @@
   <text x="54.26" y="29.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="503">F</text>
   <text x="66.22" y="29.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="505">G</text>
   <text x="81.87" y="29.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="509">C</text>
-  <text x="0.00" y="31.85" font-size="1.75" font-weight="bold" text-anchor="end">5</text>
+  <text x="0.00" y="31.80" font-size="1.75" font-weight="bold" text-anchor="end">5</text>
   <rect x="8.84" y="12.82" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="447"/>
   <text x="12.51" y="15.17" font-size="2.77" text-anchor="middle" data-pos="447">Main</text>
   <line x1="18.46" y1="22.99" x2="19.12" y2="22.99" stroke="#000000" stroke-width="0.130"/>

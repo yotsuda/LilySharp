@@ -18,6 +18,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using LilySharp.Core.Rendering;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Syntax;
 using LilySharp.Tests.LpFidelity;
 using Xunit;
 
@@ -145,6 +148,35 @@ public sealed class RowsOnlyDiagramStackTests
         // ...and the diagram's feet are inside the cell, with the bare name's own room under them.
         var (_, bottom) = Span(bar);
         Assert.InRange(bottom - feet, 1.1 - 0.1, 1.1 + 0.1);
+    }
+
+    /// <summary>The words of a lyrics grid stand centred between the bar ends: the same room
+    /// over the row's tallest ink as under its deepest (owner's report 2026-11-01 — kana sat
+    /// high in their cells). The band's two pieces are split by the row's own ink
+    /// (<c>MultiStaffLayouter.LyricGridBand</c>, <c>LyricEngraver.RowInkExtent</c>).</summary>
+    [Theory]
+    [InlineData("あいうえお | ほえほえ | あー |")]                      // kana: 0.88 em up, 0.12 down
+    [InlineData("one two three four | five six sev- en | nine ten |")]  // Latin, descenders
+    [InlineData("one two | one two | one two |")]                       // Latin, none
+    public void ChordsOverLyrics_TheWordsStandCentredBetweenTheBarEnds(string words)
+    {
+        string book = Book(Plain, "chords prog  lyrics verse", words);
+        var tree = SyntaxTree.Parse(book);
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        int row = score.GridBarlineRowIndex;
+        var (top, depth) = LyricEngraver.RowInkExtent(score.TextMetrics, score.Lyrics, row);
+        Assert.True(top > 0, "the row's ink top should be measured");
+
+        var g = RenderedGeometry.Render(book);
+        var bar = g.Barlines[0];
+        double baseline = g.LyricSyllables.Min(t => t.Y);
+        var (barTop, barBottom) = Span(bar);
+        // Page Y grows downward: the ink spans [baseline − top, baseline + depth].
+        double roomAbove = (baseline - top) - barTop;
+        double roomBelow = barBottom - (baseline + depth);
+        Assert.Equal(roomAbove, roomBelow, 6);
+        Assert.Equal(4.0, bar.Height, 6);
+        Assert.True(roomAbove > 0.5, $"the ink should keep air inside the cell; {roomAbove:F3}");
     }
 
     [Fact]

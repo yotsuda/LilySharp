@@ -310,6 +310,26 @@ internal sealed class LyricEngraver
         return outline;
     }
 
+    /// <summary>
+    /// The ink a lyrics ROW's syllables reach above and below their baseline — the tallest
+    /// <see cref="LyricUpExtent"/> and the deepest <see cref="LyricDownExtent"/> over every
+    /// syllable of the row, score-wide (one number per row, so a line's bars are one height
+    /// on every system). (0, 0) for a row with no syllable.
+    /// </summary>
+    internal static (double Top, double Depth) RowInkExtent(
+        Rendering.ScoreTextMetrics fonts, IReadOnlyList<LyricItem> lyrics, int rowStaffIndex)
+    {
+        double top = 0, depth = 0;
+        foreach (var l in lyrics)
+        {
+            if (!l.IsLyricsRow || l.StaffIndex != rowStaffIndex || string.IsNullOrEmpty(l.Text))
+                continue;
+            top = Math.Max(top, LyricUpExtent(fonts, l.Text));
+            depth = Math.Max(depth, LyricDownExtent(fonts, l.Text));
+        }
+        return (top, depth);
+    }
+
     // LilyPond Lyrics relatedstaff-spacing: the line is lowered so its up-skyline
     // clears the staff down-skyline. The distance→drop math and its padding live in
     // SkylineDrop (shared with figured bass).

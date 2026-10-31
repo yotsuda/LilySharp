@@ -1244,6 +1244,15 @@ internal sealed partial class LayoutEngine
                         return row.BaselineYUp;
                 return null;
             };
+        // Where the lead sheet's grid row starts its bar lines above its band top — the
+        // datum a label, a tempo and the bar number keep their padding off
+        // (MultiStaffLayouter.LyricGridBarTopAboveBandTop; 0 off a lead sheet).
+        double gridBarTopAboveBandTop =
+            ctx.MultiScore is { } gridScore && staffByIndex != null
+            && staffByIndex.TryGetValue(ctx.GridBarlineRowIndex, out var gridRowStaff)
+                ? MultiStaffLayouter.LyricGridBarTopAboveBandTop(
+                    gridScore, gridRowStaff, ctx.GridBarlineRowIndex, _options.StaffHeight)
+                : 0.0;
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             ctx.Fonts, score, musicMarks, systems, ml, measures,
             chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText,
@@ -1259,6 +1268,7 @@ internal sealed partial class LayoutEngine
             // The pass's one map, handed down like the stackers' (see its build above).
             prebuiltMeasureToSystem: measureToSystem,
             gridBarlineRowIndex: ctx.GridBarlineRowIndex,
+            gridBarTopAboveBandTop: gridBarTopAboveBandTop,
             staffLinesOf: staffLinesOf,
             staffInkOf: staffProfile,
             belowDynamics: stackedDynamics);
@@ -1273,6 +1283,7 @@ internal sealed partial class LayoutEngine
             policy: ctx.MultiScore?.LayoutPlan.BarNumbers ?? Semantics.BarNumberPolicy.Lines,
             numberOffset: barNumberOffset,
             gridBarlineRowIndex: ctx.GridBarlineRowIndex,
+            gridBarTopAboveBandTop: gridBarTopAboveBandTop,
             displayedNumbers: BarNumberEngraver.NumberMeasures(measures, barNumberOffset),
             measures: measures,
             // A mid-line number re-parents onto a chord row whose symbol stands within 1.0

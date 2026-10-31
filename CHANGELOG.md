@@ -22,6 +22,10 @@ workflow attaches that section to the GitHub Release verbatim.
   bare name keeps; lines without a diagram keep the four-space cell. The meter stays level
   with the names. (Owner's decision over LilyPond's picture of a FretBoards line hanging
   under a bar-less ChordNames line.)
+- `[render]` **The words of a lyrics grid stand centred between the bar ends**: the four-space
+  cell is split so the row's tallest ink has the same room over it as its deepest ink has
+  under it. A kana row (ink 0.88 em up, 0.12 down) used to sit high in its cells; a Latin
+  row moves by a few hundredths.
 
 ### The chord-diagram grammar: one key, one question
 

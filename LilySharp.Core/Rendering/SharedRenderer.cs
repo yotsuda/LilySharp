@@ -780,7 +780,10 @@ internal static partial class SharedRenderer
                     // barlines run the ordinary staff height — extended by one
                     // verse-spacing per extra stacked verse on a lyric row —
                     // whether the grid carries words or chord symbols.
-                    double rowTopY = LayoutUtilities.StaffTopYUp(system, globalIdx);
+                    // The bars start at the band top — lifted, on a lyrics row, to where the
+                    // centred band's top piece puts them (LyricGridBarTopAboveBandTop).
+                    double rowTopY = LayoutUtilities.StaffTopYUp(system, globalIdx)
+                        + MultiStaffLayouter.LyricGridBarTopAboveBandTop(score, staff, globalIdx, StaffHeight);
                     // ⚠️ ONE EXTENT WITH THE ROW'S SKYLINE (2026-10-31): a lyrics row's band
                     // is MultiStaffLayouter.LyricGridBand; a chords-only grid's cell is
                     // ChordNameEngraver.GridCellHeight, which grows to enclose the line's

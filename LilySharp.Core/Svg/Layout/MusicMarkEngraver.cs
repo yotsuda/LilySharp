@@ -563,6 +563,11 @@ internal static class MusicMarkEngraver
         // bar-number pass takes it): the one text row whose band carries ink for a boxed
         // label to clear (see AnchorRowCarriesTheGrid). −1 on every other score.
         int gridBarlineRowIndex = -1,
+        // How far that row's bar lines start ABOVE its band top
+        // (MultiStaffLayouter.LyricGridBarTopAboveBandTop): the floor a label or a tempo
+        // keeps 0.46 off is the bars' top, which on a lyrics row stands where the row's ink
+        // centres it, not at the band model's constant. 0 on a chords grid and elsewhere.
+        double gridBarTopAboveBandTop = 0.0,
         // The lines a staff (by index) draws: a boxed label's and a tempo's quiet base pad
         // 0.8 from the anchor staff's OWN outer line's ink (an `as lines N` staff's), not a
         // five-line frame's. Null keeps five.
@@ -1151,7 +1156,7 @@ internal static class MusicMarkEngraver
                         ? Math.Max(
                             2.0 - refBelowTop + MetronomeMarkGeometry.QuietBaselineAboveRowRefpoint(tInk.Bottom),
                             row.StaffIndex == gridBarlineRowIndex
-                                ? TextRowLabelFrameBottomAboveBandMiddle - tInk.Bottom
+                                ? TextRowLabelFrameBottomAboveBandMiddle + gridBarTopAboveBandTop - tInk.Bottom
                                 : double.NegativeInfinity)
                         : MetronomeMarkGeometry.QuietBaselineAboveMiddle(tInk.Bottom, AnchorStaffLines(mark.MeasureIndex));
                     if (!double.IsNegativeInfinity(markCeilingUp))
@@ -1188,7 +1193,8 @@ internal static class MusicMarkEngraver
                     yUp = !IsBoxedLabel(mark.Type) ? baseAboveYUp + Padding
                         : gridRow is null ? LabelFrameBottomAboveStaffMiddle(AnchorStaffLines(mark.MeasureIndex)) + halfExtent
                         : gridRow == true || double.IsNegativeInfinity(markCeilingUp)
-                            ? TextRowLabelFrameBottomAboveBandMiddle + halfExtent
+                            ? TextRowLabelFrameBottomAboveBandMiddle
+                              + (gridRow == true ? gridBarTopAboveBandTop : 0.0) + halfExtent
                             : double.NegativeInfinity;
                     if (!double.IsNegativeInfinity(markCeilingUp))
                         yUp = Math.Max(yUp, markCeilingUp + halfExtent); // box bottom clears the chord

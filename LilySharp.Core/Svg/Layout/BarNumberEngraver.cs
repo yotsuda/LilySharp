@@ -255,6 +255,9 @@ internal static class BarNumberEngraver
         Semantics.BarNumberPolicy policy = default,
         int numberOffset = 0,
         int gridBarlineRowIndex = -1,
+        // How far that row's bar lines start ABOVE its band top
+        // (MultiStaffLayouter.LyricGridBarTopAboveBandTop): the datum below is the bars' top.
+        double gridBarTopAboveBandTop = 0.0,
         ImmutableArray<int> displayedNumbers = default,
         ImmutableArray<Measure> measures = default,
         MmrRunMap? runMap = null,
@@ -320,7 +323,9 @@ internal static class BarNumberEngraver
                 // barnumber.rows-only.row-to-ink-bottom.
                 // ⚠️ USER DECISION 2026-08-24: shown both pictures rendered, the user chose
                 // this one ("この小節番号は上手に配置できている" on samples/drunken-sailor.lys).
-                : anchorRow is { } row ? row.Y
+                // ...lifted to the bars' own top where a lyrics row's centred band starts
+                // them above its band top (2026-11-01, gridBarTopAboveBandTop).
+                : anchorRow is { } row ? row.Y + gridBarTopAboveBandTop
                 // Nothing to hang on — LilyPond's move_to_extremal_staff returns #f and the
                 // number keeps the system. Unchanged from before this branch existed.
                 : EngravingDefaults.StaffLineThickness / 2;

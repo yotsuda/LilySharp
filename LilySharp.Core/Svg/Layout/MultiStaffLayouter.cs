@@ -616,9 +616,14 @@ internal sealed class MultiStaffLayouter
 
     /// <summary>
     /// The lead sheet's grid bar lines on a LYRICS row, as the two pieces that ride with its
-    /// verses: how far the bars reach ABOVE verse 1's baseline (<c>LyricRowBaseline</c>, the
-    /// band top) and how far BELOW the last verse's (the rest of a four-space band). Null
-    /// when the row is not the grid's bar row (<c>MultiStaffScore.GridBarlineRowIndex</c>).
+    /// verses: how far the bars reach ABOVE verse 1's baseline and how far BELOW the last
+    /// verse's. Together they are the nominal staff height, split so the row's INK stands
+    /// centred between the bar ends — the same room over the tallest syllable's top as under
+    /// the deepest one's bottom (<c>LyricEngraver.RowInkExtent</c>): a kana row's ink
+    /// reaches 0.88 em up and 0.12 em down, a Latin row's about 0.7 em up and a descender
+    /// down, and one constant split centred neither (owner's report 2026-11-01: the words
+    /// stood high in their cells). Null when the row is not the grid's bar row
+    /// (<c>MultiStaffScore.GridBarlineRowIndex</c>).
     /// </summary>
     /// <remarks>
     /// ⚠️ LILYSHARP-OWN: LilyPond's Lyrics context draws no bar lines; Lily#'s grid does
@@ -640,9 +645,28 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     internal static (double AboveFirstVerse, double BelowLastVerse)? LyricGridBand(
         MultiStaffScore score, Staff staff, int staffIndex, double nominalStaffHeight)
-        => staff.IsLyricsTextRow && score.IsLeadSheet && staffIndex == score.GridBarlineRowIndex
-            ? (LyricEngraver.LyricRowBaseline, nominalStaffHeight - LyricEngraver.LyricRowBaseline)
-            : null;
+    {
+        if (!staff.IsLyricsTextRow || !score.IsLeadSheet || staffIndex != score.GridBarlineRowIndex)
+            return null;
+        var (top, depth) = LyricEngraver.RowInkExtent(score.TextMetrics, score.Lyrics, staffIndex);
+        // above − top == below − depth, above + below == the nominal height.
+        double above = (nominalStaffHeight + top - depth) / 2.0;
+        return (above, nominalStaffHeight - above);
+    }
+
+    /// <summary>
+    /// How far the grid's bar lines on a LYRICS row start ABOVE the row's band top
+    /// (<c>StaffLayout.Y</c>, <c>LyricEngraver.LyricRowBaseline</c> over verse 1): the
+    /// centred band's top piece less the band model's constant — positive over a tall (kana)
+    /// row, about zero over a Latin one, 0 for a row that draws no bars. The renderer draws the
+    /// bars from there, and what clears the bars (a boxed label, a tempo on the grid row —
+    /// <c>MusicMarkEngraver</c>) is lifted by it.
+    /// </summary>
+    internal static double LyricGridBarTopAboveBandTop(
+        MultiStaffScore score, Staff staff, int staffIndex, double nominalStaffHeight)
+        => LyricGridBand(score, staff, staffIndex, nominalStaffHeight) is { } band
+            ? band.AboveFirstVerse - LyricEngraver.LyricRowBaseline
+            : 0.0;
 
     /// <summary>How far left of the SystemStartBar a system-start BRACE sits.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3669-3683 ly:side-position-interface::x-aligned-side
