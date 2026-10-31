@@ -776,6 +776,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.addChordDiagram',
             (uri?: string, offset?: number) => rewriteChordAt('lilysharp/addChordDiagram',
                 typeof uri === 'string' ? uri : undefined, typeof offset === 'number' ? offset : undefined)),
+        vscode.commands.registerCommand('lilysharp.convertNotesToChord',
+            (uri?: string, offset?: number) => rewriteChordAt('lilysharp/notesToChord',
+                typeof uri === 'string' ? uri : undefined, typeof offset === 'number' ? offset : undefined)),
         vscode.commands.registerCommand('lilysharp.extractPhrase', () => {
             outputChannel.appendLine('extractPhrase command triggered');
             extractPhrase();
@@ -2484,7 +2487,8 @@ interface ShapeToNotesResponse {
  * One of the chord rewrites at the caret (or at `offset` of `uri`, from the code action):
  * `lilysharp/shapeToNotes` writes a chord(…) / diagram(…) item out as the <…> chord it plays
  * (the server works out the notes and their octave marks and checks that the file still sounds
- * the same); `lilysharp/addChordDiagram` gives a <…> chord its @diagram(SHAPE). One edit, so one
+ * the same); `lilysharp/addChordDiagram` gives a <…> chord (or a note) its @diagram(SHAPE);
+ * `lilysharp/notesToChord` writes a <…> chord as the chord(…) item that sounds it. One edit, so one
  * undo takes it back.
  */
 async function rewriteChordAt(method: string, uri?: string, offset?: number) {

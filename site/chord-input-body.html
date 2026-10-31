@@ -156,7 +156,13 @@ its name, its diagram, a <code>chords</code> row — is on
     <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> walks the other ways to hold the same notes
     (<i>fingering 2 of 3</i>: <code>x-10-976x</code>); the notes never change. On a bare
     <code>@diagram</code>, which already draws the first, Up writes that one out; Down at the first
-    takes the shape away again, and the diagram follows the notes once more.</li>
+    takes the shape away again, and the diagram follows the notes once more. On a single note of a
+    guitar part the light bulb (<kbd>Ctrl+.</kbd>) offers it too.</li>
+    <li><b>Right-click a <code>&lt;…&gt;</code> chord → <i>Convert to Chord Symbol chord(…)</i></b>
+    makes it an item again: <code>&lt;f,\6 c\5 f'\4 a'\3 c'\2 f''\1&gt;1@chord(F)</code> →
+    <code>chord(F 133211)1</code>. The name is its <code>@chord(NAME)</code>, else read off its notes;
+    <code>chord(NAME)</code> alone when its close voicing is the notes, else with the shape. The file
+    must sound the same, or nothing changes.</li>
     <li><b>A written diagram that no longer sounds its chord is warned</b> (LYS1057) — the notes
     were edited after the shape was written. The quick fix writes the chord's own shape. A capo
     or a transposing part, every note moved alike, is not a difference.</li>

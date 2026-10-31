@@ -405,6 +405,8 @@ public sealed partial class LilySharpLanguageServer
         actions.AddRange(ShapeNameActions(doc, uri, startOffset));
         if (ChordDiagramAction(doc, uri, startOffset) is { } chordDiagram)
             actions.Add(chordDiagram);
+        if (NotesToChordAction(doc, uri, startOffset) is { } notesToChord)
+            actions.Add(notesToChord);
 
         return actions.ToArray();
     }
@@ -427,15 +429,42 @@ public sealed partial class LilySharpLanguageServer
 
     internal const string AddChordDiagramTitle = "Add Guitar Diagram";
 
-    /// <summary>On a <c>&lt;…&gt;</c> chord with no written diagram, "Add Guitar Diagram"
-    /// (owner's decision 2026-10-31): the chord gains <c>@diagram(SHAPE)</c>. Offered on sight,
-    /// worked out when picked (the server plays the file to find the notes).</summary>
-    internal static CodeAction? ChordDiagramAction(Document doc, Uri uri, int offset)
+    /// <summary>The command "Convert to Chord Symbol" runs on a <c>&lt;…&gt;</c> chord (review
+    /// 2026-10-31, C2) — the extension's, which asks the server for the rewrite
+    /// (lilysharp/notesToChord, <see cref="LilySharp.Core.Editing.ShapeChordConverter.ToChordItem"/>)
+    /// and applies it. The way back from "Convert to Chord Notes".</summary>
+    internal const string ConvertNotesToChordCommand = "lilysharp.convertNotesToChord";
+
+    internal const string ConvertNotesToChordTitle = "Convert to Chord Symbol chord(…)";
+
+    /// <summary>On a pitched <c>&lt;…&gt;</c> chord, "Convert to Chord Symbol chord(…)" — offered on
+    /// sight, worked out when picked (the name and the sound need the file played).</summary>
+    internal static CodeAction? NotesToChordAction(Document doc, Uri uri, int offset)
     {
         var chord = doc.Tree.GetNodes<ChordSyntax>().FirstOrDefault(c => !c.IsShapeChord && !c.IsEmpty
             && c.Span.Start <= offset && offset <= c.Span.End);
-        if (chord == null || chord.DrumNames.Any()
-            || chord.Articulations.Any(a => a is MusicMarkSyntax { Name: "diagram", Arguments.IsEmpty: false }))
+        if (chord == null || chord.DrumNames.Any())
+            return null;
+        return new CodeAction
+        {
+            Title = ConvertNotesToChordTitle,
+            Kind = CodeActionKind.RefactorRewrite,
+            Command = new Command
+            {
+                Title = ConvertNotesToChordTitle,
+                CommandIdentifier = ConvertNotesToChordCommand,
+                Arguments = [uri.ToString(), offset],
+            },
+        };
+    }
+
+    /// <summary>On a <c>&lt;…&gt;</c> chord with no written diagram, "Add Guitar Diagram"
+    /// (owner's decision 2026-10-31): the chord gains <c>@diagram(SHAPE)</c>. Offered on sight,
+    /// worked out when picked (the server plays the file to find the notes). On a single note in a
+    /// fretted part too (review 2026-10-31, C1; <see cref="LilySharp.Core.Editing.ShapeChordConverter.OffersDiagram"/>).</summary>
+    internal static CodeAction? ChordDiagramAction(Document doc, Uri uri, int offset)
+    {
+        if (!LilySharp.Core.Editing.ShapeChordConverter.OffersDiagram(doc.Tree, offset))
             return null;
         return new CodeAction
         {
@@ -445,7 +474,7 @@ public sealed partial class LilySharpLanguageServer
             {
                 Title = AddChordDiagramTitle,
                 CommandIdentifier = AddChordDiagramCommand,
-                Arguments = [uri.ToString(), chord.Span.Start],
+                Arguments = [uri.ToString(), offset],
             },
         };
     }

@@ -432,7 +432,7 @@ public sealed partial class MeasureCollector
             roman = structure.ToRomanNumeral(tonic, sharps);
         }
         if (symbol != null || pitches.Count > 0)
-            _chordFacts![node.Span.Start] = new ChordHoverFacts(symbol, roman, pitches.ToImmutable());
+            _chordFacts![node.Span.Start] = new ChordHoverFacts(symbol, roman, pitches.ToImmutable(), structure);
     }
 
     /// <summary>The chord a bare <c>@chord</c> on <paramref name="node"/> names from its

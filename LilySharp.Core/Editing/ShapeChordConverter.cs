@@ -145,30 +145,188 @@ public static class ShapeChordConverter
     /// the guitar's), written out so it shows in the source and the step keys can walk it. A bare
     /// <c>@diagram</c> already there is the one written out. Nothing sounds different: the edit is
     /// a mark. LYS1057 warns when the notes are edited away from the shape later.
+    /// <para>
+    /// On a single note too (review 2026-10-31, C1): <c>c'1</c> → <c>c'1@diagram(xxxx1x)</c>, where
+    /// the note is held — what a bare <c>@diagram</c> on it draws, and what its step walks.
+    /// </para>
     /// </summary>
     public static Result AddDiagram(string source, int offset)
     {
         var tree = SyntaxTree.Parse(source);
         if (tree.HasErrors)
             return Fail("The file has syntax errors - no changes made.");
-        var chord = tree.GetNodes<ChordSyntax>().FirstOrDefault(c => !c.IsShapeChord
-            && c.Span.Start <= offset && offset <= c.Span.End);
-        if (chord == null || chord.DrumNames.Any())
-            return Fail("Put the caret on a <...> chord.");
-        var marks = chord.Articulations.OfType<MusicMarkSyntax>().Where(m => m.Name == "diagram").ToList();
+        if (DiagramTarget(tree, offset) is not { } target)
+            return Fail("Put the caret on a <...> chord or a note.");
+        var marks = Articulations(target).OfType<MusicMarkSyntax>().Where(m => m.Name == "diagram").ToList();
         if (marks.Any(m => !m.Arguments.IsEmpty))
-            return Fail("This chord already has a diagram.");
+            return Fail(target is NoteSyntax ? "This note already has a diagram." : "This chord already has a diagram.");
 
-        if (PlayedPitches(tree, chord) is not { } pitches)
-            return Fail("This chord is not played in any score - nothing to finger.");
-        if (ChordFingering.Fingering(pitches, StringsOf(chord)) is not { } frets || frets.Max() > 15)
-            return Fail("No hand can hold this chord (LYS1055) - nothing to draw.");
+        if (PlayedPitches(tree, target) is not { } pitches)
+            return Fail(target is NoteSyntax ? "This note is not played in any score - nothing to finger."
+                : "This chord is not played in any score - nothing to finger.");
+        if (ChordFingering.Fingering(pitches, StringsOf(target)) is not { } frets || frets.Max() > 15)
+            return Fail(target is NoteSyntax ? "No string of the instrument plays this note - nothing to draw."
+                : "No hand can hold this chord (LYS1055) - nothing to draw.");
 
         string mark = "@diagram(" + ChordVoicings.Spell(frets) + ")";
         if (marks.FirstOrDefault() is { } bare)
             return new Result(bare.Span.Start, bare.Span.End, mark, null);
-        int at = chord.Duration is { } duration ? duration.Span.End : CloseAngleEnd(chord);
+        int at = target switch
+        {
+            NoteSyntax note => note.Tremolo?.Span.End ?? note.Duration?.Span.End ?? note.Pitch.Span.End,
+            ChordSyntax chord => chord.Duration is { } duration ? duration.Span.End : CloseAngleEnd(chord),
+            _ => -1,
+        };
         return at < 0 ? Fail("The chord's brackets are not closed.") : new Result(at, at, mark, null);
+    }
+
+    /// <summary>
+    /// Right-click → "Convert to chord(…)" on a <c>&lt;…&gt;</c> chord (review 2026-10-31, C2) — the
+    /// way back from "Convert to Chord Notes": <c>&lt;f a c'&gt;1</c> → <c>chord(F)1</c>.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    /// <item>The name is an <c>@chord(NAME)</c> written on the chord, else the one a bare
+    /// <c>@chord</c> names from its notes (spelled as they are written); notes that name no chord
+    /// refuse.</item>
+    /// <item>A <c>chord(NAME)</c> plays its close voicing: when that is not the notes, the shape a
+    /// hand holds them with goes in too — <c>chord(F 133211)</c> — in a part with a fretted
+    /// instrument, or when the chord already draws a diagram (its <c>@diagram(SHAPE)</c>, or the
+    /// first fingering a bare <c>@diagram</c> draws). A drawn diagram always carries its shape over,
+    /// so the page keeps it.</item>
+    /// <item>The <c>@chord</c> and <c>@diagram</c> marks go — the item now says both; every other
+    /// mark and the duration stay.</item>
+    /// <item>The file must sound the same afterwards (<see cref="Semantics.PlayedNotes.Signature"/>),
+    /// or nothing changes — notes whose octave hangs on the chord's first note in relative mode
+    /// included.</item>
+    /// </list>
+    /// </remarks>
+    public static Result ToChordItem(string source, int offset)
+    {
+        var tree = SyntaxTree.Parse(source);
+        if (tree.HasErrors)
+            return Fail("The file has syntax errors - no changes made.");
+        var chord = tree.GetNodes<ChordSyntax>().FirstOrDefault(c => !c.IsShapeChord && !c.IsEmpty
+            && c.Span.Start <= offset && offset <= c.Span.End);
+        if (chord == null || chord.DrumNames.Any())
+            return Fail("Put the caret on a <...> chord.");
+        if (InGroup(chord))
+            return Fail("Inside << >> a chord(...) item plays its strings in turn - convert it by hand.");
+        int closeEnd = CloseAngleEnd(chord);
+        if (closeEnd < 0)
+            return Fail("The chord's brackets are not closed.");
+
+        var seen = chord.Articulations.OfType<MusicMarkSyntax>().Where(m => m.Name is "chord" or "diagram").ToList();
+        var nameMark = seen.FirstOrDefault(m => m.Name == "chord");
+        var diagramMark = seen.FirstOrDefault(m => m.Name == "diagram");
+        if (PlayedPitches(tree, chord) is not { } pitches)
+            return Fail("This chord is not played in any score - nothing to convert.");
+
+        // The name: written, else read off the notes.
+        string? name;
+        bool nameHasShape = false;
+        if (nameMark is { Arguments.IsEmpty: false })
+        {
+            var words = nameMark.Arguments.Select(a => a.Text).ToList();
+            nameHasShape = words.Any(w => ChordShapes.TryRead(w, out _, out _));
+            name = string.Join(" ", words);
+        }
+        else
+            name = NamedFromNotes(tree, chord) is { } structure ? ChordShapes.SourceSymbol(structure) : null;
+        if (name == null)
+            return Fail("These notes name no chord - write @chord(NAME) on it first, or convert it by hand.");
+
+        // The shape: the one drawn, else the first a hand holds the notes with.
+        var strings = StringsOf(chord);
+        string? fingered = ChordFingering.Fingering(pitches, strings) is { } frets && frets.Max() <= 15
+            ? ChordVoicings.Spell(frets) : null;
+        string? drawn = diagramMark == null ? null
+            : diagramMark.Arguments.IsEmpty ? fingered : string.Join(" ", diagramMark.Arguments.Select(a => a.Text));
+        var candidates = new List<string>();
+        if (nameHasShape || diagramMark == null)
+            candidates.Add(name);
+        if (!nameHasShape)
+        {
+            if (drawn != null)
+                candidates.Add(name + " " + drawn);
+            else if (diagramMark == null && fingered != null && PartOf(chord)?.FrettedTuning != null)
+                candidates.Add(name + " " + fingered);
+        }
+
+        // The tail stays as written, less the marks the item now says.
+        int end = Math.Max(closeEnd, seen.Count == 0 ? closeEnd : seen.Max(m => m.Span.End));
+        var tail = new StringBuilder();
+        int from = closeEnd;
+        foreach (var m in seen.OrderBy(m => m.Span.Start))
+        {
+            tail.Append(source, from, m.Span.Start - from);
+            from = m.Span.End;
+        }
+        tail.Append(source, from, end - from);
+
+        string sound = Semantics.PlayedNotes.Signature(tree);
+        foreach (var words in candidates)
+        {
+            string replacement = "chord(" + words + ")" + tail;
+            var after = SyntaxTree.Parse(source[..chord.Span.Start] + replacement + source[end..]);
+            if (!after.HasErrors && Semantics.PlayedNotes.Signature(after) == sound)
+                return new Result(chord.Span.Start, end, replacement, null);
+        }
+        return Fail(candidates.Count == 1
+            ? $"chord({candidates[0]}) would not sound the same as these notes - no changes made."
+            : $"Neither chord({candidates[0]}) nor chord({candidates[1]}) would sound the same as these notes - no changes made.");
+    }
+
+    /// <summary>The chord a bare <c>@chord</c> on <paramref name="chord"/> names from its notes
+    /// (the editor's hover reads the same), in the part it is written in.</summary>
+    private static ChordStructure? NamedFromNotes(SyntaxTree tree, ChordSyntax chord)
+    {
+        string? part = null;
+        for (var n = chord.Parent; n != null && part == null; n = n.Parent)
+            part = n switch
+            {
+                PartDeclarationSyntax p => p.Name.Text,
+                PartBlockSyntax b => b.Name,
+                _ => null,
+            };
+        try
+        {
+            var collector = new Svg.Collector.MeasureCollector { RecordsChordFacts = true };
+            collector.Collect(tree, part);
+            return collector.ChordFacts.TryGetValue(chord.Span.Start, out var facts) ? facts.Structure : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>What "Add Guitar Diagram" works on at <paramref name="offset"/>: a pitched
+    /// <c>&lt;…&gt;</c> chord, else a single pitched note (not a rest or a drum).</summary>
+    private static SyntaxNode? DiagramTarget(SyntaxTree tree, int offset)
+    {
+        var chord = tree.GetNodes<ChordSyntax>().FirstOrDefault(c => !c.IsShapeChord && !c.IsEmpty
+            && c.Span.Start <= offset && offset <= c.Span.End);
+        if (chord != null)
+            return chord.DrumNames.Any() ? null : chord;
+        return tree.GetNodes<NoteSyntax>().FirstOrDefault(n => n.Span.Start <= offset && offset <= n.Span.End);
+    }
+
+    private static ChildNodeList Articulations(SyntaxNode node)
+        => node is NoteSyntax note ? note.Articulations : ((ChordSyntax)node).Articulations;
+
+    /// <summary>
+    /// Whether "Add Guitar Diagram" is offered at <paramref name="offset"/>: on a <c>&lt;…&gt;</c>
+    /// chord with no written diagram, anywhere; on a single note with none, only in a part that
+    /// plays a fretted instrument (review 2026-10-31, C1) — a flute's melody note asks for no
+    /// fingering chart, and the light bulb stays quiet there.
+    /// </summary>
+    public static bool OffersDiagram(SyntaxTree tree, int offset)
+    {
+        if (DiagramTarget(tree, offset) is not { } target
+            || Articulations(target).Any(a => a is MusicMarkSyntax { Name: "diagram", Arguments.IsEmpty: false }))
+            return false;
+        return target is ChordSyntax || PartOf(target)?.FrettedTuning != null;
     }
 
     private static int CloseAngleEnd(ChordSyntax chord)

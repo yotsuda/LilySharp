@@ -81,6 +81,13 @@ workflow attaches that section to the GitHub Release verbatim.
   With the caret on the shape, Ctrl+Shift+Up/Down walks the other ways to hold the same notes
   (a bare `@diagram` shows the first: Up writes it out, Down at the first goes back to bare)
   (*fingering 2 of 3*), the notes unchanged.
+- `[editor]` **"Add Guitar Diagram" on a single note** (light bulb, Ctrl+.), in a part with a
+  fretted instrument: `c'1` → `c'1@diagram(xxxx1x)`, where the note is held.
+- `[editor]` **Right-click a `<…>` chord → "Convert to Chord Symbol chord(…)"**, the way back from
+  Convert to Chord Notes: `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>1@chord(F)` → `chord(F 133211)1`. The
+  name is the chord's `@chord(NAME)`, else read off its notes; the shape goes in when the close
+  voicing `chord(F)` plays is not the notes (on a fretted part) or a diagram was drawn; the
+  `@chord`/`@diagram` marks go, the rest stays. The file must sound the same, or nothing changes.
 - `[lang]` **A diagram that no longer sounds its chord warns** (LYS1057): on a fretted part, an
   `@diagram(SHAPE)` on a `<…>` chord whose shape is not the chord's notes — edited since the shape
   was written. The quick fix writes the chord's own shape. A capo or a transposing part, every note

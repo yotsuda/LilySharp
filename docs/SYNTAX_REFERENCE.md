@@ -2453,6 +2453,8 @@ written out). The notes stay as they are; the shape shows in the source, and `Ct
 it. On a fretted part, an `@diagram(SHAPE)` on a `<…>` chord whose shape does not sound the chord's
 notes — notes edited after the shape was written — warns (LYS1057), and the quick fix writes the
 chord's own shape. Every note moved alike (a capo, a transposing part) is not a difference.
+On a single note in a part with a fretted instrument the light bulb (`Ctrl+.`) offers it too:
+`c'1` → `c'1@diagram(xxxx1x)`, where the note is held.
 
 ```
 <g b d' f'>1@diagram |   // G7 as xx5431
@@ -2864,8 +2866,12 @@ diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the
   names its chord (*this shape is **C***), and the quick fix writes the name in. Right-click →
   *Convert to Chord Notes <…>* writes the item out as the `<…>` chord it plays, with its octave
   marks and string numbers — a `chord(…)` item's name kept as `@chord(F)`, no diagram; the file
-  must sound the same afterwards, or nothing changes. The way back is *Add Guitar Diagram*
-  on the `<…>` chord (*Chord diagrams* above).
+  must sound the same afterwards, or nothing changes. The way back is right-click on the `<…>`
+  chord → *Convert to Chord Symbol chord(…)*: named by its `@chord(NAME)`, else from its notes;
+  `chord(NAME)` when its close voicing is the notes, else `chord(NAME SHAPE)` with the shape a hand
+  holds them by (on a fretted part, or when a diagram was drawn); its `@chord`/`@diagram` marks go,
+  the rest stays, and the file must sound the same. *Add Guitar Diagram* on the `<…>` chord keeps
+  the notes and adds their shape instead (*Chord diagrams* above).
 - `chord` and `diagram` are reserved in music only: a phrase cannot be named either (a part can).
 
 ## Guitar Bends and Technique Letters

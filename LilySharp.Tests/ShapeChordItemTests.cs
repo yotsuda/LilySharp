@@ -1056,4 +1056,65 @@ public class ShapeChordItemTests
         Assert.False(LilySharpLanguageServer.IsInsideShapeChordItem("gt { c4@chord(", 14));
         Assert.False(LilySharpLanguageServer.IsInsideShapeChordItem("gt { diagram(C) ", 16));
     }
+
+    /// <summary>"Add Guitar Diagram" on a single note (review 2026-10-31, C1): where the note is
+    /// held, what a bare @diagram on it draws — offered in a fretted part only.</summary>
+    [Fact]
+    public void ANote_GainsWhereItIsHeld()
+    {
+        string book = Book("instrument guitar", "c'1 | c'2:8 r2 | c'1@diagram |", top: "octave absolute\n");
+        var r = ShapeChordConverter.AddDiagram(book, book.IndexOf("c'1", StringComparison.Ordinal));
+        Assert.Equal("@diagram(xxxx1x)", r.Replacement);
+        Assert.Equal("c'1", book[(r.Start - 3)..r.End]);
+        // After a tremolo; a bare mark written out where it stands.
+        var tremolo = ShapeChordConverter.AddDiagram(book, book.IndexOf("c'2", StringComparison.Ordinal));
+        Assert.Equal(":8", book[(tremolo.Start - 2)..tremolo.Start]);
+        var bare = ShapeChordConverter.AddDiagram(book, book.IndexOf("c'1@", StringComparison.Ordinal));
+        Assert.Equal("@diagram", book[bare.Start..bare.End]);
+        // Offered on a note only where a fretted instrument plays it; on a chord anywhere.
+        Assert.True(ShapeChordConverter.OffersDiagram(SyntaxTree.Parse(book), book.IndexOf("c'1", StringComparison.Ordinal)));
+        string piano = Book("clef treble", "c'2 <c e g>2 |");
+        Assert.False(ShapeChordConverter.OffersDiagram(SyntaxTree.Parse(piano), piano.IndexOf("c'2", StringComparison.Ordinal)));
+        Assert.True(ShapeChordConverter.OffersDiagram(SyntaxTree.Parse(piano), piano.IndexOf("<c", StringComparison.Ordinal)));
+        Assert.False(ShapeChordConverter.OffersDiagram(SyntaxTree.Parse(book), book.IndexOf("r2", StringComparison.Ordinal)));
+    }
+
+    /// <summary>"Convert to Chord Symbol chord(…)" on a &lt;…&gt; chord (review 2026-10-31, C2): the way
+    /// back from "Convert to Chord Notes" — named from the notes or its @chord, with the shape when
+    /// the close voicing is not the notes or a diagram is drawn — and the file sounds the same.</summary>
+    [Fact]
+    public void AChord_ConvertsBackToTheItem_AndSoundsTheSame()
+    {
+        static string Apply(string book, ShapeChordConverter.Result r)
+        {
+            Assert.True(r.Replacement != null, r.Error);
+            return book[..r.Start] + r.Replacement + book[r.End..];
+        }
+        static string Back(string book, string at)
+            => Apply(book, ShapeChordConverter.ToChordItem(book, book.IndexOf(at, StringComparison.Ordinal)));
+
+        // Round trips on a guitar: the name kept, the shape the notes need.
+        string guitar = Book("instrument guitar", "c4 diagram(133211)4 chord(F 133211)4 e4 | chord(x32010)2 g2 |");
+        string asNotes = Apply(guitar, ShapeChordConverter.ToNotes(guitar, guitar.IndexOf("chord(F", StringComparison.Ordinal)));
+        Assert.Equal(guitar, Back(asNotes, "<f"));
+        string named = Apply(guitar, ShapeChordConverter.ToNotes(guitar, guitar.IndexOf("diagram(", StringComparison.Ordinal)));
+        Assert.Contains("c4 chord(F 133211)4 chord(F 133211)4", Back(named, "<f"));
+
+        // A piano: the close voicing is the notes - the name alone; other marks stay.
+        string piano = Book("clef treble", "c'4 <c e g>4@accent <e g c'>2 |");
+        Assert.Contains("c'4 chord(C)4@accent <e", Back(piano, "<c e"));
+        // An inversion is not the close voicing: refused, and why.
+        var inverted = ShapeChordConverter.ToChordItem(piano, piano.IndexOf("<e g", StringComparison.Ordinal));
+        Assert.Contains("would not sound the same", inverted.Error);
+
+        // The marks the item now says go; a drawn diagram keeps its shape.
+        string marked = Book("instrument guitar", "<f, c f a c' f'>1@chord@diagram |", top: "octave absolute\n");
+        Assert.Contains("chord(F 133211)1 |", Back(marked, "<f"));
+        string written = Book("instrument guitar", "<f, c f a c' f'>1@chord(F)@diagram(133211)@accent |", top: "octave absolute\n");
+        Assert.Contains("chord(F 133211)1@accent |", Back(written, "<f"));
+
+        // Notes that name no chord: nothing, and why.
+        string cluster = Book("clef treble", "<c cis d>1 |");
+        Assert.Contains("name no chord", ShapeChordConverter.ToChordItem(cluster, cluster.IndexOf("<c", StringComparison.Ordinal)).Error);
+    }
 }

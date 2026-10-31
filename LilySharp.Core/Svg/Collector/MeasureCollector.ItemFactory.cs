@@ -1236,7 +1236,9 @@ public sealed partial class MeasureCollector
     /// Roman-numeral degree in the key in force (what <c>as roman</c> prints) — both null
     /// when its notes name no chord — and the pitches it sounds, formatted as the trace formats
     /// them (<c>F#4</c>): a chord's and a <c>q</c>'s lowest first, an arpeggio's in played order.</summary>
-    public readonly record struct ChordHoverFacts(string? Symbol, string? Roman, ImmutableArray<string> Pitches);
+    /// <para><c>Structure</c> is the chord named, for the editor's rewrites ("Convert to chord(…)").</para>
+    public readonly record struct ChordHoverFacts(string? Symbol, string? Roman, ImmutableArray<string> Pitches,
+        LilySharp.Core.Music.ChordStructure? Structure = null);
 
     /// <summary>
     /// Ottava spans (measure range + type) for one staff, derived from the

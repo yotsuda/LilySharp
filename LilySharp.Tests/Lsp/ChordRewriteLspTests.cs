@@ -70,6 +70,7 @@ public class ChordRewriteLspTests
     [InlineData("<f a c>1@chord(F) |", "<f a c>1@diagram(xx321x)@chord(F) |", "@chord(F")]
     [InlineData("<f a c>1@chord(F) |", "<f a c>1@diagram(xx321x)@chord(F) |", "<f a")]
     [InlineData("<f a c>1 |", "<f a c>1@diagram(xx321x) |", "<f a")]
+    [InlineData("f1 |", "f1@diagram(xx3xxx) |", "f1")]
     public void AddGuitarDiagram_IsOffered_AndTheRequestWritesTheMark(string music, string expected, string caret)
     {
         string text = Book(music);
@@ -100,5 +101,36 @@ public class ChordRewriteLspTests
             Offset = offset,
         });
         Assert.Contains(@"<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>1@chord(F) |", Apply(text, response));
+    }
+
+    [Fact]
+    public void ConvertToChordSymbol_IsOffered_AndTheRequestWritesTheItem()
+    {
+        string text = Book(@"<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>1@chord(F) |");
+        var server = Open(text);
+        var action = Assert.Single(ActionsAt(server, text, text.IndexOf("<f", System.StringComparison.Ordinal)),
+            a => a.Title.StartsWith("Convert to Chord Symbol", System.StringComparison.Ordinal));
+        Assert.Equal("lilysharp.convertNotesToChord", action.Command!.CommandIdentifier);
+        int offset = System.Convert.ToInt32(action.Command.Arguments![1]);
+        var response = server.NotesToChord(new ShapeToNotesParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = Uri },
+            Offset = offset,
+        });
+        Assert.Equal(Book("chord(F 133211)1 |"), Apply(text, response));
+    }
+
+    [Fact]
+    public void AddGuitarDiagram_IsNotOffered_OnANoteOfAPartWithNoFrets()
+    {
+        string text = """
+            part fl { instrument flute }
+            section A { fl { f''1 | } }
+            form { A }
+            score { staff fl }
+            """;
+        var server = Open(text);
+        Assert.DoesNotContain(ActionsAt(server, text, text.IndexOf("f''1", System.StringComparison.Ordinal)),
+            a => a.Title == "Add Guitar Diagram");
     }
 }

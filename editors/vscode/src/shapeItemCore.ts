@@ -42,7 +42,8 @@ export function onShapeItem(line: string, character: number): boolean {
 /**
  * Whether the caret at `character` of `line` stands on a `<…>` chord — its brackets, its notes
  * and the duration after it — never inside a `<< >>` group's double brackets. What shows
- * "Add Guitar Diagram" in the editor's context menu (`lilysharp.onAngleChord`).
+ * "Add Guitar Diagram" and "Convert to Chord Symbol chord(…)" in the editor's context menu
+ * (`lilysharp.onAngleChord`).
  */
 export function onAngleChord(line: string, character: number): boolean {
     for (let i = 0; i < line.length; i++) {
