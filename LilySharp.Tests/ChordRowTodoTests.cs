@@ -146,6 +146,7 @@ public class ChordRowTodoTests
             TextDocument = new TextDocumentIdentifier { Uri = uri },
             Selections = [new StepSelection { Start = caret, End = caret }],
             Direction = 1,
+            Semitone = true,   // the Up / Down pair: the shape (the octave pair walks the key's chords)
         });
         string after = text;
         foreach (var e in response.Edits.OrderByDescending(e => e.Start))

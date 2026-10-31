@@ -121,6 +121,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [x] （2026-10-31 まで）表の中の esection NAMEe・調弦の語・形が色づき、表の e}e の後ろの elayoute の鍵も色が続く。
 - [x] （2026-10-31 まで）同じ part を capo の違う 2 つの score が弾く本で echord(…)e をホバー → score ごとに 1 行、capo の下で鳴る音名が書かれる。
 - [ ] **コード図の文法の整理（第1036・2026-10-31 のオーナー決定）**: 旧綴り elayout { chordDiagrams guitar capo 3 all }e を書くと普通の「'guitar' is not a value of 'chordDiagrams'」のエラー（旧形の認識も quick fix も無い＝同日のオーナー決定）。e{ … }e を付けると「does not open a block」。
+- [ ] **行のコード名を調の 4 和音で巡る（第1036・ユーザー指示 2026-10-31）**: ekey c majore の本の echords prog { Cmaj7 | }e の eCmaj7e にカーソルを置いて eCtrl+Shift+PgUpe → eDm7e、続けて eEm7e eFmaj7e eG7e eAm7e eBm7-5e eCmaj7e と一周（ステータスバー *Dm7: IIm7 of c major (2 of 7)*・音が鳴る）。ePgDne で逆順。eCtrl+Shift+Upe は今までどおり形（eCmaj7(x32000)e）。eG7(320001)e で PgUp → eAm7e（形は消える）。ekey a minore なら eAm7e → eBm7-5e。eBb7e では動かず、ステータスバーに「not a tone of c major」。
 - [ ] 先頭の空行で eche → 補完に echordShapese（ブロックの snippet）と ecapoe が出る。ecapo e の後ろでフレットの順位が出る（旧 echordDiagrams capo e と同じ並び）。echordShapes { e の中で補完が本のコード名 → 調のコード → esectione の順に出る。
 - [ ] ecapo 3e の行をホバー → **Capo** と順位。ecapo ‸3e で Ctrl+Shift+↑ → ecapo 4e（11 で止まる）。ecapoe と e3e が色づく（行頭だけ・epart capo { }e は色づかない）。
 - [ ] elayout { chordDiagrams e で補完が ewritten none alle、echordTuning e で調弦の語（eguitare が先頭）。それぞれ Ctrl+Shift+↑↓ で語が進む。

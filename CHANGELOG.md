@@ -100,6 +100,9 @@ workflow attaches that section to the GitHub Release verbatim.
   `chord(…)` item's name stays as a bare `@chord` (`chord(F)1` → `<f a c>1@chord`; the symbol
   goes into the mark only when the notes would name the chord otherwise); the diagram does not.
   The file must sound the same afterwards, or nothing changes. Not inside `<< >>`.
+- `[editor]` **Ctrl+Shift+PageUp / PageDown on a `chords` row entry walks the key's seventh
+  chords** (`Cmaj7` → `Dm7` → `Em7` … in C major, round again at the ends, from the degree the
+  name's root stands on); Ctrl+Shift+Up / Down keep stepping the shape.
 - `[cli]` **`lysc percent` is gone** — the book rewriter for the old `repeat percent` /
   `repeat unfold` (0.13.0). Backward compatibility has no tools here; the editor's quick fix on
   LYS1047 still rewrites an item where it stands.

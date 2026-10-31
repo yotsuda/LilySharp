@@ -279,7 +279,9 @@ public static partial class NoteStepper
     /// <paramref name="includeStretch"/> (<c>lilysharp.chordShapes.includeStretch</c>) lets an
     /// <c>@chord</c> step through stretch shapes too (<see cref="ShapeOrder"/>).
     /// <paramref name="semitone"/> steps notes and members to the next tone of the key instead
-    /// of by an octave mark (<see cref="SemitoneEdits"/>); a voicing steps its shape either way.
+    /// of by an octave mark (<see cref="SemitoneEdits"/>); a voicing steps its shape either way,
+    /// save a chords-row entry, whose octave pair walks the key's seventh chords
+    /// (<see cref="DiatonicChordEdit"/>).
     /// <paramref name="textFaces"/> gives the faces a <c>fonts</c> entry's text key walks, by key,
     /// in the editor's order (the server's font completion); null walks the two bundled faces.
     /// </summary>
@@ -508,6 +510,18 @@ public static partial class NoteStepper
                 foreach (var p in moved)
                     if (!bySemitone.Any(q => q.SourceStart == p.SourceStart))
                         bySemitone.Add(p);
+                continue;
+            }
+            if (!semitone && t.Kind == TargetKind.Voicing && t.Node is ChordEntrySyntax rowEntry)
+            {
+                // The octave pair on a chords-row entry walks the key's seventh chords (owner's
+                // request 2026-10-31: Cmaj7 → Dm7 → Em7 … in C major); the semitone pair keeps
+                // stepping the entry's shape (NoteStepper.ChordRow.cs).
+                var (chordEdit, chordSaid) = DiatonicChordEdit(rowEntry, dir);
+                message ??= chordSaid;
+                if (chordEdit is { } rowEdit)
+                    edits.Add(rowEdit);
+                stepped.Add(t);
                 continue;
             }
             // A voicing hears where the caret is: on one of several shapes, that one steps.

@@ -2789,6 +2789,13 @@ at the first written one takes the shape away again — back to the bare mark, w
 notes.
 `Ctrl+Shift+PageUp`/`PageDown` still places an `@diagram` (`.up` / `.down`).
 
+**A `chords` row entry on `Ctrl+Shift+PageUp`/`PageDown`** (2026-10-31) walks the SEVENTH chords of
+the key in force instead of the shape: in C major `Cmaj7` → `Dm7` → `Em7` → `Fmaj7` → `G7` →
+`Am7` → `Bm7-5` and round again, from the degree the symbol's root stands on (`C`, `C7` and
+`Cmaj7` all stand on I; the status bar says `Dm7: IIm7 of c major (2 of 7)`). A minor key walks
+its natural-minor sevenths; with no `key` written, C major. A shape the entry wrote goes with the
+old chord. A root outside the key, or a Roman degree, steps nothing and says why.
+
 **Hover** a `@chord` or a `chords` row entry with no shape: one line says how to add a diagram
 and what it would be — `Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)`; in an `all` score,
 the usual shape it draws instead — `guitar: 320003 (default) — shape 1 of N`; for a chord the

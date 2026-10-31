@@ -105,15 +105,15 @@ public class StepRequestTests
         return (response, after);
     }
 
-    private static string Up(string marked, Func<string, string> book)
-        => Stepped(marked, +1, book);
+    private static string Up(string marked, Func<string, string> book, bool semitone = false)
+        => Stepped(marked, +1, book, semitone);
 
-    private static string Down(string marked, Func<string, string> book)
-        => Stepped(marked, -1, book);
+    private static string Down(string marked, Func<string, string> book, bool semitone = false)
+        => Stepped(marked, -1, book, semitone);
 
-    private static string Stepped(string marked, int direction, Func<string, string> book)
+    private static string Stepped(string marked, int direction, Func<string, string> book, bool semitone = false)
     {
-        var (response, after) = Step(book(marked), direction);
+        var (response, after) = Step(book(marked), direction, semitone: semitone);
         Assert.False(response.Fallback, response.Error);
         Assert.Equal(3, response.Version);
         return after;
@@ -183,8 +183,8 @@ public class StepRequestTests
         Assert.Equal(Guitar("c'1@chord(Cm 8-10-10-888)"), Up("c'1@chord(Cm xx-10-8-8-11‸)", Guitar));
         // A written x-3-5-5-4-3 is the default x35543: Up writes the next one-character shape.
         Assert.Equal(Guitar("c'1@chord(Cm x31013)"), Up("c'1@chord(Cm x-3-5-5-4-3‸)", Guitar));
-        Assert.Equal(Row("Cm(8xx88-11) |"), Up("Cm(8xx888‸) |", Row));
-        Assert.Equal(Row("Cm(8xx888) |"), Down("Cm(8xx88-11‸) |", Row));
+        Assert.Equal(Row("Cm(8xx88-11) |"), Up("Cm(8xx888‸) |", Row, semitone: true));
+        Assert.Equal(Row("Cm(8xx888) |"), Down("Cm(8xx88-11‸) |", Row, semitone: true));
     }
 
     [Fact]
@@ -310,8 +310,8 @@ public class StepRequestTests
         // A row entry of an `all` score steps the same way.
         static string AllRow(string row) => "layout { chordDiagrams all }\n" + Row(row);
         var gOrder = Order("G", includeStretch: false);
-        Assert.Equal(AllRow($"G({gOrder[1]}) | C |"), Up("G‸ | C |", AllRow));
-        Assert.Equal(AllRow("G | C |"), Down("G(320003‸) | C |", AllRow));
+        Assert.Equal(AllRow($"G({gOrder[1]}) | C |"), Up("G‸ | C |", AllRow, semitone: true));
+        Assert.Equal(AllRow("G | C |"), Down("G(320003‸) | C |", AllRow, semitone: true));
     }
 
     // ---------------------------------------------------------------- chords-row entries
@@ -328,24 +328,78 @@ public class StepRequestTests
         score { chords prog  staff gt }
         """;
 
+    /// <summary>The semitone pair (Ctrl+Shift+Up / Down) on a row entry steps its shape; the octave
+    /// pair walks the key's chords instead (<see cref="ARowEntry_OnTheOctavePair_WalksTheKeysSeventhChords"/>).</summary>
     [Fact]
     public void ARowEntry_Steps_AndDownAtTheDefaultRemovesTheGroup()
     {
         var gOrder = Order("G", includeStretch: false);
         Assert.Equal("320003", gOrder[0]);
-        var (up, after) = Step(Row("G‸ | C |"), +1);
+        var (up, after) = Step(Row("G‸ | C |"), +1, semitone: true);
         Assert.Equal(Row("G(320003) | C |"), after);
         Assert.Equal($"G: shape 1 of {gOrder.Count} (320003)", up.Message);
-        Assert.Equal(Row($"G({gOrder[1]}) | C |"), Up("G(320003‸) | C |", Row));
-        Assert.Equal(Row("G | C |"), Down("G(3‸20003) | C |", Row));
-        var (down, same) = Step(Row("G‸ | C |"), -1);
+        Assert.Equal(Row($"G({gOrder[1]}) | C |"), Up("G(320003‸) | C |", Row, semitone: true));
+        Assert.Equal(Row("G | C |"), Down("G(3‸20003) | C |", Row, semitone: true));
+        var (down, same) = Step(Row("G‸ | C |"), -1, semitone: true);
         Assert.False(down.Fallback);
         Assert.Empty(down.Edits);
         Assert.Equal(Row("G | C |"), same);
         // Several shapes: the guitar's steps; removing it keeps the other.
-        Assert.Equal(Row("F(2010) |"), Down("F(133211‸ 2010) |", Row));
-        Assert.Equal(Row("F(2010) |"), Down("F(2010 ‸133211) |", Row));
-        Assert.Equal(Row("F(2010 133211) |"), Up("F(2010‸) |", Row));
+        Assert.Equal(Row("F(2010) |"), Down("F(133211‸ 2010) |", Row, semitone: true));
+        Assert.Equal(Row("F(2010) |"), Down("F(2010 ‸133211) |", Row, semitone: true));
+        Assert.Equal(Row("F(2010 133211) |"), Up("F(2010‸) |", Row, semitone: true));
+    }
+
+    /// <summary>The octave pair (Ctrl+Shift+PageUp / PageDown) on a row entry walks the key's
+    /// SEVENTH chords (owner's request 2026-10-31): in C major Cmaj7 → Dm7 → Em7 → Fmaj7 → G7 →
+    /// Am7 → Bm7-5 → Cmaj7, from the degree the symbol's root stands on; a written shape goes
+    /// with the old chord; a minor key walks its own; a root off the key, or a degree, says so.</summary>
+    [Fact]
+    public void ARowEntry_OnTheOctavePair_WalksTheKeysSeventhChords()
+    {
+        static string InKey(string key, string row) => $$"""
+            key {{key}}
+            octave absolute
+            part gt { clef treble }
+            section A {
+              gt { c'1 | c'1 | }
+              chords prog { {{row}} }
+            }
+            form { A }
+            score { chords prog  staff gt }
+            """;
+        var (up, after) = Step(InKey("c major", "Cmaj7‸ | C |"), +1);
+        Assert.Equal(InKey("c major", "Dm7 | C |"), after);
+        Assert.Equal("Dm7: IIm7 of c major (2 of 7)", up.Message);
+        Assert.NotEmpty(up.Pitches);   // the stepped entry sounds
+        // Round the scale and back to the start.
+        var walked = new List<string>();
+        string symbol = "Cmaj7";
+        for (int i = 0; i < 7; i++)
+        {
+            string stepped = Step(InKey("c major", symbol + "‸ | C |"), +1).After;
+            symbol = stepped.Substring(stepped.IndexOf("chords prog { ", StringComparison.Ordinal) + 14).Split(' ')[0];
+            walked.Add(symbol);
+        }
+        Assert.Equal(["Dm7", "Em7", "Fmaj7", "G7", "Am7", "Bm7-5", "Cmaj7"], walked);
+        Assert.Equal(InKey("c major", "Bm7-5 | C |"), Step(InKey("c major", "Cmaj7‸ | C |"), -1).After);
+        // A triad or a seventh stands on its degree; the shape written for it goes with it.
+        Assert.Equal(InKey("c major", "Dm7 | C |"), Step(InKey("c major", "C‸ | C |"), +1).After);
+        Assert.Equal(InKey("c major", "Am7 | C |"), Step(InKey("c major", "G7(320001)‸ | C |"), +1).After);
+        Assert.Equal(InKey("c major", "G7 | C |"), Step(InKey("c major", "F‸ | C |"), +1).After);
+        // The key in force: E-flat major spells its own, A minor walks the natural minor.
+        Assert.Equal(InKey("ees major", "Fm7 | C |"), Step(InKey("ees major", "Ebmaj7‸ | C |"), +1).After);
+        Assert.Equal(InKey("a minor", "Bm7-5 | C |"), Step(InKey("a minor", "Am7‸ | C |"), +1).After);
+        // No key written: C major.
+        Assert.Equal(Row("Dm7 | C |"), Step(Row("C‸ | C |"), +1).After);
+        // A root off the key, or a degree, steps nothing and says why.
+        var (off, same) = Step(InKey("c major", "Bb7‸ | C |"), +1);
+        Assert.Empty(off.Edits);
+        Assert.Contains("not a tone of c major", off.Message);
+        Assert.Equal(InKey("c major", "Bb7 | C |"), same);
+        var (degree, _) = Step(InKey("c major", "IIm7‸ | C |"), +1);
+        Assert.Empty(degree.Edits);
+        Assert.Contains("not a degree", degree.Message);
     }
 
     /// <summary>The row's tuning is the first score's that places it; the status bar says when
@@ -365,7 +419,7 @@ public class StepRequestTests
             score u { layout uke  chords prog  staff gt }
             score g { chords prog  staff gt }
             """;
-        var (response, after) = Step(TwoScores("G‸ |"), +1);
+        var (response, after) = Step(TwoScores("G‸ |"), +1, semitone: true);
         Assert.Equal(TwoScores("G(0232) |"), after);
         Assert.Contains("another draws guitar", response.Message);
     }
