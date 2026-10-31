@@ -33,7 +33,7 @@ All notable changes to the Lily# VS Code extension are documented here.
   `<g b d' f'>1@diagram(xx5431)`. With the caret on the shape, Ctrl+Shift+Up/Down walks the other
   ways to hold the same notes. When the notes are edited away from the shape, LYS1057 warns and
   the quick fix writes the chord's own.
-- **Ctrl+Shift+Up/Down steps a shape with no symbol** (`diagram(x32010)`, `@chord(x32010)`) through the
+- **Ctrl+Shift+Up/Down steps a shape with no symbol** (`diagram(x32010)`, `@chord(x32010)`, `@diagram(133211)` on a note) through the
   other shapes of the chord it sounds. x32010 is C, and only the shape changes.
 - **With shapes for two instruments written** (`@chord(C x32010 0003)`), Ctrl+Shift+Up/Down steps
   the one under the caret on its own instrument, and the status bar names it.

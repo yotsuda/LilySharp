@@ -2752,7 +2752,10 @@ of the chord the shape sounds on the part's tuning (x32010 is C; above a capo, t
 shape's sounding chord), and only the shape is rewritten, no symbol added. The status bar names
 the chord (`C: shape 2 of N`). `Down` at its first shape keeps it. A shape whose notes name no
 chord is not stepped, and the status bar says to write its symbol. A symbol-less
-`@chord(x32010)` steps the same way, with the caret on the word or the shape.
+`@chord(x32010)` steps the same way, with the caret on the word or the shape, and so does an
+`@diagram(133211)` on a single note or a rest (F: *shape 2 of 29*). On a `<…>` chord,
+`@diagram(SHAPE)` walks the other ways to hold that chord's own notes instead (*fingering 2 of 3*).
+`Ctrl+Shift+PageUp`/`PageDown` still places an `@diagram` (`.up` / `.down`).
 
 **Hover** a `@chord` or a `chords` row entry with no shape: one line says how to add a diagram
 and what it would be — `Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)`; in an `all` score,

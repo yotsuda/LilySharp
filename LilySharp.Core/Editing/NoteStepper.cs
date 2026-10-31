@@ -751,6 +751,15 @@ public static partial class NoteStepper
                     : ShapeSiteOf(mark) is not (null, null)
                         ? new Target(TargetKind.Voicing, mark)
                         : CarrierOf(mark) ?? new Target(TargetKind.Voicing, mark);
+        // An @diagram(SHAPE) on a single note or a rest: its shape steps through the shapes of
+        // the chord it spells, as a symbol-less @chord(x32010) does (owner's decision 2026-10-31).
+        // On a <…> chord it walks that chord's fingerings instead (DiagramFingeringStep).
+        foreach (var mark in tree.GetNodes<MusicMarkSyntax>())
+            if (mark.Name == "diagram" && !mark.Arguments.IsEmpty
+                && mark.Parent is not ChordSyntax { IsShapeChord: false }
+                && mark.Span.Start < offset && offset <= mark.Span.End
+                && ShapeSiteOf(mark) is not (null, null))
+                return new Target(TargetKind.Voicing, mark);
         // A diagram(…) item (owner's decision 2026-09-28): from its word 'chord' to its ')' —
         // the step rewrites its shape as an @chord's, on the part's tuning (StepTuning).
         foreach (var item in tree.GetNodes<ChordSyntax>())
@@ -917,7 +926,7 @@ public static partial class NoteStepper
                 TargetKind.Instrument => node is PropertyAssignmentSyntax { NameToken.Text: "midiInstrument" },
                 TargetKind.Tuning => node is PropertyAssignmentSyntax { NameToken.Text: "tuning" },
                 TargetKind.InstrumentPreset => node is PropertyAssignmentSyntax { NameToken.Text: "instrument" },
-                _ => node is MusicMarkSyntax { Name: "chord" } or ChordEntrySyntax
+                _ => node is MusicMarkSyntax { Name: "chord" or "diagram" } or ChordEntrySyntax
                     or ChordSyntax { IsShapeChord: true },
             };
             if (fits)
@@ -1205,6 +1214,16 @@ public static partial class NoteStepper
                     shapeList.Add((mark.Arguments[i].Text, spans[i].Start, spans[i].End));
                 return (new ShapeSite("", null, shapeList, [.. shapeOnly.Problems.Select(p => p.Message)],
                     spans[0].Start, null, IsRow: false), null);
+            }
+            // An @diagram(SHAPE): a shape with no symbol, as above.
+            if (mark.Name == "diagram")
+            {
+                var diagramShapes = new List<(string, int, int)>();
+                for (int i = 0; i < spans.Count; i++)
+                    if (Music.ChordShapes.StartsShape(mark.Arguments[i].Text))
+                        diagramShapes.Add((mark.Arguments[i].Text, spans[i].Start, spans[i].End));
+                return diagramShapes.Count == 0 ? (null, null)
+                    : (new ShapeSite("", null, diagramShapes, [], spans[0].Start, null, IsRow: false), null);
             }
             if (ChordAnnotation.Of(mark) is not { Symbol: { } symbol, Structure: { } chord } words)
                 return (null, null);

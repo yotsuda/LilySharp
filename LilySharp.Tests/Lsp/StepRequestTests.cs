@@ -452,6 +452,20 @@ public class StepRequestTests
         Assert.Equal(Guitar("c'1@chord(x32010)"), Step(Guitar("c'1@chord(x32‸010)"), -1, semitone: true).After);
     }
 
+    /// <summary>An <c>@diagram(SHAPE)</c> on a single note or a rest steps its shape through the
+    /// shapes of the chord it spells, as a symbol-less <c>@chord</c> does; on a <c>&lt;…&gt;</c> chord
+    /// it walks that chord's fingerings instead (owner's decision 2026-10-31). The octave pair still
+    /// places it.</summary>
+    [Fact]
+    public void ADiagramOnANote_StepsItsShape()
+    {
+        Assert.Equal(Guitar("c'1@diagram(xx3211)"), Step(Guitar("c'1@diagram(133‸211)"), +1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram(xx3211)"), Step(Guitar("c'1@di‸agram(133211)"), +1, semitone: true).After);
+        Assert.Equal(Guitar("r1@diagram(x32013)"), Step(Guitar("r1@diagram(x32‸010)"), +1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram(133211)"), Step(Guitar("c'1@diagram(133‸211)"), -1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram(133211).up"), Up("c'1@diagram(133‸211)", Guitar));
+    }
+
     // ---------------------------------------------------------------- notes
 
     [Fact]

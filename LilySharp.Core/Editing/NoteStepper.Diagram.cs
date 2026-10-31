@@ -36,11 +36,12 @@ public static partial class NoteStepper
         {
             if (mark.Name != "diagram" || mark.Arguments.IsEmpty
                 || mark.Parent is not ChordSyntax { IsShapeChord: false } chord
-                || caret < mark.Span.Start || caret > mark.Span.End)
+                || caret <= mark.Span.Start || caret > mark.Span.End)
                 continue;
             int open = text.IndexOf('(', mark.Span.Start, mark.Span.Length);
             int close = open < 0 ? -1 : text.IndexOf(')', open);
-            if (open < 0 || close < 0 || caret <= open || caret > close)
+            // The caret anywhere after the '@' — on the word or the shape.
+            if (open < 0 || close < 0 || caret > close)
                 return null;
             if (ShapeChordConverter.PlayedPitches(tree, chord) is not { } pitches)
                 return new StepResult(false, [], "@diagram: this chord is not played in any score", [], 0);
