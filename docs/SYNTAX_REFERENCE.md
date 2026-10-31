@@ -2755,6 +2755,9 @@ chord is not stepped, and the status bar says to write its symbol. A symbol-less
 `@chord(x32010)` steps the same way, with the caret on the word or the shape, and so does an
 `@diagram(133211)` on a single note or a rest (F: *shape 2 of 29*). On a `<…>` chord,
 `@diagram(SHAPE)` walks the other ways to hold that chord's own notes instead (*fingering 2 of 3*).
+A bare `@diagram` there already draws the first of them: `Up` writes the second out, and `Down`
+at the first written one takes the shape away again — back to the bare mark, which follows the
+notes.
 `Ctrl+Shift+PageUp`/`PageDown` still places an `@diagram` (`.up` / `.down`).
 
 **Hover** a `@chord` or a `chords` row entry with no shape: one line says how to add a diagram

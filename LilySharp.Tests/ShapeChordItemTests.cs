@@ -611,6 +611,20 @@ public class ShapeChordItemTests
         Assert.Equal("xx5431", written[edit.Start..edit.End]);
         Assert.Equal("x-10-976x", edit.NewText);
         Assert.Contains("fingering 2 of", step.Message);
+        // Down at the first fingering takes the shape away: back to the bare mark, which follows the notes.
+        string first = Book("instrument guitar", "<g b d' f'>1@diagram(xx5431) |", top: "octave absolute\n");
+        int at = first.IndexOf("5431", StringComparison.Ordinal);
+        var down = Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(first, SyntaxTree.Parse(first), [(at, at)], -1, semitone: true).Edits);
+        Assert.Equal("(xx5431)", first[down.Start..down.End]);
+        Assert.Equal("", down.NewText);
+        // A bare @diagram shows the first fingering: Up writes the second; Down stays.
+        string plain = Book("instrument guitar", "<g b d' f'>1@diagram |", top: "octave absolute\n");
+        int on = plain.IndexOf("diagram", StringComparison.Ordinal) + 2;
+        var up = Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(plain, SyntaxTree.Parse(plain), [(on, on)], 1, semitone: true).Edits);
+        Assert.Contains("<g b d' f'>1@diagram(x-10-976x) |", plain[..up.Start] + up.NewText + plain[up.End..]);
+        var stay = LilySharp.Core.Editing.NoteStepper.Step(plain, SyntaxTree.Parse(plain), [(on, on)], -1, semitone: true);
+        Assert.Empty(stay.Edits);
+        Assert.Contains("the first", stay.Message);
         // The shape the notes sound, written out: no warning.
         string fresh = Book("instrument guitar", "<c e g c' e'>1@diagram(x32010) |", top: "octave absolute\n");
         Assert.DoesNotContain(Diagnostics(fresh), d => d.Code == DiagnosticCodes.DiagramNotTheChord);
