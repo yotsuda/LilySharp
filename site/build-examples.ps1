@@ -458,10 +458,10 @@ $cells = [ordered]@{
     'cell-item-chord-shape'    = 'chord(F 133211)1'
     'cell-item-chord-of-shape' = 'chord(x32010)1'
     'cell-item-diagram'        = 'diagram(133211)1'
-    'cell-repeat-notes-q'      = "<f a c'>4@diagram q2 q4"
-    'cell-repeat-item-q'       = 'chord(F 133211)4 q2 q4'
-    'cell-repeat-item-length'  = 'chord(F 133211)4 4 2'
-    'cell-repeat-item-strum'   = 'chord(F 133211)4 chord(F 133211)2 chord(F 133211)4'
+    'cell-repeat-length'       = 'chord(F 133211)4 4 2'
+    'cell-repeat-length-note'  = 'chord(F 133211)4 e2 4'
+    'cell-repeat-q'            = 'chord(F 133211)4 e2 q4'
+    'cell-repeat-changes'      = 'chord(F 133211)4 chord(F 133211)2 chord(F xx3211)4'
 }
 foreach ($cell in $cells.GetEnumerator()) {
     $examples[$cell.Key] = @"

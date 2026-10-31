@@ -48,11 +48,11 @@ a guitarist reads. Writing the notes a chord plays is on
     <tr><td><code>chord(F 133211)1</code></td><td><img class="cell" src="examples/cell-item-chord-shape.svg" alt="F over its diagram, over the six strings of 133211"></td><td>✓</td><td>✓</td></tr>
     <tr><td><code>chord(x32010)1</code></td><td><img class="cell" src="examples/cell-item-chord-of-shape.svg" alt="C over its diagram, over the five strings of x32010"></td><td>✓ read off the shape</td><td>✓</td></tr>
     <tr><td><code>diagram(133211)1</code></td><td><img class="cell" src="examples/cell-item-diagram.svg" alt="the diagram alone, over the six strings of 133211"></td><td></td><td>✓</td></tr>
-    <tr class="grp"><td colspan="4"><b>Repeated at new lengths</b> — <code>q</code>, or a length alone, repeats the chord before it</td></tr>
-    <tr><td><code>&lt;f a c&gt;4@diagram q2 q4</code></td><td><img class="cell" src="examples/cell-repeat-notes-q.svg" alt="three F chords, the diagram over the first"></td><td></td><td>✓ the first only</td></tr>
-    <tr><td><code>chord(F 133211)4 q2 q4</code></td><td><img class="cell" src="examples/cell-repeat-item-q.svg" alt="three F chords, the name and diagram over the first"></td><td>✓ the first only</td><td>✓ the first only</td></tr>
-    <tr><td><code>chord(F 133211)4 4 2</code></td><td><img class="cell" src="examples/cell-repeat-item-length.svg" alt="three F chords, repeated by their lengths alone"></td><td>✓ the first only</td><td>✓ the first only</td></tr>
-    <tr><td><code>chord(F 133211)4 chord(F 133211)2 chord(F 133211)4</code></td><td><img class="cell" src="examples/cell-repeat-item-strum.svg" alt="three F chords written out, the name and diagram over the first"></td><td>✓ where the chord changes</td><td>✓ where the chord changes</td></tr>
+    <tr class="grp"><td colspan="4"><b>Repeated at new lengths</b> — a length alone repeats the note or chord before it; <code>q</code> the chord before it</td></tr>
+    <tr><td><code>chord(F 133211)4 4 2</code></td><td><img class="cell" src="examples/cell-repeat-length.svg" alt="three F chords, repeated by their lengths alone"></td><td>✓ the first only</td><td>✓ the first only</td></tr>
+    <tr><td><code>chord(F 133211)4 e2 4</code></td><td><img class="cell" src="examples/cell-repeat-length-note.svg" alt="an F chord, then a half-note E repeated as a quarter"></td><td>✓ the first only</td><td>✓ the first only</td></tr>
+    <tr><td><code>chord(F 133211)4 e2 q4</code></td><td><img class="cell" src="examples/cell-repeat-q.svg" alt="an F chord, a half-note E, then the F chord again"></td><td>✓ the first only</td><td>✓ the first only</td></tr>
+    <tr><td><code>chord(F 133211)4 chord(F 133211)2 chord(F xx3211)4</code></td><td><img class="cell" src="examples/cell-repeat-changes.svg" alt="three F chords, the name and diagram over the first and over the third, a new shape"></td><td>✓ where the chord changes</td><td>✓ where the chord changes</td></tr>
   </table>
   <details><summary>Show the whole file</summary><pre>// The table's spellings, one score for each group of rows.
 // Switch between them with the preview's Score: list. The bars follow the table's rows.
@@ -87,10 +87,10 @@ section alone {
 }
 section repeated {
   gt {
-    &lt;f a c&gt;4@diagram q2 q4 |                                 // the diagram over the first only; q repeats the notes
-    chord(F 133211)4 q2 q4 |                                 // the name and diagram over the first only
-    chord(F 133211)4 4 2 |                                   // a length alone repeats it too
-    chord(F 133211)4 chord(F 133211)2 chord(F 133211)4 |     // written each time, shown where it changes
+    chord(F 133211)4 4 2 |                               // a length alone repeats the note or chord before it
+    chord(F 133211)4 e2 4 |                              // here it repeats the single note e
+    chord(F 133211)4 e2 q4 |                             // q repeats the chord before it (never a single note)
+    chord(F 133211)4 chord(F 133211)2 chord(F xx3211)4 | // the same name and diagram written again show only where the chord changes
   }
 }
 
