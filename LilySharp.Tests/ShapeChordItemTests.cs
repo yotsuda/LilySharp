@@ -645,6 +645,27 @@ public class ShapeChordItemTests
         Assert.False(Under("c1@chord(F)@diagram(133211).down |"));
     }
 
+    /// <summary>A file whose scores each name their own form plays nothing as MIDI; the diagram's
+    /// step and "Add Guitar Diagram" read the notes off the page, so they work there too (owner's
+    /// report 2026-10-31: "not played in any score").</summary>
+    [Fact]
+    public void ScoresWithTheirOwnForms_StillStepAndAddDiagrams()
+    {
+        const string book = """
+            part gt { instrument guitar }
+            section onNote { gt { f1@diagram(133211) | f1@diagram | } }
+            section onChord { gt { <f a c>1@chord | } }
+            score a { form { onNote } staff gt }
+            score b { form { onChord } staff gt }
+            """;
+        var tree = SyntaxTree.Parse(book);
+        int shape = book.IndexOf("33211", StringComparison.Ordinal);
+        Assert.Equal("xx3211", Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(book, tree, [(shape, shape)], 1, semitone: true).Edits).NewText);
+        int bare = book.IndexOf("diagram |", StringComparison.Ordinal) + 2;
+        Assert.StartsWith("(", Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(book, tree, [(bare, bare)], 1, semitone: true).Edits).NewText);
+        Assert.Equal("@diagram(xx321x)", ShapeChordConverter.AddDiagram(book, book.IndexOf("<f a", StringComparison.Ordinal)).Replacement);
+    }
+
     // ================================================================ the outputs
 
     [Fact]

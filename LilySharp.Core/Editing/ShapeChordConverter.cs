@@ -178,15 +178,34 @@ public static class ShapeChordConverter
         return -1;
     }
 
-    /// <summary>The pitches a <c>&lt;…&gt;</c> chord plays, lowest first, as the MIDI export starts
-    /// them (one moment, one part: the first time it is played), or null when it is not played.</summary>
+    /// <summary>The sounding pitches a <c>&lt;…&gt;</c> chord or a single note writes, lowest first, as
+    /// the page draws it in the first score that renders it, or null when no score does.</summary>
+    /// <remarks>Read off the page, not the MIDI export (owner's report 2026-10-31): a file whose
+    /// scores each name their own form plays nothing as MIDI, and the diagram's step and "Add Guitar
+    /// Diagram" refused there ("not played in any score").</remarks>
     internal static int[]? PlayedPitches(SyntaxTree tree, SyntaxNode chord)
     {
-        var span = chord.Span;
-        var played = new Midi.MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes)
-            .Where(n => n.SourcePos >= span.Start && n.SourcePos < span.End)
-            .GroupBy(n => (n.Part, n.StartTick)).FirstOrDefault();
-        return played?.Select(n => n.Pitch).Distinct().OrderBy(p => p).ToArray();
+        var specs = Svg.Collector.RenderSpecParser.FindAll(tree);
+        IEnumerable<Svg.Collector.RenderSpec?> passes = specs.Count == 0 ? [null] : specs;
+        foreach (var spec in passes)
+        {
+            Svg.Model.MultiStaffScore score;
+            try { score = Svg.SvgGenerator.CollectScore(tree, spec); }
+            catch { continue; }
+            foreach (var (_, staff, _) in score.EnumerateStaves())
+                foreach (var voice in staff.Voices)
+                    foreach (var measure in voice.Measures)
+                        foreach (var item in measure.Items)
+                        {
+                            if (item.SourcePosition != chord.SourceStart)
+                                continue;
+                            if (item is Svg.Model.ChordItem c && !c.Notes.IsDefaultOrEmpty)
+                                return [.. c.Notes.Select(n => n.Midi).Distinct().Order()];
+                            if (item is Svg.Model.NoteItem n && n.Midi > 0)
+                                return [n.Midi];
+                        }
+        }
+        return null;
     }
 
     /// <summary>The open strings a chord's diagram is fretted on: its part's fretted instrument's,
