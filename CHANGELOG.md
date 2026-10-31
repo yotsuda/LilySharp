@@ -72,7 +72,9 @@ workflow attaches that section to the GitHub Release verbatim.
   moved alike, is not a difference.
 - `[editor]` **The diagram steps and Add Guitar Diagram work in a file whose scores each name their
   own form**: they read the notes off the MIDI, which plays nothing there, and refused ("not
-  played in any score"). They read the page now.
+  played in any score"). They read the page now — and so do the chord checks, LYS1055 and LYS1057,
+  which were silent there, and Convert to Chord Notes's "sounds the same" check, which passed
+  without comparing anything.
 - `[page]` **A bare `@diagram` on a single note draws where the note is held**: `c'1@diagram` is
   `xxxx1x` on a guitar (it was unknown, and drew nothing). Ctrl+Shift+Up/Down walks the other places
   — `xxx5xx`, `xx-10-xxx` — and Down at the first goes back to the bare mark. A chord's shape over a

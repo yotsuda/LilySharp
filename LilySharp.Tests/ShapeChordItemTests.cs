@@ -664,6 +664,23 @@ public class ShapeChordItemTests
         int bare = book.IndexOf("diagram |", StringComparison.Ordinal) + 2;
         Assert.StartsWith("(", Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(book, tree, [(bare, bare)], 1, semitone: true).Edits).NewText);
         Assert.Equal("@diagram(xx321x)", ShapeChordConverter.AddDiagram(book, book.IndexOf("<f a", StringComparison.Ordinal)).Replacement);
+
+        // The checks read the same notes: a chord no hand holds (LYS1055), a diagram its notes left (LYS1057).
+        const string checks = """
+            octave absolute
+            part gt { instrument guitar }
+            section s { gt { <e f fis g>1 | <e g c'>1@diagram(x32010) | diagram(133211)1 | } }
+            score a { form { s } staff gt }
+            """;
+        var found = Diagnostics(checks);
+        Assert.Contains(found, d => d.Code == DiagnosticCodes.ChordNotFingerable);
+        Assert.Contains(found, d => d.Code == DiagnosticCodes.DiagramNotTheChord);
+        // …and Convert to Chord Notes checks that the file still sounds the same.
+        var notes = ShapeChordConverter.ToNotes(checks, checks.IndexOf("diagram(1", StringComparison.Ordinal));
+        Assert.True(notes.Replacement != null, notes.Error);
+        Assert.Equal(LilySharp.Core.Semantics.PlayedNotes.Signature(SyntaxTree.Parse(checks)),
+            LilySharp.Core.Semantics.PlayedNotes.Signature(SyntaxTree.Parse(checks[..notes.Start] + notes.Replacement + checks[notes.End..])));
+        Assert.NotEqual("", LilySharp.Core.Semantics.PlayedNotes.Signature(SyntaxTree.Parse(checks)));
     }
 
     // ================================================================ the outputs

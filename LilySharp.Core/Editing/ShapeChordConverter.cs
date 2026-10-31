@@ -38,7 +38,7 @@ namespace LilySharp.Core.Editing;
 /// <item>The NAME a <c>chord(…)</c> item printed stays: <c>&lt;…&gt;@chord(F)</c>. The diagram does
 /// not (owner's decision 2026-10-31: the notes are what was asked for, and a diagram left over
 /// them would not follow an edit); "Add Guitar Diagram" goes back.</item>
-/// <item>The file must sound the same afterwards (<see cref="OctaveModeConverter.SoundSignature"/>),
+/// <item>The file must sound the same afterwards (<see cref="Semantics.PlayedNotes.Signature"/>),
 /// or nothing changes.</item>
 /// </list>
 /// </remarks>
@@ -132,7 +132,8 @@ public static class ShapeChordConverter
 
         string replacement = Replacement([.. marks.Select(m => m!.Value)]);
         string result = source[..item.SourceStart] + replacement + source[end..];
-        if (OctaveModeConverter.SoundSignature(result) != OctaveModeConverter.SoundSignature(source))
+        // What the file plays — the MIDI, else the page (a file whose scores name their own forms).
+        if (Semantics.PlayedNotes.Signature(SyntaxTree.Parse(result)) != Semantics.PlayedNotes.Signature(tree))
             return Fail("Written as notes, the item would not sound the same - no changes made.");
         return new Result(item.SourceStart, end, replacement, null);
     }

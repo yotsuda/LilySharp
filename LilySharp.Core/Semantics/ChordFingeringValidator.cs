@@ -34,7 +34,8 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A chord is the notes the MIDI export starts at one moment in one part, so a phrase, a repeat or
+/// A chord is the notes the MIDI export starts at one moment in one part (the page's, in a file
+/// whose scores each name their own form and so play nothing as MIDI: PlayedNotes), so a phrase, a repeat or
 /// a second voice is heard as the player plays it, at its sounding pitch. Fingerable is
 /// <see cref="Music.ChordFingering"/>'s rule, the one a bare <c>@diagram</c> draws by.
 /// </para>
@@ -67,20 +68,14 @@ internal sealed class ChordFingeringValidator : ISemanticValidator
         if (tunings.Count == 0)
             return;
 
-        MidiFile midi;
-        try
-        {
-            midi = new MidiExporter().Export(tree);
-        }
-        catch
-        {
-            return; // a book that cannot play surfaces its real error elsewhere
-        }
+        // What the file plays: the MIDI export's notes, else — a file whose scores each name their
+        // own form plays nothing as MIDI — the page's (PlayedNotes, owner's report 2026-10-31).
+        var played = PlayedNotes.Of(tree);
 
         var said = new HashSet<int>();
-        var chords = midi.Tracks.SelectMany(t => t.Notes)
+        var chords = played
             .Where(n => n.SourcePos >= 0 && n.Part is { } p && tunings.ContainsKey(p))
-            .GroupBy(n => (n.Part!, n.StartTick));
+            .GroupBy(n => (n.Part!, n.At));
         foreach (var chord in chords)
         {
             var pitches = chord.Select(n => n.Pitch).Distinct().OrderBy(p => p).ToArray();
@@ -113,7 +108,7 @@ internal sealed class ChordFingeringValidator : ISemanticValidator
                       + "the lowest note kept, the others moved by an octave"
                     : "spread it out, or leave notes out (the root and fifth below, the third above)"));
         }
-        StaleDiagrams(tree, midi, tunings, bowed);
+        StaleDiagrams(tree, played, tunings, bowed);
     }
 
     /// <summary>
@@ -123,9 +118,9 @@ internal sealed class ChordFingeringValidator : ISemanticValidator
     /// alike is the same chord — a capo, a transposing part. The fix named is the chord's own shape,
     /// the one a bare <c>@diagram</c> draws.
     /// </summary>
-    private void StaleDiagrams(SyntaxTree tree, MidiFile midi, Dictionary<string, int[]> tunings, HashSet<string> bowed)
+    private void StaleDiagrams(SyntaxTree tree, List<PlayedNotes.Note> all, Dictionary<string, int[]> tunings, HashSet<string> bowed)
     {
-        var notes = midi.Tracks.SelectMany(t => t.Notes)
+        var notes = all
             .Where(n => n.SourcePos >= 0 && n.Part is { } p && tunings.ContainsKey(p) && !bowed.Contains(p))
             .ToList();
         if (notes.Count == 0)
@@ -138,7 +133,7 @@ internal sealed class ChordFingeringValidator : ISemanticValidator
                 continue;
             var span = chord.Span;
             var played = notes.Where(n => n.SourcePos >= span.Start && n.SourcePos < span.End)
-                .GroupBy(n => (n.Part!, n.StartTick)).FirstOrDefault();
+                .GroupBy(n => (n.Part!, n.At)).FirstOrDefault();
             if (played == null)
                 continue;
             var strings = tunings[played.Key.Item1];
