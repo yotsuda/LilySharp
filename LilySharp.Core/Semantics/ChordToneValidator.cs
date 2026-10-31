@@ -24,7 +24,7 @@ namespace LilySharp.Core.Semantics;
 
 /// <summary>
 /// An information note at each member of a <c>&lt;…&gt;</c> chord that is not a tone of the
-/// chord symbol written on it (<c>&lt;c' e' f'&gt;4@chord(C)</c>: F), naming the chord the
+/// chord symbol written on it (<c>&lt;c' e' f'&gt;4@chord(C)</c>: "f is not a tone of C"), naming the chord the
 /// notes spell when the recognizer names one (<see cref="DiagnosticCodes.ChordToneOutsideSymbol"/>).
 /// </summary>
 /// <remarks>
@@ -62,7 +62,10 @@ internal sealed class ChordToneValidator : ISemanticValidator
                 && recognized != null ? ChordShapes.SourceSymbol(recognized) : null;
             foreach (var m in foreign)
             {
-                string note = ChordStructure.SpellPitch(m.Step, m.Alter);
+                // The note as WRITTEN (`f`, `bes`; a Dutch contraction `es` as its canonical `ees`),
+                // not its chord-tone spelling (`F`, `B♭`): the note is what the message points at
+                // (owner's request 2026-10-31).
+                string note = m.Pitch.PitchName;
                 _diagnostics.Info(m.Pitch.Span, DiagnosticCodes.ChordToneOutsideSymbol,
                     named != null && named != symbol
                         ? $"{note} is not a tone of {symbol}: the chord's notes spell {named} — write @chord({named}), or keep {symbol} if {note} is meant as a tension."

@@ -351,8 +351,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 - `[language]` **A chord's name is checked against its notes** (LYS1054, information): a member of a
   `<…>` chord that is not a tone of the `@chord(…)` written on it is noted, with the chord the notes
-  spell and a quick fix that writes it (`<c' f' g'>1@chord(C)`: "the chord's notes spell Csus4").
-  Tones left out are not noted, nor a single note's `@chord`.
+  spell and a quick fix that writes it (`<c' f' g'>1@chord(C)`: "f is not a tone of C: the chord's
+  notes spell Csus4", the note as written). Tones left out are not noted, nor a single note's `@chord`.
 
 ### Scan import
 

@@ -45,8 +45,11 @@ public class ChordToneValidatorTests
         var d = Assert.Single(Notes(text));
         Assert.Equal(LilySharp.Core.Syntax.DiagnosticSeverity.Info, d.Severity);
         Assert.Equal("f'", text.Substring(d.Span.Start, d.Span.Length));
-        Assert.Contains("F is not a tone of C", d.Message);
+        // The note as written, lowercase (owner's request 2026-10-31), not "F".
+        Assert.Equal("f is not a tone of C: the chord's notes spell Csus4 — write @chord(Csus4), or keep C if f is meant as a tension.", d.Message);
         Assert.Equal("Csus4", ChordTones.ProposedName(d.Message));
+        // An accidental is the written one too.
+        Assert.StartsWith("bes is not a tone of C", Assert.Single(Notes(Score("<c' e' bes'>1@chord(C) |"))).Message);
     }
 
     [Theory]
