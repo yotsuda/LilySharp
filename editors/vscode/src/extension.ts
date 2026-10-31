@@ -42,7 +42,7 @@ import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
-import { onAngleChord, onShapeItem } from './shapeItemCore';
+import { onAngleChord, onShapeItem, sameDocumentUri } from './shapeItemCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
@@ -2494,7 +2494,7 @@ async function rewriteChordAt(method: string, uri?: string, offset?: number) {
     }
     const editor = vscode.window.activeTextEditor;
     const doc = uri !== undefined
-        ? vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)
+        ? vscode.workspace.textDocuments.find(d => sameDocumentUri(d.uri.toString(), uri))
         : editor?.document;
     if (!doc || doc.languageId !== 'lilysharp') {
         vscode.window.showErrorMessage('Lily#: put the caret on a chord in a .lys file.');
@@ -2539,7 +2539,7 @@ interface SplitSectionsResponse {
  */
 async function splitSectionsToMatch(uriArg?: string, sectionArg?: string) {
     const doc = uriArg
-        ? vscode.workspace.textDocuments.find(d => d.uri.toString() === uriArg)
+        ? vscode.workspace.textDocuments.find(d => sameDocumentUri(d.uri.toString(), uriArg))
         : vscode.window.activeTextEditor?.document;
     if (!doc || doc.languageId !== 'lilysharp') {
         vscode.window.showErrorMessage('Lily#: open a .lys file to split its sections.');

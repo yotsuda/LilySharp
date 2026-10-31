@@ -58,3 +58,19 @@ export function onAngleChord(line: string, character: number): boolean {
     }
     return false;
 }
+
+/**
+ * Whether two document URIs name the same file. A URI the language server hands back in a
+ * command's arguments (.NET's `Uri.ToString()`, `file:///c:/song.lys`) is spelled otherwise than
+ * VS Code's own (`file:///c%3A/song.lys`), so the two are compared decoded, the drive letter in
+ * either case (owner's report 2026-10-31: "Add Guitar Diagram" from the light bulb found no
+ * document and refused).
+ */
+export function sameDocumentUri(a: string, b: string): boolean {
+    const norm = (u: string) => {
+        let s = u;
+        try { s = decodeURIComponent(u); } catch { /* keep it as written */ }
+        return s.replace(/^file:\/\/\/([A-Za-z]):/, (_m, d: string) => `file:///${d.toLowerCase()}:`);
+    };
+    return norm(a) === norm(b);
+}

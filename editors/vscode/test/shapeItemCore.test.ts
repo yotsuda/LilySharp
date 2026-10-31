@@ -16,7 +16,7 @@
 
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { onAngleChord, onShapeItem } from '../src/shapeItemCore';
+import { onAngleChord, onShapeItem, sameDocumentUri } from '../src/shapeItemCore';
 
 test('the caret on a chord(...) or diagram(...) item, its words or its duration', () => {
     const line = '  c4 diagram(133211)4 chord(C7(b9) x32310)2. e4';
@@ -43,4 +43,11 @@ test('the caret on a <...> chord, not on a << >> group', () => {
     assert.equal(onAngleChord(line, line.indexOf('c e g')), false);
     assert.equal(onAngleChord(line, line.indexOf('c4')), false);
     assert.equal(onAngleChord(line, line.indexOf('e4')), false);
+});
+
+test('a document URI from the server matches VS Code\'s spelling of it', () => {
+    assert.equal(sameDocumentUri('file:///c%3A/Users/me/song.lys', 'file:///c:/Users/me/song.lys'), true);
+    assert.equal(sameDocumentUri('file:///c%3A/Users/me/song.lys', 'file:///C:/Users/me/song.lys'), true);
+    assert.equal(sameDocumentUri('file:///c%3A/Users/me/my%20song.lys', 'file:///c:/Users/me/my song.lys'), true);
+    assert.equal(sameDocumentUri('file:///c%3A/Users/me/song.lys', 'file:///c:/Users/me/other.lys'), false);
 });
