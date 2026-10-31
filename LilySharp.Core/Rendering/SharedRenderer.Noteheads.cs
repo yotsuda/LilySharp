@@ -1685,28 +1685,37 @@ internal static partial class SharedRenderer
     {
         int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
         char glyph = Music(MusicGlyphs.Rest(noteValue, staffPosition, staffLines));
+        // A CUE rest is the one rest that is not full size: the cue's context-wide font-size
+        // reaches it (GrobFontSize.StepOf — a grace's per-grob table does not name Rest, the
+        // cue's one number names everything), and like a cue head it is drawn OUT OF ITS OWN
+        // DESIGN, the one the readers of its box measured (GlyphMetrics.GetRestBBox(RestItem, int)).
+        double restScale = GrobFontSize.ScaleOf(rest, SizedGrob.Rest);
         using (gc.Source(rest.SourcePosition))
         using (TodoScope(gc, rest))
-            gc.DrawGlyph(glyph, x, y, FontSize);
+        using (restScale != 1.0 ? gc.MusicFace(GrobFontSize.DesignOf(rest, SizedGrob.Rest)) : NullScope.Instance)
+            gc.DrawGlyph(glyph, x, y, FontSize * restScale);
 
         // Augmentation dots: one dot-width right of the rest's ink, at the position the
         // dot COLUMN solved RELATIVE to the rest's origin (the dot's Y-parent is the
         // rest, so it rides every shift the rest took). Absent an entry, the solo answer
         // applies: one position up off the origin's line — one position DOWN for a
-        // hanging semibreve.
+        // hanging semibreve. A cue rest's dots are the cue's size too (Dots is a grob the
+        // context's fontSize reaches).
         // LILYPOND-REF: lily/dot-column.cc:194-227 calc_positioning_done;
         //   :252-257 — rest dots translate by the rest extent plus one dot width;
         // LILYPOND-REF: scm/output-lib.scm:652-664 dots::calc-staff-position.
         if (rest.Dots > 0)
         {
-            double dotWidth = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width;
-            double dotStartX = x + GlyphMetrics.GetRestBBox(noteValue).Right + EngravingDefaults.DotPadding(dotWidth);
+            double dotScale = GrobFontSize.ScaleOf(rest, SizedGrob.Dots);
+            double dotWidth = GrobFontSize.FontOf(rest, SizedGrob.Dots).Box(MusicGlyph.AugmentationDot).Width;
+            double dotStartX = x + GlyphMetrics.GetRestBBox(rest, noteValue).Right + EngravingDefaults.DotPadding(dotWidth);
             double dotY = y
                 + (dotOffset ?? LilySharp.Core.Svg.Layout.ElementCoordinator.RestDotDefaultOffset(noteValue)) * 0.5;
             for (int d = 0; d < rest.Dots; d++)
                 using (gc.Source(rest.SourcePosition))
+                using (dotScale != 1.0 ? gc.MusicFace(GrobFontSize.DesignOf(rest, SizedGrob.Dots)) : NullScope.Instance)
                     gc.DrawGlyph(Music(MusicGlyph.AugmentationDot),
-                        dotStartX + d * 2 * dotWidth, dotY, FontSize);
+                        dotStartX + d * 2 * dotWidth, dotY, FontSize * dotScale);
         }
     }
 

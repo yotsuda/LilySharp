@@ -1361,7 +1361,7 @@ internal static partial class SpacingRules
             //   — brew_slash's stencil returned as it stands, no align_to on X.
             if (rest.IsRepeatSlash)
                 return 0;
-            return -GlyphMetrics.GetRestBBox(noteValue).Left;
+            return -GlyphMetrics.GetRestBBox(rest, noteValue).Left;
         }
 
         // A chord's own ink to the left — its reversed heads and its accidentals — is the

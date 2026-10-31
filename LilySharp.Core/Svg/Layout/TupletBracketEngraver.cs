@@ -1104,7 +1104,7 @@ internal static class TupletBracketEngraver
                         - neutral
                     : 0.0;
             double originUp = neutral / 2.0 + shift * 0.5;
-            var box = GlyphMetrics.GetRestBBox(restValue);
+            var box = GlyphMetrics.GetRestBBox(rest, restValue);
             double lo = originUp + box.Bottom, hi = originUp + box.Top;
             // The invisible stem of a rest a beam runs over ends on the beam's face at the
             // rest's own x (MEASURED, scratch/p345/beamslope.ly: its extent is that single
@@ -1631,7 +1631,7 @@ internal static class TupletBracketEngraver
         {
             case RestItem { IsSpacer: false } rest:
             {
-                var box = GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(rest.BaseDuration));
+                var box = GlyphMetrics.GetRestBBox(rest, GlyphMetrics.NoteValueOf(rest.BaseDuration));
                 return left ? box.Left : box.Right;
             }
             case NoteItem or ChordItem:
@@ -1686,7 +1686,7 @@ internal static class TupletBracketEngraver
         {
             case RestItem { IsSpacer: false } rest:
             {
-                var box = GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(rest.BaseDuration));
+                var box = GlyphMetrics.GetRestBBox(rest, GlyphMetrics.NoteValueOf(rest.BaseDuration));
                 return centre + (left ? box.Left : box.Right);
             }
             case NoteItem or ChordItem:
@@ -1852,7 +1852,7 @@ internal static class TupletBracketEngraver
                     // the upper central string, a half sits on the lower, the rest centre on
                     // the tab's middle — the glyph's box from that origin.
                     int value = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                    var box = GlyphMetrics.GetRestBBox(value);
+                    var box = GlyphMetrics.GetRestBBox(rest, value);
                     double originUp = value switch
                     {
                         1 => YUp(geom.StringY(strings / 2)),

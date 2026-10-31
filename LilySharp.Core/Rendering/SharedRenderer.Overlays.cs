@@ -661,7 +661,7 @@ internal static partial class SharedRenderer
             case RestItem rest:
             {
                 int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                var box = GlyphMetrics.GetRestBBox(noteValue);
+                var box = GlyphMetrics.GetRestBBox(rest, noteValue);
                 // The glyph's origin where DrawRest puts it: the neutral letter plus the shift (a
                 // pitched rest's own position is in that shift too — CalculateRestShifts).
                 double y = (ElementCoordinator.NeutralRestPosition(staffLines, noteValue) + restShift) / 2.0;
@@ -729,7 +729,7 @@ internal static partial class SharedRenderer
             case RestItem { IsSpacer: false, IsMultiMeasure: false } rest:
             {
                 int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                var box = GlyphMetrics.GetRestBBox(noteValue);
+                var box = GlyphMetrics.GetRestBBox(rest, noteValue);
                 double y = (ElementCoordinator.NeutralRestPosition(staffLines, noteValue) + restShift) / 2.0;
                 return (headLeftX + box.Left, headLeftX + box.Right, y + box.Bottom, y + box.Top);
             }

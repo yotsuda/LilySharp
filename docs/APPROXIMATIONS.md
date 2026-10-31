@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
 | `OWN` | 288 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **415** | |
+| **計** | **414** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -139,7 +139,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **`BeamRestStem`** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（63 件）
 
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **`SharedRenderer.AccidentalGroupLength`** no observer; add the paren widths when a book brings one. The unpacked
@@ -231,8 +231,6 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **`SpacingRules.FillsMeasure`** prices every lone note alike. No ledger point watches the difference;
 - **`SpacingRules.LineEndCourtesyColumns`** constant with a name, and no ledger point reached it.
-### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
-- **`SpacingRules.ApplyLeftHeadWidth`** rest. No point observes it — see the branch below.
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`
 - **`TrillSpannerEngraver.GetEndX`** named at the constant), because no point measures a barline-bound trill.
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`

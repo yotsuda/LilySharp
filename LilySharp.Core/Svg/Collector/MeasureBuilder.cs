@@ -888,6 +888,7 @@ internal sealed class MeasureBuilder
             RestItem r => new RestItem(r.BaseDuration, r.Dots, r.SourcePosition)
             {
                 GraceTime = true,
+                IsCue = r.IsCue,
                 IsSpacer = r.IsSpacer,
                 HasSlurStart = r.HasSlurStart,
                 HasSlurEnd = r.HasSlurEnd,

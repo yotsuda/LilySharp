@@ -12,10 +12,10 @@
 // cue size, once full). Fixed: 5 bars, every cue head drawn once, cue-sized.
 // Guarded more directly by CueRegionTests.WholeMeasureCue* (bar counts + walked-once).
 //
-// ⚠️ KNOWN GAP this snapshot currently pins: rests INSIDE a cue draw full size.
-// LilyPond scales them with the region (MEASURED 2026-08-05: the `lysc ly` twin of the
-// solo bar renders flat+head+3 rests all at scale 0.0025 vs 0.0040 full — magstep(-4)).
-// RestItem has no IsCue. When that gap is closed this snapshot moves — by design.
+// Rests INSIDE a cue draw at the cue's size, as LilyPond scales them with the region
+// (MEASURED 2026-08-05: the `lysc ly` twin of the solo bar renders flat+head+3 rests all at
+// scale 0.0025 vs 0.0040 full — magstep(-4)). Until session 1034 (2026-10-31) RestItem had no
+// IsCue and this snapshot pinned the rests full size as a KNOWN GAP (OMR request 2026-10-30 #12).
 // LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize = #-4 (a CONTEXT property:
 // it scales everything the region prints, rests included).
 

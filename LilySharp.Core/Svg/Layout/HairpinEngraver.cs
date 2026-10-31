@@ -675,7 +675,7 @@ internal static class HairpinEngraver
         {
             case RestItem { IsSpacer: false } rest:
             {
-                var box = GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(rest.BaseDuration));
+                var box = GlyphMetrics.GetRestBBox(rest, GlyphMetrics.NoteValueOf(rest.BaseDuration));
                 return (x + box.Left, x + box.Right, true);
             }
             case NoteItem or ChordItem:

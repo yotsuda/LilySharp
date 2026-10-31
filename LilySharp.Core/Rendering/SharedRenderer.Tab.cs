@@ -517,7 +517,7 @@ internal static partial class SharedRenderer
                         DrawRest(rest, itemX, lowerCentralLineY + stringSpace + 1.0, fiveLineFrame, null, gc, onATabLine);
                     else
                     {
-                        var restBBox = LilySharp.Core.Svg.Layout.GlyphMetrics.GetRestBBox(restValue);
+                        var restBBox = LilySharp.Core.Svg.Layout.GlyphMetrics.GetRestBBox(rest, restValue);
                         double tabMiddle = staffY - (stringCount - 1) * stringSpace / 2.0;
                         double restOriginY = tabMiddle - (restBBox.Top + restBBox.Bottom) / 2.0;
                         DrawRest(rest, itemX, restOriginY + 2.0, fiveLineFrame, null, gc, onATabLine);

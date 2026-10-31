@@ -99,19 +99,12 @@ internal enum SizedGrob
 /// grace at all.
 /// </para>
 /// <para>
-/// ⚠️ WHAT THIS DOES NOT YET ANSWER FOR. Lily# reduces a cue through a per-NOTE
-/// <see cref="NoteItem.IsCue"/> flag rather than a context, and <c>RestItem</c> carries no
-/// such flag, so a cue rest is drawn full size where LilyPond's context-wide
-/// <c>fontSize</c> shrinks it.
-///   departs from: lily/font-size-engraver.cc:47-62 <c>Font_size_engraver::acknowledge_font</c>
-///     — the context's <c>fontSize</c> is added to EVERY grob the context acknowledges, where
-///     a per-note flag reaches only the notes.
-///   goes away when: a cue becomes a region on the item the way grace time is
-///     (<c>MusicItem.GraceTime</c>), which is the same repair
-///     <c>MusicItem.BeginsCueRegion</c>'s remarks name for <c>test/cue-region-measure</c>.
-///   observed by: NOTHING — no book in the corpus puts a rest inside <c>cue { }</c>.
-/// This type does NOT paper over it: <see cref="StepOf"/> answers 0 for a rest that is not in
-/// grace time, because that is what a <c>RestItem</c> can honestly be asked.
+/// Lily# reduces a cue through a per-ITEM flag rather than a context — <see cref="NoteItem.IsCue"/>,
+/// <see cref="ChordItem.IsCue"/> and, since session 1034, <see cref="RestItem.IsCue"/> — and
+/// the flag is what stands for the context here. Until then a rest carried none and a cue's
+/// rests were drawn full size where LilyPond's context-wide <c>fontSize</c> shrinks them
+/// (OMR request 2026-10-30 #12, test/cue-region-measure's "KNOWN GAP"); the readers of a
+/// rest's box ask <c>GlyphMetrics.GetRestBBox(RestItem, int)</c>, the font this type selects.
 /// </para>
 /// </remarks>
 internal static class GrobFontSize
@@ -290,6 +283,16 @@ internal static class GrobFontSize
     {
         NoteItem n => n.IsCue,
         ChordItem c => c.IsCue,
+        RestItem r => r.IsCue,
         _ => false,
     };
+
+    /// <summary>
+    /// The design a glyph OUTLINE is walked from for <paramref name="grob"/> on
+    /// <paramref name="item"/> — <see cref="DesignOf"/> where the grob states a size, else 0,
+    /// <c>TextOutlineSkylines</c>'s "the score's own" (a full-size grob never names a design,
+    /// so nothing at the staff's own size can move).
+    /// </summary>
+    internal static int ProfileDesignOf(MusicItem item, SizedGrob grob)
+        => StepOf(item, grob) == 0 ? 0 : DesignOf(item, grob);
 }

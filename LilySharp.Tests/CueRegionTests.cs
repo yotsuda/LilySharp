@@ -77,6 +77,44 @@ public class CueRegionTests
     }
 
     /// <summary>
+    /// A rest inside the region is the region's too (<c>RestItem.IsCue</c>): LilyPond's CueVoice
+    /// <c>fontSize</c> is a context property and reaches every grob the region prints, rests
+    /// included. Until session 1034 a rest carried no flag and was drawn full size (OMR request
+    /// 2026-10-30 #12; test/cue-region-measure pinned it as a known gap).
+    /// </summary>
+    [Fact]
+    public void RegionMarksItsRests()
+    {
+        var rests = Collect("c'4 r cue { r4 d' } |").Voice.Measures
+            .SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.RestItem>().ToList();
+        Assert.Equal(2, rests.Count);
+        Assert.False(rests[0].IsCue);
+        Assert.True(rests[1].IsCue);
+    }
+
+    /// <summary>
+    /// …and the page draws it at the cue's size: the quarter rest inside <c>cue { }</c> at
+    /// magstep(−4) of the staff's own, the one outside at the staff's own (the OMR's
+    /// cue-rests-full-size-2026-10-30.lys, bars 3 and 5).
+    /// </summary>
+    [Fact]
+    public void ARestInsideTheRegion_IsDrawnAtTheCuesSize()
+    {
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(
+                "octave absolute\ntime 3/4\npart pt { clef treble }\nsection A {\n  pt {\n"
+                + "    voice { cue { bes'4 r4 c''4 } } { R2. } |\n    e''4 r4 g''4 |\n  }\n}\nform { ~A }\nscore { staff pt }\n"),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        var sizes = System.Text.RegularExpressions.Regex.Matches(svg,
+                // A cue glyph names its own design in a style attribute before its x.
+                "<text class=\"music\"(?: style=\"[^\"]*\")? x=\"[-\\d.]+\" y=\"[-\\d.]+\" font-size=\"([\\d.]+)\"[^>]*><")
+            .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
+            .ToList();
+        Assert.Equal(2, sizes.Count);
+        Assert.Equal(4.0 * LilySharp.Core.Svg.EngravingDefaults.CueScale, sizes[0], 2);
+        Assert.Equal(4.0, sizes[1], 2);
+    }
+
+    /// <summary>
     /// A cue is ORDINARY METRIC TIME, unlike a grace. When its body was not counted, every
     /// bar holding one validated as short — `c4 d cue { e4 f }` drew LYS2006 on a bar that
     /// is exactly full.

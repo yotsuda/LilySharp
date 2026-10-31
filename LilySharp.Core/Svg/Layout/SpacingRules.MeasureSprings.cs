@@ -891,9 +891,9 @@ internal static partial class SpacingRules
         int noteValue = GetNoteValue(item);
 
         // A rest is drawn glyph-left-aligned at its column, so its own box IS its extent.
-        if (item is RestItem)
+        if (item is RestItem rest)
         {
-            var restBox = GlyphMetrics.GetRestBBox(noteValue);
+            var restBox = GlyphMetrics.GetRestBBox(rest, noteValue);
             return (restBox.Left, restBox.Right);
         }
 

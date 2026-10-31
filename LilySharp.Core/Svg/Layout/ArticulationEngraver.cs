@@ -2198,13 +2198,14 @@ internal static class ArticulationEngraver
                     var restGlyph = MusicGlyphs.Rest(restValue, restPosition, staff.Lines);
                     support ??= new VerticalSkyline(direction);
                     var (restUp, restDown) = TextOutlineSkylines.MusicGlyphProfile(
-                        restGlyph, Rendering.SharedRenderer.FontSize);
+                        restGlyph, Rendering.SharedRenderer.FontSize * GrobFontSize.ScaleOf(rest, SizedGrob.Rest),
+                        GrobFontSize.ProfileDesignOf(rest, SizedGrob.Rest));
                     var side = direction == VerticalDirection.Up ? restUp : restDown;
                     if (restUp.Count > 0 || restDown.Count > 0)
                         support.Merge(side, restX, restOriginUp);
                     else
                     {
-                        var box = GlyphMetrics.GetRestSkylineBBox(restValue,
+                        var box = GlyphMetrics.GetRestSkylineBBox(rest, restValue,
                             ledgered: restGlyph is MusicGlyph.RestWholeLegerLine
                                 or MusicGlyph.RestHalfLegerLine or MusicGlyph.RestDoubleWholeLegerLine);
                         support.MergeBox(restX + box.Left, restX + box.Right,

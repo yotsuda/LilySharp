@@ -532,9 +532,9 @@ internal static partial class SpacingRules
             extent = PercentRepeatEngraver.Geometry(
                 isBeatSlash: true, slashCount, isDouble: false, staffSpace: 1.0).GroupWidth;
         }
-        else if (item is RestItem)
+        else if (item is RestItem rest)
         {
-            extent = GlyphMetrics.GetRestBBox(noteValue).Right;
+            extent = GlyphMetrics.GetRestBBox(rest, noteValue).Right;
         }
         else
         {

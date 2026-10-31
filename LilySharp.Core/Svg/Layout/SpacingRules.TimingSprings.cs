@@ -145,6 +145,7 @@ internal static partial class SpacingRules
     {
         NoteItem n => n.IsCue,
         ChordItem c => c.IsCue,
+        RestItem r => r.IsCue,
         _ => false
     };
 
@@ -413,9 +414,8 @@ internal static partial class SpacingRules
                 // 1.304200 * magstep(-4) = 0.821594517 is not LilyPond's 0.815348908. Reading the
                 // full-size box here was the whole of cue.column.step's +0.488851092: the
                 // renderer shrank the head and the spring did not hear about it.
-                //   ⚠️ A REST INSIDE A CUE STILL PRICES FULL SIZE. RestItem carries no IsCue,
-                //   so there is nothing to ask; LilyPond's left grob would be the cue-sized
-                //   rest. No point observes it — see the branch below.
+                //   A rest inside a cue prices the cue font's rest box since session 1034
+                //   (RestItem.IsCue; GetRestBBox(RestItem, int) in the branch below).
                 // ...and of the head's own SHAPE: a slash head's right edge, not a plain one's.
                 NoteItem or ChordItem => GlyphMetrics.GetNoteheadBBox(
                     HeadFontOf(p) ?? MusicFont.Current.DesignAt(0),
@@ -462,7 +462,7 @@ internal static partial class SpacingRules
                     ? (r.IsRepeatSlash ? 0.0 : double.NaN)
                     : r.IsMultiMeasure
                         ? double.NaN
-                        : GlyphMetrics.GetRestBBox(GetNoteValue(p)).Right,
+                        : GlyphMetrics.GetRestBBox(r, GetNoteValue(p)).Right,
                 _ => double.NaN
             };
             if (p is NoteItem or ChordItem && i < headOverrides.Length && !double.IsNaN(headOverrides[i]))

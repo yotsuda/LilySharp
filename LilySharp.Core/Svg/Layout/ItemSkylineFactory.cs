@@ -884,7 +884,7 @@ internal static class ItemSkylineFactory
             // LILYPOND-REF: lily/beam.cc:1421-1494 pure_rest_collision_callback.
             // `noteValue` is the NOTATED value; GlyphMetrics.NoteValueOf(item) answers 4 for
             // any rest, which boxed every beamed rest as a quarter rest until 2026-09-03.
-            var restBox = GlyphMetrics.GetRestBBox(noteValue);
+            var restBox = GlyphMetrics.GetRestBBox(beamedRest, noteValue);
             double restY = staffY
                 - (noteValue == 1 ? 1.0 : 0.0)
                 - beamedRest.PureBeamShift / 2.0;
@@ -917,7 +917,7 @@ internal static class ItemSkylineFactory
             // The staff's own line count (session 557 — until then five lines whatever the
             // staff, see the remark at the Shared* views): the box stands where the page draws
             // and vertically seeds the rest (ElementCoordinator.NeutralRestPosition).
-            var restBox = GlyphMetrics.GetRestBBox(noteValue);
+            var restBox = GlyphMetrics.GetRestBBox(voicedRest, noteValue);
             double restY = staffY
                 - ElementCoordinator.RestStaffPosition(voicedRest, voicedRest.VoiceDirection, noteValue, staffLines)
                     / 2.0;
@@ -954,7 +954,7 @@ internal static class ItemSkylineFactory
                 staffY - sign.SlashHeight / 2, staffY + sign.SlashHeight / 2,
                 noteheadLeftX, noteheadLeftX + sign.GroupWidth) with { NoteColumnMember = false });
         }
-        else if (item is RestItem { IsSpacer: false, IsMultiMeasure: false })
+        else if (item is RestItem { IsSpacer: false, IsMultiMeasure: false } drawnRest)
         {
             // A plain DRAWN rest — unbeamed, unvoiced — at its resting place: the middle
             // line, or hanging from the line above it for a whole rest (the same Y the
@@ -975,7 +975,8 @@ internal static class ItemSkylineFactory
             // The staff's neutral letter (session 557; five lines: a whole rest a space above
             // the middle, everything shorter on it — the same numbers this branch spelled
             // inline until then): on one line the whole rest hangs from the line itself.
-            var restBox = GlyphMetrics.GetRestBBox(noteValue);
+            // …in the font the rest is drawn in: a cue rest's box is the cue font's (session 1034).
+            var restBox = GlyphMetrics.GetRestBBox(drawnRest, noteValue);
             double restY = staffY - ElementCoordinator.NeutralRestPosition(staffLines, noteValue) / 2.0;
             parts.Add(ColumnPart.Ink(
                 restY - restBox.Top, restY - restBox.Bottom,
@@ -1293,8 +1294,8 @@ internal static class ItemSkylineFactory
 
         // In the column's frame: a rest's glyph right (the rest branch of ColumnParts boxes
         // the rest at noteheadLeftX + its glyph box), else the rightmost head's ink right.
-        double headInkRight = item is RestItem
-            ? GlyphMetrics.GetRestBBox(noteValue).Right
+        double headInkRight = item is RestItem dottedRest
+            ? GlyphMetrics.GetRestBBox(dottedRest, noteValue).Right
             : maxNoteheadRightX - noteheadLeftX;
         var (offset, rows) = DotColumn.Reserved(item, noteValue, headInkRight);
 

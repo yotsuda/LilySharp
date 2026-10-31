@@ -305,6 +305,7 @@ public sealed partial class MeasureCollector
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, note.SourceStart)
         {
             StaffPosition = rp.StaffPosition,
+            IsCue = _v.CueDepth > 0,
             TodoKey = TodoKeyOf(note), TodoMemo = TodoMemoOf(note), TodoBelow = TodoBelowOf(note), TodoSideWritten = TodoSideWrittenOf(note),
         };
     }
@@ -327,8 +328,12 @@ public sealed partial class MeasureCollector
         }
 
         // 's' is a spacer rest: it occupies time/width but is never drawn (unlike 'r').
+        // A rest inside cue { } is the region's, cue-sized like its notes (RestItem.IsCue);
+        // a bar rest (CreateBarRestItem) is not — LilyPond's MultiMeasureRest is the Staff's
+        // grob, out of the CueVoice's reach.
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, rest.SourceStart)
         {
+            IsCue = _v.CueDepth > 0,
             IsSpacer = rest.RestText == "s",
             // Capital R = explicit multi-measure rest (centred). Lowercase r = plain
             // rest at beat 1, even when it fills the measure.

@@ -1223,6 +1223,15 @@ public sealed record RestItem : MusicItem
     public Fraction TimeScale { get; init; } = new Fraction(1, 1);
 
     /// <summary>
+    /// Written inside a <c>cue { }</c> region, as <see cref="NoteItem.IsCue"/> says of a note:
+    /// the rest is drawn and boxed in the cue font (<c>GrobFontSize.StepOf</c>, the cue's
+    /// context-wide <c>fontSize</c> reaching every grob the region prints). Until session 1034
+    /// a rest carried no flag and a cue's rests came out full size (OMR request 2026-10-30 #12).
+    /// LILYPOND-REF: ly/engraver-init.ly CueVoice — <c>fontSize = #-4</c> is a context property.
+    /// </summary>
+    public bool IsCue { get; init; }
+
+    /// <summary>
     /// An invisible time-filler (LilyPond <c>s</c> skip), used by chord rows to give
     /// the layout timing columns without drawing anything. Never rendered, and never
     /// collapses into a multi-measure rest.

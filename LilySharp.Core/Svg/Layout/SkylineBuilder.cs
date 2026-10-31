@@ -3133,7 +3133,8 @@ internal sealed class SkylineBuilder
                 // they differ by 0.030000 at the bottom. See GetRestSkylineBBox.
                 var restGlyph = MusicGlyphs.Rest(restValue,
                     ElementCoordinator.NeutralRestPosition(staffLines, restValue) + restShiftUp * 2.0, staffLines);
-                var restBox = size.Ink(GlyphMetrics.GetRestSkylineBBox(restValue,
+                // …out of the font the rest is drawn in: a cue rest's outline is the cue font's.
+                var restBox = size.Ink(GlyphMetrics.GetRestSkylineBBox(restItem, restValue,
                     ledgered: restGlyph is MusicGlyph.RestWholeLegerLine or MusicGlyph.RestHalfLegerLine
                         or MusicGlyph.RestDoubleWholeLegerLine));
                 // Y-up of the glyph's own origin, in this skyline's frame: the middle line is
@@ -3162,7 +3163,8 @@ internal sealed class SkylineBuilder
                 // outline's own bearing (≤ 0.104) moves no point — the sixteenth's high right
                 // end stays clear of the next staff's stem either way.
                 var (restUp, restDown) = TextOutlineSkylines.MusicGlyphProfile(
-                    restGlyph, size.Span(Rendering.SharedRenderer.FontSize));
+                    restGlyph, size.Span(Rendering.SharedRenderer.FontSize * GrobFontSize.ScaleOf(restItem, SizedGrob.Rest)),
+                    GrobFontSize.ProfileDesignOf(restItem, SizedGrob.Rest));
                 if (restUp.Count > 0 || restDown.Count > 0)
                 {
                     upSkyline.Merge(restUp, x, restOriginUp);
@@ -3188,8 +3190,9 @@ internal sealed class SkylineBuilder
                 // hanging semibreve.
                 if (restItem.Dots > 0)
                 {
-                    double restDotX = x + size.Ink(GlyphMetrics.GetRestBBox(restValue)).Right
-                        + size.Span(EngravingDefaults.DotPadding(MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width));
+                    double restDotX = x + size.Ink(GlyphMetrics.GetRestBBox(restItem, restValue)).Right
+                        + size.Span(EngravingDefaults.DotPadding(
+                            GrobFontSize.FontOf(restItem, SizedGrob.Dots).Box(MusicGlyph.AugmentationDot).Width));
                     double restDotUp = restOriginUp + size.Span(
                         (restDotRel ?? ElementCoordinator.RestDotDefaultOffset(restValue)) * 0.5);
                     MergeDotRow(restItem.Dots, restDotX, restDotUp,

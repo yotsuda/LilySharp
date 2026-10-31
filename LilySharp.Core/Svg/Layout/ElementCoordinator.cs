@@ -1739,7 +1739,7 @@ internal sealed class ElementCoordinator
 
                     // The rest's own ink, in staff POSITIONS about the middle line, at
                     // its voiced place (a whole rest's glyph hangs from basePos).
-                    var box = GlyphMetrics.GetRestBBox(restValue);
+                    var box = GlyphMetrics.GetRestBBox(rest, restValue);
                     double restLow = basePos + box.Bottom * 2.0;
                     double restHigh = basePos + box.Top * 2.0;
 
@@ -1879,7 +1879,7 @@ internal sealed class ElementCoordinator
             return basePos - defaultPos;
 
         int dir = rest.VoiceDirection != 0 ? rest.VoiceDirection : 1;
-        var box = GlyphMetrics.GetRestBBox(restValue);
+        var box = GlyphMetrics.GetRestBBox(rest, restValue);
         double restNear = dir > 0 ? basePos + box.Bottom * 2.0 : basePos + box.Top * 2.0;
         double half = EngravingDefaults.NoteheadHalfHeight * 2.0;
         double noteFar = dir > 0
@@ -3608,7 +3608,7 @@ internal sealed class ElementCoordinator
                 // the X was NOT compared against LP.
                 // LILYPOND-REF: slur-scoring.cc:594-598 —
                 //   breakable_bound_extent / generic_bound_extent, x = ext[-d].
-                return GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(r.BaseDuration)).CenterX;
+                return GlyphMetrics.GetRestBBox(r, GlyphMetrics.NoteValueOf(r.BaseDuration)).CenterX;
             default: return 0;
         }
         return BowHeadBox(items[itemIndex], GlyphMetrics.NoteValueOf(dur)).Width / 2.0;
@@ -3818,7 +3818,7 @@ internal sealed class ElementCoordinator
                     if (rx < segStartX - eps || rx > segEndX + eps)
                         continue;
                     int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                    var restBox = GlyphMetrics.GetRestBBox(restValue);
+                    var restBox = GlyphMetrics.GetRestBBox(rest, restValue);
                     // The glyph origin the renderer draws at: a whole rest hangs
                     // one space above the middle, everything else sits on it
                     // (SharedRenderer.DrawRest / the skyline seed's shared rule).
@@ -4630,7 +4630,7 @@ internal sealed class ElementCoordinator
                         // A rest's dots sit one dot width past its glyph, in the space
                         // above the middle line (row 1), as the renderer draws them.
                         var (dotOffset, rows) = DotColumn.Reserved(
-                            rest, value, GlyphMetrics.GetRestBBox(value).Right);
+                            rest, value, GlyphMetrics.GetRestBBox(rest, value).Right);
                         AddDotRow(rest.Dots, x + dotOffset, staffMiddleDown - rows[0] / 2.0);
                         break;
                     }
@@ -5266,7 +5266,7 @@ internal sealed class ElementCoordinator
                 double RestBoundBaseY(RestItem r)
                 {
                     int rv = GlyphMetrics.NoteValueOf(r.BaseDuration);
-                    var box = GlyphMetrics.GetRestBBox(rv);
+                    var box = GlyphMetrics.GetRestBBox(r, rv);
                     double originDown = staffMiddleDown - (rv == 1 ? 1.0 : 0.0);
                     return slur.CurveUp
                         ? originDown - box.Top - 0.5

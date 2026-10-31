@@ -180,18 +180,6 @@ internal static class DynamicEngraver
     internal const double StackStep = 2.0;
 
     /// <summary>
-    /// Calculates layout for all dynamics in a score.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: side-position-interface.cc:193-400 aligned_side()
-    /// LILYPOND-REF: dynamic-align-engraver.cc:120-180 process_acknowledged()
-    ///
-    /// Dynamics are placed below the staff, avoiding collision with notes
-    /// that extend below the staff (low notes, stems down).
-    /// </remarks>
-    /// <param name="staffLinesOf">The lines a staff (by index) draws, for the staff extent the
-    /// side position floors on; absent, every staff stands on five.</param>
-    /// <summary>
     /// The indices in <paramref name="dynamics"/> of a drum staff's second copy of a level: the same level
     /// written in two of the staff's voices at one moment (the hands' and the feet's line of a
     /// `drums { }` chart, both <c>@ff</c>) is ONE drummer's one level, printed once — the first
@@ -227,6 +215,18 @@ internal static class DynamicEngraver
         return doubles;
     }
 
+    /// <summary>
+    /// Calculates layout for all dynamics in a score.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: side-position-interface.cc:193-400 aligned_side()
+    /// LILYPOND-REF: dynamic-align-engraver.cc:120-180 process_acknowledged()
+    ///
+    /// Dynamics are placed below the staff, avoiding collision with notes
+    /// that extend below the staff (low notes, stems down).
+    /// </remarks>
+    /// <param name="staffLinesOf">The lines a staff (by index) draws, for the staff extent the
+    /// side position floors on; absent, every staff stands on five.</param>
     public static ImmutableArray<DynamicLayout> Calculate(
         Score score,
         ImmutableArray<DynamicItem> dynamics,
@@ -984,7 +984,7 @@ internal static class DynamicEngraver
 
     private static double RestInkCentre(RestItem r)
     {
-        var box = GlyphMetrics.GetRestBBox(
+        var box = GlyphMetrics.GetRestBBox(r,
             LayoutUtilities.GetNoteValueFromFraction(r.BaseDuration));
         return (box.Left + box.Right) / 2.0;
     }
@@ -1061,7 +1061,7 @@ internal static class DynamicEngraver
                 box = GlyphMetrics.GetNoteheadBBox(LayoutUtilities.GetNoteValueFromFraction(c.BaseDuration));
                 break;
             case RestItem { IsSpacer: false, IsMultiMeasure: false } r:
-                box = GlyphMetrics.GetRestBBox(LayoutUtilities.GetNoteValueFromFraction(r.BaseDuration));
+                box = GlyphMetrics.GetRestBBox(r, LayoutUtilities.GetNoteValueFromFraction(r.BaseDuration));
                 break;
             default:
                 return null;

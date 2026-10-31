@@ -521,8 +521,17 @@ internal static partial class GlyphMetrics
 
     // ========== Helper methods ==========
 
-    /// <summary>Gets the rest glyph bounding box for a given note value.</summary>
+    /// <summary>Gets the rest glyph bounding box for a given note value, at the staff's own size.</summary>
     public static BBox GetRestBBox(int noteValue) => MusicFont.Current.FullSize.Box(RestGlyphOf(noteValue));
+
+    /// <summary>
+    /// The box of the rest glyph <paramref name="rest"/> is DRAWN with — out of the font its own
+    /// <c>font-size</c> selects (<see cref="GrobFontSize.FontOf"/>: the cue font for a rest inside
+    /// <c>cue { }</c>, the staff's own for every other, a grace rest's included). The readers of
+    /// a drawn rest's extent ask this one, so the box they reserve is the box the renderer fills.
+    /// </summary>
+    public static BBox GetRestBBox(Model.RestItem rest, int noteValue)
+        => GrobFontSize.FontOf(rest, SizedGrob.Rest).Box(RestGlyphOf(noteValue));
 
     /// <summary>The unledgered rest glyph of a note value — a quarter rest for a value the
     /// readers here never priced on its own (the breve among them).</summary>
@@ -541,7 +550,7 @@ internal static partial class GlyphMetrics
 
     /// <summary>
     /// Gets the rest glyph's SKYLINE box — the flattened outline, which reaches a little
-    /// further than the LILC box <see cref="GetRestBBox"/> returns.
+    /// further than the LILC box <see cref="GetRestBBox(int)"/> returns.
     /// </summary>
     /// <remarks>
     /// The rest twin of <see cref="GetAccidentalSkylineBBox(string?)"/>, and the distinction is the one
@@ -558,14 +567,22 @@ internal static partial class GlyphMetrics
     /// rest off the staff lines prints its ledgered ("o") cut, whose outline carries the
     /// ledger (<c>RestWholeLedgeredOutline</c> reaches 0.1 above the line and 0.624 to each
     /// side). See SkylineBuilder's rest seed for the measurement.</summary>
-    public static BBox GetRestSkylineBBox(int noteValue, bool ledgered) => !ledgered
-        ? GetRestSkylineBBox(noteValue)
+    public static BBox GetRestSkylineBBox(int noteValue, bool ledgered)
+        => GetRestSkylineBBox(MusicFont.Current.FullSize, noteValue, ledgered);
+
+    /// <summary>The skyline box of the rest glyph <paramref name="rest"/> prints, out of the font
+    /// its own <c>font-size</c> selects — the outline twin of <see cref="GetRestBBox(Model.RestItem, int)"/>.</summary>
+    public static BBox GetRestSkylineBBox(Model.RestItem rest, int noteValue, bool ledgered)
+        => GetRestSkylineBBox(GrobFontSize.FontOf(rest, SizedGrob.Rest), noteValue, ledgered);
+
+    private static BBox GetRestSkylineBBox(MusicFontDesign font, int noteValue, bool ledgered) => !ledgered
+        ? font.Outline(RestGlyphOf(noteValue))
         : noteValue switch
         {
-            0 => MusicFont.Current.FullSize.Outline(MusicGlyph.RestDoubleWholeLegerLine),
-            1 => MusicFont.Current.FullSize.Outline(MusicGlyph.RestWholeLegerLine),
-            2 => MusicFont.Current.FullSize.Outline(MusicGlyph.RestHalfLegerLine),
-            _ => GetRestSkylineBBox(noteValue),
+            0 => font.Outline(MusicGlyph.RestDoubleWholeLegerLine),
+            1 => font.Outline(MusicGlyph.RestWholeLegerLine),
+            2 => font.Outline(MusicGlyph.RestHalfLegerLine),
+            _ => font.Outline(RestGlyphOf(noteValue)),
         };
 
     /// <summary>
