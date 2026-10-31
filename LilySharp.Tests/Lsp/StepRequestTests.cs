@@ -478,6 +478,15 @@ public class StepRequestTests
         Assert.Equal(Guitar("c'1@diagram(xxx5xx)"), Step(Guitar("c'1@diagram(xx-1‸0-xxx)"), -1, semitone: true).After);
         Assert.Equal(Guitar("c'1@diagram"), Step(Guitar("c'1@diagram(xxxx‸1x)"), -1, semitone: true).After);
         Assert.Equal(Guitar("c'1@diagram"), Step(Guitar("c'1@diag‸ram"), -1, semitone: true).After);
+        // Just past the ')' — where the editor leaves the caret after Up wrote the shape in — the
+        // keys go on walking (owner's report 2026-10-31: the second Up did nothing there).
+        Assert.Equal(Guitar("c'1@diagram(xxx5xx)"), Step(Guitar("c'1@diagram(xxxx1x)‸"), +1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram"), Step(Guitar("c'1@diagram(xxxx1x)‸"), -1, semitone: true).After);
+        string inside = Step(Guitar("<c' e'>1@diagram(x320‸1x)"), +1, semitone: true).After;
+        Assert.NotEqual(Guitar("<c' e'>1@diagram(x3201x)"), inside);
+        Assert.Equal(inside, Step(Guitar("<c' e'>1@diagram(x3201x)‸"), +1, semitone: true).After);
+        // A space after the ')' is no longer the mark: the next note steps.
+        Assert.Equal(Guitar("c'1@diagram(xxxx1x) d''4"), Step(Guitar("c'1@diagram(xxxx1x) ‸d'4"), +1).After);
         // The page draws it: one dot, the B string's first fret.
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(Guitar("c'1@diagram |"));
         Assert.Equal("xxxx1x", Assert.Single(LilySharp.Core.Svg.SvgGenerator.CollectScore(tree,

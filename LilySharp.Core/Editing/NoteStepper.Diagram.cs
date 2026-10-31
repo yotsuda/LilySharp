@@ -50,7 +50,10 @@ public static partial class NoteStepper
             bool bare = mark.Arguments.IsEmpty;
             int open = bare ? -1 : text.IndexOf('(', mark.Span.Start, mark.Span.Length);
             int close = open < 0 ? -1 : text.IndexOf(')', open);
-            if (!bare && (open < 0 || close < 0 || caret > close))
+            // The caret just past the ')' steps too (owner's report 2026-10-31): Up on the bare
+            // mark inserts "(SHAPE)" at the caret, which the editor then leaves right after it, so
+            // the next Up has to answer there — as it does just past an @chord's ')'.
+            if (!bare && (open < 0 || close < 0 || caret > close + 1))
                 return null;
             if (ShapeChordConverter.PlayedPitches(tree, chord) is not { } pitches)
                 return new StepResult(false, [], "@diagram: this chord is not played in any score", [], 0);

@@ -13,6 +13,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   gets an error that says where each word goes, and Ctrl+. rewrites it**: the capo and the
   table go before the layout block (or before the score that holds it), the entry becomes
   `chordTuning` / `chordDiagrams`, and a block left with nothing goes with it.
+- **Ctrl+Shift+Up / Down on an `@diagram(…)` keep walking with the caret just past its `)`** —
+  where the editor leaves the caret after Up wrote the shape into a bare `@diagram`; the second
+  press did nothing there.
 - **`capo` and `chordShapes` are completed at the top level**; after `capo ` the completion
   ranks the frets by their barre chords as before, the hover on the `capo` line shows the
   ranking, and Ctrl+Shift+Up / Down step the fret. Inside `chordShapes { }` the completion
