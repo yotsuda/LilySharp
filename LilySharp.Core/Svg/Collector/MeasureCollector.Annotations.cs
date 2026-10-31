@@ -986,7 +986,10 @@ public sealed partial class MeasureCollector
                         markSyntax.SourceStart, _v.Cursor.StaffIndex)
                     { PluckLetter = pluckLetter, VoiceIndex = _v.Cursor.VoiceIndex });
                 }
-                else if ((Semantics.AnnotationValues.Frame(markSyntax)
+                // `chordDiagrams none` draws no diagram at all, an @diagram's included (owner's
+                // review 2026-10-31: it drew one there while the items and the bare form did not).
+                else if (Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning) is not null
+                         && (Semantics.AnnotationValues.Frame(markSyntax)
                           // A bare @diagram on a <…> chord: its own notes as the part's strings fret
                           // them (owner's request 2026-10-30), the guitar's for a part with none.
                           // On a single note, where that note is held: its lowest fret (owner's

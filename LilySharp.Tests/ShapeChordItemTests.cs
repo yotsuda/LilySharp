@@ -710,6 +710,19 @@ public class ShapeChordItemTests
         Assert.Equal(new[] { 41, 45, 48 }, MidiPitches(bass));
     }
 
+    /// <summary>`chordDiagrams none` draws no diagram at all, an @diagram's included — on the page,
+    /// in the twin and in MusicXML (owner's review 2026-10-31: it drew one while the items did not).</summary>
+    [Fact]
+    public void ChordDiagramsNone_DrawsNoDiagramAtAll()
+    {
+        string none = Book("instrument guitar", "f1@diagram(133211) | <f a c>1@diagram | diagram(F 133211)1 |",
+            top: "layout { chordDiagrams none }\n");
+        Assert.Empty(Frames(none));
+        Assert.DoesNotContain("fret-diagram", new LilyPondExporter().Export(SyntaxTree.Parse(none)));
+        Assert.DoesNotContain("<frame", new MusicXmlExporter().Export(SyntaxTree.Parse(none)).ToXml().ToString());
+        Assert.Single(Frames(Book("instrument guitar", "f1@diagram(133211) |")));
+    }
+
     // ================================================================ the outputs
 
     [Fact]

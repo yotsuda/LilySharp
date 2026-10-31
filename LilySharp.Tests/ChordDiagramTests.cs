@@ -663,9 +663,10 @@ public class ChordDiagramTests
         foreach (string layout in new[] { Guitar, "" })
             Assert.Equal(new[] { "frame:x3x546", "frame:x32010", "frame:xx0232" },
                 Laid(With(layout)).ArticulationLayouts.OrderBy(a => a.X).Select(a => a.Glyph));
-        // chordDiagrams none: @diagram alone draws; the names still print, x32010 named C.
+        // chordDiagrams none: no diagram at all, an @diagram's included (owner's review 2026-10-31;
+        // it drew alone until then); the names still print, x32010 named C.
         var plain = Laid(With(NoDiagrams));
-        Assert.Equal("frame:xx0232", Assert.Single(plain.ArticulationLayouts).Glyph);
+        Assert.Empty(plain.ArticulationLayouts);
         Assert.Equal(new[] { "Cm7", "Cm7", "C" }, plain.ChordNameLayouts.OrderBy(c => c.X).Select(c => c.ChordText));
     }
 

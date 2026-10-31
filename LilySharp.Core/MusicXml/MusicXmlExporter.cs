@@ -5212,6 +5212,8 @@ public sealed class MusicXmlExporter
         _markedNoteLength = xmlNote.IsGrace || xmlNote.IsChord || xmlNote.IsBackup ? 0 : xmlNote.Duration;
         foreach (var artic in articulations)
             if (artic is MusicMarkSyntax fm
+                // `chordDiagrams none`: no frame, an @diagram's included — as the page (2026-10-31).
+                && Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Word, _partFrettedTuning) is not null
                 && (Semantics.AnnotationValues.Frame(fm) ?? PageFrameAt(fm)) is { } spec)
                 _noteFrameSpec = spec;
 

@@ -59,6 +59,8 @@ workflow attaches that section to the GitHub Release verbatim.
   marks the frame there needs: `diagram(133211)4` → `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4`. A
   `chord(…)` item's name stays as `@chord(F)`; the diagram does not. The file must sound the same
   afterwards, or nothing changes. Not inside `<< >>`.
+- `[page]` **`chordDiagrams none` draws no `@diagram` either**: it drew one there while every other
+  diagram stayed off. The same in the `.ly` twin and MusicXML.
 - `[lang]` **A chord item with no shape, reviewed** (owner's review):
   - `diagram(F)` plays the shape it draws on every part; a piano part voiced it close under a
     guitar diagram it did not play.

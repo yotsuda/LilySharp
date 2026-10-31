@@ -2154,8 +2154,8 @@ words a tab's `tuning` takes (`guitar`, `ukulele`, `mandolin`, `guitarDropD`, `b
 `diagram(x32010)`; *Chord Diagrams*); this key says which of the written shapes applies. Unset,
 each diagram takes the instrument of its part (the part an `@chord`'s note is in, the staff a
 row stands over), else the guitar. `none` draws no diagram at all, written shapes included —
-so the same source makes a piano score and a guitar score. `@diagram(…)` is not a chord symbol
-and always draws. The scope word **`all`**, after the tuning (`chordDiagrams guitar all`,
+so the same source makes a piano score and a guitar score; an `@diagram(…)` is no exception
+(2026-10-31). Short of `none` it is no chord symbol, and draws in every score. The scope word **`all`**, after the tuning (`chordDiagrams guitar all`,
 `chordDiagrams ukulele all`) or alone (`chordDiagrams all` — the tuning then resolved as when
 unset), makes EVERY chord name draw a diagram: its written shape, else the usual one. `none all`
 is refused (`none` draws nothing), as are `all guitar` (the tuning comes first) and a word
@@ -2646,7 +2646,8 @@ that tuning is the diagram's. `@chord` takes the same words after its symbol:
   (in an `all` score, the usual shape of the chord it names). On a single note it has nothing to
   name and warns (LYS1020).
 - `@chord` takes no `.up`/`.down`: the diagram is always above, under its name.
-- `@diagram(x32010)` is not a chord symbol: it always draws, with no name. On a part with a
+- `@diagram(x32010)` is not a chord symbol: it draws with no name, in every score but a
+  `chordDiagrams none` one. On a part with a
   fretted instrument its shape must have that instrument's string count (LYS1038).
 
 **The usual shape** — what `Ctrl+Shift+Up` writes first on a chord with none, what the

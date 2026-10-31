@@ -626,7 +626,9 @@ public sealed partial class LilyPondExporter
     /// </para>
     /// </remarks>
     private string? FretDiagram(MusicMarkSyntax mk)
-        => (Semantics.AnnotationValues.Frame(mk) ?? PageFrameAt(mk)) is { } spec
+        // `chordDiagrams none` draws none, an @diagram's included — as the page (2026-10-31).
+        => _layoutPlan.ChordDiagramTuningFor(null) is not null
+           && (Semantics.AnnotationValues.Frame(mk) ?? PageFrameAt(mk)) is { } spec
             ? FretDiagramMarkup(spec, above: mk.ForcedAbove != false)
             : null;
 
