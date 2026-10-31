@@ -447,10 +447,10 @@ score { staff gt  tab gt }
 # The pictures in chords.html's table of spellings (#rule): one bar of a guitar part for each
 # row, on a page as narrow as the bar, so it sits in a table cell.
 $cells = [ordered]@{
-    'cell-note-chord'          = "c'1@chord(F)"
-    'cell-note-chord-shape'    = "c'1@chord(F 133211)"
-    'cell-note-chord-of-shape' = "c'1@chord(x32010)"
-    'cell-note-diagram'        = "c'1@diagram(133211)"
+    'cell-note-chord'          = "f1@chord(F)"
+    'cell-note-chord-shape'    = "f1@chord(F 133211)"
+    'cell-note-chord-of-shape' = "f1@chord(x32010)"
+    'cell-note-diagram'        = "f1@diagram(133211)"
     'cell-notes-chord'         = "<f a c'>1@chord"
     'cell-notes-diagram'       = "<f a c'>1@diagram"
     'cell-notes-chord-diagram' = "<f a c'>1@chord@diagram"

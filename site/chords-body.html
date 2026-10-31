@@ -35,10 +35,10 @@ a guitarist reads. Writing the notes a chord plays is on
   <table class="g">
     <tr><th>Written</th><th>Looks</th><th>Name</th><th>Diagram</th></tr>
     <tr class="grp"><td colspan="4"><b>On a note</b> — the note sounds; the mark only shows</td></tr>
-    <tr><td><code>c1@chord(F)</code></td><td><img class="cell" src="examples/cell-note-chord.svg" alt="F over a whole note"></td><td>✓</td><td></td></tr>
-    <tr><td><code>c1@chord(F 133211)</code></td><td><img class="cell" src="examples/cell-note-chord-shape.svg" alt="F over its diagram, over a whole note"></td><td>✓</td><td>✓</td></tr>
-    <tr><td><code>c1@chord(x32010)</code></td><td><img class="cell" src="examples/cell-note-chord-of-shape.svg" alt="C over the x32010 diagram, over a whole note"></td><td>✓ read off the shape</td><td>✓</td></tr>
-    <tr><td><code>c1@diagram(133211)</code></td><td><img class="cell" src="examples/cell-note-diagram.svg" alt="a diagram alone over a whole note"></td><td></td><td>✓</td></tr>
+    <tr><td><code>f1@chord(F)</code></td><td><img class="cell" src="examples/cell-note-chord.svg" alt="F over a whole note"></td><td>✓</td><td></td></tr>
+    <tr><td><code>f1@chord(F 133211)</code></td><td><img class="cell" src="examples/cell-note-chord-shape.svg" alt="F over its diagram, over a whole note"></td><td>✓</td><td>✓</td></tr>
+    <tr><td><code>f1@chord(x32010)</code></td><td><img class="cell" src="examples/cell-note-chord-of-shape.svg" alt="C over the x32010 diagram, over a whole note"></td><td>✓ read off the shape</td><td>✓</td></tr>
+    <tr><td><code>f1@diagram(133211)</code></td><td><img class="cell" src="examples/cell-note-diagram.svg" alt="a diagram alone over a whole note"></td><td></td><td>✓</td></tr>
     <tr class="grp"><td colspan="4"><b>On a <code>&lt;…&gt;</code> chord</b> — read off its own notes, with nothing written</td></tr>
     <tr><td><code>&lt;f a c&gt;1@chord</code></td><td><img class="cell" src="examples/cell-notes-chord.svg" alt="F over the chord F A C"></td><td>✓ read off the notes</td><td></td></tr>
     <tr><td><code>&lt;f a c&gt;1@diagram</code></td><td><img class="cell" src="examples/cell-notes-diagram.svg" alt="the chord F A C with the diagram of its fingering"></td><td></td><td>✓ the notes, fretted</td></tr>
@@ -64,10 +64,10 @@ part gt { instrument guitar }
 
 section onNote {
   gt {
-    c1@chord(F) |           // a name
-    c1@chord(F 133211) |    // a name over its diagram
-    c1@chord(x32010) |      // the name read off the shape, over its diagram
-    c1@diagram(133211) |    // a diagram alone
+    f1@chord(F) |           // a name
+    f1@chord(F 133211) |    // a name over its diagram
+    f1@chord(x32010) |      // the name read off the shape, over its diagram
+    f1@diagram(133211) |    // a diagram alone
   }
 }
 section onChord {
