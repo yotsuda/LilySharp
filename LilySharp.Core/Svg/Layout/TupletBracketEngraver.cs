@@ -1497,6 +1497,17 @@ internal static class TupletBracketEngraver
                 {
                     if (a.OutsideStaffPriority != null)     // LP :690-692
                         continue;
+                    // The chord diagram an @chord chose declares no priority so that the
+                    // chord-name line stands over it (ArticulationSpacing.OutsideStaffPriority),
+                    // but it is no script of the tuplet's notes: it is placed OVER the staff's
+                    // finished inside profile, the bracket included
+                    // (SkylineBuilder.PlaceDiagramsUnderNames), as LilyPond's TextScript (450)
+                    // clears a tuplet. Reading it here was a circle (session 1034, owner's
+                    // review 2026-10-31): the bracket cleared the diagram, the diagram cleared
+                    // the bracket, and the name line, laid out before the bracket, was crossed —
+                    // `<< c e g c' e' >>2@chord(C x32010)` put the "5" over the grid, under the C.
+                    if (ArticulationEngraver.IsDiagramUnderName(a))
+                        continue;
                     if (a.StaffIndex != tuplet.StaffIndex
                         || a.MeasureIndex != tuplet.MeasureIndex
                         || a.ItemIndex < tuplet.StartNoteIndex

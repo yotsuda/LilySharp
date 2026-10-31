@@ -77,6 +77,40 @@ public class FretFrameTests
         Assert.Equal(new[] { true, true, false }, sides);
     }
 
+    /// <summary>
+    /// The diagram an <c>@chord</c> chose stands OVER a tuplet of its notes, and the tuplet's
+    /// number stays by its beam (LilyPond: TextScript 450 clears the bracket, the ChordNames
+    /// line stands over both). Until session 1034 the tuplet's avoid-scripts read the diagram
+    /// as a priority-less script of its notes and climbed over it — the "5" stood over the C
+    /// grid, and the F's bracket crossed its name (owner's review 2026-10-31).
+    /// </summary>
+    [Fact]
+    public void ATupletUnderAChordDiagram_StaysByItsBeam_AndTheDiagramClearsIt()
+    {
+        var tree = SyntaxTree.Parse(
+            "octave absolute\npart gt { instrument guitar }\n"
+            + "section A { gt { << c e g c' e' >>2@chord(C x32010) << chord(F 133211) >>2 | } }\n"
+            + "form { A }\nscore { staff gt }\n");
+        Assert.False(tree.HasErrors);
+        var layout = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+        var diagrams = layout.ArticulationLayouts.Where(a => a.Glyph.StartsWith("frame:")).OrderBy(a => a.X).ToList();
+        var tuplets = layout.TupletBracketLayouts.OrderBy(t => t.StartX).ToList();
+        Assert.Equal(2, diagrams.Count);
+        Assert.Equal(2, tuplets.Count);
+        // The quintuplet follows its beam (no bracket) and its number stays by the beam — under
+        // two spaces over the top line, beside the C grid, not lifted over it (it stood 7 over).
+        Assert.False(tuplets[0].ShowBracket);
+        Assert.InRange(tuplets[0].NumberYUp, 0, 2.5);
+        // The sextuplet's bracket starts under the F grid: the grid's bottom clears the bracket
+        // by TextScript's padding and no more. Frames: a script's YUp is about the staff middle,
+        // a bracket's StartYUp above the SYSTEM top (the staff's top line is StaffOffsetInSystemUp).
+        double staffTopInSystem = LayoutUtilities.StaffOffsetInSystemUp(layout.AllSystems.First(), 0);
+        double bracketOverTop = tuplets[1].StartYUp - staffTopInSystem;
+        double fGridBottomOverTop = diagrams[1].YUp + diagrams[1].Ink.Bottom - 2.0;
+        Assert.True(tuplets[1].ShowBracket);
+        Assert.InRange(fGridBottomOverTop - bracketOverTop, 0.1, 1.5);
+    }
+
     private const string TextLength =
         "-\\tweak extra-spacing-width #'(-0.0 . 0.4) -\\tweak extra-spacing-height #'(-inf.0 . +inf.0) ";
 
