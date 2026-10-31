@@ -453,6 +453,7 @@ $cells = [ordered]@{
     'cell-note-diagram'        = "c'1@diagram(133211)"
     'cell-notes-chord'         = "<f a c'>1@chord"
     'cell-notes-diagram'       = "<f a c'>1@diagram"
+    'cell-notes-chord-diagram' = "<f a c'>1@chord@diagram"
     'cell-item-chord'          = 'chord(F)1'
     'cell-item-chord-shape'    = 'chord(F 133211)1'
     'cell-item-chord-of-shape' = 'chord(x32010)1'
