@@ -207,7 +207,7 @@ public static class AnnotationValues
     /// </para>
     /// <para>
     /// ⚠️ <b>A behaviour change, declared and chosen</b> (§9.5.3 ⑵, the same shape as
-    /// <see cref="Chord"/>'s swallowed dot): <c>MarkName</c> joins the tokens of the
+    /// <see cref="Chord(MusicMarkSyntax, ChordSpelling, out Music.ChordStructure?, int)"/>'s swallowed dot): <c>MarkName</c> joins the tokens of the
     /// argument with '.', so a label written with more than one token came out spelled
     /// with dots that were never typed — <c>@mark(-1)</c> printed <c>-.1</c>,
     /// <c>@mark(A B)</c> printed <c>A.B</c>, and <c>@mark("A" "B")</c> printed

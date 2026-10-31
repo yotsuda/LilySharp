@@ -83,7 +83,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     /// <remarks>
     /// <para>
-    /// One question, asked once: <see cref="Semantics.AnnotationValues.Chord"/> answers
+    /// One question, asked once: <see cref="Semantics.AnnotationValues.Chord(MusicMarkSyntax, ChordSpelling, out ChordStructure?, int)"/> answers
     /// null for "not a chord annotation", the empty string for "a chord annotation that
     /// names nothing itself" (bare <c>@chord</c>, and the <c>@chord()</c> the completion
     /// leaves behind), and the symbol otherwise. This used to be two questions asked of

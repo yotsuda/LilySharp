@@ -345,7 +345,8 @@ public static class ShapeChordConverter
     internal static int[]? PlayedPitches(SyntaxTree tree, SyntaxNode chord)
     {
         var specs = Svg.Collector.RenderSpecParser.FindAll(tree);
-        IEnumerable<Svg.Collector.RenderSpec?> passes = specs.Count == 0 ? [null] : specs;
+        IEnumerable<Svg.Collector.RenderSpec?> passes = specs.Count == 0
+            ? new Svg.Collector.RenderSpec?[] { null } : (IEnumerable<Svg.Collector.RenderSpec?>)specs;
         foreach (var spec in passes)
         {
             Svg.Model.MultiStaffScore score;

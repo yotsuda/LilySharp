@@ -107,7 +107,7 @@ public static class ShapeChords
     /// <paramref name="capo"/>; else null (shapes written for other tunings only, or a chord with
     /// no usual shape on the tuning — LYS1040).</summary>
     /// <param name="fretted">The part frets its strings; a part that does not (a piano, a voice,
-    /// a violin) plays no usual shape — <see cref="Notes(ChordAnnotation, TuningType, int, int, int, bool)"/>
+    /// a violin) plays no usual shape — <see cref="Notes(ChordAnnotation, TuningType, int, int, int, bool, int, int, IReadOnlyList{int})"/>
     /// voices its chord instead.</param>
     public static string? ShapeFor(ChordAnnotation words, TuningType tuning, int capo = 0, bool fretted = true)
         => ChordShapes.WrittenFor(tuning, words.Shapes)

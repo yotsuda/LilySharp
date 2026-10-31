@@ -326,7 +326,7 @@ public static partial class NoteStepper
 
     /// <summary>A number in a <c>layout { }</c> block the caret is on — a number key's value (its
     /// index among them), <c>voltaBracket N</c>, or the fret of <c>chordDiagrams … capo N</c>
-    /// (<paramref name="Capo"/>) — with its key, or null. <c>barNumbers every N</c> is
+    /// (<c>Capo</c>) — with its key, or null. <c>barNumbers every N</c> is
     /// <see cref="BarNumberEveryAt"/>'s.</summary>
     private static (string Key, SyntaxTokenNode Number, int Index, bool Capo)? LayoutNumberAt(SyntaxTree tree, int offset)
     {

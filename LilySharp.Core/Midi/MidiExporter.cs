@@ -3181,7 +3181,7 @@ public sealed class MidiExporter
         if (_swing.Count == 0)
             return;
         var swing = _swing.OrderBy(s => s.Tick).ToList();
-        var bars = _barTicks.Prepend(0).Distinct().OrderBy(t => t).ToList();
+        var bars = (_barTicks ?? Enumerable.Empty<int>()).Prepend(0).Distinct().OrderBy(t => t).ToList();
         int Swung(int tick)
         {
             int sub = 0;

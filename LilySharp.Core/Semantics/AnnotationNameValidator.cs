@@ -577,7 +577,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         if (ChordAnnotation.PartTuningOf(mark) is { } partTuning
             && ChordAnnotation.Parse([shape]).NamingShape(null, partTuning) is { } naming
             && ChordAnnotation.NameFromFrets(naming.Frets, naming.Tuning, 0) is { } named)
-            name = ChordShapes.SourceSymbol(named);
+            name = ChordShapes.SourceSymbol(named) ?? name;
         return $"@diagram({shape})@chord draws the name apart from the diagram: write @chord({name} {shape}) "
             + $"for the name over its diagram, or chord({shape}) in place of the note to hear the shape with "
             + "its name and diagram.";

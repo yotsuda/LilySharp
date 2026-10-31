@@ -64,7 +64,8 @@ internal static class PlayedNotes
         string PartAt(int pos, string voice)
             => parts.FirstOrDefault(p => p.Span.Start <= pos && pos < p.Span.End).Name ?? voice;
         var specs = Svg.Collector.RenderSpecParser.FindAll(tree);
-        IEnumerable<Svg.Collector.RenderSpec?> passes = specs.Count == 0 ? [null] : specs;
+        IEnumerable<Svg.Collector.RenderSpec?> passes = specs.Count == 0
+            ? new Svg.Collector.RenderSpec?[] { null } : (IEnumerable<Svg.Collector.RenderSpec?>)specs;
         int scoreIndex = 0;
         foreach (var spec in passes)
         {
