@@ -43,6 +43,7 @@ import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupTo
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
 import { onAngleChord, onShapeItem, shapeItemAt, sameDocumentUri } from './shapeItemCore';
+import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
@@ -296,6 +297,50 @@ function postToActivePreview(type: string) {
             return;
         }
     }
+}
+
+/** The `@todo` marks of a document as the server lists them now (lilysharp/todos), or null when
+ *  the server cannot say (not ready, or the list is of another version of the text). */
+async function todoMarksOf(document: vscode.TextDocument): Promise<TodoMark[] | null> {
+    if (!client || !clientReady) {
+        return null;
+    }
+    try {
+        const resp = await client.sendRequest<{ Todos?: TodoMark[]; Version: number; Error?: string | null }>(
+            'lilysharp/todos', { textDocument: { uri: document.uri.toString() } });
+        if (resp.Error || resp.Version !== document.version) {
+            return null;
+        }
+        return resp.Todos ?? [];
+    } catch {
+        return null;
+    }
+}
+
+/** The preview's Resolve This TODO / Resolve All TODOs (owner's request 2026-10-31): the marks
+ *  that begin at `starts` — every mark when null — deleted from the shown document, as the
+ *  editor's quick fix deletes one. The marks are re-read from the server first, so a mark that
+ *  moved or went since the right-click is left alone. */
+async function resolvePreviewTodos(starts: number[] | null): Promise<void> {
+    const shown = [...previewPanels.entries()].find(([, p]) => p.active);
+    if (!shown || (starts !== null && starts.length === 0)) {
+        return;
+    }
+    const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(shown[0]));
+    const marks = await todoMarksOf(document);
+    if (!marks) {
+        void vscode.window.showInformationMessage('The @todo marks could not be read — try again once the preview has rendered.');
+        return;
+    }
+    const deletions = todoDeletions(marks, starts);
+    if (deletions.length === 0) {
+        return;
+    }
+    const edit = new vscode.WorkspaceEdit();
+    for (const d of deletions) {
+        edit.delete(document.uri, new vscode.Range(document.positionAt(d.start), document.positionAt(d.end)));
+    }
+    await vscode.workspace.applyEdit(edit);
 }
 
 // Re-key a live preview from oldUri to newUri (an untitled score saved to a file):
@@ -987,7 +1032,13 @@ export function activate(context: vscode.ExtensionContext) {
             editor.selection = new vscode.Selection(position, position);
             editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
             await vscode.window.showTextDocument(editor.document, editor.viewColumn);
-        }));
+        }),
+        // The @todo doors (owner's request 2026-10-31): on a bar that holds a mark, Resolve This
+        // TODO takes the bar's marks out; off the staves, Resolve All TODOs takes every one out —
+        // the quick fix's edit, applied from the page (todoResolveCore).
+        vscode.commands.registerCommand('lilysharp.previewResolveTodo', (m?: { lysTodoStarts?: string }) =>
+            resolvePreviewTodos(parseStarts(m?.lysTodoStarts))),
+        vscode.commands.registerCommand('lilysharp.previewResolveAllTodos', () => resolvePreviewTodos(null)));
     // The Settings screen's "Choose a model…" links name the feature ('edit' | 'ghost'), so the
     // list of features is skipped; the palette asks which.
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel',
@@ -1779,6 +1830,13 @@ async function updatePreviewContent(
     void panel.webview.postMessage({ type: 'scanState', hasScan: hasScan(document.uri) });
     // The chords of the text, for Select Chord on a member right-clicked (owner's request 2026-10-27).
     void panel.webview.postMessage({ type: 'chordSpans', spans: chordSpans(document.getText()) });
+    // The @todo marks of the text, for Resolve This TODO on the bar right-clicked and Resolve
+    // All TODOs off the staves (owner's request 2026-10-31) — once the server is up to answer.
+    void todoMarksOf(document).then(marks => {
+        if (marks) {
+            void panel.webview.postMessage({ type: 'todos', marks: marks.map(m => ({ start: m.Start, hostStart: m.HostStart })) });
+        }
+    });
 
     // Wait for client to be ready if not already
     if (!clientReady) {
@@ -6648,6 +6706,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'chordSpans':
                     chordSpanList = Array.isArray(message.spans) ? message.spans : [];
                     break;
+                case 'todos':
+                    todoMarks = Array.isArray(message.marks) ? message.marks : [];
+                    break;
                 case 'updateContent': {
                     updateRenderSelect(message.renders, message.selectedRender);
                     const hasPreview = !!svgContainer.querySelector('svg');
@@ -7059,6 +7120,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // Select Chord on a member right-clicked puts the caret past the ">" (owner's request
         // 2026-10-27: where a chord's octave marks and decorations are written).
         let chordSpanList = [];
+        // The @todo marks of the text, {start, hostStart} (todos, with each render): Resolve This
+        // TODO on a bar that holds one, Resolve All TODOs off the staves (owner's request
+        // 2026-10-31). A bar's marks are the ones whose host is written in its span (data-span).
+        let todoMarks = [];
         function chordEndAt(pos) {
             let lo = 0, hi = chordSpanList.length - 1;
             while (lo <= hi) {
@@ -7079,11 +7144,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // holds the point, where its text starts — else the note's own offset. The menu's
             // command gets it as its argument (lysAt).
             let ctxBarAt = -1;
+            let ctxTodoStarts = [];
             for (const r of document.querySelectorAll('rect.bar-staff')) {
                 const b = r.getBoundingClientRect();
                 if (e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom) {
                     const s = parseInt(r.getAttribute('data-start'), 10);
-                    if (!isNaN(s)) { ctxBarAt = s; break; }
+                    if (!isNaN(s)) { ctxBarAt = s; }
+                    const span = (r.getAttribute('data-span') || '').split(' ').map(Number);
+                    if (span.length === 2 && span[1] > span[0]) {
+                        ctxTodoStarts = todoMarks.filter(m => m.hostStart >= span[0] && m.hostStart < span[1])
+                            .map(m => m.start).sort((a, b) => a - b);
+                    }
+                    if (!isNaN(s)) { break; }
                 }
             }
             // What the menu's Change … with AI works on, and says it does (owner's requests
@@ -7127,6 +7199,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 lysPlayFrom: ctxPlayPos >= 0,
                 lysOnChord: ctxChordEnd >= 0,
                 lysChordEnd: ctxChordEnd,
+                lysBarTodo: ctxTodoStarts.length > 0,
+                lysTodoStarts: ctxTodoStarts.join(','),
+                lysHasTodos: todoMarks.length > 0,
                 // The Stop button's enabled state is the playback flag that also
                 // covers the optimistic window between Play and the first events.
                 lysPlaying: !document.getElementById('stopBtn').disabled

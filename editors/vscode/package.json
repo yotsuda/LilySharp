@@ -593,6 +593,16 @@
         "title": "Clear Selection"
       },
       {
+        "command": "lilysharp.previewResolveTodo",
+        "category": "Lily#",
+        "title": "Resolve This TODO (remove @todo)"
+      },
+      {
+        "command": "lilysharp.previewResolveAllTodos",
+        "category": "Lily#",
+        "title": "Resolve All TODOs"
+      },
+      {
         "command": "lilysharp.omrFixWithAi",
         "category": "Lily#",
         "icon": "$(sparkle)",
@@ -825,6 +835,14 @@
           "when": "false"
         },
         {
+          "command": "lilysharp.previewResolveTodo",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewResolveAllTodos",
+          "when": "false"
+        },
+        {
           "command": "lilysharp.openPreview",
           "when": "resourceLangId == lilysharp"
         },
@@ -1005,6 +1023,16 @@
           "command": "lilysharp.editBarsBesideScan",
           "when": "(webviewId == 'lilysharpPreview' || webviewId == 'lilysharpScan') && lysOnBar",
           "group": "1_edit@5"
+        },
+        {
+          "command": "lilysharp.previewResolveTodo",
+          "when": "webviewId == 'lilysharpPreview' && lysBarTodo",
+          "group": "1_edit@6"
+        },
+        {
+          "command": "lilysharp.previewResolveAllTodos",
+          "when": "webviewId == 'lilysharpPreview' && !lysOnStaff && lysHasTodos",
+          "group": "1_edit@7"
         },
         {
           "command": "lilysharp.previewPlayFromHere",
