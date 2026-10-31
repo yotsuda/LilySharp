@@ -2638,6 +2638,8 @@ that tuning is the diagram's. `@chord` takes the same words after its symbol:
   (printed).
 - A bare `@chord` beside an `@diagram(x32010)` asks in two words what `@chord(C x32010)` says in
   one: it draws both, but warns (LYS1056) naming that spelling, with the name read off the shape.
+  Not on a `<…>` chord: there the bare `@chord` names the chord's notes, and `@diagram(SHAPE)` is
+  one way to hold them (`<f a c>1@chord@diagram(xx321x)`).
 - A bare `@chord` on a chord names it from its notes; it writes no shape, so draws no diagram
   (in an `all` score, the usual shape of the chord it names). On a single note it has nothing to
   name and warns (LYS1020).

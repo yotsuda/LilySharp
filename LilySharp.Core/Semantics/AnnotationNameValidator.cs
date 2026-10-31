@@ -559,10 +559,16 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     /// the note, or <c>chord(x32010)</c> in its place to hear the shape too. (<c>@chord(x32010)</c>,
     /// a shape alone in an <c>@chord</c>, is one word for the name read off the shape and its
     /// diagram: not warned.) Null for anything else.
+    /// <para>
+    /// Not on a <c>&lt;…&gt;</c> chord (owner's report 2026-10-31): there the bare <c>@chord</c>
+    /// names the chord's NOTES and the <c>@diagram(SHAPE)</c> is one way to hold them — what a step
+    /// from a bare <c>@diagram</c> writes. No one word says that, and a shape the notes left is
+    /// LYS1057's to warn.
+    /// </para>
     /// </summary>
     private static string? ShapeNameSpelling(MusicMarkSyntax mark)
     {
-        if (mark.Name != "chord" || mark.Parent is null || !mark.Arguments.IsEmpty
+        if (mark.Name != "chord" || mark.Parent is null or ChordSyntax { IsShapeChord: false } || !mark.Arguments.IsEmpty
             || mark.Parent.ChildNodes().OfType<MusicMarkSyntax>().FirstOrDefault(m => AnnotationValues.Frame(m) != null)
                 is not { } diagram)
             return null;

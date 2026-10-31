@@ -643,6 +643,12 @@ public class ShapeChordItemTests
         Assert.True(Under("c1@chord(F)@diagram(133211) |"));
         Assert.False(Under("<f a c>1@diagram |"));
         Assert.False(Under("c1@chord(F)@diagram(133211).down |"));
+        // On a <…> chord a bare @chord names its notes and the shape is a way to hold them — what a
+        // step from a bare @diagram writes: not LYS1056's two words for one (owner's report 2026-10-31).
+        Assert.DoesNotContain(Diagnostics(Book("instrument guitar", "<f a c>1@chord@diagram(xx321x) |", top: "octave absolute\n")),
+            d => d.Code == DiagnosticCodes.ChordNameOfAShape);
+        Assert.Contains(Diagnostics(Book("instrument guitar", "c1@diagram(x32010)@chord |")),
+            d => d.Code == DiagnosticCodes.ChordNameOfAShape);
     }
 
     /// <summary>A file whose scores each name their own form plays nothing as MIDI; the diagram's

@@ -813,7 +813,8 @@ public static class DiagnosticCodes
     /// <summary>Warning: a chord's name asked of a shape in two words — a bare <c>@chord</c> beside
     /// an <c>@diagram(x32010)</c>, whose name and diagram are drawn apart — named with the one word
     /// that says it: <c>@chord(C x32010)</c> over the note, <c>chord(x32010)</c> in its place
-    /// (owner's decisions 2026-10-31, docs/chord-syntax-design.md). Still drawn as before.</summary>
+    /// (owner's decisions 2026-10-31, docs/chord-syntax-design.md). Still drawn as before. Not on a
+    /// <c>&lt;…&gt;</c> chord, whose bare <c>@chord</c> names its notes.</summary>
     public const string ChordNameOfAShape = "LYS1056";
 
     /// <summary>Warning: an <c>@diagram(SHAPE)</c> on a <c>&lt;…&gt;</c> chord of a fretted part whose
