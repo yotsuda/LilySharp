@@ -1,0 +1,8 @@
+// <f a c'>1@diagram - one bar for the table of chord spellings (chords.html).
+octave absolute
+time 4/4
+paper { paperWidth 40mm  paperHeight 0  leftMargin 2mm  rightMargin 2mm  topMargin 2mm  bottomMargin 2mm  indent 0  raggedRight }
+part gt { instrument guitar }
+section A { gt { <f a c'>1@diagram | } }
+form { ~A }
+score { staff gt }

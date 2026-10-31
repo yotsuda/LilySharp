@@ -58,6 +58,10 @@ $extra = @'
   table.g td:first-child { min-width:9em; }
   table.g code { white-space:nowrap; }
   @media (max-width:700px) { table.g code, table.g td:first-child { white-space:normal; } }
+  /* A row that heads a group of the rows under it (chords.html's table of spellings). */
+  table.g tr.grp td { background:var(--code); color:var(--muted); font-size:14px; padding-top:9px; }
+  /* A one-bar picture in a table cell (cell-*.svg, build-examples.ps1): white paper as a figure's. */
+  table.g img.cell { display:block; width:170px; height:auto; background:#fff; border-radius:4px; padding:2px; }
   figure.ex { margin:18px 0 22px; }
   figure.ex .paper { padding:12px; }
   figure.ex details { margin-top:10px; }

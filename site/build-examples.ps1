@@ -444,6 +444,33 @@ score { staff gt  tab gt }
 
 }
 
+# The pictures in chords.html's table of spellings (#rule): one bar of a guitar part for each
+# row, on a page as narrow as the bar, so it sits in a table cell.
+$cells = [ordered]@{
+    'cell-note-chord'          = "c'1@chord(F)"
+    'cell-note-chord-shape'    = "c'1@chord(F 133211)"
+    'cell-note-chord-of-shape' = "c'1@chord(x32010)"
+    'cell-note-diagram'        = "c'1@diagram(133211)"
+    'cell-notes-chord'         = "<f a c'>1@chord"
+    'cell-notes-diagram'       = "<f a c'>1@diagram"
+    'cell-item-chord'          = 'chord(F)1'
+    'cell-item-chord-shape'    = 'chord(F 133211)1'
+    'cell-item-chord-of-shape' = 'chord(x32010)1'
+    'cell-item-diagram'        = 'diagram(133211)1'
+}
+foreach ($cell in $cells.GetEnumerator()) {
+    $examples[$cell.Key] = @"
+// $($cell.Value) - one bar for the table of chord spellings (chords.html).
+octave absolute
+time 4/4
+paper { paperWidth 40mm  paperHeight 0  leftMargin 2mm  rightMargin 2mm  topMargin 2mm  bottomMargin 2mm  indent 0  raggedRight }
+part gt { instrument guitar }
+section A { gt { $($cell.Value) | } }
+form { ~A }
+score { staff gt }
+"@
+}
+
 $failed = @()
 foreach ($name in $examples.Keys) {
     $path = Join-Path $dir "$name.lys"
