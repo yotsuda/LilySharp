@@ -2681,9 +2681,9 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    dashes separated ('10-9-9', never '10-99'). *)
 (* The voicing INDEX and the 'mute' words of 2026-09-27 never shipped and are gone (2026-09-28):
    '@chord(C 7)' is C with a one-character Shape — LYS1038, the name still draws. A diagram
-   draws only where a Shape is written (or, under 'chordDiagrams … all', for every name); which of them applies is the tuning the score's
-   'layout { chordDiagrams … }' names (§2.6 LayoutEntry), else the part's fretted
-   instrument, else the guitar. *)
+   draws only where a Shape is written (or, under 'chordDiagrams … all', for every name); which of them applies is the tuning of the
+   part's fretted instrument, else the one 'layout { chordDiagrams … }' names (§2.6
+   LayoutEntry), else the guitar; 'chordDiagrams none' draws none. *)
 (* A value-bearing annotation puts its argument(s) in parentheses (space- or
    comma-separated); '.' is reserved for the .up / .down placement suffix. *)
 (* '@!X' is the TERMINATOR: it ends what '@X' opened, and it reports the SAME name, so the

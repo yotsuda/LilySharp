@@ -145,8 +145,8 @@ public sealed class PartHeaderDefaults
     /// string preset (a piano, a voice), or a bowed one.
     /// </summary>
     /// <remarks>
-    /// What a chord diagram of the part draws on when the score's layout names no
-    /// <c>chordDiagrams</c> tuning (owner's decision 2026-09-28, <see cref="ChordDiagramsKey.Resolve"/>).
+    /// What a chord diagram of the part draws on, whatever the score's <c>chordDiagrams</c> tuning
+    /// (owner's decisions 2026-09-28, 2026-10-31; <see cref="ChordDiagramsKey.Resolve"/>).
     /// ⚠️ Lily#'s choice: the bowed strings (<c>violin</c>, <c>viola</c>, <c>cello</c> and the
     /// <c>contrabass</c> preset) have tunings for their tabs but no frets, so their chord
     /// diagrams take the guitar like a piano's. The <c>mandolin</c> word shares the violin's

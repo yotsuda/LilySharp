@@ -91,8 +91,8 @@ public sealed record ChosenShape(ImmutableArray<int> Frets, ShapeSource Source,
 /// Owner's design (HANDOFF §2 K, 2026-09-28): the SOURCE holds a shape or nothing — never an
 /// index — and a diagram draws ONLY where a shape is written (<c>G(320003)</c>,
 /// <c>@chord(G 320003)</c>, <c>@chord(x32010)</c>); a name alone draws none, in every score.
-/// It draws on ONE tuning (<see cref="Semantics.ChordDiagramsKey.Resolve"/>: the layout's
-/// <c>chordDiagrams</c>, else the part's fretted instrument, else the guitar). One chord can
+/// It draws on ONE tuning (<see cref="Semantics.ChordDiagramsKey.Resolve"/>: the part's fretted
+/// instrument, else the layout's <c>chordDiagrams</c>, else the guitar). One chord can
 /// carry shapes for several instruments: an unnamed shape applies to the tuning whose STRING
 /// COUNT is its length (<c>F(133211 2010)</c>: six strings, four strings), and a tuning word
 /// binds the next shape to that tuning by name (<c>F(guitar 133211 ukulele 2010)</c>) — needed

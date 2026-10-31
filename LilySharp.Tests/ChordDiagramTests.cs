@@ -439,12 +439,13 @@ public class ChordDiagramTests
         Assert.Equal(word, plan.ChordDiagrams);
     }
 
-    /// <summary>Which tuning a diagram draws on (owner's decision 2026-09-28): the layout's
-    /// word, else the part's fretted instrument, else the guitar; <c>none</c> draws none.</summary>
+    /// <summary>Which tuning a diagram draws on (owner's decisions 2026-09-28, 2026-10-31): the
+    /// part's fretted instrument, else the layout's word, else the guitar; <c>none</c> draws none.</summary>
     [Fact]
-    public void TheTuning_IsTheLayoutsThenThePartsThenTheGuitar()
+    public void TheTuning_IsThePartsThenTheLayoutsThenTheGuitar()
     {
-        Assert.Equal(TuningType.Ukulele, ChordDiagramsKey.Resolve("ukulele", TuningType.Bass));
+        Assert.Equal(TuningType.Bass, ChordDiagramsKey.Resolve("ukulele", TuningType.Bass));
+        Assert.Equal(TuningType.Ukulele, ChordDiagramsKey.Resolve("ukulele", null));
         Assert.Equal(TuningType.Bass, ChordDiagramsKey.Resolve(null, TuningType.Bass));
         Assert.Equal(TuningType.Guitar, ChordDiagramsKey.Resolve(null, null));
         Assert.Null(ChordDiagramsKey.Resolve("none", TuningType.Ukulele));
@@ -539,7 +540,9 @@ public class ChordDiagramTests
         Assert.Equal(new string?[] { "0003" }, RowFrames(Song("", row, "c'1 |", "staff gt  chords prog  staff uk")));
         Assert.Equal(new string?[] { "x32010" }, RowFrames(Song("", row, "c'1 |", "chords prog  staff gt")));
         Assert.Equal(new string?[] { "x32010" }, RowFrames(Song("", row, "c'1 |", "chords prog")));
-        Assert.Equal(new string?[] { "x32010" }, RowFrames(Song(Guitar, row, "c'1 |", "chords prog  staff uk")));
+        Assert.Equal(new string?[] { "0003" }, RowFrames(Song(Guitar, row, "c'1 |", "chords prog  staff uk")));
+        // Over a staff that frets nothing, the layout's word speaks: a ukulele lead sheet.
+        Assert.Equal(new string?[] { "0003" }, RowFrames(Song(Ukulele, row, "c'1 |", "chords prog  staff gt")));
         Assert.Equal(new string?[] { null }, RowFrames(Song(NoDiagrams, row, "c'1 |", "chords prog  staff uk")));
     }
 
@@ -671,7 +674,8 @@ public class ChordDiagramTests
     }
 
     /// <summary>An <c>@chord</c> draws on the instrument of the part whose note carries it: on a
-    /// ukulele part a four-string diagram with no layout; the layout's word wins.</summary>
+    /// ukulele part a four-string diagram, whatever the layout's word (owner's decision 2026-10-31:
+    /// the part's instrument first).</summary>
     [Fact]
     public void AnAtChordOnAUkulelePart_DrawsFourStrings()
     {
@@ -683,7 +687,7 @@ public class ChordDiagramTests
             score { staff uk }
             """;
         Assert.Equal("frame:0003", Assert.Single(Laid(With("")).ArticulationLayouts).Glyph);
-        Assert.Equal("frame:x32010", Assert.Single(Laid(With(Guitar)).ArticulationLayouts).Glyph);
+        Assert.Equal("frame:0003", Assert.Single(Laid(With(Guitar)).ArticulationLayouts).Glyph);
         Assert.Empty(Laid(With(NoDiagrams)).ArticulationLayouts);
     }
 

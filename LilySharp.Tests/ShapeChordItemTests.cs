@@ -1057,6 +1057,29 @@ public class ShapeChordItemTests
         Assert.False(LilySharpLanguageServer.IsInsideShapeChordItem("gt { diagram(C) ", 16));
     }
 
+    /// <summary>The part's instrument first, the score's chordDiagrams word for the chords no fretted
+    /// part owns (owner's decision 2026-10-31, review D1): a guitar part's chord(F 133211) under
+    /// `chordDiagrams ukulele all` drew the ukulele's F while playing the guitar shape.</summary>
+    [Fact]
+    public void ADiagram_FollowsItsPartsInstrument_TheScoresWordTheRest()
+    {
+        const string book = """
+            octave absolute
+            layout { chordDiagrams ukulele all }
+            part gt { instrument guitar }
+            part pn { clef treble }
+            section A { gt { chord(F 133211)1 | c'1@chord(F) | } pn { c'1@chord(F) | c'1 | } }
+            form { A }
+            score { staff gt staff pn }
+            """;
+        var frames = Collected(book).Articulations.Where(a => a.Type == ArticulationType.FretFrame)
+            .OrderBy(a => a.SourcePosition).Select(a => a.FrameSpec).ToList();
+        Assert.Equal(3, frames.Count);
+        Assert.Equal("133211", frames[0]);                 // the guitar's shape, as it plays
+        Assert.StartsWith("133211|", frames[1]);           // the guitar part's F: the guitar's
+        Assert.StartsWith("2010", frames[2]);              // the piano's F: the score's ukulele
+    }
+
     /// <summary>An @diagram strum after strum stands where the diagram changes and at a system's
     /// head, as an item's does (owner's decision 2026-10-31, review C3); its @chord name stands on
     /// every chord.</summary>

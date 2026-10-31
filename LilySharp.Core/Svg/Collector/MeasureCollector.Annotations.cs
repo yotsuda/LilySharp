@@ -162,7 +162,7 @@ public sealed partial class MeasureCollector
             // The chord diagram (owner's decisions 2026-09-28, HANDOFF §2 K): drawn where a
             // shape is WRITTEN — and, in a `chordDiagrams … all` score, for every name, the
             // default shape when none is written (a bare @chord's derived name included) — on the
-            // tuning the score's layout names, else the part's fretted instrument's, else the
+            // part's fretted instrument's tuning, else the one the score's layout names, else the
             // guitar's (ChordDiagramsKey.Resolve); `chordDiagrams none` draws none.
             var diagramTuning = Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning);
             // The layout's shape table lists chords that draw wherever they are named, per the

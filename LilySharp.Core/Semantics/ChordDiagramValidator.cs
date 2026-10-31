@@ -26,9 +26,9 @@ namespace LilySharp.Core.Semantics;
 /// <summary>
 /// Which tuning a chord diagram draws on in each score of a file — read from the tree, the way
 /// the page reads it (<see cref="LayoutPlanReader.Resolve"/>, <see cref="RenderSpecParser"/>):
-/// the score's <c>chordDiagrams</c> word, else the fretted instrument of the part the chord
-/// belongs to, else the guitar (<see cref="ChordDiagramsKey.Resolve"/>, owner's decision
-/// 2026-09-28).
+/// the fretted instrument of the part the chord belongs to, else the score's <c>chordDiagrams</c>
+/// word, else the guitar (<see cref="ChordDiagramsKey.Resolve"/>, owner's decisions 2026-09-28,
+/// 2026-10-31: the part first).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -309,7 +309,7 @@ public static class ChordDiagramScores
 /// fifth; the bass is not checked — the owner's second decision that day) is warned once (<see cref="ChordShapes.Mismatch"/>), naming the chord it does play when the
 /// recognizer names one. Each shape is checked on the tuning it is ROUTED to
 /// (<see cref="ChordShapes.WrittenFor"/>) in each score that draws it
-/// (<see cref="ChordDiagramScores"/>: layout, else the part's fretted instrument, else the
+/// (<see cref="ChordDiagramScores"/>: the part's fretted instrument, else the layout, else the
 /// guitar); identical warnings from several scores are said once. A shape routed to no tuning
 /// in any score — a file written for two instruments carries shapes each score leaves alone —
 /// is not checked, nor is a symbol-less <c>@chord(x32010)</c> (its name comes from the shape)

@@ -512,10 +512,10 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   `Cm(8-10-10-888)`, `@diagram(x-15-13-12-13-x)`; a `-` between every string also reads
   (`x-x-10-12-13-11`). Between dashes, EXACTLY two digits are ONE fret: frets 10, 9, 9 are
   `10-9-9` (`10-99` = fret 99, an error); routed by string count (`8xx88-11` = 6); lower case
-  only; use the one-character form when every fret is ≤ 9. The diagram's tuning: the score's
-  `layout { chordDiagrams TUNING [all] [{ table }] }` (the tab tuning words; `none` = no diagrams at all), else
-  the part's fretted instrument (an `@chord`'s part; for a row, the staff it stands directly
-  above), else the guitar. Common guitar shapes (LilyPond's): C `x32010`, F `133211`, G
+  only; use the one-character form when every fret is ≤ 9. The diagram's tuning: the part's
+  fretted instrument (an `@chord`'s or item's part; for a row, the staff it stands directly
+  above), else the score's `layout { chordDiagrams TUNING [all] [{ table }] }` (the tab tuning
+  words; `none` = no diagrams at all, whatever the parts), else the guitar. Common guitar shapes (LilyPond's): C `x32010`, F `133211`, G
   `320003`, Cm7 `x35343`; ukulele C `0003`. A written shape that cannot be used warns LYS1038;
   the name still draws. A written shape that disagrees with its symbol (a non-chord tone, or a
   missing 3rd/7th/altered fifth/tension — the root and the perfect fifth may be left out; the
@@ -1349,7 +1349,7 @@ layout {
   partCombineText false    // a2 / Solo words: true (default) | false
   chordQualities words     // chord quality: symbols (default) | words
   minorChords lower        // a minor chord's root: upper (default) | lower
-  chordDiagrams ukulele    // the tuning written chord shapes draw on: a tuning word | none (unset: the part's instrument, else guitar)
+  chordDiagrams ukulele    // the tuning for chords no fretted part owns: a tuning word | none (a fretted part: its own; unset: guitar)
                            // `chordDiagrams ukulele all` / `chordDiagrams all`: every chord draws a diagram
                            // `chordDiagrams guitar { Cm7 x35343  G  section B { C x35553 } }`: the listed chords draw
                            // `chordDiagrams guitar capo 3`: a capo — pressed shapes, pressed names, "Capo 3" at the head
@@ -1399,10 +1399,10 @@ layout {
   set Lily# spells these chords exactly as LilyPond prints them. `maj7` is NOT switchable:
   LilyPond draws it as a raised triangle, which Lily#'s one-line chord name has no home for.
 - `chordDiagrams ukulele` (or `guitar`, `mandolin`, `guitarDropD`, … — the words a tab's
-  `tuning` takes) is the tuning the score's chord diagrams draw on. A diagram draws only where
-  a chord writes its shape; this picks which written shape applies. Unset, a diagram takes the
-  part's fretted instrument (an `@chord`'s part, the staff a row stands above), else the
-  guitar. `none` draws no diagram at all, even where a shape is written — the same source
+  `tuning` takes) is the tuning the chord diagrams no fretted part owns draw on (a piano's, a
+  voice's, a lead-sheet row's). A diagram draws only where a chord writes its shape; this picks
+  which written shape applies. A fretted part's chords always take its own instrument (an
+  `@chord`'s or item's part, the staff a row stands above); unset, the rest take the guitar. `none` draws no diagram at all, even where a shape is written — the same source
   makes a piano score and a guitar score. `all` after the tuning word (`chordDiagrams guitar
   all`), or alone (`chordDiagrams all`, the tuning as when unset), makes EVERY chord name draw:
   its written shape, else the usual one (LilyPond's predefined, else Lily#'s first); a chord

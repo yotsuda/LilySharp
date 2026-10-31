@@ -211,17 +211,21 @@ score repeated { form { repeated } staff gt }</pre></details>
 
 <section id="layout">
   <h2>Which instrument, and every chord</h2>
-  <p>A diagram is drawn for one tuning. Which one is decided per score, strongest first:</p>
+  <p>A diagram is drawn for one tuning, strongest first:</p>
   <ol>
-    <li><b>The score's layout:</b> <code>layout { chordDiagrams ukulele }</code> — any word
+    <li><b>The part's instrument</b>, when it is fretted: for an <code>@chord</code> or a
+    <code>chord(…)</code> item, the part it is written in; for a row, the staff the row stands
+    directly above. A guitar part's chords draw guitar diagrams in every score — the shape drawn
+    is the one played.</li>
+    <li><b>Else the score's layout:</b> <code>layout { chordDiagrams ukulele }</code> — any word
     a tab's <code>tuning</code> takes (<code>guitar</code>, <code>ukulele</code>,
-    <code>mandolin</code>, <code>guitarDropD</code>, <code>bass</code>, …).
-    <code>chordDiagrams none</code> draws no diagram at all, written shapes included.</li>
-    <li><b>Else the part's instrument</b>, when it is fretted: for an <code>@chord</code>, the
-    part whose note carries it; for a row, the staff the row stands directly above.</li>
-    <li><b>Else the guitar</b> — a lead-sheet row with no staff under it, or a staff that
-    frets nothing (a violin or cello part too: bowed strings have no diagrams of their own).</li>
+    <code>mandolin</code>, <code>guitarDropD</code>, <code>bass</code>, …) — for the chords no
+    fretted part owns: a piano's, a voice's, a lead-sheet row's.</li>
+    <li><b>Else the guitar</b> (a violin or cello part too: bowed strings have no diagrams of
+    their own).</li>
   </ol>
+  <p><code>chordDiagrams none</code> draws no diagram at all, written shapes included, whatever
+  the parts.</p>
   <p>So one source prints a guitar book, a ukulele book and a piano score, each from its own
   <code>score</code>:</p>
 <pre>layout uke   { chordDiagrams ukulele }

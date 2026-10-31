@@ -59,8 +59,9 @@ public sealed record LayoutPlan(
     // LayoutPlan.Default compares equal to a plan that writes both keys out.
     ChordSpelling Chords = default,
     // `chordDiagrams none|guitar|ukulele|…` — the TUNING word as written, or null when the key
-    // is absent or writes no tuning (`chordDiagrams all`): then each diagram takes its part's
-    // instrument, else the guitar (ChordDiagramsKey.Resolve, owner's decision 2026-09-28).
+    // is absent or writes no tuning (`chordDiagrams all`). A fretted part's diagrams take its own
+    // instrument either way; the rest take this word, else the guitar (ChordDiagramsKey.Resolve,
+    // owner's decisions 2026-09-28, 2026-10-31).
     string? ChordDiagrams = null,
     // `chordDiagrams [TUNING] all` — every chord name draws a diagram: its written shape, else
     // the default one (Music.ChordShapes.Drawn; owner's decision 2026-09-28). False without it:
@@ -482,9 +483,13 @@ public static class PartCombineTexts
 /// chord name draws one, its written shape else the default (<see cref="Music.ChordShapes.Default"/>).
 /// <c>none all</c> is refused (<c>none</c> draws nothing). A diagram draws on ONE tuning,
 /// strongest first:
-/// the score's <c>chordDiagrams TUNING</c> (<c>none</c>: no diagram at all, written shapes
-/// included — a piano score from the same source); else the fretted instrument of the part
-/// the chord belongs to (<see cref="PartHeaderDefaults.FrettedTuningWord"/>); else the guitar.
+/// the fretted instrument of the part the chord belongs to
+/// (<see cref="PartHeaderDefaults.FrettedTuningWord"/>); else the score's <c>chordDiagrams TUNING</c>;
+/// else the guitar — and <c>none</c> draws no diagram at all, written shapes included (a piano
+/// score from the same source). The part comes first since 2026-10-31 (owner's decision, review
+/// D1): a guitar part's <c>chord(F 133211)</c> under <c>chordDiagrams ukulele</c> plays the guitar
+/// shape and drew the ukulele's F; the score's word now speaks for the chords no fretted part
+/// owns — a piano part's, a lead sheet's chords row.
 /// A staff-level override (<c>staff melody with chords prog on ukulele</c>) was considered and
 /// NOT added: the layout suffices.
 /// </para>
@@ -529,19 +534,18 @@ public static class ChordDiagramsKey
     public static bool IsTuningWord(string word) => Tablature.Tunings.Names.Contains(word);
 
     /// <summary>
-    /// The tuning a diagram draws on: the layout's word (<paramref name="layoutWord"/>, null
-    /// when the key is absent), else the part's fretted tuning (<paramref name="partTuning"/>),
-    /// else the guitar — null for <c>none</c>, which draws no diagram.
+    /// The tuning a diagram draws on: the part's fretted tuning (<paramref name="partTuning"/>),
+    /// else the layout's word (<paramref name="layoutWord"/>, null when the key is absent), else
+    /// the guitar — null for <c>none</c>, which draws no diagram.
     /// </summary>
     public static Syntax.TuningType? Resolve(string? layoutWord, Syntax.TuningType? partTuning)
         => layoutWord == Music.ChordShapes.NoneWord ? null
-            : layoutWord != null ? Tablature.Tunings.Parse(layoutWord)
-            : partTuning ?? Syntax.TuningType.Guitar;
+            : partTuning ?? (layoutWord != null ? Tablature.Tunings.Parse(layoutWord) : Syntax.TuningType.Guitar);
 
-    /// <summary>The same, as a tuning WORD (for the editor's messages): the layout's word, else
-    /// the part's (<paramref name="partWord"/>), else <c>guitar</c>; null for <c>none</c>.</summary>
+    /// <summary>The same, as a tuning WORD (for the editor's messages): the part's
+    /// (<paramref name="partWord"/>), else the layout's word, else <c>guitar</c>; null for <c>none</c>.</summary>
     public static string? ResolveWord(string? layoutWord, string? partWord)
-        => layoutWord == Music.ChordShapes.NoneWord ? null : layoutWord ?? partWord ?? "guitar";
+        => layoutWord == Music.ChordShapes.NoneWord ? null : partWord ?? layoutWord ?? "guitar";
 }
 
 /// <summary>How far an ending's volta bracket reaches (<see cref="VoltaBracketLength"/>).</summary>

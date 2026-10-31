@@ -37,6 +37,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   ways to hold the same notes. When the notes are edited away from the shape, LYS1057 warns and
   the quick fix writes the chord's own. On a guitar part's single note the light bulb offers it
   too: `c'1` → `c'1@diagram(xxxx1x)`.
+- ⚠️ **A guitar part's chord diagrams are always the guitar's**, whatever the score's
+  `chordDiagrams`; that word now chooses the instrument for a piano's or a lead sheet's chords.
 - **`<f a c>4@chord@diagram` strum after strum draws the diagram once**, where it changes and at
   each system's head, as `chord(F 133211)4` does; the name prints every time.
 - **`<< c e g >>@diagram` is drawn** over the group's first note (it warned LYS4008).

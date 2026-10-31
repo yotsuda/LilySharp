@@ -622,7 +622,8 @@ internal static class LayoutPlanReader
         }
 
         // The tuning word as written, `none` included: an absent key — or `all` alone — is
-        // null, and means "the part's instrument, else the guitar" (ChordDiagramsKey.Resolve).
+        // null, and means "the part's instrument, else the guitar"; a written word yields to a
+        // fretted part's own instrument too (ChordDiagramsKey.Resolve).
         // All four parts are set, so an override block's `chordDiagrams guitar` drops a named
         // block's `all`, its capo and its table (a key written again is written whole). The
         // capo lives in the chord SPELLING, the value every namer is handed (ChordSpelling).

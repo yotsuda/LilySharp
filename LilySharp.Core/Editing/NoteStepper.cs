@@ -1393,8 +1393,8 @@ public static partial class NoteStepper
     /// <summary>
     /// The tuning word the editor steps, sounds and offers a chord's shapes on, and a note for
     /// the status bar (or null): the owner's rule for which tuning a diagram draws on
-    /// (<see cref="ChordDiagramsKey.Resolve"/>: the layout's <c>chordDiagrams</c>, else the
-    /// part's fretted instrument, else the guitar), read in the FIRST score that renders the
+    /// (<see cref="ChordDiagramsKey.Resolve"/>: the part's fretted instrument, else the layout's
+    /// <c>chordDiagrams</c>, else the guitar), read in the FIRST score that renders the
     /// chord — for an <c>@chord</c>, the first score drawing its part
     /// (<see cref="ChordDiagramScores.TuningsOfMark"/>); for a row entry, the first score placing
     /// its row, on the staff it is first placed over (<see cref="ChordDiagramScores.TuningsOfRow"/>).

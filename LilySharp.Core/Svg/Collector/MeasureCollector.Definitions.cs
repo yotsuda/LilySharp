@@ -544,8 +544,8 @@ public sealed partial class MeasureCollector
         // every inline @chord is collected after this.
         _chordSpelling = _v.Meta.LayoutPlan.Chords;
         _chordNameCollector.Spelling = _chordSpelling;
-        // …and the tuning chord diagrams draw on (chordDiagrams; absent = the part's instrument,
-        // else the guitar — resolved per part and per row, ChordDiagramsKey.Resolve).
+        // …and the tuning chord diagrams no fretted part owns draw on (chordDiagrams; absent = the
+        // guitar — a fretted part's own first, resolved per part and per row, ChordDiagramsKey.Resolve).
         _chordDiagramsWord = _v.Meta.LayoutPlan.ChordDiagrams;
         _chordNameCollector.DiagramsWord = _chordDiagramsWord;
         // …and whether every chord name draws one (`chordDiagrams … all`), not only a written shape.

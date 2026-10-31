@@ -104,7 +104,7 @@ internal sealed class ChordNameCollector
     /// decision 2026-09-28) — else the layout table's shape for the chord (<see cref="Table"/>,
     /// in the section the entry is written in) — in a <c>chordDiagrams … all</c> score, else the
     /// default shape of <paramref name="structure"/> (the chord the entry names, a degree resolved
-    /// in its key) — on the layout's tuning, else the staff's fretted instrument's, else the
+    /// in its key) — on the staff's fretted instrument's tuning, else the layout's, else the
     /// guitar's (<see cref="Semantics.ChordDiagramsKey.Resolve"/>); never under <c>chordDiagrams none</c>.
     /// </summary>
     private string? DiagramOf(ChordEntrySyntax entry, LilySharp.Core.Music.ChordStructure? structure)

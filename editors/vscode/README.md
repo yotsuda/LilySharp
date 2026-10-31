@@ -143,8 +143,8 @@ Key…, Remove All String Numbers. Every command, with examples:
 | `Ctrl+Shift+Up` / `Ctrl+Shift+Down` **anywhere else** | Nothing on Windows and macOS (VS Code binds these keys to nothing in the editor there); on Linux, VS Code's own *Add Cursor Above / Below*, which these keys are the second binding of |
 | `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown` **anywhere else** | VS Code's own *Move Editor Left / Right in Group* on Windows and Linux; nothing on macOS |
 
-The chord's tuning is the diagram's: the score's `layout { chordDiagrams TUNING [all] }`, else the
-part's instrument when it is fretted (for a `chords` row, the staff it stands above), else the
+The chord's tuning is the diagram's: the part's instrument when it is fretted (for a `chords` row,
+the staff it stands above), else the score's `layout { chordDiagrams TUNING [all] }`, else the
 guitar — read in the first score that renders the chord; the status bar says when another
 score draws it on another tuning.
 

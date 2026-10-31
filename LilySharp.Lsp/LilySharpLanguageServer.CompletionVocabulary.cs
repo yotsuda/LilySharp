@@ -842,9 +842,9 @@ public sealed partial class LilySharpLanguageServer
         ["partCombineText"] = "true",
         ["chordQualities"] = "symbols",
         ["minorChords"] = "upper",
-        // `guitar`, not the absent key's "the part's instrument, else guitar" (no word says
-        // that): the same page unless a part is a ukulele, a mandolin, a bass… (owner's rule
-        // 2026-09-28, ChordDiagramsKey.Resolve).
+        // `guitar`: the same page as the absent key — a fretted part takes its own instrument
+        // either way, the rest the guitar (owner's rules 2026-09-28, 2026-10-31,
+        // ChordDiagramsKey.Resolve).
         ["chordDiagrams"] = "guitar",
         ["chordNames"] = "shape",
         ["chordList"] = "false",

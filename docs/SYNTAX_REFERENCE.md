@@ -1997,7 +1997,7 @@ layout {
   partCombineText true     // the default: a combinedStaff prints a2 / Solo
   chordQualities symbols   // the default: C°, C+, Cø, C°7 — LilyPond's own
   minorChords upper        // the default: Am, Am7
-  chordDiagrams guitar     // written chord shapes draw as guitar diagrams (unset: the part's instrument)
+  chordDiagrams guitar     // chords no fretted part owns draw guitar diagrams (a fretted part: its own)
                            // (`chordDiagrams guitar all` / `chordDiagrams all`: EVERY chord draws one)
   voltaBracket all         // the default: an ending's bracket covers every bar of it
   Stem.thickness 1.3       // the default: the line thicknesses and stem length (below)
@@ -2589,16 +2589,19 @@ and hovering `capo` or its fret shows the same ranking. Pick a fret and write it
 
 **Which tuning.** A diagram draws on ONE tuning, strongest first:
 
-1. the score's `layout { chordDiagrams TUNING }` (with or without `all`) — `none` draws no
-   diagram at all, written shapes included;
-2. else the instrument of the PART, when it is fretted (its `tuning`, else its `instrument`
+1. the instrument of the PART, when it is fretted (its `tuning`, else its `instrument`
    preset's — the tuning its tab would use: guitar, ukulele, mandolin, bass, banjo, …; the
-   bowed strings, a piano, a voice fret nothing): for an `@chord`, the part whose note carries
-   it; for a `chords` row, the staff the row stands directly above in the score (a tab staff:
-   its own tuning);
-3. else the guitar — a lead-sheet row with no staff under it, a staff that frets nothing.
+   bowed strings, a piano, a voice fret nothing): for an `@chord` or a `chord(…)` item, the part
+   it is written in; for a `chords` row, the staff the row stands directly above in the score (a
+   tab staff: its own tuning) — a guitar part's chords draw guitar diagrams in every score, so
+   the shape drawn is the one played;
+2. else the score's `layout { chordDiagrams TUNING }` (with or without `all`) — the chords no
+   fretted part owns: a piano's, a voice's, a lead-sheet row's (a ukulele edition of a lead sheet);
+3. else the guitar.
 
-There is no staff-level override; a score that needs another tuning says so in its `layout`.
+`chordDiagrams none` draws no diagram at all, written shapes included, whatever the parts. Until
+2026-10-31 the score's word came first, and a guitar part's `chord(F 133211)` under
+`chordDiagrams ukulele` played the guitar shape and drew the ukulele's F.
 
 **A shape** is one character per string from the LOW string: `x` muted, `o` or `0` open, a
 digit the fret. For frets 10 to 15, put a `-` on each side of each two-digit fret:
@@ -2693,7 +2696,7 @@ than Lily#'s order, below, so every shape of that order passes):
 
 The bass is not checked: an inversion (`@chord(C 032010)`, LilyPond's own C7 `032310`) is an
 ordinary shape. One warning per shape lists every problem. A shape is checked on the tuning it is routed to
-in each score that draws it (layout, else the part's instrument, else the guitar); a shape
+in each score that draws it (the part's instrument, else the layout, else the guitar); a shape
 no score uses (a four-string shape in a guitar-only score) is not — it is warned as unused
 (LYS1038: *'0232' is a 4-string shape, but the scores here draw this chord's diagram on
  guitar (6 strings)*) — and a shape under `chordDiagrams none` is neither. A symbol-less shape (`diagram(x32010)`, its name comes from the shape),
@@ -2856,7 +2859,7 @@ diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the
 - **Its diagram and name.** The item draws its shape's diagram over the staff and in the twin —
   `chordDiagrams none` turns it off with every other diagram; `chord(…)` prints its name over it.
   A bare `@chord` on a `diagram(…)` item names the item's symbol and draws its shape once (the
-  usual diagram rules: the diagram's tuning is layout, else the part's instrument, else the
+  usual diagram rules: the diagram's tuning is the part's instrument, else the layout, else the
   guitar); an `@chord(Other …)` or `@diagram(…)` on either item is its own.
 - **Exports.** The MIDI plays the notes; MusicXML writes the chord with each note's
   `<technical><string>` (a `chord(…)` item's name and diagram as its `<harmony>` and `<frame>`);

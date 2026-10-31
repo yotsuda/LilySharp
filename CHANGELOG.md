@@ -81,6 +81,11 @@ workflow attaches that section to the GitHub Release verbatim.
   With the caret on the shape, Ctrl+Shift+Up/Down walks the other ways to hold the same notes
   (a bare `@diagram` shows the first: Up writes it out, Down at the first goes back to bare)
   (*fingering 2 of 3*), the notes unchanged.
+- ⚠️ `[lang]` **A chord diagram takes its part's instrument first**: a guitar part's chords draw
+  guitar diagrams in every score, and `layout { chordDiagrams ukulele }` now speaks for the chords
+  no fretted part owns — a piano's, a voice's, a lead-sheet row's. Under `chordDiagrams ukulele
+  all` a guitar part's `chord(F 133211)` played the guitar shape and drew the ukulele's F.
+  `chordDiagrams none` still draws nothing.
 - `[page]` **An `@diagram` strum after strum stands where the diagram changes**, as a `chord(…)`
   item's does: `<f a c>4@chord@diagram` four times draws the diagram once (and again at each
   system's head); the `@chord` name prints on every chord. The same shape as the voice's diagram

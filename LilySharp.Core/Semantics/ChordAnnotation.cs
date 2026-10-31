@@ -48,8 +48,8 @@ namespace LilySharp.Core.Semantics;
 /// A diagram draws only where a shape is written (owner's decision 2026-09-28): <c>@chord(Cm7)</c>
 /// names and draws none — save in a <c>chordDiagrams … all</c> score, where every name (a bare
 /// <c>@chord</c>'s derived one too) draws its written shape, else the default. The TUNING it draws on is the score's and the part's
-/// (<see cref="ChordDiagramsKey.Resolve"/>: <c>layout { chordDiagrams T }</c>, else the part's
-/// fretted instrument, else the guitar; <c>none</c> draws nothing, so one source makes a piano
+/// (<see cref="ChordDiagramsKey.Resolve"/>: the part's fretted instrument, else
+/// <c>layout { chordDiagrams T }</c>, else the guitar; <c>none</c> draws nothing, so one source makes a piano
 /// score and a guitar score).
 /// </para>
 /// <para>
