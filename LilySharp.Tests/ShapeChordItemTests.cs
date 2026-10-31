@@ -910,7 +910,8 @@ public class ShapeChordItemTests
     }
 
     /// <summary>Ctrl+Shift+Up/Down on the item steps its shape through the @chord order, on the
-    /// PART's tuning, and sounds it; Down at the default keeps it (the shape is required).</summary>
+    /// PART's tuning, and sounds it; Down at the default takes the shape away — the name alone
+    /// still draws and plays it (owner's request 2026-10-31; it used to stop there).</summary>
     [Fact]
     public void TheStep_StepsTheItemsShape_AndSoundsIt()
     {
@@ -924,10 +925,10 @@ public class ShapeChordItemTests
         var (next, _) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, +1);
         Assert.NotEqual(text, next);
         Assert.Matches(@"diagram\(C [x0-9-]+\)1", next);
-        var (same, down) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, -1);
-        Assert.Equal(text, same);
+        var (bare, down) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, -1);
+        Assert.Equal(Doc("C"), bare);
         Assert.False(down.Fallback);
-        Assert.Contains("keeps its shape", down.Message);
+        Assert.Contains("still draws and plays the usual shape (x32010)", down.Message);
         // On a ukulele part it steps the ukulele's shapes.
         string uke = Book("instrument ukulele", "diagram(C)1 |");
         Assert.Equal(Book("instrument ukulele", "diagram(C 0003)1 |"),

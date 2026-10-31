@@ -1114,21 +1114,22 @@ public static partial class NoteStepper
                     : "this score's layout table lists it, so the name alone still shows it")} "
                 + $"({Music.ChordVoicings.Spell(order[at])}){note}", true);
         }
-        else if (dir < 0 && at == 0 && (site.IsItem && !site.ShowsName || unnamed))
+        else if (dir < 0 && at == 0 && unnamed)
         {
-            // A diagram(…) item shows its shape (owner's decision 2026-09-28): Down stops at the
-            // default. A shape with no symbol is all its words say, so it stays too. A chord(…)
-            // item with a symbol goes on below (owner's request 2026-10-31): chord(F 133211) →
-            // chord(F), the name alone — no diagram, F A C close.
-            return (null, ShapeMessage(symbol, 0, order) + (unnamed
-                ? " - the first; a shape with no symbol keeps its shape"
-                : " - the first; a diagram(...) item keeps its shape") + note, true);
+            // A shape with no symbol is all its words say, so it stays.
+            return (null, ShapeMessage(symbol, 0, order) + " - the first; a shape with no symbol keeps its shape" + note, true);
         }
         else if (dir < 0 && at == 0)
         {
-            // Down at the default: the shape goes, and with it the diagram.
-            return (Remove(site, namedAt >= 0 ? namedAt : shapeAt, shapeAt),
-                $"{symbol}: shape removed, no diagram (Up adds {Music.ChordVoicings.Spell(order[0])}){note}", true);
+            // Down at the default: the shape goes. An @chord's or a chord(…) item's diagram goes
+            // with it (chord(F 133211) → chord(F), the name alone — F A C close; owner's request
+            // 2026-10-31); a diagram(…) item's name alone still draws and plays the usual shape
+            // (diagram(Cmaj7 x32000) → diagram(Cmaj7); owner's request the same day — it used to
+            // stop at the default, the shape being what the item showed).
+            string first = Music.ChordVoicings.Spell(order[0]);
+            return (Remove(site, namedAt >= 0 ? namedAt : shapeAt, shapeAt), site.IsItem && !site.ShowsName
+                ? $"{symbol}: shape removed - diagram({symbol}) still draws and plays the usual shape ({first}){note}"
+                : $"{symbol}: shape removed, no diagram (Up adds {first}){note}", true);
         }
         else
         {

@@ -495,10 +495,11 @@ public class StepRequestTests
     }
 
     /// <summary>Down at a chord(…) item's usual shape takes the shape away — chord(F 133211) →
-    /// chord(F), the name alone, played close — as at an @chord's; a diagram(…) item keeps its shape
-    /// (owner's request 2026-10-31).</summary>
+    /// chord(F), the name alone, played close — as at an @chord's; a diagram(…) item's too
+    /// (diagram(Cmaj7 x32000) → diagram(Cmaj7), which still draws and plays the usual shape;
+    /// owner's requests 2026-10-31). A shape with no symbol stays.</summary>
     [Fact]
-    public void DownAtAChordItemsUsualShape_LeavesTheNameAlone()
+    public void DownAtAnItemsUsualShape_LeavesTheNameAlone()
     {
         static string Gt(string music) => $$"""
             part gt { instrument guitar }
@@ -508,7 +509,10 @@ public class StepRequestTests
             """;
         Assert.Equal(Gt("chord(F)1 |"), Step(Gt("chord(F 1332‸11)1 |"), -1, semitone: true).After);
         Assert.Equal(Gt("chord(F 133211)1 |"), Step(Gt("chord(‸F)1 |"), +1, semitone: true).After);
-        Assert.Equal(Gt("diagram(F 133211)1 |"), Step(Gt("diagram(F 1332‸11)1 |"), -1, semitone: true).After);
+        Assert.Equal(Gt("diagram(F)1 |"), Step(Gt("diagram(F 1332‸11)1 |"), -1, semitone: true).After);
+        Assert.Equal(Gt("diagram(Cmaj7)1 |"), Step(Gt("diagram(Cmaj7 x320‸00)1 |"), -1, semitone: true).After);
+        Assert.Equal(Gt("diagram(Cmaj7 x32000)1 |"), Step(Gt("diagram(Cmaj‸7)1 |"), +1, semitone: true).After);
+        Assert.Equal(Gt("diagram(x32010)1 |"), Step(Gt("diagram(x320‸10)1 |"), -1, semitone: true).After);
     }
 
     // ---------------------------------------------------------------- notes

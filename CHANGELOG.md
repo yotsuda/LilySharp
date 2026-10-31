@@ -109,8 +109,10 @@ workflow attaches that section to the GitHub Release verbatim.
   - The close voicing stays in the instrument's range (a ukulele's G is G4 B4 D5, not G3), stands
     by a bass staff's foot on a bass staff, and on a fretted part goes up an octave until a hand
     can hold it (a bass's F is F2 A2 C3, not F1 A1 C2).
-- `[editor]` **Ctrl+Shift+Down at a `chord(…)` item's usual shape takes the shape away**:
-  `chord(F 133211)` → `chord(F)`, as `@chord(F 133211)` → `@chord(F)`. A `diagram(…)` item keeps its shape.
+- `[editor]` **Ctrl+Shift+Down at a `chord(…)` or `diagram(…)` item's usual shape takes the shape
+  away**: `chord(F 133211)` → `chord(F)`, as `@chord(F 133211)` → `@chord(F)`, and
+  `diagram(Cmaj7 x32000)` → `diagram(Cmaj7)`, whose name alone still draws and plays the usual
+  shape. A shape with no symbol (`diagram(x32010)`) stays.
 - `[lang]` **`<f a c>1@chord@diagram(xx321x)` is not warned** (LYS1056 was): the bare `@chord` names
   the chord's notes and the shape is one way to hold them — what Ctrl+Shift+Up writes from a bare
   `@diagram`. LYS1056 stays for a single note, where the name is read off the shape.
