@@ -13,6 +13,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   gets an error that says where each word goes, and Ctrl+. rewrites it**: the capo and the
   table go before the layout block (or before the score that holds it), the entry becomes
   `chordTuning` / `chordDiagrams`, and a block left with nothing goes with it.
+- **`chord` and `diagram` — the shape-chord items `chord(F 133211)4`, `diagram(F 133211)4` — are
+  in the music completion** (Ctrl+Space inside a part's music); the parentheses open on the
+  chord symbols.
 - **The preview lights a `chord(…)` / `diagram(…)` item's notes with the caret anywhere on the
   item** — inside its parentheses and on its duration too; only its word lit them before.
 - **Ctrl+Shift+Up / Down on an `@diagram(…)` keep walking with the caret just past its `)`** —

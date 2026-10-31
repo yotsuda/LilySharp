@@ -273,6 +273,14 @@ public class CompletionAuditTests
         foreach (string mark in LanguageVocabulary.NavigationMarks)
             Assert.DoesNotContain(mark, labels);
 
+        // The shape-chord items (owner's request 2026-10-31): the word, its parentheses open
+        // on the chord symbols, and what they insert compiles with a symbol and shape in them.
+        Assert.Equal("chord($0)", items.Single(i => i.Label == "chord").InsertText);
+        Assert.Equal("diagram($0)", items.Single(i => i.Label == "diagram").InsertText);
+        AssertCompiles(Book(music: Resolved(items.Single(i => i.Label == "chord"), "F 133211") + "4 d4 e f |"), "`chord(…)` in music");
+        AssertCompiles(Book(music: Resolved(items.Single(i => i.Label == "diagram"), "F 133211") + "4 d4 e f |"), "`diagram(…)` in music");
+        Assert.True(LilySharpLanguageServer.IsInsideChordAnnotation("section A { m { chord(", 22));
+
         var cue = items.Single(i => i.Label == "cue");
         AssertCompiles(Book(music: "c4 d " + Resolved(cue, "e4 f") + " g4 a |"), "`cue { }` in music");
         AssertCompiles(Book(music: "cue bass { c4 d } e4 f |"), "`cue bass { }` in music");

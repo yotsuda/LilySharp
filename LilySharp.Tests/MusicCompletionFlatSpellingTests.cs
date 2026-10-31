@@ -146,6 +146,8 @@ public class MusicCompletionFlatSpellingTests
                 "afterGrace" => "g2 afterGrace { a16 } b2 |",   // after its main note (2026-10-12)
                 "voice" => "voice { g4 a b c' | } { e4 f g a | }",   // one keyword, N blocks
                 "cue" => "cue { g4 a } b4 c' |",                       // a region inside the bar
+                "chord" => "chord(G 320003)4 a4 b c' |",               // the shape-chord items (2026-10-31)
+                "diagram" => "diagram(G 320003)4 a4 b c' |",
                 "q" => "<g b d'>4 q q q |",                            // repeats the chord before it
                 "R" => "R1 |",
                 "r" or "s" => word + "4 a b c' |",
