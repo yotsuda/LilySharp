@@ -5,12 +5,11 @@
   <ol>
     <li><a href="#entry">1. Notes in angle brackets</a></li>
     <li><a href="#complete">2. Let completion spell it</a></li>
-    <li><a href="#named">3. Name a chord from its notes</a></li>
+    <li><a href="#byname">3. By name or by shape</a></li>
     <li><a href="#broken">4. Rolled and broken chords</a></li>
-    <li><a href="#byname">5. By name or by shape</a></li>
-    <li><a href="#fretted">6. On a fretted instrument</a></li>
-    <li><a href="#bowed">7. On a bowed string</a></li>
-    <li><a href="#ai">8. Ask the AI which voicings</a></li>
+    <li><a href="#fretted">5. On a fretted instrument</a></li>
+    <li><a href="#bowed">6. On a bowed string</a></li>
+    <li><a href="#ai">7. Ask the AI which voicings</a></li>
   </ol>
   <p class="grp">Elsewhere</p>
   <ol>
@@ -22,10 +21,17 @@
 
 <article>
 
-<p>This page is about chords you <b>play</b>: the notes on the staff, how to write them
-quickly, and how Lily# checks that a player can hold them. Chord <i>names</i> over the music —
-<code>chords</code> rows, <code>@chord(Cm7)</code>, shapes and diagram layouts — are on
-<a href="chords.html">Chords and chord diagrams</a>.</p>
+<p>This page is about chords you <b>play</b>: the notes on the staff, three ways to write them,
+and how Lily# checks that a player can hold them. What a chord <i>shows</i> over the music —
+its name, its diagram, a <code>chords</code> row — is on
+<a href="chords.html">Chord names and diagrams</a>.</p>
+
+<table class="g">
+  <tr><th>Write</th><th>When</th><th>Section</th></tr>
+  <tr><td><code>&lt;f a c&gt;4</code></td><td>you know the notes, or completion writes them</td><td><a href="#entry">1</a>, <a href="#complete">2</a></td></tr>
+  <tr><td><code>chord(F)4</code></td><td>you know the name; the part plays its usual voicing</td><td><a href="#byname">3</a></td></tr>
+  <tr><td><code>chord(F 133211)4</code></td><td>a guitarist's shape: those strings, those frets</td><td><a href="#byname">3</a></td></tr>
+</table>
 
 <section id="entry">
   <h2>Notes in angle brackets</h2>
@@ -46,7 +52,9 @@ quickly, and how Lily# checks that a player can hold them. Chord <i>names</i> ov
   </ul>
   <!--EXAMPLE:chord-entry-->
   <p class="note">The full octave rules, with the marks on later notes that spread a chord
-  out, are in the manual's <a href="grammar.html#events">Notes, rests, chords</a>.</p>
+  out, are in the manual's <a href="grammar.html#events">Notes, rests, chords</a>. To print the
+  chord's name over it, add a bare <code>@chord</code> — see
+  <a href="chords.html#fromnotes">Names from the notes</a>.</p>
 </section>
 
 <section id="complete">
@@ -64,19 +72,53 @@ quickly, and how Lily# checks that a player can hold them. Chord <i>names</i> ov
   Every other typing aid is on the <a href="editor.html">editor page</a>.</p>
 </section>
 
-<section id="named">
-  <h2>Name a chord from its notes</h2>
-  <p>A bare <code>@chord</code> on a chord names it from its own notes, so the name can never
-  disagree with what sounds. Sevenths, inversions and slash basses are all named:
-  <code>&lt;e g c&gt;</code> prints <b>C/E</b>.</p>
-  <!--EXAMPLE:chord-named-->
-  <p>A name you write yourself — <code>&lt;c' f' g'&gt;1@chord(C)</code> — is checked against the
-  notes, gently (LYS1054, information): <i>F is not a tone of C: the chord's notes spell
-  Csus4</i>, with a quick fix that writes <code>@chord(Csus4)</code>. A tension the name leaves
-  out may be meant, so it is never more than a note.</p>
-  <p>To name a whole song at once, <a href="commands.html#chord-track">Add Chord Track</a> reads
-  the chords the score plays and writes them as a <code>chords</code> row
-  (from the command line, <code>lysc harmonize</code> suggests a chord track for a melody).</p>
+<section id="byname">
+  <h2>By name or by shape</h2>
+  <p>Instead of its notes, write the chord's <b>name</b>, or a guitarist's <b>shape</b> (one
+  character per string, low string first: <code>x32010</code> is C). One rule covers every
+  spelling: <b>the word says what is seen</b> — <code>chord</code> shows the name,
+  <code>diagram</code> the fret diagram — and with no <code>@</code> the chord sounds.</p>
+  <table class="g">
+    <tr><th>Written</th><th>Prints</th><th>Sounds</th></tr>
+    <tr><td><code>chord(F)4</code></td><td>F</td><td>the usual voicing</td></tr>
+    <tr><td><code>chord(F 133211)4</code></td><td>F over its diagram</td><td>that shape's strings</td></tr>
+    <tr><td><code>chord(x32010)4</code></td><td>C, read off the shape, over its diagram</td><td>that shape's strings</td></tr>
+    <tr><td><code>diagram(133211)4</code></td><td>the diagram alone</td><td>that shape's strings</td></tr>
+  </table>
+  <p>The same words with <code>@</code> — <code>c1@chord(F)</code>, <code>c1@diagram(133211)</code> —
+  only mark the note they are on; they are on <a href="chords.html">Chord names and diagrams</a>.</p>
+  <ul>
+    <li><b>The notes:</b> each string's open pitch plus its fret, on the part's instrument (else
+    the guitar), each with its string number, so a <code>tab</code> shows exactly the shape.
+    <code>chord(C x32013)1</code> on a guitar is C3 E3 G3 C4 G4. They are absolute — octave
+    marks after the <code>)</code> are an error; play it higher on the neck instead — and the note
+    after the item is read from its lowest note.</li>
+    <li><b>No shape:</b> a guitar, bass, ukulele or banjo plays its usual shape for the name
+    (<code>chord(G)</code> prints the name, <code>diagram(G)</code> draws the shape). Any other
+    part plays the chord close, with its root near middle C. A shape written badly, or only for
+    another instrument, warns (LYS1040) and keeps its time as a spacer.</li>
+    <li><b>The tail is a chord's:</b> a duration, dots, ties, slurs, beams, articulations,
+    dynamics; a bare duration or <code>q</code> repeats it.</li>
+    <li><b>Strum after strum:</b> write every strum the same. The name and the diagram stand
+    where the chord changes, and again at the head of each system, and the repeats take no
+    room.</li>
+  </ul>
+  <!--EXAMPLE:chord-items-->
+  <!--EXAMPLE:chord-notes-->
+  <!--EXAMPLE:chord-items-piano-->
+  <h3>In the editor</h3>
+  <ul>
+    <li><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> on an item walks the other shapes of the
+    same chord, and sounds each one; from <code>chord(G)</code>, Up writes the usual shape.</li>
+    <li><b>Found a shape by ear?</b> Write <code>chord(x02210)4</code> and the page prints its
+    name, Am. Or hover <code>diagram(x02210)</code>: it says <i>this shape is Am</i>, and the
+    quick fix (<kbd>Ctrl+.</kbd>) writes the name in.</li>
+    <li><b>Right-click an item → <i>Convert to Chord Notes &lt;…&gt;</i></b> writes it out as the
+    notes it plays, octave marks and string numbers included — <code>diagram(133211)4</code>
+    becomes <code>&lt;f,\6 c\5 f'\4 a'\3 c'\2 f''\1&gt;4</code>, and a <code>chord(…)</code> item
+    keeps its name as <code>@chord(F)</code>. The file must sound the same afterwards, or nothing
+    changes.</li>
+  </ul>
 </section>
 
 <section id="broken">
@@ -89,57 +131,30 @@ quickly, and how Lily# checks that a player can hold them. Chord <i>names</i> ov
     eighths. A share that is no plain note value becomes a tuplet by itself. Octaves stack as
     in a chord. A bare number inside is a degree, never a duration: <code>&lt;&lt; c 3 5 8 &gt;&gt;</code>.
     A member may be a chord or a rest.</li>
+    <li><b>A shape inside is spread</b>: <code>&lt;&lt; diagram(C x32010) &gt;&gt;2</code> plays the
+    five strings in turn, lowest first, under 5:4, and draws the diagram once, over the first
+    note. Mixed with other members (<code>&lt;&lt; c diagram(G 320003) e &gt;&gt;</code>) its notes take
+    their places in the sequence.</li>
   </ul>
   <!--EXAMPLE:chord-broken-->
-</section>
-
-<section id="byname">
-  <h2>By name or by shape</h2>
-  <p>You can also write the chord's <b>name</b>, or a guitarist's <b>shape</b>, instead of its
-  notes. One rule covers every spelling: <b>the word says what is seen</b>. <code>chord</code>
-  shows the name, <code>diagram</code> shows the fret diagram. Without <code>@</code> the chord
-  sounds; with <code>@</code> it only marks the note it is on.</p>
-  <table class="g">
-    <tr><th>Written</th><th>Name</th><th>Diagram</th><th>Sounds</th></tr>
-    <tr><td><code>chord(F)4</code></td><td>F</td><td></td><td>the usual voicing</td></tr>
-    <tr><td><code>chord(F 133211)4</code></td><td>F</td><td>✓</td><td>that shape's strings</td></tr>
-    <tr><td><code>chord(x32010)4</code></td><td>C, read off the shape</td><td>✓</td><td>that shape's strings</td></tr>
-    <tr><td><code>diagram(133211)4</code></td><td></td><td>✓</td><td>that shape's strings</td></tr>
-    <tr><td><code>c1@chord(F)</code></td><td>F</td><td></td><td>only the c</td></tr>
-    <tr><td><code>c1@chord(F 133211)</code></td><td>F</td><td>✓</td><td>only the c</td></tr>
-    <tr><td><code>c1@diagram(133211)</code></td><td></td><td>✓</td><td>only the c</td></tr>
-  </table>
-  <ul>
-    <li><b>No shape:</b> a guitar, bass, ukulele or banjo plays its usual shape for the name
-    (<code>chord(G)</code> prints the name, <code>diagram(G)</code> draws the shape). Any other
-    part plays the chord close, with its root near middle C.</li>
-    <li><b>Strum after strum:</b> write every strum the same. The name and the diagram stand
-    where the chord changes, and again at the head of each system, and the repeats take no
-    room.</li>
-    <li><b>Found a shape by ear?</b> Write <code>chord(x32010)4</code> and the page prints its
-    name. Or hover <code>diagram(x32010)</code>: it says <i>this shape is C</i>, and the quick
-    fix (Ctrl+.) writes the name in.</li>
-    <li><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> on either item walks the other shapes of the
-    same chord, and sounds each one.</li>
-  </ul>
-  <!--EXAMPLE:chord-items-->
-  <!--EXAMPLE:chord-items-piano-->
 </section>
 
 <section id="fretted">
   <h2>On a fretted instrument</h2>
   <p>A guitar, bass, ukulele or banjo part can hold only what one hand can fret: one note per
-  string, all within four frets. Lily# finds that fingering itself and uses it three ways.</p>
+  string, all within four frets. Lily# finds that fingering itself — no crossed strings, the
+  lowest position, the fewest fingers — and uses it four ways.</p>
   <ul>
     <li><b>A bare <code>@diagram</code> on a chord draws its own notes as fretted:</b>
-    <code>&lt;g b d' f'&gt;1@diagram</code> draws <code>xx5431</code>. It chooses no crossed
-    strings, the lowest position and the fewest fingers. The <code>.ly</code> twin draws the
-    same shape.</li>
-    <li><b><code>chord(NAME SHAPE)</code> and <code>diagram(NAME SHAPE)</code> go the other
-    way:</b> you write the shape and it writes the notes (<a href="#byname">By name or by
-    shape</a>). Each string's open pitch plus its fret becomes a note, with its string number,
-    so a <code>tab</code> shows exactly that shape. In <code>&lt;&lt; &gt;&gt;</code> its strings
-    are played in turn, lowest first. The diagram is drawn once, over the first note.</li>
+    <code>&lt;g b d' f'&gt;1@diagram</code> draws <code>xx5431</code>, and follows the notes when
+    you edit them. The <code>.ly</code> twin draws the same shape.</li>
+    <li><b>Right-click a <code>&lt;…&gt;</code> chord → <i>Add Guitar Diagram</i></b> writes that
+    shape out: <code>&lt;g b d' f'&gt;1@diagram(xx5431)</code>. With the caret on the shape,
+    <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> walks the other ways to hold the same notes
+    (<i>fingering 2 of 3</i>: <code>x-10-976x</code>); the notes never change.</li>
+    <li><b>A written diagram that no longer sounds its chord is warned</b> (LYS1057) — the notes
+    were edited after the shape was written. The quick fix writes the chord's own shape. A capo
+    or a transposing part, every note moved alike, is not a difference.</li>
     <li><b>A chord no hand can hold is warned</b> (LYS1055). The warning names a voicing of the
     same notes that can be held, written as a diagram writes it.</li>
   </ul>
@@ -150,8 +165,8 @@ quickly, and how Lily# checks that a player can hold them. Chord <i>names</i> ov
   </table>
   <p>Ranges, open strings and the tuning are the part's own: <code>instrument ukulele</code>
   checks against the ukulele's re-entrant G, <code>tuning guitarDropD</code> against the
-  dropped D. Shapes, chord diagram layouts and the capo are on
-  <a href="chords.html#notes">Chords and chord diagrams</a>.</p>
+  dropped D. Which instrument a diagram is drawn for, every-chord diagrams and the capo are on
+  <a href="chords.html#layout">Chord names and diagrams</a>.</p>
 </section>
 
 <section id="bowed">
