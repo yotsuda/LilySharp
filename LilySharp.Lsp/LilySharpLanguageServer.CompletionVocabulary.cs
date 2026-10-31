@@ -5074,9 +5074,11 @@ public sealed partial class LilySharpLanguageServer
                 ArgumentStub("pluck", "Right-hand (plucking) finger — offers p, i, m, a", "6pluck"),
                 ArgumentStub("bend", "String bend — offers half, full", "6bend"),
 
-                // Guitar chord diagram: one character per string, low to high —
-                // x = muted, o = open, digit = fret.
-                new CompletionItem { Label = "diagram(x32010)", Kind = CompletionItemKind.Value, Detail = "Chord diagram (x = muted, o = open, digit = fret)", SortText = "6diagram" },
+                // Guitar chord diagram. Bare, it draws the chord's (or the note's) own fingering;
+                // with a shape — one character per string, low to high, x = muted, o = open,
+                // digit = fret — that shape. The completion writes the bare word (owner's request
+                // 2026-10-31: it used to glue "(x32010)" on), and Ctrl+Shift+Up writes the shape out.
+                new CompletionItem { Label = "diagram", Kind = CompletionItemKind.Value, Detail = "Chord diagram: the chord's own fingering; or a shape, @diagram(x32010) (x = muted, o = open, digit = fret)", SortText = "6diagram" },
 
                 // Figured bass — parenthesised, figures space-separated: @figuredBass(6 4).
                 ArgumentStub("figuredBass", "Figured bass — offers 6, 6 4, 7, 6 5, 4 3, … (space-separated)", "7fig"),

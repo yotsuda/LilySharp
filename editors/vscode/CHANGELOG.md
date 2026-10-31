@@ -18,6 +18,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   chord symbols.
 - **The preview lights a `chord(…)` / `diagram(…)` item's notes with the caret anywhere on the
   item** — inside its parentheses and on its duration too; only its word lit them before.
+- **`@diagram` completes as the bare word**: it used to glue `(x32010)` on. Bare, the mark
+  draws the chord's own fingering; a shape is typed in, or Ctrl+Shift+Up writes one out.
 - **The preview's right-click resolves `@todo` marks**: on a bar that holds one, *Resolve This
   TODO (remove @todo)* takes the bar's marks out; off the staves, *Resolve All TODOs* takes every
   mark of the file out — the editor's quick fix, from the page.

@@ -129,7 +129,7 @@ public class AtCompletionParsesTests
     [InlineData("bend")]           // string bends
     [InlineData("feather")]        // feathered beams
     [InlineData("figuredBass")]            // figured bass
-    [InlineData("diagram(")]       // guitar chord diagrams — free-form, no second list
+    [InlineData("diagram")]        // guitar chord diagrams — the bare word (owner's request 2026-10-31); a shape is typed, or stepped in
     [InlineData("8vb")]           // ottava bassa
     [InlineData("15m")]           // 15ma / 15mb
     [InlineData("text")]           // free expressive text
