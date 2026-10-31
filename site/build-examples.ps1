@@ -463,12 +463,30 @@ foreach ($cell in $cells.GetEnumerator()) {
 // $($cell.Value) - one bar for the table of chord spellings (chords.html).
 octave absolute
 time 4/4
-paper { paperWidth 40mm  paperHeight 0  leftMargin 2mm  rightMargin 2mm  topMargin 2mm  bottomMargin 2mm  indent 0  raggedRight }
+paper { paperWidth 40mm  paperHeight 0  leftMargin 2mm  rightMargin 2mm  topMargin 2mm  bottomMargin 2mm  indent 0 }
 part gt { instrument guitar }
 section A { gt { $($cell.Value) | } }
 form { ~A }
 score { staff gt }
 "@
+}
+
+# A table cell's picture is cut to its staff: the page's right edge where the staff ends, as
+# far past it as the staff starts from the left edge (a single line keeps its ideal width, so
+# each bar ends elsewhere). Every cell is then drawn at one scale, 7.5 px a staff space.
+function Set-CellWidth([string]$svg) {
+    $t = Get-Content $svg -Raw
+    $shift = [double]([regex]::Match($t, '<g transform="translate\(([-\d.]+),').Groups[1].Value)
+    $staff = [regex]::Match($t, '<line x1="([-\d.]+)" y1="[-\d.]+" x2="([-\d.]+)" y2="[-\d.]+" stroke="#000000" stroke-width="0\.100"/>')
+    $left = $shift + [double]$staff.Groups[1].Value
+    $width = $shift + [double]$staff.Groups[2].Value + $left
+    $height = [double]([regex]::Match($t, 'viewBox="0 0 [-\d.]+ ([-\d.]+)"').Groups[1].Value)
+    $inv = [Globalization.CultureInfo]::InvariantCulture
+    $w = $width.ToString('0.##', $inv)
+    $t = [regex]::Replace($t, '<svg ([^>]*?)width="[-\d.]+" height="[-\d.]+" viewBox="0 0 [-\d.]+ ([-\d.]+)"',
+        { param($m) "<svg $($m.Groups[1].Value)width=`"$(($width * 7.5).ToString('0.#', $inv))`" height=`"$(($height * 7.5).ToString('0.#', $inv))`" viewBox=`"0 0 $w $($m.Groups[2].Value)`"" }, 'None', [TimeSpan]::FromSeconds(5))
+    $t = [regex]::Replace($t, '<rect x="0" y="0" width="[-\d.]+"', "<rect x=`"0`" y=`"0`" width=`"$w`"")
+    Set-Content -Path $svg -Value $t -Encoding UTF8 -NoNewline
 }
 
 $failed = @()
@@ -483,6 +501,7 @@ foreach ($name in $examples.Keys) {
         continue
     }
     & $lysc svg $path | Out-Null   # -> $dir/$name.svg (lysc names its output for the book)
+    if ($cells.Contains($name)) { Set-CellWidth (Join-Path $dir "$name.svg") }
     Write-Host "ok  $name"
 }
 # A failed example would leave the manual with a broken picture and a source that does not
