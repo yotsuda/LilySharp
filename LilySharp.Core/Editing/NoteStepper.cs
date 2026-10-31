@@ -436,7 +436,7 @@ public static partial class NoteStepper
                     // A bar a step, four (a phrase) on the octave pair.
                     TargetKind.BarNumberEvery => CountEdit((SyntaxTokenNode)t.Node, semitone ? dir : 4 * dir, "barNumbers every"),
                     TargetKind.LayoutNumber => LayoutNumberAt(tree, t.Node.Span.Start) is { } ln
-                        ? LayoutNumberEdit(ln.Key, ln.Number, ln.Index, ln.Capo, dir, semitone)
+                        ? LayoutNumberEdit(ln.Key, ln.Number, ln.Index, ln.Capo, dir, semitone, ln.Sign)
                         : (null, "write a number"),
                     TargetKind.TupletRatio => TupletRatioEdit((TupletExpressionSyntax)t.Node, dir),
                     TargetKind.MusicCount => t.Node.Parent is BarlineSyntax or FormRepeatBlockSyntax

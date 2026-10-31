@@ -1270,7 +1270,7 @@ internal sealed class ElementCoordinator
     /// <summary>LilyPond's CueVoice fontSize = -4 shrinks the accidental grob with the head, so
     /// both read <see cref="EngravingDefaults.CueScale"/> — one home, and the port moved the
     /// head and its accidental together.</summary>
-    private static readonly double CueAccidentalScale = EngravingDefaults.CueScale;
+    private static double CueAccidentalScale => EngravingDefaults.CueScale;
 
     /// <summary>The font a cue note's accidental is measured with — the design font-size −4
     /// selects, already magnified, or null (the plain 20) for an ordinary note.</summary>

@@ -221,16 +221,18 @@ public sealed partial class LilyPondExporter
         // a `\repeat percent` repetition (EmitRest's remark; it stood here for one day,
         // session 878).
         string overrides = BarNumberContextLines() + FontOverrideLines() + EngravingStyleContextLines();
+        // …and the cue's size as the \CueVoice context's own (CueVoiceContextLines), nothing at −4.
+        string cueContext = CueVoiceContextLines();
         string initialRepeatBar = _rewindOpensThePiece ? "##f" : "##t";
         _sb.Append("  \\layout { indent = 15\\mm").Append(LineThicknessVariable());
-        if (overrides.Length == 0)
+        if (overrides.Length == 0 && cueContext.Length == 0)
             _sb.Append(" \\context { \\Score printInitialRepeatBar = ").Append(initialRepeatBar)
                .Append(" } }\n}\n");
         else
             _sb.Append("\n    \\context {\n      \\Score\n      printInitialRepeatBar = ")
                .Append(initialRepeatBar).Append('\n')
                .Append(overrides)
-               .Append("    }\n  }\n}\n");
+               .Append("    }\n").Append(cueContext).Append("  }\n}\n");
     }
 
     // ---- Chord tracks (\chordmode) ------------------------------------------

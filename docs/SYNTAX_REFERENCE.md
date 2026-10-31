@@ -2046,12 +2046,15 @@ keys (`--set Stem.thickness=1.5`, and `LedgerLine.thickness=1.0,0.1` with a comm
 | `NoteHead.scale` | 1.0 | the note heads' size, a factor (1.15 is 15% larger). Everything that hangs on a head follows it, as in LilyPond: stems stand on its edge, ledger lines reach past it, dots, accidentals, ties and slurs keep their gaps from it, and the notes make room for it. A grace note's head keeps its own size; a cue's is both smaller and scaled. Stems, flags, beams, dots, accidentals and rests keep their size |
 | `BarLine.thinThickness` | 1.9 | thin bar lines, in line thicknesses |
 | `BarLine.thickThickness` | 6.0 | thick bar lines, in line thicknesses |
+| `cueSize` | -4 | a `cue { }`'s size, as LilyPond's font-size step, -8 to 0: -4 is 0.63 of the staff's size (LilyPond's CueVoice), -3 is 0.71, -2 is 0.79 (about a Sibelius part's cue), -1 is 0.89. Everything the cue prints follows — heads, stems, flags, beams, rests, dots, accidentals and its clef |
 
 Each takes a positive number with no unit (`LedgerLine.thickness` two, not both 0;
-`Beam.damping`, `Dots.padding` and `Accidental.rightPadding` may be 0). The
+`Beam.damping`, `Dots.padding` and `Accidental.rightPadding` may be 0; `cueSize` is the one
+written with a sign, `cueSize -2`). The
 `.ly` twin writes them as those overrides (`\override Stem.thickness = #1.5`,
 `line-thickness = 0.6\pt`; `NoteHead.scale 1.1` as
-`\override NoteHead.font-size = #(magnification->font-size 1.1)`).
+`\override NoteHead.font-size = #(magnification->font-size 1.1)`; `cueSize -2` as the
+`\CueVoice` context's `fontSize = #-2` with its stems' and beams' `length-fraction`).
 
 **`markTempo`** — a boxed section label (a `form` section's name, a `@mark`) and the metronome
 mark standing at the **same bar** are arranged one of two ways. `stacked` is LilyPond's:

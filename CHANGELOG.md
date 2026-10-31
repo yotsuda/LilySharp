@@ -6,6 +6,22 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Cues, tuplets and chord diagrams
+
+- `[lang]` **`layout { cueSize N }`** chooses a `cue { }`'s size as LilyPond's font-size step, -8 to
+  0: -4 (the default, LilyPond's CueVoice) is 0.63 of the staff's size, -2 is 0.79, about a
+  Sibelius part's cue. Everything the cue prints follows — heads, stems, flags, beams, rests, dots,
+  accidentals and its clef — and the LilyPond twin writes the `\CueVoice` context's `fontSize`.
+  `lysc --set cueSize=-2` takes it too.
+- `[render]` **A rest inside `cue { }` is drawn at the cue's size**, and spaced and boxed for it; it
+  was full size while the notes around it were small. A whole-bar `R` keeps its size, as LilyPond's.
+- `[render]` **A grace rest's dot is a grace dot** (font-size -3), as LilyPond draws it; it was full size.
+- `[render]` **An octave line ending inside a tuplet stops after its own note**: `tuplet 3/2 { d'''8@!15ma
+  c''8 b'8 }` went on transposing c'' and b'.
+- `[render]` **A tuplet under a chord's diagram stays by its beam**: the diagram clears the bracket and the
+  chord name clears the diagram, as LilyPond stacks them. The tuplet's number used to climb over the
+  diagram, and the bracket could run through the name.
+
 ### Section names and bends
 
 - `[lang]` **`layout { sectionLabelAlign center | left }`** says where a mid-line section name

@@ -1071,7 +1071,6 @@
 "Svg/EngravingDefaults.cs","EngravingDefaults.TupletBracketThickness","1.6","public static double TupletBracketThickness => 1.6 * LineThickness;","LILYPOND-REF: scm/define-grobs.scm TupletBracket (thickness . 1.6).</remarks>","Green"
 "Svg/EngravingDefaults.cs","EngravingDefaults.MultiMeasureRestThickThickness","6.6","public static double MultiMeasureRestThickThickness => 6.6 * PaperLineThickness;","LILYPOND-REF: scm/define-grobs.scm MultiMeasureRest","Green"
 "Svg/EngravingDefaults.cs","EngravingDefaults.MultiMeasureRestHairThickness","2.0","public static double MultiMeasureRestHairThickness => 2.0 * PaperLineThickness;","LILYPOND-REF: scm/define-grobs.scm MultiMeasureRest","Green"
-"Svg/EngravingDefaults.cs","EngravingDefaults.CueFontSizeStep","4.0","public const double CueFontSizeStep = -4.0;","(file-level) LILYPOND-REF: lily/spacing-options.cc:55-66 Spacing_options constructor (defaults)","Yellow"
 "Svg/EngravingDefaults.cs","EngravingDefaults.CueBeamThickness","0.35","public const double CueBeamThickness = 0.35;","LILYPOND-REF: ly/engraver-init.ly CueVoice — <c>\override Beam.beam-thickness = #0.35</c>.","Green"
 "Svg/EngravingDefaults.cs","EngravingDefaults.RestCenterPosition","0.0","public const double RestCenterPosition = 0.0;","LILYPOND-REF: scm/define-grobs.scm Rest (minimum-distance . 0.25) — consumed by","Green"
 "Svg/EngravingDefaults.cs","EngravingDefaults.RestMinimumDistance","0.25","public const double RestMinimumDistance = 0.25;","LILYPOND-REF: scm/define-grobs.scm Rest (minimum-distance . 0.25) — consumed by","Green"

@@ -93,6 +93,25 @@ public sealed partial class LilyPondExporter
         return lines.ToString();
     }
 
+    /// <summary>
+    /// The <c>\CueVoice</c> context block the plan's <c>cueSize</c> spells — empty at LilyPond's
+    /// −4. The stems' and beams' <c>length-fraction</c> go with it: CueVoice declares them as
+    /// <c>magstep -4</c> beside its <c>fontSize</c>, and Lily#'s cue stems follow the step
+    /// (EngravingDefaults.CueStemDetails), so the twin's must too.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice — <c>fontSize = #-4</c>,
+    /// <c>\override Stem.length-fraction = #(magstep -4)</c>, <c>\override Beam.length-fraction = #(magstep -4)</c>.</remarks>
+    private string CueVoiceContextLines()
+    {
+        double step = _layoutPlan.EngravingStyle.CueFontSizeStep;
+        if (step == Svg.EngravingStyle.Default.CueFontSizeStep)
+            return "";
+        string n = step.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
+        return "    \\context {\n      \\CueVoice\n      fontSize = #" + n + "\n"
+            + "      \\override Stem.length-fraction = #(magstep " + n + ")\n"
+            + "      \\override Beam.length-fraction = #(magstep " + n + ")\n    }\n";
+    }
+
     /// <summary>The <c>\layout</c> variable the plan's <c>lineThickness</c> spells — empty at
     /// LilyPond's default — in points: the twin's staff is LilyPond's default 20pt one (no
     /// <c>paper { }</c> reaches the twin, EmitHeader's warning), whose staff space is 5pt.</summary>

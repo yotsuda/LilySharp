@@ -1294,6 +1294,16 @@ public class StepRequestTests
         Assert.Equal(L("lineThickness 0.11"), Step(L("lineThickness ‸0.1"), +1, semitone: true).After);
         Assert.Equal(L("Dots.padding 0.4"), Step(L("Dots.padding ‸0.45"), -1, semitone: true).After);
         Assert.Equal(L("NoteHead.scale 1.05"), Step(L("NoteHead.scale ‸1.0"), +1, semitone: true).After);
+        // cueSize is LilyPond's font-size step, written with its sign: one step on Up / Down, two
+        // on the page pair, never over 0 and never under -8 (2026-10-31).
+        Assert.Equal(L("cueSize -3"), Step(L("cueSize ‸-4"), +1, semitone: true).After);
+        Assert.Equal(L("cueSize -2"), Step(L("cueSize -‸4"), +1, semitone: false).After);
+        Assert.Equal(L("cueSize 0"), Step(L("cueSize ‸-1"), +1, semitone: true).After);
+        Assert.Equal(L("cueSize -1"), Step(L("cueSize ‸0"), -1, semitone: true).After);
+        var (most, atMost) = Step(L("cueSize ‸0"), +1, semitone: true);
+        Assert.Equal(L("cueSize 0"), atMost);
+        Assert.Contains("most", most.Message);
+        Assert.Equal(L("cueSize -8"), Step(L("cueSize ‸-7"), -1, semitone: false).After);
         // Each of LedgerLine.thickness's two numbers on its own steps.
         Assert.Equal(L("LedgerLine.thickness 1.0 0.11"), Step(L("LedgerLine.thickness 1.0 ‸0.1"), +1, semitone: true).After);
         Assert.Equal(L("LedgerLine.thickness 1.1 0.1"), Step(L("LedgerLine.thickness ‸1.0 0.1"), +1, semitone: true).After);

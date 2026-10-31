@@ -763,7 +763,8 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'voltaBracket' , VoltaLength        (* VoltaLength: 'all' | 'line' | Integer >= 1 — §6 StructureVolta *)
                | StyleKey , Number                     (* > 0, no unit *)
                | ( 'Beam.damping' | 'Dots.padding' | 'Accidental.rightPadding' ) , Number   (* >= 0 *)
-               | 'LedgerLine.thickness' , Number , Number ;   (* >= 0, not both 0 *)
+               | 'LedgerLine.thickness' , Number , Number    (* >= 0, not both 0 *)
+               | 'cueSize' , [ '-' ] , Number ;             (* -8..0: LilyPond's font-size step, default -4 *)
 StyleKey       = 'lineThickness' | 'StaffLine.thickness' | 'LedgerLine.lengthFraction'
                | 'Stem.thickness' | 'Stem.lengthFraction' | 'Beam.thickness' | 'NoteHead.scale'
                | 'BarLine.thinThickness' | 'BarLine.thickThickness' ;   (* a dotted key is a word, a
@@ -813,7 +814,11 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    note heads' size, a factor — LilyPond's NoteHead.font-size, 6·log2 of it: the stems, ledger
    lines, dots, accidentals, ties and the spacing follow the heads, a grace head keeps its own
    size and a cue head takes both; BarLine.thinThickness (1.9) and BarLine.thickThickness (6.0) in line
-   thicknesses. The twin writes them as those overrides.
+   thicknesses; cueSize (-4) a cue { }'s size as LilyPond's font-size step, -8 to 0 — the one
+   number written with a sign — which every grob the cue prints follows (heads, stems, flags,
+   beams, rests, dots, accidentals, its clef): -4 is 0.63 of the staff's size, LilyPond's
+   CueVoice; -2 is 0.79, about a Sibelius part's (owner's decision 2026-10-31). The twin writes
+   them as those overrides (cueSize as the \CueVoice context's fontSize and length-fractions).
    indent / raggedRight / spacingIncrement stay in paper on that
    rule (LilyPond accepts them in \paper too). NOT an 'override': an override reads a
    once / section scope that a whole-score switch would silently ignore.

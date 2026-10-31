@@ -570,7 +570,14 @@ internal static class EngravingDefaults
     /// <see cref="Svg.Model.GraceNoteItem.FontSizeStep"/> has, one grob family over.
     /// </para>
     /// </remarks>
-    public const double CueFontSizeStep = -4.0;
+    /// <para>
+    /// Since session 1035 it is the score's <see cref="EngravingStyle.CueFontSizeStep"/>
+    /// (<c>layout { cueSize N }</c>), −4 at the default — a property over
+    /// <see cref="EngravingStyle.Current"/> like the line thicknesses, so every reader below
+    /// (<see cref="CueScale"/>, <see cref="CueFont"/>, <see cref="CueDesignSize"/>,
+    /// <see cref="CueStemDetails"/>, <see cref="CueBeamLengthFraction"/>) follows the one number.
+    /// </para>
+    public static double CueFontSizeStep => EngravingStyle.Current.CueFontSizeStep;
 
     /// <summary>
     /// What a cue's font-size multiplies a length by — <c>magstep(-4)</c>.
@@ -594,7 +601,7 @@ internal static class EngravingDefaults
     /// multiplies the chosen design's table by. See <see cref="CueFont"/>.
     /// </para>
     /// </remarks>
-    public static readonly double CueScale = Layout.EmmentalerDesignSize.Magstep(CueFontSizeStep);
+    public static double CueScale => Layout.EmmentalerDesignSize.Magstep(CueFontSizeStep);
 
     /// <summary>
     /// The FONT a cue grob reads its glyph dimensions from: the design
@@ -656,8 +663,26 @@ internal static class EngravingDefaults
     /// <see cref="CueBeamLengthFraction"/>, passed by <c>BeamEngraver</c> for a cue group).
     /// </para>
     /// </remarks>
-    internal static readonly Layout.StemDetails CueStemDetails =
-        Layout.StemDetails.Default with { LengthFraction = CueScale };
+    internal static Layout.StemDetails CueStemDetails
+    {
+        get
+        {
+            // One instance per (style's stem table, cue scale), as the readonly field was one
+            // per process: the stem table is read by reference nowhere, but a table per note
+            // would be allocation for nothing.
+            var baseline = Layout.StemDetails.Default;
+            double fraction = CueScale;
+            var cached = s_cueStem;
+            if (cached != null && ReferenceEquals(cached.Base, baseline) && cached.Cue.LengthFraction == fraction)
+                return cached.Cue;
+            var made = new CueStemCache(baseline, baseline with { LengthFraction = fraction });
+            s_cueStem = made;
+            return made.Cue;
+        }
+    }
+
+    private sealed record CueStemCache(Layout.StemDetails Base, Layout.StemDetails Cue);
+    private static CueStemCache? s_cueStem;
 
     /// <summary>A cue Beam's thickness, in staff spaces.</summary>
     /// <remarks>
@@ -671,7 +696,7 @@ internal static class EngravingDefaults
     /// LILYPOND-REF: ly/engraver-init.ly CueVoice — <c>\override Beam.length-fraction =
     /// #(magstep -4)</c> beside <c>\override Stem.length-fraction = #(magstep -4)</c>.
     /// </remarks>
-    public static readonly double CueBeamLengthFraction = CueScale;
+    public static double CueBeamLengthFraction => CueScale;
 
     // Rest collision avoidance.
     // ⚠️ FOUR CONSTANTS HERE REPORTED AS SOURCED UNTIL 2026-08-03 AND NEVER WERE (the

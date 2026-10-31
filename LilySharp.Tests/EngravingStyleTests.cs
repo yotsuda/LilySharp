@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
@@ -47,7 +48,9 @@ public class EngravingStyleTests
         var s = StyleOf("lineThickness=0.15", "StaffLine.thickness=1.2", "LedgerLine.thickness=2,0.05",
             "LedgerLine.lengthFraction=0.4", "Stem.thickness=2", "Stem.lengthFraction=1.2", "Beam.thickness=0.6",
             "Beam.damping=0", "Dots.padding=0.6", "Accidental.rightPadding=0", "NoteHead.scale=1.2599210498948732",
-            "BarLine.thinThickness=3", "BarLine.thickThickness=7");
+            "BarLine.thinThickness=3", "BarLine.thickThickness=7", "cueSize=-2");
+        Assert.Equal(-2, s.CueFontSizeStep);
+        Assert.Equal(-4, EngravingStyle.Default.CueFontSizeStep);
         Assert.Equal(0.15, s.LineThickness);
         Assert.Equal(1.2, s.StaffSymbolThickness);
         Assert.Equal(2, s.LedgerLineThicknessLines);
@@ -81,6 +84,10 @@ public class EngravingStyleTests
     [InlineData("Accidental.rightPadding=x")]
     [InlineData("NoteHead.scale=0")]
     [InlineData("NoteHead.scale=-1.1")]
+    [InlineData("cueSize=1")]
+    [InlineData("cueSize=-9")]
+    [InlineData("cueSize=x")]
+    [InlineData("cueSize=-")]
     [InlineData("Stem.length=3.5")]
     public void AValueThatDoesNotRead_IsRefused(string setting)
     {
@@ -523,7 +530,7 @@ public class EngravingStyleTests
         string Twin(string layout) => new Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(
             layout + "part m { }\nsection A { m { c''1 | } }\nform { A }\nscore { staff m }\n"));
         string styled = Twin("layout { lineThickness 0.15  StaffLine.thickness 1.2  LedgerLine.thickness 2 0.1  "
-            + "LedgerLine.lengthFraction 0.4  Stem.thickness 2 Stem.lengthFraction 1.2  Beam.thickness 0.6  Beam.damping 3  Dots.padding 0.7  Accidental.rightPadding 0.4  NoteHead.scale 1.1  BarLine.thinThickness 3  BarLine.thickThickness 7 }\n");
+            + "LedgerLine.lengthFraction 0.4  Stem.thickness 2 Stem.lengthFraction 1.2  Beam.thickness 0.6  Beam.damping 3  Dots.padding 0.7  Accidental.rightPadding 0.4  NoteHead.scale 1.1  BarLine.thinThickness 3  BarLine.thickThickness 7  cueSize -2 }\n");
         foreach (string line in new[]
         {
             "line-thickness = 0.75\\pt", "\\override StaffSymbol.thickness = #1.2",
@@ -534,11 +541,41 @@ public class EngravingStyleTests
             "\\override AccidentalPlacement.right-padding = #0.4",
             "\\override NoteHead.font-size = #(magnification->font-size 1.1)",
             "\\override BarLine.hair-thickness = #3", "\\override BarLine.thick-thickness = #7",
+            // The cue's size is the \CueVoice context's, with the length-fractions CueVoice ties to it.
+            "\\context {\n      \\CueVoice\n      fontSize = #-2\n      \\override Stem.length-fraction = #(magstep -2)\n      \\override Beam.length-fraction = #(magstep -2)\n    }",
         })
             Assert.Contains(line, styled, StringComparison.Ordinal);
         string plain = Twin("");
         Assert.DoesNotContain("line-thickness", plain, StringComparison.Ordinal);
-        Assert.Equal(plain, Twin("layout { Stem.thickness 1.3  lineThickness 0.1 }\n"));
+        Assert.DoesNotContain("CueVoice", plain, StringComparison.Ordinal);
+        Assert.Equal(plain, Twin("layout { Stem.thickness 1.3  lineThickness 0.1  cueSize -4 }\n"));
+        // A cue's size alone opens the block the \Score lines share.
+        string cued = Twin("layout { cueSize -3 }\n");
+        Assert.Contains("\\CueVoice\n      fontSize = #-3", cued, StringComparison.Ordinal);
+        Assert.Contains("printInitialRepeatBar", cued, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// <c>cueSize</c> reaches the page: a cue's head and rest are drawn out of the design the step
+    /// selects, at its magnification — −2 is 2^(−2/6) = 0.794 of the staff's 4.00, the sixteen
+    /// design (OMR request 2026-10-31 #13; owner's decision: LilyPond's step, −4 kept as the default).
+    /// </summary>
+    [Theory]
+    [InlineData("", "2.52", "Emmentaler-13")]
+    [InlineData("layout { cueSize -2 }\n", "3.17", "Emmentaler-16")]
+    [InlineData("layout { cueSize -1 }\n", "3.56", "Emmentaler-18")]
+    public void CueSize_DrawsTheCueOutOfItsStepsDesign(string layout, string fontSize, string design)
+    {
+        string svg = Svg(layout + "octave absolute\ntime 3/4\npart pt { clef treble }\n"
+            + "section A { pt { voice { cue { bes'4 r4 c''4 } } { R2. } | e''4 r4 g''4 | } }\nform { ~A }\nscore { staff pt }\n");
+        var cue = Regex.Matches(svg, "<text class=\"music\" style=\"font-family: '([^']+)'[^>]*font-size=\"([\\d.]+)\"[^>]*>(.)</text>")
+            .Select(m => (Design: m.Groups[1].Value, Size: m.Groups[2].Value, Glyph: m.Groups[3].Value[0])).ToList();
+        // The two heads and the rest of the cue bar, and nothing of the plain bar.
+        Assert.Equal(2, cue.Count(g => g.Glyph == EmmentalerGlyphs.NoteheadBlack));
+        Assert.Single(cue.Where(g => g.Glyph == EmmentalerGlyphs.RestQuarter));
+        Assert.All(cue.Where(g => g.Glyph is var c && (c == EmmentalerGlyphs.NoteheadBlack || c == EmmentalerGlyphs.RestQuarter)),
+            g => { Assert.Equal(fontSize, g.Size); Assert.Equal(design, g.Design); });
+        Assert.Equal(2, Regex.Matches(svg, "<text class=\"music\" x=\"[-\\d.]+\" y=\"[-\\d.]+\" font-size=\"4.00\"[^>]*>" + EmmentalerGlyphs.NoteheadBlack + "<").Count);
     }
 
     /// <summary>A setting reaches the PNG and the PDF as well: the same layout, drawn.</summary>

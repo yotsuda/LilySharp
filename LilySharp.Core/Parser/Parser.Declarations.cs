@@ -930,8 +930,10 @@ internal sealed partial class Parser
                     tokens.Add(Advance());
                 continue;
             }
+            // …and a sign, as the paper block takes one: `cueSize -2` is LilyPond's font-size
+            // step, below zero (the reader joins the sign to its number, LayoutPlanReader.ReadStyle).
             if (Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DecimalLiteral) ||
-                Check(SyntaxKind.StringLiteral) || IsWordLikeToken(Current))
+                Check(SyntaxKind.Minus) || Check(SyntaxKind.StringLiteral) || IsWordLikeToken(Current))
             {
                 if (SyntaxFacts.IsLayoutKey(Current.Text))
                     entryKey = Current.Text;

@@ -153,6 +153,16 @@ public sealed record EngravingStyle
     /// octave — exactly 0 at the default.</summary>
     public double NoteHeadFontSizeStep => NoteHeadScale == 1.0 ? 0 : 6 * System.Math.Log2(NoteHeadScale);
 
+    /// <summary>A cue's <c>fontSize</c> — LilyPond's step, in sixths of an octave: −4 (0.63 of
+    /// the staff's size) is CueVoice's default; <c>layout { cueSize -2 }</c> writes 0.79, a
+    /// Sibelius part's size (OMR request 2026-10-31 #13; owner's decision: LilyPond's step, the
+    /// default kept). Every grob a <c>cue { }</c> prints reads it through
+    /// <see cref="EngravingDefaults.CueFontSizeStep"/> — heads, stems and flags, beams, rests,
+    /// dots, accidentals, the cue clef — as the context property reaches them all.</summary>
+    /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice — <c>fontSize = #-4</c>;
+    /// lily/font-size-engraver.cc:47-62 Font_size_engraver::acknowledge_font.</remarks>
+    public double CueFontSizeStep { get; init; } = -4.0;
+
     /// <summary><c>BarLine.hair-thickness</c>, in staff line thicknesses.</summary>
     /// <remarks>LILYPOND-REF: scm/bar-line.scm:227-238 make-simple-bar-line reads it times the
     /// paper's line-thickness; scm/define-grobs.scm BarLine (hair-thickness . 1.9).</remarks>

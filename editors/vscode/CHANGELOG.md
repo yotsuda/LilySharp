@@ -4,6 +4,15 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Cues, tuplets and chord diagrams
+
+- **`layout { cueSize -2 }`** chooses a cue's size (LilyPond's font-size step, -8 to 0; -4 is the
+  default 0.63, -2 is 0.79). Completed, described on hover and stepped with Ctrl+Shift+Up / Down
+  (two steps on PageUp / PageDown) like the other layout numbers.
+- **Rests inside `cue { }` are drawn at the cue's size**; a grace rest's dot is a grace dot.
+- **An octave line ending inside a tuplet stops after its own note**; **a tuplet under a chord
+  diagram stays by its beam**, the diagram above it and the chord name above both.
+
 ### Section names and bends
 
 - **`layout { sectionLabelAlign left }`** puts a mid-line section name's left edge on its bar line,

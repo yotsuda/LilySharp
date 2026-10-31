@@ -72,6 +72,8 @@ internal static class LayoutPlanReader
             ["NoteHead.scale"] = ("1.0", "1.1"),
             ["BarLine.thinThickness"] = ("1.9", "2.5"),
             ["BarLine.thickThickness"] = ("6.0", "7"),
+            // LilyPond's font-size step, so the one key that takes a SIGN (ReadStyle joins it).
+            ["cueSize"] = ("-4", "-2"),
         };
 
     /// <summary>The words each key takes, for messages and for completion.</summary>
@@ -314,6 +316,8 @@ internal static class LayoutPlanReader
                 "NoteHead.scale" => ReadStyle(plan, entry, span, found, (s, v) => s with { NoteHeadScale = v[0] }),
                 "BarLine.thinThickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BarLineHairThickness = v[0] }),
                 "BarLine.thickThickness" => ReadStyle(plan, entry, span, found, (s, v) => s with { BarLineThickThickness = v[0] }),
+                // A cue's size, LilyPond's font-size step (owner's decision 2026-10-31, OMR #13).
+                "cueSize" => ReadStyle(plan, entry, span, found, (s, v) => s with { CueFontSizeStep = v[0] }),
                 // ⚠️ A key published in SyntaxFacts.LayoutKeyVocabulary with no arm here
                 // lands on the default below and binds NOTHING, in silence — "a switch
                 // nobody reads looks exactly like one that works", the sentence the
@@ -339,16 +343,38 @@ internal static class LayoutPlanReader
         string example = NumberKeys[entry.Key].Example;
         int count = example.Split(' ').Length;
         bool zeroReads = entry.Key is "Beam.damping" or "Dots.padding" or "Accidental.rightPadding";
-        string takes = count == 1
+        // cueSize is LilyPond's font-size step: a sign and a number (the block keeps the `-` as a
+        // token of its own), −8 to 0 — nothing larger than the staff's own size, nothing smaller
+        // than a quarter of it (magstep(−8) = 0.40).
+        bool signedStep = entry.Key == "cueSize";
+        string takes = signedStep
+            ? $"'{entry.Key}' takes LilyPond's font-size step, -8 to 0 (-4 is the default, 0.63 of the staff's size; -2 is 0.79): {entry.Key} {example}."
+            : count == 1
             ? $"'{entry.Key}' takes a {(zeroReads ? "number, 0 or more" : "positive number")}, no unit: {entry.Key} {example}."
             : $"'{entry.Key}' takes {count} numbers, not both 0 and none below 0: {entry.Key} {example}.";
-        var values = new double[entry.Values.Count];
-        bool numbers = entry.Values.Count == count;
-        for (int i = 0; numbers && i < count; i++)
-            numbers = entry.Values[i].Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral
-                && double.TryParse(entry.Values[i].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out values[i]);
-        if (numbers)
-            numbers = count == 1 ? values[0] > 0 || (zeroReads && values[0] == 0) : values.All(v => v >= 0) && values.Any(v => v > 0);
+        var values = new double[Math.Max(count, entry.Values.Count)];
+        bool numbers;
+        if (signedStep)
+        {
+            var tokens = entry.Values;
+            numbers = tokens.Count is 1 or 2
+                && tokens[^1].Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral
+                && (tokens.Count == 1 || tokens[0].Kind == SyntaxKind.Minus)
+                && double.TryParse(tokens[^1].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out values[0]);
+            if (numbers && tokens.Count == 2)
+                values[0] = -values[0];
+            if (numbers)
+                numbers = values[0] >= -8 && values[0] <= 0;
+        }
+        else
+        {
+            numbers = entry.Values.Count == count;
+            for (int i = 0; numbers && i < count; i++)
+                numbers = entry.Values[i].Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral
+                    && double.TryParse(entry.Values[i].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out values[i]);
+            if (numbers)
+                numbers = count == 1 ? values[0] > 0 || (zeroReads && values[0] == 0) : values.All(v => v >= 0) && values.Any(v => v > 0);
+        }
         if (!numbers)
         {
             found.Add(new Problem(entry.Values.Count > 0 ? entry.Values[0].Span : keySpan,

@@ -926,6 +926,7 @@ public sealed partial class LilySharpLanguageServer
         "NoteHead.scale" => "The note heads' size, a factor (default 1.0); stems, ledger lines, dots and accidentals follow the heads, a grace note keeps its own",
         "BarLine.thinThickness" => "Thin bar lines, in line thicknesses (default 1.9)",
         "BarLine.thickThickness" => "Thick bar lines, in line thicknesses (default 6.0)",
+        "cueSize" => "A cue { }'s size, LilyPond's font-size step, -8 to 0 (default -4: 0.63 of the staff's; -2 is 0.79): its heads, stems, flags, beams, rests, dots and accidentals follow",
         _ => "Layout key",
     };
 
