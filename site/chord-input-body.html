@@ -29,7 +29,7 @@ its name, its diagram, a <code>chords</code> row — is on
 <table class="g">
   <tr><th>Write</th><th>When</th><th>Section</th></tr>
   <tr><td><code>&lt;f a c&gt;4</code></td><td>you know the notes, or completion writes them</td><td><a href="#entry">1</a>, <a href="#complete">2</a></td></tr>
-  <tr><td><code>chord(F)4</code></td><td>you know the name; the part plays its usual voicing</td><td><a href="#byname">3</a></td></tr>
+  <tr><td><code>chord(F)4</code></td><td>you know the name; it plays the chord's notes, close</td><td><a href="#byname">3</a></td></tr>
   <tr><td><code>chord(F 133211)4</code></td><td>a guitarist's shape: those strings, those frets</td><td><a href="#byname">3</a></td></tr>
 </table>
 
@@ -80,7 +80,7 @@ its name, its diagram, a <code>chords</code> row — is on
   <code>diagram</code> the fret diagram — and with no <code>@</code> the chord sounds.</p>
   <table class="g">
     <tr><th>Written</th><th>Prints</th><th>Sounds</th></tr>
-    <tr><td><code>chord(F)4</code></td><td>F</td><td>the usual voicing</td></tr>
+    <tr><td><code>chord(F)4</code></td><td>F</td><td>F A C, close</td></tr>
     <tr><td><code>chord(F 133211)4</code></td><td>F over its diagram</td><td>that shape's strings</td></tr>
     <tr><td><code>chord(x32010)4</code></td><td>C, read off the shape, over its diagram</td><td>that shape's strings</td></tr>
     <tr><td><code>diagram(133211)4</code></td><td>the diagram alone</td><td>that shape's strings</td></tr>
@@ -93,9 +93,9 @@ its name, its diagram, a <code>chords</code> row — is on
     <code>chord(C x32013)1</code> on a guitar is C3 E3 G3 C4 G4. They are absolute — octave
     marks after the <code>)</code> are an error; play it higher on the neck instead — and the note
     after the item is read from its lowest note.</li>
-    <li><b>No shape:</b> a guitar, bass, ukulele or banjo plays its usual shape for the name
-    (<code>chord(G)</code> prints the name, <code>diagram(G)</code> draws the shape). Any other
-    part plays the chord close, with its root near middle C. A shape written badly, or only for
+    <li><b>No shape:</b> <code>chord(G)</code> plays the chord's notes close, G B D, its root by
+    middle C as the staff draws it — on any part, a guitar's too. <code>diagram(G)</code> on a
+    guitar, bass, ukulele or banjo plays and draws its usual shape. A shape written badly, or only for
     another instrument, warns (LYS1040) and keeps its time as a spacer.</li>
     <li><b>The tail is a chord's:</b> a duration, dots, ties, slurs, beams, articulations,
     dynamics; a bare duration or <code>q</code> repeats it.</li>

@@ -82,10 +82,12 @@ internal sealed class ShapeChordValidator : ISemanticValidator
         foreach (var part in ShapeChords.PartTuningsOf(item))
         {
             var strings = Tablature.Tunings.GetTuning(part.Tuning);
-            // A part with no frets voices a chord with no shape written (Q1): nothing to check.
-            if (!part.Fretted && words.Shapes.IsEmpty && words.Problems.IsEmpty && words.Structure != null)
+            // A part with no frets, or a chord(…) item, voices a chord with no shape written (Q1):
+            // nothing to check.
+            bool usual = ShapeChords.PlaysUsualShape(item, part.Fretted);
+            if (!usual && words.Shapes.IsEmpty && words.Problems.IsEmpty && words.Structure != null)
                 continue;
-            if (ShapeChords.ShapeFor(words, part.Tuning, capos[0], part.Fretted) is not { } shape)
+            if (ShapeChords.ShapeFor(words, part.Tuning, capos[0], usual) is not { } shape)
             {
                 string? example = words.Structure is { } s ? ChordShapes.Default(part.Tuning, s.Pressed(capos[0], 0))?.Spelled : null;
                 string message = ShapeChords.NoShape(written, words.Symbol, part.Word, strings.Length,

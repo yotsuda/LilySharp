@@ -2625,7 +2625,7 @@ that tuning is the diagram's. `@chord` takes the same words after its symbol:
   | `<f a c>1@chord` | ✓ read off the notes | | |
   | `c1@diagram(133211)` | | ✓ | |
   | `<f a c>1@diagram` | | ✓ the notes, fretted | |
-  | `chord(F)4` | ✓ | | ✓ the usual voicing |
+  | `chord(F)4` | ✓ | | ✓ F A C, close |
   | `chord(F 133211)4` | ✓ | ✓ | ✓ the shape's strings |
   | `diagram(133211)4`, `diagram(F 133211)4` | | ✓ | ✓ the shape's strings |
 
@@ -2790,7 +2790,7 @@ repeating it, a tuplet or a grace body around it.
 chord(C x32013)1 |                 // C3 E3 G3 C4 G4 on a guitar, a whole note; the name C and its diagram
 diagram(C x32013)1 |               // the same notes and diagram, no name
 chord(x32010)2                     // no symbol: the shape gives the notes, and the name they spell (C)
-chord(G)4 chord(D)4 |              // no shape: a guitar plays its usual shape; a piano G B D by middle C
+chord(G)4 chord(D)4 |              // no shape: G B D, then D F# A, close, on any part
 diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the dash form; dots, tie as on <…>
 ```
 
@@ -2798,13 +2798,14 @@ diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the
   alone; either shape form, a tuning word binding a shape to one tuning
   (`chord(F guitar 133211 ukulele 2010)`). Every shape warning applies (LYS1038: length, dashes,
   case), and a shape that disagrees with its symbol warns (LYS1039, the fix written `chord(X shape)`).
-- **No shape** (`chord(F)`, `diagram(F)`): a part with a fretted instrument (guitar, bass,
-  ukulele, banjo, …) plays that instrument's usual shape (*The usual shape* above), pressed above
-  a capo; `diagram(F)` draws it, `chord(F)` prints the name alone (as `@chord(F)` does — a
-  `chordDiagrams … all` score draws it under the name). Any other part plays the chord's notes as the completion writes them —
-  close, root up, the root written from G3 to F♯4 (by middle C on a treble staff) — with no
-  string numbers. A shape written badly, or only for another instrument, does not fall back: it
-  warns (LYS1040) and keeps its time as a SPACER, so the bar still adds up.
+- **No shape** (`chord(F)`, `diagram(F)`): `chord(F)` plays the chord's notes as the completion
+  writes them — close, root up, the root by middle C as the staff draws it (written G3 to F♯4; an
+  octave lower on a `treble_8` or `bass_8` staff, so a guitar's F is F3 A3 C4) — with no string
+  numbers, on every part: it shows a name and no diagram, so it plays no shape. `diagram(F)` on a
+  part with a fretted instrument (guitar, bass, ukulele, banjo, …) plays and draws that
+  instrument's usual shape (*The usual shape* above), pressed above a capo; on any other part it
+  voices the chord close the same way. A shape written badly, or only for another instrument,
+  does not fall back: it warns (LYS1040) and keeps its time as a SPACER, so the bar still adds up.
 - **Strum after strum** (`chord(F 133211)4` four times), the name and the diagram stand where the
   chord CHANGES, and again at the head of each system; the repeats take no room in their bar. Any
   other chord in the voice between — an `@chord`, an `@diagram`, another shape — starts again.

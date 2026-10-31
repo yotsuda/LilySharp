@@ -40,10 +40,11 @@ workflow attaches that section to the GitHub Release verbatim.
     `chord(…)`); `chordDiagrams none` turns the diagrams off, and an `@chord` or `@diagram` on
     the item draws only one.
   - `chord` and `diagram` are both reserved in music: a phrase cannot be named either.
-  - With no shape written the item still sounds. `chord(F)1` on a guitar, bass, ukulele or
-    banjo plays the instrument's usual shape (pressed above a capo); on any other part, F A C
-    close by middle C. Before, it was a silent spacer that warned (LYS1040). A shape written
-    badly, or only for another instrument, still warns.
+  - With no shape written the item still sounds. `chord(F)1` plays F A C close by middle C, on
+    any part (on a guitar's staff, F3 A3 C4, in the middle of the staff as drawn).
+    `diagram(F)1` on a guitar, bass, ukulele or banjo plays and draws the instrument's usual
+    shape (pressed above a capo). Before, it was a silent spacer that warned (LYS1040). A shape
+    written badly, or only for another instrument, still warns.
   - Ctrl+Shift+Up/Down steps either item's shape, and completion inside the parentheses offers
     the chord symbols.
   - Spread in `<< >>`, the item draws its diagram once, over its first note, on the page and

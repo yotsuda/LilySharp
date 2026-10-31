@@ -170,20 +170,26 @@ public class ShapeChordItemTests
         Assert.Empty(Frames(Book("instrument guitar", "diagram(C x32010)1 |", top: "layout { chordDiagrams none }\n")));
     }
 
-    /// <summary>Owner's decision 2026-10-31 (docs/chord-syntax-design.md Q1): with no shape
-    /// written the item sounds — on a fretted part the usual shape of its instrument (pressed
-    /// above the capo), on any other part the chord's notes close, root up, by middle C.</summary>
+    /// <summary>Owner's decisions 2026-10-31 (docs/chord-syntax-design.md Q1): with no shape
+    /// written the item sounds. A chord(…) item shows a name and no diagram, so it plays its chord's
+    /// notes close, root up, by middle C — on every part, a guitar's too (revised the same day: it
+    /// played six strings no diagram showed). A diagram(…) item on a fretted part plays, and draws,
+    /// the usual shape of its instrument, pressed above the capo.</summary>
     [Fact]
     public void WithNoShape_TheItemSoundsTheUsualVoicing()
     {
         string guitar = Book("instrument guitar", "chord(F)2 diagram(G)2 |");
         Assert.DoesNotContain(Diagnostics(guitar), d => d.Code == DiagnosticCodes.ShapeChordNoShape);
-        Assert.Equal(MidiPitches(Book("instrument guitar", "diagram(F 133211)2 diagram(G 320003)2 |")), MidiPitches(guitar));
+        // F A C (F3 A3 C4 sounding: the guitar is written an octave up), then G's 320003.
+        Assert.Equal(new[] { 53, 57, 60, 43, 47, 50, 55, 59, 67 }, MidiPitches(guitar));
         Assert.Equal(new[] { "F" }, Collected(guitar).ChordNames.Select(n => n.ChordText));
         Assert.Equal(new[] { "320003" }, Frames(guitar));      // chord(F) writes no shape: no diagram
+        // No string numbers on the close notes: the tab chooses their strings.
+        Assert.Contains("<f a c>2 ", new LilyPondExporter().Export(SyntaxTree.Parse(guitar)));
 
-        string capo = Book("instrument guitar", "chord(Eb)1 |", top: "layout { chordDiagrams guitar capo 3 }");
-        Assert.Equal(new[] { 51, 55, 58, 63, 67 }, MidiPitches(capo));   // C's x32010 above the capo
+        string capo = Book("instrument guitar", "chord(Eb)1 diagram(Eb)1 |", top: "layout { chordDiagrams guitar capo 3 }");
+        // chord(Eb): E♭ G B♭ close; diagram(Eb): C's x32010 pressed above the capo.
+        Assert.Equal(new[] { 51, 55, 58, 51, 55, 58, 63, 67 }, MidiPitches(capo));
 
         string piano = Book("clef treble", "chord(F)2 diagram(G)2 | chord(C/E)1 |");
         Assert.DoesNotContain(Diagnostics(piano), d => d.Code == DiagnosticCodes.ShapeChordNoShape);

@@ -33,7 +33,7 @@ What a book shows beyond that is the layout's, per score (§4).
 | `<f a c>1@chord` | ✓ (read off the notes) | | |
 | `c1@diagram(133211)` | | ✓ | |
 | `<f a c>1@diagram` | | ✓ (the notes, fretted) | |
-| `chord(F)4` | ✓ | | ✓ the usual voicing (Q1) |
+| `chord(F)4` | ✓ | | ✓ F A C, close (Q1) |
 | `chord(F 133211)4` | ✓ | ✓ | ✓ the shape's strings |
 | `diagram(133211)4` | | ✓ | ✓ the shape's strings |
 | `diagram(F 133211)4` | | ✓ | ✓ — F is data: the shape is checked against it and Ctrl+Shift+Up/Down walks F's shapes |
@@ -71,7 +71,7 @@ Every combination is ONE word. Nothing needs two marks.
 
 | | Question | Decided |
 |---|---|---|
-| Q1 | Does `chord(F)4`, with no shape, sound? | Yes: a fretted part plays the usual shape of its instrument; any other part the chord's notes as the completion writes them (`<f a c>`), close and root up, the root written from G3 to F♯4 (by middle C on a treble staff), with no string numbers. A shape written badly, or only for another instrument, does not fall back: LYS1040 says so. This reverses "the shape is required (for now)" of 2026-09-28 for `chord(…)`. `diagram(F)` with no shape plays and draws the usual shape the same way |
+| Q1 | Does `chord(F)4`, with no shape, sound? | Yes: the chord's notes as the completion writes them (`<f a c>`), close and root up, the root written from G3 to F♯4 — by middle C as the staff draws it (an octave lower on a `treble_8` / `bass_8` staff: a guitar's F is F3 A3 C4) — with no string numbers, on every part. *Revised the same day:* a fretted part first played its instrument's usual shape, six strings under a name that showed no diagram; what is seen and what sounds now agree. A shape written badly, or only for another instrument, does not fall back: LYS1040 says so. This reverses "the shape is required (for now)" of 2026-09-28 for `chord(…)`. `diagram(F)` with no shape, on a fretted part, plays and draws its instrument's usual shape (it shows a diagram, so it plays one); elsewhere it voices the chord close |
 | Q2 | Does an item draw its diagram every time? | No: where the chord changes, and at each system's head |
 | — | `@chord(F 133211)` | Stays: a name over its diagram (the proposal to forbid it is withdrawn) |
 | — | `@chord(x32010)` | Stays: the name read off the shape, over the diagram. LYS1056 no longer warns it |

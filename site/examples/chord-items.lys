@@ -1,5 +1,5 @@
-// chord(...) plays a chord and prints its name; with no shape a guitar plays its usual
-// shape, and strum after strum the name and diagram stand only where the chord changes.
+// chord(...) plays a chord and prints its name; with no shape it plays the chord's notes
+// close (G B D), and strum after strum the name and diagram stand only where the chord changes.
 // chord(x32010) prints the name the shape spells; diagram(...) plays it under the picture alone.
 time 4/4
 part gt { instrument guitar }

@@ -368,21 +368,22 @@ the note it is on, without `@` it is an item that SOUNDS. Never two marks for on
 | `<f a c>1@chord` | ✓ read off the notes | | |
 | `c1@diagram(133211)` | | ✓ | |
 | `<f a c>1@diagram` | | ✓ the notes, fretted | |
-| `chord(F)4` | ✓ | | ✓ the usual voicing |
+| `chord(F)4` | ✓ | | ✓ F A C, close |
 | `chord(F 133211)4` | ✓ | ✓ | ✓ the shape's strings |
 | `diagram(133211)4` / `diagram(F 133211)4` | | ✓ | ✓ the shape's strings |
 
 ```
 chord(C x32013)1 |            // C3 E3 G3 C4 G4 on a guitar, the name C and its diagram
 diagram(C x32013)1 |          // the same notes and diagram, no name (C is data: checked, stepped)
-chord(G)2 chord(D)2 |         // no shape: a guitar plays its usual shape, a piano G B D by middle C
+chord(G)2 chord(D)2 |         // no shape: G B D, D F# A, close, on every part (a guitar: G3 B3 D4)
 diagram(C xx-10-12-13-12)4.~  // frets 10-15 in the dash form
 ```
 
 - Item words are `@chord(…)`'s: a symbol + a shape, a shape alone, or a symbol alone. With no
-  shape, a fretted part plays its instrument's usual shape (pressed above a capo); any other
-  part the chord's notes close, root from G3 to F♯4, no string numbers. A shape written badly,
-  or only for another instrument, warns (LYS1040) and is a spacer of its length.
+  shape, `chord(F)` plays the chord's notes close (F A C), root by middle C as the staff draws
+  it, no string numbers — on every part, a guitar's too; `diagram(F)` on a fretted part plays
+  and draws its instrument's usual shape (pressed above a capo). A shape written badly, or only
+  for another instrument, warns (LYS1040) and is a spacer of its length.
 - Tuning: the PART's fretted instrument (its tab tuning), else the guitar. The shape gives
   SOUNDING pitches, and a guitar part (treble_8) is written as it sounds. ABSOLUTE: the frame, `octave absolute` and marks do not move
   it; marks after `)` are an error (LYS0035).
