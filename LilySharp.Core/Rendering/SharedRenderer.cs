@@ -790,12 +790,11 @@ internal static partial class SharedRenderer
                     // diagrams (owner's decision A) — the same items the skyline measured.
                     double h = staff.IsLyricsTextRow
                         ? LyricGridRowHeight(score, layout, system, staff, globalIdx, StaffHeight)
-                        : ChordNameEngraver.GridCellHeight(StaffHeight,
-                            ChordNameEngraver.LineDiagramInkDepth(score.TextMetrics,
-                                GridRowDiagrams(layout, system, globalIdx)));
-                    // The meter is centred on the NAMES' cell, not on a cell a diagram deepened:
-                    // it stands level with the symbols it precedes.
-                    double meterH = staff.IsLyricsTextRow ? h : StaffHeight;
+                        : ChordNameEngraver.GridCellHeight(score.TextMetrics, StaffHeight,
+                            GridRowSymbols(score.TextMetrics, layout, system, globalIdx));
+                    // The meter is centred in the CELL — a cell a diagram deepened included
+                    // (owner's request 2026-11-01).
+                    double meterH = h;
                     // The grid OPENS each line with a bar — the staff's left-edge
                     // system bar in the grid's own cloth (user request 2026-08-20:
                     // "a bar line right before the meter"). Same X a staff's system

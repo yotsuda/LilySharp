@@ -1168,35 +1168,44 @@ internal static class ChordNameEngraver
     // diagram" (option A; B, LilyPond's own picture of a FretBoards line under a bar-less
     // ChordNames line, was declined). LILYSHARP-OWN: LilyPond's ChordNames draws no bar lines.
 
-    /// <summary>
-    /// How far below the names' baseline the deepest diagram ink of a line reaches — its
-    /// finger digits' bottom (<see cref="DiagramBox"/> with fingers) at the line's one grid
-    /// level — as a positive depth; 0 when no symbol of the line draws one.
-    /// </summary>
-    internal static double LineDiagramInkDepth(
-        Rendering.ScoreTextMetrics fonts, IEnumerable<(string? Spec, double FrameBottom)> line)
-    {
-        double depth = 0;
-        foreach (var (spec, frameBottom) in line)
-            if (spec is not null)
-                depth = Math.Max(depth, -(frameBottom + DiagramBox(fonts, spec).Bottom));
-        return depth;
-    }
+    /// <summary>One placed symbol of a grid line, as the cell reads it: its diagram's spec
+    /// and grid level (null spec: none) and its name's ink top over the baseline.</summary>
+    internal readonly record struct GridLineSymbol(string? Spec, double FrameBottom, double InkTop);
 
     /// <summary>
     /// A chords-only grid's CELL height on one line — how tall its bar lines run from the
-    /// band top: the nominal staff height, plus the line's deepest diagram ink below the
-    /// baseline (<see cref="LineDiagramInkDepth"/>). The room under the diagram is then the
-    /// room a bare name's baseline keeps over the bars' feet (StaffHeight − GridChordBaseline),
-    /// so a line without a diagram is the cell it always was.
+    /// band top. A line without a diagram is the nominal staff: the names centred in it by
+    /// <see cref="RowTextBaseline"/>'s grid rule. A line WITH diagrams encloses them with the
+    /// same room under the deepest diagram's feet as over the tallest name's ink: the cell
+    /// top stays the band top, the baseline <c>GridChordBaseline</c> under it, so the cell
+    /// runs <c>baseline + depth + (baseline − inkTop)</c> (owner's request 2026-11-01: the
+    /// room above and below the diagram alike).
     /// </summary>
     /// <remarks>
-    /// ⚠️ ONE HOME, TWO READERS: the renderer draws the bars this tall
-    /// (<c>SharedRenderer.DrawBarlines</c>' grid arm) and <see cref="RowSkylines"/> merges the
-    /// same extent as the row's ink, so the next system clears the cell's feet.
+    /// ⚠️ ONE HOME, TWO READERS: the renderer draws the bars this tall and centres the meter
+    /// in them (<c>SharedRenderer.DrawBarlines</c>' grid arm) and <see cref="RowSkylines"/>
+    /// merges the same extent as the row's ink, so the next system clears the cell's feet.
     /// </remarks>
-    internal static double GridCellHeight(double staffHeight, double diagramInkDepth)
-        => staffHeight + Math.Max(0, diagramInkDepth);
+    internal static double GridCellHeight(
+        Rendering.ScoreTextMetrics fonts, double staffHeight, IEnumerable<GridLineSymbol> line)
+    {
+        double depth = double.NegativeInfinity, inkTop = 0;
+        foreach (var s in line)
+        {
+            inkTop = Math.Max(inkTop, s.InkTop);
+            if (s.Spec is { } spec)
+                depth = Math.Max(depth, -(s.FrameBottom + DiagramBox(fonts, spec).Bottom));
+        }
+        if (double.IsNegativeInfinity(depth))
+            return staffHeight;
+        double baseline = RowTextBaseline(chordGridSheet: true);
+        return baseline + depth + (baseline - inkTop);
+    }
+
+    /// <summary>A row symbol's ink top over its baseline — the name's letters, a raised 7
+    /// or an accidental, whichever reaches highest — for <see cref="GridCellHeight"/>.</summary>
+    internal static double ItemInkTop(Rendering.ScoreTextMetrics fonts, ChordNameItem chord)
+        => SymbolInk(fonts, chord).Top;
 
     /// <summary>
     /// <paramref name="curX"/> shifted right, if it has to be, so its box clears the
@@ -1351,8 +1360,8 @@ internal static class ChordNameEngraver
             && MultiStaffLayouter.MeasureSpan(measureLayouts) is { } span)
         {
             double cellTop = RowTextBaseline(chordGridSheet: true);
-            double cellHeight = GridCellHeight(cellStaffHeight, LineDiagramInkDepth(
-                fonts, placed.Select(p => (p.Chord.FrameSpec, lineGridBottom ?? 0.0))));
+            double cellHeight = GridCellHeight(fonts, cellStaffHeight, placed.Select(p =>
+                new GridLineSymbol(p.Chord.FrameSpec, lineGridBottom ?? 0.0, ItemInkTop(fonts, p.Chord) + p.Lift)));
             up.MergeBox(span.Left, span.Right, cellTop - cellHeight, cellTop);
             down.MergeBox(span.Left, span.Right, cellTop - cellHeight, cellTop);
         }

@@ -130,24 +130,40 @@ public sealed class RowsOnlyDiagramStackTests
         var plainBar = control.Barlines[0];
         Assert.Equal(4.0, plainBar.Height, 6);
 
-        // With a diagram the cell grows by the diagram's ink depth below the names' baseline
-        // (ChordNameEngraver.GridCellHeight): the diagram's feet then keep the same room over
-        // the bars' feet that a bare name's baseline keeps — 4.0 − 2.9 (GridChordBaseline).
+        // With a diagram the cell grows to enclose it (ChordNameEngraver.GridCellHeight): the
+        // cell's top stays the band top with the names 2.9 under it, and the room under the
+        // deepest diagram's feet is the room over the tallest name's ink (owner's request
+        // 2026-11-01: the same margin above and below).
         var bar = g.Barlines[0];
         double chord = ChordBaseline(g);
         double feet = DiagramFeet(g);
         double depth = feet - chord;
         Assert.True(depth > 4.0, $"the diagram's feet should hang well under the names; depth {depth:F3}");
-        Assert.InRange(bar.Height, 4.0 + depth - 0.1, 4.0 + depth + 0.1);
         // Every bar line of the line is the same cell.
         foreach (var b in g.Barlines)
             Assert.Equal(bar.Height, b.Height, 6);
         // The name stands where it stood: 2.9 under the cell's top on both sheets.
         double plainChord = ChordBaseline(control);
         Assert.Equal(plainChord - plainBar.Y, chord - bar.Y, 6);
-        // ...and the diagram's feet are inside the cell, with the bare name's own room under them.
-        var (_, bottom) = Span(bar);
-        Assert.InRange(bottom - feet, 1.1 - 0.1, 1.1 + 0.1);
+        // ...and the margins match: the line's tallest ink (a raised 7 here) to the bar top,
+        // the diagram's feet to the bar bottom. The strings are drawn to their centre line and
+        // the reserved box ends half a string thickness further, hence the tolerance.
+        var tree = SyntaxTree.Parse(Book(WithDiagram, "chords prog"));
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        double inkTop = score.ChordNames.Max(c => ChordNameEngraver.ItemInkTop(score.TextMetrics, c));
+        var (top, bottom) = Span(bar);
+        double roomAbove = (chord - inkTop) - top;
+        double roomBelow = bottom - feet;
+        Assert.InRange(roomBelow - roomAbove, -0.06, 0.06);
+
+        // The meter stands centred in the cell on both sheets — the same offset from the
+        // cell's middle with the deepened cell as with the plain one.
+        double meterOffset = g.Glyphs.Min(gl => gl.X) is var mx
+            ? g.Glyphs.First(gl => gl.X == mx).Y - (top + bottom) / 2 : 0;
+        var (pt, pb) = Span(plainBar);
+        double plainMx = control.Glyphs.Min(gl => gl.X);
+        double plainOffset = control.Glyphs.First(gl => gl.X == plainMx).Y - (pt + pb) / 2;
+        Assert.Equal(plainOffset, meterOffset, 6);
     }
 
     /// <summary>The words of a lyrics grid stand centred between the bar ends: the same room

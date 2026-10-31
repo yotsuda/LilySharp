@@ -104,11 +104,11 @@ internal static partial class SharedRenderer
         return double.IsInfinity(top) ? flat : band.AboveFirstVerse + (top - bottom) + band.BelowLastVerse;
     }
 
-    /// <summary>The (diagram spec, grid bottom) of every chord symbol a grid row draws on
-    /// <paramref name="system"/> — what <c>ChordNameEngraver.LineDiagramInkDepth</c> reads
-    /// to size the cell; the symbols are the ones the skyline measured (RowSkylines).</summary>
-    private static IEnumerable<(string? Spec, double FrameBottom)> GridRowDiagrams(
-        ScoreLayout layout, SystemLayout system, int rowStaffIndex)
+    /// <summary>Every chord symbol a grid row draws on <paramref name="system"/>, as
+    /// <c>ChordNameEngraver.GridCellHeight</c> reads it to size the cell — its diagram and
+    /// its name's ink top; the symbols are the ones the skyline measured (RowSkylines).</summary>
+    private static IEnumerable<ChordNameEngraver.GridLineSymbol> GridRowSymbols(
+        ScoreTextMetrics fonts, ScoreLayout layout, SystemLayout system, int rowStaffIndex)
     {
         if (layout.ChordNameLayouts.IsDefaultOrEmpty || system.Measures.IsDefaultOrEmpty)
             yield break;
@@ -116,7 +116,8 @@ internal static partial class SharedRenderer
         int last = system.Measures[^1].MeasureIndex;
         foreach (var c in layout.ChordNameLayouts)
             if (c.RowStaffIndex == rowStaffIndex && c.MeasureIndex >= first && c.MeasureIndex <= last)
-                yield return (c.FrameSpec, c.FrameBottom);
+                yield return new ChordNameEngraver.GridLineSymbol(
+                    c.FrameSpec, c.FrameBottom, ChordNameEngraver.SymbolInk(fonts, c).Top);
     }
 
     /// <summary>One bar line a staff draws: its type, its left edge, the measure it belongs

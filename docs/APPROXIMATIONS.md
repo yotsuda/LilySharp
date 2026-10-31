@@ -477,7 +477,7 @@
 - **`ChordNameEngraver.ChordLineOfSystem`** ⚠️ LILYSHARP-OWN, all of it. LilyPond cannot spell the configuration: a
 - **`ChordNameEngraver.SymbolGap`** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
 - **`ChordNameEngraver.FootprintWidth`** ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
-- **`ChordNameEngraver.LineDiagramInkDepth`** ChordNames line, was declined). LILYSHARP-OWN: LilyPond's ChordNames draws no bar lines.
+- **`ChordNameEngraver.GridLineSymbol`** ChordNames line, was declined). LILYSHARP-OWN: LilyPond's ChordNames draws no bar lines.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
 - **`ChordNameGlyphRun.CsymFontSize`** LILYSHARP-OWN: LilyPond reads no SMuFL font and draws a chord symbol's flat as a
 ### `LilySharp.Core/Svg/Layout/CustomTextEngraver.cs`

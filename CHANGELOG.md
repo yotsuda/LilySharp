@@ -18,10 +18,10 @@ workflow attaches that section to the GitHub Release verbatim.
   band gap that read neither row's ink. The grid's bar lines count as the lyric row's ink, so
   the diagram keeps its 0.5 off the bar tops.
 - `[render]` **A chords-only grid's cell encloses the diagram**: on a line whose chords draw
-  diagrams the bar lines run down past the diagrams' feet, with the same room under them a
-  bare name keeps; lines without a diagram keep the four-space cell. The meter stays level
-  with the names. (Owner's decision over LilyPond's picture of a FretBoards line hanging
-  under a bar-less ChordNames line.)
+  diagrams the bar lines run down past the diagrams' feet, with the same room under them the
+  tallest name's ink has over it; lines without a diagram keep the four-space cell. The
+  meter is centred in the cell. (Owner's decision over LilyPond's picture of a FretBoards
+  line hanging under a bar-less ChordNames line.)
 - `[render]` **The words of a lyrics grid stand centred between the bar ends**: the four-space
   cell is split so the row's tallest ink has the same room over it as its deepest ink has
   under it. A kana row (ink 0.88 em up, 0.12 down) used to sit high in its cells; a Latin
