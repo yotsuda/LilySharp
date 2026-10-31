@@ -655,6 +655,7 @@
     ["layout", "Accidental"],
     ["layout", "NoteHead"],
     ["layout", "BarLine"],
+    ["layout", "cueSize"],
     ["paper", "size"],
     ["paper", "paperWidth"],
     ["paper", "paperHeight"],
