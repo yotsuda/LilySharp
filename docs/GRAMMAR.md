@@ -2378,10 +2378,13 @@ ChordNote      = PitchToken , { Annotation } ;
    - Each note carries its string number, as 'c\3' would; a muted string gives no note.
    - NO SHAPE ('chord(F)', 'diagram(F)', 2026-10-31): 'chord(F)' plays the chord's notes as the
      completion writes them, close, the root written from G3 to F#4 (an octave lower on a
-     'treble_8' / 'bass_8' staff, so it stands by middle C as drawn), with no string numbers, on
-     every part (ShapeChords.PlaysUsualShape: it shows no diagram, so it plays none). 'diagram(F)'
-     on a fretted part plays and draws its instrument's usual shape (pressed above a capo);
-     elsewhere it voices the chord close the same way.
+     'treble_8' / 'bass_8' staff, so it stands by middle C as drawn; moved with the clef's middle
+     line on any other staff; an octave up while below the instrument's range, or — on a fretted
+     part — while no hand holds it), with no string numbers, on every part (ShapeChords.
+     PlaysUsualShape: it shows no diagram, so it plays none) — and it draws none, even under
+     'chordDiagrams … all' (a diagram is a score's, the notes are the part's). 'diagram(F)' plays
+     and draws its instrument's usual shape (pressed above a capo), the guitar's on a part with no
+     fretted instrument: it plays the shape it shows.
      A shape written badly, or only for another string count, does not fall back: the item is
      a SPACER of its length and warns (LYS1040). The words' own diagnostics are LYS1038 / LYS1039's.
    - The item draws its shape's diagram on the page and in the twin, unless the score's

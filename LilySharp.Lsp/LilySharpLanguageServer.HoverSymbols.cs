@@ -211,7 +211,8 @@ public sealed partial class LilySharpLanguageServer
         foreach (var part in ShapeChords.PartTuningsOf(item))
         {
             bool usual = ShapeChords.PlaysUsualShape(item, part.Fretted);
-            var notes = ShapeChords.Notes(words, part.Tuning, part.SoundingShift - capo, keySharps, capo, usual, part.CloseRegister);
+            var notes = ShapeChords.Notes(words, part.Tuning, part.SoundingShift - capo, keySharps, capo, usual, part.CloseRegister, part.CloseFloor,
+                part.Fretted ? LilySharp.Core.Tablature.Tunings.GetTuning(part.Tuning) : null);
             if (notes.IsEmpty)
             {
                 lines.Add($"{part.Word}: no shape for its {LilySharp.Core.Tablature.Tunings.GetStringCount(part.Tuning)} "

@@ -91,6 +91,13 @@ public sealed record ChordAnnotation
     /// to point a diagnostic at.</summary>
     public bool FromShapeItem { get; init; }
 
+    /// <summary>The words are a <c>chord(…)</c> item's own, the name it prints. With no shape
+    /// written it draws NO diagram, even in a <c>chordDiagrams … all</c> score or for a chord the
+    /// layout table lists (<see cref="Drawn"/>): the item sounds its chord close (Q1), and a diagram
+    /// is a score's while the notes are the part's, so a drawn shape could not be the one it plays
+    /// in every score (owner's decision 2026-10-31). <c>chord(F 133211)</c> draws its own.</summary>
+    public bool FromChordItem { get; init; }
+
     /// <summary>Reads the words of <paramref name="mark"/>, or null when it is not an
     /// <c>@chord</c>.</summary>
     /// <remarks>
@@ -181,7 +188,8 @@ public sealed record ChordAnnotation
     /// <param name="capo">The fret the score's capo is on, 0 for none.</param>
     public ChosenShape? Drawn(Syntax.TuningType diagramTuning, bool all = false, ChordStructure? derived = null,
         ChordShapeTable? table = null, string? section = null, int capo = 0)
-        => ChordShapes.Drawn(diagramTuning, Shapes, all, Symbol != null ? Structure : derived, table, section, capo);
+        => FromChordItem && Shapes.IsEmpty ? null
+           : ChordShapes.Drawn(diagramTuning, Shapes, all, Symbol != null ? Structure : derived, table, section, capo);
 
     /// <summary>
     /// The tuning a symbol-less shape (<c>@chord(x32010)</c>) is NAMED on — the score's

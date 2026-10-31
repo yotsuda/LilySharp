@@ -193,7 +193,9 @@ public class ShapeChordItemTests
 
         string piano = Book("clef treble", "chord(F)2 diagram(G)2 | chord(C/E)1 |");
         Assert.DoesNotContain(Diagnostics(piano), d => d.Code == DiagnosticCodes.ShapeChordNoShape);
-        Assert.Equal(new[] { 65, 69, 72, 55, 59, 62, 52, 60, 64, 67 }, MidiPitches(piano));
+        // chord(F) F A C close; diagram(G) the guitar's 320003 it draws (it plays what it shows, on any
+        // part — owner's review 2026-10-31); chord(C/E) E below C E G.
+        Assert.Equal(new[] { 65, 69, 72, 43, 47, 50, 55, 59, 67, 52, 60, 64, 67 }, MidiPitches(piano));
         Assert.DoesNotContain("\\1", new LilyPondExporter().Export(SyntaxTree.Parse(piano)).Split("chordmode")[0]
             .Split('\n').Where(l => l.Contains("<f")).DefaultIfEmpty("").First());
     }
@@ -687,6 +689,25 @@ public class ShapeChordItemTests
         Assert.Equal(LilySharp.Core.Semantics.PlayedNotes.Signature(SyntaxTree.Parse(checks)),
             LilySharp.Core.Semantics.PlayedNotes.Signature(SyntaxTree.Parse(checks[..notes.Start] + notes.Replacement + checks[notes.End..])));
         Assert.NotEqual("", LilySharp.Core.Semantics.PlayedNotes.Signature(SyntaxTree.Parse(checks)));
+    }
+
+    /// <summary>Owner's review 2026-10-31. A chord(…) item with no shape draws no diagram even in an
+    /// `all` score (it sounds close, and a diagram is a score's while its notes are the part's); its
+    /// close voicing stands by the foot of the staff as drawn, in the instrument's range, and on a
+    /// fretted part where a hand can hold it.</summary>
+    [Fact]
+    public void AChordItemWithNoShape_StaysCloseInRangeAndUndrawn()
+    {
+        Assert.Empty(Frames(Book("instrument guitar", "chord(F)1 |", top: "layout { chordDiagrams guitar all }\n")));
+        Assert.Equal(new[] { "133211" }, Frames(Book("instrument guitar", "chord(F 133211)1 |", top: "layout { chordDiagrams guitar all }\n")));
+        // A ukulele's G is G4 B4 D5: G3 is below its C4.
+        string uke = Book("instrument ukulele", "chord(G)1 |");
+        Assert.Equal(new[] { 67, 71, 74 }, MidiPitches(uke));
+        Assert.DoesNotContain(Diagnostics(uke), d => d.Severity == DiagnosticSeverity.Warning);
+        // A bass's F is held: not F1 A1 C2, which no hand frets.
+        string bass = Book("instrument bass", "chord(F)1 |");
+        Assert.DoesNotContain(Diagnostics(bass), d => d.Code == DiagnosticCodes.ChordNotFingerable);
+        Assert.Equal(new[] { 41, 45, 48 }, MidiPitches(bass));
     }
 
     // ================================================================ the outputs

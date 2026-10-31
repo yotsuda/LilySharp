@@ -4242,7 +4242,7 @@ public sealed class MusicXmlExporter
                 || spreadAt.Note == Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
                     _partTransposeSemitones - DiagramCapo, _keyFifths, DiagramCapo, _partFrettedTuning != null).MinBy(n => n.SoundingMidi))
             && LilySharp.Core.Music.ShapeChords.Words(chord) is { IsBare: false } itemWords)
-            WriteHarmony(itemWords with { Problems = [], FromShapeItem = true }, chord);
+            WriteHarmony(itemWords with { Problems = [], FromShapeItem = true, FromChordItem = true }, chord);
 
         var pitches = chord.Pitches.ToList();
         // diagram(SYMBOL SHAPE): the shape's strings on the part's tuning (Music.ShapeChords —

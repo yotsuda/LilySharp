@@ -139,7 +139,7 @@ public sealed partial class MeasureCollector
         };
         if (item != null && !articulations.Any(a => a is MusicMarkSyntax { Name: "chord" })
             && Music.ShapeChords.Words(item) is { IsBare: false } itemWords)
-            CollectChordName(node, item, itemWords with { Problems = [], FromShapeItem = true },
+            CollectChordName(node, item, itemWords with { Problems = [], FromShapeItem = true, FromChordItem = true },
                 measureIndex, itemIndex, anchorTiming);
     }
 

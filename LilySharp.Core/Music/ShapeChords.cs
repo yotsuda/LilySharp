@@ -127,24 +127,49 @@ public static class ShapeChords
     public static ImmutableArray<ShapeNote> Notes(ChordSyntax chord, TuningType tuning, int soundingShift, int keySharps,
         int capo = 0, bool fretted = true)
         => Notes(Words(chord), tuning, soundingShift, keySharps, capo, PlaysUsualShape(chord, fretted),
-            CloseRegisterOf(chord));
+            CloseRegisterOf(chord), CloseFloorOf(chord), fretted ? Tablature.Tunings.GetTuning(tuning) : null);
 
-    /// <summary>Where a close voicing of an item stands (<see cref="CloseVoicing"/>): an octave lower
-    /// on a staff that reads an octave down (<c>treble_8</c>, <c>bass_8</c> — a guitar's, a
-    /// bass's), so the chord sits by the middle of the staff as drawn, as it does on a treble
-    /// staff by middle C. 0 elsewhere, and outside a part.</summary>
+    /// <summary>Where a close voicing of an item stands (<see cref="CloseVoicing"/>), in semitones
+    /// from a treble staff's: the root's range moves with the staff's middle line, so the chord sits
+    /// at the foot of the staff as drawn — by middle C on a treble staff, an octave lower on
+    /// <c>treble_8</c> (a guitar's), by the bass staff's foot on a bass staff (owner's review
+    /// 2026-10-31: a bass's chord(F) stood far above its staff). 0 outside a part.</summary>
     public static int CloseRegisterOf(SyntaxNode node)
+        => HeaderOf(node) is { } header ? CloseRegisterOf(header) : 0;
+
+    /// <summary>The lowest note a close voicing may sound on the part's instrument (its preset's
+    /// range), or none: an octave is added until the chord is in it (owner's review 2026-10-31: a
+    /// ukulele's chord(G) sounded G3, below its C4).</summary>
+    public static int CloseFloorOf(SyntaxNode node)
+        => HeaderOf(node) is { } header ? CloseFloorOf(header) : int.MinValue;
+
+    private static PartHeaderDefaults? HeaderOf(SyntaxNode node)
     {
         var root = node;
         while (root.Parent != null)
             root = root.Parent;
         return ChordDiagramScores.PartNameOf(node) is { } part
-            ? CloseRegisterOf(PartHeaderDefaults.Read(ConcertPitch.FindPart(root, part)))
-            : 0;
+            ? PartHeaderDefaults.Read(ConcertPitch.FindPart(root, part))
+            : null;
     }
 
-    private static int CloseRegisterOf(PartHeaderDefaults header)
-        => header.Clef is Svg.Model.ClefType.Treble8Below or Svg.Model.ClefType.Bass8Below ? -12 : 0;
+    // The written pitch on the staff's middle line, a treble staff's B4 the reference.
+    private static int CloseRegisterOf(PartHeaderDefaults header) => header.Clef switch
+    {
+        Svg.Model.ClefType.Treble8Below => 59,
+        Svg.Model.ClefType.Treble8Above => 83,
+        Svg.Model.ClefType.Bass => 50,
+        Svg.Model.ClefType.Bass8Below => 38,
+        Svg.Model.ClefType.Baritone => 53,
+        Svg.Model.ClefType.Tenor => 57,
+        Svg.Model.ClefType.Alto => 60,
+        Svg.Model.ClefType.MezzoSoprano => 64,
+        Svg.Model.ClefType.Soprano => 67,
+        _ => 71,
+    } - 71;
+
+    private static int CloseFloorOf(PartHeaderDefaults header)
+        => Svg.Model.InstrumentDefaults.SoundingRange(header.Preset)?.Low ?? int.MinValue;
 
     /// <summary>Whether <paramref name="item"/>, with no shape written, plays the usual shape of its
     /// part's instrument: a <c>diagram(…)</c> item on a fretted part (it draws that shape too). A
@@ -152,16 +177,20 @@ public static class ShapeChords
     /// every part — <c>chord(F)</c> is F A C (owner's decision 2026-10-31, docs/chord-syntax-design.md
     /// Q1, revised the same day: a guitar used to play its usual shape there, six strings no diagram
     /// showed).</summary>
-    public static bool PlaysUsualShape(ChordSyntax item, bool partFretted) => partFretted && !item.ShowsName;
+    /// <remarks>A <c>diagram(…)</c> item plays the shape it shows on every part (owner's review
+    /// 2026-10-31): on a part with no fretted instrument, the guitar's usual shape it draws — it
+    /// voiced its chord close there until then, under a guitar diagram it did not play.</remarks>
+    public static bool PlaysUsualShape(ChordSyntax item, bool partFretted) => !item.ShowsName;
 
     /// <summary><see cref="Notes(ChordSyntax, TuningType, int, int, int, bool)"/> on words already read.</summary>
     public static ImmutableArray<ShapeNote> Notes(ChordAnnotation words, TuningType tuning, int soundingShift, int keySharps,
-        int capo = 0, bool fretted = true, int closeRegister = 0)
+        int capo = 0, bool fretted = true, int closeRegister = 0, int closeFloor = int.MinValue,
+        IReadOnlyList<int>? closeStrings = null)
     {
         // No usual shape to play and no shape written (owner's decision 2026-10-31, Q1): the chord's
         // notes as the completion writes them, close and root up — around middle C as drawn.
         if (!fretted && words.Shapes.IsEmpty && words.Problems.IsEmpty && words.Structure is { } voiced)
-            return CloseVoicing(voiced, soundingShift + capo, closeRegister);
+            return CloseVoicing(voiced, soundingShift + capo, closeRegister, closeFloor, closeStrings);
         if (ShapeFor(words, tuning, capo, fretted) is not { } shape)
             return [];
         var frets = ChordShapes.Frets(shape);
@@ -199,10 +228,26 @@ public static class ShapeChords
     /// middle C — and a slash bass below the root; no string numbers (0).
     /// <paramref name="partShift"/> is the part's written→sounding shift; <paramref name="register"/>
     /// moves the range for a staff that reads an octave down (<see cref="CloseRegisterOf(SyntaxNode)"/>).</summary>
-    private static ImmutableArray<ShapeNote> CloseVoicing(ChordStructure chord, int partShift, int register = 0)
+    private static ImmutableArray<ShapeNote> CloseVoicing(ChordStructure chord, int partShift, int register = 0,
+        int floor = int.MinValue, IReadOnlyList<int>? strings = null)
+    {
+        // An octave up while the chord sounds below the instrument's range (CloseFloorOf), or — on a
+        // fretted part — while no hand can hold it (a bass's F1 A1 C2; ChordFingering).
+        for (int lift = 0; lift <= 36; lift += 12)
+        {
+            var voiced = CloseVoicingAt(chord, partShift, 55 + register + lift);
+            if (voiced.IsEmpty || lift == 36
+                || voiced.Min(n => n.SoundingMidi) >= floor
+                   && (strings is null || ChordFingering.Fingering([.. voiced.Select(n => n.SoundingMidi)], strings) != null))
+                return voiced;
+        }
+        return [];
+    }
+
+    private static ImmutableArray<ShapeNote> CloseVoicingAt(ChordStructure chord, int partShift, int low)
     {
         var notes = ImmutableArray.CreateBuilder<ShapeNote>();
-        int previous = -1, root = -1, low = 55 + register;
+        int previous = -1, root = -1;
         foreach (var t in chord.Tones)
         {
             int pc = Mod12(RelativeOctave.StepSemitoneOf(t.Step) + t.Alter);
@@ -241,7 +286,7 @@ public static class ShapeChords
     /// <summary>A part a shape chord may be played by, as the tree says it: its tuning, the
     /// word naming it, and its written→sounding shift.</summary>
     public readonly record struct PartTuning(TuningType Tuning, string Word, int SoundingShift, bool Fretted = true,
-        int CloseRegister = 0);
+        int CloseRegister = 0, int CloseFloor = int.MinValue);
 
     /// <summary>
     /// The parts <paramref name="node"/> is played by, from the SYNTAX — the enclosing part
@@ -256,7 +301,7 @@ public static class ShapeChords
         while (root.Parent != null)
             root = root.Parent;
         static PartTuning Of(PartHeaderDefaults h)
-            => new(TuningOf(h), h.FrettedTuningWord ?? "guitar", h.SoundingShiftSemitones, h.FrettedTuning != null, CloseRegisterOf(h));
+            => new(TuningOf(h), h.FrettedTuningWord ?? "guitar", h.SoundingShiftSemitones, h.FrettedTuning != null, CloseRegisterOf(h), CloseFloorOf(h));
         if (ChordDiagramScores.PartNameOf(node) is { } part)
             return [Of(PartHeaderDefaults.Read(ConcertPitch.FindPart(root, part)))];
         var all = root.ChildNodes().OfType<PartDeclarationSyntax>()

@@ -59,6 +59,14 @@ workflow attaches that section to the GitHub Release verbatim.
   marks the frame there needs: `diagram(133211)4` → `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4`. A
   `chord(…)` item's name stays as `@chord(F)`; the diagram does not. The file must sound the same
   afterwards, or nothing changes. Not inside `<< >>`.
+- `[lang]` **A chord item with no shape, reviewed** (owner's review):
+  - `diagram(F)` plays the shape it draws on every part; a piano part voiced it close under a
+    guitar diagram it did not play.
+  - `chord(F)` draws no diagram in a `chordDiagrams … all` score: it sounds close, and a diagram is
+    a score's while the notes are the part's.
+  - The close voicing stays in the instrument's range (a ukulele's G is G4 B4 D5, not G3), stands
+    by a bass staff's foot on a bass staff, and on a fretted part goes up an octave until a hand
+    can hold it (a bass's F is F2 A2 C3, not F1 A1 C2).
 - `[editor]` **Ctrl+Shift+Down at a `chord(…)` item's usual shape takes the shape away**:
   `chord(F 133211)` → `chord(F)`, as `@chord(F 133211)` → `@chord(F)`. A `diagram(…)` item keeps its shape.
 - `[lang]` **`<f a c>1@chord@diagram(xx321x)` is not warned** (LYS1056 was): the bare `@chord` names

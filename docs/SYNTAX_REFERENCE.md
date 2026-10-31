@@ -2812,10 +2812,12 @@ diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the
 - **No shape** (`chord(F)`, `diagram(F)`): `chord(F)` plays the chord's notes as the completion
   writes them — close, root up, the root by middle C as the staff draws it (written G3 to F♯4; an
   octave lower on a `treble_8` or `bass_8` staff, so a guitar's F is F3 A3 C4) — with no string
-  numbers, on every part: it shows a name and no diagram, so it plays no shape. `diagram(F)` on a
-  part with a fretted instrument (guitar, bass, ukulele, banjo, …) plays and draws that
-  instrument's usual shape (*The usual shape* above), pressed above a capo; on any other part it
-  voices the chord close the same way. A shape written badly, or only for another instrument,
+  numbers, on every part: it shows a name and no diagram, so it plays no shape — and draws none,
+  even in a `chordDiagrams … all` score (a diagram is a score's, the notes are the part's). On a
+  bass staff the root stands by that staff's foot instead; an octave goes up while the chord is
+  below the instrument's range (a ukulele's G is G4 B4 D5) or, on a fretted part, while no hand
+  holds it. `diagram(F)` plays and draws the usual shape (*The usual shape* above), pressed above a
+  capo — its part's fretted instrument's, else the guitar's: it plays the shape it shows. A shape written badly, or only for another instrument,
   does not fall back: it warns (LYS1040) and keeps its time as a SPACER, so the bar still adds up.
 - **Strum after strum** (`chord(F 133211)4` four times), the name and the diagram stand where the
   chord CHANGES, and again at the head of each system; the repeats take no room in their bar. Any

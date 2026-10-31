@@ -381,9 +381,10 @@ diagram(C xx-10-12-13-12)4.~  // frets 10-15 in the dash form
 
 - Item words are `@chord(…)`'s: a symbol + a shape, a shape alone, or a symbol alone. With no
   shape, `chord(F)` plays the chord's notes close (F A C), root by middle C as the staff draws
-  it, no string numbers — on every part, a guitar's too; `diagram(F)` on a fretted part plays
-  and draws its instrument's usual shape (pressed above a capo). A shape written badly, or only
-  for another instrument, warns (LYS1040) and is a spacer of its length.
+  it (in the instrument's range, holdable on a fretted part), no string numbers, and no diagram
+  even in an `all` score — on every part, a guitar's too; `diagram(F)` plays and draws the usual
+  shape (pressed above a capo): the part's fretted instrument's, else the guitar's. A shape
+  written badly, or only for another instrument, warns (LYS1040) and is a spacer of its length.
 - Tuning: the PART's fretted instrument (its tab tuning), else the guitar. The shape gives
   SOUNDING pitches, and a guitar part (treble_8) is written as it sounds. ABSOLUTE: the frame, `octave absolute` and marks do not move
   it; marks after `)` are an error (LYS0035).
