@@ -27,11 +27,14 @@ const marks = [
 ];
 
 describe('the preview\'s Resolve TODO doors (owner\'s request 2026-10-31)', () => {
-    it('finds the marks whose host is written in the bar right-clicked', () => {
+    it('finds the marks written in the bar right-clicked', () => {
         assert.deepEqual(todoStartsInBar(marks, 0, 27), [2, 11]);
         assert.deepEqual(todoStartsInBar(marks, 10, 27), [11]);
         assert.deepEqual(todoStartsInBar(marks, 28, 40), []);
         assert.deepEqual(todoStartsInBar(marks, 5, 5), []);          // no span
+        // `<< c e g >>2@todo("x") d2 |`: the bar's span starts at the `c` (50), the group — the
+        // host — at its `<<` (47), the mark at 59: the mark's place is what puts it in the bar.
+        assert.deepEqual(todoStartsInBar([{ Start: 59, End: 69, HostStart: 47 }], 50, 73), [59]);
     });
     it('carries the starts through the menu context as one string', () => {
         assert.equal(joinStarts([2, 11]), '2,11');
@@ -52,6 +55,7 @@ describe('the preview\'s Resolve TODO doors (owner\'s request 2026-10-31)', () =
         const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
         assert.match(ext, /type: 'todos', marks: /);
         assert.match(ext, /lysBarTodo: ctxTodoStarts\.length > 0,\s*lysTodoStarts: ctxTodoStarts\.join\(','\),\s*lysHasTodos: todoMarks\.length > 0,/);
+        assert.match(ext, /\(m\.start >= span\[0\] && m\.start < span\[1\]\)\s*\|\| \(m\.hostStart >= span\[0\] && m\.hostStart < span\[1\]\)/);
         assert.match(ext, /registerCommand\('lilysharp\.previewResolveTodo'/);
         assert.match(ext, /registerCommand\('lilysharp\.previewResolveAllTodos'/);
         const menu = pkg.contributes.menus['webview/context'] as { command: string; when: string; group: string }[];

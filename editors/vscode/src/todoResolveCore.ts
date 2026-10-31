@@ -29,11 +29,14 @@ export interface TodoMark {
     readonly HostStart: number;
 }
 
-/** The marks whose host is written in the bar's span [from, to) — what a right-click on that
- *  bar resolves — by the start of each mark, in source order. */
+/** The marks written in the bar's span [from, to) — what a right-click on that bar resolves —
+ *  by the start of each mark, in source order. The mark's own place decides, its host's as a
+ *  fallback: the page's bar span starts at the bar's first ITEM, which for a `<< c e g >>@todo`
+ *  is the `c` past the `<<` the group (the host) starts at (owner's report 2026-10-31). */
 export function todoStartsInBar(marks: readonly TodoMark[], from: number, to: number): number[] {
     if (!(to > from)) { return []; }
-    return marks.filter(m => m.HostStart >= from && m.HostStart < to).map(m => m.Start).sort((a, b) => a - b);
+    const inBar = (at: number) => at >= from && at < to;
+    return marks.filter(m => inBar(m.Start) || inBar(m.HostStart)).map(m => m.Start).sort((a, b) => a - b);
 }
 
 /** The page writes the bar's marks into the menu's context as one string ("12,45"): the

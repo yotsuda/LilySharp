@@ -7151,8 +7151,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     const s = parseInt(r.getAttribute('data-start'), 10);
                     if (!isNaN(s)) { ctxBarAt = s; }
                     const span = (r.getAttribute('data-span') || '').split(' ').map(Number);
+                    // The bar's span runs from its first ITEM — past a group's "<<" — so a mark
+                    // is the bar's by where the MARK is written (owner's report 2026-10-31:
+                    // "<< c e g >>@todo" offered nothing), else by its host.
                     if (span.length === 2 && span[1] > span[0]) {
-                        ctxTodoStarts = todoMarks.filter(m => m.hostStart >= span[0] && m.hostStart < span[1])
+                        ctxTodoStarts = todoMarks.filter(m => (m.start >= span[0] && m.start < span[1])
+                                || (m.hostStart >= span[0] && m.hostStart < span[1]))
                             .map(m => m.start).sort((a, b) => a - b);
                     }
                     if (!isNaN(s)) { break; }
