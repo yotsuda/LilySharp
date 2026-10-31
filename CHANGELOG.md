@@ -59,6 +59,8 @@ workflow attaches that section to the GitHub Release verbatim.
   marks the frame there needs: `diagram(133211)4` → `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4`. A
   `chord(…)` item's name stays as `@chord(F)`; the diagram does not. The file must sound the same
   afterwards, or nothing changes. Not inside `<< >>`.
+- `[editor]` **Ctrl+Shift+Down at a `chord(…)` item's usual shape takes the shape away**:
+  `chord(F 133211)` → `chord(F)`, as `@chord(F 133211)` → `@chord(F)`. A `diagram(…)` item keeps its shape.
 - `[lang]` **`<f a c>1@chord@diagram(xx321x)` is not warned** (LYS1056 was): the bare `@chord` names
   the chord's notes and the shape is one way to hold them — what Ctrl+Shift+Up writes from a bare
   `@diagram`. LYS1056 stays for a single note, where the name is read off the shape.

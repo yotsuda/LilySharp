@@ -2853,7 +2853,8 @@ diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the
 - **Editor.** Hover lists the notes it sounds on each tuning that plays it —
   `guitar: x32013 — C3 E3 G3 C4 G4 — shape n of N`; `Ctrl+Shift+Up`/`Down` on the item steps its
   shape through the order above on the PART's tuning (from `diagram(C)`, Up writes the usual shape),
-  sounding each, and Down stops at the usual shape (the item keeps a shape); inside `chord(` and
+  sounding each. Down at the usual shape takes a `chord(…)` item's shape away — `chord(F 133211)` →
+  `chord(F)`, the name alone, played close — and stops a `diagram(…)` item, which shows its shape; inside `chord(` and
   `diagram(` the completion offers the chord symbols `@chord(` does. Hover on a symbol-less item
   names its chord (*this shape is **C***), and the quick fix writes the name in. Right-click →
   *Convert to Chord Notes <…>* writes the item out as the `<…>` chord it plays, with its octave

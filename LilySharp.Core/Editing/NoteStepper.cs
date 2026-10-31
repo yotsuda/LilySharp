@@ -1111,11 +1111,12 @@ public static partial class NoteStepper
                     : "this score's layout table lists it, so the name alone still shows it")} "
                 + $"({Music.ChordVoicings.Spell(order[at])}){note}", true);
         }
-        else if (dir < 0 && at == 0 && (site.IsItem || unnamed))
+        else if (dir < 0 && at == 0 && (site.IsItem && !site.ShowsName || unnamed))
         {
-            // A diagram(…) item's shape IS its notes (required, owner's decision 2026-09-28):
-            // Down stops at the default instead of leaving a spacer. A shape with no symbol is
-            // all its words say, so it stays too.
+            // A diagram(…) item shows its shape (owner's decision 2026-09-28): Down stops at the
+            // default. A shape with no symbol is all its words say, so it stays too. A chord(…)
+            // item with a symbol goes on below (owner's request 2026-10-31): chord(F 133211) →
+            // chord(F), the name alone — no diagram, F A C close.
             return (null, ShapeMessage(symbol, 0, order) + (unnamed
                 ? " - the first; a shape with no symbol keeps its shape"
                 : " - the first; a diagram(...) item keeps its shape") + note, true);
@@ -1148,7 +1149,7 @@ public static partial class NoteStepper
     /// on the step's tuning, and steps through that chord's order with no symbol written.</remarks>
     private sealed record ShapeSite(string Symbol, Music.ChordStructure? Chord,
         List<(string Text, int Start, int End)> Words, List<string> Problems, int SymbolEnd,
-        (int Open, int OpenEnd, int Close)? Group, bool IsRow, bool IsItem = false)
+        (int Open, int OpenEnd, int Close)? Group, bool IsRow, bool IsItem = false, bool ShowsName = false)
     {
         public bool Unnamed => Chord is null;
     }
@@ -1197,7 +1198,7 @@ public static partial class NoteStepper
                 itemList.Add((itemArgs[i].Text, itemSpans[i].Start, itemSpans[i].End));
             return (new ShapeSite(itemWords.Symbol ?? "", itemWords.Structure, itemList,
                 [.. itemWords.Problems.Select(p => p.Message)],
-                itemNamed ? itemSpans[0].End : itemSpans[0].Start, null, IsRow: false, IsItem: true), null);
+                itemNamed ? itemSpans[0].End : itemSpans[0].Start, null, IsRow: false, IsItem: true, ShowsName: item.ShowsName), null);
         }
         if (node is MusicMarkSyntax mark)
         {

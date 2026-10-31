@@ -485,6 +485,23 @@ public class StepRequestTests
             a => a.Type == LilySharp.Core.Syntax.ArticulationType.FretFrame).FrameSpec);
     }
 
+    /// <summary>Down at a chord(…) item's usual shape takes the shape away — chord(F 133211) →
+    /// chord(F), the name alone, played close — as at an @chord's; a diagram(…) item keeps its shape
+    /// (owner's request 2026-10-31).</summary>
+    [Fact]
+    public void DownAtAChordItemsUsualShape_LeavesTheNameAlone()
+    {
+        static string Gt(string music) => $$"""
+            part gt { instrument guitar }
+            section A { gt { {{music}} } }
+            form { A }
+            score { staff gt }
+            """;
+        Assert.Equal(Gt("chord(F)1 |"), Step(Gt("chord(F 1332‸11)1 |"), -1, semitone: true).After);
+        Assert.Equal(Gt("chord(F 133211)1 |"), Step(Gt("chord(‸F)1 |"), +1, semitone: true).After);
+        Assert.Equal(Gt("diagram(F 133211)1 |"), Step(Gt("diagram(F 1332‸11)1 |"), -1, semitone: true).After);
+    }
+
     // ---------------------------------------------------------------- notes
 
     [Fact]
