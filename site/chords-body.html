@@ -33,20 +33,20 @@ a guitarist reads. Writing the notes a chord plays is on
   <b><code>diagram</code> shows the diagram</b> alone. With <code>@</code> it marks the note it
   is on; without, it is a chord that sounds. Every combination is one word:</p>
   <table class="g">
-    <tr><th>Written</th><th>Looks</th><th>Name</th><th>Diagram</th><th>Sounds</th></tr>
-    <tr class="grp"><td colspan="5"><b>On a note</b> — the note sounds; the mark only shows</td></tr>
-    <tr><td><code>c1@chord(F)</code></td><td><img class="cell" src="examples/cell-note-chord.svg" alt="F over a whole note"></td><td>F</td><td></td><td>the c</td></tr>
-    <tr><td><code>c1@chord(F 133211)</code></td><td><img class="cell" src="examples/cell-note-chord-shape.svg" alt="F over its diagram, over a whole note"></td><td>F</td><td>✓</td><td>the c</td></tr>
-    <tr><td><code>c1@chord(x32010)</code></td><td><img class="cell" src="examples/cell-note-chord-of-shape.svg" alt="C over the x32010 diagram, over a whole note"></td><td>C, read off the shape</td><td>✓</td><td>the c</td></tr>
-    <tr><td><code>c1@diagram(133211)</code></td><td><img class="cell" src="examples/cell-note-diagram.svg" alt="a diagram alone over a whole note"></td><td></td><td>✓</td><td>the c</td></tr>
-    <tr class="grp"><td colspan="5"><b>On a <code>&lt;…&gt;</code> chord</b> — read off its own notes, with nothing written</td></tr>
-    <tr><td><code>&lt;f a c&gt;1@chord</code></td><td><img class="cell" src="examples/cell-notes-chord.svg" alt="F over the chord F A C"></td><td>F, read off the notes</td><td></td><td>the chord</td></tr>
-    <tr><td><code>&lt;f a c&gt;1@diagram</code></td><td><img class="cell" src="examples/cell-notes-diagram.svg" alt="the chord F A C with the diagram of its fingering"></td><td></td><td>✓ the notes, fretted</td><td>the chord</td></tr>
-    <tr class="grp"><td colspan="5"><b>Alone, with no <code>@</code></b> — a chord that sounds</td></tr>
-    <tr><td><code>chord(F)4</code></td><td><img class="cell" src="examples/cell-item-chord.svg" alt="F over the guitar's usual F chord"></td><td>F</td><td></td><td>the usual voicing</td></tr>
-    <tr><td><code>chord(F 133211)4</code></td><td><img class="cell" src="examples/cell-item-chord-shape.svg" alt="F over its diagram, over the six strings of 133211"></td><td>F</td><td>✓</td><td>the shape's strings</td></tr>
-    <tr><td><code>chord(x32010)4</code></td><td><img class="cell" src="examples/cell-item-chord-of-shape.svg" alt="C over its diagram, over the five strings of x32010"></td><td>C, read off the shape</td><td>✓</td><td>the shape's strings</td></tr>
-    <tr><td><code>diagram(133211)4</code></td><td><img class="cell" src="examples/cell-item-diagram.svg" alt="the diagram alone, over the six strings of 133211"></td><td></td><td>✓</td><td>the shape's strings</td></tr>
+    <tr><th>Written</th><th>Looks</th><th>Name</th><th>Diagram</th></tr>
+    <tr class="grp"><td colspan="4"><b>On a note</b> — the note sounds; the mark only shows</td></tr>
+    <tr><td><code>c1@chord(F)</code></td><td><img class="cell" src="examples/cell-note-chord.svg" alt="F over a whole note"></td><td>F</td><td></td></tr>
+    <tr><td><code>c1@chord(F 133211)</code></td><td><img class="cell" src="examples/cell-note-chord-shape.svg" alt="F over its diagram, over a whole note"></td><td>F</td><td>✓</td></tr>
+    <tr><td><code>c1@chord(x32010)</code></td><td><img class="cell" src="examples/cell-note-chord-of-shape.svg" alt="C over the x32010 diagram, over a whole note"></td><td>C, read off the shape</td><td>✓</td></tr>
+    <tr><td><code>c1@diagram(133211)</code></td><td><img class="cell" src="examples/cell-note-diagram.svg" alt="a diagram alone over a whole note"></td><td></td><td>✓</td></tr>
+    <tr class="grp"><td colspan="4"><b>On a <code>&lt;…&gt;</code> chord</b> — read off its own notes, with nothing written</td></tr>
+    <tr><td><code>&lt;f a c&gt;1@chord</code></td><td><img class="cell" src="examples/cell-notes-chord.svg" alt="F over the chord F A C"></td><td>F, read off the notes</td><td></td></tr>
+    <tr><td><code>&lt;f a c&gt;1@diagram</code></td><td><img class="cell" src="examples/cell-notes-diagram.svg" alt="the chord F A C with the diagram of its fingering"></td><td></td><td>✓ the notes, fretted</td></tr>
+    <tr class="grp"><td colspan="4"><b>Alone, with no <code>@</code></b> — a chord that sounds</td></tr>
+    <tr><td><code>chord(F)4</code></td><td><img class="cell" src="examples/cell-item-chord.svg" alt="F over the guitar's usual F chord"></td><td>F</td><td></td></tr>
+    <tr><td><code>chord(F 133211)4</code></td><td><img class="cell" src="examples/cell-item-chord-shape.svg" alt="F over its diagram, over the six strings of 133211"></td><td>F</td><td>✓</td></tr>
+    <tr><td><code>chord(x32010)4</code></td><td><img class="cell" src="examples/cell-item-chord-of-shape.svg" alt="C over its diagram, over the five strings of x32010"></td><td>C, read off the shape</td><td>✓</td></tr>
+    <tr><td><code>diagram(133211)4</code></td><td><img class="cell" src="examples/cell-item-diagram.svg" alt="the diagram alone, over the six strings of 133211"></td><td></td><td>✓</td></tr>
   </table>
   <p>Everything written on a note can be written on a <code>&lt;…&gt;</code> chord too
   (<code>&lt;f a c&gt;1@chord(F)</code>).</p>
