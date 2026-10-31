@@ -487,6 +487,8 @@ public class DoubleAngleArpeggioTests
     [Theory]
     [InlineData("<< c e g >>@f")]          // a group dynamic works
     [InlineData("<< c e g >>@chord")]      // a chord name works
+    [InlineData("<< c e g >>@todo")]       // a @todo rings the first member (owner's request 2026-10-31)
+    [InlineData("<< c e g >>@todo(k1 \"roll?\").down")]
     [InlineData("<< <c e>@arpeggio g >>")] // a nested chord keeps its own handling
     [InlineData("<< c@staccato e g >>")]   // a member script is applied (2026-09-08)
     [InlineData("<< c@f e g >>")]          // a member dynamic too

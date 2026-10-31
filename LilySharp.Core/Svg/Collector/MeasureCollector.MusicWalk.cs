@@ -643,6 +643,18 @@ public sealed partial class MeasureCollector
         // takes effect at the group's start, as if written on the first member),
         // both anchored on the group's first item. Other annotations are not
         // applied; AnnotationNameValidator warns (LYS4008) so nothing is silent.
+        // A @todo after '>>' rides the group's first item too (owner's request 2026-10-31): the
+        // mark points at ONE item (GRAMMAR, where '@' goes), and the group's is the first — the
+        // preview rings that head and hangs the memo on it. It engraves and plays nothing, so
+        // the twin and the exports are the same page either way.
+        if (TodoKeyOf(arpeggio) is { } groupTodo && startNoteIndex < builder.CurrentItemCount)
+            builder.RestampItem(startNoteIndex, builder.CurrentItems[startNoteIndex] with
+            {
+                TodoKey = groupTodo,
+                TodoMemo = TodoMemoOf(arpeggio),
+                TodoBelow = TodoBelowOf(arpeggio),
+                TodoSideWritten = TodoSideWrittenOf(arpeggio),
+            });
         CollectChordNames(arpeggio, measureIndex, startNoteIndex, startTiming);
         CollectDynamics(arpeggio, measureIndex, startNoteIndex);
         // An @diagram on the group stands over its first note, as its @chord's does (review

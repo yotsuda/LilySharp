@@ -504,6 +504,11 @@ internal sealed class MeasureBuilder
                 _currentItems[i] = standing with { Clef = clef };
     }
 
+    /// <summary>Replaces the item at <paramref name="index"/> of the current bar with
+    /// <paramref name="item"/> — a restamped copy of it (a <c>&lt;&lt; &gt;&gt;</c> group's
+    /// <c>@todo</c> on its first member, ProcessArpeggio).</summary>
+    internal void RestampItem(int index, MusicItem item) => _currentItems[index] = item;
+
     /// <summary>Stamps the armed section play onto <paramref name="item"/> when it is the
     /// play's first timed item, and clears it. Both doors call it, through
     /// <see cref="TakePendingPhrasingSlur"/>.</summary>

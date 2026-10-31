@@ -99,6 +99,9 @@ workflow attaches that section to the GitHub Release verbatim.
   `chord(…)` item's name stays as a bare `@chord` (`chord(F)1` → `<f a c>1@chord`; the symbol
   goes into the mark only when the notes would name the chord otherwise); the diagram does not.
   The file must sound the same afterwards, or nothing changes. Not inside `<< >>`.
+- `[lang]` **`<< c e g >>4@todo` marks the group**: the mark rings the group's first note in
+  the preview, with its memo and `.down`, and the editor's list and quick fixes name it as
+  the group's. It was the one mark of the group's that was refused (LYS4008).
 - `[page]` **A diagram over a `<< >>` group leaves the group evenly spaced**: `<< diagram(G 320003) >>1`
   spread its first gap to twice the others, the diagram's box pushing the second note away. The
   box is the group's now — cleared by the column after the group, the group's own gaps

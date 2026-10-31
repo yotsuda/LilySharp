@@ -420,8 +420,8 @@ degrees-only group anchors on the tonic. NOT LilyPond's `<< >>`
 << c . d >>4     // a SPACED dot = one more share for the member before it: 2:1 → tuplet 3/2 { c4 d8 }
 << c . . d >>4   // 3:1 → c8. d16 (never glued: `c.` is a duration dot, `3.` a decimal)
 << c@accent e\3 g( a) >> |  // a member carries scripts, string numbers, fingering, dynamics, slur marks
-<< c e g >>4\2   // on the group: a dynamic, a chord name, a string number (every member's);
-                 //   a '~' or '(' after >> hangs on the LAST member
+<< c e g >>4\2   // on the group: a dynamic, a chord name, a diagram, a @todo (rings the FIRST
+                 //   member), a string number (every member's); a '~' or '(' after >> hangs on the LAST member
 << c e g >>2 |   // a duration after >> = the group's total: 3 in a half (triplet 3:2 of quarters)
                  // (the convention's spelling: M against the power of two below it —
                  //  5 in a quarter → 16ths 5:4; 4 in a quarter → plain 16ths; 2 in a

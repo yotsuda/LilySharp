@@ -301,8 +301,8 @@ A member carries what a note carries — a script, a fingering, a dynamic, a str
 number, a slur mark — written on the member. A mark written after `>>` belongs to the
 group: a dynamic sounds from its first note, a chord name labels it, a diagram
 (`@diagram(x32010)`, or a bare `@diagram`: the group's notes as fretted) stands over its first
-note, under the name, a string number is every member's, and a tie or slur mark hangs on its
-**last** member.
+note, under the name, a `@todo` rings its first note (with its memo), a string number is every
+member's, and a tie or slur mark hangs on its **last** member.
 
 ```
 << c@accent e\3 g@finger(1) >>   // per-member marks

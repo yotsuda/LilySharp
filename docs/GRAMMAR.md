@@ -2467,7 +2467,9 @@ ShapeChord     = ( 'chord' | 'diagram' ) , '(' , ChordArgument , ')'    (* Chord
    ('c.', '3.') or leading, the dot is reported (LYS0023). A tie '~' or beam mark inside is
    reported with the spelling to use instead.
    Annotations after '>>': a dynamic (@f) applies to the whole group, a chord name
-   (@chord / @chord(Am7)) labels it, a string number (\3) is every member's; a tie or slur
+   (@chord / @chord(Am7)) labels it, a diagram (@diagram) stands over its first note, a
+   '@todo' rings its FIRST member (owner's request 2026-10-31: the mark points at one item,
+   and the group's is the first), a string number (\3) is every member's; a tie or slur
    mark after '>>' hangs on the LAST member. Any other annotation on the group is not
    applied and warns (LYS4008) — write it on the member. A nested chord member keeps its own
    annotation handling ('<< <c e>@arpeggio g >>' is fine).

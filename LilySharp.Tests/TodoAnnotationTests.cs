@@ -17,9 +17,12 @@
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using LilySharp.Core.Editing;
+using LilySharp.Core.LilyPond;
 using LilySharp.Core.Midi;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 using LilySharp.Lsp;
@@ -141,6 +144,35 @@ public class TodoAnnotationTests
         var diagnostics = Diagnostics(Book("c'4@todo(o1) d'4@todo(o2) e'4@todo(o1) f'4 |"));
         Assert.Single(diagnostics, d => d.Code == DiagnosticCodes.TodoKeyRepeated);
         Assert.Equal(3, diagnostics.Count(d => d.Code == DiagnosticCodes.TodoMark));
+    }
+
+    /// <summary>A <c>@todo</c> after a <c>&lt;&lt; &gt;&gt;</c> group's <c>&gt;&gt;</c> rings the group's
+    /// FIRST member (owner's request 2026-10-31: it used to be refused with LYS4008, the one
+    /// mark of the group's that was), with its memo and side; the group's host is what the
+    /// editor's list names, and the page and the twin are the unmarked ones.</summary>
+    [Fact]
+    public void AMarkOnAGroup_RingsItsFirstMember()
+    {
+        string marked = Book("<< c' e' g' >>2@todo(g1 \"roll?\").down d'2 | << r e' g' >>1@todo |");
+        string plain = Book("<< c' e' g' >>2 d'2 | << r e' g' >>1 |");
+        var diagnostics = Diagnostics(marked);
+        Assert.DoesNotContain(diagnostics, d => d.Code == DiagnosticCodes.ArpeggioAnnotationUnsupported);
+        Assert.Equal(2, diagnostics.Count(d => d.Code == DiagnosticCodes.TodoMark));
+        string svg = Svg(marked);
+        Assert.Single(Regex.Matches(svg, "data-todo=\"g1\""));      // the c' alone, not the e' and g'
+        Assert.Single(Regex.Matches(svg, "data-todo=\"\""));        // the second group's rest
+        static string Masked(string s) => Regex.Replace(s, @"\s(data-pos|data-todo)=""[^""]*""", "");
+        Assert.Equal(Masked(Svg(plain)), Masked(svg));
+        // The item carries the memo and the side the mark wrote.
+        var tree = SyntaxTree.Parse(marked);
+        var first = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree))
+            .EnumerateStaves().First().Staff.PrimaryVoice.Measures[0].Items[0];
+        Assert.Equal(("g1", "roll?", true), (first.TodoKey, first.TodoMemo, first.TodoBelow));
+        // The editor's list names the group as the host.
+        var entry = TodoIndex.Find(tree).First();
+        Assert.Equal(("g1", marked.IndexOf("<< c'", System.StringComparison.Ordinal)), (entry.Key, entry.HostStart));
+        // The twin writes no mark for it.
+        Assert.DoesNotContain("todo", new LilyPondExporter().Export(tree));
     }
 
     /// <summary>The mark draws nothing and plays nothing: with <c>data-todo</c> masked the
