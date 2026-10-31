@@ -644,6 +644,16 @@ public sealed partial class MeasureCollector
         // applied; AnnotationNameValidator warns (LYS4008) so nothing is silent.
         CollectChordNames(arpeggio, measureIndex, startNoteIndex, startTiming);
         CollectDynamics(arpeggio, measureIndex, startNoteIndex);
+        // An @diagram on the group stands over its first note, as its @chord's does (review
+        // 2026-10-31, D2: the page dropped it, LYS4008, while the .ly twin drew it); a bare one
+        // draws the group's notes as the part's strings fret them.
+        var groupMidis = new List<int>();
+        for (int i = startNoteIndex; i < builder.CurrentItemCount; i++)
+            if (builder.CurrentItems[i] is ChordItem { GraceTime: false } spreadChord)
+                groupMidis.AddRange(spreadChord.Notes.Select(n => n.Midi));
+            else if (builder.CurrentItems[i] is NoteItem { GraceTime: false, Midi: > 0 } spreadNote)
+                groupMidis.Add(spreadNote.Midi);
+        CollectGroupDiagrams(arpeggio, measureIndex, startNoteIndex, groupMidis);
 
         // Auto-tuplet: the members were added WITHOUT duration — draw the bracket now.
         if (sub.HasTuplet)

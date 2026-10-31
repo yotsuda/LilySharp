@@ -55,6 +55,14 @@ internal static class PlayedNotes
     private static List<Note> OfThePage(SyntaxTree tree)
     {
         var notes = new List<Note>();
+        // The page names its voices, not its parts — a part written in two voices is "voice1" and
+        // "voice2" there (review 2026-10-31, C4: the chord checks missed such a part): each note's
+        // part is the one it is written in, else its voice's name (a phrase body).
+        var parts = tree.GetNodes<PartBlockSyntax>().Select(b => (b.Span, Name: (string?)b.Name))
+            .Concat(tree.GetNodes<PartDeclarationSyntax>().Select(d => (d.Span, Name: (string?)d.Name.Text)))
+            .ToList();
+        string PartAt(int pos, string voice)
+            => parts.FirstOrDefault(p => p.Span.Start <= pos && pos < p.Span.End).Name ?? voice;
         var specs = Svg.Collector.RenderSpecParser.FindAll(tree);
         IEnumerable<Svg.Collector.RenderSpec?> passes = specs.Count == 0 ? [null] : specs;
         int scoreIndex = 0;
@@ -74,9 +82,9 @@ internal static class PlayedNotes
                             var at = (scoreIndex, (long)m, onset);
                             if (item is Svg.Model.ChordItem chord && !chord.GraceTime)
                                 foreach (var member in chord.Notes)
-                                    notes.Add(new Note(voice.Name, at, member.Midi, chord.SourcePosition));
+                                    notes.Add(new Note(PartAt(chord.SourcePosition, voice.Name), at, member.Midi, chord.SourcePosition));
                             else if (item is Svg.Model.NoteItem note && !note.GraceTime && note.Midi > 0)
-                                notes.Add(new Note(voice.Name, at, note.Midi, note.SourcePosition));
+                                notes.Add(new Note(PartAt(note.SourcePosition, voice.Name), at, note.Midi, note.SourcePosition));
                             onset += item.Duration;
                         }
                     }

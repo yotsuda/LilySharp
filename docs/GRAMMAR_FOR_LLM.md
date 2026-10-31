@@ -397,7 +397,8 @@ diagram(C xx-10-12-13-12)4.~  // frets 10-15 in the dash form
   `@chord`/`@diagram` on the item draws its own.
 - Strum after strum (`chord(F 133211)4 chord(F 133211)4 …`), the name and diagram stand where
   the chord CHANGES and again at each system's head — write every strum the same; never thin
-  them out yourself.
+  them out yourself. The same holds for `<f a c>4@chord@diagram` strum after strum (the diagram
+  thins; the `@chord` name prints every time).
 - To learn the name of a shape: `chord(x32010)4` prints it. `@diagram(x32010)@chord` warns
   (LYS1056): write `@chord(C x32010)`.
 - `chord` and `diagram` are reserved in music: a phrase cannot be named either.

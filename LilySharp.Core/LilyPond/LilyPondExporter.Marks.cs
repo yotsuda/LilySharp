@@ -627,10 +627,15 @@ public sealed partial class LilyPondExporter
     /// </remarks>
     private string? FretDiagram(MusicMarkSyntax mk)
         // `chordDiagrams none` draws none, an @diagram's included — as the page (2026-10-31).
-        => _layoutPlan.ChordDiagramTuningFor(null) is not null
-           && (Semantics.AnnotationValues.Frame(mk) ?? PageFrameAt(mk)) is { } spec
-            ? FretDiagramMarkup(spec, above: mk.ForcedAbove != false)
-            : null;
+        => _layoutPlan.ChordDiagramTuningFor(null) is null ? null
+            // Strum after strum, where the diagram changes and at a system's head, as an item's
+            // (owner's decision 2026-10-31): the page's choice, asked of LilyPond's breaks.
+            : _page?.Articulations.Any(a => a.Type == ArticulationType.FretFrame && a.SourcePosition == mk.SourceStart
+                    && a.IsItemDiagram) == true
+                ? ItemDiagramMarkup(mk.SourceStart, above: mk.ForcedAbove != false)
+            : (Semantics.AnnotationValues.Frame(mk) ?? PageFrameAt(mk)) is { } spec
+                ? FretDiagramMarkup(spec, above: mk.ForcedAbove != false)
+                : null;
 
     /// <summary>The shape the page found for a bare <c>@diagram</c> on a chord — its own notes, as
     /// the part's strings fret them (<see cref="Semantics.AnnotationValues.IsNotesDiagram"/>) — read
@@ -701,7 +706,7 @@ public sealed partial class LilyPondExporter
     /// LILYPOND-REF: lily/system.cc pre_processing — every grob's before-line-breaking runs
     /// before the lines are broken, and after-line-breaking after.
     /// </remarks>
-    private string? ItemDiagramMarkup(int itemStart)
+    private string? ItemDiagramMarkup(int itemStart, bool above = true)
     {
         if (_page?.Articulations.FirstOrDefault(a => a.Type == ArticulationType.FretFrame && a.SourcePosition == itemStart)
                 is not { FrameSpec: { } spec } diagram)
@@ -714,7 +719,7 @@ public sealed partial class LilyPondExporter
             + (diagram.RepeatsDiagramAt >= 0
                 ? "-\\tweak after-line-breaking #(lysRepeatedDiagram " + diagram.RepeatsDiagramAt.ToString(inv) + ") "
                 : "");
-        return tweaks + FretDiagramMarkup(spec, above: true, textLength: diagram.RepeatsDiagramAt < 0);
+        return tweaks + FretDiagramMarkup(spec, above, textLength: diagram.RepeatsDiagramAt < 0);
     }
 
     /// <summary>The item diagrams some later one repeats, by source position (<see cref="ItemDiagramMarkup"/>).</summary>

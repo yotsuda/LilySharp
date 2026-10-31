@@ -307,7 +307,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 {
                     // Chord names work on the group; other marks belong on a member.
                     var name = mark.MarkName;
-                    if (name != "chord"
+                    // An @diagram too: it stands over the first note, with the name (review 2026-10-31, D2).
+                    if (name != "chord" && mark.Name != "diagram"
                         && AnnotationValues.Chord(mark, ChordSpelling.Default, out _) == null)
                         WarnArpeggioUnsupported(mark, name);
                 }
@@ -488,7 +489,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     private void WarnArpeggioUnsupported(SyntaxNode node, string name)
         => _diagnostics.Warning(node.Span, DiagnosticCodes.ArpeggioAnnotationUnsupported,
             $"'@{name}' on a '<< >>' group is not applied - on the group only a dynamic (@f), "
-            + "a chord name (@chord) and a string number (\\3) work; write the mark on the "
+            + "a chord name (@chord), a diagram (@diagram) and a string number (\\3) work; write the mark on the "
             + "member it belongs to: << c@accent e g >>.");
 
     /// <summary>

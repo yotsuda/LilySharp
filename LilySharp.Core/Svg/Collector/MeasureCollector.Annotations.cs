@@ -277,6 +277,40 @@ public sealed partial class MeasureCollector
             (_v.GraceFrameSpecs ??= new())[itemIndex] = frameSpec;
     }
 
+    /// <summary>
+    /// The <c>@diagram</c> marks after a <c>&lt;&lt; &gt;&gt;</c> group's <c>&gt;&gt;</c>, over its
+    /// first note — where its <c>@chord</c> name stands (review 2026-10-31, D2: the page dropped
+    /// them with LYS4008 while the <c>.ly</c> twin drew them). A bare one draws the group's notes,
+    /// <paramref name="midis"/>, as the part's strings fret them, as on a <c>&lt;…&gt;</c> chord.
+    /// </summary>
+    private void CollectGroupDiagrams(ArpeggioSyntax group, int measureIndex, int itemIndex, List<int> midis)
+    {
+        if (_v.GraceDepth > 0 || _v.PercentCoveredDepth > 0
+            || Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning) is null)
+            return;
+        foreach (var mark in group.Articulations.OfType<MusicMarkSyntax>())
+        {
+            if (mark.Name != "diagram"
+                || (Semantics.AnnotationValues.Frame(mark)
+                    ?? (Semantics.AnnotationValues.IsNotesDiagram(mark) && midis.Count > 0
+                        ? Music.ChordFingering.FrameSpec([.. midis.Distinct()],
+                            Tablature.Tunings.GetTuning(_partFrettedTuning ?? TuningType.Guitar))
+                        : null)) is not { } spec)
+                continue;
+            _articulations.Add(new ArticulationItem(
+                ArticulationType.FretFrame, measureIndex, itemIndex, mark.ForcedAbove != false,
+                mark.SourceStart, _v.Cursor.StaffIndex)
+            {
+                FrameSpec = spec,
+                VoiceIndex = _v.Cursor.VoiceIndex,
+                DirectionForced = mark.ForcedAbove is not null,
+                UnderChordName = mark.ForcedAbove != false
+                    && (PrintsAName(group) || group.DescendantNodes<ChordSyntax>().Any(c => c.ShowsName)),
+                IsItemDiagram = true,
+            });
+        }
+    }
+
     /// <summary>Whether <paramref name="host"/> — the note, chord or rest an <c>@diagram</c> is on —
     /// prints a chord name too: an <c>@chord</c> on it, or a <c>chord(…)</c> item.</summary>
     private static bool PrintsAName(SyntaxNode? host)
@@ -1016,6 +1050,9 @@ public sealed partial class MeasureCollector
                         // the diagram stands under the name, as @chord(NAME SHAPE)'s does (owner's
                         // report 2026-10-31: <f a c>1@chord@diagram drew the diagram over its name).
                         UnderChordName = markSyntax.ForcedAbove != false && PrintsAName(markSyntax.Parent),
+                        // Strum after strum, it stands where the diagram changes and at a system's
+                        // head, as an item's does (owner's decision 2026-10-31; ItemDiagramRuns).
+                        IsItemDiagram = !graceTime,
                     });
                     // On a grace column (session 964, GraceBodySupport.IsCarriedDiagram) the
                     // run's spacing rods the box against its neighbours (GraceColumnInfo.FrameSpec).

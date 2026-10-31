@@ -1057,6 +1057,71 @@ public class ShapeChordItemTests
         Assert.False(LilySharpLanguageServer.IsInsideShapeChordItem("gt { diagram(C) ", 16));
     }
 
+    /// <summary>An @diagram strum after strum stands where the diagram changes and at a system's
+    /// head, as an item's does (owner's decision 2026-10-31, review C3); its @chord name stands on
+    /// every chord.</summary>
+    [Fact]
+    public void ADiagramMark_StandsWhereTheDiagramChanges()
+    {
+        string book = Book("instrument guitar",
+            "<f a c>4@chord@diagram <f a c>4@chord@diagram <g b d>4@chord@diagram <g b d>4@chord@diagram | "
+            + "<g b d>4@chord@diagram r2. |");
+        var collected = Collected(book);
+        Assert.Equal(new[] { -1, 0, -1, 0, 1 }, collected.Articulations.Where(a => a.Type == ArticulationType.FretFrame)
+            .OrderBy(a => a.SourcePosition).Select(a => a.RepeatsDiagramBack));
+        Assert.All(collected.ChordNames, c => Assert.Equal(-1, c.RepeatsNameBack));
+        // On the page: the two changes only; every name.
+        var laid = new LayoutEngine().Layout(collected);
+        Assert.Equal(2, laid.ArticulationLayouts.Count(a => a.Glyph.StartsWith("frame:")));
+        Assert.Equal(5, laid.ChordNameLayouts.Length);
+        // The twin asks LilyPond's breaks the same question.
+        string ly = new LilyPondExporter().Export(SyntaxTree.Parse(book));
+        Assert.Equal(3, Regex.Matches(ly, "lysRepeatedDiagram \\d+").Count);
+        // An @chord(NAME SHAPE)'s diagram stands with its name on every chord.
+        var named = Collected(Book("instrument guitar", "c4@chord(F 133211) c4@chord(F 133211) r2 |"));
+        Assert.All(named.Articulations.Where(a => a.Type == ArticulationType.FretFrame), a => Assert.Equal(-1, a.RepeatsDiagramBack));
+    }
+
+    /// <summary>An @diagram after a &lt;&lt; &gt;&gt; group stands over its first note, as its @chord does
+    /// (review 2026-10-31, D2: the page dropped it with LYS4008 while the twin drew it); a bare one
+    /// draws the group's notes as fretted.</summary>
+    [Fact]
+    public void ADiagramOnASpreadGroup_StandsOverItsFirstNote()
+    {
+        string book = Book("instrument guitar", "<< c e g c' e' >>2@diagram(x32010) << f a c' f' >>2@chord@diagram |",
+            top: "octave absolute\n");
+        Assert.DoesNotContain(Diagnostics(book), d => d.Code == DiagnosticCodes.ArpeggioAnnotationUnsupported);
+        var frames = Collected(book).Articulations.Where(a => a.Type == ArticulationType.FretFrame)
+            .OrderBy(a => a.SourcePosition).ToList();
+        Assert.Equal(2, frames.Count);
+        Assert.Equal("x32010", frames[0].FrameSpec);
+        Assert.Equal(0, frames[0].ItemIndex);
+        Assert.Equal(5, frames[1].ItemIndex);            // the second group's first note
+        Assert.True(frames[1].UnderChordName);
+        Assert.False(frames[0].UnderChordName);
+        // The twin draws the same two, the bare one's shape read off the page.
+        string ly = new LilyPondExporter().Export(SyntaxTree.Parse(book));
+        Assert.Equal(2, Regex.Matches(ly, "fret-diagram-terse").Count);
+        Assert.Contains("fret-diagram-terse \"x;3;2;o;1;o;\"", ly);
+    }
+
+    /// <summary>A part written in two voices, in a file whose scores name their own forms (so its
+    /// notes are read off the page, whose voices are "voice1" and "voice2"), is checked as its part
+    /// (review 2026-10-31, C4: neither LYS1055 nor LYS1057 was raised there).</summary>
+    [Fact]
+    public void ATwoVoicePart_IsCheckedWhereTheScoresNameTheirOwnForms()
+    {
+        const string music = "voice { c''1 | c''1 | } { <e f fis g>1 | <e g c'>1@diagram(x32010) | }";
+        string own = $"octave absolute\npart gt {{ instrument guitar }}\nsection s {{ gt {{ {music} }} }}\nscore a {{ form {{ s }} staff gt }}";
+        string shared = $"octave absolute\npart gt {{ instrument guitar }}\nsection s {{ gt {{ {music} }} }}\nform {{ s }}\nscore {{ staff gt }}";
+        static string[] Codes(string book) => [.. Diagnostics(book)
+            .Where(d => d.Code is DiagnosticCodes.ChordNotFingerable or DiagnosticCodes.DiagramNotTheChord)
+            .Select(d => $"{d.Code}@{d.Span.Start}")];
+        Assert.Equal(2, Codes(own).Length);
+        Assert.Equal(Codes(shared), Codes(own));
+        Assert.All(LilySharp.Core.Semantics.PlayedNotes.Of(SyntaxTree.Parse(own)), n => Assert.Equal("gt", n.Part));
+    }
+
     /// <summary>"Add Guitar Diagram" on a single note (review 2026-10-31, C1): where the note is
     /// held, what a bare @diagram on it draws — offered in a fretted part only.</summary>
     [Fact]

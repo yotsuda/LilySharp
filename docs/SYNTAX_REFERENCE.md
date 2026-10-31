@@ -299,8 +299,10 @@ Members may be **chords** or **rests**:
 
 A member carries what a note carries — a script, a fingering, a dynamic, a string
 number, a slur mark — written on the member. A mark written after `>>` belongs to the
-group: a dynamic sounds from its first note, a chord name labels it, a string number is
-every member's, and a tie or slur mark hangs on its **last** member.
+group: a dynamic sounds from its first note, a chord name labels it, a diagram
+(`@diagram(x32010)`, or a bare `@diagram`: the group's notes as fretted) stands over its first
+note, under the name, a string number is every member's, and a tie or slur mark hangs on its
+**last** member.
 
 ```
 << c@accent e\3 g@finger(1) >>   // per-member marks
@@ -2473,7 +2475,8 @@ A chord draws a diagram UNDER its name only where its SHAPE is written — `G(32
 `chord(x32010)`: the name read off the shape) — between the name and the staff, side by side,
 and the bars widen to fit them. A run of the same item (`chord(G 320003)4` strum after strum)
 prints its name and diagram once, where the chord changes, and again at the head of each system;
-the repeats take no room. A
+the repeats take no room. An `@diagram` does the same (`<f a c>4@chord@diagram` strum after
+strum: the diagram where it changes, the `@chord` name on every chord). A
 name alone (`G`, `@chord(G)`, a bare `@chord`) draws no diagram — save in a score whose
 layout writes `all` (below). The editor writes shapes for you: `Ctrl+Shift+Up` on a chord adds
 its usual shape (below).
@@ -2826,7 +2829,9 @@ diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the
   does not fall back: it warns (LYS1040) and keeps its time as a SPACER, so the bar still adds up.
 - **Strum after strum** (`chord(F 133211)4` four times), the name and the diagram stand where the
   chord CHANGES, and again at the head of each system; the repeats take no room in their bar. Any
-  other chord in the voice between — an `@chord`, an `@diagram`, another shape — starts again.
+  other chord in the voice between — an `@chord`, another shape — starts again. An `@diagram` that
+  draws the same shape as the diagram before it in the voice (an item's or another `@diagram`'s)
+  is a repeat too; an `@chord(NAME SHAPE)`'s diagram stands with its name every time.
   Write every strum the same; the page thins them, and the twin makes the same choice on
   LilyPond's own line breaks.
 - **The tuning** is the PART's: its fretted instrument (its `tuning`, else its `instrument`

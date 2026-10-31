@@ -73,8 +73,10 @@ public sealed record ArticulationItem
     /// </summary>
     public bool UnderChordName { get; init; }
 
-    /// <summary>True for the diagram a <c>chord(…)</c> or <c>diagram(…)</c> ITEM draws — the one
-    /// kind that stands only where the chord changes (<see cref="RepeatsDiagramBack"/>).</summary>
+    /// <summary>True for the diagram a <c>chord(…)</c> or <c>diagram(…)</c> ITEM draws, and an
+    /// <c>@diagram</c>'s (owner's decision 2026-10-31) — the kinds that stand only where the
+    /// diagram changes (<see cref="RepeatsDiagramBack"/>). An <c>@chord(NAME SHAPE)</c>'s diagram
+    /// stands with its name on every chord.</summary>
     public bool IsItemDiagram { get; init; }
 
     /// <summary>

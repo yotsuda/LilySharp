@@ -102,7 +102,8 @@ line spread to two bars).
    previous one in its part, and keeps the first of each system — known only after the line
    breaks, so the drop is made where the systems are laid out. ⚠️ The twin writes diagrams as
    markups, which LilyPond does not drop at a repeat: the twin must make the same choice for the
-   breaks it writes, or the two pages differ.
+   breaks it writes, or the two pages differ. An `@diagram` joins the run (owner's decision
+   2026-10-31): the same shape as the voice's diagram before it is a repeat, whoever drew it.
 5. **Words.** `SYNTAX_REFERENCE.md`, `GRAMMAR.md`, `GRAMMAR_FOR_LLM.md`, the chords and chord-input
    pages, the examples, the CHANGELOGs.
 

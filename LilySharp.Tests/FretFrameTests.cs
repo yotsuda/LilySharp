@@ -39,7 +39,7 @@ public class FretFrameTests
     private const string Book = """
         octave absolute
         part gt { clef treble }
-        section A { gt { <g@diagram(320003) d' g'>2 <g'' d''' g'''@diagram(320003)>2 | e'2 c'2@diagram(x32010).down | } }
+        section A { gt { <g@diagram(320003) d' g'>2 <g'' d''' g'''@diagram(320000)>2 | e'2 c'2@diagram(x32010).down | } }
         form { A }
         score { staff gt }
         """;
@@ -48,7 +48,8 @@ public class FretFrameTests
     /// An open string is an <c>O</c> and a muted one an <c>X</c>, set in the sans face over the
     /// string, as LilyPond's fret-diagrams.scm draw-xo sets them (2026-09-29; until then a
     /// stroked ring and two strokes, and before 2026-09-28 a black disc under a white one, which
-    /// the preview's dark theme inverted — owner report). 320003 has three open strings (twice),
+    /// the preview's dark theme inverted — owner report). 320003 has three open strings, 320000 four
+    /// (a shape of its own: the same one again would stand only where it changes, ItemDiagramRuns),
     /// x32010 two open and one muted.
     /// </summary>
     [Fact]
@@ -56,7 +57,7 @@ public class FretFrameTests
     {
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(Book));
         var os = System.Text.RegularExpressions.Regex.Matches(svg, "<text([^>]*)>O</text>");
-        Assert.Equal(3 + 3 + 2, os.Count);
+        Assert.Equal(3 + 4 + 2, os.Count);
         Assert.Single(System.Text.RegularExpressions.Regex.Matches(svg, "<text[^>]*>X</text>"));
         Assert.All(os, m => Assert.Contains("sans-serif", m.Groups[1].Value));
         // No ring and no disc: the dots are the only circles.

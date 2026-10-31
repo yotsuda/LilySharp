@@ -81,6 +81,16 @@ workflow attaches that section to the GitHub Release verbatim.
   With the caret on the shape, Ctrl+Shift+Up/Down walks the other ways to hold the same notes
   (a bare `@diagram` shows the first: Up writes it out, Down at the first goes back to bare)
   (*fingering 2 of 3*), the notes unchanged.
+- `[page]` **An `@diagram` strum after strum stands where the diagram changes**, as a `chord(…)`
+  item's does: `<f a c>4@chord@diagram` four times draws the diagram once (and again at each
+  system's head); the `@chord` name prints on every chord. The same shape as the voice's diagram
+  before it — an item's or another `@diagram`'s — is a repeat. The LilyPond twin makes the same choice.
+- `[page]` **An `@diagram` after a `<< >>` group is drawn**, over its first note and under its
+  name, as the LilyPond twin already drew it; a bare one draws the group's notes as fretted. It
+  warned (LYS4008) and drew nothing.
+- `[lang]` **A part written in two voices is checked in a file whose scores name their own forms**:
+  LYS1055 and LYS1057 said nothing there, the notes being filed under "voice1"/"voice2" instead
+  of the part.
 - `[editor]` **"Add Guitar Diagram" on a single note** (light bulb, Ctrl+.), in a part with a
   fretted instrument: `c'1` → `c'1@diagram(xxxx1x)`, where the note is held.
 - `[editor]` **Right-click a `<…>` chord → "Convert to Chord Symbol chord(…)"**, the way back from

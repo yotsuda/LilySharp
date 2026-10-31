@@ -34,9 +34,15 @@ namespace LilySharp.Core.Svg.Collector;
 /// field would be lost at the resume point. Read here from the tables, it is the same however
 /// they were filled.
 /// <para>
-/// What ends a run: any other chord in the voice — an <c>@chord</c>'s name, an <c>@diagram</c>,
-/// an item that prints another shape or name, or none (a <c>diagram(…)</c> item ends a run of
-/// names, a <c>chord(…)</c> item with no diagram one of diagrams).
+/// An <c>@diagram</c> joins its voice's run of diagrams as an item's does (owner's decision
+/// 2026-10-31: <c>&lt;f a c&gt;4@chord@diagram</c> strum after strum drew its diagram on every
+/// beat): diagrams are the same when their shapes are, whoever drew them.
+/// </para>
+/// <para>
+/// What ends a run: any other chord in the voice — for diagrams, a site with no diagram or with
+/// one that is not thinned (an <c>@chord(NAME SHAPE)</c>'s); for names, a site with no item name
+/// or with an <c>@chord</c>'s name, which stands on every chord (a <c>diagram(…)</c> item ends a
+/// run of names, a <c>chord(…)</c> item with no diagram one of diagrams).
 /// </para>
 /// </remarks>
 internal static class ItemDiagramRuns
@@ -73,14 +79,14 @@ internal static class ItemDiagramRuns
                 if (articulations[i] is { Type: ArticulationType.FretFrame } a)
                 {
                     var site = At(a.StaffIndex, a.VoiceIndex, a.MeasureIndex, a.ItemIndex);
-                    if (a.IsItemDiagram) site.Diagram = i; else site.Other = true;
+                    if (a.IsItemDiagram) site.Diagram = i; else site.OtherDiagram = true;
                 }
         if (!chordNames.IsDefaultOrEmpty)
             for (int i = 0; i < chordNames.Length; i++)
                 if (chordNames[i] is { UseTiming: false, IsChordRow: false } c)
                 {
                     var site = At(c.StaffIndex, c.VoiceIndex, c.MeasureIndex, c.ItemIndex);
-                    if (c.IsItemName) site.Name = i; else site.Other = true;
+                    if (c.IsItemName) site.Name = i; else site.OtherName = true;
                 }
 
         var markedArticulations = anyDiagram ? articulations.ToBuilder() : null;
@@ -91,9 +97,11 @@ internal static class ItemDiagramRuns
             ChordNameItem? lastName = null;
             foreach (var site in voiceSites.Values)
             {
-                if (site.Other)
-                    (lastDiagram, lastName) = (null, null);
-                if (site.Diagram is int d)
+                if (site.OtherDiagram)
+                    lastDiagram = null;
+                if (site.OtherName)
+                    lastName = null;
+                if (site.Diagram is int d && !site.OtherDiagram)
                 {
                     var diagram = articulations[d];
                     if (lastDiagram != null && lastDiagram.FrameSpec == diagram.FrameSpec)
@@ -106,7 +114,7 @@ internal static class ItemDiagramRuns
                 }
                 else
                     lastDiagram = null;
-                if (site.Name is int n)
+                if (site.Name is int n && !site.OtherName)
                 {
                     var name = chordNames[n];
                     if (lastName != null && lastName.ChordText == name.ChordText && lastName.DrawnShape == name.DrawnShape)
@@ -127,6 +135,6 @@ internal static class ItemDiagramRuns
     private sealed class Site
     {
         public int? Diagram, Name;
-        public bool Other;
+        public bool OtherDiagram, OtherName;
     }
 }

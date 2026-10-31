@@ -1555,7 +1555,7 @@ public class ChordDiagramTests
     /// <summary>The owner's report 2026-09-28, verbatim: <c>r1@chord(C x32013)</c>,
     /// <c>s1@chord(G)</c> drew nothing — not even the name — while <c>@diagram</c> drew.</summary>
     private static string RestBook(string layout, string music =
-        "c'1@chord(C x32013) | r1@chord(C x32013) | s1@chord(C x32013) | r1@chord(G) | s1@chord(G) | r1@diagram(x32010) | s1@diagram(x32010) |")
+        "c'1@chord(C x32013) | r1@chord(C x32013) | s1@chord(C x32013) | r1@chord(G) | s1@chord(G) | r1@diagram(x32010) | s1@diagram(x02210) |")
         => layout + $$"""
         title "Rests and spacers"
         part gt { clef treble }
@@ -1581,7 +1581,9 @@ public class ChordDiagramTests
             var lay = Laid(RestBook(layout));
             Assert.Equal(5, lay.ChordNameLayouts.Count());
             Assert.Equal(3, lay.ArticulationLayouts.Count(a => a.Glyph == "frame:x32013"));
-            Assert.Equal(2, lay.ArticulationLayouts.Count(a => a.Glyph == "frame:x32010"));
+            // Two shapes: the same one again would stand only where it changes (ItemDiagramRuns).
+            Assert.Equal(1, lay.ArticulationLayouts.Count(a => a.Glyph == "frame:x32010"));
+            Assert.Equal(1, lay.ArticulationLayouts.Count(a => a.Glyph == "frame:x02210"));
         }
         // chordDiagrams none: the names still print; only the @diagrams draw.
         var plain = Laid(RestBook(NoDiagrams));
