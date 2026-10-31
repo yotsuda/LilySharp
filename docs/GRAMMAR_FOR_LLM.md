@@ -649,7 +649,7 @@ score { staff melody }
   lines — `%` repeats the bar before it, `%N` the N bars before it:
   `c4 d e f | % | % | % |` (the bar four times), `a2 b | c'2 d' | %2 | %2 |` (two bars three
   times). The bars repeated must be whole bars; a mark of another length cannot follow a run
-  of marks. `repeat percent` / `repeat unfold` are gone (LYS1047; `lysc percent` rewrites them).
+  of marks. `repeat percent` / `repeat unfold` are gone (LYS1047; the editor's quick fix rewrites them).
 - Tremolo. On ONE note, `:N` after the duration strikes the stem (`c4:16` — one stroke per
   beam of N: `:8` one, `:16` two, `:32` three). Between TWO notes, `repeat tremolo N { a16 b }`
   alternates them, and lasts N times the body: `repeat tremolo 4 { c16 e }` = 4 × an eighth =

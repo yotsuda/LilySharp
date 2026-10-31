@@ -873,9 +873,9 @@ internal sealed partial class Parser
     /// The block's tokens are kept FLAT, like the paper block's: the entries are read back
     /// by <c>LayoutDeclarationSyntax.Entries</c> and judged by <c>LayoutPlanReader</c>. The
     /// parser's only jobs are the block's extent and refusing a token that could never be a
-    /// key or a value — the one nested block in this vocabulary is the shape table after
-    /// <c>chordDiagrams</c> (<see cref="ParseLayoutShapeTable"/>); any other brace inside is
-    /// refused where it stands.
+    /// key or a value — no key opens a block (the shape table is the top-level
+    /// <c>chordShapes { }</c>, <see cref="ParseLayoutShapeTable"/>); a brace inside is refused
+    /// where it stands.
     /// </remarks>
     private LayoutDeclarationGreen ParseLayoutDeclaration(bool inScore = false)
     {
@@ -945,9 +945,6 @@ internal sealed partial class Parser
         if (name != null)
             tokens.Add(name);
         tokens.Add(Advance()); // {
-        // The key of the entry being read — for the ONE key that opens a block, chordDiagrams'
-        // shape table (Semantics.ChordDiagramsKey.Key; owner's design HANDOFF §2 K5 ③, 2026-09-29).
-        string? entryKey = null;
         while (!Check(SyntaxKind.EndOfFile))
         {
             if (Check(SyntaxKind.CloseBrace))
@@ -957,16 +954,10 @@ internal sealed partial class Parser
             }
             if (Check(SyntaxKind.OpenBrace))
             {
-                if (entryKey == Semantics.ChordDiagramsKey.Key)
-                {
-                    // The OLD form's table (to 2026-10-31), bounded so LayoutPlanReader can refuse
-                    // the whole entry naming the new `chordShapes { }` (and the editor rewrite it).
-                    ParseLayoutShapeTable(tokens, Semantics.ChordDiagramsKey.Key);
-                    entryKey = null;
-                    continue;
-                }
-                // No layout key opens a block; refused where it stands and skipped so the
-                // walker upstairs stays one level deep. Its closer is consumed with it.
+                // No layout key opens a block (the shape table `chordDiagrams … { }` took until
+                // 2026-10-31 is not recognized: no backward compatibility); refused where it
+                // stands and skipped so the walker upstairs stays one level deep. Its closer is
+                // consumed with it.
                 var braceSpan = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
                 _diagnostics.Error(braceSpan, DiagnosticCodes.LayoutEntryBadValue,
                     "A 'layout { }' entry is a key followed by its word (markTempo beside, "
@@ -984,8 +975,6 @@ internal sealed partial class Parser
             if (Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DecimalLiteral) ||
                 Check(SyntaxKind.Minus) || Check(SyntaxKind.StringLiteral) || IsWordLikeToken(Current))
             {
-                if (SyntaxFacts.IsLayoutKey(Current.Text))
-                    entryKey = Current.Text;
                 tokens.Add(Advance());
                 continue;
             }

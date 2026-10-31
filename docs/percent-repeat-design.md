@@ -28,8 +28,8 @@ a2 b | c d | %2 | %2 |            the two-bar pattern twice more      (old: repe
   shape the owner's books write between repetitions).
 - **The bar line between two marks in a row may be left out** (owner's decision 2026-10-18,
   session 912): `c4 d e f | % % % |` reads as `c4 d e f | % | % | % |`. The written spelling is
-  the canonical one — the page draws a bar line there, and it is what `lysc percent`, the quick
-  fix and the OMR write; the short one is for the hand that finds `| ` after every mark tedious
+  the canonical one — the page draws a bar line there, and it is what the quick fix and the OMR
+  write; the short one is for the hand that finds `| ` after every mark tedious
   (the editor types it: a space after a mark writes `| `, as it does after the note that fills a
   bar). Only between two marks with nothing but whitespace between them, in a run that opens
   after a bar line: `% break %` and `c4 % %` are LYS1048 as before, so the one exception to "the
@@ -58,9 +58,11 @@ a2 b | c d | %2 | %2 |            the two-bar pattern twice more      (old: repe
 
 `repeat percent` and `repeat unfold` are an error that names the new spelling, with a quick fix
 that rewrites the item (`… | % | % |` after the body; the unfold's body written out N times).
-`lysc percent <book>` rewrites a whole book (the `lysc octave` family: the source text in, the
-same text out with only those items changed). The repository's own books, fixtures, samples,
-lessons and documents are rewritten by it; the owner's books are the owner's call.
+`lysc percent <book>` rewrote a whole book (the `lysc octave` family: the source text in, the
+same text out with only those items changed); the repository's own books, fixtures, samples,
+lessons and documents were rewritten by it, and the owner's books were the owner's call. The
+command went 2026-10-31 (owner's decision: no backward compatibility, and no tools for it); the
+quick fix stays.
 
 ## 3. The tree
 

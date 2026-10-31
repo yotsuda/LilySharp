@@ -33,7 +33,7 @@ namespace LilySharp.Tests;
 /// decision 2026-10-14): the bars once, then <c>%</c> / <c>%N</c> — one repetition of the N
 /// bars before it — alone between bar lines. The parser groups a run of marks with its bars;
 /// a mark it cannot group is LYS1048, bars that are not whole are LYS1049, and the old
-/// <c>repeat percent</c> / <c>repeat unfold</c> is LYS1047 with <c>lysc percent</c> to rewrite it.
+/// <c>repeat percent</c> / <c>repeat unfold</c> is LYS1047 with the editor's quick fix to rewrite it.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class PercentMarkTests
@@ -199,7 +199,7 @@ public sealed class PercentMarkTests
         Assert.Equal(climb[7].Start + climb[7].Length, climb[8].Start);
     }
 
-    // --- the converter (lysc percent) ---
+    // --- the converter (the quick fix's; `lysc percent` went 2026-10-31) ---
 
     [Theory]
     [InlineData("repeat percent 4 { c4 d e f } break", "c4 d e f | % | % | % break")]

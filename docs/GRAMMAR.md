@@ -968,7 +968,8 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    chordDiagrams — WHICH chords of the score draw a CHORD DIAGRAM (owner's grammar
    2026-10-31: one key, one question — until then the key also named the tuning, the capo and
    the shape table, which are 'chordTuning', the top-level 'capo N' and 'chordShapes { }' now;
-   the old spelling is refused naming the new one, LYS1061, and the editor rewrites it).
+   those words are wrong words of the key like any other, not an old form the compiler
+   recognizes: no backward compatibility, and no machinery for it — owner's decision the same day).
    'written' (the default): a chord with a shape — WRITTEN at it (ChordArgument,
    ChordRowEntry) or LISTED in the file's 'chordShapes { }' table (§2.2) — draws it; a name
    alone draws none (owner's decision 2026-09-28, HANDOFF §2 K). 'all': EVERY chord name draws,
@@ -2892,8 +2893,8 @@ Repeat         = 'repeat' , 'tremolo' , Integer , MusicBlock ;
                     Volta repeats use the form's |: … :|, NOT a 'repeat' keyword.
                     ⚠️ 'repeat percent' and 'repeat unfold' are GONE (owner's decision
                     2026-10-14, LYS1047): a percent repeat is the PercentMark below, an
-                    unfold its music written out; `lysc percent` and the quick fix rewrite
-                    the old spelling. *)
+                    unfold its music written out; the editor's quick fix rewrites the item
+                    (the `lysc percent` book rewriter went 2026-10-31). *)
 PercentMark    = '%' , [ Integer ] ;                 (* no space: '%2' *)
                  (* ONE REPETITION of the N bars written just before it ('%' is '%1'), and
                     it occupies those N bars (docs/percent-repeat-design.md):
@@ -2907,8 +2908,8 @@ PercentMark    = '%' , [ Integer ] ;                 (* no space: '%2' *)
                     out (owner's decision, 2026-10-18): 'c4 d e f | % % % |' reads as
                     'c4 d e f | % | % | % |' — only between two marks with nothing but
                     space between them ('% break %' and 'c4 % %' are LYS1048 as before).
-                    The written spelling is the canonical one: it is what `lysc percent`,
-                    the quick fix and the page write, and the editor types the '| ' after
+                    The written spelling is the canonical one: it is what the quick fix
+                    and the page write, and the editor types the '| ' after
                     a mark by itself. The parser puts the bar line left out into the tree
                     where it is read, a '|' of no width (BarlineSyntax.IsLeftOut), so every
                     reader sees the bars as written and no position moves. "The bars before it" are counted back over the bar lines

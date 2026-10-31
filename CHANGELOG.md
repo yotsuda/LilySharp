@@ -19,8 +19,9 @@ workflow attaches that section to the GitHub Release verbatim.
   chords draw a diagram: those with a written or listed shape (the default), none at all, or
   every chord — and **`layout { chordTuning TUNING }`** is the tuning a chord with no fretted
   part draws on (a chords row's, a piano's; `guitar` when unset). The old
-  `chordDiagrams guitar capo 3 all { … }` is an error that names the new spelling (LYS1061),
-  and the editor's quick fix writes it — there is no backward compatibility, by the owner's rule.
+  `chordDiagrams guitar capo 3 all { … }` is a wrong word of the key like any other — no
+  backward compatibility, by the owner's rule, and no machinery for it (an error that named the
+  new spelling, with a quick fix that wrote it, lived for a few hours the same day).
   A `capo` line with no fret, a fret of 0 or above 11 is LYS1058; `chordShapes` with no block
   LYS1059, a broken table LYS1060; a second `capo` or `chordShapes` is LYS4005 and the last wins.
 - `[render]` **"Capo N" prints at the score's head only where the score shows the capo** —
@@ -99,6 +100,9 @@ workflow attaches that section to the GitHub Release verbatim.
   `chord(…)` item's name stays as a bare `@chord` (`chord(F)1` → `<f a c>1@chord`; the symbol
   goes into the mark only when the notes would name the chord otherwise); the diagram does not.
   The file must sound the same afterwards, or nothing changes. Not inside `<< >>`.
+- `[cli]` **`lysc percent` is gone** — the book rewriter for the old `repeat percent` /
+  `repeat unfold` (0.13.0). Backward compatibility has no tools here; the editor's quick fix on
+  LYS1047 still rewrites an item where it stands.
 - `[lang]` **`<< c e g >>4@todo` marks the group**: the mark rings the group's first note in
   the preview, with its memo and `.down`, and the editor's list and quick fixes name it as
   the group's. It was the one mark of the group's that was refused (LYS4008).

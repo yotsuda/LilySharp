@@ -382,8 +382,6 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(ownDiagram);
                 if (TabOctaveAction(doc, uri, diagnostic) is { } tabOctave)
                     actions.Add(tabOctave);
-                if (ChordDiagramsOldFormAction(doc, uri, diagnostic) is { } oldForm)
-                    actions.Add(oldForm);
                 if (diagnostic.Code == DiagnosticCodes.TodoMark && !todoOffered)
                 {
                     todoOffered = true;
@@ -492,84 +490,6 @@ public sealed partial class LilySharpLanguageServer
             return null;
         return QuickFix($"Write the chord's own diagram: {m.Groups[1].Value}", doc, uri, diagnostic,
             [EditOf(doc.Text, diagnostic.Span.Start, diagnostic.Span.End, m.Groups[1].Value)]);
-    }
-
-    /// <summary>
-    /// LYS1061's quick fix: an old-spelling <c>chordDiagrams</c> entry (a tuning word, <c>capo N</c>,
-    /// a shape table — 2026-09-28 to 2026-10-31) rewritten in the grammar settled on 2026-10-31
-    /// (<see cref="ChordDiagramsKey.OldFormRewrite"/>, the same rewrite the message names): the
-    /// capo and the table go to the top level, before the layout block (or before the score that
-    /// holds it), and the entry becomes <c>chordTuning T</c> / <c>chordDiagrams none|all</c> — or
-    /// nothing, and then an unnamed top-level block it was the only entry of goes with it. A capo
-    /// or a table the file already writes at the top level is not written twice.
-    /// </summary>
-    private static CodeAction? ChordDiagramsOldFormAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
-    {
-        if (diagnostic.Code != DiagnosticCodes.ChordDiagramsOldForm)
-            return null;
-        var root = doc.Tree.GetRoot();
-        LayoutDeclarationSyntax? layout = null;
-        LayoutDeclarationSyntax.Entry entry = default;
-        foreach (var l in root.DescendantNodes().OfType<LayoutDeclarationSyntax>())
-            foreach (var e in l.Entries)
-                if (e.Key == ChordDiagramsKey.Key && e.Values.Count > 0
-                    && e.KeyToken.Span.Start <= diagnostic.Span.Start && diagnostic.Span.Start <= e.Values[^1].Span.End)
-                {
-                    layout = l;
-                    entry = e;
-                }
-        if (layout == null || ChordDiagramsKey.OldFormRewrite(entry) is not { } rewrite)
-            return null;
-
-        // The entry's text, key to last value, and what replaces it in the block.
-        int entryStart = entry.KeyToken.Span.Start, entryEnd = entry.Values[^1].Span.End;
-        var edits = new List<TextEdit>();
-        bool dropBlock = rewrite.LayoutEntries.Length == 0 && layout.Entries.Count == 1
-                         && layout.NameToken == null && layout.Parent is CompilationUnitSyntax;
-        if (dropBlock)
-        {
-            // The whole `layout { … }` and the line break after it.
-            int end = layout.Span.End;
-            if (end < doc.Text.Length && doc.Text[end] == '\r') end++;
-            if (end < doc.Text.Length && doc.Text[end] == '\n') end++;
-            edits.Add(EditOf(doc.Text, layout.Span.Start, end, ""));
-        }
-        else
-        {
-            // An entry that becomes nothing takes the whitespace before it, so the block does
-            // not keep a stray run of spaces.
-            int from = entryStart;
-            if (rewrite.LayoutEntries.Length == 0)
-                while (from > 0 && doc.Text[from - 1] is ' ' or '\t')
-                    from--;
-            edits.Add(EditOf(doc.Text, from, entryEnd, rewrite.LayoutEntries.Length == 0 ? "" : rewrite.LayoutEntries));
-        }
-
-        // The top-level lines, before the declaration that holds the entry (a score's layout: before
-        // the score), unless the file already writes them.
-        SyntaxNode host = layout;
-        while (host.Parent is not null and not CompilationUnitSyntax)
-            host = host.Parent;
-        var top = new StringBuilder();
-        var parts = new List<string>();
-        if (rewrite.Capo > 0 && !CapoDirective.Lines(root).Any())
-        {
-            top.Append(CapoDirective.Keyword).Append(' ').Append(rewrite.Capo).Append('\n');
-            parts.Add($"{CapoDirective.Keyword} {rewrite.Capo}");
-        }
-        if (rewrite.Table != null && !ChordShapesDirective.Declarations(root).Any())
-        {
-            top.Append(ChordShapesDirective.Keyword).Append(' ').Append(rewrite.Table).Append('\n');
-            parts.Add($"{ChordShapesDirective.Keyword} {{ … }}");
-        }
-        if (top.Length > 0)
-            edits.Add(EditOf(doc.Text, host.Span.Start, host.Span.Start, top.ToString()));
-        if (rewrite.LayoutEntries.Length > 0)
-            parts.Add(rewrite.LayoutEntries);
-        string title = parts.Count > 0
-            ? "Write it the new way: " + string.Join(", ", parts)
-            : "Leave the entry out (written is the default, guitar the tuning)";
-        return QuickFix(title, doc, uri, diagnostic, [.. edits]);
     }
 
     /// <summary>The second quick fix for an LYS2007 (owner's decision, 2026-09-28): when one part
@@ -692,7 +612,7 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// The quick fix for LYS1047, the old <c>repeat percent</c> / <c>repeat unfold</c>: the item
-    /// rewritten as <c>lysc percent</c> rewrites it (<see cref="LilySharp.Core.Editing.PercentRepeatConverter"/>)
+    /// rewritten (<see cref="LilySharp.Core.Editing.PercentRepeatConverter"/>)
     /// — the bars once and a mark a repetition, or the music written out — as one edit over the
     /// text that changes.
     /// </summary>
@@ -1095,7 +1015,6 @@ public sealed partial class LilySharpLanguageServer
                     EditOf(doc.Text, block.Position, block.Position + block.FullWidth, "melody")),
             });
         }
-
 
         return actions;
     }

@@ -1395,7 +1395,7 @@ Marks in a row repeat the same bars; a mark of another length right after them i
 (`… | break % |`). Between two marks in a row the bar line may be left out: `c4 d e f | % % % |`
 reads as `c4 d e f | % | % | % |`, the written spelling, which is what the tools write (in the
 editor a space after a mark types the `| ` for you). The old `repeat percent N { … }` and `repeat unfold N { … }` are errors
-(LYS1047); the editor's quick fix and `lysc percent` rewrite them.
+(LYS1047); the editor's quick fix rewrites them.
 
 ## Beaming
 
@@ -2160,8 +2160,8 @@ and a name alone draws none; `all` — EVERY chord name draws a diagram, its wri
 shape else the usual one; `none` — no diagram at all, written shapes included, so the same
 source makes a piano score and a guitar score (an `@diagram(…)` is no exception). One word:
 until 2026-10-31 this key also took a tuning word, `capo N` and a shape table in braces; those
-are `chordTuning`, the top-level `capo N` and `chordShapes { }` now, and the old spelling is an
-error that names the new one (the editor's quick fix rewrites it).
+are `chordTuning`, the top-level `capo N` and `chordShapes { }` now, and the old words are
+simply wrong words of the key (no backward compatibility).
 
 **`chordTuning`** — the tuning the chord diagrams of chords with NO fretted part draw on (a
 chords row's, a piano's, a singer's): a tuning word — the words a tab's `tuning` takes

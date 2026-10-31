@@ -529,22 +529,13 @@ internal static class LayoutPlanReader
     }
 
     // chordDiagrams written | none | all — exactly one word (ChordDiagramScope; owner's grammar
-    // 2026-10-31). Its own reader for ONE reason: the OLD form (2026-09-28 to 2026-10-31,
-    // `chordDiagrams [TUNING] [capo N] [all] [{ table }]`) is refused whole with the new spelling
-    // named (LYS1061, the editor's quick fix rewrites it; OldFormRewrite says how), so a book
-    // written last month says what moved where rather than "'guitar' is not a value".
+    // 2026-10-31). Any other word — the tuning words, `capo`, a table the key took before that
+    // day — is a wrong word like any other: no old form is recognized (owner's decision the same
+    // day: no backward compatibility, and no machinery for it).
     private static LayoutPlan ReadChordDiagrams(
         LayoutPlan plan, LayoutDeclarationSyntax.Entry entry, TextSpan keySpan, List<Problem> found)
-    {
-        if (ChordDiagramsKey.OldFormRewrite(entry) is { } old)
-        {
-            found.Add(new Problem(entry.Values.Count > 0 ? entry.Values[0].Span : keySpan,
-                DiagnosticCodes.ChordDiagramsOldForm, old.Message, IsError: true));
-            return plan;
-        }
-        return ReadOneWord(plan, entry, keySpan, found, ChordDiagramsKey.Key, ChordDiagramsKey.Words,
+        => ReadOneWord(plan, entry, keySpan, found, ChordDiagramsKey.Key, ChordDiagramsKey.Words,
             w => ChordDiagramsKey.Find(w) is { } scope ? plan with { ChordDiagrams = scope } : null);
-    }
 
     // chordTuning guitar | ukulele | mandolin | … — exactly one word, the tuning vocabulary
     // (ChordTuningKey). Its own reader for the message: the vocabulary is thirty words, so the

@@ -9,10 +9,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **`capo 3` and `chordShapes { … }` are top-level lines now**, the piece's own data (the
   grammar settled on 2026-10-31), and the layout's `chordDiagrams` takes one word — `written`
   (the default), `none` or `all` — with **`chordTuning TUNING`** beside it for the chords no
-  fretted part owns. **A book in the old spelling (`chordDiagrams guitar capo 3 all { … }`)
-  gets an error that says where each word goes, and Ctrl+. rewrites it**: the capo and the
-  table go before the layout block (or before the score that holds it), the entry becomes
-  `chordTuning` / `chordDiagrams`, and a block left with nothing goes with it.
+  fretted part owns. A book in the old spelling (`chordDiagrams guitar capo 3 all { … }`) gets
+  the ordinary wrong-word error — no backward compatibility, and no rewrite for it.
 - **`chord` and `diagram` — the shape-chord items `chord(F 133211)4`, `diagram(F 133211)4` — are
   in the music completion** (Ctrl+Space inside a part's music); the parentheses open on the
   chord symbols.

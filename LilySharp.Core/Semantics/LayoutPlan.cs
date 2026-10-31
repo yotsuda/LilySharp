@@ -532,10 +532,10 @@ public enum ChordDiagramScope
 /// was considered and NOT added: the layout suffices.
 /// </para>
 /// <para>
-/// ⚠️ THE OLD SPELLING (2026-09-28 to 2026-10-31) — <c>chordDiagrams [TUNING] [capo N] [all]
-/// [{ table }]</c> — is refused by the reader with the new one named (LYS1061), and the editor's
-/// quick fix rewrites it; there is no backward compatibility (the owner's rule: "a well-ordered,
-/// consistent grammar; no regard for backward compatibility").
+/// Until 2026-10-31 the key also took a tuning word, <c>capo N</c> and a shape table; those words
+/// are wrong words now, like any other (the owner's rule: "a well-ordered, consistent grammar;
+/// no regard for backward compatibility" — and no machinery for it, the owner's decision the
+/// same day: the old form is not recognized, named or rewritten).
 /// </para>
 /// <para>
 /// LILYSHARP-OWN: LilyPond's FretBoards context carries its own <c>stringTunings</c>
@@ -565,10 +565,6 @@ public static class ChordDiagramsKey
     /// <summary>The word for <paramref name="scope"/>.</summary>
     public static string WordOf(ChordDiagramScope scope) => Words[(int)scope];
 
-    /// <summary>True for a tuning word (<see cref="Tablature.Tunings.Names"/>) — the
-    /// <see cref="ChordTuningKey"/>'s vocabulary, asked here by the readers of the old form.</summary>
-    public static bool IsTuningWord(string word) => Tablature.Tunings.Names.Contains(word);
-
     /// <summary>
     /// The tuning a diagram draws on: null under <see cref="ChordDiagramScope.None"/>, which draws
     /// no diagram; else the part's fretted tuning (<paramref name="partTuning"/>), else the layout's
@@ -583,79 +579,6 @@ public static class ChordDiagramsKey
     /// (<paramref name="partWord"/>), else the layout's word, else <c>guitar</c>; null under <c>none</c>.</summary>
     public static string? ResolveWord(ChordDiagramScope scope, string? tuningWord, string? partWord)
         => scope == ChordDiagramScope.None ? null : partWord ?? tuningWord ?? "guitar";
-
-    /// <summary>
-    /// How an entry in the OLD <c>chordDiagrams</c> spelling reads in the new grammar, or null for
-    /// an entry that is not the old form (a scope word, nothing, a wrong word): the words that move
-    /// to the top level (<c>capo N</c>, <c>chordShapes { … }</c>), the layout entries that replace
-    /// it (<c>chordTuning TUNING</c>, <c>chordDiagrams none|all</c>, or nothing), and the sentence
-    /// LYS1061 says. The reader refuses with the message and the editor's quick fix applies the
-    /// same rewrite (<c>LilySharpLanguageServer.ChordDiagramsOldFormAction</c>), so the two cannot
-    /// say different things.
-    /// </summary>
-    /// <remarks>
-    /// Read loosely — a tuning word, <c>capo</c>, <c>all</c>, <c>none</c>, a brace, in any order —
-    /// because this is the OLD reader's grammar being recognized, not enforced: whatever the old
-    /// entry meant, every word of it lands somewhere in the new one. The table's words are copied
-    /// as written (the new table reads the same entries), one space apart.
-    /// </remarks>
-    public static (string Message, int Capo, string? Table, string LayoutEntries)? OldFormRewrite(
-        Syntax.LayoutDeclarationSyntax.Entry entry)
-    {
-        var values = entry.Values;
-        int open = -1;
-        for (int i = 0; i < values.Count; i++)
-            if (values[i].Kind == Syntax.SyntaxKind.OpenBrace)
-            {
-                open = i;
-                break;
-            }
-        var head = open < 0 ? values : values.Take(open).ToList();
-        bool oldWord = head.Any(t => IsTuningWord(t.Text) || t.Text == CapoDirective.Keyword);
-        if (open < 0 && !oldWord)
-            return null;
-
-        string? tuning = head.Select(t => t.Text).FirstOrDefault(IsTuningWord);
-        int capo = 0;
-        for (int i = 0; i + 1 < head.Count; i++)
-            if (head[i].Text == CapoDirective.Keyword && head[i + 1].Kind == Syntax.SyntaxKind.IntegerLiteral
-                && int.TryParse(head[i + 1].Text, System.Globalization.NumberStyles.None,
-                    System.Globalization.CultureInfo.InvariantCulture, out int fret)
-                && fret >= 1 && fret <= CapoDirective.MaxFret)
-                capo = fret;
-        var scope = head.Any(t => t.Text == "all") ? ChordDiagramScope.All
-            : head.Any(t => t.Text == Music.ChordShapes.NoneWord) ? ChordDiagramScope.None
-            : ChordDiagramScope.Written;
-        // The table's words as written, between its brace and its closer.
-        string? table = null;
-        if (open >= 0 && values[^1].Kind == Syntax.SyntaxKind.CloseBrace)
-        {
-            var words = ChordShapesDirective.TableWords(values, open + 1);
-            string inner = string.Join(" ", words.Take(words.Count - 1).Select(w => w.Text));
-            table = inner.Length == 0 ? "{ }" : "{ " + inner + " }";
-        }
-        var entries = new List<string>();
-        if (tuning != null && tuning != "guitar")
-            entries.Add($"{ChordTuningKey.Key} {tuning}");
-        if (scope != ChordDiagramScope.Written)
-            entries.Add($"{Key} {WordOf(scope)}");
-        string layoutEntries = string.Join("  ", entries);
-
-        var moved = new List<string>();
-        if (capo > 0)
-            moved.Add($"'{CapoDirective.Keyword} {capo}'");
-        if (table != null)
-            moved.Add($"'{ChordShapesDirective.Keyword} {{ ... }}'");
-        string fix = moved.Count > 0 && layoutEntries.Length > 0
-            ? $"write {string.Join(" and ", moved)} at the top level, and '{layoutEntries}' here"
-            : moved.Count > 0 ? $"write {string.Join(" and ", moved)} at the top level, and leave this entry out"
-            : layoutEntries.Length > 0 ? $"write '{layoutEntries}' here"
-            : "leave this entry out (written is the default, and the guitar the tuning)";
-        string message = $"'{Key}' takes one word - written, none or all: which chords draw a diagram. "
-            + "Its old spelling (a tuning word, 'capo N', a shape table in braces) is split up since 2026-10-31: "
-            + fix + ". The tuning of a chord with no fretted part is 'chordTuning TUNING'.";
-        return (message, capo, table, layoutEntries);
-    }
 }
 
 /// <summary>

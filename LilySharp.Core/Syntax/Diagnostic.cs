@@ -764,8 +764,8 @@ public static class DiagnosticCodes
     /// <summary>Error: <c>repeat percent N { … }</c> or <c>repeat unfold N { … }</c>. A percent
     /// repeat is written after the bars it repeats, one mark a repetition
     /// (<c>c4 d e f | % | % |</c>, <c>a2 b | c d | %2 |</c>), and an unfold is its music written
-    /// out (docs/percent-repeat-design.md). The item is read as its body once; the quick fix
-    /// and <c>lysc percent</c> rewrite it.</summary>
+    /// out (docs/percent-repeat-design.md). The item is read as its body once; the editor's
+    /// quick fix rewrites it (<c>lysc percent</c>, which rewrote a whole book, went 2026-10-31).</summary>
     /// <remarks>Owner's decision 2026-10-14 (session 904): the old spelling was hard to use, and
     /// its bars closed where the beats filled where every other bar is closed by a bar line.</remarks>
     public const string RepeatPercentRemoved = "LYS1047";
@@ -828,14 +828,9 @@ public static class DiagnosticCodes
     /// warning of a chord listed twice in one scope and of a section no declaration names.</summary>
     public const string ChordShapesTableBroken = "LYS1060";
 
-    /// <summary>Error: the OLD <c>chordDiagrams</c> spelling (2026-09-28 to 2026-10-31) — a
-    /// tuning word, <c>capo N</c>, or a shape table in braces after the key. The grammar settled
-    /// on 2026-10-31 (docs/ROADMAP.md "Chord diagrams: one key doing four jobs"; no backward
-    /// compatibility, the owner's rule) spells the four jobs apart: the top-level <c>capo N</c>
-    /// and <c>chordShapes { }</c>, and in the layout <c>chordDiagrams none|written|all</c> with
-    /// <c>chordTuning TUNING</c>. The message names the new spelling, and the editor's quick fix
-    /// writes it (the entry is dropped from the plan until then).</summary>
-    public const string ChordDiagramsOldForm = "LYS1061";
+    // (LYS1061, the old `chordDiagrams` spelling named and rewritten, lived for the hours of
+    // 2026-10-31 it took the owner to decide against it: no backward compatibility, and no
+    // machinery for it. The number is not reused.)
 
     /// <summary>Warning: a chord's name asked of a shape in two words — a bare <c>@chord</c> beside
     /// an <c>@diagram(x32010)</c>, whose name and diagram are drawn apart — named with the one word

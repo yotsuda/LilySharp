@@ -423,7 +423,7 @@ public class ChordDiagramTests
     {
         var tree = SyntaxTree.Parse($"{top}layout {{ {entries} }}\npart m {{ }}\nsection A {{ m {{ c'1 | }} }}\nform {{ A }}\nscore {{ staff m }}\n");
         var problems = SemanticValidation.Run(tree).Where(d => d.Code is DiagnosticCodes.LayoutEntryBadValue
-            or DiagnosticCodes.UnknownLayoutKey or DiagnosticCodes.ChordDiagramsOldForm
+            or DiagnosticCodes.UnknownLayoutKey
             or DiagnosticCodes.CapoDirectiveBadValue or DiagnosticCodes.ChordShapesTableBroken).ToList();
         return (LayoutPlanReader.Resolve(tree.GetRoot(), TopLevelNodes.OfRoot<RenderDeclarationSyntax>(tree.GetRoot()).First()), problems);
     }
@@ -480,6 +480,11 @@ public class ChordDiagramTests
     [InlineData("ChordDiagrams none", "Keys are case-sensitive: write 'chordDiagrams'")]
     [InlineData("chordDiagrams", "takes written, none or all")]
     [InlineData("chordDiagrams all none", "one word")]
+    // The spelling the key took until 2026-10-31 (a tuning word, `capo N`, a table) is a wrong
+    // word like any other: not recognized, named or rewritten (owner's decision the same day —
+    // no backward compatibility, and no machinery for it).
+    [InlineData("chordDiagrams guitar", "is not a value of 'chordDiagrams'")]
+    [InlineData("chordDiagrams ukulele capo 2 all", "is not a value of 'chordDiagrams'")]
     [InlineData("chordTuning banjo", "is not a value of 'chordTuning'")]
     [InlineData("chordTuning Guitar", "Values are case-sensitive: write 'guitar'")]
     [InlineData("chordTuning", "takes a tuning name")]
@@ -490,87 +495,6 @@ public class ChordDiagramTests
         Assert.Contains(message, Assert.Single(problems).Message);
         Assert.Equal(ChordDiagramScope.Written, plan.ChordDiagrams);
         Assert.Null(plan.ChordTuning);
-    }
-
-    /// <summary>The OLD spelling (2026-09-28 to 2026-10-31) — a tuning word, <c>capo N</c>, a
-    /// table — is refused whole, naming where each word goes (LYS1061); the plan keeps nothing of
-    /// it. No backward compatibility (the owner's rule), but a sentence that says what moved.</summary>
-    [Theory]
-    [InlineData("chordDiagrams guitar", "leave this entry out (written is the default, and the guitar the tuning)")]
-    [InlineData("chordDiagrams ukulele", "write 'chordTuning ukulele' here")]
-    [InlineData("chordDiagrams ukulele all", "write 'chordTuning ukulele  chordDiagrams all' here")]
-    [InlineData("chordDiagrams guitar capo 3", "write 'capo 3' at the top level, and leave this entry out")]
-    [InlineData("chordDiagrams capo 3 all", "write 'capo 3' at the top level, and 'chordDiagrams all' here")]
-    [InlineData("chordDiagrams guitar { C x32010 }", "write 'chordShapes { ... }' at the top level, and leave this entry out")]
-    [InlineData("chordDiagrams ukulele capo 2 all { C }", "write 'capo 2' and 'chordShapes { ... }' at the top level, and 'chordTuning ukulele  chordDiagrams all' here")]
-    public void TheOldSpelling_IsRefused_NamingTheNewOne(string entries, string fix)
-    {
-        var (plan, problems) = Layout(entries);
-        var only = Assert.Single(problems);
-        Assert.Equal(DiagnosticCodes.ChordDiagramsOldForm, only.Code);
-        Assert.Contains(fix, only.Message);
-        Assert.Equal((ChordDiagramScope.Written, (string?)null, 0, (ChordShapeTable?)null),
-            (plan.ChordDiagrams, plan.ChordTuning, plan.Chords.Capo, plan.ChordDiagramTable));
-    }
-
-    /// <summary>LYS1061's quick fix writes the new spelling: the capo and the table to the top
-    /// level before the block (before the score, for a score's own layout), the entry rewritten
-    /// or dropped — and a one-entry unnamed block dropped with it. The result compiles clean and
-    /// reads the same plan.</summary>
-    [Theory]
-    [InlineData("layout { chordDiagrams guitar capo 3 all { Eb x32010 } }\n", "capo 3\nchordShapes { Eb x32010 }\nlayout { chordDiagrams all }\n")]
-    [InlineData("layout { chordDiagrams ukulele  chordList true }\n", "layout { chordTuning ukulele  chordList true }\n")]
-    [InlineData("layout { chordDiagrams guitar }\n", "")]
-    [InlineData("layout { chordNames both  chordDiagrams guitar capo 2 }\n", "capo 2\nlayout { chordNames both }\n")]
-    [InlineData("layout chart { chordDiagrams ukulele all }\n", "layout chart { chordTuning ukulele  chordDiagrams all }\n")]
-    public void TheOldSpelling_IsRewrittenByTheQuickFix(string old, string wanted)
-    {
-        string text = old + "part m { }\nsection A { m { c'1 | } }\nform { A }\nscore { staff m }\n";
-        var action = Assert.Single(QuickFixesAt(text, text.IndexOf("chordDiagrams", StringComparison.Ordinal) + 15),
-            a => a.Diagnostics?.Any(d => d.Code?.ToString() == DiagnosticCodes.ChordDiagramsOldForm) == true);
-        string fixedText = ApplyEdits(text, action);
-        Assert.Equal(wanted + "part m { }\nsection A { m { c'1 | } }\nform { A }\nscore { staff m }\n", fixedText);
-        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(fixedText)), d => d.Code == DiagnosticCodes.ChordDiagramsOldForm);
-        // A score's own layout: the lines go before the score.
-        string inScore = "part m { }\nsection A { m { c'1 | } }\nform { A }\nscore { layout { chordDiagrams capo 4 }  staff m }\n";
-        var scoreFix = Assert.Single(QuickFixesAt(inScore, inScore.IndexOf("capo 4", StringComparison.Ordinal)),
-            a => a.Diagnostics?.Any(d => d.Code?.ToString() == DiagnosticCodes.ChordDiagramsOldForm) == true);
-        Assert.Equal("part m { }\nsection A { m { c'1 | } }\nform { A }\ncapo 4\nscore { layout { }  staff m }\n", ApplyEdits(inScore, scoreFix));
-    }
-
-    private static LilySharp.Lsp.Protocol.CodeAction[] QuickFixesAt(string text, int offset)
-    {
-        var server = new LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
-        var uri = new Uri("file:///oldform.lys");
-        server.DidOpen(new LilySharp.Lsp.Protocol.DidOpenTextDocumentParams
-        {
-            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentItem { Uri = uri, Text = text, LanguageId = "lilysharp", Version = 1 },
-        });
-        var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(text, offset);
-        var at = new LilySharp.Lsp.Protocol.Position(line, character);
-        return server.GetCodeActions(new LilySharp.Lsp.Protocol.CodeActionParams
-        {
-            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentIdentifier { Uri = uri },
-            Range = new LilySharp.Lsp.Protocol.Range { Start = at, End = at },
-        }) ?? [];
-    }
-
-    /// <summary>Applies every edit of the action's one document, last first.</summary>
-    private static string ApplyEdits(string text, LilySharp.Lsp.Protocol.CodeAction action)
-    {
-        static int OffsetOf(string t, LilySharp.Lsp.Protocol.Position p)
-        {
-            int offset = 0;
-            for (int l = 0; l < p.Line; l++)
-                offset = t.IndexOf('\n', offset) + 1;
-            return offset + p.Character;
-        }
-        var edits = action.Edit!.Changes!.Values.Single()
-            .Select(e => (Start: OffsetOf(text, e.Range.Start), End: OffsetOf(text, e.Range.End), e.NewText))
-            .OrderByDescending(e => e.Start).ToList();
-        foreach (var (start, end, newText) in edits)
-            text = text[..start] + newText + text[end..];
-        return text;
     }
 
     // ================================================================ where diagrams draw
@@ -2549,16 +2473,18 @@ public class ChordDiagramTests
     }
 
     /// <summary>No layout key opens a block (the parser's rule): a key's brace is refused where
-    /// it stands, naming the top-level <c>chordShapes { }</c>. The OLD <c>chordDiagrams … { }</c>
-    /// still parses whole, so the reader can refuse it as one entry (LYS1061) and the editor
-    /// rewrite it.</summary>
+    /// it stands, naming the top-level <c>chordShapes { }</c> — the table <c>chordDiagrams</c>
+    /// took until 2026-10-31 included (no old form is recognized).</summary>
     [Fact]
     public void NoLayoutKey_OpensABlock()
     {
-        var tree = SyntaxTree.Parse("layout { barNumbers every 4 { x }  markTempo beside }\n");
-        var refusal = Assert.Single(tree.Diagnostics, d => d.Message.Contains("does not open a block", StringComparison.Ordinal));
-        Assert.Contains("the chord-shape table is the top-level 'chordShapes { Cm7 x35343 }'", refusal.Message);
-        Assert.Empty(SyntaxTree.Parse("layout { chordDiagrams guitar { C#m7 x46654  section A { F/A x03211 } } }\n").Diagnostics);
+        foreach (string block in new[] { "layout { barNumbers every 4 { x }  markTempo beside }\n",
+                                         "layout { chordDiagrams guitar { C#m7 x46654  section A { F/A x03211 } } }\n" })
+        {
+            var tree = SyntaxTree.Parse(block);
+            var refusal = Assert.Single(tree.Diagnostics, d => d.Message.Contains("does not open a block", StringComparison.Ordinal));
+            Assert.Contains("the chord-shape table is the top-level 'chordShapes { Cm7 x35343 }'", refusal.Message);
+        }
         Assert.Empty(SyntaxTree.Parse("chordShapes { C#m7 x46654  section A { F/A x03211 } }\n").Diagnostics);
     }
 

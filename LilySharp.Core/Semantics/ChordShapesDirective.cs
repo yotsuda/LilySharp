@@ -217,8 +217,7 @@ public static class ChordShapesDirective
 
     /// <summary>
     /// The table reader proper, over the tokens from the <c>{</c> at <paramref name="open"/> to
-    /// its closer. Shared with the OLD <c>chordDiagrams … { }</c> form's reader only for its
-    /// problems (the old form is refused whole, LYS1061).
+    /// its closer.
     /// </summary>
     internal static ChordShapeTable? ReadTable(IReadOnlyList<SyntaxTokenNode> values, int open,
         SyntaxNode root, int capo, List<LayoutPlanReader.Problem> found)
