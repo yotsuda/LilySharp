@@ -160,6 +160,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1034セッションの経緯
+
+### 1.1 第1034セッション（2026-10-31・YT-DELL2）
+
+新しい会話。開始時 full **13669 / 0 / 2**（`-Start p1034`・Core の警告 9＝前の会話の置き土産）。作業場所は Lab `sessions/p1034/`。§0 の順どおり OMR の `REQUESTS.md` の open 3 件を先に、次に §1.0 先頭の連符×コード図。
+- **Core の警告 9 → 0**（`b9c4b8e12`）: `[null]` の collection expression が non-null の list の型に寄る CS8625 ×2（`new RenderSpec?[] { null }` と `(IEnumerable<RenderSpec?>)specs` の三項）・`SourceSymbol` の null・`_barTicks` の null・tuple 要素への paramref・cref の未解決 1 と曖昧 2・`DynamicEngraver.Calculate` の doc が `DrumDoubles` の挿入で分断されていた 1。挙動の変更なし。⚠️ **Edit ツールが `ShapeChordConverter.cs`・`PlayedNotes.cs` を LF 化した**（CLAUDE-OPERATIONS §1 の罠そのもの）＝`git diff --name-only` を回して CRLF に戻した。`.lys` と snapshot svg の LF は `.gitattributes` どおり。
+- **OMR #11 連符の中で終わる 8va（`e64dad771`）**: 「音符を含む終わり」は `_v.LastAddedItem` の長さを足すが、連符の中身を足す `AddItemWithoutDurationAsync` がそれを書いていなかった＝連符の前の音（4 分）の長さで終わりを計算し、残りの連符の音まで線の下に。両方の funnel が書く。副産物＝連符の中の裸の `@diagram` も正しい音を読む。網 `OttavaMidBarTests.AnEndInsideATuplet_StopsAfterItsOwnMember`・絵 Lab `sessions/p1034/omr/`。
+- **OMR #12 cue の休符（`0ae99e2e6`）**: `RestItem.IsCue`（`CreateRestItem`／pitched rest で `_v.CueDepth > 0`・`R` は Staff の grob なので付けない・grace への narrowing の clone が保つ）→ `GrobFontSize.IsCue` が読む＝休符の font-size は cue で −4・grace では 0 のまま。**休符の箱の読み手 20 箇所を `GlyphMetrics.GetRestBBox(RestItem, int)`／`GetRestSkylineBBox(RestItem, …)`（描く font の箱）に統一**（renderer＝字形と付点を自分の design で・`ItemSkylineFactory` ×4・`SkylineBuilder` ×3・`SpacingRules` 左右端・bar-line skyline・`DynamicEngraver`・`HairpinEngraver`・`ElementCoordinator` ×6・`TupletBracketEngraver` ×4・Overlays ×2・Tab）。`GrobFontSize.ProfileDesignOf`（段 0 なら design 0＝今までの outline cache の鍵）。`TimingSprings.IsCueItem` にも RestItem。**snapshot 3 枚**: cue-region-measure（KNOWN GAP 閉じ）・cue-flag-dot・**grace-rest＝装飾音の休符の*付点*が −3 に**（`general-grace-settings` の Dots 行どおり。LP 2.26.0 実測: `\grace { r8. d'16 }` の付点は scale 0.0028・休符の原点から +1.3087。Lily# 2.83／+1.31、前は 4.00／+1.45＝Lab `sessions/p1034/gracerest/`）。網 `CueRegionTests` ×2。⚠️ 残り: grace column の休符（`GraceColumnHeads`）と梁に押される休符の stem（`ElementCoordinator` 1535・`BeamEngraver.RestStemX`）は RestItem を持たない箱＝cue の中の梁つき休符だけが古い箱（観測者なし）。
+- **連符×「名前の下のダイアグラム」の積み順（§1.0 ⒜ 先頭・閉じた）**: 原因は HANDOFF の読みどおりの**循環**＝`UnderChordName` のダイアグラムは優先度なし → 連符の avoid-scripts が避けて上へ → room は連符の上にダイアグラムを置く → 本番の連符はまた上がったダイアグラムを避ける → 名前の行は連符を知らない。直し＝**avoid-scripts のループで `IsDiagramUnderName` を飛ばす 1 行**（`34a42169a`・`TupletBracketEngraver.cs`＝両 wire が通る 1 家。sieve 側は触っていない）。room は元から連符を先に seed してからダイアグラムを置く（`SkylineBuilder` 1877 → 1912）ので ⑵⑶ は既に満たされていた。再現の絵＝LP と同じ積み（連桁のそばの 5・その上に C の図・その上に C。F の図の底は 6 の括弧の上 0.1〜1.5）。網 `FretFrameTests.ATupletUnderAChordDiagram_…`・絵 Lab `sessions/p1034/stack/`（`repro.png`＝前・`after1/repro.png`＝後・`lp.png`）。
+- **CI**: 2a4aac29f（10-28 の push）の windows Debug が `TypedPitchStepTests` 2 本で赤・他は巻き添え。HEAD のローカル full は緑＝NoteStepper.Words.cs はその後 3 commit 動いた。次の push で見る。
+- **OMR #13（cue の大きさ）は question**＝§1.0 ⒜。終了時 full **13673 / 0 / 2**（`-End p1034 -DiffBase 0a602da21`・Core '+' 154 行 / LILYPOND-REF 3 / LILYSHARP-OWN 0・門は全部 OK・§1 現在便 18,359 字＝**次便は §1.0 の閉じた段落を先に落とすこと**）。
+
 ## 以下は第1033セッションの経緯
 
 ### 1.1 第1033セッション（2026-10-28・YT-DELL2）
