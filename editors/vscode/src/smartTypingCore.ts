@@ -209,7 +209,8 @@
 //    after it (`c d e r` + ' ' → `c d e r | `; owner request 2026-10-14) — only at
 //    the end of what is being written (nothing but '}' after the caret on its line),
 //    only when the bar comes to EXACTLY the meter, and only where every event of it
-//    can be counted for sure: notes, rests, chords and slash notes, their durations
+//    can be counted for sure: notes, rests, chords, shape-chord items (`chord(Cmaj7)1`,
+//    `diagram(G 320003)2`) and slash notes, their durations
 //    and dots carried from the bar before as the compiler carries them (reset to a
 //    quarter at each block), the meter from the last `time` in force. Anything the
 //    count cannot be sure of — a tuplet, grace or voice block, a phrase reference, a
@@ -259,6 +260,25 @@ const NOTE_TOKEN = /^[a-g][a-z]*[',]*/;
 // every caller checks that a word character does NOT follow, so `clef`, `bass`
 // and `rightHand` can never pose as notes.
 const NOTE_EVENT = /^(?:[a-g](?:isis|eses|is|es)?[',]*|[rsR])(?:[0-9]+\.*)?/;
+
+/** Where the `chord(…)` / `diagram(…)` ITEM beginning at `i` — a chord from a shape,
+ * GRAMMAR §8, whose tail is a chord's: duration, dots, post-events — has its `)`: just
+ * past it. -1 when no item begins there: another word, an `@chord(…)` mark's word, or an
+ * item still unclosed before `end` (the walk reads that as the barrier it always did).
+ * The '(' may follow the word after a space, as the parser allows; a symbol's own
+ * `(…)` nests inside (`chord(C7(b9) x32310)`). */
+function shapeItemClose(text: string, i: number, end: number): number {
+    const word = text[i] === 'c' ? 'chord' : text[i] === 'd' ? 'diagram' : null;
+    if (!word || !text.startsWith(word, i) || text[i - 1] === '@' || isWordChar(text[i - 1])) { return -1; }
+    let j = i + word.length;
+    while (j < end && (text[j] === ' ' || text[j] === '\t')) { j++; }
+    if (text[j] !== '(') { return -1; }
+    for (let depth = 0; j < end; j++) {
+        if (text[j] === '(') { depth++; }
+        else if (text[j] === ')' && --depth === 0) { return j + 1; }
+    }
+    return -1;
+}
 
 // ⚠️ PER-CHARACTER TESTS ARE CHARACTER COMPARISONS, NOT REGEXES. The walks below
 // look at every character of the block before the caret, and a regex `.test()`
@@ -987,6 +1007,22 @@ function* musicEvents(text: string, from: number, end: number, bareDurations = f
             i = chordEnd;
             continue;
         }
+        if (c === 'c' || c === 'd') {
+            // A shape-chord item `chord(F 133211)4` / `diagram(G 320003)2.`: a chord
+            // event, its parentheses its own like a chord's brackets (owner request
+            // 2026-10-31: the space after `chord(Cmaj7)1` wrote no bar line, the word
+            // read as a barrier). Unclosed, it falls through to the barrier below.
+            const close = shapeItemClose(text, i, end);
+            if (close >= 0) {
+                let j = close;
+                while (j < end && isOctaveMark(text[j])) { j++; }            // reported LYS, still glued
+                while (j < end && (isDigit(text[j]) || text[j] === '.')) { j++; } // duration + dots
+                const itemEnd = skipAnnotations(text, j, end);
+                yield { note: true, start: i, end: itemEnd };
+                i = itemEnd;
+                continue;
+            }
+        }
         // The two anchored regexes are asked only of a character that could
         // begin their match — the first letter of a command, a pitch or a rest
         // — so an ordinary note pays for one exec and a barrier word for none.
@@ -1093,6 +1129,10 @@ function inStringOrComment(text: string, offset: number): boolean {
  * spelling was removed 2026-08-28 and the parser reads that '(' as a slur, so the editor
  * has to as well or it silently stops closing a slur the compiler is expecting. */
 function isSlurOpen(text: string, offset: number): boolean {
+    // The '(' of a shape-chord item being typed — `chord(`, `diagram (` — opens the item's
+    // own parentheses (reserved words in music; the parser lets a space stand before it).
+    const item = /(?:^|[^@A-Za-z0-9_])(?:chord|diagram)[ \t]*$/.test(text.slice(Math.max(0, offset - 16), offset));
+    if (item) { return false; }
     const prev = text[offset - 1];
     if (prev === undefined || /\s/.test(prev) || prev === '|' || prev === '>') { return true; }
     let j = offset - 1;
@@ -1115,7 +1155,7 @@ function slurAnchorAt(text: string, offset: number)
         if (!event.note || postEventEnd(text, event) < offset) { continue; }
         if (event.start > offset) { return null; } // between events
         const slots = noteSlots(text, event.start, event.end);
-        if (slots && text[event.start] === '<'
+        if (slots && (text[event.start] === '<' || slots.shape)
             && offset > event.start && offset < slots.marksEnd) { return 'member'; }
         // Past the core the caret is among the note's annotations, and an
         // unclosed '(' there that is GLUED TO A NAME is an argument list being
@@ -1233,8 +1273,8 @@ function measureEvents(text: string, at: number): MeasureEvent[] {
         running = digits ? parseInt(digits, 10) : running;
         events.push({
             start: event.start, end: event.end, core: slots.coreEnd,
-            // A slash note has no pitch either, but it is a NOTE to a beam.
-            duration: running, rest: slots.octave === null && text[event.start] !== '/',
+            // A slash note has no pitch either, but it is a NOTE to a beam — a shape item too.
+            duration: running, rest: slots.octave === null && !slots.shape && text[event.start] !== '/',
         });
     }
     return events;
@@ -1470,13 +1510,21 @@ export function slurClosePlan(text: string, offset: number): FixPlan | null {
  * go (null for a rest, which takes none), where the marks already there END —
  * which is also where the duration starts — where its digits end, and where its
  * CORE does (pitch, marks, duration and dots, but NOT its annotations). null
- * when the event is not something these slots apply to. */
-interface NoteSlots { octave: number | null, marksEnd: number, digitsEnd: number, coreEnd: number }
+ * when the event is not something these slots apply to. `shape`: a `chord(…)` /
+ * `diagram(…)` item, whose parentheses are its own like a chord's brackets — a
+ * digit or a '(' typed inside them is the shape's, not the item's — and which
+ * takes no octave mark (the shape says where it sounds), so `octave` is null. */
+interface NoteSlots { octave: number | null, marksEnd: number, digitsEnd: number, coreEnd: number, shape?: true }
 
 function noteSlots(text: string, start: number, end: number): NoteSlots | null {
     let octave: number | null = null;
     let marksEnd: number;
-    if (text[start] === '<') {
+    let shape: true | undefined;
+    const itemClose = text[start] === 'c' || text[start] === 'd' ? shapeItemClose(text, start, end) : -1;
+    if (itemClose >= 0) {
+        marksEnd = itemClose;
+        shape = true;
+    } else if (text[start] === '<') {
         const arpeggio = text[start + 1] === '<';
         let j = start + (arpeggio ? 2 : 1);
         for (let depth = 0; j < end; j++) {
@@ -1503,7 +1551,7 @@ function noteSlots(text: string, start: number, end: number): NoteSlots | null {
     while (digitsEnd < end && isDigit(text[digitsEnd])) { digitsEnd++; }
     let coreEnd = digitsEnd;
     while (coreEnd < end && text[coreEnd] === '.') { coreEnd++; }
-    return { octave, marksEnd, digitsEnd, coreEnd };
+    return shape ? { octave, marksEnd, digitsEnd, coreEnd, shape } : { octave, marksEnd, digitsEnd, coreEnd };
 }
 
 /** The note event the caret at `offset` is ON, with its slots — or null when the
@@ -1527,7 +1575,7 @@ function noteAtCaret(text: string, offset: number, throughMarks = false)
         // `@text("x")` is the `.up` placement, not an augmentation dot.
         const far = throughMarks && !insideAnnotationArgs(text, slots.coreEnd, offset)
             ? postEventEnd(text, event) : slots.coreEnd;
-        const onIt = text[event.start] === '<'
+        const onIt = text[event.start] === '<' || slots.shape
             ? offset === event.start
                 || (offset >= slots.marksEnd && offset <= far)
             : offset >= event.start && offset <= far;

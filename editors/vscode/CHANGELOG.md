@@ -18,6 +18,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   chord symbols.
 - **The preview lights a `chord(…)` / `diagram(…)` item's notes with the caret anywhere on the
   item** — inside its parentheses and on its duration too; only its word lit them before.
+- **A `chord(…)` / `diagram(…)` item is a chord to the typing aids**: the space after the item
+  that fills its bar writes the bar line (`chord(Cmaj7)1` + space → `chord(Cmaj7)1 | `; the word
+  stopped the count before), a digit at its ends is its duration and one inside the parentheses
+  the shape's, a slur, tie, beam or `@` typed on it goes to its end, and the `(` of `chord(` is
+  the item's own, not a slur's.
 - **Ctrl+Shift+Up / Down on an `@diagram(…)` keep walking with the caret just past its `)`** —
   where the editor leaves the caret after Up wrote the shape into a bare `@diagram`; the second
   press did nothing there.

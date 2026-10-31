@@ -437,6 +437,30 @@ describe('annotations (rule 27, 29)', () => {
     });
 });
 
+describe('a shape-chord item — chord(…), diagram(…) — is a chord to the rules, its parentheses its brackets', () => {
+    it('a digit inside the parentheses is the shape\'s; at the item\'s ends it is the duration (rules 16–18)', () => {
+        typed('chord(F 13321‸)4', '1', 'chord(F 133211‸)4');
+        typed('chord(F 133211)4‸', '8', 'chord(F 133211)8‸');
+        typed('‸chord(F 133211)4', '2', '‸chord(F 133211)2');
+        typed('diagram(G 320003)‸', '4', 'diagram(G 320003)4‸');
+    });
+    it('its ( is the item\'s own, not a slur\'s, and its ) just closes it', () => {
+        typed('chord‸ a4 b', '(', 'chord(‸) a4 b');
+        typed('c4 diagram ‸', '(', 'c4 diagram (‸)');
+        typed('a4 chord(F 133211‸', ')', 'a4 chord(F 133211)‸');
+    });
+    it('a slur, a tie, a beam and an annotation hang on it as on a chord', () => {
+        typed('chord(F 133211)4‸ a4', '(', 'chord(F 133211)4(‸ a4)');
+        typed('a4‸ chord(G 320003)4', '(', 'a4(‸ chord(G 320003)4)');
+        typed('‸chord(F 133211)4 c', '~', 'chord(F 133211)4~‸ c');
+        typed('chord(G)8‸ a8', '[', 'chord(G)8[‸ a8]');
+        typed('chord(F 133211)4~‸', '@', 'chord(F 133211)4@‸~');
+    });
+    it('an octave mark is typed as pressed: the item takes none', () => {
+        typed('chord(F 133211)4‸', "'", 'chord(F 133211)4\'‸');
+    });
+});
+
 describe('the canonical order of a note\'s marks (rule 26)', () => {
     it('a [ on a note that already opens a slur goes inside the (, before the ~', () => {
         typed('c8(~‸ d', '[', 'c8([‸~ d]');
@@ -508,6 +532,17 @@ describe('a space after the note that fills its bar writes the bar line (rule 32
         typed('section A { c2. 8 8~‸', ' ', 'section A { c2. 8 8~ | ‸');
         typed('section A { 8 8 8 8 8 8 8 8‸', ' ', 'section A { 8 8 8 8 8 8 8 8 ‸');        // nothing to repeat: LYS0016
         typed('section A { <<c e g>>2 2‸', ' ', 'section A { <<c e g>>2 2 ‸');           // after an arpeggio: LYS0016
+    });
+    it('32. counts a shape-chord item — chord(…), diagram(…) — as the chord it is (owner request 2026-10-31)', () => {
+        typed('section A { chord(Cmaj7)1‸', ' ', 'section A { chord(Cmaj7)1 | ‸');
+        typed('section A { chord(F 133211)2 diagram(G 320003)2‸', ' ', 'section A { chord(F 133211)2 diagram(G 320003)2 | ‸');
+        typed('section A { chord(C7(b9) x32310)2. c8 d‸', ' ', 'section A { chord(C7(b9) x32310)2. c8 d | ‸');   // a symbol's own parentheses
+        typed('section A { c4 d chord(G)2@f‸', ' ', 'section A { c4 d chord(G)2@f | ‸');
+        typed('section A { chord(G)4 4 2‸', ' ', 'section A { chord(G)4 4 2 | ‸');       // bare durations repeat it
+        typed('section A { chord (G)1‸', ' ', 'section A { chord (G)1 | ‸');              // the '(' after a space
+        typed('section A { chord(G)2 d‸', ' ', 'section A { chord(G)2 d | ‸');            // the d carries the half
+        typed('section A { chord(G)2 d4‸', ' ', 'section A { chord(G)2 d4 ‸');            // 3/4: not full
+        typed('section A { c4@chord(G) d e f‸', ' ', 'section A { c4@chord(G) d e f | ‸');  // the MARK is its note's
     });
     it('32. a percent mark is its bar: the space after it writes the bar line, so % % % leaves % | % | % |', () => {
         typed('section A { c d e f | %‸', ' ', 'section A { c d e f | % | ‸');
