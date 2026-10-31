@@ -774,27 +774,25 @@ internal static partial class SharedRenderer
                 // barlines around the words (maintainer feedback: the short
                 // ticks read as stray marks); a chords-only grid keeps the
                 // short ticks the chord symbols hang on.
-                // ★ EVERY chords row of a chords-only grid is a cell (MultiStaffScore
-                // .IsGridBarlineRow, 2026-11-01); the meter is engraved on the FIRST grid row.
-                if (leadSheet && score.IsGridBarlineRow(globalIdx))
+                // ★ ONE GRID PER SYSTEM, drawn by the FIRST grid row: its bar lines run from
+                // that row's cell top down to the LAST grid row's cell bottom — a chords-only
+                // sheet's second chords row stands inside the same bars (MultiStaffScore
+                // .IsGridBarlineRow; owner 2026-11-01: a line's bars must not break between
+                // the rows), and the meter is centred in that whole span.
+                if (leadSheet && globalIdx == barlineRowIdx)
                 {
                     // The grid row is "a staff with the lines removed": its
                     // barlines run the ordinary staff height — extended by one
                     // verse-spacing per extra stacked verse on a lyric row —
                     // whether the grid carries words or chord symbols.
-                    // The bars start at the band top — lifted, on a lyrics row, to where the
-                    // centred band's top piece puts them (LyricGridBarTopAboveBandTop).
-                    double rowTopY = LayoutUtilities.StaffTopYUp(system, globalIdx)
-                        + MultiStaffLayouter.LyricGridBarTopAboveBandTop(score, staff, globalIdx, StaffHeight);
-                    // ⚠️ ONE EXTENT WITH THE ROW'S SKYLINE (2026-10-31): a lyrics row's band
+                    // ⚠️ ONE EXTENT WITH THE ROWS' SKYLINES (2026-10-31): a lyrics row's band
                     // is MultiStaffLayouter.LyricGridBand; a chords-only grid's cell is
                     // ChordNameEngraver.GridCellHeight, which grows to enclose the line's
-                    // diagrams (owner's decision A) — the same items the skyline measured.
-                    double h = staff.IsLyricsTextRow
-                        ? LyricGridRowHeight(score, layout, system, staff, globalIdx, StaffHeight)
-                        : ChordNameEngraver.GridCellHeight(score.TextMetrics, StaffHeight,
-                            GridRowSymbols(score.TextMetrics, layout, system, globalIdx));
-                    // The meter is centred in the CELL — a cell a diagram deepened included
+                    // diagrams (owner's decision A) — the same items the skylines measured —
+                    // and the span is every grid row's cell of this system (GridCellSpan).
+                    var (rowTopY, gridBottomY) = GridCellSpan(score, layout, system, StaffHeight);
+                    double h = rowTopY - gridBottomY;
+                    // The meter is centred in the grid — a cell a diagram deepened included
                     // (owner's request 2026-11-01).
                     double meterH = h;
                     // The grid OPENS each line with a bar — the staff's left-edge
@@ -852,8 +850,6 @@ internal static partial class SharedRenderer
                     // before a line that opens with one (GetSystemEndTimeChange, the width
                     // LineEndCourtesyWidth reserved). Until then the header's 3/2 widened the
                     // bars and showed nothing.
-                    if (globalIdx != barlineRowIdx)
-                        continue;   // a second cell row: bars only, the meter is the first row's
                     double meterY = rowTopY - meterH / 2 + StaffMiddleLineDrop;
                     var startTimeChange = GetSystemStartTimeChange(staff, system);
                     var prefixMeter = isFirstSystem ? score.TimeSignature : startTimeChange?.NewTime;

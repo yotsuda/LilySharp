@@ -104,6 +104,35 @@ internal static partial class SharedRenderer
         return double.IsInfinity(top) ? flat : band.AboveFirstVerse + (top - bottom) + band.BelowLastVerse;
     }
 
+    /// <summary>
+    /// One system's grid as ONE span (page Y-up): the first grid row's cell top down to the
+    /// last grid row's cell bottom, over every row <c>MultiStaffScore.IsGridBarlineRow</c>
+    /// names that this system places. A lyrics row's cell is its centred band around its
+    /// drawn verses (<see cref="LyricGridRowHeight"/>, lifted by
+    /// <c>LyricGridBarTopAboveBandTop</c>); a chords row's is
+    /// <c>ChordNameEngraver.GridCellHeight</c> — each the extent its skyline carries, so the
+    /// bars drawn through the gap between two rows' cells cross nothing but that gap.
+    /// </summary>
+    private static (double Top, double Bottom) GridCellSpan(
+        MultiStaffScore score, ScoreLayout layout, SystemLayout system, double nominalStaffHeight)
+    {
+        double top = double.NegativeInfinity, bottom = double.PositiveInfinity;
+        foreach (var (_, staff, idx) in score.EnumerateStaves())
+        {
+            if (!score.IsGridBarlineRow(idx) || !StaffPresentInSystem(system, idx))
+                continue;
+            double cellTop = LayoutUtilities.StaffTopYUp(system, idx)
+                + MultiStaffLayouter.LyricGridBarTopAboveBandTop(score, staff, idx, nominalStaffHeight);
+            double cellHeight = staff.IsLyricsTextRow
+                ? LyricGridRowHeight(score, layout, system, staff, idx, nominalStaffHeight)
+                : ChordNameEngraver.GridCellHeight(score.TextMetrics, nominalStaffHeight,
+                    GridRowSymbols(score.TextMetrics, layout, system, idx));
+            top = Math.Max(top, cellTop);
+            bottom = Math.Min(bottom, cellTop - cellHeight);
+        }
+        return (top, bottom);
+    }
+
     /// <summary>Every chord symbol a grid row draws on <paramref name="system"/>, as
     /// <c>ChordNameEngraver.GridCellHeight</c> reads it to size the cell — its diagram and
     /// its name's ink top; the symbols are the ones the skyline measured (RowSkylines).</summary>

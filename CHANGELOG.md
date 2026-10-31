@@ -22,9 +22,9 @@ workflow attaches that section to the GitHub Release verbatim.
   tallest name's ink has over it; lines without a diagram keep the four-space cell. The
   meter is centred in the cell. (Owner's decision over LilyPond's picture of a FretBoards
   line hanging under a bar-less ChordNames line.)
-- `[render]` **Every chords row of a chords-only grid is a cell**: a second row
-  (`chords prog` over `chords prog as roman`) gets its own bar lines; the meter stays on the
-  first. **A track placed twice on the same tuning draws its diagrams once**, under the LAST
+- `[render]` **A chords-only grid with two chords rows is one grid**: the bar lines run
+  unbroken from the first row's cell top to the last row's cell bottom (`chords prog` over
+  `chords prog as roman`), and the meter is centred in that span. **A track placed twice on the same tuning draws its diagrams once**, under the LAST
   of its rows — name, name, diagram; the rows above print the names alone (a row over a
   differently tuned part is a different diagram and still draws).
 - `[render]` **The words of a lyrics grid stand centred between the bar ends**: the four-space

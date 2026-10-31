@@ -2376,9 +2376,10 @@ staff the rows stack as LilyPond stacks a staffless system: the first row anchor
 each row under it is spaced by its own ink — a lyrics row stands 5.5 staff spaces under the
 chord row's baseline and never closer than 0.5 to the names and their diagrams, so a diagram
 pushes the words (and the grid's bar lines) down under it; on a chords-only grid the cell's
-bar lines run down past the diagrams on that line instead, every chords row is a cell of its
-own, and a track placed twice on the same tuning (`chords prog` over `chords prog as roman`)
-draws its diagrams under the last of its rows only — name, name, diagram.
+bar lines run down past the diagrams on that line instead; two chords rows stand inside one
+unbroken grid, and a track placed twice on the same tuning (`chords prog` over
+`chords prog as roman`) draws its diagrams under the last of its rows only — name, name,
+diagram.
 
 An entry may also be a **Roman degree of the key** at that bar, which is how a
 progression is written once and follows the key:

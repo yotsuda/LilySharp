@@ -196,33 +196,42 @@ public sealed class RowsOnlyDiagramStackTests
     }
 
     /// <summary>A track placed twice on a chords-only sheet (<c>chords prog</c> over
-    /// <c>chords prog as roman</c>): every row is a cell with its own bar lines, the meter
-    /// stands on the first alone, and the diagram draws once, on the LAST row — name, name,
-    /// diagram (owner's requests 2026-11-01); the same track on the same tuning is the same
-    /// diagram.</summary>
+    /// <c>chords prog as roman</c>): ONE grid — the bar lines run unbroken from the first
+    /// row's cell top to the last row's cell bottom, the meter stands centred in that span —
+    /// and the diagram draws once, under the LAST row: name, name, diagram (owner's requests
+    /// 2026-11-01); the same track on the same tuning is the same diagram.</summary>
     [Fact]
-    public void ChordsOnlyGrid_ATrackPlacedTwice_EveryRowIsACell_AndTheDiagramDrawsOnceOnTheLastRow()
+    public void ChordsOnlyGrid_ATrackPlacedTwice_OneUnbrokenGrid_AndTheDiagramDrawsOnceOnTheLastRow()
     {
         var g = RenderedGeometry.Render(Book(WithDiagram, "chords prog  chords prog as roman"));
-        var cells = g.Barlines.GroupBy(b => Math.Round(b.Y, 3)).OrderBy(c => c.Key).ToList();
-        Assert.Equal(2, cells.Count);
-        var first = cells[0].First();
-        var second = cells[1].First();
-        // The first cell is the bare four-space cell; the second encloses the diagram.
-        Assert.Equal(4.0, first.Height, 6);
-        Assert.True(second.Height > 4.0 + 4.0, $"the second cell ({second.Height:F3}) should enclose the diagram");
-        Assert.True(second.Y >= first.Y + first.Height - 1e-6,
-            $"the second cell starts at {second.Y:F3}, inside the first's [{first.Y:F3}, {first.Y + first.Height:F3}]");
+        var control = RenderedGeometry.Render(Book(Plain, "chords prog"));
+        // One set of bars: every bar line of the system has the one top and the one height.
+        var bar = g.Barlines[0];
+        foreach (var b in g.Barlines)
+        {
+            Assert.Equal(bar.Y, b.Y, 6);
+            Assert.Equal(bar.Height, b.Height, 6);
+        }
+        var (top, bottom) = Span(bar);
+        // Both rows' names stand inside the bars; the diagram's feet are inside too.
+        double names = g.ChordSymbolRuns.Where(t => Math.Abs(t.FontSize - g.ChordSymbolRuns.Max(r => r.FontSize)) < 1e-9).Min(t => t.Y);
+        double roman = g.ChordSymbolRuns.Max(t => t.Y);
+        Assert.True(top < names && roman < bottom, $"the rows ({names:F3}, {roman:F3}) should stand inside the bars [{top:F3}, {bottom:F3}]");
+        double feet = DiagramFeet(g);
+        Assert.True(feet < bottom, $"the diagram's feet ({feet:F3}) should stand inside the bars (bottom {bottom:F3})");
+        Assert.True(bar.Height > 4.0 + 4.0 + 4.0, $"the grid ({bar.Height:F3}) should span two rows and the diagram");
         // One diagram, under the roman row: its x x o marks once, below the second row's names.
         var marks = g.Texts.Where(t => t.Role == TextRole.FretFrame).ToList();
         Assert.Equal(3, marks.Count);
-        double roman = g.ChordSymbolRuns.Max(t => t.Y);
         Assert.True(marks.All(m => m.Y > roman), "the diagram should hang under the roman row's names");
-        // One meter (the staff-size glyph; the header tempo's note is the smaller one).
-        Assert.Single(g.Glyphs.Where(gl => Math.Abs(gl.FontSize - 4.0) < 1e-9));
-        // ...and the second row's names stand inside its own cell.
-        Assert.True(second.Y < roman && roman < second.Y + second.Height,
-            $"the roman row's baseline {roman:F3} is outside its cell [{second.Y:F3}, {second.Y + second.Height:F3}]");
+        // One meter, centred in the whole span — the same offset from the middle as on the
+        // one-row sheet.
+        var meters = g.Glyphs.Where(gl => Math.Abs(gl.FontSize - 4.0) < 1e-9).ToList();
+        var meter = Assert.Single(meters);
+        var plainBar = control.Barlines[0];
+        var (pt, pb) = Span(plainBar);
+        double plainMeterY = control.Glyphs.Where(gl => Math.Abs(gl.FontSize - 4.0) < 1e-9).Single().Y;
+        Assert.Equal(plainMeterY - (pt + pb) / 2, meter.Y - (top + bottom) / 2, 6);
     }
 
     [Fact]
