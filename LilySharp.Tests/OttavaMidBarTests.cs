@@ -124,6 +124,23 @@ public class OttavaMidBarTests
     }
 
     /// <summary>
+    /// …and inside a tuplet the note's length is the tuplet member's SCALED one: the members
+    /// after the end are back at written pitch. Until session 1034 the end read the length of
+    /// the last note BEFORE the tuplet (the tuplet funnel did not record its members as the
+    /// last item added), so `tuplet 3/2 { d'''8@!15ma c''8 b'8 }` went on transposing c'' and b'
+    /// (OMR request 2026-10-29 #11).
+    /// </summary>
+    [Fact]
+    public void AnEndInsideATuplet_StopsAfterItsOwnMember()
+    {
+        var shifted = Heads(Svg("a,,4@8vb tuplet 3/2 { e,8@!8vb a,8 e,8 } r2 | a,,4 e, a, e, |"));
+        var plain = Heads(Svg("a,,4 tuplet 3/2 { e,8 a,8 e,8 } r2 | a,,4 e, a, e, |"));
+        Assert.Equal(8, shifted.Length);
+        for (int i = 0; i < 8; i++)
+            Assert.Equal(i < 2 ? plain[i].Y - 3.5 : plain[i].Y, shifted[i].Y, 2);
+    }
+
+    /// <summary>
     /// The octavation stops at the END of the note the end is written on, not at its start: a
     /// second voice's notes sounding under that note are under the line too (the ottava is the
     /// staff's), as LilyPond's <c>\ottava #0</c> after the note says.

@@ -258,6 +258,7 @@ public sealed partial class MeasureCollector
         {
             _clock.CountReach();
             builder.AddItemWithoutDuration(item);
+            _v.LastAddedItem = item;
             return default;
         }
         return AddItemWithoutDurationInSpanAsync(builder, item);
@@ -267,6 +268,7 @@ public sealed partial class MeasureCollector
     {
         await _clock.ReachAsync(builder);
         builder.AddItemWithoutDuration(item);
+        _v.LastAddedItem = item;
     }
 
     /// <summary>Reaches the builder's moment, then <see cref="MeasureBuilder.AddDuration"/>.</summary>
@@ -315,8 +317,13 @@ public sealed partial class MeasureCollector
         public CollectionCursor Cursor;
 
         // The item this branch added last — the note whose marks are read next, for the
-        // ottava end that includes its note (its length; MeasureCollector.Annotations). Per
-        // branch: inside a span the voices take turns, and another voice's last item is not it.
+        // ottava end that includes its note (its length; MeasureCollector.Annotations) and the
+        // bare @diagram that frets it. Per branch: inside a span the voices take turns, and
+        // another voice's last item is not it. ⚠️ Written by BOTH funnels that add an item: a
+        // tuplet's members come through AddItemWithoutDuration, and while that one did not
+        // write it (until session 1034) an `@!8va` inside a tuplet read the length of the
+        // last note BEFORE the tuplet, and went on transposing the members after it (OMR
+        // request 2026-10-29 #11, `tuplet 3/2 { d'''8@!15ma c''8 b'8 }`).
         public MusicItem? LastAddedItem;
 
         // The relative-octave chain plus the part transpose that composes on top of
