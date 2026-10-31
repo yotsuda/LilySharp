@@ -2886,8 +2886,9 @@ diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the
   `diagram(` the completion offers the chord symbols `@chord(` does. Hover on a symbol-less item
   names its chord (*this shape is **C***), and the quick fix writes the name in. Right-click →
   *Convert to Chord Notes <…>* writes the item out as the `<…>` chord it plays, with its octave
-  marks and string numbers — a `chord(…)` item's name kept as `@chord(F)`, no diagram; the file
-  must sound the same afterwards, or nothing changes. The way back is right-click on the `<…>`
+  marks and string numbers — a `chord(…)` item's name kept as a bare `@chord` (`chord(F)1` →
+  `<f a c>1@chord`; `@chord(F)` only when the notes would name it otherwise), no diagram; the
+  file must sound the same afterwards, or nothing changes. The way back is right-click on the `<…>`
   chord → *Convert to Chord Symbol chord(…)*: named by its `@chord(NAME)`, else from its notes;
   `chord(NAME)` when its close voicing is the notes, else `chord(NAME SHAPE)` with the shape a hand
   holds them by (on a fretted part, or when a diagram was drawn); its `@chord`/`@diagram` marks go,

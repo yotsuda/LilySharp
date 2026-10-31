@@ -64,8 +64,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   Strum after strum, the name and diagram stand where the chord changes and at each system's head.
 - **Right-click a `chord(…)` or `diagram(…)` item → "Convert to Chord Notes <…>"** writes it out
   as the chord it plays, with its octave marks and string numbers: `diagram(133211)4` becomes
-  `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4` (a `chord(…)` item keeps its name as `@chord(F)`); the file
-  sounds the same, or nothing changes. Also in the light bulb and the command palette.
+  `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4` (a `chord(…)` item keeps its name as a bare `@chord`:
+  `chord(F)1` → `<f a c>1@chord`); the file sounds the same, or nothing changes. Also in the light
+  bulb and the command palette.
 - **Add Guitar Diagram and Convert to Chord Notes work from the light bulb (Ctrl+.)**: they refused
   with "put the caret on a chord" there, since the document was looked up by a differently
   spelled URI (`c:` against `c%3A`). Split Sections to Match had the same fault.

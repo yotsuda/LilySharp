@@ -96,8 +96,9 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[editor]` **Right-click a `chord(…)` or `diagram(…)` item → "Convert to Chord Notes <…>".** The item
   becomes the `<…>` chord it plays — its notes lowest first, with string numbers and the octave
   marks the frame there needs: `diagram(133211)4` → `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4`. A
-  `chord(…)` item's name stays as `@chord(F)`; the diagram does not. The file must sound the same
-  afterwards, or nothing changes. Not inside `<< >>`.
+  `chord(…)` item's name stays as a bare `@chord` (`chord(F)1` → `<f a c>1@chord`; the symbol
+  goes into the mark only when the notes would name the chord otherwise); the diagram does not.
+  The file must sound the same afterwards, or nothing changes. Not inside `<< >>`.
 - `[page]` **`chordDiagrams none` draws no `@diagram` either**: it drew one there while every other
   diagram stayed off. The same in the `.ly` twin and MusicXML.
 - `[lang]` **A chord item with no shape, reviewed** (owner's review):

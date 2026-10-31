@@ -559,7 +559,9 @@ public class ShapeChordItemTests
 
     /// <summary>Right-click → "Convert to chord notes" (owner's request 2026-10-31): the item
     /// becomes the &lt;…&gt; chord it plays, octave marks read off the walk, what it showed kept
-    /// in one word — and the file sounds the same.</summary>
+    /// as a bare @chord (owner's decision the same day: `&lt;f a c&gt;1@chord`, not `@chord(F)`;
+    /// the symbol goes in only when the bare mark would print another name) — and the file
+    /// sounds the same.</summary>
     [Fact]
     public void AnItem_ConvertsToTheChordItPlays_AndSoundsTheSame()
     {
@@ -571,13 +573,19 @@ public class ShapeChordItemTests
         }
         string guitar = Book("instrument guitar", "c4 diagram(133211)4 chord(F 133211)4 e4 | chord(x32010)2 g2 |");
         // Relative mode: each member read from the chord's first note; no diagram carried over,
-        // a chord(…) item's name kept (its symbol alone: a shape there would draw a diagram).
+        // a chord(…) item's name kept as the bare mark (the notes name it F, as the item did).
         Assert.Equal(@"<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4", Convert(guitar, "diagram("));
-        Assert.Equal(@"<f\6 c\5 f'\4 a'\3 c'\2 f''\1>4@chord(F)", Convert(guitar, "chord(F"));
+        Assert.Equal(@"<f\6 c\5 f'\4 a'\3 c'\2 f''\1>4@chord", Convert(guitar, "chord(F"));
         Assert.EndsWith(">2@chord", Convert(guitar, "chord(x"));
         // A piano's usual voicing, no string numbers; the name kept.
         string piano = Book("clef treble", "c'4 chord(C)4 chord(G7)2 |");
-        Assert.Equal("<c e g>4@chord(C)", Convert(piano, "chord(C"));
+        Assert.Equal("<c e g>4@chord", Convert(piano, "chord(C"));
+        Assert.Equal("<g b d f>2@chord", Convert(piano, "chord(G7"));
+        // The page prints the same name after as before — the bare mark's reading of the notes.
+        string converted = ShapeChordConverter.ToNotes(piano, piano.IndexOf("chord(G7", StringComparison.Ordinal)) is { Replacement: { } r, Start: var s, End: var e }
+            ? piano[..s] + r + piano[e..] : throw new InvalidOperationException();
+        Assert.Equal(Collected(piano).ChordNames.OrderBy(c => c.SourcePosition).Select(c => c.ChordText),
+            Collected(converted).ChordNames.OrderBy(c => c.SourcePosition).Select(c => c.ChordText));
         // Not on an item, or inside << >>: nothing, and why.
         Assert.NotNull(ShapeChordConverter.ToNotes(guitar, guitar.IndexOf("e4", StringComparison.Ordinal)).Error);
         string spread = Book("instrument guitar", "<< diagram(C x32010) >>2 r2 |");

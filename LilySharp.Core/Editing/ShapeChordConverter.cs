@@ -35,9 +35,12 @@ namespace LilySharp.Core.Editing;
 /// <item>Their octave marks are read off the same walk the octave-mode converter makes
 /// (<see cref="OctaveModeConverter.Walk"/>): each new pitch is forced to the octave the item
 /// played it at, and the marks are what that took from the frame — relative or absolute alike.</item>
-/// <item>The NAME a <c>chord(…)</c> item printed stays: <c>&lt;…&gt;@chord(F)</c>. The diagram does
-/// not (owner's decision 2026-10-31: the notes are what was asked for, and a diagram left over
-/// them would not follow an edit); "Add Guitar Diagram" goes back.</item>
+/// <item>The NAME a <c>chord(…)</c> item printed stays, as a bare <c>&lt;…&gt;@chord</c> — named from
+/// the notes, which is what the item was (owner's decision 2026-10-31: not <c>@chord(F)</c>); only
+/// when the bare mark would print another name than the item did is the symbol kept in it,
+/// <c>@chord(F)</c>. The diagram does not stay (owner's decision the same day: the notes are what
+/// was asked for, and a diagram left over them would not follow an edit); "Add Guitar Diagram"
+/// goes back.</item>
 /// <item>The file must sound the same afterwards (<see cref="Semantics.PlayedNotes.Signature"/>),
 /// or nothing changes.</item>
 /// </list>
@@ -98,19 +101,20 @@ public static class ShapeChordConverter
 
         // The tail stays as written; what was seen comes after its duration, in one word.
         int end = item.Duration is { } duration ? duration.Span.End : close;
-        string mark = NameMark(source, item);
+        string? symbol = ShownSymbol(source, item, out bool showsName);
+        string mark = showsName ? "@chord" : "";
         string tailBeforeMark = source[close..end];
         string chordText = sb.ToString();
-        string Replacement(IReadOnlyList<int> marks)
+        string Replacement(IReadOnlyList<int> marks, string nameMark)
         {
             var r = new StringBuilder(chordText);
             for (int k = pitchAt.Count - 1; k >= 0; k--)
                 r.Insert(pitchAt[k].MarksAt, Marks(marks[k]));
-            return r + tailBeforeMark + mark;
+            return r + tailBeforeMark + nameMark;
         }
 
         // Each pitch's marks: the octave the item played it at, less what the frame gives it.
-        string candidate = source[..item.SourceStart] + Replacement(new int[notes.Count]) + source[end..];
+        string candidate = source[..item.SourceStart] + Replacement(new int[notes.Count], mark) + source[end..];
         var at = new Dictionary<int, int>();
         for (int k = 0; k < pitchAt.Count; k++)
             at[item.SourceStart + pitchAt[k].Start] = k;
@@ -130,12 +134,44 @@ public static class ShapeChordConverter
         if (conflict || marks.Any(m => m is null))
             return Fail("The item is played where its notes would need different octave marks - convert it by hand.");
 
-        string replacement = Replacement([.. marks.Select(m => m!.Value)]);
+        int[] octaveMarks = [.. marks.Select(m => m!.Value)];
+        string replacement = Replacement(octaveMarks, mark);
         string result = source[..item.SourceStart] + replacement + source[end..];
         // What the file plays — the MIDI, else the page (a file whose scores name their own forms).
-        if (Semantics.PlayedNotes.Signature(SyntaxTree.Parse(result)) != Semantics.PlayedNotes.Signature(tree))
+        string sound = Semantics.PlayedNotes.Signature(tree);
+        if (Semantics.PlayedNotes.Signature(SyntaxTree.Parse(result)) != sound)
             return Fail("Written as notes, the item would not sound the same - no changes made.");
+        // The bare @chord names the chord from its notes. When that is not the name the item
+        // printed, the symbol goes into the mark, so the page reads the same.
+        if (symbol != null && PrintedNames(SyntaxTree.Parse(result)) != PrintedNames(tree))
+        {
+            replacement = Replacement(octaveMarks, "@chord(" + symbol + ")");
+            result = source[..item.SourceStart] + replacement + source[end..];
+            if (Semantics.PlayedNotes.Signature(SyntaxTree.Parse(result)) != sound)
+                return Fail("Written as notes, the item would not sound the same - no changes made.");
+        }
         return new Result(item.SourceStart, end, replacement, null);
+    }
+
+    /// <summary>The chord names the page prints, score by score in source order — compared as a
+    /// whole before and after the conversion, since a note-attached mark's name stands at the
+    /// MARK's source position and the item's at the item's.</summary>
+    private static string PrintedNames(SyntaxTree tree)
+    {
+        var specs = Svg.Collector.RenderSpecParser.FindAll(tree);
+        IEnumerable<Svg.Collector.RenderSpec?> passes = specs.Count == 0
+            ? new Svg.Collector.RenderSpec?[] { null } : (IEnumerable<Svg.Collector.RenderSpec?>)specs;
+        var sb = new StringBuilder();
+        foreach (var spec in passes)
+        {
+            Svg.Model.MultiStaffScore score;
+            try { score = Svg.SvgGenerator.CollectScore(tree, spec); }
+            catch { continue; }
+            foreach (var name in score.ChordNames.OrderBy(c => c.SourcePosition))
+                sb.Append(name.ChordText).Append('\n');
+            sb.Append('\f');
+        }
+        return sb.ToString();
     }
 
     /// <summary>
@@ -389,21 +425,20 @@ public static class ShapeChordConverter
         return null;
     }
 
-    /// <summary>The NAME a <c>chord(…)</c> item printed, as the mark that prints it on a
-    /// <c>&lt;…&gt;</c> chord — <c>@chord(F)</c>, or a bare <c>@chord</c> for a symbol-less item
-    /// (named from the notes, as the item was) — and nothing for a <c>diagram(…)</c>: the
-    /// diagram is not carried over (owner's decision 2026-10-31), so a shape never follows the
-    /// symbol into the mark.</summary>
-    private static string NameMark(string source, ChordSyntax item)
+    /// <summary>The symbol a <c>chord(…)</c> item printed — <c>F</c> of <c>chord(F 133211)</c>, null
+    /// for a symbol-less item (named from its notes) — and whether the item showed a name at all
+    /// (<paramref name="showsName"/>): not a <c>diagram(…)</c>, whose diagram is not carried over
+    /// (owner's decision 2026-10-31), and not an item an <c>@chord</c> or <c>@diagram</c> already
+    /// draws instead of, which stays where it is.</summary>
+    private static string? ShownSymbol(string source, ChordSyntax item, out bool showsName)
     {
-        // An @chord or @diagram on the item draws instead of it, and stays where it is.
-        if (!item.ShowsName || item.Articulations.Any(a => a is MusicMarkSyntax { Name: "chord" or "diagram" }))
-            return "";
+        showsName = item.ShowsName && !item.Articulations.Any(a => a is MusicMarkSyntax { Name: "chord" or "diagram" });
+        if (!showsName)
+            return null;
         var spans = item.ShapeWordSpans;
-        string? symbol = spans.Count > 0 && source[spans[0].Start..spans[0].End] is var first
+        return spans.Count > 0 && source[spans[0].Start..spans[0].End] is var first
             && !ChordShapes.TryRead(first, out _, out _) && !Tablature.Tunings.Names.Contains(first)
             ? first : null;
-        return symbol is null ? "@chord" : "@chord(" + symbol + ")";
     }
 
     private static bool InGroup(SyntaxNode node)

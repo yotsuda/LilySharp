@@ -100,7 +100,7 @@ public class ChordRewriteLspTests
             TextDocument = new TextDocumentIdentifier { Uri = Uri },
             Offset = offset,
         });
-        Assert.Contains(@"<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>1@chord(F) |", Apply(text, response));
+        Assert.Contains(@"<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>1@chord |", Apply(text, response));
     }
 
     [Fact]
