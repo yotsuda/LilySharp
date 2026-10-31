@@ -3202,8 +3202,16 @@ internal static class OutsideStaffStacker
             // C (MEASURED, Lab sessions/p878/probe/mark: LilyPond 2.26.0 lifts it clear).
             int anchorStaff = LayoutUtilities.ResolveScoreGrobStaff(systems[sysIdx], m.StaffIndex);
             double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], anchorStaff);
-            double topLineUp = EngravingDefaults.StaffLinePositions(
-                staffLinesOf?.Invoke(anchorStaff) ?? EngravingDefaults.DefaultStaffLines)[^1] / 2.0;
+            // ⚠️ A TEXT ROW HAS NO TOP LINE: on a rows-only sheet the marks anchor on the top row
+            // (a chords row over a lyrics grid), whose quiet base stands under the five-line 2.0
+            // — and the tempo, not lifted by a chord under it, was left out of the pass, so the
+            // section label placed after it never cleared it (owner's report 2026-10-31,
+            // Downloads/lyrics.lys: the boxed "A" printed on the "♩ = 100"; a wide first
+            // syllable had pushed the chord off the tempo's column). A row's "line" is its
+            // refpoint: everything above it is the above pass's.
+            double topLineUp = IsTextRow(systems[sysIdx], anchorStaff) ? 0.0
+                : EngravingDefaults.StaffLinePositions(
+                    staffLinesOf?.Invoke(anchorStaff) ?? EngravingDefaults.DefaultStaffLines)[^1] / 2.0;
             if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.YUp < topLineUp)
                 continue;
             // The metronome mark's pair is its STENCIL's, piecewise like the draw:
@@ -3449,6 +3457,20 @@ internal static class OutsideStaffStacker
                 b[ti2] = b[ti2] with { YUp = b[ti2].YUp + (newRel - midUp - m.YUp) };
         }
         return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
+    }
+
+    /// <summary>Whether <paramref name="staffIndex"/> of <paramref name="system"/> is a text row —
+    /// a chords or lyrics row, a non-spaceable staff (<see cref="StaffAffinity.IsSpaceable"/>) —
+    /// rather than a staff with lines.</summary>
+    private static bool IsTextRow(SystemLayout system, int staffIndex)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty)
+            return false;
+        foreach (var g in system.StaffGroups)
+            foreach (var s in g.Staves)
+                if (s.StaffIndex == staffIndex)
+                    return !StaffAffinity.IsSpaceable(s.StaffAffinity);
+        return false;
     }
 
     /// <summary>

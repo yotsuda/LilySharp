@@ -108,6 +108,37 @@ public sealed class RowsOnlySectionTempoTests
         Assert.Contains("Slower", marks);
     }
 
+    /// <summary>On a rows-only sheet the section label clears the tempo under it (owner's report
+    /// 2026-10-31, Downloads/lyrics.lys: the boxed "A" printed on the "♩ = 100"). The tempo had
+    /// been left out of the outside-staff pass whenever no chord stood under it to lift it — a
+    /// wide first syllable pushes the first chord off the tempo's column — because its quiet
+    /// base on a text row stands under the five-line staff's top-line guard
+    /// (OutsideStaffStacker.PlaceMusicMarks, now IsTextRow).</summary>
+    [Theory]
+    [InlineData("one two three four | five six sev- en |")]            // the chord under the tempo
+    [InlineData("oneeeeeeeeeeeeeeeeee two | five six |")]              // the first chord pushed right
+    [InlineData("あいうえお | ほえほえ |")]                               // the owner's sheet
+    public void ASectionLabel_ClearsTheTempoUnderIt_OnARowsOnlySheet(string words)
+    {
+        string book = $$"""
+            tempo 100
+            time 4/4
+            key c major
+            chords prog { section A { Cmaj7 | Dm7 | } }
+            lyrics verse { section A { {{words}} } }
+            form { A }
+            score { chords prog  lyrics verse }
+            """;
+        var g = RenderedGeometry.Render(book);
+        var label = Assert.Single(g.Texts, t => t.Role == TextRole.Mark && t.Text == "A");
+        var tempo = Assert.Single(g.Texts, t => t.Role == TextRole.Tempo && t.Text == "= 100");
+        // Y grows downward: the label's baseline stands above the tempo's by at least the tempo's
+        // ink (its note), the pass's padding and the label's frame below its baseline — the
+        // arrangement the staffed sheet and the chords-only sheet have always had (3.97).
+        Assert.True(tempo.Y - label.Y > 3.5,
+            $"the label's baseline is {tempo.Y - label.Y:F2} over the tempo's; it printed on it");
+    }
+
     [Fact]
     public void ASectionPlayedTwice_PrintsItsTempoAtEachPass_OnARowsOnlySheet()
     {

@@ -100,6 +100,11 @@ workflow attaches that section to the GitHub Release verbatim.
   `chord(…)` item's name stays as a bare `@chord` (`chord(F)1` → `<f a c>1@chord`; the symbol
   goes into the mark only when the notes would name the chord otherwise); the diagram does not.
   The file must sound the same afterwards, or nothing changes. Not inside `<< >>`.
+- `[page]` **On a rows-only sheet the section label clears the tempo under it.** The boxed "A"
+  printed on the "♩ = 100" of a chords-and-lyrics sheet whenever no chord stood under the
+  tempo to lift it (a wide first syllable pushes the first chord off its column): the tempo's
+  quiet base on a text row stood under the five-line top-line guard of the outside-staff pass,
+  so the pass never saw it. A text row's guard is its refpoint now.
 - `[editor]` **Ctrl+Shift+PageUp / PageDown on a `chords` row entry walks the key's seventh
   chords** (`Cmaj7` → `Dm7` → `Em7` … `Bm7-5` in C major, stopping at I and at VII, from the
   degree the name's root stands on); Ctrl+Shift+Up / Down keep stepping the shape.
