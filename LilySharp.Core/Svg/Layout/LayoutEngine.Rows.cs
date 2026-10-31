@@ -211,6 +211,15 @@ internal sealed partial class LayoutEngine
         var firstSpaceable = new double[systemsArray.Length];
         var lastSpaceable = new double[systemsArray.Length];
         var firstSpaceableIndex = new int[systemsArray.Length];
+        // ...and from each of those two staves' top line down to its REFERENCE POINT — half a
+        // staff for a staff, the text baseline for a rows-only sheet's promoted first row
+        // (StaffLayout.RefpointBelowTop, MultiStaffLayouter.RefpointBelowTop's one home).
+        // ⚠️ THIS WAS THE NOMINAL HALF STAFF for every anchor until 2026-10-31, which was
+        // right while every spaceable element was a staff. A rows-only sheet's anchor is a
+        // chord row (page-layout-problem.cc:728-730), whose refpoint is 1.6 below its band
+        // top, and the room is between refpoints (:936-939).
+        var firstRefBelowTop = new double[systemsArray.Length];
+        var lastRefBelowTop = new double[systemsArray.Length];
         // The non-spaceable lines each system OPENS with, in placement order — the run
         // LilyPond hands to the previous block's chain (:948-990).
         var leading = new List<StaffLayout>[systemsArray.Length];
@@ -245,9 +254,10 @@ internal sealed partial class LayoutEngine
             firstSpaceableIndex[s] = firstStaff.StaffIndex;
             lastSpaceable[s] = -lastStaff.Y;
             leading[s] = alignment.Leading.ToList();
+            firstRefBelowTop[s] = firstStaff.RefpointBelowTop ?? _options.StaffHeight / 2.0;
+            lastRefBelowTop[s] = lastStaff.RefpointBelowTop ?? _options.StaffHeight / 2.0;
         }
 
-        double halfStaff = _options.StaffHeight / 2.0;
         // The pair spec a music system takes; a title between two systems would take
         // another (VerticalSpacingParameters.SelectSpec), which no lyric score reaches.
         double systemPadding = _options.VerticalSpacing.SystemSystem.Padding;
@@ -276,7 +286,7 @@ internal sealed partial class LayoutEngine
                 if (i + 1 < onPage.Length && !usable[index + 1]) continue;
 
                 // LilyPond's `last_spaceable_line_translation`.
-                double anchor = onPage[i].Y - lastSpaceable[index] - halfStaff;
+                double anchor = onPage[i].Y - lastSpaceable[index] - lastRefBelowTop[index];
                 if (i + 1 < onPage.Length)
                 {
                     // ...and `-solution_[spring_idx]`, the next system's FIRST spaceable
@@ -290,7 +300,8 @@ internal sealed partial class LayoutEngine
                     double nextUpExtent = index + 1 < perSystemExtents.Count
                         ? perSystemExtents[index + 1].upExtent : 0;
                     double nextFirst = firstSpaceable[index + 1];
-                    double room = anchor - (onPage[i + 1].Y - nextFirst - halfStaff);
+                    double nextRefBelowTop = firstRefBelowTop[index + 1];
+                    double room = anchor - (onPage[i + 1].Y - nextFirst - nextRefBelowTop);
 
                     var (lines, closingSpec, closingMin) = LeadingLinesOfSystem(
                         score, systemsArray, staffByIndex, index + 1,
@@ -298,7 +309,7 @@ internal sealed partial class LayoutEngine
                         staffSpanners, staffOutside);
 
                     ends[index] = new LooseLineSpacer.ChainEnd(
-                        room, systemPadding + nextUpExtent + nextFirst + halfStaff,
+                        room, systemPadding + nextUpExtent + nextFirst + nextRefBelowTop,
                         lines, closingSpec, closingMin);
                 }
                 else
@@ -591,6 +602,35 @@ internal sealed partial class LayoutEngine
                 up.Merge(textInk);
         }
         return up;
+    }
+
+    /// <summary>The pages with their systems replaced by <paramref name="systems"/>, in order —
+    /// the one array the annotation pass moved rows in (<see cref="ApplySolvedRowPositions"/>).
+    /// Identity when nothing differs.</summary>
+    private static ImmutableArray<PageLayout> PagesWithSystems(
+        ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems)
+    {
+        if (pages.IsDefaultOrEmpty || systems.IsDefaultOrEmpty)
+            return pages;
+        var builder = pages.ToBuilder();
+        int next = 0;
+        bool changed = false;
+        for (int p = 0; p < builder.Count; p++)
+        {
+            var onPage = builder[p].Systems;
+            if (onPage.IsDefaultOrEmpty) continue;
+            var replaced = onPage.ToBuilder();
+            for (int i = 0; i < replaced.Count && next < systems.Length; i++, next++)
+            {
+                if (!ReferenceEquals(replaced[i], systems[next]))
+                {
+                    replaced[i] = systems[next];
+                    changed = true;
+                }
+            }
+            builder[p] = builder[p] with { Systems = replaced.MoveToImmutable() };
+        }
+        return changed ? builder.MoveToImmutable() : pages;
     }
 
     /// <summary>

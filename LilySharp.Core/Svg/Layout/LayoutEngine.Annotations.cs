@@ -1872,12 +1872,20 @@ internal sealed partial class LayoutEngine
                 measuresByStaff, measures, ctx.VoicesByStaff),
             systemPadding: _options.VerticalSpacing.SystemSystem.Padding,
             fonts: ctx.Fonts);
+        // A lyrics row's grid bar lines are its ink (MultiStaffLayouter.LyricGridBand) — one
+        // extent for the band stack, the chain and the renderer.
+        Func<int, (double AboveFirstVerse, double BelowLastVerse)?>? gridBandOf = null;
+        if (ctx.MultiScore is { } gridScore && staffByIndex != null && gridScore.IsLeadSheet)
+            gridBandOf = idx => staffByIndex.TryGetValue(idx, out var st)
+                ? MultiStaffLayouter.LyricGridBand(gridScore, st, idx, _options.StaffHeight)
+                : null;
+
         var laid = engraver.CalculateLayouts(
             lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
             ctx.NoteBoundAnchorY, anchorStaffDownSkyline, ctx.LooseChainEnd,
             betweenStavesEnd, ctx.LastSpaceableStaffY, ctx.TrailingRowStaves,
             ctx.BetweenRowStaves, ctx.VerseSkylines, ctx.LyricChains,
-            sp, runLineOf, chordRowInk, attachedChordBelow);
+            sp, runLineOf, chordRowInk, attachedChordBelow, gridBandOf);
 
         // The rows the chain solved travel back out through the context — see
         // AnnotationLayoutContext.SolvedRowBaselines for why they are applied afterwards
@@ -2124,8 +2132,11 @@ internal sealed partial class LayoutEngine
                 var line = RunLineOf(row, sp);
                 if (row.IsLyricsTextRow)
                 {
+                    // With the grid's bar lines where the row draws them (LyricGridBand), so the
+                    // page reserves the bars' feet across the line and not the last syllables alone.
                     var verses = engraver.RowBlockSkylines(
-                        score.Lyrics, measureLayouts, startMeasure, endMeasure, rowStaff);
+                        score.Lyrics, measureLayouts, startMeasure, endMeasure, rowStaff,
+                        MultiStaffLayouter.LyricGridBand(score, row, rowStaff, _options.StaffHeight));
                     for (int k = 0; k < verses.Count; k++)
                         ink[(rowStaff, k)] = verses[k];
                     rowsIn.Add((rowStaff, LooseLineSpacer.ByPosition(verses.Count), line));

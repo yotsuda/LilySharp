@@ -781,7 +781,18 @@ internal static partial class SharedRenderer
                     // verse-spacing per extra stacked verse on a lyric row —
                     // whether the grid carries words or chord symbols.
                     double rowTopY = LayoutUtilities.StaffTopYUp(system, globalIdx);
-                    double h = StaffHeight + (staff.TextRowVerses - 1) * LyricVerseSpacing;
+                    // ⚠️ ONE EXTENT WITH THE ROW'S SKYLINE (2026-10-31): a lyrics row's band
+                    // is MultiStaffLayouter.LyricGridBand; a chords-only grid's cell is
+                    // ChordNameEngraver.GridCellHeight, which grows to enclose the line's
+                    // diagrams (owner's decision A) — the same items the skyline measured.
+                    double h = staff.IsLyricsTextRow
+                        ? LyricGridRowHeight(score, layout, system, staff, globalIdx, StaffHeight)
+                        : ChordNameEngraver.GridCellHeight(StaffHeight,
+                            ChordNameEngraver.LineDiagramInkDepth(score.TextMetrics,
+                                GridRowDiagrams(layout, system, globalIdx)));
+                    // The meter is centred on the NAMES' cell, not on a cell a diagram deepened:
+                    // it stands level with the symbols it precedes.
+                    double meterH = staff.IsLyricsTextRow ? h : StaffHeight;
                     // The grid OPENS each line with a bar — the staff's left-edge
                     // system bar in the grid's own cloth (user request 2026-08-20:
                     // "a bar line right before the meter"). Same X a staff's system
@@ -837,7 +848,7 @@ internal static partial class SharedRenderer
                     // before a line that opens with one (GetSystemEndTimeChange, the width
                     // LineEndCourtesyWidth reserved). Until then the header's 3/2 widened the
                     // bars and showed nothing.
-                    double meterY = rowTopY - h / 2 + StaffMiddleLineDrop;
+                    double meterY = rowTopY - meterH / 2 + StaffMiddleLineDrop;
                     var startTimeChange = GetSystemStartTimeChange(staff, system);
                     var prefixMeter = isFirstSystem ? score.TimeSignature : startTimeChange?.NewTime;
                     if (prefixMeter is { SenzaMisura: false } pm)

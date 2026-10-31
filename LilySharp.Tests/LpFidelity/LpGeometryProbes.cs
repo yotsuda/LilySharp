@@ -5259,6 +5259,41 @@ internal static class LpGeometryProbes
     /// <inheritdoc cref="TCY"/>
     private static readonly string TCG = StafflessTempoOverChordScore("TCG", sharp: false, lyrics: false);
 
+    /// <summary>
+    /// A CHORD ROW OVER A LYRICS ROW AND NOTHING ELSE — the owner's lead sheet
+    /// (probes/staffless-fretboards.ly SFL1: <c>\new ChordNames \prog \new Lyrics \vers</c>,
+    /// <c>d1:m7 | f:maj7</c> under <c>Twin2 -- kle2 twin2 -- kle2</c>).
+    /// </summary>
+    /// <remarks>
+    /// THE QUANTITY is the lyric baseline below the chord baseline, refpoint to refpoint. On a
+    /// system with no spaceable staff LilyPond makes its FIRST line spaceable
+    /// (lily/page-layout-problem.cc:728-730 append_system's corner case; the probe dumps the
+    /// ChordNames line's staff-affinity as #f) and the Lyrics line below it is then a loose
+    /// line under a spaceable one: its own nonstaff-relatedstaff-spacing, basic-distance 5.5,
+    /// which the chain rests at with room to spare. Lily# promotes the first row the same way
+    /// (MeasureCollector, 2026-10-31); until then the two rows were stacked by a flat band gap
+    /// (4.1 refpoint to refpoint) that no LilyPond number stood behind. The twin's syllables
+    /// are the written ones (Lily# spreads a row's syllables evenly across the bar; two
+    /// half-note syllables per bar is where both engines agree), and the names' INK does not
+    /// enter the number: 5.5 is a spring's ideal, read above both engines' ink floors.
+    /// </remarks>
+    private static readonly string SFL1 = """
+        time 4/4
+        key c major
+
+        section A {
+          chords prog { Dm7 | Fmaj7 }
+          lyrics verse { Twin- kle | twin- kle | }
+        }
+
+        form { ~A }
+
+        score SFL1 {
+          chords prog
+          lyrics verse
+        }
+        """;
+
     private static string StafflessTempoOverChordScore(string name, bool sharp, bool lyrics)
     {
         string chords = sharp ? "A#m | F#" : "Am | F";
@@ -16795,6 +16830,12 @@ internal static class LpGeometryProbes
             g => g.TempoBaselineAboveChordInkTop(), RaggedBottomPaper),
         new("tempo.staffless.grid.over-chord.row-ink-to-baseline", TCG,
             g => g.TempoBaselineAboveChordInkTop(), RaggedBottomPaper),
+
+        // A chord row over a lyrics row, no staff (book SFL1, probes/staffless-fretboards.ly):
+        // the lyric line's refpoint step under the promoted first line — the Lyrics spec's
+        // 5.5 ideal, a spring at rest. See the book's remark.
+        new("staffless.chords-lyrics.refpoint-step", SFL1,
+            g => g.LyricBaselineBelowChordBaseline(), RaggedBottomPaper),
 
         // ...and the shape BOTH of those were blind to: NO STAFF AT ALL (book BNS, mirroring
         // barnumber-staffless.ly). The entries above measure over a staff refpoint, which a

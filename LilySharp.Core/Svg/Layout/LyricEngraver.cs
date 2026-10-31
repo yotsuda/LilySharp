@@ -406,7 +406,8 @@ internal sealed class LyricEngraver
         Func<int, LooseLineSpacer.RunLine>? runLineOf = null,
         Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? chordRowInk = null,
         Func<int, int, (int StaffIndex, VerticalSkyline Up, VerticalSkyline Down)?>?
-            attachedChordBelow = null)
+            attachedChordBelow = null,
+        Func<int, (double AboveFirstVerse, double BelowLastVerse)?>? gridBandOf = null)
     {
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
@@ -500,7 +501,7 @@ internal sealed class LyricEngraver
                 lastSpaceableStaffY, trailingRowStaves, betweenRowStaves,
                 verseSkylineMemo, chainMemo,
                 staffSpacing ?? StaffSpacingParameters.Default, runLineOf, chordRowInk,
-                attachedChordBelow);
+                attachedChordBelow, gridBandOf);
 
         return layouts.ToImmutableArray();
     }
@@ -630,7 +631,11 @@ internal sealed class LyricEngraver
         Func<int, LooseLineSpacer.RunLine>? runLineOf,
         Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? chordRowInk,
         Func<int, int, (int StaffIndex, VerticalSkyline Up, VerticalSkyline Down)?>?
-            attachedChordBelow)
+            attachedChordBelow,
+        // A lyrics ROW's grid bar lines (MultiStaffLayouter.LyricGridBand): their tops in its
+        // verse-1 UP profile — the ink the chain's first spring is floored by — and their feet
+        // in its last verse's DOWN profile.
+        Func<int, (double AboveFirstVerse, double BelowLastVerse)?>? gridBandOf = null)
     {
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
@@ -698,7 +703,7 @@ internal sealed class LyricEngraver
         // (`staff X with lyrics a` + `lyrics b`), and keying by verse would have their verse 1
         // read each other's ink.
         var (up, down) = BuildVerseSkylines(
-            _fonts, layouts, measureToSystem, LineKeyOf, systems, verseSkylineMemo);
+            _fonts, layouts, measureToSystem, LineKeyOf, systems, verseSkylineMemo, gridBandOf);
 
         var newY = new Dictionary<(int Family, int System, int Line, int Verse), double>();
 
@@ -1326,16 +1331,28 @@ internal sealed class LyricEngraver
     /// HANDOFF 5.2.1② in the place that has already cost this island a session.
     /// </para>
     /// </remarks>
+    /// <param name="gridBand">The lead sheet's bar lines this row draws, as the two pieces of
+    /// <c>MultiStaffLayouter.LyricGridBand</c> — merged over the block's measures into verse 1's
+    /// UP profile (the bar tops) and the last verse's DOWN profile (their feet). Null for a row
+    /// that draws none.</param>
     internal List<(VerticalSkyline Up, VerticalSkyline Down)> RowBlockSkylines(
         IReadOnlyList<LyricItem> lyrics, IReadOnlyList<MeasureLayout> measureLayouts,
-        int startMeasure, int endMeasure, int rowStaffIndex)
+        int startMeasure, int endMeasure, int rowStaffIndex,
+        (double AboveFirstVerse, double BelowLastVerse)? gridBand = null)
     {
         var inBlock = new List<LyricItem>();
         foreach (var l in lyrics)
             if (l.IsLyricsRow && l.StaffIndex == rowStaffIndex
                 && l.MeasureIndex >= startMeasure && l.MeasureIndex < endMeasure)
                 inBlock.Add(l);
-        return BlockSkylines(inBlock, measureLayouts);
+        var verses = BlockSkylines(inBlock, measureLayouts);
+        if (gridBand is { } band && verses.Count > 0
+            && MultiStaffLayouter.MeasureSpan(measureLayouts, startMeasure, endMeasure) is { } span)
+        {
+            verses[0].Up.MergeBox(span.Left, span.Right, 0, band.AboveFirstVerse);
+            verses[^1].Down.MergeBox(span.Left, span.Right, -band.BelowLastVerse, 0);
+        }
+        return verses;
     }
 
     /// <summary>
@@ -1709,7 +1726,8 @@ internal sealed class LyricEngraver
         Dictionary<(int System, int Line, int Verse), VerticalSkyline> Down) BuildVerseSkylines(
         Rendering.ScoreTextMetrics fonts, IEnumerable<LyricLayout> layouts,
         IReadOnlyDictionary<int, int> measureToSystem, Func<LyricItem, int> lineKeyOf,
-        ImmutableArray<SystemLayout> systems, VerseSkylineMemo? memo)
+        ImmutableArray<SystemLayout> systems, VerseSkylineMemo? memo,
+        Func<int, (double AboveFirstVerse, double BelowLastVerse)?>? gridBandOf = null)
     {
         // Group per system, preserving document order within each — the same order the
         // flat walk merged in (EndBatch resolves order-independently, but stating it
@@ -1732,10 +1750,14 @@ internal sealed class LyricEngraver
         foreach (int s in systemOrder)
         {
             var lays = bySystem[s];
+            // The grid band spans this system's measures (the bars do); a score-constant per
+            // row, so it lives inside the memo's unit with the syllables it is ink beside.
+            var span = !systems.IsDefaultOrEmpty && s < systems.Length
+                ? MultiStaffLayouter.MeasureSpan(systems[s].Measures) : null;
             var value = memo != null && !systems.IsDefaultOrEmpty && s < systems.Length
                 ? memo.GetOrCompute(s, systems[s].Measures,
-                    () => BuildSystemVerseSkylines(fonts, lays, lineKeyOf))
-                : BuildSystemVerseSkylines(fonts, lays, lineKeyOf);
+                    () => BuildSystemVerseSkylines(fonts, lays, lineKeyOf, gridBandOf, span))
+                : BuildSystemVerseSkylines(fonts, lays, lineKeyOf, gridBandOf, span);
             foreach (var v in value)
             {
                 up[(s, v.Line, v.Verse)] = v.Up;
@@ -1749,7 +1771,9 @@ internal sealed class LyricEngraver
     /// unit of work (<see cref="VerseSkylineMemo"/>).</summary>
     private static ImmutableArray<VerseSkylineMemo.VerseSkylines> BuildSystemVerseSkylines(
         Rendering.ScoreTextMetrics fonts, IReadOnlyList<LyricLayout> lays,
-        Func<LyricItem, int> lineKeyOf)
+        Func<LyricItem, int> lineKeyOf,
+        Func<int, (double AboveFirstVerse, double BelowLastVerse)?>? gridBandOf = null,
+        (double Left, double Right)? gridSpan = null)
     {
         // BATCHED per line, merging the cached resolved profiles straight in — see
         // NoteBoundBlockSkylines' batch note — and PRE-SIZED to the exact outline
@@ -1781,12 +1805,30 @@ internal sealed class LyricEngraver
             }
             MergeSyllableInto(fonts, lay, pair.Up, pair.Down);
         }
+        // A grid row's bar lines: their tops on its FIRST verse's up side, their feet on its
+        // LAST verse's down side — the same two pieces RowBlockSkylines gives the per-staff
+        // list and the page's reservation, so the chain's floors and theirs agree.
+        var firstVerse = new Dictionary<int, int>();
+        var lastVerse = new Dictionary<int, int>();
+        if (gridBandOf != null && gridSpan != null)
+            foreach (var key in order)
+            {
+                if (!firstVerse.TryGetValue(key.Line, out int f) || key.Verse < f) firstVerse[key.Line] = key.Verse;
+                if (!lastVerse.TryGetValue(key.Line, out int l) || key.Verse > l) lastVerse[key.Line] = key.Verse;
+            }
         var builder = ImmutableArray.CreateBuilder<VerseSkylineMemo.VerseSkylines>(order.Count);
         foreach (var key in order)
         {
             var (u, d) = skys[key];
             u.EndBatch();
             d.EndBatch();
+            if (gridSpan is { } span && gridBandOf?.Invoke(key.Line) is { } band)
+            {
+                if (key.Verse == firstVerse[key.Line])
+                    u.MergeBox(span.Left, span.Right, 0, band.AboveFirstVerse);
+                if (key.Verse == lastVerse[key.Line])
+                    d.MergeBox(span.Left, span.Right, -band.BelowLastVerse, 0);
+            }
             builder.Add(new VerseSkylineMemo.VerseSkylines(key.Line, key.Verse, u, d));
         }
         return builder.MoveToImmutable();

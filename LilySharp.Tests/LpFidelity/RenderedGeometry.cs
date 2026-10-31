@@ -2063,6 +2063,28 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// On a sheet of a chord row over a lyrics row and nothing else, the lyric line's baseline
+    /// BELOW the chord line's — refpoint to refpoint, the step LilyPond's loose chain takes
+    /// under a staffless system's first line (probes/staffless-fretboards.ly SFL1). The chord
+    /// baseline is its full-size runs' (a raised 7 is drawn smaller, above it); the lyric
+    /// baseline is verse 1's, the highest syllable.
+    /// </summary>
+    public double LyricBaselineBelowChordBaseline(int page = 0)
+    {
+        var runs = _pages[page].Texts.Where(t => t.Role == TextRole.ChordName).ToList();
+        var syllables = LyricSyllables;
+        if (runs.Count == 0 || syllables.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: a chord row AND a lyrics row are needed — found {runs.Count} chord "
+                + $"runs and {syllables.Count} syllables.\nDrawn geometry:\n" + Describe());
+        }
+        double em = runs.Max(t => t.FontSize);
+        double chord = runs.Where(t => Math.Abs(t.FontSize - em) < 1e-9).Max(t => t.Y);
+        return syllables.Min(t => t.Y) - chord;
+    }
+
+    /// <summary>
     /// The METRONOME MARK's baseline above the ink top of the chord symbol(s) its ink meets in
     /// X — on a STAFFLESS sheet, where the mark has no staff to rest on
     /// (probes/tempo-chord-row.ly TCY/TCZ/TCG). The mark's extent is its drawn note glyph's

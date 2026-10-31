@@ -2137,6 +2137,47 @@ public sealed partial class MeasureCollector
                 .ToImmutableArray();
         }
 
+        // A score with NO spaceable staff — rows only — makes its FIRST row spaceable. That
+        // is what puts a rows-only sheet into the same alignment as every other page: the
+        // first row is the anchor the page's springs attach to and the rows below it are the
+        // loose lines of its run, spaced by their own specs against its ink (a chord row's
+        // names AND diagrams; LayoutEngine.ClassifySystem, LyricEngraver.DistributeLooseLines).
+        // Until 2026-10-31 the two rows were stacked by a flat band gap that never read the
+        // chord row's skyline (MultiStaffLayouter.TextRowPairGap 0.6), so a written diagram —
+        // ~6 ss of ink hanging out of the row's 2.5 ss band — printed through the lyrics
+        // (owner's report, Downloads/lyrics.lys).
+        // LILYPOND-REF: lily/page-layout-problem.cc:728-730 Page_layout_problem::append_system
+        //   — "Corner case: there was only one staff, and it wasn't spaceable.
+        //      if (!found_spaceable_staff && elts.size ()) mark_as_spaceable (elts[0]);"
+        //   and :1180-1183 mark_as_spaceable — set_property (g, "staff-affinity", SCM_BOOL_F).
+        // MEASURED (audit/lp-geometry/probes/staffless-fretboards.ly, 2.26.0): book SFL1
+        //   (ChordNames over Lyrics, no staff) dumps the ChordNames line's staff-affinity as #f
+        //   and the Lyrics line 5.500000 below it refpoint to refpoint — the Lyrics context's
+        //   nonstaff-relatedstaff-spacing basic-distance, i.e. the step a Lyrics line takes
+        //   under a SPACEABLE line; book CHL1 (chord-lyric-run.ly), the same two lines between
+        //   two staves, reads 2.320115 — the loose/loose step. One rule, two numbers.
+        // ⚠️ THE SCORE'S FIRST ROW, where LilyPond takes each SYSTEM's first live element
+        //   (filter_dead_elements runs before :660). A row hara-kiri hides on some system
+        //   leaves that system with no spaceable line, and its rows keep their bands there
+        //   (ClassifySystem's `leading` arm) — the regime this sheet had everywhere before.
+        if (!staffGroups.Any(sg => sg.Staves.Any(st => Layout.StaffAffinity.IsSpaceable(st.StaffAffinity))))
+        {
+            bool promoted = false;
+            staffGroups = staffGroups
+                .Select(sg => sg with
+                {
+                    Staves = sg.Staves
+                        .Select(st =>
+                        {
+                            if (promoted) return st;
+                            promoted = true;
+                            return st with { StaffAffinity = null };
+                        })
+                        .ToImmutableArray()
+                })
+                .ToImmutableArray();
+        }
+
         // Resolve tab string numbers per tab staff (tuning-dependent): explicit
         // \N kept, a pitch written with \N earlier in the bar keeps that string, the
         // rest are planned over the whole voice (TabFingeringPlanner). Done here so the layout and every

@@ -6,6 +6,23 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Rows-only sheets stack like LilyPond's
+
+- `[render]` **A sheet with no staff — `score { chords prog  lyrics verse }` — makes its first
+  row the alignment's anchor and spaces every row under it by its own ink and spacing**, as
+  LilyPond does for a staffless system (page-layout-problem.cc's append_system corner case,
+  measured on 2.26.0: `audit/lp-geometry/probes/staffless-fretboards.ly`). The lyrics line
+  stands 5.5 staff spaces under the chord line (the Lyrics context's ideal) and never closer
+  than 0.5 to the chord line's ink — names **and diagrams**. A written shape's diagram
+  (`Dm7(xx0211)`) used to print through the words: the two rows were stacked by a flat 0.6
+  band gap that read neither row's ink. The grid's bar lines count as the lyric row's ink, so
+  the diagram keeps its 0.5 off the bar tops.
+- `[render]` **A chords-only grid's cell encloses the diagram**: on a line whose chords draw
+  diagrams the bar lines run down past the diagrams' feet, with the same room under them a
+  bare name keeps; lines without a diagram keep the four-space cell. The meter stays level
+  with the names. (Owner's decision over LilyPond's picture of a FretBoards line hanging
+  under a bar-less ChordNames line.)
+
 ### The chord-diagram grammar: one key, one question
 
 - `[lang]` **The capo and the chord-shape table are the piece's own lines**, written once at

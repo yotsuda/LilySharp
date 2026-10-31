@@ -92,6 +92,39 @@ internal static class StaffAffinity
     }
 
     /// <summary>
+    /// A system's topmost non-hidden spaceable staff that is a STAFF — lines, a clef, bar
+    /// lines — and not a text row. Null on a rows-only sheet.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT LilyPond's question, and kept apart from <see cref="TopSpaceableStaff"/> on
+    /// purpose. Since 2026-10-31 a rows-only sheet's first row IS spaceable (the
+    /// page-layout-problem.cc:728-730 corner case, ported in MeasureCollector), so
+    /// <see cref="TopSpaceableStaff"/> answers that row there — which is right for every
+    /// reader that wants the alignment's anchor (a Score-level mark, the page's spring). Three
+    /// readers want something else: "is there a staff at all, or is this a grid of rows" —
+    /// the bar number's host (<c>BarNumberEngraver.AnchorStaff</c>, whose rows-only answer is
+    /// the GRID row by Lily#'s own rule) and the two rows-only gates in
+    /// <c>OutsideStaffStacker</c>. Those ask this, so the promotion changes nothing they draw.
+    /// </remarks>
+    public static StaffLayout? TopNotationStaff(SystemLayout system)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty) return null;
+        StaffLayout? best = null;
+        foreach (var group in system.StaffGroups)
+        {
+            if (group.Staves.IsDefaultOrEmpty) continue;
+            foreach (var st in group.Staves)
+            {
+                if (st.IsHidden || st.IsTextRow || !IsSpaceable(st.StaffAffinity))
+                    continue;
+                if (best == null || st.Y > best.Y)
+                    best = st;
+            }
+        }
+        return best;
+    }
+
+    /// <summary>
     /// LilyPond's <c>LARGE_STRETCH</c> — what goes between a non-spaceable line and the
     /// staff its affinity does NOT point at.
     /// </summary>

@@ -1159,6 +1159,45 @@ internal static class ChordNameEngraver
         return (x, x + box.Width, gridBottom + box.Bottom, gridBottom + box.Top);
     }
 
+    // ========== THE CHORDS-ONLY GRID'S CELL AROUND A DIAGRAM (owner's decision 2026-10-31) ==========
+    //
+    // A chords-only sheet is a grid: the row's bar lines run the nominal staff height from the
+    // band top and the names stand centred in that cell (GridChordBaseline). A written diagram
+    // hung OUT of the cell — its top 0.5 under the name, its grid through the bar lines' feet and
+    // ~5 ss below them — which the owner called unnatural and settled as "the cell encloses the
+    // diagram" (option A; B, LilyPond's own picture of a FretBoards line under a bar-less
+    // ChordNames line, was declined). LILYSHARP-OWN: LilyPond's ChordNames draws no bar lines.
+
+    /// <summary>
+    /// How far below the names' baseline the deepest diagram ink of a line reaches — its
+    /// finger digits' bottom (<see cref="DiagramBox"/> with fingers) at the line's one grid
+    /// level — as a positive depth; 0 when no symbol of the line draws one.
+    /// </summary>
+    internal static double LineDiagramInkDepth(
+        Rendering.ScoreTextMetrics fonts, IEnumerable<(string? Spec, double FrameBottom)> line)
+    {
+        double depth = 0;
+        foreach (var (spec, frameBottom) in line)
+            if (spec is not null)
+                depth = Math.Max(depth, -(frameBottom + DiagramBox(fonts, spec).Bottom));
+        return depth;
+    }
+
+    /// <summary>
+    /// A chords-only grid's CELL height on one line — how tall its bar lines run from the
+    /// band top: the nominal staff height, plus the line's deepest diagram ink below the
+    /// baseline (<see cref="LineDiagramInkDepth"/>). The room under the diagram is then the
+    /// room a bare name's baseline keeps over the bars' feet (StaffHeight − GridChordBaseline),
+    /// so a line without a diagram is the cell it always was.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE HOME, TWO READERS: the renderer draws the bars this tall
+    /// (<c>SharedRenderer.DrawBarlines</c>' grid arm) and <see cref="RowSkylines"/> merges the
+    /// same extent as the row's ink, so the next system clears the cell's feet.
+    /// </remarks>
+    internal static double GridCellHeight(double staffHeight, double diagramInkDepth)
+        => staffHeight + Math.Max(0, diagramInkDepth);
+
     /// <summary>
     /// <paramref name="curX"/> shifted right, if it has to be, so its box clears the
     /// previous symbol's. Both symbols start AT their columns, so only the earlier one's
@@ -1222,6 +1261,13 @@ internal static class ChordNameEngraver
     /// below stops booking a band for them, this skyline is the only thing that says they are
     /// there, and whatever stands above the row is spaced against it.
     /// </param>
+    /// <param name="gridCellStaffHeight">
+    /// The score's nominal staff height when this row is a chords-only grid's bar row
+    /// (<c>MultiStaffScore.GridBarlineRowIndex</c>), whose bar lines are then merged as the
+    /// row's ink — <see cref="GridCellHeight"/> tall from the band top
+    /// (<see cref="RowTextBaseline"/> of a grid sheet over the baseline), over the measures'
+    /// span. Null for any other row.
+    /// </param>
     internal static (VerticalSkyline Up, VerticalSkyline Down) RowSkylines(
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<ChordNameItem> chordNames,
@@ -1229,7 +1275,8 @@ internal static class ChordNameEngraver
         int staffIndex,
         ImmutableArray<Measure> staffMeasures,
         bool attachedLine = false,
-        IReadOnlyList<(int StaffIndex, ImmutableArray<Measure> Measures)>? joinedInline = null)
+        IReadOnlyList<(int StaffIndex, ImmutableArray<Measure> Measures)>? joinedInline = null,
+        double? gridCellStaffHeight = null)
     {
         var up = new VerticalSkyline(VerticalDirection.Up);
         var down = new VerticalSkyline(VerticalDirection.Down);
@@ -1290,7 +1337,8 @@ internal static class ChordNameEngraver
         }
         // …and the diagrams under the names (a written shape, HANDOFF §2 K): the line's ink, so
         // the staff below and the row above stand off them as they do off the names.
-        if (LineDiagramBottom(fonts, placed.Select(p => p.Chord)) is { } gridBottom)
+        double? lineGridBottom = LineDiagramBottom(fonts, placed.Select(p => p.Chord));
+        if (lineGridBottom is { } gridBottom)
             foreach (var (x, chord, _) in placed)
                 if (chord.FrameSpec is { } spec)
                 {
@@ -1298,6 +1346,16 @@ internal static class ChordNameEngraver
                     up.MergeBox(l, r, b, t);
                     down.MergeBox(l, r, b, t);
                 }
+        // …and a chords-only grid's bar lines: the cell, diagrams enclosed (GridCellHeight).
+        if (gridCellStaffHeight is { } cellStaffHeight
+            && MultiStaffLayouter.MeasureSpan(measureLayouts) is { } span)
+        {
+            double cellTop = RowTextBaseline(chordGridSheet: true);
+            double cellHeight = GridCellHeight(cellStaffHeight, LineDiagramInkDepth(
+                fonts, placed.Select(p => (p.Chord.FrameSpec, lineGridBottom ?? 0.0))));
+            up.MergeBox(span.Left, span.Right, cellTop - cellHeight, cellTop);
+            down.MergeBox(span.Left, span.Right, cellTop - cellHeight, cellTop);
+        }
         return (up, down);
     }
 

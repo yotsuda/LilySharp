@@ -711,7 +711,10 @@ internal static class MusicMarkEngraver
             foreach (var g in system.StaffGroups)
                 foreach (var st in g.Staves)
                     if (st.StaffIndex == anchor)
-                        return st.StaffAffinity is not null ? st : null;
+                        // The row's KIND, not its spaceability: a rows-only sheet's first row
+                        // is spaceable (page-layout-problem.cc:728-730) and still a row with
+                        // no staff symbol to pad from (StaffLayout.IsTextRow).
+                        return st.IsTextRow ? st : null;
             return null;
         }
 
@@ -2914,7 +2917,9 @@ internal static class MusicMarkEngraver
         foreach (var g in system.StaffGroups)
             foreach (var st in g.Staves)
                 if (st.StaffIndex == anchor)
-                    return StaffAffinity.IsSpaceable(st.StaffAffinity);
+                    // A promoted first row of a rows-only sheet is spaceable and still has
+                    // no Bar_engraver (StaffLayout.IsTextRow's remark).
+                    return StaffAffinity.IsSpaceable(st.StaffAffinity) && !st.IsTextRow;
         return false;
     }
 

@@ -187,11 +187,8 @@ internal sealed class MultiStaffLayouter
                 // its own (HANDOFF 5.2.1②: the port lands on one copy and not the other).
                 var nextGroup = score.StaffGroups[i + 1];
                 var spec = InterGroupSpec(group, nextGroup, sp);
-                bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
-                double interGroupGap = textRowPair
-                    ? TextRowPairGap
-                    : spec.BasicDistance - GapSpan(score, group.Staves[^1], nextGroup.Staves[0]);
-                height += interGroupGap;
+                height += PairRestLength(spec, group.Staves[^1], nextGroup.Staves[0])
+                    - GapSpan(score, group.Staves[^1], nextGroup.Staves[0]);
             }
 
             globalStaffIndex += group.StaffCount;
@@ -617,10 +614,35 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     private const double TextRowVerseSpacing = 3.2;
 
-    /// <summary>Gap between two adjacent TEXT rows (chord row above a lyric
-    /// row): the chord symbols sit just above the lyric band, like chord
-    /// names above a staff — not a whole staff-distance away.</summary>
-    private const double TextRowPairGap = 0.6;
+    /// <summary>
+    /// The lead sheet's grid bar lines on a LYRICS row, as the two pieces that ride with its
+    /// verses: how far the bars reach ABOVE verse 1's baseline (<c>LyricRowBaseline</c>, the
+    /// band top) and how far BELOW the last verse's (the rest of a four-space band). Null
+    /// when the row is not the grid's bar row (<c>MultiStaffScore.GridBarlineRowIndex</c>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN: LilyPond's Lyrics context draws no bar lines; Lily#'s grid does
+    /// (owner's decision, HANDOFF 3). Drawn ink is ink the alignment measures, so the pieces
+    /// are in the row's skylines — verse 1's UP profile and the last verse's DOWN profile, in
+    /// the per-verse list every reader builds from (<c>LyricEngraver.RowBlockSkylines</c>:
+    /// the per-staff list, the page's reservation) and in the chain's own
+    /// (<c>LyricEngraver.BuildVerseSkylines</c>) — and the renderer draws the bars from verse 1
+    /// to the last verse by the same two numbers (<c>SharedRenderer.LyricGridRowHeight</c>),
+    /// whatever step the chain gave the verses. ⚠️ TWO PIECES, NOT ONE BOX: a box over the
+    /// whole band on verse 1's DOWN side stood verse 2 under the band's FOOT (6.6 below
+    /// verse 1 where its step is 2.8), measured on the first cut (2026-10-31).
+    /// What the pieces buy: a chord row's diagram keeps its padding off the bar TOPS and not
+    /// off the syllables under them, which stand 0.78 lower (band top 2.6 over the baseline,
+    /// syllable ink ~1.82) — without it the bars ran into the diagram's feet; and the next
+    /// system clears the bars' feet, which span the whole line where the last verse's
+    /// syllables do not. Without a diagram the top piece changes nothing: the names' ink
+    /// bottom + 0.5 + 2.6 = 3.1 is under the Lyrics spec's 5.5 ideal (SFL1).
+    /// </remarks>
+    internal static (double AboveFirstVerse, double BelowLastVerse)? LyricGridBand(
+        MultiStaffScore score, Staff staff, int staffIndex, double nominalStaffHeight)
+        => staff.IsLyricsTextRow && score.IsLeadSheet && staffIndex == score.GridBarlineRowIndex
+            ? (LyricEngraver.LyricRowBaseline, nominalStaffHeight - LyricEngraver.LyricRowBaseline)
+            : null;
 
     /// <summary>How far left of the SystemStartBar a system-start BRACE sits.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3669-3683 ly:side-position-interface::x-aligned-side
@@ -849,11 +871,8 @@ internal sealed class MultiStaffLayouter
                 // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
                 var nextGroup = score.StaffGroups[i + 1];
                 var spec = InterGroupSpec(group, nextGroup, sp);
-                bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
-                double interGroupGap = textRowPair
-                    ? TextRowPairGap
-                    : spec.BasicDistance - GapSpan(score, group.Staves[^1], nextGroup.Staves[0]);
-                currentY -= interGroupGap;
+                currentY -= PairRestLength(spec, group.Staves[^1], nextGroup.Staves[0])
+                    - GapSpan(score, group.Staves[^1], nextGroup.Staves[0]);
             }
 
             globalStaffIndex += group.StaffCount;
@@ -956,7 +975,8 @@ internal sealed class MultiStaffLayouter
                     IsOssia: staff.IsOssia,
                     IsHidden: true,
                     StaffAffinity: staff.StaffAffinity,
-                    RefpointBelowTop: PlacedRefpointBelowTop(score, staff));
+                    RefpointBelowTop: PlacedRefpointBelowTop(score, staff),
+                    IsTextRow: staff.IsTextRow);
                 continue;
             }
 
@@ -1001,7 +1021,8 @@ internal sealed class MultiStaffLayouter
                 InstrumentName: staff.InstrumentName,
                 IsOssia: staff.IsOssia,
                 StaffAffinity: staff.StaffAffinity,
-                RefpointBelowTop: PlacedRefpointBelowTop(score, staff));
+                RefpointBelowTop: PlacedRefpointBelowTop(score, staff),
+                IsTextRow: staff.IsTextRow);
             anyVisible = true;
             lastVisibleIndex = globalIndex;
             lastVisibleHeight = thisStaffHeight;
@@ -1025,16 +1046,25 @@ internal sealed class MultiStaffLayouter
     /// the upper staff's whole HEIGHT here while the inter-group path passed the span, so the
     /// same parameter meant two things and only agreed while every pair had equal heights.
     /// </param>
+    /// <summary>A pair's spring at rest with no ink read — the spec's ideal, or for a
+    /// LOOSE/LOOSE pair its minimum-distance (the ideal LilyPond never shows there; see the
+    /// loose-pair remark in <c>LayoutGroupsWithSkylines</c>).</summary>
+    private static double PairRestLength(VerticalSpacingSpec spec, Staff upper, Staff lower)
+        => !StaffAffinity.IsSpaceable(upper.StaffAffinity) && !StaffAffinity.IsSpaceable(lower.StaffAffinity)
+            ? spec.MinimumDistance
+            : spec.BasicDistance;
+
     private static double StaffGap(
         VerticalSpacingSpec spec, double refpointSpan,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
         int upperStaffIndex, int lowerStaffIndex,
-        IReadOnlyList<PairLooseLine>? looseLines = null)
+        IReadOnlyList<PairLooseLine>? looseLines = null,
+        bool idealApplies = true)
         => staffSkylines is null
-            ? Math.Max(0, spec.BasicDistance - refpointSpan)
+            ? Math.Max(0, (idealApplies ? spec.BasicDistance : spec.MinimumDistance) - refpointSpan)
             : CalculateStaffGapWithSkylines(
                 spec, refpointSpan, staffSkylines, upperStaffIndex, lowerStaffIndex,
-                looseLines);
+                looseLines, idealApplies);
 
     /// <summary>Nothing ever dies — the filter for a score with no hara-kiri in it.</summary>
     private static readonly Func<Staff, bool> NothingDies = _ => false;
@@ -1173,7 +1203,8 @@ internal sealed class MultiStaffLayouter
                 Tuning: staff.Tuning,
                 InstrumentName: staff.InstrumentName,
                 StaffAffinity: staff.StaffAffinity,
-                RefpointBelowTop: PlacedRefpointBelowTop(score, staff)));
+                RefpointBelowTop: PlacedRefpointBelowTop(score, staff),
+                IsTextRow: staff.IsTextRow));
 
             if (i < group.Staves.Length - 1)
                 currentY -= staffHeight + Math.Max(0, staffSpacing);
@@ -1225,7 +1256,8 @@ internal sealed class MultiStaffLayouter
                 InstrumentName: staff.InstrumentName,
                 IsOssia: staff.IsOssia,
                 StaffAffinity: staff.StaffAffinity,
-                RefpointBelowTop: PlacedRefpointBelowTop(score, staff)));
+                RefpointBelowTop: PlacedRefpointBelowTop(score, staff),
+                IsTextRow: staff.IsTextRow));
 
             if (i < group.Staves.Length - 1)
                 currentY -= thisStaffHeight + Math.Max(0, staffSpacing);
@@ -1270,7 +1302,8 @@ internal sealed class MultiStaffLayouter
                 InstrumentName: staff.InstrumentName,
                 IsOssia: staff.IsOssia,
                 StaffAffinity: staff.StaffAffinity,
-                RefpointBelowTop: PlacedRefpointBelowTop(score, staff)));
+                RefpointBelowTop: PlacedRefpointBelowTop(score, staff),
+                IsTextRow: staff.IsTextRow));
 
             if (i < group.Staves.Length - 1)
                 currentY -= thisStaffHeight + Math.Max(0, staffSpacing);
@@ -3282,7 +3315,6 @@ internal sealed class MultiStaffLayouter
                     // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
                     var nextGroup = score.StaffGroups[next];
                     var spec = InterGroupSpec(group, nextGroup, sp);
-                    bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
                     int upperLive = LastLiveIndex(i);
                     int lowerLive = FirstLiveIndex(next);
                     double span = GapSpan(score, group.Staves[^1], nextGroup.Staves[0]);
@@ -3322,11 +3354,31 @@ internal sealed class MultiStaffLayouter
                     // What changed here is only that an ossia pair now goes through the SAME
                     // reconstruction as every other pair instead of a scaled one; it does not
                     // make the ossia's spacing literal, it makes it not-special.
-                    double interGroupGap = textRowPair
-                        ? TextRowPairGap
-                        : StaffGap(spec, span, staffSkylines, upperLive, lowerLive,
-                            runSources.Blocks(upperLive, lowerLive, NoRows,
-                                staffSkylines, sp));
+                    // ★ A TEXT-ROW PAIR IS NOT SPECIAL EITHER, since 2026-10-31. Two rows with
+                    // no staff used to take a flat band gap here (TextRowPairGap 0.6) that read
+                    // neither row's skyline, so a chord row's written diagram — ink hanging ~6 ss
+                    // out of its 2.5 ss band — printed through the lyrics under it (owner's
+                    // report, Downloads/lyrics.lys). The rows-only sheet's first row is spaceable
+                    // now (MeasureCollector, page-layout-problem.cc:728-730), so this pair is
+                    // spaceable→UP and reads the Lyrics line's own nonstaff-relatedstaff-spacing
+                    // through InterGroupSpec — ideal 5.5, padding 0.5 off the names AND the
+                    // diagrams (ChordNameEngraver.RowSkylines) — like a lyric line under a staff.
+                    // MEASURED (audit/lp-geometry/probes/staffless-fretboards.ly SFL1/SFL2).
+                    // ⚠️ AND A LOOSE/LOOSE PAIR TAKES NO IDEAL HERE (two rows, neither spaceable —
+                    // a chords row leading a staff over a lyrics row, two lyrics rows under one):
+                    // LilyPond's alignment places a non-spaceable line at the skyline distance
+                    // plus padding and minimum-distance alone (align-interface.cc:228-238; the
+                    // basic-distance is the pure branch's), and its loose-line spring's ideal
+                    // does not show either — MEASURED inert for nonstaff-nonstaff-spacing on
+                    // 2.26.0 (VocabularyPerturbationTests.PaperKeysAskedByPadding, session 377).
+                    // CalculateStaffGapWithSkylines' max(ideal, floor) is for a pair with a
+                    // spaceable element, whose spring really rests at that max.
+                    bool loosePair = !StaffAffinity.IsSpaceable(group.Staves[^1].StaffAffinity)
+                        && !StaffAffinity.IsSpaceable(nextGroup.Staves[0].StaffAffinity);
+                    double interGroupGap = StaffGap(spec, span, staffSkylines, upperLive, lowerLive,
+                        runSources.Blocks(upperLive, lowerLive, NoRows,
+                            staffSkylines, sp),
+                        idealApplies: !loosePair);
 
                     // ★ A SPACEABLE PAIR WITH ROWS BETWEEN IS PLACED AT THE ALIGNMENT'S OWN
                     // ANSWER (2026-08-26). The incremental stack above prices this boundary
@@ -4227,14 +4279,21 @@ internal sealed class MultiStaffLayouter
                     // it are merged at the step the ALIGNMENT WALKS — the same
                     // nonstaff-nonstaff-spacing the loose chain steps them by
                     // (RowSkylinesAboutBaseline), not a flat constant.
+                    // ★ AND THE GRID'S BAR LINES ARE THE ROW'S INK (2026-10-31): on a rows-only
+                    // sheet the row that draws them (MultiStaffScore.GridBarlineRowIndex) merges
+                    // their band — a lyrics row's LyricGridBand, a chords-only grid's cell
+                    // (ChordNameEngraver.GridCellHeight, which encloses the diagrams) — so what
+                    // stands above or below the row clears the bars it draws, not only its text.
                     if (staff.IsTextRow)
                     {
                         var rowInk = staff.IsLyricsTextRow
-                            ? LyricRowInk(score, measureLayouts, thisStaff)
+                            ? LyricRowInk(score, staff, measureLayouts, thisStaff, _options.StaffHeight)
                             : ChordNameEngraver.RowSkylines(
                                 score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
                                 staff.PrimaryVoice.Measures,
-                                joinedInline: InlineChordStavesOnRow(score, thisStaff));
+                                joinedInline: InlineChordStavesOnRow(score, thisStaff),
+                                gridCellStaffHeight: score.IsLeadSheet && thisStaff == score.GridBarlineRowIndex
+                                    ? _options.StaffHeight : null);
                         sky.Up.Merge(rowInk.Up);
                         sky.Down.Merge(rowInk.Down);
                     }
@@ -4331,15 +4390,38 @@ internal sealed class MultiStaffLayouter
     /// overload wants (the positional one is the trap its remarks describe).
     /// </remarks>
     private static (VerticalSkyline Up, VerticalSkyline Down) LyricRowInk(
-        MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts, int staffIndex)
+        MultiStaffScore score, Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
+        int staffIndex, double nominalStaffHeight)
     {
         if (score.Lyrics.IsDefaultOrEmpty)
             return (new VerticalSkyline(VerticalDirection.Up),
                     new VerticalSkyline(VerticalDirection.Down));
         var engraver = LyricEngraver.ForGeometry(score);
+        // …with the grid's bar lines where this row draws them (LyricGridBand): the pieces
+        // ride with the verses, so the merged row carries them at the verses' own drops.
         var verses = engraver.RowBlockSkylines(
-            score.Lyrics, measureLayouts, 0, int.MaxValue, staffIndex);
+            score.Lyrics, measureLayouts, 0, int.MaxValue, staffIndex,
+            LyricGridBand(score, staff, staffIndex, nominalStaffHeight));
         return engraver.RowSkylinesAboutBaseline(verses);
+    }
+
+    /// <summary>The X span the measures in <c>[startMeasure, endMeasure)</c> cover — one
+    /// system's, when handed that system's layouts or the score's with the system's range —
+    /// or null with none.</summary>
+    internal static (double Left, double Right)? MeasureSpan(
+        IReadOnlyList<MeasureLayout>? measureLayouts,
+        int startMeasure = int.MinValue, int endMeasure = int.MaxValue)
+    {
+        if (measureLayouts is null || measureLayouts.Count == 0)
+            return null;
+        double xLeft = double.PositiveInfinity, xRight = double.NegativeInfinity;
+        foreach (var ml in measureLayouts)
+        {
+            if (ml.MeasureIndex < startMeasure || ml.MeasureIndex >= endMeasure) continue;
+            xLeft = Math.Min(xLeft, ml.X);
+            xRight = Math.Max(xRight, ml.X + ml.Width);
+        }
+        return xRight > xLeft ? (xLeft, xRight) : null;
     }
 
     /// <summary>
@@ -5753,16 +5835,20 @@ internal sealed class MultiStaffLayouter
         VerticalSpacingSpec spec, double refpointSpan,
         List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
         int upperStaffIndex, int lowerStaffIndex,
-        IReadOnlyList<PairLooseLine>? looseLines = null)
+        IReadOnlyList<PairLooseLine>? looseLines = null,
+        bool idealApplies = true)
     {
+        // The spring's rest length with no ink to read: its ideal — or, for a loose/loose
+        // pair whose ideal LilyPond never shows (the caller's remark), its minimum-distance.
+        double rest = idealApplies ? spec.BasicDistance : spec.MinimumDistance;
         if (upperStaffIndex >= staffSkylines.Count || lowerStaffIndex >= staffSkylines.Count)
-            return Math.Max(0, spec.BasicDistance - refpointSpan);
+            return Math.Max(0, rest - refpointSpan);
 
         var upperDown = staffSkylines[upperStaffIndex].Down;
         var lowerUp = staffSkylines[lowerStaffIndex].Up;
 
         if (upperDown.IsEmpty || lowerUp.IsEmpty)
-            return Math.Max(0, spec.BasicDistance - refpointSpan);
+            return Math.Max(0, rest - refpointSpan);
 
         // The distance a staff is DRAWN at is the page spring at rest, and a spring at rest
         // is max(its floor, its ideal) — so basic-distance enters here as the IDEAL and the
@@ -5781,7 +5867,7 @@ internal sealed class MultiStaffLayouter
         // company on a row whose symbols sit closer than its spec's 1.0. No point measures
         // that, so it is named rather than split.
         double centerToCenter = Math.Max(
-            spec.BasicDistance,
+            rest,
             AlignmentMinimumWithSkylines(
                 spec, staffSkylines, upperStaffIndex, lowerStaffIndex, looseLines, out _));
 

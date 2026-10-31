@@ -66,7 +66,15 @@ public sealed record StaffLayout(
     // ⚠️ NULL means "not stated", and the stacker then keeps the nominal half staff it used
     // before this field existed. Only the harnesses that build a StaffLayout by hand leave it
     // unset; every layout MultiStaffLayouter places carries it.
-    double? RefpointBelowTop = null
+    double? RefpointBelowTop = null,
+    // Whether this element is a chords or lyrics ROW (Staff.IsTextRow) rather than a staff
+    // with lines. ⚠️ NOT THE SAME QUESTION AS SPACEABILITY since 2026-10-31: a rows-only
+    // sheet's first row is made SPACEABLE (lily/page-layout-problem.cc:728-730, the
+    // append_system corner case — MeasureCollector), so "non-spaceable ⇒ text row" no longer
+    // holds, and the readers that want to know whether there is a staff symbol, a clef or a
+    // bar line to measure against (OutsideStaffStacker's text-row base, its phantom-clef
+    // guard, MusicMarkEngraver's bar anchor) ask this instead.
+    bool IsTextRow = false
 );
 
 /// <summary>

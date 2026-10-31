@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 289 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **415** | |
+| `OWN` | 291 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **417** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -23,16 +23,16 @@
 |---|---:|
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 20 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 17 |
-| `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 14 |
+| `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 15 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 7 |
+| `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
-| `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（63 件）
 
@@ -244,7 +244,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（289 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（291 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -477,6 +477,7 @@
 - **`ChordNameEngraver.ChordLineOfSystem`** ⚠️ LILYSHARP-OWN, all of it. LilyPond cannot spell the configuration: a
 - **`ChordNameEngraver.SymbolGap`** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
 - **`ChordNameEngraver.FootprintWidth`** ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
+- **`ChordNameEngraver.LineDiagramInkDepth`** ChordNames line, was declined). LILYSHARP-OWN: LilyPond's ChordNames draws no bar lines.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
 - **`ChordNameGlyphRun.CsymFontSize`** LILYSHARP-OWN: LilyPond reads no SMuFL font and draws a chord symbol's flat as a
 ### `LilySharp.Core/Svg/Layout/CustomTextEngraver.cs`
@@ -552,6 +553,7 @@
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **`MultiStaffLayouter.TextRowRefpointBelowTop`** ⚠️ LILYSHARP-OWN, AND IT HAS ONE HOME ON PURPOSE. LilyPond has no band: a Lyrics or
 - **`MultiStaffLayouter.TextRowVerseSpacing`** ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an
+- **`MultiStaffLayouter.LyricGridBand`** ⚠️ LILYSHARP-OWN: LilyPond's Lyrics context draws no bar lines; Lily#'s grid does
 - **`MultiStaffLayouter.SystemStartReach`** LILYSHARP-OWN: the brace's height read for the estimate — a five-line staff's 4 spaces, and 7 between staves.
 - **`MultiStaffLayouter.LineStartSpringForLine`** LILYSHARP-OWN: a bar of a sign of three or more bars (Lily#'s own; LilyPond's
 - **`MultiStaffLayouter.LayoutMeasures`** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request

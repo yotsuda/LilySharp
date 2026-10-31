@@ -4888,6 +4888,13 @@
       "residual": 0.354316605,
       "why": "LILY# SIDE, same session: 0.853561605, the same number as MKY to nine digits -- the identity the pair exists to watch (it read 1.171183732 while the reader priced the sharp's ink from the drawn runs alone; the reader now takes the placed symbol's spelling off the layout). THE TALL HALF of the staffless pair -- MKY with every chord sharped (`ais:m' under the label: ext (-0.953517 . 2.224872), the row pushed down by the descender exactly as MKX's is). MEASURED 2.26.0 (`Chorus'): label rel -1.928239045, chord rel -4.652356340, ink top -2.427483842 -- the SAME ink top as MKY's `Am' to nine digits (the row moved by the ink growth), and the same gap 0.499244797. See mark.staffless.over-chord.row-ink-to-baseline for the design, the two drafts it took and the claim."
     },
+    "staffless.chords-lyrics.refpoint-step": {
+      "probe": "staffless-fretboards.ly",
+      "score": "SFL1",
+      "lilypond": 5.500001452,
+      "residual": 0.0,
+      "why": "LILY# SIDE: 5.500001448 -- the same ideal and the same stretch tail, 4e-9 apart. OPENED 2026-10-31 (session 1036) with the port that makes a rows-only sheet's first row spaceable (MeasureCollector; lily/page-layout-problem.cc:728-730). MEASURED 2.26.0 (Measure-LilyPondProbe staffless-fretboards.ly SFL1): ChordNames VerticalAxisGroup rel -2.500823590 with staff-affinity #f (the promoted line), Lyrics VerticalAxisGroup rel -8.000825042 aff UP -- the step is 5.500001452 = the Lyrics context's nonstaff-relatedstaff-spacing basic-distance (ly/engraver-init.ly:649-652) plus the page-edge chain's stretch tail (the same 1.45e-6 TBL2 carries). The chord ink bottom (0) + padding 0.5 + the lyric ink top 1.820098 = 2.32 is under the ideal, so the spring rests at it. Lily#: the band stack prices the pair spaceable->UP through InterGroupSpec (max(5.5, ink + 0.5) refpoint to refpoint) and the loose chain re-solves the row to the same number at force 0; the grid's bar lines on the lyric row (LyricGridBand, 2.6 over verse 1) raise its floor to 3.1, still under the ideal. BEFORE THE PORT the pair read 4.1: the band stack's flat TextRowPairGap 0.6 between a 2.5 ss chord band and the lyric band, a number no LilyPond quantity stood behind."
+    },
     "tempo.staffless.over-chord.row-ink-to-baseline": {
       "probe": "tempo-chord-row.ly",
       "score": "TCY",

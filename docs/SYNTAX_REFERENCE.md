@@ -2371,7 +2371,12 @@ chords prog { C | F G | C . . G7 | }
 
 An entry may carry its chord diagram's shapes in parentheses glued to the symbol —
 `F(133211)`, `F(133211 2010)`, `F(guitar 133211 ukulele 2010)`, `F/A(x03211)` — and only an
-entry that writes one draws a diagram under its name (*Chord Diagrams*).
+entry that writes one draws a diagram under its name (*Chord Diagrams*). On a sheet with no
+staff the rows stack as LilyPond stacks a staffless system: the first row anchors the page and
+each row under it is spaced by its own ink — a lyrics row stands 5.5 staff spaces under the
+chord row's baseline and never closer than 0.5 to the names and their diagrams, so a diagram
+pushes the words (and the grid's bar lines) down under it; on a chords-only grid the cell's
+bar lines run down past the diagrams on that line instead.
 
 An entry may also be a **Roman degree of the key** at that bar, which is how a
 progression is written once and follows the key:

@@ -75,6 +75,50 @@ internal static partial class SharedRenderer
         }
     }
 
+    /// <summary>
+    /// The grid's bar height on a LYRICS row for ONE system: the band's two pieces around the
+    /// row's DRAWN verses — <c>AboveFirstVerse</c> over verse 1's baseline (the band top the
+    /// bars start from) and <c>BelowLastVerse</c> under the last verse's
+    /// (<c>MultiStaffLayouter.LyricGridBand</c>) — so the bars end where the row's skyline
+    /// said they end, whatever step the loose chain gave the verses. The band model's flat
+    /// height where the system draws no syllable of the row.
+    /// </summary>
+    private static double LyricGridRowHeight(
+        MultiStaffScore score, ScoreLayout layout, SystemLayout system, Staff staff,
+        int rowStaffIndex, double nominalStaffHeight)
+    {
+        double flat = MultiStaffLayouter.StaffHeightOf(staff, nominalStaffHeight);
+        if (MultiStaffLayouter.LyricGridBand(score, staff, rowStaffIndex, nominalStaffHeight) is not { } band
+            || layout.LyricLayouts.IsDefaultOrEmpty || system.Measures.IsDefaultOrEmpty)
+            return flat;
+        int first = system.Measures[0].MeasureIndex, last = system.Measures[^1].MeasureIndex;
+        double top = double.NegativeInfinity, bottom = double.PositiveInfinity;
+        foreach (var l in layout.LyricLayouts)
+        {
+            if (!l.Item.IsLyricsRow || l.Item.StaffIndex != rowStaffIndex
+                || l.Item.MeasureIndex < first || l.Item.MeasureIndex > last)
+                continue;
+            top = Math.Max(top, l.YUp);
+            bottom = Math.Min(bottom, l.YUp);
+        }
+        return double.IsInfinity(top) ? flat : band.AboveFirstVerse + (top - bottom) + band.BelowLastVerse;
+    }
+
+    /// <summary>The (diagram spec, grid bottom) of every chord symbol a grid row draws on
+    /// <paramref name="system"/> — what <c>ChordNameEngraver.LineDiagramInkDepth</c> reads
+    /// to size the cell; the symbols are the ones the skyline measured (RowSkylines).</summary>
+    private static IEnumerable<(string? Spec, double FrameBottom)> GridRowDiagrams(
+        ScoreLayout layout, SystemLayout system, int rowStaffIndex)
+    {
+        if (layout.ChordNameLayouts.IsDefaultOrEmpty || system.Measures.IsDefaultOrEmpty)
+            yield break;
+        int first = system.Measures[0].MeasureIndex;
+        int last = system.Measures[^1].MeasureIndex;
+        foreach (var c in layout.ChordNameLayouts)
+            if (c.RowStaffIndex == rowStaffIndex && c.MeasureIndex >= first && c.MeasureIndex <= last)
+                yield return (c.FrameSpec, c.FrameBottom);
+    }
+
     /// <summary>One bar line a staff draws: its type, its left edge, the measure it belongs
     /// to and whether it is that measure's START bar (a repeat-start) or its end bar.</summary>
     internal readonly record struct StaffBar(BarlineType Type, double X, Measure Measure, bool IsStart);

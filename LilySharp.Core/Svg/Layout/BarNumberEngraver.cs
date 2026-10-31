@@ -126,7 +126,10 @@ internal static class BarNumberEngraver
     /// "shared with the stacker's tracker choice" and it was not: the REHEARSAL MARK had a
     /// spelling of its own, and with it the same defect, for four more sessions.
     internal static StaffLayout? AnchorStaff(SystemLayout system)
-        => StaffAffinity.TopSpaceableStaff(system);
+        // ⚠️ THE NOTATION STAFF, not the alignment's top spaceable element: on a rows-only
+        // sheet the first row is spaceable (page-layout-problem.cc:728-730, MeasureCollector)
+        // and the number still goes on the GRID row (AnchorRow), Lily#'s own rule below.
+        => StaffAffinity.TopNotationStaff(system);
 
     /// <summary>
     /// The ROW a system with no staff at all hangs its bar number on: the grid row, the one

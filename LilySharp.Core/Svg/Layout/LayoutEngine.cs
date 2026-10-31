@@ -653,6 +653,14 @@ internal sealed partial class LayoutEngine
         // pass rather than inside it — see AnnotationLayoutContext.SolvedRowBaselines.
         (systemsArray, annotations) = ApplySolvedRowPositions(
             score, systemsArray, annotations, annotationContext.SolvedRowBaselines);
+        // ...and the PAGES carry the moved systems too. A PageLayout holds its own copies of
+        // the SystemLayouts (systemsArray IS pages.SelectMany(p => p.Systems), in order), and
+        // the renderer walks page.Systems — so a row the chain moved was moved in the array
+        // the annotations read and NOT in the one the bar grid is drawn from. Invisible while
+        // no solved row drew bars (a row under a staff draws none); a rows-only sheet's lyric
+        // row draws the grid, and its bars stayed at the band stack's provisional Y while its
+        // syllables went where the chain put them (2026-10-31).
+        pages = PagesWithSystems(pages, systemsArray);
 
         var (voiceOffsets, headWipes, dotAdjustments) =
             CalculateVoiceCollisions(score, systemsArray, systemCache);

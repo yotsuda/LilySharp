@@ -2044,11 +2044,13 @@ internal static class OutsideStaffStacker
         // and the support read exactly 1.800000 at the label's X and 0.000000 everywhere
         // else. LP measured in audit/lp-geometry/probes/mark-chord-row.ly book MKT, the
         // rows-only sheet with a \sectionLabel.
-        // ⚠️ THE PREDICATE IS SPACEABILITY, the same one everything else in this island
-        // asks: a text row is exactly a non-spaceable staff (Staff.CreateTextRow gives it a
-        // staff-affinity; an ossia has none and is a real staff with a real clef).
+        // ⚠️ THE PREDICATE WAS SPACEABILITY ALONE until 2026-10-31: a text row was exactly a
+        // non-spaceable staff (Staff.CreateTextRow gives it a staff-affinity; an ossia has
+        // none and is a real staff with a real clef). A rows-only sheet's first row is
+        // spaceable now (page-layout-problem.cc:728-730, MeasureCollector) and draws no clef
+        // either, so the row's kind is asked as well (StaffLayout.IsTextRow).
         // LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 Page_layout_problem::is_spaceable.
-        if (!StaffAffinity.IsSpaceable(staff.StaffAffinity))
+        if (staff.IsTextRow || !StaffAffinity.IsSpaceable(staff.StaffAffinity))
             return;
         // ⚠️ THE CLEF THE PAGE DRAWS, from the one home the drawing reads (MusicGlyphs.Clef and
         // SharedRenderer.ClefLineBelowTopLine). Until session 871 this kept a switch of its own
@@ -2305,7 +2307,7 @@ internal static class OutsideStaffStacker
             if (cn.RowStaffIndex < 0
                 || !measureToSystem.TryGetValue(cn.MeasureIndex, out int sysIdx))
                 continue;
-            if (StaffAffinity.TopSpaceableStaff(systems[sysIdx]) is null)
+            if (StaffAffinity.TopNotationStaff(systems[sysIdx]) is null)
                 continue;   // staffless: the row is the anchor, and its line is the label's
             // The name AND a chord diagram under it (a written shape, HANDOFF §2 K) — one box.
             var ink = ChordNameEngraver.InkWithDiagram(fonts, cn);
@@ -2528,7 +2530,7 @@ internal static class OutsideStaffStacker
             // LilyPond's do (all_v_skylines.push_back). The staffless sheet's number keeps the
             // pass: there the grid row IS the anchor.
             if (bn.AnchorStaffIndex is { } host
-                && StaffAffinity.TopSpaceableStaff(systems[sysIdx]) is { } hostStaff
+                && StaffAffinity.TopNotationStaff(systems[sysIdx]) is { } hostStaff
                 && host != hostStaff.StaffIndex)
             {
                 trackers(sysIdx, hostStaff.StaffIndex).Reserve(bnUp, bnDown, OutsideStaffPadding);
@@ -3460,8 +3462,9 @@ internal static class OutsideStaffStacker
     }
 
     /// <summary>Whether <paramref name="staffIndex"/> of <paramref name="system"/> is a text row —
-    /// a chords or lyrics row, a non-spaceable staff (<see cref="StaffAffinity.IsSpaceable"/>) —
-    /// rather than a staff with lines.</summary>
+    /// a chords or lyrics row (<see cref="StaffLayout.IsTextRow"/>) — rather than a staff with
+    /// lines. ⚠️ Asked of the row's kind, not of its spaceability: a rows-only sheet's first row
+    /// is spaceable (page-layout-problem.cc:728-730) and still has no staff lines.</summary>
     private static bool IsTextRow(SystemLayout system, int staffIndex)
     {
         if (system.StaffGroups.IsDefaultOrEmpty)
@@ -3469,7 +3472,7 @@ internal static class OutsideStaffStacker
         foreach (var g in system.StaffGroups)
             foreach (var s in g.Staves)
                 if (s.StaffIndex == staffIndex)
-                    return !StaffAffinity.IsSpaceable(s.StaffAffinity);
+                    return s.IsTextRow;
         return false;
     }
 
