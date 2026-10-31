@@ -616,6 +616,21 @@ public class ShapeChordItemTests
         Assert.DoesNotContain(Diagnostics(fresh), d => d.Code == DiagnosticCodes.DiagramNotTheChord);
     }
 
+    /// <summary>An @diagram over a note that also prints a name stands under the name, as
+    /// @chord(NAME SHAPE)'s diagram does (owner's report 2026-10-31: <f a c>1@chord@diagram drew
+    /// the diagram over its name); alone, or put below with .down, it is an ordinary script.</summary>
+    [Fact]
+    public void ADiagramBesideAName_StandsUnderIt()
+    {
+        bool Under(string music) => Assert.Single(Collected(Book("instrument guitar", music)).Articulations,
+            a => a.Type == ArticulationType.FretFrame).UnderChordName;
+        Assert.True(Under("<f a c>1@chord@diagram |"));
+        Assert.True(Under("<f a c>1@diagram@chord |"));
+        Assert.True(Under("c1@chord(F)@diagram(133211) |"));
+        Assert.False(Under("<f a c>1@diagram |"));
+        Assert.False(Under("c1@chord(F)@diagram(133211).down |"));
+    }
+
     // ================================================================ the outputs
 
     [Fact]

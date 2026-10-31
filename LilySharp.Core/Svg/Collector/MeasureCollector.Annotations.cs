@@ -277,6 +277,12 @@ public sealed partial class MeasureCollector
             (_v.GraceFrameSpecs ??= new())[itemIndex] = frameSpec;
     }
 
+    /// <summary>Whether <paramref name="host"/> — the note, chord or rest an <c>@diagram</c> is on —
+    /// prints a chord name too: an <c>@chord</c> on it, or a <c>chord(…)</c> item.</summary>
+    private static bool PrintsAName(SyntaxNode? host)
+        => host is ChordSyntax { ShowsName: true }
+           || host != null && ArticulationsOf(host).Any(a => a is MusicMarkSyntax { Name: "chord" });
+
     /// <summary>The key signature as WRITTEN at this point of the walk — the one a chord
     /// named from notes is spelled in (<see cref="TryNameChord"/> reads it the same way).</summary>
     private int WrittenKeySharps() => _v.Meta.KeySharps - _v.Octave.TransposeKeySharps(0);
@@ -998,6 +1004,10 @@ public sealed partial class MeasureCollector
                         FrameSpec = spec,
                         VoiceIndex = _v.Cursor.VoiceIndex,
                         DirectionForced = markSyntax.ForcedAbove is not null,
+                        // Over a note that also prints a name — an @chord on it, a chord(…) item —
+                        // the diagram stands under the name, as @chord(NAME SHAPE)'s does (owner's
+                        // report 2026-10-31: <f a c>1@chord@diagram drew the diagram over its name).
+                        UnderChordName = markSyntax.ForcedAbove != false && PrintsAName(markSyntax.Parent),
                     });
                     // On a grace column (session 964, GraceBodySupport.IsCarriedDiagram) the
                     // run's spacing rods the box against its neighbours (GraceColumnInfo.FrameSpec).
