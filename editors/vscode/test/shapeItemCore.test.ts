@@ -16,7 +16,7 @@
 
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { onAngleChord, onShapeItem, sameDocumentUri } from '../src/shapeItemCore';
+import { onAngleChord, onShapeItem, shapeItemAt, sameDocumentUri } from '../src/shapeItemCore';
 
 test('the caret on a chord(...) or diagram(...) item, its words or its duration', () => {
     const line = '  c4 diagram(133211)4 chord(C7(b9) x32310)2. e4';
@@ -25,6 +25,20 @@ test('the caret on a chord(...) or diagram(...) item, its words or its duration'
     assert.equal(onShapeItem(line, line.indexOf(')4') + 2), true);
     assert.equal(onShapeItem(line, line.indexOf('b9')), true);
     assert.equal(onShapeItem(line, line.indexOf('2.') + 2), true);
+});
+
+test('the item the caret is on, whole — for the preview to light (owner\'s request 2026-10-31)', () => {
+    const line = '  c4 chord(F 133211)4 diagram(C7(b9) x32310)2. e4';
+    const chord: [number, number] = [line.indexOf('chord'), line.indexOf(')4') + 2];
+    assert.deepEqual(shapeItemAt(line, line.indexOf('chord')), chord);      // on the word
+    assert.deepEqual(shapeItemAt(line, line.indexOf('133211')), chord);     // inside the parentheses
+    assert.deepEqual(shapeItemAt(line, line.indexOf(')4') + 1), chord);     // on the duration
+    assert.deepEqual(shapeItemAt(line, line.indexOf(')4') + 2), chord);     // just past it
+    const diagram: [number, number] = [line.indexOf('diagram'), line.indexOf('2.') + 2];
+    assert.deepEqual(shapeItemAt(line, line.indexOf('b9')), diagram);       // a nested parenthesis
+    assert.equal(shapeItemAt(line, line.indexOf('c4')), undefined);
+    assert.equal(shapeItemAt(line, line.indexOf('e4')), undefined);
+    assert.deepEqual(shapeItemAt('  chord(F 1332', 12), [2, 14]);           // unclosed: to the line's end
 });
 
 test('not on a note, and not on an @chord / @diagram mark', () => {

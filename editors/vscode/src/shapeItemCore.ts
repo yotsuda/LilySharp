@@ -21,6 +21,16 @@
  * the editor's context menu (`lilysharp.onShapeItem`); the server decides the rest.
  */
 export function onShapeItem(line: string, character: number): boolean {
+    return shapeItemAt(line, character) !== undefined;
+}
+
+/**
+ * The `chord(…)` / `diagram(…)` ITEM the caret at `character` of `line` stands on, as
+ * [its word's start, just past its duration) columns — or undefined. The preview lights the
+ * whole item there (owner's request 2026-10-31: inside the parentheses and on the duration the
+ * caret lit nothing, since the whitespace-cut token under it was `133211)4`, not the item).
+ */
+export function shapeItemAt(line: string, character: number): [number, number] | undefined {
     const word = /(?<![@\w])(chord|diagram)\s*\(/g;
     let m: RegExpExecArray | null;
     while ((m = word.exec(line)) !== null) {
@@ -30,13 +40,13 @@ export function onShapeItem(line: string, character: number): boolean {
             if (line[i] === '(') depth++;
             else if (line[i] === ')' && depth-- === 0) break;
         }
-        if (i >= line.length) return character >= m.index;   // words run on: still on the item
+        if (i >= line.length) return character >= m.index ? [m.index, line.length] : undefined;   // words run on: still on the item
         let end = i + 1;
         while (end < line.length && /[0-9.]/.test(line[end])) end++;
-        if (character >= m.index && character <= end) return true;
+        if (character >= m.index && character <= end) return [m.index, end];
         word.lastIndex = end;
     }
-    return false;
+    return undefined;
 }
 
 /**

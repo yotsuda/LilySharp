@@ -42,7 +42,7 @@ import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
-import { onAngleChord, onShapeItem, sameDocumentUri } from './shapeItemCore';
+import { onAngleChord, onShapeItem, shapeItemAt, sameDocumentUri } from './shapeItemCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
@@ -1229,6 +1229,15 @@ export function activate(context: vscode.ExtensionContext) {
                     if (chord) {
                         const lineStart = offset - col;
                         panel.webview.postMessage({ type: 'highlightRange', ranges: [[lineStart + chord[0], lineStart + chord[1] + 1]], caret: offset });
+                        return;
+                    }
+                    // A caret anywhere on a chord(…) / diagram(…) item — its word, inside its
+                    // parentheses, on its duration — lights the item's notes (owner's request
+                    // 2026-10-31): the token under the caret alone (`133211)4`) holds no note.
+                    const item = shapeItemAt(line, col);
+                    if (item) {
+                        const lineStart = offset - col;
+                        panel.webview.postMessage({ type: 'highlightRange', ranges: [[lineStart + item[0], lineStart + item[1]]], caret: offset });
                         return;
                     }
                     const isWs = (c: string | undefined) =>
