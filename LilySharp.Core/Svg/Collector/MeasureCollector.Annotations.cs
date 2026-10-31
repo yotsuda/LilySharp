@@ -989,10 +989,15 @@ public sealed partial class MeasureCollector
                 else if ((Semantics.AnnotationValues.Frame(markSyntax)
                           // A bare @diagram on a <…> chord: its own notes as the part's strings fret
                           // them (owner's request 2026-10-30), the guitar's for a part with none.
+                          // On a single note, where that note is held: its lowest fret (owner's
+                          // decision 2026-10-31 — c@diagram is xxxx1x on a guitar).
                           ?? (Semantics.AnnotationValues.IsNotesDiagram(markSyntax) && _v.LastAddedItem is ChordItem notes
                               ? Music.ChordFingering.FrameSpec([.. notes.Notes.Select(n => n.Midi)],
                                   Tablature.Tunings.GetTuning(_partFrettedTuning ?? TuningType.Guitar))
-                              : null)) is { } spec)
+                              : Semantics.AnnotationValues.IsNotesDiagram(markSyntax) && _v.LastAddedItem is NoteItem single
+                                ? Music.ChordFingering.FrameSpec([single.Midi],
+                                    Tablature.Tunings.GetTuning(_partFrettedTuning ?? TuningType.Guitar))
+                                : null)) is { } spec)
                 {
                     // @diagram(x32010) — chord diagram above the note (ArticulationEngraver's
                     // IsForcedAbove), or below with an explicit `.down`.

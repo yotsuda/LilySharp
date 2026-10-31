@@ -91,9 +91,13 @@ public class ChordVoicingFinderTests
         string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
         Assert.Contains("\\fret-diagram-terse \"x;x;5;4;3;1;\"", ly);
         Assert.Contains("\\fret-diagram-terse \"x;3;2;o;1;x;\"", ly);
-        // On a single note it is no diagram of anything: its shape must be written.
-        Assert.Contains(SemanticValidation.Run(SyntaxTree.Parse("octave absolute\npart gt { instrument guitar }\nsection A { gt { c'1@diagram | } }\nform { A }\n")),
-            d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        // On a single note it draws where that note is held, its lowest fret (owner's decision
+        // 2026-10-31; it was unknown until then): C4 is the B string's first fret.
+        var single = SyntaxTree.Parse("octave absolute\npart gt { instrument guitar }\nsection A { gt { c'1@diagram | } }\nform { A }\nscore { staff gt }\n");
+        Assert.DoesNotContain(SemanticValidation.Run(single), d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        Assert.Equal("xxxx1x", Assert.Single(LilySharp.Core.Svg.SvgGenerator.CollectScore(single,
+            LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(single)).Articulations,
+            a => a.Type == ArticulationType.FretFrame).FrameSpec);
     }
 
     [Fact]

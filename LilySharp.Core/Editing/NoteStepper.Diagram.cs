@@ -24,7 +24,8 @@ public static partial class NoteStepper
 {
     /// <summary>
     /// Ctrl+Shift+Up/Down with the caret on the shape of an <c>@diagram(SHAPE)</c> over a
-    /// <c>&lt;…&gt;</c> chord (owner's decision 2026-10-31, with "Add Guitar Diagram"): the
+    /// <c>&lt;…&gt;</c> chord, or over a single note it is held by (owner's decisions 2026-10-31;
+    /// <c>c@diagram</c> is xxxx1x, Up xxx5xx), with "Add Guitar Diagram": the
     /// other ways a hand holds the SAME notes, the one a player reaches for first
     /// (<see cref="ChordFingering.Fingerings"/>) — the notes never change, only the strings and
     /// the frets. A shape that is none of them (the notes edited since; LYS1057) steps to the
@@ -42,7 +43,7 @@ public static partial class NoteStepper
         {
             // The caret anywhere after the '@' — on the word or the shape.
             if (mark.Name != "diagram"
-                || mark.Parent is not ChordSyntax { IsShapeChord: false } chord
+                || mark.Parent is not (ChordSyntax { IsShapeChord: false } or NoteSyntax) || mark.Parent is not { } chord
                 || caret <= mark.Span.Start || caret > mark.Span.End)
                 continue;
             bool bare = mark.Arguments.IsEmpty;
@@ -52,7 +53,16 @@ public static partial class NoteStepper
                 return null;
             if (ShapeChordConverter.PlayedPitches(tree, chord) is not { } pitches)
                 return new StepResult(false, [], "@diagram: this chord is not played in any score", [], 0);
-            var options = ChordFingering.Fingerings(pitches, ShapeChordConverter.StringsOf(chord))
+            var strings = ShapeChordConverter.StringsOf(chord);
+            // On a single note, a shape that is not where that note is held — a chord's diagram
+            // over a melody note — is an illustration: it walks its chord's shapes (the Voicing
+            // step), not the note's positions (owner's decision 2026-10-31).
+            if (chord is NoteSyntax && !bare
+                && !(Semantics.AnnotationValues.DiagramFrets(mark) is { } drawn && drawn.Length == strings.Length
+                     && drawn.Select((f, s) => f < 0 ? -1 : strings[s] + f).Where(p => p >= 0).Distinct().Order()
+                        .SequenceEqual(pitches)))
+                return null;
+            var options = ChordFingering.Fingerings(pitches, strings)
                 .Where(f => f.Max() <= 15).ToList();
             if (options.Count == 0)
                 return new StepResult(false, [], "@diagram: no hand can hold this chord (LYS1055)", [], 0);

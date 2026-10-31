@@ -468,7 +468,8 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   side (`@diagram(xx-10-12-13-11)`); 4–8 strings. Above the note
   whatever the stem; `@diagram(x32010).down` puts it below. Size: `fonts { diagram step +3 }`.
   A bare `@diagram` on a `<…>` chord draws the chord's own notes as the part's strings fret them
-  (`<g b d' f'>1@diagram` = xx5431); a chord no hand can hold draws none (LYS1055 warns).
+  (`<g b d' f'>1@diagram` = xx5431); a chord no hand can hold draws none (LYS1055 warns). On a
+  single note it draws where that note is held (`c'1@diagram` = xxxx1x).
   On a fretted part, `@diagram(SHAPE)` on a `<…>` chord must sound the chord's notes, or LYS1057
   warns: after editing the notes, rewrite the shape (or write a bare `@diagram`).
 - Guitar bend: `c4@bend(half)` (1 semitone), `@bend(full)` (2), `@bend(N)` (N = 1–12

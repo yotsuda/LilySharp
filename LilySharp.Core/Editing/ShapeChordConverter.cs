@@ -180,7 +180,7 @@ public static class ShapeChordConverter
 
     /// <summary>The pitches a <c>&lt;…&gt;</c> chord plays, lowest first, as the MIDI export starts
     /// them (one moment, one part: the first time it is played), or null when it is not played.</summary>
-    internal static int[]? PlayedPitches(SyntaxTree tree, ChordSyntax chord)
+    internal static int[]? PlayedPitches(SyntaxTree tree, SyntaxNode chord)
     {
         var span = chord.Span;
         var played = new Midi.MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes)

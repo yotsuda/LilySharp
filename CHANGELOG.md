@@ -70,6 +70,10 @@ workflow attaches that section to the GitHub Release verbatim.
   `@diagram(SHAPE)` on a `<…>` chord whose shape is not the chord's notes — edited since the shape
   was written. The quick fix writes the chord's own shape. A capo or a transposing part, every note
   moved alike, is not a difference.
+- `[page]` **A bare `@diagram` on a single note draws where the note is held**: `c'1@diagram` is
+  `xxxx1x` on a guitar (it was unknown, and drew nothing). Ctrl+Shift+Up/Down walks the other places
+  — `xxx5xx`, `xx-10-xxx` — and Down at the first goes back to the bare mark. A chord's shape over a
+  single note still walks its chord's shapes.
 - `[editor]` **Ctrl+Shift+Up/Down steps a shape with no symbol** — a `diagram(x32010)` item, an `@chord(x32010)` (which used to step the note it is on), and an `@diagram(133211)` on a single note or a rest — through the shapes of the chord it spells. On a `<…>` chord, `@diagram(SHAPE)` walks the ways to hold that chord's notes instead.
   It walks the other shapes of the chord the shape sounds, rewriting the shape only: x32010 is C,
   and the status bar says *C: shape 2 of …*. Down at the first shape keeps it.

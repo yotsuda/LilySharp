@@ -466,6 +466,25 @@ public class StepRequestTests
         Assert.Equal(Guitar("c'1@diagram(133211).up"), Up("c'1@diagram(133‸211)", Guitar));
     }
 
+    /// <summary>A bare <c>@diagram</c> on a single note draws where that note is held, its lowest fret
+    /// first (owner's decision 2026-10-31: c'@diagram is xxxx1x); the keys walk the other places,
+    /// as a chord's fingerings. A shape that is not where the note is held — a chord's diagram over
+    /// a melody note — still walks its chord's shapes (ADiagramOnANote_StepsItsShape).</summary>
+    [Fact]
+    public void ADiagramOnASingleNote_WalksWhereTheNoteIsHeld()
+    {
+        Assert.Equal(Guitar("c'1@diagram(xxx5xx)"), Step(Guitar("c'1@diag‸ram"), +1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram(xx-10-xxx)"), Step(Guitar("c'1@diagram(xxx‸5xx)"), +1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram(xxx5xx)"), Step(Guitar("c'1@diagram(xx-1‸0-xxx)"), -1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram"), Step(Guitar("c'1@diagram(xxxx‸1x)"), -1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram"), Step(Guitar("c'1@diag‸ram"), -1, semitone: true).After);
+        // The page draws it: one dot, the B string's first fret.
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(Guitar("c'1@diagram |"));
+        Assert.Equal("xxxx1x", Assert.Single(LilySharp.Core.Svg.SvgGenerator.CollectScore(tree,
+            LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)).Articulations,
+            a => a.Type == LilySharp.Core.Syntax.ArticulationType.FretFrame).FrameSpec);
+    }
+
     // ---------------------------------------------------------------- notes
 
     [Fact]

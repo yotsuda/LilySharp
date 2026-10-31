@@ -147,7 +147,9 @@ its name, its diagram, a <code>chords</code> row — is on
   <ul>
     <li><b>A bare <code>@diagram</code> on a chord draws its own notes as fretted:</b>
     <code>&lt;g b d' f'&gt;1@diagram</code> draws <code>xx5431</code>, and follows the notes when
-    you edit them. The <code>.ly</code> twin draws the same shape.</li>
+    you edit them. The <code>.ly</code> twin draws the same shape. On a single note it draws
+    where that note is held: <code>c'1@diagram</code> is <code>xxxx1x</code>, and
+    <kbd>Ctrl+Shift+Up</kbd> walks the other places (<code>xxx5xx</code>, <code>xx-10-xxx</code>, …).</li>
     <li><b>Right-click a <code>&lt;…&gt;</code> chord → <i>Add Guitar Diagram</i></b> writes that
     shape out: <code>&lt;g b d' f'&gt;1@diagram(xx5431)</code>. With the caret on the shape,
     <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> walks the other ways to hold the same notes

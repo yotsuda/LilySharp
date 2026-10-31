@@ -2442,7 +2442,10 @@ them (its `instrument` or `tuning`, else the guitar's): each note on a string of
 fretted ones within four frets, the shape a player reaches for (no crossed strings, the lowest
 position, the fewest fingers). A chord no hand can hold draws none, and a fretted part warns it
 (LYS1055, naming a voicing of its notes that can be held). On a single note a bare `@diagram`
-draws nothing: its shape must be written.
+draws where that note is held, its lowest fret first (`c'1@diagram` is `xxxx1x` on a guitar), and
+`Ctrl+Shift+Up` walks the other places (`xxx5xx`, `xx-10-xxx`, …). A shape written over a single
+note that is not where the note is held — a chord's diagram over a melody note — is an
+illustration, and its keys walk its chord's shapes instead.
 
 **Right-click a `<…>` chord → *Add Guitar Diagram*** writes that shape out:
 `<g b d' f'>1` becomes `<g b d' f'>1@diagram(xx5431)` (a bare `@diagram` there is the one
