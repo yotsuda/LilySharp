@@ -2378,7 +2378,7 @@ chord row's baseline and never closer than 0.5 to the names and their diagrams, 
 pushes the words (and the grid's bar lines) down under it; on a chords-only grid the cell's
 bar lines run down past the diagrams on that line instead, every chords row is a cell of its
 own, and a track placed twice on the same tuning (`chords prog` over `chords prog as roman`)
-draws its diagrams on the first row only.
+draws its diagrams under the last of its rows only — name, name, diagram.
 
 An entry may also be a **Roman degree of the key** at that bar, which is how a
 progression is written once and follows the key:

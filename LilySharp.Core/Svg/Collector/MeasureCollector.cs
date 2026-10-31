@@ -1782,9 +1782,19 @@ public sealed partial class MeasureCollector
             EnsureSectionStartsForRows(tree.GetRoot());
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
-        // The (track, diagram tuning) pairs the score has placed: a second row of the same
-        // track on the same tuning draws no diagram (ChordNameCollector.RepeatsPlacedRow).
-        var placedRows = new HashSet<(string Track, Syntax.TuningType? Tuning)>();
+        // How many rows of each (track, diagram tuning) the score places: the LAST of them
+        // draws the diagrams, the ones above it the names alone — name, name, diagram
+        // (ChordNameCollector.DiagramsDrawOnALaterRow).
+        Syntax.TuningType? RowDiagramTuning(string rowName)
+            => Semantics.ChordDiagramsKey.Resolve(_chordDiagramScope, _chordTuningWord,
+                Semantics.ChordDiagramScores.RowStaffWord(tree.GetRoot(), renderSpec, rowName) is { } w
+                    ? Tablature.Tunings.Parse(w) : null);
+        var rowsLeft = new Dictionary<(string Track, Syntax.TuningType? Tuning), int>();
+        foreach (var (rowName, _, _, _) in pendingChordRows)
+        {
+            var key = (rowName, RowDiagramTuning(rowName));
+            rowsLeft[key] = rowsLeft.TryGetValue(key, out int n) ? n + 1 : 1;
+        }
         foreach (var (rowName, rowIdx, rowMode, rowFor) in pendingChordRows)
         {
             // A row's diagrams draw on the instrument of the staff it stands directly above
@@ -1792,8 +1802,8 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowStaffTuning =
                 Semantics.ChordDiagramScores.RowStaffWord(tree.GetRoot(), renderSpec, rowName) is { } rowWord
                     ? Tablature.Tunings.Parse(rowWord) : null;
-            _chordNameCollector.RepeatsPlacedRow = !placedRows.Add((rowName,
-                Semantics.ChordDiagramsKey.Resolve(_chordDiagramScope, _chordTuningWord, _chordNameCollector.RowStaffTuning)));
+            var rowKey = (rowName, RowDiagramTuning(rowName));
+            _chordNameCollector.DiagramsDrawOnALaterRow = --rowsLeft[rowKey] > 0;
             // (renderSpec is never null on this road — a null test here made the flow analysis
             // doubt it for the rest of the pass: six CS8602/CS8604 from one `== null`.)
             _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), rowName, rowFor);

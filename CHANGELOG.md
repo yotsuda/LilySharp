@@ -24,9 +24,9 @@ workflow attaches that section to the GitHub Release verbatim.
   line hanging under a bar-less ChordNames line.)
 - `[render]` **Every chords row of a chords-only grid is a cell**: a second row
   (`chords prog` over `chords prog as roman`) gets its own bar lines; the meter stays on the
-  first. **A track placed twice on the same tuning draws its diagrams once**, on the first
-  row — the second row prints the names alone (a row over a differently tuned part is a
-  different diagram and still draws).
+  first. **A track placed twice on the same tuning draws its diagrams once**, under the LAST
+  of its rows — name, name, diagram; the rows above print the names alone (a row over a
+  differently tuned part is a different diagram and still draws).
 - `[render]` **The words of a lyrics grid stand centred between the bar ends**: the four-space
   cell is split so the row's tallest ink has the same room over it as its deepest ink has
   under it. A kana row (ink 0.88 em up, 0.12 down) used to sit high in its cells; a Latin

@@ -197,27 +197,30 @@ public sealed class RowsOnlyDiagramStackTests
 
     /// <summary>A track placed twice on a chords-only sheet (<c>chords prog</c> over
     /// <c>chords prog as roman</c>): every row is a cell with its own bar lines, the meter
-    /// stands on the first alone, and the diagram draws on the first row alone — the same
-    /// track on the same tuning is the same diagram (owner's report 2026-11-01).</summary>
+    /// stands on the first alone, and the diagram draws once, on the LAST row — name, name,
+    /// diagram (owner's requests 2026-11-01); the same track on the same tuning is the same
+    /// diagram.</summary>
     [Fact]
-    public void ChordsOnlyGrid_ATrackPlacedTwice_EveryRowIsACell_AndTheDiagramDrawsOnce()
+    public void ChordsOnlyGrid_ATrackPlacedTwice_EveryRowIsACell_AndTheDiagramDrawsOnceOnTheLastRow()
     {
         var g = RenderedGeometry.Render(Book(WithDiagram, "chords prog  chords prog as roman"));
         var cells = g.Barlines.GroupBy(b => Math.Round(b.Y, 3)).OrderBy(c => c.Key).ToList();
         Assert.Equal(2, cells.Count);
         var first = cells[0].First();
         var second = cells[1].First();
-        // The first cell encloses the diagram; the second is a bare four-space cell under it.
-        Assert.True(first.Height > 4.0 + 4.0, $"the first cell ({first.Height:F3}) should enclose the diagram");
-        Assert.Equal(4.0, second.Height, 6);
+        // The first cell is the bare four-space cell; the second encloses the diagram.
+        Assert.Equal(4.0, first.Height, 6);
+        Assert.True(second.Height > 4.0 + 4.0, $"the second cell ({second.Height:F3}) should enclose the diagram");
         Assert.True(second.Y >= first.Y + first.Height - 1e-6,
             $"the second cell starts at {second.Y:F3}, inside the first's [{first.Y:F3}, {first.Y + first.Height:F3}]");
-        // One diagram: its x x o marks once, not twice.
-        Assert.Equal(3, g.Texts.Count(t => t.Role == TextRole.FretFrame));
+        // One diagram, under the roman row: its x x o marks once, below the second row's names.
+        var marks = g.Texts.Where(t => t.Role == TextRole.FretFrame).ToList();
+        Assert.Equal(3, marks.Count);
+        double roman = g.ChordSymbolRuns.Max(t => t.Y);
+        Assert.True(marks.All(m => m.Y > roman), "the diagram should hang under the roman row's names");
         // One meter (the staff-size glyph; the header tempo's note is the smaller one).
         Assert.Single(g.Glyphs.Where(gl => Math.Abs(gl.FontSize - 4.0) < 1e-9));
         // ...and the second row's names stand inside its own cell.
-        double roman = g.ChordSymbolRuns.Max(t => t.Y);
         Assert.True(second.Y < roman && roman < second.Y + second.Height,
             $"the roman row's baseline {roman:F3} is outside its cell [{second.Y:F3}, {second.Y + second.Height:F3}]");
     }

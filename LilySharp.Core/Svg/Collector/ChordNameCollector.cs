@@ -90,13 +90,14 @@ internal sealed class ChordNameCollector
     public int RowShift { get; set; }
 
     /// <summary>
-    /// True while a row is collected that is the SAME track on the SAME tuning as a row this
-    /// score already placed (<c>chords prog</c> over <c>chords prog as roman</c>): its entries
-    /// draw no diagram — the first row's diagrams are the shapes, and the second row would
-    /// print each of them again (owner's request 2026-11-01). Set by the collector before each
-    /// row; a different tuning (a row over a ukulele part) is a different diagram and draws.
+    /// True while a row is collected that the SAME track on the SAME tuning is placed AGAIN
+    /// below (<c>chords prog</c> over <c>chords prog as roman</c>): its entries draw no
+    /// diagram — the LAST such row draws the shapes, under every name of the track, and an
+    /// earlier row would print each of them again (owner's request 2026-11-01: name, name,
+    /// diagram). Set by the collector before each row; a different tuning (a row over a
+    /// ukulele part) is a different diagram and draws.
     /// </summary>
-    public bool RepeatsPlacedRow { get; set; }
+    public bool DiagramsDrawOnALaterRow { get; set; }
 
     /// <summary>The <c>@todo</c> a chords-row entry or rest carries (docs/todo-memo-design.md §5),
     /// as <see cref="ChordNameItem.TodoKey"/> / <see cref="ChordNameItem.TodoMemo"/> /
@@ -122,7 +123,7 @@ internal sealed class ChordNameCollector
     private string? DiagramOf(ChordEntrySyntax entry, LilySharp.Core.Music.ChordStructure? structure)
     {
         var words = entry.ShapeWords;
-        if (RepeatsPlacedRow
+        if (DiagramsDrawOnALaterRow
             || (words.Count == 0 && !DiagramsAll && Table == null)
             || Semantics.ChordDiagramsKey.Resolve(DiagramScope, TuningWord, RowStaffTuning) is not { } tuning)
             return null;
