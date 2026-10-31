@@ -31,10 +31,11 @@ public static partial class NoteStepper
     /// the frets. A shape that is none of them (the notes edited since; LYS1057) steps to the
     /// first. Null when the caret is not there: the step goes on as before.
     /// <para>
-    /// A bare <c>@diagram</c> already draws the first fingering (owner's decision 2026-10-31): Up
-    /// writes the SECOND out, and Down at the first written one takes the shape away again — back to
-    /// the bare mark, whose diagram follows the notes. Down on the bare mark stays. The same walk as a
-    /// chord name's in an <c>all</c> score, whose usual shape is shown before it is written.
+    /// A bare <c>@diagram</c> already draws the first fingering: Up writes THAT one out (the page does
+    /// not change; the shape shows in the source, as "Add Guitar Diagram" writes it), and Down at the
+    /// first written one takes the shape away again — back to the bare mark, whose diagram follows
+    /// the notes. Down on the bare mark stays. One line: bare ⇄ first ⇄ second ⇄ … (owner's
+    /// decisions 2026-10-31; Up wrote the second at first, which made the walk skip a step).
     /// </para>
     /// </summary>
     private static StepResult? DiagramFingeringStep(string text, SyntaxTree tree, int caret, int dir)
@@ -69,14 +70,15 @@ public static partial class NoteStepper
             ImmutableArray<int> sound = [.. pitches.Take(MaxAuditionPitches)];
             if (bare)
             {
-                // The bare mark shows the first fingering: Up writes the second, Down stays.
-                string first = $"@diagram: fingering 1 of {options.Count} ({ChordVoicings.Spell(options[0])})";
-                if (dir < 0 || options.Count == 1)
-                    return new StepResult(false, [], first + " - the first", sound, GuitarTimbre, GuitarProgram);
-                string second = ChordVoicings.Spell(options[1]);
+                // The bare mark shows the first fingering: Up writes it out — the page does not
+                // change, the source shows the shape — and Down stays.
+                string first = ChordVoicings.Spell(options[0]);
+                string firstAt = $"@diagram: fingering 1 of {options.Count} ({first})";
+                if (dir < 0)
+                    return new StepResult(false, [], firstAt + " - drawn from the notes", sound, GuitarTimbre, GuitarProgram);
                 int after = mark.Span.Start + "@diagram".Length;
-                return new StepResult(false, [new Edit(after, after, "(" + second + ")")],
-                    $"@diagram: fingering 2 of {options.Count} ({second})", sound, GuitarTimbre, GuitarProgram);
+                return new StepResult(false, [new Edit(after, after, "(" + first + ")")], firstAt, sound,
+                    GuitarTimbre, GuitarProgram);
             }
             int at = Semantics.AnnotationValues.DiagramFrets(mark) is { } now
                 ? options.FindIndex(o => o.SequenceEqual(now)) : -1;

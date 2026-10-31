@@ -473,7 +473,7 @@ public class StepRequestTests
     [Fact]
     public void ADiagramOnASingleNote_WalksWhereTheNoteIsHeld()
     {
-        Assert.Equal(Guitar("c'1@diagram(xxx5xx)"), Step(Guitar("c'1@diag‸ram"), +1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram(xxxx1x)"), Step(Guitar("c'1@diag‸ram"), +1, semitone: true).After);
         Assert.Equal(Guitar("c'1@diagram(xx-10-xxx)"), Step(Guitar("c'1@diagram(xxx‸5xx)"), +1, semitone: true).After);
         Assert.Equal(Guitar("c'1@diagram(xxx5xx)"), Step(Guitar("c'1@diagram(xx-1‸0-xxx)"), -1, semitone: true).After);
         Assert.Equal(Guitar("c'1@diagram"), Step(Guitar("c'1@diagram(xxxx‸1x)"), -1, semitone: true).After);

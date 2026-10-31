@@ -67,7 +67,7 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[editor]` **Right-click a `<…>` chord → "Add Guitar Diagram".** The chord stays and gains
   `@diagram(SHAPE)`, the shape a bare `@diagram` draws: `<g b d' f'>1` → `<g b d' f'>1@diagram(xx5431)`.
   With the caret on the shape, Ctrl+Shift+Up/Down walks the other ways to hold the same notes
-  (a bare `@diagram` shows the first: Up writes the second, Down at the first goes back to bare)
+  (a bare `@diagram` shows the first: Up writes it out, Down at the first goes back to bare)
   (*fingering 2 of 3*), the notes unchanged.
 - `[lang]` **A diagram that no longer sounds its chord warns** (LYS1057): on a fretted part, an
   `@diagram(SHAPE)` on a `<…>` chord whose shape is not the chord's notes — edited since the shape
