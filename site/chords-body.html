@@ -48,6 +48,38 @@ a guitarist reads. Writing the notes a chord plays is on
     <tr><td><code>chord(x32010)1</code></td><td><img class="cell" src="examples/cell-item-chord-of-shape.svg" alt="C over its diagram, over the five strings of x32010"></td><td>✓ read off the shape</td><td>✓</td></tr>
     <tr><td><code>diagram(133211)1</code></td><td><img class="cell" src="examples/cell-item-diagram.svg" alt="the diagram alone, over the six strings of 133211"></td><td></td><td>✓</td></tr>
   </table>
+  <details><summary>Show the whole file</summary><pre>// The table's spellings, one score for each group of rows.
+// Switch between them with the preview's Score: list. The bars follow the table's rows.
+octave absolute
+time 4/4
+part gt { instrument guitar }
+
+section onNote {
+  gt {
+    c'1@chord(F) |           // a name
+    c'1@chord(F 133211) |    // a name over its diagram
+    c'1@chord(x32010) |      // the name read off the shape, over its diagram
+    c'1@diagram(133211) |    // a diagram alone
+  }
+}
+section onChord {
+  gt {
+    &lt;f a c'&gt;1@chord |        // the name read off the notes
+    &lt;f a c'&gt;1@diagram |      // the diagram of the notes, fretted
+  }
+}
+section alone {
+  gt {
+    chord(F)1 |              // a name; F A C sound
+    chord(F 133211)1 |       // a name over its diagram; the shape sounds
+    chord(x32010)1 |         // the name read off the shape, over its diagram
+    diagram(133211)1 |       // a diagram alone; the shape sounds
+  }
+}
+
+score onANote  { form { onNote }   staff gt }
+score onAChord { form { onChord }  staff gt }
+score alone    { form { alone }    staff gt }</pre></details>
   <p>Everything written on a note can be written on a <code>&lt;…&gt;</code> chord too
   (<code>&lt;f a c&gt;1@chord(F)</code>).</p>
   <p>A <code>chords</code> row follows the same rule: <code>F</code> is a name,
