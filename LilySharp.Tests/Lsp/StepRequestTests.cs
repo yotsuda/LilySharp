@@ -439,14 +439,17 @@ public class StepRequestTests
         Assert.Equal(Guitar("c'1@chord(Cm7 8x58x6)"), Up("c'1@chord(Cm7 8xx54x‸)", Guitar));
     }
 
-    /// <summary>An <c>@chord</c> with no symbol — a bare shape — has nothing of its own to step, so
-    /// the keys step the note it is written on (owner's request 2026-10-17); it used to fall back
-    /// to the editor's command.</summary>
+    /// <summary>An <c>@chord</c> with no symbol — a bare shape — steps its shape through the shapes
+    /// of the chord it spells, the shape alone rewritten, with the caret on the word or the shape
+    /// (owner's request 2026-10-31, over 2026-10-17's "the keys step the note it is on").</summary>
     [Fact]
-    public void AShapeWithNoSymbol_StepsItsNote()
+    public void AShapeWithNoSymbol_StepsItsShape()
     {
-        Assert.Equal(Guitar("d'1@chord(x3x546)"), Step(Guitar("c'1@chord(x3x5‸46)"), +1, semitone: true).After);
-        Assert.Equal(Guitar("c''1@chord(x3x546)"), Up("c'1@chord(x3x5‸46)", Guitar));
+        Assert.Equal(Guitar("c'1@chord(x32013)"), Step(Guitar("c'1@ch‸ord(x32010)"), +1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@chord(x32013)"), Step(Guitar("c'1@chord(x32‸010)"), +1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@chord(x35046)"), Step(Guitar("c'1@chord(x3x5‸46)"), +1, semitone: true).After);
+        // Down at the chord's first shape keeps it: no symbol is written, the shape is all there is.
+        Assert.Equal(Guitar("c'1@chord(x32010)"), Step(Guitar("c'1@chord(x32‸010)"), -1, semitone: true).After);
     }
 
     // ---------------------------------------------------------------- notes

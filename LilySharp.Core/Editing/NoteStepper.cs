@@ -1192,12 +1192,21 @@ public static partial class NoteStepper
         }
         if (node is MusicMarkSyntax mark)
         {
-            // A symbol-less @chord(x3x546) is no site: the keys step the note it is on (owner's
-            // request 2026-10-17, StepRequestTests.AShapeWithNoSymbol_StepsItsNote).
-            if (ChordAnnotation.Of(mark) is not { Symbol: { } symbol, Structure: { } chord } words)
-                return (null, null);
             var spans = ChordAnnotation.WordSpans(mark);
             if (spans.Count != mark.Arguments.Length || spans.Count == 0)
+                return (null, null);
+            // A symbol-less @chord(x32010) steps its shape through the shapes of the chord it
+            // spells, the shape alone rewritten — as a symbol-less diagram(…) item does (owner's
+            // request 2026-10-31, over 2026-10-17's "step the note it is on").
+            if (ChordAnnotation.Of(mark) is { Symbol: null, QuotedText: null, Shapes.IsEmpty: false } shapeOnly)
+            {
+                var shapeList = new List<(string, int, int)>();
+                for (int i = 0; i < spans.Count; i++)
+                    shapeList.Add((mark.Arguments[i].Text, spans[i].Start, spans[i].End));
+                return (new ShapeSite("", null, shapeList, [.. shapeOnly.Problems.Select(p => p.Message)],
+                    spans[0].Start, null, IsRow: false), null);
+            }
+            if (ChordAnnotation.Of(mark) is not { Symbol: { } symbol, Structure: { } chord } words)
                 return (null, null);
             var list = new List<(string, int, int)>();
             for (int i = 1; i < spans.Count; i++)

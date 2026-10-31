@@ -67,7 +67,7 @@ workflow attaches that section to the GitHub Release verbatim.
   `@diagram(SHAPE)` on a `<…>` chord whose shape is not the chord's notes — edited since the shape
   was written. The quick fix writes the chord's own shape. A capo or a transposing part, every note
   moved alike, is not a difference.
-- `[editor]` **Ctrl+Shift+Up/Down steps a `diagram(…)` item with no symbol** (`diagram(x32010)`).
+- `[editor]` **Ctrl+Shift+Up/Down steps a shape with no symbol** — a `diagram(x32010)` item, and an `@chord(x32010)` (which used to step the note it is on).
   It walks the other shapes of the chord the shape sounds, rewriting the shape only: x32010 is C,
   and the status bar says *C: shape 2 of …*. Down at the first shape keeps it.
 - `[editor]` **Hovering a `diagram(…)` item with no symbol names its chord** (*this shape is
