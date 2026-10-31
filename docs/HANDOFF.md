@@ -88,7 +88,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **OMR の依頼 #13（2026-10-31）＝cue の大きさを選べるように＝オーナーの判断待ち**（`REQUESTS.md` は `question`・返事は Lab `sessions/p1034/omr/lilysharp-reply-2026-10-31.md`）: 機構は `EngravingDefaults.CueFontSizeStep`（const −4）を `EngravingStyle.Current` の型で譜面ごとの値にするだけ（描画・箱・間隔・符幹は全部その 1 家を読む）。Lily# の案＝`layout { cueSize -2 }`（LP の font-size の段そのまま・既定 −4 のまま）。**文法と既定が決まったら入れる**。
 - **この会話（2026-10-31・番号なし・`Session-Check` は回していない）のコード図の決定**（全部 commit 済み・push はユーザー）: `<…>` → `chord(…)` の逆変換「Convert to Chord Symbol chord(…)」と単音の「Add Guitar Diagram」（`063459874`）／`@diagram` も直前と同じ形なら間引く・`<< >>@diagram` を描く・2 声のパートの検査（`8c796ca9e`）／**ダイアグラムの楽器はパートのフレット楽器が先・`layout { chordDiagrams TUNING }` はフレット楽器の無い和音（ピアノ・歌・リードシートの行）だけ・`none` は全部消す（`0f3b3450f`・ユーザー決定 A）**＝下の「コード図の文法の整理」の前提が一つ変わった。
 - **作曲ガイダンス（Copilot のチャットで作曲 → Lily# が音楽として検査）＝オーナーが先に完了したい（2026-10-30）**: 流れ・検査の一覧・差し戻しの規則・**講評の手順**（オーナーが Downloads の .lys を送る → ログ `~\.copilot\session-state\*\events.jsonl` → 検査を DLL で → `lysc octave --absolute` → 日本語で講評し「入れて」で実装）・残りは **`docs/compose-in-chat-design.md`**。
 - **人間の曲のレビュー（オーナーの設計 2026-10-30）**: 同じ検査を AI のツール `lilysharp_reviewScore` の入口で＝構造化した報告（facts・strengths・findings の kind／why／fix／fine_when／ask）を AI が初心者にも噛み砕く・AI なしはコマンドと `lysc review`・調の検査（聞こえる調と調号・調の外の音・向きの綴り・スケール外の和音）を足す。**設計と順序は `docs/review-tool-design.md`**（§6 の 1 から）。
@@ -132,6 +131,13 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1035セッション（2026-10-31・YT-DELL2）
+
+第1034 と同じ会話の続き（§1 の枠が 1,641 字しか無かったので便を切った）。開始時 full **13673 / 0 / 2**。作業場所は Lab `sessions/p1035/`。**ユーザー決定「#13 があれば OMR の開発に有利。提案通りで入れて」**＝`layout { cueSize N }`（LP の font-size の段・既定 −4）。
+- **OMR #13 `layout { cueSize N }`（`e20c7c610`・`REQUESTS` は fixed）**: `EngravingStyle.CueFontSizeStep`（既定 −4）→ `EngravingDefaults.CueFontSizeStep`／`CueScale`／`CueStemDetails`／`CueBeamLengthFraction` を const・readonly から `EngravingStyle.Current` を読む property に（`CueStemDetails` は (style の stem 表, 比) ごとに 1 instance を cache）。**負の数は `layout { }` の字句にならなかった**（ARCHIVE 第822 が `NoteHead.scale` を倍率にした理由）＝`ParseLayoutBlock` が paper と同じく `Minus` を通し、`LayoutPlanReader.ReadStyle` が `-`＋数を 1 つの値に読む（−8〜0・この鍵だけ符号つき）。`SyntaxFacts.LayoutKeyVocabulary`・`NumberKeys`・LSP の説明・`NoteStepper`（符号つきの段＝1 ずつ・PageUp で 2・0 が天井）・双子は `\layout { \context { \CueVoice fontSize = #N  Stem/Beam.length-fraction = #(magstep N) } }`（LP 2.26.0 で描いて字形 0.0040 × magstep(N) を確認＝Lab `sessions/p1035/cuesize/`）。CHANGELOG 両方の `## Unreleased` に第1034 の 4 件も書いた（それまで書き漏れていた）。網: `EngravingStyleTests` ×3・`LayoutBlockTests`・`StepRequestTests`。⚠️ **layout の鍵を 1 つ足すと赤くなる網が 2 つ別にある**＝`EditorColouringTests.TheLayoutBlock_…`（`editors/vscode/syntaxes/lilysharp.tmLanguage.json` の layout-block の鍵の alternation に足す）と `CompletionTypingAuditTests.TheTypingFixture_IsCurrent`（`LILYSHARP_UPDATE_DOCS=1` で `editors/vscode/test/completion-typing.json` を再生成＝LF で出るので CRLF に戻す）。最初の `-End` はこの 2 本で赤（13678 / 2）→ `dc0e1cc95` で足して 2 回目は緑。終了時 full **13680 / 0 / 2**（`-End p1035 -DiffBase 34a42169a`・Core '+' 129 行 / LILYPOND-REF 2 / LILYSHARP-OWN 0・門は全部 OK・§1 現在便 16,582 字）。**OMR の open は 0**（#11・#12・#13 とも fixed・OMR repo 側の `REQUESTS.md` は未 commit＝OMR が commit する）。
+
+## 以下は第1034セッションの経緯
+
 ### 1.1 第1034セッション（2026-10-31・YT-DELL2）
 
 新しい会話。開始時 full **13669 / 0 / 2**（`-Start p1034`・Core の警告 9＝前の会話の置き土産）。作業場所は Lab `sessions/p1034/`。§0 の順どおり OMR の `REQUESTS.md` の open 3 件を先に、次に §1.0 先頭の連符×コード図。
@@ -141,15 +147,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **連符×「名前の下のダイアグラム」の積み順（§1.0 ⒜ 先頭・閉じた）**: 原因は HANDOFF の読みどおりの**循環**＝`UnderChordName` のダイアグラムは優先度なし → 連符の avoid-scripts が避けて上へ → room は連符の上にダイアグラムを置く → 本番の連符はまた上がったダイアグラムを避ける → 名前の行は連符を知らない。直し＝**avoid-scripts のループで `IsDiagramUnderName` を飛ばす 1 行**（`34a42169a`・`TupletBracketEngraver.cs`＝両 wire が通る 1 家。sieve 側は触っていない）。room は元から連符を先に seed してからダイアグラムを置く（`SkylineBuilder` 1877 → 1912）ので ⑵⑶ は既に満たされていた。再現の絵＝LP と同じ積み（連桁のそばの 5・その上に C の図・その上に C。F の図の底は 6 の括弧の上 0.1〜1.5）。網 `FretFrameTests.ATupletUnderAChordDiagram_…`・絵 Lab `sessions/p1034/stack/`（`repro.png`＝前・`after1/repro.png`＝後・`lp.png`）。
 - **CI**: 2a4aac29f（10-28 の push）の windows Debug が `TypedPitchStepTests` 2 本で赤・他は巻き添え。HEAD のローカル full は緑＝NoteStepper.Words.cs はその後 3 commit 動いた。次の push で見る。
 - **OMR #13（cue の大きさ）は question**＝§1.0 ⒜。終了時 full **13673 / 0 / 2**（`-End p1034 -DiffBase 0a602da21`・Core '+' 154 行 / LILYPOND-REF 3 / LILYSHARP-OWN 0・門は全部 OK・§1 現在便 18,359 字＝**次便は §1.0 の閉じた段落を先に落とすこと**）。
-
-## 以下は第1033セッションの経緯
-
-### 1.1 第1033セッション（2026-10-28・YT-DELL2）
-
-第1032 と同じ会話の続き（記録の枠が詰まったので便を切った）。開始時 full **13569 / 0 / 2**。作業場所は Lab `sessions/p1033/`。
-- ⚠️ `Session-Check -Start` は 1 つ前の欄を**自分で**アーカイブへ移す＝手で第1031 を移した上に走らせたら第1032 まで移った（`HandoffArchiveContinuityTests` が咎めた・第1032 を戻した）。**欄を立てるときは見出しを書くだけ、移すのはスクリプトに任せる**。
-- **ユーザー「1 2 3 を入れて」**（Ctrl+Shift の残りの候補）: `@figuredBass(…)`（`ArgumentSteps` に補完の一覧・空白の数は問わない）・`@mark("A")`（1 文字の英字か整数・↑ で次・端で止まる・それ以外の語は書き手のもの＝何もしない）・フォームのナビゲーション記号（`TargetKind.NavigationMark`・群 `segno/coda`・`to coda/fine`・dc/ds 6 つ・補完の順に ↓）。full **13582 / 0 / 2**。
-- **ユーザー「ottava とは？ 仲間に入れた方が便利なら」→ 説明**: `@8va` と `@ottava` は同じ線の別綴り＝つなぐと押しても楽譜が変わらない一手が増えるだけ＝つながない。**ユーザー提案「ottava と quindicesima は廃止でも良いのでは」→ 私は賛成 → ユーザー「後方互換性のための修正はすべきではない。固有の警告は入れないで」**（`1f523561f`）: `MusicMarkItem` の表と引数を取る名前から `ottava`／`quindicesima`（と `.bassa`）を外した＝知らない注釈。`OttavaHint` と、同じ理由で `@startTrillSpan` の案内も外した。MusicXML 書き出しは `@8va` 系で分岐（前は旧名だけ＝`@8va` は書き出されていなかった）・読み込みは大きさと向きから 8va/8vb/15ma/15mb。仲間・補完（探す語に ottava/quindicesima を残す）・セクション分割・文面。テスト・見本は前から順に開いた名前を覚えて置き換えた。OMR へ追記（3 通目）。full **13570 / 0 / 2**。
 
 ## 2. 開いている作業
 
