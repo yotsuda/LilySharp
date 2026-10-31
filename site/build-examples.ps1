@@ -457,13 +457,17 @@ $cells = [ordered]@{
     'cell-item-chord-shape'    = 'chord(F 133211)1'
     'cell-item-chord-of-shape' = 'chord(x32010)1'
     'cell-item-diagram'        = 'diagram(133211)1'
+    'cell-repeat-notes-q'      = "<f a c'>4@diagram q2 q4"
+    'cell-repeat-item-q'       = 'chord(F 133211)4 q2 q4'
+    'cell-repeat-item-length'  = 'chord(F 133211)4 4 2'
+    'cell-repeat-item-strum'   = 'chord(F 133211)4 chord(F 133211)2 chord(F 133211)4'
 }
 foreach ($cell in $cells.GetEnumerator()) {
     $examples[$cell.Key] = @"
 // $($cell.Value) - one bar for the table of chord spellings (chords.html).
 octave absolute
 time 4/4
-paper { paperWidth 40mm  paperHeight 0  leftMargin 2mm  rightMargin 2mm  topMargin 2mm  bottomMargin 2mm  indent 0 }
+paper { paperWidth 70mm  paperHeight 0  leftMargin 2mm  rightMargin 2mm  topMargin 2mm  bottomMargin 2mm  indent 0 }
 part gt { instrument guitar }
 section A { gt { $($cell.Value) | } }
 form { ~A }

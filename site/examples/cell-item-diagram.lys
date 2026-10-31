@@ -1,7 +1,7 @@
 // diagram(133211)1 - one bar for the table of chord spellings (chords.html).
 octave absolute
 time 4/4
-paper { paperWidth 40mm  paperHeight 0  leftMargin 2mm  rightMargin 2mm  topMargin 2mm  bottomMargin 2mm  indent 0 }
+paper { paperWidth 70mm  paperHeight 0  leftMargin 2mm  rightMargin 2mm  topMargin 2mm  bottomMargin 2mm  indent 0 }
 part gt { instrument guitar }
 section A { gt { diagram(133211)1 | } }
 form { ~A }
