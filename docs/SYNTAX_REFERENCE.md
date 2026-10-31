@@ -2618,7 +2618,8 @@ that tuning is the diagram's. `@chord` takes the same words after its symbol:
 - **The word says what is seen** (owner's decision 2026-10-31): `chord` shows the NAME (and the
   diagram of a shape written with it), `diagram` the DIAGRAM only. With `@` it marks the note it
   is on; without `@` it is an item that sounds (*Chords from a shape* below). Every combination is
-  one word:
+  one word, but one — on a `<…>` chord, `@chord@diagram` reads the name and the fingering both
+  off its notes:
 
   | Written | Name | Diagram | Sounds |
   |---|---|---|---|
@@ -2628,6 +2629,7 @@ that tuning is the diagram's. `@chord` takes the same words after its symbol:
   | `<f a c>1@chord` | ✓ read off the notes | | |
   | `c1@diagram(133211)` | | ✓ | |
   | `<f a c>1@diagram` | | ✓ the notes, fretted | |
+  | `<f a c>1@chord@diagram` | ✓ read off the notes | ✓ the notes, fretted | |
   | `chord(F)4` | ✓ | | ✓ F A C, close |
   | `chord(F 133211)4` | ✓ | ✓ | ✓ the shape's strings |
   | `diagram(133211)4`, `diagram(F 133211)4` | | ✓ | ✓ the shape's strings |

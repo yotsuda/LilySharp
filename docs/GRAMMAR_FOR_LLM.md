@@ -358,7 +358,8 @@ the mark once. Degree chords hand on the TONIC, not the first degree written. (U
 2026-10-18 the anchor was the first member's BARE letter and its mark local — superseded.)
 
 CHORDS IN ONE WORD (2026-10-31) — `chord` shows the NAME, `diagram` the PICTURE; with `@` it marks
-the note it is on, without `@` it is an item that SOUNDS. Never two marks for one chord.
+the note it is on, without `@` it is an item that SOUNDS. Never two marks for one chord — but one:
+`<f a c>1@chord@diagram`, the name and the fingering both read off the chord's notes.
 
 | Written | Name | Diagram | Sounds |
 |---|---|---|---|
@@ -368,6 +369,7 @@ the note it is on, without `@` it is an item that SOUNDS. Never two marks for on
 | `<f a c>1@chord` | ✓ read off the notes | | |
 | `c1@diagram(133211)` | | ✓ | |
 | `<f a c>1@diagram` | | ✓ the notes, fretted | |
+| `<f a c>1@chord@diagram` | ✓ read off the notes | ✓ the notes, fretted | |
 | `chord(F)4` | ✓ | | ✓ F A C, close |
 | `chord(F 133211)4` | ✓ | ✓ | ✓ the shape's strings |
 | `diagram(133211)4` / `diagram(F 133211)4` | | ✓ | ✓ the shape's strings |
