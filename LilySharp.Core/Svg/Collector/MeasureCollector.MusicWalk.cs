@@ -532,6 +532,7 @@ public sealed partial class MeasureCollector
         int measureIndex = builder.CurrentMeasureIndex;
         int startNoteIndex = builder.CurrentItemCount;
         Fraction startTiming = builder.CurrentDuration;
+        int articulationsBefore = _articulations.Count;
 
         // The ROOT is the first PITCHED member (leading rests just advance time) — it
         // resolves relative to the incoming frame and anchors the group. Every later PITCHED
@@ -655,10 +656,18 @@ public sealed partial class MeasureCollector
                 groupMidis.Add(spreadNote.Midi);
         CollectGroupDiagrams(arpeggio, measureIndex, startNoteIndex, groupMidis);
 
+        int endNoteIndex = builder.CurrentItemCount - 1;
+        // A diagram over the group — a spread diagram(…) member's, the group's @diagram or
+        // @chord(NAME SHAPE) — belongs to the whole group: the spacing clears its box at the
+        // column after the group (ArticulationItem.GroupLastItemIndex).
+        for (int i = articulationsBefore; i < _articulations.Count; i++)
+            if (_articulations[i] is { Type: ArticulationType.FretFrame } frame
+                && frame.MeasureIndex == measureIndex && frame.ItemIndex >= startNoteIndex && frame.ItemIndex <= endNoteIndex)
+                _articulations[i] = frame with { GroupLastItemIndex = endNoteIndex };
+
         // Auto-tuplet: the members were added WITHOUT duration — draw the bracket now.
         if (sub.HasTuplet)
         {
-            int endNoteIndex = builder.CurrentItemCount - 1;
             if (endNoteIndex >= startNoteIndex)
                 _tupletBrackets.Add(new TupletBracketItem(sub.TupletNum, sub.TupletBase,
                     startNoteIndex, endNoteIndex, measureIndex, arpeggio.SourceStart, 0,

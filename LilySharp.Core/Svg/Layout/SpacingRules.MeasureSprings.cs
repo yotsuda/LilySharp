@@ -1688,6 +1688,12 @@ internal static partial class SpacingRules
         // Per column: how far its diagram reaches left and right of the column (0 = none).
         double[]? left = null, right = null;
         bool[]? has = null;
+        // Per column: the column its diagram's box is cleared by on the right — the next
+        // column, or, for a diagram over a << >> group (ArticulationItem.GroupLastItemIndex),
+        // the first column after the group: the diagram is the group's, and the rod laid over
+        // the group's springs stretches them alike, so the group stays evenly spaced (owner's
+        // report 2026-10-31: `<< diagram(G 320003) >>1` had its first gap twice the others).
+        int[]? clearedBy = null;
         var voices = staff.Voices;
         foreach (var art in articulations)
         {
@@ -1730,6 +1736,22 @@ internal static partial class SpacingRules
             has[t] = true;
             left[t] = Math.Max(left[t], -(centre + box.Left) + toMain);
             right[t] = Math.Max(right[t], centre + box.Right + TextLengthRightExtra - toMain);
+            if (art.GroupLastItemIndex >= art.ItemIndex && art.GroupLastItemIndex < items.Length)
+            {
+                Fraction groupEnd = onset;
+                for (int gi = art.ItemIndex; gi <= art.GroupLastItemIndex; gi++)
+                    groupEnd += items[gi].Duration;
+                int u = timings.Count;
+                for (int c = t + 1; c < timings.Count; c++)
+                    if (timings[c] >= groupEnd)
+                    {
+                        u = c;
+                        break;
+                    }
+                if (clearedBy is null)
+                    Array.Fill(clearedBy = new int[timings.Count], -1);
+                clearedBy[t] = Math.Max(clearedBy[t], u);
+            }
         }
         if (left is null || right is null || has is null)
             return springs;
@@ -1754,8 +1776,11 @@ internal static partial class SpacingRules
             // whatever height their ink stands — not only another diagram.
             if (t > 0 && !has[t - 1] && ColumnItems(t - 1) is { } before)
                 rods.Add((t, t + 1, RightSkylineToBox(before, left[t]) + rodPadding));
-            if (t + 1 < count && !has[t + 1] && ColumnItems(t + 1) is { } after)
-                rods.Add((t + 1, t + 2, BoxToLeftSkyline(right[t], after) + rodPadding));
+            // On the right: the next column — or, for a group's diagram, the column after the
+            // group, the rod spanning the group's springs (columns t → u are springs t+1 … u).
+            int u = clearedBy is not null && clearedBy[t] > t ? clearedBy[t] : t + 1;
+            if (u < count && !has[u] && ColumnItems(u) is { } after)
+                rods.Add((t + 1, u + 1, BoxToLeftSkyline(right[t], after) + rodPadding));
             prev = t;
         }
         rods.Add((prev + 1, count + 1, right[prev] + barReach + rodPadding));

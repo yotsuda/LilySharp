@@ -557,6 +557,48 @@ public class ShapeChordItemTests
             Book("instrument guitar", "chord(F 133211)2 chord(G 320003)2 |"))));
     }
 
+    /// <summary>A diagram over a &lt;&lt; &gt;&gt; group belongs to the group: its box is cleared by the
+    /// column after the group, not by the group's second note, so the spread notes keep the
+    /// spacing the bare group has — stretched alike where the box needs the room (owner's report
+    /// 2026-10-31: `&lt;&lt; diagram(G 320003) &gt;&gt;1` had its first gap twice the others).</summary>
+    [Theory]
+    [InlineData("<< diagram(G 320003) >>1 |", null)]
+    [InlineData("<< diagram(G 320003) >>2 c'4 d'4 |", null)]
+    [InlineData("<< g, b d g b g >>2@diagram(320003) c'4 d'4 |", "<< g, b d g b g >>2 c'4 d'4 |")]
+    [InlineData("<< g, b d g b g >>2@chord(G 320003) c'4 d'4 |", "<< g, b d g b g >>2@chord(G) c'4 d'4 |")]
+    public void ADiagramOverASpreadGroup_LeavesTheGroupEvenlySpaced(string music, string? bare)
+    {
+        static (List<double> Heads, ScoreLayout Laid) Heads(string music)
+        {
+            var tree = SyntaxTree.Parse(Book("instrument guitar", music, top: "octave absolute\n"));
+            Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+            var laid = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+            var measure = laid.AllSystems[0].Measures[0];
+            return ([.. measure.Items.Select(i => measure.X + i.X)], laid);
+        }
+        var (with, laid) = Heads(music);
+        var gaps = Enumerable.Range(1, 5).Select(i => with[i] - with[i - 1]).ToList();
+        if (bare is null)
+        {
+            // The spread item's six notes: even, to the eye (the bug read 4.48 then 1.9s).
+            Assert.True(gaps.Max() - gaps.Min() < 0.3, $"the group's gaps: {string.Join(" ", gaps.Select(g => g.ToString("F2")))}");
+        }
+        else
+        {
+            // Against the same group with no diagram: the gaps grow by ONE factor (1 where the
+            // group is already wide enough), never the first alone.
+            var (plain, _) = Heads(bare);
+            Assert.Equal(plain.Count, with.Count);
+            var ratios = Enumerable.Range(1, 5).Select(i => gaps[i - 1] / (plain[i] - plain[i - 1])).ToList();
+            Assert.True(ratios[0] >= 0.999, $"the group is not squeezed: {ratios[0]:F3}");
+            Assert.All(ratios, r => Assert.InRange(r, ratios[0] - 0.03, ratios[0] + 0.03));
+        }
+        // The box still clears what follows the group: the frame ends before the c' stands.
+        var frame = Assert.Single(laid.ArticulationLayouts, a => a.Glyph.StartsWith("frame:"));
+        if (with.Count > 6)
+            Assert.True(frame.X + frame.Ink.Right <= with[6], $"the frame ends at {frame.X + frame.Ink.Right:F3}, the c' stands at {with[6]:F3}");
+    }
+
     /// <summary>Right-click → "Convert to chord notes" (owner's request 2026-10-31): the item
     /// becomes the &lt;…&gt; chord it plays, octave marks read off the walk, what it showed kept
     /// as a bare @chord (owner's decision the same day: `&lt;f a c&gt;1@chord`, not `@chord(F)`;

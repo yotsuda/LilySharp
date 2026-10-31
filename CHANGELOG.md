@@ -99,6 +99,11 @@ workflow attaches that section to the GitHub Release verbatim.
   `chord(…)` item's name stays as a bare `@chord` (`chord(F)1` → `<f a c>1@chord`; the symbol
   goes into the mark only when the notes would name the chord otherwise); the diagram does not.
   The file must sound the same afterwards, or nothing changes. Not inside `<< >>`.
+- `[page]` **A diagram over a `<< >>` group leaves the group evenly spaced**: `<< diagram(G 320003) >>1`
+  spread its first gap to twice the others, the diagram's box pushing the second note away. The
+  box is the group's now — cleared by the column after the group, the group's own gaps
+  stretching alike — for a spread `diagram(…)` member, the group's `@diagram` and its
+  `@chord(NAME SHAPE)`.
 - `[page]` **`chordDiagrams none` draws no `@diagram` either**: it drew one there while every other
   diagram stayed off. The same in the `.ly` twin and MusicXML.
 - `[lang]` **A chord item with no shape, reviewed** (owner's review):

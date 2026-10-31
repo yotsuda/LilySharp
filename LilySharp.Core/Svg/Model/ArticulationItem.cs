@@ -93,6 +93,16 @@ public sealed record ArticulationItem
     /// diagram's grob by, to make the same choice on LilyPond's own line breaks.</summary>
     public int RepeatsDiagramAt { get; init; } = -1;
 
+    /// <summary>
+    /// For a diagram over the first note of a <c>&lt;&lt; … &gt;&gt;</c> group — a spread
+    /// <c>diagram(…)</c> member's, the group's <c>@diagram</c> or <c>@chord(NAME SHAPE)</c> —
+    /// the index of the group's LAST item in its voice's bar; else -1. The diagram belongs to
+    /// the whole group, so its box is cleared by the column after the group, not by the
+    /// group's second note (<c>SpacingRules.ApplyFretFrameSpacing</c>; owner's report
+    /// 2026-10-31: <c>&lt;&lt; diagram(G 320003) &gt;&gt;1</c> spread its first gap to twice the others).
+    /// </summary>
+    public int GroupLastItemIndex { get; init; } = -1;
+
     /// <summary>Right-hand pluck letter (p/i/m/a); only for
     /// <see cref="ArticulationType.Pluck"/>.</summary>
     public string? PluckLetter { get; init; }

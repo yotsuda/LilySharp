@@ -195,6 +195,12 @@ internal static class CombinedStaffReaddress
                     VoiceIndex = to.VoiceIndex,
                     MeasureIndex = to.MeasureIndex,
                     ItemIndex = to.ItemIndex,
+                    // A group diagram's last item moves with its group — kept only where it
+                    // lands in the same bar and voice as the diagram's note.
+                    GroupLastItemIndex = a.GroupLastItemIndex < 0 ? -1
+                        : byStaff[a.StaffIndex].Translate(new VoiceItemAddress(a.VoiceIndex, a.MeasureIndex, a.GroupLastItemIndex))
+                            is { } end && end.VoiceIndex == to.VoiceIndex && end.MeasureIndex == to.MeasureIndex
+                            ? end.ItemIndex : -1,
                 },
                 // A chord member's own mark (a fingering, a string) belongs to ITS note —
                 // two of them at one column are two notes' marks, never a duplicate.
