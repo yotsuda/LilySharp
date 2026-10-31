@@ -26,9 +26,10 @@ namespace LilySharp.Core.Semantics;
 /// The capo suggestion (owner's design 2026-09-28, HANDOFF §2 K2; built 2026-09-29): for each
 /// capo fret 0 to <see cref="MaxSuggested"/>, how many of the chords a file names would be
 /// played with a BARRE on the usual shape of their pressed chord — ranked, fewest barres
-/// first. The editor lists the ranking after <c>capo</c> in a layout's <c>chordDiagrams</c>
-/// entry and on hovering the word; the writer picks a fret and writes it (<c>capo auto</c> is
-/// not a spelling: the choice is the writer's).
+/// first. The editor lists the ranking after the top-level <c>capo</c> word (the file's line,
+/// <see cref="CapoDirective"/>; until 2026-10-31 the layout's <c>chordDiagrams … capo</c>) and
+/// on hovering it; the writer picks a fret and writes it (<c>capo auto</c> is not a spelling:
+/// the choice is the writer's).
 /// </summary>
 /// <remarks>
 /// The chords are every <c>chords</c> row entry that names an absolute chord and every

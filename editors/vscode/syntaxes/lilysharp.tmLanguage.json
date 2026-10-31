@@ -11,6 +11,8 @@
         { "include": "#fonts-block" },
         { "include": "#paper-block" },
         { "include": "#layout-block" },
+        { "include": "#capo-directive" },
+        { "include": "#chord-shapes-block" },
         { "include": "#part-body" },
         { "include": "#instrument-value" },
         { "include": "#directive-value" },
@@ -274,7 +276,6 @@
             "patterns": [
                 { "include": "#comments" },
                 { "include": "#strings" },
-                { "include": "#shape-table" },
                 {
                     "match": "\\b(markTempo)\\s+(stacked|beside)\\b",
                     "captures": {
@@ -333,14 +334,19 @@
                     }
                 },
                 {
-                    "comment": "chordDiagrams takes none, a tuning word — the tuning vocabulary a tab's `tuning` takes (Tablature.Tunings.Names) — capo (then its fret) or all; a tuning word may be followed by `capo N` (ChordDiagramsKey.CapoWord) and by all (ChordDiagramsKey.AllWord). The lookbehinds keep `none all` / `all all` (refused by the compiler) from colouring the second word.",
-                    "match": "\\b(chordDiagrams)\\s+(none|banjoC|banjoDoubleC|banjoDoubleD|banjoModal|banjoOpenD|banjoOpenDm|banjoOpenG|baritoneUkulele|bass|bass4|bass5|bass6|bassDropD|capo|cello|doubleBass|guitar|guitar7|guitarAsus4|guitarDadgad|guitarDropC|guitarDropD|guitarLute|guitarOpenD|guitarOpenG|mandolin|tenorUkulele|ukulele|ukuleleD|viola|violin|all)(?:(?<!none)(?<!all)(?<!capo)\\s+(capo)\\s+(\\d+))?(?:(?<!none)(?<!all)\\s+(all))?\\b",
+                    "comment": "chordDiagrams takes written, none or all (ChordDiagramsKey.Words; the owner's grammar 2026-10-31): which chords draw a diagram. The tuning, the capo and the shape table it used to take are `chordTuning`, the top-level `capo N` and `chordShapes { }`.",
+                    "match": "\\b(chordDiagrams)\\s+(written|none|all)\\b",
                     "captures": {
                         "1": { "name": "keyword.other.layout-key.lilysharp" },
-                        "2": { "name": "support.constant.layout-value.lilysharp" },
-                        "3": { "name": "support.constant.layout-value.lilysharp" },
-                        "4": { "name": "constant.numeric.lilysharp" },
-                        "5": { "name": "support.constant.layout-value.lilysharp" }
+                        "2": { "name": "support.constant.layout-value.lilysharp" }
+                    }
+                },
+                {
+                    "comment": "chordTuning takes a tuning word — the tuning vocabulary a tab's `tuning` takes (Tablature.Tunings.Names, ChordTuningKey.Words): the tuning a chord with no fretted part draws its diagram on.",
+                    "match": "\\b(chordTuning)\\s+(banjoC|banjoDoubleC|banjoDoubleD|banjoModal|banjoOpenD|banjoOpenDm|banjoOpenG|baritoneUkulele|bass|bass4|bass5|bass6|bassDropD|cello|doubleBass|guitar|guitar7|guitarAsus4|guitarDadgad|guitarDropC|guitarDropD|guitarLute|guitarOpenD|guitarOpenG|mandolin|tenorUkulele|ukulele|ukuleleD|viola|violin)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.layout-key.lilysharp" },
+                        "2": { "name": "support.constant.layout-value.lilysharp" }
                     }
                 },
                 {
@@ -378,7 +384,7 @@
                 {
                     "comment": "A key still gets its colour while the writer has typed it and not yet its word — the two-word rules above take over the moment the word lands.",
                     "name": "keyword.other.layout-key.lilysharp",
-                    "match": "\\b(markTempo|barNumbers|accidentals|sectionLabels|sectionLabelAlign|partCombineText|chordQualities|minorChords|chordDiagrams|chordNames|chordList|voltaBracket|compressRests|lineThickness|StaffLine\\.thickness|LedgerLine\\.thickness|LedgerLine\\.lengthFraction|Stem\\.thickness|Stem\\.lengthFraction|Beam\\.thickness|Beam\\.damping|Dots\\.padding|Accidental\\.rightPadding|NoteHead\\.scale|BarLine\\.thinThickness|BarLine\\.thickThickness|cueSize)\\b"
+                    "match": "\\b(markTempo|barNumbers|accidentals|sectionLabels|sectionLabelAlign|partCombineText|chordQualities|minorChords|chordDiagrams|chordTuning|chordNames|chordList|voltaBracket|compressRests|lineThickness|StaffLine\\.thickness|LedgerLine\\.thickness|LedgerLine\\.lengthFraction|Stem\\.thickness|Stem\\.lengthFraction|Beam\\.thickness|Beam\\.damping|Dots\\.padding|Accidental\\.rightPadding|NoteHead\\.scale|BarLine\\.thinThickness|BarLine\\.thickThickness|cueSize)\\b"
                 },
                 {
                     "comment": "`every`'s count, and voltaBracket's.",
@@ -387,11 +393,20 @@
                 }
             ]
         },
-        "shape-table": {
-            "comment": "`layout { chordDiagrams guitar { Cm7 x35343  G  section Chorus { C x35553 } } }` (2026-09-30). The table is the ONE brace a layout body holds, so any `{` there opens it. ⚠️ Before this rule nothing claimed that brace, and #layout-block ends at `\\}` — so the table's own `}` (or its section's) ENDED THE LAYOUT BLOCK, and the keys after it were read by the top-level rules (the #part-inner-section shape: the tell is that a key BEFORE the table is coloured and one after it is not). Inside: `section NAME { … }` as a section is coloured anywhere, the tuning words and the shapes — each a whole word, so a digit inside a chord name (`C6/9`, `C7(9)`) is not taken for a shape. The chord names stay plain, as they are in a `chords` row.",
-            "begin": "\\{",
+        "capo-directive": {
+            "comment": "The top-level `capo N` (Semantics.CapoDirective; the owner's grammar 2026-10-31): the file's capo, 1 to 11, which every pressed shape is relative to. Anchored at the start of a line: `capo` is not a reserved word (a part may be named capo), so only the line's own shape may colour it.",
+            "match": "^[ \\t]*(capo)\\s+(\\d+)\\b",
+            "captures": {
+                "1": { "name": "keyword.other.lilysharp" },
+                "2": { "name": "constant.numeric.lilysharp" }
+            }
+        },
+        "chord-shapes-block": {
+            "comment": "The top-level `chordShapes { Cm7 x35343  G  section Chorus { C x35553 } }` (the owner's grammar 2026-10-31; until then the table followed a layout's `chordDiagrams` words and was the one brace a layout body held). A begin/end region: its `}` (or its section's) must not end an enclosing block, and nothing outside knows its words. Inside: `section NAME { … }` as a section is coloured anywhere, the tuning words and the shapes — each a whole word, so a digit inside a chord name (`C6/9`, `C7(9)`) is not taken for a shape. The chord names stay plain, as they are in a `chords` row.",
+            "begin": "\\b(chordShapes)\\s*(\\{)",
             "beginCaptures": {
-                "0": { "name": "punctuation.definition.block.lilysharp" }
+                "1": { "name": "keyword.other.lilysharp" },
+                "2": { "name": "punctuation.definition.block.lilysharp" }
             },
             "end": "\\}",
             "endCaptures": {

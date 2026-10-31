@@ -161,8 +161,8 @@ public static partial class NoteStepper
         KeywordValue,
         /// <summary>The number of a layout's <c>barNumbers every N</c> (NoteStepper.Words.cs).</summary>
         BarNumberEvery,
-        /// <summary>A number in a <c>layout { }</c> block — a line thickness, <c>voltaBracket N</c>,
-        /// <c>chordDiagrams capo N</c> (NoteStepper.Words.cs).</summary>
+        /// <summary>A number in a <c>layout { }</c> block — a line thickness, <c>voltaBracket N</c>
+        /// (NoteStepper.Words.cs).</summary>
         LayoutNumber,
         /// <summary>A <c>paper { size … }</c> page name (NoteStepper.Words.cs).</summary>
         PaperSize,
@@ -170,8 +170,8 @@ public static partial class NoteStepper
         InstrumentPreset,
         /// <summary>A <c>tuplet N/M</c>'s ratio (NoteStepper.Words.cs).</summary>
         TupletRatio,
-        /// <summary>A count in the music: a <c>repeat tremolo N</c>'s, a rest's <c>*N</c>
-        /// (NoteStepper.Words.cs).</summary>
+        /// <summary>A count in the music: a <c>repeat tremolo N</c>'s, a rest's <c>*N</c>, a
+        /// <c>:|*N</c>'s — and the file's <c>capo N</c> fret (NoteStepper.Words.cs).</summary>
         MusicCount,
         /// <summary>A <c>partial</c>'s length (NoteStepper.Words.cs).</summary>
         PartialLength,
@@ -436,11 +436,14 @@ public static partial class NoteStepper
                     // A bar a step, four (a phrase) on the octave pair.
                     TargetKind.BarNumberEvery => CountEdit((SyntaxTokenNode)t.Node, semitone ? dir : 4 * dir, "barNumbers every"),
                     TargetKind.LayoutNumber => LayoutNumberAt(tree, t.Node.Span.Start) is { } ln
-                        ? LayoutNumberEdit(ln.Key, ln.Number, ln.Index, ln.Capo, dir, semitone, ln.Sign)
+                        ? LayoutNumberEdit(ln.Key, ln.Number, ln.Index, dir, semitone, ln.Sign)
                         : (null, "write a number"),
                     TargetKind.TupletRatio => TupletRatioEdit((TupletExpressionSyntax)t.Node, dir),
                     TargetKind.MusicCount => t.Node.Parent is BarlineSyntax or FormRepeatBlockSyntax
                         ? RepeatPlaysEdit((SyntaxTokenNode)t.Node, dir)
+                        // The file's `capo N` (Semantics.CapoDirective): a fret a step, 1 to 11.
+                        : t.Node.Parent is PropertyAssignmentSyntax
+                        ? CountEdit((SyntaxTokenNode)t.Node, dir, CapoDirective.Keyword, max: CapoDirective.MaxFret)
                         : CountEdit((SyntaxTokenNode)t.Node, dir,
                             t.Node.Parent is RestSyntax ? "bars of rest" : "tremolo strokes"),
                     TargetKind.PartialLength => PartialLengthEdit(t.Node, dir),

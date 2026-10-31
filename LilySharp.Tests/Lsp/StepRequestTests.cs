@@ -251,7 +251,7 @@ public class StepRequestTests
 
     // ---- a layout shape table (2026-09-29): a listed name alone draws the table's shape
 
-    private static string TableGuitar(string music) => "layout { chordDiagrams guitar { Cm7 x35343 } }\n" + Guitar(music);
+    private static string TableGuitar(string music) => "chordShapes { Cm7 x35343 }\n" + Guitar(music);
 
     /// <summary>Where the layout's table lists the chord, the name alone shows the table's shape,
     /// so the step counts from it exactly as in an <c>all</c> score: Up writes the shape after
@@ -354,7 +354,7 @@ public class StepRequestTests
     public void ARowEntry_StepsOnTheFirstScoresTuning_AndSaysSo()
     {
         static string TwoScores(string row) => $$"""
-            layout uke { chordDiagrams ukulele }
+            layout uke { chordTuning ukulele }
             octave absolute
             part gt { clef treble }
             section A {
@@ -1283,8 +1283,8 @@ public class StepRequestTests
 
     /// <summary>Owner's request 2026-10-30: every value in a layout block steps — the number keys
     /// by a small step on Up / Down and a large one on PageUp / PageDown, each on its own grid and
-    /// never under its least; voltaBracket's bars and a capo's fret as counts; voltaBracket's and
-    /// chordDiagrams' words along their lists.</summary>
+    /// never under its least; voltaBracket's bars as counts (and the file's capo fret, a line of its
+    /// own since 2026-10-31); voltaBracket's, chordDiagrams' and chordTuning's words along their lists.</summary>
     [Fact]
     public void ALayoutsNumbers_Step_SmallOnUpDown_LargeOnPageUpDown()
     {
@@ -1314,10 +1314,15 @@ public class StepRequestTests
         // Counts.
         Assert.Equal(L("voltaBracket 3"), Step(L("voltaBracket ‸2"), +1, semitone: true).After);
         Assert.Equal(L("voltaBracket 6"), Step(L("voltaBracket ‸2"), +1, semitone: false).After);
-        Assert.Equal(L("chordDiagrams guitar capo 4"), Step(L("chordDiagrams guitar capo ‸3"), +1, semitone: true).After);
+        // The file's `capo N` line (2026-10-31): a fret a step, 1 to 11.
+        string T(string line) => $"{line}\npart m {{ }}\nsection A {{ m {{ c'4 }} }}\n";
+        Assert.Equal(T("capo 4"), Step(T("capo ‸3"), +1, semitone: true).After);
+        Assert.Equal(T("capo 11"), Step(T("capo ‸11"), +1, semitone: true).After);
         // Words.
         Assert.Equal(L("voltaBracket line"), Step(L("voltaBracket ‸all"), -1, semitone: true).After);
-        Assert.NotEqual(L("chordDiagrams guitar"), Step(L("chordDiagrams ‸guitar"), -1, semitone: true).After);
+        Assert.Equal(L("chordDiagrams none"), Step(L("chordDiagrams ‸written"), -1, semitone: true).After);
+        Assert.Equal(L("chordDiagrams all"), Step(L("chordDiagrams ‸none"), -1, semitone: true).After);
+        Assert.NotEqual(L("chordTuning guitar"), Step(L("chordTuning ‸guitar"), -1, semitone: true).After);
     }
 
     [Fact]

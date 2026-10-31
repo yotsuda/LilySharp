@@ -189,6 +189,8 @@ TopLevelItem   = MetadataDecl                     (* title, subtitle, composer, 
                | OverrideDecl                     (* engraving overrides *)
                | UsingDecl                        (* multi-file include - top level only *)
                | CheckDecl                        (* a check the file turns on - a pragma *)
+               | CapoDecl                         (* the capo every pressed shape is relative to *)
+               | ChordShapesDecl                  (* the chord-shape table: the shape each chord draws *)
                ;
 
 (* MUSIC IS NOT A TopLevelItem, and is rejected with LYS0020: a note stream, a bare
@@ -233,6 +235,47 @@ CheckRule      = 'voiceLeading' ;
                     does not declare, a part named twice, or fewer than two parts is LYS3001.
                     Top level only, any number of lines. 'check' is no keyword: a part may
                     still be named check. docs/voice-leading-design.md. *)
+
+CapoDecl       = 'capo' , Integer ;                    (* 1..11; to the end of its line *)
+ChordShapesDecl = 'chordShapes' , ShapeTable ;
+ShapeTable     = '{' , { ShapeEntry | 'section' , Identifier , '{' , { ShapeEntry } , '}' } , '}' ;
+ShapeEntry     = ChordSymbol , { ShapeWord } ;        (* ShapeWords: a ChordRowEntry's, §4 *)
+                 (* THE PIECE'S CHORD DATA (owner's grammar 2026-10-31, docs/ROADMAP.md
+                    "Chord diagrams: one key doing four jobs" — until then both were words of
+                    the layout's 'chordDiagrams' key, and that key did four jobs). Each is written
+                    once, at the top level, beside 'time' and 'key'; a second is LYS4005 and the
+                    last wins. Neither word is a keyword: a part may still be named capo.
+
+                    'capo N' puts a capo on fret N: every PRESSED shape in the file — written at
+                    a chord, listed in the table — is relative to it, the printed chord names are
+                    the pressed chords' ('chordNames', §2.6), a 'diagram(Eb x32010)' item sounds
+                    N semitones higher, and "Capo N" stands at the head of every score that prints
+                    diagrams or pressed names. Not a layout key: the capo changes what an item
+                    SOUNDS, and a sound must not change with the edition. 'capo 0' is refused
+                    (leave the line out), as is a fret above 11, a word, or a second value
+                    (LYS1058). The rest of the capo's rules are under 'chordNames' in §2.6.
+
+                    'chordShapes { Cm7 x35343  G  section Chorus { C x35553 } }' lists the chords
+                    that draw a diagram wherever they are named, with the shape each draws. An
+                    entry is a chord symbol and its shapes, the words a ChordRowEntry writes after
+                    its symbol (several shapes route by string count or by a tuning word:
+                    'F guitar 133211 ukulele 2010'); a name alone draws the usual shape. A
+                    'section NAME { … }' block's entries apply to the chords WRITTEN in that
+                    section (an @chord's note, a row's bar, a by-part row's inner section); the
+                    others to the whole piece — the keyword keeps a section named A or C from
+                    reading as a chord. Which shape a chord draws, strongest first: the shape
+                    written at the chord, the section's entry, the song's, then (under
+                    'chordDiagrams all') the usual shape. An entry whose shapes fit no tuning a
+                    score draws on is not used there. The table's shapes are PRESSED shapes under
+                    the capo. A symbol that is no chord, a shape that is none, a shape before any
+                    symbol (LYS1038) and a chord listed twice in one scope (the last wins,
+                    LYS1060) are warnings that leave the rest standing; a section nothing declares
+                    warns; a table shape that disagrees with its chord is LYS1039 (on the guitar,
+                    on each fretted instrument the parts play, and on each 'chordTuning' a layout
+                    block writes). A brace where none belongs, a 'section' with no name or block
+                    and a 'section' inside a section refuse the whole table (LYS1060); the word
+                    with no block is LYS1059. The chord symbols spell sharps with '#' as a chords
+                    row does. *)
 
 ### 2.3 Global Settings
 
@@ -298,7 +341,7 @@ ShiftDecl      = 'shift' , [ '+' | '-' ] , Integer ;
                     signatures and chord names agree. A row's WRITTEN chord shapes belong to
                     the written chord, so under a shift its diagrams draw the shifted chord's
                     usual shape instead (the "refret"; a capo is the writer's own
-                    'chordDiagrams … capo N'). '@chord' annotations are not moved. Top level
+                    'capo N' line). '@chord' annotations are not moved. Top level
                     only; 12 or more is refused at the number (an octave is 'octave N'). *)
 
 TempoDecl      = 'tempo' , [ Marking ] , [ DurationBase , [ Dots ] , '=' ] , [ Integer ] ,
@@ -756,7 +799,8 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'partCombineText' , Boolean
                | 'chordQualities' , ChordQualityStyle
                | 'minorChords' , MinorChordCase
-               | 'chordDiagrams' , ( 'none' | [ TuningName ] , [ 'capo' , Integer ] , [ 'all' ] , [ ShapeTable ] )   (* TuningName: the tab's 'tuning' words; at least one of the four; the capo's Integer 1..11 *)
+               | 'chordDiagrams' , ( 'written' | 'none' | 'all' )   (* which chords draw a diagram; default written *)
+               | 'chordTuning' , TuningName            (* the tab's 'tuning' words: the tuning a chord with no fretted part draws on; default guitar *)
                | 'chordNames' , ChordNameMode
                | 'chordList' , Boolean
                | 'compressRests' , Boolean
@@ -921,53 +965,42 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    refpoint (audit/lp-geometry lyrics.chord-run.staff-to-chord, exact). Neither key reaches
    MIDI or MusicXML: a <harmony> carries the chord as data, and asks for the words.
 
-   chordDiagrams — the tuning the score's CHORD DIAGRAMS draw on: a TuningName, or 'none'
-   (no diagram at all, written shapes included — one source makes a piano score and a
-   guitar score). A diagram draws only where a chord WRITES its shape (ChordArgument,
-   ChordRowEntry); a name alone draws none (owner's decisions 2026-09-28, HANDOFF §2 K) —
-   save with the scope word 'all' (after the TuningName, or alone: 'chordDiagrams all' takes
-   the tuning as when unset), where EVERY chord name draws, its written shape else the usual
-   one (a chord with no shape on the tuning warns once per symbol and tuning, LYS1038).
-   'none all', 'all guitar' (the tuning comes first) and a word written twice are errors.
-   Unset, a diagram takes the fretted instrument of its part — the part an @chord's note is
-   in, the staff a row stands directly above — else the guitar. The twin writes a FretBoards
-   context under a row's ChordNames when some entry draws (every row with 'all').
+   chordDiagrams — WHICH chords of the score draw a CHORD DIAGRAM (owner's grammar
+   2026-10-31: one key, one question — until then the key also named the tuning, the capo and
+   the shape table, which are 'chordTuning', the top-level 'capo N' and 'chordShapes { }' now;
+   the old spelling is refused naming the new one, LYS1061, and the editor rewrites it).
+   'written' (the default): a chord with a shape — WRITTEN at it (ChordArgument,
+   ChordRowEntry) or LISTED in the file's 'chordShapes { }' table (§2.2) — draws it; a name
+   alone draws none (owner's decision 2026-09-28, HANDOFF §2 K). 'all': EVERY chord name draws,
+   its written or listed shape else the usual one (a chord with no shape on the tuning warns
+   once per symbol and tuning, LYS1038). 'none': no diagram at all, written shapes and
+   '@diagram's included — one source makes a piano score and a guitar score. The twin writes a
+   FretBoards context under a row's ChordNames when some entry draws (every row with 'all').
 
-   The SHAPE TABLE (ShapeTable, after the words; 2026-09-29, HANDOFF §2 K5 ③) lists the
-   chords that draw a diagram wherever they are named, with the shape each draws:
-   'chordDiagrams guitar { Cm7 x35343  G  section Chorus { C x35553 } }'. An entry is a
-   chord symbol and its shapes, the words a ChordRowEntry writes after its symbol (several
-   shapes route by string count or by a tuning word: 'F guitar 133211 ukulele 2010'); a name
-   alone draws the usual shape. A 'section NAME { … }' block's entries apply to the chords
-   WRITTEN in that section (an @chord's note, a row's bar, a by-part row's inner section);
-   the others to the whole score — the keyword keeps a section named A or C from reading as a
-   chord. Strongest first: the shape written at the chord, the section's entry, the song's,
-   then (under 'all') the usual shape. An entry whose shapes fit no tuning the score draws on
-   is not used there. The table follows 'all' ('chordDiagrams all { F xx3211 }': the listed
-   shape for F, the usual one for the rest) or stands alone ('chordDiagrams { C }'); 'none'
-   takes none. A symbol that is no chord, a shape that is none, a shape before any symbol
-   (LYS1038) and a chord listed twice in one scope (the last wins) are warnings that leave the
-   rest of the table standing; a section nothing declares warns; a table shape that disagrees
-   with its chord is LYS1039 (on the layout's tuning, else on the guitar and each fretted
-   instrument the file's parts play). A brace where none belongs, a 'section' with no name or
-   block and a word after the closing '}' refuse the whole entry (the key's error).
+   chordTuning — the tuning a chord with NO fretted part draws its diagram on: a TuningName
+   (the tab's 'tuning' words), the guitar when unset. A diagram draws on ONE tuning, strongest
+   first: the fretted instrument of its part — the part an @chord's note is in, the staff a row
+   stands directly above (a tab: its own tuning) — else this word, else the guitar (owner's
+   decisions 2026-09-28, 2026-10-31: the part first). A chord's shape that fits no tuning a
+   score draws on is not used there.
 
-   THE CAPO ('capo' Integer after the TuningName, before 'all'; 2026-09-29, HANDOFF §2 K2):
-   'chordDiagrams guitar capo 3'. The music still writes the SOUNDING chords (a row's 'Eb',
-   '@chord(Eb)'); every shape — written at the chord, listed in the table, the usual one — is
-   the shape PRESSED above the capo, drawn capo-relative ('Eb(x32010)' is the C shape, and its
-   check, LYS1039, reads the pressed chord: the sounding chord that many semitones down); the
-   usual shape is the pressed chord's; a 'diagram(SYMBOL SHAPE)' item's strings sound that many
-   semitones higher. The printed NAME is the pressed chord's — 'C' for a sounding E♭ — spelled
-   in the key that many semitones below the key at the bar (the key's own letter for the note,
-   else a natural, else the key's side of the accidental; the tritone falls to F♯: owner's
-   decision 2026-09-29), and "Capo 3" stands at the score's head on the header's instrument
-   line (the poet / instrument / composer row of LilyPond's bookTitleMarkup). A Roman degree is
-   the sounding key's and is not moved. 'capo 0' is refused (leave the word out), as is a fret
-   above 11, 'none capo N', 'all capo N' (the capo comes first) and a capo written twice. The
-   .ly twin writes the pressed chords into \chordmode (so LilyPond prints the same names) and
-   'instrument = "Capo 3"' in \header; MusicXML's <harmony> stays the sounding chord, its
-   <frame> the pressed shape; the MIDI plays the sounding music.
+   THE CAPO (the top-level 'capo N' line, §2.2; owner's design 2026-09-28, HANDOFF §2 K2,
+   built 2026-09-29 as a word of this key, the file's own line since 2026-10-31). The music
+   still writes the SOUNDING chords (a row's 'Eb', '@chord(Eb)'); every shape — written at the
+   chord, listed in the table, the usual one — is the shape PRESSED above the capo, drawn
+   capo-relative ('Eb(x32010)' is the C shape, and its check, LYS1039, reads the pressed chord:
+   the sounding chord that many semitones down); the usual shape is the pressed chord's; a
+   'diagram(SYMBOL SHAPE)' item's strings sound that many semitones higher. The printed NAME is
+   the pressed chord's — 'C' for a sounding E♭ — spelled in the key that many semitones below
+   the key at the bar (the key's own letter for the note, else a natural, else the key's side of
+   the accidental; the tritone falls to F♯: owner's decision 2026-09-29), and "Capo 3" stands at
+   the score's head on the header's instrument line (the poet / instrument / composer row of
+   LilyPond's bookTitleMarkup) — in a score that prints diagrams ('chordDiagrams' not 'none')
+   or pressed names ('chordNames shape | both'); a score of sounding names with no diagrams
+   shows the capo nowhere, so it prints no line. A Roman degree is the sounding key's and is
+   not moved. The .ly twin writes the pressed chords into \chordmode (so LilyPond prints the
+   same names) and 'instrument = "Capo 3"' in \header; MusicXML's <harmony> stays the sounding
+   chord, its <frame> the pressed shape; the MIDI plays the sounding music.
 
    chordNames — what a chord name shows under a capo: 'shape' (the default) the pressed
    chord's name, 'sounding' the sounding chord's, 'both' the sounding name first and the
@@ -976,9 +1009,10 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    print the same name. The twin cannot spell 'both' (LilyPond 2.26 has no capo on its
    ChordNames) and names the sounding chord, with a warning.
 
-   THE CAPO SUGGESTION is the editor's, not the language's: after 'capo' the completion lists
-   the frets 0..7 ranked by how many of the file's chords would take a barre there on their
-   usual shape (CapoAdvisor; fewest first), and hovering 'capo N' shows the same ranking. The
+   THE CAPO SUGGESTION is the editor's, not the language's: after the top-level 'capo' the
+   completion lists the frets 0..7 ranked by how many of the file's chords would take a barre
+   there on their usual shape (CapoAdvisor; fewest first — on the first 'chordTuning' a layout
+   block writes, else the guitar), and hovering the 'capo N' line shows the same ranking. The
    writer reads it and writes a fret; there is no 'capo auto'.
 
    chordList — 'true' puts the CHORD LIST at the score's head, under the title rows and above
@@ -987,7 +1021,7 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    resolves to — each once, in order of first appearance, as the name the score prints (a
    capo's pressed name) over the diagram it draws there; a chord that draws no diagram in the
    score shows its usual shape here (the list is where a shape is looked up), on the layout's
-   tuning, else the guitar; 'chordDiagrams none' lists the names alone. The cells stand
+   'chordTuning', else the guitar; 'chordDiagrams none' lists the names alone. The cells stand
    ChordListCellGap (3 ss) apart in the FEWEST rows that fit the line width with as nearly
    EQUAL counts as those rows allow (16 chords where 12 fit a row make 8 + 8), each row
    CENTRED on the page (owner's decision 2026-09-29, after seeing a left-set row and a 12 + 4
@@ -1024,10 +1058,13 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    words are reserved — 'part markTempo { … }' compiles. An unknown key is an ERROR, the
    fonts block's reasoning: a switch nobody reads looks exactly like one that works. A
    key set twice in one block warns and the last one wins. A brace inside the block is
-   refused where it stands: no layout key opens a block — save 'chordDiagrams', whose
-   shape table is one (2026-09-29). *)
+   refused where it stands: no layout key opens a block (the chord-shape table is the
+   top-level 'chordShapes { }', §2.2; it was this block's 'chordDiagrams … { }' from
+   2026-09-29 to 2026-10-31). *)
 
 (* Example:
+   capo 3
+   chordShapes { Cm7 x35343  G  section Chorus { C x35553 } }
    layout {
      markTempo beside
      barNumbers every 4
@@ -1036,7 +1073,8 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
      partCombineText false
      chordQualities words
      minorChords lower
-     chordDiagrams guitar capo 3 { Cm7 x35343  G  section Chorus { C x35553 } }
+     chordDiagrams all
+     chordTuning ukulele
      chordNames both
      chordList true
      voltaBracket line
@@ -1410,11 +1448,11 @@ TodoMark       = Annotation ;   (* GLUED: '@todo', '@todo(key)', '@todo("memo")'
                     F(133211 2010), F(guitar 133211 ukulele 2010), F/A(x03211). ShapeWords
                     is ChordArgument's (§8.4): each unnamed shape goes to the diagram tuning
                     with as many strings; a TuningName binds the next one by name. Only an
-                    entry that writes a shape draws a diagram (every entry under a
-                    layout's 'chordDiagrams … all', the usual shape if none), on the layout's
-                    'chordDiagrams' tuning, else the instrument of the staff the row stands
-                    above, else the guitar. A '(' after a space is a stray token, as it
-                    always was. *)
+                    entry that writes a shape — or that the file's 'chordShapes { }' lists —
+                    draws a diagram (every entry under a layout's 'chordDiagrams all', the
+                    usual shape if none), on the instrument of the staff the row stands
+                    above, else the layout's 'chordTuning', else the guitar. A '(' after a
+                    space is a stray token, as it always was. *)
                  (* A named chord part; a score places it as a 'chords NAME' row —
                     directly above a staff, or as a lead-sheet row on its own.
                     The NAMELESS form (auto-attach above "the co-written part's
@@ -2387,7 +2425,7 @@ ChordNote      = PitchToken , { Annotation } ;
      line on any other staff; an octave up while below the instrument's range, or — on a fretted
      part — while no hand holds it), with no string numbers, on every part (ShapeChords.
      PlaysUsualShape: it shows no diagram, so it plays none) — and it draws none, even under
-     'chordDiagrams … all' (a diagram is a score's, the notes are the part's). 'diagram(F)' plays
+     'chordDiagrams all' (a diagram is a score's, the notes are the part's). 'diagram(F)' plays
      and draws its instrument's usual shape (pressed above a capo), the guitar's on a part with no
      fretted instrument: it plays the shape it shows.
      A shape written badly, or only for another string count, does not fall back: the item is
@@ -2686,8 +2724,9 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    dashes separated ('10-9-9', never '10-99'). *)
 (* The voicing INDEX and the 'mute' words of 2026-09-27 never shipped and are gone (2026-09-28):
    '@chord(C 7)' is C with a one-character Shape — LYS1038, the name still draws. A diagram
-   draws only where a Shape is written (or, under 'chordDiagrams … all', for every name); which of them applies is the tuning of the
-   part's fretted instrument, else the one 'layout { chordDiagrams … }' names (§2.6
+   draws only where a Shape is written or the file's 'chordShapes { }' lists the chord (or,
+   under 'chordDiagrams all', for every name); which of them applies is the tuning of the
+   part's fretted instrument, else the one 'layout { chordTuning … }' names (§2.6
    LayoutEntry), else the guitar; 'chordDiagrams none' draws none. *)
 (* A value-bearing annotation puts its argument(s) in parentheses (space- or
    comma-separated); '.' is reserved for the .up / .down placement suffix. *)
@@ -2744,11 +2783,12 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                     and the symbol is not engraved. A bare '@chord' derives it from the notes.
                     The words after the symbol are the shapes of its chord DIAGRAM
                     (ChordArgument above): c4@chord(Cm7 x3x546) ,
-                    c4@chord(F guitar 133211 ukulele 2010). Only a written shape draws a
-                    diagram under the name, on the layout's 'chordDiagrams' tuning, else the
-                    part's fretted instrument, else the guitar (SYNTAX_REFERENCE *Chord
-                    Diagrams*); a name alone draws none, save under 'chordDiagrams … all'
-                    (the usual shape — a bare '@chord' by the name it derives).
+                    c4@chord(F guitar 133211 ukulele 2010). Only a written shape (or a chord
+                    the file's 'chordShapes { }' lists) draws a diagram under the name, on the
+                    part's fretted instrument, else the layout's 'chordTuning', else the
+                    guitar (SYNTAX_REFERENCE *Chord Diagrams*); a name alone draws none, save
+                    under 'chordDiagrams all' (the usual shape — a bare '@chord' by the name
+                    it derives).
                     ⚠️ Since 2026-09-27 words are NOT concatenated: '@chord(C 7)' is C with
                     a one-character shape (LYS1038), not C7. *)
    - Fingering:     <c@finger(1) e@finger(3)>4

@@ -834,6 +834,7 @@ public class EditorColouringTests
             ("chordQualities", LanguageVocabulary.ChordQualityStyleWords),
             ("minorChords", LanguageVocabulary.MinorChordWords),
             ("chordDiagrams", LanguageVocabulary.ChordDiagramWords),
+            ("chordTuning", LanguageVocabulary.ChordTuningWords),
             ("chordNames", LanguageVocabulary.ChordNameWords),
             ("chordList", LanguageVocabulary.ChordListWords),
             ("compressRests", LanguageVocabulary.CompressRestsWords),
@@ -879,22 +880,30 @@ public class EditorColouringTests
             Assert.Equal(SyntaxKind.Identifier, KindOf(word));
     }
 
-    /// <summary>A layout's shape table (<c>chordDiagrams guitar { Cm7 x35343  section A { … } }</c>)
-    /// is its own begin/end region, first in the layout block: until 2026-09-30 nothing claimed
-    /// its brace, so its <c>}</c> ended the layout block and the keys after it went plain. Inside,
-    /// the tuning words are exactly the compiler's and a shape is coloured only as a whole word.</summary>
+    /// <summary>The file's shape table (<c>chordShapes { Cm7 x35343  section A { … } }</c>, a
+    /// top-level block since 2026-10-31; until then a layout's <c>chordDiagrams … { }</c>, whose
+    /// brace nothing claimed until 2026-09-30) is its own begin/end region among the top-level
+    /// patterns, and <c>capo N</c> a top-level rule of its own. Inside the table, the tuning
+    /// words are exactly the compiler's and a shape is coloured only as a whole word.</summary>
     [Fact]
     public void TheShapeTable_IsItsOwnRegion_AndColoursTuningsAndShapes()
     {
         using var doc = JsonDocument.Parse(File.ReadAllText(GrammarPath));
         var repository = doc.RootElement.GetProperty("repository");
-        var layout = Rules(repository.GetProperty("layout-block")).ToList();
-        int table = layout.FindIndex(r => r.TryGetProperty("include", out var i) && i.GetString() == "#shape-table");
-        int firstKey = layout.FindIndex(r => r.TryGetProperty("match", out _));
-        Assert.InRange(table, 0, firstKey - 1);
+        string?[] top = [.. doc.RootElement.GetProperty("patterns").EnumerateArray()
+            .Select(p => p.TryGetProperty("include", out var i) ? i.GetString() : null)];
+        Assert.Contains("#chord-shapes-block", top);
+        Assert.Contains("#capo-directive", top);
+        Assert.DoesNotContain(Rules(repository.GetProperty("layout-block")),
+            r => r.TryGetProperty("include", out var i) && i.GetString() == "#shape-table");
 
-        var region = repository.GetProperty("shape-table");
-        Assert.Equal(("\\{", "\\}"), (region.GetProperty("begin").GetString(), region.GetProperty("end").GetString()));
+        var capo = repository.GetProperty("capo-directive");
+        Assert.Matches(capo.GetProperty("match").GetString()!, "capo 3");
+        Assert.DoesNotMatch(capo.GetProperty("match").GetString()!, "part capo {");
+
+        var region = repository.GetProperty("chord-shapes-block");
+        Assert.Matches(region.GetProperty("begin").GetString()!, "chordShapes {");
+        Assert.Equal("\\}", region.GetProperty("end").GetString());
         var section = Rules(region).Single(r => r.TryGetProperty("begin", out _));
         Assert.Matches(section.GetProperty("begin").GetString()!, "section Chorus {");
 

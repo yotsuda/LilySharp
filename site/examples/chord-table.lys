@@ -1,6 +1,7 @@
-// A shape table lists the chords that draw, wherever they are named. C draws its usual
-// shape and F the listed xx3211 - except in the Chorus, where F is the barre and G draws too.
-layout { chordDiagrams guitar { C  F xx3211  section Chorus { F 133211  G } } }
+// The shape table lists the chords that draw, wherever they are named - the piece's own
+// data, written once at the top level. C draws its usual shape and F the listed xx3211 -
+// except in the Chorus, where F is the barre and G draws too.
+chordShapes { C  F xx3211  section Chorus { F 133211  G } }
 time 4/4
 part melody { clef treble }
 section Verse  { melody { e''2 c2 | f2 d2 | }  chords prog { C | F G | } }

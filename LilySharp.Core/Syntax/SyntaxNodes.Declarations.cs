@@ -885,8 +885,10 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
 /// <remarks>
 /// The green node holds the block's tokens FLAT, like the paper block's: the entries are
 /// read back here, so a growing layout vocabulary grows <c>LayoutPlanReader</c>'s table
-/// and nothing in the syntax tree. The one nested block — <c>chordDiagrams</c>' shape table
-/// (2026-09-29); the parser refuses any other brace inside — belongs to its entry whole,
+/// and nothing in the syntax tree. The one nested block — the shape table the OLD
+/// <c>chordDiagrams</c> key took (2026-09-29 to 2026-10-31; it is the top-level
+/// <c>chordShapes { }</c> now, and the reader refuses the old form naming the new); the parser
+/// refuses any other brace inside — belongs to its entry whole,
 /// braces included, and no word inside it is a key. An entry runs from its key to the next
 /// KEY, and a word is a key when it opens the block or is one of the known keys
 /// (<see cref="SyntaxFacts.LayoutKeyVocabulary"/>): the value words are a closed vocabulary
@@ -1033,6 +1035,49 @@ public sealed class LayoutDeclarationSyntax : SyntaxNode
             }
             Flush();
             return entries;
+        }
+    }
+}
+
+/// <summary>
+/// The file's chord-shape table — <c>chordShapes { Cm7 x35343  G  section Chorus { C x35553 } }</c>,
+/// a top-level block written once: the shape each chord draws wherever it is named, the piece's
+/// DATA rather than one edition's display (owner's decision 2026-10-31, docs/ROADMAP.md
+/// "Chord diagrams: one key doing four jobs" §4; until then the table was the
+/// <c>chordDiagrams</c> key's, inside <c>layout { }</c>). A node whose <see cref="IsBlock"/> is
+/// false is the refused blockless form, kept in the tree so no source position slides.
+/// </summary>
+/// <remarks>
+/// The green node holds the block's tokens FLAT, braces included, like the layout block's:
+/// the entries are read back by <c>Semantics.ChordShapesDirective</c>, which re-joins a chord
+/// symbol's glued run (<c>C#m7-5/G</c>) by adjacency. A <c>section NAME { … }</c> nests one level.
+/// </remarks>
+public sealed class ChordShapesDeclarationSyntax : SyntaxNode
+{
+    internal ChordShapesDeclarationSyntax(ChordShapesDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>chordShapes</c> keyword token.</summary>
+    public SyntaxTokenNode KeywordToken => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>True when the directive carries its <c>{ … }</c> block.</summary>
+    public bool IsBlock => SlotCount > 1 && GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace };
+
+    /// <summary>The block's tokens, the opening brace first and the closer last (when written),
+    /// in source order; empty for the blockless form.</summary>
+    public IReadOnlyList<SyntaxTokenNode> Tokens
+    {
+        get
+        {
+            if (!IsBlock)
+                return [];
+            var tokens = new List<SyntaxTokenNode>();
+            for (int i = 1; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode token)
+                    tokens.Add(token);
+            return tokens;
         }
     }
 }

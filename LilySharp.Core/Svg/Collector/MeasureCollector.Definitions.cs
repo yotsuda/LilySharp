@@ -531,6 +531,10 @@ public sealed partial class MeasureCollector
         // `lysc … --set Stem.thickness=1.5`: the caller's layout values, over everything the file says.
         if (PaperOverrides is { } layoutSettings)
             _v.Meta.LayoutPlan = layoutSettings.ApplyLayout(_v.Meta.LayoutPlan);
+        // The piece's data the plan carries — the file's `capo N` and `chordShapes { }` (owner's
+        // grammar 2026-10-31) — laid on last, as LayoutPlanReader.Resolve lays them: no layout
+        // block sets them, so the file default read above and the reference both lack them.
+        _v.Meta.LayoutPlan = Semantics.ChordShapesDirective.Apply(root, _v.Meta.LayoutPlan);
         // The layout's line thicknesses and stem length ride on the paper, which is what the
         // layout engine and the renderer hold the engraving style from (Svg.EngravingStyle).
         // The music font fills what neither wrote from its engravingDefaults (MusicFont.Engrave;
@@ -544,14 +548,14 @@ public sealed partial class MeasureCollector
         // every inline @chord is collected after this.
         _chordSpelling = _v.Meta.LayoutPlan.Chords;
         _chordNameCollector.Spelling = _chordSpelling;
-        // …and the tuning chord diagrams no fretted part owns draw on (chordDiagrams; absent = the
-        // guitar — a fretted part's own first, resolved per part and per row, ChordDiagramsKey.Resolve).
-        _chordDiagramsWord = _v.Meta.LayoutPlan.ChordDiagrams;
-        _chordNameCollector.DiagramsWord = _chordDiagramsWord;
-        // …and whether every chord name draws one (`chordDiagrams … all`), not only a written shape.
-        _chordDiagramsAll = _v.Meta.LayoutPlan.ChordDiagramsAll;
-        _chordNameCollector.DiagramsAll = _chordDiagramsAll;
-        // …and the layout's shape table (the chords that draw wherever they are named).
+        // …and which chords draw a diagram (chordDiagrams written|none|all) and the tuning the
+        // diagrams no fretted part owns draw on (chordTuning; absent = the guitar — a fretted
+        // part's own first, resolved per part and per row, ChordDiagramsKey.Resolve).
+        _chordDiagramScope = _v.Meta.LayoutPlan.ChordDiagrams;
+        _chordTuningWord = _v.Meta.LayoutPlan.ChordTuning;
+        _chordNameCollector.DiagramScope = _chordDiagramScope;
+        _chordNameCollector.TuningWord = _chordTuningWord;
+        // …and the file's shape table (the chords that draw wherever they are named).
         _chordDiagramTable = _v.Meta.LayoutPlan.ChordDiagramTable;
         _chordNameCollector.Table = _chordDiagramTable;
         // …and the score-level meter, while _v.Meta still holds it: every voice's builder is

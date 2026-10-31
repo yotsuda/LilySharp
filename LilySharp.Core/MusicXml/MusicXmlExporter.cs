@@ -147,7 +147,7 @@ public sealed class MusicXmlExporter
     private string? _noteFrameSpec; // @diagram(...) on the note being written
     private int[] _partTuning = Tablature.Tunings.Guitar; // what a symbol-less @chord(x32010) is named on
     private TuningType? _partFrettedTuning;  // the part's fretted instrument: a diagram's tuning when the layout names none
-    private (bool Read, string? Word, bool All, Music.ChordShapeTable? Table, int Capo) _diagramsWord;  // the score's chordDiagrams word as written (its `all`, its shape table, its capo), read once
+    private (bool Read, Semantics.ChordDiagramScope Scope, string? TuningWord, Music.ChordShapeTable? Table, int Capo) _diagramsWord;  // the score's chordDiagrams scope and chordTuning word, the file's shape table and capo, read once
     private MusicXmlNote? _lastPitchedNote; // hammer-on/pull-off start anchor
     private string? _pendingLineStop;       // "glissando" | "slide": stop lands on the NEXT note
     private string? _chordArpeggio;         // "arpeggiate" | "non-arpeggiate" for the chord being written
@@ -260,17 +260,9 @@ public sealed class MusicXmlExporter
         var plan = Semantics.LayoutPlan.Default;
         if (_root != null)
         {
-            if (Score is { } score)
-            {
-                var file = Semantics.LayoutPlanReader.FileDefault(_root) is { } f
-                    ? Semantics.LayoutPlanReader.Read(f, out _)
-                    : Semantics.LayoutPlan.Default;
-                plan = score.LayoutRef is { } layoutRef
-                    ? Semantics.LayoutPlanReader.ReadReference(_root, layoutRef, file)
-                    : file;
-            }
-            else
-                plan = Semantics.LayoutPlanReader.Resolve(_root,
+            plan = Score is { } score
+                ? Semantics.LayoutPlanReader.ResolveFor(_root, score)
+                : Semantics.LayoutPlanReader.Resolve(_root,
                     _root.DescendantNodes().OfType<RenderDeclarationSyntax>().FirstOrDefault());
         }
         return (_scoreLayoutPlan = plan);
@@ -280,37 +272,20 @@ public sealed class MusicXmlExporter
 
     /// <summary>
     /// The tuning an <c>@chord</c>'s diagram draws on in the exported score (owner's decisions
-    /// 2026-09-28): the score's <c>layout { chordDiagrams T }</c> — the <see cref="Score"/> being
-    /// written (its layout reference over the file's default), else the file's first score, the
-    /// page's reading (<see cref="Semantics.LayoutPlanReader"/>) — else the part's fretted
-    /// instrument, else the guitar; null under <c>chordDiagrams none</c>.
+    /// 2026-09-28, 2026-10-31): the part's fretted instrument, else the score's
+    /// <c>layout { chordTuning T }</c> — the <see cref="Score"/> being written (its layout
+    /// reference over the file's default), else the file's first score, the page's reading
+    /// (<see cref="Semantics.LayoutPlanReader"/>) — else the guitar; null under
+    /// <c>chordDiagrams none</c>.
     /// </summary>
     private TuningType? DiagramTuning()
     {
         if (!_diagramsWord.Read && _root != null)
         {
-            string? word;
-            bool all;
-            Music.ChordShapeTable? table;
-            int capo;
-            if (Score is { } score)
-            {
-                var file = Semantics.LayoutPlanReader.FileDefault(_root) is { } f
-                    ? Semantics.LayoutPlanReader.Read(f, out _)
-                    : Semantics.LayoutPlan.Default;
-                var plan = score.LayoutRef is { } layoutRef
-                    ? Semantics.LayoutPlanReader.ReadReference(_root, layoutRef, file)
-                    : file;
-                (word, all, table, capo) = (plan.ChordDiagrams, plan.ChordDiagramsAll, plan.ChordDiagramTable, plan.Chords.Capo);
-            }
-            else
-            {
-                var first = Semantics.ChordDiagramScores.Of(_root).FirstOrDefault();
-                (word, all, table, capo) = (first?.LayoutWord, first?.All ?? false, first?.Table, first?.Capo ?? 0);
-            }
-            _diagramsWord = (true, word, all, table, capo);
+            var plan = ScoreLayoutPlan();
+            _diagramsWord = (true, plan.ChordDiagrams, plan.ChordTuning, plan.ChordDiagramTable, plan.Chords.Capo);
         }
-        return Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Word, _partFrettedTuning);
+        return Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Scope, _diagramsWord.TuningWord, _partFrettedTuning);
     }
 
     /// <summary>The exported score's capo fret (read with <see cref="DiagramTuning"/>), 0 for
@@ -328,7 +303,7 @@ public sealed class MusicXmlExporter
     /// <summary>The exported score's <c>chordDiagrams … all</c> (read with
     /// <see cref="DiagramTuning"/>, which is always asked first): every chord name draws a
     /// diagram, its written shape else the default.</summary>
-    private bool DiagramsAll => _diagramsWord.All;
+    private bool DiagramsAll => _diagramsWord.Scope == Semantics.ChordDiagramScope.All;
 
     /// <summary>The exported score's layout shape table (read with <see cref="DiagramTuning"/>):
     /// the chords that draw wherever they are named, or null.</summary>
@@ -5213,7 +5188,7 @@ public sealed class MusicXmlExporter
         foreach (var artic in articulations)
             if (artic is MusicMarkSyntax fm
                 // `chordDiagrams none`: no frame, an @diagram's included — as the page (2026-10-31).
-                && Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Word, _partFrettedTuning) is not null
+                && DiagramTuning() is not null
                 && (Semantics.AnnotationValues.Frame(fm) ?? PageFrameAt(fm)) is { } spec)
                 _noteFrameSpec = spec;
 
@@ -6164,7 +6139,8 @@ public sealed class MusicXmlExporter
                     continue;
                 var header = PartHeaderDefaults.Read(
                     _root?.DescendantNodes().OfType<PartDeclarationSyntax>().FirstOrDefault(pd => pd.Name.Text == target));
-                var tuning = Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Word, header.FrettedTuning);
+                DiagramTuning();
+                var tuning = Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Scope, _diagramsWord.TuningWord, header.FrettedTuning);
                 for (int k = 0; k < bars.Count && start + k < part.Measures.Count; k++)
                 {
                     var measure = part.Measures[start + k];
@@ -6284,7 +6260,8 @@ public sealed class MusicXmlExporter
         _keyCustomXml = pending.Key.Custom;
         _bars.SetMeter(new Semantics.Meter(pending.Beats, pending.BeatType));
         _attributesDirty = true;
-        var tuning = Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Word, null);
+        DiagramTuning();
+        var tuning = Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Scope, _diagramsWord.TuningWord, null);
         for (int k = 0; k < bars.Count; k++)
         {
             bool first = _currentPart!.Measures.Count == 0;

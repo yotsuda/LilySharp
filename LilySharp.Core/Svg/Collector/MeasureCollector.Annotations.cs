@@ -164,13 +164,13 @@ public sealed partial class MeasureCollector
             // default shape when none is written (a bare @chord's derived name included) — on the
             // part's fretted instrument's tuning, else the one the score's layout names, else the
             // guitar's (ChordDiagramsKey.Resolve); `chordDiagrams none` draws none.
-            var diagramTuning = Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning);
-            // The layout's shape table lists chords that draw wherever they are named, per the
+            var diagramTuning = Semantics.ChordDiagramsKey.Resolve(_chordDiagramScope, _chordTuningWord, _partFrettedTuning);
+            // The file's shape table lists chords that draw wherever they are named, per the
             // section the mark is WRITTEN in (ChordShapeTable); read only when a table exists.
             string? section = _chordDiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(site) : null;
             Music.ChosenShape? DiagramFor(Music.ChordStructure? derived)
                 => diagramTuning is { } dt
-                    ? words.Drawn(dt, _chordDiagramsAll, derived, _chordDiagramTable, section, _chordSpelling.Capo) : null;
+                    ? words.Drawn(dt, _chordDiagramScope == Semantics.ChordDiagramScope.All, derived, _chordDiagramTable, section, _chordSpelling.Capo) : null;
 
             // The key as written here spells a capo score's pressed name (ChordStructure.Pressed).
             int keySharps = WrittenKeySharps();
@@ -286,7 +286,7 @@ public sealed partial class MeasureCollector
     private void CollectGroupDiagrams(ArpeggioSyntax group, int measureIndex, int itemIndex, List<int> midis)
     {
         if (_v.GraceDepth > 0 || _v.PercentCoveredDepth > 0
-            || Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning) is null)
+            || Semantics.ChordDiagramsKey.Resolve(_chordDiagramScope, _chordTuningWord, _partFrettedTuning) is null)
             return;
         foreach (var mark in group.Articulations.OfType<MusicMarkSyntax>())
         {
@@ -332,16 +332,16 @@ public sealed partial class MeasureCollector
     /// <c>@chord</c> diagrams draw on when the layout names no <c>chordDiagrams</c> tuning.</summary>
     private TuningType? _partFrettedTuning;
 
-    /// <summary>The score's <c>layout { chordDiagrams … }</c> word as written, or null when
-    /// absent — set with the plan (<c>CollectDefinitions</c>), before any walk.</summary>
-    private string? _chordDiagramsWord;
+    /// <summary>The score's <c>layout { chordDiagrams written|none|all }</c> — which chords draw a
+    /// diagram — set with the plan (<c>CollectDefinitions</c>), before any walk.</summary>
+    private Semantics.ChordDiagramScope _chordDiagramScope;
 
-    /// <summary>The score's <c>chordDiagrams … all</c>: every <c>@chord</c> name draws a diagram,
-    /// its written shape else the default — set with <see cref="_chordDiagramsWord"/>.</summary>
-    private bool _chordDiagramsAll;
+    /// <summary>The score's <c>layout { chordTuning … }</c> word as written, or null when absent
+    /// (the guitar) — set with <see cref="_chordDiagramScope"/>.</summary>
+    private string? _chordTuningWord;
 
-    /// <summary>The score's layout shape table (<c>chordDiagrams … { Cm7 x35343 … }</c>): the
-    /// chords that draw wherever they are named — or null. Set with <see cref="_chordDiagramsWord"/>.</summary>
+    /// <summary>The file's shape table (<c>chordShapes { Cm7 x35343 … }</c>): the chords that
+    /// draw wherever they are named — or null. Set with <see cref="_chordDiagramScope"/>.</summary>
     private Music.ChordShapeTable? _chordDiagramTable;
 
     /// <summary>The fretted tuning of the single staff <paramref name="voiceName"/> — the one its
@@ -794,7 +794,7 @@ public sealed partial class MeasureCollector
                     && !chord.Articulations.Any(a => a is MusicMarkSyntax { Name: "chord" or "diagram" })
                     // Spread in a << >> group (ArpeggioSpread, lowest first): once, over its first note.
                     && IsFirstSpreadNote(chord)
-                    && Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning) is not null
+                    && Semantics.ChordDiagramsKey.Resolve(_chordDiagramScope, _chordTuningWord, _partFrettedTuning) is not null
                     && Music.ShapeChords.ShapeFor(Music.ShapeChords.Words(chord), _partFrettedTuning ?? TuningType.Guitar, _chordSpelling.Capo) is { } shape
                     && Music.ChordShapes.TryRead(shape, out var shapeFrets, out _))
                     _articulations.Add(new ArticulationItem(
@@ -1022,7 +1022,7 @@ public sealed partial class MeasureCollector
                 }
                 // `chordDiagrams none` draws no diagram at all, an @diagram's included (owner's
                 // review 2026-10-31: it drew one there while the items and the bare form did not).
-                else if (Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning) is not null
+                else if (Semantics.ChordDiagramsKey.Resolve(_chordDiagramScope, _chordTuningWord, _partFrettedTuning) is not null
                          && (Semantics.AnnotationValues.Frame(markSyntax)
                           // A bare @diagram on a <…> chord: its own notes as the part's strings fret
                           // them (owner's request 2026-10-30), the guitar's for a part with none.

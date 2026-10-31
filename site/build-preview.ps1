@@ -225,9 +225,10 @@ $template = @'
       <code>form</code>. The full score, the separate parts, a staff-less chord grid and a
       practice excerpt all come out of the same notes — so they cannot drift apart. Write a
       progression once and print it both above the melody and as its own chart. Chord
-      diagrams follow the score, not the file: <code>chordDiagrams guitar</code>,
-      <code>ukulele</code> or <code>none</code>, a <code>capo</code>, and a chord list at the
-      head turn the same progression into a guitar book, a ukulele book and a piano score.
+      diagrams follow the score, not the file: <code>chordTuning guitar</code> or
+      <code>ukulele</code>, <code>chordDiagrams none</code> or <code>all</code>, and a chord
+      list at the head turn the same progression into a guitar book, a ukulele book and a
+      piano score; the capo and the shapes are the piece's own.
       <a href="chords.html">Chords and chord diagrams &rarr;</a></p></div>
   </div>
 </div></section>

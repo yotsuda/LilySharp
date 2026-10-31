@@ -6,6 +6,29 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### The chord-diagram grammar: one key, one question
+
+- `[lang]` **The capo and the chord-shape table are the piece's own lines**, written once at
+  the top level beside `time` and `key`: **`capo 3`** (1–11; every pressed shape in the file,
+  the printed names and a `diagram(…)` item's sound follow it, in every score) and
+  **`chordShapes { Cm7 x35343  G  section Chorus { C x35553 } }`** (the shape each chord draws
+  wherever it is named). Until now both were words of the layout's `chordDiagrams` key, so a
+  named `layout` had to copy the table, two scores could sound one item under two capos, and a
+  chord sheet with a capo and pressed names but no diagrams could not be written.
+- `[lang]` **`layout { chordDiagrams written | none | all }`** answers one question — which
+  chords draw a diagram: those with a written or listed shape (the default), none at all, or
+  every chord — and **`layout { chordTuning TUNING }`** is the tuning a chord with no fretted
+  part draws on (a chords row's, a piano's; `guitar` when unset). The old
+  `chordDiagrams guitar capo 3 all { … }` is an error that names the new spelling (LYS1061),
+  and the editor's quick fix writes it — there is no backward compatibility, by the owner's rule.
+  A `capo` line with no fret, a fret of 0 or above 11 is LYS1058; `chordShapes` with no block
+  LYS1059, a broken table LYS1060; a second `capo` or `chordShapes` is LYS4005 and the last wins.
+- `[render]` **"Capo N" prints at the score's head only where the score shows the capo** —
+  diagrams, or pressed names (`chordNames shape | both`); a score of sounding names with no
+  diagrams prints no line. The LilyPond twin's `instrument = "Capo N"` follows.
+- `[lang]` **The table's shapes are checked** (LYS1039) on the guitar, on each fretted
+  instrument the parts play and on each `chordTuning` a layout writes.
+
 ### Cues, tuplets and chord diagrams
 
 - `[lang]` **`layout { cueSize N }`** chooses a `cue { }`'s size as LilyPond's font-size step, -8 to

@@ -52,8 +52,8 @@ review 2026-10-31; LYS1056 does not warn it there).
 
 ### Per user
 
-- ① `c1@chord(F)` or a `chords` row; `layout { chordDiagrams guitar all }` gives every name its
-  usual diagram, the layout's shape table a chosen one, `@chord(F 133211)` one in one place.
+- ① `c1@chord(F)` or a `chords` row; `layout { chordDiagrams all }` gives every name its
+  usual diagram, the file's `chordShapes { }` table a chosen one, `@chord(F 133211)` one in one place.
 - ② `chord(F 133211)4` strum after strum: the name and the diagram where the chord changes.
 - ③ `diagram(x32010)4` plays it; the hover says *this shape is **C***; the quick fix writes
   `chord(C x32010)4` — name, diagram and sound.
@@ -64,9 +64,12 @@ review 2026-10-31; LYS1056 does not warn it there).
 
 ## 4. What the layout decides (per score, unchanged unless said)
 
-- `chordDiagrams none | guitar | ukulele | …` — the instrument, or no diagrams at all.
-- `chordDiagrams … all` — every name draws its usual diagram; a shape table picks others.
-- `chordNames shape | sounding | both`, the capo, `chordList` — as now.
+- `chordDiagrams written | none | all` — which chords draw: those with a shape, none at all,
+  every name (its usual diagram); `chordTuning TUNING` — the instrument for a chord with no
+  fretted part. (Until 2026-10-31 one key did both, and the capo and the shape table too; the
+  grammar settled that day puts the capo and the table at the top level — `capo N`,
+  `chordShapes { }` — as the piece's data.)
+- `chordNames shape | sounding | both`, `chordList` — as now.
 - New (Q2): an item's diagram stands where the chord CHANGES — not over a repeat of the same
   shape in the same part — and again at the head of each system.
 

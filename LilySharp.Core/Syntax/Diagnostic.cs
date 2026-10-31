@@ -810,6 +810,33 @@ public static class DiagnosticCodes
     /// chord diagram writes it (owner's request 2026-10-30; <c>Semantics.ChordFingeringValidator</c>).</summary>
     public const string ChordNotFingerable = "LYS1055";
 
+    /// <summary>Error: the top-level <c>capo N</c> line (<c>Semantics.CapoDirective</c>; owner's
+    /// grammar 2026-10-31) takes one fret, 1 to 11 — nothing after the word, a word, a fret of 0 or
+    /// above 11, or a second value is refused, and the capo stays unset. A second <c>capo</c> line
+    /// is LYS4005 (the last one wins).</summary>
+    public const string CapoDirectiveBadValue = "LYS1058";
+
+    /// <summary>Error: <c>chordShapes</c> written without its block — the file's chord-shape
+    /// table is <c>chordShapes { Cm7 x35343  G  section Chorus { C x35553 } }</c> (owner's grammar
+    /// 2026-10-31). Mirrors <see cref="LayoutNeedsABlock"/>. What is wrong INSIDE the table is
+    /// LYS1038 / LYS1039 for an entry and <see cref="ChordShapesTableBroken"/> for the table.</summary>
+    public const string ChordShapesNeedsABlock = "LYS1059";
+
+    /// <summary>Error: a <c>chordShapes { }</c> table refused as a whole — a stray brace, a
+    /// <c>section</c> with no name or block, a section inside a section, a token after the
+    /// closer (<c>Semantics.ChordShapesDirective</c>); the table then lists nothing. Also the
+    /// warning of a chord listed twice in one scope and of a section no declaration names.</summary>
+    public const string ChordShapesTableBroken = "LYS1060";
+
+    /// <summary>Error: the OLD <c>chordDiagrams</c> spelling (2026-09-28 to 2026-10-31) — a
+    /// tuning word, <c>capo N</c>, or a shape table in braces after the key. The grammar settled
+    /// on 2026-10-31 (docs/ROADMAP.md "Chord diagrams: one key doing four jobs"; no backward
+    /// compatibility, the owner's rule) spells the four jobs apart: the top-level <c>capo N</c>
+    /// and <c>chordShapes { }</c>, and in the layout <c>chordDiagrams none|written|all</c> with
+    /// <c>chordTuning TUNING</c>. The message names the new spelling, and the editor's quick fix
+    /// writes it (the entry is dropped from the plan until then).</summary>
+    public const string ChordDiagramsOldForm = "LYS1061";
+
     /// <summary>Warning: a chord's name asked of a shape in two words — a bare <c>@chord</c> beside
     /// an <c>@diagram(x32010)</c>, whose name and diagram are drawn apart — named with the one word
     /// that says it: <c>@chord(C x32010)</c> over the note, <c>chord(x32010)</c> in its place

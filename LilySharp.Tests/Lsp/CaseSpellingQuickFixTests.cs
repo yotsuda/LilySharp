@@ -103,7 +103,7 @@ public class CaseSpellingQuickFixTests
     [Fact]
     public void AWrongCaseShapeWord_AndALayoutKey_AreOfferedTheirSpellings()
     {
-        string text = Book("c'1 |", "layout { ChordDiagrams guitar }\n");
+        string text = Book("c'1 |", "layout { ChordDiagrams none }\n");
         var shape = WriteAction(text, "X32010");
         Assert.NotNull(shape);
         Assert.Equal("Write 'x32010'", shape!.Title);
@@ -111,7 +111,7 @@ public class CaseSpellingQuickFixTests
         var key = WriteAction(text, "ChordDiagrams");
         Assert.NotNull(key);
         Assert.Equal("Write 'chordDiagrams'", key!.Title);
-        Assert.Contains("layout { chordDiagrams guitar }", Apply(text, key));
+        Assert.Contains("layout { chordDiagrams none }", Apply(text, key));
     }
 
     [Fact]

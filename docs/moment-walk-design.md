@@ -250,14 +250,14 @@ grace body の作業域 6＝`_carriedGraceBreathStart`・`_innerGraceBreathStart
 **P（14）**: Form.cs の `_pendingRole`・`_pendingRunStart`・`_pendingRunCount`・`_pendingRewind`・`_pendingPasses`・
 `_pendingMarks`・`_formTrailingMarks`・`_pendingFormEdge`・`_formDividerOpen`／`Closed`・`_dividerEnding`・`_meterCursor`・
 `_sectionStartLog`・`_voiceName`、＋ Annotations.cs の part 既定 6＝`_partTuning`・`_partFrettedTuning`・`_partShapeTuning`・
-`_partSoundingShift`・`_chordFacts`・（`_chordDiagramsWord`／`All`／`_chordDiagramTable` は score 級＝W）。
+`_partSoundingShift`・`_chordFacts`・（`_chordDiagramScope`／`_chordTuningWord`／`_chordDiagramTable` は score 級＝W）。
 
 **W（約 80）**: 定義＝`_sectionState`・`_variables`・`_form`・`_filePartial`・`_root`・Definitions.cs の file 級 12
 （`_fileTransposeDefault(+Seen)`・`_fileIsConcert(+Seen)`・`_fileShiftSemitones`／`Seen`／`Interval`・`_fileClef(+Position)`・
 `_sectionDeclarationsInOrder`・`_phraseDeclarationsInOrder`・`_variableDeclarationsInOrder`・`_phraseGreens`）・
 `_sectionHeaders`・`_canonicalSectionBars`・`_canonicalByName`・`_meterPlan`・`_gatherContainerSite`・`_writtenBarPhrases`・
 `_writtenBarAt`／設定＝`_accidentalStyle`・`_chordSpelling`・`_drumOverrides`・`_drumPlans`・`_scoreTime`・**`_meta` の
-header／`Fonts`／`Paper`／`LayoutPlan`／`Time*`／`Tempo*`／`Swing*`**・`_chordDiagramsWord`／`All`／`_chordDiagramTable`／
+header／`Fonts`／`Paper`／`LayoutPlan`／`Time*`／`Tempo*`／`Swing*`**・`_chordDiagramScope`／`_chordTuningWord`／`_chordDiagramTable`／
 出力＝`_dynamics`・`_articulations`・`_graceNotes`・`_lyricsCollector`・`_lyricsRowNames`・`_voiceMeasuresByName`・
 `_musicMarks`（＋`_musicMarkPositions`・`Synced`）・`_customTexts`・`_voltaBrackets`・`_rowsOnlyFormBars`／`Breaks`／`GridBars`・
 `_offBarVoices`・`_tupletBrackets`・`_arpeggios`・`_pitchTrace`・`_tabResolver`・`_figuredBasses`・`_chordNameCollector`・

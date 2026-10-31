@@ -489,6 +489,19 @@ internal sealed class LayoutDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// The file's chord-shape table: chordShapes { Cm7 x35343  G  section Chorus { C x35553 } },
+/// tokens kept flat like the layout block's (braces included); the reader
+/// (Semantics.ChordShapesDirective) re-joins the chord symbols by adjacency.
+/// </summary>
+internal sealed class ChordShapesDeclarationGreen : GreenSyntaxNode
+{
+    public ChordShapesDeclarationGreen(SyntaxToken keyword, GreenNode?[] tokens)
+        : base(SyntaxKind.ChordShapesDeclaration, [keyword, .. tokens])
+    {
+    }
+}
+
+/// <summary>
 /// Variable declaration: name = expr (new style) or let name = expr (legacy)
 /// </summary>
 internal sealed class VariableDeclarationGreen : GreenSyntaxNode

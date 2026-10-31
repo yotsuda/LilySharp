@@ -65,10 +65,11 @@ internal sealed partial class Parser
         int stage = 0;     // 0 = idle, 1 = saw '@', 2 = saw '@chord'/'@figuredBass' name
         int chordsDepth = 0;   // brace depth inside a chords { } body (0 = outside)
         int chordsStage = 0;   // 0 = idle, 1 = saw 'chords', 2 = saw its name
-        // A layout's `chordDiagrams [words] { … }` shape table (2026-09-29): chord symbols
-        // there spell sharps with '#' as a chords body does (`C#m7 x46654`).
+        // The chord-shape table — `chordShapes { … }` (2026-10-31), and the old layout
+        // `chordDiagrams [words] { … }` (2026-09-29): chord symbols there spell sharps with '#'
+        // as a chords body does (`C#m7 x46654`).
         int tableDepth = 0;    // brace depth inside the table (0 = outside)
-        bool tableHead = false; // saw `chordDiagrams`, its words may follow, then the brace
+        bool tableHead = false; // saw `chordShapes` / `chordDiagrams`, its words may follow, then the brace
         // A lyrics { } body is free text: a '?' or ';' written against a syllable is part
         // of the word (ParseLyricSyllable glues it on — "you?", "gent-ly;"), so it is not a
         // stray character there. Until 2026-09-26 it was flagged as one, an ERROR, though
@@ -197,14 +198,18 @@ internal sealed partial class Parser
             else
                 chordsStage = 0;
 
-            // The shape table of a layout's `chordDiagrams`: the key, then its words (a tuning,
-            // `all`), then the brace; any other token disarms it.
+            // The shape table — the top-level `chordShapes { … }` (2026-10-31), and the OLD
+            // `chordDiagrams [words] { … }` of a layout, still bounded so the reader can name
+            // the new form: the key, then its words (a tuning, `all`), then the brace; any other
+            // token disarms it.
             if (tableDepth > 0)
             {
                 if (t.Kind == SyntaxKind.OpenBrace) tableDepth++;
                 else if (t.Kind == SyntaxKind.CloseBrace) tableDepth--;
             }
-            else if (t.Kind == SyntaxKind.Identifier && t.Text.Equals(Semantics.ChordDiagramsKey.Key, StringComparison.Ordinal))
+            else if (t.Kind == SyntaxKind.Identifier
+                     && (t.Text.Equals(Semantics.ChordDiagramsKey.Key, StringComparison.Ordinal)
+                         || t.Text.Equals(Semantics.ChordShapesDirective.Keyword, StringComparison.Ordinal)))
                 tableHead = true;
             else if (tableHead && t.Kind == SyntaxKind.OpenBrace)
             {
@@ -530,6 +535,8 @@ internal sealed partial class Parser
             or SyntaxKind.OnceKeyword => false,
         SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => false,
         SyntaxKind.Identifier when Current.Text == Semantics.CheckPragma.Keyword => false,
+        SyntaxKind.Identifier when Current.Text == Semantics.CapoDirective.Keyword => false,
+        SyntaxKind.Identifier when Current.Text == Semantics.ChordShapesDirective.Keyword => false,
         // A bare clef or dynamic word is a phrase reference INSIDE a music stream
         // (IsBareReferenceKind), and nothing at the file level: it keeps falling to the
         // skip path, where `treble { … }` gets its grand-staff hint (LYS0011) and anything
@@ -589,6 +596,10 @@ internal sealed partial class Parser
             SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => ParseNewVariableDeclaration(),
             // `check voiceLeading s a t b` — a check the file turns on (Semantics.CheckPragma).
             SyntaxKind.Identifier when Current.Text == Semantics.CheckPragma.Keyword => ParseCheckPragma(),
+            // `capo 3` and `chordShapes { … }` — the file's capo and its chord-shape table, the
+            // piece's data (owner's decision 2026-10-31; Semantics.CapoDirective, ChordShapesDirective).
+            SyntaxKind.Identifier when Current.Text == Semantics.CapoDirective.Keyword => ParseCapoDirective(),
+            SyntaxKind.Identifier when Current.Text == Semantics.ChordShapesDirective.Keyword => ParseChordShapesDeclaration(),
 
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword
                 or SyntaxKind.SubtitleKeyword or SyntaxKind.PoetKeyword => ParseMetadataDeclaration(),

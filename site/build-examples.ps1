@@ -307,7 +307,7 @@ score { staff gt  tab gt }
 'chord-all' = @'
 // `chordDiagrams all` draws a diagram for EVERY chord name: the shape written for the
 // tuning, else its usual shape. The row stands above a ukulele staff, so the diagrams
-// are the ukulele's - no layout word needed for that.
+// are the ukulele's - no chordTuning word needed for that.
 layout { chordDiagrams all }
 time 4/4
 part uke { instrument ukulele "Ukulele" }
@@ -320,9 +320,10 @@ score { chords prog  staff uke }
 '@
 
 'chord-table' = @'
-// A shape table lists the chords that draw, wherever they are named. C draws its usual
-// shape and F the listed xx3211 - except in the Chorus, where F is the barre and G draws too.
-layout { chordDiagrams guitar { C  F xx3211  section Chorus { F 133211  G } } }
+// The shape table lists the chords that draw, wherever they are named - the piece's own
+// data, written once at the top level. C draws its usual shape and F the listed xx3211 -
+// except in the Chorus, where F is the barre and G draws too.
+chordShapes { C  F xx3211  section Chorus { F 133211  G } }
 time 4/4
 part melody { clef treble }
 section Verse  { melody { e''2 c2 | f2 d2 | }  chords prog { C | F G | } }
@@ -332,10 +333,12 @@ score { chords prog  staff melody }
 '@
 
 'chord-capo' = @'
-// A capo on the third fret. The music writes the SOUNDING chords (Eb, Ab, Bb7); the page
-// prints what the player presses (C, F, G7), draws the pressed shapes, and says "Capo 3"
-// at the head. `chordNames both` prints both: the sounding name, then the pressed one.
-layout { chordDiagrams guitar capo 3 all  chordNames both }
+// A capo on the third fret - the piece's own line. The music writes the SOUNDING chords
+// (Eb, Ab, Bb7); the page prints what the player presses (C, F, G7), draws the pressed
+// shapes, and says "Capo 3" at the head. `chordNames both` prints both: the sounding
+// name, then the pressed one.
+capo 3
+layout { chordDiagrams all  chordNames both }
 title "Capo"
 time 4/4
 key ees major
@@ -351,7 +354,7 @@ score { chords prog  staff melody }
 'chord-list' = @'
 // `chordList true` puts every chord the score names at its head, once each in order of
 // first appearance, over the diagram it draws there - the songbook's "chords used" row.
-layout { chordDiagrams guitar  chordList true }
+layout { chordList true }
 title "Chord list"
 time 4/4
 part melody { clef treble }

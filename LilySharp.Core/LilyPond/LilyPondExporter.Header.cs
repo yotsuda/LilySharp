@@ -350,15 +350,16 @@ public sealed partial class LilyPondExporter
                .Append('\n');
         }
         // "Capo 3" on the header's instrument line — where the page puts it (HeaderBand;
-        // owner's design HANDOFF §2 K2, 2026-09-29).
-        if (_layoutPlan.Chords.Capo > 0)
+        // owner's design HANDOFF §2 K2, 2026-09-29), and only when the page prints it
+        // (LayoutPlan.PrintsCapoLine).
+        if (_layoutPlan.CapoLine is { } capoLine)
         {
             if (!opened)
             {
                 _sb.Append("\\header {\n");
                 opened = true;
             }
-            _sb.Append("  instrument = \"Capo ").Append(_layoutPlan.Chords.Capo.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append("\"\n");
+            _sb.Append("  instrument = \"").Append(capoLine).Append("\"\n");
         }
         if (opened)
             _sb.Append("}\n\n");

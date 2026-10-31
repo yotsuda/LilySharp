@@ -1,6 +1,6 @@
 // `chordDiagrams all` draws a diagram for EVERY chord name: the shape written for the
 // tuning, else its usual shape. The row stands above a ukulele staff, so the diagrams
-// are the ukulele's - no layout word needed for that.
+// are the ukulele's - no chordTuning word needed for that.
 layout { chordDiagrams all }
 time 4/4
 part uke { instrument ukulele "Ukulele" }

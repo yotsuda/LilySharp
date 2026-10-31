@@ -253,7 +253,7 @@ public class ChordRowInlineAlignmentTests
     public void ARowOverAStaffThatKeepsItsOwnLine_ClearsTheLinesSuperscript()
     {
         var tree = SyntaxTree.Parse(
-            "layout { chordDiagrams guitar all }\n"
+            "layout { chordDiagrams all }\n"
           + "octave absolute\n"
           + "part m { clef treble }\n"
           + "section A { m { c''1@chord(Cm7) | c'1@chord(F) | } chords prog { Cm7 | F | } }\n"

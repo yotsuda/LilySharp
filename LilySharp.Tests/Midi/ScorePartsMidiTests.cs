@@ -164,23 +164,26 @@ public class ScorePartsMidiTests
     }
 
     [Fact]
-    public void TheCapo_IsThePlayedScores_NotTheFirstScores()
+    public void TheCapo_IsTheFiles_InEveryScore()
     {
-        // x32010 is C major open; under the main score's capo 3 it sounds E♭ major, and the
-        // "open" score, which references a layout with no capo, sounds C — it used to sound
-        // the first score's E♭ whichever score was written (HANDOFF §1.0 ⒜ capo hole).
+        // x32010 is C major open; under the file's `capo 3` (the top-level line, owner's grammar
+        // 2026-10-31) it sounds E♭ major in EVERY score — a sound must not change with the
+        // edition, which is why the capo left the layout block (where, 2026-09-29 to 2026-10-31,
+        // two scores could reference layouts with different capos and the MIDI read the played
+        // score's). Without the line, C.
         const string book = """
-            layout capo3 { chordDiagrams guitar capo 3 }
-            layout open { chordDiagrams guitar }
+            capo 3
+            layout open { chordDiagrams written }
             part gt { instrument guitar }
             section A { gt { diagram(C x32010)1 | } }
             form { A }
-            score { layout capo3  staff gt }
+            score { staff gt }
             score open { layout open  staff gt }
             """;
         static int[] Pitches(MidiFile midi) => midi.Tracks.SelectMany(t => t.Notes).Select(n => n.Pitch).OrderBy(p => p).ToArray();
         Assert.Equal(new[] { 51, 55, 58, 63, 67 }, Pitches(Export(book)));   // E♭3 G3 B♭3 E♭4 G4
-        Assert.Equal(new[] { 48, 52, 55, 60, 64 }, Pitches(Export(book, "open")));   // C3 E3 G3 C4 E4
+        Assert.Equal(new[] { 51, 55, 58, 63, 67 }, Pitches(Export(book, "open")));
+        Assert.Equal(new[] { 48, 52, 55, 60, 64 }, Pitches(Export(book.Replace("capo 3\r\n", "").Replace("capo 3\n", ""))));   // C3 E3 G3 C4 E4
     }
 
     [Fact]

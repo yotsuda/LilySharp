@@ -45,7 +45,7 @@ internal static class ChordListBand
         var plan = score.LayoutPlan;
         if (!plan.ChordList || score.ChordNames.IsDefaultOrEmpty)
             return [];
-        var tuning = Semantics.ChordDiagramsKey.Resolve(plan.ChordDiagrams, null);
+        var tuning = plan.ChordDiagramTuningFor(null);
         var seen = new List<ChordStructure>();
         var entries = new List<ChordListEntry>();
         foreach (var c in score.ChordNames.OrderBy(c => c.MeasureIndex).ThenBy(c => c.Timing.ToDouble()).ThenBy(c => c.StaffIndex))

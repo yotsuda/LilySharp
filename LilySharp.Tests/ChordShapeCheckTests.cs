@@ -149,7 +149,7 @@ public class ChordShapeCheckTests
     public void TheTwin_WritesTheFallback_NotTheLeftOutShape()
     {
         string book = """
-            layout { chordDiagrams guitar all }
+            layout { chordDiagrams all }
             octave absolute
             part gt { clef treble }
             section A { gt { c''1 | } chords prog { D#m | } }
@@ -241,7 +241,7 @@ public class ChordShapeCheckTests
     [Fact]
     public void UnderACapo_TheMessageSpeaksSoundingNames()
     {
-        const string capo2 = "layout { chordDiagrams guitar capo 2 }\n";
+        const string capo2 = "capo 2\n";
         // The G shape above a capo on 2 is A; G itself is pressed as F there (133211).
         Assert.Equal("'320003' sounds A C♯ E with the capo on fret 2, which is A, not G (A C♯ E are not tones of G; "
                      + "it lacks B (the 3rd)) - write diagram(A 320003), or diagram(G 133211) for G under the capo, or another shape.",
@@ -252,12 +252,12 @@ public class ChordShapeCheckTests
             Single(OnGuitar("diagram(C x32011)1 |", capo2)));
         // The pressed shape IS the symbol's shape under the capo: silent.
         Assert.Empty(Mismatches(OnGuitar("diagram(G 133211)1 diagram(A 320003)1 |", capo2)));
-        // The same reading for a chords row and a layout table.
+        // The same reading for a chords row and the file's shape table.
         Assert.Equal("'320003' sounds A C♯ E with the capo on fret 2, which is A, not G (A C♯ E are not tones of G; "
                      + "it lacks B (the 3rd)) - write A(320003), or G(133211) for G under the capo, or another shape.",
             Single(Song("G(320003) |", layout: capo2)));
         Assert.Contains("- write A 320003, or G 133211 for G under the capo, or another shape.",
-            Single("layout { chordDiagrams guitar capo 2 { G 320003 } }\n" + OnGuitar("c'1 |")));
+            Single("capo 2\nchordShapes { G 320003 }\n" + OnGuitar("c'1 |")));
     }
 
     /// <summary>⑴ A shape whose notes are another chord names it — the fix, written out.</summary>
@@ -359,7 +359,7 @@ public class ChordShapeCheckTests
         Assert.Empty(Mismatches(Song("C(x32010 0000) | G |")));
         Assert.Equal("'0000' sounds C E G A, which is C6, not C (A is not a tone of C) - write C6(0000) or another shape.",
             Single(Song("C(x32010 0000) | G |", "chords prog  staff uk")));
-        Assert.Single(Mismatches(Song("C(x32010 0000) | G |", layout: "layout { chordDiagrams ukulele }\n")));
+        Assert.Single(Mismatches(Song("C(x32010 0000) | G |", layout: "layout { chordTuning ukulele }\n")));
         Assert.Empty(Mismatches(Song("C(x32010 0000) | G |", "chords prog  staff uk", "layout { chordDiagrams none }\n")));
         // An @chord: on a ukulele part checked on the ukulele, on a guitar part unused.
         string Uke(string part) => $$"""

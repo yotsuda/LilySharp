@@ -752,7 +752,7 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   B major, G major <code>shift -1</code> F♯ major — and notes, signatures and chord names all
   follow that one spelling. Chord shapes written for the old key (<code>G(320003)</code>) are
   the old chord's: under a shift the diagrams draw each chord's usual shape on its new root
-  instead; a capo is your own call (<a href="chords.html#capo"><code>chordDiagrams guitar capo N</code></a>).
+  instead; a capo is your own call (<a href="chords.html#capo"><code>capo N</code></a>).
   On the <code>shift</code> line <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> step it a semitone and
   the status bar names the new key. −11 to +11; an octave is the part's <code>octave N</code>.</p>
   <!--EXAMPLE:instrument-->
@@ -1372,7 +1372,8 @@ score parts { layout chart  staff melody }   // this score's own</pre>
     <tr><td><code>partCombineText</code></td><td><code>true</code> · <code>false</code></td><td>whether a <code>combinedStaff</code> prints a2 / Solo</td></tr>
     <tr><td><code>chordQualities</code></td><td><code>symbols</code> · <code>words</code></td><td>C° C+ Cø C°7, or Cdim Caug Cm7♭5 Cdim7</td></tr>
     <tr><td><code>minorChords</code></td><td><code>upper</code> · <code>lower</code></td><td>Am, or a lowercase root with no m (a)</td></tr>
-    <tr><td><code>chordDiagrams</code></td><td>a tuning word · <code>none</code>, then optionally <code>capo N</code>, <code>all</code>, <code>{ a shape table }</code></td><td>which instrument chord diagrams are drawn for, a capo, whether every chord draws one, and which listed chords draw — see <a href="chords.html#layout">Chords and chord diagrams</a></td></tr>
+    <tr><td><code>chordDiagrams</code></td><td><code>written</code> · <code>none</code> · <code>all</code></td><td>which chords draw a diagram: those with a written or listed shape, none at all, or every chord — see <a href="chords.html#layout">Chords and chord diagrams</a></td></tr>
+    <tr><td><code>chordTuning</code></td><td>a tuning word</td><td>the instrument the diagrams of chords with no fretted part are drawn for (a chords row's, a piano's); a fretted part's chords take its own. The shape table (<code>chordShapes { }</code>) and the capo (<code>capo N</code>) are top-level lines, not layout keys</td></tr>
     <tr><td><code>chordNames</code></td><td><code>shape</code> · <code>sounding</code> · <code>both</code></td><td>under a capo, whether a chord name is the pressed chord's, the sounding chord's, or both (“E♭m7 (Cm7)”) — see <a href="chords.html#capo">A capo</a></td></tr>
     <tr><td><code>chordList</code></td><td><code>true</code> · <code>false</code></td><td>whether the chords the score uses are drawn at its head, each over its diagram — see <a href="chords.html#list">The chord list</a></td></tr>
     <tr><td><code>voltaBracket</code></td><td><code>all</code> · <code>line</code> · <code>N</code></td><td>how far a repeat ending's bracket reaches: all of the ending, to the end of its first line, or its first N bars (cut short, it ends straight); one ending overrides it with <code>[1. B]@voltaBracket(…)</code> — see <a href="#forms">Forms</a></td></tr>

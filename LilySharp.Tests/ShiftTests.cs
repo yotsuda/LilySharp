@@ -199,13 +199,13 @@ public class ShiftTests
             var spec = RenderSpecParser.FindFirst(tree)!;
             return SvgGenerator.CollectScore(tree, spec).ChordNames.OrderBy(c => c.MeasureIndex).First().FrameSpec;
         }
-        string? plain = Frame("layout { chordDiagrams guitar }\nkey c major");
-        string? shifted = Frame("layout { chordDiagrams guitar }\nkey c major\nshift +1");
+        string? plain = Frame("layout { chordTuning guitar }\nkey c major");
+        string? shifted = Frame("layout { chordTuning guitar }\nkey c major\nshift +1");
         Assert.Equal("x32010", plain);
         Assert.NotNull(shifted);
         Assert.NotEqual(plain, shifted);
         // The shifted chord is D-flat, whose usual shape is what a bare D-flat draws under `all`.
-        Assert.Equal(Frame("layout { chordDiagrams guitar all }\nkey c major", "Db | G7 |"), shifted);
+        Assert.Equal(Frame("layout { chordDiagrams all }\nkey c major", "Db | G7 |"), shifted);
     }
 
     [Fact]

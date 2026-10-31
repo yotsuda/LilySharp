@@ -26,9 +26,9 @@ namespace LilySharp.Core.Semantics;
 /// <summary>
 /// Which tuning a chord diagram draws on in each score of a file — read from the tree, the way
 /// the page reads it (<see cref="LayoutPlanReader.Resolve"/>, <see cref="RenderSpecParser"/>):
-/// the fretted instrument of the part the chord belongs to, else the score's <c>chordDiagrams</c>
+/// the fretted instrument of the part the chord belongs to, else the score's <c>chordTuning</c>
 /// word, else the guitar (<see cref="ChordDiagramsKey.Resolve"/>, owner's decisions 2026-09-28,
-/// 2026-10-31: the part first).
+/// 2026-10-31: the part first); none under <c>chordDiagrams none</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -50,21 +50,24 @@ namespace LilySharp.Core.Semantics;
 public static class ChordDiagramScores
 {
     /// <summary>One score: its node (null for a file with no <c>score</c>, which renders by the
-    /// file's own layout), its <c>chordDiagrams</c> word as written (null when absent), its
-    /// spec (null with no node), the names of the <c>chords</c> rows it places (over a
-    /// staff or as a row), and whether it draws EVERY chord name (<c>chordDiagrams … all</c>,
-    /// <see cref="LayoutPlan.ChordDiagramsAll"/>).</summary>
-    public sealed record Score(RenderDeclarationSyntax? Node, string? LayoutWord,
-        RenderSpec? Spec, ImmutableArray<string> RowNames, bool All = false,
+    /// file's own layout), which chords draw a diagram there (<c>chordDiagrams</c>,
+    /// <see cref="LayoutPlan.ChordDiagrams"/>), its <c>chordTuning</c> word as written (null when
+    /// absent), its spec (null with no node), the names of the <c>chords</c> rows it places (over
+    /// a staff or as a row), and the file's shape table and capo as the plan carries them.</summary>
+    public sealed record Score(RenderDeclarationSyntax? Node, ChordDiagramScope Scope, string? TuningWord,
+        RenderSpec? Spec, ImmutableArray<string> RowNames,
         ChordShapeTable? Table = null, int Capo = 0)
     {
-        /// <summary>Whether a name alone can draw in this score: it writes <c>all</c>, or a
-        /// shape table (<see cref="LayoutPlan.ChordDiagramTable"/>) that may list the chord.</summary>
+        /// <summary>Whether the score draws EVERY chord name (<c>chordDiagrams all</c>).</summary>
+        public bool All => Scope == ChordDiagramScope.All;
+
+        /// <summary>Whether a name alone can draw in this score: it writes <c>all</c>, or the
+        /// file's shape table (<see cref="LayoutPlan.ChordDiagramTable"/>) may list the chord.</summary>
         public bool DrawsNamesAlone => All || Table != null;
 
         /// <summary>The tuning word a diagram of a part with fretted tuning
         /// <paramref name="partWord"/> draws on in this score; null under <c>none</c>.</summary>
-        public string? TuningWordFor(string? partWord) => ChordDiagramsKey.ResolveWord(LayoutWord, partWord);
+        public string? TuningWordFor(string? partWord) => ChordDiagramsKey.ResolveWord(Scope, TuningWord, partWord);
 
         /// <summary>Whether this score draws <paramref name="part"/> (a file with no score draws
         /// every part).</summary>
@@ -79,13 +82,13 @@ public static class ChordDiagramScores
         {
             var plan = LayoutPlanReader.Resolve(root, render);
             var spec = RenderSpecParser.Parse(render);
-            scores.Add(new Score(render, plan.ChordDiagrams, spec, spec == null ? [] : [.. RowNamesOf(spec)],
-                plan.ChordDiagramsAll, plan.ChordDiagramTable, plan.Chords.Capo));
+            scores.Add(new Score(render, plan.ChordDiagrams, plan.ChordTuning, spec, spec == null ? [] : [.. RowNamesOf(spec)],
+                plan.ChordDiagramTable, plan.Chords.Capo));
         }
         if (scores.Count == 0)
         {
             var plan = LayoutPlanReader.Resolve(root, null);
-            scores.Add(new Score(null, plan.ChordDiagrams, null, [], plan.ChordDiagramsAll, plan.ChordDiagramTable,
+            scores.Add(new Score(null, plan.ChordDiagrams, plan.ChordTuning, null, [], plan.ChordDiagramTable,
                 plan.Chords.Capo));
         }
         return scores;

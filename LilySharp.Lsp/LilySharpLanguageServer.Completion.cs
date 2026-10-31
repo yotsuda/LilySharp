@@ -372,13 +372,10 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLayoutChordQualities => GetChordQualityStyleCompletions(),
             CompletionContext.AfterLayoutMinorChords => GetMinorChordCompletions(),
             CompletionContext.AfterLayoutChordDiagrams => GetChordDiagramCompletions(),
-            // After a tuning word `capo` and `all`; after `capo N` only `all`.
-            CompletionContext.AfterLayoutChordDiagramsTuning => GetChordDiagramScopeCompletions(
-                capoAllowed: !WordBeforeCursor(doc.Text, offset).All(char.IsAsciiDigit)),
-            // The ranked capo frets, on the entry's tuning (the word before `capo`), else the guitar.
-            CompletionContext.AfterLayoutChordDiagramsCapo => GetChordDiagramCapoCompletions(
-                doc.Text, SecondWordBeforeCursor(doc.Text, offset)),
-            // Inside a shape table: chord names (and `section`); after `section` the sections.
+            CompletionContext.AfterLayoutChordTuning => GetChordTuningCompletions(),
+            // The ranked capo frets after the top-level `capo` (on the file's chordTuning, else the guitar).
+            CompletionContext.AfterCapo => GetChordDiagramCapoCompletions(doc.Text),
+            // Inside the shape table: chord names (and `section`); after `section` the sections.
             CompletionContext.ChordDiagramTable => GetChordDiagramTableCompletions(doc.Text, offset),
             CompletionContext.ChordDiagramTableSection => GetChordDiagramTableSectionCompletions(doc.Text, offset),
             CompletionContext.AfterLayoutChordNames => GetChordNameCompletions(),

@@ -180,41 +180,29 @@ internal static class LanguageReference
     }
 
     /// <summary>
-    /// The hover for a layout's <c>capo</c> word and the fret after it (owner's design
-    /// 2026-09-28, HANDOFF §2 K2; built 2026-09-29): what a capo does, and the capo suggestion —
-    /// each fret 0–7 with the barre chords the file's chords would take there
-    /// (<see cref="LilySharp.Core.Semantics.CapoAdvisor"/>), fewest first, on the entry's tuning
-    /// word, else the guitar. Or null.
+    /// The hover for the top-level <c>capo N</c> line — the word and the fret after it (owner's
+    /// design 2026-09-28, HANDOFF §2 K2; built 2026-09-29 as a layout word, the file's own line
+    /// since 2026-10-31): what a capo does, and the capo suggestion — each fret 0–7 with the
+    /// barre chords the file's chords would take there (<see cref="LilySharp.Core.Semantics.CapoAdvisor"/>),
+    /// fewest first, on the tuning the file's part-less chords draw on
+    /// (<see cref="LilySharpLanguageServer.CapoRankingTuning"/>). Or null.
     /// </summary>
     private static string? CapoHover(SyntaxNode node)
     {
-        const string capo = LilySharp.Core.Semantics.ChordDiagramsKey.CapoWord;
-        if (node is not SyntaxTokenNode token || token.Parent is not LayoutDeclarationSyntax layout)
+        const string capo = LilySharp.Core.Semantics.CapoDirective.Keyword;
+        var line = node as PropertyAssignmentSyntax ?? node.Parent as PropertyAssignmentSyntax;
+        if (line is not { NameToken.Text: capo, Parent: CompilationUnitSyntax })
             return null;
-        // The word itself, or the number right after it.
-        bool onWord = token.Text == capo;
-        bool onFret = token.Kind == SyntaxKind.IntegerLiteral && PreviousToken(layout, token)?.Text == capo;
-        if (!onWord && !onFret)
-            return null;
-        string? tuningWord = null;
-        foreach (var entry in layout.Entries)
-        {
-            if (entry.Key != LilySharp.Core.Semantics.ChordDiagramsKey.Key)
-                continue;
-            if (entry.Values.Count > 0 && LilySharp.Core.Semantics.ChordDiagramsKey.IsTuningWord(entry.Values[0].Text))
-                tuningWord = entry.Values[0].Text;
-        }
-        SyntaxNode root = layout;
-        while (root.Parent != null)
-            root = root.Parent;
-        var tuning = LilySharp.Core.Tablature.Tunings.Parse(tuningWord ?? "guitar");
+        SyntaxNode root = line.Parent;
+        var tuning = LilySharpLanguageServer.CapoRankingTuning(root);
+        string tuningWord = LilySharp.Core.Tablature.Tunings.Names.First(n => LilySharp.Core.Tablature.Tunings.Parse(n) == tuning);
         var ranking = LilySharp.Core.Semantics.CapoAdvisor.Rank(root, tuning);
         var sb = new System.Text.StringBuilder();
-        sb.Append($"**Capo** `{capo} N` — the diagrams are the shapes pressed above the capo, the chord names ")
-          .Append("the pressed chords' (`chordNames shape|sounding|both`), and \"Capo N\" stands at the score's head.");
+        sb.Append($"**Capo** `{capo} N` — every shape in the file is the shape pressed above the capo (the diagrams, `chordShapes {{ }}`, a `diagram(…)` item's sound), the chord names ")
+          .Append("the pressed chords' (`chordNames shape|sounding|both`), and \"Capo N\" stands at the head of a score that prints diagrams or pressed names.");
         if (ranking.Count > 0)
         {
-            sb.Append($"\n\nOn {tuningWord ?? "guitar"}, fewest barre chords first:");
+            sb.Append($"\n\nOn {tuningWord}, fewest barre chords first:");
             foreach (var c in ranking)
                 sb.Append("  \n").Append(LilySharp.Core.Semantics.CapoAdvisor.Describe(c));
         }
@@ -296,22 +284,6 @@ internal static class LanguageReference
             ? new[] { "C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B" }
             : new[] { "C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B" })[midi % 12]
            + (midi / 12 - 1);
-
-    /// <summary>The token before <paramref name="token"/> among <paramref name="layout"/>'s
-    /// children, or null.</summary>
-    private static SyntaxTokenNode? PreviousToken(LayoutDeclarationSyntax layout, SyntaxTokenNode token)
-    {
-        SyntaxTokenNode? previous = null;
-        for (int i = 0; i < layout.SlotCount; i++)
-        {
-            if (layout.GetChild(i) is not SyntaxTokenNode t)
-                continue;
-            if (t.SourceStart == token.SourceStart && t.Text == token.Text)
-                return previous;
-            previous = t;
-        }
-        return null;
-    }
 
     private const string VoltaBracketValues =
         "`all` — every bar of the ending (the default) · `line` — up to the end of the system "

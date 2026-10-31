@@ -416,58 +416,167 @@ public class ChordDiagramTests
 
     // ================================================================ the layout key
 
-    private static (LayoutPlan Plan, IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> Problems) Layout(string entries)
+    /// <summary>The plan of the standard one-section book with these layout entries, and
+    /// <paramref name="top"/> written before the block (the file's <c>capo N</c>, <c>chordShapes { }</c>);
+    /// with every problem the chord keys and the two directives can raise.</summary>
+    private static (LayoutPlan Plan, IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> Problems) Layout(string entries, string top = "")
     {
-        var tree = SyntaxTree.Parse($"layout {{ {entries} }}\npart m {{ }}\nsection A {{ m {{ c'1 | }} }}\nform {{ A }}\nscore {{ staff m }}\n");
-        var problems = SemanticValidation.Run(tree).Where(d => d.Code.StartsWith("LYS", StringComparison.Ordinal)
-            && (d.Code == DiagnosticCodes.LayoutEntryBadValue || d.Code == DiagnosticCodes.UnknownLayoutKey)).ToList();
+        var tree = SyntaxTree.Parse($"{top}layout {{ {entries} }}\npart m {{ }}\nsection A {{ m {{ c'1 | }} }}\nform {{ A }}\nscore {{ staff m }}\n");
+        var problems = SemanticValidation.Run(tree).Where(d => d.Code is DiagnosticCodes.LayoutEntryBadValue
+            or DiagnosticCodes.UnknownLayoutKey or DiagnosticCodes.ChordDiagramsOldForm
+            or DiagnosticCodes.CapoDirectiveBadValue or DiagnosticCodes.ChordShapesTableBroken).ToList();
         return (LayoutPlanReader.Resolve(tree.GetRoot(), TopLevelNodes.OfRoot<RenderDeclarationSyntax>(tree.GetRoot()).First()), problems);
     }
 
+    /// <summary>Owner's grammar 2026-10-31: <c>chordDiagrams</c> answers one question — which
+    /// chords draw a diagram — with one word; <c>written</c> is the default.</summary>
     [Theory]
-    [InlineData("chordDiagrams guitar", "guitar")]
-    [InlineData("chordDiagrams ukulele", "ukulele")]
-    [InlineData("chordDiagrams mandolin", "mandolin")]
-    [InlineData("chordDiagrams guitarDropD", "guitarDropD")]
-    [InlineData("chordDiagrams bass5", "bass5")]
-    [InlineData("chordDiagrams none", "none")]
-    [InlineData("", null)]
-    public void TheKey_TakesNoneOrATuningWord(string entries, string? word)
+    [InlineData("chordDiagrams written", ChordDiagramScope.Written)]
+    [InlineData("chordDiagrams none", ChordDiagramScope.None)]
+    [InlineData("chordDiagrams all", ChordDiagramScope.All)]
+    [InlineData("", ChordDiagramScope.Written)]
+    public void TheKey_TakesWrittenNoneOrAll(string entries, ChordDiagramScope scope)
     {
         var (plan, problems) = Layout(entries);
         Assert.Empty(problems);
-        Assert.Equal(word, plan.ChordDiagrams);
+        Assert.Equal(scope, plan.ChordDiagrams);
+        Assert.Null(plan.ChordTuning);
+    }
+
+    /// <summary><c>chordTuning</c> takes the tuning vocabulary: the tuning a chord with no fretted
+    /// part draws on; absent, the guitar.</summary>
+    [Theory]
+    [InlineData("chordTuning guitar", "guitar")]
+    [InlineData("chordTuning ukulele", "ukulele")]
+    [InlineData("chordTuning mandolin", "mandolin")]
+    [InlineData("chordTuning guitarDropD", "guitarDropD")]
+    [InlineData("chordTuning bass5", "bass5")]
+    [InlineData("", null)]
+    public void ChordTuning_TakesATuningWord(string entries, string? word)
+    {
+        var (plan, problems) = Layout(entries);
+        Assert.Empty(problems);
+        Assert.Equal(word, plan.ChordTuning);
+        Assert.Equal(ChordDiagramScope.Written, plan.ChordDiagrams);
+        Assert.Equal(word is null ? TuningType.Guitar : Tunings.Parse(word), plan.ChordDiagramTuningFor(null));
     }
 
     /// <summary>Which tuning a diagram draws on (owner's decisions 2026-09-28, 2026-10-31): the
-    /// part's fretted instrument, else the layout's word, else the guitar; <c>none</c> draws none.</summary>
+    /// part's fretted instrument, else the layout's <c>chordTuning</c>, else the guitar;
+    /// <c>chordDiagrams none</c> draws none.</summary>
     [Fact]
     public void TheTuning_IsThePartsThenTheLayoutsThenTheGuitar()
     {
-        Assert.Equal(TuningType.Bass, ChordDiagramsKey.Resolve("ukulele", TuningType.Bass));
-        Assert.Equal(TuningType.Ukulele, ChordDiagramsKey.Resolve("ukulele", null));
-        Assert.Equal(TuningType.Bass, ChordDiagramsKey.Resolve(null, TuningType.Bass));
-        Assert.Equal(TuningType.Guitar, ChordDiagramsKey.Resolve(null, null));
-        Assert.Null(ChordDiagramsKey.Resolve("none", TuningType.Ukulele));
+        Assert.Equal(TuningType.Bass, ChordDiagramsKey.Resolve(ChordDiagramScope.Written, "ukulele", TuningType.Bass));
+        Assert.Equal(TuningType.Ukulele, ChordDiagramsKey.Resolve(ChordDiagramScope.All, "ukulele", null));
+        Assert.Equal(TuningType.Bass, ChordDiagramsKey.Resolve(ChordDiagramScope.Written, null, TuningType.Bass));
+        Assert.Equal(TuningType.Guitar, ChordDiagramsKey.Resolve(ChordDiagramScope.Written, null, null));
+        Assert.Null(ChordDiagramsKey.Resolve(ChordDiagramScope.None, "ukulele", TuningType.Ukulele));
     }
 
     [Theory]
     [InlineData("chordDiagrams banjo", "is not a value of 'chordDiagrams'")]
-    [InlineData("chordDiagrams Guitar", "is not a value of 'chordDiagrams'")]
-    [InlineData("ChordDiagrams guitar", "Keys are case-sensitive: write 'chordDiagrams'")]
-    [InlineData("chordDiagrams", "takes none or a tuning name")]
-    [InlineData("chordDiagrams guitar ukulele", "one word")]
+    [InlineData("chordDiagrams Written", "is not a value of 'chordDiagrams'")]
+    [InlineData("ChordDiagrams none", "Keys are case-sensitive: write 'chordDiagrams'")]
+    [InlineData("chordDiagrams", "takes written, none or all")]
+    [InlineData("chordDiagrams all none", "one word")]
+    [InlineData("chordTuning banjo", "is not a value of 'chordTuning'")]
+    [InlineData("chordTuning Guitar", "Values are case-sensitive: write 'guitar'")]
+    [InlineData("chordTuning", "takes a tuning name")]
+    [InlineData("chordTuning guitar ukulele", "one word")]
     public void AWrongWord_IsRefused(string entries, string message)
     {
         var (plan, problems) = Layout(entries);
         Assert.Contains(message, Assert.Single(problems).Message);
-        Assert.Null(plan.ChordDiagrams);
+        Assert.Equal(ChordDiagramScope.Written, plan.ChordDiagrams);
+        Assert.Null(plan.ChordTuning);
+    }
+
+    /// <summary>The OLD spelling (2026-09-28 to 2026-10-31) — a tuning word, <c>capo N</c>, a
+    /// table — is refused whole, naming where each word goes (LYS1061); the plan keeps nothing of
+    /// it. No backward compatibility (the owner's rule), but a sentence that says what moved.</summary>
+    [Theory]
+    [InlineData("chordDiagrams guitar", "leave this entry out (written is the default, and the guitar the tuning)")]
+    [InlineData("chordDiagrams ukulele", "write 'chordTuning ukulele' here")]
+    [InlineData("chordDiagrams ukulele all", "write 'chordTuning ukulele  chordDiagrams all' here")]
+    [InlineData("chordDiagrams guitar capo 3", "write 'capo 3' at the top level, and leave this entry out")]
+    [InlineData("chordDiagrams capo 3 all", "write 'capo 3' at the top level, and 'chordDiagrams all' here")]
+    [InlineData("chordDiagrams guitar { C x32010 }", "write 'chordShapes { ... }' at the top level, and leave this entry out")]
+    [InlineData("chordDiagrams ukulele capo 2 all { C }", "write 'capo 2' and 'chordShapes { ... }' at the top level, and 'chordTuning ukulele  chordDiagrams all' here")]
+    public void TheOldSpelling_IsRefused_NamingTheNewOne(string entries, string fix)
+    {
+        var (plan, problems) = Layout(entries);
+        var only = Assert.Single(problems);
+        Assert.Equal(DiagnosticCodes.ChordDiagramsOldForm, only.Code);
+        Assert.Contains(fix, only.Message);
+        Assert.Equal((ChordDiagramScope.Written, (string?)null, 0, (ChordShapeTable?)null),
+            (plan.ChordDiagrams, plan.ChordTuning, plan.Chords.Capo, plan.ChordDiagramTable));
+    }
+
+    /// <summary>LYS1061's quick fix writes the new spelling: the capo and the table to the top
+    /// level before the block (before the score, for a score's own layout), the entry rewritten
+    /// or dropped — and a one-entry unnamed block dropped with it. The result compiles clean and
+    /// reads the same plan.</summary>
+    [Theory]
+    [InlineData("layout { chordDiagrams guitar capo 3 all { Eb x32010 } }\n", "capo 3\nchordShapes { Eb x32010 }\nlayout { chordDiagrams all }\n")]
+    [InlineData("layout { chordDiagrams ukulele  chordList true }\n", "layout { chordTuning ukulele  chordList true }\n")]
+    [InlineData("layout { chordDiagrams guitar }\n", "")]
+    [InlineData("layout { chordNames both  chordDiagrams guitar capo 2 }\n", "capo 2\nlayout { chordNames both }\n")]
+    [InlineData("layout chart { chordDiagrams ukulele all }\n", "layout chart { chordTuning ukulele  chordDiagrams all }\n")]
+    public void TheOldSpelling_IsRewrittenByTheQuickFix(string old, string wanted)
+    {
+        string text = old + "part m { }\nsection A { m { c'1 | } }\nform { A }\nscore { staff m }\n";
+        var action = Assert.Single(QuickFixesAt(text, text.IndexOf("chordDiagrams", StringComparison.Ordinal) + 15),
+            a => a.Diagnostics?.Any(d => d.Code?.ToString() == DiagnosticCodes.ChordDiagramsOldForm) == true);
+        string fixedText = ApplyEdits(text, action);
+        Assert.Equal(wanted + "part m { }\nsection A { m { c'1 | } }\nform { A }\nscore { staff m }\n", fixedText);
+        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(fixedText)), d => d.Code == DiagnosticCodes.ChordDiagramsOldForm);
+        // A score's own layout: the lines go before the score.
+        string inScore = "part m { }\nsection A { m { c'1 | } }\nform { A }\nscore { layout { chordDiagrams capo 4 }  staff m }\n";
+        var scoreFix = Assert.Single(QuickFixesAt(inScore, inScore.IndexOf("capo 4", StringComparison.Ordinal)),
+            a => a.Diagnostics?.Any(d => d.Code?.ToString() == DiagnosticCodes.ChordDiagramsOldForm) == true);
+        Assert.Equal("part m { }\nsection A { m { c'1 | } }\nform { A }\ncapo 4\nscore { layout { }  staff m }\n", ApplyEdits(inScore, scoreFix));
+    }
+
+    private static LilySharp.Lsp.Protocol.CodeAction[] QuickFixesAt(string text, int offset)
+    {
+        var server = new LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
+        var uri = new Uri("file:///oldform.lys");
+        server.DidOpen(new LilySharp.Lsp.Protocol.DidOpenTextDocumentParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentItem { Uri = uri, Text = text, LanguageId = "lilysharp", Version = 1 },
+        });
+        var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(text, offset);
+        var at = new LilySharp.Lsp.Protocol.Position(line, character);
+        return server.GetCodeActions(new LilySharp.Lsp.Protocol.CodeActionParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentIdentifier { Uri = uri },
+            Range = new LilySharp.Lsp.Protocol.Range { Start = at, End = at },
+        }) ?? [];
+    }
+
+    /// <summary>Applies every edit of the action's one document, last first.</summary>
+    private static string ApplyEdits(string text, LilySharp.Lsp.Protocol.CodeAction action)
+    {
+        static int OffsetOf(string t, LilySharp.Lsp.Protocol.Position p)
+        {
+            int offset = 0;
+            for (int l = 0; l < p.Line; l++)
+                offset = t.IndexOf('\n', offset) + 1;
+            return offset + p.Character;
+        }
+        var edits = action.Edit!.Changes!.Values.Single()
+            .Select(e => (Start: OffsetOf(text, e.Range.Start), End: OffsetOf(text, e.Range.End), e.NewText))
+            .OrderByDescending(e => e.Start).ToList();
+        foreach (var (start, end, newText) in edits)
+            text = text[..start] + newText + text[end..];
+        return text;
     }
 
     // ================================================================ where diagrams draw
 
-    private const string Guitar = "layout { chordDiagrams guitar }\n";
-    private const string Ukulele = "layout { chordDiagrams ukulele }\n";
+    private const string Guitar = "layout { chordTuning guitar }\n";
+    private const string Ukulele = "layout { chordTuning ukulele }\n";
     private const string NoDiagrams = "layout { chordDiagrams none }\n";
 
     /// <summary>A song with a chords row above a staff whose part frets nothing (so its
@@ -1221,8 +1330,8 @@ public class ChordDiagramTests
     public void Hover_ShowsTheWrittenShapePerTuning()
     {
         string doc = """
-            layout gtr { chordDiagrams guitar }
-            layout uke { chordDiagrams ukulele }
+            layout gtr { chordTuning guitar }
+            layout uke { chordTuning ukulele }
             octave absolute
             part gt { clef treble }
             section A {
@@ -1277,7 +1386,7 @@ public class ChordDiagramTests
     public void Hover_SaysWhereTheShapeStands_WithAndWithoutStretch()
     {
         string doc = """
-            layout gtr { chordDiagrams guitar }
+            layout gtr { chordTuning guitar }
             octave absolute
             part gt { clef treble }
             section A { gt { c''2@chord(Cm7 x35343) c''2@chord(Cm7 8xx546) | } }
@@ -1304,7 +1413,7 @@ public class ChordDiagramTests
     public void Hover_SpellsADashShapeInTheWritersForm()
     {
         string doc = """
-            layout gtr { chordDiagrams guitar }
+            layout gtr { chordTuning guitar }
             octave absolute
             part gt { clef treble }
             section A { gt { c''2@chord(Cm x-3-5-5-4-3) c''4@chord(Cm 8-x-x-8-8-11) c''4@chord(Cm x-x-10-12-13-11) | } }
@@ -1336,64 +1445,30 @@ public class ChordDiagramTests
     // no shape at all on the tuning is warned once per symbol and tuning. Without it, nothing moves.
 
     private const string All = "layout { chordDiagrams all }\n";
-    private const string GuitarAll = "layout { chordDiagrams guitar all }\n";
-    private const string UkuleleAll = "layout { chordDiagrams ukulele all }\n";
+    private const string GuitarAll = "layout { chordTuning guitar  chordDiagrams all }\n";
+    private const string UkuleleAll = "layout { chordTuning ukulele  chordDiagrams all }\n";
 
-    [Theory]
-    [InlineData("chordDiagrams all", null, true)]
-    [InlineData("chordDiagrams guitar all", "guitar", true)]
-    [InlineData("chordDiagrams ukulele all", "ukulele", true)]
-    [InlineData("chordDiagrams guitarDropD all", "guitarDropD", true)]
-    [InlineData("chordDiagrams guitar", "guitar", false)]
-    [InlineData("chordDiagrams none", "none", false)]
-    [InlineData("", null, false)]
-    public void TheKey_TakesAllAloneOrAfterTheTuning(string entries, string? word, bool all)
-    {
-        var (plan, problems) = Layout(entries);
-        Assert.Empty(problems);
-        Assert.Equal(word, plan.ChordDiagrams);
-        Assert.Equal(all, plan.ChordDiagramsAll);
-    }
-
-    [Theory]
-    [InlineData("chordDiagrams none all", "'none' draws no diagram, so it takes no 'all'")]
-    [InlineData("chordDiagrams all guitar", "the tuning comes first: write 'chordDiagrams guitar all'")]
-    [InlineData("chordDiagrams all all", "'all' is written twice")]
-    [InlineData("chordDiagrams guitar all all", "'all' is written twice")]
-    [InlineData("chordDiagrams guitar guitar", "'guitar' is written twice")]
-    [InlineData("chordDiagrams guitar alll", "after the tuning only 'capo N' and 'all' may follow")]
-    [InlineData("chordDiagrams guitar All", "Values are case-sensitive: write 'all'")]
-    [InlineData("chordDiagrams ALL", "Values are case-sensitive: write 'all'")]
-    [InlineData("chordDiagrams Guitar all", "Values are case-sensitive: write 'guitar'")]
-    [InlineData("chordDiagrams all x", "'all' takes nothing after it")]
-    [InlineData("chordDiagrams none guitar", "'none' takes nothing after it")]
-    public void AWrongAll_IsRefused_NamingTheFix(string entries, string message)
-    {
-        var (plan, problems) = Layout(entries);
-        Assert.Contains(message, Assert.Single(problems).Message);
-        Assert.False(plan.ChordDiagramsAll);
-        Assert.Null(plan.ChordDiagrams);
-    }
-
-    /// <summary>A key written again is written whole: a score's override <c>chordDiagrams
-    /// guitar</c> drops the named block's <c>all</c>.</summary>
+    /// <summary>The two keys are two keys (owner's grammar 2026-10-31): a score's override
+    /// <c>chordDiagrams written</c> drops the named block's <c>all</c> and leaves its
+    /// <c>chordTuning</c> standing — until then one key carried both, and an override of it was
+    /// written whole.</summary>
     [Fact]
-    public void AnOverride_WithoutAll_DropsTheNamedBlocksAll()
+    public void AnOverride_ChangesOnlyTheKeyItWrites()
     {
         const string book = """
-            layout every { chordDiagrams ukulele all }
+            layout every { chordTuning ukulele  chordDiagrams all }
             part m { }
             section A { m { c''1 | } }
             form { A }
             score a { layout every  staff m }
-            score b { layout every { chordDiagrams guitar }  staff m }
+            score b { layout every { chordDiagrams written }  staff m }
             """;
         var tree = SyntaxTree.Parse(book);
         var renders = TopLevelNodes.OfRoot<RenderDeclarationSyntax>(tree.GetRoot()).ToList();
         var a = LayoutPlanReader.Resolve(tree.GetRoot(), renders[0]);
         var b = LayoutPlanReader.Resolve(tree.GetRoot(), renders[1]);
-        Assert.Equal(("ukulele", true), (a.ChordDiagrams, a.ChordDiagramsAll));
-        Assert.Equal(("guitar", false), (b.ChordDiagrams, b.ChordDiagramsAll));
+        Assert.Equal(("ukulele", ChordDiagramScope.All), (a.ChordTuning, a.ChordDiagrams));
+        Assert.Equal(("ukulele", ChordDiagramScope.Written), (b.ChordTuning, b.ChordDiagrams));
     }
 
     /// <summary>In an <c>all</c> score every row entry draws: the written shape wins, a name
@@ -1506,26 +1581,26 @@ public class ChordDiagramTests
     {
         static string Ctx(string text) => LilySharpLanguageServer.GetCompletionContext(text, text.Length).ToString();
         Assert.Equal("AfterLayoutChordDiagrams", Ctx("layout {\n  chordDiagrams "));
-        Assert.Contains(LilySharpLanguageServer.GetChordDiagramCompletions().Items, i => i.Label == "all");
-        Assert.Equal("AfterLayoutChordDiagramsTuning", Ctx("layout {\n  chordDiagrams ukulele "));
-        Assert.Equal("AfterLayoutChordDiagramsTuning", Ctx("layout {\n  chordDiagrams guitar a"));
-        // After a tuning: `capo` and `all` (2026-09-29); after `capo N`: `all` alone.
-        Assert.Equal(new[] { "capo", "all" }, LilySharpLanguageServer.GetChordDiagramScopeCompletions().Items.Select(i => i.Label));
-        Assert.Equal("all", Assert.Single(LilySharpLanguageServer.GetChordDiagramScopeCompletions(capoAllowed: false).Items).Label);
+        Assert.Equal(new[] { "written", "none", "all" }, LilySharpLanguageServer.GetChordDiagramCompletions().Items.Select(i => i.Label));
+        Assert.Equal("AfterLayoutChordTuning", Ctx("layout {\n  chordTuning "));
+        var tunings = LilySharpLanguageServer.GetChordTuningCompletions().Items.Select(i => i.Label).ToList();
+        Assert.Equal("guitar", tunings[0]);
+        Assert.Contains("ukulele", tunings);
+        Assert.Equal(LanguageVocabulary.TuningNames.OrderBy(t => t, StringComparer.Ordinal), tunings.OrderBy(t => t, StringComparer.Ordinal));
         Assert.Equal("LayoutBlock", Ctx("layout {\n  chordDiagrams none "));
         Assert.Equal("LayoutBlock", Ctx("layout {\n  chordDiagrams all "));
+        Assert.Equal("LayoutBlock", Ctx("layout {\n  chordTuning ukulele "));
 
         string grammar = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
             "editors", "vscode", "syntaxes", "lilysharp.tmLanguage.json"));
         string rule = Regex.Match(grammar, "\"match\": \"(\\\\\\\\b\\(chordDiagrams\\)[^\"]+)\"").Groups[1].Value
             .Replace("\\\\", "\\");
-        var match = Regex.Match("chordDiagrams guitar all", rule);
-        Assert.Equal("all", match.Groups[5].Value);
         Assert.Equal("all", Regex.Match("chordDiagrams all", rule).Groups[2].Value);
-        Assert.Equal("", Regex.Match("chordDiagrams none all", rule).Groups[5].Value);
-        var capo = Regex.Match("chordDiagrams guitar capo 3 all", rule);
-        Assert.Equal(("guitar", "capo", "3", "all"), (capo.Groups[2].Value, capo.Groups[3].Value, capo.Groups[4].Value, capo.Groups[5].Value));
-        Assert.Equal("capo", Regex.Match("chordDiagrams capo 3", rule).Groups[2].Value);
+        Assert.Equal("written", Regex.Match("chordDiagrams written", rule).Groups[2].Value);
+        Assert.False(Regex.IsMatch("chordDiagrams guitar", rule));
+        string tuningRule = Regex.Match(grammar, "\"match\": \"(\\\\\\\\b\\(chordTuning\\)[^\"]+)\"").Groups[1].Value
+            .Replace("\\\\", "\\");
+        Assert.Equal("ukulele", Regex.Match("chordTuning ukulele", tuningRule).Groups[2].Value);
     }
 
     /// <summary>In an <c>all</c> score a name alone shows the default it draws, where it stands
@@ -1753,30 +1828,31 @@ public class ChordDiagramTests
         Assert.Contains("adds a chord diagram", HoverAt(doc, "@chord(G"));
     }
 
-    // ================================================================ the layout's shape table
-    // Owner's design (HANDOFF §2 K5 ③; built 2026-09-29): `chordDiagrams [TUNING] [all] { Cm7
-    // x35343  G  section B { C x35553 } }` lists the chords that draw a diagram wherever they are
-    // named. Strongest first: the shape written at the chord, the entry of the section the chord
-    // is written in, the song's entry, then — under `all` — the default. A name listed alone
-    // draws the default; an entry whose shapes fit no tuning of the score is not used there.
+    // ================================================================ the file's shape table
+    // Owner's design (HANDOFF §2 K5 ③; built 2026-09-29 as the layout's `chordDiagrams … { }`,
+    // the top-level `chordShapes { }` since 2026-10-31): `chordShapes { Cm7 x35343  G  section B
+    // { C x35553 } }` lists the chords that draw a diagram wherever they are named. Strongest
+    // first: the shape written at the chord, the entry of the section the chord is written in,
+    // the song's entry, then — under `all` — the default. A name listed alone draws the default;
+    // an entry whose shapes fit no tuning of the score is not used there.
 
     /// <summary>C listed alone (the default draws), F with a shape of its own.</summary>
-    private const string Table = "layout { chordDiagrams guitar { C  F xx3211 } }\n";
+    private const string Table = "chordShapes { C  F xx3211 }\n";
 
-    /// <summary>Every LYS diagnostic of the standard one-section book with these layout entries.</summary>
-    private static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> LayoutDiagnostics(string entries)
+    /// <summary>Every LYS diagnostic of the standard one-section book with <paramref name="top"/>
+    /// written before its parts (a <c>chordShapes</c> block, a <c>capo</c> line).</summary>
+    private static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> LayoutDiagnostics(string top)
     {
-        var tree = SyntaxTree.Parse($"layout {{ {entries} }}\npart m {{ }}\nsection A {{ m {{ c'1 | }} }}\nform {{ A }}\nscore {{ staff m }}\n");
+        var tree = SyntaxTree.Parse($"{top}\npart m {{ }}\nsection A {{ m {{ c'1 | }} }}\nform {{ A }}\nscore {{ staff m }}\n");
         return [.. tree.Diagnostics.Concat(SemanticValidation.Run(tree)).Where(d => d.Code.StartsWith("LYS", StringComparison.Ordinal))];
     }
 
     [Fact]
-    public void TheKey_TakesAShapeTable()
+    public void TheFile_TakesAShapeTable()
     {
-        var (plan, problems) = Layout("chordDiagrams guitar { Cm7 x35343  G  F guitar 133211 ukulele 2010  section A { C#m7 x46654 } }");
+        var (plan, problems) = Layout("", top: "chordShapes { Cm7 x35343  G  F guitar 133211 ukulele 2010  section A { C#m7 x46654 } }\n");
         Assert.Empty(problems);
-        Assert.Equal("guitar", plan.ChordDiagrams);
-        Assert.False(plan.ChordDiagramsAll);
+        Assert.Equal(ChordDiagramScope.Written, plan.ChordDiagrams);
         var table = plan.ChordDiagramTable!;
         Assert.Equal(new[] { "Cm7", "G", "F" }, table.Song.Select(e => e.Symbol));
         Assert.Equal("x35343", Assert.Single(table.Song[0].Shapes).Shape);
@@ -1788,33 +1864,48 @@ public class ChordDiagramTests
         Assert.Equal("C#m7", Assert.Single(entries).Symbol);
         Assert.Equal(new[] { -1, 4, 6, 6, 5, 4 }, ChordShapes.Frets(Assert.Single(entries).Shapes[0].Shape));
 
-        // After `all`, alone (the tuning as when unset), over several lines; an empty table is one.
-        Assert.True(Layout("chordDiagrams all { C }").Plan is { ChordDiagramsAll: true, ChordDiagramTable.Song.Length: 1 });
-        Assert.True(Layout("chordDiagrams { C }").Plan is { ChordDiagrams: null, ChordDiagramsAll: false, ChordDiagramTable.Song.Length: 1 });
-        Assert.True(Layout("chordDiagrams guitar all {\n  C x32013\n  section A {\n    G\n  }\n}").Plan
-            is { ChordDiagramsAll: true, ChordDiagramTable: { Song.Length: 1, Sections.Length: 1 } });
-        Assert.True(Layout("chordDiagrams guitar { }").Plan.ChordDiagramTable!.IsEmpty);
-        Assert.Null(Layout("chordDiagrams guitar").Plan.ChordDiagramTable);
+        // With `all`, over several lines, before or after the layout; an empty table is one; the
+        // table rides every score's plan, a score's own layout reference included.
+        Assert.True(Layout("chordDiagrams all", top: "chordShapes { C }\n").Plan is { ChordDiagramsAll: true, ChordDiagramTable.Song.Length: 1 });
+        Assert.True(Layout("", top: "chordShapes {\n  C x32013\n  section A {\n    G\n  }\n}\n").Plan
+            is { ChordDiagramsAll: false, ChordDiagramTable: { Song.Length: 1, Sections.Length: 1 } });
+        Assert.True(Layout("", top: "chordShapes { }\n").Plan.ChordDiagramTable!.IsEmpty);
+        Assert.Null(Layout("chordDiagrams all").Plan.ChordDiagramTable);
+        var after = SyntaxTree.Parse("layout { chordNames both }\npart m { }\nsection A { m { c'1 | } }\nform { A }\nchordShapes { C }\nscore { layout { chordNames shape }  staff m }\n");
+        Assert.Equal(1, LayoutPlanReader.Resolve(after.GetRoot(), TopLevelNodes.OfRoot<RenderDeclarationSyntax>(after.GetRoot()).First()).ChordDiagramTable!.Song.Length);
         // Compared by value: a re-read is no change (the incremental compiler's contract).
-        Assert.Equal(Layout("chordDiagrams guitar { C  F xx3211  section A { G } }").Plan,
-            Layout("chordDiagrams   guitar {  C   F xx3211   section  A  { G } }").Plan);
-        Assert.NotEqual(Layout("chordDiagrams guitar { C  F xx3211 }").Plan, Layout("chordDiagrams guitar { C  F xx3212 }").Plan);
+        Assert.Equal(Layout("", top: "chordShapes { C  F xx3211  section A { G } }\n").Plan,
+            Layout("", top: "chordShapes  {  C   F xx3211   section  A  { G } }\n").Plan);
+        Assert.NotEqual(Layout("", top: "chordShapes { C  F xx3211 }\n").Plan, Layout("", top: "chordShapes { C  F xx3212 }\n").Plan);
+        // `chordDiagrams none` and a table are two things: the table stands, nothing draws.
+        Assert.True(Layout("chordDiagrams none", top: "chordShapes { C }\n").Plan is { ChordDiagrams: ChordDiagramScope.None, ChordDiagramTable.Song.Length: 1 });
     }
 
     [Theory]
-    [InlineData("chordDiagrams none { C }", "'none' draws no diagram, so it takes no shape table")]
-    [InlineData("chordDiagrams guitar { section { C } }", "'section' takes the section's name and a block")]
-    [InlineData("chordDiagrams guitar { section A }", "'section' takes the section's name and a block")]
-    [InlineData("chordDiagrams guitar { { C } }", "'{' here opens nothing")]
-    [InlineData("chordDiagrams guitar { section A { section A { } } }", "holds no 'section' of its own")]
-    [InlineData("chordDiagrams guitar { C } x", "comes after the shape table's closing '}'")]
-    [InlineData("chordDiagrams guitar all all { C }", "'all' is written twice")]
-    public void ABrokenTable_IsRefused_NamingTheFix(string entries, string message)
+    [InlineData("chordShapes { section { C } }", "'section' takes the section's name and a block")]
+    [InlineData("chordShapes { section A }", "'section' takes the section's name and a block")]
+    [InlineData("chordShapes { { C } }", "'{' here opens nothing")]
+    [InlineData("chordShapes { section A { section A { } } }", "holds no 'section' of its own")]
+    public void ABrokenTable_IsRefused_NamingTheFix(string top, string message)
     {
-        var (plan, problems) = Layout(entries);
-        Assert.Contains(message, Assert.Single(problems.Where(p => p.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error)).Message);
+        var (plan, problems) = Layout("", top: top + "\n");
+        var only = Assert.Single(problems.Where(p => p.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error));
+        Assert.Contains(message, only.Message);
+        Assert.Equal(DiagnosticCodes.ChordShapesTableBroken, only.Code);
         Assert.Null(plan.ChordDiagramTable);
-        Assert.Null(plan.ChordDiagrams);
+    }
+
+    /// <summary><c>chordShapes</c> with no block is the parser's refusal (LYS1059), kept in the
+    /// tree; two blocks warn as a setting written twice (LYS4005), and the last one wins.</summary>
+    [Fact]
+    public void ABlocklessOrRepeatedTable_IsSaid()
+    {
+        var blockless = Assert.Single(LayoutDiagnostics("chordShapes"), d => d.Code == DiagnosticCodes.ChordShapesNeedsABlock);
+        Assert.Contains("takes a block", blockless.Message);
+        var twice = Assert.Single(LayoutDiagnostics("chordShapes { C }\nchordShapes { F xx3211 }"));
+        Assert.Equal(DiagnosticCodes.DuplicateGlobalSetting, twice.Code);
+        Assert.Contains("'chordShapes' is overwritten by a later 'chordShapes'", twice.Message);
+        Assert.Equal("F", Assert.Single(Layout("", top: "chordShapes { C }\nchordShapes { F xx3211 }\n").Plan.ChordDiagramTable!.Song).Symbol);
     }
 
     /// <summary>An entry with a problem is left out with a warning and the rest stand — a row's
@@ -1824,33 +1915,35 @@ public class ChordDiagramTests
     public void ATablesEntryProblems_AreWarned_AndTheRestStand()
     {
         // A symbol that is none takes its shapes with it, silently; a bad shape is a row's LYS1038.
-        var d = LayoutDiagnostics("chordDiagrams guitar { Xm7 x35343  x32010  C x32  F xx3211 }");
+        var d = LayoutDiagnostics("chordShapes { Xm7 x35343  x32010  C x32  F xx3211 }");
         Assert.Equal(2, d.Count);
         Assert.All(d, p => Assert.Equal(DiagnosticCodes.ChordDiagramNotDrawn, p.Code));
         Assert.Contains("'Xm7' is not a chord symbol", d[0].Message);
         Assert.Contains("'x32' has 3 character(s)", d[1].Message);
-        var table = Layout("chordDiagrams guitar { Xm7 x35343  x32010  C x32  F xx3211 }").Plan.ChordDiagramTable!;
+        var table = Layout("", top: "chordShapes { Xm7 x35343  x32010  C x32  F xx3211 }\n").Plan.ChordDiagramTable!;
         Assert.Equal(new[] { "C", "F" }, table.Song.Select(e => e.Symbol));
         Assert.Empty(table.Song[0].Shapes);
         Assert.Contains("'x32010' comes before any chord name",
-            Assert.Single(LayoutDiagnostics("chordDiagrams guitar { x32010  C }")).Message);
+            Assert.Single(LayoutDiagnostics("chordShapes { x32010  C }")).Message);
 
-        var twice = LayoutDiagnostics("chordDiagrams guitar { C x32010  G  C x32013 }");
+        var twice = LayoutDiagnostics("chordShapes { C x32010  G  C x32013 }");
         var only = Assert.Single(twice);
         Assert.Contains("'C' is listed twice in this table; the last one wins", only.Message);
         Assert.Equal(LilySharp.Core.Syntax.DiagnosticSeverity.Warning, only.Severity);
         Assert.Equal("x32013", ChordShapes.Drawn(TuningType.Guitar, [], chord: Parse("C"),
-            table: Layout("chordDiagrams guitar { C x32010  G  C x32013 }").Plan.ChordDiagramTable)!.Spelled);
+            table: Layout("", top: "chordShapes { C x32010  G  C x32013 }\n").Plan.ChordDiagramTable)!.Spelled);
 
-        var unknown = Assert.Single(LayoutDiagnostics("chordDiagrams guitar { section Z { C } }"));
+        var unknown = Assert.Single(LayoutDiagnostics("chordShapes { section Z { C } }"));
         Assert.Contains("No section is named 'Z', so its entries apply nowhere. Sections: A.", unknown.Message);
         Assert.Equal(LilySharp.Core.Syntax.DiagnosticSeverity.Warning, unknown.Severity);
 
-        var mismatch = Assert.Single(LayoutDiagnostics("chordDiagrams guitar { C x02210 }"));
+        var mismatch = Assert.Single(LayoutDiagnostics("chordShapes { C x02210 }"));
         Assert.Equal(DiagnosticCodes.ChordShapeMismatch, mismatch.Code);
         Assert.Contains("'x02210' sounds A C E, which is Am, not C (A is not a tone of C) - write Am x02210 or another shape.", mismatch.Message);
-        // Unset tuning: checked on the guitar and on each fretted instrument the parts play.
-        Assert.Empty(LayoutDiagnostics("chordDiagrams { F 2010 }"));
+        // Checked on the guitar, on each fretted instrument the parts play, and on each
+        // chordTuning a layout block writes: a four-string shape is no guitar's.
+        Assert.Empty(LayoutDiagnostics("chordShapes { F 0003 }"));
+        Assert.Single(LayoutDiagnostics("chordShapes { F 0003 }\nlayout { chordTuning ukulele }"), p => p.Code == DiagnosticCodes.ChordShapeMismatch);
     }
 
     [Fact]
@@ -1864,12 +1957,12 @@ public class ChordDiagramTests
         Assert.Equal(new string?[] { "xx3211" }, RowFrames(Song(Table, "IV |", "c'1 |")));
         // With `all`: the table's shape for a listed chord, the default for the rest.
         Assert.Equal(new string?[] { "xx3211", "320003|210003" },
-            RowFrames(Song("layout { chordDiagrams all { F xx3211 } }\n", "F | G |", "c'1 | c'1 |")));
+            RowFrames(Song("chordShapes { F xx3211 }\nlayout { chordDiagrams all }\n", "F | G |", "c'1 | c'1 |")));
         // An entry whose shapes fit no tuning of the score is not used there.
-        Assert.Equal(new string?[] { null }, RowFrames(Song("layout { chordDiagrams guitar { F 2010 } }\n", "F |", "c'1 |")));
-        Assert.Equal(new string?[] { "2010" }, RowFrames(Song("layout { chordDiagrams ukulele { F 2010 } }\n", "F |", "c'1 |")));
+        Assert.Equal(new string?[] { null }, RowFrames(Song("chordShapes { F 2010 }\n", "F |", "c'1 |")));
+        Assert.Equal(new string?[] { "2010" }, RowFrames(Song("chordShapes { F 2010 }\nlayout { chordTuning ukulele }\n", "F |", "c'1 |")));
         // The tuning as when unset: over a ukulele staff, the ukulele's shape of the entry.
-        Assert.Equal(new string?[] { "2010" }, RowFrames(Song("layout { chordDiagrams { F xx3211 2010 } }\n", "F |", "c'1 |", "chords prog  staff uk")));
+        Assert.Equal(new string?[] { "2010" }, RowFrames(Song("chordShapes { F xx3211 2010 }\n", "F |", "c'1 |", "chords prog  staff uk")));
 
         // An @chord: the listed F draws, G does not; a bare @chord's derived C draws its default.
         string book = Table + """
@@ -1888,7 +1981,7 @@ public class ChordDiagramTests
     [Fact]
     public void TheTable_ASectionsEntryWins_InThatSectionOnly()
     {
-        const string layout = "layout { chordDiagrams guitar { F xx3211  section B { F 133211  G } } }\n";
+        const string layout = "chordShapes { F xx3211  section B { F 133211  G } }\n";
         const string byPart = layout + """
             octave absolute
             part gt { clef treble }
@@ -1911,7 +2004,7 @@ public class ChordDiagramTests
             Laid(marks).ArticulationLayouts.OrderBy(a => a.X).Select(a => a.Glyph));
         // A row written inside the section takes the section's entry too.
         const string flat = """
-            layout { chordDiagrams guitar { section B { F 133211 } } }
+            chordShapes { section B { F 133211 } }
             octave absolute
             part gt { clef treble }
             section A { gt { c''1 | }  chords prog { F | } }
@@ -1927,9 +2020,9 @@ public class ChordDiagramTests
     [Fact]
     public void TheTable_WarnsAListedChordWithNoShapeOnTheTuning()
     {
-        var w = Warnings(Song("layout { chordDiagrams ukulele { C13  G } }\n", "C13 | G |", "c'1 | c'1 |"));
+        var w = Warnings(Song("chordShapes { C13  G }\nlayout { chordTuning ukulele }\n", "C13 | G |", "c'1 | c'1 |"));
         Assert.Contains("C13 has no chord diagram on 'ukulele'", Assert.Single(w).Message);
-        Assert.Empty(Warnings(Song("layout { chordDiagrams ukulele { G } }\n", "C13 | G |", "c'1 | c'1 |")));
+        Assert.Empty(Warnings(Song("chordShapes { G }\nlayout { chordTuning ukulele }\n", "C13 | G |", "c'1 | c'1 |")));
     }
 
     [Fact]
@@ -1981,51 +2074,82 @@ public class ChordDiagramTests
     }
 
     // ================================================================ the capo (K5 ④)
-    // Owner's design (HANDOFF §2 K2, 2026-09-28; built 2026-09-29): `chordDiagrams [TUNING] capo N
-    // [all] [{ … }]` — the diagrams are the shapes PRESSED above the capo, the names the pressed
-    // chords' (`chordNames shape` — the default — | sounding | both: "E♭ (C)"), "Capo N" on the
-    // header's instrument line; a pressed name is spelled in the key N semitones below the key at
-    // the bar (owner's decision 2026-09-29). The editor ranks the frets by their barre chords.
+    // Owner's design (HANDOFF §2 K2, 2026-09-28; built 2026-09-29 as the layout's `chordDiagrams
+    // … capo N`, the file's own top-level `capo N` line since 2026-10-31) — the diagrams are the
+    // shapes PRESSED above the capo, the names the pressed chords' (`chordNames shape` — the
+    // default — | sounding | both: "E♭ (C)"), "Capo N" on the header's instrument line; a pressed
+    // name is spelled in the key N semitones below the key at the bar (owner's decision
+    // 2026-09-29). The editor ranks the frets by their barre chords.
 
-    private const string Capo3 = "layout { chordDiagrams guitar capo 3 }\n";
-    private const string Capo3All = "layout { chordDiagrams guitar capo 3 all }\n";
+    private const string Capo3 = "capo 3\n";
+    private const string Capo3All = "capo 3\nlayout { chordDiagrams all }\n";
 
     [Fact]
-    public void TheKey_TakesACapo()
+    public void TheFile_TakesACapo()
     {
-        var (plan, problems) = Layout("chordDiagrams guitar capo 3");
+        var (plan, problems) = Layout("", top: Capo3);
         Assert.Empty(problems);
-        Assert.Equal(("guitar", 3, false), (plan.ChordDiagrams, plan.Chords.Capo, plan.ChordDiagramsAll));
-        Assert.True(Layout("chordDiagrams capo 3").Plan is { ChordDiagrams: null, Chords.Capo: 3 });
-        Assert.True(Layout("chordDiagrams guitar capo 3 all { Eb x32010 }").Plan
-            is { ChordDiagrams: "guitar", Chords.Capo: 3, ChordDiagramsAll: true, ChordDiagramTable.Song.Length: 1 });
-        Assert.True(Layout("chordDiagrams capo 11 all").Plan is { Chords.Capo: 11, ChordDiagramsAll: true });
-        // A key written again is written whole: no capo in the override drops the named block's.
-        Assert.Equal(0, Layout("chordDiagrams guitar").Plan.Chords.Capo);
+        Assert.Equal((ChordDiagramScope.Written, null, 3), (plan.ChordDiagrams, plan.ChordTuning, plan.Chords.Capo));
+        Assert.True(Layout("chordDiagrams all", top: "capo 3\nchordShapes { Eb x32010 }\n").Plan
+            is { Chords.Capo: 3, ChordDiagramsAll: true, ChordDiagramTable.Song.Length: 1 });
+        Assert.True(Layout("chordDiagrams all", top: "capo 11\n").Plan is { Chords.Capo: 11, ChordDiagramsAll: true });
+        Assert.Equal(0, Layout("chordDiagrams written").Plan.Chords.Capo);
+        // The capo is the FILE's: a score's own layout reference carries it too (ResolveFor).
+        var two = SyntaxTree.Parse("capo 5\nlayout lp { chordNames both }\npart m { }\nsection A { m { c'1 | } }\nform { A }\nscore { layout lp  staff m }\n");
+        Assert.Equal(5, LayoutPlanReader.Resolve(two.GetRoot(), TopLevelNodes.OfRoot<RenderDeclarationSyntax>(two.GetRoot()).First()).Chords.Capo);
+        Assert.Equal(5, LayoutPlanReader.ResolveFor(two.GetRoot(), RenderSpecParser.FindFirst(two)).Chords.Capo);
         // chordNames: what a name shows under the capo, the default `shape`.
-        Assert.Equal(ChordNameMode.Shape, Layout("chordDiagrams guitar capo 3").Plan.Chords.Names);
+        Assert.Equal(ChordNameMode.Shape, Layout("", top: Capo3).Plan.Chords.Names);
         Assert.Equal(ChordNameMode.Both, Layout("chordNames both").Plan.Chords.Names);
-        Assert.Equal(ChordNameMode.Sounding, Layout("chordDiagrams capo 2  chordNames sounding").Plan.Chords.Names);
+        Assert.Equal(ChordNameMode.Sounding, Layout("chordNames sounding", top: "capo 2\n").Plan.Chords.Names);
     }
 
     [Theory]
-    [InlineData("chordDiagrams guitar capo", "'capo' takes the fret the capo is on, 1 to 11")]
-    [InlineData("chordDiagrams guitar capo x", "'capo' takes the fret the capo is on, 1 to 11")]
-    [InlineData("chordDiagrams guitar capo 12", "'capo' takes the fret the capo is on, 1 to 11")]
-    [InlineData("chordDiagrams guitar capo 0", "'capo 0' is no capo - leave the 'capo' out")]
-    [InlineData("chordDiagrams none capo 3", "'none' draws no diagram, so it takes no 'capo'")]
-    [InlineData("chordDiagrams guitar all capo 3", "the capo comes before 'all': write 'chordDiagrams guitar capo N all'")]
-    [InlineData("chordDiagrams guitar capo 3 capo 3", "'capo' is written twice")]
-    [InlineData("chordDiagrams capo 3 guitar", "the tuning comes first: write 'chordDiagrams guitar capo 3'")]
-    [InlineData("chordDiagrams guitar capo 3 all all", "'all' is written twice - write 'chordDiagrams guitar capo 3 all'")]
-    [InlineData("chordNames Both", "is not a value of 'chordNames'")]
-    public void AWrongCapo_IsRefused_NamingTheFix(string entries, string message)
+    [InlineData("capo", "", "'capo' takes the fret the capo is on, 1 to 11")]
+    [InlineData("capo high", "", "'high' is not a capo fret. 'capo' takes the fret the capo is on, 1 to 11")]
+    [InlineData("capo 12", "", "'12' is not a capo fret")]
+    [InlineData("capo 0", "", "'capo 0' is no capo - leave the line out")]
+    [InlineData("capo 3 4", "", "one fret; '4' is extra")]
+    [InlineData("", "chordNames Both", "is not a value of 'chordNames'")]
+    public void AWrongCapo_IsRefused_NamingTheFix(string top, string entries, string message)
     {
-        var (plan, problems) = Layout(entries);
-        Assert.Contains(message, Assert.Single(problems).Message);
+        var (plan, problems) = Layout(entries, top: top.Length > 0 ? top + "\n" : "");
+        var only = Assert.Single(problems);
+        Assert.Contains(message, only.Message);
+        if (top.Length > 0)
+            Assert.Equal(DiagnosticCodes.CapoDirectiveBadValue, only.Code);
         Assert.Equal(0, plan.Chords.Capo);
-        Assert.Null(plan.ChordDiagrams);
         Assert.Equal(ChordNameMode.Shape, plan.Chords.Names);
+    }
+
+    /// <summary>Two <c>capo</c> lines: a setting written twice (LYS4005), the last one wins.</summary>
+    [Fact]
+    public void ASecondCapoLine_IsSaid_AndTheLastWins()
+    {
+        var twice = Assert.Single(LayoutDiagnostics("capo 2\ncapo 5"));
+        Assert.Equal(DiagnosticCodes.DuplicateGlobalSetting, twice.Code);
+        Assert.Contains("'capo' is overwritten by a later 'capo'", twice.Message);
+        Assert.Equal(5, Layout("", top: "capo 2\ncapo 5\n").Plan.Chords.Capo);
+    }
+
+    /// <summary>"Capo N" prints at the score's head only where the score shows the capo —
+    /// diagrams (<c>chordDiagrams</c> not <c>none</c>) or pressed names (<c>chordNames shape |
+    /// both</c>); a score of sounding names with no diagrams has no line (owner's grammar
+    /// 2026-10-31, Q2). The page and the twin alike.</summary>
+    [Fact]
+    public void TheCapoLine_PrintsOnlyWhereTheScoreShowsTheCapo()
+    {
+        static (string? Page, bool Twin) CapoLine(string layout)
+        {
+            string book = Song(layout, "Eb | Bb |", "c'1 | c'1 |");
+            return (Collected(book).Instrument, Twin(book).Contains("instrument = \"Capo 3\""));
+        }
+        Assert.Equal(("Capo 3", true), CapoLine(Capo3));
+        Assert.Equal(("Capo 3", true), CapoLine("capo 3\nlayout { chordDiagrams none }\n"));
+        Assert.Equal(("Capo 3", true), CapoLine("capo 3\nlayout { chordDiagrams none  chordNames both }\n"));
+        Assert.Equal(("Capo 3", true), CapoLine("capo 3\nlayout { chordNames sounding }\n"));
+        Assert.Equal((null, false), CapoLine("capo 3\nlayout { chordDiagrams none  chordNames sounding }\n"));
+        Assert.Equal((null, false), CapoLine(""));
     }
 
     /// <summary>The pressed chord: this chord N semitones down, spelled in the key N semitones
@@ -2058,8 +2182,8 @@ public class ChordDiagramTests
     {
         string[] Names(string book) => [.. Collected(book).ChordNames.OrderBy(c => c.MeasureIndex).Select(c => c.ChordText)];
         Assert.Equal(new[] { "C", "G", "F/A" }, Names(Song(Capo3, "Eb | Bb | Ab/C |")));
-        Assert.Equal(new[] { "E♭", "B♭", "A♭/C" }, Names(Song("layout { chordDiagrams guitar capo 3  chordNames sounding }\n", "Eb | Bb | Ab/C |")));
-        Assert.Equal(new[] { "E♭ (C)", "B♭ (G)", "A♭/C (F/A)" }, Names(Song("layout { chordDiagrams guitar capo 3  chordNames both }\n", "Eb | Bb | Ab/C |")));
+        Assert.Equal(new[] { "E♭", "B♭", "A♭/C" }, Names(Song("capo 3\nlayout { chordNames sounding }\n", "Eb | Bb | Ab/C |")));
+        Assert.Equal(new[] { "E♭ (C)", "B♭ (G)", "A♭/C (F/A)" }, Names(Song("capo 3\nlayout { chordNames both }\n", "Eb | Bb | Ab/C |")));
         // The key at the bar spells the pressed name: in E major a G♯m at capo 3 is Fm; a Roman
         // degree is the sounding key's and is not moved.
         Assert.Equal(new[] { "Fm", "Fm" }, Names(Song("key e major\n" + Capo3, "G#m | IIIm |", "c'1 | c'1 |")));
@@ -2081,7 +2205,7 @@ public class ChordDiagramTests
     [Fact]
     public void UnderACapo_ABothNameRaisesBothQualities()
     {
-        string book = "layout { chordDiagrams guitar capo 3  chordNames both }\n"
+        string book = "capo 3\nlayout { chordNames both }\n"
             + "part m { clef treble }\nsection A { m { c'4 d e f | } chords prog { Ebm7 | } }\nform { A }\nscore { chords prog  staff m }\n";
         var score = SvgGenerator.CollectScore(SyntaxTree.Parse(book), RenderSpecParser.FindFirst(SyntaxTree.Parse(book)));
         var item = Assert.Single(score.ChordNames);
@@ -2102,7 +2226,7 @@ public class ChordDiagramTests
     {
         Assert.Equal(new string?[] { "x32010|032010", "320003|210003" }, RowFrames(Song(Capo3All, "Eb | Bb |", "c'1 | c'1 |")));
         Assert.Equal(new string?[] { "x32013", null }, RowFrames(Song(Capo3, "Eb(x32013) | Bb |", "c'1 | c'1 |")));
-        Assert.Equal(new string?[] { "133211" }, RowFrames(Song("layout { chordDiagrams guitar capo 3 { Ab 133211 } }\n", "Ab |", "c'1 |")));
+        Assert.Equal(new string?[] { "133211" }, RowFrames(Song("capo 3\nchordShapes { Ab 133211 }\n", "Ab |", "c'1 |")));
         // LYS1039 reads the shape as pressed above the capo: x32010 is the pressed E♭ (C);
         // 320003 is not — and the message speaks in SOUNDING names, naming the capo once and
         // the symbol's own pressed shape as the fix that keeps it (2026-10-03; until then it
@@ -2111,10 +2235,10 @@ public class ChordDiagramTests
         Assert.Equal("'320003' sounds B♭ D F with the capo on fret 3, which is Bb, not Eb (D F are not tones of Eb; "
                      + "it lacks G (the 3rd)) - write Bb(320003), or Eb(x32010) for Eb under the capo, or another shape.",
             Assert.Single(Mismatches(Song(Capo3, "Eb(320003) |", "c'1 |"))).Message);
-        Assert.Empty(Mismatches("layout { chordDiagrams guitar capo 3 { Eb x32010 } }\npart m { }\nsection A { m { c''1 | } }\nform { A }\nscore { staff m }\n"));
+        Assert.Empty(Mismatches("capo 3\nchordShapes { Eb x32010 }\npart m { }\nsection A { m { c''1 | } }\nform { A }\nscore { staff m }\n"));
         // A listed chord with no pressed shape on the tuning warns (C13 → A13 on the ukulele).
         Assert.Contains("C13 has no chord diagram on 'ukulele'",
-            Assert.Single(Warnings(Song("layout { chordDiagrams ukulele capo 3 { C13 } }\n", "C13 |", "c'1 |"))).Message);
+            Assert.Single(Warnings(Song("capo 3\nchordShapes { C13 }\nlayout { chordTuning ukulele }\n", "C13 |", "c'1 |"))).Message);
     }
 
     private static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> Mismatches(string book)
@@ -2132,14 +2256,14 @@ public class ChordDiagramTests
         Assert.Contains("instrument = \"Capo 3\"", ly);
         Assert.Empty(exporter.Warnings.Where(w => w.Contains("chordNames", StringComparison.Ordinal)));
         // sounding: the sounding chords are named, the diagrams stay pressed.
-        string sounding = Twin(Song("layout { chordDiagrams guitar capo 3 all  chordNames sounding }\n", "Eb | Bb |", "c'1 | c'1 |"));
+        string sounding = Twin(Song("capo 3\nlayout { chordDiagrams all  chordNames sounding }\n", "Eb | Bb |", "c'1 | c'1 |"));
         Assert.Matches(@"progChords = \\chordmode \{\s+ees1 \|\s+bes1 \|", sounding);
         Assert.Contains("\\chordmode { c } #guitar-tuning", sounding);
         // both: the sounding chord, named "E♭ (C)" by lysCapoBoth from the pressed chord each entry
         // carries (LilyPond 2.26 prints the page's names — Lab sessions/p709/both); the FretBoards
         // track keeps the pressed chords bare. Until 2026-09-30 named sounding alone, and warned.
         var both = new LilyPondExporter();
-        string bothLy = both.Export(SyntaxTree.Parse(Song("layout { chordDiagrams guitar capo 3 all  chordNames both }\n",
+        string bothLy = both.Export(SyntaxTree.Parse(Song("capo 3\nlayout { chordDiagrams all  chordNames both }\n",
             "Eb | Ab/C |", "c'1 | c'1 |")));
         Assert.Single(Regex.Matches(bothLy, @"#\(define \(lysCapoBoth pressed\)"));
         Assert.Matches(@"progChords = \\chordmode \{\s+"
@@ -2224,17 +2348,19 @@ public class ChordDiagramTests
         Assert.Contains("(F 133211, Bb x13331)", CapoAdvisor.Describe(open));
         Assert.True(ranking.Select(c => c.Barres).SequenceEqual(ranking.Select(c => c.Barres).OrderBy(b => b)));
 
-        // The editor: the ranked frets after `capo`, `all` after `capo N`, and the hover.
+        // The editor: the ranked frets after the top-level `capo`, and the hover on its line.
         static string Ctx(string text) => LilySharpLanguageServer.GetCompletionContext(text, text.Length).ToString();
-        Assert.Equal("AfterLayoutChordDiagramsCapo", Ctx("layout {\n  chordDiagrams guitar capo "));
-        Assert.Equal("AfterLayoutChordDiagramsCapo", Ctx("layout {\n  chordDiagrams capo "));
-        Assert.Equal("AfterLayoutChordDiagramsTuning", Ctx("layout {\n  chordDiagrams guitar capo 3 "));
+        Assert.Equal("AfterCapo", Ctx("capo "));
+        Assert.Equal("AfterCapo", Ctx("part m { }\ncapo "));
+        Assert.NotEqual("AfterCapo", Ctx("part capo { "));
         Assert.Equal("AfterLayoutChordNames", Ctx("layout {\n  chordNames "));
         string doc = Song(Guitar, "F | C | Bb |", "c'1 | c'1 | c'1 |");
-        var items = LilySharpLanguageServer.GetChordDiagramCapoCompletions(doc, "guitar").Items;
+        var items = LilySharpLanguageServer.GetChordDiagramCapoCompletions(doc).Items;
         Assert.Equal("3", items[0].Label);
         Assert.Contains("0 barre chords of 3", items[0].Detail);
         Assert.Contains("no capo", items.Single(i => i.Label == "0").Detail);
+        // On the file's chordTuning when a layout writes one: the ukulele's own ranking.
+        Assert.Equal(TuningType.Ukulele, LilySharpLanguageServer.CapoRankingTuning(SyntaxTree.Parse(Song(Ukulele, "F | C |", "c'1 | c'1 |")).GetRoot()));
         string capoDoc = Song(Capo3, "F | C | Bb |", "c'1 | c'1 | c'1 |");
         string? hover = HoverAt(capoDoc, "capo 3", 1);
         Assert.Contains("**Capo**", hover);
@@ -2249,15 +2375,16 @@ public class ChordDiagramTests
     public void TheEditor_InsideTheShapeTable_OffersTheFilesChords()
     {
         static string Ctx(string text) => LilySharpLanguageServer.GetCompletionContext(text, text.Length).ToString();
-        Assert.Equal("ChordDiagramTable", Ctx("layout {\n  chordDiagrams guitar { "));
-        Assert.Equal("ChordDiagramTable", Ctx("layout {\n  chordDiagrams { Cm7 x35343 "));
-        Assert.Equal("ChordDiagramTable", Ctx("layout chart { chordDiagrams ukulele capo 2 all {\n  C "));
-        Assert.Equal("ChordDiagramTable", Ctx("layout { chordDiagrams guitar { C  section A { F "));
-        Assert.Equal("ChordDiagramTableSection", Ctx("layout { chordDiagrams guitar { C  section "));
-        // Out of the table the layout is the layout again; a brace elsewhere is no table.
-        Assert.Equal("LayoutBlock", Ctx("layout { chordDiagrams guitar { C } "));
-        Assert.Equal("LayoutBlock", Ctx("layout { chordDiagrams guitar { C  section A { F } } "));
+        Assert.Equal("ChordDiagramTable", Ctx("chordShapes { "));
+        Assert.Equal("ChordDiagramTable", Ctx("part m { }\nchordShapes{ Cm7 x35343 "));
+        Assert.Equal("ChordDiagramTable", Ctx("chordShapes {\n  C "));
+        Assert.Equal("ChordDiagramTable", Ctx("chordShapes { C  section A { F "));
+        Assert.Equal("ChordDiagramTableSection", Ctx("chordShapes { C  section "));
+        // Out of the table the file is the file again; a brace elsewhere is no table.
+        Assert.NotEqual("ChordDiagramTable", Ctx("chordShapes { C } "));
+        Assert.NotEqual("ChordDiagramTable", Ctx("chordShapes { C  section A { F } } "));
         Assert.NotEqual("ChordDiagramTable", Ctx("section A { gt { "));
+        Assert.NotEqual("ChordDiagramTable", Ctx("layout { chordDiagrams all { "));
 
         (string Doc, int Caret) At(string layout)
         {
@@ -2266,7 +2393,7 @@ public class ChordDiagramTests
             return (doc.Remove(caret, 1), caret);
         }
         // The file's chords first, less the ones this scope lists; `section` at the table's level.
-        var (doc, caret) = At("layout { chordDiagrams guitar { C x32010  ▮ } }\n");
+        var (doc, caret) = At("chordShapes { C x32010  ▮ }\n");
         Assert.Equal("ChordDiagramTable", LilySharpLanguageServer.GetCompletionContext(doc, caret).ToString());
         var items = LilySharpLanguageServer.GetChordDiagramTableCompletions(doc, caret).Items;
         Assert.Equal(new[] { "F", "Bb" }, items.Take(2).Select(i => i.Label));
@@ -2276,16 +2403,16 @@ public class ChordDiagramTests
         Assert.DoesNotContain(items, i => LanguageVocabulary.LayoutKeys.Contains(i.Label));
         Assert.Equal(items.Length, items.Select(i => i.Label).Distinct().Count());
         // In a section's table: that scope's own list, and no `section`.
-        (doc, caret) = At("layout { chordDiagrams guitar { C x32010  section A { F 133211  ▮ } } }\n");
+        (doc, caret) = At("chordShapes { C x32010  section A { F 133211  ▮ } }\n");
         items = LilySharpLanguageServer.GetChordDiagramTableCompletions(doc, caret).Items;
         Assert.Equal(new[] { "C", "Bb" }, items.Take(2).Select(i => i.Label));
         Assert.DoesNotContain(items, i => i.Label == "section");
         // After `section`: the sections, less the ones the table has; the block comes with it.
-        (doc, caret) = At("layout { chordDiagrams guitar { section ▮ } }\n");
+        (doc, caret) = At("chordShapes { section ▮ }\n");
         Assert.Equal("ChordDiagramTableSection", LilySharpLanguageServer.GetCompletionContext(doc, caret).ToString());
         var section = Assert.Single(LilySharpLanguageServer.GetChordDiagramTableSectionCompletions(doc, caret).Items);
         Assert.Equal(("A", "A {\n\t$0\n}"), (section.Label, section.InsertText));
-        (doc, caret) = At("layout { chordDiagrams guitar { section A { F }  section ▮ } }\n");
+        (doc, caret) = At("chordShapes { section A { F }  section ▮ }\n");
         Assert.Empty(LilySharpLanguageServer.GetChordDiagramTableSectionCompletions(doc, caret).Items);
     }
 
@@ -2312,14 +2439,14 @@ public class ChordDiagramTests
     // draws none), under the title — rows of even counts, each centred (the owner's choice after
     // seeing a left-set row and a 12 + 4 split).
 
-    private const string List = "layout { chordDiagrams guitar  chordList true }\n";
+    private const string List = "layout { chordTuning guitar  chordList true }\n";
 
     [Fact]
     public void TheKey_TakesTrueOrFalse()
     {
         Assert.True(Layout("chordList true").Plan.ChordList);
         Assert.False(Layout("chordList false").Plan.ChordList);
-        Assert.False(Layout("chordDiagrams guitar").Plan.ChordList);
+        Assert.False(Layout("chordDiagrams written").Plan.ChordList);
         var (plan, problems) = Layout("chordList yes");
         Assert.Contains("'yes' is not a value of 'chordList'", Assert.Single(problems).Message);
         Assert.False(plan.ChordList);
@@ -2352,7 +2479,7 @@ public class ChordDiagramTests
         // Under `chordDiagrams none` the names alone; under a capo the pressed names and shapes.
         Assert.All(Listed(Song("layout { chordDiagrams none  chordList true }\n", "C | F |", "c'1 | c'1 |")), e => Assert.Null(e.Spec));
         Assert.Equal(new (string, string?)[] { ("C", "x32010|032010"), ("G", "320003|210003") },
-            Listed(Song("layout { chordDiagrams guitar capo 3  chordList true }\n", "Eb | Bb |", "c'1 | c'1 |")));
+            Listed(Song("capo 3\nlayout { chordList true }\n", "Eb | Bb |", "c'1 | c'1 |")));
         // Without the key, nothing.
         Assert.Empty(Listed(Song(Guitar, "C | F |", "c'1 | c'1 |")));
     }
@@ -2421,15 +2548,18 @@ public class ChordDiagramTests
         Assert.Contains("adds a chord diagram (ukulele: 4203)", HoverAt(doc, "@chord(Cmaj9)"));
     }
 
-    /// <summary>The block form is the shape table's alone: any other key's brace is refused
-    /// where it stands, as before (the parser's rule).</summary>
+    /// <summary>No layout key opens a block (the parser's rule): a key's brace is refused where
+    /// it stands, naming the top-level <c>chordShapes { }</c>. The OLD <c>chordDiagrams … { }</c>
+    /// still parses whole, so the reader can refuse it as one entry (LYS1061) and the editor
+    /// rewrite it.</summary>
     [Fact]
-    public void OnlyChordDiagrams_OpensABlock()
+    public void NoLayoutKey_OpensABlock()
     {
         var tree = SyntaxTree.Parse("layout { barNumbers every 4 { x }  markTempo beside }\n");
         var refusal = Assert.Single(tree.Diagnostics, d => d.Message.Contains("does not open a block", StringComparison.Ordinal));
-        Assert.Contains("only 'chordDiagrams' takes one", refusal.Message);
+        Assert.Contains("the chord-shape table is the top-level 'chordShapes { Cm7 x35343 }'", refusal.Message);
         Assert.Empty(SyntaxTree.Parse("layout { chordDiagrams guitar { C#m7 x46654  section A { F/A x03211 } } }\n").Diagnostics);
+        Assert.Empty(SyntaxTree.Parse("chordShapes { C#m7 x46654  section A { F/A x03211 } }\n").Diagnostics);
     }
 
     /// <summary>
@@ -2451,13 +2581,13 @@ public class ChordDiagramTests
     {
         foreach (var book in new[]
         {
-            "layout { chordDiagrams guitar all }\noctave absolute\npart m { clef treble }\n"
+            "layout { chordDiagrams all }\noctave absolute\npart m { clef treble }\n"
             + "section A { m { c''1 | c'1 | c'1 | c'2 c'2 | } chords prog { C | G | F | C A(x57765) | } }\n"
             + "form { A }\nscore { chords prog  staff m }\n",
-            "layout { chordDiagrams guitar all }\n"
+            "layout { chordTuning guitar  chordDiagrams all }\n"
             + "section A { chords prog { C | G | F | C A(x57765) | C | G | F | C A(x57765) | C | G | F | C A(x57765) | C | G | F | C A(x57765) | } }\n"
             + "form { A }\nscore { chords prog }\n",
-            "layout { chordDiagrams guitar all }\noctave absolute\npart m { clef treble }\n"
+            "layout { chordDiagrams all }\noctave absolute\npart m { clef treble }\n"
             + "section A { m { c''4 d' e' f'@chord(A x57765) | } }\nform { A }\nscore { staff m }\n",
         })
         {

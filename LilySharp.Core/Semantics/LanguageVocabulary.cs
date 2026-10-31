@@ -137,9 +137,12 @@ public static class LanguageVocabulary
     public static IReadOnlyCollection<string> MinorChordWords => MinorChords.Words;
 
     /// <summary>The words the <c>chordDiagrams</c> key of a <c>layout { }</c> block takes
-    /// first (<see cref="ChordDiagramsKey"/>): <c>none</c>, then the tuning words, then the scope
-    /// word <c>all</c> — which may also follow a tuning word (<see cref="ChordDiagramsKey.AllWord"/>).</summary>
+    /// (<see cref="ChordDiagramsKey"/>): <c>written</c> (the default), <c>none</c>, <c>all</c>.</summary>
     public static IReadOnlyCollection<string> ChordDiagramWords => ChordDiagramsKey.Words;
+
+    /// <summary>The words the <c>chordTuning</c> key of a <c>layout { }</c> block takes
+    /// (<see cref="ChordTuningKey"/>): the tuning words, <c>guitar</c> (the default) first.</summary>
+    public static IReadOnlyCollection<string> ChordTuningWords => ChordTuningKey.Words;
 
     /// <summary>The words the <c>chordNames</c> key of a <c>layout { }</c> block takes
     /// (<see cref="ChordNamesKey"/>): what a name shows under a capo, the default first.</summary>

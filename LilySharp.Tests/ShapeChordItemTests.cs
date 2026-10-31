@@ -187,7 +187,7 @@ public class ShapeChordItemTests
         // No string numbers on the close notes: the tab chooses their strings.
         Assert.Contains("<f a c>2 ", new LilyPondExporter().Export(SyntaxTree.Parse(guitar)));
 
-        string capo = Book("instrument guitar", "chord(Eb)1 diagram(Eb)1 |", top: "layout { chordDiagrams guitar capo 3 }");
+        string capo = Book("instrument guitar", "chord(Eb)1 diagram(Eb)1 |", top: "capo 3");
         // chord(Eb): E♭ G B♭ close; diagram(Eb): C's x32010 pressed above the capo.
         Assert.Equal(new[] { 51, 55, 58, 51, 55, 58, 63, 67 }, MidiPitches(capo));
 
@@ -205,7 +205,7 @@ public class ShapeChordItemTests
     [Fact]
     public void UnderACapo_TheShapeSoundsAboveTheCapo()
     {
-        string book = Book("instrument guitar", "diagram(Eb x32010)1 |", top: "layout { chordDiagrams guitar capo 3 }");
+        string book = Book("instrument guitar", "diagram(Eb x32010)1 |", top: "capo 3");
         Assert.Equal(new[] { 51, 55, 58, 63, 67 }, MidiPitches(book));   // E♭3 G3 B♭3 E♭4 G4
         Assert.DoesNotContain(Diagnostics(book), d => d.Severity != DiagnosticSeverity.Info);
         Assert.Contains("<ees\\5 g\\4 bes\\3 ees\\2 g\\1>1", new LilyPondExporter().Export(SyntaxTree.Parse(book)));
@@ -698,8 +698,8 @@ public class ShapeChordItemTests
     [Fact]
     public void AChordItemWithNoShape_StaysCloseInRangeAndUndrawn()
     {
-        Assert.Empty(Frames(Book("instrument guitar", "chord(F)1 |", top: "layout { chordDiagrams guitar all }\n")));
-        Assert.Equal(new[] { "133211" }, Frames(Book("instrument guitar", "chord(F 133211)1 |", top: "layout { chordDiagrams guitar all }\n")));
+        Assert.Empty(Frames(Book("instrument guitar", "chord(F)1 |", top: "layout { chordDiagrams all }\n")));
+        Assert.Equal(new[] { "133211" }, Frames(Book("instrument guitar", "chord(F 133211)1 |", top: "layout { chordDiagrams all }\n")));
         // A ukulele's G is G4 B4 D5: G3 is below its C4.
         string uke = Book("instrument ukulele", "chord(G)1 |");
         Assert.Equal(new[] { 67, 71, 74 }, MidiPitches(uke));
@@ -819,53 +819,49 @@ public class ShapeChordItemTests
         Assert.Contains("guitar: `x32010`", HoverAt(doc, "diagram(C)"));   // the usual shape (2026-10-31)
     }
 
-    /// <summary>Each score sounds the item under its own capo (the page and the MIDI read the
-    /// played score's): when the scores drawing the part differ, the hover lists each capo with
-    /// its scores. Until 2026-09-30 it read the first score's alone — E♭ where "open" sounds C.</summary>
+    /// <summary>The capo is the FILE's (the top-level <c>capo N</c>, owner's grammar 2026-10-31):
+    /// every score sounds the item under it, so the hover's line is one — a per-score capo
+    /// (2026-09-30 to 2026-10-31, when the capo was a layout word and two scores could differ)
+    /// went with the layout word. The line reads as it always did.</summary>
     [Fact]
-    public void Hover_ListsEachScoresCapo_WhenTheyDiffer()
+    public void Hover_ReadsTheFilesCapo_InEveryScore()
     {
         const string book = """
-            layout capo3 { chordDiagrams guitar capo 3 }
-            layout open { chordDiagrams guitar }
+            capo 3
+            layout open { chordDiagrams written }
             part gt { instrument guitar }
             section A { gt { diagram(Eb x32010)1 | } }
             form { A }
-            score { layout capo3  staff gt }
+            score { staff gt }
             score open { layout open  staff gt }
             """;
         string? hover = HoverAt(book, "diagram(Eb x");
-        Assert.Contains("guitar, capo 3 (Default): `x32010` — E♭3  G3  B♭3  E♭4  G4", hover);
-        Assert.Contains("guitar, no capo (open): `x32010` — C3  E3  G3  C4  E4", hover);
-        // One capo for every score: the line as it always was.
+        Assert.Contains("guitar: `x32010` — E♭3  G3  B♭3  E♭4  G4", hover);
+        Assert.DoesNotContain("(Default)", hover);
+        Assert.DoesNotContain("no capo", hover);
         string single = Book("instrument guitar", "diagram(C x32010)1 |");
         Assert.Contains("guitar: `x32010` — C3  E3  G3  C4  E4", HoverAt(single, "diagram(C x"));
     }
 
-    /// <summary>LYS1039 checks the item under each score's capo, as each score sounds it: x32010
-    /// is E♭ at capo 3 and C with no capo, so `diagram(Eb x32010)` warns once whichever score comes
-    /// first. Until 2026-09-30 it read the first score's capo alone — silent when that was capo 3.</summary>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void TheShapeCheck_ReadsEachScoresCapo(bool capoFirst)
+    /// <summary>LYS1039 checks the item under the file's capo, as every score sounds it: x32010
+    /// is E♭ at capo 3 and C with no capo, so <c>diagram(Eb x32010)</c> warns without the capo
+    /// line and is silent with it, however many scores draw the part.</summary>
+    [Fact]
+    public void TheShapeCheck_ReadsTheFilesCapo()
     {
-        string capo = "score { layout capo3  staff gt }";
-        string open = "score open { layout open  staff gt }";
-        string book = $$"""
-            layout capo3 { chordDiagrams guitar capo 3 }
-            layout open { chordDiagrams guitar }
+        const string open = """
             part gt { instrument guitar }
             section A { gt { diagram(Eb x32010)1 | } }
             form { A }
-            {{(capoFirst ? capo : open)}}
-            {{(capoFirst ? open : capo)}}
+            score { staff gt }
+            score two { staff gt }
             """;
-        var mismatch = Assert.Single(Diagnostics(book), d => d.Code == DiagnosticCodes.ChordShapeMismatch);
+        var mismatch = Assert.Single(Diagnostics(open), d => d.Code == DiagnosticCodes.ChordShapeMismatch);
         Assert.Contains("x32010", mismatch.Message);
-        // Under one capo that presses it, nothing to say.
+        // Under the capo that presses it, nothing to say — in every score.
+        Assert.DoesNotContain(Diagnostics("capo 3\n" + open), d => d.Code == DiagnosticCodes.ChordShapeMismatch);
         Assert.DoesNotContain(Diagnostics(Book("instrument guitar", "diagram(Eb x32010)1 |",
-            top: "layout { chordDiagrams guitar capo 3 }")), d => d.Code == DiagnosticCodes.ChordShapeMismatch);
+            top: "capo 3")), d => d.Code == DiagnosticCodes.ChordShapeMismatch);
     }
 
     /// <summary>The hover spells a tone that is no chord tone as the key in force spells it, as the
@@ -1032,7 +1028,7 @@ public class ShapeChordItemTests
     [Fact]
     public void TheStep_OnOneOfSeveralShapes_StepsThatOne()
     {
-        const string both = "layout uke { chordDiagrams ukulele }\npart melody { clef treble }\n"
+        const string both = "layout uke { chordTuning ukulele }\npart melody { clef treble }\n"
             + "section A { melody { e''1@chord(C x32010 0003) | } }\nform { A }\n"
             + "score { staff melody }\nscore uke { layout uke  staff melody }\n";
         var (uke, said) = Step(both, both.IndexOf("0003", StringComparison.Ordinal) + 1, +1);
@@ -1057,15 +1053,15 @@ public class ShapeChordItemTests
         Assert.False(LilySharpLanguageServer.IsInsideShapeChordItem("gt { diagram(C) ", 16));
     }
 
-    /// <summary>The part's instrument first, the score's chordDiagrams word for the chords no fretted
+    /// <summary>The part's instrument first, the score's chordTuning word for the chords no fretted
     /// part owns (owner's decision 2026-10-31, review D1): a guitar part's chord(F 133211) under
-    /// `chordDiagrams ukulele all` drew the ukulele's F while playing the guitar shape.</summary>
+    /// a ukulele word drew the ukulele's F while playing the guitar shape.</summary>
     [Fact]
     public void ADiagram_FollowsItsPartsInstrument_TheScoresWordTheRest()
     {
         const string book = """
             octave absolute
-            layout { chordDiagrams ukulele all }
+            layout { chordTuning ukulele  chordDiagrams all }
             part gt { instrument guitar }
             part pn { clef treble }
             section A { gt { chord(F 133211)1 | c'1@chord(F) | } pn { c'1@chord(F) | c'1 | } }

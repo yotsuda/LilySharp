@@ -4,6 +4,21 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### The chord-diagram grammar: one key, one question
+
+- **`capo 3` and `chordShapes { … }` are top-level lines now**, the piece's own data (the
+  grammar settled on 2026-10-31), and the layout's `chordDiagrams` takes one word — `written`
+  (the default), `none` or `all` — with **`chordTuning TUNING`** beside it for the chords no
+  fretted part owns. **A book in the old spelling (`chordDiagrams guitar capo 3 all { … }`)
+  gets an error that says where each word goes, and Ctrl+. rewrites it**: the capo and the
+  table go before the layout block (or before the score that holds it), the entry becomes
+  `chordTuning` / `chordDiagrams`, and a block left with nothing goes with it.
+- **`capo` and `chordShapes` are completed at the top level**; after `capo ` the completion
+  ranks the frets by their barre chords as before, the hover on the `capo` line shows the
+  ranking, and Ctrl+Shift+Up / Down step the fret. Inside `chordShapes { }` the completion
+  offers the chords the file names, then the key's, then `section`. `chordDiagrams`' and
+  `chordTuning`'s words are completed, coloured and stepped like the other layout words.
+
 ### Cues, tuplets and chord diagrams
 
 - **`layout { cueSize -2 }`** chooses a cue's size (LilyPond's font-size step, -8 to 0; -4 is the

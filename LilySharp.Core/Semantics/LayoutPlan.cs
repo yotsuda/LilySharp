@@ -58,22 +58,26 @@ public sealed record LayoutPlan(
     // spelled (ChordSpelling). The struct's own default is LilyPond's spelling, so
     // LayoutPlan.Default compares equal to a plan that writes both keys out.
     ChordSpelling Chords = default,
-    // `chordDiagrams none|guitar|ukulele|…` — the TUNING word as written, or null when the key
-    // is absent or writes no tuning (`chordDiagrams all`). A fretted part's diagrams take its own
-    // instrument either way; the rest take this word, else the guitar (ChordDiagramsKey.Resolve,
-    // owner's decisions 2026-09-28, 2026-10-31).
-    string? ChordDiagrams = null,
-    // `chordDiagrams [TUNING] all` — every chord name draws a diagram: its written shape, else
-    // the default one (Music.ChordShapes.Drawn; owner's decision 2026-09-28). False without it:
-    // only a written shape draws. Never true with `none` (the reader refuses `none all`).
-    bool ChordDiagramsAll = false,
+    // `chordDiagrams none|written|all` — WHICH chords draw a diagram (ChordDiagramScope; owner's
+    // grammar 2026-10-31): none at all (a piano score from the same source), those with a
+    // written or listed shape (the default), or every chord name (its written shape, else the
+    // default one, Music.ChordShapes.Drawn).
+    ChordDiagramScope ChordDiagrams = ChordDiagramScope.Written,
+    // `chordTuning guitar|ukulele|…` — the tuning a chord with NO fretted part draws on (a chords
+    // row's, a piano's or a singer's chord): the word as written, or null for the guitar. A fretted
+    // part's diagrams take its own instrument either way (ChordDiagramsKey.Resolve, owner's
+    // decisions 2026-09-28, 2026-10-31).
+    string? ChordTuning = null,
     // `voltaBracket all|line|N` — how far an ending's bracket reaches (VoltaBracketLength);
     // an ending's own `@voltaBracket(…)` overrides it. The struct's default is `all`.
     VoltaBracketLength VoltaBracket = default,
-    // `chordDiagrams [TUNING] [all] { Cm7 x35343  G  section B { … } }` — the chords that draw
-    // a diagram wherever they are named, with the shape each draws (Music.ChordShapeTable;
-    // HANDOFF §2 K5 ③, 2026-09-29). Null when the key writes no table. Set with the two halves
-    // above: a key written again is written whole, table included.
+    // The FILE's shape table — `chordShapes { Cm7 x35343  G  section B { … } }`, a top-level
+    // block since 2026-10-31 (Music.ChordShapeTable; HANDOFF §2 K5 ③): the chords that draw a
+    // diagram wherever they are named, with the shape each draws. Null when the file writes none.
+    // ⚠️ NOT a layout entry's: no `layout { }` key sets it. It is laid on the plan by
+    // ChordShapesDirective.Apply when a score's plan is resolved (with the file's capo, in Chords),
+    // so that every reader of the plan — the page, the twin, MusicXML, the editor — finds the
+    // piece's data beside the edition's switches, as it did when the table was the key's.
     Music.ChordShapeTable? ChordDiagramTable = null,
     // `chordList true|false` — the chords the score uses, each with its diagram, at the head of
     // the score under the title (ChordListKey; HANDOFF §2 K5 ⑤, 2026-09-29).
@@ -97,7 +101,23 @@ public sealed record LayoutPlan(
     /// of the part it belongs to (<paramref name="partTuning"/>, null for none) — or null
     /// when the score writes <c>chordDiagrams none</c> (<see cref="ChordDiagramsKey.Resolve"/>).</summary>
     public Syntax.TuningType? ChordDiagramTuningFor(Syntax.TuningType? partTuning)
-        => ChordDiagramsKey.Resolve(ChordDiagrams, partTuning);
+        => ChordDiagramsKey.Resolve(ChordDiagrams, ChordTuning, partTuning);
+
+    /// <summary><c>chordDiagrams all</c>: every chord name draws a diagram, its written shape else
+    /// the default (<see cref="ChordDiagramScope.All"/>).</summary>
+    public bool ChordDiagramsAll => ChordDiagrams == ChordDiagramScope.All;
+
+    /// <summary>Whether the score prints "Capo N" at its head: there is a capo
+    /// (<see cref="ChordSpelling.Capo"/>), and the score prints diagrams (<c>chordDiagrams</c> not
+    /// <c>none</c>) or pressed names (<c>chordNames shape | both</c>) — where neither is printed
+    /// the capo shows nowhere on the page, so its line would name nothing (owner's grammar
+    /// 2026-10-31, Q2).</summary>
+    public bool PrintsCapoLine
+        => Chords.Capo > 0 && (ChordDiagrams != ChordDiagramScope.None || Chords.Names != ChordNameMode.Sounding);
+
+    /// <summary>The "Capo N" line the score's head prints, or null (<see cref="PrintsCapoLine"/>).</summary>
+    public string? CapoLine
+        => PrintsCapoLine ? "Capo " + Chords.Capo.ToString(System.Globalization.CultureInfo.InvariantCulture) : null;
 
     /// <summary>What a book with no <c>layout { }</c> gets: LilyPond's picture on every
     /// switch — labels stacked over the tempo, a number at the start of every line but the
@@ -143,10 +163,12 @@ public sealed record LayoutPlan(
 /// <param name="Qualities">The quality's vocabulary.</param>
 /// <param name="LowercaseMinor">LilyPond's <c>chordNameLowercaseMinor</c>: a minor-third
 /// chord prints a lowercase root and drops the <c>m</c>.</param>
-/// <param name="Capo">The fret the capo is on (<c>chordDiagrams … capo N</c>), 0 for none:
-/// a name is then the PRESSED chord's, the sounding chord that many semitones down
+/// <param name="Capo">The fret the FILE's capo is on (the top-level <c>capo N</c> line,
+/// <see cref="CapoDirective"/>; laid on the plan by <see cref="ChordShapesDirective.Apply"/>),
+/// 0 for none: a name is then the PRESSED chord's, the sounding chord that many semitones down
 /// (<see cref="Music.ChordStructure.Pressed"/>) — unless <paramref name="Names"/> says
-/// otherwise. Owner's design 2026-09-28 (HANDOFF §2 K2), built 2026-09-29.</param>
+/// otherwise. Owner's design 2026-09-28 (HANDOFF §2 K2), built 2026-09-29 as the layout's
+/// <c>chordDiagrams … capo N</c>; the piece's own line since 2026-10-31.</param>
 /// <param name="Names">What a name shows under a capo (<c>chordNames shape|sounding|both</c>,
 /// <see cref="ChordNamesKey"/>): the pressed shape's name (the default, the guitarist's
 /// chart), the sounding chord's, or both — <c>E♭ (C)</c>.</param>
@@ -269,7 +291,7 @@ public static class MinorChords
     };
 }
 
-/// <summary>What a chord name shows in a score with a capo (<c>chordDiagrams … capo N</c>):
+/// <summary>What a chord name shows in a score with a capo (the file's <c>capo N</c> line):
 /// the name of the shape the player presses, the sounding chord's name, or both.</summary>
 /// <remarks>
 /// Owner's design 2026-09-28 (HANDOFF §2 K2), built 2026-09-29: the guitarist's chart names
@@ -469,29 +491,51 @@ public static class PartCombineTexts
     };
 }
 
+/// <summary>WHICH chords of a score draw a diagram — the <c>chordDiagrams</c> key's value.</summary>
+/// <remarks>
+/// Owner's grammar 2026-10-31 (docs/ROADMAP.md "Chord diagrams: one key doing four jobs" §4, Q3:
+/// "one key, one question"): until then the key also named the tuning, the capo and the shape
+/// table. <see cref="Written"/> is the default and the enum's zero.
+/// </remarks>
+public enum ChordDiagramScope
+{
+    /// <summary>A chord with a shape — written at the chord, or listed in the file's
+    /// <c>chordShapes { }</c> table — draws it; a name alone draws none (the default; owner's
+    /// decision 2026-09-28).</summary>
+    Written,
+    /// <summary>No chord diagram at all, written shapes and <c>@diagram</c>s included — a piano
+    /// score from the same source.</summary>
+    None,
+    /// <summary>Every chord name draws a diagram: its written or listed shape, else the default
+    /// one (<see cref="Music.ChordShapes.Default"/>; owner's decision 2026-09-28).</summary>
+    All,
+}
+
 /// <summary>
-/// The <c>chordDiagrams</c> key's words: <c>none</c> or a tuning word — the same vocabulary a
-/// tab staff's <c>tuning</c> takes (<see cref="Tablature.Tunings.Names"/>) — and the scope
-/// word <c>all</c>, alone or after the tuning; and which tuning a diagram draws on
-/// (<see cref="Resolve"/>).
+/// The <c>chordDiagrams</c> key's words — <c>written</c> (the default), <c>none</c>, <c>all</c>
+/// (<see cref="ChordDiagramScope"/>) — and which tuning a diagram draws on (<see cref="Resolve"/>),
+/// which joins the scope with the <see cref="ChordTuningKey">chordTuning</see> word and the part's
+/// instrument.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Owner's decisions (HANDOFF §2 K, 2026-09-28): a diagram draws only where a shape is
-/// WRITTEN (<see cref="Music.ChordShapes.Drawn"/>) — unless the score writes <c>all</c>
-/// (<c>chordDiagrams all</c>, <c>chordDiagrams ukulele all</c>: the tuning first), when EVERY
-/// chord name draws one, its written shape else the default (<see cref="Music.ChordShapes.Default"/>).
-/// <c>none all</c> is refused (<c>none</c> draws nothing). A diagram draws on ONE tuning,
-/// strongest first:
-/// the fretted instrument of the part the chord belongs to
-/// (<see cref="PartHeaderDefaults.FrettedTuningWord"/>); else the score's <c>chordDiagrams TUNING</c>;
-/// else the guitar — and <c>none</c> draws no diagram at all, written shapes included (a piano
-/// score from the same source). The part comes first since 2026-10-31 (owner's decision, review
-/// D1): a guitar part's <c>chord(F 133211)</c> under <c>chordDiagrams ukulele</c> plays the guitar
-/// shape and drew the ukulele's F; the score's word now speaks for the chords no fretted part
-/// owns — a piano part's, a lead sheet's chords row.
-/// A staff-level override (<c>staff melody with chords prog on ukulele</c>) was considered and
-/// NOT added: the layout suffices.
+/// Owner's decisions (HANDOFF §2 K, 2026-09-28; the grammar 2026-10-31): a diagram draws only
+/// where a shape is WRITTEN or LISTED (<see cref="Music.ChordShapes.Drawn"/>) — unless the score
+/// writes <c>all</c>, when EVERY chord name draws one, its written shape else the default
+/// (<see cref="Music.ChordShapes.Default"/>); <c>none</c> draws nothing. A diagram draws on ONE
+/// tuning, strongest first: the fretted instrument of the part the chord belongs to
+/// (<see cref="PartHeaderDefaults.FrettedTuningWord"/>); else the score's <c>chordTuning TUNING</c>;
+/// else the guitar. The part comes first since 2026-10-31 (owner's decision, review D1): a guitar
+/// part's <c>chord(F 133211)</c> under a ukulele word plays the guitar shape and drew the ukulele's
+/// F; the score's word speaks for the chords no fretted part owns — a piano part's, a lead
+/// sheet's chords row. A staff-level override (<c>staff melody with chords prog on ukulele</c>)
+/// was considered and NOT added: the layout suffices.
+/// </para>
+/// <para>
+/// ⚠️ THE OLD SPELLING (2026-09-28 to 2026-10-31) — <c>chordDiagrams [TUNING] [capo N] [all]
+/// [{ table }]</c> — is refused by the reader with the new one named (LYS1061), and the editor's
+/// quick fix rewrites it; there is no backward compatibility (the owner's rule: "a well-ordered,
+/// consistent grammar; no regard for backward compatibility").
 /// </para>
 /// <para>
 /// LILYSHARP-OWN: LilyPond's FretBoards context carries its own <c>stringTunings</c>
@@ -506,46 +550,133 @@ public static class ChordDiagramsKey
     /// <summary>The key as written in the block.</summary>
     public const string Key = "chordDiagrams";
 
-    /// <summary>The scope word: every chord name draws a diagram (<c>chordDiagrams all</c>,
-    /// <c>chordDiagrams guitar all</c>).</summary>
-    public const string AllWord = "all";
+    /// <summary>The words, the default first.</summary>
+    public static readonly IReadOnlyList<string> Words = ["written", Music.ChordShapes.NoneWord, "all"];
 
-    /// <summary>The capo word, followed by the fret it is on (<c>chordDiagrams guitar capo 3</c>;
-    /// after the tuning, before <c>all</c>): the diagrams are the PRESSED shapes, the names the
-    /// pressed chords' (<see cref="ChordSpelling.Capo"/>, <see cref="ChordNameMode"/>), and the
-    /// score's head says "Capo 3". Owner's design 2026-09-28 (HANDOFF §2 K2), built 2026-09-29.</summary>
-    public const string CapoWord = "capo";
+    /// <summary>The scope <paramref name="word"/> names, or null.</summary>
+    public static ChordDiagramScope? Find(string word) => word switch
+    {
+        "written" => ChordDiagramScope.Written,
+        "none" => ChordDiagramScope.None,
+        "all" => ChordDiagramScope.All,
+        _ => null,
+    };
 
-    /// <summary>The highest fret a capo is written on (a guitar's capo range); 0 is no capo
-    /// and is refused — leave the word out.</summary>
-    public const int MaxCapo = 11;
+    /// <summary>The word for <paramref name="scope"/>.</summary>
+    public static string WordOf(ChordDiagramScope scope) => Words[(int)scope];
 
-    /// <summary>The words the key's FIRST value takes: <c>none</c>, the tuning vocabulary,
-    /// <c>capo</c> (then its fret) and <c>all</c> (which may also follow a tuning word).</summary>
-    public static readonly IReadOnlyList<string> Words =
-        [Music.ChordShapes.NoneWord, .. Tablature.Tunings.Names, CapoWord, AllWord];
-
-    /// <summary>True for a word the key's first value takes (<c>none</c>, a tuning word,
-    /// <c>capo</c> or <c>all</c>).</summary>
-    public static bool TryFind(string word)
-        => word == Music.ChordShapes.NoneWord || word == AllWord || word == CapoWord || IsTuningWord(word);
-
-    /// <summary>True for a tuning word (<see cref="Tablature.Tunings.Names"/>).</summary>
+    /// <summary>True for a tuning word (<see cref="Tablature.Tunings.Names"/>) — the
+    /// <see cref="ChordTuningKey"/>'s vocabulary, asked here by the readers of the old form.</summary>
     public static bool IsTuningWord(string word) => Tablature.Tunings.Names.Contains(word);
 
     /// <summary>
-    /// The tuning a diagram draws on: the part's fretted tuning (<paramref name="partTuning"/>),
-    /// else the layout's word (<paramref name="layoutWord"/>, null when the key is absent), else
-    /// the guitar — null for <c>none</c>, which draws no diagram.
+    /// The tuning a diagram draws on: null under <see cref="ChordDiagramScope.None"/>, which draws
+    /// no diagram; else the part's fretted tuning (<paramref name="partTuning"/>), else the layout's
+    /// <c>chordTuning</c> word (<paramref name="tuningWord"/>, null when the key is absent), else
+    /// the guitar.
     /// </summary>
-    public static Syntax.TuningType? Resolve(string? layoutWord, Syntax.TuningType? partTuning)
-        => layoutWord == Music.ChordShapes.NoneWord ? null
-            : partTuning ?? (layoutWord != null ? Tablature.Tunings.Parse(layoutWord) : Syntax.TuningType.Guitar);
+    public static Syntax.TuningType? Resolve(ChordDiagramScope scope, string? tuningWord, Syntax.TuningType? partTuning)
+        => scope == ChordDiagramScope.None ? null
+            : partTuning ?? (tuningWord != null ? Tablature.Tunings.Parse(tuningWord) : Syntax.TuningType.Guitar);
 
     /// <summary>The same, as a tuning WORD (for the editor's messages): the part's
-    /// (<paramref name="partWord"/>), else the layout's word, else <c>guitar</c>; null for <c>none</c>.</summary>
-    public static string? ResolveWord(string? layoutWord, string? partWord)
-        => layoutWord == Music.ChordShapes.NoneWord ? null : partWord ?? layoutWord ?? "guitar";
+    /// (<paramref name="partWord"/>), else the layout's word, else <c>guitar</c>; null under <c>none</c>.</summary>
+    public static string? ResolveWord(ChordDiagramScope scope, string? tuningWord, string? partWord)
+        => scope == ChordDiagramScope.None ? null : partWord ?? tuningWord ?? "guitar";
+
+    /// <summary>
+    /// How an entry in the OLD <c>chordDiagrams</c> spelling reads in the new grammar, or null for
+    /// an entry that is not the old form (a scope word, nothing, a wrong word): the words that move
+    /// to the top level (<c>capo N</c>, <c>chordShapes { … }</c>), the layout entries that replace
+    /// it (<c>chordTuning TUNING</c>, <c>chordDiagrams none|all</c>, or nothing), and the sentence
+    /// LYS1061 says. The reader refuses with the message and the editor's quick fix applies the
+    /// same rewrite (<c>LilySharpLanguageServer.ChordDiagramsOldFormAction</c>), so the two cannot
+    /// say different things.
+    /// </summary>
+    /// <remarks>
+    /// Read loosely — a tuning word, <c>capo</c>, <c>all</c>, <c>none</c>, a brace, in any order —
+    /// because this is the OLD reader's grammar being recognized, not enforced: whatever the old
+    /// entry meant, every word of it lands somewhere in the new one. The table's words are copied
+    /// as written (the new table reads the same entries), one space apart.
+    /// </remarks>
+    public static (string Message, int Capo, string? Table, string LayoutEntries)? OldFormRewrite(
+        Syntax.LayoutDeclarationSyntax.Entry entry)
+    {
+        var values = entry.Values;
+        int open = -1;
+        for (int i = 0; i < values.Count; i++)
+            if (values[i].Kind == Syntax.SyntaxKind.OpenBrace)
+            {
+                open = i;
+                break;
+            }
+        var head = open < 0 ? values : values.Take(open).ToList();
+        bool oldWord = head.Any(t => IsTuningWord(t.Text) || t.Text == CapoDirective.Keyword);
+        if (open < 0 && !oldWord)
+            return null;
+
+        string? tuning = head.Select(t => t.Text).FirstOrDefault(IsTuningWord);
+        int capo = 0;
+        for (int i = 0; i + 1 < head.Count; i++)
+            if (head[i].Text == CapoDirective.Keyword && head[i + 1].Kind == Syntax.SyntaxKind.IntegerLiteral
+                && int.TryParse(head[i + 1].Text, System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out int fret)
+                && fret >= 1 && fret <= CapoDirective.MaxFret)
+                capo = fret;
+        var scope = head.Any(t => t.Text == "all") ? ChordDiagramScope.All
+            : head.Any(t => t.Text == Music.ChordShapes.NoneWord) ? ChordDiagramScope.None
+            : ChordDiagramScope.Written;
+        // The table's words as written, between its brace and its closer.
+        string? table = null;
+        if (open >= 0 && values[^1].Kind == Syntax.SyntaxKind.CloseBrace)
+        {
+            var words = ChordShapesDirective.TableWords(values, open + 1);
+            string inner = string.Join(" ", words.Take(words.Count - 1).Select(w => w.Text));
+            table = inner.Length == 0 ? "{ }" : "{ " + inner + " }";
+        }
+        var entries = new List<string>();
+        if (tuning != null && tuning != "guitar")
+            entries.Add($"{ChordTuningKey.Key} {tuning}");
+        if (scope != ChordDiagramScope.Written)
+            entries.Add($"{Key} {WordOf(scope)}");
+        string layoutEntries = string.Join("  ", entries);
+
+        var moved = new List<string>();
+        if (capo > 0)
+            moved.Add($"'{CapoDirective.Keyword} {capo}'");
+        if (table != null)
+            moved.Add($"'{ChordShapesDirective.Keyword} {{ ... }}'");
+        string fix = moved.Count > 0 && layoutEntries.Length > 0
+            ? $"write {string.Join(" and ", moved)} at the top level, and '{layoutEntries}' here"
+            : moved.Count > 0 ? $"write {string.Join(" and ", moved)} at the top level, and leave this entry out"
+            : layoutEntries.Length > 0 ? $"write '{layoutEntries}' here"
+            : "leave this entry out (written is the default, and the guitar the tuning)";
+        string message = $"'{Key}' takes one word - written, none or all: which chords draw a diagram. "
+            + "Its old spelling (a tuning word, 'capo N', a shape table in braces) is split up since 2026-10-31: "
+            + fix + ". The tuning of a chord with no fretted part is 'chordTuning TUNING'.";
+        return (message, capo, table, layoutEntries);
+    }
+}
+
+/// <summary>
+/// The <c>chordTuning</c> key's words: a tuning word — the same vocabulary a tab staff's
+/// <c>tuning</c> takes (<see cref="Tablature.Tunings.Names"/>) — the tuning a chord with NO
+/// fretted part draws its diagram on (a chords row's, a piano's or a singer's chord); the guitar
+/// when the key is absent. A fretted part's chords take its own instrument
+/// (<see cref="ChordDiagramsKey.Resolve"/>). Owner's grammar 2026-10-31 (Q3): its own key, so that
+/// <c>chordDiagrams</c> mixes no kinds of word and <c>none</c> leaves nothing stranded.
+/// </summary>
+public static class ChordTuningKey
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "chordTuning";
+
+    /// <summary>The words, the default (<c>guitar</c>) first.</summary>
+    public static readonly IReadOnlyList<string> Words =
+        ["guitar", .. Tablature.Tunings.Names.Where(n => n != "guitar")];
+
+    /// <summary>True for a tuning word.</summary>
+    public static bool IsTuningWord(string word) => Tablature.Tunings.Names.Contains(word);
 }
 
 /// <summary>How far an ending's volta bracket reaches (<see cref="VoltaBracketLength"/>).</summary>

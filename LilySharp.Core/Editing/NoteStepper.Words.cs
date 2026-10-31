@@ -62,8 +62,8 @@ public static partial class NoteStepper
             "chordList" => LanguageVocabulary.ChordListWords,
             "compressRests" => LanguageVocabulary.CompressRestsWords,
             "voltaBracket" => VoltaBracketLength.Words,
-            // A tuning word steps the tunings (and `none`); `capo` and `all` are not a tuning.
-            "chordDiagrams" => [.. LanguageVocabulary.ChordDiagramWords.Where(w => w is not (ChordDiagramsKey.CapoWord or ChordDiagramsKey.AllWord))],
+            "chordDiagrams" => LanguageVocabulary.ChordDiagramWords,
+            "chordTuning" => LanguageVocabulary.ChordTuningWords,
             // `as` governs three different words: a chord row's display, a tab's style, and a
             // fonts entry's family — the one whose list holds the word.
             "as" => new[] { ChordAsWords, (IReadOnlyCollection<string>)LanguageVocabulary.TabStyles, FontFamilyWords }
@@ -328,10 +328,10 @@ public static partial class NoteStepper
     };
 
     /// <summary>A number in a <c>layout { }</c> block the caret is on — a number key's value (its
-    /// index among them), <c>voltaBracket N</c>, or the fret of <c>chordDiagrams … capo N</c>
-    /// (<c>Capo</c>) — with its key, or null. <c>barNumbers every N</c> is
-    /// <see cref="BarNumberEveryAt"/>'s.</summary>
-    private static (string Key, SyntaxTokenNode Number, int Index, bool Capo, SyntaxTokenNode? Sign)? LayoutNumberAt(SyntaxTree tree, int offset)
+    /// index among them) or <c>voltaBracket N</c> — with its key, or null. <c>barNumbers every N</c>
+    /// is <see cref="BarNumberEveryAt"/>'s; the capo's fret is the top-level <c>capo N</c> line's
+    /// since 2026-10-31 (<see cref="MusicNumberAt"/>).</summary>
+    private static (string Key, SyntaxTokenNode Number, int Index, SyntaxTokenNode? Sign)? LayoutNumberAt(SyntaxTree tree, int offset)
     {
         foreach (var layout in tree.GetNodes<LayoutDeclarationSyntax>())
             foreach (var entry in layout.Entries)
@@ -343,22 +343,18 @@ public static partial class NoteStepper
                     if (value.Kind is not (SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral)
                         || (sign?.Span.Start ?? value.Span.Start) > offset || offset > value.Span.End)
                         continue;
-                    bool capo = entry.Key == ChordDiagramsKey.Key && i > 0 && entry.Values[i - 1].Text == ChordDiagramsKey.CapoWord;
-                    if (capo || (entry.Key == VoltaBracketLength.Key && i == 0) || LayoutNumberSteps.ContainsKey(entry.Key))
-                        return (entry.Key, value, sign != null ? i - 1 : i, capo, sign);
+                    if ((entry.Key == VoltaBracketLength.Key && i == 0) || LayoutNumberSteps.ContainsKey(entry.Key))
+                        return (entry.Key, value, sign != null ? i - 1 : i, sign);
                 }
         return null;
     }
 
     /// <summary>One step of a layout number: a whole count for <c>voltaBracket N</c> (a bar, four on
-    /// the octave pair) and a capo's fret (1 to 11), else the key's own steps
-    /// (<see cref="LayoutNumberSteps"/>), the value kept on the small step's grid and never under its
-    /// least.</summary>
-    private static (Edit? Edit, string Message) LayoutNumberEdit(string key, SyntaxTokenNode number, int index, bool capo,
+    /// the octave pair), else the key's own steps (<see cref="LayoutNumberSteps"/>), the value kept
+    /// on the small step's grid and never under its least.</summary>
+    private static (Edit? Edit, string Message) LayoutNumberEdit(string key, SyntaxTokenNode number, int index,
         int dir, bool small, SyntaxTokenNode? sign = null)
     {
-        if (capo)
-            return CountEdit(number, dir, "chordDiagrams capo", max: ChordDiagramsKey.MaxCapo);
         if (key == VoltaBracketLength.Key)
             return CountEdit(number, small ? dir : 4 * dir, "voltaBracket");
         var steps = LayoutNumberSteps[key];
@@ -417,13 +413,17 @@ public static partial class NoteStepper
 
     /// <summary>A number in the music the caret is on — a tuplet's ratio, a tremolo's count, a
     /// rest's <c>*N</c>, a repeat's <c>:|*N</c> (owner's request 2026-10-24), a <c>partial</c>'s
-    /// length — as the node that holds it, or null.</summary>
+    /// length, the file's <c>capo N</c> fret (2026-10-31) — as the node that holds it, or null.</summary>
     private static (TargetKind Kind, SyntaxNode Node)? MusicNumberAt(SyntaxTree tree, int offset)
     {
         static bool On(SyntaxNode? n, int at) => n is { } x && x.Span.Start <= at && at <= x.Span.End;
         foreach (var node in tree.GetNodes<SyntaxNode>())
             switch (node)
             {
+                // The top-level `capo N` line (Semantics.CapoDirective): its fret, 1 to 11.
+                case PropertyAssignmentSyntax { NameToken.Text: CapoDirective.Keyword, Parent: CompilationUnitSyntax } capoLine
+                    when capoLine.Values.OfType<SyntaxTokenNode>().FirstOrDefault() is { Kind: SyntaxKind.IntegerLiteral } fret && On(fret, offset):
+                    return (TargetKind.MusicCount, fret);
                 case TupletExpressionSyntax tuplet when On(tuplet.Numerator, offset) || On(tuplet.Denominator, offset):
                     return (TargetKind.TupletRatio, tuplet);
                 case RepeatExpressionSyntax repeat when On(repeat.Count, offset):

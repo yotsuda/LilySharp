@@ -483,6 +483,53 @@ internal sealed partial class Parser
         return new PropertyAssignmentGreen(keyword, null, [.. values]);
     }
 
+    // `capo 3` — the file's capo, a top-level line (owner's decision 2026-10-31, docs/ROADMAP.md
+    // "Chord diagrams: one key doing four jobs" §4 Q2): the fret every pressed shape in the file
+    // is relative to — the shapes written in the music, the `chordShapes { }` table — and what a
+    // `diagram(Eb x32010)` item sounds; so it is the piece's data, beside `time` and `key`, not a
+    // layout switch (a sound must not change with the edition). The same property-node shape as
+    // `check`, read to the end of its line; the fret is judged by ChordShapesValidator
+    // (Semantics.CapoDirective.Read), so a line being typed parses without an error.
+    private PropertyAssignmentGreen ParseCapoDirective()
+    {
+        var keyword = Advance(); // capo
+        var values = new List<GreenNode?>();
+        SyntaxToken last = keyword;
+        while (Current.Kind != SyntaxKind.EndOfFile
+               && !LineBreakBetween(last, Current)
+               && (Current.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral or SyntaxKind.Identifier
+                   or SyntaxKind.Minus || SyntaxFacts.IsPartNameToken(Current.Kind, Current.Text)))
+        {
+            last = Advance();
+            values.Add(last);
+        }
+        return new PropertyAssignmentGreen(keyword, null, [.. values]);
+    }
+
+    /// <summary>
+    /// <c>chordShapes { Cm7 x35343  G  section Chorus { C x35553 } }</c> — the file's chord-shape
+    /// table, a top-level block (owner's decision 2026-10-31; until then the table followed the
+    /// layout's <c>chordDiagrams</c> words). Only BOUNDED here, as the old one was
+    /// (<see cref="ParseLayoutShapeTable"/>): its tokens stay flat in the node and
+    /// <c>Semantics.ChordShapesDirective</c> reads them. Without a block the directive is refused
+    /// (LYS1050) and kept, like a blockless <c>layout</c>, so no position slides.
+    /// </summary>
+    private ChordShapesDeclarationGreen ParseChordShapesDeclaration()
+    {
+        var keyword = Advance(); // chordShapes
+        var tokens = new List<GreenNode?>();
+        if (Check(SyntaxKind.OpenBrace))
+        {
+            ParseLayoutShapeTable(tokens, Semantics.ChordShapesDirective.Keyword);
+            return new ChordShapesDeclarationGreen(keyword, [.. tokens]);
+        }
+        var span = new TextSpan(_textPosition - keyword.FullWidth + keyword.LeadingTriviaWidth, Math.Max(1, keyword.Width));
+        _diagnostics.Error(span, DiagnosticCodes.ChordShapesNeedsABlock,
+            "'chordShapes' lists the shape each chord draws, so it takes a block: "
+            + "chordShapes { Cm7 x35343  G  section Chorus { C x35553 } }.");
+        return new ChordShapesDeclarationGreen(keyword, []);
+    }
+
     /// <summary>Whether a line ends between two tokens: in the trailing trivia of the first or the
     /// leading trivia of the second.</summary>
     private static bool LineBreakBetween(SyntaxToken previous, SyntaxToken next)
@@ -912,17 +959,19 @@ internal sealed partial class Parser
             {
                 if (entryKey == Semantics.ChordDiagramsKey.Key)
                 {
-                    ParseLayoutShapeTable(tokens);
+                    // The OLD form's table (to 2026-10-31), bounded so LayoutPlanReader can refuse
+                    // the whole entry naming the new `chordShapes { }` (and the editor rewrite it).
+                    ParseLayoutShapeTable(tokens, Semantics.ChordDiagramsKey.Key);
                     entryKey = null;
                     continue;
                 }
-                // No other layout key opens a block; refused where it stands and skipped so the
+                // No layout key opens a block; refused where it stands and skipped so the
                 // walker upstairs stays one level deep. Its closer is consumed with it.
                 var braceSpan = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
                 _diagnostics.Error(braceSpan, DiagnosticCodes.LayoutEntryBadValue,
                     "A 'layout { }' entry is a key followed by its word (markTempo beside, "
-                    + "barNumbers every 4) — it does not open a block; only 'chordDiagrams' takes "
-                    + "one, its shape table (chordDiagrams guitar { Cm7 x35343 }).");
+                    + "barNumbers every 4) — it does not open a block; the chord-shape table is "
+                    + "the top-level 'chordShapes { Cm7 x35343 }'.");
                 tokens.Add(Advance());
                 while (!Check(SyntaxKind.EndOfFile) && !Check(SyntaxKind.CloseBrace))
                     tokens.Add(Advance());
@@ -965,14 +1014,16 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// <c>chordDiagrams [TUNING] [all] { Cm7 x35343  G  section Chorus { C x35553 } }</c> — the
-    /// shape table, the one layout entry that opens a block (owner's design, HANDOFF §2 K5 ③;
-    /// 2026-09-29). Only BOUNDED here: its tokens stay flat in the node, braces included, and
-    /// <c>LayoutPlanReader</c> reads them — a chord symbol's glued run (<c>C#m7-5/G</c>: the
-    /// <c>#</c> is a BadToken, <c>-</c> and <c>/</c> their own tokens, as in a chords row) is
-    /// re-joined by adjacency there. A <c>section NAME { … }</c> nests one level.
+    /// The shape table's block — <c>{ Cm7 x35343  G  section Chorus { C x35553 } }</c> after the
+    /// top-level <c>chordShapes</c> (2026-10-31), and after the old <c>chordDiagrams [words]</c>
+    /// layout entry (2026-09-29, still bounded so the reader can name the new form). Only
+    /// BOUNDED here: its tokens stay flat in the node, braces included, and
+    /// <c>Semantics.ChordShapesDirective</c> reads them — a chord symbol's glued run
+    /// (<c>C#m7-5/G</c>: the <c>#</c> is a BadToken, <c>-</c> and <c>/</c> their own tokens, as in
+    /// a chords row) is re-joined by adjacency there. A <c>section NAME { … }</c> nests one level.
+    /// <paramref name="opener"/> names the directive in the unclosed-brace message.
     /// </summary>
-    private void ParseLayoutShapeTable(List<GreenNode?> tokens)
+    private void ParseLayoutShapeTable(List<GreenNode?> tokens, string opener)
     {
         tokens.Add(Advance()); // {
         int depth = 1;
@@ -1006,7 +1057,7 @@ internal sealed partial class Parser
         }
         if (depth > 0)
             _diagnostics.Error(new TextSpan(_textPosition, 1), DiagnosticCodes.ExpectedToken,
-                "This 'chordDiagrams … {' has no closing '}'.");
+                $"This '{opener} {{' has no closing '}}'.");
     }
 
     // A token that reads as a bare WORD, judged by its text rather than by its kind:

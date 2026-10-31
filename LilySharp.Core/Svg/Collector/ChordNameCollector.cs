@@ -50,17 +50,20 @@ internal sealed class ChordNameCollector
     /// what a book that writes neither key gets.</summary>
     public Semantics.ChordSpelling Spelling { get; set; } = Semantics.ChordSpelling.Default;
 
-    /// <summary>The score's <c>layout { chordDiagrams … }</c> word as written, or null when
-    /// absent — set by the collector with <see cref="Spelling"/>, before any row is walked.</summary>
-    public string? DiagramsWord { get; set; }
+    /// <summary>The score's <c>layout { chordDiagrams written|none|all }</c> — which chords draw
+    /// a diagram — set by the collector with <see cref="Spelling"/>, before any row is walked.</summary>
+    public Semantics.ChordDiagramScope DiagramScope { get; set; }
 
-    /// <summary>The score's <c>chordDiagrams … all</c> (every chord name draws a diagram) —
-    /// set by the collector with <see cref="DiagramsWord"/>.</summary>
-    public bool DiagramsAll { get; set; }
+    /// <summary>The score's <c>layout { chordTuning … }</c> word as written, or null when absent
+    /// (the guitar) — set by the collector with <see cref="DiagramScope"/>.</summary>
+    public string? TuningWord { get; set; }
 
-    /// <summary>The score's layout shape table (<c>chordDiagrams … { … }</c>: the chords that
-    /// draw wherever they are named, <see cref="LilySharp.Core.Music.ChordShapeTable"/>), or
-    /// null — set by the collector with <see cref="DiagramsWord"/>.</summary>
+    /// <summary><c>chordDiagrams all</c>: every chord name draws a diagram.</summary>
+    private bool DiagramsAll => DiagramScope == Semantics.ChordDiagramScope.All;
+
+    /// <summary>The file's shape table (<c>chordShapes { … }</c>: the chords that draw wherever
+    /// they are named, <see cref="LilySharp.Core.Music.ChordShapeTable"/>), or null — set by the
+    /// collector with <see cref="DiagramScope"/>.</summary>
     public LilySharp.Core.Music.ChordShapeTable? Table { get; set; }
 
     /// <summary>The fretted tuning of the staff the row being collected stands over
@@ -111,7 +114,7 @@ internal sealed class ChordNameCollector
     {
         var words = entry.ShapeWords;
         if ((words.Count == 0 && !DiagramsAll && Table == null)
-            || Semantics.ChordDiagramsKey.Resolve(DiagramsWord, RowStaffTuning) is not { } tuning)
+            || Semantics.ChordDiagramsKey.Resolve(DiagramScope, TuningWord, RowStaffTuning) is not { } tuning)
             return null;
         // Under the file's `shift` the written shapes are the WRITTEN chord's (FileShift's
         // remarks): the diagram draws the shifted chord's usual shape — a written shape still

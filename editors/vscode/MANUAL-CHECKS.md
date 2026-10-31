@@ -117,9 +117,13 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 
 ### 2.2 コード図まわり
 
-- [x] elayout { chordDiagrams … { … } }e の表の中で補完が、本に出てくるコード名のうち表に無いもの → 調のコード → esectione → section 名の順に出る。
-- [x] 表の中の esection NAMEe・調弦の語・形が色づき、表の e}e の後ろの elayoute の鍵も色が続く。
-- [x] 同じ part を capo の違う 2 つの score が弾く本で echord(…)e をホバー → score ごとに 1 行、capo の下で鳴る音名が書かれる。
+- [x] （2026-10-31 まで）elayout { chordDiagrams … { … } }e の表の中で補完が、本に出てくるコード名のうち表に無いもの → 調のコード → esectione → section 名の順に出る。
+- [x] （2026-10-31 まで）表の中の esection NAMEe・調弦の語・形が色づき、表の e}e の後ろの elayoute の鍵も色が続く。
+- [x] （2026-10-31 まで）同じ part を capo の違う 2 つの score が弾く本で echord(…)e をホバー → score ごとに 1 行、capo の下で鳴る音名が書かれる。
+- [ ] **コード図の文法の整理（第1036・2026-10-31 のオーナー決定）**: 旧綴り elayout { chordDiagrams guitar capo 3 all { C x32010 } }e を書くと LYS1061 のエラーが「どの語がどこへ行くか」を言い、eCtrl+.e → *Write it the new way: capo 3, chordShapes { … }, chordDiagrams all* で、layout の前に ecapo 3e と echordShapes { C x32010 }e の 2 行が入り、エントリが echordDiagrams alle になる。echordDiagrams guitare だけの 1 行 layout は丸ごと消える。
+- [ ] 先頭の空行で eche → 補完に echordShapese（ブロックの snippet）と ecapoe が出る。ecapo e の後ろでフレットの順位が出る（旧 echordDiagrams capo e と同じ並び）。echordShapes { e の中で補完が本のコード名 → 調のコード → esectione の順に出る。
+- [ ] ecapo 3e の行をホバー → **Capo** と順位。ecapo ‸3e で Ctrl+Shift+↑ → ecapo 4e（11 で止まる）。ecapoe と e3e が色づく（行頭だけ・epart capo { }e は色づかない）。
+- [ ] elayout { chordDiagrams e で補完が ewritten none alle、echordTuning e で調弦の語（eguitare が先頭）。それぞれ Ctrl+Shift+↑↓ で語が進む。
 
 ### 2.3 プレビューの Export と再生
 

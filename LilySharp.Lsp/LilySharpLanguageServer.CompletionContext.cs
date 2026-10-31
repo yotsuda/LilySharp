@@ -483,9 +483,10 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>How deep the caret sits in a layout's shape table
     /// (<c>layout { chordDiagrams [tuning] [capo N] [all] { … } }</c>): 1 in the table, 2 in one
     /// of its <c>section NAME { … }</c> blocks, 0 elsewhere.</summary>
-    /// <remarks>The table's brace is not a layout frame — its words before the brace are the
-    /// entry's (<c>guitar</c>, <c>capo 3</c>) — so until 2026-09-30 nothing claimed its body and
-    /// the popup offered what the words around it happened to match (HANDOFF §1.0, 第664).</remarks>
+    /// <remarks>The table is the top-level <c>chordShapes { }</c> block since 2026-10-31 (until
+    /// then the layout's <c>chordDiagrams … { }</c>, whose brace no frame claimed until
+    /// 2026-09-30 — HANDOFF §1.0, 第664). Its brace is not a block frame of its own, so the
+    /// opener is read off the text before it.</remarks>
     internal static int ChordDiagramTableLevel(string text, int offset)
         => ChordDiagramTableLevel(text, new BlockContextScan(text, offset).Stack);
 
@@ -499,26 +500,16 @@ public sealed partial class LilySharpLanguageServer
         return 0;
     }
 
-    /// <summary>Whether <c>stack[k]</c> is a shape table's brace: the block around it is a
-    /// layout, and the words from the layout's last <c>chordDiagrams</c> to the brace are that
-    /// entry's head (tuning, <c>capo N</c>, <c>all</c>).</summary>
+    /// <summary>Whether <c>stack[k]</c> is the shape table's brace: a top-level brace (nothing
+    /// open around it) whose last word before it is <c>chordShapes</c>.</summary>
     private static bool IsShapeTableOpener(string text, List<OpenBlock> stack, int k)
     {
-        if (k < 1 || !IsInsideLayoutBlock(stack.GetRange(0, k)))
+        if (k != 0 || stack.Count == 0)
             return false;
-        var words = text[(stack[k - 1].OpenIndex + 1)..stack[k].OpenIndex]
-            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        int key = Array.LastIndexOf(words, ChordDiagramsKey.Key);
-        if (key < 0)
-            return false;
-        for (int w = key + 1; w < words.Length; w++)
-        {
-            string word = words[w];
-            if (!(ChordDiagramsKey.IsTuningWord(word) || word == ChordDiagramsKey.CapoWord
-                  || word == ChordDiagramsKey.AllWord || word.All(char.IsAsciiDigit)))
-                return false;
-        }
-        return true;
+        int open = stack[k].OpenIndex;
+        int from = Math.Max(0, open - 64);
+        return System.Text.RegularExpressions.Regex.IsMatch(text[from..open],
+            @"(?<![A-Za-z0-9_])" + ChordShapesDirective.Keyword + @"\s*$");
     }
 
     // A named part (`part rh {`) has `part` one word before the brace; the nameless one
@@ -735,16 +726,16 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutChordQualities,
         /// <summary><c>layout { minorChords |</c> — upper / lower.</summary>
         AfterLayoutMinorChords,
-        /// <summary><c>layout { chordDiagrams |</c> — none / the tuning words / all.</summary>
+        /// <summary><c>layout { chordDiagrams |</c> — written / none / all.</summary>
         AfterLayoutChordDiagrams,
-        /// <summary><c>layout { chordDiagrams guitar |</c> — capo / all (after <c>capo N</c>: all).</summary>
-        AfterLayoutChordDiagramsTuning,
-        /// <summary><c>layout { chordDiagrams guitar capo |</c> — the frets, ranked (CapoAdvisor).</summary>
-        AfterLayoutChordDiagramsCapo,
-        /// <summary>Inside <c>layout { chordDiagrams … { | } }</c> (or a <c>section</c> of it) — the
+        /// <summary><c>layout { chordTuning |</c> — the tuning words.</summary>
+        AfterLayoutChordTuning,
+        /// <summary>The top-level <c>capo |</c> — the frets, ranked (CapoAdvisor).</summary>
+        AfterCapo,
+        /// <summary>Inside the top-level <c>chordShapes { | }</c> (or a <c>section</c> of it) — the
         /// chord names an entry starts with, and <c>section</c> at the table's own level.</summary>
         ChordDiagramTable,
-        /// <summary><c>layout { chordDiagrams … { section |</c> — the file's section names.</summary>
+        /// <summary><c>chordShapes { section |</c> — the file's section names.</summary>
         ChordDiagramTableSection,
         /// <summary><c>layout { chordNames |</c> — shape / sounding / both.</summary>
         AfterLayoutChordNames,
@@ -1203,19 +1194,8 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterLayoutMinorChords;
             if (prevWord.Equals(ChordDiagramsKey.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutChordDiagrams;
-            // `chordDiagrams guitar |` — the capo and the scope word may follow the tuning (and
-            // only then: not after `none`, not after `all`); `chordDiagrams [guitar] capo |` the
-            // ranked frets; `… capo 3 |` the scope word alone.
-            if (ChordDiagramsKey.IsTuningWord(prevWord)
-                && SecondWordBeforeCursor(text, offset) == ChordDiagramsKey.Key)
-                return CompletionContext.AfterLayoutChordDiagramsTuning;
-            if (prevWord.Equals(ChordDiagramsKey.CapoWord, StringComparison.Ordinal)
-                && SecondWordBeforeCursor(text, offset) is var beforeCapo
-                && (beforeCapo == ChordDiagramsKey.Key || ChordDiagramsKey.IsTuningWord(beforeCapo)))
-                return CompletionContext.AfterLayoutChordDiagramsCapo;
-            if (prevWord.Length > 0 && prevWord.All(char.IsAsciiDigit)
-                && SecondWordBeforeCursor(text, offset) == ChordDiagramsKey.CapoWord)
-                return CompletionContext.AfterLayoutChordDiagramsTuning;
+            if (prevWord.Equals(ChordTuningKey.Key, StringComparison.Ordinal))
+                return CompletionContext.AfterLayoutChordTuning;
             if (prevWord.Equals(ChordNamesKey.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutChordNames;
             if (prevWord.Equals(ChordListKey.Key, StringComparison.Ordinal))
@@ -1316,6 +1296,11 @@ public sealed partial class LilySharpLanguageServer
         // part name typed after the rule (`check voiceLeading s`) still answers with the parts.
         if (InnermostOpenBlock(scan.Stack) == null && CheckLineWordsBeforeCaret(text, offset) is int done)
             return done == 0 ? CompletionContext.AfterCheck : CompletionContext.AfterCheckArguments;
+
+        // The top-level `capo |` (Semantics.CapoDirective, 2026-10-31): the ranked frets.
+        if (InnermostOpenBlock(scan.Stack) == null && prevWord == CapoDirective.Keyword
+            && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.AfterCapo;
 
         // (`marks` left the top level and the score body on 2026-09-11 — it is a key of
         // `layout { }` now, served inside the layout branch above.)
