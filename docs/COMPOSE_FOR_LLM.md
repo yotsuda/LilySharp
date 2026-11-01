@@ -216,6 +216,11 @@ What makes it music:
   - **The verses**: one lyrics track, `verse 1 { … } verse 2 { … }` inside it (see *Lyrics*), and
     the form sings the section again — `|: Verse :|` stacks the verses under it, `Verse Verse`
     prints each at its own time, numbered. Not a track a verse, never `[1. … ]`.
+  - **The bridge is a change**: a chord the verse and the chorus do not use (Am, Bm, D7, a borrowed
+    chord), a tune of its own, or the strum's pattern changed there — not the same four chords
+    walked from another one of them under the verse's tune again.
+  - **The singer breathes**: every line of words ends on a longer note with a rest after it (a
+    bar's last beat, at least), never four quarters in every bar from the first word to the last.
   - **The diagrams, always**: `layout { chordDiagrams all  chordList true }` — every chord draws
     its diagram where it changes and at each line's head, and the chords the song uses are listed
     with their diagrams under the title. The usual shapes draw by themselves (C `x32010`, G

@@ -566,6 +566,8 @@ public static class CompositionChecks
             .Select(p => p.Key).ToHashSet(System.StringComparer.Ordinal)));
         findings.AddRange(OneProgression(midi, barList, fifths));
         findings.AddRange(StaffRestatesTheChordsRow(midi, parts, barList));
+        findings.AddRange(NoBreath(midi, parts, barList, System.Text.RegularExpressions.Regex.Matches(source, @"\blyrics\s+\w+\s+sings\s+(\w+)")
+            .Select(m => m.Groups[1].Value).ToHashSet(System.StringComparer.Ordinal)));
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
             findings.AddRange(OpenEndings(midi, tune, fifths));
         findings.AddRange(EndsApart(midi, barList));
@@ -750,6 +752,59 @@ public static class CompositionChecks
                 + "as the form plays them) — distortion blurs a full chord into a roar: strike two or three notes, the root and its fifth "
                 + "with the octave above (a power chord; the voicing tool, given the sound, answers them first), and leave the full chord "
                 + "to a clean sound or to one ringing chord at a close.";
+        }
+    }
+
+    // A singer with no rest in this many bars in a row (owner's review 2026-11-01: 帰り道の灯り sang
+    // its 48 bars from the first note to the last without one, nearly every phrase's end a quarter
+    // note). A bar is sung through when the part's notes cover it from its start to its end with no
+    // gap; the run is counted as the form plays the bars.
+    private const int NoBreathFewestBars = 16;
+
+    /// <summary>A voice part — a voice preset, or a part a lyrics track sings — singing
+    /// <see cref="NoBreathFewestBars"/> bars or more in a row without a rest.</summary>
+    private static IEnumerable<string> NoBreath(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, List<int> bars, IReadOnlySet<string> sung)
+    {
+        // `bars`: the bar starts from tick 0, the piece's end the last of them.
+        if (bars.Count < 2)
+            yield break;
+        foreach (var part in parts)
+        {
+            string name = part.Name.Text;
+            if (!(sung.Contains(name) || InstrumentOf(part) is "soprano" or "alto" or "tenor" or "baritone" or "voice-bass"))
+                continue;
+            var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && (n.Part ?? t.Name) == name))
+                .Select(n => (Start: n.StartTick, End: n.StartTick + n.DurationTicks)).OrderBy(n => n.Start).ToList();
+            if (notes.Count == 0)
+                continue;
+            // The longest run of bars sung through.
+            int run = 0, runStart = -1, best = 0, bestStart = -1;
+            for (int b = 0; b + 1 < bars.Count; b++)
+            {
+                int cursor = bars[b];
+                foreach (var n in notes)
+                {
+                    if (n.End <= cursor || n.Start >= bars[b + 1])
+                        continue;
+                    if (n.Start > cursor)
+                        break;
+                    cursor = System.Math.Max(cursor, n.End);
+                }
+                if (cursor >= bars[b + 1])
+                {
+                    if (run == 0)
+                        runStart = b;
+                    run++;
+                    if (run > best)
+                        (best, bestStart) = (run, runStart);
+                }
+                else
+                    run = 0;
+            }
+            if (best >= NoBreathFewestBars)
+                yield return $"{name}: sings {best} bars in a row without a rest (bars {bestStart + 1}–{bestStart + best}, as the form plays them) — "
+                    + "a singer breathes: a line of words is a phrase, and each phrase ends on a longer note with a rest after it; "
+                    + "a comma in the words is a breath in the line.";
         }
     }
 

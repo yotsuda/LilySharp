@@ -721,6 +721,15 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             + 'Move each note named into the range (an octave up or down, or another note of its chord), or give the part an '
             + 'instrument that has it, and call lilysharp_proposeScore again with the whole corrected text.';
     }
+    // A syllable with no note goes back every time too (owner's decision 2026-11-01): the words would
+    // be lost from the page.
+    const unsung = diags.filter(d => d.Severity === 'warning' && d.Code === LOST_SYLLABLE_CODE);
+    if (unsung.length > 0) {
+        deps.log(`AI proposal (chat): turned down — ${unsung.length} syllable(s) with no note to sing.`);
+        return `Not shown to the musician: words would be lost — a syllable with no note to sing it on.\n${formatDiags(unsung, text)}\n`
+            + 'In each bar named, give the words as many notes as they have syllables (or as many syllables as the notes), '
+            + 'and call lilysharp_proposeScore again with the whole corrected text.';
+    }
     // Its compiler warnings go back with it, unseen, the same once (owner's report 2026-10-29: a
     // piece written with a warning was proposed again at once to mend it, and the musician saw the
     // half-done piece in the editor and then a panel to accept its mending).
@@ -2151,6 +2160,11 @@ const BAR_LENGTH_CODES = new Set(['LYS2001', 'LYS2002', 'LYS2004', 'LYS2006', 'L
 /** A note its part's instrument cannot sound (LYS1052): turned down from the chat as a bar that
  *  does not add up is (owner's decision 2026-10-30). */
 const OUT_OF_RANGE_CODE = 'LYS1052';
+
+/** A syllable with no note to sing it on (LYS4001), left off the page: turned down from the chat
+ *  every time too (owner's decision 2026-11-01: a chorus's last word, the よ of またあるくよ, was
+ *  lost, the warning told once and the piece written). A word lost is never meant. */
+const LOST_SYLLABLE_CODE = 'LYS4001';
 
 /**
  * The warnings a candidate ADDS, judged the way errors are: the file with the candidate has

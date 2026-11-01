@@ -409,6 +409,25 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Song("d4 <fis a d'>4 d4 <fis a d'>4 | a,4 <cis' e' a'>4 a,4 <cis' e' a'>4 |")), f => f.Contains("says what the chords row says"));
     }
 
+    // Owner's review 2026-11-01 (Kaerimichi-no-Akari3, a song to sing and play yourself): 48 bars sung
+    // from the first note to the last with no rest, nearly every phrase's end a quarter note.
+    [Fact]
+    public void ASingerWithNoRestInSixteenBars_IsSaid()
+    {
+        string Song(string part, int bars, string bar8 = "g'4 a'4 b'4 c''4 |") => "title \"Breath\"\ntime 4/4\noctave absolute\n" + part + "\nsection A {\n  singer { "
+            + string.Concat(Enumerable.Range(1, bars).Select(i => i == 8 ? bar8 + " " : "c''4 b'4 a'4 g'4 | ")) + "}\n}\nform { A }\nscore { staff singer }\n";
+        Assert.Contains(CompositionChecks.Of(Song("part singer { instrument alto }", 16)),
+            f => f.StartsWith("singer: sings 16 bars in a row without a rest (bars 1–16, as the form plays them)"));
+        // A rest in bar 8: two runs of 7 and 8, neither long enough.
+        Assert.DoesNotContain(CompositionChecks.Of(Song("part singer { instrument alto }", 16, "g'4 a'4 b'4 r4 |")), f => f.Contains("without a rest"));
+        // Fifteen bars: not yet.
+        Assert.DoesNotContain(CompositionChecks.Of(Song("part singer { instrument alto }", 15)), f => f.Contains("without a rest"));
+        // A violin may play on; a part a lyrics track sings is a singer whatever its instrument.
+        Assert.DoesNotContain(CompositionChecks.Of(Song("part singer { instrument violin }", 16)), f => f.Contains("without a rest"));
+        Assert.Contains(CompositionChecks.Of(Song("part singer { instrument violin }", 16).Replace("}\n}\nform", "}\n  lyrics w sings singer { "
+            + string.Concat(Enumerable.Repeat("la la la la | ", 16)) + "}\n}\nform")), f => f.Contains("without a rest"));
+    }
+
     // Owner's reviews 2026-11-01 (Shippu-no-Kodou, Yoake-o-Kakenukete): a chorus tune in the first voice
     // over the guitar's own power chords in the second was told "a tune in 0 of the 76 bars" and
     // "only 19% of its moves are steps" — the two voices read as one line.

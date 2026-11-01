@@ -35,6 +35,8 @@ next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
    - **A note its instrument cannot play** (LYS1052, `OUT_OF_RANGE_CODE`) also goes back every time.
      Told once, the AI kept a guitar's E♭2 "for its open sound". It goes back even when the score had it before the
      proposal: a revision that leaves it (fewer warnings in all) is not shown either.
+   - **A syllable with no note** (LYS4001, `LOST_SYLLABLE_CODE`) goes back every time (2026-11-01:
+     a chorus's last word was left off the page, the warning told once and the piece written).
    - **The first proposal of a new piece** is checked as music once (`musicCheckedFor`). The
      compiler's warnings, `CompositionChecks.Of`'s findings (through LSP `lilysharp/compositionCheck`),
      the header-language note and the drawn-key note go back together, unseen by the musician.
@@ -119,6 +121,9 @@ as the melody's rhythm).
   bar before. Measured on the owner's 60 pieces: the sequenced rock guitars scored 0.53–0.61, the
   rest 0.42 or less, and Ode to Joy 0.11.
 - Compound-meter beats crossed.
+- A singer with no rest in 16 bars or more in a row (a voice preset, or a part a lyrics track sings;
+  2026-11-01: a song sang its 48 bars from the first note to the last without one). A bar is sung
+  through when the part's notes cover it with no gap.
 - A note held a semitone or a minor ninth from the harmony (a major seventh over the bass is
   colour, not a clash).
 - Sections whose tune ends open against the bass (a 2nd, a tritone or a 7th; a 4th does not count).

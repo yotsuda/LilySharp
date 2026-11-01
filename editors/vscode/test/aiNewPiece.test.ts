@@ -77,6 +77,11 @@ describe('the composing guide', () => {
         assert.match(transform, /const OUT_OF_RANGE_CODE = 'LYS1052';/);
         const unplayable = fn.indexOf('const unplayable = diags.filter(d => d.Severity === \'warning\' && d.Code === OUT_OF_RANGE_CODE);');
         assert.ok(unplayable > misfit && unplayable < fn.indexOf('musicCheckedFor.has(uri.toString())'));
+        // A syllable with no note, the same (owner's decision 2026-11-01: a chorus's last word was lost).
+        assert.match(transform, /const LOST_SYLLABLE_CODE = 'LYS4001';/);
+        const unsung = fn.indexOf('const unsung = diags.filter(d => d.Severity === \'warning\' && d.Code === LOST_SYLLABLE_CODE);');
+        assert.ok(unsung > unplayable && unsung < fn.indexOf('musicCheckedFor.has(uri.toString())'));
+        assert.match(fn, /return `Not shown to the musician: words would be lost — a syllable with no note to sing it on\./);
         assert.match(fn, /return `Not shown to the musician: its players cannot play it/);
     });
     // Owner's request 2026-10-29: the chat listed the folder in a terminal to see that a name was free.

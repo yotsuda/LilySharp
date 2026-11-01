@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A word lost from the page is turned down
+
+- **Copilot's chat is turned down every time its piece drops a syllable** (LYS4001: a syllable with
+  no note to sing it on), as it is for a bar that does not add up: the words are asked to be given
+  as many notes as they have syllables. Until now the warning was told once and the piece written
+  with the word missing. Compose with AI's check also tells a singer who never breathes (16 bars
+  or more in a row without a rest).
+
 ### A piece composed in the chat opens once, finished
 
 - **No candidate panel over a piece the chat just composed.** Copilot's chat sometimes proposes

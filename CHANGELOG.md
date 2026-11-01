@@ -6,6 +6,19 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Composition checks: a singer who never breathes, a word lost from the page
+
+- `[check]` **A voice part singing 16 bars or more in a row without a rest is said** (a voice
+  preset — soprano, alto, tenor, baritone, voice-bass — or any part a lyrics track sings): "sings
+  48 bars in a row without a rest (bars 5–52, as the form plays them) — a singer breathes". A bar is
+  sung through when the part's notes cover it with no gap. Owner's review 2026-11-01: a song to
+  sing and play yourself sang its 48 bars from the first note to the last without one.
+- `[editor]` **A syllable with no note to sing it on (LYS4001) is turned down from Copilot's chat
+  every time**, as a bar that does not add up is: the chorus's last word was left off the page, the
+  warning told once and the piece written.
+- `[docs]` The composing guide's song to sing and play yourself: the bridge is a change (a chord
+  the verse and chorus do not use, a tune of its own, or another strum), and the singer breathes.
+
 ### A piece composed in Copilot's chat opens once, finished
 
 - `[editor]` A proposal for a piece the chat itself just wrote, while the text is as written and
