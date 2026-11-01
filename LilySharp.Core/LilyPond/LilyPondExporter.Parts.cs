@@ -387,6 +387,9 @@ public sealed partial class LilyPondExporter
         _lastWrittenValue = "4";
         _lastWrittenDots = 0;
         _forceNextDuration = true;
+        // The part's short final bar after the pickup, if any — written `\bar "|"` (EmitBarline).
+        (_shortFinalBar, _shortFinalBarDuration) = _chordTrack ? (null, Fraction.Zero)
+            : ShortFinalBarOf(music) is { } shortFinal ? (shortFinal.Bar, shortFinal.Duration) : (null, Fraction.Zero);
         // Each part's music variable is its own scope - a slash run cannot stay
         // open across the boundary (the next part opened with a stray
         // improvisationOff when it did).

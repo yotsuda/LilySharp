@@ -14,6 +14,15 @@ workflow attaches that section to the GitHub Release verbatim.
   padding short of the note column's centre, the two open ends two thirds of a space apart. A
   niente pair keeps its shared circle; a dynamic text on the note stays the bound.
 
+### The twin draws a short final bar's line without a bar check
+
+- `[lilypond]` **A short final bar completing the pickup ends with `\bar "|"` in the twin**: Lily#
+  holds `partial 4 … | e'2. |` correct (pickup + final bar = one bar) and draws the bar line;
+  LilyPond has no such rule, so the `|` there was a bar check that failed ("bar check failed at:
+  3/4") and drew nothing. The glyph draws the same line and asserts no count — as the twin already
+  writes a `|` under \cadenzaOn. A voice span in that bar counts as its longest voice; a bar
+  holding a phrase word or a repeat mark is left as it was.
+
 ### The preview lights a drum chart's bar where the chart is written
 
 - `[editor]` **A drum chart of phrase words no longer keeps its whole staff lit**: a kit of

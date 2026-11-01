@@ -1611,8 +1611,10 @@ public sealed partial class LilyPondExporter
         return b.BarToken.Kind switch
         {
             // Under \cadenzaOn a bare `|` is a bar CHECK that draws nothing; Lily#'s `|`
-            // closes and draws the bar wherever it stands, so the twin writes the glyph.
-            SyntaxKind.Bar => _bars.SenzaMisura ? "\\bar \"|\"" : "|",
+            // closes and draws the bar wherever it stands, so the twin writes the glyph. The
+            // same at a short final bar completing the pickup (ShortFinalBarOf): LilyPond's
+            // check would fail there, and the glyph draws the line the page draws.
+            SyntaxKind.Bar => _bars.SenzaMisura || ClosesTheShortFinalBar(b) ? "\\bar \"|\"" : "|",
             SyntaxKind.DoubleBar => "\\bar \"||\"",
             SyntaxKind.FinalBar => "\\bar \"|.\"",
             SyntaxKind.DashedBar => "\\bar \"!\"",
@@ -1624,6 +1626,12 @@ public sealed partial class LilyPondExporter
             _ => "|",
         };
     }
+
+    /// <summary><paramref name="b"/> is the part's short final bar line (<see cref="ShortFinalBarOf"/>)
+    /// and the bar it closes completes the opening pickup in the meter in force.</summary>
+    private bool ClosesTheShortFinalBar(BarlineSyntax b)
+        => ReferenceEquals(b, _shortFinalBar) && _openingPickup is { } pickup
+            && _shortFinalBarDuration < _bars.MeterLength && pickup + _shortFinalBarDuration == _bars.MeterLength;
 
     /// <summary>
     /// A key signature — and the running key a scale-degree chord stacks in, advanced here
@@ -1848,6 +1856,77 @@ public sealed partial class LilyPondExporter
         return false;
     }
 
+    // The piece's opening pickup, the first `partial` armed (a file's or a section head's):
+    // the length a shortened final bar completes (Semantics.MeasureValidator's exemption).
+    private Fraction? _openingPickup;
+    // The part's bar line that closes a short final bar after that pickup (ShortFinalBarOf),
+    // and the bar's length — EmitBarline writes it as `\bar "|"`.
+    private BarlineSyntax? _shortFinalBar;
+    private Fraction _shortFinalBarDuration;
+
+    /// <summary>
+    /// The part's last bar line, when it closes the piece's final bar and no music follows:
+    /// the bar a pickup is completed by (<c>partial 4 … | e'2. |</c>), which Lily# holds correct
+    /// when pickup + final bar = one bar (Semantics.MeasureValidator). LilyPond has no such rule:
+    /// its <c>|</c> there is a bar check that fails ("bar check failed at: 3/4"), so the twin writes
+    /// the glyph, <c>\bar "|"</c>, as it does under \cadenzaOn (<see cref="EmitBarline"/>) — the
+    /// same line drawn, no count asserted (owner's question 2026-11-01, a Chopin prelude read from a
+    /// scan: `partial 4` and `e'2.@fermata |` at the end). The bar's length is counted from the
+    /// section play it stands in, the note value restarting at a quarter there as the collector's
+    /// does; a final bar holding a phrase word, a repeat mark or a voice span is left alone.
+    /// </summary>
+    private static (BarlineSyntax Bar, Fraction Duration)? ShortFinalBarOf(List<SyntaxNode> music)
+    {
+        int last = music.FindLastIndex(n => n is BarlineSyntax { BarToken.Kind: SyntaxKind.Bar });
+        if (last < 0 || music.Skip(last + 1).Any(TakesMeasureTime))
+            return null;
+        int segment = music.FindLastIndex(last, n => n is { Green: SectionPlayGreen });
+        var value = Fraction.Quarter;
+        int from = segment + 1;
+        Fraction duration = Fraction.Zero;
+        for (int i = from; i <= last; i++)
+        {
+            if (music[i] is not (BarlineSyntax or { Green: ClosedBarGreen }))
+                continue;
+            var barItems = music.GetRange(from, i - from);
+            if (i == last && barItems.Any(n => n is VariableReferenceSyntax or PercentMarkSyntax or PercentRepeatSyntax or ParallelExpressionSyntax { IsDrums: true }))
+                return null;
+            duration = BarDurationWithSpans(barItems, ref value);
+            from = i + 1;
+        }
+        return ((BarlineSyntax)music[last], duration);
+    }
+
+    /// <summary>A bar's length as <see cref="MeasureDurations"/> counts it, a voice span
+    /// (<c>voice { } { }</c>) as its longest voice — each voice from the value in force before the
+    /// span, the music after it too (the collector's frame rule).</summary>
+    private static Fraction BarDurationWithSpans(List<SyntaxNode> barItems, ref Fraction value)
+    {
+        var total = Fraction.Zero;
+        var run = new List<SyntaxNode>();
+        foreach (var n in barItems)
+        {
+            if (n is not ParallelExpressionSyntax span)
+            {
+                run.Add(n);
+                continue;
+            }
+            total += MeasureDurations.CalculateMeasureDuration(run, ref value);
+            run.Clear();
+            var longest = Fraction.Zero;
+            foreach (var voice in span.Voices)
+            {
+                var inVoice = value;
+                var items = voice is MusicBlockSyntax block ? block.Items.ToList() : [voice];
+                var length = MeasureDurations.CalculateMeasureDuration(items, ref inVoice);
+                if (length > longest)
+                    longest = length;
+            }
+            total += longest;
+        }
+        return total + MeasureDurations.CalculateMeasureDuration(run, ref value);
+    }
+
     private static string EmitPartial(PartialDeclarationSyntax p)
     {
         var d = p.Duration;
@@ -1873,7 +1952,10 @@ public sealed partial class LilyPondExporter
             return "";
         }
         if (p.Duration != null)
+        {
             _bars.SetPartial(p.ToFraction());
+            _openingPickup ??= p.ToFraction();
+        }
         return EmitPartial(p);
     }
 
