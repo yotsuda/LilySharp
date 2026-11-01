@@ -2498,7 +2498,7 @@ public static class CompositionChecks
     /// <remarks>A voice under another voice's chords is their bass, however many single notes it
     /// has, not the tune (owner's review 2026-11-01, Ameagari-no-Cafe: a guitar's thumb, read as
     /// the line, was told "98% half notes" and made busy, on the figure the guide gives).</remarks>
-    private static Dictionary<string, int> LineVoices(MidiFile midi)
+    internal static Dictionary<string, int> LineVoices(MidiFile midi)
         => midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick, n.Pitch)))
             .GroupBy(n => n.Part)
             .ToDictionary(p => p.Key, p =>

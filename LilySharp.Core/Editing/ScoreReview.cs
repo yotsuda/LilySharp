@@ -229,8 +229,11 @@ public static class ScoreReview
         var meters = midi.Tracks.SelectMany(t => t.TimeSignatures).OrderBy(t => t.Tick).Select(t => $"{t.Numerator}/{t.Denominator}").Distinct().ToList();
         if (meters.Count > 0)
             facts["meter"] = string.Join(", ", meters);
-        var tempos = midi.Tracks.SelectMany(t => t.TempoChanges).OrderBy(t => t.Tick)
-            .Select(t => $"♩ = {System.Math.Round(60_000_000.0 / t.MicrosecondsPerBeat)}").Distinct().ToList();
+        // What is played, in the unit it is written in: MIDI keeps only quarters, and `tempo 4. = 96` in 12/8 is not ♩ = 144 to a reader.
+        var marks = root.DescendantNodes<TempoDeclarationSyntax>().Select(t => t.Value).Where(v => v.QuarterBpm != null).ToList();
+        var tempos = midi.Tracks.SelectMany(t => t.TempoChanges).OrderBy(t => t.Tick).Select(t => 60_000_000.0 / t.MicrosecondsPerBeat)
+            .Select(played => marks.FirstOrDefault(m => System.Math.Abs(m.QuarterBpm!.Value - played) < 0.01) is { Bpm: int bpm, BeatUnit: int unit } mark
+                ? $"{BeatName(unit, mark.BeatDots)} = {bpm}" : $"♩ = {System.Math.Round(played)}").Distinct().ToList();
         if (tempos.Count > 0)
             facts["tempo"] = string.Join(", ", tempos);
         var (bars, seconds) = CompositionChecks.LengthOf(midi);
@@ -247,6 +250,15 @@ public static class ScoreReview
             facts["chords_not_listed"] = chords.Count - MostChords;
         return facts;
     }
+
+    private static string BeatName(int unit, int dots) => (unit switch
+    {
+        1 => "𝅝",
+        2 => "𝅗𝅥",
+        4 => "♩",
+        8 => "♪",
+        _ => $"1/{unit}",
+    }) + new string('.', dots);
 
     private static JsonObject Chord((int Bar, string Symbol, string? Roman, string? Role) chord)
     {

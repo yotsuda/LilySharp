@@ -100,15 +100,26 @@ public static class KeyChecks
         var findings = new List<CompositionFinding>();
         foreach (var finding in AgainstTheirDirection(source, root, parts, concert))
             findings.Add(finding);
-        if (TheOneKey(source, root) is not { } keys)
+        // A mode has its own notes, which this major-or-minor reading does not know.
+        if (TheOneKey(source, root) is not { } keys || keys.Mode is not ("major" or "minor"))
             return findings;
-        int fifths = PartRanges.KeyFifths(root);
+        int fifths = WrittenFifths(root, keys);
         if (Signature(midi, keys, fifths) is { } signature)
             findings.Add(signature);
         findings.AddRange(Outside(midi, keys.Mode == "minor", fifths));
         if (ChordChecks.ChordKey.Of(keys.Tonic, keys.Mode) is { } key)
             findings.AddRange(ChordChecks.Findings(source, root, midi, key));
         return findings;
+    }
+
+    /// <summary>The written key's signature. A key past seven accidentals (`des minor`, eight flats, the notes of
+    /// C♯ minor; Senko-no-Michi) is not in <see cref="PartRanges.KeyFifths"/>' table, which reads it as C major:
+    /// such a key is read by its notes instead.</summary>
+    private static int WrittenFifths(SyntaxNode root, (string Tonic, string Mode) key)
+    {
+        int tonic = CompositionChecks.PitchClass(key.Tonic);
+        int byNotes = FifthsOf(key.Mode == "major" ? tonic : tonic + 3), table = PartRanges.KeyFifths(root);
+        return ScaleOf(table).SetEquals(ScaleOf(byNotes)) ? table : byNotes;
     }
 
     private static List<PartDeclarationSyntax> PartsOf(SyntaxNode root)
@@ -148,7 +159,9 @@ public static class KeyChecks
 
     /// <summary>A line's notes outside the key that lead nowhere: neither a semitone from a note of the key
     /// before or after them (a leading tone, a passing or neighbour note), nor one of a chromatic run, nor
-    /// sounding in the harmony around them (a chord from outside the key is a chord, not a slip), nor
+    /// sounding in the harmony around them, from another part or from the line's own part's other voices (a
+    /// chord from outside the key is a chord, not a slip: a solo guitar's tune on the E of the C7 its own thumb
+    /// holds, Cafe-no-Midori), nor
     /// the bottom of the harmony: a line in a bass's register, or the lowest note sounding, plays the root of
     /// whatever chord is there, and an out-of-key root is that chord's, not a slip (the census: nearly all
     /// of 168 such notes were in the bass lines of the owner's books, under chords no part wrote out).</summary>
@@ -164,7 +177,8 @@ public static class KeyChecks
             scale.Add((relative + 8) % 12);
         }
         static int Pc(int pitch) => (pitch % 12 + 12) % 12;
-        var everything = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.DurationTicks, n.Pitch))).ToList();
+        var everything = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick, n.DurationTicks, n.Pitch))).ToList();
+        var lineVoices = CompositionChecks.LineVoices(midi);
         var bars = midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b).ToList();
         foreach (var line in CompositionChecks.LineNotes(midi).Where(n => !n.Part.EndsWith(" (chords)", System.StringComparison.Ordinal)).GroupBy(n => n.Part))
         {
@@ -181,7 +195,7 @@ public static class KeyChecks
                 if (Beside(i - 1) || Beside(i + 1))
                     continue;
                 var note = notes[i];
-                var around = everything.Where(o => o.Part != line.Key
+                var around = everything.Where(o => (o.Part != line.Key || o.Voice != lineVoices[line.Key])
                     && o.StartTick < note.StartTick + note.DurationTicks && note.StartTick < o.StartTick + o.DurationTicks).ToList();
                 if (around.Any(o => Pc(o.Pitch) == pc) || (around.Count > 0 && around.All(o => o.Pitch > note.Pitch)))
                     continue;

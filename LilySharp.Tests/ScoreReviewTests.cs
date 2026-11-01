@@ -263,6 +263,53 @@ public class ScoreReviewTests
     }
 
     [Fact]
+    public void ANoteTheLinesOwnPartHolds_IsAChord_NotASlip()
+    {
+        // A solo guitar: the tune in one voice, its own hand's chords in the other (Cafe-no-Midori).
+        const string book = """
+            title "Solo"
+            key c major
+            time 4/4
+            octave absolute
+            part g { instrument guitar }
+            section A { g { voice { c''4 d'' e'' g'' | ees'' c'' a' g' | e'' f'' g'' a'' | g'' e'' c''2 | } { <c e>1 | HARMONY | <c e>1 | <c e>1 | } } }
+            form { A }
+            score { staff g }
+            """;
+        Assert.True(Says(book.Replace("HARMONY", "<c e>1"), "key.outside"));
+        Assert.False(Says(book.Replace("HARMONY", "<c ees>1"), "key.outside"));
+    }
+
+    [Fact]
+    public void AKeyPastSevenAccidentals_IsReadByItsNotes()
+    {
+        const string inCSharpMinor = "cis'4 dis' e' fis' | gis' a' b' cis'' | b' a' gis' fis' | e' dis' cis' e' | gis' b' cis'' b' | gis' fis' e' dis' | cis'1 |";
+        Assert.Empty(KeyFindings(Tune("des minor", inCSharpMinor)).Where(f => (string?)f["id"] is "key.outside" or "key.signature"));
+        Assert.Empty(KeyFindings(Tune("cis minor", inCSharpMinor)).Where(f => (string?)f["id"] is "key.outside" or "key.signature"));
+    }
+
+    [Fact]
+    public void AMode_IsNotWeighedAsCMajor()
+    {
+        // G mixolydian's B and F, reached and left by a leap. Read as a major or a minor key, one of them leads nowhere.
+        const string book = "g'4 a' c'' a' | g' b' g' a' | c'' d'' f'' d'' | c'' a' g' a' | d'' b' g' a' | c'' a' g' a' |";
+        Assert.False(Says(Tune("g mixolydian", book), "key.outside"));
+        Assert.True(Says(Tune("g major", book), "key.outside"));
+    }
+
+    [Theory]
+    [InlineData("time 12/8", "tempo 4. = 96", "♩. = 96")]
+    [InlineData("time 2/2", "tempo 2 = 60", "𝅗𝅥 = 60")]
+    [InlineData("time 6/8", "tempo \"Allegro\" 8 = 200", "♪ = 200")]
+    [InlineData("time 4/4", "tempo 4 = 96", "♩ = 96")]
+    [InlineData("time 4/4", "tempo 96", "♩ = 96")]
+    public void TheTempo_IsSaidInTheUnitItIsWrittenIn(string meter, string tempo, string said)
+    {
+        string book = Tune("c major", "c'1 |").Replace("time 4/4", $"{tempo}\n{meter}");
+        Assert.Equal(said, (string?)Report(book)["facts"]!["tempo"]);
+    }
+
+    [Fact]
     public void ABassPlaysTheRootOfWhateverChordIsThere()
     {
         // In a bass's register, played alone, as the owner's bass books are.
