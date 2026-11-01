@@ -430,7 +430,7 @@ internal sealed partial class LayoutEngine
             return _skylineBuilder.BuildSystemSkylines(
                 score, firstSystemMeasureLayouts, systemHeight, indent,
                 firstEdgeBeams.first, firstEdgeBeams.last, firstStaffGroupLayouts,
-                firstStaffSkylines.Skylines);
+                firstStaffSkylines.Skylines, restShiftsOf: multiStaffLayouter.RestCollisionsOfDelegate);
         }
         var (firstUpSkyline, _) = systemMeasures.Count > 0 && systemHeight > 0
             ? ComputeSystemSkyline(systemCache, 0, systemMeasures[0].Count, true,
@@ -902,27 +902,28 @@ internal sealed partial class LayoutEngine
                 isFirstSystem, sysIdx == systemMeasures.Count - 1, sysIndent, commonShortestDuration, sysHeight,
                 (EdgeStaffBeams, Builder: _skylineBuilder, Score: score, Room: sysStaffSkylines,
                     Measures: measureLayouts, SysIdx: sysIdx, Height: sysHeight, Indent: sysIndent,
-                    Groups: sysStaffGroups),
+                    Groups: sysStaffGroups, RestShiftsOf: multiStaffLayouter.RestCollisionsOfDelegate),
                 static s =>
                 {
                     var edgeBeams = s.EdgeStaffBeams(s.Room, s.Measures, s.SysIdx);
                     return s.Builder.BuildSystemSkylines(s.Score, s.Measures, s.Height, s.Indent,
-                        edgeBeams.first, edgeBeams.last, s.Groups, s.Room.Skylines);
+                        edgeBeams.first, edgeBeams.last, s.Groups, s.Room.Skylines, restShiftsOf: s.RestShiftsOf);
                 });
             perSystemSkylines.Add((upSky, downSky));
             var breakerBaseState = (EdgeStaffBeams, Builder: _skylineBuilder, Score: score,
                 Room: sysStaffSkylines, Measures: measureLayouts, SysIdx: sysIdx, Height: sysHeight,
-                Indent: sysIndent, Groups: sysStaffGroups);
+                Indent: sysIndent, Groups: sysStaffGroups, RestShiftsOf: multiStaffLayouter.RestCollisionsOfDelegate);
             static (VerticalSkyline, VerticalSkyline) BuildBreakerBase(
                 (Func<MultiStaffLayouter.StaffSkylineSet, ImmutableArray<MeasureLayout>, int,
                     (ImmutableArray<BeamLayout> first, ImmutableArray<BeamLayout> last)> EdgeStaffBeams,
                     SkylineBuilder Builder, MultiStaffScore Score, MultiStaffLayouter.StaffSkylineSet Room,
                     ImmutableArray<MeasureLayout> Measures, int SysIdx, double Height, double Indent,
-                    ImmutableArray<StaffGroupLayout> Groups) s)
+                    ImmutableArray<StaffGroupLayout> Groups,
+                    Func<Staff, ImmutableDictionary<RestShiftKey, double>> RestShiftsOf) s)
             {
                 var edgeBeams = s.EdgeStaffBeams(s.Room, s.Measures, s.SysIdx);
                 return s.Builder.BuildSystemSkylines(s.Score, s.Measures, s.Height, s.Indent,
-                    edgeBeams.first, edgeBeams.last, s.Groups, s.Room.Skylines, pureBeams: true);
+                    edgeBeams.first, edgeBeams.last, s.Groups, s.Room.Skylines, pureBeams: true, restShiftsOf: s.RestShiftsOf);
             }
             perSystemBreakerBases.Add(systemCache is null
                 ? BuildBreakerBase(breakerBaseState)

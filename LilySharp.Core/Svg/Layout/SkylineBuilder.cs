@@ -80,7 +80,8 @@ internal sealed class SkylineBuilder
         ImmutableArray<BeamLayout> lastStaffBeams = default,
         ImmutableArray<StaffGroupLayout> placed = default,
         IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines = null,
-        bool pureBeams = false)
+        bool pureBeams = false,
+        Func<Staff, ImmutableDictionary<RestShiftKey, double>>? restShiftsOf = null)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -110,9 +111,15 @@ internal sealed class SkylineBuilder
         //   fixed-length stem model.
         // ...with the edge staff's GRACE columns, seeded where the drawn run stands — the
         // page's silhouette carries a grace's flag exactly as the staff's own profile does.
+        // ...and a rest another voice pushed out of the staff WHERE IT WAS PUSHED TO, as the staff's
+        // own profile has it: the page read it at its default place and set the next system on it
+        // (owner's report 2026-11-01, a three-voice guitar's rest on a stem of the system below).
+        // LILYPOND-REF: lily/page-layout-problem.cc:1093-1108 build_system_skyline merges the
+        //   elements' own skylines, the rest's as Rest_collision placed it.
         AddEdgeStaffInk(firstStaff, measureLayouts, firstStaffMiddleUp, firstStaffBeams,
             systemLeft, upSkyline, downSkyline,
-            EdgeGraceSeeds(score, firstStaff, measureLayouts), pureBeams);
+            EdgeGraceSeeds(score, firstStaff, measureLayouts), pureBeams,
+            firstStaff is null ? null : restShiftsOf?.Invoke(firstStaff));
         SeedLineStartKey(score, firstStaff, measureLayouts, firstStaffMiddleUp, systemLeft,
             upSkyline, downSkyline);
         // ...and the COUNT over the top staff's multi-measure rests, the one piece of a rest's
@@ -165,7 +172,8 @@ internal sealed class SkylineBuilder
         if (twoEnds)
             AddEdgeStaffInk(lastStaff, measureLayouts, lastStaffMiddleUp, lastStaffBeams,
                 systemLeft, upSkyline, downSkyline,
-                EdgeGraceSeeds(score, lastStaff, measureLayouts), pureBeams);
+                EdgeGraceSeeds(score, lastStaff, measureLayouts), pureBeams,
+                lastStaff is null ? null : restShiftsOf?.Invoke(lastStaff));
         if (twoEnds)
             SeedLineStartKey(score, lastStaff, measureLayouts, lastStaffMiddleUp, systemLeft,
                 upSkyline, downSkyline);
@@ -276,7 +284,8 @@ internal sealed class SkylineBuilder
         Staff? staff, ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
         ImmutableArray<BeamLayout> beams, double systemLeft,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline,
-        GraceSeeds? graceSeeds = null, bool pureBeams = false)
+        GraceSeeds? graceSeeds = null, bool pureBeams = false,
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         // ★ THE STAFF'S OWN SIZE, asked for once and carried into the seeds, so that every
         // quantity BELONGING to this staff arrives already at its size and no seed multiplies
@@ -291,7 +300,7 @@ internal sealed class SkylineBuilder
             try
             {
                 AddStaffToSkylines(staff, measureLayouts, staffMiddleUp, upSkyline, downSkyline,
-                    beams, graceSeeds: graceSeeds);
+                    beams, restShifts, graceSeeds: graceSeeds);
             }
             finally
             {

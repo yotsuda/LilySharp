@@ -4,6 +4,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A rest no longer stands on the next system's stems
+
+- A rest that another voice pushed out of the staff now keeps the system below clear of it.
+
 ### What the check still finds is said by Lily# itself
 
 - **A piece the chat writes with points left from the check brings up a notification** with their

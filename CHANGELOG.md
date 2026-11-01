@@ -6,6 +6,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A rest pushed out of the staff keeps the next system clear
+
+- `[layout]` **The page spaces systems by a rest where it was pushed to.** The staff's own silhouette
+  read the push and the system's did not, so a rest another voice pushed under the staff could stand
+  on a stem of the system below, and one pushed above could reach past the page's top spring. On
+  `dot-cross-voice-spacing` the first staff moves from 10.28 to 13.27, LilyPond 2.26.0 at 13.77. Owner's
+  report 2026-11-01, Cafe-no-Midori.
+
 ### A guitar's thumb is not its tune
 
 - `[check]` **A voice under another voice's chords is their bass.** The composition checks read a
