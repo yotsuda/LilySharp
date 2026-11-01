@@ -155,6 +155,8 @@ internal static class TieTargetScanner
     {
         for (int i = 0, n = PitchCount(start); i < n; i++)
         {
+            if (start is ChordItem chord && !chord.Ties(chord.Notes[i]))
+                continue;
             var (pos, midi) = PitchAt(start, i);
             for (int j = 0, m = PitchCount(end); j < m; j++)
             {

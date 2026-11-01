@@ -884,6 +884,13 @@ public sealed partial class MeasureCollector
             }
         }
 
+        // A tie written on a MEMBER (<c f d~>) is that note's alone (ChordItem.Ties).
+        if (hasTieAfter && chord.HasTiedMembers)
+            foreach (var member in chord.TiedMembers)
+                for (int i = 0; i < notes.Count; i++)
+                    if (notes[i].SourcePosition == member.SourceStart)
+                        notes[i] = notes[i] with { TiedAlone = true };
+
         return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.SourceStart, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
         {
             SlurStartHeadPosition = slurStartHead,

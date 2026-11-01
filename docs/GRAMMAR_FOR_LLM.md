@@ -560,6 +560,8 @@ c4@staccato d4@accent <e g>4@arpeggio |
 
 ```
 c4~ | c4 d e f |     // tie (same pitch across the barline) with ~
+<c e g>2~ <c e g> |  // a tie after a chord ties every note the next item repeats
+<c e g~>2 <c e g> |  // a tie on a member ties that note alone; the others sound again
 c4( d e f) |         // slur (different pitches) with ( )
 <c e>2( <d f>) |     // a slur may bind chords, not just single notes
 c8( d e( f) g) r4. | // WRONG: one slur at a time (the inner '(' is ignored); an outer phrase is @phrasingSlur

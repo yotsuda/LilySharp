@@ -748,7 +748,7 @@ internal static class SectionTieCarry
                 else if (!arc && any && Current(mi, ii) is ChordItem chord)
                     changed![(mi, ii)] = chord with
                     {
-                        Notes = chord.Notes.Select(m => m with { HasLaissezVibrer = true }).ToImmutableArray(),
+                        Notes = chord.Notes.Select(m => chord.Ties(m) ? m with { HasLaissezVibrer = true } : m).ToImmutableArray(),
                     };
             }
         }
@@ -777,7 +777,7 @@ internal static class SectionTieCarry
                     return TieDetector.SamePitch(pos, midi, n.StaffPosition, n.Midi);
                 case ChordItem c:
                     foreach (var m in c.Notes)
-                        if (TieDetector.SamePitch(pos, midi, m.StaffPosition, m.Midi))
+                        if (c.Ties(m) && TieDetector.SamePitch(pos, midi, m.StaffPosition, m.Midi))
                             return true;
                     return false;
                 default:

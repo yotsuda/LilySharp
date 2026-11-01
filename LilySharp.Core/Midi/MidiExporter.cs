@@ -3063,6 +3063,8 @@ public sealed class MidiExporter
         // HasTieAfter, which draws one tie per head.
         var tieTargets = OpenTieTargets(track);
         bool startsTie = chord.Articulations.OfType<TieSyntax>().Any();
+        var tiedMembers = chord.HasTiedMembers ? chord.TiedMembers.Select(m => m.SourceStart).ToHashSet() : null;
+        var onTiedMembers = new List<int>();
         var onset = new List<int>();
         var resolved = new List<(int MidiPitch, int QuarterBend, bool IsDrum)>();
 
@@ -3136,6 +3138,9 @@ public sealed class MidiExporter
                     SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, MemberPos: pitch.SourceStart));
                 onset.Add(track.Notes.Count - 1);
             }
+            // A tie written on members (<c f d~>) goes on from those notes alone.
+            if (tiedMembers?.Contains(pitch.SourceStart) == true)
+                onTiedMembers.Add(onset[^1]);
             resolved.Add((midiPitch, pitch.QuarterOffset, false));
         }
 
@@ -3206,7 +3211,7 @@ public sealed class MidiExporter
             resolved.Add((dinfo.GmKey, 0, true));
         }
         _resolvedChordNotes[chord] = resolved;
-        CloseOnset(track, onset, startsTie);
+        CloseOnset(track, tiedMembers is null ? onset : onTiedMembers, startsTie);
 
         // The next note is relative to the chord's ANCHOR (the root's bare letter or the
         // tonic, plus the whole-chord marks); a chord that anchors nothing, and absolute

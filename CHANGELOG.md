@@ -6,6 +6,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A tie on one note of a chord
+
+- **`<c f d~>8. <c f d>16` ties the d alone**, and the c and the f sound again, on the page, in the sound, in MusicXML
+  and in the LilyPond twin, as LilyPond's chord_body reads it. A chord takes its ties on its members or on the whole chord (OMR request 16).
+
 ### An ottava no longer prints through the title
 
 - `[engraving]` **The page reserves a system's ottava.** Its label, line and hook were on the system's silhouette

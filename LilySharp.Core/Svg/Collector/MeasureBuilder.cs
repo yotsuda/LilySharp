@@ -345,7 +345,7 @@ internal sealed class MeasureBuilder
             var notes = c.Notes;
             for (int i = 0; i < notes.Length; i++)
                 if (notes[i].StaffPosition == staffPosition && notes[i].Midi == midi)
-                    return true;
+                    return c.Ties(notes[i]);
             return false;
         }
     }

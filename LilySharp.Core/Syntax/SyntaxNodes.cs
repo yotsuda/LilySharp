@@ -837,6 +837,56 @@ public sealed class ChordSyntax : SyntaxNode
         }
     }
 
+    /// <summary>
+    /// The pitch members with a tie written on them INSIDE the brackets —
+    /// <c>&lt;c f d~&gt;</c> is the d. When there are any, those notes alone are tied and the
+    /// others sound again. Empty for the usual chord.
+    /// </summary>
+    /// <remarks>The mark is ALSO on <see cref="Articulations"/>, as a member's slur is, which is
+    /// what makes the chord open a tie at all.</remarks>
+    public IEnumerable<PitchSyntax> TiedMembers
+    {
+        get
+        {
+            if (IsShapeChord)
+                yield break;
+            PitchSyntax? last = null;
+            for (int i = 0; i < SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child is SyntaxTokenNode { Kind: SyntaxKind.CloseAngle })
+                    yield break;
+                if (child is PitchSyntax p)
+                    last = p;
+                else if (child is ScaleDegreeSyntax or DrumNoteSyntax)
+                    last = null;
+                else if (child is TieSyntax && last != null)
+                    yield return last;
+            }
+        }
+    }
+
+    /// <summary>Whether a tie mark stands INSIDE the brackets — read off the green slots' kinds,
+    /// so the chord that has none (nearly every chord) materializes nothing.</summary>
+    public bool HasTiedMembers
+    {
+        get
+        {
+            if (IsShapeChord)
+                return false;
+            var green = Green;
+            for (int slot = 0; slot < green.SlotCount; slot++)
+            {
+                var kind = green.GetSlot(slot)?.Kind;
+                if (kind == SyntaxKind.CloseAngle)
+                    return false;
+                if (kind == SyntaxKind.Tie)
+                    return true;
+            }
+            return false;
+        }
+    }
+
     /// <summary>The scale-degree members (<c>&lt;d 3 5 7,&gt;</c> → 3, 5, 7,). Empty
     /// for an ordinary all-pitch chord.</summary>
     public IEnumerable<ScaleDegreeSyntax> Degrees

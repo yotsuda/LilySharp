@@ -461,7 +461,7 @@ internal static class StaffAccidentals
             case ChordItem { HasTieStart: true } c:
                 foreach (var m in c.Notes)
                     if (m.StaffPosition == staffPosition && m.Midi == midi)
-                        return true;
+                        return c.Ties(m);
                 return false;
             default:
                 return false;

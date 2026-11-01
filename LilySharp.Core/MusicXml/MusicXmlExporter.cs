@@ -4290,6 +4290,7 @@ public sealed class MusicXmlExporter
             if (a is StringNumberAnnotationSyntax sn)
                 (chordStrings ??= new()).Add(sn.StringNumber);
         int nextChordString = 0;
+        var tiedXmlNotes = new List<MusicXmlNote>();
 
         bool isFirst = true;
         foreach (var pitch in pitches)
@@ -4345,6 +4346,8 @@ public sealed class MusicXmlExporter
                     else
                         xmlNote.SlurStop = !RefusedSlur(chord.SourceStart, close: true);
                 }
+            if (chord.HasTiedMembers && chord.TiedMembers.Any(m => m.SourceStart == pitch.SourceStart))
+                tiedXmlNotes.Add(xmlNote);
 
             // Add articulations + tie pairing only on the first note of the chord.
             if (isFirst)
@@ -4502,7 +4505,11 @@ public sealed class MusicXmlExporter
         // voices, so tagging only the first note (the old behavior) dropped the
         // rest. Pair the stop from a preceding tie across all members too.
         CloseTies(_chordMembers);
-        if (chord.Articulations.OfType<TieSyntax>().Any()) OpenTies(_chordMembers);
+        // ...unless the ties are written on members (<c f d~>), which are those notes' alone.
+        if (chord.HasTiedMembers)
+            OpenTies(tiedXmlNotes);
+        else if (chord.Articulations.OfType<TieSyntax>().Any())
+            OpenTies(_chordMembers);
 
         // Remember this chord's members so a following standalone '~' node ties
         // all of them (a chord tie), not just the last member.

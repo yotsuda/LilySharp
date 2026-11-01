@@ -1365,6 +1365,9 @@ public sealed partial class LilyPondExporter
             foreach (var (member, mark) in c.MemberSlurs)
                 if (member.SourceStart == p.SourceStart)
                     sb.Append(mark.IsOpen ? '(' : ')');
+            // ...and a tie written on it (<c f d~>), bound to the head the same way.
+            if (c.HasTiedMembers && c.TiedMembers.Any(m => m.SourceStart == p.SourceStart))
+                sb.Append('~');
             first = false;
         }
 
@@ -1438,13 +1441,15 @@ public sealed partial class LilyPondExporter
 
         sb.Append('>');
         sb.Append(EmitEventDuration(c.Duration));
-        // The chord's post-events are the whole list less the member slurs written above.
+        // The chord's post-events are the whole list less the member slurs and ties written above.
         IEnumerable<SyntaxNode> chordArts = c.Articulations;
         if (c.MemberSlurs.Any())
         {
             var memberMarks = c.MemberSlurs.Select(ms => ms.Mark.SourceStart).ToHashSet();
-            chordArts = c.Articulations.Where(a => !(a is SlurSyntax s && memberMarks.Contains(s.SourceStart))).ToList();
+            chordArts = chordArts.Where(a => !(a is SlurSyntax s && memberMarks.Contains(s.SourceStart))).ToList();
         }
+        if (c.HasTiedMembers)
+            chordArts = chordArts.Where(a => a is not TieSyntax).ToList();
         var (prefix, suffix) = SplitAttachments(chordArts);
         return prefix + sb.ToString() + suffix + memberFrames;
     }

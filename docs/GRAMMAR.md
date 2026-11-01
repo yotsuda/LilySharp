@@ -2708,7 +2708,13 @@ PhraseRef      = PhraseName , { "'" | ',' } ;
 Tie            = '~' ;            (* same pitch across notes/barline: c4~ | c4. A tie binds to
                                      the IMMEDIATELY following note/chord, which must repeat the
                                      tied pitch — a different pitch or a rest there ties nothing
-                                     and warns (LYS4007); different pitches connect with a slur. *)
+                                     and warns (LYS4007); different pitches connect with a slur.
+                                     After a chord it ties every note the next item repeats:
+                                     <c f d>8.~ <c f d>16. Written on a MEMBER inside the brackets it
+                                     ties that note alone, and the others sound again:
+                                     <c f d~>8. <c f d>16 (OMR request 16, 2026-11-01; LilyPond's
+                                     chord_body). A chord takes its ties on its members
+                                     or on the whole chord, not both. *)
 Slur           = '(' | ')' ;      (* over notes OR chords: c4( d e) , <c e>4( <d f>) . A slur mark
                                      goes AFTER the note it belongs to, so a '(' written before any
                                      note belongs to none. Marks pair innermost-first and do not

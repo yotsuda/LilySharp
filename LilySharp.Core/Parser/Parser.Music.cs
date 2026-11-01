@@ -864,6 +864,7 @@ internal sealed partial class Parser
         // is flagged once (best-effort parse continues).
         bool degreeAnchored = false;
         bool first = true;
+        bool memberTie = false;
         bool reportedMix = false;
         void ReportMixOnce()
         {
@@ -926,15 +927,28 @@ internal sealed partial class Parser
             // which is how ChordSyntax.MemberSlurs tells it from a mark on the chord itself.
             if (Check(SyntaxKind.OpenParen) || Check(SyntaxKind.CloseParen))
             {
-                int owner = pitches.Count - 1;
-                while (owner >= 0 && pitches[owner] is SlurGreen)
-                    owner--;
-                if (owner < 0 || pitches[owner] is not PitchGreen)
+                if (!FollowsAPitchMember(pitches))
                     _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
                         DiagnosticCodes.StrayItemToken,
                         "A slur mark inside < > goes after the pitch it starts or ends on "
                         + "(<c e( g>4 <d f) a>); a slur on the whole chord goes after '>' (<c e g>4( <d f a>)).");
                 pitches.Add(ParseSlur());
+                continue;
+            }
+            // A tie on a pitch MEMBER (<c f d~>8. <c f d>16): that note alone is tied, and the
+            // members without one sound again — LilyPond's chord_body takes it as a post-event of
+            // the note, and the engraver ties that head alone
+            // (lily/tie-engraver.cc:288-301 process_acknowledged reads the note's own tie-event).
+            // Same place as a member's slur.
+            if (Check(SyntaxKind.Tilde))
+            {
+                if (!FollowsAPitchMember(pitches))
+                    _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+                        DiagnosticCodes.StrayItemToken,
+                        "A tie inside < > goes after the pitch it ties (<c f d~>8. <c f d>16); "
+                        + "a tie on the whole chord goes after '>' (<c f d>8.~ <c f d>16).");
+                memberTie = true;
+                pitches.Add(ParseTie());
                 continue;
             }
             break;
@@ -949,8 +963,24 @@ internal sealed partial class Parser
         var duration = ParseOptionalDuration();
         var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
         var articulations = ParsePostEvents();
+        // Members' ties and the whole chord's say two things about the same notes.
+        if (memberTie && (Check(SyntaxKind.Tilde) || articulations.Any(a => a is TieGreen)))
+            _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Math.Max(1, Current.Text.Length)),
+                DiagnosticCodes.StrayItemToken,
+                "A chord takes its ties on its members or on the whole chord, not both: "
+                + "<c f d~>8. ties the d, <c f d>8.~ ties them all.");
 
         return new ChordGreen(openAngle, [.. pitches], closeAngle, [.. octaveMarks], duration, tremolo, articulations);
+    }
+
+    /// <summary>Whether a mark written now inside &lt; &gt; follows a pitch member, past the
+    /// slur and tie marks already on it.</summary>
+    private static bool FollowsAPitchMember(List<GreenNode?> members)
+    {
+        int owner = members.Count - 1;
+        while (owner >= 0 && members[owner] is SlurGreen or TieGreen)
+            owner--;
+        return owner >= 0 && members[owner] is PitchGreen;
     }
 
     /// <summary>The word that opens a chord from a shape in a music stream: <c>diagram(C x32010)1</c>

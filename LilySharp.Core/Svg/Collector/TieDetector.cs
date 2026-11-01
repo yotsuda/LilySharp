@@ -153,6 +153,8 @@ internal sealed class TieDetector
             var matched = new List<(ChordNoteInfo Start, NoteItem End)>();
             foreach (var startPitch in startChord.Notes)
             {
+                if (!startChord.Ties(startPitch))
+                    continue;
                 foreach (var endPitch in endChord.Notes)
                 {
                     if (SamePitch(endPitch.StaffPosition, endPitch.Midi, startPitch.StaffPosition, startPitch.Midi))
@@ -172,7 +174,8 @@ internal sealed class TieDetector
             var matched = new List<(ChordNoteInfo Start, NoteItem End)>();
             foreach (var startPitch in startChord.Notes)
             {
-                if (SamePitch(endNoteItem.StaffPosition, endNoteItem.Midi, startPitch.StaffPosition, startPitch.Midi))
+                if (startChord.Ties(startPitch)
+                    && SamePitch(endNoteItem.StaffPosition, endNoteItem.Midi, startPitch.StaffPosition, startPitch.Midi))
                     matched.Add((startPitch, endNoteItem));
             }
             EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex, multiVoice);

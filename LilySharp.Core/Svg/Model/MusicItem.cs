@@ -1502,7 +1502,10 @@ public readonly record struct ChordNoteInfo(
     bool Parenthesized = false,
     // The displayed pitch the accidental was decided for, packed (WrittenPitch) — 0 where
     // none was (a drum member). See NoteItem.WrittenPitch.
-    int WrittenPitch = 0
+    int WrittenPitch = 0,
+    // A '~' is written on THIS member inside the brackets (<c f d~>), so the chord's tie is
+    // this note's and not the others'. See ChordItem.Ties.
+    bool TiedAlone = false
 );
 
 /// <summary>
@@ -1722,6 +1725,20 @@ public sealed record ChordItem : MusicItem
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/tie-column.cc — TieColumn groups chord ties.</remarks>
     public bool HasTieStart { get; }
+
+    /// <summary>Whether this chord's tie reaches this member: all of them under a <c>~</c> on the
+    /// chord, only the members that carry their own under <c>&lt;c f d~&gt;</c>.</summary>
+    public bool Ties(ChordNoteInfo member)
+    {
+        if (!HasTieStart)
+            return false;
+        if (member.TiedAlone)
+            return true;
+        foreach (var n in Notes)
+            if (n.TiedAlone)
+                return false;
+        return true;
+    }
 
     /// <summary>Whether this chord opens a slur (a <c>(</c> follows it).</summary>
     public bool HasSlurStart { get; }

@@ -4,6 +4,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A tie on one note of a chord
+
+- `<c f d~>8. <c f d>16` ties the d alone: the other notes sound again.
+
 ### An ottava no longer prints through the title
 
 - A first system's "8va" now stands clear under the title, and an "8vb" under the last staff has its room on the page.

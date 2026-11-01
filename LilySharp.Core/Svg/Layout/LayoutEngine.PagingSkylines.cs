@@ -520,7 +520,7 @@ internal sealed partial class LayoutEngine
         // label centred on the line, the line, and the hook. The silhouette alone left it out
         // of this scalar, which is what the title's spring and the page's top spring read, so
         // a first system's "8va" printed through the title (OMR request 18, 2026-11-01).
-        // LILYPOND-REF: scm/define-grobs.scm:2721 OttavaBracket vertical-skylines from its stencil.
+        // LILYPOND-REF: scm/define-grobs.scm:2721 OttavaBracket grob::unpure-vertical-skylines-from-stencil.
         // LILYPOND-REF: lily/page-layout-problem.cc:625-633 append_system — the title's floor
         //   reads the system's up skyline.
         if (!ann.OttavaBrackets.IsDefaultOrEmpty)
