@@ -13,6 +13,8 @@ workflow attaches that section to the GitHub Release verbatim.
   on a stem of the system below, and one pushed above could reach past the page's top spring. On
   `dot-cross-voice-spacing` the first staff moves from 10.28 to 13.27, LilyPond 2.26.0 at 13.77. Owner's
   report 2026-11-01, Cafe-no-Midori.
+- `[layout]` **A score of one staff prints its part's short name** from the second system on, as a
+  score of two staves and LilyPond do. Its own road took the long name alone.
 
 ### A guitar's thumb is not its tune
 

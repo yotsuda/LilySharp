@@ -63,6 +63,23 @@ public class ShortInstrumentNameTests
         Assert.True(Count(all, "Vn. I") >= 1 && Count(all, "Vn. I") == Count(all, "Vc."));
     }
 
+    /// <summary>One staff comes out through its own road (MultiStaffScore.FromScore), which took the
+    /// long name alone (owner's review 2026-11-01, Cafe-no-Midori: LilyPond's twin printed "Gtr." from
+    /// the second system on, Lily# nothing).</summary>
+    [Fact]
+    public void AScoreOfOneStaff_PrintsItsShortName_FromTheSecondSystemOn()
+    {
+        string Solo(string names) => "octave absolute\n" + $"part vn1 {names} {{ instrument violin }}\n"
+            + "section A { vn1 { " + string.Concat(Enumerable.Repeat("c''1 | ", 40)) + "} }\n"
+            + "form { A }\nscore { staff vn1 }";
+        string all = SvgGenerator.Generate(SyntaxTree.Parse(Solo("\"Violin I\" \"Vn. I\"")));
+        Assert.Equal(1, Count(all, "Violin I"));
+        Assert.True(Count(all, "Vn. I") >= 1, "the later systems print the short name");
+        // With none, or silenced on the staff, they stay blank.
+        Assert.Equal(0, Count(SvgGenerator.Generate(SyntaxTree.Parse(Solo("\"Violin I\""))), "Vn. I"));
+        Assert.Equal(0, Count(SvgGenerator.Generate(SyntaxTree.Parse(Solo("\"Violin I\" \"Vn. I\"").Replace("staff vn1", "staff ~vn1"))), "Vn. I"));
+    }
+
     [Fact]
     public void WithoutAShortName_LaterSystemsStayBlank()
     {

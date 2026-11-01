@@ -324,7 +324,7 @@ public sealed record MultiStaffScore
     /// Creates a MultiStaffScore from a single-voice Score (for backward compatibility).
     /// </summary>
     public static MultiStaffScore FromScore(Score score, string? instrumentName = null, int lines = 5,
-        PedalStyle pedalStyle = PedalStyle.Bracket)
+        PedalStyle pedalStyle = PedalStyle.Bracket, string? shortInstrumentName = null)
     {
         var clef = Staff.ParseClef(score.Clef);
         // Preserve ALL voices (polyphony), not just the primary, so the renderer
@@ -336,7 +336,7 @@ public sealed record MultiStaffScore
         // wrap left it 0 and a solo score's clef — the one case that always worked — would
         // have lost its tag.
         var staff = Staff.Create(clef, score.Voices, instrumentName)
-            with { Lines = lines, PedalStyle = pedalStyle, ClefPosition = score.Header.Clef };
+            with { Lines = lines, PedalStyle = pedalStyle, ClefPosition = score.Header.Clef, ShortInstrumentName = shortInstrumentName };
         var staffGroup = StaffGroup.CreateSingle(staff);
 
         return new MultiStaffScore(

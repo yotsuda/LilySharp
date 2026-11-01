@@ -7,6 +7,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 ### A rest no longer stands on the next system's stems
 
 - A rest that another voice pushed out of the staff now keeps the system below clear of it.
+- A score of one staff prints its part's short name from the second system on.
 
 ### What the check still finds is said by Lily# itself
 
