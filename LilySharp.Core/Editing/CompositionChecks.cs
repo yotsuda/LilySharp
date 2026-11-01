@@ -263,6 +263,15 @@ public static class CompositionChecks
                 findings.Add($"{part}, the melody: {alike} of its {inBars} bars have the same rhythm — a pattern poured full, not a line: "
                     + "let the rhythm follow the words and the phrase — a longer note at a phrase's end and a breath only there, "
                     + "a phrase that runs on over the bar line, the rhythm changing from section to section" + (band ? BandTuneSings : EvenPaceKept));
+            // …or on most of a SECTION's bars, where the whole piece's count passes because other
+            // sections vary (owner's review 2026-11-01: a rock instrumental's verse played one rhythm
+            // in all 8 of its bars, its chorus two rhythms in turn, its solo free — 40% over the
+            // piece, nothing said). Read section by section, the sections named together.
+            else if (melody && SameRhythmSections(onsets, midi) is { Count: > 0 } poured)
+                findings.Add($"{part}, the melody: {string.Join(", ", poured.Select(s => $"in {s.Name} {s.Same} of its {s.Bars} bars"))} "
+                    + "have the same rhythm — one pattern poured into the section, not a line: let the rhythm vary within it — "
+                    + "a longer note at a phrase's end, a rest, a note tied over the beat — and change from section to section"
+                    + (band ? BandTuneSings : EvenPaceKept));
         }
 
         // A melody of leaps alone (owner's trial 2026-10-30: told it had no tune, a rock guitar broke
@@ -534,6 +543,10 @@ public static class CompositionChecks
                     + "open chords ringing in a quiet part; its "
                     + "tune goes over them in a solo, a fill, or a lead part of its own." + shared);
         }
+        // The accompaniments' figures, section by section (the melody is read above, the drums in
+        // OneGroove): every pitched part that is not a melody, with enough notes to have a figure.
+        findings.AddRange(OneFigure(midi, barList, byPart.Where(p => !melodies.Contains(p.Key) && p.Value.Count >= 16)
+            .Select(p => p.Key).ToHashSet(System.StringComparer.Ordinal)));
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
             findings.AddRange(OpenEndings(midi, tune, fifths));
         findings.AddRange(EndsApart(midi, barList));
@@ -560,7 +573,9 @@ public static class CompositionChecks
                 + $"the length its form needs — a minute and a half to three minutes ({BarsFor(seconds, barCount)}), its phrases long "
                 + "enough to say something, each closing on a cadence. Lengthen it "
                 + "with music — a section more, a varied return, an introduction — never by slowing its tempo (keep the tempo its "
-                + "character asks for), nor by playing the same sections over and over, in a row or apart.");
+                + "character asks for). A section that returns as it was is named again in the form, and that counts toward the "
+                + "length; what is added is new music, or a return that changes in a way the listener hears — not a copy of an "
+                + "earlier section under a new name with a few bars altered.");
         if (PlayedKeys(root) is { } inKeys && pitched.Count > 0)
         {
             var (home, end) = inKeys;
@@ -693,6 +708,62 @@ public static class CompositionChecks
             .Where(s => s.End > s.Start).GroupBy(s => s.Name).Select(g => g.First()).ToList();
     }
 
+    /// <summary>How many sections a song has before "one beat in all but one of them" is said
+    /// (<see cref="OneGroove"/>) and "one figure in all but one" (<see cref="OneFigure"/>).</summary>
+    private const int OneBeatFewestSections = 6;
+
+    /// <summary>
+    /// An accompanying part — a bass, a piano's hand, a strummed part, anything that is not the melody
+    /// and not the drums — playing one figure in every section (or in all but one of a long piece):
+    /// the commonest bar of each section the same, read as the onsets' places and each note's interval
+    /// from the bar's first (so the figure moved along the chords is one figure), where that bar owns
+    /// at least half the section. The drums' twin is <see cref="OneGroove"/>; the guide's rule is
+    /// general ("a contrasting section takes a figure of its own"), and so is this.
+    /// </summary>
+    private static IEnumerable<string> OneFigure(MidiFile midi, List<int> barList, IReadOnlySet<string> accompaniments)
+    {
+        var spans = PlayedSpans(midi);
+        if (spans.Count < 3)
+            yield break;
+        foreach (var part in midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9)
+                     .Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.Pitch))).GroupBy(n => n.Part))
+        {
+            if (!accompaniments.Contains(part.Key))
+                continue;
+            string? Commonest(int start, int end)
+            {
+                var bars = barList.Where(b => b >= start && b < end).ToList();
+                var patterns = bars.Select((b, i) =>
+                {
+                    int next = i + 1 < bars.Count ? bars[i + 1] : end;
+                    var inBar = part.Where(n => n.StartTick >= b && n.StartTick < next).GroupBy(n => n.StartTick).OrderBy(g => g.Key)
+                        .Select(g => (Offset: g.Key - b, Pitch: g.Min(n => n.Pitch))).ToList();
+                    if (inBar.Count == 0)
+                        return "";
+                    int first = inBar[0].Pitch;
+                    return string.Join(";", inBar.Select(o => $"{o.Offset}:{o.Pitch - first}"));
+                }).Where(p => p.Length > 0).ToList();
+                if (patterns.Count < 2)
+                    return null;
+                var top = patterns.GroupBy(p => p).OrderByDescending(g => g.Count()).First();
+                return top.Count() * 2 >= patterns.Count ? top.Key : null;
+            }
+            var figures = spans.Select(s => (s.Name, Figure: Commonest(s.Start, s.End))).Where(f => f.Figure != null).ToList();
+            if (figures.Count < 3)
+                continue;
+            var shared = figures.GroupBy(f => f.Figure).OrderByDescending(g => g.Count()).First();
+            bool every = shared.Count() == figures.Count;
+            if (!every && (figures.Count < OneBeatFewestSections || shared.Count() < figures.Count - 1))
+                continue;
+            string where = every
+                ? $"every section ({string.Join(", ", figures.Select(f => f.Name))})"
+                : $"{shared.Count()} of the {figures.Count} sections (all but {string.Join(", ", figures.Where(f => f.Figure != shared.Key).Select(f => f.Name))})";
+            yield return $"{part.Key}: the same figure in {where} — a contrasting section takes a figure of its own: another rhythm, "
+                + "the chord's notes in another order, longer notes under a quiet part, a run or a fill in the figure's last bar "
+                + "leading into the next section.";
+        }
+    }
+
     /// <summary>A band's drums playing one groove in every section: the commonest bar of each the same
     /// (owner's trial 2026-10-30: a rock trio's kick and snare `bd4 sn4 bd8 bd8 sn4` in all 52 bars),
     /// or its kick and snare the same while only the cymbals change.</summary>
@@ -724,6 +795,17 @@ public static class CompositionChecks
                 yield return $"{kit.Key}: the kick and the snare play one beat in every section ({names}), only the cymbals change — let "
                     + "a section change the beat itself: half-time in a bridge or a breakdown (the snare on 3), the kick driving harder "
                     + "in the last chorus.";
+            // …or in every section but one of a long song (owner's review 2026-11-01: a 72-bar
+            // instrumental's kick and snare were one beat in eight of its nine sections, the bridge
+            // alone in half-time — the four-section rule above let it by). One section of
+            // difference is a contrast; one in six or more is the exception that shows the rule.
+            else if (grooves.Count >= OneBeatFewestSections
+                && grooves.GroupBy(g => g.Feet).OrderByDescending(g => g.Count()).First() is { } oneBeat
+                && oneBeat.Count() >= grooves.Count - 1)
+                yield return $"{kit.Key}: the kick and the snare play one beat in {oneBeat.Count()} of the {grooves.Count} sections "
+                    + $"(all but {string.Join(", ", grooves.Where(g => g.Feet != oneBeat.Key).Select(g => g.Name))}), only the cymbals "
+                    + "change — let more than one section change the beat itself: half-time in a bridge or a breakdown (the snare on 3), "
+                    + "the kick driving harder in the last chorus, a lighter beat under a quiet verse.";
             // The same bar over and over, no fill and no crash between (owner's review 2026-10-30: a rock
             // trio's drums played one bar sixteen times running through its verse, and again in its last
             // chorus) — the groove is right, the phrases go unmarked.
@@ -955,6 +1037,12 @@ public static class CompositionChecks
                 if (differ > 0 && (total < 8 || differ > total * (1 - NearlyReplayedShare)))
                     continue;
                 said.Add(b.Section.SectionName);
+                // ⚠️ NOT LOWERED TO "MOST OF ITS BARS" (tried 2026-11-01, on a rock instrumental that
+                // grew from 33 bars to 72 by writing its verse, pre-chorus and chorus again under new
+                // names): three quarters of the bars alike, every part's counted, named a second verse
+                // whose tune was new over the same bass and drums — the ordinary shape of a song — and
+                // the owner's 2026-10-30 rule stands: a tune changed in three bars of eight is music of
+                // its own. The length finding says instead that a copy under a new name is not length.
                 string how = differ == 0 ? "note for note in every part — only its levels and marks differ"
                     : $"note for note in every part but {differ} {(differ == 1 ? "bar" : "bars")} — elsewhere only its levels and marks differ";
                 yield return $"{b.Section.SectionName} plays {a.Section.SectionName} again, {how}: a section that returns to end the piece "
@@ -1233,6 +1321,28 @@ public static class CompositionChecks
     // theme's rhythm comes back often, but not in every other bar).
     private const double SameRhythmShare = 0.5;
     private const int SameRhythmFewestBars = 8;
+
+    // A section whose bars mostly share one rhythm: three quarters of them or more, over 4 bars at
+    // least — a higher bar than the piece's half, since a section is a theme's own ground and
+    // repeats its rhythm by design; what it should not do is repeat it in every bar.
+    private const double SectionRhythmShare = 0.75;
+    private const int SectionRhythmFewestBars = 4;
+
+    /// <summary>The sections (as the form first plays them) in which <paramref name="onsets"/>'s bars
+    /// mostly share one rhythm: each section's name, the bars alike and the bars it sounds in.</summary>
+    private static List<(string Name, int Same, int Bars)> SameRhythmSections(
+        IReadOnlyList<(int Start, int Length)> onsets, MidiFile midi)
+    {
+        var poured = new List<(string, int, int)>();
+        foreach (var (name, start, end) in PlayedSpans(midi))
+        {
+            var mine = onsets.Where(o => o.Start >= start && o.Start < end).ToList();
+            var (same, bars) = SameRhythmBars(mine, midi.BarTicks.Where(b => b >= start && b < end));
+            if (bars >= SectionRhythmFewestBars && same >= bars * SectionRhythmShare)
+                poured.Add((name, same, bars));
+        }
+        return poured;
+    }
 
     /// <summary>How many of the bars a part sounds in share its commonest rhythm (the onsets' places
     /// in the bar), and how many bars it sounds in.</summary>

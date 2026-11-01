@@ -215,7 +215,10 @@ public class CompositionChecksTests
         Assert.Contains("(bars 1, 2, 5, 9, 10, 13,", beats);
         Assert.Contains(findings, f => f.StartsWith("The piece is 24 bars long, about 50 seconds played")
             // More music, not a slower tempo (owner's report 2026-10-29: ♩ = 72 became 48).
-            && f.EndsWith("never by slowing its tempo (keep the tempo its character asks for), nor by playing the same sections over and over, in a row or apart.")
+            && f.Contains("never by slowing its tempo (keep the tempo its character asks for).")
+            // …nor by a copy under a new name (owner's review 2026-11-01: told it was short, a piece
+            // wrote its sections again with a few bars altered).
+            && f.EndsWith("not a copy of an earlier section under a new name with a few bars altered.")
             // The bars it takes, at its own pace (owner's trial 2026-10-30: told "24 to 32 bars of 4/4", a quick piece stopped short).
             && f.Contains("a minute and a half to three minutes (at this tempo and meter, about 44 to 86 bars)"));
         // The tune by its beats: not said.
@@ -731,6 +734,74 @@ public class CompositionChecksTests
         form { ~A }
         score { staff vox  lyrics words  grandStaff { staff rh  staff lh } }
         """;
+
+    // Owner's review 2026-11-01: a rock instrumental's verse played one rhythm in all 8 of its bars,
+    // its chorus two in turn, its solo free — 40% over the piece, and the count above said nothing.
+    [Fact]
+    public void AMelodyOfOneRhythmThroughASection_IsToldSo_SectionByName()
+    {
+        const string poured = "r8 a'8 c''8 e''8~ e''4 d''4 | ";
+        const string varied = "c''2. r4 | e''4. d''8 c''4 a'4 | g'4 r4 g'8 a'8 b'4 | c''4 d''8 e''8 g''2 | e''8 d''8 c''4~ c''4 a'4 | c''1 | "
+            + "e''4. d''8 c''4 a'4 | g'4. a'8 g'2 | c''4 d''8 e''8 g''2 | e''8 d''8 c''4~ c''4 a'4 | c''8 r8 c''8 r8 c''4 r4 | g'1 | ";
+        string Book(string a, string b) => $$"""
+            title "Morning"
+            time 4/4
+            octave absolute
+            part vox "Voice" { instrument soprano }
+            part rh "Piano" "Pno." { instrument piano-right }
+            part lh { instrument piano-left }
+            section A {
+              vox { {{a}} }
+              lyrics words sings vox { a a a a | }
+              rh { {{string.Concat(Enumerable.Repeat("<e' g'>2 <e' g'>4 <e' g'>4 | ", 8))}} }
+              lh { {{string.Concat(Enumerable.Repeat("c4 g4 e4 g4 | ", 8))}} }
+            }
+            section B {
+              vox { {{b}} }
+              lyrics words sings vox { a a a a | }
+              rh { {{string.Concat(Enumerable.Repeat("<f' a'>2 <f' a'>4 <f' a'>4 | ", 12))}} }
+              lh { {{string.Concat(Enumerable.Repeat("f4 c'4 a4 c'4 | ", 12))}} }
+            }
+            form { ~A ~B }
+            score { staff vox  lyrics words  grandStaff { staff rh  staff lh } }
+            """;
+        // 8 of 20 bars over the piece — under the piece's half — and all 8 of A's.
+        var findings = CompositionChecks.Of(Book(string.Concat(Enumerable.Repeat(poured, 8)), varied));
+        Assert.DoesNotContain(findings, f => f.Contains("of its 20 bars have the same rhythm"));
+        Assert.Contains(findings, f => f.StartsWith("vox, the melody: in A 8 of its 8 bars have the same rhythm"));
+        // Two rhythms in turn are not one poured: 4 of 8.
+        var inTurn = CompositionChecks.Of(Book(string.Concat(Enumerable.Repeat(poured + "c''2. r4 | ", 4)), varied));
+        Assert.DoesNotContain(inTurn, f => f.Contains("have the same rhythm"));
+    }
+
+    // Owner's review 2026-11-01: a 72-bar instrumental's bass played one figure in section after
+    // section (the guide's rule is any piece's: a contrasting section takes a figure of its own).
+    [Fact]
+    public void AnAccompanimentsOneFigureThroughEverySection_IsSaid()
+    {
+        var one = CompositionChecks.Of(Rock3("e'4 g' a'2", "e,8 e, b, e, e, b, e, b,", lastGuitar: "b'2 a'4 g'4"));
+        Assert.Contains(one, f => f.StartsWith("bass: the same figure in every section (A, B, C)"));
+        // The figure moved along the chords is one figure; a section with a figure of its own is not.
+        string own = Rock3("e'4 g' a'2", "e,8 e, b, e, e, b, e, b,", lastGuitar: "b'2 a'4 g'4")
+            .Replace("section C {\n  gtr", "section C {\n  bass { e,2 b,2 | a,2 e,2 | e,2 b,2 | a,2 e,2 | }\n  gtr");
+        own = System.Text.RegularExpressions.Regex.Replace(own, @"(section C \{\n  bass \{[^\n]*\n  gtr \{[^\n]*\n)  bass \{[^\n]*\n", "$1");
+        Assert.DoesNotContain(CompositionChecks.Of(own), f => f.StartsWith("bass: the same figure"));
+    }
+
+    // Owner's review 2026-11-01: a nine-section song's kick and snare were one beat in every section
+    // but the bridge; the four-section rule (above) asks for every one.
+    [Fact]
+    public void ABandsDrumsOnOneBeatInAllSectionsButOne_OfSixOrMore_AreSaid()
+    {
+        const string hats = "hh8 hh hh hh hh hh hh hh", ride = "cymr8 cymr cymr cymr cymr cymr cymr cymr", beat = "bd4 sn bd sn";
+        var six = CompositionChecks.Of(Rock3("e'4 g' a'2", "e,8 e, e, e, e, e, e, e,",
+            kits: [(hats, beat), (ride, beat), (hats, beat), (ride, beat), (hats, "bd4 r sn r"), (ride, beat)]));
+        Assert.Contains(six, f => f.StartsWith("kit: the kick and the snare play one beat in 5 of the 6 sections (all but E)"));
+        // Two sections of their own are two contrasts.
+        var two = CompositionChecks.Of(Rock3("e'4 g' a'2", "e,8 e, e, e, e, e, e, e,",
+            kits: [(hats, beat), (ride, beat), (hats, "bd4 r sn r"), (ride, beat), (hats, "bd4 r sn r"), (ride, beat)]));
+        Assert.DoesNotContain(two, f => f.StartsWith("kit: the kick and the snare"));
+    }
 
     [Fact]
     public void AMelodyOfOneBarsRhythm_IsToldSo_AVariedOneIsNot()

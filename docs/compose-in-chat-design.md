@@ -69,12 +69,21 @@ that prompted each check is written beside it in the code.
 - The bass leaping octaves.
 - A part in the bass's register.
 - Nobody playing the chords: only single notes, high (a low single-note riff counts as chords).
-- One drum groove through every section (a varying kick and snare are said apart from the cymbals).
+- One drum groove through every section (a varying kick and snare are said apart from the cymbals);
+  and the kick and snare on one beat in every section but one, of six or more (2026-11-01).
 - The bass or drums at one level from start to end while the lead's level moves.
+
+**The accompaniments** (2026-11-01; any piece, not a band's alone)
+- A part that is not the melody playing one figure in every section (or in all but one of six or
+  more): each section's commonest bar — the onsets' places and each note's interval from the bar's
+  first, so the figure moved along the chords is one figure — the same, where that bar owns half
+  the section. The guide's own rule: a contrasting section takes a figure of its own.
 
 **The melody**
 - One note value.
 - One rhythm in most bars. A band's tune is NOT let off as "an even pace is the music's character".
+  And, where the piece's count passes, one rhythm in three quarters of a SECTION's bars (four bars
+  or more), the sections named (2026-11-01: a verse of eight bars in one rhythm under a varied solo).
 - Leaps up and down its chords (fewer than a quarter of the moves are steps).
 - One bar's figure moved along the chords: half the bars or more take the up-and-down shape of the
   bar before. Measured on the owner's 60 pieces: the sequenced rock guitars scored 0.53–0.61, the
@@ -99,7 +108,13 @@ that prompted each check is written beside it in the code.
 - Sections copied note for note.
 - Sections played three times in an instrumental.
 - A tune in too few bars of an instrumental.
-- The length: the bars needed are computed at the piece's own tempo and meter.
+- The length: the bars needed are computed at the piece's own tempo and meter. The finding says a
+  section that returns is named again in the form — that counts — and a copy under a new name with
+  a few bars altered is not length (2026-11-01: told it was short, a piece wrote its verse,
+  pre-chorus and chorus again as Verse2, PreChorus2, Chorus2). ⚠️ A near-copy check was tried and
+  dropped the same day: three quarters of the bars alike named a second verse whose tune was new over
+  the same bass and drums, the ordinary shape of a song; the 2026-10-30 rule stands — a tune changed
+  in three bars of eight is music of its own.
 - The key the piece ends in.
 - The final bass note off the tonic.
 - Every part moving in one rhythm.

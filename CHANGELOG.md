@@ -6,6 +6,19 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Composition checks: a section's rhythm, an accompaniment's figure, the length's wording
+
+- `[editor]` **Compose with AI's check reads the melody's rhythm section by section**: where the
+  whole piece's count passes because other sections vary, a section whose bars run three quarters
+  in one rhythm (four bars or more) is named — "in Verse 8 of its 8 bars have the same rhythm".
+- `[editor]` **An accompaniment playing one figure in every section is said** (a bass, a piano's
+  hand, any part that is not the melody): each section's commonest bar read as its rhythm and its
+  intervals from the bar's first note, so a figure moved along the chords counts as one; in all but
+  one section of six or more too. The drums' kick-and-snare rule gains the same "all but one of six"
+  tier.
+- `[editor]` **The length finding says how not to lengthen**: a section that returns is named again
+  in the form, and that counts; a copy under a new name with a few bars altered is not length.
+
 ### Rows-only sheets stack like LilyPond's
 
 - `[render]` **A sheet with no staff — `score { chords prog  lyrics verse }` — makes its first
