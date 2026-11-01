@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 294 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **420** | |
+| `OWN` | 296 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **422** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -27,8 +27,8 @@
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 9 |
+| `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
-| `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
@@ -244,7 +244,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（294 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（296 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -318,6 +318,7 @@
 - **`LysWriter.CuttableMarks`** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **`Parser.ParseChordRepetition`** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
+- **`Parser.ParseChord`** LILYSHARP-OWN: members' ties and the whole chord's say two things about the same notes; LilyPond takes both.
 - **`Parser.ParseShapeChord`** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
 - **`HarfBuzzOutline`** LILYSHARP-OWN: LilyPond reads its text ink through FreeType as well (Pango over the
@@ -344,6 +345,7 @@
 - **`SharedRenderer.DrawBendBefore`** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
 - **`SharedRenderer.BendLabelEm`** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
 - **`SharedRenderer.DrawGuitarBend`** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
+- **`SharedRenderer.DrawOttavaBrackets`** layout { ottavaLine wave }: a trill's run. LILYSHARP-OWN: no extra piece past its end, which LilyPond's trill style adds.
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **`SharedRenderer.DrawTimeSignature`** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 - **`SharedRenderer.MeterRows`** starts at the middle line and grows outward. LILYSHARP-OWN for that arm: LilyPond's rule

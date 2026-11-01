@@ -1203,7 +1203,7 @@ internal static partial class SharedRenderer
                     fonts, b.Text, b.StartX, textFontSize);
                 if (lineStartX < b.EndX && OttavaBracketEngraver.Wave)
                 {
-                    // layout { ottavaLine wave }: the run a trill's line is, by the same arithmetic.
+                    // layout { ottavaLine wave }: a trill's run. LILYSHARP-OWN: no extra piece past its end, which LilyPond's trill style adds.
                     double baseline = absY + os.Size(TrillWaveOutline.GlyphBaselineOffset, b.StaffIndex);
                     double size = os.Size(FontSize, b.StaffIndex);
                     foreach (double originX in TrillWaveOutline.ElementOrigins(lineStartX, b.EndX - lineStartX))

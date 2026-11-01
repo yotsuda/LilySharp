@@ -267,6 +267,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1035セッションの経緯
+
+### 1.1 第1035セッション（2026-10-31・YT-DELL2）
+
+第1034 と同じ会話の続き（§1 の枠が 1,641 字しか無かったので便を切った）。開始時 full **13673 / 0 / 2**。作業場所は Lab `sessions/p1035/`。**ユーザー決定「#13 があれば OMR の開発に有利。提案通りで入れて」**＝`layout { cueSize N }`（LP の font-size の段・既定 −4）。
+- **OMR #13 `layout { cueSize N }`（`e20c7c610`・`REQUESTS` は fixed）**: `EngravingStyle.CueFontSizeStep`（既定 −4）→ `EngravingDefaults.CueFontSizeStep`／`CueScale`／`CueStemDetails`／`CueBeamLengthFraction` を const・readonly から `EngravingStyle.Current` を読む property に（`CueStemDetails` は (style の stem 表, 比) ごとに 1 instance を cache）。**負の数は `layout { }` の字句にならなかった**（ARCHIVE 第822 が `NoteHead.scale` を倍率にした理由）＝`ParseLayoutBlock` が paper と同じく `Minus` を通し、`LayoutPlanReader.ReadStyle` が `-`＋数を 1 つの値に読む（−8〜0・この鍵だけ符号つき）。`SyntaxFacts.LayoutKeyVocabulary`・`NumberKeys`・LSP の説明・`NoteStepper`（符号つきの段＝1 ずつ・PageUp で 2・0 が天井）・双子は `\layout { \context { \CueVoice fontSize = #N  Stem/Beam.length-fraction = #(magstep N) } }`（LP 2.26.0 で描いて字形 0.0040 × magstep(N) を確認＝Lab `sessions/p1035/cuesize/`）。CHANGELOG 両方の `## Unreleased` に第1034 の 4 件も書いた（それまで書き漏れていた）。網: `EngravingStyleTests` ×3・`LayoutBlockTests`・`StepRequestTests`。⚠️ **layout の鍵を 1 つ足すと赤くなる網が 2 つ別にある**＝`EditorColouringTests.TheLayoutBlock_…`（`editors/vscode/syntaxes/lilysharp.tmLanguage.json` の layout-block の鍵の alternation に足す）と `CompletionTypingAuditTests.TheTypingFixture_IsCurrent`（`LILYSHARP_UPDATE_DOCS=1` で `editors/vscode/test/completion-typing.json` を再生成＝LF で出るので CRLF に戻す）。最初の `-End` はこの 2 本で赤（13678 / 2）→ `dc0e1cc95` で足して 2 回目は緑。終了時 full **13680 / 0 / 2**（`-End p1035 -DiffBase 34a42169a`・Core '+' 129 行 / LILYPOND-REF 2 / LILYSHARP-OWN 0・門は全部 OK・§1 現在便 16,582 字）。**OMR の open は 0**（#11・#12・#13 とも fixed・OMR repo 側の `REQUESTS.md` は未 commit＝OMR が commit する）。
+- **コード図の文法 Q1〜Q3 をオーナーに訊いた（ユーザー指示）→ 決定**: Q1 `chordShapes { }`／Q2 (b′) 先頭の 1 行 `capo N`（(c) より (b) を推した理由＝表の形が capo 相対なので表と同じ階層・行はパートに属さない・パート単位は後から上書きとして足せる）／Q3 `chordDiagrams none | written | all` ＋ `chordTuning TUNING`（1 鍵 1 問い）。ユーザー「よく整理され一貫した文法を獲得したい。後方互換性は考慮しないで」。全文と段取りは `docs/ROADMAP.md` §4（Decided）・§5。**実装はこの便ではしていない＝次便の最初**（§1.0 ⒜ 先頭）。
+
 ## 以下は第1034セッションの経緯
 
 ### 1.1 第1034セッション（2026-10-31・YT-DELL2）

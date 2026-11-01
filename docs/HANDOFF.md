@@ -130,6 +130,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1037セッション（2026-11-01〜02・YT-DELL2）
+
+新しい会話。開始時 full **13771 / 0 / 2**（`-Start p1037`・HEAD `76756764a`・OMR の open 4）。作業場所は Lab `sessions/p1037/`。§0 の規則どおり **OMR の open（#15〜#18）に優先して着手し、4 本とも閉じた**（`REQUESTS.md` の行を書き換えた＝OMR repo 側は未 commit）。
+- **#15** Release の lysc を `b94d4f261` でビルドし直した。
+- **#18 `a7d6859c0` 表題がオッターヴァに重なる**: `EnrichExtentsWithAnnotationProtrusions` にオッターヴァの腕が無かった（段の輪郭には在る）＝表題とページ上端のばねが読むスカラーに入らない。トリルと同じ腕を足した。掃きで 1262 枚中 5 枚（どれもオッターヴァの本）。`multi-staff-ottava` のスナップショットはページの高さだけ 37.60→40.43 で承認＝**⚠️ 出力が動く変更なので push 前にユーザーが確認**。網 `OttavaUnderTitleTests`（最初の版は座標系を読み違えて毒でも緑＝SVG の座標で書き直し、毒で赤を確認）。同時に Core の警告 CS1572（`StaffGap` の doc が別のメソッドに割り込まれていた）を直した。
+- **#16 `8a3780d5e` 和音の 1 音のタイ** `<c f d~>8. <c f d>16`: 文法は和音の中の TieSyntax（メンバーのスラーと同じ置き場）→ `ChordSyntax.TiedMembers`／`HasTiedMembers`、`ChordNoteInfo.TiedAlone`、読み手は `ChordItem.Ties(member)`（`TieDetector`・`MeasureBuilder.TiesInto`・`StaffAccidentals`・`TieTargetScanner`・`SectionPlayCarry`）。再生は `CloseOnset` に結ぶ音だけ渡す。MusicXML・双子も。符頭の `~` と和音の `~` の両方はエラー（LilySharp の判断＝LP は受ける）。掃き 0。網 `ChordMemberTieTests`（毒で 3 本赤）。⚠️ 文法の追加はオーナーに訊かず OMR の依頼どおりに入れた＝報告済み。⚠️ 絵のタイの本数と形は LP と同じだが、高さは細かく比べていない。
+- **#17 `b94d4f261` `layout { ottavaLine dashed | wave }`**（オーナー決定「1 鍵」2026-11-02）: `EngravingStyle.OttavaWave`・`OttavaLineKey`。線は `TrillWaveOutline`（`Skylines`・描画・`LineReach`）・`wave` はかぎ 0。双子は `OttavaBracket.style`／`edge-height`。⚠️ LP はこの設定で線の末尾に切れ目を挟んで短い波を 1 つ足す＝副産物と読んで写していない（機構は未確認）。掃き 0。網 `OttavaLineTests`。C54。
+- **OMR の候補 §4（連符の弧 `tuplet-slur`）はオーナー「可」**＝REQUESTS の「将来の依頼」に書いた。依頼が来たら着手。**§3（`lysc ly` のキューの符幹が無い・急がない）は未着手**。
+- 終了時 full **13786 / 0 / 2**（`-End p1037 -DiffBase 76756764a`・門は全部 OK・OWN 2＝両方のタイのエラーと末尾の波＝`docs/APPROXIMATIONS.md` に 2 項増）。⚠️ 罠: `#18` のコミットは引用の網 `CitationsThatNameNothing` が赤いまま入れた（`vertical-skylines` は 2 語＝シンボルに数えない・`8a3780d5e` で解消）。**コメントを直した後もコミット前に full を回す**。
+
+## 以下は第1036セッションの経緯
+
 ### 1.1 第1036セッション（2026-10-31・YT-DELL2）
 
 新しい会話。開始時 full **13680 / 0 / 2**（`-Start p1036`・HEAD `112813183`・Core 0 警告・OMR の open 0）。作業場所は Lab `sessions/p1036/`。§1.0 ⒜ 先頭の**コード図の文法の整理**（第1035 のオーナー決定）を実装した＝ROADMAP の節は出荷したので消した（CHANGELOG 両方の `## Unreleased` が残り）。
@@ -164,14 +176,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ㊹ **ボサノバのタイのストローク（okura-guitar のページ→「入れて」2026-11-01）**: `~` は後ろに注釈がなければ音符の後置ではなく兄弟の `TieSyntax`＝`8~` が `_strokeTieOpen` に届かず鳴り直していた。`case TieSyntax` で立てる・同じコードの次の区間へは鳴り続ける（違うコードで止まる＝先取りの扱いは未決）。ガイドのソロギターはこの便から。`C | . |` の小節頭の `.` は文法どおり無音の枠（2026-09-04 のオーナー決定）＝`plays` のストロークも鳴らない・不具合ではない（網 `ASilentBar_SoundsNoStroke`）。同日「`plays` が楽譜どおり鳴らない」＝ループ再生だけ: `playSpanWindow` が同じ記号の打点を繰り返しとして落としていた→`MidiNote.Strike`／`PlaybackNote.K` を鍵に足した（C51）。同日「入れて」＝ガイドのリズムをユーザーの `bossa.lys`（`4. 4. 4 | r4 4 r8 4. |`）に（ページのパターン 2 と私の先の 2 つは「ちょっと違う」）。Lab `sessions/p1036/bossa/`・C50。「雨あがりのカフェ」（`sessions/p1036/ameagari/`・下書きも）の講評→「入れて」: 親指を旋律と読む誤読 3 つが旋律を消していた＝`VoiceIsUnderChords`・和音の隣の単音は和音の上端から測る。⚠️ 旋律がほぼ 1 音の曲を告げる検査はまだない。ガイドのソロギターは 3 声に。「雨あがりのテラス」（`sessions/p1036/terrace/`）は弾けない和音 14＝`unfingerableOf`・8 以上は新曲の改訂で毎回差し戻し（C52）・ガイドに同時 4 音まで。「木漏れ日のカフェ」（`sessions/p1036/midori/`）の休符と次の段の符幹＝`BuildSystemSkylines` に `restShiftsOf`（五線の輪郭だけが押し出しを読んでいた・C53）。`dot-cross-voice-spacing` の五線の上端 10.28→13.27、LP 13.77。LP と曲全体で比較（Lab `midori/compare-rests.py`）: 63 休符のうち 47 が一致・16 は第 3 声部の上の休符が 0.5 低い。ユーザー判断＝五線に近い方がよいので調べない（段間隔 3→4 の 1.42 の差も）。1 段譜の短い楽器名＝`FromScore` が落としていた→渡す。
 - ㊱ **score の `strokes ▮` に strokes part を補完**（ユーザー依頼 2026-11-01）: `CompletionContext.AfterStrokesRef`／`AfterPlaysTarget`（`chords NAME plays ▮`）＝`GetDeclaredNameCompletions(text, "strokes", …)`、`GetChordAttachNameCompletions` に `plays`（triggerSuggest 付き）。網 `ValueContextCompletionTests`（InlineData 3 行＋`AStrokesRow_AndAPlaysTarget_OfferTheStrokesParts`）・C43 に追記。同日「`plays rhythm` の rhythm に色がない」→ 色は tmLanguage ではなく semantic tokens（`CollectSemanticTokens`）＝`ChordRowRenderSyntax.PlaysTargetToken`・`PartReferenceFinder.PlaysTargetToken` を `PartReferences` に（strokes 宣言は part なので Parts で解決）。網 `DeclaredNameTokenTests.AStrokesPart_IsColouredWhereARowPlaysIt_AndWhereTheScoreDrawsIt`。
 - **commit `ccaa486bd`**（実装・網・文書・例題を 1 つに）。終了時 full **13676 / 0 / 2**（`-End p1036 -DiffBase 112813183`・Core '+' 1046 行 / LILYPOND-REF 0 / LILYSHARP-OWN 1＝ほぼ `ReadShapeTable` の移動と文法＝LP に対応物なし・門は全部 OK・§1 現在便 18,480 字＝**次便は §1.0 ⒜ の閉じた段落（この会話の決定・コード図の整理）を先に落とす**）。合計が 13680→13678 なのは旧綴りの Theory 行を減らし新しい網を足した差し引き。
-
-## 以下は第1035セッションの経緯
-
-### 1.1 第1035セッション（2026-10-31・YT-DELL2）
-
-第1034 と同じ会話の続き（§1 の枠が 1,641 字しか無かったので便を切った）。開始時 full **13673 / 0 / 2**。作業場所は Lab `sessions/p1035/`。**ユーザー決定「#13 があれば OMR の開発に有利。提案通りで入れて」**＝`layout { cueSize N }`（LP の font-size の段・既定 −4）。
-- **OMR #13 `layout { cueSize N }`（`e20c7c610`・`REQUESTS` は fixed）**: `EngravingStyle.CueFontSizeStep`（既定 −4）→ `EngravingDefaults.CueFontSizeStep`／`CueScale`／`CueStemDetails`／`CueBeamLengthFraction` を const・readonly から `EngravingStyle.Current` を読む property に（`CueStemDetails` は (style の stem 表, 比) ごとに 1 instance を cache）。**負の数は `layout { }` の字句にならなかった**（ARCHIVE 第822 が `NoteHead.scale` を倍率にした理由）＝`ParseLayoutBlock` が paper と同じく `Minus` を通し、`LayoutPlanReader.ReadStyle` が `-`＋数を 1 つの値に読む（−8〜0・この鍵だけ符号つき）。`SyntaxFacts.LayoutKeyVocabulary`・`NumberKeys`・LSP の説明・`NoteStepper`（符号つきの段＝1 ずつ・PageUp で 2・0 が天井）・双子は `\layout { \context { \CueVoice fontSize = #N  Stem/Beam.length-fraction = #(magstep N) } }`（LP 2.26.0 で描いて字形 0.0040 × magstep(N) を確認＝Lab `sessions/p1035/cuesize/`）。CHANGELOG 両方の `## Unreleased` に第1034 の 4 件も書いた（それまで書き漏れていた）。網: `EngravingStyleTests` ×3・`LayoutBlockTests`・`StepRequestTests`。⚠️ **layout の鍵を 1 つ足すと赤くなる網が 2 つ別にある**＝`EditorColouringTests.TheLayoutBlock_…`（`editors/vscode/syntaxes/lilysharp.tmLanguage.json` の layout-block の鍵の alternation に足す）と `CompletionTypingAuditTests.TheTypingFixture_IsCurrent`（`LILYSHARP_UPDATE_DOCS=1` で `editors/vscode/test/completion-typing.json` を再生成＝LF で出るので CRLF に戻す）。最初の `-End` はこの 2 本で赤（13678 / 2）→ `dc0e1cc95` で足して 2 回目は緑。終了時 full **13680 / 0 / 2**（`-End p1035 -DiffBase 34a42169a`・Core '+' 129 行 / LILYPOND-REF 2 / LILYSHARP-OWN 0・門は全部 OK・§1 現在便 16,582 字）。**OMR の open は 0**（#11・#12・#13 とも fixed・OMR repo 側の `REQUESTS.md` は未 commit＝OMR が commit する）。
-- **コード図の文法 Q1〜Q3 をオーナーに訊いた（ユーザー指示）→ 決定**: Q1 `chordShapes { }`／Q2 (b′) 先頭の 1 行 `capo N`（(c) より (b) を推した理由＝表の形が capo 相対なので表と同じ階層・行はパートに属さない・パート単位は後から上書きとして足せる）／Q3 `chordDiagrams none | written | all` ＋ `chordTuning TUNING`（1 鍵 1 問い）。ユーザー「よく整理され一貫した文法を獲得したい。後方互換性は考慮しないで」。全文と段取りは `docs/ROADMAP.md` §4（Decided）・§5。**実装はこの便ではしていない＝次便の最初**（§1.0 ⒜ 先頭）。
 
 ## 2. 開いている作業
 

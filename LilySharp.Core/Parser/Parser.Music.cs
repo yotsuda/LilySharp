@@ -963,7 +963,7 @@ internal sealed partial class Parser
         var duration = ParseOptionalDuration();
         var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
         var articulations = ParsePostEvents();
-        // Members' ties and the whole chord's say two things about the same notes.
+        // LILYSHARP-OWN: members' ties and the whole chord's say two things about the same notes; LilyPond takes both.
         if (memberTie && (Check(SyntaxKind.Tilde) || articulations.Any(a => a is TieGreen)))
             _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Math.Max(1, Current.Text.Length)),
                 DiagnosticCodes.StrayItemToken,
