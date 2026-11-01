@@ -80,6 +80,29 @@ public class CliBatchTests : IDisposable
         return (p.ExitCode, outText, errText);
     }
 
+    [Fact]
+    public void Review_SaysThePiece_AsTextOrJson_AndFailsOnlyWhenItCannotBeRead()
+    {
+        string book = Book("Air");
+        var text = Lysc("review", book);
+        Assert.Equal(0, text.Exit);
+        Assert.StartsWith("Air - ", text.Stdout);
+        Assert.Contains("To look at:", text.Stdout);
+
+        var json = Lysc("review", book, "--json", "--focus", "form", "--audience", "advanced");
+        Assert.Equal(0, json.Exit);
+        var report = System.Text.Json.Nodes.JsonNode.Parse(json.Stdout)!;
+        Assert.Equal("advanced", (string?)report["audience"]);
+        Assert.All(report["findings"]!.AsArray(), f => Assert.StartsWith("form.", (string?)f!["id"]));
+
+        string broken = Path.Combine(_dir, "broken.lys");
+        File.WriteAllText(broken, "part a { }\nsection A { a { c'4 \n");
+        Assert.Equal(1, Lysc("review", broken).Exit);
+        Assert.Equal(1, Lysc("review", Path.Combine(_dir, "no-such.lys")).Exit);
+        Assert.NotEqual(0, Lysc("review", book, "--focus", "nonsense").Exit);
+        Assert.NotEqual(0, Lysc("review", book, "--audience", "nonsense").Exit);
+    }
+
     /// <summary>A one-bar book whose title is <paramref name="name"/>.</summary>
     private string Book(string name, string extra = "")
     {

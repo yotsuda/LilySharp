@@ -549,6 +549,35 @@ lysc check score.lys --pitches    # also print each note's resolved absolute pit
 lysc check score.lys --todo-as-error    # fail while a @todo mark is left
 ```
 
+### review - Review a Piece as Music
+
+```bash
+lysc review <input.lys>
+```
+
+Says what the piece is, what works, the compiler's errors and warnings, and what to look at: each point with why it matters and when it does not apply. The points are counts, not judgements: the style of the piece decides. What the report holds is in `docs/review-tool-design.md`.
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `--json` | Print the report as JSON |
+| `--focus <theme>` | The points of one theme alone: `key`, `rhythm`, `form`, `parts` or `notation` |
+| `--audience <who>` | Given back in the JSON, for an AI that explains it: `beginner`, `intermediate` or `advanced` |
+| `-h, --help` | Show help |
+
+**Exit Codes:**
+| Code | Meaning |
+|------|---------|
+| 0 | The score compiles, whatever the review found |
+| 1 | The score does not compile, or the file cannot be read |
+
+**Examples:**
+```bash
+lysc review score.lys
+lysc review score.lys --focus key
+lysc review --batch books.txt --json
+```
+
 ### layout - Layout Summary
 
 ```bash

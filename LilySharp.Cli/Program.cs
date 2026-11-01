@@ -82,6 +82,7 @@ static int Dispatch(string command, string[] args) => command switch
     "octave" => RunOctave(args),
     "harmonize" => RunHarmonize(args),
     "check" => RunCheck(args),
+    "review" => RunReview(args),
     "layout" => RunLayout(args),
     _ => UnknownCommand(command)
 };
@@ -114,6 +115,7 @@ static void ShowHelp()
 
           harmonize  Suggest a diatonic chord track for the melody (prints a chords part)
           check      Check syntax without output
+          review     Review a piece as music: what works, and what to look at
           layout     Print a text summary of the layout (system/line breaks, bars per system)
 
         Global Options:
@@ -882,6 +884,77 @@ static int RunHarmonize(string[] args)
         Console.WriteLine(block);
         return 0;
     });
+}
+
+// ============ Review Command ============
+
+static int RunReview(string[] args)
+{
+    if (WantsHelp(args))
+    {
+        ShowReviewHelp();
+        return 0;
+    }
+
+    var r = new CliParser(maxPositionals: 1)
+        .Flag("json", "--json")
+        .Value("focus", "--focus requires key, rhythm, form, parts or notation", "--focus")
+        .Value("audience", "--audience requires beginner, intermediate or advanced", "--audience")
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "review");
+    if (r.Get("focus") is { } focus && focus is not ("key" or "rhythm" or "form" or "parts" or "notation"))
+        return OptionError($"--focus {focus}: give key, rhythm, form, parts or notation", "review");
+    if (r.Get("audience") is { } audience && audience is not ("beginner" or "intermediate" or "advanced"))
+        return OptionError($"--audience {audience}: give beginner, intermediate or advanced", "review");
+    if (r.Positionals.Count == 0)
+        return OptionError("Input file required", "review");
+
+    var inputPath = r.Positionals[0];
+    if (!File.Exists(inputPath))
+    {
+        Console.Error.WriteLine($"Error: File not found: {inputPath}");
+        return 1;
+    }
+
+    try
+    {
+        string source = File.ReadAllText(inputPath);
+        string report = LilySharp.Core.Editing.ScoreReview.Json(source, r.Get("audience") ?? "beginner", r.Get("focus"));
+        Console.Write(r.Has("json") ? report + Environment.NewLine : LilySharp.Core.Editing.ScoreReview.Text(source, r.Get("focus")));
+        // What it finds is advice: a piece may mean any of it. Only a score that cannot be read fails.
+        return System.Text.Json.Nodes.JsonNode.Parse(report)!["compiles"]!.GetValue<bool>() ? 0 : 1;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine(CliParser.Verbose ? ex.ToString() : $"Error: {ex.Message}");
+        return 1;
+    }
+}
+
+static void ShowReviewHelp()
+{
+    Console.WriteLine("""
+        Review a piece as music: what it is, what works, and what to look at.
+        The points are counts, not judgements: the style of the piece decides.
+
+        Usage: lysc review <input.lys>
+
+        Arguments:
+          <input.lys>        Input Lily# source file
+
+        Options:
+          --json             Print the report as JSON
+          --focus <theme>    The points of one theme alone:
+                             key, rhythm, form, parts or notation
+          --audience <who>   Given back in the JSON, for an AI that explains it:
+                             beginner, intermediate or advanced
+          -h, --help         Show this help
+
+        Examples:
+          lysc review score.lys
+          lysc review score.lys --focus key
+          lysc review score.lys --json
+        """);
 }
 
 // ============ Check Command ============

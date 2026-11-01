@@ -28,6 +28,7 @@ import {
 import { registerAiTransform, showCandidateSounding } from './aiTransform';
 import { registerAiComplete } from './aiComplete';
 import { findCopilotLogFrom, pickAiModel, rememberRefusalsIn } from './modelClient';
+import { reviewPointsOf } from './reviewCore';
 import { chatPointer } from './chatPointerCore';
 import { registerSmartTyping } from './smartTyping';
 import { registerStepAudition } from './stepAudition';
@@ -833,6 +834,7 @@ export function activate(context: vscode.ExtensionContext) {
             addChordTrack(context);
         }),
         vscode.commands.registerCommand('lilysharp.guessSectionKey', () => guessSectionKey()),
+        vscode.commands.registerCommand('lilysharp.reviewScore', () => reviewScoreCommand(context)),
         vscode.commands.registerCommand('lilysharp.respellNotesToKey', () => respellNotesToKey()),
         vscode.commands.registerCommand('lilysharp.newScore', async () => {
             outputChannel.appendLine('newScore command triggered');
@@ -2875,6 +2877,42 @@ async function sectionKeyGuesses(editor: vscode.TextEditor): Promise<SectionKeyG
  * starts in (an existing starting key is rewritten), then the notes spelled against it
  * are offered for respelling. Escape leaves the file untouched.
  */
+let reviewPoints: vscode.DiagnosticCollection | undefined;
+
+/**
+ * The review with no AI (docs/review-tool-design.md §5): its findings as Information in the Problems
+ * panel, their own source, until the score changes. The compiler's errors and warnings are there already.
+ */
+async function reviewScoreCommand(context: vscode.ExtensionContext) {
+    const editor = lysEditorFor('review a score');
+    if (!editor) { return; }
+    const doc = editor.document;
+    if (!reviewPoints) {
+        const points = reviewPoints = vscode.languages.createDiagnosticCollection('Lily# review');
+        context.subscriptions.push(points, vscode.workspace.onDidChangeTextDocument(e => points.delete(e.document.uri)));
+    }
+    try {
+        const text = doc.getText();
+        const resp = await client!.sendRequest<{ Report: string }>('lilysharp/reviewScore', { Text: text });
+        const { compiles, points } = reviewPointsOf(resp.Report, text);
+        reviewPoints.set(doc.uri, points.map(p => {
+            const line = Math.min(p.line, doc.lineCount - 1);
+            const diagnostic = new vscode.Diagnostic(doc.lineAt(line).range, p.message, vscode.DiagnosticSeverity.Information);
+            diagnostic.source = 'Lily# review';
+            return diagnostic;
+        }));
+        if (!compiles) {
+            void vscode.window.showWarningMessage('Lily#: the score has errors to fix before it can be reviewed as music.');
+        } else if (points.length === 0) {
+            void vscode.window.showInformationMessage('Lily#: the review found nothing to look at.');
+        } else {
+            void vscode.commands.executeCommand('workbench.actions.view.problems');
+        }
+    } catch (e) {
+        void vscode.window.showErrorMessage(`Lily#: the review failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}
+
 async function guessSectionKey() {
     const editor = lysEditorFor('guess a section\'s key');
     if (!editor) { return; }

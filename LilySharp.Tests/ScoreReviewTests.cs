@@ -330,6 +330,15 @@ public class ScoreReviewTests
     }
 
     [Fact]
+    public void AChordTrackWithItsOwnSections_IsRead()
+    {
+        string book = WithChords("c major", "C | E7 | F | C |")
+            .Replace("chords prog { C | E7 | F | C | } }", "}\nchords prog { section A { C | E7 | F | C | } }");
+        Assert.Equal(["C", "E7", "F"], ChordFacts(book).Select(c => (string?)c["symbol"]).Distinct());
+        Assert.Contains("leads to a chord on A, and goes to F", (string?)ChordFindings(book).Single()["what"]);
+    }
+
+    [Fact]
     public void AChordOnAMark_IsReadToo()
     {
         var chords = ChordFacts(Tune("c major", "c'1@chord(C) | d'1@chord(E7) | a'1@chord(Am) | c'1 |"));
@@ -435,6 +444,42 @@ public class ScoreReviewTests
     [Fact]
     public void APieceWithNoChords_ListsNone()
         => Assert.Null(Report(Piece)["facts"]!["chords"]);
+
+    [Fact]
+    public void AsText_ThePieceThenWhatWorksThenThePoints()
+    {
+        string text = ScoreReview.Text(Piece).ReplaceLineEndings("\n");
+        Assert.StartsWith("A Short Air - G major, 4/4, ♩ = 96, 6 bars, about 15 seconds\n", text);
+        Assert.Contains("Heard in: ", text);
+        Assert.Contains("\nForm: A B A\n", text);
+        Assert.Contains("\nWhat works:\n  It ends where it began: in G major, over its tonic.\n", text);
+        Assert.Contains("\nTo look at:\n", text);
+        Assert.Contains("\n  [idea] The piece is 6 bars long", text);
+        Assert.Contains("\n    Why: A piece needs room", text);
+        Assert.Contains("\n    Fine when: A short piece was asked for", text);
+        Assert.True(text.IndexOf("What works:", System.StringComparison.Ordinal) < text.IndexOf("To look at:", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AsText_AQuestionIsPut()
+        => Assert.Contains("    Ask: Is F#maj7 in bar 2 the chord you meant?", ScoreReview.Text(WithChords("c major", "C | F#maj7 | C | C |")));
+
+    [Fact]
+    public void AsText_ABrokenScore_SaysItsErrors_AndNothingElse()
+    {
+        string text = ScoreReview.Text("title \"Broken\"\npart a { instrument flute }\nsection A { a { c'4 d' \n").ReplaceLineEndings("\n");
+        Assert.StartsWith("\nErrors:\n  line ", text);
+        Assert.DoesNotContain("What works", text);
+        Assert.DoesNotContain("Nothing to look at", text);
+    }
+
+    [Fact]
+    public void AsText_WithNothingFound_SaysSo()
+        => Assert.Contains("Nothing to look at.", ScoreReview.Text(Piece, "notation"));
+
+    [Fact]
+    public void AsText_TheCompilersWarningsAreSaid()
+        => Assert.Contains("\n  line 8: LYS1052: ", ScoreReview.Text(Piece.Replace("g'4@mf a' b' c''", "c4@mf a' b' c''")).ReplaceLineEndings("\n"));
 
     [Fact]
     public void TheAudienceIsGivenBack()

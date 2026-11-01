@@ -49,6 +49,57 @@ public static class ScoreReview
     public static string Json(string source, string audience = "beginner", string? focus = null)
         => Report(source, audience, focus).ToJsonString(Written);
 
+    /// <summary>The report as a person reads it with no AI: what the piece is, what it does well, and the points,
+    /// each with why it matters and when it does not apply.</summary>
+    public static string Text(string source, string? focus = null)
+    {
+        var report = Report(source, "", focus);
+        var text = new System.Text.StringBuilder();
+        void Said(string heading, string key)
+        {
+            if (report[key] is not JsonArray { Count: > 0 } lines)
+                return;
+            text.AppendLine().AppendLine(heading);
+            foreach (var line in lines)
+                text.AppendLine($"  line {(int)line!["line"]!}: {(string?)line["code"]}: {(string?)line["message"]}");
+        }
+        if (report["facts"] is JsonObject facts)
+        {
+            var about = new[] { "key", "meter", "tempo" }.Select(k => (string?)facts[k]).OfType<string>().ToList();
+            if (facts["bars"] is { } bars)
+                about.Add($"{(int)bars} bars, about {(int)facts["seconds"]!} seconds");
+            text.AppendLine(string.Join(" - ", new[] { (string?)facts["title"] ?? "(no title)", string.Join(", ", about) }.Where(s => s.Length > 0)));
+            if (facts["keyHeard"] is { } heard)
+                text.AppendLine($"Heard in: {(string?)heard}");
+            if (facts["form"] is JsonArray form)
+                text.AppendLine($"Form: {string.Join(" ", form.Select(s => (string?)s))}");
+        }
+        Said("Errors:", "errors");
+        Said("Warnings:", "warnings");
+        if (report["strengths"] is JsonArray { Count: > 0 } strengths)
+        {
+            text.AppendLine().AppendLine("What works:");
+            foreach (var strength in strengths)
+                text.AppendLine($"  {(string?)strength}");
+        }
+        if (report["findings"] is JsonArray { Count: > 0 } findings)
+        {
+            text.AppendLine().AppendLine("To look at:");
+            foreach (var finding in findings)
+            {
+                text.AppendLine($"  [{(string?)finding!["kind"]}] {(string?)finding["what"]}");
+                text.AppendLine($"    Why: {(string?)finding["why"]}");
+                if (finding["fine_when"] is { } fine)
+                    text.AppendLine($"    Fine when: {(string?)fine}");
+                if (finding["ask"] is { } ask)
+                    text.AppendLine($"    Ask: {(string?)ask}");
+            }
+        }
+        else if (report["findings"] != null)
+            text.AppendLine().AppendLine("Nothing to look at.");
+        return text.ToString();
+    }
+
     private static JsonObject Report(string source, string audience, string? focus)
     {
         var report = new JsonObject { ["audience"] = audience };

@@ -11,7 +11,7 @@ what applies to this piece's style, says why in musical terms, and teaches the c
 each point. The report's design serves that interpretation. Without an AI, the same report is free
 and fast (§5).
 
-Status: §6 steps 1 to 3 are built (2026-11-02), and not yet tried in a real VS Code (`editors/vscode/MANUAL-CHECKS.md` C55). What was built differs from §2 in the ways §7 lists.
+Status: §6 steps 1 to 4 are built (2026-11-02), and not yet tried in a real VS Code (`editors/vscode/MANUAL-CHECKS.md` C55, C56). What was built differs from §2 in the ways §7 lists.
 
 ## 1. Entrances
 
@@ -144,7 +144,7 @@ Beyond the composing checks (`compose-in-chat-design.md` §2):
    the most value. Built, with the differences in §7.
 3. **The key checks of §4:** `key.signature`, `key.outside`, `spelling.direction` (`KeyChecks`), and
    `chord.outside` and `facts.chords` from chord symbols (`ChordChecks`). Built.
-4. **The command and `lysc review`.**
+4. **The command and `lysc review`.** Built. A finding with no place in the text stands on its first part's declaration, else line 1, and there is no quick fix, since no finding has an `edit` yet.
 5. **Silencing**, when first asked for.
 
 ## 7. What was built, against §2

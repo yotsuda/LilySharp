@@ -505,6 +505,11 @@
         "title": "Guess Section Key…"
       },
       {
+        "command": "lilysharp.reviewScore",
+        "category": "Lily#",
+        "title": "Review Score"
+      },
+      {
         "command": "lilysharp.respellNotesToKey",
         "category": "Lily#",
         "title": "Respell Notes to Key…"
@@ -900,6 +905,10 @@
         },
         {
           "command": "lilysharp.guessSectionKey",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.reviewScore",
           "when": "resourceLangId == lilysharp"
         },
         {
