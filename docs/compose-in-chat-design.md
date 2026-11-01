@@ -71,6 +71,10 @@ that prompted each check is written beside it in the code.
 - The bass leaping octaves.
 - A part in the bass's register.
 - Nobody playing the chords: only single notes, high (a low single-note riff counts as chords).
+- A tune in too few bars: a bar is the tune's with three onsets or more, most single notes, or a
+  chord struck where the tune rests (chords no more than half the single notes); a tune in fewer
+  than a third of the bars is said (2026-11-01: half until then — the riff under the verses and
+  the tune in the choruses, the shape the finding asks for, has about half).
 - A fretted part striking its chords (two strikes or more in the bar) in one voice under its own
   tune in another, in half its tune's bars: one player cannot (2026-11-01, three trios in a row).
 - One drum groove through every section (a varying kick and snare are said apart from the cymbals);

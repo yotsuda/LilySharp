@@ -82,6 +82,11 @@ workflow attaches that section to the GitHub Release verbatim.
   hook in the first voice over power chords in the second was told "a tune in 0 of the 76 bars",
   "only 19% of its moves are steps" and "65% quarter notes" (the riff's chord-and-rest eighths
   counted as the melody's). The part's own chords now count as harmony its tune sounds against.
+- `[editor]` **"A tune is played in only…" counts a chord struck where the tune rests as the
+  tune's bar** (`<g, d>4 b'4 d''2`, what the finding itself asks for: single notes at least two,
+  the chords no more than half of them), and asks for a tune in a third of the bars, not half — a
+  piece built as the finding advises, riff under the verses and the tune in the choruses and a
+  solo, had 32 of its 68 bars with a tune and was still told.
 - `[editor]` **A guitar striking its chords under its own tune is said**: in a band, a fretted part
   whose one voice strikes chords twice or more in a bar while another plays a line, in half its
   tune's bars (four or more), is told one player's hands cannot — let the chords rest while the

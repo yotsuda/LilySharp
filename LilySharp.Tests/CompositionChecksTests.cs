@@ -406,6 +406,11 @@ public class CompositionChecksTests
         // A chord struck once where the tune rests is fine.
         Assert.DoesNotContain(CompositionChecks.Of(Rock3("voice { r4 fis'8 g' a'4 g' } { <e b>4 r2. }", "e,8 e, e, e, e, e, e, e,")),
             f => f.Contains("one player's hands cannot"));
+        // A chord struck where the tune rests, then the tune (what the "no tune" finding asks for),
+        // is a bar of the tune (owner's review 2026-11-01: `<g, d>4 b'4 d''2` was no tune bar).
+        var struck = CompositionChecks.Of(Rock3("<e b>4 g'4 a'2", "e,8 e, e, e, e, e, e, e,"));
+        Assert.DoesNotContain(struck, f => f.StartsWith("A tune is played in only"));
+        Assert.DoesNotContain(struck, f => f.Contains("one player's hands cannot"));
         // Chords alone in both voices: still no tune.
         Assert.Contains(CompositionChecks.Of(Rock3("voice { <e' g'>4 <e' g'> <e' g'> <e' g'> } { <e b>8 r <e b> r <e b>8 r <e b> r }", "e,8 e, e, e, e, e, e, e,")),
             f => f.StartsWith("A tune is played in only"));

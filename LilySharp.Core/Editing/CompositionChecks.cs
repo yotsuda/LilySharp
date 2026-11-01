@@ -1044,8 +1044,11 @@ public static class CompositionChecks
     private const int AcrossBeatFewestBars = 3;
 
     // A band's line in a bar: most of its onsets single notes; and the share of the bars a tune is
-    // heard in, under which an instrumental has none to speak of (owner's report 2026-10-29).
-    private const double TuneSingleShare = 0.7, TunedBarsShare = 0.5, BassLeapShare = 0.2;
+    // heard in, under which an instrumental has none to speak of (owner's report 2026-10-29) — a
+    // third: the finding itself asks for the riff under the verse and the tune in the chorus, and a
+    // piece built so (verses of riff, choruses and a solo of tune) had 32 of its 68 bars with a tune
+    // (owner's review 2026-11-01; half was asked until then).
+    private const double TuneSingleShare = 0.7, TunedBarsShare = 1.0 / 3, BassLeapShare = 0.2;
     private const int SlipFewest = 3;
     private const double MelodyStepShare = 0.25;
 
@@ -1558,10 +1561,16 @@ public static class CompositionChecks
             {
                 bool line = false, singles = false;
                 foreach (var v in g.GroupBy(o => o.Voice))
-                    if (v.Count() >= 3 && v.Count(o => o.Single) >= v.Count() * TuneSingleShare)
+                {
+                    int count = v.Count(), single = v.Count(o => o.Single);
+                    // Most of the onsets single notes — or a chord struck where the tune rests, the
+                    // chords no more than half the single notes (`<g, d>4 b'4 d''2`: what the "no
+                    // tune" finding itself asks for; owner's review 2026-11-01).
+                    if (count >= 3 && (single >= count * TuneSingleShare || (single >= 2 && (count - single) * 2 <= single)))
                         line = true;
-                    else if (v.All(o => o.Single))
+                    else if (single == count)
                         singles = true;
+                }
                 if (line)
                     lines[g.Key].Add(b);
                 else if (singles)
