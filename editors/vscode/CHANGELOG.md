@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### What the check still finds is said by Lily# itself
+
+- **A piece the chat writes with points left from the check brings up a notification** with their
+  count and **Show Log**, which lists them, whether or not the chat tells you. The check also tells
+  a piano under singers that only holds, and takes a section named chorus for the chorus however
+  often the form plays it.
+
 ### A written-out verse says its number once
 
 - **The preview prints a written-out verse's `2.` where the verse begins**, not again at the head

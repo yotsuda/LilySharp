@@ -573,6 +573,7 @@ public static class CompositionChecks
             ? placed.Declaration.DescendantNodes<StaffRenderSyntax>().Select(s => s.PartToken?.Text).OfType<string>().ToList()
             : []));
         findings.AddRange(BarsWithoutWords(midi, root, parts, barList, sung));
+        findings.AddRange(PianoHolds(midi, parts, barList, sung));
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
         {
             findings.AddRange(OpenEndings(midi, tune, fifths));
@@ -875,6 +876,40 @@ public static class CompositionChecks
         }
     }
 
+    // A piano under voices holding this share of its bars, of this many at least.
+    private const double PianoHoldsShare = 0.75;
+    private const int PianoHoldsFewestBars = 8;
+
+    /// <summary>A piano under singers doing nothing but hold: its right hand striking chords alone,
+    /// its left a bass note or two a bar. Owner's review 2026-11-01 (ひかりの道): the right hand's
+    /// chords on G3–F4 from the first bar to the last, the left hand's roots beneath.</summary>
+    private static IEnumerable<string> PianoHolds(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, List<int> barList, IReadOnlySet<string> sung)
+    {
+        if (sung.Count == 0
+            || parts.FirstOrDefault(p => InstrumentOf(p) == "piano-right") is not { } right
+            || parts.FirstOrDefault(p => InstrumentOf(p) == "piano-left") is not { } left)
+            yield break;
+        List<(int StartTick, int Pitch)> Notes(PartDeclarationSyntax p) => midi.Tracks.SelectMany(t => t.Notes
+            .Where(n => n.Channel != 9 && (n.Part ?? t.Name) == p.Name.Text)).Select(n => (n.StartTick, n.Pitch)).ToList();
+        var (rh, lh) = (Notes(right), Notes(left));
+        int played = 0, held = 0;
+        for (int b = 0; b + 1 < barList.Count; b++)
+        {
+            int from = barList[b], to = barList[b + 1];
+            var r = rh.Where(n => n.StartTick >= from && n.StartTick < to).GroupBy(n => n.StartTick).ToList();
+            int leftOnsets = lh.Where(n => n.StartTick >= from && n.StartTick < to).Select(n => n.StartTick).Distinct().Count();
+            if (r.Count == 0 && leftOnsets == 0)
+                continue;
+            played++;
+            if (r.All(g => g.Select(n => n.Pitch).Distinct().Count() >= 2) && leftOnsets <= 2)
+                held++;
+        }
+        if (played >= PianoHoldsFewestBars && held >= played * PianoHoldsShare)
+            yield return $"{right.Name.Text}, {left.Name.Text}: in {held} of its {played} bars the piano only holds — chords in the right hand, a bass note or two in the left: "
+                + "an accompaniment moves the song on: broken chords or a flowing figure under the verse, more of it in the chorus, a line of its own "
+                + "where the voices rest — unless a chorale's plain chords are meant: then keep it.";
+    }
+
     // Bars in a row a voice sings with no word under them before it is said.
     private const int WordlessFewestBars = 2;
 
@@ -1140,21 +1175,26 @@ public static class CompositionChecks
             + "return: then keep it.";
     }
 
-    /// <summary>The section the form plays most — the chorus, as a song is built — by its name and the
-    /// span of its first playing: of the ties, one named for it (chorus, sabi, refrain, hook), else the
-    /// one that comes last. None when nothing is played twice.</summary>
+    /// <summary>The chorus, by its name and the span of its first playing: a section named for it
+    /// (chorus, sabi, refrain, hook), else the section the form plays most, of the ties the one that
+    /// comes last. None when nothing is so named and nothing is played twice.</summary>
     private static (string Name, int Start, int End)? ChorusOf(MidiFile midi)
     {
         var spans = PlayedSpans(midi);
         if (spans.Count < 2)
             return null;
         var plays = midi.SectionStarts.GroupBy(s => s.Value).ToDictionary(g => g.Key, g => g.Count(), System.StringComparer.Ordinal);
+        // A section NAMED the chorus is the chorus, however often it is sung: 風の… ひかりの道 sang
+        // Chorus once and FinalChorus once and its Verse twice, and was told of its Verse's top
+        // (owner's review 2026-11-01). Of several, the one sung most, then the first.
+        var named = spans.Where(s => System.Text.RegularExpressions.Regex.IsMatch(s.Name, "chorus|sabi|refrain|hook", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            .OrderByDescending(s => plays[s.Name]).ToList();
+        if (named.Count > 0)
+            return named[0];
         int most = plays.Values.Max();
         if (most < 2)
             return null;
-        var tied = spans.Where(s => plays[s.Name] == most).ToList();
-        var named = tied.Where(s => System.Text.RegularExpressions.Regex.IsMatch(s.Name, "chorus|sabi|refrain|hook", System.Text.RegularExpressions.RegexOptions.IgnoreCase)).ToList();
-        return named.Count > 0 ? named[0] : tied[^1];
+        return spans.Last(s => plays[s.Name] == most);
     }
 
     /// <summary>The chorus opening with another section's first phrase — its first two bars the same
@@ -1173,9 +1213,11 @@ public static class CompositionChecks
         }
         if (Opening(chorus.Start, out int chorusBar) is not { } hook)
             yield break;
+        // Another chorus (a FinalChorus) opens as the chorus does by right.
+        static bool IsChorusName(string name) => System.Text.RegularExpressions.Regex.IsMatch(name, "chorus|sabi|refrain|hook", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         foreach (var (name, start, _) in PlayedSpans(midi))
         {
-            if (name == chorus.Name || Opening(start, out int bar) != hook)
+            if (name == chorus.Name || IsChorusName(name) || Opening(start, out int bar) != hook)
                 continue;
             yield return $"{tune}, the melody: the chorus ({chorus.Name}) opens with {name}'s first phrase, note for note (bars {bar + 1}–{bar + 2} "
                 + $"and {chorusBar + 1}–{chorusBar + 2}, as the form plays them) — a chorus is the hook the song is remembered by: give it an "
@@ -1197,7 +1239,7 @@ public static class CompositionChecks
             yield break;
         foreach (var (name, start, _) in PlayedSpans(midi))
         {
-            if (name == chorus.Name || FirstBar(start, out int bar) != line)
+            if (name == chorus.Name || IsChorusName(name) || FirstBar(start, out int bar) != line)
                 continue;
             yield return $"{tune}, the melody: the chorus ({chorus.Name}) opens with the first bar of {name}, an octave apart or none (bars {bar + 1} "
                 + $"and {chorusFirst + 1}, as the form plays them) — the same line sung higher is not a hook of its own: give the chorus "

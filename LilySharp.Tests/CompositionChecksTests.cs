@@ -576,6 +576,32 @@ public class CompositionChecksTests
         Assert.Contains(CompositionChecks.Of(Choir(Bars(Sop), Bars("g4 e' g e'"), Bars("g'4 a' g' a'"))), f => f.StartsWith("alt: only "));
     }
 
+    // Owner's review 2026-11-01 (Hikari-no-Michi): the piano's chords and roots from first to last, and
+    // a Verse sung twice taken for the chorus over a Chorus and a FinalChorus sung once each.
+    [Fact]
+    public void APianoThatOnlyHolds_IsSaid()
+    {
+        string Song(string right, string left) => "title \"P\"\ntime 4/4\noctave absolute\npart sop { instrument soprano }\n"
+            + "part rh { instrument piano-right }\npart lh { instrument piano-left }\nsection A {\n  sop { " + Bars(Sop) + "}\n  rh { " + Bars(right) + "}\n  lh { " + Bars(left) + "}\n"
+            + "  lyrics w sings sop { " + string.Concat(Enumerable.Repeat("la la la la | ", 8)) + "}\n}\nform { A }\nscore { staff sop  lyrics w  grandStaff { staff rh  staff lh } }\n";
+        Assert.Contains(CompositionChecks.Of(Song("<e' g' c''>2 <e' g' c''>2", "c1")), f => f.StartsWith("rh, lh: in 8 of its 8 bars the piano only holds"));
+        Assert.DoesNotContain(CompositionChecks.Of(Song("e'8 g' c'' g' e' g' c'' g'", "c1")), f => f.Contains("only holds"));
+    }
+
+    [Fact]
+    public void ASectionNamedTheChorus_IsTheChorus_ThoughTheVerseIsSungMore()
+    {
+        string song = Hook(Q + Q + P + Q, "a'8 b'8 c''4 e''2 | d''4 c''2 r4 | " + R + R + R)
+            .Replace("form { Verse Chorus Verse Chorus }", "form { Verse Chorus Verse }");
+        var findings = CompositionChecks.Of(song);
+        Assert.DoesNotContain(findings, f => f.Contains("the chorus (Verse)"));
+        Assert.Contains(findings, f => f.Contains("the chorus (Chorus) climbs no higher"));
+        // A FinalChorus opens as the Chorus does by right.
+        string last = Hook(Q + Q + Q + Q, R + R + R + R).Replace("form { Verse Chorus Verse Chorus }", "form { Verse Chorus Verse FinalChorus }")
+            .Replace("form {", "section FinalChorus {\n  singer { " + R + R + R + "a'4 g'4 f'2 | e'1 | }\n}\nform {");
+        Assert.DoesNotContain(CompositionChecks.Of(last), f => f.Contains("opens with"));
+    }
+
     [Fact]
     public void VoicesSingingBarsWithNoWords_AreSaid()
     {

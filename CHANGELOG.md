@@ -57,6 +57,11 @@ workflow attaches that section to the GitHub Release verbatim.
   over it, an inner part going from chord tone to chord tone, and voices singing bars with no
   words. Owner's reviews 2026-11-01 (風のひかり, 夢の先へ). The composing guide gains a paragraph on a
   chorus for a school choir, piano part included.
+- `[check]` **A piano under singers that only holds** is said, and a section named chorus (sabi,
+  refrain, hook) is the chorus however often the form plays it: a Verse sung twice was read as the
+  chorus over a Chorus and a FinalChorus sung once each.
+- `[editor]` What the check still finds when the chat's piece is written goes to the extension's log,
+  with a notification, whether or not the chat tells it.
 - `[editor]` **Singers doubling each other for a fifth or more of what they sing are turned down
   from Copilot's chat every time** (short of four fifths, which may be a piece in unison).
 - `[docs]` The composing guide: a long note is its chord's own tone, or resolves to one, and falls

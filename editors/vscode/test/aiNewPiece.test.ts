@@ -86,6 +86,9 @@ describe('the composing guide', () => {
         // twelve held clashes were written in "as colour").
         assert.match(fn, /const clashing = heldClashesOf\(kept\);\s*if \(clashing && clashing\.count >= CLASHES_TURNED_DOWN\) \{[\s\S]*?return `Not shown to the musician: its tune stands against its chords/);
         assert.ok(fn.indexOf('const clashing = heldClashesOf(kept);') < fn.indexOf('const brought = kept.filter('));
+        // What the check still finds is said by Lily# itself, the chat not always telling it
+        // (owner's request 2026-11-01).
+        assert.match(fn, /const stillFound = \[\.\.\.kept, \.\.\.added\.map\(w => w\.Message\)\];[\s\S]*?point\(s\) from the check left in it\.`,\s*'Show Log'\)/);
         // Singers on one line, the same (owner's decision 2026-11-01).
         assert.match(fn, /const oneLine = singersInOneLineOf\(kept\);\s*if \(oneLine\.length > 0\) \{[\s\S]*?return 'Not shown to the musician: its parts are not parts/);
         assert.ok(fn.indexOf('const oneLine = singersInOneLineOf(kept);') < fn.indexOf('const brought = kept.filter('));

@@ -55,6 +55,8 @@ next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
      chat since: the newest `user.message` in the Copilot CLI session log (`lastUserMessageAt`) is
      older than the write. A chat that keeps no log goes by the text alone. A change the musician
      asks for in the chat (a new `user.message`), or a piece they edited, is a proposal on the panel.
+   What the check still finds at the write is also put in the extension's log, and a notification
+   gives its count (2026-11-01: a chat left the points out of its last message).
 5. **Writing.** The piece is converted to relative octaves, as a musician writes
    (`asMusicianWrites` → `OctaveModeConverter`). Unplayed phrases and sections convert too. If the
    conversion fails, the reply says the piece was left in absolute octaves.
@@ -108,6 +110,8 @@ that prompted each check is written beside it in the code.
 - A lower singer over the part above it, eight times or more and 10% of the moments they sing
   together (the stack is the score's order).
 - An inner singer with fewer than a quarter of its moves steps, 16 moves or more.
+- A piano under them holding three quarters of its bars, eight or more: chords alone in the right
+  hand, a bass note or two in the left (`PianoHolds`).
 - A sung piece's voices singing two bars or more in sections no lyrics track writes words for
   (`BarsWithoutWords`; read from the sections, the MIDI's lyric events carrying no `verse N { }`).
 
@@ -139,8 +143,8 @@ as the melody's rhythm).
 - Where the phrases are not one formula: three quarters of the two-bar phrases ending the same way
   — the last two notes at the same places from the phrase's end, the last the same length
   (`PhraseEndings`; 2026-11-01: every phrase `… 4 r8`).
-- **A song's tune** (a part a lyrics track sings) only: the chorus — the section the form plays most,
-  of ties one named chorus/sabi/refrain/hook, else the last — opening with another section's first
+- **A song's tune** (a part a lyrics track sings) only: the chorus — a section named
+  chorus/sabi/refrain/hook, else the one the form plays most, of ties the last — opening with another section's first
   phrase note for note; the tune's highest note spent in its first phrase, or the chorus climbing
   no higher than the sections before it (`ChorusOf`, `ChorusOpensLikeAnother`, `PeakSpentEarly`);
   and more than half of the sections (four or more) closing on one figure — the first four single

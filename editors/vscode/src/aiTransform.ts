@@ -836,6 +836,15 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
         newPieces.set(written.uri.toString(), { text: written.getText(), at: Date.now() });
         deps.log(goesOn ? 'AI proposal (chat): the composing goes on — the new piece written into the file again, no panel.'
             : 'AI proposal (chat): a new piece — written into the file.');
+        // What the check still finds, said by Lily# itself: the chat is asked to tell the musician
+        // and may not (owner's request 2026-11-01: ひかりの道's last message left both points out).
+        const stillFound = [...kept, ...added.map(w => w.Message)];
+        if (stillFound.length > 0) {
+            for (const point of stillFound) { deps.log(`  still found: ${point}`); }
+            void vscode.window.showInformationMessage(
+                `Lily#: ${path.basename(currentUri(uri).fsPath)} was written with ${stillFound.length} point(s) from the check left in it.`,
+                'Show Log').then(pick => { if (pick === 'Show Log') { deps.showLog?.(); } });
+        }
         // The piece is done: what is to change, the musician says — not proposed again unasked, which
         // would put a panel over the piece just written (owner's report 2026-10-29).
         // The file by its own name, for the chat to tell the musician (owner's report 2026-10-29: the
