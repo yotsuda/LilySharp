@@ -66,6 +66,9 @@ workflow attaches that section to the GitHub Release verbatim.
   section's body, and the singer's cell under the root-level `section A` was never walked. A
   root-level body now outranks a by-part cell as the section's representative.
 
+- `[editor]` `score { strokes ▮` and `chords NAME plays ▮` offer the document's strokes parts;
+  `chords NAME ▮` offers `plays` (owner's request 2026-11-01).
+
 ### Verses are `verse N { … }`, and the number is a label, not a line
 
 - `[grammar]` **A verse is written `verse 2 { How I won- der | what you are | }`** — the words

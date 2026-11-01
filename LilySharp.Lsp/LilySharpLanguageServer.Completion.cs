@@ -432,6 +432,8 @@ public sealed partial class LilySharpLanguageServer
             // A lyrics body: the verses (`verse N { … }`).
             CompletionContext.LyricsBody => GetLyricVerseCompletions(),
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
+            CompletionContext.AfterStrokesRef => GetDeclaredNameCompletions(doc.Text, "strokes", "Strokes part — drawn as a one-line staff of slash heads"),
+            CompletionContext.AfterPlaysTarget => GetDeclaredNameCompletions(doc.Text, "strokes", "Strokes part the row plays — its chords struck at the strokes"),
             CompletionContext.AfterLyricsRef => GetLyricsRowNameCompletions(doc.Text, offset),
             CompletionContext.AfterLyricsName => GetVoiceBindingNameCompletions(doc.Text),
             CompletionContext.AfterLyricsTrackName => GetLyricsTrackNameCompletions(),

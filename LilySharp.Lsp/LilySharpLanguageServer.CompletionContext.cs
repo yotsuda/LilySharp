@@ -753,6 +753,11 @@ public sealed partial class LilySharpLanguageServer
         StaffGroupBlock,
         AfterStaffRef,
         AfterChordsRef,
+        /// <summary><c>strokes |</c> in a score — the strokes parts the document declares
+        /// (owner's request 2026-11-01).</summary>
+        AfterStrokesRef,
+        /// <summary><c>chords NAME plays |</c> on a score row — the strokes part the row plays.</summary>
+        AfterPlaysTarget,
         AfterLyricsRef,
         AfterLyricsName,
         AfterLyricsTrackName,
@@ -1414,6 +1419,14 @@ public sealed partial class LilySharpLanguageServer
                 // or the brace itself (owner's request 2026-10-24).
                 case "condensedStaff" or "combinedStaff": return CompletionContext.AfterOneStaffKeyword;
                 case "chords": return CompletionContext.AfterChordsRef;
+                // `strokes ▮`: the strokes parts (owner's request 2026-11-01: `score { strokes ▮`
+                // offered nothing; `rhythm` is the one thing that fits).
+                case "strokes": return CompletionContext.AfterStrokesRef;
+                // `chords NAME plays ▮` / `chords plays ▮`: the strokes part the row plays.
+                case "plays":
+                    if (SecondWordBeforeCursor(text, offset) == "chords" || ThirdWordBeforeCursor(text, offset) == "chords")
+                        return CompletionContext.AfterPlaysTarget;
+                    break;
                 case "lyrics": return CompletionContext.AfterLyricsRef;
                 // `lyrics NAME sings ▮` on a score row — the binding target, the
                 // same list the definition's `sings` offers. Guarded by the word

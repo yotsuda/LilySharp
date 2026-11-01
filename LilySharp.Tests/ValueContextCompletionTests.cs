@@ -227,9 +227,25 @@ public class ValueContextCompletionTests
     [InlineData("score { grandStaff { staff m  lyrics ", "AfterLyricsRef")]
     [InlineData("score s { chords ", "AfterChordsRef")]
     [InlineData("score s { lyrics ", "AfterLyricsRef")]
+    // `strokes |` and `chords NAME plays |`: the strokes parts (owner's request 2026-11-01).
+    [InlineData("score { strokes ", "AfterStrokesRef")]
+    [InlineData("score { chords harmony plays ", "AfterPlaysTarget")]
+    [InlineData("score { chords plays ", "AfterPlaysTarget")]
     public void InsideAScoreBlock_RenderSpecContexts(string text, string expected)
     {
         Assert.Equal(expected, ContextOf(text).ToString());
+    }
+
+    [Fact]
+    public void AStrokesRow_AndAPlaysTarget_OfferTheStrokesParts()
+    {
+        const string book = "part singer { instrument alto }\nstrokes rhythm { section A { 4 8 8 4 4 | } }\n"
+            + "chords harmony { section A { C | } }\nsection A { singer { c'1 | } }\nform { A }\nscore { ";
+        // Both contexts list the document's strokes parts — not its chords, not its parts.
+        Assert.Equal(["rhythm"], LilySharpLanguageServer.GetDeclaredNameCompletions(book + "strokes ", "strokes", "").Items.Select(i => i.Label).ToArray());
+        // …and `plays` itself after the row's name, re-opening onto them.
+        var plays = LilySharpLanguageServer.GetChordAttachNameCompletions().Items.Single(i => i.Label == "plays");
+        Assert.Equal("editor.action.triggerSuggest", plays.Command!.CommandIdentifier);
     }
 
     [Fact]

@@ -50,6 +50,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   under them. The
   top-level completion offers the `strokes` snippet, the score completion the `strokes` item,
   and `strokes` is coloured as a keyword (`plays`, like `sings` and `for`, stays a plain word).
+- **`score { strokes ▮` offers the strokes parts** (`rhythm`), as `chords NAME plays ▮` does; and
+  after a chords row's name the list carries `plays`, which re-opens onto them.
 
 ### The chord-diagram grammar: one key, one question
 

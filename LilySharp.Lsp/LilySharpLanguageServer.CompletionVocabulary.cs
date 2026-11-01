@@ -2492,6 +2492,17 @@ public sealed partial class LilySharpLanguageServer
             AsItem("as roman", "Show chord symbols as Roman-numeral degrees (I, IIm7, V7)", "0"),
             AsItem("as names", "Show absolute chord names (C, Am7) — the default", "1"),
             ChordForItem("Print the chords as this part's player reads them on this page", "2"),
+            // `plays STROKES`: the strum the row's chords are struck in (owner's request 2026-11-01).
+            new CompletionItem
+            {
+                Label = "plays",
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "plays $0",
+                Detail = "Strike the chords in a strokes part's rhythm (`plays rhythm`; the MIDI only — `strokes NAME` draws it)",
+                SortText = "3",
+                Command = new Command { Title = "Suggest strokes part", CommandIdentifier = "editor.action.triggerSuggest" },
+            },
         };
         // The next render item can also start here; keep those, sorted after `as …`.
         foreach (var it in GetScoreBlockCompletions().Items)
