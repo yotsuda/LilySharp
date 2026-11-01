@@ -572,7 +572,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             {
                 AdoptMeters(from, itemIndex);
                 total += MeasureDurations.CalculateMeasureDuration(
-                    barItems.GetRange(from, itemIndex - from), ref defaultDuration);
+                    barItems.GetRange(from, itemIndex - from), ref defaultDuration, JudgeTuplet);
                 from = itemIndex;
                 if (span != null)
                 {
@@ -609,7 +609,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             }
             AdoptMeters(from, barItems.Count);
             total += MeasureDurations.CalculateMeasureDuration(
-                barItems.GetRange(from, barItems.Count - from), ref defaultDuration);
+                barItems.GetRange(from, barItems.Count - from), ref defaultDuration, JudgeTuplet);
             var duration = total;
 
             // A percent mark's bar is the bars it repeats — whole bars of the meter, by the
@@ -1004,6 +1004,38 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// already has a diagnostic" — and widening the key would silence a different bar.
     /// The reader gets the wider address; the bookkeeping keeps the narrow identity.
     /// </remarks>
+    // The tuplets judged once (a phrase body is counted where it plays and where it is declared).
+    private readonly HashSet<TupletExpressionSyntax> _tupletsJudged = new();
+
+    /// <summary>
+    /// A tuplet whose notes sound a length no note value writes — <c>tuplet 3/2 { g8 }</c> is
+    /// 1/12 of a whole note — holds the wrong notes: a 3/2 bracket's notes add up to three of
+    /// one value played in the time of two (three eighths, or a quarter and an eighth). Said of
+    /// every tuplet the bar count meets (<see cref="MeasureDurations.ItemDuration"/>), once each.
+    /// Owner's question 2026-11-01 on a bar a scan read: the bracket on the page covered a
+    /// quarter and an eighth, the text put the eighth alone inside it, and the bar read 13/12 —
+    /// LYS2002 named the bar, nothing named the bracket. The scan's own check now sees it.
+    /// </summary>
+    private void JudgeTuplet(TupletExpressionSyntax tuplet, Fraction sounding)
+    {
+        int d = sounding.Denominator;
+        if (sounding == Fraction.Zero || (d & (d - 1)) == 0 || !_tupletsJudged.Add(tuplet))
+            return;
+        int n = tuplet.TupletRatio, b = tuplet.BaseDivision;
+        string example = (n, b) switch
+        {
+            (3, 2) => "three eighths, or a quarter and an eighth",
+            (5, 4) => "five sixteenths",
+            (6, 4) => "six sixteenths",
+            (7, 4) => "seven sixteenths",
+            (2, 3) => "two eighths, or a quarter",
+            _ => $"{n} of one value",
+        };
+        _diagnostics.Warning(tuplet.Span, DiagnosticCodes.TupletNotANoteValue,
+            $"this tuplet sounds {sounding} of a whole note, a length no note value writes: the notes inside a {n}/{b} bracket "
+            + $"add up to {n} of one value played in the time of {b} ({example}) — a note the bracket covers may have been left outside it.");
+    }
+
     private TextSpan Reported(MeasureContent measure, TextSpan? leadInSpan)
     {
         // A meter carried in from voice 1 (WithMeters) stands in another voice's text: the

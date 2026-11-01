@@ -286,7 +286,9 @@ bes8 8 8 8  // bes eighths, written once
 one bar: what starts past its end is not drawn or played (LYS2002). Music that is two or more
 whole bars with no `|` between them (within a quarter of a bar) is an ERROR (LYS2017) — it is
 drawn and played in bars of the meter, every note kept, until the `|` is written; so is a
-`time` written after music in a bar (write the `|` before it). A phrase's music is held to the
+`time` written after music in a bar (write the `|` before it). A tuplet's notes add up to the
+ratio's count of one value — `tuplet 3/2 { c8 d e }`, or `{ c4 d8 }` — so the group sounds a
+note value; `tuplet 3/2 { g8 }` sounds 1/12 and is warned (LYS2020). A phrase's music is held to the
 bar it plays in like any other. A repeat's turns and an `R1*N` still close their bars where
 the beats fill.
 

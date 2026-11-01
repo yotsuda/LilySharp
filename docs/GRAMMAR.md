@@ -2505,6 +2505,10 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
        error (LYS2017), every note kept;
      - a phrase body inlined into the bar is music like any other, held to the written bar it
        plays in (its own bar lines are bar lines);
+     - a tuplet's notes add up to the ratio's count of one value ('tuplet 3/2 { c8 d e }', or
+       '{ c4 d8 }'), so the group sounds a note value; one that does not — 'tuplet 3/2 { g8 }'
+       sounds 1/12 — is WARNED at the bracket (LYS2020; a scan's bracket missing a note), each
+       tuplet once, nested ones each on their own (Semantics.MeasureValidator.JudgeTuplet);
      - where no bar line can be written — inside an 'R1*N' or a '%N' — the bars still close
        where the beats fill;
      - between two percent marks in a row the bar line MAY BE LEFT OUT (owner's decision,

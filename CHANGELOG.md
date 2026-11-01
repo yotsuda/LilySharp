@@ -14,6 +14,15 @@ workflow attaches that section to the GitHub Release verbatim.
   padding short of the note column's centre, the two open ends two thirds of a space apart. A
   niente pair keeps its shared circle; a dynamic text on the note stays the bound.
 
+### A tuplet that sounds no note value is warned
+
+- `[check]` **LYS2020: a tuplet whose notes sound a length no note value writes** — `tuplet 3/2
+  { g8 }` is 1/12 of a whole note — is warned at the bracket: "the notes inside a 3/2 bracket add
+  up to 3 of one value played in the time of 2 (three eighths, or a quarter and an eighth) — a note
+  the bracket covers may have been left outside it". Counted where the bar is counted, nested
+  tuplets each on their own, once per tuplet. A scan read `ees''4 tuplet 3/2 { g''8 }` for a
+  bracket over a quarter and an eighth; only the bar's 13/12 was named before.
+
 ### The twin draws a short final bar's line without a bar check
 
 - `[lilypond]` **A short final bar completing the pickup ends with `\bar "|"` in the twin**: Lily#

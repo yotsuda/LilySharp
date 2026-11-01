@@ -1556,6 +1556,11 @@ public static class DiagnosticCodes
     /// (owner's report and decision 2026-10-30; <c>Semantics.VoiceSpanLengthValidator</c>).</summary>
     public const string VoiceRunsPastSpan = "LYS2019";
 
+    /// <summary>Warning: a tuplet's notes sound a length no note value writes (<c>tuplet 3/2 { g8 }</c>,
+    /// 1/12 of a whole note) — the bracket holds the wrong notes, as when a scan leaves a note it
+    /// covers outside it (owner's question 2026-11-01; <c>Semantics.MeasureValidator.JudgeTuplet</c>).</summary>
+    public const string TupletNotANoteValue = "LYS2020";
+
     /// <summary>Warning: a key whose signature has more than seven sharps or flats — <c>key des
     /// minor</c> is eight flats, B double-flat in the signature — named with the enharmonic key that
     /// sounds the same (<c>key cis minor</c>, four sharps). Owner's review 2026-10-30: a composed

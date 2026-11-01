@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
@@ -26,19 +27,23 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 internal static class MeasureDurations
 {
-    public static Fraction CalculateMeasureDuration(List<SyntaxNode> items, ref Fraction defaultDuration)
+    public static Fraction CalculateMeasureDuration(List<SyntaxNode> items, ref Fraction defaultDuration,
+        Action<TupletExpressionSyntax, Fraction>? onTuplet = null)
     {
         var total = Fraction.Zero;
         foreach (var item in items)
-            total += ItemDuration(item, ref defaultDuration);
+            total += ItemDuration(item, ref defaultDuration, onTuplet);
         return total;
     }
 
     /// <summary>
     /// Metric duration of a single music item, recursing into tuplets (scaled by
-    /// their ratio) so triplets etc. fill the correct fraction of the bar.
+    /// their ratio) so triplets etc. fill the correct fraction of the bar. Each tuplet met, outer
+    /// and nested, is handed to <paramref name="onTuplet"/> with the length it sounds
+    /// (<see cref="MeasureValidator"/> judges it there: LYS2020).
     /// </summary>
-    public static Fraction ItemDuration(SyntaxNode item, ref Fraction defaultDuration)
+    public static Fraction ItemDuration(SyntaxNode item, ref Fraction defaultDuration,
+        Action<TupletExpressionSyntax, Fraction>? onTuplet = null)
     {
         switch (item)
         {
@@ -118,9 +123,10 @@ internal static class MeasureDurations
                 // (\tuplet 3/2 { c8 c c } -> 3 * 1/8 * 2/3 = 1/4).
                 var inner = Fraction.Zero;
                 foreach (var bodyItem in tuplet.Body.Items)
-                    inner += ItemDuration(bodyItem, ref defaultDuration);
+                    inner += ItemDuration(bodyItem, ref defaultDuration, onTuplet);
                 if (tuplet.TupletRatio > 0)
                     inner *= new Fraction(tuplet.BaseDivision, tuplet.TupletRatio);
+                onTuplet?.Invoke(tuplet, inner);
                 return inner;
 
             case ArpeggioSyntax arp:
@@ -147,7 +153,7 @@ internal static class MeasureDurations
                 // that is exactly full.
                 var cueTotal = Fraction.Zero;
                 foreach (var bodyItem in cue.Body.Items)
-                    cueTotal += ItemDuration(bodyItem, ref defaultDuration);
+                    cueTotal += ItemDuration(bodyItem, ref defaultDuration, onTuplet);
                 return cueTotal;
             }
 
@@ -159,7 +165,7 @@ internal static class MeasureDurations
                 // repeat's metric length is count × body (8 × c32 = a quarter).
                 var body = Fraction.Zero;
                 foreach (var bodyItem in rep.Body.Items)
-                    body += ItemDuration(bodyItem, ref defaultDuration);
+                    body += ItemDuration(bodyItem, ref defaultDuration, onTuplet);
                 return body * new Fraction(tremCount, 1);
             }
 
@@ -169,7 +175,7 @@ internal static class MeasureDurations
                 // bars reads the group's children instead — MeasureModel.)
                 var body = Fraction.Zero;
                 foreach (var bodyItem in percent.BodyItems)
-                    body += ItemDuration(bodyItem, ref defaultDuration);
+                    body += ItemDuration(bodyItem, ref defaultDuration, onTuplet);
                 return body * new Fraction(percent.Count, 1);
             }
 
