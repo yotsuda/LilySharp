@@ -42,6 +42,13 @@ next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
      (`firstFindings`, `recheckedFor`; compared with their digits stripped).
    - **The proposal after that** is written into the file. Whatever the check still finds is listed
      in the reply, and the AI is told to tell the musician each point and why it was left.
+   - **A proposal while the composing goes on** — the chat revising its own piece, unasked, after it
+     was written — is written into the file again in its place, never put on the panel
+     (`newPieces`, `composingGoesOn`; owner's request 2026-11-01). The composing goes on while the
+     document's text is still what `proposeScore` wrote and the musician has said nothing in the
+     chat since: the newest `user.message` in the Copilot CLI session log (`lastUserMessageAt`) is
+     older than the write. A chat that keeps no log goes by the text alone. A change the musician
+     asks for in the chat (a new `user.message`), or a piece they edited, is a proposal on the panel.
 5. **Writing.** The piece is converted to relative octaves, as a musician writes
    (`asMusicianWrites` → `OctaveModeConverter`). Unplayed phrases and sections convert too. If the
    conversion fails, the reply says the piece was left in absolute octaves.

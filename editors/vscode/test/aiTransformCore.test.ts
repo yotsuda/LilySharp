@@ -25,7 +25,27 @@ import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
     aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
+    lastUserMessageAt,
 } from '../src/aiTransformCore';
+
+// Owner's request 2026-11-01: a composed piece opened in the editor, and a panel over it at once —
+// the chat had proposed its piece again, unasked. The same request's going on is told by the log:
+// nothing said since the piece was written.
+describe('when the musician last spoke in the chat', () => {
+    it('is the newest user.message in the session log, in ms', () => {
+        const log = [
+            '{"type":"session.start","data":{},"timestamp":"2026-11-01T05:41:45.000Z"}',
+            '{"type":"user.message","data":{"content":"write a song"},"timestamp":"2026-11-01T05:41:49.986Z"}',
+            '{"type":"tool.execution_start","data":{"toolName":"proposeScore"},"timestamp":"2026-11-01T05:44:51.000Z"}',
+            '{"type":"user.message","data":{"content":"make it longer"},"timestamp":"2026-11-01T05:50:00.000Z"}',
+            '{"type":"assistant.message","data":{"content":"user.message"},"timestamp":"2026-11-01T05:51:00.000Z"}',
+            'not json',
+        ].join('\n');
+        assert.equal(lastUserMessageAt(log), Date.parse('2026-11-01T05:50:00.000Z'));
+        assert.equal(lastUserMessageAt('{"type":"session.start","data":{}}'), undefined);
+        assert.equal(lastUserMessageAt('{"type":"user.message","data":{}}'), undefined);
+    });
+});
 
 // Owner's request 2026-10-30: the header to name the model that composed the piece.
 describe('the model a chat\'s piece names in its header', () => {

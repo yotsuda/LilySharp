@@ -43,7 +43,9 @@ describe('the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*A song to sing and play yourself\*\* \(弾き語り;/);
         assert.match(guide, /`instrument alto` \(F3–F5\) for a woman's song and when the request names no\s+voice; `instrument baritone` \(G2–G4\) for a man's/);
-        assert.match(guide, /`score \{ chords NAME  staff singer  lyrics words \}`/);
+        assert.match(guide, /`score \{ chords NAME plays rhythm  staff singer  lyrics words \}`/);
+        // Owner's design 2026-11-01: the verses are `verse N { }` in one track, not a track a verse.
+        assert.match(guide, /\*\*The verses\*\*: one lyrics track, `verse 1 \{ … \} verse 2 \{ … \}` inside it/);
         assert.match(guide, /\*\*The diagrams, always\*\*: `layout \{ chordDiagrams all  chordList true \}`/);
     });
     // Owner's trial 2026-10-29: a "dramatic" quartet's tremolo and sforzando were all in two bars.
@@ -175,7 +177,7 @@ describe('the composing guide', () => {
         assert.match(fn, /return 'Accepted: the musician accepted the proposal, and it is in the editor, not saved yet/);
         // The file named by its own name, where it is now, for the chat to tell (owner's report
         // 2026-10-29: the chat called the file by the piece's title).
-        assert.match(fn, /return `Written: the new piece is \$\{path\.basename\(currentUri\(uri\)\.fsPath\)\} — call the file by that name, `/);
+        assert.match(fn, /return `Written\$\{goesOn \? ' again, in place of the piece written before' : ''\}: the new piece is `\s*\+ `\$\{path\.basename\(currentUri\(uri\)\.fsPath\)\} — call the file by that name, `/);
         assert.match(fn, /`\$\{path\.basename\(currentUri\(uri\)\.fsPath\)\} \(call the file by that name; it may have been renamed\)\. Read it `/);
         // Owner's request 2026-10-29: Accept puts it in the editor and saves nothing.
         assert.ok(!/\.save\(\)/.test(fn));
@@ -190,7 +192,15 @@ describe('the composing guide', () => {
         assert.match(fn, /'Tell them in a line or two what the rejected proposal changed \(and anything it left undone\), then '/);
         // Owner's request 2026-10-29: a new piece goes straight into the file, open in the editor —
         // no panel; the music check still speaks once first.
-        assert.match(fn, /if \(isEmptyScore\(current\)\) \{[\s\S]*?const musicians = await asMusicianWrites\(deps, client, text\);[\s\S]*?const written = await writeWhole\(uri, exists, doc, musicians\);/);
+        assert.match(fn, /if \(isEmptyScore\(current\) \|\| goesOn\) \{[\s\S]*?const musicians = await asMusicianWrites\(deps, client, text\);[\s\S]*?const written = await writeWhole\(uri, exists, doc, musicians\);/);
+        // Owner's request 2026-11-01: a composed piece opened, and a panel over it at once — the chat
+        // had proposed its piece again, unasked. While the composing goes on (the text as the chat wrote
+        // it, nothing said in the chat since, by the Copilot session log), the piece is written again.
+        assert.match(fn, /const goesOn = doc !== undefined && !isEmptyScore\(current\) && await composingGoesOn\(doc, current\);/);
+        assert.match(fn, /newPieces\.set\(written\.uri\.toString\(\), \{ text: written\.getText\(\), at: Date\.now\(\) \}\);/);
+        const goesOn = transform.slice(transform.indexOf('async function composingGoesOn('), transform.indexOf('/** The unsaved document named by the path'));
+        assert.match(goesOn, /if \(!piece \|\| piece\.text !== current\) \{\s*return false;/);
+        assert.match(goesOn, /const spoken = await chatSpokenAt\(\);\s*return spoken === undefined \|\| spoken <= piece\.at;/);
         assert.ok(fn.indexOf('const music = await compositionFindings') < fn.indexOf('const written = await writeWhole'));
         // Written, not saved; an unsaved score is found by the path it is named by.
         const write = transform.slice(transform.indexOf('async function writeWhole'), transform.indexOf('function unsavedNamed'));

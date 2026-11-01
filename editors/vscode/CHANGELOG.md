@@ -4,6 +4,16 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A piece composed in the chat opens once, finished
+
+- **No candidate panel over a piece the chat just composed.** Copilot's chat sometimes proposes
+  its new piece a second time, unasked, right after Lily# wrote it into the editor; the file was
+  no longer empty, so the second proposal opened the candidate panel beside the piece. Now a
+  proposal for a piece the chat itself just wrote, while its text is as written and nothing has
+  been said in the chat since (the Copilot session log says), is written into the editor again
+  in its place: only the final piece opens. A change asked for in the chat afterwards is still
+  proposed on the panel.
+
 ### Verses are `verse N { … }`
 
 - **A verse's words are `verse 2 { … }` inside the lyrics**, not `[2. … ]` (which read like a

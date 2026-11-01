@@ -6,6 +6,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A piece composed in Copilot's chat opens once, finished
+
+- `[editor]` A proposal for a piece the chat itself just wrote, while the text is as written and
+  the musician has said nothing since (by the Copilot session log; by the text alone in a chat
+  that keeps none), is written into the editor again in its place — no candidate panel over the
+  piece just composed. Owner's report 2026-11-01: the chat revised its new piece unasked, and
+  the panel opened beside it.
+
 ### A chord row strums: `strokes` and `plays`
 
 - `[grammar]` **`strokes NAME { … }` is a part that holds a rhythm and no pitch** — `strokes

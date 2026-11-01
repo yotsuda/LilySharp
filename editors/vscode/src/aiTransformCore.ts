@@ -816,6 +816,26 @@ export function copilotModelOf(events: string): string | undefined {
     return id === undefined ? undefined : names.get(id) ?? id;
 }
 
+/**
+ * When the musician last spoke in a Copilot CLI session, by its events log (the newest `user.message`
+ * event's timestamp, in ms); undefined when the log has none. A proposal after the chat wrote a new
+ * piece is the same request's going on while nothing has been said since (owner's request
+ * 2026-11-01: a composed piece opened in the editor, and a panel over it at once — the chat had
+ * proposed its piece again, unasked, into the file no longer empty).
+ */
+export function lastUserMessageAt(events: string): number | undefined {
+    let at: number | undefined;
+    for (const line of events.split(/\r?\n/)) {
+        if (!line.includes('"user.message"')) { continue; }
+        let e: { type?: string; timestamp?: string };
+        try { e = JSON.parse(line); } catch { continue; }
+        if (e.type !== 'user.message' || !e.timestamp) { continue; }
+        const t = Date.parse(e.timestamp);
+        if (!Number.isNaN(t) && (at === undefined || t > at)) { at = t; }
+    }
+    return at;
+}
+
 /** The text with the model named in its "// Composed in Copilot's chat" line (copilotModelOf). */
 export function withModelNamed(text: string, model: string): string {
     return text.replace(/^(\s*\/\/ Composed in Copilot's chat)(?: \([^)\r\n]*\))?,/m, `$1 (${model}),`);

@@ -42,6 +42,7 @@ import {
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
     cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
+    lastUserMessageAt,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -421,8 +422,8 @@ function newPieceSteps(lysc: string | undefined): string {
 /** Writes `text` as the whole file and opens it, not saved: the musician saves it when they want it
  *  kept (owner's requests 2026-10-29), and the chat reads it as it stands with lilysharp_readScore. A
  *  file not there opens as an unsaved score named by its path, as Compose with AI in Chat opens one.
- *  The reason when it could not. */
-async function writeWhole(uri: vscode.Uri, exists: boolean, doc: vscode.TextDocument | undefined, text: string): Promise<string | undefined> {
+ *  The document written, or the reason when it could not be. */
+async function writeWhole(uri: vscode.Uri, exists: boolean, doc: vscode.TextDocument | undefined, text: string): Promise<vscode.TextDocument | string> {
     const target = exists && doc ? doc : await vscode.workspace.openTextDocument(uri.with({ scheme: 'untitled' }));
     const edit = new vscode.WorkspaceEdit();
     edit.replace(target.uri, new vscode.Range(target.positionAt(0), target.positionAt(target.getText().length)), text);
@@ -433,7 +434,36 @@ async function writeWhole(uri: vscode.Uri, exists: boolean, doc: vscode.TextDocu
         await vscode.languages.setTextDocumentLanguage(target, 'lilysharp');
     }
     await vscode.window.showTextDocument(target, { preview: false });
+    return target;
+}
+
+/** Each document's new piece as the chat's proposal wrote it, and when (proposeScore): a proposal
+ *  for it while the text is still that and the musician has not spoken since is the composing going
+ *  on — written whole again, not put on a panel over the piece (owner's request 2026-11-01). */
+const newPieces = new Map<string, { text: string; at: number }>();
+
+/** The new piece written into `doc`, by its URI now or the one it was written as (an untitled score
+ *  saved since). */
+function newPieceOf(doc: vscode.TextDocument): { text: string; at: number } | undefined {
+    const now = doc.uri.toString();
+    const direct = newPieces.get(now);
+    if (direct) { return direct; }
+    for (const [key, piece] of newPieces) {
+        if (currentUri(vscode.Uri.parse(key)).toString() === now) { return piece; }
+    }
     return undefined;
+}
+
+/** Whether a proposal for the new piece written at `at` is the same request's going on: the musician
+ *  has not touched its text, and has said nothing in the chat since — by the Copilot CLI session's
+ *  log (lastUserMessageAt); in a chat that keeps no log, by the text alone. */
+async function composingGoesOn(doc: vscode.TextDocument, current: string): Promise<boolean> {
+    const piece = newPieceOf(doc);
+    if (!piece || piece.text !== current) {
+        return false;
+    }
+    const spoken = await chatSpokenAt();
+    return spoken === undefined || spoken <= piece.at;
 }
 
 /** The unsaved document named by the path it will be saved to (Compose with AI in Chat): the one a
@@ -590,6 +620,20 @@ let drawnHint: string | undefined;
 /** The model calling proposeScore, read from the newest Copilot CLI session's log (copilotModelOf);
  *  undefined in a chat that keeps none, as VS Code's own. */
 async function chatModelName(): Promise<string | undefined> {
+    const log = await chatSessionLog();
+    return log === undefined ? undefined : copilotModelOf(log);
+}
+
+/** When the musician last spoke in the chat calling proposeScore, by the newest Copilot CLI session's
+ *  log (lastUserMessageAt); undefined in a chat that keeps none. */
+async function chatSpokenAt(): Promise<number | undefined> {
+    const log = await chatSessionLog();
+    return log === undefined ? undefined : lastUserMessageAt(log);
+}
+
+/** The newest Copilot CLI session's events log, when it is this chat's: one written to just now —
+ *  this call was logged as it began. Undefined where there is none, as in VS Code's own chat. */
+async function chatSessionLog(): Promise<string | undefined> {
     try {
         const root = path.join(os.homedir(), '.copilot', 'session-state');
         let newest: { file: string; time: number } | undefined;
@@ -598,8 +642,7 @@ async function chatModelName(): Promise<string | undefined> {
             const time = (await fs.promises.stat(file).catch(() => undefined))?.mtimeMs;
             if (time !== undefined && (newest === undefined || time > newest.time)) { newest = { file, time }; }
         }
-        // A log not written to just now is another chat's: this call was logged as it began.
-        return newest && Date.now() - newest.time < 60_000 ? copilotModelOf(await fs.promises.readFile(newest.file, 'utf8')) : undefined;
+        return newest && Date.now() - newest.time < 60_000 ? await fs.promises.readFile(newest.file, 'utf8') : undefined;
     } catch {
         return undefined;
     }
@@ -712,8 +755,12 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     }
     // A new piece goes straight into the file, not to the panel (owner's request 2026-10-29: a
     // composed piece decided on beside an empty score was the less clear way — what is to change is
-    // said in the chat afterwards, a bar named there if need be).
-    if (isEmptyScore(current)) {
+    // said in the chat afterwards, a bar named there if need be). So does the piece proposed again
+    // while the composing goes on — the chat revising its own piece, unasked, before the musician has
+    // said a word (owner's request 2026-11-01: a composed piece opened, and a panel over it at once;
+    // only the final piece is to open). A change the musician asks for in the chat is a proposal.
+    const goesOn = doc !== undefined && !isEmptyScore(current) && await composingGoesOn(doc, current);
+    if (isEmptyScore(current) || goesOn) {
         // Opened as a musician writes it, as Compose with AI's piece is (owner's report 2026-10-29).
         // The ranges are of the piece as the AI wrote it: they are the same notes.
         // The revision is written as it is, and what the check still finds in it said to the musician
@@ -750,15 +797,18 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             ? 'It is written in absolute octaves, as you proposed it (Lily# could not bring it into relative octaves); '
             : 'It is written in relative octaves, as a musician writes it; ';
         const written = await writeWhole(uri, exists, doc, musicians);
-        if (written !== undefined) {
+        if (typeof written === 'string') {
             return `Not written: ${written}`;
         }
-        deps.log('AI proposal (chat): a new piece — written into the file.');
+        newPieces.set(written.uri.toString(), { text: written.getText(), at: Date.now() });
+        deps.log(goesOn ? 'AI proposal (chat): the composing goes on — the new piece written into the file again, no panel.'
+            : 'AI proposal (chat): a new piece — written into the file.');
         // The piece is done: what is to change, the musician says — not proposed again unasked, which
         // would put a panel over the piece just written (owner's report 2026-10-29).
         // The file by its own name, for the chat to tell the musician (owner's report 2026-10-29: the
         // chat called Meifu-no-Ou-to-no-Kessen.lys "冥府の王との決戦.lys", the piece's title).
-        return `Written: the new piece is ${path.basename(currentUri(uri).fsPath)} — call the file by that name, `
+        return `Written${goesOn ? ' again, in place of the piece written before' : ''}: the new piece is `
+            + `${path.basename(currentUri(uri).fsPath)} — call the file by that name, `
             + 'not by the piece\'s title. It is open in the editor, not saved: the musician '
             + 'saves it when they want to keep it. ' + octaves
             + 'read it with lilysharp_readScore (not from the disk), which shows it to you in absolute octaves. The piece is done: '
