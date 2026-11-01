@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1037セッションの経緯
+
+### 1.1 第1037セッション（2026-11-01〜02・YT-DELL2）
+
+新しい会話。開始時 full **13771 / 0 / 2**（`-Start p1037`・HEAD `76756764a`・OMR の open 4）。作業場所は Lab `sessions/p1037/`。§0 の規則どおり **OMR の open（#15〜#18）に優先して着手し、4 本とも閉じた**（`REQUESTS.md` の行を書き換えた＝OMR repo 側は未 commit）。
+- **#15** Release の lysc を `b94d4f261` でビルドし直した。
+- **#18 `a7d6859c0` 表題がオッターヴァに重なる**: `EnrichExtentsWithAnnotationProtrusions` にオッターヴァの腕が無かった（段の輪郭には在る）＝表題とページ上端のばねが読むスカラーに入らない。トリルと同じ腕を足した。掃きで 1262 枚中 5 枚（どれもオッターヴァの本）。`multi-staff-ottava` のスナップショットはページの高さだけ 37.60→40.43 で承認＝**⚠️ 出力が動く変更なので push 前にユーザーが確認**。網 `OttavaUnderTitleTests`（最初の版は座標系を読み違えて毒でも緑＝SVG の座標で書き直し、毒で赤を確認）。同時に Core の警告 CS1572（`StaffGap` の doc が別のメソッドに割り込まれていた）を直した。
+- **#16 `8a3780d5e` 和音の 1 音のタイ** `<c f d~>8. <c f d>16`: 文法は和音の中の TieSyntax（メンバーのスラーと同じ置き場）→ `ChordSyntax.TiedMembers`／`HasTiedMembers`、`ChordNoteInfo.TiedAlone`、読み手は `ChordItem.Ties(member)`（`TieDetector`・`MeasureBuilder.TiesInto`・`StaffAccidentals`・`TieTargetScanner`・`SectionPlayCarry`）。再生は `CloseOnset` に結ぶ音だけ渡す。MusicXML・双子も。符頭の `~` と和音の `~` の両方はエラー（LilySharp の判断＝LP は受ける）。掃き 0。網 `ChordMemberTieTests`（毒で 3 本赤）。⚠️ 文法の追加はオーナーに訊かず OMR の依頼どおりに入れた＝報告済み。⚠️ 絵のタイの本数と形は LP と同じだが、高さは細かく比べていない。
+- **#17 `b94d4f261` `layout { ottavaLine dashed | wave }`**（オーナー決定「1 鍵」2026-11-02）: `EngravingStyle.OttavaWave`・`OttavaLineKey`。線は `TrillWaveOutline`（`Skylines`・描画・`LineReach`）・`wave` はかぎ 0。双子は `OttavaBracket.style`／`edge-height`。⚠️ LP はこの設定で線の末尾に切れ目を挟んで短い波を 1 つ足す＝副産物と読んで写していない（機構は未確認）。掃き 0。網 `OttavaLineTests`。C54。
+- **OMR の候補 §4（連符の弧 `tuplet-slur`）はオーナー「可」**＝REQUESTS の「将来の依頼」に書いた。依頼が来たら着手。**§3（`lysc ly` のキューの符幹が無い・急がない）は未着手**。
+- 終了時 full **13786 / 0 / 2**（`-End p1037 -DiffBase 76756764a`・門は全部 OK・OWN 2＝両方のタイのエラーと末尾の波＝`docs/APPROXIMATIONS.md` に 2 項増）。⚠️ 罠: `#18` のコミットは引用の網 `CitationsThatNameNothing` が赤いまま入れた（`vertical-skylines` は 2 語＝シンボルに数えない・`8a3780d5e` で解消）。**コメントを直した後もコミット前に full を回す**。
+
 ## 以下は第1036セッションの経緯
 
 ### 1.1 第1036セッション（2026-10-31・YT-DELL2）

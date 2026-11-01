@@ -185,7 +185,7 @@ measured over the same 1,215 books (`key-census` in Lab `sessions/p1038/`):
   root of whatever chord is there, and an out-of-key root is that chord's. So a line whose middle note
   is under C3, a note lowest of what sounds with it, and a note another part sounds at the time are
   all left out, and more than 10% of a line's notes is taken for the music's own language.
-- **`spelling.direction`** speaks on none of them. Only its tests have seen it speak.
+- **`spelling.direction`** speaks on none of them. It speaks on one of the chat pieces below.
 - **`chord.outside`** speaks on 4 of the 52 books with chord symbols (366 chords listed), all four test
   fixtures that show chord names. Of the 27 chords outside the scale that had a role, 11 were secondary
   dominants, 8 a blues's dominant sevenths and 6 borrowed. So the roles are hardly tested by real
@@ -194,3 +194,11 @@ measured over the same 1,215 books (`key-census` in Lab `sessions/p1038/`):
 - **`key.signature`, `key.outside` and `chord.outside` do not read a piece that changes key**, or whose
   notes do not sound as written (a transposing part, the file not in concert pitch): they read everything
   against one key. Such a piece's `facts.chords` has the symbols and no `roman`.
+- **A piece in a mode is not read by `key.signature`, `key.outside` or `chord.outside` either**: they know major
+  and minor only. A key past seven accidentals (`des minor`) is read by its notes; LYS4034 asks to rewrite it.
+
+The owner's folder of chat pieces (148 more books, mostly written by an AI, Lab `sessions/p1039/`) is a harder
+test than the books above: over the whole 1,363, `key.outside` speaks on 21 (14 of them there), `key.signature` on 9
+and `chord.outside` on 6. Those notes were not all read against their songs. `Hibana-o-Oikose` is a rock riff's G
+natural in E major, which is why this check is put as a question. `facts.tempo` is what is played, in the unit
+the mark is written in (`♩. = 96`); a tempo with no unit is in quarters.

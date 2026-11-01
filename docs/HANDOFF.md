@@ -131,6 +131,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1039セッション（2026-11-02・YT-DELL2）
+
+新しい会話。開始時 full **13876 / 0 / 2**（`-Start p1039`・HEAD `ed86982b3`・OMR の open 0）。作業場所は Lab `sessions/p1039/`。
+§1.0 ⒜ の先頭の作曲ガイダンスは曲待ちで、オーナーからの依頼も無い。**昨夜の `lysc review` を、census に入っていなかったオーナーのチャットの曲（Downloads の 147 冊＋今朝の未保存の 1 曲をログから復元＝`sessions/p1039/pieces/`）に当てたら、レビュー自身の欠陥が 4 つ見つかった。**
+- **直した**: ⑴ `key.outside` が同じパートの他の声部を「周りの和音」に数えていなかった（ギター独奏の E が自分の C7 の E の上で `[mistake]`・`Cafe-no-Midori`）／⑵ `key des minor` は `KeyFifths` の表に無く 0＝ハ長調として読まれ「58% が調の外」（`Senko-no-Michi`・調は LYS4034 が既に警告）→音で読む／⑶ 旋法も同じ経路でハ長調→読まない／⑷ `facts.tempo` が MIDI からの逆算で `4. = 96` を `♩ = 144` と言った→書かれた単位で。掃き 1363 冊の差は 3 冊が消えただけ（新規 0）。毒 5 本。⚠️ 最初の網 2 本は毒で緑だった（15 音で `key.signature` の下限 16 未満／G 短調は第 6 音を上げた E♮ も音階の内）＝書き直した。
+- **オーナーの判断待ち（作曲フローなので「入れて」待ち・`docs/compose-in-chat-design.md` §4 の末尾に 3 件）**: ⑴ 最後の修正が新しく作った欠陥は差し戻せない（`Hoshi-furu-Yoru-no-Carol`: 最初のテーマは拍どおり→「8 分が 70%」で書き直し→17 / 35 小節が拍をまたぐ→3 回目で初出＝書き込み確定）／⑵ `piano.left-reaches-melody` が伴奏の右手を melody と呼ぶ（旋律はフルート）／⑶ ピアノに強弱がほぼ無くても何も言わない。
+- ⚠️ 今朝のクリスマス曲はエディタで未保存のまま（`C:\MyProj\compose-trial` は空）。本文はログの `proposeScore` にある。
+- ⚠️ Copilot のログの時刻は UTC（`22:10` は JST 7:10）。§3 の手順でファイルの時刻と比べるときに読み違える。
+- 終了時 full **13884 / 0 / 2**（`-End p1039 -DiffBase ed86982b3`・門は全部 OK）。§7 7.5: Core の差分は描画に触れないレビューの修正・REF 0／OWN 0＝LP の出典は無い。⚠️ 罠: ログ抽出の末尾に `Add-Type` を書き、共有コンソールが Core.dll を掴んで 1 回目の `-End` が MSB3027（`close_console` でやり直した）。server は作り直していない＝エディタのレビューには `Deploy-Lsp.ps1` の後に届く。
+
+
+
+## 以下は第1038セッションの経緯
+
 ### 1.1 第1038セッション（2026-11-02・YT-DELL2）
 
 新しい会話。開始時 full **13786 / 0 / 2**（`-Start p1038`・HEAD `38a2a1041`・OMR の open 0）。作業場所は Lab `sessions/p1038/`。§1.0 ⒜ の先頭の作曲ガイダンスはオーナーが曲を送って進む仕事なので、次の**人間の曲のレビュー**を `docs/review-tool-design.md` §6 の順に実装した。
@@ -142,18 +156,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **実物の VS Code で確認（26 項目 PASS）**: Lab `sessions/p1038/vscode-e2e/`＝隔離した user data で `--extensionTestsPath`・`vscode.lm.invokeTool` と `executeCommand` を直接呼ぶ。Deploy 済み＝ユーザーは Reload Window を 2 回。⚠️ Copilot の AI の振る舞いだけ未確認（C55）。
 - **flat なコード行の再生**: `section` の外の `chords prog { C | G7 | }`（by-section の本で有効・譜面は小節 1 から描く）で、MIDI は小節線だけ歩いて全パートが行の長さだけ遅れ、コードは鳴らなかった。`PlayChordRow` の「Not handled」は音のことしか言っていなかった。時間を取らず、**section ごとに印刷する小節ぶんを渡す**形にした（`Semantics.FlatChordRows`・`PlaySectionChordRows`＝弱起・拍子・調は section 内の行と同じ経路。繰り返しは本体を読み直す・endings は印刷順・D.C. は `PieceState` で戻す・音楽の後の余りも鳴らす）。MusicXML も同じ（余りは載せない）。網＝`ChordRowMidiTests`（section に書いた行と音が同じ・XML はバイト一致）。コーパス 0 冊。⚠️ 1 section の途中の拍子変更は section 内の行と同じく見ていない。 譜面は section 内に書いた行と一致（弱起・拍子・繰り返しの 3 冊・`sessions/p1038/page-compare.ps1`）。`lysc ly` も同じ `FlatChordRows`（`AppendSilentPlay` の和音の腕）＝弱起が `s1`・3/4 の小節が 4/4 の格子・音楽の後に余分な `s1` だったのを、section 内の行とバイト一致に。 かっこが平らになるのも直した（`AppendRepeatBlock` の条件）。実物の LilyPond 2.26 で 3 冊とも警告なし。
 - 終了時 full **13876 / 0 / 2**（`-End p1038 -DiffBase 38a2a1041`・門は全部 OK・npm 649 緑）。§7 7.5: Core の差分は描画に触れない新機能・REF 0／OWN 0＝LP の出典は無い。⚠️ 罠: `,@(旧, X + "`n")` を再発（CLAUDE-OPERATIONS §1）・メンバーを挟むと `DocCommentPlacementTests` が赤。**新しい CI の赤の修正 `5a612b194` は push するまで CI で確かめられない。**
-
-## 以下は第1037セッションの経緯
-
-### 1.1 第1037セッション（2026-11-01〜02・YT-DELL2）
-
-新しい会話。開始時 full **13771 / 0 / 2**（`-Start p1037`・HEAD `76756764a`・OMR の open 4）。作業場所は Lab `sessions/p1037/`。§0 の規則どおり **OMR の open（#15〜#18）に優先して着手し、4 本とも閉じた**（`REQUESTS.md` の行を書き換えた＝OMR repo 側は未 commit）。
-- **#15** Release の lysc を `b94d4f261` でビルドし直した。
-- **#18 `a7d6859c0` 表題がオッターヴァに重なる**: `EnrichExtentsWithAnnotationProtrusions` にオッターヴァの腕が無かった（段の輪郭には在る）＝表題とページ上端のばねが読むスカラーに入らない。トリルと同じ腕を足した。掃きで 1262 枚中 5 枚（どれもオッターヴァの本）。`multi-staff-ottava` のスナップショットはページの高さだけ 37.60→40.43 で承認＝**⚠️ 出力が動く変更なので push 前にユーザーが確認**。網 `OttavaUnderTitleTests`（最初の版は座標系を読み違えて毒でも緑＝SVG の座標で書き直し、毒で赤を確認）。同時に Core の警告 CS1572（`StaffGap` の doc が別のメソッドに割り込まれていた）を直した。
-- **#16 `8a3780d5e` 和音の 1 音のタイ** `<c f d~>8. <c f d>16`: 文法は和音の中の TieSyntax（メンバーのスラーと同じ置き場）→ `ChordSyntax.TiedMembers`／`HasTiedMembers`、`ChordNoteInfo.TiedAlone`、読み手は `ChordItem.Ties(member)`（`TieDetector`・`MeasureBuilder.TiesInto`・`StaffAccidentals`・`TieTargetScanner`・`SectionPlayCarry`）。再生は `CloseOnset` に結ぶ音だけ渡す。MusicXML・双子も。符頭の `~` と和音の `~` の両方はエラー（LilySharp の判断＝LP は受ける）。掃き 0。網 `ChordMemberTieTests`（毒で 3 本赤）。⚠️ 文法の追加はオーナーに訊かず OMR の依頼どおりに入れた＝報告済み。⚠️ 絵のタイの本数と形は LP と同じだが、高さは細かく比べていない。
-- **#17 `b94d4f261` `layout { ottavaLine dashed | wave }`**（オーナー決定「1 鍵」2026-11-02）: `EngravingStyle.OttavaWave`・`OttavaLineKey`。線は `TrillWaveOutline`（`Skylines`・描画・`LineReach`）・`wave` はかぎ 0。双子は `OttavaBracket.style`／`edge-height`。⚠️ LP はこの設定で線の末尾に切れ目を挟んで短い波を 1 つ足す＝副産物と読んで写していない（機構は未確認）。掃き 0。網 `OttavaLineTests`。C54。
-- **OMR の候補 §4（連符の弧 `tuplet-slur`）はオーナー「可」**＝REQUESTS の「将来の依頼」に書いた。依頼が来たら着手。**§3（`lysc ly` のキューの符幹が無い・急がない）は未着手**。
-- 終了時 full **13786 / 0 / 2**（`-End p1037 -DiffBase 76756764a`・門は全部 OK・OWN 2＝両方のタイのエラーと末尾の波＝`docs/APPROXIMATIONS.md` に 2 項増）。⚠️ 罠: `#18` のコミットは引用の網 `CitationsThatNameNothing` が赤いまま入れた（`vertical-skylines` は 2 語＝シンボルに数えない・`8a3780d5e` で解消）。**コメントを直した後もコミット前に full を回す**。
 
 ## 2. 開いている作業
 
