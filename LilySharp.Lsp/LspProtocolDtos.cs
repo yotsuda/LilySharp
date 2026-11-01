@@ -311,6 +311,9 @@ public class PlaybackNote
     /// <summary>The note's track: its index in <see cref="PlaybackResponse.Parts"/> — what the
     /// preview's part switches mute it by (owner's request 2026-10-25).</summary>
     public int N { get; set; }
+    /// <summary>Which stroke of its chord this is (<c>MidiNote.Strike</c>), in a chord row that
+    /// plays a strokes part — what the preview's loop tells a later stroke from a repeat by.</summary>
+    public int K { get; set; }
 }
 
 /// <summary>One metronome beat: when (seconds) and whether it opens a bar.</summary>

@@ -29,6 +29,8 @@ export interface PlaybackNote {
     S: number; O?: number; I?: number; C?: number; G?: number;
     /** The note's track, an index into the response's Parts. */
     N?: number;
+    /** Which stroke of its chord this is, in a chord row that plays a strokes part. */
+    K?: number;
 }
 
 /** A metronome beat as the server sends it: seconds, and whether it opens a bar. */
@@ -186,7 +188,10 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
     // A printed note is its place, its copy and its pitch: a chord row's chord sounds its members
     // from one place (owner's report 2026-10-25: taken for repeats, its second and third were
     // dropped and every note fell to 0 — the whole piece sounded at once, round after round).
-    const key = (n: PlaybackNote) => n.S + ':' + (n.O ?? 0) + ':' + n.P;
+    // And a row that plays strokes sounds them from that one place, each its own: taken for a
+    // repeat, all but a chord's first stroke were dropped and the time closed up (owner's report
+    // 2026-11-01, a bossa nova's four bars going round in two).
+    const key = (n: PlaybackNote) => n.S + ':' + (n.O ?? 0) + ':' + n.P + ':' + (n.K ?? 0);
     const sorted = [...notes].sort((a, b) => a.T - b.T);
     // A printed note's first sounding; a later one is a repeat playing it again.
     const first = new Set<PlaybackNote>();

@@ -1044,6 +1044,7 @@ public sealed partial class LilySharpLanguageServer
                         C = n.Channel,
                         G = n.Channel == 9 ? 0 : x.Track.Program ?? 0,
                         N = x.Index,
+                        K = n.Strike,
                     };
                 })
                 .ToArray();

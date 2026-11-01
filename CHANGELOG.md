@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### The preview's loop keeps every stroke
+
+- `[preview]` **A loop no longer drops a chord's later strokes.** A chords row that plays a strokes
+  part sounds each stroke from the chord's one place, which the loop took for a repeat's notes: only
+  each chord's first stroke was left and the time closed up, four bars going round in two. Each
+  stroke now carries its number (`MidiNote.Strike`), and a real repeat is still played once.
+
 ### A tied stroke is not struck again
 
 - `[midi]` **A chords row that plays a strokes part no longer strikes at a tie's end.** `4 4. 4 8~ |

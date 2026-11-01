@@ -14,6 +14,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   and a guitar alone with the thumb under the fingers).
 - **A tied stroke sounds once.** A chords row playing a `strokes` part no longer strikes again where
   a stroke's tie lands.
+- **The preview's loop plays a chords row's strokes as written.** It kept only each chord's first
+  stroke and closed up the time.
 
 ### A written-out verse says its number once
 

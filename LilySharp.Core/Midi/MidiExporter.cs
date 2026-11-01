@@ -1637,6 +1637,7 @@ public sealed class MidiExporter
                         ringingLeft -= more;
                         ringingTo = onset + length;
                     }
+                    int strike = 0;
                     foreach (var stroke in strokes)
                     {
                         if (stroke.Tick < onset || stroke.Tick >= onset + length)
@@ -1648,8 +1649,9 @@ public sealed class MidiExporter
                         {
                             ringing.Add(track.Notes.Count);
                             track.Notes.Add(new MidiNote(track.Channel, SoundKey(tone.Midi + _fileShiftSemitones, position), level,
-                                stroke.Tick, Math.Max(1, strum), position, SourceOrdinal: ordinal, Timbre: timbre, Part: part));
+                                stroke.Tick, Math.Max(1, strum), position, SourceOrdinal: ordinal, Timbre: timbre, Part: part, Strike: strike));
                         }
+                        strike++;
                         ringingLeft = stroke.Ticks - strum;
                         ringingTo = onset + length;
                         ringingChord = entry.SymbolText;

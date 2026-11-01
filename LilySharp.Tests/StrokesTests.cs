@@ -123,6 +123,35 @@ public class StrokesTests
             StrikesOf(strokes, "C | C |"));
     }
 
+    /// <summary>Each stroke of a chord is told from the others (the preview's loop took them for a
+    /// repeat and kept the first, owner's report 2026-11-01), counted again from each symbol.</summary>
+    [Fact]
+    public void EachStrokeOfAChord_IsNumbered_FromEachSymbol()
+    {
+        const string book = """
+            time 4/4
+            part singer { instrument alto }
+            strokes rhythm { section A { 4. 4. 4 | r4 4 r8 4. | } }
+            chords harmony { section A { Am7 | D7 | } }
+            section A { singer { e'1 | e'1 | } }
+            form { A }
+            score { chords harmony plays rhythm  staff singer }
+            """;
+        var notes = new MidiExporter().Export(Parse(book.ReplaceLineEndings("\n")))
+            .Tracks.Single(t => t.Name == "harmony (chords)").Notes;
+        var strikes = notes.GroupBy(n => n.StartTick).OrderBy(g => g.Key).Select(g => g.Select(n => n.Strike).Distinct().Single());
+        Assert.Equal([0, 1, 2, 0, 1], strikes);
+    }
+
+    /// <summary>A bar of <c>.</c> is the row's silent slot (the owner's decision 2026-09-04; a
+    /// <c>.</c> never crosses a bar line), so a stroke in it sounds nothing, and a tie stops at it.</summary>
+    [Fact]
+    public void ASilentBar_SoundsNoStroke()
+    {
+        int half = Bar / 2;
+        Assert.Equal([(0, half), (half, half)], StrikesOf("2 2~ | 2 2 |", "C | . |"));
+    }
+
     /// <summary>A tied stroke over a chord change sounds only the chord it was struck in, stopping
     /// where that ends; the next chord waits for its own stroke (as the guide says).</summary>
     [Fact]

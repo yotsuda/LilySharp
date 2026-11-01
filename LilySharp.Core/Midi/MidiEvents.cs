@@ -56,7 +56,11 @@ public readonly record struct MidiNote(
     // `voice { } { }` span), 1 for the second voice, … — so a check reads each voice as a line of
     // its own (CompositionChecks: a chorus tune over its own chords, one guitar part, was told of
     // octave slips between the two; owner's review 2026-11-01). Not written to .mid files.
-    int Voice = 0
+    int Voice = 0,
+    // Which stroke of its chord this is, in a row that plays a strokes part: one symbol sounds at
+    // each stroke from one place, and a repeat's pass counts them again, so the preview's loop
+    // tells a later stroke from a repeat by it (playSpanWindow). Not written to .mid files.
+    int Strike = 0
 );
 
 /// <summary>

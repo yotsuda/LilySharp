@@ -139,6 +139,20 @@ describe('the stretch a Play sounds', () => {
         assert.equal(w.length, 8);
     });
 
+    it('keeps every stroke of a chord that plays strokes, and still drops a repeat of them', () => {
+        // Owner's report 2026-11-01: one symbol's strokes share its place, its copy and its pitch,
+        // so a loop kept each chord's first stroke and closed up the rest.
+        const strokes = (from: number) => [0, 1.5, 3].map((t, k) => note(from + t, 1, 60, { S: 900, O: 0, K: k }));
+        const round = strokes(0);
+        const w = playSpanWindow(round, null, null, true, [0, 4]);
+        assert.deepEqual(w.notes.map(n => n.T), [0, 1.5, 3]);
+        assert.equal(w.length, 4);
+        // The same strokes again, a repeat's second pass: one round of them is left.
+        const twice = playSpanWindow([...round, ...strokes(4)], null, null, true, [0, 4, 8]);
+        assert.deepEqual(twice.notes.map(n => n.T), [0, 1.5, 3]);
+        assert.equal(twice.length, 4);
+    });
+
     it('plays nothing for a selection with no notes', () => {
         assert.deepEqual(playSpan(piece, 50, 60, false), []);
     });
