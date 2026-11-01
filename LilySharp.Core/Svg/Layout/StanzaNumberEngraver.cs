@@ -47,8 +47,8 @@ public readonly record struct StanzaNumberLayout(
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/stanza-number-engraver.cc — Stanza_number_engraver.
-/// Emits one entry per (system, verseNumber) combination so that a number
-/// appears at the start of every verse line on every system.
+/// A <c>verse N { }</c>'s written number stands once, where the verse begins; rows stacked with no
+/// written number get one entry per (system, verseNumber).
 /// </remarks>
 internal static class StanzaNumberEngraver
 {
@@ -126,9 +126,14 @@ internal static class StanzaNumberEngraver
 
         // Where each written number's verse begins (LyricItem.OpensStanzaRun).
         var runOpensOn = new HashSet<(int sys, int staff, int verse, int label)>();
+        var staffHasWrittenNumbers = new HashSet<int>();
         foreach (var l in lyrics)
+        {
+            if (l.Item.StanzaLabel > 0)
+                staffHasWrittenNumbers.Add(l.Item.StaffIndex);
             if (l.Item.OpensStanzaRun && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int os))
                 runOpensOn.Add((os, l.Item.StaffIndex, l.Item.VerseNumber, l.Item.StanzaLabel));
+        }
 
         // Collect (system, staff, verse, label) → first lyric of that run (its Y is the
         // baseline). ★ THE LABEL IS PART OF THE KEY (owner's design 2026-11-01): a section
@@ -152,13 +157,17 @@ internal static class StanzaNumberEngraver
                 continue;
             if (hiddenPairs.Contains((sysIdx, l.Item.StaffIndex, l.Item.VerseNumber)))
                 continue; // a ~-hidden verse suppresses this baseline's number outright
-            // A written number on a line it has to itself (a section written out twice: one
-            // row, nothing stacked to tell apart) stands where its verse begins and nowhere
-            // else, LilyPond's own once-per-change (lily/stanza-number-engraver.cc:57-68
-            // process_music). Owner's question 2026-11-01 (風の道): a verse running on to the
+            // A written number stands where its verse begins and nowhere else, LilyPond's own
+            // once-per-change (lily/stanza-number-engraver.cc:57-68 process_music), stacked or
+            // not. Owner's reports 2026-11-01 (風の道, 明日へつなぐ声): a verse running on to the
             // next line printed "1." and "2." again in the middle of its sentence.
-            if (!emitForFirstVerse && l.Item.StanzaLabel > 0 && !runOpensOn.Contains((sysIdx, l.Item.StaffIndex, l.Item.VerseNumber, l.Item.StanzaLabel))
-                && versesInSystem.TryGetValue((sysIdx, l.Item.StaffIndex), out var alone) && alone.Count <= 1)
+            if (!emitForFirstVerse && l.Item.StanzaLabel > 0
+                && !runOpensOn.Contains((sysIdx, l.Item.StaffIndex, l.Item.VerseNumber, l.Item.StanzaLabel)))
+                continue;
+            // …and words written with no `verse` beside verses that have numbers have none: they
+            // are sung every time, and no count of the rows beside them makes them "1." (明日へ
+            // つなぐ声 M9, plain words on the system the verses end on).
+            if (!emitForFirstVerse && l.Item.StanzaLabel <= 0 && staffHasWrittenNumbers.Contains(l.Item.StaffIndex))
                 continue;
             var key = (sysIdx, l.Item.StaffIndex, l.Item.VerseNumber, Math.Max(0, l.Item.StanzaLabel));
             // Keep the lyric whose X is leftmost in the run (the verse's start).
@@ -189,9 +198,9 @@ internal static class StanzaNumberEngraver
         // LILYPOND-REF: lily/stanza-number-align-engraver.cc:62-71 Stanza_number_align_engraver — add_support of every syllable to every number of the timestep
         // LILYPOND-REF: lily/stanza-number-engraver.cc:70-75 Stanza_number_engraver — acknowledge_lyric_syllable adds the support
         // LILYPOND-REF: lily/side-position-interface.cc:189-260 aligned_side — direction LEFT puts the grob's RIGHT edge padding off the supports' left
-        // LILYSHARP-OWN: LilyPond makes ONE number, where \set stanza changed; Lily# labels
-        //   STACKED verses on EVERY system (the per-(system, staff) key above), anchored to
-        //   that system's first syllables — there the number says which line is which.
+        // LILYSHARP-OWN: LilyPond makes ONE number, where \set stanza changed; Lily# labels rows
+        //   stacked with NO written number (two tracks, a body wrapped into rows) on EVERY system
+        //   (the per-(system, staff) key above), anchored to that system's first syllables.
         //   departs from: lily/stanza-number-engraver.cc:57-68 process_music (once per change).
         //   goes away when: never — the page's own reading convention.
         //   observed by: StanzaNumberAlignmentTests (two verses, one system).

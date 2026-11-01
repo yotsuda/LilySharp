@@ -628,7 +628,7 @@
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`
 - **`StaffSize.Of`** ⚠️ LILYSHARP-OWN: THIS LINE IS A TYPE ENUMERATION, and it is the one part of this file
 ### `LilySharp.Core/Svg/Layout/StanzaNumberEngraver.cs`
-- **`StanzaNumberEngraver.Calculate`** LILYSHARP-OWN: LilyPond makes ONE number, where \set stanza changed; Lily# labels
+- **`StanzaNumberEngraver.Calculate`** LILYSHARP-OWN: LilyPond makes ONE number, where \set stanza changed; Lily# labels rows
 - **`StanzaNumberEngraver.Calculate`** every verse number in the same column, clear of the bar. LILYSHARP-OWN: the
 ### `LilySharp.Core/Svg/Layout/StemCalculator.cs`
 - **`StemDetails.DownFlagExtensions`** LILYSHARP-OWN: lengths is LilyPond's table for Emmentaler's flags. A down flag

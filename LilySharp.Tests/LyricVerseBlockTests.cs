@@ -131,19 +131,42 @@ public sealed class LyricVerseBlockTests
         Assert.Equal(kle.Y, two.Y, 6);
     }
 
-    /// <summary>A verse running on to the next line says its number once, where it begins
-    /// (owner's question 2026-11-01, 風の道); stacked verses keep theirs on every line, where
-    /// the number says which line is which.</summary>
+    /// <summary>A verse running on to the next line says its number once, where it begins, written
+    /// out or stacked (owner's reports 2026-11-01, 風の道, 明日へつなぐ声).</summary>
     [Fact]
-    public void AWrittenOutVerse_SaysItsNumberOnce_StackedVersesOnEveryLine()
+    public void AVerseSaysItsNumberOnce_WrittenOutOrStacked()
     {
         const string oneBarALine = "paper { measuresPerSystem 1 }\n";
         var once = RenderedGeometry.Render(oneBarALine + WrittenOut);
         Assert.Equal(new[] { "1.", "2." },
             once.Texts.Where(t => t.Role == TextRole.Stanza).Select(t => t.Text).OrderBy(t => t).ToArray());
         var stacked = RenderedGeometry.Render(oneBarALine + WrittenOut.Replace("form { A A \"A2\" }", "form { |: A :| }"));
-        Assert.Equal(new[] { "1.", "1.", "2.", "2." },
+        Assert.Equal(new[] { "1.", "2." },
             stacked.Texts.Where(t => t.Role == TextRole.Stanza).Select(t => t.Text).OrderBy(t => t).ToArray());
+    }
+
+    /// <summary>Words with no <c>verse</c> have no number, though they share a system with verses
+    /// that stack (owner's report 2026-11-01, 明日へつなぐ声 M9: "1." before あしたへ).</summary>
+    [Fact]
+    public void PlainWordsBesideNumberedVerses_HaveNoNumber()
+    {
+        string song = """
+            time 4/4
+            octave absolute
+            part melody { clef treble }
+            section A {
+              melody { c'4 d' e' f' | }
+              lyrics w sings melody { verse 1 { up up up up | } verse 2 { down down down down | } }
+            }
+            section B {
+              melody { g'4 a' b' c'' | }
+              lyrics w sings melody { plain words sung here | }
+            }
+            form { |: A :| B }
+            score { staff melody  lyrics w }
+            """.ReplaceLineEndings("\n");
+        var numbers = RenderedGeometry.Render(song).Texts.Where(t => t.Role == TextRole.Stanza).Select(t => t.Text).OrderBy(t => t).ToArray();
+        Assert.Equal(new[] { "1.", "2." }, numbers);
     }
 
     [Fact]

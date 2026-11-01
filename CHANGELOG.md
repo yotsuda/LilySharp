@@ -44,9 +44,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### A written-out verse says its number once
 
-- `[render]` A `verse N { … }` on a line of its own (a section written out twice) prints its number
-  where the verse begins, not again at each line it runs on to, as LilyPond's `\set stanza` does.
-  Stacked verses keep their numbers on every line, where they say which line is which.
+- `[render]` A `verse N { … }` prints its number where the verse begins, written out or stacked, not
+  again at each line it runs on to, as LilyPond's `\set stanza` does. Words with no `verse` beside
+  numbered verses have no number (they printed "1." on a system the verses end on).
 - `[check]` **Four-bar phrases keeping one rhythm for each bar's place** (three quarters of the
   bars, where whole phrases differ), and **a song's chorus sung three times or more, the last as
   the first**. Owner's review 2026-11-01 (風の道).

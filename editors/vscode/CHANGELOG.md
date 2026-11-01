@@ -13,8 +13,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### A written-out verse says its number once
 
-- **The preview prints a written-out verse's `2.` where the verse begins**, not again at the head
-  of each line it runs on to. Stacked verses keep their numbers on every line.
+- **The preview prints a verse's number where the verse begins**, written out or stacked, not again
+  at the head of each line it runs on to; words with no `verse` have no number.
 - **Copilot's chat is told to call `lilysharp_proposeScore` directly**, not through a canvas
   action, which asked "Allow tool call?" for nothing. Compose with AI's check also tells four-bar
   phrases that keep one rhythm for each bar's place, and a chorus sung three times unchanged; a
