@@ -89,7 +89,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **作曲ガイダンス（Copilot のチャットで作曲 → Lily# が音楽として検査）＝オーナーが先に完了したい（2026-10-30）**: 流れ・検査の一覧・差し戻しの規則・**講評の手順**（オーナーが Downloads の .lys を送る → ログ `~\.copilot\session-state\*\events.jsonl` → 検査を DLL で → `lysc octave --absolute` → 日本語で講評し「入れて」で実装）・残りは **`docs/compose-in-chat-design.md`**。
-- **人間の曲のレビュー（オーナーの設計 2026-10-30）＝第1038 で §6 の 1・2 と 3 の前半を実装・実機未確認（MANUAL-CHECKS C55）**: 次は `chord.outside` と `facts.chords`（コード記号から）→ コマンドと `lysc review`。設計との差は **`docs/review-tool-design.md` §7**（`what` と `fix.say` が 1 文のまま・`fix.edit`／`ask` なし）。
+- **人間の曲のレビュー（オーナーの設計 2026-10-30）＝第1038 で §6 の 1〜3 を実装・実機未確認（MANUAL-CHECKS C55）**: 次はコマンドと `lysc review`（§6-4）。設計との差は **`docs/review-tool-design.md` §7**（`what` と `fix.say` が 1 文のまま・`fix.edit`／`ask` なし）。
 - **コード図の文法の整理＝第1036 で実装済（§1.1 第1036）**: 残りは MANUAL-CHECKS §2.2 の `[ ]`（実機）だけ。旧綴りの本は普通の語のエラー＝Claude は直さない（全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **OMR の読みを AI で直す＝M1〜M3 実装済・実機未確認**（MANUAL-CHECKS §5 B9〜B11・設計は `docs/omr-ai-fix-design.md`・照合の lysc は VSIX の `server` に同梱済＝§1.1 第975。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **GitHub Pages の OMR デモ動画の撮影＝ユーザーのタスク（第961）**: `site/videos/SHOTLIST.md` の 16・17。置き場は `site/scan-body.html` の `figure.demo-video[data-pending]`（置いたら `data-pending` を外す）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
@@ -136,6 +136,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **CI の赤 `5a612b194`**: master の最後の push（run 40688152100）の Windows Debug で `TypedPitchStepTests` 2 本が赤だった。`"pitch written\n"` の置換が CRLF のチェックアウトで空振りする＝手元（LF）では緑。CRLF に写して再現してから直した。
 - **§6-1・2 `16c28ccb1`**: `CompositionChecks.Findings`（`CompositionFinding`＝id・Parts・Bars）・`Of` はその Message＝**作曲フローは不変（門: `Of` が 1215 冊・2058 件でバイト一致＝`dump-checks.ps1`）**。`ReviewNotes` は id ごとの kind／confidence／why／fine_when（68＋3 件・網が両方向に照合）。`ScoreReview.Json`＝facts・strengths・errors・warnings・findings（mistake が先）。LSP `lilysharp/reviewScore`・ツール `lilysharp_reviewScore`（`REVIEW_READING` を前に置く・書き込まない）。`Bars` は各メッセージが名指す小節と照合（コーパス＋テストの入力に一時の検証を入れて 99 本）。⚠️ `compiles`・`errors`・`warnings` は設計に無かった追加＝コンパイルできない曲を「指摘なしの曲」と報告しないため。⚠️ `here` の指示文は予算いっぱい（1998 / 2000）＝案内は `lilysharp.instructions.md` に置いた。
 - **§6-3 の前半 `3702337ae`**: `KeyChecks`＝`key.signature`・`key.outside`・`spelling.direction`・`facts.keyHeard`（Krumhansl–Schmuckler）。レビュー専用＝`Of` に入れない。コーパスの実測は design §7: `key.signature` 9 冊（うち fixture 4・`Beat It` は正しい指摘・ベース単独 4 は曲と照合していない）／`key.outside` は最初 168 冊がほぼベースライン→音域とハーモニーの除外で 7 冊／`spelling.direction` 0 冊。短調の第 6・7 音の計算を最初に間違えた（コーパスで発覚）。毒 11 本は全部赤（最初の 6 本すり抜け＝2 本は冗長なコードを削除・4 本は網を足した）。
+- **§6-3 の残り（`ChordChecks`）**: `chord.outside`・`facts.chords`＝コード行と `@chord(…)` を MIDI の `SourcePos` で演奏順に読む（`ToRomanNumeral`・`StructureOf`・`ChordAnnotation` を再利用）。役割＝副属七・副導七・ブルース・ナポリ・裏コード・同主調からの借用。役割が果たされない／役割が無いときだけ `ask` つきの指摘。実測はコード記号のある 52 冊・366 和音で指摘 4 冊（全部 fixture）＝**実曲のコード進行ではほとんど試されていない**（design §7）。⚠️ `KeyChecks` に Krumhansl–Kessler の表を書き写していた＝`KeyEstimator.ProfileFit` に寄せた（§0「まず grep」を飛ばした）。
 - **VS Code の実機では 1 度も動かしていない**＝C55。server と拡張の作り直しが要る。
 - 終了時 full **13818 / 0 / 2**（`-End p1038 -DiffBase 38a2a1041`・門は全部 OK・npm 639 緑）。§7 7.5: Core の + 904 行・REF 0／OWN 0＝描画に触れない新しい機能なので LP の出典は無い。⚠️ 罠: `,@(旧, X + "`n")` を再発（CLAUDE-OPERATIONS §1）・メンバーを挟むと `DocCommentPlacementTests` が赤。**新しい CI の赤の修正 `5a612b194` は push するまで CI で確かめられない。**
 

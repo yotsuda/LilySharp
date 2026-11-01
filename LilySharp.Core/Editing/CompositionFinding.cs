@@ -39,4 +39,7 @@ public sealed record CompositionFinding(string Id, string Message)
 
     /// <summary>What is written there; null with no <see cref="Line"/>.</summary>
     public string? Written { get; init; }
+
+    /// <summary>The question to put to the person, where only their intent can decide; null when there is none.</summary>
+    public string? Ask { get; init; }
 }

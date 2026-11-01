@@ -52,7 +52,7 @@ public class ScoreReviewTests
     [Fact]
     public void EveryCheckHasANote_AndEveryNoteACheck()
     {
-        var made = CheckId.Matches(Source("CompositionChecks.cs") + Source("KeyChecks.cs")).Select(m => m.Groups[1].Value).ToHashSet();
+        var made = CheckId.Matches(Source("CompositionChecks.cs") + Source("KeyChecks.cs") + Source("ChordChecks.cs")).Select(m => m.Groups[1].Value).ToHashSet();
         Assert.True(made.Count >= 60, $"read only {made.Count} ids: has the way a check names itself changed?");
         Assert.Empty(made.Except(ReviewNotes.All.Keys));
         Assert.Empty(ReviewNotes.All.Keys.Except(made));
@@ -298,6 +298,143 @@ public class ScoreReviewTests
         Assert.Contains(Report(book)["findings"]!.AsArray(), f => (string?)f!["id"] == "key.signature");
         Assert.DoesNotContain(CompositionChecks.Findings(book), f => f.Id.StartsWith("key.", System.StringComparison.Ordinal));
     }
+
+    private static string WithChords(string key, string row, string form = "A") => $$"""
+        title "With Chords"
+        key {{key}}
+        time 4/4
+        octave absolute
+        part m { instrument flute }
+        section A { m { c''1 | c''1 | c''1 | c''1 | } chords prog { {{row}} } }
+        form { {{form}} }
+        score { chords prog staff m }
+        """;
+
+    private static System.Collections.Generic.List<JsonObject> ChordFacts(string source)
+        => Report(source)["facts"]!["chords"]!.AsArray().Select(c => c!.AsObject()).ToList();
+
+    private static string? RoleIn(string key, string row, string symbol)
+        => (string?)ChordFacts(WithChords(key, row)).First(c => (string?)c["symbol"] == symbol)["role"];
+
+    private static System.Collections.Generic.List<JsonObject> ChordFindings(string source)
+        => KeyFindings(source).Where(f => (string?)f["id"] == "chord.outside").ToList();
+
+    [Fact]
+    public void TheChords_AreListedWithTheirDegrees_EachWhereItIsFirstPlayed()
+    {
+        var chords = ChordFacts(WithChords("c major", "C | Am | F | G7 |", "A A"));
+        Assert.Equal(["C", "Am", "F", "G7"], chords.Select(c => (string?)c["symbol"]));
+        Assert.Equal([1, 2, 3, 4], chords.Select(c => (int)c["bar"]!));
+        Assert.Equal(["I", "VIm", "IV", "V7"], chords.Select(c => (string?)c["roman"]));
+        Assert.All(chords, c => Assert.Null(c["role"]));
+    }
+
+    [Fact]
+    public void AChordOnAMark_IsReadToo()
+    {
+        var chords = ChordFacts(Tune("c major", "c'1@chord(C) | d'1@chord(E7) | a'1@chord(Am) | c'1 |"));
+        Assert.Equal(["C", "E7", "Am"], chords.Select(c => (string?)c["symbol"]));
+        Assert.Equal([1, 2, 3], chords.Select(c => (int)c["bar"]!));
+        Assert.Equal("V/VI, a secondary dominant", (string?)chords[1]["role"]);
+    }
+
+    [Fact]
+    public void ThePlayedOrderDecidesWhatAChordLeadsTo()
+    {
+        // E7 ends the section, and the form plays it into A again: C. It leads to A, and goes to C.
+        var found = ChordFindings(WithChords("c major", "C | C | C | E7 |", "A A")).Single();
+        Assert.Contains("E7 (III7, bar 4, as the form plays them) leads to a chord on A, and goes to C", (string?)found["what"]);
+    }
+
+    [Theory]
+    [InlineData("c major", "C | E7 | Am | C |", "E7", "V/VI, a secondary dominant")]
+    [InlineData("c major", "C | D7 | G | C |", "D7", "V/V, a secondary dominant")]
+    [InlineData("c major", "C | C7 | F | C |", "C7", "V/IV, a secondary dominant")]
+    [InlineData("c major", "C | F#dim | G | C |", "F#dim", "vii°/V, a secondary leading-tone chord")]
+    [InlineData("c major", "C | Fm | C | C |", "Fm", "borrowed from the parallel minor")]
+    [InlineData("c major", "C | Bb | C | C |", "Bb", "borrowed from the parallel minor")]
+    [InlineData("c major", "C | Ab | C | C |", "Ab", "borrowed from the parallel minor")]
+    [InlineData("c major", "C | Eb | C | C |", "Eb", "borrowed from the parallel minor")]
+    [InlineData("c major", "Dm | Db | C | C |", "Db", "♭II, the Neapolitan")]
+    [InlineData("c major", "Dm | Db7 | C | C |", "Db7", "a tritone substitute")]
+    [InlineData("c major", "C | F7 | C | G7 |", "F7", "a dominant seventh on the blues's own degree")]
+    [InlineData("c major", "C | C7 | G | C |", "C7", "a dominant seventh on the blues's own degree")]
+    [InlineData("a minor", "Am | A | Am | Am |", "A", "borrowed from the parallel major")]
+    public void AChordOutsideTheScale_IsToldByItsRole(string key, string row, string symbol, string role)
+    {
+        Assert.Equal(role, RoleIn(key, row, symbol));
+        Assert.Empty(ChordFindings(WithChords(key, row)));
+    }
+
+    [Theory]
+    [InlineData("a minor", "Am | E7 | Am | Am |")]    // the major V of a minor key
+    [InlineData("a minor", "Am | G#dim | Am | Am |")] // its vii°
+    [InlineData("c major", "Dm7 | G7 | Cmaj7 | C |")]
+    [InlineData("c major", "C | G7(b9) | C | C |")]   // an extension colours a chord and does not place it
+    public void AChordOfTheKey_HasNoRole_AndNoFinding(string key, string row)
+    {
+        Assert.All(ChordFacts(WithChords(key, row)), c => Assert.Null(c["role"]));
+        Assert.Empty(ChordFindings(WithChords(key, row)));
+    }
+
+    [Fact]
+    public void AWrittenFunction_IsReadAsItsChord()
+    {
+        var chords = ChordFacts(WithChords("c major", "I | V7/V | V | I |"));
+        Assert.Equal("V/V, a secondary dominant", (string?)chords[1]["role"]);
+        Assert.Equal("V7/V", (string?)chords[1]["roman"]);
+    }
+
+    [Fact]
+    public void AWrittenFunction_SaysWhatItIsFor_WhereTheSameChordCouldBeTheBlues()
+    {
+        // C7 going to G is the blues's I7; written V7/IV, it says it leads to F, and is asked about.
+        Assert.Empty(ChordFindings(WithChords("c major", "C | C7 | G | C |")));
+        var found = ChordFindings(WithChords("c major", "I | V7/IV | V | I |")).Single();
+        Assert.Contains("leads to a chord on F, and goes to G", (string?)found["what"]);
+    }
+    [Fact]
+    public void ARoleNotFulfilled_IsAsked_NotToldOff()
+    {
+        var found = ChordFindings(WithChords("c major", "C | E7 | F | C |")).Single();
+        Assert.Equal("style", (string?)found["kind"]);
+        Assert.Equal("low", (string?)found["confidence"]);
+        Assert.Equal([2], found["where"]!["bars"]!.AsArray().Select(b => (int)b!));
+        Assert.Equal("E7", (string?)found["where"]!["written"]);
+        Assert.Equal(6, (int)found["where"]!["line"]!);
+        Assert.Contains("E7 (III7, bar 2, as the form plays them) leads to a chord on A, and goes to F", (string?)found["what"]);
+        Assert.Contains("Is the E7 in bar 2 meant to lead to A? Going to F instead, it may be a deceptive cadence.", (string?)found["ask"]);
+    }
+
+    [Fact]
+    public void AChordWithNoRole_IsAsked()
+    {
+        var found = ChordFindings(WithChords("c major", "C | F#maj7 | C | C |")).Single();
+        Assert.Contains("is outside the key, and none of the usual roles fits it", (string?)found["what"]);
+        Assert.Equal("Is F#maj7 in bar 2 the chord you meant?", (string?)found["ask"]);
+    }
+
+    [Fact]
+    public void TheLastChord_HasNotGoneAnywhereYet()
+        => Assert.Empty(ChordFindings(WithChords("c major", "C | C | C | E7 |")));
+
+    [Fact]
+    public void AChordHeldOn_LeadsWhereItGoesNext()
+        => Assert.Empty(ChordFindings(WithChords("c major", "E7 | E7 | Am | C |")));
+
+    [Fact]
+    public void WithNoOneKey_TheSymbolsAreSaid_AndNothingIsJudged()
+    {
+        string book = WithChords("c major", "C | F#maj7 | C | C |").Replace("section A {", "section A { key d major ");
+        var chords = ChordFacts(book);
+        Assert.Equal("F#maj7", (string?)chords[1]["symbol"]);
+        Assert.Null(chords[1]["roman"]);
+        Assert.Empty(ChordFindings(book));
+    }
+
+    [Fact]
+    public void APieceWithNoChords_ListsNone()
+        => Assert.Null(Report(Piece)["facts"]!["chords"]);
 
     [Fact]
     public void TheAudienceIsGivenBack()

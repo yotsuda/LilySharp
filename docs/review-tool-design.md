@@ -11,7 +11,7 @@ what applies to this piece's style, says why in musical terms, and teaches the c
 each point. The report's design serves that interpretation. Without an AI, the same report is free
 and fast (§5).
 
-Status: §6 steps 1 and 2 and the first three checks of step 3 are built (2026-11-02), and not yet tried in a real VS Code (`editors/vscode/MANUAL-CHECKS.md` C55). What was built differs from §2 in the ways §7 lists.
+Status: §6 steps 1 to 3 are built (2026-11-02), and not yet tried in a real VS Code (`editors/vscode/MANUAL-CHECKS.md` C55). What was built differs from §2 in the ways §7 lists.
 
 ## 1. Entrances
 
@@ -142,8 +142,8 @@ Beyond the composing checks (`compose-in-chat-design.md` §2):
    - The composing flow keeps reading the one-sentence `message`; its tests stay.
 2. **`lilysharp_reviewScore`** with `facts`, `strengths` and the reading instructions. This brings
    the most value. Built, with the differences in §7.
-3. **The key checks of §4:** `key.signature`, `key.outside`, `spelling.direction` are built
-   (`KeyChecks`); `chord.outside` from chord symbols, and `facts.chords` with it, is next.
+3. **The key checks of §4:** `key.signature`, `key.outside`, `spelling.direction` (`KeyChecks`), and
+   `chord.outside` and `facts.chords` from chord symbols (`ChordChecks`). Built.
 4. **The command and `lysc review`.**
 5. **Silencing**, when first asked for.
 
@@ -160,14 +160,16 @@ Differences from §2, each still to do unless it says otherwise:
 - **`what` and `fix.say` are one sentence.** `what` is the check's `message`, finding and advice
   together, and there is no `fix`. Splitting them means rewording every check. The reading
   instructions tell the AI where the advice is.
-- **No `fix.edit` and no `ask`, and `where.line` and `where.written` on `spelling.direction` alone.**
-  Each needs a source span from the check, and most checks read the sounding notes, not the text.
+- **No `fix.edit`; `ask` on `chord.outside` alone; `where.line` and `where.written` on
+  `spelling.direction` and `chord.outside` alone.** Each needs a source span or a reading of intent
+  from the check, and most checks read the sounding notes, not the text.
   `spelling.direction` could have an exact edit, but in relative octaves a new letter can move the
   notes after it, so it says the right name in words.
 - **`where.bars` is what the check can show, not always all it counted.** It is empty for a check
   that names no bars, as `rhythm.one-value`.
 - **`confidence` is per check**, not per finding.
-- **`facts` has no `chords`.** It comes with `chord.outside`.
+- **`facts.chords` lists each written chord once, where it is first played**, so a section that
+  returns does not repeat them, and at most 128. It adds `role` to a chord outside the scale.
 - **Added, and meant to stay: `compiles`, `errors` and `warnings`.** A score that does not compile
   has to be reported as that, not as a piece with no faults, and the compiler's warnings (a note out
   of range, a bar too long) are the first things a beginner needs to hear of.
@@ -184,6 +186,11 @@ measured over the same 1,215 books (`key-census` in Lab `sessions/p1038/`):
   is under C3, a note lowest of what sounds with it, and a note another part sounds at the time are
   all left out, and more than 10% of a line's notes is taken for the music's own language.
 - **`spelling.direction`** speaks on none of them. Only its tests have seen it speak.
-- **`key.signature` and `key.outside` do not read a piece that changes key**, or whose notes do not
-  sound as written (a transposing part, the file not in concert pitch). They weigh the sounding notes
-  against one key.
+- **`chord.outside`** speaks on 4 of the 52 books with chord symbols (366 chords listed), all four test
+  fixtures that show chord names. Of the 27 chords outside the scale that had a role, 11 were secondary
+  dominants, 8 a blues's dominant sevenths and 6 borrowed. So the roles are hardly tested by real
+  harmony yet: few of these books have a chord row. Its roles are in `ChordChecks.RoleOf`; a chord is
+  read to its seventh, since an extension colours a chord and does not place it.
+- **`key.signature`, `key.outside` and `chord.outside` do not read a piece that changes key**, or whose
+  notes do not sound as written (a transposing part, the file not in concert pitch): they read everything
+  against one key. Such a piece's `facts.chords` has the symbols and no `roman`.

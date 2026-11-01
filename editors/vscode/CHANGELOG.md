@@ -7,7 +7,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 ### Ask Copilot's chat to review a piece
 
 - **`#reviewScore`** reviews the score open in the editor, as music. The chat says what the piece does well, then what to look at: where it is, why it matters, and when it would not apply, in plain words for a beginner. It changes nothing unless you agree to a fix.
-- The review reads the key too: a forgotten key signature, a note outside the key that leads nowhere, and a chromatic passing note spelled against its direction.
+- The review reads the key too: a forgotten key signature, a note outside the key that leads nowhere, and a chromatic passing note spelled against its direction. It reads the chord symbols too: what a chord outside the key is doing there, and a question when one seems to have no job.
 ### An ottava's line can be a wave
 
 - **`layout { ottavaLine wave }`** draws an ottava's line as a wave with no hook, as in old prints. The default stays dashes and a hook.

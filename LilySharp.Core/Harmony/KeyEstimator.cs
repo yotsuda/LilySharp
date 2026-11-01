@@ -245,8 +245,7 @@ public static class KeyEstimator
         {
             foreach (bool major in new[] { true, false })
             {
-                var profile = major ? MajorProfile : MinorProfile;
-                double r = Correlation(weight, i => profile[Mod12(i - tonic)]);
+                double r = ProfileFit(weight, major, tonic);
                 if (finalBass?.Pc == tonic)
                     r += FinalTonicBonus;
                 candidates.Add(new KeyCandidate(SpellTonic(tonic, major, spelled), major, r));
@@ -499,6 +498,13 @@ public static class KeyEstimator
     private static readonly int[] StepSemitones = { 0, 2, 4, 5, 7, 9, 11 };
 
     private static int Mod12(int x) => ((x % 12) + 12) % 12;
+
+    /// <summary>How well sounding time per pitch class fits a key: its correlation with the key's profile.</summary>
+    internal static double ProfileFit(double[] weight, bool major, int tonic)
+    {
+        var profile = major ? MajorProfile : MinorProfile;
+        return Correlation(weight, i => profile[Mod12(i - tonic)]);
+    }
 
     private static double Correlation(double[] x, Func<int, double> y)
     {

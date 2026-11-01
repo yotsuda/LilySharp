@@ -28,10 +28,6 @@ namespace LilySharp.Core.Editing;
 /// </summary>
 public static class KeyChecks
 {
-    // Krumhansl and Kessler's profiles: how well each pitch class fits a key, from its tonic up.
-    private static readonly double[] MajorProfile = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
-    private static readonly double[] MinorProfile = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
-
     private static readonly int[] MajorSteps = [0, 2, 4, 5, 7, 9, 11];
 
     // key.signature: this many notes at least, to hear a key in.
@@ -69,9 +65,9 @@ public static class KeyChecks
 
     private static HashSet<int> ScaleOf(int fifths) => MajorSteps.Select(s => ((s + fifths * 7) % 12 + 12) % 12).ToHashSet();
 
-    /// <summary>The keys the notes fit, best first (Krumhansl–Schmuckler): sounding time per pitch class,
-    /// correlated with each key's profile. Empty with too few notes to tell. The drums and a chords row's
-    /// voicings are left out.</summary>
+    /// <summary>The keys the whole piece's notes fit, best first (<see cref="Harmony.KeyEstimator.ProfileFit"/>;
+    /// the estimator itself reads one section, and leans on its last bass note). Empty with too few notes to
+    /// tell. The drums and a chords row's voicings are left out.</summary>
     public static IReadOnlyList<HeardKey> Heard(MidiFile midi)
     {
         var notes = Pitched(midi);
@@ -79,7 +75,7 @@ public static class KeyChecks
             return [];
         var weights = Weights(notes);
         return Enumerable.Range(0, 12)
-            .SelectMany(t => new[] { new HeardKey(t, false, Fit(weights, MajorProfile, t)), new HeardKey(t, true, Fit(weights, MinorProfile, t)) })
+            .SelectMany(t => new[] { new HeardKey(t, false, Harmony.KeyEstimator.ProfileFit(weights, true, t)), new HeardKey(t, true, Harmony.KeyEstimator.ProfileFit(weights, false, t)) })
             .OrderByDescending(k => k.Fit).ToList();
     }
 
@@ -94,38 +90,40 @@ public static class KeyChecks
         return weights;
     }
 
-    private static double Fit(double[] weights, double[] profile, int tonic)
-    {
-        double mw = weights.Average(), mp = profile.Average(), top = 0, sw = 0, sp = 0;
-        for (int i = 0; i < 12; i++)
-        {
-            double w = weights[(i + tonic) % 12] - mw, p = profile[i] - mp;
-            top += w * p;
-            sw += w * w;
-            sp += p * p;
-        }
-        return sw == 0 ? 0 : top / System.Math.Sqrt(sw * sp);
-    }
-
     /// <summary>The findings for a piece that compiles. A piece that changes key, or whose notes do not
     /// sound as written (a transposing part, its file not in concert pitch), is not read by the two checks
     /// that weigh the sounding notes against one key.</summary>
     public static IEnumerable<CompositionFinding> Of(string source, SyntaxNode root, MidiFile midi)
     {
-        var parts = root.DescendantNodes<PartDeclarationSyntax>().Where(p => !p.IsStrokes).GroupBy(p => p.Name.Text).Select(g => g.First()).ToList();
-        bool concert = System.Text.RegularExpressions.Regex.IsMatch(source, @"(?m)^\s*pitch\s+concert\b");
+        var parts = PartsOf(root);
+        bool concert = IsConcert(source);
         var findings = new List<CompositionFinding>();
         foreach (var finding in AgainstTheirDirection(source, root, parts, concert))
             findings.Add(finding);
-        bool sounding = concert || parts.All(p => Svg.Model.InstrumentDefaults.GetTransposition(CompositionChecks.InstrumentOf(p)) % 12 == 0);
-        if (!sounding || CompositionChecks.PlayedKeys(root) is not { } keys
-            || root.DescendantNodes<KeySignatureSyntax>().Select(k => k.ToFullString().Trim()).Distinct().Count() > 1)
+        if (TheOneKey(source, root) is not { } keys)
             return findings;
         int fifths = PartRanges.KeyFifths(root);
-        if (Signature(midi, keys.Home, fifths) is { } signature)
+        if (Signature(midi, keys, fifths) is { } signature)
             findings.Add(signature);
-        findings.AddRange(Outside(midi, keys.Home.Mode == "minor", fifths));
+        findings.AddRange(Outside(midi, keys.Mode == "minor", fifths));
+        if (ChordChecks.ChordKey.Of(keys.Tonic, keys.Mode) is { } key)
+            findings.AddRange(ChordChecks.Findings(source, root, midi, key));
         return findings;
+    }
+
+    private static List<PartDeclarationSyntax> PartsOf(SyntaxNode root)
+        => root.DescendantNodes<PartDeclarationSyntax>().Where(p => !p.IsStrokes).GroupBy(p => p.Name.Text).Select(g => g.First()).ToList();
+
+    private static bool IsConcert(string source) => System.Text.RegularExpressions.Regex.IsMatch(source, @"(?m)^\s*pitch\s+concert\b");
+
+    /// <summary>The one key a piece's sounding notes can be weighed against; null when it changes key, or when its
+    /// notes do not sound as written (a transposing part, the file not in concert pitch).</summary>
+    internal static (string Tonic, string Mode)? TheOneKey(string source, SyntaxNode root)
+    {
+        bool sounding = IsConcert(source) || PartsOf(root).All(p => Svg.Model.InstrumentDefaults.GetTransposition(CompositionChecks.InstrumentOf(p)) % 12 == 0);
+        return sounding && CompositionChecks.PlayedKeys(root) is { } keys
+            && root.DescendantNodes<KeySignatureSyntax>().Select(k => k.ToFullString().Trim()).Distinct().Count() <= 1
+            ? keys.Home : null;
     }
 
     /// <summary>The signature the notes are in, where it is not the one written: the forgotten key signature,

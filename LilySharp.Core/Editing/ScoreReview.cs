@@ -34,6 +34,7 @@ namespace LilySharp.Core.Editing;
 public static class ScoreReview
 {
     private const int MostWarnings = 20;
+    private const int MostChords = 128;
 
     private static readonly JsonSerializerOptions Written = new()
     {
@@ -122,6 +123,8 @@ public static class ScoreReview
         };
         if (note.FineWhen != null)
             found["fine_when"] = note.FineWhen;
+        if (finding.Ask != null)
+            found["ask"] = finding.Ask;
         return found;
     }
 
@@ -145,7 +148,7 @@ public static class ScoreReview
         string theme = finding.Id[..finding.Id.IndexOf('.')];
         return focus switch
         {
-            "key" => theme is "key" or "harmony" or "spelling",
+            "key" => theme is "key" or "chord" or "harmony" or "spelling",
             "rhythm" => theme is "rhythm" or "meter" or "phrase" or "drums" or "texture",
             "form" => theme is "form" or "chorus",
             "parts" => theme is "part" or "band" or "bass" or "piano" or "singers" or "voicing" or "dynamics" or "tune" or "staff" or "melody" or "octave",
@@ -185,7 +188,23 @@ public static class ScoreReview
         int fifths = PartRanges.KeyFifths(root);
         var ranges = PartRanges.Of(midi, source, fifths);
         facts["parts"] = new JsonArray([.. parts.Select(p => (JsonNode?)Part(p, ranges.FirstOrDefault(r => r.Name == p.Name.Text), fifths))]);
+        var inKey = KeyChecks.TheOneKey(source, root) is { } one ? ChordChecks.ChordKey.Of(one.Tonic, one.Mode) : null;
+        var chords = ChordChecks.Facts(root, midi, inKey).ToList();
+        if (chords.Count > 0)
+            facts["chords"] = new JsonArray([.. chords.Take(MostChords).Select(c => (JsonNode?)Chord(c))]);
+        if (chords.Count > MostChords)
+            facts["chords_not_listed"] = chords.Count - MostChords;
         return facts;
+    }
+
+    private static JsonObject Chord((int Bar, string Symbol, string? Roman, string? Role) chord)
+    {
+        var said = new JsonObject { ["bar"] = chord.Bar, ["symbol"] = chord.Symbol };
+        if (chord.Roman != null)
+            said["roman"] = chord.Roman;
+        if (chord.Role != null)
+            said["role"] = chord.Role;
+        return said;
     }
 
     private static JsonObject Part(PartDeclarationSyntax part, PartRange? range, int fifths)
