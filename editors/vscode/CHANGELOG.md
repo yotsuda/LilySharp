@@ -11,6 +11,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   `verse 1 { }`, `verse 2 { }`, `verse 1-2 { }` and `verse ~1 { }`, and the `verse N {` head
   is coloured. The preview prints a written-out second verse on the first line under the
   staff with `2.` before it, instead of an empty first line over the words.
+- **Copilot's chat knows the spelling**: the grammar guide it reads answers "add a second
+  verse" with `verse N { … }` and "make the chords strum" with `strokes` and `plays`, and
+  Compose with AI's recipe for a song to sing and play writes its verses that way.
 
 ### A chord row strums: `strokes` and `plays`
 

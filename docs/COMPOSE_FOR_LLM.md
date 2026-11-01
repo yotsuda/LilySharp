@@ -212,8 +212,10 @@ What makes it music:
     the row then sounds its chords at every stroke. Without it a row holds each chord for a
     whole bar, which is not how a guitar is played. `plays` draws nothing; when the request asks
     for the strum on the page, add `strokes rhythm` as the score's last item (a one-line staff
-    of slashes) and move the row above it. A verse whose tune is not written out takes its words
-    under that staff: `lyrics verse2 sings rhythm { … }`, one syllable a stroke, placed after it.
+    of slashes) and move the row above it.
+  - **The verses**: one lyrics track, `verse 1 { … } verse 2 { … }` inside it (see *Lyrics*), and
+    the form sings the section again — `|: Verse :|` stacks the verses under it, `Verse Verse`
+    prints each at its own time, numbered. Not a track a verse, never `[1. … ]`.
   - **The diagrams, always**: `layout { chordDiagrams all  chordList true }` — every chord draws
     its diagram where it changes and at each line's head, and the chords the song uses are listed
     with their diagrams under the title. The usual shapes draw by themselves (C `x32010`, G

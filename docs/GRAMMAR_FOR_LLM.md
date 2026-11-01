@@ -1080,6 +1080,37 @@ score {
 one syllable a note (`-` joins a word's syllables; a slur holds one syllable over its notes),
 and a `lyrics NAME` row directly below the part's staff. See *Lyrics*.
 
+**"Add a second verse" / "the words for the second time"** — `verse N { … }` blocks in the SAME
+track, not a second track and not a repeat ending: `verse 1 { … } verse 2 { … }` in the section's
+lyrics, and the form sings the section twice (`|: A :|` stacks the verses under it; `A A` prints
+each at its own time). Never `[1. … ]` in lyrics (LYS4003) and never the music written out again.
+
+```
+part melody { clef treble }
+section A {
+  melody { c4 d e f | g2 g | }
+  lyrics words sings melody {
+    verse 1 { Twin- kle twin- kle | lit- tle | }   // added: the verse blocks
+    verse 2 { How I won- der | what you | }        // added
+  }
+}
+form { |: ~A :| }                                  // added: the repeat that sings it twice
+score { staff melody  lyrics words }
+```
+
+**"Make the chords strum" / "a guitar rhythm for the chords"** — a `strokes` part (values alone,
+no pitch) that the chord row `plays`; it changes the MIDI and draws nothing. Only when the strum
+is asked for on the page, a `strokes NAME` item in the score (a one-line staff of slashes).
+
+```
+part melody { clef treble }
+strokes rhythm { section A { 4 8 8 4 4 | % | } }       // added: the strum, one bar then "the same"
+chords harmony { section A { C | G7 | } }
+section A { melody { e4 d c d | e2 e | } }
+form { ~A }
+score { chords harmony plays rhythm  staff melody }    // added: plays — the row sounds it
+```
+
 **"Add a bass line" / "add a part for …"** — three places: the `part` declaration, its music
 in EVERY section (as many bars as the other parts there), and a `staff` row in each score
 that should show it. A piano accompaniment is two parts in a `grandStaff { … }`.

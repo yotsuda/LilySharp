@@ -1895,7 +1895,8 @@ function systemPrompt(grammar: string): string {
         '  Markdown, no code fences, no selection markers.',
         // Owner's report 2026-10-25: "add chords" came back as @chord on every note. The answers
         // to everyday requests live in the grammar's "Common requests" section.
-        '- An everyday request ("add chords", "add lyrics", "add a bass line", "add tab", "repeat this",',
+        '- An everyday request ("add chords", "add lyrics", "add a second verse", "make the chords strum",',
+        '  "add a bass line", "add tab", "repeat this",',
         '  "transpose", in any language — "コードをつけて" is "add chords") is answered with the construct the',
         '  grammar\'s "Common requests" section gives for it.',
         '- A reply identical to the input is wrong: carry out the instruction.',

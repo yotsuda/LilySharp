@@ -44,6 +44,9 @@ workflow attaches that section to the GitHub Release verbatim.
   printing drew an empty first line and its words on the second (帰り道の灯り, bars 13–20).
 - `[editor]` The lyrics-body completion offers `verse 1 { }`, `verse 2 { }`, `verse 1-2 { }`
   and `verse ~1 { }`; the `verse N {` head is coloured in a lyrics block.
+- `[docs]` The guides Copilot's chat reads answer "add a second verse" and "make the chords
+  strum" in *Common requests* (`docs/GRAMMAR_FOR_LLM.md`), and the composing guide's
+  song-to-sing-and-play recipe writes its verses as `verse N { … }` in one track.
 
 ### A section label over a leading chord row clears the verses above it
 
