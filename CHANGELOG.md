@@ -57,6 +57,8 @@ workflow attaches that section to the GitHub Release verbatim.
   over it, an inner part going from chord tone to chord tone, and voices singing bars with no
   words. Owner's reviews 2026-11-01 (風のひかり, 夢の先へ). The composing guide gains a paragraph on a
   chorus for a school choir, piano part included.
+- `[check]` **A tune under its own chords** is said: a part in voices, another voice's chord reaching
+  over the tune in half its bars (a solo guitar's bossa nova, 2026-11-01).
 - `[check]` **A last chord with its singers out of order** is said (a soprano under the alto).
 - `[check]` **A piano under singers that only holds** is said, and a section named chorus (sabi,
   refrain, hook) is the chorus however often the form plays it: a Verse sung twice was read as the

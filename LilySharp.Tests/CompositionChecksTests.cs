@@ -599,6 +599,16 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Song("e'8 g' c'' g' e' g' c'' g'", "c1")), f => f.Contains("only holds"));
     }
 
+    // Owner's review 2026-11-01 (Kissaten-no-Yugure): a solo guitar's G♯4 under its own Emaj7 topped by D♯5.
+    [Fact]
+    public void ATuneUnderItsOwnChords_IsSaid()
+    {
+        string Solo(string upper) => "title \"Solo\"\ntime 4/4\noctave absolute\npart g { instrument guitar }\nsection A {\n  g { voice { "
+            + Bars(upper) + "} { " + Bars("e,4 r8 <e g' b' d''>8 b,4 r8 <e g' b' d''>8") + "} }\n}\nform { A }\nscore { staff g }\n";
+        Assert.Contains(CompositionChecks.Of(Solo("r4 g'8 r8 r4 f'8 r8")), f => f.StartsWith("g: in 8 of its 8 bars with a tune and chords, a chord reaches over the tune"));
+        Assert.DoesNotContain(CompositionChecks.Of(Solo("r4 e''8 r8 r4 f''8 r8")), f => f.Contains("reaches over the tune"));
+    }
+
     [Fact]
     public void ASectionNamedTheChorus_IsTheChorus_ThoughTheVerseIsSungMore()
     {

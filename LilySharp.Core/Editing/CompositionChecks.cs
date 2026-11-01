@@ -574,6 +574,7 @@ public static class CompositionChecks
             : [], fifths));
         findings.AddRange(BarsWithoutWords(midi, root, parts, barList, sung));
         findings.AddRange(PianoHolds(midi, parts, barList, sung));
+        findings.AddRange(TuneUnderItsChords(midi, barList));
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
         {
             findings.AddRange(OpenEndings(midi, tune, fifths));
@@ -888,6 +889,52 @@ public static class CompositionChecks
     }
 
     // A piano under voices holding this share of its bars, of this many at least.
+    private const double TuneUnderChordsShare = 0.5;
+    private const int TuneUnderChordsFewestBars = 8;
+
+    /// <summary>A part written in voices whose tune stands under its own chords: the highest voice
+    /// of single notes, and in half its bars or more another voice's chord reaching over it. What
+    /// the ear takes for the tune is the top. Owner's review 2026-11-01 (喫茶店の夕暮れ, a solo guitar's
+    /// G♯4 under its own Emaj7 topped by D♯5).</summary>
+    private static IEnumerable<string> TuneUnderItsChords(MidiFile midi, List<int> barList)
+    {
+        var byPart = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && !n.IsGrace).Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick, n.Pitch)))
+            .GroupBy(n => n.Part);
+        foreach (var part in byPart)
+        {
+            var voices = part.GroupBy(n => n.Voice).ToList();
+            if (voices.Count < 2)
+                continue;
+            // A voice of single notes, three onsets in four, the highest of them on average.
+            var lines = voices.Where(v =>
+            {
+                var onsets = v.GroupBy(n => n.StartTick).ToList();
+                return onsets.Count(g => g.Count() == 1) * 4 >= onsets.Count * 3;
+            }).ToList();
+            if (lines.Count == 0)
+                continue;
+            var tune = lines.OrderByDescending(v => v.Average(n => n.Pitch)).First();
+            // The other voices' chords.
+            var chords = voices.Where(v => v.Key != tune.Key).SelectMany(v => v.GroupBy(n => n.StartTick))
+                .Where(g => g.Count() >= 2).Select(g => (Start: g.Key, Top: g.Max(n => n.Pitch))).ToList();
+            int bars = 0, under = 0;
+            for (int b = 0; b + 1 < barList.Count; b++)
+            {
+                int from = barList[b], to = barList[b + 1];
+                var mine = tune.Where(n => n.StartTick >= from && n.StartTick < to).ToList();
+                var theirs = chords.Where(c => c.Start >= from && c.Start < to).ToList();
+                if (mine.Count == 0 || theirs.Count == 0)
+                    continue;
+                bars++;
+                if (theirs.Max(c => c.Top) > mine.Max(n => n.Pitch))
+                    under++;
+            }
+            if (bars >= TuneUnderChordsFewestBars && under >= bars * TuneUnderChordsShare)
+                yield return $"{part.Key}: in {under} of its {bars} bars with a tune and chords, a chord reaches over the tune — the ear takes the top for the tune, and the "
+                    + "one written is buried: keep the chords' top note under it, or give the tune the top of the chord — unless an inner melody is meant: then keep it.";
+        }
+    }
+
     private const double PianoHoldsShare = 0.75;
     private const int PianoHoldsFewestBars = 8;
 

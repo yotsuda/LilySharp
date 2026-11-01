@@ -159,6 +159,8 @@ as the melody's rhythm).
   bar before. Measured on the owner's 60 pieces: the sequenced rock guitars scored 0.53–0.61, the
   rest 0.42 or less, and Ode to Joy 0.11.
 - Compound-meter beats crossed.
+- A part in voices whose tune (its highest voice of single notes) has another voice's chord reaching
+  over it in half its bars, eight or more (`TuneUnderItsChords`; 2026-11-01: a solo guitar's bossa nova).
 - A singer with no rest in 16 bars or more in a row (a voice preset, or a part a lyrics track sings;
   2026-11-01: a song sang its 48 bars from the first note to the last without one). A bar is sung
   through when the part's notes cover it with no gap.

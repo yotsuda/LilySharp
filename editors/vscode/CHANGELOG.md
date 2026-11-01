@@ -9,7 +9,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A piece the chat writes with points left from the check brings up a notification** with their
   count and **Show Log**, which lists them, whether or not the chat tells you. The check also tells
   a piano under singers that only holds, and takes a section named chorus for the chorus however
-  often the form plays it.
+  often the form plays it, and tells a tune standing under its own chords.
 
 ### A written-out verse says its number once
 
