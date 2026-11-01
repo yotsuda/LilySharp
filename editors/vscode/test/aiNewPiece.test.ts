@@ -626,6 +626,10 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /a section that comes back as it was is named again in the form',\s*'\s*\(`form \{ A B A Coda \}`\), never copied\./);
         const grammarDoc = llmDocs();
         assert.match(grammarDoc, /\*\*A section that returns is named again, not copied\*\*/);
+        // Owner's decision 2026-11-02: told it was short, a carol went round its 24 bars four times,
+        // and its "variations" were new tunes over new chords in the theme's rhythm.
+        assert.match(grammarDoc, /Going round the form does not make a piece longer: a section plays twice at most\./);
+        assert.match(grammarDoc, /\*\*A variation is of its theme\*\*: it keeps the theme's chords or the outline of its tune/);
     });
     // Owner's report 2026-10-29: the connection broke during the third round, and the piece the
     // second had written went with it.

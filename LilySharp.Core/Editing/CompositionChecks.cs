@@ -634,6 +634,8 @@ public static class CompositionChecks
                 + "character asks for). A section that returns as it was is named again in the form, and that counts toward the "
                 + "length; what is added is new music, or a return that changes in a way the listener hears — not a copy of an "
                 + "earlier section under a new name with a few bars altered."));
+        if (instrumentalLines == null && byPart.Count >= 2 && !root.DescendantNodes<LyricsBlockSyntax>().Any() && PlayedRound(midi) is { } round)
+            findings.Add(round);
         if (PlayedKeys(root) is { } inKeys && pitched.Count > 0)
         {
             var (home, end) = inKeys;
@@ -666,6 +668,28 @@ public static class CompositionChecks
         && !(n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal))).ToList();
 
     /// <summary>How long the music plays: the first bar and every bar that starts before it ends, and its seconds.</summary>
+    /// <summary>
+    /// A form going round, beyond a band: a section played three times or more, and over half of the bars
+    /// played being repeats (owner's decision 2026-11-02: told it was short, a carol for flute and piano
+    /// played its 24 bars four times, 72 of 100 bars copies). A rondo's refrain is under the half, and
+    /// a part alone is left out: a song's bass written down goes round as the song does (three of the
+    /// owner's bass books, `|: A B :|*4`), and a melody alone is a head played round.
+    /// </summary>
+    private static CompositionFinding? PlayedRound(MidiFile midi)
+    {
+        var starts = midi.SectionStarts.ToList();
+        int end = midi.Tracks.SelectMany(t => t.Notes).Select(n => n.StartTick + n.DurationTicks).DefaultIfEmpty(0).Max();
+        var plays = starts.Select((s, i) => (Name: s.Value, Bars: 1 + midi.BarTicks.Count(b => b > s.Key && b < (i + 1 < starts.Count ? starts[i + 1].Key : end)))).ToList();
+        var thrice = plays.GroupBy(p => p.Name).Where(g => g.Count() >= 3).Select(g => $"{g.Key} ({g.Count()} times)").ToList();
+        int total = plays.Sum(p => p.Bars), repeats = total - plays.GroupBy(p => p.Name).Sum(g => g.First().Bars);
+        // Sections played twice at most are never over the half: some section has been played three times.
+        if (repeats * 2 <= total)
+            return null;
+        return new("form.played-three-times", $"{string.Join(", ", thrice)}: played the same each time, {repeats} of the {total} bars played repeats, and no words are sung "
+            + "to change them — going round does not make a piece longer: write what is added as new music, a contrasting section, or a return as a section of its own "
+            + "(a new figure under the tune, the tune an octave up or a key higher), and play a section twice at most.");
+    }
+
     internal static (int Bars, int Seconds) LengthOf(MidiFile midi)
     {
         var pitched = PitchedNotes(midi);

@@ -298,9 +298,9 @@ public static class ScoreReview
         if (HomeKey(root) is { } key && !Said("form.ends-in-another-key", "form.final-bass"))
             yield return $"It ends where it began: in {key}, over its tonic.";
         var form = CompositionChecks.PlayedSections(root);
-        if (form.Distinct().Count() >= 2 && form.Distinct().Count() < form.Count)
+        if (form.Distinct().Count() >= 2 && form.Distinct().Count() < form.Count && !Said("form.played-three-times"))
             yield return $"The form has a return: {string.Join(" ", form)}.";
-        if (midi != null && !Said("form.length"))
+        if (midi != null && !Said("form.length", "form.played-three-times"))
         {
             var (bars, seconds) = CompositionChecks.LengthOf(midi);
             yield return $"It has room to say something: {bars} bars, about {seconds} seconds.";

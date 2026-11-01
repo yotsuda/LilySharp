@@ -916,7 +916,7 @@ public class CompositionChecksTests
             + Section("Chorus", "b'4 b'8 a' fis'4 e' | d''4 cis''8 b' a'2@f |", "g,8 g, g, d g, g, g, d | d8 d d a d d d a@f |")
             + $"form {{ {form} }}\nscore {{ staff gtr staff bass staff kit }}\n";
         var thrice = CompositionChecks.Of(Piece("Verse Chorus Verse Chorus Verse Chorus", ""));
-        Assert.Contains(thrice, f => f.StartsWith("Verse (3 times), Chorus (3 times): played the same each time"));
+        Assert.Single(thrice, f => f.StartsWith("Verse (3 times), Chorus (3 times): played the same each time"));
         Assert.Contains(thrice, f => f.StartsWith("gtr, bass: no level until Chorus — "));
         var twice = CompositionChecks.Of(Piece("Verse Chorus Verse Chorus", "@mf"));
         Assert.DoesNotContain(twice, f => f.Contains("played the same each time"));
@@ -924,6 +924,32 @@ public class CompositionChecksTests
         // Sung, the verses change their words.
         Assert.DoesNotContain(CompositionChecks.Of(Piece("Verse Chorus Verse Chorus Verse Chorus", "").Replace("form {", "lyrics words sings gtr { la }\nform {")),
             f => f.Contains("played the same each time"));
+    }
+
+    // Owner's decision 2026-11-02: told it was short, a carol for flute and piano played its 24 bars
+    // four times, and no check spoke: the check read a band's pieces.
+    [Fact]
+    public void AFormGoingRound_IsSaid_BeyondABand()
+    {
+        static string Duo(string form, string lyrics = "") => "title \"Round\"\ntime 4/4\noctave absolute\n"
+            + "part fl { instrument flute }\npart vc { instrument cello }\n"
+            + string.Concat("ABC".Select(s => $"section {s} {{\n  fl {{ c''1 | d''1 | }}\n  vc {{ c1 | g,1 | }}\n}}\n"))
+            .Replace("section B {\n  fl { c''1", "section B {\n  fl { e''1").Replace("section C {\n  fl { c''1", "section C {\n  fl { g''1")
+            + $"{lyrics}form {{ {form} }}\nscore {{ staff fl staff vc }}\n";
+        var round = Assert.Single(CompositionChecks.Findings(Duo("A B A B A B")), f => f.Id == "form.played-three-times");
+        Assert.StartsWith("A (3 times), B (3 times): played the same each time, 8 of the 12 bars played repeats", round.Message);
+        // It names what goes round, not what plays twice.
+        Assert.StartsWith("A (4 times): played the same each time, 8 of the 12 bars",
+            Assert.Single(CompositionChecks.Findings(Duo("A B A B A A")), f => f.Id == "form.played-three-times").Message);
+        // A rondo's refrain, and a return played twice, are forms.
+        Assert.DoesNotContain(CompositionChecks.Findings(Duo("A B A C A")), f => f.Id == "form.played-three-times");
+        Assert.DoesNotContain(CompositionChecks.Findings(Duo("A B A B")), f => f.Id == "form.played-three-times");
+        // Sung, the verses change their words.
+        Assert.DoesNotContain(CompositionChecks.Findings(Duo("A B A B A B", "lyrics words sings fl { la }\n")), f => f.Id == "form.played-three-times");
+        Assert.DoesNotContain(CompositionChecks.Findings(Duo("A B A B A B", "lyrics { la }\n")), f => f.Id == "form.played-three-times");
+        // A part alone: a song's bass written down goes round as the song does.
+        string alone = Duo("A B A B A B").Replace("part vc { instrument cello }\n", "").Replace("  vc { c1 | g,1 | }\n", "").Replace(" staff vc", "");
+        Assert.DoesNotContain(CompositionChecks.Findings(alone), f => f.Id == "form.played-three-times");
     }
 
     // Owner's trial 2026-10-30: guitar and bass went from @p to @ff, the drums with no level.

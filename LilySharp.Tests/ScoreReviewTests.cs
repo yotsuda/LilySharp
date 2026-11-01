@@ -76,6 +76,30 @@ public class ScoreReviewTests
     }
 
     [Fact]
+    public void AFormGoingRound_IsNotPraisedForItsReturnOrItsLength()
+    {
+        // Sixty bars of two sections, at a walking pace: long enough, with a return, and a third of it new.
+        string Book(string form) => $$"""
+            title "Round"
+            tempo 4 = 80
+            time 4/4
+            octave absolute
+            part m { instrument flute }
+            part b { instrument cello }
+            section A { m { {{string.Concat(Enumerable.Repeat("c''4 d'' e'' g'' | ", 10))}} } b { {{string.Concat(Enumerable.Repeat("c1 | ", 10))}} } }
+            section B { m { {{string.Concat(Enumerable.Repeat("g''4 f'' d'' b' | ", 10))}} } b { {{string.Concat(Enumerable.Repeat("g,1 | ", 10))}} } }
+            form { {{form}} }
+            score { staff m staff b }
+            """;
+        var round = Report(Book("A B A B A B"))["strengths"]!.AsArray().Select(s => (string?)s).ToList();
+        Assert.DoesNotContain(round, s => s!.StartsWith("The form has a return"));
+        Assert.DoesNotContain(round, s => s!.StartsWith("It has room to say something"));
+        var twice = Report(Book("A B A B"))["strengths"]!.AsArray().Select(s => (string?)s).ToList();
+        Assert.Contains(twice, s => s!.StartsWith("The form has a return"));
+        Assert.Contains(twice, s => s!.StartsWith("It has room to say something"));
+    }
+
+    [Fact]
     public void TheFacts_SayWhatThePieceIs()
     {
         var report = Report(Piece);
