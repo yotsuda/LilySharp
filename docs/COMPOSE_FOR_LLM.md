@@ -168,6 +168,14 @@ What makes it music:
   other. Each inner voice is a line of its own, by step where it can, holding a common tone from
   chord to chord; the bass carries the harmony with steps and leaps of its own (to the root at a
   cadence), not rocking between a chord's root and fifth.
+- **A chorus for a school choir** (a contest or class piece; 合唱コンクール, "for our class to sing"):
+  a piano part under the voices (`instrument piano-right` / `piano-left` in a `grandStaff`, below the
+  `choirStaff`) carries the introduction and the interludes, and the voices sing words whenever they
+  sing. Younger voices sit in the middle of the staff: soprano about C4–E5, alto A3–C5, a mixed
+  choir's men B♭2–D4, whatever the `instrument` preset allows. Every part is a line a singer can
+  learn by ear, by step where it can, sharing a common tone from chord to chord — the alto and the
+  men above all — and two parts do not double at the octave unless the words ask for that strength.
+  About three minutes, two verses and a chorus that returns.
 - **A song with words** (a voice part — `instrument soprano`, `alto`, `tenor`, `baritone` or `voice-bass`, the
   vocal line of a pop song too — and its lyrics row under it, see *Lyrics*):
   - **One sung unit a note, each written apart**: the unit is the language's own beat of speech —

@@ -569,6 +569,8 @@ public static class CompositionChecks
         var sung = System.Text.RegularExpressions.Regex.Matches(source, @"\blyrics\s+\w+\s+sings\s+(\w+)")
             .Select(m => m.Groups[1].Value).ToHashSet(System.StringComparer.Ordinal);
         findings.AddRange(NoBreath(midi, parts, barList, sung));
+        findings.AddRange(SingersLines(midi, parts));
+        findings.AddRange(BarsWithoutWords(midi, root, parts, barList, sung));
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
         {
             findings.AddRange(OpenEndings(midi, tune, fifths));
@@ -777,6 +779,128 @@ public static class CompositionChecks
                 + "with the octave above (a power chord; the voicing tool, given the sound, answers them first), and leave the full chord "
                 + "to a clean sound or to one ringing chord at a close.";
         }
+    }
+
+    private static bool IsVoicePreset(PartDeclarationSyntax part)
+        => InstrumentOf(part) is "soprano" or "alto" or "tenor" or "baritone" or "voice-bass";
+
+    // Two singers in octaves for this many moves, and this share of the moves they make together
+    // (owner's review 2026-11-01: 風のひかり, alto and men, 17 times — three parts that sounded two).
+    private const int ParallelOctavesFewest = 8;
+    private const double ParallelOctavesShare = 0.1;
+
+    // An inner singer with fewer steps than this among its moves, over this many moves: a chord's
+    // tones in turn, not a line to sing (風のひかり's alto: 17 of 133).
+    private const double InnerLineStepShare = 0.25;
+    private const int InnerLineFewestMoves = 16;
+
+    /// <summary>The singers' parts read against each other: a pair doubling at the octave, and an
+    /// inner part that leaps from chord tone to chord tone. A choir's lines; a band's or an
+    /// orchestra's parts double and leap by right, so only the voice presets are read.</summary>
+    private static IEnumerable<string> SingersLines(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts)
+    {
+        var singers = parts.Where(IsVoicePreset).Select(p => p.Name.Text).ToList();
+        if (singers.Count < 2)
+            yield break;
+        var lines = singers.ToDictionary(s => s, s => midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && !n.IsGrace && (n.Part ?? t.Name) == s))
+            .GroupBy(n => n.StartTick).OrderBy(g => g.Key).Select(g => (Start: g.Key, End: g.Max(n => n.StartTick + n.DurationTicks), Pitch: g.Max(n => n.Pitch))).ToList());
+        static int? At(List<(int Start, int End, int Pitch)> line, int t)
+        {
+            foreach (var n in line)
+            {
+                if (n.Start > t)
+                    break;
+                if (n.End > t)
+                    return n.Pitch;
+            }
+            return null;
+        }
+        for (int i = 0; i < singers.Count; i++)
+            for (int j = i + 1; j < singers.Count; j++)
+            {
+                var (a, b) = (lines[singers[i]], lines[singers[j]]);
+                var times = a.Select(n => n.Start).Concat(b.Select(n => n.Start)).Distinct().Order().ToList();
+                int moves = 0, octaves = 0;
+                for (int k = 1; k < times.Count; k++)
+                {
+                    if (At(a, times[k - 1]) is not { } a0 || At(b, times[k - 1]) is not { } b0
+                        || At(a, times[k]) is not { } a1 || At(b, times[k]) is not { } b1 || a0 == a1 || b0 == b1)
+                        continue;
+                    moves++;
+                    if ((a0 - b0) % 12 == 0 && (a1 - b1) % 12 == 0 && a1 - a0 == b1 - b0)
+                        octaves++;
+                }
+                if (octaves >= ParallelOctavesFewest && octaves >= moves * ParallelOctavesShare)
+                    yield return $"{singers[i]} and {singers[j]} move in octaves {octaves} times of the {moves} they move together — two parts singing one line: "
+                        + "give each its own, one holding or moving by step while the other moves — unless a passage in octaves is meant, "
+                        + "a line the voices sing as one for its strength: then keep it.";
+            }
+        // The inner singers: not the highest nor the lowest, by where they mostly sound.
+        var byHeight = singers.Where(s => lines[s].Count > 0).OrderByDescending(s => lines[s].Average(n => n.Pitch)).ToList();
+        foreach (var s in byHeight.Skip(1).Take(byHeight.Count - 2))
+        {
+            var pitches = lines[s].Select(n => n.Pitch).ToList();
+            var moved = pitches.Zip(pitches.Skip(1), (x, y) => System.Math.Abs(x - y)).Where(d => d > 0).ToList();
+            int steps = moved.Count(d => d <= 2);
+            if (moved.Count >= InnerLineFewestMoves && steps < moved.Count * InnerLineStepShare)
+                yield return $"{s}: only {steps} of its {moved.Count} moves are steps — it goes from chord tone to chord tone, which a singer cannot hold in the ear: "
+                    + "an inner voice is a line of its own, by step where it can, keeping a common tone from chord to chord.";
+        }
+    }
+
+    // Bars in a row a voice sings with no word under them before it is said.
+    private const int WordlessFewestBars = 2;
+
+    /// <summary>A sung piece's voices singing with no word in the bar: an introduction written for
+    /// the voices, which belongs to an instrument. Owner's review 2026-11-01 (風のひかり: the men
+    /// alone for two bars, then all three, four bars with no words). Bars where the song has words in any part are
+    /// words the voices share, as a hymn's one verse does.</summary>
+    /// <remarks>Read from the sections, not from the MIDI's lyric events: those carry no
+    /// <c>verse N { }</c>, and a song's second verse read as bars with no words.</remarks>
+    private static IEnumerable<string> BarsWithoutWords(MidiFile midi, SyntaxNode root, IReadOnlyList<PartDeclarationSyntax> parts, List<int> barList, IReadOnlySet<string> sung)
+    {
+        if (sung.Count == 0)
+            yield break;
+        // The sections some lyrics track writes words in: a `lyrics` block in the section, or a
+        // `section` in the lyrics block. A track written with no sections sings them all.
+        var worded = new HashSet<string>(System.StringComparer.Ordinal);
+        foreach (var block in root.DescendantNodes<LyricsBlockSyntax>())
+        {
+            var inner = block.DescendantNodes<SectionDeclarationSyntax>().ToList();
+            SyntaxNode? up = block.Parent;
+            while (up is not null and not SectionDeclarationSyntax)
+                up = up.Parent;
+            if (up is SectionDeclarationSyntax outer)
+                worded.Add(outer.Name.Text);
+            else if (inner.Count == 0)
+                yield break;
+            foreach (var s in inner)
+                worded.Add(s.Name.Text);
+        }
+        var singers = parts.Where(IsVoicePreset).Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
+        var onsets = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && singers.Contains(n.Part ?? t.Name))).Select(n => n.StartTick).Distinct().ToList();
+        var starts = midi.SectionStarts.ToList();
+        var wordless = new List<int>();
+        var names = new List<string>();
+        for (int i = 0; i < starts.Count; i++)
+        {
+            if (worded.Contains(starts[i].Value))
+                continue;
+            int end = i + 1 < starts.Count ? starts[i + 1].Key : midi.EndTick;
+            bool any = false;
+            for (int b = 0; b + 1 < barList.Count; b++)
+                if (barList[b] >= starts[i].Key && barList[b] < end && onsets.Any(t => t >= barList[b] && t < barList[b + 1]))
+                {
+                    wordless.Add(b);
+                    any = true;
+                }
+            if (any && !names.Contains(starts[i].Value))
+                names.Add(starts[i].Value);
+        }
+        if (wordless.Count < WordlessFewestBars)
+            yield break;
+        yield return $"The voices sing {wordless.Count} bars with no words ({string.Join(", ", names)}) — a voice sings words: give an introduction or an "
+            + "ending to an instrument, or write the words — unless a vocalise, a hum or an ah is meant: then keep it.";
     }
 
     // A singer with no rest in this many bars in a row (owner's review 2026-11-01: 帰り道の灯り sang

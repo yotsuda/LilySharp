@@ -542,6 +542,42 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Hook(V + Q + Q + Q, "e''4. d''8 b'2 | f'4 a'4 c''2 | " + R + R + R)), f => f.Contains("first bar of Verse"));
     }
 
+    // Owner's review 2026-11-01 (Kaze-no-Hikari, a school chorus): alto and men in octaves 17 times, the
+    // alto's 91 moves 12 steps, and an introduction for the voices with no words.
+    private static string Choir(string sop, string alt, string men, string intro = "") => "title \"Choir\"\ntime 4/4\noctave absolute\n"
+        + "part sop { instrument soprano }\npart alt { instrument alto }\npart men { instrument baritone }\n" + intro
+        + $"section A {{\n  sop {{ {sop} }}\n  alt {{ {alt} }}\n  men {{ {men} }}\n"
+        + "  lyrics w sings sop { " + string.Concat(Enumerable.Repeat("la la la la | ", 8)) + "}\n}\n"
+        + "form { " + (intro.Length > 0 ? "I " : "") + "A }\nscore { choirStaff { staff sop  staff alt  staff men }  lyrics w }\n";
+    private static string Bars(string bar) => string.Concat(Enumerable.Repeat(bar + " | ", 8));
+    private const string Sop = "g'4 a' b' c''";
+
+    [Fact]
+    public void SingersInOctaves_AndAnInnerVoiceOfLeaps_AreSaid()
+    {
+        var doubled = CompositionChecks.Of(Choir(Bars(Sop), Bars("e'4 c' g e'"), Bars("e4 c g, e")));
+        Assert.Contains(doubled, f => f.StartsWith("alt and men move in octaves"));
+        Assert.Contains(doubled, f => f.StartsWith("alt: only 0 of its"));
+        // Lines of their own: the alto by step, the men against it.
+        var lines = CompositionChecks.Of(Choir(Bars(Sop), Bars("e'4 f' g' e'"), Bars("c4 d c g,")));
+        Assert.DoesNotContain(lines, f => f.Contains("move in octaves"));
+        Assert.DoesNotContain(lines, f => f.StartsWith("alt: only"));
+    }
+
+    [Fact]
+    public void VoicesSingingBarsWithNoWords_AreSaid()
+    {
+        const string intro = "section I {\n  sop { c'1 | d'1 | }\n  alt { c'1 | b1 | }\n  men { c1 | g,1 | }\n}\n";
+        Assert.Contains(CompositionChecks.Of(Choir(Bars(Sop), Bars("e'4 f' g' e'"), Bars("c4 d c g,"), intro)),
+            f => f.StartsWith("The voices sing 2 bars with no words (I)"));
+        // A second verse written `verse 2 { }` has its words.
+        string verses = Choir(Bars(Sop), Bars("e'4 f' g' e'"), Bars("c4 d c g,")).Replace("form { A }", "form { A A \"A2\" }")
+            .Replace("lyrics w sings sop { ", "lyrics w sings sop { verse 1 { ").Replace("}\n}\nform", "} verse 2 { " + string.Concat(Enumerable.Repeat("do do do do | ", 8)) + "} }\n}\nform");
+        Assert.DoesNotContain(CompositionChecks.Of(verses), f => f.Contains("with no words"));
+        // Words in the soprano's track are the words all three sing.
+        Assert.DoesNotContain(CompositionChecks.Of(Choir(Bars(Sop), Bars("e'4 f' g' e'"), Bars("c4 d c g,"))), f => f.Contains("with no words"));
+    }
+
     [Fact]
     public void AChorusSungThreeTimes_TheLastAsTheFirst_IsSaid()
     {
@@ -925,7 +961,8 @@ public class CompositionChecksTests
         string sopranoSings = hymn.Replace("  staff alt  lyrics words sings alt", "  staff alt")
             .Replace("  staff ten  lyrics words sings ten", "  staff ten").Replace("  staff bas  lyrics words sings bas", "  staff bas");
         var sung = CompositionChecks.Of(sopranoSings);
-        Assert.DoesNotContain(sung, f => f.StartsWith("alt") || f.StartsWith("ten") || f.StartsWith("bas"));
+        // (Their line is another matter: this book's alto and tenor leap in every bar, and SingersLines says so.)
+        Assert.DoesNotContain(sung, f => (f.StartsWith("alt") || f.StartsWith("ten") || f.StartsWith("bas")) && !f.Contains("moves are steps"));
         Assert.Contains(sung, f => f.StartsWith("sop, the melody: "));
     }
 

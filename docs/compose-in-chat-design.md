@@ -101,6 +101,12 @@ that prompted each check is written beside it in the code.
   and the kick and snare on one beat in every section but one, of six or more (2026-11-01).
 - The bass or drums at one level from start to end while the lead's level moves.
 
+**The singers** (2026-11-01: 風のひかり, a school chorus; the voice presets alone)
+- Two singers in octaves eight times or more, 10% of the moves they make together (`SingersLines`).
+- An inner singer with fewer than a quarter of its moves steps, 16 moves or more.
+- A sung piece's voices singing two bars or more in sections no lyrics track writes words for
+  (`BarsWithoutWords`; read from the sections, the MIDI's lyric events carrying no `verse N { }`).
+
 **The accompaniments** (2026-11-01; any piece, not a band's alone)
 - A part that is not the melody playing one figure in every section (or in all but one of six or
   more): each section's commonest bar — the onsets' places and each note's interval from the bar's
