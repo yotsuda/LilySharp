@@ -123,10 +123,16 @@ as the melody's rhythm).
 - One rhythm in three quarters of its PHRASES (two bars, else four, counted from each section's
   first bar; six phrases or more) — the bar-by-bar readings miss a two-bar formula, which splits
   into two bar rhythms of half the bars each (2026-11-01: 夜明けのうた, `8 8 4 2 | 4 2 r4` in 10 of 12).
+- Where the phrases are not one formula: three quarters of the two-bar phrases ending the same way
+  — the last two notes at the same places from the phrase's end, the last the same length
+  (`PhraseEndings`; 2026-11-01: every phrase `… 4 r8`).
 - **A song's tune** (a part a lyrics track sings) only: the chorus — the section the form plays most,
   of ties one named chorus/sabi/refrain/hook, else the last — opening with another section's first
-  phrase note for note; and the tune's highest note spent in its first phrase, or the chorus climbing
-  no higher than the sections before it (`ChorusOf`, `ChorusOpensLikeAnother`, `PeakSpentEarly`).
+  phrase note for note; the tune's highest note spent in its first phrase, or the chorus climbing
+  no higher than the sections before it (`ChorusOf`, `ChorusOpensLikeAnother`, `PeakSpentEarly`);
+  and more than half of the sections (four or more) closing on one figure — the first four single
+  notes of each section's last bar, as intervals (`OneClosingFigure`; 2026-11-01: `cis8 b'4 ais8
+  gis8` closing a verse, a chorus and a second verse).
 - Leaps up and down its chords (fewer than a quarter of the moves are steps).
 - One bar's figure moved along the chords: half the bars or more take the up-and-down shape of the
   bar before. Measured on the owner's 60 pieces: the sequenced rock guitars scored 0.53–0.61, the
@@ -160,7 +166,9 @@ as the melody's rhythm).
 - Sections copied note for note.
 - Sections played three times in an instrumental.
 - A tune in too few bars of an instrumental.
-- The length: the bars needed are computed at the piece's own tempo and meter. The finding says a
+- The length: the bars needed are computed at the piece's own tempo and meter. A one-part piece is
+  let off the minutes as a head played round — unless it is sung: a song's words run out
+  (2026-11-01: a song to sing and play yourself of 24 bars, 69 seconds). The finding says a
   section that returns is named again in the form — that counts — and a copy under a new name with
   a few bars altered is not length (2026-11-01: told it was short, a piece wrote its verse,
   pre-chorus and chorus again as Verse2, PreChorus2, Chorus2). ⚠️ A near-copy check was tried and

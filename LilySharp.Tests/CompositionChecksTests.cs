@@ -471,6 +471,45 @@ public class CompositionChecksTests
         Assert.DoesNotContain(climbs, f => f.Contains("climbs no higher"));
     }
 
+    // Owner's review 2026-11-01 (Kaerimichi-no-Akari4): every phrase closing `… 4 r8`, the sections
+    // closing on one lick, and a song of 24 bars (69 seconds) let off as a head played round.
+    [Fact]
+    public void PhrasesEndingTheSameWay_AreSaid_WhereThePhrasesThemselvesVary()
+    {
+        // Four first bars, four rhythms; the second bar `4 2 r4` every time.
+        const string S1 = "g'8 a'8 b'4 e''2 | d''4 c''2 r4 | ", S2 = "e'4 g'8 a'8 b'2 | d''4 c''2 r4 | ",
+            S3 = "g'4. a'8 b'4 e''4 | d''4 c''2 r4 | ", S4 = "g'8 a'8 b'8 c''8 e''2 | d''4 c''2 r4 | ";
+        var same = CompositionChecks.Of(Hook(S1 + S2 + S3 + S4, S2 + S3 + S4 + S1));
+        Assert.DoesNotContain(same, f => f.Contains("one formula poured"));
+        Assert.Contains(same, f => f.StartsWith("singer, the melody: 8 of its 8 phrases end the same way"));
+        // Half of them closing otherwise: not one gesture.
+        Assert.DoesNotContain(CompositionChecks.Of(Hook(S1 + S2 + S3 + S4, R + R + R + R)), f => f.Contains("end the same way"));
+    }
+
+    [Fact]
+    public void SectionsClosingOnOneFigure_AreSaid()
+    {
+        const string Lick = "d''8 c''4 b'8 a'8 g'4 r8 | ", Lick2 = "d''8 c''4 b'8 a'8 d''4 r8 | ", Other = "e'4 g'4 a'4 b'4 | ", Other2 = "d'4 e'4 fis'4 g'4 | ";
+        string Song(string a, string b, string c, string d) => "title \"Tag\"\ntime 4/4\noctave absolute\npart singer { instrument alto }\n"
+            + $"section A {{ singer {{ g'4 a'4 b'4 c''4 | {a}}} lyrics w sings singer {{ la la | }} }}\nsection B {{ singer {{ e'4 g'4 a'4 b'4 | {b}}} }}\n"
+            + $"section C {{ singer {{ c''4 b'4 a'4 g'4 | {c}}} }}\nsection D {{ singer {{ a'4 b'4 c''4 d''4 | {d}}} }}\n"
+            + "form { A B C D A B }\nscore { staff singer  lyrics w }\n";
+        Assert.Contains(CompositionChecks.Of(Song(Lick, Lick2, Lick, Other)),
+            f => f.StartsWith("singer, the melody: 3 of its 4 sections close on the same figure (D5 C5 B4 A4 in bar 2 first, as the form plays them; A, B, C)"));
+        // Two of four: not most.
+        Assert.DoesNotContain(CompositionChecks.Of(Song(Lick, Lick2, Other, Other2)), f => f.Contains("close on the same figure"));
+    }
+
+    [Fact]
+    public void AShortSong_IsToldItsLength_ThoughItIsOnePart()
+    {
+        // 16 bars at ♩ = 84: 46 seconds. Sung, it is told; a one-part instrumental head is not.
+        string song = Hook(Q + Q + Q + X, R + R + R + R).Replace("time 4/4", "tempo 84\ntime 4/4").Replace("form { Verse Chorus Verse Chorus }", "form { Verse Chorus }");
+        Assert.Contains(CompositionChecks.Of(song), f => f.StartsWith("The piece is 16 bars long, about 46 seconds played"));
+        Assert.DoesNotContain(CompositionChecks.Of(song.Replace("  lyrics w sings singer { la la | }\n", "").Replace("  lyrics w", "")),
+            f => f.StartsWith("The piece is"));
+    }
+
     // Owner's reviews 2026-11-01 (Shippu-no-Kodou, Yoake-o-Kakenukete): a chorus tune in the first voice
     // over the guitar's own power chords in the second was told "a tune in 0 of the 76 bars" and
     // "only 19% of its moves are steps" — the two voices read as one line.

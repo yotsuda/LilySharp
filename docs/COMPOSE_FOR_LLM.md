@@ -210,6 +210,9 @@ What makes it music:
     row above the singer's staff, the words under it, and nothing else. No guitar staff: the row
     IS the guitar part. Write one only when a figure is asked for (a picking pattern, a riff),
     and then that figure, never the row's chords struck again as notes.
+  - **Eight bars a section**: the verse and the chorus are two lines of words or more — eight bars,
+    two phrases that answer each other — never one four-bar phrase; the second verse sings new
+    words. A song of 24 bars is over in a minute: give it the minutes a song has.
   - **The chords row in every section** (`chords harmony { D | A | Bm G | }`), one bar a chord,
     two chords in a bar written together (`Bm G`).
   - **The strum, always**: a `strokes` part — the rhythm the chords are struck in, values alone

@@ -17,10 +17,17 @@ workflow attaches that section to the GitHub Release verbatim.
   opening with another section's first phrase note for note. And **a peak spent early**: the
   tune's highest note in its first phrase and never passed, or the chorus climbing no higher than
   the sections before it. Both for a tune a lyrics track sings.
+- `[check]` **Phrases that all end the same way** (where the phrases themselves vary): three
+  quarters of the two-bar phrases with their last two notes at the same places and the same rest
+  after — "10 of its 10 phrases end the same way". **Sections closing on one figure**: the first
+  four notes of the last bar the same intervals in most sections of a song. **A short song is told
+  its length** though it is one part: a lead sheet was let off as a head played round, but a
+  song's words run out (24 bars, 69 seconds).
 - `[editor]` **A tune held against its chords eight times or more is turned down from Copilot's
   chat every time**, as a bar that does not add up is; the chat had kept twelve "as colour".
 - `[docs]` The composing guide's song with words: the chorus's hook is written first — two bars
   with the song's highest note and a rhythm of its own — then the verse, lower, in another rhythm.
+  A song to sing and play yourself gives its verse and chorus eight bars each, two lines of words.
 
 ### Composition checks: a singer who never breathes, a word lost from the page
 

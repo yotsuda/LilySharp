@@ -572,13 +572,19 @@ public static class CompositionChecks
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
         {
             findings.AddRange(OpenEndings(midi, tune, fifths));
-            findings.AddRange(PhraseFormula(midi, tune, byPart[tune], barList, band));
-            // A song's tune climbs to its chorus; an instrumental's theme is read for its line alone.
+            var formula = PhraseFormula(midi, tune, byPart[tune], barList, band).ToList();
+            findings.AddRange(formula);
+            // The phrases' endings, where the phrases themselves are not one formula (said above).
+            if (formula.Count == 0)
+                findings.AddRange(PhraseEndings(midi, tune, byPart[tune], barList, band));
+            // A song's tune climbs to its chorus, and closes each section its own way; an
+            // instrumental's theme is read for its line alone.
             if (sung.Contains(tune))
             {
                 var tuneNotes = lineNotes.Where(n => n.Part == tune).Select(n => (n.StartTick, n.DurationTicks, n.Pitch)).OrderBy(n => n.StartTick).ToList();
                 findings.AddRange(ChorusOpensLikeAnother(midi, tune, tuneNotes, barList));
                 findings.AddRange(PeakSpentEarly(midi, tune, tuneNotes, barList, fifths));
+                findings.AddRange(OneClosingFigure(midi, tune, tuneNotes, barList, fifths));
             }
         }
         findings.AddRange(EndsApart(midi, barList));
@@ -594,9 +600,11 @@ public static class CompositionChecks
         int barCount = 1 + barStarts.Count(b => b > 0 && b < lastTick);
         // …and as long as it plays (owner's trials 2026-10-29: two 6/8 wedding pieces of 26 and 28 bars
         // lasted under a minute — the guide's minutes, said once, went unheeded). A lead sheet or a
-        // melody alone, one staff, is a head played round or a tune to sing: its length is its form's.
+        // melody alone, one staff, is a head played round: its length is its form's — unless it is
+        // SUNG: a song's words run out, so it is held to the minutes too (owner's review 2026-11-01:
+        // a song to sing and play yourself of 24 bars, 69 seconds, verse and chorus one phrase each).
         int seconds = (int)System.Math.Round(SecondsAt(midi, lastTick));
-        if (pitched.Count > 0 && (barCount < ShortestPiece || (seconds < ShortestSeconds && byPart.Count >= 2)))
+        if (pitched.Count > 0 && (barCount < ShortestPiece || (seconds < ShortestSeconds && (byPart.Count >= 2 || sung.Count > 0))))
             // More music, not a slower tempo (owner's report 2026-10-29: told 70 seconds, the chat took
             // its Andante from ♩ = 72 to 48 and added no bar).
             // The bars it takes, at the piece's own tempo and meter (owner's trial 2026-10-30: told "about
@@ -836,21 +844,14 @@ public static class CompositionChecks
     /// phrase. Said once, for the shorter phrase that shows it.</summary>
     private static IEnumerable<string> PhraseFormula(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList, bool band)
     {
-        var spans = PlayedSpans(midi);
         foreach (int length in PhraseLengths)
         {
             var phrases = new List<string>();
-            foreach (var (_, start, end) in spans)
+            foreach (var (start, end) in PhraseWindows(midi, barList, length))
             {
-                int first = barList.IndexOf(start);
-                if (first < 0)
-                    continue;
-                for (int i = first; i + length < barList.Count && barList[i + length] <= end; i += length)
-                {
-                    var mine = onsets.Where(o => o.Start >= barList[i] && o.Start < barList[i + length]).Select(o => o.Start - barList[i]).ToList();
-                    if (mine.Count > 0)   // a phrase of rests (an intro's) is no phrase
-                        phrases.Add(string.Join(",", mine));
-                }
+                var mine = onsets.Where(o => o.Start >= start && o.Start < end).Select(o => o.Start - start).ToList();
+                if (mine.Count > 0)   // a phrase of rests (an intro's) is no phrase
+                    phrases.Add(string.Join(",", mine));
             }
             if (phrases.Count < PhraseFormulaFewestPhrases)
                 continue;
@@ -864,6 +865,82 @@ public static class CompositionChecks
                 yield break;
             }
         }
+    }
+
+    /// <summary>The phrase windows of <paramref name="length"/> bars — counted from each section's
+    /// first bar as the form first plays it — as (start tick, end tick).</summary>
+    private static List<(int Start, int End)> PhraseWindows(MidiFile midi, List<int> barList, int length)
+    {
+        var windows = new List<(int, int)>();
+        foreach (var (_, start, end) in PlayedSpans(midi))
+        {
+            int first = barList.IndexOf(start);
+            if (first < 0)
+                continue;
+            for (int i = first; i + length < barList.Count && barList[i + length] <= end; i += length)
+                windows.Add((barList[i], barList[i + length]));
+        }
+        return windows;
+    }
+
+    /// <summary>The melody's two-bar phrases mostly ending the same way — the last two notes at
+    /// the same places from the phrase's end, the last the same length (a rest after it shows in
+    /// the places). Owner's review 2026-11-01: a song whose every phrase closed `… 4 r8`, its
+    /// phrases otherwise varied.</summary>
+    private static IEnumerable<string> PhraseEndings(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList, bool band)
+    {
+        var endings = new List<string>();
+        foreach (var (start, end) in PhraseWindows(midi, barList, 2))
+        {
+            var mine = onsets.Where(o => o.Start >= start && o.Start < end).OrderBy(o => o.Start).ToList();
+            if (mine.Count < 2)
+                continue;
+            endings.Add($"{end - mine[^2].Start},{end - mine[^1].Start},{mine[^1].Length}");
+        }
+        if (endings.Count < PhraseFormulaFewestPhrases)
+            yield break;
+        var common = endings.GroupBy(e => e).OrderByDescending(g => g.Count()).First();
+        if (common.Count() >= endings.Count * PhraseFormulaShare)
+            yield return $"{tune}, the melody: {common.Count()} of its {endings.Count} phrases end the same way (the last two notes at the same "
+                + "places, the same rest after them) — one closing gesture for every line: end some lines on a note held into the next "
+                + "bar, some on an upbeat into the next line, some with no breath at all, and let the chorus's last line close otherwise "
+                + "than the verse's" + (band ? BandTuneSings : EvenPaceKept);
+    }
+
+    // A section's closing figure: the first this many single notes of its last bar, as intervals from
+    // the first; the same in more than half of this many sections or more.
+    private const int ClosingFigureNotes = 4, ClosingFigureFewestSections = 4;
+
+    /// <summary>A song's sections closing on one figure — the same intervals opening the last bar of
+    /// most of them (owner's review 2026-11-01: a verse, a chorus and a second verse all closing
+    /// `cis8 b'4 ais8 gis8 …`, the tune built of two licks).</summary>
+    private static IEnumerable<string> OneClosingFigure(MidiFile midi, string tune, IReadOnlyList<(int StartTick, int DurationTicks, int Pitch)> notes,
+        List<int> barList, int fifths)
+    {
+        var closes = new List<(string Name, string Figure, int Bar, List<int> Pitches)>();
+        foreach (var (name, _, end) in PlayedSpans(midi))
+        {
+            int after = barList.IndexOf(end);
+            if (after <= 0)
+                continue;
+            var mine = notes.Where(n => n.StartTick >= barList[after - 1] && n.StartTick < barList[after])
+                .GroupBy(n => n.StartTick).Where(g => g.Count() == 1).OrderBy(g => g.Key).Select(g => g.First().Pitch).ToList();
+            if (mine.Count < ClosingFigureNotes)
+                continue;
+            var head = mine.Take(ClosingFigureNotes).ToList();
+            closes.Add((name, string.Join(",", head.Select(p => p - head[0])), after - 1, head));
+        }
+        if (closes.Count < ClosingFigureFewestSections)
+            yield break;
+        var common = closes.GroupBy(c => c.Figure).OrderByDescending(g => g.Count()).First();
+        if (common.Count() * 2 <= closes.Count)
+            yield break;
+        var first = common.First();
+        yield return $"{tune}, the melody: {common.Count()} of its {closes.Count} sections close on the same figure "
+            + $"({string.Join(" ", first.Pitches.Select(p => PartRanges.SpelledFromPitch(p, fifths)))} in bar {first.Bar + 1} first, as the form plays "
+            + $"them; {string.Join(", ", common.Select(c => c.Name))}) — one cadence lick for every section: let each close in its own way — "
+            + "the verse's leads on, the chorus's lands, the bridge's opens the way back — unless the figure is the song's tag, meant to "
+            + "return: then keep it.";
     }
 
     /// <summary>The section the form plays most — the chorus, as a song is built — by its name and the
