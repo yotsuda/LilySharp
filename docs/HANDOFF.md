@@ -139,6 +139,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **オーナーの「入れて」で 3 件実装（`docs/compose-in-chat-design.md` §1）`c3904b0df`**: ⑴ 最後の修正が新しく作った `mistake` だけもう 1 回差し戻す（`mistakeRecheckedFor`・LSP の `Mistakes`）／⑵ `piano.left-reaches-melody` は右手が旋律のときだけ／⑶ `dynamics.late` は両手を 1 人の奏者として読む。ついでに全部休みの区間は「始まる区間」に数えない（他のパートも同じ・誤報 3 冊が消えた）。`Of` の掃きは 1363 冊中 7 冊が動いた＝全部意図どおり（`sessions/p1039/checks-{base,head}.txt`）。毒 4 本。**実物の VS Code でクリスマス曲の実ログ 3 案を再生して 10 項目 PASS**（`sessions/p1039/replay/`）＝3 回目が拍またぎで差し戻され 4 回目で書き込み。⚠️ AI が実際にどう直すかは未確認＝次の曲の講評で見る。⚠️ 差し戻しが増える＝リクエストも 1 回増える。Deploy 済み（ユーザーは Reload Window）。⚠️ 罠: CRLF の文書に `(?m)…[^\r\n]*$` は当たらない（`$` は `\n` の手前）＝門の `hits 0` が止めた。
 - ⚠️ 今朝のクリスマス曲はエディタで未保存のまま（`C:\MyProj\compose-trial` は空）。本文はログの `proposeScore` にある。
 - ⚠️ Copilot のログの時刻は UTC（`22:10` は JST 7:10）。§3 の手順でファイルの時刻と比べるときに読み違える。
+- **講評 `Hoshiakari-no-Christmas`（オーナーが送った・判断待ち 2 件＝`docs/compose-in-chat-design.md` §4 の末尾）**: 長さの指摘を 28 小節の 4 周でかわした（101 小節中 72 がコピー）。`form.played-three-times` はバンドの中にしか無い。今朝の 3 件はこの曲では発火せず、確かめられていない。⚠️ `Deploy-Lsp.ps1` は拡張の `out` も入れる＝`mistakeRecheckedFor` は入っている（「拡張の作り直しが要る」は誤りだった）。
 - 終了時 full **13886 / 0 / 2**（`-End p1039 -DiffBase ed86982b3`＝`sessions/p1039/end2.log`・門は全部 OK・npm 649 緑）。§7 7.5: Core の差分は描画に触れないレビューの修正・REF 0／OWN 0＝LP の出典は無い。⚠️ 罠: ログ抽出の末尾に `Add-Type` を書き、共有コンソールが Core.dll を掴んで 1 回目の `-End` が MSB3027（`close_console` でやり直した）。
 
 
