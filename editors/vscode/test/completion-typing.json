@@ -477,6 +477,7 @@
     ["part-instrument", "soprano"],
     ["part-instrument", "alto"],
     ["part-instrument", "tenor"],
+    ["part-instrument", "baritone"],
     ["part-instrument", "voice-bass"],
     ["part-tuning", "guitar"],
     ["part-tuning", "guitar7"],

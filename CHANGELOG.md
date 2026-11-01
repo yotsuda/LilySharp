@@ -92,9 +92,12 @@ workflow attaches that section to the GitHub Release verbatim.
   told to drop the staff (the row with its diagrams is what a guitarist reads) or to write what
   the player plays. A song to sing and play yourself had a guitar staff of five-note strums under
   its chords row.
+- `[lang]` **`instrument baritone`**: a voice preset for the untrained man's voice, G2–G4, read in
+  the tenor's octave-down treble clef — a tenor's C5 let a song to sing and play yourself go where
+  the singer cannot. The range check (LYS1052) holds it; the ranges table in GRAMMAR_FOR_LLM lists it.
 - `[ai]` **The composing guide says how a song to sing and play yourself is written** (弾き語り,
-  "chords and lyrics"): `instrument alto` unless a voice is named — the range check then holds the
-  tune to F3–F5 — a lead sheet's shape (`score { chords NAME  staff singer  lyrics words }`, no
+  "chords and lyrics"): `instrument alto` (F3–F5) for a woman's song and when no voice is named,
+  `instrument baritone` (G2–G4) for a man's — the range check then holds the tune — a lead sheet's shape (`score { chords NAME  staff singer  lyrics words }`, no
   guitar staff), the row in every section, and always the diagrams: `layout { chordDiagrams all
   chordList true }`, a shape written at a chord with no usual one.
 - `[editor]` **A guitar striking its chords under its own tune is said**: in a band, a fretted part

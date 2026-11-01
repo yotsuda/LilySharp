@@ -42,7 +42,7 @@ describe('the composing guide', () => {
     it('says how a song to sing and play yourself is written', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*A song to sing and play yourself\*\* \(弾き語り;/);
-        assert.match(guide, /`instrument alto` unless the request names a voice or a range/);
+        assert.match(guide, /`instrument alto` \(F3–F5\) for a woman's song and when the request names no\s+voice; `instrument baritone` \(G2–G4\) for a man's/);
         assert.match(guide, /`score \{ chords NAME  staff singer  lyrics words \}`/);
         assert.match(guide, /\*\*The diagrams, always\*\*: `layout \{ chordDiagrams all  chordList true \}`/);
     });

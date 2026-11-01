@@ -104,8 +104,9 @@ public static class InstrumentDefaults
             "soprano" => (ClefType.Treble, 4),
             "alto" => (ClefType.Treble, 4),
             "tenor" => (ClefType.Treble8Below, 4),  // treble_8 clef
+            "baritone" => (ClefType.Treble8Below, 4),  // treble_8 clef, as a tenor's
             "voice-bass" => (ClefType.Bass, 3),
-            
+
             // Default
             _ => (ClefType.Treble, 4)
         };
@@ -316,7 +317,7 @@ public static class InstrumentDefaults
         "tuba" => 58,
         "horn" => 60,
         "soprano" or "alto"
-            or "tenor" or "voice-bass" => 52,
+            or "tenor" or "baritone" or "voice-bass" => 52,
         _ => null,
     };
 
@@ -366,6 +367,7 @@ public static class InstrumentDefaults
         "soprano" => "Soprano",
         "alto" => "Alto",
         "tenor" => "Tenor",
+        "baritone" => "Baritone",
         "voice-bass" => "Bass",
         _ => null,
     };
@@ -416,6 +418,9 @@ public static class InstrumentDefaults
         "soprano" => (60, 84),          // C4 – C6
         "alto" => (53, 77),             // F3 – F5
         "tenor" => (48, 72),            // C3 – C5
+        // The untrained man's voice — a song to sing and play yourself (owner's decision
+        // 2026-11-01): a tenor's C5 lets such a tune go where the singer cannot.
+        "baritone" => (43, 67),         // G2 – G4
         "voice-bass" => (40, 64),       // E2 – E4
         _ => null,
     };
@@ -485,8 +490,9 @@ public static class InstrumentDefaults
         "soprano-sax", "alto-sax", "tenor-sax", "baritone-sax",
         // Brass
         "trumpet", "trumpet-c", "horn", "trombone", "tuba",
-        // Voice ("voice-bass" because "bass" is the bass guitar)
-        "soprano", "alto", "tenor", "voice-bass",
+        // Voice ("voice-bass" because "bass" is the bass guitar; "baritone" the untrained man's
+        // voice, G2–G4, for a song to sing and play yourself — owner's decision 2026-11-01)
+        "soprano", "alto", "tenor", "baritone", "voice-bass",
     };
 
     private static readonly HashSet<string> KnownSet =

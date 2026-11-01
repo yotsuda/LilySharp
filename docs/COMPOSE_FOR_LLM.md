@@ -168,7 +168,7 @@ What makes it music:
   other. Each inner voice is a line of its own, by step where it can, holding a common tone from
   chord to chord; the bass carries the harmony with steps and leaps of its own (to the root at a
   cadence), not rocking between a chord's root and fifth.
-- **A song with words** (a voice part — `instrument soprano`, `alto`, `tenor` or `voice-bass`, the
+- **A song with words** (a voice part — `instrument soprano`, `alto`, `tenor`, `baritone` or `voice-bass`, the
   vocal line of a pop song too — and its lyrics row under it, see *Lyrics*):
   - **One sung unit a note, each written apart**: the unit is the language's own beat of speech —
     a syllable in most languages (English `Hap- py`, a word's syllables joined by `-`), a mora in
@@ -194,10 +194,12 @@ What makes it music:
     verses and come back unchanged in the chorus, its hook the title.
 - **A song to sing and play yourself** (弾き語り; "a song with chords and lyrics", "for guitar and
   voice"): a lead sheet with the guitar's chord diagrams, not a written guitar staff.
-  - **The voice**: `instrument alto` unless the request names a voice or a range — the singer is
-    the player, not a trained voice, and the alto's F3–F5 is where such a tune sits; Lily# holds
-    every note to it (LYS1052). Choose the key so the tune lies there and the chords are the open
-    shapes (C, D, E, G, A, Am, Dm, Em, with a `capo N` line for another key).
+  - **The voice**: `instrument alto` (F3–F5) for a woman's song and when the request names no
+    voice; `instrument baritone` (G2–G4) for a man's — the singer is the player, not a trained
+    voice, and those are the ranges such a voice has; Lily# holds every note to the range
+    (LYS1052). A voice the request names (a tenor, a soprano) is written as named. Choose the key
+    so the tune lies in the range and the chords are the open shapes (C, D, E, G, A, Am, Dm, Em,
+    with a `capo N` line for another key).
   - **The score**: `score { chords NAME  staff singer  lyrics words }` — the chords row above the
     singer's staff, the words under it, and nothing else. No guitar staff: the row IS the guitar
     part. Write one only when a figure is asked for (a picking pattern, a riff), and then that

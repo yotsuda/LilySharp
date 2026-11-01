@@ -755,6 +755,7 @@ Both hands write LilyPond's octaves: C3 is `c`, middle C `c'`, C5 `c''`.
 | `soprano` | C4–C6 | `c'` – `c'''` |
 | `alto` | F3–F5 | `f` – `f''` |
 | `tenor` | C3–C5 | `c` – `c''` |
+| `baritone` | G2–G4 | `g,` – `g'` |
 | `voice-bass` | E2–E4 | `e,` – `e'` |
 <!-- END instrument ranges -->
 
