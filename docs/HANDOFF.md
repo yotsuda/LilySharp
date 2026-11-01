@@ -90,6 +90,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **作曲ガイダンス（Copilot のチャットで作曲 → Lily# が音楽として検査）＝オーナーが先に完了したい（2026-10-30）**: 流れ・検査の一覧・差し戻しの規則・**講評の手順**（オーナーが Downloads の .lys を送る → ログ `~\.copilot\session-state\*\events.jsonl` → 検査を DLL で → `lysc octave --absolute` → 日本語で講評し「入れて」で実装）・残りは **`docs/compose-in-chat-design.md`**。
 - **人間の曲のレビュー（オーナーの設計 2026-10-30）＝第1038 で §6 の 1〜4 を実装**: ツールとコマンドは実物の VS Code で確認済み。残りは Copilot の AI の振る舞い（MANUAL-CHECKS C55）・目視（C56）・§6-5（消音・頼まれてから）。設計との差は **`docs/review-tool-design.md` §7**（`what` と `fix.say` が 1 文のまま・`fix.edit`／`ask` なし）。
+- **section の外のコード行（`chords X { C | G7 | }`・`Semantics.FlatChordRows`）の残りの制限＝第1038**: ⑴ section の途中で拍子が変わる小節も、MIDI と MusicXML ではコード行を section 冒頭の拍子で読む（`.ly` は小節の長さだけ合わせる・section 内に書いた行と同じ動き）／⑵ 音楽より長い行の余りの小節は MusicXML に載せない（譜面・MIDI・`.ly` には出る）／⑶ form の無い本の `.ly` は今も行を先頭に一括で書く（弱起・拍子は見ない・実測していない）。コーパスにこの形の本は 0 冊＝急がない。
 - **コード図の文法の整理＝第1036 で実装済（§1.1 第1036）**: 残りは MANUAL-CHECKS §2.2 の `[ ]`（実機）だけ。旧綴りの本は普通の語のエラー＝Claude は直さない（全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **OMR の読みを AI で直す＝M1〜M3 実装済・実機未確認**（MANUAL-CHECKS §5 B9〜B11・設計は `docs/omr-ai-fix-design.md`・照合の lysc は VSIX の `server` に同梱済＝§1.1 第975。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **GitHub Pages の OMR デモ動画の撮影＝ユーザーのタスク（第961）**: `site/videos/SHOTLIST.md` の 16・17。置き場は `site/scan-body.html` の `figure.demo-video[data-pending]`（置いたら `data-pending` を外す）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
