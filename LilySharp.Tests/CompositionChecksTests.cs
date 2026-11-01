@@ -392,6 +392,23 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Looped("ees, bes,, c, aes,,").Replace("gtr { e'4@f g'", "gtr { e'4@p.subito g'")), f => f.StartsWith("The levels are set"));
     }
 
+    // Owner's review 2026-11-01 (Kaerimichi-no-Akari, a song to sing and play yourself): a guitar staff
+    // of five-note strums under the chords row, the same harmony twice.
+    [Fact]
+    public void AStaffStrikingTheChordsRowsChords_IsSaid()
+    {
+        string Song(string guitar) => "title \"Akari\"\ntime 4/4\noctave absolute\nkey d major\npart singer { instrument alto }\n"
+            + "part guitar { instrument guitar }\nsection A {\n  singer { " + string.Concat(Enumerable.Repeat("d'4 fis'8 a'8 d''2 | a'4 cis''4 e''4 cis''4 | ", 4)) + "}\n"
+            + "  guitar { " + string.Concat(Enumerable.Repeat(guitar + " ", 4)) + "}\n  chords harmony { D | A | D | A | D | A | D | A | }\n}\nform { A }\n"
+            + "score { chords harmony  staff singer  staff guitar }\n";
+        Assert.Contains(CompositionChecks.Of(Song("<d fis a d' fis'>2 <d fis a d' fis'>2 | <a cis' e' a' cis''>4 <a cis' e' a' cis''>4 <a cis' e' a' cis''>2 |")),
+            f => f.StartsWith("guitar: its staff says what the chords row says — the row's chords struck as block chords in 8 of its 8 bars"));
+        // A picking pattern is the player's own.
+        Assert.DoesNotContain(CompositionChecks.Of(Song("d8 a d' fis' a' fis' d' a | a,8 e a cis' e' cis' a e |")), f => f.Contains("says what the chords row says"));
+        // A bass note, then the chord: not block chords alone.
+        Assert.DoesNotContain(CompositionChecks.Of(Song("d4 <fis a d'>4 d4 <fis a d'>4 | a,4 <cis' e' a'>4 a,4 <cis' e' a'>4 |")), f => f.Contains("says what the chords row says"));
+    }
+
     // Owner's reviews 2026-11-01 (Shippu-no-Kodou, Yoake-o-Kakenukete): a chorus tune in the first voice
     // over the guitar's own power chords in the second was told "a tune in 0 of the 76 bars" and
     // "only 19% of its moves are steps" — the two voices read as one line.

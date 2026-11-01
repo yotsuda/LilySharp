@@ -564,6 +564,7 @@ public static class CompositionChecks
         findings.AddRange(OneFigure(midi, barList, byPart.Where(p => !melodies.Contains(p.Key) && p.Value.Count >= 16)
             .Select(p => p.Key).ToHashSet(System.StringComparer.Ordinal)));
         findings.AddRange(OneProgression(midi, barList, fifths));
+        findings.AddRange(StaffRestatesTheChordsRow(midi, parts, barList));
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
             findings.AddRange(OpenEndings(midi, tune, fifths));
         findings.AddRange(EndsApart(midi, barList));
@@ -834,6 +835,48 @@ public static class CompositionChecks
                 yield return $"{name}: in {under} of its {tuneBars.Count} bars with a tune, one voice strikes the chords while another plays the "
                     + "tune — one player's hands cannot: let the chords rest while the hook plays (the bass holds the harmony; a chord struck "
                     + "where the tune rests is fine), or give the tune to a second guitar part of its own.";
+        }
+    }
+
+    // A chord instrument's staff that says what the chords row says, in this share of its bars
+    // (a bridge of arpeggios under a song of strums leaves the rest), eight bars or more.
+    private const int RestatedRowFewestBars = 8;
+    private const double RestatedRowShare = 0.8;
+
+    /// <summary>
+    /// A chord instrument's staff whose every bar is block chords of the row's chord — the row
+    /// struck again as notes (owner's review 2026-11-01: a song to sing and play yourself had a
+    /// guitar staff of five-note strums under its chords row, the same harmony twice, which no
+    /// guitarist reads). Said when every bar the part plays in, eight or more, holds chords only,
+    /// their pitch classes inside the row's chord sounding in that bar.
+    /// </summary>
+    private static IEnumerable<string> StaffRestatesTheChordsRow(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, List<int> barList)
+    {
+        var row = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && (n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal))).ToList();
+        if (row.Count == 0)
+            yield break;
+        foreach (var part in parts.Where(p => RoleOf(p).Chords))
+        {
+            string name = part.Name.Text;
+            var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && (n.Part ?? t.Name) == name)).ToList();
+            int played = 0, restated = 0;
+            for (int b = 0; b < barList.Count; b++)
+            {
+                int start = barList[b], end = b + 1 < barList.Count ? barList[b + 1] : int.MaxValue;
+                var onsets = notes.Where(n => n.StartTick >= start && n.StartTick < end).GroupBy(n => n.StartTick).ToList();
+                if (onsets.Count == 0)
+                    continue;
+                played++;
+                var rowTones = row.Where(n => n.StartTick < end && n.StartTick + n.DurationTicks > start)
+                    .Select(n => ((n.Pitch % 12) + 12) % 12).ToHashSet();
+                if (rowTones.Count > 0 && onsets.All(o => o.Select(n => n.Pitch).Distinct().Count() >= 2
+                        && o.All(n => rowTones.Contains(((n.Pitch % 12) + 12) % 12))))
+                    restated++;
+            }
+            if (played >= RestatedRowFewestBars && restated >= played * RestatedRowShare)
+                yield return $"{name}: its staff says what the chords row says — the row's chords struck as block chords in {restated} of its "
+                    + $"{played} bars: drop the staff (the chords row, with its diagrams, is what a guitarist reads), or write what the player "
+                    + "plays — a picking pattern, a bass note and then the chord, a riff — and keep the row for the names.";
         }
     }
 

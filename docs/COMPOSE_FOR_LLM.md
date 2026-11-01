@@ -192,6 +192,23 @@ What makes it music:
   - Count every bar: as many units as notes, less the notes a slur or a tie carries over.
   - Words the request gives are set as they stand. Words written for it tell their story in the
     verses and come back unchanged in the chorus, its hook the title.
+- **A song to sing and play yourself** (弾き語り; "a song with chords and lyrics", "for guitar and
+  voice"): a lead sheet with the guitar's chord diagrams, not a written guitar staff.
+  - **The voice**: `instrument alto` unless the request names a voice or a range — the singer is
+    the player, not a trained voice, and the alto's F3–F5 is where such a tune sits; Lily# holds
+    every note to it (LYS1052). Choose the key so the tune lies there and the chords are the open
+    shapes (C, D, E, G, A, Am, Dm, Em, with a `capo N` line for another key).
+  - **The score**: `score { chords NAME  staff singer  lyrics words }` — the chords row above the
+    singer's staff, the words under it, and nothing else. No guitar staff: the row IS the guitar
+    part. Write one only when a figure is asked for (a picking pattern, a riff), and then that
+    figure, never the row's chords struck again as notes.
+  - **The chords row in every section** (`chords harmony { D | A | Bm G | }`), one bar a chord,
+    two chords in a bar written together (`Bm G`).
+  - **The diagrams, always**: `layout { chordDiagrams all  chordList true }` — every chord draws
+    its diagram where it changes and at each line's head, and the chords the song uses are listed
+    with their diagrams under the title. The usual shapes draw by themselves (C `x32010`, G
+    `320003`, D `xx0232`, Am `x02210` …); a chord with no usual shape takes one written at its
+    name (`Bm(x24432)`, `F(133211)`), and a capo's shapes are the pressed ones.
 - **A piano piece** is written for two hands that fill the keyboard between them: the left
   hand's figure — broken chords, an octave bass, a root-and-fifth beat, an ostinato — reaching
   up toward middle C, the right hand's melody round C5 with its harmony under it (thirds, sixths,

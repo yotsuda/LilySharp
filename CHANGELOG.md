@@ -87,6 +87,16 @@ workflow attaches that section to the GitHub Release verbatim.
   the chords no more than half of them), and asks for a tune in a third of the bars, not half — a
   piece built as the finding advises, riff under the verses and the tune in the choruses and a
   solo, had 32 of its 68 bars with a tune and was still told.
+- `[editor]` **A staff that restates the chords row is said**: a chord instrument whose bars are
+  block chords of the row's chord sounding there, in four fifths of its bars (eight or more), is
+  told to drop the staff (the row with its diagrams is what a guitarist reads) or to write what
+  the player plays. A song to sing and play yourself had a guitar staff of five-note strums under
+  its chords row.
+- `[ai]` **The composing guide says how a song to sing and play yourself is written** (弾き語り,
+  "chords and lyrics"): `instrument alto` unless a voice is named — the range check then holds the
+  tune to F3–F5 — a lead sheet's shape (`score { chords NAME  staff singer  lyrics words }`, no
+  guitar staff), the row in every section, and always the diagrams: `layout { chordDiagrams all
+  chordList true }`, a shape written at a chord with no usual one.
 - `[editor]` **A guitar striking its chords under its own tune is said**: in a band, a fretted part
   whose one voice strikes chords twice or more in a bar while another plays a line, in half its
   tune's bars (four or more), is told one player's hands cannot — let the chords rest while the

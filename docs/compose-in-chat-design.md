@@ -56,6 +56,9 @@ that prompted each check is written beside it in the code.
 - No instrument on a part.
 - An ensemble braced as one grandStaff.
 - Staves labelled by the hand that plays them.
+- A chord instrument's staff restating the chords row: block chords of the row's chord in four
+  fifths of its bars, eight or more (2026-11-01: a song to sing and play yourself, strums under
+  the row). The guide's rule for such a song: alto, a lead sheet, the diagrams always.
 
 **Dynamics**
 - A part with no dynamics.
