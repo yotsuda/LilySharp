@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { asksForOneStaff, carrySelection, cleanTitle, isPlaceholderTitle, isProblem, partCount, titleOf, toCandidateEdit, withTitle } from '../src/aiTransformCore';
+import { REVIEW_READING, asksForOneStaff, carrySelection, cleanTitle, isPlaceholderTitle, isProblem, partCount, titleOf, toCandidateEdit, withTitle } from '../src/aiTransformCore';
 
 /** The grammar and the composing guide, as the composer is sent them (owner's decision 2026-10-29:
  *  the guide is a document of its own, sent with Compose with AI alone). */
@@ -278,6 +278,27 @@ describe('the composing guide', () => {
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(ext, /`\$\{doc\.uri\.fsPath\} \(not saved — read it with #readScore\)`/);
     });
+    // Owner's proposal 2026-10-30: the composing checks, for a person who asks for a review.
+    it('gives Copilot\'s chat a tool to review a score, which writes nothing and says how to read its report', () => {
+        const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
+        assert.match(pkg, /"name": "lilysharp_reviewScore",\s*"toolReferenceName": "reviewScore"/);
+        assert.match(pkg, /"onLanguageModelTool:lilysharp_reviewScore"/);
+        assert.match(pkg, /"enum": \["beginner", "intermediate", "advanced"\]/);
+        assert.match(pkg, /"enum": \["key", "rhythm", "form", "parts", "notation"\]/);
+        assert.match(transform, /lm\.registerTool<ReviewScoreInput>\('lilysharp_reviewScore'/);
+        const fn = transform.slice(transform.indexOf('async function reviewScore('), transform.indexOf('async function compositionFindings('));
+        assert.match(fn, /'lilysharp\/reviewScore', \{ Text: doc\.getText\(\), Audience: input\?\.audience, Focus: input\?\.focus \}/);
+        assert.match(fn, /\$\{REVIEW_READING\}/);
+        assert.match(fn, /active\?\.languageId === 'lilysharp' \? active : undefined/);
+        assert.doesNotMatch(fn, /\.edit\(|applyEdit|writeFile|proposeScore\(/);
+        const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
+        assert.match(build, /'\*\*Reviewing a piece\*\*: asked to review a \.lys file or give feedback on it, use the `lilysharp_reviewScore` tool \(#reviewScore\)',/);
+        assert.match(REVIEW_READING, /Start with what works \(`strengths`\)/);
+        assert.match(REVIEW_READING, /at most five points, mistakes first/);
+        assert.match(REVIEW_READING, /Check `fine_when` against the piece/);
+        assert.match(REVIEW_READING, /Do not change the score/);
+        assert.match(REVIEW_READING, /If `compiles` is false/);
+    });
     // Owner's request 2026-10-29: the instructions files go only with a request about a .lys, so a
     // piece asked for in the chat with none open was written without them — a tool gives them.
     it('gives Copilot\'s chat the grammar and the composing guide by a tool, found by what it is for', () => {
@@ -286,7 +307,7 @@ describe('the composing guide', () => {
         assert.match(pkg, /"name": "lilysharp_readGuide",\s*"toolReferenceName": "readGuide",\s*"displayName": "Read the Lily# guide"/);
         assert.match(pkg, /"onLanguageModelTool:lilysharp_readGuide"/);
         const tags = '"tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"]';
-        assert.equal(pkg.split(tags).length - 1, 4);   // proposeScore, readScore, checkName, readGuide
+        assert.equal(pkg.split(tags).length - 1, 5);   // proposeScore, readScore, reviewScore, checkName, readGuide
         assert.match(pkg, /"modelDescription": "Use this before composing music — a piece, a song, a score — or writing or changing Lily# \(\.lys\) text/);
         assert.match(pkg, /"enum": \["grammar", "composing", "start"\]/);
         assert.match(transform, /lm\.registerTool<ReadGuideInput>\('lilysharp_readGuide'/);

@@ -33,22 +33,26 @@ namespace LilySharp.Core.Editing;
 public static class CompositionChecks
 {
     /// <summary>The findings for <paramref name="source"/>, each one sentence; empty when none.</summary>
-    public static IReadOnlyList<string> Of(string source)
+    public static IReadOnlyList<string> Of(string source) => [.. Findings(source).Select(f => f.Message)];
+
+    /// <summary>The findings for <paramref name="source"/>, each saying which check made it and where it reads;
+    /// <see cref="ReviewNotes"/> holds what is said of each check. Empty when none.</summary>
+    public static IReadOnlyList<CompositionFinding> Findings(string source)
     {
         var tree = SyntaxTree.Parse(source);
         if (tree.HasErrors)
             return [];
         var root = tree.GetRoot();
-        var findings = new List<string>();
+        var findings = new List<CompositionFinding>();
         // Pitches named as the key spells them (owner's request 2026-10-30: B♭ minor told in C♯).
         int fifths = PartRanges.KeyFifths(root);
         var declared = RenderSpecParser.ChooseDeclared(tree, null);
 
         // A piece has a title of its own (owner's request 2026-10-27).
         if (TitleOf(source) is not { } title)
-            findings.Add("The piece has no title: give it a title of its own that fits its music, a `title \"…\"` line at the top.");
+            findings.Add(new("score.title", "The piece has no title: give it a title of its own that fits its music, a `title \"…\"` line at the top."));
         else if (IsPlaceholderTitle(title))
-            findings.Add($"\"{title}\" is a placeholder, not a title: give the piece a title of its own that fits its music.");
+            findings.Add(new("score.title", $"\"{title}\" is a placeholder, not a title: give the piece a title of its own that fits its music."));
 
         // An ensemble braced as one piano.
         var braced = new HashSet<string>(System.StringComparer.Ordinal);
@@ -64,8 +68,8 @@ public static class CompositionChecks
                 if (staves.Count <= 2)
                     braced.UnionWith(staves);
                 if (staves.Count > 2)
-                    findings.Add($"The score puts {staves.Count} staves ({string.Join(", ", staves)}) in one grandStaff, the brace of ONE "
-                        + "instrument on two staves (a piano): an ensemble is a staffGroup { … }.");
+                    findings.Add(new("score.ensemble-braced", $"The score puts {staves.Count} staves ({string.Join(", ", staves)}) in one grandStaff, the brace of ONE "
+                        + "instrument on two staves (a piano): an ensemble is a staffGroup { … }.") { Parts = staves });
             }
 
         // A part with no instrument plays a piano — fine for a piano's two hands, not for a player of something else.
@@ -77,8 +81,8 @@ public static class CompositionChecks
             var bare = parts.Where(p => !braced.Contains(p.Name.Text) && !RoleOf(p).Drums && !p.Properties.Any(prop =>
                 prop.NameToken.Text is "instrument" or "midiInstrument")).Select(p => p.Name.Text).ToList();
             if (bare.Count > 0)
-                findings.Add($"No instrument for {string.Join(", ", bare)}: a part without `instrument` sounds as a piano "
-                    + "(write `instrument violin`, `viola`, `cello`, … in its part declaration).");
+                findings.Add(new("part.no-instrument", $"No instrument for {string.Join(", ", bare)}: a part without `instrument` sounds as a piano "
+                    + "(write `instrument violin`, `viola`, `cello`, … in its part declaration).") { Parts = bare });
         }
 
         // Every player reads only their own staff, so a level written in one part says nothing to the
@@ -92,8 +96,8 @@ public static class CompositionChecks
                         && InstrumentOf(o) is "piano-left" or "piano-right" && levelled.Contains(o.Name.Text))))
                 .Select(p => p.Name.Text).ToList();
             if (silent.Count > 0)
-                findings.Add($"No dynamics in {string.Join(", ", silent)}: each player reads only their own staff — write the levels "
-                    + "(`@p`, `@mf`, `@f`, …) and the hairpins in every part, where its own music asks for them, not in one part alone.");
+                findings.Add(new("dynamics.part-silent", $"No dynamics in {string.Join(", ", silent)}: each player reads only their own staff — write the levels "
+                    + "(`@p`, `@mf`, `@f`, …) and the hairpins in every part, where its own music asks for them, not in one part alone.") { Parts = silent });
         }
         findings.AddRange(DynamicDrops(root));
         findings.AddRange(PhraseDrops(root));
@@ -127,11 +131,11 @@ public static class CompositionChecks
         if (band && parts.Count >= 2)
         {
             if (!roles.Any(r => r.Drums))
-                findings.Add("A band piece has drums: add a drum part (`clef percussion`) that plays a groove under the whole song, with fills at the section ends.");
+                findings.Add(new("band.no-drums", "A band piece has drums: add a drum part (`clef percussion`) that plays a groove under the whole song, with fills at the section ends."));
             if (!roles.Any(r => r.Bass))
-                findings.Add("A band piece has an electric bass: add a part with `instrument bass` and `midiInstrument \"electric bass (finger)\"` that locks with the kick drum.");
+                findings.Add(new("band.no-bass", "A band piece has an electric bass: add a part with `instrument bass` and `midiInstrument \"electric bass (finger)\"` that locks with the kick drum."));
             if (!roles.Any(r => r.Chords))
-                findings.Add("A band piece has a guitar or keyboards for the chords: add one (`instrument guitar` with an electric `midiInstrument`, or keyboards).");
+                findings.Add(new("band.no-chord-part", "A band piece has a guitar or keyboards for the chords: add one (`instrument guitar` with an electric `midiInstrument`, or keyboards)."));
             // A drummer's levels too, when the band's move (owner's trial 2026-10-30: guitar and bass went
             // from @p to @ff, the drums had no level, the same loudness through a quiet bridge).
             var kits = parts.Where(p => RoleOf(p).Drums).Select(p => p.Name.Text).ToList();
@@ -142,9 +146,9 @@ public static class CompositionChecks
                 .Where(i => i >= 0).ToList();
             var unlevelled = kits.Where(k => !levelledParts.Contains(k)).ToList();
             if (unlevelled.Count > 0 && levels.Count > 0 && levels.Max() - levels.Min() >= 2)
-                findings.Add($"{string.Join(", ", unlevelled)}: no level, while the others go from @{order[levels.Min()]} to "
+                findings.Add(new("dynamics.drums-silent", $"{string.Join(", ", unlevelled)}: no level, while the others go from @{order[levels.Min()]} to "
                     + $"@{order[levels.Max()]} — write the drummer's levels too (`@p` on the first note of a quiet section, "
-                    + "`@f` where the band comes in full), with the hairpins the others play.");
+                    + "`@f` where the band comes in full), with the hairpins the others play.") { Parts = unlevelled });
             // The rhythm section at one level while the band moves (owner's trial 2026-10-30: the bass
             // and drums held their opening @mf through every chorus the guitar played @f). A part with
             // no level at all is said above; the levels in its phrases count.
@@ -160,15 +164,15 @@ public static class CompositionChecks
             if (held.Count > 0 && moving.Count > 0)
             {
                 var span = moving.SelectMany(p => p.Levels).Select(l => System.Array.IndexOf(order, l)).ToList();
-                findings.Add($"{string.Join(", ", held.Select(p => p.Name))}: one level, @{held[0].Levels[0]}, from start to end, while "
+                findings.Add(new("dynamics.rhythm-section-flat", $"{string.Join(", ", held.Select(p => p.Name))}: one level, @{held[0].Levels[0]}, from start to end, while "
                     + $"{string.Join(", ", moving.Select(p => p.Name))} {(moving.Count == 1 ? "goes" : "go")} from @{order[span.Min()]} "
                     + $"to @{order[span.Max()]} — a band rises "
                     + "and falls together: write the rhythm section's levels where the lead's change (the drums @f where the chorus "
-                    + "comes in, the bass with them, both down for a quiet bridge), with the hairpins between.");
+                    + "comes in, the bass with them, both down for a quiet bridge), with the hairpins between.") { Parts = [.. held.Select(p => p.Name)] });
             }
             int tempos = midi.Tracks.SelectMany(t => t.TempoChanges).Select(t => t.MicrosecondsPerBeat).Distinct().Count();
             if (tempos > 1)
-                findings.Add("A band piece keeps one tempo from start to end: write one `tempo` at the top and none in the sections.");
+                findings.Add(new("band.tempo-changes", "A band piece keeps one tempo from start to end: write one `tempo` at the top and none in the sections."));
         }
         int tpq = midi.TicksPerQuarterNote;
         // Each part's onsets (a chord one onset) with its duration — of its line voice (LineVoices).
@@ -260,29 +264,29 @@ public static class CompositionChecks
             if (asOne && part != top)
                 continue;
             if (common.Count() >= onsets.Count * (melody ? MelodyOneValue : PartOneValue))
-                findings.Add(melody
+                findings.Add(new("rhythm.one-value", melody
                     ? $"{part}, the melody: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — a tune lives on its "
                         + "rhythm: long notes at its peaks, shorter ones leading to them, dotted rhythms, a note tied over the beat, a "
                         + "rest to breathe; give its theme a rhythm of its own and vary it from phrase to phrase" + (band ? BandTuneSings : EvenPaceKept)
                     : $"{part}: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — mix long and short notes, "
-                        + "rests, dotted rhythms; give the line a rhythm of its own.");
+                        + "rests, dotted rhythms; give the line a rhythm of its own.") { Parts = [part] });
             // One bar's rhythm on most of the melody's bars (owner's trial 2026-10-29: a pop song sang
             // `r8 x8 x8 x8~ x4 x4` in every bar, four syllables poured into each and a breath at every
             // bar line, in the middle of words) — a mix of values the count above passes.
             if (melody && SameRhythmBars(onsets, midi.BarTicks) is var (alike, inBars) && inBars >= SameRhythmFewestBars
                 && alike >= inBars * SameRhythmShare)
-                findings.Add($"{part}, the melody: {alike} of its {inBars} bars have the same rhythm — a pattern poured full, not a line: "
+                findings.Add(new("rhythm.same-bars", $"{part}, the melody: {alike} of its {inBars} bars have the same rhythm — a pattern poured full, not a line: "
                     + "let the rhythm follow the words and the phrase — a longer note at a phrase's end and a breath only there, "
-                    + "a phrase that runs on over the bar line, the rhythm changing from section to section" + (band ? BandTuneSings : EvenPaceKept));
+                    + "a phrase that runs on over the bar line, the rhythm changing from section to section" + (band ? BandTuneSings : EvenPaceKept)) { Parts = [part] });
             // …or on most of a SECTION's bars, where the whole piece's count passes because other
             // sections vary (owner's review 2026-11-01: a rock instrumental's verse played one rhythm
             // in all 8 of its bars, its chorus two rhythms in turn, its solo free — 40% over the
             // piece, nothing said). Read section by section, the sections named together.
             else if (melody && SameRhythmSections(onsets, midi) is { Count: > 0 } poured)
-                findings.Add($"{part}, the melody: {string.Join(", ", poured.Select(s => $"in {s.Name} {s.Same} of its {s.Bars} bars"))} "
+                findings.Add(new("rhythm.same-bars-in-section", $"{part}, the melody: {string.Join(", ", poured.Select(s => $"in {s.Name} {s.Same} of its {s.Bars} bars"))} "
                     + "have the same rhythm — one pattern poured into the section, not a line: let the rhythm vary within it — "
                     + "a longer note at a phrase's end, a rest, a note tied over the beat — and change from section to section"
-                    + (band ? BandTuneSings : EvenPaceKept));
+                    + (band ? BandTuneSings : EvenPaceKept)) { Parts = [part] });
         }
 
         // A melody of leaps alone (owner's trial 2026-10-30: told it had no tune, a rock guitar broke
@@ -298,10 +302,10 @@ public static class CompositionChecks
             var moves = line.Zip(line.Skip(1), (a, b) => System.Math.Abs(a - b)).Where(d => d > 0).ToList();
             int steps = moves.Count(d => d <= 2);
             if (moves.Count >= LeapsFewestMoves && steps < moves.Count * MelodyStepShare)
-                findings.Add($"{part}, the melody: only {steps * 100 / moves.Count}% of its moves are steps — it goes up and down "
+                findings.Add(new("melody.leaps", $"{part}, the melody: only {steps * 100 / moves.Count}% of its moves are steps — it goes up and down "
                     + "its chords, a broken chord, the accompaniment's figure: a tune moves mostly by step (a second up or down), "
                     + "a leap now and then to reach a peak, turning back by step after it — unless its theme is a fanfare, a call "
-                    + "on its chord's notes: then keep it.");
+                    + "on its chord's notes: then keep it.") { Parts = [part] });
         }
 
         // One bar's figure moved along the chords (owner's trial 2026-10-30: a rock guitar's verse was
@@ -313,10 +317,10 @@ public static class CompositionChecks
                 continue;
             var (alike, inBars, shape) = BarContours(midi, part, barList);
             if (inBars >= ContourFewestBars && alike >= inBars * ContourShare)
-                findings.Add($"{part}, the melody: {alike} of its {inBars} bars move in the shape of the bar before ({shape}) — "
+                findings.Add(new("melody.sequence", $"{part}, the melody: {alike} of its {inBars} bars move in the shape of the bar before ({shape}) — "
                     + "one bar's figure moved along the chords, not a line: let a phrase run two or four bars as one line, rising "
                     + "to a peak and falling to its close, its hook a shape of its own, answered by a different one"
-                    + (band ? "." : " — unless a sequence is the music's own design, as in a baroque episode: then keep it."));
+                    + (band ? "." : " — unless a sequence is the music's own design, as in a baroque episode: then keep it.")) { Parts = [part] });
         }
 
         // A compound meter's tune that does not keep its beats: a note starting within a beat and running
@@ -343,10 +347,10 @@ public static class CompositionChecks
                     across.Add(b + 1);
             }
             if (across.Count >= AcrossBeatFewestBars && across.Count >= compoundBars * AcrossBeatShare)
-                findings.Add($"{part}, the melody: in {across.Count} of its {compoundBars} bars a note starts within a beat and runs "
+                findings.Add(new("meter.across-beats", $"{part}, the melody: in {across.Count} of its {compoundBars} bars a note starts within a beat and runs "
                     + $"across the next (bars {string.Join(", ", across.Take(6))}{(across.Count > 6 ? ", …" : "")}, as the form plays them) — "
                     + "in a compound meter a beat is three eighths: group the tune by its beats (`4.`, `4 8`, `8 8 8`), and cross "
-                    + "a beat only where a syncopation is meant.");
+                    + "a beat only where a syncopation is meant.") { Parts = [part], Bars = across });
         }
 
         // A band's instrumental with no tune (owner's report 2026-10-29: a rock piece for guitar, bass
@@ -368,19 +372,19 @@ public static class CompositionChecks
             var (lineBars, playedBars) = instrumental;
             int withTune = lineBars.Values.SelectMany(b => b).Distinct().Count();
             if (playedBars >= 8 && withTune < playedBars * TunedBarsShare)
-                findings.Add($"A tune is played in only {withTune} of the {playedBars} bars: the parts over the bass play chords and figures, and "
+                findings.Add(new("band.no-tune", $"A tune is played in only {withTune} of the {playedBars} bars: the parts over the bass play chords and figures, and "
                     + "no words are sung. An instrumental's tune is its lead — let the guitar (or a lead instrument added for it) play "
                     + (shared.Length > 0 ? "a melody" : "the melody of the verse and the chorus")
                     + ", single notes with a hook to remember, moving mostly by step; a riff, "
-                    + "chords and their notes broken up and down are the groove under a tune, not the tune." + shared);
+                    + "chords and their notes broken up and down are the groove under a tune, not the tune." + shared));
             // The same sections played three times over (owner's trial 2026-10-30: told it was short, a
             // rock instrumental played Verse Chorus three times, the same each time). A song's verses
             // change their words; an instrumental's return the same music.
             var thrice = PlayedSections(root).GroupBy(s => s).Where(g => g.Count() >= 3).Select(g => (Name: g.Key, Times: g.Count())).ToList();
             if (thrice.Count > 0)
-                findings.Add($"{string.Join(", ", thrice.Select(t => $"{t.Name} ({t.Times} times)"))}: played the same each time, and no "
+                findings.Add(new("form.played-three-times", $"{string.Join(", ", thrice.Select(t => $"{t.Name} ({t.Times} times)"))}: played the same each time, and no "
                     + "words are sung to change them — vary a return as a section of its own (a lead tune over the verse, the chorus "
-                    + "an octave up or a key higher, a breakdown), or play it twice.");
+                    + "an octave up or a key higher, a breakdown), or play it twice."));
         }
 
         // A band's bass leaping about (owner's trial 2026-10-30: a rock trio's bass at ♩=176 jumped
@@ -394,9 +398,9 @@ public static class CompositionChecks
                 continue;
             int wide = lows.Zip(lows.Skip(1), (a, b) => System.Math.Abs(a - b)).Count(d => d > 12);
             if (wide >= (lows.Count - 1) * BassLeapShare)
-                findings.Add($"{bass}: {wide * 100 / (lows.Count - 1)}% of its steps leap more than an octave — a band's bass drives "
+                findings.Add(new("bass.leaps", $"{bass}: {wide * 100 / (lows.Count - 1)}% of its steps leap more than an octave — a band's bass drives "
                     + "the chord's root in eighths with the kick drum (an octave or a fifth now and then, a run at a fill) and "
-                    + "doubles the riff; it does not jump octaves from note to note.");
+                    + "doubles the riff; it does not jump octaves from note to note.") { Parts = [bass] });
         }
 
         // One note out of its line and straight back, an octave mark slipped (owner's trial 2026-10-30: a
@@ -431,10 +435,10 @@ public static class CompositionChecks
                 continue;
             var at = slips.Select(i => 1 + spikeBars.Count(b => b <= lows[i].Tick)).Distinct().ToList();
             int first = slips[0];
-            findings.Add($"{line.Key.Part}: {slips.Count} times one note leaps more than an octave away and straight back (bars "
+            findings.Add(new("octave.slip", $"{line.Key.Part}: {slips.Count} times one note leaps more than an octave away and straight back (bars "
                 + $"{string.Join(", ", at.Take(6))}{(at.Count > 6 ? ", …" : "")}, as the form plays them; "
                 + $"{PartRanges.SpelledFromPitch(lows[first].Pitch, fifths)} between {PartRanges.SpelledFromPitch(lows[first - 1].Pitch, fifths)} and "
-                + $"{PartRanges.SpelledFromPitch(lows[first + 1].Pitch, fifths)} first) — an octave mark slipped? Write it in its line's octave.");
+                + $"{PartRanges.SpelledFromPitch(lows[first + 1].Pitch, fifths)} first) — an octave mark slipped? Write it in its line's octave.") { Parts = [line.Key.Part], Bars = at });
         }
 
         // A staff labelled by the hand that plays it (owner's report 2026-10-27: a piano piece printed
@@ -442,9 +446,9 @@ public static class CompositionChecks
         var handNamed = parts.Where(p => new[] { p.DisplayName, p.ShortName }.Any(n => n != null && HandLabel.IsMatch(n)))
             .Select(p => p.Name.Text).ToList();
         if (handNamed.Count > 0)
-            findings.Add($"{string.Join(", ", handNamed)}: a staff is not labelled by the hand that plays it. A piece for piano alone "
+            findings.Add(new("staff.hand-label", $"{string.Join(", ", handNamed)}: a staff is not labelled by the hand that plays it. A piece for piano alone "
                 + "names no part (`part rh { instrument piano-right }`); a piano in an ensemble is named once, on its upper part "
-                + "(`\"Piano\" \"Pno.\"`).");
+                + "(`\"Piano\" \"Pno.\"`).") { Parts = handNamed });
         var sounding = midi.Tracks.SelectMany(t => t.Notes.Select(n => (Part: n.Part ?? t.Name, n.Pitch, n.DurationTicks, n.Channel)))
             .Where(n => n.Channel != 9)
             .GroupBy(n => n.Part)
@@ -468,13 +472,13 @@ public static class CompositionChecks
             string Name(int m) => PartRanges.SpelledFromPitch(m, fifths);
             string mostly = $"most of its time is between {Name(Percentile(0.1))} and {Name(Percentile(0.9))}, its middle {Name(middle)}";
             if (left && middle < LeftHandLowestMiddle)
-                findings.Add($"{part}: {mostly} — far below a pianist's left hand, which lies mostly between C2 and C4, round C3: "
+                findings.Add(new("piano.hand-register", $"{part}: {mostly} — far below a pianist's left hand, which lies mostly between C2 and C4, round C3: "
                     + "move it up an octave or two."
-                    + " (Absolute octaves are LilyPond's: C3 is `c`, C2 `c,`, middle C `c'`.)");
+                    + " (Absolute octaves are LilyPond's: C3 is `c`, C2 `c,`, middle C `c'`.)") { Parts = [part] });
             else if (!left && middle > RightHandHighestMiddle)
-                findings.Add($"{part}: {mostly} — high above a pianist's right hand, which lies mostly between C4 and C6, round C5: "
+                findings.Add(new("piano.hand-register", $"{part}: {mostly} — high above a pianist's right hand, which lies mostly between C4 and C6, round C5: "
                     + "move it down an octave."
-                    + " (Absolute octaves are LilyPond's: middle C is `c'`, C5 `c''`, C6 `c'''`.)");
+                    + " (Absolute octaves are LilyPond's: middle C is `c'`, C5 `c''`, C6 `c'''`.)") { Parts = [part] });
         }
         // The two hands far apart, the middle of the keyboard left empty (owner's report 2026-10-27:
         // a left hand mostly up to D4 under a right hand mostly from D5 — a thin, hollow sound).
@@ -484,10 +488,10 @@ public static class CompositionChecks
         {
             int lhTop = PercentileOf(sounding[lefts[0]], 0.9), rhFloor = PercentileOf(sounding[rights[0]], 0.1);
             if (rhFloor - lhTop > WidestGapBetweenHands)
-                findings.Add($"{rights[0]}, {lefts[0]}: the hands stand far apart — the left hand mostly up to {PartRanges.SpelledFromPitch(lhTop, fifths)}, "
+                findings.Add(new("piano.hands-apart", $"{rights[0]}, {lefts[0]}: the hands stand far apart — the left hand mostly up to {PartRanges.SpelledFromPitch(lhTop, fifths)}, "
                     + $"the right hand mostly from {PartRanges.SpelledFromPitch(rhFloor, fifths)} — and the middle of the keyboard is empty: let the left "
                     + "hand's figure reach up toward middle C, and give the right hand's melody its harmony under it (thirds, sixths, "
-                    + "chords on the strong beats).");
+                    + "chords on the strong beats).") { Parts = [rights[0], lefts[0]] });
         }
         // The left hand's figure into the melody, and spread wider than a hand's figure (owner's review
         // 2026-10-29: a wedding piece's broken chords ran D2 to A4 every bar — on the melody's own note,
@@ -507,18 +511,18 @@ public static class CompositionChecks
                 .Select(n => BarOf(n.StartTick)).Distinct().OrderBy(b => b).ToList();
             int played = lh.Concat(rh).Select(n => BarOf(n.StartTick)).Distinct().Count();
             if (into.Count >= HandsMeetFewestBars && into.Count >= played * HandsMeetShare)
-                findings.Add($"{lefts[0]}, {rights[0]}: in {into.Count} of {played} bars the left hand reaches the melody — the right hand's own note "
+                findings.Add(new("piano.left-reaches-melody", $"{lefts[0]}, {rights[0]}: in {into.Count} of {played} bars the left hand reaches the melody — the right hand's own note "
                     + $"or above it (bars {string.Join(", ", into.Take(6))}{(into.Count > 6 ? ", …" : "")}, as the form plays them): the melody is "
-                    + "lost in its accompaniment. Keep the left hand's figure below the tune, round C3 up toward middle C.");
+                    + "lost in its accompaniment. Keep the left hand's figure below the tune, round C3 up toward middle C.") { Parts = [lefts[0], rights[0]], Bars = into });
             // A bar of the left hand's broken chords (single notes, four or more) wider than a twelfth.
             var wide = lh.GroupBy(n => BarOf(n.StartTick))
                 .Where(g => g.GroupBy(n => n.StartTick).Count() >= 4 && g.GroupBy(n => n.StartTick).All(c => c.Count() == 1))
                 .Select(g => (Bar: g.Key, Low: g.Min(n => n.Pitch), High: g.Max(n => n.Pitch))).ToList();
             var over = wide.Where(w => w.High - w.Low > Twelfth).ToList();
             if (over.Count >= HandsMeetFewestBars && over.Count >= wide.Count * HandsMeetShare)
-                findings.Add($"{lefts[0]}: in {over.Count} of its {wide.Count} bars of broken chords the figure spans more than a twelfth "
+                findings.Add(new("piano.figure-wide", $"{lefts[0]}: in {over.Count} of its {wide.Count} bars of broken chords the figure spans more than a twelfth "
                     + $"({PartRanges.SpelledFromPitch(over[0].Low, fifths)} to {PartRanges.SpelledFromPitch(over[0].High, fifths)} in bar {over[0].Bar}): a hand's "
-                    + "figure stays within an octave and a half, climbing from its bass by the chord's tones and turning back.");
+                    + "figure stays within an octave and a half, climbing from its bass by the chord's tones and turning back.") { Parts = [lefts[0]], Bars = [.. over.Select(o => o.Bar)] });
         }
 
         findings.AddRange(Clashes(midi, melodies, barList, fifths));
@@ -536,9 +540,9 @@ public static class CompositionChecks
                     continue;
                 int middle = PercentileOf(notes, 0.5);
                 if (middle - under < 12)
-                    findings.Add($"{part}: most of its time round {PartRanges.SpelledFromPitch(middle, fifths)}, within an octave of the bass's "
+                    findings.Add(new("band.register-with-bass", $"{part}: most of its time round {PartRanges.SpelledFromPitch(middle, fifths)}, within an octave of the bass's "
                         + $"{PartRanges.SpelledFromPitch(under, fifths)} — two low lines in one register muddy each other: lift it an octave "
-                        + "(a guitar's chords round C3 to C5, its tune above them), and leave the low register to the bass.");
+                        + "(a guitar's chords round C3 to C5, its tune above them), and leave the low register to the bass.") { Parts = [part, bass] });
             }
         }
         if (band)
@@ -556,11 +560,11 @@ public static class CompositionChecks
             int chordBars = onsets.GroupBy(o => o.Bar).Count(b => b.Any(o => o.Chord) || b.Count(o => o.Low) * 2 > b.Count());
             bool chordRow = midi.Tracks.Any(t => t.Notes.Any(n => (n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal)));
             if (!chordRow && strumBars >= 8 && chordBars < strumBars * NoChordsShare)
-                findings.Add($"Nobody plays the chords: {string.Join(", ", strummers)} plays a tune of single notes in {strumBars - chordBars} of its "
+                findings.Add(new("band.nobody-plays-chords", $"Nobody plays the chords: {string.Join(", ", strummers)} plays a tune of single notes in {strumBars - chordBars} of its "
                     + $"{strumBars} bars, and the harmony is the bass's root alone — a band's guitar (or keyboards) strikes the chords: "
                     + $"power chords or a riff on the root {(shared.Length > 0 ? "under the verse" : "through the verse and the chorus")}, "
                     + "open chords ringing in a quiet part; its "
-                    + "tune goes over them in a solo, a fill, or a lead part of its own." + shared);
+                    + "tune goes over them in a solo, a fill, or a lead part of its own." + shared) { Parts = [.. strummers] });
             if (instrumentalLines is { } withLines)
                 findings.AddRange(ChordsUnderTheTune(midi, parts, barList, withLines.Item1));
         }
@@ -606,57 +610,63 @@ public static class CompositionChecks
 
         // The length and the ending (owner's report 2026-10-27: the composed piano piece was 8 bars, two
         // sections of four, and its end "unnatural" — it began in E minor and stopped in G major).
-        var barStarts = midi.BarTicks.ToList();
         // A chords row's voicings are the player's, not the piece's bass: left out, as above.
-        var pitched = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9
-            && !(n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal))).ToList();
-        int lastTick = pitched.Count == 0 ? 0 : pitched.Max(n => n.StartTick + n.DurationTicks);
-        // The first bar, and every bar that starts before the music ends.
-        int barCount = 1 + barStarts.Count(b => b > 0 && b < lastTick);
+        var pitched = PitchedNotes(midi);
+        var (barCount, seconds) = LengthOf(midi);
         // …and as long as it plays (owner's trials 2026-10-29: two 6/8 wedding pieces of 26 and 28 bars
         // lasted under a minute — the guide's minutes, said once, went unheeded). A lead sheet or a
         // melody alone, one staff, is a head played round: its length is its form's — unless it is
         // SUNG: a song's words run out, so it is held to the minutes too (owner's review 2026-11-01:
         // a song to sing and play yourself of 24 bars, 69 seconds, verse and chorus one phrase each).
-        int seconds = (int)System.Math.Round(SecondsAt(midi, lastTick));
         if (pitched.Count > 0 && (barCount < ShortestPiece || (seconds < ShortestSeconds && (byPart.Count >= 2 || sung.Count > 0))))
             // More music, not a slower tempo (owner's report 2026-10-29: told 70 seconds, the chat took
             // its Andante from ♩ = 72 to 48 and added no bar).
             // The bars it takes, at the piece's own tempo and meter (owner's trial 2026-10-30: told "about
             // 24 to 32 bars of 4/4", a rock piece at ♩ = 168 grew from 32 bars to 44 and stopped, at 63 seconds).
-            findings.Add($"The piece is {barCount} bars long, about {seconds} seconds played: unless a short piece was asked for, give it "
+            findings.Add(new("form.length", $"The piece is {barCount} bars long, about {seconds} seconds played: unless a short piece was asked for, give it "
                 + $"the length its form needs — a minute and a half to three minutes ({BarsFor(seconds, barCount)}), its phrases long "
                 + "enough to say something, each closing on a cadence. Lengthen it "
                 + "with music — a section more, a varied return, an introduction — never by slowing its tempo (keep the tempo its "
                 + "character asks for). A section that returns as it was is named again in the form, and that counts toward the "
                 + "length; what is added is new music, or a return that changes in a way the listener hears — not a copy of an "
-                + "earlier section under a new name with a few bars altered.");
+                + "earlier section under a new name with a few bars altered."));
         if (PlayedKeys(root) is { } inKeys && pitched.Count > 0)
         {
             var (home, end) = inKeys;
             int homeTonic = PitchClass(home.Tonic), endTonic = PitchClass(end.Tonic);
             string KeyName((string Tonic, string Mode) k) => $"{TonicName(k.Tonic)} {k.Mode}";
             if (homeTonic != endTonic || home.Mode != end.Mode)
-                findings.Add($"The piece begins in {KeyName(home)} and ends in {KeyName(end)}: come back to the home key for the last "
-                    + "section, and close there.");
+                findings.Add(new("form.ends-in-another-key", $"The piece begins in {KeyName(home)} and ends in {KeyName(end)}: come back to the home key for the last "
+                    + "section, and close there."));
             // The lowest note sounding at the last onset: the final chord's bass.
             int lastOnset = pitched.Max(n => n.StartTick);
             int bass = pitched.Where(n => n.StartTick <= lastOnset && n.StartTick + n.DurationTicks > lastOnset).Min(n => n.Pitch);
             if ((bass % 12 + 12) % 12 != endTonic)
-                findings.Add($"The piece ends over {PitchClassName(bass, fifths)}, not its tonic {PitchClassName(endTonic, fifths)}: close with a cadence "
-                    + $"(V–I) on the tonic chord, held through the last bar, the bass on {PitchClassName(endTonic, fifths)}.");
+                findings.Add(new("form.final-bass", $"The piece ends over {PitchClassName(bass, fifths)}, not its tonic {PitchClassName(endTonic, fifths)}: close with a cadence "
+                    + $"(V–I) on the tonic chord, held through the last bar, the bass on {PitchClassName(endTonic, fifths)}."));
         }
 
         // Every part in the same rhythm, bar after bar (counted above).
         {
             if (asOne)
-                findings.Add($"In {together} of {counted} bars every part moves in the same rhythm: let one voice carry the melody "
+                findings.Add(new("texture.one-rhythm", $"In {together} of {counted} bars every part moves in the same rhythm: let one voice carry the melody "
                     + "while the others accompany (broken chords, repeated notes, a moving bass), and pass the roles between them"
                     // A hymn's four voices move as one (owner's trial 2026-10-29: told this, the chat
                     // turned a hymn into a tune over held notes — the alto on whole notes for 16 bars).
-                    + " — unless the voices moving together is the music's own character, as in a hymn or a chorale: then keep it.");
+                    + " — unless the voices moving together is the music's own character, as in a hymn or a chorale: then keep it."));
         }
         return findings;
+    }
+
+    private static List<MidiNote> PitchedNotes(MidiFile midi) => midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9
+        && !(n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal))).ToList();
+
+    /// <summary>How long the music plays: the first bar and every bar that starts before it ends, and its seconds.</summary>
+    internal static (int Bars, int Seconds) LengthOf(MidiFile midi)
+    {
+        var pitched = PitchedNotes(midi);
+        int lastTick = pitched.Count == 0 ? 0 : pitched.Max(n => n.StartTick + n.DurationTicks);
+        return (1 + midi.BarTicks.Count(b => b > 0 && b < lastTick), (int)System.Math.Round(SecondsAt(midi, lastTick)));
     }
 
     // The middle of a piano hand's sounding time (MIDI) past which the hand is out of its usual
@@ -697,7 +707,7 @@ public static class CompositionChecks
     /// <summary>A melody's notes held on the beat (a quarter or longer) a semitone or a minor ninth over
     /// a note another part sounds with them at their start, or a semitone under one. A suspension is
     /// struck before the harmony moves under it, so it is not one.</summary>
-    private static IEnumerable<string> Clashes(MidiFile midi, HashSet<string> melodies, List<int> barList, int fifths)
+    private static IEnumerable<CompositionFinding> Clashes(MidiFile midi, HashSet<string> melodies, List<int> barList, int fifths)
     {
         int tpq = midi.TicksPerQuarterNote;
         var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9)
@@ -724,11 +734,11 @@ public static class CompositionChecks
             if (clashes.Count < ClashFewest || clashes.Count < held.Count * ClashShare)
                 continue;
             var bars = clashes.Select(c => c.Bar).Distinct().ToList();
-            yield return $"{part}, the melody: {clashes.Count} times a note held on the beat stands a semitone from the harmony sounding "
+            yield return new("harmony.clash", $"{part}, the melody: {clashes.Count} times a note held on the beat stands a semitone from the harmony sounding "
                 + $"with it (bars {string.Join(", ", bars.Take(6))}{(bars.Count > 6 ? ", …" : "")}, as the form plays them; "
                 + $"{PartRanges.SpelledFromPitch(clashes[0].Note, fifths)} against {PartRanges.SpelledFromPitch(clashes[0].Against, fifths)} first) — "
                 + "a wrong note? Take the chord's own tone there, or change the chord under it; a note against the chord is a "
-                + "passing one, short and moving on by step — unless it is a blue note meant, a minor third over a major chord.";
+                + "passing one, short and moving on by step — unless it is a blue note meant, a minor third over a major chord.") { Parts = [part], Bars = [.. bars] };
         }
     }
 
@@ -740,7 +750,7 @@ public static class CompositionChecks
     private const double NoChordsShare = 0.1;
 
     /// <summary>A part's chords with a third or a second under C3.</summary>
-    private static IEnumerable<string> LowChords(MidiFile midi, List<int> barList, int fifths)
+    private static IEnumerable<CompositionFinding> LowChords(MidiFile midi, List<int> barList, int fifths)
     {
         foreach (var part in midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.Pitch)))
             .GroupBy(n => n.Part))
@@ -751,10 +761,10 @@ public static class CompositionChecks
             if (muddy.Count < LowChordsFewest)
                 continue;
             var first = muddy[0];
-            yield return $"{part.Key}: {muddy.Count} chords stack a third or a second below C3 ("
+            yield return new("voicing.low-chords", $"{part.Key}: {muddy.Count} chords stack a third or a second below C3 ("
                 + $"{string.Join(" ", first.Pitches.Select(p => PartRanges.SpelledFromPitch(p, fifths)))} in bar {barList.Count(b => b <= first.Tick)} first, "
                 + "as the form plays them) — so low, close notes are mud: voice it open, the root and fifth below (a power chord) "
-                + "and the third an octave or more higher.";
+                + "and the third an octave or more higher.") { Parts = [part.Key], Bars = [barList.Count(b => b <= first.Tick)] };
         }
     }
 
@@ -766,7 +776,7 @@ public static class CompositionChecks
 
     /// <summary>A part on a distorted sound (<see cref="ChordVoicingFinder.IsDistorted"/>) striking
     /// full chords: distortion blurs them; two or three notes — a power chord — ring clear.</summary>
-    private static IEnumerable<string> ThickChordsOnADistortedSound(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts,
+    private static IEnumerable<CompositionFinding> ThickChordsOnADistortedSound(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts,
         List<int> barList, int fifths)
     {
         foreach (var part in parts)
@@ -781,11 +791,11 @@ public static class CompositionChecks
             if (chords.Count < ThickChordsFewest || thick.Count < chords.Count * ThickChordsShare)
                 continue;
             var first = thick[0];
-            yield return $"{part.Name.Text}, on a distorted sound ({sound}): {thick.Count} of its {chords.Count} chords are {ThickChordNotes} notes or more "
+            yield return new("voicing.thick-distorted", $"{part.Name.Text}, on a distorted sound ({sound}): {thick.Count} of its {chords.Count} chords are {ThickChordNotes} notes or more "
                 + $"({string.Join(" ", first.Pitches.Select(p => PartRanges.SpelledFromPitch(p, fifths)))} in bar {barList.Count(b => b <= first.Tick)} first, "
                 + "as the form plays them) — distortion blurs a full chord into a roar: strike two or three notes, the root and its fifth "
                 + "with the octave above (a power chord; the voicing tool, given the sound, answers them first), and leave the full chord "
-                + "to a clean sound or to one ringing chord at a close.";
+                + "to a clean sound or to one ringing chord at a close.") { Parts = [part.Name.Text], Bars = [barList.Count(b => b <= first.Tick)] };
         }
     }
 
@@ -810,7 +820,7 @@ public static class CompositionChecks
     /// <summary>The singers' parts read against each other: a pair doubling at the octave, and an
     /// inner part that leaps from chord tone to chord tone. A choir's lines; a band's or an
     /// orchestra's parts double and leap by right, so only the voice presets are read.</summary>
-    private static IEnumerable<string> SingersLines(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, IReadOnlyList<string> scoreOrder, int fifths)
+    private static IEnumerable<CompositionFinding> SingersLines(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, IReadOnlyList<string> scoreOrder, int fifths)
     {
         var voices = parts.Where(IsVoicePreset).Select(p => p.Name.Text).ToList();
         // Top to bottom as the score stacks them, the order a choir's parts are meant in; a part
@@ -847,9 +857,9 @@ public static class CompositionChecks
                         octaves++;
                 }
                 if (octaves >= ParallelOctavesFewest && octaves >= moves * ParallelOctavesShare)
-                    yield return $"{singers[i]} and {singers[j]} move in octaves or unison {octaves} times of the {moves} they move together — two parts singing one line: "
+                    yield return new("singers.octaves", $"{singers[i]} and {singers[j]} move in octaves or unison {octaves} times of the {moves} they move together — two parts singing one line: "
                         + "give each its own, one holding or moving by step while the other moves — unless a passage in octaves is meant, "
-                        + "a line the voices sing as one for its strength: then keep it.";
+                        + "a line the voices sing as one for its strength: then keep it.") { Parts = [singers[i], singers[j]] };
             }
         // A lower part standing over the one above it (owner's review 2026-11-01: 夢の先へ, the men in
         // a tenor's range above the alto, 33 crossings).
@@ -866,8 +876,8 @@ public static class CompositionChecks
                         crossed++;
                 }
             if (crossed >= CrossingsFewest && crossed >= together * CrossingsShare)
-                yield return $"{singers[i + 1]} stands above {singers[i]} at {crossed} of the {together} moments they sing together — the parts cross, and neither "
-                    + "is heard as its own line: keep each voice in its own register, the lower part below, with an instrument whose range lies there.";
+                yield return new("singers.crossed", $"{singers[i + 1]} stands above {singers[i]} at {crossed} of the {together} moments they sing together — the parts cross, and neither "
+                    + "is heard as its own line: keep each voice in its own register, the lower part below, with an instrument whose range lies there.") { Parts = [singers[i + 1], singers[i]] };
         }
         // …and on the last chord, where one crossing is one too many (owner's review 2026-11-01:
         // ひかりをつないで closed with the soprano's E4 under the alto's G♯4).
@@ -876,9 +886,9 @@ public static class CompositionChecks
             int lastOnset = lines.Values.Where(l => l.Count > 0).Max(l => l[^1].Start);
             for (int i = 0; i + 1 < singers.Count; i++)
                 if (At(lines[singers[i]], lastOnset) is { } u && At(lines[singers[i + 1]], lastOnset) is { } l && l > u)
-                    yield return $"{singers[i + 1]} ends above {singers[i]} on the last chord ({PartRanges.SpelledFromPitch(l, fifths)} over "
+                    yield return new("singers.crossed-at-end", $"{singers[i + 1]} ends above {singers[i]} on the last chord ({PartRanges.SpelledFromPitch(l, fifths)} over "
                         + $"{PartRanges.SpelledFromPitch(u, fifths)}) — the closing chord is where the voices are heard most plainly: an octave mark "
-                        + "slipped? Check the section's first note, which is read afresh, and give each part its place in the chord.";
+                        + "slipped? Check the section's first note, which is read afresh, and give each part its place in the chord.") { Parts = [singers[i + 1], singers[i]] };
         }
         // The inner singers: neither the top nor the bottom of the stack.
         foreach (var s in singers.Skip(1).Take(singers.Count - 2))
@@ -887,8 +897,8 @@ public static class CompositionChecks
             var moved = pitches.Zip(pitches.Skip(1), (x, y) => System.Math.Abs(x - y)).Where(d => d > 0).ToList();
             int steps = moved.Count(d => d <= 2);
             if (moved.Count >= InnerLineFewestMoves && steps < moved.Count * InnerLineStepShare)
-                yield return $"{s}: only {steps} of its {moved.Count} moves are steps — it goes from chord tone to chord tone, which a singer cannot hold in the ear: "
-                    + "an inner voice is a line of its own, by step where it can, keeping a common tone from chord to chord.";
+                yield return new("singers.inner-leaps", $"{s}: only {steps} of its {moved.Count} moves are steps — it goes from chord tone to chord tone, which a singer cannot hold in the ear: "
+                    + "an inner voice is a line of its own, by step where it can, keeping a common tone from chord to chord.") { Parts = [s] };
         }
     }
 
@@ -900,7 +910,7 @@ public static class CompositionChecks
     /// of single notes, and in half its bars or more another voice's chord reaching over it. What
     /// the ear takes for the tune is the top. Owner's review 2026-11-01 (喫茶店の夕暮れ, a solo guitar's
     /// G♯4 under its own Emaj7 topped by D♯5).</summary>
-    private static IEnumerable<string> TuneUnderItsChords(MidiFile midi, List<int> barList)
+    private static IEnumerable<CompositionFinding> TuneUnderItsChords(MidiFile midi, List<int> barList)
     {
         var byPart = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && !n.IsGrace).Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick, n.Pitch)))
             .GroupBy(n => n.Part);
@@ -938,8 +948,8 @@ public static class CompositionChecks
                     under++;
             }
             if (bars >= TuneUnderChordsFewestBars && under >= bars * TuneUnderChordsShare)
-                yield return $"{part.Key}: in {under} of its {bars} bars with a tune and chords, a chord reaches over the tune — the ear takes the top for the tune, and the "
-                    + "one written is buried: keep the chords' top note under it, or give the tune the top of the chord — unless an inner melody is meant: then keep it.";
+                yield return new("tune.under-chords", $"{part.Key}: in {under} of its {bars} bars with a tune and chords, a chord reaches over the tune — the ear takes the top for the tune, and the "
+                    + "one written is buried: keep the chords' top note under it, or give the tune the top of the chord — unless an inner melody is meant: then keep it.") { Parts = [part.Key] };
         }
     }
 
@@ -949,7 +959,7 @@ public static class CompositionChecks
     /// <summary>A piano under singers doing nothing but hold: its right hand striking chords alone,
     /// its left a bass note or two a bar. Owner's review 2026-11-01 (ひかりの道): the right hand's
     /// chords on G3–F4 from the first bar to the last, the left hand's roots beneath.</summary>
-    private static IEnumerable<string> PianoHolds(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, List<int> barList, IReadOnlySet<string> sung)
+    private static IEnumerable<CompositionFinding> PianoHolds(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, List<int> barList, IReadOnlySet<string> sung)
     {
         if (sung.Count == 0
             || parts.FirstOrDefault(p => InstrumentOf(p) == "piano-right") is not { } right
@@ -971,9 +981,9 @@ public static class CompositionChecks
                 held++;
         }
         if (played >= PianoHoldsFewestBars && held >= played * PianoHoldsShare)
-            yield return $"{right.Name.Text}, {left.Name.Text}: in {held} of its {played} bars the piano only holds — chords in the right hand, a bass note or two in the left: "
+            yield return new("piano.holds", $"{right.Name.Text}, {left.Name.Text}: in {held} of its {played} bars the piano only holds — chords in the right hand, a bass note or two in the left: "
                 + "an accompaniment moves the song on: broken chords or a flowing figure under the verse, more of it in the chorus, a line of its own "
-                + "where the voices rest — unless a chorale's plain chords are meant: then keep it.";
+                + "where the voices rest — unless a chorale's plain chords are meant: then keep it.") { Parts = [right.Name.Text, left.Name.Text] };
     }
 
     // Bars in a row a voice sings with no word under them before it is said.
@@ -985,7 +995,7 @@ public static class CompositionChecks
     /// words the voices share, as a hymn's one verse does.</summary>
     /// <remarks>Read from the sections, not from the MIDI's lyric events: those carry no
     /// <c>verse N { }</c>, and a song's second verse read as bars with no words.</remarks>
-    private static IEnumerable<string> BarsWithoutWords(MidiFile midi, SyntaxNode root, IReadOnlyList<PartDeclarationSyntax> parts, List<int> barList, IReadOnlySet<string> sung)
+    private static IEnumerable<CompositionFinding> BarsWithoutWords(MidiFile midi, SyntaxNode root, IReadOnlyList<PartDeclarationSyntax> parts, List<int> barList, IReadOnlySet<string> sung)
     {
         if (sung.Count == 0)
             yield break;
@@ -1027,8 +1037,8 @@ public static class CompositionChecks
         }
         if (wordless.Count < WordlessFewestBars)
             yield break;
-        yield return $"The voices sing {wordless.Count} bars with no words ({string.Join(", ", names)}) — a voice sings words: give an introduction or an "
-            + "ending to an instrument, or write the words — unless a vocalise, a hum or an ah is meant: then keep it.";
+        yield return new("singers.no-words", $"The voices sing {wordless.Count} bars with no words ({string.Join(", ", names)}) — a voice sings words: give an introduction or an "
+            + "ending to an instrument, or write the words — unless a vocalise, a hum or an ah is meant: then keep it.");
     }
 
     // A singer with no rest in this many bars in a row (owner's review 2026-11-01: 帰り道の灯り sang
@@ -1039,7 +1049,7 @@ public static class CompositionChecks
 
     /// <summary>A voice part — a voice preset, or a part a lyrics track sings — singing
     /// <see cref="NoBreathFewestBars"/> bars or more in a row without a rest.</summary>
-    private static IEnumerable<string> NoBreath(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, List<int> bars, IReadOnlySet<string> sung)
+    private static IEnumerable<CompositionFinding> NoBreath(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, List<int> bars, IReadOnlySet<string> sung)
     {
         // `bars`: the bar starts from tick 0, the piece's end the last of them.
         if (bars.Count < 2)
@@ -1078,9 +1088,9 @@ public static class CompositionChecks
                     run = 0;
             }
             if (best >= NoBreathFewestBars)
-                yield return $"{name}: sings {best} bars in a row without a rest (bars {bestStart + 1}–{bestStart + best}, as the form plays them) — "
+                yield return new("singers.no-breath", $"{name}: sings {best} bars in a row without a rest (bars {bestStart + 1}–{bestStart + best}, as the form plays them) — "
                     + "a singer breathes: a line of words is a phrase, and each phrase ends on a longer note with a rest after it; "
-                    + "a comma in the words is a breath in the line.";
+                    + "a comma in the words is a breath in the line.") { Parts = [name], Bars = [.. Enumerable.Range(bestStart + 1, best)] };
         }
     }
 
@@ -1099,7 +1109,7 @@ public static class CompositionChecks
     /// <summary>The melody's phrases — two bars, else four, counted from each section's first bar as
     /// the form first plays it — mostly in one rhythm, read as the onsets' places over the whole
     /// phrase. Said once, for the shorter phrase that shows it.</summary>
-    private static IEnumerable<string> PhraseFormula(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList, bool band)
+    private static IEnumerable<CompositionFinding> PhraseFormula(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList, bool band)
     {
         foreach (int length in PhraseLengths)
         {
@@ -1115,10 +1125,10 @@ public static class CompositionChecks
             var common = phrases.GroupBy(p => p).OrderByDescending(g => g.Count()).First();
             if (common.Count() >= phrases.Count * PhraseFormulaShare)
             {
-                yield return $"{tune}, the melody: {common.Count()} of its {phrases.Count} {length}-bar phrases have the same rhythm — one formula "
+                yield return new("phrase.formula", $"{tune}, the melody: {common.Count()} of its {phrases.Count} {length}-bar phrases have the same rhythm — one formula "
                     + "poured into every phrase, verse and chorus alike: give the chorus's hook a rhythm of its own and the verse another, "
                     + "and let a phrase end otherwise than the one before (a note held over the bar line, an upbeat into the next, "
-                    + "the breath in another place)" + (band ? BandTuneSings : EvenPaceKept);
+                    + "the breath in another place)" + (band ? BandTuneSings : EvenPaceKept)) { Parts = [tune] };
                 yield break;
             }
         }
@@ -1144,7 +1154,7 @@ public static class CompositionChecks
     /// the phrase: the phrase's second bars alike, its third bars alike… Owner's review 2026-11-01
     /// (風の道): 21 of 24 bars, while the whole phrases agreed in 4 of 6 and the two-bar ones split
     /// into two rhythms of half each, so <see cref="PhraseFormula"/> said nothing.</summary>
-    private static IEnumerable<string> PhrasePositions(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList, bool band)
+    private static IEnumerable<CompositionFinding> PhrasePositions(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList, bool band)
     {
         const int length = 4;
         var phrases = new List<string[]>();
@@ -1162,30 +1172,30 @@ public static class CompositionChecks
         int same = Enumerable.Range(0, length).Sum(k => phrases.GroupBy(p => p[k]).Max(g => g.Count()));
         int total = length * phrases.Count;
         if (same >= total * PhraseFormulaShare)
-            yield return $"{tune}, the melody: its {phrases.Count} four-bar phrases keep one rhythm for each bar's place in the phrase ({same} of "
+            yield return new("phrase.positions", $"{tune}, the melody: its {phrases.Count} four-bar phrases keep one rhythm for each bar's place in the phrase ({same} of "
                 + $"{total} bars) — every section sings the same four bars of rhythm: let the chorus and the bridge move differently from the "
-                + "verse, the long notes and the breaths falling in other places" + (band ? BandTuneSings : EvenPaceKept);
+                + "verse, the long notes and the breaths falling in other places" + (band ? BandTuneSings : EvenPaceKept)) { Parts = [tune] };
     }
 
     /// <summary>A song's chorus sung three times or more, the last as the first. Named again in the
     /// form is how a chorus returns, and the second time is that; a song's last chorus is where it
     /// arrives. Owner's review 2026-11-01 (風の道).</summary>
-    private static IEnumerable<string> LastChorusUnchanged(MidiFile midi, string tune)
+    private static IEnumerable<CompositionFinding> LastChorusUnchanged(MidiFile midi, string tune)
     {
         if (ChorusOf(midi) is not { } chorus)
             yield break;
         int plays = midi.SectionStarts.Count(s => s.Value == chorus.Name);
         if (plays >= 3)
-            yield return $"{tune}, the melody: the chorus ({chorus.Name}) is sung {plays} times, the last as the first — the last chorus is where the "
+            yield return new("chorus.last-unchanged", $"{tune}, the melody: the chorus ({chorus.Name}) is sung {plays} times, the last as the first — the last chorus is where the "
                 + "song arrives: make it a section of its own with something the listener hears, its hook higher, a held note, a new "
-                + "ending — unless the song means to close as it began: then keep it.";
+                + "ending — unless the song means to close as it began: then keep it.") { Parts = [tune] };
     }
 
     /// <summary>The melody's two-bar phrases mostly ending the same way — the last two notes at
     /// the same places from the phrase's end, the last the same length (a rest after it shows in
     /// the places). Owner's review 2026-11-01: a song whose every phrase closed `… 4 r8`, its
     /// phrases otherwise varied.</summary>
-    private static IEnumerable<string> PhraseEndings(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList, bool band)
+    private static IEnumerable<CompositionFinding> PhraseEndings(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList, bool band)
     {
         var endings = new List<string>();
         foreach (var (start, end) in PhraseWindows(midi, barList, 2))
@@ -1199,10 +1209,10 @@ public static class CompositionChecks
             yield break;
         var common = endings.GroupBy(e => e).OrderByDescending(g => g.Count()).First();
         if (common.Count() >= endings.Count * PhraseFormulaShare)
-            yield return $"{tune}, the melody: {common.Count()} of its {endings.Count} phrases end the same way (the last two notes at the same "
+            yield return new("phrase.endings", $"{tune}, the melody: {common.Count()} of its {endings.Count} phrases end the same way (the last two notes at the same "
                 + "places, the same rest after them) — one closing gesture for every line: end some lines on a note held into the next "
                 + "bar, some on an upbeat into the next line, some with no breath at all, and let the chorus's last line close otherwise "
-                + "than the verse's" + (band ? BandTuneSings : EvenPaceKept);
+                + "than the verse's" + (band ? BandTuneSings : EvenPaceKept)) { Parts = [tune] };
     }
 
     // A section's closing figure: the first this many single notes of its last bar, as intervals from
@@ -1212,7 +1222,7 @@ public static class CompositionChecks
     /// <summary>A song's sections closing on one figure — the same intervals opening the last bar of
     /// most of them (owner's review 2026-11-01: a verse, a chorus and a second verse all closing
     /// `cis8 b'4 ais8 gis8 …`, the tune built of two licks).</summary>
-    private static IEnumerable<string> OneClosingFigure(MidiFile midi, string tune, IReadOnlyList<(int StartTick, int DurationTicks, int Pitch)> notes,
+    private static IEnumerable<CompositionFinding> OneClosingFigure(MidiFile midi, string tune, IReadOnlyList<(int StartTick, int DurationTicks, int Pitch)> notes,
         List<int> barList, int fifths)
     {
         var closes = new List<(string Name, string Figure, int Bar, List<int> Pitches)>();
@@ -1234,11 +1244,11 @@ public static class CompositionChecks
         if (common.Count() * 2 <= closes.Count)
             yield break;
         var first = common.First();
-        yield return $"{tune}, the melody: {common.Count()} of its {closes.Count} sections close on the same figure "
+        yield return new("phrase.closing-figure", $"{tune}, the melody: {common.Count()} of its {closes.Count} sections close on the same figure "
             + $"({string.Join(" ", first.Pitches.Select(p => PartRanges.SpelledFromPitch(p, fifths)))} in bar {first.Bar + 1} first, as the form plays "
             + $"them; {string.Join(", ", common.Select(c => c.Name))}) — one cadence lick for every section: let each close in its own way — "
             + "the verse's leads on, the chorus's lands, the bridge's opens the way back — unless the figure is the song's tag, meant to "
-            + "return: then keep it.";
+            + "return: then keep it.") { Parts = [tune], Bars = [first.Bar + 1] };
     }
 
     /// <summary>The chorus, by its name and the span of its first playing: a section named for it
@@ -1265,7 +1275,7 @@ public static class CompositionChecks
 
     /// <summary>The chorus opening with another section's first phrase — its first two bars the same
     /// notes at the same places. A chorus is the hook a song is remembered by.</summary>
-    private static IEnumerable<string> ChorusOpensLikeAnother(MidiFile midi, string tune, IReadOnlyList<(int StartTick, int DurationTicks, int Pitch)> notes, List<int> barList)
+    private static IEnumerable<CompositionFinding> ChorusOpensLikeAnother(MidiFile midi, string tune, IReadOnlyList<(int StartTick, int DurationTicks, int Pitch)> notes, List<int> barList)
     {
         if (ChorusOf(midi) is not { } chorus)
             yield break;
@@ -1285,9 +1295,9 @@ public static class CompositionChecks
         {
             if (name == chorus.Name || IsChorusName(name) || Opening(start, out int bar) != hook)
                 continue;
-            yield return $"{tune}, the melody: the chorus ({chorus.Name}) opens with {name}'s first phrase, note for note (bars {bar + 1}–{bar + 2} "
+            yield return new("chorus.opens-like-another", $"{tune}, the melody: the chorus ({chorus.Name}) opens with {name}'s first phrase, note for note (bars {bar + 1}–{bar + 2} "
                 + $"and {chorusBar + 1}–{chorusBar + 2}, as the form plays them) — a chorus is the hook the song is remembered by: give it an "
-                + "opening of its own, in another rhythm, from a higher note, with a leap the verse does not make.";
+                + "opening of its own, in another rhythm, from a higher note, with a leap the verse does not make.") { Parts = [tune], Bars = [bar + 1, bar + 2, chorusBar + 1, chorusBar + 2] };
             yield break;
         }
         // …or its first bar the same line at another octave (owner's review 2026-11-01, あしたの窓:
@@ -1307,9 +1317,9 @@ public static class CompositionChecks
         {
             if (name == chorus.Name || IsChorusName(name) || FirstBar(start, out int bar) != line)
                 continue;
-            yield return $"{tune}, the melody: the chorus ({chorus.Name}) opens with the first bar of {name}, an octave apart or none (bars {bar + 1} "
+            yield return new("chorus.opens-like-another", $"{tune}, the melody: the chorus ({chorus.Name}) opens with the first bar of {name}, an octave apart or none (bars {bar + 1} "
                 + $"and {chorusFirst + 1}, as the form plays them) — the same line sung higher is not a hook of its own: give the chorus "
-                + "another rhythm and another shape from its first notes.";
+                + "another rhythm and another shape from its first notes.") { Parts = [tune], Bars = [bar + 1, chorusFirst + 1] };
             yield break;
         }
     }
@@ -1322,7 +1332,7 @@ public static class CompositionChecks
     /// phrase, line after line: the words cut to a mould rather than the notes set to the words.
     /// Owner's review 2026-11-01 (あしたの窓): 3, 3, 5, 2 notes in 31 of 32 bars, every word broken at
     /// the bar lines, the rhythms changed enough to pass <see cref="PhrasePositions"/>.</summary>
-    private static IEnumerable<string> PhraseCounts(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList)
+    private static IEnumerable<CompositionFinding> PhraseCounts(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList)
     {
         const int length = 4;
         var phrases = new List<int[]>();
@@ -1341,10 +1351,10 @@ public static class CompositionChecks
         int total = length * phrases.Count;
         // One count in every bar is an even pace, which the note-value readings speak to.
         if (same >= total * PhraseCountShare && common.Select(g => g.Key).Distinct().Count() > 1)
-            yield return $"{tune}, the melody: its {phrases.Count} four-bar phrases keep the same number of notes in each bar's place "
+            yield return new("phrase.note-counts", $"{tune}, the melody: its {phrases.Count} four-bar phrases keep the same number of notes in each bar's place "
                 + $"({string.Join(", ", common.Select(g => g.Key))} notes, in {same} of {total} bars) — the words are being cut to one mould, whole "
                 + "words broken at the bar lines: write each line as the sentence it is, and give it the notes its words need, some "
-                + "lines long and some short.";
+                + "lines long and some short.") { Parts = [tune] };
     }
 
     // A tune this long is read for where its peak comes.
@@ -1353,7 +1363,7 @@ public static class CompositionChecks
     /// <summary>The melody's highest note spent in its first phrase (its first two bars sung) and never
     /// passed; else the chorus staying below the sections before it. A song climbs to its
     /// chorus.</summary>
-    private static IEnumerable<string> PeakSpentEarly(MidiFile midi, string tune, IReadOnlyList<(int StartTick, int DurationTicks, int Pitch)> notes,
+    private static IEnumerable<CompositionFinding> PeakSpentEarly(MidiFile midi, string tune, IReadOnlyList<(int StartTick, int DurationTicks, int Pitch)> notes,
         List<int> barList, int fifths)
     {
         if (notes.Count < PeakFewestNotes)
@@ -1364,9 +1374,9 @@ public static class CompositionChecks
         int phraseEnd = barList[System.Math.Min(firstBar + 2, barList.Count - 1)];
         if (topAt < phraseEnd)
         {
-            yield return $"{tune}, the melody: its highest note, {PartRanges.SpelledFromPitch(top, fifths)}, comes in its first phrase (bar "
+            yield return new("melody.peak-early", $"{tune}, the melody: its highest note, {PartRanges.SpelledFromPitch(top, fifths)}, comes in its first phrase (bar "
                 + $"{barList.Count(b => b <= topAt)}, as the form plays them) and is never passed — a song climbs: start the verse lower "
-                + "and keep the top for the chorus's hook, or for the last chorus.";
+                + "and keep the top for the chorus's hook, or for the last chorus.") { Parts = [tune], Bars = [barList.Count(b => b <= topAt)] };
             yield break;
         }
         if (ChorusOf(midi) is not { } chorus)
@@ -1379,9 +1389,9 @@ public static class CompositionChecks
         // Below them, not level with them: a chorus reaching the verse's own peak is common in the
         // songs people write (owner's decision 2026-11-01, five of the samples told at the level).
         if (chorusTop < beforeTop)
-            yield return $"{tune}, the melody: the chorus ({chorus.Name}) stays below the sections before it (its top "
+            yield return new("chorus.below", $"{tune}, the melody: the chorus ({chorus.Name}) stays below the sections before it (its top "
                 + $"{PartRanges.SpelledFromPitch(chorusTop, fifths)}, theirs {PartRanges.SpelledFromPitch(beforeTop, fifths)}) — the chorus is the "
-                + "song's high ground: lift its hook to the verse's peak or above it.";
+                + "song's high ground: lift its hook to the verse's peak or above it.") { Parts = [tune] };
     }
 
     // One chord progression under the whole piece (owner's review 2026-11-01: a rock instrumental
@@ -1393,7 +1403,7 @@ public static class CompositionChecks
     private const int OneProgressionFewestSections = 3;
 
     /// <summary>The same chord progression in every section, its loop turned at most.</summary>
-    private static IEnumerable<string> OneProgression(MidiFile midi, List<int> barList, int fifths)
+    private static IEnumerable<CompositionFinding> OneProgression(MidiFile midi, List<int> barList, int fifths)
     {
         var pitched = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9
             && !(n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal))).ToList();
@@ -1424,11 +1434,11 @@ public static class CompositionChecks
             yield break;
         var on = sections.Where(s => OnTheLoop(s.Roots)).Select(s => s.Name).ToList();
         string roots = string.Join(" ", loop.Select(r => PitchClassName(r!.Value, fifths)));
-        yield return $"One chord progression from start to end: the bass's roots walk {roots} in {(off.Count > 0 ? $"every section but {off[0]}" : "every section")} "
+        yield return new("harmony.one-progression", $"One chord progression from start to end: the bass's roots walk {roots} in {(off.Count > 0 ? $"every section but {off[0]}" : "every section")} "
             + $"({string.Join(", ", on)}) — a song's sections are told apart by their harmony as much as by their tune: give the "
             + "chorus or the bridge a progression of its own (a new bass note under the hook, a chord from outside the loop; the loop "
             + "begun from another of its chords is not a new one) — unless the music is built on one progression, a blues or a vamp: "
-            + "then keep it.";
+            + "then keep it.");
     }
 
     // A fretted part striking its chords in one voice under its own tune in another, in this share
@@ -1441,7 +1451,7 @@ public static class CompositionChecks
     /// <summary>A band's fretted part whose chord voice strikes under its tune voice in most of
     /// its tune's bars: one player's hands cannot. A chord struck once where the tune rests is
     /// not that; two strikes or more in the bar are.</summary>
-    private static IEnumerable<string> ChordsUnderTheTune(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts,
+    private static IEnumerable<CompositionFinding> ChordsUnderTheTune(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts,
         List<int> barList, Dictionary<string, HashSet<int>> lineBars)
     {
         foreach (var part in parts)
@@ -1464,9 +1474,9 @@ public static class CompositionChecks
                     under++;
             }
             if (under >= ChordsUnderTuneFewest && under >= tuneBars.Count * ChordsUnderTuneShare)
-                yield return $"{name}: in {under} of its {tuneBars.Count} bars with a tune, one voice strikes the chords while another plays the "
+                yield return new("band.one-player-two-voices", $"{name}: in {under} of its {tuneBars.Count} bars with a tune, one voice strikes the chords while another plays the "
                     + "tune — one player's hands cannot: let the chords rest while the hook plays (the bass holds the harmony; a chord struck "
-                    + "where the tune rests is fine), or give the tune to a second guitar part of its own.";
+                    + "where the tune rests is fine), or give the tune to a second guitar part of its own.") { Parts = [name] };
         }
     }
 
@@ -1482,7 +1492,7 @@ public static class CompositionChecks
     /// guitarist reads). Said when every bar the part plays in, eight or more, holds chords only,
     /// their pitch classes inside the row's chord sounding in that bar.
     /// </summary>
-    private static IEnumerable<string> StaffRestatesTheChordsRow(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, List<int> barList)
+    private static IEnumerable<CompositionFinding> StaffRestatesTheChordsRow(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, List<int> barList)
     {
         var row = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && (n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal))).ToList();
         if (row.Count == 0)
@@ -1506,10 +1516,10 @@ public static class CompositionChecks
                     restated++;
             }
             if (played >= RestatedRowFewestBars && restated >= played * RestatedRowShare)
-                yield return $"{name}: its staff says what the chords row says — the row's chords struck as block chords in {restated} of its "
+                yield return new("staff.restates-chords", $"{name}: its staff says what the chords row says — the row's chords struck as block chords in {restated} of its "
                     + $"{played} bars: drop the staff (the chords row, with its diagrams, is what a guitarist reads), or write what the player "
                     + "plays — a picking pattern, a bass note and then the chord, a riff — and keep the row for the names. A strum's rhythm "
-                    + "alone is a strokes part: `strokes rhythm { section A { 4 8 8 4 4 | % | % | % | } }`, placed by `chords NAME plays rhythm`.";
+                    + "alone is a strokes part: `strokes rhythm { section A { 4 8 8 4 4 | % | % | % | } }`, placed by `chords NAME plays rhythm`.") { Parts = [name] };
         }
     }
 
@@ -1533,7 +1543,7 @@ public static class CompositionChecks
     /// at least half the section. The drums' twin is <see cref="OneGroove"/>; the guide's rule is
     /// general ("a contrasting section takes a figure of its own"), and so is this.
     /// </summary>
-    private static IEnumerable<string> OneFigure(MidiFile midi, List<int> barList, IReadOnlySet<string> accompaniments)
+    private static IEnumerable<CompositionFinding> OneFigure(MidiFile midi, List<int> barList, IReadOnlySet<string> accompaniments)
     {
         var spans = PlayedSpans(midi);
         if (spans.Count < 3)
@@ -1571,16 +1581,16 @@ public static class CompositionChecks
             string where = every
                 ? $"every section ({string.Join(", ", figures.Select(f => f.Name))})"
                 : $"{shared.Count()} of the {figures.Count} sections (all but {string.Join(", ", figures.Where(f => f.Figure != shared.Key).Select(f => f.Name))})";
-            yield return $"{part.Key}: the same figure in {where} — a contrasting section takes a figure of its own: another rhythm, "
+            yield return new("part.one-figure", $"{part.Key}: the same figure in {where} — a contrasting section takes a figure of its own: another rhythm, "
                 + "the chord's notes in another order, longer notes under a quiet part, a run or a fill in the figure's last bar "
-                + "leading into the next section.";
+                + "leading into the next section.") { Parts = [part.Key] };
         }
     }
 
     /// <summary>A band's drums playing one groove in every section: the commonest bar of each the same
     /// (owner's trial 2026-10-30: a rock trio's kick and snare `bd4 sn4 bd8 bd8 sn4` in all 52 bars),
     /// or its kick and snare the same while only the cymbals change.</summary>
-    private static IEnumerable<string> OneGroove(MidiFile midi, List<int> barList)
+    private static IEnumerable<CompositionFinding> OneGroove(MidiFile midi, List<int> barList)
     {
         var spans = PlayedSpans(midi);
         foreach (var kit in midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel == 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.Pitch)))
@@ -1601,13 +1611,13 @@ public static class CompositionChecks
                 .Where(g => g.All != null).ToList();
             string names = string.Join(", ", grooves.Select(g => g.Name));
             if (grooves.Count >= 3 && grooves.Select(g => g.All).Distinct().Count() == 1)
-                yield return $"{kit.Key}: the same groove in every section ({names}) — the drums change with the song: the closed hi-hat "
+                yield return new("drums.one-groove", $"{kit.Key}: the same groove in every section ({names}) — the drums change with the song: the closed hi-hat "
                     + "in the verse, the ride or crashes and the open hi-hat in the chorus, half-time or the toms in a quiet bridge, and a "
-                    + "fill into each new section.";
+                    + "fill into each new section.") { Parts = [kit.Key] };
             else if (grooves.Count >= 4 && grooves.Select(g => g.Feet).Distinct().Count() == 1)
-                yield return $"{kit.Key}: the kick and the snare play one beat in every section ({names}), only the cymbals change — let "
+                yield return new("drums.one-beat", $"{kit.Key}: the kick and the snare play one beat in every section ({names}), only the cymbals change — let "
                     + "a section change the beat itself: half-time in a bridge or a breakdown (the snare on 3), the kick driving harder "
-                    + "in the last chorus.";
+                    + "in the last chorus.") { Parts = [kit.Key] };
             // …or in every section but one of a long song (owner's review 2026-11-01: a 72-bar
             // instrumental's kick and snare were one beat in eight of its nine sections, the bridge
             // alone in half-time — the four-section rule above let it by). One section of
@@ -1615,10 +1625,10 @@ public static class CompositionChecks
             else if (grooves.Count >= OneBeatFewestSections
                 && grooves.GroupBy(g => g.Feet).OrderByDescending(g => g.Count()).First() is { } oneBeat
                 && oneBeat.Count() >= grooves.Count - 1)
-                yield return $"{kit.Key}: the kick and the snare play one beat in {oneBeat.Count()} of the {grooves.Count} sections "
+                yield return new("drums.one-beat", $"{kit.Key}: the kick and the snare play one beat in {oneBeat.Count()} of the {grooves.Count} sections "
                     + $"(all but {string.Join(", ", grooves.Where(g => g.Feet != oneBeat.Key).Select(g => g.Name))}), only the cymbals "
                     + "change — let more than one section change the beat itself: half-time in a bridge or a breakdown (the snare on 3), "
-                    + "the kick driving harder in the last chorus, a lighter beat under a quiet verse.";
+                    + "the kick driving harder in the last chorus, a lighter beat under a quiet verse.") { Parts = [kit.Key] };
             // The same bar over and over, no fill and no crash between (owner's review 2026-10-30: a rock
             // trio's drums played one bar sixteen times running through its verse, and again in its last
             // chorus) — the groove is right, the phrases go unmarked.
@@ -1637,9 +1647,9 @@ public static class CompositionChecks
             // Bars as the page numbers them: a pickup is bar 0.
             int shift = barList.Count >= 3 && barList[1] - barList[0] < barList[2] - barList[1] ? 0 : 1;
             if (longest >= SameDrumBarsFewest)
-                yield return $"{kit.Key}: the same bar {longest} times running (bars {longestEnd - longest + 1 + shift}-{longestEnd + shift}, as the form "
+                yield return new("drums.same-bar", $"{kit.Key}: the same bar {longest} times running (bars {longestEnd - longest + 1 + shift}-{longestEnd + shift}, as the form "
                     + "plays them) — a drummer marks the phrases: a fill in the last bar of each four or eight leading into the next, a crash "
-                    + "on its first beat, the groove kept between.";
+                    + "on its first beat, the groove kept between.") { Parts = [kit.Key], Bars = [.. Enumerable.Range(longestEnd - longest + 1 + shift, longest)] };
         }
     }
 
@@ -1647,7 +1657,7 @@ public static class CompositionChecks
     /// tritone or a seventh: its phrase not closed. Not a fourth: a band's bass passes through the
     /// chord's fifth under the root it ends on (owner's request 2026-10-30; the length
     /// finding asks for phrases "each closing on a cadence", and nothing saw whether they did).</summary>
-    private static IEnumerable<string> OpenEndings(MidiFile midi, string tune, int fifths)
+    private static IEnumerable<CompositionFinding> OpenEndings(MidiFile midi, string tune, int fifths)
     {
         var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9)
             .Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick, n.DurationTicks, n.Pitch))).ToList();
@@ -1671,9 +1681,9 @@ public static class CompositionChecks
                 open.Add($"{name}: {PartRanges.SpelledFromPitch(top, fifths)} over {PartRanges.SpelledFromPitch(bass, fifths)}");
         }
         if (read >= 3 && open.Count >= 2 && open.Count * 3 >= read)
-            yield return $"{tune}: {open.Count} of {read} sections end their tune on a note open against the bass ({string.Join(", ", open.Take(4))}"
+            yield return new("phrase.open-endings", $"{tune}: {open.Count} of {read} sections end their tune on a note open against the bass ({string.Join(", ", open.Take(4))}"
                 + $"{(open.Count > 4 ? ", …" : "")}) — a section closes its phrase: end it on the chord's own tone (the root, the third "
-                + "or the fifth over the bass), held, a cadence the next section starts from.";
+                + "or the fifth over the bass), held, a cadence the next section starts from.") { Parts = [tune] };
     }
 
     /// <summary>
@@ -1683,7 +1693,7 @@ public static class CompositionChecks
     /// band did not end together). A part holds when everything it plays there starts on the downbeat;
     /// it runs on with four onsets or more.
     /// </summary>
-    private static IEnumerable<string> EndsApart(MidiFile midi, List<int> barList)
+    private static IEnumerable<CompositionFinding> EndsApart(MidiFile midi, List<int> barList)
     {
         int end = midi.EndTick;
         var starts = barList.Where(b => b < end).ToList();
@@ -1699,10 +1709,10 @@ public static class CompositionChecks
         var running = inLast.Where(p => p.Value >= 4).Select(p => p.Key).ToList();
         if (heldOn.Count == 0 || running.Count == 0)
             yield break;
-        yield return $"{string.Join(", ", running)} {(running.Count == 1 ? "runs" : "run")} on through the last bar "
+        yield return new("form.ends-apart", $"{string.Join(", ", running)} {(running.Count == 1 ? "runs" : "run")} on through the last bar "
             + $"({inLast[running[0]]} notes) while {string.Join(" and ", heldOn)} {(heldOn.Count == 1 ? "holds its" : "hold their")} "
             + "last note from its first beat — the parts end together: let every part land on the final chord on the same beat "
-            + "and hold it (the bass on the root), or all stop together on a hit.";
+            + "and hold it (the bass on the root), or all stop together on a hit.") { Parts = [.. running, .. heldOn] };
     }
 
     /// <summary>The bars a minute and a half to three minutes take at the piece's own pace — its
@@ -1784,7 +1794,7 @@ public static class CompositionChecks
     /// 2026-10-29: a rock trio's Chorus2 was its Chorus again, every part). The guide says a section
     /// that returns is named again in the form, not copied.
     /// </summary>
-    private static IEnumerable<string> CopiedSections(SyntaxNode root)
+    private static IEnumerable<CompositionFinding> CopiedSections(SyntaxNode root)
     {
         static string Body(SectionDeclarationSyntax s)
         {
@@ -1795,8 +1805,8 @@ public static class CompositionChecks
         return root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
             .GroupBy(Body).Where(g => g.Key.Length > 0 && g.Count() > 1)
             .Select(g => g.Select(s => s.SectionName).ToList())
-            .Select(names => $"{string.Join(" and ", names.Skip(1))} {(names.Count > 2 ? "are" : "is")} {names[0]} again, note for note: "
-                + $"write {names[0]} once and name it again in the form where it returns, not a second section with the same notes.");
+            .Select(names => new CompositionFinding("form.copied", $"{string.Join(" and ", names.Skip(1))} {(names.Count > 2 ? "are" : "is")} {names[0]} again, note for note: "
+                + $"write {names[0]} once and name it again in the form where it returns, not a second section with the same notes."));
     }
 
     /// <summary>
@@ -1806,7 +1816,7 @@ public static class CompositionChecks
     /// <see cref="CopiedSections"/> reads the written text and misses it: here each part's phrases are
     /// read in place and the marks left out. A section copied as written is said there, not here.
     /// </summary>
-    private static IEnumerable<string> ReplayedSections(SyntaxNode root)
+    private static IEnumerable<CompositionFinding> ReplayedSections(SyntaxNode root)
     {
         var phrases = SectionBarCounts.PhraseBodies(root);
         string source = root.ToFullString();
@@ -1862,9 +1872,9 @@ public static class CompositionChecks
                 // its own. The length finding says instead that a copy under a new name is not length.
                 string how = differ == 0 ? "note for note in every part — only its levels and marks differ"
                     : $"note for note in every part but {differ} {(differ == 1 ? "bar" : "bars")} — elsewhere only its levels and marks differ";
-                yield return $"{b.Section.SectionName} plays {a.Section.SectionName} again, {how}: a section that returns to end the piece "
+                yield return new("form.returns-unchanged", $"{b.Section.SectionName} plays {a.Section.SectionName} again, {how}: a section that returns to end the piece "
                     + $"lifts — the tune an octave up or in harmony, a held note at its top, its bars changed toward its close, the drums "
-                    + $"opened up — or, if it is the same music, name {a.Section.SectionName} again in the form instead of a copy.";
+                    + $"opened up — or, if it is the same music, name {a.Section.SectionName} again in the form instead of a copy.");
             }
     }
 
@@ -1878,7 +1888,7 @@ public static class CompositionChecks
     /// say it is meant (owner's trials 2026-10-29: three wedding pieces in a row went from B's @f
     /// straight to the returning A's @p). Read part by part, each part's marks in the order written.
     /// </summary>
-    private static IEnumerable<string> DynamicDrops(SyntaxNode root)
+    private static IEnumerable<CompositionFinding> DynamicDrops(SyntaxNode root)
     {
         string[] order = ["pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff"];
         var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
@@ -1910,9 +1920,9 @@ public static class CompositionChecks
                 if (loud - soft < 2)
                     continue;
                 said.Add((from, to));
-                yield return $"{part}: {from} ends at @{order[loud]} and {to}, played after it, opens at @{order[soft]} — a drop of "
+                yield return new("dynamics.drop", $"{part}: {from} ends at @{order[loud]} and {to}, played after it, opens at @{order[soft]} — a drop of "
                     + $"{loud - soft} levels with nothing leading to it: bring the level down over {from}'s last bars (a @decresc to "
-                    + $"@{order[soft]}), or, if the sudden quiet is meant, write @{order[soft]}.subito.";
+                    + $"@{order[soft]}), or, if the sudden quiet is meant, write @{order[soft]}.subito.") { Parts = [part] };
                 break;
             }
         }
@@ -1924,7 +1934,7 @@ public static class CompositionChecks
     private const int SubitoSectionsFewest = 3;
 
     /// <summary>No hairpin in the piece and this many sections opening on a <c>.subito</c> level.</summary>
-    private static IEnumerable<string> LevelsSetNotShaped(SyntaxNode root)
+    private static IEnumerable<CompositionFinding> LevelsSetNotShaped(SyntaxNode root)
     {
         var phrases = root.DescendantNodes<PhraseDeclarationSyntax>().Where(p => p.Parent is CompilationUnitSyntax)
             .GroupBy(p => p.Name.Text).ToDictionary(g => g.Key, g => g.First());
@@ -1937,9 +1947,9 @@ public static class CompositionChecks
             .Select(s => s.SectionName).Distinct().ToList();
         if (subito.Count < SubitoSectionsFewest)
             yield break;
-        yield return $"The levels are set, not shaped: no crescendo or decrescendo anywhere, and {subito.Count} sections open on a .subito "
+        yield return new("dynamics.set-not-shaped", $"The levels are set, not shaped: no crescendo or decrescendo anywhere, and {subito.Count} sections open on a .subito "
             + $"({string.Join(", ", subito)}) — a level switched at the section line is a cut; shape the way there: a @cresc over the "
-            + "bars before a louder section, a @decresc out of it into a quieter one, and keep .subito for the surprise the music means.";
+            + "bars before a louder section, a @decresc out of it into a quieter one, and keep .subito for the surprise the music means.");
     }
 
     /// <summary>
@@ -1948,7 +1958,7 @@ public static class CompositionChecks
     /// from the intro's last @ff straight back to its first @p, one section all through — the section
     /// check never met it). A part's own drops only, at most three told per part.
     /// </summary>
-    private static IEnumerable<string> PhraseDrops(SyntaxNode root)
+    private static IEnumerable<CompositionFinding> PhraseDrops(SyntaxNode root)
     {
         string[] order = ["pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff"];
         var phrases = root.DescendantNodes<PhraseDeclarationSyntax>().Where(p => p.Parent is CompilationUnitSyntax)
@@ -1983,10 +1993,10 @@ public static class CompositionChecks
                 }
             }
             if (drops.Count > 0)
-                yield return $"{part.Key}: {string.Join("; ", drops)} — played one after the other, a drop of two levels or more "
+                yield return new("dynamics.drop", $"{part.Key}: {string.Join("; ", drops)} — played one after the other, a drop of two levels or more "
                     + "with nothing leading to it: bring the level down over the first one's last bars (a @decresc), or, if the "
                     + "sudden quiet is meant, write the second's level .subito. A phrase played again keeps the levels written in "
-                    + "it: where it returns in a louder place, give it that place's levels (a phrase of its own).";
+                    + "it: where it returns in a louder place, give it that place's levels (a phrase of its own).") { Parts = [part.Key] };
         }
     }
 
@@ -1998,7 +2008,7 @@ public static class CompositionChecks
     /// Read section by section, in the section's own bars: the phrase starts are where the other
     /// parts' phrase references begin, so a section written in notes alone says nothing.
     /// </summary>
-    private static IEnumerable<string> CrashesOffThePhrases(SyntaxNode root, HashSet<string> drums)
+    private static IEnumerable<CompositionFinding> CrashesOffThePhrases(SyntaxNode root, HashSet<string> drums)
     {
         if (drums.Count == 0)
             return [];
@@ -2008,7 +2018,7 @@ public static class CompositionChecks
             .Select(n => n.Span.Start).ToHashSet();
         if (crashes.Count == 0)
             return [];
-        var findings = new List<string>();
+        var findings = new List<CompositionFinding>();
         foreach (var section in root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is CompilationUnitSyntax))
         {
             var blocks = section.ChildNodes().OfType<PartBlockSyntax>().ToList();
@@ -2063,10 +2073,10 @@ public static class CompositionChecks
                     var shown = list.OrderBy(b => b).Select(b => (b + shift).ToString()).ToList();
                     return string.Join(", ", shown.Take(most)) + (shown.Count > most ? ", ..." : "");
                 }
-                findings.Add($"{kit.PartName.Text}: {off.Count} of its {entries.Count} crashes in {section.SectionName} come in off the bars "
+                findings.Add(new("drums.crashes-off-phrases", $"{kit.PartName.Text}: {off.Count} of its {entries.Count} crashes in {section.SectionName} come in off the bars "
                     + $"the phrases begin on (bars {Bars(off, 6)}; the other parts' phrases begin at bars {Bars(starts, 8)}) — a crash "
                     + "marks where a phrase begins, with the fill in the bar before it: move each crash to the first bar of the phrase "
-                    + "it announces, and keep the time (hi-hat or ride) going through the bars between.");
+                    + "it announces, and keep the time (hi-hat or ride) going through the bars between.") { Parts = [kit.PartName.Text] });
             }
         }
         return findings;
@@ -2088,7 +2098,7 @@ public static class CompositionChecks
     }
 
     /// <summary>The sections as the form plays them; with no form, as written.</summary>
-    private static List<string> PlayedSections(SyntaxNode root)
+    internal static List<string> PlayedSections(SyntaxNode root)
     {
         var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
             .Select(s => s.SectionName).ToList();
@@ -2103,7 +2113,7 @@ public static class CompositionChecks
     /// none, as for a part with no level at all — said apart — nor does a piano's hand, its levels
     /// written between the staves, in the other hand's part.
     /// </summary>
-    private static IEnumerable<string> LateLevels(SyntaxNode root, HashSet<string> drums)
+    private static IEnumerable<CompositionFinding> LateLevels(SyntaxNode root, HashSet<string> drums)
     {
         var phrases = root.DescendantNodes<PhraseDeclarationSyntax>()
             .Where(p => p.DescendantNodes<DynamicSyntax>().Any(d => Levels.Contains(d.DynamicToken.Text)))
@@ -2124,13 +2134,13 @@ public static class CompositionChecks
             if (from.Section != null)
                 late.Add((part, from.Section));
         }
-        return late.GroupBy(l => l.From).Select(g => $"{string.Join(", ", g.Select(l => l.Part))}: no level until {g.Key} — the "
-            + "section a part begins in says none: write one at each part's first note (`@p`, `@mf`, `@f`, …), the level the piece opens at.");
+        return late.GroupBy(l => l.From).Select(g => new CompositionFinding("dynamics.late", $"{string.Join(", ", g.Select(l => l.Part))}: no level until {g.Key} — the "
+            + "section a part begins in says none: write one at each part's first note (`@p`, `@mf`, `@f`, …), the level the piece opens at.") { Parts = [.. g.Select(l => l.Part)] });
     }
 
     /// <summary>The parts whose music writes a dynamic level, in a section's cell or in a phrase the
     /// cell names.</summary>
-    private static HashSet<string> DynamicLevelsByPart(SyntaxNode root)
+    internal static HashSet<string> DynamicLevelsByPart(SyntaxNode root)
     {
         static bool HasLevel(SyntaxNode n) => n.DescendantNodes<DynamicSyntax>().Any(d => Levels.Contains(d.DynamicToken.Text));
         var phrases = root.DescendantNodes<PhraseDeclarationSyntax>().Where(HasLevel).Select(p => p.Name.Text)
@@ -2290,7 +2300,7 @@ public static class CompositionChecks
     private static string PitchClassName(int pitch, int fifths) => PartRanges.SpelledFromPitch((pitch % 12 + 12) % 12 + 60, fifths)[..^1];
 
     /// <summary>A key's tonic as written (<c>ees</c>, <c>fis</c>, <c>as</c>) named as a musician names it: E♭, F♯, A♭.</summary>
-    private static string TonicName(string tonic)
+    internal static string TonicName(string tonic)
         => tonic.Length == 0 ? tonic : char.ToUpperInvariant(tonic[0]) + tonic[1..] switch
         {
             "is" => "♯", "isis" => "𝄪", "es" or "s" => "♭", "eses" or "ses" => "𝄫", _ => "",
@@ -2303,7 +2313,7 @@ public static class CompositionChecks
     /// major, the A after it and the coda back in G with no line of their own, was told it "ends in
     /// D major", and the chat wrote a `key g major` the coda did not need). Null with no key written.
     /// </summary>
-    private static ((string Tonic, string Mode) Home, (string Tonic, string Mode) End)? PlayedKeys(SyntaxNode root)
+    internal static ((string Tonic, string Mode) Home, (string Tonic, string Mode) End)? PlayedKeys(SyntaxNode root)
     {
         static (string, string)? Of(KeySignatureSyntax? k)
             => k is null || k.IsCustom ? null
@@ -2337,7 +2347,7 @@ public static class CompositionChecks
     /// Each section's notes are read in its own key, a top-level phrase's in the file's; a part that
     /// reads a transposed staff only when the file writes <c>pitch concert</c>.
     /// </summary>
-    private static IEnumerable<string> SpelledAgainstTheKey(SyntaxNode root, IReadOnlyList<PartDeclarationSyntax> parts, bool concert)
+    private static IEnumerable<CompositionFinding> SpelledAgainstTheKey(SyntaxNode root, IReadOnlyList<PartDeclarationSyntax> parts, bool concert)
     {
         static (string Tonic, string Mode)? Of(KeySignatureSyntax? k)
             => k is null || k.IsCustom ? null : (k.Pitch.ToFullString().Trim().ToLowerInvariant(), k.Mode.Text.ToLowerInvariant());
@@ -2425,8 +2435,8 @@ public static class CompositionChecks
             if (counts.Values.Sum() < MisspelledFewest)
                 continue;
             var most = counts.OrderByDescending(c => c.Value).Take(3).Select(c => $"`{c.Key.Written}` for its `{c.Key.Key}` ({c.Value} times)");
-            yield return $"{part}: notes of the key written under another name, in {keyName} — {string.Join(", ", most)}: write a note of "
-                + "the key by the key's own name; a sharp or a natural in a flat key (a flat in a sharp one) reads as a note out of the key.";
+            yield return new("spelling.key", $"{part}: notes of the key written under another name, in {keyName} — {string.Join(", ", most)}: write a note of "
+                + "the key by the key's own name; a sharp or a natural in a flat key (a flat in a sharp one) reads as a note out of the key.") { Parts = [part] };
         }
         foreach (var (part, counts) in outside)
         {
@@ -2435,9 +2445,9 @@ public static class CompositionChecks
             var ordered = counts.OrderByDescending(c => c.Value).ToList();
             var most = ordered.Take(3).Select(c => $"`{c.Key.Written}` for `{c.Key.Natural}` ({c.Value} times)");
             var (w, n) = ordered[0].Key;
-            yield return $"{part}: naturals out of the key written with an accidental it does not use, in {keyName} — {string.Join(", ", most)}: "
+            yield return new("spelling.natural", $"{part}: naturals out of the key written with an accidental it does not use, in {keyName} — {string.Join(", ", most)}: "
                 + $"a note's name is its pitch and the key never changes it — {char.ToUpperInvariant(n[0])} natural is `{n}` in any key, drawn "
-                + $"with its natural sign where the key alters it; `{w}` prints a {TonicName(w)}. Write each by its natural name.";
+                + $"with its natural sign where the key alters it; `{w}` prints a {TonicName(w)}. Write each by its natural name.") { Parts = [part] };
         }
     }
 
@@ -2462,7 +2472,7 @@ public static class CompositionChecks
 
     /// <summary>The part's <c>instrument</c>, lower case; empty when it names none. A hyphenated
     /// preset is three tokens (word, minus, word), joined back into one word.</summary>
-    private static string InstrumentOf(PartDeclarationSyntax part)
+    internal static string InstrumentOf(PartDeclarationSyntax part)
         => System.Text.RegularExpressions.Regex.Replace(PropOf(part, "instrument"), @"\s*-\s*", "-");
 
     private static string PropOf(PartDeclarationSyntax part, string name) => string.Join(" ", part.Properties
@@ -2521,6 +2531,8 @@ public static class CompositionChecks
 
     /// <summary>What a part is in a band: drums, a bass, a chord instrument (guitar, keyboards), and
     /// whether its sound is electric (an electric guitar or bass, an organ, a synth).</summary>
+    internal static bool IsDrums(PartDeclarationSyntax part) => RoleOf(part).Drums;
+
     private readonly record struct Role(bool Drums, bool Bass, bool Chords, bool Electric);
 
     private static Role RoleOf(PartDeclarationSyntax part)

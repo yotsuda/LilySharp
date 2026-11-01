@@ -6,6 +6,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Review a piece
+
+- The composing checks now say which check made each finding, and which parts and bars it is about (`CompositionChecks.Findings`).
+- `ScoreReview.Json` reports on a score: its facts, what it does well, the compiler's errors and warnings, and the findings, each with why it matters and when it does not apply. The language server answers it as `lilysharp/reviewScore`, and VS Code's chat as `#reviewScore`.
+
 ### An ottava's line can be a wave
 
 - `[lang]` **`layout { ottavaLine dashed | wave }`**: `wave` draws an ottava's line as an old print does, a wave with no hook. `dashed`, with its hook,

@@ -775,6 +775,23 @@ public class CompositionCheckResponse
     public string[] Ranges { get; set; } = System.Array.Empty<string>();
 }
 
+/// <summary>Parameters for lilysharp/reviewScore.</summary>
+public class ReviewScoreParams
+{
+    public string? Text { get; set; }
+    /// <summary><c>beginner</c>, <c>intermediate</c> or <c>advanced</c>; given back in the report.</summary>
+    public string? Audience { get; set; }
+    /// <summary><c>key</c>, <c>rhythm</c>, <c>form</c>, <c>parts</c> or <c>notation</c>: the findings of that theme alone.</summary>
+    public string? Focus { get; set; }
+}
+
+/// <summary>Response for lilysharp/reviewScore.</summary>
+public class ReviewScoreResponse
+{
+    /// <summary>The report, one JSON document (<see cref="LilySharp.Core.Editing.ScoreReview"/>).</summary>
+    public string Report { get; set; } = "";
+}
+
 /// <summary>Parameters for lilysharp/renderText: render an arbitrary candidate
 /// source string to preview SVG without touching the open document (the "decide on
 /// the score" preview of §3/§7 — an offscreen compile of the candidate).</summary>

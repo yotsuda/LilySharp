@@ -61,6 +61,8 @@ function copyGrammar() {
             'tool is there.',
             '**Reading a .lys file**: read it through the `lilysharp_readScore` tool (#readScore), not from the disk —',
             'it gives the text as it stands in the editor; a score not saved yet is not on the disk at all.',
+            '**Reviewing a piece**: asked to review a .lys file or give feedback on it, use the `lilysharp_reviewScore` tool (#reviewScore)',
+            'and explain its report in plain words.',
             '',
             fs.readFileSync(src, 'utf8'),
         ].join('\n');

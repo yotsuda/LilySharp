@@ -28,6 +28,7 @@
     "onLanguage:markdown",
     "onLanguageModelTool:lilysharp_proposeScore",
     "onLanguageModelTool:lilysharp_readScore",
+    "onLanguageModelTool:lilysharp_reviewScore",
     "onLanguageModelTool:lilysharp_checkName",
     "onLanguageModelTool:lilysharp_readGuide",
     "onLanguageModelTool:lilysharp_readScan",
@@ -71,6 +72,24 @@
             "file": { "type": "string", "description": "The .lys file's absolute path — for a score open in the editor and not saved yet, the path it is named by." }
           },
           "required": ["file"]
+        }
+      },
+      {
+        "name": "lilysharp_reviewScore",
+        "toolReferenceName": "reviewScore",
+        "displayName": "Review a Lily# score",
+        "icon": "$(checklist)",
+        "canBeReferencedInPrompt": true,
+        "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"],
+        "userDescription": "Reviews a .lys score as music: its facts, what it does well, and what to look at, for the chat to explain in plain words.",
+        "modelDescription": "Use this when asked to review, check or give feedback on a Lily# (.lys) piece, the one open in the editor unless another is named. It answers a report on the score as it stands in the editor, with how to read it first: the piece's facts, what it does well, the compiler's errors and warnings, and findings, each with where it is, why it matters and when it does not apply. The findings are counts, not judgements: explain them to the person in plain words. It changes nothing. Make a fix with lilysharp_proposeScore once the person agrees.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file": { "type": "string", "description": "The .lys file's absolute path. Leave it out for the score open in the editor." },
+            "audience": { "type": "string", "enum": ["beginner", "intermediate", "advanced"], "description": "Who the review is for, judged from how the person writes; ask if it is not clear. A beginner may not know what a key is." },
+            "focus": { "type": "string", "enum": ["key", "rhythm", "form", "parts", "notation"], "description": "Keep the findings of one theme alone, when the person asks about one." }
+          }
         }
       },
       {

@@ -1476,6 +1476,17 @@ public sealed partial class LilySharpLanguageServer
             Ranges = [.. LilySharp.Core.Midi.PartRanges.Lines(@params.Text ?? "")],
         }, token);
 
+    /// <summary>
+    /// The review's report on a score (<see cref="LilySharp.Core.Editing.ScoreReview"/>,
+    /// docs/review-tool-design.md §2), for the AI that explains it to the person who wrote it. Read-only.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/reviewScore", UseSingleObjectParameterDeserialization = true)]
+    public Task<ReviewScoreResponse> ReviewScoreAsync(ReviewScoreParams @params, CancellationToken token)
+        => OffDispatch(() => new ReviewScoreResponse
+        {
+            Report = LilySharp.Core.Editing.ScoreReview.Json(@params.Text ?? "", @params.Audience ?? "beginner", @params.Focus),
+        }, token);
+
     public CheckCandidateResponse CheckCandidate(CheckCandidateParams @params)
     {
         var text = @params.Text ?? "";

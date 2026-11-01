@@ -11,7 +11,7 @@ what applies to this piece's style, says why in musical terms, and teaches the c
 each point. The report's design serves that interpretation. Without an AI, the same report is free
 and fast (§5).
 
-Status: designed, not built. The next session builds it in the order of §6.
+Status: §6 steps 1 and 2 are built (2026-11-02), and not yet tried in a real VS Code (`editors/vscode/MANUAL-CHECKS.md` C55). What was built differs from §2 in the ways §7 lists.
 
 ## 1. Entrances
 
@@ -135,14 +135,37 @@ Beyond the composing checks (`compose-in-chat-design.md` §2):
 
 ## 6. Order of work
 
-1. **Structured findings in the core.**
+1. **Structured findings in the core.** Built, with the differences in §7.
    - Each check returns `id`, `kind`, `confidence`, part, bars (as played and as written),
      source span and written text, `what`, `fix` (and `edit` where exact).
    - `ReviewNotes` holds `why` and `fine_when` per id.
    - The composing flow keeps reading the one-sentence `message`; its tests stay.
 2. **`lilysharp_reviewScore`** with `facts`, `strengths` and the reading instructions. This brings
-   the most value.
+   the most value. Built, with the differences in §7.
 3. **The key checks of §4:** `key.signature`, `key.outside`, `spelling.direction`; then
    `chord.outside` from chord symbols.
 4. **The command and `lysc review`.**
 5. **Silencing**, when first asked for.
+
+## 7. What was built, against §2
+
+`CompositionChecks.Findings` returns `CompositionFinding` (`id`, `message`, `Parts`, `Bars`).
+`CompositionChecks.Of` is its messages, so the composing flow is unchanged. The gate of the change:
+`Of` byte-identical over 1,215 books before and after. `ReviewNotes` holds `kind`, `confidence`, `why`
+and `fine_when` per id. `ScoreReview.Json` writes the report, and the language server answers it as
+`lilysharp/reviewScore`.
+
+Differences from §2, each still to do unless it says otherwise:
+
+- **`what` and `fix.say` are one sentence.** `what` is the check's `message`, finding and advice
+  together, and there is no `fix`. Splitting them means rewording every check. The reading
+  instructions tell the AI where the advice is.
+- **No `fix.edit`, no `ask`, and no `where.line` or `where.written`.** Each needs a source span from
+  the check, and most checks read the sounding notes, not the text. `spelling.*` can have them first.
+- **`where.bars` is what the check can show, not always all it counted.** It is empty for a check
+  that names no bars, as `rhythm.one-value`.
+- **`confidence` is per check**, not per finding.
+- **`facts` has no `keyHeard` and no `chords`.** They come with step 3.
+- **Added, and meant to stay: `compiles`, `errors` and `warnings`.** A score that does not compile
+  has to be reported as that, not as a piece with no faults, and the compiler's warnings (a note out
+  of range, a bar too long) are the first things a beginner needs to hear of.

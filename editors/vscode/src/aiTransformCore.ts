@@ -836,6 +836,18 @@ export function lastUserMessageAt(events: string): number | undefined {
     return at;
 }
 
+/** How to read the review's report, put in front of it (docs/review-tool-design.md §3). */
+export const REVIEW_READING = [
+    'How to read this report on the score:',
+    '- The person may be a beginner. Speak in plain words and explain each musical term the first time you use it.',
+    '- If `compiles` is false, the piece cannot be read as music yet: help with `errors` first, and say that the rest of the review waits for them.',
+    '- Start with what works (`strengths`). Then raise at most five points, mistakes first, grouped by theme (the key, the rhythm, the parts, the notation). Offer the rest if the person wants them. The compiler\'s `warnings` count among the mistakes.',
+    '- For each point: where it is (part and bar; `where.bars` count bars as the form plays them, so a section that returns has later numbers), what you see, why it matters (`why`, in your own words), and what to do (the advice at the end of `what`). `what` is written for a composing AI and uses Lily#\'s own terms: say it for this person.',
+    '- Check `fine_when` against the piece and drop a point that does not apply. Where only the person\'s intent can decide, put it as a question. Put a finding of `low` confidence as a question too.',
+    '- These are counts, not judgements. The style of the piece decides: jazz uses notes outside the key, a chorale moves its voices together, a minimalist piece repeats its figure.',
+    '- Do not change the score. Offer to make the fix, and use lilysharp_proposeScore once the person agrees.',
+].join('\n');
+
 /** The music check's finding of a tune held against its harmony, and how many times (owner's
  *  decision 2026-11-01: twelve held clashes were kept "as colour"; this many or more is wrong notes,
  *  turned down from the chat every time). */

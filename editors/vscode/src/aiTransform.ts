@@ -42,7 +42,7 @@ import {
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
     cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
-    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN,
+    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -278,6 +278,14 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
         }),
         invoke: async options => new vscode.LanguageModelToolResult([
             new vscode.LanguageModelTextPart(await readScore(deps, options.input)),
+        ]),
+    }));
+    context.subscriptions.push(lm.registerTool<ReviewScoreInput>('lilysharp_reviewScore', {
+        prepareInvocation: options => ({
+            invocationMessage: `Reviewing ${options.input?.file ? path.basename(options.input.file) : 'the score'}…`,
+        }),
+        invoke: async options => new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(await reviewScore(deps, options.input)),
         ]),
     }));
     // The voicings a player can hold (owner's request 2026-10-30: a composed guitar part wrote a chord
@@ -2121,6 +2129,39 @@ async function titleFor(chat: ChatClient, piece: string, asked: string): Promise
         return cleanTitle(reply);
     } catch {
         return null;
+    }
+}
+
+/** What Copilot's chat hands the review tool. */
+interface ReviewScoreInput {
+    /** The .lys file's absolute path; none: the score open in the editor. */
+    file?: string;
+    audience?: string;
+    focus?: string;
+}
+
+/**
+ * The review's report on a score, its reading instructions in front (owner's proposal 2026-10-30,
+ * docs/review-tool-design.md): the checks made for composing, for a person who asks "review this
+ * piece", explained by the chat in plain words. It writes nothing.
+ */
+async function reviewScore(deps: AiTransformDeps, input: ReviewScoreInput | undefined): Promise<string> {
+    const active = vscode.window.activeTextEditor?.document;
+    const doc = input?.file ? await scoreDocument(input.file)
+        : active?.languageId === 'lilysharp' ? active : undefined;
+    if (!doc) {
+        return input?.file ? `Nothing reviewed: no score ${input.file} is open in the editor or on the disk.`
+            : 'Nothing reviewed: no score is open in the editor. Give `file` (the .lys file\'s absolute path).';
+    }
+    const client = deps.getClient();
+    if (!client) {
+        return 'Nothing reviewed: the Lily# language server is not running.';
+    }
+    try {
+        const resp = await client.sendRequest<{ Report: string }>('lilysharp/reviewScore', { Text: doc.getText(), Audience: input?.audience, Focus: input?.focus });
+        return `${REVIEW_READING}\n\nThe report on ${path.basename(doc.uri.fsPath)}, as it stands in the editor:\n${resp.Report}`;
+    } catch (e) {
+        return `Nothing reviewed: the Lily# language server did not answer (${e instanceof Error ? e.message : String(e)}).`;
     }
 }
 
