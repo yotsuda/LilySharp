@@ -339,6 +339,25 @@ public class CompositionChecksTests
             f => f.StartsWith("A tune is played"));
     }
 
+    // Owner's report 2026-11-01: `Downloads/Redline.lys`, an overdriven guitar in `<e, e b e' b'>` (the
+    // voicing tool's first E5 shape) from start to end — on a distorted sound a full chord blurs.
+    [Fact]
+    public void FullChordsOnADistortedSound_AreSaid()
+    {
+        string Rock(string guitar, string sound = "overdriven guitar") => Band(Guitar.Replace("overdriven guitar", sound) + "\n" + Bass + "\n" + Drums,
+            $"  gtr {{ {guitar} }}\n  bass {{ {string.Concat(Enumerable.Repeat("e,8 e, e, e, e, e, e, e, | c8 c c c d d d d | ", 4))} }}\n"
+            + $"  kit {{ voice {{ {string.Concat(Enumerable.Repeat("hh8 hh hh hh hh hh hh hh | ", 8))} }} {{ {string.Concat(Enumerable.Repeat("bd4 sn bd sn | ", 8))} }} }}",
+            "staff gtr  staff bass  staff kit", "tempo 176");
+        string full = string.Concat(Enumerable.Repeat("<e, e b e' b'>8 r <e, e b e' b'> <e, e b e' b'> <e, e b e' b'>4 r | <c g c' g'>4 <c g c' g'>8 r <d a d' a'>4 <d a d' a'> | ", 4));
+        Assert.Contains(CompositionChecks.Of(Rock(full)), f => f.StartsWith("gtr, on a distorted sound (overdriven guitar): 32 of its 32 chords are 4 notes or more "
+            + "(E2 E3 B3 E4 B4 in bar 1 first, as the form plays them) — distortion blurs a full chord into a roar: strike two or three notes"));
+        // Power chords of two and three notes.
+        string power = string.Concat(Enumerable.Repeat("<e, b,>8 r <e, b, e> <e, b,> <e, b,>4 r | <c g>4 <c g c'>8 r <d a>4 <d a> | ", 4));
+        Assert.DoesNotContain(CompositionChecks.Of(Rock(power)), f => f.Contains("distorted sound"));
+        // A clean sound rings full chords.
+        Assert.DoesNotContain(CompositionChecks.Of(Rock(full, "electric guitar (clean)")), f => f.Contains("distorted sound"));
+    }
+
     // Owner's request 2026-10-30: four findings for a piece's sound — a wrong note held against the
     // harmony, low close chords and a part in the bass's register, one groove in every section, and
     // sections whose tune ends open.

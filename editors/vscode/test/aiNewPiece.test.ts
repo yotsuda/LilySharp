@@ -263,7 +263,10 @@ describe('the composing guide', () => {
         // counted a drum line's phrases in a terminal script).
         assert.match(here, /'Run no script or terminal on a score\.',/);
         // The voicings a player can hold, asked before a chord is written (owner's request 2026-10-30).
-        assert.match(here, /ask lilysharp_chordVoicings what its player can hold\.',/);
+        // …with the part's sound: a distorted one is answered power chords first (owner's request 2026-11-01).
+        assert.match(here, /ask lilysharp_chordVoicings what its player can hold, its midiInstrument as sound\.',/);
+        assert.match(transform, /Sound: typeof input\.sound === 'string' \? input\.sound : null,/);
+        assert.match(pkg, /"sound": \{ "type": "string", "description": "The part's midiInstrument/);
         assert.match(pkg, /"onLanguageModelTool:lilysharp_chordVoicings"/);
         assert.match(pkg, /"name": "lilysharp_chordVoicings",\s*"toolReferenceName": "chordVoicings"/);
         assert.match(transform, /lm\.registerTool<ChordVoicingsInput>\('lilysharp_chordVoicings'/);

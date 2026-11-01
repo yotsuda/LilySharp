@@ -505,6 +505,7 @@ public static class CompositionChecks
 
         findings.AddRange(Clashes(midi, melodies, barList, fifths));
         findings.AddRange(LowChords(midi, barList, fifths));
+        findings.AddRange(ThickChordsOnADistortedSound(midi, parts, barList, fifths));
         // A band's part crowding its bass (owner's trial 2026-10-30: a rock guitar mostly D2–D3 over a
         // bass mostly E1–E2 — two low lines in one register, a muddy sound).
         foreach (var bass in bandBasses.Where(sounding.ContainsKey))
@@ -697,6 +698,37 @@ public static class CompositionChecks
                 + $"{string.Join(" ", first.Pitches.Select(p => PartRanges.SpelledFromPitch(p, fifths)))} in bar {barList.Count(b => b <= first.Tick)} first, "
                 + "as the form plays them) — so low, close notes are mud: voice it open, the root and fifth below (a power chord) "
                 + "and the third an octave or more higher.";
+        }
+    }
+
+    // A chord of this many notes or more on a distorted sound, in half of a part's chords, of this many
+    // (owner's report 2026-11-01: `Downloads/Redline.lys`, an overdriven guitar in `<e, e b e' b'>` —
+    // the voicing tool's first E5 shape, 07x457 — from start to end).
+    private const int ThickChordNotes = 4, ThickChordsFewest = 8;
+    private const double ThickChordsShare = 0.5;
+
+    /// <summary>A part on a distorted sound (<see cref="ChordVoicingFinder.IsDistorted"/>) striking
+    /// full chords: distortion blurs them; two or three notes — a power chord — ring clear.</summary>
+    private static IEnumerable<string> ThickChordsOnADistortedSound(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts,
+        List<int> barList, int fifths)
+    {
+        foreach (var part in parts)
+        {
+            string sound = PropOf(part, "midiInstrument");
+            if (!ChordVoicingFinder.IsDistorted(sound))
+                continue;
+            var chords = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && (n.Part ?? t.Name) == part.Name.Text))
+                .GroupBy(n => n.StartTick).Select(g => (Tick: g.Key, Pitches: g.Select(n => n.Pitch).Distinct().OrderBy(p => p).ToList()))
+                .Where(c => c.Pitches.Count >= 2).OrderBy(c => c.Tick).ToList();
+            var thick = chords.Where(c => c.Pitches.Count >= ThickChordNotes).ToList();
+            if (chords.Count < ThickChordsFewest || thick.Count < chords.Count * ThickChordsShare)
+                continue;
+            var first = thick[0];
+            yield return $"{part.Name.Text}, on a distorted sound ({sound}): {thick.Count} of its {chords.Count} chords are {ThickChordNotes} notes or more "
+                + $"({string.Join(" ", first.Pitches.Select(p => PartRanges.SpelledFromPitch(p, fifths)))} in bar {barList.Count(b => b <= first.Tick)} first, "
+                + "as the form plays them) — distortion blurs a full chord into a roar: strike two or three notes, the root and its fifth "
+                + "with the octave above (a power chord; the voicing tool, given the sound, answers them first), and leave the full chord "
+                + "to a clean sound or to one ringing chord at a close.";
         }
     }
 

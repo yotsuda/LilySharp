@@ -434,7 +434,8 @@ public class ConvertOctavesResponse
 }
 
 /// <summary>Parameters for lilysharp/chordVoicings: a chord symbol, a string instrument (or a tuning
-/// word), and a register's two ends as note names — each but the chord may be left out.</summary>
+/// word), a register's two ends as note names, and the part's sound (its <c>midiInstrument</c>; a
+/// distorted one is answered power chords first) — each but the chord may be left out.</summary>
 public class ChordVoicingsParams
 {
     public string? Chord { get; set; }
@@ -442,6 +443,7 @@ public class ChordVoicingsParams
     public string? Low { get; set; }
     public string? High { get; set; }
     public int? Count { get; set; }
+    public string? Sound { get; set; }
 }
 
 /// <summary>Response for lilysharp/chordVoicings: the voicings, as the AI reads them.</summary>

@@ -102,7 +102,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   `@chord(C x32010)`, or `chord(x32010)` in place of the note.
 - **#chordVoicings**: Copilot's chat can ask which voicings of a chord a player can hold on a
   guitar, bass, ukulele or bowed string, in a register. It answers as Lily# chords with their
-  diagrams (`<c g bes ees' g'>`, `x35343`), and for a bowed string the double stops.
+  diagrams (`<c g bes ees' g'>`, `x35343`), and for a bowed string the double stops. Given the
+  part's sound (`sound`, its `midiInstrument`), a distorted one is answered power chords first —
+  the root and its fifth, the octave above — and Compose with AI's check names a part on a
+  distorted sound striking full chords.
 - **A chord its player cannot hold is warned** (LYS1055). In a violin, viola, cello or double bass
   part, completion's chord rows write a double stop.
 - **A drum note sounds its drum when selected**: a hi-hat, kick, snare… heard on the kit's

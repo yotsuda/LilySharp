@@ -57,6 +57,34 @@ public class ChordVoicingFinderTests
         Assert.DoesNotContain(ChordVoicingFinder.Find("G", "guitar", null, null, 12).Voicings, v => v.Diagram == "35503x");
     }
 
+    // Owner's report 2026-11-01: `Downloads/Redline.lys`, an overdriven guitar in `<e, e b e' b'>` —
+    // this tool's first E5 shape — from start to end. On a distorted sound a full chord blurs and two
+    // or three notes ring clear: given the part's sound, the power chords come first.
+    [Fact]
+    public void OnADistortedSound_ThePowerChordsComeFirst()
+    {
+        var e5 = ChordVoicingFinder.Find("E5", "guitar", null, null, 6, sound: "overdriven guitar");
+        Assert.True(e5.Distorted && e5.Powered);
+        Assert.Equal(["<e, b,>", "<e, b, e>", "<e b>", "<e b e'>"], e5.Voicings.Take(4).Select(v => v.Chord));
+        Assert.Equal(["02xxxx", "022xxx", "xx24xx", "xx245x"], e5.Voicings.Take(4).Select(v => v.Diagram));
+        Assert.All(e5.Voicings, v => Assert.True(v.Pitches.Count <= 3));
+        Assert.All(e5.Voicings, v => Assert.NotNull(ChordFingeringValidator.Fingering(v.Pitches, LilySharp.Core.Tablature.Tunings.Guitar)));
+        // A minor chord's power chord drops its third; the register picks the position.
+        var am = ChordVoicingFinder.Find("Am", "guitar", "A2", "A3", 6, sound: "distortion guitar");
+        Assert.Equal("<a, e>", am.Voicings[0].Chord);
+        Assert.Equal("x02xxx", am.Voicings[0].Diagram);
+        Assert.Equal("<a, e a>", am.Voicings[1].Chord);
+        // The full shapes follow the power chords; a chord with no perfect fifth has none, and the text says so.
+        Assert.Contains(ChordVoicingFinder.Find("E", "guitar", null, null, 40, sound: "overdriven guitar").Voicings, v => v.Pitches.Count >= 4);
+        string dim = ChordVoicingFinder.Describe("Bdim", "guitar", null, null, 6, "overdriven guitar");
+        Assert.Contains("no perfect fifth over its root, so no power chord", dim);
+        Assert.Contains("its power chords first", ChordVoicingFinder.Describe("E", "guitar", null, null, 6, "overdriven guitar"));
+        // A clean sound, or none given, keeps the full shapes first; a slash chord has no power chord.
+        Assert.Equal("<e, e b e' b'>", ChordVoicingFinder.Find("E5", "guitar", null, null, 6, "electric guitar (clean)").Voicings[0].Chord);
+        Assert.Equal("<e, e b e' b'>", ChordVoicingFinder.Find("E5", "guitar", null, null, 6).Voicings[0].Chord);
+        Assert.False(ChordVoicingFinder.Find("C/E", "guitar", null, null, 6, "overdriven guitar").Powered);
+    }
+
     [Fact]
     public void ABowedString_AnswersDoubleStops_OnNeighbouringStrings()
     {

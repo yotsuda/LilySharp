@@ -88,7 +88,9 @@ What makes it music:
   bass** (`instrument bass` with `midiInstrument "electric bass (finger)"`, locked to the
   kick drum) and a **guitar or keyboards** for the chords (`instrument guitar` with
   `midiInstrument "overdriven guitar"` or `"electric guitar (clean)"`; keyboards on
-  `instrument piano-right` with `"rock organ"`, `"electric piano 1"` …). "Guitar and drums"
+  `instrument piano-right` with `"rock organ"`, `"electric piano 1"` …). A distorted sound
+  (overdriven, distortion) blurs a full chord: on it strike two or three notes — the root and its
+  fifth, the octave above (`<e, b,>`, `<e, b, e>`) — and keep full chords for a clean sound. "Guitar and drums"
   has a bass too; "guitar and bass" has drums too; keyboards are welcome. **One tempo** from start
   to end — a single `tempo` at the top, none in the sections. The form is the song's: intro,
   verse, chorus, bridge, outro; separate staves, no bracket.

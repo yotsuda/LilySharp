@@ -101,6 +101,11 @@ that prompted each check is written beside it in the code.
 
 **Voicing and spelling**
 - Close thirds or seconds under C3.
+- Four notes or more in half the chords (eight or more) of a part whose `midiInstrument` distorts
+  (2026-11-01: an overdriven guitar in `<e, e b e' b'>`, the voicing tool's first E5 shape, from start
+  to end). The tool `lilysharp_chordVoicings` takes the part's sound as `sound` and, when it
+  distorts, answers the power chords — the root and its fifth, the octave above — before the full
+  shapes; the chat's instructions tell it to pass the sound.
 - Notes of the key spelled by another name (B and F♯ in E♭ minor).
 - An octave mark slipped: one note an octave away and straight back.
 

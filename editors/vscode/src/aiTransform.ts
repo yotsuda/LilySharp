@@ -470,6 +470,8 @@ interface ChordVoicingsInput {
     low?: string;
     high?: string;
     count?: number;
+    /** The part's midiInstrument: a distorted sound is answered power chords first (owner's request 2026-11-01). */
+    sound?: string;
 }
 
 /** A chord's voicings a player can hold, from the server (lilysharp/chordVoicings). */
@@ -486,6 +488,7 @@ async function chordVoicings(deps: AiTransformDeps, input: ChordVoicingsInput): 
         const answer = await client.sendRequest<{ Text: string }>('lilysharp/chordVoicings', {
             Chord: input.chord, Instrument: input.instrument ?? 'guitar', Low: input.low ?? null, High: input.high ?? null,
             Count: typeof input.count === 'number' ? input.count : null,
+            Sound: typeof input.sound === 'string' ? input.sound : null,
         });
         return answer.Text;
     } catch (err) {

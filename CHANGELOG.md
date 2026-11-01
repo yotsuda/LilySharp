@@ -19,6 +19,15 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[editor]` **`#chordVoicings` answers no voicing that sounds one pitch on two strings**: the
   diagrams' G shape 35503x (its fourth string at the fifth fret and its open third string both G3)
   used to come back as `<g, d g g d'>`, and the doubled note read as a mistake on the page.
+- `[editor]` **`#chordVoicings` takes the part's sound, and on a distorted one answers power chords
+  first**: a new input `sound` (the part's `midiInstrument`). On an overdriven or distortion guitar a
+  full chord blurs, so the root and its fifth, with the octave above — two or three notes, the
+  deepest root and lowest position first — lead the list and the full shapes follow; a chord with
+  no perfect fifth over its root (dim, aug) or over another bass has none, and the answer says so.
+  Before, an overdriven guitar took the tool's first E5 shape, `<e, e b e' b'>`, for a whole piece.
+- `[editor]` **Full chords on a distorted sound are said**: a part whose `midiInstrument` distorts,
+  striking four notes or more in half of its chords (eight or more), is told to strike two or three
+  and leave the full chord to a clean sound.
 - `[editor]` **The length finding says how not to lengthen**: a section that returns is named again
   in the form, and that counts; a copy under a new name with a few bars altered is not length.
 

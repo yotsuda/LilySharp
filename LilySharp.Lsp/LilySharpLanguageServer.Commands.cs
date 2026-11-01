@@ -1227,7 +1227,7 @@ public sealed partial class LilySharpLanguageServer
         => OffDispatch(() => new ChordVoicingsResponse
         {
             Text = LilySharp.Core.Editing.ChordVoicingFinder.Describe(@params.Chord ?? "", @params.Instrument ?? "guitar",
-                @params.Low, @params.High, @params.Count is int n and > 0 ? n : 6),
+                @params.Low, @params.High, @params.Count is int n and > 0 ? n : 6, @params.Sound),
         }, token);
 
     [JsonRpcMethod("lilysharp/aiOctaves", UseSingleObjectParameterDeserialization = true)]

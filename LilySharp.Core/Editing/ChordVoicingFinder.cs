@@ -56,8 +56,18 @@ public static class ChordVoicingFinder
         public string Chord => $"<{string.Join(" ", Notes)}>";
     }
 
-    /// <summary>The answer: the voicings, or why there are none, and the instrument's strings.</summary>
-    public sealed record Answer(IReadOnlyList<Voicing> Voicings, string? Problem, bool Bowed, IReadOnlyList<string> Strings);
+    /// <summary>The answer: the voicings, or why there are none, and the instrument's strings;
+    /// whether the sound asked for distorts, and whether the chord has power chords (two or three
+    /// notes) that then lead the list.</summary>
+    public sealed record Answer(IReadOnlyList<Voicing> Voicings, string? Problem, bool Bowed, IReadOnlyList<string> Strings,
+        bool Distorted = false, bool Powered = false);
+
+    /// <summary>A sound that distorts — an overdriven or distortion guitar, a fuzz — on which a full
+    /// chord blurs and two or three notes ring clear (owner's report 2026-11-01: an overdriven guitar
+    /// struck `&lt;e, e b e' b'&gt;`, this tool's first E5 shape, from start to end).</summary>
+    public static bool IsDistorted(string? sound)
+        => sound != null && System.Text.RegularExpressions.Regex.IsMatch(sound, "overdriv|distort|fuzz",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     /// <summary>The widest a bowed double stop's two fingers lie apart, in semitones along the strings.</summary>
     public const int BowedReach = 5;
@@ -70,9 +80,11 @@ public static class ChordVoicingFinder
     /// <paramref name="instrument"/> (an instrument preset or a tuning word: <c>guitar</c>,
     /// <c>bass</c>, <c>dropD</c>, <c>ukulele</c>, <c>violin</c>, <c>cello</c> …), its notes within
     /// <paramref name="low"/>..<paramref name="high"/> (note names, <c>C3</c> or <c>c</c>; either may
-    /// be null) first, at most <paramref name="count"/>.
+    /// be null) first, at most <paramref name="count"/>. On a distorted <paramref name="sound"/> (the
+    /// part's <c>midiInstrument</c>) the chord's power chords — the root and its fifth, the octave
+    /// above — lead the list, the full shapes after them.
     /// </summary>
-    public static Answer Find(string symbol, string instrument, string? low, string? high, int count = 6)
+    public static Answer Find(string symbol, string instrument, string? low, string? high, int count = 6, string? sound = null)
     {
         string word = InstrumentWord(instrument);
         bool bowed = word is "violin" or "viola" or "cello" or "doubleBass";
@@ -90,9 +102,11 @@ public static class ChordVoicingFinder
             return new Answer([], $"a register is two note names, as 'C3' and 'G4' or 'c' and 'g'''", bowed, names);
 
         var spelled = Spellings(chord);
+        bool distorted = !bowed && IsDistorted(sound);
+        List<int[]> power = distorted ? PowerChords(strings, chord, bassPc) : [];
         List<int[]> shapes = bowed
             ? DoubleStops(strings, allowed, required, chord, bassPc)
-            : [.. ChordVoicings.For(strings, chord, includeStretch: false).Bases.Select(b => b.ToArray())];
+            : [.. power, .. ChordVoicings.For(strings, chord, includeStretch: false).Bases.Select(b => b.ToArray())];
         var voicings = shapes.Select(frets =>
         {
             var pitches = frets.Select((f, s) => f < 0 ? -1 : strings[s] + f).Where(p => p >= 0).OrderBy(p => p).ToList();
@@ -119,14 +133,14 @@ public static class ChordVoicingFinder
                 : "no voicing of it within the diagrams' rules (every needed tone, the root lowest, four frets, four fingers) that "
                   + "sounds no pitch on two strings", bowed, names);
         string? outside = ordered.Any(Inside) ? null : "none lies wholly in the register asked: the nearest are given";
-        return new Answer([.. ordered.Take(System.Math.Max(1, count))], outside, bowed, names);
+        return new Answer([.. ordered.Take(System.Math.Max(1, count))], outside, bowed, names, distorted, power.Count > 0);
     }
 
     /// <summary>The answer as the composing AI reads it: each voicing as Lily# writes the chord, with
     /// its diagram (fretted) or its strings (bowed), and how to read them.</summary>
-    public static string Describe(string symbol, string instrument, string? low, string? high, int count = 6)
+    public static string Describe(string symbol, string instrument, string? low, string? high, int count = 6, string? sound = null)
     {
-        var answer = Find(symbol, instrument, low, high, count);
+        var answer = Find(symbol, instrument, low, high, count, sound);
         if (answer.Voicings.Count == 0)
             return $"No voicing: {answer.Problem}.";
         string register = low is { Length: > 0 } || high is { Length: > 0 } ? $", in {low ?? "..."}-{high ?? "..."}" : "";
@@ -134,6 +148,12 @@ public static class ChordVoicingFinder
         text.Append($"{symbol} on the {instrument} (strings {string.Join(" ", answer.Strings)}){register} — ")
             .Append(answer.Bowed
                 ? "a bowed string sounds two strings at once: double stops on neighbouring strings, the lowest positions first:\n"
+                : answer.Distorted && answer.Powered
+                ? $"on a distorted sound ({sound}) a full chord blurs and two or three notes ring clear: its power chords first, "
+                  + "the root and its fifth with the octave above, lowest first, then the full shapes:\n"
+                : answer.Distorted
+                ? $"on a distorted sound ({sound}) a full chord blurs, but this chord has no perfect fifth over its root, so no power "
+                  + "chord: these are its full shapes — strike two or three of their notes, or leave the chord to a clean sound:\n"
                 : "voicings a player can hold, the commonest shapes first:\n");
         for (int i = 0; i < answer.Voicings.Count; i++)
         {
@@ -178,6 +198,42 @@ public static class ChordVoicingFinder
                     found.Add((frets, a + b));
                 }
         return [.. found.OrderBy(f => f.Cost).Select(f => f.Frets)];
+    }
+
+    /// <summary>The power chords of a chord with a perfect fifth over its root and no other bass: the
+    /// root and its fifth on neighbouring strings, and those with the octave on the string above —
+    /// the deepest root first, then the lowest position, the two notes before the three. None for a
+    /// chord without one (dim, aug) or over another bass.</summary>
+    private static List<int[]> PowerChords(int[] strings, ChordStructure chord, int bassPc)
+    {
+        int rootPc = ((Natural(((chord.RootStep % 7) + 7) % 7) + chord.RootAlter) % 12 + 12) % 12;
+        if (bassPc != rootPc || !chord.ToneSpecs.Any(ChordVoicings.IsPerfectFifth))
+            return [];
+        // Fretted frets no further apart than the normal rule's span; open strings lie anywhere.
+        static bool Near(int a, int b) => a == 0 || b == 0 || System.Math.Abs(a - b) <= ChordVoicings.NormalSpan;
+        static int Position(int[] frets) => frets.Where(f => f > 0).DefaultIfEmpty(0).Min();
+        var found = new List<(int[] Frets, int Root, int Position, int Notes)>();
+        for (int s = 0; s + 1 < strings.Length; s++)
+            for (int f = 0; f <= ChordVoicings.MaxFret; f++)
+            {
+                int root = strings[s] + f;
+                int g = root + 7 - strings[s + 1];
+                if (((root % 12) + 12) % 12 != rootPc || g < 0 || g > ChordVoicings.MaxFret || !Near(f, g))
+                    continue;
+                var two = Enumerable.Repeat(-1, strings.Length).ToArray();
+                two[s] = f;
+                two[s + 1] = g;
+                found.Add((two, root, Position(two), 2));
+                if (s + 2 >= strings.Length)
+                    continue;
+                int h = root + 12 - strings[s + 2];
+                if (h < 0 || h > ChordVoicings.MaxFret || !Near(f, h) || !Near(g, h))
+                    continue;
+                var three = (int[])two.Clone();
+                three[s + 2] = h;
+                found.Add((three, root, Position(three), 3));
+            }
+        return [.. found.OrderBy(x => x.Root).ThenBy(x => x.Position).ThenBy(x => x.Notes).Select(x => x.Frets)];
     }
 
     /// <summary>Each pitch class of the chord named as the chord spells it (letter and alteration).</summary>

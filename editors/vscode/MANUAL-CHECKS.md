@@ -265,6 +265,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C36**（第1024・作曲者の名前）: Compose with AI で「ロックバラードを書いて。composer を埋めて。」→ `composer` がモデルの名前（例 "Claude Fable 5.1"）・*Lily# AI Exchange* の system 行に `name "…", vendor …, id …, family …, version …`。「composer」と言わなければ composer 行は勝手に増えない（今まで通り）。
 - [ ] **C37**（第1025・名前の見切れ）: `Untitled-2.lys`（バンド 4 段・"Electric Guitar" "E. Bass"）をプレビュー／PDF → 1 段目の Electric Guitar・2 段目以降の E. Bass の頭が紙の左端で切れない。名前の短い曲（Piano・Violin）の 1 段目の字下げは今まで通り。
 - [ ] **C38**（第1026・Auto を選ばない）: モデルを選んでいない状態で Compose with AI → 通知が `via copilot/<具体的なモデル>`（auto でない）・*Lily# AI Exchange* の system 行の id が auto でない。「Lily#: Select AI Model」で Auto を選べば `copilot/auto` と出て、作曲者に名前を書かない。
+- [ ] **C40**（第1036・歪む音色のパワーコード・ユーザー指示 2026-11-01）: Copilot Chat で `#chordVoicings` に chord `E5`・sound `overdriven guitar` → 先頭が `<e, b,>`（02xxxx）・`<e, b, e>`（022xxx）で、5 音の形は後ろ。sound を `electric guitar (clean)` にすると今までどおり `<e, e b e' b'>` が先頭。「エレキギター、ベース、ドラムで疾走感のあるロックを」と作曲させる → ギターの和音が 2〜3 音（5 音の `<e, e b e' b'>` が曲中ずっと続かない）。`Downloads/Redline.lys` を開いて Compose with AI の check（作曲の続きの提案）→「guitar, on a distorted sound (overdriven guitar): 153 of its 158 chords are 4 notes or more」。
 - [ ] **C39**（第1028・LilyPond のオクターブ・破壊的変更）:
   - (1) Lessons の 1〜12 を順に開く → どれも前と同じ高さで鳴り、同じ位置に描かれる。
   - (2) `octave absolute` の新しいファイルに `c'4` → 中央の C（ト音記号の下第 1 線）。
