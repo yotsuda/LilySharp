@@ -38,6 +38,17 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[editor]` **Full chords on a distorted sound are said**: a part whose `midiInstrument` distorts,
   striking four notes or more in half of its chords (eight or more), is told to strike two or three
   and leave the full chord to a clean sound.
+- `[editor]` **One chord progression under the whole piece is said**: the lowest note sounding at
+  each bar's start, read section by section; when every section (or all but one of six or more)
+  walks the same loop of two chords or more, from any of its chords, the finding names the loop and
+  asks for a progression of the chorus's or the bridge's own — unless the music is built on one, a
+  blues or a vamp.
+- `[editor]` **Levels set, not shaped, are said**: no crescendo or decrescendo anywhere and three
+  sections or more opening on a `.subito` level — the drop finding's own escape, written into
+  every section to quiet it.
+- `[editor]` **The octave-slip finding reads each voice as its own line**: a chorus tune in one
+  voice over the same guitar's chords in another was told of slips between the two. MIDI notes
+  now carry their voice (`MidiNote.Voice`).
 - `[editor]` **The length finding says how not to lengthen**: a section that returns is named again
   in the form, and that counts; a copy under a new name with a few bars altered is not length.
 

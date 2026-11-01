@@ -946,8 +946,10 @@ public sealed class MidiExporter
                 // first voice's bars.
                 var gridAtStart = (_barStart, _barNotes, _barKnown, _firstBarTicks, _barFlows);
                 (int, int, bool, int?, bool)? gridAfterFirst = null;
+                int lane = 0;
                 foreach (var voice in voices)
                 {
+                    int notesBefore = track.Notes.Count;
                     _currentTick = blockStartTick;
                     _currentNoteName = startNoteName;
                     _currentOctave = startOctave;
@@ -957,6 +959,14 @@ public sealed class MidiExporter
                         _barNotes = Math.Max(_barNotes, track.Notes.Count);
                     _pendingGraceSteal = 0; // a lane opens with no grace debt (PlaySection says why)
                     ProcessNode(voice, track, conductorTrack);
+                    // Every note this voice added is the lane's (MidiNote.Voice), whatever path
+                    // made it — a note, a chord, a grace, a repeated `q`; a nested span's own first
+                    // voice takes the lane, its later voices keep their own number.
+                    if (lane > 0)
+                        for (int k = notesBefore; k < track.Notes.Count; k++)
+                            if (track.Notes[k].Voice == 0)
+                                track.Notes[k] = track.Notes[k] with { Voice = lane };
+                    lane++;
                     voicesEndTick = Math.Max(voicesEndTick, _currentTick);
                     gridAfterFirst ??= (_barStart, _barNotes, _barKnown, _firstBarTicks, _barFlows);
                 }

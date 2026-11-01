@@ -51,7 +51,12 @@ public readonly record struct MidiNote(
     // A chord member's OWN place — its pitch, degree or drum, where the page puts its head —
     // where SourcePos is the chord's '<' (the onset the preview lights the chord by). -1 for
     // anything not a chord member. The Range panel goes to it. Not written to .mid files.
-    int MemberPos = -1
+    int MemberPos = -1,
+    // The voice the note is written in: 0 for a part's own line (or the first voice of a
+    // `voice { } { }` span), 1 for the second voice, … — so a check reads each voice as a line of
+    // its own (CompositionChecks: a chorus tune over its own chords, one guitar part, was told of
+    // octave slips between the two; owner's review 2026-11-01). Not written to .mid files.
+    int Voice = 0
 );
 
 /// <summary>

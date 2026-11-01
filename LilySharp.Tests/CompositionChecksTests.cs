@@ -358,6 +358,53 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Rock(full, "electric guitar (clean)")), f => f.Contains("distorted sound"));
     }
 
+    // Owner's review 2026-11-01 (a rock instrumental, Yoake-o-Kakenukete): one chord loop from the intro
+    // to the outro, the chorus starting on its second chord; no hairpin anywhere and every section
+    // opening .subito; and the chorus tune over the same guitar's chords told of octave slips.
+    private static string Looped(string sectionC, string levels = "@f", string lastGuitar = "e'4 g' a'2")
+    {
+        string Bars(string bass) => string.Join(" ", bass.Split(' ').Select(b => $"{b}1 |"));
+        string Section(string name, string bass, string guitar) =>
+            $"section {name} {{\n  gtr {{ {string.Concat(Enumerable.Repeat(guitar + " | ", 4))} }}\n  bass {{ {Bars(bass)} }}\n"
+            + "  kit { voice { hh8 hh hh hh hh hh hh hh | hh8 hh hh hh hh hh hh hh | hh8 hh hh hh hh hh hh hh | hh8 hh hh hh hh hh hh hh | } "
+            + "{ bd4 sn bd sn | bd4 sn bd sn | bd4 sn bd sn | bd4 sn bd sn | } }\n}\n";
+        return $"title \"Loop\"\ntempo 168\ntime 4/4\noctave absolute\nkey c minor\n{Guitar}\n{Bass}\n{Drums}\n"
+            + Section("A", "c, aes,, ees, bes,,", $"e'4{levels} g' a'2") + Section("B", "aes,, ees, bes,, c,", "e'4 g' a'2")
+            + Section("C", sectionC, lastGuitar) + "form { A B C }\nscore { staff gtr  staff bass  staff kit }\n";
+    }
+
+    [Fact]
+    public void OneChordProgressionThroughEverySection_IsSaid()
+    {
+        Assert.Contains(CompositionChecks.Of(Looped("ees, bes,, c, aes,,")), f => f.StartsWith("One chord progression from start to end: the bass's roots walk C A♭ E♭ B♭ in every section (A, B, C)"));
+        // A section of its own: no finding (three sections: every one must be on the loop).
+        Assert.DoesNotContain(CompositionChecks.Of(Looped("f, g, c, c,")), f => f.StartsWith("One chord progression"));
+    }
+
+    [Fact]
+    public void LevelsSetBySubitoAtEverySection_WithNoHairpin_AreSaid()
+    {
+        string set = Looped("ees, bes,, c, aes,,").Replace("gtr { e'4 g' a'2", "gtr { e'4@f.subito g' a'2").Replace("gtr { e'4@f g'", "gtr { e'4@p.subito g'");
+        Assert.Contains(CompositionChecks.Of(set), f => f.StartsWith("The levels are set, not shaped: no crescendo or decrescendo anywhere, and 3 sections open on a .subito (A, B, C)"));
+        // One hairpin anywhere, and the levels are shaped.
+        Assert.DoesNotContain(CompositionChecks.Of(set.Replace("a'2 |  }", "a'2@cresc |  }")), f => f.StartsWith("The levels are set"));
+        // Two sections .subito of three: not yet.
+        Assert.DoesNotContain(CompositionChecks.Of(Looped("ees, bes,, c, aes,,").Replace("gtr { e'4@f g'", "gtr { e'4@p.subito g'")), f => f.StartsWith("The levels are set"));
+    }
+
+    [Fact]
+    public void ATuneOverItsOwnPartsChords_IsNotToldOfOctaveSlips()
+    {
+        // The chord's E♭3 on 1 and 3, the tune's G4 on 2 — one line would read a slip at every G4.
+        var two = CompositionChecks.Of(Rock3("voice { r4 g' r f' } { <ees bes>4 r <ees bes> r }", "e,8 e, e, e, e, e, e, e,"));
+        Assert.DoesNotContain(two, f => f.Contains("leaps more than an octave away and straight back"));
+        var midi = new LilySharp.Core.Midi.MidiExporter().Export(LilySharp.Core.Syntax.SyntaxTree.Parse(Rock3("voice { r4 g' r f' } { <ees bes>4 r <ees bes> r }", "e,8 e, e, e, e, e, e, e,")));
+        Assert.Contains(midi.Tracks.SelectMany(t => t.Notes), n => n.Pitch == 51 && n.Voice == 1);
+        Assert.Contains(midi.Tracks.SelectMany(t => t.Notes), n => n.Pitch == 67 && n.Voice == 0);
+        // One line that does slip is still told.
+        Assert.Contains(CompositionChecks.Of(Rock3("e'4 g' a'2", "e,8 e, cis''8 e, e, e, e, e,")), f => f.StartsWith("bass: ") && f.Contains("leaps more than an octave away and straight back"));
+    }
+
     // Owner's request 2026-10-30: four findings for a piece's sound — a wrong note held against the
     // harmony, low close chords and a part in the bass's register, one groove in every section, and
     // sections whose tune ends open.

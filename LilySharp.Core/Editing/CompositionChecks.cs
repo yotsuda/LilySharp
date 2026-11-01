@@ -96,6 +96,7 @@ public static class CompositionChecks
         }
         findings.AddRange(DynamicDrops(root));
         findings.AddRange(PhraseDrops(root));
+        findings.AddRange(LevelsSetNotShaped(root));
         findings.AddRange(LateLevels(root, parts.Where(p => RoleOf(p).Drums || InstrumentOf(p) is "" || InstrumentOf(p).StartsWith("piano", System.StringComparison.Ordinal))
             .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)));
         findings.AddRange(CopiedSections(root));
@@ -391,11 +392,14 @@ public static class CompositionChecks
         // One note out of its line and straight back, an octave mark slipped (owner's trial 2026-10-30: a
         // rock bass ended its A and B bars `… e cis'' | b …`, a C♯4 between E2 and B2, a passing note
         // two octaves up). Not a piano's hand, whose stride leaps so by nature, nor a pedal riff,
-        // whose notes leap so one after another: a slip stands alone.
+        // whose notes leap so one after another: a slip stands alone. Each voice of a part is a
+        // line of its own (owner's review 2026-11-01: a chorus tune over the same guitar's chords,
+        // `voice { … } { <ees bes>4 r … }`, was told of five slips — the chord's E♭3 and the tune's
+        // G4 read as one line).
         var spikeBars = midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b).ToList();
-        foreach (var line in midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.Pitch)))
+        foreach (var line in midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick, n.Pitch)))
             .Where(n => !n.Part.EndsWith(" (chords)", System.StringComparison.Ordinal) && !hands.ContainsKey(n.Part))
-            .GroupBy(n => n.Part))
+            .GroupBy(n => (n.Part, n.Voice)))
         {
             var lows = line.GroupBy(n => n.StartTick).OrderBy(g => g.Key)
                 .Select(g => (Tick: g.Key, Pitch: g.Min(n => n.Pitch), Chord: g.Count() > 1)).ToList();
@@ -413,7 +417,7 @@ public static class CompositionChecks
                 continue;
             var at = slips.Select(i => 1 + spikeBars.Count(b => b <= lows[i].Tick)).Distinct().ToList();
             int first = slips[0];
-            findings.Add($"{line.Key}: {slips.Count} times one note leaps more than an octave away and straight back (bars "
+            findings.Add($"{line.Key.Part}: {slips.Count} times one note leaps more than an octave away and straight back (bars "
                 + $"{string.Join(", ", at.Take(6))}{(at.Count > 6 ? ", …" : "")}, as the form plays them; "
                 + $"{PartRanges.SpelledFromPitch(lows[first].Pitch, fifths)} between {PartRanges.SpelledFromPitch(lows[first - 1].Pitch, fifths)} and "
                 + $"{PartRanges.SpelledFromPitch(lows[first + 1].Pitch, fifths)} first) — an octave mark slipped? Write it in its line's octave.");
@@ -548,6 +552,7 @@ public static class CompositionChecks
         // OneGroove): every pitched part that is not a melody, with enough notes to have a figure.
         findings.AddRange(OneFigure(midi, barList, byPart.Where(p => !melodies.Contains(p.Key) && p.Value.Count >= 16)
             .Select(p => p.Key).ToHashSet(System.StringComparer.Ordinal)));
+        findings.AddRange(OneProgression(midi, barList, fifths));
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
             findings.AddRange(OpenEndings(midi, tune, fifths));
         findings.AddRange(EndsApart(midi, barList));
@@ -730,6 +735,53 @@ public static class CompositionChecks
                 + "with the octave above (a power chord; the voicing tool, given the sound, answers them first), and leave the full chord "
                 + "to a clean sound or to one ringing chord at a close.";
         }
+    }
+
+    // One chord progression under the whole piece (owner's review 2026-11-01: a rock instrumental
+    // ran Cm A♭ E♭ B♭ from its intro to its outro — the chorus began on the A♭, the bridge played
+    // the loop at @p — and the sections were told apart by nothing but their drums). Read as the
+    // lowest note sounding at each bar's start, a pitch class a bar: the loop is the longest
+    // section's shortest period (two chords or more), and a section is on it when its bars walk
+    // the loop from somewhere. Every section, or all but one of six or more (OneBeatFewestSections).
+    private const int OneProgressionFewestSections = 3;
+
+    /// <summary>The same chord progression in every section, its loop turned at most.</summary>
+    private static IEnumerable<string> OneProgression(MidiFile midi, List<int> barList, int fifths)
+    {
+        var pitched = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9
+            && !(n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal))).ToList();
+        if (pitched.Count == 0)
+            yield break;
+        // The lowest note sounding at a bar's start: struck on it, or held across it; null where none.
+        int? RootAt(int bar)
+        {
+            var sounding = pitched.Where(n => n.StartTick <= bar && n.StartTick + n.DurationTicks > bar).ToList();
+            return sounding.Count == 0 ? null : ((sounding.Min(n => n.Pitch) % 12) + 12) % 12;
+        }
+        var sections = PlayedSpans(midi)
+            .Select(s => (s.Name, Roots: barList.Where(b => b >= s.Start && b < s.End).Select(RootAt).ToList()))
+            .Where(s => s.Roots.Count(r => r != null) >= 2).ToList();
+        if (sections.Count < OneProgressionFewestSections)
+            yield break;
+        static bool Same(int? a, int? b) => a == null || b == null || a == b;
+        var longest = sections.OrderByDescending(s => s.Roots.Count).First();
+        int n = longest.Roots.Count;
+        int period = Enumerable.Range(1, n).First(p => Enumerable.Range(0, n - p).All(i => Same(longest.Roots[i], longest.Roots[i + p])));
+        var loop = longest.Roots.Take(period).ToList();
+        if (loop.Any(r => r == null) || loop.Distinct().Count() < 2)
+            yield break;
+        bool OnTheLoop(List<int?> roots) => Enumerable.Range(0, period)
+            .Any(turn => roots.Select((r, i) => Same(r, loop[(turn + i) % period])).All(ok => ok));
+        var off = sections.Where(s => !OnTheLoop(s.Roots)).Select(s => s.Name).ToList();
+        if (off.Count > (sections.Count >= OneBeatFewestSections ? 1 : 0))
+            yield break;
+        var on = sections.Where(s => OnTheLoop(s.Roots)).Select(s => s.Name).ToList();
+        string roots = string.Join(" ", loop.Select(r => PitchClassName(r!.Value, fifths)));
+        yield return $"One chord progression from start to end: the bass's roots walk {roots} in {(off.Count > 0 ? $"every section but {off[0]}" : "every section")} "
+            + $"({string.Join(", ", on)}) — a song's sections are told apart by their harmony as much as by their tune: give the "
+            + "chorus or the bridge a progression of its own (a new bass note under the hook, a chord from outside the loop; the loop "
+            + "begun from another of its chords is not a new one) — unless the music is built on one progression, a blues or a vamp: "
+            + "then keep it.";
     }
 
     /// <summary>The sections as played, by name, each once: its first play's start and end.</summary>
@@ -1131,6 +1183,30 @@ public static class CompositionChecks
                 break;
             }
         }
+    }
+
+    // Levels switched at the section line and never shaped (owner's review 2026-11-01: a rock
+    // instrumental had no crescendo or decrescendo anywhere, and six of its eight sections opened
+    // .subito — the drop finding's own escape, written into every section to quiet it).
+    private const int SubitoSectionsFewest = 3;
+
+    /// <summary>No hairpin in the piece and this many sections opening on a <c>.subito</c> level.</summary>
+    private static IEnumerable<string> LevelsSetNotShaped(SyntaxNode root)
+    {
+        var phrases = root.DescendantNodes<PhraseDeclarationSyntax>().Where(p => p.Parent is CompilationUnitSyntax)
+            .GroupBy(p => p.Name.Text).ToDictionary(g => g.Key, g => g.First());
+        var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is CompilationUnitSyntax).ToList();
+        if (sections.SelectMany(s => DynamicsPlayed(s, phrases)).Any(d => SyntaxFacts.IsDynamicSpannerName(d.DynamicToken.Text)))
+            yield break;
+        // A section opens .subito when a part's first level in it is one.
+        var subito = sections.Where(s => s.DescendantNodes<PartBlockSyntax>()
+            .Select(b => DynamicsPlayed(b, phrases).FirstOrDefault()).Any(d => d is { IsSubito: true }))
+            .Select(s => s.SectionName).Distinct().ToList();
+        if (subito.Count < SubitoSectionsFewest)
+            yield break;
+        yield return $"The levels are set, not shaped: no crescendo or decrescendo anywhere, and {subito.Count} sections open on a .subito "
+            + $"({string.Join(", ", subito)}) — a level switched at the section line is a cut; shape the way there: a @cresc over the "
+            + "bars before a louder section, a @decresc out of it into a quieter one, and keep .subito for the surprise the music means.";
     }
 
     /// <summary>

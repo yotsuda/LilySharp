@@ -62,6 +62,8 @@ that prompted each check is written beside it in the code.
 - A drop of two or more levels with nothing leading to it (levels inside phrases count).
 - A part whose first level comes late.
 - A band's drums with no level while the others move.
+- Levels set, not shaped: no hairpin anywhere and three sections or more opening `.subito`
+  (2026-11-01: the drop finding's "or write .subito" was written into every section).
 
 **The band**
 - Drums, bass and chords present.
@@ -78,6 +80,11 @@ that prompted each check is written beside it in the code.
   more): each section's commonest bar — the onsets' places and each note's interval from the bar's
   first, so the figure moved along the chords is one figure — the same, where that bar owns half
   the section. The guide's own rule: a contrasting section takes a figure of its own.
+
+**The harmony** (2026-11-01: a rock instrumental ran Cm A♭ E♭ B♭ from its intro to its outro)
+- One chord progression under every section (or all but one of six or more): the lowest note
+  sounding at each bar's start, the loop the longest section's shortest period of two chords or
+  more, a section on it when its bars walk the loop from any of its chords. Escape: a blues, a vamp.
 
 **The melody**
 - One note value.
@@ -107,7 +114,8 @@ that prompted each check is written beside it in the code.
   distorts, answers the power chords — the root and its fifth, the octave above — before the full
   shapes; the chat's instructions tell it to pass the sound.
 - Notes of the key spelled by another name (B and F♯ in E♭ minor).
-- An octave mark slipped: one note an octave away and straight back.
+- An octave mark slipped: one note an octave away and straight back — each voice of a part read
+  as its own line (`MidiNote.Voice`; 2026-11-01: a tune over its own part's chords was told of slips).
 
 **Form and length**
 - Sections copied note for note.
