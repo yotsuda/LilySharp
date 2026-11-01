@@ -48,6 +48,12 @@ describe('the composing guide', () => {
         assert.match(guide, /\*\*The verses\*\*: one lyrics track, `verse 1 \{ … \} verse 2 \{ … \}` inside it/);
         assert.match(guide, /\*\*The diagrams, always\*\*: `layout \{ chordDiagrams all  chordList true \}`/);
     });
+    // Owner's review 2026-11-01: a "bossa nova" of its chords, a bass and two off-beat chords a bar, heard as no bossa nova.
+    it('says a style named is its rhythm first, a bossa nova\'s two bars above all', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /\*\*A style named is its rhythm first\*\*/);
+        assert.match(guide, /chords on 1, 4, 7 of the first bar and 3, 6 of the second/);
+    });
     // Owner's trial 2026-10-29: a "dramatic" quartet's tremolo and sforzando were all in two bars.
     it('says the character\'s devices run through the piece, strongest at the climax', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');

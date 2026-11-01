@@ -154,6 +154,14 @@ What makes it music:
   soloist sings a line, the choir answers it. Rich chords (added 9ths and 7ths, a dominant with a
   sus4 before it resolves, passing diminished chords, the bass walking up into the next chord), a
   slow 12/8 or a swinging fast 4/4, and the IV–I "amen" at the end.
+- **A style named is its rhythm first**: its chords alone do not make it, and a request for one is
+  answered in the figure the style is known by, written into every section. A tango's bass is
+  `4. 8 4 4`; reggae's chords stand on the off-beats, its bass answering them. **A bossa nova**: ♩ =
+  120 to 140, major sevenths and minor sevenths, and two bars that go round — eighths counted, the
+  chords on 1, 4, 7 of the first bar and 3, 6 of the second (`<…>4. <…>4. <…>4 | r4 <…>4. <…>4. |`,
+  turned about or varied from section to section, a chord often changing an eighth before its bar) —
+  over a bass on 1 and 3 in dotted quarter and eighth (`e,4. e,8 b,4. b,8 |`). The melody comes in
+  off the beat and is held over the bar line, long notes against that figure, above the chords.
 - **A piece for a beginner** ("for a beginner", "an easy exercise", "for a child learning the
   piano"): the hand stays in one place — five notes under five fingers (C to G for the right
   hand from middle C), moving by step with a few skips of a third, no leap out of the five, no
