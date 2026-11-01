@@ -6,6 +6,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A chord track written at the top level plays
+
+- `chords prog { C | G7 | }` outside any section, in a file written by section, draws from bar 1. It played nothing, and every part started that many bars late. It now sounds from bar 1, and takes no time.
+
 ### Review a piece
 
 - The composing checks now say which check made each finding, and which parts and bars it is about (`CompositionChecks.Findings`).

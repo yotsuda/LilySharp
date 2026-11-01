@@ -4,6 +4,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A chord track written at the top level plays
+
+- `chords prog { C | G7 | }` outside any section played nothing, and every part started that many bars late. It now sounds from bar 1, as the page draws it.
+
 ### Ask Copilot's chat to review a piece
 
 - **`#reviewScore`** reviews the score open in the editor, as music. The chat says what the piece does well, then what to look at: where it is, why it matters, and when it would not apply, in plain words for a beginner. It changes nothing unless you agree to a fix.

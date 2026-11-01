@@ -89,7 +89,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **作曲ガイダンス（Copilot のチャットで作曲 → Lily# が音楽として検査）＝オーナーが先に完了したい（2026-10-30）**: 流れ・検査の一覧・差し戻しの規則・**講評の手順**（オーナーが Downloads の .lys を送る → ログ `~\.copilot\session-state\*\events.jsonl` → 検査を DLL で → `lysc octave --absolute` → 日本語で講評し「入れて」で実装）・残りは **`docs/compose-in-chat-design.md`**。
-- **人間の曲のレビュー（オーナーの設計 2026-10-30）＝第1038 で §6 の 1〜4 を実装・実機未確認（MANUAL-CHECKS C55・C56）**: 残りは実機確認と §6-5（消音・頼まれてから）。設計との差は **`docs/review-tool-design.md` §7**（`what` と `fix.say` が 1 文のまま・`fix.edit`／`ask` なし）。
+- **人間の曲のレビュー（オーナーの設計 2026-10-30）＝第1038 で §6 の 1〜4 を実装**: ツールとコマンドは実物の VS Code で確認済み。残りは Copilot の AI の振る舞い（MANUAL-CHECKS C55）・目視（C56）・§6-5（消音・頼まれてから）。設計との差は **`docs/review-tool-design.md` §7**（`what` と `fix.say` が 1 文のまま・`fix.edit`／`ask` なし）。
 - **コード図の文法の整理＝第1036 で実装済（§1.1 第1036）**: 残りは MANUAL-CHECKS §2.2 の `[ ]`（実機）だけ。旧綴りの本は普通の語のエラー＝Claude は直さない（全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **OMR の読みを AI で直す＝M1〜M3 実装済・実機未確認**（MANUAL-CHECKS §5 B9〜B11・設計は `docs/omr-ai-fix-design.md`・照合の lysc は VSIX の `server` に同梱済＝§1.1 第975。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **GitHub Pages の OMR デモ動画の撮影＝ユーザーのタスク（第961）**: `site/videos/SHOTLIST.md` の 16・17。置き場は `site/scan-body.html` の `figure.demo-video[data-pending]`（置いたら `data-pending` を外す）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
@@ -138,9 +138,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **§6-3 の前半 `3702337ae`**: `KeyChecks`＝`key.signature`・`key.outside`・`spelling.direction`・`facts.keyHeard`（Krumhansl–Schmuckler）。レビュー専用＝`Of` に入れない。コーパスの実測は design §7: `key.signature` 9 冊（うち fixture 4・`Beat It` は正しい指摘・ベース単独 4 は曲と照合していない）／`key.outside` は最初 168 冊がほぼベースライン→音域とハーモニーの除外で 7 冊／`spelling.direction` 0 冊。短調の第 6・7 音の計算を最初に間違えた（コーパスで発覚）。毒 11 本は全部赤（最初の 6 本すり抜け＝2 本は冗長なコードを削除・4 本は網を足した）。
 - **§6-3 の残り（`ChordChecks`）**: `chord.outside`・`facts.chords`＝コード行と `@chord(…)` を MIDI の `SourcePos` で演奏順に読む（`ToRomanNumeral`・`StructureOf`・`ChordAnnotation` を再利用）。役割＝副属七・副導七・ブルース・ナポリ・裏コード・同主調からの借用。役割が果たされない／役割が無いときだけ `ask` つきの指摘。実測はコード記号のある 52 冊・366 和音で指摘 4 冊（全部 fixture）＝**実曲のコード進行ではほとんど試されていない**（design §7）。⚠️ `KeyChecks` に Krumhansl–Kessler の表を書き写していた＝`KeyEstimator.ProfileFit` に寄せた（§0「まず grep」を飛ばした）。
 - **§6-4**: `lysc review`（`--json`・`--focus`・`--audience`・終了コードはコンパイルの可否だけ）・`ScoreReview.Text`・コマンド **Lily#: Review Score**（`reviewCore.ts`・Problems に Information・編集で消える）。
-- **VS Code の実機では 1 度も動かしていない**＝C55・C56。server と拡張の作り直しが要る。
-- ⚠️ 未調査: section の外の `chords prog { C | E7 | }`（`section` なし）は `lysc check` がエラーを出さず、4 小節の曲が 8 小節と数えられ、コードはレポートに載らない（Lab `sessions/p1038/chords.lys`）。文書の形ではなくコーパスに 0 冊。
-- 終了時 full **13853 / 0 / 2**（`-End p1038 -DiffBase 38a2a1041`・門は全部 OK・npm 649 緑）。§7 7.5: Core の差分は描画に触れない新機能・REF 0／OWN 0＝LP の出典は無い。⚠️ 罠: `,@(旧, X + "`n")` を再発（CLAUDE-OPERATIONS §1）・メンバーを挟むと `DocCommentPlacementTests` が赤。**新しい CI の赤の修正 `5a612b194` は push するまで CI で確かめられない。**
+- **実物の VS Code で確認（26 項目 PASS）**: Lab `sessions/p1038/vscode-e2e/`＝隔離した user data で `--extensionTestsPath`・`vscode.lm.invokeTool` と `executeCommand` を直接呼ぶ。Deploy 済み＝ユーザーは Reload Window を 2 回。⚠️ Copilot の AI の振る舞いだけ未確認（C55）。
+- **flat なコード行の再生**: `section` の外の `chords prog { C | G7 | }`（by-section の本で有効・譜面は小節 1 から描く）で、MIDI は小節線だけ歩いて全パートが行の長さだけ遅れ、コードは鳴らなかった。`PlayChordRow` の「Not handled」は音のことしか言っていなかった。小節 1 から鳴らし時間は取らない形にした（網 `ChordRowMidiTests`）。⚠️ 最初のメーターで読む・弱起なし・コーパス 0 冊。MusicXML 側は見ていない。
+- 終了時 full **13857 / 0 / 2**（`-End p1038 -DiffBase 38a2a1041`・門は全部 OK・npm 649 緑）。§7 7.5: Core の差分は描画に触れない新機能・REF 0／OWN 0＝LP の出典は無い。⚠️ 罠: `,@(旧, X + "`n")` を再発（CLAUDE-OPERATIONS §1）・メンバーを挟むと `DocCommentPlacementTests` が赤。**新しい CI の赤の修正 `5a612b194` は push するまで CI で確かめられない。**
 
 ## 以下は第1037セッションの経緯
 

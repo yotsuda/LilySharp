@@ -785,6 +785,14 @@ public sealed class MidiExporter
                 }
                 break;
 
+            case ChordPartBlockSyntax { HasSections: false, Parent: CompilationUnitSyntax, PartName: var flatRow } flatTrack:
+                // A chord track written flat at the top level runs from bar 1, as the page draws it
+                // (TrackNeedsSectionsValidator; a file grouped by part refuses it). It is not in the
+                // music's time: walked as children, its bar lines put the form a row's length late.
+                if (flatRow != null && _soundingChordRows.Contains(flatRow))
+                    PlayChordRow(flatTrack.Items, flatRow, 0, track, _strokesByRow.GetValueOrDefault(flatRow));
+                break;
+
             case PartBlockSyntax partBlock:
                 // A section's `partName { ... }` block: arm the part's transpose
                 // (sounding-pitch shift) for the notes inside, then disarm it.
@@ -1568,8 +1576,8 @@ public sealed class MidiExporter
     /// <remarks>
     /// LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
     /// ChordNames context and performs nothing for it. A pickup bar keeps the full meter's
-    /// grid and cuts what runs past its end. Not handled: a chord track written flat at the
-    /// top level (no book on disk does it).
+    /// grid and cuts what runs past its end. A chord track written flat at the top level is read
+    /// in the file's first meter, with no pickup: no book on disk does it.
     /// </remarks>
     private int PlayChordRow(IEnumerable<SyntaxNode> items, string rowName, int startTick, MidiTrack track,
         IReadOnlyList<Stroke>? strokes = null)

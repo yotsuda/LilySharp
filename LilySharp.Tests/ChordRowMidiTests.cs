@@ -64,6 +64,29 @@ public class ChordRowMidiTests
         Assert.NotEqual(midi.Tracks.Single(t => t.Name == "melody").Channel, track.Channel);
     }
 
+    [Theory]
+    [InlineData("chords harmony { C | G7 | }\nsection A { melody { c''1 | g'1 | } }\n")]   // before the section
+    [InlineData("section A { melody { c''1 | g'1 | } }\nchords harmony { C | G7 | }\n")]   // after it
+    public void AFlatTopLevelRow_SoundsFromBarOne_AsThePageDrawsIt_AndTakesNoTime(string music)
+    {
+        var midi = Export($"time 4/4\npart melody\n{music}form {{ A }}\nscore {{ chords harmony  staff melody }}\n");
+        Assert.Equal(new[] { 0, Bar }, midi.Tracks.Single(t => t.Name == "melody").Notes.Select(n => n.StartTick));
+        Assert.Equal(new[]
+        {
+            (0, Bar, 55), (0, Bar, 60), (0, Bar, 64),                                  // C
+            (Bar, Bar, 55), (Bar, Bar, 59), (Bar, Bar, 62), (Bar, Bar, 65),            // G7
+        }, ChordNotes(midi));
+        Assert.Equal(new[] { Bar, 2 * Bar }, midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b));
+    }
+
+    [Fact]
+    public void AFlatTopLevelRowTheScoreDoesNotPlace_IsSilent_AndTakesNoTime()
+    {
+        var midi = Export("time 4/4\npart melody\nchords harmony { C | G7 | }\nsection A { melody { c''1 | g'1 | } }\nform { A }\nscore { staff melody }\n");
+        Assert.Equal(new[] { 0, Bar }, midi.Tracks.Single(t => t.Name == "melody").Notes.Select(n => n.StartTick));
+        Assert.Empty(ChordNotes(midi));
+    }
+
     [Fact]
     public void ARowTheScoreDoesNotPlace_IsSilent()
     {

@@ -11,7 +11,7 @@ what applies to this piece's style, says why in musical terms, and teaches the c
 each point. The report's design serves that interpretation. Without an AI, the same report is free
 and fast (§5).
 
-Status: §6 steps 1 to 4 are built (2026-11-02), and not yet tried in a real VS Code (`editors/vscode/MANUAL-CHECKS.md` C55, C56). What was built differs from §2 in the ways §7 lists.
+Status: §6 steps 1 to 4 are built (2026-11-02). The tool and the command were run in a real VS Code through the language server; whether Copilot's AI picks the tool and explains the report as told has not been seen (`editors/vscode/MANUAL-CHECKS.md` C55, C56). What was built differs from §2 in the ways §7 lists.
 
 ## 1. Entrances
 

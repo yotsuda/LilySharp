@@ -339,6 +339,15 @@ public class ScoreReviewTests
     }
 
     [Fact]
+    public void AFlatTrackAtTheTopLevel_IsRead()
+    {
+        string book = WithChords("c major", "C | E7 | F | C |")
+            .Replace("chords prog { C | E7 | F | C | } }", "}\nchords prog { C | E7 | F | C | }");
+        Assert.Equal(4, (int)Report(book)["facts"]!["bars"]!);
+        Assert.Equal(["C", "E7", "F"], ChordFacts(book).Select(c => (string?)c["symbol"]).Distinct());
+    }
+
+    [Fact]
     public void AChordOnAMark_IsReadToo()
     {
         var chords = ChordFacts(Tune("c major", "c'1@chord(C) | d'1@chord(E7) | a'1@chord(Am) | c'1 |"));
