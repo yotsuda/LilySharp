@@ -836,6 +836,20 @@ export function lastUserMessageAt(events: string): number | undefined {
     return at;
 }
 
+/** The music check's finding of a tune held against its harmony, and how many times (owner's
+ *  decision 2026-11-01: twelve held clashes were kept "as colour"; this many or more is wrong notes,
+ *  turned down from the chat every time). */
+export function heldClashesOf(findings: string[]): { finding: string; count: number } | undefined {
+    for (const finding of findings) {
+        const m = /^[^,]+, the melody: (\d+) times a note held on the beat stands a semitone from the harmony/.exec(finding);
+        if (m) { return { finding, count: Number(m[1]) }; }
+    }
+    return undefined;
+}
+
+/** Held clashes this many or more: turned down, not told (heldClashesOf). */
+export const CLASHES_TURNED_DOWN = 8;
+
 /** The text with the model named in its "// Composed in Copilot's chat" line (copilotModelOf). */
 export function withModelNamed(text: string, model: string): string {
     return text.replace(/^(\s*\/\/ Composed in Copilot's chat)(?: \([^)\r\n]*\))?,/m, `$1 (${model}),`);

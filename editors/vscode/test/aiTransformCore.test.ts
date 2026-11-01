@@ -25,8 +25,18 @@ import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
     aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
-    lastUserMessageAt,
+    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN,
 } from '../src/aiTransformCore';
+
+// Owner's decision 2026-11-01: twelve held clashes kept "as colour" are wrong notes.
+describe('a tune held against its harmony', () => {
+    it('is read from the music check\'s finding with how many times, eight or more turned down', () => {
+        const finding = 'singer, the melody: 12 times a note held on the beat stands a semitone from the harmony sounding with it (bars 3, 4; B4 against C4 first) — a wrong note?';
+        assert.deepEqual(heldClashesOf(['singer, the melody: 85% of its notes are quarter notes', finding]), { finding, count: 12 });
+        assert.equal(heldClashesOf(['singer: sings 48 bars in a row without a rest']), undefined);
+        assert.equal(CLASHES_TURNED_DOWN, 8);
+    });
+});
 
 // Owner's request 2026-11-01: a composed piece opened in the editor, and a panel over it at once —
 // the chat had proposed its piece again, unasked. The same request's going on is told by the log:

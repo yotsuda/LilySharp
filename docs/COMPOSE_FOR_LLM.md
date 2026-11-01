@@ -189,6 +189,12 @@ What makes it music:
     (`to- mor-` for "tomorrow", `も や` for 燃やす) gets another note or other words. A long note or
     a phrase's last note ends a word; a bar line may fall inside a word only where the phrase runs
     on through it.
+  - **Then the chorus's hook, before any other note of the tune**: two bars on the chorus's first
+    line, with the song's highest note in them and a rhythm of its own, that can be hummed after one
+    hearing. Then the verse — lower, in another rhythm, ending open — and the rest around them. A
+    chorus that opens with the verse's phrase, or climbs no higher than the verse, is no chorus; a
+    tune whose every two-bar phrase has one rhythm (`8 8 4 2 | 4 2 r4` thirteen times) is a formula,
+    not a tune.
   - Count every bar: as many units as notes, less the notes a slur or a tie carries over.
   - Words the request gives are set as they stand. Words written for it tell their story in the
     verses and come back unchanged in the chorus, its hook the title.

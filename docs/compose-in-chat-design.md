@@ -37,6 +37,10 @@ next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
      proposal: a revision that leaves it (fewer warnings in all) is not shown either.
    - **A syllable with no note** (LYS4001, `LOST_SYLLABLE_CODE`) goes back every time (2026-11-01:
      a chorus's last word was left off the page, the warning told once and the piece written).
+   - **A tune held against its chords 8 times or more** (the music check's clash finding, read by
+     `heldClashesOf`, `CLASHES_TURNED_DOWN`) goes back every time once the piece is past its first
+     check (2026-11-01: 12 held semitone clashes in a dawn ballad were written in "as colour"). Fewer
+     keep the blue-note escape.
    - **The first proposal of a new piece** is checked as music once (`musicCheckedFor`). The
      compiler's warnings, `CompositionChecks.Of`'s findings (through LSP `lilysharp/compositionCheck`),
      the header-language note and the drawn-key note go back together, unseen by the musician.
@@ -116,6 +120,13 @@ as the melody's rhythm).
 - One rhythm in most bars. A band's tune is NOT let off as "an even pace is the music's character".
   And, where the piece's count passes, one rhythm in three quarters of a SECTION's bars (four bars
   or more), the sections named (2026-11-01: a verse of eight bars in one rhythm under a varied solo).
+- One rhythm in three quarters of its PHRASES (two bars, else four, counted from each section's
+  first bar; six phrases or more) — the bar-by-bar readings miss a two-bar formula, which splits
+  into two bar rhythms of half the bars each (2026-11-01: 夜明けのうた, `8 8 4 2 | 4 2 r4` in 10 of 12).
+- **A song's tune** (a part a lyrics track sings) only: the chorus — the section the form plays most,
+  of ties one named chorus/sabi/refrain/hook, else the last — opening with another section's first
+  phrase note for note; and the tune's highest note spent in its first phrase, or the chorus climbing
+  no higher than the sections before it (`ChorusOf`, `ChorusOpensLikeAnother`, `PeakSpentEarly`).
 - Leaps up and down its chords (fewer than a quarter of the moves are steps).
 - One bar's figure moved along the chords: half the bars or more take the up-and-down shape of the
   bar before. Measured on the owner's 60 pieces: the sequenced rock guitars scored 0.53–0.61, the

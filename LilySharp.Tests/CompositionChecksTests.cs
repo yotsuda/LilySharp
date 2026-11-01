@@ -428,6 +428,49 @@ public class CompositionChecksTests
             + string.Concat(Enumerable.Repeat("la la la la | ", 16)) + "}\n}\nform")), f => f.Contains("without a rest"));
     }
 
+    // Owner's review 2026-11-01 (Yoru-Ake-no-Uta): every two-bar phrase in `8 8 4 2 | 4 2 r4`, the chorus
+    // opening with the verse's first phrase note for note, the top note spent in bar 3.
+    private static string Hook(string verse, string chorus) => "title \"Hook\"\ntime 4/4\noctave absolute\npart singer { instrument alto }\n"
+        + "section Verse {\n  singer { " + verse + "}\n  lyrics w sings singer { la la | }\n}\nsection Chorus {\n  singer { " + chorus + "}\n}\n"
+        + "form { Verse Chorus Verse Chorus }\nscore { staff singer  lyrics w }\n";
+    private const string P = "g'8 a'8 b'4 e''2 | d''4 c''2 r4 | ";      // the formula, topping at E5
+    private const string Q = "e'8 f'8 g'4 c''2 | b'4 a'2 r4 | ";       // the formula, lower (C5)
+    private const string R = "a'4. b'8 c''4 e''4 | d''2 c''2 | ";      // another rhythm, E5
+    private const string X = "e'4 g'2 a'4 | g'4 a'4 b'4 r4 | ";        // another rhythm, lower
+
+    [Fact]
+    public void OneRhythmInEveryPhrase_IsSaid()
+    {
+        Assert.Contains(CompositionChecks.Of(Hook(Q + Q + Q + X, P + P + P + P)),
+            f => f.StartsWith("singer, the melody: 7 of its 8 2-bar phrases have the same rhythm — one formula poured into every phrase"));
+        // The chorus in a rhythm of its own: half the phrases, not a formula.
+        Assert.DoesNotContain(CompositionChecks.Of(Hook(Q + Q + Q + X, R + R + R + R)), f => f.Contains("one formula poured"));
+    }
+
+    [Fact]
+    public void AChorusOpeningWithTheVersesPhrase_IsSaid()
+    {
+        Assert.Contains(CompositionChecks.Of(Hook(P + Q + Q + Q, P + R + R + R)),
+            f => f.StartsWith("singer, the melody: the chorus (Chorus) opens with Verse's first phrase, note for note (bars 1–2 and 9–10, as the form plays them)"));
+        // One note changed: its own opening.
+        Assert.DoesNotContain(CompositionChecks.Of(Hook(P + Q + Q + Q, "a'8 b'8 c''4 e''2 | d''4 c''2 r4 | " + R + R + R)), f => f.Contains("opens with Verse's first phrase"));
+    }
+
+    [Fact]
+    public void ATopNoteSpentInTheFirstPhrase_OrAChorusNoHigherThanTheVerse_IsSaid()
+    {
+        const string P2 = "a'8 b'8 c''4 e''2 | d''4 c''2 r4 | ";
+        Assert.Contains(CompositionChecks.Of(Hook(P + Q + Q + Q, P2 + R + R + R)),
+            f => f.StartsWith("singer, the melody: its highest note, E5, comes in its first phrase (bar 1, as the form plays them) and is never passed"));
+        // The top in the verse's third phrase, and the chorus no higher.
+        Assert.Contains(CompositionChecks.Of(Hook(Q + Q + P + Q, P2 + R + R + R)),
+            f => f.StartsWith("singer, the melody: the chorus (Chorus) climbs no higher than the sections before it (its top E5, theirs E5)"));
+        // The chorus above the verse: a song that climbs.
+        var climbs = CompositionChecks.Of(Hook(Q + Q + P + Q, P2 + "a'4. b'8 c''4 g''4 | f''2 e''2 | " + R + R));
+        Assert.DoesNotContain(climbs, f => f.Contains("comes in its first phrase"));
+        Assert.DoesNotContain(climbs, f => f.Contains("climbs no higher"));
+    }
+
     // Owner's reviews 2026-11-01 (Shippu-no-Kodou, Yoake-o-Kakenukete): a chorus tune in the first voice
     // over the guitar's own power chords in the second was told "a tune in 0 of the 76 bars" and
     // "only 19% of its moves are steps" — the two voices read as one line.

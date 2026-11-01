@@ -82,6 +82,10 @@ describe('the composing guide', () => {
         const unsung = fn.indexOf('const unsung = diags.filter(d => d.Severity === \'warning\' && d.Code === LOST_SYLLABLE_CODE);');
         assert.ok(unsung > unplayable && unsung < fn.indexOf('musicCheckedFor.has(uri.toString())'));
         assert.match(fn, /return `Not shown to the musician: words would be lost — a syllable with no note to sing it on\./);
+        // A tune held against its chords eight times or more, the same (owner's decision 2026-11-01:
+        // twelve held clashes were written in "as colour").
+        assert.match(fn, /const clashing = heldClashesOf\(kept\);\s*if \(clashing && clashing\.count >= CLASHES_TURNED_DOWN\) \{[\s\S]*?return `Not shown to the musician: its tune stands against its chords/);
+        assert.ok(fn.indexOf('const clashing = heldClashesOf(kept);') < fn.indexOf('const brought = kept.filter('));
         assert.match(fn, /return `Not shown to the musician: its players cannot play it/);
     });
     // Owner's request 2026-10-29: the chat listed the folder in a terminal to see that a name was free.

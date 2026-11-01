@@ -42,7 +42,7 @@ import {
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
     cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
-    lastUserMessageAt,
+    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -780,6 +780,17 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             const report = await compositionReport(client, text);
             ranges = report.ranges;
             kept = report.findings;
+            // A tune held against its chords this often is wrong notes, not colour: turned down every
+            // time, as a bar that does not add up is (owner's decision 2026-11-01: 12 held clashes in a
+            // dawn ballad were written in "as colour").
+            const clashing = heldClashesOf(kept);
+            if (clashing && clashing.count >= CLASHES_TURNED_DOWN) {
+                deps.log(`AI proposal (chat): turned down — ${clashing.count} notes held against the harmony.`);
+                return `Not shown to the musician: its tune stands against its chords — ${clashing.count} notes held on the beat a semitone `
+                    + `from the harmony, which is not colour but wrong notes.\n- ${clashing.finding}\n`
+                    + 'At each, take the chord\'s own tone or change the chord under it, and call lilysharp_proposeScore again with the whole text.'
+                    + rangesSaid(ranges);
+            }
             // What the revision brought in goes back once more (owner's decision 2026-10-30: a revision's
             // bass slipped two octaves, `cis''`, and was written in, the AI never told of it); the
             // proposal after that is written.

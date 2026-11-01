@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A tune against its chords is turned down
+
+- **Copilot's chat is turned down every time its tune stands against its chords** — eight notes
+  or more held on the beat a semitone from the harmony — as it is for a bar that does not add up;
+  it had kept twelve "as colour". Compose with AI's check also tells a tune whose every phrase has
+  one rhythm, a song's chorus that opens with the verse's phrase, and a peak spent in the first
+  phrase.
+
 ### A word lost from the page is turned down
 
 - **Copilot's chat is turned down every time its piece drops a syllable** (LYS4001: a syllable with

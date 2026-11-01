@@ -566,10 +566,21 @@ public static class CompositionChecks
             .Select(p => p.Key).ToHashSet(System.StringComparer.Ordinal)));
         findings.AddRange(OneProgression(midi, barList, fifths));
         findings.AddRange(StaffRestatesTheChordsRow(midi, parts, barList));
-        findings.AddRange(NoBreath(midi, parts, barList, System.Text.RegularExpressions.Regex.Matches(source, @"\blyrics\s+\w+\s+sings\s+(\w+)")
-            .Select(m => m.Groups[1].Value).ToHashSet(System.StringComparer.Ordinal)));
+        var sung = System.Text.RegularExpressions.Regex.Matches(source, @"\blyrics\s+\w+\s+sings\s+(\w+)")
+            .Select(m => m.Groups[1].Value).ToHashSet(System.StringComparer.Ordinal);
+        findings.AddRange(NoBreath(midi, parts, barList, sung));
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
+        {
             findings.AddRange(OpenEndings(midi, tune, fifths));
+            findings.AddRange(PhraseFormula(midi, tune, byPart[tune], barList, band));
+            // A song's tune climbs to its chorus; an instrumental's theme is read for its line alone.
+            if (sung.Contains(tune))
+            {
+                var tuneNotes = lineNotes.Where(n => n.Part == tune).Select(n => (n.StartTick, n.DurationTicks, n.Pitch)).OrderBy(n => n.StartTick).ToList();
+                findings.AddRange(ChorusOpensLikeAnother(midi, tune, tuneNotes, barList));
+                findings.AddRange(PeakSpentEarly(midi, tune, tuneNotes, barList, fifths));
+            }
+        }
         findings.AddRange(EndsApart(midi, barList));
 
         // The length and the ending (owner's report 2026-10-27: the composed piano piece was 8 bars, two
@@ -806,6 +817,132 @@ public static class CompositionChecks
                     + "a singer breathes: a line of words is a phrase, and each phrase ends on a longer note with a rest after it; "
                     + "a comma in the words is a breath in the line.";
         }
+    }
+
+    // ---- The tune's shape across the song (owner's review 2026-11-01: 夜明けのうた — every one of its 13
+    // two-bar phrases in the rhythm `8 8 4 2 | 4 2 r4`, the chorus opening with the verse's first
+    // phrase note for note, the song's highest note spent in bar 3 and the chorus climbing no higher).
+    // The bar-by-bar readings above are blind to all three: a two-bar formula splits into two bar
+    // rhythms, each in half the bars.
+
+    // A phrase of this many bars (two, then four) in one rhythm through this share of the phrases, of
+    // this many at least.
+    private static readonly int[] PhraseLengths = [2, 4];
+    private const int PhraseFormulaFewestPhrases = 6;
+    private const double PhraseFormulaShare = 0.75;
+
+    /// <summary>The melody's phrases — two bars, else four, counted from each section's first bar as
+    /// the form first plays it — mostly in one rhythm, read as the onsets' places over the whole
+    /// phrase. Said once, for the shorter phrase that shows it.</summary>
+    private static IEnumerable<string> PhraseFormula(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList, bool band)
+    {
+        var spans = PlayedSpans(midi);
+        foreach (int length in PhraseLengths)
+        {
+            var phrases = new List<string>();
+            foreach (var (_, start, end) in spans)
+            {
+                int first = barList.IndexOf(start);
+                if (first < 0)
+                    continue;
+                for (int i = first; i + length < barList.Count && barList[i + length] <= end; i += length)
+                {
+                    var mine = onsets.Where(o => o.Start >= barList[i] && o.Start < barList[i + length]).Select(o => o.Start - barList[i]).ToList();
+                    if (mine.Count > 0)   // a phrase of rests (an intro's) is no phrase
+                        phrases.Add(string.Join(",", mine));
+                }
+            }
+            if (phrases.Count < PhraseFormulaFewestPhrases)
+                continue;
+            var common = phrases.GroupBy(p => p).OrderByDescending(g => g.Count()).First();
+            if (common.Count() >= phrases.Count * PhraseFormulaShare)
+            {
+                yield return $"{tune}, the melody: {common.Count()} of its {phrases.Count} {length}-bar phrases have the same rhythm — one formula "
+                    + "poured into every phrase, verse and chorus alike: give the chorus's hook a rhythm of its own and the verse another, "
+                    + "and let a phrase end otherwise than the one before (a note held over the bar line, an upbeat into the next, "
+                    + "the breath in another place)" + (band ? BandTuneSings : EvenPaceKept);
+                yield break;
+            }
+        }
+    }
+
+    /// <summary>The section the form plays most — the chorus, as a song is built — by its name and the
+    /// span of its first playing: of the ties, one named for it (chorus, sabi, refrain, hook), else the
+    /// one that comes last. None when nothing is played twice.</summary>
+    private static (string Name, int Start, int End)? ChorusOf(MidiFile midi)
+    {
+        var spans = PlayedSpans(midi);
+        if (spans.Count < 2)
+            return null;
+        var plays = midi.SectionStarts.GroupBy(s => s.Value).ToDictionary(g => g.Key, g => g.Count(), System.StringComparer.Ordinal);
+        int most = plays.Values.Max();
+        if (most < 2)
+            return null;
+        var tied = spans.Where(s => plays[s.Name] == most).ToList();
+        var named = tied.Where(s => System.Text.RegularExpressions.Regex.IsMatch(s.Name, "chorus|sabi|refrain|hook", System.Text.RegularExpressions.RegexOptions.IgnoreCase)).ToList();
+        return named.Count > 0 ? named[0] : tied[^1];
+    }
+
+    /// <summary>The chorus opening with another section's first phrase — its first two bars the same
+    /// notes at the same places. A chorus is the hook a song is remembered by.</summary>
+    private static IEnumerable<string> ChorusOpensLikeAnother(MidiFile midi, string tune, IReadOnlyList<(int StartTick, int DurationTicks, int Pitch)> notes, List<int> barList)
+    {
+        if (ChorusOf(midi) is not { } chorus)
+            yield break;
+        string? Opening(int start, out int bar)
+        {
+            int b = bar = barList.IndexOf(start);
+            if (b < 0 || b + 2 >= barList.Count)
+                return null;
+            var mine = notes.Where(n => n.StartTick >= barList[b] && n.StartTick < barList[b + 2]).Select(n => $"{n.StartTick - barList[b]}:{n.Pitch}").ToList();
+            return mine.Count >= 3 ? string.Join(",", mine) : null;
+        }
+        if (Opening(chorus.Start, out int chorusBar) is not { } hook)
+            yield break;
+        foreach (var (name, start, _) in PlayedSpans(midi))
+        {
+            if (name == chorus.Name || Opening(start, out int bar) != hook)
+                continue;
+            yield return $"{tune}, the melody: the chorus ({chorus.Name}) opens with {name}'s first phrase, note for note (bars {bar + 1}–{bar + 2} "
+                + $"and {chorusBar + 1}–{chorusBar + 2}, as the form plays them) — a chorus is the hook the song is remembered by: give it an "
+                + "opening of its own, in another rhythm, from a higher note, with a leap the verse does not make.";
+            yield break;
+        }
+    }
+
+    // A tune this long is read for where its peak comes.
+    private const int PeakFewestNotes = 16;
+
+    /// <summary>The melody's highest note spent in its first phrase (its first two bars sung) and never
+    /// passed; else the chorus climbing no higher than the sections before it. A song climbs to its
+    /// chorus.</summary>
+    private static IEnumerable<string> PeakSpentEarly(MidiFile midi, string tune, IReadOnlyList<(int StartTick, int DurationTicks, int Pitch)> notes,
+        List<int> barList, int fifths)
+    {
+        if (notes.Count < PeakFewestNotes)
+            yield break;
+        int top = notes.Max(n => n.Pitch);
+        int topAt = notes.Where(n => n.Pitch == top).Min(n => n.StartTick);
+        int firstBar = barList.Count(b => b <= notes[0].StartTick) - 1;
+        int phraseEnd = barList[System.Math.Min(firstBar + 2, barList.Count - 1)];
+        if (topAt < phraseEnd)
+        {
+            yield return $"{tune}, the melody: its highest note, {PartRanges.SpelledFromPitch(top, fifths)}, comes in its first phrase (bar "
+                + $"{barList.Count(b => b <= topAt)}, as the form plays them) and is never passed — a song climbs: start the verse lower "
+                + "and keep the top for the chorus's hook, or for the last chorus.";
+            yield break;
+        }
+        if (ChorusOf(midi) is not { } chorus)
+            yield break;
+        var before = notes.Where(n => n.StartTick < chorus.Start).ToList();
+        var inChorus = notes.Where(n => n.StartTick >= chorus.Start && n.StartTick < chorus.End).ToList();
+        if (before.Count == 0 || inChorus.Count == 0)
+            yield break;
+        int chorusTop = inChorus.Max(n => n.Pitch), beforeTop = before.Max(n => n.Pitch);
+        if (chorusTop <= beforeTop)
+            yield return $"{tune}, the melody: the chorus ({chorus.Name}) climbs no higher than the sections before it (its top "
+                + $"{PartRanges.SpelledFromPitch(chorusTop, fifths)}, theirs {PartRanges.SpelledFromPitch(beforeTop, fifths)}) — the chorus is the "
+                + "song's high ground: lift its hook a third or more above the verse's peak.";
     }
 
     // One chord progression under the whole piece (owner's review 2026-11-01: a rock instrumental

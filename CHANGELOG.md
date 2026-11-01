@@ -6,6 +6,22 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Composition checks: the tune's shape across a song
+
+- `[check]` **One rhythm in nearly every phrase is said** — two-bar phrases (else four), counted
+  from each section's first bar, three quarters of them in one rhythm: "10 of its 12 2-bar phrases
+  have the same rhythm — one formula poured into every phrase". The bar-by-bar readings missed a
+  two-bar formula, which splits into two bar rhythms of half the bars each. Owner's review
+  2026-11-01: a song's every phrase in `8 8 4 2 | 4 2 r4`.
+- `[check]` **A song's chorus with no opening of its own**: the section the form plays most
+  opening with another section's first phrase note for note. And **a peak spent early**: the
+  tune's highest note in its first phrase and never passed, or the chorus climbing no higher than
+  the sections before it. Both for a tune a lyrics track sings.
+- `[editor]` **A tune held against its chords eight times or more is turned down from Copilot's
+  chat every time**, as a bar that does not add up is; the chat had kept twelve "as colour".
+- `[docs]` The composing guide's song with words: the chorus's hook is written first — two bars
+  with the song's highest note and a rhythm of its own — then the verse, lower, in another rhythm.
+
 ### Composition checks: a singer who never breathes, a word lost from the page
 
 - `[check]` **A voice part singing 16 bars or more in a row without a rest is said** (a voice
