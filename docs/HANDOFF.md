@@ -136,10 +136,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 新しい会話。開始時 full **13876 / 0 / 2**（`-Start p1039`・HEAD `ed86982b3`・OMR の open 0）。作業場所は Lab `sessions/p1039/`。
 §1.0 ⒜ の先頭の作曲ガイダンスは曲待ちで、オーナーからの依頼も無い。**昨夜の `lysc review` を、census に入っていなかったオーナーのチャットの曲（Downloads の 147 冊＋今朝の未保存の 1 曲をログから復元＝`sessions/p1039/pieces/`）に当てたら、レビュー自身の欠陥が 4 つ見つかった。**
 - **直した**: ⑴ `key.outside` が同じパートの他の声部を「周りの和音」に数えていなかった（ギター独奏の E が自分の C7 の E の上で `[mistake]`・`Cafe-no-Midori`）／⑵ `key des minor` は `KeyFifths` の表に無く 0＝ハ長調として読まれ「58% が調の外」（`Senko-no-Michi`・調は LYS4034 が既に警告）→音で読む／⑶ 旋法も同じ経路でハ長調→読まない／⑷ `facts.tempo` が MIDI からの逆算で `4. = 96` を `♩ = 144` と言った→書かれた単位で。掃き 1363 冊の差は 3 冊が消えただけ（新規 0）。毒 5 本。⚠️ 最初の網 2 本は毒で緑だった（15 音で `key.signature` の下限 16 未満／G 短調は第 6 音を上げた E♮ も音階の内）＝書き直した。
-- **オーナーの判断待ち（作曲フローなので「入れて」待ち・`docs/compose-in-chat-design.md` §4 の末尾に 3 件）**: ⑴ 最後の修正が新しく作った欠陥は差し戻せない（`Hoshi-furu-Yoru-no-Carol`: 最初のテーマは拍どおり→「8 分が 70%」で書き直し→17 / 35 小節が拍をまたぐ→3 回目で初出＝書き込み確定）／⑵ `piano.left-reaches-melody` が伴奏の右手を melody と呼ぶ（旋律はフルート）／⑶ ピアノに強弱がほぼ無くても何も言わない。
+- **オーナーの「入れて」で 3 件実装（`docs/compose-in-chat-design.md` §1）`c3904b0df`**: ⑴ 最後の修正が新しく作った `mistake` だけもう 1 回差し戻す（`mistakeRecheckedFor`・LSP の `Mistakes`）／⑵ `piano.left-reaches-melody` は右手が旋律のときだけ／⑶ `dynamics.late` は両手を 1 人の奏者として読む。ついでに全部休みの区間は「始まる区間」に数えない（他のパートも同じ・誤報 3 冊が消えた）。`Of` の掃きは 1363 冊中 7 冊が動いた＝全部意図どおり（`sessions/p1039/checks-{base,head}.txt`）。毒 4 本。**実物の VS Code でクリスマス曲の実ログ 3 案を再生して 10 項目 PASS**（`sessions/p1039/replay/`）＝3 回目が拍またぎで差し戻され 4 回目で書き込み。⚠️ AI が実際にどう直すかは未確認＝次の曲の講評で見る。⚠️ 差し戻しが増える＝リクエストも 1 回増える。Deploy 済み（ユーザーは Reload Window）。⚠️ 罠: CRLF の文書に `(?m)…[^\r\n]*$` は当たらない（`$` は `\n` の手前）＝門の `hits 0` が止めた。
 - ⚠️ 今朝のクリスマス曲はエディタで未保存のまま（`C:\MyProj\compose-trial` は空）。本文はログの `proposeScore` にある。
 - ⚠️ Copilot のログの時刻は UTC（`22:10` は JST 7:10）。§3 の手順でファイルの時刻と比べるときに読み違える。
-- 終了時 full **13884 / 0 / 2**（`-End p1039 -DiffBase ed86982b3`・門は全部 OK）。§7 7.5: Core の差分は描画に触れないレビューの修正・REF 0／OWN 0＝LP の出典は無い。⚠️ 罠: ログ抽出の末尾に `Add-Type` を書き、共有コンソールが Core.dll を掴んで 1 回目の `-End` が MSB3027（`close_console` でやり直した）。server は作り直していない＝エディタのレビューには `Deploy-Lsp.ps1` の後に届く。
+- 終了時 full **13886 / 0 / 2**（`-End p1039 -DiffBase ed86982b3`＝`sessions/p1039/end2.log`・門は全部 OK・npm 649 緑）。§7 7.5: Core の差分は描画に触れないレビューの修正・REF 0／OWN 0＝LP の出典は無い。⚠️ 罠: ログ抽出の末尾に `Add-Type` を書き、共有コンソールが Core.dll を掴んで 1 回目の `-End` が MSB3027（`close_console` でやり直した）。
 
 
 

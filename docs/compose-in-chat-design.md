@@ -50,7 +50,11 @@ next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
      the header-language note and the drawn-key note go back together, unseen by the musician.
    - **The revision** is checked again. Findings the first check did not make go back ONCE more
      (`firstFindings`, `recheckedFor`; compared with their digits stripped).
-   - **The proposal after that** is written into the file. Whatever the check still finds is listed
+   - **The proposal after that** goes back once, and only, for a finding the review calls a `mistake`
+     (`ReviewNotes`, `Mistakes` in the response) that no earlier check made (`mistakeRecheckedFor`; owner's
+     decision 2026-11-02: a carol's theme kept to its 12/8 beats, was told "70% eighths", and came back
+     across them in 17 of 35 bars, too late). The AI is told to mend that and leave the rest.
+   - **Otherwise, and the proposal after that,** is written into the file. Whatever the check still finds is listed
      in the reply, and the AI is told to tell the musician each point and why it was left.
    - **A proposal while the composing goes on** — the chat revising its own piece, unasked, after it
      was written — is written into the file again in its place, never put on the panel
@@ -259,14 +263,3 @@ its path in `Downloads`. For each piece:
   - "The chorus does not lift": the melody's height and the level no higher than the verse's.
   - Breathing for a voice or a wind instrument (eight bars or more without a rest; except where
     the request asks for circular breathing).
-  - Three from reviewing `Hoshi-furu-Yoru-no-Carol` (2026-11-02, Lab `sessions/p1039/pieces/`), waiting for the owner:
-    - **A fault the last revision made cannot go back.** Its first theme kept to the 12/8 beats (`8 8 8 4.`). Told
-      "70% eighths" and "19% steps", the AI rewrote it as `4. 8 8 4. 2`, and 17 of 35 bars now cross a beat. That
-      finding first appeared on the third proposal, which is written as it is, and the AI told it as "the fine
-      movement of 12/8". Proposed: one more round when the last revision adds a finding the review calls a `mistake`.
-    - **`piano.left-reaches-melody` calls the right hand the melody.** The flute has the tune here, and the right
-      hand is the accompaniment. It fired on 4 of the 35 pieces with two hands; 3 have another pitched part
-      (not checked which of those has the tune there). Proposed: say it, or leave it out, when another part is the melody.
-    - **A piano with almost no level.** The hands are excused from `dynamics.late`, since a level may be written
-      in the other hand, and this piano has one `@p`, in the last bar. Proposed: excuse them only while the other
-      hand has a level.

@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Composing in the chat**: a mistake the AI's last revision makes goes back to it once more before the piece is written. A piano with no level until its last section is told so, and a left hand near the right is no longer called "into the melody" when a flute or a singer has the tune.
+
 ### A chord track written at the top level plays
 
 - `chords prog { C | G7 | }` outside any section played nothing, and every part started that many bars late. It now sounds from bar 1, as the page draws it.

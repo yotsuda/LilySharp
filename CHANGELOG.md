@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### The chat's composing checks
+
+- A mistake the chat's last revision makes (a tune written across a compound meter's beats, say) goes back to it once more, and only that, before the piece is written.
+- A piano's two hands are one player for its levels: a level in either is the piano's, and a piano with none until its last section is told. A section where a part only rests no longer counts as where it begins.
+- `piano.left-reaches-melody` speaks only where the right hand has the tune, not beside a flute's or a singer's.
+- The review reads a solo part's own lower voices as harmony, a key past seven accidentals by its notes, and leaves a mode out of its key checks. A tempo is reported in the unit it is written in (`♩. = 96`).
+
 ### A chord track written at the top level plays
 
 - `chords prog { C | G7 | }` outside any section, in a file written by section, draws from bar 1. It played nothing, and every part started that many bars late. It now sounds under the bars the page draws it over: a pickup, a section's own meter and key, and a repeat's every pass included. It takes no time, and the MusicXML and `lysc ly` carry it the same way (`lysc ly` wrote a pickup as a whole bar, three beats late, and a 3/4 bar on a 4/4 grid).
