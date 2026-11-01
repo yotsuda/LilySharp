@@ -86,6 +86,25 @@ public class DeclaredNameTokenTests
         score { staff melody }
         """;
 
+    // Owner's report 2026-11-01: `score { chords harmony plays rhythm` — `harmony` coloured, `rhythm` plain.
+    [Fact]
+    public void AStrokesPart_IsColouredWhereARowPlaysIt_AndWhereTheScoreDrawsIt()
+    {
+        const string song = """
+            part singer { instrument alto }
+            strokes rhythm { section A { 4 8 8 4 4 | } }
+            chords harmony { section A { C | } }
+            section A { singer { c'1 | } }
+            form { A }
+            score { chords harmony plays rhythm  staff singer  strokes rhythm }
+            """;
+        var parts = Coloured(song, Part);
+        Assert.Equal(3, parts.Count(p => p == "rhythm"));   // the declaration, the `plays` target, the score item
+        Assert.Contains("harmony", parts);
+        // A `plays` naming no strokes part stays plain, beside its diagnostic.
+        Assert.DoesNotContain("groove", Coloured(song.Replace("plays rhythm", "plays groove"), Part));
+    }
+
     [Fact]
     public void APartName_IsColouredWhereverItIsWritten()
     {

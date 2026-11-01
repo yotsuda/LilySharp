@@ -954,7 +954,12 @@ public sealed class ChordRowRenderSyntax : SyntaxNode
     /// <summary>The strokes part this row strums to (<c>chords prog plays rhythm</c> → "rhythm",
     /// owner's design 2026-11-01), or null: the row's chords sound at that part's strokes, and
     /// the part's one-line staff stands under the row (RenderSpecParser).</summary>
-    public string? PlaysTarget
+    public string? PlaysTarget => PlaysTargetToken?.Text;
+
+    /// <summary>The token naming the strokes part after the row's <c>plays</c>, or null — what
+    /// the editor colours as a part reference (owner's report 2026-11-01: `rhythm` plain beside
+    /// a coloured `harmony`).</summary>
+    public SyntaxTokenNode? PlaysTargetToken
     {
         get
         {
@@ -963,7 +968,7 @@ public sealed class ChordRowRenderSyntax : SyntaxNode
                     && p.Text == SyntaxFacts.ChordRowPlaysWord
                     && GetChild(i - 1) is not SyntaxTokenNode { Text: "as" }
                     && GetChild(i + 1) is SyntaxTokenNode t && SyntaxFacts.IsPartNameToken(t.Kind, t.Text))
-                    return t.Text;
+                    return t;
             return null;
         }
     }

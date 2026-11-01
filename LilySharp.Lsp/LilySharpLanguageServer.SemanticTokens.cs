@@ -210,6 +210,10 @@ public sealed partial class LilySharpLanguageServer
         // part only (LYS7006).
         if (PartReferenceFinder.ChordForTargetToken(node) is { } chordFor)
             names.PartReferences.Add(chordFor);
+        // …and the strokes part a row `plays` (owner's report 2026-11-01: `chords harmony plays
+        // rhythm` had `harmony` coloured and `rhythm` plain).
+        if (PartReferenceFinder.PlaysTargetToken(node) is { } plays)
+            names.PartReferences.Add(plays);
 
         PartReferenceFinder.CollectVoiceNames(node, names.Voices);
 

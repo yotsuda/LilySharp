@@ -74,7 +74,8 @@ workflow attaches that section to the GitHub Release verbatim.
   root-level body now outranks a by-part cell as the section's representative.
 
 - `[editor]` `score { strokes ▮` and `chords NAME plays ▮` offer the document's strokes parts;
-  `chords NAME ▮` offers `plays` (owner's request 2026-11-01).
+  `chords NAME ▮` offers `plays` (owner's request 2026-11-01). The strokes part after `plays`
+  is coloured as a part reference when it resolves (owner's report, the same day).
 
 ### Verses are `verse N { … }`, and the number is a label, not a line
 

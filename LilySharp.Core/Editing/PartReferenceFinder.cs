@@ -361,6 +361,12 @@ public static class PartReferenceFinder
         _ => null,
     };
 
+    /// <summary>The token naming the strokes part after a chord row's <c>plays</c>
+    /// (<c>chords harmony plays rhythm</c>), or null. A strokes part is declared as a part
+    /// (<c>strokes rhythm { … }</c>), so it resolves against the parts.</summary>
+    public static SyntaxTokenNode? PlaysTargetToken(SyntaxNode node)
+        => node is ChordRowRenderSyntax row ? row.PlaysTargetToken : null;
+
     /// <summary>The named voices this node introduces, appended to
     /// <paramref name="into"/> — the second half of what a <c>sings</c> target may name.
     /// </summary>
