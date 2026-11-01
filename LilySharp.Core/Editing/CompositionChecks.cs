@@ -571,7 +571,7 @@ public static class CompositionChecks
         findings.AddRange(NoBreath(midi, parts, barList, sung));
         findings.AddRange(SingersLines(midi, parts, declared is { } placed
             ? placed.Declaration.DescendantNodes<StaffRenderSyntax>().Select(s => s.PartToken?.Text).OfType<string>().ToList()
-            : []));
+            : [], fifths));
         findings.AddRange(BarsWithoutWords(midi, root, parts, barList, sung));
         findings.AddRange(PianoHolds(midi, parts, barList, sung));
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
@@ -805,7 +805,7 @@ public static class CompositionChecks
     /// <summary>The singers' parts read against each other: a pair doubling at the octave, and an
     /// inner part that leaps from chord tone to chord tone. A choir's lines; a band's or an
     /// orchestra's parts double and leap by right, so only the voice presets are read.</summary>
-    private static IEnumerable<string> SingersLines(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, IReadOnlyList<string> scoreOrder)
+    private static IEnumerable<string> SingersLines(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, IReadOnlyList<string> scoreOrder, int fifths)
     {
         var voices = parts.Where(IsVoicePreset).Select(p => p.Name.Text).ToList();
         // Top to bottom as the score stacks them, the order a choir's parts are meant in; a part
@@ -863,6 +863,17 @@ public static class CompositionChecks
             if (crossed >= CrossingsFewest && crossed >= together * CrossingsShare)
                 yield return $"{singers[i + 1]} stands above {singers[i]} at {crossed} of the {together} moments they sing together — the parts cross, and neither "
                     + "is heard as its own line: keep each voice in its own register, the lower part below, with an instrument whose range lies there.";
+        }
+        // …and on the last chord, where one crossing is one too many (owner's review 2026-11-01:
+        // ひかりをつないで closed with the soprano's E4 under the alto's G♯4).
+        if (lines.Values.Any(l => l.Count > 0))
+        {
+            int lastOnset = lines.Values.Where(l => l.Count > 0).Max(l => l[^1].Start);
+            for (int i = 0; i + 1 < singers.Count; i++)
+                if (At(lines[singers[i]], lastOnset) is { } u && At(lines[singers[i + 1]], lastOnset) is { } l && l > u)
+                    yield return $"{singers[i + 1]} ends above {singers[i]} on the last chord ({PartRanges.SpelledFromPitch(l, fifths)} over "
+                        + $"{PartRanges.SpelledFromPitch(u, fifths)}) — the closing chord is where the voices are heard most plainly: an octave mark "
+                        + "slipped? Check the section's first note, which is read afresh, and give each part its place in the chord.";
         }
         // The inner singers: neither the top nor the bottom of the stack.
         foreach (var s in singers.Skip(1).Take(singers.Count - 2))

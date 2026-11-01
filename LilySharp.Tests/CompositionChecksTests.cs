@@ -578,6 +578,15 @@ public class CompositionChecksTests
         Assert.Contains(CompositionChecks.Of(Choir(Bars(Sop), Bars("g4 e' g e'"), Bars("g'4 a' g' a'"))), f => f.StartsWith("alt: only "));
     }
 
+    // Owner's review 2026-11-01 (Hikari-o-Tsunaide): the soprano's E4 under the alto's G♯4 on the last chord.
+    [Fact]
+    public void ALastChordWithItsVoicesOutOfOrder_IsSaid()
+    {
+        string Close(string sop, string alt) => Choir(Bars(Sop)[..^("g'4 a' b' c'' | ".Length)] + sop + " | ", Bars("e'4 f' g' e'")[..^("e'4 f' g' e' | ".Length)] + alt + " | ", Bars("c4 d c g,"));
+        Assert.Contains(CompositionChecks.Of(Close("e'1", "g'1")), f => f.StartsWith("alt ends above sop on the last chord (G4 over E4)"));
+        Assert.DoesNotContain(CompositionChecks.Of(Close("g'1", "e'1")), f => f.Contains("on the last chord"));
+    }
+
     // Owner's review 2026-11-01 (Hikari-no-Michi): the piano's chords and roots from first to last, and
     // a Verse sung twice taken for the chorus over a Chorus and a FinalChorus sung once each.
     [Fact]
