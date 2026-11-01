@@ -1058,6 +1058,14 @@ internal sealed class MultiStaffLayouter
             .AsImmutableArray(staffLayouts);
     }
 
+    /// <summary>A pair's spring at rest with no ink read — the spec's ideal, or for a
+    /// LOOSE/LOOSE pair its minimum-distance (the ideal LilyPond never shows there; see the
+    /// loose-pair remark in <c>LayoutGroupsWithSkylines</c>).</summary>
+    private static double PairRestLength(VerticalSpacingSpec spec, Staff upper, Staff lower)
+        => !StaffAffinity.IsSpaceable(upper.StaffAffinity) && !StaffAffinity.IsSpaceable(lower.StaffAffinity)
+            ? spec.MinimumDistance
+            : spec.BasicDistance;
+
     /// <summary>
     /// The gap between the bottom of one staff and the top of the next: the skyline-aware
     /// distance when skylines exist, and the spec's basic-distance when they do not. See
@@ -1070,14 +1078,6 @@ internal sealed class MultiStaffLayouter
     /// the upper staff's whole HEIGHT here while the inter-group path passed the span, so the
     /// same parameter meant two things and only agreed while every pair had equal heights.
     /// </param>
-    /// <summary>A pair's spring at rest with no ink read — the spec's ideal, or for a
-    /// LOOSE/LOOSE pair its minimum-distance (the ideal LilyPond never shows there; see the
-    /// loose-pair remark in <c>LayoutGroupsWithSkylines</c>).</summary>
-    private static double PairRestLength(VerticalSpacingSpec spec, Staff upper, Staff lower)
-        => !StaffAffinity.IsSpaceable(upper.StaffAffinity) && !StaffAffinity.IsSpaceable(lower.StaffAffinity)
-            ? spec.MinimumDistance
-            : spec.BasicDistance;
-
     private static double StaffGap(
         VerticalSpacingSpec spec, double refpointSpan,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,

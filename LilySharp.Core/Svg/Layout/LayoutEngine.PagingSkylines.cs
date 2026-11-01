@@ -516,6 +516,35 @@ internal sealed partial class LayoutEngine
                     : trWave),
                 trY + (trHasGlyph ? EngravingDefaults.TrillSpannerTextOffsetDown : trWave));
         }
+        // The ottava's drawn ink, the same three pieces its paging boxes are built from: the
+        // label centred on the line, the line, and the hook. The silhouette alone left it out
+        // of this scalar, which is what the title's spring and the page's top spring read, so
+        // a first system's "8va" printed through the title (OMR request 18, 2026-11-01).
+        // LILYPOND-REF: scm/define-grobs.scm:2721 OttavaBracket vertical-skylines from its stencil.
+        // LILYPOND-REF: lily/page-layout-problem.cc:625-633 append_system — the title's floor
+        //   reads the system's up skyline.
+        if (!ann.OttavaBrackets.IsDefaultOrEmpty)
+            foreach (var ob in ann.OttavaBrackets)
+            {
+                double obTop = EngravingDefaults.StaffLineThickness / 2.0;
+                double obBottom = obTop;
+                if (!string.IsNullOrEmpty(ob.Text))
+                {
+                    var ink = fonts.Ink(ob.Text, OttavaBracketEngraver.LabelEm(fonts),
+                        TextRole.Ottava, OttavaBracketEngraver.LabelStyle(fonts));
+                    double halfInk = (ink.Top - ink.Bottom) / 2.0;
+                    obTop = Math.Max(obTop, halfInk);
+                    obBottom = Math.Max(obBottom, halfInk);
+                }
+                if (ob.EdgeHeight > 0)
+                {
+                    if (ob.IsAbove)
+                        obBottom = Math.Max(obBottom, ob.EdgeHeight);
+                    else
+                        obTop = Math.Max(obTop, ob.EdgeHeight);
+                }
+                Add(ob.StartMeasureIndex, -ob.YUp - obTop, -ob.YUp + obBottom);
+            }
         // Figured-bass rows hang below the staff; a skyline-dropped row must
         // widen the gap to the NEXT system, or its digits print through that
         // system's volta boxes / high notes (showcase/04).

@@ -4,6 +4,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### An ottava no longer prints through the title
+
+- A first system's "8va" now stands clear under the title, and an "8vb" under the last staff has its room on the page.
+
 ### A rest no longer stands on the next system's stems
 
 - A rest that another voice pushed out of the staff now keeps the system below clear of it.

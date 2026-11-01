@@ -6,6 +6,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### An ottava no longer prints through the title
+
+- `[engraving]` **The page reserves a system's ottava.** Its label, line and hook were on the system's silhouette
+  but not in the extent the title's and the page's springs read, so a first system's "8va" printed through the
+  title, as LilyPond 2.26.0 does not, and an "8vb" under the last staff had no room in the page's height (OMR request 18).
+
 ### A rest pushed out of the staff keeps the next system clear
 
 - `[layout]` **The page spaces systems by a rest where it was pushed to.** The staff's own silhouette
