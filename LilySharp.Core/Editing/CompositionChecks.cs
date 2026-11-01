@@ -102,8 +102,10 @@ public static class CompositionChecks
         findings.AddRange(DynamicDrops(root));
         findings.AddRange(PhraseDrops(root));
         findings.AddRange(LevelsSetNotShaped(root));
-        findings.AddRange(LateLevels(root, parts.Where(p => RoleOf(p).Drums || InstrumentOf(p) is "" || InstrumentOf(p).StartsWith("piano", System.StringComparison.Ordinal))
-            .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)));
+        var pianoHands = parts.Where(p => InstrumentOf(p) is "piano-left" or "piano-right").Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
+        findings.AddRange(LateLevels(root, parts.Where(p => (RoleOf(p).Drums || InstrumentOf(p) is "" || InstrumentOf(p).StartsWith("piano", System.StringComparison.Ordinal))
+                && !pianoHands.Contains(p.Name.Text))
+            .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal), pianoHands));
         findings.AddRange(CopiedSections(root));
         findings.AddRange(ReplayedSections(root));
         findings.AddRange(CrashesOffThePhrases(root, parts.Where(p => RoleOf(p).Drums).Select(p => p.Name.Text)
@@ -510,7 +512,9 @@ public static class CompositionChecks
                 })
                 .Select(n => BarOf(n.StartTick)).Distinct().OrderBy(b => b).ToList();
             int played = lh.Concat(rh).Select(n => BarOf(n.StartTick)).Distinct().Count();
-            if (into.Count >= HandsMeetFewestBars && into.Count >= played * HandsMeetShare)
+            // Only where the right hand has the tune (owner's decision 2026-11-02: beside a flute's tune, the
+            // right hand's chords are the accompaniment, and were called the melody).
+            if (melodies.Contains(rights[0]) && into.Count >= HandsMeetFewestBars && into.Count >= played * HandsMeetShare)
                 findings.Add(new("piano.left-reaches-melody", $"{lefts[0]}, {rights[0]}: in {into.Count} of {played} bars the left hand reaches the melody — the right hand's own note "
                     + $"or above it (bars {string.Join(", ", into.Take(6))}{(into.Count > 6 ? ", …" : "")}, as the form plays them): the melody is "
                     + "lost in its accompaniment. Keep the left hand's figure below the tune, round C3 up toward middle C.") { Parts = [lefts[0], rights[0]], Bars = into });
@@ -2110,11 +2114,14 @@ public static class CompositionChecks
     /// A part whose levels begin after its music does: the first section it plays in, as the form
     /// plays them, writes none (owner's trial 2026-10-30: a rock trio's guitar and bass wrote their
     /// first level in the last bar of the chorus, twenty bars in, and the drums none). Drums need
-    /// none, as for a part with no level at all — said apart — nor does a piano's hand, its levels
-    /// written between the staves, in the other hand's part.
+    /// none, as for a part with no level at all — said apart. A piano's two hands are read as one
+    /// player, its levels written between the staves, in either hand's part (owner's decision
+    /// 2026-11-02: a carol's piano had one `@p`, in its last bar). A section where a part only rests
+    /// is not where it begins.
     /// </summary>
-    private static IEnumerable<CompositionFinding> LateLevels(SyntaxNode root, HashSet<string> drums)
+    private static IEnumerable<CompositionFinding> LateLevels(SyntaxNode root, HashSet<string> drums, HashSet<string> hands)
     {
+        static bool Plays(PartBlockSyntax cell) => !System.Text.RegularExpressions.Regex.IsMatch(cell.ToFullString(), @"^\s*\w+\s*\{[\s|Rrs\d.*]*\}\s*$");
         var phrases = root.DescendantNodes<PhraseDeclarationSyntax>()
             .Where(p => p.DescendantNodes<DynamicSyntax>().Any(d => Levels.Contains(d.DynamicToken.Text)))
             .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
@@ -2126,8 +2133,8 @@ public static class CompositionChecks
         var late = new List<(string Part, string? From)>();
         foreach (var part in root.DescendantNodes<PartBlockSyntax>().Select(b => b.PartName.Text).Distinct().Where(p => !drums.Contains(p)))
         {
-            var cells = played.Select(s => sections[s].DescendantNodes<PartBlockSyntax>().Where(b => b.PartName.Text == part).ToList())
-                .Select((c, i) => (Section: played[i], Cells: c)).Where(c => c.Cells.Count > 0).ToList();
+            var cells = played.Select(s => sections[s].DescendantNodes<PartBlockSyntax>().Where(b => b.PartName.Text == part || (hands.Contains(part) && hands.Contains(b.PartName.Text))).ToList())
+                .Select((c, i) => (Section: played[i], Cells: c)).Where(c => c.Cells.Any(Plays)).ToList();
             if (cells.Count == 0 || cells[0].Cells.Any(HasLevel))
                 continue;
             var from = cells.FirstOrDefault(c => c.Cells.Any(HasLevel));

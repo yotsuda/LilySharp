@@ -1470,10 +1470,15 @@ public sealed partial class LilySharpLanguageServer
     /// </summary>
     [JsonRpcMethod("lilysharp/compositionCheck", UseSingleObjectParameterDeserialization = true)]
     public Task<CompositionCheckResponse> CompositionCheckAsync(CheckCandidateParams @params, CancellationToken token)
-        => OffDispatch(() => new CompositionCheckResponse
+        => OffDispatch(() =>
         {
-            Findings = [.. LilySharp.Core.Editing.CompositionChecks.Of(@params.Text ?? "")],
-            Ranges = [.. LilySharp.Core.Midi.PartRanges.Lines(@params.Text ?? "")],
+            var findings = LilySharp.Core.Editing.CompositionChecks.Findings(@params.Text ?? "");
+            return new CompositionCheckResponse
+            {
+                Findings = [.. findings.Select(f => f.Message)],
+                Mistakes = [.. findings.Where(f => LilySharp.Core.Editing.ReviewNotes.All[f.Id].Kind == LilySharp.Core.Editing.ReviewKind.Mistake).Select(f => f.Message)],
+                Ranges = [.. LilySharp.Core.Midi.PartRanges.Lines(@params.Text ?? "")],
+            };
         }, token);
 
     /// <summary>

@@ -770,6 +770,9 @@ public class CompleteTextItem
 public class CompositionCheckResponse
 {
     public string[] Findings { get; set; } = System.Array.Empty<string>();
+    /// <summary>Those of <see cref="Findings"/> the review calls a mistake
+    /// (<see cref="LilySharp.Core.Editing.ReviewNotes"/>): almost surely unintended, not a choice to weigh.</summary>
+    public string[] Mistakes { get; set; } = System.Array.Empty<string>();
     /// <summary>Each part's range, one line each (<see cref="LilySharp.Core.Midi.PartRanges.Lines"/>):
     /// what the piece is, said beside what the check finds in it.</summary>
     public string[] Ranges { get; set; } = System.Array.Empty<string>();

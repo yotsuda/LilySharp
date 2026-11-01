@@ -666,6 +666,8 @@ const musicCheckedFor = new Set<string>();
  *  the files whose revision has been sent back for what it brought in: the second time, the last. */
 const firstFindings = new Map<string, Set<string>>();
 const recheckedFor = new Set<string>();
+/** The files whose last revision has been sent back for a mistake it made: once, after the two above. */
+const mistakeRecheckedFor = new Set<string>();
 const findingKey = (finding: string) => finding.replace(/\d+/g, '#');
 
 /** The proposal shown and decided on; what is told to the chat. */
@@ -830,12 +832,26 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             const brought = kept.filter(m => !first.has(findingKey(m)));
             if (brought.length > 0 && !recheckedFor.has(uri.toString())) {
                 recheckedFor.add(uri.toString());
+                firstFindings.set(uri.toString(), new Set([...first, ...kept.map(findingKey)]));
                 deps.log(`AI proposal (chat): revision sent back — as music: ${brought.join(' / ')}`);
                 return 'Not shown to the musician yet. Lily#\'s check finds this in the revision, not in the piece before '
                     + 'it — it counts notes and does not know the kind of music you mean: take what helps the piece, and '
                     + `leave what does not fit it —\n${brought.map(m => `- ${m}`).join('\n')}\n`
                     + 'Revise the piece with these in mind and call lilysharp_proposeScore again with the whole text. '
-                    + 'The proposal after this one is written as it is, and what the check still finds in it is told to the musician.'
+                    + 'The proposal after this one is written, unless it makes a mistake the piece did not have, and what the check still finds in it is told to the musician.'
+                    + rangesSaid(ranges);
+            }
+            // A mistake the last revision made goes back too, once (owner's decision 2026-11-02: a carol's
+            // theme kept to its 12/8 beats, was told "70% eighths", and came back across them in 17 of 35
+            // bars, too late to be sent back). The rest of the last revision's findings are told.
+            const mistakes = report.mistakes.filter(m => !first.has(findingKey(m)));
+            if (mistakes.length > 0 && !mistakeRecheckedFor.has(uri.toString())) {
+                mistakeRecheckedFor.add(uri.toString());
+                deps.log(`AI proposal (chat): revision sent back for a mistake it made: ${mistakes.join(' / ')}`);
+                return 'Not shown to the musician yet. Your last revision made this mistake, which the piece before it did not have '
+                    + `— almost surely not what you meant:\n${mistakes.map(m => `- ${m}`).join('\n')}\n`
+                    + 'Mend it and leave the rest as it is, and call lilysharp_proposeScore again with the whole text; if it is as you meant it, '
+                    + 'send the piece as it is and say why in the proposal\'s note. The proposal after this one is written as it is, and what the check still finds in it is told to the musician.'
                     + rangesSaid(ranges);
             }
         }
@@ -2174,12 +2190,12 @@ async function compositionFindings(client: LanguageClient, text: string): Promis
 /** The music check's findings, and each part's range as one line ("melody: C4–B4, most of its
  *  time E4–G4") — what the piece is, for a chat to read back what it wrote (owner's request
  *  2026-10-29: a beginner's piece meant for C4–G4 reached B4 by an octave slip). */
-async function compositionReport(client: LanguageClient, text: string): Promise<{ findings: string[]; ranges: string[] }> {
+async function compositionReport(client: LanguageClient, text: string): Promise<{ findings: string[]; mistakes: string[]; ranges: string[] }> {
     try {
-        const resp = await client.sendRequest<{ Findings: string[]; Ranges?: string[] }>('lilysharp/compositionCheck', { Text: text });
-        return { findings: resp?.Findings ?? [], ranges: resp?.Ranges ?? [] };
+        const resp = await client.sendRequest<{ Findings: string[]; Mistakes?: string[]; Ranges?: string[] }>('lilysharp/compositionCheck', { Text: text });
+        return { findings: resp?.Findings ?? [], mistakes: resp?.Mistakes ?? [], ranges: resp?.Ranges ?? [] };
     } catch {
-        return { findings: [], ranges: [] };
+        return { findings: [], mistakes: [], ranges: [] };
     }
 }
 

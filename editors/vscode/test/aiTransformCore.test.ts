@@ -184,7 +184,13 @@ describe('a proposal from Copilot\'s chat', () => {
         // decision 2026-10-30: a revision's bass slipped two octaves and was written in untold).
         assert.match(src, /firstFindings\.set\(uri\.toString\(\), new Set\(report\.findings\.map\(findingKey\)\)\);/);
         assert.match(src, /const brought = kept\.filter\(m => !first\.has\(findingKey\(m\)\)\);\s*if \(brought\.length > 0 && !recheckedFor\.has\(uri\.toString\(\)\)\) \{\s*recheckedFor\.add\(uri\.toString\(\)\);/);
-        assert.match(src, /'The proposal after this one is written as it is, and what the check still finds in it is told to the musician\.'\s*\+ rangesSaid\(ranges\);/);
+        assert.match(src, /'The proposal after this one is written, unless it makes a mistake the piece did not have, and what the check still finds in it is told to the musician\.'\s*\+ rangesSaid\(ranges\);/);
+        // A mistake that revision made goes back once too, against everything found so far (owner's
+        // decision 2026-11-02: a carol's theme came back across its beats, too late to be sent back).
+        assert.match(src, /recheckedFor\.add\(uri\.toString\(\)\);\s*firstFindings\.set\(uri\.toString\(\), new Set\(\[\.\.\.first, \.\.\.kept\.map\(findingKey\)\]\)\);/);
+        assert.match(src, /const mistakes = report\.mistakes\.filter\(m => !first\.has\(findingKey\(m\)\)\);\s*if \(mistakes\.length > 0 && !mistakeRecheckedFor\.has\(uri\.toString\(\)\)\) \{\s*mistakeRecheckedFor\.add\(uri\.toString\(\)\);/);
+        assert.ok(src.indexOf('const brought = kept.filter(') < src.indexOf('const mistakes = report.mistakes.filter('));
+        assert.ok(src.indexOf('const mistakes = report.mistakes.filter(') < src.indexOf('const model = await chatModelName();'));
         // The revision checked again, written, and what still holds told to the musician (owner's
         // decision 2026-10-30: a rock piece sent back as too short came again as short, unmentioned).
         assert.match(src, /if \(ranges === undefined\) \{\s*const report = await compositionReport\(client, text\);\s*ranges = report\.ranges;\s*kept = report\.findings;/);

@@ -194,6 +194,34 @@ public class CompositionChecksTests
             "d''4 b'8 a'4 g'8 | a'4 b'8 d''4. | e''4 d''8 b'4 a'8 | fis'4. a'4. | b'4 d''8 g''4. | e''4 d''8 c''4. | a'4 c''8 fis''4. | g''2. |",
             "g,8 d b, d g d | fis,8 a, d a, fis a, | e,8 b, g b, e b, | d,8 a, fis a, d a, | b,8 d g d b, d | c,8 g, e g, c g, | d,8 a, c a, fis a, | g,2. |");
         Assert.DoesNotContain(CompositionChecks.Of(kept), f => f.Contains("reaches the melody") || f.Contains("twelfth"));
+        // The same hands beside a flute: the tune is the flute's, and the right hand accompanies it.
+        string flute = into.Replace($"{Hands}\n", $"part fl {{ instrument flute }}\n{Hands}\n")
+            .Replace("section A {\n", "section A {\n  fl { d''2. | d''2. | d''2. | d''2. | d''2. | d''2. | d''2. | d''2. | }\n")
+            .Replace("score { grandStaff", "score { staff fl grandStaff");
+        Assert.Contains(CompositionChecks.Findings(flute), f => f.Id == "piano.figure-wide");
+        Assert.DoesNotContain(CompositionChecks.Findings(flute), f => f.Id == "piano.left-reaches-melody");
+    }
+
+    // Owner's decision 2026-11-02: a carol's piano wrote one @p, in its last bar, and no check spoke.
+    [Fact]
+    public void APianosHands_AreOnePlayer_ForALateLevel()
+    {
+        string Book(string introRh, string introLh, string coda, string fl = "c''1 | c''1 |") => "title \"Late\"\ntime 4/4\noctave absolute\n"
+            + $"part fl {{ instrument flute }}\n{Hands}\n"
+            + $"section Intro {{\n  fl {{ {fl} }}\n  rh {{ {introRh} }}\n  lh {{ {introLh} }}\n}}\n"
+            + $"section Coda {{\n  fl {{ c''1 | c''1 | }}\n  rh {{ <e' g'>1{coda} | <e' g'>1 | }}\n  lh {{ c1 | c1 | }}\n}}\n"
+            + "form { Intro Coda }\nscore { staff fl grandStaff { staff rh  staff lh } }\n";
+        string Late(string book) => string.Join(" / ", CompositionChecks.Findings(book).Where(f => f.Id == "dynamics.late").Select(f => f.Message));
+
+        // Neither hand has a level before the coda.
+        Assert.Contains("rh, lh: no level until Coda", Late(Book("<e' g'>1 | <e' g'>1 |", "c1 | c1 |", "@p", "c''1@p | c''1 |")));
+        // A level in either hand is the piano's.
+        Assert.DoesNotContain("no level until", Late(Book("<e' g'>1@p | <e' g'>1 |", "c1 | c1 |", "", "c''1@p | c''1 |")));
+        Assert.DoesNotContain("no level until", Late(Book("<e' g'>1 | <e' g'>1 |", "c1@p | c1 |", "", "c''1@p | c''1 |")));
+        // A piano that only rests in the first section begins in the next.
+        Assert.DoesNotContain("no level until", Late(Book("R | R |", "R | R |", "@p", "c''1@p | c''1 |")));
+        // …and so does a flute: the rule is every part's.
+        Assert.DoesNotContain("fl", Late(Book("<e' g'>1@p | <e' g'>1 |", "c1 | c1 |", "", "R | r2 r4 r4 |").Replace("fl { c''1 | c''1 | }\n  rh { <e' g'>1", "fl { c''1@mp | c''1 | }\n  rh { <e' g'>1")));
     }
 
     // Owner's trial 2026-10-29: a 6/8 wedding piece sang `b'8 d''4. b'8 a'8` across its beats, and

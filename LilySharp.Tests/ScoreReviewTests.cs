@@ -68,6 +68,14 @@ public class ScoreReviewTests
     }
 
     [Fact]
+    public void AMistake_IsWhatTheLastRevisionIsSentBackFor()
+    {
+        // What lilysharp/compositionCheck tells apart: a note across a compound meter's beats, not a rhythm to weigh.
+        Assert.Equal(ReviewKind.Mistake, ReviewNotes.All["meter.across-beats"].Kind);
+        Assert.Equal(ReviewKind.Style, ReviewNotes.All["piano.left-reaches-melody"].Kind);
+    }
+
+    [Fact]
     public void TheFacts_SayWhatThePieceIs()
     {
         var report = Report(Piece);
