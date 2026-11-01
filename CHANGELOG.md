@@ -6,6 +6,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Hairpins back to back meet with a gap
+
+- `[render]` **A crescendo ending on the note a decrescendo starts on no longer runs through it**:
+  `d''8@!cresc@decresc` drew the crescendo to the note's right edge, across the decrescendo's
+  open end. As in LilyPond (hairpin.cc, adjacent spanners), each now stops a third of the bound
+  padding short of the note column's centre, the two open ends two thirds of a space apart. A
+  niente pair keeps its shared circle; a dynamic text on the note stays the bound.
+
 ### The preview lights a drum chart's bar where the chart is written
 
 - `[editor]` **A drum chart of phrase words no longer keeps its whole staff lit**: a kit of

@@ -103,6 +103,26 @@ public sealed record HairpinItem(
     /// </remarks>
     public bool TipAdjacent { get; init; }
 
+    /// <summary>
+    /// Another hairpin starts on the note this one ends on (<c>… d''8@!cresc@decresc …</c>), the
+    /// two back to back: each stops a third of the bound padding short of the note column's
+    /// centre, so the wedges meet with a gap of two thirds and never cross (owner's report
+    /// 2026-11-01: the crescendo ran to the note's right edge, through the decrescendo's open
+    /// end). Not at a bar's head, where the ending hairpin's bound is the bar line.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/hairpin.cc:241-260 Hairpin::print — neighbor_found, not circled:
+    ///   <c>x_points[d] = e.center () - d * padding / 3</c>; lily/dynamic-engraver.cc:155-165 —
+    ///   the hairpin ending and the one starting at one timestep are adjacent-spanners.
+    ///   Measured (2.26.0, Lab sessions/p1036/chop/adj.svg): <c>c'8\&lt; d'8 e'8\!\&gt; f'8 g'8\!</c>, the
+    ///   crescendo ends at 22.448 and the decrescendo starts at 23.115, 0.667 apart.
+    /// </remarks>
+    public bool AdjacentAtEnd { get; init; }
+
+    /// <summary>This hairpin starts on the note another ends on — the other side of
+    /// <see cref="AdjacentAtEnd"/>.</summary>
+    public bool AdjacentAtStart { get; init; }
+
     // Identity, not value equality: see ModelIdentity.
     public bool Equals(HairpinItem? other) => ReferenceEquals(this, other);
 

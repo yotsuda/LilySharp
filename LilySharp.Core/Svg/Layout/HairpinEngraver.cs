@@ -364,6 +364,17 @@ internal static class HairpinEngraver
                     ownEndX = measureLayouts[hairpin.EndMeasureIndex].X - BoundPadding;
                 }
             }
+            else if (hairpin.AdjacentAtEnd && !(hairpin.TipAdjacent && hairpin.Direction == HairpinDirection.Decrescendo)
+                     && !dynamicAt.ContainsKey((hairpin.EndMeasureIndex, hairpin.EndItemIndex, hairpin.StaffIndex))
+                     && ColumnExtent(hairpin.EndMeasureIndex, hairpin.EndItemIndex, hpMeasures,
+                         measureLayouts) is { } metColumn)
+            {
+                // Back to back with the hairpin starting on this note, no circle between: a third
+                // of the padding short of the column's centre, the other's start as far past it
+                // (HairpinItem.AdjacentAtEnd). A dynamic text on the note is the bound instead.
+                // LILYPOND-REF: lily/hairpin.cc:258-259 — x_points[d] = e.center () - d * padding / 3
+                ownEndX = (metColumn.Left + metColumn.Right) / 2 - BoundPadding / 3;
+            }
             else if ((hairpin.NienteAtEnd != null || hairpin.EndsAtStop)
                      && ColumnExtent(hairpin.EndMeasureIndex, hairpin.EndItemIndex, hpMeasures,
                          measureLayouts) is { } endColumn)
@@ -411,6 +422,14 @@ internal static class HairpinEngraver
             // LILYPOND-REF: lily/hairpin.cc:243-252 Hairpin::print — x_points[LEFT] =
             //   e.center () - (rad - thick / 2.0)
             ownStartX = (startColumn.Left + startColumn.Right) / 2 - (CircleRadius - CircleThickness / 2.0);
+        else if (segment.IsFirst && hairpin.AdjacentAtStart
+            && !dynamicAt.ContainsKey((hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin.StaffIndex))
+            && ColumnExtent(hairpin.StartMeasureIndex, hairpin.StartItemIndex, hpMeasures,
+                measureLayouts) is { } metColumn)
+            // Back to back with the hairpin ending on this note: a third of the padding past the
+            // column's centre (HairpinItem.AdjacentAtStart; the mirror of the end above).
+            // LILYPOND-REF: lily/hairpin.cc:258-259 — x_points[d] = e.center () - d * padding / 3
+            ownStartX = (metColumn.Left + metColumn.Right) / 2 + BoundPadding / 3;
         else if (segment.IsFirst)
             ownStartX =
                 dynamicAt.TryGetValue(
@@ -1080,29 +1099,31 @@ internal static class HairpinEngraver
     /// </remarks>
     private static ImmutableArray<HairpinItem> MarkAdjacentTips(ImmutableArray<HairpinItem>.Builder hairpins)
     {
-        // ⚠️ Not at a bar's head: there the decrescendo's right bound is rewritten to the bar
-        // line (to-barline), which is not the column the crescendo starts on, so LilyPond
-        // finds no adjacent hairpin and draws two circles.
+        // ⚠️ Not at a bar's head: there the ending hairpin's right bound is rewritten to the bar
+        // line (to-barline), which is not the column the next one starts on, so LilyPond
+        // finds no adjacent hairpin (and, for a niente pair, draws two circles).
         // LILYPOND-REF: lily/hairpin.cc:232-235 — adjacent->get_bound (-d)->get_column () ==
         //   b->get_column (); lily/bar-engraver.cc:579-587 acknowledge_end_spanner
-        HashSet<DynamicItem>? growsFrom = null;
-        foreach (var h in hairpins)
-            if (h.Direction == HairpinDirection.Crescendo && h.NienteAtStart is { ItemIndex: > 0 } n)
-                (growsFrom ??= new HashSet<DynamicItem>()).Add(n);
-        if (growsFrom == null)
-            return hairpins.ToImmutable();
-        var fadesTo = new HashSet<DynamicItem>();
+        // Any two hairpins back to back on one note are adjacent (HairpinItem.AdjacentAtEnd /
+        // AdjacentAtStart; owner's report 2026-11-01); the circled tip is their special case, a
+        // decrescendo al niente met by a crescendo dal niente on the same niente.
         for (int i = 0; i < hairpins.Count; i++)
-            if (hairpins[i].Direction == HairpinDirection.Decrescendo
-                && hairpins[i].NienteAtEnd is { } n && growsFrom.Contains(n))
+        {
+            var ending = hairpins[i];
+            if (ending.EndItemIndex <= 0)
+                continue;
+            for (int j = 0; j < hairpins.Count; j++)
             {
-                fadesTo.Add(n);
-                hairpins[i] = hairpins[i] with { TipAdjacent = true };
+                var starting = hairpins[j];
+                if (j == i || starting.StaffIndex != ending.StaffIndex
+                    || starting.StartMeasureIndex != ending.EndMeasureIndex || starting.StartItemIndex != ending.EndItemIndex)
+                    continue;
+                bool circled = ending.Direction == HairpinDirection.Decrescendo && ending.NienteAtEnd is { } n
+                    && starting.Direction == HairpinDirection.Crescendo && ReferenceEquals(starting.NienteAtStart, n);
+                hairpins[i] = hairpins[i] with { AdjacentAtEnd = true, TipAdjacent = hairpins[i].TipAdjacent || circled };
+                hairpins[j] = hairpins[j] with { AdjacentAtStart = true, TipAdjacent = hairpins[j].TipAdjacent || circled };
             }
-        for (int i = 0; i < hairpins.Count; i++)
-            if (hairpins[i].Direction == HairpinDirection.Crescendo
-                && hairpins[i].NienteAtStart is { } n && fadesTo.Contains(n))
-                hairpins[i] = hairpins[i] with { TipAdjacent = true };
+        }
         return hairpins.ToImmutable();
     }
 
