@@ -126,6 +126,14 @@ public sealed partial class LilyPondExporter
                             // …and its diagrams under the names, when some entry writes a shape.
                             if (_fretVars.TryGetValue(chords.PartName, out var fretVar))
                                 rows.Add("    \\new FretBoards " + FretBoardsWith(chords.PartName) + "\\" + fretVar + "\n");
+                            // `chords prog plays rhythm` (2026-11-01): the strokes part's one-line
+                            // staff under the row, where the page places it (RenderSpecParser).
+                            if (chords.PlaysTarget is { } strokesPart)
+                            {
+                                rows.Add(EmitStaff(strokesPart, parts, partVars, tab: false, "    ",
+                                    selectors: RenderSpecParser.StrokesStaffSpec(strokesPart)));
+                                lastMainStaffPart = strokesPart;
+                            }
                             // The page can show the row as degrees of the key; LilyPond
                             // prints the names it realizes, so say so once.
                             if (string.Equals(chords.DisplayModeText, "roman", StringComparison.OrdinalIgnoreCase))

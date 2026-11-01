@@ -76,6 +76,11 @@ public sealed record StaffSpec(
     /// suppressed (`~`).</summary>
     public string? ShortInstrumentName { get; init; }
 
+    /// <summary>The folded chord row's own <c>plays</c> (<c>chords prog plays rhythm</c> folded over
+    /// the strokes staff it places, RenderSpecParser.FoldAdjacentRows): the strokes part the row's
+    /// chords sound at (MidiExporter.StrokesOfPlacedRows), or null.</summary>
+    public string? ChordPlays { get; init; }
+
     /// <summary>The folded chord row's own <c>for</c> (<c>chords prog for tp  staff tp</c>):
     /// the part whose player's reading it prints, or null when the row wrote none
     /// (<see cref="Semantics.ChordTrackPitch.ReaderOfRow"/>).</summary>
@@ -260,6 +265,12 @@ public sealed record ChordRowSpec(
     /// <summary>The row's own <c>for</c> (<c>chords prog for tp</c>): the part whose player's
     /// reading it prints, or null when it wrote none (<see cref="Semantics.ChordTrackPitch.ReaderOfRow"/>).</summary>
     public string? For { get; init; }
+
+    /// <summary>The strokes part the row strums to (<c>chords prog plays rhythm</c>, owner's design
+    /// 2026-11-01), or null: the MIDI sounds the row's chords at that part's strokes
+    /// (MidiExporter.PlayChordRow), and RenderSpecParser places the part's one-line staff
+    /// right under this row.</summary>
+    public string? Plays { get; init; }
 }
 
 /// <summary>

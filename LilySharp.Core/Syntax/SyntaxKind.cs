@@ -199,6 +199,11 @@ public enum SyntaxKind : ushort
     LyricsKeyword,
     /// <summary>The <c>chords</c> keyword (independent chord part: <c>chords name { ... }</c> plus a score row).</summary>
     ChordsKeyword,
+    /// <summary>The <c>strokes</c> keyword (owner's design 2026-11-01): a part of strokes alone —
+    /// slash heads, no pitches — <c>strokes name { section A { /4 8 8 4 4 | } }</c>, drawn on a
+    /// one-line staff by a score's <c>strokes name</c> item or under a chord row's
+    /// <c>chords name plays STROKES</c>, whose chords then sound at the strokes.</summary>
+    StrokesKeyword,
     /// <summary>The <c>tuning</c> keyword.</summary>
     TuningKeyword,
     /// <summary>The <c>transpose</c> keyword.</summary>

@@ -751,6 +751,9 @@ internal sealed partial class Parser
         return Current.Kind switch
         {
             SyntaxKind.StaffKeyword => ParseStaffRender(),
+            // `strokes NAME`: the strokes part's one-line staff (2026-11-01) — a staff item
+            // under its own keyword (StaffRenderSyntax.IsStrokes).
+            SyntaxKind.StrokesKeyword => ParseStaffRender(),
             SyntaxKind.ChordsKeyword => ParseChordRowRender(),
             SyntaxKind.LyricsKeyword => ParseLyricsRowRender(),
             SyntaxKind.GrandStaffKeyword => ParseGrandStaffRender(),
@@ -790,7 +793,7 @@ internal sealed partial class Parser
             // staff groups and the bare-part-name item, and advertised braces `ossia` does not
             // take, until DocKeywordListTests grew a machine for it.
             _ => ReportStrayItem("a score",
-                    "A score body holds render items — 'staff NAME', 'tab NAME', "
+                    "A score body holds render items — 'staff NAME', 'tab NAME', 'strokes NAME', "
                     + "'grandStaff { … }', 'staffGroup { … }', 'choirStaff { … }', "
                     + "'condensedStaff { … }', 'combinedStaff { … }', 'ossia NAME', "
                     + "'chords NAME', 'lyrics NAME' — its own 'title'/'subtitle'/'composer'/'poet', "
@@ -805,7 +808,8 @@ internal sealed partial class Parser
     private StaffRenderGreen ParseStaffRender()
     {
         // staff [~] [clef] part ["display name"] [as lines N] [removeEmpty V]   (no braces; one `as`)
-        var tokens = new List<SyntaxToken> { Expect(SyntaxKind.StaffKeyword) };
+        // — or `strokes part …`, the strokes part's one-line staff (2026-11-01).
+        var tokens = new List<SyntaxToken> { Check(SyntaxKind.StrokesKeyword) ? Advance() : Expect(SyntaxKind.StaffKeyword) };
 
         // `staff ~flute` suppresses the default instrument name label.
         if (Check(SyntaxKind.Tilde))
@@ -853,14 +857,30 @@ internal sealed partial class Parser
         // A bare `chords` places the file's unnamed chord track (2026-10-09). ⚠️ So a bare
         // word right after it is always the track's name, never a MIDI-only part.
         if (IsPartNameStart() && !string.Equals(Current.Text, "as", System.StringComparison.Ordinal)
-            && !IsChordRowFor())
+            && !IsChordRowFor() && !IsChordRowPlays())
             tokens.Add(Advance());
         // `chords prog for tp`: this row prints the chords as tp's player reads them on this
         // page (Semantics.ChordTrackPitch.ReaderOfRow) — before or after the `as` selector.
+        // `chords prog plays rhythm` (2026-11-01): the row's chords sound at the strokes part's
+        // strokes, whose one-line staff stands under the row — the same places as `for`.
         ConsumeChordRowFor(tokens);
+        ConsumeChordRowPlays(tokens);
         ConsumeAsSelector(tokens);
         ConsumeChordRowFor(tokens);
+        ConsumeChordRowPlays(tokens);
         return new ChordRowRenderGreen([.. tokens]);
+    }
+
+    private bool IsChordRowPlays()
+        => Check(SyntaxKind.Identifier) && Current.Text == SyntaxFacts.ChordRowPlaysWord
+           && Peek(1) is { } next && IsPartNameToken(next);
+
+    private void ConsumeChordRowPlays(List<SyntaxToken> tokens)
+    {
+        if (!(Check(SyntaxKind.Identifier) && Current.Text == SyntaxFacts.ChordRowPlaysWord))
+            return;
+        tokens.Add(Advance());
+        tokens.Add(ExpectPartName());
     }
 
     private bool IsChordRowFor()

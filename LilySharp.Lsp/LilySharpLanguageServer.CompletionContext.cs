@@ -1957,7 +1957,7 @@ public sealed partial class LilySharpLanguageServer
     }
 
     private static bool IsNamelessBlockKeyword(string word)
-        => word is "section" or "part" or "phrase" or "form" or "chords"
+        => word is "section" or "part" or "phrase" or "form" or "chords" or "strokes"
             or "lyrics" or "voice" or "tuplet" or "grace" or "acciaccatura"
             or "appoggiatura" or "afterGrace" or "repeat" or "ossia" or "tab";
 
@@ -2135,7 +2135,7 @@ public sealed partial class LilySharpLanguageServer
             }
 
             // Structural keywords: this is not a part-music block.
-            if (name is "section" or "score" or "form" or "part" or "phrase"
+            if (name is "section" or "score" or "form" or "part" or "phrase" or "strokes"
                 or "grandstaff" or "lyrics" or "chords" or "repeat" or "tuplet"
                 or "grace" or "acciaccatura" or "appoggiatura" or "afterGrace")
                 return false;

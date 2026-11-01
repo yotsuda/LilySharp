@@ -111,7 +111,7 @@ DurationToken  = DurationBase , [ Dots ] , [ Tremolo ] ;
 ### Keywords
 
 Keyword = 'title' | 'subtitle' | 'composer' | 'poet' | 'tempo' | 'time' | 'key' | 'clef'
-        | 'part' | 'phrase' | 'section' | 'form' | 'score'
+        | 'part' | 'strokes' | 'phrase' | 'section' | 'form' | 'score'
         | 'staff' | 'grandStaff' | 'staffGroup' | 'choirStaff'
         | 'condensedStaff' | 'combinedStaff' | 'tab' | 'ossia' | 'voice'
         | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'percussion' | 'drummap'
@@ -1090,7 +1090,16 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
 (* Parts declare instruments/voices. Header attributes are written BARE — the same
    command form as the top-level commands (NO colon, NO '='). *)
 
-PartDecl       = 'part' , [ PartName ] , [ String ] , [ PartBody ] ;  (* String = display name *)
+PartDecl       = ( 'part' | 'strokes' ) , [ PartName ] , [ String ] , [ PartBody ] ;  (* String = display name *)
+                 (* 'strokes NAME { … }' (owner's design 2026-11-01) is a part that holds a
+                    RHYTHM and no pitch: slashes ('/4', then bare values '8 4' for more of
+                    them), rests, ties, bar lines and the repeat marks '%'. A note, a chord, a
+                    drum, a 'q' inside it is LYS2021 (Semantics.StrokesContentValidator). The
+                    score places it as a ONE-LINE staff with no clef, key or name ('strokes
+                    NAME', StaffRender), or under a chords row that PLAYS it ('chords NAME plays
+                    STROKES', ScoreItem): there the MIDI strikes the row's chord at each stroke,
+                    and a 'lyrics … sings STROKES' puts words under the strokes. It needs no
+                    'instrument' (the composition checks pass it by). *)
                  (* An UNNAMED 'part { … }' (2026-10-09) is allowed only as the file's ONE
                     part (LYS1007 otherwise). A score's bare 'staff' / 'tab' renders it, a
                     section's bare music is its music, and an unnamed lyrics track sings it.
@@ -1766,6 +1775,11 @@ ScoreOption    = 'transpose' , PitchToken       (* this score's transpose, compo
                     engraves a page with no music, so it is an error (LYS6002). *)
 
 ScoreItem      = StaffRender                        (* staff partName — BARE, no braces *)
+               | 'strokes' , PartRef , [ DisplayName ] , [ 'as' , StaffSelector , { StaffSelector } ]
+                                                     (* a strokes part on ONE line, no clef, key
+                                                        or name - a StaffRender under its own
+                                                        keyword ('as lines 5' widens it,
+                                                        a String names it) *)
                | 'grandStaff' , StaffGroupBody      (* a BRACE  — one instrument, two staves *)
                | 'staffGroup' , StaffGroupBody      (* a BRACKET, bar lines drawn through *)
                | 'choirStaff' , StaffGroupBody      (* a BRACKET, bar lines NOT drawn through *)
@@ -1798,14 +1812,19 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         ⚠️ keep semicolons out of comments
                                                         inside this production — the doc
                                                         tests cut the block at the first *)
-               | 'chords' , [ PartRef ] , [ 'for' , PartRef ] , [ 'as' , ( 'roman' | 'names' ) ]
+               | 'chords' , [ PartRef ] , [ 'for' , PartRef ] , [ 'as' , ( 'roman' | 'names' ) ] , [ 'plays' , PartRef ]
                                                      (* independent chord ROW (lead sheet) - bare,
                                                         the unnamed chords track. The optional
                                                         'for' (before or after 'as') names the
                                                         part whose player's reading THIS ROW
                                                         prints on this page, over the track's
                                                         own 'for' - without either the row prints
-                                                        what sounds *)
+                                                        what sounds. 'plays STROKES' (before or
+                                                        after 'as') puts the strokes part's
+                                                        one-line staff under the row and STRIKES
+                                                        the row's chord at each stroke in the
+                                                        MIDI - without it a row holds each chord
+                                                        over its slot *)
                | 'lyrics' , [ PartRef ] , [ 'sings' , PartRef ]
                                                      (* lyrics ROW. The optional 'sings' names
                                                         the melody THIS ROW sings - it overrides
@@ -2119,6 +2138,23 @@ DisplayName    = String ;
    form { Main }
    score sheet { chords prog lyrics words }
 *)
+
+(* THE STRUM'S RHYTHM (owner's design 2026-11-01: a song to sing and play yourself whose
+   chords sounded on beat 1 only). A chord row holds each chord over its slot - a keyboard's
+   reading, kept as the default. A guitar's strum is a 'strokes' part, written once and
+   played by the row:
+
+     strokes rhythm { section A { /4 8 8 4 4 | % | % | % | } }
+     chords harmony { section A { D | A | Bm | G | } }
+     score { staff singer  lyrics words  chords harmony plays rhythm }
+
+   The row stands over a one-line staff of slashes (no clef, key or name) and the MIDI
+   strikes D at the quarter, the two eighths, and the two quarters - the chord in force at
+   each stroke, held to the next stroke or the slot's end. '%' repeats the previous bar
+   (and '%N' the previous N bars, as in music). A strokes part holds no pitch (LYS2021).
+   'lyrics strum sings rhythm { … }' puts words under the strokes, one syllable a stroke,
+   which is how a verse's words are placed when the tune is not written out. 'strokes
+   rhythm' alone in a score draws the one-line staff without a chord row over it. *)
 
 (* WRITING THE CHORDS AS DEGREES. An entry may be an absolute symbol (C, Am, G7, F#m,
    Bb7/D) or a ROMAN DEGREE of the key at that bar:

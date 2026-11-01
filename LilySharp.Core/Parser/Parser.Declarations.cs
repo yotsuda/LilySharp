@@ -25,7 +25,8 @@ internal sealed partial class Parser
 
     private PartDeclarationGreen ParsePartDeclaration()
     {
-        var keyword = Expect(SyntaxKind.PartKeyword);
+        // `strokes NAME { … }` is a part declaration under its own keyword (2026-11-01).
+        var keyword = Check(SyntaxKind.StrokesKeyword) ? Advance() : Expect(SyntaxKind.PartKeyword);
         // names may be clef-name words (bass/treble/...). `part { … }` / `part "Violin" { … }`
         // is the file's unnamed part (SyntaxFacts.UnnamedPartName, 2026-10-09): the slot
         // stays, empty, so every later slot keeps its index.

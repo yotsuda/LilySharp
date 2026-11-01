@@ -6,6 +6,28 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A chord row strums: `strokes` and `plays`
+
+- `[grammar]` **`strokes NAME { … }` is a part that holds a rhythm and no pitch** — `strokes
+  rhythm { section A { /4 8 8 4 4 | % | % | % | } }`: slashes (`/4`, then bare values for more),
+  rests, ties, bar lines and `%`. A note, a chord, a drum or a `q` in it is an error (LYS2021).
+  Owner's design 2026-11-01: a song to sing and play yourself whose chords sounded on beat 1 only.
+- `[score]` **`chords NAME plays STROKES`** stands the row over a one-line staff of the strokes —
+  no clef, key signature or name — and **`strokes NAME`** alone draws that staff with no row over
+  it (`as lines 5` widens it, a string after the name labels it). The LilyPond twin writes the
+  staff with `line-count = #1` and `\improvisationOn`.
+- `[midi]` **A row that plays strokes strikes the chord in force at every stroke**, each held to
+  the next stroke or the slot's end, on the row's own track. A row without `plays` holds each
+  chord over its slot as before (a keyboard's reading).
+- `[lyrics]` **`lyrics NAME sings STROKES`** puts words under the strokes, one syllable a stroke —
+  a verse whose tune is not written out.
+- `[check]` A strokes part is no part to the composition checks: it is not asked for an
+  instrument. The lead-sheet guide (COMPOSE_FOR_LLM) now asks for the strum in every such song.
+- `[render]` **A by-part `strokes` (or `part`) written above a by-section `section A { … }`
+  no longer hides the section's other parts**: its inner `section A` cell was taken as the
+  section's body, and the singer's cell under the root-level `section A` was never walked. A
+  root-level body now outranks a by-part cell as the section's representative.
+
 ### Hairpins back to back meet with a gap
 
 - `[render]` **A crescendo ending on the note a decrescendo starts on no longer runs through it**:

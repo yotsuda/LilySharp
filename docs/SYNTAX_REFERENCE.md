@@ -2417,6 +2417,25 @@ but voices none, so Lily# picks one voicing, the same everywhere: every tone tak
 pitch from G3 up to (not including) G4, and a slash bass its pitch an octave below that —
 `G7/B` sounds B2 G3 B3 D4 F4. Hovering the symbol in the editor lists those pitches.
 
+### The strum's rhythm — `strokes` and `plays`
+
+A placed row **holds** each chord over its slot — a keyboard's reading. A guitar's strum is a
+`strokes` part: a rhythm of slashes and no pitch, which a row plays:
+
+```
+strokes rhythm { section A { /4 8 8 4 4 | % | % | % | } }
+chords harmony { section A { D | A | Bm | G | } }
+score { staff singer  lyrics words  chords harmony plays rhythm }
+```
+
+A strokes part holds strokes (`/4`, then bare values `8 4` for more of them), rests, ties, bar
+lines and `%` (the bar before; `%N` the N bars before); a note, a chord, a drum or a `q` in it is
+an error (LYS2021). `chords NAME plays STROKES` stands the row over a **one-line staff** of the
+slashes — no clef, key signature or name — and in the MIDI strikes the chord in force at every
+stroke, each held to the next stroke or the slot's end. `lyrics NAME sings STROKES` puts words
+under the strokes, one syllable a stroke. `strokes NAME` alone in a score draws the one-line
+staff with no row over it (`as lines 5` widens it, a string after the name labels it).
+
 ### Chords for a transposing part — `for`
 
 A track is the band's chords at **concert pitch**: it prints and plays as written, whatever the
@@ -2990,7 +3009,7 @@ the `check` line too.
 
 The following words are keywords. A **part or section name may still be any of them**
 except the structural ones (2026-10-03): the words that open a block of their own where a
-name could stand — `voice` `lyrics` `chords` `section` `part` `phrase` `form` `score` `tab`
+name could stand — `voice` `lyrics` `chords` `strokes` `section` `part` `phrase` `form` `score` `tab`
 `staff` `ossia` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff`
 `layout` `paper` `fonts` `grace` `acciaccatura` `appoggiatura` `afterGrace` `cue` — plus the section
 settings and item-head directives `key` `time` `tempo` `partial` `override` `revert` `once`
@@ -3008,7 +3027,7 @@ phrase). Any other keyword — and `f`, which is the note F — is refused at th
 | Group | Words |
 |-------|-------|
 | Structure | `section` `form` `using` `tab` `ossia` `transpose` `shift` `octave` `pitch` `instrument` `percussion` `drummap` |
-| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `break` `noBreak` `pageBreak` `noPageBreak` `partial` `embedded` `fonts` `paper` `layout` |
+| Score / layout | `score` `part` `strokes` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `break` `noBreak` `pageBreak` `noPageBreak` `partial` `embedded` `fonts` `paper` `layout` |
 | Metadata | `title` `subtitle` `composer` `poet` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |

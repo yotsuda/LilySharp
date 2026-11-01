@@ -464,9 +464,14 @@ internal static class SyntaxFacts
     public static IReadOnlyList<string> ScoreItemKeywordVocabulary { get; } =
     [
         "staff", "grandStaff", "staffGroup", "choirStaff", "condensedStaff", "combinedStaff",
-        "tab", "ossia", "chords", "lyrics",
+        "tab", "ossia", "chords", "lyrics", "strokes",
         "title", "subtitle", "composer", "poet", "form", "fonts", "paper", "layout",
     ];
+
+    /// <summary>The contextual word of a chord row that strums to a strokes part — <c>chords prog
+    /// plays rhythm</c> (owner's design 2026-11-01): the row's chords sound at the strokes, and the
+    /// strokes' one-line staff stands under the row. Matched by text, like a row's <c>for</c>.</summary>
+    public const string ChordRowPlaysWord = "plays";
 
     /// <summary>
     /// The keys a <c>layout { }</c> block takes (GRAMMAR.md: LayoutEntry) — <c>marks</c>
@@ -563,7 +568,7 @@ internal static class SyntaxFacts
     /// </remarks>
     public static IReadOnlyList<string> PartNameReservedVocabulary { get; } =
     [
-        "voice", "lyrics", "chords", "section", "part", "phrase", "form", "score",
+        "voice", "lyrics", "chords", "strokes", "section", "part", "phrase", "form", "score",
         "tab", "staff", "ossia", "grandStaff", "staffGroup", "choirStaff",
         "condensedStaff", "combinedStaff", "layout", "paper", "fonts",
         "grace", "acciaccatura", "appoggiatura", "afterGrace", "cue",

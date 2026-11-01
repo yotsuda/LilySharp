@@ -185,7 +185,11 @@ public static class RenderSpecParser
 
                 case ChordRowRenderSyntax chordRow:
                     items.Add(new ChordRowSpec(chordRow.PartName, ParseChordMode(chordRow.DisplayModeText))
-                        { For = chordRow.ForTarget });
+                        { For = chordRow.ForTarget, Plays = chordRow.PlaysTarget });
+                    // `chords prog plays rhythm` (2026-11-01): the strokes part's one-line staff
+                    // stands right under the row, as `strokes rhythm` would place it.
+                    if (chordRow.PlaysTarget is { } strokes)
+                        items.Add(new SingleStaffSpec(StrokesStaffSpec(strokes)));
                     break;
 
                 // A row inside a group body belongs to the group (ParseGrandStaff
@@ -330,7 +334,7 @@ public static class RenderSpecParser
                 {
                     case SingleStaffSpec { Staff.WithChords: null } s:
                         items[i + 1] = new SingleStaffSpec(s.Staff with
-                        { WithChords = row.PartName, ChordDisplay = row.DisplayMode, ChordFor = row.For });
+                        { WithChords = row.PartName, ChordDisplay = row.DisplayMode, ChordFor = row.For, ChordPlays = row.Plays });
                         items.RemoveAt(i);
                         i--;
                         continue;
@@ -767,6 +771,12 @@ public static class RenderSpecParser
     /// the same (part, with-lyrics) answer the renderer does, never a re-spelling.</summary>
     internal static StaffSpec? ParseStaffSpec(StaffRenderSyntax staff) => ParseStaff(staff);
 
+    /// <summary>The staff a strokes part is drawn on when a chord row <c>plays</c> it (owner's
+    /// design 2026-11-01): one line, no label — what <c>strokes NAME</c> places. The twin reads it
+    /// too (LilyPondExporter.EmitScore), so the row and its strokes stand together there as here.</summary>
+    public static StaffSpec StrokesStaffSpec(string partName)
+        => new(ClefType.Treble, partName, null, Lines: 1, NameSuppressed: true, WithLyrics: ImmutableArray<string>.Empty);
+
     private static StaffSpec? ParseStaff(StaffRenderSyntax staff)
     {
         // [~][clef?] part ["display"] [with chords chordPart]; braces skipped.
@@ -776,8 +786,9 @@ public static class RenderSpecParser
         var reading = StaffTargets.Of(staff);
         var selectors = SelectorsOf(reading);
 
-        // `staff ~flute` = no instrument-name label for this staff.
-        bool nameSuppressed = reading.Tilde != null;
+        // `staff ~flute` = no instrument-name label for this staff. A strokes staff names nothing
+        // unless the item gives it a name: the rhythm is the chord row's, not an instrument's.
+        bool nameSuppressed = reading.Tilde != null || (staff.IsStrokes && reading.DisplayName == null);
 
         // `staff flute "津田さん"` = per-score display-name override.
         string? nameOverride = reading.DisplayName is { } display ? StringLiteral.Value(display.Text) : null;
@@ -811,7 +822,9 @@ public static class RenderSpecParser
         // it was a part property until then) — read above with the line count. The
         // part header is not consulted: a `removeEmpty` written there is an unknown
         // property (SymbolCaseValidator), the way `lines` has been since 2026-08-19.
-        int lines = selectors.Lines ?? StaffSpec.MaxLines;
+        // A `strokes NAME` item is the one-line staff (2026-11-01) — slash heads on one line, no
+        // clef and no key, as `as lines 1` draws — unless the item writes its own count.
+        int lines = selectors.Lines ?? (staff.IsStrokes ? 1 : StaffSpec.MaxLines);
         // Piano pedal style (part property `pedal bracket|text|mixed`; default Bracket).
         // It STAYS on the part by the same decision: LilyPond's pedalSustainStyle is a
         // context property a `\set` may write anywhere, a house style rather than a

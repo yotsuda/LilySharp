@@ -1561,6 +1561,11 @@ public static class DiagnosticCodes
     /// covers outside it (owner's question 2026-11-01; <c>Semantics.MeasureValidator.JudgeTuplet</c>).</summary>
     public const string TupletNotANoteValue = "LYS2020";
 
+    /// <summary>Error: a strokes part (<c>strokes NAME { … }</c>, owner's design 2026-11-01) holds
+    /// a pitch — a note, a chord, a drum, a <c>q</c> — where only strokes (<c>/4</c>, a bare
+    /// value), rests, ties, bar lines and repeat marks may stand (<c>Semantics.StrokesContentValidator</c>).</summary>
+    public const string StrokesHoldNoPitch = "LYS2021";
+
     /// <summary>Warning: a key whose signature has more than seven sharps or flats — <c>key des
     /// minor</c> is eight flats, B double-flat in the signature — named with the enharmonic key that
     /// sounds the same (<c>key cis minor</c>, four sharps). Owner's review 2026-10-30: a composed

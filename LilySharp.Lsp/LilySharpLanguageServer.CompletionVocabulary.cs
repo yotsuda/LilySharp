@@ -1999,6 +1999,7 @@ public sealed partial class LilySharpLanguageServer
             ["ossia"] = ("ossia $0", "An ossia staff (small alternative reading) for the named part", true),
             ["chords"] = ("chords $0", "Chord row (no staff) for the named chord part", true),
             ["lyrics"] = ("lyrics $0", "Lyrics row (no staff) for the named lyrics part", true),
+            ["strokes"] = ("strokes $0", "The named strokes part's one-line staff (slash heads) — or `chords NAME plays STROKES`", true),
             ["title"] = ("title \"$0\"", "This score's own title, overriding the file's", false),
             ["subtitle"] = ("subtitle \"$0\"", "This score's own subtitle, overriding the file's", false),
             ["composer"] = ("composer \"$0\"", "This score's own composer, overriding the file's", false),
@@ -3946,6 +3947,9 @@ public sealed partial class LilySharpLanguageServer
                 // rather than copied from the lyrics item beside it: a chord track takes NO
                 // `sings` clause, and offering one would have taught a spelling that errors.
                 new CompletionItem { Label = "chords", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "chords ${1:prog} {\n\tsection ${2:A} {\n\t\t$0\n\t}\n}", Detail = "Named chord track (a score places it with a `chords NAME` row)" },
+                // A strokes part (2026-11-01): slash heads alone, the rhythm a chord row strums in
+                // (`chords prog plays rhythm`).
+                new CompletionItem { Label = "strokes", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "strokes ${1:rhythm} {\n\tsection ${2:A} {\n\t\t/4 8 8 4 4 |$0\n\t}\n}", Detail = "Strokes part: slash heads, no pitches — a chord row plays it (`chords NAME plays rhythm`)" },
         };
 
         // Drop the singleton globals (metadata + piece-wide defaults) already written at the

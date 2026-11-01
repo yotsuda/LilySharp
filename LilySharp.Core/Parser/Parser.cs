@@ -587,6 +587,10 @@ internal sealed partial class Parser
             SyntaxKind.ScoreKeyword => ParseRenderDeclaration(),
             SyntaxKind.PhraseKeyword => ParsePhraseDeclaration(),
             SyntaxKind.PartKeyword => ParsePartDeclaration(),  // New part syntax
+            // A strokes part (owner's design 2026-11-01): a part declaration under its own
+            // keyword, read everywhere as a part whose music is strokes alone
+            // (PartDeclarationSyntax.IsStrokes; Semantics.StrokesContentValidator refuses a pitch).
+            SyntaxKind.StrokesKeyword => ParsePartDeclaration(),
             // A top-level chord track — the by-part dual of an in-section chords
             // block: `chords name { section A { c1 } section B { c1 } }`.
             SyntaxKind.ChordsKeyword => ParseChordPartBlock(),

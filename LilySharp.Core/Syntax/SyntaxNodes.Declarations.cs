@@ -1128,8 +1128,14 @@ public sealed class PartDeclarationSyntax : SyntaxNode
     {
     }
 
-    /// <summary>The <c>part</c> keyword token.</summary>
+    /// <summary>The <c>part</c> keyword token — or <c>strokes</c> (<see cref="IsStrokes"/>).</summary>
     public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>A strokes part (<c>strokes rhythm { section A { /4 8 8 4 4 | } }</c>, owner's
+    /// design 2026-11-01): a part whose music is strokes alone — slash heads, no pitches
+    /// (Semantics.StrokesContentValidator) — drawn on a one-line staff and, under a chord row's
+    /// <c>plays</c>, the rhythm that row's chords sound in.</summary>
+    public bool IsStrokes => Keyword.Kind == SyntaxKind.StrokesKeyword;
     /// <summary>The declared part name token — for the unnamed <c>part { … }</c>, the
     /// <c>part</c> keyword itself, whose text is <see cref="SyntaxFacts.UnnamedPartName"/>
     /// (2026-10-09). Every reader that keys a part by <c>Name.Text</c> reads the unnamed

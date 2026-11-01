@@ -69,7 +69,8 @@ public static class CompositionChecks
             }
 
         // A part with no instrument plays a piano — fine for a piano's two hands, not for a player of something else.
-        var parts = root.DescendantNodes<PartDeclarationSyntax>().GroupBy(p => p.Name.Text).Select(g => g.First()).ToList();
+        // A strokes part (slash heads under a chord row) names no instrument and plays no line: not a part these readings judge.
+        var parts = root.DescendantNodes<PartDeclarationSyntax>().Where(p => !p.IsStrokes).GroupBy(p => p.Name.Text).Select(g => g.First()).ToList();
         if (parts.Count >= 2)
         {
             // A drum part is written with `clef percussion` and plays the kit: it needs no instrument.
@@ -876,7 +877,8 @@ public static class CompositionChecks
             if (played >= RestatedRowFewestBars && restated >= played * RestatedRowShare)
                 yield return $"{name}: its staff says what the chords row says — the row's chords struck as block chords in {restated} of its "
                     + $"{played} bars: drop the staff (the chords row, with its diagrams, is what a guitarist reads), or write what the player "
-                    + "plays — a picking pattern, a bass note and then the chord, a riff — and keep the row for the names.";
+                    + "plays — a picking pattern, a bass note and then the chord, a riff — and keep the row for the names. A strum's rhythm "
+                    + "alone is a strokes part: `strokes rhythm { section A { /4 8 8 4 4 | % | % | % | } }`, placed by `chords NAME plays rhythm`.";
         }
     }
 

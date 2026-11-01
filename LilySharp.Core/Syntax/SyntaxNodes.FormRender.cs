@@ -808,8 +808,13 @@ public sealed partial class StaffRenderSyntax : SyntaxNode
     {
     }
 
-    /// <summary>The <c>staff</c> keyword token.</summary>
+    /// <summary>The <c>staff</c> keyword token — or <c>strokes</c> (<see cref="IsStrokes"/>).</summary>
     public SyntaxTokenNode StaffKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>A <c>strokes NAME</c> item (owner's design 2026-11-01): the strokes part's
+    /// one-line staff — slash heads on one line, no clef, no key — drawn as <c>staff NAME as
+    /// lines 1</c> would be (RenderSpecParser.ParseStaff).</summary>
+    public bool IsStrokes => StaffKeyword.Kind == SyntaxKind.StrokesKeyword;
 
     /// <summary>The clef word of <c>staff [clef] part</c> (<c>staff bass melody</c>), or null —
     /// <see cref="StaffTargets"/>'s reading.</summary>
@@ -943,7 +948,25 @@ public sealed class ChordRowRenderSyntax : SyntaxNode
     /// the file's unnamed chord track.</summary>
     public SyntaxTokenNode? NameToken =>
         GetChild(1) is SyntaxTokenNode t
-            && !((t.Text == "as" || t.Text == Semantics.ChordTrackPitch.ForWord) && SlotCount > 2) ? t : null;
+            && !((t.Text == "as" || t.Text == Semantics.ChordTrackPitch.ForWord || t.Text == SyntaxFacts.ChordRowPlaysWord)
+                 && SlotCount > 2) ? t : null;
+
+    /// <summary>The strokes part this row strums to (<c>chords prog plays rhythm</c> → "rhythm",
+    /// owner's design 2026-11-01), or null: the row's chords sound at that part's strokes, and
+    /// the part's one-line staff stands under the row (RenderSpecParser).</summary>
+    public string? PlaysTarget
+    {
+        get
+        {
+            for (int i = NameToken != null ? 2 : 1; i + 1 < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } p
+                    && p.Text == SyntaxFacts.ChordRowPlaysWord
+                    && GetChild(i - 1) is not SyntaxTokenNode { Text: "as" }
+                    && GetChild(i + 1) is SyntaxTokenNode t && SyntaxFacts.IsPartNameToken(t.Kind, t.Text))
+                    return t.Text;
+            return null;
+        }
+    }
 
     /// <summary>The chord part name to place (e.g. <c>chords riff</c> → "riff"; a bare
     /// <c>chords</c> → <see cref="SyntaxFacts.UnnamedChordsName"/>).</summary>

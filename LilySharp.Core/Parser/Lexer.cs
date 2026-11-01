@@ -785,6 +785,7 @@ internal sealed class Lexer
             "cue" => SyntaxKind.CueKeyword,
             "lyrics" => SyntaxKind.LyricsKeyword,
             "chords" => SyntaxKind.ChordsKeyword,
+            "strokes" => SyntaxKind.StrokesKeyword,
             "tuning" => SyntaxKind.TuningKeyword,
             "break" => SyntaxKind.BreakKeyword,
             "noBreak" => SyntaxKind.NoBreakKeyword,

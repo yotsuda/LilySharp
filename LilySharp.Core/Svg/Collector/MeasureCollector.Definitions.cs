@@ -435,9 +435,17 @@ public sealed partial class MeasureCollector
                     // { … } }`) is one part's music, not the section — the standalone header beside
                     // the parts IS the section's declaration there, and the label jumps to it
                     // (test/chord-flag's data-pos moved when the cell was allowed to win).
+                    // …and a ROOT-level body outranks a by-part cell declared before it (owner's
+                    // design 2026-11-01: `strokes rhythm { section A { … } }` written above
+                    // `section A { singer { … } }` made the cell the representative, and the
+                    // singer's cell was never walked — a cell is one part's music; the root body
+                    // holds the others' cells, and the by-part fallback (ProcessSection) finds the
+                    // cell for its own part either way).
                     if (!_sectionState.Sections.TryGetValue(section.SectionName, out var representative)
                         || (IsStandaloneHeader(representative) && !IsStandaloneHeader(section)
-                            && section.Parent is not PartDeclarationSyntax))
+                            && section.Parent is not PartDeclarationSyntax)
+                        || (representative.Parent is PartDeclarationSyntax && section.Parent is CompilationUnitSyntax
+                            && !IsStandaloneHeader(section)))
                         _sectionState.Sections[section.SectionName] = section;
                     // By-part: an inner section binds its music to the part it
                     // lives in. Record the (section, part) cell for voice lookup.

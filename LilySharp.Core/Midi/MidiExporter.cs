@@ -596,6 +596,9 @@ public sealed class MidiExporter
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
         _soundingChordRows = SoundingChordRows(tree, Score, Form);
         _soundingParts = SoundingParts(_playedSpec);
+        // The rows that strum to a strokes part take that part's strokes (a recorder's walk
+        // reads them first); the recorder itself reads none.
+        _strokesByRow = _recordStrokesFor == null ? StrokesOfPlacedRows(tree) : new(StringComparer.Ordinal);
         _partPitchLanes.Clear();
         _partVelocity.Clear();
         _velocity = DefaultVelocity;
@@ -1201,7 +1204,7 @@ public sealed class MidiExporter
         {
             if (chordTrack.PartName is { } row && _soundingChordRows.Contains(row))
                 _currentTick = PlayChordRow(Svg.Collector.ChordNameCollector.SectionItems(section),
-                    row, _currentTick, track);
+                    row, _currentTick, track, _strokesByRow.GetValueOrDefault(row));
             return;
         }
 
@@ -1421,12 +1424,90 @@ public sealed class MidiExporter
         for (int i = 0; i < section.SlotCount; i++)
             if (section.GetChild(i) is ChordPartBlockSyntax { HasSections: false, PartName: { } row } cell
                 && _soundingChordRows.Contains(row))
-                end = Math.Max(end, PlayChordRow(cell.Items, row, start, track));
+                end = Math.Max(end, PlayChordRow(cell.Items, row, start, track, _strokesByRow.GetValueOrDefault(row)));
         return end;
     }
 
     // The chord rows the exported score PLACES, read once per Export (SoundingChordRows).
     private HashSet<string> _soundingChordRows = new(StringComparer.Ordinal);
+
+    /// <summary>One stroke of a strokes part: its tick, its length and its velocity.</summary>
+    internal readonly record struct Stroke(int Tick, int Ticks, int Velocity);
+
+    // `chords NAME plays STROKES` (owner's design 2026-11-01): each placed row's strokes, read once
+    // per Export off a walk of the strokes part alone (StrokesOf) — the row's chords then sound at
+    // them (PlayChordRow). A row that strums to no part has no entry and sounds as it always did.
+    private Dictionary<string, IReadOnlyList<Stroke>> _strokesByRow = new(StringComparer.Ordinal);
+    // The strokes part THIS walk records (StrokesOf's recorder), or null in an ordinary export.
+    private string? _recordStrokesFor;
+    private readonly List<Stroke> _recordedStrokes = new();
+    private bool _strokeTieOpen;
+
+    /// <summary>The strokes of every strokes part a placed chord row <c>plays</c>, by row.</summary>
+    private Dictionary<string, IReadOnlyList<Stroke>> StrokesOfPlacedRows(SyntaxTree tree)
+    {
+        var rows = new Dictionary<string, IReadOnlyList<Stroke>>(StringComparer.Ordinal);
+        if (_playedSpec == null)
+            return rows;
+        var byPart = new Dictionary<string, IReadOnlyList<Stroke>>(StringComparer.Ordinal);
+        void Take(string rowName, string part)
+        {
+            if (rows.ContainsKey(rowName))
+                return;
+            if (!byPart.TryGetValue(part, out var strokes))
+                byPart[part] = strokes = StrokesOf(tree, part);
+            rows[rowName] = strokes;
+        }
+        foreach (var item in _playedSpec.Items)
+            switch (item)
+            {
+                case ChordRowSpec { Plays: { } part } row:
+                    Take(row.PartName, part);
+                    break;
+                // The row folded over the strokes staff it places (RenderSpecParser.FoldAdjacentRows).
+                case SingleStaffSpec { Staff: { WithChords: { } rowName, ChordPlays: { } strokesPart } }:
+                    Take(rowName, strokesPart);
+                    break;
+            }
+        return rows;
+    }
+
+    /// <summary>The strokes of <paramref name="part"/> as the form plays them: a walk of its own,
+    /// the same as this export's, that records the part's slashes (<see cref="RecordStroke"/>) and
+    /// whose music is thrown away.</summary>
+    private List<Stroke> StrokesOf(SyntaxTree tree, string part)
+    {
+        var recorder = new MidiExporter { _recordStrokesFor = part, Score = Score, Form = Form };
+        recorder.Export(tree);
+        return recorder._recordedStrokes;
+    }
+
+    /// <summary>Records a stroke of the part <see cref="StrokesOf"/> walks: its tick, its length —
+    /// a tie on the stroke before joins this one to it — and its velocity: the level in force with
+    /// the stroke's own dynamic and accent, or <paramref name="velocity"/> when the caller read them.</summary>
+    private void RecordStroke(IEnumerable<SyntaxNode> articulations, int tick, int ticks, int? velocity = null)
+    {
+        if (_recordStrokesFor == null || _currentPart != _recordStrokesFor)
+            return;
+        int level = velocity ?? _velocity;
+        if (velocity == null)
+            foreach (var child in articulations)
+                switch (child)
+                {
+                    case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
+                        level = dynamic.Velocity;
+                        SetLevel(level, written: true);
+                        break;
+                    case ArticulationSyntax articulation:
+                        (level, _) = ApplyArticulationType(articulation.Type, level, 100);
+                        break;
+                }
+        if (_strokeTieOpen && _recordedStrokes.Count > 0)
+            _recordedStrokes[^1] = _recordedStrokes[^1] with { Ticks = _recordedStrokes[^1].Ticks + ticks };
+        else
+            _recordedStrokes.Add(new Stroke(tick, ticks, level));
+        _strokeTieOpen = articulations.OfType<TieSyntax>().Any();
+    }
 
     // The score being PLAYED (RenderSpecParser.PlayedSpec: Score, else the one engraving Form,
     // else the file's first), read once per Export; null for a file with no score.
@@ -1486,7 +1567,8 @@ public sealed class MidiExporter
     /// grid and cuts what runs past its end. Not handled: a chord track written flat at the
     /// top level (no book on disk does it).
     /// </remarks>
-    private int PlayChordRow(IEnumerable<SyntaxNode> items, string rowName, int startTick, MidiTrack track)
+    private int PlayChordRow(IEnumerable<SyntaxNode> items, string rowName, int startTick, MidiTrack track,
+        IReadOnlyList<Stroke>? strokes = null)
     {
         string part = rowName + ChordRowTrackSuffix;
         int timbre = PartTimbre(part);
@@ -1531,6 +1613,24 @@ public sealed class MidiExporter
                     continue;
                 int position = entry.SourceStart;
                 int ordinal = NextOrdinal(position);
+                // A row that strums to a strokes part (`chords NAME plays STROKES`, owner's design
+                // 2026-11-01) sounds the chord at each stroke within its span, for the stroke's
+                // length cut at the span's end, at the stroke's level (70%, as the row); a span
+                // no stroke falls in is silent until the next stroke.
+                if (strokes != null)
+                {
+                    foreach (var stroke in strokes)
+                    {
+                        if (stroke.Tick < onset || stroke.Tick >= onset + length)
+                            continue;
+                        int strum = Math.Min(stroke.Ticks, onset + length - stroke.Tick);
+                        int level = Math.Max(1, stroke.Velocity * 7 / 10);
+                        foreach (var tone in Music.ChordVoicing.Window(chord))
+                            track.Notes.Add(new MidiNote(track.Channel, SoundKey(tone.Midi + _fileShiftSemitones, position), level,
+                                stroke.Tick, Math.Max(1, strum), position, SourceOrdinal: ordinal, Timbre: timbre, Part: part));
+                    }
+                    continue;
+                }
                 // A row is sounding pitch once its letters are read (above), moved only by the
                 // file's `shift N` (FileShift).
                 foreach (var tone in Music.ChordVoicing.Window(chord))
@@ -2719,6 +2819,8 @@ public sealed class MidiExporter
         var duration = GetDuration(slash.Duration);
         int durationTicks = FractionToTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks);
+        // A strokes part's slash is a stroke the chord row that plays it sounds at (RecordStroke).
+        RecordStroke(slash.Articulations, _currentTick, durationTicks);
         _currentTick += durationTicks;
     }
 
@@ -2750,6 +2852,10 @@ public sealed class MidiExporter
         }
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
         bool startsTie = bare.Articulations.OfType<TieSyntax>().Any();
+
+        // A bare value after a slash is that stroke again (a strokes part's `/4 8 8 4 4`).
+        if (Music.BareDurations.OriginalOf(bare) is SlashNoteSyntax)
+            RecordStroke(bare.Articulations, startTick, durationTicks, velocity);
 
         switch (Music.BareDurations.OriginalOf(bare))
         {

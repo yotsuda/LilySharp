@@ -887,6 +887,29 @@ form { Main |: ~Loop :| }
 score sheet { chords prog lyrics words }     // chords + lyrics rows, no staff
 ```
 
+**The strum's rhythm — `strokes`.** A placed row HOLDS each chord over its slot in the MIDI (a
+keyboard's reading). A guitar's strum is a `strokes` part: a rhythm of slashes and no pitch
+(`/4`, then bare values for more strokes; rests, ties, `%` for the bar before), played by the
+row with `plays`:
+
+```
+key d major
+part singer { instrument alto }
+strokes rhythm { section A { /4 8 8 4 4 | % | % | % | } }   // a note or chord in it is LYS2021
+chords harmony { section A { D | A | Bm | G | } }
+section A {
+  singer { d'4 fis'8 a' d''2 | a'4 cis'' e'' cis'' | b'4 d'' e'' d'' | g'4 b'8 d'' b'2 | }
+  lyrics words sings singer { ゆ う や け | み ち を き | と あ る い | ね よ る の | }
+}
+form { A }
+score { staff singer  lyrics words  chords harmony plays rhythm }
+```
+
+The row then stands over a ONE-LINE staff of the slashes (no clef, key or name), and the MIDI
+strikes the chord in force at every stroke. `lyrics strum sings rhythm { … }` puts words under
+the strokes, one syllable a stroke — the way to place a verse's words when its tune is not
+written out. `strokes rhythm` alone in a score draws the one-line staff with no row over it.
+
 **Roman numerals.** A chord entry may also be a DEGREE of the key in force at its bar —
 `I` `IIm7` `V7` `IVmaj7` `VIIm7-5` `bVII` (`b`/`#` or `♭`/`♯`; the quality in any of its
 spellings, `IIø7`, `V7(b9)`). After a `/`, a
@@ -1466,7 +1489,7 @@ layout {
 ## Reserved words
 
 These are keywords. A PART or SECTION name may be any of them EXCEPT the structural ones
-(`voice lyrics chords section part phrase form score tab staff ossia grandStaff staffGroup
+(`voice lyrics chords strokes section part phrase form score tab staff ossia grandStaff staffGroup
 choirStaff condensedStaff combinedStaff layout paper fonts grace acciaccatura appoggiatura afterGrace
 cue key time tempo partial override revert once using title subtitle composer poet segno
 fine coda dc ds al to break noBreak pageBreak noPageBreak`, and `as` — a score's `staff X as …` word) — so
@@ -1477,7 +1500,7 @@ Keywords:
 
 ```text
 section form using tab ossia transpose shift octave pitch instrument percussion drummap
-score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
+score part strokes staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
 voice phrase repeat break noBreak pageBreak noPageBreak partial cue embedded fonts paper layout
 title subtitle composer poet tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian

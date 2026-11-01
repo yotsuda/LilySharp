@@ -4,6 +4,15 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A chord row strums: `strokes` and `plays`
+
+- **`strokes` is a keyword and a score item**: `strokes rhythm { section A { /4 8 8 4 4 | % | }
+  }` declares a strum's rhythm (slashes, no pitch — a note in it is LYS2021), `chords harmony
+  plays rhythm` stands the row over a one-line staff of it and the preview's playback strikes
+  the chords at the strokes, and `lyrics NAME sings rhythm` puts words under them. The
+  top-level completion offers the `strokes` snippet, the score completion the `strokes` item,
+  and `strokes` is coloured as a keyword (`plays`, like `sings` and `for`, stays a plain word).
+
 ### The chord-diagram grammar: one key, one question
 
 - **`capo 3` and `chordShapes { … }` are top-level lines now**, the piece's own data (the
