@@ -1,3 +1,8 @@
+## 第1036 ㉕㉖ の逐語 ← §1 の 20,000 字の門を超えたので出した
+
+- ㉕ **旋律の検査は part の「線の声部」を読む**（ユーザーの講評依頼 2026-11-01・`Downloads/Shippu-no-Kodou.lys`＝サビのフックを第 1 声、`chord(G#5)` の刻みを第 2 声に書いたギターが「tune in 0 of the 76 bars」）: `CompositionChecks.LineVoices`＝`voice { } { }` の part は単音の発音が最も多い声部（`MidiNote.Voice`）、`LineNotes` がその声部だけを返す。`byPart`・歩進・輪郭（`BarContours`）・衝突（`Clashes`＝同じ part の別声部は響く和声として `others` に入れる）・終止（`OpenEndings`）がそれを読み、`LineBars` は声部ごとに「線の小節」を判定。バンドのインストでは旋律 part の `byPart` を線の小節に絞る（リフの `chord8 r8` が「65% quarter notes」「Intro 8 of 8 bars same rhythm」と読まれた）。網 `ATuneOverItsOwnPartsChords_IsATune_AndIsReadAlone`。
+- ㉖ **刻みとフックを 1 人で弾くギター**（ユーザー「入れて」2026-11-01・3 曲続けてサビのフックを第 1 声、リフを第 2 声に積んだ）: `CompositionChecks.ChordsUnderTheTune`＝バンドのフレット楽器（guitar／ukulele／banjo／mandolin）で、線の小節（`LineBars`）のうち「単音 3 つ以上の声部」と「和音を 2 回以上打つ声部」が同時にある小節が半分以上（4 以上）なら指摘。1 回だけの和音（旋律の休みに打つ）は除外。網は `ATuneOverItsOwnPartsChords_IsATune_AndIsReadAlone` に追記。
+
 ## 第1036 ㉒㉓㉔ の逐語 ← §1 の 20,000 字の門を超えたので出した
 
 - ㉒ **隣り合うヘアピンが交差する**（ユーザー報告 2026-11-01・`Downloads/Chop-28-4a-a4-2.lys` L28 `d'8@!cresc@decresc`）: cresc の終点が音列の右端（`EndsAtStop` の既定）、decresc の始点が左端で、開いた口どうしが重なっていた。LP は同じ timestep で終わる／始まるヘアピンを adjacent-spanners にし、円でなければ `x_points[d] = e.center() − d·padding/3`（hairpin.cc:241-260・計測 Lab `sessions/p1036/chop/adj.svg`＝22.448 と 23.115・差 0.667）。`HairpinItem.AdjacentAtEnd`／`AdjacentAtStart`（`MarkAdjacentTips` を一般化＝同じ staff・同じ (measure,item)・小節頭は除外・niente の対は従来どおり `TipAdjacent`）を `HairpinEngraver` の両端の束縛で中央 ∓ 1/3 に（dynamic text が乗る音はテキストが束縛のまま）。網 `AdjacentHairpinTests`（3 本）。MANUAL-CHECKS C42。

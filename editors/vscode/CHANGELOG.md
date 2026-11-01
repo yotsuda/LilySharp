@@ -4,6 +4,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Chord diagrams clear the staff under them
+
+- **A lead sheet with diagrams and section labels goes on to a second page** instead of being
+  pressed onto one, where each diagram ran into the staff below it.
+
 ### A tune against its chords is turned down
 
 - **Copilot's chat is turned down every time its tune stands against its chords** — eight notes

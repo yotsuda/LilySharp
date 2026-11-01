@@ -42,6 +42,13 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[docs]` The composing guide's song to sing and play yourself: the bridge is a change (a chord
   the verse and chorus do not use, a tune of its own, or another strum), and the singer breathes.
 
+### A chord row's diagrams no longer pressed into the staff under them
+
+- `[render]` The page breaker prices a section label, rehearsal mark or tempo stacked over a row
+  the system opens with where it is stacked: resting on the staff it stood inside the row's band
+  and cost its line nothing, so a page was chosen that the chain could not hold (13 staff spaces
+  over), and the compression pressed each diagram into its staff. Owner's report 2026-11-01.
+
 ### A piece composed in Copilot's chat opens once, finished
 
 - `[editor]` A proposal for a piece the chat itself just wrote, while the text is as written and

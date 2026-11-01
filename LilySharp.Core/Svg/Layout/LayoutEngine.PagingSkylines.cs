@@ -1146,6 +1146,17 @@ internal sealed partial class LayoutEngine
                     return i;
             return -1;
         }
+        // The baseline of the highest row system `s` opens with, Y-up from its origin; +∞ when it
+        // opens on a staff.
+        double LeadingRowBaselineUp(int s)
+        {
+            if (systems[s].StaffGroups.IsDefaultOrEmpty)
+                return double.PositiveInfinity;
+            var first = ClassifySystem(systems[s].StaffGroups).Leading.FirstOrDefault();
+            return first is null
+                ? double.PositiveInfinity
+                : first.Y - ChordNameEngraver.ChordRowTextBaseline;
+        }
         if (!musicMarks.IsDefaultOrEmpty)
         {
             foreach (var m in musicMarks)
@@ -1217,6 +1228,17 @@ internal sealed partial class LayoutEngine
                 if (m.YUp > 0)
                 {
                     double pureBottom = PureMarkBottomUp(m, ScoreGrobStaffTopUp(ms, m.StaffIndex));
+                    // …unless it was stacked over a row the system opens with: resting on the
+                    // staff it would stand INSIDE the row's band and cost the line nothing, and
+                    // the page would be broken for lines shorter than the ones the chain places.
+                    // Owner's report 2026-11-01 (帰り道の灯り, chord diagrams over a sung staff):
+                    // every line priced with no ink over its row, one page chosen at cost 0, the
+                    // chain 13.0 over the paper — and the compression pressed each diagram into
+                    // the staff under it. ⚠️ LILYSHARP-OWN: LilyPond's mark stands beside the
+                    // row's symbols where it fits and its pure height is the staff's
+                    // (RowUpWithMarksRestingOnIt says why Lily# stacks it).
+                    if (mY - mBottom > LeadingRowBaselineUp(ms))
+                        pureBottom = mY - mBottom;
                     double pureTop = pureBottom + mTop + mBottom;
                     // A mark OPENING its line is in that line's BEGIN heights alone: it hangs
                     // off the line's first breakable column, and LilyPond puts a grob in an

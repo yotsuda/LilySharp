@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 293 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **419** | |
+| `OWN` | 294 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **420** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -244,7 +244,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（293 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（294 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -525,6 +525,7 @@
 - **`LayoutEngine.EnrichExtentsWithAnnotationProtrusions`** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
 - **`LayoutEngine.EnrichExtentsWithAnnotationProtrusions`** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
 - **`LayoutEngine.AugmentSkylinesForPaging`** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
+- **`LayoutEngine.AugmentSkylinesForPaging`** the staff under it. ⚠️ LILYSHARP-OWN: LilyPond's mark stands beside the
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
 - **`LayoutEngine.RunPreliminaryAnnotationPass`** LILYSHARP-OWN: an editor's aid.
 - **`LayoutEngine.BowShiftsOf`** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
