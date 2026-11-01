@@ -170,9 +170,10 @@ public static class CompositionChecks
                 findings.Add("A band piece keeps one tempo from start to end: write one `tempo` at the top and none in the sections.");
         }
         int tpq = midi.TicksPerQuarterNote;
-        // Each part's onsets (a chord one onset) with its duration.
-        var byPart = midi.Tracks.SelectMany(t => t.Notes.Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.DurationTicks, n.Channel)))
-            .Where(n => n.Channel != 9 && !n.Part.EndsWith(" (chords)", System.StringComparison.Ordinal))
+        // Each part's onsets (a chord one onset) with its duration — of its line voice (LineVoices).
+        var lineNotes = LineNotes(midi);
+        var byPart = lineNotes
+            .Where(n => !n.Part.EndsWith(" (chords)", System.StringComparison.Ordinal))
             .GroupBy(n => n.Part)
             .ToDictionary(g => g.Key, g => g.GroupBy(n => n.StartTick).Select(c => (Start: c.Key, Length: c.Max(n => n.DurationTicks))).OrderBy(o => o.Start).ToList());
 
@@ -213,6 +214,14 @@ public static class CompositionChecks
             ? LineBars(midi, parts, barList) : ((Dictionary<string, HashSet<int>>, int)?)null;
         if (instrumentalLines is { } il && melodies.Count == 0)
             melodies.UnionWith(il.Item1.Where(l => l.Value.Count >= System.Math.Max(4, il.Item2 / 4)).Select(l => l.Key));
+        // A band's part reads as the melody in the bars it plays a line; where it strums the riff
+        // (the verse under no tune) it accompanies, and those bars say nothing of its tune (owner's
+        // review 2026-11-01: a guitar's riff bars — a chord and a rest, eighth by eighth — read as
+        // "65% quarter notes" and "the same rhythm in all 8 bars of the Intro" of the melody).
+        if (instrumentalLines is { } tuned)
+            foreach (var (part, lineBars) in tuned.Item1)
+                if (lineBars.Count > 0 && byPart.TryGetValue(part, out var every))
+                    byPart[part] = every.Where(o => lineBars.Contains(barList.Count(b => b <= o.Start) - 1)).ToList();
         // Every part in the same rhythm, bar after bar (said at the end). Moving as one, the parts
         // share one rhythm, said of the top one alone — the melody, else the first part (owner's
         // trials 2026-10-29: a hymn sung in every voice heard the same two findings four times over,
@@ -283,7 +292,7 @@ public static class CompositionChecks
         {
             if (asOne && part != top)
                 continue;
-            var line = midi.Tracks.SelectMany(t => t.Notes.Where(n => (n.Part ?? t.Name) == part && n.Channel != 9))
+            var line = lineNotes.Where(n => n.Part == part)
                 .GroupBy(n => n.StartTick).OrderBy(g => g.Key).Where(g => g.Count() == 1).Select(g => g.First().Pitch).ToList();
             var moves = line.Zip(line.Skip(1), (a, b) => System.Math.Abs(a - b)).Where(d => d > 0).ToList();
             int steps = moves.Count(d => d <= 2);
@@ -652,11 +661,14 @@ public static class CompositionChecks
     {
         int tpq = midi.TicksPerQuarterNote;
         var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9)
-            .Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.DurationTicks, n.Pitch))).ToList();
+            .Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick, n.DurationTicks, n.Pitch))).ToList();
+        var voices = LineVoices(midi);
         foreach (var part in melodies)
         {
-            var line = notes.Where(n => n.Part == part).GroupBy(n => n.StartTick).Where(g => g.Count() == 1).Select(g => g.First()).ToList();
-            var others = notes.Where(n => n.Part != part).ToList();
+            // The melody is the part's line voice; its own chords in another voice are harmony it sounds against.
+            int voice = voices.GetValueOrDefault(part);
+            var line = notes.Where(n => n.Part == part && n.Voice == voice).GroupBy(n => n.StartTick).Where(g => g.Count() == 1).Select(g => g.First()).ToList();
+            var others = notes.Where(n => n.Part != part || n.Voice != voice).ToList();
             var held = line.Where(m => m.DurationTicks >= tpq && (m.StartTick - barList.LastOrDefault(b => b <= m.StartTick)) % tpq == 0).ToList();
             var clashes = new List<(int Bar, int Note, int Against)>();
             foreach (var m in held)
@@ -921,13 +933,14 @@ public static class CompositionChecks
     private static IEnumerable<string> OpenEndings(MidiFile midi, string tune, int fifths)
     {
         var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9)
-            .Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.DurationTicks, n.Pitch))).ToList();
+            .Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick, n.DurationTicks, n.Pitch))).ToList();
+        int tuneVoice = LineVoices(midi).GetValueOrDefault(tune);
         var spans = PlayedSpans(midi);
         var open = new List<string>();
         int read = 0;
         foreach (var (name, start, end) in spans)
         {
-            var mine = notes.Where(n => n.Part == tune && n.StartTick >= start && n.StartTick < end).ToList();
+            var mine = notes.Where(n => n.Part == tune && n.Voice == tuneVoice && n.StartTick >= start && n.StartTick < end).ToList();
             if (mine.Count == 0)
                 continue;
             int last = mine.Max(n => n.StartTick);
@@ -1009,7 +1022,7 @@ public static class CompositionChecks
     /// </summary>
     internal static (int Alike, int Bars, string Shape) BarContours(MidiFile midi, string part, List<int> barList)
     {
-        var line = midi.Tracks.SelectMany(t => t.Notes.Where(n => (n.Part ?? t.Name) == part && n.Channel != 9))
+        var line = LineNotes(midi).Where(n => n.Part == part)
             .GroupBy(n => n.StartTick).OrderBy(g => g.Key).Where(g => g.Count() == 1)
             .Select(g => (Tick: g.Key, g.First().Pitch)).ToList();
         var shapes = line.GroupBy(n => barList.Count(b => b <= n.Tick))
@@ -1483,9 +1496,12 @@ public static class CompositionChecks
     {
         var lineParts = parts.Where(p => RoleOf(p) is { Drums: false, Bass: false }).Select(p => p.Name.Text)
             .ToHashSet(System.StringComparer.Ordinal);
-        var onsets = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick)))
+        // Each voice of a part is read on its own: a tune in the first voice over the part's own
+        // chords in the second is a line (owner's reviews 2026-11-01: two rock instrumentals wrote
+        // the chorus so, and were told "a tune in 0 of the 76 bars").
+        var onsets = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick)))
             .Where(n => lineParts.Contains(n.Part))
-            .GroupBy(n => (n.Part, n.StartTick)).Select(g => (g.Key.Part, g.Key.StartTick, Single: g.Count() == 1)).ToList();
+            .GroupBy(n => (n.Part, n.Voice, n.StartTick)).Select(g => (g.Key.Part, g.Key.Voice, g.Key.StartTick, Single: g.Count() == 1)).ToList();
         var lines = lineParts.ToDictionary(p => p, _ => new HashSet<int>(), System.StringComparer.Ordinal);
         // Bars of single notes alone, one or two of them: a tune in long notes when they run on.
         var held = lineParts.ToDictionary(p => p, _ => new HashSet<int>(), System.StringComparer.Ordinal);
@@ -1498,10 +1514,18 @@ public static class CompositionChecks
                 continue;
             played++;
             foreach (var g in inBar.GroupBy(o => o.Part))
-                if (g.Count() >= 3 && g.Count(o => o.Single) >= g.Count() * TuneSingleShare)
+            {
+                bool line = false, singles = false;
+                foreach (var v in g.GroupBy(o => o.Voice))
+                    if (v.Count() >= 3 && v.Count(o => o.Single) >= v.Count() * TuneSingleShare)
+                        line = true;
+                    else if (v.All(o => o.Single))
+                        singles = true;
+                if (line)
                     lines[g.Key].Add(b);
-                else if (g.All(o => o.Single))
+                else if (singles)
                     held[g.Key].Add(b);
+            }
         }
         // A tune that sings in half and whole notes — as the rhythm finding asks of one over a band's
         // eighths — has bars of one or two notes (owner's review 2026-10-30: a rock trio's tune in
@@ -1719,6 +1743,30 @@ public static class CompositionChecks
         .Where(p => p.NameToken.Text.Equals(name, System.StringComparison.OrdinalIgnoreCase))
         .SelectMany(p => Enumerable.Range(2, System.Math.Max(0, p.SlotCount - 2)).Select(p.GetChild))
         .OfType<SyntaxTokenNode>().Select(t => t.Text.Trim('"'))).ToLowerInvariant();
+
+    /// <summary>
+    /// Each part's line voice: of a part written in voices (<c>voice { } { }</c>), the voice with the
+    /// most single-note onsets — the tune over the part's own chords; 0 for a part in one voice.
+    /// The melody readings (its values, rhythm, steps, contour, clashes, endings) read that voice
+    /// alone (owner's reviews 2026-11-01: two rock instrumentals wrote the chorus tune in the first
+    /// voice over power chords in the second, and read as one line it was "no tune", "19% steps",
+    /// "67% eighths", with octave slips between the two).
+    /// </summary>
+    private static Dictionary<string, int> LineVoices(MidiFile midi)
+        => midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick)))
+            .GroupBy(n => n.Part)
+            .ToDictionary(p => p.Key, p => p.GroupBy(n => n.Voice)
+                .Select(v => (Voice: v.Key, Singles: v.GroupBy(n => n.StartTick).Count(g => g.Count() == 1)))
+                .OrderByDescending(v => v.Singles).ThenBy(v => v.Voice).First().Voice, System.StringComparer.Ordinal);
+
+    /// <summary>The pitched notes of each part's line voice (<see cref="LineVoices"/>), the drums left out.</summary>
+    private static List<(string Part, int StartTick, int DurationTicks, int Pitch)> LineNotes(MidiFile midi)
+    {
+        var voices = LineVoices(midi);
+        return midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick, n.DurationTicks, n.Pitch)))
+            .Where(n => voices.GetValueOrDefault(n.Part) == n.Voice)
+            .Select(n => (n.Part, n.StartTick, n.DurationTicks, n.Pitch)).ToList();
+    }
 
     /// <summary>What a part is in a band: drums, a bass, a chord instrument (guitar, keyboards), and
     /// whether its sound is electric (an electric guitar or bass, an organ, a synth).</summary>

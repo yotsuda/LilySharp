@@ -75,6 +75,13 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[editor]` **The octave-slip finding reads each voice as its own line**: a chorus tune in one
   voice over the same guitar's chords in another was told of slips between the two. MIDI notes
   now carry their voice (`MidiNote.Voice`).
+- `[editor]` **A tune over its own part's chords is read as the tune**: every melody reading (the
+  bars a tune is played in, its note values, its rhythm, its steps, its bar shapes, its clashes,
+  its endings) reads the part's line voice — of a `voice { } { }` part, the voice with the most
+  single notes — and, in a band's instrumental, only the bars that voice plays a line in. A chorus
+  hook in the first voice over power chords in the second was told "a tune in 0 of the 76 bars",
+  "only 19% of its moves are steps" and "65% quarter notes" (the riff's chord-and-rest eighths
+  counted as the melody's). The part's own chords now count as harmony its tune sounds against.
 - `[editor]` **The length finding says how not to lengthen**: a section that returns is named again
   in the form, and that counts; a copy under a new name with a few bars altered is not length.
 

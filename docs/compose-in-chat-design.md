@@ -86,7 +86,10 @@ that prompted each check is written beside it in the code.
   sounding at each bar's start, the loop the longest section's shortest period of two chords or
   more, a section on it when its bars walk the loop from any of its chords. Escape: a blues, a vamp.
 
-**The melody**
+**The melody** — read from the part's line voice (of a `voice { } { }` part, the voice with the most
+single notes; `MidiNote.Voice`), and in a band's instrumental only in the bars that voice plays a
+line (2026-11-01: a chorus hook over the guitar's own power chords read as "no tune"; its riff bars
+as the melody's rhythm).
 - One note value.
 - One rhythm in most bars. A band's tune is NOT let off as "an even pace is the music's character".
   And, where the piece's count passes, one rhythm in three quarters of a SECTION's bars (four bars

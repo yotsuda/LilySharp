@@ -392,6 +392,20 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Looped("ees, bes,, c, aes,,").Replace("gtr { e'4@f g'", "gtr { e'4@p.subito g'")), f => f.StartsWith("The levels are set"));
     }
 
+    // Owner's reviews 2026-11-01 (Shippu-no-Kodou, Yoake-o-Kakenukete): a chorus tune in the first voice
+    // over the guitar's own power chords in the second was told "a tune in 0 of the 76 bars" and
+    // "only 19% of its moves are steps" — the two voices read as one line.
+    [Fact]
+    public void ATuneOverItsOwnPartsChords_IsATune_AndIsReadAlone()
+    {
+        var two = CompositionChecks.Of(Rock3("voice { e'4 fis'8 g' a'4 g' } { <e b>8 r <e b> r <e b>8 r <e b> r }", "e,8 e, e, e, e, e, e, e,"));
+        Assert.DoesNotContain(two, f => f.StartsWith("A tune is played in only"));
+        Assert.DoesNotContain(two, f => f.Contains("of its moves are steps"));
+        // Chords alone in both voices: still no tune.
+        Assert.Contains(CompositionChecks.Of(Rock3("voice { <e' g'>4 <e' g'> <e' g'> <e' g'> } { <e b>8 r <e b> r <e b>8 r <e b> r }", "e,8 e, e, e, e, e, e, e,")),
+            f => f.StartsWith("A tune is played in only"));
+    }
+
     [Fact]
     public void ATuneOverItsOwnPartsChords_IsNotToldOfOctaveSlips()
     {
