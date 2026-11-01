@@ -93,6 +93,32 @@ public class BarStaffBoxTests
             spans.Select(x => Book[x.F..(x.T + 1)]));
     }
 
+    /// <summary>A drum chart written in phrase words (owner's report 2026-11-01: a kit of
+    /// <c>drums { hats back kick } |</c> bars stayed lit in the preview whatever the caret did). The
+    /// chart's hits carry the phrase bodies' positions, so each bar's stretch ran from the phrases
+    /// at the top of the file down to its own bar line, and every Dr bar held the caret. A bar is
+    /// written where its chart is: its stretch is the chart's text, and a click on it goes there.</summary>
+    [Fact]
+    public void ADrumChartOfPhrases_SpansItsChart_NotThePhraseBodies()
+    {
+        const string book = "time 4/4\npart kit { clef percussion }\nphrase hats { hh8 hh hh hh hh hh hh hh | }\nphrase kick { bd4 r bd r | }\n"
+            + "section A {\n  kit { drums { hats kick } | drums { hats kick } | }\n}\nform { A }\nscore { staff kit }\n";
+        string preview = SvgGenerator.Generate(SyntaxTree.Parse(book), SvgRenderOptions.Preview());
+        var spans = Regex.Matches(preview, @"data-start=""(\d+)"" data-span=""(\d+) (\d+)""").Cast<Match>()
+            .Select(m => (S: int.Parse(m.Groups[1].Value), F: int.Parse(m.Groups[2].Value), T: int.Parse(m.Groups[3].Value)))
+            .ToList();
+        Assert.Equal(new[] { "drums { hats kick } |", "drums { hats kick } |" }, spans.Select(x => book[x.F..(x.T + 1)]));
+        Assert.All(spans, x => Assert.Equal(x.S, x.F));
+        // The hits themselves still point into the phrase bodies (a click on a note goes there).
+        Assert.Contains($"data-pos=\"{book.IndexOf("hh8")}\"", preview);
+        // A chart written out keeps its own text too — the chart's start, not its first hit's.
+        string inline = book.Replace("drums { hats kick }", "drums { { hh8 hh hh hh hh hh hh hh } { bd4 r bd r } }");
+        var own = Regex.Matches(SvgGenerator.Generate(SyntaxTree.Parse(inline), SvgRenderOptions.Preview()), @"data-span=""(\d+) (\d+)""").Cast<Match>()
+            .Select(m => inline[int.Parse(m.Groups[1].Value)..(int.Parse(m.Groups[2].Value) + 1)]).ToList();
+        Assert.Equal(2, own.Count);
+        Assert.All(own, s => Assert.Equal("drums { { hh8 hh hh hh hh hh hh hh } { bd4 r bd r } } |", s));
+    }
+
     [Fact]
     public void AnExportedPage_HasNone()
         => Assert.DoesNotContain("bar-staff", SvgGenerator.Generate(SyntaxTree.Parse(Book), SvgRenderOptions.Default));

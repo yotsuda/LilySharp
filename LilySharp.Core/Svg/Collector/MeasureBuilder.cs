@@ -253,6 +253,18 @@ internal sealed class MeasureBuilder
     private string? _sectionLabel;
     private int _sectionLabelPosition;
     private int _measureSourceStart;
+    // Where the current measure's music is written when its items' positions do not say
+    // (Measure.WrittenStart): a drum chart's start, noted by the chart's walker as it adds the
+    // chart's pieces; -1 otherwise, and again once the measure closes.
+    private int _writtenStart = -1;
+
+    /// <summary>Notes where the current measure's music is written (<see cref="Measure.WrittenStart"/>)
+    /// when its items' positions point elsewhere — the first call for a measure wins.</summary>
+    internal void NoteWrittenStart(int position)
+    {
+        if (_writtenStart < 0)
+            _writtenStart = position;
+    }
 
     /// <summary>
     /// Fires when a measure is completed (auto-fill OR explicit barline), i.e.
@@ -1249,6 +1261,7 @@ internal sealed class MeasureBuilder
             breaksMidBar: true)
         {
             IsEmptyPlaceholder = isEmptyPlaceholder,
+            WrittenStart = _writtenStart,
         });
         _currentItems.Clear();
         _sectionLabel = null;
@@ -1258,6 +1271,7 @@ internal sealed class MeasureBuilder
         _pendingNoBreak = false;
         _pendingMidBar = null;
         _measureSourceStart = sourceEnd;
+        _writtenStart = -1;
         _confirmableBoundary = false;
         _boundaryRetargetable = false;
         _lastEndAutoFill = false;
@@ -1573,7 +1587,10 @@ internal sealed class MeasureBuilder
             isPickup: _bars.Partial is not null,
             unmetered: _bars.SenzaMisura,
             continuesBar: _continuesBar,
-            unmeteredPosition: _frozenPosition));
+            unmeteredPosition: _frozenPosition)
+        {
+            WrittenStart = _writtenStart,
+        });
 
         // An auto-filled close leaves an UNCONFIRMED boundary (a following written barline
         // just confirms it); a written-barline close consumed the boundary, so a following
@@ -1645,6 +1662,7 @@ internal sealed class MeasureBuilder
         _boundaryRetargetable = false;
         _lastEndAutoFill = false;
         _currentItems.Clear();
+        _writtenStart = -1;
         _sectionLabel = null;
         _sectionLabelPosition = 0;
         _pendingStartBarline = BarlineType.None;
@@ -1993,6 +2011,7 @@ internal sealed class MeasureBuilder
             unmeteredPosition: _frozenPosition)
         {
             IsEmptyPlaceholder = true,
+            WrittenStart = _writtenStart,
         });
 
         // Closed by a written barline, so a further bare barline opens ANOTHER placeholder
@@ -2026,7 +2045,10 @@ internal sealed class MeasureBuilder
                 isPickup: _bars.Partial is not null,
                 unmetered: _bars.SenzaMisura,
                 continuesBar: _continuesBar,
-                unmeteredPosition: _frozenPosition));
+                unmeteredPosition: _frozenPosition)
+            {
+                WrittenStart = _writtenStart,
+            });
         }
 
         // Back-to-back repeats collapse: a measure that ENDS with a repeat (`:|` or
@@ -2194,6 +2216,7 @@ internal sealed class MeasureBuilder
         string? SectionLabel,
         int SectionLabelPosition,
         int MeasureSourceStart,
+        int WrittenStart,
         Measure? LastMeasure,
         int LogicalCount,
         Fraction BarPosition,
@@ -2228,7 +2251,7 @@ internal sealed class MeasureBuilder
         _bars.Save(), _frozenPosition, _bars.Partial,
         _pendingStartBarline, _pendingEndBarline,
         _pendingBreak, _pendingNoBreak, _pendingPageBreak, _pendingNoPageBreak,
-        _sectionLabel, _sectionLabelPosition, _measureSourceStart,
+        _sectionLabel, _sectionLabelPosition, _measureSourceStart, _writtenStart,
         _measures.Count > 0 ? _measures[^1] : null,
         _logicalCount, _barPosition, _alternativeStart, _alternativeUndo, _inEnding,
         _pendingPlay, _sectionHead, _sectionHeadMeasures, MeterInForce,
@@ -2266,6 +2289,7 @@ internal sealed class MeasureBuilder
         _sectionLabel = ck.SectionLabel;
         _sectionLabelPosition = ck.SectionLabelPosition;
         _measureSourceStart = ck.MeasureSourceStart;
+        _writtenStart = ck.WrittenStart;
         _barPosition = ck.BarPosition;
         _alternativeStart = ck.AlternativeStart;
         _alternativeUndo = ck.AlternativeUndo;

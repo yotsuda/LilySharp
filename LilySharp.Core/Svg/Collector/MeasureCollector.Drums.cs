@@ -463,14 +463,14 @@ public sealed partial class MeasureCollector
     /// does, and every hit's own marks — its automatic "+"/"○", its dynamics and scripts — on
     /// the item it joined.
     /// </summary>
-    private async ValueTask EmitDrumVoice(List<DrumPiece> pieces, MeasureBuilder builder, bool stemUp)
+    private async ValueTask EmitDrumVoice(List<DrumPiece> pieces, MeasureBuilder builder, bool stemUp, int chartStart)
     {
         for (int i = 0; i < pieces.Count;)
         {
             var run = pieces[i].Run;
             if (run == null)
             {
-                await EmitDrumPiece(pieces[i], builder, stemUp, scaled: null);
+                await EmitDrumPiece(pieces[i], builder, stemUp, scaled: null, chartStart);
                 i++;
                 continue;
             }
@@ -478,7 +478,7 @@ public sealed partial class MeasureCollector
             int first = builder.CurrentItemCount;
             Fraction written = Fraction.Zero;
             for (; i < pieces.Count && pieces[i].Run == run; i++)
-                written += await EmitDrumPiece(pieces[i], builder, stemUp, run.Scale);
+                written += await EmitDrumPiece(pieces[i], builder, stemUp, run.Scale, chartStart);
             _tupletBrackets.Add(new TupletBracketItem(run.Ratio, run.Base, first, builder.CurrentItemCount - 1,
                 measureIndex, run.SourceStart, 0, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex));
             await AddDurationAsync(builder, written * run.Scale, run.SourceStart + 1);
@@ -490,9 +490,12 @@ public sealed partial class MeasureCollector
     private static bool HitParenthesized(DrumHit h)
         => WritesParenthesize(h.Node) || (h.Member is { } m && m.Articulations.Any(IsParenthesizeMark));
 
-    /// <summary>One piece of a merged voice; returns its written value.</summary>
-    private async ValueTask<Fraction> EmitDrumPiece(DrumPiece piece, MeasureBuilder builder, bool stemUp, Fraction? scaled)
+    /// <summary>One piece of a merged voice; returns its written value. The bar it joins is
+    /// written at <paramref name="chartStart"/>, the chart's own text (the hits' positions are their
+    /// lines', phrase bodies elsewhere in the file when the lines are phrase words).</summary>
+    private async ValueTask<Fraction> EmitDrumPiece(DrumPiece piece, MeasureBuilder builder, bool stemUp, Fraction? scaled, int chartStart)
     {
+        builder.NoteWrittenStart(chartStart);
         int measureIndex = builder.CurrentMeasureIndex;
         int itemIndex = builder.CurrentItemCount;
         Fraction anchor = builder.CurrentDuration;

@@ -108,6 +108,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   distorted sound striking full chords.
 - **A chord its player cannot hold is warned** (LYS1055). In a violin, viola, cello or double bass
   part, completion's chord rows write a double stop.
+- **A drum chart of phrase words no longer keeps its whole staff lit in the preview**: the
+  caret anywhere below the phrases used to light every `drums { hats back kick } |` bar after
+  it, and a click on such a bar jumped to the phrase. The caret in the chart lights that bar, a
+  click goes to the chart; the notes still go to their phrase.
 - **A drum note sounds its drum when selected**: a hi-hat, kick, snare… heard on the kit's
   channel, the drums of a `<…>` together, a `drums { }` chart's hits too — it was silent.
 - **New warnings**:

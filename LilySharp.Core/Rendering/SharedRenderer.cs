@@ -365,6 +365,12 @@ internal static partial class SharedRenderer
                 }
                 var measures = staff.PrimaryVoice.Measures;
                 int to = Math.Max(last, m < measures.Length ? measures[m].SourceEnd : 0);
+                // A bar whose items are written elsewhere — a drum chart of phrase words, its hits
+                // in the phrase bodies — is written where its chart is (Measure.WrittenStart): the
+                // click goes there and the stretch is the chart's, not from the bodies at the top of
+                // the file down to the bar line (owner's report 2026-11-01: every Dr bar lit).
+                if (last >= 0 && m < measures.Length && measures[m].WrittenStart is >= 0 and var written)
+                    (best, first) = (written, written);
                 row[m] = last < 0
                     ? new BarSource(best >= 0 ? best : spacer, 0, 0)
                     : new BarSource(best >= 0 ? best : spacer, first, to);

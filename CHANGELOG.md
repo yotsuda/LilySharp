@@ -6,6 +6,16 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### The preview lights a drum chart's bar where the chart is written
+
+- `[editor]` **A drum chart of phrase words no longer keeps its whole staff lit**: a kit of
+  `drums { hats back kick } |` bars stayed lit in the preview whatever the caret did, and a click
+  on a Dr bar jumped to a phrase at the top of the file. The chart's hits carry the phrase bodies'
+  positions, so each bar's written stretch ran from the phrases down to its own bar line, and the
+  caret anywhere between lit every bar after it. A bar is now written where its chart is
+  (`Measure.WrittenStart`): the caret in the chart lights that bar alone, a click on it goes to
+  the chart, and the notes themselves still point into the phrase bodies.
+
 ### Composition checks: a section's rhythm, an accompaniment's figure, the length's wording
 
 - `[editor]` **Compose with AI's check reads the melody's rhythm section by section**: where the

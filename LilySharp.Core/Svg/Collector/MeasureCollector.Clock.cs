@@ -675,7 +675,7 @@ public sealed partial class MeasureCollector
         var children = await RunSpanAsync(
             builder,
             branch0: () => drums != null
-                ? EmitDrumVoice(drums.Upper, builder, stemUp: true)
+                ? EmitDrumVoice(drums.Upper, builder, stemUp: true, parallel.SourceStart)
                 : ProcessMusicNodeSequence(GatherVoiceMusicNodes(voiceBlocks[0]), builder),
             childCount: voiceCount - 1,
             childState: t => BranchState.ForChild(outerCursor with
@@ -689,7 +689,7 @@ public sealed partial class MeasureCollector
                 leadingOffset: spanOffset,
                 logicalIndexBase: MidBarBreaks?.ToLogical(spanStart) ?? spanStart,
                 measureIndexBase: spanStart,
-                emit: drums != null ? b => EmitDrumVoice(drums.Lower, b, stemUp: false) : null));
+                emit: drums != null ? b => EmitDrumVoice(drums.Lower, b, stemUp: false, parallel.SourceStart) : null));
         _v.Cursor.VoiceScope = null;
         // A later voice that runs past the first: the staff runs on to its end, the first voice
         // silent there in spacer bars, so what sounds is drawn (owner's decision 2026-10-30: a drum

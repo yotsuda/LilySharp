@@ -143,6 +143,14 @@ public sealed record Measure
     /// <summary>Source end position for caching and incremental updates.</summary>
     public int SourceEnd { get; init; }
 
+    /// <summary>Where this bar's music is WRITTEN when its items' positions do not say: a drum
+    /// chart's start (<c>drums { hats kick } |</c>), whose hits carry the phrase bodies' positions
+    /// when its lines are phrase words. -1 when the items' own positions are the bar's (the usual
+    /// case). The preview's bar box spans the bar's written text (SharedRenderer.BarStartPositions)
+    /// — owner's report 2026-11-01: a kit of charts in phrase words stayed lit whatever the caret did,
+    /// each bar's stretch running from the phrases at the top of the file down to its own bar line.</summary>
+    public int WrittenStart { get; init; } = -1;
+
     /// <summary>
     /// EXTRA source offsets a caret can be on to highlight this measure's END barline,
     /// beyond <see cref="SourceEnd"/> (the click target). A drawn barline can collapse
