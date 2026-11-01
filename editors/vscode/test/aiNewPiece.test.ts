@@ -52,9 +52,10 @@ describe('the composing guide', () => {
     it('says a style named is its rhythm first, a bossa nova\'s two bars above all', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*A style named is its rhythm first\*\*/);
-        assert.match(guide, /chords on 1, 4, 7 of the first bar and 3, 6 of the second/);
+        assert.match(guide, /`e,4 r4 b,2 \| e,4 r4 e,2 \|`/);
+        assert.match(guide, /1, 3, 6, 8 of the first bar and 2, 4, 6 of the second/);
         // …and over a chords row, as strokes (owner's request 2026-11-01).
-        assert.match(guide, /`strokes bossa \{ section A \{ 4\. 4\. 4 \| r4 4\. 4\. \|\s+%2 \| %2 \| %2 \| \} \}`/);
+        assert.match(guide, /`strokes bossa \{ section A \{ 4 4\. 8 r8 8 \| r8 8 r8 8 r8 4\. \|\s+%2 \| %2 \| %2 \| \} \}`/);
     });
     // Owner's trial 2026-10-29: a "dramatic" quartet's tremolo and sforzando were all in two bars.
     it('says the character\'s devices run through the piece, strongest at the climax', () => {
