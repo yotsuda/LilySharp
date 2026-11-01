@@ -4,6 +4,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### An ottava's line can be a wave
+
+- **`layout { ottavaLine wave }`** draws an ottava's line as a wave with no hook, as in old prints. The default stays dashes and a hook.
+
 ### A tie on one note of a chord
 
 - `<c f d~>8. <c f d>16` ties the d alone: the other notes sound again.

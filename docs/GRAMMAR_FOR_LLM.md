@@ -1418,6 +1418,7 @@ layout {
   partCombineText false    // a2 / Solo words: true (default) | false
   chordQualities words     // chord quality: symbols (default) | words
   minorChords lower        // a minor chord's root: upper (default) | lower
+  ottavaLine wave          // an ottava's line: dashed with a hook (default) | wave with no hook, as in old prints
   chordDiagrams all        // which chords draw a diagram: written (default: those with a written or listed shape) | none | all
   chordTuning ukulele      // the tuning for chords no fretted part owns: a tuning word (a fretted part: its own; unset: guitar)
                            // the shape table and the capo are TOP-LEVEL lines, not layout keys:

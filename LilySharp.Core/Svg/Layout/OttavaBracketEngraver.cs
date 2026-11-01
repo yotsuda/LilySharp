@@ -101,6 +101,15 @@ internal static class OttavaBracketEngraver
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2711 (edge-height . (0 . 0.8))</remarks>
     private const double EndEdgeHeight = 0.8;
 
+    /// <summary>Whether this score draws its ottavas' lines as a wave with no hook
+    /// (<c>layout { ottavaLine wave }</c>). The run is the trill's element, the one line-interface.cc
+    /// builds for <c>style = #'trill</c> whichever grob asks (<see cref="TrillWaveOutline"/>).</summary>
+    internal static bool Wave => EngravingStyle.Current.OttavaWave;
+
+    /// <summary>How far the drawn line reaches either side of its Y: the wave's ink, or half the rule.</summary>
+    internal static double LineReach
+        => Wave ? TrillWaveOutline.InkReach : EngravingDefaults.StaffLineThickness / 2.0;
+
     /// <summary>
     /// Staff padding — minimum distance from staff. One home: EngravingDefaults'
     /// outside-staff declaration table (the LILYPOND-REF lives beside the entry).
@@ -240,8 +249,17 @@ internal static class OttavaBracketEngraver
             startX, lineY - LabelInkCentre(fonts, text, fontSize));
         if (lineStartX < endX)
         {
-            up.MergeBox(lineStartX, endX, lineY - half, lineY + half);
-            down.MergeBox(lineStartX, endX, lineY - half, lineY + half);
+            if (Wave)
+            {
+                var (waveUp, waveDown) = TrillWaveOutline.Place(lineStartX, endX - lineStartX, lineY);
+                up.Merge(waveUp);
+                down.Merge(waveDown);
+            }
+            else
+            {
+                up.MergeBox(lineStartX, endX, lineY - half, lineY + half);
+                down.MergeBox(lineStartX, endX, lineY - half, lineY + half);
+            }
         }
         if (edgeHeight > 0)
         {
@@ -375,7 +393,7 @@ internal static class OttavaBracketEngraver
                 // First segment shows the bare text ("8va"); continuation pieces use "(8va)".
                 // Last segment carries the hook; non-last ends are open.
                 string segText = segment.IsFirst ? text : $"({text})";
-                double segEdgeHeight = segment.IsLast ? EndEdgeHeight : 0;
+                double segEdgeHeight = segment.IsLast && !Wave ? EndEdgeHeight : 0;
 
                 // A span shorter than its label plus the minimum line slides the label LEFT,
                 // so the hook stands after the label instead of on it. Not ported until

@@ -6,6 +6,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### An ottava's line can be a wave
+
+- `[lang]` **`layout { ottavaLine dashed | wave }`**: `wave` draws an ottava's line as an old print does, a wave with no hook. `dashed`, with its hook,
+  stays the default. `lysc --set ottavaLine=wave` takes it too, and the twin writes LilyPond's `style` and `edge-height` (OMR request 17).
+
 ### A tie on one note of a chord
 
 - **`<c f d~>8. <c f d>16` ties the d alone**, and the c and the f sound again, on the page, in the sound, in MusicXML

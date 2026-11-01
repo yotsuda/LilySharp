@@ -496,6 +496,12 @@ public sealed partial class LilySharpLanguageServer
         ["lower"] = "a, a7 — a lowercase root and no m (LilyPond's chordNameLowercaseMinor)",
     };
 
+    private static readonly System.Collections.Generic.Dictionary<string, string> OttavaLineDetails = new()
+    {
+        ["dashed"] = "Dashes and a hook at the end — LilyPond's (the default)",
+        ["wave"] = "A wavy line with no hook, as in old prints",
+    };
+
     /// <summary>After <c>layout { sectionLabels</c>.</summary>
     internal static CompletionList GetSectionLabelCompletions()
         => WordList(LanguageVocabulary.SectionLabelStyles, SectionLabelDetails);
@@ -511,6 +517,10 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>After <c>layout { minorChords</c>.</summary>
     internal static CompletionList GetMinorChordCompletions()
         => WordList(LanguageVocabulary.MinorChordWords, MinorChordDetails);
+
+    /// <summary>After <c>layout { ottavaLine</c>.</summary>
+    internal static CompletionList GetOttavaLineCompletions()
+        => WordList(Core.Semantics.OttavaLineKey.Words, OttavaLineDetails);
 
     /// <summary>After <c>layout { chordDiagrams</c>: written, none, all (the compiler's
     /// <see cref="Core.Semantics.ChordDiagramsKey.Words"/>; owner's grammar 2026-10-31).</summary>
@@ -858,6 +868,7 @@ public sealed partial class LilySharpLanguageServer
         ["chordList"] = "false",
         ["voltaBracket"] = "all",
         ["compressRests"] = "false",
+        ["ottavaLine"] = "dashed",
     };
 
     /// <summary>Every key's line of the pre-filled <c>layout</c> snippet, at its default — the
@@ -916,6 +927,7 @@ public sealed partial class LilySharpLanguageServer
         "partCombineText" => "Whether a combinedStaff prints a2 / Solo: true (default) | false",
         "chordQualities" => "How a chord's quality is spelled: symbols (default) | words",
         "minorChords" => "How a minor chord's root is spelled: upper (default) | lower",
+        "ottavaLine" => "How an ottava's line is drawn: dashed (default, with a hook) | wave (no hook, as in old prints)",
         "chordDiagrams" => "The tuning written chord shapes draw on: guitar | ukulele | mandolin | … | none (default: the part's instrument, else guitar); add `capo N` for a capo, `all` to draw every chord, `{ … }` to list the chords that draw",
         "chordNames" => "What a chord name shows under a capo: shape (default, the pressed chord's) | sounding | both",
         "chordList" => "The chords the score uses, each with its diagram, under the title: true | false (default)",

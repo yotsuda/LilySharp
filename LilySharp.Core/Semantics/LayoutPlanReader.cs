@@ -93,6 +93,7 @@ internal static class LayoutPlanReader
         ChordListKey.Key => ChordListKey.Words,
         CompressRestsKey.Key => CompressRestsKey.Words,
         VoltaBracketLength.Key => VoltaBracketLength.Words,
+        OttavaLineKey.Key => OttavaLineKey.Words,
         _ => [],
     };
 
@@ -297,6 +298,9 @@ internal static class LayoutPlanReader
                 MinorChords.Key => ReadOneWord(plan, entry, span, found, MinorChords.Key,
                     MinorChords.Words, w => MinorChords.Find(w) is { } b
                         ? plan with { Chords = plan.Chords with { LowercaseMinor = b } } : null),
+                OttavaLineKey.Key => ReadOneWord(plan, entry, span, found, OttavaLineKey.Key,
+                    OttavaLineKey.Words, w => OttavaLineKey.Find(w) is { } b
+                        ? plan with { Style = plan.EngravingStyle with { OttavaWave = b } } : null),
                 // Which chords draw a diagram, and the tuning a part-less chord draws on — two
                 // keys, one question each (owner's grammar 2026-10-31). The old one-key form
                 // (a tuning word, `capo N`, a table) is refused naming the new spelling.

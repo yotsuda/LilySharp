@@ -804,6 +804,7 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'chordNames' , ChordNameMode
                | 'chordList' , Boolean
                | 'compressRests' , Boolean
+               | 'ottavaLine' , ( 'dashed' | 'wave' )   (* an ottava's line: dashes and a hook (default), or a wave with no hook *)
                | 'voltaBracket' , VoltaLength        (* VoltaLength: 'all' | 'line' | Integer >= 1 — §6 StructureVolta *)
                | StyleKey , Number                     (* > 0, no unit *)
                | ( 'Beam.damping' | 'Dots.padding' | 'Accidental.rightPadding' ) , Number   (* >= 0 *)

@@ -291,6 +291,31 @@ public static class MinorChords
     };
 }
 
+/// <summary>
+/// <c>layout { ottavaLine dashed | wave }</c>: how an ottava's line is drawn. <c>dashed</c> (the
+/// default) is LilyPond's dashes and hook; <c>wave</c> is an old print's wavy line with no hook
+/// (OMR request 17, 2026-11-01; owner's decision: one key).
+/// </summary>
+/// <remarks>LILYPOND-REF: scm/define-grobs.scm:2708-2731 OttavaBracket ottava-bracket-interface: its
+/// edge-height and dashed-line style are the default; LilyPond 2.26.0 draws the same picture under
+/// <c>style = #'trill</c> and <c>edge-height = #'(0 . 0)</c>.</remarks>
+public static class OttavaLineKey
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "ottavaLine";
+
+    /// <summary>The two words, the default first.</summary>
+    public static readonly IReadOnlyList<string> Words = ["dashed", "wave"];
+
+    /// <summary>True for <c>wave</c>, false for <c>dashed</c>, null for anything else.</summary>
+    public static bool? Find(string word) => word switch
+    {
+        "dashed" => false,
+        "wave" => true,
+        _ => null,
+    };
+}
+
 /// <summary>What a chord name shows in a score with a capo (the file's <c>capo N</c> line):
 /// the name of the shape the player presses, the sounding chord's name, or both.</summary>
 /// <remarks>

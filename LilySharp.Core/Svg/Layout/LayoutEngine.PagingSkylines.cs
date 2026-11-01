@@ -526,7 +526,7 @@ internal sealed partial class LayoutEngine
         if (!ann.OttavaBrackets.IsDefaultOrEmpty)
             foreach (var ob in ann.OttavaBrackets)
             {
-                double obTop = EngravingDefaults.StaffLineThickness / 2.0;
+                double obTop = OttavaBracketEngraver.LineReach;
                 double obBottom = obTop;
                 if (!string.IsNullOrEmpty(ob.Text))
                 {
@@ -1542,7 +1542,8 @@ internal sealed partial class LayoutEngine
                         ob.YUp + halfInk, ob.YUp - halfInk);
                 }
                 if (ob.EndX > lineStart)
-                    AddMarkBox(ob.StartMeasureIndex, lineStart, ob.EndX, ob.YUp + half, ob.YUp - half);
+                    AddMarkBox(ob.StartMeasureIndex, lineStart, ob.EndX,
+                        ob.YUp + OttavaBracketEngraver.LineReach, ob.YUp - OttavaBracketEngraver.LineReach);
                 if (ob.EdgeHeight > 0)
                 {
                     double tip = ob.YUp + (ob.IsAbove ? -ob.EdgeHeight : ob.EdgeHeight);

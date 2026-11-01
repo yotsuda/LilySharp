@@ -345,6 +345,13 @@
                     }
                 },
                 {
+                    "match": "\\b(ottavaLine)\\s+(dashed|wave)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.layout-key.lilysharp" },
+                        "2": { "name": "support.constant.layout-value.lilysharp" }
+                    }
+                },
+                {
                     "match": "\\b(minorChords)\\s+(upper|lower)\\b",
                     "captures": {
                         "1": { "name": "keyword.other.layout-key.lilysharp" },
@@ -402,7 +409,7 @@
                 {
                     "comment": "A key still gets its colour while the writer has typed it and not yet its word — the two-word rules above take over the moment the word lands.",
                     "name": "keyword.other.layout-key.lilysharp",
-                    "match": "\\b(markTempo|barNumbers|accidentals|sectionLabels|sectionLabelAlign|partCombineText|chordQualities|minorChords|chordDiagrams|chordTuning|chordNames|chordList|voltaBracket|compressRests|lineThickness|StaffLine\\.thickness|LedgerLine\\.thickness|LedgerLine\\.lengthFraction|Stem\\.thickness|Stem\\.lengthFraction|Beam\\.thickness|Beam\\.damping|Dots\\.padding|Accidental\\.rightPadding|NoteHead\\.scale|BarLine\\.thinThickness|BarLine\\.thickThickness|cueSize)\\b"
+                    "match": "\\b(markTempo|barNumbers|accidentals|sectionLabels|sectionLabelAlign|partCombineText|chordQualities|minorChords|chordDiagrams|chordTuning|chordNames|chordList|voltaBracket|compressRests|ottavaLine|lineThickness|StaffLine\\.thickness|LedgerLine\\.thickness|LedgerLine\\.lengthFraction|Stem\\.thickness|Stem\\.lengthFraction|Beam\\.thickness|Beam\\.damping|Dots\\.padding|Accidental\\.rightPadding|NoteHead\\.scale|BarLine\\.thinThickness|BarLine\\.thickThickness|cueSize)\\b"
                 },
                 {
                     "comment": "`every`'s count, and voltaBracket's.",

@@ -163,6 +163,10 @@ public sealed record EngravingStyle
     /// lily/font-size-engraver.cc:47-62 Font_size_engraver::acknowledge_font.</remarks>
     public double CueFontSizeStep { get; init; } = -4.0;
 
+    /// <summary><c>layout { ottavaLine wave }</c>: an ottava's line is a wave with no hook, not
+    /// dashes and a hook (<see cref="Semantics.OttavaLineKey"/>).</summary>
+    public bool OttavaWave { get; init; }
+
     /// <summary><c>BarLine.hair-thickness</c>, in staff line thicknesses.</summary>
     /// <remarks>LILYPOND-REF: scm/bar-line.scm:227-238 make-simple-bar-line reads it times the
     /// paper's line-thickness; scm/define-grobs.scm BarLine (hair-thickness . 1.9).</remarks>

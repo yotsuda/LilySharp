@@ -1201,7 +1201,15 @@ internal static partial class SharedRenderer
 
                 double lineStartX = OttavaBracketEngraver.LineStartX(
                     fonts, b.Text, b.StartX, textFontSize);
-                if (lineStartX < b.EndX)
+                if (lineStartX < b.EndX && OttavaBracketEngraver.Wave)
+                {
+                    // layout { ottavaLine wave }: the run a trill's line is, by the same arithmetic.
+                    double baseline = absY + os.Size(TrillWaveOutline.GlyphBaselineOffset, b.StaffIndex);
+                    double size = os.Size(FontSize, b.StaffIndex);
+                    foreach (double originX in TrillWaveOutline.ElementOrigins(lineStartX, b.EndX - lineStartX))
+                        gc.DrawGlyph(Music(MusicGlyph.WiggleTrill), originX, baseline, size);
+                }
+                else if (lineStartX < b.EndX)
                 {
                     double dashOn = b.DashPeriod * b.DashFraction;
                     double dashOff = b.DashPeriod * (1 - b.DashFraction);

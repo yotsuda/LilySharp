@@ -2147,6 +2147,11 @@ word, because LilyPond spells the rest with digits too. `words` spells the quali
 instead — `Cdim`, `Caug`, `Cm7♭5`, `Cdim7`, `Cmaj7` — the lead-sheet convention, and what
 every Lily# book printed before 2026-09-12.
 
+**`ottavaLine`** — how an ottava's line is drawn: `dashed` (the default and LilyPond's: dashes
+and a hook at its end) or `wave` (a wavy line with no hook, as in old prints; the twin writes
+`OttavaBracket.style = #'trill` and `edge-height = #'(0 . 0)`). It is the whole score's, and the
+line's room follows its shape. `lysc --set ottavaLine=wave` takes it too.
+
 **`minorChords`** — whether a chord with a **minor third** prints an uppercase root with
 its `m` (`upper`, the default and LilyPond's) or a lowercase root with the `m` dropped
 (`lower` = LilyPond's `chordNameLowercaseMinor`, which the twin writes on the `ChordNames`
