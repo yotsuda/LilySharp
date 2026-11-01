@@ -16,6 +16,9 @@ workflow attaches that section to the GitHub Release verbatim.
   intervals from the bar's first note, so a figure moved along the chords counts as one; in all but
   one section of six or more too. The drums' kick-and-snare rule gains the same "all but one of six"
   tier.
+- `[editor]` **`#chordVoicings` answers no voicing that sounds one pitch on two strings**: the
+  diagrams' G shape 35503x (its fourth string at the fifth fret and its open third string both G3)
+  used to come back as `<g, d g g d'>`, and the doubled note read as a mistake on the page.
 - `[editor]` **The length finding says how not to lengthen**: a section that returns is named again
   in the form, and that counts; a copy under a new name with a few bars altered is not length.
 

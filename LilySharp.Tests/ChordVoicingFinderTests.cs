@@ -39,6 +39,24 @@ public class ChordVoicingFinderTests
         Assert.Contains("x35343", ChordVoicingFinder.Describe("Cm7", "guitar", "C3", "C5"));
     }
 
+    // Owner's request 2026-11-01: a composed guitar part held `<g, d g g d'>` — the diagrams' G
+    // shape 35503x sounds G3 on two strings — and the doubled note reads as a mistake on the page.
+    [Theory]
+    [InlineData("G", "guitar")]
+    [InlineData("D", "guitar")]
+    [InlineData("C", "guitar")]
+    [InlineData("Am", "guitar")]
+    [InlineData("E", "guitar")]
+    [InlineData("G", "bass")]
+    [InlineData("C", "ukulele")]
+    public void NoVoicingSoundsOnePitchOnTwoStrings(string chord, string instrument)
+    {
+        var answer = ChordVoicingFinder.Find(chord, instrument, null, null, 12);
+        Assert.NotEmpty(answer.Voicings);
+        Assert.All(answer.Voicings, v => Assert.Equal(v.Pitches.Count, v.Pitches.Distinct().Count()));
+        Assert.DoesNotContain(ChordVoicingFinder.Find("G", "guitar", null, null, 12).Voicings, v => v.Diagram == "35503x");
+    }
+
     [Fact]
     public void ABowedString_AnswersDoubleStops_OnNeighbouringStrings()
     {

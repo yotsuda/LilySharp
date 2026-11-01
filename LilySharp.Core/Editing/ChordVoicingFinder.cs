@@ -97,7 +97,13 @@ public static class ChordVoicingFinder
         {
             var pitches = frets.Select((f, s) => f < 0 ? -1 : strings[s] + f).Where(p => p >= 0).OrderBy(p => p).ToList();
             return new Voicing(frets, pitches, [.. pitches.Select(p => NoteName(p, spelled))]);
-        }).ToList();
+        })
+        // No two strings on one pitch (owner's request 2026-11-01: a composed guitar part held
+        // `<g, d g g d'>` — the diagrams' G shape 35503x, its fourth string at the fifth fret and
+        // its open third string both G3 — and the doubled note reads as a mistake on the page). A
+        // diagram may double a note; a chord written in notes should not, so the tool leaves such
+        // shapes out and the AI never sees them.
+        .Where(v => v.Pitches.Distinct().Count() == v.Pitches.Count).ToList();
         // In the register first, in the list's own order (the commonest shapes first); then the
         // rest, the nearest to the register first.
         bool Inside(Voicing v) => (lo is not int l || v.Pitches[0] >= l) && (hi is not int h || v.Pitches[^1] <= h);
@@ -110,7 +116,8 @@ public static class ChordVoicingFinder
         if (ordered.Count == 0)
             return new Answer([], bowed
                 ? "no double stop of its tones lies on two neighbouring strings within the hand's reach"
-                : "no voicing of it within the diagrams' rules (every needed tone, the root lowest, four frets, four fingers)", bowed, names);
+                : "no voicing of it within the diagrams' rules (every needed tone, the root lowest, four frets, four fingers) that "
+                  + "sounds no pitch on two strings", bowed, names);
         string? outside = ordered.Any(Inside) ? null : "none lies wholly in the register asked: the nearest are given";
         return new Answer([.. ordered.Take(System.Math.Max(1, count))], outside, bowed, names);
     }
