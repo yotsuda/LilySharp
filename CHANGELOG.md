@@ -50,6 +50,9 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[check]` **Four-bar phrases keeping one rhythm for each bar's place** (three quarters of the
   bars, where whole phrases differ), and **a song's chorus sung three times or more, the last as
   the first**. Owner's review 2026-11-01 (風の道).
+- `[check]` **A song's lines cut to one count of notes** (3, 3, 5, 2 a phrase, whatever the rhythm)
+  and **a chorus whose first bar is another section's**, an octave apart or none. Owner's review
+  2026-11-01 (あしたの窓).
 - `[docs]` The composing guide: a long note is its chord's own tone, or resolves to one, and falls
   on a word that carries the meaning. Copilot's chat calls `lilysharp_proposeScore` directly.
 

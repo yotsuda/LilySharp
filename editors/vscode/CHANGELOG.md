@@ -10,7 +10,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   of each line it runs on to. Stacked verses keep their numbers on every line.
 - **Copilot's chat is told to call `lilysharp_proposeScore` directly**, not through a canvas
   action, which asked "Allow tool call?" for nothing. Compose with AI's check also tells four-bar
-  phrases that keep one rhythm for each bar's place, and a chorus sung three times unchanged.
+  phrases that keep one rhythm for each bar's place, and a chorus sung three times unchanged; a
+  song's lines cut to one count of notes a bar, and a chorus opening on another section's first bar.
 
 ### Chord diagrams clear the staff under them
 

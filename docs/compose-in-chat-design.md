@@ -136,7 +136,10 @@ as the melody's rhythm).
   and more than half of the sections (four or more) closing on one figure — the first four single
   notes of each section's last bar, as intervals (`OneClosingFigure`; 2026-11-01: `cis8 b'4 ais8
   gis8` closing a verse, a chorus and a second verse); and the chorus sung three times or more,
-  the last as the first (`LastChorusUnchanged`).
+  the last as the first (`LastChorusUnchanged`); its first bar the same line as another section's
+  first bar, an octave apart or none (in `ChorusOpensLikeAnother`); seven eighths of its four-bar
+  phrases' bars with the commonest number of notes for their place, the numbers not all one
+  (`PhraseCounts`; 2026-11-01: あしたの窓, 3, 3, 5, 2 in 31 of 32 bars; 4 of 145 books).
 - Leaps up and down its chords (fewer than a quarter of the moves are steps).
 - One bar's figure moved along the chords: half the bars or more take the up-and-down shape of the
   bar before. Measured on the owner's 60 pieces: the sequenced rock guitars scored 0.53–0.61, the

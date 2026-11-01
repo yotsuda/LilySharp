@@ -516,6 +516,32 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Hook(A + C + D, A + C + D)), f => f.Contains("four-bar phrases keep"));
     }
 
+    // Owner's review 2026-11-01 (Ashita-no-Mado): 3, 3, 5, 2 notes in 31 of 32 bars, the rhythms
+    // changed enough to pass, and the chorus opening an octave over the verse.
+    [Fact]
+    public void LinesCutToOneCountOfNotes_AreSaid_ThoughTheirRhythmsDiffer()
+    {
+        const string A = "r8 b'8~ b'4 c''4 d''4 | c''4 a'4 f''2 | r8 g'8~ g'4 f'8 d'8 f'8 g'8 | a'4 f'2 r4 | ",
+            B = "b'2 a'4 f'4 | r8 a'8~ a'4 f'4 c''4 | r8 d'8~ d'4 f'8 g'8 b'8 g'8 | f'2 b'4 r4 | ",
+            C = "c''4 e''2 g'4 | g'2 b'4 e''4 | d''4 c''8 b'8 f'4 d''4 | r4 a'4 f'2 | ";
+        var moulded = CompositionChecks.Of(Hook(A + B + C, C + A + B));
+        Assert.Contains(moulded, f => f.StartsWith("singer, the melody: its 6 four-bar phrases keep the same number of notes in each bar's place (3, 3, 5, 2 notes, in 24 of 24 bars)"));
+        // Lines of their own lengths are not told.
+        const string D = "g'1 | a'2 b'2 | c''8 b'8 a'8 g'8 a'2 | b'1 | ",
+            E = "e'4 g'4 a'4 b'4 | c''2. r4 | b'2 a'4 g'4 | f'8 g'8 a'8 b'8 c''4 d''4 | ";
+        Assert.DoesNotContain(CompositionChecks.Of(Hook(A + D + E, D + E + A)), f => f.Contains("same number of notes"));
+    }
+
+    [Fact]
+    public void AChorusOpeningWithTheVersesFirstBarAnOctaveUp_IsSaid()
+    {
+        const string V = "r8 b8~ b4 c'4 d'4 | c'4 a4 f'2 | ", K = "r8 b'8~ b'4 c''4 d''4 | f'4 a'4 c''2 | ";
+        Assert.Contains(CompositionChecks.Of(Hook(V + Q + Q + Q, K + R + R + R)),
+            f => f.StartsWith("singer, the melody: the chorus (Chorus) opens with the first bar of Verse, an octave apart or none (bars 1 and 9"));
+        // Its first bar a line of its own: not told.
+        Assert.DoesNotContain(CompositionChecks.Of(Hook(V + Q + Q + Q, "e''4. d''8 b'2 | f'4 a'4 c''2 | " + R + R + R)), f => f.Contains("first bar of Verse"));
+    }
+
     [Fact]
     public void AChorusSungThreeTimes_TheLastAsTheFirst_IsSaid()
     {

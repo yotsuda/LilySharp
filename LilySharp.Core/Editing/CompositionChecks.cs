@@ -589,6 +589,7 @@ public static class CompositionChecks
                 findings.AddRange(PeakSpentEarly(midi, tune, tuneNotes, barList, fifths));
                 findings.AddRange(OneClosingFigure(midi, tune, tuneNotes, barList, fifths));
                 findings.AddRange(LastChorusUnchanged(midi, tune));
+                findings.AddRange(PhraseCounts(midi, tune, byPart[tune], barList));
             }
         }
         findings.AddRange(EndsApart(midi, barList));
@@ -1030,6 +1031,61 @@ public static class CompositionChecks
                 + "opening of its own, in another rhythm, from a higher note, with a leap the verse does not make.";
             yield break;
         }
+        // …or its first bar the same line at another octave (owner's review 2026-11-01, あしたの窓:
+        // `r8 b'~ b' cis'' dis''` over the verse's `r8 b~ b cis' dis'`, the second bars apart).
+        string? FirstBar(int start, out int bar)
+        {
+            int b = bar = barList.IndexOf(start);
+            if (b < 0 || b + 1 >= barList.Count)
+                return null;
+            var mine = notes.Where(n => n.StartTick >= barList[b] && n.StartTick < barList[b + 1]).ToList();
+            return mine.Count < 3 ? null
+                : (mine[0].Pitch % 12) + ":" + string.Join(",", mine.Select(n => $"{n.StartTick - barList[b]}:{n.Pitch - mine[0].Pitch}"));
+        }
+        if (FirstBar(chorus.Start, out int chorusFirst) is not { } line)
+            yield break;
+        foreach (var (name, start, _) in PlayedSpans(midi))
+        {
+            if (name == chorus.Name || FirstBar(start, out int bar) != line)
+                continue;
+            yield return $"{tune}, the melody: the chorus ({chorus.Name}) opens with the first bar of {name}, an octave apart or none (bars {bar + 1} "
+                + $"and {chorusFirst + 1}, as the form plays them) — the same line sung higher is not a hook of its own: give the chorus "
+                + "another rhythm and another shape from its first notes.";
+            yield break;
+        }
+    }
+
+    // Three bars of four… a sung line's notes a bar the same for its place in the phrase: more of
+    // them than a rhythm's three quarters, a count being a coarser likeness than a rhythm.
+    private const double PhraseCountShare = 0.875;
+
+    /// <summary>A sung tune's four-bar phrases with as many notes in each bar for its place in the
+    /// phrase, line after line: the words cut to a mould rather than the notes set to the words.
+    /// Owner's review 2026-11-01 (あしたの窓): 3, 3, 5, 2 notes in 31 of 32 bars, every word broken at
+    /// the bar lines, the rhythms changed enough to pass <see cref="PhrasePositions"/>.</summary>
+    private static IEnumerable<string> PhraseCounts(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList)
+    {
+        const int length = 4;
+        var phrases = new List<int[]>();
+        foreach (var (start, _) in PhraseWindows(midi, barList, length))
+        {
+            int first = barList.IndexOf(start);
+            var bars = Enumerable.Range(0, length)
+                .Select(k => onsets.Count(o => o.Start >= barList[first + k] && o.Start < barList[first + k + 1])).ToArray();
+            if (bars.Any(b => b > 0))
+                phrases.Add(bars);
+        }
+        if (phrases.Count < PhraseFormulaFewestPhrases)
+            yield break;
+        var common = Enumerable.Range(0, length).Select(k => phrases.GroupBy(p => p[k]).OrderByDescending(g => g.Count()).First()).ToList();
+        int same = common.Sum(g => g.Count());
+        int total = length * phrases.Count;
+        // One count in every bar is an even pace, which the note-value readings speak to.
+        if (same >= total * PhraseCountShare && common.Select(g => g.Key).Distinct().Count() > 1)
+            yield return $"{tune}, the melody: its {phrases.Count} four-bar phrases keep the same number of notes in each bar's place "
+                + $"({string.Join(", ", common.Select(g => g.Key))} notes, in {same} of {total} bars) — the words are being cut to one mould, whole "
+                + "words broken at the bar lines: write each line as the sentence it is, and give it the notes its words need, some "
+                + "lines long and some short.";
     }
 
     // A tune this long is read for where its peak comes.
