@@ -888,27 +888,28 @@ score sheet { chords prog lyrics words }     // chords + lyrics rows, no staff
 ```
 
 **The strum's rhythm — `strokes`.** A placed row HOLDS each chord over its slot in the MIDI (a
-keyboard's reading). A guitar's strum is a `strokes` part: a rhythm of slashes and no pitch
-(`/4`, then bare values for more strokes; rests, ties, `%` for the bar before), played by the
-row with `plays`:
+keyboard's reading). A guitar's strum is a `strokes` part: a rhythm and no pitch — VALUES alone
+(`4 8 8 4 4`, each a slash head; rests, ties, `%` for the bar before) — which the row `plays`:
 
 ```
 key d major
 part singer { instrument alto }
-strokes rhythm { section A { /4 8 8 4 4 | % | % | % | } }   // a note or chord in it is LYS2021
+strokes rhythm { section A { 4 8 8 4 4 | % | % | % | } }   // a note or chord in it is LYS2021
 chords harmony { section A { D | A | Bm | G | } }
 section A {
   singer { d'4 fis'8 a' d''2 | a'4 cis'' e'' cis'' | b'4 d'' e'' d'' | g'4 b'8 d'' b'2 | }
   lyrics words sings singer { ゆ う や け | み ち を き | と あ る い | ね よ る の | }
 }
 form { A }
-score { staff singer  lyrics words  chords harmony plays rhythm }
+score { chords harmony plays rhythm  staff singer  lyrics words }
 ```
 
-The row then stands over a ONE-LINE staff of the slashes (no clef, key or name), and the MIDI
-strikes the chord in force at every stroke. `lyrics strum sings rhythm { … }` puts words under
-the strokes, one syllable a stroke — the way to place a verse's words when its tune is not
-written out. `strokes rhythm` alone in a score draws the one-line staff with no row over it.
+`plays` is how the row SOUNDS — the MIDI strikes the chord in force at every stroke — and draws
+nothing: the page is the lead sheet it was. To PRINT the strum, place the part: `strokes rhythm`
+in the score draws it as a ONE-LINE staff of slashes (no clef, key or name), and a chords row
+written above that item stands over it (`score { staff singer  lyrics words  chords harmony
+plays rhythm  strokes rhythm }`). `lyrics strum sings rhythm { … }` puts words under the strokes,
+one syllable a stroke — the way to place a verse's words when its tune is not written out.
 
 **Roman numerals.** A chord entry may also be a DEGREE of the key in force at its bar —
 `I` `IIm7` `V7` `IVmaj7` `VIIm7-5` `bVII` (`b`/`#` or `♭`/`♯`; the quality in any of its

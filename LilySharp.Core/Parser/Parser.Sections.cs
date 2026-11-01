@@ -763,24 +763,35 @@ internal sealed partial class Parser
             options.Add(ParsePartOption());
         }
 
-        // Body can be: { ... } or variable reference
-        GreenNode body;
-        if (Check(SyntaxKind.OpenBrace))
+        // A strokes part's cell reads a bare value as a stroke (_strokesBody), wherever the
+        // `strokes NAME` declaration stands in the file (_strokesNames).
+        bool wasStrokes = _strokesBody;
+        _strokesBody = _strokesNames.Contains(partName.Text);
+        try
         {
-            body = ParseMusicBlock();
-        }
-        else if (Check(SyntaxKind.Identifier))
-        {
-            // Variable reference: partName { existingVariable }
-            body = new VariableReferenceGreen(Advance());
-        }
-        else
-        {
-            // Error recovery: expect a block
-            body = ParseMusicBlock();
-        }
+            // Body can be: { ... } or variable reference
+            GreenNode body;
+            if (Check(SyntaxKind.OpenBrace))
+            {
+                body = ParseMusicBlock();
+            }
+            else if (Check(SyntaxKind.Identifier))
+            {
+                // Variable reference: partName { existingVariable }
+                body = new VariableReferenceGreen(Advance());
+            }
+            else
+            {
+                // Error recovery: expect a block
+                body = ParseMusicBlock();
+            }
 
-        return new PartBlockGreen(partName, [.. options], body);
+            return new PartBlockGreen(partName, [.. options], body);
+        }
+        finally
+        {
+            _strokesBody = wasStrokes;
+        }
     }
 
     private bool IsPartOption()

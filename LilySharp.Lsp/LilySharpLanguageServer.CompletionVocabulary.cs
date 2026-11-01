@@ -3949,7 +3949,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "chords", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "chords ${1:prog} {\n\tsection ${2:A} {\n\t\t$0\n\t}\n}", Detail = "Named chord track (a score places it with a `chords NAME` row)" },
                 // A strokes part (2026-11-01): slash heads alone, the rhythm a chord row strums in
                 // (`chords prog plays rhythm`).
-                new CompletionItem { Label = "strokes", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "strokes ${1:rhythm} {\n\tsection ${2:A} {\n\t\t/4 8 8 4 4 |$0\n\t}\n}", Detail = "Strokes part: slash heads, no pitches — a chord row plays it (`chords NAME plays rhythm`)" },
+                new CompletionItem { Label = "strokes", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "strokes ${1:rhythm} {\n\tsection ${2:A} {\n\t\t4 8 8 4 4 |$0\n\t}\n}", Detail = "Strokes part: values alone (slash heads, no pitches) — a chord row plays it (`chords NAME plays rhythm`)" },
         };
 
         // Drop the singleton globals (metadata + piece-wide defaults) already written at the

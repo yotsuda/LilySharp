@@ -25,6 +25,22 @@ internal sealed partial class Parser
 
     private PartDeclarationGreen ParsePartDeclaration()
     {
+        // A strokes body reads a bare value as a stroke (_strokesBody); a part's reads it as a
+        // bare duration, whatever block this declaration stands in.
+        bool wasStrokes = _strokesBody;
+        _strokesBody = Check(SyntaxKind.StrokesKeyword);
+        try
+        {
+            return ParsePartDeclarationBody();
+        }
+        finally
+        {
+            _strokesBody = wasStrokes;
+        }
+    }
+
+    private PartDeclarationGreen ParsePartDeclarationBody()
+    {
         // `strokes NAME { … }` is a part declaration under its own keyword (2026-11-01).
         var keyword = Check(SyntaxKind.StrokesKeyword) ? Advance() : Expect(SyntaxKind.PartKeyword);
         // names may be clef-name words (bass/treble/...). `part { … }` / `part "Violin" { … }`

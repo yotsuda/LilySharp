@@ -9,16 +9,17 @@ workflow attaches that section to the GitHub Release verbatim.
 ### A chord row strums: `strokes` and `plays`
 
 - `[grammar]` **`strokes NAME { … }` is a part that holds a rhythm and no pitch** — `strokes
-  rhythm { section A { /4 8 8 4 4 | % | % | % | } }`: slashes (`/4`, then bare values for more),
-  rests, ties, bar lines and `%`. A note, a chord, a drum or a `q` in it is an error (LYS2021).
-  Owner's design 2026-11-01: a song to sing and play yourself whose chords sounded on beat 1 only.
-- `[score]` **`chords NAME plays STROKES`** stands the row over a one-line staff of the strokes —
-  no clef, key signature or name — and **`strokes NAME`** alone draws that staff with no row over
-  it (`as lines 5` widens it, a string after the name labels it). The LilyPond twin writes the
-  staff with `line-count = #1` and `\improvisationOn`.
-- `[midi]` **A row that plays strokes strikes the chord in force at every stroke**, each held to
-  the next stroke or the slot's end, on the row's own track. A row without `plays` holds each
-  chord over its slot as before (a keyboard's reading).
+  rhythm { section A { 4 8 8 4 4 | % | % | % | } }`: values alone, each a slash head (the part has
+  no other, so the `/` goes unwritten; `/4` still reads as itself), rests, ties, bar lines and
+  `%`. A note, a chord, a drum or a `q` in it is an error (LYS2021). Owner's design 2026-11-01: a
+  song to sing and play yourself whose chords sounded on beat 1 only.
+- `[midi]` **`chords NAME plays STROKES` is how the row sounds**: the chord in force is struck at
+  every stroke, each held to the next stroke or the slot's end, on the row's own track; it draws
+  nothing. A row without `plays` holds each chord over its slot as before (a keyboard's reading).
+- `[score]` **`strokes NAME`** draws the strokes as a one-line staff — no clef, key signature or
+  name (`as lines 5` widens it, a string after the name labels it); a chords row written above
+  it stands over it. The LilyPond twin writes the staff with `line-count = #1` and
+  `\improvisationOn`.
 - `[lyrics]` **`lyrics NAME sings STROKES`** puts words under the strokes, one syllable a stroke —
   a verse whose tune is not written out.
 - `[check]` A strokes part is no part to the composition checks: it is not asked for an

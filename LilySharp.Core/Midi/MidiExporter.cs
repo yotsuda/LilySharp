@@ -2853,7 +2853,8 @@ public sealed class MidiExporter
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
         bool startsTie = bare.Articulations.OfType<TieSyntax>().Any();
 
-        // A bare value after a slash is that stroke again (a strokes part's `/4 8 8 4 4`).
+        // A bare value after a slash is that stroke again (`/4 8 8 4 4` in a part that comps; a
+        // strokes part's bare values are slash notes themselves, Parser.ParseStrokeOfBareValue).
         if (Music.BareDurations.OriginalOf(bare) is SlashNoteSyntax)
             RecordStroke(bare.Articulations, startTick, durationTicks, velocity);
 

@@ -390,7 +390,9 @@ internal sealed partial class Parser
             // lily/parser.yy music_embedded). With nothing before it to repeat,
             // the validator reports it (LYS0016) — the parser keeps the node so
             // later notes keep their source offsets.
-            SyntaxKind.IntegerLiteral => ParseBareDuration(),
+            // …except in a strokes part, where it is a STROKE: the slash is the only head a
+            // strokes part has, so it goes unwritten (`4 8 8 4 4`, ParseStrokeOfBareValue).
+            SyntaxKind.IntegerLiteral => _strokesBody ? ParseStrokeOfBareValue() : ParseBareDuration(),
 
             // A decimal in a music stream can only have been meant as a duration, and
             // durations are whole. Reported rather than skipped: `c4.5` used to lex as
@@ -702,6 +704,25 @@ internal sealed partial class Parser
         var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
         var articulations = ParsePostEvents();
         return new BareDurationGreen(duration, tremolo, articulations);
+    }
+
+    // 4 8 8 4 4 in a strokes part — each value a slash note whose '/' is unwritten (owner's
+    // design 2026-11-01: a strokes part has no other head, so the first stroke of a section
+    // need not spell it). The node is a SlashNote with a ZERO-WIDTH slash token — no trivia,
+    // no diagnostic — so every reader (the collector, the exporters, BareDurations' threading,
+    // the strokes MIDI) sees the stroke `/4` would have been; the number is read as
+    // ParseBareDuration reads it, since it is glued to nothing. `/4` still parses as itself.
+    private SlashNoteGreen ParseStrokeOfBareValue()
+    {
+        var slashToken = new SyntaxToken(SyntaxKind.Slash, "", null, null);
+        var number = Advance();
+        var dots = new List<GreenNode?>();
+        while (Check(SyntaxKind.Dot) && CurrentGluedToPrevious)
+            dots.Add(Advance());
+        var duration = new DurationGreen(number, [.. dots]);
+        var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
+        var articulations = ParsePostEvents();
+        return new SlashNoteGreen(slashToken, duration, tremolo, articulations);
     }
 
     // bd4, sn8@f, hh — same trailing structure as ParseNote.

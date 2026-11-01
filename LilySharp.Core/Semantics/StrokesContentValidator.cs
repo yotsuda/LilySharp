@@ -21,9 +21,9 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// A strokes part (<c>strokes rhythm { section A { /4 8 8 4 4 | } }</c>, owner's design
-/// 2026-11-01) holds strokes alone: slash heads (<c>/4</c>, and the bare values that repeat
-/// them), rests, ties, bar lines, repeat marks, tuplets of strokes, and phrases of the same. A
+/// A strokes part (<c>strokes rhythm { section A { 4 8 8 4 4 | } }</c>, owner's design
+/// 2026-11-01) holds strokes alone: slash heads (a bare value is one, its <c>/</c> unwritten —
+/// <c>Parser.ParseStrokeOfBareValue</c>), rests, ties, bar lines, repeat marks, tuplets of strokes, and phrases of the same. A
 /// pitch written in it — a note, a chord, a drum, a <c>q</c>, a broken chord — is an error
 /// (LYS2021) at the item: the part names no instrument and sounds nothing of its own; the chord
 /// row that <c>plays</c> it is what sounds.
@@ -66,8 +66,8 @@ internal sealed class StrokesContentValidator : ISemanticValidator
                     or ChordEntrySyntax or ParallelExpressionSyntax or GraceExpressionSyntax:
                     if (said.Add(node))
                         _diagnostics.Error(node.Span, DiagnosticCodes.StrokesHoldNoPitch,
-                            $"'{part}' is a strokes part and holds no pitches: write a stroke ('/4', then bare values '8 4' "
-                            + "for more of them), a rest, a tie or a bar line — the chords it strums are the chord row's "
+                            $"'{part}' is a strokes part and holds no pitches: write the strokes as values ('4 8 8 4 4'), "
+                            + "a rest, a tie or a bar line — the chords it strums are the chord row's "
                             + "('chords NAME plays " + part + "').");
                     break;
                 case VariableReferenceSyntax reference when phrases.TryGetValue(reference.Name.Text, out var phrase)

@@ -37,11 +37,15 @@ public class StrokesTests
 {
     private const int Bar = 1920;
 
-    private const string Song = """
+    // ⚠️ A raw string takes the FILE's line endings (CRLF here), so the "\n" the Replace calls
+    // below look for would never match — normalised once (the CRLF trap of HANDOFF §1.1 第1036).
+    private static readonly string Song = Raw.ReplaceLineEndings("\n");
+
+    private const string Raw = """
         time 4/4
         octave absolute
         part singer { instrument alto }
-        strokes rhythm { section A { /4 8 8 4 4 | % | } }
+        strokes rhythm { section A { 4 8 8 4 4 | % | } }
         chords harmony { section A { C | G | } }
         section A {
           singer { c'4 d'4 e'4 f'4 | g'1 | }
@@ -53,6 +57,7 @@ public class StrokesTests
           staff singer
           lyrics words
           chords harmony plays rhythm
+          strokes rhythm
           lyrics strum
         }
         """;
@@ -74,6 +79,49 @@ public class StrokesTests
         Assert.Empty(SemanticValidation.Run(tree).Where(d => d.Severity == DiagnosticSeverity.Error));
     }
 
+    /// <summary>
+    /// Owner's design 2026-11-01, the second step: "the first pitch of a strokes section is a
+    /// slash", so a strokes part writes values alone — <c>4 8 8 4 4</c> — each a slash note whose
+    /// <c>/</c> is unwritten (a zero-width token), in a by-part body and in a section's cell
+    /// alike, with <c>/4</c> still read as itself. Elsewhere a leading bare value is still
+    /// LYS0016.
+    /// </summary>
+    [Theory]
+    [InlineData("strokes rhythm { section A { 4 8. 16 4 4 | } }\nsection A { singer { c'1 | } }")]
+    [InlineData("strokes rhythm { }\nsection A { singer { c'1 | } rhythm { 4 8. 16 4 4 | } }")]
+    [InlineData("section A { singer { c'1 | } rhythm { 4 8. 16 4 4 | } }\nstrokes rhythm { }")]
+    [InlineData("strokes rhythm { section A { /4 8. 16 4 4 | } }\nsection A { singer { c'1 | } }")]
+    public void ABareValueInAStrokesPart_IsAStroke(string body)
+    {
+        var tree = Parse("part singer\n" + body + "\nform { A }\nscore { staff singer  strokes rhythm }");
+        Assert.Empty(tree.Diagnostics);
+        Assert.Empty(SemanticValidation.Run(tree));
+        var strokes = tree.GetRoot().DescendantNodes<SlashNoteSyntax>().ToList();
+        Assert.Equal(5, strokes.Count);
+        Assert.Empty(tree.GetRoot().DescendantNodes<BareDurationSyntax>());
+        Assert.Equal([(4, 0), (8, 1), (16, 0), (4, 0), (4, 0)], strokes.Select(s => (s.Duration!.Value, s.Duration.DotCount)));
+        Assert.Equal(body, tree.ToFullString().Substring("part singer\n".Length, body.Length));
+        // The singer's bare value is still a repeat with nothing to repeat.
+        var pitched = Parse("part singer\nsection A { singer { 4 8 8 4 4 | } }\nform { A }\nscore { staff singer }");
+        Assert.Contains(SemanticValidation.Run(pitched), d => d.Code == DiagnosticCodes.DetachedDuration);
+    }
+
+    [Fact]
+    public void AddingTheStrokesDeclaration_RereadsAnUnchangedCell()
+    {
+        // The score's own `strokes rhythm` item is no declaration: before the declaration is
+        // written, the cell's values are bare durations (Parser.StrokesNamesOf reads depth 0).
+        const string cell = "section A { singer { c'1 | } rhythm { 4 8 8 4 4 | } }\nform { A }\nscore { staff singer  strokes rhythm }\n";
+        var before = Parse("part singer\n" + cell);
+        Assert.Equal(5, before.GetRoot().DescendantNodes<BareDurationSyntax>().Count());
+        // The edit touches the first line only; every other member is unchanged text, which an
+        // incremental reparse would adopt as parsed — with the cell's values as bare durations.
+        var after = before.WithChanges(new TextChange(new TextSpan("part singer\n".Length, 0), "strokes rhythm { }\n"));
+        Assert.Equal(5, after.GetRoot().DescendantNodes<SlashNoteSyntax>().Count());
+        Assert.Empty(after.GetRoot().DescendantNodes<BareDurationSyntax>());
+        Assert.Equal(after.ToFullString(), SyntaxTree.Parse(after.ToFullString()).ToFullString());
+    }
+
     [Fact]
     public void APitchInAStrokesPart_IsRefused()
     {
@@ -90,7 +138,7 @@ public class StrokesTests
     }
 
     [Fact]
-    public void AChordsRowThatPlaysStrokes_PutsAOneLineStaffUnderTheRow()
+    public void AChordsRowThatPlaysStrokes_OverTheStrokesItem_FoldsIntoItsOneLineStaff()
     {
         var spec = RenderSpecParser.FindFirst(Parse(Song))!;
         // Each row is folded into the staff beside it (RenderSpecParser.FoldAdjacentRows): the
@@ -103,6 +151,33 @@ public class StrokesTests
         Assert.Equal("rhythm", staff.ChordPlays);
         Assert.Equal("harmony", staff.WithChords);
         Assert.Equal("strum", Assert.Single(staff.WithLyrics));
+    }
+
+    /// <summary>Owner's decision 2026-11-01: <c>plays</c> says how the row SOUNDS and draws
+    /// nothing — the one-line staff is the score's own <c>strokes NAME</c> item.</summary>
+    [Fact]
+    public void PlaysAlone_DrawsNoStaff_AndStillStrikes()
+    {
+        string song = Song.Replace("  strokes rhythm\n", "").Replace("  lyrics strum\n", "");
+        var spec = RenderSpecParser.FindFirst(Parse(song))!;
+        // The row under the singer's words stays a row, with its `plays`; no staff of the
+        // strokes is added.
+        Assert.Equal(2, spec.Items.Length);
+        Assert.Equal("singer", Assert.IsType<SingleStaffSpec>(spec.Items[0]).Staff.VoiceName);
+        Assert.Equal("rhythm", Assert.IsType<ChordRowSpec>(spec.Items[1]).Plays);
+        Assert.Equal(10, ChordStrikes(new MidiExporter().Export(Parse(song))).Length);
+        // The twin writes every part's variable (the strokes' with \improvisationOn) but
+        // places no staff for the strokes in the score.
+        string ly = new LilyPondExporter().Export(Parse(song));
+        Assert.DoesNotContain("line-count", ly);
+        Assert.DoesNotContain("\\rhythmVar", ly.Substring(ly.IndexOf("\\score", StringComparison.Ordinal)));
+        // …and the row above the singer's staff, folded into it, strikes the same.
+        string above = Song.Replace("  staff singer\n  lyrics words\n  chords harmony plays rhythm\n  strokes rhythm\n  lyrics strum\n",
+            "  chords harmony plays rhythm\n  staff singer\n  lyrics words\n");
+        Assert.Equal(10, ChordStrikes(new MidiExporter().Export(Parse(above))).Length);
+        var aboveItems = RenderSpecParser.FindFirst(Parse(above))!.Items;
+        Assert.Equal("rhythm", Assert.Single(aboveItems.OfType<ChordRowSpec>()).Plays);
+        Assert.DoesNotContain(aboveItems, i => i is SingleStaffSpec { Staff.VoiceName: "rhythm" });
     }
 
     [Fact]
@@ -138,7 +213,7 @@ public class StrokesTests
     [Fact]
     public void ARowWithoutPlays_HoldsEachChord()
     {
-        var midi = new MidiExporter().Export(Parse(Song.Replace(" plays rhythm", "").Replace("lyrics strum\n", "")));
+        var midi = new MidiExporter().Export(Parse(Song.Replace(" plays rhythm", "")));
         Assert.Equal(new[] { (0, Bar), (Bar, Bar) }, ChordStrikes(midi));
     }
 

@@ -184,12 +184,11 @@ public static class RenderSpecParser
                     break;
 
                 case ChordRowRenderSyntax chordRow:
+                    // `chords prog plays rhythm` (owner's decision 2026-11-01) says how the row
+                    // SOUNDS — the MIDI strikes its chords at the strokes — and draws nothing of
+                    // the strokes: the one-line staff is the score's own `strokes rhythm` item.
                     items.Add(new ChordRowSpec(chordRow.PartName, ParseChordMode(chordRow.DisplayModeText))
                         { For = chordRow.ForTarget, Plays = chordRow.PlaysTarget });
-                    // `chords prog plays rhythm` (2026-11-01): the strokes part's one-line staff
-                    // stands right under the row, as `strokes rhythm` would place it.
-                    if (chordRow.PlaysTarget is { } strokes)
-                        items.Add(new SingleStaffSpec(StrokesStaffSpec(strokes)));
                     break;
 
                 // A row inside a group body belongs to the group (ParseGrandStaff
@@ -770,12 +769,6 @@ public static class RenderSpecParser
     /// <summary>One home for the staff-item token scan: the sings validator reads
     /// the same (part, with-lyrics) answer the renderer does, never a re-spelling.</summary>
     internal static StaffSpec? ParseStaffSpec(StaffRenderSyntax staff) => ParseStaff(staff);
-
-    /// <summary>The staff a strokes part is drawn on when a chord row <c>plays</c> it (owner's
-    /// design 2026-11-01): one line, no label — what <c>strokes NAME</c> places. The twin reads it
-    /// too (LilyPondExporter.EmitScore), so the row and its strokes stand together there as here.</summary>
-    public static StaffSpec StrokesStaffSpec(string partName)
-        => new(ClefType.Treble, partName, null, Lines: 1, NameSuppressed: true, WithLyrics: ImmutableArray<string>.Empty);
 
     private static StaffSpec? ParseStaff(StaffRenderSyntax staff)
     {

@@ -60,8 +60,9 @@ that prompted each check is written beside it in the code.
   fifths of its bars, eight or more (2026-11-01: a song to sing and play yourself, strums under
   the row). The guide's rule for such a song: alto for a woman's or an unnamed voice, baritone
   (G2–G4, a preset of its own since that day) for a man's, a lead sheet, the diagrams always,
-  and the strum as a `strokes` part the row plays (`chords harmony plays rhythm`, the grammar
-  of that day; a strokes part is no part to these checks — it needs no instrument).
+  and the strum as a `strokes` part the row plays (`chords harmony plays rhythm` — how the row
+  sounds; `strokes rhythm` in the score prints it; the grammar of that day. A strokes part is no
+  part to these checks — it needs no instrument).
 
 **Dynamics**
 - A part with no dynamics.

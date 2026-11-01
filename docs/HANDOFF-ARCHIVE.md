@@ -1,3 +1,7 @@
+## 第1036 ㉚ strokes の逐語 ← §1 の 20,000 字の門を超えたので出した
+
+- ㉚ **`strokes` 文法（ユーザー設計 2026-11-01・`Downloads/Kaerimichi-no-Akari2.lys`＝コードが 1 拍目しか鳴らない。決定＝語は `strokes`・`plays` の無い行は従来どおり保持（鍵盤の読み）・`lyrics … sings STROKES` で歌詞を置ける）**: `strokes NAME { … }`＝音高の無い part（`StrokesKeyword`・`PartDeclarationSyntax.IsStrokes`・`StrokesContentValidator`＝音符・和音・drum・q は LYS2021）。score の `strokes NAME`（1 線・clef／key／名前なし＝`RenderSpecParser.StrokesStaffSpec`）と `chords NAME plays STROKES`（`ChordRowRenderSyntax.PlaysTarget`・`ChordRowSpec.Plays`・fold 後は `StaffSpec.ChordPlays`）。MIDI＝`MidiExporter.StrokesOf` が strokes part を 1 度鳴らして打点を集め（`RecordStroke`）、`PlayChordRow` がスロット内の各打点で和音を打つ。双子＝`line-count = #1`＋`\improvisationOn`。補完・tmLanguage・検査器は strokes を part に数えない。⚠️ 副産物＝by-part の `strokes rhythm { section A … }` を root の `section A { singer … }` より先に書くと inner cell が代表 section になり singer が描かれなかった → `MeasureCollector.Definitions` で root-level body が by-part cell に勝つ。**同日の追加決定 2 件**: ⑴ strokes の中は `/` 不要＝裸の値が打点（`Parser.ParseStrokeOfBareValue`＝幅 0 の `/` トークンを持つ SlashNote・by-part 本体と section のセル（`Parser.StrokesNamesOf` が先にトークン列から名前を拾う）の両方・`/4` も従来どおり）。増分再パースは strokes 名の集合が変わると adoption を捨てる（`SyntaxTree.ParseIncremental`）。⑵ **`plays` は鳴り方だけ＝1 線の譜表は描かない**。描くときは score に `strokes rhythm` を書く（その上に書いた chords 行がその上に乗る）。網 `StrokesTests`（11 本）・Lab `sessions/p1036/strokes/`・GRAMMAR 3 冊・COMPOSE（弾き語りは必ず strokes＋plays・譜表は頼まれたら）・MANUAL-CHECKS C43。
+
 ## 第1036 ⑯ 譜表なし譜面の行の積み方の逐語 ← §1 の 20,000 字の門を超えたので出した
 
 > §1.1 第1036 ⑯（2026-10-31〜11-01、commit `16f45ff0d`・`106748df3`・`4518cb55e`＋次便）の語り。結論は §1.1 の ⑯ に残してある。

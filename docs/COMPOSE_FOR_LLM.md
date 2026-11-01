@@ -200,19 +200,20 @@ What makes it music:
     (LYS1052). A voice the request names (a tenor, a soprano) is written as named. Choose the key
     so the tune lies in the range and the chords are the open shapes (C, D, E, G, A, Am, Dm, Em,
     with a `capo N` line for another key).
-  - **The score**: `score { staff singer  lyrics words  chords NAME plays rhythm }` — the
-    singer's staff with the words under it, then the chords row over its strum. No guitar
-    staff: the row IS the guitar part. Write one only when a figure is asked for (a picking
-    pattern, a riff), and then that figure, never the row's chords struck again as notes.
+  - **The score**: `score { chords NAME plays rhythm  staff singer  lyrics words }` — the chords
+    row above the singer's staff, the words under it, and nothing else. No guitar staff: the row
+    IS the guitar part. Write one only when a figure is asked for (a picking pattern, a riff),
+    and then that figure, never the row's chords struck again as notes.
   - **The chords row in every section** (`chords harmony { D | A | Bm G | }`), one bar a chord,
     two chords in a bar written together (`Bm G`).
-  - **The strum, always**: a `strokes` part — the rhythm the chords are struck in, slashes and
-    no pitch — `strokes rhythm { section A { /4 8 8 4 4 | % | % | % | } }`, one pattern a
+  - **The strum, always**: a `strokes` part — the rhythm the chords are struck in, values alone
+    and no pitch — `strokes rhythm { section A { 4 8 8 4 4 | % | % | % | } }`, one pattern a
     section (`%` repeats the bar before), and the row plays it (`chords harmony plays rhythm`):
-    the row then sounds its chords at every stroke, and prints over a one-line staff of them.
-    Without it a row holds each chord for a whole bar, which is not how a guitar is played. A
-    verse whose tune is not written out takes its words under the strum: `lyrics verse2 sings
-    rhythm { … }`, one syllable a stroke, placed after the row.
+    the row then sounds its chords at every stroke. Without it a row holds each chord for a
+    whole bar, which is not how a guitar is played. `plays` draws nothing; when the request asks
+    for the strum on the page, add `strokes rhythm` as the score's last item (a one-line staff
+    of slashes) and move the row above it. A verse whose tune is not written out takes its words
+    under that staff: `lyrics verse2 sings rhythm { … }`, one syllable a stroke, placed after it.
   - **The diagrams, always**: `layout { chordDiagrams all  chordList true }` — every chord draws
     its diagram where it changes and at each line's head, and the chords the song uses are listed
     with their diagrams under the title. The usual shapes draw by themselves (C `x32010`, G

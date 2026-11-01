@@ -155,6 +155,12 @@ public sealed class SyntaxTree
         var tokens = IncrementalLexer.Splice(
             oldTree.Tokens, newText, damageStart, damageOldEnd, delta);
 
+        // A strokes part's cells parse by the part's NAME (Parser.StrokesNamesOf): when the edit
+        // adds or removes a `strokes NAME`, an unchanged cell elsewhere reads differently, so no
+        // member is adopted.
+        if (reuse != null && !Parser.Parser.StrokesNamesOf(oldTree.Tokens).SetEquals(Parser.Parser.StrokesNamesOf(tokens)))
+            reuse = null;
+
         var parser = new Parser.Parser(tokens, reuse);
         var root = parser.ParseCompilationUnit();
         return new SyntaxTree(newText, root, MergeDiagnostics(tokens, parser.Diagnostics), tokens,

@@ -2423,18 +2423,21 @@ A placed row **holds** each chord over its slot — a keyboard's reading. A guit
 `strokes` part: a rhythm of slashes and no pitch, which a row plays:
 
 ```
-strokes rhythm { section A { /4 8 8 4 4 | % | % | % | } }
+strokes rhythm { section A { 4 8 8 4 4 | % | % | % | } }
 chords harmony { section A { D | A | Bm | G | } }
-score { staff singer  lyrics words  chords harmony plays rhythm }
+score { chords harmony plays rhythm  staff singer  lyrics words }
 ```
 
-A strokes part holds strokes (`/4`, then bare values `8 4` for more of them), rests, ties, bar
-lines and `%` (the bar before; `%N` the N bars before); a note, a chord, a drum or a `q` in it is
-an error (LYS2021). `chords NAME plays STROKES` stands the row over a **one-line staff** of the
-slashes — no clef, key signature or name — and in the MIDI strikes the chord in force at every
-stroke, each held to the next stroke or the slot's end. `lyrics NAME sings STROKES` puts words
-under the strokes, one syllable a stroke. `strokes NAME` alone in a score draws the one-line
-staff with no row over it (`as lines 5` widens it, a string after the name labels it).
+A strokes part holds its strokes as **values alone** (`4 8 8 4 4`, each a slash head — the part
+has no other, so the `/` goes unwritten; `/4` still reads as itself), rests, ties, bar lines and
+`%` (the bar before; `%N` the N bars before); a note, a chord, a drum or a `q` in it is an error
+(LYS2021). `chords NAME plays STROKES` is how the row **sounds**: in the MIDI it strikes the chord
+in force at every stroke, each held to the next stroke or the slot's end — and it draws nothing.
+To print the strum, place the part: `strokes NAME` in the score draws it as a **one-line staff**
+of slashes — no clef, key signature or name (`as lines 5` widens it, a string after the name
+labels it) — and a chords row written above that item stands over it (`chords harmony plays
+rhythm  strokes rhythm`). `lyrics NAME sings STROKES` puts words under the strokes, one syllable
+a stroke.
 
 ### Chords for a transposing part — `for`
 

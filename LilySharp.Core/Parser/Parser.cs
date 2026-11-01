@@ -31,6 +31,37 @@ internal sealed partial class Parser
     private int _textPosition; // Tracks position in source text
     private bool _topLevelMusicReported; // LYS0020 is reported once per file, not per note
 
+    // Inside a strokes part's music (owner's design 2026-11-01: "the first pitch of a strokes
+    // section is a slash", so `4 8 8 4 4` needs no '/'): a bare value is a STROKE
+    // (ParseStrokeOfBareValue), not a bare duration. Set for a `strokes NAME { … }` body and for
+    // a section's cell of a strokes part, whose names StrokesNamesOf reads off the token stream
+    // first — a cell may stand above its declaration.
+    private bool _strokesBody;
+    private readonly HashSet<string> _strokesNames;
+
+    /// <summary>The names every <c>strokes NAME</c> in the stream declares — read before the
+    /// parse, so a section's cell under that name parses as strokes wherever the declaration
+    /// stands. <see cref="SyntaxTree.ParseIncremental"/> compares the old and new sets: a changed
+    /// set reparses every member, since an adopted cell would keep its old reading.</summary>
+    internal static HashSet<string> StrokesNamesOf(IReadOnlyList<SyntaxToken> tokens)
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        int depth = 0;   // a `strokes NAME` inside braces is a score's item, not a declaration
+        for (int i = 0; i + 1 < tokens.Count; i++)
+        {
+            switch (tokens[i].Kind)
+            {
+                case SyntaxKind.OpenBrace: depth++; break;
+                case SyntaxKind.CloseBrace: depth = Math.Max(0, depth - 1); break;
+                case SyntaxKind.StrokesKeyword when depth == 0
+                    && SyntaxFacts.IsPartNameToken(tokens[i + 1].Kind, tokens[i + 1].Text):
+                    names.Add(tokens[i + 1].Text);
+                    break;
+            }
+        }
+        return names;
+    }
+
     public Parser(IEnumerable<SyntaxToken> tokens)
         : this(tokens, reuse: null)
     {
@@ -46,6 +77,7 @@ internal sealed partial class Parser
         _reuse = reuse;
         _position = 0;
         _textPosition = 0;
+        _strokesNames = StrokesNamesOf(_tokens);
 
         // Unknown characters lex to BadToken and no parse rule consumes them —
         // they were dropped in complete silence (a typo like `b??` compiled

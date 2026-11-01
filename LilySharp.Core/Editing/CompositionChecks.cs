@@ -878,7 +878,7 @@ public static class CompositionChecks
                 yield return $"{name}: its staff says what the chords row says — the row's chords struck as block chords in {restated} of its "
                     + $"{played} bars: drop the staff (the chords row, with its diagrams, is what a guitarist reads), or write what the player "
                     + "plays — a picking pattern, a bass note and then the chord, a riff — and keep the row for the names. A strum's rhythm "
-                    + "alone is a strokes part: `strokes rhythm { section A { /4 8 8 4 4 | % | % | % | } }`, placed by `chords NAME plays rhythm`.";
+                    + "alone is a strokes part: `strokes rhythm { section A { 4 8 8 4 4 | % | % | % | } }`, placed by `chords NAME plays rhythm`.";
         }
     }
 
