@@ -82,8 +82,8 @@ public class LyricRowUnderMultipleStavesTests
         "lyrics verse sings melody {\n" +
         "  section A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }\n" +
         "  section B {\n" +
-        "    [~1. Up a- bove the | world so high |]\n" +
-        "    [~2. Like a dia- mond | in the sky |]\n" +
+        "    verse ~1 { Up a- bove the | world so high | }\n" +
+        "    verse ~2 { Like a dia- mond | in the sky | }\n" +
         "  }\n" +
         "}\n" +
         "form { A |: B :| A \"A2\" }\n" +

@@ -62,8 +62,23 @@ public sealed record LyricItem(
     // from Timing against the shared column grid.
     int VoiceId = 0,
 
-    // Verse number (1-based) for multiple lyric lines.
+    // The ROW this syllable is drawn on (1-based): the first line under the staff, the
+    // second, … Several lines stack where one printing of a section carries several
+    // verses (`|: B :|` sung twice), or where several tracks sing one staff.
     int VerseNumber = 1,
+
+    // The stanza number PRINTED before this syllable's line, or 0 for the row's own
+    // number. A `verse N { … }` verse carries its N here whatever row it lands on — a
+    // section written out twice in the form puts verse 2 on the FIRST row of its second
+    // printing, labelled "2." (owner's design 2026-11-01: until then the number chose the
+    // row, and the second printing drew an empty first line over its words).
+    int StanzaLabel = 0,
+
+    // True on the FIRST syllable of a numbered verse's run — where its stanza number is
+    // printed. The horizontal spacing makes room for the number before that syllable
+    // (LyricSpacing.LyricLeftExtent), since mid-line the number stands between two
+    // syllables of one row.
+    bool OpensStanzaRun = false,
 
     // Musical moment of this syllable's note within its measure. Used
     // to place a bound (non-primary) voice's syllable over its real note column
@@ -86,7 +101,7 @@ public sealed record LyricItem(
     bool IsLyricsRow = false,
 
     // True to suppress this verse's stanza-number prefix ("N."). Set by a
-    // `~`-marked per-occurrence verse (`[~2. …]`): the words apply to the pass but
+    // `~`-marked verse (`verse ~2 { … }`): the words apply to the play but
     // the number label is hidden. Does not affect the multi-verse count, so other
     // verses still get their numbers.
     bool HideStanza = false,

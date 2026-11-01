@@ -110,7 +110,7 @@ public sealed class SharedRendererBarlineTests
         part m { clef treble section A { c4 d e f | } section B { g4 a b c' | } }
         lyrics v {
           section A { one two three four | }
-          section B { [~1. five six sev- en |] [~2. eight nine ten e- le- ven |] }
+          section B { verse ~1 { five six sev- en | } verse ~2 { eight nine ten e- le- ven | } }
         }
         form { A |: B :| }
         score { lyrics v }

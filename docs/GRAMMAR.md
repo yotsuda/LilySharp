@@ -1402,21 +1402,29 @@ PartBlock      = PartName , MusicBlock ;
    part names its voices: there the likelier reading is a misspelled voice. A row without
    its own 'sings' cannot re-decide the association by position: after a staff
    it does not sing it simply stays an independent band. *)
-LyricsBlock    = 'lyrics' , [ Identifier ] , [ 'sings' , PartRef ] , '{' , { LyricMeasure | LyricVolta } , '}' ;
+LyricsBlock    = 'lyrics' , [ Identifier ] , [ 'sings' , PartRef ] , '{' , { LyricMeasure | LyricVerse } , '}' ;
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'lyrics' row.
                     With no 'sings' it sings the file's one part - the unnamed part, the only
                     declared one, or the music written straight into the sections; with
                     several parts it is unbound, like any track that names no melody. *)
 LyricMeasure   = { LyricSyllable } , '|' ;
-LyricVolta     = '[' , [ '~' ] , Integer , { ( ',' | '-' ) , Integer } , '.' , { LyricMeasure } , ']' ;
-                 (* A VERSE HEADER: the words for the Nth PLAY of the section — '[1. … ]
-                    [2. … ]'. A list or a range covers several plays ('[1,3. … ]',
-                    '[1-2. … ]'). The number prints as the stanza number ('1.'); a leading
-                    '~' keeps the words and hides it ('[~1. … ]'). Under a '|: B :|' the
-                    section prints once and its verses stack as verses 1 and 2; a section
-                    the form plays again written out takes each verse at its own play.
-                    Not a repeat ending: a lyric row's '[' never changes the playing order
-                    (see the REPEAT STRUCTURE note in §8.1). *)
+LyricVerse     = 'verse' , [ '~' ] , Integer , { ( ',' | '-' ) , Integer } , '{' , { LyricMeasure } , '}' ;
+                 (* A VERSE: the words for the Nth time the section is SUNG — 'verse 1 { … }
+                    verse 2 { … }' (owner's design 2026-11-01). 'verse' is contextual, like
+                    'sings': a syllable elsewhere, and a legal part or track name. A list or
+                    a range covers several times ('verse 1,3 { }', 'verse 1-2 { }'). The number
+                    prints as the stanza number ('1.'); a leading '~' keeps the words and
+                    hides it ('verse ~1 { }'). WHERE THE WORDS GO follows from the form, and
+                    the number is never a row: under '|: B :|' the section prints once, so
+                    its verses stack under it in order, each with its number; a section the
+                    form sings again WRITTEN OUT ('Verse Verse') takes each verse at its own
+                    printing, on the FIRST line under the staff, with its number before it —
+                    '2.' before the second printing's words (until that day the number chose
+                    the line, and the second printing drew an empty first line over its words).
+                    Words with no 'verse' are sung every time. Not a repeat ending: a lyric
+                    row never changes the playing order (the REPEAT STRUCTURE note in §8.1).
+                    ⚠️ The former spelling '[1. … ]' is read as the same verse with an error
+                    (LYS4003) — it read like a form's repeat ending. *)
 LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
                  (* MEASURED 2026-08-16 — and the spacing is part of the rule, because
                     the two arms that fuse tokens keep only the pair's OUTER trivia:
@@ -2133,8 +2141,8 @@ DisplayName    = String ;
    in the form like any other (LYS1034). The repeat barlines a form composes still reach the
    row and are drawn as real barline types — that is the claim
    LilySharp.Tests/Fixtures/test/lead-sheet-repeat.lys pins. A LYRIC row is different: its
-   barline is a plain measure delimiter that never played anything, and its '[1. … ]' is a
-   VERSE header (LyricVolta), so neither is touched. *)
+   barline is a plain measure delimiter that never played anything, and its 'verse N { … }'
+   is a VERSE (LyricVerse), so neither is touched. *)
 
 (* Example:
    section Main {
@@ -2236,8 +2244,8 @@ MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
    in, and a book's order is written in its `form`. Writing one here is an ERROR with no
    grace period and no rewriter — the line is drawn at "does it change the playing order",
    which is why the percent mark '%' and `repeat tremolo` STAY (they abbreviate notes)
-   and why a `lyrics` row's '[1. … ]' is untouched (it is the words for the Nth pass, a
-   different construct: LyricVolta in §5).
+   and why a `lyrics` row's 'verse N { … }' is untouched (it is the words for the Nth time
+   through, a different construct: LyricVerse in §5).
    They are still LEXED and PARSED here so the error can name them and point at them; what
    the grammar refuses is a place, not a token. See StructureRepeat / StructureVolta in §6.
    ⚠️ THE MOVE IS NOT PURELY SYNTACTIC and the difference is worth knowing: a '|:' in music

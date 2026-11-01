@@ -14,8 +14,8 @@ chords prog {
 }
 lyrics verse {
   section A { one two three four | five six seven | eight nine ten | eleven twelve | }
-  section B { [~1. thir- teen four- teen |]
-    [~2. fif- teen six- teen |]
+  section B { verse ~1 { thir- teen four- teen | }
+    verse ~2 { fif- teen six- teen | }
   }
 }
 

@@ -1307,24 +1307,27 @@ internal sealed class LyricMeasureGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// A per-occurrence lyric verse: <c>[1. syllable syllable | … ]</c>. The header keys
-/// the section's playback occurrence(s) so a repeated/reprised section can carry
-/// different words each pass — a single number (<c>[1. …]</c>), a comma list
-/// (<c>[1,3. …]</c>), a dash range (<c>[1-2. …]</c>), with an optional leading <c>~</c>
-/// that HIDES the stanza-number label while still applying to the listed occurrence(s)
-/// (<c>[~1. …]</c>). The body is lyric measures, exactly like a plain (unbracketed) verse.
+/// A verse of a lyric section: <c>verse 1 { syllable syllable | … }</c> — the words for the
+/// section's Nth play, so a repeated or reprised section carries different words each time
+/// (owner's design 2026-11-01). The header names the play(s): a single number
+/// (<c>verse 1 { }</c>), a comma list (<c>verse 1,3 { }</c>), a dash range (<c>verse 1-2 { }</c>),
+/// with an optional leading <c>~</c> that HIDES the stanza number while the words still apply
+/// (<c>verse ~1 { }</c>). The body is lyric measures, exactly like a plain verse's.
 /// </summary>
-/// <remarks>Slot layout: <c>[</c>, header tokens (<c>~</c>? number ((<c>,</c>|<c>-</c>)
-/// number)*), <c>.</c>, measures…, <c>]</c>.</remarks>
-internal sealed class LyricVoltaGreen : GreenSyntaxNode
+/// <remarks>Slot layout: the <c>verse</c> word, header tokens (<c>~</c>? number ((<c>,</c>|<c>-</c>)
+/// number)*), <c>{</c>, measures…, <c>}</c>. ⚠️ The retired bracket spelling <c>[1. … ]</c>
+/// is parsed into the SAME shape with its own tokens in the three punctuation slots — <c>[</c>,
+/// <c>.</c>, <c>]</c> — and an error (LYS4003); readers find the header's end by the kind of the
+/// token (<c>{</c> or <c>.</c>), never by its text.</remarks>
+internal sealed class LyricVerseGreen : GreenSyntaxNode
 {
-    public LyricVoltaGreen(
-        SyntaxToken openBracket,
+    public LyricVerseGreen(
+        SyntaxToken verseWord,
         GreenNode?[] header,
-        SyntaxToken dot,
+        SyntaxToken openBrace,
         GreenNode?[] measures,
-        SyntaxToken? closeBracket)
-        : base(SyntaxKind.LyricVolta, [openBracket, .. header, dot, .. measures, closeBracket])
+        SyntaxToken? closeBrace)
+        : base(SyntaxKind.LyricVerse, [verseWord, .. header, openBrace, .. measures, closeBrace])
     {
     }
 }

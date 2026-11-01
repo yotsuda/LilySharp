@@ -73,8 +73,8 @@ public class RowsOnlyBarNumberAnchorTests
         }
         lyrics verse {
           section A { one two | three four | five six | sev- en | }
-          section B { [~1. eight nine | ten e- ]
-            [~2. le- ven | twelve thir- ] }
+          section B { verse ~1 { eight nine | ten e- }
+            verse ~2 { le- ven | twelve thir- } }
         }
         form { A |: B :| A "A2" }
         """;

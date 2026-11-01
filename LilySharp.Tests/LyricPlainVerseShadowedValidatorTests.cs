@@ -51,7 +51,7 @@ public class LyricPlainVerseShadowedValidatorTests
         // A is sung twice; [1.] and [2.] cover both occurrences, so the plain
         // "zz zz zz zz" line can never render.
         Assert.True(PlainShadowed(Melody + """
-            lyrics w sings melody { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
+            lyrics w sings melody { section A { verse 1 { one two three four | } verse 2 { aa bb cc dd | } zz zz zz zz | } }
             form { A A }
             score { staff melody  lyrics w }
             """));
@@ -63,7 +63,7 @@ public class LyricPlainVerseShadowedValidatorTests
         // A is sung three times; [1.] and [2.] cover the first two, so the third
         // occurrence falls back to the plain line — it is used, not shadowed.
         Assert.False(PlainShadowed(Melody + """
-            lyrics w sings melody { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
+            lyrics w sings melody { section A { verse 1 { one two three four | } verse 2 { aa bb cc dd | } zz zz zz zz | } }
             form { A A A }
             score { staff melody  lyrics w }
             """));
@@ -101,7 +101,7 @@ public class LyricPlainVerseShadowedValidatorTests
         // shared collect is every staff the score draws, so it is reported like the
         // melody's would be.
         Assert.True(PlainShadowed(TwoParts + """
-            lyrics w sings harmony { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
+            lyrics w sings harmony { section A { verse 1 { one two three four | } verse 2 { aa bb cc dd | } zz zz zz zz | } }
             form { A A }
             score { staff melody  staff harmony  lyrics w }
             """));
@@ -114,7 +114,7 @@ public class LyricPlainVerseShadowedValidatorTests
         // collect of a book whose plain verse IS shadowed while the tree it validates has
         // no lyrics at all — the diagnostic follows the lent collect.
         var shadowed = SyntaxTree.Parse(Melody + """
-            lyrics w sings melody { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
+            lyrics w sings melody { section A { verse 1 { one two three four | } verse 2 { aa bb cc dd | } zz zz zz zz | } }
             form { A A }
             score { staff melody  lyrics w }
             """);

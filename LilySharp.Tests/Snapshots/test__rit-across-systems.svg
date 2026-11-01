@@ -246,14 +246,14 @@
   <text x="70.88" y="89.36" font-size="2.47" text-anchor="middle" data-pos="350">ten</text>
   <text x="81.78" y="89.36" font-size="2.47" text-anchor="middle" data-pos="356">eleven</text>
   <text x="91.17" y="89.36" font-size="2.47" text-anchor="middle" data-pos="363">twelve</text>
-  <text x="8.12" y="60.61" font-size="2.47" text-anchor="middle" data-pos="393">thir</text>
-  <text x="21.13" y="60.61" font-size="2.47" text-anchor="middle" data-pos="399">teen</text>
-  <text x="34.62" y="60.61" font-size="2.47" text-anchor="middle" data-pos="404">four</text>
-  <text x="47.76" y="60.61" font-size="2.47" text-anchor="middle" data-pos="410">teen</text>
-  <text x="8.12" y="63.41" font-size="2.47" text-anchor="middle" data-pos="427">fif</text>
-  <text x="21.13" y="63.41" font-size="2.47" text-anchor="middle" data-pos="432">teen</text>
-  <text x="34.62" y="63.41" font-size="2.47" text-anchor="middle" data-pos="437">six</text>
-  <text x="47.76" y="63.41" font-size="2.47" text-anchor="middle" data-pos="442">teen</text>
+  <text x="8.12" y="60.61" font-size="2.47" text-anchor="middle" data-pos="399">thir</text>
+  <text x="21.13" y="60.61" font-size="2.47" text-anchor="middle" data-pos="405">teen</text>
+  <text x="34.62" y="60.61" font-size="2.47" text-anchor="middle" data-pos="410">four</text>
+  <text x="47.76" y="60.61" font-size="2.47" text-anchor="middle" data-pos="416">teen</text>
+  <text x="8.12" y="63.41" font-size="2.47" text-anchor="middle" data-pos="440">fif</text>
+  <text x="21.13" y="63.41" font-size="2.47" text-anchor="middle" data-pos="445">teen</text>
+  <text x="34.62" y="63.41" font-size="2.47" text-anchor="middle" data-pos="450">six</text>
+  <text x="47.76" y="63.41" font-size="2.47" text-anchor="middle" data-pos="455">teen</text>
   <text x="18.51" y="26.31" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="214">D</text>
   <line x1="20.43" y1="25.12" x2="21.50" y2="25.12" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="214"/>
   <line x1="21.50" y1="25.12" x2="20.97" y2="24.20" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="214"/>

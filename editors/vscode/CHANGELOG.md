@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Verses are `verse N { … }`
+
+- **A verse's words are `verse 2 { … }` inside the lyrics**, not `[2. … ]` (which read like a
+  form's repeat ending and is an error now, LYS4003). The lyrics-body completion offers
+  `verse 1 { }`, `verse 2 { }`, `verse 1-2 { }` and `verse ~1 { }`, and the `verse N {` head
+  is coloured. The preview prints a written-out second verse on the first line under the
+  staff with `2.` before it, instead of an empty first line over the words.
+
 ### A chord row strums: `strokes` and `plays`
 
 - **`strokes` is a keyword and a score item**: `strokes rhythm { section A { 4 8 8 4 4 | % | }

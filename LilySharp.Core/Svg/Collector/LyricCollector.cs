@@ -96,7 +96,11 @@ internal sealed class LyricCollector
         int voiceId = 0,
         int verseNumber = 1,
         bool hideStanza = false,
-        int baseMeasureIndex = 0)
+        int baseMeasureIndex = 0,
+        // The stanza number a `verse N { … }` prints before its line (LyricItem.StanzaLabel);
+        // 0 for a plain line. A body long enough to wrap into further rows labels its first
+        // row only.
+        int stanzaLabel = 0)
     {
         var lyrics = ImmutableArray.CreateBuilder<LyricItem>();
         var syllables = ParseSyllablesFrom(syllableMeasures);
@@ -220,6 +224,8 @@ internal sealed class LyricCollector
                     ConnectorType: connectorType,
                     VoiceId: voiceId,
                     VerseNumber: verse,
+                    StanzaLabel: verse == verseNumber ? stanzaLabel : 0,
+                    OpensStanzaRun: verse == verseNumber && stanzaLabel > 0 && lyrics.Count == 0,
                     Timing: slot.Timing,
                     SourcePosition: position,
                     HideStanza: hideStanza

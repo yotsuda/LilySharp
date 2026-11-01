@@ -191,11 +191,12 @@ internal sealed partial class Parser
                 continue;
             }
 
-            // Per-occurrence verse: `[1. … ] [2. … ]` — different words each time the
-            // enclosing section is sung (a repeat/reprise).
-            if (Check(SyntaxKind.OpenBracket))
+            // A verse: `verse 1 { … } verse 2 { … }` — different words each time the
+            // enclosing section is sung (a repeat/reprise). The retired `[1. … ]` is read
+            // the same way, with an error.
+            if (IsLyricVerseStart() || Check(SyntaxKind.OpenBracket))
             {
-                items.Add(ParseLyricVolta());
+                items.Add(ParseLyricVerse());
                 continue;
             }
 
@@ -225,11 +226,11 @@ internal sealed partial class Parser
         var measures = new List<GreenNode?>();
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
-            // Per-occurrence verse `[1. … ] [2. … ]`: this section's words for its 1st,
-            // 2nd, … playback pass.
-            if (Check(SyntaxKind.OpenBracket))
+            // A verse `verse 1 { … } verse 2 { … }`: this section's words for its 1st,
+            // 2nd, … play (the retired `[1. … ]` reads the same, with an error).
+            if (IsLyricVerseStart() || Check(SyntaxKind.OpenBracket))
             {
-                measures.Add(ParseLyricVolta());
+                measures.Add(ParseLyricVerse());
                 continue;
             }
 
@@ -521,20 +522,45 @@ internal sealed partial class Parser
     /// barline, matching the chord-block set).</summary>
     private static bool IsLyricBarline(SyntaxKind kind) => SyntaxFacts.IsMeasureBarlineKind(kind);
 
-    /// <summary>Parse a per-occurrence lyric verse: <c>[1. syllable syllable | … ]</c>.
-    /// The header selects the section's playback occurrence(s) — a single number, a
-    /// comma list (<c>[1,3. …]</c>), a dash range (<c>[1-2. …]</c>), with an optional
-    /// leading <c>~</c> that HIDES the stanza-number label (<c>[~1. …]</c>) while still
-    /// applying to the listed occurrence(s) — so a repeated/reprised section can carry
-    /// different words each pass; the body is ordinary lyric measures. The closing
-    /// <c>]</c> is optional (a run to the block's <c>}</c> recovers).</summary>
-    private LyricVoltaGreen ParseLyricVolta()
+    /// <summary>
+    /// Does a verse open here: the contextual word <c>verse</c>, then a header
+    /// (<c>~</c>? number ((<c>,</c>|<c>-</c>) number)*), then <c>{</c>? Contextual like
+    /// <c>sings</c>: a lyric syllable "verse" followed by anything else stays a syllable, and
+    /// a part or track may still be named <c>verse</c>.
+    /// </summary>
+    private bool IsLyricVerseStart()
     {
-        var openBracket = Expect(SyntaxKind.OpenBracket);
+        if (!Check(SyntaxKind.Identifier) || Current.Text != "verse")
+            return false;
+        int i = 1;
+        if (Peek(i).Kind == SyntaxKind.Tilde) i++;
+        if (Peek(i).Kind != SyntaxKind.IntegerLiteral) return false;
+        i++;
+        while (Peek(i).Kind is SyntaxKind.Comma or SyntaxKind.Minus && Peek(i + 1).Kind == SyntaxKind.IntegerLiteral)
+            i += 2;
+        return Peek(i).Kind == SyntaxKind.OpenBrace;
+    }
+
+    /// <summary>Parse a lyric verse: <c>verse 1 { syllable syllable | … }</c> (owner's design
+    /// 2026-11-01). The header names the section's play(s) — a single number, a comma list
+    /// (<c>verse 1,3 { }</c>), a dash range (<c>verse 1-2 { }</c>), with an optional leading
+    /// <c>~</c> that HIDES the stanza number (<c>verse ~1 { }</c>) while the words still apply
+    /// — so a repeated or reprised section carries different words each time; the body is
+    /// ordinary lyric measures. The retired bracket <c>[1. … ]</c> is read into the same
+    /// node with LYS4003 at its <c>[</c>, so the page still shows what was meant.</summary>
+    private LyricVerseGreen ParseLyricVerse()
+    {
+        bool bracket = Check(SyntaxKind.OpenBracket);
+        if (bracket)
+            _diagnostics.Error(new TextSpan(_textPosition, Current.FullWidth),
+                DiagnosticCodes.LyricVerseBracketRetired,
+                "A verse is written 'verse N { … }' - the words for the section's Nth play, "
+                + "e.g. verse 2 { How I won- der | what you are | }. The '[N. … ]' bracket was "
+                + "retired on 2026-11-01 (it read like a form's repeat ending).");
+        var opener = Advance();   // the `verse` word, or the retired `[`
 
         // Header: `~? number ((',' | '-') number)*`. A leading `~` hides the stanza
-        // number label (the words still apply to the listed occurrences); ',' lists,
-        // '-' ranges.
+        // number (the words still apply to the listed plays); ',' lists, '-' ranges.
         var header = new List<GreenNode?>();
         if (Check(SyntaxKind.Tilde))
             header.Add(Advance());
@@ -545,10 +571,12 @@ internal sealed partial class Parser
             header.Add(Expect(SyntaxKind.IntegerLiteral));
         }
 
-        var dot = Expect(SyntaxKind.Dot);
+        // The body's opener: `{` — or the retired form's `.`.
+        var openBrace = bracket ? Expect(SyntaxKind.Dot) : Expect(SyntaxKind.OpenBrace);
 
         var measures = new List<GreenNode?>();
-        while (!Check(SyntaxKind.CloseBracket) && !Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile)
+               && !(bracket && Check(SyntaxKind.CloseBracket)))
         {
             var measure = ParseLyricMeasure();
             if (measure != null)
@@ -557,8 +585,12 @@ internal sealed partial class Parser
                 break;
         }
 
-        SyntaxToken? closeBracket = Check(SyntaxKind.CloseBracket) ? Advance() : null;
-        return new LyricVoltaGreen(openBracket, [.. header], dot, [.. measures], closeBracket);
+        // The retired form's `]` was optional (a run to the block's `}` recovers); the brace
+        // form closes like every block.
+        SyntaxToken? closeBrace = bracket
+            ? (Check(SyntaxKind.CloseBracket) ? Advance() : null)
+            : Expect(SyntaxKind.CloseBrace);
+        return new LyricVerseGreen(opener, [.. header], openBrace, [.. measures], closeBrace);
     }
 
     /// <summary>

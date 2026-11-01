@@ -38,7 +38,7 @@ What makes it music:
   time: an A–B–A with a short coda (2 to 4 bars), or
   a song's form — complete and shapely rather than long, never a bar added to reach a length. A
   song counts its WRITTEN bars: a verse or a chorus sung again is named again in the form (its new
-  words as verses, `[1. …] [2. …]`), not written twice. Phrases often run 8 bars — two halves of
+  words as verses, `verse 1 { … } verse 2 { … }`), not written twice. Phrases often run 8 bars — two halves of
   4 that answer each other — and a section is given room to say something: one of a single 4-bar
   phrase seldom does, and its dynamics turn every four bars. Each phrase closes on a cadence: a
   half cadence (on V) to go on, an authentic one (V–I) to close a section. Check each one bar by

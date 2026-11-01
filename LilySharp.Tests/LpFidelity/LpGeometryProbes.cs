@@ -2772,8 +2772,8 @@ internal static class LpGeometryProbes
     private static string ChordVerseRowScore(string name, bool secondVerse)
     {
         string verseB = secondVerse
-            ? "[~1. no no no no | no no no no | no no no no | no no no no |]\n"
-              + "    [~2. no no no no | no no no no | no no no no | no no no no |]"
+            ? "verse ~1 { no no no no | no no no no | no no no no | no no no no | }\n"
+              + "    verse ~2 { no no no no | no no no no | no no no no | no no no no | }"
             : "no no no no | no no no no | no no no no | no no no no |";
         return $$"""
             octave absolute

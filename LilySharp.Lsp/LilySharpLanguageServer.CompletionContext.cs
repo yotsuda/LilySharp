@@ -847,7 +847,7 @@ public sealed partial class LilySharpLanguageServer
         BarePartNameList,
         /// <summary>Inside a lyrics BODY — a by-section <c>lyrics NAME { | }</c> cell or a
         /// by-part track's inner <c>section A { | }</c>: syllables are typed, and the one
-        /// construct worth completing is the verse header <c>[N. … ]</c>.</summary>
+        /// construct worth completing is the verse <c>verse N { … }</c>.</summary>
         LyricsBody,
         /// <summary>Directly inside a top-level <c>chords NAME { | }</c> TRACK — the level
         /// that holds <c>section NAME { … }</c> cells, the chords dual of

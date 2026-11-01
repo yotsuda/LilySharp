@@ -135,6 +135,23 @@
             },
             "patterns": [
                 { "include": "#lyrics-inner-section" },
+                { "include": "#lyrics-verse" },
+                { "include": "#lyrics-content" }
+            ]
+        },
+        "lyrics-verse": {
+            "comment": "A verse inside lyrics: `verse 2 { … }`, `verse 1-2 { … }`, `verse ~1 { … }` (2026-11-01). The word is contextual — a syllable elsewhere, and a legal part name — so it is coloured only in this shape (word, play numbers, brace) and as a storage word rather than a reserved keyword; balancing its braces keeps the enclosing lyrics block open past its '}'.",
+            "begin": "\\b(verse)\\s+(~?\\d+(?:\\s*[,-]\\s*\\d+)*)\\s*(\\{)",
+            "beginCaptures": {
+                "1": { "name": "storage.type.lyric-verse.lilysharp" },
+                "2": { "name": "constant.numeric.lyric-verse.lilysharp" },
+                "3": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "patterns": [
                 { "include": "#lyrics-content" }
             ]
         },
@@ -151,6 +168,7 @@
                 "0": { "name": "punctuation.definition.block.lilysharp" }
             },
             "patterns": [
+                { "include": "#lyrics-verse" },
                 { "include": "#lyrics-content" }
             ]
         },

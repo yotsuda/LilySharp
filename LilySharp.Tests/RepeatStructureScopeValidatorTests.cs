@@ -96,8 +96,8 @@ public class RepeatStructureScopeValidatorTests
     // a LYRIC verse header is the words for the Nth pass, not an ending
     [InlineData("octave absolute\ntime 4/4\nkey c major\n"
         + "part m { clef treble\n  section A { c''4 d' e' d' | }\n}\n"
-        + "lyrics w sings m {\n  section A {\n    [1. Twin- kle twin- kle | ]\n"
-        + "    [2. How I won- der | ]\n  }\n}\n"
+        + "lyrics w sings m {\n  section A {\n    verse 1 { Twin- kle twin- kle | }\n"
+        + "    verse 2 { How I won- der | }\n  }\n}\n"
         + "form { ~A }\nscore { staff m  lyrics w }\n")]
     // a lyric row's barline is a raw token inside LyricMeasureGreen, never a BarlineSyntax —
     // so this rule cannot see it, and a lyric row plays nothing whose order could change.

@@ -45,8 +45,8 @@ public sealed class MarkOverLeadingChordRowTests
           chords harmony { C | G | Am | F | C | G | Am | F | }
           singer { c'4 d' e' f' | g'4 a' b' c'' | c''4 b' a' g' | f'4 e' d' c' | c'4 d' e' f' | g'4 a' b' c'' | c''4 b' a' g' | f'4 e' d' c' | }
           lyrics words sings singer {
-            [1. a b c d | e f g h | i j k l | m n o p | a b c d | e f g h | i j k l | m n o p |]
-            [2. a b c d | e f g h | i j k l | m n o p | a b c d | e f g h | i j k l | m n o p |]
+            verse 1 { a b c d | e f g h | i j k l | m n o p | a b c d | e f g h | i j k l | m n o p | }
+            verse 2 { a b c d | e f g h | i j k l | m n o p | a b c d | e f g h | i j k l | m n o p | }
           }
         }
         section B {

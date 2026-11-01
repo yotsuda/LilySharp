@@ -895,14 +895,26 @@ internal static class LyricSpacing
         return maxExtent;
     }
 
-    /// <summary>One syllable's left reach on one edge — the single-item core, as above.</summary>
+    /// <summary>One syllable's left reach on one edge — the single-item core, as above. A
+    /// syllable that OPENS a numbered verse's run (<see cref="LyricItem.OpensStanzaRun"/>)
+    /// reaches further left by its stanza number and the number's padding: the "2." a
+    /// written-out second verse prints mid-line stands between the previous syllable and
+    /// this one, and the rod that keeps syllables apart is what makes room for it
+    /// (owner's design 2026-11-01; without it the number was printed over the last syllable
+    /// of the first verse). LILYSHARP-OWN: LilyPond's StanzaNumber takes no part in
+    /// horizontal spacing — its <c>\set stanza</c> mid-line overprints the same way.</summary>
     private static double LyricLeftExtent(
         Rendering.ScoreTextMetrics fonts, LyricItem lyric, (double Left, double Centre) alignmentEdge)
     {
         double width = EstimateLyricTextWidth(fonts, lyric.Text);
-        return lyric.MelismaAlignLeft
+        double reach = lyric.MelismaAlignLeft
             ? -alignmentEdge.Left
             : width / 2 - alignmentEdge.Centre;
+        if (lyric.OpensStanzaRun && lyric.StanzaLabel > 0 && !lyric.HideStanza)
+            reach += StanzaNumberEngraver.Padding
+                + Rendering.TextFontMetrics.Advance($"{lyric.StanzaLabel}.",
+                    StanzaNumberEngraver.Em(fonts), sans: false, StanzaNumberEngraver.Style(fonts));
+        return reach;
     }
 
     // The syllable's width as spacing sees it: the ADVANCE at the DRAWN lyric size.

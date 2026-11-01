@@ -836,18 +836,24 @@ form { Main }
 score { staff melody  lyrics words }
 ```
 
-**Verses** (different words per pass of a section) are verse headers inside the lyrics
-block: `[1. up up up up |] [2. down down down down |]`. The number is the section's Nth
-play and prints as the stanza number `1.`; `[1,3. …]` / `[1-2. …]` cover several plays;
-`[~1. …]` keeps the words and hides the number. Under `|: B :|` (printed once) the verses
-stack under B as verses 1 and 2. This is NOT a repeat ending — it never changes the order.
+**Verses** — the words for each time a section is sung — are `verse N { … }` blocks inside the
+lyrics block: `verse 1 { up up up up | } verse 2 { down down down down | }`. Three rules and
+nothing else: ⑴ one `lyrics` track is ONE line of words under the staff; more lines are more
+tracks, placed in score order. ⑵ words written with no `verse` are sung every time the section
+comes round. ⑶ `verse N { … }` is the words for the Nth time — where they go follows from the
+form: under `|: B :|` (printed once) the verses stack under B in order, each with its number
+`1.` `2.`; a section the form names again written out (`Verse Verse`) prints each verse at its
+own printing, on the first line, with its number before it (`2.` before the second). `verse 1,3
+{ }` / `verse 1-2 { }` cover several times; `verse ~1 { }` keeps the words and hides the number.
+This is NOT a repeat ending — it never changes the order. (`[1. … ]` was this construct's old
+spelling; it is an error now, LYS4003.)
 
 ```
 part melody
 section A { melody { c4 d e f | } }
 section B {
   melody { g4 a b c | }
-  lyrics words sings melody { [1. up up up up |] [2. down down down down |] }
+  lyrics words sings melody { verse 1 { up up up up | } verse 2 { down down down down | } }
 }
 form { A |: B :| }
 score { staff melody  lyrics words }

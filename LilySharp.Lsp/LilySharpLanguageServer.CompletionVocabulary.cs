@@ -3741,8 +3741,8 @@ public sealed partial class LilySharpLanguageServer
         "lyrics verse sings melody {",
         "  section A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }",
         "  section B {",
-        "    [~1. Up a- bove the | world so high |]",
-        "    [~2. Like a dia- mond | in the sky |]",
+        "    verse ~1 { Up a- bove the | world so high | }",
+        "    verse ~2 { Like a dia- mond | in the sky | }",
         "  }",
         "}",
         "",
@@ -5600,18 +5600,19 @@ public sealed partial class LilySharpLanguageServer
     };
 
     /// <summary>
-    /// Inside a lyrics BODY: the verse headers (ParseLyricVolta — <c>[N. … ]</c>,
-    /// <c>[N-M. … ]</c>, <c>[N,M. … ]</c>, and <c>[~N. … ]</c> hiding the stanza number).
-    /// Syllables are typed, not completed, so this is the whole list.
+    /// Inside a lyrics BODY: the verses (ParseLyricVerse — <c>verse N { … }</c>,
+    /// <c>verse N-M { … }</c>, <c>verse N,M { … }</c>, and <c>verse ~N { … }</c> hiding the
+    /// stanza number; owner's design 2026-11-01). Syllables are typed, not completed, so this
+    /// is the whole list.
     /// </summary>
-    internal static CompletionList GetLyricVoltaCompletions() => new()
+    internal static CompletionList GetLyricVerseCompletions() => new()
     {
         Items =
         [
-            Verse("[1. ]", "[1. $0]", "Words for the 1st time through (a verse header; the number prints)", "0"),
-            Verse("[2. ]", "[2. $0]", "Words for the 2nd time through", "1"),
-            Verse("[1-2. ]", "[${1:1-2}. $0]", "Words for a range of passes, e.g. [1-2. …] or [1,3. …]", "2"),
-            Verse("[~1. ]", "[~${1:1}. $0]", "Words for the Nth pass with the stanza number hidden", "3"),
+            Verse("verse 1 { }", "verse 1 { $0 }", "The words for the 1st time the section is sung (the number prints)", "0"),
+            Verse("verse 2 { }", "verse 2 { $0 }", "The words for the 2nd time the section is sung", "1"),
+            Verse("verse 1-2 { }", "verse ${1:1-2} { $0 }", "The words for several times through, e.g. verse 1-2 { … } or verse 1,3 { … }", "2"),
+            Verse("verse ~1 { }", "verse ~${1:1} { $0 }", "The words for the Nth time with the stanza number hidden", "3"),
         ]
     };
 

@@ -429,8 +429,8 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterTransposePitch => GetTransposePitchCompletions(),
             // `shift |`: a number of semitones is typed; nothing to list.
             CompletionContext.AfterShiftAmount => GetShiftAmountCompletions(),
-            // A lyrics body: the verse headers.
-            CompletionContext.LyricsBody => GetLyricVoltaCompletions(),
+            // A lyrics body: the verses (`verse N { … }`).
+            CompletionContext.LyricsBody => GetLyricVerseCompletions(),
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
             CompletionContext.AfterLyricsRef => GetLyricsRowNameCompletions(doc.Text, offset),
             CompletionContext.AfterLyricsName => GetVoiceBindingNameCompletions(doc.Text),

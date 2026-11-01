@@ -58,8 +58,8 @@ public class GridRowMeterCentringTests
         string b = verses == 1
             ? "one two | three four |"
             : """
-              [~1. one two | three four |]
-                  [~2. five six | seven eight |]
+              verse ~1 { one two | three four | }
+                  verse ~2 { five six | seven eight | }
               """;
         return $$"""
             time 4/4

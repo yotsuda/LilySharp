@@ -352,8 +352,8 @@ public class RowsOnlyFormOrderTests
             lyrics verse {
               section A { one | two | }
               section B {
-                [~1. three | four |]
-                [~2. five | six |]
+                verse ~1 { three | four | }
+                verse ~2 { five | six | }
               }
             }
             chords prog { section A { C | F | } section B { G | C | } }

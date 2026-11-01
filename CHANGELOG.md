@@ -29,6 +29,22 @@ workflow attaches that section to the GitHub Release verbatim.
   section's body, and the singer's cell under the root-level `section A` was never walked. A
   root-level body now outranks a by-part cell as the section's representative.
 
+### Verses are `verse N { … }`, and the number is a label, not a line
+
+- `[grammar]` **A verse is written `verse 2 { How I won- der | what you are | }`** — the words
+  for the second time the section is sung; `verse 1,3 { }` and `verse 1-2 { }` cover several
+  times, `verse ~1 { }` hides the number. The word is contextual (a syllable elsewhere, and a
+  legal track name). Owner's design 2026-11-01: the former `[2. … ]` read like a form's
+  repeat ending; it is an error now (LYS4003), still read as the verse it meant.
+- `[render]` **Where a verse's words go follows from the form, and the number never chooses
+  the line**: under `|: B :|` the verses stack under the one printing, in order, each with
+  its number; a section the form sings again written out (`Verse Verse`) prints each verse
+  at its own printing on the FIRST line, with its number before the words — `2.` before the
+  second printing's, mid-line when both printings share a system. Until now the second
+  printing drew an empty first line and its words on the second (帰り道の灯り, bars 13–20).
+- `[editor]` The lyrics-body completion offers `verse 1 { }`, `verse 2 { }`, `verse 1-2 { }`
+  and `verse ~1 { }`; the `verse N {` head is coloured in a lyrics block.
+
 ### A section label over a leading chord row clears the verses above it
 
 - `[render]` **A label (Verse, Chorus, a rehearsal mark, a tempo) stacked over the chord row

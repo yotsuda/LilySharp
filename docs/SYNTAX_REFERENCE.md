@@ -1926,13 +1926,17 @@ form { Main }
 score { staff melody  lyrics words }
 ```
 
-**Verses** — different words for each pass of a section — are written as a verse header,
-`[1. syll syll | … ]`: the number names the pass (a play of the section in the form), and
-prints as the stanza number `1.` before the words. A list or a range covers several passes
-(`[1,3. …]`, `[1-2. …]`); a leading `~` keeps the words and hides the number (`[~1. …]`).
-Under a `|: B :|` repeat the section is printed once, so its
-verses stack under it as verses 1 and 2; a section the form plays twice written out takes
-each verse at its own play.
+**Verses** — the words for each time a section is sung — are written as `verse N { … }`
+blocks: `verse 1 { syll syll | … }`. The number names the time through (a play of the section
+in the form) and prints as the stanza number `1.` before the words. A list or a range covers
+several times (`verse 1,3 { }`, `verse 1-2 { }`); a leading `~` keeps the words and hides the
+number (`verse ~1 { }`). Where the words go follows from the form, and the number is never a
+line: under a `|: B :|` repeat the section is printed once, so its verses stack under it in
+order; a section the form sings again written out (`Verse Verse`) takes each verse at its own
+printing, on the first line under the staff, with its number before it — `2.` before the
+second printing's words. Words written with no `verse` are sung every time. The word `verse`
+is contextual (a syllable elsewhere, and a legal track name). The former spelling `[1. … ]` is
+read as the same verse with an error (LYS4003).
 
 ```
 part melody
@@ -1940,8 +1944,8 @@ section A { melody { c4 d e f | } }
 section B {
   melody { g4 a b c | }
   lyrics words sings melody {
-    [1. up up up up |]
-    [2. down down down down |]
+    verse 1 { up up up up | }
+    verse 2 { down down down down | }
   }
 }
 form { A |: B :| }

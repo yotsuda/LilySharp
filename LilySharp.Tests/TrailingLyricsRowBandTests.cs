@@ -78,7 +78,7 @@ public class TrailingLyricsRowBandTests
             ? VerseTexts[0]
             : string.Join(
                 "\n    ",
-                Enumerable.Range(0, verses).Select(i => $"[~{i + 1}. {VerseTexts[i]}]"));
+                Enumerable.Range(0, verses).Select(i => $"verse ~{i + 1} {{ {VerseTexts[i]} }}"));
         return $$"""
             time 4/4
             part melody {

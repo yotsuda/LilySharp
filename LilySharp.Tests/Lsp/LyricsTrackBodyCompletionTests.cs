@@ -139,7 +139,7 @@ public class LyricsTrackBodyCompletionTests
             """);
         var labels = CompletionLabelsAt(text, offset);
 
-        Assert.Contains("[1. ]", labels);
+        Assert.Contains("verse 1 { }", labels);
         AssertNoMusic(labels);
     }
 

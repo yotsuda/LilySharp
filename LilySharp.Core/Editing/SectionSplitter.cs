@@ -867,8 +867,8 @@ public static class SectionSplitter
                 && (word.Text.EndsWith('-') || word.Text == "__"))
                 open.Add(new OpenSpan($"word@{word.Span.Start}",
                     $"a lyric word ('{word.Text}' {LineOf(word.Span.Start)})", MayCarry: false));
-            if (cell.Kind == CellKind.Lyrics && nodes.OfType<SyntaxTokenNode>().Any(t => t.Kind == SyntaxKind.OpenBracket))
-                open.Add(new OpenSpan("verse", "a verse bracket [N. …]", MayCarry: false));
+            if (cell.Kind == CellKind.Lyrics && nodes.Any(n => n.Kind == SyntaxKind.LyricVerse || n.Parent?.Kind == SyntaxKind.LyricVerse))
+                open.Add(new OpenSpan("verse", "a verse block (verse N { … })", MayCarry: false));
             return open;
         }
 

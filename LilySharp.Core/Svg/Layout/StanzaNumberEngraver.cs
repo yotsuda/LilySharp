@@ -124,26 +124,41 @@ internal static class StanzaNumberEngraver
             if (l.Item.HideStanza && measureToSystem.TryGetValue(l.Item.MeasureIndex, out int hs))
                 hiddenPairs.Add((hs, l.Item.StaffIndex, l.Item.VerseNumber));
 
-        // Collect (system, staff, verse) → first lyric on that baseline (its Y is the baseline).
-        var firstLyricBySystem = new Dictionary<(int sys, int staff, int verse), LyricLayout>();
+        // Collect (system, staff, verse, label) → first lyric of that run (its Y is the
+        // baseline). ★ THE LABEL IS PART OF THE KEY (owner's design 2026-11-01): a section
+        // written out twice carries verse 1 and then verse 2 on the SAME row, and when both
+        // printings share a system the "2." stands mid-line before the second play's first
+        // syllable — LilyPond's `\set stanza` prints where it changes, which is this.
+        var firstLyricBySystem = new Dictionary<(int sys, int staff, int verse, int label), LyricLayout>();
         foreach (var l in lyrics)
         {
             if (l.Item.HideStanza)
                 continue;
             if (!measureToSystem.TryGetValue(l.Item.MeasureIndex, out int sysIdx))
                 continue;
-            // Only a system that stacks 2+ verses gets numbers (unless forced).
-            if (!emitForFirstVerse
+            // Only a system that stacks 2+ verses gets numbers (unless forced) — or a line
+            // that carries a written number: a `verse 2 { … }` on the second printing of a
+            // section written out twice stands alone on its row and still says "2."
+            // (LyricItem.StanzaLabel).
+            if (!emitForFirstVerse && l.Item.StanzaLabel <= 0
                 && (!versesInSystem.TryGetValue((sysIdx, l.Item.StaffIndex), out var vs)
                     || vs.Count <= 1))
                 continue;
-            var key = (sysIdx, l.Item.StaffIndex, l.Item.VerseNumber);
-            if (hiddenPairs.Contains(key))
+            if (hiddenPairs.Contains((sysIdx, l.Item.StaffIndex, l.Item.VerseNumber)))
                 continue; // a ~-hidden verse suppresses this baseline's number outright
-            // Keep the lyric whose X is leftmost in the system (the verse's start).
+            var key = (sysIdx, l.Item.StaffIndex, l.Item.VerseNumber, Math.Max(0, l.Item.StanzaLabel));
+            // Keep the lyric whose X is leftmost in the run (the verse's start).
             if (!firstLyricBySystem.TryGetValue(key, out var cur) || l.X < cur.X)
                 firstLyricBySystem[key] = l;
         }
+
+        // Of the runs on one row of one system, the LEFTMOST is the line's label and shares
+        // the line's right edge (below); any later run is a mid-line label and stands off
+        // its own first syllable.
+        var lineStartRun = new Dictionary<(int sys, int staff, int verse), (int label, double x)>();
+        foreach (var ((sysIdx, staff, verse, label), lyric) in firstLyricBySystem)
+            if (!lineStartRun.TryGetValue((sysIdx, staff, verse), out var cur) || lyric.X < cur.x)
+                lineStartRun[(sysIdx, staff, verse)] = (label, lyric.X);
 
         // The numbers' shared RIGHT edge per (system, staff): LilyPond's x-aligned-side
         // with direction LEFT and padding 1.0 off the number's supports — the syllables of
@@ -167,8 +182,10 @@ internal static class StanzaNumberEngraver
         //   goes away when: never — the page's own reading convention.
         //   observed by: StanzaNumberAlignmentTests (two verses, one system).
         var leftmostFirstSyllable = new Dictionary<(int sys, int staff), double>();
-        foreach (var ((sysIdx, staff, _), lyric) in firstLyricBySystem)
+        foreach (var ((sysIdx, staff, verse, label), lyric) in firstLyricBySystem)
         {
+            if (lineStartRun[(sysIdx, staff, verse)].label != label)
+                continue;   // a mid-line label aligns to its own syllable
             double inkLeft = lyric.X - lyric.Width / 2.0;
             if (!leftmostFirstSyllable.TryGetValue((sysIdx, staff), out var cur) || inkLeft < cur)
                 leftmostFirstSyllable[(sysIdx, staff)] = inkLeft;
@@ -180,11 +197,13 @@ internal static class StanzaNumberEngraver
         // 448 carry: `CreateBuilder<T>()` lays out its first block before a single Add, and
         // this one was empty in every build over the reader's corpus.
         ImmutableArray<StanzaNumberLayout>.Builder? builder = null;
-        foreach (var ((sysIdx, staff, verseNumber), lyric) in firstLyricBySystem)
+        foreach (var ((sysIdx, staff, verseNumber, label), lyric) in firstLyricBySystem)
         {
             if (sysIdx >= systems.Length) continue;
             var system = systems[sysIdx];
-            string text = $"{verseNumber}.";
+            // The written number of a `verse N { … }` line, else the row's own.
+            string text = $"{(label > 0 ? label : verseNumber)}.";
+            bool midLine = lineStartRun[(sysIdx, staff, verseNumber)].label != label;
             // ⚠️ On a LEAD SHEET the anchor is the LINE START (the indent), not the
             // syllables: the grid opens every line with a bar line and the first line's
             // syllables start past the bar + meter prefix, so a label hung off them put the
@@ -195,7 +214,10 @@ internal static class StanzaNumberEngraver
             //   departs from: the x-aligned-side rule above.
             //   goes away when: the grid's bar line becomes a support the number clears.
             //   observed by: the lead-sheet snapshots.
-            double x = leadSheet
+            double x = midLine
+                ? lyric.X - lyric.Width / 2.0 - Padding
+                    - Rendering.TextFontMetrics.Advance(text, em, sans: false, style)
+                : leadSheet
                 ? system.Indent - 4.0
                 : leftmostFirstSyllable[(sysIdx, staff)] - Padding
                     - Rendering.TextFontMetrics.Advance(text, em, sans: false, style);

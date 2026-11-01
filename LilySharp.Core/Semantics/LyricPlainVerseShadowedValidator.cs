@@ -70,7 +70,7 @@ internal sealed class LyricPlainVerseShadowedValidator : ISharedCollectValidator
             // consoles through the CLI.
             _diagnostics.Warning(w.Span, DiagnosticCodes.LyricPlainVerseShadowed,
                 $"the plain lyrics in section '{w.SectionName}' are shadowed by its " +
-                "[N.] verses; every occurrence already has a numbered verse, so these " +
-                "words will not be shown - remove them or give them an occurrence to cover");
+                "'verse N { }' verses; every play already has a numbered verse, so these " +
+                "words will not be shown - remove them or give them a play to cover");
     }
 }

@@ -115,11 +115,11 @@ internal static class LyricSyllableReader
     /// <c>LyricsCollector.PlaceRun</c> — any grid sized from lyric bars must use
     /// THIS, or a fenced verse pads a phantom bar.</summary>
     /// <remarks>
-    /// <c>[N. …]</c> verses are ALTERNATIVE stanzas for the same bars, so they widen the
+    /// <c>verse N { … }</c> verses are ALTERNATIVE stanzas for the same bars, so they widen the
     /// container rather than lengthening it: the answer is the widest single run, not the
     /// sum. Counting only the direct <c>LyricMeasure</c> children answered 0 for a section
-    /// written entirely as bracketed verses — every bar sits one level down, inside the
-    /// brackets — and a rows-only score then gave that section NO bars, laying the section
+    /// written entirely as verses — every bar sits one level down, inside the
+    /// blocks — and a rows-only score then gave that section NO bars, laying the section
     /// after it on top of the section before it (<c>MeasureCollector.RowGridSectionBars</c>
     /// is the caller that sizes the grid from this).
     /// </remarks>
@@ -140,9 +140,9 @@ internal static class LyricSyllableReader
         {
             if (container.GetChild(i) is not SyntaxNode m)
                 continue;
-            if (m.Kind == SyntaxKind.LyricVolta)
+            if (m.Kind == SyntaxKind.LyricVerse)
             {
-                widestVerse = Math.Max(widestVerse, CountRun(VoltaMeasures(m)));
+                widestVerse = Math.Max(widestVerse, CountRun(VerseMeasures(m)));
                 continue;
             }
             if (m.Kind != SyntaxKind.LyricMeasure)
@@ -169,19 +169,19 @@ internal static class LyricSyllableReader
         return bars;
     }
 
-    /// <summary>The lyric measures inside a <c>[ … . measures ]</c> verse: the non-token
-    /// children AFTER the header's '.', skipping the optional closing ']' and null slots.
-    /// ONE HOME — <c>LyricsCollector</c> places the verses this reads, and a grid sized
-    /// from them must see the same measures the placer does.</summary>
-    internal static IEnumerable<SyntaxNode> VoltaMeasures(SyntaxNode volta)
+    /// <summary>The lyric measures inside a <c>verse N { measures }</c> block: the non-token
+    /// children AFTER the header's '{' (the retired bracket form's '.'), skipping the closing
+    /// token and null slots. ONE HOME — <c>LyricsCollector</c> places the verses this reads,
+    /// and a grid sized from them must see the same measures the placer does.</summary>
+    internal static IEnumerable<SyntaxNode> VerseMeasures(SyntaxNode verse)
     {
-        bool afterDot = false;
-        for (int i = 0; i < volta.SlotCount; i++)
+        bool inBody = false;
+        for (int i = 0; i < verse.SlotCount; i++)
         {
-            var child = volta.GetChild(i);
-            if (!afterDot)
+            var child = verse.GetChild(i);
+            if (!inBody)
             {
-                if (child is SyntaxTokenNode t && t.Kind == SyntaxKind.Dot) afterDot = true;
+                if (child is SyntaxTokenNode t && t.Kind is SyntaxKind.OpenBrace or SyntaxKind.Dot) inBody = true;
                 continue;
             }
             if (child is SyntaxNode node and not SyntaxTokenNode)

@@ -11,8 +11,8 @@ part melody { clef treble
 }
 lyrics words sings melody {
   section A {
-    [1. Twin- kle twin- kle | lit- tle star |]
-    [2. How I won- der | what you are |]
+    verse 1 { Twin- kle twin- kle | lit- tle star | }
+    verse 2 { How I won- der | what you are | }
   }
 }
 form { A |: ~B :| A "A2" }

@@ -995,8 +995,8 @@ public static class DiagnosticCodes
     /// </para>
     /// <para>
     /// ⚠️ TWO SPELLINGS THIS MUST NOT CATCH, both of which a naive count did catch (three
-    /// separate miscounts, HANDOFF §2 F ⒫): a LYRIC verse header <c>[1. … ]</c> is
-    /// <c>LyricVoltaSyntax</c> — the words for the Nth pass, not a repeat — and a lyric row's
+    /// separate miscounts, HANDOFF §2 F ⒫): a LYRIC verse <c>verse 1 { … }</c> (and its retired
+    /// bracket spelling) is a <c>LyricVerse</c> node — the words for the Nth play, not a repeat — and a lyric row's
     /// barline is a raw token inside <c>LyricMeasureGreen</c>, not a
     /// <see cref="Syntax.BarlineSyntax"/> at all. Both are invisible to this rule by
     /// construction rather than by an exclusion list, which is why the rule is written on the
@@ -1277,12 +1277,15 @@ public static class DiagnosticCodes
     /// <summary>Lyric error: a top-level lyrics track in a by-part file is written
     /// flat; it must group its verses by section (<c>lyrics { section A { … } }</c>).</summary>
     public const string LyricTrackNeedsSections = "LYS4002";
-    // LYS4003 (NavigationMarkMidMeasure) retired 2026-10-04 (session 793): a navigation mark
-    // in music is LYS1034 now, so "mid-measure" has nothing left to warn about. The code
-    // number is left unreused.
-    /// <summary>Lyric warning: a section's plain (unbracketed) verse is fully shadowed
-    /// by its <c>[N. …]</c> verses — every written-out occurrence already has a numbered
-    /// verse, so the plain line (a fallback for uncovered occurrences) never renders.</summary>
+    /// <summary>Lyric error: a verse written in the retired bracket spelling <c>[N. … ]</c>
+    /// (owner's design 2026-11-01: a verse is <c>verse N { … }</c>; the bracket read like a
+    /// form's repeat ending). The words are still read as that verse, so the page shows what
+    /// was meant. (LYS4003 was NavigationMarkMidMeasure until 2026-10-04, retired unreused;
+    /// taken again here.)</summary>
+    public const string LyricVerseBracketRetired = "LYS4003";
+    /// <summary>Lyric warning: a section's plain (unnumbered) words are fully shadowed
+    /// by its <c>verse N { … }</c> verses — every written-out play already has a numbered
+    /// verse, so the plain line (a fallback for uncovered plays) never renders.</summary>
     public const string LyricPlainVerseShadowed = "LYS4004";
 
     /// <summary>Warning: a top-level single-value global setting (tempo / time / key /

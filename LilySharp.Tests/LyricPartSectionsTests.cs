@@ -144,7 +144,7 @@ public class LyricPartSectionsTests
     [Fact]
     public void PerOccurrenceVoltaLyrics_GiveEachSectionRenditionItsOwnWords()
     {
-        // `[1. …] [2. …]` inside a lyric section = different words each time A is sung.
+        // `verse 1 { … } verse 2 { … }` inside a lyric section = different words each time A is sung.
         // Form: A (bars 0-1) |: ~B :| (bar 2) A "A2" (bars 3-4). Occurrence 1 takes
         // verse 1, the A2 reprise takes verse 2 — not a repeat of verse 1.
         var tree = SyntaxTree.Parse("""
@@ -156,8 +156,8 @@ public class LyricPartSectionsTests
             }
             lyrics w {
               section A {
-                [1. Twin- kle twin- kle | lit- tle star |]
-                [2. How I won- der | what you are |]
+                verse 1 { Twin- kle twin- kle | lit- tle star | }
+                verse 2 { How I won- der | what you are | }
               }
             }
             form { A |: ~B :| A "A2" }
@@ -190,7 +190,7 @@ public class LyricPartSectionsTests
             }
             lyrics w {
               section A { la la la la | }
-              section B { [1. up up up up |] [2. down down down down |] }
+              section B { verse 1 { up up up up | } verse 2 { down down down down | } }
             }
             form { A |: B :| }
             score { staff melody }
@@ -209,7 +209,7 @@ public class LyricPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble section A { c''4 d' e' f' | } }
-            lyrics w { section A { [1,3. one two three four |] [2. aa bb cc dd |] } }
+            lyrics w { section A { verse 1,3 { one two three four | } verse 2 { aa bb cc dd | } } }
             form { A "1" A "2" A "3" }
             score { staff melody }
             """);
@@ -231,7 +231,7 @@ public class LyricPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble section A { c''4 d' e' f' | } }
-            lyrics w { section A { [3,1. one two three four |] } }
+            lyrics w { section A { verse 3,1 { one two three four | } } }
             form { A "1" A "2" }
             score { staff melody }
             """);
@@ -252,7 +252,7 @@ public class LyricPartSectionsTests
             }
             lyrics w {
               section A { la la la la | }
-              section B { [1. up up up up |] [~2. down down down down |] }
+              section B { verse 1 { up up up up | } verse ~2 { down down down down | } }
             }
             form { A |: B :| }
             score { staff melody }
@@ -326,7 +326,7 @@ public class LyricPartSectionsTests
             }
             lyrics words {
               section A { la la la la | }
-              section B { [1. up up up up |] [~2. down down down down |] }
+              section B { verse 1 { up up up up | } verse ~2 { down down down down | } }
             }
             form { A |: B :| }
             score { staff melody  lyrics words }
@@ -347,7 +347,7 @@ public class LyricPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble section A { c''4 d' e' f' | } }
-            lyrics words { section A { [1. one one one one |] [2. two two two two |] } }
+            lyrics words { section A { verse 1 { one one one one | } verse 2 { two two two two | } } }
             form { A "1" A "2" }
             score { staff melody  lyrics words }
             """);

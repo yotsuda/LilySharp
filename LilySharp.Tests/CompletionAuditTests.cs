@@ -422,8 +422,8 @@ public class CompletionAuditTests
     [Fact]
     public void LyricsBody_OffersTheVerseHeaders_AndEachCompiles()
     {
-        var items = LilySharpLanguageServer.GetLyricVoltaCompletions().Items;
-        Assert.Equal(new[] { "[1. ]", "[2. ]", "[1-2. ]", "[~1. ]" }, items.Select(i => i.Label).ToArray());
+        var items = LilySharpLanguageServer.GetLyricVerseCompletions().Items;
+        Assert.Equal(new[] { "verse 1 { }", "verse 2 { }", "verse 1-2 { }", "verse ~1 { }" }, items.Select(i => i.Label).ToArray());
         foreach (var item in items)
         {
             string verse = Resolved(item, "la la la la |");

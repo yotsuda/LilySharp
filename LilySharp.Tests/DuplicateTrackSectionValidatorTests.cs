@@ -65,7 +65,7 @@ public class DuplicateTrackSectionValidatorTests
         Assert.False(HasDuplicate(Parts + """
             lyrics {
               section A { la la la la | }
-              section B { [1. up up up up |] [2. down down down down |] }
+              section B { verse 1 { up up up up | } verse 2 { down down down down | } }
             }
             form { A |: B :| }
             score { staff melody }
