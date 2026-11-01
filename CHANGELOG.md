@@ -20,10 +20,9 @@ workflow attaches that section to the GitHub Release verbatim.
   never read as that stroke's tie. The stroke now sounds on through the tie into the same chord
   (`Am7 | Am7 |`), and stops at a different one, which waits for its own stroke. A rest between a
   tie and the next stroke breaks the tie. Owner's page 2026-11-01, a bossa nova's tied batida.
-- `[docs]` **The composing guide's bossa nova is that batida**, 1, 3, 6, 8 of the first bar with the
-  last tied, then 3, 6 of the second, as chords and as `strokes`. **A guitar alone** has its own
-  example: the thumb in one voice and the fingers on three neighbouring strings in the other, the
-  tied chord already the next bar's.
+- `[docs]` **The composing guide's bossa nova is the owner's batida**, 1, 4, 7 of the first bar and
+  3, 6 of the second, as chords and as `strokes` (`4. 4. 4 | r4 4 r8 4. |`). **A guitar alone** has
+  its own example: the thumb in one voice and the fingers on three neighbouring strings in the other.
 
 ### Composition checks: the tune's shape across a song
 

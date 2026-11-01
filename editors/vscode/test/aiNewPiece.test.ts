@@ -53,12 +53,12 @@ describe('the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*A style named is its rhythm first\*\*/);
         assert.match(guide, /`e,4 r4 b,2 \| e,4 r4 e,2 \|`/);
-        assert.match(guide, /1, 3, 6, 8 of the first bar, the last tied over the bar line, and 3, 6 of the second/);
-        // …and over a chords row, as strokes (owner's request 2026-11-01).
-        assert.match(guide, /`strokes bossa \{ section A \{ 4 4\. 4 8~ \|\s+4 4\. 4\. \| %2 \| %2 \| %2 \| \} \}`/);
+        assert.match(guide, /1, 4, 7 of the first bar and 3, 6 of the second/);
+        // …and over a chords row, as strokes (the owner's bossa.lys, 2026-11-01).
+        assert.match(guide, /`strokes bossa \{ section A \{ 4\. 4\. 4 \| r4 4 r8 4\. \| %2 \| %2 \| %2 \| \} \}`/);
         // …and a guitar alone, the thumb under the fingers (the owner's page, 2026-11-01).
         assert.match(guide, /\*\*A guitar alone\*\* plays both at once/);
-        assert.match(guide, /<g c' e'>4 <g c' e'>4\. <g c' e'>4 <fis c' e'>8~ \| <fis c' e'>4 <fis c' e'>4\. <fis c' e'>4\. \|/);
+        assert.match(guide, /<g c' e'>4\. <g c' e'>4\. <g c' e'>4 \| r4 <fis c' e'>4 r8 <fis c' e'>4\. \|/);
         assert.match(guide, /a,2 a,2 \| d2 d2 \|/);
     });
     // Owner's trial 2026-10-29: a "dramatic" quartet's tremolo and sforzando were all in two bars.
