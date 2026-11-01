@@ -61,6 +61,8 @@ describe('the composing guide', () => {
         // …its tune a voice of its own (the owner's review of Ameagari-no-Cafe, 2026-11-01).
         assert.match(guide, /r4 c''4 b'8 a'4\.~ \| a'2 fis'2 \|/);
         assert.match(guide, /A dynamic goes in one voice\s+only/);
+        // …and one hand plays them (the owner's question of Ameagari-no-Terrace, 2026-11-01).
+        assert.match(guide, /four notes\s+struck at once at most/);
         assert.match(guide, /<g c' e'>4\. <g c' e'>4\. <g c' e'>4 \| r4 <fis c' e'>4 r8 <fis c' e'>4\. \|/);
         assert.match(guide, /a,2 a,2 \| d2 d2 \|/);
     });
@@ -102,6 +104,9 @@ describe('the composing guide', () => {
         // twelve held clashes were written in "as colour").
         assert.match(fn, /const clashing = heldClashesOf\(kept\);\s*if \(clashing && clashing\.count >= CLASHES_TURNED_DOWN\) \{[\s\S]*?return `Not shown to the musician: its tune stands against its chords/);
         assert.ok(fn.indexOf('const clashing = heldClashesOf(kept);') < fn.indexOf('const brought = kept.filter('));
+        // Chords no hand can hold, eight or more, the same (owner's decision 2026-11-01: a solo guitar's 14).
+        assert.match(fn, /const unheld = unfingerableOf\(diags\.filter\(d => d\.Severity === 'warning'\)\);\s*if \(unheld\.length >= UNFINGERABLE_TURNED_DOWN\) \{[\s\S]*?return `Not shown to the musician: its player cannot play it/);
+        assert.ok(fn.indexOf('const unheld = unfingerableOf(') < fn.indexOf('const brought = kept.filter('));
         // What the check still finds is said by Lily# itself, the chat not always telling it
         // (owner's request 2026-11-01).
         assert.match(fn, /const stillFound = \[\.\.\.kept, \.\.\.added\.map\(w => w\.Message\)\];[\s\S]*?point\(s\) from the check left in it\.`,\s*'Show Log'\)/);

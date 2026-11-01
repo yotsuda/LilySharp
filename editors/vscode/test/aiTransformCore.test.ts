@@ -25,8 +25,19 @@ import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
     aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
-    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN, singersInOneLineOf,
+    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN,
 } from '../src/aiTransformCore';
+
+// Owner's decision 2026-11-01: a solo guitar's 14 chords no hand can hold were written in.
+describe('chords no hand can hold', () => {
+    it('are the fretted warnings of the code, eight or more turned down; a bowed chord is not one', () => {
+        const held = { Code: 'LYS1055', Message: 'this chord (C#3 E3 Ab3 B3 E4 B4) cannot be fingered: no string for each note' };
+        const bowed = { Code: 'LYS1055', Message: 'this chord (C4 E4 G4) cannot be bowed at once: a bowed string sounds two strings' };
+        const other = { Code: 'LYS1052', Message: 'out of range' };
+        assert.deepEqual(unfingerableOf([held, bowed, other]), [held]);
+        assert.equal(UNFINGERABLE_TURNED_DOWN, 8);
+    });
+});
 
 // Owner's decision 2026-11-01: told of 30 octaves in 131 moves, a chorus kept them.
 describe('singers on one line', () => {

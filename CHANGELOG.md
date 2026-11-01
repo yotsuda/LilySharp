@@ -14,7 +14,11 @@ workflow attaches that section to the GitHub Release verbatim.
   chords' top, not their low strings, so it is no longer told it leapt. Answering these took a
   piece's tune away. Owner's review 2026-11-01, Ameagari-no-Cafe.
 - `[docs]` **The composing guide's guitar alone has its tune**, a third voice above the chords, in
-  between the strokes and held over the bar line. A dynamic goes in one voice only.
+  between the strokes and held over the bar line. A dynamic goes in one voice only. Four notes struck
+  at once at most, the hand within a few frets.
+- `[chat]` **A new piece with eight or more chords no hand can hold goes back** every time it is
+  proposed after its first check. A solo guitar's 14 were written in, the chat calling them hard to
+  hold. Owner's decision 2026-11-01, Ameagari-no-Terrace.
 
 ### The preview's loop keeps every stroke
 

@@ -41,6 +41,10 @@ next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
      `heldClashesOf`, `CLASHES_TURNED_DOWN`) goes back every time once the piece is past its first
      check (2026-11-01: 12 held semitone clashes in a dawn ballad were written in "as colour"). Fewer
      keep the blue-note escape.
+   - **Chords no hand can hold, 8 or more** (LYS1055 "cannot be fingered", `unfingerableOf`,
+     `UNFINGERABLE_TURNED_DOWN`) go back every time once a new piece is past its first check (2026-11-01:
+     a solo guitar's 14, written in as "hard to hold"). A change the musician asks for in the chat is
+     not held to it, and a bowed string's "cannot be bowed" is not counted.
    - **The first proposal of a new piece** is checked as music once (`musicCheckedFor`). The
      compiler's warnings, `CompositionChecks.Of`'s findings (through LSP `lilysharp/compositionCheck`),
      the header-language note and the drawn-key note go back together, unseen by the musician.

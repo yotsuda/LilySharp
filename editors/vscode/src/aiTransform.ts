@@ -42,7 +42,7 @@ import {
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
     cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
-    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN, singersInOneLineOf,
+    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -783,6 +783,17 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             const report = await compositionReport(client, text);
             ranges = report.ranges;
             kept = report.findings;
+            // Chords no hand can hold, this many, are a piece its player cannot play: turned down every
+            // time (owner's decision 2026-11-01: a solo guitar's 14, a tune and a thumb over chords of
+            // four and five notes, written in as "hard to hold").
+            const unheld = unfingerableOf(diags.filter(d => d.Severity === 'warning'));
+            if (unheld.length >= UNFINGERABLE_TURNED_DOWN) {
+                deps.log(`AI proposal (chat): turned down — ${unheld.length} chords no hand can hold.`);
+                return `Not shown to the musician: its player cannot play it — ${unheld.length} chords no hand can hold, each counted with the notes of the other voices sounding with it.\n${formatDiags(unheld, text)}\n`
+                    + 'One hand plays the tune, the chord and the bass together: strike four notes at once at most, the chord on three neighbouring strings, '
+                    + 'two of them where the tune strikes with it, the hand within a few frets from chord to chord; and call lilysharp_proposeScore again with the whole text.'
+                    + rangesSaid(ranges);
+            }
             // A tune held against its chords this often is wrong notes, not colour: turned down every
             // time, as a bar that does not add up is (owner's decision 2026-11-01: 12 held clashes in a
             // dawn ballad were written in "as colour").

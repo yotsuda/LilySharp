@@ -170,8 +170,10 @@ What makes it music:
   in three voices on one part: the tune above the chords, a voice of its own that comes in between the
   strokes and is held over the bar line, not one note squeezed into each gap of the chords; the fingers
   the batida on three neighbouring strings (Am7 `<g c' e'>`, D7(9) `<fis c' e'>`, written here with
-  `octave absolute`); the thumb on beats 1 and 3, the root, or the fifth. A dynamic goes in one voice
-  only, or the page prints it once for each:
+  `octave absolute`); the thumb on beats 1 and 3, the root, or the fifth. One hand plays them: four notes
+  struck at once at most, the chord two notes where the tune strikes with it, and the hand within a few
+  frets from chord to chord, since a chord that no hand can hold is counted with the notes of the other
+  voices sounding with it. A dynamic goes in one voice only, or the page prints it once for each:
   ```
   part gtr { instrument guitar midiInstrument "acoustic guitar (nylon)" }
   section A { gtr { voice {
