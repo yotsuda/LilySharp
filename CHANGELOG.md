@@ -82,6 +82,11 @@ workflow attaches that section to the GitHub Release verbatim.
   hook in the first voice over power chords in the second was told "a tune in 0 of the 76 bars",
   "only 19% of its moves are steps" and "65% quarter notes" (the riff's chord-and-rest eighths
   counted as the melody's). The part's own chords now count as harmony its tune sounds against.
+- `[editor]` **A guitar striking its chords under its own tune is said**: in a band, a fretted part
+  whose one voice strikes chords twice or more in a bar while another plays a line, in half its
+  tune's bars (four or more), is told one player's hands cannot — let the chords rest while the
+  hook plays, or give the tune a second guitar part. A chord struck once where the tune rests is
+  left alone.
 - `[editor]` **The length finding says how not to lengthen**: a section that returns is named again
   in the form, and that counts; a copy under a new name with a few bars altered is not length.
 

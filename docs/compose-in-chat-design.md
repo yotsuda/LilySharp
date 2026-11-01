@@ -71,6 +71,8 @@ that prompted each check is written beside it in the code.
 - The bass leaping octaves.
 - A part in the bass's register.
 - Nobody playing the chords: only single notes, high (a low single-note riff counts as chords).
+- A fretted part striking its chords (two strikes or more in the bar) in one voice under its own
+  tune in another, in half its tune's bars: one player cannot (2026-11-01, three trios in a row).
 - One drum groove through every section (a varying kick and snare are said apart from the cymbals);
   and the kick and snare on one beat in every section but one, of six or more (2026-11-01).
 - The bass or drums at one level from start to end while the lead's level moves.

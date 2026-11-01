@@ -556,6 +556,8 @@ public static class CompositionChecks
                     + $"power chords or a riff on the root {(shared.Length > 0 ? "under the verse" : "through the verse and the chorus")}, "
                     + "open chords ringing in a quiet part; its "
                     + "tune goes over them in a solo, a fill, or a lead part of its own." + shared);
+            if (instrumentalLines is { } withLines)
+                findings.AddRange(ChordsUnderTheTune(midi, parts, barList, withLines.Item1));
         }
         // The accompaniments' figures, section by section (the melody is read above, the drums in
         // OneGroove): every pitched part that is not a melody, with enough notes to have a figure.
@@ -794,6 +796,45 @@ public static class CompositionChecks
             + "chorus or the bridge a progression of its own (a new bass note under the hook, a chord from outside the loop; the loop "
             + "begun from another of its chords is not a new one) — unless the music is built on one progression, a blues or a vamp: "
             + "then keep it.";
+    }
+
+    // A fretted part striking its chords in one voice under its own tune in another, in this share
+    // of its tune's bars (and this many): one player cannot (owner's reviews 2026-11-01: three rock
+    // trios in a row wrote the chorus hook in the guitar's first voice over the riff, eighth by
+    // eighth, in its second — the "share them out" advice answered by stacking both).
+    private const double ChordsUnderTuneShare = 0.5;
+    private const int ChordsUnderTuneFewest = 4;
+
+    /// <summary>A band's fretted part whose chord voice strikes under its tune voice in most of
+    /// its tune's bars: one player's hands cannot. A chord struck once where the tune rests is
+    /// not that; two strikes or more in the bar are.</summary>
+    private static IEnumerable<string> ChordsUnderTheTune(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts,
+        List<int> barList, Dictionary<string, HashSet<int>> lineBars)
+    {
+        foreach (var part in parts)
+        {
+            string name = part.Name.Text, instrument = InstrumentOf(part);
+            if (!(instrument.StartsWith("guitar", System.StringComparison.Ordinal) || instrument.StartsWith("ukulele", System.StringComparison.Ordinal)
+                    || instrument.StartsWith("banjo", System.StringComparison.Ordinal) || instrument.StartsWith("mandolin", System.StringComparison.Ordinal))
+                || !lineBars.TryGetValue(name, out var tuneBars) || tuneBars.Count < ChordsUnderTuneFewest)
+                continue;
+            var onsets = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && (n.Part ?? t.Name) == name))
+                .GroupBy(n => (n.Voice, n.StartTick)).Select(g => (g.Key.Voice, g.Key.StartTick, Notes: g.Select(n => n.Pitch).Distinct().Count())).ToList();
+            int under = 0;
+            foreach (int b in tuneBars)
+            {
+                int start = barList[b], end = b + 1 < barList.Count ? barList[b + 1] : int.MaxValue;
+                var inBar = onsets.Where(o => o.StartTick >= start && o.StartTick < end).GroupBy(o => o.Voice).ToList();
+                bool line = inBar.Any(v => v.Count(o => o.Notes == 1) >= 3);
+                bool strikes = inBar.Any(v => v.Count(o => o.Notes >= 2) >= 2 && v.Count(o => o.Notes >= 2) > v.Count(o => o.Notes == 1));
+                if (line && strikes)
+                    under++;
+            }
+            if (under >= ChordsUnderTuneFewest && under >= tuneBars.Count * ChordsUnderTuneShare)
+                yield return $"{name}: in {under} of its {tuneBars.Count} bars with a tune, one voice strikes the chords while another plays the "
+                    + "tune — one player's hands cannot: let the chords rest while the hook plays (the bass holds the harmony; a chord struck "
+                    + "where the tune rests is fine), or give the tune to a second guitar part of its own.";
+        }
     }
 
     /// <summary>The sections as played, by name, each once: its first play's start and end.</summary>
