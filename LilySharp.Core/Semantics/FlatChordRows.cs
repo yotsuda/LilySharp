@@ -42,13 +42,14 @@ internal sealed class FlatChordRows
 
     /// <summary>The flat tracks of the file that <paramref name="placed"/> names.</summary>
     public static FlatChordRows Of(SyntaxNode root, IReadOnlySet<string> placed)
-    {
-        var rows = new List<(string, List<List<SyntaxNode>>)>();
-        foreach (var block in root.ChildNodes().OfType<ChordPartBlockSyntax>())
-            if (!block.HasSections && block.PartName is { } row && placed.Contains(row))
-                rows.Add((row, BarsOf(block.Items)));
-        return new FlatChordRows(rows);
-    }
+        => Of(root.ChildNodes().OfType<ChordPartBlockSyntax>().Where(b => !b.HasSections && b.PartName is { } row && placed.Contains(row)));
+
+    /// <summary>These flat tracks.</summary>
+    public static FlatChordRows Of(IEnumerable<ChordPartBlockSyntax> blocks)
+        => new([.. blocks.Select(b => (b.PartName ?? "", BarsOf(b.Items)))]);
+
+    /// <summary>How many bars the longest track has left.</summary>
+    public int BarsLeft => _rows.Count == 0 ? 0 : System.Math.Max(0, _rows.Max(r => r.Bars.Count) - Cursor);
 
     /// <summary>The next <paramref name="bars"/> bars of each track, as items of a row, and moves on.</summary>
     public IEnumerable<(string Row, List<SyntaxNode> Items)> Take(int bars)

@@ -469,7 +469,15 @@ public sealed partial class LilyPondExporter
             // score's meter (HANDOFF §2 F-partmeter ⒜), and a row silent under a 3/4 bar wrote `s1`.
             var meters = _allSections.FirstOrDefault(s => s.SectionName == name) is { } declaration
                 ? SectionBarMeters(declaration, name) : null;
-            for (int i = 0; i < bars; i++)
+            // A flat chord track at the top level writes the bars it has for this play, on the
+            // same bars' lengths; a track that has run out is silent, as a row that writes nothing.
+            int flatBars = 0;
+            if (_flatChordBars != null)
+            {
+                flatBars = Math.Min(bars, _flatChordBars.BarsLeft);
+                result.AddRange(ChordBarsOf(_flatChordBars.Take(bars).SelectMany(r => r.Items), ChordKeyFor(name), pickup, meters));
+            }
+            for (int i = flatBars; i < bars; i++)
             {
                 var barMeter = meters is { Count: > 0 } ? meters[Math.Min(i, meters.Count - 1)] : meter;
                 result.Add(new ChordBarMarker("s" + ChordModeDuration(i == 0 && pickup is { } p ? p : barMeter)));
@@ -643,7 +651,8 @@ public sealed partial class LilyPondExporter
                     result.Add(CreateBarline(SyntaxKind.RepeatStartBar, "|:", both.Position, 0));
                     break;
 
-                case FormWalk.Ending ending when ending.Sections.Any(s => byName.ContainsKey(s.Name)):
+                // (A flat chord track has no section of its own to name: it writes bars under every ending.)
+                case FormWalk.Ending ending when _flatChordBars != null || ending.Sections.Any(s => byName.ContainsKey(s.Name)):
                     // An ending a ':|' follows ends on LilyPond's ":|." bar, whose glyph
                     // allows the hook by itself; the one after the last ':|' does not.
                     result.Add(CreateEnding(ending, byName,

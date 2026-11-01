@@ -410,7 +410,9 @@ public sealed partial class LilyPondExporter
     /// A chord part's bars in playing order — the chord twin of <see cref="OrderedMusic"/>.
     /// A by-part track (<c>chords P { section A { … } }</c>) registers each inner section
     /// under its name; a flat block registers under the section that encloses it; a flat
-    /// block at top level plays once, first (the collector anchors it at bar 0).
+    /// block at top level gives each section of the form the bars it prints
+    /// (<see cref="Semantics.FlatChordRows"/>, <see cref="AppendSilentPlay"/>), and with no
+    /// form plays once, first (the collector anchors it at bar 0).
     /// </summary>
     private List<SyntaxNode> OrderedChordItems(List<ChordPartBlockSyntax> blocks,
         FormDeclarationSyntax? form, List<SectionDeclarationSyntax> allSections)
@@ -446,20 +448,32 @@ public sealed partial class LilyPondExporter
         var result = new List<SyntaxNode>();
         _repeatTiePlays = new HashSet<int>(); // a chord track carries no ties
         _chordTrack = true;
-        foreach (var block in loose)
-            result.AddRange(ChordBars(block, (_homeTonic.Step, _homeKeySharps)));
         if (form != null)
+        {
+            _flatChordBars = loose.Count > 0 ? Semantics.FlatChordRows.Of(loose) : null;
             AppendFormItems(FormWalk.Read(form), byName, result);
+            // What is left past the music goes on, as the page draws it.
+            if (_flatChordBars != null)
+                result.AddRange(ChordBarsOf(_flatChordBars.Rest().SelectMany(r => r.Items), (_homeTonic.Step, _homeKeySharps)));
+            _flatChordBars = null;
+        }
         else
+        {
+            foreach (var block in loose)
+                result.AddRange(ChordBars(block, (_homeTonic.Step, _homeKeySharps)));
             foreach (var entry in inOrder)
             {
                 result.AddRange(ChordBars(entry.Container, ChordKeyFor(entry.Section.SectionName),
                     meters: SectionBarMeters(entry.Section, entry.Section.SectionName)));
                 result.AddRange(PaddingBars(entry.Container));
             }
+        }
         _chordTrack = false;
         return result;
     }
+
+    /// <summary>The flat chord tracks at the top level of the file, while their form is walked.</summary>
+    private Semantics.FlatChordRows? _flatChordBars;
 
     /// <summary>The key a scale-degree entry of the named section stacks in: the section's
     /// own header key, else the score's home key — the two keys the collector's timeline
@@ -607,6 +621,12 @@ public sealed partial class LilyPondExporter
             SectionDeclarationSyntax section => Svg.Collector.ChordNameCollector.SectionItems(section),
             _ => Enumerable.Empty<SyntaxNode>(),
         };
+        return ChordBarsOf(items, key, pickup, meters);
+    }
+
+    private IEnumerable<SyntaxNode> ChordBarsOf(IEnumerable<SyntaxNode> items, (int TonicStep, int Sharps) key,
+        Fraction? pickup = null, IReadOnlyList<Fraction>? meters = null)
+    {
         var result = new List<SyntaxNode>();
         var pending = new List<SyntaxNode>();
         bool firstBar = true;

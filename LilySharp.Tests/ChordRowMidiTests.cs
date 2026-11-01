@@ -145,6 +145,34 @@ public class ChordRowMidiTests
         Assert.Equal(Xml(same, form), flat);
     }
 
+    [Theory]
+    // A pickup: the first bar as short as the music's.
+    [InlineData("A", "section A { partial 4 melody { g'4 | c''1 | d''1 | } }", "| C | G |", "section A { partial 4 melody { g'4 | c''1 | d''1 | } chords harmony { | C | G | } }")]
+    // …and the next section's bars in its own key.
+    [InlineData("A B", "section A { key c major partial 4 melody { g'4 | c''1 | } }\nsection B { key d major melody { d''1 | } }", "| I | I |", "section A { key c major partial 4 melody { g'4 | c''1 | } chords harmony { | I | } }\nsection B { key d major melody { d''1 | } chords harmony { I | } }")]
+    // A section's own meter.
+    [InlineData("A B", "section A { melody { c''1 | } }\nsection B { time 3/4 melody { d''2. | e''2. | } }", "C D | G . A | Am . . |", "section A { melody { c''1 | } chords harmony { C D | } }\nsection B { time 3/4 melody { d''2. | e''2. | } chords harmony { G . A | Am . . | } }")]
+    // A repeat and its endings, in the chord variable as in the music's.
+    [InlineData("|: A [1. B] :| [2. C] D", "section A { melody { c''1 | } }\nsection B { melody { d''1 | } }\nsection C { melody { e''1 | } }\nsection D { melody { f''1 | } }", "C | Dm | Em | F |", "section A { melody { c''1 | } chords harmony { C | } }\nsection B { melody { d''1 | } chords harmony { Dm | } }\nsection C { melody { e''1 | } chords harmony { Em | } }\nsection D { melody { f''1 | } chords harmony { F | } }")]
+    public void AFlatTopLevelRow_IsInTheLilyPondTwin_AsItsBarsWrittenInTheSections(string form, string sections, string row, string same)
+    {
+        static string Ly(string music, string form) => new LilySharp.Core.LilyPond.LilyPondExporter()
+            .Export(SyntaxTree.Parse($"time 4/4\npart melody\n{music}\nform {{ {form} }}\nscore {{ chords harmony  staff melody }}\n"));
+        string flat = Ly($"{sections}\nchords harmony {{ {row} }}", form);
+        Assert.Contains("\\chordmode", flat);
+        Assert.Equal(Ly(same, form), flat);
+    }
+
+    [Fact]
+    public void AFlatTopLevelRow_InTheTwin_GoesOnPastTheMusic_AndFallsSilentWhenItRunsOut()
+    {
+        static string Ly(string row) => new LilySharp.Core.LilyPond.LilyPondExporter()
+            .Export(SyntaxTree.Parse($"time 4/4\npart melody\nsection A {{ melody {{ c''1 | d''1 | }} }}\nchords harmony {{ {row} }}\nform {{ A }}\nscore {{ chords harmony  staff melody }}\n"))
+            .ReplaceLineEndings("\n");
+        Assert.Matches(@"c1 \|\s+g1 \|\s+a1:m \|\s+\}", Ly("C | G | Am |"));
+        Assert.Matches(@"c1 \|\s+s1 \|\s+\}", Ly("C |"));
+    }
+
     [Fact]
     public void AFlatTopLevelRow_PastTheMusic_GoesOn_AsThePageDrawsIt()
         => Assert.Equal(new[] { 0, Bar, 2 * Bar }, Onsets("section A { melody { c''1 | } }\nchords harmony { C | G | Am | }"));
