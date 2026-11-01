@@ -948,21 +948,29 @@ score { staff melody  lyrics words sings melody }</pre>
   <code>f</code>. A slur written only to mark phrasing over a lyric line would swallow its
   syllables — write that one as <code>@phrasingSlur … @!phrasingSlur</code>, which holds
   none; the warning says so when it happens.</p>
-  <p><b>Verses</b> — different words for each pass of a section — are written with a verse
-  header, <code>[1. … ]</code>. The number names the pass and prints as the stanza number; a
-  list or range covers several (<code>[1,3. …]</code>, <code>[1-2. …]</code>) and
-  <code>[~1. …]</code> keeps the words but hides the number. Under a <code>|: B :|</code>
-  repeat the section is printed once, so its verses stack under it:</p>
+  <p><b>Verses</b> — the words for each time a section is sung — are <code>verse N { … }</code>
+  blocks inside the lyrics. Three rules and nothing else: one <code>lyrics</code> track is
+  <b>one line</b> of words under the staff (more lines are more tracks, in score order); words
+  written with no <code>verse</code> are sung <b>every time</b> the section comes round; and
+  <code>verse N { … }</code> is the words for the <b>Nth time</b> — where they go follows
+  from the form, and the number never chooses the line. Under a <code>|: B :|</code> repeat the
+  section is printed once, so its verses stack under it in order, each with its number:</p>
 <pre>part melody { clef treble }
 section B {
   melody { g4 a b c | }
   lyrics words sings melody {
-    [1. up up up up |]
-    [2. down down down down |]
+    verse 1 { up up up up | }
+    verse 2 { down down down down | }
   }
 }
 form { |: B :| }
 score { staff melody  lyrics words }</pre>
+  <p>A section the form names again written out (<code>form { Verse Verse }</code>) prints each
+  verse at its own printing, on the first line, with its number before the words —
+  <code>2.</code> before the second. <code>verse 1,3 { }</code> and <code>verse 1-2 { }</code>
+  cover several times; <code>verse ~1 { }</code> keeps the words and hides the number. The word
+  is contextual: a syllable elsewhere, and a legal track name. (The former <code>[1. … ]</code>
+  spelling is an error now, LYS4003 — it read like a form's repeat ending.)</p>
   <p>Barlines follow the same rule as music: every written <code>|</code> closes one bar,
   the one that <i>opens</i> the run included. That leading <code>|</code> is how a verse
   skips the rest bar its melody opens with.</p>
@@ -1020,6 +1028,17 @@ score { staff melody  lyrics words }</pre>
   silence. A symbol names a chord but voices none, so Lily# uses one voicing everywhere —
   every tone between G3 and G4, a slash bass an octave below (<code>G7/B</code> sounds B2 G3
   B3 D4 F4). A row no score places is silent.</p>
+  <p><b>A strum — <code>strokes</code> and <code>plays</code>.</b> A placed row <i>holds</i>
+  each chord over its slot, a keyboard's reading. A guitar's strum is a <code>strokes</code>
+  part: a rhythm and no pitch, written as values alone, each a slash head (<code>4 8 8 4 4</code>;
+  rests, ties and <code>%</code> for the bar before — a note in it is an error, LYS2021). A row
+  <i>plays</i> it: <code>chords harmony plays rhythm</code> is how the row <b>sounds</b> — the
+  chord in force struck at every stroke — and draws nothing. To print the strum, place the part:
+  <code>strokes rhythm</code> in the score draws it as a one-line staff of slashes (no clef, key
+  or name), and a chord row written above that item stands over it.</p>
+<pre>strokes rhythm { section A { 4 8 8 4 4 | % | % | % | } }
+chords harmony { section A { D | A | Bm | G | } }
+score { chords harmony plays rhythm  staff singer  lyrics words }</pre>
 
   <h3>What you write and what it prints are two different choices</h3>
   <p>A chord has three representations in Lily# — a <b>symbol</b> (<code>Cmaj7</code>), a
@@ -1183,6 +1202,8 @@ score { staff melody  staff bass }</pre>
     <tr><td><code>staff NAME as pitch transposed</code></td><td>…a transposing part in its player's key (<code>concert</code>: as it sounds), whatever the score's <code>pitch</code> — see <a href="#transposing">Transposing instruments</a></td></tr>
     <tr><td><code>tab NAME</code></td><td>tablature — see below</td></tr>
     <tr><td><code>chords NAME</code></td><td>a chord row</td></tr>
+    <tr><td><code>chords NAME plays STROKES</code></td><td>…sounding its chords at a <code>strokes</code> part's strokes (draws nothing more) — see <a href="#chordrows">Chords and chord rows</a></td></tr>
+    <tr><td><code>strokes NAME</code></td><td>a <code>strokes</code> part on one line, no clef, key or name (<code>as lines 5</code> widens it)</td></tr>
     <tr><td><code>lyrics NAME</code></td><td>a lyric row</td></tr>
     <tr><td><code>ossia NAME</code></td><td>a small alternative staff</td></tr>
     <tr><td><code>NAME</code> (bare)</td><td>played to MIDI only, never engraved — a click track, a cue part</td></tr>
@@ -1403,7 +1424,7 @@ c4 d e f |</pre>
 <section id="reserved">
   <h2>Reserved words</h2>
 <pre>section form using tab ossia transpose octave pitch instrument percussion drummap
-score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
+score part strokes staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
 voice phrase repeat break noBreak pageBreak noPageBreak partial cue embedded fonts paper layout
 title subtitle composer poet tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian

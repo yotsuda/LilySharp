@@ -268,6 +268,13 @@ form { Verse }
 score { staff melody  lyrics words }
 ```
 
+Verses — the words for each time a section is sung — are `verse N { … }` blocks
+inside the lyrics: `verse 1 { Hap- py birth- day | to you | } verse 2 { … }`. Under
+`|: Verse :|` the verses stack under the one printing, each with its number; a
+section the form names again written out (`form { Verse Verse }`) prints each
+verse at its own printing, on the first line, with its number before the words.
+Words with no `verse` are sung every time.
+
 ## Output Formats
 
 ```bash
