@@ -847,6 +847,19 @@ export function heldClashesOf(findings: string[]): { finding: string; count: num
     return undefined;
 }
 
+/** The music check's findings of two singers in octaves or unison over a share of the moves they
+ *  make together that is no passage: a fifth of them or more (owner's decision 2026-11-01: told of
+ *  30 in 131, a chorus kept them "for ease of singing"), and short of a piece sung in unison, four
+ *  fifths, which a request may mean. */
+export function singersInOneLineOf(findings: string[]): string[] {
+    return findings.filter(f => {
+        const m = /^\S+ and \S+ move in octaves or unison (\d+) times of the (\d+) they move together/.exec(f);
+        if (!m) { return false; }
+        const share = Number(m[1]) / Number(m[2]);
+        return share >= 0.2 && share < 0.8;
+    });
+}
+
 /** Held clashes this many or more: turned down, not told (heldClashesOf). */
 export const CLASHES_TURNED_DOWN = 8;
 

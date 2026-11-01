@@ -564,6 +564,18 @@ public class CompositionChecksTests
         Assert.DoesNotContain(lines, f => f.StartsWith("alt: only"));
     }
 
+    // Owner's review 2026-11-01 (Yume-no-Saki-e): the men in a tenor's range above the alto, and the
+    // alto, the inner part of the stack, not the middle of it by height.
+    [Fact]
+    public void ALowerSingerAboveTheOneOverIt_IsSaid_AndTheStackIsTheScores()
+    {
+        var crossed = CompositionChecks.Of(Choir(Bars(Sop), Bars("c'4 d' e' c'"), Bars("e'4 g' e' d'")));
+        Assert.Contains(crossed, f => f.StartsWith("men stands above alt at "));
+        Assert.DoesNotContain(CompositionChecks.Of(Choir(Bars(Sop), Bars("e'4 f' g' e'"), Bars("c4 d c g,"))), f => f.Contains("stands above"));
+        // The alto of the stack leaps though the men sound above it.
+        Assert.Contains(CompositionChecks.Of(Choir(Bars(Sop), Bars("g4 e' g e'"), Bars("g'4 a' g' a'"))), f => f.StartsWith("alt: only "));
+    }
+
     [Fact]
     public void VoicesSingingBarsWithNoWords_AreSaid()
     {

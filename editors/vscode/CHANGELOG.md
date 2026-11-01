@@ -12,7 +12,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   action, which asked "Allow tool call?" for nothing. Compose with AI's check also tells four-bar
   phrases that keep one rhythm for each bar's place, and a chorus sung three times unchanged; a
   song's lines cut to one count of notes a bar, and a chorus opening on another section's first bar;
-  a choir's parts in octaves, an inner part of leaps, and voices singing bars with no words.
+  a choir's parts in octaves or crossing, an inner part of leaps, and voices singing bars with no
+  words. Copilot's chat is turned down when two singers double each other for a fifth or more of
+  what they sing.
 
 ### Chord diagrams clear the staff under them
 

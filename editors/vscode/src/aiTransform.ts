@@ -42,7 +42,7 @@ import {
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
     cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
-    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN,
+    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN, singersInOneLineOf,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -792,6 +792,16 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                 return `Not shown to the musician: its tune stands against its chords — ${clashing.count} notes held on the beat a semitone `
                     + `from the harmony, which is not colour but wrong notes.\n- ${clashing.finding}\n`
                     + 'At each, take the chord\'s own tone or change the chord under it, and call lilysharp_proposeScore again with the whole text.'
+                    + rangesSaid(ranges);
+            }
+            // Singers on one line this often are fewer parts than the page says: the same (owner's
+            // decision 2026-11-01).
+            const oneLine = singersInOneLineOf(kept);
+            if (oneLine.length > 0) {
+                deps.log(`AI proposal (chat): turned down — ${oneLine.length} pair(s) of singers on one line.`);
+                return 'Not shown to the musician: its parts are not parts — singers doubling each other for a fifth or more of what they sing.\n'
+                    + oneLine.map(f => `- ${f}`).join('\n') + '\n'
+                    + 'Give each part a line of its own — a third or a sixth apart, one holding while the other moves — and call lilysharp_proposeScore again with the whole text.'
                     + rangesSaid(ranges);
             }
             // What the revision brought in goes back once more (owner's decision 2026-10-30: a revision's

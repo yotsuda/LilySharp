@@ -103,6 +103,10 @@ that prompted each check is written beside it in the code.
 
 **The singers** (2026-11-01: 風のひかり, a school chorus; the voice presets alone)
 - Two singers in octaves eight times or more, 10% of the moves they make together (`SingersLines`).
+  From a fifth of those moves up to four fifths (a piece in unison may be meant) `proposeScore`
+  turns the piece down every time (`singersInOneLineOf`; 2026-11-01: 夢の先へ kept 30 in 131).
+- A lower singer over the part above it, eight times or more and 10% of the moments they sing
+  together (the stack is the score's order).
 - An inner singer with fewer than a quarter of its moves steps, 16 moves or more.
 - A sung piece's voices singing two bars or more in sections no lyrics track writes words for
   (`BarsWithoutWords`; read from the sections, the MIDI's lyric events carrying no `verse N { }`).

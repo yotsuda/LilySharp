@@ -53,9 +53,12 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[check]` **A song's lines cut to one count of notes** (3, 3, 5, 2 a phrase, whatever the rhythm)
   and **a chorus whose first bar is another section's**, an octave apart or none. Owner's review
   2026-11-01 (あしたの窓).
-- `[check]` **The singers of a choir**: two parts in octaves, an inner part going from chord tone
-  to chord tone, and voices singing bars with no words. Owner's review 2026-11-01 (風のひかり). The
-  composing guide gains a paragraph on a chorus for a school choir, piano part included.
+- `[check]` **The singers of a choir**: two parts in octaves or unison, a lower part above the one
+  over it, an inner part going from chord tone to chord tone, and voices singing bars with no
+  words. Owner's reviews 2026-11-01 (風のひかり, 夢の先へ). The composing guide gains a paragraph on a
+  chorus for a school choir, piano part included.
+- `[editor]` **Singers doubling each other for a fifth or more of what they sing are turned down
+  from Copilot's chat every time** (short of four fifths, which may be a piece in unison).
 - `[docs]` The composing guide: a long note is its chord's own tone, or resolves to one, and falls
   on a word that carries the meaning. Copilot's chat calls `lilysharp_proposeScore` directly.
 

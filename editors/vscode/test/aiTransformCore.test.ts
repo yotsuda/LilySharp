@@ -25,8 +25,18 @@ import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
     aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
-    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN,
+    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN, singersInOneLineOf,
 } from '../src/aiTransformCore';
+
+// Owner's decision 2026-11-01: told of 30 octaves in 131 moves, a chorus kept them.
+describe('singers on one line', () => {
+    const said = (n: number, m: number) => `sop and alt move in octaves or unison ${n} times of the ${m} they move together — two parts`;
+    it('are a fifth of what the pair sings, and short of a piece in unison', () => {
+        assert.deepEqual(singersInOneLineOf([said(30, 131), 'alt: only 3 of its 30 moves']), [said(30, 131)]);
+        assert.deepEqual(singersInOneLineOf([said(14, 130)]), []);
+        assert.deepEqual(singersInOneLineOf([said(120, 130)]), []);
+    });
+});
 
 // Owner's decision 2026-11-01: twelve held clashes kept "as colour" are wrong notes.
 describe('a tune held against its harmony', () => {

@@ -569,7 +569,9 @@ public static class CompositionChecks
         var sung = System.Text.RegularExpressions.Regex.Matches(source, @"\blyrics\s+\w+\s+sings\s+(\w+)")
             .Select(m => m.Groups[1].Value).ToHashSet(System.StringComparer.Ordinal);
         findings.AddRange(NoBreath(midi, parts, barList, sung));
-        findings.AddRange(SingersLines(midi, parts));
+        findings.AddRange(SingersLines(midi, parts, declared is { } placed
+            ? placed.Declaration.DescendantNodes<StaffRenderSyntax>().Select(s => s.PartToken?.Text).OfType<string>().ToList()
+            : []));
         findings.AddRange(BarsWithoutWords(midi, root, parts, barList, sung));
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
         {
@@ -789,6 +791,11 @@ public static class CompositionChecks
     private const int ParallelOctavesFewest = 8;
     private const double ParallelOctavesShare = 0.1;
 
+    // A lower singer over the part above it this often: a crossing here and there is a voice's own
+    // right; this many says the two are in one register.
+    private const int CrossingsFewest = 8;
+    private const double CrossingsShare = 0.1;
+
     // An inner singer with fewer steps than this among its moves, over this many moves: a chord's
     // tones in turn, not a line to sing (風のひかり's alto: 17 of 133).
     private const double InnerLineStepShare = 0.25;
@@ -797,9 +804,12 @@ public static class CompositionChecks
     /// <summary>The singers' parts read against each other: a pair doubling at the octave, and an
     /// inner part that leaps from chord tone to chord tone. A choir's lines; a band's or an
     /// orchestra's parts double and leap by right, so only the voice presets are read.</summary>
-    private static IEnumerable<string> SingersLines(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts)
+    private static IEnumerable<string> SingersLines(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts, IReadOnlyList<string> scoreOrder)
     {
-        var singers = parts.Where(IsVoicePreset).Select(p => p.Name.Text).ToList();
+        var voices = parts.Where(IsVoicePreset).Select(p => p.Name.Text).ToList();
+        // Top to bottom as the score stacks them, the order a choir's parts are meant in; a part
+        // the score does not place comes after, in declared order.
+        var singers = scoreOrder.Where(voices.Contains).Distinct().Concat(voices.Where(v => !scoreOrder.Contains(v))).ToList();
         if (singers.Count < 2)
             yield break;
         var lines = singers.ToDictionary(s => s, s => midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && !n.IsGrace && (n.Part ?? t.Name) == s))
@@ -831,13 +841,30 @@ public static class CompositionChecks
                         octaves++;
                 }
                 if (octaves >= ParallelOctavesFewest && octaves >= moves * ParallelOctavesShare)
-                    yield return $"{singers[i]} and {singers[j]} move in octaves {octaves} times of the {moves} they move together — two parts singing one line: "
+                    yield return $"{singers[i]} and {singers[j]} move in octaves or unison {octaves} times of the {moves} they move together — two parts singing one line: "
                         + "give each its own, one holding or moving by step while the other moves — unless a passage in octaves is meant, "
                         + "a line the voices sing as one for its strength: then keep it.";
             }
-        // The inner singers: not the highest nor the lowest, by where they mostly sound.
-        var byHeight = singers.Where(s => lines[s].Count > 0).OrderByDescending(s => lines[s].Average(n => n.Pitch)).ToList();
-        foreach (var s in byHeight.Skip(1).Take(byHeight.Count - 2))
+        // A lower part standing over the one above it (owner's review 2026-11-01: 夢の先へ, the men in
+        // a tenor's range above the alto, 33 crossings).
+        for (int i = 0; i + 1 < singers.Count; i++)
+        {
+            var (upper, lower) = (lines[singers[i]], lines[singers[i + 1]]);
+            var times = upper.Select(n => n.Start).Concat(lower.Select(n => n.Start)).Distinct().Order().ToList();
+            int together = 0, crossed = 0;
+            foreach (int t in times)
+                if (At(upper, t) is { } u && At(lower, t) is { } l)
+                {
+                    together++;
+                    if (l > u)
+                        crossed++;
+                }
+            if (crossed >= CrossingsFewest && crossed >= together * CrossingsShare)
+                yield return $"{singers[i + 1]} stands above {singers[i]} at {crossed} of the {together} moments they sing together — the parts cross, and neither "
+                    + "is heard as its own line: keep each voice in its own register, the lower part below, with an instrument whose range lies there.";
+        }
+        // The inner singers: neither the top nor the bottom of the stack.
+        foreach (var s in singers.Skip(1).Take(singers.Count - 2))
         {
             var pitches = lines[s].Select(n => n.Pitch).ToList();
             var moved = pitches.Zip(pitches.Skip(1), (x, y) => System.Math.Abs(x - y)).Where(d => d > 0).ToList();

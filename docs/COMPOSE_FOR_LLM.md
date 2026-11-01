@@ -172,7 +172,8 @@ What makes it music:
   a piano part under the voices (`instrument piano-right` / `piano-left` in a `grandStaff`, below the
   `choirStaff`) carries the introduction and the interludes, and the voices sing words whenever they
   sing. Younger voices sit in the middle of the staff: soprano about C4–E5, alto A3–C5, a mixed
-  choir's men B♭2–D4, whatever the `instrument` preset allows. Every part is a line a singer can
+  choir's men B♭2–D4 (`instrument baritone`, below the alto, not a tenor above it), whatever the
+  preset allows. Every part is a line a singer can
   learn by ear, by step where it can, sharing a common tone from chord to chord — the alto and the
   men above all — and two parts do not double at the octave unless the words ask for that strength.
   About three minutes, two verses and a chorus that returns.

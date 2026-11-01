@@ -1,3 +1,11 @@
+## 第1036 ㉝ の逐語 ← §1 の 20,000 字の門を超えたので出した
+
+- ㉝ **chat の作曲は最終成果物だけがエディタに開く**（ユーザー報告 2026-11-01「楽譜が開いた直後に proposed pane も開いた」）: chat が書いた直後に頼まれもせず同じ曲を再提案し、空でなくなった file への提案として panel に行った（Copilot のログ `~/.copilot/session-state/<id>/events.jsonl` で 1 つの `user.message` に proposeScore が 3 回）。直し＝`proposeScore` は書いた曲を `newPieces`（uri→text・時刻）に覚え、本文がそのままで、ログの最新 `user.message`（`lastUserMessageAt`）が書いた時刻より前なら「作曲の続き」＝`writeWhole` で書き直し（panel なし）。ログの無い chat は本文だけで判定。musician が chat で何か言えば従来どおり panel。網 `aiTransformCore.test.ts`・`aiNewPiece.test.ts`（npm test）・MANUAL-CHECKS C46。
+
+## 第1036 ㉛ の逐語 ← §1 の 20,000 字の門を超えたので出した
+
+- ㉛ **先頭のコード行の上の section 記号が前の段の歌詞を貫く**（ユーザー「直して」2026-11-01・帰り道の灯り・再現 Lab `sessions/p1036/strokes/markclash2.lys`）: 前の段の歌詞の鎖は次の段の先頭のコード行を要素に解くが、行の上に積んだ記号を知らなかった。直し＝`LayoutEngine.RowUpWithMarksRestingOnIt`（記号の箱を先頭の行の Up に足す・記号の X は lyrics の前に `MusicMarkEngraver.Calculate` をもう 1 度）＋`ApplySolvedRowPositions` が行の移動を乗る記号にも適用。LP は記号を横に並べる＝LILYSHARP-OWN。網 `MarkOverLeadingChordRowTests`。
+
 ## 第1036 ㉕㉖ の逐語 ← §1 の 20,000 字の門を超えたので出した
 
 - ㉕ **旋律の検査は part の「線の声部」を読む**（ユーザーの講評依頼 2026-11-01・`Downloads/Shippu-no-Kodou.lys`＝サビのフックを第 1 声、`chord(G#5)` の刻みを第 2 声に書いたギターが「tune in 0 of the 76 bars」）: `CompositionChecks.LineVoices`＝`voice { } { }` の part は単音の発音が最も多い声部（`MidiNote.Voice`）、`LineNotes` がその声部だけを返す。`byPart`・歩進・輪郭（`BarContours`）・衝突（`Clashes`＝同じ part の別声部は響く和声として `others` に入れる）・終止（`OpenEndings`）がそれを読み、`LineBars` は声部ごとに「線の小節」を判定。バンドのインストでは旋律 part の `byPart` を線の小節に絞る（リフの `chord8 r8` が「65% quarter notes」「Intro 8 of 8 bars same rhythm」と読まれた）。網 `ATuneOverItsOwnPartsChords_IsATune_AndIsReadAlone`。
