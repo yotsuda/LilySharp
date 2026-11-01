@@ -162,11 +162,24 @@ What makes it music:
   (`e,4 r4 b,2 | e,4 r4 e,2 |`) — a tune from a four-beat standard takes `e,4 r8 e,8 b,4. b,8 |`
   instead. The piano or guitar fills the gaps round the melody, long chords and a few off-beat ones,
   not one figure from start to end; here and there it takes the batida, eighths counted the chords on
-  1, 3, 6, 8 of the first bar and 2, 4, 6 of the second (`<…>4 <…>4. <…>8 r8 <…>8 | r8 <…>8 r8 <…>8 r8
-  <…>4. |`). The melody comes in off the beat and is held over the bar line, above the chords. Over
-  a chords row (a song to sing and play, a lead sheet) the batida is a `strokes` part the row plays,
-  `%2` repeating the two bars before it — `strokes bossa { section A { 4 4. 8 r8 8 | r8 8 r8 8 r8 4. |
-  %2 | %2 | %2 | } }`, as many bars as the section, and `chords harmony plays bossa` in the score.
+  1, 3, 6, 8 of the first bar, the last tied over the bar line, and 3, 6 of the second (`<…>4 <…>4.
+  <…>4 <…>8~ | <…>4 <…>4. <…>4. |`). The melody comes in off the beat and is held over the bar line,
+  above the chords. Over a chords row (a song to sing and play, a lead sheet) the batida is a `strokes`
+  part the row plays, `%2` repeating the two bars before it — `strokes bossa { section A { 4 4. 4 8~ |
+  4 4. 4. | %2 | %2 | %2 | } }`, as many bars as the section, and `chords harmony plays bossa` in the
+  score, a chord written again for the second bar of the two (`Am7 | Am7 | D7 | D7 |`): the tied stroke
+  sounds on into the same chord and stops at a different one. **A guitar alone** plays both at once, in two voices on one part: the thumb on
+  beats 1 and 3, the root, or the fifth, and the fingers the batida on three neighbouring strings
+  (Am7 `<g c' e'>`, D7(9) `<fis c' e'>`, written here with `octave absolute`), the tied chord already
+  the next bar's, an eighth early:
+  ```
+  part gtr { instrument guitar midiInstrument "acoustic guitar (nylon)" }
+  section A { gtr { voice {
+    <g c' e'>4 <g c' e'>4. <g c' e'>4 <fis c' e'>8~ | <fis c' e'>4 <fis c' e'>4. <fis c' e'>4. |
+  } {
+    a,2 a,2 | d2 d2 |
+  } } }
+  ```
 - **A piece for a beginner** ("for a beginner", "an easy exercise", "for a child learning the
   piano"): the hand stays in one place — five notes under five fingers (C to G for the right
   hand from middle C), moving by step with a few skips of a third, no leap out of the five, no

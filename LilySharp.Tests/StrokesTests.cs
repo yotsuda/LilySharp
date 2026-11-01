@@ -69,16 +69,16 @@ public class StrokesTests
             .GroupBy(n => (n.StartTick, n.DurationTicks)).Select(g => g.Key).OrderBy(s => s.StartTick).ToArray();
 
     /// <summary>The bossa nova's strokes the composing guide gives (owner's request 2026-11-01): the
-    /// row strikes the batida, its chords on the 1st, 3rd, 6th, 8th eighths and the 2nd, 4th, 6th of
-    /// the next bar, <c>%2</c> going round.</summary>
+    /// row strikes the batida, its chords on the 1st, 3rd, 6th, 8th eighths and, the 8th tied over
+    /// the bar line, the 3rd and 6th of the next bar, <c>%2</c> going round.</summary>
     [Fact]
     public void TheGuidesBossaNovaStrokes_GoRoundInTwoBars()
     {
         const string book = """
             time 4/4
             part singer { instrument alto }
-            strokes bossa { section A { 4 4. 8 r8 8 | r8 8 r8 8 r8 4. | %2 | %2 | } }
-            chords harmony { section A { E | A | B | E | E | A | } }
+            strokes bossa { section A { 4 4. 4 8~ | 4 4. 4. | %2 | %2 | } }
+            chords harmony { section A { E | E | A | A | B | B | } }
             section A { singer { e'1 | e'1 | e'1 | e'1 | e'1 | e'1 | } }
             form { A }
             score { chords harmony plays bossa  staff singer }
@@ -87,8 +87,60 @@ public class StrokesTests
         Assert.False(tree.HasErrors);
         int eighth = Bar / 8;
         var strikes = ChordStrikes(new MidiExporter().Export(tree)).Select(s => s.Start / eighth).Distinct().ToArray();
-        int[] twoBars = [0, 2, 5, 7, 9, 11, 13];
+        int[] twoBars = [0, 2, 5, 7, 10, 13];
         Assert.Equal(twoBars.Concat(twoBars.Select(x => x + 16)).Concat(twoBars.Select(x => x + 32)).ToArray(), strikes);
+    }
+
+    private static (int Start, int Length)[] StrikesOf(string strokes, string chords)
+    {
+        string book = $$"""
+            time 4/4
+            part singer { instrument alto }
+            strokes rhythm { section A { {{strokes}} } }
+            chords harmony { section A { {{chords}} } }
+            section A { singer { e'1 | e'1 | } }
+            form { A }
+            score { chords harmony plays rhythm  staff singer }
+            """;
+        var tree = Parse(book.ReplaceLineEndings("\n"));
+        Assert.False(tree.HasErrors);
+        return ChordStrikes(new MidiExporter().Export(tree));
+    }
+
+    /// <summary>A tied stroke is one stroke (the owner's page, 2026-11-01: a batida tied over the bar
+    /// line struck again where the tie landed): the chord is not struck at the tie's end, and sounds
+    /// on through it. <c>~</c> stands after a stroke as a sibling, as after a note, unless a mark
+    /// follows it, so both spellings are held here.</summary>
+    [Theory]
+    [InlineData("4 4 4 8 8~ | 4 2. |")]
+    [InlineData("/4 /4 /4 /8 /8~ | /4 /2. |")]
+    public void ATiedStroke_IsNotStruckAgain_AndSoundsOnThroughTheTie(string strokes)
+    {
+        int quarter = Bar / 4, eighth = Bar / 8;
+        Assert.Equal(
+            [(0, quarter), (quarter, quarter), (2 * quarter, quarter), (3 * quarter, eighth),
+             (3 * quarter + eighth, eighth + quarter), (Bar + quarter, 3 * quarter)],
+            StrikesOf(strokes, "C | C |"));
+    }
+
+    /// <summary>A tied stroke over a chord change sounds only the chord it was struck in, stopping
+    /// where that ends; the next chord waits for its own stroke (as the guide says).</summary>
+    [Fact]
+    public void ATiedStroke_StopsWhereItsChordEnds()
+    {
+        int quarter = Bar / 4, eighth = Bar / 8;
+        var last = StrikesOf("2. 8 8~ | 4 2. |", "C | G |");
+        Assert.Equal([(0, 3 * quarter), (3 * quarter, eighth), (3 * quarter + eighth, eighth), (Bar + quarter, 3 * quarter)], last);
+    }
+
+    /// <summary>A rest between a tie and the next stroke breaks the tie: that stroke is struck.</summary>
+    [Fact]
+    public void ARestAfterATie_LeavesTheNextStrokeStruck()
+    {
+        int quarter = Bar / 4;
+        Assert.Equal(
+            [(0, quarter), (2 * quarter, 2 * quarter), (Bar, Bar)],
+            StrikesOf("4~ r4 2 | 1 |", "C | C |"));
     }
 
     [Fact]

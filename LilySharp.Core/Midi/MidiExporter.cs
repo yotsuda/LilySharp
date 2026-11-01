@@ -825,8 +825,11 @@ public sealed class MidiExporter
 
             case TieSyntax:
                 // Tie between two sibling notes — the next same-pitch note extends
-                // the previous one rather than re-articulating.
+                // the previous one rather than re-articulating. `8~ | 4` in a strokes part is
+                // this same sibling, so the stroke it follows goes on into the next (RecordStroke).
                 SetTiePending(true);
+                if (_recordStrokesFor != null && _currentPart == _recordStrokesFor)
+                    _strokeTieOpen = true;
                 break;
 
             case RestSyntax rest:
@@ -1502,7 +1505,8 @@ public sealed class MidiExporter
                         (level, _) = ApplyArticulationType(articulation.Type, level, 100);
                         break;
                 }
-        if (_strokeTieOpen && _recordedStrokes.Count > 0)
+        // A tie joins only the stroke that ends where this one starts: a rest between them breaks it.
+        if (_strokeTieOpen && _recordedStrokes.Count > 0 && _recordedStrokes[^1].Tick + _recordedStrokes[^1].Ticks == tick)
             _recordedStrokes[^1] = _recordedStrokes[^1] with { Ticks = _recordedStrokes[^1].Ticks + ticks };
         else
             _recordedStrokes.Add(new Stroke(tick, ticks, level));
@@ -1587,6 +1591,10 @@ public sealed class MidiExporter
         // A track typed `for` a transposing part in its player's letters sounds that many
         // semitones lower (Semantics.ChordTrackPitch): read once, off the first item's tree.
         int? typedDrop = null;
+        // The last stroke's notes, and what is left of it past the span it was struck in.
+        var ringing = new List<int>();
+        int ringingLeft = 0, ringingTo = -1;
+        string? ringingChord = null;
 
         void Sound()
         {
@@ -1616,18 +1624,35 @@ public sealed class MidiExporter
                 // A row that strums to a strokes part (`chords NAME plays STROKES`, owner's design
                 // 2026-11-01) sounds the chord at each stroke within its span, for the stroke's
                 // length cut at the span's end, at the stroke's level (70%, as the row); a span
-                // no stroke falls in is silent until the next stroke.
+                // no stroke falls in is silent until the next stroke. A stroke that runs on past
+                // its span (a tie over the bar line) sounds on into a span of the SAME chord, the
+                // same notes held, and stops at a different one: it was struck as the old chord.
                 if (strokes != null)
                 {
+                    if (ringingTo == onset && ringingChord == entry.SymbolText && ringingLeft > 0)
+                    {
+                        int more = Math.Min(ringingLeft, length);
+                        foreach (int index in ringing)
+                            track.Notes[index] = track.Notes[index] with { DurationTicks = track.Notes[index].DurationTicks + more };
+                        ringingLeft -= more;
+                        ringingTo = onset + length;
+                    }
                     foreach (var stroke in strokes)
                     {
                         if (stroke.Tick < onset || stroke.Tick >= onset + length)
                             continue;
                         int strum = Math.Min(stroke.Ticks, onset + length - stroke.Tick);
                         int level = Math.Max(1, stroke.Velocity * 7 / 10);
+                        ringing.Clear();
                         foreach (var tone in Music.ChordVoicing.Window(chord))
+                        {
+                            ringing.Add(track.Notes.Count);
                             track.Notes.Add(new MidiNote(track.Channel, SoundKey(tone.Midi + _fileShiftSemitones, position), level,
                                 stroke.Tick, Math.Max(1, strum), position, SourceOrdinal: ordinal, Timbre: timbre, Part: part));
+                        }
+                        ringingLeft = stroke.Ticks - strum;
+                        ringingTo = onset + length;
+                        ringingChord = entry.SymbolText;
                     }
                     continue;
                 }

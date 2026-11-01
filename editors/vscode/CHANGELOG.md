@@ -10,7 +10,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   count and **Show Log**, which lists them, whether or not the chat tells you. The check also tells
   a piano under singers that only holds, and takes a section named chorus for the chorus however
   often the form plays it, and tells a tune standing under its own chords. Compose with AI's guide
-  writes a named style's rhythm first (a bossa nova's two bars among them).
+  writes a named style's rhythm first (a bossa nova's two bars among them, tied over the bar line,
+  and a guitar alone with the thumb under the fingers).
+- **A tied stroke sounds once.** A chords row playing a `strokes` part no longer strikes again where
+  a stroke's tie lands.
 
 ### A written-out verse says its number once
 
