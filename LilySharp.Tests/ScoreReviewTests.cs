@@ -44,15 +44,15 @@ public class ScoreReviewTests
     private static JsonObject Report(string source, string audience = "beginner", string? focus = null)
         => JsonNode.Parse(ScoreReview.Json(source, audience, focus))!.AsObject();
 
-    private static string Source([CallerFilePath] string here = "")
-        => File.ReadAllText(Path.Combine(Path.GetDirectoryName(here)!, "..", "LilySharp.Core", "Editing", "CompositionChecks.cs"));
+    private static string Source(string file, [CallerFilePath] string here = "")
+        => File.ReadAllText(Path.Combine(Path.GetDirectoryName(here)!, "..", "LilySharp.Core", "Editing", file));
 
     private static readonly Regex CheckId = new(@"new(?: CompositionFinding)?\(""([a-z]+\.[a-z-]+)""");
 
     [Fact]
     public void EveryCheckHasANote_AndEveryNoteACheck()
     {
-        var made = CheckId.Matches(Source()).Select(m => m.Groups[1].Value).ToHashSet();
+        var made = CheckId.Matches(Source("CompositionChecks.cs") + Source("KeyChecks.cs")).Select(m => m.Groups[1].Value).ToHashSet();
         Assert.True(made.Count >= 60, $"read only {made.Count} ids: has the way a check names itself changed?");
         Assert.Empty(made.Except(ReviewNotes.All.Keys));
         Assert.Empty(ReviewNotes.All.Keys.Except(made));
@@ -164,6 +164,139 @@ public class ScoreReviewTests
         Assert.DoesNotContain(notation, f => (string?)f!["id"] == "form.length");
         Assert.Equal(all["facts"]!.ToJsonString(), form["facts"]!.ToJsonString());
         Assert.Equal(all["strengths"]!.ToJsonString(), form["strengths"]!.ToJsonString());
+    }
+
+    private static string Tune(string key, string notes) => $$"""
+        title "A Tune"
+        key {{key}}
+        time 4/4
+        octave absolute
+        part m { instrument flute }
+        section A { m { {{notes}} } }
+        form { A }
+        score { staff m }
+        """;
+
+    private static System.Collections.Generic.List<JsonObject> KeyFindings(string source)
+        => Report(source, focus: "key")["findings"]!.AsArray().Select(f => f!.AsObject()).ToList();
+
+    private static bool Says(string source, string id) => KeyFindings(source).Any(f => (string?)f["id"] == id);
+
+    // A scale of D major up and down, and its chord.
+    private const string InD = "d'4 e' fis' g' | a' b' cis'' d'' | cis'' b' a' g' | fis' e' d' fis' | a' fis' d'2 |";
+    private const string InAMinor = "a'4 b' c'' d'' | e'' f'' gis'' a'' | g'' f'' e'' d'' | c'' b' a'2 |";
+
+    [Fact]
+    public void AForgottenKeySignature_IsSaid_WithTheKeyHeard()
+    {
+        var found = KeyFindings(Tune("c major", InD)).Single(f => (string?)f["id"] == "key.signature");
+        Assert.Equal("mistake", (string?)found["kind"]);
+        Assert.Contains("The key says C major, and the notes are heard in D major", (string?)found["what"]);
+        Assert.Contains("F♯", (string?)found["what"]);
+        Assert.Contains("C♯", (string?)found["what"]);
+        Assert.StartsWith("D major (", (string?)Report(Tune("c major", InD))["facts"]!["keyHeard"]);
+    }
+
+    [Fact]
+    public void TheRightSignature_IsNotSaid()
+    {
+        Assert.False(Says(Tune("d major", InD), "key.signature"));
+        // The relative key shares its signature.
+        Assert.False(Says(Tune("b minor", InD), "key.signature"));
+        // A minor key's raised notes lie outside its signature, and are its own.
+        Assert.False(Says(Tune("a minor", InAMinor), "key.signature"));
+    }
+
+    [Fact]
+    public void NotesInNoKey_AreNotHeardInOne()
+    {
+        const string chromatic = "c'4 cis' d' dis' | e' f' fis' g' | gis' a' ais' b' | ais' a' gis' g' | fis' f' e' dis' | d' cis' c'2 |";
+        Assert.False(Says(Tune("c major", chromatic), "key.signature"));
+    }
+
+    [Fact]
+    public void APieceThatChangesKey_IsNotWeighedAgainstOneKey()
+    {
+        string book = Tune("c major", "c'4 d' e' f' | g' a' b' c'' | c'' b' a' g' | f' e' d' c' |")
+            .Replace("form { A }", $"section B {{ key d major m {{ {InD} }} }}\nform {{ A B }}");
+        Assert.False(Says(book, "key.signature"));
+        Assert.False(Says(book, "key.outside"));
+    }
+
+    [Fact]
+    public void ANoteThatLeadsNowhere_IsAsked_WithItsBar()
+    {
+        var found = KeyFindings(Tune("c major", "c'4 d' e' g' | ees'' c'' a' g' | e' f' g' a' | g' e' c'2 |")).Single(f => (string?)f["id"] == "key.outside");
+        Assert.Equal("low", (string?)found["confidence"]);
+        Assert.Equal([2], found["where"]!["bars"]!.AsArray().Select(b => (int)b!));
+        Assert.Contains("E♭5 in bar 2, as the form plays them", (string?)found["what"]);
+    }
+
+    [Theory]
+    [InlineData("a minor", InAMinor)]                                                     // the leading tone, and its key's own
+    [InlineData("a minor", "e'4 gis' b' e'' | c'' a' e' a' | e'' d'' c'' b' | a' c'' a'2 |")]   // the leading tone, a leap from anything
+    [InlineData("a minor", "d'4 fis' a' d'' | c'' a' e' a' | e'' d'' c'' b' | a' c'' a'2 |")]   // the raised sixth, a leap from anything
+    [InlineData("c major", "c'4 d' e' f' | g' gis' a' g' | e' f' g' a' | g' e' c'2 |")]   // a semitone into the key
+    [InlineData("c major", "c'4 d' e' f' | fis' g' a' b' | c'' b' a' g' | e' d' c'2 |")]  // a semitone from the key
+    public void ANoteThatLeadsSomewhere_IsNotSaid(string key, string notes)
+        => Assert.False(Says(Tune(key, notes), "key.outside"));
+
+    private const string TwoParts = """
+        title "Two"
+        key c major
+        time 4/4
+        octave absolute
+        part m { instrument flute }
+        part h { instrument cello }
+        section A { m { c''4 d'' e'' g'' | ees'' c'' a' g' | e'' f'' g'' a'' | g'' e'' c''2 | } h { HARMONY | } }
+        form { A }
+        score { staff m staff h }
+        """;
+
+    [Fact]
+    public void ANoteTheHarmonyHas_IsAChord_NotASlip()
+    {
+        string plain = "c1 | c1 | c1 | c1";
+        string borrowed = "c1 | <c ees>1 | c1 | c1";
+        Assert.True(Says(TwoParts.Replace("HARMONY", plain), "key.outside"));
+        Assert.False(Says(TwoParts.Replace("HARMONY", borrowed), "key.outside"));
+    }
+
+    [Fact]
+    public void ABassPlaysTheRootOfWhateverChordIsThere()
+    {
+        // In a bass's register, played alone, as the owner's bass books are.
+        const string book = "c,4 d, e, g, | ees c a, g, | e, f, g, a, | g, e, c,2 |";
+        Assert.False(Says(Tune("c major", book).Replace("instrument flute", "instrument cello"), "key.outside"));
+    }
+
+    [Theory]
+    [InlineData("c'4 des' d' e' | f' g' a' b' |", "des", "up", "cis")]
+    [InlineData("e'4 d' cis' c' | d' e' f' g' |", "cis", "down", "des")]
+    public void APassingNoteAgainstItsDirection_IsSaid_WhereItIsWritten(string notes, string written, string way, string right)
+    {
+        var found = KeyFindings(Tune("c major", notes)).Single(f => (string?)f["id"] == "spelling.direction");
+        Assert.Equal("notation", (string?)found["kind"]);
+        Assert.Equal(written, (string?)found["where"]!["written"]);
+        Assert.Equal(6, (int)found["where"]!["line"]!);
+        Assert.Contains($"`{written}` on the way {way}: write `{right}`", (string?)found["what"]);
+    }
+
+    [Theory]
+    [InlineData("c major", "c'4 cis' d' e' | f' g' a' b' |")]   // rising, raised
+    [InlineData("c major", "e'4 d' des' c' | d' e' f' g' |")]   // falling, lowered
+    [InlineData("c major", "c'4 des' c' e' | f' g' a' b' |")]   // a neighbour, moving on no one way
+    [InlineData("c major", "d'4 cis' d' e' | f' g' a' b' |")]    // a neighbour below, moving on no one way
+    [InlineData("f major", "a'4 bes' b' c'' | d'' e'' f'' g'' |")] // a note of the key, whatever is either side
+    public void ASpellingWithItsDirection_IsNotSaid(string key, string notes)
+        => Assert.False(Says(Tune(key, notes), "spelling.direction"));
+
+    [Fact]
+    public void TheKeyChecks_AreTheReviewsAlone()
+    {
+        string book = Tune("c major", InD);
+        Assert.Contains(Report(book)["findings"]!.AsArray(), f => (string?)f!["id"] == "key.signature");
+        Assert.DoesNotContain(CompositionChecks.Findings(book), f => f.Id.StartsWith("key.", System.StringComparison.Ordinal));
     }
 
     [Fact]

@@ -33,4 +33,10 @@ public sealed record CompositionFinding(string Id, string Message)
     /// <summary>The bars it is about, as the form plays them, first bar 1; empty when the check does not
     /// name bars. A check that counts bars names the ones it can show, not always all it counted.</summary>
     public IReadOnlyList<int> Bars { get; init; } = [];
+
+    /// <summary>The source line of the first place it is about, first line 1; 0 when the check reads the sounding notes.</summary>
+    public int Line { get; init; }
+
+    /// <summary>What is written there; null with no <see cref="Line"/>.</summary>
+    public string? Written { get; init; }
 }

@@ -2340,14 +2340,9 @@ public static class CompositionChecks
         return written.Count > 0 ? (written[0], written[^1]) : null;
     }
 
-    /// <summary>
-    /// Notes of the key written under another name (owner's trial 2026-10-30: a bass in E♭ minor
-    /// wrote <c>b</c> and <c>fis</c> for the key's C♭ and G♭, its staff full of naturals and sharps).
-    /// A note the key does not hold — a raised leading tone, a chromatic passing note — is not one.
-    /// Each section's notes are read in its own key, a top-level phrase's in the file's; a part that
-    /// reads a transposed staff only when the file writes <c>pitch concert</c>.
-    /// </summary>
-    private static IEnumerable<CompositionFinding> SpelledAgainstTheKey(SyntaxNode root, IReadOnlyList<PartDeclarationSyntax> parts, bool concert)
+    /// <summary>The music whose spelling can be read, each with its key: a section's part blocks, and a top-level
+    /// phrase played by one part alone. Not the drums, nor a transposing part unless the file is in concert pitch.</summary>
+    internal static List<(string Part, SyntaxNode Music, (string, string)? Key)> MusicBlocks(SyntaxNode root, IReadOnlyList<PartDeclarationSyntax> parts, bool concert)
     {
         static (string Tonic, string Mode)? Of(KeySignatureSyntax? k)
             => k is null || k.IsCustom ? null : (k.Pitch.ToFullString().Trim().ToLowerInvariant(), k.Mode.Text.ToLowerInvariant());
@@ -2361,7 +2356,6 @@ public static class CompositionChecks
         var fileKey = Of(root.DescendantNodes<KeySignatureSyntax>().FirstOrDefault(k => !InSection(k)));
         var read = parts.Where(p => !RoleOf(p).Drums && (concert || Svg.Model.InstrumentDefaults.GetTransposition(InstrumentOf(p)) % 12 == 0))
             .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
-        // The music read, each with its key: a section's part blocks, and a top-level phrase played by those parts alone.
         var blocks = new List<(string Part, SyntaxNode Music, (string, string)? Key)>();
         foreach (var section in root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null }))
         {
@@ -2377,6 +2371,19 @@ public static class CompositionChecks
             if (players.Count == 1 && read.Contains(players[0]))
                 blocks.Add((players[0], phrase, fileKey));
         }
+        return blocks;
+    }
+
+    /// <summary>
+    /// Notes of the key written under another name (owner's trial 2026-10-30: a bass in E♭ minor
+    /// wrote <c>b</c> and <c>fis</c> for the key's C♭ and G♭, its staff full of naturals and sharps).
+    /// A note the key does not hold — a raised leading tone, a chromatic passing note — is not one.
+    /// Each section's notes are read in its own key, a top-level phrase's in the file's; a part that
+    /// reads a transposed staff only when the file writes <c>pitch concert</c>.
+    /// </summary>
+    private static IEnumerable<CompositionFinding> SpelledAgainstTheKey(SyntaxNode root, IReadOnlyList<PartDeclarationSyntax> parts, bool concert)
+    {
+        var blocks = MusicBlocks(root, parts, concert);
         int[] major = [0, 2, 4, 5, 7, 9, 11], minor = [0, 2, 3, 5, 7, 8, 10];
         const string letters = "cdefgab";
         int[] natural = [0, 2, 4, 5, 7, 9, 11];
@@ -2462,7 +2469,7 @@ public static class CompositionChecks
     private const int OddlySpelledFewest = 2;
 
     /// <summary>The pitch class of a note name (<c>fis</c>, <c>bes</c>, <c>es</c>), 0 = C.</summary>
-    private static int PitchClass(string name)
+    internal static int PitchClass(string name)
     {
         int step = name[0] switch { 'c' => 0, 'd' => 2, 'e' => 4, 'f' => 5, 'g' => 7, 'a' => 9, _ => 11 };
         string suffix = name[1..];
@@ -2521,7 +2528,7 @@ public static class CompositionChecks
     }
 
     /// <summary>The pitched notes of each part's line voice (<see cref="LineVoices"/>), the drums left out.</summary>
-    private static List<(string Part, int StartTick, int DurationTicks, int Pitch)> LineNotes(MidiFile midi)
+    internal static List<(string Part, int StartTick, int DurationTicks, int Pitch)> LineNotes(MidiFile midi)
     {
         var voices = LineVoices(midi);
         return midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick, n.DurationTicks, n.Pitch)))
@@ -2529,10 +2536,10 @@ public static class CompositionChecks
             .Select(n => (n.Part, n.StartTick, n.DurationTicks, n.Pitch)).ToList();
     }
 
-    /// <summary>What a part is in a band: drums, a bass, a chord instrument (guitar, keyboards), and
-    /// whether its sound is electric (an electric guitar or bass, an organ, a synth).</summary>
     internal static bool IsDrums(PartDeclarationSyntax part) => RoleOf(part).Drums;
 
+    /// <summary>What a part is in a band: drums, a bass, a chord instrument (guitar, keyboards), and
+    /// whether its sound is electric (an electric guitar or bass, an organ, a synth).</summary>
     private readonly record struct Role(bool Drums, bool Bass, bool Chords, bool Electric);
 
     private static Role RoleOf(PartDeclarationSyntax part)

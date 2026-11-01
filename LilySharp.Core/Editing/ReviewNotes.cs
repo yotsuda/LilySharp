@@ -143,6 +143,9 @@ public static class ReviewNotes
         ["voicing.low-chords"] = new(M, D, "Thirds and seconds below about C3 blur into a rumble, because low partials clash. Low voicings are spaced in fifths and octaves.", "A dark cluster is the effect meant."),
         ["voicing.thick-distorted"] = new(S, D, "Distortion multiplies a chord's overtones, so an electric guitar plays power chords where a clean one plays full shapes.", "A wall of noise is the effect meant."),
         ["octave.slip"] = new(M, D, "One note an octave or more away and straight back is rarely a tune's idea and often a misplaced octave mark.", "It is a wide grace or a stride figure, as a lead's accent."),
+        ["key.signature"] = new(M, D, "A key signature saves writing the key's sharps or flats on every note. If the music sits in another key than the one written, the page fills with accidentals and the reader expects the wrong notes.", "The accidentals are the music's own: a mode, or a passage that has left the key."),
+        ["key.outside"] = new(M, L, "A note outside the key usually leads somewhere, by a semitone into a note of the key, or belongs to a chord from outside it. One that does neither is often a slip.", "The style uses notes outside the key freely, as jazz and the blues do."),
+        ["spelling.direction"] = new(N, D, "A note on its way up is written as the lower note raised (C♯), and one on its way down as the upper note lowered (D♭). The letter shows the direction, and the bar needs no natural.", "The note has a harmonic job that names it: it belongs to a chord, as the D♭ of a D♭ major chord."),
         ["spelling.key"] = new(N, H, "A note of the key is written by the key's own name. Under another name it reads as a note out of the key."),
         ["spelling.natural"] = new(N, H, "A note's name is its pitch, and the key never changes it. A natural is written by its natural name, with its natural sign where the key alters it."),
 

@@ -11,7 +11,7 @@ what applies to this piece's style, says why in musical terms, and teaches the c
 each point. The report's design serves that interpretation. Without an AI, the same report is free
 and fast (§5).
 
-Status: §6 steps 1 and 2 are built (2026-11-02), and not yet tried in a real VS Code (`editors/vscode/MANUAL-CHECKS.md` C55). What was built differs from §2 in the ways §7 lists.
+Status: §6 steps 1 and 2 and the first three checks of step 3 are built (2026-11-02), and not yet tried in a real VS Code (`editors/vscode/MANUAL-CHECKS.md` C55). What was built differs from §2 in the ways §7 lists.
 
 ## 1. Entrances
 
@@ -142,8 +142,8 @@ Beyond the composing checks (`compose-in-chat-design.md` §2):
    - The composing flow keeps reading the one-sentence `message`; its tests stay.
 2. **`lilysharp_reviewScore`** with `facts`, `strengths` and the reading instructions. This brings
    the most value. Built, with the differences in §7.
-3. **The key checks of §4:** `key.signature`, `key.outside`, `spelling.direction`; then
-   `chord.outside` from chord symbols.
+3. **The key checks of §4:** `key.signature`, `key.outside`, `spelling.direction` are built
+   (`KeyChecks`); `chord.outside` from chord symbols, and `facts.chords` with it, is next.
 4. **The command and `lysc review`.**
 5. **Silencing**, when first asked for.
 
@@ -160,12 +160,30 @@ Differences from §2, each still to do unless it says otherwise:
 - **`what` and `fix.say` are one sentence.** `what` is the check's `message`, finding and advice
   together, and there is no `fix`. Splitting them means rewording every check. The reading
   instructions tell the AI where the advice is.
-- **No `fix.edit`, no `ask`, and no `where.line` or `where.written`.** Each needs a source span from
-  the check, and most checks read the sounding notes, not the text. `spelling.*` can have them first.
+- **No `fix.edit` and no `ask`, and `where.line` and `where.written` on `spelling.direction` alone.**
+  Each needs a source span from the check, and most checks read the sounding notes, not the text.
+  `spelling.direction` could have an exact edit, but in relative octaves a new letter can move the
+  notes after it, so it says the right name in words.
 - **`where.bars` is what the check can show, not always all it counted.** It is empty for a check
   that names no bars, as `rhythm.one-value`.
 - **`confidence` is per check**, not per finding.
-- **`facts` has no `keyHeard` and no `chords`.** They come with step 3.
+- **`facts` has no `chords`.** It comes with `chord.outside`.
 - **Added, and meant to stay: `compiles`, `errors` and `warnings`.** A score that does not compile
   has to be reported as that, not as a piece with no faults, and the compiler's warnings (a note out
   of range, a bar too long) are the first things a beginner needs to hear of.
+
+The key checks are the review's alone, so `CompositionChecks.Of` stays as it was. What they read,
+measured over the same 1,215 books (`key-census` in Lab `sessions/p1038/`):
+
+- **`key.signature`** speaks on 9. The signature heard must hold 90% of the sounding time and 10%
+  more than the one written. Of the 9, 4 are test fixtures whose notes do not care about their key;
+  `Beat It` is written in E♭ major and is in E♭ minor; the other 4 are bass parts alone, where a
+  key is hard to hear, and were not checked against the songs.
+- **`key.outside`** speaks on 7. It first spoke on 168, nearly all in bass lines: a bass plays the
+  root of whatever chord is there, and an out-of-key root is that chord's. So a line whose middle note
+  is under C3, a note lowest of what sounds with it, and a note another part sounds at the time are
+  all left out, and more than 10% of a line's notes is taken for the music's own language.
+- **`spelling.direction`** speaks on none of them. Only its tests have seen it speak.
+- **`key.signature` and `key.outside` do not read a piece that changes key**, or whose notes do not
+  sound as written (a transposing part, the file not in concert pitch). They weigh the sounding notes
+  against one key.

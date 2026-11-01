@@ -77,7 +77,7 @@ public static class ScoreReview
         if (tree.HasErrors)
             return report;
 
-        var findings = CompositionChecks.Findings(source);
+        var findings = CompositionChecks.Findings(source).ToList();
         MidiFile? midi = null;
         try
         {
@@ -87,6 +87,8 @@ public static class ScoreReview
         {
             // What the notation alone says is still said.
         }
+        if (midi != null)
+            findings.AddRange(KeyChecks.Of(source, tree.GetRoot(), midi));
         report["facts"] = Facts(source, tree.GetRoot(), midi);
         report["strengths"] = Strings(Strengths(tree.GetRoot(), midi, findings));
         report["findings"] = new JsonArray([.. findings
@@ -114,11 +116,7 @@ public static class ScoreReview
             ["id"] = finding.Id,
             ["kind"] = note.Kind.ToString().ToLowerInvariant(),
             ["confidence"] = note.Confidence.ToString().ToLowerInvariant(),
-            ["where"] = new JsonObject
-            {
-                ["parts"] = Strings(finding.Parts),
-                ["bars"] = new JsonArray([.. finding.Bars.Select(b => (JsonNode?)b)]),
-            },
+            ["where"] = Where(finding),
             ["what"] = finding.Message,
             ["why"] = note.Why,
         };
@@ -127,12 +125,27 @@ public static class ScoreReview
         return found;
     }
 
+    private static JsonObject Where(CompositionFinding finding)
+    {
+        var where = new JsonObject
+        {
+            ["parts"] = Strings(finding.Parts),
+            ["bars"] = new JsonArray([.. finding.Bars.Select(b => (JsonNode?)b)]),
+        };
+        if (finding.Line > 0)
+        {
+            where["line"] = finding.Line;
+            where["written"] = finding.Written;
+        }
+        return where;
+    }
+
     private static bool InFocus(CompositionFinding finding, string focus)
     {
         string theme = finding.Id[..finding.Id.IndexOf('.')];
         return focus switch
         {
-            "key" => theme is "harmony" or "spelling",
+            "key" => theme is "key" or "harmony" or "spelling",
             "rhythm" => theme is "rhythm" or "meter" or "phrase" or "drums" or "texture",
             "form" => theme is "form" or "chorus",
             "parts" => theme is "part" or "band" or "bass" or "piano" or "singers" or "voicing" or "dynamics" or "tune" or "staff" or "melody" or "octave",
@@ -148,6 +161,8 @@ public static class ScoreReview
             facts["title"] = title;
         if (HomeKey(root) is { } key)
             facts["key"] = key;
+        if (midi != null && KeyChecks.Heard(midi) is { Count: > 0 } heard)
+            facts["keyHeard"] = string.Join(" / ", heard.Take(2).Select(k => $"{k.Name} ({k.Fit:0.00})"));
         var form = CompositionChecks.PlayedSections(root);
         if (form.Count > 0)
             facts["form"] = Strings(form);
