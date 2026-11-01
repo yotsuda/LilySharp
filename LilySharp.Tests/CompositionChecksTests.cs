@@ -500,6 +500,31 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Song(Lick, Lick2, Other, Other2)), f => f.Contains("close on the same figure"));
     }
 
+    // Owner's review 2026-11-01 (Kaze-no-Michi): 21 of 24 bars in one rhythm for their place in the
+    // four-bar phrase, the whole phrases alike in 4 of 6 and the two-bar ones split in half.
+    [Fact]
+    public void FourBarPhrasesKeepingOneRhythmForEachPlace_AreSaid()
+    {
+        const string A = "g'8 a'8 b'4 a'4 g'4 | a'8 b'8 a'4 fis'2 | e'4 g'4 b'2 | b'8 a'8 g'2 r4 | ",
+            B = "g'4 a'8 b'8 d''4 b'4 | a'8 fis'8 d''4 a'2 | g'4 a'4 g'2 | fis'8 g'8 a'2 r4 | ";
+        var same = CompositionChecks.Of(Hook(A + B + A, A + B + A));
+        Assert.DoesNotContain(same, f => f.Contains("one formula poured"));
+        Assert.Contains(same, f => f.StartsWith("singer, the melody: its 6 four-bar phrases keep one rhythm for each bar's place in the phrase (22 of 24 bars)"));
+        // Each bar's rhythm its own in three kinds of phrase: no place has one rhythm.
+        const string C = "g'4. a'8 b'2 | a'2 g'4 fis'4 | e'8 g'8 b'4 a'4 g'4 | a'1 | ",
+            D = "b'2 a'8 g'8 fis'4 | g'4 a'4 b'4 c''4 | d''2. r4 | c''4. b'8 a'2 | ";
+        Assert.DoesNotContain(CompositionChecks.Of(Hook(A + C + D, A + C + D)), f => f.Contains("four-bar phrases keep"));
+    }
+
+    [Fact]
+    public void AChorusSungThreeTimes_TheLastAsTheFirst_IsSaid()
+    {
+        string twice = Hook(Q + Q + Q + X, R + R + R + R);
+        Assert.DoesNotContain(CompositionChecks.Of(twice), f => f.Contains("the last as the first"));
+        Assert.Contains(CompositionChecks.Of(twice.Replace("form { Verse Chorus Verse Chorus }", "form { Verse Chorus Verse Chorus Chorus }")),
+            f => f.StartsWith("singer, the melody: the chorus (Chorus) is sung 3 times, the last as the first"));
+    }
+
     [Fact]
     public void AShortSong_IsToldItsLength_ThoughItIsOnePart()
     {

@@ -576,7 +576,10 @@ public static class CompositionChecks
             findings.AddRange(formula);
             // The phrases' endings, where the phrases themselves are not one formula (said above).
             if (formula.Count == 0)
+            {
+                findings.AddRange(PhrasePositions(midi, tune, byPart[tune], barList, band));
                 findings.AddRange(PhraseEndings(midi, tune, byPart[tune], barList, band));
+            }
             // A song's tune climbs to its chorus, and closes each section its own way; an
             // instrumental's theme is read for its line alone.
             if (sung.Contains(tune))
@@ -585,6 +588,7 @@ public static class CompositionChecks
                 findings.AddRange(ChorusOpensLikeAnother(midi, tune, tuneNotes, barList));
                 findings.AddRange(PeakSpentEarly(midi, tune, tuneNotes, barList, fifths));
                 findings.AddRange(OneClosingFigure(midi, tune, tuneNotes, barList, fifths));
+                findings.AddRange(LastChorusUnchanged(midi, tune));
             }
         }
         findings.AddRange(EndsApart(midi, barList));
@@ -881,6 +885,47 @@ public static class CompositionChecks
                 windows.Add((barList[i], barList[i + length]));
         }
         return windows;
+    }
+
+    /// <summary>The melody's four-bar phrases with each bar mostly in one rhythm for its place in
+    /// the phrase: the phrase's second bars alike, its third bars alike… Owner's review 2026-11-01
+    /// (風の道): 21 of 24 bars, while the whole phrases agreed in 4 of 6 and the two-bar ones split
+    /// into two rhythms of half each, so <see cref="PhraseFormula"/> said nothing.</summary>
+    private static IEnumerable<string> PhrasePositions(MidiFile midi, string tune, IReadOnlyList<(int Start, int Length)> onsets, List<int> barList, bool band)
+    {
+        const int length = 4;
+        var phrases = new List<string[]>();
+        foreach (var (start, _) in PhraseWindows(midi, barList, length))
+        {
+            int first = barList.IndexOf(start);
+            var bars = Enumerable.Range(0, length).Select(k => string.Join(",", onsets
+                .Where(o => o.Start >= barList[first + k] && o.Start < barList[first + k + 1])
+                .Select(o => o.Start - barList[first + k]))).ToArray();
+            if (bars.Any(b => b.Length > 0))
+                phrases.Add(bars);
+        }
+        if (phrases.Count < PhraseFormulaFewestPhrases)
+            yield break;
+        int same = Enumerable.Range(0, length).Sum(k => phrases.GroupBy(p => p[k]).Max(g => g.Count()));
+        int total = length * phrases.Count;
+        if (same >= total * PhraseFormulaShare)
+            yield return $"{tune}, the melody: its {phrases.Count} four-bar phrases keep one rhythm for each bar's place in the phrase ({same} of "
+                + $"{total} bars) — every section sings the same four bars of rhythm: let the chorus and the bridge move differently from the "
+                + "verse, the long notes and the breaths falling in other places" + (band ? BandTuneSings : EvenPaceKept);
+    }
+
+    /// <summary>A song's chorus sung three times or more, the last as the first. Named again in the
+    /// form is how a chorus returns, and the second time is that; a song's last chorus is where it
+    /// arrives. Owner's review 2026-11-01 (風の道).</summary>
+    private static IEnumerable<string> LastChorusUnchanged(MidiFile midi, string tune)
+    {
+        if (ChorusOf(midi) is not { } chorus)
+            yield break;
+        int plays = midi.SectionStarts.Count(s => s.Value == chorus.Name);
+        if (plays >= 3)
+            yield return $"{tune}, the melody: the chorus ({chorus.Name}) is sung {plays} times, the last as the first — the last chorus is where the "
+                + "song arrives: make it a section of its own with something the listener hears, its hook higher, a held note, a new "
+                + "ending — unless the song means to close as it began: then keep it.";
     }
 
     /// <summary>The melody's two-bar phrases mostly ending the same way — the last two notes at

@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A written-out verse says its number once
+
+- **The preview prints a written-out verse's `2.` where the verse begins**, not again at the head
+  of each line it runs on to. Stacked verses keep their numbers on every line.
+- **Copilot's chat is told to call `lilysharp_proposeScore` directly**, not through a canvas
+  action, which asked "Allow tool call?" for nothing. Compose with AI's check also tells four-bar
+  phrases that keep one rhythm for each bar's place, and a chorus sung three times unchanged.
+
 ### Chord diagrams clear the staff under them
 
 - **A lead sheet with diagrams and section labels goes on to a second page** instead of being

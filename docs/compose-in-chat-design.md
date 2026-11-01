@@ -123,6 +123,9 @@ as the melody's rhythm).
 - One rhythm in three quarters of its PHRASES (two bars, else four, counted from each section's
   first bar; six phrases or more) — the bar-by-bar readings miss a two-bar formula, which splits
   into two bar rhythms of half the bars each (2026-11-01: 夜明けのうた, `8 8 4 2 | 4 2 r4` in 10 of 12).
+- Where the phrases are not one formula: three quarters of the bars of its four-bar phrases (six
+  phrases or more) in the commonest rhythm for their place in the phrase (`PhrasePositions`;
+  2026-11-01: 風の道, 21 of 24; 7 of the owner's 144 books, mostly composed by AI).
 - Where the phrases are not one formula: three quarters of the two-bar phrases ending the same way
   — the last two notes at the same places from the phrase's end, the last the same length
   (`PhraseEndings`; 2026-11-01: every phrase `… 4 r8`).
@@ -132,7 +135,8 @@ as the melody's rhythm).
   no higher than the sections before it (`ChorusOf`, `ChorusOpensLikeAnother`, `PeakSpentEarly`);
   and more than half of the sections (four or more) closing on one figure — the first four single
   notes of each section's last bar, as intervals (`OneClosingFigure`; 2026-11-01: `cis8 b'4 ais8
-  gis8` closing a verse, a chorus and a second verse).
+  gis8` closing a verse, a chorus and a second verse); and the chorus sung three times or more,
+  the last as the first (`LastChorusUnchanged`).
 - Leaps up and down its chords (fewer than a quarter of the moves are steps).
 - One bar's figure moved along the chords: half the bars or more take the up-and-down shape of the
   bar before. Measured on the owner's 60 pieces: the sequenced rock guitars scored 0.53–0.61, the

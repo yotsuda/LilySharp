@@ -180,7 +180,9 @@ What makes it music:
     the weak ones off them (English, German, Spanish …); the rise and fall of a pitch accent or a
     tone where the language has one (Japanese 雨 falls from its first mora — a line that rises
     there sings 飴; a Chinese word's tone is not sung against). A long or high note on an open
-    vowel (a, o, e), not on i or u or a closed syllable.
+    vowel (a, o, e), not on i or u or a closed syllable, and on a word that carries the meaning,
+    not on a little word that only joins others. A long note is its chord's own tone, or resolves
+    to one by step before the chord changes.
   - A line of words is a phrase of music: the line ends where the phrase does, on a longer note, a
     rest after it to breathe; a comma in the words is a breath in the line.
   - **Write the words first, whole, then set them**: each line as the sentence it is, its units

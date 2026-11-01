@@ -42,6 +42,17 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[docs]` The composing guide's song to sing and play yourself: the bridge is a change (a chord
   the verse and chorus do not use, a tune of its own, or another strum), and the singer breathes.
 
+### A written-out verse says its number once
+
+- `[render]` A `verse N { … }` on a line of its own (a section written out twice) prints its number
+  where the verse begins, not again at each line it runs on to, as LilyPond's `\set stanza` does.
+  Stacked verses keep their numbers on every line, where they say which line is which.
+- `[check]` **Four-bar phrases keeping one rhythm for each bar's place** (three quarters of the
+  bars, where whole phrases differ), and **a song's chorus sung three times or more, the last as
+  the first**. Owner's review 2026-11-01 (風の道).
+- `[docs]` The composing guide: a long note is its chord's own tone, or resolves to one, and falls
+  on a word that carries the meaning. Copilot's chat calls `lilysharp_proposeScore` directly.
+
 ### A chord row's diagrams no longer pressed into the staff under them
 
 - `[render]` The page breaker prices a section label, rehearsal mark or tempo stacked over a row

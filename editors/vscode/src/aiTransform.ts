@@ -416,6 +416,9 @@ function newPieceSteps(lysc: string | undefined): string {
         + 'piece, sends back its errors and warnings to fix, and writes it into the document — do not run a compiler '
         + 'yourself, nor anything else in a terminal: Lily#\'s tools and your file tools do all a new piece needs. If that tool is not available, write the piece into the file instead'
         + (lysc ? `, and check it with \`& "${lysc}" check <file>\`` : '') + '.\n'
+        // Owner's report 2026-11-01: the score was handed to invoke_canvas_action, and the musician
+        // asked to allow it.
+        + 'Call that tool directly, by its own name, never through a canvas action or another tool.\n'
         + 'Keep `octave absolute` and `pitch concert`, and write every pitch as the pitch it sounds.\n';
 }
 

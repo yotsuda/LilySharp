@@ -131,6 +131,21 @@ public sealed class LyricVerseBlockTests
         Assert.Equal(kle.Y, two.Y, 6);
     }
 
+    /// <summary>A verse running on to the next line says its number once, where it begins
+    /// (owner's question 2026-11-01, 風の道); stacked verses keep theirs on every line, where
+    /// the number says which line is which.</summary>
+    [Fact]
+    public void AWrittenOutVerse_SaysItsNumberOnce_StackedVersesOnEveryLine()
+    {
+        const string oneBarALine = "paper { measuresPerSystem 1 }\n";
+        var once = RenderedGeometry.Render(oneBarALine + WrittenOut);
+        Assert.Equal(new[] { "1.", "2." },
+            once.Texts.Where(t => t.Role == TextRole.Stanza).Select(t => t.Text).OrderBy(t => t).ToArray());
+        var stacked = RenderedGeometry.Render(oneBarALine + WrittenOut.Replace("form { A A \"A2\" }", "form { |: A :| }"));
+        Assert.Equal(new[] { "1.", "1.", "2.", "2." },
+            stacked.Texts.Where(t => t.Role == TextRole.Stanza).Select(t => t.Text).OrderBy(t => t).ToArray());
+    }
+
     [Fact]
     public void UnderARepeat_TheVersesStillStack_EachWithItsNumber()
     {

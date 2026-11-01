@@ -162,6 +162,8 @@ describe('the composing guide', () => {
         assert.match(steps, /a new piece needs\. If that tool is not available, write the piece into the file instead'\s*\+ \(lysc \? `, and check it with/);
         assert.match(steps, /do not run a compiler '/);
         assert.ok(!/on a copy of your text/.test(steps));
+        // Owner's report 2026-11-01: the score was handed to invoke_canvas_action.
+        assert.match(steps, /'Call that tool directly, by its own name, never through a canvas action or another tool\.\\n'/);
         // Owner's request 2026-10-29: no save dialog — an unsaved score, saved when the musician wants
         // it kept; and, the same day, no "Composed.lys": the folder is given, the chat names the file
         // after the piece's title.
