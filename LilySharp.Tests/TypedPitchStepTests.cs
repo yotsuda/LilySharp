@@ -27,7 +27,8 @@ namespace LilySharp.Tests;
 /// </summary>
 public class TypedPitchStepTests
 {
-    private const string Band = """
+    // LF on every checkout: the tests below take lines out by "…\n", and a Windows runner checks this file out CRLF.
+    private static readonly string Band = """
         pitch written
         octave absolute
         time 4/4
@@ -36,7 +37,7 @@ public class TypedPitchStepTests
         section A { pno { c'4 e' g' c'' | } bs { c4 e g c' | } }
         form { A }
         score { staff pno staff bs }
-        """;
+        """.ReplaceLineEndings("\n");
 
     private static (string Text, string Message) StepAt(string text, string word, int dir, int nth = 0)
     {
