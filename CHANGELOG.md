@@ -15,8 +15,8 @@ workflow attaches that section to the GitHub Release verbatim.
   2026-11-01: a song's every phrase in `8 8 4 2 | 4 2 r4`.
 - `[check]` **A song's chorus with no opening of its own**: the section the form plays most
   opening with another section's first phrase note for note. And **a peak spent early**: the
-  tune's highest note in its first phrase and never passed, or the chorus climbing no higher than
-  the sections before it. Both for a tune a lyrics track sings.
+  tune's highest note in its first phrase and never passed, or the chorus staying below the
+  sections before it (level with them is fine). Both for a tune a lyrics track sings.
 - `[check]` **Phrases that all end the same way** (where the phrases themselves vary): three
   quarters of the two-bar phrases with their last two notes at the same places and the same rest
   after — "10 of its 10 phrases end the same way". **Sections closing on one figure**: the first

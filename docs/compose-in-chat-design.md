@@ -145,8 +145,8 @@ as the melody's rhythm).
   (`PhraseEndings`; 2026-11-01: every phrase `… 4 r8`).
 - **A song's tune** (a part a lyrics track sings) only: the chorus — a section named
   chorus/sabi/refrain/hook, else the one the form plays most, of ties the last — opening with another section's first
-  phrase note for note; the tune's highest note spent in its first phrase, or the chorus climbing
-  no higher than the sections before it (`ChorusOf`, `ChorusOpensLikeAnother`, `PeakSpentEarly`);
+  phrase note for note; the tune's highest note spent in its first phrase, or the chorus staying
+  below the sections before it, level with them being fine (`ChorusOf`, `ChorusOpensLikeAnother`, `PeakSpentEarly`);
   and more than half of the sections (four or more) closing on one figure — the first four single
   notes of each section's last bar, as intervals (`OneClosingFigure`; 2026-11-01: `cis8 b'4 ais8
   gis8` closing a verse, a chorus and a second verse); and the chorus sung three times or more,

@@ -462,13 +462,15 @@ public class CompositionChecksTests
         const string P2 = "a'8 b'8 c''4 e''2 | d''4 c''2 r4 | ";
         Assert.Contains(CompositionChecks.Of(Hook(P + Q + Q + Q, P2 + R + R + R)),
             f => f.StartsWith("singer, the melody: its highest note, E5, comes in its first phrase (bar 1, as the form plays them) and is never passed"));
-        // The top in the verse's third phrase, and the chorus no higher.
-        Assert.Contains(CompositionChecks.Of(Hook(Q + Q + P + Q, P2 + R + R + R)),
-            f => f.StartsWith("singer, the melody: the chorus (Chorus) climbs no higher than the sections before it (its top E5, theirs E5)"));
+        // The top in the verse's third phrase, and the chorus below it.
+        Assert.Contains(CompositionChecks.Of(Hook(Q + Q + P + Q, X + X + X + X)),
+            f => f.StartsWith("singer, the melody: the chorus (Chorus) stays below the sections before it (its top B4, theirs E5)"));
+        // Level with the verse's peak: not told (owner's decision 2026-11-01).
+        Assert.DoesNotContain(CompositionChecks.Of(Hook(Q + Q + P + Q, P2 + R + R + R)), f => f.Contains("stays below"));
         // The chorus above the verse: a song that climbs.
         var climbs = CompositionChecks.Of(Hook(Q + Q + P + Q, P2 + "a'4. b'8 c''4 g''4 | f''2 e''2 | " + R + R));
         Assert.DoesNotContain(climbs, f => f.Contains("comes in its first phrase"));
-        Assert.DoesNotContain(climbs, f => f.Contains("climbs no higher"));
+        Assert.DoesNotContain(climbs, f => f.Contains("stays below"));
     }
 
     // Owner's review 2026-11-01 (Kaerimichi-no-Akari4): every phrase closing `… 4 r8`, the sections
@@ -591,11 +593,11 @@ public class CompositionChecksTests
     [Fact]
     public void ASectionNamedTheChorus_IsTheChorus_ThoughTheVerseIsSungMore()
     {
-        string song = Hook(Q + Q + P + Q, "a'8 b'8 c''4 e''2 | d''4 c''2 r4 | " + R + R + R)
+        string song = Hook(Q + Q + P + Q, X + X + X + X)
             .Replace("form { Verse Chorus Verse Chorus }", "form { Verse Chorus Verse }");
         var findings = CompositionChecks.Of(song);
         Assert.DoesNotContain(findings, f => f.Contains("the chorus (Verse)"));
-        Assert.Contains(findings, f => f.Contains("the chorus (Chorus) climbs no higher"));
+        Assert.Contains(findings, f => f.Contains("the chorus (Chorus) stays below"));
         // A FinalChorus opens as the Chorus does by right.
         string last = Hook(Q + Q + Q + Q, R + R + R + R).Replace("form { Verse Chorus Verse Chorus }", "form { Verse Chorus Verse FinalChorus }")
             .Replace("form {", "section FinalChorus {\n  singer { " + R + R + R + "a'4 g'4 f'2 | e'1 | }\n}\nform {");

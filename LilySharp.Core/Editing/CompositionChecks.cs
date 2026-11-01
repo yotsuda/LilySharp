@@ -1285,7 +1285,7 @@ public static class CompositionChecks
     private const int PeakFewestNotes = 16;
 
     /// <summary>The melody's highest note spent in its first phrase (its first two bars sung) and never
-    /// passed; else the chorus climbing no higher than the sections before it. A song climbs to its
+    /// passed; else the chorus staying below the sections before it. A song climbs to its
     /// chorus.</summary>
     private static IEnumerable<string> PeakSpentEarly(MidiFile midi, string tune, IReadOnlyList<(int StartTick, int DurationTicks, int Pitch)> notes,
         List<int> barList, int fifths)
@@ -1310,10 +1310,12 @@ public static class CompositionChecks
         if (before.Count == 0 || inChorus.Count == 0)
             yield break;
         int chorusTop = inChorus.Max(n => n.Pitch), beforeTop = before.Max(n => n.Pitch);
-        if (chorusTop <= beforeTop)
-            yield return $"{tune}, the melody: the chorus ({chorus.Name}) climbs no higher than the sections before it (its top "
+        // Below them, not level with them: a chorus reaching the verse's own peak is common in the
+        // songs people write (owner's decision 2026-11-01, five of the samples told at the level).
+        if (chorusTop < beforeTop)
+            yield return $"{tune}, the melody: the chorus ({chorus.Name}) stays below the sections before it (its top "
                 + $"{PartRanges.SpelledFromPitch(chorusTop, fifths)}, theirs {PartRanges.SpelledFromPitch(beforeTop, fifths)}) — the chorus is the "
-                + "song's high ground: lift its hook a third or more above the verse's peak.";
+                + "song's high ground: lift its hook to the verse's peak or above it.";
     }
 
     // One chord progression under the whole piece (owner's review 2026-11-01: a rock instrumental

@@ -203,7 +203,7 @@ What makes it music:
   - **Then the chorus's hook, before any other note of the tune**: two bars on the chorus's first
     line, with the song's highest note in them and a rhythm of its own, that can be hummed after one
     hearing. Then the verse — lower, in another rhythm, ending open — and the rest around them. A
-    chorus that opens with the verse's phrase, or climbs no higher than the verse, is no chorus; a
+    chorus that opens with the verse's phrase, or stays below the verse, is no chorus; a
     tune whose every two-bar phrase has one rhythm (`8 8 4 2 | 4 2 r4` thirteen times) is a formula,
     not a tune.
   - Count every bar: as many units as notes, less the notes a slur or a tie carries over.
