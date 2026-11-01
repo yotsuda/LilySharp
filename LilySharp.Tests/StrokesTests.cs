@@ -68,6 +68,29 @@ public class StrokesTests
         => midi.Tracks.Where(t => t.Name == row + " (chords)").SelectMany(t => t.Notes)
             .GroupBy(n => (n.StartTick, n.DurationTicks)).Select(g => g.Key).OrderBy(s => s.StartTick).ToArray();
 
+    /// <summary>The bossa nova's strokes the composing guide gives (owner's request 2026-11-01): the
+    /// row strikes its chords on the 1st, 4th, 7th eighths and the 3rd, 6th of the next bar, <c>%2</c>
+    /// going round.</summary>
+    [Fact]
+    public void TheGuidesBossaNovaStrokes_GoRoundInTwoBars()
+    {
+        const string book = """
+            time 4/4
+            part singer { instrument alto }
+            strokes bossa { section A { 4. 4. 4 | r4 4. 4. | %2 | %2 | } }
+            chords harmony { section A { E | A | B | E | E | A | } }
+            section A { singer { e'1 | e'1 | e'1 | e'1 | e'1 | e'1 | } }
+            form { A }
+            score { chords harmony plays bossa  staff singer }
+            """;
+        var tree = Parse(book.ReplaceLineEndings("\n"));
+        Assert.False(tree.HasErrors);
+        int eighth = Bar / 8;
+        var strikes = ChordStrikes(new MidiExporter().Export(tree)).Select(s => s.Start / eighth).Distinct().ToArray();
+        int[] twoBars = [0, 3, 6, 10, 13];
+        Assert.Equal(twoBars.Concat(twoBars.Select(x => x + 16)).Concat(twoBars.Select(x => x + 32)).ToArray(), strikes);
+    }
+
     [Fact]
     public void AStrokesPart_ParsesAsAPart_ThatIsStrokes()
     {

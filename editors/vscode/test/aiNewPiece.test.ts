@@ -53,6 +53,8 @@ describe('the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*A style named is its rhythm first\*\*/);
         assert.match(guide, /chords on 1, 4, 7 of the first bar and 3, 6 of the second/);
+        // …and over a chords row, as strokes (owner's request 2026-11-01).
+        assert.match(guide, /`strokes bossa \{ section A \{ 4\. 4\. 4 \| r4 4\. 4\. \|\s+%2 \| %2 \| %2 \| \} \}`/);
     });
     // Owner's trial 2026-10-29: a "dramatic" quartet's tremolo and sforzando were all in two bars.
     it('says the character\'s devices run through the piece, strongest at the climax', () => {
