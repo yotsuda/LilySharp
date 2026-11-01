@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 291 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **417** | |
+| `OWN` | 292 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **418** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -244,7 +244,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（291 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（292 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -528,6 +528,8 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
 - **`LayoutEngine.RunPreliminaryAnnotationPass`** LILYSHARP-OWN: an editor's aid.
 - **`LayoutEngine.BowShiftsOf`** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
+### `LilySharp.Core/Svg/Layout/LayoutEngine.Rows.cs`
+- **`LayoutEngine.RowUpWithMarksRestingOnIt`** into the group's outline). ⚠️ LILYSHARP-OWN in shape: LilyPond's mark would rather
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **`LayoutOptions.SystemSpacing`** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 - **`LayoutOptions.MeasuresPerSystem`** LILYSHARP-OWN: LilyPond has no such variable (its spelling is a \break every N bars beside the ##f permissions); 0 leaves the breaks to the breaker.

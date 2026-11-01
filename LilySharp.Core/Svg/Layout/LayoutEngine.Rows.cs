@@ -741,6 +741,61 @@ internal sealed partial class LayoutEngine
             annotations = annotations with { ChordNames = newChords.ToImmutable() };
         }
 
+        // ...and the Score-level marks RESTING ON a leading row — a section label, a rehearsal
+        // mark, a tempo the outside-staff pass stacked over the row's symbols
+        // (OutsideStaffStacker.ChordRowSupport). They were placed against the row where the
+        // band had it; the row has now moved, so they move with it or float where it was.
+        // Owner's report 2026-11-01 (帰り道の灯り): the solve let the leading row down by
+        // 2.15 and every mid-line label stayed 2.15 over it — into the system above (the chain
+        // had priced the label on the row, RowUpWithMarksRestingOnIt, and the drawn label was
+        // not there). A mark is "on the row" when its ink bottom stands above the row's
+        // baseline; a mark at staff level (no symbol under it) stays, the row standing over it.
+        var marks = annotations.MusicMarks;
+        if (!marks.IsDefaultOrEmpty && !chords.IsDefaultOrEmpty)
+        {
+            // The rows that LEAD their system, by (system, row), with the row's baseline in
+            // the system frame (a ChordNameLayout's YUp is above the system top).
+            var leadingBaseline = new Dictionary<(int System, int StaffIndex), double>();
+            foreach (var ((sysIdx, staffIndex), _) in delta)
+            {
+                if (!ClassifySystem(systems[sysIdx].StaffGroups).Leading.Any(l => l.StaffIndex == staffIndex))
+                    continue;
+                foreach (var c in chords)
+                    if (c.RowStaffIndex == staffIndex
+                        && measureToSystem.TryGetValue(c.MeasureIndex, out int cs) && cs == sysIdx)
+                    {
+                        leadingBaseline[(sysIdx, staffIndex)] = leadingBaseline.TryGetValue((sysIdx, staffIndex), out double b)
+                            ? Math.Max(b, c.YUp) : c.YUp;
+                    }
+            }
+            if (leadingBaseline.Count > 0)
+            {
+                var fonts = score.TextMetrics;
+                var newMarks = marks.ToBuilder();
+                for (int i = 0; i < newMarks.Count; i++)
+                {
+                    var m = newMarks[i];
+                    if (m.YUp <= 0 || MusicMarkItem.IsSpannerHandled(m.MarkType)
+                        || !measureToSystem.TryGetValue(m.MeasureIndex, out int ms))
+                        continue;
+                    foreach (var ((sysIdx, staffIndex), baselineUp) in leadingBaseline)
+                    {
+                        if (sysIdx != ms) continue;
+                        // The mark's ink bottom in the system frame — the frame step the paging
+                        // silhouette makes for the same mark (AugmentSkylinesForPaging).
+                        double markUp = LayoutUtilities.StaffOffsetInSystemUp(
+                                systems[sysIdx], LayoutUtilities.ResolveScoreGrobStaff(systems[sysIdx], m.StaffIndex))
+                            + m.YUp - EngravingDefaults.StaffMiddle;
+                        var (_, _, _, bottom) = OutsideStaffStacker.MusicMarkExtents(fonts, m);
+                        if (markUp - bottom > baselineUp)
+                            newMarks[i] = m with { YUp = m.YUp + delta[(sysIdx, staffIndex)] };
+                        break;
+                    }
+                }
+                annotations = annotations with { MusicMarks = newMarks.ToImmutable() };
+            }
+        }
+
         return (moved.ToImmutable(), annotations);
     }
 
@@ -779,4 +834,72 @@ internal sealed partial class LayoutEngine
     private static LooseLineSpacer.RunLine RunLineOf(Staff staff, StaffSpacingParameters sp)
         => new(staff.StaffAffinity, MultiStaffLayouter.NonStaffSpecsOf(staff, sp));
 
+    /// <summary>
+    /// A leading chord row's UP profile with the Score-level marks that will REST ON IT merged
+    /// in — the section labels, rehearsal marks and tempos the outside-staff pass stacks over
+    /// the row's symbols and diagrams (<c>OutsideStaffStacker.PlaceMusicMarks</c>, support
+    /// <c>ChordRowSupport</c>). Null when no mark rests on the row.
+    /// </summary>
+    /// <remarks>
+    /// Owner's report 2026-11-01 (帰り道の灯り, a chords row with diagrams over a sung staff):
+    /// every mid-line section label — Verse, Chorus, Bridge, Coda — was engraved through the
+    /// second verse of the system above. The previous system's lyric block is solved into the
+    /// room between the two systems with the next system's leading row as a chain element
+    /// (<see cref="LeadingLinesOfSystem"/>), and that element's profile was the row's ink alone:
+    /// the label stacked over the row (whose box the PAGE had reserved, through
+    /// <c>AugmentSkylinesForPaging</c>'s stacked box) was invisible to the chain, so the verses
+    /// were pushed down into it wherever the room allowed. Lab sessions/p1036/strokes/markclash2:
+    /// the label's frame top stood 0.2 under the verse-2 baseline.
+    /// <para>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1093-1108 build_system_skyline — every
+    ///   element's skyline joins the system's, outside-staff grobs included; and
+    ///   :948-990 — a loose line's profile in distribute_loose_lines is the grob's
+    ///   vertical-skylines, which for a ChordNames line placed under a Score mark carries that
+    ///   mark (lily/axis-group-interface.cc:969-978 skyline_spacing merges the placed grobs
+    ///   into the group's outline). ⚠️ LILYSHARP-OWN in shape: LilyPond's mark would rather
+    ///   stand BESIDE the row's symbol at the same height when it fits (markclash2's twin,
+    ///   LilyPond 2.26.0); Lily#'s centred label overlaps the first symbol by 0.2 and goes
+    ///   above the row, and this reservation follows what Lily# draws.
+    /// </para>
+    /// <para>
+    /// The mark is priced where the stacker will put it: its box lifted clear of the row's
+    /// profile by outside-staff-padding, horizon-padded as the stacker pads it, in the row's
+    /// own baseline frame. A mark with no row ink under its extent is left alone — it stays at
+    /// staff level, under the row, and the row's own profile already stands over it. The marks
+    /// are the engraver's PRE-STACK layouts (the pass runs the engraver once more for them
+    /// before the lyrics: LayoutEngine.Annotations), read for their X alone.
+    /// </para>
+    /// </remarks>
+    internal static VerticalSkyline? RowUpWithMarksRestingOnIt(
+        ScoreTextMetrics fonts, VerticalSkyline rowUp, IEnumerable<MusicMarkLayout> marksOfSystem)
+    {
+        if (rowUp.IsEmpty)
+            return null;
+        VerticalSkyline? merged = null;
+        foreach (var m in marksOfSystem)
+        {
+            // Above-staff marks only (a below mark hangs under the system); a spanner's start
+            // word is the spanner's.
+            if (m.YUp <= 0 || MusicMarkItem.IsSpannerHandled(m.MarkType))
+                continue;
+            var (x0, x1) = MusicMarkEngraver.MarkXExtent(fonts, m, m.X);
+            var (_, _, top, bottom) = OutsideStaffStacker.MusicMarkExtents(fonts, m);
+            if (x1 <= x0 || top + bottom <= 0)
+                continue;
+            // How far the mark's box, anchored at 0, must rise to clear the row's profile —
+            // the stacker's own question (OutsideStaffSkylines.Place against the extra support).
+            var markDown = VerticalSkyline.FromBox(x0, x1, -bottom, top, VerticalDirection.Down);
+            double lift = markDown.Distance(rowUp, OutsideStaffStacker.OutsideStaffHorizontalPadding);
+            if (double.IsNegativeInfinity(lift) || double.IsNaN(lift))
+                continue;   // no row ink under the mark: it stays at staff level
+            lift += OutsideStaffStacker.OutsideStaffPadding;
+            if (merged is null)
+            {
+                merged = new VerticalSkyline(VerticalDirection.Up);
+                merged.Merge(rowUp);
+            }
+            merged.MergeBox(x0, x1, lift - bottom, lift + top);
+        }
+        return merged;
+    }
 }

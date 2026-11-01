@@ -29,6 +29,18 @@ workflow attaches that section to the GitHub Release verbatim.
   section's body, and the singer's cell under the root-level `section A` was never walked. A
   root-level body now outranks a by-part cell as the section's representative.
 
+### A section label over a leading chord row clears the verses above it
+
+- `[render]` **A label (Verse, Chorus, a rehearsal mark, a tempo) stacked over the chord row
+  that opens a system no longer prints through the lyrics of the system above**: the previous
+  system's verses are solved into the room between the systems with the leading row as a
+  chain element, and that element knew the row's symbols and diagrams only — the label the
+  outside-staff pass had stacked over them was invisible to it, so a second verse was let down
+  onto the label wherever the room allowed (owner's report 2026-11-01, 帰り道の灯り: every
+  mid-line label cut through verse 2). The chain now prices the label where it will rest on
+  the row, and when the solve moves the row, the label moves with it instead of floating where
+  the row was.
+
 ### Hairpins back to back meet with a gap
 
 - `[render]` **A crescendo ending on the note a decrescendo starts on no longer runs through it**:

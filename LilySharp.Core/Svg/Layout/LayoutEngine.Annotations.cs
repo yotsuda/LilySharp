@@ -714,7 +714,29 @@ internal sealed partial class LayoutEngine
             measureToSystem);
         var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
-        var lyricLayouts = LayoutLyrics(ctx, ml, scriptedSkylines);
+        // The marks a lyric chain has to see BEFORE it is solved: a section label (a rehearsal
+        // mark, a tempo) stacked over a chord row that LEADS the next system is an element of
+        // the previous system's chain (LayoutEngine.RowUpWithMarksRestingOnIt). The engraver is
+        // asked once more here, for the marks' X alone — its final answer below reads the
+        // lyrics it has to clear, which do not exist yet. Only on the final pass of a sung book
+        // whose some system opens on a chord row; every other book pays nothing.
+        var marksForTheChain = ImmutableArray<MusicMarkLayout>.Empty;
+        if (ctx.LooseChainEnd != null && !lyrics.IsDefaultOrEmpty && staffByIndex != null
+            && AnySystemLeadsWithAChordRow(systems, staffByIndex))
+            marksForTheChain = MusicMarkEngraver.Calculate(
+                ctx.Fonts, score, musicMarks, systems, ml, measures,
+                prefixTimeSignatureX: ctx.PrefixTimeSignatureX,
+                lineStartBarlineX: ctx.LineStartBarlineX,
+                prefixMarkAnchorX: ctx.PrefixMarkAnchorX,
+                marksBeside: ctx.MultiScore?.MarksBeside ?? false,
+                sectionLabels: ctx.MultiScore?.LayoutPlan.SectionLabels
+                    ?? ctx.Score?.LayoutPlan.SectionLabels ?? Semantics.SectionLabelStyle.Boxed,
+                sectionLabelAlign: ctx.MultiScore?.LayoutPlan.SectionLabelAlign
+                    ?? ctx.Score?.LayoutPlan.SectionLabelAlign ?? Semantics.SectionLabelAlign.Center,
+                prebuiltMeasureToSystem: measureToSystem,
+                gridBarlineRowIndex: ctx.GridBarlineRowIndex);
+
+        var lyricLayouts = LayoutLyrics(ctx, ml, scriptedSkylines, marksForTheChain, measureToSystem);
 
         // LILYPOND-REF: axis-group-interface.cc skyline_spacing
         // Outside-staff elements are placed in priority order (lower priority = closer to staff).
@@ -1652,6 +1674,23 @@ internal sealed partial class LayoutEngine
         };
     }
 
+    /// <summary>Whether any system's topmost placed line is a CHORD row — the arrangement
+    /// whose marks stack over the row (<see cref="RowUpWithMarksRestingOnIt"/>).</summary>
+    private static bool AnySystemLeadsWithAChordRow(
+        ImmutableArray<SystemLayout> systems, IReadOnlyDictionary<int, Staff> staffByIndex)
+    {
+        foreach (var system in systems)
+        {
+            if (system.StaffGroups.IsDefaultOrEmpty) continue;
+            var alignment = ClassifySystem(system.StaffGroups);
+            foreach (var leading in alignment.Leading)
+                if (staffByIndex.TryGetValue(leading.StaffIndex, out var row)
+                    && row.IsTextRow && !row.IsLyricsTextRow)
+                    return true;
+        }
+        return false;
+    }
+
     /// <summary>
     /// The syllables, with the two things only the surrounding music can answer: what each
     /// one is centred on, and what it has to clear.
@@ -1663,13 +1702,45 @@ internal sealed partial class LayoutEngine
     /// </remarks>
     private ImmutableArray<LyricLayout> LayoutLyrics(
         AnnotationLayoutContext ctx, ImmutableArray<MeasureLayout> ml,
-        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? scriptedSkylines)
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? scriptedSkylines,
+        ImmutableArray<MusicMarkLayout> marksForTheChain = default,
+        IReadOnlyDictionary<int, int>? measureToSystem = null)
     {
         var systems = ctx.Systems;
         var lyrics = ctx.Lyrics;
         var staffByIndex = ctx.StaffByIndex;
         var measuresByStaff = ctx.MeasuresByStaff;
         var measures = ctx.Measures;
+
+        // The chain's far end, with the marks resting on the next system's leading chord row
+        // in that row's profile (RowUpWithMarksRestingOnIt) — the one change to what
+        // BuildLooseChainEnds handed over, made here because the marks' X are the annotation
+        // pass's and not the page's.
+        var looseChainEnd = ctx.LooseChainEnd;
+        if (looseChainEnd != null && !marksForTheChain.IsDefaultOrEmpty && staffByIndex != null)
+        {
+            var inner = looseChainEnd;
+            var marksBySystem = new Dictionary<int, List<MusicMarkLayout>>();
+            var m2s = measureToSystem ?? SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
+            foreach (var m in marksForTheChain)
+                if (m2s.TryGetValue(m.MeasureIndex, out int ms))
+                    (marksBySystem.TryGetValue(ms, out var list) ? list : marksBySystem[ms] = new()).Add(m);
+            var ends = new Dictionary<int, LooseLineSpacer.ChainEnd?>();
+            looseChainEnd = s =>
+            {
+                if (ends.TryGetValue(s, out var known))
+                    return known;
+                var end = inner(s);
+                if (end is { Lines.IsDefaultOrEmpty: false }
+                    && staffByIndex.TryGetValue(end.Lines[0].StaffIndex, out var row)
+                    && row.IsTextRow && !row.IsLyricsTextRow
+                    && marksBySystem.TryGetValue(s + 1, out var marks)
+                    && RowUpWithMarksRestingOnIt(ctx.Fonts, end.Lines[0].Up, marks) is { } withMarks)
+                    end = end with { Lines = end.Lines.SetItem(0, end.Lines[0] with { Up = withMarks }) };
+                ends[s] = end;
+                return end;
+            };
+        }
 
         // Per-(system, staff) DOWN-skyline for a note-bound lyric line that sits under an
         // UPPER staff, so it clears THAT staff's own notes and real (font-metric) glyph
@@ -1893,7 +1964,7 @@ internal sealed partial class LayoutEngine
 
         var laid = engraver.CalculateLayouts(
             lyrics, ml, _options.StaffHeight, systems, scriptedSkylines, ctx.StaffYByIndex,
-            ctx.NoteBoundAnchorY, anchorStaffDownSkyline, ctx.LooseChainEnd,
+            ctx.NoteBoundAnchorY, anchorStaffDownSkyline, looseChainEnd,
             betweenStavesEnd, ctx.LastSpaceableStaffY, ctx.TrailingRowStaves,
             ctx.BetweenRowStaves, ctx.VerseSkylines, ctx.LyricChains,
             sp, runLineOf, chordRowInk, attachedChordBelow, gridBandOf);
