@@ -599,6 +599,24 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Song("e'8 g' c'' g' e' g' c'' g'", "c1")), f => f.Contains("only holds"));
     }
 
+    // Owner's review 2026-11-01 (Ameagari-no-Cafe): a guitar's thumb under its fingers' chords was read
+    // as the tune, told "98% half notes" and "a chord reaches over the tune", and a tune's note between
+    // the chords told it leapt from their low strings; each answer took the piece's tune away.
+    [Fact]
+    public void AThumbUnderTheFingersChords_IsNotTheTune()
+    {
+        string Solo(string upper, string thumb) => "title \"Solo\"\ntime 4/4\noctave absolute\npart g { instrument guitar }\nsection A {\n  g { voice { "
+            + Bars(upper) + "} { " + Bars(thumb) + "} }\n}\nform { A }\nscore { staff g }\n";
+        var thumb = CompositionChecks.Of(Solo("<g c' e'>4. <g c' e'>4. a'4", "a,2 e,2"));
+        Assert.DoesNotContain(thumb, f => f.Contains("half notes"));
+        Assert.DoesNotContain(thumb, f => f.Contains("reaches over the tune"));
+        Assert.DoesNotContain(thumb, f => f.Contains("leaps more than an octave"));
+        // A tune's note over chords with a low bass in them is no slip either…
+        Assert.DoesNotContain(CompositionChecks.Of(Solo("<d a d' f'>4. <d a d' f'>4. bes'4", "bes,2 f,2")), f => f.Contains("leaps more than an octave"));
+        // …and a single note far above the chord's top is one.
+        Assert.Contains(CompositionChecks.Of(Solo("<d a d'>4. <d a d'>4. a''4", "bes,2 f,2")), f => f.Contains("leaps more than an octave"));
+    }
+
     // Owner's review 2026-11-01 (Kissaten-no-Yugure): a solo guitar's G♯4 under its own Emaj7 topped by D♯5.
     [Fact]
     public void ATuneUnderItsOwnChords_IsSaid()

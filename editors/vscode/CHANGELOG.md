@@ -11,7 +11,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   a piano under singers that only holds, and takes a section named chorus for the chorus however
   often the form plays it, and tells a tune standing under its own chords. Compose with AI's guide
   writes a named style's rhythm first (a bossa nova's two bars among them, `4. 4. 4 | r4 4 r8 4. |`,
-  and a guitar alone with the thumb under the fingers).
+  and a guitar alone with its tune over the fingers and the thumb under them). The check no longer
+  takes a guitar's thumb for the tune.
 - **A tied stroke sounds once.** A chords row playing a `strokes` part no longer strikes again where
   a stroke's tie lands.
 - **The preview's loop plays a chords row's strokes as written.** It kept only each chord's first

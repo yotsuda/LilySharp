@@ -166,13 +166,17 @@ What makes it music:
   comes in off the beat and is held over the bar line, above the chords. Over a chords row (a song to
   sing and play, a lead sheet) the batida is a `strokes` part the row plays, `%2` repeating the two bars
   before it — `strokes bossa { section A { 4. 4. 4 | r4 4 r8 4. | %2 | %2 | %2 | } }`, as many bars as
-  the section, and `chords harmony plays bossa` in the score. **A guitar alone** plays both at once, in
-  two voices on one part: the thumb on beats 1 and 3, the root, or the fifth, and the fingers the batida
-  on three neighbouring strings (Am7 `<g c' e'>`, D7(9) `<fis c' e'>`, written here with `octave
-  absolute`):
+  the section, and `chords harmony plays bossa` in the score. **A guitar alone** plays all three at once,
+  in three voices on one part: the tune above the chords, a voice of its own that comes in between the
+  strokes and is held over the bar line, not one note squeezed into each gap of the chords; the fingers
+  the batida on three neighbouring strings (Am7 `<g c' e'>`, D7(9) `<fis c' e'>`, written here with
+  `octave absolute`); the thumb on beats 1 and 3, the root, or the fifth. A dynamic goes in one voice
+  only, or the page prints it once for each:
   ```
   part gtr { instrument guitar midiInstrument "acoustic guitar (nylon)" }
   section A { gtr { voice {
+    r4 c''4 b'8 a'4.~ | a'2 fis'2 |
+  } {
     <g c' e'>4. <g c' e'>4. <g c' e'>4 | r4 <fis c' e'>4 r8 <fis c' e'>4. |
   } {
     a,2 a,2 | d2 d2 |

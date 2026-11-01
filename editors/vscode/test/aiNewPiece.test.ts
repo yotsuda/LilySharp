@@ -57,7 +57,10 @@ describe('the composing guide', () => {
         // …and over a chords row, as strokes (the owner's bossa.lys, 2026-11-01).
         assert.match(guide, /`strokes bossa \{ section A \{ 4\. 4\. 4 \| r4 4 r8 4\. \| %2 \| %2 \| %2 \| \} \}`/);
         // …and a guitar alone, the thumb under the fingers (the owner's page, 2026-11-01).
-        assert.match(guide, /\*\*A guitar alone\*\* plays both at once/);
+        assert.match(guide, /\*\*A guitar alone\*\* plays all three at once/);
+        // …its tune a voice of its own (the owner's review of Ameagari-no-Cafe, 2026-11-01).
+        assert.match(guide, /r4 c''4 b'8 a'4\.~ \| a'2 fis'2 \|/);
+        assert.match(guide, /A dynamic goes in one voice\s+only/);
         assert.match(guide, /<g c' e'>4\. <g c' e'>4\. <g c' e'>4 \| r4 <fis c' e'>4 r8 <fis c' e'>4\. \|/);
         assert.match(guide, /a,2 a,2 \| d2 d2 \|/);
     });

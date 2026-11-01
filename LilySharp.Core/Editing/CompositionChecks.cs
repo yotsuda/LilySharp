@@ -412,12 +412,16 @@ public static class CompositionChecks
             .GroupBy(n => (n.Part, n.Voice)))
         {
             var lows = line.GroupBy(n => n.StartTick).OrderBy(g => g.Key)
-                .Select(g => (Tick: g.Key, Pitch: g.Min(n => n.Pitch), Chord: g.Count() > 1)).ToList();
+                .Select(g => (Tick: g.Key, Pitch: g.Min(n => n.Pitch), Top: g.Max(n => n.Pitch), Chord: g.Count() > 1)).ToList();
             bool Spike(int i)
             {
                 if (i <= 0 || i + 1 >= lows.Count)
                     return false;
-                var (before, after) =(lows[i].Pitch - lows[i - 1].Pitch, lows[i].Pitch - lows[i + 1].Pitch);
+                // A note beside a chord in its own voice is measured from the chord's nearer end: a
+                // tune's note between a guitar's chords is no leap from their low strings (owner's
+                // review 2026-11-01: B♭4 over a chord topped by F4, told it leapt from E♭3).
+                int From((int Tick, int Pitch, int Top, bool Chord) n) => n.Chord && lows[i].Pitch > n.Pitch ? n.Top : n.Pitch;
+                var (before, after) = (lows[i].Pitch - From(lows[i - 1]), lows[i].Pitch - From(lows[i + 1]));
                 return (before > 12 && after > 12) || (before < -12 && after < -12);
             }
             // A chord is not one: a guitar's chord struck under its own tune (owner's trial 2026-10-30:
@@ -914,6 +918,10 @@ public static class CompositionChecks
             if (lines.Count == 0)
                 continue;
             var tune = lines.OrderByDescending(v => v.Average(n => n.Pitch)).First();
+            // A line under the chords is their bass (LineVoices), and the chords cannot bury it.
+            if (VoiceIsUnderChords(tune.Select(n => (n.StartTick, n.Pitch)),
+                    voices.Where(v => v.Key != tune.Key).Select(v => v.Select(n => (n.StartTick, n.Pitch)))))
+                continue;
             // The other voices' chords.
             var chords = voices.Where(v => v.Key != tune.Key).SelectMany(v => v.GroupBy(n => n.StartTick))
                 .Where(g => g.Count() >= 2).Select(g => (Start: g.Key, Top: g.Max(n => n.Pitch))).ToList();
@@ -2470,12 +2478,37 @@ public static class CompositionChecks
     /// voice over power chords in the second, and read as one line it was "no tune", "19% steps",
     /// "67% eighths", with octave slips between the two).
     /// </summary>
+    /// <remarks>A voice under another voice's chords is their bass, however many single notes it
+    /// has, not the tune (owner's review 2026-11-01, Ameagari-no-Cafe: a guitar's thumb, read as
+    /// the line, was told "98% half notes" and made busy, on the figure the guide gives).</remarks>
     private static Dictionary<string, int> LineVoices(MidiFile midi)
-        => midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick)))
+        => midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.Voice, n.StartTick, n.Pitch)))
             .GroupBy(n => n.Part)
-            .ToDictionary(p => p.Key, p => p.GroupBy(n => n.Voice)
-                .Select(v => (Voice: v.Key, Singles: v.GroupBy(n => n.StartTick).Count(g => g.Count() == 1)))
-                .OrderByDescending(v => v.Singles).ThenBy(v => v.Voice).First().Voice, System.StringComparer.Ordinal);
+            .ToDictionary(p => p.Key, p =>
+            {
+                var voices = p.GroupBy(n => n.Voice)
+                    .Select(v => (Voice: v.Key, Singles: v.GroupBy(n => n.StartTick).Count(g => g.Count() == 1),
+                        Under: VoiceIsUnderChords(v.Select(n => (n.StartTick, n.Pitch)),
+                            p.Where(o => o.Voice != v.Key).GroupBy(o => o.Voice).Select(o => o.Select(n => (n.StartTick, n.Pitch))))))
+                    .ToList();
+                var lines = voices.Where(v => !v.Under).ToList();
+                return (lines.Count > 0 ? lines : voices).OrderByDescending(v => v.Singles).ThenBy(v => v.Voice).First().Voice;
+            }, System.StringComparer.Ordinal);
+
+    /// <summary>A voice whose notes lie, on average, below the lowest notes of another voice's
+    /// chords, that voice striking chords at half its onsets or more: their bass.</summary>
+    private static bool VoiceIsUnderChords(IEnumerable<(int StartTick, int Pitch)> voice, IEnumerable<IEnumerable<(int StartTick, int Pitch)>> others)
+    {
+        double average = voice.Average(n => n.Pitch);
+        foreach (var other in others)
+        {
+            var onsets = other.GroupBy(n => n.StartTick).ToList();
+            var chords = onsets.Where(g => g.Count() >= 2).ToList();
+            if (chords.Count * 2 >= onsets.Count && chords.Count > 0 && average < chords.Average(g => g.Min(n => n.Pitch)))
+                return true;
+        }
+        return false;
+    }
 
     /// <summary>The pitched notes of each part's line voice (<see cref="LineVoices"/>), the drums left out.</summary>
     private static List<(string Part, int StartTick, int DurationTicks, int Pitch)> LineNotes(MidiFile midi)

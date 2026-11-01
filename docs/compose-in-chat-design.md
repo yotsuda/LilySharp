@@ -161,6 +161,8 @@ as the melody's rhythm).
 - Compound-meter beats crossed.
 - A part in voices whose tune (its highest voice of single notes) has another voice's chord reaching
   over it in half its bars, eight or more (`TuneUnderItsChords`; 2026-11-01: a solo guitar's bossa nova).
+  A voice below another voice's chords is their bass, never the tune, here and for every reading of a
+  part's line (`VoiceIsUnderChords`; 2026-11-01: a guitar's thumb, told "98% half notes").
 - A singer with no rest in 16 bars or more in a row (a voice preset, or a part a lyrics track sings;
   2026-11-01: a song sang its 48 bars from the first note to the last without one). A bar is sung
   through when the part's notes cover it with no gap.

@@ -6,6 +6,16 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A guitar's thumb is not its tune
+
+- `[check]` **A voice under another voice's chords is their bass.** The composition checks read a
+  guitar's thumb as the part's line: "98% half notes" on the thumb the guide gives, and "a chord
+  reaches over the tune". **A tune's note between chords in its own voice** is measured from the
+  chords' top, not their low strings, so it is no longer told it leapt. Answering these took a
+  piece's tune away. Owner's review 2026-11-01, Ameagari-no-Cafe.
+- `[docs]` **The composing guide's guitar alone has its tune**, a third voice above the chords, in
+  between the strokes and held over the bar line. A dynamic goes in one voice only.
+
 ### The preview's loop keeps every stroke
 
 - `[preview]` **A loop no longer drops a chord's later strokes.** A chords row that plays a strokes
