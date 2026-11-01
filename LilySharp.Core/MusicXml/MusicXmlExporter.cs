@@ -328,6 +328,7 @@ public sealed class MusicXmlExporter
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
         _playedSpec = RenderSpecParser.PlayedSpec(tree, Score, Form);
         _placedChordRows = RenderSpecParser.PlacedChordRows(_playedSpec);
+        _flatRows = FlatChordRows.Of(root, _placedChordRows);
         ReadCarryRefusals(tree);
         _pendingChordRows.Clear();
         _playStartMeasure.Clear();
@@ -1432,6 +1433,9 @@ public sealed class MusicXmlExporter
             if (section.GetChild(i) is ChordPartBlockSyntax { HasSections: false, PartName: { } cellRow } cell
                 && _placedChordRows.Contains(cellRow))
                 RememberChordRow(cellRow, cell.Items);
+        // A flat chord track gives this section the bars it prints (a repeat's are printed once, as here).
+        foreach (var (flatRow, flatItems) in _flatRows.Take(_sectionBars.Canonical.GetValueOrDefault(section.SectionName)))
+            RememberChordRow(flatRow, flatItems);
 
         // Each section may contain part blocks
         var partBlocks = section.DescendantNodes().OfType<PartBlockSyntax>().ToList();
@@ -5997,6 +6001,7 @@ public sealed class MusicXmlExporter
         (int Fifths, string Mode, string? Custom) Key);
 
     private readonly List<PendingChordRow> _pendingChordRows = new();
+    private FlatChordRows _flatRows = FlatChordRows.None;
     /// <summary>The measure index a part's bars of a printed play begin at.</summary>
     private readonly Dictionary<(string Part, int Play), int> _playStartMeasure = new();
     private HashSet<string> _placedChordRows = new(StringComparer.Ordinal);

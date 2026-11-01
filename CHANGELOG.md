@@ -8,7 +8,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### A chord track written at the top level plays
 
-- `chords prog { C | G7 | }` outside any section, in a file written by section, draws from bar 1. It played nothing, and every part started that many bars late. It now sounds from bar 1, and takes no time.
+- `chords prog { C | G7 | }` outside any section, in a file written by section, draws from bar 1. It played nothing, and every part started that many bars late. It now sounds under the bars the page draws it over: a pickup, a section's own meter and key, and a repeat's every pass included. It takes no time, and the MusicXML carries it too.
 
 ### Review a piece
 

@@ -79,6 +79,83 @@ public class ChordRowMidiTests
         Assert.Equal(new[] { Bar, 2 * Bar }, midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b));
     }
 
+    private static int[] Onsets(string music, string form = "A", string head = "")
+    {
+        var midi = Export($"time 4/4\n{head}part melody\n{music}\nform {{ {form} }}\nscore {{ chords harmony  staff melody }}\n");
+        return ChordNotes(midi).Select(n => n.Start).Distinct().ToArray();
+    }
+
+    // What a flat row sounds is what the same row sounds written in its sections.
+    private static (int, int, int)[] Sounds(string music, string form)
+    {
+        string book = $"time 4/4\npart melody\n{music}\nform {{ {form} }}\nscore {{ chords harmony  staff melody }}\n";
+        Assert.False(SyntaxTree.Parse(book).HasErrors, book);
+        return ChordNotes(Export(book));
+    }
+
+    [Theory]
+    // Each section its own bars, a section that returns taking the bars after.
+    [InlineData("A B", "section A { melody { c''1 | } }\nsection B { melody { d''1 | e''1 | } }", "C | G | Am |", "section A { melody { c''1 | } chords harmony { C | } }\nsection B { melody { d''1 | e''1 | } chords harmony { G | Am | } }")]
+    // A pickup: the row's first bar is the pickup bar, as on the page.
+    [InlineData("A", "section A { partial 4 melody { g'4 | c''1 | d''1 | } }", "| C | G |", "section A { partial 4 melody { g'4 | c''1 | d''1 | } chords harmony { | C | G | } }")]
+    // …and the section after it takes the bars after, in its own key: the opening bar line closed the pickup's.
+    [InlineData("A B", "section A { key c major partial 4 melody { g'4 | c''1 | } }\nsection B { key d major melody { d''1 | } }", "| I | I |", "section A { key c major partial 4 melody { g'4 | c''1 | } chords harmony { | I | } }\nsection B { key d major melody { d''1 | } chords harmony { I | } }")]
+    // A section's own meter, its slots on that bar's grid.
+    [InlineData("A B", "section A { melody { c''1 | } }\nsection B { time 3/4 melody { d''2. | e''2. | } }", "C D | G . A | Am . . |", "section A { melody { c''1 | } chords harmony { C D | } }\nsection B { time 3/4 melody { d''2. | e''2. | } chords harmony { G . A | Am . . | } }")]
+    // A degree, read in the key of the section it falls in.
+    [InlineData("A B", "section A { key c major melody { c''1 | } }\nsection B { key d major melody { d''1 | } }", "I | I |", "section A { key c major melody { c''1 | } chords harmony { I | } }\nsection B { key d major melody { d''1 | } chords harmony { I | } }")]
+    // A repeat is printed once: its bars sound on every pass.
+    [InlineData("|: A :| B", "section A { melody { c''1 | } }\nsection B { melody { d''1 | } }", "C | G |", "section A { melody { c''1 | } chords harmony { C | } }\nsection B { melody { d''1 | } chords harmony { G | } }")]
+    // Endings are printed one after the other, the second after the first.
+    [InlineData("|: A [1. B] :| [2. C] D", "section A { melody { c''1 | } }\nsection B { melody { d''1 | } }\nsection C { melody { e''1 | } }\nsection D { melody { f''1 | } }", "C | Dm | Em | F |", "section A { melody { c''1 | } chords harmony { C | } }\nsection B { melody { d''1 | } chords harmony { Dm | } }\nsection C { melody { e''1 | } chords harmony { Em | } }\nsection D { melody { f''1 | } chords harmony { F | } }")]
+    // Endings written out of the order they play: what follows comes after both as printed.
+    [InlineData("|: A [2. B] :| [1. C] D", "section A { melody { c''1 | } }\nsection B { melody { d''1 | } }\nsection C { melody { e''1 | } }\nsection D { melody { f''1 | } }", "C | Dm | Em | F |", "section A { melody { c''1 | } chords harmony { C | } }\nsection B { melody { d''1 | } chords harmony { Dm | } }\nsection C { melody { e''1 | } chords harmony { Em | } }\nsection D { melody { f''1 | } chords harmony { F | } }")]
+    // A section written twice in the form is printed twice: two sets of bars.
+    [InlineData("A A", "section A { melody { c''1 | } }", "C | G |", null)]
+    public void AFlatTopLevelRow_SoundsAsItsBarsWrittenInTheSections(string form, string sections, string row, string? same)
+    {
+        var flat = Sounds($"{sections}\nchords harmony {{ {row} }}", form);
+        Assert.NotEmpty(flat);
+        if (same != null)
+            Assert.Equal(Sounds(same, form), flat);
+        else
+            Assert.Equal(new[] { 0, Bar }, flat.Select(n => n.Item1).Distinct());
+    }
+
+    [Fact]
+    public void AFlatTopLevelRow_OnADaCapo_ReadsItsBarsAgain()
+    {
+        string music = "section A { melody { c''1 | } }\nsection B { melody { d''1 | } }\nchords harmony { C | G | }";
+        var midi = Export($"time 4/4\npart melody\n{music}\nform {{ A B dc }}\nscore {{ chords harmony  staff melody }}\n");
+        var melody = midi.Tracks.Single(t => t.Name == "melody").Notes.Select(n => n.StartTick).ToArray();
+        var chords = ChordNotes(midi).Select(n => n.Start).Distinct().ToArray();
+        Assert.Equal(melody, chords);
+        Assert.True(melody.Length > 2, "the D.C. replays");
+    }
+
+    [Theory]
+    [InlineData("A B", "section A { melody { c''1 | } }\nsection B { time 3/4 melody { d''2. | } }", "C | G . A |", "section A { melody { c''1 | } chords harmony { C | } }\nsection B { time 3/4 melody { d''2. | } chords harmony { G . A | } }")]
+    [InlineData("|: A [1. B] :| [2. C]", "section A { melody { c''1 | } }\nsection B { melody { d''1 | } }\nsection C { melody { e''1 | } }", "C | Dm | Em |", "section A { melody { c''1 | } chords harmony { C | } }\nsection B { melody { d''1 | } chords harmony { Dm | } }\nsection C { melody { e''1 | } chords harmony { Em | } }")]
+    public void AFlatTopLevelRow_IsInTheMusicXml_AsItsBarsWrittenInTheSections(string form, string sections, string row, string same)
+    {
+        static string Xml(string music, string form) => new LilySharp.Core.MusicXml.MusicXmlExporter()
+            .Export(SyntaxTree.Parse($"time 4/4\npart melody\n{music}\nform {{ {form} }}\nscore {{ chords harmony  staff melody }}\n")).ToXml().ToString();
+        string flat = Xml($"{sections}\nchords harmony {{ {row} }}", form);
+        Assert.Contains("<harmony", flat);
+        Assert.Equal(Xml(same, form), flat);
+    }
+
+    [Fact]
+    public void AFlatTopLevelRow_PastTheMusic_GoesOn_AsThePageDrawsIt()
+        => Assert.Equal(new[] { 0, Bar, 2 * Bar }, Onsets("section A { melody { c''1 | } }\nchords harmony { C | G | Am | }"));
+
+    [Fact]
+    public void AFlatTopLevelRow_WithNoMusicAtAll_Sounds()
+    {
+        var midi = Export("time 4/4\nchords harmony { C | G | }\nscore { chords harmony }\n");
+        Assert.Equal(new[] { 0, Bar }, ChordNotes(midi).Select(n => n.Start).Distinct());
+    }
+
     [Fact]
     public void AFlatTopLevelRowTheScoreDoesNotPlace_IsSilent_AndTakesNoTime()
     {

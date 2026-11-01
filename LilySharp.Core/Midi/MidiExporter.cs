@@ -595,6 +595,8 @@ public sealed class MidiExporter
         _playedSpec = RenderSpecParser.PlayedSpec(tree, Score, Form);
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
         _soundingChordRows = SoundingChordRows(tree, Score, Form);
+        _flatRows = Semantics.FlatChordRows.Of(_root, _soundingChordRows);
+        _flatRowsPlay = -1;
         _soundingParts = SoundingParts(_playedSpec);
         // The rows that strum to a strokes part take that part's strokes (a recorder's walk
         // reads them first); the recorder itself reads none.
@@ -607,6 +609,9 @@ public sealed class MidiExporter
         OpenBarGrid(mainTrack, null);
         _levelLog.Clear();
         ProcessNode(_root, mainTrack, conductorTrack);
+        // A flat chord track's bars past the music, as the page goes on drawing them.
+        foreach (var (row, items) in _flatRows.Rest())
+            PlayChordRow(items, row, _currentTick, mainTrack, _strokesByRow.GetValueOrDefault(row));
         ShareGrandStaffDynamics(mainTrack);
         // The notes an overfull bar ran past its bar line (AlignBarLine), once nothing indexes
         // the track any more.
@@ -785,12 +790,10 @@ public sealed class MidiExporter
                 }
                 break;
 
-            case ChordPartBlockSyntax { HasSections: false, Parent: CompilationUnitSyntax, PartName: var flatRow } flatTrack:
-                // A chord track written flat at the top level runs from bar 1, as the page draws it
-                // (TrackNeedsSectionsValidator; a file grouped by part refuses it). It is not in the
-                // music's time: walked as children, its bar lines put the form a row's length late.
-                if (flatRow != null && _soundingChordRows.Contains(flatRow))
-                    PlayChordRow(flatTrack.Items, flatRow, 0, track, _strokesByRow.GetValueOrDefault(flatRow));
+            case ChordPartBlockSyntax { HasSections: false, Parent: CompilationUnitSyntax }:
+                // A chord track written flat at the top level is played section by section
+                // (PlaySectionChordRows). It is not in the music's time: walked as children, its bar
+                // lines put the form a row's length late.
                 break;
 
             case PartBlockSyntax partBlock:
@@ -1436,8 +1439,19 @@ public sealed class MidiExporter
             if (section.GetChild(i) is ChordPartBlockSyntax { HasSections: false, PartName: { } row } cell
                 && _soundingChordRows.Contains(row))
                 end = Math.Max(end, PlayChordRow(cell.Items, row, start, track, _strokesByRow.GetValueOrDefault(row)));
+        // A flat chord track gives this play the bars it prints. A section declared twice is one play.
+        if (_flatRowsPlay != _sectionPlaySerial)
+        {
+            _flatRowsPlay = _sectionPlaySerial;
+            foreach (var (flat, items) in _flatRows.Take(_sectionBars.Canonical.GetValueOrDefault(section.SectionName)))
+                end = Math.Max(end, PlayChordRow(items, flat, start, track, _strokesByRow.GetValueOrDefault(flat)));
+        }
         return end;
     }
+
+    // The chord tracks written flat at the top level, and the section play that last took bars of them.
+    private Semantics.FlatChordRows _flatRows = Semantics.FlatChordRows.None;
+    private int _flatRowsPlay = -1;
 
     // The chord rows the exported score PLACES, read once per Export (SoundingChordRows).
     private HashSet<string> _soundingChordRows = new(StringComparer.Ordinal);
@@ -1576,8 +1590,7 @@ public sealed class MidiExporter
     /// <remarks>
     /// LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
     /// ChordNames context and performs nothing for it. A pickup bar keeps the full meter's
-    /// grid and cuts what runs past its end. A chord track written flat at the top level is read
-    /// in the file's first meter, with no pickup: no book on disk does it.
+    /// grid and cuts what runs past its end.
     /// </remarks>
     private int PlayChordRow(IEnumerable<SyntaxNode> items, string rowName, int startTick, MidiTrack track,
         IReadOnlyList<Stroke>? strokes = null)
@@ -1775,14 +1788,16 @@ public sealed class MidiExporter
         Dictionary<string, (int, int, Fraction)> PitchLanes,
         Dictionary<string, int> VelocityLanes,
         Fraction Duration,
-        int Velocity);
+        int Velocity,
+        int FlatRowBar);
 
     private PieceState CaptureState() => new(
         new Dictionary<int, int>(_sourceOrdinals),
         new Dictionary<string, (int, int, Fraction)>(_partPitchLanes),
         new Dictionary<string, int>(_partVelocity),
         _defaultDuration,
-        _velocity);
+        _velocity,
+        _flatRows.Cursor);
 
     /// <summary>Puts <paramref name="state"/> back, so the replayed stretch sounds as it did
     /// the first time. The replayed music is ENGRAVED once, so its printed copies are the ones
@@ -1799,6 +1814,7 @@ public sealed class MidiExporter
             _partVelocity[kv.Key] = kv.Value;
         _defaultDuration = state.Duration;
         _velocity = state.Velocity;
+        _flatRows.Cursor = state.FlatRowBar;
     }
 
     /// <summary>Plays one form item. The one switch both the first pass and a
@@ -1924,6 +1940,15 @@ public sealed class MidiExporter
         // revisit the same printed BODY copy, so the body's ordinals restart from
         // this snapshot each pass (the highlight re-lights the same printed body).
         var structOrdSnapshot = new Dictionary<int, int>(_sourceOrdinals);
+        // A flat chord track's bars are printed once too: the body's for every pass, each ending's after it.
+        int BarsOfRun(IEnumerable<string> names) => names.Sum(n => _sectionBars.Canonical.GetValueOrDefault(n));
+        int flatBody = _flatRows.Cursor, flatEndings = flatBody + BarsOfRun(body.Select(b => b.Item1));
+        var flatEnding = new List<int>(alternatives.Count);
+        foreach (var alternative in alternatives)
+        {
+            flatEnding.Add(flatEndings);
+            flatEndings += BarsOfRun(alternative.Sections.Select(s => s.Item1));
+        }
         // On a D.C./D.S. replay the run is heard once, as its LAST pass: the body and the
         // ending that pass names (`|: A [1. B] :| [2. C]` replays A C) — the performer's
         // convention that repeats are not taken after the jump (FormRoute).
@@ -1933,6 +1958,7 @@ public sealed class MidiExporter
             // into this pass's ending — as the page draws it (SectionPlayGraph).
             if (pass > 1)
                 _sourceOrdinals = new Dictionary<int, int>(structOrdSnapshot);
+            _flatRows.Cursor = flatBody;
             foreach (var (name, bodyOctave) in body)
                 PlaySectionByName(name, track, conductorTrack, bodyOctave);
             int ending = RepeatPasses.EndingFor(pass, endingPasses);
@@ -1957,10 +1983,12 @@ public sealed class MidiExporter
                     }
                 }
                 // An ending's sections play in order, as one stretch of the pass.
+                _flatRows.Cursor = flatEnding[ending];
                 foreach (var (name, endingOctave) in alternatives[ending].Sections)
                     PlaySectionByName(name, track, conductorTrack, endingOctave);
             }
         }
+        _flatRows.Cursor = flatEndings;
     }
 
     /// <summary>
