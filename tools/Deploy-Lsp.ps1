@@ -151,8 +151,19 @@ if (-not $SkipCompile) {
         if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
             throw 'npm was not found on PATH. Install Node.js (18+), or pass -SkipCompile to deploy the server alone.'
         }
-        if (-not (Test-Path (Join-Path $repoExt 'node_modules'))) {
-            Write-Host 'node_modules missing - installing extension dev dependencies...'
+        # A node_modules that EXISTS is not one that is complete: a dependency added to
+        # package.json after this machine last installed (spessasynth_lib, pngjs, jpeg-js
+        # -- seen 2026-11-02) is absent, and esbuild then dies on a missing file under
+        # node_modules, again reported as a compile failure. `npm ls` is npm's own
+        # verdict on whether what is installed satisfies package.json (missing, invalid
+        # or extraneous all exit non-zero), so it is asked rather than a folder test.
+        $needInstall = -not (Test-Path (Join-Path $repoExt 'node_modules'))
+        if (-not $needInstall) {
+            Invoke-Native { npm ls --depth=0 --silent 2>&1 } | Out-Null
+            $needInstall = $LASTEXITCODE -ne 0
+        }
+        if ($needInstall) {
+            Write-Host 'node_modules missing or out of date - installing extension dependencies...'
             if (Test-Path (Join-Path $repoExt 'package-lock.json')) { npm ci } else { npm install }
             if ($LASTEXITCODE -ne 0) { throw "npm install failed ($LASTEXITCODE)" }
         }

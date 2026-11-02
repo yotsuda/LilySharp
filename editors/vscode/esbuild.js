@@ -151,6 +151,9 @@ const LICENSE_BANNER = `/*!
 function copyWorkletProcessor() {
     const src = path.resolve(__dirname, 'node_modules', 'spessasynth_lib', 'dist', 'spessasynth_processor.min.js');
     const outDir = path.resolve(__dirname, 'out', 'synth');
+    if (!fs.existsSync(src)) {
+        throw new Error(`${src} not found - node_modules is out of date with package.json; run \`npm ci\` in ${__dirname}.`);
+    }
     fs.mkdirSync(outDir, { recursive: true });
     fs.copyFileSync(src, path.join(outDir, 'spessasynth_processor.min.js'));
     console.log('esbuild: copied spessasynth_processor.min.js');
