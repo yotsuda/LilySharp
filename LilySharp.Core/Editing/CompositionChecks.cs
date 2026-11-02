@@ -667,7 +667,6 @@ public static class CompositionChecks
     private static List<MidiNote> PitchedNotes(MidiFile midi) => midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9
         && !(n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal))).ToList();
 
-    /// <summary>How long the music plays: the first bar and every bar that starts before it ends, and its seconds.</summary>
     /// <summary>
     /// A form going round, beyond a band: a section played three times or more, and over half of the bars
     /// played being repeats (owner's decision 2026-11-02: told it was short, a carol for flute and piano
@@ -690,6 +689,7 @@ public static class CompositionChecks
             + "(a new figure under the tune, the tune an octave up or a key higher), and play a section twice at most.");
     }
 
+    /// <summary>How long the music plays: the first bar and every bar that starts before it ends, and its seconds.</summary>
     internal static (int Bars, int Seconds) LengthOf(MidiFile midi)
     {
         var pitched = PitchedNotes(midi);
