@@ -115,6 +115,9 @@ Ctrl+Z 1 回で、キーを押す前の選択に戻ること。Ctrl+Y で戻る�
 | T51 | `chord(F‸)4 d` | `#` | `chord(F#‸)4 d` | 同上 | ☐ |
 | T52 | `chords p { c‸ }` | `#` | `chords p { c#‸ }` | `chords` 行も同じ | ☐ |
 | T53 | `lyrics w { c‸ }` | `#` | `lyrics w { c#‸ }` | 歌詞も同じ | ☐ |
+| T54 | `es‸4 d` | `#` | `e‸4 d` | 短い書き方のフラット（`es`・`as`）も打ち消す | ☐ |
+| T55 | `es4‸ d` | `8` | `es8‸ d` | `es`・`as` も音符として読む | ☐ |
+| T56 | `‸as4 d` | `(` | `as4(‸ d)` | 同上 | ☐ |
 
 ## 5. `staff` の行をグループで包む
 
@@ -150,7 +153,9 @@ Ctrl+Z 1 回で、キーを押す前の選択に戻ること。Ctrl+Y で戻る�
 | Q04 | `bb16 d e f` | エラー | `Write 'bes16'` | `bes16 d e f` | ☐ |
 | Q05 | `c4 eb d e` | エラー | `Write 'ees'` | `c4 ees d e` | ☐ |
 | Q06 | `cb4 d e f` | 警告（ドラムのない本） | `Write 'ces'` | `ces4 d e f` | ☐ |
-| Q07 | `cb4 sn bd hh`（`clef percussion`） | なし | なし | カウベルのまま | ☐ |
+| Q07 | `cb4 sn bd hh`（`clef percussion` のパート） | なし | なし | カウベルのまま | ☐ |
+| Q08 | `cb4 d e f`（旋律のパート。ドラムは別のパート） | 警告 | `Write 'ces'` | `ces4 d e f`。本にドラムがあっても出る | ☐ |
+| Q09 | `<e' g'>4\1`（tab のあるパート） | 警告（LYS1063） | なし | 同じ弦に 2 音 | ☐ |
 
 ## 7. 操作感（実際のキーボードでだけ確かめられるもの）
 

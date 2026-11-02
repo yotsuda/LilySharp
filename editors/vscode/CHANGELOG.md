@@ -4,13 +4,15 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Two notes of a chord on one string warn** (LYS1063): the tab drew both on one line.
+- **The typing aids read `es`, `as`, `eses` and `ases` as notes**: they were typed as pressed.
 - **A beam typed at the head of a bar**: `c8 d | e|` + `[` is `c8 d | e[| f]`. The note's length was not read from the bars before it.
 - **Typing on `chord(F#)`**: a digit or a dot on the word `chord` or `diagram` is its length: `c|hord(F#)` + `8` is `c|hord(F#)8`. In the parentheses keys are typed as pressed.
 - **A slur reaching the next line no longer indents it**: `c4( |` with its `)` on the next line pushed that line right.
 - **`<` and `[` inside a note no longer split it**: `c|is4` + `<` is `<cis|>4`. `[` on a quarter or a rest changes nothing and says why, where `c[4` and `c4[]` were an error and a mark that drew nothing.
 - **Selected staves go into a group**: select `staff` rows in a `score`, press Ctrl+Space and pick `grandStaff`, `staffGroup`, `choirStaff`, `condensedStaff` or `combinedStaff`.
 - **`#` writes the sharp**: typed on a note it goes into the name, `c4` to `cis4`, and against a flat it cancels one. `c#`, `bb4` and `ab4` now say which pitch was meant, and Ctrl+. writes it.
-- **`cb` warns in a book with no drums**: it is a cowbell, and C flat written that way used to pass in silence. Ctrl+. writes `ces`.
+- **`cb` warns in a part with no drums**: it is a cowbell, and C flat written that way used to pass in silence. Ctrl+. writes `ces`.
 - **Typing in a chord**: on a note inside the brackets a digit, a dot, `(` and `[` are the whole chord's: `<c e g|>` + `4` is `<c e g|>4`. They used to write `<c e g4>`, which does not compile. A digit after a space is still a scale degree.
 - **Selected notes take the mark**: `(`, `[` and `<`, or `)`, `]` and `>`, over selected notes write `c4( d e)`, `c8[ d e]` and `<c d e>4`, not `(c4 d e)`, where no slur was drawn. One undo takes it back, and the note after a new chord keeps its pitch.
 - **Ask Copilot's chat how to write Lily#**: it teaches a stage at a time, from the most useful operations to the advanced, in your language.

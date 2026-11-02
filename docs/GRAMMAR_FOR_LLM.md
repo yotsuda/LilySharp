@@ -781,7 +781,7 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
   agl cab mar wbh wbl tri …`). `tt` (tamtam) is not one.
 - Durations, dots, bare durations, rests, `<bd hh>4` chords, `repeat`, `@` marks work as on
   notes. A drum name is read as a drum note in ANY part, so a phrase cannot be named after
-  one (LYS1030); keep pitches out of a drum part. `cb` in a book with no drum in it warns
+  one (LYS1030); keep pitches out of a drum part. `cb` in a part with no drums warns
   (LYS1062), C flat being `ces`.
 - `drums { LINE LINE … }` — a drum chart: each LINE is a phrase name or `{ … }`, optionally
   led by `up`/`down`; the lines play together (`drums { hats back kick }`). Drawn in two
@@ -1154,7 +1154,8 @@ score { staff melody }
 
 **"Add tab" / "guitar tab"** — the part names a fretted `instrument` (`guitar`, `bass`,
 `ukulele`, …) and the score gets a `tab NAME` row under its staff. The tab chooses strings and
-frets itself: write a string number (`\4`) only where a particular string is asked for.
+frets itself: write a string number (`\4`) only where a particular string is asked for. Two notes
+of a chord written on one string warn (LYS1063): `<e'\1 b\2>`, not `<e' g'>\1`, which numbers both.
 
 ```
 part guitar { instrument guitar }          // added: instrument guitar

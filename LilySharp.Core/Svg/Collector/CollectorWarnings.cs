@@ -94,6 +94,11 @@ public readonly record struct TabFit(string Voice, TuningType Tuning, IReadOnlyL
 /// handle-negative 'recalculate, "Requested string for pitch requires negative fret".</remarks>
 public record TabStringUnplayableWarning(int SourcePosition, int StringNumber, int Fret);
 
+/// <summary>Two notes of a chord written on one string, both playable on it (LYS1063): both are
+/// kept there as written, so the tab draws two frets on one line. <see cref="SourcePosition"/>
+/// points at the chord.</summary>
+public record TabChordOneStringWarning(int SourcePosition, int StringNumber);
+
 /// <summary>A rehearsal mark (<c>@mark("A")</c>) written at a bar a section label opens:
 /// the label is engraved and the mark is not (one mark a moment —
 /// <c>Layout.MusicMarkEngraver.ShadowedBySectionLabel</c>). <see cref="SourcePosition"/>

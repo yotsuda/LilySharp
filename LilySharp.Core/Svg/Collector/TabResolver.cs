@@ -61,6 +61,33 @@ internal sealed class TabResolver
             _stringWarnings.Add(new TabStringUnplayableWarning(sourcePosition, s, fret));
     }
 
+    private readonly List<TabChordOneStringWarning> _chordOneStringWarnings = new();
+
+    /// <summary>Chords with two notes written on one string, both playable there.</summary>
+    public IReadOnlyList<TabChordOneStringWarning> ChordOneStringWarnings => _chordOneStringWarnings;
+
+    /// <summary>Records each string two members of a chord are written on, counting only a
+    /// member that string can play: one it cannot is LYS5003's and is chosen again.</summary>
+    private void CheckChordStrings(ChordItem chord, int shift, int[] tun)
+    {
+        int seen = 0, reported = 0;
+        foreach (var cn in chord.Notes)
+        {
+            if (cn.StringNumber is not int s || s < 1 || s > tun.Length || !IsTabPlaceable(cn.Midi + shift, tun))
+                continue;
+            int fret = cn.Midi + shift - tun[tun.Length - s];
+            if (fret < 0 || fret > 24)
+                continue;
+            int bit = 1 << s;
+            if ((seen & bit) != 0 && (reported & bit) == 0)
+            {
+                _chordOneStringWarnings.Add(new TabChordOneStringWarning(chord.SourcePosition, s));
+                reported |= bit;
+            }
+            seen |= bit;
+        }
+    }
+
     /// <summary>Ties whose two ends carry conflicting explicit string numbers.</summary>
     public IReadOnlyList<TabTieStringWarning> TieWarnings => _tieWarnings;
 
@@ -394,6 +421,7 @@ internal sealed class TabResolver
                     foreach (var cn in chord.Notes)
                         if (IsTabPlaceable(cn.Midi + shift, tun))
                             CheckWrittenString(chord.SourcePosition, cn.Midi + shift, cn.StringNumber, tun);
+                    CheckChordStrings(chord, shift, tun);
                     var newNotes = AssignChordStrings(chord.Notes, tun, shift);
                     Work(mi)[ii] = chord with { Notes = newNotes };
                     foreach (var cn in newNotes)

@@ -103,6 +103,28 @@ public class PitchSpellingTests
     }
 
     [Fact]
+    public void ACowbell_InAMelodyPart_WarnsThoughAnotherPartHasDrums()
+    {
+        string book = "part k { clef percussion }\npart m { clef treble }\n"
+            + "section A { k { cb4 sn bd hh | } m { cb4 d e f | } }\nform { A }\nscore { staff m  staff k }";
+        var report = Assert.Single(Said(book), d => d.Code == DiagnosticCodes.CowbellWithNoDrumPart);
+        Assert.True(report.Span.Start > book.IndexOf(" m {", System.StringComparison.Ordinal), "the melody's, not the kit's");
+    }
+
+    [Theory]
+    [InlineData("part kit { clef percussion }\nsection A { kit { cb4 cb cb cb | } }\nform { A }\nscore { staff kit }")]
+    [InlineData("section A { drums { cb4 cb cb cb | } }\nform { A }\nscore { staff drums }")]
+    [InlineData("phrase Bell { cb4 cb cb cb | }\npart k { clef percussion }\nsection A { k { Bell } }\nform { A }\nscore { staff k }")]
+    public void ACowbell_WhereItMayBeOne_IsLeftAlone(string book)
+        => Assert.DoesNotContain(Said(book), d => d.Code == DiagnosticCodes.CowbellWithNoDrumPart);
+
+    [Fact]
+    public void ACowbell_InAPhrase_WithNoDrumInTheBook_Warns()
+        => Assert.Contains(
+            Said("phrase Bell { cb4 d e f | }\npart m { clef treble }\nsection A { m { Bell } }\nform { A }\nscore { staff m }"),
+            d => d.Code == DiagnosticCodes.CowbellWithNoDrumPart);
+
+    [Fact]
     public void APhraseOfThatName_IsAPhrase()
         => Assert.DoesNotContain(
             Said("phrase ab4 { c4 d e f | }\npart m { clef treble }\nsection A { m { ab4 } }\nform { A }\nscore { staff m }"),

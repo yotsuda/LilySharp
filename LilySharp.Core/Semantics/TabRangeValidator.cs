@@ -42,11 +42,13 @@ internal sealed class TabRangeValidator : ISemanticValidator
     {
         var seen = new HashSet<int>();
         var seenStrings = new HashSet<(int, int, int)>();
+        var seenOneString = new HashSet<(int, int)>();
         var advised = new HashSet<int>();
         foreach (var spec in RenderSpecParser.FindAll(tree).Where(s => s.HasTab))
         {
             IReadOnlyList<TabRangeWarning> warnings;
             IReadOnlyList<TabStringUnplayableWarning> stringWarnings;
+            IReadOnlyList<TabChordOneStringWarning> oneStringWarnings;
             IReadOnlyList<TabFit> fits;
             try
             {
@@ -54,6 +56,7 @@ internal sealed class TabRangeValidator : ISemanticValidator
                 collector.CollectMultiStaff(tree, spec);
                 warnings = collector.TabRangeWarnings;
                 stringWarnings = collector.TabStringWarnings;
+                oneStringWarnings = collector.TabChordOneStringWarnings;
                 fits = collector.TabFits;
             }
             catch
@@ -87,6 +90,17 @@ internal sealed class TabRangeValidator : ISemanticValidator
                     $"string {w.StringNumber} cannot play this pitch (it would be fret {w.Fret}), "
                     + "so the string request is ignored and the string chosen again - "
                     + "check the \\" + w.StringNumber + " (LilyPond ignores it the same way)");
+            }
+
+            // LYS1063 — one a chord and string, however many times a repeat plays it.
+            foreach (var w in oneStringWarnings)
+            {
+                if (!seenOneString.Add((w.SourcePosition, w.StringNumber))) continue;
+                _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
+                    DiagnosticCodes.TabChordNotesOnOneString,
+                    $"two notes of this chord are written on string {w.StringNumber}, and one string "
+                    + "sounds one note - give one of them another string (a \\N after a chord numbers "
+                    + "all its notes), or leave the strings to the tab");
             }
         }
     }

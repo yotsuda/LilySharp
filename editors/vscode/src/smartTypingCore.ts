@@ -307,7 +307,7 @@ const NOTE_TOKEN = /^[a-g][a-z]*[',]*/;
 // octave marks) or a rest, plus the duration and dots glued to it. Anchored, and
 // every caller checks that a word character does NOT follow, so `clef`, `bass`
 // and `rightHand` can never pose as notes.
-const NOTE_EVENT = /^(?:[a-g](?:isis|eses|is|es)?[',]*|[rsR])(?:[0-9]+\.*)?/;
+const NOTE_EVENT = /^(?:(?:[ae]s(?:es)?|[a-g](?:isis|eses|is|es)?)[',]*|[rsR])(?:[0-9]+\.*)?/;
 
 /** Where the `chord(…)` / `diagram(…)` ITEM beginning at `i` — a chord from a shape,
  * GRAMMAR §8, whose tail is a chord's: duration, dots, post-events — has its `)`: just
@@ -359,7 +359,8 @@ const isBetweenEvents = (c: string): boolean =>
 
 // The pitch letters an octave mark attaches to: the note name with its glued
 // accidental spelling. The marks go after these and BEFORE the duration.
-const PITCH_LETTERS = /^[a-g](?:isis|eses|is|es)?/;
+// `es`, `as` and their doubles `eses`, `ases` are names too, the contracted flats.
+const PITCH_LETTERS = /^(?:[ae]s(?:es)?|[a-g](?:isis|eses|is|es)?)/;
 
 // Every DurationBase there is (GRAMMAR.md §Duration). Tested as a MEMBER for
 // what gets written (rule 17), and — for a single digit — as a PREFIX for
@@ -375,7 +376,7 @@ const isDuration = (digits: string) => DURATIONS.includes(digits);
 // — a slur spans it, so the scan for the following note skips the whole command
 // (its operands included, or `key g major` would offer 'g' as the note).
 const MID_MUSIC_COMMAND =
-    /^(?:clef\s+[A-Za-z_][A-Za-z0-9_]*|key\s+[a-g](?:isis|eses|is|es)?\s+[A-Za-z]+|time\s+[0-9]+(?:\s*\+\s*[0-9]*)*\s*\/\s*[0-9]*|partial\s+[0-9]+\.*|octave\s+[A-Za-z0-9]+|break)(?![A-Za-z0-9_])/;
+    /^(?:clef\s+[A-Za-z_][A-Za-z0-9_]*|key\s+(?:[ae]s(?:es)?|[a-g](?:isis|eses|is|es)?)\s+[A-Za-z]+|time\s+[0-9]+(?:\s*\+\s*[0-9]*)*\s*\/\s*[0-9]*|partial\s+[0-9]+\.*|octave\s+[A-Za-z0-9]+|break)(?![A-Za-z0-9_])/;
 
 // The insertions this module reacts to — the pairs VS Code auto-closes included.
 // Checked BEFORE the document text is read, so an ordinary letter, a space or a
@@ -2015,7 +2016,7 @@ function inWordBlock(text: string, offset: number): boolean {
 }
 
 /** What a sharp makes of a name's accidental letters. A flat gives way to it. */
-const AFTER_A_SHARP: Record<string, string> = { '': 'is', is: 'isis', es: '', eses: 'es' };
+const AFTER_A_SHARP: Record<string, string> = { '': 'is', is: 'isis', es: '', eses: 'es', s: '', ses: 's' };
 
 /** '#' typed in music (rule 35): the sharp goes into the name of the note the caret is
  * on, or of the chord member; a thing with no name of its own to spell absorbs it. */

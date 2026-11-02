@@ -605,6 +605,47 @@ describe('a sharp typed on a note goes into its name (rule 35)', () => {
     });
 });
 
+describe('the contracted flats es, as, eses and ases are notes to the keys', () => {
+    it('a digit, an octave mark and a dot find their slots', () => {
+        typed('es4‸ d', '8', 'es8‸ d');
+        typed('es‸4 d', '8', 'es‸8 d');
+        typed('‸as4 d', '8', '‸as8 d');
+        typed('ases4‸ d', '8', 'ases8‸ d');
+        typed('es4‸ d', "'", "es'4‸ d");
+        typed('a‸s4 d', "'", "a‸s'4 d");
+        typed('‸eses4 d', '.', '‸eses4. d');
+    });
+    it('the marks land after them, and a slur reaches them', () => {
+        typed('‸es4 d', '@', 'es4@‸ d');
+        typed('‸es4 d', '~', 'es4~‸ d');
+        typed('‸es4 d', '(', 'es4(‸ d)');
+        typed('c4‸ as d', '(', 'c4(‸ as) d');
+        typed('‸as8 d', '[', 'as8[‸ d]');
+    });
+    it('# cancels them, as it does ees and aes', () => {
+        typed('es‸4 d', '#', 'e‸4 d');
+        typed('as4‸ d', '#', 'a4‸ d');
+        typed('ases‸4 d', '#', 'as‸4 d');
+        typed('eses4‸ d', '#', 'es4‸ d');
+    });
+    it('< wraps them, from just before and from inside', () => {
+        typed('‸es4 d', '<', '<es‸>4 d');
+        typed('e‸s4 d', '<', '<es‸>4 d');
+        typed('as‸4 d', '<', '<as‸>4 d');
+    });
+    it('in a chord and over a selection', () => {
+        typed('<es‸ g>4 d', '#', '<e‸ g>4 d');
+        typed('<es‸ g>4 d', '8', '<es‸ g>8 d');
+        assert.equal(show(typeOverSelection('«es4 as» r', '<')), '<es as‸>4 r');
+    });
+    it('a key spelled with one, and a longer word, are not', () => {
+        typed('key es‸ major d', '8', 'key es8‸ major d');
+        typed('c4‸ key as major d', '(', 'c4(‸ key as major d)');
+        typed('ess‸4 d', '8', 'ess8‸4 d');
+        typed('esa4‸ d', '#', 'esa4#‸ d');
+    });
+});
+
 describe('inside a note, < and [ do not split it (rule 36)', () => {
     it('< wraps the note, from anywhere inside it, the caret after its name', () => {
         typed('c‸is4 d', '<', '<cis‸>4 d');

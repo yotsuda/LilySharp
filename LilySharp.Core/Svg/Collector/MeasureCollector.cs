@@ -302,6 +302,8 @@ public sealed partial class MeasureCollector
     public IReadOnlyList<TabFit> TabFits => _tabResolver.Fits;
     /// <summary>Written string numbers that cannot fret their pitch (LYS5003).</summary>
     public IReadOnlyList<TabStringUnplayableWarning> TabStringWarnings => _tabResolver.StringWarnings;
+    /// <summary>Chords with two notes written on one string (LYS1063).</summary>
+    public IReadOnlyList<TabChordOneStringWarning> TabChordOneStringWarnings => _tabResolver.ChordOneStringWarnings;
     /// <summary>Tied note pairs with conflicting explicit tab string numbers.
     /// Populated as a side effect of Collect.</summary>
     public IReadOnlyList<TabTieStringWarning> TabTieWarnings => _tabResolver.TieWarnings;

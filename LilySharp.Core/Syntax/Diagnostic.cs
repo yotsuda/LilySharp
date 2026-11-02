@@ -852,6 +852,11 @@ public static class DiagnosticCodes
     /// writes <c>ces</c>.</summary>
     public const string CowbellWithNoDrumPart = "LYS1062";
 
+    /// <summary>Two notes of a chord written on one string, each playable there: `s1 f0` and
+    /// `s1 f15` were drawn on one line of the tab, which no hand can play and which passed in
+    /// silence (found 2026-11-02; `&lt;e' g'&gt;4\1` numbers every member alike).</summary>
+    public const string TabChordNotesOnOneString = "LYS1063";
+
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
     /// root (a root that is no A–G is the parser's error); the message names the spelling's fix, as the

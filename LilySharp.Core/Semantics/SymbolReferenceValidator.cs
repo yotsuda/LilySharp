@@ -91,16 +91,19 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
         ValidateUnnamedPart(root);
 
         // `cb` is a drum name wherever it stands, so C flat written the English way passes
-        // as a cowbell. In a book with drums it may be one, and nothing is said.
-        bool? hasDrums = null;
+        // as a cowbell. In a part with drums it may be one, and nothing is said. Music in no
+        // part's block (a phrase, a book's bare music) could be played by any: there it is the
+        // whole book that is asked.
         foreach (var node in root.DescendantNodesOfKinds(DrumNoteKinds))
         {
             if (node is not DrumNoteSyntax { DrumName: "cb" } cowbell)
                 continue;
-            hasDrums ??= AnyDrumWord.IsMatch(tree.Text);
-            if (hasDrums == false)
+            SyntaxNode? block = cowbell.Parent;
+            while (block is not null and not PartBlockSyntax)
+                block = block.Parent;
+            if (!CouldHoldDrums(tree, root, block))
                 _diagnostics.Warning(cowbell.NameToken.Span, DiagnosticCodes.CowbellWithNoDrumPart,
-                    "'cb' is a cowbell, and this book has no drum part — did you mean the pitch 'ces'?");
+                    "'cb' is a cowbell, and this part has no drums — did you mean the pitch 'ces'?");
         }
 
         // The score's TRACK references name their own tracks, not the staff parts above: a
@@ -122,6 +125,20 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                 $"Undefined {keyword} part: '{token.Text}'. Define it with a named block "
                 + $"('{keyword} {token.Text} {{ … }}').");
         }
+    }
+
+    /// <summary>Whether the music in <paramref name="block"/>, a part's block in a section or
+    /// null, could be drums: by the block's own words or its part's header, or for music in no
+    /// block by the words of the book.</summary>
+    private static bool CouldHoldDrums(SyntaxTree tree, SyntaxNode root, SyntaxNode? block)
+    {
+        if (block == null)
+            return AnyDrumWord.IsMatch(tree.Text);
+        if (AnyDrumWord.IsMatch(block.ToFullString()))
+            return true;
+        string? name = PartReferenceFinder.DeclaredName(block)?.Text;
+        return name != null && root.DescendantNodes<PartDeclarationSyntax>().Any(
+            d => PartReferenceFinder.DeclaredName(d)?.Text == name && AnyDrumWord.IsMatch(d.ToFullString()));
     }
 
     /// <summary>
