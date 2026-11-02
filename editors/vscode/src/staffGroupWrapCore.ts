@@ -19,9 +19,16 @@
 // grandStaff picked, and they stand inside `grandStaff { … }`. Nothing here touches an
 // editor (staffGroupWrap.ts is the other half), so it runs and is tested under plain node.
 
-/** The groups that take `staff` items (GRAMMAR, "Several staves as ONE GROUP"). The
- * bare-name groups, condensedStaff and combinedStaff, would have to rewrite the rows. */
-export const STAFF_GROUPS = ['grandStaff', 'staffGroup', 'choirStaff'] as const;
+/** The groups the list offers, in its order: the first three take `staff` items (GRAMMAR,
+ * "Several staves as ONE GROUP"), the last two bare part names, so each row loses its
+ * `staff`. */
+export const STAFF_GROUPS = ['grandStaff', 'staffGroup', 'choirStaff', 'condensedStaff', 'combinedStaff'] as const;
+
+/** A row a bare-name group can take: a part's name and nothing more. `staff bass a` would
+ * lose its clef, and the group's own clef is the first part's for all of them. */
+const IS_BARE_ROW = /^staff\s+[A-Za-z_]\w*\s*(?:\/\/.*)?$/;
+const IS_BARE_RUN = /^(?:staff\s+[A-Za-z_]\w*\s*)+$/;
+const takesBareNames = (group: string) => group === 'condensedStaff' || group === 'combinedStaff';
 
 /** What replaces the selection: `head`, then the caret, then `tail`. Literal text, its
  * indentation already written. */
@@ -52,7 +59,6 @@ const leadingSpace = (s: string) => /^[ \t]*/.exec(s)![0];
  * where the file does not show it: the rows' own depth under the `score {` line says it. */
 export function staffGroupWrap(text: string, lo: number, hi: number, group: string, tab: string): StaffGroupWrap | null {
     const selected = text.slice(lo, hi);
-    if ((selected.match(/\bstaff\b/g) ?? []).length < 2) { return null; }
     const block = headOfBlock(text, lo);
     if (!block || !/^[ \t]*score\b/.test(block.head)) { return null; }
 
@@ -61,10 +67,21 @@ export function staffGroupWrap(text: string, lo: number, hi: number, group: stri
     const lines = content.replace(/\r/g, '').split('\n');
     if (lines.some(l => { const t = l.trim(); return t !== '' && !IS_COMMENT.test(t) && !IS_ROW.test(t); })) { return null; }
 
+    // Two staves at least, and for combinedStaff exactly two: the compiler refuses the rest.
+    const staves = lines.length === 1 ? (content.match(/\bstaff\b/g) ?? []).length
+        : lines.filter(l => /^\s*staff\b/.test(l)).length;
+    if (staves < 2 || (group === 'combinedStaff' && staves !== 2)) { return null; }
+
+    const bare = takesBareNames(group);
+
     // On one line: `score { staff a  staff b }` is written on one line, and stays so.
     if (lines.length === 1) {
-        return { head: `${group} { ${content.trim()} }`, tail };
+        if (bare && !IS_BARE_RUN.test(content.trim())) { return null; }
+        const body = bare ? content.trim().replace(/\bstaff\s+/g, '') : content.trim();
+        return { head: `${group} { ${body} }`, tail };
     }
+
+    if (bare && lines.some(l => { const t = l.trim(); return t !== '' && !IS_COMMENT.test(t) && !IS_BARE_ROW.test(t); })) { return null; }
 
     // Over several: whole lines, or the group's own lines would land among other text.
     const lineStart = text.lastIndexOf('\n', lo - 1) + 1;
@@ -78,7 +95,8 @@ export function staffGroupWrap(text: string, lo: number, hi: number, group: stri
     const unit = indent.length > outer.length && indent.startsWith(outer) ? indent.slice(outer.length) : tab;
     const rows = [before + lines[0], ...lines.slice(1)].map(l => {
         if (l.trim() === '') { return ''; }
-        return indent + unit + (l.startsWith(indent) ? l.slice(indent.length) : l.trimStart());
+        const row = indent + unit + (l.startsWith(indent) ? l.slice(indent.length) : l.trimStart());
+        return bare ? row.replace(/^(\s*)staff\s+/, '$1') : row;
     });
     return {
         head: `${indent.slice(before.length)}${group} {\n${rows.join('\n')}\n${indent}}`,

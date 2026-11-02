@@ -33,7 +33,8 @@ function selectionIn(document: vscode.TextDocument) {
         ? editor : undefined;
 }
 
-/** Whether the list is these groups alone: the language server's items are for a caret and
+/** Whether the list is these groups alone (grandStaff takes every row any of them does, so
+ * it answers for all): the language server's items are for a caret and
  * know nothing of the selection, and its `melody` after `staff melody|`, matching the word
  * there, would stand above grandStaff. Its answer is not asked for. */
 export function staffGroupsOffered(document: vscode.TextDocument): boolean {

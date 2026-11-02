@@ -4,7 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **Selected staves go into a group**: select `staff` rows in a `score`, press Ctrl+Space and pick `grandStaff`, `staffGroup` or `choirStaff`.
+- **Selected staves go into a group**: select `staff` rows in a `score`, press Ctrl+Space and pick `grandStaff`, `staffGroup`, `choirStaff`, `condensedStaff` or `combinedStaff`.
 - **`#` writes the sharp**: typed on a note it goes into the name, `c4` to `cis4`, and against a flat it cancels one. `c#`, `bb4` and `ab4` now say which pitch was meant, and Ctrl+. writes it.
 - **`cb` warns in a book with no drums**: it is a cowbell, and C flat written that way used to pass in silence. Ctrl+. writes `ces`.
 - **Typing in a chord**: on a note inside the brackets a digit, a dot, `(` and `[` are the whole chord's: `<c e g|>` + `4` is `<c e g|>4`. They used to write `<c e g4>`, which does not compile. A digit after a space is still a scale degree.

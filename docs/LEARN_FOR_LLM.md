@@ -73,7 +73,7 @@ of the chord, a digit, `.`, `(` and `[` are still the whole chord's: on `<c e g>
 
 **With notes selected:** `(` makes a slur from the first to the last, `[` a beam, and `<` one chord of them, if they
 have one length: `c4 d e` becomes `c4( d e)` or `<c d e>4`. Other keys replace the selection, as in any editor.
-In a `score`, select two or more `staff` rows, press Ctrl+Space and pick `grandStaff`: the rows move inside it.
+In a `score`, select two or more `staff` rows, press Ctrl+Space and pick `grandStaff` or another group: the rows move inside it.
 
 **Try:** put the caret on a note and press Ctrl+Shift+Up. Then, with the caret still on it, type `@` and pick `mf`.
 

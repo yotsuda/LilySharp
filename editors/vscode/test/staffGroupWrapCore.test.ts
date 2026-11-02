@@ -58,9 +58,47 @@ test('on one line it stays on one line', () => {
 });
 
 test('every group that takes staff rows, in a named score too', () => {
-    for (const group of STAFF_GROUPS) {
+    for (const group of ['grandStaff', 'staffGroup', 'choirStaff']) {
         assert.equal(wrapped('score winds {\n  «staff a\n  staff b»\n}', group), `score winds {\n  ${group} {\n    staff a\n    staff b\n  }\n}`);
     }
+});
+
+test('the groups of bare names: each row loses its staff, its comment and its depth stay', () => {
+    for (const group of ['condensedStaff', 'combinedStaff']) {
+        assert.equal(wrapped('  score {\n    «staff melody\n    staff melody»\n  }\n', group),
+            `  score {\n    ${group} {\n      melody\n      melody\n    }\n  }\n`);
+        assert.equal(wrapped('  score {\n«    staff a\n    staff b\n»  }\n', group),
+            `  score {\n    ${group} {\n      a\n      b\n    }\n  }\n`);
+        assert.equal(wrapped('score { «staff a  staff b» }', group), `score { ${group} { a  b } }`);
+    }
+    assert.equal(wrapped('score {\n  «staff a // top\n  // low\n\n  staff  b»\n}', 'condensedStaff'),
+        'score {\n  condensedStaff {\n    a // top\n    // low\n\n    b\n  }\n}');
+});
+
+test('combinedStaff is for exactly two; condensedStaff for two or more', () => {
+    const three = 'score {\n  «staff a\n  staff b\n  staff c»\n}';
+    assert.equal(wrapped(three, 'combinedStaff'), null);
+    assert.equal(wrapped(three, 'condensedStaff'), 'score {\n  condensedStaff {\n    a\n    b\n    c\n  }\n}');
+    assert.equal(wrapped('score { «staff a staff b staff c» }', 'combinedStaff'), null);
+    assert.equal(wrapped('score { «staff a staff b staff c» }', 'condensedStaff'), 'score { condensedStaff { a b c } }');
+    // A comment naming a staff is not a third one.
+    assert.equal(wrapped('score {\n  «staff a\n  // staff x\n  staff b»\n}', 'combinedStaff'), 'score {\n  combinedStaff {\n    a\n    // staff x\n    b\n  }\n}');
+});
+
+test('a row with more than a name stays out of the bare groups, and in the others', () => {
+    for (const body of ['staff bass a\n  staff b', 'staff a\n  lyrics w\n  staff b']) {
+        const marked = `score {\n  «${body}»\n}`;
+        assert.equal(wrapped(marked, 'condensedStaff'), null, body);
+        assert.equal(wrapped(marked, 'combinedStaff'), null, body);
+        assert.notEqual(wrapped(marked, 'grandStaff'), null, body);
+    }
+    assert.equal(wrapped('score { «staff bass a staff b» }', 'condensedStaff'), null);
+    assert.notEqual(wrapped('score { «staff bass a staff b» }', 'grandStaff'), null);
+});
+
+test('the list\'s order, and a comment is no second staff', () => {
+    assert.deepEqual([...STAFF_GROUPS], ['grandStaff', 'staffGroup', 'choirStaff', 'condensedStaff', 'combinedStaff']);
+    assert.equal(wrapped('score {\n  «staff a\n  // staff x»\n}'), null);
 });
 
 test('not offered for anything else', () => {
