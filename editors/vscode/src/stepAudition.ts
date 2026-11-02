@@ -225,7 +225,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         }
     };
 
-    const askSteps = (doc: vscode.TextDocument, offset: number, steps: number, mode: NoteDragMode) =>
+    const askSteps = (doc: vscode.TextDocument, offset: number, steps: number, mode: NoteDragMode, holdOthers = false) =>
         deps.getClient()!.sendRequest<StepResponse>('lilysharp/step', {
             TextDocument: { uri: doc.uri.toString() },
             Selections: [{ Start: offset, End: offset }],
@@ -233,6 +233,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             ...(mode === 'position' ? { StaffPositions: Math.abs(steps) } : { Count: Math.abs(steps) }),
             IncludeStretch: false,
             Semitone: mode === 'position' || mode === 'mark',
+            HoldOthers: holdOthers,
         });
     /** The word of the mark at `offset`, its `@` just before: its name and any placement. */
     const markWordAt = (text: string, offset: number) => /^!?[\w-]+(?:\.(?:up|down))?/.exec(text.slice(offset))?.[0] ?? '';
@@ -265,7 +266,10 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         write: async (doc, position, steps, mode) => {
             if (!deps.getClient() || !deps.isReady() || steps === 0) { return false; }
             const version = doc.version;
-            const response = await askSteps(doc, jumpOffsetFor(doc.getText(), position), steps, mode);
+            // A dragged note moves alone (owner's decision 2026-11-03), where the keys' notes after
+            // it follow: what the hand saw move is what moves.
+            const moved = mode === 'position' || mode === 'octave';
+            const response = await askSteps(doc, jumpOffsetFor(doc.getText(), position), steps, mode, moved);
             if (response.Message) { vscode.window.setStatusBarMessage(`Lily#: ${response.Message}`, 4000); }
             if (response.Fallback || response.ConvertOctaves || response.Edits.length === 0
                 || doc.version !== version || response.Version !== version) { return false; }

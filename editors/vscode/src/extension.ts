@@ -7253,11 +7253,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         // What a press takes hold of. A mark's text answers for its whole em box, 12 pixels tall
         // over a head for a staccato, and is drawn after the heads: where a head is under the
-        // pointer it is the head that is meant (a mark can be taken by the rest of its box).
-        function dragTargetOf(pressed, stackAtPointer) {
-            if (isNoteHead(pressed)) return pressed;
-            if (!isSteppingMark(pressed)) return null;
-            return stackAtPointer().find(isNoteHead) || pressed;
+        // pointer it is the head that is meant (a mark can be taken by the rest of its box). A
+        // head's click box answers beyond its edges too, and the next head of a chord lies over
+        // it: of the heads there, the one whose middle is nearest (a press on a chord's lowest
+        // note took the one above it).
+        function dragTargetOf(pressed, stackAtPointer, x, y) {
+            if (!isNoteHead(pressed) && !isSteppingMark(pressed)) return null;
+            const heads = stackAtPointer().filter(isNoteHead);
+            if (heads.length === 0) return pressed;
+            const off = (el) => {
+                const r = el.getBoundingClientRect();
+                return Math.hypot(r.left + r.width / 2 - x, r.top + r.height / 2 - y);
+            };
+            return heads.reduce((a, b) => (off(b) < off(a) ? b : a));
         }
         // The drawn glyph nearest what was pressed, of those with its data-pos: a section played
         // twice prints a note twice, and the box pressed is not the glyph.
@@ -7395,7 +7403,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             noteDragged = false;
             notePress = null;
             if (mouseEditLocked || e.pointerType !== 'mouse' || e.button !== 0 || e.shiftKey || e.altKey) return;
-            const target = dragTargetOf(e.target, () => document.elementsFromPoint(e.clientX, e.clientY));
+            const target = dragTargetOf(e.target, () => document.elementsFromPoint(e.clientX, e.clientY), e.clientX, e.clientY);
             // A note is no place to change while the score plays: a press is a seek then.
             if (!target || !document.getElementById('stopBtn').disabled) return;
             e.stopPropagation();   // the sheet's drag-to-scroll

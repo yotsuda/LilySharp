@@ -202,6 +202,51 @@ public static partial class NoteStepper
         return (edits, message);
     }
 
+    /// <summary>
+    /// <paramref name="after"/>, a step of the one pitch at <paramref name="at"/> in
+    /// <paramref name="before"/>, with every other pitch sounding where it did: a note dragged in
+    /// the preview moves alone (owner's decision 2026-11-03: the keys' "the notes after it follow"
+    /// surprises a hand on the note; a chord's other members and the notes after the chord stay).
+    /// In relative octaves a note hangs on the one before it, a chord's members and the note after
+    /// it on the chord's first member. One mark put right can put right what hangs on it, so the
+    /// first pitch off is corrected and the text read again.
+    /// </summary>
+    public static string HoldOtherPitches(string before, string after, int at, Func<string, SyntaxTree>? expand = null)
+    {
+        var was = WrittenMidi(before, null, expand);
+        if (was.Count == 0)
+            return after;
+        var old = PitchesInOrder(SyntaxTree.Parse(before));
+        int moved = old.FindLastIndex(p => p.SourceStart <= at);
+        string text = after;
+        // Each correction ends a chain: the members hanging on the moved one, and the next chord.
+        for (int round = 0; round < MaxOctaveRounds; round++)
+        {
+            var now = PitchesInOrder(SyntaxTree.Parse(text));
+            if (now.Count != old.Count)
+                return text;
+            var midi = WrittenMidi(text, null, expand);
+            bool corrected = false;
+            for (int i = 0; i < now.Count && !corrected; i++)
+            {
+                if (i == moved || !was.TryGetValue(old[i].SourceStart, out int w) || !midi.TryGetValue(now[i].SourceStart, out int n))
+                    continue;
+                int off = n - w;
+                if (off == 0 || off % 12 != 0)
+                    continue;
+                int nameEnd = NameEnd(now[i]);
+                text = text[..nameEnd] + Marks(now[i].OctaveOffset - off / 12) + text[MarksEnd(text, nameEnd)..];
+                corrected = true;
+            }
+            if (!corrected)
+                break;
+        }
+        return text;
+    }
+
+    private static List<PitchSyntax> PitchesInOrder(SyntaxTree tree)
+        => [.. tree.GetNodes<PitchSyntax>().Where(p => p.BaseName != '\0').OrderBy(p => p.SourceStart)];
+
     /// <summary>The member an inversion moves: the lowest sounding (<paramref name="dir"/> &gt; 0)
     /// or the highest, the first written of equals; null when a member's pitch is unknown.</summary>
     private static PitchSyntax? Inversion(List<PitchSyntax> members, Dictionary<int, int> pitches, int dir)

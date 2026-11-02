@@ -580,18 +580,33 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         // Over a head a mark's box gives way to the head, and nothing else is taken hold of.
         const scope = { noteHeads: new Set([39]), noteMarks: new Set([42]) };
-        const head = el({ 'data-pos': '39' }), mark = el({ 'data-pos': '42' }), page = el({});
+        const at = (attrs: Record<string, string>, top: number) => ({ ...el(attrs), getBoundingClientRect: () => ({ left: 0, width: 4, top, height: 4 }) });
+        const head = at({ 'data-pos': '39' }, 10), mark = el({ 'data-pos': '42' }), page = el({});
         const isHeadFn = pageFunction('isNoteHead', scope);
         const isMarkFn = pageFunction('isSteppingMark', scope);
-        const target = pageFunction('dragTargetOf', { isNoteHead: isHeadFn, isSteppingMark: isMarkFn }) as (p: unknown, s: () => unknown[]) => unknown;
-        assert.equal(target(head, () => { throw new Error('a head asks nothing'); }), head);
-        assert.equal(target(mark, () => [mark, head, page]), head);
-        assert.equal(target(mark, () => [mark, page]), mark);
-        assert.equal(target(page, () => { throw new Error('nothing else asks either'); }), null);
+        const target = pageFunction('dragTargetOf', { isNoteHead: isHeadFn, isSteppingMark: isMarkFn }) as (p: unknown, s: () => unknown[], x: number, y: number) => unknown;
+        assert.equal(target(head, () => [head, page], 2, 12), head);
+        assert.equal(target(mark, () => [mark, head, page], 2, 12), head);
+        assert.equal(target(mark, () => [mark, page], 2, 12), mark);
+        assert.equal(target(page, () => { throw new Error('nothing else asks either'); }, 2, 12), null);
+        // A chord: the head above lies over the one pressed, and its box reaches here.
+        const headsAt = new Set([39, 41]);
+        const above = at({ 'data-pos': '41' }, 7);
+        const inChord = pageFunction('dragTargetOf', {
+            isNoteHead: pageFunction('isNoteHead', { noteHeads: headsAt }),
+            isSteppingMark: isMarkFn,
+        }) as (p: unknown, s: () => unknown[], x: number, y: number) => unknown;
+        assert.equal(inChord(above, () => [above, head, page], 2, 12), head);
+        assert.equal(inChord(head, () => [above, head, page], 2, 9), above);
         assert.match(source, /const OCTAVE_POSITIONS = 7;/);
         assert.match(source, /const unit = press\.ctrl \? OCTAVE_POSITIONS : 1;/);
         assert.match(source, /moving: false, isMark: isSteppingMark\(target\), ctrl: e\.ctrlKey \|\| e\.metaKey,/);
         assert.match(source, /press\.isMark \? \(press\.ctrl \? 'placement' : 'mark'\) : \(press\.ctrl \? 'octave' : 'position'\)/);
+    });
+    it('asks a dragged note to move alone, when it is let go', () => {
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'stepAudition.ts'), 'utf8');
+        assert.match(source, /const moved = mode === 'position' \|\| mode === 'octave';\s+const response = await askSteps\(doc, jumpOffsetFor\(doc\.getText\(\), position\), steps, mode, moved\);/);
+        assert.match(source, /HoldOthers: holdOthers,/);
     });
     it('takes the focus when a drag starts, so that Esc and Ctrl+Z come to the preview', () => {
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');

@@ -961,6 +961,10 @@ public class StepParams
     /// <summary>Step this many times, as one edit (a mark, or a note's octave, dragged in the
     /// preview). Optional; absent means once. <see cref="StaffPositions"/> goes first.</summary>
     public int Count { get; set; } = 1;
+    /// <summary>Every other pitch keeps sounding where it did, its marks corrected: a note dragged
+    /// in the preview moves alone (<c>NoteStepper.HoldOtherPitches</c>). Optional; absent means
+    /// false — the keys', after which the notes follow as they will.</summary>
+    public bool HoldOthers { get; set; }
 }
 
 /// <summary>Asks what the preview may drag: <c>lilysharp/noteHeads</c>.</summary>

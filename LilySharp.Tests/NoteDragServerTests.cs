@@ -245,6 +245,63 @@ public class NoteDragServerTests
         }
     }
 
+    private static StepSelection At(int offset) => new() { Start = offset, End = offset };
+
+    private static string TheMusic(string text)
+    {
+        const string open = "section A { m { ";
+        int from = text.IndexOf(open, System.StringComparison.Ordinal) + open.Length;
+        return text[from..text.IndexOf(" } }", from, System.StringComparison.Ordinal)];
+    }
+
+    // By octaves (positions 0): the owner's chord, and the note after the chord too. A chord's
+    // members hang on its first (probed: <c' e' g> is C4 E5 G4), so moving another moves none.
+    [Theory]
+    [InlineData("<c' e g>4 <d e g> |", "c'", 1, 0, "<c'' e, g,>4 <d, e g> |")]
+    [InlineData("<c' e g>4 d |", "c'", -1, 0, "<c e' g'>4 d' |")]
+    [InlineData("<c' e g>4 d |", "e g", 1, 0, "<c' e' g>4 d |")]
+    [InlineData("c'4 d e f |", "c'", 1, 0, "c''4 d, e f |")]
+    [InlineData("c'4 d e f | g a b c |", "f |", 1, 0, "c'4 d e f' | g, a b c |")]
+    // By staff positions: a leap, down past the note before; and none to correct.
+    [InlineData("c'4 d e f |", "c'", 1, 5, "a'4 d, e f |")]
+    [InlineData("c'4 e g c |", "c'", -1, 2, "a4 e' g c |")]
+    [InlineData("c'4 d e f |", "c'", 1, 1, "d'4 d e f |")]
+    public void ADraggedNote_MovesAlone(string music, string word, int direction, int positions, string expected)
+        => Assert.Equal(expected, TheMusic(DraggedAt(music, word, direction, positions, hold: true)));
+
+    [Theory]
+    [InlineData("<c' e g>4 <d e g> |", "c'", 1, 0, "<c'' e g>4 <d e g> |")]
+    [InlineData("c'4 d e f |", "c'", 1, 0, "c''4 d e f |")]
+    public void TheKeys_LeaveTheNotesAfterToFollow(string music, string word, int direction, int positions, string expected)
+        => Assert.Equal(expected, TheMusic(DraggedAt(music, word, direction, positions, hold: false)));
+
+    [Fact]
+    public void AbsoluteOctaves_HaveNothingToHold()
+    {
+        string text = "octave absolute\n" + Book("<c' e' g'>4 d' |");
+        var server = Open(text, out var uri);
+        int at = text.IndexOf("c'", System.StringComparison.Ordinal);
+        var r = server.Step(new StepParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Selections = [At(at)], Direction = 1, HoldOthers = true });
+        Assert.Contains("<c'' e' g'>4 d' |", Applied(text, r));
+    }
+
+    private static string DraggedAt(string music, string word, int direction, int positions, bool hold)
+    {
+        string text = Book(music);
+        var server = Open(text, out var uri);
+        int music0 = text.IndexOf("{ m {", System.StringComparison.Ordinal);
+        var r = server.Step(new StepParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Selections = [At(text.IndexOf(word, music0, System.StringComparison.Ordinal))],
+            Direction = direction,
+            Semitone = positions > 0,
+            StaffPositions = positions,
+            HoldOthers = hold,
+        });
+        return Applied(text, r);
+    }
+
     [Fact]
     public void ADrum_IsNoPitch()
     {

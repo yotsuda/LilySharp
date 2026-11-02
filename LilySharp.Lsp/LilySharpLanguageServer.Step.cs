@@ -47,10 +47,10 @@ public sealed partial class LilySharpLanguageServer
         {
             string basePath = uri.IsFile ? uri.LocalPath : string.Empty;
             var selections = @params.Selections.Select(s => (s.Start, s.End)).ToList();
+            SyntaxTree Expand(string text) => ExpandUsings(text, SyntaxTree.Parse(text), basePath,
+                p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree;
             NoteStepper.StepResult StepOn(string on, SyntaxTree tree) => NoteStepper.Step(on, tree, selections, @params.Direction,
-                text => ExpandUsings(text, SyntaxTree.Parse(text), basePath,
-                    p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree,
-                @params.IncludeStretch, @params.Semitone, FacesForStep);
+                Expand, @params.IncludeStretch, @params.Semitone, FacesForStep);
             var result = StepOn(doc.Text, doc.Tree);
             var edits = result.Edits.Select(e => new StepTextEdit { Start = e.Start, End = e.End, NewText = e.NewText }).ToArray();
             // A drag: each step read off the text the last one left, one edit in the end. Staff
@@ -58,7 +58,8 @@ public sealed partial class LilySharpLanguageServer
             // stays; anything else by the steps.
             bool byLetter = @params.StaffPositions > 0;
             int want = System.Math.Min(byLetter ? @params.StaffPositions : @params.Count, MaxStepsAtOnce);
-            if ((byLetter || want > 1) && selections.Count == 1 && !result.Fallback && result.Edits.Any() && result.ConvertOctaves == null)
+            bool oneStepped = selections.Count == 1 && !result.Fallback && result.Edits.Any() && result.ConvertOctaves == null;
+            if ((byLetter || want > 1 || @params.HoldOthers) && oneStepped)
             {
                 int at = selections[0].Start;
                 string now = Applied(doc.Text, result.Edits);
@@ -76,6 +77,8 @@ public sealed partial class LilySharpLanguageServer
                     now = stepped;
                     result = next;
                 }
+                if (@params.HoldOthers)
+                    now = NoteStepper.HoldOtherPitches(doc.Text, now, at, Expand);
                 edits = [TheDifference(doc.Text, now)];
             }
 
