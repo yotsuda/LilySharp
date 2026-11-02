@@ -2140,11 +2140,6 @@ public static class CompositionChecks
     }
 
     /// <summary>The sections as the form plays them; with no form, as written.</summary>
-    /// <summary>The sections a form plays, in order, a `~A` as well as an `A` (owner's review
-    /// 2026-11-02: 雨音の午後's `~Intro`, its label hidden, was left out of what the form plays).</summary>
-    private static List<string> PlaysOf(FormDeclarationSyntax form)
-        => form.DescendantNodes().Select(SectionSymbols.ReferencedName).OfType<SyntaxTokenNode>().Select(n => n.Text).ToList();
-
     internal static List<string> PlayedSections(SyntaxNode root)
     {
         var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
@@ -2152,6 +2147,11 @@ public static class CompositionChecks
         var form = root.DescendantNodes<FormDeclarationSyntax>().Where(f => !f.InScore).OrderBy(f => f.Name != null).FirstOrDefault();
         return form == null ? sections : PlaysOf(form).Where(sections.Contains).ToList();
     }
+
+    /// <summary>The sections a form plays, in order, a `~A` as well as an `A` (owner's review
+    /// 2026-11-02: 雨音の午後's `~Intro`, its label hidden, was left out of what the form plays).</summary>
+    private static List<string> PlaysOf(FormDeclarationSyntax form)
+        => form.DescendantNodes().Select(SectionSymbols.ReferencedName).OfType<SyntaxTokenNode>().Select(n => n.Text).ToList();
 
     /// <summary>
     /// A part whose levels begin after its music does: the first section it plays in, as the form
