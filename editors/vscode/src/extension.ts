@@ -4020,6 +4020,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
         }
         .toolbar button.toggle[aria-pressed="true"]:hover { background: #c8ddf5; }
+        /* The practice menu open looks as the Range panel open does (owner's request 2026-11-02). */
+        .toolbar button.practice[aria-expanded="true"] {
+            background: #d6e6f8; border-color: #0078d7; color: #0b4a8b;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        .toolbar button.practice[aria-expanded="true"]:hover { background: #c8ddf5; }
         /* An icon button (Range: a double-headed arrow just left of an eighth note — owner's
            request 2026-10-25: stemless heads read as no note, and a quarter as a tempo) is as
            big as the emoji one (✨). */
@@ -4072,12 +4078,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .tip[hidden] { display: none; }
         /* The practice menu (owner's request 2026-10-25): the button opens it under itself; its
            rows are the tempo, the metronome and the parts. */
+        /* An icon button as Range is (owner's request 2026-11-02), wider only while it shows the
+           tempo it plays at. */
         .toolbar button.practice {
-            display: inline-flex; align-items: center; gap: 3px; height: 28px; padding: 0 8px;
-            line-height: 1; font-variant-numeric: tabular-nums; font-size: 12px;
+            width: auto; min-width: 42px; padding: 0 8px; gap: 3px;
+            font-variant-numeric: tabular-nums; font-size: 12px;
         }
-        .toolbar button.practice svg { display: block; width: 15px; height: 15px; }
-        .toolbar button.practice svg.caret { width: 8px; height: 8px; opacity: 0.7; }
+        .toolbar button.practice #practiceSpeed:empty { display: none; }
         .practice-panel .prow { display: flex; align-items: flex-start; gap: 10px; padding: 4px 2px; }
         .practice-panel .plbl { width: 72px; flex-shrink: 0; opacity: 0.75; font-weight: 600; padding-top: 3px; }
         .practice-panel button {
@@ -4138,7 +4145,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <span class="group">
         <button id="playBtn" type="button" title="Play">▶</button>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
-        <button id="practiceBtn" class="toggle practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Tempo, loop, metronome, parts"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.5h8L9.6 2H6.4z"/><path d="M8 11.5l3.6-6.5"/><path d="M5.2 10.5h5.6"/></svg><span id="practiceSpeed"></span><svg class="caret" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><path d="M1 2.5h6L4 6z"/></svg></button>
+        <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Tempo, loop, metronome, parts"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>
         <span class="sep"></span>

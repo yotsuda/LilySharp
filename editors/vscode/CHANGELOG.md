@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **The metronome button matches the Range button** in the preview's header: the same size, a solid icon, pressed in while its menu is open, and no ▼.
 - **Two notes of a chord on one string warn** (LYS1063): the tab drew both on one line.
 - **The typing aids read `es`, `as`, `eses` and `ases` as notes**: they were typed as pressed.
 - **A beam typed at the head of a bar**: `c8 d | e|` + `[` is `c8 d | e[| f]`. The note's length was not read from the bars before it.
