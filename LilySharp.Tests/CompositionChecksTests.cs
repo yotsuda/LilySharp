@@ -947,9 +947,9 @@ public class CompositionChecksTests
         // Sung, the verses change their words.
         Assert.DoesNotContain(CompositionChecks.Findings(Duo("A B A B A B", "lyrics words sings fl { la }\n")), f => f.Id == "form.played-three-times");
         Assert.DoesNotContain(CompositionChecks.Findings(Duo("A B A B A B", "lyrics { la }\n")), f => f.Id == "form.played-three-times");
-        // A part alone: a song's bass written down goes round as the song does.
+        // A part alone is said too: the notes cannot tell filling the time from a song written down, and the review says when it does not apply.
         string alone = Duo("A B A B A B").Replace("part vc { instrument cello }\n", "").Replace("  vc { c1 | g,1 | }\n", "").Replace(" staff vc", "");
-        Assert.DoesNotContain(CompositionChecks.Findings(alone), f => f.Id == "form.played-three-times");
+        Assert.Single(CompositionChecks.Findings(alone), f => f.Id == "form.played-three-times"); Assert.Contains("a song or a dance written down", ReviewNotes.All["form.played-three-times"].FineWhen);
     }
 
     // Owner's trial 2026-10-30: guitar and bass went from @p to @ff, the drums with no level.

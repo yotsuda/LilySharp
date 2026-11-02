@@ -634,7 +634,7 @@ public static class CompositionChecks
                 + "character asks for). A section that returns as it was is named again in the form, and that counts toward the "
                 + "length; what is added is new music, or a return that changes in a way the listener hears — not a copy of an "
                 + "earlier section under a new name with a few bars altered."));
-        if (instrumentalLines == null && byPart.Count >= 2 && !root.DescendantNodes<LyricsBlockSyntax>().Any() && PlayedRound(midi) is { } round)
+        if (instrumentalLines == null && !root.DescendantNodes<LyricsBlockSyntax>().Any() && PlayedRound(midi) is { } round)
             findings.Add(round);
         if (PlayedKeys(root) is { } inKeys && pitched.Count > 0)
         {
@@ -670,9 +670,10 @@ public static class CompositionChecks
     /// <summary>
     /// A form going round, beyond a band: a section played three times or more, and over half of the bars
     /// played being repeats (owner's decision 2026-11-02: told it was short, a carol for flute and piano
-    /// played its 24 bars four times, 72 of 100 bars copies). A rondo's refrain is under the half, and
-    /// a part alone is left out: a song's bass written down goes round as the song does (three of the
-    /// owner's bass books, `|: A B :|*4`), and a melody alone is a head played round.
+    /// played its 24 bars four times, 72 of 100 bars copies). A rondo's refrain is under the half. The
+    /// notes cannot tell a piece filling its time from a song written down that goes round as the song
+    /// does (three of the owner's bass books, `|: A B :|*4`, and the same song in more parts): the
+    /// count is said of both, and <see cref="ReviewNotes"/> says when it does not apply.
     /// </summary>
     private static CompositionFinding? PlayedRound(MidiFile midi)
     {

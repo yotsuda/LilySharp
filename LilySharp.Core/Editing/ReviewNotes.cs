@@ -152,7 +152,7 @@ public static class ReviewNotes
 
         // Form and length
         ["form.copied"] = new(N, H, "A section written twice note for note is one section named twice in the form, and a later fix then reaches both."),
-        ["form.played-three-times"] = new(S, D, "A song's verses change their words, but an instrumental's returns repeat the same music unless they vary.", "A jazz head or a dance form repeats by design."),
+        ["form.played-three-times"] = new(S, D, "A song's verses change their words, but an instrumental's returns repeat the same music unless they vary, and going round adds nothing to what a piece says.", "The music itself goes round: a song or a dance written down, a jazz head, a minimalist piece."),
         ["form.returns-unchanged"] = new(I, L, "A section that returns to end a piece usually lifts, and only louder is not yet new.", "A plain recapitulation suits the style."),
         ["form.length"] = new(I, L, "A piece needs room for its form to say something: phrases that close, and a return.", "A short piece was asked for: a sketch, a jingle, a study."),
         ["form.ends-in-another-key"] = new(M, D, "A piece usually closes in the key it began in, which is what makes the end sound like home.", "A progressive tonality or an open ending is meant."),
