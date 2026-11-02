@@ -267,6 +267,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1038セッションの経緯
+
+### 1.1 第1038セッション（2026-11-02・YT-DELL2）
+
+新しい会話。開始時 full **13786 / 0 / 2**（`-Start p1038`・HEAD `38a2a1041`・OMR の open 0）。作業場所は Lab `sessions/p1038/`。§1.0 ⒜ の先頭の作曲ガイダンスはオーナーが曲を送って進む仕事なので、次の**人間の曲のレビュー**を `docs/review-tool-design.md` §6 の順に実装した。
+- **CI の赤 `5a612b194`**: master の最後の push（run 40688152100）の Windows Debug で `TypedPitchStepTests` 2 本が赤だった。`"pitch written\n"` の置換が CRLF のチェックアウトで空振りする＝手元（LF）では緑。CRLF に写して再現してから直した。
+- **§6-1・2 `16c28ccb1`**: `CompositionChecks.Findings`（`CompositionFinding`＝id・Parts・Bars）・`Of` はその Message＝**作曲フローは不変（門: `Of` が 1215 冊・2058 件でバイト一致＝`dump-checks.ps1`）**。`ReviewNotes` は id ごとの kind／confidence／why／fine_when（68＋3 件・網が両方向に照合）。`ScoreReview.Json`＝facts・strengths・errors・warnings・findings（mistake が先）。LSP `lilysharp/reviewScore`・ツール `lilysharp_reviewScore`（`REVIEW_READING` を前に置く・書き込まない）。`Bars` は各メッセージが名指す小節と照合（コーパス＋テストの入力に一時の検証を入れて 99 本）。⚠️ `compiles`・`errors`・`warnings` は設計に無かった追加＝コンパイルできない曲を「指摘なしの曲」と報告しないため。⚠️ `here` の指示文は予算いっぱい（1998 / 2000）＝案内は `lilysharp.instructions.md` に置いた。
+- **§6-3 の前半 `3702337ae`**: `KeyChecks`＝`key.signature`・`key.outside`・`spelling.direction`・`facts.keyHeard`（Krumhansl–Schmuckler）。レビュー専用＝`Of` に入れない。コーパスの実測は design §7: `key.signature` 9 冊（うち fixture 4・`Beat It` は正しい指摘・ベース単独 4 は曲と照合していない）／`key.outside` は最初 168 冊がほぼベースライン→音域とハーモニーの除外で 7 冊／`spelling.direction` 0 冊。短調の第 6・7 音の計算を最初に間違えた（コーパスで発覚）。毒 11 本は全部赤（最初の 6 本すり抜け＝2 本は冗長なコードを削除・4 本は網を足した）。
+- **§6-3 の残り（`ChordChecks`）**: `chord.outside`・`facts.chords`＝コード行と `@chord(…)` を MIDI の `SourcePos` で演奏順に読む（`ToRomanNumeral`・`StructureOf`・`ChordAnnotation` を再利用）。役割＝副属七・副導七・ブルース・ナポリ・裏コード・同主調からの借用。役割が果たされない／役割が無いときだけ `ask` つきの指摘。実測はコード記号のある 52 冊・366 和音で指摘 4 冊（全部 fixture）＝**実曲のコード進行ではほとんど試されていない**（design §7）。⚠️ `KeyChecks` に Krumhansl–Kessler の表を書き写していた＝`KeyEstimator.ProfileFit` に寄せた（§0「まず grep」を飛ばした）。
+- **§6-4**: `lysc review`（`--json`・`--focus`・`--audience`・終了コードはコンパイルの可否だけ）・`ScoreReview.Text`・コマンド **Lily#: Review Score**（`reviewCore.ts`・Problems に Information・編集で消える）。
+- **実物の VS Code で確認（26 項目 PASS）**: Lab `sessions/p1038/vscode-e2e/`＝隔離した user data で `--extensionTestsPath`・`vscode.lm.invokeTool` と `executeCommand` を直接呼ぶ。Deploy 済み＝ユーザーは Reload Window を 2 回。⚠️ Copilot の AI の振る舞いだけ未確認（C55）。
+- **flat なコード行の再生**: `section` の外の `chords prog { C | G7 | }`（by-section の本で有効・譜面は小節 1 から描く）で、MIDI は小節線だけ歩いて全パートが行の長さだけ遅れ、コードは鳴らなかった。`PlayChordRow` の「Not handled」は音のことしか言っていなかった。時間を取らず、**section ごとに印刷する小節ぶんを渡す**形にした（`Semantics.FlatChordRows`・`PlaySectionChordRows`＝弱起・拍子・調は section 内の行と同じ経路。繰り返しは本体を読み直す・endings は印刷順・D.C. は `PieceState` で戻す・音楽の後の余りも鳴らす）。MusicXML も同じ（余りは載せない）。網＝`ChordRowMidiTests`（section に書いた行と音が同じ・XML はバイト一致）。コーパス 0 冊。⚠️ 1 section の途中の拍子変更は section 内の行と同じく見ていない。 譜面は section 内に書いた行と一致（弱起・拍子・繰り返しの 3 冊・`sessions/p1038/page-compare.ps1`）。`lysc ly` も同じ `FlatChordRows`（`AppendSilentPlay` の和音の腕）＝弱起が `s1`・3/4 の小節が 4/4 の格子・音楽の後に余分な `s1` だったのを、section 内の行とバイト一致に。 かっこが平らになるのも直した（`AppendRepeatBlock` の条件）。実物の LilyPond 2.26 で 3 冊とも警告なし。
+- 終了時 full **13876 / 0 / 2**（`-End p1038 -DiffBase 38a2a1041`・門は全部 OK・npm 649 緑）。§7 7.5: Core の差分は描画に触れない新機能・REF 0／OWN 0＝LP の出典は無い。⚠️ 罠: `,@(旧, X + "`n")` を再発（CLAUDE-OPERATIONS §1）・メンバーを挟むと `DocCommentPlacementTests` が赤。**新しい CI の赤の修正 `5a612b194` は push するまで CI で確かめられない。**
+
 ## 以下は第1037セッションの経緯
 
 ### 1.1 第1037セッション（2026-11-01〜02・YT-DELL2）

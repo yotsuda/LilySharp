@@ -265,6 +265,9 @@ its path in `Downloads`. For each piece:
   Only composition findings are.
 - **The AI sometimes reports two remaining findings in one line.** Seen once; not acted on.
 - **Proposed and not built:**
+  - Leaving a piece's frame out of the melody's rhythm readings: 2026-11-02, 雨粒の午後's four bars of coda took
+    `rhythm.same-bars` (23/50) and `phrase.positions` (38/52) under their shares. Swept over 1364 books: 2 newly
+    told. Waiting for the owner.
   - "The chorus does not lift": the melody's height and the level no higher than the verse's.
   - Breathing for a voice or a wind instrument (eight bars or more without a rest; except where
     the request asks for circular breathing).
