@@ -197,7 +197,9 @@ as the melody's rhythm).
 
 **Form and length**
 - Sections copied note for note.
-- Sections played three times in an instrumental.
+- Sections played three times in an instrumental. Beyond a band: two parts or more, no words, and over half
+  the bars played being repeats (`PlayedRound`; 2026-11-02: a carol went round its 24 bars four times). A rondo
+  stays under the half, and a part alone is left out (a song's bass written down goes round as the song does).
 - A tune in too few bars of an instrumental.
 - The length: the bars needed are computed at the piece's own tempo and meter. A one-part piece is
   let off the minutes as a head played round — unless it is sung: a song's words run out
@@ -263,11 +265,3 @@ its path in `Downloads`. For each piece:
   - "The chorus does not lift": the melody's height and the level no higher than the verse's.
   - Breathing for a voice or a wind instrument (eight bars or more without a rest; except where
     the request asks for circular breathing).
-  - Two from reviewing `Hoshiakari-no-Christmas` (2026-11-02, Lab `sessions/p1039/thrice-census.txt`), waiting for the owner:
-    - **A form played round and round, beyond a band.** Told it was short, the AI played its 28 bars four times, 72
-      of 101 bars copies. `form.played-three-times` reads a band's pieces only. Proposed: also a piece with no words where
-      a section plays three times or more and over half the bars played are repeats, which leaves a rondo
-      (`Composed`, A B A C A, 40%) alone. Over 1,364 books that adds this piece and five test fixtures. The
-      review's "The form has a return" and "It has room to say something" should then not be said of it.
-    - **A variation that is not one.** VariationOne has its own tune and its own chords. No check can say it. Proposed: a
-      guide sentence, that a variation keeps the theme's chords or its outline and changes its rhythm and figure.

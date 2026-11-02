@@ -12,6 +12,8 @@ workflow attaches that section to the GitHub Release verbatim.
 - A piano's two hands are one player for its levels: a level in either is the piano's, and a piano with none until its last section is told. A section where a part only rests no longer counts as where it begins.
 - `piano.left-reaches-melody` speaks only where the right hand has the tune, not beside a flute's or a singer's.
 - The review reads a solo part's own lower voices as harmony, a key past seven accidentals by its notes, and leaves a mode out of its key checks. A tempo is reported in the unit it is written in (`♩. = 96`).
+- A form going round is said beyond a band: with no words, a section played three times or more and over half the bars played being repeats (`form.played-three-times`). A rondo's refrain is left alone. The review no longer praises such a piece for its return or its length.
+- The composing guide says that a section plays twice at most, and what a variation keeps of its theme.
 
 ### A chord track written at the top level plays
 
