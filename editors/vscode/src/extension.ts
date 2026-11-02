@@ -78,6 +78,10 @@ let followerPanel: vscode.WebviewPanel | undefined;
 // Panels whose page is playing: the follower turns only once the music stops, to the last
 // .lys that came to the front meanwhile (pendingFollow) — a turn would cut the piece off.
 const playingPanels = new Set<vscode.WebviewPanel>();
+// The preview whose Play the MIDI output is sounding. The server plays that list on a thread of its
+// own, so a closed preview takes nothing with it: closing this one stops it (owner's request
+// 2026-11-02), and closing another leaves it playing.
+let midiPlaybackPanel: vscode.WebviewPanel | undefined;
 let pendingFollow: string | undefined;
 // Files whose preview the writer closed this session: opening them again opens none.
 const dismissedPreviews = new Set<string>();
@@ -757,6 +761,7 @@ export function activate(context: vscode.ExtensionContext) {
                 for (const panel of previewPanels.values()) {
                     panel.webview.postMessage({ type: 'setMidiOutput', name });
                 }
+                midiPlaybackPanel = undefined;
                 void midiOutRequest('lilysharp/midiOut/stop', {});
             }
             if (!e.affectsConfiguration('lilysharp.preview.theme')) {
@@ -1522,6 +1527,14 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         if (followTicker) { clearInterval(followTicker); followTicker = undefined; }
     };
     panel.onDidDispose(stopFollowTicker);
+    panel.onDidDispose(() => {
+        for (const t of midiStrumTimers) { clearTimeout(t); }
+        midiStrumTimers = [];
+        if (midiPlaybackPanel === panel) {
+            midiPlaybackPanel = undefined;
+            void midiOutRequest('lilysharp/midiOut/stop', {});
+        }
+    });
     panel.webview.onDidReceiveMessage(
         async message => {
             // The file the panel shows NOW: the follower turns, and an untitled save re-keys.
@@ -1693,6 +1706,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             // clock, which the page's highlight then follows; a play the server could not
             // start (the port is not there) is reported, and the page plays its own synth.
             if (message.type === 'midiPlay') {
+                midiPlaybackPanel = panel;
                 const r = await midiOutRequest<{ Started?: boolean; StartedAtMs?: number; EndSeconds?: number; Error?: string | null }>(
                     'lilysharp/midiOut/play', { port: message.port, notes: message.notes, offset: message.offset });
                 if (r.Error) { reportMidiOutError(message.port, r.Error); }
@@ -1704,6 +1718,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 return;
             }
             if (message.type === 'midiStop') {
+                if (midiPlaybackPanel === panel) { midiPlaybackPanel = undefined; }
                 void midiOutRequest('lilysharp/midiOut/stop', {});
                 return;
             }

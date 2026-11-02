@@ -78,4 +78,16 @@ describe('the preview routes its sounds to the MIDI output', () => {
         const stop = html.indexOf('function stopPlayback(');
         assert.match(html.slice(stop, html.indexOf('function startPlayback(', stop)), /type: 'midiStop'/);
     });
+
+    // Owner's request 2026-11-02: the server plays on a thread of its own, so a closed preview's
+    // Play went on sounding. Its own only: another preview may have taken the output since.
+    it('stops the output when the preview that started it closes, and only then', () => {
+        assert.match(source, /if \(message\.type === 'midiPlay'\) \{\s*midiPlaybackPanel = panel;\s*const r = await midiOutRequest/);
+        assert.match(source, /panel\.onDidDispose\(\(\) => \{[^}]*\}[^}]*if \(midiPlaybackPanel === panel\) \{\s*midiPlaybackPanel = undefined;\s*void midiOutRequest\('lilysharp\/midiOut\/stop', \{\}\);/);
+        assert.match(source, /if \(message\.type === 'midiStop'\) \{\s*if \(midiPlaybackPanel === panel\) \{ midiPlaybackPanel = undefined; \}/);
+    });
+
+    it('lets a strum still to come die with its preview', () => {
+        assert.match(source, /panel\.onDidDispose\(\(\) => \{\s*for \(const t of midiStrumTimers\) \{ clearTimeout\(t\); \}\s*midiStrumTimers = \[\];/);
+    });
 });
