@@ -197,9 +197,10 @@ as the melody's rhythm).
 
 **Form and length**
 - Sections copied note for note.
-- Sections played three times in an instrumental. Beyond a band: two parts or more, no words, and over half
-  the bars played being repeats (`PlayedRound`; 2026-11-02: a carol went round its 24 bars four times). A rondo
-  stays under the half, and a part alone is left out (a song's bass written down goes round as the song does).
+- Sections played three times in an instrumental. Beyond a band: no words, and over half the bars played being
+  repeats (`PlayedRound`; 2026-11-02: a carol went round its 24 bars four times). A rondo stays under the half.
+  The notes cannot tell a piece filling its time from a song written down that goes round as the song does, in
+  one part or many (owner's point 2026-11-02): the count is said of both, and `fine_when` says when it does not apply.
 - A tune in too few bars of an instrumental.
 - The length: the bars needed are computed at the piece's own tempo and meter. A one-part piece is
   let off the minutes as a head played round — unless it is sung: a song's words run out
