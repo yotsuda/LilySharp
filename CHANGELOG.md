@@ -12,6 +12,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### The chat's composing checks
 
+- A compiler warning the chat's last revision brings goes back to it once more before the piece is written. Told of a choir's parallels, it is no longer told it may hold a note to avoid them, and the guide's hymn has its bass sing the words.
 - A choir is told of its parallel fifths and octaves with no `check voiceLeading` line, and its inner voices moving with the soprano over the bass are no longer told to find a rhythm of their own. Two parts or more with no dynamic level are told. The guide says a line opening on a weak syllable opens on an upbeat.
 - A melody in one note value and in leaps is told it is no tune, and a revision that keeps it goes back once more before the piece is written.
 - A player's notes before the first level are said, where the section does write one: a piano's left hand alone in bar 1, the first level in bar 2, opened louder than the piece's climax. A form's `~A` is played: the review's form, a drop in level and the key a piece begins and ends in read it now. The one-figure finding says an intro or a coda may keep the figure.

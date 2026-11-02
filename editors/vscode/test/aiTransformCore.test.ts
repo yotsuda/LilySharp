@@ -190,6 +190,11 @@ describe('a proposal from Copilot\'s chat', () => {
         assert.match(src, /const noTune = noTuneOf\(kept\);\s*if \(noTune\.length > 0 && !noTuneRecheckedFor\.has\(uri\.toString\(\)\)\) \{\s*noTuneRecheckedFor\.add\(uri\.toString\(\)\);/);
         assert.ok(src.indexOf('const noTune = noTuneOf(kept);') < src.indexOf('const brought = kept.filter('));
         assert.deepStrictEqual(noTuneOf(['rh, the melody: only 17% of its moves are steps', 'rh, the melody: no tune — 75% of its notes are quarter notes']), ['rh, the melody: no tune — 75% of its notes are quarter notes']);
+        // A compiler warning a revision brought goes back once, before its findings (owner's decision 2026-11-02).
+        assert.match(src, /const newWarnings = added\.filter\(w => !warned\.has\(findingKey\(w\.Message\)\)\);\s*if \(newWarnings\.length > 0 && !warningRecheckedFor\.has\(uri\.toString\(\)\)\) \{\s*warningRecheckedFor\.add\(uri\.toString\(\)\);/);
+        assert.match(src, /firstWarnings\.set\(uri\.toString\(\), new Set\(added\.map\(w => findingKey\(w\.Message\)\)\)\);/);
+        assert.ok(src.indexOf('const noTune = noTuneOf(kept);') < src.indexOf('const newWarnings = added.filter('));
+        assert.ok(src.indexOf('const newWarnings = added.filter(') < src.indexOf('const brought = kept.filter('));
         // A mistake that revision made goes back once too, against everything found so far (owner's
         // decision 2026-11-02: a carol's theme came back across its beats, too late to be sent back).
         assert.match(src, /recheckedFor\.add\(uri\.toString\(\)\);\s*firstFindings\.set\(uri\.toString\(\), new Set\(\[\.\.\.first, \.\.\.kept\.map\(findingKey\)\]\)\);/);

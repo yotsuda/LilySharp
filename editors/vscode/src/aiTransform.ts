@@ -669,6 +669,9 @@ const recheckedFor = new Set<string>();
 /** The files whose last revision has been sent back for a mistake it made: once, after the two above. */
 const mistakeRecheckedFor = new Set<string>();
 const noTuneRecheckedFor = new Set<string>();
+/** The compiler's warnings each new piece has been told of, and the files sent back for a warning a revision brought. */
+const firstWarnings = new Map<string, Set<string>>();
+const warningRecheckedFor = new Set<string>();
 const findingKey = (finding: string) => finding.replace(/\d+/g, '#');
 
 /** The proposal shown and decided on; what is told to the chat. */
@@ -759,6 +762,7 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
         ranges = report.ranges;
         musicCheckedFor.add(uri.toString());
         firstFindings.set(uri.toString(), new Set(report.findings.map(findingKey)));
+        firstWarnings.set(uri.toString(), new Set(added.map(w => findingKey(w.Message))));
         if (music.length > 0 || added.length > 0) {
             deps.log(`AI proposal (chat): sent back once — ${added.length} warning(s); as music: ${music.join(' / ') || 'nothing'}`);
             // The check counts notes and does not know the music meant (owner's decision 2026-10-29: a
@@ -835,6 +839,19 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                     + `${noTune.map(m => `- ${m}`).join('\n')}\n`
                     + 'Write the tune: change the notes and the rhythm of the melody itself, and keep the chords and the form. If broken chords in one value are what the piece is, '
                     + 'send it as it is and say why in the proposal\'s note. Call lilysharp_proposeScore again with the whole text.'
+                    + rangesSaid(ranges);
+            }
+            // A compiler warning the revision brought goes back once too (owner's decision 2026-11-02: a hymn's
+            // alto and tenor were written with a @cresc leading to @p, LYS4035, the warning only told).
+            const warned = firstWarnings.get(uri.toString()) ?? new Set<string>();
+            const newWarnings = added.filter(w => !warned.has(findingKey(w.Message)));
+            if (newWarnings.length > 0 && !warningRecheckedFor.has(uri.toString())) {
+                warningRecheckedFor.add(uri.toString());
+                firstWarnings.set(uri.toString(), new Set([...warned, ...added.map(w => findingKey(w.Message))]));
+                deps.log(`AI proposal (chat): revision sent back — ${newWarnings.length} warning(s) it brought.`);
+                return 'Not shown to the musician yet. The Lily# compiler warns of this in the revision, not in the piece before it:\n'
+                    + `${formatDiags(newWarnings, text)}\n`
+                    + 'Mend each and leave the rest as it is, and call lilysharp_proposeScore again with the whole text; if one is as you meant it, say why in the proposal\'s note.'
                     + rangesSaid(ranges);
             }
             // What the revision brought in goes back once more (owner's decision 2026-10-30: a revision's

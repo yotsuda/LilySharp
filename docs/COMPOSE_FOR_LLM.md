@@ -200,7 +200,8 @@ What makes it music:
   E2–C4 — the alto ABOVE the tenor, never crossing it, the upper three within an octave of each
   other. Each inner voice is a line of its own, by step where it can, holding a common tone from
   chord to chord; the bass carries the harmony with steps and leaps of its own (to the root at a
-  cadence), not rocking between a chord's root and fifth.
+  cadence), not rocking between a chord's root and fifth, and sings the words with the others, not
+  one long note a bar under them.
 - **A chorus for a school choir** (a contest or class piece; 合唱コンクール, "for our class to sing"):
   a piano part under the voices (`instrument piano-right` / `piano-left` in a `grandStaff`, below the
   `choirStaff`) carries the introduction and the interludes, and the voices sing words whenever they

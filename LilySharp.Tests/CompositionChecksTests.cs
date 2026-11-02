@@ -976,6 +976,9 @@ public class CompositionChecksTests
         string octaves = Hymn("g'1 | e'1 | e'1 |", "d'1 | d'1 | d'1 |", "b1 | b1 | b1 |", "g,1 | e,1 | e,1 |");
         var told = Assert.Single(Told(octaves));
         Assert.Contains("sop and bas in octaves, bar 2", told.Message);
+        // Owner's review 2026-11-02: told "or hold a common tone", a hymn's bass went to one whole note a bar.
+        Assert.Contains("Move one of them the other way, note for note: a voice held long to get out of them is no line", told.Message);
+        Assert.DoesNotContain("hold a common tone", told.Message);
         Assert.Equal([2], told.Bars);
         Assert.Equal(["sop", "alt", "ten", "bas"], told.Parts);
         // Contrary motion: nothing.
@@ -1003,6 +1006,7 @@ public class CompositionChecksTests
     {
         var guide = File.ReadAllText(Path.Combine(CollectResumeTests.FindRepoRoot(), "docs", "COMPOSE_FOR_LLM.md")).Replace("\r\n", "\n");
         Assert.Contains("a line that opens on a weak syllable (*O GOD of\n    LIGHT*) opens on an upbeat, with `partial`", guide);
+        Assert.Contains("and sings the words with the others, not\n  one long note a bar under them", guide);
     }
 
     // Owner's review 2026-11-02: 雨の窓辺, told it was 75% quarter notes and 22% steps, kept both as the

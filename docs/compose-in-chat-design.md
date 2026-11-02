@@ -48,6 +48,7 @@ next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
    - **The first proposal of a new piece** is checked as music once (`musicCheckedFor`). The
      compiler's warnings, `CompositionChecks.Of`'s findings (through LSP `lilysharp/compositionCheck`),
      the header-language note and the drawn-key note go back together, unseen by the musician.
+   - **A compiler warning the revision brought** goes back once more (`firstWarnings`, `warningRecheckedFor`; compared with their digits stripped; owner's decision 2026-11-02: a `@cresc` leading to `@p` was only told).
    - **A revision that is still no tune** (`melody.no-tune`, `noTuneOf`) goes back once more, and only once: the AI may send it as it is and say why (owner's decision 2026-11-02).
    - **The revision** is checked again. Findings the first check did not make go back ONCE more
      (`firstFindings`, `recheckedFor`; compared with their digits stripped).
@@ -268,8 +269,6 @@ its path in `Downloads`. For each piece:
 - **Drop-D D2 on a guitar.** The AI writes D2 and the range warning stays. It is not decided whether
   to accept drop D (`tuning guitarDropD`) or to guide the AI away from it.
 - **The draw's form and opening are not checked.** Only its key is.
-- **A revision's new compiler warnings** (other than the bar-length codes) are not sent back again.
-  Only composition findings are.
 - **The AI sometimes reports two remaining findings in one line.** Seen once; not acted on.
 - **Pedal playing.** `@sustain` is on the page and not in the sound. See `docs/pedal-playback-design.md`.
 - **Proposed and not built:**

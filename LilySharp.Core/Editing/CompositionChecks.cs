@@ -910,8 +910,9 @@ public static class CompositionChecks
                 return $"{g.Key.Upper} and {g.Key.Lower} in {g.Key.Kind}, {(at.Count == 1 ? "bar" : "bars")} {list}";
             })) + (pairs.Count > ParallelsPairsNamed ? "; …" : "");
             yield return new("singers.parallels", $"Parallel fifths, octaves or unisons between the voices ({where}, as the form plays them): where two voices stand a perfect fifth "
-                + "or octave apart and both move to the same again, the ear hears one line and not two. Move one of them the other way, or hold a common tone — unless a style "
-                + "that moves in parallel is meant, as in folk or pop harmony: then keep it.")
+                + "or octave apart and both move to the same again, the ear hears one line and not two. Move one of them the other way, note for note: a voice held long to get out of them is no line, and has no notes for the words "
+                // Owner's review 2026-11-02: told "or hold a common tone", a hymn's bass went to one whole note a bar.
+                + "— unless a style that moves in parallel is meant, as in folk or pop harmony: then keep it.")
             { Parts = voices, Bars = [.. parallels.Select(x => BarOf(x.Tick)).Distinct().Order()] };
         }
     }
