@@ -135,10 +135,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 新しい会話。開始時 full **13888 / 0 / 2**（`-Start p1040`・HEAD `10e66014f`・OMR の open 0）。作業場所は Lab `sessions/p1040/`。
 - **講評 `Amatsubu-no-Gogo`（雨粒の午後・GPT-6 Luna）→「入れて」で 2 件 `abeeced04`**: 検査は指摘 0 件だった。⑴ 小節数＝最後の和音のフェルマータ（MIDI で 150%）が閉じの小節線を越え、1 小節多く数えていた（52 → 53）。`BarsEnd`＝`LengthOf` と `PlayedRound` で共用・秒数には残す。毒 4 本は全部赤（`sessions/p1040/poisons.ps1`）。⑵ COMPOSE_FOR_LLM のピアノの項にペダルの 1 文（ヘッダーのある Copilot 作のピアノ曲 29 冊で `@sustain` 0 冊）。⚠️ 今朝の `mistake` の差し戻しと `form.played-three-times` はこの曲でも発火せず、実物の AI の直し方は未確認のまま。
-- **判断待ち＝オーナー: リズム検査 2 つの分母から Intro／Coda を外す案**（`rhythm.same-bars`・`phrase.positions`）。この曲は 4 小節の Coda だけで両方を逃れた（23/50・38/52 → 外すと 23/44・35/44 で発火）。掃き 1364 冊で、新しく指摘が出る本は 2 冊（`Composed8` とその控え `Composed8BK`）、`same-bars-in-section` から `same-bars` へ変わる本が 4 冊（`bigband-swing`・`Kaze-no-Chikai`・`Untitled-3`・`Hoshi-furu-Yoru-no-Carol`）、`Untitled-5` は逆に `in Coda` へ変わる＝section の読みは Coda をまだ読む。`phrase.positions` で新規は 0 冊。試作は `sessions/p1040/proto.ps1`（入れていない）。
+- **オーナーの「3を入れて」で Intro／Coda を外す `FrameSection`・`OutsideTheFrame`**: `rhythm.same-bars`・`phrase.positions`・`rhythm.same-bars-in-section` が名前で枠の section を読まない。この曲は 4 小節の Coda だけで前 2 つを逃れていた（23/50・38/52）＝入れると 23/44・35/44 で発火。掃き 1364 冊（`sessions/p1040/checks-{base,head3}.txt`）: 新しく指摘が出る本は 2 冊（`Composed8` とその控え `Composed8BK`）・`in-section` から曲全体へ変わる本 4 冊（`bigband-swing`・`Kaze-no-Chikai`・`Untitled-3`・`Hoshi-furu-Yoru-no-Carol`）・枠の名前だけ消える本 3 冊（`Hikari-no-Hate`・`Senko-wo-Oikoze`・`Senkou-no-Zankyou`）・指摘が消える本 1 冊（`Untitled-5`＝16/32 のうち 6 小節が Coda）・残りは分母の数字だけ。毒 7 本は全部赤（`poisons2.ps1`）。⚠️ 判定は section の名前＝`Ending` と名付けない終わりは読まれる。
 - ⚠️ **講評の訂正**: 「伴奏（左手 p）が旋律（右手 pp）より大きい」は誤り。実測で右手と左手の velocity は全小節同じ（`sessions/p1040/velo.ps1`）＝ピアノの両手の強弱は再生で共有される。楽譜上の記号だけ見て書いた。⇒ 提案 4（`dynamics.tune-under`）は取り下げ。試作の掃きで出た 23 冊はバンドのベースが多い（書かれた強弱の差＝`Kaze-no-Sprint` 95 対 86）。別の話として `Composed9` はフルート 77 対ピアノ 90 で本物＝必要なら別の提案。
 - ⚠️ 罠: CRLF の文書に `$var`（LF）で置換すると `hits 0`＝門が止めた。
-- 終了時 full **13889 / 0 / 2**（`-End p1040 -DiffBase 10e66014f`＝`sessions/p1040/end.log`・門は全部 OK）。§7 7.5: Core の差分は描画に触れない検査の修正 10 行・REF 0／OWN 0＝LP の出典は無い。
+- 終了時 full **13890 / 0 / 2**（`-End p1040 -DiffBase 10e66014f`＝`sessions/p1040/end2.log`・門は全部 OK・npm 649 緑は提案 3 の前の 1 回＝TS は無変更）。§7 7.5: Core の差分は描画に触れない検査の修正 28 行・REF 0／OWN 0＝LP の出典は無い。
 
 ## 以下は第1039セッションの経緯
 
