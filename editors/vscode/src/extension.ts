@@ -4044,7 +4044,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         /* The Range panel (owner's request 2026-10-25): each part's lowest and highest note over
            the score, top right under the toolbar; a click on one shows it on the score. */
         .range-panel {
-            position: fixed; right: 12px; z-index: 20;
+            /* Under the toolbar's 10: a panel dragged up goes behind the header, which stays whole
+               (owner's request 2026-11-02). */
+            position: fixed; right: 12px; z-index: 5;
             background: var(--vscode-editorWidget-background, #f3f3f3);
             color: var(--vscode-editorWidget-foreground, inherit);
             border: 1px solid var(--vscode-editorWidget-border, #c8c8c8);
@@ -6474,15 +6476,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         // The Range and practice panels move where they are dragged (owner's request
         // 2026-10-29), inside the preview: what goes past its edge is cut off there, and a panel
-        // keeps PANEL_KEEP pixels in sight on all four sides alike, over the toolbar too (owner's
-        // request 2026-11-02), so it can always be taken back. Once moved it stays where it was
-        // put, also when opened again.
+        // keeps PANEL_KEEP pixels in sight on all four sides alike, the top one being the toolbar's
+        // lower edge, behind which it goes (owner's request 2026-11-02), so it can always be taken
+        // back. Once moved it stays where it was put, also when opened again.
         const PANEL_KEEP = 48;
         function clampPanel(panel) {
             if (panel.hidden || !panel.dataset.moved) return;
             const r = panel.getBoundingClientRect();
+            const under = document.querySelector('.toolbar').getBoundingClientRect().bottom;
             const left = Math.min(Math.max(r.left, PANEL_KEEP - r.width), window.innerWidth - PANEL_KEEP);
-            const top = Math.min(Math.max(r.top, PANEL_KEEP - r.height), window.innerHeight - PANEL_KEEP);
+            const top = Math.min(Math.max(r.top, under + PANEL_KEEP - r.height), window.innerHeight - PANEL_KEEP);
             panel.style.right = 'auto';
             panel.style.left = left + 'px';
             panel.style.top = top + 'px';

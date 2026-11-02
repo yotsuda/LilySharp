@@ -503,6 +503,7 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
     const clamp = pageFunction('clampPanel', {
         PANEL_KEEP: 48,
         window: { innerWidth: 800, innerHeight: 600 },
+        document: { querySelector: () => ({ getBoundingClientRect: () => ({ bottom: 40 }) }) },
     }) as (p: Panel) => void;
     const at = (p: Panel) => [parseFloat(p.style.left), parseFloat(p.style.top)];
 
@@ -520,11 +521,16 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const down = panel(200, 900); clamp(down);
         assert.deepEqual(at(down), [200, 600 - 48]);
     });
-    it('goes up over the toolbar, keeping as much in sight as on the other sides', () => {
-        const over = panel(200, 10); clamp(over);
-        assert.deepEqual(at(over), [200, 10]);
+    it('goes up behind the toolbar, keeping as much in sight below it as on the other sides', () => {
+        const behind = panel(200, 10); clamp(behind);
+        assert.deepEqual(at(behind), [200, Math.max(10, 40 + 48 - behind.height)]);
         const up = panel(200, -3000); clamp(up);
-        assert.deepEqual(at(up), [200, 48 - up.height]);
+        assert.deepEqual(at(up), [200, 40 + 48 - up.height]);
+    });
+    it('stands behind the toolbar, which stays whole', () => {
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const z = (rule: string) => Number(new RegExp(`${rule} \\{[^}]*?z-index: (\\d+)`).exec(source)?.[1]);
+        assert.ok(z('\\.range-panel') < z('\\.toolbar'), `${z('\\.range-panel')} / ${z('\\.toolbar')}`);
     });
     it('does not touch a panel never moved, or one hidden', () => {
         const p = panel(-500, 100); p.dataset = {}; clamp(p);
