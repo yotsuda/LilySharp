@@ -95,6 +95,21 @@
     <figcaption>An octave mark typed in the middle of <code>cis4.</code> lands after the pitch.</figcaption>
   </figure>
 
+  <h3>A sharp goes into the name</h3>
+  <p>A sharp is part of a note's name, <code>cis</code>. Type <code>#</code> anywhere on a note and
+  it is written there. Against a flat it cancels one; a second one makes a double sharp.</p>
+  <table class="g">
+    <tr><th>Before</th><th>Type</th><th>After</th></tr>
+    <tr><td class="ba">c|</td><td><code>#</code></td><td class="ba">cis|</td></tr>
+    <tr><td class="ba">c4|</td><td><code>#</code></td><td class="ba">cis4|</td></tr>
+    <tr><td class="ba">ces4|</td><td><code>#</code></td><td class="ba">c4|</td></tr>
+    <tr><td class="ba">&lt;c e| g&gt;4</td><td><code>#</code></td><td class="ba">&lt;c eis| g&gt;4 — the note the caret is on</td></tr>
+  </table>
+  <p>A rest, a slash note or a whole chord takes none, and the status bar says why. In a chord
+  symbol it is typed as pressed: <code>@chord(F#)</code>. A flat has no key of its own, since
+  <code>b</code> is a note: <code>bb4</code> is marked as an error and <kbd>Ctrl+.</kbd> writes
+  <code>bes4</code>. <code>cb</code> is a cowbell, so in a book with no drums it is marked too.</p>
+
   <h3>A duration digit replaces the duration</h3>
   <p>Type a digit with the caret anywhere on a note, rest, chord or slash note and it goes to
   the duration slot, and <b>what it leaves there is always a real duration</b> — 1, 2, 4, 8,

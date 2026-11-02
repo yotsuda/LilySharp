@@ -139,6 +139,9 @@ internal sealed partial class Parser
                 string message = t.Text == "?"
                     ? "Unexpected '?' — Lily# has no LilyPond-style cautionary accidental; "
                       + "write @courtesy (cautionary) or @editorial after the note."
+                    // A sharp glued to a bare pitch letter: the pitch's name is what was meant.
+                    : t.Text == "#" && glued && previous is { Text: [>= 'a' and <= 'g'] }
+                        ? $"'{previous.Text}#' is not a valid note — did you mean the pitch '{previous.Text}is'?"
                     : $"Unexpected character '{t.Text}' — it has no meaning here and is ignored";
                 _diagnostics.Error(
                     new TextSpan(inkPos, t.Text.Length),

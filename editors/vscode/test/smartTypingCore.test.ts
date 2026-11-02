@@ -24,7 +24,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { composeFix, multiCursorPlan, stayPut } from '../src/smartTypingCore';
+import { composeFix, multiCursorPlan, planFor, stayPut } from '../src/smartTypingCore';
 import { parseMulti, pressBackspace, pressDelete, show, showMulti, typeKey, typeKeyAtCarets, typeOverSelection } from './simulate';
 
 /** Asserts that typing `key` at the caret of `before` leaves `after`. */
@@ -541,6 +541,59 @@ describe('what is a whole chord\'s, typed on a member (rule 33)', () => {
     });
     it('several carets on chords each write their own', () => {
         assert.equal(showMulti(typeKeyAtCarets('<c‸ e>4 <d‸ f>4', '8')), '<c‸ e>8 <d‸ f>8');
+    });
+});
+
+describe('a sharp typed on a note goes into its name (rule 35)', () => {
+    it('anywhere on the note, the caret going on only from the end of the name', () => {
+        typed('c‸', '#', 'cis‸');
+        typed('c‸4 d', '#', 'cis‸4 d');
+        typed('c4‸ d', '#', 'cis4‸ d');
+        typed('‸c4 d', '#', '‸cis4 d');
+        typed("c'‸4 d", '#', "cis'‸4 d");
+        typed('c4.@mf‸ d', '#', 'cis4.@mf‸ d');
+        typed('c8 ‸d', '#', 'c8 ‸dis');
+    });
+    it('a second one makes a double sharp, and there it stops and says so', () => {
+        typed('cis‸4 d', '#', 'cisis‸4 d');
+        typed('c‸is4 d', '#', 'c‸isis4 d');
+        typed('cisis‸4 d', '#', 'cisis‸4 d');
+        assert.match(planFor('#', 'cisis4 d', 5)?.hint ?? '', /double sharp/);
+    });
+    it('against a flat it cancels one', () => {
+        typed('ces‸4 d', '#', 'c‸4 d');
+        typed('ces4‸ d', '#', 'c4‸ d');
+        typed('c‸es4 d', '#', 'c‸4 d');
+        typed('ceses‸4 d', '#', 'ces‸4 d');
+    });
+    it('on a chord member it is the member\'s', () => {
+        typed('<c‸ e>4 d', '#', '<cis‸ e>4 d');
+        typed('<c e g‸>4 d', '#', '<c e gis‸>4 d');
+        typed("<c'‸ e>4 d", '#', "<cis'‸ e>4 d");
+        typed('<ces‸ e>4 d', '#', '<c‸ e>4 d');
+    });
+    it('what has no name to spell absorbs it', () => {
+        typed('<c e>4‸ d', '#', '<c e>4‸ d');
+        typed('r4‸ d', '#', 'r4‸ d');
+        typed('/4‸ d', '#', '/4‸ d');
+        assert.match(planFor('#', '<c e>4 d', 6)?.hint ?? '', /on its notes/);
+        assert.match(planFor('#', 'r4 d', 2)?.hint ?? '', /no pitch/);
+    });
+    it('off a note it is typed as pressed, where it means something', () => {
+        typed('c4 ‸ d', '#', 'c4 #‸ d');
+        typed('c4@chord(F‸) d', '#', 'c4@chord(F#‸) d');
+        typed('chord(F‸)4 d', '#', 'chord(F#‸)4 d');
+        typed('chord(c‸)4 d', '#', 'chord(c#‸)4 d');
+        typed('chords p { c‸ }', '#', 'chords p { c#‸ }');
+        typed('chords { c‸ }', '#', 'chords { c#‸ }');
+        typed('lyrics w { c‸ }', '#', 'lyrics w { c#‸ }');
+        typed('// c‸', '#', '// c#‸');
+        typed('title "c‸"', '#', 'title "c#‸"');
+        typed('paper { c‸ }', '#', 'paper { c#‸ }');
+        typed('<c 3‸ 5>4 d', '#', '<c 3#‸ 5>4 d');
+    });
+    it('several carets each write their own', () => {
+        assert.equal(showMulti(typeKeyAtCarets('c‸4 d‸4', '#')), 'cis‸4 dis‸4');
     });
 });
 

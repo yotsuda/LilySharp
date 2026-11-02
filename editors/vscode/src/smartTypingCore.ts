@@ -240,6 +240,15 @@
 //    different lengths, or notes that carry marks of their own. A chord changes what the
 //    NEXT note is relative to, its first member and no longer the last one selected, so
 //    in relative octaves that note is given the marks that keep it where it sounded.
+// 35. '#' typed on a note writes the sharp into its name (owner decision 2026-11-02): a
+//    sharp is spelled `is`, and `c#` compiles to an error. `c|` + '#' → `cis|`, `c4|` →
+//    `cis4|`, `cis|` → `cisis|`; against a flat it cancels one, as an octave mark does its
+//    opposite (rule 15): `ces|` → `c|`. On a chord's member it is the member's; the caret
+//    goes on with the name when it stood at the end of the name, and otherwise stays. A
+//    double sharp, a rest, a slash note or a whole chord takes none: the key is absorbed and
+//    the status bar says why. Off a note it is typed as pressed, which is where it means
+//    something: `chord(F#m)`, `@chord(F#)`, a `chords` row, a lyric. Like '@' it has no
+//    layout-safe key, so it comes through the change-event route (rule 27).
 //
 // Rules 14–23 and 25 move TEXT and never the CARET: the mark or digit travels to the
 // slot it belongs in and the cursor keeps the position it was pressed at (see
@@ -355,7 +364,7 @@ const MID_MUSIC_COMMAND =
 // The insertions this module reacts to — the pairs VS Code auto-closes included.
 // Checked BEFORE the document text is read, so an ordinary letter, a space or a
 // paste never pays for a full getText().
-const SMART_INSERTS = new Set(['<', '<>', '>', '(', '()', ')', "'", ',', '.', '~', '[', '[]', ']', '\\', '@']);
+const SMART_INSERTS = new Set(['<', '<>', '>', '(', '()', ')', "'", ',', '.', '~', '[', '[]', ']', '\\', '@', '#']);
 
 // The durations that carry a flag, and so can be beamed. A note that spells no
 // duration inherits the running one — `c8 d e f` beams all four and only the
@@ -367,7 +376,7 @@ export const isSmartInsert = (t: string) => SMART_INSERTS.has(t) || /^[0-9]$/.te
 /** The keys whose keystroke is decided as a TypePlan on the text WITHOUT it —
  * the ones planFor answers for. The rest (the brackets, the tie) are decided on
  * the text WITH the keystroke, by insertionPlan. */
-export const isPlannedKey = (t: string) => t.length === 1 && ("',.\\@".includes(t) || /^[0-9]$/.test(t));
+export const isPlannedKey = (t: string) => t.length === 1 && ("',.\\@#".includes(t) || /^[0-9]$/.test(t));
 
 /** One replacement in the document as it stands: `del` characters at `at` give
  * way to `ins`. Either half may be absent. */
@@ -410,6 +419,7 @@ export function planFor(ch: string, before: string, offset: number): TypePlan | 
     if (ch === '.') { return dotPlan(before, offset); }
     if (ch === '\\') { return stringNumberPlan(before, offset); }
     if (ch === '@') { return annotationPlan(before, offset); }
+    if (ch === '#') { return sharpPlan(before, offset); }
     if (/^[0-9]$/.test(ch)) { return durationPlan(before, offset, ch); }
     return null;
 }
@@ -895,7 +905,7 @@ function chordMemberAtCaret(text: string, offset: number): number | null {
  * also the answer on every space and in every header. The digit and the dot ask
  * mayBeInChord first, so only a caret really after a '<' pays for a second walk. */
 function chordMemberHit(text: string, offset: number)
-    : { core: number, chord: { start: number, end: number } } | null {
+    : { start: number, core: number, chord: { start: number, end: number } } | null {
     const [blockStart, blockEnd] = blockBounds(text, offset);
     for (const event of musicEvents(text, walkStart(text, blockStart, offset), blockEnd)) {
         if (!event.note || postEventEnd(text, event) < offset) { continue; }
@@ -923,7 +933,7 @@ function chordMemberHit(text: string, offset: number)
             const end = run.length > 0 ? run[run.length - 1].end : core;
             if (offset >= k && offset <= end) {
                 return insideAnnotationArgs(text, core, offset) ? null
-                    : { core, chord: { start: event.start, end: event.end } };
+                    : { start: k, core, chord: { start: event.start, end: event.end } };
             }
             k = Math.max(end, k + 1);
         }
@@ -1923,6 +1933,69 @@ export function annotationPlan(before: string, offset: number): TypePlan | null 
     return {
         at: slot, del: 0, ins: '@', caret: slot + 1,
         what: 'moved into the annotation slot, caret after it',
+    };
+}
+
+/** The words whose blocks are words and not notes: a '#' there is a chord symbol's or a
+ * lyric's. Asked of the innermost block only, by the one key that needs it. */
+const WORD_BLOCKS = new Set(['chords', 'lyrics']);
+
+function inWordBlock(text: string, offset: number): boolean {
+    for (let i = offset - 1, depth = 0; i >= 0; i--) {
+        const c = text[i];
+        if (c === '}') { depth++; }
+        else if (c === '{') {
+            if (depth > 0) { depth--; continue; }
+            // The block's head: `chords NAME {`, `lyrics w sings m {`, each word looked at.
+            let at = i;
+            for (let words = 0; words < 4; words++) {
+                const head = wordBefore(text, at);
+                if (!head.word) { return false; }
+                if (WORD_BLOCKS.has(head.word)) { return true; }
+                at = head.at;
+            }
+            return false;
+        }
+    }
+    return false;
+}
+
+/** What a sharp makes of a name's accidental letters. A flat gives way to it. */
+const AFTER_A_SHARP: Record<string, string> = { '': 'is', is: 'isis', es: '', eses: 'es' };
+
+/** '#' typed in music (rule 35): the sharp goes into the name of the note the caret is
+ * on, or of the chord member; a thing with no name of its own to spell absorbs it. */
+export function sharpPlan(before: string, offset: number): TypePlan | null {
+    if (inStringOrComment(before, offset) || inWordBlock(before, offset)) { return null; }
+    const found = noteAtCaret(before, offset, true);
+    let nameAt: number;
+    if (found) {
+        if (found.slots.octave === null || before[found.start] === '<') {
+            const what = before[found.start] === '<' ? 'a chord takes a sharp on its notes'
+                : found.slots.shape ? 'a chord symbol writes its own sharps' : 'a rest has no pitch to sharpen';
+            return { at: offset, del: 0, ins: '', caret: offset, what: `# -> ${what}`, hint: `Lily#: ${what}` };
+        }
+        nameAt = found.start;
+    } else {
+        const member = mayBeInChord(before, offset) ? chordMemberHit(before, offset) : null;
+        if (!member) { return null; }
+        nameAt = member.start;
+    }
+    const name = PITCH_LETTERS.exec(before.slice(nameAt, nameAt + 5));
+    if (!name) { return null; }
+    const accidental = name[0].slice(1);
+    const written = AFTER_A_SHARP[accidental];
+    if (written === undefined) {
+        const what = 'a double sharp is as far as a name goes';
+        return { at: offset, del: 0, ins: '', caret: offset, what: `# -> ${what}`, hint: `Lily#: ${what}` };
+    }
+    const at = nameAt + 1;
+    return {
+        at, del: accidental.length, ins: written,
+        // At the end of the name the name is being typed, and the caret carries on past it.
+        caret: offset === at + accidental.length ? at + written.length
+            : stayPut(offset, at, accidental.length, written.length),
+        what: `# -> ${before[nameAt]}${written}`,
     };
 }
 

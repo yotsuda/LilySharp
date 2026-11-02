@@ -35,6 +35,17 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
     private readonly HashSet<string> _sectionsWithMusic = new();
     private readonly HashSet<string> _definedParts = new();
 
+    /// <summary>An English flat with its length glued on: <c>ab4</c>, <c>bb16</c>.</summary>
+    private static readonly System.Text.RegularExpressions.Regex FlatWithALength =
+        new("^([a-g])b([0-9]+)$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>What a book says to have a drum in it: <c>clef percussion</c>, a <c>drums</c>
+    /// chart, a <c>drummap</c>, a drum <c>instrument</c>. Read only when a <c>cb</c> is there.</summary>
+    private static readonly System.Text.RegularExpressions.Regex AnyDrumWord =
+        new("percussion|drum|cowbell", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private static readonly SyntaxKind[] DrumNoteKinds = [SyntaxKind.DrumNote];
+
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
     /// <summary>
@@ -78,6 +89,19 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                     + $"('part {reference.Text} {{ … }}').");
 
         ValidateUnnamedPart(root);
+
+        // `cb` is a drum name wherever it stands, so C flat written the English way passes
+        // as a cowbell. In a book with drums it may be one, and nothing is said.
+        bool? hasDrums = null;
+        foreach (var node in root.DescendantNodesOfKinds(DrumNoteKinds))
+        {
+            if (node is not DrumNoteSyntax { DrumName: "cb" } cowbell)
+                continue;
+            hasDrums ??= AnyDrumWord.IsMatch(tree.Text);
+            if (hasDrums == false)
+                _diagnostics.Warning(cowbell.NameToken.Span, DiagnosticCodes.CowbellWithNoDrumPart,
+                    "'cb' is a cowbell, and this book has no drum part — did you mean the pitch 'ces'?");
+        }
 
         // The score's TRACK references name their own tracks, not the staff parts above: a
         // `chords NAME` row — or a `staff X with chords NAME` attachment — is declared by a
@@ -199,7 +223,10 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                     _diagnostics.Error(
                         varRef.Name.Span,
                         DiagnosticCodes.UndefinedVariable,
-                        $"Undefined variable or phrase: '{varName}'");
+                        FlatWithALength.Match(varName) is { Success: true } flat
+                            // `ab4`: one word to the lexer, so the parser's `eb` hint never sees it.
+                            ? $"'{varName}' is not a valid note — did you mean the pitch '{flat.Groups[1].Value}es{flat.Groups[2].Value}'?"
+                            : $"Undefined variable or phrase: '{varName}'");
                 }
                 break;
                 

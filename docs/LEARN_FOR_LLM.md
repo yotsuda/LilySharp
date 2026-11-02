@@ -55,6 +55,7 @@ they belong, so never tell them to move the caret first, or to type "right after
 |---|---|---|
 | a digit | as the length: on `d4`, `2` makes `d2` | stays |
 | `'` or `,` | as an octave mark, after the name | stays |
+| `#` | as a sharp, into the name: on `c4`, it makes `cis4`; on `ces4`, `c4` | stays, or goes on from the end of the name |
 | `.` | as a dot, after the length | stays |
 | `@` | after the length, and lists every mark: `@mf`, `@staccato`, `@fermata` … | follows |
 | `\` | as a string number for tab, ready for its digit | follows |
@@ -64,11 +65,11 @@ they belong, so never tell them to move the caret first, or to type "right after
 
 **One goes by where the caret is:** `<` wraps a note in a chord only from just before it.
 
-**On what:** a rest or a slash `/` has no pitch, so `'`, `,` and `\` are only typed where the caret is; the digit,
+**On what:** a rest or a slash `/` has no pitch, so `'`, `,` and `\` are only typed where the caret is, and `#` does nothing; the digit,
 `.`, `@`, `~` and `(` work as on a note. `[` works on a slash, and is only typed on a rest. From outside a chord's
 brackets the table applies to the whole chord, except `\`, which is only typed there. Inside the brackets, on a note
 of the chord, a digit, `.`, `(` and `[` are still the whole chord's: on `<c e g>`, `4` makes `<c e g>4`. There `'`,
-`,`, `\`, `@` and `~` go on that one note. A digit after a space in the brackets is a scale degree.
+`,`, `#`, `\`, `@` and `~` go on that one note; from outside the brackets `#` does nothing. A digit after a space in the brackets is a scale degree.
 
 **With notes selected:** `(` makes a slur from the first to the last, `[` a beam, and `<` one chord of them, if they
 have one length: `c4 d e` becomes `c4( d e)` or `<c d e>4`. Other keys replace the selection, as in any editor.
@@ -157,7 +158,8 @@ form { ~A }
 score { staff melody }
 ```
 
-- Sharp is `is`, flat is `es`: `fis` is F♯, `bes` is B♭, `ees` is E♭.
+- Sharp is `is`, flat is `es`: `fis` is F♯, `bes` is B♭, `ees` is E♭. Typing `#` on a note writes the `is`. A flat
+  has no key of its own: `bb` is marked, and Ctrl+. writes `bes`. `cb` is a cowbell, so it warns unless the book has drums.
 - **A note's name is its pitch; the key never changes it.** In G major, F♯ is still written `fis`, and
   `f` is F natural, drawn with its sign. The key only says what is printed.
 - `instrument flute` brings the clef, the sound and the range: name the instrument, and write no

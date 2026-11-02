@@ -781,7 +781,8 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
   agl cab mar wbh wbl tri …`). `tt` (tamtam) is not one.
 - Durations, dots, bare durations, rests, `<bd hh>4` chords, `repeat`, `@` marks work as on
   notes. A drum name is read as a drum note in ANY part, so a phrase cannot be named after
-  one (LYS1030); keep pitches out of a drum part.
+  one (LYS1030); keep pitches out of a drum part. `cb` in a book with no drum in it warns
+  (LYS1062), C flat being `ces`.
 - `drums { LINE LINE … }` — a drum chart: each LINE is a phrase name or `{ … }`, optionally
   led by `up`/`down`; the lines play together (`drums { hats back kick }`). Drawn in two
   voices: hands merged on stems up, feet (`bd bda hhp`) stems down. Lines hold drum notes,

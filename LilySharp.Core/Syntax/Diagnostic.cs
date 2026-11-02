@@ -846,6 +846,12 @@ public static class DiagnosticCodes
     /// <c>Semantics.ChordFingeringValidator</c>).</summary>
     public const string DiagramNotTheChord = "LYS1057";
 
+    /// <summary><c>cb</c> in a book with no drum in it: the cowbell, a drum name read as a drum
+    /// note in ANY part, drawn with a cross on a treble staff and passing in silence where
+    /// C flat was meant (found 2026-11-02, the sibling <c>ab4</c> being an error). Its quick fix
+    /// writes <c>ces</c>.</summary>
+    public const string CowbellWithNoDrumPart = "LYS1062";
+
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
     /// root (a root that is no A–G is the parser's error); the message names the spelling's fix, as the

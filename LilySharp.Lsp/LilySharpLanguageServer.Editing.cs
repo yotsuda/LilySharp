@@ -332,6 +332,8 @@ public sealed partial class LilySharpLanguageServer
                 actions.AddRange(fixes);
                 if (CaseSpellingAction(doc, uri, diagnostic) is { } spelling)
                     actions.Add(spelling);
+                if (PitchSpellingAction(doc, uri, diagnostic) is { } pitch)
+                    actions.Add(pitch);
                 if (ScoreNameQuotedAction(doc, uri, diagnostic) is { } bareName)
                     actions.Add(bareName);
                 if (RepeatedStaffSelectorAsAction(doc, uri, diagnostic) is { } oneAs)
@@ -370,6 +372,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(percent);
                 if (CaseSpellingAction(doc, uri, diagnostic) is { } spelling)
                     actions.Add(spelling);
+                if (PitchSpellingAction(doc, uri, diagnostic) is { } pitch)
+                    actions.Add(pitch);
                 if (RestRunFractionAction(doc, uri, diagnostic) is { } restRun)
                     actions.Add(restRun);
                 if (MissingBarLineAction(doc, uri, diagnostic) is { } barLines)
@@ -806,6 +810,31 @@ public sealed partial class LilySharpLanguageServer
             return null;
         return QuickFix($"Write '{wanted}'", doc, uri, diagnostic, EditOf(doc.Text, start, end, wanted));
     }
+
+    /// <summary>
+    /// The quick fix for a pitch written the English way: every report of one says "did you
+    /// mean the pitch 'X'" (<c>eb</c>, <c>ab4</c>, <c>c#</c>, <c>cb</c>), and this writes X. The
+    /// squiggle of <c>c#</c> covers the '#' alone, so there only the accidental is written; a
+    /// word's may carry the space after it, which stays.
+    /// </summary>
+    private static CodeAction? PitchSpellingAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        var m = PitchSpellingOfError.Match(diagnostic.Message);
+        int start = diagnostic.Span.Start, end = diagnostic.Span.End;
+        if (!m.Success || start < 0 || end > doc.Text.Length || end <= start)
+            return null;
+        string wanted = m.Groups[1].Value;
+        string written = doc.Text[start..end];
+        string word = written.TrimEnd();
+        return word == "#"
+            ? QuickFix($"Write '{wanted}'", doc, uri, diagnostic, EditOf(doc.Text, start, start + 1, wanted[1..]))
+            : word.Length > 0 && word[0] == wanted[0]
+                ? QuickFix($"Write '{wanted}'", doc, uri, diagnostic, EditOf(doc.Text, start, start + word.Length, wanted))
+                : null;
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex PitchSpellingOfError =
+        new(@"did you mean the pitch '([^']+)'", System.Text.RegularExpressions.RegexOptions.Compiled);
 
     /// <summary>The editor's command that rewrites a marked bar with the language model
     /// (editors/vscode omrAiFix.ts; docs/omr-ai-fix-design.md §2.1): its arguments are the
