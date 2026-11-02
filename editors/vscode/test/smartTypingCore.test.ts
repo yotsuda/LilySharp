@@ -648,6 +648,40 @@ describe('inside a note, < and [ do not split it (rule 36)', () => {
     });
 });
 
+describe('on a shape-chord item\'s word a digit is its length; in its parentheses keys are as typed (rule 33a)', () => {
+    it('on the word any digit and dot are the item\'s, the caret staying', () => {
+        for (const place of ['c‸hord(F#) d', 'chor‸d(F#) d', 'chord‸(F#) d']) {
+            assert.equal(show(typeKey(place, '8')).replace('‸', ''), 'chord(F#)8 d', place);
+            assert.equal(show(typeKey(place, '.')).replace('‸', ''), 'chord(F#). d', place);
+        }
+        typed('c‸hord(F#) d', '8', 'c‸hord(F#)8 d');
+        typed('c‸hord(F#)4. d', '8', 'c‸hord(F#)8. d');
+        typed('d‸iagram(G) d', '4', 'd‸iagram(G)4 d');
+        typed('c‸hord(F#)4 d', '5', 'c‸hord(F#)4 d');
+        typed('chord‸ (F#) d', '8', 'chord‸ (F#)8 d');
+    });
+    it('its two ends, as they were', () => {
+        typed('‸chord(F#) d', '8', '‸chord(F#)8 d');
+        typed('chord(F#)‸ d', '8', 'chord(F#)8‸ d');
+    });
+    it('in the parentheses every digit and dot is as typed', () => {
+        for (const digit of ['2', '4', '5', '7', '8', '1']) {
+            typed('chord(F#‸) d', digit, `chord(F#${digit}‸) d`);
+        }
+        typed('chord(‸F#) d', '8', 'chord(8‸F#) d');
+        typed('chord(F‸#) d', '8', 'chord(F8‸#) d');
+        typed('chord(F ‸) d', '8', 'chord(F 8‸) d');
+        typed('diagram(1332‸) d', '4', 'diagram(13324‸) d');
+        typed('chord(F#‸) d', '.', 'chord(F#.‸) d');
+    });
+    it('not an annotation, not another word, not a block of words', () => {
+        typed('c4@c‸hord(F#) d', '8', 'c8@c‸hord(F#) d');     // rule 28: the note's, as it was
+        typed('chordal‸ d', '8', 'chordal8‸ d');
+        typed('c‸hord d', '8', 'c8‸hord d');
+        typed('chords p { c‸hord(F#) }', '8', 'chords p { c8‸hord(F#) }');
+    });
+});
+
 describe('selected music takes the mark on its notes (rule 34)', () => {
     const over = (marked: string, key: string, expected: string) =>
         assert.equal(show(typeOverSelection(marked, key)), expected, `${marked} + ${key}`);

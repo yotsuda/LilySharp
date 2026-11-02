@@ -227,6 +227,11 @@
 //    `<c. e>` do not compile and `<c() e>` draws no slur. Not a member's: a spaced digit is
 //    a scale degree (`<c e g |>`), an annotation's arguments are its own, a '\' waiting
 //    for its digit takes it (rule 25), and the marks of rule 29 and a tie stay the member's.
+// 33a. A digit or a dot typed on the WORD of a shape-chord item is the item's, the caret
+//    staying (owner decision 2026-11-02): `c|hord(F#)` + '8' → `c|hord(F#)8`, as `c8hord` is
+//    nothing. Inside its parentheses every key is typed as pressed, whatever it spells
+//    (`F#7`, a fret): one plain rule, where sorting the digits that make a symbol from
+//    those that do not would have `F#7` and `F#8` go two ways.
 // 34. SELECTED MUSIC + '(', '[' or '<': VS Code surrounds a selection with the pair, which
 //    in music is never what is meant (owner decision 2026-11-02): `c4 d e` selected gives
 //    `(c4 d e)`, where no slur is drawn, and `<c4 d e>`, which does not compile. So the
@@ -1734,7 +1739,9 @@ export function durationPlan(before: string, offset: number, digit: string): Typ
     if (/@!?\d*$/.test(before.slice(Math.max(0, offset - 6), offset))) { return null; }
     const found = noteAtCaret(before, offset, true);
     if (!found) {
-        return mayBeInChord(before, offset) ? chordDurationPlan(before, offset, digit) : null;
+        if (mayBeInChord(before, offset)) { return chordDurationPlan(before, offset, digit); }
+        const item = shapeItemWordAt(before, offset);
+        return item ? writtenDuration(before, offset, digit, item.marksEnd, item.digitsEnd) : null;
     }
     const { marksEnd, digitsEnd } = found.slots;
 
@@ -1757,6 +1764,18 @@ export function durationPlan(before: string, offset: number, digit: string): Typ
     }
 
     return writtenDuration(before, offset, digit, marksEnd, digitsEnd);
+}
+
+/** The `chord(…)` / `diagram(…)` item whose WORD the caret is on (rule 33a), or null: over
+ * the word's letters and no further, so a key off a note pays for a few comparisons. */
+function shapeItemWordAt(text: string, offset: number): NoteSlots | null {
+    let start = offset;
+    while (start > 0 && isWordChar(text[start - 1])) { start--; }
+    if (start === offset && !isWordChar(text[offset])) { return null; }
+    const close = shapeItemClose(text, start, text.length);
+    if (close < 0 || inWordBlock(text, offset)) { return null; }
+    const slots = noteSlots(text, start, text.length);
+    return slots?.shape ? slots : null;
 }
 
 /** A digit typed on a chord's member is the whole chord's length (rule 33), or the
@@ -1856,7 +1875,8 @@ export function dotPlan(before: string, offset: number): TypePlan | null {
     // core, as on a note's: after its `@text("x")` a '.' is the `.up` placement.
     const member = !found && mayBeInChord(before, offset) ? chordMemberHit(before, offset) : null;
     const slots = found ? found.slots
-        : member && offset <= member.core ? noteSlots(before, member.chord.start, member.chord.end) : null;
+        : member ? (offset <= member.core ? noteSlots(before, member.chord.start, member.chord.end) : null)
+            : shapeItemWordAt(before, offset);
     if (!slots) { return null; }
     const { coreEnd } = slots;
     if (coreEnd === offset) { return null; } // already in the slot — type it normally
