@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **The Range and practice panels come to the front when clicked or opened**: the practice menu always stood in front.
 - **The practice menu stays open beside the score**, as the Range panel does: its × and its button close it, no longer a click outside or Esc.
 - **The Range and practice panels drag up behind the header**, which stays whole, keeping as much in sight under it as at the other edges.
 - **The metronome button matches the Range button** in the preview's header: the same size, a solid icon, pressed in while its menu is open, and no ▼.

@@ -538,6 +538,20 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const h = panel(-500, 100); h.hidden = true; clamp(h);
         assert.deepEqual(at(h), [-500, 100]);
     });
+    it('stands the panel pressed or opened last in front of the other, both under the toolbar', () => {
+        const range = { style: {} as { zIndex?: string } };
+        const practice = { style: {} as { zIndex?: string } };
+        const raise = pageFunction('raisePanel', { rangePanel: range, practicePanel: practice }) as (p: unknown) => void;
+        raise(range);
+        assert.ok(Number(range.style.zIndex) > Number(practice.style.zIndex));
+        raise(practice);
+        assert.ok(Number(practice.style.zIndex) > Number(range.style.zIndex));
+        assert.ok(Number(practice.style.zIndex) < 10, 'the toolbar is 10');
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(source, /addEventListener\('pointerdown', \(e\) => \{\s*raisePanel\(panel\);/);
+        assert.match(source, /if \(rangePanel\.hidden\) return;\s*raisePanel\(rangePanel\);/);
+        assert.match(source, /practicePanel\.hidden = false;\s*raisePanel\(practicePanel\);/);
+    });
     it('is installed on both panels, left alone by their inputs, and kept on a resize', () => {
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(source, /installPanelDrag\(rangePanel\);\s*installPanelDrag\(practicePanel\);/);

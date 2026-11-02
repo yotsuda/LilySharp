@@ -5721,6 +5721,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             rangePanel.hidden = !rangePanel.hidden;
             rangeBtn.setAttribute('aria-pressed', String(!rangePanel.hidden));
             if (rangePanel.hidden) return;
+            raisePanel(rangePanel);
             if (rangePanel.dataset.moved) clampPanel(rangePanel);
             else rangePanel.style.top = (document.querySelector('.toolbar').getBoundingClientRect().bottom + 6) + 'px';
             if (!rangeParts && !rangeError) rangeBody.textContent = 'Reading the ranges…';
@@ -6459,6 +6460,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!practicePanel.hidden) { closePractice(); return; }
             const b = practiceBtn.getBoundingClientRect();
             practicePanel.hidden = false;
+            raisePanel(practicePanel);
             if (practicePanel.dataset.moved) clampPanel(practicePanel);
             else {
                 practicePanel.style.top = (document.querySelector('.toolbar').getBoundingClientRect().bottom + 6) + 'px';
@@ -6488,11 +6490,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             panel.style.left = left + 'px';
             panel.style.top = top + 'px';
         }
+        // The one pressed or opened last stands in front of the other (owner's request
+        // 2026-11-02: the practice panel always did, being later in the page). Both stay under
+        // the toolbar's z-index.
+        function raisePanel(panel) {
+            for (const p of [rangePanel, practicePanel]) p.style.zIndex = p === panel ? '6' : '5';
+        }
         // A press anywhere but an input starts it, once it has gone 4 px: a click on a
         // button or a cell stays a click, and the click a drag ends with does nothing.
         function installPanelDrag(panel) {
             let drag = null, dragged = false;
             panel.addEventListener('pointerdown', (e) => {
+                raisePanel(panel);
                 dragged = false;
                 if (e.button !== 0 || e.target.closest('input, select, textarea')) return;
                 const r = panel.getBoundingClientRect();
