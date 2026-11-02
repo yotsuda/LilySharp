@@ -120,6 +120,7 @@ public static class ReviewNotes
         ["rhythm.same-bars"] = new(S, D, "One bar's rhythm on most bars is a pattern poured full. A phrase's rhythm follows its words and its shape.", "A strict dance rhythm or an ostinato is the design."),
         ["rhythm.same-bars-in-section"] = new(S, D, "One rhythm through a whole section gives the ear nothing to follow inside it.", "A strict dance rhythm or an ostinato is the design."),
         ["melody.leaps"] = new(S, D, "A tune moves mostly by step, with a leap now and then to reach a peak, turning back by step after it.", "The theme is a fanfare, a call on its chord's notes."),
+        ["melody.no-tune"] = new(S, D, "A part in one note value that moves up and down its chords is an accompaniment, whatever staff it is on. A listener leaves with no tune to hum.", "Broken chords in one value are the piece: a study, or a texture with no tune meant."),
         ["melody.sequence"] = new(S, D, "One bar's figure moved along the chords is a sequence. Used throughout, it stops being a phrase with somewhere to go.", "A sequence is the music's own design, as in a baroque episode."),
         ["melody.peak-early"] = new(S, D, "A song usually climbs. Its highest note, spent in the first phrase, leaves the chorus nowhere to go.", "The song is built to fall from its opening, as some ballads are."),
         ["meter.across-beats"] = new(M, D, "In a compound meter a beat is three eighths, and a note crossing the beats is heard as another meter.", "A syncopation or a hemiola is meant."),

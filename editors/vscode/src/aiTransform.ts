@@ -42,7 +42,7 @@ import {
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
     cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
-    lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
+    lastUserMessageAt, heldClashesOf, noTuneOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -668,6 +668,7 @@ const firstFindings = new Map<string, Set<string>>();
 const recheckedFor = new Set<string>();
 /** The files whose last revision has been sent back for a mistake it made: once, after the two above. */
 const mistakeRecheckedFor = new Set<string>();
+const noTuneRecheckedFor = new Set<string>();
 const findingKey = (finding: string) => finding.replace(/\d+/g, '#');
 
 /** The proposal shown and decided on; what is told to the chat. */
@@ -823,6 +824,17 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                 return 'Not shown to the musician: its parts are not parts — singers doubling each other for a fifth or more of what they sing.\n'
                     + oneLine.map(f => `- ${f}`).join('\n') + '\n'
                     + 'Give each part a line of its own — a third or a sixth apart, one holding while the other moves — and call lilysharp_proposeScore again with the whole text.'
+                    + rangesSaid(ranges);
+            }
+            // A melody that is still no tune goes back once more, and only that once: the AI may mean it.
+            const noTune = noTuneOf(kept);
+            if (noTune.length > 0 && !noTuneRecheckedFor.has(uri.toString())) {
+                noTuneRecheckedFor.add(uri.toString());
+                deps.log(`AI proposal (chat): revision sent back — still no tune: ${noTune.join(' / ')}`);
+                return 'Not shown to the musician yet. The revision still has no tune:\n'
+                    + `${noTune.map(m => `- ${m}`).join('\n')}\n`
+                    + 'Write the tune: change the notes and the rhythm of the melody itself, and keep the chords and the form. If broken chords in one value are what the piece is, '
+                    + 'send it as it is and say why in the proposal\'s note. Call lilysharp_proposeScore again with the whole text.'
                     + rangesSaid(ranges);
             }
             // What the revision brought in goes back once more (owner's decision 2026-10-30: a revision's

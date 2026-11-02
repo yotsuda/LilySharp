@@ -48,6 +48,7 @@ next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
    - **The first proposal of a new piece** is checked as music once (`musicCheckedFor`). The
      compiler's warnings, `CompositionChecks.Of`'s findings (through LSP `lilysharp/compositionCheck`),
      the header-language note and the drawn-key note go back together, unseen by the musician.
+   - **A revision that is still no tune** (`melody.no-tune`, `noTuneOf`) goes back once more, and only once: the AI may send it as it is and say why (owner's decision 2026-11-02).
    - **The revision** is checked again. Findings the first check did not make go back ONCE more
      (`firstFindings`, `recheckedFor`; compared with their digits stripped).
    - **The proposal after that** goes back once, and only, for a finding the review calls a `mistake`
@@ -165,7 +166,7 @@ as the melody's rhythm).
 A section named as a frame (intro, outro, coda, ending, tag, prelude, postlude, or their Japanese names) is left out of
   "one rhythm in most bars", of the section reading and of `PhrasePositions` (`FrameSection`, `OutsideTheFrame`; 2026-11-02: 雨粒の午後's
   four bars of coda took 23 of 46 and 36 of 48 under their shares).
-- Leaps up and down its chords (fewer than a quarter of the moves are steps).
+- Leaps up and down its chords (fewer than a quarter of the moves are steps). Both this and one note value at once: no tune (`melody.no-tune`; 2026-11-02: 雨の窓辺 kept both "for the rain"; 3 of 1364 books).
 - One bar's figure moved along the chords: half the bars or more take the up-and-down shape of the
   bar before. Measured on the owner's 60 pieces: the sequenced rock guitars scored 0.53–0.61, the
   rest 0.42 or less, and Ode to Joy 0.11.

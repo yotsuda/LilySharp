@@ -872,6 +872,15 @@ export function singersInOneLineOf(findings: string[]): string[] {
     });
 }
 
+/**
+ * The findings that a melody is no tune at all: one note value and in leaps (`melody.no-tune`). A
+ * revision that keeps it goes back once more (owner's decision 2026-11-02: 雨の窓辺 kept both points
+ * "for the rain", its note saying it had added short notes, its rhythm unchanged in every bar).
+ */
+export function noTuneOf(findings: string[]): string[] {
+    return findings.filter(f => /, the melody: no tune — /.test(f));
+}
+
 /** Held clashes this many or more: turned down, not told (heldClashesOf). */
 export const CLASHES_TURNED_DOWN = 8;
 

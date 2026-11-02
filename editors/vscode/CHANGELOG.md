@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Composing in the chat**: a melody that only breaks chords in one note value goes back to the AI once more.
 - **Composing in the chat**: notes before the first level are told. A section with its label hidden (`~A`) is read as played by the review and the checks. An intro or a coda may keep the accompaniment's figure.
 - **Composing in the chat**: the checks on a tune's rhythm leave out an intro, an outro or a coda, so a short ending no longer hides a tune poured into one rhythm.
 - **Composing in the chat**: the AI is told to write the pedal under a piano's broken chords and a quiet tune. A last chord's fermata no longer counts as one bar more in the review and the checks.

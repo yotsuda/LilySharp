@@ -26,6 +26,7 @@ import {
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
     aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
     lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN,
+    noTuneOf,
 } from '../src/aiTransformCore';
 
 // Owner's decision 2026-11-01: a solo guitar's 14 chords no hand can hold were written in.
@@ -185,6 +186,10 @@ describe('a proposal from Copilot\'s chat', () => {
         assert.match(src, /firstFindings\.set\(uri\.toString\(\), new Set\(report\.findings\.map\(findingKey\)\)\);/);
         assert.match(src, /const brought = kept\.filter\(m => !first\.has\(findingKey\(m\)\)\);\s*if \(brought\.length > 0 && !recheckedFor\.has\(uri\.toString\(\)\)\) \{\s*recheckedFor\.add\(uri\.toString\(\)\);/);
         assert.match(src, /'The proposal after this one is written, unless it makes a mistake the piece did not have, and what the check still finds in it is told to the musician\.'\s*\+ rangesSaid\(ranges\);/);
+        // A melody still no tune goes back once more, before what the revision brought in (owner's decision 2026-11-02).
+        assert.match(src, /const noTune = noTuneOf\(kept\);\s*if \(noTune\.length > 0 && !noTuneRecheckedFor\.has\(uri\.toString\(\)\)\) \{\s*noTuneRecheckedFor\.add\(uri\.toString\(\)\);/);
+        assert.ok(src.indexOf('const noTune = noTuneOf(kept);') < src.indexOf('const brought = kept.filter('));
+        assert.deepStrictEqual(noTuneOf(['rh, the melody: only 17% of its moves are steps', 'rh, the melody: no tune — 75% of its notes are quarter notes']), ['rh, the melody: no tune — 75% of its notes are quarter notes']);
         // A mistake that revision made goes back once too, against everything found so far (owner's
         // decision 2026-11-02: a carol's theme came back across its beats, too late to be sent back).
         assert.match(src, /recheckedFor\.add\(uri\.toString\(\)\);\s*firstFindings\.set\(uri\.toString\(\), new Set\(\[\.\.\.first, \.\.\.kept\.map\(findingKey\)\]\)\);/);

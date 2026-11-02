@@ -926,6 +926,30 @@ public class CompositionChecksTests
             f => f.Contains("played the same each time"));
     }
 
+    // Owner's review 2026-11-02: 雨の窓辺, told it was 75% quarter notes and 22% steps, kept both as the
+    // rain's and came back at 75% and 17%: a tune in one value up and down its chords is no tune.
+    [Fact]
+    public void AMelodyInOneValueAndInLeaps_IsNoTune()
+    {
+        static string Piano(string rh) => $"title \"Window\"\ntime 4/4\noctave absolute\n{Hands}\n"
+            + $"section A {{\n  rh {{ {rh} }}\n  lh {{ {string.Concat(Enumerable.Repeat("c1 | ", 8))} }}\n}}\nform {{ A }}\nscore {{ grandStaff {{ staff rh  staff lh }} }}\n";
+        static string Bars(string bar) => string.Concat(Enumerable.Repeat(bar + " | ", 8));
+        static List<string> NoTune(string book) => CompositionChecks.Findings(book).Where(f => f.Id == "melody.no-tune").Select(f => f.Message).ToList();
+        Assert.StartsWith("rh, the melody: no tune — 100% of its notes are quarter notes and only 0% of its moves are steps", Assert.Single(NoTune(Piano(Bars("c''4 e'' g'' e''")))));
+        // Steps in one value, or chord tones in many: one point each, not this one.
+        Assert.Empty(NoTune(Piano(Bars("c''4 d'' e'' d''"))));
+        Assert.Empty(NoTune(Piano(Bars("c''4. e''8 g''2"))));
+        // Both are still said, and what the review calls it has its note.
+        var findings = CompositionChecks.Findings(Piano(Bars("c''4 e'' g'' e''")));
+        Assert.Contains(findings, f => f.Id == "rhythm.one-value");
+        Assert.Contains(findings, f => f.Id == "melody.leaps");
+        // A bass's line is its own: a part named as one is not told.
+        string alone = "title \"Walk\"\ntime 4/4\noctave absolute\npart b { instrument bass }\n"
+            + $"section A {{\n  b {{ {Bars("c4 e g e")} }}\n  lyrics words sings b {{ {string.Concat(Enumerable.Repeat("la la la la | ", 8))} }}\n}}\nform {{ A }}\nscore {{ staff b  lyrics words }}\n";
+        Assert.Contains(CompositionChecks.Findings(alone), f => f.Id == "melody.leaps");
+        Assert.Empty(NoTune(alone));
+    }
+
     // Owner's review 2026-11-02: 雨音の午後's left hand alone in bar 1, the first level the right hand's
     // @pp in bar 2. Bar 1 played at the default, louder than the piece's @mf; the section had a level.
     [Fact]

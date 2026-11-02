@@ -253,6 +253,7 @@ public static class CompositionChecks
         bool asOne = counted >= 4 && together >= counted * 0.6;
         string? top = parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n))
             ?? parts.Select(p => p.Name.Text).FirstOrDefault(byPart.ContainsKey);
+        var oneValueShare = new Dictionary<string, (int Share, string Value)>(System.StringComparer.Ordinal);
         foreach (var (part, onsets) in byPart)
         {
             if (onsets.Count < 16 || bandBasses.Contains(part) || hands.GetValueOrDefault(part))
@@ -267,6 +268,8 @@ public static class CompositionChecks
             bool melody = melodies.Contains(part);
             if (asOne && part != top)
                 continue;
+            if (melody && common.Count() >= onsets.Count * MelodyOneValue)
+                oneValueShare[part] = (common.Count() * 100 / onsets.Count, common.Key);
             if (common.Count() >= onsets.Count * (melody ? MelodyOneValue : PartOneValue))
                 findings.Add(new("rhythm.one-value", melody
                     ? $"{part}, the melody: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — a tune lives on its "
@@ -310,6 +313,14 @@ public static class CompositionChecks
                     + "its chords, a broken chord, the accompaniment's figure: a tune moves mostly by step (a second up or down), "
                     + "a leap now and then to reach a peak, turning back by step after it — unless its theme is a fanfare, a call "
                     + "on its chord's notes: then keep it.") { Parts = [part] });
+            // Both at once: no tune at all, the accompaniment's figure in another part (owner's review
+            // 2026-11-02: 雨の窓辺, told of each, kept both "for the rain", steps down from 22% to 17%; 3 of 1364
+            // books have both). The flow sends it back once more (noTuneOf); a bass's line is its own.
+            if (moves.Count >= LeapsFewestMoves && steps < moves.Count * MelodyStepShare && oneValueShare.TryGetValue(part, out var even)
+                && !parts.Any(p => p.Name.Text == part && RoleOf(p).Bass))
+                findings.Add(new("melody.no-tune", $"{part}, the melody: no tune — {even.Share}% of its notes are {even.Value}s and only {steps * 100 / moves.Count}% of its moves are steps: "
+                    + "it is the accompaniment's figure in another part. Write a line someone could hum after one hearing: mostly steps, a long note at its peak with "
+                    + "shorter ones leading to it, a rest to breathe, and leave the chords to what accompanies it — unless broken chords in one value are what was asked for: then keep them.") { Parts = [part] });
         }
 
         // One bar's figure moved along the chords (owner's trial 2026-10-30: a rock guitar's verse was
