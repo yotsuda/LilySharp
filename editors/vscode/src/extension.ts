@@ -6474,15 +6474,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         // The Range and practice panels move where they are dragged (owner's request
         // 2026-10-29), inside the preview: what goes past its edge is cut off there, and a panel
-        // keeps its top under the toolbar and PANEL_KEEP pixels in sight each way, so it can
-        // always be taken back. Once moved it stays where it was put, also when opened again.
+        // keeps PANEL_KEEP pixels in sight on all four sides alike, over the toolbar too (owner's
+        // request 2026-11-02), so it can always be taken back. Once moved it stays where it was
+        // put, also when opened again.
         const PANEL_KEEP = 48;
         function clampPanel(panel) {
             if (panel.hidden || !panel.dataset.moved) return;
             const r = panel.getBoundingClientRect();
-            const under = document.querySelector('.toolbar').getBoundingClientRect().bottom;
             const left = Math.min(Math.max(r.left, PANEL_KEEP - r.width), window.innerWidth - PANEL_KEEP);
-            const top = Math.min(Math.max(r.top, under), window.innerHeight - PANEL_KEEP);
+            const top = Math.min(Math.max(r.top, PANEL_KEEP - r.height), window.innerHeight - PANEL_KEEP);
             panel.style.right = 'auto';
             panel.style.left = left + 'px';
             panel.style.top = top + 'px';

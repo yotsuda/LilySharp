@@ -503,7 +503,6 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
     const clamp = pageFunction('clampPanel', {
         PANEL_KEEP: 48,
         window: { innerWidth: 800, innerHeight: 600 },
-        document: { querySelector: () => ({ getBoundingClientRect: () => ({ bottom: 40 }) }) },
     }) as (p: Panel) => void;
     const at = (p: Panel) => [parseFloat(p.style.left), parseFloat(p.style.top)];
 
@@ -521,9 +520,11 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const down = panel(200, 900); clamp(down);
         assert.deepEqual(at(down), [200, 600 - 48]);
     });
-    it('keeps its top under the toolbar, where it is taken hold of', () => {
-        const up = panel(200, -300); clamp(up);
-        assert.deepEqual(at(up), [200, 40]);
+    it('goes up over the toolbar, keeping as much in sight as on the other sides', () => {
+        const over = panel(200, 10); clamp(over);
+        assert.deepEqual(at(over), [200, 10]);
+        const up = panel(200, -3000); clamp(up);
+        assert.deepEqual(at(up), [200, 48 - up.height]);
     });
     it('does not touch a panel never moved, or one hidden', () => {
         const p = panel(-500, 100); p.dataset = {}; clamp(p);
