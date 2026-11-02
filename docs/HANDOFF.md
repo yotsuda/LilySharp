@@ -89,7 +89,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **ペダルの音＝第1041 で実装（`@sustain` だけ・`docs/pedal-playback-design.md`）**: 残りは耳の確認（MANUAL-CHECKS C57）。`@sostenuto`・`@unaCorda` は描くだけのまま。
-- **作曲ガイダンス（Copilot のチャットで作曲 → Lily# が音楽として検査）＝オーナーが先に完了したい（2026-10-30）**: 流れ・検査の一覧・差し戻しの規則・**講評の手順**（オーナーが Downloads の .lys を送る → ログ `~\.copilot\session-state\*\events.jsonl` → 検査を DLL で → `lysc octave --absolute` → 日本語で講評し「入れて」で実装）・残りは **`docs/compose-in-chat-design.md`**。
+- **作曲ガイダンスの改善＝クローズ（オーナー決定 2026-11-02・第1042）**: 「ユーザーが使う機会が少ない機能にかなり投資している。どうしても入れるべき内容でなければクローズして別の課題へ」。**講評のループと検査の追加を、オーナーが言うまで再開しない・提案しない。** 入れなかったもの: W3（section の中の急な落ち込み・試作は Lab `sessions/p1042/proto-w3.ps1`）。未調査のまま: 書き込みの後の再提案で差し戻しが最初からやり直しになる動き。
+- **作曲ガイダンス（Copilot のチャットで作曲 → Lily# が音楽として検査）＝第1042 でクローズ（上の行）**: 流れ・検査の一覧・差し戻しの規則・**講評の手順**（オーナーが Downloads の .lys を送る → ログ `~\.copilot\session-state\*\events.jsonl` → 検査を DLL で → `lysc octave --absolute` → 日本語で講評し「入れて」で実装）・残りは **`docs/compose-in-chat-design.md`**。
 - **人間の曲のレビュー（オーナーの設計 2026-10-30）＝第1038 で §6 の 1〜4 を実装**: ツールとコマンドは実物の VS Code で確認済み。残りは Copilot の AI の振る舞い（MANUAL-CHECKS C55）・目視（C56）・§6-5（消音・頼まれてから）。設計との差は **`docs/review-tool-design.md` §7**（`what` と `fix.say` が 1 文のまま・`fix.edit`／`ask` なし）。
 - **section の外のコード行（`chords X { C | G7 | }`・`Semantics.FlatChordRows`）の残りの制限＝第1038**: ⑴ section の途中で拍子が変わる小節も、MIDI と MusicXML ではコード行を section 冒頭の拍子で読む（`.ly` は小節の長さだけ合わせる・section 内に書いた行と同じ動き）／⑵ 音楽より長い行の余りの小節は MusicXML に載せない（譜面・MIDI・`.ly` には出る）／⑶ form の無い本の `.ly` は今も行を先頭に一括で書く（弱起・拍子は見ない・実測していない）。コーパスにこの形の本は 0 冊＝急がない。
 - **コード図の文法の整理＝第1036 で実装済（§1.1 第1036）**: 残りは MANUAL-CHECKS §2.2 の `[ ]`（実機）だけ。旧綴りの本は普通の語のエラー＝Claude は直さない（全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
