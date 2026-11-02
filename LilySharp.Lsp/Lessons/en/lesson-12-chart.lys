@@ -5,7 +5,7 @@
 // `fonts { music "Petaluma" }` writes it all in a jazz hand — notes, titles, chords.
 //
 // STEP 1 — the ringed chord ends the tune: make it `Gm7 C7` (two chords share the bar).
-// STEP 2 — the ringed slash: type `@` right after it and pick `accent`.
+// STEP 2 — the ringed slash: with the caret on it, type `@` and pick `accent`.
 
 fonts { music "Petaluma" }
 

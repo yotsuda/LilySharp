@@ -431,6 +431,15 @@ describe('annotations (rule 27, 29)', () => {
     it('27. between events the @ stays where it was typed', () => {
         typed('c4 ‸ d', '@', 'c4 @‸ d');
     });
+    it('27. on a slash note it lands in the same place, wherever the caret is on it', () => {
+        typed('‸/4 / / /', '@', '/4@‸ / / /');
+        typed('/‸4 / / /', '@', '/4@‸ / / /');
+        typed('/4 ‸/ / /', '@', '/4 /@‸ / /');
+        typed('/4 /‸ / /', '@', '/4 /@‸ / /');
+        typed('/2~‸ /2', '@', '/2@‸~ /2');
+        typed('/4(‸ / / /)', '@', '/4@‸( / / /)');
+        typed('/4 / ‸ / /', '@', '/4 / @‸ / /');
+    });
     it('29. inside a chord the @ is the member\'s under the caret', () => {
         typed('<c‸\\3 e>', '@', '<c\\3@‸ e>');
         typed('<c\\3‸ e>', '@', '<c\\3@‸ e>');
