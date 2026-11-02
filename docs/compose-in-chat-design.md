@@ -90,7 +90,7 @@ that prompted each check is written beside it in the code.
 **Dynamics**
 - A part with no dynamics.
 - A drop of two or more levels with nothing leading to it (levels inside phrases count).
-- A part whose first level comes late.
+- A part whose first level comes late. Read two ways: the first section it plays in writes none, and, from what plays, notes sounding before a player's first level (`LevelAfterTheFirstNotes`; 2026-11-02: 雨音の午後's left hand alone in bar 1, the first level in bar 2, its opening the piece's loudest bar). A piano's two hands are one player.
 - A band's drums with no level while the others move.
 - Levels set, not shaped: no hairpin anywhere and three sections or more opening `.subito`
   (2026-11-01: the drop finding's "or write .subito" was written into every section).
@@ -267,6 +267,7 @@ its path in `Downloads`. For each piece:
 - **A revision's new compiler warnings** (other than the bar-length codes) are not sent back again.
   Only composition findings are.
 - **The AI sometimes reports two remaining findings in one line.** Seen once; not acted on.
+- **Pedal playing.** `@sustain` is on the page and not in the sound. See `docs/pedal-playback-design.md`.
 - **Proposed and not built:**
   - "The chorus does not lift": the melody's height and the level no higher than the verse's.
   - Breathing for a voice or a wind instrument (eight bars or more without a rest; except where

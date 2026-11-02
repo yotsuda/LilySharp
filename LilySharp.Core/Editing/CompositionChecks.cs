@@ -204,6 +204,8 @@ public static class CompositionChecks
                 }
             }
 
+        findings.AddRange(LevelAfterTheFirstNotes(midi, hands.Keys.ToHashSet(System.StringComparer.Ordinal), findings));
+
         // A part of one note value — not a band's bass, whose driving eighths are the idiom, nor a
         // piano's left hand, whose figure (broken chords, a root-and-fifth beat, an ostinato) keeps one
         // value by nature (owner's decision 2026-10-27: told so, the AI broke two good left hands into
@@ -1620,7 +1622,10 @@ public static class CompositionChecks
                 : $"{shared.Count()} of the {figures.Count} sections (all but {string.Join(", ", figures.Where(f => f.Figure != shared.Key).Select(f => f.Name))})";
             yield return new("part.one-figure", $"{part.Key}: the same figure in {where} — a contrasting section takes a figure of its own: another rhythm, "
                 + "the chord's notes in another order, longer notes under a quiet part, a run or a fill in the figure's last bar "
-                + "leading into the next section.") { Parts = [part.Key] };
+                + "leading into the next section."
+                // Owner's review 2026-11-02: 雨音の午後, drawn an intro on its figure and told of it, took the figure and the
+                // pedal out of its intro and coda, and the pedal was lost from the coda's harmony.
+                + (figures.Any(f => FrameSection.IsMatch(f.Name)) ? " An intro or a coda may keep the figure: the change belongs in the sections between them." : "")) { Parts = [part.Key] };
         }
     }
 
@@ -1931,7 +1936,7 @@ public static class CompositionChecks
         var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
             .GroupBy(s => s.SectionName).ToDictionary(g => g.Key, g => g.First());
         var form = root.DescendantNodes<FormDeclarationSyntax>().Where(f => !f.InScore).OrderBy(f => f.Name != null).FirstOrDefault();
-        var played = form?.DescendantNodes<SectionReferenceSyntax>().Select(r => r.SectionName).Where(sections.ContainsKey).ToList() ?? [];
+        var played = form == null ? [] : PlaysOf(form).Where(sections.ContainsKey).ToList();
         var phrases = root.DescendantNodes<PhraseDeclarationSyntax>().Where(p => p.Parent is CompilationUnitSyntax)
             .GroupBy(p => p.Name.Text).ToDictionary(g => g.Key, g => g.First());
         List<DynamicSyntax> MarksOf(string section, string part) => sections[section].DescendantNodes<PartBlockSyntax>()
@@ -2135,12 +2140,17 @@ public static class CompositionChecks
     }
 
     /// <summary>The sections as the form plays them; with no form, as written.</summary>
+    /// <summary>The sections a form plays, in order, a `~A` as well as an `A` (owner's review
+    /// 2026-11-02: 雨音の午後's `~Intro`, its label hidden, was left out of what the form plays).</summary>
+    private static List<string> PlaysOf(FormDeclarationSyntax form)
+        => form.DescendantNodes().Select(SectionSymbols.ReferencedName).OfType<SyntaxTokenNode>().Select(n => n.Text).ToList();
+
     internal static List<string> PlayedSections(SyntaxNode root)
     {
         var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
             .Select(s => s.SectionName).ToList();
         var form = root.DescendantNodes<FormDeclarationSyntax>().Where(f => !f.InScore).OrderBy(f => f.Name != null).FirstOrDefault();
-        return form?.DescendantNodes<SectionReferenceSyntax>().Select(r => r.SectionName).Where(sections.Contains).ToList() ?? sections;
+        return form == null ? sections : PlaysOf(form).Where(sections.Contains).ToList();
     }
 
     /// <summary>
@@ -2176,6 +2186,35 @@ public static class CompositionChecks
         }
         return late.GroupBy(l => l.From).Select(g => new CompositionFinding("dynamics.late", $"{string.Join(", ", g.Select(l => l.Part))}: no level until {g.Key} — the "
             + "section a part begins in says none: write one at each part's first note (`@p`, `@mf`, `@f`, …), the level the piece opens at.") { Parts = [.. g.Select(l => l.Part)] });
+    }
+
+    /// <summary>
+    /// Notes sounding before a player's first level, where the section it begins in does write one
+    /// (owner's review 2026-11-02: 雨音の午後's left hand alone in bar 1, the first level the right
+    /// hand's @pp in bar 2: its opening was the piece's loudest bar). Read from what plays, so a level in
+    /// a phrase counts, and a piano's two hands are one player. A player told by <see cref="LateLevels"/>
+    /// is not told again, and one with no level at all is told apart.
+    /// </summary>
+    private static IEnumerable<CompositionFinding> LevelAfterTheFirstNotes(MidiFile midi, HashSet<string> hands, IReadOnlyList<CompositionFinding> said)
+    {
+        var told = said.Where(f => f.Id == "dynamics.late").SelectMany(f => f.Parts).ToHashSet(System.StringComparer.Ordinal);
+        var bars = midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b).Prepend(0).ToList();
+        int BarOf(int tick) => bars.FindLastIndex(b => b <= tick) + 1;
+        var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.Velocity)))
+            .Where(n => !n.Part.EndsWith(" (chords)", System.StringComparison.Ordinal));
+        foreach (var player in notes.GroupBy(n => hands.Contains(n.Part) ? "" : n.Part))
+        {
+            if (player.Any(n => told.Contains(n.Part)) || !player.Any(n => n.Velocity != MidiExporter.DefaultVelocity))
+                continue;
+            int from = player.Where(n => n.Velocity != MidiExporter.DefaultVelocity).Min(n => n.StartTick);
+            var before = player.Where(n => n.StartTick < from).ToList();
+            if (before.Count == 0)
+                continue;
+            var parts = before.Select(n => n.Part).Distinct().ToList();
+            yield return new("dynamics.late", $"{string.Join(", ", parts)}: the notes before the first level (bar {BarOf(from)}) have none, and play between @mf and @f: "
+                + "write one at the part's first note (`@p`, `@mf`, `@f`, …), the level the piece opens at.")
+            { Parts = parts, Bars = [.. before.Select(n => BarOf(n.StartTick)).Distinct().OrderBy(b => b)] };
+        }
     }
 
     /// <summary>The parts whose music writes a dynamic level, in a section's cell or in a phrase the
@@ -2387,9 +2426,9 @@ public static class CompositionChecks
         (string, string)? KeyOf(string section)
             => sections.TryGetValue(section, out var s) ? Of(s.DescendantNodes<KeySignatureSyntax>().LastOrDefault()) ?? fileKey : fileKey;
         var form = root.DescendantNodes<FormDeclarationSyntax>().Where(f => !f.InScore).OrderBy(f => f.Name != null).FirstOrDefault();
-        var played = form?.DescendantNodes<SectionReferenceSyntax>().ToList() ?? [];
+        var played = form == null ? [] : PlaysOf(form);
         if (played.Count > 0)
-            return KeyOf(played[0].SectionName) is { } first && KeyOf(played[^1].SectionName) is { } last ? (first, last) : null;
+            return KeyOf(played[0]) is { } first && KeyOf(played[^1]) is { } last ? (first, last) : null;
         // No form: the keys as written.
         var written = keys.Select(Of).OfType<(string, string)>().ToList();
         return written.Count > 0 ? (written[0], written[^1]) : null;

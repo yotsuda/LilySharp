@@ -129,7 +129,7 @@ public sealed class MidiExporter
     private int _velocity = DefaultVelocity;
     /// <remarks>LILYPOND-REF: scm/midi.scm dynamic-default-volume 0.71 → 90 (owner's decision
     /// 2026-10-27, with LilyPond's levels in <see cref="DynamicLevel"/>; it was 80, the old mf).</remarks>
-    private const int DefaultVelocity = 90;
+    internal const int DefaultVelocity = 90;
 
     // The running velocity PER PART — the lane twin of _partPitchLanes for dynamics. A part's
     // lane opens at the velocity its last lane closed with (a `@p` in section A still sounds

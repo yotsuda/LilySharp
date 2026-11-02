@@ -926,6 +926,76 @@ public class CompositionChecksTests
             f => f.Contains("played the same each time"));
     }
 
+    // Owner's review 2026-11-02: 雨音の午後's left hand alone in bar 1, the first level the right hand's
+    // @pp in bar 2. Bar 1 played at the default, louder than the piece's @mf; the section had a level.
+    [Fact]
+    public void NotesBeforeTheFirstLevel_AreSaid()
+    {
+        static string Piano(string rh, string lh) => $"title \"First\"\ntime 4/4\noctave absolute\n{Hands}\n"
+            + $"section A {{\n  rh {{ {rh} }}\n  lh {{ {lh} }}\n}}\nform {{ A }}\nscore {{ grandStaff {{ staff rh  staff lh }} }}\n";
+        static string Flute(string fl) => $"title \"First\"\ntime 4/4\noctave absolute\npart fl {{ instrument flute }}\nsection A {{\n  fl {{ {fl} }}\n}}\nform {{ A }}\nscore {{ staff fl }}\n";
+        static List<CompositionFinding> Late(string book) => CompositionChecks.Findings(book).Where(f => f.Id == "dynamics.late").ToList();
+
+        var left = Assert.Single(Late(Piano("r1 | g'1@pp | g'1 |", "c1 | c1 | c1 |")));
+        Assert.StartsWith("lh: the notes before the first level (bar 2) have none, and play between @mf and @f", left.Message);
+        Assert.Equal(["lh"], left.Parts);
+        Assert.Equal([1], left.Bars);
+        // Within the bar: the notes before it are named, and the bars.
+        Assert.StartsWith("fl: the notes before the first level (bar 2)", Assert.Single(Late(Flute("c''1 | d''2 e''2@p | c''1 |"))).Message);
+        // Both hands sounding before it are both named.
+        Assert.Equal(["rh", "lh"], Assert.Single(Late(Piano("g'1 | g'1@p | g'1 |", "c1 | c1 | c1 |"))).Parts.OrderByDescending(p => p).ToList());
+        // Two staves of one grandStaff with no instrument are the same two hands.
+        Assert.Single(Late(Piano("g'1 | g'1@p | g'1 |", "c1 | c1 | c1 |").Replace("{ instrument piano-right }", "{ clef treble }").Replace("{ instrument piano-left }", "{ clef bass }")));
+        // A level on the first note, in either hand: nothing to say.
+        Assert.Empty(Late(Piano("r1 | g'1@pp | g'1 |", "c1@pp | c1 | c1 |")));
+        Assert.Empty(Late(Flute("c''1@p | d''1 | c''1 |")));
+        // Rests before the first level: the player begins with it.
+        Assert.Empty(Late(Piano("r1 | g'1@pp | g'1 |", "r1 | c1 | c1 |")));
+        Assert.Empty(Late(Flute("r1 | d''1@p | c''1 |")));
+        // No level at all is another finding.
+        Assert.Empty(Late(Flute("c''1 | d''1 | c''1 |")));
+        // A first section with none is told once, by its section.
+        string twoSections = "title \"First\"\ntime 4/4\noctave absolute\npart fl { instrument flute }\nsection A {\n  fl { c''1 | d''1 | }\n}\nsection B {\n  fl { c''1@p | d''1 | }\n}\nform { A B }\nscore { staff fl }\n";
+        Assert.StartsWith("fl: no level until B", Assert.Single(Late(twoSections)).Message);
+    }
+
+    // Owner's review 2026-11-02: 雨音の午後, drawn an introduction on its figure, was told of "the same
+    // figure in every section" and took the figure out of its intro and coda.
+    [Fact]
+    public void TheOneFigureFinding_LetsAnIntroOrACodaKeepIt()
+    {
+        static string Book(string first) => $"title \"Figure\"\ntime 4/4\noctave absolute\n{Hands}\n"
+            + string.Concat(new[] { first, "B", "C" }.Select(s => $"section {s} {{\n  rh {{ c''1@p | d''1 | e''1 | d''1 | }}\n  lh {{ c8 g c' g c g c' g | g,8 d g d g, d g d | c8 g c' g c g c' g | g,8 d g d g, d g d | }}\n}}\n"))
+            + $"form {{ {first} B C }}\nscore {{ grandStaff {{ staff rh  staff lh }} }}\n";
+        const string Keep = "An intro or a coda may keep the figure";
+        Assert.Contains(CompositionChecks.Of(Book("Intro")), f => f.StartsWith("lh: the same figure in every section (Intro, B, C)") && f.EndsWith(Keep + ": the change belongs in the sections between them."));
+        Assert.Contains(CompositionChecks.Of(Book("A")), f => f.StartsWith("lh: the same figure in every section (A, B, C)") && !f.Contains(Keep));
+    }
+
+    // Owner's review 2026-11-02: 雨音の午後's `form { ~Intro A B A2 Coda }`: the review's form began at A.
+    // `~A` hides a label, and three readings of what the form plays did not see it.
+    [Fact]
+    public void ASectionWithItsLabelHidden_IsStillPlayed()
+    {
+        static string Piece(string form, string aEnd = "g''2@f") => "title \"Hidden\"\ntime 4/4\noctave absolute\nkey f major\n" + Hands
+            + "\nsection A {\n  rh { a'4@p c''8 d''8 f''2 | a'2 d''4 f''4 | e''4 f''8 g''8 " + aEnd + " | }\n  lh { f,8 c a c' f, c a c' | d,8 a, f a d, a, f a | c,8 g, e g c, g, e g | }\n}\n"
+            + "section B {\n  rh { a'4@p c''2. | }\n  lh { f,1 | }\n}\n"
+            + $"form {{ {form} }}\nscore {{ grandStaff {{ staff rh  staff lh }} }}\n";
+        Assert.Contains(CompositionChecks.Of(Piece("A B")), f => f.Contains("a drop of"));
+        Assert.Contains(CompositionChecks.Of(Piece("~A ~B")), f => f.Contains("a drop of"));
+        Assert.Contains("Form: A B\n", ScoreReview.Text(Piece("~A B")).Replace("\r\n", "\n"));
+        // The keys it begins and ends in.
+        static string Keys(string form) => "title \"Hidden\"\ntime 4/4\noctave absolute\n" + Hands
+            + "\nsection A {\n  key d minor\n  rh { d'1@p | a'1 | d'1 | }\n  lh { d1 | a,1 | d1 | }\n}\n"
+            + "section B {\n  key f major\n  rh { f'1 | c''1 | f'1 | }\n  lh { f1 | c1 | f1 | }\n}\n"
+            + $"form {{ {form} }}\nscore {{ grandStaff {{ staff rh  staff lh }} }}\n";
+        Assert.Contains(CompositionChecks.Of(Keys("~A ~B")), f => f.StartsWith("The piece begins in D minor and ends in F major"));
+        // Read from the visible sections alone, `A ~B` both began and ended in D minor…
+        Assert.Contains(CompositionChecks.Of(Keys("A ~B")), f => f.StartsWith("The piece begins in D minor and ends in F major"));
+        // …and `~A B A`, the form going home, began in F major (2026-11-02: strings6, `~A B ~A Coda`).
+        Assert.DoesNotContain(CompositionChecks.Of(Keys("~A B ~A")), f => f.StartsWith("The piece begins in"));
+    }
+
     // Owner's review 2026-11-02: 雨粒の午後's four bars of coda took its `4. 8 8 8` under the shares of
     // both readings of the tune's rhythm. The sections that frame a piece are not its tune.
     [Fact]
