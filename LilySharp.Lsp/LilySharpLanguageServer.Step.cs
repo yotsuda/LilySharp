@@ -53,14 +53,16 @@ public sealed partial class LilySharpLanguageServer
                 @params.IncludeStretch, @params.Semitone, FacesForStep);
             var result = StepOn(doc.Text, doc.Tree);
             var edits = result.Edits.Select(e => new StepTextEdit { Start = e.Start, End = e.End, NewText = e.NewText }).ToArray();
-            // A drag: each step read off the text the last one left, one edit in the end, counted
-            // by the letter under the selection, where a step starts and stays.
-            if (@params.StaffPositions > 0 && selections.Count == 1 && !result.Fallback && result.Edits.Any() && result.ConvertOctaves == null)
+            // A drag: each step read off the text the last one left, one edit in the end. Staff
+            // positions are counted by the letter under the selection, where a step starts and
+            // stays; anything else by the steps.
+            bool byLetter = @params.StaffPositions > 0;
+            int want = System.Math.Min(byLetter ? @params.StaffPositions : @params.Count, MaxStepsAtOnce);
+            if ((byLetter || want > 1) && selections.Count == 1 && !result.Fallback && result.Edits.Any() && result.ConvertOctaves == null)
             {
                 int at = selections[0].Start;
                 string now = Applied(doc.Text, result.Edits);
-                int moved = now[at] != doc.Text[at] ? 1 : 0;
-                int want = System.Math.Min(@params.StaffPositions, MaxStaffPositions);
+                int moved = !byLetter || now[at] != doc.Text[at] ? 1 : 0;
                 // Twice as many tries as positions: one same-letter step at most, and a key of few
                 // steps cannot hold the walk here for ever.
                 for (int tries = 0; moved < want && tries < 2 * want; tries++)
@@ -69,13 +71,14 @@ public sealed partial class LilySharpLanguageServer
                     if (next.Fallback || !next.Edits.Any())
                         break;
                     string stepped = Applied(now, next.Edits);
-                    if (stepped[at] != now[at])
+                    if (!byLetter || stepped[at] != now[at])
                         moved++;
                     now = stepped;
                     result = next;
                 }
                 edits = [TheDifference(doc.Text, now)];
             }
+
             return new StepResponse
             {
                 Fallback = result.Fallback,
@@ -98,8 +101,8 @@ public sealed partial class LilySharpLanguageServer
         }
     }
 
-    /// <summary>More than a staff has room to be dragged across.</summary>
-    private const int MaxStaffPositions = 64;
+    /// <summary>More than a drag has room for.</summary>
+    private const int MaxStepsAtOnce = 64;
 
     private static string Applied(string text, IEnumerable<NoteStepper.Edit> edits)
     {
@@ -142,6 +145,7 @@ public sealed partial class LilySharpLanguageServer
                 .Where(p => p.BaseName != '\0' && p.QuarterOffset == 0
                     && p.Parent is NoteSyntax or ChordSyntax or ArpeggioSyntax)
                 .Select(p => p.SourceStart)],
+            Marks = [.. NoteStepper.SteppingMarks(doc.Text, doc.Tree)],
             LedgerThickness = ledger.Thickness,
             LedgerLengthFraction = ledger.LengthFraction,
         };

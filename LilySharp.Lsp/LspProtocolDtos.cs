@@ -958,6 +958,9 @@ public class StepParams
     /// off the key steps first to a tone of the same letter, which moves it none (F in G major, to
     /// F sharp). Optional; absent or 0 means the one step of the key.</summary>
     public int StaffPositions { get; set; }
+    /// <summary>Step this many times, as one edit (a mark, or a note's octave, dragged in the
+    /// preview). Optional; absent means once. <see cref="StaffPositions"/> goes first.</summary>
+    public int Count { get; set; } = 1;
 }
 
 /// <summary>Asks what the preview may drag: <c>lilysharp/noteHeads</c>.</summary>
@@ -970,6 +973,8 @@ public class NoteHeadsParams
 public class NoteHeadsResponse
 {
     public int[] Positions { get; set; } = System.Array.Empty<int>();
+    /// <summary>Where the marks stand that a drag steps: the <c>data-pos</c> each is drawn with.</summary>
+    public int[] Marks { get; set; } = System.Array.Empty<int>();
     /// <summary>A ledger line's thickness in this file, in staff spaces.</summary>
     public double LedgerThickness { get; set; }
     /// <summary>How far a ledger line reaches past a head on each side, in the head's widths.</summary>

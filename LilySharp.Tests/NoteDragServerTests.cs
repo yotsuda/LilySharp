@@ -185,6 +185,65 @@ public class NoteDragServerTests
         Assert.Equal(fraction, answer.LedgerLengthFraction, 6);
     }
 
+    private static StepResponse Stepped(LilySharpLanguageServer server, System.Uri uri, int offset, int direction, int count, bool semitone) => server.Step(new StepParams
+    {
+        TextDocument = new TextDocumentIdentifier { Uri = uri },
+        Selections = [new StepSelection { Start = offset, End = offset }],
+        Direction = direction,
+        Semitone = semitone,
+        Count = count,
+    });
+
+    [Theory]
+    [InlineData("c'4@mf d e f |", "mf", 1, 2, true, "c'4@ff d")]
+    [InlineData("c'4@mf d e f |", "mf", -1, 1, true, "c'4@mp d")]
+    [InlineData("c'4 d e f |", "c'4", 1, 2, false, "c'''4 d")]
+    [InlineData("c'4 d e f |", "c'4", -1, 1, false, "c4 d")]
+    public void ACount_IsThatManySteps_InOneEdit(string music, string at, int direction, int count, bool semitone, string landed)
+    {
+        string text = Book(music);
+        var server = Open(text, out var uri);
+        var response = Stepped(server, uri, text.IndexOf(at, text.IndexOf("m {", System.StringComparison.Ordinal), System.StringComparison.Ordinal), direction, count, semitone);
+        Assert.Single(response.Edits);
+        Assert.Contains(landed, Applied(text, response));
+    }
+
+    [Fact]
+    public void ACount_StopsAtTheEndOfTheLadder()
+    {
+        string text = Book("c'4@mf d e f |");
+        var server = Open(text, out var uri);
+        var response = Stepped(server, uri, text.IndexOf("mf", System.StringComparison.Ordinal), 1, 60, true);
+        Assert.Contains("c'4@", Applied(text, response));
+        Assert.DoesNotContain("@mf", Applied(text, response));
+    }
+
+    [Fact]
+    public void ThePlacement_IsTheOctavePair()
+    {
+        string text = Book("c'4@staccato d e f |");
+        var server = Open(text, out var uri);
+        Assert.Contains("@staccato.up", Applied(text, Stepped(server, uri, text.IndexOf("staccato", System.StringComparison.Ordinal), 1, 1, false)));
+    }
+
+    [Fact]
+    public void TheMarks_AreThoseWithANameToStep_AndStandAtTheirAt()
+    {
+        string text = Book("c'4@mf d@staccato e@fermata f@text(\"x\") |");
+        var server = Open(text, out var uri);
+        var marks = server.NoteHeads(new NoteHeadsParams { TextDocument = new TextDocumentIdentifier { Uri = uri } }).Marks;
+        string[] words = [.. marks.OrderBy(p => p).Select(p => new string(text[p..].TakeWhile(c => !" |".Contains(c)).ToArray()))];
+        Assert.Contains("@mf", words);
+        Assert.Contains("@staccato", words);
+        Assert.DoesNotContain(words, w => w.StartsWith("@text", System.StringComparison.Ordinal));
+        // A step on anything else in the list must not fall through to the note.
+        foreach (int at in marks)
+        {
+            var stepped = Applied(text, Stepped(server, uri, at + 1, 1, 1, true));
+            Assert.Contains("c'4@", stepped);
+        }
+    }
+
     [Fact]
     public void ADrum_IsNoPitch()
     {

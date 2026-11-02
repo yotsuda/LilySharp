@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Ctrl+drag a note by octaves, and drag a dynamic or an articulation**: a drag does what the Ctrl+Shift+Up / Down keys do, and with Ctrl what Ctrl+Shift+PageUp / PageDown do. A mark says what it would become beside the pointer.
 - **Drag a note in the preview to change its pitch**: it clicks from staff position to staff position, sounding at each, and the mouse need not be exact. Esc takes it back, and so does Ctrl+Z over the preview once it is written.
 - **The Range and practice panels come to the front when clicked or opened**: the practice menu always stood in front.
 - **The practice menu stays open beside the score**, as the Range panel does: its × and its button close it, no longer a click outside or Esc.

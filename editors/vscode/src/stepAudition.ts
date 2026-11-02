@@ -88,13 +88,20 @@ function includeStretch(): boolean {
     return vscode.workspace.getConfiguration('lilysharp').get<boolean>('chordShapes.includeStretch', false);
 }
 
-/** A note dragged in the preview (owner's request 2026-11-02): `steps` staff positions, up
- * when positive, from the note whose `data-pos` is `position`, each to the key's tone there. */
+/** What a drag in the preview steps (owner's requests 2026-11-02 and 03), the keys' pairs: 'position'
+ * a note's staff positions, each to the key's tone there (Ctrl+Shift+Up / Down); 'octave' its
+ * octave (Ctrl+Shift+PageUp / PageDown); 'mark' a dynamic's or an articulation's name; 'placement'
+ * that mark's .up / .down. */
+export type NoteDragMode = 'position' | 'octave' | 'mark' | 'placement';
+
+/** A drag of `steps`, up when positive, from what has `data-pos` `position`. */
 export interface NoteDragSteps {
     /** Sounds where the note would land. The last asked for wins: a drag outruns the server. */
-    hear(doc: vscode.TextDocument, position: number, steps: number): Promise<void>;
+    hear(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<void>;
+    /** The mark's word now and as it would be: nothing is written. Undefined for a stale question. */
+    markWords(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<{ from: string, to: string } | undefined>;
     /** Writes it, one edit and one undo step; false when it writes nothing. */
-    write(doc: vscode.TextDocument, position: number, steps: number): Promise<boolean>;
+    write(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<boolean>;
 }
 
 export function registerStepAudition(context: vscode.ExtensionContext, deps: StepAuditionDeps): NoteDragSteps {
@@ -218,18 +225,33 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         }
     };
 
-    const askSteps = (doc: vscode.TextDocument, offset: number, steps: number) =>
+    const askSteps = (doc: vscode.TextDocument, offset: number, steps: number, mode: NoteDragMode) =>
         deps.getClient()!.sendRequest<StepResponse>('lilysharp/step', {
             TextDocument: { uri: doc.uri.toString() },
             Selections: [{ Start: offset, End: offset }],
             Direction: steps > 0 ? 1 : -1,
-            StaffPositions: Math.abs(steps),
+            ...(mode === 'position' ? { StaffPositions: Math.abs(steps) } : { Count: Math.abs(steps) }),
             IncludeStretch: false,
-            Semitone: true,
+            Semitone: mode === 'position' || mode === 'mark',
         });
-    let lastHeard = 0;
+    /** The word of the mark at `offset`, its `@` just before: its name and any placement. */
+    const markWordAt = (text: string, offset: number) => /^!?[\w-]+(?:\.(?:up|down))?/.exec(text.slice(offset))?.[0] ?? '';
+    let lastHeard = 0, lastWords = 0;
     const noteDrag: NoteDragSteps = {
-        hear: async (doc, position, steps) => {
+        markWords: async (doc, position, steps, mode) => {
+            if (!deps.getClient() || !deps.isReady()) { return undefined; }
+            const asked = ++lastWords;
+            const text = doc.getText();
+            const offset = jumpOffsetFor(text, position);
+            const response = await askSteps(doc, offset, steps, mode);
+            if (asked !== lastWords) { return undefined; }
+            let after = text;
+            for (const e of [...response.Edits].sort((a, b) => b.Start - a.Start)) {
+                after = after.slice(0, e.Start) + e.NewText + after.slice(e.End);
+            }
+            return { from: markWordAt(text, offset), to: markWordAt(after, offset) };
+        },
+        hear: async (doc, position, steps, mode) => {
             if (!deps.getClient() || !deps.isReady() || !auditionEnabled()) { return; }
             const asked = ++lastHeard;
             const offset = jumpOffsetFor(doc.getText(), position);
@@ -237,13 +259,13 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
                 ? await deps.getClient()!.sendRequest<AuditionAtResponse>('lilysharp/auditionAt', {
                     TextDocument: { uri: doc.uri.toString() }, Offset: offset, IncludeStretch: false,
                 })
-                : await askSteps(doc, offset, steps);
+                : await askSteps(doc, offset, steps, mode);
             if (asked === lastHeard) { play(doc.uri.toString(), answer.Pitches, answer.Timbre, answer.Program); }
         },
-        write: async (doc, position, steps) => {
+        write: async (doc, position, steps, mode) => {
             if (!deps.getClient() || !deps.isReady() || steps === 0) { return false; }
             const version = doc.version;
-            const response = await askSteps(doc, jumpOffsetFor(doc.getText(), position), steps);
+            const response = await askSteps(doc, jumpOffsetFor(doc.getText(), position), steps, mode);
             if (response.Message) { vscode.window.setStatusBarMessage(`Lily#: ${response.Message}`, 4000); }
             if (response.Fallback || response.ConvertOctaves || response.Edits.length === 0
                 || doc.version !== version || response.Version !== version) { return false; }

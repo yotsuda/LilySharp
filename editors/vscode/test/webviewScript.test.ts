@@ -570,6 +570,29 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.match(source, /const box = hitBox \? \{ x, width: num\(hitBox, 'width'\) \} : head\.getBBox\(\);/);
         assert.doesNotMatch(source, /\.note-drag-ghost \{[^}]*stroke-width/);
     });
+    it('takes hold of a mark the server says steps, and goes by octaves with Ctrl', () => {
+        const el = (attrs: Record<string, string>) => ({ hasAttribute: (n: string) => n in attrs, getAttribute: (n: string) => attrs[n] ?? null });
+        const isMark = pageFunction('isSteppingMark', { noteMarks: new Set([42]) }) as (t: unknown) => boolean;
+        assert.equal(isMark(el({ 'data-pos': '42' })), true);
+        assert.equal(isMark(el({ 'data-pos': '39' })), false);
+        assert.equal(isMark(el({})), false);
+        assert.equal(isMark(null), false);
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        // Over a head a mark's box gives way to the head, and nothing else is taken hold of.
+        const scope = { noteHeads: new Set([39]), noteMarks: new Set([42]) };
+        const head = el({ 'data-pos': '39' }), mark = el({ 'data-pos': '42' }), page = el({});
+        const isHeadFn = pageFunction('isNoteHead', scope);
+        const isMarkFn = pageFunction('isSteppingMark', scope);
+        const target = pageFunction('dragTargetOf', { isNoteHead: isHeadFn, isSteppingMark: isMarkFn }) as (p: unknown, s: () => unknown[]) => unknown;
+        assert.equal(target(head, () => { throw new Error('a head asks nothing'); }), head);
+        assert.equal(target(mark, () => [mark, head, page]), head);
+        assert.equal(target(mark, () => [mark, page]), mark);
+        assert.equal(target(page, () => { throw new Error('nothing else asks either'); }), null);
+        assert.match(source, /const OCTAVE_POSITIONS = 7;/);
+        assert.match(source, /const unit = press\.ctrl \? OCTAVE_POSITIONS : 1;/);
+        assert.match(source, /moving: false, isMark: isSteppingMark\(target\), ctrl: e\.ctrlKey \|\| e\.metaKey,/);
+        assert.match(source, /press\.isMark \? \(press\.ctrl \? 'placement' : 'mark'\) : \(press\.ctrl \? 'octave' : 'position'\)/);
+    });
     it('moves a dragged note a whole staff position at a time, and holds it at the edge of one', () => {
         const next = pageFunction('noteDragSteps', { NOTE_DRAG_HOLD: 0.25 }) as (px: number, per: number, steps: number) => number;
         const walk = (pixels: number[]) => pixels.reduce((steps, px) => next(px, 10, steps), 0) + 0;

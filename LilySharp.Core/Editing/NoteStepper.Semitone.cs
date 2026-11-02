@@ -70,6 +70,20 @@ namespace LilySharp.Core.Editing;
 /// </remarks>
 public static partial class NoteStepper
 {
+    /// <summary>Where the marks stand that step by a name of their own: a dynamic on the ladder,
+    /// an articulation in a group. A step on any other mark falls through to its note (the key's
+    /// way, the caret being on the note's item), which a drag on that mark must not do.</summary>
+    public static IEnumerable<int> SteppingMarks(string text, SyntaxTree tree)
+    {
+        foreach (var node in tree.GetRoot().DescendantNodes<SyntaxNode>())
+        {
+            if (node is DynamicSyntax dynamic && DynamicSteps(dynamic.DynamicToken.Text))
+                yield return node.SourceStart;
+            else if (node is ArticulationSyntax && MarkSteps(text, node))
+                yield return node.SourceStart;
+        }
+    }
+
     /// <summary>A ledger line as this file's <c>layout { }</c> draws it: its thickness in staff
     /// spaces and how far it reaches past a head on each side, in the head's widths — what the
     /// preview draws a dragged note's lines with until the score comes back drawn (owner's
