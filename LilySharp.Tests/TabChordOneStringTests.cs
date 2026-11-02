@@ -60,6 +60,15 @@ public class TabChordOneStringTests
     public void TwoStringsDoubled_AreTwoReports()
         => Assert.Equal(2, OneString(Book("<e'\\1 g'\\1 b\\2 d\\2>4 r2. |")).Count);
 
+    // Both written where the string cannot play them: each is LYS5003's, and each is chosen again.
+    [Fact]
+    public void TwoNotesTheStringCannotPlay_AreNotOnIt()
+        => Assert.Empty(OneString(Book("<c\\2 e\\2>4 r2. |")));
+
+    [Fact]
+    public void TwoScoresOfOneChord_SayItOnce()
+        => Assert.Single(OneString("part g { clef treble_8 instrument guitar }\nsection A { g { <e' g'>4\\1 r2. | } }\nform { A }\nscore a { tab g }\nscore b { tab g }"));
+
     [Fact]
     public void WithNoTab_NothingIsDrawn_AndNothingIsSaid()
         => Assert.Empty(OneString("part g { clef treble_8 instrument guitar }\nsection A { g { <e' g'>4\\1 r2. | } }\nform { A }\nscore { staff g }"));
