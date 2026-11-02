@@ -663,8 +663,9 @@ public sealed class MidiExporter
     /// pedal written in the left hand holds the right hand's tune. A mark pressing a pedal already
     /// down is a change, up and down at one tick. A pedal the form leaves down lifts at the end.
     /// </summary>
-    /// <remarks>LILYSHARP-OWN: LilyPond's Piano_pedal_performer sounds the pedal in the Staff it is
-    /// written in; a piano's pedal holds the whole instrument.</remarks>
+    /// <remarks>LILYSHARP-OWN: LilyPond's Piano_pedal_performer is consisted per Voice
+    /// (ly/performer-init.ly:100-105), so its MIDI plays a pedal in the hand it is written in only;
+    /// a piano's pedal holds the whole instrument.</remarks>
     private void AddPedals(MidiFile midi, string unclaimedTrack)
     {
         if (_pedalLog.Count == 0)

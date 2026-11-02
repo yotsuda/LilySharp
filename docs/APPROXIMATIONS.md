@@ -275,7 +275,7 @@
 - **`GeneralMidi.PreviewTimbreFamily`** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **`MidiExporter.ShareGrandStaffDynamics`** LILYSHARP-OWN: LilyPond's Dynamic_performer is consisted per Voice
-- **`MidiExporter.AddPedals`** LILYSHARP-OWN: LilyPond's Piano_pedal_performer sounds the pedal in the Staff it is
+- **`MidiExporter.AddPedals`** LILYSHARP-OWN: LilyPond's Piano_pedal_performer is consisted per Voice
 - **`MidiExporter.SplitIntoPartTracks`** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
 - **`MidiExporter.PlayChordRow`** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
 - **`MidiExporter.SwingNotes`** LILYSHARP-OWN: LilyPond's MIDI plays its swing equation straight unless the score asks for
