@@ -67,7 +67,7 @@ they belong, so never tell them to move the caret first, or to type "right after
 
 **On what:** a rest or a slash `/` has no pitch, so `'`, `,` and `\` are only typed where the caret is, and `#` does nothing; the digit,
 `.`, `@`, `~` and `(` work as on a note. `[` works on a slash, and does nothing on a rest. From outside a chord's
-brackets the table applies to the whole chord, and `\` numbers all its notes alike. Inside the brackets, on a note
+brackets the table applies to the whole chord, except `\`, which is only typed there. Inside the brackets, on a note
 of the chord, a digit, `.`, `(` and `[` are still the whole chord's: on `<c e g>`, `4` makes `<c e g>4`. There `'`,
 `,`, `#`, `\`, `@` and `~` go on that one note; from outside the brackets `#` does nothing. A digit after a space in the brackets is a scale degree.
 

@@ -5,7 +5,6 @@ All notable changes to the Lily# VS Code extension are documented here.
 ## Unreleased
 
 - **`<` and `[` inside a note no longer split it**: `c|is4` + `<` is `<cis|>4`. `[` on a quarter or a rest changes nothing and says why, where `c[4` and `c4[]` were an error and a mark that drew nothing.
-- **`\` from outside a chord** goes to the chord's slot, as on a note.
 - **Selected staves go into a group**: select `staff` rows in a `score`, press Ctrl+Space and pick `grandStaff`, `staffGroup`, `choirStaff`, `condensedStaff` or `combinedStaff`.
 - **`#` writes the sharp**: typed on a note it goes into the name, `c4` to `cis4`, and against a flat it cancels one. `c#`, `bb4` and `ab4` now say which pitch was meant, and Ctrl+. writes it.
 - **`cb` warns in a book with no drums**: it is a cowbell, and C flat written that way used to pass in silence. Ctrl+. writes `ces`.

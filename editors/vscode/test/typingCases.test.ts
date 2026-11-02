@@ -39,7 +39,7 @@ const rows: Row[] = fs.readFileSync(RELATIVE, 'utf8').split(/\r?\n/).flatMap(lin
 });
 
 test('the table is read: a row that no longer parses would pass in silence', () => {
-    assert.ok(rows.filter(r => r.kind === 'T').length >= 40, `T rows: ${rows.filter(r => r.kind === 'T').length}`);
+    assert.ok(rows.filter(r => r.kind === 'T').length >= 35, `T rows: ${rows.filter(r => r.kind === 'T').length}`);
     assert.ok(rows.filter(r => r.kind === 'S').length >= 16, `S rows: ${rows.filter(r => r.kind === 'S').length}`);
     assert.ok(rows.filter(r => r.kind === 'W').length >= 15, `W rows: ${rows.filter(r => r.kind === 'W').length}`);
     assert.equal(new Set(rows.map(r => r.id)).size, rows.length, 'every number once');

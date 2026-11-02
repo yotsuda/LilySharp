@@ -192,7 +192,7 @@
 //    (`<c| e>4` + '\' → `<c\| e>4`; `<c\3 e>` + '@' on the c → `<c\3@| e>`),
 //    which is where the parser reads a member's string number and annotations
 //    (`<c\3 e\2>`, `<c@finger(1) e>`). At the chord's ends and on a degree
-//    member '@' is typed as pressed; '\' goes to the chord's slot (rule 37).
+//    member they are typed as pressed.
 //
 // 30. SEVERAL CARETS: a key planned here (', ',', '.', '\', '@', the digits)
 //    typed with several empty carets is decided for EACH caret on its own, on
@@ -256,10 +256,6 @@
 //    with the reason in the status bar: `c4[]` drew nothing and said nothing. This narrows
 //    rule 22 for a note whose length is known; one that inherits it from the bar before
 //    reads as unknown here, and keeps its pair. A rest absorbs a '<' no more than it did.
-// 37. '\' from outside a chord's brackets goes to the chord's slot, the caret following,
-//    as on a note (owner decision 2026-11-02): `|<c e>4` + '\' → `<c e>4\|`. It numbers
-//    every member alike (`<c e>4\2`, the compiler's reading), so a number for one note is
-//    typed on that note (rule 29).
 //
 // Rules 14–23 and 25 move TEXT and never the CARET: the mark or digit travels to the
 // slot it belongs in and the cursor keeps the position it was pressed at (see
@@ -1880,7 +1876,7 @@ export function dotPlan(before: string, offset: number): TypePlan | null {
  * annotations, its own `\N` — because a string number is about the note, not a
  * slot the caret has to be in. A rest plays no string and takes the '\' as
  * pressed; inside a chord the '\' is the MEMBER's the caret is on (rule 29,
- * chordMemberAtCaret), and from outside the brackets it is the chord's (rule 37). */
+ * chordMemberAtCaret), and at the chord's ends it is typed as pressed. */
 export function stringNumberPlan(before: string, offset: number): TypePlan | null {
     if (inStringOrComment(before, offset)) { return null; }
     const [blockStart, blockEnd] = blockBounds(before, offset);
@@ -1889,17 +1885,13 @@ export function stringNumberPlan(before: string, offset: number): TypePlan | nul
         if (event.start > offset) { return null; } // the caret is between events
         let core: number;
         if (before[event.start] === '<') {
-            // A chord: on a member the string number is that member's (`<c\3 e\2>`);
-            // from outside the brackets it goes to the chord's own slot (rule 37). A space
-            // inside them is neither, and neither is an annotation's argument list.
+            // A chord: the string number is the MEMBER's (`<c\3 e\2>`), so the
+            // caret has to be on one; at the chord's ends it is typed as pressed: there it
+            // would number every member alike (`<c e>4\2`, the compiler's reading), which
+            // a chord has little use for (tried as rule 37, owner decision 2026-11-02: out).
             const member = chordMemberAtCaret(before, offset);
-            if (member !== null) { core = member; }
-            else {
-                const slots = noteSlots(before, event.start, event.end);
-                if (!slots || (offset !== event.start && offset < slots.marksEnd)
-                    || insideAnnotationArgs(before, slots.coreEnd, offset)) { return null; }
-                core = slots.coreEnd;
-            }
+            if (member === null) { return null; }
+            core = member;
         } else {
             const slots = noteSlots(before, event.start, event.end);
             if (!slots || slots.octave === null) { return null; } // a rest plays no string

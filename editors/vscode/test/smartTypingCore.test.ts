@@ -417,8 +417,8 @@ describe('string numbers (rules 24–24a, 29)', () => {
         typed('<‸c e>4', '\\', '<c\\‸ e>4');
         typed('<c‸ e>4', '\\', '<c\\‸ e>4');
     });
-    it('29. from outside the brackets the string number goes to the slot', () => {
-        typed('‸<c e>4', '\\', '<c e>4\\‸');
+    it('29. at the chord\'s ends it is typed as pressed', () => {
+        typed('‸<c e>4', '\\', '\\‸<c e>4');
     });
 });
 
@@ -475,8 +475,9 @@ describe('the keys as the teaching path says they go', () => {
         typed('<c‸ e>4 d', '\\', '<c\\‸ e>4 d');
         typed('‸<c e>8 d e', '[', '<c e>8[‸ d] e');
     });
-    it('on a chord, the string number from outside goes to its slot', () => {
+    it('on a chord, the string number from outside is only typed', () => {
         typed('<c e>4‸ d', '\\', '<c e>4\\‸ d');
+        typed('<c e>‸4 d', '\\', '<c e>\\‸4 d');
     });
     it('on a chord, a length or a dot from inside is the whole chord\'s', () => {
         typed('<c‸ e>4 d', '8', '<c‸ e>8 d');
@@ -637,27 +638,6 @@ describe('inside a note, < and [ do not split it (rule 36)', () => {
     it('[ in a block of words is typed as pressed', () => {
         typed('lyrics w { r‸ }', '[', 'lyrics w { r[‸] }');
         typed('form { c4‸ }', '[', 'form { c4[‸] }');
-    });
-});
-
-describe('from outside a chord, the string number is the chord\'s (rule 37)', () => {
-    it('it goes to the slot, the caret following', () => {
-        typed('‸<c e>4 d', '\\', '<c e>4\\‸ d');
-        typed('<c e>‸4 d', '\\', '<c e>4\\‸ d');
-        typed('<c e>4.‸ d', '\\', '<c e>4.\\‸ d');
-        typed('‸<c e>4( d)', '\\', '<c e>4\\‸( d)');
-        typed('‸<<c e>>4 d', '\\', '<<c e>>4\\‸ d');
-    });
-    it('and the next digit is the string', () => {
-        assert.equal(show(typeKey('<c e>4\\‸ d', '2')), '<c e>4\\2‸ d');
-    });
-    it('a number already there is offered for retyping', () => {
-        assert.equal(show(typeKey('‸<c e>4\\2 d', '\\')), '<c e>4\\‸«2» d');
-    });
-    it('on a member it is the member\'s, on a space and in arguments it is typed', () => {
-        typed('<c‸ e>4 d', '\\', '<c\\‸ e>4 d');
-        typed('<c ‸ e>4 d', '\\', '<c \\‸ e>4 d');
-        typed('<c e>4@finger(‸) d', '\\', '<c e>4@finger(\\‸) d');
     });
 });
 
