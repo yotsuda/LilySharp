@@ -31,6 +31,7 @@ import { findCopilotLogFrom, pickAiModel, rememberRefusalsIn } from './modelClie
 import { reviewPointsOf } from './reviewCore';
 import { chatPointer } from './chatPointerCore';
 import { registerSmartTyping } from './smartTyping';
+import { registerStaffGroupWrap, staffGroupsOffered } from './staffGroupWrap';
 import { registerStepAudition } from './stepAudition';
 import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
@@ -571,7 +572,11 @@ export function activate(context: vscode.ExtensionContext) {
         },
         outputChannelName: 'Lily# Language Server',
         // Applied when the server starts; change takes effect on reload.
-        initializationOptions: serverSettings(config)
+        initializationOptions: serverSettings(config),
+        middleware: {
+            provideCompletionItem: (document, position, context, token, next) =>
+                staffGroupsOffered(document) ? [] : next(document, position, context, token),
+        },
     };
 
     client = new LanguageClient(
@@ -1069,6 +1074,7 @@ export function activate(context: vscode.ExtensionContext) {
     // slurs, octave marks, beams, ties and durations — hence smartTyping, not
     // smartBrackets.
     registerSmartTyping(context, (msg: string) => outputChannel.appendLine(msg));
+    registerStaffGroupWrap(context);
 
     // The step keys (Ctrl+Shift+Up / Down: a note's semitone, Ctrl+Shift+PageUp / PageDown:
     // its octave mark — owner's decision 2026-10-15; both: a chord's shape) and the automatic
