@@ -99,6 +99,11 @@ public static class CompositionChecks
                 findings.Add(new("dynamics.part-silent", $"No dynamics in {string.Join(", ", silent)}: each player reads only their own staff — write the levels "
                     + "(`@p`, `@mf`, `@f`, …) and the hairpins in every part, where its own music asks for them, not in one part alone.") { Parts = silent });
         }
+        // …and no level anywhere: every note at the default, whatever the piece says of itself (owner's
+        // review 2026-11-02: a hymn with "a quiet, prayerful cadence" played louder than another piece's @mf).
+        if (parts.Count >= 2 && DynamicLevelsByPart(root).Count == 0)
+            findings.Add(new("dynamics.none", "No part has a dynamic level: every note plays at one level, between @mf and @f, whatever the music means — write the level each "
+                + "part opens at (`@p`, `@mf`, `@f`, …) and shape it with hairpins where the music rises and falls."));
         findings.AddRange(DynamicDrops(root));
         findings.AddRange(PhraseDrops(root));
         findings.AddRange(LevelsSetNotShaped(root));
@@ -237,7 +242,7 @@ public static class CompositionChecks
         // and came back stumbling in every voice, its "keep it" drowned; sung by the soprano alone,
         // its lower voices were told one value each, and were pulled apart).
         var bars = midi.BarTicks.ToList();
-        int together = 0, counted = 0;
+        int together = 0, counted = 0, inChoir = 0;
         if (byPart.Count >= 3 && bars.Count >= 4)
             for (int b = 0; b + 1 < bars.Count; b++)
             {
@@ -249,8 +254,13 @@ public static class CompositionChecks
                 counted++;
                 if (rhythms.Distinct().Count() == 1)
                     together++;
+                if (rhythms.Count >= 4 && rhythms.GroupBy(r => r).Max(g => g.Count()) >= rhythms.Count - 1)
+                    inChoir++;
             }
         bool asOne = counted >= 4 && together >= counted * 0.6;
+        // A choir whose upper voices move as one over a bass with its own values: the guide's own hymn. Told of
+        // one value, its alto and tenor were told to find "a rhythm of their own" (owner's review 2026-11-02).
+        bool choirAsOne = parts.All(IsVoicePreset) && counted >= 4 && inChoir >= counted * 0.6;
         string? top = parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n))
             ?? parts.Select(p => p.Name.Text).FirstOrDefault(byPart.ContainsKey);
         var oneValueShare = new Dictionary<string, (int Share, string Value)>(System.StringComparer.Ordinal);
@@ -266,7 +276,7 @@ public static class CompositionChecks
             // quarters, a piano piece's right hand two thirds eighths in one figure bar after bar,
             // a violin's quarters and halves — each under the 80% an accompaniment is allowed).
             bool melody = melodies.Contains(part);
-            if (asOne && part != top)
+            if ((asOne || choirAsOne) && part != top)
                 continue;
             if (melody && common.Count() >= onsets.Count * MelodyOneValue)
                 oneValueShare[part] = (common.Count() * 100 / onsets.Count, common.Key);
@@ -597,6 +607,7 @@ public static class CompositionChecks
         findings.AddRange(SingersLines(midi, parts, declared is { } placed
             ? placed.Declaration.DescendantNodes<StaffRenderSyntax>().Select(s => s.PartToken?.Text).OfType<string>().ToList()
             : [], fifths));
+        findings.AddRange(ChoirParallels(tree, midi, parts, declared?.Declaration, barList));
         findings.AddRange(BarsWithoutWords(midi, root, parts, barList, sung));
         findings.AddRange(PianoHolds(midi, parts, barList, sung));
         findings.AddRange(TuneUnderItsChords(midi, barList));
@@ -866,6 +877,44 @@ public static class CompositionChecks
     // tones in turn, not a line to sing (風のひかり's alto: 17 of 133).
     private const double InnerLineStepShare = 0.25;
     private const int InnerLineFewestMoves = 16;
+
+    // How much of a choir's parallels a finding names: the pairs, and each pair's bars.
+    private const int ParallelsPairsNamed = 6, ParallelsBarsNamed = 8;
+
+    /// <summary>
+    /// A choir's parallel fifths and octaves, with no <c>check voiceLeading</c> line to ask for them
+    /// (owner's review 2026-11-02: an eight-bar hymn had six; so did every one of 12 choirs, 4 to 80
+    /// of them, and two singers' doubling is read only from eight up). Read with
+    /// <see cref="Semantics.VoiceLeadingValidator"/>, from three voices in a <c>choirStaff</c>.
+    /// </summary>
+    private static IEnumerable<CompositionFinding> ChoirParallels(SyntaxTree tree, MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts,
+        SyntaxNode? score, List<int> barList)
+    {
+        if (score == null)
+            yield break;
+        var singers = parts.Where(IsVoicePreset).Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
+        foreach (var choir in score.DescendantNodes<GrandStaffRenderSyntax>().Where(g => g.GrandStaffKeyword.Text == "choirStaff"))
+        {
+            var voices = choir.DescendantNodes<StaffRenderSyntax>().Select(s => s.PartToken?.Text).OfType<string>().Where(singers.Contains).Distinct().ToList();
+            if (voices.Count < 3)
+                continue;
+            var parallels = Semantics.VoiceLeadingValidator.ParallelsIn(tree, midi, voices);
+            if (parallels.Count == 0)
+                continue;
+            int BarOf(int tick) => barList.Count(b => b <= tick);
+            var pairs = parallels.GroupBy(x => (x.Upper, x.Lower, x.Kind)).OrderBy(g => g.Min(x => x.Tick)).ToList();
+            string where = string.Join("; ", pairs.Take(ParallelsPairsNamed).Select(g =>
+            {
+                var at = g.Select(x => BarOf(x.Tick)).Distinct().Order().ToList();
+                string list = string.Join(", ", at.Take(ParallelsBarsNamed)) + (at.Count > ParallelsBarsNamed ? ", …" : "");
+                return $"{g.Key.Upper} and {g.Key.Lower} in {g.Key.Kind}, {(at.Count == 1 ? "bar" : "bars")} {list}";
+            })) + (pairs.Count > ParallelsPairsNamed ? "; …" : "");
+            yield return new("singers.parallels", $"Parallel fifths, octaves or unisons between the voices ({where}, as the form plays them): where two voices stand a perfect fifth "
+                + "or octave apart and both move to the same again, the ear hears one line and not two. Move one of them the other way, or hold a common tone — unless a style "
+                + "that moves in parallel is meant, as in folk or pop harmony: then keep it.")
+            { Parts = voices, Bars = [.. parallels.Select(x => BarOf(x.Tick)).Distinct().Order()] };
+        }
+    }
 
     /// <summary>The singers' parts read against each other: a pair doubling at the octave, and an
     /// inner part that leaps from chord tone to chord tone. A choir's lines; a band's or an

@@ -91,6 +91,7 @@ that prompted each check is written beside it in the code.
 **Dynamics**
 - A part with no dynamics.
 - A drop of two or more levels with nothing leading to it (levels inside phrases count).
+- No part with a level at all, two parts or more (`dynamics.none`; 2026-11-02: a hymn's "quiet, prayerful cadence" at the default).
 - A part whose first level comes late. Read two ways: the first section it plays in writes none, and, from what plays, notes sounding before a player's first level (`LevelAfterTheFirstNotes`; 2026-11-02: 雨音の午後's left hand alone in bar 1, the first level in bar 2, its opening the piece's loudest bar). A piano's two hands are one player.
 - A band's drums with no level while the others move.
 - Levels set, not shaped: no hairpin anywhere and three sections or more opening `.subito`
@@ -113,6 +114,8 @@ that prompted each check is written beside it in the code.
 - The bass or drums at one level from start to end while the lead's level moves.
 
 **The singers** (2026-11-01: 風のひかり, a school chorus; the voice presets alone)
+- Parallel fifths and octaves between three voices or more in a `choirStaff`, told with no `check voiceLeading` line (`singers.parallels`, `VoiceLeadingValidator.ParallelsIn`; 2026-11-02: an eight-bar hymn had six, and each of 12 choirs some). Told, not sent back past the flow's rules: a style may mean them.
+- Upper voices moving as one over a bass with its own values are not told of one value, the top voice alone (`choirAsOne`; 2026-11-02: the guide's own hymn, its alto and tenor told to find "a rhythm of their own").
 - Two singers in octaves eight times or more, 10% of the moves they make together (`SingersLines`).
   From a fifth of those moves up to four fifths (a piece in unison may be meant) `proposeScore`
   turns the piece down every time (`singersInOneLineOf`; 2026-11-01: 夢の先へ kept 30 in 131).

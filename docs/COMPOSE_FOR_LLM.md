@@ -219,7 +219,9 @@ What makes it music:
     is ONE unit on one note, with no warning. A melisma (one unit over several notes) is a slur,
     and is rare.
   - **The melody follows the words' own shape**: their stressed syllables on the strong beats and
-    the weak ones off them (English, German, Spanish …); the rise and fall of a pitch accent or a
+    the weak ones off them (English, German, Spanish …) — a line that opens on a weak syllable (*O GOD of
+    LIGHT*) opens on an upbeat, with `partial`, so that GOD and LIGHT fall on the beats, and a long note
+    goes to a stressed word, not to the small word after it; the rise and fall of a pitch accent or a
     tone where the language has one (Japanese 雨 falls from its first mora — a line that rises
     there sings 飴; a Chinese word's tone is not sung against). A long or high note on an open
     vowel (a, o, e), not on i or u or a closed syllable, and on a word that carries the meaning,

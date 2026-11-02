@@ -83,6 +83,7 @@ public static class ReviewNotes
             "The drop is meant as a surprise."),
         ["dynamics.set-not-shaped"] = new(S, D, "Hairpins are how a level gets from one place to the next. Levels that only switch at section lines sound like a switch.",
             "Terraced dynamics are the style, as in much baroque music."),
+        ["dynamics.none"] = new(S, D, "A score with no levels plays and is read at one level. Levels are how a piece says where it is quiet and where it arrives.", "A lead sheet or a transcription, where the levels are the player's."),
         ["dynamics.late"] = new(N, D, "A player needs a level at their first note, or the first section is played at a guess."),
 
         // The band
@@ -101,6 +102,7 @@ public static class ReviewNotes
         ["drums.crashes-off-phrases"] = new(M, D, "A crash marks where a phrase begins. Off those bars it is heard as a misplaced accent.", "An off-phrase accent is the arrangement's own idea."),
 
         // The singers
+        ["singers.parallels"] = new(S, D, "In part-writing, two voices moving in parallel fifths or octaves lose their independence and thin the harmony.", "A style that moves in parallel: folk, pop or barbershop harmony, organum."),
         ["singers.octaves"] = new(S, D, "Two parts in octaves are heard as one line, and the harmony loses a voice.", "A unison or octave passage is meant, as a climax."),
         ["singers.crossed"] = new(M, D, "When a lower voice stands above the part over it, neither is heard as its own line.", "A brief crossing is written for a reason, as in counterpoint."),
         ["singers.crossed-at-end"] = new(M, H, "The last chord is where the voices are heard most plainly, and a crossing there usually means an octave mark has slipped."),

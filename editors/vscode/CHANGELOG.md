@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Composing in the chat**: a hymn's parallel fifths and octaves go back to the AI, and a piece with no dynamics is told; an alto and tenor moving with the soprano are left alone.
 - **Closing a preview stops its playback on the MIDI output**: the output went on sounding after the preview was closed.
 - **The sustain pedal sounds**: `@sustain` plays in the preview, MIDI out and the exports, on all the staves of a grand staff. It was only drawn until now.
 - **Composing in the chat**: a melody that only breaks chords in one note value goes back to the AI once more.

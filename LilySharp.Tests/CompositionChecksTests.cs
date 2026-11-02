@@ -101,7 +101,7 @@ public class CompositionChecksTests
             time 4/4
             part rh { clef treble }
             part lh { clef bass }
-            section A { rh { c''4 d' e' f' | } lh { c'2 g | } }
+            section A { rh { c''4@p d' e' f' | } lh { c'2@p g | } }
             form { A }
             score { grandStaff { staff rh  staff lh } }
             """;
@@ -924,6 +924,85 @@ public class CompositionChecksTests
         // Sung, the verses change their words.
         Assert.DoesNotContain(CompositionChecks.Of(Piece("Verse Chorus Verse Chorus Verse Chorus", "").Replace("form {", "lyrics words sings gtr { la }\nform {")),
             f => f.Contains("played the same each time"));
+    }
+
+    private const string HymnVoices = "part sop { instrument soprano }\npart alt { instrument alto }\npart ten { instrument tenor }\npart bas { instrument voice-bass }";
+
+    private static string Hymn(string sop, string alt, string ten, string bas, string score = "choirStaff { staff sop  staff alt  staff ten  staff bas }", string voices = HymnVoices)
+        => $"title \"Morning\"\ntime 4/4\noctave absolute\nkey g major\n{voices}\n"
+            + $"section A {{\n  sop {{ {sop} }}\n  alt {{ {alt} }}\n  ten {{ {ten} }}\n  bas {{ {bas} }}\n}}\nform {{ A }}\nscore {{ {score} }}\n";
+
+    private static string Eight(string bar) => string.Concat(Enumerable.Repeat(bar + " | ", 8));
+
+    // Owner's review 2026-11-02: the guide's own hymn, its upper voices in quarters together over a bass
+    // in halves, heard its alto and tenor told to find "a rhythm of their own".
+    [Fact]
+    public void AChoirsInnerVoices_MovingWithTheTop_AreLeftAlone()
+    {
+        string Book(string voices) => Hymn(Eight("g'4 a' b' a'"), Eight("d'4 e' d' e'"), Eight("b4 c' d' c'"), Eight("g,2 d2"), voices: voices)
+            .Replace("  alt {", $"  lyrics words sings sop {{ {string.Concat(Enumerable.Repeat("la la la la | ", 8))} }}\n  alt {{").Replace("staff bas }", "staff bas }  lyrics words");
+        var hymn = CompositionChecks.Of(Book(HymnVoices));
+        Assert.Contains(hymn, f => f.StartsWith("sop, the melody: 100% of its notes are quarter notes"));
+        Assert.DoesNotContain(hymn, f => f.StartsWith("alt:") || f.StartsWith("ten:"));
+        // Not one rhythm: "every part" stays for four parts all alike.
+        Assert.DoesNotContain(hymn, f => f.Contains("every part moves") || f.Contains("all move in one rhythm"));
+        // Strings in the same notes are not a choir: told as ever.
+        var strings = CompositionChecks.Of(Book("part sop { instrument violin }\npart alt { instrument violin }\npart ten { instrument viola }\npart bas { instrument cello }"));
+        Assert.Contains(strings, f => f.StartsWith("alt:") || f.StartsWith("ten:"));
+    }
+
+    // Owner's review 2026-11-02: a hymn with "a quiet, prayerful cadence" and no level anywhere, every note
+    // at the default, was told nothing: the check read only a part silent beside a part with levels.
+    [Fact]
+    public void NoLevelAnywhere_IsSaid_FromTwoParts()
+    {
+        static bool Told(string book) => CompositionChecks.Findings(book).Any(f => f.Id == "dynamics.none");
+        string duet = Hymn("g'1 |", "d'1 |", "b1 |", "g,1 |");
+        Assert.True(Told(duet));
+        Assert.False(Told(duet.Replace("g,1", "g,1@p")));
+        // One part alone: a head or a transcription.
+        Assert.False(Told("title \"One\"\ntime 4/4\noctave absolute\npart b { instrument bass }\nsection A {\n  b { c1 | }\n}\nform { A }\nscore { staff b }\n"));
+        // A level in a phrase is a level.
+        Assert.False(Told(duet.Replace("section A", "phrase soft { g,1@p }\nsection A").Replace("g,1 |", "soft |")));
+    }
+
+    // Owner's review 2026-11-02: an eight-bar hymn had six parallel fifths and octaves; `check voiceLeading`
+    // finds them, and no piece the chat composes turns it on.
+    [Fact]
+    public void AChoirsParallels_AreSaid_WithNoCheckLine()
+    {
+        static List<CompositionFinding> Told(string book) => CompositionChecks.Findings(book).Where(f => f.Id == "singers.parallels").ToList();
+        // G4/G2 to E4/E2 between soprano and bass in bar 2 (the alto and tenor hold).
+        string octaves = Hymn("g'1 | e'1 | e'1 |", "d'1 | d'1 | d'1 |", "b1 | b1 | b1 |", "g,1 | e,1 | e,1 |");
+        var told = Assert.Single(Told(octaves));
+        Assert.Contains("sop and bas in octaves, bar 2", told.Message);
+        Assert.Equal([2], told.Bars);
+        Assert.Equal(["sop", "alt", "ten", "bas"], told.Parts);
+        // Contrary motion: nothing.
+        Assert.Empty(Told(Hymn("g'1 | a'1 | a'1 |", "d'1 | d'1 | d'1 |", "b1 | b1 | b1 |", "g,1 | e,1 | e,1 |")));
+        // Fifths, named as fifths: D4/G3 to C4/F3 between alto and tenor.
+        Assert.Contains("alt and ten in fifths, bar 2", Assert.Single(Told(Hymn("b'1 | a'1 | a'1 |", "d'1 | c'1 | c'1 |", "g1 | f1 | f1 |", "g,1 | f,1 | f,1 |")
+            .Replace("bas { g,1 | f,1 | f,1 | }", "bas { b,1 | a,1 | a,1 | }"))).Message);
+        // Not in a choirStaff, or fewer than three voices: not said.
+        Assert.Empty(Told(octaves.Replace("choirStaff { staff sop  staff alt  staff ten  staff bas }", "staff sop  staff alt  staff ten  staff bas")));
+        Assert.Empty(Told(octaves.Replace("choirStaff {", "staffGroup {")));
+        string two = "title \"Two\"\ntime 4/4\noctave absolute\npart sop { instrument soprano }\npart bas { instrument voice-bass }\n"
+            + "section A {\n  sop { g'1 | e'1 | }\n  bas { g,1 | e,1 | }\n}\nform { A }\nscore { choirStaff { staff sop  staff bas } }\n";
+        Assert.Empty(Told(two));
+        // Strings in a choirStaff are no choir.
+        Assert.Empty(Told(octaves.Replace("instrument soprano", "instrument violin").Replace("instrument alto", "instrument violin").Replace("instrument tenor", "instrument viola").Replace("instrument voice-bass", "instrument cello")));
+        // A section the form plays twice is one set of parallels, as first played: bar 2, not bar 5. The
+        // new one is the turn from its last bar to its first, E to G, bar 4.
+        var twice = Assert.Single(Told(octaves.Replace("form { A }", "form { A A }")));
+        Assert.Equal([2, 4], twice.Bars);
+    }
+
+    // The guide says what a line opening on a weak syllable does.
+    [Fact]
+    public void TheGuide_PutsAnIambOnAnUpbeat()
+    {
+        var guide = File.ReadAllText(Path.Combine(CollectResumeTests.FindRepoRoot(), "docs", "COMPOSE_FOR_LLM.md")).Replace("\r\n", "\n");
+        Assert.Contains("a line that opens on a weak syllable (*O GOD of\n    LIGHT*) opens on an upbeat, with `partial`", guide);
     }
 
     // Owner's review 2026-11-02: 雨の窓辺, told it was 75% quarter notes and 22% steps, kept both as the

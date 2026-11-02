@@ -183,6 +183,28 @@ internal sealed class VoiceLeadingValidator : ISemanticValidator
         }
     }
 
+    /// <summary>The parallel fifths and octaves between <paramref name="parts"/>, highest first, each
+    /// once however often the form plays it, with the tick it first plays at: what
+    /// <c>CompositionChecks</c> tells a choir with no <c>check</c> line (owner's decision 2026-11-02).</summary>
+    internal static List<(string Upper, string Lower, string Kind, int Tick)> ParallelsIn(SyntaxTree tree, MidiFile midi, IReadOnlyList<string> parts)
+    {
+        var validator = new VoiceLeadingValidator();
+        var branches = Branches(tree);
+        var names = new List<string>();
+        var lists = new List<List<Note>>();
+        for (int p = 0; p < parts.Count; p++)
+            foreach (var (name, notes) in VoicesOf(parts[p], p == parts.Count - 1, midi, branches))
+            {
+                names.Add(name);
+                lists.Add(notes);
+            }
+        validator.Check(names, [.. lists], tree.Text, []);
+        return validator._parallels;
+    }
+
+    private readonly List<(string Upper, string Lower, string Kind, int Tick)> _parallels = [];
+    private readonly HashSet<(int, int, int)> _parallelsSeen = [];
+
     /// <summary>The voice blocks of every <c>voice { } { }</c>: their span, their place among
     /// the span's blocks (0 = the first, the highest), and their name if written.</summary>
     private static List<(int Start, int End, int Index, string? Name)> Branches(SyntaxTree tree)
@@ -289,7 +311,7 @@ internal sealed class VoiceLeadingValidator : ISemanticValidator
             Vertical(parts, now, t, text, reported);
             if (before != null)
             {
-                Parallels(parts, before, now, text, reported);
+                Parallels(parts, before, now, t, text, reported);
                 Overlaps(parts, before, now, text, reported);
                 Hidden(parts, before, now, text, reported);
             }
@@ -338,7 +360,7 @@ internal sealed class VoiceLeadingValidator : ISemanticValidator
 
     /// <summary>LYS3002: the same two voices from a perfect fifth or octave to the same again,
     /// both moving.</summary>
-    private void Parallels(IReadOnlyList<string> parts, Note?[] before, Note?[] now, string text, HashSet<(string, int)> reported)
+    private void Parallels(IReadOnlyList<string> parts, Note?[] before, Note?[] now, int t, string text, HashSet<(string, int)> reported)
     {
         int n = parts.Count;
         for (int i = 0; i < n; i++)
@@ -355,6 +377,8 @@ internal sealed class VoiceLeadingValidator : ISemanticValidator
                 if (kind != to % 12 || (kind != 0 && kind != 7))
                     continue;
                 string name = kind == 7 ? "fifths" : from == 0 && to == 0 ? "unisons" : "octaves";
+                if (_parallelsSeen.Add((i, j, a1.Pos)))
+                    _parallels.Add((parts[i], parts[j], name, t));
                 string Interval(int d) => kind == 7 ? (d > 12 ? "a twelfth" : "a fifth") : d == 0 ? "a unison" : d > 12 ? "two octaves" : "an octave";
                 // Both moved, so both start here: the upper voice's note carries it.
                 Report(DiagnosticCodes.ParallelPerfectIntervals, a1.Pos, text, reported,
