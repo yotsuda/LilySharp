@@ -6455,8 +6455,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             practicePanel.hidden = true;
             practiceBtn.setAttribute('aria-expanded', 'false');
         }
-        practiceBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
+        practiceBtn.addEventListener('click', () => {
             if (!practicePanel.hidden) { closePractice(); return; }
             const b = practiceBtn.getBoundingClientRect();
             practicePanel.hidden = false;
@@ -6469,10 +6468,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             practiceBtn.setAttribute('aria-expanded', 'true');
             vscode.postMessage({ type: 'requestParts' });
         });
-        practicePanel.addEventListener('click', (e) => e.stopPropagation());
+        // It closes as the Range panel does, by its × and its button, and stays open beside the
+        // score (owner's request 2026-11-02: a click on the score closed it).
         document.getElementById('practiceClose').addEventListener('click', closePractice);
-        document.addEventListener('click', () => { if (!practicePanel.hidden) closePractice(); });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !practicePanel.hidden) closePractice(); });
 
         // The Range and practice panels move where they are dragged (owner's request
         // 2026-10-29), inside the preview: what goes past its edge is cut off there, and a panel

@@ -38,3 +38,12 @@ test('it keeps the tempo it plays at, and looks pressed while its menu is open',
     assert.match(source, /button\.practice\[aria-expanded="true"\] \{\s*background: #d6e6f8/);
     assert.match(source, /#practiceSpeed:empty \{ display: none; \}/);
 });
+
+test('the two panels close alike: by the × and the button, not by a click beside them or a key', () => {
+    for (const panel of ['rangePanel', 'practicePanel']) {
+        assert.doesNotMatch(source, new RegExp(`document\\.addEventListener\\('(?:click|keydown)'[^\\n]*${panel}\\.hidden`), panel);
+    }
+    assert.doesNotMatch(source, /practicePanel\.addEventListener\('click', \(e\) => e\.stopPropagation\(\)\)/);
+    assert.match(source, /getElementById\('rangeClose'\)\.addEventListener\('click'/);
+    assert.match(source, /getElementById\('practiceClose'\)\.addEventListener\('click', closePractice\)/);
+});
