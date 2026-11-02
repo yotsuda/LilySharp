@@ -240,6 +240,9 @@
 //    different lengths, or notes that carry marks of their own. A chord changes what the
 //    NEXT note is relative to, its first member and no longer the last one selected, so
 //    in relative octaves that note is given the marks that keep it where it sounded.
+//    ')', ']' and '>' over the selection do the same, the caret after the closing mark
+//    (owner decision 2026-11-02): VS Code surrounds only for an opening key, and a closing
+//    one replaced the notes with itself. What is not music is replaced as anywhere.
 // 35. '#' typed on a note writes the sharp into its name (owner decision 2026-11-02): a
 //    sharp is spelled `is`, and `c#` compiles to an error. `c|` + '#' → `cis|`, `c4|` →
 //    `cis4|`, `cis|` → `cisis|`; against a flat it cancels one, as an octave mark does its
@@ -393,7 +396,7 @@ export interface Edit { at: number, del?: number, ins?: string }
  * text's offsets, and where the caret ends up in the FINISHED text — or no
  * caret at all, when the keystroke's own caret (wherever VS Code left it) is
  * the right one and only the text changes. */
-export interface FixPlan { edits: Edit[], caret?: number, what: string, hint?: string }
+export interface FixPlan { edits: Edit[], caret?: number, what: string, hint?: string, select?: number }
 
 /** What a typed octave mark or duration digit does to the text, decided ENTIRELY
  * on the text as it stands WITHOUT that keystroke.
@@ -2054,14 +2057,14 @@ function selectedNotes(text: string, lo: number, hi: number): NoteSpan[] | null 
 }
 
 /** What a selection's mark comes to: the document rewritten and the caret, or why not. */
-type Surrounded = { text: string, caret: number } | { refused: string };
+type Surrounded = { text: string, caret: number, close?: number } | { refused: string };
 
 const carriesMark = (text: string, notes: NoteSpan[], kinds: PostEventKind[]) =>
     notes.some(n => postEventRun(text, coreEndOf(text, n)).some(e => kinds.includes(e.kind)));
 
 /** The open and close marks written at their slots (a < b), the caret after the open. */
 function twoMarks(text: string, a: number, open: string, b: number, close: string): Surrounded {
-    return { text: text.slice(0, a) + open + text.slice(a, b) + close + text.slice(b), caret: a + 1 };
+    return { text: text.slice(0, a) + open + text.slice(a, b) + close + text.slice(b), caret: a + 1, close: b + 2 };
 }
 
 function slurOver(text: string, notes: NoteSpan[]): Surrounded {
@@ -2158,10 +2161,10 @@ function chordOver(text: string, notes: NoteSpan[]): Surrounded {
         if (shift !== 0) {
             const net = netMarks(text.slice(next.at, next.marksEnd)) + shift;
             const marks = (net > 0 ? "'" : ',').repeat(Math.abs(net));
-            return { text: written(text.slice(last.coreEnd, next.at) + marks + text.slice(next.marksEnd)), caret };
+            return { text: written(text.slice(last.coreEnd, next.at) + marks + text.slice(next.marksEnd)), caret, close: caret + 1 };
         }
     }
-    return { text: written(text.slice(last.coreEnd)), caret };
+    return { text: written(text.slice(last.coreEnd)), caret, close: caret + 1 };
 }
 
 /** One selected note: what the key does on that note (slurOpenPlan, beamOpenPlan,
@@ -2184,17 +2187,38 @@ function onOneNote(open: string, text: string, note: NoteSpan): Surrounded {
     return { text: typed.slice(0, c.lo) + c.out + typed.slice(c.hi), caret: c.lo + c.caretIn };
 }
 
+/** What the mark comes to on the selection [lo, hi) of `before`, the document without the
+ * key; null when the selection is not music. `single` says what one note does. */
+function markedSelection(open: string, before: string, lo: number, hi: number,
+    single: (note: NoteSpan) => Surrounded): Surrounded | null {
+    if (inSettingsBlock(before, lo) || inStringOrComment(before, lo) || inStringOrComment(before, hi)) { return null; }
+    const notes = selectedNotes(before, lo, hi);
+    if (!notes) { return null; }
+    return notes.length === 1 ? single(notes[0])
+        : open === '(' ? slurOver(before, notes)
+            : open === '[' ? beamOver(before, notes) : chordOver(before, notes);
+}
+
+/** `text` rewritten as `written`: the one span that differs, one edit, one snippet, the caret
+ * placed with it. Never past the caret on either side: `c e g` selected + '<' is already
+ * `<c e g>`, nothing differs, and a span found at the end of the file would grow back from
+ * there to reach the caret. */
+function oneSpan(text: string, written: string, caret: number): Edit {
+    let head = 0;
+    while (head < text.length && head < caret && text[head] === written[head]) { head++; }
+    let tail = 0;
+    while (tail < text.length - head && tail < written.length - Math.max(head, caret)
+        && text[text.length - 1 - tail] === written[written.length - 1 - tail]) { tail++; }
+    return { at: head, del: text.length - head - tail, ins: written.slice(head, written.length - tail) };
+}
+
 /** Rule 34: VS Code has surrounded a selection with `open` and its close. `text` holds
  * the pair, `open` at `lo` and the close after the selection's old end `hi`. null: not
  * music, and the pair stands. */
 export function surroundPlan(open: string, text: string, lo: number, hi: number): FixPlan | null {
     const before = text.slice(0, lo) + text.slice(lo + 1, hi + 1) + text.slice(hi + 2);
-    if (inSettingsBlock(before, lo) || inStringOrComment(before, lo) || inStringOrComment(before, hi)) { return null; }
-    const notes = selectedNotes(before, lo, hi);
-    if (!notes) { return null; }
-    const done = notes.length === 1 ? onOneNote(open, before, notes[0])
-        : open === '(' ? slurOver(before, notes)
-            : open === '[' ? beamOver(before, notes) : chordOver(before, notes);
+    const done = markedSelection(open, before, lo, hi, note => onOneNote(open, before, note));
+    if (!done) { return null; }
     if ('refused' in done) {
         return {
             edits: [{ at: lo, del: 1 }, { at: hi + 1, del: 1 }],
@@ -2202,18 +2226,66 @@ export function surroundPlan(open: string, text: string, lo: number, hi: number)
             hint: `Lily#: ${done.refused}`,
         };
     }
-    // The one span that differs: one edit, one snippet, the caret placed with it. Never past
-    // the caret on either side: `c e g` selected + '<' is already `<c e g>`, nothing differs,
-    // and a span found at the end of the file would grow back from there to reach the caret.
-    let head = 0;
-    while (head < text.length && head < done.caret && text[head] === done.text[head]) { head++; }
-    let tail = 0;
-    while (tail < text.length - head && tail < done.text.length - Math.max(head, done.caret)
-        && text[text.length - 1 - tail] === done.text[done.text.length - 1 - tail]) { tail++; }
     return {
-        edits: [{ at: head, del: text.length - head - tail, ins: done.text.slice(head, done.text.length - tail) }],
+        edits: [oneSpan(text, done.text, done.caret)],
         caret: done.caret,
         what: `${open} on a selection -> written on its notes`,
+    };
+}
+
+const OPEN_OF: Record<string, string> = { ')': '(', ']': '[', '>': '<' };
+
+/** Whether a change's text is a key that closes what rule 34 can write. */
+export const isSelectionClose = (t: string) => t === ')' || t === ']' || t === '>';
+
+const netOf = (text: string, open: string, close: string) => {
+    let net = 0;
+    for (const c of text) { if (c === open) { net++; } else if (c === close) { net--; } }
+    return net;
+};
+
+/** One selected note and a closing key: what the key does on that note (rules 11, 21),
+ * reaching back for the note before, or for '>' the chord of that one note. A ')' with
+ * nothing before it to open on would stand alone, so it is refused. */
+function closeOnOneNote(close: string, text: string, note: NoteSpan): Surrounded {
+    if (close === '>') {
+        const chord = onOneNote('<', text, note);
+        return 'refused' in chord ? chord : { ...chord, close: chord.caret + 1 };
+    }
+    const typed = text.slice(0, note.end) + close + text.slice(note.end);
+    const plan = close === ')' ? slurClosePlan(typed, note.end) : beamClosePlan(typed, note.end);
+    const refused = { refused: close === ')' ? 'a slur needs a note to come from' : 'a beam takes eighths and shorter, with one before it' };
+    if (!plan) { return refused; }
+    const caret = plan.caret ?? note.end + 1;
+    const c = composeFix(typed, plan.edits, caret);
+    const written = typed.slice(0, c.lo) + c.out + typed.slice(c.hi);
+    const open = OPEN_OF[close];
+    if (netOf(written, open, close) !== netOf(text, open, close)) { return refused; }
+    const at = c.lo + c.caretIn;
+    return { text: written, caret: at, close: at };
+}
+
+/** Rule 34's closing keys: VS Code has replaced the selection `selected`, which began at
+ * `lo`, with the key, so `text` holds the key there and the notes are gone. They are written
+ * back with the mark on them. null: not music, and the replacement stands. */
+export function selectionClosePlan(close: string, text: string, lo: number, selected: string): FixPlan | null {
+    const before = text.slice(0, lo) + selected + text.slice(lo + 1);
+    const done = markedSelection(OPEN_OF[close], before, lo, lo + selected.length, note => closeOnOneNote(close, before, note));
+    if (!done) { return null; }
+    if ('refused' in done) {
+        return {
+            edits: [{ at: lo, del: 1, ins: selected }],
+            caret: lo,
+            select: selected.length,
+            what: `${close} on a selection -> ${done.refused}`,
+            hint: `Lily#: ${done.refused}`,
+        };
+    }
+    const caret = done.close ?? done.caret;
+    return {
+        edits: [oneSpan(text, done.text, caret)],
+        caret,
+        what: `${close} on a selection -> written on its notes`,
     };
 }
 

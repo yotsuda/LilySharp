@@ -978,7 +978,16 @@ export function guidePages(text: string, limit: number, firstLimit: number = lim
         }
         page = page ? page + sep + piece : piece;
     };
-    for (const block of text.replace(/\r\n/g, '\n').split(/\n{2,}/)) {
+    // A code block holding a blank line is one piece: cut at that line it reaches the model as
+    // two halves of an example, the second not even marked as one.
+    const blocks: string[] = [];
+    let inFence = false;
+    for (const piece of text.replace(/\r\n/g, '\n').split(/\n{2,}/)) {
+        if (inFence) { blocks[blocks.length - 1] += '\n\n' + piece; }
+        else { blocks.push(piece); }
+        if ((piece.match(/```/g) ?? []).length % 2 === 1) { inFence = !inFence; }
+    }
+    for (const block of blocks) {
         if (bytes(block) <= Math.min(limit, firstLimit)) {
             add(block, '\n\n');
             continue;

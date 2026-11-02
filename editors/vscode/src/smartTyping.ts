@@ -17,7 +17,7 @@
 import * as vscode from 'vscode';
 import {
     Edit, FixPlan, TypePlan, afterKeystrokeEdit, composeFix, deletionPlan, insertionPlan,
-    isPlannedKey, isSmartInsert, multiCursorPlan, planFor, surroundChange, surroundPlan,
+    isPlannedKey, isSelectionClose, isSmartInsert, multiCursorPlan, planFor, selectionClosePlan, surroundChange, surroundPlan,
     typedKeyOutcome, autoBarlinePlan,
 } from './smartTypingCore';
 
@@ -94,6 +94,12 @@ let autoBarline: { key: string, caret: number, barTyped: boolean } | undefined;
  * has no layout-safe key, as '@' has none (rule 27). */
 let surroundStep: { key: string, next: 'undo' | 'redo', chained: boolean } | undefined;
 
+/** The last one selection made, for a closing key that replaces it (rule 34): a change event
+ * says how much went, never what. Read only when something is selected, within reason, and
+ * good only for a change of its exact place and length; a caret moved away replaces nothing. */
+const SELECTION_LINES = 500;
+let lastSelection: { key: string, lo: number, text: string } | undefined;
+
 /** Whether a space typed at `offset` can end a bar at all — read off its LINE, so
  * the space typed between two notes, the common one, never pays for the whole
  * document's text (rule 32's own reading needs it): something is right before
@@ -156,6 +162,10 @@ export function registerSmartTyping(
             const doc = e.textEditor.document;
             if (doc.languageId === 'lilysharp') {
                 cacheWindow(doc, doc.offsetAt(e.selections[0].active));
+                const s = e.selections[0];
+                if (e.selections.length === 1 && !s.isEmpty && s.end.line - s.start.line <= SELECTION_LINES) {
+                    lastSelection = { key: doc.uri.toString(), lo: doc.offsetAt(s.start), text: doc.getText(s) };
+                }
             }
         }),
         vscode.workspace.onDidChangeTextDocument(event => {
@@ -212,6 +222,16 @@ export function registerSmartTyping(
                 return;
             }
 
+            // A closing key over the selection (rule 34): it has replaced the notes.
+            if (change.rangeLength > 0 && isSelectionClose(change.text)) {
+                const s = lastSelection;
+                if (s?.key === key && s.lo === offset && s.text.length === change.rangeLength) {
+                    lastSelection = undefined;
+                    const text = event.document.getText();
+                    carryOut(editor, text, selectionClosePlan(change.text, text, offset, s.text), log);
+                }
+                return;
+            }
             // Only a matched change needs the document text, so the full read
             // stays off the path a paste or an unrelated keystroke takes.
             if (change.rangeLength === 1 && change.text === '') {
@@ -497,7 +517,7 @@ function carryOut(editor: vscode.TextEditor, text: string, plan: FixPlan | null,
     if (!plan) { return; }
     showHint(plan.hint);
     if (plan.caret !== undefined) {
-        applyFixWithCaret(editor, text, plan.edits, plan.caret);
+        applyFixWithCaret(editor, text, plan.edits, plan.caret, false, plan.select ?? 0);
     } else {
         applyFix(editor, b => {
             for (const e of plan.edits) {

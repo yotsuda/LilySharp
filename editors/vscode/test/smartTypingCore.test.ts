@@ -715,6 +715,41 @@ describe('selected music takes the mark on its notes (rule 34)', () => {
         }
         over('section A { «c e g»' + rest, '<', 'section A { <c e g‸>' + rest);
     });
+    it('a closing key does the same, the caret after the mark', () => {
+        over('«c4 d e» f', ')', 'c4( d e)‸ f');
+        over('«c4 d | e f» g', ')', 'c4( d | e f)‸ g');
+        over('«c8 d e» f', ']', 'c8[ d e]‸ f');
+        over('c8 «r8 d e» f', ']', 'c8 r8 d[ e]‸ f');
+        over('«c4 d e» f', '>', '<c d e>‸4 f');
+        over('«c d e» f', '>', '<c d e>‸ f');
+        over("c'4 «e g» c r", '>', "c'4 <e g>‸ c' r");
+    });
+    it('a closing key on one note goes as that key does on it', () => {
+        over('b4 «c4» d', ')', 'b4( c4)‸ d');
+        over('b8 «c8» d', ']', 'b8[ c8]‸ d');
+        over('«c4» d', '>', '<c>‸4 d');
+        over('b4( c4) «d» e', ')', 'b4( c4 d)‸ e');
+    });
+    it('music that cannot take a closing key gets its notes back, selected, and says why', () => {
+        const back = (marked: string, key: string, hint: RegExp) => {
+            const s = typeOverSelection(marked, key);
+            assert.equal(s.text, marked.replace('«', '').replace('»', ''), `${marked} + ${key}`);
+            assert.equal(s.select, marked.indexOf('»') - marked.indexOf('«') - 1, 'the selection stands');
+            assert.match(s.hint ?? '', hint);
+        };
+        back('«c4 d» e', ']', /eighths/);
+        back('«c8 d | e f» g', ']', /one bar/);
+        back('«c4( d) e» f', ')', /already/);
+        back('«c4 d8» e', '>', /one length/);
+        back('«c4 r» e', '>', /notes/);
+        back('«c4» d', ')', /come from/);
+        back('«c8» d', ']', /one before/);
+    });
+    it('what is not music is replaced by a closing key, as anywhere', () => {
+        over('«c4 foo» d', ')', ')‸ d');
+        over('title "«My» Tune"', ')', 'title ")‸ Tune"');
+        over('// «c4 d» e', ']', '// ]‸ e');
+    });
     it('music that cannot take it loses the pair and says why', () => {
         refused('«c4 d» e', '[', /eighths/);
         refused('«c8 d | e f» g', '[', /one bar/);

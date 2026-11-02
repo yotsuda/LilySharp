@@ -71,7 +71,7 @@ brackets the table applies to the whole chord, except `\`, which is only typed t
 of the chord, a digit, `.`, `(` and `[` are still the whole chord's: on `<c e g>`, `4` makes `<c e g>4`. There `'`,
 `,`, `#`, `\`, `@` and `~` go on that one note; from outside the brackets `#` does nothing. A digit after a space in the brackets is a scale degree.
 
-**With notes selected:** `(` makes a slur from the first to the last, `[` a beam, and `<` one chord of them, if they
+**With notes selected:** `(` or `)` makes a slur from the first to the last, `[` or `]` a beam, and `<` or `>` one chord of them, if they
 have one length: `c4 d e` becomes `c4( d e)` or `<c d e>4`. Other keys replace the selection, as in any editor.
 In a `score`, select two or more `staff` rows, press Ctrl+Space and pick `grandStaff` or another group: the rows move inside it.
 

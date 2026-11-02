@@ -27,7 +27,7 @@
 import * as assert from 'node:assert/strict';
 import {
     Edit, afterKeystrokeEdit, composeFix, deletionPlan, insertionPlan, isPlannedKey,
-    multiCursorPlan, planFor, surroundChange, surroundPlan, typedKeyOutcome,
+    multiCursorPlan, planFor, selectionClosePlan, surroundChange, surroundPlan, typedKeyOutcome,
 } from '../src/smartTypingCore';
 
 export const CARET = '‸';
@@ -131,13 +131,21 @@ export function typeKey(marked: string, key: string, opts: { autoClose?: boolean
         : applyBuilder(withKey, plan.edits, asTyped.caret);
 }
 
-/** Types `(`, `[` or `<` over the selection written «…» (rule 34): VS Code surrounds it,
+/** Types a key over the selection written «…» (rule 34). `(`, `[` or `<`: VS Code surrounds it,
  * two changes at the selection's two ends, the later one first as VS Code sends them, and
  * the extension rewrites. A selection still standing is shown as ‸«…». */
 export function typeOverSelection(marked: string, key: string): State & { hint?: string } {
     const lo = marked.indexOf('«');
     const hi = marked.indexOf('»') - 1;
     const before = marked.replace('«', '').replace('»', '');
+    if (!(key in PAIRS)) {
+        // A closing key: VS Code surrounds for none of them, and replaces the selection.
+        const selected = before.slice(lo, hi);
+        const typed = before.slice(0, lo) + key + before.slice(hi);
+        const closing = selectionClosePlan(key, typed, lo, selected);
+        if (!closing) { return { text: typed, caret: lo + 1, select: 0 }; }
+        return { ...applyComposed(typed, closing.edits, closing.caret!, closing.select ?? 0), hint: closing.hint };
+    }
     const close = PAIRS[key];
     const seen = surroundChange([
         { text: close, rangeLength: 0, rangeOffset: hi },
