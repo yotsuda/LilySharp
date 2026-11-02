@@ -1786,8 +1786,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             if (message.type === 'requestNoteHeads') {
                 const doc = await previewDocument(uri);
                 if (!client || !clientReady || !doc) { return; }
-                const answer = await client.sendRequest<{ Positions: number[] }>('lilysharp/noteHeads', { TextDocument: { uri } });
-                void panel.webview.postMessage({ type: 'noteHeads', positions: answer.Positions });
+                const answer = await client.sendRequest<{ Positions: number[], LedgerThickness: number, LedgerLengthFraction: number }>('lilysharp/noteHeads', { TextDocument: { uri } });
+                void panel.webview.postMessage({
+                    type: 'noteHeads', positions: answer.Positions,
+                    ledgerThickness: answer.LedgerThickness, ledgerFraction: answer.LedgerLengthFraction,
+                });
                 return;
             }
             if (message.type === 'noteDragHear') {
@@ -4101,9 +4104,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             padding: 6px 8px; font-size: 12px; max-height: 60vh; overflow: auto;
         }
         .range-panel[hidden] { display: none; }
-        /* A note being dragged (owner's request 2026-11-02): where it would land, pale. */
-        .note-drag-ghost { pointer-events: none; opacity: 0.45; fill: #0078d7; stroke: #0078d7; stroke-width: 0.13; }
-        .note-drag-ghost text { stroke: none; }
+        /* A note being dragged (owner's request 2026-11-02): the ledger lines where it stands now. */
+        .note-drag-ghost { pointer-events: none; stroke: #000000; }
         #svgContainer.note-dragging, #svgContainer.note-dragging * { cursor: ns-resize !important; }
         /* Dragged anywhere but its inputs (owner's request 2026-10-29), its buttons and cells
            still clicked; nothing selects while it moves. */
@@ -6937,6 +6939,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 }
                 case 'noteHeads':
                     noteHeads = new Set(message.positions);
+                    noteLedger = { thickness: message.ledgerThickness, fraction: message.ledgerFraction };
                     break;
                 case 'noteDragResult':
                     // Nothing written: no picture is coming, and the note goes back.
@@ -7149,14 +7152,29 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         installBarHover();
 
-        // A note's head dragged up or down moves its pitch (owner's request 2026-11-02). It
-        // follows the pointer smoothly, with its accidental and without a re-render, while a pale
-        // head shows the staff position it would land on and sounds when that changes; let go, the
-        // key's tone at that position is written as one edit, and the score redraws. Only
+        // A note's head dragged up or down moves its pitch (owner's request 2026-11-02). It clicks
+        // from staff position to staff position with its accidental, no re-render, and sounds at
+        // each (owner's request 2026-11-03: no smooth following, and no fine work with the mouse);
+        // let go, the key's tone at that position is written as one edit, and the score redraws. Only
         // a pitch's head (noteHeads, from the server): anything else still scrolls the sheet.
         const NOTE_DRAG_SLOP = 4;
+        // The mouse's way to one staff position at the least, however small the score is drawn.
+        const NOTE_DRAG_PIXELS = 10;
+        // How far back past a position's edge the pointer has to come to leave it: a hand
+        // resting on an edge does not flip the note back and forth.
+        const NOTE_DRAG_HOLD = 0.25;
+        // Where a note now that many staff positions up stands next, the pointer that many pixels
+        // below where it was pressed: each position takes a whole perStep of the way.
+        function noteDragSteps(pixels, perStep, steps) {
+            const at = -pixels / perStep;
+            const next = Math.trunc(at);
+            const goingBack = Math.abs(next) < Math.abs(steps) && (next === 0 || Math.sign(next) === Math.sign(steps));
+            return goingBack && Math.abs(at) > Math.abs(steps) - NOTE_DRAG_HOLD && Math.sign(at) === Math.sign(steps) ? steps : next;
+        }
         let noteHeads = new Set();
         let notePress = null, noteDragged = false, noteDropped = null;
+        // As the score draws a ledger line (from the server, with noteHeads).
+        let noteLedger = { thickness: 0.2, fraction: 0.25 };
         // The five lines of the staff at x nearest y, read off the drawn lines: a ledger line is
         // shorter than minWidth and joins no staff. null when none is there.
         function staffFromLines(lines, x, y, minWidth) {
@@ -7212,7 +7230,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const lines = Array.from(svg.querySelectorAll('line')).filter(l => l.getAttribute('y1') === l.getAttribute('y2'))
                 .map(l => ({ x1: num(l, 'x1'), x2: num(l, 'x2'), y: num(l, 'y1') }));
             const staff = staffFromLines(lines, x, y, fs * 1.5);
-            const box = head.getBBox();
+            // The head as drawn: the click box the server puts over it is its exact width, where
+            // a glyph's own box is the font's, wider (a ledger line reaches from the head's).
+            const hitBox = Array.from(svg.querySelectorAll('rect.nh-hit[data-pos="' + press.pos + '"]'))
+                .find(r => Math.abs(num(r, 'x') - x) < 0.01 && Math.abs(num(r, 'y') - y) < fs);
+            const box = hitBox ? { x, width: num(hitBox, 'width') } : head.getBBox();
             const ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             ghost.setAttribute('class', 'note-drag-ghost');
             // Beside the head, in the same coordinates: the page's music stands in a shifted group.
@@ -7220,25 +7242,20 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             Object.assign(press, {
                 moving: true, row, head, x, y, staff, box, ghost,
                 step: (staff ? staff.space : fs / 4) / 2,
-                perPixel: 1 / head.getScreenCTM().d,
+                perStep: Math.max(NOTE_DRAG_PIXELS, (staff ? staff.space : fs / 4) / 2 * head.getScreenCTM().d),
                 steps: 0,
             });
             svgContainer.classList.add('note-dragging');
             svgContainer.setPointerCapture(press.id);
             return true;
         }
-        function drawNoteGhost(press) {
+        function drawNoteLedgers(press) {
             const y = press.y - press.steps * press.step;
             press.ghost.textContent = '';
-            const pale = press.head.cloneNode(true);
-            pale.removeAttribute('data-pos');
-            pale.removeAttribute('transform');   // the head's own, as it follows the pointer
-            pale.style.cursor = '';
-            pale.setAttribute('y', String(y));
-            press.ghost.appendChild(pale);
             for (const ly of ledgersFor(press.staff, y)) {
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                const over = press.staff.space / 3;
+                const over = noteLedger.fraction * press.box.width;
+                line.setAttribute('stroke-width', String(noteLedger.thickness * press.staff.space));
                 line.setAttribute('x1', String(press.box.x - over));
                 line.setAttribute('x2', String(press.box.x + press.box.width + over));
                 line.setAttribute('y1', String(ly));
@@ -7264,7 +7281,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             e.preventDefault();
             notePress = { id: e.pointerId, at: e.clientY, pos: parseInt(e.target.getAttribute('data-pos'), 10), target: e.target, moving: false };
         });
-        svgContainer.addEventListener('pointermove', (e) => {
+        // On the window: a quick first move can leave the sheet before the slop is passed, with the
+        // pointer not captured yet (capturing at the press would take a plain click off the note).
+        window.addEventListener('pointermove', (e) => {
             if (!notePress) {
                 if (e.buttons === 0 && isNoteHead(e.target)) e.target.style.cursor = 'ns-resize';
                 return;
@@ -7274,14 +7293,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!notePress.moving) {
                 if (Math.abs(dyPixels) < NOTE_DRAG_SLOP) return;
                 if (!beginNoteDrag(notePress)) { notePress = null; return; }
-                drawNoteGhost(notePress);
+                drawNoteLedgers(notePress);
             }
-            const dy = dyPixels * notePress.perPixel;
-            moveNoteRow(notePress.row, dy);
-            const steps = Math.round(-dy / notePress.step);
+            const steps = noteDragSteps(dyPixels, notePress.perStep, notePress.steps);
             if (steps !== notePress.steps) {
                 notePress.steps = steps;
-                drawNoteGhost(notePress);
+                moveNoteRow(notePress.row, -steps * notePress.step);
+                drawNoteLedgers(notePress);
                 vscode.postMessage({ type: 'noteDragHear', position: notePress.pos, steps });
             }
         });
@@ -7292,13 +7310,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             noteDragged = true;
             endNoteDrag(press);
             if (press.steps === 0) { moveNoteRow(press.row, 0); return; }
-            // It stays where it was put until the score comes back drawn: no jump back and forth.
-            moveNoteRow(press.row, -press.steps * press.step);
+            // It stays where it was put until the score comes back drawn.
             noteDropped = press.row;
             vscode.postMessage({ type: 'noteDrag', position: press.pos, steps: press.steps });
         };
-        svgContainer.addEventListener('pointerup', dropNote);
-        svgContainer.addEventListener('pointercancel', (e) => {
+        window.addEventListener('pointerup', dropNote);
+        window.addEventListener('pointercancel', (e) => {
             if (!notePress || e.pointerId !== notePress.id) return;
             if (notePress.moving) { moveNoteRow(notePress.row, 0); endNoteDrag(notePress); }
             notePress = null;

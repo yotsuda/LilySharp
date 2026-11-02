@@ -970,6 +970,10 @@ public class NoteHeadsParams
 public class NoteHeadsResponse
 {
     public int[] Positions { get; set; } = System.Array.Empty<int>();
+    /// <summary>A ledger line's thickness in this file, in staff spaces.</summary>
+    public double LedgerThickness { get; set; }
+    /// <summary>How far a ledger line reaches past a head on each side, in the head's widths.</summary>
+    public double LedgerLengthFraction { get; set; }
 }
 
 /// <summary>One replacement of <c>[Start, End)</c> (offsets into the text of

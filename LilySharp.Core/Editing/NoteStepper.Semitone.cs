@@ -70,6 +70,17 @@ namespace LilySharp.Core.Editing;
 /// </remarks>
 public static partial class NoteStepper
 {
+    /// <summary>A ledger line as this file's <c>layout { }</c> draws it: its thickness in staff
+    /// spaces and how far it reaches past a head on each side, in the head's widths — what the
+    /// preview draws a dragged note's lines with until the score comes back drawn (owner's
+    /// report 2026-11-03: they were thinner than the score's).</summary>
+    public static (double Thickness, double LengthFraction) LedgerLineOf(SyntaxTree tree)
+    {
+        var style = LilySharp.Core.Semantics.LayoutPlanReader.Resolve(tree.GetRoot(), null).EngravingStyle;
+        using var scope = LilySharp.Core.Svg.EngravingStyle.Use(style);
+        return (LilySharp.Core.Svg.EngravingDefaults.LegerLineThickness, style.LedgerLengthFraction);
+    }
+
     /// <summary>The status-bar word for a target the semitone step leaves alone.</summary>
     private const string SemitoneRefusal =
         "a scale degree or a quarter tone moves by octave only (Ctrl+Shift+PageUp / PageDown)";

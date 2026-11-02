@@ -556,11 +556,44 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.equal(glyphOf(first, [first, second])?.getAttribute('x'), '10');
         assert.equal(glyphOf(first, []), null);
     });
-    it('draws where a dragged note will land beside its head, not on top of what the head has moved by', () => {
+    it('draws the ledger lines beside the head, and takes at least so many pixels to a staff position', () => {
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(source, /head\.parentNode\.appendChild\(ghost\);/);
-        assert.match(source, /pale\.removeAttribute\('transform'\);/);
-        assert.match(source, /perPixel: 1 \/ head\.getScreenCTM\(\)\.d/);
+        assert.match(source, /perStep: Math\.max\(NOTE_DRAG_PIXELS, /);
+        assert.match(source, /const NOTE_DRAG_PIXELS = 10;/);
+        // A quick first move leaves the sheet before the drag has begun: heard on the window.
+        assert.match(source, /window\.addEventListener\('pointermove', \(e\) => \{\s*if \(!notePress\)/);
+        assert.match(source, /window\.addEventListener\('pointerup', dropNote\);/);
+        // As the score's own: thickness and reach from the server, not guessed here.
+        assert.match(source, /line\.setAttribute\('stroke-width', String\(noteLedger\.thickness \* press\.staff\.space\)\);/);
+        assert.match(source, /const over = noteLedger\.fraction \* press\.box\.width;/);
+        assert.match(source, /const box = hitBox \? \{ x, width: num\(hitBox, 'width'\) \} : head\.getBBox\(\);/);
+        assert.doesNotMatch(source, /\.note-drag-ghost \{[^}]*stroke-width/);
+    });
+    it('moves a dragged note a whole staff position at a time, and holds it at the edge of one', () => {
+        const next = pageFunction('noteDragSteps', { NOTE_DRAG_HOLD: 0.25 }) as (px: number, per: number, steps: number) => number;
+        const walk = (pixels: number[]) => pixels.reduce((steps, px) => next(px, 10, steps), 0) + 0;
+        // Pixels are down: a note goes up as the pointer goes up.
+        assert.equal(walk([-4]), 0, 'not before a whole position');
+        assert.equal(walk([-9]), 0);
+        assert.equal(walk([-10]), 1);
+        assert.equal(walk([-19]), 1);
+        assert.equal(walk([-20]), 2);
+        assert.equal(walk([10]), -1);
+        assert.equal(walk([25]), -2);
+        // Back over the edge: held until a quarter of a position past it.
+        assert.equal(walk([-20, -19]), 2);
+        assert.equal(walk([-20, -18]), 2);
+        assert.equal(walk([-20, -17]), 1);
+        assert.equal(walk([-10, -8]), 1);
+        assert.equal(walk([-10, -7]), 0);
+        assert.equal(walk([10, 8]), -1);
+        assert.equal(walk([10, 7]), 0);
+        // Right across where it began, it is on the other side at once.
+        assert.equal(walk([-10, 10]), -1);
+        assert.equal(walk([-20, 0]), 0);
+        // Onward from a held place.
+        assert.equal(walk([-20, -18, -30]), 3);
     });
     it('finds the staff a dragged note is on, and the ledger lines it would need', () => {
         const staff5 = (top: number) => [0, 1, 2, 3, 4].map(i => ({ x1: 0, x2: 100, y: top + i }));

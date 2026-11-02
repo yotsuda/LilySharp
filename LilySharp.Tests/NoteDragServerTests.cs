@@ -170,6 +170,21 @@ public class NoteDragServerTests
         Assert.Equal(["fis'", "e'", "g'", "bes"], pitches);
     }
 
+    // A ledger line drawn for a dragged note is as thick and as long as the score's.
+    [Theory]
+    [InlineData("", 0.2, 0.25)]
+    [InlineData("layout { LedgerLine.thickness 1.0 0.3 }\n", 0.4, 0.25)]
+    [InlineData("layout { LedgerLine.lengthFraction 0.5 }\n", 0.2, 0.5)]
+    [InlineData("layout { StaffLine.thickness 2.0 }\n", 0.3, 0.25)]
+    public void TheLedgerLine_IsTheFilesOwn(string layout, double thickness, double fraction)
+    {
+        string text = layout + Book("c'4 d e f |");
+        var server = Open(text, out var uri);
+        var answer = server.NoteHeads(new NoteHeadsParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        Assert.Equal(thickness, answer.LedgerThickness, 6);
+        Assert.Equal(fraction, answer.LedgerLengthFraction, 6);
+    }
+
     [Fact]
     public void ADrum_IsNoPitch()
     {

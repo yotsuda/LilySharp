@@ -133,12 +133,17 @@ public sealed partial class LilySharpLanguageServer
     public NoteHeadsResponse NoteHeads(NoteHeadsParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
-        return doc == null ? new NoteHeadsResponse() : new NoteHeadsResponse
+        if (doc == null)
+            return new NoteHeadsResponse();
+        var ledger = NoteStepper.LedgerLineOf(doc.Tree);
+        return new NoteHeadsResponse
         {
             Positions = [.. doc.Tree.GetRoot().DescendantNodes<PitchSyntax>()
                 .Where(p => p.BaseName != '\0' && p.QuarterOffset == 0
                     && p.Parent is NoteSyntax or ChordSyntax or ArpeggioSyntax)
                 .Select(p => p.SourceStart)],
+            LedgerThickness = ledger.Thickness,
+            LedgerLengthFraction = ledger.LengthFraction,
         };
     }
 
