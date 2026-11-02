@@ -1801,7 +1801,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             if (message.type === 'markDragWords') {
                 const doc = await previewDocument(uri);
                 const words = doc ? await noteDragSteps?.markWords(doc, message.position, message.steps, message.mode) : undefined;
-                if (words) { void panel.webview.postMessage({ type: 'markDragWords', steps: message.steps, from: words.from, to: words.to }); }
+                if (words) { void panel.webview.postMessage({ type: 'markDragWords', steps: message.steps, mode: message.mode, from: words.from, to: words.to }); }
                 return;
             }
             if (message.type === 'noteDrag') {
@@ -6957,7 +6957,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'markDragWords':
                     // An answer for where the drag still is: it says nothing of a step left behind.
-                    if (notePress && notePress.tip && notePress.steps === message.steps) {
+                    if (notePress && notePress.tip && notePress.steps === message.steps && dragMode(notePress) === message.mode) {
                         notePress.tip.textContent = message.from === message.to ? message.from : message.from + ' \u2192 ' + message.to;
                         notePress.tip.hidden = false;
                     }
@@ -7254,6 +7254,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             return best;
         }
+        // What one step of a dragged note is, on the page and of the mouse's way.
+        function setDragGrid(press) {
+            const unit = press.ctrl ? OCTAVE_POSITIONS : 1;
+            press.step = press.position * unit;
+            press.perStep = press.perPosition * unit;
+        }
+        // Ctrl pressed or let go in the middle of a drag (owner's request 2026-11-03): the mouse's
+        // whole way from the press is read again by what a step now is, so the note stays by the
+        // pointer. What is on the page when the button is let go is what gets written.
+        function switchDragCtrl(press, ctrl) {
+            if (press.ctrl === ctrl) return;
+            press.ctrl = ctrl;
+            if (!press.moving) return;
+            if (!press.isMark) setDragGrid(press);
+            press.steps = noteDragSteps(press.dy, press.perStep, 0);
+            showDragSteps(press);
+        }
         function beginNoteDrag(press) {
             const svg = press.target.ownerSVGElement;
             const num = (el, name) => parseFloat(el.getAttribute(name));
@@ -7279,13 +7296,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // Beside the head, in the same coordinates: the page's music stands in a shifted group.
             head.parentNode.appendChild(ghost);
             const position = (staff ? staff.space : fs / 4) / 2;
-            const unit = press.ctrl ? OCTAVE_POSITIONS : 1;
             Object.assign(press, {
-                moving: true, row, head, x, y, staff, box, ghost,
-                step: position * unit,
-                perStep: Math.max(NOTE_DRAG_PIXELS, position * head.getScreenCTM().d) * unit,
+                moving: true, row, head, x, y, staff, box, ghost, position,
+                perPosition: Math.max(NOTE_DRAG_PIXELS, position * head.getScreenCTM().d),
                 steps: 0,
             });
+            setDragGrid(press);
             svgContainer.classList.add('note-dragging');
             svgContainer.setPointerCapture(press.id);
             return true;
@@ -7324,6 +7340,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             notePress = null;
         }
         const dragMode = (press) => press.isMark ? (press.ctrl ? 'placement' : 'mark') : (press.ctrl ? 'octave' : 'position');
+        function showDragSteps(press) {
+            const steps = press.steps, mode = dragMode(press);
+            if (press.isMark) {
+                if (steps === 0) press.tip.hidden = true;
+                else vscode.postMessage({ type: 'markDragWords', position: press.pos, steps, mode });
+            } else {
+                moveNoteRow(press.row, -steps * press.step);
+                drawNoteLedgers(press);
+                vscode.postMessage({ type: 'noteDragHear', position: press.pos, steps, mode });
+            }
+        }
         svgContainer.addEventListener('pointerdown', (e) => {
             noteDragged = false;
             notePress = null;
@@ -7347,6 +7374,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             if (e.pointerId !== notePress.id) return;
             const dyPixels = e.clientY - notePress.at;
+            notePress.dy = dyPixels;
+            // From the move as well as the key: a press takes no focus, and the key may go elsewhere.
+            switchDragCtrl(notePress, e.ctrlKey || e.metaKey);
             if (!notePress.moving) {
                 if (Math.abs(dyPixels) < NOTE_DRAG_SLOP) return;
                 if (!(notePress.isMark ? beginMarkDrag(notePress) : beginNoteDrag(notePress))) { notePress = null; return; }
@@ -7359,15 +7389,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             if (steps !== notePress.steps) {
                 notePress.steps = steps;
-                const mode = dragMode(notePress);
-                if (notePress.isMark) {
-                    if (steps === 0) notePress.tip.hidden = true;
-                    else vscode.postMessage({ type: 'markDragWords', position: notePress.pos, steps, mode });
-                } else {
-                    moveNoteRow(notePress.row, -steps * notePress.step);
-                    drawNoteLedgers(notePress);
-                    vscode.postMessage({ type: 'noteDragHear', position: notePress.pos, steps, mode });
-                }
+                showDragSteps(notePress);
             }
         });
         const dropNote = (e) => {
@@ -7394,6 +7416,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             endNoteDrag(notePress);
             noteDragged = true;
         });
+        const ctrlInADrag = (e) => {
+            if (notePress && (e.key === 'Control' || e.key === 'Meta')) switchDragCtrl(notePress, e.type === 'keydown');
+        };
+        window.addEventListener('keydown', ctrlInADrag);
+        window.addEventListener('keyup', ctrlInADrag);
         document.addEventListener('click', (e) => {
             if (!noteDragged) return;
             noteDragged = false;

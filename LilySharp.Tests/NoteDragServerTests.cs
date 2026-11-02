@@ -229,13 +229,14 @@ public class NoteDragServerTests
     [Fact]
     public void TheMarks_AreThoseWithANameToStep_AndStandAtTheirAt()
     {
-        string text = Book("c'4@mf d@staccato e@fermata f@text(\"x\") |");
+        string text = Book("c'4@mf d@staccato e@fermata f@text(\"x\") g@stopped |");
         var server = Open(text, out var uri);
         var marks = server.NoteHeads(new NoteHeadsParams { TextDocument = new TextDocumentIdentifier { Uri = uri } }).Marks;
         string[] words = [.. marks.OrderBy(p => p).Select(p => new string(text[p..].TakeWhile(c => !" |".Contains(c)).ToArray()))];
         Assert.Contains("@mf", words);
         Assert.Contains("@staccato", words);
         Assert.DoesNotContain(words, w => w.StartsWith("@text", System.StringComparison.Ordinal));
+        Assert.DoesNotContain("@stopped", words);   // an articulation alone in the world
         // A step on anything else in the list must not fall through to the note.
         foreach (int at in marks)
         {
