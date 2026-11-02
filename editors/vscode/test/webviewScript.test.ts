@@ -593,6 +593,14 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.match(source, /moving: false, isMark: isSteppingMark\(target\), ctrl: e\.ctrlKey \|\| e\.metaKey,/);
         assert.match(source, /press\.isMark \? \(press\.ctrl \? 'placement' : 'mark'\) : \(press\.ctrl \? 'octave' : 'position'\)/);
     });
+    it('locks mouse editing by the toolbar button, for every preview and for the next time', () => {
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(source, /if \(mouseEditLocked \|\| e\.pointerType !== 'mouse'/);
+        assert.match(source, /e\.buttons === 0 && !mouseEditLocked && /);
+        assert.match(source, /context\.globalState\.update\(MOUSE_LOCK_KEY, !!message\.locked\)/);
+        assert.match(source, /for \(const open of previewPanels\.values\(\)\) \{\s+void open\.webview\.postMessage\(\{ type: 'mouseLock'/);
+        assert.match(source, /vscode\.postMessage\(\{ type: 'requestMouseLock' \}\);/);
+    });
     it('reads the drag again when Ctrl is pressed or let go in the middle of it', () => {
         const shown: number[] = [];
         const switchCtrl = pageFunction('switchDragCtrl', {

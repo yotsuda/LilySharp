@@ -72,6 +72,8 @@ function ensureClientReady(): Promise<void> {
     return clientReadyPromise;
 }
 const previewPanels = new Map<string, vscode.WebviewPanel>();
+// Mouse editing in the preview locked (owner's request 2026-11-03: against a slip of the hand).
+const MOUSE_LOCK_KEY = 'lilysharp.preview.mouseLocked';
 // The follower: the one preview that is not locked. It turns to whichever .lys comes to the
 // front, the Markdown preview's way (owner's decision 2026-10-12), so opening another score
 // reuses the pane instead of adding a tab. Every other panel is locked to its own file.
@@ -1791,6 +1793,17 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     type: 'noteHeads', positions: answer.Positions, marks: answer.Marks,
                     ledgerThickness: answer.LedgerThickness, ledgerFraction: answer.LedgerLengthFraction,
                 });
+                return;
+            }
+            if (message.type === 'requestMouseLock') {
+                void panel.webview.postMessage({ type: 'mouseLock', locked: context.globalState.get<boolean>(MOUSE_LOCK_KEY, false) });
+                return;
+            }
+            if (message.type === 'setMouseLock') {
+                await context.globalState.update(MOUSE_LOCK_KEY, !!message.locked);
+                for (const open of previewPanels.values()) {
+                    void open.webview.postMessage({ type: 'mouseLock', locked: !!message.locked });
+                }
                 return;
             }
             if (message.type === 'noteDragHear') {
@@ -4092,6 +4105,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             height: 28px; width: 42px; padding: 0; line-height: 1;
         }
         .toolbar button.icon svg { display: block; width: 15px; height: 15px; }
+        #mouseLockBtn .lock-shut, #mouseLockBtn[aria-pressed="true"] .lock-open { display: none; }
+        #mouseLockBtn[aria-pressed="true"] .lock-shut { display: inline; }
         /* How long the score plays (owner's request 2026-10-25), beside the transport. */
         .toolbar .length {
             font-family: system-ui, sans-serif; font-size: 12px; color: #555;
@@ -4206,6 +4221,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </span>
         <span class="sep"></span>
         <span class="group">
+        <button id="mouseLockBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Lock mouse editing" title="Lock mouse editing: dragging a note or a mark changes the score"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3" y="7.5" width="10" height="7" rx="1" fill="currentColor" stroke="none"/><path class="lock-open" d="M5.2 7.5V4.3a2.8 2.8 0 0 1 5.6 0v.4"/><path class="lock-shut" d="M5.2 7.5V4.3a2.8 2.8 0 0 1 5.6 0v3.2"/></svg></button>
         <button id="aiTransformBtn" class="ai icon" type="button" title="Ask AI in Chat (Ctrl+I)">✨</button>
         <button id="rangeBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Range" title="Each part's range"><svg viewBox="0 -.25 16.5 16.5" fill="currentColor" aria-hidden="true"><path d="M3 1.5 5.95 5.3H3.8v6.6h2.15L3 15.7.05 11.9H2.2V5.3H.05z"/><g transform="translate(.8 0)"><ellipse cx="9.4" cy="12.4" rx="2.8" ry="2" transform="rotate(-22 9.4 12.4)"/><rect x="11.35" y="1.5" width="1.05" height="10.8"/><path d="M12.4 1.5c.3 2 1.6 2.8 2.4 3.9.9 1.5 1.1 3.6.3 5.5.1-2.1-.9-3.6-2.7-4.2z"/></g></svg></button>
         </span>
@@ -6955,6 +6971,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     noteMarks = new Set(message.marks);
                     noteLedger = { thickness: message.ledgerThickness, fraction: message.ledgerFraction };
                     break;
+                case 'mouseLock':
+                    showMouseLock(message.locked);
+                    break;
                 case 'markDragWords':
                     // An answer for where the drag still is: it says nothing of a step left behind.
                     if (notePress && notePress.tip && notePress.steps === message.steps && dragMode(notePress) === message.mode) {
@@ -7339,6 +7358,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             svgContainer.classList.remove('note-dragging');
             notePress = null;
         }
+        // The lock: a press on a note or a mark is then a press on the page, as while the score plays.
+        let mouseEditLocked = false;
+        function showMouseLock(locked) {
+            mouseEditLocked = locked;
+            const btn = document.getElementById('mouseLockBtn');
+            btn.setAttribute('aria-pressed', String(locked));
+            btn.title = locked
+                ? 'Mouse editing is locked: dragging a note or a mark changes nothing. Click to unlock'
+                : 'Lock mouse editing: dragging a note or a mark changes the score';
+            // What the hover left on what it passed over.
+            if (locked) svgContainer.querySelectorAll('[data-pos]').forEach(el => { el.style.cursor = ''; });
+        }
+        document.getElementById('mouseLockBtn').addEventListener('click', () => {
+            showMouseLock(!mouseEditLocked);
+            vscode.postMessage({ type: 'setMouseLock', locked: mouseEditLocked });
+        });
+        vscode.postMessage({ type: 'requestMouseLock' });
         const dragMode = (press) => press.isMark ? (press.ctrl ? 'placement' : 'mark') : (press.ctrl ? 'octave' : 'position');
         function showDragSteps(press) {
             const steps = press.steps, mode = dragMode(press);
@@ -7354,7 +7390,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         svgContainer.addEventListener('pointerdown', (e) => {
             noteDragged = false;
             notePress = null;
-            if (e.pointerType !== 'mouse' || e.button !== 0 || e.shiftKey || e.altKey) return;
+            if (mouseEditLocked || e.pointerType !== 'mouse' || e.button !== 0 || e.shiftKey || e.altKey) return;
             const target = dragTargetOf(e.target, () => document.elementsFromPoint(e.clientX, e.clientY));
             // A note is no place to change while the score plays: a press is a seek then.
             if (!target || !document.getElementById('stopBtn').disabled) return;
@@ -7369,7 +7405,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // pointer not captured yet (capturing at the press would take a plain click off the note).
         window.addEventListener('pointermove', (e) => {
             if (!notePress) {
-                if (e.buttons === 0 && (isNoteHead(e.target) || isSteppingMark(e.target))) e.target.style.cursor = 'ns-resize';
+                if (e.buttons === 0 && !mouseEditLocked && (isNoteHead(e.target) || isSteppingMark(e.target))) e.target.style.cursor = 'ns-resize';
                 return;
             }
             if (e.pointerId !== notePress.id) return;
