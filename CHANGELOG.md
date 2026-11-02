@@ -9,6 +9,7 @@ workflow attaches that section to the GitHub Release verbatim.
 ### The chat's composing checks
 
 - The bars of a piece are counted to its closing bar line: a last chord's fermata no longer makes a bar more in the review, the length finding or the count of a form going round. The guide tells a piano piece to hold its broken chords and a quiet tune in the pedal.
+- The readings of a tune's rhythm leave out a section named as a frame (intro, outro, coda and the like): a few bars of coda no longer take a tune poured into one rhythm under the check's share.
 - A mistake the chat's last revision makes (a tune written across a compound meter's beats, say) goes back to it once more, and only that, before the piece is written.
 - A piano's two hands are one player for its levels: a level in either is the piano's, and a piano with none until its last section is told. A section where a part only rests no longer counts as where it begins.
 - `piano.left-reaches-melody` speaks only where the right hand has the tune, not beside a flute's or a singer's.

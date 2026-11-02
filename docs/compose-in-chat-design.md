@@ -162,6 +162,9 @@ as the melody's rhythm).
   first bar, an octave apart or none (in `ChorusOpensLikeAnother`); seven eighths of its four-bar
   phrases' bars with the commonest number of notes for their place, the numbers not all one
   (`PhraseCounts`; 2026-11-01: あしたの窓, 3, 3, 5, 2 in 31 of 32 bars; 4 of 145 books).
+A section named as a frame (intro, outro, coda, ending, tag, prelude, postlude, or their Japanese names) is left out of
+  "one rhythm in most bars", of the section reading and of `PhrasePositions` (`FrameSection`, `OutsideTheFrame`; 2026-11-02: 雨粒の午後's
+  four bars of coda took 23 of 46 and 36 of 48 under their shares).
 - Leaps up and down its chords (fewer than a quarter of the moves are steps).
 - One bar's figure moved along the chords: half the bars or more take the up-and-down shape of the
   bar before. Measured on the owner's 60 pieces: the sequenced rock guitars scored 0.53–0.61, the
@@ -265,9 +268,6 @@ its path in `Downloads`. For each piece:
   Only composition findings are.
 - **The AI sometimes reports two remaining findings in one line.** Seen once; not acted on.
 - **Proposed and not built:**
-  - Leaving a piece's frame out of the melody's rhythm readings: 2026-11-02, 雨粒の午後's four bars of coda took
-    `rhythm.same-bars` (23/50) and `phrase.positions` (38/52) under their shares. Swept over 1364 books: 2 newly
-    told. Waiting for the owner.
   - "The chorus does not lift": the melody's height and the level no higher than the verse's.
   - Breathing for a voice or a wind instrument (eight bars or more without a rest; except where
     the request asks for circular breathing).

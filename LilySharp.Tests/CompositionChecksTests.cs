@@ -926,6 +926,38 @@ public class CompositionChecksTests
             f => f.Contains("played the same each time"));
     }
 
+    // Owner's review 2026-11-02: 雨粒の午後's four bars of coda took its `4. 8 8 8` under the shares of
+    // both readings of the tune's rhythm. The sections that frame a piece are not its tune.
+    [Fact]
+    public void TheSectionsThatFrameAPiece_AreLeftOutOfTheTunesRhythm()
+    {
+        static string Bars(params string[] bars) => string.Concat(bars.Select(b => b + " | "));
+        static string Duet(string body, string frame, string frameName) => $"title \"Frame\"\ntime 4/4\noctave absolute\nkey c major\n{Hands}\n"
+            + $"section A {{\n  rh {{ {body} }}\n  lh {{ {Bars(Enumerable.Repeat("c1", body.Count(c => c == '|')).ToArray())} }}\n}}\n"
+            + $"section {frameName} {{\n  rh {{ {frame} }}\n  lh {{ {Bars(Enumerable.Repeat("c1", frame.Count(c => c == '|')).ToArray())} }}\n}}\n"
+            + $"form {{ A {frameName} }}\nscore {{ grandStaff {{ staff rh  staff lh }} }}\n";
+        const string Plain = "g'1", Poured = "g'4 a'8 b'8 c''4 b'4";
+        // 8 of the body's 16 bars in one rhythm, the rest each its own: a half, and 8 of 20 with four bars more.
+        string body = Bars(Poured, "g'2 a'2", Poured, "g'4. a'8 b'2", Poured, "g'8 a'8 b'2.", Poured, "g'2. a'4",
+            Poured, "g'4 a'2 b'4", Poured, "g'2 a'4 b'4", Poured, "g'4 a'4 b'2", Poured, "g'8 a'4. b'2");
+        string frame = Bars(Plain, "a'2. g'4", "g'2.. a'8", Plain);
+        foreach (var name in new[] { "Coda", "intro", "Outro2", "コーダ" })
+            Assert.Contains(CompositionChecks.Of(Duet(body, frame, name)), f => f.StartsWith("rh, the melody: 8 of its 16 bars have the same rhythm"));
+        Assert.DoesNotContain(CompositionChecks.Of(Duet(body, frame, "Fin")), f => f.Contains("of its 20 bars have the same rhythm"));
+        // A frame in one rhythm is no section poured; another section is.
+        string varied = Bars("g'2 a'2", "g'4. a'8 b'2", "g'8 a'8 b'2.", "g'2. a'4", "g'4 a'2 b'4", "g'2 a'4 b'4", "g'4 a'4 b'2", "g'8 a'4. b'2");
+        string poured = Bars(Poured, Poured, Poured, Poured);
+        Assert.DoesNotContain(CompositionChecks.Of(Duet(varied + varied, poured, "Coda")), f => f.Contains("have the same rhythm"));
+        Assert.Contains(CompositionChecks.Of(Duet(varied + varied, poured, "Fin")), f => f.StartsWith("rh, the melody: in Fin 4 of its 4 bars have the same rhythm"));
+        // Six four-bar phrases, 18 of 24 bars in one rhythm for their place; a seventh of the coda's takes it under.
+        string[] place = ["g'4 a'4 b'4 c''4", "g'2 a'4 b'4", "g'4. a'8 b'2", "g'1"];
+        const string Off = "g'8 a'8 b'8 c''8 b'2";
+        string phrases = string.Concat(Enumerable.Range(0, 6).Select(i => Bars(place.Select((b, k) => k == i % 4 ? Off : b).ToArray())));
+        string other = Bars("g'2. a'4", "g'2.. a'8", "g'8 a'4. b'2", "g'4 a'2 b'4");
+        Assert.Contains(CompositionChecks.Of(Duet(phrases, other, "Coda")), f => f.StartsWith("rh, the melody: its 6 four-bar phrases keep one rhythm for each bar's place in the phrase (18 of 24 bars)"));
+        Assert.DoesNotContain(CompositionChecks.Of(Duet(phrases, other, "Fin")), f => f.Contains("four-bar phrases keep"));
+    }
+
     // Owner's review 2026-11-02: 雨粒の午後, 52 bars, was called 53: the last chord's fermata, longer
     // in the MIDI, ran past the closing bar line and read as a bar begun.
     [Fact]

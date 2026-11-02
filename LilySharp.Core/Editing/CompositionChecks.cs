@@ -275,7 +275,7 @@ public static class CompositionChecks
             // One bar's rhythm on most of the melody's bars (owner's trial 2026-10-29: a pop song sang
             // `r8 x8 x8 x8~ x4 x4` in every bar, four syllables poured into each and a breath at every
             // bar line, in the middle of words) — a mix of values the count above passes.
-            if (melody && SameRhythmBars(onsets, midi.BarTicks) is var (alike, inBars) && inBars >= SameRhythmFewestBars
+            if (melody && SameRhythmBars(OutsideTheFrame(midi, onsets), midi.BarTicks) is var (alike, inBars) && inBars >= SameRhythmFewestBars
                 && alike >= inBars * SameRhythmShare)
                 findings.Add(new("rhythm.same-bars", $"{part}, the melody: {alike} of its {inBars} bars have the same rhythm — a pattern poured full, not a line: "
                     + "let the rhythm follow the words and the phrase — a longer note at a phrase's end and a breath only there, "
@@ -595,7 +595,7 @@ public static class CompositionChecks
             // The phrases' endings, where the phrases themselves are not one formula (said above).
             if (formula.Count == 0)
             {
-                findings.AddRange(PhrasePositions(midi, tune, byPart[tune], barList, band));
+                findings.AddRange(PhrasePositions(midi, tune, OutsideTheFrame(midi, byPart[tune]), barList, band));
                 findings.AddRange(PhraseEndings(midi, tune, byPart[tune], barList, band));
             }
             // A song's tune climbs to its chorus, and closes each section its own way; an
@@ -2219,13 +2219,28 @@ public static class CompositionChecks
     private const double SectionRhythmShare = 0.75;
     private const int SectionRhythmFewestBars = 4;
 
+    // A section that frames the piece, by its name: its rhythm is not the tune's.
+    private static readonly System.Text.RegularExpressions.Regex FrameSection = new(
+        @"^(intro|outro|coda|ending|tag|prelude|postlude|前奏|後奏|イントロ|アウトロ|エンディング|コーダ)\W*\d*$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    /// <summary>The onsets outside the sections that frame the piece (owner's review 2026-11-02: 雨粒の午後's
+    /// four bars of coda took both readings of its `4. 8 8 8` under their shares, 23 of 50 and 38 of 52).</summary>
+    private static List<(int Start, int Length)> OutsideTheFrame(MidiFile midi, IReadOnlyList<(int Start, int Length)> onsets)
+    {
+        var starts = midi.SectionStarts.ToList();
+        var framed = starts.Select((s, i) => (Name: s.Value, From: s.Key, To: i + 1 < starts.Count ? starts[i + 1].Key : int.MaxValue))
+            .Where(s => FrameSection.IsMatch(s.Name)).ToList();
+        return onsets.Where(o => !framed.Any(f => o.Start >= f.From && o.Start < f.To)).ToList();
+    }
+
     /// <summary>The sections (as the form first plays them) in which <paramref name="onsets"/>'s bars
     /// mostly share one rhythm: each section's name, the bars alike and the bars it sounds in.</summary>
     private static List<(string Name, int Same, int Bars)> SameRhythmSections(
         IReadOnlyList<(int Start, int Length)> onsets, MidiFile midi)
     {
         var poured = new List<(string, int, int)>();
-        foreach (var (name, start, end) in PlayedSpans(midi))
+        foreach (var (name, start, end) in PlayedSpans(midi).Where(s => !FrameSection.IsMatch(s.Name)))
         {
             var mine = onsets.Where(o => o.Start >= start && o.Start < end).ToList();
             var (same, bars) = SameRhythmBars(mine, midi.BarTicks.Where(b => b >= start && b < end));
