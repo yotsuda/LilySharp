@@ -207,7 +207,9 @@ as the melody's rhythm).
   (2026-11-01: a song to sing and play yourself of 24 bars, 69 seconds). The finding says a
   section that returns is named again in the form — that counts — and a copy under a new name with
   a few bars altered is not length (2026-11-01: told it was short, a piece wrote its verse,
-  pre-chorus and chorus again as Verse2, PreChorus2, Chorus2). ⚠️ A near-copy check was tried and
+  pre-chorus and chorus again as Verse2, PreChorus2, Chorus2). The bars are counted to the closing
+  bar line; a fermata held past it is in the seconds and is no bar (`BarsEnd`; 2026-11-02: 雨粒の午後,
+  52 bars, was called 53). ⚠️ A near-copy check was tried and
   dropped the same day: three quarters of the bars alike named a second verse whose tune was new over
   the same bass and drums, the ordinary shape of a song; the 2026-10-30 rule stands — a tune changed
   in three bars of eight is music of its own.

@@ -286,7 +286,10 @@ What makes it music:
   left hand may keep one note value through a section: its figure is the rhythm; the melody is
   where the rhythm varies. A contrasting section takes a figure of its own. A broken-chord figure
   stays within an octave and a half (a twelfth), climbing from its bass by the chord's tones and
-  turning back — not leaping two octaves from a low bass to the treble.
+  turning back — not leaping two octaves from a low bass to the treble. Broken chords and a slow
+  or quiet tune are held in the pedal, or each note stops where it is written: `@sustain` on the
+  harmony's first bass note, the same mark again at each change of harmony, `@!sustain` on the
+  last note (`d,4@sustain a, d a, | g,4@sustain d g d | a,1@!sustain |`).
 - **Texture**: one voice carries the melody while the others accompany — broken chords,
   repeated eighths, a moving bass — and the roles pass between the parts. Not every part in the
   same rhythm; not whole notes everywhere. **A rest in one part is covered by another**: the

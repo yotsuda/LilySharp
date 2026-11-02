@@ -678,7 +678,8 @@ public static class CompositionChecks
     private static CompositionFinding? PlayedRound(MidiFile midi)
     {
         var starts = midi.SectionStarts.ToList();
-        int end = midi.Tracks.SelectMany(t => t.Notes).Select(n => n.StartTick + n.DurationTicks).DefaultIfEmpty(0).Max();
+        int end = BarsEnd(midi, midi.Tracks.SelectMany(t => t.Notes).Select(n => n.StartTick).DefaultIfEmpty(0).Max(),
+            midi.Tracks.SelectMany(t => t.Notes).Select(n => n.StartTick + n.DurationTicks).DefaultIfEmpty(0).Max());
         var plays = starts.Select((s, i) => (Name: s.Value, Bars: 1 + midi.BarTicks.Count(b => b > s.Key && b < (i + 1 < starts.Count ? starts[i + 1].Key : end)))).ToList();
         var thrice = plays.GroupBy(p => p.Name).Where(g => g.Count() >= 3).Select(g => $"{g.Key} ({g.Count()} times)").ToList();
         int total = plays.Sum(p => p.Bars), repeats = total - plays.GroupBy(p => p.Name).Sum(g => g.First().Bars);
@@ -695,8 +696,15 @@ public static class CompositionChecks
     {
         var pitched = PitchedNotes(midi);
         int lastTick = pitched.Count == 0 ? 0 : pitched.Max(n => n.StartTick + n.DurationTicks);
-        return (1 + midi.BarTicks.Count(b => b > 0 && b < lastTick), (int)System.Math.Round(SecondsAt(midi, lastTick)));
+        int barsEnd = BarsEnd(midi, pitched.Count == 0 ? 0 : pitched.Max(n => n.StartTick), lastTick);
+        return (1 + midi.BarTicks.Count(b => b > 0 && b < barsEnd), (int)System.Math.Round(SecondsAt(midi, lastTick)));
     }
+
+    /// <summary>Where the bars are counted to: the closing bar line, when the last note starts before
+    /// it and a fermata holds it past (owner's review 2026-11-02: a piece of 52 bars called 53, its
+    /// hold counted as a bar). The hold stays in the seconds.</summary>
+    private static int BarsEnd(MidiFile midi, int lastOnset, int lastTick) =>
+        midi.BarTicks.Count > 0 && midi.BarTicks.Max > lastOnset ? System.Math.Min(midi.BarTicks.Max, lastTick) : lastTick;
 
     // The middle of a piano hand's sounding time (MIDI) past which the hand is out of its usual
     // register: a left hand whose middle is under F2, a right hand whose middle is over G5 (owner's

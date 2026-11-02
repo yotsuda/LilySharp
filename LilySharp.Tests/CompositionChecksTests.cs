@@ -926,6 +926,30 @@ public class CompositionChecksTests
             f => f.Contains("played the same each time"));
     }
 
+    // Owner's review 2026-11-02: 雨粒の午後, 52 bars, was called 53: the last chord's fermata, longer
+    // in the MIDI, ran past the closing bar line and read as a bar begun.
+    [Fact]
+    public void AFermataHeldPastTheClosingBarLine_IsNoBarMore()
+    {
+        static string Duo(string fl, string vc, string form) => "title \"Hold\"\ntime 4/4\noctave absolute\n"
+            + "part fl { instrument flute }\npart vc { instrument cello }\n"
+            + $"section A {{\n  fl {{ {fl} }}\n  vc {{ {vc} }}\n}}\n"
+            + "section B {\n  fl { e''1 | d''1@fermata | }\n  vc { c1 | g,1@fermata | }\n}\n"
+            + $"form {{ {form} }}\nscore {{ staff fl staff vc }}\n";
+        string Length(string piece) => Assert.Single(CompositionChecks.Findings(piece), f => f.Id == "form.length").Message;
+        // Two sections of two whole notes at ♩ = 120: 8 seconds, and the hold's second is in the seconds.
+        Assert.StartsWith("The piece is 4 bars long, about 9 seconds played", Length(Duo("c''1 | d''1 |", "c1 | g,1 |", "A B")));
+        // No closing bar line: the last bar is the one its note starts in.
+        Assert.StartsWith("The piece is 2 bars long", Length(Duo("c''1 | d''1@fermata", "c1 | g,1@fermata", "A")));
+        // A note tied into the last bar still plays it.
+        Assert.StartsWith("The piece is 2 bars long", Length(Duo("c''1~ | c''1 |", "c1~ | c1 |", "A")));
+        // Rests to the closing bar line: the music stopped before it.
+        Assert.StartsWith("The piece is 1 bars long", Length(Duo("c''1 | R | R |", "c1 | R | R |", "A")));
+        // What goes round is counted by the same bars.
+        Assert.StartsWith("A (3 times), B (3 times): played the same each time, 8 of the 12 bars played repeats",
+            Assert.Single(CompositionChecks.Findings(Duo("c''1 | d''1 |", "c1 | g,1 |", "A B A B A B")), f => f.Id == "form.played-three-times").Message);
+    }
+
     // Owner's decision 2026-11-02: told it was short, a carol for flute and piano played its 24 bars
     // four times, and no check spoke: the check read a band's pieces.
     [Fact]
@@ -1446,5 +1470,7 @@ public class CompositionChecksTests
         foreach (var title in new[] { "Little Quartet", "Night Drive", "Blue Window" })
             Assert.DoesNotContain($"title \"{title}\"", guide);
         Assert.Contains("about 24 to 32 bars\n  of 4/4 suits a piece", guide.Replace("\r\n", "\n"));
+        // Owner's review 2026-11-02: 29 pieces with a piano, composed in the chat, and not one pedal.
+        Assert.Contains("`@sustain` on the\n  harmony's first bass note", guide.Replace("\r\n", "\n"));
     }
 }
