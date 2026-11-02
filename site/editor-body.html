@@ -162,8 +162,8 @@
     <tr><td><code>@</code></td><td>goes after the string number and the annotations already there, and the name list opens there</td><td class="ba">c|4( → c4@|(</td></tr>
     <tr><td><code>~</code></td><td>moves to the end of the note</td><td class="ba">|c2 → c2~</td></tr>
     <tr><td><code>(</code> / <code>)</code></td><td>a slur is placed over two notes at once — the one typed on and the next; <code>)</code> on the note after a slur's end extends it by one. From a note inside a chord's brackets, <code>(</code> goes after the chord</td><td class="ba">c4| d e → c4( d) e</td></tr>
-    <tr><td><code>[</code> / <code>]</code></td><td>a manual beam, the same way, within the bar. From a note inside a chord's brackets, <code>[</code> goes after the chord</td><td class="ba">c8| d e f → c8[ d] e f</td></tr>
-    <tr><td><code>&lt;</code> / <code>&gt;</code></td><td><code>&lt;</code> before a note wraps it in a chord (the duration stays outside); turning one end into <code>&lt;&lt;</code> or back turns the matching end too</td><td class="ba">|c4 → &lt;c|&gt;4</td></tr>
+    <tr><td><code>[</code> / <code>]</code></td><td>a manual beam, the same way, within the bar. From a note inside a chord's brackets, <code>[</code> goes after the chord. On a quarter, a longer note or a rest it changes nothing, and the status bar says why</td><td class="ba">c8| d e f → c8[ d] e f</td></tr>
+    <tr><td><code>&lt;</code> / <code>&gt;</code></td><td><code>&lt;</code> before a note, or inside it, wraps it in a chord (the duration stays outside); turning one end into <code>&lt;&lt;</code> or back turns the matching end too</td><td class="ba">|c4 → &lt;c|&gt;4</td></tr>
   </table>
   <p><b>Several cursors.</b> With more than one cursor, the octave marks, digits, dots,
   <code>\</code> and <code>@</code> work at each cursor on its own note, all in one undo step:

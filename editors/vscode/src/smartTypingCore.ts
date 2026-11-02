@@ -192,7 +192,7 @@
 //    (`<c| e>4` + '\' → `<c\| e>4`; `<c\3 e>` + '@' on the c → `<c\3@| e>`),
 //    which is where the parser reads a member's string number and annotations
 //    (`<c\3 e\2>`, `<c@finger(1) e>`). At the chord's ends and on a degree
-//    member they are typed as pressed.
+//    member '@' is typed as pressed; '\' goes to the chord's slot (rule 37).
 //
 // 30. SEVERAL CARETS: a key planned here (', ',', '.', '\', '@', the digits)
 //    typed with several empty carets is decided for EACH caret on its own, on
@@ -249,6 +249,17 @@
 //    the status bar says why. Off a note it is typed as pressed, which is where it means
 //    something: `chord(F#m)`, `@chord(F#)`, a `chords` row, a lyric. Like '@' it has no
 //    layout-safe key, so it comes through the change-event route (rule 27).
+// 36. '<' and '[' typed inside a note do not split it (owner decision 2026-11-02): `c<is4`
+//    breaks the file down to its end, and `c[4` is reported as a volta. So `c|is4` + '<' is
+//    `<cis|>4`, as from just before it (rule 1), and `c|8 | d8` + '[' is `c8[|] | d8`. A note
+//    that can carry no beam, a quarter or a rest, absorbs the '[' wherever the caret is,
+//    with the reason in the status bar: `c4[]` drew nothing and said nothing. This narrows
+//    rule 22 for a note whose length is known; one that inherits it from the bar before
+//    reads as unknown here, and keeps its pair. A rest absorbs a '<' no more than it did.
+// 37. '\' from outside a chord's brackets goes to the chord's slot, the caret following,
+//    as on a note (owner decision 2026-11-02): `|<c e>4` + '\' → `<c e>4\|`. It numbers
+//    every member alike (`<c e>4\2`, the compiler's reading), so a number for one note is
+//    typed on that note (rule 29).
 //
 // Rules 14–23 and 25 move TEXT and never the CARET: the mark or digit travels to the
 // slot it belongs in and the cursor keeps the position it was pressed at (see
@@ -1271,7 +1282,7 @@ export function slurOpenPlan(text: string, offset: number, autoClosed: boolean):
     let openAt = anchor ? postEventSlot(before, coreEndOf(before, anchor), '(') : offset;
     let closeOn = firstNoteEvent(before, anchor ? anchor.end : offset, end);
     if (!closeOn) {
-        if (member) { return markMovedOffMember(offset, typedLen, openAt, '(', ')', autoClosed); }
+        if (member) { return markMovedToItsSlot(offset, typedLen, openAt, '(', ')'); }
         // Nothing after the anchor to cover. When the caret was pointing AHEAD
         // at that note, the nearest legal two-note slur is the one anchored on
         // the note BEFORE the caret, so the paren stays where it was typed.
@@ -1311,18 +1322,17 @@ export function slurOpenPlan(text: string, offset: number, autoClosed: boolean):
     };
 }
 
-/** A '(' or '[' typed on a chord's member with nothing for it to close on: at the
- * chord's end it is what the key leaves after any note in that case (rules 10, 22),
- * and inside the brackets it would be no mark at all. */
-function markMovedOffMember(offset: number, typedLen: number, slot: number,
-    open: string, close: string, autoClosed: boolean): FixPlan {
+/** A '(' or '[' typed inside a note or on a chord's member, with nothing for it to close
+ * on: the pair at the note's slot is what the key leaves after any note in that case
+ * (rules 10, 22), and where it was typed it would be no mark at all. */
+function markMovedToItsSlot(offset: number, typedLen: number, slot: number, open: string, close: string): FixPlan {
     return {
         edits: [
             { at: offset, del: typedLen },
-            { at: slot + typedLen, ins: autoClosed ? open + close : open },
+            { at: slot <= offset ? slot : slot + typedLen, ins: open + close },
         ],
         caret: slot + 1,
-        what: `${open} typed on a chord member -> moved to the end of the chord`,
+        what: `${open} typed inside a note -> moved to its slot`,
     };
 }
 
@@ -1420,7 +1430,15 @@ export function beamOpenPlan(text: string, offset: number, autoClosed: boolean):
     // Both ends go into their notes' canonical slots (POST_EVENT_RANK).
     const openAt = postEventSlot(before, coreEndOf(before, anchor), '[');
     if (closeIdx < 0) { // not beamable, or nothing to group with
-        return member ? markMovedOffMember(offset, typedLen, openAt, '[', ']', autoClosed) : null;
+        if (inWordBlock(before, offset)) { return null; }
+        const on = events.find(e => e.start === anchor.start);
+        const refused = on?.rest ? 'a beam starts on a note, not a rest'
+            : on && on.duration > 0 && !BEAMABLE.has(on.duration) ? 'a beam takes eighths and shorter' : null;
+        if (refused) {
+            return { edits: [{ at: offset, del: typedLen }], caret: offset, what: `[ -> ${refused}`, hint: `Lily#: ${refused}` };
+        }
+        // Rules 10 and 22: the pair, for what is typed next; never inside the note.
+        return offset === openAt ? null : markMovedToItsSlot(offset, typedLen, openAt, '[', ']');
     }
     const closeOn = events[closeIdx];
     const closeAt = postEventSlot(before, closeOn.core, ']');
@@ -1862,7 +1880,7 @@ export function dotPlan(before: string, offset: number): TypePlan | null {
  * annotations, its own `\N` — because a string number is about the note, not a
  * slot the caret has to be in. A rest plays no string and takes the '\' as
  * pressed; inside a chord the '\' is the MEMBER's the caret is on (rule 29,
- * chordMemberAtCaret), and at the chord's ends it is typed as pressed. */
+ * chordMemberAtCaret), and from outside the brackets it is the chord's (rule 37). */
 export function stringNumberPlan(before: string, offset: number): TypePlan | null {
     if (inStringOrComment(before, offset)) { return null; }
     const [blockStart, blockEnd] = blockBounds(before, offset);
@@ -1871,11 +1889,17 @@ export function stringNumberPlan(before: string, offset: number): TypePlan | nul
         if (event.start > offset) { return null; } // the caret is between events
         let core: number;
         if (before[event.start] === '<') {
-            // A chord: the string number is the MEMBER's (`<c\3 e\2>`), so the
-            // caret has to be on one; at the chord's ends it is typed as pressed.
+            // A chord: on a member the string number is that member's (`<c\3 e\2>`);
+            // from outside the brackets it goes to the chord's own slot (rule 37). A space
+            // inside them is neither, and neither is an annotation's argument list.
             const member = chordMemberAtCaret(before, offset);
-            if (member === null) { return null; }
-            core = member;
+            if (member !== null) { core = member; }
+            else {
+                const slots = noteSlots(before, event.start, event.end);
+                if (!slots || (offset !== event.start && offset < slots.marksEnd)
+                    || insideAnnotationArgs(before, slots.coreEnd, offset)) { return null; }
+                core = slots.coreEnd;
+            }
         } else {
             const slots = noteSlots(before, event.start, event.end);
             if (!slots || slots.octave === null) { return null; } // a rest plays no string
@@ -1937,8 +1961,9 @@ export function annotationPlan(before: string, offset: number): TypePlan | null 
 }
 
 /** The words whose blocks are words and not notes: a '#' there is a chord symbol's or a
- * lyric's. Asked of the innermost block only, by the one key that needs it. */
-const WORD_BLOCKS = new Set(['chords', 'lyrics']);
+ * lyric's, a '[' a verse's or a volta's. Asked of the innermost block only, by the keys
+ * that need it, and only once they mean to do something. */
+const WORD_BLOCKS = new Set(['chords', 'lyrics', 'form', 'score']);
 
 function inWordBlock(text: string, offset: number): boolean {
     for (let i = offset - 1, depth = 0; i >= 0; i--) {
@@ -2220,6 +2245,9 @@ export function chordOpenPlan(text: string, offset: number): FixPlan | null {
     const [, mEnd] = measureBounds(text, after);
     if (hasUnresolvedClose(text, after, mEnd)) { return null; }
 
+    const inside = wrapFromInside(text, offset, 1);
+    if (inside) { return inside; }
+
     // '<' typed directly before a note: wrap that ONE note.
     const m = NOTE_TOKEN.exec(text.slice(after));
     if (!m) { return null; }
@@ -2237,8 +2265,36 @@ export function chordOpenPlan(text: string, offset: number): FixPlan | null {
 export function chordAutoClosePlan(text: string, offset: number): FixPlan | null {
     const closeAt = offset + 1; // the auto-inserted '>'
     const [, end] = measureBounds(text, closeAt + 1);
-    if (!hasUnresolvedClose(text, closeAt + 1, end)) { return null; }
+    if (!hasUnresolvedClose(text, closeAt + 1, end)) { return wrapFromInside(text, offset, 2); }
     return { edits: [{ at: closeAt, del: 1 }], what: 'unresolved > ahead -> dropped the auto-closed >' };
+}
+
+/** '<' typed INSIDE a plain note's core (rule 36): the note is wrapped as from just before
+ * it. `typedLen` characters of the keystroke stand at `offset`. Only a character that can go
+ * on being the note's lets this read anything: a '<' before a space or a bar line, the
+ * usual one, pays for nothing. */
+function wrapFromInside(text: string, offset: number, typedLen: number): FixPlan | null {
+    const next = text[offset + typedLen];
+    if (!(isWordChar(next) || isOctaveMark(next) || next === '.')) { return null; }
+    const before = text.slice(0, offset) + text.slice(offset + typedLen);
+    if (inStringOrComment(before, offset) || inWordBlock(before, offset)) { return null; }
+    const found = noteAtCaret(before, offset);
+    if (!found || found.slots.octave === null || before[found.start] === '<' || found.slots.shape) { return null; }
+    if (offset <= found.start) { return null; }
+    const { marksEnd } = found.slots;
+    return {
+        edits: [
+            { at: offset, del: typedLen },
+            { at: found.start, ins: '<' },
+            { at: marksEnd <= offset ? marksEnd : marksEnd + typedLen, ins: '>' },
+            // The span reaches one character past the keystroke. Ending right at it, a real VS Code
+            // leaves the caret after the '>' (c|4; measured in Lab sessions/p1048/e2e, reason not
+            // known), where the replay, which has no snippet, cannot see it.
+            { at: offset + typedLen + 1 },
+        ],
+        caret: marksEnd + 1,
+        what: '< typed inside a note -> wrapped it',
+    };
 }
 
 /** One '<' of a '<<' deleted: demote the measure's matching '>>' to '>'. A

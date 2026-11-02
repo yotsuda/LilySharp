@@ -18,6 +18,7 @@ publish-marketplace.ps1
 # whoever installs it. The licence and notice files below are the opposite case and MUST
 # ship: the vsix conveys the code they cover.
 DEPLOY.md
+TYPING-TEST-CASES.md
 esbuild.js
 
 # Dependencies are bundled into out/extension.js by esbuild, so ship none of them.

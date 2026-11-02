@@ -61,13 +61,13 @@ they belong, so never tell them to move the caret first, or to type "right after
 | `\` | as a string number for tab, ready for its digit | follows |
 | `~` | as a tie, at the end of the note | follows |
 | `(` | as a slur over this note and the next | follows |
-| `[` | as a beam over this note and the next, on an eighth or shorter with one beside it in the bar; on a longer note it is typed where the caret is | follows |
+| `[` | as a beam over this note and the next, on an eighth or shorter with one beside it in the bar; on a longer note it does nothing | follows |
 
-**One goes by where the caret is:** `<` wraps a note in a chord only from just before it.
+**One goes by where the caret is:** `<` wraps a note in a chord from just before it or from inside it, not from after it.
 
 **On what:** a rest or a slash `/` has no pitch, so `'`, `,` and `\` are only typed where the caret is, and `#` does nothing; the digit,
-`.`, `@`, `~` and `(` work as on a note. `[` works on a slash, and is only typed on a rest. From outside a chord's
-brackets the table applies to the whole chord, except `\`, which is only typed there. Inside the brackets, on a note
+`.`, `@`, `~` and `(` work as on a note. `[` works on a slash, and does nothing on a rest. From outside a chord's
+brackets the table applies to the whole chord, and `\` numbers all its notes alike. Inside the brackets, on a note
 of the chord, a digit, `.`, `(` and `[` are still the whole chord's: on `<c e g>`, `4` makes `<c e g>4`. There `'`,
 `,`, `#`, `\`, `@` and `~` go on that one note; from outside the brackets `#` does nothing. A digit after a space in the brackets is a scale degree.
 

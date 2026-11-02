@@ -24,7 +24,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { composeFix, multiCursorPlan, planFor, stayPut } from '../src/smartTypingCore';
+import { composeFix, insertionPlan, multiCursorPlan, planFor, stayPut } from '../src/smartTypingCore';
 import { parseMulti, pressBackspace, pressDelete, show, showMulti, typeKey, typeKeyAtCarets, typeOverSelection } from './simulate';
 
 /** Asserts that typing `key` at the caret of `before` leaves `after`. */
@@ -160,7 +160,7 @@ describe('beams (rules 20–22)', () => {
         typed('c8[ d] e‸', ']', 'c8[ d e]‸');
     });
     it('22. a note that cannot carry a beam, or a [ off a note, is left as typed', () => {
-        typed('c4‸ d', '[', 'c4[‸] d');
+        typed('c4‸ d', '[', 'c4‸ d');
         typed('c4 ‸ d', '[', 'c4 [‸] d');
     });
     it('the running duration is carried: the d e f of c8 d e f are eighths', () => {
@@ -417,8 +417,8 @@ describe('string numbers (rules 24–24a, 29)', () => {
         typed('<‸c e>4', '\\', '<c\\‸ e>4');
         typed('<c‸ e>4', '\\', '<c\\‸ e>4');
     });
-    it('29. at the chord\'s ends it is typed as pressed', () => {
-        typed('‸<c e>4', '\\', '\\‸<c e>4');
+    it('29. from outside the brackets the string number goes to the slot', () => {
+        typed('‸<c e>4', '\\', '<c e>4\\‸');
     });
 });
 
@@ -449,11 +449,11 @@ describe('the keys as the teaching path says they go', () => {
     });
     it('< wraps a note only from just before it', () => {
         typed('‸c4 d', '<', '<c‸>4 d');
-        typed('c‸4 d', '<', 'c<‸4 d');
+        typed('c‸4 d', '<', '<c‸>4 d');
     });
     it('[ beams an eighth and the next from anywhere on it; on a longer note it is typed where the caret is', () => {
         for (const place of ['‸c8 d e', 'c‸8 d e', 'c8‸ d e']) { typed(place, '[', 'c8[‸ d] e'); }
-        typed('c‸4 d e', '[', 'c[‸4 d e');
+        typed('c‸4 d e', '[', 'c‸4 d e');
     });
     it('a rest and a slash take no octave mark and no string number; the rest of the keys work', () => {
         for (const key of ["'", ',', '\\']) {
@@ -464,7 +464,7 @@ describe('the keys as the teaching path says they go', () => {
         typed('‸/4 /', '8', '‸/8 /');
         typed('‸r4 d', '@', 'r4@‸ d');
         typed('‸/8 / /', '[', '/8[‸ /] /');
-        typed('‸r8 d e', '[', '[‸r8 d e');
+        typed('‸r8 d e', '[', '‸r8 d e');
     });
     it('on a chord, from outside its brackets the whole chord, inside them the note under the caret', () => {
         typed('<c e>4‸ d', "'", "<c e>'4‸ d");
@@ -475,7 +475,7 @@ describe('the keys as the teaching path says they go', () => {
         typed('<c‸ e>4 d', '\\', '<c\\‸ e>4 d');
         typed('‸<c e>8 d e', '[', '<c e>8[‸ d] e');
     });
-    it('on a chord, the string number from outside is only typed', () => {
+    it('on a chord, the string number from outside goes to its slot', () => {
         typed('<c e>4‸ d', '\\', '<c e>4\\‸ d');
     });
     it('on a chord, a length or a dot from inside is the whole chord\'s', () => {
@@ -531,7 +531,7 @@ describe('what is a whole chord\'s, typed on a member (rule 33)', () => {
     it('[ is its beam, the caret following', () => {
         typed('<c e‸>8 d', '[', '<c e>8[‸ d]');
         typed('<c‸is e>8 d', '[', '<cis e>8[‸ d]');
-        typed('<c e‸>4 d', '[', '<c e>4[‸] d');
+        typed('<c e‸>4 d', '[', '<c e‸>4 d');
     });
     it('what stays the member\'s stays', () => {
         typed('<c‸ e>4 d', "'", "<c'‸ e>4 d");
@@ -594,6 +594,70 @@ describe('a sharp typed on a note goes into its name (rule 35)', () => {
     });
     it('several carets each write their own', () => {
         assert.equal(showMulti(typeKeyAtCarets('c‸4 d‸4', '#')), 'cis‸4 dis‸4');
+    });
+});
+
+describe('inside a note, < and [ do not split it (rule 36)', () => {
+    it('< wraps the note, from anywhere inside it, the caret after its name', () => {
+        typed('c‸is4 d', '<', '<cis‸>4 d');
+        typed('ci‸s4. d', '<', '<cis‸>4. d');
+        typed('cis‸4. d', '<', '<cis‸>4. d');
+        typed('cis4‸. d', '<', '<cis‸>4. d');
+        typed("c‸'4 d", '<', "<c'‸>4 d");
+        typed("c'‸4 d", '<', "<c'‸>4 d");
+    });
+    it('< at the end of a note, between notes and on what is no note stays as it was', () => {
+        typed('cis4.‸ d', '<', 'cis4.<‸> d');
+        typed('c4 ‸ d', '<', 'c4 <‸> d');
+        typed('r‸4 d', '<', 'r<‸4 d');
+        typed('<c e>‸4 d', '<', '<c e><‸4 d');
+        typed('c‸is e>4', '<', 'c<‸is e>4');
+        typed('// c‸is4', '<', '// c<‸is4');
+        typed('lyrics w { c‸is }', '<', 'lyrics w { c<‸is }');
+    });
+    it('[ on a note that takes none is absorbed, wherever the caret is, and says why', () => {
+        for (const place of ['‸c4 d', 'c‸4 d', 'c4‸ d']) { typed(place, '[', place); }
+        for (const place of ['‸r8 d', 'r‸8 d', 'r8‸ d']) { typed(place, '[', place); }
+        typed('/4‸ /', '[', '/4‸ /');
+        const hint = (before: string, at: number) => insertionPlan('[', before, at)?.hint ?? '';
+        assert.match(hint('c[4 d', 1), /eighths/);
+        assert.match(hint('r[8 d', 1), /rest/);
+    });
+    it('[ on a beamable note with nothing beside it keeps its pair, at the note\'s slot', () => {
+        typed('c8‸ | d8', '[', 'c8[‸] | d8');
+        typed('c‸8 | d8', '[', 'c8[‸] | d8');
+        typed('‸c8 | d8', '[', 'c8[‸] | d8');
+        typed('c‸is8 | d8', '[', 'cis8[‸] | d8');
+        typed('c8~‸ | d8', '[', 'c8[‸]~ | d8');
+    });
+    it('[ on a note whose length is the bar before\'s is not refused', () => {
+        typed('c4 | e‸ f', '[', 'c4 | e[‸] f');
+        typed('c4 | e‸is f', '[', 'c4 | eis[‸] f');
+    });
+    it('[ in a block of words is typed as pressed', () => {
+        typed('lyrics w { r‸ }', '[', 'lyrics w { r[‸] }');
+        typed('form { c4‸ }', '[', 'form { c4[‸] }');
+    });
+});
+
+describe('from outside a chord, the string number is the chord\'s (rule 37)', () => {
+    it('it goes to the slot, the caret following', () => {
+        typed('‸<c e>4 d', '\\', '<c e>4\\‸ d');
+        typed('<c e>‸4 d', '\\', '<c e>4\\‸ d');
+        typed('<c e>4.‸ d', '\\', '<c e>4.\\‸ d');
+        typed('‸<c e>4( d)', '\\', '<c e>4\\‸( d)');
+        typed('‸<<c e>>4 d', '\\', '<<c e>>4\\‸ d');
+    });
+    it('and the next digit is the string', () => {
+        assert.equal(show(typeKey('<c e>4\\‸ d', '2')), '<c e>4\\2‸ d');
+    });
+    it('a number already there is offered for retyping', () => {
+        assert.equal(show(typeKey('‸<c e>4\\2 d', '\\')), '<c e>4\\‸«2» d');
+    });
+    it('on a member it is the member\'s, on a space and in arguments it is typed', () => {
+        typed('<c‸ e>4 d', '\\', '<c\\‸ e>4 d');
+        typed('<c ‸ e>4 d', '\\', '<c \\‸ e>4 d');
+        typed('<c e>4@finger(‸) d', '\\', '<c e>4@finger(\\‸) d');
     });
 });
 
