@@ -29,7 +29,7 @@ part melody {
   // Now Ctrl+Shift+PageDown: an octave down (`e`) — the notes after it follow, and the
   // whole tune moves into the cello's staff. Press ▶. Then delete its `@todo("STEP 3: …")`:
   // its red circle goes away.
-  // STEP 4 — Replace `@todo("STEP 4")` with `@mf`: delete it, type `@` right after the `e`,
+  // STEP 4 — Replace `@todo("STEP 4")` with `@mf`: delete it, type `@` with the caret on the `e`,
   // and pick `mf` from the list. Then, with the caret on `mf`, press Ctrl+Shift+Up: it
   // becomes `f`. Ctrl+Shift+Down twice: `mp`. The same keys move a note, the key, the clef.
   section A {

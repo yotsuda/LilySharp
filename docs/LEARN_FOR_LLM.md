@@ -47,10 +47,15 @@ the Lily# Studio extension of VS Code. It is NOT LilyPond: no `\relative`, no ba
 | Ctrl+Space | lists what can come next: words, names, chords, marks |
 | Ctrl+Shift+Up / Down | a note to the next note of the key, up or down, and it sounds; also a dynamic, a clef, a key, a tempo, a time |
 | Ctrl+Shift+PageUp / PageDown | a note an octave up or down; the notes after it follow |
-| a digit, anywhere on a note | sets its length: on `d4`, type `2` and it is `d2` |
-| `@` after a note | lists every mark: `@mf`, `@staccato`, `@fermata` … |
+| a digit on a note | sets its length: on `d4`, type `2` and it is `d2` |
+| `'` or `,` on a note | an octave mark |
+| `.` on a note | a dot |
+| `@` on a note | lists every mark: `@mf`, `@staccato`, `@fermata` … |
 
-**Try:** put the caret on a note and press Ctrl+Shift+Up. Then type `@` right after it and pick `mf`.
+**The caret can be anywhere on the note**: at its start, in its name, after its length. Each of these
+lands in its right place by itself, so never tell them to move the caret first, or to type "right after the note".
+
+**Try:** put the caret on a note and press Ctrl+Shift+Up. Then, with the caret still on it, type `@` and pick `mf`.
 
 ### Stage 3 — Have it done for them, and get it out
 
@@ -160,7 +165,7 @@ score { staff melody }
 - `@cresc` and `@decresc` run to the next level. `( … )` is a slur.
 - Some marks need an end: `@rit` … `@!rit`, the sustain pedal `@sustain` … `@!sustain`.
 
-**Try:** type `@` after a note to see them all. **Lesson:** `lesson-05-expression`.
+**Try:** type `@` with the caret anywhere on a note to see them all. **Lesson:** `lesson-05-expression`.
 
 ### Stage 8 — Form and repeats
 

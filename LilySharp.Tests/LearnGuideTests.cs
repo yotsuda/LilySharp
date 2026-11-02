@@ -70,6 +70,16 @@ public class LearnGuideTests
         Assert.Equal(LilySharpLanguageServer.Lessons.Select(l => l.Label), named);
     }
 
+    // Owner's report 2026-11-02: told "type @ right after the note", where the key finds its place from
+    // anywhere on the note (smartTypingCore): what the path teaches is that the caret need not move.
+    [Fact]
+    public void TheMarks_AreTaughtAsTypedAnywhereOnTheNote()
+    {
+        Assert.Contains("**The caret can be anywhere on the note**", Guide);
+        Assert.DoesNotContain("`@` after", Guide);
+        Assert.DoesNotContain("`@` right after", Guide);
+    }
+
     // What it says of the editor is the manifest's: a renamed command falsifies it.
     [Fact]
     public void TheCommandsItNames_AreTheExtensions()
