@@ -7315,6 +7315,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // Beside the head, in the same coordinates: the page's music stands in a shifted group.
             head.parentNode.appendChild(ghost);
             const position = (staff ? staff.space : fs / 4) / 2;
+            // The press took no focus, and the editor may still have it: Esc and Ctrl+Z would go
+            // there (owner's report 2026-11-03). Not at the press: a click is still for the editor.
+            window.focus();
             Object.assign(press, {
                 moving: true, row, head, x, y, staff, box, ghost, position,
                 perPosition: Math.max(NOTE_DRAG_PIXELS, position * head.getScreenCTM().d),
@@ -7347,6 +7350,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             tip.className = 'mark-drag-tip';
             tip.hidden = true;
             document.body.appendChild(tip);
+            window.focus();   // as for a note
             Object.assign(press, { moving: true, tip, perStep: MARK_DRAG_PIXELS, steps: 0 });
             svgContainer.classList.add('note-dragging');
             svgContainer.setPointerCapture(press.id);
@@ -7411,7 +7415,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (e.pointerId !== notePress.id) return;
             const dyPixels = e.clientY - notePress.at;
             notePress.dy = dyPixels;
-            // From the move as well as the key: a press takes no focus, and the key may go elsewhere.
+            // From the move as well as the key: until the drag starts the focus may be elsewhere.
             switchDragCtrl(notePress, e.ctrlKey || e.metaKey);
             if (!notePress.moving) {
                 if (Math.abs(dyPixels) < NOTE_DRAG_SLOP) return;

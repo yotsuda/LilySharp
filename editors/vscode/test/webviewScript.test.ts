@@ -593,6 +593,17 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.match(source, /moving: false, isMark: isSteppingMark\(target\), ctrl: e\.ctrlKey \|\| e\.metaKey,/);
         assert.match(source, /press\.isMark \? \(press\.ctrl \? 'placement' : 'mark'\) : \(press\.ctrl \? 'octave' : 'position'\)/);
     });
+    it('takes the focus when a drag starts, so that Esc and Ctrl+Z come to the preview', () => {
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        for (const name of ['beginNoteDrag', 'beginMarkDrag']) {
+            const from = source.indexOf('function ' + name + '(');
+            assert.match(source.slice(from, source.indexOf('return true;', from)), /window\.focus\(\);/, name);
+        }
+        // Not at the press: a plain click goes on to the editor.
+        const press = source.indexOf("svgContainer.addEventListener('pointerdown', (e) => {\r\n            noteDragged = false;");
+        assert.ok(press > 0);
+        assert.doesNotMatch(source.slice(press, source.indexOf('moving: false', press)), /focus\(/);
+    });
     it('locks mouse editing by the toolbar button, for every preview and for the next time', () => {
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(source, /if \(mouseEditLocked \|\| e\.pointerType !== 'mouse'/);
