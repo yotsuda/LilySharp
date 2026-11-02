@@ -39,6 +39,10 @@ function copyGrammar() {
         const compose = path.resolve(__dirname, '..', '..', 'docs', 'COMPOSE_FOR_LLM.md');
         fs.copyFileSync(compose, path.join(outDir, 'COMPOSE_FOR_LLM.md'));
         console.log('esbuild: bundled COMPOSE_FOR_LLM.md');
+        // The path the chat teaches Lily# from, read through lilysharp_readGuide (owner's request
+        // 2026-11-02): not an instructions file, as nothing but a request to be taught needs it.
+        fs.copyFileSync(path.resolve(__dirname, '..', '..', 'docs', 'LEARN_FOR_LLM.md'), path.join(outDir, 'LEARN_FOR_LLM.md'));
+        console.log('esbuild: bundled LEARN_FOR_LLM.md');
         // The SAME canon, as a Copilot instructions file (package.json
         // contributes.chatInstructions). Only Lily#'s own AI features read the copy above;
         // Copilot's chat, agent and inline chat never did, so asked about a .lys file they
@@ -63,6 +67,7 @@ function copyGrammar() {
             'it gives the text as it stands in the editor; a score not saved yet is not on the disk at all.',
             '**Reviewing a piece**: asked to review a .lys file or give feedback on it, use the `lilysharp_reviewScore` tool (#reviewScore)',
             'and explain its report in plain words.',
+            '**Teaching Lily#**: asked how to write it, or to be taught it, read the `lilysharp_readGuide` tool, topic `learn`, and teach from that path.',
             '',
             fs.readFileSync(src, 'utf8'),
         ].join('\n');
@@ -86,6 +91,9 @@ function copyGrammar() {
         // written in Lily# (owner's report 2026-10-29: in an empty folder the chat answered a hymn
         // in prose, the tools never searched for). Kept to what a request for a score needs, and
         // told to stand aside otherwise: VS Code is used for much besides music.
+        // A scan read and mended in Lily#'s own panels (owner's request 2026-10-29). And (owner's reports
+        // 2026-10-30) an attached .lys viewed from the disk ("Allow reading file outside of workspace?"), a
+        // drum line's phrases counted in a script ("Run in terminal?").
         const everywhere = [
             '---',
             'name: Lily# is here',
@@ -97,13 +105,11 @@ function copyGrammar() {
             'When the request is to compose or write out music as a score — a piece, a song, a hymn, an',
             'arrangement — and names no other format, write it in Lily#: first read how with the',
             'lilysharp_readGuide tool (topic "composing"), then propose it with lilysharp_proposeScore.',
-            // A scan read and mended in Lily#'s own panels (owner's request 2026-10-29).
+            'Asked how to write Lily# or .lys, or to be taught it, read that tool with topic "learn" and teach from it.',
             'Asked to turn images or a PDF of sheet music into a score, read them with lilysharp_readScan.',
             'A score read from a scan (its .omr.json beside it) is not corrected by you: asked to fix its',
             'misreadings, open the bars named with lilysharp_fixScanBars; with none named, tell the musician to',
             'right-click the bar on the score and choose Edit Bars Beside the Scan.',
-            // Owner's reports 2026-10-30: an attached .lys viewed from the disk ("Allow reading file
-            // outside of workspace?"), a drum line's phrases counted in a script ("Run in terminal?").
             'To read a .lys file, attached or named, use lilysharp_readScore (search the tools for it),',
             'never a file viewer: it gives the score as it stands in the editor, and what Lily# says of it.',
             'Run no script or terminal on a score.',

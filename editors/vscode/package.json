@@ -138,12 +138,12 @@
         "icon": "$(book)",
         "canBeReferencedInPrompt": true,
         "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"],
-        "userDescription": "Gives the AI the Lily# grammar, or the guide to composing a new piece in Lily#.",
-        "modelDescription": "Use this before composing music — a piece, a song, a score — or writing or changing Lily# (.lys) text, unless the Lily# instructions are already in your context. Lily# is the music notation language (.lys files) this editor engraves, plays and checks; it is NOT LilyPond. Topic \"grammar\" gives how Lily# is written; topic \"composing\" gives how to compose a new piece — its file and first lines, the tool to propose it with, a starting point — and the composing guide; topic \"start\" gives how a new piece begins without the guide, for a chat that has the Lily# instructions. Asked to compose music here with no file named, compose it in Lily#.",
+        "userDescription": "Gives the AI the Lily# grammar, the guide to composing a new piece, or the path for teaching Lily#.",
+        "modelDescription": "Use this before composing music — a piece, a song, a score — or writing or changing Lily# (.lys) text, unless the Lily# instructions are already in your context. Lily# is the music notation language (.lys files) this editor engraves, plays and checks; it is NOT LilyPond. Topic \"grammar\" gives how Lily# is written; topic \"composing\" gives how to compose a new piece — its file and first lines, the tool to propose it with, a starting point — and the composing guide; topic \"start\" gives how a new piece begins without the guide, for a chat that has the Lily# instructions; topic \"learn\" gives the path for teaching Lily#, from the most useful operations to the advanced, for anyone asking how to write .lys or use Lily#. Asked to compose music here with no file named, compose it in Lily#.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "topic": { "type": "string", "enum": ["grammar", "composing", "start"], "description": "\"grammar\": how Lily# is written. \"composing\": how to compose a new piece, with the composing guide. \"start\": how a new piece begins, and its starting point, alone." },
+            "topic": { "type": "string", "enum": ["grammar", "composing", "start", "learn"], "description": "\"grammar\": how Lily# is written. \"composing\": how to compose a new piece, with the composing guide. \"start\": how a new piece begins, and its starting point, alone. \"learn\": how to teach Lily# to someone asking how to write it, in order." },
             "part": { "type": "integer", "minimum": 1, "description": "Which part, from 1 (the default). A guide comes in parts; each says which part to read next." }
           },
           "required": ["topic"]

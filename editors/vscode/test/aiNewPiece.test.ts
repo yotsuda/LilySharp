@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { REVIEW_READING, asksForOneStaff, carrySelection, cleanTitle, isPlaceholderTitle, isProblem, partCount, titleOf, toCandidateEdit, withTitle } from '../src/aiTransformCore';
+import { REVIEW_READING, asksForOneStaff, carrySelection, cleanTitle, isPlaceholderTitle, isProblem, partCount, titleOf, toCandidateEdit, withTitle, guidePages } from '../src/aiTransformCore';
 
 /** The grammar and the composing guide, as the composer is sent them (owner's decision 2026-10-29:
  *  the guide is a document of its own, sent with Compose with AI alone). */
@@ -309,7 +309,6 @@ describe('the composing guide', () => {
         const tags = '"tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"]';
         assert.equal(pkg.split(tags).length - 1, 5);   // proposeScore, readScore, reviewScore, checkName, readGuide
         assert.match(pkg, /"modelDescription": "Use this before composing music — a piece, a song, a score — or writing or changing Lily# \(\.lys\) text/);
-        assert.match(pkg, /"enum": \["grammar", "composing", "start"\]/);
         assert.match(transform, /lm\.registerTool<ReadGuideInput>\('lilysharp_readGuide'/);
         const fn = transform.slice(transform.indexOf('async function readGuide('), transform.indexOf('function newPieceSteps('));
         // The instructions files Copilot is given with a .lys in hand, their front matter left out.
@@ -355,6 +354,19 @@ describe('the composing guide', () => {
         assert.match(read, /as it stands:\\n\$\{text\}\$\{said\}`;/);
         assert.match(transform, /return diagLines\(diags, d => text \? spotOf\(d, text\) \+ rangeFixOf\(d, text\) : ''\);/);
         assert.ok(here.length < 2000, 'kept to a few lines');
+        // Asked how to write Lily#, the chat teaches from the path (owner's request 2026-11-02), wherever it is asked.
+        assert.match(here, /'Asked how to write Lily# or \.lys, or to be taught it, read that tool with topic "learn" and teach from it\.',/);
+        assert.match(build, /'\*\*Teaching Lily#\*\*: asked how to write it, or to be taught it, read the `lilysharp_readGuide` tool, topic `learn`, and teach from that path\.',/);
+        assert.match(build, /fs\.copyFileSync\(path\.resolve\(__dirname, '\.\.', '\.\.', 'docs', 'LEARN_FOR_LLM\.md'\), path\.join\(outDir, 'LEARN_FOR_LLM\.md'\)\);/);
+        assert.match(pkg, /"enum": \["grammar", "composing", "start", "learn"\]/);
+        assert.match(pkg, /topic \\"learn\\" gives the path for teaching Lily#/);
+        const guided = transform.slice(transform.indexOf('async function readGuide('), transform.indexOf('function newPieceHeader('));
+        assert.match(guided, /if \(topic === 'learn'\) \{\s*const teaching = built\('LEARN_FOR_LLM\.md'\);\s*return teaching \? paged\('teaching path', guidePages\(teaching, GUIDE_PAGE_BYTES\)\)/);
+        // The path's pages, each small enough to be read whole, and none of them losing an example across a page.
+        const learn = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'LEARN_FOR_LLM.md'), 'utf8');
+        const pages = guidePages(learn, 7000);
+        assert.ok(pages.length >= 2 && pages.every((p: string) => Buffer.byteLength(p) <= 7000));
+        assert.ok(pages.every((p: string) => (p.match(/```/g) ?? []).length % 2 === 0), 'no example is cut across a page');
         // A scan read with Lily#'s reader, and its misreadings mended beside the scan, not by the chat
         // (owner's request 2026-10-29).
         assert.match(here, /'Asked to turn images or a PDF of sheet music into a score, read them with lilysharp_readScan\.',/);

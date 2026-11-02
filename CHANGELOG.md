@@ -6,6 +6,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Copilot's chat teaches Lily#
+
+- Asked how to write `.lys`, the chat teaches from a path of its own (`docs/LEARN_FOR_LLM.md`): the most useful operations first, then notes, form, words, chords, piano, drums, a band and the page, a stage at a time, with the lesson for each. Its examples compile.
+
 ### The pedal sounds
 
 - `@sustain` plays: in the `.mid`, the WAV, the preview and MIDI out, as real pedal events, the notes keeping their written lengths. On a grand staff it holds all the staves; it lifts at the onset of the note `@!sustain` is written on. It was only drawn until now. `@sostenuto` and `@unaCorda` still only draw.

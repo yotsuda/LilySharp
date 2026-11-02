@@ -308,7 +308,8 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
     }));
     context.subscriptions.push(lm.registerTool<ReadGuideInput>('lilysharp_readGuide', {
         prepareInvocation: options => ({
-            invocationMessage: options.input?.topic === 'composing' ? 'Reading the Lily# composing guide…' : 'Reading the Lily# grammar…',
+            invocationMessage: options.input?.topic === 'composing' ? 'Reading the Lily# composing guide…'
+                : options.input?.topic === 'learn' ? 'Reading how to teach Lily#…' : 'Reading the Lily# grammar…',
         }),
         invoke: async options => new vscode.LanguageModelToolResult([
             new vscode.LanguageModelTextPart(await readGuide(deps, options.input)),
@@ -319,7 +320,8 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
 /** What Copilot's chat hands the guide tool. */
 interface ReadGuideInput {
     /** 'grammar' — how Lily# is written; 'composing' — how to compose a new piece in it, with the
-     *  composing guide; 'start' — how a new piece begins and its starting point alone. */
+     *  composing guide; 'start' — how a new piece begins and its starting point alone; 'learn' — the
+     *  path for teaching Lily# to someone asking how to write it. */
     topic?: string;
     /** Which part, from 1: a guide comes in parts small enough to be read whole (guidePages). */
     part?: number;
@@ -360,9 +362,14 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
         return pages.length === 1 ? body
             : `${body}\n\n[Part ${part} of ${pages.length} of the ${name}. `
                 + (part < pages.length
-                    ? `Read part ${part + 1} next: lilysharp_readGuide, topic "${topic === 'start' || topic === 'composing' ? 'composing' : 'grammar'}", part ${part + 1} — every part before you write.]`
+                    ? `Read part ${part + 1} next: lilysharp_readGuide, topic "${topic === 'start' || topic === 'composing' ? 'composing' : topic === 'learn' ? 'learn' : 'grammar'}", part ${part + 1} — every part before you ${topic === 'learn' ? 'teach' : 'write'}.]`
                     : 'The end.]');
     };
+    // Owner's request 2026-11-02: asked how to write Lily#, the chat had a 100 KB grammar and a guide to composing.
+    if (topic === 'learn') {
+        const teaching = built('LEARN_FOR_LLM.md');
+        return teaching ? paged('teaching path', guidePages(teaching, GUIDE_PAGE_BYTES)) : 'The teaching path is not in this build: read topic "grammar".';
+    }
     if (topic !== 'composing' && topic !== 'start') {
         return paged('Lily# grammar', guidePages(built('lilysharp.instructions.md') ?? await loadGrammar(deps), GUIDE_PAGE_BYTES));
     }
