@@ -638,9 +638,34 @@ describe('inside a note, < and [ do not split it (rule 36)', () => {
         typed('c‸is8 | d8', '[', 'cis8[‸] | d8');
         typed('c8~‸ | d8', '[', 'c8[‸]~ | d8');
     });
-    it('[ on a note whose length is the bar before\'s is not refused', () => {
-        typed('c4 | e‸ f', '[', 'c4 | e[‸] f');
-        typed('c4 | e‸is f', '[', 'c4 | eis[‸] f');
+    it('[ on the first note of a bar reads the length from the bars before', () => {
+        typed('c8 d | e‸ f', '[', 'c8 d | e[‸ f]');
+        typed('c8 d | ‸e f', '[', 'c8 d | e[‸ f]');
+        typed('c8 d | e‸is f', '[', 'c8 d | eis[‸ f]');
+        typed('c8 d | e f | g‸ a', '[', 'c8 d | e f | g[‸ a]');
+        typed('c16 | e‸ f', '[', 'c16 | e[‸ f]');
+        typed('c8. | e‸ f', '[', 'c8. | e[‸ f]');
+        typed('c4 8 | e‸ f', '[', 'c4 8 | e[‸ f]');
+        typed('c8 r | e‸ f', '[', 'c8 r | e[‸ f]');
+        typed('<c e>8 | e‸ f', '[', '<c e>8 | e[‸ f]');
+        typed('/8 | /‸ /', '[', '/8 | /[‸ /]');
+        typed('c8 | r‸ d', '[', 'c8 | r‸ d');
+        typed('c8 | r d‸ e', '[', 'c8 | r d[‸ e]');
+    });
+    it('the last spelled length is the one, and what is not beamable is refused as ever', () => {
+        typed('c8 d4 | e‸ f', '[', 'c8 d4 | e‸ f');
+        typed('c4 d8 | e‸ f', '[', 'c4 d8 | e[‸ f]');
+        typed('c4 | e‸ f', '[', 'c4 | e‸ f');
+        typed('c4 | e8‸ f', '[', 'c4 | e8[‸ f]');
+        assert.match(insertionPlan('[', 'c4 | e[ f', 6)?.hint ?? '', /eighths/);
+    });
+    it('] reaches back on the same reading', () => {
+        typed('c8 | e f‸ g', ']', 'c8 | e[ f]‸ g');
+    });
+    it('a length that cannot be read keeps the pair: a block\'s first bar, or a bar it cannot count', () => {
+        typed('section A { e‸ f', '[', 'section A { e[‸] f');
+        typed('section A { c e | f‸ g', '[', 'section A { c e | f[‸] g');
+        typed('foo | e‸ f', '[', 'foo | e[‸] f');
     });
     it('[ in a block of words is typed as pressed', () => {
         typed('lyrics w { r‸ }', '[', 'lyrics w { r[‸] }');
@@ -748,6 +773,11 @@ describe('selected music takes the mark on its notes (rule 34)', () => {
             assert.doesNotMatch(span(marked, key), /\n/, marked);
         }
         over('section A { «c e g»' + rest, '<', 'section A { <c e g‸>' + rest);
+    });
+    it('a beam over a selection at a bar\'s head reads the length from the bars before', () => {
+        over('c8 d | «e f» g', '[', 'c8 d | e[‸ f] g');
+        over('c8 d | «e f» g', ']', 'c8 d | e[ f]‸ g');
+        refused('c4 d | «e f» g', '[', /eighths/);
     });
     it('a closing key does the same, the caret after the mark', () => {
         over('«c4 d e» f', ')', 'c4( d e)‸ f');

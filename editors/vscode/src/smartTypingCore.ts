@@ -262,8 +262,9 @@
 //    `<cis|>4`, as from just before it (rule 1), and `c|8 | d8` + '[' is `c8[|] | d8`. A note
 //    that can carry no beam, a quarter or a rest, absorbs the '[' wherever the caret is,
 //    with the reason in the status bar: `c4[]` drew nothing and said nothing. This narrows
-//    rule 22 for a note whose length is known; one that inherits it from the bar before
-//    reads as unknown here, and keeps its pair. A rest absorbs a '<' no more than it did.
+//    rule 22 for a note whose length is known, the bars before read for one that inherits
+//    it (rule 20); where it cannot be read it keeps its pair. A rest absorbs a '<' no more
+//    than it did.
 //
 // Rules 14–23 and 25 move TEXT and never the CARET: the mark or digit travels to the
 // slot it belongs in and the cursor keeps the position it was pressed at (see
@@ -1359,7 +1360,8 @@ function measureEvents(text: string, at: number): MeasureEvent[] {
         const slots = noteSlots(text, event.start, event.end);
         if (!slots) { break; }
         const digits = text.slice(slots.marksEnd, slots.digitsEnd);
-        running = digits ? parseInt(digits, 10) : running;
+        running = digits ? parseInt(digits, 10)
+            : events.length === 0 ? inheritedBase(text, mStart) : running;
         events.push({
             start: event.start, end: event.end, core: slots.coreEnd,
             // A slash note has no pitch either, but it is a NOTE to a beam — a shape item too.
@@ -1367,6 +1369,18 @@ function measureEvents(text: string, at: number): MeasureEvent[] {
         });
     }
     return events;
+}
+
+/** What the first note of the bar starting at `barStart` inherits when it spells no duration
+ * (`c8 d | e f`: owner's request 2026-11-02, a beam typed on the e found no length and left
+ * `e[] f`): the base last spelled in the bars before, read back a bar at a time. 0 when it
+ * cannot be read: a block's first bar, whose opening depends on what the block is, or a bar
+ * back there the walk cannot count. Only the beam keys ask, and only of a first note with
+ * no number of its own, so no other keystroke pays for this. */
+function inheritedBase(text: string, barStart: number): number {
+    if (text[barStart - 1] !== '|') { return 0; }
+    const [blockStart] = blockBounds(text, barStart);
+    return runningBefore(text, blockStart, barStart, { base: 0, dots: 0 })?.base ?? 0;
 }
 
 /** The beamable note NEXT to `events[i]` in `step` direction — the one a beam

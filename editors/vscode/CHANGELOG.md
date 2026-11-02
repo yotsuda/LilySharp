@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A beam typed at the head of a bar**: `c8 d | e|` + `[` is `c8 d | e[| f]`. The note's length was not read from the bars before it.
 - **Typing on `chord(F#)`**: a digit or a dot on the word `chord` or `diagram` is its length: `c|hord(F#)` + `8` is `c|hord(F#)8`. In the parentheses keys are typed as pressed.
 - **A slur reaching the next line no longer indents it**: `c4( |` with its `)` on the next line pushed that line right.
 - **`<` and `[` inside a note no longer split it**: `c|is4` + `<` is `<cis|>4`. `[` on a quarter or a rest changes nothing and says why, where `c[4` and `c4[]` were an error and a mark that drew nothing.
