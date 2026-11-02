@@ -953,6 +953,23 @@ public class StepParams
     /// name is from when it stepped a semitone). Optional; absent means false — the octave step, as
     /// every request before it.</summary>
     public bool Semitone { get; set; }
+    /// <summary>Step on until the note stands this many staff positions away, as one edit (a note
+    /// dragged in the preview, owner's request 2026-11-02). Each position is a new letter: a note
+    /// off the key steps first to a tone of the same letter, which moves it none (F in G major, to
+    /// F sharp). Optional; absent or 0 means the one step of the key.</summary>
+    public int StaffPositions { get; set; }
+}
+
+/// <summary>Asks what the preview may drag: <c>lilysharp/noteHeads</c>.</summary>
+public class NoteHeadsParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+}
+
+/// <summary>Where the pitches of a document stand: the <c>data-pos</c> of what is drawn for each.</summary>
+public class NoteHeadsResponse
+{
+    public int[] Positions { get; set; } = System.Array.Empty<int>();
 }
 
 /// <summary>One replacement of <c>[Start, End)</c> (offsets into the text of

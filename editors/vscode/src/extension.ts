@@ -32,7 +32,7 @@ import { reviewPointsOf } from './reviewCore';
 import { chatPointer } from './chatPointerCore';
 import { registerSmartTyping } from './smartTyping';
 import { registerStaffGroupWrap, staffGroupsOffered } from './staffGroupWrap';
-import { registerStepAudition } from './stepAudition';
+import { NoteDragSteps, registerStepAudition } from './stepAudition';
 import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
 import { OmrImportDeps, importFromImage } from './omrImport';
@@ -209,6 +209,22 @@ function revealPreviewSource(panel: vscode.WebviewPanel) {
 // the preview left open): the score is opened again — in the group that holds a tab of it, else
 // where a score opened beside a preview goes (sourceGroupToOpen) — and the click lands there as
 // in an open one. An untitled score that was closed is gone: nothing to open, as before.
+let noteDragSteps: NoteDragSteps | undefined;
+
+/** Ctrl+Z over the preview (owner's request 2026-11-02: a drag there has to be taken back there).
+ * VS Code's undo goes to the editor in focus, and a webview is none: the source takes the focus
+ * for it and gives it back. */
+async function undoFromPreview(uri: string, redo: boolean) {
+    const panel = previewPanels.get(uri);
+    if (!panel) { return; }
+    const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === uri)
+        ?? await openPreviewSource(panel, uri);
+    if (!editor) { return; }
+    await vscode.window.showTextDocument(editor.document, editor.viewColumn);
+    await vscode.commands.executeCommand(redo ? 'redo' : 'undo');
+    panel.reveal(panel.viewColumn, false);
+}
+
 async function openPreviewSource(panel: vscode.WebviewPanel, key: string): Promise<vscode.TextEditor | undefined> {
     const uri = vscode.Uri.parse(key);
     if (uri.scheme === 'untitled' && !vscode.workspace.textDocuments.some(d => d.uri.toString() === key)) {
@@ -1081,12 +1097,21 @@ export function activate(context: vscode.ExtensionContext) {
     // audition (the caret landing on a note, a note typed, a step) — owner's decision
     // 2026-09-28. The server computes both; the
     // preview webview is the synth, and with no preview open they are silent.
-    registerStepAudition(context, {
+    noteDragSteps = registerStepAudition(context, {
         getClient: () => client,
         isReady: () => clientReady,
         getPreview: (uri: string) => previewPanels.get(uri),
         log: (msg: string) => outputChannel.appendLine(msg),
     });
+    // What the preview's note drag and its Ctrl+Z do, by name for a test to drive: a page cannot
+    // be reached from outside it.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('lilysharp.stepNoteBy', async (uri: string, position: number, steps: number) => {
+            const doc = await previewDocument(uri);
+            return doc ? noteDragSteps?.write(doc, position, steps) : false;
+        }),
+        vscode.commands.registerCommand('lilysharp.undoFromPreview', (uri: string, redo: boolean) => undoFromPreview(uri, redo)),
+    );
 
     // The caret's status line (owner's request 2026-10-24): what the setting under the caret
     // does, in the status bar rather than a hover that covers the text.
@@ -1756,6 +1781,28 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 for (const t of midiStrumTimers) { clearTimeout(t); }
                 midiStrumTimers = [];
                 void midiOutRequest('lilysharp/midiOut/release', { channel: message.channel, pitches: message.pitches });
+                return;
+            }
+            if (message.type === 'requestNoteHeads') {
+                const doc = await previewDocument(uri);
+                if (!client || !clientReady || !doc) { return; }
+                const answer = await client.sendRequest<{ Positions: number[] }>('lilysharp/noteHeads', { TextDocument: { uri } });
+                void panel.webview.postMessage({ type: 'noteHeads', positions: answer.Positions });
+                return;
+            }
+            if (message.type === 'noteDragHear') {
+                const doc = await previewDocument(uri);
+                if (doc) { await noteDragSteps?.hear(doc, message.position, message.steps); }
+                return;
+            }
+            if (message.type === 'noteDrag') {
+                const doc = await previewDocument(uri);
+                const ok = doc ? await noteDragSteps?.write(doc, message.position, message.steps) : false;
+                void panel.webview.postMessage({ type: 'noteDragResult', ok: !!ok });
+                return;
+            }
+            if (message.type === 'previewUndo') {
+                await undoFromPreview(uri, !!message.redo);
                 return;
             }
             if (message.type === 'export') {
@@ -4054,6 +4101,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             padding: 6px 8px; font-size: 12px; max-height: 60vh; overflow: auto;
         }
         .range-panel[hidden] { display: none; }
+        /* A note being dragged (owner's request 2026-11-02): where it would land, pale. */
+        .note-drag-ghost { pointer-events: none; opacity: 0.45; fill: #0078d7; stroke: #0078d7; stroke-width: 0.13; }
+        .note-drag-ghost text { stroke: none; }
+        #svgContainer.note-dragging, #svgContainer.note-dragging * { cursor: ns-resize !important; }
         /* Dragged anywhere but its inputs (owner's request 2026-10-29), its buttons and cells
            still clicked; nothing selects while it moves. */
         .range-panel { cursor: move; }
@@ -6826,6 +6877,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         lightCaretBar();
                         refreshRanges();
                         vscode.postMessage({ type: 'requestLength' });
+                        vscode.postMessage({ type: 'requestNoteHeads' });
+                        noteDropped = null;
                         // Keep the fit across re-renders (this is also what fits
                         // the FIRST render of a freshly opened preview); otherwise
                         // re-apply the current manual zoom to the fresh SVG.
@@ -6882,6 +6935,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     }
                     break;
                 }
+                case 'noteHeads':
+                    noteHeads = new Set(message.positions);
+                    break;
+                case 'noteDragResult':
+                    // Nothing written: no picture is coming, and the note goes back.
+                    if (!message.ok && noteDropped) moveNoteRow(noteDropped, 0);
+                    noteDropped = null;
+                    break;
                 case 'playPitches':
                     playPitches(message.pitches, message.timbre, message.program, message.durationMs, message.strumMs || 0, !!message.apart);
                     break;
@@ -7087,6 +7148,154 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
 
         installBarHover();
+
+        // A note's head dragged up or down moves its pitch (owner's request 2026-11-02). It
+        // follows the pointer smoothly, with its accidental and without a re-render, while a pale
+        // head shows the staff position it would land on and sounds when that changes; let go, the
+        // key's tone at that position is written as one edit, and the score redraws. Only
+        // a pitch's head (noteHeads, from the server): anything else still scrolls the sheet.
+        const NOTE_DRAG_SLOP = 4;
+        let noteHeads = new Set();
+        let notePress = null, noteDragged = false, noteDropped = null;
+        // The five lines of the staff at x nearest y, read off the drawn lines: a ledger line is
+        // shorter than minWidth and joins no staff. null when none is there.
+        function staffFromLines(lines, x, y, minWidth) {
+            const at = lines.filter(l => l.x1 <= x && l.x2 >= x && l.x2 - l.x1 >= minWidth).map(l => l.y).sort((a, b) => a - b);
+            let best = null;
+            for (let i = 0; i + 4 < at.length; i++) {
+                const space = at[i + 1] - at[i];
+                if (space <= 0 || [2, 3, 4].some(k => Math.abs(at[i + k] - at[i + k - 1] - space) > 0.01)) continue;
+                const off = y < at[i] ? at[i] - y : y > at[i + 4] ? y - at[i + 4] : 0;
+                if (!best || off < best.off) best = { top: at[i], bottom: at[i + 4], space, off };
+            }
+            return best;
+        }
+        // The ledger lines a head at y needs off that staff, as their ys.
+        function ledgersFor(staff, y) {
+            const out = [];
+            if (!staff) return out;
+            for (let l = staff.top - staff.space; l >= y - 0.01; l -= staff.space) out.push(l);
+            for (let l = staff.bottom + staff.space; l <= y + 0.01; l += staff.space) out.push(l);
+            return out;
+        }
+        function isNoteHead(t) {
+            return !!t && t.tagName === 'text' && t.hasAttribute('data-pos') && noteHeads.has(parseInt(t.getAttribute('data-pos'), 10));
+        }
+        function beginNoteDrag(press) {
+            const svg = press.target.ownerSVGElement;
+            const num = (el, name) => parseFloat(el.getAttribute(name));
+            const fs = num(press.target, 'font-size');
+            // Its head and accidental, of this copy: a section played twice prints it twice.
+            const row = Array.from(svg.querySelectorAll('text[data-pos="' + press.pos + '"]')).filter(el =>
+                Math.abs(num(el, 'y') - num(press.target, 'y')) < fs / 2 && Math.abs(num(el, 'x') - num(press.target, 'x')) < fs * 1.5);
+            const head = row.reduce((a, b) => (num(b, 'x') > num(a, 'x') ? b : a), press.target);
+            const x = num(head, 'x'), y = num(head, 'y');
+            const lines = Array.from(svg.querySelectorAll('line')).filter(l => l.getAttribute('y1') === l.getAttribute('y2'))
+                .map(l => ({ x1: num(l, 'x1'), x2: num(l, 'x2'), y: num(l, 'y1') }));
+            const staff = staffFromLines(lines, x, y, fs * 1.5);
+            const box = head.getBBox();
+            const ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            ghost.setAttribute('class', 'note-drag-ghost');
+            // Beside the head, in the same coordinates: the page's music stands in a shifted group.
+            head.parentNode.appendChild(ghost);
+            Object.assign(press, {
+                moving: true, row, head, x, y, staff, box, ghost,
+                step: (staff ? staff.space : fs / 4) / 2,
+                perPixel: 1 / head.getScreenCTM().d,
+                steps: 0,
+            });
+            svgContainer.classList.add('note-dragging');
+            svgContainer.setPointerCapture(press.id);
+        }
+        function drawNoteGhost(press) {
+            const y = press.y - press.steps * press.step;
+            press.ghost.textContent = '';
+            const pale = press.head.cloneNode(true);
+            pale.removeAttribute('data-pos');
+            pale.removeAttribute('transform');   // the head's own, as it follows the pointer
+            pale.style.cursor = '';
+            pale.setAttribute('y', String(y));
+            press.ghost.appendChild(pale);
+            for (const ly of ledgersFor(press.staff, y)) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                const over = press.staff.space / 3;
+                line.setAttribute('x1', String(press.box.x - over));
+                line.setAttribute('x2', String(press.box.x + press.box.width + over));
+                line.setAttribute('y1', String(ly));
+                line.setAttribute('y2', String(ly));
+                press.ghost.appendChild(line);
+            }
+        }
+        function moveNoteRow(row, dy) {
+            for (const el of row) el.setAttribute('transform', 'translate(0 ' + dy + ')');
+        }
+        function endNoteDrag(press) {
+            press.ghost.remove();
+            svgContainer.classList.remove('note-dragging');
+            notePress = null;
+        }
+        svgContainer.addEventListener('pointerdown', (e) => {
+            noteDragged = false;
+            notePress = null;
+            if (e.pointerType !== 'mouse' || e.button !== 0 || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+            // A note is no place to change while the score plays: a press is a seek then.
+            if (!isNoteHead(e.target) || !document.getElementById('stopBtn').disabled) return;
+            e.stopPropagation();   // the sheet's drag-to-scroll
+            e.preventDefault();
+            notePress = { id: e.pointerId, at: e.clientY, pos: parseInt(e.target.getAttribute('data-pos'), 10), target: e.target, moving: false };
+        });
+        svgContainer.addEventListener('pointermove', (e) => {
+            if (!notePress) {
+                if (e.buttons === 0 && isNoteHead(e.target)) e.target.style.cursor = 'ns-resize';
+                return;
+            }
+            if (e.pointerId !== notePress.id) return;
+            const dyPixels = e.clientY - notePress.at;
+            if (!notePress.moving) {
+                if (Math.abs(dyPixels) < NOTE_DRAG_SLOP) return;
+                beginNoteDrag(notePress);
+                drawNoteGhost(notePress);
+            }
+            const dy = dyPixels * notePress.perPixel;
+            moveNoteRow(notePress.row, dy);
+            const steps = Math.round(-dy / notePress.step);
+            if (steps !== notePress.steps) {
+                notePress.steps = steps;
+                drawNoteGhost(notePress);
+                vscode.postMessage({ type: 'noteDragHear', position: notePress.pos, steps });
+            }
+        });
+        const dropNote = (e) => {
+            if (!notePress || e.pointerId !== notePress.id) return;
+            const press = notePress;
+            if (!press.moving) { notePress = null; return; }
+            noteDragged = true;
+            endNoteDrag(press);
+            if (press.steps === 0) { moveNoteRow(press.row, 0); return; }
+            // It stays where it was put until the score comes back drawn: no jump back and forth.
+            moveNoteRow(press.row, -press.steps * press.step);
+            noteDropped = press.row;
+            vscode.postMessage({ type: 'noteDrag', position: press.pos, steps: press.steps });
+        };
+        svgContainer.addEventListener('pointerup', dropNote);
+        svgContainer.addEventListener('pointercancel', (e) => {
+            if (!notePress || e.pointerId !== notePress.id) return;
+            if (notePress.moving) { moveNoteRow(notePress.row, 0); endNoteDrag(notePress); }
+            notePress = null;
+        });
+        window.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape' || !notePress || !notePress.moving) return;
+            moveNoteRow(notePress.row, 0);
+            endNoteDrag(notePress);
+            noteDragged = true;
+        });
+        document.addEventListener('click', (e) => {
+            if (!noteDragged) return;
+            noteDragged = false;
+            e.stopImmediatePropagation();
+            e.preventDefault();
+        }, true);
+        // End of the note drag.
 
         // Shift+drag across bars selects them (owner's request 2026-10-25). A plain drag still
         // scrolls the sheet (installDragScroll leaves a shifted press alone); the click a
@@ -7296,6 +7505,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 e.preventDefault(); askInChat();
             } else if (e.key === 'Escape') {
                 if (aiRangeLo >= 0) { aiClearSelection(); clearHighlights(); }
+            } else if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')
+                && !(e.target && e.target.closest && e.target.closest('input, select, textarea'))) {
+                e.preventDefault();
+                vscode.postMessage({ type: 'previewUndo', redo: e.key === 'y' || e.key === 'Y' || e.shiftKey });
             }
         });
 

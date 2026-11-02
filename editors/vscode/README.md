@@ -96,6 +96,7 @@ Key…, Remove All String Numbers. Every command, with examples:
 | **Document Formatting** | Auto-format with configurable indentation |
 | **Code Actions** | Quick fixes and refactoring suggestions |
 | **Signature Help** | Parameter hints while typing keywords |
+| **Drag a Note** | In the preview, drag a note's head up or down: it lands on the key's tone at that staff position, sounding as you go. Esc cancels; `Ctrl+Z` over the preview undoes |
 | **Staves into a Group** | Select two or more `staff` rows in a `score`, press `Ctrl+Space` and pick `grandStaff`, `staffGroup`, `choirStaff`, `condensedStaff` or `combinedStaff`: the rows move inside it |
 | **Typing Aids** | An octave mark, duration digit, dot, `\` or `@` typed anywhere on a note lands in its slot on that note, and `#` writes the sharp into its name (`c4` → `cis4`); a digit always leaves a valid duration (`c1` + `2` → `c2`, `c4` + `6` → `c64`; 5, 7, 9 and 0 leave the note unchanged); on a note inside a chord's brackets a digit, dot, slur or beam is the whole chord's; selected notes take `(`, `[` and `<` on the notes (`c4( d e)`, `c8[ d e]`, `<c d e>4`); chords, slurs, beams and ties keep their two ends paired. Works per cursor with several cursors. Turn it all off with `"lilysharp.typingAids.enabled": false` |
 | **Document Highlight** | Highlight all occurrences of selected variable |

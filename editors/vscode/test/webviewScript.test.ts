@@ -538,6 +538,30 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const h = panel(-500, 100); h.hidden = true; clamp(h);
         assert.deepEqual(at(h), [-500, 100]);
     });
+    it('draws where a dragged note will land beside its head, not on top of what the head has moved by', () => {
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(source, /head\.parentNode\.appendChild\(ghost\);/);
+        assert.match(source, /pale\.removeAttribute\('transform'\);/);
+        assert.match(source, /perPixel: 1 \/ head\.getScreenCTM\(\)\.d/);
+    });
+    it('finds the staff a dragged note is on, and the ledger lines it would need', () => {
+        const staff5 = (top: number) => [0, 1, 2, 3, 4].map(i => ({ x1: 0, x2: 100, y: top + i }));
+        const lines = [...staff5(10), ...staff5(30), { x1: 40, x2: 43, y: 9 }, { x1: 40, x2: 43, y: 8 }, { x1: 40, x2: 43, y: 7 }];
+        const find = pageFunction('staffFromLines', {}) as (l: unknown[], x: number, y: number, w: number) => { top: number, bottom: number, space: number };
+        const on = find(lines, 41, 12, 6);
+        assert.deepEqual([on.top, on.bottom, on.space], [10, 14, 1]);
+        const below = find(lines, 41, 36, 6);
+        assert.deepEqual([below.top, below.bottom], [30, 34]);
+        const high = find(lines, 41, 5, 6);
+        assert.deepEqual([high.top, high.bottom], [10, 14], 'a ledger line joins no staff');
+        assert.equal(find(lines.slice(0, 4), 41, 12, 6), null);
+        const ledgers = pageFunction('ledgersFor', {}) as (s: unknown, y: number) => number[];
+        assert.deepEqual(Array.from(ledgers(on, 12)), []);
+        assert.deepEqual(Array.from(ledgers(on, 8.5)), [9]);
+        assert.deepEqual(Array.from(ledgers(on, 8)), [9, 8]);
+        assert.deepEqual(Array.from(ledgers(on, 15.5)), [15]);
+        assert.deepEqual(Array.from(ledgers(null, 8)), []);
+    });
     it('stands the panel pressed or opened last in front of the other, both under the toolbar', () => {
         const range = { style: {} as { zIndex?: string } };
         const practice = { style: {} as { zIndex?: string } };

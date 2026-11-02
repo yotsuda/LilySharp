@@ -29,6 +29,7 @@
 
 import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
+import { jumpOffsetFor } from './previewCore';
 import {
     AuditionMemory, CARET_DEBOUNCE_MS, Debouncer, SOUNDS_WHEN_CHANGED, TYPING_SETTLE_MS,
     auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument, reselectAfterStep,
@@ -87,7 +88,16 @@ function includeStretch(): boolean {
     return vscode.workspace.getConfiguration('lilysharp').get<boolean>('chordShapes.includeStretch', false);
 }
 
-export function registerStepAudition(context: vscode.ExtensionContext, deps: StepAuditionDeps) {
+/** A note dragged in the preview (owner's request 2026-11-02): `steps` staff positions, up
+ * when positive, from the note whose `data-pos` is `position`, each to the key's tone there. */
+export interface NoteDragSteps {
+    /** Sounds where the note would land. The last asked for wins: a drag outruns the server. */
+    hear(doc: vscode.TextDocument, position: number, steps: number): Promise<void>;
+    /** Writes it, one edit and one undo step; false when it writes nothing. */
+    write(doc: vscode.TextDocument, position: number, steps: number): Promise<boolean>;
+}
+
+export function registerStepAudition(context: vscode.ExtensionContext, deps: StepAuditionDeps): NoteDragSteps {
     const memory = new AuditionMemory();
     const caretWait = new Debouncer(CARET_DEBOUNCE_MS);
     const typingWait = new Debouncer(TYPING_SETTLE_MS);
@@ -208,6 +218,43 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         }
     };
 
+    const askSteps = (doc: vscode.TextDocument, offset: number, steps: number) =>
+        deps.getClient()!.sendRequest<StepResponse>('lilysharp/step', {
+            TextDocument: { uri: doc.uri.toString() },
+            Selections: [{ Start: offset, End: offset }],
+            Direction: steps > 0 ? 1 : -1,
+            StaffPositions: Math.abs(steps),
+            IncludeStretch: false,
+            Semitone: true,
+        });
+    let lastHeard = 0;
+    const noteDrag: NoteDragSteps = {
+        hear: async (doc, position, steps) => {
+            if (!deps.getClient() || !deps.isReady() || !auditionEnabled()) { return; }
+            const asked = ++lastHeard;
+            const offset = jumpOffsetFor(doc.getText(), position);
+            const answer = steps === 0
+                ? await deps.getClient()!.sendRequest<AuditionAtResponse>('lilysharp/auditionAt', {
+                    TextDocument: { uri: doc.uri.toString() }, Offset: offset, IncludeStretch: false,
+                })
+                : await askSteps(doc, offset, steps);
+            if (asked === lastHeard) { play(doc.uri.toString(), answer.Pitches, answer.Timbre, answer.Program); }
+        },
+        write: async (doc, position, steps) => {
+            if (!deps.getClient() || !deps.isReady() || steps === 0) { return false; }
+            const version = doc.version;
+            const response = await askSteps(doc, jumpOffsetFor(doc.getText(), position), steps);
+            if (response.Message) { vscode.window.setStatusBarMessage(`Lily#: ${response.Message}`, 4000); }
+            if (response.Fallback || response.ConvertOctaves || response.Edits.length === 0
+                || doc.version !== version || response.Version !== version) { return false; }
+            const edit = new vscode.WorkspaceEdit();
+            for (const e of response.Edits) {
+                edit.replace(doc.uri, new vscode.Range(doc.positionAt(e.Start), doc.positionAt(e.End)), e.NewText);
+            }
+            return vscode.workspace.applyEdit(edit);
+        },
+    };
+
     context.subscriptions.push(
         vscode.commands.registerCommand('lilysharp.stepSemitoneUp', () => step(1, true)),
         vscode.commands.registerCommand('lilysharp.stepSemitoneDown', () => step(-1, true)),
@@ -280,4 +327,6 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             lastEdit.delete(uri);
         }),
     );
+
+    return noteDrag;
 }

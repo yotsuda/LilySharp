@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
 using System.Linq;
 using LilySharp.Core.Editing;
 using LilySharp.Core.Syntax;
@@ -45,15 +46,40 @@ public sealed partial class LilySharpLanguageServer
         try
         {
             string basePath = uri.IsFile ? uri.LocalPath : string.Empty;
-            var result = NoteStepper.Step(doc.Text, doc.Tree,
-                @params.Selections.Select(s => (s.Start, s.End)).ToList(), @params.Direction,
+            var selections = @params.Selections.Select(s => (s.Start, s.End)).ToList();
+            NoteStepper.StepResult StepOn(string on, SyntaxTree tree) => NoteStepper.Step(on, tree, selections, @params.Direction,
                 text => ExpandUsings(text, SyntaxTree.Parse(text), basePath,
                     p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree,
                 @params.IncludeStretch, @params.Semitone, FacesForStep);
+            var result = StepOn(doc.Text, doc.Tree);
+            var edits = result.Edits.Select(e => new StepTextEdit { Start = e.Start, End = e.End, NewText = e.NewText }).ToArray();
+            // A drag: each step read off the text the last one left, one edit in the end, counted
+            // by the letter under the selection, where a step starts and stays.
+            if (@params.StaffPositions > 0 && selections.Count == 1 && !result.Fallback && result.Edits.Any() && result.ConvertOctaves == null)
+            {
+                int at = selections[0].Start;
+                string now = Applied(doc.Text, result.Edits);
+                int moved = now[at] != doc.Text[at] ? 1 : 0;
+                int want = System.Math.Min(@params.StaffPositions, MaxStaffPositions);
+                // Twice as many tries as positions: one same-letter step at most, and a key of few
+                // steps cannot hold the walk here for ever.
+                for (int tries = 0; moved < want && tries < 2 * want; tries++)
+                {
+                    var next = StepOn(now, SyntaxTree.Parse(now));
+                    if (next.Fallback || !next.Edits.Any())
+                        break;
+                    string stepped = Applied(now, next.Edits);
+                    if (stepped[at] != now[at])
+                        moved++;
+                    now = stepped;
+                    result = next;
+                }
+                edits = [TheDifference(doc.Text, now)];
+            }
             return new StepResponse
             {
                 Fallback = result.Fallback,
-                Edits = result.Edits.Select(e => new StepTextEdit { Start = e.Start, End = e.End, NewText = e.NewText }).ToArray(),
+                Edits = edits,
                 Message = result.Message,
                 Pitches = [.. result.Pitches],
                 Timbre = result.Timbre,
@@ -70,6 +96,50 @@ public sealed partial class LilySharpLanguageServer
             // falls back to the key's own command.
             return new StepResponse { Fallback = true, Error = ex.Message, Version = doc.Version };
         }
+    }
+
+    /// <summary>More than a staff has room to be dragged across.</summary>
+    private const int MaxStaffPositions = 64;
+
+    private static string Applied(string text, IEnumerable<NoteStepper.Edit> edits)
+    {
+        foreach (var e in edits.OrderByDescending(e => e.Start))
+            text = text[..e.Start] + e.NewText + text[e.End..];
+        return text;
+    }
+
+    /// <summary>The one span in which <paramref name="after"/> differs from <paramref name="before"/>.</summary>
+    private static StepTextEdit TheDifference(string before, string after)
+    {
+        int head = 0;
+        while (head < before.Length && head < after.Length && before[head] == after[head])
+            head++;
+        int tail = 0;
+        while (tail < before.Length - head && tail < after.Length - head
+            && before[before.Length - 1 - tail] == after[after.Length - 1 - tail])
+            tail++;
+        return new StepTextEdit { Start = head, End = before.Length - tail, NewText = after[head..(after.Length - tail)] };
+    }
+
+    [JsonRpcMethod("lilysharp/noteHeads", UseSingleObjectParameterDeserialization = true)]
+    public Task<NoteHeadsResponse> NoteHeadsAsync(NoteHeadsParams @params, CancellationToken token)
+        => OffDispatch(() => NoteHeads(@params), token);
+
+    /// <summary>What the preview may take hold of and drag (owner's request 2026-11-02): each
+    /// pitch's start, the <c>data-pos</c> its head and accidental are drawn with. A clef, a key, a
+    /// rest, a slash and a drum carry a data-pos too and are no note's pitch (a key's tonic is a
+    /// pitch of no note); the glyphs cannot tell them apart, a music font being free to number
+    /// its own.</summary>
+    public NoteHeadsResponse NoteHeads(NoteHeadsParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        return doc == null ? new NoteHeadsResponse() : new NoteHeadsResponse
+        {
+            Positions = [.. doc.Tree.GetRoot().DescendantNodes<PitchSyntax>()
+                .Where(p => p.BaseName != '\0' && p.QuarterOffset == 0
+                    && p.Parent is NoteSyntax or ChordSyntax or ArpeggioSyntax)
+                .Select(p => p.SourceStart)],
+        };
     }
 
     /// <summary>The faces a <c>fonts</c> entry's text key steps through: the ones its completion

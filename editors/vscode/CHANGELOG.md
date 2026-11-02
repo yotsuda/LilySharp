@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Drag a note in the preview to change its pitch**: it follows the mouse, a pale head shows where it will land and the note sounds as that changes. Esc takes it back, and so does Ctrl+Z over the preview once it is written.
 - **The Range and practice panels come to the front when clicked or opened**: the practice menu always stood in front.
 - **The practice menu stays open beside the score**, as the Range panel does: its × and its button close it, no longer a click outside or Esc.
 - **The Range and practice panels drag up behind the header**, which stays whole, keeping as much in sight under it as at the other edges.
