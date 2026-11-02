@@ -138,7 +138,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **オーナーの「全部勧めどおり」でペダルを鳴らす（`docs/pedal-playback-design.md`）**: 本物の CC64・`grandStaff` の全段（`GrandStaffPartSets`・`ShareGrandStaffDynamics` と同じ考え）・`@!sustain` は書かれた音の頭で上げる。`MidiTrack.Pedals`・`MidiExporter.ProcessNode` が音・和音・休符の頭で記録・`AddPedals` が分割後に配る。**音符の長さは変えない**＝検査は読まない。★ 再生の音符リストには `P = -1` の項目として混ぜた（メトロノームのクリックと同じ `S = -1`）＝練習の速度・ミュート・範囲・ループ・カウントインが自動で運ぶ。`P < 0` を読み飛ばす側は `toEvents`・`endOf`・`MidiOutEvents`・plain tones。`fromOffset` が seek をまたぐペダルを運ぶ。
 - 門: 掃き 1364 冊で `.mid` が動いたのは `@sustain` のある 33 冊だけ（`mid-sweep.ps1`・`gates.log`）・検査の出力はバイト一致。MeltySynth は実音で確認（`ARealSynth_RingsUnderThePedal`＝`TinySoundFont`）。毒は C# 17 本＋TS 8 本。⚠️ TS の 1 本（範囲の中へ持ち込んだペダルの複製が `first` に無いと落ちる）は最初緑＝網を足して赤を確かめた。⚠️ **プレビューの音（spessasynth）と MIDI 出力の実機は耳でしか確かめられない＝C57**。⚠️ 掴みやすい罠: PowerShell の `R` は `Invoke-History` の別名＝関数名に使うと引数エラー。
 - ⚠️ コーパス 33 冊の再生が変わる（本は直さない）。ペダルの書き方が雑な本は濁って聞こえるようになる＝本の側の問題。
-- 終了時 full **13903 / 0 / 2**（`-End p1041 -DiffBase 3158fed9`＝`sessions/p1041/end3.log`・門は全部 OK・npm 658 緑）。§7 7.5: Core の差分 90 行は描画に触れない再生の追加・REF 0／OWN 1（`AddPedals`＝LP はペダルを書かれた Staff でだけ鳴らす）。棚卸しは `OWN` が 296→297（`AddPedals`）。⚠️ 最初の `-End` は `TheInventoryIsNotStale` が赤＝`LILYSHARP-OWN` を足した（`LILYSHARP_UPDATE_DOCS=1`・CRLF に戻す）。
+- **オーナーの依頼: プレビューを閉じたら再生を止める**: オーナーの設定は MIDI 出力（`lilysharp.playback.midiOutput`）＝再生はサーバーのスレッドなのでページが消えても止まらなかった。`midiPlaybackPanel`＝その再生を始めたペインが閉じたときだけ stop（別のプレビューの再生は止めない）・鳴る前の strum のタイマーも消す。⚠️ 網はソースの形だけ（`midiOutputSetting.test.ts`）＝実物は MANUAL-CHECKS C58。
+- 終了時 full **13903 / 0 / 2**（`-End p1041 -DiffBase 3158fed9`＝`sessions/p1041/end4.log`・門は全部 OK・npm 660 緑）。§7 7.5: Core の差分 91 行は描画に触れない再生の追加・REF 0／OWN 1（`AddPedals`＝LP はペダルを書かれた Staff でだけ鳴らす）。棚卸しは `OWN` が 296→297（`AddPedals`）。⚠️ 最初の `-End` は `TheInventoryIsNotStale` が赤＝`LILYSHARP-OWN` を足した（`LILYSHARP_UPDATE_DOCS=1`・CRLF に戻す）。
 
 ## 以下は第1040セッションの経緯
 
