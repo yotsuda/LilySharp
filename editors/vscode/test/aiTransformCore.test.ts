@@ -827,10 +827,12 @@ describe('startTimeAt — playing an AI candidate from a clicked note', () => {
     });
 });
 
-test('a guide\'s page never falls inside a code block that holds a blank line', () => {
-    const example = '```lys\nc4 d e f |\n\ng a b c |\n```';
-    const pages = guidePages(`${'x'.repeat(30)}\n\n${example}\n\nafter`, 45);
-    assert.ok(pages.every(p => (p.match(/```/g) ?? []).length % 2 === 0), JSON.stringify(pages));
-    assert.ok(pages.some(p => p.includes(example)), JSON.stringify(pages));
-    assert.equal(pages.join('\n\n').replace(/\n+/g, '\n'), `${'x'.repeat(30)}\n\n${example}\n\nafter`.replace(/\n+/g, '\n'));
+describe('guidePages and code blocks', () => {
+    it('a guide\'s page never falls inside a code block that holds a blank line', () => {
+        const example = '```lys\nc4 d e f |\n\ng a b c |\n```';
+        const pages = guidePages(`${'x'.repeat(30)}\n\n${example}\n\nafter`, 45);
+        assert.ok(pages.every(p => (p.match(/```/g) ?? []).length % 2 === 0), JSON.stringify(pages));
+        assert.ok(pages.some(p => p.includes(example)), JSON.stringify(pages));
+        assert.equal(pages.join('\n\n').replace(/\n+/g, '\n'), `${'x'.repeat(30)}\n\n${example}\n\nafter`.replace(/\n+/g, '\n'));
+    });
 });
