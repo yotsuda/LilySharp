@@ -464,12 +464,22 @@ describe('the keys as the teaching path says they go', () => {
         typed('‸r4 d', '8', '‸r8 d');
         typed('‸/4 /', '8', '‸/8 /');
         typed('‸r4 d', '@', 'r4@‸ d');
+        typed('‸/8 / /', '[', '/8[‸ /] /');
+        typed('‸r8 d e', '[', '[‸r8 d e');
     });
     it('on a chord, from outside its brackets the whole chord, inside them the note under the caret', () => {
         typed('<c e>4‸ d', "'", "<c e>'4‸ d");
         typed('<c‸ e>4 d', "'", "<c'‸ e>4 d");
         typed('<c e>4‸ d', '@', '<c e>4@‸ d');
         typed('<c‸ e>4 d', '@', '<c@‸ e>4 d');
+        typed('<c‸ e>4 d', '~', '<c~‸ e>4 d');
+        typed('<c‸ e>4 d', '\\', '<c\\‸ e>4 d');
+        typed('‸<c e>8 d e', '[', '<c e>8[‸ d] e');
+    });
+    it('on a chord, the string number from outside and a length or a dot from inside are only typed', () => {
+        typed('<c e>4‸ d', '\\', '<c e>4\\‸ d');
+        typed('<c‸ e>4 d', '8', '<c8‸ e>4 d');
+        typed('<c‸ e>4 d', '.', '<c.‸ e>4 d');
     });
 });
 

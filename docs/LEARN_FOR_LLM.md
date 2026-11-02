@@ -48,8 +48,8 @@ the Lily# Studio extension of VS Code. It is NOT LilyPond: no `\relative`, no ba
 | Ctrl+Shift+Up / Down | a note to the next note of the key, up or down, and it sounds; also a dynamic, a clef, a key, a tempo, a time |
 | Ctrl+Shift+PageUp / PageDown | a note an octave up or down; the notes after it follow |
 
-**Keys that find their own place.** With the caret anywhere on a note (at its start, in its name, after its
-length), these land where they belong, so never tell them to move the caret first, or to type "right after the note":
+**The caret can be anywhere on the note** (at its start, in its name, after its length). These keys land where
+they belong, so never tell them to move the caret first, or to type "right after the note":
 
 | Key | Lands | The caret |
 |---|---|---|
@@ -64,8 +64,10 @@ length), these land where they belong, so never tell them to move the caret firs
 
 **One goes by where the caret is:** `<` wraps a note in a chord only from just before it.
 
-**On what:** a rest or a slash `/` has no pitch, so `'`, `,` and `\` do nothing special there; the rest of the
-table works. On a chord they apply to the whole chord from outside its brackets, and to the note the caret is on inside them.
+**On what:** a rest or a slash `/` has no pitch, so `'`, `,` and `\` are only typed where the caret is; the digit,
+`.`, `@`, `~` and `(` work as on a note. `[` works on a slash, and is only typed on a rest. From outside a chord's
+brackets the table applies to the whole chord, except `\`, which is only typed there. Inside the brackets, `'`, `,`,
+`\`, `@` and `~` go on the note the caret is on; a length or a dot does not belong there, so type those outside.
 
 **Try:** put the caret on a note and press Ctrl+Shift+Up. Then, with the caret still on it, type `@` and pick `mf`.
 
