@@ -7159,7 +7159,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // a pitch's head (noteHeads, from the server): anything else still scrolls the sheet.
         const NOTE_DRAG_SLOP = 4;
         // The mouse's way to one staff position at the least, however small the score is drawn.
-        const NOTE_DRAG_PIXELS = 10;
+        const NOTE_DRAG_PIXELS = 6;
         // How far back past a position's edge the pointer has to come to leave it: a hand
         // resting on an edge does not flip the note back and forth.
         const NOTE_DRAG_HOLD = 0.25;

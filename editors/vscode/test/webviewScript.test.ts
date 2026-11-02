@@ -560,7 +560,7 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(source, /head\.parentNode\.appendChild\(ghost\);/);
         assert.match(source, /perStep: Math\.max\(NOTE_DRAG_PIXELS, /);
-        assert.match(source, /const NOTE_DRAG_PIXELS = 10;/);
+        assert.match(source, /const NOTE_DRAG_PIXELS = 6;/);
         // A quick first move leaves the sheet before the drag has begun: heard on the window.
         assert.match(source, /window\.addEventListener\('pointermove', \(e\) => \{\s*if \(!notePress\)/);
         assert.match(source, /window\.addEventListener\('pointerup', dropNote\);/);
