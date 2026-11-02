@@ -887,7 +887,7 @@ export const CLASHES_TURNED_DOWN = 8;
 /** The compiler's warnings of a chord no hand can hold on a fretted instrument (LYS1055; a bowed
  *  string's "cannot be bowed" is another matter). Owner's decision 2026-11-01: a solo guitar's 14 were
  *  written in, the chat saying only that some chords are hard to hold. */
-export function unfingerableOf<T extends { Code?: string; Message: string }>(diags: readonly T[]): T[] {
+export function unfingerableOf<T extends { Code?: string | null; Message: string }>(diags: readonly T[]): T[] {
     return diags.filter(d => d.Code === 'LYS1055' && d.Message.includes('cannot be fingered'));
 }
 
