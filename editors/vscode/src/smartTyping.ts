@@ -17,7 +17,8 @@
 import * as vscode from 'vscode';
 import {
     Edit, FixPlan, TypePlan, afterKeystrokeEdit, composeFix, deletionPlan, insertionPlan,
-    isPlannedKey, isSmartInsert, multiCursorPlan, planFor, typedKeyOutcome, autoBarlinePlan,
+    isPlannedKey, isSmartInsert, multiCursorPlan, planFor, surroundChange, surroundPlan,
+    typedKeyOutcome, autoBarlinePlan,
 } from './smartTypingCore';
 
 // `lilysharp.typingAids.enabled` (rule 31): false turns every aid off. Read
@@ -83,6 +84,15 @@ let applyingFix = false;
  * left after it, and whether a '|' typed there has been absorbed already (then a
  * space is next). Good for the very next keystroke in that document only. */
 let autoBarline: { key: string, caret: number, barTyped: boolean } | undefined;
+
+/** A selection's mark just rewritten (rule 34). VS Code closes the undo step of a
+ * surround behind it, so the rewrite cannot merge into it as every other follow-up does,
+ * and one Ctrl+Z would leave the `(c4 d e)` nobody wrote: the undo and the redo are
+ * carried one step further here instead. `next` is which of them still has that to do;
+ * `chained` marks the one sent from here, whose own change event is coming. Any other
+ * change in the document ends it. Binding the three keys instead is no way round: '('
+ * has no layout-safe key, as '@' has none (rule 27). */
+let surroundStep: { key: string, next: 'undo' | 'redo', chained: boolean } | undefined;
 
 /** Whether a space typed at `offset` can end a bar at all — read off its LINE, so
  * the space typed between two notes, the common one, never pays for the whole
@@ -171,11 +181,33 @@ export function registerSmartTyping(
             autoBarline = undefined;
             // Never fight undo/redo — re-fixing would make undo circular.
             if (event.reason === vscode.TextDocumentChangeReason.Undo
-                || event.reason === vscode.TextDocumentChangeReason.Redo) { return; }
+                || event.reason === vscode.TextDocumentChangeReason.Redo) {
+                if (surroundStep?.key === key) {
+                    const asked = event.reason === vscode.TextDocumentChangeReason.Undo ? 'undo' : 'redo';
+                    if (surroundStep.chained) { surroundStep.chained = false; }
+                    else if (surroundStep.next === asked) {
+                        surroundStep = { key, next: asked === 'undo' ? 'redo' : 'undo', chained: true };
+                        void vscode.commands.executeCommand(asked);
+                    } else { surroundStep = undefined; }
+                }
+                return;
+            }
+            surroundStep = undefined;
 
             const editor = vscode.window.activeTextEditor;
             if (!editor || editor.document !== event.document) { return; }
             if (!change) {
+                // One selection surrounded with a pair (rule 34). The test reads no text,
+                // and the several carets' typing below is the only other change in parts.
+                const surround = editor.selections.length === 1 && !editor.selection.isEmpty
+                    ? surroundChange(event.contentChanges) : null;
+                if (surround) {
+                    const text = event.document.getText();
+                    const plan = surroundPlan(surround.open, text, surround.lo, surround.hi);
+                    carryOut(editor, text, plan, log);
+                    if (plan) { surroundStep = { key, next: 'undo', chained: false }; }
+                    return;
+                }
                 multiCursorAfterKeystroke(editor, event.contentChanges, log);
                 return;
             }
@@ -459,6 +491,7 @@ function applyPlanForTypedKey(editor: vscode.TextEditor, before: string, offset:
 function carryOut(editor: vscode.TextEditor, text: string, plan: FixPlan | null,
     log: (msg: string) => void) {
     if (!plan) { return; }
+    showHint(plan.hint);
     if (plan.caret !== undefined) {
         applyFixWithCaret(editor, text, plan.edits, plan.caret);
     } else {

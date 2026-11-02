@@ -110,6 +110,7 @@
     <tr><td class="ba">c4|</td><td><code>6</code></td><td class="ba">c64| — a 3 or 6 on its own is completed to 32 or 64</td></tr>
     <tr><td class="ba">c4.|</td><td><code>8</code></td><td class="ba">c8.| — the dot is kept</td></tr>
     <tr><td class="ba">&lt;c e g&gt;4|</td><td><code>8</code></td><td class="ba">&lt;c e g&gt;8|</td></tr>
+    <tr><td class="ba">&lt;c e g|&gt;</td><td><code>4</code></td><td class="ba">&lt;c e g|&gt;4 — on a note of the chord too</td></tr>
     <tr><td class="ba">r4|</td><td><code>2</code></td><td class="ba">r2| — rests too</td></tr>
     <tr><td class="ba">/4|</td><td><code>8</code></td><td class="ba">/8| — and slash notes</td></tr>
     <tr><td class="ba">c4@f|</td><td><code>8</code></td><td class="ba">c8@f|</td></tr>
@@ -127,8 +128,8 @@
   in the status bar: on a note it could only write an error such as <code>c45</code>.</p>
   <p>A 128th cannot be typed digit by digit, since <code>c1|</code> + <code>2</code> is already
   <code>c2</code>: paste <code>128</code>, type it with the aids turned off, or type
-  <code>8</code> after a <code>12</code> that is already there. Digits inside a chord's brackets
-  (scale degrees), inside an annotation's parentheses (<code>@finger(5)</code>) and outside
+  <code>8</code> after a <code>12</code> that is already there. A digit after a space inside a
+  chord's brackets (a scale degree), inside an annotation's parentheses (<code>@finger(5)</code>) and outside
   notes (<code>time 5/4</code>, <code>R1*5</code>) are typed as pressed.</p>
   <!-- VIDEO editor-duration-overwrite: source `c4 d4 e4 f4 |` with the preview open. Put the
        caret after `d4` and type 8, then after `e4` type 2, then in the middle of `f4` type 1:
@@ -141,12 +142,12 @@
   <h3>The rest of the slots</h3>
   <table class="g">
     <tr><th>Key</th><th>What happens</th><th>Example</th></tr>
-    <tr><td><code>.</code></td><td>the dot goes after the duration and any dots already there (on a rest too)</td><td class="ba">c|'8. → c|'8..</td></tr>
+    <tr><td><code>.</code></td><td>the dot goes after the duration and any dots already there (on a rest too, and from a note inside a chord's brackets)</td><td class="ba">c|'8. → c|'8..</td></tr>
     <tr><td><code>\</code></td><td>opens the note's tab string number in its slot and the caret follows, ready for the digit; on a note that already has one, the digit is selected so the next key replaces it</td><td class="ba">|a4 → a4\|</td></tr>
     <tr><td><code>@</code></td><td>goes after the string number and the annotations already there, and the name list opens there</td><td class="ba">c|4( → c4@|(</td></tr>
     <tr><td><code>~</code></td><td>moves to the end of the note</td><td class="ba">|c2 → c2~</td></tr>
-    <tr><td><code>(</code> / <code>)</code></td><td>a slur is placed over two notes at once — the one typed on and the next; <code>)</code> on the note after a slur's end extends it by one</td><td class="ba">c4| d e → c4( d) e</td></tr>
-    <tr><td><code>[</code> / <code>]</code></td><td>a manual beam, the same way, within the bar</td><td class="ba">c8| d e f → c8[ d] e f</td></tr>
+    <tr><td><code>(</code> / <code>)</code></td><td>a slur is placed over two notes at once — the one typed on and the next; <code>)</code> on the note after a slur's end extends it by one. From a note inside a chord's brackets, <code>(</code> goes after the chord</td><td class="ba">c4| d e → c4( d) e</td></tr>
+    <tr><td><code>[</code> / <code>]</code></td><td>a manual beam, the same way, within the bar. From a note inside a chord's brackets, <code>[</code> goes after the chord</td><td class="ba">c8| d e f → c8[ d] e f</td></tr>
     <tr><td><code>&lt;</code> / <code>&gt;</code></td><td><code>&lt;</code> before a note wraps it in a chord (the duration stays outside); turning one end into <code>&lt;&lt;</code> or back turns the matching end too</td><td class="ba">|c4 → &lt;c|&gt;4</td></tr>
   </table>
   <p><b>Several cursors.</b> With more than one cursor, the octave marks, digits, dots,
@@ -155,7 +156,22 @@
   same note have no single answer, so there the key is typed as pressed at every cursor. The
   bracket, slur, beam and tie keys are single-cursor: with several cursors they type as
   pressed.</p>
-  <p class="note"><b>When it steps aside.</b> With a selection the key replaces the selection,
+  <h3>Selected notes take the mark</h3>
+  <p>Select notes and type <code>(</code>, <code>[</code> or <code>&lt;</code>, and the mark goes
+  on the notes instead of around the selection. One <kbd>Ctrl+Z</kbd> takes it back.</p>
+  <table class="g">
+    <tr><th>Selected</th><th>Type</th><th>After</th></tr>
+    <tr><td class="ba">c4 d e</td><td><code>(</code></td><td class="ba">c4(| d e)</td></tr>
+    <tr><td class="ba">c8 d e</td><td><code>[</code></td><td class="ba">c8[| d e]</td></tr>
+    <tr><td class="ba">c4 d e</td><td><code>&lt;</code></td><td class="ba">&lt;c d e|&gt;4</td></tr>
+  </table>
+  <p>The next note keeps its pitch: a note after a chord is counted from the chord's first
+  note, so it is given the octave marks that keep it where it sounded. The chord's own notes
+  stack upward from its first note, as in any chord. When the notes cannot take the mark — a
+  beam over a bar line or a quarter, a chord of different lengths, notes with marks of their
+  own — nothing changes, the selection stays and the status bar says why. A selection that
+  is not all notes is surrounded as anywhere in VS Code.</p>
+  <p class="note"><b>When it steps aside.</b> With a selection any other key replaces the selection,
   as anywhere in VS Code. Keys inside strings and comments, and outside notes —
   <code>time 4/4</code>, <code>tuplet 3/2</code>, a title — type as pressed. A slash note
   takes durations, dots, ties, slurs and beams like a note but has no pitch, so

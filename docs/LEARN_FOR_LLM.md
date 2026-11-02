@@ -66,8 +66,12 @@ they belong, so never tell them to move the caret first, or to type "right after
 
 **On what:** a rest or a slash `/` has no pitch, so `'`, `,` and `\` are only typed where the caret is; the digit,
 `.`, `@`, `~` and `(` work as on a note. `[` works on a slash, and is only typed on a rest. From outside a chord's
-brackets the table applies to the whole chord, except `\`, which is only typed there. Inside the brackets, `'`, `,`,
-`\`, `@` and `~` go on the note the caret is on; a length or a dot does not belong there, so type those outside.
+brackets the table applies to the whole chord, except `\`, which is only typed there. Inside the brackets, on a note
+of the chord, a digit, `.`, `(` and `[` are still the whole chord's: on `<c e g>`, `4` makes `<c e g>4`. There `'`,
+`,`, `\`, `@` and `~` go on that one note. A digit after a space in the brackets is a scale degree.
+
+**With notes selected:** `(` makes a slur from the first to the last, `[` a beam, and `<` one chord of them, if they
+have one length: `c4 d e` becomes `c4( d e)` or `<c d e>4`. Other keys replace the selection, as in any editor.
 
 **Try:** put the caret on a note and press Ctrl+Shift+Up. Then, with the caret still on it, type `@` and pick `mf`.
 

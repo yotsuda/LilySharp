@@ -200,8 +200,9 @@
 //    (multiCursorPlan). Two carets whose rewrites would touch — both on one
 //    note — have no single answer, so the key is then typed as pressed at every
 //    caret. The bracket, slur, beam and tie keys are single-caret: with several
-//    carets they are typed as pressed. A NON-EMPTY selection is always ordinary
-//    typing — the key replaces the selection, as everywhere in VS Code.
+//    carets they are typed as pressed. A NON-EMPTY selection is ordinary typing
+//    — the key replaces the selection, as everywhere in VS Code — but for the
+//    three keys that surround it (rule 34).
 // 31. `lilysharp.typingAids.enabled: false` turns ALL of the above off: every
 //    key is typed as pressed. (The Ctrl+Shift+Up/Down step commands are
 //    commands, not typing, and are not affected.)
@@ -218,6 +219,27 @@
 //    nothing: nothing is guessed. The bar line is its own undo step, and a '|' typed
 //    right after it — then a space — is absorbed, so typing it as well does not
 //    double it (smartTyping.ts keeps that state).
+// 33. A length, a dot, a slur and a beam belong to a chord WHOLE, whichever member the
+//    caret is on (owner decision 2026-11-02): `<c e g|>` + '4' → `<c e g|>4`,
+//    `<c e g|>4` + '.' → `<c e g|>4.`, the caret staying as rules 16–18b and 23 have it;
+//    `<c e g|>4 d` + '(' → `<c e g>4(| d)`, and '[' alike, the caret following as rules 8
+//    and 20 have it. Glued to a member none of them means anything: `<c e g4>` and
+//    `<c. e>` do not compile and `<c() e>` draws no slur. Not a member's: a spaced digit is
+//    a scale degree (`<c e g |>`), an annotation's arguments are its own, a '\' waiting
+//    for its digit takes it (rule 25), and the marks of rule 29 and a tie stay the member's.
+// 34. SELECTED MUSIC + '(', '[' or '<': VS Code surrounds a selection with the pair, which
+//    in music is never what is meant (owner decision 2026-11-02): `c4 d e` selected gives
+//    `(c4 d e)`, where no slur is drawn, and `<c4 d e>`, which does not compile. So the
+//    pair is rewritten: `c4( d e)`, `c8[ d e]`, `<c d e>4`, the caret after the mark or
+//    after the chord's last member, one Ctrl+Z taking back the key and the rewrite
+//    together (smartTyping.ts carries the undo a step on: see surroundStep). One selected
+//    note goes as the key does on that note. The selection must hold nothing but notes
+//    and bar lines, or the pair stands as VS Code wrote it (a title, an unknown word).
+//    Music that cannot take the mark loses the pair and keeps its selection, with the
+//    reason in the status bar: a beam over a bar line or a quarter, a chord of notes of
+//    different lengths, or notes that carry marks of their own. A chord changes what the
+//    NEXT note is relative to, its first member and no longer the last one selected, so
+//    in relative octaves that note is given the marks that keep it where it sounded.
 //
 // Rules 14–23 and 25 move TEXT and never the CARET: the mark or digit travels to the
 // slot it belongs in and the cursor keeps the position it was pressed at (see
@@ -230,7 +252,8 @@
 //
 // A caret INSIDE a chord is pointing at a member (`<c, e g>`, `<c 3 5>` — the
 // spaced digits are scale degrees), and one past the note's core is in its
-// annotations (`@figuredBass(6,4)`); both are left as typed.
+// annotations (`@figuredBass(6,4)`); both are left as typed, but for what is the
+// whole chord's (rule 33).
 //
 // The search for both the following note and the unresolved ')' is bounded by
 // the innermost `{ … }` block, so an auto-placed ')' never leaves the part (or
@@ -354,7 +377,7 @@ export interface Edit { at: number, del?: number, ins?: string }
  * text's offsets, and where the caret ends up in the FINISHED text — or no
  * caret at all, when the keystroke's own caret (wherever VS Code left it) is
  * the right one and only the text changes. */
-export interface FixPlan { edits: Edit[], caret?: number, what: string }
+export interface FixPlan { edits: Edit[], caret?: number, what: string, hint?: string }
 
 /** What a typed octave mark or duration digit does to the text, decided ENTIRELY
  * on the text as it stands WITHOUT that keystroke.
@@ -863,6 +886,16 @@ function coreEndOf(text: string, event: { start: number, end: number }): number 
  * post-events: `<c\3 e\2>`, `<c@finger(1) e>`), so a '\' or '@' typed on one
  * belongs to that member and not to the chord (rule 29). */
 function chordMemberAtCaret(text: string, offset: number): number | null {
+    return chordMemberHit(text, offset)?.core ?? null;
+}
+
+/** chordMemberAtCaret's reading in full: the member's core end and its chord.
+ *
+ * ⚠️ A WALK, asked by keys that have just had one answer "not on a note" — which is
+ * also the answer on every space and in every header. The digit and the dot ask
+ * mayBeInChord first, so only a caret really after a '<' pays for a second walk. */
+function chordMemberHit(text: string, offset: number)
+    : { core: number, chord: { start: number, end: number } } | null {
     const [blockStart, blockEnd] = blockBounds(text, offset);
     for (const event of musicEvents(text, walkStart(text, blockStart, offset), blockEnd)) {
         if (!event.note || postEventEnd(text, event) < offset) { continue; }
@@ -889,13 +922,26 @@ function chordMemberAtCaret(text: string, offset: number): number | null {
             const run = postEventRun(text, core);
             const end = run.length > 0 ? run[run.length - 1].end : core;
             if (offset >= k && offset <= end) {
-                return insideAnnotationArgs(text, core, offset) ? null : core;
+                return insideAnnotationArgs(text, core, offset) ? null
+                    : { core, chord: { start: event.start, end: event.end } };
             }
             k = Math.max(end, k + 1);
         }
         return null;
     }
     return null;
+}
+
+/** Whether a '<' stands open before `offset` in its bar: back over the characters
+ * to the nearest bracket or bar line, a few at most, with no walk and no allocation. A
+ * nested chord's '>' answers no, and the key is typed as pressed there, as it was. */
+function mayBeInChord(text: string, offset: number): boolean {
+    for (let i = offset - 1; i >= 0; i--) {
+        const c = text[i];
+        if (c === '<') { return true; }
+        if (c === '>' || c === '|' || c === '{' || c === '}') { return false; }
+    }
+    return false;
 }
 
 /** Where the note event's glued post-events end — the far end of what a caret
@@ -1205,13 +1251,17 @@ export function slurOpenPlan(text: string, offset: number, autoClosed: boolean):
     // parser reads a slur start from. So `c| d e` and `c|2 d` and `c |d e` all
     // start the slur on the note the caret was in, and the paren travels to that
     // note's end by itself.
-    const anchor = slurAnchorAt(before, offset);
-    if (anchor === 'member') { return null; } // pointing inside a chord
+    const found = slurAnchorAt(before, offset);
+    // Inside a chord's brackets: on a member, the mark is the whole chord's (rule 33).
+    const member = found === 'member' ? chordMemberHit(before, offset) : null;
+    if (found === 'member' && !member) { return null; }
+    const anchor = member ? member.chord : found as Exclude<typeof found, 'member'>;
     // The '(' goes into the note's canonical slot (POST_EVENT_RANK): after what
     // ends there, before a '[' and the tie.
     let openAt = anchor ? postEventSlot(before, coreEndOf(before, anchor), '(') : offset;
     let closeOn = firstNoteEvent(before, anchor ? anchor.end : offset, end);
     if (!closeOn) {
+        if (member) { return markMovedOffMember(offset, typedLen, openAt, '(', ')', autoClosed); }
         // Nothing after the anchor to cover. When the caret was pointing AHEAD
         // at that note, the nearest legal two-note slur is the one anchored on
         // the note BEFORE the caret, so the paren stays where it was typed.
@@ -1248,6 +1298,21 @@ export function slurOpenPlan(text: string, offset: number, autoClosed: boolean):
             + (extend ? 'extended the slur starting there'
                 : paired ? 'paired with the unresolved ) ahead'
                     : ') placed after the following note'),
+    };
+}
+
+/** A '(' or '[' typed on a chord's member with nothing for it to close on: at the
+ * chord's end it is what the key leaves after any note in that case (rules 10, 22),
+ * and inside the brackets it would be no mark at all. */
+function markMovedOffMember(offset: number, typedLen: number, slot: number,
+    open: string, close: string, autoClosed: boolean): FixPlan {
+    return {
+        edits: [
+            { at: offset, del: typedLen },
+            { at: slot + typedLen, ins: autoClosed ? open + close : open },
+        ],
+        caret: slot + 1,
+        what: `${open} typed on a chord member -> moved to the end of the chord`,
     };
 }
 
@@ -1334,14 +1399,20 @@ export function beamOpenPlan(text: string, offset: number, autoClosed: boolean):
     if (inStringOrComment(text, offset)) { return null; }
     const typedLen = autoClosed ? 2 : 1;
     const before = text.slice(0, offset) + text.slice(offset + typedLen);
-    const anchor = slurAnchorAt(before, offset);
-    if (!anchor || anchor === 'member') { return null; }
+    const found = slurAnchorAt(before, offset);
+    if (!found) { return null; }
+    // Inside a chord's brackets: on a member, the mark is the whole chord's (rule 33).
+    const member = found === 'member' ? chordMemberHit(before, offset) : null;
+    if (found === 'member' && !member) { return null; }
+    const anchor = member ? member.chord : found as Exclude<typeof found, 'member' | null>;
     const events = measureEvents(before, anchor.start);
     const closeIdx = beamNeighbour(events, events.findIndex(e => e.start === anchor.start), 1);
-    if (closeIdx < 0) { return null; } // not beamable, or nothing to group with
-    const closeOn = events[closeIdx];
     // Both ends go into their notes' canonical slots (POST_EVENT_RANK).
     const openAt = postEventSlot(before, coreEndOf(before, anchor), '[');
+    if (closeIdx < 0) { // not beamable, or nothing to group with
+        return member ? markMovedOffMember(offset, typedLen, openAt, '[', ']', autoClosed) : null;
+    }
+    const closeOn = events[closeIdx];
     const closeAt = postEventSlot(before, closeOn.core, ']');
 
     // An unresolved ']' ahead: the '[' pairs with THAT, so no close is added.
@@ -1635,7 +1706,9 @@ export function durationPlan(before: string, offset: number, digit: string): Typ
     // `@8va` never reached the completion list (owner's report 2026-10-28).
     if (/@!?\d*$/.test(before.slice(Math.max(0, offset - 6), offset))) { return null; }
     const found = noteAtCaret(before, offset, true);
-    if (!found) { return null; }
+    if (!found) {
+        return mayBeInChord(before, offset) ? chordDurationPlan(before, offset, digit) : null;
+    }
     const { marksEnd, digitsEnd } = found.slots;
 
     // A '\' on the note still waiting for its digit takes this one (rule 25): it
@@ -1656,6 +1729,32 @@ export function durationPlan(before: string, offset: number, digit: string): Typ
         };
     }
 
+    return writtenDuration(before, offset, digit, marksEnd, digitsEnd);
+}
+
+/** A digit typed on a chord's member is the whole chord's length (rule 33), or the
+ * string number a '\' on that member is waiting for (rule 25). */
+function chordDurationPlan(before: string, offset: number, digit: string): TypePlan | null {
+    const member = chordMemberHit(before, offset);
+    if (!member) { return null; }
+    const stringNumber = stringNumberAt(before, member.core);
+    if (stringNumber && !stringNumber.digit && digit !== '0') {
+        const slot = stringNumber.at + 1;
+        if (slot === offset) { return null; }
+        return {
+            at: slot, del: 0, ins: digit,
+            caret: stayPut(offset, slot, 0, 1),
+            what: `string number ${digit} (rule 25)`,
+        };
+    }
+    const slots = noteSlots(before, member.chord.start, member.chord.end);
+    return slots ? writtenDuration(before, offset, digit, slots.marksEnd, slots.digitsEnd) : null;
+}
+
+/** What a digit writes into the duration slot [marksEnd, digitsEnd), the caret at
+ * `offset` — rules 17–18b, for a note and a chord alike. */
+function writtenDuration(before: string, offset: number, digit: string, marksEnd: number, digitsEnd: number)
+    : TypePlan | null {
     const digits = before.slice(marksEnd, digitsEnd);
 
     // 5, 7, 9 and 0 begin no duration and continue none, so no reading of the
@@ -1726,8 +1825,13 @@ export function durationPlan(before: string, offset: number, digit: string): Typ
 export function dotPlan(before: string, offset: number): TypePlan | null {
     if (inStringOrComment(before, offset)) { return null; }
     const found = noteAtCaret(before, offset);
-    if (!found) { return null; }
-    const { coreEnd } = found.slots;
+    // On a chord's member the dot is the whole chord's (rule 33). Only on the member's
+    // core, as on a note's: after its `@text("x")` a '.' is the `.up` placement.
+    const member = !found && mayBeInChord(before, offset) ? chordMemberHit(before, offset) : null;
+    const slots = found ? found.slots
+        : member && offset <= member.core ? noteSlots(before, member.chord.start, member.chord.end) : null;
+    if (!slots) { return null; }
+    const { coreEnd } = slots;
     if (coreEnd === offset) { return null; } // already in the slot — type it normally
     return {
         at: coreEnd, del: 0, ins: '.',
@@ -1819,6 +1923,205 @@ export function annotationPlan(before: string, offset: number): TypePlan | null 
     return {
         at: slot, del: 0, ins: '@', caret: slot + 1,
         what: 'moved into the annotation slot, caret after it',
+    };
+}
+
+const SURROUND_CLOSE: Record<string, string> = { '(': ')', '[': ']', '<': '>' };
+
+/** Whether a document change is VS Code surrounding one selection with a pair (rule
+ * 34): two insertions, the open and its close, each one character. Asked only of a
+ * change in two parts, and reads no text. `lo` and `hi` are the selection's ends in the
+ * document as it was, which is what the changes' offsets are in. */
+export function surroundChange(changes: readonly { text: string, rangeLength: number, rangeOffset: number }[])
+    : { open: string, lo: number, hi: number } | null {
+    if (changes.length !== 2 || changes[0].rangeLength !== 0 || changes[1].rangeLength !== 0) { return null; }
+    const [a, b] = changes[0].rangeOffset < changes[1].rangeOffset ? [changes[0], changes[1]] : [changes[1], changes[0]];
+    return SURROUND_CLOSE[a.text] === b.text && a.rangeOffset < b.rangeOffset
+        ? { open: a.text, lo: a.rangeOffset, hi: b.rangeOffset } : null;
+}
+
+type NoteSpan = { start: number, end: number };
+
+/** The note events [lo, hi) touches, in a selection that holds nothing else but bar
+ * lines and space; null for any other selection. */
+function selectedNotes(text: string, lo: number, hi: number): NoteSpan[] | null {
+    const [blockStart, blockEnd] = blockBounds(text, lo);
+    if (hi > blockEnd) { return null; }
+    const notes: NoteSpan[] = [];
+    let barrier = false;
+    for (const event of musicEvents(text, walkStart(text, blockStart, lo), blockEnd)) {
+        if (!event.note) { barrier = notes.length > 0; continue; }
+        if (event.start >= hi) { break; }
+        if (postEventEnd(text, event) <= lo) { continue; }
+        if (barrier) { return null; }
+        notes.push({ start: event.start, end: event.end });
+    }
+    if (notes.length === 0) { return null; }
+    const onlyBars = /^[\s|:]*$/;
+    const tail = postEventEnd(text, notes[notes.length - 1]);
+    return onlyBars.test(text.slice(lo, Math.max(lo, notes[0].start))) && onlyBars.test(text.slice(tail, Math.max(tail, hi)))
+        ? notes : null;
+}
+
+/** What a selection's mark comes to: the document rewritten and the caret, or why not. */
+type Surrounded = { text: string, caret: number } | { refused: string };
+
+const carriesMark = (text: string, notes: NoteSpan[], kinds: PostEventKind[]) =>
+    notes.some(n => postEventRun(text, coreEndOf(text, n)).some(e => kinds.includes(e.kind)));
+
+/** The open and close marks written at their slots (a < b), the caret after the open. */
+function twoMarks(text: string, a: number, open: string, b: number, close: string): Surrounded {
+    return { text: text.slice(0, a) + open + text.slice(a, b) + close + text.slice(b), caret: a + 1 };
+}
+
+function slurOver(text: string, notes: NoteSpan[]): Surrounded {
+    if (carriesMark(text, notes, ['(', ')'])) { return { refused: 'these notes already carry a slur mark' }; }
+    return twoMarks(text, postEventSlot(text, coreEndOf(text, notes[0]), '('), '(',
+        postEventSlot(text, coreEndOf(text, notes[notes.length - 1]), ')'), ')');
+}
+
+function beamOver(text: string, notes: NoteSpan[]): Surrounded {
+    const bar = measureEvents(text, notes[0].start);
+    const at = notes.map(n => bar.findIndex(e => e.start === n.start));
+    if (at.includes(-1)) { return { refused: 'a beam stays inside one bar' }; }
+    // A rest is spanned but never begins or ends a beam (rule 20).
+    let first = at[0];
+    let last = at[at.length - 1];
+    while (first < last && bar[first].rest) { first++; }
+    while (last > first && bar[last].rest) { last--; }
+    if (first === last) { return { refused: 'a beam needs two notes' }; }
+    if (bar.slice(first, last + 1).some(e => !BEAMABLE.has(e.duration))) {
+        return { refused: 'a beam takes eighths and shorter' };
+    }
+    if (carriesMark(text, bar.slice(first, last + 1), ['[', ']'])) { return { refused: 'these notes already carry a beam mark' }; }
+    return twoMarks(text, postEventSlot(text, bar[first].core, '['), '[', postEventSlot(text, bar[last].core, ']'), ']');
+}
+
+/** The letter steps from the C of octave 0. A mark moves seven. */
+const STEP_LETTERS = 'cdefgab';
+function nearestPosition(reference: number, step: number): number {
+    const base = Math.floor(reference / 7) * 7 + step;
+    return [base - 7, base, base + 7].reduce((best, p) => (Math.abs(p - reference) < Math.abs(best - reference) ? p : best));
+}
+const netMarks = (marks: string) => [...marks].reduce((n, m) => n + (m === "'" ? 1 : -1), 0);
+
+/** The next pitch the relative chain reads after `from`, past rests and bar lines: its
+ * letter's step and where its marks are. null when a word, a degree chord, a shape
+ * item or the block's end comes first: nothing is guessed about those. */
+function nextPitch(text: string, from: number, end: number): { step: number, at: number, marksEnd: number } | null {
+    for (const event of musicEvents(text, from, end)) {
+        if (!event.note) { return null; }
+        const slots = noteSlots(text, event.start, event.end);
+        if (!slots || slots.shape) { return null; }
+        let pitchAt = event.start;
+        if (text[pitchAt] === '<') {
+            pitchAt += text[pitchAt + 1] === '<' ? 2 : 1;
+            while (isSpace(text[pitchAt])) { pitchAt++; }
+        } else if (slots.octave === null) { continue; } // a rest or a slash: the chain goes on
+        const pitch = PITCH_LETTERS.exec(text.slice(pitchAt, event.end));
+        if (!pitch) { return null; }
+        const at = pitchAt + pitch[0].length;
+        let marksEnd = at;
+        while (isOctaveMark(text[marksEnd])) { marksEnd++; }
+        return { step: STEP_LETTERS.indexOf(text[pitchAt]), at, marksEnd };
+    }
+    return null;
+}
+
+function chordOver(text: string, notes: NoteSpan[]): Surrounded {
+    const slots = notes.map(n => noteSlots(text, n.start, n.end));
+    const plain = slots.every((s, i) => s && !s.shape && s.octave !== null && text[notes[i].start] !== '<');
+    if (!plain) { return { refused: 'a chord is made of notes' }; }
+    const read = slots as NoteSlots[];
+    if (notes.some((n, i) => postEventsEnd(text, read[i].coreEnd) !== read[i].coreEnd)) {
+        return { refused: 'these notes carry marks of their own' };
+    }
+    if (notes.some((n, i) => i > 0 && !/^\s*$/.test(text.slice(read[i - 1].coreEnd, n.start)))) {
+        return { refused: 'a chord stays inside one bar' };
+    }
+    const lengths = read.map(s => text.slice(s.marksEnd, s.coreEnd));
+    // What the first spells, the rest repeat or leave unsaid; anything else is a length a
+    // chord cannot have, and it would change what the notes after it inherit.
+    if (lengths.some((l, i) => i > 0 && l !== '' && l !== lengths[0])) {
+        return { refused: 'the notes of a chord share one length' };
+    }
+    const members = notes.map((n, i) => text.slice(n.start, read[i].marksEnd)).join(' ');
+    const first = notes[0];
+    const last = read[read.length - 1];
+    const chord = `<${members}>${lengths[0]}`;
+    const written = (rest: string) => text.slice(0, first.start) + chord + rest;
+    const caret = first.start + 1 + members.length;
+
+    // The note after a chord is relative to its FIRST member (GRAMMAR, the anchor
+    // model): keep it where it sounded after the last note selected.
+    const mode = text.slice(0, first.start).match(/\boctave\s+(?:absolute|relative)\b/g);
+    const next = mode?.[mode.length - 1].endsWith('absolute') ? null
+        : nextPitch(text, last.coreEnd, blockBounds(text, first.start)[1]);
+    if (next) {
+        const start = STEP_LETTERS.indexOf(text[first.start]);
+        let position = start;
+        for (let i = 1; i < notes.length; i++) {
+            position = nearestPosition(position, STEP_LETTERS.indexOf(text[notes[i].start]))
+                + 7 * netMarks(text.slice(read[i].octave!, read[i].marksEnd));
+        }
+        const shift = (nearestPosition(position, next.step) - nearestPosition(start, next.step)) / 7;
+        if (shift !== 0) {
+            const net = netMarks(text.slice(next.at, next.marksEnd)) + shift;
+            const marks = (net > 0 ? "'" : ',').repeat(Math.abs(net));
+            return { text: written(text.slice(last.coreEnd, next.at) + marks + text.slice(next.marksEnd)), caret };
+        }
+    }
+    return { text: written(text.slice(last.coreEnd)), caret };
+}
+
+/** One selected note: what the key does on that note (slurOpenPlan, beamOpenPlan,
+ * chordOpenPlan), read on the text with the key typed there. */
+function onOneNote(open: string, text: string, note: NoteSpan): Surrounded {
+    if (open === '<') {
+        const slots = noteSlots(text, note.start, note.end);
+        if (!slots || slots.shape || slots.octave === null || text[note.start] === '<') {
+            return { refused: 'a chord is made of notes' };
+        }
+    }
+    const at = open === '<' ? note.start : note.end;
+    const typed = text.slice(0, at) + open + text.slice(at);
+    const plan = open === '(' ? slurOpenPlan(typed, at, false)
+        : open === '[' ? beamOpenPlan(typed, at, false) : chordOpenPlan(typed, at);
+    if (!plan || plan.caret === undefined) {
+        return { refused: open === '(' ? 'a slur needs a note to go to' : 'a beam takes an eighth or shorter with one beside it' };
+    }
+    const c = composeFix(typed, plan.edits, plan.caret);
+    return { text: typed.slice(0, c.lo) + c.out + typed.slice(c.hi), caret: c.lo + c.caretIn };
+}
+
+/** Rule 34: VS Code has surrounded a selection with `open` and its close. `text` holds
+ * the pair, `open` at `lo` and the close after the selection's old end `hi`. null: not
+ * music, and the pair stands. */
+export function surroundPlan(open: string, text: string, lo: number, hi: number): FixPlan | null {
+    const before = text.slice(0, lo) + text.slice(lo + 1, hi + 1) + text.slice(hi + 2);
+    if (inSettingsBlock(before, lo) || inStringOrComment(before, lo) || inStringOrComment(before, hi)) { return null; }
+    const notes = selectedNotes(before, lo, hi);
+    if (!notes) { return null; }
+    const done = notes.length === 1 ? onOneNote(open, before, notes[0])
+        : open === '(' ? slurOver(before, notes)
+            : open === '[' ? beamOver(before, notes) : chordOver(before, notes);
+    if ('refused' in done) {
+        return {
+            edits: [{ at: lo, del: 1 }, { at: hi + 1, del: 1 }],
+            what: `${open} on a selection -> ${done.refused}`,
+            hint: `Lily#: ${done.refused}`,
+        };
+    }
+    // The one span that differs: one edit, one snippet, the caret placed with it.
+    let head = 0;
+    while (head < text.length && text[head] === done.text[head]) { head++; }
+    let tail = 0;
+    while (tail < text.length - head && tail < done.text.length - head
+        && text[text.length - 1 - tail] === done.text[done.text.length - 1 - tail]) { tail++; }
+    return {
+        edits: [{ at: head, del: text.length - head - tail, ins: done.text.slice(head, done.text.length - tail) }],
+        caret: done.caret,
+        what: `${open} on a selection -> written on its notes`,
     };
 }
 

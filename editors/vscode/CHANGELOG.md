@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Typing in a chord**: on a note inside the brackets a digit, a dot, `(` and `[` are the whole chord's: `<c e g|>` + `4` is `<c e g|>4`. They used to write `<c e g4>`, which does not compile. A digit after a space is still a scale degree.
+- **Selected notes take the mark**: `(`, `[` and `<` over selected notes write `c4( d e)`, `c8[ d e]` and `<c d e>4`, not `(c4 d e)`, where no slur was drawn. One undo takes it back, and the note after a new chord keeps its pitch.
 - **Ask Copilot's chat how to write Lily#**: it teaches a stage at a time, from the most useful operations to the advanced, in your language.
 - **Composing in the chat**: a compiler warning the AI's last revision brings goes back to it once more.
 - **Composing in the chat**: a hymn's parallel fifths and octaves go back to the AI, and a piece with no dynamics is told; an alto and tenor moving with the soprano are left alone.

@@ -25,7 +25,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { composeFix, multiCursorPlan, stayPut } from '../src/smartTypingCore';
-import { parseMulti, pressBackspace, pressDelete, show, showMulti, typeKey, typeKeyAtCarets } from './simulate';
+import { parseMulti, pressBackspace, pressDelete, show, showMulti, typeKey, typeKeyAtCarets, typeOverSelection } from './simulate';
 
 /** Asserts that typing `key` at the caret of `before` leaves `after`. */
 function typed(before: string, key: string, after: string, opts?: { autoClose?: boolean }) {
@@ -122,9 +122,8 @@ describe('slurs (rules 8–13)', () => {
     it('a slur spans a mid-music command, never lands on its operand', () => {
         typed('c4‸ key g major d', '(', 'c4(‸ key g major d)');
     });
-    it('a chord is one note to a slur; inside its brackets nothing is placed', () => {
+    it('a chord is one note to a slur', () => {
         typed('<c e>4‸ d', '(', '<c e>4(‸ d)');
-        typed('<c ‸e>4 d', '(', '<c (‸e>4 d');
     });
     it('a ( in a comment or a string is plain text', () => {
         typed('// c4‸ d', '(', '// c4(‸) d');
@@ -476,10 +475,145 @@ describe('the keys as the teaching path says they go', () => {
         typed('<c‸ e>4 d', '\\', '<c\\‸ e>4 d');
         typed('‸<c e>8 d e', '[', '<c e>8[‸ d] e');
     });
-    it('on a chord, the string number from outside and a length or a dot from inside are only typed', () => {
+    it('on a chord, the string number from outside is only typed', () => {
         typed('<c e>4‸ d', '\\', '<c e>4\\‸ d');
-        typed('<c‸ e>4 d', '8', '<c8‸ e>4 d');
-        typed('<c‸ e>4 d', '.', '<c.‸ e>4 d');
+    });
+    it('on a chord, a length or a dot from inside is the whole chord\'s', () => {
+        typed('<c‸ e>4 d', '8', '<c‸ e>8 d');
+        typed('<c‸ e>4 d', '.', '<c‸ e>4. d');
+    });
+});
+
+describe('what is a whole chord\'s, typed on a member (rule 33)', () => {
+    it('a digit is its length, the caret staying', () => {
+        typed('<c e g‸> d', '4', '<c e g‸>4 d');
+        typed('<c e g‸>4 d', '8', '<c e g‸>8 d');
+        typed('<c‸ e g>4. d', '2', '<c‸ e g>2. d');
+        typed('<c e‸ g>1 d', '6', '<c e‸ g>16 d');
+        typed('<c e‸ g>4 d', '3', '<c e‸ g>32 d');
+        typed('<cis‸ e>4 d', '8', '<cis‸ e>8 d');
+        typed("<c'‸ e>4 d", '8', "<c'‸ e>8 d");
+        typed('<‸c e>4 d', '8', '<‸c e>8 d');
+        typed('<<c e‸>>4 d', '8', '<<c e‸>>8 d');
+    });
+    it('a digit that begins no duration is absorbed, as on a note', () => {
+        typed('<c‸ e>4 d', '5', '<c‸ e>4 d');
+    });
+    it('a spaced digit is still a degree, and an argument still an argument', () => {
+        typed('<c e g ‸> d', '4', '<c e g 4‸> d');
+        typed('<c 3‸ 5>4 d', '8', '<c 38‸ 5>4 d');
+        typed('<c@finger(‸) e>4 d', '3', '<c@finger(3‸) e>4 d');
+        typed('<c@‸ e>4 d', '8', '<c@8‸ e>4 d');
+    });
+    it('a string number waiting on the member takes the digit', () => {
+        typed('<c\\‸ e>4 d', '3', '<c\\3‸ e>4 d');
+        typed('<c‸\\ e>4 d', '3', '<c‸\\3 e>4 d');
+        typed('<c\\3‸ e>4 d', '8', '<c\\3‸ e>8 d');
+    });
+    it('a chord not closed yet, or nested, is left as typed', () => {
+        typed('<c e‸', '4', '<c e4‸');
+        typed('<c <e g> a‸>4 d', '8', '<c <e g> a8‸>4 d');
+    });
+    it('a dot is its dot, the caret staying; after a member\'s text it is the placement', () => {
+        typed('<c e g‸>4 d', '.', '<c e g‸>4. d');
+        typed('<c e g‸> d', '.', '<c e g‸>. d');
+        typed('<c‸ e>4. d', '.', '<c‸ e>4.. d');
+        typed('<c@text("x")‸ e>4 d', '.', '<c@text("x").‸ e>4 d');
+    });
+    it('( is its slur, the caret following', () => {
+        typed('<c e g‸>4 d', '(', '<c e g>4(‸ d)');
+        typed('<c ‸e>4 d', '(', '<c e>4(‸ d)');
+        typed('<‸c e>4 d', '(', '<c e>4(‸ d)');
+        typed('<c‸is e>4 d', '(', '<cis e>4(‸ d)');
+        typed('<c‸ e>4', '(', '<c e>4(‸)');
+        typed('<c@finger(‸) e>4 d', '(', '<c@finger((‸)) e>4 d');
+    });
+    it('[ is its beam, the caret following', () => {
+        typed('<c e‸>8 d', '[', '<c e>8[‸ d]');
+        typed('<c‸is e>8 d', '[', '<cis e>8[‸ d]');
+        typed('<c e‸>4 d', '[', '<c e>4[‸] d');
+    });
+    it('what stays the member\'s stays', () => {
+        typed('<c‸ e>4 d', "'", "<c'‸ e>4 d");
+        typed('<c‸ e>4 d', '\\', '<c\\‸ e>4 d');
+        typed('<c‸ e>4 d', '@', '<c@‸ e>4 d');
+        typed('<c‸ e>4 d', '~', '<c~‸ e>4 d');
+    });
+    it('several carets on chords each write their own', () => {
+        assert.equal(showMulti(typeKeyAtCarets('<c‸ e>4 <d‸ f>4', '8')), '<c‸ e>8 <d‸ f>8');
+    });
+});
+
+describe('selected music takes the mark on its notes (rule 34)', () => {
+    const over = (marked: string, key: string, expected: string) =>
+        assert.equal(show(typeOverSelection(marked, key)), expected, `${marked} + ${key}`);
+    const refused = (marked: string, key: string, hint: RegExp) => {
+        const s = typeOverSelection(marked, key);
+        assert.equal(s.text, marked.replace('«', '').replace('»', ''), `${marked} + ${key}: the pair is gone`);
+        assert.equal(s.select, marked.indexOf('»') - marked.indexOf('«') - 1, 'the selection stands');
+        assert.match(s.hint ?? '', hint);
+    };
+    it('( writes a slur over the selection', () => {
+        over('«c4 d e» f', '(', 'c4(‸ d e) f');
+        over('«cis4. d8» e', '(', 'cis4.(‸ d8) e');
+        over('«c4 d | e f» g', '(', 'c4(‸ d | e f) g');
+        over('a «c4 d e | » f', '(', 'a c4(‸ d e) |  f');
+        over('«c4~ d\\2 e@mf» f', '(', 'c4(‸~ d\\2 e@mf) f');
+        over('c«4 d» e', '(', 'c4(‸ d) e');
+    });
+    it('[ writes a beam over the selection', () => {
+        over('«c8 d e» f', '[', 'c8[‸ d e] f');
+        over('«/8 /» /', '[', '/8[‸ /] /');
+        over('«<c e>8 d» e', '[', '<c e>8[‸ d] e');
+        over('c8 «r8 d e» f', '[', 'c8 r8 d[‸ e] f');
+        over('«c8 r8 e» f', '[', 'c8[‸ r8 e] f');
+    });
+    it('< makes a chord of the selection, its length after the bracket', () => {
+        over('«c4 d e» f', '<', '<c d e‸>4 f');
+        over('«c8. d8. e» f', '<', '<c d e‸>8. f');
+        over("«cis'4 ees,» r", '<', "<cis' ees,‸>4 r");
+        over('«c d e» f', '<', '<c d e‸> f');
+        over('«c4\n  d» f', '<', '<c d‸>4 f');
+    });
+    it('one note selected goes as the key does on that note', () => {
+        over('«c4» d', '(', 'c4(‸ d)');
+        over('«c8» d', '[', 'c8[‸ d]');
+        over('«c4» d', '<', '<c‸>4 d');
+    });
+    it('a chord keeps the next note where it sounded, in relative octaves', () => {
+        over("c'4 «e g» c r", '<', "c'4 <e g‸> c' r");     // C5 after the g, C4 after the e
+        over("c'4 «e g» c' r", '<', "c'4 <e g‸> c'' r");
+        over("c'4 «e g» c, r", '<', "c'4 <e g‸> c r");
+        over("c'4 «e g» <c e> r", '<', "c'4 <e g‸> <c' e> r");
+        over("c'4 «e g» | r c", '<', "c'4 <e g‸> | r c'");
+        over("c'4 «g e» c r", '<', "c'4 <g e‸> c, r");
+        over("c'4 «e g» e r", '<', "c'4 <e g‸> e r");     // the same from both
+        over("c'4 «e g'» c r", '<', "c'4 <e g'‸> c'' r"); // a later member's mark moves the chain
+        over("c'4 «e g» Tune c", '<', "c'4 <e g‸> Tune c"); // past a word nothing is guessed
+        over("octave absolute c'4 «e' g'» c' r", '<', "octave absolute c'4 <e' g'‸> c' r");
+    });
+    it('music that cannot take it loses the pair and says why', () => {
+        refused('«c4 d» e', '[', /eighths/);
+        refused('«c8 d | e f» g', '[', /one bar/);
+        refused('«c8 r8» e4', '[', /two notes/);
+        refused('«c8[ d e] f» g', '[', /already/);
+        refused('«c4( d) e» f', '(', /already/);
+        refused('«c4» | }', '(', /a note to go to/);
+        refused('«c4 d8» e', '<', /one length/);
+        refused('«c d8» e', '<', /one length/);
+        refused('«c4 d | e» f', '<', /one bar/);
+        refused('«c4~ d» e', '<', /marks/);
+        refused('«c4 r» e', '<', /notes/);
+        refused('«<c e>4 d» e', '<', /notes/);
+        refused('«<c e>4» d', '<', /notes/);
+    });
+    it('what is not music keeps the pair VS Code wrote', () => {
+        over('title "«My» Tune"', '(', 'title "(‸«My») Tune"');
+        over('// «c4 d» e', '(', '// (‸«c4 d») e');
+        over('«foo c4» d', '(', '(‸«foo c4») d');
+        over('«c4 foo» d', '(', '(‸«c4 foo») d');
+        over('«c4 foo d» e', '(', '(‸«c4 foo d») e');
+        over('paper { «a4 b» }', '(', 'paper { (‸«a4 b») }');
     });
 });
 
