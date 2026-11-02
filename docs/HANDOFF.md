@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **ペダルを再生で鳴らす＝設計は `docs/pedal-playback-design.md`・オーナーの判断待ち（2026-11-02）**: `@sustain` は描くだけで鳴らない。§3 の 3 つを決めてから実装。
+- **ペダルの音＝第1041 で実装（`@sustain` だけ・`docs/pedal-playback-design.md`）**: 残りは耳の確認（MANUAL-CHECKS C57）。`@sostenuto`・`@unaCorda` は描くだけのまま。
 - **作曲ガイダンス（Copilot のチャットで作曲 → Lily# が音楽として検査）＝オーナーが先に完了したい（2026-10-30）**: 流れ・検査の一覧・差し戻しの規則・**講評の手順**（オーナーが Downloads の .lys を送る → ログ `~\.copilot\session-state\*\events.jsonl` → 検査を DLL で → `lysc octave --absolute` → 日本語で講評し「入れて」で実装）・残りは **`docs/compose-in-chat-design.md`**。
 - **人間の曲のレビュー（オーナーの設計 2026-10-30）＝第1038 で §6 の 1〜4 を実装**: ツールとコマンドは実物の VS Code で確認済み。残りは Copilot の AI の振る舞い（MANUAL-CHECKS C55）・目視（C56）・§6-5（消音・頼まれてから）。設計との差は **`docs/review-tool-design.md` §7**（`what` と `fix.say` が 1 文のまま・`fix.edit`／`ask` なし）。
 - **section の外のコード行（`chords X { C | G7 | }`・`Semantics.FlatChordRows`）の残りの制限＝第1038**: ⑴ section の途中で拍子が変わる小節も、MIDI と MusicXML ではコード行を section 冒頭の拍子で読む（`.ly` は小節の長さだけ合わせる・section 内に書いた行と同じ動き）／⑵ 音楽より長い行の余りの小節は MusicXML に載せない（譜面・MIDI・`.ly` には出る）／⑶ form の無い本の `.ly` は今も行を先頭に一括で書く（弱起・拍子は見ない・実測していない）。コーパスにこの形の本は 0 冊＝急がない。
@@ -132,6 +132,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1041セッション（2026-11-02・YT-DELL2）
+
+同じ会話で新しい便。開始時 full **13894 / 0 / 2**（`-Start p1041`・HEAD `3158fed9`・OMR の open 0）。作業場所は Lab `sessions/p1041/`。
+- **オーナーの「全部勧めどおり」でペダルを鳴らす（`docs/pedal-playback-design.md`）**: 本物の CC64・`grandStaff` の全段（`GrandStaffPartSets`・`ShareGrandStaffDynamics` と同じ考え）・`@!sustain` は書かれた音の頭で上げる。`MidiTrack.Pedals`・`MidiExporter.ProcessNode` が音・和音・休符の頭で記録・`AddPedals` が分割後に配る。**音符の長さは変えない**＝検査は読まない。★ 再生の音符リストには `P = -1` の項目として混ぜた（メトロノームのクリックと同じ `S = -1`）＝練習の速度・ミュート・範囲・ループ・カウントインが自動で運ぶ。`P < 0` を読み飛ばす側は `toEvents`・`endOf`・`MidiOutEvents`・plain tones。`fromOffset` が seek をまたぐペダルを運ぶ。
+- 門: 掃き 1364 冊で `.mid` が動いたのは `@sustain` のある 33 冊だけ（`mid-sweep.ps1`・`gates.log`）・検査の出力はバイト一致。MeltySynth は実音で確認（`ARealSynth_RingsUnderThePedal`＝`TinySoundFont`）。毒は C# 17 本＋TS 8 本。⚠️ TS の 1 本（範囲の中へ持ち込んだペダルの複製が `first` に無いと落ちる）は最初緑＝網を足して赤を確かめた。⚠️ **プレビューの音（spessasynth）と MIDI 出力の実機は耳でしか確かめられない＝C57**。⚠️ 掴みやすい罠: PowerShell の `R` は `Invoke-History` の別名＝関数名に使うと引数エラー。
+- ⚠️ コーパス 33 冊の再生が変わる（本は直さない）。ペダルの書き方が雑な本は濁って聞こえるようになる＝本の側の問題。
+- 終了時 full **13903 / 0 / 2**（`-End p1041 -DiffBase 3158fed9`＝`sessions/p1041/end2.log`・門は全部 OK・npm 658 緑）。§7 7.5: Core の差分 90 行は描画に触れない再生の追加・REF 0／OWN 1（`AddPedals`＝LP はペダルを書かれた Staff でだけ鳴らす）。棚卸しの差分は `docs/APPROXIMATIONS.md` の行番号だけ（項目の増減 0）。⚠️ 最初の `-End` は `TheInventoryIsNotStale` が赤＝`MidiExporter` に行を足して行番号が動いた（`LILYSHARP_UPDATE_DOCS=1`・CRLF に戻す）。
+
+## 以下は第1040セッションの経緯
+
 ### 1.1 第1040セッション（2026-11-02・YT-DELL2）
 
 新しい会話。開始時 full **13888 / 0 / 2**（`-Start p1040`・HEAD `10e66014f`・OMR の open 0）。作業場所は Lab `sessions/p1040/`。
@@ -142,21 +152,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **講評 `Ameoto-no-Gogo`（雨音の午後）→「その順でやって」で B・C・D**: ペダルは初めて書かれた（ガイドの 1 文は効いた）。⚠️ **ところが `@sustain` は再生で鳴らない**＝`Core/Midi` にペダルが無く `.mid` の CC64 は 0。提案前に確かめなかった（講評の問題 5 と同じ、譜面しか見なかった失敗）。⇒ 提案 A＝`docs/pedal-playback-design.md`（オーナーの判断待ち）。B＝`LevelAfterTheFirstNotes`（id は `dynamics.late`・最初の強弱より前に鳴る音。1 小節目が velocity 90＝曲の頂点 mf の 86 より大きかった）。C＝`part.one-figure` の文面（枠があれば「Intro と Coda は型を保ってよい」・発火は変えない＝この指摘で A2 が良くなったため）。D＝`~A` は `SectionReferenceSyntax` ではない汎用ノードで、`PlayedSections`・`DynamicDrops`・`PlayedKeys` の 3 か所が読み飛ばしていた＝`PlaysOf`（`SectionSymbols.ReferencedName`）。毒 12 本は全部赤（`poisons3.ps1`）。⚠️ 最初の keys の網は毒で緑（`~A ~B` は旧コードの「書かれた順」でも同じ答え）＝`A ~B` と `~A B ~A` を足した。掃き 1364 冊（`checks-{head3,head5}.txt`）: B＝62 件（repo の fixture 41・corpus 5・AI 5・Downloads 11。ベース譜の `bar 138` のような本にも出る＝レビューでは正しい言い分）／D＝drop が 12 件増（`strings6` の `@fff`→`@p` ほか）・`no level until` が 4 件増・「始まりと終わりの調」が 7 件減（6 件は `~A B ~A Coda` を F major 始まりと読んだ誤報・1 件は fixture で、`~` なしと同じ扱いに揃った）・`final-bass` 1 件減（同じ原因）／C＝45 件は文面だけ。⚠️ 次の曲で、B と C で実物の AI がどう直すかを見る。
 - **講評 `Ame-no-Madobe`（雨の窓辺）→「全部勧めどおり」で X**: 旋律が 4 分音符 75%・順次 22→17% のまま「雨のため」と残され、2 回目の提案の説明は「短い音の動きを加え」と言ったがリズムは全小節同じだった。`melody.no-tune`（`rhythm.one-value` と `melody.leaps` が同じ旋律に重なるとき・Bass の役は除く）＋流れの `noTuneOf`／`noTuneRecheckedFor`＝残っていればもう 1 回だけ差し戻す（AI は理由を書いて残せる）。掃き 1364 冊で 3 冊（`Hope at Dawn`・`Shissou-no-Hikari`・`bigband-swing` のベース＝`contrabass` は Bass の役に入らない＝既存の読み方の制限）。毒 4 本は全部赤（`poisons4.ps1`）。**実物の VS Code で実ログを再生して 6 項目 PASS**（`sessions/p1040/replay3/`）。⚠️ AI が実際にどう書き直すかは未確認。Y（両手が同じ打点）は掃きだけ（`hands-census.ps1`）: 打点 3 以上で揃う小節が 25% 以上のピアノ曲は 40 冊中 1 冊＋この曲＝X で足りるので入れない案。⚠️ この曲の E♭2 B♭3 E♭3 G♭3（3,13,19,25 小節）は読まれない形のまま。
 - 終了時 full **13894 / 0 / 2**（`-End p1040 -DiffBase 10e66014f`＝`sessions/p1040/end5.log`・門は全部 OK・npm 649 緑）。§7 7.5: Core の差分は描画に触れない検査の修正 85 行・REF 0／OWN 0＝LP の出典は無い。⚠️ メンバーを doc コメントの下に挟んで `DocCommentPlacementTests` が赤になる罠を第1038・第1039 に続いて再発（`-End` が止めた）。
-
-## 以下は第1039セッションの経緯
-
-### 1.1 第1039セッション（2026-11-02・YT-DELL2）
-
-新しい会話。開始時 full **13876 / 0 / 2**（`-Start p1039`・HEAD `ed86982b3`・OMR の open 0）。作業場所は Lab `sessions/p1039/`。
-§1.0 ⒜ の先頭の作曲ガイダンスは曲待ちで、オーナーからの依頼も無い。**昨夜の `lysc review` を、census に入っていなかったオーナーのチャットの曲（Downloads の 147 冊＋今朝の未保存の 1 曲をログから復元＝`sessions/p1039/pieces/`）に当てたら、レビュー自身の欠陥が 4 つ見つかった。**
-- **直した**: ⑴ `key.outside` が同じパートの他の声部を「周りの和音」に数えていなかった（ギター独奏の E が自分の C7 の E の上で `[mistake]`・`Cafe-no-Midori`）／⑵ `key des minor` は `KeyFifths` の表に無く 0＝ハ長調として読まれ「58% が調の外」（`Senko-no-Michi`・調は LYS4034 が既に警告）→音で読む／⑶ 旋法も同じ経路でハ長調→読まない／⑷ `facts.tempo` が MIDI からの逆算で `4. = 96` を `♩ = 144` と言った→書かれた単位で。掃き 1363 冊の差は 3 冊が消えただけ（新規 0）。毒 5 本。⚠️ 最初の網 2 本は毒で緑だった（15 音で `key.signature` の下限 16 未満／G 短調は第 6 音を上げた E♮ も音階の内）＝書き直した。
-- **オーナーの「入れて」で 3 件実装（`docs/compose-in-chat-design.md` §1）`c3904b0df`**: ⑴ 最後の修正が新しく作った `mistake` だけもう 1 回差し戻す（`mistakeRecheckedFor`・LSP の `Mistakes`）／⑵ `piano.left-reaches-melody` は右手が旋律のときだけ／⑶ `dynamics.late` は両手を 1 人の奏者として読む。ついでに全部休みの区間は「始まる区間」に数えない（他のパートも同じ・誤報 3 冊が消えた）。`Of` の掃きは 1363 冊中 7 冊が動いた＝全部意図どおり（`sessions/p1039/checks-{base,head}.txt`）。毒 4 本。**実物の VS Code でクリスマス曲の実ログ 3 案を再生して 10 項目 PASS**（`sessions/p1039/replay/`）＝3 回目が拍またぎで差し戻され 4 回目で書き込み。⚠️ AI が実際にどう直すかは未確認＝次の曲の講評で見る。⚠️ 差し戻しが増える＝リクエストも 1 回増える。Deploy 済み（ユーザーは Reload Window）。⚠️ 罠: CRLF の文書に `(?m)…[^\r\n]*$` は当たらない（`$` は `\n` の手前）＝門の `hits 0` が止めた。
-- ⚠️ 今朝のクリスマス曲はエディタで未保存のまま（`C:\MyProj\compose-trial` は空）。本文はログの `proposeScore` にある。
-- ⚠️ Copilot のログの時刻は UTC（`22:10` は JST 7:10）。§3 の手順でファイルの時刻と比べるときに読み違える。
-- **講評 `Hoshiakari-no-Christmas` → 「入れて」で 2 件 `793c6deda`**: 長さの指摘を 24 小節の 4 周でかわした（100 小節中 72 がコピー）。⑴ `form.played-three-times` をバンドの外へ（`PlayedRound`＝歌詞なし・繰り返しが半分超）＋レビューの褒め言葉 2 つを外す／⑵ COMPOSE_FOR_LLM に変奏の 1 文。掃き 1364 冊で動いたのはこの曲・ベース譜 3 冊・fixture 3 冊。⚠️ オーナーのベース譜 3 冊（`|: A B :|*4`）にも当たる＝一度「1 パートを外す」で消したが、オーナーの指摘で撤回（同じ曲の 2 パートには当たる＝`sessions/p1039/fullscore-probe.ps1`・音符では見分けられない）→数えて言い、`fine_when` が採譜を除く。`form` の字面での概算（`thrice-census`）は `|: :|*N` を読めず「実曲はこの曲だけ」と誤報告した＝掃きは `dump-checks` で。`lyrics {` を正規表現が拾わず構文木へ。毒 8 本（最初の 2 本は緑・`thrice.Count == 0` は「半分超」に含まれるので削除）。実ログ再生 5 項目 PASS（`sessions/p1039/replay2/`）。⚠️ 今朝の 3 件はこの曲では発火せず、実物の AI の直し方はどちらも未確認。⚠️ `Deploy-Lsp.ps1` は拡張の `out` も入れる（「拡張の作り直しが要る」は誤りだった）。⚠️ 罠: 複数行の `$var` で置換すると LF が混ざる（`git add` の警告で気づいた）。 ⚠️ メンバーを挟んで `DocCommentPlacementTests` が赤になる罠を第1038 に続いて再発＝`793c6deda` はその 1 本が赤のまま・次の commit で直した。
-- 終了時 full **13888 / 0 / 2**（`-End p1039 -DiffBase ed86982b3`＝`sessions/p1039/end5.log`・門は全部 OK・npm 649 緑）。§7 7.5: Core の差分は描画に触れないレビューの修正・REF 0／OWN 0＝LP の出典は無い。⚠️ 罠: ログ抽出の末尾に `Add-Type` を書き、共有コンソールが Core.dll を掴んで 1 回目の `-End` が MSB3027（`close_console` でやり直した）。
-
-
 
 ## 2. 開いている作業
 
