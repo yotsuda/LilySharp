@@ -88,6 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
+- **チャットで Lily# を教わる＝第1043 で実装（`docs/LEARN_FOR_LLM.md`・`HANDOFF-LEARNING.md`）**: 残りは実物の Copilot での確認（MANUAL-CHECKS C59）。
 - **ペダルの音＝第1041 で実装（`@sustain` だけ・`docs/pedal-playback-design.md`）**: 残りは耳の確認（MANUAL-CHECKS C57）。`@sostenuto`・`@unaCorda` は描くだけのまま。
 - **作曲ガイダンスの改善＝クローズ（オーナー決定 2026-11-02・第1042）**: 「ユーザーが使う機会が少ない機能にかなり投資している。どうしても入れるべき内容でなければクローズして別の課題へ」。**講評のループと検査の追加を、オーナーが言うまで再開しない・提案しない。** 入れなかったもの: W3（section の中の急な落ち込み・試作は Lab `sessions/p1042/proto-w3.ps1`）。未調査のまま: 書き込みの後の再提案で差し戻しが最初からやり直しになる動き。
 - **作曲ガイダンス（Copilot のチャットで作曲 → Lily# が音楽として検査）＝第1042 でクローズ（上の行）**: 流れ・検査の一覧・差し戻しの規則・**講評の手順**（オーナーが Downloads の .lys を送る → ログ `~\.copilot\session-state\*\events.jsonl` → 検査を DLL で → `lysc octave --absolute` → 日本語で講評し「入れて」で実装）・残りは **`docs/compose-in-chat-design.md`**。
@@ -133,6 +134,14 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1043セッション（2026-11-02・YT-DELL2）
+
+同じ会話で新しい便。開始時 full **13907 / 0 / 2**（`-Start p1043`・HEAD `d029488e`・OMR の open 0）。作業場所は Lab `sessions/p1043/`。
+- **オーナーの依頼「lys の書き方を Copilot Chat にきいたら教えてもらえるように。体系的に、有益な操作から高度な内容までを順に」**: `docs/LEARN_FOR_LLM.md`（16 段階＋質問から段階を引く表・英語で書き AI が相手の言語で話す）。`lilysharp_readGuide` に topic `learn`・`here` と文法の指示文に 1 行ずつ（`here` は 2000 字の予算いっぱいなので配列の中のコメントを外へ出した）。網 `LearnGuideTests`＝例は全部エラー・警告なしで描ける／段階の番号と表／レッスン 12 本の順序／コマンド名は manifest と照合。npm で指示文・ページ割り（例が切れない）。**実物の VS Code で 11 項目 PASS**（`sessions/p1043/e2e/`）。⚠️ 例を絵で見たら Stage 11 の 3 連符が 1 オクターブ下＝phrase の次の音は phrase の先頭の文字から数える（コンパイルは通る）＝網にかからない。⚠️ **実物の Copilot がこのトピックを選んで段階どおり教えるかは未確認＝MANUAL-CHECKS C59**。
+- 終了時 full **13923 / 0 / 2**（`-End p1043 -DiffBase d029488e`＝`sessions/p1043/end.log`・門は全部 OK・npm 660 緑）。§7 7.5: Core の差分 0 行。毒 11 本は全部赤（`finish.log`）。
+
+## 以下は第1042セッションの経緯
+
 ### 1.1 第1042セッション（2026-11-02・YT-DELL2）
 
 同じ会話で新しい便。開始時 full **13903 / 0 / 2**（`-Start p1042`・HEAD `e4a03cf2`・OMR の open 0）。作業場所は Lab `sessions/p1042/`。オーナーがペダルの音を聞いて「良い感じ」（C57 の音そのもの）。
@@ -141,17 +150,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **講評 `Mercy-Light-and-Grace`（SATB の賛美歌 2 曲目）→「良い」で W1・W2**: H4 は効いた可能性が高い（歌詞が強拍始まりの 8.7.8.7）・X は初回で効いた（順次 16%→約 41%）・H1 も効いた。⚠️ H3 の文面「or hold a common tone」で**バスが全小節全音符になった**＝W1 で文面を変え、ガイドの賛美歌に「バスも言葉と動く」。W2＝最後の修正で増えたコンパイラ警告をもう 1 回だけ差し戻す（`firstWarnings`・`warningRecheckedFor`・§4 の未解決を閉じた）`27138044b`。毒 5 本は全部赤。**実ログ再生 7 項目 PASS**（`replay2/`）＝3 回目で警告を差し戻す。**W3（section の中の急な落ち込み）は入れていない**＝試作 `proto-w3.ps1`・掃き `w3-{base,head}.txt`・数え `w3-count.ps1`＝判断待ち。⚠️ 書き込みの後に同じ本をもう一度提案すると、1 回目の差し戻しからやり直す動きを見た（`replay2` の初回の 6 回目）＝今回の変更の前からあるかは未調査。
 - 終了時 full **13907 / 0 / 2**（`-End p1042 -DiffBase e4a03cf2`＝`sessions/p1042/end2.log`・門は全部 OK・npm 660 緑）。§7 7.5: Core の差分 80 行は描画に触れない検査の追加・REF 0／OWN 0＝LP の出典は無い。
 - ⚠️ 罠: pwsh MCP の関数から `$script:t` は呼び出し元の `$t` ではない＝置換は値を返す形で（第1040 の `Swap` の型）。`$w??=` は変数名に `??` が入る＝空白を空ける。
-
-## 以下は第1041セッションの経緯
-
-### 1.1 第1041セッション（2026-11-02・YT-DELL2）
-
-同じ会話で新しい便。開始時 full **13894 / 0 / 2**（`-Start p1041`・HEAD `3158fed9`・OMR の open 0）。作業場所は Lab `sessions/p1041/`。
-- **オーナーの「全部勧めどおり」でペダルを鳴らす（`docs/pedal-playback-design.md`）**: 本物の CC64・`grandStaff` の全段（`GrandStaffPartSets`・`ShareGrandStaffDynamics` と同じ考え）・`@!sustain` は書かれた音の頭で上げる。`MidiTrack.Pedals`・`MidiExporter.ProcessNode` が音・和音・休符の頭で記録・`AddPedals` が分割後に配る。**音符の長さは変えない**＝検査は読まない。★ 再生の音符リストには `P = -1` の項目として混ぜた（メトロノームのクリックと同じ `S = -1`）＝練習の速度・ミュート・範囲・ループ・カウントインが自動で運ぶ。`P < 0` を読み飛ばす側は `toEvents`・`endOf`・`MidiOutEvents`・plain tones。`fromOffset` が seek をまたぐペダルを運ぶ。
-- 門: 掃き 1364 冊で `.mid` が動いたのは `@sustain` のある 33 冊だけ（`mid-sweep.ps1`・`gates.log`）・検査の出力はバイト一致。MeltySynth は実音で確認（`ARealSynth_RingsUnderThePedal`＝`TinySoundFont`）。毒は C# 17 本＋TS 8 本。⚠️ TS の 1 本（範囲の中へ持ち込んだペダルの複製が `first` に無いと落ちる）は最初緑＝網を足して赤を確かめた。⚠️ **プレビューの音（spessasynth）と MIDI 出力の実機は耳でしか確かめられない＝C57**。⚠️ 掴みやすい罠: PowerShell の `R` は `Invoke-History` の別名＝関数名に使うと引数エラー。
-- ⚠️ コーパス 33 冊の再生が変わる（本は直さない）。ペダルの書き方が雑な本は濁って聞こえるようになる＝本の側の問題。
-- **オーナーの依頼: プレビューを閉じたら再生を止める**: オーナーの設定は MIDI 出力（`lilysharp.playback.midiOutput`）＝再生はサーバーのスレッドなのでページが消えても止まらなかった。`midiPlaybackPanel`＝その再生を始めたペインが閉じたときだけ stop（別のプレビューの再生は止めない）・鳴る前の strum のタイマーも消す。⚠️ 網はソースの形だけ（`midiOutputSetting.test.ts`）＝実物は MANUAL-CHECKS C58。
-- 終了時 full **13903 / 0 / 2**（`-End p1041 -DiffBase 3158fed9`＝`sessions/p1041/end4.log`・門は全部 OK・npm 660 緑）。§7 7.5: Core の差分 91 行は描画に触れない再生の追加・REF 0／OWN 1（`AddPedals`＝LP はペダルを書かれた Staff でだけ鳴らす）。棚卸しは `OWN` が 296→297（`AddPedals`）。⚠️ 最初の `-End` は `TheInventoryIsNotStale` が赤＝`LILYSHARP-OWN` を足した（`LILYSHARP_UPDATE_DOCS=1`・CRLF に戻す）。
 
 ## 2. 開いている作業
 
