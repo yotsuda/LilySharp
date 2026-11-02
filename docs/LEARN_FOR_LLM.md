@@ -47,13 +47,25 @@ the Lily# Studio extension of VS Code. It is NOT LilyPond: no `\relative`, no ba
 | Ctrl+Space | lists what can come next: words, names, chords, marks |
 | Ctrl+Shift+Up / Down | a note to the next note of the key, up or down, and it sounds; also a dynamic, a clef, a key, a tempo, a time |
 | Ctrl+Shift+PageUp / PageDown | a note an octave up or down; the notes after it follow |
-| a digit on a note | sets its length: on `d4`, type `2` and it is `d2` |
-| `'` or `,` on a note | an octave mark |
-| `.` on a note | a dot |
-| `@` on a note | lists every mark: `@mf`, `@staccato`, `@fermata` … |
 
-**The caret can be anywhere on the note**: at its start, in its name, after its length. Each of these
-lands in its right place by itself, so never tell them to move the caret first, or to type "right after the note".
+**Keys that find their own place.** With the caret anywhere on a note (at its start, in its name, after its
+length), these land where they belong, so never tell them to move the caret first, or to type "right after the note":
+
+| Key | Lands | The caret |
+|---|---|---|
+| a digit | as the length: on `d4`, `2` makes `d2` | stays |
+| `'` or `,` | as an octave mark, after the name | stays |
+| `.` | as a dot, after the length | stays |
+| `@` | after the length, and lists every mark: `@mf`, `@staccato`, `@fermata` … | follows |
+| `\` | as a string number for tab, ready for its digit | follows |
+| `~` | as a tie, at the end of the note | follows |
+| `(` | as a slur over this note and the next | follows |
+| `[` | as a beam over this note and the next, on an eighth or shorter with one beside it in the bar; on a longer note it is typed where the caret is | follows |
+
+**One goes by where the caret is:** `<` wraps a note in a chord only from just before it.
+
+**On what:** a rest or a slash `/` has no pitch, so `'`, `,` and `\` do nothing special there; the rest of the
+table works. On a chord they apply to the whole chord from outside its brackets, and to the note the caret is on inside them.
 
 **Try:** put the caret on a note and press Ctrl+Shift+Up. Then, with the caret still on it, type `@` and pick `mf`.
 

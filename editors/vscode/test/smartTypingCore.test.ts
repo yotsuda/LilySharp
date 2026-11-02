@@ -423,6 +423,56 @@ describe('string numbers (rules 24–24a, 29)', () => {
     });
 });
 
+// What docs/LEARN_FOR_LLM.md tells a person, stage 2 (owner's question 2026-11-02: do the duration and
+// the `\` go as the `@` does?). Told wrongly once: this holds the path to what the keys do.
+describe('the keys as the teaching path says they go', () => {
+    const everywhere = ['‸cis4. d8', 'c‸is4. d8', 'cis‸4. d8', 'cis4‸. d8', 'cis4.‸ d8'];
+    const lands = (key: string, text: string) => {
+        for (const place of everywhere) {
+            assert.equal(show(typeKey(place, key)).replace('‸', ''), text, `${place} + ${key}`);
+        }
+    };
+    const follows = (key: string, marked: string) => {
+        for (const place of everywhere) { typed(place, key, marked); }
+    };
+    it('a digit, an octave mark and a dot find their place, the caret staying', () => {
+        lands('8', 'cis8. d8');
+        lands("'", "cis'4. d8");
+        lands(',', 'cis,4. d8');
+        lands('.', 'cis4.. d8');
+        typed('c‸is4. d8', '8', 'c‸is8. d8');
+    });
+    it('@, the string number, the tie and the slur find their place, the caret following', () => {
+        follows('@', 'cis4.@‸ d8');
+        follows('\\', 'cis4.\\‸ d8');
+        follows('~', 'cis4.~‸ d8');
+        follows('(', 'cis4.(‸ d8)');
+    });
+    it('< wraps a note only from just before it', () => {
+        typed('‸c4 d', '<', '<c‸>4 d');
+        typed('c‸4 d', '<', 'c<‸4 d');
+    });
+    it('[ beams an eighth and the next from anywhere on it; on a longer note it is typed where the caret is', () => {
+        for (const place of ['‸c8 d e', 'c‸8 d e', 'c8‸ d e']) { typed(place, '[', 'c8[‸ d] e'); }
+        typed('c‸4 d e', '[', 'c[‸4 d e');
+    });
+    it('a rest and a slash take no octave mark and no string number; the rest of the keys work', () => {
+        for (const key of ["'", ',', '\\']) {
+            typed('r4‸ d', key, `r4${key}‸ d`);
+            typed('/4‸ /', key, `/4${key}‸ /`);
+        }
+        typed('‸r4 d', '8', '‸r8 d');
+        typed('‸/4 /', '8', '‸/8 /');
+        typed('‸r4 d', '@', 'r4@‸ d');
+    });
+    it('on a chord, from outside its brackets the whole chord, inside them the note under the caret', () => {
+        typed('<c e>4‸ d', "'", "<c e>'4‸ d");
+        typed('<c‸ e>4 d', "'", "<c'‸ e>4 d");
+        typed('<c e>4‸ d', '@', '<c e>4@‸ d');
+        typed('<c‸ e>4 d', '@', '<c@‸ e>4 d');
+    });
+});
+
 describe('annotations (rule 27, 29)', () => {
     it('27. @ on a note lands after the string number, before the marks', () => {
         typed('c4~‸', '@', 'c4@‸~');
