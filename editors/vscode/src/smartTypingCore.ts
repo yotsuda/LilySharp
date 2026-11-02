@@ -2202,11 +2202,13 @@ export function surroundPlan(open: string, text: string, lo: number, hi: number)
             hint: `Lily#: ${done.refused}`,
         };
     }
-    // The one span that differs: one edit, one snippet, the caret placed with it.
+    // The one span that differs: one edit, one snippet, the caret placed with it. Never past
+    // the caret on either side: `c e g` selected + '<' is already `<c e g>`, nothing differs,
+    // and a span found at the end of the file would grow back from there to reach the caret.
     let head = 0;
-    while (head < text.length && text[head] === done.text[head]) { head++; }
+    while (head < text.length && head < done.caret && text[head] === done.text[head]) { head++; }
     let tail = 0;
-    while (tail < text.length - head && tail < done.text.length - head
+    while (tail < text.length - head && tail < done.text.length - Math.max(head, done.caret)
         && text[text.length - 1 - tail] === done.text[done.text.length - 1 - tail]) { tail++; }
     return {
         edits: [{ at: head, del: text.length - head - tail, ins: done.text.slice(head, done.text.length - tail) }],

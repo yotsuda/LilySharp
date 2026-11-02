@@ -24,13 +24,20 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { composeFix, insertionPlan, multiCursorPlan, planFor, stayPut } from '../src/smartTypingCore';
+import { composeFix, insertionPlan, multiCursorPlan, planFor, stayPut, surroundPlan } from '../src/smartTypingCore';
 import { parseMulti, pressBackspace, pressDelete, show, showMulti, typeKey, typeKeyAtCarets, typeOverSelection } from './simulate';
 
 /** Asserts that typing `key` at the caret of `before` leaves `after`. */
 function typed(before: string, key: string, after: string, opts?: { autoClose?: boolean }) {
     assert.equal(show(typeKey(before, key, opts)), after, `${JSON.stringify(before)} + ${key}`);
 }
+
+describe('the editor side keeps the document\'s own whitespace', () => {
+    it('a span that runs over lines is not indented again by the snippet', () => {
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'smartTyping.ts'), 'utf8');
+        assert.match(source, /undoStopAfter: true, keepWhitespace: true \}\)/);
+    });
+});
 
 describe('the core is editor-free', () => {
     it('never imports vscode — the property that lets it run here at all', () => {
@@ -688,6 +695,25 @@ describe('selected music takes the mark on its notes (rule 34)', () => {
         over("c'4 «e g'» c r", '<', "c'4 <e g'‸> c'' r"); // a later member's mark moves the chain
         over("c'4 «e g» Tune c", '<', "c'4 <e g‸> Tune c"); // past a word nothing is guessed
         over("octave absolute c'4 «e' g'» c' r", '<', "octave absolute c'4 <e' g'‸> c' r");
+    });
+    it('the rewrite stays on the line of its notes: nothing below them is touched (owner\'s report)', () => {
+        // Selected `c e g` + '<' is `<c e g>` already. A span reaching the end of the file went
+        // through a snippet, which indented every line after it.
+        const span = (marked: string, key: string) => {
+            const lo = marked.indexOf('«');
+            const hi = marked.indexOf('»') - 1;
+            const before = marked.replace('«', '').replace('»', '');
+            const close: Record<string, string> = { '(': ')', '[': ']', '<': '>' };
+            const text = before.slice(0, lo) + key + before.slice(lo, hi) + close[key] + before.slice(hi);
+            const plan = surroundPlan(key, text, lo, hi)!;
+            return composeFix(text, plan.edits, plan.caret!).out;
+        };
+        const rest = ' }\n}\n\nscore { staff m }\n';
+        for (const [marked, key] of [['section A { «c e g»' + rest, '<'], ['section A { «c4 e g»' + rest, '<'],
+            ['section A { «c4 e g»' + rest, '('], ['section A { «c8 e g»' + rest, '[']]) {
+            assert.doesNotMatch(span(marked, key), /\n/, marked);
+        }
+        over('section A { «c e g»' + rest, '<', 'section A { <c e g‸>' + rest);
     });
     it('music that cannot take it loses the pair and says why', () => {
         refused('«c4 d» e', '[', /eighths/);

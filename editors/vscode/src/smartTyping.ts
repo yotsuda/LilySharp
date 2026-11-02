@@ -382,9 +382,13 @@ function applyFixWithCaret(editor: vscode.TextEditor, text: string,
     // INTERCEPTED key has no keystroke edit to merge with, so it opens its own —
     // without this it would join whatever the user did before, and one undo would
     // take that away too.
+    //
+    // keepWhitespace: the span is the document's own text, and may run over lines (a ')' on
+    // the next line). By default a snippet indents its later lines by the first one's
+    // indentation, which pushed every line of the span right (owner's report 2026-11-02).
     editor.insertSnippet(snippet,
         new vscode.Range(editor.document.positionAt(lo), editor.document.positionAt(hi)),
-        { undoStopBefore: ownUndoStep, undoStopAfter: true })
+        { undoStopBefore: ownUndoStep, undoStopAfter: true, keepWhitespace: true })
         .then(() => { applyingFix = false; after?.(); }, () => { applyingFix = false; });
 }
 

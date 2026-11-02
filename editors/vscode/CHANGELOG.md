@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A slur reaching the next line no longer indents it**: `c4( |` with its `)` on the next line pushed that line right.
 - **`<` and `[` inside a note no longer split it**: `c|is4` + `<` is `<cis|>4`. `[` on a quarter or a rest changes nothing and says why, where `c[4` and `c4[]` were an error and a mark that drew nothing.
 - **Selected staves go into a group**: select `staff` rows in a `score`, press Ctrl+Space and pick `grandStaff`, `staffGroup`, `choirStaff`, `condensedStaff` or `combinedStaff`.
 - **`#` writes the sharp**: typed on a note it goes into the name, `c4` to `cis4`, and against a flat it cancels one. `c#`, `bb4` and `ab4` now say which pitch was meant, and Ctrl+. writes it.
