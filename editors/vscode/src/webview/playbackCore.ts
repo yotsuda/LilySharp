@@ -71,6 +71,7 @@ export function practiceNotes(notes: readonly PlaybackNote[], parts: readonly st
 export type MidiEvent =
     | { t: number; kind: 'program'; c: number; g: number }
     | { t: number; kind: 'bend'; c: number; value: number }
+    | { t: number; kind: 'pedal'; c: number; v: number }
     | { t: number; kind: 'on'; c: number; p: number; v: number }
     | { t: number; kind: 'off'; c: number; p: number };
 
@@ -105,9 +106,31 @@ export function programOf(program: number | undefined, timbre: number | undefine
     return FAMILY_PROGRAM[t] ?? 0;
 }
 
-/** The order of events at one instant: a note's off before its own re-strike, the
- *  programs and the bends before the notes that need them. */
-const KIND_ORDER: Record<MidiEvent['kind'], number> = { off: 0, program: 1, bend: 2, on: 3 };
+/** The order of events at one instant: a pedal's lift before anything, so the old notes end under
+ *  it; a note's off before its own re-strike; the programs, the bends and a pedal's press before
+ *  the notes they catch. */
+const KIND_ORDER: Record<Exclude<MidiEvent['kind'], 'pedal'>, number> = { off: 0, program: 1, bend: 2, on: 3 };
+const orderOf = (e: MidiEvent) => e.kind === 'pedal' ? (e.v === 0 ? -1 : 2) : KIND_ORDER[e.kind];
+
+/** An entry of the note list that is the sustain pedal changing (LspProtocolDtos.PlaybackNote.PedalPitch), not a note. */
+export const isPedal = (n: { P: number }) => n.P < 0;
+
+/**
+ * The list from `offset` on, for a seek, a loop or a count-in: what starts before it is dropped,
+ * and a pedal held down across it goes down at `offset`, or the music would start dry and a later
+ * change would lift nothing. The list is in time order, as the server sends it.
+ */
+export function fromOffset(notes: readonly PlaybackNote[], offset: number): PlaybackNote[] {
+    const held = new Map<number, PlaybackNote>();
+    const out: PlaybackNote[] = [];
+    for (const n of notes) {
+        if (n.T >= offset - 0.001) { out.push(n); }
+        else if (isPedal(n)) {
+            if (n.V > 0) { held.set(channelOf(n), n); } else { held.delete(channelOf(n)); }
+        }
+    }
+    return [...[...held.values()].map(n => ({ ...n, T: offset })), ...out];
+}
 
 /**
  * The events of `notes` from `offset` (seconds into the piece) on, timed from the
@@ -123,6 +146,10 @@ export function toEvents(notes: readonly PlaybackNote[], offset = 0): MidiEvent[
     for (const n of notes) {
         if (n.T < offset - 0.001) { continue; }
         const c = channelOf(n);
+        if (isPedal(n)) {
+            events.push({ t: micro(Math.max(0, n.T - offset)), kind: 'pedal', c, v: n.V });
+            continue;
+        }
         if (c !== DRUM_CHANNEL && !programs.has(c)) { programs.set(c, programOf(n.G, n.I)); }
         // To the microsecond: a note's end and the next one's start that are one instant can
         // differ in the last bit (a tempo the practice menu stretched, 2026-10-25), and the off
@@ -147,7 +174,7 @@ export function toEvents(notes: readonly PlaybackNote[], offset = 0): MidiEvent[
     // A stable sort keeps a note's bend before its on (pushed in that order) at equal t.
     return events
         .map((e, i) => ({ e, i }))
-        .sort((a, b) => a.e.t - b.e.t || KIND_ORDER[a.e.kind] - KIND_ORDER[b.e.kind] || a.i - b.i)
+        .sort((a, b) => a.e.t - b.e.t || orderOf(a.e) - orderOf(b.e) || a.i - b.i)
         .map(x => x.e);
 }
 
@@ -158,7 +185,7 @@ const micro = (t: number) => Math.round(t * 1e6) / 1e6;
 export function endOf(notes: readonly PlaybackNote[], offset = 0): number {
     let end = offset;
     for (const n of notes) {
-        if (n.T < offset - 0.001) { continue; }
+        if (n.T < offset - 0.001 || isPedal(n)) { continue; }
         end = Math.max(end, n.T + Math.max(0.03, n.D));
     }
     return end;
@@ -217,7 +244,14 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
         if (start > -Infinity) { t0 = start; }
         if (end < Infinity) { t1 = end; }
     }
-    const window = sorted.filter(n => n.T >= t0 - 1e-6 && n.T < t1 - 1e-6);
+    // A pedal held into the stretch goes down at its start; one held out of it lifts at its end, or
+    // a loop's next round would ring on from the last.
+    const window = fromOffset(sorted, t0).filter(n => n.T < t1 - 1e-6);
+    const down = new Map<number, PlaybackNote>();
+    for (const n of window) {
+        if (isPedal(n)) { first.add(n); if (n.V > 0) { down.set(channelOf(n), n); } else { down.delete(channelOf(n)); } }
+    }
+    for (const n of down.values()) { const lift = { ...n, T: t1, V: 0 }; first.add(lift); window.push(lift); }
     if (!once) { return { notes: window.map(n => ({ ...n, T: n.T - t0 })), length: t1 - t0, start: t0 }; }
 
     // The repeats' time: the merged spans the dropped notes sound in, less the time a kept note
@@ -293,7 +327,7 @@ export function countIn(notes: readonly PlaybackNote[], start: number, origin: n
         .filter(b => b.T >= barStart - 1e-6 && b.T < barEnd - 1e-6)
         .map(b => ({ T: b.T - barStart, D: 0.08, P: b.A ? CLICK_ACCENT : CLICK_BEAT, V: b.A ? 120 : 95,
             S: -1, O: 0, I: 9, C: DRUM_CHANNEL, G: 0, N: -1 }));
-    const music = notes.filter(n => n.T >= start - 0.001).map(n => ({ ...n, T: n.T - start + lead }));
+    const music = fromOffset(notes, start).map(n => ({ ...n, T: n.T - start + lead }));
     return { notes: [...clicks, ...music].sort((a, b) => a.T - b.T), lead };
 }
 

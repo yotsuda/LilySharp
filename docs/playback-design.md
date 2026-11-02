@@ -54,6 +54,8 @@ hosting a VST ourselves. LILYSHARP-OWN throughout — LilyPond writes a `.mid` a
   note on the same channel bends both. The export has the same limit; a per-note tuning
   (MIDI Tuning Standard, which spessasynth supports) is the fix if a book ever needs it.
 - Velocity 1..127, keys 0..127.
+- **The sustain pedal** (`@sustain`) is an entry of the list with `P` -1, a controller and no note: see
+  `docs/pedal-playback-design.md`. At one instant a lift comes first and a press just before the notes.
 
 ## 3. Why it stuttered, and the scheduling now
 

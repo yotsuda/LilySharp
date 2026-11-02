@@ -5898,7 +5898,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // Seek = re-schedule from the offset; notes already past it are
             // dropped (mid-note tails too — re-striking half a note reads
             // worse than starting cleanly at the next onset).
-            notes = notes.filter(n => n.T >= offset - 0.001);
+            notes = window.LysSynth ? window.LysSynth.fromOffset(notes, offset) : notes.filter(n => n.T >= offset - 0.001);
             if (notes.length === 0) { return; }
             if (midiOutput && !here) {
                 // The MIDI output: the server plays the list from the offset and answers
@@ -6080,6 +6080,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 return noiseBuf;
             };
             for (const n of notes) {
+                if (n.P < 0) { continue; }   // the pedal: the plain tones have none
                 const p = PATCHES[n.I] || PATCHES[0];
                 if (p.drum) {
                     // GM percussion approximation: filtered noise burst.

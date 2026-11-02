@@ -1,18 +1,15 @@
-# Playing the pedal — design, waiting for the owner
+# Playing the pedal
 
-**Status: not built.** Written 2026-11-02 (session 1040) after the review of 雨音の午後. Decisions 1 to 3 in §3
-are the owner's.
+**Status: built for `@sustain`** (session 1041, 2026-11-02), the owner's three decisions as §3 recommends. Written
+in session 1040 after the review of 雨音の午後. `@sostenuto` and `@unaCorda` still only draw. What remains is the
+owner's ear (`editors/vscode/MANUAL-CHECKS.md` C57).
 
-## 1. What happens now
+## 1. What happened before
 
-`@sustain`, `@sostenuto` and `@unaCorda` are drawn, and exported to LilyPond and MusicXML. They do not sound.
+`@sustain`, `@sostenuto` and `@unaCorda` were drawn, and exported to LilyPond and MusicXML. They did not sound.
 
-- `LilySharp.Core/Midi` has no pedal: `MidiExporter` reads no pedal mark, `MidiTrack` has no controller list, and
-  `MidiFile.WriteTrack`'s `MidiEventType` has no control change.
-- Measured on `Ameoto-no-Gogo.lys`: the left hand's notes have the same lengths with the marks and without them,
-  and the `.mid` holds no CC64.
-- So the guide's sentence on the pedal (COMPOSE_FOR_LLM, "A piano piece") changes the page and not the sound. A
-  quiet piece's broken chords stop where they are written, whatever the page says.
+- Measured on `Ameoto-no-Gogo.lys`: the left hand's notes had the same lengths with the marks and without them,
+  and the `.mid` held no CC64.
 
 ## 2. The roads
 
@@ -37,32 +34,37 @@ are the owner's.
    that note's onset; nothing new in the grammar. The alternative is to hold it through a last note and lift at the
    music's end, which then differs from the drawn bracket.
 
-## 4. Road A, step by step
+## 4. Road A, as built
 
-1. **Core.** `MidiTrack` gets a list of `(Tick, Channel, Down)`. `MidiExporter` records it where a note carries the
-   mark, in the played walk, so repeats and D.C. come with it; the tick is the note's onset. A re-press under the
-   pedal (`g,4@sustain` with the pedal down) is up then down at one tick, in that order. `@sostenuto` (CC66) and
-   `@unaCorda` (CC67) are the same list with another controller, and go in only if the owner wants them now.
+1. **Core.** `MidiTrack.Pedals` is a list of `PedalChange(Tick, Down)`. `MidiExporter.ProcessNode` records a mark at
+   the onset of the note, chord or rest that carries it, in the played walk, so repeats and D.C. come with it, and
+   `AddPedals` gives it to the tracks after the split. A re-press under the pedal (`g,4@sustain` with the pedal
+   down) is up then down at one tick. A pedal the form leaves down lifts at the music's end. In a grace note a mark
+   is not read. `@sostenuto` (CC66) and `@unaCorda` (CC67) would be the same list with another controller.
 2. **The `.mid`.** `MidiFile.WriteTrack` writes `0xB0`. Order at one tick: pedal up, note off, pedal down, note on,
    so a re-press catches the new chord and not the old one. MeltySynth reads the file, so `lysc wav` follows.
-3. **The note list.** `lilysharp/playback` gains the pedal events beside `PlaybackNote`, in seconds with the channel.
-4. **The preview.** `toEvents` (`playbackCore.ts`) schedules them; `previewSynth.ts` calls
-   `synth.controllerChange(c, 64, value, { time })`, already used for all-sound-off.
-5. **MIDI out.** `MidiOutEvents` already has `Control = 0xB0`.
-6. **Seek and stop.** Play from the middle starts with the pedal state at the offset, and a pedal down over the
-   offset is sent first. Stop and the loop's turn send CC64 0: all-sound-off does not lift a pedal, and the next play
-   would ring from its first note.
+3. **The note list.** A pedal change travels IN `lilysharp/playback`'s `Notes`, as a metronome click does: `P` is
+   `PlaybackNote.PedalPitch` (-1), `V` is 127 or 0, `S` is -1, `C` and `N` are its track's. So the practice tempo, a
+   muted part, a stretch, a loop and a count-in move it with the notes and need no code of their own. Whatever reads
+   the list as notes skips `P < 0`: `toEvents`, `endOf`, `MidiOutEvents.From` and `EndOf`, the plain tones.
+4. **The preview.** `toEvents` (`playbackCore.ts`) makes `pedal` events; `previewSynth.ts` calls
+   `synth.controllerChange(c, 64, value, { time })`.
+5. **MIDI out.** `MidiOutEvents.From` sends the same events in the same order.
+6. **Seek, stretch and stop.** `fromOffset` carries a pedal held across the offset down at the offset. A stretch
+   (`playSpanWindow`) lifts a pedal it leaves down at its end, so a loop's next round does not ring on from the last.
+   Stop sends CC64 0 in both players: all-sound-off does not lift a pedal.
 
-## 5. How it is checked
+## 5. How it was checked
 
-- C#: the bytes of the `.mid`, the order at one tick, a repeat, a grand staff's two channels, and the note lengths
-  unchanged with the marks and without them. The checks' sweep must then be byte for byte the same.
-- `npm test`: `toEvents` with a seek inside a pedal, and CC64 0 at stop.
-- `lysc wav`: the last seconds of a piece with the marks and without them differ in level (rings against stops).
-- By ear, the owner's: the preview, then MIDI out. Machines cannot judge whether it sounds like a piano.
+- C# (`MidiPedalTests`): the bytes of the `.mid`, the order at one tick, a repeat, a rest, a phrase, a tuplet, a
+  grand staff's two channels, the note lengths unchanged. MeltySynth rings under the pedal and stops at the lift.
+- `npm test`: a seek, a stretch, a count-in, the practice tempo, the order at one instant. 25 poisons, all red.
+- Over 1364 books: the `.mid` moved in the 33 that write a sustain and in no other; the checks byte for byte the same.
+- NOT checked by a machine: the preview's sound. `spessasynth` is not run in the tests, and whether it sounds like a
+  piano is the owner's ear (MANUAL-CHECKS C57).
 
 ## 6. What follows
 
 - **A check for a pedal held over a change of bass** (雨音の午後, bar 23: E♭ held into B♭, the `@sustain` lost in a
   revision). Its measure is easier once the events exist.
-- **The guide's sentence** is true of the sound only after this.
+- **`@sostenuto` and `@unaCorda`**, if the owner wants them.

@@ -36,6 +36,9 @@ public class MidiTrack
     public List<TimeSignatureChange> TimeSignatures { get; } = [];
     /// <summary>The lyric events on this track.</summary>
     public List<LyricEvent> Lyrics { get; } = [];
+    /// <summary>The sustain pedal's changes on this track's channel, in tick order. The notes keep
+    /// their written lengths: the checks read those, and a DAW edits the pedal as a pedal.</summary>
+    public List<PedalChange> Pedals { get; } = [];
 
     /// <summary>
     /// Sets the tempo from <paramref name="tick"/> on: ONE event per moment — a tempo already
@@ -252,6 +255,12 @@ public class MidiFile
                     trackWriter.Write((byte)(0xC0 | (evt.Channel & 0x0F)));
                     trackWriter.Write((byte)(evt.Data1 & 0x7F));
                     break;
+                case MidiEventType.PedalUp:
+                case MidiEventType.PedalDown:
+                    trackWriter.Write((byte)(0xB0 | (evt.Channel & 0x0F)));
+                    trackWriter.Write((byte)64);
+                    trackWriter.Write((byte)(evt.Type == MidiEventType.PedalDown ? 127 : 0));
+                    break;
                 case MidiEventType.PitchBend:
                     trackWriter.Write((byte)(0xE0 | (evt.Channel & 0x0F)));
                     trackWriter.Write((byte)(evt.Data1 & 0x7F));
@@ -338,6 +347,18 @@ public class MidiFile
                 events.Add(new MidiEvent(0, MidiEventType.ProgramChange, ch, program, 0));
         }
 
+        // The pedal on every channel the notes use, as the program is: it is channel-wide too.
+        if (track.Pedals.Count > 0)
+        {
+            var pedalled = new SortedSet<int> { track.Channel };
+            for (int ni = 0; ni < track.Notes.Count; ni++)
+                pedalled.Add(channelPlan != null ? channelPlan[ni] : track.Notes[ni].Channel);
+            pedalled.Remove(9);
+            foreach (var pedal in track.Pedals)
+                foreach (int ch in pedalled)
+                    events.Add(new MidiEvent(pedal.Tick, pedal.Down ? MidiEventType.PedalDown : MidiEventType.PedalUp, ch, 0, 0));
+        }
+
         foreach (var tempo in track.TempoChanges)
             events.Add(new MidiEvent(tempo.Tick, MidiEventType.Tempo, 0, tempo.MicrosecondsPerBeat, 0));
 
@@ -416,7 +437,9 @@ public class MidiFile
 
     // ⚠️ THE ORDER IS THE SORT at a shared tick (BuildEventList): the track's name and its
     // program change come before any note it starts at tick 0 — a player sets the sound
-    // before the first note-on — and a bend before the note-on it bends.
-    private enum MidiEventType { TrackName = 0, ProgramChange = 1, NoteOff = 2, PitchBend = 3, NoteOn = 4, Tempo = 5, TimeSignature = 6, Lyric = 7 }
+    // before the first note-on — and a bend before the note-on it bends. A pedal changed on a
+    // note lifts before the old notes end and presses before the new one starts, so it catches
+    // the new chord and not the old.
+    private enum MidiEventType { TrackName = 0, ProgramChange = 1, PedalUp = 2, NoteOff = 3, PitchBend = 4, PedalDown = 5, NoteOn = 6, Tempo = 7, TimeSignature = 8, Lyric = 9 }
     private readonly record struct MidiEvent(int Tick, MidiEventType Type, int Channel, int Data1, int Data2, string? Text = null);
 }

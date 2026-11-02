@@ -20,7 +20,10 @@ import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
     CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, playSpan, playSpanWindow, practiceNotes,
     programOf, toEvents,
+    fromOffset,
 } from '../src/webview/playbackCore';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const note = (t: number, d: number, p: number, extra: Partial<PlaybackNote> = {}): PlaybackNote =>
     ({ T: t, D: d, P: p, V: 90, S: 10 * t, O: 0, I: 0, C: 0, G: 0, ...extra });
@@ -246,6 +249,61 @@ describe('the events a note list becomes (docs/playback-design.md §2)', () => {
 
     it('names the channels a stop must silence', () => {
         assert.deepEqual(channelsOf(toEvents([note(0, 1, 60, { C: 3 }), note(0, 1, 36, { C: 9 })])), [3, 9]);
+    });
+});
+
+describe('the sustain pedal in the list (docs/pedal-playback-design.md)', () => {
+    const pedal = (T: number, V: number, C = 0) => ({ T, D: 0, P: -1, V, S: -1, C, G: 0, I: 0, N: 0 });
+    const note = (T: number, P: number, D = 1) => ({ T, D, P, V: 90, S: 10 + T, C: 0, G: 0, I: 0, N: 0 });
+
+    it('is a controller, no note and no program', () => {
+        assert.deepEqual(toEvents([pedal(0, 127)]), [{ t: 0, kind: 'pedal', c: 0, v: 127 }]);
+    });
+    it('lifts before the old note ends and presses before the new one starts', () => {
+        const at1 = toEvents([note(0, 48), note(1, 53), pedal(1, 127), pedal(1, 0)]).filter(e => e.t === 1);
+        assert.deepEqual(at1.map(e => e.kind === 'pedal' ? `pedal${e.v}` : e.kind), ['pedal0', 'off', 'pedal127', 'on']);
+    });
+    it('makes the piece no longer', () => {
+        assert.equal(endOf([note(0, 48), pedal(5, 0)]), 1);
+    });
+    it('held across a seek, goes down at the offset; lifted before it, does not', () => {
+        const list = [pedal(0, 127), note(0, 48), pedal(1, 0), pedal(1, 127), note(1, 53), pedal(2, 0), note(2, 55)];
+        const mid = fromOffset(list, 1.5);
+        assert.deepEqual(mid[0], { ...pedal(0, 127), T: 1.5 });
+        assert.deepEqual(mid.slice(1).map(n => n.T), [2, 2]);
+        assert.ok(!fromOffset(list, 2.5).some(n => n.P < 0));
+    });
+    it('goes with the time under the practice tempo, and with a muted part', () => {
+        const slower = practiceNotes([pedal(2, 127)], null, null, { speed: 0.5, muted: [], click: false });
+        assert.equal(slower[0].T, 4);
+        assert.equal(practiceNotes([pedal(2, 127)], ['lh'], null, { speed: 1, muted: ['lh'], click: false }).length, 0);
+    });
+    it('a stretch starts with the pedal held into it, and lifts one held out of it', () => {
+        const list = [pedal(0, 127), note(0, 48), note(1, 53), note(2, 55), note(3, 57)];
+        const { notes, length } = playSpanWindow(list, 11, 12, false);
+        assert.equal(length, 2);
+        assert.deepEqual(notes.filter(n => n.P < 0).map(n => [n.T, n.V]), [[0, 127], [2, 0]]);
+    });
+    it('...and so when the repeats in it are closed up', () => {
+        const list = [pedal(0, 127), note(0, 48), note(1, 53)];
+        const { notes } = playSpanWindow(list, null, null, true);
+        assert.deepEqual(notes.filter(n => n.P < 0).map(n => [n.T, n.V]), [[0, 127], [2, 0]]);
+        // Held into a stretch that starts later: its copy at the start is kept too.
+        const later = playSpanWindow([pedal(0, 127), note(0, 48), note(1, 53), note(2, 55), note(3, 57)], 11, 12, true);
+        assert.deepEqual(later.notes.filter(n => n.P < 0).map(n => [n.T, n.V]), [[0, 127], [2, 0]]);
+    });
+    it('a count-in brings the pedal held at its start', () => {
+        const beats = [{ T: 0, A: true }, { T: 1, A: false }, { T: 2, A: true }, { T: 3, A: false }, { T: 4, A: true }];
+        const counted = countIn([pedal(0, 127), note(0, 48), note(2, 53)], 2, 0, beats)!;
+        assert.ok(counted.notes.some(n => n.P < 0 && n.V === 127 && n.T === counted.lead));
+    });
+    it('the browser half sends it, and a stop lifts it', () => {
+        const src = readFileSync(join(__dirname, '..', '..', 'src', 'webview', 'previewSynth.ts'), 'utf8');
+        assert.match(src, /case 'pedal': this\.synth\.controllerChange\(e\.c, SUSTAIN, e\.v, at\)/);
+        assert.match(src, /this\.synth\.controllerChange\(c, SUSTAIN, 0, \{ time: quietAt \}\)/);
+        const page = readFileSync(join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(page, /window\.LysSynth\.fromOffset\(notes, offset\)/);
+        assert.match(page, /if \(n\.P < 0\) \{ continue; \}/);
     });
 });
 

@@ -1047,6 +1047,17 @@ public sealed partial class LilySharpLanguageServer
                         K = n.Strike,
                     };
                 })
+                .Concat(midi.Tracks.SelectMany((t, ti) => t.Pedals.Select(c => new PlaybackNote
+                {
+                    T = SecondsAt(c.Tick),
+                    P = PlaybackNote.PedalPitch,
+                    V = c.Down ? 127 : 0,
+                    S = -1,
+                    C = t.Channel,
+                    G = t.Program ?? 0,
+                    N = ti,
+                })))
+                .OrderBy(n => n.T)
                 .ToArray();
 
             var beats = MetronomeBeats(midi, tpq, out int barEnd).Select(b => new PlaybackBeat { T = SecondsAt(b.Tick), A = b.Accent }).ToArray();

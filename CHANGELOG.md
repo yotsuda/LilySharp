@@ -6,6 +6,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### The pedal sounds
+
+- `@sustain` plays: in the `.mid`, the WAV, the preview and MIDI out, as real pedal events, the notes keeping their written lengths. On a grand staff it holds all the staves; it lifts at the onset of the note `@!sustain` is written on. It was only drawn until now. `@sostenuto` and `@unaCorda` still only draw.
+
 ### The chat's composing checks
 
 - A melody in one note value and in leaps is told it is no tune, and a revision that keeps it goes back once more before the piece is written.

@@ -608,6 +608,8 @@ public sealed class MidiExporter
         _swing.Clear();
         OpenBarGrid(mainTrack, null);
         _levelLog.Clear();
+        _pedalLog.Clear();
+        _anyPedal = tree.GetRoot().DescendantNodes().Any(n => PedalMark(n) != null);
         ProcessNode(_root, mainTrack, conductorTrack);
         // A flat chord track's bars past the music, as the page goes on drawing them.
         foreach (var (row, items) in _flatRows.Rest())
@@ -637,8 +639,62 @@ public sealed class MidiExporter
         // A section-less file's lyric blocks were met on the root stream: sing them now.
         AttachLyrics(mainTrack, null, 0, 0);
         SplitIntoPartTracks(midi, mainTrack);
+        AddPedals(midi, mainTrack.Name);
 
         return midi;
+    }
+
+    // Every pedal mark the walk plays, in the order it plays them: the part it is in, and where.
+    private readonly List<(string? Part, int Tick, bool Down)> _pedalLog = new();
+    private bool _anyPedal;
+
+    /// <summary>Whether <paramref name="node"/> is a sustain mark: true `@sustain`, false `@!sustain`, null neither.</summary>
+    private static bool? PedalMark(SyntaxNode node) => node switch
+    {
+        ArticulationSyntax { Type: ArticulationType.None } a when a.NameToken.Text == "sustain" => true,
+        MusicMarkSyntax { Name: "sustain" } m => !m.IsSpanEnd,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Gives each track the pedal it plays under (owner's decision 2026-11-02,
+    /// docs/pedal-playback-design.md): the marks of its own part and, on a grand staff, of the
+    /// other hands too, as a piano's levels are shared (<see cref="ShareGrandStaffDynamics"/>): a
+    /// pedal written in the left hand holds the right hand's tune. A mark pressing a pedal already
+    /// down is a change, up and down at one tick. A pedal the form leaves down lifts at the end.
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN: LilyPond's Piano_pedal_performer sounds the pedal in the Staff it is
+    /// written in; a piano's pedal holds the whole instrument.</remarks>
+    private void AddPedals(MidiFile midi, string unclaimedTrack)
+    {
+        if (_pedalLog.Count == 0)
+            return;
+        var groups = _playedSpec == null ? [] : GrandStaffPartSets(_playedSpec.Items).Where(g => g.Count >= 2).ToList();
+        foreach (var marks in _pedalLog.GroupBy(e => e.Part is { } part ? groups.FirstOrDefault(g => g.Contains(part))?.Min(StringComparer.Ordinal) ?? part : unclaimedTrack))
+        {
+            var members = marks.First().Part is { } one && groups.FirstOrDefault(g => g.Contains(one)) is { } group ? group : new HashSet<string> { marks.Key };
+            var changes = new List<PedalChange>();
+            bool down = false;
+            foreach (var mark in marks.OrderBy(e => e.Tick))
+            {
+                if (mark.Down)
+                {
+                    // Both hands marking one moment are one press.
+                    if (down && changes[^1].Tick == mark.Tick)
+                        continue;
+                    if (down)
+                        changes.Add(new PedalChange(mark.Tick, false));
+                    changes.Add(new PedalChange(mark.Tick, true));
+                }
+                else if (down)
+                    changes.Add(new PedalChange(mark.Tick, false));
+                down = mark.Down;
+            }
+            if (down)
+                changes.Add(new PedalChange(midi.EndTick, false));
+            foreach (var track in midi.Tracks.Where(t => members.Contains(t.Name)))
+                track.Pedals.AddRange(changes);
+        }
     }
 
     // One line per part the channel plan could not give a channel of its own or a same-sounding
@@ -753,6 +809,12 @@ public sealed class MidiExporter
 
     private void ProcessNode(SyntaxNode node, MidiTrack track, MidiTrack conductorTrack)
     {
+        // The pedal goes down or up at the onset of what carries its mark, a rest as well as a note.
+        if (_anyPedal && node is NoteSyntax or ChordSyntax or RestSyntax or BareDurationSyntax or SlashNoteSyntax or ChordRepetitionSyntax or ArpeggioSyntax or DrumNoteSyntax)
+            foreach (var child in node.DescendantNodes())
+                if (PedalMark(child) is { } pressed)
+                    _pedalLog.Add((_currentPart, _currentTick, pressed));
+
         switch (node)
         {
             case CompilationUnitSyntax cu:

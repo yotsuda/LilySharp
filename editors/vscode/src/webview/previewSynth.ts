@@ -28,7 +28,7 @@
 import { WorkletSynthesizer } from 'spessasynth_lib';
 import {
     BEND_CENTRE, DRUM_CHANNEL, Lookahead, MidiEvent, PlaybackNote, SoundingCursor,
-    channelsOf, countIn, endOf, loopNotes, playSpan, playSpanWindow, practiceNotes, programOf, toEvents,
+    channelsOf, countIn, endOf, fromOffset, loopNotes, playSpan, playSpanWindow, practiceNotes, programOf, toEvents,
 } from './playbackCore';
 
 export type SynthState = 'loading' | 'ready' | 'failed' | 'none';
@@ -44,6 +44,7 @@ const PUMP_MS = 50;
  *  which a score's parts take only past fourteen pitched sounds. */
 const AUDITION_CHANNEL = 15;
 const ALL_SOUND_OFF = 120;
+const SUSTAIN = 64;
 
 /** The worklet module, from its URL; failing that (a host that will not hand a worklet a
  *  cross-origin module), from a blob of the same text. */
@@ -101,6 +102,7 @@ export class Player {
         switch (e.kind) {
             case 'program': this.synth.programChange(e.c, e.g, at); break;
             case 'bend': this.synth.pitchWheel(e.c, e.value, at); break;
+            case 'pedal': this.synth.controllerChange(e.c, SUSTAIN, e.v, at); break;
             case 'on': this.synth.noteOn(e.c, e.p, e.v, at); break;
             case 'off': this.synth.noteOff(e.c, e.p, at); break;
         }
@@ -114,6 +116,8 @@ export class Player {
         this.synth.stopAll(true);
         const quietAt = Math.max(this.ctx.currentTime, this.scheduledUntil) + 0.02;
         for (const c of this.channels) {
+            // All Sound Off lifts no pedal: the next Play would ring from its first note.
+            this.synth.controllerChange(c, SUSTAIN, 0, { time: quietAt });
             this.synth.controllerChange(c, ALL_SOUND_OFF, 0, { time: quietAt });
             this.synth.pitchWheel(c, BEND_CENTRE, { time: quietAt });
         }
@@ -317,6 +321,7 @@ const api = {
     loopNotes,
     playSpanWindow,
     countIn,
+    fromOffset,
 };
 
 declare global {

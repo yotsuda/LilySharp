@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **The sustain pedal sounds**: `@sustain` plays in the preview, MIDI out and the exports, on all the staves of a grand staff. It was only drawn until now.
 - **Composing in the chat**: a melody that only breaks chords in one note value goes back to the AI once more.
 - **Composing in the chat**: notes before the first level are told. A section with its label hidden (`~A`) is read as played by the review and the checks. An intro or a coda may keep the accompaniment's figure.
 - **Composing in the chat**: the checks on a tune's rhythm leave out an intro, an outro or a coda, so a short ending no longer hides a tune poured into one rhythm.

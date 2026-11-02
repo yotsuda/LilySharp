@@ -43,7 +43,7 @@ public static class MidiOutEvents
     private const double BendEpsilon = 0.01;
     private const double MinDuration = 0.03;
     public const byte NoteOff = 0x80, NoteOn = 0x90, Control = 0xB0, Program = 0xC0, PitchBend = 0xE0;
-    public const byte AllSoundOff = 120, AllNotesOff = 123;
+    public const byte AllSoundOff = 120, AllNotesOff = 123, Sustain = 64;
 
     /// <summary>The program a timbre family sounds with when no part names one (the
     /// oscillator patches' families: 0 piano, 1 flute, 2 reed, 3 strings, 4 guitar, 5 bass,
@@ -57,8 +57,9 @@ public static class MidiOutEvents
         => program is >= 0 and <= 127 ? program
             : timbre >= 0 && timbre < FamilyProgram.Length ? FamilyProgram[timbre] : 0;
 
-    private static int KindOrder(byte status) => (status & 0xF0) switch
+    private static int KindOrder(MidiOutEvent e) => (e.Status & 0xF0) switch
     {
+        Control => e.Data2 == 0 ? -1 : 2,
         NoteOff => 0,
         Program => 1,
         PitchBend => 2,
@@ -83,6 +84,11 @@ public static class MidiOutEvents
         {
             if (n.T < offset - 0.001) continue;
             int c = ChannelOf(n.C, n.I);
+            if (n.P < 0)
+            {
+                Add(Math.Max(0, n.T - offset), (byte)(Control | c), Sustain, n.V);
+                continue;
+            }
             if (c != DrumChannel && !programs.ContainsKey(c)) programs[c] = ProgramOf(n.G, n.I);
             double t = Math.Max(0, n.T - offset);
             double off = t + Math.Max(MinDuration, n.D);
@@ -102,7 +108,7 @@ public static class MidiOutEvents
             Add(0, (byte)(Program | c), g, 0);
         return events
             .OrderBy(x => x.E.Time)
-            .ThenBy(x => KindOrder(x.E.Status))
+            .ThenBy(x => KindOrder(x.E))
             .ThenBy(x => x.I)
             .Select(x => x.E)
             .ToList();
@@ -115,7 +121,7 @@ public static class MidiOutEvents
         double end = offset;
         foreach (var n in notes)
         {
-            if (n.T < offset - 0.001) continue;
+            if (n.T < offset - 0.001 || n.P < 0) continue;
             end = Math.Max(end, n.T + Math.Max(MinDuration, n.D));
         }
         return end;
@@ -129,6 +135,7 @@ public static class MidiOutEvents
     /// centred — a synth left with a note hanging is the one thing a MIDI player must not do.</summary>
     public static IEnumerable<MidiOutEvent> Silence(int channel)
     {
+        yield return new MidiOutEvent(0, (byte)(Control | channel), Sustain, 0);
         yield return new MidiOutEvent(0, (byte)(Control | channel), AllNotesOff, 0);
         yield return new MidiOutEvent(0, (byte)(Control | channel), AllSoundOff, 0);
         yield return new MidiOutEvent(0, (byte)(PitchBend | channel), BendCentre & 0x7F, BendCentre >> 7);

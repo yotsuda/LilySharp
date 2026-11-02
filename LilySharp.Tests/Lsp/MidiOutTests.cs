@@ -198,9 +198,9 @@ public class MidiOutTests
         lock (port.Sent) sent = [.. port.Sent];
         // The program, the first note on and off; then the silence on 3 and 9 and nothing of the 5 s notes.
         var silence = sent.Skip(3).ToList();
-        Assert.Equal([0xB3, 0xB3, 0xE3, 0xB9, 0xB9, 0xE9], silence.Select(s => (int)s.Status));
-        Assert.Equal([123, 120], silence.Take(2).Select(s => (int)s.D1));
-        Assert.Equal(MidiOutEvents.BendCentre, silence[2].D1 | (silence[2].D2 << 7));
+        Assert.Equal([0xB3, 0xB3, 0xB3, 0xE3, 0xB9, 0xB9, 0xB9, 0xE9], silence.Select(s => (int)s.Status));
+        Assert.Equal([64, 123, 120], silence.Take(3).Select(s => (int)s.D1));
+        Assert.Equal(MidiOutEvents.BendCentre, silence[3].D1 | (silence[3].D2 << 7));
         Assert.DoesNotContain(sent, s => s.Status == 0x93 && s.D1 == 62);
         player.Dispose();
     }

@@ -16,6 +16,9 @@
 
 namespace LilySharp.Core.Midi;
 
+/// <summary>The sustain pedal going down or up at a tick (`@sustain`, `@!sustain`; docs/pedal-playback-design.md).</summary>
+public readonly record struct PedalChange(int Tick, bool Down);
+
 /// <summary>
 /// Represents a MIDI note event.
 /// </summary>

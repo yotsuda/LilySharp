@@ -293,10 +293,16 @@ public class PlaybackTextParams
 /// <summary>One playable note, in SECONDS (tempo map already applied).</summary>
 public class PlaybackNote
 {
+    /// <summary>The <see cref="P"/> of an entry that is the sustain pedal changing on channel
+    /// <see cref="C"/>, at <see cref="T"/>. It travels in the list as a metronome click does (no
+    /// source position), so the practice tempo, a muted part, a loop and a count-in move it with
+    /// the notes (docs/pedal-playback-design.md).</summary>
+    public const double PedalPitch = -1;
+
     public double T { get; set; }   // onset (s)
     public double D { get; set; }   // duration (s)
-    public double P { get; set; }   // MIDI pitch (fractional for quarter tones)
-    public int V { get; set; }      // velocity 0-127
+    public double P { get; set; }   // MIDI pitch (fractional for quarter tones); PedalPitch = a pedal change, no note
+    public int V { get; set; }      // velocity 0-127; of a pedal change, its value: 127 down, 0 up
     public int S { get; set; }      // source offset (-1 = none) for follow-along highlight
     public int O { get; set; }      // printed-copy ordinal of this onset among same-S copies
     public int I { get; set; }      // timbre family for the preview's fallback oscillator synth
