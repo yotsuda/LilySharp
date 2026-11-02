@@ -7178,17 +7178,36 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             for (let l = staff.bottom + staff.space; l <= y + 0.01; l += staff.space) out.push(l);
             return out;
         }
+        // The element under the pointer: in the preview that is the transparent box the server
+        // draws over a head for clicks, a rect with the head's data-pos, as often as the glyph.
         function isNoteHead(t) {
-            return !!t && t.tagName === 'text' && t.hasAttribute('data-pos') && noteHeads.has(parseInt(t.getAttribute('data-pos'), 10));
+            return !!t && !!t.hasAttribute && t.hasAttribute('data-pos') && noteHeads.has(parseInt(t.getAttribute('data-pos'), 10));
+        }
+        // The drawn glyph nearest what was pressed, of those with its data-pos: a section played
+        // twice prints a note twice, and the box pressed is not the glyph.
+        function glyphOf(pressed, glyphs) {
+            const num = (el, name) => parseFloat(el.getAttribute(name)) || 0;
+            const isBox = pressed.tagName !== 'text';
+            const x = num(pressed, 'x') + (isBox ? num(pressed, 'width') / 2 : 0);
+            const y = num(pressed, 'y') + (isBox ? num(pressed, 'height') / 2 : 0);
+            let best = null, bestAt = Infinity;
+            for (const g of glyphs) {
+                const at = Math.abs(num(g, 'x') - x) + Math.abs(num(g, 'y') - y);
+                if (at < bestAt) { best = g; bestAt = at; }
+            }
+            return best;
         }
         function beginNoteDrag(press) {
             const svg = press.target.ownerSVGElement;
             const num = (el, name) => parseFloat(el.getAttribute(name));
-            const fs = num(press.target, 'font-size');
-            // Its head and accidental, of this copy: a section played twice prints it twice.
-            const row = Array.from(svg.querySelectorAll('text[data-pos="' + press.pos + '"]')).filter(el =>
-                Math.abs(num(el, 'y') - num(press.target, 'y')) < fs / 2 && Math.abs(num(el, 'x') - num(press.target, 'x')) < fs * 1.5);
-            const head = row.reduce((a, b) => (num(b, 'x') > num(a, 'x') ? b : a), press.target);
+            const glyphs = Array.from(svg.querySelectorAll('text[data-pos="' + press.pos + '"]'));
+            const glyph = glyphOf(press.target, glyphs);
+            if (!glyph) return false;
+            const fs = num(glyph, 'font-size');
+            // Its head and accidental, of this copy; the head is the one to the right.
+            const row = glyphs.filter(el =>
+                Math.abs(num(el, 'y') - num(glyph, 'y')) < fs / 2 && Math.abs(num(el, 'x') - num(glyph, 'x')) < fs * 1.5);
+            const head = row.reduce((a, b) => (num(b, 'x') > num(a, 'x') ? b : a), glyph);
             const x = num(head, 'x'), y = num(head, 'y');
             const lines = Array.from(svg.querySelectorAll('line')).filter(l => l.getAttribute('y1') === l.getAttribute('y2'))
                 .map(l => ({ x1: num(l, 'x1'), x2: num(l, 'x2'), y: num(l, 'y1') }));
@@ -7206,6 +7225,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             });
             svgContainer.classList.add('note-dragging');
             svgContainer.setPointerCapture(press.id);
+            return true;
         }
         function drawNoteGhost(press) {
             const y = press.y - press.steps * press.step;
@@ -7253,7 +7273,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const dyPixels = e.clientY - notePress.at;
             if (!notePress.moving) {
                 if (Math.abs(dyPixels) < NOTE_DRAG_SLOP) return;
-                beginNoteDrag(notePress);
+                if (!beginNoteDrag(notePress)) { notePress = null; return; }
                 drawNoteGhost(notePress);
             }
             const dy = dyPixels * notePress.perPixel;

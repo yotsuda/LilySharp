@@ -538,6 +538,24 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const h = panel(-500, 100); h.hidden = true; clamp(h);
         assert.deepEqual(at(h), [-500, 100]);
     });
+    it('takes hold of a note by the box over its head as well as by its glyph (owner\'s report: no cursor, no drag)', () => {
+        const el = (tag: string, attrs: Record<string, string>) => ({
+            tagName: tag, getAttribute: (n: string) => attrs[n] ?? null, hasAttribute: (n: string) => n in attrs,
+        });
+        const isHead = pageFunction('isNoteHead', { noteHeads: new Set([51]) }) as (t: unknown) => boolean;
+        assert.equal(isHead(el('rect', { 'data-pos': '51' })), true);
+        assert.equal(isHead(el('text', { 'data-pos': '51' })), true);
+        assert.equal(isHead(el('rect', { 'data-pos': '14' })), false);
+        assert.equal(isHead(el('rect', {})), false);
+        assert.equal(isHead(null), false);
+        const glyphOf = pageFunction('glyphOf', {}) as (p: unknown, g: unknown[]) => { getAttribute: (n: string) => string } | null;
+        const first = el('text', { x: '10', y: '30' });
+        const second = el('text', { x: '200', y: '30' });
+        const onSecond = glyphOf(el('rect', { x: '199', y: '29', width: '2', height: '2' }), [first, second]);
+        assert.equal(onSecond?.getAttribute('x'), '200');
+        assert.equal(glyphOf(first, [first, second])?.getAttribute('x'), '10');
+        assert.equal(glyphOf(first, []), null);
+    });
     it('draws where a dragged note will land beside its head, not on top of what the head has moved by', () => {
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(source, /head\.parentNode\.appendChild\(ghost\);/);
