@@ -4221,8 +4221,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </span>
         <span class="sep"></span>
         <span class="group">
-        <button id="mouseLockBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Lock mouse editing" title="Lock mouse editing: dragging a note or a mark changes the score"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3" y="7.5" width="10" height="7" rx="1" fill="currentColor" stroke="none"/><path class="lock-open" d="M5.2 7.5V4.3a2.8 2.8 0 0 1 5.6 0v.4"/><path class="lock-shut" d="M5.2 7.5V4.3a2.8 2.8 0 0 1 5.6 0v3.2"/></svg></button>
         <button id="aiTransformBtn" class="ai icon" type="button" title="Ask AI in Chat (Ctrl+I)">✨</button>
+        <button id="mouseLockBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Lock mouse editing" title="Lock mouse editing: dragging a note or a mark changes the score"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3" y="7.5" width="10" height="7" rx="1" fill="currentColor" stroke="none"/><path class="lock-open" d="M5.2 7.5V4.3a2.8 2.8 0 0 1 5.6 0v.4"/><path class="lock-shut" d="M5.2 7.5V4.3a2.8 2.8 0 0 1 5.6 0v3.2"/></svg></button>
         <button id="rangeBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Range" title="Each part's range"><svg viewBox="0 -.25 16.5 16.5" fill="currentColor" aria-hidden="true"><path d="M3 1.5 5.95 5.3H3.8v6.6h2.15L3 15.7.05 11.9H2.2V5.3H.05z"/><g transform="translate(.8 0)"><ellipse cx="9.4" cy="12.4" rx="2.8" ry="2" transform="rotate(-22 9.4 12.4)"/><rect x="11.35" y="1.5" width="1.05" height="10.8"/><path d="M12.4 1.5c.3 2 1.6 2.8 2.4 3.9.9 1.5 1.1 3.6.3 5.5.1-2.1-.9-3.6-2.7-4.2z"/></g></svg></button>
         </span>
         <span class="sep"></span>

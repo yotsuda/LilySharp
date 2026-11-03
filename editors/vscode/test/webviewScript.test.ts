@@ -624,6 +624,8 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
     });
     it('locks mouse editing by the toolbar button, for every preview and for the next time', () => {
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        // Beside the range button, after the AI's (owner's request 2026-11-03).
+        assert.ok(source.indexOf('id="aiTransformBtn"') < source.indexOf('id="mouseLockBtn"') && source.indexOf('id="mouseLockBtn"') < source.indexOf('id="rangeBtn"'));
         assert.match(source, /if \(mouseEditLocked \|\| e\.pointerType !== 'mouse'/);
         assert.match(source, /e\.buttons === 0 && !mouseEditLocked && /);
         assert.match(source, /context\.globalState\.update\(MOUSE_LOCK_KEY, !!message\.locked\)/);
