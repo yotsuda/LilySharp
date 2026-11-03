@@ -25,6 +25,37 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# ONE DEPLOY AT A TIME, ON THIS MACHINE. A publish begins by deleting editors\vscode\server, so a
+# second deploy started during the first emptied the tree the first was comparing, and that one
+# failed its check with "N file(s) do not match", every one of them EXTRA (seen twice 2026-11-03: the
+# owner's build beside a session's deploy). Worse, the two could race for the same installed folder.
+# The later one waits. The lock is the OS's on an open file, so a deploy that is killed lets go of it
+# by dying; the file left behind means nothing. It is one lock for every clone: they share the extension.
+function Enter-DeployLock {
+    $path = Join-Path ([IO.Path]::GetTempPath()) 'lilysharp-deploy.lock'
+    $deadline = (Get-Date).AddMinutes(15)
+    $said = $false
+    while ($true) {
+        try {
+            $held = [IO.FileStream]::new($path, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::Read)
+            $held.SetLength(0)
+            $line = [Text.Encoding]::UTF8.GetBytes("pid $PID since $(Get-Date -Format HH:mm:ss)")
+            $held.Write($line, 0, $line.Length)
+            $held.Flush()
+            return $held
+        }
+        catch [IO.IOException] {
+            $who = try { $r = [IO.StreamReader]::new([IO.FileStream]::new($path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)); try { $r.ReadToEnd() } finally { $r.Dispose() } } catch { 'unknown' }
+            if ((Get-Date) -gt $deadline) { throw "Another deploy has held the lock for 15 minutes ($who). If nothing is deploying, it will let go when that process ends." }
+            if (-not $said) { Write-Host "Another deploy is running ($who) - waiting for it to finish..." -ForegroundColor Yellow; $said = $true }
+            Start-Sleep -Milliseconds 500
+        }
+    }
+}
+$deployLock = Enter-DeployLock
+try {
+
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $repoServer = Join-Path $repoRoot 'editors\vscode\server'
 $repoExt = Join-Path $repoRoot 'editors\vscode'
@@ -478,3 +509,9 @@ Write-Host 'Now run "Developer: Reload Window" in VS Code.'
 # and offers "Extensions have been modified on disk. Please reload the window." The
 # contribution appears on the SECOND reload. A server-only deploy needs one.
 Write-Host '  If the manifest (package.json) changed, reload TWICE: the first reload only notices the change.'
+
+}
+finally {
+    # Not left to the process: this script is often run in a console that stays open.
+    $deployLock.Dispose()
+}
