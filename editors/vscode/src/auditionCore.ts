@@ -280,3 +280,15 @@ export function chromaticPositions(from: string, to: string, semitones: number):
     const within = (((letter(to) - letter(from)) * sign) % 7 + 7) % 7;
     return sign * (Math.floor(Math.abs(semitones) / 12) * 7 + within) + 0;
 }
+
+/** The word of what a drag steps at `offset`: a mark's name, any shape and placement; a chords-row
+ * entry, a tempo's number, a clef's name. A key names its tonic and its mode, the tonic alone being
+ * what the score's signature says it stands at. */
+export function dragWordAt(text: string, offset: number): string {
+    const rest = text.slice(offset);
+    if (/\bkey!?\s+$/.test(text.slice(Math.max(0, offset - 16), offset))) {
+        const key = /^\S+\s+[A-Za-z]+/.exec(rest);
+        if (key) { return key[0].replace(/\s+/, ' '); }
+    }
+    return /^!?[\w#+/^-]+(?:\([^)]*\))?(?:\.(?:up|down))?/.exec(rest)?.[0] ?? '';
+}

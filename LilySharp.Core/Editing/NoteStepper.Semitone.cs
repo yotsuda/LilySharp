@@ -71,7 +71,7 @@ namespace LilySharp.Core.Editing;
 public static partial class NoteStepper
 {
     /// <summary>Where the things stand that a drag steps in place of a note: a dynamic on the
-    /// ladder, an articulation in a group, a tempo's number, a chord's shape. A step on any other
+    /// ladder, an articulation in a group, a tempo's number, a chord's shape, a clef, a key. A step on any other
     /// mark falls through to its note (the key's way, the caret being on the note's item), which a
     /// drag on that mark must not do: a bare <c>@chord</c> on <c>&lt;…&gt;</c> with no shape site
     /// would invert the chord.</summary>
@@ -95,6 +95,13 @@ public static partial class NoteStepper
                 yield return node.SourceStart;
             else if (node is TempoDeclarationSyntax tempo && TempoNumber(tempo) is { } number)
                 yield return number.Span.Start;
+            // Where the score's clef and key say they were written: the clef's name, the key's tonic.
+            else if (node is KeySignatureSyntax { IsCustom: false } key)
+                yield return key.Pitch.SourceStart;
+            else if (node is ClefDeclarationSyntax { ClefName: { } clefName })
+                yield return clefName.Span.Start;
+            else if (node is PropertyAssignmentSyntax { NameToken.Text: "clef" } property && property.Values.ToList() is [SyntaxTokenNode only])
+                yield return only.Span.Start;
         }
     }
 

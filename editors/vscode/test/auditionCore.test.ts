@@ -22,7 +22,7 @@ import {
     AuditionMemory, Debouncer, EDIT_SELECTION_WINDOW_MS, CHORD_MS, NOTE_MS, OCTAVE_DOWN_KEY, OCTAVE_UP_KEY,
     STEP_DOWN_KEY, STEP_UP_KEY, STRUM_MS,
     INSTRUMENT_CHANGE_MAX, auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument,
-    reselectAfterStep, stepFallbackCommand, strumGapMs, chromaticPositions } from '../src/auditionCore';
+    reselectAfterStep, stepFallbackCommand, strumGapMs, chromaticPositions, dragWordAt } from '../src/auditionCore';
 
 describe('a stepped selection stays selected (owner\'s request 2026-10-24)', () => {
     it('selects the new text of each replaced selection, shifted by the edits before it', () => {
@@ -242,4 +242,14 @@ describe('chromaticPositions', () => {
         assert.equal(chromaticPositions('c', 'd', 14), 8);
         assert.equal(chromaticPositions('c', 'c', -24), -14);
     });
+});
+
+it('dragWordAt: a key says its tonic and its mode, and anything else its word', () => {
+    const at = (text: string, word: string) => dragWordAt(text, text.indexOf(word));
+    assert.equal(at('key g major\npart m { }', 'g major'), 'g major');
+    assert.equal(at('key! bes  minor }', 'bes'), 'bes minor');
+    assert.equal(at('part m { clef treble }', 'treble'), 'treble');
+    assert.equal(at('part m { clef treble^8 }', 'treble^8'), 'treble^8');
+    assert.equal(at('monkey g major', 'g major'), 'g');
+    assert.equal(at("c'4@staccato.up d", 'staccato'), 'staccato.up');
 });
