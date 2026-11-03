@@ -32,6 +32,11 @@ Step input from a MIDI keyboard. Deferred until there is a keyboard to try it wi
 
 ## Decided against
 
+- **More mouse editing in the preview: a right-click menu on a note** (2026-11-03): rest, chord
+  member out, marks. Built and taken back the same day (`425fc8cb5`, reverted). The owner found
+  typing faster, and does not want the mouse to become the way Lily# is written: people are to be
+  led to the keyboard. What `Ctrl+Shift+Up` can step may be dragged; beyond that, no new mouse
+  editing, and no more menus.
 - **A range CodeLens on each part's line** (2026-10-25): the section CodeLens already stands
   between the lines, and the range is not needed while writing; the preview's Range panel
   answers it when asked.

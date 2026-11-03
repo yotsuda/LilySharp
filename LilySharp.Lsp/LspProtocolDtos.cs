@@ -984,18 +984,6 @@ public class DraggedGlyph
     public double FontSize { get; set; }
 }
 
-/// <summary>What the preview's right-click menu does to a note: <c>lilysharp/noteEdit</c>.</summary>
-public class NoteEditParams
-{
-    public TextDocumentIdentifier TextDocument { get; set; } = null!;
-    /// <summary>The <c>data-pos</c> right-clicked.</summary>
-    public int Position { get; set; }
-    /// <summary><c>rest</c>, <c>note</c> (from a rest), <c>removeMember</c> or <c>mark</c>.</summary>
-    public string Kind { get; set; } = "";
-    /// <summary>For <c>mark</c>: the mark's name, on or off.</summary>
-    public string? Mark { get; set; }
-}
-
 /// <summary>Asks what the preview may drag: <c>lilysharp/noteHeads</c>.</summary>
 public class NoteHeadsParams
 {
@@ -1008,8 +996,6 @@ public class NoteHeadsResponse
     public int[] Positions { get; set; } = System.Array.Empty<int>();
     /// <summary>Where the marks stand that a drag steps: the <c>data-pos</c> each is drawn with.</summary>
     public int[] Marks { get; set; } = System.Array.Empty<int>();
-    /// <summary>Where the rests stand: the right-click menu offers them as notes.</summary>
-    public int[] Rests { get; set; } = System.Array.Empty<int>();
     /// <summary>Those of <see cref="Marks"/> whose steps a drag takes in less of the mouse's way.</summary>
     public int[] FineMarks { get; set; } = System.Array.Empty<int>();
     /// <summary>A ledger line's thickness in this file, in staff spaces.</summary>
