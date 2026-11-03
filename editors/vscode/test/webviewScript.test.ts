@@ -599,7 +599,7 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.equal(inChord(above, () => [above, head, page], 2, 12), head);
         assert.equal(inChord(head, () => [above, head, page], 2, 9), above);
         assert.match(source, /const OCTAVE_POSITIONS = 7;/);
-        assert.match(source, /const unit = press\.ctrl \? OCTAVE_POSITIONS : 1;/);
+        assert.match(source, /press\.step = press\.position \* \(press\.ctrl \? OCTAVE_POSITIONS : 1\);/);
         assert.match(source, /moving: false, isMark: isSteppingMark\(target\), ctrl: e\.ctrlKey \|\| e\.metaKey,/);
         assert.match(source, /press\.isMark \? \(press\.ctrl \? 'placement' : 'mark'\) : \(press\.ctrl \? 'octave' : 'position'\)/);
     });
@@ -631,10 +631,13 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const shown: number[] = [];
         const switchCtrl = pageFunction('switchDragCtrl', {
             setDragGrid: pageFunction('setDragGrid', { OCTAVE_POSITIONS: 7 }),
-            noteDragSteps: pageFunction('noteDragSteps', { NOTE_DRAG_HOLD: 0.25 }),
+            dragStepsOf: pageFunction('dragStepsOf', {
+                noteDragSteps: pageFunction('noteDragSteps', { NOTE_DRAG_HOLD: 0.25 }),
+                noteOctaveSteps: pageFunction('noteOctaveSteps', { NOTE_DRAG_HOLD: 0.25 }),
+            }),
             showDragSteps: (p: { steps: number }) => shown.push(p.steps),
         }) as (p: unknown, ctrl: boolean) => void;
-        const note = { moving: true, isMark: false, ctrl: false, position: 2.5, perPosition: 10, step: 2.5, perStep: 10, steps: 7, dy: -75 };
+        const note = { moving: true, isMark: false, ctrl: false, position: 2.5, perDrawn: 10, perPosition: 10, step: 2.5, perStep: 10, steps: 7, dy: -75 };
         switchCtrl(note, false);
         assert.deepEqual(shown, []);
         switchCtrl(note, true);
@@ -642,10 +645,19 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         switchCtrl(note, false);
         assert.deepEqual([note.steps, note.step, note.perStep], [7, 2.5, 10]);
         assert.deepEqual(shown, [1, 7]);
-        // Short of an octave: back where it was pressed.
+        // Under half an octave: back where it was pressed; over it, on to the octave.
         const near = { ...note, steps: 3, dy: -30 };
         switchCtrl(near, true);
         assert.equal(near.steps, 0);
+        const past = { ...note, steps: 4, dy: -40 };
+        switchCtrl(past, true);
+        assert.equal(past.steps, 1);
+        // The mouse's way is the octave as drawn, however small a position is under the least.
+        const small = { ...note, perDrawn: 1.5, perPosition: 6, steps: 2, dy: -12 };
+        switchCtrl(small, true);
+        assert.deepEqual([small.perStep, small.steps], [10.5, 1]);
+        switchCtrl(small, false);
+        assert.deepEqual([small.perStep, small.steps], [6, 2]);
         // A mark has no staff: the same way to a step, and it asks again though the number stays.
         shown.length = 0;
         const mark = { moving: true, isMark: true, ctrl: false, perStep: 12, steps: 1, dy: -13 };
@@ -659,6 +671,22 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(source, /switchDragCtrl\(notePress, e\.ctrlKey \|\| e\.metaKey\);/);
         assert.match(source, /window\.addEventListener\('keydown', ctrlInADrag\);\s+window\.addEventListener\('keyup', ctrlInADrag\);/);
+    });
+    it('goes to the nearest octave with Ctrl, and holds it on the way back', () => {
+        const next = pageFunction('noteOctaveSteps', { NOTE_DRAG_HOLD: 0.25 }) as (px: number, per: number, steps: number) => number;
+        const walk = (pixels: number[]) => pixels.reduce((steps, px) => next(px, 10, steps), 0);
+        assert.equal(walk([-4]), 0);
+        assert.equal(walk([-6]), 1);
+        assert.equal(walk([6]), -1);
+        assert.equal(walk([-15]), 2);
+        assert.equal(walk([-6, -4]), 1);     // back past the middle, within the hold
+        assert.equal(walk([-6, -2]), 0);     // and beyond it
+        assert.equal(walk([6, 4]), -1);
+        assert.equal(walk([6, 2]), 0);
+        assert.equal(walk([-16, -13]), 2);
+        assert.equal(walk([-16, -7]), 1);
+        assert.equal(walk([-6, 6]), -1);     // across the press
+        assert.ok(Object.is(next(-1, 10, 0), 0) && Object.is(next(1, 10, 0), 0));
     });
     it('moves a dragged note a whole staff position at a time, and holds it at the edge of one', () => {
         const next = pageFunction('noteDragSteps', { NOTE_DRAG_HOLD: 0.25 }) as (px: number, per: number, steps: number) => number;

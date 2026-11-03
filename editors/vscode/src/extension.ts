@@ -7218,6 +7218,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const goingBack = Math.abs(next) < Math.abs(steps) && (next === 0 || Math.sign(next) === Math.sign(steps));
             return goingBack && Math.abs(at) > Math.abs(steps) - NOTE_DRAG_HOLD && Math.sign(at) === Math.sign(steps) ? steps : next;
         }
+        // The same by octaves, where the mouse's way is the octave as drawn (owner's request
+        // 2026-11-03: with Ctrl the note goes where the pointer goes): the nearest octave, so the
+        // note is never far from the pointer. On the way back it holds on past the middle.
+        function noteOctaveSteps(pixels, perStep, steps) {
+            const at = -pixels / perStep;
+            const next = Math.sign(at) * Math.round(Math.abs(at)) + 0;
+            const goingBack = Math.abs(next) < Math.abs(steps) && (next === 0 || Math.sign(next) === Math.sign(steps));
+            return goingBack && Math.sign(at) === Math.sign(steps) && Math.abs(at) > Math.abs(steps) - 0.5 - NOTE_DRAG_HOLD ? steps : next;
+        }
+        function dragStepsOf(press, pixels, steps) {
+            return press.ctrl && !press.isMark ? noteOctaveSteps(pixels, press.perStep, steps) : noteDragSteps(pixels, press.perStep, steps);
+        }
         let noteHeads = new Set(), noteMarks = new Set();
         let notePress = null, noteDragged = false, noteDropped = null;
         // As the score draws a ledger line (from the server, with noteHeads).
@@ -7283,9 +7295,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         // What one step of a dragged note is, on the page and of the mouse's way.
         function setDragGrid(press) {
-            const unit = press.ctrl ? OCTAVE_POSITIONS : 1;
-            press.step = press.position * unit;
-            press.perStep = press.perPosition * unit;
+            press.step = press.position * (press.ctrl ? OCTAVE_POSITIONS : 1);
+            press.perStep = press.ctrl ? press.perDrawn * OCTAVE_POSITIONS : press.perPosition;
         }
         // Ctrl pressed or let go in the middle of a drag (owner's request 2026-11-03): the mouse's
         // whole way from the press is read again by what a step now is, so the note stays by the
@@ -7295,7 +7306,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             press.ctrl = ctrl;
             if (!press.moving) return;
             if (!press.isMark) setDragGrid(press);
-            press.steps = noteDragSteps(press.dy, press.perStep, 0);
+            press.steps = dragStepsOf(press, press.dy, 0);
             showDragSteps(press);
         }
         function beginNoteDrag(press) {
@@ -7323,12 +7334,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // Beside the head, in the same coordinates: the page's music stands in a shifted group.
             head.parentNode.appendChild(ghost);
             const position = (staff ? staff.space : fs / 4) / 2;
+            const perDrawn = position * head.getScreenCTM().d;
             // The press took no focus, and the editor may still have it: Esc and Ctrl+Z would go
             // there (owner's report 2026-11-03). Not at the press: a click is still for the editor.
             window.focus();
             Object.assign(press, {
-                moving: true, row, head, x, y, staff, box, ghost, position,
-                perPosition: Math.max(NOTE_DRAG_PIXELS, position * head.getScreenCTM().d),
+                moving: true, row, head, x, y, staff, box, ghost, position, perDrawn,
+                perPosition: Math.max(NOTE_DRAG_PIXELS, perDrawn),
                 steps: 0,
             });
             setDragGrid(press);
@@ -7430,7 +7442,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (!(notePress.isMark ? beginMarkDrag(notePress) : beginNoteDrag(notePress))) { notePress = null; return; }
                 if (!notePress.isMark) drawNoteLedgers(notePress);
             }
-            const steps = noteDragSteps(dyPixels, notePress.perStep, notePress.steps);
+            const steps = dragStepsOf(notePress, dyPixels, notePress.steps);
             if (notePress.isMark) {
                 notePress.tip.style.left = (e.clientX + 14) + 'px';
                 notePress.tip.style.top = (e.clientY - 26) + 'px';
