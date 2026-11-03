@@ -7257,16 +7257,25 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let notePress = null, noteDragged = false, noteDropped = null;
         // As the score draws a ledger line (from the server, with noteHeads).
         let noteLedger = { thickness: 0.2, fraction: 0.25 };
-        // The five lines of the staff at x nearest y, read off the drawn lines: a ledger line is
-        // shorter than minWidth and joins no staff. null when none is there.
+        // The five lines of the staff at x that a head at y belongs to, read off the drawn lines: a
+        // ledger line is shorter than minWidth and joins no staff. Not simply the nearest: a low
+        // note of an upper staff can stand nearer the staff below it (owner's report 2026-11-03,
+        // c,, over a second staff). Its own is the one its ledger lines reach, unbroken; of those,
+        // the nearest; and with no such one, the nearest. null when none is there.
         function staffFromLines(lines, x, y, minWidth) {
             const at = lines.filter(l => l.x1 <= x && l.x2 >= x && l.x2 - l.x1 >= minWidth).map(l => l.y).sort((a, b) => a - b);
-            let best = null;
+            const short = lines.filter(l => l.x1 <= x && l.x2 >= x && l.x2 - l.x1 < minWidth).map(l => l.y);
+            let best = null, bestReached = false;
             for (let i = 0; i + 4 < at.length; i++) {
                 const space = at[i + 1] - at[i];
                 if (space <= 0 || [2, 3, 4].some(k => Math.abs(at[i + k] - at[i + k - 1] - space) > 0.01)) continue;
+                const staff = { top: at[i], bottom: at[i + 4], space };
                 const off = y < at[i] ? at[i] - y : y > at[i + 4] ? y - at[i + 4] : 0;
-                if (!best || off < best.off) best = { top: at[i], bottom: at[i + 4], space, off };
+                const reached = ledgersFor(staff, y).every(l => short.some(s => Math.abs(s - l) < 0.01));
+                if (!best || (reached && !bestReached) || (reached === bestReached && off < best.off)) {
+                    best = { top: at[i], bottom: at[i + 4], space, off };
+                    bestReached = reached;
+                }
             }
             return best;
         }
@@ -7477,8 +7486,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const hitBox = Array.from(svg.querySelectorAll('rect.nh-hit[data-pos="' + press.pos + '"]'))
                 .find(r => Math.abs(num(r, 'x') - x) < 0.01 && Math.abs(num(r, 'y') - y) < fs);
             const box = hitBox ? { x, width: num(hitBox, 'width') } : head.getBBox();
+            // Of its own staff: the next staff down has heads in this column too, the same note's
+            // when one part is drawn twice, and they have no use for these lines.
             const otherHeads = Array.from(svg.querySelectorAll('rect.nh-hit')).filter(r => r !== hitBox)
-                .map(r => ({ x: num(r, 'x'), width: num(r, 'width'), y: num(r, 'y') + num(r, 'height') / 2 }));
+                .map(r => ({ x: num(r, 'x'), width: num(r, 'width'), y: num(r, 'y') + num(r, 'height') / 2 }))
+                .filter(o => {
+                    const theirs = staffFromLines(lines, o.x + o.width / 2, o.y, fs * 1.5);
+                    return !staff || !theirs || theirs.top === staff.top;
+                });
             const ownLedgers = ledgersOnlyFor({ x, width: box.width, y }, otherHeads, staff, lines.filter(l => l.x2 - l.x1 < fs * 1.5)).map(l => l.el);
             const ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             ghost.setAttribute('class', 'note-drag-ghost');

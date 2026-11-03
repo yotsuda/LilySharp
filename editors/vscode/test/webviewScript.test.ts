@@ -791,6 +791,23 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.match(source, /el\.style\.visibility = press\.steps === 0 \? '' : 'hidden';/);
         assert.doesNotMatch(source, /noteDragRender|dragText|rebindNoteDrag/);
     });
+    it('finds a head\'s staff by the ledger lines that reach it, not by which is nearest', () => {
+        const long = (y: number) => ({ x1: 0, x2: 100, y });
+        const ledger = (y: number) => ({ x1: 9, x2: 12, y });
+        const staves = [0, 1, 2, 3, 4, 10, 11, 12, 13, 14].map(long);
+        const of = pageFunction('staffFromLines', { ledgersFor: pageFunction('ledgersFor', {}) }) as (l: unknown[], x: number, y: number, w: number) => { top: number };
+        // Between two staves, nearer the lower: its ledger lines say whose it is.
+        assert.equal(of([...staves, ledger(5), ledger(6), ledger(7), ledger(8)], 10, 8, 6).top, 0);
+        // The same place with lines up to the lower staff.
+        assert.equal(of([...staves, ledger(9), ledger(8)], 10, 8, 6).top, 10);
+        // Within a staff, that staff, and one that needs no line: the nearest.
+        assert.equal(of(staves, 10, 2, 6).top, 0);
+        assert.equal(of(staves, 10, 12, 6).top, 10);
+        assert.equal(of(staves, 10, 4.5, 6).top, 0);
+        assert.equal(of(staves, 10, 9.5, 6).top, 10);
+        // Another column's lines say nothing.
+        assert.equal(of([...staves, { x1: 40, x2: 43, y: 9 }, { x1: 40, x2: 43, y: 8 }, ledger(5), ledger(6), ledger(7), ledger(8)], 10, 8, 6).top, 0);
+    });
     it('knows the ledger lines that are a dragged head\'s alone', () => {
         const staff = { top: 0, bottom: 4, space: 1 };
         const line = (y: number, x1 = 10, x2 = 12) => ({ x1, x2, y });
@@ -867,7 +884,7 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
     it('finds the staff a dragged note is on, and the ledger lines it would need', () => {
         const staff5 = (top: number) => [0, 1, 2, 3, 4].map(i => ({ x1: 0, x2: 100, y: top + i }));
         const lines = [...staff5(10), ...staff5(30), { x1: 40, x2: 43, y: 9 }, { x1: 40, x2: 43, y: 8 }, { x1: 40, x2: 43, y: 7 }];
-        const find = pageFunction('staffFromLines', {}) as (l: unknown[], x: number, y: number, w: number) => { top: number, bottom: number, space: number };
+        const find = pageFunction('staffFromLines', { ledgersFor: pageFunction('ledgersFor', {}) }) as (l: unknown[], x: number, y: number, w: number) => { top: number, bottom: number, space: number };
         const on = find(lines, 41, 12, 6);
         assert.deepEqual([on.top, on.bottom, on.space], [10, 14, 1]);
         const below = find(lines, 41, 36, 6);
