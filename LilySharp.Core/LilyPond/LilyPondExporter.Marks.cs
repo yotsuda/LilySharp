@@ -678,10 +678,14 @@ public sealed partial class LilyPondExporter
                 : null) is { } tuning
            && Semantics.ChordAnnotation.Of(mk) is { } words
            && (!words.IsBare || namesAlone)
-           && words.Drawn(tuning, _layoutPlan.ChordDiagramsAll,
-                   words.Symbol == null && namesAlone ? PageChordAt(mk) : null,
-                   table, table != null ? Semantics.ChordDiagramScores.SectionNameOf(mk) : null,
-                   _layoutPlan.Chords.Capo) is { } chosen
+           && (Semantics.PitchTransposer.ChordMoveOf(Score?.Transpose is { } own ? Semantics.PartTranspose.ReadProperty(own) : null) is { } move
+               && (words.Structure?.TransposedBy(move.Step, move.Alter) ?? PageChordAt(mk)) is { } moved
+                   ? words.DrawnMoved(tuning, _layoutPlan.ChordDiagramsAll, moved,
+                       table, table != null ? Semantics.ChordDiagramScores.SectionNameOf(mk) : null, _layoutPlan.Chords.Capo)
+                   : words.Drawn(tuning, _layoutPlan.ChordDiagramsAll,
+                       words.Symbol == null && namesAlone ? PageChordAt(mk) : null,
+                       table, table != null ? Semantics.ChordDiagramScores.SectionNameOf(mk) : null,
+                       _layoutPlan.Chords.Capo)) is { } chosen
             ? FretDiagramMarkup(chosen.FrameSpec, above: true)
             : null;
     }

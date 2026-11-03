@@ -1990,7 +1990,10 @@ public sealed class MusicXmlExporter
         _planContainer = planContainer;
         _planPart = _currentPart;
         _planFirstMeasure = _currentPart!.Measures.Count;
-        _currentTranspose = _root != null ? PartTranspose.Read(_root, partName) : null;
+        // The score's own `transpose` on top of the part's, as the page composes them: the key
+        // follows (EffectiveKeyFifths), and the harmonies (ScoreChordMove).
+        _currentTranspose = PitchTransposer.NullIfIdentity(PitchTransposer.Compose(
+            _root != null ? PartTranspose.Read(_root, partName) : null, _playedSpec?.ScoreTranspose));
         ApplyPartHeader(partName);
         _lastPitchedNote = null; // ho/po never pairs across parts
 
@@ -2382,6 +2385,9 @@ public sealed class MusicXmlExporter
         }
         return furthest;
     }
+
+    /// <summary>What the score's own <c>transpose</c> moves a chord's name by, or null.</summary>
+    private (int Step, int Alter)? ScoreChordMove => PitchTransposer.ChordMoveOf(_playedSpec?.ScoreTranspose);
 
     /// <summary>The key signature as the DOCUMENT must spell it: the written fifths plus
     /// whatever the part's instrument transpose adds. One house, so the opening attributes
@@ -5561,10 +5567,23 @@ public sealed class MusicXmlExporter
             // In a `chordDiagrams … all` score every name draws: the written shape, else the
             // default of its chord (a symbol-less shape's, the one its frets name); a chord the
             // layout's shape table lists draws the table's shape (per the section the mark is in).
-            var diagram = diagramTuning is { } dt
-                ? words.Drawn(dt, DiagramsAll, derived, DiagramTable,
-                    DiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(site) : null, DiagramCapo)
-                : null;
+            // The score's own `transpose` moves the name with the notes; a written shape is the
+            // written chord's (ChordAnnotation.DrawnMoved).
+            var move = ScoreChordMove;
+            if (move is { } m && (named ?? derived) is { } written)
+            {
+                if (named != null)
+                    named = named.TransposedBy(m.Step, m.Alter);
+                else
+                    derived = written.TransposedBy(m.Step, m.Alter);
+                chordText = (named ?? derived)!.PrintedSymbol(LilySharp.Core.Semantics.ChordSpelling.Canonical).Text;
+            }
+            var diagram = diagramTuning is not { } dt ? null
+                : move != null && (named ?? derived) is { } movedChord
+                    ? words.DrawnMoved(dt, DiagramsAll, movedChord, DiagramTable,
+                        DiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(site) : null, DiagramCapo)
+                    : words.Drawn(dt, DiagramsAll, derived, DiagramTable,
+                        DiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(site) : null, DiagramCapo);
             if (chordText != null)
             {
                 if (BuildHarmony(chordText, named ?? derived) is { } harmony)
@@ -6196,13 +6215,21 @@ public sealed class MusicXmlExporter
             // trumpet's harmony is the chord a major second up — the name its page prints
             // (ConcertPitch.ChordNameDrop). The diagram stays the sounding chord's.
             var named = drop == 0 ? chord : chord.Pressed(drop, pending.Sharps);
+            // The score's own `transpose` moves the row with the notes, and its diagrams (a written
+            // shape is the written chord's), as the page does.
+            var move = ScoreChordMove;
+            if (move is { } moved)
+                named = named.TransposedBy(moved.Step, moved.Alter);
             if (BuildHarmony(named.PrintedSymbol(LilySharp.Core.Semantics.ChordSpelling.Canonical).Text, named) is not { } harmony)
                 continue;
             if (tuning is { } t)
             {
                 var shapes = Semantics.ChordDiagramScores.ShapesOf(entry).Shapes;
-                var drawn = Music.ChordShapes.Drawn(t, shapes, DiagramsAll, chord, DiagramTable,
-                    DiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(entry) : null, DiagramCapo);
+                var drawn = move is { } m
+                    ? Music.ChordShapes.Drawn(t, [], DiagramsAll || shapes.Length > 0, chord.TransposedBy(m.Step, m.Alter), DiagramTable,
+                        DiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(entry) : null, DiagramCapo)
+                    : Music.ChordShapes.Drawn(t, shapes, DiagramsAll, chord, DiagramTable,
+                        DiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(entry) : null, DiagramCapo);
                 if (drawn != null && BuildFrame(drawn.FrameSpec) is { } frame)
                     harmony.Add(frame);
             }
@@ -6267,7 +6294,8 @@ public sealed class MusicXmlExporter
         _partTransposeSemitones = 0;
         _partTransposeWritten = 0;
         SetClef("treble");
-        _keyFifths = pending.Key.Fifths;
+        // A part of its own has no notes to carry the score's `transpose`: the key takes it here.
+        _keyFifths = pending.Key.Fifths + (ScoreChordMove is { } moved ? PitchTransposer.KeySignatureFifthsShift(moved.Step, moved.Alter) : 0);
         _keyMode = pending.Key.Mode;
         _keyCustomXml = pending.Key.Custom;
         _bars.SetMeter(new Semantics.Meter(pending.Beats, pending.BeatType));

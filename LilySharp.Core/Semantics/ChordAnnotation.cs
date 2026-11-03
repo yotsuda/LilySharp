@@ -191,6 +191,14 @@ public sealed record ChordAnnotation
         => FromChordItem && Shapes.IsEmpty ? null
            : ChordShapes.Drawn(diagramTuning, Shapes, all, Symbol != null ? Structure : derived, table, section, capo);
 
+    /// <summary>The diagram of these words under a score's own <c>transpose</c>, <paramref name="moved"/>
+    /// being the chord it now names: a written shape is the written chord's, so it asks for a
+    /// diagram and draws the moved chord's usual shape, as a row's does under a <c>shift</c>.</summary>
+    public ChosenShape? DrawnMoved(Syntax.TuningType diagramTuning, bool all, ChordStructure moved,
+        ChordShapeTable? table = null, string? section = null, int capo = 0)
+        => FromChordItem && Shapes.IsEmpty ? null
+           : ChordShapes.Drawn(diagramTuning, [], all || !Shapes.IsEmpty, moved, table, section, capo);
+
     /// <summary>
     /// The tuning a symbol-less shape (<c>@chord(x32010)</c>) is NAMED on — the score's
     /// diagram tuning when the shape fits it, else the part's (<paramref name="partTuning"/>)

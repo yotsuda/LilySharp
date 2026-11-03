@@ -180,4 +180,149 @@ public class ScoreTransposeRowTests
         var tree = SyntaxTree.Parse(Book("transpose d"));
         Assert.Contains("\\new ChordNames \\progChords", new LilyPondExporter().Export(tree));
     }
+
+    // ---- An @chord on a note (owner's decision 2026-11-03).
+
+    private static string Marked(string music, string option = "transpose d", string key = "key c major\n", string header = "clef treble") =>
+        key + "part m { " + header + " }\nsection A { m { " + music + " } }\nform { A }\nscore { staff m }\nscore moved " + option + " { staff m }\n";
+
+    private static string Inline(string book, string? score = "moved") => Names(book, score);
+
+    [Theory]
+    [InlineData("d'4@chord(Dm7) f a d |", "Em7")]
+    [InlineData("d'4@chord(C/E) f a d |", "D/F♯")]
+    [InlineData("<c' e g>4@chord f a d |", "D")]                // named from its notes
+    [InlineData("<c' e g>4@chord q r2 |", "D")]
+    [InlineData("d'4@chord(x32010) f a d |", "D")]              // named from its shape
+    [InlineData("chord(F)1 |", "G")]                            // the item's own name
+    [InlineData("chord(C x32010)1 |", "D")]
+    public void AnAtChord_MovesWithTheNotes(string music, string name)
+        => Assert.Equal(name, Inline(Marked(music)));
+
+    [Theory]
+    [InlineData("d'4@chord(Dm7) f a d |", "Dm7")]
+    [InlineData("<c' e g>4@chord f a d |", "C")]
+    [InlineData("d'4@chord(x32010) f a d |", "C")]
+    public void TheOtherScore_ItsAtChordsAsWritten(string music, string name)
+        => Assert.Equal(name, Inline(Marked(music), null));
+
+    [Theory]
+    [InlineData("transpose cis", "D♯m7")]
+    [InlineData("transpose des", "E♭m7")]
+    [InlineData("transpose c'", "Dm7")]
+    public void AnAtChord_SpellsAsTheNotesDo(string option, string name)
+        => Assert.Equal(name, Inline(Marked("d'4@chord(Dm7) f a d |", option)));
+
+    [Fact]
+    public void QuotedText_IsNoChord_AndStays()
+        => Assert.Equal("N.C.", Inline(Marked("d'4@chord(\"N.C.\") f a d |")));
+
+    [Fact]
+    public void APartsOwnTranspose_AndAFileShift_StillLeaveAnAtChord()
+    {
+        Assert.Equal("Dm7", Inline(Marked("d'4@chord(Dm7) f a d |", header: "clef treble transpose f"), null));
+        Assert.Equal("Dm7", Inline("shift 1\n" + Marked("d'4@chord(Dm7) f a d |"), null));
+        Assert.Equal("Em7", Inline(Marked("d'4@chord(Dm7) f a d |", header: "clef treble transpose f")));   // the score's alone
+    }
+
+    private static string Twin(string book, string? score = "moved")
+    {
+        var tree = SyntaxTree.Parse(book);
+        return new LilyPondExporter { Score = score == null ? null : RenderSpecParser.FindDeclaredByName(tree, score)!.Value.Declaration }.Export(tree);
+    }
+
+    /// <summary>A written shape is the written chord's: the moved chord's usual shape draws, in its place.</summary>
+    [Fact]
+    public void AnAtChordsWrittenShape_IsNotDrawnOnTheMovedChord()
+    {
+        string book = Marked("d'4@chord(C x32010) f a d |", header: "tuning guitar");
+        Assert.Contains("\"x;3;2;o;1;o;\"", Twin(book, null));
+        string moved = Twin(book);
+        Assert.Contains("\\fret-diagram-terse", moved);
+        Assert.DoesNotContain("\"x;3;2;o;1;o;\"", moved);
+    }
+
+    [Fact]
+    public void AnAtChordNamedAlone_StillDrawsNothing()
+        => Assert.DoesNotContain("\\fret-diagram-terse", Twin(Marked("d'4@chord(Dm7) f a d |", header: "tuning guitar")));
+
+    [Fact]
+    public void TheTwin_NamesItsMovedBareAtChord_FromThePage()
+    {
+        string twin = Twin(Marked("<c' e g>4@chord f a d |"));
+        Assert.Matches(@"\\chordmode \{\s+d\d", twin);
+    }
+
+    [Fact]
+    public void TheTwin_NamesTheMovedAtChord()
+    {
+        var tree = SyntaxTree.Parse(Marked("d'4@chord(Dm7) f a d |"));
+        var render = RenderSpecParser.FindDeclaredByName(tree, "moved")!.Value.Declaration;
+        string twin = new LilyPondExporter { Score = render }.Export(tree);
+        Assert.Matches(@"\be\d*:m7", twin);
+        Assert.DoesNotMatch(@"\bd\d*:m7", twin);
+        Assert.Matches(@"\bd\d*:m7", new LilyPondExporter().Export(tree));
+    }
+
+    // ---- The MusicXML (owner's decision 2026-11-03).
+
+    private static string Xml(string book, string? score = "transposed")
+    {
+        var tree = SyntaxTree.Parse(book);
+        var spec = Spec(tree, score);
+        return new LilySharp.Core.MusicXml.MusicXmlExporter { Score = spec, Form = spec.Form }.Export(tree).ToXml().ToString();
+    }
+
+    private static string All(string xml, string pattern) => string.Join(" ", System.Text.RegularExpressions.Regex.Matches(xml, pattern)
+        .Select(m => string.Concat(m.Groups.Values.Skip(1).Select(g => g.Value))));
+
+    [Fact]
+    public void TheMusicXml_MovesTheNotesTheKeyAndTheRow()
+    {
+        string book = Book("transpose d");
+        string moved = Xml(book);
+        Assert.Equal("E G B E", All(moved, @"<step>(\w)</step>").Split(' ').Take(4).Aggregate((a, b) => a + " " + b));
+        Assert.Equal("2", All(moved, @"<fifths>(-?\d+)</fifths>").Split(' ')[0]);
+        Assert.Equal("E A D", All(moved, @"<root-step>(\w)</root-step>"));
+        string written = Xml(book, null);
+        Assert.Equal("D F A D", All(written, @"<step>(\w)</step>").Split(' ').Take(4).Aggregate((a, b) => a + " " + b));
+        Assert.Equal("0", All(written, @"<fifths>(-?\d+)</fifths>").Split(' ')[0]);
+        Assert.Equal("D G C", All(written, @"<root-step>(\w)</root-step>"));
+    }
+
+    [Theory]
+    [InlineData("transpose des", "E-1 A-1 D-1")]
+    [InlineData("transpose cis", "D1 G1 C1")]
+    public void TheMusicXml_SpellsTheRowAsTheNotes(string option, string roots)
+        => Assert.Equal(roots, All(Xml(Book(option)), @"<root-step>(\w)</root-step>(?:\s*<root-alter>(-?\d)</root-alter>)?"));
+
+    [Fact]
+    public void TheMusicXml_MovesAnAtChord_AndItsWrittenShape()
+    {
+        string book = Marked("d'4@chord(C x32010) f a d |", header: "tuning guitar");
+        string written = Xml(book, null), moved = Xml(book, "moved");
+        Assert.Equal("C", All(written, @"<root-step>(\w)</root-step>"));
+        Assert.Equal("D", All(moved, @"<root-step>(\w)</root-step>"));
+        Assert.NotEqual(All(written, @"<fret>(\d+)</fret>"), All(moved, @"<fret>(\d+)</fret>"));
+    }
+
+    [Fact]
+    public void TheMusicXml_ARowOfItsOwn_TakesTheMovedKey()
+    {
+        const string book = "key c major\nchords prog { section A { Dm7 | } }\nform { A }\nscore { chords prog }\nscore transposed transpose d { chords prog }\n";
+        string moved = Xml(book);
+        Assert.Equal("E", All(moved, @"<root-step>(\w)</root-step>"));
+        Assert.Equal("2", All(moved, @"<fifths>(-?\d+)</fifths>").Split(' ')[0]);
+    }
+
+    [Fact]
+    public void TheMusicXml_ComposesWithAPartsOwn_AndLeavesADrumPart()
+    {
+        string own = Marked("c'4 d e f |", header: "clef treble transpose d");
+        Assert.Equal("E", All(Xml(own, "moved"), @"<step>(\w)</step>").Split(' ')[0]);
+        const string drums = "part kit { clef percussion }\nsection A { kit { bd4 hh sn hh | } }\nform { A }\nscore { staff kit }\nscore moved transpose d { staff kit }\n";
+        string Unpitched(string? s) => All(Xml(drums, s), @"<display-step>(\w)</display-step>");
+        Assert.NotEmpty(Unpitched("moved"));
+        Assert.Equal(Unpitched(null), Unpitched("moved"));
+    }
 }

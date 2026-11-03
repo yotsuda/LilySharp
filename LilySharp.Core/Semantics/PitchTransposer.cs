@@ -108,6 +108,11 @@ public static class PitchTransposer
     private static int FloorDiv(int a, int b) => (int)Math.Floor((double)a / b);
     private static int Mod(int a, int b) => ((a % b) + b) % b;
 
+    /// <summary>What a score's own <c>transpose</c> moves a chord's name by, or null for none: an
+    /// octave moves no name.</summary>
+    public static (int Step, int Alter)? ChordMoveOf((int step, int alt, int oct)? interval)
+        => interval is { } t && IntervalSemitones(t.step, t.alt, t.oct) % 12 != 0 ? (t.step, t.alt) : null;
+
     /// <summary>
     /// The chromatic size, in semitones, of the interval from c to the target.
     /// A sounding pitch (MIDI) only needs this shift — no respelling.

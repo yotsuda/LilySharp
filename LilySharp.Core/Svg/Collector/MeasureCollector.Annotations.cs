@@ -168,14 +168,28 @@ public sealed partial class MeasureCollector
             // The file's shape table lists chords that draw wherever they are named, per the
             // section the mark is WRITTEN in (ChordShapeTable); read only when a table exists.
             string? section = _chordDiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(site) : null;
+            // A score's own `transpose` moves the name with the notes, name by name, and a written
+            // shape is the written chord's (owner's decision 2026-11-03).
+            var move = Semantics.PitchTransposer.ChordMoveOf(ScoreTranspose);
+            Music.ChordStructure? Moved(Music.ChordStructure? chord)
+                => move is { } m ? chord?.TransposedBy(m.Step, m.Alter) : chord;
             Music.ChosenShape? DiagramFor(Music.ChordStructure? derived)
-                => diagramTuning is { } dt
-                    ? words.Drawn(dt, _chordDiagramScope == Semantics.ChordDiagramScope.All, derived, _chordDiagramTable, section, _chordSpelling.Capo) : null;
+                => diagramTuning is not { } dt ? null
+                    : move != null && derived != null
+                        ? words.DrawnMoved(dt, _chordDiagramScope == Semantics.ChordDiagramScope.All, derived, _chordDiagramTable, section, _chordSpelling.Capo)
+                        : words.Drawn(dt, _chordDiagramScope == Semantics.ChordDiagramScope.All, derived, _chordDiagramTable, section, _chordSpelling.Capo);
 
-            // The key as written here spells a capo score's pressed name (ChordStructure.Pressed).
-            int keySharps = WrittenKeySharps();
+            // The key as written here spells a capo score's pressed name (ChordStructure.Pressed),
+            // and the key it comes to, a moved one.
+            int keySharps = WrittenKeySharps()
+                + (move is { } moved ? Semantics.PitchTransposer.KeySignatureFifthsShift(moved.Step, moved.Alter) : 0);
             var chordSymbol = Semantics.AnnotationValues.Chord(
                 words, _chordSpelling, out var structure, keySharps);
+            if (move != null && chordSymbol is { Text.Length: > 0 } && structure != null)
+            {
+                structure = Moved(structure);
+                chordSymbol = structure!.PrintedSymbol(_chordSpelling, keySharps);
+            }
             if (chordSymbol is not { } sym)
             {
                 // @chord(x32010): a shape with no symbol. The diagram draws (on a diagram
@@ -186,8 +200,8 @@ public sealed partial class MeasureCollector
                 if (words is { NamesFromDiagram: true }
                     && words.NamingShape(diagramTuning, _partTuning) is { } naming)
                 {
-                    var fromFrets = Semantics.ChordAnnotation.NameFromFrets(
-                        naming.Frets, naming.Tuning, WrittenKeySharps());
+                    var fromFrets = Moved(Semantics.ChordAnnotation.NameFromFrets(
+                        naming.Frets, naming.Tuning, WrittenKeySharps()));
                     var diagram = DiagramFor(fromFrets);
                     if (diagram != null)
                         AddChordDiagram(site, diagram.FrameSpec, measureIndex, itemIndex, words.FromShapeItem);
@@ -215,6 +229,7 @@ public sealed partial class MeasureCollector
             // (AnnotationNameValidator warns there, naming the fix: write the name).
             if (chordText.Length == 0)
             {
+                // Its notes have moved already: this names them as they stand.
                 structure = NameFromNotes(node);
                 if (structure == null)
                     return;
@@ -380,7 +395,7 @@ public sealed partial class MeasureCollector
     {
         int score = ScoreTranspose is { } t ? Semantics.PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct) : 0;
         _chordNameCollector.RowShift = _fileShiftSemitones + score % 12;
-        _chordNameCollector.RowInterval = ScoreTranspose is { } i && score % 12 != 0 ? (i.step, i.alt) : null;
+        _chordNameCollector.RowInterval = Semantics.PitchTransposer.ChordMoveOf(ScoreTranspose);
     }
 
     /// <summary>Reads the tuning of <paramref name="partName"/> for the names its symbol-less

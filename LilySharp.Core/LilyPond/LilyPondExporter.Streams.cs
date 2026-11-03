@@ -54,6 +54,7 @@ public sealed partial class LilyPondExporter
                     FontsOverride = spec.FontsRef,
                     PaperOverride = spec.PaperRef,
                     LayoutOverride = spec.LayoutRef,
+                    ScoreTranspose = spec.ScoreTranspose,
                 }.CollectMultiStaff(tree, spec);
         }
         catch (Exception e)
