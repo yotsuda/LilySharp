@@ -212,8 +212,6 @@ function revealPreviewSource(panel: vscode.WebviewPanel) {
 // where a score opened beside a preview goes (sourceGroupToOpen) — and the click lands there as
 // in an open one. An untitled score that was closed is gone: nothing to open, as before.
 let noteDragSteps: NoteDragSteps | undefined;
-// Which of a held note's pictures is the one still wanted.
-let noteDragRenders = 0;
 
 /** Ctrl+Z over the preview (owner's request 2026-11-02: a drag there has to be taken back there).
  * VS Code's undo goes to the editor in focus, and a webview is none: the source takes the focus
@@ -1819,30 +1817,16 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 if (words) { void panel.webview.postMessage({ type: 'markDragWords', steps: message.steps, mode: message.mode, from: words.from, to: words.to, positions: words.positions }); }
                 return;
             }
-            if (message.type === 'noteDragRender') {
-                // Held still: the score as it would be. The newest asks; an older one, still on
-                // its way to an answer, draws nothing.
-                const asked = ++noteDragRenders;
+            if (message.type === 'noteDragAccidentals') {
                 const doc = await previewDocument(uri);
-                if (!doc) { return; }
-                const landing = await noteDragSteps?.landing(doc, message.position, message.steps, message.mode);
-                if (asked !== noteDragRenders) { return; }
-                await updatePreviewContent(doc, panel, context, undefined, landing);
-                return;
-            }
-            if (message.type === 'noteDragRenderEnd') {
-                // Taken back: the picture is the document's again.
-                noteDragRenders++;
-                const doc = await previewDocument(uri);
-                if (doc) { await updatePreviewContent(doc, panel, context); }
+                const glyphs = doc ? await noteDragSteps?.accidentals(doc, message.position, message.steps, message.mode, selectedRenders.get(uri) || undefined) : [];
+                void panel.webview.postMessage({ type: 'noteDragAccidentals', steps: message.steps, mode: message.mode, glyphs: glyphs ?? [] });
                 return;
             }
             if (message.type === 'noteDrag') {
-                noteDragRenders++;
                 const doc = await previewDocument(uri);
                 const ok = doc ? await noteDragSteps?.write(doc, message.position, message.steps, message.mode) : false;
                 void panel.webview.postMessage({ type: 'noteDragResult', ok: !!ok });
-                if (!ok && doc) { await updatePreviewContent(doc, panel, context); }
                 return;
             }
             if (message.type === 'tempoDragLive' || message.type === 'tempoDragEnd') {
@@ -1923,9 +1907,7 @@ async function updatePreviewContent(
     document: vscode.TextDocument,
     panel: vscode.WebviewPanel,
     context: vscode.ExtensionContext,
-    retries: number = 8,
-    // A note in a drag: draw this text, not the document's, and say how far the note stands in it.
-    drag?: { text: string, positions: number }
+    retries: number = 8
 ) {
     const uri = document.uri.toString();
     const selectedRender = selectedRenders.get(uri);
@@ -2022,8 +2004,7 @@ async function updatePreviewContent(
             renderName: selectedRender || null,
             clientSentAt: requestedAt,
             pageDiff: true,
-            shownVersion,
-            dragText: drag?.text
+            shownVersion
         }, requestCancellation.token);
         const hostLag = lagProbe.stop();
 
@@ -2098,7 +2079,7 @@ async function updatePreviewContent(
                     + `${held}; asking for every page`);
                 shownPagesVersion.delete(uri);
                 if (retries > 0) {
-                    setTimeout(() => updatePreviewContent(document, panel, context, retries - 1, drag), 0);
+                    setTimeout(() => updatePreviewContent(document, panel, context, retries - 1), 0);
                 }
                 return;
             }
@@ -2112,7 +2093,6 @@ async function updatePreviewContent(
             panel.webview.postMessage({
                 type: 'updateContent',
                 pages,
-                dragPositions: drag?.positions,
                 error: response.Error ?? undefined,
                 renders: response.Renders || [],
                 selectedRender: drawnRender
@@ -2145,7 +2125,6 @@ async function updatePreviewContent(
                 panel.webview.postMessage({
                     type: 'updateContent',
                     svg: response.Svg,
-                    dragPositions: drag?.positions,
                     error: response.Error ?? undefined,
                     renders: response.Renders || [],
                     selectedRender: drawnRender
@@ -6943,8 +6922,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         vscode.postMessage({ type: 'requestLength' });
                         vscode.postMessage({ type: 'requestNoteHeads' });
                         noteDropped = null;
-                        // The sheet is new under a note still in the hand.
-                        if (notePress && notePress.moving && notePress.row) rebindNoteDrag(notePress, message.dragPositions || 0);
                         // Keep the fit across re-renders (this is also what fits
                         // the FIRST render of a freshly opened preview); otherwise
                         // re-apply the current manual zoom to the fresh SVG.
@@ -7019,9 +6996,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         if (notePress.row && message.positions !== undefined) showChromaticHead(notePress, message.positions);
                     }
                     break;
+                case 'noteDragAccidentals':
+                    if (notePress && notePress.row) gotDraggedAccidentals(notePress, message);
+                    break;
                 case 'noteDragResult':
                     // Nothing written: no picture is coming, and the note goes back.
-                    if (!message.ok && noteDropped) moveNoteRow(noteDropped, 0);
+                    if (!message.ok && noteDropped) {
+                        moveNoteRow(noteDropped.row, 0);
+                        noteAccidentalsBack(noteDropped);
+                    }
                     noteDropped = null;
                     break;
                 case 'playPitches':
@@ -7245,8 +7228,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         const MARK_DRAG_PIXELS = 12;
         // A tempo's number, a beat a minute a step: a change of twenty is not a long way.
         const FINE_MARK_DRAG_PIXELS = 4;
-        // How long a note in the hand has to stay on a line for the score to be drawn with it there.
-        const NOTE_DRAG_REDRAW_MS = 200;
         // An octave, on a staff.
         const OCTAVE_POSITIONS = 7;
         // How far back past a position's edge the pointer has to come to leave it: a hand
@@ -7348,9 +7329,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let pressedAt = null;
         window.addEventListener('pointerdown', (e) => {
             pressedAt = { x: e.clientX, y: e.clientY };
-            // The click a drag ends in is held back below, but there may be none to hold back: the
-            // sheet drawn anew under the hand has no element left to click, and Esc leaves none
-            // either. A new press is a new click, whatever became of that one.
+            // The click a drag ends in is held back below, but there may be none to hold back: Esc
+            // leaves none. A new press is a new click, whatever became of that one.
             noteDragged = false;
         }, true);
         const noteUnder = (e) => {
@@ -7407,46 +7387,58 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             press.shown = positions * press.position;
             placeNoteRow(press);
             drawNoteLedgers(press);
+            placeDraggedAccidentals(press);
         }
-        // How far above where it was pressed the note stands now, and from the picture on screen:
-        // that picture may already draw it some of the way (press.drawn).
+        // How far above where it was pressed the note stands now.
         function noteDragRise(press) {
             return press.alt ? press.shown : press.steps * press.step;
         }
         function placeNoteRow(press) {
-            moveNoteRow(press.row, press.drawn - noteDragRise(press));
+            moveNoteRow(press.row, -noteDragRise(press));
         }
-        // The score drawn with the note where it stays: held still long enough, and only the last.
-        function scheduleNoteRedraw(press) {
-            clearTimeout(press.redrawTimer);
-            press.redrawTimer = setTimeout(() => {
-                if (notePress !== press || !press.moving) return;
-                const asking = dragMode(press) + ':' + press.steps;
-                if (asking === press.askedFor || (press.askedFor === undefined && press.steps === 0)) return;
-                press.askedFor = asking;
-                if (press.steps === 0) vscode.postMessage({ type: 'noteDragRenderEnd' });
-                else vscode.postMessage({ type: 'noteDragRender', position: press.pos, steps: press.steps, mode: dragMode(press) });
-            }, NOTE_DRAG_REDRAW_MS);
+        // The accidental a note in the hand has where it now stands (owner's request 2026-11-03):
+        // the one it was pressed with goes with its place, and the score says what this place
+        // takes, none as like as not. Until the answer, none: no sign is better than a wrong one.
+        function noteAccidentalsFollow(press) {
+            press.accGroup.textContent = '';
+            for (const el of press.row) if (el !== press.head) el.style.visibility = press.steps === 0 ? '' : 'hidden';
+            if (press.steps !== 0) askDraggedAccidentals(press);
         }
-        // Given up: the picture goes back to the document's, if it ever left it.
-        function endNoteRedraws(press) {
-            clearTimeout(press.redrawTimer);
-            if (press.askedFor !== undefined) vscode.postMessage({ type: 'noteDragRenderEnd' });
+        // One question at a time, and only the last place: a hand crosses lines faster than that.
+        function askDraggedAccidentals(press) {
+            if (press.accAsking) { press.accAgain = true; return; }
+            press.accAsking = true;
+            press.accAgain = false;
+            vscode.postMessage({ type: 'noteDragAccidentals', position: press.pos, steps: press.steps, mode: dragMode(press) });
         }
-        // What of the old sheet the hand was holding is on the new one: the same copy of the note
-        // (a section played twice prints it twice), drawn dragPositions up from where it was.
-        function rebindNoteDrag(press, dragPositions) {
-            const boxes = Array.from(svgContainer.querySelectorAll('rect.nh-hit[data-pos="' + press.pos + '"]'));
-            const box = boxes[Math.min(press.copy, boxes.length - 1)];
-            if (!box) return;
-            const drawn = dragPositions * press.position;
-            press.target = box;
-            bindNoteRow(press, drawn);
-            press.drawn = drawn;
-            placeNoteRow(press);
-            drawNoteLedgers(press);
+        function gotDraggedAccidentals(press, answer) {
+            press.accAsking = false;
+            const current = answer.steps === press.steps && answer.mode === dragMode(press);
+            if (press.accAgain || !current) {
+                if (press.moving && press.steps !== 0) askDraggedAccidentals(press);
+                if (!current) return;
+            }
+            press.accGroup.textContent = '';
+            for (const g of answer.glyphs) {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('class', 'music');
+                text.setAttribute('x', String(press.x + g.Dx));
+                text.setAttribute('font-size', String(g.FontSize));
+                text.textContent = g.Glyph;
+                press.accGroup.appendChild(text);
+            }
+            placeDraggedAccidentals(press);
         }
-        function bindNoteRow(press, drawn) {
+        function placeDraggedAccidentals(press) {
+            const y = String(press.y - noteDragRise(press));
+            for (const text of press.accGroup.children) text.setAttribute('y', y);
+        }
+        // Given up, or not written: the one it had.
+        function noteAccidentalsBack(press) {
+            press.accGroup.remove();
+            for (const el of press.row) if (el !== press.head) el.style.visibility = '';
+        }
+        function beginNoteDrag(press) {
             const svg = press.target.ownerSVGElement;
             const num = (el, name) => parseFloat(el.getAttribute(name));
             const glyphs = Array.from(svg.querySelectorAll('text[data-pos="' + press.pos + '"]'));
@@ -7466,26 +7458,20 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const hitBox = Array.from(svg.querySelectorAll('rect.nh-hit[data-pos="' + press.pos + '"]'))
                 .find(r => Math.abs(num(r, 'x') - x) < 0.01 && Math.abs(num(r, 'y') - y) < fs);
             const box = hitBox ? { x, width: num(hitBox, 'width') } : head.getBBox();
-            if (press.ghost) press.ghost.remove();
             const ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             ghost.setAttribute('class', 'note-drag-ghost');
             // Beside the head, in the same coordinates: the page's music stands in a shifted group.
             head.parentNode.appendChild(ghost);
-            Object.assign(press, { row, head, x, y: y + drawn, staff, box, ghost });
-            return true;
-        }
-        function beginNoteDrag(press) {
-            if (!bindNoteRow(press, 0)) return false;
-            const { staff, head } = press;
-            const fs = parseFloat(head.getAttribute('font-size'));
+            const accGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            accGroup.setAttribute('pointer-events', 'none');
+            head.parentNode.appendChild(accGroup);
             const position = (staff ? staff.space : fs / 4) / 2;
             const perDrawn = position * head.getScreenCTM().d;
-            press.copy = Math.max(0, Array.from(svgContainer.querySelectorAll('rect.nh-hit[data-pos="' + press.pos + '"]')).indexOf(press.target));
             // The press took no focus, and the editor may still have it: Esc and Ctrl+Z would go
             // there (owner's report 2026-11-03). Not at the press: a click is still for the editor.
             window.focus();
             Object.assign(press, {
-                moving: true, position, perDrawn, tip: newDragTip(), shown: 0, drawn: 0,
+                moving: true, row, head, x, y, staff, box, ghost, accGroup, position, perDrawn, tip: newDragTip(), shown: 0,
                 perPosition: Math.max(NOTE_DRAG_PIXELS, perDrawn),
                 steps: 0,
             });
@@ -7591,13 +7577,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (steps === 0) { press.tip.hidden = true; showChromaticHead(press, 0); }
                 else vscode.postMessage({ type: 'markDragWords', position: press.pos, steps, mode });
                 vscode.postMessage({ type: 'noteDragHear', position: press.pos, steps, mode });
-                scheduleNoteRedraw(press);
+                noteAccidentalsFollow(press);
             } else {
                 press.tip.hidden = true;
                 placeNoteRow(press);
                 drawNoteLedgers(press);
                 vscode.postMessage({ type: 'noteDragHear', position: press.pos, steps, mode });
-                scheduleNoteRedraw(press);
+                noteAccidentalsFollow(press);
             }
         }
         svgContainer.addEventListener('pointerdown', (e) => {
@@ -7650,18 +7636,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             noteDragged = true;
             endNoteDrag(press);
             if (press.tempo !== undefined) { vscode.postMessage({ type: 'tempoDragEnd' }); return; }
-            if (press.row) clearTimeout(press.redrawTimer);
-            if (press.row && press.steps === 0) { moveNoteRow(press.row, press.drawn); endNoteRedraws(press); }
+            if (press.row && press.steps === 0) { moveNoteRow(press.row, 0); noteAccidentalsBack(press); }
             if (press.steps === 0) return;
             // A note stays where it was put until the score comes back drawn.
-            noteDropped = press.row || null;
+            noteDropped = press.row ? press : null;
             vscode.postMessage({ type: 'noteDrag', position: press.pos, steps: press.steps, mode: dragMode(press) });
         };
         window.addEventListener('pointerup', dropNote);
         window.addEventListener('pointercancel', (e) => {
             if (!notePress || e.pointerId !== notePress.id) return;
             if (notePress.moving) {
-                if (notePress.row) { moveNoteRow(notePress.row, notePress.drawn); endNoteRedraws(notePress); }
+                if (notePress.row) { moveNoteRow(notePress.row, 0); noteAccidentalsBack(notePress); }
                 if (notePress.tempo !== undefined) cancelTempoDrag(notePress);
                 endNoteDrag(notePress);
             }
@@ -7669,7 +7654,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         });
         window.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape' || !notePress || !notePress.moving) return;
-            if (notePress.row) { moveNoteRow(notePress.row, notePress.drawn); endNoteRedraws(notePress); }
+            if (notePress.row) { moveNoteRow(notePress.row, 0); noteAccidentalsBack(notePress); }
             if (notePress.tempo !== undefined) cancelTempoDrag(notePress);
             endNoteDrag(notePress);
             noteDragged = true;

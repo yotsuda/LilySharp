@@ -762,46 +762,34 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const steps = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'stepAudition.ts'), 'utf8');
         assert.match(steps, /undoStopBefore: !drag\.written, undoStopAfter/);
     });
-    it('draws the score with the note where it is held, once it is still, and only then', () => {
-        const posted: Array<{ type: string }> = [];
-        const timers: Array<() => void> = [];
-        const pressHeld = {} as Record<string, unknown>;
-        const redraw = pageFunction('scheduleNoteRedraw', {
-            NOTE_DRAG_REDRAW_MS: 200,
-            notePress: pressHeld,
-            dragMode: () => 'position',
-            clearTimeout: () => { timers.length = 0; },
-            setTimeout: (f: () => void) => { timers.push(f); return 1; },
-            vscode: { postMessage: (m: { type: string }) => posted.push(m) },
-        }) as (p: unknown) => void;
-        Object.assign(pressHeld, { moving: true, steps: 2, pos: 40 });
-        redraw(pressHeld);
-        redraw(pressHeld);
-        assert.equal(timers.length, 1);            // the last stop only
-        assert.equal(posted.length, 0);            // not until it has been still
-        timers[0]();
-        assert.equal(posted[0].type, 'noteDragRender');
-        timers[0]();
-        assert.equal(posted.length, 1);            // the same again is not asked again
-        (pressHeld as { steps: number }).steps = 0;
-        redraw(pressHeld);
-        timers[0]();
-        assert.equal(posted[1].type, 'noteDragRenderEnd');   // back where it began
-        const quiet = {} as Record<string, unknown>;
-        const redrawQuiet = pageFunction('scheduleNoteRedraw', {
-            NOTE_DRAG_REDRAW_MS: 200, notePress: quiet, dragMode: () => 'position',
-            clearTimeout: () => { timers.length = 0; }, setTimeout: (f: () => void) => { timers.push(f); return 1; },
-            vscode: { postMessage: () => { throw new Error('nothing to take back'); } },
-        }) as (p: unknown) => void;
-        Object.assign(quiet, { moving: true, steps: 0, pos: 40 });
-        redrawQuiet(quiet);
-        timers[0]();
+    it('asks what accidental a note in the hand has, one question at a time and the last place', () => {
+        const posted: Array<{ steps: number }> = [];
+        const scope = { dragMode: () => 'position', vscode: { postMessage: (m: { steps: number }) => posted.push(m) } };
+        const ask = pageFunction('askDraggedAccidentals', scope) as (p: unknown) => void;
+        const group = { textContent: 'old', children: [] as unknown[], appendChild: () => undefined };
+        const got = pageFunction('gotDraggedAccidentals', {
+            ...scope, askDraggedAccidentals: ask, placeDraggedAccidentals: () => undefined,
+            document: { createElementNS: () => ({ setAttribute: () => undefined }) },
+        }) as (p: unknown, a: unknown) => void;
+        const press = { moving: true, pos: 40, steps: 1, x: 0, accGroup: group, accAsking: false, accAgain: false };
+        ask(press);
+        press.steps = 2;
+        ask(press);
+        press.steps = 3;
+        ask(press);
+        assert.equal(posted.length, 1);             // the hand went on; one question is out
+        got(press, { steps: 1, mode: 'position', glyphs: [] });
+        assert.equal(posted.length, 2);
+        assert.equal(posted[1].steps, 3);           // and the next is for where it is now
+        group.textContent = 'kept';
+        press.steps = 4;
+        got(press, { steps: 3, mode: 'position', glyphs: [] });
+        assert.equal(group.textContent, 'kept');    // an answer for a place left says nothing
+        got(press, { steps: 4, mode: 'position', glyphs: [] });
+        assert.equal(group.textContent, '');        // and this place may take none
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
-        assert.match(source, /if \(notePress && notePress\.moving && notePress\.row\) rebindNoteDrag\(notePress, message\.dragPositions \|\| 0\);/);
-        // The next click is the hand's, though the drag's own never came.
-        assert.match(source, /pressedAt = \{ x: e\.clientX, y: e\.clientY \};[\s\S]{0,300}?noteDragged = false;\s+\}, true\);/);
-        assert.match(source, /if \(asked !== noteDragRenders\) \{ return; \}/);
-        assert.match(source, /moveNoteRow\(press\.row, press\.drawn - noteDragRise\(press\)\);/);
+        assert.match(source, /el\.style\.visibility = press\.steps === 0 \? '' : 'hidden';/);
+        assert.doesNotMatch(source, /noteDragRender|dragText|rebindNoteDrag/);
     });
     it('goes by the nearest only for a note with Ctrl', () => {
         const stepsOf = pageFunction('dragStepsOf', {

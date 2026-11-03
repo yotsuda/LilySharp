@@ -50,7 +50,12 @@ public sealed partial class LilySharpLanguageServer
             SyntaxTree Expand(string text) => ExpandUsings(text, SyntaxTree.Parse(text), basePath,
                 p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree;
             if (@params.Chromatic)
-                return ChromaticStep(@params, doc, selections, Expand);
+            {
+                var chromatic = ChromaticStep(@params, doc, selections, Expand);
+                if (@params.WantAccidentals && chromatic.Edits.Length == 1)
+                    chromatic.Accidentals = AccidentalsOf(uri, doc.Text[..chromatic.Edits[0].Start] + chromatic.Edits[0].NewText + doc.Text[chromatic.Edits[0].End..], selections[0].Start, @params.RenderName, Expand);
+                return chromatic;
+            }
             // A note dragged and let go, or held still: all the way at once, the others held.
             if (@params.HoldOthers && selections.Count == 1)
             {
@@ -59,7 +64,12 @@ public sealed partial class LilySharpLanguageServer
                     System.Math.Min(positions ? @params.StaffPositions : @params.Count, MaxStepsAtOnce),
                     positions ? NoteStepper.NoteDrag.StaffPositions : NoteStepper.NoteDrag.Octaves, Expand);
                 if (moved != null)
-                    return new StepResponse { Edits = [TheDifference(doc.Text, moved)], Version = doc.Version };
+                    return new StepResponse
+                    {
+                        Edits = [TheDifference(doc.Text, moved)],
+                        Accidentals = @params.WantAccidentals ? AccidentalsOf(uri, moved, selections[0].Start, @params.RenderName, Expand) : [],
+                        Version = doc.Version,
+                    };
             }
             NoteStepper.StepResult StepOn(string on, SyntaxTree tree) => NoteStepper.Step(on, tree, selections, @params.Direction,
                 Expand, @params.IncludeStretch, @params.Semitone, FacesForStep);
@@ -136,6 +146,74 @@ public sealed partial class LilySharpLanguageServer
             Program = heard?.Program ?? -1,
             Version = doc.Version,
         };
+    }
+
+    // A session of its own, for a note's accidental in a drag: it draws texts the document never
+    // was, and the preview's session has a picture to keep a delta against. Only the last score asked.
+    private readonly object _dragDrawGate = new();
+    private (System.Uri Uri, string? Render, LilySharp.Core.Svg.IncrementalCompiler Session)? _dragDraw;
+
+    /// <summary>The accidental the note at <paramref name="at"/> is drawn with in
+    /// <paramref name="text"/> (owner's request 2026-11-03: as it goes, on and off by where it is).
+    /// Read off the score itself, not worked out again: whether a note needs one hangs on the key,
+    /// the bar before it and the staff's other voices, its place on the rest of a chord, and what
+    /// it looks like on a natural that restores or a courtesy's brackets.</summary>
+    private DraggedGlyph[] AccidentalsOf(System.Uri uri, string text, int at, string? render, System.Func<string, SyntaxTree> expand)
+    {
+        try
+        {
+            var tree = expand(text);
+            string svg;
+            lock (_dragDrawGate)
+            {
+                if (_dragDraw is not { } held || held.Uri != uri || held.Render != render)
+                    _dragDraw = held = (uri, render, new LilySharp.Core.Svg.IncrementalCompiler(tree,
+                        LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview(), render));
+                svg = held.Session.RenderIncremental(tree);
+            }
+            return AccidentalsDrawnAt(svg, at);
+        }
+        catch (System.Exception)
+        {
+            // The note goes on without one; the score comes back drawn when it is let go.
+            return [];
+        }
+    }
+
+    /// <summary>The glyphs left of the first head with that source position, on its line.</summary>
+    internal static DraggedGlyph[] AccidentalsDrawnAt(string svg, int at)
+    {
+        string pos = "data-pos=\"" + at.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\"";
+        static double Attr(string tag, string name)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(tag, "\\b" + name + "=\"([-0-9.]+)\"");
+            return m.Success ? double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) : 0;
+        }
+        int box = -1;
+        for (int i = svg.IndexOf(pos, System.StringComparison.Ordinal); i >= 0; i = svg.IndexOf(pos, i + 1, System.StringComparison.Ordinal))
+        {
+            int open = svg.LastIndexOf('<', i);
+            if (string.CompareOrdinal(svg, open, "<rect class=\"nh-hit\"", 0, 20) == 0) { box = open; break; }
+        }
+        if (box < 0)
+            return [];
+        string rect = svg[box..svg.IndexOf('>', box)];
+        double x = Attr(rect, "x"), y = Attr(rect, "y") + Attr(rect, "height") / 2;
+        var found = new List<DraggedGlyph>();
+        for (int i = svg.IndexOf(pos, System.StringComparison.Ordinal); i >= 0; i = svg.IndexOf(pos, i + 1, System.StringComparison.Ordinal))
+        {
+            int open = svg.LastIndexOf('<', i);
+            if (string.CompareOrdinal(svg, open, "<text", 0, 5) != 0)
+                continue;
+            int close = svg.IndexOf('>', i);
+            string tag = svg[open..close];
+            double gx = Attr(tag, "x");
+            if (gx >= x - 0.001 || System.Math.Abs(Attr(tag, "y") - y) > 0.5)
+                continue;
+            int end = svg.IndexOf("</text>", close, System.StringComparison.Ordinal);
+            found.Add(new DraggedGlyph { Glyph = svg[(close + 1)..end], Dx = gx - x, FontSize = Attr(tag, "font-size") });
+        }
+        return [.. found];
     }
 
     /// <summary>More than a drag has room for.</summary>

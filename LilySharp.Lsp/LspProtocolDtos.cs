@@ -27,10 +27,6 @@ namespace LilySharp.Lsp;
 public class SvgParams
 {
     public TextDocumentIdentifier TextDocument { get; set; } = null!;
-    /// <summary>Draw this text in place of the document's, which stays as it is: a note in a
-    /// drag, where it would land (owner's request 2026-11-03). Through the session and the page
-    /// deltas of any other preview, so a change of a note costs what a keystroke does.</summary>
-    public string? DragText { get; set; }
     /// <summary>
     /// Optional render name to select which render block to use.
     /// If null, returns the first score render or default preview.
@@ -973,6 +969,19 @@ public class StepParams
     /// selection, spelled by <c>NoteStepper.ChromaticStep</c> (a note dragged with Alt, owner's
     /// request 2026-11-03). Optional; absent means false.</summary>
     public bool Chromatic { get; set; }
+    /// <summary>With <see cref="HoldOthers"/>: also say what accidental the moved note then has
+    /// (<see cref="StepResponse.Accidentals"/>), on the score <see cref="RenderName"/> draws.</summary>
+    public bool WantAccidentals { get; set; }
+    public string? RenderName { get; set; }
+}
+
+/// <summary>One glyph of the accidental a dragged note would be drawn with, beside its head.</summary>
+public class DraggedGlyph
+{
+    public string Glyph { get; set; } = "";
+    /// <summary>From the head's x, as the score draws it.</summary>
+    public double Dx { get; set; }
+    public double FontSize { get; set; }
 }
 
 /// <summary>Asks what the preview may drag: <c>lilysharp/noteHeads</c>.</summary>
@@ -1015,6 +1024,9 @@ public class StepTextEdit
 /// </summary>
 public class StepResponse
 {
+    /// <summary>What <see cref="StepParams.WantAccidentals"/> asks: none where it needs none, and
+    /// a natural, or two glyphs and their brackets, where it does.</summary>
+    public DraggedGlyph[] Accidentals { get; set; } = System.Array.Empty<DraggedGlyph>();
     public bool Fallback { get; set; }
     public StepTextEdit[] Edits { get; set; } = System.Array.Empty<StepTextEdit>();
     public string? Message { get; set; }

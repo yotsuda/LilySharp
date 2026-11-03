@@ -45,6 +45,8 @@ export interface StepAuditionDeps {
 }
 
 interface StepResponse {
+    /** The moved note's accidental, when asked: WantAccidentals. */
+    Accidentals?: Array<{ Glyph: string, Dx: number, FontSize: number }>;
     Fallback: boolean;
     Edits: { Start: number; End: number; NewText: string }[];
     Message?: string | null;
@@ -102,9 +104,8 @@ export interface NoteDragSteps {
     markWords(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<{ from: string, to: string, positions?: number } | undefined>;
     /** Writes it, one edit and one undo step; false when it writes nothing. */
     write(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<boolean>;
-    /** The text with the note where the drag has it, the others held, and how many staff positions
-     * away it stands; nothing is written. Undefined when it goes nowhere. */
-    landing(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<{ text: string, positions: number } | undefined>;
+    /** The accidental the note would be drawn with where the drag has it; nothing is written. */
+    accidentals(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode, renderName: string | undefined): Promise<Array<{ Glyph: string, Dx: number, FontSize: number }>>;
     /** A tempo's number where a drag has it, written at once, all of one drag one undo. */
     tempoLive(doc: vscode.TextDocument, position: number, value: number): void;
     /** The drag let go, or cancelled with its first number written back. */
@@ -232,8 +233,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         }
     };
 
-    const askSteps = (doc: vscode.TextDocument, offset: number, steps: number, mode: NoteDragMode, holdOthers = false) =>
-        deps.getClient()!.sendRequest<StepResponse>('lilysharp/step', {
+    const stepsAsked = (doc: vscode.TextDocument, offset: number, steps: number, mode: NoteDragMode, holdOthers: boolean) => ({
             TextDocument: { uri: doc.uri.toString() },
             Selections: [{ Start: offset, End: offset }],
             Direction: steps > 0 ? 1 : -1,
@@ -242,7 +242,9 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             Semitone: mode === 'position' || mode === 'mark',
             HoldOthers: holdOthers,
             Chromatic: mode === 'chromatic',
-        });
+    });
+    const askSteps = (doc: vscode.TextDocument, offset: number, steps: number, mode: NoteDragMode, holdOthers = false) =>
+        deps.getClient()!.sendRequest<StepResponse>('lilysharp/step', stepsAsked(doc, offset, steps, mode, holdOthers));
     /** The word of what a drag steps at `offset`: a mark's name, any shape and placement; a chords-row
      * entry, a tempo's number. */
     const markWordAt = (text: string, offset: number) => /^!?[\w#+/-]+(?:\([^)]*\))?(?:\.(?:up|down))?/.exec(text.slice(offset))?.[0] ?? '';
@@ -267,20 +269,15 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         drag.written = true;
     };
     const noteDrag: NoteDragSteps = {
-        landing: async (doc, position, steps, mode) => {
-            if (!deps.getClient() || !deps.isReady() || steps === 0) { return undefined; }
-            const text = doc.getText();
-            const offset = jumpOffsetFor(text, position);
-            const response = await askSteps(doc, offset, steps, mode, true);
-            if (response.Fallback || response.Edits.length === 0 || response.Version !== doc.version) { return undefined; }
-            let after = text;
-            for (const e of [...response.Edits].sort((a, b) => b.Start - a.Start)) {
-                after = after.slice(0, e.Start) + e.NewText + after.slice(e.End);
-            }
-            const positions = mode === 'octave' ? steps * 7
-                : mode === 'position' ? steps
-                : chromaticPositions(pitchNameAt(text, offset), pitchNameAt(after, offset), steps);
-            return { text: after, positions };
+        accidentals: async (doc, position, steps, mode, renderName) => {
+            if (!deps.getClient() || !deps.isReady() || steps === 0) { return []; }
+            const offset = jumpOffsetFor(doc.getText(), position);
+            const response = await deps.getClient()!.sendRequest<StepResponse>('lilysharp/step', {
+                ...stepsAsked(doc, offset, steps, mode, true),
+                WantAccidentals: true,
+                RenderName: renderName ?? null,
+            });
+            return response.Accidentals ?? [];
         },
         tempoLive: (doc, position, value) => {
             tempoQueue = tempoQueue.then(async () => {

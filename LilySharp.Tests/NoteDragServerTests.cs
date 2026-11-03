@@ -430,23 +430,63 @@ public class NoteDragServerTests
         Assert.Equal(keys, walked);
     }
 
-    [Fact]
-    public void AHeldNote_IsDrawn_AndTheDocumentStaysAsItIs()
+    private static DraggedGlyph[] AccidentalsAt(string music, string word, int direction, int count, bool chromatic, string part = "clef treble")
     {
-        string text = Book("c'4 d e f |");
-        string landed = Book("e'4 d, e f |");
+        string text = Book(music, part);
         var server = Open(text, out var uri);
-        var doc = new TextDocumentIdentifier { Uri = uri };
-        string SvgOf(string? drag) => server.GetSvg(new SvgParams { TextDocument = doc, DragText = drag }).Svg!;
-        string first = SvgOf(null);
-        string drawn = SvgOf(landed);
-        Assert.NotEqual(first, drawn);
-        // The same text written is the same picture.
-        var other = Open(landed, out var otherUri);
-        Assert.Equal(other.GetSvg(new SvgParams { TextDocument = new TextDocumentIdentifier { Uri = otherUri } }).Svg, drawn);
-        // ...and the document is as it was: its own picture, its own steps.
-        Assert.Equal(first, SvgOf(null));
-        Assert.Equal(1, server.Step(new StepParams { TextDocument = doc, Selections = [At(text.IndexOf("c'", text.IndexOf("{ m {", System.StringComparison.Ordinal), System.StringComparison.Ordinal))], Direction = 1, Semitone = true, HoldOthers = true, StaffPositions = 1 }).Edits.Length);
+        var r = server.Step(new StepParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Selections = [At(text.IndexOf(word, text.IndexOf("{ m {", System.StringComparison.Ordinal), System.StringComparison.Ordinal))],
+            Direction = direction,
+            Semitone = !chromatic,
+            StaffPositions = chromatic ? 0 : count,
+            Count = chromatic ? count : 1,
+            Chromatic = chromatic,
+            HoldOthers = true,
+            WantAccidentals = true,
+        });
+        return r.Accidentals;
+    }
+
+    // On and off by where it goes, the key and the bar before it deciding.
+    [Theory]
+    [InlineData("e'4 g a b |", "e'", 1, 1, false, "clef treble\n  key g major", 0)]  // to F sharp: the key has it
+    [InlineData("f'4 g a b |", "f'", 1, 1, true, "clef treble\n  key g major", 0)]   // the same, by a semitone
+    [InlineData("fis'4 g a b |", "fis'", -1, 1, true, "clef treble\n  key g major", 1)] // F natural against the key
+    [InlineData("f4 e a b |", "e a", 1, 1, false, "clef treble\n  key g major", 1)]  // the F natural before it: the sharp again
+    [InlineData("c'4 g a b |", "c'", 1, 1, true, "clef treble", 1)]                  // C sharp in C major
+    [InlineData("cis'4 g a b |", "cis'", 1, 1, true, "clef treble", 0)]              // on to D: it goes
+    [InlineData("cis'4 c d e |", "c d", 1, 1, false, "clef treble", 0)]              // the C of that bar steps on to D
+    public void TheAccidental_ComesAndGoes(string music, string word, int direction, int count, bool chromatic, string part, int glyphs)
+    {
+        var found = AccidentalsAt(music, word, direction, count, chromatic, part);
+        Assert.Equal(glyphs, found.Length);
+        foreach (var g in found)
+        {
+            Assert.True(g.Dx < 0, "left of the head");
+            Assert.False(string.IsNullOrEmpty(g.Glyph));
+            Assert.True(g.FontSize > 0);
+        }
+    }
+
+    // As the score draws it, the same glyph at the same place from the head.
+    [Fact]
+    public void TheAccidental_IsWhatTheScoreDraws()
+    {
+        var found = Assert.Single(AccidentalsAt("c'4 g a b |", "c'", 1, 1, true));
+        string landed = Book("cis'4 g a b |");
+        var server = Open(landed, out var uri);
+        string svg = server.GetSvg(new SvgParams { TextDocument = new TextDocumentIdentifier { Uri = uri } }).Svg!;
+        var direct = Assert.Single(LilySharpLanguageServer.AccidentalsDrawnAt(svg, landed.IndexOf("cis'", System.StringComparison.Ordinal)));
+        Assert.Equal(direct.Glyph, found.Glyph);
+        Assert.Equal(direct.Dx, found.Dx, 3);
+    }
+
+    [Fact]
+    public void AChordsMember_HasItsOwn()
+    {
+        Assert.Single(AccidentalsAt("<c' e g>2 d2 |", "e g", 1, 2, true));   // E to F sharp
     }
 
     [Fact]
