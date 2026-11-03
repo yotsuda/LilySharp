@@ -227,6 +227,8 @@ internal sealed class ImportNote : ImportItem
     /// <summary>When this note OPENS a tuplet: the ratio (actual in the time of normal,
     /// e.g. 3 in 2 for a triplet), emitted as <c>tuplet A/N { </c> before it.</summary>
     public (int Actual, int Normal)? TupletStart { get; set; }
+    /// <summary>The tuplet it opens draws no number and no bracket: <c>tuplet A/N bare { </c>.</summary>
+    public bool TupletBare { get; set; }
     /// <summary>When this note CLOSES a tuplet (a <c>}</c> is emitted after it).</summary>
     public bool TupletStop { get; set; }
     /// <summary>Grace notes written immediately before this note, emitted as a leading

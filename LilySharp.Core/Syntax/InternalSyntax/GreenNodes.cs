@@ -776,8 +776,9 @@ internal sealed class TupletExpressionGreen : GreenSyntaxNode
         SyntaxToken numerator,
         SyntaxToken slash,
         SyntaxToken denominator,
+        SyntaxToken? appearance,
         GreenNode body)
-        : base(SyntaxKind.TupletExpression, [tupletKeyword, numerator, slash, denominator, body])
+        : base(SyntaxKind.TupletExpression, [tupletKeyword, numerator, slash, denominator, appearance, body])
     {
     }
 }

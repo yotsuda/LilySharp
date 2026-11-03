@@ -2871,7 +2871,7 @@ public sealed class MusicXmlExporter
                     }
                     if (firstIdx >= 0)
                     {
-                        body[firstIdx].ExtraNotations.Add(TupletNotation("start", tupletNumber));
+                        body[firstIdx].ExtraNotations.Add(TupletNotation("start", tupletNumber, tuplet.IsBare));
                         body[lastIdx].ExtraNotations.Add(TupletNotation("stop", tupletNumber));
                     }
                 }
@@ -6441,10 +6441,19 @@ public sealed class MusicXmlExporter
 
     /// <summary>A &lt;tuplet&gt; notation bracket (start / stop) for the visual
     /// bracket + ratio number, alongside the note's &lt;time-modification&gt;.</summary>
-    private static System.Xml.Linq.XElement TupletNotation(string type, int number)
-        => new("tuplet",
+    private static System.Xml.Linq.XElement TupletNotation(string type, int number, bool bare = false)
+    {
+        var tuplet = new System.Xml.Linq.XElement("tuplet",
             new System.Xml.Linq.XAttribute("type", type),
             new System.Xml.Linq.XAttribute("number", number));
+        // `tuplet 3/2 bare`: MusicXML's own way to draw neither, on the start.
+        if (bare)
+        {
+            tuplet.Add(new System.Xml.Linq.XAttribute("bracket", "no"));
+            tuplet.Add(new System.Xml.Linq.XAttribute("show-number", "none"));
+        }
+        return tuplet;
+    }
 
     private (string type, int dots) GetNoteType(Fraction duration)
     {

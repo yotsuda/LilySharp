@@ -280,6 +280,9 @@ internal static class TupletBracketEngraver
         foreach (int ti in order)
         {
             var tuplet = tuplets[ti];
+            // `tuplet 3/2 bare`: nothing to draw, so nothing to make room for.
+            if (tuplet.Bare)
+                continue;
             // Find measure layout — BY MEASURE INDEX: the array is keyed by it (its callers
             // hand over the score's measures in index order), and a caller scoped to one
             // system leaves the other systems' slots empty

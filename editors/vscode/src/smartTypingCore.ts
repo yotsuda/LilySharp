@@ -2752,6 +2752,8 @@ export function inSettingsBlock(text: string, offset: number): boolean {
 function barsBlock(text: string, open: number): boolean {
     const named = wordBefore(text, open);
     if (!named.word || isDigit(named.word[0]) || NOT_BARS.has(named.word)) { return false; }
+    // `tuplet 3/2 bare {`: the word after a ratio is no name.
+    if (named.word === 'bare' && isDigit(wordBefore(text, named.at).word[0] ?? '')) { return false; }
     return !NOT_BARS.has(wordBefore(text, named.at).word);
 }
 

@@ -415,9 +415,12 @@ internal sealed partial class Parser
         var numerator = Expect(SyntaxKind.IntegerLiteral);
         var slash = Expect(SyntaxKind.Slash);
         var denominator = Expect(SyntaxKind.IntegerLiteral);
+        // How the tuplet looks, one word in this place and no other (owner's decision 2026-11-03):
+        // `bare` draws no number and no bracket. A word here takes no name from anything.
+        var appearance = Current.Kind == SyntaxKind.Identifier && Current.Text == TupletExpressionSyntax.BareWord ? Advance() : null;
         var body = ParseMusicBlock();
 
-        return new TupletExpressionGreen(tupletKeyword, numerator, slash, denominator, body);
+        return new TupletExpressionGreen(tupletKeyword, numerator, slash, denominator, appearance, body);
     }
     private GraceExpressionGreen ParseGraceExpression()
     {

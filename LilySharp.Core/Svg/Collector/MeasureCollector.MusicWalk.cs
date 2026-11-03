@@ -2152,7 +2152,8 @@ public sealed partial class MeasureCollector
                 tuplet.SourceStart,
                 nestingDepth,
                 _v.Cursor.StaffIndex,
-                _v.Cursor.VoiceIndex
+                _v.Cursor.VoiceIndex,
+                tuplet.IsBare
             ));
         }
         // In grace time the span is kept for the grace beam's beamlets instead

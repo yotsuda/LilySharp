@@ -2910,7 +2910,12 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
 
 ### 8.5 Tuplets and Grace notes
 
-Tuplet         = 'tuplet' , Integer , '/' , Integer , MusicBlock ;   (* nesting allowed *)
+Tuplet         = 'tuplet' , Integer , '/' , Integer , [ 'bare' ] , MusicBlock ;   (* nesting allowed *)
+                 (* 'bare' (owner's decision 2026-11-03): drawn with NO NUMBER AND NO BRACKET, as
+                    engravers leave them off where the music plainly runs in threes. The durations,
+                    the beams and the sound are the same. It is a word of this place alone: a part
+                    may be called bare. The twin writes \once \omit TupletNumber \once \omit
+                    TupletBracket, MusicXML bracket="no" show-number="none". *)
 Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , MusicBlock ;
                  (* 'afterGrace' follows its MAIN note — the note, chord or rest written just
                     before it, past any tie/slur/beam mark — and its run takes that note's last

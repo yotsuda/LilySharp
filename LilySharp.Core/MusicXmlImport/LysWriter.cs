@@ -1150,7 +1150,7 @@ internal static class LysWriter
                     rest += "@" + art;
                 if (note.TupletStart is { } rt)
                 {
-                    tokens.Add($"tuplet {rt.Actual}/{rt.Normal} {{");
+                    tokens.Add($"tuplet {rt.Actual}/{rt.Normal}{(note.TupletBare ? " bare" : "")} {{");
                     tupletDepth++;
                 }
                 tokens.Add(rest);
@@ -1220,7 +1220,7 @@ internal static class LysWriter
             // Wrap a tuplet group: `tuplet A/N { … }` around the notes it spans.
             if (note.TupletStart is { } tr)
             {
-                tokens.Add($"tuplet {tr.Actual}/{tr.Normal} {{");
+                tokens.Add($"tuplet {tr.Actual}/{tr.Normal}{(note.TupletBare ? " bare" : "")} {{");
                 tupletDepth++;
             }
             // Leading grace notes hang before the main note (inside any tuplet wrap).

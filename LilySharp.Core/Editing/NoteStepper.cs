@@ -183,6 +183,8 @@ public static partial class NoteStepper
         Duration,
         /// <summary>A chord symbol's quality, the symbol SELECTED (NoteStepper.Words.cs).</summary>
         ChordQuality,
+        /// <summary>How a tuplet looks, on its word <c>tuplet</c> or <c>bare</c> (NoteStepper.Words.cs).</summary>
+        TupletAppearance,
         /// <summary>A bar line's look — <c>|</c>, <c>||</c>, <c>|.</c>, <c>!</c> (NoteStepper.Words.cs).</summary>
         Barline,
         /// <summary>A music keyword among its kin — <c>grace</c> / <c>acciaccatura</c> /
@@ -203,7 +205,7 @@ public static partial class NoteStepper
             or TargetKind.Font or TargetKind.FontSize or TargetKind.Percent or TargetKind.StaffGroup
             or TargetKind.StaffOrTab or TargetKind.ScorePart or TargetKind.StaffLines
             or TargetKind.StaffSelector or TargetKind.KeywordValue or TargetKind.BarNumberEvery
-            or TargetKind.LayoutNumber or TargetKind.PaperSize or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength
+            or TargetKind.LayoutNumber or TargetKind.PaperSize or TargetKind.TupletRatio or TargetKind.TupletAppearance or TargetKind.MusicCount or TargetKind.PartialLength
             or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.Duration or TargetKind.ChordQuality
             or TargetKind.Barline or TargetKind.MusicKeyword or TargetKind.NavigationMark;
 
@@ -412,7 +414,7 @@ public static partial class NoteStepper
                 or TargetKind.StaffGroup or TargetKind.StaffOrTab or TargetKind.FontSize or TargetKind.ScorePart
                 or TargetKind.StaffLines or TargetKind.StaffSelector or TargetKind.KeywordValue
                 or TargetKind.BarNumberEvery or TargetKind.LayoutNumber or TargetKind.PaperSize or TargetKind.InstrumentPreset
-                or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength
+                or TargetKind.TupletRatio or TargetKind.TupletAppearance or TargetKind.MusicCount or TargetKind.PartialLength
                 or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.Duration or TargetKind.ChordQuality
                 or TargetKind.Barline or TargetKind.MusicKeyword or TargetKind.NavigationMark)
             {
@@ -441,6 +443,7 @@ public static partial class NoteStepper
                         ? LayoutNumberEdit(ln.Key, ln.Number, ln.Index, dir, semitone, ln.Sign)
                         : (null, "write a number"),
                     TargetKind.TupletRatio => TupletRatioEdit((TupletExpressionSyntax)t.Node, dir),
+                    TargetKind.TupletAppearance => TupletAppearanceEdit((TupletExpressionSyntax)t.Node, dir),
                     TargetKind.MusicCount => t.Node.Parent is BarlineSyntax or FormRepeatBlockSyntax
                         ? RepeatPlaysEdit((SyntaxTokenNode)t.Node, dir)
                         // The file's `capo N` (Semantics.CapoDirective): a fret a step, 1 to 11.

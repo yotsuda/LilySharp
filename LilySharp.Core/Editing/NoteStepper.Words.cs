@@ -426,6 +426,8 @@ public static partial class NoteStepper
                     return (TargetKind.MusicCount, fret);
                 case TupletExpressionSyntax tuplet when On(tuplet.Numerator, offset) || On(tuplet.Denominator, offset):
                     return (TargetKind.TupletRatio, tuplet);
+                case TupletExpressionSyntax tuplet when On(tuplet.TupletKeyword, offset) || On(tuplet.Appearance, offset):
+                    return (TargetKind.TupletAppearance, tuplet);
                 case RepeatExpressionSyntax repeat when On(repeat.Count, offset):
                     return (TargetKind.MusicCount, repeat.Count);
                 case RestSyntax rest when rest.GetChild(3) is SyntaxTokenNode { Text.Length: > 0 } count && On(count, offset):
@@ -458,6 +460,21 @@ public static partial class NoteStepper
         var (n, d) = TupletRatios[to];
         return (new Edit(tuplet.Numerator.Span.Start, tuplet.Denominator.Span.End, $"{n}/{d}"),
             $"tuplet {n}/{d}: {n} notes in the time of {d}");
+    }
+
+    /// <summary>One step of how a tuplet looks (owner's decision 2026-11-03): Up to <c>bare</c>, no
+    /// number and no bracket; Down back to what is drawn by default.</summary>
+    private static (Edit? Edit, string Message) TupletAppearanceEdit(TupletExpressionSyntax tuplet, int dir)
+    {
+        string ratio = $"tuplet {tuplet.Numerator.Text}/{tuplet.Denominator.Text}";
+        int after = tuplet.Denominator.Span.End;
+        if (dir > 0)
+            return tuplet.Appearance != null
+                ? (null, $"{ratio} {tuplet.Appearance.Text}: already drawn with no number and no bracket")
+                : (new Edit(after, after, " " + TupletExpressionSyntax.BareWord), $"{ratio} {TupletExpressionSyntax.BareWord}: no number and no bracket, the notes the same");
+        return tuplet.Appearance is { } word
+            ? (new Edit(after, word.Span.End, ""), $"{ratio}: its number and bracket drawn")
+            : (null, $"{ratio}: already its number and bracket drawn");
     }
 
     /// <summary>The note values a <c>partial</c> walks, longest first.</summary>

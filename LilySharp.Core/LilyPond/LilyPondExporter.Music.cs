@@ -1972,7 +1972,9 @@ public sealed partial class LilyPondExporter
         // frame and the note after it follows the tuplet's last, so the frame comes back.
         CarryFrameBack(buf);
         string body = NestedText(buf);
-        return $"\\tuplet {tup.Numerator.Text}/{tup.Denominator.Text} {{ {body} }}";
+        // `bare`: LilyPond's own way to draw neither, for this tuplet alone.
+        string hide = tup.IsBare ? "\\once \\omit TupletNumber \\once \\omit TupletBracket " : "";
+        return $"{hide}\\tuplet {tup.Numerator.Text}/{tup.Denominator.Text} {{ {body} }}";
     }
 
     /// <summary>

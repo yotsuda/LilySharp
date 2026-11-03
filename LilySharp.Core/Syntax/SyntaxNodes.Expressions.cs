@@ -354,8 +354,17 @@ public sealed class TupletExpressionSyntax : SyntaxNode
     public SyntaxTokenNode Slash => (SyntaxTokenNode)GetChild(2)!;
     /// <summary>The ratio denominator token.</summary>
     public SyntaxTokenNode Denominator => (SyntaxTokenNode)GetChild(3)!;
+    /// <summary>The word after the ratio, how the tuplet looks, or null.</summary>
+    public SyntaxTokenNode? Appearance => GetChild(4) as SyntaxTokenNode;
     /// <summary>The tuplet's music block.</summary>
-    public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(4)!;
+    public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(5)!;
+
+    /// <summary>The word of a tuplet drawn with no number and no bracket.</summary>
+    public const string BareWord = "bare";
+
+    /// <summary><c>tuplet 3/2 bare { … }</c>: no number and no bracket on the page, the same
+    /// durations and the same beams (owner's decision 2026-11-03).</summary>
+    public bool IsBare => Appearance?.Text == BareWord;
 
     /// <summary>
     /// Gets the tuplet ratio (e.g., 3 for triplets)

@@ -1082,6 +1082,7 @@ describe('rule 32 counts a closed voice span in the bar it stands in', () => {
 describe('rule 32 counts bars, not the bodies inside them', () => {
     it('32. writes no bar line inside a tuplet, a grace or a repeat\'s alternatives', () => {
         typed('m { tuplet 3/2 { c4 d e f‸}', ' ', 'm { tuplet 3/2 { c4 d e f ‸}');
+        typed('m { tuplet 3/2 bare { c4 d e f‸}', ' ', 'm { tuplet 3/2 bare { c4 d e f ‸}');
         typed('m { grace { c4 d e f‸}', ' ', 'm { grace { c4 d e f ‸}');
         typed('m { repeat volta 2 { c d e f‸}', ' ', 'm { repeat volta 2 { c d e f ‸}');
     });

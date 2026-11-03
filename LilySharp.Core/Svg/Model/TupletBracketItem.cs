@@ -56,7 +56,10 @@ public sealed record TupletBracketItem(
     // the same reading every consumer of a VoiceIndex uses, because they all index the
     // staff's array with it (score.Voices[tie.VoiceIndex], AnchorItem, and the filter in
     // AddressedTo below).
-    int VoiceIndex = 0
+    int VoiceIndex = 0,
+    // `tuplet 3/2 bare { … }`: drawn with no number and no bracket. The item stays, for the beams
+    // (BeamDetector reads its span whatever is drawn).
+    bool Bare = false
 )
 {
     // Identity, not value equality: see ModelIdentity.

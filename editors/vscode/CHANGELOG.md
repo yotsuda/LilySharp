@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **`tuplet 3/2 bare { … }` draws a tuplet with no number and no bracket**, the notes, beams and sound the same; `Ctrl+Shift+Up` / `Down` on the word `tuplet` write and take away `bare`. In the LilyPond and MusicXML exports too, and read back from MusicXML.
 - **A score's own `transpose` moves all of it**: `score x transpose d` moved its notes and key while its chord names, `@chord`s and sound stayed, and the MusicXML export moved nothing. A named `diagram(…)` item draws the moved chord. The LilyPond export's chord names too.
 - **`Ctrl+Shift+PageUp` / `PageDown` on a named `@chord(…)` or `diagram(…)` walks the seventh chords of the key**, as on a `chords` row entry: in C major `@chord(Cmaj7)` → `@chord(Dm7)`, and a named `diagram(…)` or `chord(…)` item the same; a shape with no name moves nothing on this pair, an `@chord(x32010)` as a `diagram(x32010)`.
 - **A click on a chord's note goes to that note**: the upper half of a lower note used to go to the note above it.
@@ -12,7 +13,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **The Range and practice panels drag up behind the header**, which stays whole, keeping as much in sight under it as at the other edges.
 - **The metronome button matches the Range button** in the preview's header: the same size, a solid icon, pressed in while its menu is open, and no ▼.
 - **Two notes of a chord on one string warn** (LYS1063): the tab drew both on one line.
-- **One pitch twice in a chord warns** (LYS1064), and beside a second it is drawn as one head: in `<a b b>` a b lay on the a.
+- `[engraving]` **One pitch twice in a chord warns** (LYS1064), and beside a second it is drawn as one head: in `<a b b>` a b lay on the a.
 - **The typing aids read `es`, `as`, `eses` and `ases` as notes**: they were typed as pressed.
 - **A beam typed at the head of a bar**: `c8 d | e|` + `[` is `c8 d | e[| f]`. The note's length was not read from the bars before it.
 - **Typing on `chord(F#)`**: a digit or a dot on the word `chord` or `diagram` is its length: `c|hord(F#)` + `8` is `c|hord(F#)8`. In the parentheses keys are typed as pressed.

@@ -763,7 +763,10 @@ internal static class MusicXmlReader
         foreach (var tup in Els(notations, "tuplet"))
             switch ((string?)tup.Attribute("type"))
             {
-                case "start": note.TupletStart = ReadTimeModification(el); break;
+                case "start":
+                    note.TupletStart = ReadTimeModification(el);
+                    note.TupletBare = (string?)tup.Attribute("bracket") == "no" && (string?)tup.Attribute("show-number") == "none";
+                    break;
                 case "stop": note.TupletStop = true; break;
             }
     }

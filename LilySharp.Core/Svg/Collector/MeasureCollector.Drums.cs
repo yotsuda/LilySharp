@@ -39,7 +39,7 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>A <c>tuplet</c> written in a chart line: the time it covers and its ratio.</summary>
-    private sealed record DrumTupletRun(Fraction Start, Fraction End, Fraction Scale, int Ratio, int Base, int SourceStart);
+    private sealed record DrumTupletRun(Fraction Start, Fraction End, Fraction Scale, int Ratio, int Base, int SourceStart, bool Bare);
 
     /// <summary>One item of a merged voice: a chord of hits (or one), or a rest when
     /// <see cref="Hits"/> is null, at a written value; <see cref="Run"/> is the tuplet it
@@ -328,7 +328,7 @@ public sealed partial class MeasureCollector
                         var start = Time;
                         if (!Read(owner.GatherVoiceMusicNodes(tuplet.Body), inner, id))
                             return false;
-                        runs[id] = new DrumTupletRun(start, Time, inner, tuplet.TupletRatio, tuplet.BaseDivision, tuplet.SourceStart);
+                        runs[id] = new DrumTupletRun(start, Time, inner, tuplet.TupletRatio, tuplet.BaseDivision, tuplet.SourceStart, tuplet.IsBare);
                         break;
                     }
                     case RepeatExpressionSyntax repeat when repeat.RepeatType.Text is "unfold" or "percent":
@@ -480,7 +480,7 @@ public sealed partial class MeasureCollector
             for (; i < pieces.Count && pieces[i].Run == run; i++)
                 written += await EmitDrumPiece(pieces[i], builder, stemUp, run.Scale, chartStart);
             _tupletBrackets.Add(new TupletBracketItem(run.Ratio, run.Base, first, builder.CurrentItemCount - 1,
-                measureIndex, run.SourceStart, 0, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex));
+                measureIndex, run.SourceStart, 0, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex, run.Bare));
             await AddDurationAsync(builder, written * run.Scale, run.SourceStart + 1);
         }
     }
