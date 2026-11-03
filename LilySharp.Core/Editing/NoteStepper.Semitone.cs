@@ -70,8 +70,8 @@ namespace LilySharp.Core.Editing;
 /// </remarks>
 public static partial class NoteStepper
 {
-    /// <summary>Where the things stand that a drag steps in place of a note: a dynamic on the
-    /// ladder, an articulation in a group, a tempo's number, a chord's shape, a clef. A step on any other
+    /// <summary>Where the things stand that a drag steps in place of a note: an articulation in a
+    /// group, a tempo's number, a chord's shape, a clef. A step on any other
     /// mark falls through to its note (the key's way, the caret being on the note's item), which a
     /// drag on that mark must not do: a bare <c>@chord</c> on <c>&lt;…&gt;</c> with no shape site
     /// would invert the chord.</summary>
@@ -81,7 +81,6 @@ public static partial class NoteStepper
         {
             bool steps = node switch
             {
-                DynamicSyntax dynamic => DynamicSteps(dynamic.DynamicToken.Text),
                 ArticulationSyntax => MarkSteps(text, node),
                 ChordEntrySyntax or ChordSyntax { IsShapeChord: true } => true,
                 MusicMarkSyntax { Name: "chord" } chord => ChordAnnotation.Of(chord) is { FromShapeItem: true }
@@ -102,11 +101,6 @@ public static partial class NoteStepper
                 yield return only.Span.Start;
         }
     }
-
-    /// <summary>The marks of <see cref="SteppingMarks"/> a drag writes as it goes, the score drawing
-    /// what it now says: the dynamics (owner's request 2026-11-03, to see it and judge).</summary>
-    public static IEnumerable<int> LiveSteppingMarks(SyntaxTree tree)
-        => tree.GetRoot().DescendantNodes<DynamicSyntax>().Where(d => DynamicSteps(d.DynamicToken.Text)).Select(d => d.SourceStart);
 
     /// <summary>The marks of <see cref="SteppingMarks"/> with many steps a hand wants to cross at
     /// once: a tempo's number, one beat a minute a step.</summary>

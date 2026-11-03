@@ -591,6 +591,11 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.equal(target(mark, () => [mark, page], 2, 12), mark);
         assert.equal(target(mark, () => [mark, head, page], 2, 15), mark);   // in the head's margin: a staccato's dot
         assert.equal(target(page, () => { throw new Error('nothing else asks either'); }, 2, 12), null);
+        // A mark no drag takes, a dynamic's box over a note: the note. Off the note, nothing.
+        const dynamic = at({ 'data-pos': '50' }, 7);
+        assert.equal(target(dynamic, () => [dynamic, head, page], 2, 12), head);
+        assert.equal(target(dynamic, () => [dynamic, page], 2, 12), null);
+        assert.equal(target(dynamic, () => [dynamic, head, page], 2, 15), null);
         // A chord: the head above lies over the one pressed, and its box reaches here.
         const headsAt = new Set([39, 41]);
         const above = at({ 'data-pos': '41' }, 7);
@@ -700,6 +705,9 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.equal(clickOf(lower, () => [lower, page], 2, 12), lower);
         assert.equal(clickOf(mark, () => [mark, lower, page], 2, 12), lower);     // a mark's box over a head
         assert.equal(clickOf(mark, () => [mark, page], 2, 12), mark);
+        const box50 = { classList: { contains: () => false }, hasAttribute: () => true, getAttribute: () => '50' };
+        assert.equal(clickOf(box50, () => [box50, lower, page], 2, 12), lower);   // a dynamic's box over a head
+        assert.equal(clickOf(box50, () => [box50, page], 2, 12), box50);
         assert.equal(clickOf(mark, () => [mark, lower, page], 2, 15), mark);      // in its margin
         assert.equal(clickOf(page, never, 2, 12), page);
         assert.equal(clickOf(null, never, 2, 12), null);
@@ -755,10 +763,9 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         show(press);                       // the same again, a frame later: nothing to write
         assert.equal(posted.length, 1);
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
-        assert.match(source, /if \(press\.tempo !== undefined\) \{\s+showTempoDrag\(press\);\s+\} else if \(press\.isLive\) \{[\s\S]{0,200}?markDragLive[\s\S]{0,120}?\} else if \(press\.isMark\)/);
+        assert.match(source, /if \(press\.tempo !== undefined\) \{\s+showTempoDrag\(press\);\s+\} else if \(press\.isMark\)/);
         assert.match(source, /if \(press\.tempo !== undefined\) \{ vscode\.postMessage\(\{ type: 'tempoDragEnd' \}\); return; \}/);
-        assert.match(source, /if \(notePress\.tempo !== undefined\) cancelTempoDrag\(notePress\);\s+if \(notePress\.isLive\) cancelLiveMark\(notePress\);\s+endNoteDrag\(notePress\);\s+noteDragged = true;/);
-        assert.match(source, /if \(press\.isLive\) \{ vscode\.postMessage\(\{ type: 'markDragLiveEnd' \}\); return; \}/);
+        assert.match(source, /if \(notePress\.tempo !== undefined\) cancelTempoDrag\(notePress\);\s+endNoteDrag\(notePress\);\s+noteDragged = true;/);
         assert.match(source, /const FINE_MARK_DRAG_PIXELS = 4;/);   // owner's feel, 2026-11-03: 3 was a little quick
         const steps = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'stepAudition.ts'), 'utf8');
         assert.match(steps, /undoStopBefore: !drag\.written, undoStopAfter/);

@@ -37,6 +37,9 @@ Step input from a MIDI keyboard. Deferred until there is a keyboard to try it wi
   typing faster, and does not want the mouse to become the way Lily# is written: people are to be
   led to the keyboard. What `Ctrl+Shift+Up` can step may be dragged; beyond that, no new mouse
   editing, and no more menus.
+- **Dragging a dynamic in the preview** (2026-11-03): built, then redrawn as the mouse moved to see it
+  and judge, then taken out. The owner found it not intuitive and at odds with how other symbols are
+  edited, and `Ctrl+Shift+Up` does the same while leading people to the editor.
 - **Dragging a key signature in the preview** (2026-11-03): tried, with the signature redrawn as the
   mouse moved. A key changes the signature's width, so the systems reflow and the staves move under
   the hand; the owner took it out. `Ctrl+Shift+Up` steps a key. A clef and the marks stay draggable,

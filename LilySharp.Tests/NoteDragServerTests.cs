@@ -227,22 +227,13 @@ public class NoteDragServerTests
     }
 
     [Fact]
-    public void TheDynamics_AreNamedAsWrittenAsADragGoes()
-    {
-        string text = Book("c'4@mf d@staccato e@p f@text(\"x\") |");
-        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(text);
-        Assert.Equal([text.IndexOf("@mf", System.StringComparison.Ordinal), text.IndexOf("@p", System.StringComparison.Ordinal)], LilySharp.Core.Editing.NoteStepper.LiveSteppingMarks(tree).Order());
-        Assert.All(LilySharp.Core.Editing.NoteStepper.LiveSteppingMarks(tree), at => Assert.Contains(at, LilySharp.Core.Editing.NoteStepper.SteppingMarks(text, tree)));
-    }
-
-    [Fact]
     public void TheMarks_AreThoseWithANameToStep_AndStandAtTheirAt()
     {
         string text = Book("c'4@mf d@staccato e@fermata f@text(\"x\") g@stopped |");
         var server = Open(text, out var uri);
         var marks = server.NoteHeads(new NoteHeadsParams { TextDocument = new TextDocumentIdentifier { Uri = uri } }).Marks;
         string[] words = [.. marks.OrderBy(p => p).Select(p => new string(text[p..].TakeWhile(c => !" |".Contains(c)).ToArray()))];
-        Assert.Contains("@mf", words);
+        Assert.DoesNotContain("@mf", words);   // the keys alone step a dynamic (owner, 2026-11-03)
         Assert.Contains("@staccato", words);
         Assert.DoesNotContain(words, w => w.StartsWith("@text", System.StringComparison.Ordinal));
         Assert.DoesNotContain("@stopped", words);   // an articulation alone in the world

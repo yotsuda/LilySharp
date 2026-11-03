@@ -998,8 +998,6 @@ public class NoteHeadsResponse
     public int[] Marks { get; set; } = System.Array.Empty<int>();
     /// <summary>Those of <see cref="Marks"/> whose steps a drag takes in less of the mouse's way.</summary>
     public int[] FineMarks { get; set; } = System.Array.Empty<int>();
-    /// <summary>Those of <see cref="Marks"/> a drag writes as it goes.</summary>
-    public int[] LiveMarks { get; set; } = System.Array.Empty<int>();
     /// <summary>A ledger line's thickness in this file, in staff spaces.</summary>
     public double LedgerThickness { get; set; }
     /// <summary>How far a ledger line reaches past a head on each side, in the head's widths.</summary>
