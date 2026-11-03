@@ -672,6 +672,16 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.match(source, /switchDragCtrl\(notePress, e\.ctrlKey \|\| e\.metaKey\);/);
         assert.match(source, /window\.addEventListener\('keydown', ctrlInADrag\);\s+window\.addEventListener\('keyup', ctrlInADrag\);/);
     });
+    it('goes by the nearest only for a note with Ctrl', () => {
+        const stepsOf = pageFunction('dragStepsOf', {
+            noteDragSteps: () => 'whole',
+            noteOctaveSteps: () => 'nearest',
+        }) as (press: unknown, px: number, steps: number) => string;
+        assert.equal(stepsOf({ ctrl: true, isMark: false, perStep: 10 }, -6, 0), 'nearest');
+        assert.equal(stepsOf({ ctrl: false, isMark: false, perStep: 10 }, -6, 0), 'whole');
+        assert.equal(stepsOf({ ctrl: true, isMark: true, perStep: 12 }, -6, 0), 'whole');
+        assert.equal(stepsOf({ ctrl: false, isMark: true, perStep: 12 }, -6, 0), 'whole');
+    });
     it('goes to the nearest octave with Ctrl, and holds it on the way back', () => {
         const next = pageFunction('noteOctaveSteps', { NOTE_DRAG_HOLD: 0.25 }) as (px: number, per: number, steps: number) => number;
         const walk = (pixels: number[]) => pixels.reduce((steps, px) => next(px, 10, steps), 0);
