@@ -1197,6 +1197,30 @@ internal sealed class BeamDetector
     }
 
     /// <summary>
+    /// The stems of a beam across the staves when the pure distance knees it, each pointing into
+    /// the gap; null when it does not knee. Asked before the spacing, which reads the stems.
+    /// </summary>
+    /// <param name="items">The beam's members.</param>
+    /// <param name="pureOffsets">Each member's staff from the beam's, in positions up-positive.</param>
+    /// <remarks>LILYPOND-REF: lily/beam.cc:1047-1051 consider_auto_knees.</remarks>
+    internal static bool[]? KneeStemsOf(IReadOnlyList<MusicItem> items, double[] pureOffsets)
+    {
+        var detector = new BeamDetector();
+        var stems = new StemCandidate[items.Count];
+        for (int i = 0; i < stems.Length; i++)
+        {
+            var range = GetHeadRange(items[i]);
+            stems[i] = new StemCandidate(items[i], i, -1, detector.GetBeamCount(items[i]), 1, 1, range.Min, range.Max);
+        }
+        if (AutoKneeGapCenter(stems, pureOffsets) is not { } center)
+            return null;
+        var up = new bool[stems.Length];
+        for (int i = 0; i < up.Length; i++)
+            up[i] = (stems[i].HeadMin + stems[i].HeadMax) / 2.0 + pureOffsets[i] < center;
+        return up;
+    }
+
+    /// <summary>
     /// A cross-staff beam once the staves are placed: every member learns how far its own staff
     /// stands from the beam's (<see cref="BeamMember.StaffOffset"/>) and the knee is judged in
     /// that one frame. Detection could not — it runs before there is a distance, and read each

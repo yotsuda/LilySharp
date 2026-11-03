@@ -30,6 +30,10 @@ internal sealed record SlurLayout : BowLayout
     /// <summary>The slur model.</summary>
     public Model.SlurItem Slur { get; init; }
 
+    /// <summary>Whether a note under the slur stands on another staff (@cross): the slur is then
+    /// laid on the final systems and is in no skyline.</summary>
+    public bool CrossesStaves { get; init; }
+
     /// <summary>Direction: true = curve up, false = curve down.</summary>
     public override bool CurveUp => Slur.CurveUp;
 

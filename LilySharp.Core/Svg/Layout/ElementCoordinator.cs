@@ -3452,7 +3452,8 @@ internal sealed class ElementCoordinator
     private static SlurEdgeInfo ResolveSlurEdge(
         Voice voice, int voiceIndex, int measureIndex, int itemIndex, bool leftEdge,
         double columnX = double.NaN, double staffMiddleDown = double.NaN,
-        Dictionary<(int Voice, int Measure, int Item), BeamLayout>? beamByMember = null)
+        Dictionary<(int Voice, int Measure, int Item), BeamLayout>? beamByMember = null,
+        SystemLayout? system = null, int staffIndex = -1)
     {
         if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
             return default;
@@ -3516,7 +3517,10 @@ internal sealed class ElementCoordinator
             double halfStem = EngravingDefaults.StemThickness / 2.0;
             stemXLo = stemX - halfStem;
             stemXHi = stemX + halfStem;
-            stemBeginY = staffMiddleDown - col.HeadPositionToward(!stemUp) / 2.0;
+            // The head stands on the staff @cross moved it to; a beam's face is read about the
+            // beam's own staff, which is this one.
+            double headMiddleDown = staffMiddleDown + MovedDown(items[itemIndex], system, staffIndex);
+            stemBeginY = headMiddleDown - col.HeadPositionToward(!stemUp) / 2.0;
             if (TryGetBeamedStemTipDeviceY(beamByMember, voiceIndex, measureIndex, itemIndex,
                     stemX, staffMiddleDown, stemUp, out double tip))
                 stemTipY = tip;
@@ -3527,7 +3531,7 @@ internal sealed class ElementCoordinator
                     stemUp, StemCalculator.GetDurationLog(col.NoteValue), col.HeadPositionToward(stemUp),
                     GrobFontSize.GraceStemDetails) / 2.0;
             else
-                stemTipY = staffMiddleDown - EngravingDefaults.StaffMiddle
+                stemTipY = headMiddleDown - EngravingDefaults.StaffMiddle
                     + col.OutwardTipDeviceY(stemUp);
             var flag = beamed ? default
                 : bowFont is { } cueFont ? GlyphMetrics.GetFlagBBox(cueFont, col.NoteValue, stemUp)
@@ -3774,7 +3778,8 @@ internal sealed class ElementCoordinator
         ImmutableArray<GraceNoteItem> graceNotes,
         Dictionary<int, List<int>>? graceByMeasure,
         GraceObstacleGeom?[]? graceGeomCache,
-        VoiceCollisionTable voiceShifts)
+        VoiceCollisionTable voiceShifts,
+        int staffIndex = -1)
     {
         const double eps = 0.001;
         var obstacles = new List<SlurObstacle>();
@@ -3873,8 +3878,11 @@ internal sealed class ElementCoordinator
                     ? headCol.NoteValue
                     : GlyphMetrics.NoteValueOf(items[i]);
                 var headBox = BowHeadBox(items[i], headValue);
-                double topY = (staffMiddleDown - topPos.Value / 2.0) - headBox.Top;
-                double bottomY = (staffMiddleDown - bottomPos.Value / 2.0) - headBox.Bottom;
+                // LILYPOND-REF: lily/slur-scoring.cc:144 get_encompass_info — h->extent
+                //   (common_[Y_AXIS], Y_AXIS): the head on its own staff, in the common frame.
+                double headMiddleDown = staffMiddleDown + MovedDown(items[i], segSystem, staffIndex);
+                double topY = (headMiddleDown - topPos.Value / 2.0) - headBox.Top;
+                double bottomY = (headMiddleDown - bottomPos.Value / 2.0) - headBox.Bottom;
 
                 // stem_ / the stem-x_ move, only when the stem points WITH the slur.
                 // LILYPOND-REF: slur-scoring.cc:146-158.
@@ -3896,7 +3904,7 @@ internal sealed class ElementCoordinator
                     else
                         // Unbeamed: the drawn stem end, from the one house
                         // (staff-top frame, middle at EngravingDefaults.StaffMiddle).
-                        stemY = staffMiddleDown - EngravingDefaults.StaffMiddle
+                        stemY = headMiddleDown - EngravingDefaults.StaffMiddle
                             + col.OutwardTipDeviceY(col.StemUp);
                     obstacleX = stemX;
                 }
@@ -5106,6 +5114,8 @@ internal sealed class ElementCoordinator
 
         foreach (var slur in slurs)
         {
+            bool crossesStaves = staff is { HasMovedNotes: true }
+                && SlurCrossesStaves(score.Voices[slur.VoiceIndex], slur);
             // A slur whose other end is on a system this call was not handed (the per-system
             // staff skylines lay out ONE system) still has its piece here: SplitClipped below.
             measureMap.TryGetValue(slur.StartMeasureIndex, out var startInfo);
@@ -5244,11 +5254,11 @@ internal sealed class ElementCoordinator
                 // otherwise to the notehead (slurOffset). This lifts the slur clear of the beam.
                 var leftEdgeInfo = segment.IsFirst
                     ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.VoiceIndex, slur.StartMeasureIndex, slur.StartItemIndex, leftEdge: true,
-                        windowStartX, staffMiddleDown, beamByMember)
+                        windowStartX, staffMiddleDown, beamByMember, segSystem, staffIndex)
                     : default;
                 var rightEdgeInfo = segment.IsLast
                     ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.VoiceIndex, slur.EndMeasureIndex, slur.EndItemIndex, leftEdge: false,
-                        windowEndX, staffMiddleDown, beamByMember)
+                        windowEndX, staffMiddleDown, beamByMember, segSystem, staffIndex)
                     : default;
                 if (segment.IsFirst && startGrace is { } sgs && graceGeomCache != null)
                     leftEdgeInfo = WithGraceBeamedStem(leftEdgeInfo, score.Voices[slur.VoiceIndex], graceNotes, sgs,
@@ -5312,10 +5322,11 @@ internal sealed class ElementCoordinator
                 else
                 {
                     // The lift off the head is that head's own extent (a cue head is smaller).
-                    double startLift = HeadLift(segment.IsFirst
+                    var startBound = segment.IsFirst
                         ? ItemAt(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex)
-                        : EdgeColumnItem(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: true));
-                    segStartY = (staffMiddleDown - startStaffPos / 2.0)
+                        : EdgeColumnItem(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: true);
+                    double startLift = HeadLift(startBound);
+                    segStartY = (staffMiddleDown + MovedDown(startBound, segSystem, staffIndex) - startStaffPos / 2.0)
                         + (slur.CurveUp ? -startLift : startLift);
                     // A broken edge reads its bound column's whole extent, stem included.
                     if (!segment.IsFirst
@@ -5352,10 +5363,11 @@ internal sealed class ElementCoordinator
                     segEndY = endFace + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
                 {
-                    double endLift = HeadLift(segment.IsLast
+                    var endBound = segment.IsLast
                         ? ItemAt(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex)
-                        : EdgeColumnItem(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: false));
-                    segEndY = (staffMiddleDown - endStaffPos / 2.0)
+                        : EdgeColumnItem(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: false);
+                    double endLift = HeadLift(endBound);
+                    segEndY = (staffMiddleDown + MovedDown(endBound, segSystem, staffIndex) - endStaffPos / 2.0)
                         + (slur.CurveUp ? -endLift : endLift);
                     if (!segment.IsLast
                         && BrokenEdgeStemBaseY(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: false,
@@ -5409,7 +5421,7 @@ internal sealed class ElementCoordinator
                 var obstacles = BuildSlurObstacles(
                     score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown,
                     windowStartX, windowEndX, beamByMember, graceNotes,
-                    graceByMeasure, graceGeomCache, voiceShifts);
+                    graceByMeasure, graceGeomCache, voiceShifts, staffIndex);
 
                 var extraObjects = BuildSlurExtraObjects(
                     score.TextMetrics, score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX,
@@ -5433,14 +5445,53 @@ internal sealed class ElementCoordinator
                     extraObjects: extraObjects,
                     tieEnds: tieEnds,
                     // The staff's drawn lines, which the two line avoidances step off.
-                    staffLineCount: staff is { IsTab: false } ? staff.Lines : EngravingDefaults.DefaultStaffLines);
-                slurLayouts.Add(solved with { StaffIndex = staffIndex, RenderMeasureIndex = segment.StartMeasureIndex });
+                    staffLineCount: staff is { IsTab: false } ? staff.Lines : EngravingDefaults.DefaultStaffLines,
+                    // LILYPOND-REF: lily/slur-scoring.cc:334-341 Slur_score_state::fill — the
+                    //   heads' difference in the common frame, so across the staves too.
+                    musicalDy: crossesStaves
+                        ? (slur.EndStaffPosition - slur.StartStaffPosition) / 2.0
+                            + MovedDown(ItemAt(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex), segSystem, staffIndex)
+                            - MovedDown(ItemAt(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex), segSystem, staffIndex)
+                        : null);
+                slurLayouts.Add(solved with
+                {
+                    StaffIndex = staffIndex,
+                    RenderMeasureIndex = segment.StartMeasureIndex,
+                    CrossesStaves = crossesStaves,
+                });
             }
         }
 
         if (beamByMember != null)
             GiveBeamByMember(beamByMember);
         return slurLayouts.ToImmutableArray();
+    }
+
+    /// <summary>How far below the staff being laid (device, positive down) a note <c>@cross</c>
+    /// moved stands: its position is about that staff, and everything else here is about this
+    /// one. 0 for any other item.</summary>
+    private static double MovedDown(MusicItem? item, SystemLayout? system, int staffIndex)
+        => item is { CrossStaffIndex: >= 0 } moved && system is not null && staffIndex >= 0
+            ? LayoutUtilities.FindStaffYInSystem(system, staffIndex)
+                - LayoutUtilities.FindStaffYInSystem(system, moved.CrossStaffIndex)
+            : 0.0;
+
+    /// <summary>Whether a note under <paramref name="slur"/> stands on another staff: such a
+    /// slur is cross-staff, and in no skyline.</summary>
+    /// <remarks>LILYPOND-REF: lily/slur.cc Slur::calc_cross_staff — asked of the slur's
+    /// encompassed note columns; lily/axis-group-interface.cc:921 skyline_spacing leaves it out.</remarks>
+    private static bool SlurCrossesStaves(Voice voice, SlurItem slur)
+    {
+        for (int m = slur.StartMeasureIndex; m <= slur.EndMeasureIndex && m < voice.Measures.Length; m++)
+        {
+            var items = voice.Measures[m].Items;
+            int lo = m == slur.StartMeasureIndex ? slur.StartItemIndex : 0;
+            int hi = m == slur.EndMeasureIndex ? Math.Min(slur.EndItemIndex, items.Length - 1) : items.Length - 1;
+            for (int i = Math.Max(lo, 0); i <= hi; i++)
+                if (items[i].CrossStaffIndex >= 0)
+                    return true;
+        }
+        return false;
     }
 
     /// <summary>

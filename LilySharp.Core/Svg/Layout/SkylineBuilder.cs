@@ -1039,10 +1039,9 @@ internal sealed class SkylineBuilder
             }
         }
         GiveSuppressed(suppressStems);
-        // ...and the heads of the notes another part's @cross moved onto this staff. The head is
-        // this staff's grob; its stem is left out when it is beamed (a cross-staff stem is in no
-        // skyline), and the unbeamed one is not reserved yet — the gap this leaves is named at
-        // Staff.CrossedIn.
+        // ...and the notes another part's @cross moved onto this staff. The head is this staff's
+        // grob, and so is an unbeamed stem; a beamed one is left out (a cross-staff stem is in no
+        // skyline).
         // LILYPOND-REF: lily/axis-group-interface.cc:850-858 skyline_spacing — "we just leave
         //   cross-staff grobs out of the skyline altogether"; a NoteHead is not one.
         foreach (var crossed in staff.CrossedIn)
@@ -1056,7 +1055,8 @@ internal sealed class SkylineBuilder
                 double crossedX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                     crossed.Measures, crossed.MeasureIndex, crossed.ItemIndex, measureLayout);
                 AddMusicItemToSkylines(crossed.Item, crossedX, staffMiddleUp, StaffSize.Of(staff),
-                    upSkyline, downSkyline, forcedStemUp: null, reserveStem: false,
+                    upSkyline, downSkyline, forcedStemUp: null,
+                    reserveStem: crossed.Item is NoteItem { BeamId: null } or ChordItem { BeamId: null },
                     clef: staff.Clef, staffLines: staff.Lines);
             }
         }
@@ -2452,8 +2452,14 @@ internal sealed class SkylineBuilder
         if (slurs.IsDefaultOrEmpty)
             return;
         foreach (var s in slurs)
+        {
+            // A slur over a note @cross moved is cross-staff: laid once the staff distance is
+            // known, and out of the spacing that decides it (SlurLayout.CrossesStaves).
+            if (s.CrossesStaves)
+                continue;
             SeedBowInk(s.StartX, s.StartYUp, s.Control1, s.Control2, s.EndX, s.EndYUp,
                 staffTopUp, size, upSkyline, downSkyline);
+        }
     }
 
     /// <summary>

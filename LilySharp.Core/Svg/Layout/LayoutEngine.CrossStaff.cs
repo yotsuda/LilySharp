@@ -46,7 +46,6 @@ internal sealed partial class LayoutEngine
             return (byStaff, all);
 
         var measureMap = LayoutUtilities.BuildMeasureMap(systems);
-        HashSet<MusicItem>? crossMembers = null;
         var newByStaff = new Dictionary<int, ImmutableArray<BeamLayout>>(byStaff.Count);
         var newAll = ImmutableArray.CreateBuilder<BeamLayout>(all.Length);
         foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
@@ -74,7 +73,7 @@ internal sealed partial class LayoutEngine
                     int target = g.Members[i].TargetStaffIndex;
                     return target < 0
                         ? 0.0
-                        : PureOffset(score, staffIndex, target, ref crossMembers, layouter) ?? PlacedOffsetOf(i);
+                        : PureOffset(score, staffIndex, target) ?? PlacedOffsetOf(i);
                 }, forced);
                 // The knee is only known now, and a stem's readers ask its stamp (a tuplet's
                 // side, a slur's end): they run after this.
@@ -110,43 +109,12 @@ internal sealed partial class LayoutEngine
         return (newByStaff, newAll.ToImmutable());
     }
 
-    /// <summary>staff-staff-spacing's basic-distance and padding, which a staff's pure distance
-    /// reads. LILYPOND-REF: scm/define-grobs.scm VerticalAxisGroup — staff-staff-spacing.</summary>
-    private const double PureBasicDistance = 9.0, PurePadding = 1.0;
-
-    /// <summary>The length a pure stem is estimated at: the ideal unbeamed stem.</summary>
-    private const double PureStemLength = 3.5;
-
-    /// <summary>
-    /// The distance, in staff positions up-positive, from one staff to an ADJACENT other that
-    /// LilyPond's knee judges a cross-staff beam by: not the placed distance but the PURE one,
-    /// the two staves' whole-score bounding boxes apart, and at least the basic distance. Null
-    /// for staves that are not neighbours (the caller reads the placed distance).
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/align-interface.cc:228-238 internal_get_minimum_translations — dy =
-    ///   skyline distance + padding, and for the whole score max (dy, basic-distance).
-    /// LILYPOND-REF: lily/align-interface.cc:90-125 get_skylines — pure: a flat box of the
-    ///   rest of the line, the clefs apart.
-    /// Not literal: the boxes here hold heads and the estimated length of a stem that is not
-    /// a cross-staff beam's, where LilyPond's hold every inside-staff grob's pure height.
-    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1093/p2): `&lt;c' e'&gt;8 g'` knees with the placed
-    /// staves too close to knee, which is why the placed distance cannot answer.
-    /// </remarks>
-    private static double? PureOffset(MultiStaffScore score, int fromStaff, int toStaff,
-        ref HashSet<MusicItem>? crossMembers, MultiStaffLayouter layouter)
+    /// <summary>The pure distance (<see cref="CrossStaffPure"/>) from one staff to an adjacent
+    /// other, in staff positions up-positive; null for staves that are not neighbours.</summary>
+    private static double? PureOffset(MultiStaffScore score, int fromStaff, int toStaff)
     {
         if (Math.Abs(fromStaff - toStaff) != 1)
             return null;
-        if (crossMembers is null)
-        {
-            crossMembers = new HashSet<MusicItem>();
-            foreach (var (_, st, si) in score.EnumerateStaves())
-                foreach (var g in layouter.StaffBeamGroupsOf(score, st, si))
-                    if (g.IsCrossStaff)
-                        foreach (var item in g.MemberItems())
-                            crossMembers.Add(item);
-        }
         Staff? from = null, to = null;
         foreach (var (_, st, si) in score.EnumerateStaves())
         {
@@ -155,39 +123,8 @@ internal sealed partial class LayoutEngine
         }
         if (from is null || to is null)
             return null;
-        var upper = fromStaff < toStaff ? from : to;
-        var lower = fromStaff < toStaff ? to : from;
-        double dy = Math.Max(PureBasicDistance,
-            ExtentOf(lower, crossMembers).Hi - ExtentOf(upper, crossMembers).Lo + PurePadding);
+        double dy = fromStaff < toStaff ? CrossStaffPure.Distance(from, to) : CrossStaffPure.Distance(to, from);
         return (fromStaff < toStaff ? -dy : dy) * 2.0;
-    }
-
-    /// <summary>A staff's pure box, in staff spaces about its middle line: its lines, its own
-    /// notes and the notes moved onto it.</summary>
-    private static (double Lo, double Hi) ExtentOf(Staff staff, HashSet<MusicItem> crossMembers)
-    {
-        double lo = -2, hi = 2;
-        void Head(MusicItem item, bool stem)
-        {
-            if (MusicItem.EdgeStaffPosition(item, preferTop: true) is not { } top
-                || MusicItem.EdgeStaffPosition(item, preferTop: false) is not { } bottom)
-                return;
-            lo = Math.Min(lo, bottom / 2.0 - 0.5);
-            hi = Math.Max(hi, top / 2.0 + 0.5);
-            if (stem && item is NoteItem { StemUp: var up })
-            {
-                if (up) hi = Math.Max(hi, bottom / 2.0 + PureStemLength);
-                else lo = Math.Min(lo, top / 2.0 - PureStemLength);
-            }
-        }
-        foreach (var voice in staff.Voices)
-            foreach (var measure in voice.Measures)
-                foreach (var item in measure.Items)
-                    if (item.CrossStaffIndex < 0 && !item.GraceTime && item is NoteItem or ChordItem)
-                        Head(item, !crossMembers.Contains(item));
-        foreach (var crossed in staff.CrossedIn)
-            Head(crossed.Item, false);
-        return (lo, hi);
     }
 
     /// <summary>A tie between notes <c>@cross</c> moved stands about THEIR staff: it was laid

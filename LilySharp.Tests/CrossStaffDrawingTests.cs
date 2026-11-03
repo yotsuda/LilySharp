@@ -150,6 +150,95 @@ public class CrossStaffDrawingTests
         Assert.True(layout.TupletBracketLayouts.Single().IsStemUp);
     }
 
+    /// <summary>The slur's span against LilyPond 2.26.0's (`lysc ly --pin-fonts`, -dbackend=svg,
+    /// two decimals: Lab sessions/p1093/snum). <c>dyUp</c> is the end above the start.</summary>
+    [Theory]
+    [InlineData("c2( e''2@cross) | c1 |", 4.49, 4.50, 0.02)]
+    [InlineData("c4( e''@cross e''@cross c) | c1 |", 8.28, 0.00, 0.02)]
+    [InlineData("c4( e g'@cross c''@cross) | c1 |", 8.51, 1.00, 0.02)]
+    // A kneed pair: the width is the spacing's, which needs the knee BEFORE it (3.68, not 2.25).
+    // ⚠️ The rise is 4.05 against LilyPond's 3.90: named, not explained.
+    [InlineData("c8( g@cross) r4 c'4@cross( c,4@cross) | c1 |", 3.68, 4.05, 0.02)]
+    public void ASlurAcrossTheStavesHasLilyPondsSpan(string lh, double dx, double dyUp, double tolerance)
+    {
+        var score = Score(Book("r1 | r1 |", lh));
+        var slur = new LayoutEngine().Layout(score).SlurLayouts.OrderBy(s => s.StartX).First();
+        Assert.InRange(slur.EndX - slur.StartX, dx - tolerance, dx + tolerance);
+        Assert.InRange(slur.EndYUp - slur.StartYUp, dyUp - tolerance, dyUp + tolerance);
+    }
+
+    [Fact]
+    public void AKneeIsStampedBeforeTheSpacing()
+    {
+        // Before any layout: `c8 g@cross` knees, the low stem up and the moved one down.
+        var notes = Notes(Score(Book("r1 |", "c8 g@cross r4 c'4@cross c,4@cross |")), 1);
+        Assert.True(notes[0].StemUp);
+        Assert.False(notes[1].StemUp);
+    }
+
+    [Fact]
+    public void ACrossStaffSlurDoesNotOpenTheStaves()
+    {
+        // It is in no skyline, as LilyPond's isn't (lily/axis-group-interface.cc:921
+        // skyline_spacing): an arch over the staves leaves their distance where it was.
+        double DistanceOf(string lh)
+        {
+            var system = new LayoutEngine().Layout(Score(Book("r1 |", lh))).Systems[0];
+            return LayoutUtilities.FindStaffYInSystem(system, 0) - LayoutUtilities.FindStaffYInSystem(system, 1);
+        }
+        Assert.Equal(DistanceOf("c8 e g@cross c'@cross e g c e |"),
+            DistanceOf("c8( e g@cross c'@cross e g c e) |"), 6);
+    }
+
+    [Fact]
+    public void ASlurAcrossTheStavesReachesTheMovedNote()
+    {
+        // LilyPond (s1 bar 3): from the bass staff up to a note on the treble staff. Unmoved, the
+        // far end reads the treble position about the bass staff, under the staff.
+        var layout = new LayoutEngine().Layout(Score(Book("r1 | r1 |", "c4( e g@cross c'@cross) | c1 |")));
+        var slur = layout.SlurLayouts.Single();
+        Assert.True(slur.CrossesStaves);
+        Assert.True(slur.EndYUp > slur.StartYUp + 1.5);
+    }
+
+    [Fact]
+    public void ASlurOverOnlyMovedNotesStandsOnTheirStaff()
+    {
+        var moved = new LayoutEngine().Layout(Score(Book("r1 |", "c4@cross( e@cross) r2 |"))).SlurLayouts.Single();
+        var plain = new LayoutEngine().Layout(Score(Book("r1 |", "c4( e) r2 |"))).SlurLayouts.Single();
+        Assert.True(moved.StartYUp > plain.StartYUp);
+    }
+
+    [Fact]
+    public void ASlurOverNoMovedNoteIsNotCrossStaff()
+    {
+        var slurs = new LayoutEngine().Layout(Score(Book("r1 |", "c4( e) g@cross c' |"))).SlurLayouts;
+        Assert.False(Assert.Single(slurs).CrossesStaves);
+    }
+
+    /// <summary>The preview's road: an edit on a warm session draws what a full compile draws.
+    /// The staff a note moved ONTO is the one a per-staff reuse could leave stale.</summary>
+    [Theory]
+    [InlineData("g8@cross c'8 r4 r2 | c1", "e8@cross c'8 r4 r2 | c1")]   // the moved note's pitch
+    [InlineData("g8@cross c'8 r4 r2 | c1", "g8 c'8 r4 r2 | c1")]         // @cross written away
+    [InlineData("g8 c'8 r4 r2 | c1", "g8@cross c'8 r4 r2 | c1")]         // @cross written in
+    [InlineData("g8@cross c'8 r4 r2 | c1", "c,8@cross c'8 r4 r2 | c1")]  // far enough to move the staves
+    public void AnIncrementalEditMatchesAFullCompile(string before, string after)
+    {
+        var opt = new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false };
+        string bars = string.Concat(Enumerable.Repeat("c8 e g c' e g c' e | ", 16));
+        string Text(string lh) => Book("c''1 | c''1 | " + string.Concat(Enumerable.Repeat("c''1 | ", 16)), "c1 | " + lh + " | " + bars);
+        string seed = Text(before);
+        var tree = SyntaxTree.Parse(seed);
+        var session = new LilySharp.Core.Svg.IncrementalCompiler(tree, opt);
+        session.Render();
+        int at = seed.IndexOf(before, System.StringComparison.Ordinal);
+        var change = new TextChange(new TextSpan(at, before.Length), after);
+        string incremental = session.Edit(change).Replace("\r\n", "\n");
+        string full = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(Text(after)), opt).Replace("\r\n", "\n");
+        Assert.Equal(full, incremental);
+    }
+
     [Fact]
     public void ATieBetweenMovedNotesStandsOnTheirStaff()
     {

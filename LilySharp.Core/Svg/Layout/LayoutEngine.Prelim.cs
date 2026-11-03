@@ -1543,7 +1543,8 @@ internal sealed partial class LayoutEngine
                     _elementCoordinator.DetectTies(staffSpannerScore), staffSpannerScore, systemsArray, staffIndex, staff,
                     score.GraceNotes, staffIndex);
             allTieLayouts.AddRange(TiesOnTheirNotesStaff(staffTies, systemsArray, staffIndex, bowSystemOf));
-            var staffSlurs = bowShifts is null
+            // A slur across the staves depends on their distance: never carried from the prelim.
+            var staffSlurs = bowShifts is null || staff.HasMovedNotes
                 ? default
                 : ReanchorBows(prelimSlursByStaff[staffIndex], bowShifts, bowSystemOf);
             if (staffSlurs.IsDefault)

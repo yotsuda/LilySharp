@@ -144,6 +144,9 @@ public sealed record Staff(
     /// </remarks>
     public ImmutableArray<CrossedNote> CrossedIn { get; init; } = ImmutableArray<CrossedNote>.Empty;
 
+    /// <summary>Whether a note of this staff's voices stands on another staff (@cross).</summary>
+    public bool HasMovedNotes { get; init; }
+
     /// <summary>The short name printed at the staff's left from the second system on
     /// (`part vn1 "Violin I" "Vn. I"` — LilyPond's shortInstrumentName), or null.</summary>
     public string? ShortInstrumentName { get; init; }

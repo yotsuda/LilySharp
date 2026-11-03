@@ -3601,7 +3601,6 @@ public sealed partial class MeasureCollector
                 {
                     var measuresNow = ImmutableArray.Create(newMeasures);
                     (newVoices ??= voices.ToArray())[vi] = voices[vi] with { Measures = measuresNow };
-                    RestampMovedBeams(measuresNow);
                     for (int m = 0; m < measuresNow.Length; m++)
                     {
                         var items = measuresNow[m].Items;
@@ -3612,62 +3611,94 @@ public sealed partial class MeasureCollector
                 }
             }
             if (newVoices != null)
-                moved[source] = staves[source] with { Voices = ImmutableArray.Create(newVoices) };
+                moved[source] = staves[source] with { Voices = ImmutableArray.Create(newVoices), HasMovedNotes = true };
         }
+
+        var finals = new Staff[staves.Length];
+        for (int i = 0; i < finals.Length; i++)
+        {
+            var now = moved[i] ?? staves[i];
+            finals[i] = crossedIn[i] is { } here ? now with { CrossedIn = here.ToImmutableArray() } : now;
+        }
+        // After every staff has its moved notes: the knee reads the boxes of both.
+        RestampMovedBeams(finals);
 
         int walk = 0;
         return staffGroups.Select(g => g with
         {
-            Staves = g.Staves.Select(st =>
-            {
-                int i = walk++;
-                var now = moved[i] ?? st;
-                return crossedIn[i] is { } here ? now with { CrossedIn = here.ToImmutableArray() } : now;
-            }).ToImmutableArray(),
+            Staves = g.Staves.Select(_ => finals[walk++]).ToImmutableArray(),
         }).ToImmutableArray();
     }
 
     /// <summary>
     /// The bake stamped each beam's direction off the positions the notes had before
-    /// <c>@cross</c> moved them; every later reader of a note's stem (a tuplet's side, a slur's
-    /// end) asks the stamp, so a beam with a moved member is stamped again. The pure tip goes
-    /// with it: a cross-staff stem is in no skyline.
+    /// <c>@cross</c> moved them; every later reader of a note's stem (the spacing, a tuplet's
+    /// side, a slur's end) asks the stamp, so a beam with a moved member is stamped again — with
+    /// its knee, which the pure distance decides here, before any spacing, as LilyPond's does.
+    /// The pure tip goes with it: a cross-staff stem is in no skyline.
     /// </summary>
     /// <remarks>A voice-forced beam keeps its direction, and a stem the writer turned keeps its
-    /// own (lily/beam.cc:946-956 set_stem_directions).</remarks>
-    private static void RestampMovedBeams(ImmutableArray<Measure> measures)
+    /// own (lily/beam.cc:946-956 set_stem_directions). A beam reaching a staff that is not a
+    /// neighbour takes no knee here: it has no pure distance (<see cref="CrossStaffPure"/>).
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1093/snum/stem): `c8( g@cross)` knees, and the
+    /// up-then-down stems space the pair 3.7 apart where same-way stems gave 2.3.
+    /// LILYPOND-REF: lily/note-spacing.cc:207 Note_spacing::stem_dir_correction.</remarks>
+    private static void RestampMovedBeams(Staff[] staves)
     {
-        var beams = new Dictionary<int, List<MusicItem>>();
-        var moved = new HashSet<int>();
-        foreach (var measure in measures)
-            foreach (var item in measure.Items)
-            {
-                if (item.GraceTime || (item is NoteItem n ? n.BeamId : item is ChordItem c ? c.BeamId : null) is not { } id)
-                    continue;
-                if (!beams.TryGetValue(id, out var list))
-                    beams[id] = list = new List<MusicItem>();
-                list.Add(item);
-                if (item.CrossStaffIndex >= 0)
-                    moved.Add(id);
-            }
-        foreach (int id in moved)
+        for (int s = 0; s < staves.Length; s++)
         {
-            var members = beams[id];
-            if (members.Any(i => i is NoteItem { VoiceStemUp: not null } or ChordItem { VoiceStemUp: not null }))
+            if (!staves[s].HasMovedNotes)
                 continue;
-            bool up = BeamDetector.DefaultStemUpOf(members);
-            foreach (var item in members)
+            foreach (var voice in staves[s].Voices)
             {
-                switch (item)
+                var beams = new Dictionary<int, List<MusicItem>>();
+                var moved = new HashSet<int>();
+                foreach (var measure in voice.Measures)
+                    foreach (var item in measure.Items)
+                    {
+                        if (item.GraceTime || (item is NoteItem n ? n.BeamId : item is ChordItem c ? c.BeamId : null) is not { } id)
+                            continue;
+                        if (!beams.TryGetValue(id, out var list))
+                            beams[id] = list = new List<MusicItem>();
+                        list.Add(item);
+                        if (item.CrossStaffIndex >= 0)
+                            moved.Add(id);
+                    }
+                foreach (int id in moved)
                 {
-                    case NoteItem n:
-                        n.ClearBeamStamp();
-                        n.StampBeam(n.ForcedStemUp ?? up, id, null);
-                        break;
-                    case ChordItem c:
-                        c.ClearBeamStamp();
-                        c.StampBeam(c.ForcedStemUp ?? up, id, null);
-                        break;
+                    var members = beams[id];
+                    if (members.Any(i => i is NoteItem { VoiceStemUp: not null } or ChordItem { VoiceStemUp: not null }))
+                        continue;
+                    bool up = BeamDetector.DefaultStemUpOf(members);
+                    bool[]? knee = null;
+                    if (members.All(m => m.CrossStaffIndex < 0 || Math.Abs(m.CrossStaffIndex - s) == 1))
+                    {
+                        var offsets = new double[members.Count];
+                        for (int i = 0; i < offsets.Length; i++)
+                        {
+                            int target = members[i].CrossStaffIndex;
+                            if (target >= 0)
+                                offsets[i] = target > s
+                                    ? -CrossStaffPure.Distance(staves[s], staves[target]) * 2.0
+                                    : CrossStaffPure.Distance(staves[target], staves[s]) * 2.0;
+                        }
+                        knee = BeamDetector.KneeStemsOf(members, offsets);
+                    }
+                    for (int i = 0; i < members.Count; i++)
+                    {
+                        bool stem = knee?[i] ?? up;
+                        switch (members[i])
+                        {
+                            case NoteItem n:
+                                n.ClearBeamStamp();
+                                n.StampBeam(n.ForcedStemUp ?? stem, id, null);
+                                break;
+                            case ChordItem c:
+                                c.ClearBeamStamp();
+                                c.StampBeam(c.ForcedStemUp ?? stem, id, null);
+                                break;
+                        }
+                    }
                 }
             }
         }
