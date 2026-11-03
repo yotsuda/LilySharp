@@ -1156,6 +1156,7 @@ score { staff melody }
 `ukulele`, …) and the score gets a `tab NAME` row under its staff. The tab chooses strings and
 frets itself: write a string number (`\4`) only where a particular string is asked for. Two notes
 of a chord written on one string warn (LYS1063): `<e'\1 b\2>`, not `<e' g'>\1`, which numbers both.
+One pitch twice in a chord warns too (LYS1064), unless on two strings: `<e'\1 e\2>`.
 
 ```
 part guitar { instrument guitar }          // added: instrument guitar

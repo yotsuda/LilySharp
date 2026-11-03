@@ -94,6 +94,29 @@ public static class ChordHeadPositioning
         keys.Sort(order.AsSpan());
     }
 
+    /// <summary>
+    /// One pitch twice in a chord with a note a second from it: drawn as one head (owner's decision
+    /// 2026-11-03, LILYSHARP-OWN). The parity walk only sees neighbours, so <c>&lt;a b b&gt;</c> goes
+    /// left, right, left and lays the second b on the a, in LilyPond 2.26.0 too (checked by the
+    /// twin). A unison with no second stays LilyPond's two heads, one a player can mean. B and
+    /// B flat on one line are two notes, and are not this. Whatever reads the offsets, ties and
+    /// dots and spacing, sees the two heads on one spot.
+    /// </summary>
+    private static bool IsOneHeadBesideASecond(IReadOnlyList<ChordNoteInfo> notes, int a, int b)
+    {
+        var (x, y) = (notes[a], notes[b]);
+        // By the pitch and not the accidental, which only the first of them prints. Heads asked
+        // about by position alone carry no pitch (NoteCollision's), and then the accidental is all
+        // there is to tell.
+        if (x.StaffPosition != y.StaffPosition || x.Midi != y.Midi
+            || (x.Midi == 0 && x.Accidental != y.Accidental))
+            return false;
+        for (int i = 0; i < notes.Count; i++)
+            if (Math.Abs(notes[i].StaffPosition - x.StaffPosition) == 1)
+                return true;
+        return false;
+    }
+
     /// <summary>The rule itself, over the head right extent its caller resolved.</summary>
     private static double[] OffsetsForEll(
         IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue, double ell)
@@ -117,6 +140,11 @@ public static class ChordHeadPositioning
         const int threshold = 1; // note-collision-threshold (staff positions)
         for (int k = 1; k < order.Length; k++)
         {
+            if (IsOneHeadBesideASecond(notes, order[k - 1], order[k]))
+            {
+                offsets[order[k]] = offsets[order[k - 1]];
+                continue;
+            }
             double p = notes[order[k]].StaffPosition;
             double dy = Math.Abs(lastPos - p);
 

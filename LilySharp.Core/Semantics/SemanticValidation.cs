@@ -115,6 +115,7 @@ public static class SemanticValidation
         new InstrumentPresetPropertyValidator(), // an octave or a tuning that slips against the part's preset
         new InstrumentRangeValidator(),     // a note the part's instrument cannot sound
         new ChordFingeringValidator(),      // a chord a fretted part's player cannot finger
+        new ChordUnisonValidator(),         // one pitch twice in a <…> chord
         new PercentRepeatValidator(),       // the old repeat percent/unfold; a % mark that repeats nothing
         new EmptyScoreValidator(),          // a score block with no staff to engrave
         new MissingScoreValidator(),        // a book with music and no score block at all

@@ -11,6 +11,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **The Range and practice panels drag up behind the header**, which stays whole, keeping as much in sight under it as at the other edges.
 - **The metronome button matches the Range button** in the preview's header: the same size, a solid icon, pressed in while its menu is open, and no ▼.
 - **Two notes of a chord on one string warn** (LYS1063): the tab drew both on one line.
+- **One pitch twice in a chord warns** (LYS1064), and beside a second it is drawn as one head: in `<a b b>` a b lay on the a.
 - **The typing aids read `es`, `as`, `eses` and `ases` as notes**: they were typed as pressed.
 - **A beam typed at the head of a bar**: `c8 d | e|` + `[` is `c8 d | e[| f]`. The note's length was not read from the bars before it.
 - **Typing on `chord(F#)`**: a digit or a dot on the word `chord` or `diagram` is its length: `c|hord(F#)` + `8` is `c|hord(F#)8`. In the parentheses keys are typed as pressed.

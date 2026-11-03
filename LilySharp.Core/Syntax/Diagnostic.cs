@@ -857,6 +857,11 @@ public static class DiagnosticCodes
     /// silence (found 2026-11-02; `&lt;e' g'&gt;4\1` numbers every member alike).</summary>
     public const string TabChordNotesOnOneString = "LYS1063";
 
+    /// <summary>One pitch twice in a <c>&lt;…&gt;</c> chord, which sounds as one: dragging a triad's
+    /// note onto another makes <c>&lt;b' a, b&gt;</c>, where the marks hide it (owner's decision
+    /// 2026-11-03; <c>Semantics.ChordUnisonValidator</c>).</summary>
+    public const string ChordSamePitchTwice = "LYS1064";
+
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
     /// root (a root that is no A–G is the parser's error); the message names the spelling's fix, as the
