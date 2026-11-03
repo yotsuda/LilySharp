@@ -102,6 +102,9 @@ export interface NoteDragSteps {
     markWords(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<{ from: string, to: string, positions?: number } | undefined>;
     /** Writes it, one edit and one undo step; false when it writes nothing. */
     write(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<boolean>;
+    /** The text with the note where the drag has it, the others held, and how many staff positions
+     * away it stands; nothing is written. Undefined when it goes nowhere. */
+    landing(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<{ text: string, positions: number } | undefined>;
     /** A tempo's number where a drag has it, written at once, all of one drag one undo. */
     tempoLive(doc: vscode.TextDocument, position: number, value: number): void;
     /** The drag let go, or cancelled with its first number written back. */
@@ -264,6 +267,21 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         drag.written = true;
     };
     const noteDrag: NoteDragSteps = {
+        landing: async (doc, position, steps, mode) => {
+            if (!deps.getClient() || !deps.isReady() || steps === 0) { return undefined; }
+            const text = doc.getText();
+            const offset = jumpOffsetFor(text, position);
+            const response = await askSteps(doc, offset, steps, mode, true);
+            if (response.Fallback || response.Edits.length === 0 || response.Version !== doc.version) { return undefined; }
+            let after = text;
+            for (const e of [...response.Edits].sort((a, b) => b.Start - a.Start)) {
+                after = after.slice(0, e.Start) + e.NewText + after.slice(e.End);
+            }
+            const positions = mode === 'octave' ? steps * 7
+                : mode === 'position' ? steps
+                : chromaticPositions(pitchNameAt(text, offset), pitchNameAt(after, offset), steps);
+            return { text: after, positions };
+        },
         tempoLive: (doc, position, value) => {
             tempoQueue = tempoQueue.then(async () => {
                 if (!tempoDrag) {

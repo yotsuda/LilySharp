@@ -51,6 +51,16 @@ public sealed partial class LilySharpLanguageServer
                 p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree;
             if (@params.Chromatic)
                 return ChromaticStep(@params, doc, selections, Expand);
+            // A note dragged and let go, or held still: all the way at once, the others held.
+            if (@params.HoldOthers && selections.Count == 1)
+            {
+                bool positions = @params.StaffPositions > 0;
+                string? moved = NoteStepper.DragNote(doc.Text, doc.Tree, selections[0].Start, @params.Direction >= 0 ? 1 : -1,
+                    System.Math.Min(positions ? @params.StaffPositions : @params.Count, MaxStepsAtOnce),
+                    positions ? NoteStepper.NoteDrag.StaffPositions : NoteStepper.NoteDrag.Octaves, Expand);
+                if (moved != null)
+                    return new StepResponse { Edits = [TheDifference(doc.Text, moved)], Version = doc.Version };
+            }
             NoteStepper.StepResult StepOn(string on, SyntaxTree tree) => NoteStepper.Step(on, tree, selections, @params.Direction,
                 Expand, @params.IncludeStretch, @params.Semitone, FacesForStep);
             var result = StepOn(doc.Text, doc.Tree);
@@ -113,12 +123,11 @@ public sealed partial class LilySharpLanguageServer
         if (selections.Count != 1 || count <= 0)
             return new StepResponse { Version = doc.Version };
         int at = selections[0].Start;
-        string? stepped = NoteStepper.ChromaticStep(doc.Text, doc.Tree, at, (@params.Direction >= 0 ? 1 : -1) * count, expand);
+        string? stepped = NoteStepper.ChromaticStep(doc.Text, doc.Tree, at, (@params.Direction >= 0 ? 1 : -1) * count, expand, @params.HoldOthers);
         if (stepped == null)
             return new StepResponse { Version = doc.Version };
-        var heard = NoteStepper.AuditionAt(stepped, SyntaxTree.Parse(stepped), at, expand(stepped));
-        if (@params.HoldOthers)
-            stepped = NoteStepper.HoldOtherPitches(doc.Text, stepped, at, expand);
+        // What it sounds is asked for by the hand on the way, not by what is written at the end.
+        var heard = @params.HoldOthers ? null : NoteStepper.AuditionAt(stepped, SyntaxTree.Parse(stepped), at, expand(stepped));
         return new StepResponse
         {
             Edits = [TheDifference(doc.Text, stepped)],

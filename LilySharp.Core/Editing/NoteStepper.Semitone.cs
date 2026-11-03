@@ -114,28 +114,116 @@ public static partial class NoteStepper
     /// where it has that tone, else a white key, else a sharp going up and a flat going down.
     /// Its octave marks are corrected until it sounds there; the other notes are the caller's.
     /// </summary>
-    public static string? ChromaticStep(string text, SyntaxTree tree, int at, int semitones, Func<string, SyntaxTree>? expand = null)
+    public static string? ChromaticStep(string text, SyntaxTree tree, int at, int semitones, Func<string, SyntaxTree>? expand = null, bool holdOthers = false)
+        => DragNote(text, tree, at, semitones >= 0 ? 1 : -1, Math.Abs(semitones), NoteDrag.Semitones, expand, holdOthers);
+
+    /// <summary>What a drag of a note counts in.</summary>
+    public enum NoteDrag
     {
-        var pitch = tree.GetNodes<PitchSyntax>().FirstOrDefault(p => p.SourceStart == at && p.BaseName != '\0' && p.QuarterOffset == 0);
-        if (pitch == null || !WrittenMidi(text, tree, expand).TryGetValue(at, out int was))
+        /// <summary>Staff positions, each to the key's tone there.</summary>
+        StaffPositions,
+        /// <summary>Octaves.</summary>
+        Octaves,
+        /// <summary>Semitones (<see cref="ChromaticStep"/>).</summary>
+        Semitones,
+    }
+
+    /// <summary>
+    /// <paramref name="text"/> with the pitch at <paramref name="at"/> some way off, or null when
+    /// there is no such pitch or its pitch is not known: the answer of a drag, reached at once and
+    /// not a step at a time. Each of a run of <see cref="Step"/>s compiles the file two or three times
+    /// (first a step's spelling, then its marks), and a drag waits on it while the hand is still
+    /// (owner's request 2026-11-03: the score drawn as the note moves; 1.3 s on a 14 KB score). The
+    /// spelling needs no compile, so the walk goes first and the marks are put right once, on the
+    /// end of it: the moved pitch where it is going, and with <paramref name="holdOthers"/> every
+    /// other where it was (<see cref="HoldOtherPitches"/>), the first one off at a time.
+    /// </summary>
+    public static string? DragNote(string text, SyntaxTree tree, int at, int dir, int count, NoteDrag drag,
+        Func<string, SyntaxTree>? expand = null, bool holdOthers = true)
+    {
+        var old = PitchesInOrder(tree);
+        int moved = old.FindIndex(p => p.SourceStart == at);
+        if (moved < 0 || old[moved].QuarterOffset != 0)
             return null;
-        int want = was + semitones;
-        var (step, alter) = ChromaticSpelling(KeyInForce(pitch), ((want % 12) + 12) % 12, semitones > 0);
-        string name = NameOf(step, alter, WritesLongFlats(tree));
-        int nameEnd = NameEnd(pitch), marksEnd = MarksEnd(text, nameEnd);
-        int net = pitch.OctaveOffset;
-        string result = text;
+        var pitch = old[moved];
+        var was = WrittenMidi(text, tree, expand);
+        if (!was.TryGetValue(at, out int from))
+            return null;
+        bool longFlats = WritesLongFlats(tree);
+        int nameEnd = NameEnd(pitch);
+        string name;
+        int want;
+        switch (drag)
+        {
+            case NoteDrag.Octaves:
+                name = text[at..nameEnd];
+                want = from + 12 * dir * count;
+                break;
+            case NoteDrag.Semitones:
+            {
+                want = from + dir * count;
+                var (step, alter) = ChromaticSpelling(KeyInForce(pitch), ((want % 12) + 12) % 12, dir > 0);
+                name = NameOf(step, alter, longFlats);
+                break;
+            }
+            default:
+                (name, int delta) = WalkTheKey(pitch, dir, count, longFlats);
+                want = from + delta;
+                break;
+        }
+        string result = text[..at] + name + Marks(pitch.OctaveOffset) + text[MarksEnd(text, nameEnd)..];
+        // One a round: a mark put right can put right what hangs on it.
         for (int round = 0; round < MaxOctaveRounds; round++)
         {
-            result = text[..at] + name + Marks(net) + text[marksEnd..];
-            if (!WrittenMidi(result, null, expand).TryGetValue(at, out int now))
+            var now = PitchesInOrder(SyntaxTree.Parse(result));
+            if (now.Count != old.Count)
                 break;
-            int off = now - want;
-            if (off == 0 || off % 12 != 0)
+            var midi = WrittenMidi(result, null, expand);
+            bool corrected = false;
+            for (int i = 0; i < now.Count && !corrected; i++)
+            {
+                if (i != moved && !holdOthers)
+                    continue;
+                int target;
+                if (i == moved)
+                    target = want;
+                else if (!was.TryGetValue(old[i].SourceStart, out target))
+                    continue;
+                if (!midi.TryGetValue(now[i].SourceStart, out int heard))
+                    continue;
+                int off = heard - target;
+                if (off == 0 || off % 12 != 0)
+                    continue;
+                int end = NameEnd(now[i]);
+                result = result[..end] + Marks(now[i].OctaveOffset - off / 12) + result[MarksEnd(result, end)..];
+                corrected = true;
+            }
+            if (!corrected)
                 break;
-            net -= off / 12;
         }
         return result;
+    }
+
+    /// <summary>The key's tone <paramref name="positions"/> staff positions away: its name, and how
+    /// many semitones off. Each position is a new letter: a note off the key steps first to a tone
+    /// of the same letter, which moves it none (F in G major, to F sharp).</summary>
+    private static (string Name, int Delta) WalkTheKey(PitchSyntax pitch, int dir, int positions, bool longFlats)
+    {
+        var tones = KeyInForce(pitch);
+        int step = KeySpelling.StepOf(pitch.BaseName), alter = pitch.AccidentalOffset, delta = 0, moved = 0;
+        string name = NameOf(step, alter, longFlats);
+        // Twice as many tries as positions: one same-letter step at most, and a key of few steps
+        // cannot hold the walk here for ever.
+        for (int tries = 0; moved < positions && tries < 2 * positions; tries++)
+        {
+            var (toStep, toAlter, by) = NextTone(tones, step, alter, dir);
+            if (toStep != step)
+                moved++;
+            (step, alter) = (toStep, toAlter);
+            delta += by;
+            name = NameOf(step, alter, longFlats);
+        }
+        return (name, delta);
     }
 
     private static (int Step, int Alter) ChromaticSpelling(List<(int Step, int Alter)> keyTones, int pitchClass, bool up)
@@ -377,9 +465,15 @@ public static partial class NoteStepper
     /// and how many semitones it lies from <paramref name="p"/>.</summary>
     private static (string Name, int Delta) Respell(PitchSyntax p, int dir, bool longFlats)
     {
-        var tones = KeyInForce(p);
+        var (step, alter, delta) = NextTone(KeyInForce(p), KeySpelling.StepOf(p.BaseName), p.AccidentalOffset, dir);
+        return (NameOf(step, alter, longFlats), delta);
+    }
+
+    /// <summary>The next of <paramref name="tones"/> from a letter and its alteration, up or down.</summary>
+    private static (int Step, int Alter, int Delta) NextTone(List<(int Step, int Alter)> tones, int fromStep, int fromAlter, int dir)
+    {
         // In semitones above the letter's C, so ces is -1 and bis 12.
-        int was = RelativeOctave.StepSemitoneOf(KeySpelling.StepOf(p.BaseName)) + p.AccidentalOffset;
+        int was = RelativeOctave.StepSemitoneOf(fromStep) + fromAlter;
         (int Step, int Alter, int Value)? best = null;
         for (int octave = -1; octave <= 1; octave++)
             foreach (var (s, a) in tones)
@@ -391,7 +485,7 @@ public static partial class NoteStepper
                     best = (s, a, value);
             }
         var (step, alter, to) = best!.Value;
-        return (NameOf(step, alter, longFlats), to - was);
+        return (step, alter, to - was);
     }
 
     /// <summary>A pitch name in the language's Dutch names: <c>fis</c>, <c>bes</c>, <c>ees</c>

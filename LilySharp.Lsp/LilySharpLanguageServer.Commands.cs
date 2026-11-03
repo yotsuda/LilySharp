@@ -533,7 +533,10 @@ public sealed partial class LilySharpLanguageServer
         // Resolve `using "..."` directives so the preview shows the whole piece.
         // The main file is the prefix of the combined source, so its positions
         // (data-pos editor<->preview sync) are unchanged.
-        var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
+        var (tree, _) = @params.DragText is { } dragText
+            ? ExpandUsings(dragText, SyntaxTree.Parse(dragText), @params.TextDocument.Uri.IsFile ? @params.TextDocument.Uri.LocalPath : string.Empty,
+                p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null)
+            : ExpandUsings(doc, @params.TextDocument.Uri);
 
         // The picker's list AND the entry this request resolves to, from one walk and
         // the renderer's own rule (RenderSpecParser.ScoreIndex).

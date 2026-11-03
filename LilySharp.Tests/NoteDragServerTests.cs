@@ -397,6 +397,58 @@ public class NoteDragServerTests
         Assert.Contains(expected, Applied(text, Stepped(server, uri, text.IndexOf("100", System.StringComparison.Ordinal), 1, count, semitone)));
     }
 
+    // The drag's one walk comes to what the keys' run of steps does, then every other note held.
+    [Theory]
+    [InlineData("c'4 d e f | g a b c |", "c'", 1, 1, "clef treble")]
+    [InlineData("c'4 d e f | g a b c |", "c'", 1, 5, "clef treble")]
+    [InlineData("c'4 d e f | g a b c |", "c'", 1, 9, "clef treble")]
+    [InlineData("c'4 d e f | g a b c |", "c'", -1, 3, "clef treble")]
+    [InlineData("c'4 d e f | g a b c |", "f |", -1, 8, "clef treble")]
+    [InlineData("fis'4 g a b |", "fis'", 1, 1, "clef treble\n  key g major")]
+    [InlineData("f'4 g a b |", "f'", 1, 1, "clef treble\n  key g major")]   // off the key: its own letter first
+    [InlineData("f'4 g a b |", "f'", -1, 3, "clef treble\n  key g major")]
+    [InlineData("bes'4 c d es |", "bes'", 1, 2, "clef treble\n  key bes major")]
+    [InlineData("<c' e g>2 <d f a>2 |", "c'", 1, 3, "clef treble")]
+    [InlineData("<c' e g>2 <d f a>2 |", "e g", 1, 2, "clef treble")]
+    [InlineData("<c' e g>2 <d f a>2 |", "d f", -1, 4, "clef treble")]
+    public void TheWalk_ComesToWhatTheStepsDo(string music, string word, int direction, int positions, string part)
+    {
+        string text = Book(music, part);
+        int at = text.IndexOf(word, text.IndexOf("{ m {", System.StringComparison.Ordinal), System.StringComparison.Ordinal);
+        var server = Open(text, out var uri);
+        string stepped = Applied(text, Step(server, uri, at, direction, positions));
+        string keys = LilySharp.Core.Editing.NoteStepper.HoldOtherPitches(text, stepped, at);
+        string walked = Applied(text, server.Step(new StepParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Selections = [At(at)],
+            Direction = direction,
+            Semitone = true,
+            StaffPositions = positions,
+            HoldOthers = true,
+        }));
+        Assert.Equal(keys, walked);
+    }
+
+    [Fact]
+    public void AHeldNote_IsDrawn_AndTheDocumentStaysAsItIs()
+    {
+        string text = Book("c'4 d e f |");
+        string landed = Book("e'4 d, e f |");
+        var server = Open(text, out var uri);
+        var doc = new TextDocumentIdentifier { Uri = uri };
+        string SvgOf(string? drag) => server.GetSvg(new SvgParams { TextDocument = doc, DragText = drag }).Svg!;
+        string first = SvgOf(null);
+        string drawn = SvgOf(landed);
+        Assert.NotEqual(first, drawn);
+        // The same text written is the same picture.
+        var other = Open(landed, out var otherUri);
+        Assert.Equal(other.GetSvg(new SvgParams { TextDocument = new TextDocumentIdentifier { Uri = otherUri } }).Svg, drawn);
+        // ...and the document is as it was: its own picture, its own steps.
+        Assert.Equal(first, SvgOf(null));
+        Assert.Equal(1, server.Step(new StepParams { TextDocument = doc, Selections = [At(text.IndexOf("c'", text.IndexOf("{ m {", System.StringComparison.Ordinal), System.StringComparison.Ordinal))], Direction = 1, Semitone = true, HoldOthers = true, StaffPositions = 1 }).Edits.Length);
+    }
+
     [Fact]
     public void ADrum_IsNoPitch()
     {

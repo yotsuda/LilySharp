@@ -27,6 +27,10 @@ namespace LilySharp.Lsp;
 public class SvgParams
 {
     public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    /// <summary>Draw this text in place of the document's, which stays as it is: a note in a
+    /// drag, where it would land (owner's request 2026-11-03). Through the session and the page
+    /// deltas of any other preview, so a change of a note costs what a keystroke does.</summary>
+    public string? DragText { get; set; }
     /// <summary>
     /// Optional render name to select which render block to use.
     /// If null, returns the first score render or default preview.
