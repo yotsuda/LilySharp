@@ -283,7 +283,7 @@ public static partial class NoteStepper
     /// <paramref name="semitone"/> steps notes and members to the next tone of the key instead
     /// of by an octave mark (<see cref="SemitoneEdits"/>); a voicing steps its shape either way,
     /// save a chords-row entry, whose octave pair walks the key's seventh chords
-    /// (<see cref="DiatonicChordEdit"/>).
+    /// (<see cref="DiatonicChordEdit(ChordEntrySyntax, int)"/>).
     /// <paramref name="textFaces"/> gives the faces a <c>fonts</c> entry's text key walks, by key,
     /// in the editor's order (the server's font completion); null walks the two bundled faces.
     /// </summary>
