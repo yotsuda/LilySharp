@@ -25,7 +25,7 @@ namespace LilySharp.Core.Semantics;
 /// Warns at an <c>@cross</c> whose note has no other staff to move to
 /// (<see cref="DiagnosticCodes.CrossStaffWithoutPartner"/>): the part it is written in is
 /// drawn by scores that give it one staff and no neighbour, so the page draws the note where
-/// it stands and <c>CrossStaffEngraver.Calculate</c> answers nothing (<c>staffCount &lt; 2</c>).
+/// it stands (<c>MeasureCollector.MoveCrossStaffNotes</c> moves nothing with no other notation staff).
 /// </summary>
 /// <remarks>
 /// Owner's decision 2026-10-23 (session 966, choice (a) of three): until then a single-staff
@@ -39,11 +39,8 @@ namespace LilySharp.Core.Semantics;
 /// The staves are counted off the score's items (<see cref="NotationStaves"/>): a staff, tab,
 /// ossia, condensed or combined staff one each, a group its members' — and a chords or
 /// lyrics ROW none, although it is a voice binding of its own
-/// (<see cref="RenderSpec.GetVoiceBindings"/>). ⒝ The engraver counts rows among the staves
-/// (<c>score.StaffGroups.Sum(g =&gt; g.StaffCount)</c>), so under a lead sheet's chord row it
-/// files the note for "staff 1" — the row — and the page draws the note where it stands
-/// (MEASURED, Lab sessions/p966/row.lys: nothing moves). The warning is right there too.
-/// </para>
+/// (<see cref="RenderSpec.GetVoiceBindings"/>).
+    /// </para>
 /// <para>
 /// ⚠️ ONLY A NOTE WHOSE PART IS KNOWN FROM THE SYNTAX (<see cref="ChordDiagramScores.PartNameOf"/>):
 /// an <c>@cross</c> in a phrase can be played by any part and is not judged; a part no score

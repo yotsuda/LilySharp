@@ -84,7 +84,7 @@ public class ScoreAssemblerTests
     private static ImmutableArray<PercentRepeatItem> OnePercent() =>
         ImmutableArray.Create(new PercentRepeatItem(0, 0));
     private static ImmutableArray<CrossStaffItem> OneCrossStaff() =>
-        ImmutableArray.Create(new CrossStaffItem(0, 0, 1, 0));
+        ImmutableArray.Create(new CrossStaffItem(0, 0, 0));
     private static ImmutableArray<GrobOverride> OneOverride() =>
         ImmutableArray.Create(new GrobOverride("NoteHead", "color", new LysValue.Symbol("red"), 0, 0));
     private static ImmutableArray<GrobRevert> OneRevert() =>

@@ -92,7 +92,6 @@ internal sealed partial class LayoutEngine
         public ImmutableArray<FiguredBassItem>? FiguredBasses { get; init; }
         public ImmutableArray<ChordNameItem>? ChordNames { get; init; }
         public ImmutableArray<PercentRepeatItem>? PercentRepeats { get; init; }
-        public ImmutableArray<CrossStaffLayout>? CrossStaffLayouts { get; init; }
         public ImmutableArray<TrillSpannerItem>? TrillSpanners { get; init; }
         public ImmutableArray<BeamGroup>? BeamGroups { get; init; }
         public ImmutableArray<BeamLayout>? BeamLayouts { get; init; }
@@ -567,7 +566,6 @@ internal sealed partial class LayoutEngine
         var figuredBasses = ctx.FiguredBasses;
         var chordNames = ctx.ChordNames;
         var percentRepeats = ctx.PercentRepeats;
-        var crossStaffLayouts = ctx.CrossStaffLayouts;
         var trillSpanners = ctx.TrillSpanners;
         var beamGroups = ctx.BeamGroups;
         var beamLayouts = ctx.BeamLayouts;
@@ -1395,7 +1393,6 @@ internal sealed partial class LayoutEngine
             FiguredBasses: figuredBassLayouts,
             ChordNames: chordNameLayouts,
             PercentRepeats: percentRepeatLayouts,
-            CrossStaffs: crossStaffLayouts ?? ImmutableArray<CrossStaffLayout>.Empty,
             TrillSpanners: stackedTrills,
             // LILYPOND-REF: lily/fingering-engraver.cc — Fingering grob.
             Fingerings: fingeringLayouts,

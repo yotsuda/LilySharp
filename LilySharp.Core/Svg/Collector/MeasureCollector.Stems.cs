@@ -481,9 +481,9 @@ public sealed partial class MeasureCollector
             // same-direction members' unbeamed heights and clips the non-stem side back to
             // the stem's own, so the whole result is the own head-side end plus this one
             // shared tip. LilyPond caches the answer per stem; this bake is that cache.
-            // The cross-staff coords term (:421-436) is identically zero here: a Lily#
-            // beam group never spans staves, so every member's pure Y refpoint is the
-            // same and the per-member adjustment vanishes.
+            // The cross-staff coords term (:421-436) is zero here: the notes have not moved
+            // yet (MoveCrossStaffNotes runs later and takes this tip back off the beams it
+            // moves), so every member's pure Y refpoint is the same.
             // LILYPOND-REF: lily/stem.cc:387-447 Stem::internal_pure_height — :399-444
             //   the calc_beam branch; :443 iv.intersect (overshoot).
             // LILYPOND-REF: lily/stem.cc:449-458 Stem::cache_pure_height.

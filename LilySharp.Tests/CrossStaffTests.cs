@@ -25,88 +25,15 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class CrossStaffTests
 {
-    // --- CrossStaffEngraver ---
+    // --- Which staff ---
 
-    [Fact]
-    public void CrossStaffEngraver_Calculate_EmptyInput()
-    {
-        var result = CrossStaffEngraver.Calculate(
-            ImmutableArray<CrossStaffItem>.Empty, 0, 2);
-        Assert.True(result.IsEmpty);
-    }
-
-    [Fact]
-    public void CrossStaffEngraver_Calculate_SingleStaff_ReturnsEmpty()
-    {
-        var items = ImmutableArray.Create(new CrossStaffItem(0, 1, 0, 0));
-        var result = CrossStaffEngraver.Calculate(items, 0, 1);
-        Assert.True(result.IsEmpty);
-    }
-
-    [Fact]
-    public void CrossStaffEngraver_Calculate_GrandStaff_TrebleToBase()
-    {
-        var items = ImmutableArray.Create(new CrossStaffItem(0, 2, 0, 0));
-        var result = CrossStaffEngraver.Calculate(items, voiceStaffIndex: 0, staffCount: 2);
-        Assert.Single(result);
-        Assert.Equal(0, result[0].SourceStaffIndex); // treble
-        Assert.Equal(1, result[0].TargetStaffIndex);  // bass
-    }
-
-    [Fact]
-    public void CrossStaffEngraver_Calculate_GrandStaff_BassToTreble()
-    {
-        var items = ImmutableArray.Create(new CrossStaffItem(1, 0, 0, 0));
-        var result = CrossStaffEngraver.Calculate(items, voiceStaffIndex: 1, staffCount: 2);
-        Assert.Single(result);
-        Assert.Equal(1, result[0].SourceStaffIndex); // bass
-        Assert.Equal(0, result[0].TargetStaffIndex);  // treble
-    }
-
-    [Fact]
-    public void CrossStaffEngraver_Calculate_MultipleItems()
-    {
-        var items = ImmutableArray.Create(
-            new CrossStaffItem(0, 1, 0, 0),
-            new CrossStaffItem(0, 3, 0, 0),
-            new CrossStaffItem(1, 0, 0, 0));
-        var result = CrossStaffEngraver.Calculate(items, voiceStaffIndex: 0, staffCount: 2);
-        Assert.Equal(3, result.Length);
-        Assert.All(result, r => Assert.Equal(1, r.TargetStaffIndex));
-    }
-
-    [Fact]
-    public void CrossStaffEngraver_Calculate_ThreeStaves_Wrapping()
-    {
-        // With 3 staves and voice on staff 2, @cross goes to staff 0 (wrap)
-        var items = ImmutableArray.Create(new CrossStaffItem(0, 0, 0, 0));
-        var result = CrossStaffEngraver.Calculate(items, voiceStaffIndex: 2, staffCount: 3);
-        Assert.Single(result);
-        Assert.Equal(0, result[0].TargetStaffIndex);
-    }
-
-    [Fact]
-    public void CrossStaffEngraver_BuildLookup()
-    {
-        var layouts = ImmutableArray.Create(
-            new CrossStaffLayout(0, 1, 0, 1),
-            new CrossStaffLayout(0, 3, 0, 1));
-        var lookup = CrossStaffEngraver.BuildCrossStaffLookup(layouts);
-        Assert.True(lookup.Contains((0, 1)));
-        Assert.True(lookup.Contains((0, 3)));
-        Assert.False(lookup.Contains((0, 2)));
-    }
-
-    [Fact]
-    public void CrossStaffEngraver_GetTargetStaffIndex()
-    {
-        var layouts = ImmutableArray.Create(
-            new CrossStaffLayout(0, 1, 0, 1),
-            new CrossStaffLayout(1, 0, 0, 1));
-        Assert.Equal(1, CrossStaffEngraver.GetTargetStaffIndex(layouts, 0, 1));
-        Assert.Equal(1, CrossStaffEngraver.GetTargetStaffIndex(layouts, 1, 0));
-        Assert.Equal(-1, CrossStaffEngraver.GetTargetStaffIndex(layouts, 0, 2));
-    }
+    [Theory]
+    [InlineData(0, 2, 1)]   // the grand staff's other staff, either way
+    [InlineData(1, 2, 0)]
+    [InlineData(0, 3, 1)]   // the next one down of more
+    [InlineData(2, 3, 0)]   // the last wraps
+    public void TargetStaffOf_IsTheOtherOrTheNextDown(int staff, int count, int target) =>
+        Assert.Equal(target, CrossStaffEngraver.TargetStaffOf(staff, count));
 
     // --- BeamGroup cross-staff detection ---
 

@@ -56,11 +56,6 @@ public sealed record CrossStaffItem(
     // Item index within the measure.
     int ItemIndex,
 
-    // Target staff index within the staff group (0-based).
-    // For grand staff: 0 = treble, 1 = bass.
-    // -1 means revert to original staff.
-    int TargetStaffIndex,
-
     // Source position for diagnostics.
     int SourcePosition
 )

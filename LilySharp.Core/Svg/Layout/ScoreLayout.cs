@@ -364,7 +364,6 @@ internal sealed record ScoreLayout(
     ImmutableArray<FiguredBassLayout> FiguredBassLayouts,
     ImmutableArray<ChordNameLayout> ChordNameLayouts,
     ImmutableArray<PercentRepeatLayout> PercentRepeatLayouts,
-    ImmutableArray<CrossStaffLayout> CrossStaffLayouts,
     ImmutableArray<PartCombineLayout> PartCombineLayouts,
     ImmutableArray<TrillSpannerLayout> TrillSpannerLayouts,
     ImmutableArray<FingeringLayout> FingeringLayouts,

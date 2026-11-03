@@ -539,18 +539,6 @@ internal sealed partial class LayoutEngine
                 beamsByStaff, carriedBeams, prelim.TiesByStaff, prelim.SlursByStaff,
                 prelim.Systems);
 
-        // Resolve cross-staff layouts per voice
-        var crossStaffLayouts = ImmutableArray<CrossStaffLayout>.Empty;
-        if (!score.CrossStaffItems.IsDefaultOrEmpty)
-        {
-            // Use primary staff index (0) as default source; in full multi-voice,
-            // each voice would have its own staff index.
-            int primaryStaffIdx = 0;
-            int staffCount = score.StaffGroups.Sum(g => g.StaffCount);
-            crossStaffLayouts = CrossStaffEngraver.Calculate(
-                score.CrossStaffItems, primaryStaffIdx, staffCount);
-        }
-
         // Create primary staff Score for annotation engravers
         var primaryStaff = score.PrimaryContentStaff;
         var primaryScore = new Score(
@@ -597,7 +585,6 @@ internal sealed partial class LayoutEngine
             FiguredBasses = score.FiguredBasses,
             ChordNames = score.ChordNames,
             PercentRepeats = score.PercentRepeats,
-            CrossStaffLayouts = crossStaffLayouts,
             TrillSpanners = score.TrillSpanners,
             // bracket-visibility = if-no-beam needs the beam groups; without
             // them every tuplet bracket draws even when fully beamed. The

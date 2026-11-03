@@ -688,11 +688,9 @@ public sealed partial class MeasureCollector
     /// LILYPOND-REF: lily/beam.cc:1497 Beam::is_cross_staff (calc_cross_staff @ 1509)
     /// Syntax: @cross marks a note for rendering on the other staff in a grand staff.
     ///
-    /// In a grand staff context:
-    /// - If voice is on staff 0 (treble), @cross moves to staff 1 (bass)
-    /// - If voice is on staff 1 (bass), @cross moves to staff 0 (treble)
-    /// The TargetStaffIndex is resolved later during layout based on voice assignment.
-    /// Here we use 0 as a placeholder (actual target resolved by layout engine).
+    /// The note itself carries <see cref="MusicItem.CrossWritten"/>, and the staff it moves to is
+    /// settled when the staves are known (MoveCrossStaffNotes). This table is what the measure's
+    /// content key reads, and what tells the collector any note moves at all.
     /// </remarks>
     private void CollectCrossStaff(SyntaxNode node, int measureIndex, int itemIndex)
     {
@@ -709,7 +707,6 @@ public sealed partial class MeasureCollector
                 _crossStaffItems.Add(new CrossStaffItem(
                     measureIndex,
                     itemIndex,
-                    0,
                     artSyntax.SourceStart));
                 return;
             }

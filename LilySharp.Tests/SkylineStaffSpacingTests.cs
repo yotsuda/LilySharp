@@ -114,10 +114,7 @@ public class SkylineStaffSpacingTests
     ///   lily/stem.cc:1278-1290 Stem::is_cross_staff.
     /// </summary>
     /// <remarks>
-    /// No end-to-end twin exists yet: nothing in the collector stamps a BeamMember's
-    /// TargetStaffIndex, so IsCrossStaff is unreachable from .lys today (the @cross
-    /// annotation flows only to CrossStaffLayouts at render time). This pins the
-    /// skyline policy for when the feature lands — see HANDOFF §1.
+    /// The end-to-end half is CrossStaffDrawingTests; this pins the skyline policy alone.
     /// </remarks>
     [Fact]
     public void BeamedItemsToSuppress_CrossStaffBeam_SuppressesMembersWithoutSeed()

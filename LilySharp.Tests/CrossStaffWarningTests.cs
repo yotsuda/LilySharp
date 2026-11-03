@@ -24,7 +24,7 @@ namespace LilySharp.Tests;
 /// <summary>
 /// An <c>@cross</c> with no other staff to move to is reported (LYS4031; owner's decision
 /// 2026-10-23, session 966): on a single staff the page draws the note where it stands
-/// (<c>CrossStaffEngraver.Calculate</c> answers nothing for one staff), and until then nothing
+/// (<c>MeasureCollector.MoveCrossStaffNotes</c> has no other staff to move it to), and until then nothing
 /// said so — the owner's own lead sheet wrote <c>b4@cross</c> for an x head.
 /// </summary>
 [Trait("Category", "Unit")]
