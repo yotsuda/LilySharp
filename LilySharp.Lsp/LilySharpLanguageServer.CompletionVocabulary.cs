@@ -958,6 +958,29 @@ public sealed partial class LilySharpLanguageServer
         ["tremolo"] = ("Tremolo: alternate the body's notes N times under beams (LP \\repeat tremolo)", 4),
     };
 
+    /// <summary>The slot between a tuplet's ratio and its body. A space follows the word unless
+    /// one is already there: <c>tuplet 3/2 |{ … }</c> is reached by going back into a finished tuplet.</summary>
+    internal static CompletionList GetTupletAppearanceCompletions(string text, int offset)
+    {
+        string word = TupletExpressionSyntax.BareWord;
+        bool spaced = offset < text.Length && text[offset] is ' ' or '\t';
+        return new CompletionList
+        {
+            Items =
+            [
+                new CompletionItem
+                {
+                    Label = word,
+                    Kind = CompletionItemKind.Keyword,
+                    InsertText = spaced ? word : word + " ",
+                    Detail = "Tuplet with no number or bracket",
+                    Documentation = "tuplet 3/2 bare { c8 d e } — the same timing, nothing drawn over the notes",
+                },
+            ],
+        };
+    }
+
+
     /// <summary>
     /// The kinds valid right after <c>repeat</c> in music, READ FROM THE COMPILER
     /// (<c>LanguageVocabulary.RepeatKinds</c>). Each is a snippet that finishes the
@@ -4354,6 +4377,7 @@ public sealed partial class LilySharpLanguageServer
             // committed to here — this item used to insert `repeat percent 2 { }` outright.
             new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat $0", Detail = "Repeat block", Documentation = string.Join(" | ", LanguageVocabulary.RepeatKinds), SortText = "3repeat", Command = new Command { Title = "Suggest repeat kind", CommandIdentifier = "editor.action.triggerSuggest" } },
             new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "3tuplet" },
+            new CompletionItem { Label = "tuplet bare", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 bare { $0 }", Detail = "Tuplet with no number or bracket", SortText = "3tupletbare" },
             new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "4time", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
             new CompletionItem { Label = "break", Kind = CompletionItemKind.Keyword, InsertText = "break", Detail = "Force a line/system break here", SortText = "4break" },
             new CompletionItem { Label = "noBreak", Kind = CompletionItemKind.Keyword, InsertText = "noBreak", Detail = "Forbid a line break", Documentation = "LilyPond \\noBreak", SortText = "4nobreak" },
@@ -4533,6 +4557,7 @@ public sealed partial class LilySharpLanguageServer
                 // not committed to here — this item used to insert `repeat unfold 2 { }` outright.
                 new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat $0", Detail = "Repeat block", Documentation = string.Join(" | ", LanguageVocabulary.RepeatKinds), SortText = "2repeatkw", Command = new Command { Title = "Suggest repeat kind", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "2tuplet" },
+                new CompletionItem { Label = "tuplet bare", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 bare { $0 }", Detail = "Tuplet with no number or bracket", SortText = "2tupletbare" },
                 new CompletionItem { Label = "<< >>", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "<< $0 >>", Detail = "Arpeggio", Documentation = "Sequential notes, octaves stacked above the first (like a chord). Add a duration after >> for an auto-tuplet.", SortText = "2arpeggio" },
                 // The shape-chord ITEMS (owner's request 2026-10-31: the music popup had no row for
                 // them): `chord(F 133211)4` plays the shape's notes under its name and diagram,

@@ -807,6 +807,8 @@ public sealed partial class LilySharpLanguageServer
         /// level and inside a score body.</summary>
         AfterMarks,
         AfterRepeat,
+        /// <summary><c>tuplet 3/2 |</c>, <c>tuplet 3/2 ba|</c> — the slot for how the tuplet looks: <c>bare</c>.</summary>
+        AfterTupletRatio,
         AfterAt,
         /// <summary><c>@!|</c>, <c>@!ri|</c> — the end of a span: the names <c>@!</c> takes.</summary>
         AfterAtBang,
@@ -944,6 +946,45 @@ public sealed partial class LilySharpLanguageServer
         int end = i;
         while (i > 0 && IsWordChar(text[i - 1])) i--;        // the preceding word
         return text.Substring(i, end - i);
+    }
+
+    /// <summary>
+    /// The caret stands where <c>tuplet N/M</c> takes its appearance word: after the ratio and a
+    /// gap, on nothing or on a beginning of <c>bare</c>. Any other word there is not ours, and
+    /// <c>tuplet 3/2 bare |</c> is past the slot — the word before the caret is no longer the ratio.
+    /// </summary>
+    internal static bool IsAfterTupletRatio(string text, int offset)
+    {
+        int i = offset;
+        while (i > 0 && char.IsLetter(text[i - 1])) i--;
+        if (!TupletExpressionSyntax.BareWord.StartsWith(text[i..offset], StringComparison.Ordinal))
+            return false;
+        bool Gap()
+        {
+            int from = i;
+            while (i > 0 && char.IsWhiteSpace(text[i - 1])) i--;
+            return i < from;
+        }
+        bool Number()
+        {
+            int from = i;
+            while (i > 0 && char.IsAsciiDigit(text[i - 1])) i--;
+            return i < from;
+        }
+        if (!Gap() || !Number())
+            return false;
+        Gap();
+        if (i == 0 || text[i - 1] != '/')
+            return false;
+        i--;
+        Gap();
+        if (!Number() || !Gap())
+            return false;
+        const string Keyword = "tuplet";
+        return i >= Keyword.Length
+            && string.CompareOrdinal(text, i - Keyword.Length, Keyword, 0, Keyword.Length) == 0
+            && (i == Keyword.Length || !(char.IsLetterOrDigit(text[i - Keyword.Length - 1]) || text[i - Keyword.Length - 1] is '_' or '-'))
+            && CodeMask(text, offset)[i - Keyword.Length];
     }
 
     /// <param name="tempoFeel">False to skip the <see cref="CompletionContext.AfterTempoBpm"/>
@@ -1322,6 +1363,16 @@ public sealed partial class LilySharpLanguageServer
         // lyric, not a directive. ⚠️ A frame reads the TWO words before its brace, so
         // `lyrics v sings m {` shows as Prefix=sings, Name=m — the `sings` clause is the
         // lyrics track's other spelling, which IsLyricsFrame is the one reader of.
+        // `tuplet 3/2 |`: the one word that may stand between the ratio and the body (GRAMMAR
+        // TupletExpression). Under the same roof as `repeat` below: music is always braced, and a
+        // lyric or a string may hold these words as plain text.
+        if (IsAfterTupletRatio(text, offset)
+            && scan.Stack.Count > 0
+            && !IsInsidePartBlock(scan.Stack)
+            && !IsInsideStringLiteral(text, offset)
+            && !scan.Stack.Any(b => IsLyricsFrame(b.Frame)))
+            return CompletionContext.AfterTupletRatio;
+
         if (prevWord == "repeat"
             && scan.Stack.Count > 0
             && !IsInsidePartBlock(scan.Stack)

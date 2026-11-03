@@ -4,7 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **`tuplet 3/2 bare { … }` draws a tuplet with no number and no bracket**, the notes, beams and sound the same; `Ctrl+Shift+Up` / `Down` on the word `tuplet` write and take away `bare`. In the LilyPond and MusicXML exports too, and read back from MusicXML.
+- **`tuplet 3/2 bare { … }` draws a tuplet with no number and no bracket**, the notes, beams and sound the same; `Ctrl+Shift+Up` / `Down` on the word `tuplet` write and take away `bare`. Completion offers `bare` after the ratio, and `tuplet bare` among the music items. In the LilyPond and MusicXML exports too, and read back from MusicXML.
 - **A score's own `transpose` moves all of it**: `score x transpose d` moved its notes and key while its chord names, `@chord`s and sound stayed, and the MusicXML export moved nothing. A named `diagram(…)` item draws the moved chord. The LilyPond export's chord names too.
 - **`Ctrl+Shift+PageUp` / `PageDown` on a named `@chord(…)` or `diagram(…)` walks the seventh chords of the key**, as on a `chords` row entry: in C major `@chord(Cmaj7)` → `@chord(Dm7)`, and a named `diagram(…)` or `chord(…)` item the same; a shape with no name moves nothing on this pair, an `@chord(x32010)` as a `diagram(x32010)`.
 - **A click on a chord's note goes to that note**: the upper half of a lower note used to go to the note above it.
