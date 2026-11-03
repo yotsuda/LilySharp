@@ -524,6 +524,17 @@ public static partial class NoteStepper
                 stepped.Add(t);
                 continue;
             }
+            if (!semitone && t.Kind == TargetKind.Voicing && t.Node is MusicMarkSyntax { Name: "chord" } chordMark
+                && ChordAnnotation.Of(chordMark) is { Symbol: { } markSymbol, FromShapeItem: false })
+            {
+                // The same on a named @chord in a part (owner's request 2026-11-03).
+                var (markEdit, markSaid) = DiatonicChordEdit(chordMark, markSymbol, dir);
+                message ??= markSaid;
+                if (markEdit is { } written)
+                    edits.Add(written);
+                stepped.Add(t);
+                continue;
+            }
             // A voicing hears where the caret is: on one of several shapes, that one steps.
             int? caret = selections.Where(s => s.Start == s.End && t.Node.SourceStart <= s.Start
                     && s.Start <= t.Node.SourceStart + t.Node.Width)

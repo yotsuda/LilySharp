@@ -15,33 +15,48 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using LilySharp.Core.Music;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Editing;
 
 /// <summary>
 /// The octave pair (Ctrl+Shift+PageUp / PageDown) on a <c>chords</c> row entry (owner's request
-/// 2026-10-31): the entry's symbol walks the SEVENTH chords of the key in force — in C major
+/// 2026-10-31) or a named <c>@chord(…)</c> (owner's request 2026-11-03): its symbol walks the SEVENTH chords of the key in force — in C major
 /// Cmaj7, Dm7, Em7, Fmaj7, G7, Am7, Bm7-5 — from the degree whose root the symbol stands on
 /// (Cmaj7, C and C7 all stand on I), stopping at I and at VII (owner's decision the same day:
 /// no going round). The semitone pair (Up / Down) keeps stepping the entry's shape, as it did.
+/// So does a named <c>@chord(…)</c> in a part (owner's request 2026-11-03): an @chord with no name
+/// has nothing to walk from, and keeps its steps.
 /// </summary>
 /// <remarks>
-/// The key is the one written for the entry (<see cref="WrittenKeyAt"/>: the section's, the
-/// file's), C major with none; a minor key walks its natural-minor sevenths (Am7 Bm7-5 Cmaj7 …,
-/// <see cref="DiatonicChords.ForKey"/>). A shape the entry wrote goes with the old chord — it
+/// The key is the one written for it (<see cref="WrittenKeyAt"/>: the music's, the section's, the
+/// part's, the file's), C major with none; a minor key walks its natural-minor sevenths (Am7 Bm7-5 Cmaj7 …,
+/// <see cref="DiatonicChords.ForKey"/>). A shape written on it goes with the old chord — it
 /// was that chord's. A Roman degree (<c>IIm7</c>), a symbol whose root is not a tone of the
 /// key, or a custom key, steps nothing and says why.
 /// </remarks>
 public static partial class NoteStepper
 {
+    /// <summary>The whole entry, its shapes included (they held the old chord), becomes the new
+    /// symbol; a <c>@todo</c> after it stays (<see cref="EntryEnd"/> stops at the symbol or its
+    /// <c>)</c>).</summary>
     private static (Edit? Edit, string Message) DiatonicChordEdit(ChordEntrySyntax entry, int dir)
+        => DiatonicChordEdit(entry, entry.SymbolText, entry.SourceStart, EntryEnd(entry), dir);
+
+    /// <summary>All an @chord's words, its shapes included, become the new symbol.</summary>
+    private static (Edit? Edit, string Message) DiatonicChordEdit(MusicMarkSyntax mark, string symbol, int dir)
     {
-        string symbol = entry.SymbolText;
+        var words = ChordAnnotation.WordSpans(mark);
+        return DiatonicChordEdit(mark, symbol, words[0].Start, words[^1].End, dir);
+    }
+
+    private static (Edit? Edit, string Message) DiatonicChordEdit(SyntaxNode site, string symbol, int start, int end, int dir)
+    {
         if (!ChordStructure.TryParseChordEntry(symbol, out var parsed))
             return (null, $"{symbol}: the keys walk a key's seventh chords from a chord NAME, not a degree - its chord depends on the key.");
 
-        var key = WrittenKeyAt(entry);
+        var key = WrittenKeyAt(site);
         if (key is { IsCustom: true })
             return (null, $"{symbol}: a custom key has no seventh chords to walk.");
         char tonic = 'c';
@@ -76,9 +91,7 @@ public static partial class NoteStepper
             return (null, $"{symbol}: {chords[at].RomanSeventhSymbol} is the {(next < 0 ? "first" : "last")} chord of {keyName} "
                 + $"({string.Join(" ", chords.Select(c => c.SeventhSymbol))}).");
         var chord = chords[next];
-        // The whole entry — its shapes included: they held the old chord — becomes the new symbol;
-        // a `@todo` after it stays (EntryEnd stops at the symbol or its ')').
-        return (new Edit(entry.SourceStart, EntryEnd(entry), chord.SeventhSymbol),
+        return (new Edit(start, end, chord.SeventhSymbol),
             $"{chord.SeventhSymbol}: {chord.RomanSeventhSymbol} of {keyName} ({next + 1} of 7)");
     }
 }
