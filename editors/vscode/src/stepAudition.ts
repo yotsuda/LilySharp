@@ -102,6 +102,10 @@ export interface NoteDragSteps {
     markWords(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<{ from: string, to: string, positions?: number } | undefined>;
     /** Writes it, one edit and one undo step; false when it writes nothing. */
     write(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<boolean>;
+    /** A tempo's number where a drag has it, written at once, all of one drag one undo. */
+    tempoLive(doc: vscode.TextDocument, position: number, value: number): void;
+    /** The drag let go, or cancelled with its first number written back. */
+    tempoEnd(doc: vscode.TextDocument): void;
 }
 
 export function registerStepAudition(context: vscode.ExtensionContext, deps: StepAuditionDeps): NoteDragSteps {
@@ -242,7 +246,48 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
     /** A pitch's name alone: no octave marks, no duration. */
     const pitchNameAt = (text: string, offset: number) => /^[a-z]+/.exec(text.slice(offset))?.[0] ?? '';
     let lastHeard = 0, lastWords = 0;
+    // One at a time, in order: an edit waits for the last, and each replaces what that one wrote.
+    let tempoQueue: Promise<unknown> = Promise.resolve();
+    let tempoDrag: { start: number, length: number, written: boolean } | undefined;
+    const writeTempo = async (doc: vscode.TextDocument, number: string, undoStopAfter: boolean) => {
+        const drag = tempoDrag!;
+        const range = new vscode.Range(doc.positionAt(drag.start), doc.positionAt(drag.start + drag.length));
+        const editor = vscode.window.visibleTextEditors.find(e => e.document === doc);
+        if (editor) {
+            await editor.edit(b => b.replace(range, number), { undoStopBefore: !drag.written, undoStopAfter });
+        } else {
+            const edit = new vscode.WorkspaceEdit();
+            edit.replace(doc.uri, range, number);
+            await vscode.workspace.applyEdit(edit);
+        }
+        drag.length = number.length;
+        drag.written = true;
+    };
     const noteDrag: NoteDragSteps = {
+        tempoLive: (doc, position, value) => {
+            tempoQueue = tempoQueue.then(async () => {
+                if (!tempoDrag) {
+                    const digits = /^\d+/.exec(doc.getText().slice(position));
+                    if (!digits) { return; }
+                    tempoDrag = { start: position, length: digits[0].length, written: false };
+                    // The number is what it is all for: on the screen, if it is not.
+                    const at = doc.positionAt(position);
+                    vscode.window.visibleTextEditors.find(e => e.document === doc)
+                        ?.revealRange(new vscode.Range(at, at), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+                }
+                await writeTempo(doc, String(value), false);
+            }).catch(() => undefined);
+        },
+        tempoEnd: (doc) => {
+            tempoQueue = tempoQueue.then(async () => {
+                const drag = tempoDrag;
+                if (drag?.written) {
+                    // The same number again, for the stop that closes the undo.
+                    await writeTempo(doc, doc.getText(new vscode.Range(doc.positionAt(drag.start), doc.positionAt(drag.start + drag.length))), true);
+                }
+                tempoDrag = undefined;
+            }).catch(() => { tempoDrag = undefined; });
+        },
         markWords: async (doc, position, steps, mode) => {
             if (!deps.getClient() || !deps.isReady()) { return undefined; }
             const asked = ++lastWords;

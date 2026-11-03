@@ -1823,6 +1823,12 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 void panel.webview.postMessage({ type: 'noteDragResult', ok: !!ok });
                 return;
             }
+            if (message.type === 'tempoDragLive' || message.type === 'tempoDragEnd') {
+                const doc = await previewDocument(uri);
+                if (doc && message.type === 'tempoDragLive') { noteDragSteps?.tempoLive(doc, message.position, message.value); }
+                if (doc && message.type === 'tempoDragEnd') { noteDragSteps?.tempoEnd(doc); }
+                return;
+            }
             if (message.type === 'previewUndo') {
                 await undoFromPreview(uri, !!message.redo);
                 return;
@@ -7421,6 +7427,30 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function moveNoteRow(row, dy) {
             for (const el of row) el.setAttribute('transform', 'translate(0 ' + dy + ')');
         }
+        // A tempo says nothing by the pointer: its number changes where it stands, on the sheet at
+        // once and in the editor (owner's request 2026-11-03). What a step of it comes to is the
+        // key's rule, TempoEdit: ten with Ctrl, and never under one.
+        function tempoDragValue(base, steps, ctrl) {
+            return Math.max(1, base + steps * (ctrl ? 10 : 1));
+        }
+        function drawnTempoNumber(pos) {
+            return Array.from(svgContainer.querySelectorAll('text[data-pos="' + pos + '"]')).find(el => /[0-9]/.test(el.textContent));
+        }
+        function showTempoDrag(press) {
+            const value = tempoDragValue(press.tempo, press.steps, press.ctrl);
+            const drawn = drawnTempoNumber(press.pos);
+            if (drawn) drawn.textContent = drawn.textContent.replace(/[0-9]+/, String(value));
+            if (value !== press.shownTempo) {
+                press.shownTempo = value;
+                vscode.postMessage({ type: 'tempoDragLive', position: press.pos, value });
+            }
+        }
+        // Esc, or the pointer lost: its first number back, on the sheet and in the editor.
+        function cancelTempoDrag(press) {
+            press.steps = 0;
+            showTempoDrag(press);
+            vscode.postMessage({ type: 'tempoDragEnd' });
+        }
         function newDragTip() {
             const tip = document.createElement('div');
             tip.className = 'mark-drag-tip';
@@ -7432,6 +7462,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const tip = newDragTip();
             window.focus();   // as for a note
             Object.assign(press, { moving: true, tip, steps: 0 });
+            if (noteFineMarks.has(press.pos)) {
+                const drawn = drawnTempoNumber(press.pos);
+                press.tempo = press.shownTempo = drawn ? parseInt(/[0-9]+/.exec(drawn.textContent)[0], 10) : undefined;
+            }
             setDragGrid(press);
             svgContainer.classList.add('note-dragging');
             svgContainer.setPointerCapture(press.id);
@@ -7463,7 +7497,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         const dragMode = (press) => press.isMark ? (press.ctrl ? 'placement' : 'mark') : press.alt ? 'chromatic' : (press.ctrl ? 'octave' : 'position');
         function showDragSteps(press) {
             const steps = press.steps, mode = dragMode(press);
-            if (press.isMark) {
+            if (press.tempo !== undefined) {
+                showTempoDrag(press);
+            } else if (press.isMark) {
                 if (steps === 0) press.tip.hidden = true;
                 else vscode.postMessage({ type: 'markDragWords', position: press.pos, steps, mode });
             } else if (press.alt) {
@@ -7527,6 +7563,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!press.moving) { notePress = null; return; }
             noteDragged = true;
             endNoteDrag(press);
+            if (press.tempo !== undefined) { vscode.postMessage({ type: 'tempoDragEnd' }); return; }
             if (press.row && press.steps === 0) moveNoteRow(press.row, 0);
             if (press.steps === 0) return;
             // A note stays where it was put until the score comes back drawn.
@@ -7536,12 +7573,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         window.addEventListener('pointerup', dropNote);
         window.addEventListener('pointercancel', (e) => {
             if (!notePress || e.pointerId !== notePress.id) return;
-            if (notePress.moving) { if (notePress.row) moveNoteRow(notePress.row, 0); endNoteDrag(notePress); }
+            if (notePress.moving) {
+                if (notePress.row) moveNoteRow(notePress.row, 0);
+                if (notePress.tempo !== undefined) cancelTempoDrag(notePress);
+                endNoteDrag(notePress);
+            }
             notePress = null;
         });
         window.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape' || !notePress || !notePress.moving) return;
             if (notePress.row) moveNoteRow(notePress.row, 0);
+            if (notePress.tempo !== undefined) cancelTempoDrag(notePress);
             endNoteDrag(notePress);
             noteDragged = true;
         });

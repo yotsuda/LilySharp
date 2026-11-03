@@ -734,6 +734,33 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.match(source, /altIsTheDrags = e\.type === 'keydown';\s+e\.stopImmediatePropagation\(\);/);
         assert.match(source, /if \(e\.altKey\) altIsTheDrags = true;/);
     });
+    it('changes a tempo where it stands, at the key\'s steps, with nothing by the pointer', () => {
+        const value = pageFunction('tempoDragValue', {}) as (base: number, steps: number, ctrl: boolean) => number;
+        assert.equal(value(100, 3, false), 103);
+        assert.equal(value(100, 2, true), 120);
+        assert.equal(value(100, 0, true), 100);
+        assert.equal(value(5, -9, false), 1);
+        assert.equal(value(30, -5, true), 1);
+        const posted: unknown[] = [];
+        const drawn = { textContent: '= 100' };
+        const show = pageFunction('showTempoDrag', {
+            tempoDragValue: value,
+            drawnTempoNumber: () => drawn,
+            vscode: { postMessage: (m: unknown) => posted.push(m) },
+        }) as (p: unknown) => void;
+        const press = { pos: 6, tempo: 100, shownTempo: 100, steps: 3, ctrl: false };
+        show(press);
+        assert.equal(drawn.textContent, '= 103');
+        assert.equal(JSON.stringify(posted), JSON.stringify([{ type: 'tempoDragLive', position: 6, value: 103 }]));
+        show(press);                       // the same again, a frame later: nothing to write
+        assert.equal(posted.length, 1);
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(source, /if \(press\.tempo !== undefined\) \{\s+showTempoDrag\(press\);\s+\} else if \(press\.isMark\)/);
+        assert.match(source, /if \(press\.tempo !== undefined\) \{ vscode\.postMessage\(\{ type: 'tempoDragEnd' \}\); return; \}/);
+        assert.match(source, /if \(notePress\.tempo !== undefined\) cancelTempoDrag\(notePress\);\s+endNoteDrag\(notePress\);\s+noteDragged = true;/);
+        const steps = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'stepAudition.ts'), 'utf8');
+        assert.match(steps, /undoStopBefore: !drag\.written, undoStopAfter/);
+    });
     it('goes by the nearest only for a note with Ctrl', () => {
         const stepsOf = pageFunction('dragStepsOf', {
             noteDragSteps: () => 'whole',
