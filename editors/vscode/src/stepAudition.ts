@@ -92,16 +92,16 @@ function includeStretch(): boolean {
 
 /** What a drag in the preview steps (owner's requests 2026-11-02 and 03), the keys' pairs: 'position'
  * a note's staff positions, each to the key's tone there (Ctrl+Shift+Up / Down); 'octave' its
- * octave (Ctrl+Shift+PageUp / PageDown); 'mark' a dynamic's or an articulation's name; 'placement'
- * that mark's .up / .down. */
-export type NoteDragMode = 'position' | 'octave' | 'chromatic' | 'mark' | 'placement';
+ * octave (Ctrl+Shift+PageUp / PageDown). */
+export type NoteDragMode = 'position' | 'octave' | 'chromatic';
 
 /** A drag of `steps`, up when positive, from what has `data-pos` `position`. */
 export interface NoteDragSteps {
     /** Sounds where the note would land. The last asked for wins: a drag outruns the server. */
     hear(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<void>;
-    /** The mark's word now and as it would be: nothing is written. Undefined for a stale question. */
-    markWords(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<{ from: string, to: string, positions?: number } | undefined>;
+    /** A note's name now and that many semitones away, and the staff positions between: nothing is
+     * written. Undefined for a stale question. */
+    chromaticWords(doc: vscode.TextDocument, position: number, steps: number): Promise<{ from: string, to: string, positions: number } | undefined>;
     /** Writes it, one edit and one undo step; false when it writes nothing. */
     write(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<boolean>;
     /** The accidental the note would be drawn with where the drag has it; nothing is written. */
@@ -239,14 +239,12 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             Direction: steps > 0 ? 1 : -1,
             ...(mode === 'position' ? { StaffPositions: Math.abs(steps) } : { Count: Math.abs(steps) }),
             IncludeStretch: false,
-            Semitone: mode === 'position' || mode === 'mark',
+            Semitone: mode === 'position',
             HoldOthers: holdOthers,
             Chromatic: mode === 'chromatic',
     });
     const askSteps = (doc: vscode.TextDocument, offset: number, steps: number, mode: NoteDragMode, holdOthers = false) =>
         deps.getClient()!.sendRequest<StepResponse>('lilysharp/step', stepsAsked(doc, offset, steps, mode, holdOthers));
-    /** The word of what a drag steps at `offset`: a tempo's number. */
-    const markWordAt = (text: string, offset: number) => /^!?[\w#+/-]+/.exec(text.slice(offset))?.[0] ?? '';
     /** A pitch's name alone: no octave marks, no duration. */
     const pitchNameAt = (text: string, offset: number) => /^[a-z]+/.exec(text.slice(offset))?.[0] ?? '';
     let lastHeard = 0, lastWords = 0;
@@ -302,22 +300,19 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
                 tempoDrag = undefined;
             }).catch(() => { tempoDrag = undefined; });
         },
-        markWords: async (doc, position, steps, mode) => {
+        chromaticWords: async (doc, position, steps) => {
             if (!deps.getClient() || !deps.isReady()) { return undefined; }
             const asked = ++lastWords;
             const text = doc.getText();
             const offset = jumpOffsetFor(text, position);
-            const response = await askSteps(doc, offset, steps, mode);
+            const response = await askSteps(doc, offset, steps, 'chromatic');
             if (asked !== lastWords) { return undefined; }
             let after = text;
             for (const e of [...response.Edits].sort((a, b) => b.Start - a.Start)) {
                 after = after.slice(0, e.Start) + e.NewText + after.slice(e.End);
             }
-            if (mode === 'chromatic') {
-                const from = pitchNameAt(text, offset), to = pitchNameAt(after, offset);
-                return { from, to, positions: chromaticPositions(from, to, steps) };
-            }
-            return { from: markWordAt(text, offset), to: markWordAt(after, offset) };
+            const from = pitchNameAt(text, offset), to = pitchNameAt(after, offset);
+            return { from, to, positions: chromaticPositions(from, to, steps) };
         },
         hear: async (doc, position, steps, mode) => {
             if (!deps.getClient() || !deps.isReady() || !auditionEnabled()) { return; }
@@ -335,8 +330,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             const version = doc.version;
             // A dragged note moves alone (owner's decision 2026-11-03), where the keys' notes after
             // it follow: what the hand saw move is what moves.
-            const moved = mode === 'position' || mode === 'octave' || mode === 'chromatic';
-            const response = await askSteps(doc, jumpOffsetFor(doc.getText(), position), steps, mode, moved);
+            const response = await askSteps(doc, jumpOffsetFor(doc.getText(), position), steps, mode, true);
             if (response.Message) { vscode.window.setStatusBarMessage(`Lily#: ${response.Message}`, 4000); }
             if (response.Fallback || response.ConvertOctaves || response.Edits.length === 0
                 || doc.version !== version || response.Version !== version) { return false; }

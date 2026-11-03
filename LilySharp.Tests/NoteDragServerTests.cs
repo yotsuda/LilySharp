@@ -195,8 +195,6 @@ public class NoteDragServerTests
     });
 
     [Theory]
-    [InlineData("c'4@mf d e f |", "mf", 1, 2, true, "c'4@ff d")]
-    [InlineData("c'4@mf d e f |", "mf", -1, 1, true, "c'4@mp d")]
     [InlineData("c'4 d e f |", "c'4", 1, 2, false, "c'''4 d")]
     [InlineData("c'4 d e f |", "c'4", -1, 1, false, "c4 d")]
     public void ACount_IsThatManySteps_InOneEdit(string music, string at, int direction, int count, bool semitone, string landed)
@@ -206,16 +204,6 @@ public class NoteDragServerTests
         var response = Stepped(server, uri, text.IndexOf(at, text.IndexOf("m {", System.StringComparison.Ordinal), System.StringComparison.Ordinal), direction, count, semitone);
         Assert.Single(response.Edits);
         Assert.Contains(landed, Applied(text, response));
-    }
-
-    [Fact]
-    public void ACount_StopsAtTheEndOfTheLadder()
-    {
-        string text = Book("c'4@mf d e f |");
-        var server = Open(text, out var uri);
-        var response = Stepped(server, uri, text.IndexOf("mf", System.StringComparison.Ordinal), 1, 60, true);
-        Assert.Contains("c'4@", Applied(text, response));
-        Assert.DoesNotContain("@mf", Applied(text, response));
     }
 
     [Fact]
@@ -233,8 +221,7 @@ public class NoteDragServerTests
             + "section A { m { c'4@mf@chord(C) d@staccato e@diagram(x32010) f@fermata | clef bass key d major g2@chord(G) a | } }\nform { A }\nscore { chords prog\n staff m }\n";
         var server = Open(text, out var uri);
         var answer = server.NoteHeads(new NoteHeadsParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
-        Assert.Equal([text.IndexOf("100", System.StringComparison.Ordinal)], answer.Marks);
-        Assert.Equal(answer.Marks, answer.FineMarks);
+        Assert.Equal([text.IndexOf("100", System.StringComparison.Ordinal)], answer.Tempos);
     }
 
     private static StepSelection At(int offset) => new() { Start = offset, End = offset };

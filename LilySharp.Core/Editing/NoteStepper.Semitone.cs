@@ -70,14 +70,10 @@ namespace LilySharp.Core.Editing;
 /// </remarks>
 public static partial class NoteStepper
 {
-    /// <summary>Where the things stand that a drag steps in place of a note: a tempo's number alone
+    /// <summary>Where the things stand that a drag takes hold of besides a note: a tempo's number alone
     /// (owner's decision 2026-11-03: the notes and the tempos are dragged, and Ctrl+Shift+Up steps
     /// everything else, which leads people to the editor).</summary>
-    public static IEnumerable<int> SteppingMarks(SyntaxTree tree) => FineSteppingMarks(tree);
-
-    /// <summary>The marks of <see cref="SteppingMarks"/> with many steps a hand wants to cross at
-    /// once: a tempo's number, one beat a minute a step.</summary>
-    public static IEnumerable<int> FineSteppingMarks(SyntaxTree tree)
+    public static IEnumerable<int> DraggedTempoNumbers(SyntaxTree tree)
     {
         foreach (var tempo in tree.GetRoot().DescendantNodes<TempoDeclarationSyntax>())
             if (TempoNumber(tempo) is { } number)

@@ -572,20 +572,20 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
     });
     it('takes hold of a mark the server says steps, and goes by octaves with Ctrl', () => {
         const el = (attrs: Record<string, string>) => ({ hasAttribute: (n: string) => n in attrs, getAttribute: (n: string) => attrs[n] ?? null });
-        const isMark = pageFunction('isSteppingMark', { noteMarks: new Set([42]) }) as (t: unknown) => boolean;
-        assert.equal(isMark(el({ 'data-pos': '42' })), true);
-        assert.equal(isMark(el({ 'data-pos': '39' })), false);
-        assert.equal(isMark(el({})), false);
-        assert.equal(isMark(null), false);
+        const isTempo = pageFunction('isTempoNumber', { noteTempos: new Set([42]) }) as (t: unknown) => boolean;
+        assert.equal(isTempo(el({ 'data-pos': '42' })), true);
+        assert.equal(isTempo(el({ 'data-pos': '39' })), false);
+        assert.equal(isTempo(el({})), false);
+        assert.equal(isTempo(null), false);
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         // Over a head a mark's box gives way to the head, and nothing else is taken hold of.
-        const scope = { noteHeads: new Set([39]), noteMarks: new Set([42]) };
+        const scope = { noteHeads: new Set([39]), noteTempos: new Set([42]) };
         const at = (attrs: Record<string, string>, top: number) => ({ ...el(attrs), getBoundingClientRect: () => ({ left: 0, width: 4, top, height: 4 }) });
         const head = at({ 'data-pos': '39' }, 10), mark = el({ 'data-pos': '42' }), page = el({});
         const isHeadFn = pageFunction('isNoteHead', scope);
-        const isMarkFn = pageFunction('isSteppingMark', scope);
+        const isTempoFn = pageFunction('isTempoNumber', scope);
         const giveWay = pageFunction('giveWay', { nearestTo: pageFunction('nearestTo', {}) });
-        const target = pageFunction('dragTargetOf', { isNoteHead: isHeadFn, isSteppingMark: isMarkFn, giveWay }) as (p: unknown, s: () => unknown[], x: number, y: number) => unknown;
+        const target = pageFunction('dragTargetOf', { isNoteHead: isHeadFn, isTempoNumber: isTempoFn, giveWay }) as (p: unknown, s: () => unknown[], x: number, y: number) => unknown;
         assert.equal(target(head, () => [head, page], 2, 12), head);
         assert.equal(target(mark, () => [mark, head, page], 2, 12), head);
         assert.equal(target(mark, () => [mark, page], 2, 12), mark);
@@ -601,24 +601,24 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const above = at({ 'data-pos': '41' }, 7);
         const inChord = pageFunction('dragTargetOf', {
             isNoteHead: pageFunction('isNoteHead', { noteHeads: headsAt }),
-            isSteppingMark: isMarkFn,
+            isTempoNumber: isTempoFn,
             giveWay,
         }) as (p: unknown, s: () => unknown[], x: number, y: number) => unknown;
         assert.equal(inChord(above, () => [above, head, page], 2, 12), head);
         assert.equal(inChord(head, () => [above, head, page], 2, 9), above);
         assert.match(source, /const OCTAVE_POSITIONS = 7;/);
         assert.match(source, /press\.step = press\.position \* \(octaves \? OCTAVE_POSITIONS : 1\);/);
-        assert.match(source, /moving: false, isMark: isSteppingMark\(target\), ctrl: e\.ctrlKey \|\| e\.metaKey,/);
-        assert.match(source, /press\.isMark \? \(press\.ctrl \? 'placement' : 'mark'\) : press\.alt \? 'chromatic' : \(press\.ctrl \? 'octave' : 'position'\)/);
+        assert.match(source, /moving: false, isTempo: isTempoNumber\(target\), ctrl: e\.ctrlKey \|\| e\.metaKey,/);
+        assert.match(source, /const dragMode = \(press\) => press\.alt \? 'chromatic' : \(press\.ctrl \? 'octave' : 'position'\);/);
     });
     it('asks a dragged note to move alone, when it is let go', () => {
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'stepAudition.ts'), 'utf8');
-        assert.match(source, /const moved = mode === 'position' \|\| mode === 'octave' \|\| mode === 'chromatic';\s+const response = await askSteps\(doc, jumpOffsetFor\(doc\.getText\(\), position\), steps, mode, moved\);/);
+        assert.match(source, /const response = await askSteps\(doc, jumpOffsetFor\(doc\.getText\(\), position\), steps, mode, true\);/);
         assert.match(source, /HoldOthers: holdOthers,/);
     });
     it('takes the focus when a drag starts, so that Esc and Ctrl+Z come to the preview', () => {
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
-        for (const name of ['beginNoteDrag', 'beginMarkDrag']) {
+        for (const name of ['beginNoteDrag', 'beginTempoDrag']) {
             const from = source.indexOf('function ' + name + '(');
             assert.match(source.slice(from, source.indexOf('return true;', from)), /window\.focus\(\);/, name);
         }
@@ -642,7 +642,7 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const switchCtrl = pageFunction('switchDragCtrl', {
             setDragGrid: pageFunction('setDragGrid', { OCTAVE_POSITIONS: 7 }),
             readDragAgain: pageFunction('readDragAgain', {
-                setDragGrid: pageFunction('setDragGrid', { OCTAVE_POSITIONS: 7, MARK_DRAG_PIXELS: 12, FINE_MARK_DRAG_PIXELS: 3, noteFineMarks: new Set([6]) }),
+                setDragGrid: pageFunction('setDragGrid', { OCTAVE_POSITIONS: 7, TEMPO_TEN_DRAG_PIXELS: 12, TEMPO_DRAG_PIXELS: 3 }),
                 dragStepsOf: pageFunction('dragStepsOf', {
                     noteDragSteps: pageFunction('noteDragSteps', { NOTE_DRAG_HOLD: 0.25 }),
                     noteOctaveSteps: pageFunction('noteOctaveSteps', { NOTE_DRAG_HOLD: 0.25 }),
@@ -650,7 +650,7 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
                 showDragSteps: (p: { steps: number }) => shown.push(p.steps),
             }),
         }) as (p: unknown, ctrl: boolean) => void;
-        const note = { moving: true, isMark: false, ctrl: false, position: 2.5, perDrawn: 10, perPosition: 10, step: 2.5, perStep: 10, steps: 7, dy: -75 };
+        const note = { moving: true, isTempo: false, ctrl: false, position: 2.5, perDrawn: 10, perPosition: 10, step: 2.5, perStep: 10, steps: 7, dy: -75 };
         switchCtrl(note, false);
         assert.deepEqual(shown, []);
         switchCtrl(note, true);
@@ -671,20 +671,15 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.deepEqual([small.perStep, small.steps], [10.5, 1]);
         switchCtrl(small, false);
         assert.deepEqual([small.perStep, small.steps], [6, 2]);
-        // A mark has no staff: the same way to a step, and it asks again though the number stays.
-        shown.length = 0;
-        const mark = { moving: true, isMark: true, pos: 42, ctrl: false, perStep: 12, steps: 1, dy: -13 };
-        switchCtrl(mark, true);
-        assert.deepEqual([mark.steps, mark.perStep, shown], [1, 12, [1]]);
-        // A tempo's number goes by the beat in less of the way, and with Ctrl by ten in the mark's.
-        const tempo = { moving: true, isMark: true, pos: 6, ctrl: true, perStep: 12, steps: 1, dy: -13 };
+        // A tempo's number goes by the beat in less of the way, and with Ctrl by ten in more of it.
+        const tempo = { moving: true, isTempo: true, pos: 6, ctrl: true, perStep: 12, steps: 1, dy: -13 };
         switchCtrl(tempo, false);
         assert.deepEqual([tempo.steps, tempo.perStep], [4, 3]);
         switchCtrl(tempo, true);
         assert.deepEqual([tempo.steps, tempo.perStep], [1, 12]);
         // Before the drag starts it is only remembered.
         shown.length = 0;
-        const pressed = { moving: false, isMark: false, ctrl: false, dy: -1 };
+        const pressed = { moving: false, isTempo: false, ctrl: false, dy: -1 };
         switchCtrl(pressed, true);
         assert.deepEqual([pressed.ctrl, shown], [true, []]);
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
@@ -697,7 +692,7 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const mark = { classList: { contains: () => false }, hasAttribute: () => true, getAttribute: () => '42' };
         const clickOf = pageFunction('clickTargetOf', {
             giveWay: pageFunction('giveWay', { nearestTo: pageFunction('nearestTo', {}) }),
-            isSteppingMark: (t: unknown) => t === mark,
+            isTempoNumber: (t: unknown) => t === mark,
         }) as (p: unknown, s: () => unknown[], x: number, y: number) => unknown;
         const never = () => { throw new Error('nothing else looks at what lies under it'); };
         assert.equal(clickOf(upper, () => [upper, lower, page], 2, 12), lower);   // the upper half of the lower note
@@ -728,12 +723,12 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
             showDragSteps: (p: { steps: number }) => shown.push(p.steps),
         });
         const altOf = pageFunction('switchDragAlt', { readDragAgain: readAgain }) as (p: unknown, alt: boolean) => void;
-        const note = { moving: true, isMark: false, ctrl: true, alt: false, position: 2.5, perDrawn: 2, perPosition: 6, step: 17.5, perStep: 14, steps: 0, dy: -13 };
+        const note = { moving: true, isTempo: false, ctrl: true, alt: false, position: 2.5, perDrawn: 2, perPosition: 6, step: 17.5, perStep: 14, steps: 0, dy: -13 };
         altOf(note, true);
         assert.deepEqual([note.alt, note.perStep, note.steps, shown], [true, 6, 2, [2]]);
-        const mark = { moving: true, isMark: true, pos: 1, ctrl: false, alt: false, perStep: 12, steps: 1, dy: -13 };
-        altOf(mark, true);
-        assert.deepEqual([mark.alt, shown.length], [false, 1]);
+        const held = { moving: true, isTempo: true, pos: 1, ctrl: false, alt: false, perStep: 12, steps: 1, dy: -13 };
+        altOf(held, true);
+        assert.deepEqual([held.alt, shown.length], [false, 1]);
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(source, /press\.alt \? 'chromatic' : \(press\.ctrl \? 'octave' : 'position'\)/);
         assert.match(source, /switchDragAlt\(notePress, e\.altKey\);/);
@@ -763,10 +758,10 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         show(press);                       // the same again, a frame later: nothing to write
         assert.equal(posted.length, 1);
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
-        assert.match(source, /if \(press\.tempo !== undefined\) \{\s+showTempoDrag\(press\);\s+\} else if \(press\.isMark\)/);
+        assert.match(source, /if \(press\.tempo !== undefined\) \{\s+showTempoDrag\(press\);\s+\} else if \(press\.alt\)/);
         assert.match(source, /if \(press\.tempo !== undefined\) \{ vscode\.postMessage\(\{ type: 'tempoDragEnd' \}\); return; \}/);
         assert.match(source, /if \(notePress\.tempo !== undefined\) cancelTempoDrag\(notePress\);\s+endNoteDrag\(notePress\);\s+noteDragged = true;/);
-        assert.match(source, /const FINE_MARK_DRAG_PIXELS = 4;/);   // owner's feel, 2026-11-03: 3 was a little quick
+        assert.match(source, /const TEMPO_DRAG_PIXELS = 4;/);   // owner's feel, 2026-11-03: 3 was a little quick
         const steps = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'stepAudition.ts'), 'utf8');
         assert.match(steps, /undoStopBefore: !drag\.written, undoStopAfter/);
     });
@@ -843,10 +838,10 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
             noteDragSteps: () => 'whole',
             noteOctaveSteps: () => 'nearest',
         }) as (press: unknown, px: number, steps: number) => string;
-        assert.equal(stepsOf({ ctrl: true, isMark: false, perStep: 10 }, -6, 0), 'nearest');
-        assert.equal(stepsOf({ ctrl: false, isMark: false, perStep: 10 }, -6, 0), 'whole');
-        assert.equal(stepsOf({ ctrl: true, isMark: true, perStep: 12 }, -6, 0), 'whole');
-        assert.equal(stepsOf({ ctrl: false, isMark: true, perStep: 12 }, -6, 0), 'whole');
+        assert.equal(stepsOf({ ctrl: true, isTempo: false, perStep: 10 }, -6, 0), 'nearest');
+        assert.equal(stepsOf({ ctrl: false, isTempo: false, perStep: 10 }, -6, 0), 'whole');
+        assert.equal(stepsOf({ ctrl: true, isTempo: true, perStep: 12 }, -6, 0), 'whole');
+        assert.equal(stepsOf({ ctrl: false, isTempo: true, perStep: 12 }, -6, 0), 'whole');
     });
     it('goes to the nearest octave with Ctrl, and holds it on the way back', () => {
         const next = pageFunction('noteOctaveSteps', { NOTE_DRAG_HOLD: 0.25 }) as (px: number, per: number, steps: number) => number;
