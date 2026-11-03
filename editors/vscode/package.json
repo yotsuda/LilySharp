@@ -603,6 +603,81 @@
         "title": "Ask AI…"
       },
       {
+        "command": "lilysharp.previewNoteToRest",
+        "category": "Lily#",
+        "title": "Replace with Rest"
+      },
+      {
+        "command": "lilysharp.previewChordToRest",
+        "category": "Lily#",
+        "title": "Replace Chord with Rest"
+      },
+      {
+        "command": "lilysharp.previewRemoveChordMember",
+        "category": "Lily#",
+        "title": "Delete Note from Chord"
+      },
+      {
+        "command": "lilysharp.previewRestToNote",
+        "category": "Lily#",
+        "title": "Replace with Note"
+      },
+      {
+        "command": "lilysharp.previewMark.staccato",
+        "category": "Lily#",
+        "title": "Staccato"
+      },
+      {
+        "command": "lilysharp.previewMark.tenuto",
+        "category": "Lily#",
+        "title": "Tenuto"
+      },
+      {
+        "command": "lilysharp.previewMark.accent",
+        "category": "Lily#",
+        "title": "Accent"
+      },
+      {
+        "command": "lilysharp.previewMark.marcato",
+        "category": "Lily#",
+        "title": "Marcato"
+      },
+      {
+        "command": "lilysharp.previewMark.fermata",
+        "category": "Lily#",
+        "title": "Fermata"
+      },
+      {
+        "command": "lilysharp.previewMark.pp",
+        "category": "Lily#",
+        "title": "pp"
+      },
+      {
+        "command": "lilysharp.previewMark.p",
+        "category": "Lily#",
+        "title": "p"
+      },
+      {
+        "command": "lilysharp.previewMark.mp",
+        "category": "Lily#",
+        "title": "mp"
+      },
+      {
+        "command": "lilysharp.previewMark.mf",
+        "category": "Lily#",
+        "title": "mf"
+      },
+      {
+        "command": "lilysharp.previewMark.f",
+        "category": "Lily#",
+        "title": "f"
+      },
+      {
+        "command": "lilysharp.previewMark.ff",
+        "category": "Lily#",
+        "title": "ff"
+      },
+      {
         "command": "lilysharp.previewSelectBar",
         "category": "Lily#",
         "title": "Select This Bar"
@@ -758,9 +833,59 @@
       {
         "id": "lilysharp.export",
         "label": "Lily#: Export"
+      },
+      {
+        "id": "lilysharp.previewMark",
+        "label": "Mark"
       }
     ],
     "menus": {
+      "lilysharp.previewMark": [
+        {
+          "command": "lilysharp.previewMark.staccato",
+          "group": "1_articulation@1"
+        },
+        {
+          "command": "lilysharp.previewMark.tenuto",
+          "group": "1_articulation@2"
+        },
+        {
+          "command": "lilysharp.previewMark.accent",
+          "group": "1_articulation@3"
+        },
+        {
+          "command": "lilysharp.previewMark.marcato",
+          "group": "1_articulation@4"
+        },
+        {
+          "command": "lilysharp.previewMark.fermata",
+          "group": "1_articulation@5"
+        },
+        {
+          "command": "lilysharp.previewMark.pp",
+          "group": "2_dynamic@6"
+        },
+        {
+          "command": "lilysharp.previewMark.p",
+          "group": "2_dynamic@7"
+        },
+        {
+          "command": "lilysharp.previewMark.mp",
+          "group": "2_dynamic@8"
+        },
+        {
+          "command": "lilysharp.previewMark.mf",
+          "group": "2_dynamic@9"
+        },
+        {
+          "command": "lilysharp.previewMark.f",
+          "group": "2_dynamic@10"
+        },
+        {
+          "command": "lilysharp.previewMark.ff",
+          "group": "2_dynamic@11"
+        }
+      ],
       "lilysharp.export": [
         {
           "command": "lilysharp.exportPdf",
@@ -845,6 +970,66 @@
         },
         {
           "command": "lilysharp.previewAiTransformScore",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewNoteToRest",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewChordToRest",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewRemoveChordMember",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewRestToNote",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewMark.staccato",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewMark.tenuto",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewMark.accent",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewMark.marcato",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewMark.fermata",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewMark.pp",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewMark.p",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewMark.mp",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewMark.mf",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewMark.f",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewMark.ff",
           "when": "false"
         },
         {
@@ -1028,6 +1213,31 @@
         }
       ],
       "webview/context": [
+        {
+          "command": "lilysharp.previewNoteToRest",
+          "when": "webviewId == 'lilysharpPreview' && lysEditHead && !lysOnChord",
+          "group": "0_note@1"
+        },
+        {
+          "command": "lilysharp.previewChordToRest",
+          "when": "webviewId == 'lilysharpPreview' && lysEditHead && lysOnChord",
+          "group": "0_note@1"
+        },
+        {
+          "command": "lilysharp.previewRemoveChordMember",
+          "when": "webviewId == 'lilysharpPreview' && lysEditHead && lysOnChord",
+          "group": "0_note@2"
+        },
+        {
+          "command": "lilysharp.previewRestToNote",
+          "when": "webviewId == 'lilysharpPreview' && lysEditRest",
+          "group": "0_note@1"
+        },
+        {
+          "submenu": "lilysharp.previewMark",
+          "when": "webviewId == 'lilysharpPreview' && lysEditHead",
+          "group": "0_note@3"
+        },
         {
           "command": "lilysharp.previewAskAiInChat",
           "when": "webviewId == 'lilysharpPreview'",

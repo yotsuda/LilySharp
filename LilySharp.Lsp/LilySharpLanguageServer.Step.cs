@@ -239,6 +239,35 @@ public sealed partial class LilySharpLanguageServer
         return new StepTextEdit { Start = head, End = before.Length - tail, NewText = after[head..(after.Length - tail)] };
     }
 
+    private static readonly HashSet<string> DynamicMarks = ["pp", "p", "mp", "mf", "f", "ff"];
+
+    [JsonRpcMethod("lilysharp/noteEdit", UseSingleObjectParameterDeserialization = true)]
+    public Task<StepResponse> NoteEditAsync(NoteEditParams @params, CancellationToken token)
+        => OffDispatch(() => NoteEdit(@params), token);
+
+    /// <summary>One edit of the preview's right-click menu (<c>NoteStepper.Menu.cs</c>): no edit where it can do nothing.</summary>
+    public StepResponse NoteEdit(NoteEditParams @params)
+    {
+        var uri = @params.TextDocument.Uri;
+        var doc = _documentManager.GetDocument(uri);
+        if (doc == null)
+            return new StepResponse { Fallback = true, Error = "Document not found" };
+        string basePath = uri.IsFile ? uri.LocalPath : string.Empty;
+        SyntaxTree Expand(string text) => ExpandUsings(text, SyntaxTree.Parse(text), basePath,
+            p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree;
+        string? after = @params.Kind switch
+        {
+            "rest" => NoteStepper.NoteToRest(doc.Text, doc.Tree, @params.Position, Expand),
+            "note" => NoteStepper.RestToNote(doc.Text, doc.Tree, @params.Position, Expand),
+            "removeMember" => NoteStepper.RemoveChordMember(doc.Text, doc.Tree, @params.Position, Expand),
+            "mark" when !string.IsNullOrEmpty(@params.Mark) => NoteStepper.ToggleNoteMark(doc.Text, doc.Tree, @params.Position, @params.Mark, DynamicMarks.Contains(@params.Mark)),
+            _ => null,
+        };
+        return after == null || after == doc.Text
+            ? new StepResponse { Version = doc.Version }
+            : new StepResponse { Edits = [TheDifference(doc.Text, after)], Version = doc.Version };
+    }
+
     [JsonRpcMethod("lilysharp/noteHeads", UseSingleObjectParameterDeserialization = true)]
     public Task<NoteHeadsResponse> NoteHeadsAsync(NoteHeadsParams @params, CancellationToken token)
         => OffDispatch(() => NoteHeads(@params), token);
@@ -262,6 +291,7 @@ public sealed partial class LilySharpLanguageServer
                 .Select(p => p.SourceStart)],
             Marks = [.. NoteStepper.SteppingMarks(doc.Text, doc.Tree)],
             FineMarks = [.. NoteStepper.FineSteppingMarks(doc.Tree)],
+            Rests = [.. doc.Tree.GetRoot().DescendantNodes<RestSyntax>().Select(r => r.SourceStart)],
             LedgerThickness = ledger.Thickness,
             LedgerLengthFraction = ledger.LengthFraction,
         };

@@ -213,6 +213,30 @@ function revealPreviewSource(panel: vscode.WebviewPanel) {
 // in an open one. An untitled score that was closed is gone: nothing to open, as before.
 let noteDragSteps: NoteDragSteps | undefined;
 
+// The marks the preview's right-click menu puts on a note, as package.json lists them.
+const PREVIEW_MARKS = ['staccato', 'tenuto', 'accent', 'marcato', 'fermata', 'pp', 'p', 'mp', 'mf', 'f', 'ff'];
+
+/** One of the menu's edits on the note right-clicked (owner's choice 2026-11-03). */
+async function previewNoteEdit(position: number | undefined, kind: string, mark?: string) {
+    const shown = [...previewPanels.entries()].find(([, p]) => p.active);
+    if (!shown || !client || !clientReady || !Number.isInteger(position) || position! < 0) {
+        return;
+    }
+    const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(shown[0]));
+    const version = doc.version;
+    const response = await client.sendRequest<{ Edits: Array<{ Start: number, End: number, NewText: string }>, Version: number }>('lilysharp/noteEdit', {
+        TextDocument: { uri: shown[0] }, Position: position, Kind: kind, Mark: mark ?? null,
+    });
+    if (response.Edits.length === 0 || doc.version !== version || response.Version !== version) {
+        return;
+    }
+    const edit = new vscode.WorkspaceEdit();
+    for (const e of response.Edits) {
+        edit.replace(doc.uri, new vscode.Range(doc.positionAt(e.Start), doc.positionAt(e.End)), e.NewText);
+    }
+    await vscode.workspace.applyEdit(edit);
+}
+
 /** Ctrl+Z over the preview (owner's request 2026-11-02: a drag there has to be taken back there).
  * VS Code's undo goes to the editor in focus, and a webview is none: the source takes the focus
  * for it and gives it back. */
@@ -1042,6 +1066,12 @@ export function activate(context: vscode.ExtensionContext) {
     // The score's selection from its menu: the bar right-clicked selected (Shift+click or
     // Shift+drag extends it), and the selection cleared.
     context.subscriptions.push(
+        vscode.commands.registerCommand('lilysharp.previewNoteToRest', (m?: { lysEditAt?: number }) => previewNoteEdit(m?.lysEditAt, 'rest')),
+        vscode.commands.registerCommand('lilysharp.previewChordToRest', (m?: { lysEditAt?: number }) => previewNoteEdit(m?.lysEditAt, 'rest')),
+        vscode.commands.registerCommand('lilysharp.previewRemoveChordMember', (m?: { lysEditAt?: number }) => previewNoteEdit(m?.lysEditAt, 'removeMember')),
+        vscode.commands.registerCommand('lilysharp.previewRestToNote', (m?: { lysEditAt?: number }) => previewNoteEdit(m?.lysEditAt, 'note')),
+        ...PREVIEW_MARKS.map(mark => vscode.commands.registerCommand(`lilysharp.previewMark.${mark}`,
+            (m?: { lysEditAt?: number }) => previewNoteEdit(m?.lysEditAt, 'mark', mark))),
         vscode.commands.registerCommand('lilysharp.previewSelectBar', () => postToActivePreview('ctxSelectBar')),
         vscode.commands.registerCommand('lilysharp.previewClearSelection', () => postToActivePreview('ctxClearSelection')),
         // Select Chord on a member right-clicked (owner's request 2026-10-27): the caret just past
@@ -1788,9 +1818,9 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             if (message.type === 'requestNoteHeads') {
                 const doc = await previewDocument(uri);
                 if (!client || !clientReady || !doc) { return; }
-                const answer = await client.sendRequest<{ Positions: number[], Marks: number[], FineMarks: number[], LedgerThickness: number, LedgerLengthFraction: number }>('lilysharp/noteHeads', { TextDocument: { uri } });
+                const answer = await client.sendRequest<{ Positions: number[], Marks: number[], FineMarks: number[], Rests: number[], LedgerThickness: number, LedgerLengthFraction: number }>('lilysharp/noteHeads', { TextDocument: { uri } });
                 void panel.webview.postMessage({
-                    type: 'noteHeads', positions: answer.Positions, marks: answer.Marks, fineMarks: answer.FineMarks,
+                    type: 'noteHeads', positions: answer.Positions, marks: answer.Marks, fineMarks: answer.FineMarks, rests: answer.Rests,
                     ledgerThickness: answer.LedgerThickness, ledgerFraction: answer.LedgerLengthFraction,
                 });
                 return;
@@ -6982,6 +7012,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     noteHeads = new Set(message.positions);
                     noteMarks = new Set(message.marks);
                     noteFineMarks = new Set(message.fineMarks);
+                    noteRests = new Set(message.rests);
                     noteLedger = { thickness: message.ledgerThickness, fraction: message.ledgerFraction };
                     break;
                 case 'mouseLock':
@@ -7253,7 +7284,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function dragStepsOf(press, pixels, steps) {
             return press.ctrl && !press.alt && !press.isMark ? noteOctaveSteps(pixels, press.perStep, steps) : noteDragSteps(pixels, press.perStep, steps);
         }
-        let noteHeads = new Set(), noteMarks = new Set(), noteFineMarks = new Set();
+        let noteHeads = new Set(), noteMarks = new Set(), noteFineMarks = new Set(), noteRests = new Set();
         let notePress = null, noteDragged = false, noteDropped = null;
         // As the score draws a ledger line (from the server, with noteHeads).
         let noteLedger = { thickness: 0.2, fraction: 0.25 };
@@ -7920,6 +7951,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 lysPlayFrom: ctxPlayPos >= 0,
                 lysOnChord: ctxChordEnd >= 0,
                 lysChordEnd: ctxChordEnd,
+                // The menu's edits (owner's choice 2026-11-03): what was right-clicked, and not
+                // under the padlock, nor while the score plays, as for a drag.
+                lysEditHead: noteHeads.has(ctxNotePos) && mouseEditLocked === false && document.getElementById('stopBtn').disabled,
+                lysEditRest: noteRests.has(ctxNotePos) && mouseEditLocked === false && document.getElementById('stopBtn').disabled,
+                lysEditAt: ctxNotePos,
                 lysBarTodo: ctxTodoStarts.length > 0,
                 lysTodoStarts: ctxTodoStarts.join(','),
                 lysHasTodos: todoMarks.length > 0,

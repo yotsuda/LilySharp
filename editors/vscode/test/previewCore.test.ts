@@ -65,11 +65,17 @@ describe('the chords of a score', () => {
         const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
         const menu = pkg.contributes.menus['webview/context'] as { command: string; group: string }[];
         const groups = [...new Set(menu.map(m => m.group.split('@')[0]))].sort();
-        assert.deepEqual(groups, ['1_edit', '2_playback', '3_view']);
+        assert.deepEqual(groups, ['0_note', '1_edit', '2_playback', '3_view']);
+        // The note under the pointer, first (owner's choice 2026-11-03), and not under the padlock.
+        for (const c of ['previewNoteToRest', 'previewChordToRest', 'previewRemoveChordMember']) {
+            assert.match(menu.find(m => m.command === 'lilysharp.' + c)!.group, /^0_note@/);
+            assert.match((menu.find(m => m.command === 'lilysharp.' + c) as unknown as { when: string }).when, /lysEditHead/);
+        }
+        assert.match((menu.find(m => m.command === 'lilysharp.previewRestToNote') as unknown as { when: string }).when, /lysEditRest/);
         const of = (c: string) => menu.find(m => m.command === c)?.group;
         // Owner's request 2026-10-29: the AI on the menu is the chat's; Lily#'s own Ask AI left it.
         assert.equal(of('lilysharp.previewAskAiInChat'), '1_edit@1');
-        assert.ok(!menu.some(m => m.command.startsWith('lilysharp.previewAiTransform')));
+        assert.ok(!menu.some(m => m.command?.startsWith('lilysharp.previewAiTransform')));
         const editor = pkg.contributes.menus['editor/context'] as { command: string; group: string }[];
         assert.equal(editor.find(m => m.command === 'lilysharp.askAiInChat')?.group, '1_modification@1');
         assert.ok(!editor.some(m => m.command === 'lilysharp.aiTransform'));
