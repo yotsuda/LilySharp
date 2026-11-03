@@ -59,7 +59,7 @@ namespace LilySharp.Core.Editing;
 /// A CHORD AS A WHOLE (the caret on its <c>&gt;</c> or its duration) INVERTS instead (owner's
 /// decision 2026-10-16): Up raises its lowest-sounding member an octave, Down lowers its
 /// highest, and the other members are held at their pitches by the same mark correction —
-/// in relative octaves each hangs on the one before it. The notes after the chord follow as
+/// in relative octaves each hangs on the chord's first (GRAMMAR, the anchor). The notes after the chord follow as
 /// they will.
 /// </para>
 /// <para>
@@ -101,7 +101,7 @@ public static partial class NoteStepper
 
     /// <summary>The octave-mark correction is tried at most this many times (one re-collection
     /// each). One round settles a single note; an inverted chord in relative octaves takes about
-    /// one per member, each member's octave hanging on the one before it.</summary>
+    /// one per member, the others hanging on its first member, which the inversion may move.</summary>
     private const int MaxOctaveRounds = 8;
 
     /// <summary>The pitches a semitone step of <paramref name="t"/> moves: a note's pitch, a
