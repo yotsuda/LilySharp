@@ -34,7 +34,7 @@ import {
     AuditionMemory, CARET_DEBOUNCE_MS, chromaticPositions, Debouncer, SOUNDS_WHEN_CHANGED, TYPING_SETTLE_MS,
     auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument, reselectAfterStep,
     stepFallbackCommand, strumGapMs,
-    dragWordAt, keyWordLength,
+    dragWordAt,
 } from './auditionCore';
 
 export interface StepAuditionDeps {
@@ -111,11 +111,6 @@ export interface NoteDragSteps {
     tempoLive(doc: vscode.TextDocument, position: number, value: number): void;
     /** The drag let go, or cancelled with its first number written back. */
     tempoEnd(doc: vscode.TextDocument): void;
-    /** A key where a drag has it, written at once, all of one drag one undo: `steps` from what it
-     * was when the drag began, and at none that very text. */
-    keyLive(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): void;
-    /** The drag let go, or cancelled with `steps` 0 asked first. */
-    keyEnd(doc: vscode.TextDocument): void;
 }
 
 export function registerStepAudition(context: vscode.ExtensionContext, deps: StepAuditionDeps): NoteDragSteps {
@@ -252,7 +247,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
     const askSteps = (doc: vscode.TextDocument, offset: number, steps: number, mode: NoteDragMode, holdOthers = false) =>
         deps.getClient()!.sendRequest<StepResponse>('lilysharp/step', stepsAsked(doc, offset, steps, mode, holdOthers));
     /** The word of what a drag steps at `offset`: a mark's name, any shape and placement; a chords-row
-     * entry, a tempo's number, a clef, a key. */
+     * entry, a tempo's number, a clef. */
     const markWordAt = (text: string, offset: number) => dragWordAt(text, offset);
     /** A pitch's name alone: no octave marks, no duration. */
     const pitchNameAt = (text: string, offset: number) => /^[a-z]+/.exec(text.slice(offset))?.[0] ?? '';
@@ -260,7 +255,8 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
     // One at a time, in order: an edit waits for the last, and each replaces what that one wrote.
     let tempoQueue: Promise<unknown> = Promise.resolve();
     let tempoDrag: { start: number, length: number, written: boolean } | undefined;
-    const writeLive = async (doc: vscode.TextDocument, drag: { start: number, length: number, written: boolean }, number: string, undoStopAfter: boolean) => {
+    const writeTempo = async (doc: vscode.TextDocument, number: string, undoStopAfter: boolean) => {
+        const drag = tempoDrag!;
         const range = new vscode.Range(doc.positionAt(drag.start), doc.positionAt(drag.start + drag.length));
         const editor = vscode.window.visibleTextEditors.find(e => e.document === doc);
         if (editor) {
@@ -272,36 +268,6 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         }
         drag.length = number.length;
         drag.written = true;
-    };
-    const writeTempo = (doc: vscode.TextDocument, number: string, undoStopAfter: boolean) => writeLive(doc, tempoDrag!, number, undoStopAfter);
-    // A key dragged: where it stands, as asked last, and the way there from what was written. A
-    // step at the end of the circle moves nothing, and steps counts the moves that were made, so the
-    // way back starts as soon as the mouse turns.
-    let keyDrag: { start: number, length: number, written: boolean, base: string, steps: number, mode: NoteDragMode } | undefined;
-    let keyWanted: { steps: number, mode: NoteDragMode } | undefined;
-    const driveKey = async (doc: vscode.TextDocument) => {
-        const drag = keyDrag;
-        while (drag && keyWanted) {
-            const { steps, mode } = keyWanted;
-            if (steps === drag.steps && mode === drag.mode) { return; }
-            if (steps === 0 || mode !== drag.mode) {
-                if (drag.written) { await writeLive(doc, drag, drag.base, false); }
-                drag.steps = 0;
-                drag.mode = mode;
-                continue;
-            }
-            const dir = steps > drag.steps ? 1 : -1;
-            const response = await askSteps(doc, drag.start, dir, mode);
-            const end = drag.start + drag.length;
-            if (response.Edits.length === 0 || response.Fallback || response.Version !== doc.version
-                || response.Edits.some(e => e.Start < drag.start || e.End > end)) { return; }
-            let word = doc.getText(new vscode.Range(doc.positionAt(drag.start), doc.positionAt(end)));
-            for (const e of [...response.Edits].sort((a, b) => b.Start - a.Start)) {
-                word = word.slice(0, e.Start - drag.start) + e.NewText + word.slice(e.End - drag.start);
-            }
-            await writeLive(doc, drag, word, false);
-            drag.steps += dir;
-        }
     };
     const noteDrag: NoteDragSteps = {
         accidentals: async (doc, position, steps, mode, renderName) => {
@@ -337,29 +303,6 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
                 }
                 tempoDrag = undefined;
             }).catch(() => { tempoDrag = undefined; });
-        },
-        keyLive: (doc, position, steps, mode) => {
-            keyWanted = { steps, mode };
-            tempoQueue = tempoQueue.then(async () => {
-                if (!deps.getClient() || !deps.isReady()) { return; }
-                if (!keyDrag) {
-                    const text = doc.getText();
-                    const length = keyWordLength(text, position);
-                    if (length === 0) { return; }
-                    keyDrag = { start: position, length, written: false, base: text.slice(position, position + length), steps: 0, mode };
-                }
-                await driveKey(doc);
-            }).catch(() => undefined);
-        },
-        keyEnd: (doc) => {
-            tempoQueue = tempoQueue.then(async () => {
-                const drag = keyDrag;
-                if (drag?.written) {
-                    await writeLive(doc, drag, doc.getText(new vscode.Range(doc.positionAt(drag.start), doc.positionAt(drag.start + drag.length))), true);
-                }
-                keyDrag = undefined;
-                keyWanted = undefined;
-            }).catch(() => { keyDrag = undefined; keyWanted = undefined; });
         },
         markWords: async (doc, position, steps, mode) => {
             if (!deps.getClient() || !deps.isReady()) { return undefined; }

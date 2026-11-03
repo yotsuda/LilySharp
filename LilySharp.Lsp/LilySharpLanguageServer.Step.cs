@@ -262,7 +262,6 @@ public sealed partial class LilySharpLanguageServer
                 .Select(p => p.SourceStart)],
             Marks = [.. NoteStepper.SteppingMarks(doc.Text, doc.Tree)],
             FineMarks = [.. NoteStepper.FineSteppingMarks(doc.Tree)],
-            KeyMarks = [.. NoteStepper.KeySteppingMarks(doc.Tree)],
             LedgerThickness = ledger.Thickness,
             LedgerLengthFraction = ledger.LengthFraction,
         };

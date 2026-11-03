@@ -26,12 +26,13 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A clef and a key signature dragged in the preview (owner's request 2026-11-03): what
-/// Ctrl+Shift+Up can step may be dragged. The score's glyph says where it was written, and that
-/// is the place the page must be told it can take hold of and the place a step must work from.
+/// A clef dragged in the preview (owner's request 2026-11-03): what Ctrl+Shift+Up can step may be
+/// dragged. The score's glyph says where it was written, and that is the place the page must be told
+/// it can take hold of and the place a step must work from. Not a key signature: tried and taken out
+/// by the owner, the staves moving under the hand (ROADMAP), nor a time signature.
 /// </summary>
 [Trait("Category", "Unit")]
-public class ClefKeyDragTests
+public class ClefDragTests
 {
     private const string Music = "section A { m { c'4 d e f | } }\nform { A }\nscore { staff m }\n";
 
@@ -44,38 +45,27 @@ public class ClefKeyDragTests
     [InlineData("part m { clef bass }\n" + Music, "bass")]
     [InlineData("clef alto\npart m { }\n" + Music, "alto")]
     [InlineData("part m { clef treble^8 }\n" + Music, "treble^8")]
-    [InlineData("part m { clef treble key g major }\n" + Music, "g major")]
-    [InlineData("key d major\npart m { clef treble }\n" + Music, "d major")]
-    [InlineData("key! e minor\npart m { clef treble }\n" + Music, "e minor")]
     [InlineData("part m { clef treble }\nsection A { m { c'4 d e f | clef bass c d e f | } }\nform { A }\nscore { staff m }\n", "bass")]
-    [InlineData("part m { clef treble }\nsection A { m { c'4 d e f | key d major c d e f | } }\nform { A }\nscore { staff m }\n", "d major")]
     public void WhatTheScoreDraws_CanBeTakenHoldOf(string text, string word)
     {
         int at = text.IndexOf(word, System.StringComparison.Ordinal);
         Assert.Contains(at, Marks(text));
         Assert.True(Drawn(text, at), "the glyph does not stand at " + at);
-        Assert.Contains(NoteStepper.TargetAt(text, SyntaxTree.Parse(text), at)?.Kind, new NoteStepper.TargetKind?[] { NoteStepper.TargetKind.Clef, NoteStepper.TargetKind.Key });
+        Assert.Equal(NoteStepper.TargetKind.Clef, NoteStepper.TargetAt(text, SyntaxTree.Parse(text), at)?.Kind);
     }
 
     [Theory]
-    [InlineData("key custom c 1\npart m { clef treble }\n" + Music, "custom")]  // no tonic to walk from
-    [InlineData("time 4/4\npart m { clef treble }\n" + Music, "4/4")]           // the owner's choice: not the time
-    public void NotWhatHasNoStep(string text, string word)
+    [InlineData("key d major\npart m { clef treble }\n" + Music, "d major")]
+    [InlineData("part m { clef treble key g major }\n" + Music, "g major")]
+    [InlineData("part m { clef treble }\nsection A { m { c'4 d e f | key d major c d e f | } }\nform { A }\nscore { staff m }\n", "d major")]
+    [InlineData("time 4/4\npart m { clef treble }\n" + Music, "4/4")]
+    public void NotAKey_NorATime_TheKeysAloneStepThem(string text, string word)
         => Assert.DoesNotContain(text.IndexOf(word, System.StringComparison.Ordinal), Marks(text));
-
-    [Fact]
-    public void TheKeys_AreNamed_AsDrawnWhereTheyStand()
-    {
-        string text = "key g major\npart m { clef treble }\nsection A { m { c'4 d | key custom c 1 e f | key d major g a | } }\nform { A }\nscore { staff m }\n";
-        var tree = SyntaxTree.Parse(text);
-        Assert.Equal([text.IndexOf("g major", System.StringComparison.Ordinal), text.IndexOf("d major", System.StringComparison.Ordinal)], NoteStepper.KeySteppingMarks(tree).Order());
-        Assert.All(NoteStepper.KeySteppingMarks(tree), at => Assert.Contains(at, NoteStepper.SteppingMarks(text, tree)));
-    }
 
     private static string Dragged(string text, string word, int direction, int count, bool semitone)
     {
         var server = new LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
-        var uri = new System.Uri("file:///clefkey.lys");
+        var uri = new System.Uri("file:///clef.lys");
         server.DidOpen(new DidOpenTextDocumentParams { TextDocument = new TextDocumentItem { Uri = uri, Text = text, LanguageId = "lilysharp", Version = 1 } });
         int at = text.IndexOf(word, System.StringComparison.Ordinal);
         var response = server.Step(new StepParams
@@ -91,25 +81,6 @@ public class ClefKeyDragTests
         return text;
     }
 
-    [Theory]
-    [InlineData("g major", 1, 1, "d major")]
-    [InlineData("g major", 1, 2, "a major")]
-    [InlineData("g major", -1, 1, "c major")]
-    [InlineData("g major", -1, 2, "f major")]
-    public void AKey_WalksTheCircle_AllTheWayAsOneEdit(string key, int direction, int count, string expected)
-    {
-        string text = "key " + key + "\npart m { clef treble }\n" + Music;
-        Assert.StartsWith("key " + expected + "\n", Dragged(text, key, direction, count, semitone: true));
-    }
-
-    [Fact]
-    public void AKey_WithCtrl_DoesWhatPageUpDoes()
-    {
-        string text = "key g major\npart m { clef treble }\n" + Music;
-        Assert.StartsWith("key g minor\n", Dragged(text, "g major", 1, 1, semitone: false));
-        Assert.StartsWith("key e minor\n", Dragged(text, "g major", -1, 1, semitone: false));
-    }
-
     [Fact]
     public void AClef_WalksItsList_AndStopsAtTheEnd()
     {
@@ -123,10 +94,10 @@ public class ClefKeyDragTests
     }
 
     [Fact]
+    public void AClef_WithCtrl_GoesToTheNextGroup()
+        => Assert.Contains("clef alto }", Dragged("part m { clef treble }\n" + Music, "treble", -1, 1, semitone: false));
+
+    [Fact]
     public void TheNotes_StayAsWritten()
-    {
-        string text = "key g major\npart m { clef treble }\n" + Music;
-        Assert.Contains("{ m { c'4 d e f | } }", Dragged(text, "g major", 1, 3, semitone: true));
-        Assert.Contains("{ m { c'4 d e f | } }", Dragged(text, "treble", -1, 2, semitone: true));
-    }
+        => Assert.Contains("{ m { c'4 d e f | } }", Dragged("part m { clef treble }\n" + Music, "treble", -1, 2, semitone: true));
 }

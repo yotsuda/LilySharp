@@ -37,6 +37,10 @@ Step input from a MIDI keyboard. Deferred until there is a keyboard to try it wi
   typing faster, and does not want the mouse to become the way Lily# is written: people are to be
   led to the keyboard. What `Ctrl+Shift+Up` can step may be dragged; beyond that, no new mouse
   editing, and no more menus.
+- **Dragging a key signature in the preview** (2026-11-03): tried, with the signature redrawn as the
+  mouse moved. A key changes the signature's width, so the systems reflow and the staves move under
+  the hand; the owner took it out. `Ctrl+Shift+Up` steps a key. A clef and the marks stay draggable,
+  and the time signature was never offered.
 - **A range CodeLens on each part's line** (2026-10-25): the section CodeLens already stands
   between the lines, and the range is not needed while writing; the preview's Range panel
   answers it when asked.
