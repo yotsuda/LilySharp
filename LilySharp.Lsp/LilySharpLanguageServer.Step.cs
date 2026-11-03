@@ -260,7 +260,7 @@ public sealed partial class LilySharpLanguageServer
                 .Where(p => p.BaseName != '\0' && p.QuarterOffset == 0
                     && p.Parent is NoteSyntax or ChordSyntax or ArpeggioSyntax)
                 .Select(p => p.SourceStart)],
-            Marks = [.. NoteStepper.SteppingMarks(doc.Text, doc.Tree)],
+            Marks = [.. NoteStepper.SteppingMarks(doc.Tree)],
             FineMarks = [.. NoteStepper.FineSteppingMarks(doc.Tree)],
             LedgerThickness = ledger.Thickness,
             LedgerLengthFraction = ledger.LengthFraction,

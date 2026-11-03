@@ -70,37 +70,10 @@ namespace LilySharp.Core.Editing;
 /// </remarks>
 public static partial class NoteStepper
 {
-    /// <summary>Where the things stand that a drag steps in place of a note: an articulation in a
-    /// group, a tempo's number, a chord's shape, a clef. A step on any other
-    /// mark falls through to its note (the key's way, the caret being on the note's item), which a
-    /// drag on that mark must not do: a bare <c>@chord</c> on <c>&lt;…&gt;</c> with no shape site
-    /// would invert the chord.</summary>
-    public static IEnumerable<int> SteppingMarks(string text, SyntaxTree tree)
-    {
-        foreach (var node in tree.GetRoot().DescendantNodes<SyntaxNode>())
-        {
-            bool steps = node switch
-            {
-                ArticulationSyntax => MarkSteps(text, node),
-                ChordEntrySyntax or ChordSyntax { IsShapeChord: true } => true,
-                MusicMarkSyntax { Name: "chord" } chord => ChordAnnotation.Of(chord) is { FromShapeItem: true }
-                    || ShapeSiteOf(chord) is not (null, null),
-                MusicMarkSyntax { Name: "diagram" } diagram => !diagram.Arguments.IsEmpty
-                    && diagram.Parent is not ChordSyntax { IsShapeChord: false }
-                    && ShapeSiteOf(diagram) is not (null, null),
-                _ => false,
-            };
-            if (steps)
-                yield return node.SourceStart;
-            else if (node is TempoDeclarationSyntax tempo && TempoNumber(tempo) is { } number)
-                yield return number.Span.Start;
-            // Where the score's clef says it was written: its name.
-            else if (node is ClefDeclarationSyntax { ClefName: { } clefName })
-                yield return clefName.Span.Start;
-            else if (node is PropertyAssignmentSyntax { NameToken.Text: "clef" } property && property.Values.ToList() is [SyntaxTokenNode only])
-                yield return only.Span.Start;
-        }
-    }
+    /// <summary>Where the things stand that a drag steps in place of a note: a tempo's number alone
+    /// (owner's decision 2026-11-03: the notes and the tempos are dragged, and Ctrl+Shift+Up steps
+    /// everything else, which leads people to the editor).</summary>
+    public static IEnumerable<int> SteppingMarks(SyntaxTree tree) => FineSteppingMarks(tree);
 
     /// <summary>The marks of <see cref="SteppingMarks"/> with many steps a hand wants to cross at
     /// once: a tempo's number, one beat a minute a step.</summary>

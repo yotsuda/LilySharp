@@ -280,9 +280,3 @@ export function chromaticPositions(from: string, to: string, semitones: number):
     const within = (((letter(to) - letter(from)) * sign) % 7 + 7) % 7;
     return sign * (Math.floor(Math.abs(semitones) / 12) * 7 + within) + 0;
 }
-
-/** The word of what a drag steps at `offset`: a mark's name, any shape and placement; a chords-row
- * entry, a tempo's number, a clef's name. */
-export function dragWordAt(text: string, offset: number): string {
-    return /^!?[\w#+/^-]+(?:\([^)]*\))?(?:\.(?:up|down))?/.exec(text.slice(offset))?.[0] ?? '';
-}

@@ -34,7 +34,6 @@ import {
     AuditionMemory, CARET_DEBOUNCE_MS, chromaticPositions, Debouncer, SOUNDS_WHEN_CHANGED, TYPING_SETTLE_MS,
     auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument, reselectAfterStep,
     stepFallbackCommand, strumGapMs,
-    dragWordAt,
 } from './auditionCore';
 
 export interface StepAuditionDeps {
@@ -246,9 +245,8 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
     });
     const askSteps = (doc: vscode.TextDocument, offset: number, steps: number, mode: NoteDragMode, holdOthers = false) =>
         deps.getClient()!.sendRequest<StepResponse>('lilysharp/step', stepsAsked(doc, offset, steps, mode, holdOthers));
-    /** The word of what a drag steps at `offset`: a mark's name, any shape and placement; a chords-row
-     * entry, a tempo's number, a clef. */
-    const markWordAt = (text: string, offset: number) => dragWordAt(text, offset);
+    /** The word of what a drag steps at `offset`: a tempo's number. */
+    const markWordAt = (text: string, offset: number) => /^!?[\w#+/-]+/.exec(text.slice(offset))?.[0] ?? '';
     /** A pitch's name alone: no octave marks, no duration. */
     const pitchNameAt = (text: string, offset: number) => /^[a-z]+/.exec(text.slice(offset))?.[0] ?? '';
     let lastHeard = 0, lastWords = 0;

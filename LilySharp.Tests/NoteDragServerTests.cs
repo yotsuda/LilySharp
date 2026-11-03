@@ -227,22 +227,14 @@ public class NoteDragServerTests
     }
 
     [Fact]
-    public void TheMarks_AreThoseWithANameToStep_AndStandAtTheirAt()
+    public void OnlyATempo_IsTakenHoldOf_TheKeysStepTheRest()
     {
-        string text = Book("c'4@mf d@staccato e@fermata f@text(\"x\") g@stopped |");
+        string text = "key g major\ntime 4/4\ntempo 100\npart m { clef treble }\nchords prog { section A { C G } }\n"
+            + "section A { m { c'4@mf@chord(C) d@staccato e@diagram(x32010) f@fermata | clef bass key d major g2@chord(G) a | } }\nform { A }\nscore { chords prog\n staff m }\n";
         var server = Open(text, out var uri);
-        var marks = server.NoteHeads(new NoteHeadsParams { TextDocument = new TextDocumentIdentifier { Uri = uri } }).Marks;
-        string[] words = [.. marks.OrderBy(p => p).Select(p => new string(text[p..].TakeWhile(c => !" |".Contains(c)).ToArray()))];
-        Assert.DoesNotContain("@mf", words);   // the keys alone step a dynamic (owner, 2026-11-03)
-        Assert.Contains("@staccato", words);
-        Assert.DoesNotContain(words, w => w.StartsWith("@text", System.StringComparison.Ordinal));
-        Assert.DoesNotContain("@stopped", words);   // an articulation alone in the world
-        // A step on anything else in the list must not fall through to the note.
-        foreach (int at in marks)
-        {
-            var stepped = Applied(text, Stepped(server, uri, at + 1, 1, 1, true));
-            Assert.Contains("c'4@", stepped);
-        }
+        var answer = server.NoteHeads(new NoteHeadsParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        Assert.Equal([text.IndexOf("100", System.StringComparison.Ordinal)], answer.Marks);
+        Assert.Equal(answer.Marks, answer.FineMarks);
     }
 
     private static StepSelection At(int offset) => new() { Start = offset, End = offset };
@@ -362,30 +354,6 @@ public class NoteDragServerTests
     }
 
     private const string ChordBook = "tempo 100\npart guitar { clef treble }\nchords prog { section A { C G } }\nsection A { guitar { c'4@chord(C) d e@diagram(x32010) f | <c e g>2@chord g2@chord(G) | } }\nform { A }\nscore { chords prog\n staff guitar }\n";
-
-    [Fact]
-    public void TheMarks_NameATempoAndAChordsShape_AndNotAChordsInversion()
-    {
-        string text = ChordBook;
-        var server = Open(text, out var uri);
-        var answer = server.NoteHeads(new NoteHeadsParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
-        string[] words = [.. answer.Marks.OrderBy(p => p).Select(p => new string(text[p..].TakeWhile(c => !" |\n".Contains(c)).ToArray()))];
-        Assert.Contains("100", words);
-        Assert.Contains("C", words);
-        Assert.Contains("G", words);
-        Assert.Contains("@chord(C)", words);
-        Assert.Contains("@diagram(x32010)", words);
-        Assert.Contains("@chord(G)", words);
-        Assert.DoesNotContain("@chord", words);   // bare, on <c e g>: its step inverts the chord
-        Assert.Equal([text.IndexOf("100", System.StringComparison.Ordinal)], answer.FineMarks);
-        // Each moves itself, never a note.
-        foreach (int at in answer.Marks)
-        {
-            string stepped = Applied(text, Stepped(server, uri, at + 1, 1, 1, true));
-            Assert.Contains("<c e g>2", stepped);
-            Assert.Contains("c'4", stepped);
-        }
-    }
 
     [Theory]
     [InlineData(true, 3, "tempo 103\n")]
