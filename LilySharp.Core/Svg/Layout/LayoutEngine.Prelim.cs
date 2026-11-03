@@ -1459,7 +1459,8 @@ internal sealed partial class LayoutEngine
     /// 184.67 beams (max 660) once a keystroke, at least 1,547 B with its growth ladder, and
     /// the caller then copied it twice.</param>
     private (ImmutableArray<BeamLayout> Beams, ImmutableArray<TieLayout> Ties, ImmutableArray<SlurLayout> Slurs,
-             List<GlissandoLayout> Glissandos, ImmutableDictionary<RestShiftKey, double> RestShifts)
+             List<GlissandoLayout> Glissandos, ImmutableDictionary<RestShiftKey, double> RestShifts,
+             ImmutableDictionary<(int Staff, RestShiftKey Key), double> RestShiftsByStaff)
         LayoutAllSpanners(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray,
             Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
             Dictionary<int, ImmutableArray<BeamLayout>> beamsByStaff,
@@ -1481,6 +1482,7 @@ internal sealed partial class LayoutEngine
         // share one entry; this matches the granularity the codebase already
         // accepts for HeadWipe/DotForceDown (VoiceItemKey, no staff axis).
         var restShiftsBuilder = ImmutableDictionary.CreateBuilder<RestShiftKey, double>();
+        var restShiftsByStaff = ImmutableDictionary.CreateBuilder<(int Staff, RestShiftKey Key), double>();
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
             // Beam detection reads tuplet brackets by (measure, note index), so scope
@@ -1523,9 +1525,12 @@ internal sealed partial class LayoutEngine
                 staffScore, systemsArray, staffFinalBeams,
                 staffCollisionShifts);
             foreach (var kv in staffCollisionShifts.SetItems(staffRestShifts))
+            {
+                restShiftsByStaff[(staffIndex, kv.Key)] = kv.Value;
                 if (!restShiftsBuilder.TryGetValue(kv.Key, out var existing)
                     || Math.Abs(kv.Value) > Math.Abs(existing))
                     restShiftsBuilder[kv.Key] = kv.Value;
+            }
             // ...and the ties/slurs too (since session 141), CARRIED AND RE-ANCHORED. A bow
             // bakes its OWN staff's within-system offset into its Y as an additive base (the
             // scorers feed StaffOffsetInSystemDown), and page justification can move that
@@ -1579,7 +1584,7 @@ internal sealed partial class LayoutEngine
         t_finalTies = allTieLayouts;
         allSlurLayouts.Clear();
         t_finalSlurs = allSlurLayouts;
-        return (allBeams, ties, slurs, allGlissandoLayouts, restShiftsBuilder.ToImmutable());
+        return (allBeams, ties, slurs, allGlissandoLayouts, restShiftsBuilder.ToImmutable(), restShiftsByStaff.ToImmutable());
     }
 
     /// <summary>

@@ -178,13 +178,13 @@ internal static partial class SharedRenderer
                         var inkBox = item.GraceTime
                             ? GraceTodoInkBox(staff.Voices[v], score.GraceNotes, staffIndex, v, mi, ii,
                                 measureLayout, voiceShifts ??= SpacingRules.VoiceCollisionShiftsOf(staff),
-                                staffLines, layout.GetRestShift(mi, v, ii))
+                                staffLines, layout.GetRestShift(staffIndex, mi, v, ii))
                             : staff.IsTab
                             ? TabTodoInkBox(fonts, staff, item,
                                 measureLayout.X + LayoutUtilities.GetItemXOffset(measures, mi, ii, measureLayout))
                               ?? TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing)
                             : TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing,
-                                layout.GetRestShift(mi, v, ii));
+                                layout.GetRestShift(staffIndex, mi, v, ii));
                         if (inkBox is not var (left, right, bottom, top))
                             continue;
                         double scale = os.Size(1.0, staffIndex);
@@ -613,7 +613,7 @@ internal static partial class SharedRenderer
     /// a multi-measure rest's bar over its measure; null for an item that draws no such thing.
     /// </summary>
     /// <param name="restShift">The rest's shift off its neutral letter, in staff positions —
-    /// <see cref="ScoreLayout.GetRestShift"/>, the number the rest itself is drawn by
+    /// <see cref="ScoreLayout.GetRestShift(int, int, int, int)"/>, the number the rest itself is drawn by
     /// (DrawStaffMeasures: neutral + shift), so a voiced, pitched or collision-moved rest is
     /// ringed where it stands (owner's report 2026-10-12: an upper voice's r4. was ringed at the
     /// middle line, under the rest).</param>

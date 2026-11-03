@@ -130,7 +130,7 @@ internal static partial class SharedRenderer
                         // half a staff-space per position to move the whole rest
                         // (glyph + dots) together. LILYPOND-REF: lily/beam.cc:1331.
                         double restShift =
-                            layout.GetRestShift(ml.MeasureIndex, voiceNumber - 1, itemIdx);
+                            layout.GetRestShift(staffIndex, ml.MeasureIndex, voiceNumber - 1, itemIdx);
                         // The position the rest's ORIGIN ends up at, which is what
                         // decides its ledger: the neutral letter DrawRest draws
                         // unshifted — THIS staff's (ElementCoordinator.NeutralRestPosition:

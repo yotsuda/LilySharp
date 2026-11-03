@@ -1675,6 +1675,7 @@ internal sealed class ElementCoordinator
         }
 
         AddGraceRestCollisions(staff, shifts);
+        AddCrossedRestCollisions(staff, shifts);
 
         if (staff.Voices.Length < 2)
             return shifts.ToImmutableDictionary();
@@ -1783,22 +1784,9 @@ internal sealed class ElementCoordinator
                         }
                     }
 
-                    double discrete = 0.0;
-                    if (!double.IsInfinity(noteLow))
-                    {
-                        double minimumDist = RestCollisionMinimumDistance * 2.0;  // ss → positions
-                        double restNear = dir > 0 ? restLow : restHigh;
-                        double noteFar = dir > 0 ? noteHigh : noteLow;
-                        double y = dir * Math.Max(0.0, -dir * restNear + dir * noteFar + minimumDist);
-
-                        // Half spaces first (a position IS a half space, so this is a ceil to 1).
-                        discrete = dir * Math.Ceiling(dir * y);
-
-                        // ...then whole spaces while the rest is still inside the staff,
-                        // widened by one position on each side.
-                        if (basePos + discrete >= -5.0 && basePos + discrete <= 5.0)
-                            discrete = dir * Math.Ceiling(dir * discrete / 2.0) * 2.0;
-                    }
+                    double discrete = !double.IsInfinity(noteLow)
+                        ? RestTranslation(dir, restLow, restHigh, noteLow, noteHigh, basePos)
+                        : 0.0;
 
                     double shift = basePos - defaultPos + discrete;
                     if (shift == 0.0)
@@ -1812,6 +1800,102 @@ internal sealed class ElementCoordinator
         }
 
         return shifts.ToImmutableDictionary();
+    }
+
+    /// <summary>
+    /// How far, in staff positions, Rest_collision moves a rest of direction
+    /// <paramref name="dir"/> off the notes' extent, all in positions about the middle line.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/rest-collision.cc:270-284 calc_positioning_done.</remarks>
+    private static double RestTranslation(int dir, double restLow, double restHigh,
+        double noteLow, double noteHigh, double basePos)
+    {
+        double minimumDist = RestCollisionMinimumDistance * 2.0;  // ss → positions
+        double restNear = dir > 0 ? restLow : restHigh;
+        double noteFar = dir > 0 ? noteHigh : noteLow;
+        double y = dir * Math.Max(0.0, -dir * restNear + dir * noteFar + minimumDist);
+
+        // Half spaces first (a position IS a half space, so this is a ceil to 1).
+        double discrete = dir * Math.Ceiling(dir * y);
+
+        // ...then whole spaces while the rest is still inside the staff,
+        // widened by one position on each side.
+        if (basePos + discrete >= -5.0 && basePos + discrete <= 5.0)
+            discrete = dir * Math.Ceiling(dir * discrete / 2.0) * 2.0;
+        return discrete;
+    }
+
+    /// <summary>
+    /// A rest of this staff against the notes <c>@cross</c> moved onto it: they are in the Staff's
+    /// Rest_collision like its own. A rest with no voice direction of its own goes DOWN: its
+    /// column's stem has no head, so it answers its neutral direction.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/rest-collision.cc:224-226 calc_positioning_done — the rest's direction,
+    ///   else Note_column::dir; lily/note-column.cc:101-105 Note_column::dir — the stem's;
+    ///   lily/stem.cc:781-784 Stem::calc_direction — default-direction, else neutral-direction
+    ///   (scm/define-grobs.scm Stem: DOWN).
+    /// LILYPOND-REF: lily/rest-collision.cc:244-267 calc_positioning_done — the head alone for a
+    ///   note pointing the other way or of another column, the whole column otherwise.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1093/rc): every rest under a moved note goes down
+    /// past it, past the stem tip of a stem pointing down at the same moment.
+    /// </remarks>
+    private static void AddCrossedRestCollisions(Staff staff, Dictionary<RestShiftKey, double> shifts)
+    {
+        if (staff.CrossedIn.IsEmpty)
+            return;
+        for (int v = 0; v < staff.Voices.Length; v++)
+        {
+            var measures = staff.Voices[v].Measures;
+            for (int m = 0; m < measures.Length; m++)
+            {
+                var time = new Fraction(0, 1);
+                var items = measures[m].Items;
+                for (int i = 0; i < items.Length; time += GetItemDuration(items[i]), i++)
+                {
+                    if (items[i] is not RestItem rest || rest.IsSpacer || rest.IsMultiMeasure
+                        || rest.GraceTime || rest.StaffPosition is not null)
+                        continue;
+                    int dir = rest.VoiceDirection != 0 ? rest.VoiceDirection : -1;
+                    double noteLow = double.PositiveInfinity, noteHigh = double.NegativeInfinity;
+                    foreach (var crossed in staff.CrossedIn)
+                    {
+                        if (crossed.MeasureIndex != m)
+                            continue;
+                        var theirs = crossed.Measures[m].Items;
+                        var onset = new Fraction(0, 1);
+                        for (int k = 0; k < crossed.ItemIndex; k++)
+                            onset += GetItemDuration(theirs[k]);
+                        var item = crossed.Item;
+                        if (onset > time || onset + GetItemDuration(item) <= time)
+                            continue;
+                        foreach (double p in StaffPositionsOf(item))
+                        {
+                            double half = EngravingDefaults.NoteheadHalfHeight * 2.0;
+                            noteLow = Math.Min(noteLow, p - half);
+                            noteHigh = Math.Max(noteHigh, p + half);
+                        }
+                        bool stemUp = item is NoteItem n ? n.StemUp : ((ChordItem)item).StemUp;
+                        if ((stemUp ? 1 : -1) == dir && onset == time)
+                        {
+                            double tip = StemTipPositionOf(item, stemUp);
+                            noteLow = Math.Min(noteLow, tip);
+                            noteHigh = Math.Max(noteHigh, tip);
+                        }
+                    }
+                    if (double.IsInfinity(noteLow))
+                        continue;
+                    int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+                    double basePos = RestStaffPosition(rest, rest.VoiceDirection, restValue, staff.Lines);
+                    var box = GlyphMetrics.GetRestBBox(rest, restValue);
+                    double discrete = RestTranslation(dir, basePos + box.Bottom * 2.0, basePos + box.Top * 2.0,
+                        noteLow, noteHigh, basePos);
+                    double shift = basePos - NeutralRestPosition(staff.Lines, restValue) + discrete;
+                    if (shift != 0.0)
+                        shifts[new RestShiftKey(m, v, i)] = shift;
+                }
+            }
+        }
     }
 
     /// <summary>

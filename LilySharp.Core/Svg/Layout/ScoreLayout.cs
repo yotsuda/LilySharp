@@ -491,6 +491,20 @@ internal sealed record ScoreLayout(
     }
 
     /// <summary>
+    /// <see cref="GetRestShift(int, int, int)"/> of one staff's rest. The address alone does not
+    /// name a rest: another staff has an item at the same (measure, voice, item), and it does
+    /// not move because this one does.
+    /// </summary>
+    public double GetRestShift(int staffIndex, int measureIndex, int voiceIndex, int itemIndex) =>
+        RestShiftsByStaff.TryGetValue((staffIndex, new RestShiftKey(measureIndex, voiceIndex, itemIndex)), out var shift)
+            ? shift
+            : 0;
+
+    /// <summary>Each staff's rest shifts, by the staff's global index.</summary>
+    public ImmutableDictionary<(int Staff, RestShiftKey Key), double> RestShiftsByStaff { get; init; } =
+        ImmutableDictionary<(int Staff, RestShiftKey Key), double>.Empty;
+
+    /// <summary>
     /// The rest's augmentation-dot position relative to its glyph origin, in staff
     /// positions — <c>null</c> when the dot-column solve holds no entry, in which case the
     /// consumer's default arm applies: one position up for every short rest (its origin

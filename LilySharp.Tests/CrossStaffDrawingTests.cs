@@ -150,6 +150,59 @@ public class CrossStaffDrawingTests
         Assert.True(layout.TupletBracketLayouts.Single().IsStemUp);
     }
 
+    /// <summary>LilyPond's shapes (Lab sessions/p1093/rc, 2.26.0): a rest under a moved note goes
+    /// down past it. <c>r1</c> on the treble staff at c, whose head stands at -13.</summary>
+    [Fact]
+    public void ARestGoesBelowTheNoteMovedOntoItsStaff()
+    {
+        var layout = new LayoutEngine().Layout(Score(Book("r1 | r1 |", "c1 | c4@cross r4 r2 |")));
+        Assert.True(layout.GetRestShift(0, 1, 0, 0) < -13);
+    }
+
+    [Fact]
+    public void ARestClearsTheStemOfADownStemNoteAtItsMoment()
+    {
+        // c'' stands at +1 with its stem down: past the tip, not just the head (rc bar 4).
+        var layout = new LayoutEngine().Layout(Score(Book("r1 | r4 r2. |", "c1 | c''4@cross r2. |")));
+        Assert.True(layout.GetRestShift(0, 1, 0, 0) < -9);
+    }
+
+    [Fact]
+    public void ARestClearsANoteThatStillSounds()
+    {
+        // The half note began before the second rest and still sounds: its head only.
+        var layout = new LayoutEngine().Layout(Score(Book("r4 r4 r2 |", "c2@cross r2 |")));
+        Assert.True(layout.GetRestShift(0, 0, 0, 1) < -13);
+        Assert.Equal(0, layout.GetRestShift(0, 0, 0, 2));
+    }
+
+    [Fact]
+    public void ARestShiftBelongsToItsOwnStaff()
+    {
+        // The same address on two staves: (bar 0, voice 0, item 2) is a rest on each. The upper
+        // one sounds with the moved note; the lower one does not move for it.
+        var layout = new LayoutEngine().Layout(Score(Book("r8 r8 r4 r2 |", "r4 c4@cross r2 |")));
+        Assert.True(layout.GetRestShift(0, 0, 0, 2) < -13);
+        Assert.Equal(0, layout.GetRestShift(1, 0, 0, 2));
+    }
+
+    [Fact]
+    public void TheDrawingReadsTheRestShiftOfItsOwnStaff()
+    {
+        // The page, not the table: the lower staff's half rest stays on its middle line, where
+        // the quarter rest before it stands.
+        string book = Book("r8 r8 r4 r2 |", "r4 c4@cross r2 |");
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(book),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        string YOf(int position) => System.Text.RegularExpressions.Regex.Match(svg,
+            $"y=\"([\\d.]+)\"[^>]*data-pos=\"{position}\"").Groups[1].Value;
+        int lh = book.IndexOf("lh {", book.IndexOf("section", System.StringComparison.Ordinal), System.StringComparison.Ordinal);
+        int quarter = book.IndexOf("r4", lh, System.StringComparison.Ordinal);
+        int half = book.IndexOf("r2", lh, System.StringComparison.Ordinal);
+        Assert.NotEqual("", YOf(quarter));
+        Assert.Equal(YOf(quarter), YOf(half));
+    }
+
     /// <summary>The slur's span against LilyPond 2.26.0's (`lysc ly --pin-fonts`, -dbackend=svg,
     /// two decimals: Lab sessions/p1093/snum). <c>dyUp</c> is the end above the start.</summary>
     [Theory]

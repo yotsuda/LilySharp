@@ -534,7 +534,7 @@ internal sealed partial class LayoutEngine
             score, systemsArray, multiStaffLayouter, prelim.BeamsByStaff, prelim.AllBeams);
 
         // Calculate beams/ties/slurs/glissandos per staff
-        var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
+        var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts, restShiftsByStaff) =
             LayoutAllSpanners(score, systemsArray, multiStaffLayouter.RestCollisionsOfDelegate,
                 beamsByStaff, carriedBeams, prelim.TiesByStaff, prelim.SlursByStaff,
                 prelim.Systems);
@@ -674,6 +674,7 @@ internal sealed partial class LayoutEngine
             restShifts) with
         {
             RestDotOffsets = restDotOffsetsBuilder.ToImmutable(),
+            RestShiftsByStaff = restShiftsByStaff,
             LineBreaks = lineBreaks,
         };
         return FinalizeLayout(result, score.GrobOverrides, score.GrobReverts);
