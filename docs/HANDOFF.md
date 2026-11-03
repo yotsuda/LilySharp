@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★ **次のセッションはこれ＝OMR の REQUESTS #20「`@cross` の音が本当に別の段に描かれる」（オーナー指示 2026-11-04）**: GRAMMAR の CROSS-STAFF NOTES は段を移ると書くが、絵は動かない。`LayoutEngine.cs` 539〜547 行あたりの `CrossStaffEngraver.Calculate` の結果 `CrossStaffs` は素通しされるだけで（`LayoutEngine.Annotations.cs:1397`、`LayoutEngine.Finishing.cs:571,747`）、描く側が読まない。`primaryStaffIdx` は 0 固定。下地は `CollectCrossStaff`（`MeasureCollector.Annotations.cs:697`）、`CrossStaffValidator`（LYS4031）、`BeamGroup.IsCrossStaff`、`BeamScoringProblem`、`SkylineBuilder`。テストは `CrossStaffTests.cs`、`CrossStaffWarningTests.cs`。双子は `articulation @cross not mapped, dropped` で落とす（`\change Staff` が要る）。**OMR が先に欲しい形＝連桁でつながった組の途中の音が段を移る（膝のある連桁・月光 Op.27-2 の 37〜42 小節、Schumann Op.15-1）**。4 分など連桁なしは後でよい。再現は `..\LilySharp-Omr\docs\repro\cross-staff-2026-11-03.lys` と `.ly`、LP の絵は OMR の `out/repro/cross-staff-2026-11-03-lp.png`。音の位置、棒、膝の連桁、衝突、タイと弧、双子に触る大きな仕事で、絵が動くなら `[engraving]`。終わったら REQUESTS の行を更新し、`LilySharp.Cli` を Release で作り直してコミットを書く。
+- **`@cross` の音が別の段に描かれる＝第1093 で実装（OMR の REQUESTS #20）**: 設計は §1.1 第1093。残りの制限: ⑴ 弧（スラー）は移った音の座標を元の段で読むまま＝未対応・未確認／⑵ 段をまたぐタイは最初の音の段に描く（LP は斜め）／⑶ 連桁は他の音との衝突を採点しない（`group.IsCrossStaff ? null : collisions`）／⑷ 移った先の段の音・休符とは衝突処理をしない（LP は全休符を棒の下へ避け、2 度の頭をずらす＝Lab `sessions/p1093/k2`・`p3`）／⑸ 臨時記号は元のパートの段で判定（LP は移った先の Staff）／⑹ 連桁のない棒は移った先の輪郭に入れない／⑺ MusicXML は `@cross` を書かない（`<staff>` なし）／⑻ 双子は譜の最初の瞬間の `\change Staff` が LP で効かない（`k1`）／⑼ 増分コンパイルとプレビューの実機は未確認／⑽ `CrossStaffEngraver.Calculate` と `CrossStaffs` の素通しは未使用のまま残した（消すならオーナーの承認）。
 - **チャットで Lily# を教わる＝第1043 で実装（`docs/LEARN_FOR_LLM.md`・`HANDOFF-LEARNING.md`）**: 残りは実物の Copilot での確認（MANUAL-CHECKS C59）。
 - **ペダルの音＝第1041 で実装（`@sustain` だけ・`docs/pedal-playback-design.md`）**: 残りは耳の確認（MANUAL-CHECKS C57）。`@sostenuto`・`@unaCorda` は描くだけのまま。
 - **作曲ガイダンスの改善＝クローズ（オーナー決定 2026-11-02・第1042）**: 「ユーザーが使う機会が少ない機能にかなり投資している。どうしても入れるべき内容でなければクローズして別の課題へ」。**講評のループと検査の追加を、オーナーが言うまで再開しない・提案しない。** 入れなかったもの: W3（section の中の急な落ち込み・試作は Lab `sessions/p1042/proto-w3.ps1`）。未調査のまま: 書き込みの後の再提案で差し戻しが最初からやり直しになる動き。
@@ -135,6 +135,14 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1093セッション（2026-11-04・YT-DELL2）
+
+開始時 full **14108 / 0 / 2**（`-Start p1093`・HEAD `8eaf719f`・OMR の open は #20）。作業場所は Lab `sessions/p1093/`。
+- **OMR の REQUESTS #20＝`@cross` の音を本当に別の段に描く（オーナー指示 2026-11-04）**: `MeasureCollector.MoveCrossStaffNotes` が音を移る先の段の音部記号（その音の時点）で読み直し `CrossStaffIndex` を刻む。音は元の声部のまま＝時間・連桁・音は変わらない。`Staff.CrossedIn` は移ってきた音の一覧で、移る先の輪郭に頭だけ入れる。連桁は `LayoutEngine.LayCrossStaffBeams` が最終の段位置で解き直す（段間隔に依存するので下書きの再利用はできない・輪郭に入らないので循環しない）。頭の位置は各自の段のまま `BeamMember.StaffOffset` を足す＝LP の `stem_ypositions_` と同じ持ち方。⚠️ **膝の判定だけは置いた間隔でなく LP の推定（pure）の間隔を読む**（`PureOffset`・align-interface.cc の全曲の箱）＝置いた間隔では `<c' e'>8@cross g'` が膝にならない（`k2` で LP 実測）。箱は頭と棒の推定だけで字面の移植ではない。タイ・スクリプト・グリッサンドも移る先の段で読む。双子は `\change Staff`。⚠️ 下書きの方向の刻み（`ResolveBeamStemDirections`）は移す前の位置で読むので刻み直す（`RestampMovedBeams`）＝しないと 3 連符の数字が譜の下へ飛ぶ。
+- 検証: 再現譜は LP と同じ形（`r4`）、探り譜も（`p3`・`k2`・`gx`）。連桁の傾きは絵から読んで約 2.57、LP の svg で 2.62＝⚠️ 数字の照合は粗いまま・台帳の点は起票していない。全 svg の掃き 1262 枚で動いたのは `audit/lpreg/gliss-xstaff.svg` の 1 枚だけ（`@cross` を書く唯一の追跡本）＝`sessions/p1093/sweep/diff.txt`。毒 11 本（`poisons.log`）はすべて赤。⚠️ うち `no restamp` は最初緑＝最終の刻みが覆っていたので、レイアウト前の刻みを見る網を足して赤を確認。グリッサンドの網は毒を当てていない。**RULES.md はこの便では全部読めていない**（読んだのは 1〜519 行と §5.5）。
+
+## 以下は第1043セッションの経緯
+
 ### 1.1 第1043セッション（2026-11-02・YT-DELL2）
 
 同じ会話で新しい便。開始時 full **13907 / 0 / 2**（`-Start p1043`・HEAD `d029488e`・OMR の open 0）。作業場所は Lab `sessions/p1043/`。
@@ -158,17 +166,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **OMR の REQUESTS 19・オーナー決定＝`tuplet 3/2 bare { … }`（Lab `sessions/p1091/`）**: 比の後ろの語＝見た目の置き場（次の依頼の弧も `slur` でここに入る予定）。比の後ろで補完に `bare`、音楽の補完に `tuplet bare` の行（Lab `sessions/p1092/`）。#20 は §1.0 ⒜ の先頭。
 - ⚠️ **オーナーの決定＝プレビューのマウス編集は全部外した（Lab `sessions/p1084/`）**: ドラッグ、右クリックメニュー、鍵ボタン。編集はキー（`Ctrl+Shift+Up` 等）へ誘導する。**また提案しないこと**（ROADMAP の Decided against）。残したのは和音のクリックの修正（`clickTargetOf`）と LYS1064。
 - 終了時 full **14108 / 0 / 2**（`-End p1043 -DiffBase d029488e`＝`sessions/p1092/end.log`・門は全部 OK・npm 835 緑）。§7 7.5: Core の差分は案 4 の `+37 −1`（文面 2 つと LYS1062）だけ。案 4 の毒 12 本は全部赤（1 本すり抜けたのでヒントの網を足して赤を確認）・実物の VS Code で 17 項目 PASS（2 回続けて）。e2e は各操作の前にエディタへフォーカスを戻さないとキーが届かない＝規則 33／34 の 1 回目の FAIL も同じ原因と読める。毒は規則 33／34 の 16 本すべて赤（1 本すり抜けたので `«e g'»` の例を足して赤を確認）。⚠️ **`npm run check-types` が `ce1b7d7c7`（11-01）から赤だった**＝`npm test` は別の tsconfig で見ない・`vscode:prepublish` は通らない状態だった → 型の宣言 1 か所を直した `6ff5e0943`。⚠️ e2e はビルド直後の 1 回目に 3 件 FAIL（キーが届かず本文が変わらない＝フォーカスが外れた読み・再現せず）、続く 2 回は 24 項目 PASS。**
-
-## 以下は第1042セッションの経緯
-
-### 1.1 第1042セッション（2026-11-02・YT-DELL2）
-
-同じ会話で新しい便。開始時 full **13903 / 0 / 2**（`-Start p1042`・HEAD `e4a03cf2`・OMR の open 0）。作業場所は Lab `sessions/p1042/`。オーナーがペダルの音を聞いて「良い感じ」（C57 の音そのもの）。
-- **講評 `Light-of-the-Morning`（SATB の賛美歌）→「4つとも進めて」**: 検査が言わなかったのは声部進行と強弱、言うべきでなかったのは内声。**H1** `choirAsOne`＝全パートが声のプリセットで、4 声以上・全員か 1 人を除いて同じリズムの小節が 6 割以上なら、top 以外に「独自のリズムを」と言わない（ガイドの賛美歌の項と矛盾していた）。**H2** `dynamics.none`＝2 パート以上で強弱が 1 つもない。**H3** `singers.parallels`＝`choirStaff` の声 3 つ以上で平行 5 度・8 度・ユニゾンを `VoiceLeadingValidator.ParallelsIn` で読む（`check voiceLeading` の行なしで）。**H4** COMPOSE_FOR_LLM に「弱い音節で始まる行は `partial` で」（強勢は機械で読めない＝効くかは次の英語の歌で）。
-- 掃き 1364 冊（`checks-{base,head}.txt`）: H3＝AI 作 11 冊（同じ 12 冊のうち `MorningLight` は旧文法の構文エラーで検査が動かない）／H2＝110 冊（repo の fixture 91・corpus 14・Downloads 2・AI 3）／H1 で動いた本 0（この曲で初めて踏んだ形）。毒 15 本は全部赤（`poisons.ps1`・`poisons2.ps1`）。⚠️ `any staff group` は最初緑＝`staffGroup` の網を足した。⚠️ 毒スクリプトの要素 1 つの配列は `@(,@(…))` でないと潰れる（PATTERN hits が言った）。**実物の VS Code で実ログを再生して 7 項目 PASS**（`sessions/p1042/replay/`）。⚠️ AI が実際に平行をどう直すかは未確認。
-- **講評 `Mercy-Light-and-Grace`（SATB の賛美歌 2 曲目）→「良い」で W1・W2**: H4 は効いた可能性が高い（歌詞が強拍始まりの 8.7.8.7）・X は初回で効いた（順次 16%→約 41%）・H1 も効いた。⚠️ H3 の文面「or hold a common tone」で**バスが全小節全音符になった**＝W1 で文面を変え、ガイドの賛美歌に「バスも言葉と動く」。W2＝最後の修正で増えたコンパイラ警告をもう 1 回だけ差し戻す（`firstWarnings`・`warningRecheckedFor`・§4 の未解決を閉じた）`27138044b`。毒 5 本は全部赤。**実ログ再生 7 項目 PASS**（`replay2/`）＝3 回目で警告を差し戻す。**W3（section の中の急な落ち込み）は入れていない**＝試作 `proto-w3.ps1`・掃き `w3-{base,head}.txt`・数え `w3-count.ps1`＝判断待ち。⚠️ 書き込みの後に同じ本をもう一度提案すると、1 回目の差し戻しからやり直す動きを見た（`replay2` の初回の 6 回目）＝今回の変更の前からあるかは未調査。
-- 終了時 full **13907 / 0 / 2**（`-End p1042 -DiffBase e4a03cf2`＝`sessions/p1042/end2.log`・門は全部 OK・npm 660 緑）。§7 7.5: Core の差分 80 行は描画に触れない検査の追加・REF 0／OWN 0＝LP の出典は無い。
-- ⚠️ 罠: pwsh MCP の関数から `$script:t` は呼び出し元の `$t` ではない＝置換は値を返す形で（第1040 の `Swap` の型）。`$w??=` は変数名に `??` が入る＝空白を空ける。
 
 ## 2. 開いている作業
 

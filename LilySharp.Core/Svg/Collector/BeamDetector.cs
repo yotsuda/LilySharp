@@ -1161,6 +1161,7 @@ internal sealed class BeamDetector
                 i == stemCount - 1 && !boundRestRight ? 0 : c.BeamletRight,
                 c.HeadMin, c.ItemIndex,
                 memberStemUp: memberUp,
+                targetStaffIndex: c.Item.CrossStaffIndex,
                 measureIndex: c.MeasureIndex,
                 headPositionMin: c.HeadMin,
                 headPositionMax: c.HeadMax));
@@ -1176,6 +1177,74 @@ internal sealed class BeamDetector
             // A rest can only STAND IN a beam, between two visible stems; one drifting outside
             // (a degenerate bracket whose edge note was not beamable) has nothing to hang from.
             RestStemsStandingIn(restStems, stemCount));
+    }
+
+    /// <summary>
+    /// The direction of a beam over these members, each head read about the staff it stands on
+    /// — the question detection's bake asked before <c>@cross</c> moved any of them.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/beam.cc:894-905 Beam::get_default_dir — Stem::head_positions,
+    /// about the stem's own staff.</remarks>
+    internal static bool DefaultStemUpOf(IReadOnlyList<MusicItem> items)
+    {
+        var stems = new StemCandidate[items.Count];
+        for (int i = 0; i < stems.Length; i++)
+        {
+            var range = GetHeadRange(items[i]);
+            stems[i] = new StemCandidate(items[i], i, -1, 1, 1, 1, range.Min, range.Max);
+        }
+        return DefaultBeamStemUp(stems);
+    }
+
+    /// <summary>
+    /// A cross-staff beam once the staves are placed: every member learns how far its own staff
+    /// stands from the beam's (<see cref="BeamMember.StaffOffset"/>) and the knee is judged in
+    /// that one frame. Detection could not — it runs before there is a distance, and read each
+    /// head about its own staff.
+    /// </summary>
+    /// <param name="group">The detected group.</param>
+    /// <param name="staffOffsetOf">The distance in staff positions, up-positive, from the beam's
+    /// staff to the given member's, as placed — what the quanter reads.</param>
+    /// <param name="pureOffsetOf">The same distance as LilyPond estimates it — what the knee
+    /// reads.</param>
+    /// <param name="voiceForcesDirection">Whether the voice states the stems' side (a
+    /// polyphonic voice never knees).</param>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc:997-998 consider_auto_knees — head_extents +=
+    ///   stem->pure_relative_y_coordinate (common, 0, INT_MAX).
+    /// LILYPOND-REF: lily/beam.cc:1047-1051 consider_auto_knees — each stem points into the gap.
+    /// </remarks>
+    internal static BeamGroup AcrossStaves(BeamGroup group, Func<int, double> staffOffsetOf,
+        Func<int, double> pureOffsetOf, bool voiceForcesDirection)
+    {
+        int n = group.Members.Length;
+        var stems = new StemCandidate[n];
+        var offsets = new double[n];
+        var pure = new double[n];
+        for (int i = 0; i < n; i++)
+        {
+            var m = group.Members[i];
+            stems[i] = new StemCandidate(group.ItemOf(i), m.ItemIndex, m.MeasureIndex, m.BeamCount,
+                m.BeamCountLeft, m.BeamCountRight, m.HeadPositionMin, m.HeadPositionMax);
+            offsets[i] = staffOffsetOf(i);
+            pure[i] = pureOffsetOf(i);
+        }
+        double? gapCenter = voiceForcesDirection ? null : AutoKneeGapCenter(stems, pure);
+
+        var members = ImmutableArray.CreateBuilder<BeamMember>(n);
+        for (int i = 0; i < n; i++)
+        {
+            var m = group.Members[i];
+            bool up = ForcedStemUpOf(stems[i].Item) ?? (gapCenter is { } center
+                ? (m.HeadPositionMin + m.HeadPositionMax) / 2.0 + pure[i] < center
+                : group.StemUp);
+            members.Add(new BeamMember(stems[i].Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
+                m.HeadPositionMin, m.ItemIndex, up, m.TargetStaffIndex, m.MeasureIndex,
+                m.HeadPositionMin, m.HeadPositionMax)
+            { StaffOffset = offsets[i] });
+        }
+        return new BeamGroup(members.MoveToImmutable(), group.MeasureIndex, group.StartIndex,
+            group.StemUp, group.GrowDirection, group.VoiceIndex, group.RestStems);
     }
 
     /// <summary>True when a bracketed rest stands at <paramref name="beforeMember"/> — i.e.
@@ -1481,7 +1550,7 @@ internal sealed class BeamDetector
     /// Returns the gap center (staff positions) or null for no knee.
     /// </summary>
     /// <remarks>LILYPOND-REF: beam.cc:968-1056 consider_auto_knees</remarks>
-    private static double? AutoKneeGapCenter(ReadOnlySpan<StemCandidate> members)
+    private static double? AutoKneeGapCenter(ReadOnlySpan<StemCandidate> members, ReadOnlySpan<double> staffOffsets = default)
     {
         if (members.Length < 2) return null;
 
@@ -1495,7 +1564,8 @@ internal sealed class BeamDetector
         var intervals = new (double Lo, double Hi)[members.Length];
         for (int i = 0; i < members.Length; i++)
         {
-            var iv = (Lo: members[i].HeadMin - 1.0, Hi: members[i].HeadMax + 1.0);
+            double offset = staffOffsets.IsEmpty ? 0.0 : staffOffsets[i];
+            var iv = (Lo: members[i].HeadMin - 1.0 + offset, Hi: members[i].HeadMax + 1.0 + offset);
             int j = i - 1;
             while (j >= 0 && intervals[j].Lo > iv.Lo)
             {

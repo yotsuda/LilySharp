@@ -529,10 +529,14 @@ internal sealed partial class LayoutEngine
         var trailingRowStaves = BuildTrailingRowStaves(systemsArray, textRowStaves);
         var betweenRowStaves = BuildBetweenRowStaves(systemsArray, textRowStaves);
 
+        // A cross-staff beam depends on the staff distance, which only now is final.
+        var (beamsByStaff, carriedBeams) = LayCrossStaffBeams(
+            score, systemsArray, multiStaffLayouter, prelim.BeamsByStaff, prelim.AllBeams);
+
         // Calculate beams/ties/slurs/glissandos per staff
         var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
             LayoutAllSpanners(score, systemsArray, multiStaffLayouter.RestCollisionsOfDelegate,
-                prelim.BeamsByStaff, prelim.AllBeams, prelim.TiesByStaff, prelim.SlursByStaff,
+                beamsByStaff, carriedBeams, prelim.TiesByStaff, prelim.SlursByStaff,
                 prelim.Systems);
 
         // Resolve cross-staff layouts per voice

@@ -14,7 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
+
 namespace LilySharp.Core.Svg.Model;
+
+/// <summary>
+/// One note standing on a staff that is not its voice's (<see cref="Staff.CrossedIn"/>): the
+/// address in that voice's measures, where its column is read.
+/// </summary>
+public sealed record CrossedNote(ImmutableArray<Measure> Measures, int MeasureIndex, int ItemIndex)
+{
+    /// <summary>The moved note.</summary>
+    public MusicItem Item => Measures[MeasureIndex].Items[ItemIndex];
+
+    // Identity, not value equality: see ModelIdentity.
+    public bool Equals(CrossedNote? other) => ReferenceEquals(this, other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => ModelIdentity.HashOf(this);
+}
 
 /// <summary>
 /// Marks a note/chord that should be rendered on a different staff

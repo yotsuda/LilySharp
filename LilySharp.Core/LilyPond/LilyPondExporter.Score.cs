@@ -633,6 +633,9 @@ public sealed partial class LilyPondExporter
         else
         {
             sb.Append(indent).Append("\\new Staff");
+            // A staff a note's \change Staff names (CollectCrossTargets).
+            if (partName != null && _shared.CrossTargets.ContainsKey(partName))
+                sb.Append(" = \"").Append(partName).Append('"');
             var staffWith = new List<string>(3);
             if (InstrumentNameClause(partName) is { } staffName) staffWith.Add(staffName);
             if (MidiInstrumentClause(part) is { } staffMidi) staffWith.Add(staffMidi);

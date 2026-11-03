@@ -453,7 +453,8 @@ public class IncrementalReuseSoundnessTests
         nameof(Staff.TabSourceClef), nameof(Staff.Transposition), nameof(Staff.TabNumbersOnly),
         nameof(Staff.Lines), nameof(Staff.PedalStyle), nameof(Staff.PartCombineMarks),
         };
-        var capturedElsewhere = new[] { nameof(Staff.Clef), nameof(Staff.Voices) };
+        // CrossedIn is derived: the notes it names are items of another staff's voices, which the key holds.
+        var capturedElsewhere = new[] { nameof(Staff.Clef), nameof(Staff.Voices), nameof(Staff.CrossedIn) };
         // A third outcome for the triage: a field that is NOT CONTENT and has to stay OUT
         // of the key. A source offset moves whenever text is inserted earlier in the file,
         // so folding one in makes a content-unchanged edit miss the cache and lose

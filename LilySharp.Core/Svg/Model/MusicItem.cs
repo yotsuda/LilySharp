@@ -163,6 +163,8 @@ internal sealed record MusicItemRare
     public string? TodoMemo { get; init; }
     public bool TodoBelow { get; init; }
     public bool TodoSideWritten { get; init; }
+    public bool CrossWritten { get; init; }
+    public int CrossStaffIndex { get; init; } = -1;
 }
 
 /// <summary>
@@ -216,6 +218,29 @@ public abstract record MusicItem
     {
         get => _rareBase?.VoiceContext ?? VoiceContextId.Default;
         init { if (value != VoiceContext) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { VoiceContext = value }; }
+    }
+
+    /// <summary>
+    /// Whether the note wrote <c>@cross</c>. What that moves it to is only known once the
+    /// score's staves are (<see cref="CrossStaffIndex"/>).
+    /// </summary>
+    public bool CrossWritten
+    {
+        get => _rareBase?.CrossWritten ?? false;
+        init { if (value != CrossWritten) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { CrossWritten = value }; }
+    }
+
+    /// <summary>
+    /// The global index of the staff this note is DRAWN on when <c>@cross</c> moved it, −1 when
+    /// it stands on its own part's staff. The note's <c>StaffPosition</c> is then read under
+    /// that staff's clef, about that staff's middle line — LilyPond's <c>\change Staff</c>
+    /// moves the note's Voice, and the heads ask the staff they are now in
+    /// (LILYPOND-REF: lily/staff-symbol-referencer.cc:65-68 get_position).
+    /// </summary>
+    public int CrossStaffIndex
+    {
+        get => _rareBase?.CrossStaffIndex ?? -1;
+        init { if (value != CrossStaffIndex) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { CrossStaffIndex = value }; }
     }
 
     /// <summary>

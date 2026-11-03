@@ -834,6 +834,16 @@ internal sealed class BeamScoringProblem
                 isKnee: _isKnee, beamShorten: _beamShorten,
                 // LILYPOND-REF: lily/stem.cc:1187-1194 height_of_my_trem (HANDOFF §2 R9⒢).
                 tremoloFlags: StemCalculator.TremoloFlagCount(group.ItemOf(i)));
+            // A member on another staff (@cross): its stem info is about THAT staff, and the
+            // beam is read about its own — LilyPond's base_lengths_ carry the same difference.
+            // LILYPOND-REF: lily/beam.cc:1146-1147 calc_stem_y — id = beam's y − stem's y.
+            double staffOffset = group.Members[i].StaffOffset / 2.0;
+            if (staffOffset != 0)
+                _stemInfos[i] = _stemInfos[i] with
+                {
+                    IdealY = _stemInfos[i].IdealY + staffOffset,
+                    ShortestY = _stemInfos[i].ShortestY + staffOffset,
+                };
         }
 
         // The beam's own segments — the SAME maths the renderer draws with, so the ink a
@@ -1344,7 +1354,7 @@ internal sealed class BeamScoringProblem
     private double ChordStartY(int i)
     {
         int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
-        return (dir > 0 ? _headMax[i] : _headMin[i]) * 0.5;
+        return (dir > 0 ? _headMax[i] : _headMin[i]) * 0.5 + _group.Members[i].StaffOffset / 2.0;
     }
 
     /// <summary>
@@ -1767,7 +1777,9 @@ internal sealed class BeamScoringProblem
         // all-or-nothing, so per-edge first/last-normal never diverges from this.)
         for (int e = 0; e < 2 && _normalStemCount > 0; e++)
         {
-            double headSS = BeamSideHead(e == 0 ? 0 : _memberCount - 1) / 2.0;
+            // LILYPOND-REF: lily/beam-quanting.cc:349-359 quant_range_ — heads[ed] + stem_offset.
+            int edgeMember = e == 0 ? 0 : _memberCount - 1;
+            double headSS = (BeamSideHead(edgeMember) + _group.Members[edgeMember].StaffOffset) / 2.0;
             double widen = 0.5
                 + (_edgeBeamCounts[e] - 1) * _beamTranslation
                 + _beamThickness * 0.5;

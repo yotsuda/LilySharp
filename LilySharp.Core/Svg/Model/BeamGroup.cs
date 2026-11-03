@@ -395,6 +395,14 @@ public sealed record BeamMember
     /// </summary>
     public int HeadPositionMax { get; }
 
+    /// <summary>
+    /// How far this member's staff stands above the beam's, in staff positions — 0 unless
+    /// <c>@cross</c> moved it. <see cref="HeadPositionMin"/> and <see cref="HeadPositionMax"/>
+    /// stay about the member's OWN staff, as LilyPond's do; this is the term it adds.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/beam-quanting.cc:316-317 stem_ypositions_.</remarks>
+    public double StaffOffset { get; init; }
+
     /// <summary>Creates a beam member describing one stem's beaming.
     /// <paramref name="headPosition"/> is the single head's staff position — the value
     /// both <see cref="HeadPositionMin"/> and <see cref="HeadPositionMax"/> take when the
@@ -439,7 +447,8 @@ public sealed record BeamMember
             ? this
             : new BeamMember(DetectedItem, BeamCount, BeamCountLeft, BeamCountRight, HeadPositionMin,
                 ItemIndex, MemberStemUp, TargetStaffIndex, MeasureIndex + delta,
-                HeadPositionMin, HeadPositionMax);
+                HeadPositionMin, HeadPositionMax)
+            { StaffOffset = StaffOffset };
 }
 
 /// <summary>

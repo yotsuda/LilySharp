@@ -4527,7 +4527,8 @@ internal sealed class MultiStaffLayouter
             byMeasureIndex[ml.MeasureIndex] = ml;
         var systemTuplets = ImmutableArray.CreateBuilder<TupletBracketItem>(staffTuplets.Length);
         foreach (var tuplet in staffTuplets)
-            if (tuplet.MeasureIndex <= maxMeasureIndex && byMeasureIndex[tuplet.MeasureIndex] != null)
+            if (tuplet.MeasureIndex <= maxMeasureIndex && byMeasureIndex[tuplet.MeasureIndex] != null
+                && !HoldsMovedNote(staff, tuplet))
                 systemTuplets.Add(tuplet);
         if (systemTuplets.Count == 0)
             return ImmutableArray<TupletBracketLayout>.Empty;
@@ -4547,6 +4548,25 @@ internal sealed class MultiStaffLayouter
             // A rest column is an encompass point, read where Rest_collision put the rest
             // — the room's memo, the same table the skyline seed and the renderer read.
             restShiftsOf: _ => RestCollisionsOf(staff));
+    }
+
+    /// <summary>Whether a note of <paramref name="tuplet"/> stands on another staff: such a
+    /// tuplet is cross-staff, and in no skyline.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:4101 ly:tuplet-bracket::calc-cross-staff — the
+    /// TupletBracket's cross-staff; lily/axis-group-interface.cc:921 skyline_spacing
+    /// leaves it out.</remarks>
+    private static bool HoldsMovedNote(Staff staff, TupletBracketItem tuplet)
+    {
+        if (tuplet.VoiceIndex >= staff.Voices.Length)
+            return false;
+        var measures = staff.Voices[tuplet.VoiceIndex].Measures;
+        if (tuplet.MeasureIndex >= measures.Length)
+            return false;
+        var items = measures[tuplet.MeasureIndex].Items;
+        for (int i = Math.Max(0, tuplet.StartNoteIndex); i <= tuplet.EndNoteIndex && i < items.Length; i++)
+            if (items[i].CrossStaffIndex >= 0)
+                return true;
+        return false;
     }
 
     /// <summary>

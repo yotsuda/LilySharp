@@ -910,6 +910,9 @@ internal sealed class SkylineBuilder
                         continue;
 
                     var item = measure.Items[itemIndex];
+                    // A note @cross moved is ink of the staff it stands on (the walk below).
+                    if (item.CrossStaffIndex >= 0)
+                        continue;
                     // GRACE TIME IS SEEDED HERE, by the ordinary seeds at the fonts its grobs
                     // state — LilyPond's own shape: a grace body is an ordinary stretch of an
                     // ordinary Voice, its NoteHead / Stem / Flag / Accidental are inside-staff
@@ -1036,6 +1039,27 @@ internal sealed class SkylineBuilder
             }
         }
         GiveSuppressed(suppressStems);
+        // ...and the heads of the notes another part's @cross moved onto this staff. The head is
+        // this staff's grob; its stem is left out when it is beamed (a cross-staff stem is in no
+        // skyline), and the unbeamed one is not reserved yet — the gap this leaves is named at
+        // Staff.CrossedIn.
+        // LILYPOND-REF: lily/axis-group-interface.cc:850-858 skyline_spacing — "we just leave
+        //   cross-staff grobs out of the skyline altogether"; a NoteHead is not one.
+        foreach (var crossed in staff.CrossedIn)
+        {
+            if (crossed.MeasureIndex >= crossed.Measures.Length)
+                continue;
+            foreach (var measureLayout in measureLayouts)
+            {
+                if (measureLayout.MeasureIndex != crossed.MeasureIndex)
+                    continue;
+                double crossedX = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                    crossed.Measures, crossed.MeasureIndex, crossed.ItemIndex, measureLayout);
+                AddMusicItemToSkylines(crossed.Item, crossedX, staffMiddleUp, StaffSize.Of(staff),
+                    upSkyline, downSkyline, forcedStemUp: null, reserveStem: false,
+                    clef: staff.Clef, staffLines: staff.Lines);
+            }
+        }
         // ...and the beams of this staff's grace runs, with the stems that end on them — the
         // grace counterpart of AddBeamsToSkyline, run after the columns because it seeds
         // the drawn geometry the withheld stems above were left to.
@@ -2446,8 +2470,14 @@ internal sealed class SkylineBuilder
         if (ties.IsDefaultOrEmpty)
             return;
         foreach (var t in ties)
+        {
+            // A tie between notes @cross moved is read about the other staff; this frame
+            // cannot say where it stands, and its heads already hold their room there.
+            if (t.Tie.StartNote.CrossStaffIndex >= 0)
+                continue;
             SeedBowInk(t.StartX, t.StartYUp, t.Control1, t.Control2, t.EndX, t.EndYUp,
                 staffTopUp, size, upSkyline, downSkyline);
+        }
     }
 
     /// <summary>

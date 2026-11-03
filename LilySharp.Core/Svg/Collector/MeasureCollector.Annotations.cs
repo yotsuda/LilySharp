@@ -716,6 +716,15 @@ public sealed partial class MeasureCollector
         }
     }
 
+    /// <summary>Whether the note or chord <paramref name="node"/> writes <c>@cross</c>.</summary>
+    private static bool WritesCross(SyntaxNode node)
+    {
+        foreach (var child in ArticulationsOf(node))
+            if (child is ArticulationSyntax { Name: "cross" })
+                return true;
+        return false;
+    }
+
     /// <summary>
     /// Collects a grob property override from an OverrideDeclarationSyntax.
     /// LILYPOND-REF: lily/context-property.cc (push)

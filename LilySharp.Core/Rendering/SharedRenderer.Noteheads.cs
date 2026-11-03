@@ -66,7 +66,7 @@ internal static partial class SharedRenderer
             // Percent-covered measures draw no notes — and no ledgers either.
             if (percentCovered != null && percentCovered.Contains(ledgerMl.MeasureIndex))
                 continue;
-            CollectItemLedgers(item, itemX, ledgerVoiceX, staffMiddleY, ledgerColumn++, ledgerPlan, staffLines);
+            CollectItemLedgers(item, itemX, ledgerVoiceX, MiddleYOf(item, system, staffMiddleY), ledgerColumn++, ledgerPlan, staffLines);
         }
         DrawPlannedLedgers(ledgerPlan, gc);
 
@@ -112,7 +112,7 @@ internal static partial class SharedRenderer
             switch (item)
             {
                 case NoteItem note:
-                    DrawNote(note, itemX, staffMiddleY, resolver,
+                    DrawNote(note, itemX, MiddleYOf(note, system, staffMiddleY), resolver,
                         beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
                         forcedStemUp, headWiped, gc, pageHeight, dotAdjust, voiceX);
                     break;
@@ -148,7 +148,7 @@ internal static partial class SharedRenderer
                     }
                     break;
                 case ChordItem chord:
-                    DrawChord(chord, itemX, staffMiddleY, resolver,
+                    DrawChord(chord, itemX, MiddleYOf(chord, system, staffMiddleY), resolver,
                         beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
                         forcedStemUp, headWiped, gc, pageHeight, dotAdjust, voiceX);
                     break;
@@ -183,6 +183,13 @@ internal static partial class SharedRenderer
         }
         ListPool<StaffItemPlacement>.Give(staffItems);
     }
+
+    /// <summary>The middle line an item's position is read about: the staff <c>@cross</c> moved
+    /// it to (<see cref="MusicItem.CrossStaffIndex"/>), else the staff being drawn.</summary>
+    private static double MiddleYOf(MusicItem item, SystemLayout system, double staffMiddleY) =>
+        item.CrossStaffIndex >= 0
+            ? LayoutUtilities.FindStaffYInSystem(system, item.CrossStaffIndex) - StaffHeight / 2
+            : staffMiddleY;
 
     /// <summary>
     /// Resolves each drawable item's X position for one staff pass, in drawing order, into

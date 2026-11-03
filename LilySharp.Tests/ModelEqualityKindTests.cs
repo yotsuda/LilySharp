@@ -55,7 +55,7 @@ public class ModelEqualityKindTests
         "ChordItem", "ClefChangeItem", "KeySignatureChangeItem", "NoteItem", "RestItem",
         "TimeSignatureChangeItem", "BreathingSignItem",
         // one written mark each
-        "ArticulationItem", "ChordNameItem", "CrossStaffItem", "CustomTextItem",
+        "ArticulationItem", "ChordNameItem", "CrossStaffItem", "CrossedNote", "CustomTextItem",
         "DynamicItem", "FiguredBassItem", "GraceNoteItem", "HairpinItem", "LyricItem",
         "MusicMarkItem", "OttavaBracketItem", "PercentRepeatItem", "SlurItem",
         "TextSpannerItem", "TieItem", "TrillSpannerItem", "TupletBracketItem",

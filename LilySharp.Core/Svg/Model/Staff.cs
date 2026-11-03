@@ -133,6 +133,17 @@ public sealed record Staff(
     // Identity, not value equality: see ModelIdentity.
     public bool Equals(Staff? other) => ReferenceEquals(this, other);
 
+    /// <summary>
+    /// The notes of other staves that <c>@cross</c> moved onto this one. They stay in their own
+    /// voices; this staff's skyline holds their heads.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE HEAD ONLY: an UNBEAMED moved note's stem is not reserved here, though LilyPond's
+    /// is in this staff's skyline (Stem::is_cross_staff is false for a stem with no beam) — the
+    /// over-the-edge case is a moved note whose stem leaves the staff.
+    /// </remarks>
+    public ImmutableArray<CrossedNote> CrossedIn { get; init; } = ImmutableArray<CrossedNote>.Empty;
+
     /// <summary>The short name printed at the staff's left from the second system on
     /// (`part vn1 "Violin I" "Vn. I"` — LilyPond's shortInstrumentName), or null.</summary>
     public string? ShortInstrumentName { get; init; }

@@ -1542,7 +1542,7 @@ internal sealed partial class LayoutEngine
                 staffTies = _elementCoordinator.LayoutTies(score.TextMetrics,
                     _elementCoordinator.DetectTies(staffSpannerScore), staffSpannerScore, systemsArray, staffIndex, staff,
                     score.GraceNotes, staffIndex);
-            allTieLayouts.AddRange(staffTies);
+            allTieLayouts.AddRange(TiesOnTheirNotesStaff(staffTies, systemsArray, staffIndex, bowSystemOf));
             var staffSlurs = bowShifts is null
                 ? default
                 : ReanchorBows(prelimSlursByStaff[staffIndex], bowShifts, bowSystemOf);

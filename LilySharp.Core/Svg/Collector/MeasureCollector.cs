@@ -2280,6 +2280,11 @@ public sealed partial class MeasureCollector
                 .ToImmutableArray();
         }
 
+        // @cross: the notes that move to another staff, read under that staff's clef. After the
+        // ottava pass, whose display shift they keep.
+        if (_crossStaffItems.Count > 0)
+            staffGroups = MoveCrossStaffNotes(staffGroups);
+
         // The main-note chord symbols the grace symbols are rodded to (session 964), by the
         // same global staff index.
         {
@@ -3457,15 +3462,6 @@ public sealed partial class MeasureCollector
             || !staffVoices.TryGetValue(condensed.PartNames[0], out var firstVoices) || firstVoices.Length == 0)
             return;
         var staffClefs = ClefEvents(firstVoices[0].Measures);
-        static ClefType InForce(ClefType opening, List<(int Measure, Fraction Onset, ClefType Clef)> events, int m, Fraction at)
-        {
-            var clef = opening;
-            foreach (var (em, eat, c) in events)
-                if (em < m || (em == m && eat <= at))
-                    clef = c;
-            return clef;
-        }
-        static int Diatonic(ClefType clef) => MiddleLinePitch(clef) is var (step, octave) ? step + octave * 7 : 0;
 
         foreach (string part in condensed.PartNames)
         {
@@ -3512,6 +3508,168 @@ public sealed partial class MeasureCollector
             }
             if (rewritten != null)
                 staffVoices[part] = rewritten.ToImmutableArray();
+        }
+    }
+
+    /// <summary>The clef in force at (<paramref name="m"/>, <paramref name="at"/>) on a staff
+    /// that opens with <paramref name="opening"/> and changes at <paramref name="events"/>.</summary>
+    private static ClefType InForce(ClefType opening, List<(int Measure, Fraction Onset, ClefType Clef)> events, int m, Fraction at)
+    {
+        var clef = opening;
+        foreach (var (em, eat, c) in events)
+            if (em < m || (em == m && eat <= at))
+                clef = c;
+        return clef;
+    }
+
+    /// <summary>The diatonic number of a clef's middle line — two clefs' difference is the shift
+    /// of a note's staff position from one to the other (<see cref="MiddleLinePitch"/>).</summary>
+    private static int Diatonic(ClefType clef) => MiddleLinePitch(clef) is var (step, octave) ? step + octave * 7 : 0;
+
+    /// <summary>
+    /// Moves every <c>@cross</c> note to the staff it is drawn on: its position is read under
+    /// that staff's clef in force at the note, and it is stamped with the staff's global index
+    /// (<see cref="MusicItem.CrossStaffIndex"/>). The note stays in its own voice — its time, its
+    /// beam and its sound are its part's. The target staff is told which notes stand on it
+    /// (<see cref="Staff.CrossedIn"/>), because its skyline holds their heads.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/change-iterator.cc:74-99 Change_iterator::process — <c>\change Staff</c> re-parents the Voice,
+    ///   so its heads read that Staff's clef (<c>middleCPosition</c>) from then on.
+    /// Which staff: <see cref="Layout.CrossStaffEngraver.TargetStaffOf"/> over the score's NOTATION
+    /// staves; with no other notation staff nothing moves (LYS4031 says so).
+    /// </remarks>
+    private static ImmutableArray<StaffGroup> MoveCrossStaffNotes(ImmutableArray<StaffGroup> staffGroups)
+    {
+        var staves = staffGroups.SelectMany(g => g.Staves).ToArray();
+        var notation = new List<int>(staves.Length);
+        for (int i = 0; i < staves.Length; i++)
+            if (!staves[i].IsTab && !staves[i].IsTextRow && !staves[i].IsOssia)
+                notation.Add(i);
+        if (notation.Count < 2)
+            return staffGroups;
+
+        var clefEvents = new List<(int Measure, Fraction Onset, ClefType Clef)>?[staves.Length];
+        List<(int Measure, Fraction Onset, ClefType Clef)> EventsOf(int i) =>
+            clefEvents[i] ??= staves[i].Voices.Length > 0
+                ? ClefEvents(staves[i].Voices[0].Measures)
+                : new();
+
+        var crossedIn = new List<CrossedNote>?[staves.Length];
+        var moved = new Staff?[staves.Length];
+        for (int n = 0; n < notation.Count; n++)
+        {
+            int source = notation[n];
+            int target = notation[Layout.CrossStaffEngraver.TargetStaffOf(n, notation.Count)];
+            var voices = staves[source].Voices;
+            Voice[]? newVoices = null;
+            for (int vi = 0; vi < voices.Length; vi++)
+            {
+                var measures = voices[vi].Measures;
+                Measure[]? newMeasures = null;
+                for (int m = 0; m < measures.Length; m++)
+                {
+                    var items = measures[m].Items;
+                    MusicItem[]? newItems = null;
+                    var at = Fraction.Zero;
+                    for (int i = 0; i < items.Length; i++)
+                    {
+                        var item = items[i];
+                        if (item.CrossWritten && item is NoteItem or ChordItem)
+                        {
+                            int shift = Diatonic(InForce(staves[source].Clef, EventsOf(source), m, at))
+                                - Diatonic(InForce(staves[target].Clef, EventsOf(target), m, at));
+                            (newItems ??= items.ToArray())[i] = item switch
+                            {
+                                NoteItem note => note with { StaffPosition = note.StaffPosition + shift, CrossStaffIndex = target },
+                                ChordItem chord => chord with
+                                {
+                                    Notes = chord.Notes.Select(x => x with { StaffPosition = x.StaffPosition + shift }).ToImmutableArray(),
+                                    CrossStaffIndex = target,
+                                },
+                                _ => item,
+                            };
+                        }
+                        at += item.Duration;
+                    }
+                    if (newItems != null)
+                    {
+                        (newMeasures ??= measures.ToArray())[m] = measures[m] with { Items = ImmutableArray.Create(newItems) };
+                    }
+                }
+                if (newMeasures != null)
+                {
+                    var measuresNow = ImmutableArray.Create(newMeasures);
+                    (newVoices ??= voices.ToArray())[vi] = voices[vi] with { Measures = measuresNow };
+                    RestampMovedBeams(measuresNow);
+                    for (int m = 0; m < measuresNow.Length; m++)
+                    {
+                        var items = measuresNow[m].Items;
+                        for (int i = 0; i < items.Length; i++)
+                            if (items[i].CrossStaffIndex == target)
+                                (crossedIn[target] ??= new()).Add(new CrossedNote(measuresNow, m, i));
+                    }
+                }
+            }
+            if (newVoices != null)
+                moved[source] = staves[source] with { Voices = ImmutableArray.Create(newVoices) };
+        }
+
+        int walk = 0;
+        return staffGroups.Select(g => g with
+        {
+            Staves = g.Staves.Select(st =>
+            {
+                int i = walk++;
+                var now = moved[i] ?? st;
+                return crossedIn[i] is { } here ? now with { CrossedIn = here.ToImmutableArray() } : now;
+            }).ToImmutableArray(),
+        }).ToImmutableArray();
+    }
+
+    /// <summary>
+    /// The bake stamped each beam's direction off the positions the notes had before
+    /// <c>@cross</c> moved them; every later reader of a note's stem (a tuplet's side, a slur's
+    /// end) asks the stamp, so a beam with a moved member is stamped again. The pure tip goes
+    /// with it: a cross-staff stem is in no skyline.
+    /// </summary>
+    /// <remarks>A voice-forced beam keeps its direction, and a stem the writer turned keeps its
+    /// own (lily/beam.cc:946-956 set_stem_directions).</remarks>
+    private static void RestampMovedBeams(ImmutableArray<Measure> measures)
+    {
+        var beams = new Dictionary<int, List<MusicItem>>();
+        var moved = new HashSet<int>();
+        foreach (var measure in measures)
+            foreach (var item in measure.Items)
+            {
+                if (item.GraceTime || (item is NoteItem n ? n.BeamId : item is ChordItem c ? c.BeamId : null) is not { } id)
+                    continue;
+                if (!beams.TryGetValue(id, out var list))
+                    beams[id] = list = new List<MusicItem>();
+                list.Add(item);
+                if (item.CrossStaffIndex >= 0)
+                    moved.Add(id);
+            }
+        foreach (int id in moved)
+        {
+            var members = beams[id];
+            if (members.Any(i => i is NoteItem { VoiceStemUp: not null } or ChordItem { VoiceStemUp: not null }))
+                continue;
+            bool up = BeamDetector.DefaultStemUpOf(members);
+            foreach (var item in members)
+            {
+                switch (item)
+                {
+                    case NoteItem n:
+                        n.ClearBeamStamp();
+                        n.StampBeam(n.ForcedStemUp ?? up, id, null);
+                        break;
+                    case ChordItem c:
+                        c.ClearBeamStamp();
+                        c.StampBeam(c.ForcedStemUp ?? up, id, null);
+                        break;
+                }
+            }
         }
     }
 

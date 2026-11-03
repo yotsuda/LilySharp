@@ -2300,6 +2300,9 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private T DecorateSoundingItem<T>(T item, SyntaxNode node, bool isCue) where T : MusicItem
     {
+        // Grace time has no column of its own to move — see CollectCrossStaff.
+        if (_v.GraceDepth == 0 && WritesCross(node))
+            item = item with { CrossWritten = true };
         switch (item)
         {
             case NoteItem n:

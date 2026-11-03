@@ -32,6 +32,21 @@ public sealed partial class LilyPondExporter
     // A note's attachments split into those that must precede the note (a
     // rehearsal \mark, a \deadNote prefix, a forced stem direction) and those
     // that trail it (string numbers, ties, dynamics, articulation scripts).
+    /// <summary>Fills <c>SharedState.CrossTargets</c> for a book that writes <c>@cross</c>.</summary>
+    private void CollectCrossTargets(SyntaxTree tree, RenderDeclarationSyntax? render)
+    {
+        _shared.CrossTargets.Clear();
+        if (render is null
+            || !tree.GetRoot().DescendantNodes<ArticulationSyntax>().Any(a => a.Name == "cross"))
+            return;
+        var staves = render.DescendantNodes().OfType<StaffRenderSyntax>()
+            .Select(s => RenderPartName(s)).OfType<string>().ToList();
+        if (staves.Count < 2)
+            return;
+        for (int i = 0; i < staves.Count; i++)
+            _shared.CrossTargets[staves[i]] = staves[Svg.Layout.CrossStaffEngraver.TargetStaffOf(i, staves.Count)];
+    }
+
     private (string Prefix, string Suffix) SplitAttachments(IEnumerable<SyntaxNode> arts)
     {
         var prefix = new StringBuilder();
@@ -49,6 +64,19 @@ public sealed partial class LilyPondExporter
         {
             switch (a)
             {
+                // `@cross`: the note goes to the other staff and the voice comes straight back,
+                // so the next note is the part's again. A part with no other staff stays where
+                // it is (LYS4031 says so on the page's side).
+                // LILYPOND-REF: lily/change-iterator.cc:74-99 Change_iterator::process.
+                case ArticulationSyntax { Name: "cross" }:
+                    if (_currentPartName is { } crossPart && _shared.CrossTargets.TryGetValue(crossPart, out var crossTarget))
+                    {
+                        prefix.Append("\\change Staff = \"").Append(crossTarget).Append("\" ");
+                        Trail("\\change Staff = \"" + crossPart + "\"");
+                    }
+                    else if (_currentPartName is null)
+                        _warnings.Add("@cross in a phrase is not written to the twin: the staff it leaves depends on the part playing it");
+                    break;
                 // ⚠️ THE ONE MARK THAT TRAILS ITS NOTE. `\mark` is standalone music written
                 // BEFORE the note it stands over, which is why marks default to the prefix;
                 // `\nonArpeggiato` is a POST-EVENT (scm/define-music-types.scm:436-441 gives

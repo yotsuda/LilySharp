@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **`@cross` moves the note.** A note written `@cross` is now drawn on the other staff, read under that staff's clef, as the grammar always said. A beam joins the two staves, with a knee where the gap is wide; its tie, its script and a glissando to it go with it. The `.ly` twin writes `\change Staff`. Only books that write `@cross` on a score with another staff change. Not yet: a slur over a moved note, a beam avoiding other notes, and MusicXML, which still writes the note on its own part's staff.
+
 ### Copilot's chat teaches Lily#
 
 - Asked how to write `.lys`, the chat teaches from a path of its own (`docs/LEARN_FOR_LLM.md`): the most useful operations first, then notes, form, words, chords, piano, drums, a band and the page, a stage at a time, with the lesson for each. Its examples compile.

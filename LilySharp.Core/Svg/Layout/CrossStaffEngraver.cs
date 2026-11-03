@@ -74,11 +74,7 @@ public static class CrossStaffEngraver
 
         foreach (var item in crossStaffItems)
         {
-            // In a 2-staff grand staff, @cross flips to the other staff
-            // In N-staff groups, @cross moves to the next staff (wrapping)
-            int targetStaff = staffCount == 2
-                ? (voiceStaffIndex == 0 ? 1 : 0)
-                : (voiceStaffIndex + 1) % staffCount;
+            int targetStaff = TargetStaffOf(voiceStaffIndex, staffCount);
 
             builder.Add(new CrossStaffLayout(
                 item.MeasureIndex,
@@ -89,6 +85,15 @@ public static class CrossStaffEngraver
 
         return builder.ToImmutable();
     }
+
+    /// <summary>
+    /// The staff an <c>@cross</c> moves a note to: the other one of two, the next one down of
+    /// more (the last staff's note wraps to the first).
+    /// </summary>
+    public static int TargetStaffOf(int voiceStaffIndex, int staffCount) =>
+        staffCount == 2
+            ? (voiceStaffIndex == 0 ? 1 : 0)
+            : (voiceStaffIndex + 1) % staffCount;
 
     /// <summary>
     /// Builds a lookup set for quick cross-staff detection during beam processing.

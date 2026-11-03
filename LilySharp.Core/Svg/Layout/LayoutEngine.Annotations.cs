@@ -712,6 +712,7 @@ internal sealed partial class LayoutEngine
         articulationLayouts = ClearChordDiagramsOverStaffInk(
             ctx, systems, articulationLayouts, fingeringLayouts, beamLayouts ?? default,
             measureToSystem);
+        articulationLayouts = ScriptsOnTheirNotesStaff(ctx.MultiScore, articulationLayouts);
         var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
         // The marks a lyric chain has to see BEFORE it is solved: a section label (a rehearsal

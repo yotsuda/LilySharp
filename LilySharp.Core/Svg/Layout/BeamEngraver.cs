@@ -124,9 +124,19 @@ internal sealed class BeamEngraver
             headFont: group.HeadFont,
             staffRadius: EngravingDefaults.NotationStaffRadius(staffLines),
             restXPositions: restXPositions);
+        // A cross-staff beam tells the drawing which staff each stem's head stands on.
+        var memberStaves = ImmutableArray<int>.Empty;
+        if (group.IsCrossStaff)
+        {
+            var staves = new int[group.Members.Length];
+            for (int i = 0; i < staves.Length; i++)
+                staves[i] = group.Members[i].TargetStaffIndex >= 0 ? group.Members[i].TargetStaffIndex : staffIndex;
+            memberStaves = ImmutableCollectionsMarshal.AsImmutableArray(staves);
+        }
         return new BeamLayout(
             group, leftY, rightY, leftX, rightX, leftStemX, rightStemX,
             memberXPositions, staffIndex, systemIndex,
+            memberStaffIndices: memberStaves,
             restXPositions: restXPositions);
     }
 }

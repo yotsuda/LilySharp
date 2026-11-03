@@ -384,6 +384,11 @@ public sealed partial class LilyPondExporter
         /// MusicXmlExporter and MidiExporter keep for the same reason.</summary>
         public readonly HashSet<string> ActivePhrases = new(StringComparer.Ordinal);
 
+        /// <summary>Which part's staff an <c>@cross</c> of each part moves to, in the score being
+        /// written — the page's rule (<see cref="Svg.Layout.CrossStaffEngraver.TargetStaffOf"/>)
+        /// over the notation staves. Both staves of a pair are named for <c>\change Staff</c>.</summary>
+        public readonly Dictionary<string, string> CrossTargets = new(StringComparer.Ordinal);
+
         /// <summary>The source position of every <c>@chord</c> mark a ChordNames stream
         /// carries (<see cref="EmitInlineChordTracks"/>), and of every <c>@figuredBass</c>
         /// mark a FiguredBass stream carries (<see cref="EmitFiguredBassTracks"/>): what tells
@@ -612,6 +617,8 @@ public sealed partial class LilyPondExporter
         CollectGraceSync(tree, render);
         // Before the part variables too: a niente's hairpin is written with its circled tip.
         CollectNiente(tree, render);
+        // ...and the @cross notes write \change Staff.
+        CollectCrossTargets(tree, render);
 
         // One music variable per part. A by-part score keeps its sections inside
         // the part block; the form orders them.

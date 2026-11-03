@@ -387,7 +387,10 @@ internal sealed class ElementCoordinator
                 itemXPositions,
                 staffIndex,
                 system.SystemIndex,
-                collisions,
+                // ⚠️ A CROSS-STAFF BEAM SCORES NO COVERED GROBS YET: these are read about one
+                // staff and its members stand on two. LilyPond's do collide
+                // (lily/beam-quanting.cc:368-399 add_collision, in the common frame).
+                group.IsCrossStaff ? null : collisions,
                 staffLines);
 
             beamLayouts.Add(beamLayout);
@@ -536,7 +539,8 @@ internal sealed class ElementCoordinator
                 targetStaffIndex: m.TargetStaffIndex,
                 measureIndex: m.MeasureIndex,
                 headPositionMin: m.HeadPositionMin,
-                headPositionMax: m.HeadPositionMax));
+                headPositionMax: m.HeadPositionMax)
+            { StaffOffset = m.StaffOffset });
         }
 
         // The rests the beam runs over resolve the same way, and their dense indices are
@@ -569,7 +573,8 @@ internal sealed class ElementCoordinator
             memberXs.Concat(restXs).ToList(),
             staffIndex: staffIndex,
             systemIndex: systemIndex,
-            collisions: collisions,
+            // A cross-staff beam: see the one-measure path.
+            collisions: group.IsCrossStaff ? null : collisions,
             staffLines: staffLines);
 
         // The dense renumbering above exists ONLY so the scorer can index

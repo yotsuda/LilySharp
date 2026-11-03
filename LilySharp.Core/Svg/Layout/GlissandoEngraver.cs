@@ -170,8 +170,13 @@ internal static class GlissandoEngraver
             //   s2triangle spans −0.7828..0.6566, so LilyPond's anchor sits 0.0631
             //   BELOW the position. Unspelled here (no book glisses a shape head);
             //   ticketed 2026-08-07, session 109 audit.
-            double startStaffY = gliss.StartStaffPosition * 0.5;
-            double endStaffY = gliss.EndStaffPosition * 0.5;
+            // A bound @cross moved stands on the other staff, its position already that staff's:
+            // the line reaches it across the distance between the two, as LilyPond's does in
+            // the common frame.
+            // LILYPOND-REF: lily/line-spanner.cc:416-421 calc_bound_info — the head's extent
+            //   read in the common Y refpoint of the two bounds.
+            double startStaffY = gliss.StartStaffPosition * 0.5 + MovedLift(startItem, startInfo.System);
+            double endStaffY = gliss.EndStaffPosition * 0.5 + MovedLift(endItem, endInfo.System);
 
             // The broken pieces' X first: a piece's share of the slope is its share of the
             // whole length.
@@ -272,6 +277,12 @@ internal static class GlissandoEngraver
         }
 
         return layouts.ToImmutableArray();
+
+        double MovedLift(MusicItem? item, SystemLayout system)
+            => item is { CrossStaffIndex: >= 0 } moved && staffIndex >= 0
+                ? LayoutUtilities.FindStaffYInSystem(system, moved.CrossStaffIndex)
+                    - LayoutUtilities.FindStaffYInSystem(system, staffIndex)
+                : 0.0;
 
         (GraceColumnInfo Column, double HeadLeftX)? GraceBound(int measureIndex, int itemIndex, MeasureLayout ml)
             => voice is null || graceNotes.IsDefaultOrEmpty
