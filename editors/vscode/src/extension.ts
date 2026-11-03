@@ -7272,13 +7272,43 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function dragTargetOf(pressed, stackAtPointer, x, y) {
             if (!isNoteHead(pressed) && !isSteppingMark(pressed)) return null;
             const heads = stackAtPointer().filter(isNoteHead);
-            if (heads.length === 0) return pressed;
+            return giveWay(pressed, isNoteHead(pressed), heads, x, y);
+        }
+        // Of the boxes under the pointer, what was pressed gives way to: on a box, the nearest of
+        // them; on a mark, only a head drawn right there. A box answers beyond its head, and a
+        // staccato's dot can lie in that margin.
+        function giveWay(pressed, onABox, boxes, x, y) {
+            if (onABox) return boxes.length === 0 ? pressed : nearestTo(boxes, x, y);
+            const inside = boxes.filter((el) => {
+                const r = el.getBoundingClientRect();
+                return x >= r.left && x <= r.left + r.width && y >= r.top && y <= r.top + r.height;
+            });
+            return inside.length === 0 ? pressed : nearestTo(inside, x, y);
+        }
+        // Of these elements, the one whose middle is nearest the point.
+        function nearestTo(els, x, y) {
             const off = (el) => {
                 const r = el.getBoundingClientRect();
                 return Math.hypot(r.left + r.width / 2 - x, r.top + r.height / 2 - y);
             };
-            return heads.reduce((a, b) => (off(b) < off(a) ? b : a));
+            return els.reduce((a, b) => (off(b) < off(a) ? b : a));
         }
+        // What a click means, by the same rule (owner's request 2026-11-03: the upper half of a
+        // chord's lower note went to the note above it). A box of any click target counts here,
+        // a rest's too; anything else pressed is what was pressed.
+        function clickTargetOf(pressed, stackAtPointer, x, y) {
+            const isBox = (el) => !!el && !!el.classList && el.classList.contains('nh-hit');
+            if (!isBox(pressed) && !isSteppingMark(pressed)) return pressed;
+            return giveWay(pressed, isBox(pressed), stackAtPointer().filter(isBox), x, y);
+        }
+        // At the press: a click's coordinates are whole pixels and a pointer's are not, which on a
+        // head three pixels tall can be the next note.
+        let pressedAt = null;
+        window.addEventListener('pointerdown', (e) => { pressedAt = { x: e.clientX, y: e.clientY }; }, true);
+        const noteUnder = (e) => {
+            const x = pressedAt ? pressedAt.x : e.clientX, y = pressedAt ? pressedAt.y : e.clientY;
+            return clickTargetOf(e.target, () => document.elementsFromPoint(x, y), x, y);
+        };
         // The drawn glyph nearest what was pressed, of those with its data-pos: a section played
         // twice prints a note twice, and the box pressed is not the glyph.
         function glyphOf(pressed, glyphs) {
@@ -7497,7 +7527,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             shiftDragged = false;
             shiftDrag = null;
             if (e.pointerType !== 'mouse' || e.button !== 0 || !e.shiftKey) return;
-            const t = e.target;
+            const t = noteUnder(e);
             const pos = t && t.hasAttribute && t.hasAttribute('data-pos') ? parseInt(t.getAttribute('data-pos'), 10) : NaN;
             const bar = barStaffAt(e.clientX, e.clientY);
             const range = !isNaN(pos) ? [pos, pos] : bar ? barNoteRange(bar) : null;
@@ -7525,7 +7555,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }, true);
 
         document.addEventListener('click', (e) => {
-            const target = e.target;
+            const target = noteUnder(e);
             if (target && target.hasAttribute && target.hasAttribute('data-pos')) {
                 const pos = parseInt(target.getAttribute('data-pos'), 10);
                 // M3: shift-click extends a score selection from the anchor — it never
@@ -7613,7 +7643,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             return -1;
         }
         document.addEventListener('contextmenu', (e) => {
-            const t = e.target;
+            const t = noteUnder(e);
             ctxNotePos = (t && t.hasAttribute && t.hasAttribute('data-pos'))
                 ? parseInt(t.getAttribute('data-pos'), 10)
                 : -1;

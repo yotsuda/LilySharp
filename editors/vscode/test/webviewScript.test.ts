@@ -584,10 +584,12 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const head = at({ 'data-pos': '39' }, 10), mark = el({ 'data-pos': '42' }), page = el({});
         const isHeadFn = pageFunction('isNoteHead', scope);
         const isMarkFn = pageFunction('isSteppingMark', scope);
-        const target = pageFunction('dragTargetOf', { isNoteHead: isHeadFn, isSteppingMark: isMarkFn }) as (p: unknown, s: () => unknown[], x: number, y: number) => unknown;
+        const giveWay = pageFunction('giveWay', { nearestTo: pageFunction('nearestTo', {}) });
+        const target = pageFunction('dragTargetOf', { isNoteHead: isHeadFn, isSteppingMark: isMarkFn, giveWay }) as (p: unknown, s: () => unknown[], x: number, y: number) => unknown;
         assert.equal(target(head, () => [head, page], 2, 12), head);
         assert.equal(target(mark, () => [mark, head, page], 2, 12), head);
         assert.equal(target(mark, () => [mark, page], 2, 12), mark);
+        assert.equal(target(mark, () => [mark, head, page], 2, 15), mark);   // in the head's margin: a staccato's dot
         assert.equal(target(page, () => { throw new Error('nothing else asks either'); }, 2, 12), null);
         // A chord: the head above lies over the one pressed, and its box reaches here.
         const headsAt = new Set([39, 41]);
@@ -595,6 +597,7 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const inChord = pageFunction('dragTargetOf', {
             isNoteHead: pageFunction('isNoteHead', { noteHeads: headsAt }),
             isSteppingMark: isMarkFn,
+            giveWay,
         }) as (p: unknown, s: () => unknown[], x: number, y: number) => unknown;
         assert.equal(inChord(above, () => [above, head, page], 2, 12), head);
         assert.equal(inChord(head, () => [above, head, page], 2, 9), above);
@@ -671,6 +674,29 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(source, /switchDragCtrl\(notePress, e\.ctrlKey \|\| e\.metaKey\);/);
         assert.match(source, /window\.addEventListener\('keydown', ctrlInADrag\);\s+window\.addEventListener\('keyup', ctrlInADrag\);/);
+    });
+    it('means by a click on a chord the nearest head, as a press does', () => {
+        const box = (top: number) => ({ classList: { contains: (c: string) => c === 'nh-hit' }, hasAttribute: () => true, getAttribute: () => '1', getBoundingClientRect: () => ({ left: 0, width: 4, top, height: 4 }) });
+        const lower = box(10), upper = box(7), page = { classList: { contains: () => false }, hasAttribute: () => false };
+        const mark = { classList: { contains: () => false }, hasAttribute: () => true, getAttribute: () => '42' };
+        const clickOf = pageFunction('clickTargetOf', {
+            giveWay: pageFunction('giveWay', { nearestTo: pageFunction('nearestTo', {}) }),
+            isSteppingMark: (t: unknown) => t === mark,
+        }) as (p: unknown, s: () => unknown[], x: number, y: number) => unknown;
+        const never = () => { throw new Error('nothing else looks at what lies under it'); };
+        assert.equal(clickOf(upper, () => [upper, lower, page], 2, 12), lower);   // the upper half of the lower note
+        assert.equal(clickOf(upper, () => [upper, lower, page], 2, 9), upper);
+        assert.equal(clickOf(lower, () => [lower, page], 2, 12), lower);
+        assert.equal(clickOf(mark, () => [mark, lower, page], 2, 12), lower);     // a mark's box over a head
+        assert.equal(clickOf(mark, () => [mark, page], 2, 12), mark);
+        assert.equal(clickOf(mark, () => [mark, lower, page], 2, 15), mark);      // in its margin
+        assert.equal(clickOf(page, never, 2, 12), page);
+        assert.equal(clickOf(null, never, 2, 12), null);
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(source, /window\.addEventListener\('pointerdown', \(e\) => \{ pressedAt = \{ x: e\.clientX, y: e\.clientY \}; \}, true\);/);
+        assert.match(source, /addEventListener\('click', \(e\) => \{\s+const target = noteUnder\(e\);/);
+        assert.match(source, /addEventListener\('contextmenu', \(e\) => \{\s+const t = noteUnder\(e\);/);
+        assert.match(source, /!e\.shiftKey\) return;\s+const t = noteUnder\(e\);/);
     });
     it('goes by the nearest only for a note with Ctrl', () => {
         const stepsOf = pageFunction('dragStepsOf', {
