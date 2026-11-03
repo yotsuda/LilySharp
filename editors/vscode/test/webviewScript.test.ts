@@ -807,6 +807,10 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.deepEqual(ys(head(-2), [head(-1)], [line(-1), line(-2)]), [-2]);   // one nearer keeps the nearer
         assert.deepEqual(ys(head(-2), [head(-1.5)], [line(-1), line(-2)]), [-2]); // in the space below: the same
         assert.deepEqual(ys(head(1), [], [line(-1)]), []);                        // in the staff: none are its
+        assert.deepEqual(ys(head(-1), [], [line(-1), line(-2)]), [-1]);           // one further out than it is none of its
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(source, /for \(const el of press\.ownLedgers\) el\.style\.visibility = noteDragRise\(press\) === 0 \? '' : 'hidden';/);
+        assert.match(source, /for \(const el of press\.ownLedgers\) el\.style\.visibility = '';/);
         assert.equal(only(head(-1), [], null, [line(-1)]).length, 0);
     });
     it('goes by the nearest only for a note with Ctrl', () => {
