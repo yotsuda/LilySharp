@@ -931,7 +931,7 @@ public class ShapeChordItemTests
             chord.Notes.Count(n => n.Accidental == "sharp")));
     }
 
-    private static (string After, StepResponse Response) Step(string text, int caret, int dir)
+    private static (string After, StepResponse Response) Step(string text, int caret, int dir, bool semitone = false)
     {
         var uri = new Uri("file:///shape-step.lys");
         var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
@@ -944,6 +944,7 @@ public class ShapeChordItemTests
             TextDocument = new TextDocumentIdentifier { Uri = uri },
             Selections = [new StepSelection { Start = caret, End = caret }],
             Direction = dir,
+            Semitone = semitone,
         });
         string after = text;
         foreach (var e in response.Edits.OrderByDescending(e => e.Start))
@@ -1082,15 +1083,15 @@ public class ShapeChordItemTests
         const string both = "layout uke { chordTuning ukulele }\npart melody { clef treble }\n"
             + "section A { melody { e''1@chord(C x32010 0003) | } }\nform { A }\n"
             + "score { staff melody }\nscore uke { layout uke  staff melody }\n";
-        var (uke, said) = Step(both, both.IndexOf("0003", StringComparison.Ordinal) + 1, +1);
+        var (uke, said) = Step(both, both.IndexOf("0003", StringComparison.Ordinal) + 1, +1, semitone: true);
         Assert.Contains("@chord(C x32010 0403)", uke);
         Assert.StartsWith("C (ukulele): shape 2 of", said.Message);
-        var (gtr, saidGtr) = Step(both, both.IndexOf("x32010", StringComparison.Ordinal) + 1, +1);
+        var (gtr, saidGtr) = Step(both, both.IndexOf("x32010", StringComparison.Ordinal) + 1, +1, semitone: true);
         Assert.Contains("@chord(C x32013 0003)", gtr);
         Assert.StartsWith("C (guitar): shape 2 of", saidGtr.Message);
 
         string guitarOnly = both.Replace("score uke { layout uke  staff melody }\n", "");
-        var (stepped, told) = Step(guitarOnly, guitarOnly.IndexOf("0003", StringComparison.Ordinal) + 1, +1);
+        var (stepped, told) = Step(guitarOnly, guitarOnly.IndexOf("0003", StringComparison.Ordinal) + 1, +1, semitone: true);
         Assert.Contains("@chord(C x32013 0003)", stepped);
         Assert.Contains("'0003' is drawn by no score here", told.Message);
     }
