@@ -7278,6 +7278,21 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             for (let l = staff.bottom + staff.space; l <= y + 0.01; l += staff.space) out.push(l);
             return out;
         }
+        // The ledger lines drawn for this head and no other, of those at its column (owner's report
+        // 2026-11-03: they stayed where they were as the note left them). The score does not say
+        // whose a ledger line is: it is one line off the staff, and a chord shares them, so one
+        // stays as long as another head stands on it or beyond it.
+        function ledgersOnlyFor(head, others, staff, lines) {
+            if (!staff) return [];
+            const off = (y) => (y < staff.top ? staff.top - y : y > staff.bottom ? y - staff.bottom : 0);
+            const side = (y) => Math.sign(y - staff.top);
+            return lines.filter(l => {
+                if (off(l.y) === 0 || l.x1 >= head.x + head.width || l.x2 <= head.x) return false;
+                if (Math.sign(l.y - staff.top) !== Math.sign(head.y - staff.top) || off(head.y) < off(l.y) - 0.01) return false;
+                return !others.some(o => o.x < l.x2 && o.x + o.width > l.x1
+                    && side(o.y) === side(l.y) && off(o.y) >= off(l.y) - 0.01);
+            });
+        }
         // The element under the pointer: in the preview that is the transparent box the server
         // draws over a head for clicks, a rect with the head's data-pos, as often as the glyph.
         function isNoteHead(t) {
@@ -7388,6 +7403,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             placeNoteRow(press);
             drawNoteLedgers(press);
             placeDraggedAccidentals(press);
+            for (const el of press.ownLedgers) el.style.visibility = positions === 0 ? '' : 'hidden';
         }
         // How far above where it was pressed the note stands now.
         function noteDragRise(press) {
@@ -7402,6 +7418,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function noteAccidentalsFollow(press) {
             press.accGroup.textContent = '';
             for (const el of press.row) if (el !== press.head) el.style.visibility = press.steps === 0 ? '' : 'hidden';
+            for (const el of press.ownLedgers) el.style.visibility = noteDragRise(press) === 0 ? '' : 'hidden';
             if (press.steps !== 0) askDraggedAccidentals(press);
         }
         // One question at a time, and only the last place: a hand crosses lines faster than that.
@@ -7436,7 +7453,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // Given up, or not written: the one it had.
         function noteAccidentalsBack(press) {
             press.accGroup.remove();
+            press.ghost.remove();
             for (const el of press.row) if (el !== press.head) el.style.visibility = '';
+            for (const el of press.ownLedgers) el.style.visibility = '';
         }
         function beginNoteDrag(press) {
             const svg = press.target.ownerSVGElement;
@@ -7451,13 +7470,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const head = row.reduce((a, b) => (num(b, 'x') > num(a, 'x') ? b : a), glyph);
             const x = num(head, 'x'), y = num(head, 'y');
             const lines = Array.from(svg.querySelectorAll('line')).filter(l => l.getAttribute('y1') === l.getAttribute('y2'))
-                .map(l => ({ x1: num(l, 'x1'), x2: num(l, 'x2'), y: num(l, 'y1') }));
+                .map(el => ({ el, x1: num(el, 'x1'), x2: num(el, 'x2'), y: num(el, 'y1') }));
             const staff = staffFromLines(lines, x, y, fs * 1.5);
             // The head as drawn: the click box the server puts over it is its exact width, where
             // a glyph's own box is the font's, wider (a ledger line reaches from the head's).
             const hitBox = Array.from(svg.querySelectorAll('rect.nh-hit[data-pos="' + press.pos + '"]'))
                 .find(r => Math.abs(num(r, 'x') - x) < 0.01 && Math.abs(num(r, 'y') - y) < fs);
             const box = hitBox ? { x, width: num(hitBox, 'width') } : head.getBBox();
+            const otherHeads = Array.from(svg.querySelectorAll('rect.nh-hit')).filter(r => r !== hitBox)
+                .map(r => ({ x: num(r, 'x'), width: num(r, 'width'), y: num(r, 'y') + num(r, 'height') / 2 }));
+            const ownLedgers = ledgersOnlyFor({ x, width: box.width, y }, otherHeads, staff, lines.filter(l => l.x2 - l.x1 < fs * 1.5)).map(l => l.el);
             const ghost = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             ghost.setAttribute('class', 'note-drag-ghost');
             // Beside the head, in the same coordinates: the page's music stands in a shifted group.
@@ -7471,7 +7493,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // there (owner's report 2026-11-03). Not at the press: a click is still for the editor.
             window.focus();
             Object.assign(press, {
-                moving: true, row, head, x, y, staff, box, ghost, accGroup, position, perDrawn, tip: newDragTip(), shown: 0,
+                moving: true, row, head, x, y, staff, box, ghost, accGroup, ownLedgers, position, perDrawn, tip: newDragTip(), shown: 0,
                 perPosition: Math.max(NOTE_DRAG_PIXELS, perDrawn),
                 steps: 0,
             });
@@ -7481,8 +7503,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             return true;
         }
         function drawNoteLedgers(press) {
-            const y = press.y - (press.alt ? press.shown : press.steps * press.step);
+            const y = press.y - noteDragRise(press);
             press.ghost.textContent = '';
+            // Where it was pressed the score's own lines stand: these on top would darken them.
+            if (noteDragRise(press) === 0) return;
             for (const ly of ledgersFor(press.staff, y)) {
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                 const over = noteLedger.fraction * press.box.width;
@@ -7541,8 +7565,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             svgContainer.setPointerCapture(press.id);
             return true;
         }
-        function endNoteDrag(press) {
-            if (press.ghost) press.ghost.remove();
+        // Let go with the note moved, its ledger lines stay until the score comes back drawn.
+        function endNoteDrag(press, written) {
+            if (press.ghost && !written) press.ghost.remove();
             if (press.tip) press.tip.remove();
             svgContainer.classList.remove('note-dragging');
             notePress = null;
@@ -7634,7 +7659,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const press = notePress;
             if (!press.moving) { notePress = null; return; }
             noteDragged = true;
-            endNoteDrag(press);
+            endNoteDrag(press, press.steps !== 0);
             if (press.tempo !== undefined) { vscode.postMessage({ type: 'tempoDragEnd' }); return; }
             if (press.row && press.steps === 0) { moveNoteRow(press.row, 0); noteAccidentalsBack(press); }
             if (press.steps === 0) return;

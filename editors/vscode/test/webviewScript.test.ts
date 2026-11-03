@@ -791,6 +791,24 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.match(source, /el\.style\.visibility = press\.steps === 0 \? '' : 'hidden';/);
         assert.doesNotMatch(source, /noteDragRender|dragText|rebindNoteDrag/);
     });
+    it('knows the ledger lines that are a dragged head\'s alone', () => {
+        const staff = { top: 0, bottom: 4, space: 1 };
+        const line = (y: number, x1 = 10, x2 = 12) => ({ x1, x2, y });
+        const head = (y: number) => ({ x: 10.5, width: 1, y });
+        const only = pageFunction('ledgersOnlyFor', {}) as (h: unknown, o: unknown[], s: unknown, l: unknown[]) => Array<{ y: number }>;
+        const ys = (h: unknown, o: unknown[], l: unknown[]) => JSON.parse(JSON.stringify(only(h, o, staff, l))).map((x: { y: number }) => x.y);
+        assert.deepEqual(ys(head(-1), [], [line(-1)]), [-1]);                     // on it
+        assert.deepEqual(ys(head(-1.5), [], [line(-1)]), [-1]);                   // above it
+        assert.deepEqual(ys(head(-2), [], [line(-1), line(-2)]), [-1, -2]);       // and all the way out
+        assert.deepEqual(ys(head(5), [], [line(5)]), [5]);                        // under the staff
+        assert.deepEqual(ys(head(-1), [], [line(5)]), []);                        // the other side's is another's
+        assert.deepEqual(ys(head(-1), [], [line(-1, 20, 22)]), []);               // another column's
+        assert.deepEqual(ys(head(-1), [head(-2)], [line(-1), line(-2)]), []);     // a chord's head beyond it uses both
+        assert.deepEqual(ys(head(-2), [head(-1)], [line(-1), line(-2)]), [-2]);   // one nearer keeps the nearer
+        assert.deepEqual(ys(head(-2), [head(-1.5)], [line(-1), line(-2)]), [-2]); // in the space below: the same
+        assert.deepEqual(ys(head(1), [], [line(-1)]), []);                        // in the staff: none are its
+        assert.equal(only(head(-1), [], null, [line(-1)]).length, 0);
+    });
     it('goes by the nearest only for a note with Ctrl', () => {
         const stepsOf = pageFunction('dragStepsOf', {
             noteDragSteps: () => 'whole',
