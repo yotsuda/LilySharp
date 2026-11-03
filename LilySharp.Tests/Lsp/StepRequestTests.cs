@@ -425,6 +425,56 @@ public class StepRequestTests
         Assert.DoesNotContain("Dm7", shape);
     }
 
+    /// <summary>The same walk on a named diagram(…) or chord(…) item (owner's request 2026-11-03):
+    /// its shape goes with the old chord, its length and marks stay. A shape alone has no name to
+    /// walk from, and an @diagram takes a shape alone: their octave pairs are as they were.</summary>
+    [Theory]
+    [InlineData("diagram(Cmaj7‸)1 |", +1, "diagram(Dm7)1 |")]
+    [InlineData("diagram(‸Cmaj7 x32000)1 |", +1, "diagram(Dm7)1 |")]
+    [InlineData("diagram(Cmaj7 x32‸000)1 |", +1, "diagram(Dm7)1 |")]
+    [InlineData("diag‸ram(Cmaj7 x32000)1 |", +1, "diagram(Dm7)1 |")]              // from its word
+    [InlineData("diagram(Dm7‸)1 |", -1, "diagram(Cmaj7)1 |")]
+    [InlineData("diagram(C‸)2. r4 |", +1, "diagram(Dm7)2. r4 |")]                 // its length stays
+    [InlineData("diagram(Cmaj7 x32000 ukulele 0002‸)1 |", +1, "diagram(Dm7)1 |")]
+    [InlineData("chord(Cmaj7‸)1 |", +1, "chord(Dm7)1 |")]
+    [InlineData("chord(Cmaj7 x32‸000)1 |", +1, "chord(Dm7)1 |")]
+    [InlineData("diagram(Cmaj7 x32000)1@chord‸ |", +1, "diagram(Dm7)1@chord |")]  // a bare @chord on it is its name
+    public void ANamedShapeItem_OnTheOctavePair_WalksTheKeysSeventhChords(string music, int direction, string expected)
+    {
+        string Book(string m) => "key c major\npart gt { tuning guitar }\nsection A { gt { " + m + " } }\nform { A }\nscore { staff gt }\n";
+        var (response, after) = Step(Book(music), direction);
+        Assert.False(response.Fallback, response.Error);
+        Assert.Equal(Book(expected), after);
+        Assert.False(LilySharp.Core.Syntax.SyntaxTree.Parse(after).HasErrors, after);
+    }
+
+    [Fact]
+    public void ANamedShapeItem_SaysWhereItIs_SoundsIt_StopsAtTheEnds_AndReadsTheKey()
+    {
+        string Book(string m, string key = "key c major\n") => key + "part gt { tuning guitar }\nsection A { gt { " + m + " } }\nform { A }\nscore { staff gt }\n";
+        var (up, _) = Step(Book("diagram(Cmaj7‸)1 |"), +1);
+        Assert.Equal("Dm7: IIm7 of c major (2 of 7)", up.Message);
+        Assert.NotEmpty(up.Pitches);
+        var (top, atTop) = Step(Book("diagram(Bm7-5‸)1 |"), +1);
+        Assert.Equal(Book("diagram(Bm7-5)1 |"), atTop);
+        Assert.Contains("is the last chord of c major", top.Message);
+        Assert.Equal(Book("diagram(F#m7-5)1 |", "key g major\n"), Step(Book("diagram(Em7‸)1 |", "key g major\n"), +1).After);
+    }
+
+    [Fact]
+    public void WhatHasNoName_KeepsItsOctavePair_AndTheSemitonePairTheShape()
+    {
+        string Book(string m) => "key c major\npart gt { tuning guitar }\nsection A { gt { " + m + " } }\nform { A }\nscore { staff gt }\n";
+        var (_, shapeAlone) = Step(Book("diagram(x32‸010)1 |"), +1);
+        Assert.DoesNotContain("Dm7", shapeAlone);
+        Assert.NotEqual(Book("diagram(x32010)1 |"), shapeAlone);
+        // An @diagram: its placement.
+        Assert.Equal(Book("c'1@diagram(133211).up |"), Step(Book("c'1@diagram(133‸211) |"), +1).After);
+        // Up / Down on a named item: its shape.
+        var (_, shape) = Step(Book("diagram(Cmaj7‸)1 |"), +1, semitone: true);
+        Assert.Contains("diagram(Cmaj7 ", shape);
+    }
+
     /// <summary>The octave pair (Ctrl+Shift+PageUp / PageDown) on a row entry walks the key's
     /// SEVENTH chords (owner's request 2026-10-31): in C major Cmaj7 → Dm7 → Em7 → Fmaj7 → G7 →
     /// Am7 → Bm7-5, from the degree the symbol's root stands on, stopping at I and VII (the

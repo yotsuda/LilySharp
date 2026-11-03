@@ -164,6 +164,7 @@ Ctrl+Z 1 回で、キーを押す前の選択に戻ること。Ctrl+Y で戻る�
 
 - [ ] `key c major` の `c'4@chord(Cmaj7)` の上で `Ctrl+Shift+PageUp` → `@chord(Dm7)` になり、そのコードが鳴り、ステータスバーに `Dm7: IIm7 of c major (2 of 7)`。楽譜のコード名も変わる
 - [ ] 続けて押す → `Em7` `Fmaj7` `G7` `Am7` `Bm7-5` で止まる。`PageDown` で戻り `Cmaj7` で止まる。キャレットはコード名の上に残る
+- [ ] `diagram(Cmaj7 x32000)1` の上で `Ctrl+Shift+PageUp` → `diagram(Dm7)1` になり、楽譜の音も新しいコードの音に変わる。`chord(Cmaj7)1` も同じ。`diagram(x32000)1`（名前なし）は形を切り替える。`@diagram(x32000)` は今までどおり `.up` / `.down`
 - [ ] `@chord(C x32010)` の形の上で押す → 形ごと `@chord(Dm7)` に。`Ctrl+Shift+Up` / `Down` は今までどおり形を切り替える
 
 ## 6a. プレビューのクリック

@@ -960,22 +960,22 @@ public class ShapeChordItemTests
     {
         string Doc(string words) => Book("instrument guitar", $"diagram({words})1 |");
         string text = Doc("C");
-        var (after, up) = Step(text, text.IndexOf("diagram(C", StringComparison.Ordinal) + 9, +1);
+        var (after, up) = Step(text, text.IndexOf("diagram(C", StringComparison.Ordinal) + 9, +1, semitone: true);
         Assert.Equal(Doc("C x32010"), after);
         Assert.StartsWith("C: shape 1 of", up.Message);
         Assert.Equal(new[] { 48, 52, 55, 60, 64 }, up.Pitches);
         text = Doc("C x32010");
-        var (next, _) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, +1);
+        var (next, _) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, +1, semitone: true);
         Assert.NotEqual(text, next);
         Assert.Matches(@"diagram\(C [x0-9-]+\)1", next);
-        var (bare, down) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, -1);
+        var (bare, down) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, -1, semitone: true);
         Assert.Equal(Doc("C"), bare);
         Assert.False(down.Fallback);
         Assert.Contains("still draws and plays the usual shape (x32010)", down.Message);
         // On a ukulele part it steps the ukulele's shapes.
         string uke = Book("instrument ukulele", "diagram(C)1 |");
         Assert.Equal(Book("instrument ukulele", "diagram(C 0003)1 |"),
-            Step(uke, uke.IndexOf("diagram(C", StringComparison.Ordinal) + 9, +1).After);
+            Step(uke, uke.IndexOf("diagram(C", StringComparison.Ordinal) + 9, +1, semitone: true).After);
     }
 
     /// <summary>Owner's request 2026-10-31: a shape with no symbol steps too — through the order

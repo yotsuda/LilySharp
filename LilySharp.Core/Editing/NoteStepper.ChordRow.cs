@@ -26,8 +26,9 @@ namespace LilySharp.Core.Editing;
 /// Cmaj7, Dm7, Em7, Fmaj7, G7, Am7, Bm7-5 — from the degree whose root the symbol stands on
 /// (Cmaj7, C and C7 all stand on I), stopping at I and at VII (owner's decision the same day:
 /// no going round). The semitone pair (Up / Down) keeps stepping the entry's shape, as it did.
-/// So does a named <c>@chord(…)</c> in a part (owner's request 2026-11-03): an @chord with no name
-/// has nothing to walk from, and keeps its steps.
+/// So does a named <c>@chord(…)</c> in a part, and a named <c>diagram(…)</c> or <c>chord(…)</c> item
+/// (owner's requests 2026-11-03): what has no name has nothing to walk from, and keeps its steps. An
+/// <c>@diagram(SHAPE)</c> takes a shape alone, and its octave pair is its <c>.up</c> / <c>.down</c>.
 /// </summary>
 /// <remarks>
 /// The key is the one written for it (<see cref="WrittenKeyAt"/>: the music's, the section's, the
@@ -49,6 +50,14 @@ public static partial class NoteStepper
     {
         var words = ChordAnnotation.WordSpans(mark);
         return DiatonicChordEdit(mark, symbol, words[0].Start, words[^1].End, dir);
+    }
+
+    /// <summary>All an item's words, its shapes included, become the new symbol; what is after its
+    /// <c>)</c> stays. Its notes are the new chord's.</summary>
+    private static (Edit? Edit, string Message) DiatonicChordEdit(ChordSyntax item, string symbol, int dir)
+    {
+        var words = item.ShapeWordSpans;
+        return DiatonicChordEdit(item, symbol, words[0].Start, words[^1].End, dir);
     }
 
     private static (Edit? Edit, string Message) DiatonicChordEdit(SyntaxNode site, string symbol, int start, int end, int dir)

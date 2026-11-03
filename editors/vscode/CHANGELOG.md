@@ -4,7 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **`Ctrl+Shift+PageUp` / `PageDown` on a named `@chord(…)` walks the seventh chords of the key**, as on a `chords` row entry: in C major `@chord(Cmaj7)` → `@chord(Dm7)`.
+- **`Ctrl+Shift+PageUp` / `PageDown` on a named `@chord(…)` or `diagram(…)` walks the seventh chords of the key**, as on a `chords` row entry: in C major `@chord(Cmaj7)` → `@chord(Dm7)`, and a named `diagram(…)` or `chord(…)` item the same.
 - **A click on a chord's note goes to that note**: the upper half of a lower note used to go to the note above it.
 - **The Range and practice panels come to the front when clicked or opened**: the practice menu always stood in front.
 - **The practice menu stays open beside the score**, as the Range panel does: its × and its button close it, no longer a click outside or Esc.

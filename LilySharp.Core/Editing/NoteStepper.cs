@@ -535,6 +535,17 @@ public static partial class NoteStepper
                 stepped.Add(t);
                 continue;
             }
+            if (!semitone && t.Kind == TargetKind.Voicing && t.Node is ChordSyntax { IsShapeChord: true } shapeItem
+                && Music.ShapeChords.Words(shapeItem) is { Symbol: { } itemSymbol })
+            {
+                // And on a named diagram(…) or chord(…) item (owner's request 2026-11-03).
+                var (itemEdit, itemSaid) = DiatonicChordEdit(shapeItem, itemSymbol, dir);
+                message ??= itemSaid;
+                if (itemEdit is { } itemWritten)
+                    edits.Add(itemWritten);
+                stepped.Add(t);
+                continue;
+            }
             // A voicing hears where the caret is: on one of several shapes, that one steps.
             int? caret = selections.Where(s => s.Start == s.End && t.Node.SourceStart <= s.Start
                     && s.Start <= t.Node.SourceStart + t.Node.Width)
