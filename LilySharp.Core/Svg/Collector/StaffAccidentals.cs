@@ -175,9 +175,14 @@ internal static class StaffAccidentals
                         Name(alter, previousAlter, style.ExtraNatural);
             }
         }
-        if (added == null)
-            return voices;
+        return added == null ? voices : Written(voices, added);
+    }
 
+    /// <summary><paramref name="voices"/> with the accidentals <paramref name="added"/> names written
+    /// onto their heads, keyed (voice, measure, item, chord member or -1).</summary>
+    private static ImmutableArray<Voice> Written(ImmutableArray<Voice> voices,
+        Dictionary<(int Voice, int Measure, int Item, int Member), string> added)
+    {
         var result = voices.ToBuilder();
         for (int vi = 0; vi < voices.Length; vi++)
         {
@@ -220,6 +225,160 @@ internal static class StaffAccidentals
                 result[vi] = voices[vi] with { Measures = rebuilt.MoveToImmutable() };
         }
         return result.MoveToImmutable();
+    }
+
+    /// <summary>
+    /// The accidentals owed once <c>@cross</c> has moved notes: the walk decided them by the
+    /// voice's memory, and the eye reads by the staff a head is DRAWN on. In a bar a moved note
+    /// touches, every head is read against what its drawn staff has shown so far, else the key.
+    /// Returns the staves' voices, the same arrays where nothing is owed.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly Accidental_engraver is in the Staff; scm/music-functions.scm
+    ///   (Staff same-octave 0) — so a moved note reads the memory of the Staff it is now in, and
+    ///   the staff it left does not remember it.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1093/a1): `fis'4 | … f'4@cross` prints the natural
+    /// the bar's sharp owes on the staff above; `fis4 fis4@cross fis4` prints the moved one's
+    /// sharp and not the third's; `fis'4@cross fis'4` prints the second one's sharp below.
+    /// ⚠️ LILYSHARP-OWN, as <see cref="Apply"/> ⑴: only ADDS. A moved note repeating the sharp
+    /// already shown on its new staff keeps the one its voice wrote, where LilyPond drops it —
+    /// owner's decision 2026-10-02: the reminder is correct and harmless.
+    /// Two heads at one moment do not see each other (LilyPond writes its memory at the end of
+    /// the timestep). A head a tie carries in prints nothing.
+    /// </remarks>
+    public static ImmutableArray<Voice>[] ApplyAcrossStaves(Staff[] staves, AccidentalStyleSpec style,
+        Func<Staff, KeySignature> openingKeyOf)
+    {
+        var result = new ImmutableArray<Voice>[staves.Length];
+        for (int s = 0; s < staves.Length; s++)
+            result[s] = staves[s].Voices;
+        if (!ReferenceEquals(style, AccidentalStyles.Default))
+            return result;
+
+        // Which staves' voices draw on which staff: a staff's own, and any voice with a note
+        // moved onto it. The address (staff, voice) is where an owed accidental is written back.
+        var added = new Dictionary<(int Voice, int Measure, int Item, int Member), string>?[staves.Length];
+        for (int d = 0; d < staves.Length; d++)
+        {
+            var drawers = new List<(int Staff, int Voice)>();
+            bool touched = staves[d].HasMovedNotes;
+            for (int s = 0; s < staves.Length; s++)
+            {
+                for (int v = 0; v < staves[s].Voices.Length; v++)
+                {
+                    bool here = s == d;
+                    if (!here)
+                        foreach (var m in staves[s].Voices[v].Measures)
+                            foreach (var item in m.Items)
+                                here |= item.CrossStaffIndex == d;
+                    if (here)
+                    {
+                        drawers.Add((s, v));
+                        touched |= s != d;
+                    }
+                }
+            }
+            if (!touched)
+                continue;
+
+            // Each drawer as the voice this staff sees: what stands elsewhere is silence here.
+            var seen = ImmutableArray.CreateBuilder<Voice>(drawers.Count);
+            foreach (var (s, v) in drawers)
+            {
+                var voice = staves[s].Voices[v];
+                var measures = voice.Measures.ToBuilder();
+                for (int m = 0; m < measures.Count; m++)
+                {
+                    var items = measures[m].Items;
+                    MusicItem[]? copy = null;
+                    for (int i = 0; i < items.Length; i++)
+                        if (items[i] is NoteItem or ChordItem
+                            && (s == d ? items[i].CrossStaffIndex >= 0 : items[i].CrossStaffIndex != d))
+                            (copy ??= items.ToArray())[i] = new RestItem(items[i].Duration, 0, items[i].SourcePosition) { IsSpacer = true };
+                    if (copy != null)
+                        measures[m] = measures[m] with { Items = ImmutableArray.Create(copy) };
+                }
+                seen.Add(voice with { Measures = measures.ToImmutable() });
+            }
+            var seenVoices = seen.MoveToImmutable();
+
+            int measureCount = 0;
+            foreach (var v in seenVoices)
+                measureCount = Math.Max(measureCount, v.Measures.Length);
+            var key = openingKeyOf(staves[d]);
+            var previous = new MusicItem?[seenVoices.Length];
+            for (int mi = 0; mi < measureCount; mi++)
+            {
+                bool moves = false;
+                foreach (var (s, v) in drawers)
+                    if (mi < staves[s].Voices[v].Measures.Length)
+                        foreach (var item in staves[s].Voices[v].Measures[mi].Items)
+                            moves |= item.CrossStaffIndex >= 0;
+
+                var memory = new Dictionary<int, int>();
+                Fraction? onset = null;
+                int rank = 0;
+                var moment = new List<(int StepOctave, int Alter)>();
+                void Remember()
+                {
+                    foreach (var (so, a) in moment)
+                        memory[so] = a;
+                    moment.Clear();
+                }
+                void Read(int vi, int item, int member, int packed, int staffPosition, int midi, bool shown, int itemIndex)
+                {
+                    if (packed == 0)
+                        return;
+                    int alter = WrittenPitch.Alter(packed);
+                    int stepOctave = WrittenPitch.StepOctave(packed);
+                    bool tied = TiedInto(previous[vi], staffPosition, midi);
+                    moment.Add((stepOctave, alter));
+                    if (!moves || shown || tied)
+                        return;
+                    int reader = memory.TryGetValue(stepOctave, out int last)
+                        ? last
+                        : KeyAlteration(key, WrittenPitch.Step(packed));
+                    if (reader == alter)
+                        return;
+                    var (s, v) = drawers[vi];
+                    (added[s] ??= new())[(v, mi, item, member)] = Name(alter, reader, style.ExtraNatural);
+                }
+                foreach (var e in StaffTimeline.OfMeasure(seenVoices, mi))
+                {
+                    if (onset != e.Onset || rank != e.GraceRank)
+                    {
+                        Remember();
+                        onset = e.Onset;
+                        rank = e.GraceRank;
+                    }
+                    int vi = e.VoiceIndex;
+                    switch (e.Item)
+                    {
+                        case KeySignatureChangeItem change:
+                            key = change.NewKey;
+                            break;
+                        case NoteItem n:
+                            Read(vi, e.ItemIndex, -1, n.WrittenPitch, n.StaffPosition, n.Midi,
+                                n.Accidental != null || n.LineStartAccidental != null || n.EditorialAccidental != null, e.ItemIndex);
+                            previous[vi] = n;
+                            break;
+                        case ChordItem c:
+                            for (int k = 0; k < c.Notes.Length; k++)
+                                Read(vi, e.ItemIndex, k, c.Notes[k].WrittenPitch, c.Notes[k].StaffPosition, c.Notes[k].Midi,
+                                    c.Notes[k].Accidental != null || c.Notes[k].LineStartAccidental != null, e.ItemIndex);
+                            previous[vi] = c;
+                            break;
+                        case RestItem { IsSpacer: false }:
+                            previous[vi] = null;
+                            break;
+                    }
+                }
+            }
+        }
+        for (int s = 0; s < staves.Length; s++)
+            if (added[s] is { } owed)
+                result[s] = Written(staves[s].Voices, owed);
+        return result;
     }
 
     /// <summary>

@@ -2283,7 +2283,10 @@ public sealed partial class MeasureCollector
         // @cross: the notes that move to another staff, read under that staff's clef. After the
         // ottava pass, whose display shift they keep.
         if (_crossStaffItems.Count > 0)
-            staffGroups = MoveCrossStaffNotes(staffGroups);
+            staffGroups = MoveCrossStaffNotes(staffGroups, st =>
+                st.Voices.Length > 0 && voiceKeyDict.TryGetValue(st.Voices[0].Name, out var partKey)
+                    ? partKey
+                    : new KeySignature(_v.Meta.InitialKeySharps, _v.Meta.InitialKeyCustom));
 
         // The main-note chord symbols the grace symbols are rodded to (session 964), by the
         // same global staff index.
@@ -3539,7 +3542,8 @@ public sealed partial class MeasureCollector
     /// Which staff: <see cref="Layout.CrossStaffEngraver.TargetStaffOf"/> over the score's NOTATION
     /// staves; with no other notation staff nothing moves (LYS4031 says so).
     /// </remarks>
-    private static ImmutableArray<StaffGroup> MoveCrossStaffNotes(ImmutableArray<StaffGroup> staffGroups)
+    private ImmutableArray<StaffGroup> MoveCrossStaffNotes(ImmutableArray<StaffGroup> staffGroups,
+        Func<Staff, KeySignature> openingKeyOf)
     {
         var staves = staffGroups.SelectMany(g => g.Staves).ToArray();
         var notation = new List<int>(staves.Length);
@@ -3601,13 +3605,6 @@ public sealed partial class MeasureCollector
                 {
                     var measuresNow = ImmutableArray.Create(newMeasures);
                     (newVoices ??= voices.ToArray())[vi] = voices[vi] with { Measures = measuresNow };
-                    for (int m = 0; m < measuresNow.Length; m++)
-                    {
-                        var items = measuresNow[m].Items;
-                        for (int i = 0; i < items.Length; i++)
-                            if (items[i].CrossStaffIndex == target)
-                                (crossedIn[target] ??= new()).Add(new CrossedNote(measuresNow, m, i));
-                    }
                 }
             }
             if (newVoices != null)
@@ -3616,10 +3613,27 @@ public sealed partial class MeasureCollector
 
         var finals = new Staff[staves.Length];
         for (int i = 0; i < finals.Length; i++)
-        {
-            var now = moved[i] ?? staves[i];
-            finals[i] = crossedIn[i] is { } here ? now with { CrossedIn = here.ToImmutableArray() } : now;
-        }
+            finals[i] = moved[i] ?? staves[i];
+
+        // What each DRAWN staff owes now, with the columns packed again where it adds any.
+        var owed = StaffAccidentals.ApplyAcrossStaves(finals, _accidentalStyle, openingKeyOf);
+        for (int i = 0; i < finals.Length; i++)
+            if (owed[i] != finals[i].Voices)
+                finals[i] = finals[i] with { Voices = RepackAccidentalColumns(owed[i]) };
+
+        // The addresses last: they hold the measures as they finally stand.
+        foreach (var staff in finals)
+            foreach (var voice in staff.Voices)
+                for (int m = 0; m < voice.Measures.Length; m++)
+                {
+                    var items = voice.Measures[m].Items;
+                    for (int i = 0; i < items.Length; i++)
+                        if (items[i].CrossStaffIndex >= 0)
+                            (crossedIn[items[i].CrossStaffIndex] ??= new()).Add(new CrossedNote(voice.Measures, m, i));
+                }
+        for (int i = 0; i < finals.Length; i++)
+            if (crossedIn[i] is { } here)
+                finals[i] = finals[i] with { CrossedIn = here.ToImmutableArray() };
         // After every staff has its moved notes: the knee reads the boxes of both.
         RestampMovedBeams(finals);
 

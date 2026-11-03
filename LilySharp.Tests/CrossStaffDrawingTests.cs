@@ -150,6 +150,77 @@ public class CrossStaffDrawingTests
         Assert.True(layout.TupletBracketLayouts.Single().IsStemUp);
     }
 
+    /// <summary>Accidentals read by the staff a head is DRAWN on (Lab sessions/p1093/a1,
+    /// LilyPond 2.26.0): each of these reads as the wrong pitch without its mark.</summary>
+    [Fact]
+    public void AMovedNoteOwesTheNaturalTheNewStaffsSharpCalls()
+    {
+        var score = Score(Book("fis'4 r2. |", "r2 f'4@cross r4 |"));
+        Assert.Equal("natural", Notes(score, 1).Single().Accidental);
+    }
+
+    [Fact]
+    public void AMovedNotePrintsTheSharpItsOldStaffRemembers()
+    {
+        var notes = Notes(Score(Book("r1 |", "fis4 fis4@cross fis4 r4 |")), 1);
+        Assert.Equal("sharp", notes[0].Accidental);
+        Assert.Equal("sharp", notes[1].Accidental);
+        Assert.Null(notes[2].Accidental);
+    }
+
+    [Fact]
+    public void TheStaffItLeftDoesNotRememberTheMovedNote()
+    {
+        var notes = Notes(Score(Book("r1 |", "fis'4@cross fis'4@cross fis'4 fis'4 |")), 1);
+        Assert.Equal("sharp", notes[0].Accidental);
+        Assert.Null(notes[1].Accidental);
+        Assert.Equal("sharp", notes[2].Accidental);
+        Assert.Null(notes[3].Accidental);
+    }
+
+    [Fact]
+    public void TheKeyAnswersWhenTheStaffHasShownNothing()
+    {
+        // In G major f# prints nothing on either staff, moved or not.
+        string book = Book("r1 |", "fis'4@cross fis'4 r2 |").Replace("time 4/4", "time 4/4\nkey g major");
+        Assert.All(Notes(Score(book), 1), n => Assert.Null(n.Accidental));
+    }
+
+    [Fact]
+    public void AReminderAMovedNoteWroteStays()
+    {
+        // LilyPond drops this one; Lily# keeps a voice's own (StaffAccidentals ⑴, owner 2026-10-02).
+        var notes = Notes(Score(Book("fis'4 r2. |", "r4 fis'4@cross r2 |")), 1);
+        Assert.Equal("sharp", notes.Single().Accidental);
+    }
+
+    [Fact]
+    public void AKeyChangeMovesWhatTheKeyAnswers()
+    {
+        // After G major enters, f# owes nothing on the staff it moved to; before it, a sharp.
+        var notes = Notes(Score(Book("r1 | key g major r1 |", "fis'4@cross r2. | key g major fis'4@cross r2. |")), 1);
+        Assert.Equal("sharp", notes[0].Accidental);
+        Assert.Null(notes[1].Accidental);
+    }
+
+    [Fact]
+    public void ANoteATieCarriesInPrintsNothing()
+    {
+        // The new bar's memory is empty and the key says natural; the tie says nothing is owed.
+        var notes = Notes(Score(Book("r1 | r1 |", "fis'1@cross~ | fis'1@cross |")), 1);
+        Assert.Equal("sharp", notes[0].Accidental);
+        Assert.Null(notes[1].Accidental);
+    }
+
+    [Fact]
+    public void ABarNoNoteMovesInIsLeftAlone()
+    {
+        // The second bar has no moved note: the voices' own reading stands.
+        var score = Score(Book("r1 | fis'4 r2. |", "c4@cross r2. | r4 fis'4 r2 |"));
+        var lh = Notes(score, 1);
+        Assert.Equal("sharp", lh.Last().Accidental);
+    }
+
     /// <summary>LilyPond's shapes (Lab sessions/p1093/rc, 2.26.0): a rest under a moved note goes
     /// down past it. <c>r1</c> on the treble staff at c, whose head stands at -13.</summary>
     [Fact]
