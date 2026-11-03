@@ -22,8 +22,7 @@ import {
     AuditionMemory, Debouncer, EDIT_SELECTION_WINDOW_MS, CHORD_MS, NOTE_MS, OCTAVE_DOWN_KEY, OCTAVE_UP_KEY,
     STEP_DOWN_KEY, STEP_UP_KEY, STRUM_MS,
     INSTRUMENT_CHANGE_MAX, auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument,
-    reselectAfterStep, stepFallbackCommand, strumGapMs,
-} from '../src/auditionCore';
+    reselectAfterStep, stepFallbackCommand, strumGapMs, chromaticPositions } from '../src/auditionCore';
 
 describe('a stepped selection stays selected (owner\'s request 2026-10-24)', () => {
     it('selects the new text of each replaced selection, shifted by the edits before it', () => {
@@ -224,5 +223,23 @@ describe('the debounce', () => {
         d.cancel();
         c.advance(1000);
         assert.deepEqual(ran, []);
+    });
+});
+
+describe('chromaticPositions', () => {
+    it('counts the letters a note has gone, in the way it went', () => {
+        assert.equal(chromaticPositions('f', 'fis', 1), 0);
+        assert.equal(chromaticPositions('f', 'g', 2), 1);
+        assert.equal(chromaticPositions('f', 'gis', 3), 1);
+        assert.equal(chromaticPositions('b', 'c', 1), 1);
+        assert.equal(chromaticPositions('c', 'b', -1), -1);
+        assert.equal(chromaticPositions('a', 'aes', -1), 0);
+        assert.equal(chromaticPositions('a', 'g', -2), -1);
+    });
+    it('adds seven for each octave', () => {
+        assert.equal(chromaticPositions('c', 'c', 12), 7);
+        assert.equal(chromaticPositions('c', 'cis', 13), 7);
+        assert.equal(chromaticPositions('c', 'd', 14), 8);
+        assert.equal(chromaticPositions('c', 'c', -24), -14);
     });
 });

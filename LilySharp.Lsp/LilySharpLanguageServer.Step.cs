@@ -49,6 +49,8 @@ public sealed partial class LilySharpLanguageServer
             var selections = @params.Selections.Select(s => (s.Start, s.End)).ToList();
             SyntaxTree Expand(string text) => ExpandUsings(text, SyntaxTree.Parse(text), basePath,
                 p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree;
+            if (@params.Chromatic)
+                return ChromaticStep(@params, doc, selections, Expand);
             NoteStepper.StepResult StepOn(string on, SyntaxTree tree) => NoteStepper.Step(on, tree, selections, @params.Direction,
                 Expand, @params.IncludeStretch, @params.Semitone, FacesForStep);
             var result = StepOn(doc.Text, doc.Tree);
@@ -104,6 +106,29 @@ public sealed partial class LilySharpLanguageServer
         }
     }
 
+    /// <summary>A note some semitones away, one edit, and what it then sounds.</summary>
+    private static StepResponse ChromaticStep(StepParams @params, Document doc, List<(int Start, int End)> selections, System.Func<string, SyntaxTree> expand)
+    {
+        int count = System.Math.Min(@params.Count, MaxStepsAtOnce);
+        if (selections.Count != 1 || count <= 0)
+            return new StepResponse { Version = doc.Version };
+        int at = selections[0].Start;
+        string? stepped = NoteStepper.ChromaticStep(doc.Text, doc.Tree, at, (@params.Direction >= 0 ? 1 : -1) * count, expand);
+        if (stepped == null)
+            return new StepResponse { Version = doc.Version };
+        var heard = NoteStepper.AuditionAt(stepped, SyntaxTree.Parse(stepped), at, expand(stepped));
+        if (@params.HoldOthers)
+            stepped = NoteStepper.HoldOtherPitches(doc.Text, stepped, at, expand);
+        return new StepResponse
+        {
+            Edits = [TheDifference(doc.Text, stepped)],
+            Pitches = heard != null ? [.. heard.Pitches] : [],
+            Timbre = heard?.Timbre ?? 0,
+            Program = heard?.Program ?? -1,
+            Version = doc.Version,
+        };
+    }
+
     /// <summary>More than a drag has room for.</summary>
     private const int MaxStepsAtOnce = 64;
 
@@ -149,6 +174,7 @@ public sealed partial class LilySharpLanguageServer
                     && p.Parent is NoteSyntax or ChordSyntax or ArpeggioSyntax)
                 .Select(p => p.SourceStart)],
             Marks = [.. NoteStepper.SteppingMarks(doc.Text, doc.Tree)],
+            FineMarks = [.. NoteStepper.FineSteppingMarks(doc.Tree)],
             LedgerThickness = ledger.Thickness,
             LedgerLengthFraction = ledger.LengthFraction,
         };

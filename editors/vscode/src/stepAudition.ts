@@ -31,7 +31,7 @@ import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import { jumpOffsetFor } from './previewCore';
 import {
-    AuditionMemory, CARET_DEBOUNCE_MS, Debouncer, SOUNDS_WHEN_CHANGED, TYPING_SETTLE_MS,
+    AuditionMemory, CARET_DEBOUNCE_MS, chromaticPositions, Debouncer, SOUNDS_WHEN_CHANGED, TYPING_SETTLE_MS,
     auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument, reselectAfterStep,
     stepFallbackCommand, strumGapMs,
 } from './auditionCore';
@@ -92,14 +92,14 @@ function includeStretch(): boolean {
  * a note's staff positions, each to the key's tone there (Ctrl+Shift+Up / Down); 'octave' its
  * octave (Ctrl+Shift+PageUp / PageDown); 'mark' a dynamic's or an articulation's name; 'placement'
  * that mark's .up / .down. */
-export type NoteDragMode = 'position' | 'octave' | 'mark' | 'placement';
+export type NoteDragMode = 'position' | 'octave' | 'chromatic' | 'mark' | 'placement';
 
 /** A drag of `steps`, up when positive, from what has `data-pos` `position`. */
 export interface NoteDragSteps {
     /** Sounds where the note would land. The last asked for wins: a drag outruns the server. */
     hear(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<void>;
     /** The mark's word now and as it would be: nothing is written. Undefined for a stale question. */
-    markWords(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<{ from: string, to: string } | undefined>;
+    markWords(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<{ from: string, to: string, positions?: number } | undefined>;
     /** Writes it, one edit and one undo step; false when it writes nothing. */
     write(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<boolean>;
 }
@@ -234,9 +234,13 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             IncludeStretch: false,
             Semitone: mode === 'position' || mode === 'mark',
             HoldOthers: holdOthers,
+            Chromatic: mode === 'chromatic',
         });
-    /** The word of the mark at `offset`, its `@` just before: its name and any placement. */
-    const markWordAt = (text: string, offset: number) => /^!?[\w-]+(?:\.(?:up|down))?/.exec(text.slice(offset))?.[0] ?? '';
+    /** The word of what a drag steps at `offset`: a mark's name, any shape and placement; a chords-row
+     * entry, a tempo's number. */
+    const markWordAt = (text: string, offset: number) => /^!?[\w#+/-]+(?:\([^)]*\))?(?:\.(?:up|down))?/.exec(text.slice(offset))?.[0] ?? '';
+    /** A pitch's name alone: no octave marks, no duration. */
+    const pitchNameAt = (text: string, offset: number) => /^[a-z]+/.exec(text.slice(offset))?.[0] ?? '';
     let lastHeard = 0, lastWords = 0;
     const noteDrag: NoteDragSteps = {
         markWords: async (doc, position, steps, mode) => {
@@ -249,6 +253,10 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             let after = text;
             for (const e of [...response.Edits].sort((a, b) => b.Start - a.Start)) {
                 after = after.slice(0, e.Start) + e.NewText + after.slice(e.End);
+            }
+            if (mode === 'chromatic') {
+                const from = pitchNameAt(text, offset), to = pitchNameAt(after, offset);
+                return { from, to, positions: chromaticPositions(from, to, steps) };
             }
             return { from: markWordAt(text, offset), to: markWordAt(after, offset) };
         },
@@ -268,7 +276,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             const version = doc.version;
             // A dragged note moves alone (owner's decision 2026-11-03), where the keys' notes after
             // it follow: what the hand saw move is what moves.
-            const moved = mode === 'position' || mode === 'octave';
+            const moved = mode === 'position' || mode === 'octave' || mode === 'chromatic';
             const response = await askSteps(doc, jumpOffsetFor(doc.getText(), position), steps, mode, moved);
             if (response.Message) { vscode.window.setStatusBarMessage(`Lily#: ${response.Message}`, 4000); }
             if (response.Fallback || response.ConvertOctaves || response.Edits.length === 0

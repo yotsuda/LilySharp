@@ -965,6 +965,10 @@ public class StepParams
     /// in the preview moves alone (<c>NoteStepper.HoldOtherPitches</c>). Optional; absent means
     /// false — the keys', after which the notes follow as they will.</summary>
     public bool HoldOthers { get; set; }
+    /// <summary><see cref="Count"/> semitones in <see cref="Direction"/>, from the note at the one
+    /// selection, spelled by <c>NoteStepper.ChromaticStep</c> (a note dragged with Alt, owner's
+    /// request 2026-11-03). Optional; absent means false.</summary>
+    public bool Chromatic { get; set; }
 }
 
 /// <summary>Asks what the preview may drag: <c>lilysharp/noteHeads</c>.</summary>
@@ -979,6 +983,8 @@ public class NoteHeadsResponse
     public int[] Positions { get; set; } = System.Array.Empty<int>();
     /// <summary>Where the marks stand that a drag steps: the <c>data-pos</c> each is drawn with.</summary>
     public int[] Marks { get; set; } = System.Array.Empty<int>();
+    /// <summary>Those of <see cref="Marks"/> whose steps a drag takes in less of the mouse's way.</summary>
+    public int[] FineMarks { get; set; } = System.Array.Empty<int>();
     /// <summary>A ledger line's thickness in this file, in staff spaces.</summary>
     public double LedgerThickness { get; set; }
     /// <summary>How far a ledger line reaches past a head on each side, in the head's widths.</summary>

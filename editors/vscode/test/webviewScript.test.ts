@@ -602,13 +602,13 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.equal(inChord(above, () => [above, head, page], 2, 12), head);
         assert.equal(inChord(head, () => [above, head, page], 2, 9), above);
         assert.match(source, /const OCTAVE_POSITIONS = 7;/);
-        assert.match(source, /press\.step = press\.position \* \(press\.ctrl \? OCTAVE_POSITIONS : 1\);/);
+        assert.match(source, /press\.step = press\.position \* \(octaves \? OCTAVE_POSITIONS : 1\);/);
         assert.match(source, /moving: false, isMark: isSteppingMark\(target\), ctrl: e\.ctrlKey \|\| e\.metaKey,/);
-        assert.match(source, /press\.isMark \? \(press\.ctrl \? 'placement' : 'mark'\) : \(press\.ctrl \? 'octave' : 'position'\)/);
+        assert.match(source, /press\.isMark \? \(press\.ctrl \? 'placement' : 'mark'\) : press\.alt \? 'chromatic' : \(press\.ctrl \? 'octave' : 'position'\)/);
     });
     it('asks a dragged note to move alone, when it is let go', () => {
         const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'stepAudition.ts'), 'utf8');
-        assert.match(source, /const moved = mode === 'position' \|\| mode === 'octave';\s+const response = await askSteps\(doc, jumpOffsetFor\(doc\.getText\(\), position\), steps, mode, moved\);/);
+        assert.match(source, /const moved = mode === 'position' \|\| mode === 'octave' \|\| mode === 'chromatic';\s+const response = await askSteps\(doc, jumpOffsetFor\(doc\.getText\(\), position\), steps, mode, moved\);/);
         assert.match(source, /HoldOthers: holdOthers,/);
     });
     it('takes the focus when a drag starts, so that Esc and Ctrl+Z come to the preview', () => {
@@ -636,11 +636,14 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const shown: number[] = [];
         const switchCtrl = pageFunction('switchDragCtrl', {
             setDragGrid: pageFunction('setDragGrid', { OCTAVE_POSITIONS: 7 }),
-            dragStepsOf: pageFunction('dragStepsOf', {
-                noteDragSteps: pageFunction('noteDragSteps', { NOTE_DRAG_HOLD: 0.25 }),
-                noteOctaveSteps: pageFunction('noteOctaveSteps', { NOTE_DRAG_HOLD: 0.25 }),
+            readDragAgain: pageFunction('readDragAgain', {
+                setDragGrid: pageFunction('setDragGrid', { OCTAVE_POSITIONS: 7, MARK_DRAG_PIXELS: 12, FINE_MARK_DRAG_PIXELS: 3, noteFineMarks: new Set([6]) }),
+                dragStepsOf: pageFunction('dragStepsOf', {
+                    noteDragSteps: pageFunction('noteDragSteps', { NOTE_DRAG_HOLD: 0.25 }),
+                    noteOctaveSteps: pageFunction('noteOctaveSteps', { NOTE_DRAG_HOLD: 0.25 }),
+                }),
+                showDragSteps: (p: { steps: number }) => shown.push(p.steps),
             }),
-            showDragSteps: (p: { steps: number }) => shown.push(p.steps),
         }) as (p: unknown, ctrl: boolean) => void;
         const note = { moving: true, isMark: false, ctrl: false, position: 2.5, perDrawn: 10, perPosition: 10, step: 2.5, perStep: 10, steps: 7, dy: -75 };
         switchCtrl(note, false);
@@ -665,9 +668,15 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.deepEqual([small.perStep, small.steps], [6, 2]);
         // A mark has no staff: the same way to a step, and it asks again though the number stays.
         shown.length = 0;
-        const mark = { moving: true, isMark: true, ctrl: false, perStep: 12, steps: 1, dy: -13 };
+        const mark = { moving: true, isMark: true, pos: 42, ctrl: false, perStep: 12, steps: 1, dy: -13 };
         switchCtrl(mark, true);
         assert.deepEqual([mark.steps, mark.perStep, shown], [1, 12, [1]]);
+        // A tempo's number goes by the beat in less of the way, and with Ctrl by ten in the mark's.
+        const tempo = { moving: true, isMark: true, pos: 6, ctrl: true, perStep: 12, steps: 1, dy: -13 };
+        switchCtrl(tempo, false);
+        assert.deepEqual([tempo.steps, tempo.perStep], [4, 3]);
+        switchCtrl(tempo, true);
+        assert.deepEqual([tempo.steps, tempo.perStep], [1, 12]);
         // Before the drag starts it is only remembered.
         shown.length = 0;
         const pressed = { moving: false, isMark: false, ctrl: false, dy: -1 };
@@ -699,6 +708,31 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.match(source, /addEventListener\('click', \(e\) => \{\s+const target = noteUnder\(e\);/);
         assert.match(source, /addEventListener\('contextmenu', \(e\) => \{\s+const t = noteUnder\(e\);/);
         assert.match(source, /!e\.shiftKey\) return;\s+const t = noteUnder\(e\);/);
+    });
+    it('goes by semitones with Alt on a note, whatever Ctrl says, and on a mark not at all', () => {
+        const shown: unknown[] = [];
+        const readAgain = pageFunction('readDragAgain', {
+            setDragGrid: pageFunction('setDragGrid', { OCTAVE_POSITIONS: 7, MARK_DRAG_PIXELS: 12, FINE_MARK_DRAG_PIXELS: 3, noteFineMarks: new Set() }),
+            dragStepsOf: pageFunction('dragStepsOf', {
+                noteDragSteps: pageFunction('noteDragSteps', { NOTE_DRAG_HOLD: 0.25 }),
+                noteOctaveSteps: () => { throw new Error('Alt is no octave'); },
+            }),
+            showDragSteps: (p: { steps: number }) => shown.push(p.steps),
+        });
+        const altOf = pageFunction('switchDragAlt', { readDragAgain: readAgain }) as (p: unknown, alt: boolean) => void;
+        const note = { moving: true, isMark: false, ctrl: true, alt: false, position: 2.5, perDrawn: 2, perPosition: 6, step: 17.5, perStep: 14, steps: 0, dy: -13 };
+        altOf(note, true);
+        assert.deepEqual([note.alt, note.perStep, note.steps, shown], [true, 6, 2, [2]]);
+        const mark = { moving: true, isMark: true, pos: 1, ctrl: false, alt: false, perStep: 12, steps: 1, dy: -13 };
+        altOf(mark, true);
+        assert.deepEqual([mark.alt, shown.length], [false, 1]);
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(source, /press\.alt \? 'chromatic' : \(press\.ctrl \? 'octave' : 'position'\)/);
+        assert.match(source, /switchDragAlt\(notePress, e\.altKey\);/);
+        // On the way down, and to the end of it: let go, it is the window's menu bar.
+        assert.match(source, /window\.addEventListener\('keydown', altInADrag, true\);\s+window\.addEventListener\('keyup', altInADrag, true\);/);
+        assert.match(source, /altIsTheDrags = e\.type === 'keydown';\s+e\.stopImmediatePropagation\(\);/);
+        assert.match(source, /if \(e\.altKey\) altIsTheDrags = true;/);
     });
     it('goes by the nearest only for a note with Ctrl', () => {
         const stepsOf = pageFunction('dragStepsOf', {

@@ -302,6 +302,101 @@ public class NoteDragServerTests
         return Applied(text, r);
     }
 
+    private static string Chromatic(string music, string word, int direction, int semitones, string part = "clef treble", bool hold = true)
+    {
+        string text = Book(music, part);
+        var server = Open(text, out var uri);
+        int music0 = text.IndexOf("{ m {", System.StringComparison.Ordinal);
+        var r = server.Step(new StepParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Selections = [At(text.IndexOf(word, music0, System.StringComparison.Ordinal))],
+            Direction = direction,
+            Count = semitones,
+            Chromatic = true,
+            HoldOthers = hold,
+        });
+        return TheMusic(Applied(text, r));
+    }
+
+    [Theory]
+    // Up by sharps and down by flats, a white key as it is.
+    [InlineData("c'4 d e f |", "c'", 1, 1, "cis'4 d e f |")]
+    [InlineData("c'4 d e f |", "c'", 1, 2, "d'4 d e f |")]
+    [InlineData("c'4 d e f |", "d e", -1, 1, "c'4 des e f |")]
+    [InlineData("c'4 d e f |", "e f", 1, 1, "c'4 d f f |")]
+    [InlineData("c'4 d e f |", "c'", -1, 1, "b4 d e f |")]
+    // Past an octave, and the notes after held.
+    [InlineData("c'4 d e f |", "c'", 1, 12, "c''4 d, e f |")]
+    [InlineData("c'4 d e f |", "c'", 1, 13, "cis''4 d, e f |")]
+    // A chord's first: its members held, and the note after it.
+    [InlineData("<c' e g>2 d2 |", "c'", 1, 12, "<c'' e, g,>2 d,2 |")]
+    // A member alone.
+    [InlineData("<c' e g>2 d2 |", "e g", 1, 1, "<c' f g>2 d2 |")]
+    public void AltDrag_GoesBySemitones(string music, string word, int direction, int semitones, string expected)
+        => Assert.Equal(expected, Chromatic(music, word, direction, semitones));
+
+    [Theory]
+    [InlineData("f'4 g a b |", "f'", 1, 1, "fis'4 g a b |")]    // the key's own, going up
+    [InlineData("g'4 a b c |", "g'", -1, 1, "fis'4 a b c |")]   // the key's own, going down
+    [InlineData("fis'4 g a b |", "fis'", -1, 1, "f'4 g a b |")] // a natural against the key
+    public void AltDrag_SpellsByTheKey(string music, string word, int direction, int semitones, string expected)
+        => Assert.Equal(expected, Chromatic(music, word, direction, semitones, "clef treble\n  key g major"));
+
+    [Fact]
+    public void AltDrag_OnNoNote_IsNoEdit()
+    {
+        string text = Book("r4 d e f |");
+        var server = Open(text, out var uri);
+        var r = server.Step(new StepParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Selections = [At(text.IndexOf("r4", System.StringComparison.Ordinal))], Direction = 1, Count = 1, Chromatic = true });
+        Assert.Empty(r.Edits);
+    }
+
+    [Fact]
+    public void AltDrag_ComesWithItsSound()
+    {
+        string text = Book("c'4 d e f |");
+        var server = Open(text, out var uri);
+        var r = server.Step(new StepParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Selections = [At(text.IndexOf("c'", text.IndexOf("{ m {", System.StringComparison.Ordinal), System.StringComparison.Ordinal))], Direction = 1, Count = 2, Chromatic = true });
+        Assert.Equal(62, Assert.Single(r.Pitches));
+    }
+
+    private const string ChordBook = "tempo 100\npart guitar { clef treble }\nchords prog { section A { C G } }\nsection A { guitar { c'4@chord(C) d e@diagram(x32010) f | <c e g>2@chord g2@chord(G) | } }\nform { A }\nscore { chords prog\n staff guitar }\n";
+
+    [Fact]
+    public void TheMarks_NameATempoAndAChordsShape_AndNotAChordsInversion()
+    {
+        string text = ChordBook;
+        var server = Open(text, out var uri);
+        var answer = server.NoteHeads(new NoteHeadsParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        string[] words = [.. answer.Marks.OrderBy(p => p).Select(p => new string(text[p..].TakeWhile(c => !" |\n".Contains(c)).ToArray()))];
+        Assert.Contains("100", words);
+        Assert.Contains("C", words);
+        Assert.Contains("G", words);
+        Assert.Contains("@chord(C)", words);
+        Assert.Contains("@diagram(x32010)", words);
+        Assert.Contains("@chord(G)", words);
+        Assert.DoesNotContain("@chord", words);   // bare, on <c e g>: its step inverts the chord
+        Assert.Equal([text.IndexOf("100", System.StringComparison.Ordinal)], answer.FineMarks);
+        // Each moves itself, never a note.
+        foreach (int at in answer.Marks)
+        {
+            string stepped = Applied(text, Stepped(server, uri, at + 1, 1, 1, true));
+            Assert.Contains("<c e g>2", stepped);
+            Assert.Contains("c'4", stepped);
+        }
+    }
+
+    [Theory]
+    [InlineData(true, 3, "tempo 103\n")]
+    [InlineData(false, 2, "tempo 120\n")]
+    public void ATempo_GoesByTheBeat_AndByTenWithCtrl(bool semitone, int count, string expected)
+    {
+        string text = ChordBook;
+        var server = Open(text, out var uri);
+        Assert.Contains(expected, Applied(text, Stepped(server, uri, text.IndexOf("100", System.StringComparison.Ordinal), 1, count, semitone)));
+    }
+
     [Fact]
     public void ADrum_IsNoPitch()
     {

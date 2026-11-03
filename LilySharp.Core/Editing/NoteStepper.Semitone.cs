@@ -70,18 +70,87 @@ namespace LilySharp.Core.Editing;
 /// </remarks>
 public static partial class NoteStepper
 {
-    /// <summary>Where the marks stand that step by a name of their own: a dynamic on the ladder,
-    /// an articulation in a group. A step on any other mark falls through to its note (the key's
-    /// way, the caret being on the note's item), which a drag on that mark must not do.</summary>
+    /// <summary>Where the things stand that a drag steps in place of a note: a dynamic on the
+    /// ladder, an articulation in a group, a tempo's number, a chord's shape. A step on any other
+    /// mark falls through to its note (the key's way, the caret being on the note's item), which a
+    /// drag on that mark must not do: a bare <c>@chord</c> on <c>&lt;…&gt;</c> with no shape site
+    /// would invert the chord.</summary>
     public static IEnumerable<int> SteppingMarks(string text, SyntaxTree tree)
     {
         foreach (var node in tree.GetRoot().DescendantNodes<SyntaxNode>())
         {
-            if (node is DynamicSyntax dynamic && DynamicSteps(dynamic.DynamicToken.Text))
+            bool steps = node switch
+            {
+                DynamicSyntax dynamic => DynamicSteps(dynamic.DynamicToken.Text),
+                ArticulationSyntax => MarkSteps(text, node),
+                ChordEntrySyntax or ChordSyntax { IsShapeChord: true } => true,
+                MusicMarkSyntax { Name: "chord" } chord => ChordAnnotation.Of(chord) is { FromShapeItem: true }
+                    || ShapeSiteOf(chord) is not (null, null),
+                MusicMarkSyntax { Name: "diagram" } diagram => !diagram.Arguments.IsEmpty
+                    && diagram.Parent is not ChordSyntax { IsShapeChord: false }
+                    && ShapeSiteOf(diagram) is not (null, null),
+                _ => false,
+            };
+            if (steps)
                 yield return node.SourceStart;
-            else if (node is ArticulationSyntax && MarkSteps(text, node))
-                yield return node.SourceStart;
+            else if (node is TempoDeclarationSyntax tempo && TempoNumber(tempo) is { } number)
+                yield return number.Span.Start;
         }
+    }
+
+    /// <summary>The marks of <see cref="SteppingMarks"/> with many steps a hand wants to cross at
+    /// once: a tempo's number, one beat a minute a step.</summary>
+    public static IEnumerable<int> FineSteppingMarks(SyntaxTree tree)
+    {
+        foreach (var tempo in tree.GetRoot().DescendantNodes<TempoDeclarationSyntax>())
+            if (TempoNumber(tempo) is { } number)
+                yield return number.Span.Start;
+    }
+
+    /// <summary>
+    /// <paramref name="text"/> with the pitch at <paramref name="at"/> a number of semitones away,
+    /// or null when there is no such pitch or its pitch is not known (a note dragged with Alt,
+    /// owner's request 2026-11-03: the step keys stop only on the key's tones). Spelled from the key
+    /// where it has that tone, else a white key, else a sharp going up and a flat going down.
+    /// Its octave marks are corrected until it sounds there; the other notes are the caller's.
+    /// </summary>
+    public static string? ChromaticStep(string text, SyntaxTree tree, int at, int semitones, Func<string, SyntaxTree>? expand = null)
+    {
+        var pitch = tree.GetNodes<PitchSyntax>().FirstOrDefault(p => p.SourceStart == at && p.BaseName != '\0' && p.QuarterOffset == 0);
+        if (pitch == null || !WrittenMidi(text, tree, expand).TryGetValue(at, out int was))
+            return null;
+        int want = was + semitones;
+        var (step, alter) = ChromaticSpelling(KeyInForce(pitch), ((want % 12) + 12) % 12, semitones > 0);
+        string name = NameOf(step, alter, WritesLongFlats(tree));
+        int nameEnd = NameEnd(pitch), marksEnd = MarksEnd(text, nameEnd);
+        int net = pitch.OctaveOffset;
+        string result = text;
+        for (int round = 0; round < MaxOctaveRounds; round++)
+        {
+            result = text[..at] + name + Marks(net) + text[marksEnd..];
+            if (!WrittenMidi(result, null, expand).TryGetValue(at, out int now))
+                break;
+            int off = now - want;
+            if (off == 0 || off % 12 != 0)
+                break;
+            net -= off / 12;
+        }
+        return result;
+    }
+
+    private static (int Step, int Alter) ChromaticSpelling(List<(int Step, int Alter)> keyTones, int pitchClass, bool up)
+    {
+        foreach (var (s, a) in keyTones)
+            if (((RelativeOctave.StepSemitoneOf(s) + a) % 12 + 12) % 12 == pitchClass)
+                return (s, a);
+        int white = up ? pitchClass - 1 : pitchClass + 1;
+        for (int s = 0; s < 7; s++)
+            if (RelativeOctave.StepSemitoneOf(s) == pitchClass)
+                return (s, 0);
+        for (int s = 0; s < 7; s++)
+            if (RelativeOctave.StepSemitoneOf(s) == (white + 12) % 12)
+                return (s, up ? 1 : -1);
+        return (0, 0);
     }
 
     /// <summary>A ledger line as this file's <c>layout { }</c> draws it: its thickness in staff
