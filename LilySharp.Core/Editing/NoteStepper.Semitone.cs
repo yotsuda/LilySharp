@@ -103,6 +103,11 @@ public static partial class NoteStepper
         }
     }
 
+    /// <summary>The marks of <see cref="SteppingMarks"/> a drag writes as it goes, the score drawing
+    /// what it now says: the dynamics (owner's request 2026-11-03, to see it and judge).</summary>
+    public static IEnumerable<int> LiveSteppingMarks(SyntaxTree tree)
+        => tree.GetRoot().DescendantNodes<DynamicSyntax>().Where(d => DynamicSteps(d.DynamicToken.Text)).Select(d => d.SourceStart);
+
     /// <summary>The marks of <see cref="SteppingMarks"/> with many steps a hand wants to cross at
     /// once: a tempo's number, one beat a minute a step.</summary>
     public static IEnumerable<int> FineSteppingMarks(SyntaxTree tree)

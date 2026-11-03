@@ -286,3 +286,8 @@ export function chromaticPositions(from: string, to: string, semitones: number):
 export function dragWordAt(text: string, offset: number): string {
     return /^!?[\w#+/^-]+(?:\([^)]*\))?(?:\.(?:up|down))?/.exec(text.slice(offset))?.[0] ?? '';
 }
+
+/** How much of the text at `offset`, a dynamic's name after its @, is its name and its placement. */
+export function liveWordLength(text: string, offset: number): number {
+    return /^[A-Za-z]+(?:\.(?:up|down))?/.exec(text.slice(offset))?.[0].length ?? 0;
+}

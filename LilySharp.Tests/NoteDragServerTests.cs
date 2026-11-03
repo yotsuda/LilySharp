@@ -227,6 +227,15 @@ public class NoteDragServerTests
     }
 
     [Fact]
+    public void TheDynamics_AreNamedAsWrittenAsADragGoes()
+    {
+        string text = Book("c'4@mf d@staccato e@p f@text(\"x\") |");
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(text);
+        Assert.Equal([text.IndexOf("@mf", System.StringComparison.Ordinal), text.IndexOf("@p", System.StringComparison.Ordinal)], LilySharp.Core.Editing.NoteStepper.LiveSteppingMarks(tree).Order());
+        Assert.All(LilySharp.Core.Editing.NoteStepper.LiveSteppingMarks(tree), at => Assert.Contains(at, LilySharp.Core.Editing.NoteStepper.SteppingMarks(text, tree)));
+    }
+
+    [Fact]
     public void TheMarks_AreThoseWithANameToStep_AndStandAtTheirAt()
     {
         string text = Book("c'4@mf d@staccato e@fermata f@text(\"x\") g@stopped |");

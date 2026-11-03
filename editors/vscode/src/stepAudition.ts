@@ -34,7 +34,7 @@ import {
     AuditionMemory, CARET_DEBOUNCE_MS, chromaticPositions, Debouncer, SOUNDS_WHEN_CHANGED, TYPING_SETTLE_MS,
     auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument, reselectAfterStep,
     stepFallbackCommand, strumGapMs,
-    dragWordAt,
+    dragWordAt, liveWordLength,
 } from './auditionCore';
 
 export interface StepAuditionDeps {
@@ -111,6 +111,11 @@ export interface NoteDragSteps {
     tempoLive(doc: vscode.TextDocument, position: number, value: number): void;
     /** The drag let go, or cancelled with its first number written back. */
     tempoEnd(doc: vscode.TextDocument): void;
+    /** A dynamic where a drag has it, written at once, all of one drag one undo: `steps` from what
+     * it was when the drag began, and at none that very text. */
+    markLive(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): void;
+    /** The drag let go, or cancelled with `steps` 0 asked first. */
+    markLiveEnd(doc: vscode.TextDocument): void;
 }
 
 export function registerStepAudition(context: vscode.ExtensionContext, deps: StepAuditionDeps): NoteDragSteps {
@@ -255,8 +260,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
     // One at a time, in order: an edit waits for the last, and each replaces what that one wrote.
     let tempoQueue: Promise<unknown> = Promise.resolve();
     let tempoDrag: { start: number, length: number, written: boolean } | undefined;
-    const writeTempo = async (doc: vscode.TextDocument, number: string, undoStopAfter: boolean) => {
-        const drag = tempoDrag!;
+    const writeLive = async (doc: vscode.TextDocument, drag: { start: number, length: number, written: boolean }, number: string, undoStopAfter: boolean) => {
         const range = new vscode.Range(doc.positionAt(drag.start), doc.positionAt(drag.start + drag.length));
         const editor = vscode.window.visibleTextEditors.find(e => e.document === doc);
         if (editor) {
@@ -268,6 +272,36 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         }
         drag.length = number.length;
         drag.written = true;
+    };
+    const writeTempo = (doc: vscode.TextDocument, number: string, undoStopAfter: boolean) => writeLive(doc, tempoDrag!, number, undoStopAfter);
+    // A dynamic dragged: where it stands, as asked last, and the way there from what was written. A
+    // step at the end of the ladder moves nothing and is not counted, so it goes by the mouse's place:
+    // the mouse comes back past the end before the mark comes down.
+    let markDrag: { start: number, length: number, written: boolean, base: string, steps: number, mode: NoteDragMode } | undefined;
+    let markWanted: { steps: number, mode: NoteDragMode } | undefined;
+    const driveMark = async (doc: vscode.TextDocument) => {
+        const drag = markDrag;
+        while (drag && markWanted) {
+            const { steps, mode } = markWanted;
+            if (steps === drag.steps && mode === drag.mode) { return; }
+            if (steps === 0 || mode !== drag.mode) {
+                if (drag.written) { await writeLive(doc, drag, drag.base, false); }
+                drag.steps = 0;
+                drag.mode = mode;
+                continue;
+            }
+            const dir = steps > drag.steps ? 1 : -1;
+            const response = await askSteps(doc, drag.start, dir, mode);
+            const end = drag.start + drag.length;
+            if (response.Edits.length === 0 || response.Fallback || response.Version !== doc.version
+                || response.Edits.some(e => e.Start < drag.start || e.End > end)) { return; }
+            let word = doc.getText(new vscode.Range(doc.positionAt(drag.start), doc.positionAt(end)));
+            for (const e of [...response.Edits].sort((a, b) => b.Start - a.Start)) {
+                word = word.slice(0, e.Start - drag.start) + e.NewText + word.slice(e.End - drag.start);
+            }
+            await writeLive(doc, drag, word, false);
+            drag.steps += dir;
+        }
     };
     const noteDrag: NoteDragSteps = {
         accidentals: async (doc, position, steps, mode, renderName) => {
@@ -303,6 +337,30 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
                 }
                 tempoDrag = undefined;
             }).catch(() => { tempoDrag = undefined; });
+        },
+        markLive: (doc, position, steps, mode) => {
+            markWanted = { steps, mode };
+            tempoQueue = tempoQueue.then(async () => {
+                if (!deps.getClient() || !deps.isReady()) { return; }
+                if (!markDrag) {
+                    const text = doc.getText();
+                    const start = jumpOffsetFor(text, position);
+                    const length = liveWordLength(text, start);
+                    if (length === 0) { return; }
+                    markDrag = { start, length, written: false, base: text.slice(start, start + length), steps: 0, mode };
+                }
+                await driveMark(doc);
+            }).catch(() => undefined);
+        },
+        markLiveEnd: (doc) => {
+            tempoQueue = tempoQueue.then(async () => {
+                const drag = markDrag;
+                if (drag?.written) {
+                    await writeLive(doc, drag, doc.getText(new vscode.Range(doc.positionAt(drag.start), doc.positionAt(drag.start + drag.length))), true);
+                }
+                markDrag = undefined;
+                markWanted = undefined;
+            }).catch(() => { markDrag = undefined; markWanted = undefined; });
         },
         markWords: async (doc, position, steps, mode) => {
             if (!deps.getClient() || !deps.isReady()) { return undefined; }
