@@ -7215,7 +7215,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // A mark has no staff to measure by: the mouse's way to its next word.
         const MARK_DRAG_PIXELS = 12;
         // A tempo's number, a beat a minute a step: a change of twenty is not a long way.
-        const FINE_MARK_DRAG_PIXELS = 3;
+        const FINE_MARK_DRAG_PIXELS = 4;
         // An octave, on a staff.
         const OCTAVE_POSITIONS = 7;
         // How far back past a position's edge the pointer has to come to leave it: a hand

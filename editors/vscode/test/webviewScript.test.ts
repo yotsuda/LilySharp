@@ -758,6 +758,7 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         assert.match(source, /if \(press\.tempo !== undefined\) \{\s+showTempoDrag\(press\);\s+\} else if \(press\.isMark\)/);
         assert.match(source, /if \(press\.tempo !== undefined\) \{ vscode\.postMessage\(\{ type: 'tempoDragEnd' \}\); return; \}/);
         assert.match(source, /if \(notePress\.tempo !== undefined\) cancelTempoDrag\(notePress\);\s+endNoteDrag\(notePress\);\s+noteDragged = true;/);
+        assert.match(source, /const FINE_MARK_DRAG_PIXELS = 4;/);   // owner's feel, 2026-11-03: 3 was a little quick
         const steps = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'stepAudition.ts'), 'utf8');
         assert.match(steps, /undoStopBefore: !drag\.written, undoStopAfter/);
     });
