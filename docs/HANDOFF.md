@@ -140,6 +140,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 開始時 full **14108 / 0 / 2**（`-Start p1093`・HEAD `8eaf719f`・OMR の open は #20）。作業場所は Lab `sessions/p1093/`。
 - **OMR の REQUESTS #20＝`@cross` の音を本当に別の段に描く（オーナー指示 2026-11-04）**: `MeasureCollector.MoveCrossStaffNotes` が音を移る先の段の音部記号（その音の時点）で読み直し `CrossStaffIndex` を刻む。音は元の声部のまま＝時間・連桁・音は変わらない。`Staff.CrossedIn` は移ってきた音の一覧で、移る先の輪郭に頭だけ入れる。連桁は `LayoutEngine.LayCrossStaffBeams` が最終の段位置で解き直す（段間隔に依存するので下書きの再利用はできない・輪郭に入らないので循環しない）。頭の位置は各自の段のまま `BeamMember.StaffOffset` を足す＝LP の `stem_ypositions_` と同じ持ち方。⚠️ **膝の判定だけは置いた間隔でなく LP の推定（pure）の間隔を読む**（`PureOffset`・align-interface.cc の全曲の箱）＝置いた間隔では `<c' e'>8@cross g'` が膝にならない（`k2` で LP 実測）。箱は頭と棒の推定だけで字面の移植ではない。タイ・スクリプト・グリッサンドも移る先の段で読む。双子は `\change Staff`。⚠️ 下書きの方向の刻み（`ResolveBeamStemDirections`）は移す前の位置で読むので刻み直す（`RestampMovedBeams`）＝しないと 3 連符の数字が譜の下へ飛ぶ。
 - 検証: 再現譜は LP と同じ形（`r4`）、探り譜も（`p3`・`k2`・`gx`）。連桁の傾きは絵から読んで約 2.57、LP の svg で 2.62＝⚠️ 数字の照合は粗いまま・台帳の点は起票していない。全 svg の掃き 1262 枚で動いたのは `audit/lpreg/gliss-xstaff.svg` の 1 枚だけ（`@cross` を書く唯一の追跡本）＝`sessions/p1093/sweep/diff.txt`。毒 11 本（`poisons.log`）はすべて赤。⚠️ うち `no restamp` は最初緑＝最終の刻みが覆っていたので、レイアウト前の刻みを見る網を足して赤を確認。グリッサンドの網は毒を当てていない。**RULES.md はこの便では全部読めていない**（読んだのは 1〜519 行と §5.5）。
+- 終了時 full **14121 / 0 / 2**（`-End p1093 -DiffBase 8eaf719f`＝`sessions/p1093/end.log`・門は全部 OK）。§7 7.5: Core `+727` 行・REF 16・OWN 0。Release の lysc は `16b976264` で作り直し、OMR の REQUESTS #20 を `fixed` に（OMR の repo は未 commit のままにした＝他の作業の変更が同じ木にある）。
 
 ## 以下は第1043セッションの経緯
 
