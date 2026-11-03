@@ -59,18 +59,15 @@ public static partial class NoteStepper
         return end;
     }
 
-    /// <summary>The token of a tempo's metronome number, or null.</summary>
-    private static SyntaxTokenNode? TempoNumber(TempoDeclarationSyntax tempo)
-    {
-        int at = tempo.ValuePositions.Count;
-        return at > 0 ? tempo.Values.OfType<SyntaxTokenNode>().FirstOrDefault(t => t.Span.Start == at) : null;
-    }
-
     /// <summary>The edit one step of a tempo makes (null when it cannot move) and the
     /// status-bar message.</summary>
     private static (Edit? Edit, string Message) TempoEdit(TempoDeclarationSyntax tempo, int dir, bool small)
     {
-        if (TempoNumber(tempo) is not { } token || !int.TryParse(token.Text, NumberStyles.None, CultureInfo.InvariantCulture, out int bpm))
+        int at = tempo.ValuePositions.Count;
+        var token = at > 0
+            ? tempo.Values.OfType<SyntaxTokenNode>().FirstOrDefault(t => t.Span.Start == at)
+            : null;
+        if (token == null || !int.TryParse(token.Text, NumberStyles.None, CultureInfo.InvariantCulture, out int bpm))
             return (null, "tempo: no metronome number to step - write one (tempo 120)");
         int next = Math.Max(1, bpm + dir * (small ? 1 : TempoBigStep));
         if (next == bpm)

@@ -59,7 +59,7 @@ namespace LilySharp.Core.Editing;
 /// A CHORD AS A WHOLE (the caret on its <c>&gt;</c> or its duration) INVERTS instead (owner's
 /// decision 2026-10-16): Up raises its lowest-sounding member an octave, Down lowers its
 /// highest, and the other members are held at their pitches by the same mark correction —
-/// in relative octaves each hangs on the chord's first (GRAMMAR, the anchor). The notes after the chord follow as
+/// in relative octaves each hangs on the one before it. The notes after the chord follow as
 /// they will.
 /// </para>
 /// <para>
@@ -70,168 +70,13 @@ namespace LilySharp.Core.Editing;
 /// </remarks>
 public static partial class NoteStepper
 {
-    /// <summary>Where the things stand that a drag takes hold of besides a note: a tempo's number alone
-    /// (owner's decision 2026-11-03: the notes and the tempos are dragged, and Ctrl+Shift+Up steps
-    /// everything else, which leads people to the editor).</summary>
-    public static IEnumerable<int> DraggedTempoNumbers(SyntaxTree tree)
-    {
-        foreach (var tempo in tree.GetRoot().DescendantNodes<TempoDeclarationSyntax>())
-            if (TempoNumber(tempo) is { } number)
-                yield return number.Span.Start;
-    }
-
-    /// <summary>
-    /// <paramref name="text"/> with the pitch at <paramref name="at"/> a number of semitones away,
-    /// or null when there is no such pitch or its pitch is not known (a note dragged with Alt,
-    /// owner's request 2026-11-03: the step keys stop only on the key's tones). Spelled from the key
-    /// where it has that tone, else a white key, else a sharp going up and a flat going down.
-    /// Its octave marks are corrected until it sounds there; the other notes are the caller's.
-    /// </summary>
-    public static string? ChromaticStep(string text, SyntaxTree tree, int at, int semitones, Func<string, SyntaxTree>? expand = null, bool holdOthers = false)
-        => DragNote(text, tree, at, semitones >= 0 ? 1 : -1, Math.Abs(semitones), NoteDrag.Semitones, expand, holdOthers);
-
-    /// <summary>What a drag of a note counts in.</summary>
-    public enum NoteDrag
-    {
-        /// <summary>Staff positions, each to the key's tone there.</summary>
-        StaffPositions,
-        /// <summary>Octaves.</summary>
-        Octaves,
-        /// <summary>Semitones (<see cref="ChromaticStep"/>).</summary>
-        Semitones,
-    }
-
-    /// <summary>
-    /// <paramref name="text"/> with the pitch at <paramref name="at"/> some way off, or null when
-    /// there is no such pitch or its pitch is not known: the answer of a drag, reached at once and
-    /// not a step at a time. Each of a run of <see cref="Step"/>s compiles the file two or three times
-    /// (first a step's spelling, then its marks), and a drag waits on it while the hand is still
-    /// (owner's request 2026-11-03: the score drawn as the note moves; 1.3 s on a 14 KB score). The
-    /// spelling needs no compile, so the walk goes first and the marks are put right once, on the
-    /// end of it: the moved pitch where it is going, and with <paramref name="holdOthers"/> every
-    /// other where it was (<see cref="HoldOtherPitches"/>), the first one off at a time.
-    /// </summary>
-    public static string? DragNote(string text, SyntaxTree tree, int at, int dir, int count, NoteDrag drag,
-        Func<string, SyntaxTree>? expand = null, bool holdOthers = true)
-    {
-        var old = PitchesInOrder(tree);
-        int moved = old.FindIndex(p => p.SourceStart == at);
-        if (moved < 0 || old[moved].QuarterOffset != 0)
-            return null;
-        var pitch = old[moved];
-        var was = WrittenMidi(text, tree, expand);
-        if (!was.TryGetValue(at, out int from))
-            return null;
-        bool longFlats = WritesLongFlats(tree);
-        int nameEnd = NameEnd(pitch);
-        string name;
-        int want;
-        switch (drag)
-        {
-            case NoteDrag.Octaves:
-                name = text[at..nameEnd];
-                want = from + 12 * dir * count;
-                break;
-            case NoteDrag.Semitones:
-            {
-                want = from + dir * count;
-                var (step, alter) = ChromaticSpelling(KeyInForce(pitch), ((want % 12) + 12) % 12, dir > 0);
-                name = NameOf(step, alter, longFlats);
-                break;
-            }
-            default:
-                (name, int delta) = WalkTheKey(pitch, dir, count, longFlats);
-                want = from + delta;
-                break;
-        }
-        string result = text[..at] + name + Marks(pitch.OctaveOffset) + text[MarksEnd(text, nameEnd)..];
-        // One a round: a mark put right can put right what hangs on it.
-        for (int round = 0; round < MaxOctaveRounds; round++)
-        {
-            var now = PitchesInOrder(SyntaxTree.Parse(result));
-            if (now.Count != old.Count)
-                break;
-            var midi = WrittenMidi(result, null, expand);
-            bool corrected = false;
-            for (int i = 0; i < now.Count && !corrected; i++)
-            {
-                if (i != moved && !holdOthers)
-                    continue;
-                int target;
-                if (i == moved)
-                    target = want;
-                else if (!was.TryGetValue(old[i].SourceStart, out target))
-                    continue;
-                if (!midi.TryGetValue(now[i].SourceStart, out int heard))
-                    continue;
-                int off = heard - target;
-                if (off == 0 || off % 12 != 0)
-                    continue;
-                int end = NameEnd(now[i]);
-                result = result[..end] + Marks(now[i].OctaveOffset - off / 12) + result[MarksEnd(result, end)..];
-                corrected = true;
-            }
-            if (!corrected)
-                break;
-        }
-        return result;
-    }
-
-    /// <summary>The key's tone <paramref name="positions"/> staff positions away: its name, and how
-    /// many semitones off. Each position is a new letter: a note off the key steps first to a tone
-    /// of the same letter, which moves it none (F in G major, to F sharp).</summary>
-    private static (string Name, int Delta) WalkTheKey(PitchSyntax pitch, int dir, int positions, bool longFlats)
-    {
-        var tones = KeyInForce(pitch);
-        int step = KeySpelling.StepOf(pitch.BaseName), alter = pitch.AccidentalOffset, delta = 0, moved = 0;
-        string name = NameOf(step, alter, longFlats);
-        // Twice as many tries as positions: one same-letter step at most, and a key of few steps
-        // cannot hold the walk here for ever.
-        for (int tries = 0; moved < positions && tries < 2 * positions; tries++)
-        {
-            var (toStep, toAlter, by) = NextTone(tones, step, alter, dir);
-            if (toStep != step)
-                moved++;
-            (step, alter) = (toStep, toAlter);
-            delta += by;
-            name = NameOf(step, alter, longFlats);
-        }
-        return (name, delta);
-    }
-
-    private static (int Step, int Alter) ChromaticSpelling(List<(int Step, int Alter)> keyTones, int pitchClass, bool up)
-    {
-        foreach (var (s, a) in keyTones)
-            if (((RelativeOctave.StepSemitoneOf(s) + a) % 12 + 12) % 12 == pitchClass)
-                return (s, a);
-        int white = up ? pitchClass - 1 : pitchClass + 1;
-        for (int s = 0; s < 7; s++)
-            if (RelativeOctave.StepSemitoneOf(s) == pitchClass)
-                return (s, 0);
-        for (int s = 0; s < 7; s++)
-            if (RelativeOctave.StepSemitoneOf(s) == (white + 12) % 12)
-                return (s, up ? 1 : -1);
-        return (0, 0);
-    }
-
-    /// <summary>A ledger line as this file's <c>layout { }</c> draws it: its thickness in staff
-    /// spaces and how far it reaches past a head on each side, in the head's widths — what the
-    /// preview draws a dragged note's lines with until the score comes back drawn (owner's
-    /// report 2026-11-03: they were thinner than the score's).</summary>
-    public static (double Thickness, double LengthFraction) LedgerLineOf(SyntaxTree tree)
-    {
-        var style = LilySharp.Core.Semantics.LayoutPlanReader.Resolve(tree.GetRoot(), null).EngravingStyle;
-        using var scope = LilySharp.Core.Svg.EngravingStyle.Use(style);
-        return (LilySharp.Core.Svg.EngravingDefaults.LegerLineThickness, style.LedgerLengthFraction);
-    }
-
     /// <summary>The status-bar word for a target the semitone step leaves alone.</summary>
     private const string SemitoneRefusal =
         "a scale degree or a quarter tone moves by octave only (Ctrl+Shift+PageUp / PageDown)";
 
     /// <summary>The octave-mark correction is tried at most this many times (one re-collection
     /// each). One round settles a single note; an inverted chord in relative octaves takes about
-    /// one per member, the others hanging on its first member, which the inversion may move.</summary>
+    /// one per member, each member's octave hanging on the one before it.</summary>
     private const int MaxOctaveRounds = 8;
 
     /// <summary>The pitches a semitone step of <paramref name="t"/> moves: a note's pitch, a
@@ -332,51 +177,6 @@ public static partial class NoteStepper
         return (edits, message);
     }
 
-    /// <summary>
-    /// <paramref name="after"/>, a step of the one pitch at <paramref name="at"/> in
-    /// <paramref name="before"/>, with every other pitch sounding where it did: a note dragged in
-    /// the preview moves alone (owner's decision 2026-11-03: the keys' "the notes after it follow"
-    /// surprises a hand on the note; a chord's other members and the notes after the chord stay).
-    /// In relative octaves a note hangs on the one before it, a chord's members and the note after
-    /// it on the chord's first member. One mark put right can put right what hangs on it, so the
-    /// first pitch off is corrected and the text read again.
-    /// </summary>
-    public static string HoldOtherPitches(string before, string after, int at, Func<string, SyntaxTree>? expand = null)
-    {
-        var was = WrittenMidi(before, null, expand);
-        if (was.Count == 0)
-            return after;
-        var old = PitchesInOrder(SyntaxTree.Parse(before));
-        int moved = old.FindLastIndex(p => p.SourceStart <= at);
-        string text = after;
-        // Each correction ends a chain: the members hanging on the moved one, and the next chord.
-        for (int round = 0; round < MaxOctaveRounds; round++)
-        {
-            var now = PitchesInOrder(SyntaxTree.Parse(text));
-            if (now.Count != old.Count)
-                return text;
-            var midi = WrittenMidi(text, null, expand);
-            bool corrected = false;
-            for (int i = 0; i < now.Count && !corrected; i++)
-            {
-                if (i == moved || !was.TryGetValue(old[i].SourceStart, out int w) || !midi.TryGetValue(now[i].SourceStart, out int n))
-                    continue;
-                int off = n - w;
-                if (off == 0 || off % 12 != 0)
-                    continue;
-                int nameEnd = NameEnd(now[i]);
-                text = text[..nameEnd] + Marks(now[i].OctaveOffset - off / 12) + text[MarksEnd(text, nameEnd)..];
-                corrected = true;
-            }
-            if (!corrected)
-                break;
-        }
-        return text;
-    }
-
-    private static List<PitchSyntax> PitchesInOrder(SyntaxTree tree)
-        => [.. tree.GetNodes<PitchSyntax>().Where(p => p.BaseName != '\0').OrderBy(p => p.SourceStart)];
-
     /// <summary>The member an inversion moves: the lowest sounding (<paramref name="dir"/> &gt; 0)
     /// or the highest, the first written of equals; null when a member's pitch is unknown.</summary>
     private static PitchSyntax? Inversion(List<PitchSyntax> members, Dictionary<int, int> pitches, int dir)
@@ -438,15 +238,9 @@ public static partial class NoteStepper
     /// and how many semitones it lies from <paramref name="p"/>.</summary>
     private static (string Name, int Delta) Respell(PitchSyntax p, int dir, bool longFlats)
     {
-        var (step, alter, delta) = NextTone(KeyInForce(p), KeySpelling.StepOf(p.BaseName), p.AccidentalOffset, dir);
-        return (NameOf(step, alter, longFlats), delta);
-    }
-
-    /// <summary>The next of <paramref name="tones"/> from a letter and its alteration, up or down.</summary>
-    private static (int Step, int Alter, int Delta) NextTone(List<(int Step, int Alter)> tones, int fromStep, int fromAlter, int dir)
-    {
+        var tones = KeyInForce(p);
         // In semitones above the letter's C, so ces is -1 and bis 12.
-        int was = RelativeOctave.StepSemitoneOf(fromStep) + fromAlter;
+        int was = RelativeOctave.StepSemitoneOf(KeySpelling.StepOf(p.BaseName)) + p.AccidentalOffset;
         (int Step, int Alter, int Value)? best = null;
         for (int octave = -1; octave <= 1; octave++)
             foreach (var (s, a) in tones)
@@ -458,7 +252,7 @@ public static partial class NoteStepper
                     best = (s, a, value);
             }
         var (step, alter, to) = best!.Value;
-        return (step, alter, to - was);
+        return (NameOf(step, alter, longFlats), to - was);
     }
 
     /// <summary>A pitch name in the language's Dutch names: <c>fis</c>, <c>bes</c>, <c>ees</c>

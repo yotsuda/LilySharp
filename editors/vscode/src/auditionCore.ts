@@ -269,14 +269,3 @@ export class Debouncer {
         return this.handle !== undefined;
     }
 }
-
-
-
-/** How many staff positions a note stands from where it was, some semitones away and spelled
- * `to` from `from` (Dutch names): up when `semitones` is positive. Each octave is seven. */
-export function chromaticPositions(from: string, to: string, semitones: number): number {
-    const sign = semitones >= 0 ? 1 : -1;
-    const letter = (name: string) => 'cdefgab'.indexOf(name[0]);
-    const within = (((letter(to) - letter(from)) * sign) % 7 + 7) % 7;
-    return sign * (Math.floor(Math.abs(semitones) / 12) * 7 + within) + 0;
-}

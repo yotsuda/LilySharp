@@ -4,8 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **Ctrl+drag a note by octaves**: with Ctrl the mouse's way is the octave as drawn: the note goes to the octave nearest the pointer. A click on a chord's note goes to that note: the upper half of a lower note used to go to the note above it. Alt+drag a note by semitones. Drag a tempo's number: it changes where it stands, in the score and the editor at once (with Ctrl, by ten), and one Ctrl+Z takes the drag back. Only notes and tempos are dragged: everything else steps with Ctrl+Shift+Up / Down in the editor. A dragged note shows the accidental and the ledger lines it would have where it is, on and off as it goes. A dragged note moves alone: the others, in its chord and after it, keep sounding where they were, by octave marks if they need them. Ctrl can be pressed or let go in the middle of the drag. A padlock in the preview's toolbar locks mouse editing; it is remembered, and is off to begin with.
-- **Drag a note in the preview to change its pitch**: it clicks from staff position to staff position, sounding at each, and the mouse need not be exact. Esc takes it back, and so does Ctrl+Z over the preview once it is written.
+- **A click on a chord's note goes to that note**: the upper half of a lower note used to go to the note above it.
 - **The Range and practice panels come to the front when clicked or opened**: the practice menu always stood in front.
 - **The practice menu stays open beside the score**, as the Range panel does: its × and its button close it, no longer a click outside or Esc.
 - **The Range and practice panels drag up behind the header**, which stays whole, keeping as much in sight under it as at the other edges.

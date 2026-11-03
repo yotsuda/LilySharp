@@ -32,20 +32,15 @@ Step input from a MIDI keyboard. Deferred until there is a keyboard to try it wi
 
 ## Decided against
 
-- **More mouse editing in the preview: a right-click menu on a note** (2026-11-03): rest, chord
-  member out, marks. Built and taken back the same day (`425fc8cb5`, reverted). The owner found
-  typing faster, and does not want the mouse to become the way Lily# is written: people are to be
-  led to the keyboard. What `Ctrl+Shift+Up` can step may be dragged; beyond that, no new mouse
-  editing, and no more menus.
-- **Dragging anything but a note or a tempo in the preview** (2026-11-03): dynamics, articulations, chord
-  symbols, diagrams and clefs were all draggable, the dynamics redrawn as the mouse moved to see it and
-  judge. The owner took them out: not intuitive, at odds with how other symbols are edited, and
-  `Ctrl+Shift+Up` does the same while leading people to the editor. A note's height is the staff's
-  own direction, and a tempo's drag was liked.
-- **Dragging a key signature in the preview** (2026-11-03): tried, with the signature redrawn as the
-  mouse moved. A key changes the signature's width, so the systems reflow and the staves move under
-  the hand; the owner took it out. `Ctrl+Shift+Up` steps a key. The time signature was never offered.
-- **A range CodeLens on each part's line** (2026-10-25): the section CodeLens already stands
+- **Editing the score with the mouse in the preview** (2026-11-03): built in one long day and all taken
+  out: dragging notes (by staff position, by octaves with Ctrl, by semitones with Alt), tempos,
+  dynamics, articulations, chord shapes, clefs and key signatures, some of them redrawn as the mouse
+  moved, a right-click menu on a note, and a padlock in the toolbar against a slip of the hand. The
+  owner's reasons: typing was faster; it was inconsistent with the way other things are edited; the
+  caret on a note and `Ctrl+Shift+Up` / `Down` is handier, and is where people should be led; a key
+  signature's or a dynamic's change reflows the systems under the hand; and an operation this
+  unimportant should not need a lock button. The preview is for reading and playing: a click goes
+  to the source. The drags are at `59e4aff37` to `db0f2d9c9` should anyone ask again.- **A range CodeLens on each part's line** (2026-10-25): the section CodeLens already stands
   between the lines, and the range is not needed while writing; the preview's Range panel
   answers it when asked.
 - **An overflow (⋯) menu for the preview's header** (2026-10-25): the header's groups wrap as

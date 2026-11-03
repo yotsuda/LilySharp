@@ -29,9 +29,8 @@
 
 import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
-import { jumpOffsetFor } from './previewCore';
 import {
-    AuditionMemory, CARET_DEBOUNCE_MS, chromaticPositions, Debouncer, SOUNDS_WHEN_CHANGED, TYPING_SETTLE_MS,
+    AuditionMemory, CARET_DEBOUNCE_MS, Debouncer, SOUNDS_WHEN_CHANGED, TYPING_SETTLE_MS,
     auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument, reselectAfterStep,
     stepFallbackCommand, strumGapMs,
 } from './auditionCore';
@@ -45,8 +44,6 @@ export interface StepAuditionDeps {
 }
 
 interface StepResponse {
-    /** The moved note's accidental, when asked: WantAccidentals. */
-    Accidentals?: Array<{ Glyph: string, Dx: number, FontSize: number }>;
     Fallback: boolean;
     Edits: { Start: number; End: number; NewText: string }[];
     Message?: string | null;
@@ -90,29 +87,7 @@ function includeStretch(): boolean {
     return vscode.workspace.getConfiguration('lilysharp').get<boolean>('chordShapes.includeStretch', false);
 }
 
-/** What a drag in the preview steps (owner's requests 2026-11-02 and 03), the keys' pairs: 'position'
- * a note's staff positions, each to the key's tone there (Ctrl+Shift+Up / Down); 'octave' its
- * octave (Ctrl+Shift+PageUp / PageDown). */
-export type NoteDragMode = 'position' | 'octave' | 'chromatic';
-
-/** A drag of `steps`, up when positive, from what has `data-pos` `position`. */
-export interface NoteDragSteps {
-    /** Sounds where the note would land. The last asked for wins: a drag outruns the server. */
-    hear(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<void>;
-    /** A note's name now and that many semitones away, and the staff positions between: nothing is
-     * written. Undefined for a stale question. */
-    chromaticWords(doc: vscode.TextDocument, position: number, steps: number): Promise<{ from: string, to: string, positions: number } | undefined>;
-    /** Writes it, one edit and one undo step; false when it writes nothing. */
-    write(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode): Promise<boolean>;
-    /** The accidental the note would be drawn with where the drag has it; nothing is written. */
-    accidentals(doc: vscode.TextDocument, position: number, steps: number, mode: NoteDragMode, renderName: string | undefined): Promise<Array<{ Glyph: string, Dx: number, FontSize: number }>>;
-    /** A tempo's number where a drag has it, written at once, all of one drag one undo. */
-    tempoLive(doc: vscode.TextDocument, position: number, value: number): void;
-    /** The drag let go, or cancelled with its first number written back. */
-    tempoEnd(doc: vscode.TextDocument): void;
-}
-
-export function registerStepAudition(context: vscode.ExtensionContext, deps: StepAuditionDeps): NoteDragSteps {
+export function registerStepAudition(context: vscode.ExtensionContext, deps: StepAuditionDeps) {
     const memory = new AuditionMemory();
     const caretWait = new Debouncer(CARET_DEBOUNCE_MS);
     const typingWait = new Debouncer(TYPING_SETTLE_MS);
@@ -233,115 +208,6 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         }
     };
 
-    const stepsAsked = (doc: vscode.TextDocument, offset: number, steps: number, mode: NoteDragMode, holdOthers: boolean) => ({
-            TextDocument: { uri: doc.uri.toString() },
-            Selections: [{ Start: offset, End: offset }],
-            Direction: steps > 0 ? 1 : -1,
-            ...(mode === 'position' ? { StaffPositions: Math.abs(steps) } : { Count: Math.abs(steps) }),
-            IncludeStretch: false,
-            Semitone: mode === 'position',
-            HoldOthers: holdOthers,
-            Chromatic: mode === 'chromatic',
-    });
-    const askSteps = (doc: vscode.TextDocument, offset: number, steps: number, mode: NoteDragMode, holdOthers = false) =>
-        deps.getClient()!.sendRequest<StepResponse>('lilysharp/step', stepsAsked(doc, offset, steps, mode, holdOthers));
-    /** A pitch's name alone: no octave marks, no duration. */
-    const pitchNameAt = (text: string, offset: number) => /^[a-z]+/.exec(text.slice(offset))?.[0] ?? '';
-    let lastHeard = 0, lastWords = 0;
-    // One at a time, in order: an edit waits for the last, and each replaces what that one wrote.
-    let tempoQueue: Promise<unknown> = Promise.resolve();
-    let tempoDrag: { start: number, length: number, written: boolean } | undefined;
-    const writeTempo = async (doc: vscode.TextDocument, number: string, undoStopAfter: boolean) => {
-        const drag = tempoDrag!;
-        const range = new vscode.Range(doc.positionAt(drag.start), doc.positionAt(drag.start + drag.length));
-        const editor = vscode.window.visibleTextEditors.find(e => e.document === doc);
-        if (editor) {
-            await editor.edit(b => b.replace(range, number), { undoStopBefore: !drag.written, undoStopAfter });
-        } else {
-            const edit = new vscode.WorkspaceEdit();
-            edit.replace(doc.uri, range, number);
-            await vscode.workspace.applyEdit(edit);
-        }
-        drag.length = number.length;
-        drag.written = true;
-    };
-    const noteDrag: NoteDragSteps = {
-        accidentals: async (doc, position, steps, mode, renderName) => {
-            if (!deps.getClient() || !deps.isReady() || steps === 0) { return []; }
-            const offset = jumpOffsetFor(doc.getText(), position);
-            const response = await deps.getClient()!.sendRequest<StepResponse>('lilysharp/step', {
-                ...stepsAsked(doc, offset, steps, mode, true),
-                WantAccidentals: true,
-                RenderName: renderName ?? null,
-            });
-            return response.Accidentals ?? [];
-        },
-        tempoLive: (doc, position, value) => {
-            tempoQueue = tempoQueue.then(async () => {
-                if (!tempoDrag) {
-                    const digits = /^\d+/.exec(doc.getText().slice(position));
-                    if (!digits) { return; }
-                    tempoDrag = { start: position, length: digits[0].length, written: false };
-                    // The number is what it is all for: on the screen, if it is not.
-                    const at = doc.positionAt(position);
-                    vscode.window.visibleTextEditors.find(e => e.document === doc)
-                        ?.revealRange(new vscode.Range(at, at), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-                }
-                await writeTempo(doc, String(value), false);
-            }).catch(() => undefined);
-        },
-        tempoEnd: (doc) => {
-            tempoQueue = tempoQueue.then(async () => {
-                const drag = tempoDrag;
-                if (drag?.written) {
-                    // The same number again, for the stop that closes the undo.
-                    await writeTempo(doc, doc.getText(new vscode.Range(doc.positionAt(drag.start), doc.positionAt(drag.start + drag.length))), true);
-                }
-                tempoDrag = undefined;
-            }).catch(() => { tempoDrag = undefined; });
-        },
-        chromaticWords: async (doc, position, steps) => {
-            if (!deps.getClient() || !deps.isReady()) { return undefined; }
-            const asked = ++lastWords;
-            const text = doc.getText();
-            const offset = jumpOffsetFor(text, position);
-            const response = await askSteps(doc, offset, steps, 'chromatic');
-            if (asked !== lastWords) { return undefined; }
-            let after = text;
-            for (const e of [...response.Edits].sort((a, b) => b.Start - a.Start)) {
-                after = after.slice(0, e.Start) + e.NewText + after.slice(e.End);
-            }
-            const from = pitchNameAt(text, offset), to = pitchNameAt(after, offset);
-            return { from, to, positions: chromaticPositions(from, to, steps) };
-        },
-        hear: async (doc, position, steps, mode) => {
-            if (!deps.getClient() || !deps.isReady() || !auditionEnabled()) { return; }
-            const asked = ++lastHeard;
-            const offset = jumpOffsetFor(doc.getText(), position);
-            const answer = steps === 0
-                ? await deps.getClient()!.sendRequest<AuditionAtResponse>('lilysharp/auditionAt', {
-                    TextDocument: { uri: doc.uri.toString() }, Offset: offset, IncludeStretch: false,
-                })
-                : await askSteps(doc, offset, steps, mode);
-            if (asked === lastHeard) { play(doc.uri.toString(), answer.Pitches, answer.Timbre, answer.Program); }
-        },
-        write: async (doc, position, steps, mode) => {
-            if (!deps.getClient() || !deps.isReady() || steps === 0) { return false; }
-            const version = doc.version;
-            // A dragged note moves alone (owner's decision 2026-11-03), where the keys' notes after
-            // it follow: what the hand saw move is what moves.
-            const response = await askSteps(doc, jumpOffsetFor(doc.getText(), position), steps, mode, true);
-            if (response.Message) { vscode.window.setStatusBarMessage(`Lily#: ${response.Message}`, 4000); }
-            if (response.Fallback || response.ConvertOctaves || response.Edits.length === 0
-                || doc.version !== version || response.Version !== version) { return false; }
-            const edit = new vscode.WorkspaceEdit();
-            for (const e of response.Edits) {
-                edit.replace(doc.uri, new vscode.Range(doc.positionAt(e.Start), doc.positionAt(e.End)), e.NewText);
-            }
-            return vscode.workspace.applyEdit(edit);
-        },
-    };
-
     context.subscriptions.push(
         vscode.commands.registerCommand('lilysharp.stepSemitoneUp', () => step(1, true)),
         vscode.commands.registerCommand('lilysharp.stepSemitoneDown', () => step(-1, true)),
@@ -414,6 +280,4 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             lastEdit.delete(uri);
         }),
     );
-
-    return noteDrag;
 }

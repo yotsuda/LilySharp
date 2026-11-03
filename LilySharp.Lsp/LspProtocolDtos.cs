@@ -953,53 +953,6 @@ public class StepParams
     /// name is from when it stepped a semitone). Optional; absent means false — the octave step, as
     /// every request before it.</summary>
     public bool Semitone { get; set; }
-    /// <summary>Step on until the note stands this many staff positions away, as one edit (a note
-    /// dragged in the preview, owner's request 2026-11-02). Each position is a new letter: a note
-    /// off the key steps first to a tone of the same letter, which moves it none (F in G major, to
-    /// F sharp). Optional; absent or 0 means the one step of the key.</summary>
-    public int StaffPositions { get; set; }
-    /// <summary>Step this many times, as one edit (a note's octave, dragged in the
-    /// preview). Optional; absent means once. <see cref="StaffPositions"/> goes first.</summary>
-    public int Count { get; set; } = 1;
-    /// <summary>Every other pitch keeps sounding where it did, its marks corrected: a note dragged
-    /// in the preview moves alone (<c>NoteStepper.HoldOtherPitches</c>). Optional; absent means
-    /// false — the keys', after which the notes follow as they will.</summary>
-    public bool HoldOthers { get; set; }
-    /// <summary><see cref="Count"/> semitones in <see cref="Direction"/>, from the note at the one
-    /// selection, spelled by <c>NoteStepper.ChromaticStep</c> (a note dragged with Alt, owner's
-    /// request 2026-11-03). Optional; absent means false.</summary>
-    public bool Chromatic { get; set; }
-    /// <summary>With <see cref="HoldOthers"/>: also say what accidental the moved note then has
-    /// (<see cref="StepResponse.Accidentals"/>), on the score <see cref="RenderName"/> draws.</summary>
-    public bool WantAccidentals { get; set; }
-    public string? RenderName { get; set; }
-}
-
-/// <summary>One glyph of the accidental a dragged note would be drawn with, beside its head.</summary>
-public class DraggedGlyph
-{
-    public string Glyph { get; set; } = "";
-    /// <summary>From the head's x, as the score draws it.</summary>
-    public double Dx { get; set; }
-    public double FontSize { get; set; }
-}
-
-/// <summary>Asks what the preview may drag: <c>lilysharp/noteHeads</c>.</summary>
-public class NoteHeadsParams
-{
-    public TextDocumentIdentifier TextDocument { get; set; } = null!;
-}
-
-/// <summary>Where the pitches of a document stand: the <c>data-pos</c> of what is drawn for each.</summary>
-public class NoteHeadsResponse
-{
-    public int[] Positions { get; set; } = System.Array.Empty<int>();
-    /// <summary>Where the tempo numbers a drag takes hold of stand: the <c>data-pos</c> each is drawn with.</summary>
-    public int[] Tempos { get; set; } = System.Array.Empty<int>();
-    /// <summary>A ledger line's thickness in this file, in staff spaces.</summary>
-    public double LedgerThickness { get; set; }
-    /// <summary>How far a ledger line reaches past a head on each side, in the head's widths.</summary>
-    public double LedgerLengthFraction { get; set; }
 }
 
 /// <summary>One replacement of <c>[Start, End)</c> (offsets into the text of
@@ -1022,9 +975,6 @@ public class StepTextEdit
 /// </summary>
 public class StepResponse
 {
-    /// <summary>What <see cref="StepParams.WantAccidentals"/> asks: none where it needs none, and
-    /// a natural, or two glyphs and their brackets, where it does.</summary>
-    public DraggedGlyph[] Accidentals { get; set; } = System.Array.Empty<DraggedGlyph>();
     public bool Fallback { get; set; }
     public StepTextEdit[] Edits { get; set; } = System.Array.Empty<StepTextEdit>();
     public string? Message { get; set; }
