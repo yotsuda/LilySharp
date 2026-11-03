@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 297 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **423** | |
+| `OWN` | 298 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **424** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -244,7 +244,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（297 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（298 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -471,6 +471,8 @@
 - **`BeamScoringProblem.GenerateQuantCandidates`** LILYSHARP-OWN: with no normal stems every flat off-line candidate
 ### `LilySharp.Core/Svg/Layout/BendAfterGeometry.cs`
 - **`BendAfterGeometry.DeltaStep`** The interval a fall drops and a doit rises, in staff POSITIONS. LILYSHARP-OWN:
+### `LilySharp.Core/Svg/Layout/ChordHeadPositioning.cs`
+- **`ChordHeadPositioning.IsOneHeadBesideASecond`** 2026-11-03, LILYSHARP-OWN). The parity walk only sees neighbours, so &lt;a b b&gt; goes
 ### `LilySharp.Core/Svg/Layout/ChordListBand.cs`
 - **`ChordListBand`** LILYSHARP-OWN: LilyPond has no chord list. Read off the collected model
 ### `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs`
