@@ -105,6 +105,11 @@ public static partial class NoteStepper
         }
     }
 
+    /// <summary>The marks of <see cref="SteppingMarks"/> that are keys: a drag writes them as it goes,
+    /// the score drawing what it now says (owner's request 2026-11-03).</summary>
+    public static IEnumerable<int> KeySteppingMarks(SyntaxTree tree)
+        => tree.GetRoot().DescendantNodes<KeySignatureSyntax>().Where(k => !k.IsCustom).Select(k => k.Pitch.SourceStart);
+
     /// <summary>The marks of <see cref="SteppingMarks"/> with many steps a hand wants to cross at
     /// once: a tempo's number, one beat a minute a step.</summary>
     public static IEnumerable<int> FineSteppingMarks(SyntaxTree tree)

@@ -1788,9 +1788,9 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             if (message.type === 'requestNoteHeads') {
                 const doc = await previewDocument(uri);
                 if (!client || !clientReady || !doc) { return; }
-                const answer = await client.sendRequest<{ Positions: number[], Marks: number[], FineMarks: number[], LedgerThickness: number, LedgerLengthFraction: number }>('lilysharp/noteHeads', { TextDocument: { uri } });
+                const answer = await client.sendRequest<{ Positions: number[], Marks: number[], FineMarks: number[], KeyMarks: number[], LedgerThickness: number, LedgerLengthFraction: number }>('lilysharp/noteHeads', { TextDocument: { uri } });
                 void panel.webview.postMessage({
-                    type: 'noteHeads', positions: answer.Positions, marks: answer.Marks, fineMarks: answer.FineMarks,
+                    type: 'noteHeads', positions: answer.Positions, marks: answer.Marks, fineMarks: answer.FineMarks, keyMarks: answer.KeyMarks,
                     ledgerThickness: answer.LedgerThickness, ledgerFraction: answer.LedgerLengthFraction,
                 });
                 return;
@@ -1827,6 +1827,12 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 const doc = await previewDocument(uri);
                 const ok = doc ? await noteDragSteps?.write(doc, message.position, message.steps, message.mode) : false;
                 void panel.webview.postMessage({ type: 'noteDragResult', ok: !!ok });
+                return;
+            }
+            if (message.type === 'keyDragLive' || message.type === 'keyDragEnd') {
+                const doc = await previewDocument(uri);
+                if (doc && message.type === 'keyDragLive') { noteDragSteps?.keyLive(doc, message.position, message.steps, message.mode); }
+                if (doc && message.type === 'keyDragEnd') { noteDragSteps?.keyEnd(doc); }
                 return;
             }
             if (message.type === 'tempoDragLive' || message.type === 'tempoDragEnd') {
@@ -6982,6 +6988,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     noteHeads = new Set(message.positions);
                     noteMarks = new Set(message.marks);
                     noteFineMarks = new Set(message.fineMarks);
+                    noteKeyMarks = new Set(message.keyMarks);
                     noteLedger = { thickness: message.ledgerThickness, fraction: message.ledgerFraction };
                     break;
                 case 'mouseLock':
@@ -7253,7 +7260,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function dragStepsOf(press, pixels, steps) {
             return press.ctrl && !press.alt && !press.isMark ? noteOctaveSteps(pixels, press.perStep, steps) : noteDragSteps(pixels, press.perStep, steps);
         }
-        let noteHeads = new Set(), noteMarks = new Set(), noteFineMarks = new Set();
+        let noteHeads = new Set(), noteMarks = new Set(), noteFineMarks = new Set(), noteKeyMarks = new Set();
         let notePress = null, noteDragged = false, noteDropped = null;
         // As the score draws a ledger line (from the server, with noteHeads).
         let noteLedger = { thickness: 0.2, fraction: 0.25 };
@@ -7560,6 +7567,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             showTempoDrag(press);
             vscode.postMessage({ type: 'tempoDragEnd' });
         }
+        // Esc, or the pointer lost: the key as it was written.
+        function cancelKeyDrag(press) {
+            vscode.postMessage({ type: 'keyDragLive', position: press.pos, steps: 0, mode: dragMode(press) });
+            vscode.postMessage({ type: 'keyDragEnd' });
+        }
         function newDragTip() {
             const tip = document.createElement('div');
             tip.className = 'mark-drag-tip';
@@ -7571,6 +7583,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const tip = newDragTip();
             window.focus();   // as for a note
             Object.assign(press, { moving: true, tip, steps: 0 });
+            press.isKey = noteKeyMarks.has(press.pos);
             if (noteFineMarks.has(press.pos)) {
                 const drawn = drawnTempoNumber(press.pos);
                 press.tempo = press.shownTempo = drawn ? parseInt(/[0-9]+/.exec(drawn.textContent)[0], 10) : undefined;
@@ -7609,6 +7622,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const steps = press.steps, mode = dragMode(press);
             if (press.tempo !== undefined) {
                 showTempoDrag(press);
+            } else if (press.isKey) {
+                // A key says nothing by the pointer: the score draws it (owner's request 2026-11-03).
+                vscode.postMessage({ type: 'keyDragLive', position: press.pos, steps, mode });
             } else if (press.isMark) {
                 if (steps === 0) press.tip.hidden = true;
                 else vscode.postMessage({ type: 'markDragWords', position: press.pos, steps, mode });
@@ -7676,6 +7692,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             noteDragged = true;
             endNoteDrag(press, press.steps !== 0);
             if (press.tempo !== undefined) { vscode.postMessage({ type: 'tempoDragEnd' }); return; }
+            if (press.isKey) { vscode.postMessage({ type: 'keyDragEnd' }); return; }
             if (press.row && press.steps === 0) { moveNoteRow(press.row, 0); noteAccidentalsBack(press); }
             if (press.steps === 0) return;
             // A note stays where it was put until the score comes back drawn.
@@ -7688,6 +7705,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (notePress.moving) {
                 if (notePress.row) { moveNoteRow(notePress.row, 0); noteAccidentalsBack(notePress); }
                 if (notePress.tempo !== undefined) cancelTempoDrag(notePress);
+                if (notePress.isKey) cancelKeyDrag(notePress);
                 endNoteDrag(notePress);
             }
             notePress = null;
@@ -7696,6 +7714,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (e.key !== 'Escape' || !notePress || !notePress.moving) return;
             if (notePress.row) { moveNoteRow(notePress.row, 0); noteAccidentalsBack(notePress); }
             if (notePress.tempo !== undefined) cancelTempoDrag(notePress);
+            if (notePress.isKey) cancelKeyDrag(notePress);
             endNoteDrag(notePress);
             noteDragged = true;
         });

@@ -292,3 +292,8 @@ export function dragWordAt(text: string, offset: number): string {
     }
     return /^!?[\w#+/^-]+(?:\([^)]*\))?(?:\.(?:up|down))?/.exec(rest)?.[0] ?? '';
 }
+
+/** How much of the text at `offset`, a key's tonic, is its tonic and its mode as written. */
+export function keyWordLength(text: string, offset: number): number {
+    return /^\S+\s+[A-Za-z]+/.exec(text.slice(offset))?.[0].length ?? 0;
+}

@@ -63,6 +63,15 @@ public class ClefKeyDragTests
     public void NotWhatHasNoStep(string text, string word)
         => Assert.DoesNotContain(text.IndexOf(word, System.StringComparison.Ordinal), Marks(text));
 
+    [Fact]
+    public void TheKeys_AreNamed_AsDrawnWhereTheyStand()
+    {
+        string text = "key g major\npart m { clef treble }\nsection A { m { c'4 d | key custom c 1 e f | key d major g a | } }\nform { A }\nscore { staff m }\n";
+        var tree = SyntaxTree.Parse(text);
+        Assert.Equal([text.IndexOf("g major", System.StringComparison.Ordinal), text.IndexOf("d major", System.StringComparison.Ordinal)], NoteStepper.KeySteppingMarks(tree).Order());
+        Assert.All(NoteStepper.KeySteppingMarks(tree), at => Assert.Contains(at, NoteStepper.SteppingMarks(text, tree)));
+    }
+
     private static string Dragged(string text, string word, int direction, int count, bool semitone)
     {
         var server = new LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);

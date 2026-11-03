@@ -22,7 +22,7 @@ import {
     AuditionMemory, Debouncer, EDIT_SELECTION_WINDOW_MS, CHORD_MS, NOTE_MS, OCTAVE_DOWN_KEY, OCTAVE_UP_KEY,
     STEP_DOWN_KEY, STEP_UP_KEY, STRUM_MS,
     INSTRUMENT_CHANGE_MAX, auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument,
-    reselectAfterStep, stepFallbackCommand, strumGapMs, chromaticPositions, dragWordAt } from '../src/auditionCore';
+    reselectAfterStep, stepFallbackCommand, strumGapMs, chromaticPositions, dragWordAt, keyWordLength } from '../src/auditionCore';
 
 describe('a stepped selection stays selected (owner\'s request 2026-10-24)', () => {
     it('selects the new text of each replaced selection, shifted by the edits before it', () => {
@@ -252,4 +252,10 @@ it('dragWordAt: a key says its tonic and its mode, and anything else its word', 
     assert.equal(at('part m { clef treble^8 }', 'treble^8'), 'treble^8');
     assert.equal(at('monkey g major', 'g major'), 'g');
     assert.equal(at("c'4@staccato.up d", 'staccato'), 'staccato.up');
+});
+
+it('keyWordLength: the tonic and the mode as they are written', () => {
+    assert.equal(keyWordLength('key g major\n', 4), 'g major'.length);
+    assert.equal(keyWordLength('key bes   minor }', 4), 'bes   minor'.length);
+    assert.equal(keyWordLength('key', 3), 0);
 });
