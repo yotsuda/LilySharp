@@ -411,10 +411,16 @@ public class StepRequestTests
     public void AChordMarkWithNoName_KeepsItsSteps_AndTheSemitonePairTheShape()
     {
         string Book(string m) => "key c major\npart gt { clef treble }\nsection A { gt { " + m + " e f | } }\nform { A }\nscore { staff gt }\n";
-        // A shape alone walks the chord it spells.
-        var (_, shapeOnly) = Step(Book("c'4@chord(x32010‸) d"), +1);
-        Assert.Contains("@chord(", shapeOnly);
-        Assert.DoesNotContain("Dm7", shapeOnly);
+        // A shape alone: nothing moves on this pair, and it says why; Up and Down step its shape.
+        foreach (string at in new[] { "c'4@chord(x32010‸) d", "c'4@chord(x32‸010) d", "c'4@cho‸rd(x32010) d", "r4@chord(x32010‸) d" })
+            foreach (int direction in new[] { +1, -1 })
+            {
+                var (said, same) = Step(Book(at), direction);
+                Assert.False(said.Fallback);
+                Assert.Equal(Book(at.Replace("‸", "")), same);
+                Assert.Contains("no chord name", said.Message);
+            }
+        Assert.NotEqual(Book("c'4@chord(x32010) d"), Step(Book("c'4@chord(x32010‸) d"), +1, semitone: true).After);
         // A bare @chord on <…> is its chord's: the octave pair moves the chord, as it did.
         var (_, bare) = Step(Book("<c' e g>4@chord‸ d"), +1);
         Assert.Contains("@chord d", bare);

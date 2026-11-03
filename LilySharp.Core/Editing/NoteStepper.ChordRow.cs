@@ -27,8 +27,8 @@ namespace LilySharp.Core.Editing;
 /// (Cmaj7, C and C7 all stand on I), stopping at I and at VII (owner's decision the same day:
 /// no going round). The semitone pair (Up / Down) keeps stepping the entry's shape, as it did.
 /// So does a named <c>@chord(…)</c> in a part, and a named <c>diagram(…)</c> or <c>chord(…)</c> item
-/// (owner's requests 2026-11-03). A nameless @chord has nothing to walk from and keeps its steps, and
-/// a nameless item moves nothing on this pair (NoteStepper.Step). An
+/// (owner's requests 2026-11-03). A shape with no name, an @chord's or an item's, has nothing to walk
+/// from and moves nothing on this pair (NoteStepper.Step); a bare @chord is its notes'. An
 /// <c>@diagram(SHAPE)</c> takes a shape alone, and its octave pair is its <c>.up</c> / <c>.down</c>.
 /// </summary>
 /// <remarks>
