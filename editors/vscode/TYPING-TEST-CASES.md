@@ -167,6 +167,10 @@ Ctrl+Z 1 回で、キーを押す前の選択に戻ること。Ctrl+Y で戻る�
 - [ ] `diagram(Cmaj7 x32000)1` の上で `Ctrl+Shift+PageUp` → `diagram(Dm7)1` になり、楽譜の音も新しいコードの音に変わる。`chord(Cmaj7)1` も同じ。`diagram(x32000)1`（名前なし）は形を切り替える。`@diagram(x32000)` は今までどおり `.up` / `.down`
 - [ ] `@chord(C x32010)` の形の上で押す → 形ごと `@chord(Dm7)` に。`Ctrl+Shift+Up` / `Down` は今までどおり形を切り替える
 
+## 5y. 楽譜の `transpose`
+
+- [ ] `score transposed transpose d { chords prog  staff melody }` を選ぶ → 音符、調号、コード名（`Dm7` → `Em7`）がそろって動く。再生は長 2 度上で鳴り、コード行も同じ。既定の楽譜に戻すと書いたとおりに戻る
+
 ## 6a. プレビューのクリック
 
 機械では確かめられないので、手で見る項目。

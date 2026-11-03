@@ -1128,7 +1128,7 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowStaffTuning = StaffDiagramTuning(tree.GetRoot(), renderSpec, voiceName, attachedChordPart);
             _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), attachedChordPart,
                 renderSpec?.ChordRowFor(attachedChordPart, voiceName));
-            _chordNameCollector.RowShift = _fileShiftSemitones;
+            SetRowMove();
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _v.Cursor.StaffIndex,
                 _v.Meta.TimeBeats, _v.Meta.TimeBeatType, attachedChordDisplay);
@@ -1809,7 +1809,7 @@ public sealed partial class MeasureCollector
             // (renderSpec is never null on this road — a null test here made the flow analysis
             // doubt it for the rest of the pass: six CS8602/CS8604 from one `== null`.)
             _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), rowName, rowFor);
-            _chordNameCollector.RowShift = _fileShiftSemitones;
+            SetRowMove();
             var rowMeasures = _chordNameCollector.CollectPart(
                 tree.GetRoot(), rowName, rowIdx, _sectionState.StartMeasure, _v.Meta.TimeBeats, _v.Meta.TimeBeatType, rowMode);
             staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, rowMeasures));
@@ -2025,7 +2025,7 @@ public sealed partial class MeasureCollector
                     ? Tablature.Tunings.Parse(staffWord) : null;
             _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), attachedPart,
                 renderSpec.ChordRowFor(attachedPart, staffVoice));
-            _chordNameCollector.RowShift = _fileShiftSemitones;
+            SetRowMove();
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedPart, _sectionState.StartMeasure, attachedStaff,
                 _v.Meta.TimeBeats, _v.Meta.TimeBeatType, attachedMode);
@@ -2632,7 +2632,7 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowStaffTuning = StaffDiagramTuning(root, renderSpec, voiceName, attachedChordPart);
             _chordNameCollector.RowNameDrop = ChordRowDrop(root, attachedChordPart,
                 renderSpec?.ChordRowFor(attachedChordPart, voiceName));
-            _chordNameCollector.RowShift = _fileShiftSemitones;
+            SetRowMove();
             _chordNameCollector.CollectAttached(
                 root, attachedChordPart, _sectionState.StartMeasure, _v.Cursor.StaffIndex,
                 _v.Meta.TimeBeats, _v.Meta.TimeBeatType, attachedChordDisplay);

@@ -776,6 +776,24 @@ public sealed record ChordStructure(
     }
 
     /// <summary>
+    /// This chord moved by the c→target interval a score's <c>transpose</c> moves its notes by, name
+    /// by name as they are (<see cref="Semantics.PitchTransposer.Transpose"/>), so a row under
+    /// <c>transpose cis</c> says C♯ where <c>transpose des</c> says D♭, each as its notes do.
+    /// </summary>
+    public ChordStructure TransposedBy(int toStep, int toAlter)
+    {
+        var (rootStep, rootAlter, _) = Semantics.PitchTransposer.Transpose(Wrap7(RootStep), RootAlter, 4, toStep, toAlter);
+        int? bassStep = null, bassAlter = null;
+        if (BassStep is int b)
+        {
+            var (s, a, _) = Semantics.PitchTransposer.Transpose(Wrap7(b), BassAlter ?? 0, 4, toStep, toAlter);
+            bassStep = s;
+            bassAlter = a;
+        }
+        return this with { RootStep = Wrap7(rootStep), RootAlter = rootAlter, BassStep = bassStep, BassAlter = bassAlter };
+    }
+
+    /// <summary>
     /// The key signature <paramref name="capo"/> semitones below <paramref name="keySharps"/>:
     /// seven fifths down per semitone, brought into −5…+6 — at the tritone the SHARP side
     /// (F♯ major, six sharps, over G♭: the guitarist's spelling, HANDOFF §2 K2 "sharp-leaning").

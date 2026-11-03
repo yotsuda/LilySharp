@@ -1766,7 +1766,10 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
    it is a CLI output: `lysc midi song.lys song.mid`. *)
 
 ScoreDecl      = 'score' , [ Identifier ] , { ScoreOption } , '{' , { ScoreItem } , '}' ;
-ScoreOption    = 'transpose' , PitchToken       (* this score's transpose, composed on each part's own *)
+ScoreOption    = 'transpose' , PitchToken       (* this score's transpose, composed on each part's own; it moves
+                                                   the score's chord rows and all it sounds too, name by name as
+                                                   the notes (owner's report 2026-11-03). An '@chord' on a note
+                                                   is not moved, as under 'shift' and on a transposing staff *)
                | 'pitch' , PagePitchMode ;      (* how THIS score's page reads: 'concert' shows every
                                                    chromatically transposing part at what it sounds (the
                                                    conductor's score), 'transposed' as its player reads it

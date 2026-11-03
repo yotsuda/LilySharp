@@ -373,6 +373,16 @@ public sealed partial class MeasureCollector
             _fileShiftSemitones);
     }
 
+    /// <summary>What moves a chord row besides its reader: the file's <c>shift</c> and this score's
+    /// <c>transpose</c>. Its written shapes are the written chord's under either
+    /// (<see cref="ChordNameCollector.RowShift"/>).</summary>
+    private void SetRowMove()
+    {
+        int score = ScoreTranspose is { } t ? Semantics.PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct) : 0;
+        _chordNameCollector.RowShift = _fileShiftSemitones + score % 12;
+        _chordNameCollector.RowInterval = ScoreTranspose is { } i && score % 12 != 0 ? (i.step, i.alt) : null;
+    }
+
     /// <summary>Reads the tuning of <paramref name="partName"/> for the names its symbol-less
     /// <c>@chord</c> shapes derive, and its fretted tuning for the diagrams they draw.</summary>
     private void SetPartTuning(SyntaxNode root, string? partName)

@@ -97,6 +97,8 @@ public sealed class MidiExporter
     // transpose composes with, and its semitones for the chord rows (sounding pitch).
     private (int step, int alt, int oct)? _fileShift;
     private int _fileShiftSemitones;
+    // The played score's own `transpose`, in semitones: what it engraves is what it sounds.
+    private int _scoreTransposeSemitones;
 
     // Per-PART relative-pitch state WITHIN one section, so a part whose music is split
     // over more than one block picks its own chain up again instead of inheriting the
@@ -593,6 +595,8 @@ public sealed class MidiExporter
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
         _playedSpec = RenderSpecParser.PlayedSpec(tree, Score, Form);
+        _scoreTransposeSemitones = _playedSpec?.ScoreTranspose is { } moved
+            ? PitchTransposer.IntervalSemitones(moved.step, moved.alt, moved.oct) : 0;
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
         _soundingChordRows = SoundingChordRows(tree, Score, Form);
         _flatRows = Semantics.FlatChordRows.Of(_root, _soundingChordRows);
@@ -1732,7 +1736,7 @@ public sealed class MidiExporter
                         foreach (var tone in Music.ChordVoicing.Window(chord))
                         {
                             ringing.Add(track.Notes.Count);
-                            track.Notes.Add(new MidiNote(track.Channel, SoundKey(tone.Midi + _fileShiftSemitones, position), level,
+                            track.Notes.Add(new MidiNote(track.Channel, SoundKey(tone.Midi + _fileShiftSemitones + _scoreTransposeSemitones, position), level,
                                 stroke.Tick, Math.Max(1, strum), position, SourceOrdinal: ordinal, Timbre: timbre, Part: part, Strike: strike));
                         }
                         strike++;
@@ -1743,9 +1747,9 @@ public sealed class MidiExporter
                     continue;
                 }
                 // A row is sounding pitch once its letters are read (above), moved only by the
-                // file's `shift N` (FileShift).
+                // file's `shift N` (FileShift) and this score's own `transpose`.
                 foreach (var tone in Music.ChordVoicing.Window(chord))
-                    track.Notes.Add(new MidiNote(track.Channel, SoundKey(tone.Midi + _fileShiftSemitones, position), velocity,
+                    track.Notes.Add(new MidiNote(track.Channel, SoundKey(tone.Midi + _fileShiftSemitones + _scoreTransposeSemitones, position), velocity,
                         onset, length, position, SourceOrdinal: ordinal, Timbre: timbre, Part: part));
             }
             bar.Clear();
@@ -2143,7 +2147,7 @@ public sealed class MidiExporter
         // instrument shift inside, the file's `shift N` outside (FileShift).
         var transpose = PartTranspose.Read(decl, _scoreTransposeDefault, _fileConcert, _fileShift);
         return (transpose is { } t ? PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct) : 0)
-            + PartSoundingShift(partName);
+            + _scoreTransposeSemitones + PartSoundingShift(partName);
     }
 
     /// <summary>The part's octave anchor, resolved the way the page resolves it, so a bare

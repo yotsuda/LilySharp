@@ -47,7 +47,8 @@ namespace LilySharp.Core.Semantics;
 /// "refret" a band takes when it moves a song. A capo is the writer's own choice
 /// (<c>chordDiagrams … capo N</c>; owner's decision 2026-10-17: no automatic capo).
 /// <c>@chord</c> annotations on notes are not moved (they are not moved for a transposing
-/// staff either).
+/// staff either). A score's own <c>transpose</c> moves its rows and what it sounds the same way
+/// (ChordNameCollector.RowInterval, MidiExporter), by its written interval.
 /// </para>
 /// <para>LILYSHARP-OWN: LilyPond has <c>\transpose FROM TO</c> and no number of semitones.</para>
 /// </remarks>

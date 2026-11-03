@@ -49,13 +49,15 @@ public sealed partial class LilyPondExporter
         // The file's `shift N` moves the row too (FileShift.RowDrop); alone, it is spelled as
         // the notes are (FileShift.Interval) rather than by the drop's flat-leaning table.
         int shift = Semantics.FileShift.ReadSemitones(root);
+        (int step, int alt, int oct)? moved = null;
         if (drop == 0 && Semantics.FileShift.Read(root) is { } shifted)
-            return "\\transpose c " + SpellPitch(shifted.step, shifted.alt) + OctaveMarks(shifted.oct) + " ";
-        drop = Semantics.FileShift.RowDrop(drop, shift);
-        if (drop == 0)
-            return "";
-        var (step, alt, oct) = Semantics.PitchTransposer.IntervalFromSemitones(12 - drop);
-        return "\\transpose c " + SpellPitch(step, alt) + OctaveMarks(oct) + " ";
+            moved = shifted;
+        else if (Semantics.FileShift.RowDrop(drop, shift) is var total and not 0)
+            moved = Semantics.PitchTransposer.IntervalFromSemitones(12 - total);
+        // The score's own `transpose` moves the row as it moves the score's notes.
+        if (render.Transpose is { } own)
+            moved = Semantics.PitchTransposer.NullIfIdentity(Semantics.PitchTransposer.Compose(moved, Semantics.PartTranspose.ReadProperty(own)));
+        return moved is { } m ? "\\transpose c " + SpellPitch(m.step, m.alt) + OctaveMarks(m.oct) + " " : "";
     }
 
     private void EmitScore(RenderDeclarationSyntax? render, List<PartDeclarationSyntax> parts,

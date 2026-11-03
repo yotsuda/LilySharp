@@ -89,6 +89,11 @@ internal sealed class ChordNameCollector
     /// (<see cref="DiagramOf"/>).</summary>
     public int RowShift { get; set; }
 
+    /// <summary>The c→target interval of the score's own <c>transpose</c>, or null: the row's names
+    /// move by it as the score's notes do (owner's report 2026-11-03). Set with <see cref="RowShift"/>,
+    /// which carries its semitones for the diagrams.</summary>
+    public (int Step, int Alter)? RowInterval { get; set; }
+
     /// <summary>
     /// True while a row is collected that the SAME track on the SAME tuning is placed AGAIN
     /// below (<c>chords prog</c> over <c>chords prog as roman</c>): its entries draw no
@@ -873,11 +878,26 @@ internal sealed class ChordNameCollector
         // the MIDI, the hover and the diagrams read what sounds.
         return StructureOf(symbol, tonicStep, sharps) is { } typed
                && Semantics.ChordTrackPitch.Sounding(typed, symbol, RowTypedDrop, sharps) is var structure
-            ? (RowNameDrop == 0 ? structure.PrintedSymbol(Spelling, sharps)
-                : structure.Pressed(RowNameDrop, sharps).PrintedSymbol(Spelling,
-                    LilySharp.Core.Music.ChordStructure.PressedKeySharps(sharps, RowNameDrop)), structure)
+            ? (Printed(structure, sharps), structure)
             // Unparseable root — show the raw run with no structure at all.
             : (LilySharp.Core.Music.ChordSymbolText.Flat(symbol), null);
+    }
+
+    /// <summary>The name a chord prints on this row: pressed down to its reader's letters, then moved
+    /// by the score's own <c>transpose</c>, each in the key it comes to.</summary>
+    private LilySharp.Core.Music.ChordSymbolText Printed(LilySharp.Core.Music.ChordStructure chord, int sharps)
+    {
+        if (RowNameDrop != 0)
+        {
+            chord = chord.Pressed(RowNameDrop, sharps);
+            sharps = LilySharp.Core.Music.ChordStructure.PressedKeySharps(sharps, RowNameDrop);
+        }
+        if (RowInterval is { } moved)
+        {
+            chord = chord.TransposedBy(moved.Step, moved.Alter);
+            sharps += Semantics.PitchTransposer.KeySignatureFifthsShift(moved.Step, moved.Alter);
+        }
+        return chord.PrintedSymbol(Spelling, sharps);
     }
 
     /// <summary>
