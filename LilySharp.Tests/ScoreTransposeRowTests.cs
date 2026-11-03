@@ -242,6 +242,23 @@ public class ScoreTransposeRowTests
         Assert.DoesNotContain("\"x;3;2;o;1;o;\"", moved);
     }
 
+    /// <summary>On the page as in the twin.</summary>
+    [Fact]
+    public void ThePage_DrawsTheMovedChordsUsualShape()
+    {
+        string?[] Frames(string book, string? score)
+        {
+            var tree = SyntaxTree.Parse(book);
+            return [.. SvgGenerator.CollectScore(tree, Spec(tree, score)).Articulations
+                .Where(a => a.Type == LilySharp.Core.Syntax.ArticulationType.FretFrame).Select(a => a.FrameSpec)];
+        }
+        string book = Marked("d'4@chord(C x32010) f a d |", header: "tuning guitar");
+        Assert.Equal(["x32010"], Frames(book, null));
+        var moved = Assert.Single(Frames(book, "moved"));
+        Assert.NotEqual("x32010", moved);
+        Assert.Empty(Frames(Marked("d'4@chord(Dm7) f a d |", header: "tuning guitar"), "moved"));
+    }
+
     [Fact]
     public void AnAtChordNamedAlone_StillDrawsNothing()
         => Assert.DoesNotContain("\\fret-diagram-terse", Twin(Marked("d'4@chord(Dm7) f a d |", header: "tuning guitar")));
