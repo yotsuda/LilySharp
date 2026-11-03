@@ -1769,8 +1769,9 @@ ScoreDecl      = 'score' , [ Identifier ] , { ScoreOption } , '{' , { ScoreItem 
 ScoreOption    = 'transpose' , PitchToken       (* this score's transpose, composed on each part's own; it moves
                                                    the score's chord rows, its '@chord's and all it sounds too,
                                                    name by name as the notes, and a written shape draws the moved
-                                                   chord's usual shape (owner's decisions 2026-11-03). A shape with
-                                                   no name to move ('diagram(…)' alone, '@diagram') stays *)
+                                                   chord's usual shape, a named 'diagram(…)' item's too (owner's
+                                                   decisions 2026-11-03). A shape with no name to move
+                                                   ('diagram(x32010)', '@diagram') stays *)
                | 'pitch' , PagePitchMode ;      (* how THIS score's page reads: 'concert' shows every
                                                    chromatically transposing part at what it sounds (the
                                                    conductor's score), 'transposed' as its player reads it

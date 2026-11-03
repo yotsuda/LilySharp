@@ -535,6 +535,15 @@ public static partial class NoteStepper
                 stepped.Add(t);
                 continue;
             }
+            if (!semitone && t.Kind == TargetKind.Voicing && t.Node is ChordSyntax { IsShapeChord: true } nameless
+                && Music.ShapeChords.Words(nameless).Symbol == null)
+            {
+                // An item with no name has no chord to walk from, and the octave pair is the walk:
+                // it moves nothing (owner's decision 2026-11-03). The semitone pair steps its shape.
+                message ??= "this shape has no chord name to walk the key's seventh chords from - Ctrl+Shift+Up / Down step its shape.";
+                stepped.Add(t);
+                continue;
+            }
             if (!semitone && t.Kind == TargetKind.Voicing && t.Node is ChordSyntax { IsShapeChord: true } shapeItem
                 && Music.ShapeChords.Words(shapeItem) is { Symbol: { } itemSymbol })
             {

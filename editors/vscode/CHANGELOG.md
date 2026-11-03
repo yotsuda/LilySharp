@@ -4,8 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **A score's own `transpose` moves all of it**: `score x transpose d` moved its notes and key while its chord names, `@chord`s and sound stayed, and the MusicXML export moved nothing. The LilyPond export's chord names too.
-- **`Ctrl+Shift+PageUp` / `PageDown` on a named `@chord(…)` or `diagram(…)` walks the seventh chords of the key**, as on a `chords` row entry: in C major `@chord(Cmaj7)` → `@chord(Dm7)`, and a named `diagram(…)` or `chord(…)` item the same.
+- **A score's own `transpose` moves all of it**: `score x transpose d` moved its notes and key while its chord names, `@chord`s and sound stayed, and the MusicXML export moved nothing. A named `diagram(…)` item draws the moved chord. The LilyPond export's chord names too.
+- **`Ctrl+Shift+PageUp` / `PageDown` on a named `@chord(…)` or `diagram(…)` walks the seventh chords of the key**, as on a `chords` row entry: in C major `@chord(Cmaj7)` → `@chord(Dm7)`, and a named `diagram(…)` or `chord(…)` item the same; an item with no name moves nothing on this pair.
 - **A click on a chord's note goes to that note**: the upper half of a lower note used to go to the note above it.
 - **The Range and practice panels come to the front when clicked or opened**: the practice menu always stood in front.
 - **The practice menu stays open beside the score**, as the Range panel does: its × and its button close it, no longer a click outside or Esc.

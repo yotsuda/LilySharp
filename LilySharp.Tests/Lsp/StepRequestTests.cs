@@ -427,7 +427,8 @@ public class StepRequestTests
 
     /// <summary>The same walk on a named diagram(…) or chord(…) item (owner's request 2026-11-03):
     /// its shape goes with the old chord, its length and marks stay. A shape alone has no name to
-    /// walk from, and an @diagram takes a shape alone: their octave pairs are as they were.</summary>
+    /// walk from: nothing moves (owner's decision the same day). An @diagram takes a shape alone, and
+    /// its octave pair is its placement.</summary>
     [Theory]
     [InlineData("diagram(Cmaj7‸)1 |", +1, "diagram(Dm7)1 |")]
     [InlineData("diagram(‸Cmaj7 x32000)1 |", +1, "diagram(Dm7)1 |")]
@@ -462,12 +463,20 @@ public class StepRequestTests
     }
 
     [Fact]
-    public void WhatHasNoName_KeepsItsOctavePair_AndTheSemitonePairTheShape()
+    public void WhatHasNoName_MovesNothingOnTheOctavePair_AndTheSemitonePairTheShape()
     {
         string Book(string m) => "key c major\npart gt { tuning guitar }\nsection A { gt { " + m + " } }\nform { A }\nscore { staff gt }\n";
-        var (_, shapeAlone) = Step(Book("diagram(x32‸010)1 |"), +1);
-        Assert.DoesNotContain("Dm7", shapeAlone);
-        Assert.NotEqual(Book("diagram(x32010)1 |"), shapeAlone);
+        // A shape alone: nothing moves, and it says why.
+        foreach (string item in new[] { "diagram(x32‸010)1 |", "diag‸ram(x32010)1 |", "chord(x32‸010)1 |", "diagram(x32010)1@chord‸ |" })
+            foreach (int direction in new[] { +1, -1 })
+            {
+                var (said, same) = Step(Book(item), direction);
+                Assert.False(said.Fallback);
+                Assert.Equal(Book(item.Replace("‸", "")), same);
+                Assert.Contains("no chord name", said.Message);
+            }
+        // Its shape is the semitone pair's.
+        Assert.NotEqual(Book("diagram(x32010)1 |"), Step(Book("diagram(x32‸010)1 |"), +1, semitone: true).After);
         // An @diagram: its placement.
         Assert.Equal(Book("c'1@diagram(133211).up |"), Step(Book("c'1@diagram(133‸211) |"), +1).After);
         // Up / Down on a named item: its shape.

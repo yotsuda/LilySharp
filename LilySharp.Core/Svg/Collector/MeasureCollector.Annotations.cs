@@ -326,6 +326,19 @@ public sealed partial class MeasureCollector
         }
     }
 
+    /// <summary>The shape a <c>diagram(…)</c> item draws. Under a score's own <c>transpose</c> a named
+    /// item draws the moved chord's usual shape (owner's decision 2026-11-03: as an <c>@chord</c>
+    /// does); a shape with no name has no chord to move, and stays.</summary>
+    private string? ItemDiagramShape(ChordSyntax chord)
+    {
+        var words = Music.ShapeChords.Words(chord);
+        var tuning = _partFrettedTuning ?? TuningType.Guitar;
+        return Semantics.PitchTransposer.ChordMoveOf(ScoreTranspose) is { } move && words.Structure is { } named
+            ? words.DrawnMoved(tuning, all: true, named.TransposedBy(move.Step, move.Alter), capo: _chordSpelling.Capo) is { } drawn
+                ? Music.ChordVoicings.Spell(drawn.Frets) : null
+            : Music.ShapeChords.ShapeFor(words, tuning, _chordSpelling.Capo);
+    }
+
     /// <summary>Whether <paramref name="host"/> — the note, chord or rest an <c>@diagram</c> is on —
     /// prints a chord name too: an <c>@chord</c> on it, or a <c>chord(…)</c> item.</summary>
     private static bool PrintsAName(SyntaxNode? host)
@@ -820,7 +833,7 @@ public sealed partial class MeasureCollector
                     // Spread in a << >> group (ArpeggioSpread, lowest first): once, over its first note.
                     && IsFirstSpreadNote(chord)
                     && Semantics.ChordDiagramsKey.Resolve(_chordDiagramScope, _chordTuningWord, _partFrettedTuning) is not null
-                    && Music.ShapeChords.ShapeFor(Music.ShapeChords.Words(chord), _partFrettedTuning ?? TuningType.Guitar, _chordSpelling.Capo) is { } shape
+                    && ItemDiagramShape(chord) is { } shape
                     && Music.ChordShapes.TryRead(shape, out var shapeFrets, out _))
                     _articulations.Add(new ArticulationItem(
                         ArticulationType.FretFrame, measureIndex, itemIndex, true, chord.SourceStart, _v.Cursor.StaffIndex)

@@ -259,6 +259,41 @@ public class ScoreTransposeRowTests
         Assert.Empty(Frames(Marked("d'4@chord(Dm7) f a d |", header: "tuning guitar"), "moved"));
     }
 
+    /// <summary>A named diagram(…) item draws as an @chord does (owner's decision 2026-11-03); one with
+    /// no name has no chord to move, and stays as written.</summary>
+    [Theory]
+    [InlineData("diagram(C x32010)1 |", "x32010", true)]
+    [InlineData("diagram(C)1 |", "x32010", true)]
+    [InlineData("diagram(x32010)1 |", "x32010", false)]
+    public void AShapeItem_DrawsTheMovedChord_IfItHasAName(string music, string written, bool moves)
+    {
+        string?[] Frames(string book, string? score)
+        {
+            var tree = SyntaxTree.Parse(book);
+            return [.. SvgGenerator.CollectScore(tree, Spec(tree, score)).Articulations
+                .Where(a => a.Type == ArticulationType.FretFrame).Select(a => a.FrameSpec)];
+        }
+        string book = Marked(music, header: "tuning guitar");
+        Assert.Equal([written], Frames(book, null));
+        var moved = Assert.Single(Frames(book, "moved"));
+        Assert.Equal(moves, moved != written);
+        if (moves)
+        {
+            // The usual D shape, on the page and in the twin.
+            Assert.Equal("xxo232".Replace("o", "0"), moved?.Replace("o", "0"));
+            Assert.Contains("\"x;x;o;2;3;2;\"", Twin(book));
+        }
+    }
+
+    [Fact]
+    public void ANamedDiagram_ThatTheScoreDoesNotMove_DrawsAsWritten()
+    {
+        string book = Marked("diagram(C 032010)1 |", "transpose c'", header: "tuning guitar");
+        var tree = SyntaxTree.Parse(book);
+        Assert.Equal(["032010"], SvgGenerator.CollectScore(tree, Spec(tree, "moved")).Articulations
+            .Where(a => a.Type == ArticulationType.FretFrame).Select(a => a.FrameSpec));
+    }
+
     [Fact]
     public void AnAtChordNamedAlone_StillDrawsNothing()
         => Assert.DoesNotContain("\\fret-diagram-terse", Twin(Marked("d'4@chord(Dm7) f a d |", header: "tuning guitar")));
