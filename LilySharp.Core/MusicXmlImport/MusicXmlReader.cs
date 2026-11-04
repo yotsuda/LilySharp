@@ -860,11 +860,12 @@ internal static class MusicXmlReader
                 if (OrnamentMark(o.Name.LocalName) is { } mark && !note.Articulations.Contains(mark))
                     note.Articulations.Add(mark);
                 // A single-note tremolo (<tremolo type="single">N</tremolo>): N beams
-                // print as a :value slash (1 beam = :8, 2 = :16, 3 = :32).
+                // print as a :value slash (1 beam = :8, 2 = :16, 3 = :32), on top of the note's
+                // own beams: one mark on an eighth is :16, where it read :8, shorter than nothing.
                 if (o.Name.LocalName == "tremolo"
                     && (string?)o.Attribute("type") is null or "single"
                     && int.TryParse(o.Value, out int beams) && beams is >= 1 and <= 3)
-                    note.TremoloMarks = 4 << beams;
+                    note.TremoloMarks = Math.Max(4, note.NoteValue) << beams;
                 if (o.Name.LocalName == "tremolo" && (string?)o.Attribute("type") == "start"
                     && int.TryParse(o.Value, out int pairBeams) && pairBeams is >= 1 and <= 4)
                     note.TremoloPairBeams = pairBeams;

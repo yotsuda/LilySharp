@@ -380,6 +380,125 @@ public class MusicXmlCrossStaffTests
             Assert.DoesNotContain(" pedal ", lys);
     }
 
+    private static string TremoloBook(string music, string header = "") => $$"""
+        octave absolute
+        time 6/8
+        part m { clef treble {{header}}}
+        section A { m { {{music}} } }
+        form { ~A }
+        score { staff m }
+        """;
+
+    private static XElement[] Exported(string book) =>
+        new MusicXmlExporter().Export(SyntaxTree.Parse(book)).ToXml().Descendants("note").ToArray();
+
+    private static string Tremolo(XElement note) => note.Descendants("tremolo").Select(t =>
+        t.Attribute("type")!.Value + ":" + t.Value).SingleOrDefault() ?? "";
+
+    [Theory]
+    // Mid-bar and opening a bar, a chord in the pair, a span that crosses into the next bar's notes.
+    [InlineData("repeat tremolo 6 { c''16 f'16 } |", "half", true, 36, "start:2", "stop:2", 2)]
+    [InlineData("repeat tremolo 3 { c''8 f'8 } |", "half", true, 36, "start:1", "stop:1", 2)]
+    [InlineData("c''4. repeat tremolo 3 { g'16 b'16 } |", "quarter", true, 18, "start:2", "stop:2", 3)]
+    public void ATremoloPairIsWrittenOnce(string music, string type, bool dot, int duration, string first, string second, int notes)
+    {
+        var all = Exported(TremoloBook(music));
+        Assert.Equal(notes, all.Length);
+        var a = all[^2];
+        var b = all[^1];
+        Assert.Equal(type, a.Element("type")!.Value);
+        Assert.Equal(dot, a.Element("dot") != null);
+        Assert.Equal(duration, int.Parse(a.Element("duration")!.Value));
+        Assert.Equal(first, Tremolo(a));
+        Assert.Equal(second, Tremolo(b));
+        Assert.Equal("2", a.Element("time-modification")!.Element("actual-notes")!.Value);
+    }
+
+    [Theory]
+    [InlineData("repeat tremolo 6 { c''16 f'16 } |")]
+    [InlineData("repeat tremolo 3 { <c'' e''>8 f'8 } |")]
+    [InlineData("c''4. repeat tremolo 3 { g'16 b'16 } |")]
+    [InlineData("repeat tremolo 12 { c''16 } |")]
+    public void ATremoloComesBackAsWritten(string music)
+    {
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(TremoloBook(music))).ToXml().ToString();
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+        if (music.Contains("{ c''16 }"))
+            Assert.Contains("c''2.:16 |", lys);   // the one note's spelling of the same thing
+        else
+            Assert.Contains(music, lys);
+    }
+
+    [Fact]
+    public void ATremoloOpeningALaterBarIsWrittenOnce()
+    {
+        var all = Exported(TremoloBook("c''2. | repeat tremolo 6 { c''16 f'16 } | d''2. |"));
+        Assert.Equal(4, all.Length);
+        Assert.Equal("start:2", Tremolo(all[1]));
+        Assert.Equal("stop:2", Tremolo(all[2]));
+    }
+
+    [Fact]
+    public void AOneNoteTremoloOnAShortSpanCountsOnlyWhatItAdds()
+    {
+        // An eighth's span in 32nds: three beams, one of them the eighth's own.
+        var all = Exported(TremoloBook("repeat tremolo 4 { c''32 } r8 r2 |"));
+        Assert.Equal("single:2", Tremolo(all[0]));
+    }
+
+    [Fact]
+    public void AChordInATremoloPairMovesWhole()
+    {
+        var all = Exported(TremoloBook("repeat tremolo 3 { <c'' e''>8 f'8 } |"));
+        Assert.Equal(3, all.Length);
+        Assert.Equal(36, int.Parse(all[1].Element("duration")!.Value));   // the member too
+        Assert.Equal("half", all[1].Element("type")!.Value);
+    }
+
+    [Fact]
+    public void ATieIntoATremoloStaysAndATieOutOfItStays()
+    {
+        var all = Exported(TremoloBook("c''4.~ repeat tremolo 3 { c''16 b'16~ } | b'2. |"));
+        Assert.Contains(all[1].Elements("tie"), t => t.Attribute("type")!.Value == "stop");
+        Assert.Contains(all[2].Elements("tie"), t => t.Attribute("type")!.Value == "start");
+        Assert.Contains(all[3].Elements("tie"), t => t.Attribute("type")!.Value == "stop");
+    }
+
+    [Theory]
+    [InlineData("c''2.:16 |", "single:2")]
+    [InlineData("c''2.:8 |", "single:1")]
+    [InlineData("c''8:16 r8 r4. |", "single:1")]   // the note's own beam is not a mark
+    [InlineData("<c'' e''>2.:16 |", "single:2")]
+    public void AStemTremoloIsWrittenAndComesBack(string music, string expected)
+    {
+        var all = Exported(TremoloBook(music));
+        Assert.Equal(expected, Tremolo(all[0]));
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(TremoloBook(music))).ToXml().ToString();
+        Assert.Contains(music.Split(' ')[0], new MusicXmlImporter().Import(xml).Item1);
+    }
+
+    [Theory]
+    [InlineData("", "yes", "no")]              // Lily#'s default, a bracket
+    [InlineData("pedal bracket ", "yes", "no")]
+    [InlineData("pedal text ", "no", "yes")]
+    [InlineData("pedal mixed ", "yes", "yes")]
+    public void APedalSaysHowItIsDrawn(string header, string line, string sign)
+    {
+        string book = TremoloBook("c''2.@sustain | d''2.@!sustain |", header);
+        var pedals = new MusicXmlExporter().Export(SyntaxTree.Parse(book)).ToXml().Descendants("pedal").ToArray();
+        Assert.Equal(2, pedals.Length);
+        Assert.All(pedals, p =>
+        {
+            Assert.Equal(line, p.Attribute("line")!.Value);
+            Assert.Equal(sign, p.Attribute("sign")!.Value);
+        });
+        if (header.Length > 0)
+        {
+            string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(book)).ToXml().ToString();
+            Assert.Contains($"clef treble {header.TrimEnd()}", new MusicXmlImporter().Import(xml).Item1);
+        }
+    }
+
     [Fact]
     public void ASpanTheValueCannotDivideKeepsItsNotes()
     {

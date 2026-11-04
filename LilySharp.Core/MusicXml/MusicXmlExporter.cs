@@ -46,6 +46,7 @@ public sealed class MusicXmlExporter
     // ApplyPartHeader. ⚠️ _octaveAnchor above is the ABSOLUTE-mode base and is a DIFFERENT
     // rule — only an explicit `octave N` moves it.
     private int _partAnchorOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
+    private string _partPedalStyle = "bracket";
     private int _partTransposeSemitones;
     // …and the share of it the document's <transpose> states: the instrument's alone, the
     // header clef's octave being in the pitches (MusicXmlPart.PitchOctaveShift).
@@ -2839,6 +2840,8 @@ public sealed class MusicXmlExporter
                     // MEASURED 2026-08-17 on `repeat tremolo 32 { g''64 a }`, whose page is one
                     // G5-A5 pair, the export ran G5 A5 G7 A7 G9 ... up to OCTAVE 67.
                     var frame = (_currentOctave, _currentStep, _defaultDuration);
+                    var tremoloMeasure = _currentMeasure;
+                    int tremoloFrom = _currentMeasure?.Notes.Count ?? 0;
                     for (int rep = 0; rep < repCount; rep++)
                     {
                         if (rep > 0)
@@ -2846,6 +2849,8 @@ public sealed class MusicXmlExporter
                         ProcessNode(repeat.Body);
                         CloseFullBarAtPassEnd();
                     }
+                    if (repeat.RepeatType.Text == "tremolo")
+                        WriteTremoloOnce(tremoloMeasure, tremoloFrom, repCount);
                 }
                 break;
 
@@ -3246,6 +3251,17 @@ public sealed class MusicXmlExporter
         if (header.ClefWord != null)
             SetClef(header.ClefWord);
 
+        // How this part's pedal marks are drawn, as the page reads it (Staff.ParsePedalStyle).
+        _partPedalStyle = Svg.Model.Staff.ParsePedalStyle(_root?.DescendantNodes().OfType<PartDeclarationSyntax>()
+                .FirstOrDefault(pd => pd.Name.Text == partName)?.Properties
+                .FirstOrDefault(p => p.NameToken.Text.Equals("pedal", StringComparison.OrdinalIgnoreCase))
+                ?.Values.OfType<SyntaxTokenNode>().FirstOrDefault()?.Text.ToLowerInvariant()) switch
+        {
+            Svg.Model.PedalStyle.Text => "text",
+            Svg.Model.PedalStyle.Mixed => "mixed",
+            _ => "bracket",
+        };
+
         _partAnchorOctave = header.AnchorOctave;
         _octaveAnchor = header.AbsoluteBaseOctave;
         // The strings a symbol-less @chord(x32010) is named on (the page's reading, the same header).
@@ -3512,6 +3528,7 @@ public sealed class MusicXmlExporter
             NormalNotes = tupletNormal
         };
 
+        WriteStemTremolo(note.Tremolo, xmlNote);
         // Process articulations and slurs
         ProcessArticulations(note.Articulations, xmlNote, host: note.SourceStart);
 
@@ -4367,6 +4384,7 @@ public sealed class MusicXmlExporter
             // Add articulations + tie pairing only on the first note of the chord.
             if (isFirst)
             {
+                WriteStemTremolo(chord.Tremolo, xmlNote);
                 bool hasArp = chord.Articulations.Any(a2 =>
                     a2 is ArticulationSyntax { Type: ArticulationType.None } na
                     && na.NameToken.Text.Equals("arpeggio", StringComparison.Ordinal));
@@ -5472,6 +5490,91 @@ public sealed class MusicXmlExporter
     private int _markedNoteLength;
 
     /// <summary>
+    /// Folds the passes of a <c>repeat tremolo</c> into what MusicXML writes for it: the body once,
+    /// each note with its share of the span and the whole span's <c>&lt;type&gt;</c>, a pair under
+    /// <c>&lt;time-modification&gt;</c> 2:1 and <c>&lt;tremolo type="start|stop"&gt;</c>, one note
+    /// under <c>type="single"</c>. The clock is unchanged. The sound-only spelling stays where the
+    /// form is not one of these: a span crossing a bar, a span no single value spells, a body of
+    /// more than two notes or holding anything but notes.
+    /// </summary>
+    /// <remarks>The last pass is the one kept, because a <c>~</c> in the body is open on it; a tie
+    /// INTO the tremolo stands on the first pass, so it is carried across.</remarks>
+    private static void WriteTremoloOnce(MusicXmlMeasure? measure, int from, int passes)
+    {
+        if (measure == null)
+            return;
+        var range = measure.Notes.Skip(from).ToList();
+        if (passes < 1 || range.Any(n => n.RawElement != null || n.IsBackup || n.IsGrace
+                || n.ActualNotes != null || n.Dots != 0))
+            return;
+        var heads = range.Where(n => !n.IsChord).ToList();
+        int bodyHeads = heads.Count / passes;
+        if (bodyHeads is not (1 or 2) || heads.Count != bodyHeads * passes)
+            return;
+        (string Type, int Dots)? spanType = heads.Sum(n => n.Duration) switch
+        {
+            144 => ("whole", 1),
+            96 => ("whole", 0),
+            72 => ("half", 1),
+            48 => ("half", 0),
+            36 => ("quarter", 1),
+            24 => ("quarter", 0),
+            18 => ("eighth", 1),
+            12 => ("eighth", 0),
+            _ => null,
+        };
+        int span = heads.Sum(n => n.Duration);
+        int beams = BeamsOf(heads[0].Type);
+        if (spanType is not { } written || beams == 0)
+            return;
+        var kept = heads.Skip(heads.Count - bodyHeads).ToList();
+        kept[0].TieStop |= heads[0].TieStop;
+        measure.Notes.RemoveRange(from, measure.Notes.IndexOf(kept[0]) - from);
+        for (int h = 0; h < bodyHeads; h++)
+        {
+            int at = measure.Notes.IndexOf(kept[h]);
+            for (int i = at; i < measure.Notes.Count && (i == at || measure.Notes[i].IsChord); i++)
+            {
+                var note = measure.Notes[i];
+                note.Duration = span / bodyHeads;
+                note.Type = written.Type;
+                note.Dots = written.Dots;
+                note.Beams.Clear();
+                if (bodyHeads == 2)
+                {
+                    note.ActualNotes = 2;
+                    note.NormalNotes = 1;
+                }
+            }
+            kept[h].Tremolo = (bodyHeads == 1 ? "single" : h == 0 ? "start" : "stop",
+                bodyHeads == 1 ? beams - BeamsOf(written.Type) : beams);
+        }
+    }
+
+    /// <summary>A value's beams (<c>16th</c> = 2), 0 for a quarter or longer.</summary>
+    private static int BeamsOf(string? type) => type switch
+    {
+        "eighth" => 1,
+        "16th" => 2,
+        "32nd" => 3,
+        "64th" => 4,
+        "128th" => 5,
+        _ => 0,
+    };
+
+    /// <summary>A stem tremolo (<c>c2:16</c>): as many marks as it adds to the note's own beams.</summary>
+    private static void WriteStemTremolo(SyntaxTokenNode? tremolo, MusicXmlNote note)
+    {
+        if (tremolo != null && int.TryParse(tremolo.Text.TrimStart(':'), out int value) && value >= 8)
+        {
+            int beams = System.Numerics.BitOperations.Log2((uint)value) - 2;
+            int marks = beams - BeamsOf(note.Type);
+            if (marks > 0)
+                note.Tremolo = ("single", marks);
+        }
+    }
+
+    /// <summary>
     /// Adds a direction to the current measure at the position the stream has reached — the
     /// onset of the note about to be written, since a note's marks are read before it is
     /// added (<see cref="ProcessArticulations"/> precedes every <c>Notes.Add</c>). The measure
@@ -5484,6 +5587,8 @@ public sealed class MusicXmlExporter
         if (_currentMeasure == null)
             return;
         direction.Offset = CurrentMeasurePosition(_currentMeasure);
+        if (direction.PedalType != null)
+            direction.PedalStyle = _partPedalStyle;
         _currentMeasure.Directions.Add(direction);
     }
 

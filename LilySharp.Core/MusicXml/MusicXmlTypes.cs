@@ -711,6 +711,9 @@ internal sealed class MusicXmlDirection
     public bool WedgeNiente { get; set; }
     /// <summary>Pedal mark: "start" / "stop" / "sostenuto".</summary>
     public string? PedalType { get; set; }
+    /// <summary>The part's <c>pedal</c> style (<c>text</c>, <c>mixed</c>, <c>bracket</c>): the mark's
+    /// <c>line</c> and <c>sign</c>, which MusicXML says on every &lt;pedal&gt;.</summary>
+    public string? PedalStyle { get; set; }
     /// <summary>Ottava line: "down" (8va) / "up" (8vb) / "stop".</summary>
     public string? OctaveShiftType { get; set; }
     /// <summary>The octave line's size: 8 for an ottava, 15 for a quindicesima (2026-09-29;
@@ -766,7 +769,9 @@ internal sealed class MusicXmlDirection
 
         if (PedalType != null)
             direction.Add(new XElement("direction-type",
-                new XElement("pedal", new XAttribute("type", PedalType))));
+                new XElement("pedal", new XAttribute("type", PedalType),
+                    PedalStyle is null ? null : new XAttribute("line", PedalStyle == "text" ? "no" : "yes"),
+                    PedalStyle is null ? null : new XAttribute("sign", PedalStyle == "bracket" ? "no" : "yes"))));
 
         if (OctaveShiftType != null)
         {
@@ -915,6 +920,10 @@ internal sealed class MusicXmlNote
     /// <summary>The staff of a multi-staff part this note is on (<c>&lt;staff&gt;</c>), or null
     /// on a one-staff part.</summary>
     public int? Staff { get; set; }
+
+    /// <summary>The note's &lt;tremolo&gt;: its type (<c>single</c>, <c>start</c>, <c>stop</c>) and
+    /// its number of marks; null without one.</summary>
+    public (string Type, int Marks)? Tremolo { get; set; }
 
     /// <summary>The note wrote <c>@cross</c>: where its part's two staves are merged into one
     /// part it stands on the other staff (a chord's head answers for its members).</summary>
@@ -1072,7 +1081,8 @@ internal sealed class MusicXmlNote
         var extraNotations = tabCopy ? new List<XElement>() : ExtraNotations;
 
         // Notations (articulations, ornaments, ties, slurs)
-        var hasNotations = articulations.Count > 0 || ornaments.Count > 0 ||
+        var tremolo = tabCopy ? null : Tremolo;
+        var hasNotations = articulations.Count > 0 || ornaments.Count > 0 || tremolo != null ||
                           technicals.Count > 0 || extraNotations.Count > 0 ||
                           TieStart || TieStop || slurStart || slurStop;
 
@@ -1102,11 +1112,13 @@ internal sealed class MusicXmlNote
             }
 
             // Ornaments
-            if (ornaments.Count > 0)
+            if (ornaments.Count > 0 || tremolo != null)
             {
                 var orns = new XElement("ornaments");
                 foreach (var o in ornaments)
                     orns.Add(new XElement(o));
+                if (tremolo is { } t)
+                    orns.Add(new XElement("tremolo", new XAttribute("type", t.Type), t.Marks));
                 notations.Add(orns);
             }
 
