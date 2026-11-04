@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **`lysc xml` writes a clef where it stands in the bar.** A clef after the bar's first notes waited for the next bar's head; it is now an `<attributes>` at its moment in the note stream, with its staff's `number` on a grand staff or beside a tab.
 - `[engraving]` **A clef is the staff's, whichever voice writes it.** A `clef` in `voice { } { }` moved only the voice that wrote it, and one inside `tuplet { }` was dropped, with the notes after it in the old clef. It now holds for every voice from its moment, is drawn there with its room paid for, and opens the next line. A `key` a lower voice writes at a bar head now governs the upper voice's note there too.
 - `[engraving]` **`@sfp`, as in LilyPond.** `sf` and `p` side by side could not be written: a note prints one dynamic, so one was lost. `lysc import` now joins `sf`+`p` into `@sfp` and `f`+`p` into `@fp`, and a source's own `<sfp/>` comes through. In the LilyPond and MusicXML exports too; `Ctrl+Shift+Up` / `Down` steps it among the accents, after `@fp`.
 - **`partial 8*5`, as in LilyPond.** A pickup no one note value spells (five eighths) can be declared, and `lysc import` writes it, where such a bar came back bare with a warning.

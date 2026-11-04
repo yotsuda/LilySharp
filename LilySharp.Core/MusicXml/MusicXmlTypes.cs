@@ -361,10 +361,20 @@ internal sealed class MusicXmlMeasure
 
         var tabBeams = tab != null ? TabBeams() : null;
         foreach (var note in Notes)
+        {
+            // A clef written in the note stream: a TAB-only staff draws no notation clef (as the
+            // attributes above), and beside a tab staff it is staff 1's.
+            if (tab != null && note.RawElement?.Element("clef") is { } midBarClef)
+            {
+                if (!tab.WithNotation)
+                    continue;
+                midBarClef.SetAttributeValue("number", 1);
+            }
             measure.Add(tab is { WithNotation: false } && note.IsPitchlessOnTab
                 ? note.TabGap(staff: null, voice: note.Voice)
                 : note.ToXml(staff: tab?.WithNotation == true ? 1 : null, tabStaff: tab is { WithNotation: false },
                     beams: tab is { WithNotation: false } ? tabBeams!.GetValueOrDefault(note) : null));
+        }
 
         // The tablature beside a notation staff: back to the bar's start and the same notes
         // again on staff 2, with their strings and frets (directions and harmonies stay on

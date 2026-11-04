@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Xml.Linq;
 using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
@@ -600,6 +601,8 @@ public sealed class MusicXmlExporter
             {
                 var u = upper.Measures[i];
                 var l = lower.Measures[i];
+                NumberMidBarClefs(u, 1);
+                NumberMidBarClefs(l, 2);
                 bool headCrosses = false;
                 foreach (var n in u.Notes)
                     if (n.RawElement == null && !n.IsBackup)
@@ -3231,8 +3234,44 @@ public sealed class MusicXmlExporter
         // ⚠️ Only the IN-MUSIC clef syncs. A header clef reaches the document through the
         // part's opening attributes, and syncing there would write a change on the bar a
         // second part happens to be starting.
+        if (_currentMeasure is { Notes.Count: > 0 } && _currentPart != null)
+        {
+            WriteClefHere();
+            return;
+        }
         _attributesDirty = true;
         SyncAttributes();
+    }
+
+    /// <summary>A clef written after the bar's first notes stands where it was written: an
+    /// <c>&lt;attributes&gt;</c> in the note stream, as a reader takes it, at its voice's moment.
+    /// A restatement that changes nothing writes nothing, as the page draws nothing. Until
+    /// 2026-11-04 it waited for the next bar's head (<see cref="SyncAttributes"/>'s remark, which
+    /// still holds for a key and a meter). The staff's <c>number</c> is added where a part turns
+    /// out to have two (<see cref="MergeGrandStaves"/>, the tab's measure writer).</summary>
+    private void WriteClefHere()
+    {
+        var clef = (_clefSign, _clefLine, _clefOctaveChange);
+        bool changed = _forcedClef || _writtenClef is null || !_writtenClef.Value.Equals(clef);
+        _forcedClef = false;
+        if (!changed)
+            return;
+        _writtenClef = clef;
+        _currentMeasure!.Notes.Add(new MusicXmlNote
+        {
+            RawElement = new XElement("attributes", new XElement("clef",
+                new XElement("sign", _clefSign),
+                _clefLine > 0 ? new XElement("line", _clefLine) : null,
+                _clefOctaveChange is { } octave ? new XElement("clef-octave-change", octave) : null)),
+        });
+    }
+
+    /// <summary>The staff a clef written in the note stream stands on, in a part that has two.</summary>
+    private static void NumberMidBarClefs(MusicXmlMeasure measure, int staff)
+    {
+        foreach (var note in measure.Notes)
+            if (note.RawElement is { Name.LocalName: "attributes" } raw && raw.Element("clef") is { } clef)
+                clef.SetAttributeValue("number", staff);
     }
 
     private void SetClef(string? clefName)
