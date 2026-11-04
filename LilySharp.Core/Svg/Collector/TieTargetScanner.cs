@@ -157,15 +157,15 @@ internal static class TieTargetScanner
         {
             if (start is ChordItem chord && !chord.Ties(chord.Notes[i]))
                 continue;
-            var (pos, midi) = PitchAt(start, i);
+            var (pos, midi, written) = PitchAt(start, i);
             for (int j = 0, m = PitchCount(end); j < m; j++)
             {
-                var (endPos, endMidi) = PitchAt(end, j);
+                var (endPos, endMidi, endWritten) = PitchAt(end, j);
                 // ONE SPELLING of "the same pitch" with the detector that draws the arc
                 // (TieDetector.SamePitch): until session 797 this compared position and MIDI
                 // itself, and so warned on a tie an ottava bracket's end stands between —
                 // heads the detector ties, an octave of positions apart at one MIDI number.
-                if (TieDetector.SamePitch(pos, midi, endPos, endMidi))
+                if (TieDetector.SamePitch(pos, midi, endPos, endMidi, written, endWritten))
                     return true;
             }
         }
@@ -194,11 +194,11 @@ internal static class TieTargetScanner
         _ => 0
     };
 
-    /// <summary>The (staff position, midi) of the i-th pitch an item sounds.</summary>
-    private static (int Pos, int Midi) PitchAt(MusicItem item, int i) => item switch
+    /// <summary>The (staff position, midi, written pitch) of the i-th pitch an item sounds.</summary>
+    private static (int Pos, int Midi, int Written) PitchAt(MusicItem item, int i) => item switch
     {
-        NoteItem n => (n.StaffPosition, n.Midi),
-        ChordItem c => (c.Notes[i].StaffPosition, c.Notes[i].Midi),
+        NoteItem n => (n.StaffPosition, n.Midi, n.WrittenPitch),
+        ChordItem c => (c.Notes[i].StaffPosition, c.Notes[i].Midi, c.Notes[i].WrittenPitch),
         _ => default
     };
 }

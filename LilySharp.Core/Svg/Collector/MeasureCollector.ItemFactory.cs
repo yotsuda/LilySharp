@@ -142,7 +142,7 @@ public sealed partial class MeasureCollector
         string? lineStartAccidental = null;
         if (accidental != null && builder != null
             && !_courtesySourcePositions.Contains(note.SourceStart)
-            && builder.TiesInto(staffPosition, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)))
+            && builder.TiesInto(staffPosition, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave), WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)))
         {
             MarkAccidentalTied(rp.DisplayStep, rp.DisplayOctave);
             lineStartAccidental = accidental;
@@ -620,7 +620,7 @@ public sealed partial class MeasureCollector
             // A tied member keeps its accidental for a line start only (CreateNoteItem).
             string? memberLineStart = null;
             if (accidental != null && !memberCourtesy && builder != null
-                && builder.TiesInto(staffPosition, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)))
+                && builder.TiesInto(staffPosition, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave), WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)))
             {
                 MarkAccidentalTied(rp.DisplayStep, rp.DisplayOctave);
                 memberLineStart = accidental;
@@ -690,7 +690,7 @@ public sealed partial class MeasureCollector
                     GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
                 int midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
                 string? memberLineStart = null;
-                if (accidental != null && builder != null && builder.TiesInto(rp.StaffPosition, midi))
+                if (accidental != null && builder != null && builder.TiesInto(rp.StaffPosition, midi, WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)))
                 {
                     MarkAccidentalTied(rp.DisplayStep, rp.DisplayOctave);
                     memberLineStart = accidental;
@@ -990,7 +990,7 @@ public sealed partial class MeasureCollector
             // `<c e>~ q`: a tied member keeps its accidental for a line start only.
             string? memberLineStart = null;
             if (accidental != null && builder != null && m.Step is { } tiedStep
-                && builder.TiesInto(m.StaffPosition, m.Midi))
+                && builder.TiesInto(m.StaffPosition, m.Midi, WrittenPitch.Pack(tiedStep, m.Alter!.Value, m.Octave!.Value)))
             {
                 MarkAccidentalTied(tiedStep, m.Octave!.Value);
                 memberLineStart = accidental;

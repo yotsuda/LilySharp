@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A tie crosses a clef change**: `c'1~ | clef bass c'1` drew no tie and warned that the pitches differed.
+- **MusicXML import keeps a clef where it stands**: one inside a bar was read at the bar's head, and a change on one staff of a grand staff was lost.
 - **The MusicXML export writes a clef where it stands in the bar**, not at the next bar's head.
 - **A clef is the staff's, whichever voice writes it**: a `clef` in `voice { } { }` moved only its own voice, and one inside `tuplet { }` was dropped.
 - **`@sfp`, as in LilyPond**: completion offers it, and `Ctrl+Shift+Up` / `Down` steps it among the accents, after `@fp`. MusicXML import joins `sf` and `p` set side by side into it.

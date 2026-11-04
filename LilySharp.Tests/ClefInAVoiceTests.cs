@@ -109,6 +109,66 @@ public class ClefInAVoiceTests
             Assert.Equal(Ink(Book(Long(upper, bars))), Ink(Book(Long(lower, bars))));
     }
 
+    private static int Ties(string music)
+    {
+        var tree = SyntaxTree.Parse(Book(music));
+        Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Message.Contains("does not repeat the tied pitch"));
+        return new TieDetector().DetectTies(new MeasureCollector().Collect(tree, "p")).Count();
+    }
+
+    /// <summary>A tie binds pitches, not staff positions: LilyPond draws it over a clef change.</summary>
+    [Theory]
+    [InlineData("c'1~ | clef bass c'1 |")]
+    [InlineData("c'2~ clef bass c'2 |")]
+    [InlineData("voice { c'1~ | c'1 | } { c1 | clef bass c1 | }")]
+    public void ATie_CrossesAClefChange(string music)
+        => Assert.True(Ties(music) >= 1);
+
+    [Fact]
+    public void AChordsTie_CrossesAClefChange()
+        => Assert.Equal(2, Ties("<c' e'>1~ | clef bass <c' e'>1 |"));
+
+    [Fact]
+    public void ANotesTie_ReachesAChordOverAClefChange()
+        => Assert.Equal(1, Ties("c'1~ | clef bass <c' e'>1 |"));
+
+    [Fact]
+    public void AChordsTie_ReachesANoteOverAClefChange()
+        => Assert.Equal(1, Ties("<c' e'>1~ | clef bass c'1 |"));
+
+    /// <summary>Another spelling is still no tie, clef or none.</summary>
+    [Theory]
+    [InlineData("cis'1~ | des'1 |")]
+    [InlineData("cis'1~ | clef bass des'1 |")]
+    public void AnotherSpelling_IsNoTie(string music)
+    {
+        var tree = SyntaxTree.Parse(Book(music));
+        Assert.Contains(SemanticValidation.Run(tree), d => d.Message.Contains("does not repeat the tied pitch"));
+        Assert.Empty(new TieDetector().DetectTies(new MeasureCollector().Collect(tree, "p")));
+    }
+
+    /// <summary>A tied head keeps no accidental over the clef, as under one (LilyPond 2.26.0, Lab
+    /// sessions/p1099/clef/a.ly); the next bar's first head has one.</summary>
+    [Fact]
+    public void ATiedAccidental_IsNotRepeated_OverAClefChange()
+    {
+        var heads = Staff("cis'1~ | clef bass cis'1 | cis'1 |").PrimaryVoice.Measures.SelectMany(m => m.Items).OfType<NoteItem>().ToList();
+        Assert.Equal("sharp", heads[0].Accidental);
+        Assert.Null(heads[1].Accidental);
+        Assert.Equal("sharp", heads[2].Accidental);
+    }
+
+    [Fact]
+    public void ATieOverARepeat_InAnotherClef_HangsItsRepeatTie()
+    {
+        var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\npart p { clef treble }\n"
+            + "section A { p { c'1 | } }\nsection B { p { clef bass c'1~ | } }\nform { |: A B :| }\nscore { staff p }\n");
+        Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Message.Contains("does not repeat the tied pitch"));
+        var heads = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!).StaffGroups.Single().Staves.Single()
+            .PrimaryVoice.Measures.SelectMany(m => m.Items).OfType<NoteItem>().ToList();
+        Assert.True(heads[0].HasRepeatTie);
+    }
+
     private static string[] Ink(string source)
     {
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(source), new SvgRenderOptions { EmbedFont = false });

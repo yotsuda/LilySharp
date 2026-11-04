@@ -62,8 +62,8 @@ internal sealed class TieDetector
                     var (endMeasureIdx, endItemIdx, endItem) = next.Value;
                     NoteItem? note = endItem switch
                     {
-                        NoteItem n when SamePitch(n.StaffPosition, n.Midi, startNote.StaffPosition, startNote.Midi) => n,
-                        ChordItem c => MatchingChordPitch(c, startNote.StaffPosition, startNote.Midi),
+                        NoteItem n when SamePitch(n.StaffPosition, n.Midi, startNote.StaffPosition, startNote.Midi, n.WrittenPitch, startNote.WrittenPitch) => n,
+                        ChordItem c => MatchingChordPitch(c, startNote.StaffPosition, startNote.Midi, startNote.WrittenPitch),
                         _ => null,
                     };
                     if (note != null)
@@ -157,7 +157,7 @@ internal sealed class TieDetector
                     continue;
                 foreach (var endPitch in endChord.Notes)
                 {
-                    if (SamePitch(endPitch.StaffPosition, endPitch.Midi, startPitch.StaffPosition, startPitch.Midi))
+                    if (SamePitch(endPitch.StaffPosition, endPitch.Midi, startPitch.StaffPosition, startPitch.Midi, endPitch.WrittenPitch, startPitch.WrittenPitch))
                     {
                         matched.Add((startPitch, SynthesizeNote(endPitch, endChord)));
                         break;
@@ -175,7 +175,7 @@ internal sealed class TieDetector
             foreach (var startPitch in startChord.Notes)
             {
                 if (startChord.Ties(startPitch)
-                    && SamePitch(endNoteItem.StaffPosition, endNoteItem.Midi, startPitch.StaffPosition, startPitch.Midi))
+                    && SamePitch(endNoteItem.StaffPosition, endNoteItem.Midi, startPitch.StaffPosition, startPitch.Midi, endNoteItem.WrittenPitch, startPitch.WrittenPitch))
                     matched.Add((startPitch, endNoteItem));
             }
             EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex, multiVoice);
@@ -260,28 +260,32 @@ internal sealed class TieDetector
     /// MEASURED, Lab sessions/p655 (S1 tie-ottava, LilyPond 2.26.0): `d''~ \ottava #0 d''`
     /// draws its tie at the first head's height, ending 0.335 short of the second head, which
     /// stands an octave higher; Lily# dropped every tie whose end note carried `@ottava` or
-    /// `@!ottava`. ⚠️ A clef change between the two heads moves the position by a non-octave
-    /// amount and is still left untied (no corpus book writes one).
+    /// `@!ottava`. A clef change between the two heads moves the position by a non-octave
+    /// amount, and the written pitch tells it from another spelling (2026-11-04: it was left untied).
     /// MEASURED, Lab sessions/p452 (tie-match-and-accidental.ly, book TMB, LilyPond 2.26.0):
     /// `&lt;c e&gt;2~ &lt;c ees&gt;2` makes ONE Tie grob; until session 797 this compared the
     /// position first and tied the e to the ees as well (HANDOFF §2 E; the summary line of
     /// this class said "the same pitch" all along).
     /// </remarks>
-    internal static bool SamePitch(int positionA, int midiA, int positionB, int midiB)
+    /// <param name="writtenA">The first head's written pitch (<see cref="WrittenPitch"/>), or 0.</param>
+    /// <param name="writtenB">The second head's, or 0.</param>
+    internal static bool SamePitch(int positionA, int midiA, int positionB, int midiB, int writtenA = 0, int writtenB = 0)
     {
         if (midiA == 0 || midiB == 0)
             return positionA == positionB;
+        if (writtenA != 0 && writtenB != 0)
+            return midiA == midiB && writtenA == writtenB;
         return midiA == midiB && (positionA - positionB) % 7 == 0;
     }
 
     /// <summary>The synthesized end note for a note→chord tie: the chord pitch
     /// matching <paramref name="staffPosition"/>, or null when the chord does
     /// not contain it (then there is no tie).</summary>
-    private static NoteItem? MatchingChordPitch(ChordItem chord, int staffPosition, int midi)
+    private static NoteItem? MatchingChordPitch(ChordItem chord, int staffPosition, int midi, int written)
     {
         foreach (var pitch in chord.Notes)
         {
-            if (SamePitch(pitch.StaffPosition, pitch.Midi, staffPosition, midi))
+            if (SamePitch(pitch.StaffPosition, pitch.Midi, staffPosition, midi, pitch.WrittenPitch, written))
                 return SynthesizeNote(pitch, chord);
         }
         return null;

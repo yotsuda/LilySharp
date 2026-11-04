@@ -769,15 +769,15 @@ internal static class SectionTieCarry
     /// when none does (or it is a rest).</summary>
     private static MusicItem? WithRepeatTie(MusicItem target, MusicItem tied)
     {
-        bool Matches(int pos, int midi)
+        bool Matches(int pos, int midi, int written)
         {
             switch (tied)
             {
                 case NoteItem n:
-                    return TieDetector.SamePitch(pos, midi, n.StaffPosition, n.Midi);
+                    return TieDetector.SamePitch(pos, midi, n.StaffPosition, n.Midi, written, n.WrittenPitch);
                 case ChordItem c:
                     foreach (var m in c.Notes)
-                        if (c.Ties(m) && TieDetector.SamePitch(pos, midi, m.StaffPosition, m.Midi))
+                        if (c.Ties(m) && TieDetector.SamePitch(pos, midi, m.StaffPosition, m.Midi, written, m.WrittenPitch))
                             return true;
                     return false;
                 default:
@@ -786,13 +786,13 @@ internal static class SectionTieCarry
         }
         switch (target)
         {
-            case NoteItem n when Matches(n.StaffPosition, n.Midi):
+            case NoteItem n when Matches(n.StaffPosition, n.Midi, n.WrittenPitch):
                 return n.HasRepeatTie ? n : n.WithHalfTies(laissezVibrer: false, repeatTie: true);
             case ChordItem c:
                 bool hit = false;
                 var notes = c.Notes.Select(m =>
                 {
-                    if (!Matches(m.StaffPosition, m.Midi))
+                    if (!Matches(m.StaffPosition, m.Midi, m.WrittenPitch))
                         return m;
                     hit = true;
                     return m with { HasRepeatTie = true };

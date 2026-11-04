@@ -197,6 +197,8 @@ internal static class MusicXmlReader
         int? transposeSet = null;       // the part's <transpose>, in semitones
         int measureNo = 0;
         var staffClefs = new Dictionary<int, string>();   // staff number -> clef
+        var clefsInForce = new Dictionary<int, string>(); // staff number -> the clef it stands in now
+        int staffCount = 1;                               // the part's <staves>
         var voiceStaff = new Dictionary<int, int>();       // voice number -> its staff
         var staffCounts = new Dictionary<(int Voice, int Staff), int>();   // the notes it has on each
         var noteStaff = new Dictionary<ImportNote, int>();  // the staff each head is written on
@@ -295,7 +297,11 @@ internal static class MusicXmlReader
                         // An octave line's end INCLUDES its note in Lily# (owner's decision
                         // 2026-10-28): the stop that stands before this note closes the line on
                         // the note before it, its staff's last one.
-                        if (EndsWithItsNote(pendingDynamics[i].Dynamic)
+                        if (pendingDynamics[i].Dynamic.StartsWith(ClefMark, StringComparison.Ordinal))
+                        {
+                            note.ClefBefore = pendingDynamics[i].Dynamic[ClefMark.Length..];
+                        }
+                        else if (EndsWithItsNote(pendingDynamics[i].Dynamic)
                             && (lastNoteOfStaff.TryGetValue(staff, out var before) ? before : partLastNote) is { } last)
                         {
                             last.Articulations.Add(pendingDynamics[i].Dynamic);
@@ -316,7 +322,10 @@ internal static class MusicXmlReader
                 {
                     case "attributes":
                         ReadAttributes(el, measure, ref divisions, ref clefSet, ref transposeSet,
-                                       staffClefs, report, measureNo);
+                                       staffClefs, report, measureNo,
+                                       midBar: position > 0 || measure.VoiceItems.Values.Any(items => items.Count > 0),
+                                       clefsInForce, ref staffCount,
+                                       (word, staff) => pendingDynamics.Add((ClefMark + word, position, staff)));
                         break;
 
                     case "direction":
@@ -487,7 +496,9 @@ internal static class MusicXmlReader
             // to the next bar's note instead (carriedEnds).
             foreach (var (dyn, _, dynStaff) in pendingDynamics)
             {
-                if (dyn.StartsWith('!') && !EndsWithItsNote(dyn))
+                // A clef after the bar's last note stands at the next bar's first (and is drawn
+                // before the bar line between them, as a clef opening a bar is).
+                if ((dyn.StartsWith('!') && !EndsWithItsNote(dyn)) || dyn.StartsWith(ClefMark, StringComparison.Ordinal))
                     carriedEnds.Add((dyn, dynStaff));
                 else if ((dynStaff is { } s && lastNoteOfStaff.TryGetValue(s, out var own) ? own : lastNote) is { } host)
                 {
@@ -503,7 +514,7 @@ internal static class MusicXmlReader
             report.Warn(measureNo, "grace notes after the part's last note have no note to lead to, so they are dropped.");
         // An end after the part's last note has no next note to stand on: its staff's last
         // note carries it — Lily# requires the end, and a line one note short beats none.
-        foreach (var (end, endStaff) in carriedEnds)
+        foreach (var (end, endStaff) in carriedEnds.Where(e => !e.Mark.StartsWith(ClefMark, StringComparison.Ordinal)))
             if ((endStaff is { } s && lastNoteOfStaff.TryGetValue(s, out var own) ? own
                     : partLastNote) is { } host)
             {
@@ -954,10 +965,13 @@ internal static class MusicXmlReader
     private static void ReadAttributes(
         XElement el, ImportMeasure measure, ref int divisions, ref string? clefSet,
         ref int? transposeSet,
-        Dictionary<int, string> staffClefs, ImportReport report, int measureNo)
+        Dictionary<int, string> staffClefs, ImportReport report, int measureNo,
+        bool midBar, Dictionary<int, string> clefsInForce, ref int staffCount, Action<string, int?> clefAtItsNote)
     {
         if (int.TryParse(Local(el, "divisions")?.Value, out int d) && d > 0)
             divisions = d;
+        if (int.TryParse(Local(el, "staves")?.Value, out int staves))
+            staffCount = staves;
 
         // The exporter writes `R1*N` as N whole-measure rests with this on the first; the
         // writer folds them back into one `R…*N`.
@@ -1002,6 +1016,23 @@ internal static class MusicXmlReader
             }
             string name = ClefName(clefEl, report, measureNo);
             staffClefs.TryAdd(staff, name);
+            bool isTheFirst = !clefsInForce.TryGetValue(staff, out var inForce);
+            clefsInForce[staff] = name;
+            // A later clef is a word in the music, and the music takes fewer than a part header.
+            if (!isTheFirst && name != inForce && name is not ("treble" or "bass" or "alto" or "tenor" or "treble_8"))
+            {
+                report.Warn(measureNo, $"the clef {name} has no spelling inside music, so this change is dropped.");
+                continue;
+            }
+            // Inside the bar, or on one staff of several: it stands before the note at its moment
+            // and goes where that note goes when the staves split. Until 2026-11-04 a change inside
+            // a bar was read at the bar's head, and a split staff's changes were lost.
+            if (!isTheFirst && (midBar || staffCount > 1))
+            {
+                if (name != inForce)
+                    clefAtItsNote(name, staffCount > 1 ? staff : null);
+                continue;
+            }
             measure.Clef = name;        // mid-piece single-staff clef change
             clefSet ??= name;           // first clef becomes the part header clef
         }
@@ -1030,6 +1061,9 @@ internal static class MusicXmlReader
 
     /// <summary>What <c>staffClefs</c> records for a TAB staff — not a clef word.</summary>
     private const string TabClef = "<tab>";
+
+    /// <summary>How a clef change waits among the marks for the note at its moment.</summary>
+    private const string ClefMark = "clef ";
 
     private static string ClefName(XElement clefEl, ImportReport report, int measureNo)
     {

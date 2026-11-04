@@ -224,6 +224,9 @@ internal sealed class ImportNote : ImportItem
     /// <summary>Lily# articulation/ornament mark names (<c>staccato</c>, <c>accent</c>,
     /// <c>fermata</c>, <c>trill</c>, …), emitted as <c>@name</c> suffixes.</summary>
     public List<string> Articulations { get; } = new();
+    /// <summary>A clef change written before this note: one inside a bar, or on one staff of a
+    /// split part (<see cref="ImportMeasure.Clef"/> is a whole staff's at a bar's head).</summary>
+    public string? ClefBefore { get; set; }
     /// <summary>The written string (MusicXML <c>&lt;technical&gt;&lt;string&gt;</c>), emitted
     /// as a <c>\N</c> on this note — inside the brackets when it is a chord member.</summary>
     public int? StringNumber { get; set; }

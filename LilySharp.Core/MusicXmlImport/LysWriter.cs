@@ -1140,7 +1140,7 @@ internal static class LysWriter
                 || m.Key != null || m.Time != null || m.Clef != null || m.Tempo != null
                 || LoneBarRest(m, voice) is not { } r
                 || r.NoteValue != head.NoteValue || r.Dots != head.Dots || r.IsSpacer != head.IsSpacer
-                || r.Articulations.Count > 0 || r.TupletStart != null)
+                || r.Articulations.Count > 0 || r.TupletStart != null || r.ClefBefore != null)
                 break;
             k++;
         }
@@ -1380,6 +1380,8 @@ internal static class LysWriter
 
             var note = (ImportNote)items[i];
             OpenCueIfNeeded(note);
+            if (note.ClefBefore is { } clefBefore)
+                tokens.Add("clef " + clefBefore);
             if (note.IsRest)
             {
                 // A whole-measure rest is `R` (and `R…*N` when the bars fold — WriteVoiceRange);

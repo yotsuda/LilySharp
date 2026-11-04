@@ -330,21 +330,24 @@ internal sealed class MeasureBuilder
     /// the prefix.
     /// Grace notes count: LilyPond's are ordinary events of the voice.
     /// </remarks>
-    public bool TiesInto(int staffPosition, int midi)
+    public bool TiesInto(int staffPosition, int midi, int written)
     {
         var last = LastSoundingItem();
         return last switch
         {
-            NoteItem n => n.HasTieStart && n.StaffPosition == staffPosition && n.Midi == midi,
-            ChordItem c => c.HasTieStart && ChordHas(c, staffPosition, midi),
+            NoteItem n => n.HasTieStart && Same(n.StaffPosition, n.Midi, n.WrittenPitch),
+            ChordItem c => c.HasTieStart && ChordHas(c),
             _ => false,
         };
 
-        static bool ChordHas(ChordItem c, int staffPosition, int midi)
+        bool Same(int position, int sounding, int spelled)
+            => sounding == midi && (position == staffPosition || (written != 0 && spelled == written));
+
+        bool ChordHas(ChordItem c)
         {
             var notes = c.Notes;
             for (int i = 0; i < notes.Length; i++)
-                if (notes[i].StaffPosition == staffPosition && notes[i].Midi == midi)
+                if (Same(notes[i].StaffPosition, notes[i].Midi, notes[i].WrittenPitch))
                     return c.Ties(notes[i]);
             return false;
         }

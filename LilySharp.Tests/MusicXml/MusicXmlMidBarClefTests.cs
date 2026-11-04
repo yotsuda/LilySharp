@@ -142,6 +142,99 @@ public class MusicXmlMidBarClefTests
         Assert.Equal("1", clef.Attribute("number")!.Value);
     }
 
+    private static string Import(string xml)
+    {
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+        Assert.False(SyntaxTree.Parse(lys).HasErrors, lys);
+        return lys;
+    }
+
+    private static string Book(params string[] measures)
+        => "<score-partwise version=\"4.0\"><part-list><score-part id=\"P1\"><part-name>P</part-name></score-part></part-list><part id=\"P1\">"
+           + string.Concat(measures.Select((m, i) => $"<measure number=\"{i + 1}\">" + m + "</measure>"))
+           + "</part></score-partwise>";
+
+    private const string OneStaff = "<attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>";
+    private const string TwoStaves = "<attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time><staves>2</staves>"
+        + "<clef number=\"1\"><sign>G</sign><line>2</line></clef><clef number=\"2\"><sign>F</sign><line>4</line></clef></attributes>";
+    private const string ToBass = "<attributes><clef><sign>F</sign><line>4</line></clef></attributes>";
+    private const string ToTreble = "<attributes><clef><sign>G</sign><line>2</line></clef></attributes>";
+
+    private static string N(string step, int staff = 0, int voice = 1)
+        => $"<note><pitch><step>{step}</step><octave>4</octave></pitch><duration>2</duration><voice>{voice}</voice><type>half</type>"
+           + (staff > 0 ? $"<staff>{staff}</staff>" : "") + "</note>";
+
+    [Fact]
+    public void ReadingBack_AClefInTheBar_StandsBeforeTheNoteAtItsMoment()
+        => Assert.Contains("c'2 clef bass d'2 |", Import(Book(OneStaff + N("C") + ToBass + N("D"))));
+
+    [Fact]
+    public void ReadingBack_TheWholeRoundTrip_KeepsEveryClefsMoment()
+    {
+        var doc = Music("voice { c''2 d'' | c''1 | } { c'4 clef bass c' c'2 | clef treble c'1 | }");
+        var (lys, _) = new MusicXmlImporter().Import(doc.ToString());
+        var again = new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml();
+        Assert.Equal(Clefs(doc), Clefs(again));
+    }
+
+    [Fact]
+    public void ReadingBack_AClefAfterTheLastNote_OpensTheNextBar()
+        => Assert.Contains("clef bass e'1", Import(Book(
+            OneStaff + N("C") + N("D") + ToBass,
+            "<note><pitch><step>E</step><octave>4</octave></pitch><duration>4</duration><voice>1</voice><type>whole</type></note>")));
+
+    [Fact]
+    public void ReadingBack_AClefAfterThePiecesLastNote_IsNoMark()
+        => Assert.DoesNotContain("@clef", Import(Book(OneStaff + N("C") + N("D") + ToBass)));
+
+    [Fact]
+    public void ReadingBack_ARestatedClef_WritesNothing()
+        => Assert.DoesNotContain("clef treble c", Import(Book(OneStaff + N("C") + ToTreble + N("D"))).Replace("{ clef treble }", ""));
+
+    [Fact]
+    public void ReadingBack_AClefOfOneStaff_StandsOnThatStaffsPart()
+    {
+        const string toTrebleBelow = "<attributes><clef number=\"2\"><sign>G</sign><line>2</line></clef></attributes>";
+        var lys = Import(Book(
+            TwoStaves + N("C", 1, 1) + N("D", 1, 1) + "<backup><duration>4</duration></backup>" + N("E", 2, 5) + toTrebleBelow + N("F", 2, 5),
+            toTrebleBelow + N("C", 1, 1) + N("D", 1, 1) + "<backup><duration>4</duration></backup>" + N("E", 2, 5) + N("F", 2, 5)));
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(lys, @"clef treble [a-g]"));
+        Assert.Contains("e'2 clef treble f'2", lys);
+    }
+
+    [Fact]
+    public void ReadingBack_AStaffsChangeAtABarHead_IsKeptToo()
+    {
+        const string toTrebleBelow = "<attributes><clef number=\"2\"><sign>G</sign><line>2</line></clef></attributes>";
+        var lys = Import(Book(
+            TwoStaves + N("C", 1, 1) + N("D", 1, 1) + "<backup><duration>4</duration></backup>" + N("E", 2, 5) + N("F", 2, 5),
+            toTrebleBelow + N("C", 1, 1) + N("D", 1, 1) + "<backup><duration>4</duration></backup>" + N("E", 2, 5) + N("F", 2, 5)));
+        Assert.Contains("clef treble e'2", lys);
+        Assert.DoesNotContain("clef treble c'2", lys);
+    }
+
+    [Fact]
+    public void ReadingBack_AClefTheMusicCannotSpell_IsReported_NotAnError()
+    {
+        const string soprano = "<attributes><clef><sign>C</sign><line>1</line></clef></attributes>";
+        var (lys, report) = new MusicXmlImporter().Import(Book(OneStaff + N("C") + soprano + N("D")));
+        Assert.False(SyntaxTree.Parse(lys).HasErrors, lys);
+        Assert.DoesNotContain("clef soprano", lys);
+        Assert.Contains(report.Warnings, w => w.Contains("soprano"));
+    }
+
+    [Fact]
+    public void ReadingBack_BarRestsDoNotFoldOverAClef()
+    {
+        const string bar = "<note><rest measure=\"yes\"/><duration>4</duration><voice>1</voice></note>";
+        string first = OneStaff.Replace("</attributes>", "<measure-style><multiple-rest>3</multiple-rest></measure-style></attributes>") + bar;
+        Assert.Contains("R*3", Import(Book(first, bar, bar)));
+        // After the first bar's rest, so it stands at the second's.
+        var withClef = Import(Book(first + ToBass, bar, bar));
+        Assert.DoesNotContain("R*3", withClef);
+        Assert.Contains("clef bass R", withClef);
+    }
+
     /// <summary>What the file says reads back: the notes keep their pitches and the clef is kept.</summary>
     [Fact]
     public void TheFileReadsBack()
@@ -150,7 +243,7 @@ public class MusicXmlMidBarClefTests
         var (lys, _) = new MusicXmlImporter().Import(doc.ToString());
         var tree = SyntaxTree.Parse(lys);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
-        Assert.Contains("clef bass", lys);
+        Assert.Contains("clef bass c'2", lys);
         Assert.Equal(
             doc.Descendants("note").Select(n => n.Element("pitch")!.Element("step")!.Value + n.Element("pitch")!.Element("octave")!.Value),
             new MusicXmlExporter().Export(tree).ToXml().Descendants("note").Select(n => n.Element("pitch")!.Element("step")!.Value + n.Element("pitch")!.Element("octave")!.Value));

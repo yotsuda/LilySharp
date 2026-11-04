@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **A tie crosses a clef change.** `c'1~ | clef bass c'1` drew no tie and warned that the pitches differed; it is the same pitch, and LilyPond draws the tie from the first head. A tied head after the clef repeats no accidental. Another spelling (`cis'~ des'`) is still no tie.
+- **`lysc import` keeps a clef where it stands.** One inside a bar was read at the bar's head, and a change on one staff of a grand staff was lost. A clef that music cannot spell (`soprano` after the start) is left out and reported, where it made an error.
 - **`lysc xml` writes a clef where it stands in the bar.** A clef after the bar's first notes waited for the next bar's head; it is now an `<attributes>` at its moment in the note stream, with its staff's `number` on a grand staff or beside a tab.
 - `[engraving]` **A clef is the staff's, whichever voice writes it.** A `clef` in `voice { } { }` moved only the voice that wrote it, and one inside `tuplet { }` was dropped, with the notes after it in the old clef. It now holds for every voice from its moment, is drawn there with its room paid for, and opens the next line. A `key` a lower voice writes at a bar head now governs the upper voice's note there too.
 - `[engraving]` **`@sfp`, as in LilyPond.** `sf` and `p` side by side could not be written: a note prints one dynamic, so one was lost. `lysc import` now joins `sf`+`p` into `@sfp` and `f`+`p` into `@fp`, and a source's own `<sfp/>` comes through. In the LilyPond and MusicXML exports too; `Ctrl+Shift+Up` / `Down` steps it among the accents, after `@fp`.
