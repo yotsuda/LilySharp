@@ -3603,6 +3603,7 @@ public sealed partial class MeasureCollector
                 }
                 if (newMeasures != null)
                 {
+                    MarkBarsClosedWithoutWish(newMeasures);
                     var measuresNow = ImmutableArray.Create(newMeasures);
                     (newVoices ??= voices.ToArray())[vi] = voices[vi] with { Measures = measuresNow };
                 }
@@ -3736,6 +3737,34 @@ public sealed partial class MeasureCollector
                                 }
                 }
             }
+        }
+    }
+
+    /// <summary>Marks each bar's last column whose voice has left its staff by the bar line
+    /// (<see cref="MusicItem.ClosesWithoutWish"/>). By copy, not in place: an unmoved item here
+    /// is shared with the collect's recording, and the mark must not outlive the <c>@cross</c>.</summary>
+    private static void MarkBarsClosedWithoutWish(Measure[] measures)
+    {
+        static bool Sounds(MusicItem item) => !item.GraceTime && item is NoteItem or ChordItem or RestItem { IsSpacer: false };
+        for (int m = 0; m < measures.Length; m++)
+        {
+            var items = measures[m].Items;
+            int last = items.Length - 1;
+            while (last >= 0 && !Sounds(items[last]))
+                last--;
+            if (last < 0)
+                continue;
+            // A voice with nothing after it is back on its own staff: `lysc ly`'s \change returns.
+            int next = -1;
+            if (m + 1 < measures.Length)
+                foreach (var item in measures[m + 1].Items)
+                    if (Sounds(item))
+                    {
+                        next = item.CrossStaffIndex;
+                        break;
+                    }
+            if (items[last].CrossStaffIndex != next)
+                measures[m] = measures[m] with { Items = items.SetItem(last, items[last] with { ClosesWithoutWish = true }) };
         }
     }
 

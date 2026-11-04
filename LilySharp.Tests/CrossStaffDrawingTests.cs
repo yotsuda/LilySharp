@@ -433,8 +433,7 @@ public class CrossStaffDrawingTests
     [Fact]
     public void AMovedLastNoteMeetsTheBarLineOfTheStaffItStandsOn()
     {
-        // ⚠️ 2.50 against LilyPond's 2.40 (Lab sessions/p1094/w3/t2): named, not explained. The
-        // bar line stands in the note's frame, so a sharp-less head in the staff reaches it.
+        // MEASURED, LilyPond 2.26.0 (Lab sessions/p1093/w2): 2.40, the bare duration spring.
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(WidthBook));
         var heads = BlackHeads(svg);
         var bars = System.Text.RegularExpressions.Regex
@@ -442,7 +441,35 @@ public class CrossStaffDrawingTests
             .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
             .Distinct().OrderBy(x => x).ToArray();
         double gap = bars.First(b => b > heads[5]) - heads[5];
-        Assert.InRange(gap, 2.48, 2.52);
+        Assert.InRange(gap, 2.38, 2.42);
+    }
+
+    [Theory]
+    // Whether the voice stands on another staff at the bar line, not whether the note moved.
+    [InlineData("r2 r4 c8 g@cross | c1 |", true)]    // moved, then home
+    [InlineData("r2 r4 c8 g@cross | a1@cross |", false)]  // moved, and still there
+    [InlineData("r2 r4 c8 a | a1@cross |", true)]    // home, then gone
+    [InlineData("r2 r4 c8 a | c1 |", false)]         // home, and still there
+    public void ABarClosesWithoutAWishOnlyWhereTheVoiceHasLeft(string lh, bool without)
+    {
+        var last = Score(Book("r1 | r1 |", lh)).EnumerateStaves().ToList()[1].Staff.PrimaryVoice
+            .Measures[0].Items.Last();
+        Assert.Equal(without, last.ClosesWithoutWish);
+    }
+
+    [Fact]
+    public void TheMarkDoesNotOutliveTheCross()
+    {
+        // The unmoved last note is marked by copy: its own @cross written away, the book is clean.
+        var opt = new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false };
+        string Text(string next) => Book("r1 | r1 | r1 |", "r2 r4 c8 a | " + next + " | c1 |");
+        string seed = Text("a1@cross");
+        var session = new LilySharp.Core.Svg.IncrementalCompiler(SyntaxTree.Parse(seed), opt);
+        session.Render();
+        int at = seed.IndexOf("a1@cross", System.StringComparison.Ordinal);
+        string incremental = session.Edit(new TextChange(new TextSpan(at, "a1@cross".Length), "a1")).Replace("\r\n", "\n");
+        string full = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(Text("a1")), opt).Replace("\r\n", "\n");
+        Assert.Equal(full, incremental);
     }
 
     [Fact]

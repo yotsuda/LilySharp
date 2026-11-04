@@ -351,11 +351,14 @@ internal static partial class SpacingRules
         // too until session 523 — the OWN note on the pair.)
         // An afterGrace's closing spacer closes the bar with NO wish (session 940; mirror of
         // MeasureLayouter.CreateLastToBarlineSpring): the bare duration spring, no headroom, no rod.
-        bool wishless = IsAfterGraceCarrier(lastItem);
+        // A voice gone to another staff by the bar line closes it the same way, but its column is
+        // not empty: the rod stands (MusicItem.ClosesWithoutWish).
+        bool emptyColumn = IsAfterGraceCarrier(lastItem);
+        bool wishless = emptyColumn || lastItem.ClosesWithoutWish;
         if (wishless)
             lastSpring = CreateTimingSpringMultiVoice(totalDuration - lastOnset,
                 SoloShortestPlaying(kept, kept.Count - 1), spacing);
-        var barPair = wishless ? (SkyMin: 0.0, Rod: 0.0) : NoteColumnToBarlineFloorPair(fonts, lastItem);
+        var barPair = emptyColumn ? (SkyMin: 0.0, Rod: 0.0) : NoteColumnToBarlineFloorPair(fonts, lastItem);
         if (!wishless)
         {
             lastSpring = lastSpring.EnsureMinDistance(barPair.SkyMin);

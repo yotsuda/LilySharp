@@ -373,6 +373,29 @@ public class SpacingInvariantTests
     }
 
     [Fact]
+    public void BothSpringSystems_CloseABarTheVoiceHasLeftWithTheBareDuration()
+    {
+        // MusicItem.ClosesWithoutWish: the line breaker's estimate prices the bar the page draws.
+        var (timings, allMeasures, primary, _) = Collect("""
+            octave absolute
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            section A { rh { r2 r4 c''8 e''@cross | c''1 | } lh { r1 | r1 | } }
+            form { ~A }
+            score { grandStaff { staff rh staff lh } }
+            """);
+        var spacing = SpacingOptions.Default.WithShortest(0.125);
+        Assert.True(primary.Items[^1].ClosesWithoutWish);
+        var columnSprings = new MeasureLayouter().CreateTimingSprings(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, spacing, allMeasures);
+        var itemSprings = SpacingRules.CreateSpringsForMeasure(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, spacing);
+        Assert.Equal(columnSprings[^1].IdealDistance, itemSprings[^1].IdealDistance, 9);
+        Assert.Equal(SpacingRules.CalculateDurationSpace(new Fraction(1, 8), spacing), itemSprings[^1].IdealDistance, 9);
+    }
+
+    [Fact]
     public void BothSpringSystems_AgreeAcrossAMidMeasureChangeColumn()
     {
         // The measure in BothSpringSystems_AgreeOnEveryMusicalSpring has no change item, so

@@ -165,6 +165,7 @@ internal sealed record MusicItemRare
     public bool TodoSideWritten { get; init; }
     public bool CrossWritten { get; init; }
     public int CrossStaffIndex { get; init; } = -1;
+    public bool ClosesWithoutWish { get; init; }
 }
 
 /// <summary>
@@ -261,6 +262,25 @@ public abstract record MusicItem
     private double _crossPureShift;
 
     internal void StampCrossPureShift(double shift) => _crossPureShift = shift;
+
+    /// <summary>
+    /// The last column of a bar whose voice stands on another staff at the bar line (the next
+    /// bar's first note is drawn elsewhere, <c>@cross</c>): no Note_spacing wish reaches the bar
+    /// line from it, so the closing spring is the bare duration's.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing-engraver.cc:110-120 stop_translation_timestep — the bar
+    ///   line's column joins <c>last_spacings_[parent]</c>, the wish filed under the staff the
+    ///   voice is in NOW; lily/spacing-spanner.cc:380-393 — no wish, no merge_springs.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1094/w3/bar2.ly): moved then home 2.400, moved
+    /// then moved 2.754, home then moved 2.400, home then home 2.254, and the stem correction
+    /// moves only the second and the last.
+    /// </remarks>
+    public bool ClosesWithoutWish
+    {
+        get => _rareBase?.ClosesWithoutWish ?? false;
+        init { if (value != ClosesWithoutWish) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { ClosesWithoutWish = value }; }
+    }
 
     /// <summary>
     /// The item's <c>@todo</c> mark: its key, <c>""</c> when the mark names none, or null

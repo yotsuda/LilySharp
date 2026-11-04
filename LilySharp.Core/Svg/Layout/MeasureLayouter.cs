@@ -1262,6 +1262,18 @@ internal sealed class MeasureLayouter
         bool wishless = lastItems.Count > 0;
         for (int q = 0; q < lastItems.Count; q++)
             wishless &= SpacingRules.IsAfterGraceCarrier(lastItems[q]);
+        // A voice gone to another staff by the bar line closes it the same way, but its column
+        // is not empty: the rod stands (MusicItem.ClosesWithoutWish). Several voices are priced
+        // as one here: with another voice's wish in the column the wishes stand as before.
+        bool gone = lastItems.Count > 0;
+        for (int q = 0; q < lastItems.Count; q++)
+            gone &= lastItems[q].ClosesWithoutWish;
+        if (gone)
+        {
+            wishless = true;
+            for (int q = 0; q < lastItems.Count; q++)
+                maxRod = Math.Max(maxRod, SpacingRules.NoteColumnToBarlineFloorPair(fonts, lastItems[q]).Rod);
+        }
         if (lastItems.Count > 0 && !wishless)
         {
             endSpring = TabVoiceWishes(measuresToScan, stavesOfMeasures, timings[^1]) is { } tabWishes
