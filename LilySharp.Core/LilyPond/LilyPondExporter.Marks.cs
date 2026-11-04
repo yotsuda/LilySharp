@@ -139,7 +139,18 @@ public sealed partial class LilyPondExporter
                 // note it would end the hairpin on the previous one.
                 case MusicMarkSyntax { IsSpanEnd: true } he
                     when Svg.Model.MusicMarkItem.ParseSpanEndName(he.Name) == Svg.Model.MusicMarkType.HairpinStop:
-                    suffix.Append("\\!");
+                    // LILYSHARP-OWN: written after its own hairpin's start on one note, it spans that
+                    // note's length. LilyPond reads `\<\!` as a stop then a start, so the stop goes
+                    // where the note ends, and the wedge stops at the next column's left edge
+                    // (lily/hairpin.cc:243-281, endpoint_alignments).
+                    if (arts.TakeWhile(x => !ReferenceEquals(x, a)).OfType<DynamicSyntax>()
+                            .Any(d => d.DynamicToken.Text is "cresc" or "decresc" or "dim"))
+                    {
+                        prefix.Append("\\once \\override Hairpin.endpoint-alignments = #'(-1 . -1) ");
+                        Trail("<>\\!");
+                    }
+                    else
+                        suffix.Append("\\!");
                     break;
                 // A pedal is a SPAN EVENT on its note — a post-event, so it trails the note
                 // as \sustainOn does. Until 2026-09-23 every pedal was "dropped (out of

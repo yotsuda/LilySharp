@@ -499,7 +499,14 @@ c4@p @cresc d e f |
 g4@f @decresc a b c |
 ```
 
-A hairpin runs to the next dynamic (or the next hairpin) on its staff.
+A hairpin runs to the next dynamic (or the next hairpin) on its staff, or to `@!cresc` /
+`@!decresc` / `@!dim`. Written after the start on one note, the end makes a hairpin as long as
+that note; the written order decides:
+
+```
+g1@cresc@!cresc | a1 |                 // grows under the whole note
+c4@cresc d e@!cresc@decresc f@!decresc |   // e ends the first and opens the second
+```
 
 #### Niente (al niente / dal niente)
 

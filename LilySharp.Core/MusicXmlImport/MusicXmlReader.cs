@@ -707,12 +707,8 @@ internal static class MusicXmlReader
             if (inVoice.Skip(from + 1).Take(last - from + 1).Any(n => n.Articulations.Any(EndsAHairpin)))
                 continue;
             string name = opener.Articulations.Last(a => a is "cresc" or "decresc");
-            // `@cresc@!cresc` on one note does not end there (a close is read before an open), so
-            // a wedge under one note ends on the next, or runs on when there is none.
-            if (last != from)
-                inVoice[last].Articulations.Add("!" + name);
-            else if (last + 1 < inVoice.Count)
-                inVoice[last + 1].Articulations.Add("!" + name);
+            // A wedge under one note is `@cresc@!cresc`, which spans that note's length.
+            inVoice[last].Articulations.Add("!" + name);
         }
     }
 

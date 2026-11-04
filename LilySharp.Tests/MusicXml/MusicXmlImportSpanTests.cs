@@ -136,11 +136,11 @@ public class MusicXmlImportSpanTests
     }
 
     [Fact]
-    public void AWedgeUnderOneNoteEndsOnTheNext()
+    public void AWedgeUnderOneNoteIsOneNotesHairpin()
     {
         var (lys, _) = Import(Book(
             Direction(Wedge) + Note("C") + Direction(WedgeStop) + Note("D") + Note("E") + Note("F")));
-        Assert.Contains("c'4@cresc d'4@!cresc e'4", lys);
+        Assert.Contains("c'4@cresc@!cresc d'4", lys);
     }
 
     [Fact]

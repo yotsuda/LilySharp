@@ -1002,7 +1002,40 @@ internal static class HairpinEngraver
                 m.Type == MusicMarkType.HairpinStop && m.StaffIndex == mark.StaffIndex &&
                 (m.MeasureIndex > mark.MeasureIndex ||
                  (m.MeasureIndex == mark.MeasureIndex && m.AnchorItemIndex > startItem)));
+            // A stop written after the next hairpin's start on one note is that hairpin's own.
+            if (nextStop != null && nextMark != null && nextMark.MeasureIndex == nextStop.MeasureIndex
+                && nextMark.AnchorItemIndex == nextStop.AnchorItemIndex
+                && nextMark.SourcePosition < nextStop.SourcePosition)
+                nextStop = null;
             static bool Before(int m1, int i1, int m2, int i2) => m1 < m2 || (m1 == m2 && i1 <= i2);
+
+            // A stop written AFTER this start on one note (`g1@cresc@!cresc`): the wedge spans that
+            // note's length, to the next column or the bar's end (CalculateEndX). The written order
+            // decides, so `@!cresc@decresc` still ends the hairpin before it and opens another.
+            // LILYSHARP-OWN: LilyPond reads the two at one moment as a stop, then a start.
+            bool spansItsNote = musicMarks.Any(m =>
+                m.Type == MusicMarkType.HairpinStop && m.StaffIndex == mark.StaffIndex
+                && m.MeasureIndex == mark.MeasureIndex && m.AnchorItemIndex == startItem
+                && m.SourcePosition > mark.SourcePosition);
+            if (spansItsNote)
+            {
+                hairpins.Add(new HairpinItem(
+                    Direction: direction,
+                    StartMeasureIndex: mark.MeasureIndex,
+                    StartItemIndex: startItem,
+                    EndMeasureIndex: mark.MeasureIndex,
+                    EndItemIndex: startItem + 1,
+                    SourcePosition: mark.SourcePosition,
+                    SourceIndex: srcIndex,
+                    StaffIndex: mark.StaffIndex
+                )
+                {
+                    NienteAtStart = sortedDynamics.FirstOrDefault(d =>
+                        d.Level == DynamicLevel.Niente && d.StaffIndex == mark.StaffIndex
+                        && d.MeasureIndex == mark.MeasureIndex && d.ItemIndex == startItem),
+                });
+                continue;
+            }
 
             // End at whichever comes first: next dynamic, next cresc/decresc, or a stop
             int endMeasure;
@@ -1033,8 +1066,11 @@ internal static class HairpinEngraver
             }
             else if (nextMark != null)
             {
+                // At the next hairpin's own moment. Until 2026-11-04 this was its bar's head: a
+                // hairpin met by another in its own bar was not drawn at all, and one met later in
+                // a bar stopped short at that bar's line (LilyPond draws both, Lab sessions/p1097/hp3).
                 endMeasure = nextMark.MeasureIndex;
-                endItem = 0;
+                endItem = Math.Max(0, nextMark.AnchorItemIndex);
             }
             else
             {

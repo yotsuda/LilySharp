@@ -4,6 +4,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **`g1@cresc@!cresc` is a hairpin as long as its note**: the end written after the start spans that note, and `@!cresc@decresc` still ends one hairpin and opens the next.
+- **A hairpin runs up to the hairpin that follows it**: `c@cresc d e@decresc f` drew no crescendo at all.
+
 - **MusicXML import keeps the file's lines where they were**: hairpins end where they stop, a pedal ending in `discontinue` is released, an "una corda" with no "tre corde" stays words, and a line over a repeat sign ends before it and starts again after it. A slur between two voices has no spelling in Lily#, so it is dropped and the import report says so.
 - **MusicXML export writes every voice's marks, once**: a later voice's dynamics, hairpins, pedals, octave lines and words were lost, a `repeat tremolo` wrote its marks on every pass, and a hairpin ending with `@!cresc` stopped a note early.
 - **`tuplet 3/2 bare { … }` draws a tuplet with no number and no bracket**, the notes, beams and sound the same; `Ctrl+Shift+Up` / `Down` on the word `tuplet` write and take away `bare`. Completion offers `bare` after the ratio, and `tuplet bare` among the music items. In the LilyPond and MusicXML exports too, and read back from MusicXML.

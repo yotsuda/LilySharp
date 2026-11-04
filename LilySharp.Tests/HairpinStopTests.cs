@@ -53,6 +53,88 @@ public class HairpinStopTests
         Assert.Equal((5, false), (pins[2].EndMeasureIndex, pins[2].EndsAtStop));
     }
 
+    private static System.Collections.Immutable.ImmutableArray<LilySharp.Core.Svg.Model.HairpinItem> Pins(string music)
+    {
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(
+            "part m\nsection A { m { " + music + " } }\nform { ~A }\nscore { staff m }\n"));
+        return HairpinEngraver.DetectHairpins(score.MusicMarks, score.Dynamics);
+    }
+
+    [Fact]
+    public void AStopWrittenAfterTheStartOnOneNote_SpansThatNote()
+    {
+        var pin = Assert.Single(Pins("c''2@cresc@!cresc d | e1 | f1@f |"));
+        Assert.Equal((0, 0, 0, 1), (pin.StartMeasureIndex, pin.StartItemIndex, pin.EndMeasureIndex, pin.EndItemIndex));
+    }
+
+    [Fact]
+    public void AStopWrittenBeforeTheStartOnOneNote_EndsTheOneBefore()
+    {
+        var pins = Pins("c''4@cresc d e@!cresc@decresc f | g1@p |");
+        Assert.Equal(2, pins.Length);
+        Assert.Equal((0, 2, true), (pins[0].EndMeasureIndex, pins[0].EndItemIndex, pins[0].EndsAtStop));
+        Assert.Equal((1, 0), (pins[1].EndMeasureIndex, pins[1].EndItemIndex));
+    }
+
+    [Fact]
+    public void ANoteHairpinAfterAnOpenOne_EndsThatOneAtItsStart()
+    {
+        var pins = Pins("c''4@cresc d e@decresc@!decresc f | g1 |");
+        Assert.Equal(2, pins.Length);
+        // The crescendo stops at the mark, not at the decrescendo's own stop.
+        Assert.False(pins[0].EndsAtStop);
+        Assert.Equal((0, 3), (pins[1].EndMeasureIndex, pins[1].EndItemIndex));
+    }
+
+    [Fact]
+    public void AHairpinMetByAnotherInItsBar_RunsToThatOnesNote()
+    {
+        var pins = Pins("c''4@cresc d e@decresc f | g1@p |");
+        Assert.Equal(2, pins.Length);
+        Assert.Equal((0, 2), (pins[0].EndMeasureIndex, pins[0].EndItemIndex));
+    }
+
+    [Fact]
+    public void AHairpinMetByAnotherLaterInABar_RunsToThatOnesNote()
+    {
+        var pins = Pins("c''4@cresc d e f | g2 a@decresc | g1@p |");
+        Assert.Equal(2, pins.Length);
+        Assert.Equal((1, 1), (pins[0].EndMeasureIndex, pins[0].EndItemIndex));
+    }
+
+    [Fact]
+    public void ANoteHairpinOnASectionsLastNote_CrossesNoRepeat()
+    {
+        const string book = """
+            part m
+            section A { m { c''2 d@cresc@!cresc | } }
+            section B { m { e1 | } }
+            form { |: ~A :| ~B }
+            score { staff m }
+            """;
+        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(book)), d => d.Code == DiagnosticCodes.SpanAcrossSectionBoundary);
+    }
+
+    [Fact]
+    public void ANoteHairpin_ReachesLilyPondAsAWedgeToTheNotesEnd()
+    {
+        string ly = new LilyPondExporter().Export(SyntaxTree.Parse(
+            "part m\nsection A { m { c''2@cresc@!cresc d | e1 | } }\nform { ~A }\nscore { staff m }\n"));
+        Assert.Contains("endpoint-alignments", ly);
+        Assert.Contains("\\< <>\\!", ly);
+    }
+
+    [Fact]
+    public void ANoteHairpin_StopsAtTheNotesEndInMusicXml()
+    {
+        var xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(
+            "part m\nsection A { m { c''2@cresc@!cresc d | e1 | } }\nform { ~A }\nscore { staff m }\n")).ToXml();
+        var wedges = xml.Descendants("wedge").ToArray();
+        Assert.Equal(new[] { "crescendo", "stop" }, wedges.Select(w => (string?)w.Attribute("type")));
+        int divisions = int.Parse(xml.Descendants("divisions").First().Value);
+        Assert.Equal(2 * divisions, int.Parse(wedges[1].Parent!.Parent!.Element("offset")!.Value));
+    }
+
     [Fact]
     public void AStop_IsAKnownTerminator()
     {
