@@ -278,6 +278,15 @@ internal static class MusicXmlReader
                         report.Warn(measureNo, $"the dynamic {passed.Dynamic} has no note of its staff before a later dynamic, so it is dropped.");
                         pendingDynamics.Remove(passed);
                     }
+                    // Two at one moment that are one mark: sf and p set side by side is @sfp, and
+                    // a note prints one dynamic.
+                    var left = pendingDynamics.Where(p => Due(p) && LysWriter.IsDynamic(p.Dynamic)).ToList();
+                    if (left.Count == 2 && left[1].Dynamic == "p" && left[0].Dynamic is "sf" or "f")
+                    {
+                        int first = pendingDynamics.IndexOf(left[0]);
+                        pendingDynamics[first] = (left[0].Dynamic + "p", left[0].At, left[0].Staff);
+                        pendingDynamics.Remove(left[1]);
+                    }
                 }
                 int k = 0;
                 for (int i = 0; i < pendingDynamics.Count; i++)
@@ -1849,7 +1858,7 @@ internal static class MusicXmlReader
         "phrase", "drummap", "grace", "partial", "repeat", "tuplet",
         "acciaccatura", "appoggiatura", "afterGrace",
         "a", "b", "c", "d", "e", "f", "g", "r", "s",
-        "ppp", "pp", "p", "mp", "mf", "ff", "fff", "sf", "sfz", "fp", "fz", "rfz", "rf", "sffz",
+        "ppp", "pp", "p", "mp", "mf", "ff", "fff", "sf", "sfz", "fp", "sfp", "fz", "rfz", "rf", "sffz",
     };
 
     /// <summary>Turns a MusicXML part name into a valid, unique Lily# identifier

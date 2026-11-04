@@ -886,8 +886,7 @@ internal static class LysWriter
     /// <remarks>
     /// Until 2026-11-04 the reader's <c>implicit</c> was not used: a pickup came back bare, with a
     /// warning on every part and the bar numbers one too high. A first bar that is short but not
-    /// marked implicit is a pickup too (Dichterliebe 1): it can be nothing else in a meter. Null for
-    /// a length no one value spells (5/8): the bar keeps its warning.
+    /// marked implicit is a pickup too (Dichterliebe 1): it can be nothing else in a meter.
     /// </remarks>
     private static string? PickupOf(ImportDocument doc, int bar)
     {
@@ -913,7 +912,11 @@ internal static class LysWriter
                 written += dot;
             }
         }
-        return null;
+        // No one value spells it: a count of the note value that does (5/8 is `8*5`). A tuplet's
+        // length has none, and the bar keeps its warning.
+        return length.Denominator <= 128 && (length.Denominator & (length.Denominator - 1)) == 0
+            ? length.Denominator + "*" + length.Numerator
+            : null;
     }
 
     private static Fraction? MeterAt(ImportDocument doc, int bar)

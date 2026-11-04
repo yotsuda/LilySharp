@@ -61,6 +61,7 @@ public class DynamicLabelWidthTests
     [InlineData("pf", 2.731464566929)]
     [InlineData("sf", 2.082741732283)]
     [InlineData("sfz", 3.209470866142)]
+    [InlineData("sfp", 3.550903937008)]
     // kerned runs — both signs of pair, one and two pairs
     [InlineData("ff", 2.390031496063)]
     [InlineData("fff", 3.516760629921)]

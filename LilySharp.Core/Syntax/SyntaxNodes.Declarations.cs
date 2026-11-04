@@ -349,8 +349,13 @@ public sealed class PartialDeclarationSyntax : SyntaxNode
     /// <summary>The pickup length as a duration node (number + optional dots).</summary>
     public DurationSyntax Duration => (DurationSyntax)GetChild(1)!;
 
-    /// <summary>The pickup length as a metric fraction (e.g. 1/4 for 'partial 4').</summary>
-    public Fraction ToFraction() => Duration.ToFraction();
+    /// <summary>The count of a <c>partial 8*5</c>: how many of <see cref="Duration"/>; 1 when none
+    /// is written.</summary>
+    public int Count => GetChild(3) is SyntaxTokenNode { Text: var text } && int.TryParse(text, out int count) && count > 0 ? count : 1;
+
+    /// <summary>The pickup length as a metric fraction (e.g. 1/4 for 'partial 4', 5/8 for
+    /// 'partial 8*5').</summary>
+    public Fraction ToFraction() => Duration.ToFraction() * new Fraction(Count, 1);
 }
 
 /// <summary>

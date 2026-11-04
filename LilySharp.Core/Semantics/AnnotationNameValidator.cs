@@ -80,7 +80,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     [
         "staccato", "accent", "tenuto", "marcato", "fermata", "portato",
         "staccatissimo", "upBow", "downBow", "harmonic", "flageolet",
-        "sfz", "sf", "fp", "rf", "rfz", "fz", "sffz",
+        "sfz", "sf", "fp", "sfp", "rf", "rfz", "fz", "sffz",
         "pppp", "ppppp", "ffff", "fffff", "niente",
         "trill", "mordent", "prall", "turn", "reverseTurn", "pralltriller",
         "trillSpan", "courtesy", "editorial", "glissando", "parenthesize",

@@ -438,8 +438,8 @@ internal sealed class TempoDeclarationGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class PartialDeclarationGreen : GreenSyntaxNode
 {
-    public PartialDeclarationGreen(SyntaxToken partialKeyword, GreenNode duration)
-        : base(SyntaxKind.PartialDeclaration, [partialKeyword, duration])
+    public PartialDeclarationGreen(SyntaxToken partialKeyword, GreenNode duration, SyntaxToken? asterisk = null, SyntaxToken? count = null)
+        : base(SyntaxKind.PartialDeclaration, [partialKeyword, duration, asterisk, count])
     {
     }
 }

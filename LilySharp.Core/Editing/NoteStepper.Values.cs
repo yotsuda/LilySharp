@@ -85,7 +85,7 @@ public static partial class NoteStepper
     /// away, even where the order means little) — Lily#'s order, the lighter first: Up the
     /// stronger, stopping at the ends.</summary>
     private static readonly string[] AccentDynamics =
-        [.. new[] { "fp", "rf", "rfz", "sf", "fz", "sfz", "sffz" }.Where(SyntaxFacts.IsDynamicText)];
+        [.. new[] { "fp", "sfp", "rf", "rfz", "sf", "fz", "sfz", "sffz" }.Where(SyntaxFacts.IsDynamicText)];
 
     /// <summary>The meters the octave pair walks, shortest bar first; the bars of equal length
     /// stand side by side (<c>6/8</c> ⇄ <c>3/4</c>, <c>2/2</c> ⇄ <c>4/4</c>), so one press compares

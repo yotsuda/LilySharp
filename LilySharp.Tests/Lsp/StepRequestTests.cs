@@ -2050,7 +2050,7 @@ public class StepRequestTests
         var (top, same) = Step(Plain("c'4@sff‸z d'2. |"), +1, semitone: true);
         Assert.False(top.Fallback);
         Assert.Equal(Plain("c'4@sffz d'2. |"), same);
-        Assert.Equal("sffz / sfz / fz / sf / rfz / rf / fp", top.Message);
+        Assert.Equal("sffz / sfz / fz / sf / rfz / rf / sfp / fp", top.Message);
     }
 
     /// <summary>An argument from a list steps along it (owner's request 2026-10-28: "notehead の

@@ -1935,7 +1935,7 @@ public sealed partial class LilyPondExporter
     private static string EmitPartial(PartialDeclarationSyntax p)
     {
         var d = p.Duration;
-        return d == null ? "" : "\\partial " + d.NumberToken.Text + new string('.', d.DotCount);
+        return d == null ? "" : "\\partial " + d.NumberToken.Text + new string('.', d.DotCount) + (p.Count > 1 ? "*" + p.Count : "");
     }
 
     /// <summary>Writes the <c>\partial</c> and remembers its length for an empty bar written

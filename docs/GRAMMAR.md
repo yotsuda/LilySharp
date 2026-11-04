@@ -284,7 +284,7 @@ GlobalSetting  = TempoDecl | TimeDecl | KeyDecl | PartialDecl | OctaveDecl | Pit
                  (* The display switches — how the marks are arranged, which bars carry a
                     number — are NOT here: they are the 'layout { }' block, §2.6. *)
 
-PartialDecl    = 'partial' , DurationToken ;
+PartialDecl    = 'partial' , DurationToken , [ '*' , Integer ] ;
                  (* "the bar this stands in is this long". A section's opening pickup is
                     a SECTION directive, for every part at once (§6) — `section A {
                     partial 4 … }`, or a standalone `section A { partial 4 }` beside
@@ -300,7 +300,9 @@ PartialDecl    = 'partial' , DurationToken ;
                     level of a structured file, or in a part header, there is no bar for
                     it and it is refused (LYS1024); in a bare note stream a leading
                     `partial` is that music's pickup. A bare underfull first bar gets a
-                    warning suggesting this. *)
+                    warning suggesting this. A length no one note value spells takes a
+                    count, as in LilyPond: `partial 8*5` is five eighths (owner's decision
+                    2026-11-04). *)
 OctaveDecl     = 'octave' , ( 'absolute' | 'relative' ) ;
 PitchDecl      = 'pitch' , PitchMode ;
 PitchMode      = 'written' | 'concert' ;     (* the top level and a part header: how notes are TYPED *)
@@ -2830,7 +2832,7 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
 (* - Articulations: @staccato @staccatissimo @accent @tenuto @marcato @fermata @portato  (.up/.down ok)
    - Strings:       @upBow @downBow @flageolet  (always above)
    - Ornaments:     @trill @mordent @prall @turn @reverseTurn
-   - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @rfz @fz   (default below; @f.up forces side; @p.subito prints "sub. p", plays p)
+   - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @sfp @rfz @fz   (default below; @f.up forces side; @p.subito prints "sub. p", plays p)
    - Hairpins:      @cresc @decresc @dim  (start note → next dynamic, or to @!cresc / @!decresc /
                  @!dim on a later note — LilyPond's \! — which ends whichever is open; written after
                  the start on ONE note, @cresc@!cresc, it spans that note's length; .up/.down REJECTED)

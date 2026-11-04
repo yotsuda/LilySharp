@@ -296,6 +296,7 @@ public class AnnotationNameValidatorTests
     /// </summary>
     [Theory]
     [InlineData("c4@fs d |", "@sf")]            // two letters: a swapped pair is a typo
+    [InlineData("c4@sfpx d |", "@sfp")]
     [InlineData("c4@acent d |", "@accent")]      // five letters: one edit
     [InlineData("c4@tenuot d |", "@tenuto")]     // a swap counts as one edit
     [InlineData("c4@stacatto d |", "@staccato")] // eight letters: two edits

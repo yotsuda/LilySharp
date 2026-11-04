@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **`@sfp`, as in LilyPond**: completion offers it, and `Ctrl+Shift+Up` / `Down` steps it among the accents, after `@fp`. MusicXML import joins `sf` and `p` set side by side into it.
+- **`partial 8*5`, as in LilyPond**: a pickup no one note value spells. MusicXML import writes it.
 - **A hairpin closed with `@!cresc` no longer answers for the next dynamic**: `c@f d@cresc e@!cresc | g@p` warned that the crescendo led to something softer.
 - **A quoted blank lyric syllable (`""`, `" "`) takes its note and prints nothing**, so the next word stands on the next note. The MIDI export sings `verse 1,3 { }` on every play it covers.
 - **A quoted lyric syllable is its words**: `"-"`, `"~"`, `"_"`, `"|"` and `"la-"` print those characters, and `"a"-` no longer prints its quotes.

@@ -1246,7 +1246,18 @@ internal sealed partial class Parser
         while (Check(SyntaxKind.Dot))
             dots.Add(Advance());
         var duration = new DurationGreen(number, [.. dots]);
-        return new PartialDeclarationGreen(partialKeyword, duration);
+        // A length no one note value spells: `partial 8*5`, LilyPond's \partial 8*5. A count of
+        // zero is no pickup, and is refused with the count's own error.
+        SyntaxToken? asterisk = null, count = null;
+        if (Check(SyntaxKind.Asterisk))
+        {
+            asterisk = Advance();
+            count = Expect(SyntaxKind.IntegerLiteral);
+            if (count.Text is { Length: > 0 } written && int.TryParse(written, out int times) && times == 0)
+                _diagnostics.Error(new TextSpan(_textPosition - count.FullWidth, count.FullWidth), DiagnosticCodes.ExpectedToken,
+                    "'partial' needs a count of at least 1, such as 'partial 8*5'.");
+        }
+        return new PartialDeclarationGreen(partialKeyword, duration, asterisk, count);
     }
 
     // ========== Variables ==========

@@ -1890,7 +1890,7 @@ public static class CompositionChecks
     }
 
     // The dynamic levels — not an accent like `@sf`, which says nothing of how loud the bars after it are.
-    private static readonly HashSet<string> Levels = ["pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff", "fp"];
+    private static readonly HashSet<string> Levels = ["pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff", "fp", "sfp"];
 
     /// <summary>
     /// Sections written twice, note for note — their bodies alike but for spacing (owner's report

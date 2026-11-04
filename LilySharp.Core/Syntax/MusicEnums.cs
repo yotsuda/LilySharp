@@ -161,6 +161,8 @@ public enum DynamicLevel
     MF = 86,
     /// <summary>fp — loud attack then soft; a single MIDI note gets the attack level.</summary>
     FP = 90,
+    /// <summary>sfp — a sforzato attack then soft; as with fp a single MIDI note gets the attack level, between f and ff.</summary>
+    SFP = 101,
     /// <summary>forte (loud), <c>\f</c>.</summary>
     F = 95,
     /// <summary>sf — subito forte accent on one note; LilyPond's loudest (1.00).</summary>

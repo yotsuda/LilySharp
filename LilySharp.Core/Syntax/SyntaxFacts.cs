@@ -649,7 +649,7 @@ internal static class SyntaxFacts
     /// Fixed-level dynamics recognized by TEXT rather than a dedicated token kind:
     /// the pitch-token <c>f</c>, the extended p*/f* families the lexer does not
     /// tokenize as Dynamic* kinds (<c>ppp…ppppp</c>, <c>fff…fffff</c>), and the
-    /// accent dynamics (<c>fp sf sfz rf rfz fz sffz</c>) which lex as identifiers.
+    /// accent dynamics (<c>fp sfp sf sfz rf rfz fz sffz</c>) which lex as identifiers.
     /// This is the single source shared by both the parse gate
     /// (<see cref="IsDynamicText"/> reads the keys) and the velocity map
     /// (<c>DynamicSyntax.Level</c> reads the values).
@@ -667,6 +667,7 @@ internal static class SyntaxFacts
             ["fp"] = DynamicLevel.FP,
             ["f"] = DynamicLevel.F,
             ["sf"] = DynamicLevel.SF,
+            ["sfp"] = DynamicLevel.SFP,
             ["ff"] = DynamicLevel.FF,
             ["sfz"] = DynamicLevel.SFZ,
             ["rf"] = DynamicLevel.RF,

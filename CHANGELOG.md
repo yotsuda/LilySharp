@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **`@sfp`, as in LilyPond.** `sf` and `p` side by side could not be written: a note prints one dynamic, so one was lost. `lysc import` now joins `sf`+`p` into `@sfp` and `f`+`p` into `@fp`, and a source's own `<sfp/>` comes through. In the LilyPond and MusicXML exports too; `Ctrl+Shift+Up` / `Down` steps it among the accents, after `@fp`.
+- **`partial 8*5`, as in LilyPond.** A pickup no one note value spells (five eighths) can be declared, and `lysc import` writes it, where such a bar came back bare with a warning.
 - **A hairpin closed with `@!cresc` no longer answers for the next dynamic.** `c@f d@cresc e@!cresc | g@p` warned that the crescendo led to something softer, a line later. The next level is judged only on the note the hairpin ends on, and a tuplet's braces no longer split a voice's line for this check.
 - **`lysc import` keeps the last of several dynamics that fall on one note at different moments** (no note of their staff stood between them), and reports the others; a note prints one. A dynamic set for a staff with no note in its bar stands on the note at its moment, no longer back on that staff's last note a bar earlier.
 - `[engraving]` **A quoted blank takes its note.** `""` and `" "` took none, so the next word stood a note early; as in LilyPond, they now leave that note unsung and print nothing, and a row keeps their share of the bar.

@@ -130,6 +130,7 @@ public sealed record DynamicItem
         DynamicLevel.MF => "mf",
         DynamicLevel.FP => "fp",
         DynamicLevel.F => "f",
+        DynamicLevel.SFP => "sfp",
         DynamicLevel.SF => "sf",
         DynamicLevel.FF => "ff",
         DynamicLevel.SFZ => "sfz",

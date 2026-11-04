@@ -887,7 +887,7 @@ public class MusicXmlImportSpanTests
     }
 
     [Fact]
-    public void APickupNoOneValueSpellsKeepsItsBar()
+    public void APickupNoOneValueSpells_IsACount()
     {
         const string sixteenth = "<note><pitch><step>D</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><type>16th</type><staff>1</staff></note>";
         var book = Book(Note("C") + "@@", Note("C") + Note("D") + Note("E") + Note("F"))
@@ -896,7 +896,7 @@ public class MusicXmlImportSpanTests
             .Replace("@@", sixteenth);
         var (lys, _) = Import(book);
         Assert.Contains("d'16", lys);
-        Assert.DoesNotContain("partial", lys);
+        Assert.Contains("partial 16*5", lys);
     }
 
     [Fact]
@@ -1123,7 +1123,7 @@ public class MusicXmlImportSpanTests
     public void LevelsAtOneMoment_AreBothWritten()
     {
         var (lys, _) = Import(Book(
-            Direction(Forte) + Direction("<dynamics><p/></dynamics>") + Note("C") + Note("D") + Note("E") + Note("F")));
-        Assert.Contains("@f@p", lys);
+            Direction("<dynamics><pp/></dynamics>") + Direction(Forte) + Note("C") + Note("D") + Note("E") + Note("F")));
+        Assert.Contains("@pp@f", lys);
     }
 }
