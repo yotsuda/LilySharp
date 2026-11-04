@@ -244,6 +244,25 @@ public abstract record MusicItem
     }
 
     /// <summary>
+    /// How far up, in staff positions, the staff a moved note stands on is from its own part's
+    /// staff at the PURE distance, 0 for a note that did not move. A column's skyline holds its
+    /// parts in one frame, the system's: the note's <c>StaffPosition</c> is about the other
+    /// staff's middle line, and this is what brings it into its neighbours' frame.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-interface.cc:78-85 Spacing_interface::skylines — each
+    ///   separation item's skyline is shifted by its staff's
+    ///   <c>pure_relative_y_coordinate (system)</c> before the two sides meet.
+    /// Written in place, once the staves it depends on have their notes
+    /// (<c>MeasureCollector.RestampMovedBeams</c>), and public so that it enters
+    /// <c>MeasureContentKey</c>: an edit on the other staff can move it.
+    /// </remarks>
+    public double CrossPureShift => _crossPureShift;
+    private double _crossPureShift;
+
+    internal void StampCrossPureShift(double shift) => _crossPureShift = shift;
+
+    /// <summary>
     /// The item's <c>@todo</c> mark: its key, <c>""</c> when the mark names none, or null
     /// when there is no mark. Engraves nothing and plays nothing; the drawing stamps the
     /// item's glyphs <c>data-todo</c> with it, which is what the preview colours

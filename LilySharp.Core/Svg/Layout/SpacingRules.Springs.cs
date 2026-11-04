@@ -387,7 +387,11 @@ internal static partial class SpacingRules
     /// </remarks>
     internal static double CalculateStemCorrectionToBarline(
         MusicItem? prevItem, NoteSpacingParameters noteParams)
-        => StemCorrectionToBarlineOf(StemSpacingInfo(prevItem), prevItem, 4.0, noteParams);
+        // A note @cross moved takes none: MEASURED, LilyPond 2.26.0 (Lab sessions/p1094/w3/bar),
+        // its gap to the bar line is the same with its stem up or down and at any height.
+        => prevItem is { CrossStaffIndex: >= 0 }
+            ? 0
+            : StemCorrectionToBarlineOf(StemSpacingInfo(prevItem), prevItem, 4.0, noteParams);
 
     /// <summary>
     /// <see cref="CalculateStemCorrectionToBarline"/> on a band already read, against a bar

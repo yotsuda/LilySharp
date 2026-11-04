@@ -380,8 +380,11 @@ internal static partial class SpacingRules
         // The column's parts in the COLUMN's frame — its origin, the head's left edge, at 0:
         // the paper column's for the ROD, the note column's (no dots, no half-tie) for the
         // wish's minimum — ItemSkylineFactory.ColumnElements names the two separation items.
-        var itemRight = ItemSkylineFactory.SharedRightSkylineAtColumn(item, 0, staffY: 0);
-        var wishRight = ItemSkylineFactory.SharedWishRightSkylineAtColumn(item, 0, staffY: 0);
+        // A note @cross moved meets the bar line of the staff it stands on: the paper column's
+        // skyline holds both staves' bars (ItemSkylineFactory.Boxes takes this shift off again).
+        double standsOn = item.CrossPureShift / 2.0;
+        var itemRight = ItemSkylineFactory.SharedRightSkylineAtColumn(item, 0, staffY: standsOn);
+        var wishRight = ItemSkylineFactory.SharedWishRightSkylineAtColumn(item, 0, staffY: standsOn);
 
         var (yMin, yMax) = ItemSkylineFactory.ColumnYExtent(item, 0);
         // Device frame, y down: the staff's top line is StaffYBottom (-2), its bottom line

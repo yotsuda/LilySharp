@@ -3649,20 +3649,32 @@ public sealed partial class MeasureCollector
     /// <c>@cross</c> moved them; every later reader of a note's stem (the spacing, a tuplet's
     /// side, a slur's end) asks the stamp, so a beam with a moved member is stamped again — with
     /// its knee, which the pure distance decides here, before any spacing, as LilyPond's does.
-    /// The pure tip goes with it: a cross-staff stem is in no skyline.
+    /// The pure tip goes with it, and the moved note's place in the system's frame
+    /// (<see cref="MusicItem.CrossPureShift"/>).
     /// </summary>
     /// <remarks>A voice-forced beam keeps its direction, and a stem the writer turned keeps its
     /// own (lily/beam.cc:946-956 set_stem_directions). A beam reaching a staff that is not a
     /// neighbour takes no knee here: it has no pure distance (<see cref="CrossStaffPure"/>).
     /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1093/snum/stem): `c8( g@cross)` knees, and the
     /// up-then-down stems space the pair 3.7 apart where same-way stems gave 2.3.
-    /// LILYPOND-REF: lily/note-spacing.cc:207 Note_spacing::stem_dir_correction.</remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:207 Note_spacing::stem_dir_correction.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1094/w3): `tuplet 3/2 { c8 gis@cross b@cross }`
+    /// with every stem up stands c → gis 3.154 apart, and 1.691 without the sharp: the sharp
+    /// meets the up stem of c, whose pure height unites its beam's across the staves.
+    /// LILYPOND-REF: lily/stem.cc:420-439 Stem::internal_pure_height — "look for cross staff
+    ///   effects": each same-way stem's tip, raised by its staff's distance from the far one.
+    /// </remarks>
     private static void RestampMovedBeams(Staff[] staves)
     {
         for (int s = 0; s < staves.Length; s++)
         {
             if (!staves[s].HasMovedNotes)
                 continue;
+            foreach (var voice in staves[s].Voices)
+                foreach (var measure in voice.Measures)
+                    foreach (var item in measure.Items)
+                        if (item.CrossStaffIndex >= 0 && Math.Abs(item.CrossStaffIndex - s) == 1)
+                            item.StampCrossPureShift(PureShift(staves, s, item.CrossStaffIndex));
             foreach (var voice in staves[s].Voices)
             {
                 var beams = new Dictionary<int, List<MusicItem>>();
@@ -3685,17 +3697,12 @@ public sealed partial class MeasureCollector
                         continue;
                     bool up = BeamDetector.DefaultStemUpOf(members);
                     bool[]? knee = null;
+                    double[]? offsets = null;
                     if (members.All(m => m.CrossStaffIndex < 0 || Math.Abs(m.CrossStaffIndex - s) == 1))
                     {
-                        var offsets = new double[members.Count];
+                        offsets = new double[members.Count];
                         for (int i = 0; i < offsets.Length; i++)
-                        {
-                            int target = members[i].CrossStaffIndex;
-                            if (target >= 0)
-                                offsets[i] = target > s
-                                    ? -CrossStaffPure.Distance(staves[s], staves[target]) * 2.0
-                                    : CrossStaffPure.Distance(staves[target], staves[s]) * 2.0;
-                        }
+                            offsets[i] = members[i].CrossPureShift;
                         knee = BeamDetector.KneeStemsOf(members, offsets);
                     }
                     for (int i = 0; i < members.Count; i++)
@@ -3713,9 +3720,54 @@ public sealed partial class MeasureCollector
                                 break;
                         }
                     }
+                    if (offsets is null)
+                        continue;
+                    foreach (bool dir in new[] { true, false })
+                        if (UnitedTip(members, offsets, dir) is { } tip)
+                            foreach (var member in members)
+                                switch (member)
+                                {
+                                    case NoteItem n when n.StemUp == dir:
+                                        n.StampBeam(dir, id, tip);
+                                        break;
+                                    case ChordItem c when c.StemUp == dir:
+                                        c.StampBeam(dir, id, tip);
+                                        break;
+                                }
                 }
             }
         }
+    }
+
+    /// <summary>A moved note's <see cref="MusicItem.CrossPureShift"/>.</summary>
+    private static double PureShift(Staff[] staves, int source, int target) => target > source
+        ? -CrossStaffPure.Distance(staves[source], staves[target]) * 2.0
+        : CrossStaffPure.Distance(staves[target], staves[source]) * 2.0;
+
+    /// <summary>The pure tip one stem direction's members of a beam share, read off their
+    /// unbeamed bands (the tips were just cleared), or null with no member going that way.</summary>
+    /// <remarks>LILYPOND-REF: lily/stem.cc:432-439 Stem::internal_pure_height — up:
+    /// <c>coords[i] − min_pos</c>, down: <c>coords[i] − max_pos</c>. Every stem takes the same
+    /// number in its own frame, a stem on the far staff included, as LilyPond's does.</remarks>
+    private static double? UnitedTip(List<MusicItem> members, double[] offsets, bool up)
+    {
+        double? tip = null;
+        double near = double.PositiveInfinity, far = double.NegativeInfinity;
+        for (int i = 0; i < members.Count; i++)
+            if (members[i] is NoteItem { StemUp: var a } && a == up || members[i] is ChordItem { StemUp: var b } && b == up)
+            {
+                near = Math.Min(near, offsets[i]);
+                far = Math.Max(far, offsets[i]);
+            }
+        for (int i = 0; i < members.Count; i++)
+        {
+            bool stemUp = members[i] is NoteItem n ? n.StemUp : ((ChordItem)members[i]).StemUp;
+            if (stemUp != up || Layout.SpacingRules.StemSpacingInfo(members[i], up) is not { } band)
+                continue;
+            double reach = up ? band.StemMax + offsets[i] - near : band.StemMin + offsets[i] - far;
+            tip = tip is { } seen ? (up ? Math.Max(seen, reach) : Math.Min(seen, reach)) : reach;
+        }
+        return tip;
     }
 
     /// <summary>The row skeleton of a melody-bound lyrics row: the melody's

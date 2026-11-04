@@ -369,6 +369,82 @@ public class CrossStaffDrawingTests
         Assert.False(notes[1].StemUp);
     }
 
+    /// <summary>Lab sessions/p1094/w3: five bars of 2/4, the last four `tuplet 3/2 { … }` twice,
+    /// moved then not, plain then with a sharp.</summary>
+    private const string WidthBook = """
+        octave absolute
+        time 2/4
+        part rh { clef treble }
+        part lh { clef bass }
+        section A { rh { r2 | r2 | r2 | r2 | r2 | } lh { c2 | tuplet 3/2 { c8 g@cross b@cross } tuplet 3/2 { c8 g@cross b@cross } | tuplet 3/2 { c8 gis@cross b@cross } tuplet 3/2 { c8 gis@cross b@cross } | tuplet 3/2 { c8 g b } tuplet 3/2 { c8 g b } | tuplet 3/2 { c8 gis b } tuplet 3/2 { c8 gis b } | } }
+        form { ~A }
+        score { grandStaff { staff rh staff lh } }
+        """;
+
+    private static double[] BlackHeads(string svg) => System.Text.RegularExpressions.Regex
+        .Matches(svg, "<text class=\"music\" x=\"([-\\d.]+)\"[^>]*></text>")
+        .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
+        .OrderBy(x => x).ToArray();
+
+    [Theory]
+    // MEASURED, LilyPond 2.26.0 (Lab sessions/p1093/w2): the sharp's gap is the same moved or not.
+    [InlineData(0, 2.254)]   // c g@cross
+    [InlineData(6, 3.354)]   // c gis@cross
+    [InlineData(9, 2.254)]   // the second gis in the bar writes no sharp
+    [InlineData(12, 2.754)]  // c g
+    [InlineData(18, 3.354)]  // c gis
+    public void AMovedNotesAccidentalTakesTheRoomItTakesAtHome(int head, double gap)
+    {
+        var heads = BlackHeads(LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(WidthBook)));
+        Assert.InRange(heads[head + 1] - heads[head], gap - 0.02, gap + 0.02);
+    }
+
+    [Fact]
+    public void AMovedStemSharesItsBeamsPureTip_AcrossTheStaves()
+    {
+        // MEASURED, LilyPond 2.26.0 (Lab sessions/p1094/w3/pure.ly): `ly:grob-pure-height` of all
+        // three up stems tops out at 9.05 spaces: b's own tip (0) on the staff 9.05 above c's.
+        var notes = Notes(Score(Book("r1 |", "tuplet 3/2 { c8 gis@cross b@cross } r4 r2 |")), 1);
+        Assert.All(notes, n => Assert.True(n.StemUp));
+        Assert.All(notes, n => Assert.InRange(n.PureBeamedStemTip!.Value, 18.0, 18.2));
+        Assert.Equal(0.0, notes[0].CrossPureShift);
+        Assert.InRange(notes[1].CrossPureShift, 18.0, 18.2);
+    }
+
+    [Fact]
+    public void AMovedLastNoteTakesNoStemCorrectionBeforeTheBarLine()
+    {
+        // MEASURED, LilyPond 2.26.0 (Lab sessions/p1094/w3/bar.ly): 2.09 up or down, at any height.
+        string[] lasts = ["b@cross", "d'@cross", "g'@cross", "d''@cross", "a@cross"];
+        string music = string.Concat(lasts.Select(l => $"r2 r4 tuplet 3/2 {{ c8 g@cross {l} }} | "));
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(Book(
+            string.Concat(lasts.Select(_ => "r1 | ")), music)));
+        var heads = BlackHeads(svg);
+        var bars = System.Text.RegularExpressions.Regex
+            .Matches(svg, "<rect x=\"([\\d.]+)\" y=\"[\\d.]+\" width=\"0.19\"")
+            .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
+            .Distinct().OrderBy(x => x).ToArray();
+        var lastHeads = heads.Where((_, i) => i % 3 == 2).ToArray();
+        Assert.Equal(lasts.Length, lastHeads.Length);
+        var gaps = lastHeads.Select(h => bars.First(b => b > h) - h).ToArray();
+        Assert.All(gaps, g => Assert.InRange(g, gaps[0] - 0.02, gaps[0] + 0.02));
+    }
+
+    [Fact]
+    public void AMovedLastNoteMeetsTheBarLineOfTheStaffItStandsOn()
+    {
+        // ⚠️ 2.50 against LilyPond's 2.40 (Lab sessions/p1094/w3/t2): named, not explained. The
+        // bar line stands in the note's frame, so a sharp-less head in the staff reaches it.
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(WidthBook));
+        var heads = BlackHeads(svg);
+        var bars = System.Text.RegularExpressions.Regex
+            .Matches(svg, "<rect x=\"([\\d.]+)\" y=\"[\\d.]+\" width=\"0.19\"")
+            .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
+            .Distinct().OrderBy(x => x).ToArray();
+        double gap = bars.First(b => b > heads[5]) - heads[5];
+        Assert.InRange(gap, 2.48, 2.52);
+    }
+
     [Fact]
     public void ACrossStaffSlurDoesNotOpenTheStaves()
     {
@@ -430,6 +506,29 @@ public class CrossStaffDrawingTests
         string incremental = session.Edit(change).Replace("\r\n", "\n");
         string full = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(Text(after)), opt).Replace("\r\n", "\n");
         Assert.Equal(full, incremental);
+    }
+
+    /// <summary>A moved note's place in the system's frame reads the whole staff's pure box, so
+    /// an edit bars away moves it: <see cref="MusicItem.CrossPureShift"/> and the tip.</summary>
+    [Theory]
+    [InlineData("tuplet 3/2 { c8 gis@cross b@cross } r4 r2 | ")]   // the tip enters the key as well
+    [InlineData("c4 gis4@cross r2 | ")]                            // no beam: only the shift does
+    public void AnEditThatMovesThePureDistanceReachesAMovedNoteElsewhere(string moved)
+    {
+        var opt = new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false };
+        string bars = string.Concat(Enumerable.Repeat("c8 e g c' e g c' e | ", 16));
+        string Text(string far) => Book(string.Concat(Enumerable.Repeat("c''1 | ", 18)), moved + far + " | " + bars + "c1 | ");
+        string seed = Text("c1");
+        var session = new LilySharp.Core.Svg.IncrementalCompiler(SyntaxTree.Parse(seed), opt);
+        session.Render();
+        const string FarHigh = "c'''1";
+        int bar = seed.IndexOf(moved, System.StringComparison.Ordinal) + moved.Length;
+        string incremental = session.Edit(new TextChange(new TextSpan(bar, 2), FarHigh)).Replace("\r\n", "\n");
+        string full = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(Text(FarHigh)), opt).Replace("\r\n", "\n");
+        Assert.Equal(full, incremental);
+        // The edit did reach the moved note: the shift of the full compile moved.
+        double ShiftOf(string far) => Notes(Score(Text(far)), 1).First(n => n.CrossStaffIndex >= 0).CrossPureShift;
+        Assert.True(ShiftOf(FarHigh) > ShiftOf("c1") + 1);
     }
 
     [Fact]

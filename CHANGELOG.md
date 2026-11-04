@@ -6,7 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
-- `[engraving]` **`@cross` moves the note.** A note written `@cross` is now drawn on the other staff, read under that staff's clef, as the grammar always said. A beam joins the two staves, with a knee where the gap is wide; its tie, its slur, its script and a glissando to it go with it. The `.ly` twin writes `\change Staff`. Only books that write `@cross` on a score with another staff change. The staff it left no longer makes room for it. A rest on that staff moves clear of it, and accidentals are read on the staff a note is drawn on. A beam between the staves clears what stands on either. Not yet: notes sharing a position with it on that staff, and MusicXML, which still writes the note on its own part's staff.
+- `[engraving]` **`@cross` moves the note.** A note written `@cross` is now drawn on the other staff, read under that staff's clef, as the grammar always said. A beam joins the two staves, with a knee where the gap is wide; its tie, its slur, its script and a glissando to it go with it. The `.ly` twin writes `\change Staff`. Only books that write `@cross` on a score with another staff change. The staff it left no longer makes room for it. A rest on that staff moves clear of it, and accidentals are read on the staff a note is drawn on. A beam between the staves clears what stands on either. Not yet: notes sharing a position with it on that staff, and MusicXML, which still writes the note on its own part's staff. An accidental on a moved note takes the room it takes at home: the columns are spaced in the system's frame, and a stem reaches as far as its beam across the staves.
 
 ### Copilot's chat teaches Lily#
 

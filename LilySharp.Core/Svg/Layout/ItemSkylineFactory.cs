@@ -506,6 +506,10 @@ internal static class ItemSkylineFactory
         MusicItem item, double referenceX, double staffY, ColumnElements which,
         int staffLines = EngravingDefaults.DefaultStaffLines)
     {
+        // A note @cross moved is read about the staff it stands on, in the frame of the system
+        // its neighbours share (y down, so a staff above is the smaller y).
+        // LILYPOND-REF: lily/spacing-interface.cc:78-85 Spacing_interface::skylines.
+        staffY -= item.CrossPureShift / 2.0;
         var parts = ColumnParts(item, referenceX, staffY, staffLines);
         var boxes = BoxesOf(parts, staffY, which, staffLines);
         GiveParts(parts);
