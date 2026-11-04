@@ -564,9 +564,13 @@ public sealed class MusicXmlExporter
             {
                 var u = upper.Measures[i];
                 var l = lower.Measures[i];
+                bool headCrosses = false;
                 foreach (var n in u.Notes)
                     if (n.RawElement == null && !n.IsBackup)
-                        n.Staff = 1;
+                    {
+                        headCrosses = n.IsChord ? headCrosses : n.CrossStaff;
+                        n.Staff = headCrosses ? 2 : 1;
+                    }
 
                 if (u.Attributes != null)
                     u.Attributes.ClefNumber = 1;
@@ -604,7 +608,8 @@ public sealed class MusicXmlExporter
                 {
                     if (n.RawElement == null && !n.IsBackup)
                     {
-                        n.Staff = 2;
+                        headCrosses = n.IsChord ? headCrosses : n.CrossStaff;
+                        n.Staff = headCrosses ? 1 : 2;
                         n.Voice = (n.Voice ?? 1) + 4;
                         n.SlurNumber = 2;
                     }
@@ -5215,6 +5220,9 @@ public sealed class MusicXmlExporter
         {
             if (artic is ArticulationSyntax articulation)
             {
+                // MergeGrandStaves reads it for the note's <staff>.
+                if (articulation.NameToken.Text == "cross")
+                    xmlNote.CrossStaff = true;
                 // Single-word direction marks (@sustain, @sostenuto, @ottava, @loco)
                 // parse as name-only articulations, not compound marks.
                 if (articulation.Type == ArticulationType.None)

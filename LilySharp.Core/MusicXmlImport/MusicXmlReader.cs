@@ -198,6 +198,8 @@ internal static class MusicXmlReader
         int measureNo = 0;
         var staffClefs = new Dictionary<int, string>();   // staff number -> clef
         var voiceStaff = new Dictionary<int, int>();       // voice number -> its staff
+        var staffCounts = new Dictionary<(int Voice, int Staff), int>();   // the notes it has on each
+        var noteStaff = new Dictionary<ImportNote, int>();  // the staff each head is written on
         // A span's end (`!ottava`, `!sustain`) standing past a bar's last onset — where a
         // MusicXML stop usually stands, after the last note it covers — closes on the next
         // note of its staff, in the next bar: on the bar's last note it would end the line a
@@ -322,7 +324,9 @@ internal static class MusicXmlReader
                         // Remember which staff each voice sits on; a part spanning
                         // several staves is split into a grand staff below.
                         int staff = int.TryParse(Local(el, "staff")?.Value, out int st) ? st : 1;
-                        voiceStaff[voice] = staff;
+                        staffCounts.TryGetValue((voice, staff), out int seen);
+                        staffCounts[(voice, staff)] = seen + 1;
+                        voiceStaff.TryAdd(voice, staff);
                         // A grace note has no duration — accumulate it to attach to the
                         // next real note as a leading acciaccatura/grace block.
                         if (Local(el, "grace") != null)
@@ -348,6 +352,7 @@ internal static class MusicXmlReader
                             lastNote = note;
                             lastNoteOfStaff[staff] = note;
                             partLastNote = note;
+                            noteStaff[note] = staff;
                         }
                         target.Add(note);
                         break;
@@ -387,6 +392,18 @@ internal static class MusicXmlReader
 
         // A part whose voices span more than one staff (a piano grand staff) splits
         // into one Lily# part per staff, grouped into a grandStaff by the score.
+        // A voice sits on the staff most of its notes are written on (the first of equals): a
+        // note written on the other one is a cross-staff note, and until 2026-11-04 whichever
+        // staff a voice's LAST note named took the whole voice, so a left hand ending on a note
+        // up in the right hand's staff left one staff, its clef mid-air.
+        foreach (var voice in voiceStaff.Keys.ToList())
+        {
+            int best = voiceStaff[voice], most = staffCounts.GetValueOrDefault((voice, best));
+            foreach (var ((v, s), count) in staffCounts)
+                if (v == voice && (count > most))
+                    (best, most) = (s, count);
+            voiceStaff[voice] = best;
+        }
         var staves = voiceStaff.Values.Distinct().OrderBy(s => s).ToList();
         // A TAB staff beside a notation staff holds the same notes again, with their strings
         // and frets (what MusicXmlExporter writes for `staff gt  tab gt`): its voices are a
@@ -405,6 +422,16 @@ internal static class MusicXmlReader
             ToPlainClefOctave(part.Measures, part.Clef);
             return new List<ImportPart> { part };
         }
+        // `@cross` names "the other staff", which only two staves answer.
+        if (staves.Count == 2)
+            foreach (var measure in part.Measures)
+                foreach (var (voice, items) in measure.VoiceItems)
+                    foreach (var item in items)
+                        if (item is ImportNote { IsRest: false } note
+                            && noteStaff.TryGetValue(note, out int written)
+                            && written != voiceStaff.GetValueOrDefault(voice, written)
+                            && staves.Contains(written))
+                            note.Articulations.Add("cross");
         return SplitByStaff(part, staves, voiceStaff, staffClefs, transposeSet);
     }
 

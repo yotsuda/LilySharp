@@ -916,6 +916,10 @@ internal sealed class MusicXmlNote
     /// on a one-staff part.</summary>
     public int? Staff { get; set; }
 
+    /// <summary>The note wrote <c>@cross</c>: where its part's two staves are merged into one
+    /// part it stands on the other staff (a chord's head answers for its members).</summary>
+    public bool CrossStaff { get; set; }
+
     /// <summary>The note's <c>&lt;beam&gt;</c> elements, level 1 first: <c>begin</c>,
     /// <c>continue</c>, <c>end</c>, <c>forward hook</c> or <c>backward hook</c>.</summary>
     public List<(int Number, string Value)> Beams { get; } = new();
