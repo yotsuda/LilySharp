@@ -6,6 +6,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **A `key` or `tempo` in a tuplet is drawn.** Written inside `tuplet { }`, both were dropped without a word, and the notes after the key stood in the old one. They now stand at their note's moment, as outside a tuplet.
+- **A `time` or `partial` in a tuplet is an error (LYS1065).** Both were dropped without a word. Write it before the tuplet.
+- `[engraving]` **Two voices' clefs at one moment draw one.** When voices of a staff wrote different `clef`s at the same moment, both were drawn on top of each other. The last one heard stands, as in LilyPond.
 - `[engraving]` **A tie crosses a clef change.** `c'1~ | clef bass c'1` drew no tie and warned that the pitches differed; it is the same pitch, and LilyPond draws the tie from the first head. A tied head after the clef repeats no accidental. Another spelling (`cis'~ des'`) is still no tie.
 - **`lysc import` keeps a clef where it stands.** One inside a bar was read at the bar's head, and a change on one staff of a grand staff was lost. A clef that music cannot spell (`soprano` after the start) is left out and reported, where it made an error.
 - **`lysc xml` writes a clef where it stands in the bar.** A clef after the bar's first notes waited for the next bar's head; it is now an `<attributes>` at its moment in the note stream, with its staff's `number` on a grand staff or beside a tab.

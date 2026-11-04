@@ -4,6 +4,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A `key` or `tempo` in a tuplet is drawn**: both were dropped without a word.
+- **A `time` or `partial` in a tuplet is an error** (LYS1065): both were dropped without a word. Write it before the tuplet.
+- **Two voices' clefs at one moment draw one**: the last one heard, where both were drawn on top of each other.
 - **A tie crosses a clef change**: `c'1~ | clef bass c'1` drew no tie and warned that the pitches differed.
 - **MusicXML import keeps a clef where it stands**: one inside a bar was read at the bar's head, and a change on one staff of a grand staff was lost.
 - **The MusicXML export writes a clef where it stands in the bar**, not at the next bar's head.

@@ -671,6 +671,35 @@ public sealed partial class MeasureCollector
                     s.Meta.Clef = _v.Meta.Clef;
     }
 
+    /// <summary>The last <c>clef</c> a branch of an open span heard: where it stands and the clef
+    /// in force before that moment.</summary>
+    private (VoiceClock.Span Span, MeasureBuilder Builder, int Measure, Fraction Moment, ClefType Before)? _clefAtThisMoment;
+
+    /// <summary>Remembers a <c>clef</c> for the branches that may write another at its moment.</summary>
+    private void NoteClefAtThisMoment(MeasureBuilder builder, ClefType before)
+        => _clefAtThisMoment = _clock.SpanOpen
+            ? (_clock.OpenSpans.First(), builder, builder.CurrentMeasureIndex, builder.CurrentMoment, before)
+            : null;
+
+    /// <summary>
+    /// When a branch of an open span already wrote a clef at this same moment, withdraws that
+    /// clef's change and returns the clef in force before the moment; otherwise null.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/clef-engraver.cc:139-166 Clef_engraver::inspect_clef_properties — the
+    /// engraver reads clefGlyph once per timestep, so of two clefs at one moment the staff draws
+    /// the last heard, against the clef of the timestep before.
+    /// </remarks>
+    private ClefType? WithdrawClefAtThisMoment(MeasureBuilder builder, ClefType newType)
+    {
+        if (_clefAtThisMoment is not { } earlier || !_clock.OpenSpans.Contains(earlier.Span)
+            || earlier.Measure != builder.CurrentMeasureIndex || earlier.Moment != builder.CurrentMoment)
+            return null;
+        earlier.Builder.WithdrawStanding<ClefChangeItem>();
+        earlier.Builder.RestampStandingKeys(newType);
+        return earlier.Before;
+    }
+
     /// <summary>
     /// The <c>&lt;&lt; \\ &gt;&gt;</c> span arm of the walk: branch 0 joins the primary stream (this
     /// builder) so measure indices stay continuous, and the other voices — each in its own

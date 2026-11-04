@@ -862,6 +862,10 @@ public static class DiagnosticCodes
     /// 2026-11-03; <c>Semantics.ChordUnisonValidator</c>).</summary>
     public const string ChordSamePitchTwice = "LYS1064";
 
+    /// <summary>A <c>time</c> or <c>partial</c> in a tuplet's body: write it before the tuplet
+    /// (owner's decision 2026-11-05; <c>Semantics.TupletMeterValidator</c>).</summary>
+    public const string MeterInTuplet = "LYS1065";
+
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
     /// root (a root that is no A–G is the parser's error); the message names the spelling's fix, as the

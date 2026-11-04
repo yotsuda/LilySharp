@@ -1655,8 +1655,12 @@ public sealed partial class MeasureCollector
                     string newClef = clefDecl.ClefName.Text.ToLowerInvariant();
                     var newType = ParseClefType(newClef);
                     var head = builder.SectionHead;
-                    bool unchanged = head is { } h ? h.Clef == newType : newType == ParseClefType(_v.Meta.Clef);
-                    bool theResetsChange = head != null && !unchanged && newType == ParseClefType(_v.Meta.Clef);
+                    var inForce = ParseClefType(_v.Meta.Clef);
+                    // A clef already written at this moment gives way to this one: the staff draws
+                    // one clef a moment, compared with what stood before the moment.
+                    var before = WithdrawClefAtThisMoment(builder, newType) ?? inForce;
+                    bool unchanged = head is { } h ? h.Clef == newType : newType == before;
+                    bool theResetsChange = head != null && !unchanged && newType == inForce;
                     _v.Meta.Clef = newClef;
                     ShareClefWithSpanBranches();
                     if (unchanged && !clefDecl.IsForced)
@@ -1677,6 +1681,7 @@ public sealed partial class MeasureCollector
                     // in front of it (see TimeDataPos for what that costs).
                     var clefChange = new ClefChangeItem(
                         ParseClefType(newClef), clefDecl.ClefName.Span.Start);
+                    NoteClefAtThisMoment(builder, before);
                     await AddItemAsync(builder, clefChange);
                 }
                 break;
@@ -1714,7 +1719,7 @@ public sealed partial class MeasureCollector
                             MusicMarkType.Tempo, bpm.ToString(),
                             // The declaration's first VALUE — see TempoDataPos.
                             builder.CurrentMeasureIndex, TempoDataPos(tempoChange),
-                            builder.CurrentItemCount, builder.CurrentDuration)
+                            builder.CurrentItemCount, builder.CurrentMoment)
                         {
                             // The mid-music path dropped everything but the
                             // number — "tempo Lively 4. = 80" rendered ♩=80.
@@ -1731,7 +1736,7 @@ public sealed partial class MeasureCollector
                             MusicMarkType.Tempo, "",
                             // The declaration's first VALUE — see TempoDataPos.
                             builder.CurrentMeasureIndex, TempoDataPos(tempoChange),
-                            builder.CurrentItemCount, builder.CurrentDuration)
+                            builder.CurrentItemCount, builder.CurrentMoment)
                         {
                             TempoText = tempoChange.Marking,
                             SwingSubdivision = tempoChange.SwingSubdivision,
@@ -2070,10 +2075,11 @@ public sealed partial class MeasureCollector
                 continue;
             }
 
-            // A clef in the body is the staff's at the member's moment, as outside it (a tuplet
-            // scales time and nothing else). It used to be dropped without a word, and the notes
-            // after it stood in the old clef (LilySharp-Omr REQUESTS #22).
-            if (item is ClefDeclarationSyntax)
+            // A clef, a key or a tempo in the body stands at the member's moment, as outside it (a
+            // tuplet scales time and nothing else). Each used to be dropped without a word, and the
+            // notes after it stood in the old clef or key (LilySharp-Omr REQUESTS #22). A `time` and
+            // a `partial` are errors here and stay undrawn (TupletMeterValidator, LYS1065).
+            if (item is ClefDeclarationSyntax or KeySignatureSyntax or TempoDeclarationSyntax)
             {
                 await ProcessMusicNode(item, builder);
                 continue;
@@ -2141,9 +2147,9 @@ public sealed partial class MeasureCollector
             while (startNoteIndex <= endNoteIndex && current[startNoteIndex].GraceTime)
                 startNoteIndex++;
         }
-        // A clef opening the body stands before the bracket's first column, as a clef before the
-        // tuplet would (LilyPond's bracket spans the note columns).
-        while (startNoteIndex <= endNoteIndex && builder.CurrentItems[startNoteIndex] is ClefChangeItem)
+        // A clef or key opening the body stands before the bracket's first column, as one before
+        // the tuplet would (LilyPond's bracket spans the note columns).
+        while (startNoteIndex <= endNoteIndex && builder.CurrentItems[startNoteIndex] is ClefChangeItem or KeySignatureChangeItem)
             startNoteIndex++;
 
         // Only add bracket if we have at least 2 notes.
