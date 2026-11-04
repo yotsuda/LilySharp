@@ -845,12 +845,17 @@ internal static class LysWriter
                 sb.Append(' ').Append(fill);
             // The folded bars close at the LAST one's bar line.
             var last = part.Measures[i + bars - 1];
+            // A bar this voice leaves blank is closed by a `|` of its own before a typed bar line:
+            // on an empty span `||` and `|.` only decorate the bar behind them (MeasureBuilder.
+            // HandleBarline), so `{ | || g'1 }` is ONE empty bar and g' stood a bar early, on the
+            // page and in the sound, with nothing reported (lehmann-flapper5 bar 13).
+            string closeBlank = !lead && items.Count == 0 && PlainOrDoubleBarline(last) != "|" ? "| " : "";
             i += bars;
             onLine++;
             if (i < end)
             {
                 string bar = PlainOrDoubleBarline(last);
-                sb.Append(' ').Append(bar);
+                sb.Append(' ').Append(closeBlank).Append(bar);
                 bool breakHere = onLine >= BarsPerLine || bar != "|";
                 sb.Append(breakHere ? newline : " ");
                 if (breakHere)
@@ -858,7 +863,7 @@ internal static class LysWriter
             }
             else if (seg.EndBar)
             {
-                sb.Append(' ').Append(PlainOrDoubleBarline(last));
+                sb.Append(' ').Append(closeBlank).Append(PlainOrDoubleBarline(last));
             }
         }
         return sb.ToString();

@@ -238,7 +238,6 @@ internal static class MusicXmlReader
             var pendingGrace = new List<ImportGraceNote>();
             int position = 0;           // divisions from the bar's head, along the stream
             var voiceAt = new Dictionary<int, int>();   // where each voice's written music ends
-            bool cursorMoved = false;   // a <forward> naming no voice moved the position alone
             var openTremolos = new Dictionary<int, (ImportNote First, int Ticks)>();   // per voice
             ImportNote? lastNote = null;
 
@@ -323,7 +322,6 @@ internal static class MusicXmlReader
                         if (!named && voiceAt.GetValueOrDefault(lastVoice, -1) != position)
                         {
                             position += fdur;
-                            cursorMoved = true;
                             break;
                         }
                         int fvoice = named ? fv : lastVoice;
@@ -360,13 +358,20 @@ internal static class MusicXmlReader
                         // figured-bass / dynamics / grace attach to the head note only.
                         if (!note.ChordWithPrev)
                         {
-                            if (cursorMoved)
+                            // A voice's note past that voice's end stands on its beat: the stream
+                            // reached it by a voiceless <forward> or by a <backup> short of the
+                            // bar's head (Dichterliebe 13 bar 30: E4 v2 on beat 2.5, at the bar's
+                            // head until 2026-11-04), and the voice owes the gap either way.
+                            int gap = position - voiceAt.GetValueOrDefault(voice);
+                            int spelled = 0;
+                            foreach (var (value, dots) in DecomposeDuration(gap, divisions))
                             {
-                                foreach (var (value, dots) in DecomposeDuration(
-                                    position - voiceAt.GetValueOrDefault(voice), divisions))
-                                    target.Add(new ImportNote { IsRest = true, NoteValue = value, Dots = dots });
-                                cursorMoved = false;
+                                target.Add(new ImportNote { IsRest = true, NoteValue = value, Dots = dots });
+                                spelled += 4 * Math.Max(1, divisions) / value;
                             }
+                            // A gap inside a tuplet (0.4 of a beat) has no plain note value.
+                            if (gap > spelled)
+                                report.Warn(measureNo, "a voice's gap has no plain note value, so its next note stands early.");
                             target.AddRange(pendingAnnotations);
                             pendingAnnotations.Clear();
                             AttachDue(note, staff);
@@ -1055,10 +1060,14 @@ internal static class MusicXmlReader
     {
         int wholeTicks = 4 * Math.Max(1, divisions);
         int remaining = duration;
-        foreach (int value in new[] { 1, 2, 4, 8, 16, 32 })
+        foreach (int value in new[] { 1, 2, 4, 8, 16, 32, 64, 128 })
         {
+            // A value that is no whole number of ticks is not this gap's: at divisions 3 an eighth
+            // is 1.5 ticks, and read as 1 a triplet's gap came out twice as long as it is.
+            if (wholeTicks % value != 0)
+                continue;
             int ticks = wholeTicks / value;
-            while (ticks > 0 && remaining >= ticks)
+            while (remaining >= ticks)
             {
                 yield return (value, 0);
                 remaining -= ticks;

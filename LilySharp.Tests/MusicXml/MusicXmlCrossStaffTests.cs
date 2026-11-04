@@ -268,6 +268,66 @@ public class MusicXmlCrossStaffTests
     }
 
     [Fact]
+    public void ABackupShortOfTheBarsHeadPutsTheNextVoiceOnItsBeat()
+    {
+        // Dichterliebe 13 bar 30: the stream rewinds to beat 2 and the next voice writes there.
+        var (lys, _) = new MusicXmlImporter().Import(GapBar(
+            N("C", 5, 1, 16, "half") + Backup(8) + N("F", 4, 2, 8, "quarter")));
+        Assert.Contains("r4 f'4 |", lys);
+    }
+
+    [Fact]
+    public void AGapAVoiceOwesCanBeASixtyFourth()
+    {
+        // boulanger-clairieres02 bar 22: a 64th's gap (divisions 8: one tick is a 32nd, so 16).
+        string music = N("C", 5, 1, 32, "half") + Backup(31) + N("F", 4, 2, 1, "64th");
+        var (lys, report) = new MusicXmlImporter().Import(GapBar(music).Replace("<divisions>8<", "<divisions>16<"));
+        Assert.Contains("r64 ", lys);
+        Assert.DoesNotContain(report.Warnings, w => w.Contains("no plain note value"));
+    }
+
+    [Fact]
+    public void AGapNoPlainValueSpellsIsReported()
+    {
+        // divisions 5: one tick is a fifth of a beat, no plain value's length.
+        string music = N("C", 5, 1, 10, "half") + Backup(8) + N("F", 4, 2, 2, "16th");
+        var (_, report) = new MusicXmlImporter().Import(GapBar(music).Replace("<divisions>8<", "<divisions>5<"));
+        Assert.Contains(report.Warnings, w => w.Contains("no plain note value"));
+    }
+
+    [Fact]
+    public void AVoiceBlankBeforeATypedBarLineKeepsItsBars()
+    {
+        // lehmann-flapper5: voice 2 rests through bars 1 and 2, bar 2 closing `||`, and sings in 3.
+        string Bar(int no, string music, string? style = null) =>
+            $"<measure number=\"{no}\">"
+            + (no == 1 ? "<attributes><divisions>2</divisions><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>" : "")
+            + music
+            + (style is null ? "" : $"<barline location=\"right\"><bar-style>{style}</bar-style></barline>")
+            + "</measure>";
+        string V1(string step) => N(step, 5, 1, 8, "whole");
+        string xml = $"""
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>M</part-name></score-part></part-list>
+              <part id="P1">
+                {Bar(1, V1("C"))}
+                {Bar(2, V1("D"), "light-light")}
+                {Bar(3, V1("E") + Backup(8) + N("G", 4, 2, 8, "whole"))}
+                {Bar(4, V1("F"), "light-heavy")}
+              </part>
+            </score-partwise>
+            """;
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+        Assert.Contains("|  | ||", lys.Replace("\r\n", " ").Replace("\n", " "));
+        // Round trip: G4 back in bar 3, where the source has it.
+        var measures = new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().Descendants("measure").ToArray();
+        Assert.Equal(4, measures.Length);
+        bool HasG4(XElement m) => m.Elements("note").Any(n => n.Element("pitch") is { } p
+            && p.Element("step")!.Value == "G" && p.Element("octave")!.Value == "4");
+        Assert.Equal([false, false, true, false], measures.Select(HasG4));
+    }
+
+    [Fact]
     public void ASpanTheValueCannotDivideKeepsItsNotes()
     {
         // 7 ticks at divisions 8 is no whole number of 16th pairs: no block is guessed.
