@@ -221,6 +221,55 @@ public class CrossStaffDrawingTests
         Assert.Equal("sharp", lh.Last().Accidental);
     }
 
+    /// <summary>OMR REQUESTS #21: the lower voice's rest stands where it stands without the
+    /// @cross, as LilyPond's does in both bars of the OMR's own repro.</summary>
+    [Fact]
+    public void ALowerVoicesRestDoesNotClearANoteOnTheOtherStaff()
+    {
+        var layout = new LayoutEngine().Layout(Score(Book("e''2 | e''2 | e''1 |", """
+            voice { tuplet 3/2 { d8 g8@cross b8@cross } tuplet 3/2 { d8 g8@cross b8@cross } } { g,8 r8 g,8 r8 } r2 |
+            voice { tuplet 3/2 { d8 g8 b8 } tuplet 3/2 { d8 g8 b8 } } { g,8 r8 g,8 r8 } r2 |
+            c1 |
+            """)));
+        double moved = layout.GetRestShift(1, 0, 1, 1);
+        double plain = layout.GetRestShift(1, 1, 1, 1);
+        Assert.Equal(plain, moved);
+    }
+
+    [Fact]
+    public void ARestsDotIsNotMovedByADotOnTheOtherStaff()
+    {
+        // The lower voice's dotted rest and a dotted note moved away at one moment: f' reads -3
+        // on the treble staff, the space the rest's own dot would take were they on one staff.
+        int? DotOf(string upper) => new LayoutEngine()
+            .Layout(Score(Book("r1 |", "voice { " + upper + " r8 r2 } { r4. r8 r2 } |")))
+            .GetRestDotOffset(0, 1, 0);
+        Assert.Equal(DotOf("s4."), DotOf("f'4.@cross"));
+    }
+
+    [Fact]
+    public void ALowerVoicesBeamDoesNotClearANoteOnTheOtherStaff()
+    {
+        // LilyPond (v1 bar 5): the same short stems with the upper voice on the other staff.
+        BeamLayout Lower(string upper) => new LayoutEngine()
+            .Layout(Score(Book("r1 |", "voice { " + upper + " r2 } { c8 d c d r2 } |")))
+            .BeamLayouts.Single(b => b.Group.VoiceIndex == 1 && b.StaffIndex == 1);
+        var moved = Lower("g8@cross b@cross g@cross b@cross");
+        var away = Lower("s2");
+        Assert.Equal(away.LeftY, moved.LeftY, 6);
+        Assert.Equal(away.RightY, moved.RightY, 6);
+    }
+
+    [Fact]
+    public void AHeadDoesNotStepAsideForANoteOnTheOtherStaff()
+    {
+        // c'' reads +1 on the treble staff and d 0 on the bass: a second only if read as one staff.
+        var staff = Score(Book("r1 |", "voice { c''4@cross r2. } { d4 r2. } |")).EnumerateStaves().ToList()[1].Staff;
+        var table = LilySharp.Core.Svg.Layout.SpacingRules.VoiceCollisionShiftsOf(staff);
+        Assert.Equal(0, table.ShiftOf(0, 1, 0));
+        Assert.Equal(0, table.ShiftOf(0, 2, 0));
+    }
+
     /// <summary>LilyPond's shapes (Lab sessions/p1093/rc, 2.26.0): a rest under a moved note goes
     /// down past it. <c>r1</c> on the treble staff at c, whose head stands at -13.</summary>
     [Fact]

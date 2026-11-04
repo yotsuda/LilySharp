@@ -1382,7 +1382,8 @@ internal sealed class ElementCoordinator
             if (measureIndex >= measures.Length) continue;
 
             var timing = Fraction.Zero;
-            var measure = measures[measureIndex];
+            // Only what stands on this staff is in the beam's way (HeldHere).
+            var measure = HeldHere.Of(measures[measureIndex]);
             var items = measure.Items;
             bool shifted = voiceShifts.AnyShiftIn(measureIndex);
             var itemXs = new double[items.Length];
@@ -1757,7 +1758,8 @@ internal sealed class ElementCoordinator
                         if (o == v) continue;
                         foreach (var (otherTime, otherItem, otherIndex) in byVoice[o])
                         {
-                            if (otherItem is not (NoteItem or ChordItem))
+                            // A note @cross moved is not on this staff (HeldHere; OMR REQUESTS #21).
+                            if (otherItem is not (NoteItem or ChordItem) || otherItem.CrossStaffIndex >= 0)
                                 continue;
                             bool otherUp = VoiceDefaults.GetDefaultStemUpAt(staff.Voices, o, m, otherIndex)
                                 ?? (o % 2 == 0);
@@ -2187,7 +2189,7 @@ internal sealed class ElementCoordinator
                 for (int i = 0; i < items.Length; i++)
                 {
                     var item = items[i];
-                    bool dotted = item switch
+                    bool dotted = item.CrossStaffIndex < 0 && item switch
                     {
                         RestItem r => r.Dots > 0 && !r.IsSpacer && !r.IsMultiMeasure,
                         NoteItem n => n.Dots > 0,

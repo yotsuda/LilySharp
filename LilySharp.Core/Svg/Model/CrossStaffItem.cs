@@ -19,6 +19,55 @@ using System.Collections.Immutable;
 namespace LilySharp.Core.Svg.Model;
 
 /// <summary>
+/// A staff's music as that staff holds it: a note <c>@cross</c> moved stays in its voice's items
+/// but is not on this staff, and its position is the other staff's. Whatever asks "which heads
+/// stand here" reads this view, where the moved note is silence of the same length, at the same
+/// index.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/rest-collision.cc:244-267 calc_positioning_done,
+///   lily/note-collision.cc check_meshing_chords, lily/beam-collision-engraver.cc:115-194
+///   finalize — all per Staff context, so a Voice that left this Staff is not among them.
+/// MEASURED (OMR REQUESTS #21; Lab sessions/p1093/v1): read in place, a lower voice's rest fell
+/// five spaces clear of a note that stood on the other staff, its beam ran 2.6 spaces long, and
+/// its head stepped aside for a false second.
+/// </remarks>
+internal static class HeldHere
+{
+    /// <summary><paramref name="measure"/> without the notes standing on another staff; the same
+    /// instance when it has none.</summary>
+    public static Measure Of(Measure measure)
+    {
+        MusicItem[]? copy = null;
+        var items = measure.Items;
+        for (int i = 0; i < items.Length; i++)
+            if (items[i].CrossStaffIndex >= 0)
+                (copy ??= items.ToArray())[i] = new RestItem(items[i].Duration, 0, items[i].SourcePosition) { IsSpacer = true };
+        return copy is null ? measure : measure with { Items = ImmutableArray.Create(copy) };
+    }
+
+    /// <summary><paramref name="voices"/> as <see cref="Of(Measure)"/> reads them; the same array
+    /// when no note moved.</summary>
+    public static ImmutableArray<Voice> Of(ImmutableArray<Voice> voices)
+    {
+        Voice[]? copy = null;
+        for (int v = 0; v < voices.Length; v++)
+        {
+            var measures = voices[v].Measures;
+            Measure[]? rebuilt = null;
+            for (int m = 0; m < measures.Length; m++)
+            {
+                var here = Of(measures[m]);
+                if (!ReferenceEquals(here, measures[m]))
+                    (rebuilt ??= measures.ToArray())[m] = here;
+            }
+            if (rebuilt != null)
+                (copy ??= voices.ToArray())[v] = voices[v] with { Measures = ImmutableArray.Create(rebuilt) };
+        }
+        return copy is null ? voices : ImmutableArray.Create(copy);
+    }
+}
+/// <summary>
 /// One note standing on a staff that is not its voice's (<see cref="Staff.CrossedIn"/>): the
 /// address in that voice's measures, where its column is read.
 /// </summary>

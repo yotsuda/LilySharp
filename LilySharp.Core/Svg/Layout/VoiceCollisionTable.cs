@@ -72,7 +72,8 @@ internal sealed class VoiceCollisionTable
 
     public VoiceCollisionTable(ImmutableArray<Voice> voices)
     {
-        _voices = voices;
+        // A note @cross moved collides on the staff it stands on, not this one.
+        _voices = HeldHere.Of(voices);
         int n = 0;
         foreach (var v in voices)
             n = Math.Max(n, v.Measures.Length);
