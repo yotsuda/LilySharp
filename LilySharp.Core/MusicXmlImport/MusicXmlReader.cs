@@ -237,6 +237,8 @@ internal static class MusicXmlReader
             carriedEnds.Clear();
             var pendingGrace = new List<ImportGraceNote>();
             int position = 0;           // divisions from the bar's head, along the stream
+            var voiceAt = new Dictionary<int, int>();   // where each voice's written music ends
+            bool cursorMoved = false;   // a <forward> naming no voice moved the position alone
             ImportNote? lastNote = null;
 
             void AttachDue(ImportNote note, int staff)
@@ -309,11 +311,25 @@ internal static class MusicXmlReader
                     {
                         // A gap in the current voice — fill it with rest(s) so the
                         // following notes stay on the beat.
-                        int fvoice = int.TryParse(Local(el, "voice")?.Value, out int fv) ? fv : lastVoice;
                         int fdur = int.TryParse(Local(el, "duration")?.Value, out int fd) ? fd : 0;
+                        bool named = int.TryParse(Local(el, "voice")?.Value, out int fv);
+                        // <voice> is optional here. With none, the gap is the last voice's only if
+                        // the stream is still at that voice's end; after a <backup> it is only a
+                        // cursor move, and whichever voice writes next fills up to it (below).
+                        // Until 2026-11-04 such a gap went into the voice just finished, past its
+                        // bar's end, and the voice it was for lost it: its notes came in early
+                        // (Dichterliebe 1, bar 6: `<backup 16> <forward 8> <forward 4> F4 v2`).
+                        if (!named && voiceAt.GetValueOrDefault(lastVoice, -1) != position)
+                        {
+                            position += fdur;
+                            cursorMoved = true;
+                            break;
+                        }
+                        int fvoice = named ? fv : lastVoice;
                         foreach (var (value, dots) in DecomposeDuration(fdur, divisions))
                             measure.Voice(fvoice).Add(new ImportNote { IsRest = true, NoteValue = value, Dots = dots });
                         position += fdur;
+                        voiceAt[fvoice] = position;
                         break;
                     }
 
@@ -343,12 +359,20 @@ internal static class MusicXmlReader
                         // figured-bass / dynamics / grace attach to the head note only.
                         if (!note.ChordWithPrev)
                         {
+                            if (cursorMoved)
+                            {
+                                foreach (var (value, dots) in DecomposeDuration(
+                                    position - voiceAt.GetValueOrDefault(voice), divisions))
+                                    target.Add(new ImportNote { IsRest = true, NoteValue = value, Dots = dots });
+                                cursorMoved = false;
+                            }
                             target.AddRange(pendingAnnotations);
                             pendingAnnotations.Clear();
                             AttachDue(note, staff);
                             note.LeadingGrace.AddRange(pendingGrace);
                             pendingGrace.Clear();
                             position += int.TryParse(Local(el, "duration")?.Value, out int ndur) ? ndur : 0;
+                            voiceAt[voice] = position;
                             lastNote = note;
                             lastNoteOfStaff[staff] = note;
                             partLastNote = note;

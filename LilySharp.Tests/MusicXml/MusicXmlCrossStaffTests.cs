@@ -136,6 +136,55 @@ public class MusicXmlCrossStaffTests
         Assert.Contains(expected, lys);
     }
 
+    /// <summary>One bar of 2/4 (divisions 8), the voices as Dichterliebe 1's bar 6 writes them.</summary>
+    private static string GapBar(string music) => $"""
+        <score-partwise version="4.0">
+          <part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>
+          <part id="P1"><measure number="1">
+            <attributes><divisions>8</divisions><time><beats>2</beats><beat-type>4</beat-type></time>
+              <clef><sign>G</sign><line>2</line></clef></attributes>
+            {music}
+          </measure></part>
+        </score-partwise>
+        """;
+
+    private static string N(string step, int octave, int voice, int duration, string type) =>
+        $"<note><pitch><step>{step}</step><octave>{octave}</octave></pitch><duration>{duration}</duration><voice>{voice}</voice><type>{type}</type></note>";
+
+    private static string Forward(int duration) => $"<forward><duration>{duration}</duration></forward>";
+
+    private static string Backup(int duration) => $"<backup><duration>{duration}</duration></backup>";
+
+    [Fact]
+    public void AVoicelessForwardAfterABackupBelongsToTheNextVoice()
+    {
+        var (lys, _) = new MusicXmlImporter().Import(GapBar(
+            N("C", 5, 1, 8, "quarter") + N("D", 5, 1, 8, "quarter")
+            + Backup(16) + Forward(8) + Forward(4)
+            + N("F", 4, 2, 2, "16th") + N("D", 4, 2, 2, "16th")));
+        // The finished voice takes no rest past its bar; the next one stands on its beat.
+        Assert.Contains("c''4 d''4 |", lys);
+        Assert.Contains("r4 r8 f'16 d'16 |", lys);
+    }
+
+    [Fact]
+    public void AVoicelessForwardAfterAVoicesOwnNoteIsThatVoicesGap()
+    {
+        var (lys, _) = new MusicXmlImporter().Import(GapBar(
+            N("C", 5, 1, 8, "quarter") + Forward(8)));
+        Assert.Contains("c''4 r4 |", lys);
+    }
+
+    [Fact]
+    public void AForwardNamingItsVoiceIsThatVoicesGap()
+    {
+        var (lys, _) = new MusicXmlImporter().Import(GapBar(
+            N("C", 5, 1, 16, "half") + Backup(16)
+            + "<forward><duration>8</duration><voice>2</voice></forward>"
+            + N("F", 4, 2, 8, "quarter")));
+        Assert.Contains("r4 f'4 |", lys);
+    }
+
     [Fact]
     public void ANoteOnItsVoicesOwnStaffIsNotMarked()
     {
