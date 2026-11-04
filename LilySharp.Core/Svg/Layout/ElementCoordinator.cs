@@ -300,7 +300,8 @@ internal sealed class ElementCoordinator
     public ImmutableArray<BeamLayout> LayoutBeams(
         Score score, ImmutableArray<SystemLayout> systems, int staffIndex,
         ImmutableArray<BeamGroup>? precomputedGroups = null,
-        int staffLines = EngravingDefaults.DefaultStaffLines)
+        int staffLines = EngravingDefaults.DefaultStaffLines,
+        Func<int, ImmutableArray<Voice>>? voicesOfStaff = null)
     {
         var beamGroups = precomputedGroups ?? _beamDetector.DetectBeamGroups(score);
 
@@ -317,7 +318,7 @@ internal sealed class ElementCoordinator
             // LILYPOND-REF: lily/beam.cc — multi-measure beams get a dedicated path.
             if (IsCrossMeasureGroup(group))
             {
-                foreach (var crossLayout in LayoutCrossMeasureBeamPieces(score, group, measureMap, staffIndex, staffLines))
+                foreach (var crossLayout in LayoutCrossMeasureBeamPieces(score, group, measureMap, staffIndex, staffLines, voicesOfStaff))
                     beamLayouts.Add(crossLayout);
                 continue;
             }
@@ -368,7 +369,7 @@ internal sealed class ElementCoordinator
                 continue;
 
             var collisions = CollectBeamCollisions(
-                score.Voices[group.VoiceIndex].Measures[group.MeasureIndex],
+                HeldHere.Of(score.Voices[group.VoiceIndex].Measures[group.MeasureIndex]),
                 group,
                 itemXPositions,
                 score.TextMetrics, fromColumns, measureLayout.ChangeColumnHangs, voiceShifts);
@@ -379,6 +380,11 @@ internal sealed class ElementCoordinator
             double beamRightX = itemXPositions[group.Members[^1].ItemIndex];
             AppendCrossVoiceBeamCollisions(
                 ref collisions, score, group, measureLayout, beamLeftX, beamRightX, voiceShifts);
+            if (group.IsCrossStaff && voicesOfStaff is not null)
+                AppendAcrossStaves(ref collisions, group, group, group.MeasureIndex, measureLayout,
+                    score.Voices[group.VoiceIndex].Measures[group.MeasureIndex], itemXPositions,
+                    BeamStemX(group, 0, beamLeftX),
+                    BeamStemX(group, group.Members.Length - 1, beamRightX), voicesOfStaff);
 
             // The system comes from the SAME measureMap lookup that gave the X positions, so
             // the stamp and the frame the X is in cannot disagree.
@@ -387,10 +393,7 @@ internal sealed class ElementCoordinator
                 itemXPositions,
                 staffIndex,
                 system.SystemIndex,
-                // ⚠️ A CROSS-STAFF BEAM SCORES NO COVERED GROBS YET: these are read about one
-                // staff and its members stand on two. LilyPond's do collide
-                // (lily/beam-quanting.cc:368-399 add_collision, in the common frame).
-                group.IsCrossStaff ? null : collisions,
+                collisions,
                 staffLines);
 
             beamLayouts.Add(beamLayout);
@@ -431,7 +434,7 @@ internal sealed class ElementCoordinator
     private IEnumerable<BeamLayout> LayoutCrossMeasureBeamPieces(
         Score score, BeamGroup group,
         IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
-        int staffIndex, int staffLines)
+        int staffIndex, int staffLines, Func<int, ImmutableArray<Voice>>? voicesOfStaff)
     {
         // Group members by their system index. Members of the same system stay
         // on the same beam piece; the break happens between systems.
@@ -474,7 +477,7 @@ internal sealed class ElementCoordinator
                 group.VoiceIndex);
 
             var pieceLayout = LayoutSingleSystemBeamPiece(
-                score, subGroup, measureMap, staffIndex, sysIdx, staffLines);
+                score, subGroup, measureMap, staffIndex, sysIdx, staffLines, voicesOfStaff);
             if (pieceLayout != null)
                 yield return pieceLayout;
         }
@@ -490,7 +493,7 @@ internal sealed class ElementCoordinator
     private BeamLayout? LayoutSingleSystemBeamPiece(
         Score score, BeamGroup group,
         IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
-        int staffIndex, int systemIndex, int staffLines)
+        int staffIndex, int systemIndex, int staffLines, Func<int, ImmutableArray<Voice>>? voicesOfStaff)
     {
         // The same collision shifts the single-measure path adds to its table — see
         // ApplyVoiceCollisionShifts. A beam that crosses a bar line has members in two
@@ -566,15 +569,14 @@ internal sealed class ElementCoordinator
             restStems: renumberedRests.ToImmutableArray());
 
         var collisions = CollectCrossMeasureBeamCollisions(
-            score, group, renumberedGroup, memberXs, measureMap, voiceShifts, ResolveX);
+            score, group, renumberedGroup, memberXs, measureMap, voiceShifts, ResolveX, voicesOfStaff);
 
         var beamLayout = _beamEngraver.CalculateBeamLayout(
             renumberedGroup,
             memberXs.Concat(restXs).ToList(),
             staffIndex: staffIndex,
             systemIndex: systemIndex,
-            // A cross-staff beam: see the one-measure path.
-            collisions: group.IsCrossStaff ? null : collisions,
+            collisions: collisions,
             staffLines: staffLines);
 
         // The dense renumbering above exists ONLY so the scorer can index
@@ -618,7 +620,8 @@ internal sealed class ElementCoordinator
     private List<BeamCollision>? CollectCrossMeasureBeamCollisions(
         Score score, BeamGroup group, BeamGroup renumberedGroup, List<double> memberXs,
         IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
-        VoiceCollisionTable voiceShifts, Func<int, int, double?> resolveX)
+        VoiceCollisionTable voiceShifts, Func<int, int, double?> resolveX,
+        Func<int, ImmutableArray<Voice>>? voicesOfStaff = null)
     {
         int n = group.Members.Length;
         if (n == 0)
@@ -643,7 +646,8 @@ internal sealed class ElementCoordinator
             if (mi >= voiceMeasures.Length || !measureMap.TryGetValue(mi, out var info))
                 continue;
             var measureLayout = info.Measure;
-            var measure = voiceMeasures[mi];
+            var written = voiceMeasures[mi];
+            var measure = group.IsCrossStaff ? HeldHere.Of(written) : written;
 
             // This measure's x table, the members' own resolver: a measure whose items it
             // cannot place (a secondary voice on the item-slot path) books nothing, as the
@@ -671,6 +675,9 @@ internal sealed class ElementCoordinator
 
             AppendCrossVoiceMeasureCollisions(ref collisions, score, group.VoiceIndex, mi,
                 measureLayout, voiceShifts, beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+            if (group.IsCrossStaff && voicesOfStaff is not null && placed)
+                AppendAcrossStaves(ref collisions, group, renumberedGroup, mi, measureLayout, written, itemXs,
+                    beamOriginX, beamEdgeRightX - halfStemWidth, voicesOfStaff);
         }
         return collisions;
     }
@@ -1371,14 +1378,83 @@ internal sealed class ElementCoordinator
         int measureIndex, MeasureLayout measureLayout, VoiceCollisionTable voiceShifts,
         double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
     {
-        if (score.Voices.Length <= 1
-            || measureLayout.Columns.IsDefaultOrEmpty || measureLayout.Columns.Length == 0)
+        if (score.Voices.Length <= 1)
+            return;
+        AppendVoicesMeasureCollisions(ref collisions, score.Voices, beamVoiceIndex, measureIndex,
+            measureLayout, voiceShifts, beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+    }
+
+    /// <summary>
+    /// What a cross-staff beam's stems reach on the OTHER staves, in the beam's own frame: their
+    /// voices' heads, stems and flags, and the accidentals of the beam's own members standing
+    /// there. The staff's own items are the callers'.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-collision-engraver.cc:128-135 finalize — vertical_span, the
+    ///   vertical axis groups of the beam's normal stems; :153-155 a grob of any of them is
+    ///   covered.
+    /// LILYPOND-REF: lily/beam-quanting.cc:377-387 init_instance — each extent in the common
+    ///   frame, less the beam's own y: here the member's <see cref="BeamMember.StaffOffset"/>.
+    /// ⚠️ NOT THE OTHER STAFF'S BEAMS: a covered Beam (:173-175) is not booked here, as a beam of
+    ///   another voice on one staff is not (<see cref="AppendCrossVoiceBeamCollisions"/>).
+    /// ⚠️ NOT THE NOTES OF ANOTHER VOICE MOVED ONTO THE SAME STAFF.
+    /// MEASURED, LilyPond 2.26.0 (OMR cross-try-2026-11-04.lys bar 6): the beam rises clear of the
+    /// right hand's eighth where it ran through the flag.
+    /// </remarks>
+    private void AppendAcrossStaves(ref List<BeamCollision>? collisions, BeamGroup group,
+        BeamGroup framed, int measureIndex, MeasureLayout measureLayout, Measure written,
+        IReadOnlyList<double> itemXs, double beamOriginX, double lastStemX,
+        Func<int, ImmutableArray<Voice>> voicesOfStaff)
+    {
+        double halfStem = EngravingDefaults.StemThickness / 2;
+        double edgeLeft = beamOriginX - halfStem, edgeRight = lastStemX + halfStem;
+        for (int i = 0; i < group.Members.Length; i++)
+        {
+            int target = group.Members[i].TargetStaffIndex;
+            bool first = target >= 0;
+            for (int j = 0; first && j < i; j++)
+                first = group.Members[j].TargetStaffIndex != target;
+            if (!first)
+                continue;
+            List<BeamCollision>? theirs = null;
+
+            var voices = HeldHere.Of(voicesOfStaff(target));
+            AppendVoicesMeasureCollisions(ref theirs, voices, beamVoiceIndex: -1, measureIndex,
+                measureLayout, SpacingRules.VoiceCollisionShiftsOf(voices),
+                edgeLeft, edgeRight, beamOriginX);
+
+            // The members standing there: only their accidentals, a member's head and stem being
+            // the beam's own (beam-collision-engraver.cc:179-187).
+            var moved = written.Items.ToArray();
+            for (int k = 0; k < moved.Length; k++)
+                if (moved[k].CrossStaffIndex != target)
+                    moved[k] = new RestItem(moved[k].Duration, 0, moved[k].SourcePosition) { IsSpacer = true };
+            AddAccidentalCollisions(ref theirs, written with { Items = ImmutableArray.Create(moved) }, itemXs,
+                _ => 0.0, edgeLeft, edgeRight, beamOriginX);
+
+            if (theirs is null)
+                continue;
+            double offset = group.Members[i].StaffOffset / 2.0;
+            collisions ??= new List<BeamCollision>(theirs.Count);
+            foreach (var c in theirs)
+                collisions.Add(c with { MinY = c.MinY + offset, MaxY = c.MaxY + offset });
+        }
+    }
+
+    /// <summary>The body of <see cref="AppendCrossVoiceMeasureCollisions"/> over any voices of a
+    /// staff: <paramref name="beamVoiceIndex"/> is the one skipped, -1 for none.</summary>
+    private void AppendVoicesMeasureCollisions(
+        ref List<BeamCollision>? collisions, ImmutableArray<Voice> voices, int beamVoiceIndex,
+        int measureIndex, MeasureLayout measureLayout, VoiceCollisionTable voiceShifts,
+        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
+    {
+        if (measureLayout.Columns.IsDefaultOrEmpty || measureLayout.Columns.Length == 0)
             return;
 
-        for (int v = 0; v < score.Voices.Length; v++)
+        for (int v = 0; v < voices.Length; v++)
         {
             if (v == beamVoiceIndex) continue;
-            var measures = score.Voices[v].Measures;
+            var measures = voices[v].Measures;
             if (measureIndex >= measures.Length) continue;
 
             var timing = Fraction.Zero;

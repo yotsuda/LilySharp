@@ -96,7 +96,14 @@ internal sealed partial class LayoutEngine
             }
             var again = _elementCoordinator.LayoutBeams(
                 MultiStaffLayouter.StaffBeamScoreOf(score, staff, staffIndex), systems, staffIndex,
-                groups.ToImmutable(), MultiStaffLayouter.BeamStaffLinesOf(staff));
+                groups.ToImmutable(), MultiStaffLayouter.BeamStaffLinesOf(staff),
+                target =>
+                {
+                    foreach (var (_, st, si) in score.EnumerateStaves())
+                        if (si == target)
+                            return st.Voices;
+                    return ImmutableArray<Voice>.Empty;
+                });
             var merged = ImmutableArray.CreateBuilder<BeamLayout>(laid.Length);
             foreach (var beam in laid)
                 if (!beam.Group.IsCrossStaff)

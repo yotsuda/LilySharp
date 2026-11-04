@@ -237,6 +237,26 @@ public class CrossStaffDrawingTests
     }
 
     [Fact]
+    public void ACrossStaffBeamClearsWhatStandsOnTheOtherStaff()
+    {
+        // OMR cross-try bar 6, LilyPond 2.26.0: the beam rises clear of the right hand's eighth,
+        // which its stems reach (lily/beam-collision-engraver.cc:128-155).
+        // Read at the eighth's own x and about ITS staff: a comparison with an empty right hand
+        // cannot tell a beam that cleared the note from staves its stems pushed apart.
+        var layout = new LayoutEngine().Layout(Score(Book("r8 d''8 c''4 r2 |",
+            "tuplet 3/2 { c8 gis@cross b@cross } tuplet 3/2 { c8 gis@cross b@cross } r2 |")));
+        var beam = layout.BeamLayouts.Where(b => b.StaffIndex == 1).OrderBy(b => b.LeftX).First();
+        var system = layout.Systems[0];
+        double staves = LayoutUtilities.FindStaffYInSystem(system, 0) - LayoutUtilities.FindStaffYInSystem(system, 1);
+        // The eighth's column (1/8) lies midway between the group's last two notes (1/12, 1/6).
+        double x = (beam.MemberXPositions[1] + beam.MemberXPositions[2]) / 2;
+        double along = (x - beam.LeftStemX) / (beam.RightStemX - beam.LeftStemX);
+        double beamAboutItsStaff = (beam.LeftY + along * (beam.RightY - beam.LeftY)) / 2.0 - staves;
+        // d'' stands at +2: its head reaches a space and a half above the middle line.
+        Assert.True(beamAboutItsStaff > 1.5, $"beam at {beamAboutItsStaff:F2} about the upper staff");
+    }
+
+    [Fact]
     public void ARestsDotIsNotMovedByADotOnTheOtherStaff()
     {
         // The lower voice's dotted rest and a dotted note moved away at one moment: f' reads -3
