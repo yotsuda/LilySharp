@@ -215,6 +215,8 @@ internal static class LysWriter
         foreach (var seg in layout.Segments)
         {
             sb.Append("section ").Append(seg.Name).Append(" {\n");
+            if (PickupOf(doc, seg.Start) is { } pickup)
+                sb.Append("  partial ").Append(pickup).Append('\n');
             foreach (var part in doc.Parts)
             {
                 sb.Append("  ").Append(part.SafeName).Append(" {\n");
@@ -370,7 +372,9 @@ internal static class LysWriter
         var result = new SortedDictionary<int, string?>();
         foreach (var (i, label) in marks)
         {
-            if (starts.Contains(i))
+            // A pickup has no other place to be declared, and CutSpansAtSectionEdges sees to the
+            // spans over it.
+            if (starts.Contains(i) || PickupOf(doc, i) != null)
                 result.Add(i, label);
             else if (!SpanRunsThrough(doc, i, bounds.First(b => b > i)))
                 result.Add(i, label);
@@ -422,6 +426,9 @@ internal static class LysWriter
                     || (key != null && m.Key is { } k && k != key)
                     || (part.StaffGroup == null && clef != null && m.Clef is { } c && c != clef);
                 if (i > 0 && ((changes && marks.Count == 0) || restated[i] != default))
+                    points.TryAdd(i, null);
+                // A short implicit bar is a pickup, which only a section's head can declare.
+                if (i > 0 && PickupOf(doc, i) != null)
                     points.TryAdd(i, null);
                 (time, key) = (m.Time ?? time, m.Key ?? key);
                 clef = m.Clef ?? clef;
@@ -867,6 +874,65 @@ internal static class LysWriter
     }
 
     // ---- music emission ---------------------------------------------------
+
+    /// <summary>
+    /// The <c>partial</c> value a bar opening a section declares, or null: a piece's first bar
+    /// shorter than its meter, a later one the source calls implicit, or the short bar that makes up
+    /// one bar with the short bar before it (a bar split around a double bar or a repeat sign, which
+    /// not every source marks: Kinkel op. 10/4, 5/8 and 1/8).
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-11-04 the reader's <c>implicit</c> was not used: a pickup came back bare, with a
+    /// warning on every part and the bar numbers one too high. A first bar that is short but not
+    /// marked implicit is a pickup too (Dichterliebe 1): it can be nothing else in a meter. Null for
+    /// a length no one value spells (5/8): the bar keeps its warning.
+    /// </remarks>
+    private static string? PickupOf(ImportDocument doc, int bar)
+    {
+        if (doc.Parts.Count == 0 || bar >= doc.Parts[0].Measures.Count)
+            return null;
+        if (MeterAt(doc, bar) is not { } meter)
+            return null;
+        var length = LongestBar(doc, bar);
+        if (length == Fraction.Zero || length >= meter)
+            return null;
+        if (bar > 0 && !doc.Parts.Any(p => bar < p.Measures.Count && p.Measures[bar].Implicit)
+            && !(bar > 1 && LongestBar(doc, bar - 1) + length == meter))
+            return null;
+        for (int value = 1; value <= 128; value *= 2)
+        {
+            var written = new Fraction(1, value);
+            var dot = written;
+            for (int dots = 0; dots <= 2; dots++)
+            {
+                if (written == length)
+                    return value + new string('.', dots);
+                dot = new Fraction(dot.Numerator, dot.Denominator * 2);
+                written += dot;
+            }
+        }
+        return null;
+    }
+
+    private static Fraction? MeterAt(ImportDocument doc, int bar)
+    {
+        ImportTime? time = null;
+        for (int i = 0; i <= bar; i++)
+            time = doc.Parts[0].Measures[i].Time ?? time;
+        return time is { } meter ? new Fraction(meter.Beats, meter.BeatType) : null;
+    }
+
+    /// <summary>How long a bar's longest voice lasts, in any part: zero when none can be told.</summary>
+    private static Fraction LongestBar(ImportDocument doc, int bar)
+    {
+        var longest = Fraction.Zero;
+        foreach (var part in doc.Parts)
+            if (bar < part.Measures.Count)
+                foreach (var items in part.Measures[bar].VoiceItems.Values)
+                    if (LengthOf(items) is { } length && length > longest)
+                        longest = length;
+        return longest;
+    }
 
     /// <summary>
     /// The spacers that fill a voice's items out to the longest voice of the measure — the bar's

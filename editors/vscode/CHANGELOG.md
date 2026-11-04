@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **MusicXML import declares a pickup with `partial`**, so bar numbers start after it and its parts carry no warning. The check no longer calls a voice opening on bar lines an overfull pickup, and a piece's short last bar may complete the pickup in another section.
+- **MusicXML export keeps a tuplet pickup in one bar.**
 - **`g1@cresc@!cresc` is a hairpin as long as its note**: the end written after the start spans that note, and `@!cresc@decresc` still ends one hairpin and opens the next.
 - **A hairpin runs up to the hairpin that follows it**: `c@cresc d e@decresc f` drew no crescendo at all.
 - **MusicXML import keeps the file's lines and notes**: hairpins end where they stop, a pedal ending in `discontinue` is released, an "una corda" with no "tre corde" stays words, a line over a repeat sign ends before it and starts again after it, grace notes at a bar's end lead to the next bar, and a tie on some of a chord's notes stays on those notes. A slur or a tie Lily# cannot write (between two voices, a tie over other notes or between two spellings) is dropped and the import report says so.

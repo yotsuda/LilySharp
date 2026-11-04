@@ -45,11 +45,18 @@ internal sealed class VoiceSpanLengthValidator : ISemanticValidator
             var voices = span.Voices.ToList();
             if (voices.Count < 2)
                 continue;
-            int first = Bars(voices[0], phrases, null).Count;
+            var (first, firstPickup) = Bars(voices[0], phrases, null);
             for (int v = 1; v < voices.Count; v++)
             {
                 var index = new Dictionary<(string Chain, int Position), int>();
                 var (bars, pickup) = Bars(voices[v], phrases, index);
+                // A voice silent through the first voice's pickup opens on a bar line, `{ | g1 | }`:
+                // that empty bar is the pickup, and no bar of its own to count.
+                if (firstPickup && !pickup)
+                {
+                    bars--;
+                    pickup = true;
+                }
                 if (bars <= first)
                     continue;
                 // Where the bars past the first voice's begin, as this voice writes it (owner's report

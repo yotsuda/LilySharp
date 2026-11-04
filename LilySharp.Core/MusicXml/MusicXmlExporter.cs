@@ -2329,6 +2329,16 @@ public sealed class MusicXmlExporter
         _pickupAccumulated = Fraction.Zero;
     }
 
+    /// <summary>Puts the pending pickup back as it stood: each voice of a span reads its own.</summary>
+    private void RestorePickup(Fraction? partial, Fraction accumulated)
+    {
+        if (partial is { } pending)
+            _bars.SetPartial(pending);
+        else
+            _bars.SpendPartial();
+        _pickupAccumulated = accumulated;
+    }
+
     /// <summary>
     /// While a 'partial' pickup is pending, accumulate the duration written into it and
     /// auto-close the implicit measure once it reaches the declared length — even
@@ -2340,7 +2350,15 @@ public sealed class MusicXmlExporter
     {
         if (_bars.Partial is not { } pickup)
             return;
-        _pickupAccumulated += added;
+        // A tuplet's note fills its share: a triplet pickup closed on its second eighth until
+        // 2026-11-04, and its third note stood in a bar of its own (Chaminade, Pays bleu).
+        int sounding = added.Numerator, over = added.Denominator;
+        foreach (var (actual, normal) in _tupletStack)
+        {
+            sounding *= normal;
+            over *= actual;
+        }
+        _pickupAccumulated += new Fraction(sounding, over);
         if (_pickupAccumulated >= pickup)
         {
             _bars.SpendPartial();
@@ -3066,6 +3084,11 @@ public sealed class MusicXmlExporter
         // MeasureCollector.MusicWalk): every voice opens at it, and so does the music after.
         var spanDefault = _defaultDuration;
 
+        // ...and so is a pending pickup: every voice's first bar is that pickup, or a later voice's
+        // empty first bar wrote a whole bar of rest into it (Lab sessions/p1097/part4).
+        var spanPartial = _bars.Partial;
+        var spanPickupAccumulated = _pickupAccumulated;
+
         int startMeasure = _currentPart.Measures.Count;
         ProcessNode(voices[0]);
         FlushCurrentMeasure(); // voice blocks are bar-aligned; settle voice 1
@@ -3100,6 +3123,7 @@ public sealed class MusicXmlExporter
             _defaultDuration = spanDefault;
             _tieToNextNote = false;
             _tieOpen.Clear();
+            RestorePickup(spanPartial, spanPickupAccumulated);
             ProcessNode(voices[v]);
             FlushCurrentMeasure();
 

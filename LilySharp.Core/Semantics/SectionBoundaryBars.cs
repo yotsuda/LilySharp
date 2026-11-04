@@ -60,6 +60,7 @@ internal sealed class SectionBoundaryBars
     private readonly SectionHeaders _headers;
     private Dictionary<string, HashSet<string>>? _before;
     private Dictionary<string, HashSet<string>>? _after;
+    private HashSet<string>? _openers;
     private readonly Dictionary<(string Section, string Part, Fraction Meter), List<MeasureModel.Bar>?> _bars = new();
 
     /// <param name="headers">The section headers, for their <c>partial</c>s: a predecessor
@@ -104,6 +105,20 @@ internal sealed class SectionBoundaryBars
     public bool LastBarCompletedByEverySuccessor((string Section, string Part) cell, Fraction lastBar, Fraction meter, Fraction target)
         => Complements(cell, lastBar, meter, target, before: false);
 
+    /// <summary>True when the section is where every form ends, and its last bar,
+    /// <paramref name="lastBar"/> long, completes the pickup each form opens with. A piece's short
+    /// last bar is exempt for this inside one section; split over sections it is the same bar
+    /// (<c>~Pickup |: ~Body :| ~Close</c>, the shape a repeat after the pickup cuts).</summary>
+    public bool LastBarCompletesTheOpeningPickup(string section, Fraction lastBar, Fraction meter)
+    {
+        if (lastBar <= Fraction.Zero || lastBar >= meter || Neighbours(section, before: false).Count > 0 || _openers!.Count == 0)
+            return false;
+        foreach (var opener in _openers)
+            if (!_headers.Partials.TryGetValue(opener, out var pickup) || pickup.ToFraction() + lastBar != meter)
+                return false;
+        return true;
+    }
+
     private bool Complements((string Section, string Part) cell, Fraction bar, Fraction meter, Fraction? target, bool before)
     {
         if (bar <= Fraction.Zero || bar >= (target ?? meter))
@@ -141,6 +156,7 @@ internal sealed class SectionBoundaryBars
     {
         _before = new(StringComparer.Ordinal);
         _after = new(StringComparer.Ordinal);
+        _openers = new(StringComparer.Ordinal);
         foreach (var form in TopLevelNodes.OfRoot<FormDeclarationSyntax>(_root))
         {
             // The played order off the form — repeats per their passes, the jump texts
@@ -150,6 +166,8 @@ internal sealed class SectionBoundaryBars
             var names = new List<string>();
             var printed = Svg.Collector.PlayedOrder.PlaysOf(FormWalk.Read(form), names);
             var played = Svg.Collector.PlayedOrder.Expand(printed);
+            if (played.Count > 0)
+                _openers.Add(names[played[0]]);
             for (int i = 1; i < played.Count; i++)
             {
                 Add(_after, names[played[i - 1]], names[played[i]]);

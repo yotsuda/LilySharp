@@ -522,6 +522,274 @@ public class MusicXmlImportSpanTests
         Assert.Contains("c'4)", lys);
     }
 
+    private static string Part(params string[] measures) => Book(measures);
+
+    private static string Implicit(string book, int number) =>
+        book.Replace($"<measure number=\"{number}\">", $"<measure number=\"{number}\" implicit=\"yes\">");
+
+    private static string[] Warnings(string lys) =>
+        SemanticValidation.Run(SyntaxTree.Parse(lys)).Select(d => d.Message).ToArray();
+
+    [Fact]
+    public void AnImplicitFirstBarIsAPickup()
+    {
+        var (lys, _) = Import(Implicit(Book(Note("C"), Note("D") + Note("E") + Note("F") + Note("G")), 1));
+        Assert.Contains("partial 4\n", lys);
+        Assert.Empty(Warnings(lys));
+    }
+
+    [Fact]
+    public void AShortFirstBarIsAPickupThoughNotMarked()
+    {
+        var (lys, _) = Import(Book(Note("C") + Note("D") + Note("E"), Note("D") + Note("E") + Note("F") + Note("G")));
+        Assert.Contains("partial 2.\n", lys);
+        Assert.Empty(Warnings(lys));
+    }
+
+    [Fact]
+    public void AFullImplicitFirstBarIsNoPickup()
+    {
+        var (lys, _) = Import(Implicit(Book(Note("C") + Note("D") + Note("E") + Note("F")), 1));
+        Assert.DoesNotContain("partial", lys);
+    }
+
+    [Fact]
+    public void APickupComesBackFromLyscXmlAndStaysPickup()
+    {
+        const string source = """
+            octave absolute
+            time 4/4
+            part a { clef treble }
+            section A {
+              partial 4
+              a { c'4 | d'1 | }
+            }
+            form { ~A }
+            score { staff a }
+            """;
+        var xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml();
+        var (lys, _) = Import(xml.ToString());
+        Assert.Contains("partial 4\n", lys);
+    }
+
+    [Fact]
+    public void ABarSplitByAnImplicitBarStartsASectionThere()
+    {
+        var (lys, _) = Import(Implicit(Book(
+            Note("C") + Note("D") + Note("E") + Note("F"),
+            Note("C") + Note("D") + Note("E"),
+            Note("F"),
+            Note("C") + Note("D") + Note("E") + Note("F")), 3));
+        Assert.Contains("partial 4\n", lys);
+        Assert.Equal(2, lys.Split("\nsection ").Length - 1);
+        Assert.Empty(Warnings(lys));
+    }
+
+    [Fact]
+    public void AShortBarMakingUpABarWithTheOneBeforeIsAPickup()
+    {
+        var (lys, _) = Import(Book(
+            Note("C") + Note("D") + Note("E") + Note("F"),
+            Note("C") + Note("D") + Note("E"),
+            Note("F"),
+            Note("C") + Note("D") + Note("E") + Note("F")));
+        Assert.Contains("partial 4\n", lys);
+        Assert.Empty(Warnings(lys));
+    }
+
+    [Fact]
+    public void AnImplicitShortBarIsAPickupThoughNoBarBeforeItWaitsForIt()
+    {
+        var (lys, _) = Import(Implicit(Book(
+            Note("C") + Note("D") + Note("E") + Note("F"),
+            Note("F"),
+            Note("C") + Note("D") + Note("E") + Note("F")), 2));
+        Assert.Contains("partial 4\n", lys);
+    }
+
+    [Fact]
+    public void ASlurOverTwoPickupsStillLetsThemStartSections()
+    {
+        var (lys, _) = Import(Implicit(Implicit(Book(
+            Note("C") + Note("D") + Note("E") + Note("F"),
+            Note("C", slur: "start") + Note("D") + Note("E"),
+            Note("F"),
+            Note("C") + Note("D") + Note("E"),
+            Note("F"),
+            Note("C") + Note("D", slur: "stop") + Note("E") + Note("F")), 3), 5));
+        Assert.Equal(2, lys.Split("partial 4\n").Length - 1);
+        Assert.Empty(Errors(lys));
+    }
+
+    [Fact]
+    public void AShortLaterVoiceLeavesNoPickupPendingAfterTheSpan()
+    {
+        const string source = """
+            octave absolute
+            time 4/4
+            part a { clef treble }
+            section A {
+              partial 4
+              a { voice { c''4 } { e'8 } d''2 e''2 | f''1 | }
+            }
+            form { ~A }
+            score { staff a }
+            """;
+        var measures = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().Descendants("measure").ToArray();
+        Assert.Equal(3, measures.Length);
+        Assert.Equal(2, measures[1].Elements("note").Count());
+    }
+
+    [Fact]
+    public void TheBarAfterAPickupIsNoPickupThoughTheyMakeUpABar()
+    {
+        var (lys, _) = Import(Book(Note("C"), Note("C") + Note("D") + Note("E"), Note("C") + Note("D") + Note("E") + Note("F")));
+        Assert.Equal(1, lys.Split("partial").Length - 1);
+    }
+
+    [Fact]
+    public void ALaterShortBarNotMarkedImplicitIsNoPickup()
+    {
+        var (lys, _) = Import(Book(Note("C") + Note("D") + Note("E") + Note("F"), Note("C"), Note("C") + Note("D") + Note("E") + Note("F")));
+        Assert.DoesNotContain("partial", lys);
+    }
+
+    [Fact]
+    public void APickupNoOneValueSpellsKeepsItsBar()
+    {
+        const string sixteenth = "<note><pitch><step>D</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><type>16th</type><staff>1</staff></note>";
+        var book = Book(Note("C") + "@@", Note("C") + Note("D") + Note("E") + Note("F"))
+            .Replace("<divisions>1</divisions>", "<divisions>4</divisions>")
+            .Replace("<duration>1</duration>", "<duration>4</duration>")
+            .Replace("@@", sixteenth);
+        var (lys, _) = Import(book);
+        Assert.Contains("d'16", lys);
+        Assert.DoesNotContain("partial", lys);
+    }
+
+    [Fact]
+    public void ATripletPickupStaysOneBarInMusicXml()
+    {
+        const string source = """
+            octave absolute
+            time 4/4
+            part a { clef treble }
+            section A {
+              partial 4
+              a { tuplet 3/2 { d'8 d' d' } | c'1 | }
+            }
+            form { ~A }
+            score { staff a }
+            """;
+        var measures = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().Descendants("measure").ToArray();
+        Assert.Equal(2, measures.Length);
+        Assert.Equal(3, measures[0].Elements("note").Count());
+    }
+
+    [Fact]
+    public void AVoiceSilentThroughThePickupRestsForThePickupInMusicXml()
+    {
+        const string source = """
+            octave absolute
+            time 4/4
+            part a { clef treble }
+            section A {
+              partial 4
+              a { voice { c''4 | d''1 | e''1 | } { | g'1 | a'1 | } }
+            }
+            form { ~A }
+            score { staff a }
+            """;
+        Assert.DoesNotContain(Warnings(source), m => m.Contains("this voice runs"));
+        var xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml();
+        var first = xml.Descendants("measure").First();
+        int divisions = int.Parse(xml.Descendants("divisions").First().Value);
+        var rest = first.Elements("note").Single(n => n.Element("rest") != null);
+        Assert.Equal(divisions, int.Parse(rest.Element("duration")!.Value));
+        Assert.Equal(3, xml.Descendants("measure").Count());
+    }
+
+    [Fact]
+    public void AVoiceRunningPastTheFirstIsStillCountedPastAPickup()
+    {
+        const string source = """
+            octave absolute
+            time 4/4
+            part a { clef treble }
+            section A {
+              partial 4
+              a { voice { c''4 | d''1 | } { | g'1 | a'1 | } }
+            }
+            form { ~A }
+            score { staff a }
+            """;
+        Assert.Contains(Warnings(source), m => m.Contains("this voice runs 2 bars, 1 more"));
+    }
+
+    private const string PickupThenClose = """
+        octave absolute
+        time 6/8
+        part a { clef treble }
+        section P {
+          partial 8
+          a { c'8 | }
+        }
+        section B {
+          a { d'2. | }
+        }
+        section C {
+          a { d'2. | e'2 LAST }
+        }
+        form { ~P |: ~B :| ~C }
+        score { staff a }
+        """;
+
+    [Theory]
+    [InlineData("r8 |", true)]     // 5/8 + the 1/8 pickup is one bar.
+    [InlineData("|", false)]       // 4/8 is not.
+    public void APiecesLastBarCompletesThePickupInAnotherSection(string last, bool clean)
+    {
+        var messages = Warnings(PickupThenClose.Replace("LAST", last));
+        Assert.Equal(clean, !messages.Any(m => m.Contains("less than time signature")));
+    }
+
+    [Fact]
+    public void ALastBarInASectionThatGoesOnCompletesNoPickup()
+    {
+        var book = PickupThenClose.Replace("LAST", "r8 |").Replace("form { ~P |: ~B :| ~C }", "form { ~P ~C ~B }");
+        Assert.Contains(Warnings(book), m => m.Contains("less than time signature"));
+    }
+
+    [Fact]
+    public void AnImplicitBarStartsASectionThoughALineRunsOverIt()
+    {
+        var (lys, _) = Import(Implicit(Book(
+            Note("C") + Note("D") + Note("E") + Note("F"),
+            Note("C", slur: "start") + Note("D") + Note("E"),
+            Note("F"),
+            Note("C") + Note("D") + Note("E", slur: "stop") + Note("F"),
+            Note("C") + Note("D") + Note("E") + Note("F")), 3));
+        Assert.Contains("partial 4\n", lys);
+        Assert.Empty(Errors(lys));
+    }
+
+    [Fact]
+    public void AVoiceOpeningOnBarLinesHasPassedThePickup()
+    {
+        const string source = """
+            octave absolute
+            time 4/4
+            part a { clef treble }
+            section A {
+              partial 4
+              a { voice { c''4 | d''1 | e''1 | } { | | g'1 | } }
+            }
+            form { ~A }
+            score { staff a }
+            """;
+        Assert.Empty(Errors(source));
+    }
+
     [Fact]
     public void ALaterVoicesMarksAreWritten()
     {

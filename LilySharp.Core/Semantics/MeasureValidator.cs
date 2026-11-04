@@ -460,6 +460,11 @@ internal sealed class MeasureValidator : ISemanticValidator
             && _sectionHeaders.Partials.TryGetValue(headerCell.Section, out var sectionPartial)
                 ? sectionPartial.ToFraction()
                 : inheritedPickup;
+        // A stream opening on a bar line has passed the pickup empty: its first music stands in a
+        // later bar (`voice { c4 | d1 | e1 | } { | | g1 | }`), and SplitIntoMeasures keeps no empty
+        // bar to say so. The page draws it there; this read it as the pickup until 2026-11-04.
+        if (items.FirstOrDefault() is BarlineSyntax)
+            streamPickup = null;
 
         // Its section header's meter, for this stream only (ValidateItemsScoped restores the
         // enclosing one after it) — the section's own music, and a repeat body or a span's
@@ -683,6 +688,10 @@ internal sealed class MeasureValidator : ISemanticValidator
                     bool completesOpeningPickup = isLast
                         && openingPickupIndex >= 0 && openingPickupIndex < i
                         && openingPickupDuration + duration == expected;
+                    // ... or the pickup a form opens with, in the section before this one.
+                    if (!completesOpeningPickup && partialLength == null && cell is { } lastCell && renderedBarsClosed == 0
+                        && (isLast || TrailingMeasuresAreSilent(measures, i + 1, defaultDuration)))
+                        completesOpeningPickup = _boundaries!.LastBarCompletesTheOpeningPickup(lastCell.Section, duration, expected);
 
                     // An underfull FIRST bar written bare is a benefit-of-the-
                     // doubt anacrusis: no strict length check, just a nudge to
