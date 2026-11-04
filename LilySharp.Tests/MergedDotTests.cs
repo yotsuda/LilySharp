@@ -72,6 +72,17 @@ public class MergedDotTests
         // The down chord's stem starts from f: its dot goes, and d's stays below the line.
         AssertRows("voice { <d f>4. r8 r2 } { <d f>4. r8 r2 }", -0.5, 0.5, 1.5);
 
+    [Theory]
+    // One DotColumn a staff and moment (ly/engraver-init.ly Staff): LilyPond 2.26.0's rows,
+    // Lab sessions/p1094/dd/dc.lys. Each voice alone would answer 1.5, 0.5 and 0.5 on the first.
+    [InlineData("voice { <e g>4. r8 r2 } { <e g>4. r8 r2 }", new[] { -0.5, 0.5, 1.5 })]
+    [InlineData("voice { <c e>4. r8 r2 } { <c e>4. r8 r2 }", new[] { -1.5, -0.5, 0.5 })]
+    [InlineData("voice { <e g b>4. r8 r2 } { <e g b>4. r8 r2 }", new[] { -0.5, 0.5, 1.5, 2.5, 3.5 })]
+    // Not merged: both voices alone would stand on 0.5.
+    [InlineData("voice { d4. r8 r2 } { e4. r8 r2 }", new[] { -0.5, 0.5 })]
+    public void TwoVoicesDotsShareTheStaffsOneColumn(string voices, double[] rows) =>
+        AssertRows(voices, rows);
+
     [Fact]
     public void NotesThatDoNotMergeKeepBothDots() =>
         AssertRows("voice { f4. r8 r2 } { d4. r8 r2 }", -0.5, 1.5);

@@ -993,9 +993,11 @@ internal static partial class SharedRenderer
             // LILYPOND-REF: lily/note-collision.cc:374-397 check_meshing_chords — set_property direction
             int dotDir = dotAdjust.DirectionUp ? 1
                 : forcedStemUp switch { true => 1, false => -1, null => 0 };
-            int dotPos = DotConfiguration.Resolve(
-                new[] { note.StaffPosition },
-                dotDir != 0 ? new[] { dotDir } : null)[0];
+            int dotPos = dotAdjust.Rows is { Length: > 0 } sharedRows
+                ? sharedRows[0]
+                : DotConfiguration.Resolve(
+                    new[] { note.StaffPosition },
+                    dotDir != 0 ? new[] { dotDir } : null)[0];
             double dotY = staffMiddleY + dotPos / 2.0;
             // WHERE THE COLUMN STANDS IS THE PORTED RULE — a rightward skyline over the
             // column's supports, floored on the head's own ink right, plus one dot width.
@@ -1282,7 +1284,7 @@ internal static partial class SharedRenderer
             if (dotAdjust.DotWiped)
                 dottedPositions.Remove((forcedStemUp ?? chord.StemUp)
                     ? dottedPositions.Min() : dottedPositions.Max());
-            var resolved = DotConfiguration.Resolve(
+            var resolved = dotAdjust.Rows ?? DotConfiguration.Resolve(
                 dottedPositions.ToArray(),
                 dotDir != 0 ? Enumerable.Repeat(dotDir, dottedPositions.Count).ToArray() : null);
             // The ported rule, as in DrawNote — a rightward skyline over the supports,

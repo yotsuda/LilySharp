@@ -2219,12 +2219,12 @@ internal sealed class ElementCoordinator
     /// tie, this ordering — not the badness — is the suspect.
     /// </para>
     /// <para>
-    /// ⚠️ NOTE dots are read here only as column NEIGHBOURS; the renderer keeps its
-    /// per-item <see cref="DotConfiguration.Resolve"/> for them. A cascade that moves a
-    /// NOTE's dot (two dotted items colliding across voices) would disagree with that
-    /// per-item answer — no corpus book binds one yet, and the seam is named here rather
-    /// than discovered. The note-collision DotAdjustment direction override is likewise
-    /// not read (voice-default directions only, as the renderer's fallback arm).
+    /// ⚠️ NOTE dots are read here only as column NEIGHBOURS. Two dotted NOTES resolve together
+    /// in NoteCollision (<see cref="DotAdjustment.Rows"/>); a column of dotted notes AND a dotted
+    /// rest moving a note's dot would disagree with that answer — no corpus book binds one yet,
+    /// and the seam is named here rather than discovered. The note-collision direction override
+    /// and a merge's wiped dot are likewise not read here (voice-default directions only, as
+    /// the renderer's fallback arm).
     /// </para>
     /// </remarks>
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<
