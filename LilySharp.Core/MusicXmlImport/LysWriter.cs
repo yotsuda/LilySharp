@@ -54,6 +54,7 @@ internal static class LysWriter
         var header = HeaderState(doc, cuts.Segments.Select(s => s.Start).Concat(marks.Keys));
         var directives = doc.Parts.ToDictionary(p => p, p => Directives(doc, p, header, systemStarts, report));
         var layout = SplitAtMarks(cuts, CuttableMarks(marks, cuts, doc, report), doc);
+        CutSpansAtSectionEdges(doc, layout, report);
         bool useRelative = relativeOctave;
 
         // ---- header ----
@@ -503,7 +504,7 @@ internal static class LysWriter
                             // A new hairpin ends the one before it, as a dynamic does.
                             if (art is "cresc" or "decresc")
                                 hairpin = !carried;
-                            else if (IsDynamic(art))
+                            else if (IsDynamic(art) || art is "!cresc" or "!decresc")
                                 hairpin = false;
                         }
                     }
@@ -514,8 +515,179 @@ internal static class LysWriter
         return false;
     }
 
+    /// <summary>A span open in one voice: its family, the name it opened with, its note, and the
+    /// section (by order) it opened in.</summary>
+    private sealed record OpenSpan(string Family, string Name, ImportNote Opener, int Section);
+
+    /// <summary>
+    /// Ends every span the section rule would not let cross, on the section's last note, and starts
+    /// it again on the next section's first note if it goes on past there.
+    /// </summary>
+    /// <remarks>
+    /// A span may cross one plain section edge, and must end in that next section; nothing but a
+    /// tie may cross a repeat sign or an ending's edge (SYNTAX_REFERENCE "Across a section
+    /// boundary", LYS4023), and an ottava carried over one would leave its notes at the wrong
+    /// pitch. A MusicXML line knows nothing of this: until 2026-11-04 it was written as it stood,
+    /// and the book did not compile clean (Kinkel op. 7/4: a pedal held over a repeat sign). An end
+    /// on the next section's first note was only a line reaching the bar line, so it moves to the
+    /// last note before the edge and nothing starts again.
+    /// </remarks>
+    private static void CutSpansAtSectionEdges(ImportDocument doc, VoltaLayout layout, ImportReport report)
+    {
+        if (layout.Segments.Count < 2)
+            return;
+        var plainEdge = new Dictionary<int, bool>();
+        for (int k = 1; k < layout.Segments.Count; k++)
+            plainEdge[layout.Segments[k].Start] = System.Text.RegularExpressions.Regex.IsMatch(layout.Structure,
+                System.Text.RegularExpressions.Regex.Escape(HiddenLabel(layout.Segments[k - 1].Name)) + @"\s+"
+                + System.Text.RegularExpressions.Regex.Escape(HiddenLabel(layout.Segments[k].Name)) + "(?![A-Za-z0-9_])");
+
+        foreach (var part in doc.Parts)
+            foreach (int voice in part.Measures.SelectMany(m => m.VoiceItems.Keys).Distinct().ToList())
+            {
+                var open = new Dictionary<string, OpenSpan>();
+                int section = 0;
+                ImportNote? last = null, lastPitched = null;
+                for (int i = 0; i < part.Measures.Count; i++)
+                {
+                    if (plainEdge.TryGetValue(i, out bool plain))
+                    {
+                        section++;
+                        foreach (var span in open.Values.ToList())
+                        {
+                            if (plain && span.Section == section - 1)
+                                continue;
+                            open.Remove(span.Family);
+                            bool curve = span.Family is "slur" or "phrasing";
+                            var next = FirstNoteFrom(part, voice, i, curve);
+                            CutSpan(span, curve ? lastPitched : last, next);
+                            report.Warn(i + 1, $"a {span.Family} line crosses a section edge Lily# lets no line cross, "
+                                + "so it ends on the last note before the edge.");
+                        }
+                    }
+                    if (!part.Measures[i].VoiceItems.TryGetValue(voice, out var items))
+                        continue;
+                    foreach (var note in items.OfType<ImportNote>().Where(n => !n.ChordWithPrev))
+                    {
+                        FollowSpans(note, open, section);
+                        last = note;
+                        if (!note.IsRest)
+                            lastPitched = note;
+                    }
+                }
+            }
+    }
+
+    private static ImportNote? FirstNoteFrom(ImportPart part, int voice, int measure, bool pitched)
+    {
+        for (int i = measure; i < part.Measures.Count; i++)
+            if (part.Measures[i].VoiceItems.TryGetValue(voice, out var items)
+                && items.OfType<ImportNote>().FirstOrDefault(n => !n.ChordWithPrev && (!pitched || !n.IsRest)) is { } first)
+                return first;
+        return null;
+    }
+
+    /// <summary>The spans <paramref name="note"/> closes and opens, in the order it spells them.</summary>
+    private static void FollowSpans(ImportNote note, Dictionary<string, OpenSpan> open, int section)
+    {
+        if (note.Articulations.Any(a => IsDynamic(a) || a == "niente"))
+            open.Remove("hairpin");
+        if (note.PhrasingSlurStop) open.Remove("phrasing");
+        if (note.PhrasingSlurStart) open["phrasing"] = new OpenSpan("phrasing", "phrasingSlur", note, section);
+        if (note.SlurStop) open.Remove("slur");
+        if (note.SlurStart) open["slur"] = new OpenSpan("slur", "slur", note, section);
+        foreach (var mark in note.Articulations)
+        {
+            if (mark == "treCorde")
+                open.Remove("unaCorda");
+            else if (mark.StartsWith('!') && MarkFamily(mark[1..]) is { } closes)
+                open.Remove(closes);
+            else if (MarkFamily(mark) is { } opens)
+                open[opens] = new OpenSpan(opens, mark, note, section);
+        }
+    }
+
+    /// <summary>The family of a span mark the reader writes, or null for any other mark.</summary>
+    private static string? MarkFamily(string name) => name switch
+    {
+        "cresc" or "decresc" => "hairpin",
+        "8va" or "8vb" or "15ma" or "15mb" => "ottava",
+        "sustain" or "sostenuto" or "unaCorda" => name,
+        _ => null,
+    };
+
+    /// <summary>Ends <paramref name="span"/> on <paramref name="last"/> instead of carrying it on to
+    /// <paramref name="next"/>; a span that goes on past <paramref name="next"/> starts again there.</summary>
+    private static void CutSpan(OpenSpan span, ImportNote? last, ImportNote? next)
+    {
+        if (last == null)
+            return;
+        // What ends it on the next section's first note, if anything does.
+        bool endsThere = next != null && span.Family switch
+        {
+            "slur" => next.SlurStop,
+            "phrasing" => next.PhrasingSlurStop,
+            "hairpin" => next.Articulations.Any(a => IsDynamic(a) || a is "niente" or "cresc" or "decresc" or "!cresc" or "!decresc"),
+            "unaCorda" => next.Articulations.Any(a => a is "!unaCorda" or "treCorde"),
+            _ => next.Articulations.Contains("!" + span.Name),
+        };
+        if (endsThere && next != null)
+        {
+            switch (span.Family)
+            {
+                case "slur": next.SlurStop = false; break;
+                case "phrasing": next.PhrasingSlurStop = false; break;
+                default:
+                    next.Articulations.Remove("!" + span.Name);
+                    if (span.Family == "unaCorda")
+                        next.Articulations.Remove("treCorde");
+                    break;
+            }
+        }
+        // Opened on the very note the section ends on, it has no length before the edge.
+        if (span.Opener == last)
+            RemoveOpen(span);
+        else
+            AddEnd(span, last);
+        if (!endsThere && next != null)
+            AddOpen(span, next);
+    }
+
+    private static void RemoveOpen(OpenSpan span)
+    {
+        switch (span.Family)
+        {
+            case "slur": span.Opener.SlurStart = false; break;
+            case "phrasing": span.Opener.PhrasingSlurStart = false; break;
+            default: span.Opener.Articulations.Remove(span.Name); break;
+        }
+    }
+
+    private static void AddEnd(OpenSpan span, ImportNote note)
+    {
+        switch (span.Family)
+        {
+            case "slur": note.SlurStop = true; break;
+            case "phrasing": note.PhrasingSlurStop = true; break;
+            default: note.Articulations.Add("!" + span.Name); break;
+        }
+    }
+
+    private static void AddOpen(OpenSpan span, ImportNote note)
+    {
+        switch (span.Family)
+        {
+            case "slur": note.SlurStart = true; break;
+            case "phrasing":
+                note.PhrasingSlurStart = true;
+                note.PhrasingSlurPlacement = span.Opener.PhrasingSlurPlacement;
+                break;
+            default: note.Articulations.Add(span.Name); break;
+        }
+    }
+
     // A dynamic mark as the reader spells one: it ends a hairpin.
-    private static bool IsDynamic(string articulation)
+    internal static bool IsDynamic(string articulation)
         => System.Text.RegularExpressions.Regex.IsMatch(articulation, "^(p+|f+|m[pf]|s?f+z?|sfp+|fp|rf+z?|fz|sp+|n)$");
 
     /// <summary>The text of a <c>mark("…")</c> articulation, or null for any other.</summary>

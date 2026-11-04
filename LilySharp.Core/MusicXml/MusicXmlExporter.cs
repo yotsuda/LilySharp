@@ -2877,15 +2877,20 @@ public sealed class MusicXmlExporter
                     var frame = (_currentOctave, _currentStep, _defaultDuration);
                     var tremoloMeasure = _currentMeasure;
                     int tremoloFrom = _currentMeasure?.Notes.Count ?? 0;
+                    int tremoloAt = _currentMeasure != null ? CurrentMeasurePosition(_currentMeasure) : 0;
                     for (int rep = 0; rep < repCount; rep++)
                     {
                         if (rep > 0)
                             (_currentOctave, _currentStep, _defaultDuration) = frame;
+                        // The marks too are written once: a body's `@sustain` used to open a pedal
+                        // on every pass.
+                        _inLaterTremoloPass = rep > 0;
                         ProcessNode(repeat.Body);
                         CloseFullBarAtPassEnd();
                     }
+                    _inLaterTremoloPass = false;
                     if (repeat.RepeatType.Text == "tremolo")
-                        WriteTremoloOnce(tremoloMeasure, tremoloFrom, repCount);
+                        WriteTremoloOnce(tremoloMeasure, tremoloFrom, repCount, tremoloAt);
                 }
                 break;
 
@@ -3146,6 +3151,9 @@ public sealed class MusicXmlExporter
                     n.Voice = v + 1;
                     target.Notes.Add(n);
                 }
+                // Until 2026-11-04 only the notes came across: a later voice's dynamics, hairpins,
+                // pedals, octave lines and words went with its scratch stream.
+                target.Directions.AddRange(temp.Measures[i].Directions);
             }
         }
 
@@ -5455,6 +5463,9 @@ public sealed class MusicXmlExporter
                     _currentMeasure!.Directions.Remove(n.Word);
                 _niente = null;
             }
+            // A hairpin the next one ends stops there, or the file leaves it open.
+            if (_wedgeOpen)
+                AddDirection(new MusicXmlDirection { WedgeType = "stop", Placement = "below" });
             AddDirection(wedge);
             _openWedge = wedge;
             _wedgeOpen = true;
@@ -5524,6 +5535,9 @@ public sealed class MusicXmlExporter
     /// or a chord's later member): where an end that includes its note stands.</summary>
     private int _markedNoteLength;
 
+    /// <summary>In the second or a later pass of a <c>repeat tremolo</c>, which is engraved once.</summary>
+    private bool _inLaterTremoloPass;
+
     /// <summary>
     /// Folds the passes of a <c>repeat tremolo</c> into what MusicXML writes for it: the body once,
     /// each note with its share of the span and the whole span's <c>&lt;type&gt;</c>, a pair under
@@ -5534,7 +5548,7 @@ public sealed class MusicXmlExporter
     /// </summary>
     /// <remarks>The last pass is the one kept, because a <c>~</c> in the body is open on it; a tie
     /// INTO the tremolo stands on the first pass, so it is carried across.</remarks>
-    private void WriteTremoloOnce(MusicXmlMeasure? measure, int from, int passes)
+    private void WriteTremoloOnce(MusicXmlMeasure? measure, int from, int passes, int start)
     {
         if (measure == null)
             return;
@@ -5563,6 +5577,9 @@ public sealed class MusicXmlExporter
         int beams = BeamsOf(heads[0].Type);
         if (spanType is not { } written || beams == 0)
             return;
+        // The first pass's marks stand on the body's notes, which now fill the whole span.
+        foreach (var direction in measure.Directions.Where(d => d.Offset > start && d.Offset <= start + span / passes))
+            direction.Offset = start + (direction.Offset - start) * passes;
         var kept = heads.Skip(heads.Count - bodyHeads).ToList();
         kept[0].TieStop |= heads[0].TieStop;
         measure.Notes.RemoveRange(from, measure.Notes.IndexOf(kept[0]) - from);
@@ -5620,7 +5637,7 @@ public sealed class MusicXmlExporter
     /// </summary>
     private void AddDirection(MusicXmlDirection direction)
     {
-        if (_currentMeasure == null)
+        if (_currentMeasure == null || _inLaterTremoloPass)
             return;
         direction.Offset = CurrentMeasurePosition(_currentMeasure);
         if (direction.PedalType != null)
@@ -5814,11 +5831,17 @@ public sealed class MusicXmlExporter
                     case Svg.Model.MusicMarkType.UnaCordaOff:
                         AddDirection(new MusicXmlDirection { Words = "tre corde", Placement = "below" });
                         break;
-                    // '@!cresc' / '@!decresc' / '@!dim' (LilyPond's \!): the open wedge stops here.
+                    // '@!cresc' / '@!decresc' / '@!dim' (LilyPond's \!): the wedge runs to this
+                    // note's right edge (SYNTAX_REFERENCE), so the stop stands where the note ends.
+                    // Until 2026-11-04 it stood at the note's start, a note short.
                     case Svg.Model.MusicMarkType.HairpinStop when _wedgeOpen:
-                        AddDirection(new MusicXmlDirection { WedgeType = "stop", Placement = "below" });
+                    {
+                        var stop = new MusicXmlDirection { WedgeType = "stop", Placement = "below" };
+                        AddDirection(stop);
+                        stop.Offset += _markedNoteLength;
                         _wedgeOpen = false;
                         break;
+                    }
                     // The text spanner has no stop spelling here — the silence '@rit' meets.
                 }
             return;

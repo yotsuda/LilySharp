@@ -202,6 +202,8 @@ internal static class MusicXmlReader
         var noteStaff = new Dictionary<ImportNote, int>();  // the staff each head is written on
         var noteAt = new Dictionary<ImportNote, (int Voice, int Measure, int Onset)>();
         var directed = new List<(ImportNote Host, string Mark, int Staff)>();  // marks a <staff> sent
+        var slurEnds = new List<SlurEnd>();                 // every <slur> of the part, in stream order
+        var wedgeStops = new List<(int Measure, int At, int? Staff)>();
         void NoteDirected(ImportNote host, string mark, int? staff)
         {
             if (staff is { } s)
@@ -297,6 +299,9 @@ internal static class MusicXmlReader
                         int? dirStaff = int.TryParse(Local(el, "staff")?.Value, out int ds) ? ds : null;
                         foreach (var dyn in ReadDirectionDynamics(el))
                             pendingDynamics.Add((dyn, at, dirStaff));
+                        if (Els(el, "direction-type").SelectMany(t => Els(t, "wedge"))
+                                .Any(w => (string?)w.Attribute("type") == "stop"))
+                            wedgeStops.Add((measureNo, at, dirStaff));
                         // The direction's text and its lines ride the same queue: they mark
                         // the note at their position exactly as a dynamic does.
                         foreach (var text in ReadDirectionTexts(el, report, measureNo))
@@ -371,12 +376,23 @@ internal static class MusicXmlReader
                         if (Local(el, "grace") != null)
                         {
                             if (ReadGraceNote(el) is { } g)
+                            {
                                 pendingGrace.Add(g);
+                                if (g.SlurStart && !g.ChordWithPrev)
+                                    slurEnds.Add(new SlurEnd(g, null, "1", true, voice, measureNo, position));
+                            }
                             break;
                         }
                         var note = ReadNote(el, divisions, report, measureNo);
                         if (note == null)
                             break;
+                        // A chord member sounds with its head, which has already moved the cursor.
+                        int slurOnset = note.ChordWithPrev && lastNote != null && noteAt.TryGetValue(lastNote, out var head)
+                            ? head.Onset : position;
+                        foreach (var s in Els(Local(el, "notations"), "slur"))
+                            if ((string?)s.Attribute("type") is "start" or "stop")
+                                slurEnds.Add(new SlurEnd(null, note, (string?)s.Attribute("number") ?? "1",
+                                    (string?)s.Attribute("type") == "start", voice, measureNo, slurOnset));
                         var target = measure.Voice(voice);
                         // A chord member folds onto the previous note; harmony /
                         // figured-bass / dynamics / grace attach to the head note only.
@@ -469,6 +485,7 @@ internal static class MusicXmlReader
                     (best, most) = (s, count);
             voiceStaff[voice] = best;
         }
+        PairSlurs(slurEnds, report);
         var staves = voiceStaff.Values.Distinct().OrderBy(s => s).ToList();
         // A TAB staff beside a notation staff holds the same notes again, with their strings
         // and frets (what MusicXmlExporter writes for `staff gt  tab gt`): its voices are a
@@ -484,10 +501,16 @@ internal static class MusicXmlReader
         }
         if (staves.Count <= 1)
         {
+            EndWedges(wedgeStops, noteAt, voiceStaff);
+            EndOttavasInTheirVoice(noteAt, voiceStaff);
+            KeepUnreleasedUnaCordaAsWords(noteAt);
             ToPlainClefOctave(part.Measures, part.Clef);
             return new List<ImportPart> { part };
         }
         SendDirectedMarksHome(directed, noteAt, voiceStaff);
+        EndWedges(wedgeStops, noteAt, voiceStaff);
+        EndOttavasInTheirVoice(noteAt, voiceStaff);
+        KeepUnreleasedUnaCordaAsWords(noteAt);
         // `@cross` names "the other staff", which only two staves answer.
         if (staves.Count == 2)
             foreach (var measure in part.Measures)
@@ -579,6 +602,175 @@ internal static class MusicXmlReader
                     home.Articulations.Add(mark);
             }
         }
+    }
+
+    /// <summary>One end of a &lt;slur&gt;: on a grace note or on a note, with where it sounds.</summary>
+    private sealed record SlurEnd(ImportGraceNote? Grace, ImportNote? Note, string Number, bool Start,
+        int Voice, int Measure, int Onset);
+
+    /// <summary>
+    /// Keeps the slurs a Lily# voice can hold: those whose two ends are in one voice. The ends are
+    /// paired by number along the music's time, not the stream's.
+    /// </summary>
+    /// <remarks>
+    /// A MusicXML slur may run from one voice to another, even between the staves (Dichterliebe 1,
+    /// bar 11: voice 2 on the lower staff to voice 1 on the upper), and the voice written later in
+    /// the stream can hold the end that sounds first. A Lily# slur stays in its voice. Until
+    /// 2026-11-04 each end was written where it stood, so the `(` went unclosed or met an unrelated
+    /// `)` further on, and drew a wrong curve. Such a slur has no spelling, so it is dropped and
+    /// reported.
+    /// </remarks>
+    private static void PairSlurs(List<SlurEnd> ends, ImportReport report)
+    {
+        foreach (var end in ends)
+        {
+            if (end.Grace != null)
+                end.Grace.SlurStart = false;
+            else if (end.Number == "1")
+                (end.Note!.SlurStart, end.Note.SlurStop) = (false, false);
+            else
+                (end.Note!.PhrasingSlurStart, end.Note.PhrasingSlurStop) = (false, false);
+        }
+        var open = new Dictionary<string, List<SlurEnd>>();
+        // A stop before a start at one moment: a note may end one slur and begin the next. A grace
+        // note sounds before its main note, whose stop may be the end of the grace note's slur.
+        foreach (var end in ends.OrderBy(e => e.Measure).ThenBy(e => e.Onset)
+                     .ThenBy(e => e.Grace != null ? 0 : e.Start ? 2 : 1))
+        {
+            if (!open.TryGetValue(end.Number, out var waiting))
+                open[end.Number] = waiting = new();
+            if (end.Start)
+            {
+                waiting.Add(end);
+                continue;
+            }
+            var mate = waiting.LastOrDefault(e => e.Voice == end.Voice) ?? waiting.FirstOrDefault();
+            if (mate == null)
+            {
+                report.Warn(end.Measure, "a slur's end has no start, so it is dropped.");
+                continue;
+            }
+            waiting.Remove(mate);
+            if (mate.Voice != end.Voice)
+            {
+                report.Warn(mate.Measure, $"a slur runs from voice {mate.Voice} to voice {end.Voice} (bar {end.Measure}); "
+                    + "a Lily# slur stays in its voice, so it is dropped.");
+                continue;
+            }
+            if (mate.Grace != null)
+                mate.Grace.SlurStart = true;
+            else if (mate.Number == "1")
+                mate.Note!.SlurStart = true;
+            else
+                mate.Note!.PhrasingSlurStart = true;
+            if (end.Number == "1")
+                end.Note!.SlurStop = true;
+            else
+                end.Note!.PhrasingSlurStop = true;
+        }
+        foreach (var unended in open.Values.SelectMany(w => w))
+            report.Warn(unended.Measure, "a slur has no end, so it is dropped.");
+    }
+
+    /// <summary>
+    /// A wedge's stop as <c>@!cresc</c> / <c>@!decresc</c>, on the last note of the wedge's voice
+    /// before the stop: the end includes its note, up to that note's right edge, which is where
+    /// the stop stands. Until 2026-11-04 the stop was not read and a hairpin ran on to the next
+    /// dynamic, however far that was.
+    /// </summary>
+    /// <remarks>
+    /// Nothing is written when the voice's next note carries a dynamic or a hairpin: that ends the
+    /// wedge where it stops, and is how a hairpin ending on a dynamic is spelled.
+    /// </remarks>
+    private static void EndWedges(List<(int Measure, int At, int? Staff)> stops,
+        Dictionary<ImportNote, (int Voice, int Measure, int Onset)> noteAt, Dictionary<int, int> voiceStaff)
+    {
+        if (stops.Count == 0)
+            return;
+        var byTime = noteAt.OrderBy(n => n.Value.Measure).ThenBy(n => n.Value.Onset).ToList();
+        var ended = new HashSet<ImportNote>();
+        foreach (var (measure, at, staff) in stops.OrderBy(s => s.Measure).ThenBy(s => s.At))
+        {
+            bool Before((int Voice, int Measure, int Onset) p) => p.Measure < measure || (p.Measure == measure && p.Onset < at);
+            var opener = byTime.LastOrDefault(n => Before(n.Value) && !ended.Contains(n.Key)
+                && n.Key.Articulations.Any(a => a is "cresc" or "decresc")
+                && (staff == null || voiceStaff.GetValueOrDefault(n.Value.Voice, staff.Value) == staff)).Key;
+            if (opener == null)
+                continue;
+            ended.Add(opener);
+            var inVoice = byTime.Where(n => n.Value.Voice == noteAt[opener].Voice).Select(n => n.Key).ToList();
+            int from = inVoice.IndexOf(opener);
+            int last = from;
+            while (last + 1 < inVoice.Count && Before(noteAt[inVoice[last + 1]]))
+                last++;
+            // A dynamic or a hairpin met on the way has already ended it.
+            if (inVoice.Skip(from + 1).Take(last - from + 1).Any(n => n.Articulations.Any(EndsAHairpin)))
+                continue;
+            string name = opener.Articulations.Last(a => a is "cresc" or "decresc");
+            // `@cresc@!cresc` on one note does not end there (a close is read before an open), so
+            // a wedge under one note ends on the next, or runs on when there is none.
+            if (last != from)
+                inVoice[last].Articulations.Add("!" + name);
+            else if (last + 1 < inVoice.Count)
+                inVoice[last + 1].Articulations.Add("!" + name);
+        }
+    }
+
+    /// <summary>
+    /// An octave line ends in the voice it opened in: its stop goes on the staff's last note, which
+    /// may be another voice's, and a Lily# line left open there is never closed (Kinkel op. 7/1).
+    /// </summary>
+    private static void EndOttavasInTheirVoice(Dictionary<ImportNote, (int Voice, int Measure, int Onset)> noteAt,
+        Dictionary<int, int> voiceStaff)
+    {
+        var byTime = noteAt.OrderBy(n => n.Value.Measure).ThenBy(n => n.Value.Onset).ToList();
+        // Each hand may have a line of its own open at once.
+        var open = new Dictionary<(string Name, int Staff), ImportNote>();
+        foreach (var (note, at) in byTime)
+            foreach (var mark in note.Articulations.ToList())
+            {
+                int staff = voiceStaff.GetValueOrDefault(at.Voice);
+                if (mark is "8va" or "8vb" or "15ma" or "15mb")
+                    open[(mark, staff)] = note;
+                else if (EndsWithItsNote(mark) && open.Remove((mark[1..], staff), out var opener))
+                {
+                    int voice = noteAt[opener].Voice;
+                    if (at.Voice == voice)
+                        continue;
+                    var home = byTime.LastOrDefault(n => n.Value.Voice == voice
+                        && (n.Value.Measure < at.Measure || (n.Value.Measure == at.Measure && n.Value.Onset <= at.Onset))).Key;
+                    if (home != null && note.Articulations.Remove(mark))
+                        home.Articulations.Add(mark);
+                }
+            }
+    }
+
+    /// <summary>A mark that ends the hairpin before it: a dynamic, or another hairpin.</summary>
+    private static bool EndsAHairpin(string mark)
+        => mark is "cresc" or "decresc" or "niente" || LysWriter.IsDynamic(mark);
+
+    /// <summary>
+    /// An "una corda" no "tre corde" follows stays the words on the page: <c>@unaCorda</c> opens a
+    /// span that must be released, and many scores never print the release (Holmes, Melodies 16).
+    /// </summary>
+    private static void KeepUnreleasedUnaCordaAsWords(Dictionary<ImportNote, (int Voice, int Measure, int Onset)> noteAt)
+    {
+        ImportNote? down = null;
+        void Words()
+        {
+            if (down != null)
+                down.Articulations[down.Articulations.IndexOf("unaCorda")] = "text(\"una corda\")";
+        }
+        foreach (var note in noteAt.OrderBy(n => n.Value.Measure).ThenBy(n => n.Value.Onset).Select(n => n.Key))
+            foreach (var mark in note.Articulations.ToList())
+                if (mark == "unaCorda")
+                {
+                    Words();
+                    down = note;
+                }
+                else if (mark is "treCorde")
+                    down = null;
+        Words();
     }
 
     /// <summary>
@@ -998,32 +1190,35 @@ internal static class MusicXmlReader
 
     /// <summary>Dynamic mark names from a &lt;direction&gt;: each &lt;dynamics&gt; level
     /// (f, ff, p, mf, …) and an OPENING hairpin wedge (crescendo → cresc, diminuendo →
-    /// decresc). A wedge stop is not a mark, unless it is a diminuendo's al niente stop.</summary>
+    /// decresc). A wedge stop is read apart (<see cref="EndWedges"/>), but for a diminuendo's al
+    /// niente stop, which is a mark.</summary>
     private static IEnumerable<string> ReadDirectionDynamics(XElement dir)
     {
-        var dt = Local(dir, "direction-type");
-        if (dt == null)
-            yield break;
-        foreach (var dyn in Els(dt, "dynamics"))
-            foreach (var level in dyn.Elements())
-                if (level.Name.LocalName != "other-dynamics")
-                    // <n/> is MusicXML's niente.
-                    yield return level.Name.LocalName == "n" ? "niente" : level.Name.LocalName;
-        foreach (var wedge in Els(dt, "wedge"))
+        // Every <direction-type>: one direction may hold "cresc." and its wedge side by side, and
+        // until 2026-11-04 only the first was read, so the wedge after a word was lost.
+        foreach (var dt in Els(dir, "direction-type"))
         {
-            // niente="yes" is the circle at the tip: a crescendo from nothing, or the stop of
-            // a diminuendo to nothing — Lily#'s @niente at that end.
-            bool niente = (string?)wedge.Attribute("niente") == "yes";
-            switch ((string?)wedge.Attribute("type"))
+            foreach (var dyn in Els(dt, "dynamics"))
+                foreach (var level in dyn.Elements())
+                    if (level.Name.LocalName != "other-dynamics")
+                        // <n/> is MusicXML's niente.
+                        yield return level.Name.LocalName == "n" ? "niente" : level.Name.LocalName;
+            foreach (var wedge in Els(dt, "wedge"))
             {
-                case "crescendo":
-                    if (niente) yield return "niente";
-                    yield return "cresc";
-                    break;
-                case "diminuendo": yield return "decresc"; break;
-                case "stop":
-                    if (niente) yield return "niente";
-                    break;
+                // niente="yes" is the circle at the tip: a crescendo from nothing, or the stop of
+                // a diminuendo to nothing — Lily#'s @niente at that end.
+                bool niente = (string?)wedge.Attribute("niente") == "yes";
+                switch ((string?)wedge.Attribute("type"))
+                {
+                    case "crescendo":
+                        if (niente) yield return "niente";
+                        yield return "cresc";
+                        break;
+                    case "diminuendo": yield return "decresc"; break;
+                    case "stop":
+                        if (niente) yield return "niente";
+                        break;
+                }
             }
         }
     }
@@ -1097,7 +1292,9 @@ internal static class MusicXmlReader
                             pedals.Add("sostenuto");
                         yield return "sostenuto";
                         break;
-                    case "stop":
+                    // "discontinue" ends the line with no lift drawn; Lily# has one end for both.
+                    // Until 2026-11-04 it was not read, and the pedal was never released.
+                    case "stop" or "discontinue":
                         string down = pedals.Count > 0 ? pedals[^1] : "sustain";
                         pedals.Remove(down);
                         yield return "!" + down;
