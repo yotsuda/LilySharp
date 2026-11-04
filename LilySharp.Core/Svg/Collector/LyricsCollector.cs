@@ -719,9 +719,10 @@ internal sealed class LyricsCollector
     /// markers hold one, so <c>c'4( d e) f</c> with <c>la __ la</c> put the second syllable on
     /// e where LilyPond puts it on f.
     /// <para>A grace note is no slot, and a slur or tie that opens on one does not hold the main
-    /// note after it: that note takes the syllable (lily/lyric-combine-music-iterator.cc:322-338,
-    /// pending_grace_moment_, with includeGraceNotes off, its default). Until 2026-11-04 a grace
-    /// note took a syllable here, and every word of the bar stood a note early.</para>
+    /// note after it: that note takes the syllable (pending_grace_moment_, with includeGraceNotes
+    /// off, its default). Until 2026-11-04 a grace note took a syllable here, and every word of
+    /// the bar stood a note early.</para>
+    /// LILYPOND-REF: lily/lyric-combine-music-iterator.cc:322-338 process
     /// </remarks>
     internal static List<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy, bool TieHeld)> BuildNoteIndices(
         IReadOnlyList<Measure> measures)
