@@ -981,7 +981,8 @@ internal static partial class SharedRenderer
         // its dot and still answers 1.226585 (its unshortened 2.80 stem holds the flag clear),
         // while `\grace { d''8. }` at the same "on a line, lifted" description answers 1.747274
         // because its stem is shortened to 2.50 and the flag comes down with it.
-        if (note.Dots > 0)
+        // A merge may have taken this head's dot (LILYPOND-REF: lily/note-collision.cc:310-314).
+        if (note.Dots > 0 && !dotAdjust.DotWiped)
         {
             // Same Dot_configuration machinery as chords. The dots' preferred
             // direction has two layers, exactly LilyPond's: \voiceOne/\voiceTwo set
@@ -1273,9 +1274,17 @@ internal static partial class SharedRenderer
             // LILYPOND-REF: lily/note-collision.cc:374-397 check_meshing_chords — set_property direction
             int dotDir = dotAdjust.DirectionUp ? 1
                 : forcedStemUp switch { true => 1, false => -1, null => 0 };
+            // A merge took the dot off the chord's first head, the one the stem starts from,
+            // and the rest are configured without it.
+            // LILYPOND-REF: lily/note-collision.cc:310-314 check_meshing_chords;
+            // LILYPOND-REF: lily/stem.cc Stem::first_head — extremal_heads (me)[-d].
+            var dottedPositions = chord.Notes.Select(n => n.StaffPosition).ToList();
+            if (dotAdjust.DotWiped)
+                dottedPositions.Remove((forcedStemUp ?? chord.StemUp)
+                    ? dottedPositions.Min() : dottedPositions.Max());
             var resolved = DotConfiguration.Resolve(
-                chord.Notes.Select(n => n.StaffPosition).ToArray(),
-                dotDir != 0 ? Enumerable.Repeat(dotDir, chord.Notes.Length).ToArray() : null);
+                dottedPositions.ToArray(),
+                dotDir != 0 ? Enumerable.Repeat(dotDir, dottedPositions.Count).ToArray() : null);
             // The ported rule, as in DrawNote — a rightward skyline over the supports,
             // floored on the head ink right. ⚠️ THE FLOOR CARRIES THE REVERSED HEADS: a
             // second inside the chord puts a head on the far side of the stem, and the dot

@@ -130,11 +130,22 @@ internal sealed record NoteCollisionInfo
     /// </remarks>
     public bool UpDotsAvoidDownHeads { get; }
 
+    /// <summary>Whether a merge takes the dot off the up voice's first head.</summary>
+    /// <remarks>LILYPOND-REF: lily/note-collision.cc:262-314 dot_wipe_head. A merge always
+    /// wipes one: the two voices' dots would otherwise stand on either side of a line.</remarks>
+    public bool UpDotWiped { get; }
+
+    /// <summary>Whether a merge takes the dot off the down voice's first head.</summary>
+    /// <remarks>See <see cref="UpDotWiped"/>: the side an equal merge wipes.</remarks>
+    public bool DownDotWiped { get; }
+
     public NoteCollisionInfo(CollisionType type, double upStemXOffset, double downStemXOffset,
         bool shouldMerge = false, bool upHeadTransparent = false, bool downHeadTransparent = false,
         bool downDotDirectionUp = false, bool downDotsAvoidUpHeads = false,
-        bool upDotsAvoidDownHeads = false)
+        bool upDotsAvoidDownHeads = false, bool upDotWiped = false, bool downDotWiped = false)
     {
+        UpDotWiped = upDotWiped;
+        DownDotWiped = downDotWiped;
         Type = type;
         UpStemXOffset = upStemXOffset;
         DownStemXOffset = downStemXOffset;
@@ -153,9 +164,10 @@ internal sealed record NoteCollisionInfo
 /// The dot-column adjustments a two-voice collision imposes on ONE voice item: a
 /// preferred direction for its dots (note-collision.cc:374-397) and/or a minimum X for
 /// its dot column (:352-372), in the staff column's frame — the frame the collision
-/// XOffsets live in. <c>default</c> means "no adjustment".
+/// XOffsets live in. <c>default</c> means "no adjustment". <paramref name="DotWiped"/>: a merge
+/// took the dot off this item's first head (<see cref="NoteCollisionInfo.UpDotWiped"/>).
 /// </summary>
-internal readonly record struct DotAdjustment(bool DirectionUp, double? ColumnMinX);
+internal readonly record struct DotAdjustment(bool DirectionUp, double? ColumnMinX, bool DotWiped = false);
 
 /// <summary>
 /// Parameters for note collision handling.
@@ -568,9 +580,8 @@ internal sealed class NoteCollision
     /// ⚠️ THIS USED TO WIPE THE DOWN HEAD ON EVERY SAME-HEADED MERGE, which silently
     /// dropped the down voice's chord in collision-seconds.ly m1p2 (its citation
     /// named :381-407, a range inside calc_positioning_done with no wipe code).
-    /// ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
-    /// every merge (:262-314); Lily# has no dot-wipe channel, so an equal-dots merge
-    /// draws both voices' dots coincident (same ink, one glyph too many).
+    /// dot_wipe_head (:262-314): every merge also kills one first head's DOT. MEASURED, 2.26.0
+    /// (Lab sessions/p1093/dd): `voice { d4. } { d4. }` draws the up voice's one dot.
     /// </remarks>
     private static NoteCollisionInfo ComputeMergeInfo(int upNoteValue, int downNoteValue,
         int upDots, int downDots)
@@ -579,16 +590,19 @@ internal sealed class NoteCollision
         bool downIsOpen = downNoteValue <= 2;
 
         bool hideUp = false, hideDown = false;
+        bool wipeUpDot;
         // The BALL types (up_ball_type == down_ball_type), as the merge test reads them: a
         // quarter over an eighth is one black head twice, and the arm below would wipe BOTH.
         if (BallNoteValue(upNoteValue) == BallNoteValue(downNoteValue))
         {
             // LILYPOND-REF: note-collision.cc:276-290 — equal heads: wipe only on a
-            // visible-dot-count difference, the less-dotted side.
+            // visible-dot-count difference, the less-dotted side. The dot goes with it, and
+            // with equal counts the down head's dot goes alone.
             if (downDots < upDots)
                 hideDown = true;
             else if (downDots > upDots)
                 hideUp = true;
+            wipeUpDot = downDots > upDots;
         }
         else
         {
@@ -596,10 +610,12 @@ internal sealed class NoteCollision
             // filled (shorter duration) head, keep the open one.
             hideUp = !upIsOpen;   // hide up if it's filled (quarter/eighth)
             hideDown = !downIsOpen; // hide down if it's filled
+            wipeUpDot = BallNoteValue(downNoteValue) < BallNoteValue(upNoteValue);
         }
 
         return new NoteCollisionInfo(CollisionType.Merge, 0, 0,
-            shouldMerge: true, upHeadTransparent: hideUp, downHeadTransparent: hideDown);
+            shouldMerge: true, upHeadTransparent: hideUp, downHeadTransparent: hideDown,
+            upDotWiped: wipeUpDot, downDotWiped: !wipeUpDot);
     }
 
     /// <summary>
@@ -934,11 +950,12 @@ internal sealed class NoteCollision
         var raw = new List<(int VoiceId, int ItemIndex, double Offset, bool Hide, DotAdjustment Dot)>();
         for (int i = 0; i < upEntries.Count; i++)
             raw.Add((upEntries[i].VoiceId, upEntries[i].ItemIndex, off[0][i],
-                i == 0 && collision.UpHeadTransparent, default));
+                i == 0 && collision.UpHeadTransparent,
+                i == 0 ? new DotAdjustment(false, null, collision.UpDotWiped) : default));
         for (int i = 0; i < downEntries.Count; i++)
             raw.Add((downEntries[i].VoiceId, downEntries[i].ItemIndex, off[1][i],
                 i == 0 && collision.DownHeadTransparent,
-                i == 0 ? new DotAdjustment(collision.DownDotDirectionUp, null) : default));
+                i == 0 ? new DotAdjustment(collision.DownDotDirectionUp, null, collision.DownDotWiped) : default));
 
         // :440-468 — translate by amount − left_most, where left_most starts 0.0 and
         // only amounts BELOW it move it: an all-positive set keeps the slot in place.

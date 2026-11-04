@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
 | `OWN` | 299 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **425** | |
+| **計** | **424** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -25,16 +25,16 @@
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 17 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 15 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
-| `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 9 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
+| `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（63 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（62 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **`ChordQualityRegistry.SymbolSuffix`** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -107,7 +107,6 @@
 - **`MusicMarkEngraver.LabelFrameBottomAboveStaffMiddle`** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **`NoteCollisionParameters`** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
-- **`NoteCollision.ComputeMergeInfo`** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
 - **`NoteCollision.CalculateVoiceOffsets`** see . ⚠️ STILL NOT PORTED: :578-586 (an up
 - **`NoteCollision.CalculateVoiceOffsets`** ⚠️ NOT PORTED: stem/flag boxes and rest supports (see DotColumnSupportMinX);
 - **`NoteCollision.DotColumnSupportMinX`** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
