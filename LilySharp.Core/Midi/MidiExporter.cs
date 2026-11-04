@@ -1042,6 +1042,7 @@ public sealed class MidiExporter
                     if (gridAfterFirst != null)
                         _barNotes = Math.Max(_barNotes, track.Notes.Count);
                     _pendingGraceSteal = 0; // a lane opens with no grace debt (PlaySection says why)
+                    _clockCarry = default;
                     ProcessNode(voice, track, conductorTrack);
                     // Every note this voice added is the lane's (MidiNote.Voice), whatever path
                     // made it — a note, a chord, a grace, a repeated `q`; a nested span's own first
@@ -1057,6 +1058,7 @@ public sealed class MidiExporter
                 (_barStart, _barNotes, _barKnown, _firstBarTicks, _barFlows) = gridAfterFirst is { } g
                     && g.Item1 != gridAtStart._barStart ? g : gridAtStart;
                 _pendingGraceSteal = 0;
+                _clockCarry = default;
                 _currentTick = voicesEndTick;
                 // …and the music AFTER the span reads from the frame the span opened in
                 // too: no branch moves it, so which branch was written last cannot matter
@@ -1380,6 +1382,7 @@ public sealed class MidiExporter
                 // grace's steal is simply dropped — the note it would have shortened is in
                 // another voice, or does not exist.
                 _pendingGraceSteal = 0;
+                _clockCarry = default;
                 if (!tickLanes.ContainsKey(pname))
                 {
                     _bars.Partial = sectionPickup;
@@ -1446,6 +1449,7 @@ public sealed class MidiExporter
         {
             _currentTick = start;
             _pendingGraceSteal = 0; // each part's copy is a lane of its own (PlaySection says why)
+            _clockCarry = default;
             PlaySection(section, track, conductorTrack, octaveOffset,
                 firstBars.TryGetValue(section, out int firstBar) ? firstBar : null);
             // A by-part cell (or a bare section the score attributes to one part) is one
@@ -2771,7 +2775,7 @@ public sealed class MidiExporter
                     break;
             }
         }
-        int ticks = FractionToTicks(_defaultDuration);
+        int ticks = ClockTicks(_defaultDuration);
         int actualTicks = Math.Max(1, ticks * durationPercent / 100);
         track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, pitch.SourceStart), velocity,
             _currentTick, actualTicks, pitch.SourceStart, QuarterBend: pitch.QuarterOffset,
@@ -2789,7 +2793,7 @@ public sealed class MidiExporter
         var (step, alter, octave) = ChordDegrees.Resolve(
             rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keySharps);
         int midiPitch = WrittenToMidi(step, alter, octave);
-        int ticks = FractionToTicks(_defaultDuration);
+        int ticks = ClockTicks(_defaultDuration);
         track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, degree.SourceStart), _velocity,
             _currentTick, ticks, degree.SourceStart,
             SourceOrdinal: NextOrdinal(degree.SourceStart), Timbre: _currentTimbre, Part: _currentPart));
@@ -2803,7 +2807,7 @@ public sealed class MidiExporter
         int midiPitch = CalculateRelativeMidiPitch(note.Pitch);
 
         var duration = GetDuration(note.Duration);
-        int durationTicks = FractionToTicks(duration);
+        int durationTicks = ClockTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this note
 
         // `a4@rest` is a REST that takes its staff position from a written pitch, so it is
@@ -2884,7 +2888,7 @@ public sealed class MidiExporter
         SetTiePending(false); // drums do not tie
         var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
         var duration = GetDuration(drum.Duration);
-        int durationTicks = FractionToTicks(duration);
+        int durationTicks = ClockTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks);
 
         int velocity = _velocity;
@@ -2925,7 +2929,7 @@ public sealed class MidiExporter
         // rest began, where the page draws it after three.
         int durationTicks = (Music.BarRest.IsBare(rest)
             ? MeasureTicks()
-            : FractionToTicks(GetDuration(rest.Duration))) * rest.MeasureCount;
+            : ClockTicks(GetDuration(rest.Duration))) * rest.MeasureCount;
         durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this rest
         _currentTick += durationTicks;
     }
@@ -2947,7 +2951,7 @@ public sealed class MidiExporter
     {
         ForgetOnset();
         var duration = GetDuration(slash.Duration);
-        int durationTicks = FractionToTicks(duration);
+        int durationTicks = ClockTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks);
         // A strokes part's slash is a stroke the chord row that plays it sounds at (RecordStroke).
         RecordStroke(slash.Articulations, _currentTick, durationTicks);
@@ -2961,7 +2965,7 @@ public sealed class MidiExporter
     private void ProcessBareDuration(BareDurationSyntax bare, MidiTrack track)
     {
         var duration = GetDuration(bare.Duration);
-        int durationTicks = FractionToTicks(duration);
+        int durationTicks = ClockTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks);
         int startTick = _currentTick;
 
@@ -3180,7 +3184,7 @@ public sealed class MidiExporter
         // Use the chord's own typed duration, not a descendant scan (which could
         // pick up a duration on an inner pitch if the grammar ever allowed it).
         var duration = chord.Duration is { } cd ? GetDuration(cd) : _defaultDuration;
-        int durationTicks = FractionToTicks(duration);
+        int durationTicks = ClockTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this chord
 
         // The chord's own dynamic and scripts, read as a note's are (ProcessNote). Until
@@ -3350,7 +3354,7 @@ public sealed class MidiExporter
 
         int startTick = _currentTick;
         var duration = rep.Duration is { } rd ? GetDuration(rd) : _defaultDuration;
-        int durationTicks = FractionToTicks(duration);
+        int durationTicks = ClockTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks);
 
         if (ChordRepetitions.OriginalOf(rep) is { } original
@@ -3522,6 +3526,36 @@ public sealed class MidiExporter
         }
 
         return (int)baseTicks;
+    }
+
+    /// <summary>What the clock owes the next note, in ticks: the exact end of the last note less the
+    /// tick it was rounded to. Empty when a lane opens.</summary>
+    private (long Over, long Under) _clockCarry;
+
+    /// <summary>
+    /// The ticks a note moves the clock, which keeps its exact place: a note stands at the tick
+    /// nearest its written moment and a group ends on its beat. Rounded note by note, 7 16ths in
+    /// 480 ticks were 69 each and the group 483, late by that much again at each group of the bar.
+    /// </summary>
+    private int ClockTicks(Fraction duration)
+    {
+        long over = duration.Numerator * 4L * _ticksPerQuarter, under = duration.Denominator;
+        foreach (var (numerator, denominator) in _tupletStack)
+        {
+            over *= denominator;
+            under *= numerator;
+        }
+        if (_clockCarry.Under != 0)
+        {
+            over = over * _clockCarry.Under + _clockCarry.Over * under;
+            under *= _clockCarry.Under;
+        }
+        long common = (long)System.Numerics.BigInteger.GreatestCommonDivisor(over, under);
+        over /= common;
+        under /= common;
+        long ticks = RoundedDiv(Math.Max(0, over), under);
+        _clockCarry = (over - ticks * under, under);
+        return (int)ticks;
     }
 
     /// <summary>Nearest-integer division for non-negative operands (a &gt;= 0, b &gt; 0).</summary>
