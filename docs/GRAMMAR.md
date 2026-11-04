@@ -1434,11 +1434,16 @@ LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
                     Both spellings put the same hyphen on the same syllable — Classify
                     folds them — so the difference is only which node holds the text.
                     '~' GLUED on both sides ("va~ga") is an elision, otherwise a melisma.
+                    A QUOTED syllable is its words and nothing else: "-", "~", "_", "|" and
+                    "la-" print those characters, and take a note like any word. A hyphen
+                    after the closing quote is the connector: "a"- or "a" --.
                     WHICH NOTE A SYLLABLE TAKES is LilyPond's \lyricsto (2026-09-24): a
                     note the voice reaches inside a SLUR (after its first note, up to the
                     closing one) or at the end of a TIE takes no syllable — the melisma is
-                    the slur's. '__' is the extender LINE and takes no note; '_' and a
-                    detached '~' take one note each, holding the previous syllable. *)
+                    the slur's. A grace note takes none, and a slur or tie that opens on one
+                    does not hold the main note after it. '__' is the extender LINE and takes
+                    no note; '_' and a detached '~' take one note each, holding the previous
+                    syllable. *)
 
 ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline } , '}' ;
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'chords' row. *)

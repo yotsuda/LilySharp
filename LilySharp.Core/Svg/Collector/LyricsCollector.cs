@@ -675,10 +675,10 @@ internal sealed class LyricsCollector
         {
             var child = measureNode.GetChild(i);
             if (child == null) continue;
-            var (text, pos) = LyricSyllableReader.ReadToken(child);
+            var (role, text, pos) = LyricSyllableReader.Read(child);
             if (string.IsNullOrEmpty(text)) continue;
 
-            switch (LyricSyllableReader.Classify(text))
+            switch (role)
             {
                 case LyricSyllableReader.Marker.Barline:
                     break; // a measure boundary, never a word
@@ -692,12 +692,10 @@ internal sealed class LyricsCollector
                     SetPrevConnector(LyricConnectorType.Extender);
                     break;
                 case LyricSyllableReader.Marker.HyphenWord:
-                    result.Add((LyricSyllableReader.DisplaySyllable(LyricSyllableReader.TrimHyphenWord(text)),
-                        LyricConnectorType.Hyphen, pos));
+                    result.Add((text, LyricConnectorType.Hyphen, pos));
                     break;
                 default: // Syllable
-                    result.Add((LyricSyllableReader.DisplaySyllable(text),
-                        LyricConnectorType.None, pos));
+                    result.Add((text, LyricConnectorType.None, pos));
                     break;
             }
         }
@@ -720,12 +718,16 @@ internal sealed class LyricsCollector
     /// (session 569): Lily# used to hand every note a syllable and let only the lyric-side
     /// markers hold one, so <c>c'4( d e) f</c> with <c>la __ la</c> put the second syllable on
     /// e where LilyPond puts it on f.
+    /// <para>A grace note is no slot, and a slur or tie that opens on one does not hold the main
+    /// note after it: that note takes the syllable (lily/lyric-combine-music-iterator.cc:322-338,
+    /// pending_grace_moment_, with includeGraceNotes off, its default). Until 2026-11-04 a grace
+    /// note took a syllable here, and every word of the bar stood a note early.</para>
     /// </remarks>
     internal static List<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy, bool TieHeld)> BuildNoteIndices(
         IReadOnlyList<Measure> measures)
     {
         var noteIndices = new List<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy, bool TieHeld)>();
-        bool slurOpen = false, tiedIn = false;
+        bool slurOpen = false, tiedIn = false, openedOnGrace = false;
         for (int m = 0; m < measures.Count; m++)
         {
             var timing = Fraction.Zero;
@@ -740,12 +742,18 @@ internal sealed class LyricsCollector
                     RestItem r => (false, r.HasSlurStart, r.HasSlurEnd, false),
                     _ => (false, false, false, false),
                 };
-                if (isNote)
+                if (isNote && item.GraceTime)
+                {
+                    openedOnGrace |= !slurOpen && !tiedIn && (slurStart || tieStart);
+                    tiedIn = tieStart;
+                }
+                else if (isNote)
                 {
                     // TieHeld says WHICH hold it is, for the overflow warning's advice: a tied
                     // note is held whatever slur it also sits in.
-                    noteIndices.Add((m, i, timing, slurOpen || tiedIn, tiedIn));
+                    noteIndices.Add((m, i, timing, !openedOnGrace && (slurOpen || tiedIn), !openedOnGrace && tiedIn));
                     tiedIn = tieStart;
+                    openedOnGrace = false;
                 }
                 else if (item.Duration > Fraction.Zero)
                     tiedIn = false;   // a tie does not reach across a rest

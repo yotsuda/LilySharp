@@ -123,7 +123,11 @@ public sealed record LyricItem(
     // syllable. LILYPOND-REF: lily/lyric-extender.cc:80-84 print — right_point
     //   is raised to the last head's extent RIGHT.
     int MelismaEndMeasureIndex = -1,
-    LilySharp.Core.Semantics.Fraction MelismaEndTiming = default
+    LilySharp.Core.Semantics.Fraction MelismaEndTiming = default,
+
+    // How many rows past its run's first this syllable stands: words past the last bar wrap to
+    // the next row. The MusicXML counts a verse from it (MusicXmlExporter.WriteLyrics).
+    int WrapRow = 0
 )
 {
     // Identity, not value equality: see ModelIdentity.

@@ -640,8 +640,7 @@ public sealed class MidiExporter
         if (_soundingParts is { } sounding)
             mainTrack.Notes.RemoveAll(n => n.Part is { } part && !IsChordRowTrack(part) && !sounding.Contains(part));
 
-        // A section-less file's lyric blocks were met on the root stream: sing them now.
-        AttachLyrics(mainTrack, null, 0, 0);
+        SingLyrics(tree, mainTrack);
         SplitIntoPartTracks(midi, mainTrack);
         AddPedals(midi, mainTrack.Name);
 
@@ -1005,10 +1004,8 @@ public sealed class MidiExporter
             case DynamicSyntax:
                 break;
 
-            case LyricsBlockSyntax lyrics:
-                // Sung AFTER the section's notes exist, on their onsets (AttachLyrics); the
-                // part in force now is what a block inside a part block sings.
-                _sectionLyrics.Add((lyrics, _currentPart));
+            case LyricsBlockSyntax:
+                // Sung once every note exists (SingLyrics reads them off the page).
                 break;
 
             case ParallelExpressionSyntax parallel:
@@ -1229,16 +1226,8 @@ public sealed class MidiExporter
     private void PlaySection(SectionDeclarationSyntax section, MidiTrack track, MidiTrack conductorTrack,
         int octaveOffset = 0, int? firstBarTicks = null)
     {
-        // The lyric blocks met in this section are sung onto its notes once the play is
-        // done, whichever of PlaySectionCore's exits it leaves by (AttachLyrics).
-        int notesBefore = track.Notes.Count;
-        int sectionStart = _currentTick;
-        _sectionStarts?.TryAdd(sectionStart, section.SectionName);
-        var outerLyrics = _sectionLyrics;
-        _sectionLyrics = new List<(LyricsBlockSyntax, string?)>();
+        _sectionStarts?.TryAdd(_currentTick, section.SectionName);
         PlaySectionCore(section, track, conductorTrack, octaveOffset, firstBarTicks);
-        AttachLyrics(track, section, notesBefore, sectionStart);
-        _sectionLyrics = outerLyrics;
     }
 
     private void PlaySectionCore(SectionDeclarationSyntax section, MidiTrack track, MidiTrack conductorTrack,
@@ -3891,76 +3880,51 @@ public sealed class MidiExporter
         };
     }
 
-    /// <summary>The lyric blocks met while playing the current section, with the part in
-    /// force where each was met — sung onto that section's notes once they exist.</summary>
-    private List<(LyricsBlockSyntax Block, string? Part)> _sectionLyrics = new();
-
     /// <summary>
-    /// Sings a section's lyric blocks onto the notes the section just sounded: one lyric
-    /// meta event per syllable, at the onset it is sung on — the MusicXML's rule
-    /// (MusicXmlExporter.AttachLyrics) read on ticks instead of note lists. Syllables
-    /// advance onset by onset (a chord is one onset; grace notes, rests and tie
-    /// continuations are not sung), a lyric bar line moves to the first onset of the next
-    /// bar, and a melisma holds its onset without a syllable.
+    /// The words as lyric meta events, each on the onset the page sets it on (SungSyllables):
+    /// a page note is the k-th printing of its source in its part (MidiNote.SourceOrdinal), and
+    /// a repeat sounds that printing once a pass.
     /// </summary>
     /// <remarks>
-    /// Which notes a block sings: the part block it names (<c>lyrics NAME { … }</c>), else
-    /// the part in force where it was met (a block inside a part block), else the section's
-    /// FIRST part block — as the MusicXML binds section-level lyrics. Until session 398 the
-    /// walk wrote every syllable at the tick the block was met, which was the section's
-    /// start — and then wrote nothing at all, because it read the block's children as bare
-    /// tokens after the parser had made them syllable nodes (MEASURED,
-    /// LilySharp-Lab/sessions/p398/probes/r14/lyrics-midi: no lyric events in the .mid).
-    /// ⚠️ Bars are counted at the section's meter at its end and its header pickup; a meter
-    /// change INSIDE a section shifts the bar-line sync from there on (the page and the
-    /// MusicXML sync on real measures). The events go to the main track and land in the
-    /// first part track (SplitIntoPartTracks), wherever the sung part's notes went.
+    /// Words with no verse number are sung every pass. A <c>verse N { }</c> is sung on the Nth,
+    /// and a row wrapped past the last bar on the pass of its row; where the music sounds fewer
+    /// times than that (a verse on its own written-out printing), on the last.
+    /// <para>Until 2026-11-04 this was a count of its own, on onsets: a slur held nothing, a bar
+    /// with more syllables than notes pushed the next, words past the last bar and a top-level
+    /// or by-part track were not written, and <c>verse N { }</c> sang the words "verse" and "N".</para>
+    /// ⚠️ A verse covering several plays (<c>verse 1,3 { }</c>) is sung on its first only.
+    /// The events go to the main track and land in the first part track (SplitIntoPartTracks),
+    /// wherever the sung part's notes went.
     /// </remarks>
-    private void AttachLyrics(MidiTrack track, SectionDeclarationSyntax? section, int notesBefore, int sectionStart)
+    private void SingLyrics(SyntaxTree tree, MidiTrack track)
     {
-        if (_sectionLyrics.Count == 0)
+        if (_playedSpec is not { } spec)
             return;
-        // A null section is the section-less file (Export plays the root as one stream).
-        var partNames = new List<string>();
-        for (int i = 0; section != null && i < section.SlotCount; i++)
-            if (section.GetChild(i) is PartBlockSyntax pb)
-                partNames.Add(pb.Name);
-        int firstBar = FractionToTicks(
-            section != null && _sectionHeaders.Partials.TryGetValue(section.SectionName, out var hp)
-                ? hp.ToFraction()
-                : _bars.BarLength);
-        int barTicks = FractionToTicks(_bars.MeterLength);
-
-        foreach (var (block, partAtBlock) in _sectionLyrics)
+        var sung = Svg.Collector.SungSyllables.Read(tree, spec);
+        if (sung.Count == 0)
+            return;
+        var bySource = track.Notes.ToLookup(n => n.SourcePos);
+        var wrappedTracks = sung.Where(s => s.Lyric.WrapRow > 0).Select(s => s.Track).ToHashSet();
+        foreach (var (lyric, item, printing, part, sungTrack) in sung)
         {
-            string? sung = block.VoiceName is { } named && partNames.Contains(named)
-                ? named
-                : partAtBlock ?? partNames.FirstOrDefault();
-            // The words of a part the score does not sound leave with its notes (Export's strip).
-            if (sung != null && !PartSounds(sung))
+            var notes = bySource[item.SourcePosition].ToList();
+            // A phrase two parts play stands at one source position, and its ordinals run on
+            // from one part into the next: the page's k-th printing is the part's own k-th.
+            if (notes.Any(n => n.Part == part))
+                notes = notes.Where(n => n.Part == part).ToList();
+            var ordinals = notes.Select(n => n.SourceOrdinal).Distinct().Order().ToList();
+            if (printing >= ordinals.Count)
                 continue;
-            var onsets = track.Notes.Skip(notesBefore)
-                .Where(n => !n.IsGrace && n.DurationTicks >= 0 && (sung == null || n.Part == sung))
-                .Select(n => n.StartTick).Distinct().OrderBy(t => t).ToList();
-            int bar = 0, oi = 0;
-            foreach (var (text, _, _, isBarline, isMelisma) in Svg.Collector.LyricCollector.ParseSyllables(block))
-            {
-                if (isBarline)
-                {
-                    bar++;
-                    int barStart = sectionStart + firstBar + (bar - 1) * barTicks;
-                    while (oi < onsets.Count && onsets[oi] < barStart)
-                        oi++;
-                    continue;
-                }
-                if (oi >= onsets.Count)
-                    break; // more syllables than onsets — stop quietly, as the MusicXML does
-                int tick = onsets[oi++];
-                if (isMelisma)
-                    continue;
-                track.Lyrics.Add(new LyricEvent(tick, text));
-            }
+            var onsets = notes.Where(n => n.SourceOrdinal == ordinals[printing])
+                .Select(n => n.StartTick).Distinct().Order().ToList();
+            int? pass = lyric.StanzaLabel > 0 ? lyric.StanzaLabel - 1
+                : wrappedTracks.Contains(sungTrack) ? lyric.WrapRow
+                : null;
+            if (pass is { } one)
+                track.Lyrics.Add(new LyricEvent(onsets[Math.Min(one, onsets.Count - 1)], lyric.Text));
+            else
+                foreach (int tick in onsets)
+                    track.Lyrics.Add(new LyricEvent(tick, lyric.Text));
         }
-        _sectionLyrics.Clear();
     }
 }

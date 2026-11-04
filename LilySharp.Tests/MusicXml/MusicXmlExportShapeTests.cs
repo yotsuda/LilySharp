@@ -596,7 +596,7 @@ public class MusicXmlExportShapeTests
               lyrics { glo ri~a | }
             }
             form { A }
-            score { staff v }
+            score { staff v  lyrics }
             """);
         var lyric = doc.Descendants("lyric")
             .First(l => l.Elements("elision").Any());

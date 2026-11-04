@@ -48,8 +48,8 @@ public readonly record struct MidiNote(
     // gives each part its own track and channel by it (MidiExporter.SplitIntoPartTracks).
     // Not written to .mid files.
     string? Part = null,
-    // A grace note: it sounds, but it is not an onset a lyric syllable is sung on
-    // (MidiExporter.AttachLyrics). Not written to .mid files.
+    // A grace note: it sounds, but the checks of a voice's line do not read it as one of the
+    // line's notes (CompositionChecks, VoiceLeading). Not written to .mid files.
     bool IsGrace = false,
     // A chord member's OWN place — its pitch, degree or drum, where the page puts its head —
     // where SourcePos is the chord's '<' (the onset the preview lights the chord by). -1 for

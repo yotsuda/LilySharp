@@ -4,6 +4,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A quoted lyric syllable is its words**: `"-"`, `"~"`, `"_"`, `"|"` and `"la-"` print those characters, and `"a"-` no longer prints its quotes.
+- **A grace note takes no lyric syllable**, so the words of its bar no longer stand a note early.
+- **The MusicXML and MIDI exports put each syllable where the page does**: `verse N { }` was written as the words "verse" and "N", a by-part track wrote nothing, and words past the last bar were lost. The MIDI sings `verse N` on the Nth pass of a repeat. A track the score does not place is no longer exported.
 - **MusicXML import keeps each syllable on its note, and every sung part's words**: a note with no syllable is held with `~`, a slur over notes with their own syllables becomes a phrasing slur, and a syllable of several words is quoted. The MusicXML export puts each syllable where the page does.
 - **MusicXML import declares a pickup with `partial`**, so bar numbers start after it and its parts carry no warning. The check no longer calls a voice opening on bar lines an overfull pickup, and a piece's short last bar may complete the pickup in another section.
 - **MusicXML export keeps a tuplet pickup in one bar.**

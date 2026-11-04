@@ -74,7 +74,7 @@ public class VsqxExportShapeTests
               lyrics { la le li lo | }
             }
             form { A }
-            score { staff m }
+            score { staff m  lyrics }
             """);
         var notes = Notes(root);
         Assert.Equal(4, notes.Count);

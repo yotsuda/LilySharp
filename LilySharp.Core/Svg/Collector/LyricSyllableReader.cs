@@ -51,14 +51,25 @@ internal static class LyricSyllableReader
         Barline,
     }
 
+    /// <summary>One lyric token as read by <see cref="Read"/>.</summary>
+    internal readonly record struct LyricToken(Marker Role, string Text, int Position);
+
     /// <summary>
-    /// Reads a lyric measure's child node (a syllable or the trailing barline token)
-    /// to its display text — string-literal quotes stripped — and the source byte
-    /// offset of the word itself (Span.Start excludes leading trivia), so an emitted
-    /// data-pos lands on the word and a preview click jumps to it, not the space
-    /// before. Returns an empty string for a node with no token.
+    /// Reads a lyric measure's child node (a syllable or the trailing barline token): the role
+    /// it plays, its text — for a syllable the words to print; for a marker the mark as
+    /// written — and the source byte offset of the word itself (Span.Start excludes leading
+    /// trivia), so an emitted data-pos lands on the word and a preview click jumps to it, not
+    /// the space before. A node with no token reads as an empty syllable.
     /// </summary>
-    public static (string Text, int Position) ReadToken(SyntaxNode node)
+    /// <remarks>
+    /// A QUOTED syllable is its words and nothing else: <c>"-"</c>, <c>"~"</c>, <c>"_"</c>,
+    /// <c>"|"</c> and <c>"la-"</c> print those characters. A hyphen glued AFTER the closing quote
+    /// (<c>"a"-</c>) is the same connector it is after a bare word. Until 2026-11-04 the quotes
+    /// came off before the role was decided, so a quoted mark acted as the mark and a syllable
+    /// ending in a hyphen lost it; and <c>"a"-</c> was not recognized as a literal at all, so
+    /// its quotes were printed.
+    /// </remarks>
+    public static LyricToken Read(SyntaxNode node)
     {
         SyntaxTokenNode? tok = node.Kind == SyntaxKind.LyricSyllable
             ? node.GetChild(0) as SyntaxTokenNode
@@ -67,26 +78,36 @@ internal static class LyricSyllableReader
             for (int i = 0; i < node.SlotCount && tok == null; i++)
                 tok = node.GetChild(i) as SyntaxTokenNode;
         if (tok == null)
-            return ("", node.Span.Start);
+            return new LyricToken(Marker.Syllable, "", node.Span.Start);
 
+        int position = tok.Span.Start;
         var text = tok.Text;
         if (StringLiteral.IsClosed(text))
-            text = StringLiteral.Value(text);
-        return (text, tok.Span.Start);
+            return new LyricToken(Marker.Syllable, StringLiteral.Value(text), position);
+        if (text.EndsWith('-'))
+        {
+            var word = text.TrimEnd('-');
+            if (StringLiteral.IsClosed(word))
+                return new LyricToken(Marker.HyphenWord, StringLiteral.Value(word), position);
+        }
+
+        var role = Classify(text);
+        return new LyricToken(role, role switch
+        {
+            Marker.Syllable => DisplaySyllable(text),
+            Marker.HyphenWord => DisplaySyllable(text.TrimEnd('-')),
+            _ => text,
+        }, position);
     }
 
-    /// <summary>Classifies a raw lyric token into its <see cref="Marker"/> role.</summary>
-    public static Marker Classify(string text) =>
+    /// <summary>Classifies an unquoted lyric token into its <see cref="Marker"/> role.</summary>
+    private static Marker Classify(string text) =>
         IsBarline(text) ? Marker.Barline
         : text is "--" or "-" ? Marker.Hyphen
         : text is "__" or "_" ? Marker.Extender
         : text is "~" ? Marker.Melisma
         : text.EndsWith('-') ? Marker.HyphenWord
         : Marker.Syllable;
-
-    /// <summary>The display text of a <see cref="Marker.HyphenWord"/> — the word
-    /// without its trailing hyphen(s).</summary>
-    public static string TrimHyphenWord(string text) => text.TrimEnd('-');
 
     /// <summary>Display form of a sung syllable: a '~' INSIDE the word is a
     /// lyric ELISION (two vowels sung on one note) and prints as the undertie
@@ -209,9 +230,9 @@ internal static class LyricSyllableReader
             var child = measure.GetChild(i);
             if (child == null)
                 continue;
-            var (text, _) = ReadToken(child);
-            if (!string.IsNullOrEmpty(text) && IsBarline(text))
-                last = text;
+            var token = Read(child);
+            if (token.Role == Marker.Barline)
+                last = token.Text;
         }
         return last;
     }

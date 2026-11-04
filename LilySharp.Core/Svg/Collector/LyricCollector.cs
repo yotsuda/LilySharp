@@ -228,7 +228,8 @@ internal sealed class LyricCollector
                     OpensStanzaRun: verse == verseNumber && stanzaLabel > 0 && lyrics.Count == 0,
                     Timing: slot.Timing,
                     SourcePosition: position,
-                    HideStanza: hideStanza
+                    HideStanza: hideStanza,
+                    WrapRow: verse - verseNumber
                 );
                 // A slur or tie runs on from this note: the syllable is sung over the
                 // whole melisma — LEFT-aligned (lily/lyric-engraver.cc:180-183, a
@@ -288,7 +289,7 @@ internal sealed class LyricCollector
         // source byte offset so the placed syllable can carry it (data-pos).
         // Barlines are KEPT (not stripped) so Collect can use them to skip to the
         // next measure's notes — a written bar is a real measure boundary.
-        var allTokens = new List<(string Text, int Position)>();
+        var allTokens = new List<LyricSyllableReader.LyricToken>();
         foreach (var measureNode in measureNodes)
         {
             // A by-part inner section is not a lyric measure — skip it (the
@@ -306,9 +307,9 @@ internal sealed class LyricCollector
                 var syllableNode = measureNode.GetChild(i);
                 if (syllableNode == null) continue;
 
-                var (text, position) = LyricSyllableReader.ReadToken(syllableNode);
-                if (!string.IsNullOrEmpty(text))
-                    allTokens.Add((text, position));
+                var token = LyricSyllableReader.Read(syllableNode);
+                if (!string.IsNullOrEmpty(token.Text))
+                    allTokens.Add(token);
             }
         }
 
@@ -318,9 +319,9 @@ internal sealed class LyricCollector
         // melisma (one more held note, no line). Connectors attach by looking BACK at
         // the last real syllable so a melisma marker can also consume the held note.
         // Marker roles are classified by the shared reader the lyrics-row path uses.
-        foreach (var (text, position) in allTokens)
+        foreach (var (role, text, position) in allTokens)
         {
-            switch (LyricSyllableReader.Classify(text))
+            switch (role)
             {
                 case LyricSyllableReader.Marker.Barline:
                     result.Add((text, LyricConnectorType.None, position, true, false));
@@ -345,12 +346,10 @@ internal sealed class LyricCollector
                     // A sung syllable ending in a hyphen (Mu-): render it WITHOUT the
                     // dash and draw a centered hyphen to the next syllable, same as a
                     // spaced `--` marker (and the lyrics-row path).
-                    result.Add((LyricSyllableReader.DisplaySyllable(LyricSyllableReader.TrimHyphenWord(text)),
-                        LyricConnectorType.Hyphen, position, false, false));
+                    result.Add((text, LyricConnectorType.Hyphen, position, false, false));
                     break;
                 default: // Syllable
-                    result.Add((LyricSyllableReader.DisplaySyllable(text),
-                        LyricConnectorType.None, position, false, false));
+                    result.Add((text, LyricConnectorType.None, position, false, false));
                     break;
             }
         }
