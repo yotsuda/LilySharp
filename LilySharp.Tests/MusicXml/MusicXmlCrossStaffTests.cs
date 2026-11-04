@@ -327,6 +327,59 @@ public class MusicXmlCrossStaffTests
         Assert.Equal([false, false, true, false], measures.Select(HasG4));
     }
 
+    private static string Pedal(string type, int staff, string attributes = "line=\"no\" sign=\"yes\"") =>
+        $"<direction placement=\"below\"><direction-type><pedal type=\"{type}\" {attributes}/></direction-type><staff>{staff}</staff></direction>";
+
+    private static string Hand(string step, int octave, int voice, int staff, int duration, string type) =>
+        $"<note><pitch><step>{step}</step><octave>{octave}</octave></pitch><duration>{duration}</duration><voice>{voice}</voice><type>{type}</type><staff>{staff}</staff></note>";
+
+    /// <summary>Two bars of a grand staff in 2/4 (divisions 2): each hand writes what it is given.</summary>
+    private static string PianoBars(string bar1, string bar2) => $"""
+        <score-partwise version="4.0">
+          <part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>
+          <part id="P1">
+            <measure number="1"><attributes><divisions>2</divisions><time><beats>2</beats><beat-type>4</beat-type></time>
+              <staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef></attributes>{bar1}</measure>
+            <measure number="2">{bar2}</measure>
+          </part>
+        </score-partwise>
+        """;
+
+    [Fact]
+    public void APedalReleaseStaysWithTheHandThatPressedIt()
+    {
+        // Dichterliebe 12: the release names staff 2, and the note written there first is the
+        // right hand's, come down @cross. It belongs on the left hand's own note.
+        string bar1 = Pedal("start", 2)
+            + Hand("C", 5, 1, 1, 4, "half") + Backup(4) + Hand("C", 3, 5, 2, 4, "half");
+        string bar2 = Pedal("stop", 2)
+            + Hand("G", 3, 1, 2, 2, "quarter") + Hand("D", 5, 1, 1, 2, "quarter") + Backup(4)
+            + Hand("D", 3, 5, 2, 4, "half");
+        var (lys, _) = new MusicXmlImporter().Import(PianoBars(bar1, bar2));
+        Assert.Contains("g4@cross d''4", lys);
+        Assert.Contains("c2@sustain | d2@!sustain", lys);
+        Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(lys))
+            .Where(d => d.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Theory]
+    [InlineData("line=\"no\" sign=\"yes\"", " pedal text")]
+    [InlineData("line=\"no\"", " pedal text")]
+    [InlineData("line=\"yes\" sign=\"yes\"", " pedal mixed")]
+    [InlineData("line=\"yes\" sign=\"no\"", " pedal bracket")]
+    [InlineData("line=\"yes\"", " pedal bracket")]
+    [InlineData("", "")]   // `lysc xml` says nothing: the book's default comes back as itself
+    public void APedalsDrawnFormComesThrough(string attributes, string expected)
+    {
+        string bar = Pedal("start", 2, attributes) + Hand("C", 5, 1, 1, 4, "half") + Backup(4) + Hand("C", 3, 5, 2, 4, "half");
+        string end = Pedal("stop", 2, attributes) + Hand("D", 5, 1, 1, 4, "half") + Backup(4) + Hand("D", 3, 5, 2, 4, "half");
+        var (lys, _) = new MusicXmlImporter().Import(PianoBars(bar, end));
+        if (expected.Length > 0)
+            Assert.Contains($"{{ clef bass{expected}", lys);
+        else
+            Assert.DoesNotContain(" pedal ", lys);
+    }
+
     [Fact]
     public void ASpanTheValueCannotDivideKeepsItsNotes()
     {

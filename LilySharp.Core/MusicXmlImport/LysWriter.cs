@@ -88,6 +88,8 @@ internal static class LysWriter
         {
             sb.Append("part ").Append(part.SafeName)
               .Append(" { clef ").Append(part.Clef);
+            if (part.PedalStyle is { } pedalStyle)
+                sb.Append(" pedal ").Append(pedalStyle);
             // <transpose> comes back as `transposition`, the same knob that produced it.
             // Only whole octaves reach here (the reader warns about anything else), and the
             // clef's own octave has already been subtracted — see ImportPart.

@@ -200,6 +200,15 @@ internal static class MusicXmlReader
         var voiceStaff = new Dictionary<int, int>();       // voice number -> its staff
         var staffCounts = new Dictionary<(int Voice, int Staff), int>();   // the notes it has on each
         var noteStaff = new Dictionary<ImportNote, int>();  // the staff each head is written on
+        var noteAt = new Dictionary<ImportNote, (int Voice, int Measure, int Onset)>();
+        var directed = new List<(ImportNote Host, string Mark, int Staff)>();  // marks a <staff> sent
+        void NoteDirected(ImportNote host, string mark, int? staff)
+        {
+            if (staff is { } s)
+                directed.Add((host, mark, s));
+        }
+        // How the <pedal>s of the part want drawing, by how many ask (a Lily# part has one style).
+        var pedalStyles = new Dictionary<string, int>();
         // A span's end (`!ottava`, `!sustain`) standing past a bar's last onset — where a
         // MusicXML stop usually stands, after the last note it covers — closes on the next
         // note of its staff, in the next bar: on the bar's last note it would end the line a
@@ -254,9 +263,15 @@ internal static class MusicXmlReader
                         // the note before it, its staff's last one.
                         if (EndsWithItsNote(pendingDynamics[i].Dynamic)
                             && (lastNoteOfStaff.TryGetValue(staff, out var before) ? before : partLastNote) is { } last)
+                        {
                             last.Articulations.Add(pendingDynamics[i].Dynamic);
+                            NoteDirected(last, pendingDynamics[i].Dynamic, pendingDynamics[i].Staff);
+                        }
                         else
+                        {
                             note.Articulations.Insert(k++, pendingDynamics[i].Dynamic);
+                            NoteDirected(note, pendingDynamics[i].Dynamic, pendingDynamics[i].Staff);
+                        }
                     }
                 pendingDynamics.RemoveAll(Due);
             }
@@ -288,6 +303,15 @@ internal static class MusicXmlReader
                             pendingDynamics.Add((text, at, dirStaff));
                         foreach (var span in ReadDirectionSpans(el, pedals, ottava, report, measureNo))
                             pendingDynamics.Add((span, at, dirStaff));
+                        // Only a <pedal> that says: `lysc xml` writes neither attribute, and a book's
+                        // own default style has to come back as itself.
+                        foreach (var pedal in el.Descendants().Where(d => d.Name.LocalName == "pedal"
+                            && (string?)d.Attribute("type") is "start" or "sostenuto"
+                            && (d.Attribute("line") != null || d.Attribute("sign") != null)))
+                        {
+                            string style = PedalStyleOf(pedal);
+                            pedalStyles[style] = pedalStyles.GetValueOrDefault(style) + 1;
+                        }
                         break;
                     }
 
@@ -377,6 +401,7 @@ internal static class MusicXmlReader
                             AttachDue(note, staff);
                             note.LeadingGrace.AddRange(pendingGrace);
                             pendingGrace.Clear();
+                            noteAt[note] = (voice, measureNo, position);
                             int noteTicks = int.TryParse(Local(el, "duration")?.Value, out int ndur) ? ndur : 0;
                             position += noteTicks;
                             voiceAt[voice] = position;
@@ -406,7 +431,10 @@ internal static class MusicXmlReader
                 if (dyn.StartsWith('!') && !EndsWithItsNote(dyn))
                     carriedEnds.Add((dyn, dynStaff));
                 else if ((dynStaff is { } s && lastNoteOfStaff.TryGetValue(s, out var own) ? own : lastNote) is { } host)
+                {
                     host.Articulations.Add(dyn);
+                    NoteDirected(host, dyn, dynStaff);
+                }
             }
             pendingDynamics.Clear();
 
@@ -417,10 +445,15 @@ internal static class MusicXmlReader
         foreach (var (end, endStaff) in carriedEnds)
             if ((endStaff is { } s && lastNoteOfStaff.TryGetValue(s, out var own) ? own
                     : partLastNote) is { } host)
+            {
                 host.Articulations.Add(end);
+                NoteDirected(host, end, endStaff);
+            }
 
         part.Clef = clefSet ?? "treble";
         part.TranspositionSemitones = transposeSet;
+        part.PedalStyle = pedalStyles.Count == 0 ? null
+            : pedalStyles.OrderByDescending(s => s.Value).ThenBy(s => s.Key, StringComparer.Ordinal).First().Key;
 
         // A part whose voices span more than one staff (a piano grand staff) splits
         // into one Lily# part per staff, grouped into a grandStaff by the score.
@@ -454,6 +487,7 @@ internal static class MusicXmlReader
             ToPlainClefOctave(part.Measures, part.Clef);
             return new List<ImportPart> { part };
         }
+        SendDirectedMarksHome(directed, noteAt, voiceStaff);
         // `@cross` names "the other staff", which only two staves answer.
         if (staves.Count == 2)
             foreach (var measure in part.Measures)
@@ -498,6 +532,66 @@ internal static class MusicXmlReader
                     }
     }
 
+    /// <summary>
+    /// A mark whose &lt;direction&gt; names a staff goes to a note of a voice that LIVES on that
+    /// staff: a note merely written there, by a voice of the other staff, belongs to the other
+    /// Lily# part once the staves split.
+    /// </summary>
+    /// <remarks>
+    /// Left there, Dichterliebe 12's <c>@!sustain</c> on staff 2 landed on a right-hand voice's
+    /// <c>@cross</c> note, so the right hand released a pedal it never pressed and the left hand
+    /// never released its own (`lysc check`: "a pedal is never released"). The nearest onset in
+    /// the bar; a bar with no such note keeps the mark where it is.
+    /// </remarks>
+    private static void SendDirectedMarksHome(List<(ImportNote Host, string Mark, int Staff)> directed,
+        Dictionary<ImportNote, (int Voice, int Measure, int Onset)> noteAt, Dictionary<int, int> voiceStaff)
+    {
+        Dictionary<int, List<ImportNote>>? byMeasure = null;
+        foreach (var (host, mark, staff) in directed)
+        {
+            if (!noteAt.TryGetValue(host, out var at) || voiceStaff.GetValueOrDefault(at.Voice, staff) == staff)
+                continue;
+            if (byMeasure == null)
+            {
+                byMeasure = new();
+                foreach (var (note, place) in noteAt)
+                {
+                    if (!byMeasure.TryGetValue(place.Measure, out var list))
+                        byMeasure[place.Measure] = list = new();
+                    list.Add(note);
+                }
+            }
+            ImportNote? home = null;
+            int nearest = int.MaxValue;
+            foreach (var candidate in byMeasure[at.Measure])
+            {
+                var place = noteAt[candidate];
+                int distance = Math.Abs(place.Onset - at.Onset);
+                if (voiceStaff.GetValueOrDefault(place.Voice, -1) == staff && distance < nearest)
+                    (home, nearest) = (candidate, distance);
+            }
+            if (home != null && host.Articulations.Remove(mark))
+            {
+                // A release before what follows it on that note, as AttachDue orders them.
+                if (mark.StartsWith('!'))
+                    home.Articulations.Insert(0, mark);
+                else
+                    home.Articulations.Add(mark);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The Lily# <c>pedal</c> style a &lt;pedal&gt; asks for. MusicXML: <c>sign</c> is yes by
+    /// default where <c>line</c> is no, and no where <c>line</c> is yes.
+    /// </summary>
+    private static string PedalStyleOf(XElement pedal)
+    {
+        bool line = (string?)pedal.Attribute("line") == "yes";
+        bool sign = (string?)pedal.Attribute("sign") is { } written ? written == "yes" : !line;
+        return line ? (sign ? "mixed" : "bracket") : "text";
+    }
+
     /// <summary>Splits a multi-staff part into one part per staff (grouped as a grand
     /// staff), each keeping only the voices that sit on it, with its own clef.</summary>
     private static List<ImportPart> SplitByStaff(
@@ -521,6 +615,7 @@ internal static class MusicXmlReader
                 // the split used to drop it and a transposing grand staff came back at
                 // written pitch. Each staff reads it against its OWN clef.
                 TranspositionSemitones = transposeTotal,
+                PedalStyle = part.PedalStyle,
             };
             foreach (var measure in part.Measures)
             {

@@ -60,6 +60,9 @@ internal sealed class ImportPart
 {
     /// <summary>MusicXML part id (e.g. "P1").</summary>
     public string Id { get; set; } = "";
+    /// <summary>The part's <c>pedal</c> style (<c>text</c>, <c>mixed</c>, <c>bracket</c>), null
+    /// with no pedal in it. See <c>MusicXmlReader.PedalStyleOf</c>.</summary>
+    public string? PedalStyle { get; set; }
     /// <summary>The printed part name, if any (e.g. "Piano").</summary>
     public string? Name { get; set; }
     /// <summary>The label the source prints at the part's staff — its <c>&lt;part-name&gt;</c>
