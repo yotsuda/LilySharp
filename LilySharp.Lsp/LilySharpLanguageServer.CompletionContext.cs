@@ -2325,7 +2325,8 @@ public sealed partial class LilySharpLanguageServer
             string name = text[(at + 1)..open];
             // `@todo( d e)` is the slur that starts on the note, not an argument (the
             // parser's rule for a name whose argument is optional).
-            if (LanguageVocabulary.AnnotationArgumentIsOptional(name) && char.IsWhiteSpace(text[open + 1]))
+            if (LanguageVocabulary.AnnotationArgumentIsOptional(name)
+                && (char.IsWhiteSpace(text[open + 1]) || text[open + 1] is '~' or '@' or '['))
                 return null;
             return LanguageVocabulary.AnnotationTakesPlacementAfterArgument(name) ? name : null;
         }

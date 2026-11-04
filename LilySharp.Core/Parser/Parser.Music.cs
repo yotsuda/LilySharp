@@ -1617,14 +1617,16 @@ internal sealed partial class Parser
                     // same trap GLUED: `e8@ottava( d c b)` is the slur, and it used to be read
                     // as the argument — the slur's notes and its `@!ottava` vanished into it.
                     // For those names an argument is written against the '(' and a slur's
-                    // next note after a space, so a '(' followed by whitespace is the slur.
+                    // next note after a space, so a '(' followed by whitespace is the slur. So is
+                    // one glued to what only the note's own marks begin with: `<b d'>4@arpeggio(~ c)`.
                     else if (Current.Kind == SyntaxKind.Identifier
                              && Peek(1) is { Kind: SyntaxKind.OpenParen } openParen
                              && GluedToPrevious(Current, openParen)
                              && SyntaxFacts.AnnotationReadsAParenthesisedArgument(Current.Text)
                              && !(SyntaxFacts.AnnotationArgumentIsOptional(Current.Text)
                                   && Peek(2) is { } afterParen
-                                  && !GluedToPrevious(openParen, afterParen)))
+                                  && (!GluedToPrevious(openParen, afterParen)
+                                      || afterParen.Kind is SyntaxKind.Tilde or SyntaxKind.At or SyntaxKind.OpenBracket)))
                     {
                         var name = Advance();
                         var parts = new List<SyntaxToken> { at, name, Advance() /* ( */ };

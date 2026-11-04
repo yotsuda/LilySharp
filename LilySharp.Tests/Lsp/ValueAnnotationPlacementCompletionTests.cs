@@ -63,6 +63,7 @@ public class ValueAnnotationPlacementCompletionTests
     [InlineData("c4@mark(\"A\").")]         // a fixed-side value annotation
     [InlineData("c4@finger(3)")]
     [InlineData("c4@todo( d e)")]           // a slur that starts on the note, not an argument
+    [InlineData("c4@todo(~ c d)")]          // ... and so is this one, tied
     [InlineData("c4( d e)")]                // a plain slur
     [InlineData("c4@todo(\"memo")]          // still inside the argument
     public void ElsewhereNot(string text)

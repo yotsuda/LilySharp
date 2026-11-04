@@ -61,6 +61,12 @@ public class AnnotationArgumentVocabularyTests
     [InlineData("e4@15ma( d4 c4 b,4@!15ma) |")]
     [InlineData("c4@arpeggio( d4 e4 f4) |")]
     [InlineData("c4@chord( d4 e4 f4) |")]
+    // Glued to what no argument begins with: a tie (what `lysc import` writes for a slur and a
+    // tie on an arpeggio), another mark, a beam. The tie's next note and the bar went with it.
+    [InlineData("c4@arpeggio(~ c4 e4 f4) |")]
+    [InlineData("c4@arpeggio(@staccato d4 e4 f4) |")]
+    [InlineData("c8@arpeggio([ d8 e4 f4]) |")]
+    [InlineData("c4@todo(~ c4 e4 f4) |")]
     public void AnOptionalArgument_AndASlurOnTheSameNote_KeepTheSlur(string music)
     {
         var root = Root(music);
@@ -77,6 +83,7 @@ public class AnnotationArgumentVocabularyTests
     [InlineData("c4@chord(Cm7) |", "chord.Cm7")]
     [InlineData("c4@feather(right) |", "feather.right")]
     [InlineData("c4@arpeggio(bracket) |", "arpeggio.bracket")]
+    [InlineData("c4@finger( 3) |", "finger.3")]   // nothing to mistake: this name needs its argument
     public void AnArgumentTakingAnnotation_StillReadsItsArgument(string music, string markName)
     {
         var mark = Assert.Single(Root(music).DescendantNodes().OfType<MusicMarkSyntax>());
