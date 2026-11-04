@@ -49,6 +49,9 @@ internal static class LyricSyllableReader
         Melisma,
         /// <summary>A barline (<c>|</c>, <c>||</c>, <c>|.</c>, …): a measure boundary.</summary>
         Barline,
+        /// <summary>A quoted blank (<c>""</c>, <c>" "</c>): a syllable with nothing to print,
+        /// which takes its note as any word does.</summary>
+        Blank,
     }
 
     /// <summary>One lyric token as read by <see cref="Read"/>.</summary>
@@ -83,7 +86,10 @@ internal static class LyricSyllableReader
         int position = tok.Span.Start;
         var text = tok.Text;
         if (StringLiteral.IsClosed(text))
-            return new LyricToken(Marker.Syllable, StringLiteral.Value(text), position);
+        {
+            var words = StringLiteral.Value(text);
+            return new LyricToken(string.IsNullOrWhiteSpace(words) ? Marker.Blank : Marker.Syllable, words, position);
+        }
         if (text.EndsWith('-'))
         {
             var word = text.TrimEnd('-');

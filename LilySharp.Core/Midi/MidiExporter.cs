@@ -3892,7 +3892,6 @@ public sealed class MidiExporter
     /// <para>Until 2026-11-04 this was a count of its own, on onsets: a slur held nothing, a bar
     /// with more syllables than notes pushed the next, words past the last bar and a top-level
     /// or by-part track were not written, and <c>verse N { }</c> sang the words "verse" and "N".</para>
-    /// ⚠️ A verse covering several plays (<c>verse 1,3 { }</c>) is sung on its first only.
     /// The events go to the main track and land in the first part track (SplitIntoPartTracks),
     /// wherever the sung part's notes went.
     /// </remarks>
@@ -3917,14 +3916,12 @@ public sealed class MidiExporter
                 continue;
             var onsets = notes.Where(n => n.SourceOrdinal == ordinals[printing])
                 .Select(n => n.StartTick).Distinct().Order().ToList();
-            int? pass = lyric.StanzaLabel > 0 ? lyric.StanzaLabel - 1
-                : wrappedTracks.Contains(sungTrack) ? lyric.WrapRow
-                : null;
-            if (pass is { } one)
-                track.Lyrics.Add(new LyricEvent(onsets[Math.Min(one, onsets.Count - 1)], lyric.Text));
-            else
-                foreach (int tick in onsets)
-                    track.Lyrics.Add(new LyricEvent(tick, lyric.Text));
+            IEnumerable<int> passes = lyric.StanzaLabel > 0
+                ? Svg.Collector.LyricsCollector.PlaysOfVerseAt(tree.GetRoot(), lyric.SourcePosition).Select(play => play - 1)
+                : wrappedTracks.Contains(sungTrack) ? new[] { lyric.WrapRow }
+                : Enumerable.Range(0, onsets.Count);
+            foreach (int tick in passes.Select(pass => onsets[Math.Min(pass, onsets.Count - 1)]).Distinct())
+                track.Lyrics.Add(new LyricEvent(tick, lyric.Text));
         }
     }
 }

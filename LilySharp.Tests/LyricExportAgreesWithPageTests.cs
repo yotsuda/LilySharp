@@ -195,6 +195,22 @@ public class LyricExportAgreesWithPageTests
         => Assert.Equal(new[] { (0, "aa"), (960, "bb"), (1920, "cc"), (2880, "dd") }, Events(
             Head + "section A { m { c''2 d'' | } lyrics w sings m { verse 1 { aa bb | } verse 2 { cc dd | } } }\n" + RepeatedForm));
 
+    [Theory]
+    [InlineData("1,3")]
+    [InlineData("1-3")]
+    public void TheMidi_SingsAVerseOnEveryPlayItCovers(string plays)
+    {
+        var form = "form { |: A :|*3 }\nscore { staff m  lyrics w }\n";
+        var ticks = Events(Head + "section A { m { c''1 | } lyrics w sings m { verse " + plays + " { aa | } } }\n" + form)
+            .Select(e => e.Tick).ToArray();
+        Assert.Equal(plays == "1,3" ? new[] { 0, 3840 } : new[] { 0, 1920, 3840 }, ticks);
+    }
+
+    [Fact]
+    public void TheMidi_SingsABlankNot_AndTheNextWordOnTheNextNote()
+        => Assert.Equal(new[] { (0, "aa"), (960, "cc") }, Events(
+            Head + "section A { m { c''4 d'' e'' f'' | } lyrics w sings m { aa \"\" cc | } }\n" + Staff));
+
     [Fact]
     public void TheMidi_SingsAWrappedRowOnThePassOfItsRow()
         => Assert.Equal(new[] { (0, "aa"), (1920, "bb") }, Events(

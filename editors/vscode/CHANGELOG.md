@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A quoted blank lyric syllable (`""`, `" "`) takes its note and prints nothing**, so the next word stands on the next note. The MIDI export sings `verse 1,3 { }` on every play it covers.
 - **A quoted lyric syllable is its words**: `"-"`, `"~"`, `"_"`, `"|"` and `"la-"` print those characters, and `"a"-` no longer prints its quotes.
 - **A grace note takes no lyric syllable**, so the words of its bar no longer stand a note early.
 - **The MusicXML and MIDI exports put each syllable where the page does**: `verse N { }` was written as the words "verse" and "N", a by-part track wrote nothing, and words past the last bar were lost. The MIDI sings `verse N` on the Nth pass of a repeat. A track the score does not place is no longer exported.

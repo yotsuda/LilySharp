@@ -209,9 +209,14 @@ internal sealed class LyricCollector
                 continue;
             }
 
-            // Defensive: a blank syllable consumes nothing.
+            // A quoted blank takes its note and prints nothing, as in LilyPond; a marker after
+            // it holds nothing (owner's review 2026-11-04: until then it took no note).
             if (string.IsNullOrWhiteSpace(text))
+            {
+                lastPlaced = -1;
+                pos++;
                 continue;
+            }
 
             if (lm < measureCount && pos < measures[lm].Count)
             {
@@ -308,7 +313,7 @@ internal sealed class LyricCollector
                 if (syllableNode == null) continue;
 
                 var token = LyricSyllableReader.Read(syllableNode);
-                if (!string.IsNullOrEmpty(token.Text))
+                if (token.Role == LyricSyllableReader.Marker.Blank || !string.IsNullOrEmpty(token.Text))
                     allTokens.Add(token);
             }
         }
@@ -341,6 +346,9 @@ internal sealed class LyricCollector
                     break;
                 case LyricSyllableReader.Marker.Melisma:
                     result.Add(("", LyricConnectorType.None, position, false, true)); // melisma note (no line)
+                    break;
+                case LyricSyllableReader.Marker.Blank:
+                    result.Add(("", LyricConnectorType.None, position, false, false));
                     break;
                 case LyricSyllableReader.Marker.HyphenWord:
                     // A sung syllable ending in a hyphen (Mu-): render it WITHOUT the

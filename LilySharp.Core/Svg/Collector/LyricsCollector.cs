@@ -358,6 +358,17 @@ internal sealed class LyricsCollector
         return new VerseSpec(primary == 0 ? 1 : primary, hide, nums);
     }
 
+    /// <summary>The plays the <c>verse N { }</c> holding this source position covers (1-based,
+    /// ascending), or empty when it stands in none: what a file that sounds every play sings
+    /// it on.</summary>
+    internal static List<int> PlaysOfVerseAt(SyntaxNode root, int position)
+    {
+        foreach (var verse in root.KindSites(SyntaxKind.LyricVerse))
+            if (position >= verse.Span.Start && position < verse.Span.End)
+                return ParseVerseSpec(verse).Occurrences.Order().ToList();
+        return new List<int>();
+    }
+
     /// <summary>The lyric measures inside a <c>verse N { measures }</c> block. ONE HOME in
     /// <see cref="LyricSyllableReader.VerseMeasures"/> — the grid that sizes a rows-only
     /// score counts the same measures this places, so the two cannot drift.</summary>
@@ -501,15 +512,17 @@ internal sealed class LyricsCollector
                         bool inTail = split is { } s && timing >= s.Offset;
                         if (inTail && tailFrom < 0)
                             tailFrom = k;
-                        _lyrics.Add(new LyricItem(
-                            Text: text, MeasureIndex: inTail ? mi + 1 : mi,
-                            ItemIndex: inTail ? k - tailFrom : k,
-                            ConnectorType: conn, VoiceId: staffIndex, VerseNumber: v,
-                            StanzaLabel: v == verseBase ? stanzaLabel : 0,
-                            OpensStanzaRun: v == verseBase && stanzaLabel > 0 && j == 0 && k == 0,
-                            Timing: inTail ? timing - split!.Value.Offset : timing, SourcePosition: pos,
-                            StaffIndex: staffIndex, IsLyricsRow: true,
-                            HideStanza: hideStanza));
+                        // A quoted blank keeps its slot and prints nothing.
+                        if (text.Length > 0)
+                            _lyrics.Add(new LyricItem(
+                                Text: text, MeasureIndex: inTail ? mi + 1 : mi,
+                                ItemIndex: inTail ? k - tailFrom : k,
+                                ConnectorType: conn, VoiceId: staffIndex, VerseNumber: v,
+                                StanzaLabel: v == verseBase ? stanzaLabel : 0,
+                                OpensStanzaRun: v == verseBase && stanzaLabel > 0 && j == 0 && k == 0,
+                                Timing: inTail ? timing - split!.Value.Offset : timing, SourcePosition: pos,
+                                StaffIndex: staffIndex, IsLyricsRow: true,
+                                HideStanza: hideStanza));
                         spacers.Add(new RestItem(slotDur, 0, pos) { IsSpacer = true });
                         timing += slotDur;
                     }
@@ -676,7 +689,7 @@ internal sealed class LyricsCollector
             var child = measureNode.GetChild(i);
             if (child == null) continue;
             var (role, text, pos) = LyricSyllableReader.Read(child);
-            if (string.IsNullOrEmpty(text)) continue;
+            if (role != LyricSyllableReader.Marker.Blank && string.IsNullOrEmpty(text)) continue;
 
             switch (role)
             {
@@ -690,6 +703,9 @@ internal sealed class LyricsCollector
                 case LyricSyllableReader.Marker.Extender:
                 case LyricSyllableReader.Marker.Melisma:
                     SetPrevConnector(LyricConnectorType.Extender);
+                    break;
+                case LyricSyllableReader.Marker.Blank:
+                    result.Add(("", LyricConnectorType.None, pos));
                     break;
                 case LyricSyllableReader.Marker.HyphenWord:
                     result.Add((text, LyricConnectorType.Hyphen, pos));

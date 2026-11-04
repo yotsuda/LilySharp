@@ -33,7 +33,7 @@ public class LyricQuotedSyllableTests
 
     /// <summary>The page's syllables of a sung line, as "text@item" with "+" for a hyphen after it.</summary>
     private static string[] Sung(string words) => Page(
-        Header + "section A { m { c''4 d'' e'' f'' | } lyrics w { " + words + " } }\n"
+        Header + "section A { m { c''4 d'' e'' f'' | } lyrics w sings m { " + words + " } }\n"
         + "form { A }\nscore { staff m  lyrics w }\n")
         .OrderBy(l => l.ItemIndex)
         .Select(Signature).ToArray();
@@ -92,6 +92,33 @@ public class LyricQuotedSyllableTests
         var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
         var bars = score.StaffGroups.SelectMany(g => g.Staves).First().PrimaryVoice.Measures;
         Assert.Equal(BarlineType.Single, bars[0].EndBarline);
+    }
+
+    /// <summary>LilyPond's way of leaving a note unsung: the next word stands on the next note.</summary>
+    [Theory]
+    [InlineData("\"\"")]
+    [InlineData("\" \"")]
+    public void AQuotedBlank_TakesItsNote_AndPrintsNothing(string blank)
+        => Assert.Equal(new[] { "a@0", "c@2", "d@3" }, Sung("a " + blank + " c d |"));
+
+    [Fact]
+    public void AMeltingMarkAfterABlank_HoldsNothing()
+    {
+        var l = Page(Header + "section A { m { c''4 d'' e'' f'' | } lyrics w sings m { a \"\" ~ d | } }\nform { A }\nscore { staff m  lyrics w }\n")
+            .OrderBy(x => x.ItemIndex).ToList();
+        Assert.Equal(new[] { "a", "d" }, l.Select(x => x.Text));
+        Assert.False(l[0].MelismaAlignLeft);
+        Assert.Equal(3, l[1].ItemIndex);
+    }
+
+    [Theory]
+    [InlineData("\"\"")]
+    [InlineData("\" \"")]
+    public void ABlankOnARow_KeepsItsShareOfTheBar_AndPrintsNothing(string blank)
+    {
+        var words = Page("time 4/4\nlyrics w { a " + blank + " c d | }\nscore { lyrics w }\n");
+        Assert.Equal(new[] { "a", "c", "d" }, words.Select(l => l.Text));
+        Assert.Equal(new[] { 0, 2, 3 }, words.Select(l => l.ItemIndex));
     }
 
     [Fact]

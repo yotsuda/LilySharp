@@ -1436,7 +1436,8 @@ LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
                     '~' GLUED on both sides ("va~ga") is an elision, otherwise a melisma.
                     A QUOTED syllable is its words and nothing else: "-", "~", "_", "|" and
                     "la-" print those characters, and take a note like any word. A hyphen
-                    after the closing quote is the connector: "a"- or "a" --.
+                    after the closing quote is the connector: "a"- or "a" --. A quoted BLANK
+                    ("" or " ") takes its note and prints nothing, as in LilyPond.
                     WHICH NOTE A SYLLABLE TAKES is LilyPond's \lyricsto (2026-09-24): a
                     note the voice reaches inside a SLUR (after its first note, up to the
                     closing one) or at the end of a TIE takes no syllable — the melisma is

@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **A quoted blank takes its note.** `""` and `" "` took none, so the next word stood a note early; as in LilyPond, they now leave that note unsung and print nothing, and a row keeps their share of the bar.
+- **`lysc midi` sings `verse 1,3 { }` on every play it covers**, not only the first.
 - `[engraving]` **A quoted syllable is its words and nothing else.** `"-"`, `"~"`, `"_"`, `"|"` acted as the marks they spell and `"la-"` lost its hyphen; they now print those characters and take a note. `"a"-` printed its quotes; a hyphen after the closing quote is now the connector, as after a bare word.
 - `[engraving]` **A grace note takes no syllable.** It took one, so every word of the bar stood a note early; and a slur or tie that opens on a grace note no longer holds the main note after it.
 - **`lysc xml` and `lysc midi` read a syllable's note off the page.** Each had a count of its own. `verse N { }` was written as the words "verse" and "N", a by-part track wrote nothing, a bar with more syllables than notes pushed the next bar's words along, and words past the last bar were lost. The MIDI sings a top-level track too, plain words on every pass of a repeat and `verse N` on the Nth. A track the score does not place is no longer in these files, as it is not on the page; an unbound row's words stand on the staff above.
