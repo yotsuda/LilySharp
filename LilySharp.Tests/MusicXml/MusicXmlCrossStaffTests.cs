@@ -185,6 +185,36 @@ public class MusicXmlCrossStaffTests
         Assert.Contains("r4 f'4 |", lys);
     }
 
+    private static string Tup(string kind) => $"<notations><tuplet type=\"{kind}\"/></notations>";
+
+    [Fact]
+    public void ATupletBracketWithoutATimeModificationWritesNoGroup()
+    {
+        // kinkel19-1: plain 16ths under a bracket. The start read as nothing, the stop as `}`.
+        string music = string.Concat(
+            "<note><rest/><duration>2</duration><voice>1</voice><type>16th</type>", Tup("start"), "</note>",
+            N("A", 4, 1, 2, "16th"), N("C", 5, 1, 2, "16th"),
+            "<note><pitch><step>F</step><octave>5</octave></pitch><duration>2</duration><voice>1</voice><type>16th</type>", Tup("stop"), "</note>",
+            N("A", 4, 1, 8, "quarter"));
+        var (lys, _) = new MusicXmlImporter().Import(GapBar(music));
+        Assert.Contains("r16 a'16 c''16 f''16 a'4 |", lys);
+        Assert.DoesNotContain("tuplet", lys);
+        Assert.Empty(SyntaxTree.Parse(lys).Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void ARealTupletStillWritesItsGroup()
+    {
+        const string Tm = "<time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>";
+        string Note(string step, string extra) =>
+            $"<note><pitch><step>{step}</step><octave>5</octave></pitch><duration>2</duration><voice>1</voice><type>eighth</type>{Tm}{extra}</note>";
+        // 3 × (8 ÷ 3) is not a whole tick at divisions 8: the group is read off the marks.
+        string music = Note("C", Tup("start")) + Note("D", "") + Note("E", Tup("stop")) + N("F", 5, 1, 8, "quarter");
+        var (lys, _) = new MusicXmlImporter().Import(GapBar(music));
+        Assert.Contains("tuplet 3/2 {", lys);
+        Assert.Contains("} f''4", lys);
+    }
+
     [Fact]
     public void ANoteOnItsVoicesOwnStaffIsNotMarked()
     {

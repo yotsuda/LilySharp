@@ -818,7 +818,10 @@ internal static class MusicXmlReader
                     note.TupletStart = ReadTimeModification(el);
                     note.TupletBare = (string?)tup.Attribute("bracket") == "no" && (string?)tup.Attribute("show-number") == "none";
                     break;
-                case "stop": note.TupletStop = true; break;
+                // A bracket with no <time-modification> changes no durations, so it has no group to
+                // open (its start reads null above) and none to close: closing one wrote a stray
+                // `}` that unmade the whole file (kinkel19-1: every 16th group, 52 errors).
+                case "stop": note.TupletStop = ReadTimeModification(el) != null; break;
             }
     }
 
