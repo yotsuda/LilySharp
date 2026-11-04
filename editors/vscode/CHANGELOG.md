@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A hairpin closed with `@!cresc` no longer answers for the next dynamic**: `c@f d@cresc e@!cresc | g@p` warned that the crescendo led to something softer.
 - **A quoted blank lyric syllable (`""`, `" "`) takes its note and prints nothing**, so the next word stands on the next note. The MIDI export sings `verse 1,3 { }` on every play it covers.
 - **A quoted lyric syllable is its words**: `"-"`, `"~"`, `"_"`, `"|"` and `"la-"` print those characters, and `"a"-` no longer prints its quotes.
 - **A grace note takes no lyric syllable**, so the words of its bar no longer stand a note early.

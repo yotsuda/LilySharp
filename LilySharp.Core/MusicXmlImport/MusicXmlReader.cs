@@ -255,11 +255,30 @@ internal static class MusicXmlReader
             var voiceAt = new Dictionary<int, int>();   // where each voice's written music ends
             var openTremolos = new Dictionary<int, (ImportNote First, int Ticks)>();   // per voice
             ImportNote? lastNote = null;
+            // A direction on a staff with no note in this bar (both hands written on the other,
+            // the mark set between the staves) marks the note at its moment on any staff; until
+            // 2026-11-04 it went back to that staff's last note, in an earlier bar.
+            var stavesWritten = measEl.Elements().Where(e => e.Name.LocalName == "note")
+                .Select(e => e.Elements().FirstOrDefault(c => c.Name.LocalName == "staff") is { } s && int.TryParse(s.Value, out int n) ? n : 1)
+                .ToHashSet();
 
             void AttachDue(ImportNote note, int staff)
             {
                 bool Due((string Dynamic, int At, int? Staff) p)
-                    => p.At <= position && (p.Staff == null || p.Staff == staff);
+                    => p.At <= position && (p.Staff == null || p.Staff == staff || !stavesWritten.Contains(p.Staff.Value));
+                // Levels written at different moments, with no note of their staff until now, all
+                // fall on this note, and a note prints one: the last is what stands when it
+                // sounds. Two at ONE moment are left as written, for the check to name.
+                var levels = pendingDynamics.Where(p => Due(p) && LysWriter.IsDynamic(p.Dynamic)).ToList();
+                if (levels.Count > 1)
+                {
+                    int latest = levels.Max(p => p.At);
+                    foreach (var passed in levels.Where(p => p.At < latest))
+                    {
+                        report.Warn(measureNo, $"the dynamic {passed.Dynamic} has no note of its staff before a later dynamic, so it is dropped.");
+                        pendingDynamics.Remove(passed);
+                    }
+                }
                 int k = 0;
                 for (int i = 0; i < pendingDynamics.Count; i++)
                     if (Due(pendingDynamics[i]))

@@ -1092,4 +1092,38 @@ public class MusicXmlImportSpanTests
         Assert.Contains("b'16( }", lys);
         Assert.Contains("c'4)", lys);
     }
+
+    /// <summary>Two levels with no note of their staff between them: a note prints one, and the
+    /// later is what stands when it sounds.</summary>
+    [Fact]
+    public void LevelsPiledOnOneNote_KeepTheLast_AndSaySo()
+    {
+        var (lys, report) = Import(Book(
+            Direction(Forte, 1) + Note("C", staff: 2) + Direction("<dynamics><p/></dynamics>", 1) + Note("D", staff: 2)
+            + Note("E", staff: 1) + Note("F", staff: 1)));
+        Assert.DoesNotContain("@f", lys);
+        Assert.Contains("@p", lys);
+        Assert.Contains(report.Warnings, w => w.Contains("the dynamic f has no note of its staff"));
+    }
+
+    /// <summary>A mark set for a staff with no note in the bar stands on the note at its moment,
+    /// not back on that staff's last note, a bar earlier.</summary>
+    [Fact]
+    public void ADynamicForAStaffSilentThroughTheBar_StandsOnTheNoteAtItsMoment()
+    {
+        var (lys, _) = Import(Book(
+            Note("C", staff: 1) + Note("D", staff: 1) + Note("E", staff: 1) + Note("F", staff: 1),
+            Direction(Forte, 1) + Note("G", staff: 2) + Note("A", staff: 2) + Note("B", staff: 2) + Note("C", staff: 2)));
+        Assert.DoesNotContain("f'4@f", lys);
+        Assert.Contains("g'4@f", lys);
+    }
+
+    /// <summary>At one moment they are both written, for the check to name.</summary>
+    [Fact]
+    public void LevelsAtOneMoment_AreBothWritten()
+    {
+        var (lys, _) = Import(Book(
+            Direction(Forte) + Direction("<dynamics><p/></dynamics>") + Note("C") + Note("D") + Note("E") + Note("F")));
+        Assert.Contains("@f@p", lys);
+    }
 }

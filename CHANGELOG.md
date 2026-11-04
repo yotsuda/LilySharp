@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **A hairpin closed with `@!cresc` no longer answers for the next dynamic.** `c@f d@cresc e@!cresc | g@p` warned that the crescendo led to something softer, a line later. The next level is judged only on the note the hairpin ends on, and a tuplet's braces no longer split a voice's line for this check.
+- **`lysc import` keeps the last of several dynamics that fall on one note at different moments** (no note of their staff stood between them), and reports the others; a note prints one. A dynamic set for a staff with no note in its bar stands on the note at its moment, no longer back on that staff's last note a bar earlier.
 - `[engraving]` **A quoted blank takes its note.** `""` and `" "` took none, so the next word stood a note early; as in LilyPond, they now leave that note unsung and print nothing, and a row keeps their share of the bar.
 - **`lysc midi` sings `verse 1,3 { }` on every play it covers**, not only the first.
 - `[engraving]` **A quoted syllable is its words and nothing else.** `"-"`, `"~"`, `"_"`, `"|"` acted as the marks they spell and `"la-"` lost its hyphen; they now print those characters and take a note. `"a"-` printed its quotes; a hyphen after the closing quote is now the connector, as after a bare word.

@@ -27,7 +27,10 @@ namespace LilySharp.Core.Semantics;
 /// <remarks>
 /// Read line by line as written — one music block's own marks, in order, a phrase's within the
 /// phrase — so a hairpin is judged by the level written before it and the next one written after
-/// it in the same line. A hairpin with no level before it in its line says nothing.
+/// it in the same line. A hairpin with no level before it in its line says nothing. A hairpin
+/// its <c>@!cresc</c> has closed leads nowhere: the next level is judged only when it stands on
+/// the note the hairpin ends on (until 2026-11-04 a level a phrase later was told it went the
+/// wrong way).
 /// </remarks>
 internal sealed class HairpinTargetValidator : ISemanticValidator
 {
@@ -39,22 +42,33 @@ internal sealed class HairpinTargetValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var line in tree.GetRoot().DescendantNodes<DynamicSyntax>().GroupBy(LineOf))
+        var root = tree.GetRoot();
+        var marks = root.DescendantNodes<DynamicSyntax>().Cast<SyntaxNode>()
+            .Concat(root.DescendantNodes<MusicMarkSyntax>()
+                .Where(m => m.IsSpanEnd && SyntaxFacts.IsDynamicSpannerName(m.Name)));
+        foreach (var line in marks.GroupBy(LineOf))
         {
             int level = -1;
             (DynamicSyntax Mark, int From)? open = null;
-            foreach (var mark in line.OrderBy(m => m.Span.Start))
+            SyntaxNode? closedOn = null;
+            foreach (var node in line.OrderBy(m => m.Span.Start))
             {
+                if (node is not DynamicSyntax mark)
+                {
+                    closedOn = node.Parent;
+                    continue;
+                }
                 string text = mark.DynamicToken.Text;
                 if (SyntaxFacts.IsDynamicSpannerName(text))
                 {
                     open = level >= 0 ? (mark, level) : null;
+                    closedOn = null;
                     continue;
                 }
                 int next = System.Array.IndexOf(Order, text);
                 if (next < 0)
                     continue;
-                if (open is { } hairpin && !mark.IsSubito)
+                if (open is { } hairpin && !mark.IsSubito && (closedOn == null || ReferenceEquals(closedOn, mark.Parent)))
                 {
                     bool down = hairpin.Mark.DynamicToken.Text != "cresc";
                     if (down ? next > hairpin.From : next < hairpin.From)
@@ -70,13 +84,13 @@ internal sealed class HairpinTargetValidator : ISemanticValidator
         }
     }
 
-    /// <summary>The line a mark is written in: its nearest music block, else the section, phrase or
-    /// book it stands in directly.</summary>
+    /// <summary>The voice line a mark is written in. A cue is another instrument's line, inside
+    /// this one's bars: its levels say nothing of this line's hairpins.</summary>
     private static SyntaxNode LineOf(SyntaxNode node)
     {
-        var p = node.Parent!;
-        while (p.Parent != null && p is not (MusicBlockSyntax or SectionDeclarationSyntax or PhraseDeclarationSyntax))
-            p = p.Parent;
-        return p;
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is CueExpressionSyntax)
+                return p;
+        return SpanNames.Line(node);
     }
 }

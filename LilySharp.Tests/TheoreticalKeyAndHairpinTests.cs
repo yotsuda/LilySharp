@@ -53,5 +53,19 @@ public class TheoreticalKeyAndHairpinTests
         // Meant: a subito, or no level before the hairpin in its line.
         Assert.Empty(Hairpins("c'4@ff d'@decresc e' f'@fff.subito |"));
         Assert.Empty(Hairpins("c'4 d'@decresc e' f'@fff |"));
+        // Closed before the level: it led nowhere, and the level is a new thought.
+        Assert.Empty(Hairpins("c'4@f d'@cresc e'@!cresc f' | g'1@p |"));
+        Assert.Empty(Hairpins("c'4@f d'@cresc@!cresc e' f' | g'1@p |"));
+        // Closed on the level's own note, in either order: it did lead there.
+        Assert.Single(Hairpins("c'4@f d'@cresc e' f'@!cresc@p |"));
+        Assert.Single(Hairpins("c'4@f d'@cresc e' f'@p@!cresc |"));
+        // The line runs through a tuplet's braces, and stops at a voice's.
+        Assert.Empty(Hairpins("c'4@f d'@cresc tuplet 3/2 { e'8 f' g'@!cresc } a'4 | b'1@p |"));
+        Assert.Single(Hairpins("c'4@f d'@cresc tuplet 3/2 { e'8 f' g' } a'4 | b'1@p |"));
+        Assert.Empty(Hairpins("voice { c'4@f d'@cresc e' f' | } { g1@p | }"));
+        // A cue is another instrument's line: its level is not this hairpin's.
+        Assert.Empty(Hairpins("c'4@p d'@cresc e' f' | cue { g'4@pp a' b' c'' } |"));
+        // A closed hairpin leaves the next one to be judged by itself.
+        Assert.Single(Hairpins("c'4@f d'@cresc@!cresc e'@cresc f' | g'1@p |"));
     }
 }

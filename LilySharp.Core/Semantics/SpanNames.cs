@@ -99,7 +99,7 @@ public static class SpanNames
 
     /// <summary>The voice line a node is written in: the nearest branch of a <c>voice { } { }</c>,
     /// a section's part cell, a phrase, a section, else the file.</summary>
-    private static SyntaxNode Line(SyntaxNode node)
+    internal static SyntaxNode Line(SyntaxNode node)
     {
         for (var p = node.Parent; p != null; p = p.Parent)
             if (p is MusicBlockSyntax { Parent: ParallelExpressionSyntax } or PartBlockSyntax or PhraseDeclarationSyntax
