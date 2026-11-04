@@ -136,6 +136,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1095セッション（2026-11-04・YT-DELL2）
+
+開始時 full **14176 / 0 / 2**（`-Start p1095`・HEAD `b0e3f83b`・OMR の open 0）。作業場所は Lab `sessions/p1095/`。
+
+## 以下は第1094セッションの経緯
+
 ### 1.1 第1094セッション（2026-11-04・YT-DELL2）
 
 開始時 full **14148 / 0 / 2**（`-Start p1094`・HEAD `ef0bf330`・OMR の open 0）。作業場所は Lab `sessions/p1094/`。
@@ -146,22 +152,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **付点の列の共有**（第1094 の最後の commit）: `Dot_column_engraver` は Staff の engraver＝1 段 1 瞬間に列は 1 つ。2 声部の音と和音を `NoteCollision.SharedDotRows` で一緒に解き、各声部だけの答えと違うときだけ `DotAdjustment.Rows` で描画に渡す。探り譜 `dd/dc.lys` の 12 小節すべて LP と同じ段。毒 4 本すべて赤。全 svg の掃きは差 0 / 1262（同じ exe で探り譜は差あり）。⚠️ 毒を戻した後に `--no-build` で full を回して赤を見た＝dll が毒入りのまま（ノートの罠そのもの。戻したら必ずビルド）。⚠️ `--filter A|B` を cmd に渡してテストが 1 本も走らない罠も踏んだ（`^|`）。**コーパスに付点の 2 件の形は 1 冊も無い＝描画の差は無いが、利用の少ない形への投資である点はオーナーの判断材料**。
 - **続き（オーナー「続けて」）: 曲の最後の小節の 2.40 対 2.21 も閉じた**。差はちょうど小節線の幅＝LP の wish は bar の左の張り出しを引く（note-spacing.cc:99-100）が、wish が無いと引かれない。曲の最後ではなく**段の終わりならどこでも**起きる形（`w3/end.ly` で先に実測: 段の途中 2.400・段末の `|` 2.210・元の音は 2.254 のまま）。既存の `LineEndBeforeGraceSprings`（描画と break gate で共有）に載せた。最初の行と `|.` の行は LP と 2 桁で一致（`w3/end2.lys`）。⚠️ 途中で「1.60 対 1.22」と見えたのは ragged と均等割りの比較で欠陥ではなかった。⚠️ `break` は全パートに書かないと効かない（`lh` だけでは 1 段のまま）。全 svg の掃きは差 0 / 1262（探り譜は差あり）。毒は赤。`||` の段末は段の割れ方が twin と揃わず数字を比べていない。
 - 終了時 full **14176 / 0 / 2**（`-End p1094 -DiffBase ef0bf330`＝`sessions/p1094/end3.log`）。§7 7.5 は同 log。Release の lysc は `e6c4de1fd` で作り直し、探り譜の出力が HEAD の Debug と同じことを確認した。⚠️ 12:13 の 1 回目は OMR の孤児 4 本（`out/gen/.../omr.lys`・CPU 0・2 MB・親なし）が `lysc.exe` を掴んで MSB3027 で失敗し、`LilySharp.Core.dll` だけ入れ替わった＝**掴まれていてもビルドは Core を部分的に上書きする**。孤児は Claude が止めたのではなく、後で見たら居なくなっていた。⚠️ OMR の生成が走っている間に Release をビルドしないこと（`Get-Process lysc` を先に見る）。
-
-## 以下は第1093セッションの経緯
-
-### 1.1 第1093セッション（2026-11-04・YT-DELL2）
-
-開始時 full **14108 / 0 / 2**（`-Start p1093`・HEAD `8eaf719f`・OMR の open は #20）。作業場所は Lab `sessions/p1093/`。
-- **OMR の REQUESTS #20＝`@cross` の音を本当に別の段に描く（オーナー指示 2026-11-04）**: `MeasureCollector.MoveCrossStaffNotes` が音を移る先の段の音部記号（その音の時点）で読み直し `CrossStaffIndex` を刻む。音は元の声部のまま＝時間・連桁・音は変わらない。`Staff.CrossedIn` は移ってきた音の一覧で、移る先の輪郭に頭だけ入れる。連桁は `LayoutEngine.LayCrossStaffBeams` が最終の段位置で解き直す（段間隔に依存するので下書きの再利用はできない・輪郭に入らないので循環しない）。頭の位置は各自の段のまま `BeamMember.StaffOffset` を足す＝LP の `stem_ypositions_` と同じ持ち方。⚠️ **膝の判定だけは置いた間隔でなく LP の推定（pure）の間隔を読む**（`PureOffset`・align-interface.cc の全曲の箱）＝置いた間隔では `<c' e'>8@cross g'` が膝にならない（`k2` で LP 実測）。箱は頭と棒の推定だけで字面の移植ではない。タイ・スクリプト・グリッサンドも移る先の段で読む。双子は `\change Staff`。⚠️ 下書きの方向の刻み（`ResolveBeamStemDirections`）は移す前の位置で読むので刻み直す（`RestampMovedBeams`）＝しないと 3 連符の数字が譜の下へ飛ぶ。
-- 検証: 再現譜は LP と同じ形（`r4`）、探り譜も（`p3`・`k2`・`gx`）。連桁の傾きは絵から読んで約 2.57、LP の svg で 2.62＝⚠️ 数字の照合は粗いまま・台帳の点は起票していない。全 svg の掃き 1262 枚で動いたのは `audit/lpreg/gliss-xstaff.svg` の 1 枚だけ（`@cross` を書く唯一の追跡本）＝`sessions/p1093/sweep/diff.txt`。毒 11 本（`poisons.log`）はすべて赤。⚠️ うち `no restamp` は最初緑＝最終の刻みが覆っていたので、レイアウト前の刻みを見る網を足して赤を確認。グリッサンドの網は毒を当てていない。**RULES.md はこの便では全部読めていない**（読んだのは 1〜519 行と §5.5）。
-- **続けて弧と膝の順序（オーナー「続けて」）**: 弧は頭と棒の Y を音ごとに段の差だけずらす（`ElementCoordinator.MovedDown`・連桁の面は元の段のまま）。`musicalDy` も段の差を含める。段間隔に依存するので prelim から持ち越さない（`Staff.HasMovedNotes`）、輪郭にも入れない（`SlurLayout.CrossesStaves`）。⚠️ **弧の幅と高さは 5 冊中 4 冊が LP の svg と小数 2 桁で一致**（`sessions/p1093/snum`・`slurnum.ps1`＝網 `ASlurAcrossTheStavesHasLilyPondsSpan`）。⚠️ 残る 1 冊の差が欠陥を 1 つ出した＝**膝の判定を間隔の後でしていた**。LP は棒の向き（上→下）を知って横間隔を決める（`stem_dir_correction`）＝幅 2.25 対 3.68。推定の間隔はレイアウトを要らないので、判定を `RestampMovedBeams` へ前倒しして推定の間隔を `CrossStaffPure` に出した → 幅は 3.68 で一致。⚠️ 高さは 4.05 対 3.90＝0.15 の差が残る・原因は未特定。毒 11 本のうち赤 9、緑 2（観測者なし＝§1.0 の⑹）。増分はフルと一致（4 本）。全 svg の掃きは前の commit との差 0 / 1262。⚠️ 下の削除と休符の前の数: 終了時 full **14134 / 0 / 2**（`-End p1093 -DiffBase 8eaf719f`＝`sessions/p1093/end2.log`・門は全部 OK）。§7 7.5: Core `+899` 行・REF 21・OWN 0。Release の lysc は `0bcefb0f9`。
-- **オーナー「続けて。使わなくなったコードは削除して」**: `CrossStaffEngraver.Calculate`・`BuildCrossStaffLookup`・`GetTargetStaffIndex`・`CrossStaffLayout`・`ScoreLayout.CrossStaffLayouts`・`CrossStaffItem.TargetStaffIndex` を削除（`b4f6355fe`）。`TargetStaffOf` と `CrossStaffItems`（鍵と入口が読む）は残した。
-- **休符の衝突**: `ElementCoordinator.AddCrossedRestCollisions`。⚠️ 向きのない休符は**下へ動く**＝休符の列の棒は頭が無いので `neutral-direction`（stem.cc:781-784）。LP の絵 `sessions/p1093/rc` の 2〜5 小節と同じ形（目視・数字の照合はしていない）。⚠️ 休符の移動量の表は段を区別していなかった（`RestShiftKey`）＝別の段の同じ番地の休符まで動く → `RestShiftsByStaff` を足して描画はそれを読む。古い `GetRestShift(m, v, i)` は今は描画に使わない（テストが読む）。掃きは差 0 / 1262＝コーパスにこの混線を踏む本は無かった。毒 6 本すべて赤（2 本は最初緑で網を足した）。
-- **OMR の REQUESTS #21（下の声部の休符が 5 間下へ）**: OMR の疑った `73b31cd73` ではなく `16b976264` の取りこぼし。別声部の `@cross` の音を、移る先の段の位置のまま自分の段の音として読んでいた。同じ読み違いが連桁（v1 5 小節目・短いはずの棒が 2.6 間長い）と声部の衝突（偽の 2 度で頭が横へずれる）と休符の付点にもあった → `HeldHere`（移った音を同じ長さの無音に見せる view）。毒 4 本すべて赤。全 svg の掃きは差 0 / 1262。終了時 full **14147 / 0 / 2**（`-End p1093 -DiffBase 8eaf719f`＝`sessions/p1093/end5.log`・門は全部 OK）。§7 7.5: Core `+1264` 行・REF 26・OWN 1。Release の lysc は `dbaa58429`。
-- **段をまたぐ連桁の採点**: `ElementCoordinator.AppendAcrossStaves`。LP は棒の届く段すべての頭・棒・臨時記号を避ける（beam-collision-engraver.cc:128-155 `vertical_span`）＝他の段の音を `StaffOffset` だけずらして渡す。`cross-try` の 6 小節目は LP と同じく右手の 8 分音符の上へ逃げる（目視）。連桁の傾きは LP の svg と 19 本を位置順に比べ、大半は一致（`sessions/p1093/beamnum2.ps1`）。⚠️ **残る差**: 移った音に臨時記号が付く組の横幅が足りない（LP 7.02 対 6.12・傾きも 3.00 対 2.81 に引きずられる）＝移った音の臨時記号の横の余白は未調査。毒 5 本のうち赤 3、緑 2（元の段の読み方・移った音の臨時記号＝効く本を作れていない）。⚠️ 最初の網は緑が 4 本出た＝「右手がある／ない」の比較は段の間隔の差でも通る → 音の位置と音の段で読む形に書き直した。全 svg の掃きは差 0 / 1262。終了時 full **14148 / 0 / 2**（`-End p1093 -DiffBase 8eaf719f`＝`sessions/p1093/end6.log`・門は全部 OK）。§7 7.5: Core `+1358` 行・REF 28・OWN 1。Release の lysc は `a8add3d82`。
-- ⚠️ **見つけたが直していない**: `@cross` と無関係＝2 声部の同じ高さの付点が Lily# は 2 つ、LP は 1 つ（`voice { d4. } { d4. }`・Lab `sessions/p1093/dd`・以前から）。- ⚠️ **オーナーが push した（2026-11-04）**: `origin/master` は `ed42d2500`（休符まで）。
-- **臨時記号**: `StaffAccidentals.ApplyAcrossStaves`。音を移した小節だけ、描かれる段ごとに音を並べ直し、その段の記憶、なければ調号で読み直して足す（消さない）。**意味の欠陥が 3 つ**あった＝右手の `fis'` の後の `f'@cross` にナチュラルが出ない／`fis fis@cross` の 2 つ目にシャープが出ない／`fis'@cross` の後の元の段の `fis'` にシャープが出ない（`sessions/p1093/a1`、LP と比較）。⚠️ LP が落とす再確認（右手の `fis'` の後の `fis'@cross` のシャープ）は残した＝`Apply` の⑴と同じ方針で、音の意味は変わらない。毒 9 本のうち赤 6、緑 3（小節の関門・タイの関門・列の詰め直し＝どれも出力が動く本を作れていない・`Apply` と同じ作りなので残した）。全 svg の掃きは差 0 / 1262。終了時 full **14143 / 0 / 2**（`-End p1093 -DiffBase 8eaf719f`＝`sessions/p1093/end4.log`・門は全部 OK）。§7 7.5: Core `+1208` 行・REF 25・OWN 1。Release の lysc は `9e475186d`。終了時 full **14135 / 0 / 2**（`-End p1093 -DiffBase 8eaf719f`＝`sessions/p1093/end3.log`・門は全部 OK）。§7 7.5: Core `+1033` 行・REF 24・OWN 0。Release の lysc は `73b31cd73`。
-- 終了時 full **14121 / 0 / 2**（`-End p1093 -DiffBase 8eaf719f`＝`sessions/p1093/end.log`・門は全部 OK）。§7 7.5: Core `+727` 行・REF 16・OWN 0。Release の lysc は `16b976264` で作り直し、OMR の REQUESTS #20 を `fixed` に（OMR の repo は未 commit のままにした＝他の作業の変更が同じ木にある）。
 
 ## 2. 開いている作業
 
