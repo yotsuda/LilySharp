@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 299 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **424** | |
+| `OWN` | 301 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **426** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -243,7 +243,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（299 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（301 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -260,6 +260,7 @@
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Form.cs`
 - **`LilyPondExporter.LooseSectionMusic`** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Marks.cs`
+- **`LilyPondExporter.SplitAttachments`** LILYSHARP-OWN: written after its own hairpin's start on one note, it spans that
 - **`LilyPondExporter.OnTheNewLine`** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Music.cs`
 - **`LilyPondExporter.EmitItem`** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision 2026-10-02). Any other
@@ -507,6 +508,7 @@
 - **`GlyphMetrics.AccidentalLedgerShorteningRange`** reaches — LILYSHARP-OWN. Measured before (Lab sessions/p871/probe/ledger, 30 accidentals
 ### `LilySharp.Core/Svg/Layout/HairpinEngraver.cs`
 - **`HairpinEngraver.VoiceIndex`** ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
+- **`HairpinEngraver.DetectHairpins`** LILYSHARP-OWN: LilyPond reads the two at one moment as a stop, then a start.
 ### `LilySharp.Core/Svg/Layout/HeaderBand.cs`
 - **`HeaderBand.ChordListGap`** LILYSHARP-OWN: LilyPond has no chord list; the gap is Lily#'s, a little more
 - **`HeaderBand.RowPadding`** LILYSHARP-OWN (user decision 2026-09-26): LilyPond stacks the rows with ZERO padding

@@ -1358,6 +1358,12 @@ internal static class LysWriter
             // reference first — build the grace block before the main note's body.
             string? graceToken = note.LeadingGrace.Count > 0 ? GraceBlock(note.LeadingGrace, rel, report) : null;
 
+            // A tie on some of a chord's heads is written on those heads (<c' f'~>); until
+            // 2026-11-04 only the first head's was read, and it tied them all or none.
+            bool allTied = members.All(m => m.TieStart);
+            foreach (var member in members)
+                member.TiedAlone = member.TieStart && !allTied;
+
             // A chord member's string number and fingering are its own, so they are written
             // inside the brackets (<e\5 dis'\4>); a single note's follow its duration (c4\3),
             // the canonical post-event order (HANDOFF §3: `核 \N @… ] ) ( [ ~`).
@@ -1396,7 +1402,7 @@ internal static class LysWriter
                 token += ")";
             if (note.SlurStart)
                 token += "(";
-            if (note.TieStart)
+            if (allTied)
                 token += "~";
 
             // Wrap a tuplet group: `tuplet A/N { … }` around the notes it spans.
@@ -1431,10 +1437,12 @@ internal static class LysWriter
     // A Lily# absolute-octave pitch token: letter + accidental + octave marks.
     private static string Pitch(ImportNote note) => PitchToken(note.Step, note.Alter, note.Octave);
 
-    /// <summary>The marks a note carries on its own pitch: <c>\N</c> then <c>@finger(N)</c>.</summary>
+    /// <summary>The marks a note carries on its own pitch: <c>\N</c>, <c>@finger(N)</c>, and the
+    /// tie of a chord's head tied without the others.</summary>
     private static string MemberMarks(ImportNote note)
         => (note.StringNumber is { } s ? "\\" + s : "")
-           + (note.Fingering is { } f ? "@finger(" + f + ")" : "");
+           + (note.Fingering is { } f ? "@finger(" + f + ")" : "")
+           + (note.TiedAlone ? "~" : "");
 
     private static string PitchToken(int step, int alter, int octave)
     {
@@ -1476,9 +1484,13 @@ internal static class LysWriter
             else
                 columns.Add(new List<ImportGraceNote> { g });
         }
+        // A slur from an earlier note of the group into the main note opens on the group's last
+        // note, its one slur. It was dropped until 2026-11-04, which left the main note's `)`
+        // with nothing to close.
+        bool groupSlur = columns.Any(c => c[0].SlurStart);
         if (columns.Take(columns.Count - 1).Any(c => c[0].SlurStart))
             report.Warn("a slur opening inside a grace group before its last note has no Lily# "
-                + "spelling (the group's one slur opens on its last note) and is dropped.");
+                + "spelling (the group's one slur opens on its last note), so it opens there.");
         var tokens = columns.Select((c, i) =>
         {
             var head = c[0];
@@ -1487,7 +1499,7 @@ internal static class LysWriter
                 : rel != null
                     ? rel.Chord(c.Select(m => new ImportNote { Step = m.Step, Alter = m.Alter, Octave = m.Octave }).ToList())
                     : "<" + string.Join(" ", c.Select(m => PitchToken(m.Step, m.Alter, m.Octave))) + ">";
-            return body + Value(head.NoteValue, head.Dots) + (i == columns.Count - 1 && head.SlurStart ? "(" : "");
+            return body + Value(head.NoteValue, head.Dots) + (i == columns.Count - 1 && groupSlur ? "(" : "");
         });
         return keyword + " { " + string.Join(" ", tokens) + " }";
     }

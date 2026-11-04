@@ -206,6 +206,9 @@ internal sealed class ImportNote : ImportItem
     public bool TieStart { get; set; }
     /// <summary>A tie ends on this note (continuation of the previous note).</summary>
     public bool TieStop { get; set; }
+    /// <summary>This head of a chord is tied and another is not: the <c>~</c> goes on the head.
+    /// The writer sets it.</summary>
+    public bool TiedAlone { get; set; }
     /// <summary>A slur starts on this note (a <c>(</c> is emitted after it).</summary>
     public bool SlurStart { get; set; }
     /// <summary>A slur ends on this note (a <c>)</c> is emitted after it).</summary>

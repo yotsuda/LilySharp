@@ -240,6 +240,52 @@ public class MusicXmlImportSpanTests
     }
 
     [Fact]
+    public void AnOttavasStopOnAVoiceThatSoundsEarlierStillEndsTheLine()
+    {
+        // Voice 2's one note sounds before the line opens, but is the staff's last in the stream.
+        const string half = "<note><pitch><step>G</step><octave>4</octave></pitch><duration>4</duration><voice>2</voice><type>whole</type><staff>1</staff></note>";
+        var (lys, _) = Import(Book(
+            Note("C") + Note("D") + Direction("<octave-shift type=\"down\" size=\"8\"/>") + Note("E") + Note("F") + Back + half
+            + Direction("<octave-shift type=\"stop\" size=\"8\"/>"),
+            Note("C") + Note("D") + Note("E") + Note("F") + Back + half));
+        Assert.Contains("e'4@8va f'4@!8va", lys);
+        Assert.Empty(Errors(lys));
+    }
+
+    [Fact]
+    public void AnOttavasStopOnTheOtherStaffStillEndsTheLine()
+    {
+        var (lys, _) = Import(Book(
+            Direction("<octave-shift type=\"down\" size=\"8\"/>", 1) + Note("C") + Note("D") + Note("E") + Note("F") + Back
+            + Note("C", voice: 2, staff: 2) + Note("D", voice: 2, staff: 2) + Note("E", voice: 2, staff: 2) + Note("F", voice: 2, staff: 2)
+            + Direction("<octave-shift type=\"stop\" size=\"8\"/>", 2)));
+        Assert.Contains("c'4@8va d'4 e'4 f'4@!8va", lys);
+    }
+
+    [Fact]
+    public void AnOttavasStopEndsItsOwnHandsLineThoughTheOtherOpenedLater()
+    {
+        string up(int staff) => Direction("<octave-shift type=\"down\" size=\"8\"/>", staff);
+        string end(int staff) => Direction("<octave-shift type=\"stop\" size=\"8\"/>", staff);
+        var (lys, _) = Import(Book(
+            up(1) + Note("C") + Note("D") + Note("E") + Note("F") + end(1) + Back
+            + Note("C", voice: 2, staff: 2) + up(2) + Note("D", voice: 2, staff: 2) + Note("E", voice: 2, staff: 2) + Note("F", voice: 2, staff: 2),
+            Note("C") + Note("D") + Note("E") + Note("F") + Back
+            + Note("C", voice: 2, staff: 2) + end(2) + Note("D", voice: 2, staff: 2) + Note("E", voice: 2, staff: 2) + Note("F", voice: 2, staff: 2)));
+        Assert.Contains("c'4@8va d'4 e'4 f'4@!8va", lys);
+        Assert.Contains("c'4 d'4@8va e'4 f'4 | c'4@!8va d'4", lys.Replace("\r", "").Replace("\n", " ").Replace("  ", " "));
+        Assert.Empty(Errors(lys));
+    }
+
+    [Fact]
+    public void AnOttavasEndWithNoStartIsDroppedAndReported()
+    {
+        var (lys, report) = Import(Book(Note("C") + Note("D") + Direction("<octave-shift type=\"stop\" size=\"8\"/>") + Note("E") + Note("F")));
+        Assert.DoesNotContain("8va", lys);
+        Assert.Contains(report.Warnings, w => w.Contains("octave line's end"));
+    }
+
+    [Fact]
     public void ASlurOverARepeatEndsOnTheLastPitchedNoteAndStartsAgain()
     {
         var (lys, _) = Import(Book(
@@ -349,6 +395,133 @@ public class MusicXmlImportSpanTests
         Assert.Equal(new[] { "crescendo", "stop", "diminuendo", "stop" }, wedges);
     }
 
+    private static string Tied(string step, string tie, int voice = 1, bool chord = false, string alter = "") =>
+        $"<note>{(chord ? "<chord/>" : "")}<pitch><step>{step}</step>{alter}<octave>4</octave></pitch><duration>1</duration>"
+        + string.Concat(tie.Split(',', System.StringSplitOptions.RemoveEmptyEntries).Select(t => $"<tie type=\"{t}\"/>"))
+        + $"<voice>{voice}</voice><type>quarter</type><staff>1</staff></note>";
+
+    [Fact]
+    public void ATieInOneVoiceStays_ChainedToo()
+    {
+        var (lys, report) = Import(Book(Tied("C", "start") + Tied("C", "stop,start") + Tied("C", "stop") + Tied("D", "")));
+        Assert.Contains("c'4~ c'4~ c'4 d'4", lys);
+        Assert.DoesNotContain(report.Warnings, w => w.Contains("tie"));
+    }
+
+    [Fact]
+    public void ATieBetweenTwoVoicesIsDroppedAndReported()
+    {
+        var (lys, report) = Import(Book(
+            Tied("C", "") + Tied("D", "") + Tied("E", "") + Tied("F", "start") + Back
+            + Tied("G", "", voice: 2) + Tied("A", "", voice: 2) + Tied("B", "", voice: 2) + Tied("C", "", voice: 2),
+            Tied("G", "") + Tied("A", "") + Tied("B", "") + Tied("C", "") + Back
+            + Tied("F", "stop", voice: 2) + Tied("A", "", voice: 2) + Tied("B", "", voice: 2) + Tied("C", "", voice: 2)));
+        Assert.DoesNotContain("4~", lys);
+        Assert.Contains(report.Warnings, w => w.Contains("tie runs from voice 1 to voice 2"));
+    }
+
+    [Fact]
+    public void ATieInItsOwnVoiceIsNotTakenByAnother()
+    {
+        // Voice 1's F is held into the next bar in voice 1; voice 2's F starts later and goes nowhere.
+        var (lys, _) = Import(Book(
+            Tied("C", "") + Tied("D", "") + Tied("E", "") + Tied("F", "start") + Back
+            + Tied("G", "", voice: 2) + Tied("A", "", voice: 2) + Tied("B", "", voice: 2) + Tied("F", "start", voice: 2),
+            Tied("F", "stop") + Tied("A", "") + Tied("B", "") + Tied("C", "")));
+        Assert.Equal(1, lys.Split("4~").Length - 1);
+        Assert.Contains("f'4~ |", lys);
+    }
+
+    [Fact]
+    public void ATiesStopTakesTheStartInItsOwnVoiceThoughAnotherOpenedFirst()
+    {
+        var (lys, _) = Import(Book(
+            Tied("C", "") + Tied("D", "") + Tied("F", "start") + Tied("E", "") + Back
+            + Tied("G", "", voice: 2) + Tied("A", "", voice: 2) + Tied("B", "", voice: 2) + Tied("F", "start", voice: 2),
+            Tied("C", "") + Tied("D", "") + Tied("E", "") + Tied("F", "") + Back
+            + Tied("F", "stop", voice: 2) + Tied("A", "", voice: 2) + Tied("B", "", voice: 2) + Tied("C", "", voice: 2)));
+        Assert.Contains("b'4 f'4~ |", lys);
+        Assert.Equal(1, lys.Split("4~").Length - 1);
+    }
+
+    [Fact]
+    public void ATieOnAChordsFirstHeadAloneTiesThatHead()
+    {
+        var (lys, _) = Import(Book(
+            Tied("C", "start") + Tied("E", "", chord: true) + Tied("C", "stop") + Tied("E", "", chord: true) + Tied("F", "") + Tied("G", "")));
+        Assert.Contains("<c'~ e'>4 <c' e'>4", lys);
+        Assert.Empty(Errors(lys));
+    }
+
+    [Fact]
+    public void ATieWithNoEndIsDroppedAndReported()
+    {
+        var (lys, report) = Import(Book(Tied("C", "start") + Tied("D", "") + Tied("E", "") + Tied("F", "")));
+        Assert.DoesNotContain("4~", lys);
+        Assert.Contains(report.Warnings, w => w.Contains("tie has no end"));
+    }
+
+    [Fact]
+    public void ATieOnOneHeadOfAChordIsWrittenOnThatHead()
+    {
+        var (lys, _) = Import(Book(
+            Tied("C", "") + Tied("E", "start", chord: true) + Tied("C", "") + Tied("E", "stop", chord: true) + Tied("F", "") + Tied("G", "")));
+        Assert.Contains("<c' e'~>4 <c' e'>4", lys);
+        Assert.Empty(Errors(lys));
+    }
+
+    [Fact]
+    public void ATieOnEveryHeadOfAChordIsWrittenAfterIt()
+    {
+        var (lys, _) = Import(Book(
+            Tied("C", "start") + Tied("E", "start", chord: true) + Tied("C", "stop") + Tied("E", "stop", chord: true) + Tied("F", "") + Tied("G", "")));
+        Assert.Contains("<c' e'>4~ <c' e'>4", lys);
+    }
+
+    [Fact]
+    public void ATieBetweenTwoSpellingsOfOnePitchIsDroppedAndReported()
+    {
+        const string sharp = "<alter>1</alter>", flat = "<alter>-1</alter>";
+        var (lys, report) = Import(Book(Tied("A", "start", alter: sharp) + Tied("B", "stop", alter: flat) + Tied("E", "") + Tied("F", "")));
+        Assert.Contains("ais'4 bes'4", lys);
+        Assert.Contains(report.Warnings, w => w.Contains("two spellings"));
+    }
+
+    [Fact]
+    public void ATieOverAnotherNoteOfItsVoiceIsDroppedAndReported()
+    {
+        var (lys, report) = Import(Book(Tied("E", "start") + Tied("C", "") + Tied("E", "stop") + Tied("F", "")));
+        Assert.Contains("e'4 c'4 e'4", lys);
+        Assert.Contains(report.Warnings, w => w.Contains("passes over"));
+    }
+
+    private static string Grace(string step, bool slur = false) => $"<note><grace/><pitch><step>{step}</step><octave>4</octave></pitch><voice>1</voice><type>16th</type>"
+        + "<staff>1</staff>" + (slur ? "<notations><slur type=\"start\" number=\"1\"/></notations>" : "") + "</note>";
+
+    [Fact]
+    public void GraceNotesAtABarsEndLeadToTheNextBarsNote()
+    {
+        var (lys, _) = Import(Book(
+            Note("C") + Note("D") + Note("E") + Note("F") + Grace("A"),
+            Note("G") + Note("A") + Note("B") + Note("C")));
+        Assert.Contains("f'4 | grace { a'16 } g'4", lys.Replace("\n", " ").Replace("\r", "").Replace("  ", " "));
+    }
+
+    [Fact]
+    public void GraceNotesAfterThePartsLastNoteAreReported()
+    {
+        var (_, report) = Import(Book(Note("C") + Note("D") + Note("E") + Note("F") + Grace("A")));
+        Assert.Contains(report.Warnings, w => w.Contains("grace notes after"));
+    }
+
+    [Fact]
+    public void AGraceGroupsSlurIntoItsMainNoteOpensOnItsLastNote()
+    {
+        var (lys, _) = Import(Book(Grace("A", true) + Grace("B", false) + Note("C", slur: "stop") + Note("D") + Note("E") + Note("F")));
+        Assert.Contains("b'16( }", lys);
+        Assert.Contains("c'4)", lys);
+    }
+
     [Fact]
     public void ALaterVoicesMarksAreWritten()
     {
@@ -405,8 +578,9 @@ public class MusicXmlImportSpanTests
     {
         const string member = "<note><chord/><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice>"
             + "<type>quarter</type><staff>1</staff><notations><slur type=\"start\" number=\"1\"/></notations></note>";
-        var (_, report) = Import(Book(Note("C") + member + Note("D", slur: "stop") + Note("E") + Note("F")));
+        var (lys, report) = Import(Book(Note("C") + member + Note("D", slur: "stop") + Note("E") + Note("F")));
         Assert.DoesNotContain(report.Warnings, w => w.Contains("slur"));
+        Assert.Contains("<c' g'>4( d'4)", lys);
     }
 
     [Fact]
