@@ -3019,20 +3019,69 @@ internal sealed class MultiStaffLayouter
     /// opens with a grace run: its closing spring's 0.8 re-taken against the end-of-line
     /// column's origin (<see cref="SpacingRules.IntoLineEndBeforeGrace"/>) — the end bar line's
     /// width and the courtesy group's (<see cref="LineEndCourtesyWidth"/>) right of the bar
-    /// line's left edge. <paramref name="springs"/> unchanged otherwise. ONE home for the line
-    /// layout and the break gate's line-end springs (RULES §5.4).
+    /// line's left edge. A bar closed without a wish (<see cref="MusicItem.ClosesWithoutWish"/>)
+    /// reads the same origin for its ideal: nothing takes the bar line's extent back off it.
+    /// <paramref name="springs"/> unchanged otherwise. ONE home for the line layout and the break
+    /// gate's line-end springs (RULES §5.4).
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:99-100 — a WISH subtracts the staff-bar group's left
+    ///   extent, which a line end's bar line hangs left of its column by; no wish, no subtraction.
+    /// MEASURED, 2.26.0 (Lab sessions/p1094/w3/end.ly): a moved last note 2.400 mid-line, 2.210
+    ///   before a line-ending `|` (width 0.19), 1.710 before `||`; a home note 2.254 either way.
+    /// </remarks>
     internal static ImmutableArray<Spring> LineEndBeforeGraceSprings(
         MultiStaffScore score, int measureIndex, ImmutableArray<Spring> springs)
     {
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
-        if (springs.IsDefaultOrEmpty || measureIndex + 1 >= measures.Length
-            || !BarOpensWithLeadingGrace(score, measureIndex + 1))
+        if (springs.IsDefaultOrEmpty)
+            return springs;
+        bool hasNext = measureIndex + 1 < measures.Length;
+        bool grace = hasNext && BarOpensWithLeadingGrace(score, measureIndex + 1);
+        if (!grace && !BarClosesWithoutAnyWish(score, measureIndex))
             return springs;
         double originOffset = SpacingRules.GetBarlineWidth(measures[measureIndex].EndBarline)
-            + LineEndCourtesyWidth(score, measureIndex, measureIndex + 1);
-        return springs.SetItem(springs.Length - 1,
-            SpacingRules.IntoLineEndBeforeGrace(springs[^1], originOffset));
+            + (hasNext ? LineEndCourtesyWidth(score, measureIndex, measureIndex + 1) : 0.0);
+        var closing = springs[^1];
+        return springs.SetItem(springs.Length - 1, grace
+            ? SpacingRules.IntoLineEndBeforeGrace(closing, originOffset)
+            : closing.WithIdealDistance(Math.Max(0.0, closing.IdealDistance - originOffset)));
+    }
+
+    /// <summary>Whether every voice with a column at bar <paramref name="measureIndex"/>'s last
+    /// moment closes it without a wish (<see cref="MusicItem.ClosesWithoutWish"/>) — the same
+    /// question <c>MeasureLayouter.CreateLastToBarlineSpring</c> asks of its last column.</summary>
+    private static bool BarClosesWithoutAnyWish(MultiStaffScore score, int measureIndex)
+    {
+        var last = Fraction.Zero;
+        bool any = false, all = true, moved = false;
+        foreach (var staffGroup in score.StaffGroups)
+            foreach (var staff in staffGroup.Staves)
+            {
+                moved |= staff.HasMovedNotes;
+                foreach (var voice in staff.Voices)
+                {
+                    if (measureIndex >= voice.Measures.Length)
+                        continue;
+                    var at = Fraction.Zero;
+                    foreach (var item in voice.Measures[measureIndex].Items)
+                    {
+                        if (!item.GraceTime && item is NoteItem or ChordItem or RestItem { IsSpacer: false })
+                        {
+                            if (!any || at > last)
+                            {
+                                last = at;
+                                any = true;
+                                all = item.ClosesWithoutWish;
+                            }
+                            else if (at == last)
+                                all &= item.ClosesWithoutWish;
+                        }
+                        at += item.Duration;
+                    }
+                }
+            }
+        return moved && any && all;
     }
 
     /// <summary>

@@ -426,7 +426,8 @@ public class CrossStaffDrawingTests
             .Distinct().OrderBy(x => x).ToArray();
         var lastHeads = heads.Where((_, i) => i % 3 == 2).ToArray();
         Assert.Equal(lasts.Length, lastHeads.Length);
-        var gaps = lastHeads.Select(h => bars.First(b => b > h) - h).ToArray();
+        // Not the last: it ends the line (ABarClosedWithoutAWishLosesTheBarLineAtALinesEnd).
+        var gaps = lastHeads.Select(h => bars.First(b => b > h) - h).SkipLast(1).ToArray();
         Assert.All(gaps, g => Assert.InRange(g, gaps[0] - 0.02, gaps[0] + 0.02));
     }
 
@@ -442,6 +443,55 @@ public class CrossStaffDrawingTests
             .Distinct().OrderBy(x => x).ToArray();
         double gap = bars.First(b => b > heads[5]) - heads[5];
         Assert.InRange(gap, 2.38, 2.42);
+    }
+
+    [Theory]
+    // MEASURED, LilyPond 2.26.0 (Lab sessions/p1094/w3/end.ly): 2.400 mid-line, 2.210 at a line's
+    // end: a wish takes the bar line's extent back, and no wish reaches this bar line.
+    [InlineData("r2 r4 c8 g@cross | c1 |", true)]    // the voice has left
+    [InlineData("r2 r4 c8 a | c1 |", false)]         // a home note's wish does take it back
+    public void ABarClosedWithoutAWishLosesTheBarLineAtALinesEnd(string lh, bool shrinks)
+    {
+        var score = Score(Book("r1 | r1 |", lh));
+        var measure = score.PrimaryContentStaff.PrimaryVoice.Measures[0];
+        // The primary staff is rh: what is asked of the score's last column is the lh voice's.
+        var springs = SpacingRules.CreateSpringsForMeasure(
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, measure, SpacingOptions.Default);
+        var ended = MultiStaffLayouter.LineEndBeforeGraceSprings(score, 0, springs);
+        double taken = springs[^1].IdealDistance - ended[^1].IdealDistance;
+        Assert.Equal(shrinks ? SpacingRules.GetBarlineWidth(measure.EndBarline) : 0.0, taken, 6);
+    }
+
+    [Fact]
+    public void AMovedLastNoteBeforeTheFinalBarStandsWhereLilyPondsDoes()
+    {
+        // Lab sessions/p1094/w3/end2.lys, its last line against its twin's: 12.48 to the thin
+        // stroke, 12.97 to the thick (both justified: the spring's share, not the bare 2.40).
+        const string Text = """
+            octave absolute
+            time 2/4
+            part rh { clef treble }
+            part lh { clef bass }
+            section A { rh { s2 | s2 break | s2 | s2 break | s2 | s2 | s2 break | s2 | s2 | } lh {
+              r4 c8 g@cross | c2 |
+              r4 c8 g@cross break | c2 |
+              r4 c8 a break | c2 |
+              r4 c8 g@cross || break c2 |
+              r4 c8 g@cross |.
+            } }
+            form { ~A }
+            score { grandStaff { staff rh staff lh } }
+            """;
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(Text));
+        double Value(string s) => double.Parse(s, System.Globalization.CultureInfo.InvariantCulture);
+        var thick = System.Text.RegularExpressions.Regex.Matches(svg, "<rect x=\"([\\d.]+)\" y=\"([\\d.]+)\" width=\"0.60\"")
+            .Select(m => (X: Value(m.Groups[1].Value), Y: Value(m.Groups[2].Value))).Last();
+        double lastHead = System.Text.RegularExpressions.Regex
+            .Matches(svg, "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*></text>")
+            .Select(m => (X: Value(m.Groups[1].Value), Y: Value(m.Groups[2].Value)))
+            .Where(h => System.Math.Abs(h.Y - thick.Y) < 14 && h.X < thick.X)
+            .Max(h => h.X);
+        Assert.InRange(thick.X - lastHead, 12.95, 12.99);
     }
 
     [Theory]
