@@ -722,7 +722,7 @@ internal sealed class LyricsCollector
     /// note after it: that note takes the syllable (pending_grace_moment_, with includeGraceNotes
     /// off, its default). Until 2026-11-04 a grace note took a syllable here, and every word of
     /// the bar stood a note early.</para>
-    /// LILYPOND-REF: lily/lyric-combine-music-iterator.cc:322-338 process
+    /// LILYPOND-REF: lily/lyric-combine-music-iterator.cc:298-338 Lyric_combine_music_iterator::process
     /// </remarks>
     internal static List<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy, bool TieHeld)> BuildNoteIndices(
         IReadOnlyList<Measure> measures)
