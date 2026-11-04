@@ -79,13 +79,7 @@ public sealed partial class MeasureCollector
                 // score's home key to the ambient key here.
                 if (site.Node is RelativeResetMarker reset)
                 {
-                    if (reset.PhraseName is { } opened)
-                    {
-                        _v.OpenPhrases.Add(opened);
-                        _v.PhraseCallSites.Add(reset.Position);
-                    }
-                    EnterDefaultFrame(reset.OctaveOffset);
-                    EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset, reset.AnchorShape);
+                    EnterPhraseBody(reset);
                     // ⚠️ ENTERING A PHRASE BODY TOUCHES THE BOUNDARY NOT AT ALL (owner's
                     // decision, 2026-08-28). It used to re-arm it, so a `|` at the body's
                     // head was absorbed — which would now mean that extracting a section
@@ -102,13 +96,7 @@ public sealed partial class MeasureCollector
                 // x | x }) owns the barline the phrase's trailing `|` drew.
                 if (site.Node is PhraseEndMarker end)
                 {
-                    if (end.PhraseName is { } closed && _v.OpenPhrases.LastIndexOf(closed) is var at and >= 0)
-                    {
-                        _v.OpenPhrases.RemoveAt(at);
-                        if (_v.PhraseCallSites.Count > 0)
-                            _v.PhraseCallSites.RemoveAt(_v.PhraseCallSites.Count - 1);
-                    }
-                    ExitPhraseTranspose();
+                    LeavePhraseBody(end);
                     builder.ResetMeasureBoundary(retargetableClose: true);
                     continue;
                 }
@@ -123,6 +111,53 @@ public sealed partial class MeasureCollector
             await ProcessMusicNode(site.Node, builder, PeekMarkers(nodes, i, out _));
             builder.ClearFollowingBarline();
         }
+    }
+
+    /// <summary>Folds a walked node into the walk's read extent, in record mode (see
+    /// <see cref="ProcessMusicNode"/>).</summary>
+    private void FoldWalkRead(SyntaxNode node)
+    {
+        if (_probeRecording != null)
+        {
+            // A FORM-LINE bar (`A || B`, a `|: … :|` block's own bars) is read where the
+            // form stands — usually the file's last lines — so folding it here made every
+            // later checkpoint read past any edit to the music above. It burns its
+            // position into the measures (the bar line's source), which is exactly what a
+            // position-sensitive header read is: stable before the window, or after it on a
+            // length-preserving edit (CollectResumePlanner.SpanStable). That the form is
+            // still the book's form — an edit above can leave its bytes alone and swallow
+            // it into a part — is CollectResumePlanner.TopLevelKindsAgree's to say.
+            if (_formBarRead is { } formBar)
+                _walkHeaderReads.Add(new HeaderRead(formBar, ValueOnly: false));
+            else
+                _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, node.FullSpan.End);
+        }
+    }
+
+    /// <summary>Opens a phrase reference's body: its default frame, shifted by the reference's
+    /// octave marks, and its auto-transpose from the score's home key to the ambient key.</summary>
+    private void EnterPhraseBody(RelativeResetMarker reset)
+    {
+        if (reset.PhraseName is { } opened)
+        {
+            _v.OpenPhrases.Add(opened);
+            _v.PhraseCallSites.Add(reset.Position);
+        }
+        EnterDefaultFrame(reset.OctaveOffset);
+        EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset, reset.AnchorShape);
+    }
+
+    /// <summary>Closes a phrase reference's body: drops its auto-transpose, so the notes after
+    /// it stay at their written pitch.</summary>
+    private void LeavePhraseBody(PhraseEndMarker end)
+    {
+        if (end.PhraseName is { } closed && _v.OpenPhrases.LastIndexOf(closed) is var at and >= 0)
+        {
+            _v.OpenPhrases.RemoveAt(at);
+            if (_v.PhraseCallSites.Count > 0)
+                _v.PhraseCallSites.RemoveAt(_v.PhraseCallSites.Count - 1);
+        }
+        ExitPhraseTranspose();
     }
 
     /// <summary>
@@ -500,15 +535,16 @@ public sealed partial class MeasureCollector
     /// hangs on the LAST member (<c>&gt;&gt;4~</c> ties it on, <c>&gt;&gt;4(</c> starts the
     /// bow there); a string number on the group is every member's.
     /// </remarks>
-    private async ValueTask ProcessArpeggio(ArpeggioSyntax arpeggio, MeasureBuilder builder,
+    private async ValueTask<Fraction> ProcessArpeggio(ArpeggioSyntax arpeggio, MeasureBuilder builder,
         bool tieAfterGroup = false, bool slurStartAfterGroup = false, bool slurEndAfterGroup = false,
-        int tieAfterSource = 0, int slurStartAfterSource = 0, int slurEndAfterSource = 0)
+        int tieAfterSource = 0, int slurStartAfterSource = 0, int slurEndAfterSource = 0,
+        Fraction? outerScale = null, int nestingDepth = 0)
     {
         // Bare pitches, degrees, chords and/or rests, with shares — a diagram(…) member spread
         // into its notes (owner's decision 2026-09-30, Music.ArpeggioSpread).
         var members = Music.ArpeggioSpread.Of(arpeggio, ShapeNotesOf);
         if (members.Count == 0)
-            return;
+            return Fraction.Zero;
 
         // The group occupies its total — the trailing `>>N`, or (absent one) the inherited
         // running duration (it acts like a single note), dots included: a group after
@@ -519,7 +555,9 @@ public sealed partial class MeasureCollector
         Fraction total = arpeggio.TotalDuration?.ToFraction()
             ?? _v.DefaultDuration.Dotted(_v.DefaultDots);
         var sub = ArpeggioSubdivision.Compute(Music.ArpeggioSpread.ShareCount(members), total);
-        Fraction scale = sub.TimeScale;
+        // In a tuplet's body the group's subdivision compounds with the tuplet's, whose walk
+        // hands the bar the time (WalkTupletBody takes the written total this returns).
+        Fraction scale = outerScale is { } outer ? sub.TimeScale * outer : sub.TimeScale;
         // Octave marks after '>>' shift the whole group (like a chord's '<c e g>,'): the
         // shift is applied to the ROOT, and the stacked members / degrees inherit it through
         // the anchor octave the root sets.
@@ -531,7 +569,7 @@ public sealed partial class MeasureCollector
         // name, dynamics and articulations are all keyed by it).
         int measureIndex = builder.CurrentMeasureIndex;
         int startNoteIndex = builder.CurrentItemCount;
-        Fraction startTiming = builder.CurrentDuration;
+        Fraction startTiming = builder.CurrentMoment;
         int articulationsBefore = _articulations.Count;
 
         // The ROOT is the first PITCHED member (leading rests just advance time) — it
@@ -682,12 +720,13 @@ public sealed partial class MeasureCollector
         {
             if (endNoteIndex >= startNoteIndex)
                 _tupletBrackets.Add(new TupletBracketItem(sub.TupletNum, sub.TupletBase,
-                    startNoteIndex, endNoteIndex, measureIndex, arpeggio.SourceStart, 0,
+                    startNoteIndex, endNoteIndex, measureIndex, arpeggio.SourceStart, nestingDepth,
                     _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex));
         }
         // The group consumes exactly `total`; record it once (AddDuration may roll the bar,
         // which is why the bracket indices were captured above).
-        await AddDurationAsync(builder, total, arpeggio.SourceStart + 1);
+        if (outerScale is null)
+            await AddDurationAsync(builder, total, arpeggio.SourceStart + 1);
 
         // Acts like one note: a trailing `>>N` carries N as the running duration
         // (dots included, like any written duration).
@@ -696,6 +735,7 @@ public sealed partial class MeasureCollector
             _v.DefaultDuration = Fraction.FromNoteValue(td.Value);
             _v.DefaultDots = td.DotCount;
         }
+        return total;
     }
 
     /// <summary>The bows a <c>&lt;&lt; &gt;&gt;</c> member draws: its own slur marks, and on
@@ -1021,21 +1061,7 @@ public sealed partial class MeasureCollector
         // at this one funnel is what makes WalkCheckpoint.MaxSourceRead the walk's
         // true read extent. One null-check per node when a probe records; nothing
         // when off (production CLI path).
-        if (_probeRecording != null)
-        {
-            // A FORM-LINE bar (`A || B`, a `|: … :|` block's own bars) is read where the
-            // form stands — usually the file's last lines — so folding it here made every
-            // later checkpoint read past any edit to the music above. It burns its
-            // position into the measures (the bar line's source), which is exactly what a
-            // position-sensitive header read is: stable before the window, or after it on a
-            // length-preserving edit (CollectResumePlanner.SpanStable). That the form is
-            // still the book's form — an edit above can leave its bytes alone and swallow
-            // it into a part — is CollectResumePlanner.TopLevelKindsAgree's to say.
-            if (_formBarRead is { } formBar)
-                _walkHeaderReads.Add(new HeaderRead(formBar, ValueOnly: false));
-            else
-                _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, node.FullSpan.End);
-        }
+        FoldWalkRead(node);
 
         // IN GRACE TIME, ONLY WHAT A GRACE GROUP CAN STILL BE DRAWN AS COMES THROUGH.
         // ⚠️ THIS GATE IS SCAFFOLDING AND IT IS MEANT TO BE DELETED. LilyPond's grace body is
@@ -1941,7 +1967,7 @@ public sealed partial class MeasureCollector
     /// itself drawn small.
     /// </para>
     /// </remarks>
-    private async ValueTask ProcessCueRegion(CueExpressionSyntax cue, MeasureBuilder builder)
+    private async ValueTask ProcessCueRegion(CueExpressionSyntax cue, MeasureBuilder builder, Func<ValueTask>? walkBody = null)
     {
         string? outerClef = null;
         if (cue.ClefKeyword is { } clefToken)
@@ -1969,11 +1995,16 @@ public sealed partial class MeasureCollector
         // cue { t } } expanded t again inside every cue it met, until the stack ran out
         // (session 571: lysc check died on a Lab probe whose parse recovery put the phrase's
         // own reference inside a cue). The cycle is PhraseCycleValidator's to report.
-        var cueSites = new List<GreenSite>();
-        var openHere = new HashSet<string>(_v.OpenPhrases, StringComparer.Ordinal);
-        foreach (var item in cue.Body.Items)
-            GatherMusicSite(new GreenSite(item), cueSites, openHere);
-        await ProcessMusicNodeSequence(cueSites, builder);
+        if (walkBody is not null)
+            await walkBody();
+        else
+        {
+            var cueSites = new List<GreenSite>();
+            var openHere = new HashSet<string>(_v.OpenPhrases, StringComparer.Ordinal);
+            foreach (var item in cue.Body.Items)
+                GatherMusicSite(new GreenSite(item), cueSites, openHere);
+            await ProcessMusicNodeSequence(cueSites, builder);
+        }
         // Cleared here too, for the region that emits no note or chord at all (`cue { r4 }`):
         // the stamp belongs to this region, not to the next item that happens to be cued.
         _v.CueRegionPending = false;
@@ -2053,17 +2084,99 @@ public sealed partial class MeasureCollector
             * new Fraction(tuplet.BaseDivision, tuplet.TupletRatio);
 
         // Track written duration of all items in the tuplet
+        var (writtenDuration, lastSourcePosition) = await WalkTupletBody(tuplet.Body.Items, builder, nestingDepth, scale);
+        if (lastSourcePosition < 0)
+            lastSourcePosition = tuplet.SourceStart;
+
+        // Calculate actual duration: written × base / ratio
+        // e.g., tuplet 3/2: 3 quarters (3/4) → actual 2/4
+        // LILYPOND-REF: lily/tuplet-bracket.cc - tuplet duration scaling
+        int ratio = tuplet.TupletRatio;   // e.g., 3 (play 3 notes)
+        int @base = tuplet.BaseDivision;  // e.g., 2 (in time of 2)
+        Fraction actualDuration = new Fraction(
+            writtenDuration.Numerator * @base,
+            writtenDuration.Denominator * ratio);
+
+        return await CloseTuplet(tuplet, builder, nestingDepth, measureIndex, startNoteIndex, graceAhead,
+            actualDuration, lastSourcePosition);
+    }
+
+    /// <summary>
+    /// Walks the items of a tuplet's body, or of a phrase or cue region inside one, at the
+    /// tuplet's <paramref name="scale"/>: every member is added without duration, and the written
+    /// length of them all is returned with the last one's source position (-1 when there is none).
+    /// </summary>
+    /// <remarks>
+    /// A phrase reference is walked as its body, a cue region as its body in cue state, a
+    /// <c>&lt;&lt; &gt;&gt;</c> as its members at its own subdivision of this scale. All three
+    /// were dropped from the page without a word, while MIDI and MusicXML sounded them.
+    /// </remarks>
+    private async ValueTask<(Fraction Written, int LastSource)> WalkTupletBody(
+        IEnumerable<SyntaxNode> items, MeasureBuilder builder, int nestingDepth, Fraction scale)
+    {
         Fraction writtenDuration = Fraction.Zero;
-        int lastSourcePosition = tuplet.SourceStart;
+        int lastSourcePosition = -1;
 
         // Process all notes inside the tuplet body using Items property
         // (not DescendantNodes which includes all nested nodes)
         // Use AddItemWithoutDuration to avoid incorrect auto-completion
-        var tupletItems = tuplet.Body.Items.ToList();
+        var tupletItems = new List<SyntaxNode>();
+        foreach (var written in items)
+        {
+            if (written is VariableReferenceSyntax)
+            {
+                var sites = new List<GreenSite>();
+                GatherMusicSite(new GreenSite(written), sites, new HashSet<string>(_v.OpenPhrases, StringComparer.Ordinal));
+                foreach (var site in sites)
+                    tupletItems.Add(site.Node);
+            }
+            else
+                tupletItems.Add(written);
+        }
         Fraction? afterGraceWritten = null;
         for (int j = 0; j < tupletItems.Count; j++)
         {
             var item = tupletItems[j];
+
+            if (item is RelativeResetMarker reset)
+            {
+                EnterPhraseBody(reset);
+                continue;
+            }
+            if (item is PhraseEndMarker end)
+            {
+                LeavePhraseBody(end);
+                continue;
+            }
+            // A phrase's body stands elsewhere in the file: its read extent is not the tuplet's.
+            FoldWalkRead(item);
+
+            if (item is CueExpressionSyntax cue)
+            {
+                Fraction inCue = Fraction.Zero;
+                await ProcessCueRegion(cue, builder, async () =>
+                    inCue = (await WalkTupletBody(cue.Body.Items, builder, nestingDepth, scale)).Written);
+                writtenDuration += inCue;
+                lastSourcePosition = item.SourceStart;
+                continue;
+            }
+            if (item is ArpeggioSyntax arpeggio)
+            {
+                // The group decides its members' heads, so the clock first: a clef another voice
+                // writes at this moment is heard before them (ProcessMusicNode, the same ask).
+                if (_clock.SpanOpen)
+                    await _clock.ReachAsync(builder, head: true);
+                else
+                    _clock.CountReach();
+                var after = FoldOwnMarkers(default, item);
+                for (int k = j + 1; k < tupletItems.Count && IsMarkerNode(tupletItems[k]); k++)
+                    after = FoldMarker(after, tupletItems[k]);
+                writtenDuration += await ProcessArpeggio(arpeggio, builder, after.HasTieAfter, after.HasSlurStartAfter,
+                    after.HasSlurEndAfter, after.TieSource, after.SlurStartSource, after.SlurEndSource,
+                    outerScale: scale, nestingDepth: nestingDepth + 1);
+                lastSourcePosition = item.SourceStart;
+                continue;
+            }
 
             // A `break` written inside the tuplet reaches the builder like one written
             // between bars: it cannot split the bar here (the members' time has not reached
@@ -2122,16 +2235,14 @@ public sealed partial class MeasureCollector
             }
             lastSourcePosition = item.SourceStart;
         }
+        return (writtenDuration, lastSourcePosition);
+    }
 
-        // Calculate actual duration: written × base / ratio
-        // e.g., tuplet 3/2: 3 quarters (3/4) → actual 2/4
-        // LILYPOND-REF: lily/tuplet-bracket.cc - tuplet duration scaling
-        int ratio = tuplet.TupletRatio;   // e.g., 3 (play 3 notes)
-        int @base = tuplet.BaseDivision;  // e.g., 2 (in time of 2)
-        Fraction actualDuration = new Fraction(
-            writtenDuration.Numerator * @base,
-            writtenDuration.Denominator * ratio);
-
+    /// <summary>Records a walked tuplet's bracket and, at the top level, hands the bar its
+    /// scaled length, which it returns.</summary>
+    private async ValueTask<Fraction> CloseTuplet(TupletExpressionSyntax tuplet, MeasureBuilder builder, int nestingDepth,
+        int measureIndex, int startNoteIndex, bool graceAhead, Fraction actualDuration, int lastSourcePosition)
+    {
         // Record the bracket BEFORE adding the duration: AddDuration can
         // auto-complete (roll) the measure, after which CurrentItemCount is
         // reset and the indexes would be garbage — that dropped the second

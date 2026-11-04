@@ -15,6 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
@@ -27,6 +29,41 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 internal static class MeasureDurations
 {
+    /// <summary>The written length of a phrase referenced in a tuplet's body, whose members the
+    /// page and the playback walk at the tuplet's scale. A name that resolves to nothing, or a
+    /// reference inside its own body (PhraseCycleValidator's to report), is worth nothing.</summary>
+    private static Fraction PhraseInATuplet(VariableReferenceSyntax reference,
+        Action<TupletExpressionSyntax, Fraction>? onTuplet)
+    {
+        string name = reference.Name.Text;
+        SyntaxNode root = reference;
+        while (root.Parent is { } parent)
+            root = parent;
+        var phrase = root.DescendantNodes<PhraseDeclarationSyntax>().FirstOrDefault(p => p.Name.Text == name);
+        var open = _openPhrases ??= new HashSet<string>(StringComparer.Ordinal);
+        if (phrase is null || !open.Add(name))
+            return Fraction.Zero;
+        try
+        {
+            var total = Fraction.Zero;
+            var running = Fraction.Quarter;
+            foreach (var item in phrase.Body.Items)
+                total += item is VariableReferenceSyntax nested
+                    ? PhraseInATuplet(nested, onTuplet)
+                    : ItemDuration(item, ref running, onTuplet);
+            return total;
+        }
+        finally
+        {
+            open.Remove(name);
+        }
+    }
+
+    /// <summary>The phrases <see cref="PhraseInATuplet"/> is inside: a body can reach its own name
+    /// through a tuplet, which comes back in by <see cref="ItemDuration"/>.</summary>
+    [ThreadStatic]
+    private static HashSet<string>? _openPhrases;
+
     public static Fraction CalculateMeasureDuration(List<SyntaxNode> items, ref Fraction defaultDuration,
         Action<TupletExpressionSyntax, Fraction>? onTuplet = null)
     {
@@ -123,7 +160,9 @@ internal static class MeasureDurations
                 // (\tuplet 3/2 { c8 c c } -> 3 * 1/8 * 2/3 = 1/4).
                 var inner = Fraction.Zero;
                 foreach (var bodyItem in tuplet.Body.Items)
-                    inner += ItemDuration(bodyItem, ref defaultDuration, onTuplet);
+                    inner += bodyItem is VariableReferenceSyntax reference
+                        ? PhraseInATuplet(reference, onTuplet)
+                        : ItemDuration(bodyItem, ref defaultDuration, onTuplet);
                 if (tuplet.TupletRatio > 0)
                     inner *= new Fraction(tuplet.BaseDivision, tuplet.TupletRatio);
                 onTuplet?.Invoke(tuplet, inner);

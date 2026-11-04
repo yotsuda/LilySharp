@@ -113,6 +113,8 @@ internal sealed class MeasureValidator : ISemanticValidator
                 ValidateWorkNode(node);
         // A phrase body no stream played in place is checked on its own, in the meter that
         // stood at its declaration (HANDOFF §2 F-phrasemeter).
+        if (_heldPhraseBodies.Count > 0)
+            MarkPhrasesPlayedInATuplet(root);
         foreach (var (block, meter) in _heldPhraseBodies)
         {
             if (block.Parent is PhraseDeclarationSyntax { Name.Text: var name } && _phrasesCheckedInPlace.Contains(name))
@@ -193,6 +195,20 @@ internal sealed class MeasureValidator : ISemanticValidator
     // phrase of 3/4 bars used under a section's `time 3/4` read short (LYS2006 / LYS2001).
     private readonly List<(MusicBlockSyntax Block, BarContext.MeterState Meter)> _heldPhraseBodies = new();
     private readonly HashSet<string> _phrasesCheckedInPlace = new(StringComparer.Ordinal);
+
+    /// <summary>A phrase a tuplet's body names is counted there (MeasureDurations.ItemDuration),
+    /// and so is any phrase it names in turn: three eighths in a triplet are no short bar.</summary>
+    private void MarkPhrasesPlayedInATuplet(SyntaxNode root)
+    {
+        var stack = new Stack<string>();
+        foreach (var tuplet in root.DescendantNodes<TupletExpressionSyntax>())
+            foreach (var reference in tuplet.Body.DescendantNodes<VariableReferenceSyntax>())
+                stack.Push(reference.Name.Text);
+        while (stack.TryPop(out var name))
+            if (_phrasesCheckedInPlace.Add(name) && _phraseBodies.TryGetValue(name, out var body))
+                foreach (var inner in body.DescendantNodes<VariableReferenceSyntax>())
+                    stack.Push(inner.Name.Text);
+    }
 
     /// <remarks>
     /// The kinds come from <see cref="PhraseCycleValidator.DeclaringKinds"/> — the SAME

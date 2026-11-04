@@ -2924,7 +2924,8 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
 
 Tuplet         = 'tuplet' , Integer , '/' , Integer , [ 'bare' ] , MusicBlock ;   (* nesting allowed *)
                  (* The body may hold a 'clef', 'key', 'tempo', 'octave', 'override', 'revert' or
-                    'once', each standing at its member's moment. A 'time' or 'partial' in the body is an error (LYS1065;
+                    'once', each standing at its member's moment, and a phrase reference, a 'cue'
+                    or a '<< >>', whose notes it scales like its own. A 'time' or 'partial' in the body is an error (LYS1065;
                     owner's decision 2026-11-05): write it before the tuplet, at its bar's start.
                     LilyPond takes \time inside \tuplet; Lily# does not, on purpose. *)
                  (* 'bare' (owner's decision 2026-11-03): drawn with NO NUMBER AND NO BRACKET, as

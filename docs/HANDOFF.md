@@ -143,9 +143,11 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **連符の本体**: `key`・`tempo` は黙って捨てられていた → `clef` と同じくその音の時刻に立つ（`ProcessTuplet`）。本体の先頭の `key` は括弧の前。`tempo` の錨は `CurrentMoment`（`CurrentDuration` は連符の本体で止まっている）。
 - **`time`・`partial` は LYS1065（エラー）**＝オーナー決定 2026-11-05（`TupletMeterValidator`）。意味を持つのは小節頭の先頭だけで、連符の前に書くのと同じ。**LP は `\time` を受ける＝意図した差**。小節線をまたぐ連符は元から LYS2017 で、この決定で失う形はない（`probe/cross.lys`）。
 - **同じ時刻の違う `clef`**: 後から聞いた 1 つだけ描く（`WithdrawClefAtThisMoment`。比べる相手はその時刻より前の記号）。LP と同じ絵（`probe/twoclef.lys`）。
-- **計器**: 全 svg 1262 枚の差 0（`svg/sweep.log`＝base は Release `21cee0cb9`）・`DirectivesInATupletTests` 24 件。終了時 full **14538 / 0 / 2**（`end1.log`）。毒 `poisons1.ps1`＋`poisons2-list.ps1`: 緑だった 4 本のうち 2 本はテストを足して赤、2 本（自分の声部の除外・同じ記号の除外）は観測者なしで条件を消した。⚠️ 掃きの差 0 は、この形の本が母集団にないだけ。
+- **計器**: 全 svg 1262 枚の差 0（`svg/sweep.log`＝base は Release `21cee0cb9`）・`DirectivesInATupletTests` 51 件（便の終わり）。終了時 full **14565 / 0 / 2**（`end3.log`）。全 svg の差 0 は `svg/sweep3.log`。毒 `poisons1.ps1`＋`poisons2-list.ps1`: 緑だった 4 本のうち 2 本はテストを足して赤、2 本（自分の声部の除外・同じ記号の除外）は観測者なしで条件を消した。⚠️ 掃きの差 0 は、この形の本が母集団にないだけ。
 - **`octave`・`override`・`revert`・`once`**（オーナー「続けて」）: 同じく捨てられていた → 本体で読む。`.ly` は連符の外でも途中の `octave` と `override` を書かない＝連符の問題ではなく今のまま。ナビゲーションの記号は元から LYS1034。毒 `poisons3.ps1` 4 本すべて赤（最初の回は `revert` のテストの期待値の誤りで全部赤に見えた＝直して取り直した）。
-- ⚠️ **未解決＝連符の中のフレーズ参照・`cue`・`<< >>`・`voice`**: 譜面だけ音が消える（MusicXML と MIDI は全部出す・`lysc check` は黙る）。`probe/body.lys` の 8〜11 小節・`probe/lost.ps1`。
+- **連符の中のフレーズ参照・`cue`・`<< >>`**: 譜面だけ音が消えていた（MusicXML と MIDI は全部出す・`lysc check` は黙る。`probe/body.lys` の 8〜10 小節・`probe/lost.ps1`）→ `WalkTupletBody` がその拍率で歩く。`<< >>` の分割は連符の拍率に掛ける。小節の数えは `MeasureDurations.PhraseInATuplet`。連符からだけ呼ばれる本体は単独で検査しない（`MarkPhrasesPlayedInATuplet`＝弱起の誤報を消した）。⚠️ 自分を呼ぶフレーズで `lysc check` が落ちる欠陥を一度書いた＝テストが落として直した（連符をまたぐとガードが切れていた）。毒 `poisons4.ps1` と 3 本すべて赤（緑だった 10 本はテストの穴＝足した。最後の短い小節は誰も報告しない・最初の短い小節は LYS2006）。
+- ⚠️ **未解決＝連符の中の `voice`**: 音が譜面から消える（11 小節）。LP も番号を描かない。`voice { tuplet … } { tuplet … }` と書けるので、エラーか実装かはオーナー判断。
+- ⚠️ **未調査**: 入れ子の連符が同じ範囲だと Lily# は「3」を 2 つ描き、LP は 1 つに見える（`probe/nest.lys`＝ふつうの入れ子でも同じ・今回の変更とは無関係）。
 
 ## 以下は第1099セッションの経緯
 

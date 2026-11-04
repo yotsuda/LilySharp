@@ -7,6 +7,7 @@ workflow attaches that section to the GitHub Release verbatim.
 ## Unreleased
 
 - `[engraving]` **A `key`, `tempo`, `octave` or `override` in a tuplet takes effect.** Written inside `tuplet { }`, each was dropped without a word (`revert` and `once` too), and the notes after a key or an octave mode stood in the old one. They now stand at their note's moment, as outside a tuplet.
+- `[engraving]` **A phrase, a `cue` or a `<< >>` in a tuplet is drawn.** The page left their notes out without a word, while the playback and MusicXML had them. A phrase named in a tuplet now also counts toward its bar and is not checked as a short bar of its own.
 - **A `time` or `partial` in a tuplet is an error (LYS1065).** Both were dropped without a word. Write it before the tuplet.
 - `[engraving]` **Two voices' clefs at one moment draw one.** When voices of a staff wrote different `clef`s at the same moment, both were drawn on top of each other. The last one heard stands, as in LilyPond.
 - `[engraving]` **A tie crosses a clef change.** `c'1~ | clef bass c'1` drew no tie and warned that the pitches differed; it is the same pitch, and LilyPond draws the tie from the first head. A tied head after the clef repeats no accidental. Another spelling (`cis'~ des'`) is still no tie.
