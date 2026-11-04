@@ -1198,25 +1198,32 @@ internal static partial class SpacingRules
     /// the neighbor with the LARGEST rank wins.
     /// LILYPOND-REF: lily/spacing-determine-loose-columns.cc:283-319 set_explicit_neighbor_columns
     ///   — :311-315 keeps the left col with <c>left_rank > old_left_neighbor->get_rank ()</c>.
-    /// ⚠️ SIMPLIFICATION: the walk sees only the voice the change item sits in. In LilyPond
-    /// the neighbor map is per STAFF, so a second voice of the same staff with a note
-    /// between this voice's note and the change would BE the neighbor and make the column
-    /// not loose; the corpus has no mid-measure change in a multi-voice staff yet.
+    /// The neighbor map is per STAFF: another voice of the same staff with an item between this
+    /// voice's last one and the change IS the neighbor, and makes the column not loose
+    /// (<paramref name="staves"/>, parallel to <paramref name="measures"/>; without it only the
+    /// voice the change sits in is read). Until 2026-11-04 only that voice was, so a clef in a
+    /// lower voice after its spacer was priced loose and stood on the upper voice's note
+    /// (LilySharp-Omr REQUESTS #22).
     /// </remarks>
     internal static Fraction? LooseChangeLeftNeighborTiming(
-        IReadOnlyList<Measure> measures, in ItemColumn columnItems)
+        IReadOnlyList<Measure> measures, in ItemColumn columnItems, IReadOnlyList<Staff>? staves = null)
     {
         Fraction? best = null;
-        foreach (var m in measures)
+        for (int v = 0; v < measures.Count; v++)
         {
             var t = Fraction.Zero;
             Fraction? lastMusicalOnset = null;
-            foreach (var item in m.Items)
+            foreach (var item in measures[v].Items)
             {
                 if (IsChangeItem(item) && ContainsByReference(columnItems, item))
                 {
                     if (lastMusicalOnset is { } onset && (best is not { } b || onset > b))
                         best = onset;
+                    if (staves != null && staves.Count == measures.Count)
+                        for (int w = 0; w < measures.Count; w++)
+                            if (w != v && ReferenceEquals(staves[w], staves[v])
+                                && LastOnsetBefore(measures[w], t) is { } other && (best is not { } b2 || other > b2))
+                                best = other;
                     break;
                 }
                 if (!IsChangeItem(item))
@@ -1225,6 +1232,21 @@ internal static partial class SpacingRules
             }
         }
         return best;
+
+        static Fraction? LastOnsetBefore(Measure measure, Fraction moment)
+        {
+            Fraction? last = null;
+            var at = Fraction.Zero;
+            foreach (var item in measure.Items)
+            {
+                if (at >= moment)
+                    break;
+                if (!IsChangeItem(item))
+                    last = at;
+                at += item.Duration;
+            }
+            return last;
+        }
 
         static bool ContainsByReference(in ItemColumn items, MusicItem item)
         {

@@ -86,38 +86,35 @@ internal static partial class SharedRenderer
     /// and not just the first.</param>
     internal static ClefType ResolveClefAt(Staff staff, int firstMeasureIndex, out int sourcePosition)
     {
-        var voice = staff.PrimaryVoice;
         var activeClef = staff.Clef;
         // The staff's own `clef` declaration until a change overrides it; 0 when the staff
         // inherited a default, which leaves the drawn clef untagged exactly as before.
         sourcePosition = staff.ClefPosition;
 
-        // Apply clef changes accumulated in earlier measures.
-        for (int m = 0; m < firstMeasureIndex && m < voice.Measures.Length; m++)
+        // A clef is the staff's, whichever voice wrote it (MeasureCollector.ShareClefWithSpanBranches):
+        // the latest of them in time. A later voice's stands after the first's at one moment,
+        // the order the walk heard them.
+        int latestMeasure = -1;
+        var latestAt = Fraction.Zero;
+        foreach (var voice in staff.Voices)
         {
-            foreach (var item in voice.Measures[m].Items)
+            // Changes accumulated in earlier measures, and the leading ones of this system's
+            // first measure, which surface as system-start clefs (LP groups them with the prefix).
+            for (int m = 0; m <= firstMeasureIndex && m < voice.Measures.Length; m++)
             {
-                if (item is ClefChangeItem cc)
+                var at = Fraction.Zero;
+                foreach (var item in voice.Measures[m].Items)
                 {
-                    activeClef = cc.NewClef;
-                    sourcePosition = cc.SourcePosition;
+                    if (m == firstMeasureIndex && item.Duration > Fraction.Zero)
+                        break;
+                    if (item is ClefChangeItem cc && (m > latestMeasure || (m == latestMeasure && at >= latestAt)))
+                    {
+                        activeClef = cc.NewClef;
+                        sourcePosition = cc.SourcePosition;
+                        (latestMeasure, latestAt) = (m, at);
+                    }
+                    at += item.Duration;
                 }
-            }
-        }
-
-        // Leading ClefChangeItems in this system's first measure also surface as
-        // system-start clefs (LP groups them with the prefix).
-        if (firstMeasureIndex < voice.Measures.Length)
-        {
-            foreach (var item in voice.Measures[firstMeasureIndex].Items)
-            {
-                if (item is ClefChangeItem cc)
-                {
-                    activeClef = cc.NewClef;
-                    sourcePosition = cc.SourcePosition;
-                }
-                else if (item.Duration > Fraction.Zero)
-                    break;
             }
         }
 

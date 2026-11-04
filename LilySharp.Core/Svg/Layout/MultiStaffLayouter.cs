@@ -1965,7 +1965,7 @@ internal sealed class MultiStaffLayouter
                 // THIS measure's closing spring — LilyPond draws it before the shared bar
                 // line. SystemBreaker mirrors this; the two must agree (SpacingInvariantTests).
                 var nextMeasure = i + 1 < primaryVoice.Measures.Length
-                    ? primaryVoice.Measures[i + 1] : null;
+                    ? MeasureForTheClosingGap(score, primaryVoice.Measures[i + 1], i + 1) : null;
                 springs = _measureLayouter.CreateTimingSprings(
                     score.TextMetrics, primaryMeasure, allTimings, spacing, allMeasures, nextMeasure,
                     SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, i),
@@ -2413,6 +2413,7 @@ internal sealed class MultiStaffLayouter
                 itemLayouts = _measureLayouter.LayoutItems(score.TextMetrics, primaryMeasure, measureWidth);
 
             var (changeHangs, graceToMain) = ComputeChangeColumnHangs(
+                score, measureIndex,
                 score.TextMetrics, measureAllMeasures[i], measureTimings[i],
                 measureColumnOverhangs[i].Right, columnLayouts, measureSprings[i], force);
             var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts)
@@ -2447,6 +2448,7 @@ internal sealed class MultiStaffLayouter
     ///   springs stands its right spring's length at the line's force before the next column.
     /// </remarks>
     private static (ImmutableDictionary<Fraction, double>? Hangs, ImmutableDictionary<Fraction, double>? GraceToMain) ComputeChangeColumnHangs(
+        MultiStaffScore score, int measureIndex,
         Rendering.ScoreTextMetrics fonts,
         List<Measure> allMeasures, List<Fraction> allTimings,
         double[] columnInkRight, ImmutableArray<ColumnLayout> columns,
@@ -2472,6 +2474,7 @@ internal sealed class MultiStaffLayouter
         if (!anyChange)
             return (null, null);
 
+        var staves = CollectStavesOfMeasuresAtIndex(score, measureIndex);
         ImmutableDictionary<Fraction, double>.Builder? hangs = null, graceToMain = null;
         for (int c = 1; c < allTimings.Count; c++)
         {
@@ -2493,7 +2496,7 @@ internal sealed class MultiStaffLayouter
                 || !columnItems.Any(SpacingRules.IsMidMeasureChangeColumn))
                 continue;
 
-            var ownLeft = SpacingRules.LooseChangeLeftNeighborTiming(allMeasures, columnItems);
+            var ownLeft = SpacingRules.LooseChangeLeftNeighborTiming(allMeasures, columnItems, staves);
             if (!SpacingRules.IsLooseChangeColumn(fonts, allTimings, ownLeft, changeTiming, columnItems))
             {
                 // In the springs: the slot into this timing is the change column's series
@@ -3082,6 +3085,22 @@ internal sealed class MultiStaffLayouter
                 }
             }
         return moved && any && all;
+    }
+
+    /// <summary>The next measure, as this measure's closing gap reads it: the primary voice's,
+    /// unless only another voice opens that bar with a clef change, which is drawn before the
+    /// shared bar line wherever it was written (MeasureCollector.ShareClefWithSpanBranches).</summary>
+    internal static Measure MeasureForTheClosingGap(MultiStaffScore score, Measure primary, int measureIndex)
+    {
+        if (BoundaryColumn.OpensWithClefChange(primary.Items))
+            return primary;
+        foreach (var staffGroup in score.StaffGroups)
+            foreach (var staff in staffGroup.Staves)
+                foreach (var voice in staff.Voices)
+                    if (measureIndex < voice.Measures.Length
+                        && BoundaryColumn.OpensWithClefChange(voice.Measures[measureIndex].Items))
+                        return voice.Measures[measureIndex];
+        return primary;
     }
 
     /// <summary>

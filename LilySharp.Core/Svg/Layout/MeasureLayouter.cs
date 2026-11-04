@@ -1042,7 +1042,7 @@ internal sealed class MeasureLayouter
         //   — loose columns leave the cols vector and get between-cols instead.
         if (changeGaps is { } pruned && nextItems.Count > 0)
         {
-            var ownLeft = SpacingRules.LooseChangeLeftNeighborTiming(measuresToScan, nextItems);
+            var ownLeft = SpacingRules.LooseChangeLeftNeighborTiming(measuresToScan, nextItems, stavesOfMeasures);
             if (SpacingRules.IsLooseChangeColumn(fonts, timings, ownLeft, timings[i], nextItems))
             {
                 // The rod's two arms are the same wish minimums the change gaps carry:

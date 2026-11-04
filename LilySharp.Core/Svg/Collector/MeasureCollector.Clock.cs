@@ -74,6 +74,10 @@ public sealed partial class MeasureCollector
             /// it before the branches parked on sounding items at the same moment, so the key is
             /// the staff's for every head of the moment (<see cref="ReachAsync"/>).</summary>
             public bool PendingKey;
+            /// <summary>True while the branch is parked on a sounding item in a span whose heads
+            /// wait (<see cref="Span.HeadsWaitForStaffChanges"/>): the driver resumes it after the
+            /// branches at the moment parked on anything else.</summary>
+            public bool PendingHead;
             public Action? Continuation;
             public bool Parked;
             public bool Done;
@@ -88,6 +92,10 @@ public sealed partial class MeasureCollector
             public readonly List<Branch> Branches = new();
             public (int Measure, Fraction Position) Now;
             public Branch? Current;
+            /// <summary>True when the span writes a <c>key</c> or <c>clef</c>: a sounding item is
+            /// judged only once every branch has run up to its own at that moment
+            /// (<see cref="ReachAsync"/>'s head). Other spans keep the plain index order.</summary>
+            public bool HeadsWaitForStaffChanges;
         }
 
         private readonly Stack<Span> _spans = new();
@@ -142,7 +150,12 @@ public sealed partial class MeasureCollector
         /// keyAlterations as the event arrives; lily/accidental-engraver.cc:495-500
         /// Accidental_engraver::process_music reads it after). Scoped to the key with stage ⑥;
         /// any other item keeps the branches' index order.</param>
-        public ReachAwaitable ReachAsync(MeasureBuilder builder, bool keyChange = false)
+        /// <param name="head">True when a sounding item is about to be judged. In a span that writes
+        /// a <c>key</c> or <c>clef</c> (<see cref="Span.HeadsWaitForStaffChanges"/>) it waits until
+        /// every other branch standing at this moment has run up to its own head: a branch can
+        /// reach its note at a bar line while a lower one is still on the bar line before its
+        /// <c>clef</c>, and LilyPond hears every event of a timestep before it judges a head.</param>
+        public ReachAwaitable ReachAsync(MeasureBuilder builder, bool keyChange = false, bool head = false)
         {
             Reaches++;
             if (_spans.Count == 0)
@@ -152,11 +165,28 @@ public sealed partial class MeasureCollector
             if (branch == null || span.Branches.Count <= 1)
                 return new ReachAwaitable(this, completed: true);
             var target = (builder.CurrentMeasureIndex, builder.CurrentMoment);
+            head &= span.HeadsWaitForStaffChanges;
             if (Compare(target, span.Now) <= 0)
-                return new ReachAwaitable(this, completed: true);
+            {
+                if (!head || !OtherBranchStandsAtNow(span, branch))
+                    return new ReachAwaitable(this, completed: true);
+                target = span.Now;
+            }
             branch.Target = target;
             branch.PendingKey = keyChange;
+            branch.PendingHead = head;
             return new ReachAwaitable(this, completed: false);
+        }
+
+        /// <summary>Whether another branch has yet to run at the clock's moment — parked there, or
+        /// not started at all (the span's opening moment).</summary>
+        private static bool OtherBranchStandsAtNow(Span span, Branch branch)
+        {
+            foreach (var other in span.Branches)
+                if (!ReferenceEquals(other, branch) && !other.Done
+                    && (!other.Parked || Compare(other.Target, span.Now) <= 0))
+                    return true;
+            return false;
         }
 
         /// <summary>The awaiting branch's continuation: it parks here.</summary>
@@ -622,6 +652,26 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
+    /// A <c>clef</c> written in one branch of a span is the STAFF's, as a <c>key</c> is
+    /// (<see cref="ShareKeyWithSpanBranches"/>): every voice's heads stand in it from that moment,
+    /// and the driver resumes the branch that wrote it before the heads of the moment are judged.
+    /// Until 2026-11-04 it moved only the voice that wrote it (LilySharp-Omr REQUESTS #22).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/clef-engraver.cc:139-166 Clef_engraver::inspect_clef_properties — the
+    /// engraver lives in Staff and reads clefGlyph once per timestep.
+    /// </remarks>
+    private void ShareClefWithSpanBranches()
+    {
+        if (!_clock.SpanOpen)
+            return;
+        foreach (var span in _clock.OpenSpans)
+            foreach (var b in span.Branches)
+                if (b.State is { } s && !ReferenceEquals(s.Meta, _v.Meta))
+                    s.Meta.Clef = _v.Meta.Clef;
+    }
+
+    /// <summary>
     /// The <c>&lt;&lt; \\ &gt;&gt;</c> span arm of the walk: branch 0 joins the primary stream (this
     /// builder) so measure indices stay continuous, and the other voices — each in its own
     /// builder, 0-based from the span's bar — are walked WITH it on the span's clock
@@ -678,6 +728,7 @@ public sealed partial class MeasureCollector
                 ? EmitDrumVoice(drums.Upper, builder, stemUp: true, parallel.SourceStart)
                 : ProcessMusicNodeSequence(GatherVoiceMusicNodes(voiceBlocks[0]), builder),
             childCount: voiceCount - 1,
+            headsWait: WritesAStaffChange(parallel),
             childState: t => BranchState.ForChild(outerCursor with
             {
                 VoiceIndex = outerCursor.VoiceIndex + t + 1,
@@ -724,6 +775,16 @@ public sealed partial class MeasureCollector
         }
     }
 
+    /// <summary>Whether a span's music may write a <c>key</c> or <c>clef</c>: written in it, or
+    /// perhaps in a phrase it names.</summary>
+    private static bool WritesAStaffChange(ParallelExpressionSyntax parallel)
+    {
+        foreach (var node in parallel.DescendantNodes())
+            if (node is ClefDeclarationSyntax or KeySignatureSyntax or VariableReferenceSyntax)
+                return true;
+        return false;
+    }
+
     /// <summary>
     /// Drives one span: branch 0 (<paramref name="branch0"/>, the primary's own builder) and the
     /// children (<paramref name="childBody"/>, each with the state <paramref name="childState"/>
@@ -740,9 +801,10 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private async ValueTask<List<List<Measure>>> RunSpanAsync(
         MeasureBuilder primary, Func<ValueTask> branch0, int childCount,
-        Func<int, BranchState> childState, Func<int, ValueTask<List<Measure>>> childBody)
+        Func<int, BranchState> childState, Func<int, ValueTask<List<Measure>>> childBody, bool headsWait)
     {
         var span = _clock.OpenSpan((primary.CurrentMeasureIndex, primary.CurrentMoment));
+        span.HeadsWaitForStaffChanges = headsWait;
         var b0 = new VoiceClock.Branch { Index = 0 };
         span.Branches.Add(b0);
         var kids = new VoiceClock.Branch[childCount];
@@ -774,7 +836,7 @@ public sealed partial class MeasureCollector
             // The lowest branch standing at the clock — a branch parked on a `key` change
             // before any other (VoiceClock.ReachAsync's keyChange), as LilyPond hears the event
             // before it judges the moment's heads.
-            VoiceClock.Branch? pick = null;
+            VoiceClock.Branch? pick = null, pickHead = null;
             (int Measure, Fraction Position)? earliest = null;
             foreach (var b in span.Branches)
             {
@@ -789,12 +851,16 @@ public sealed partial class MeasureCollector
                         pick = b;
                         break;
                     }
-                    pick ??= b;
+                    if (b.PendingHead)
+                        pickHead ??= b;
+                    else
+                        pick ??= b;
                     continue;
                 }
                 if (earliest is not { } e || VoiceClock.Compare(b.Target, e) < 0)
                     earliest = b.Target;
             }
+            pick ??= pickHead;
             if (pick == null)
             {
                 if (earliest is not { } next)

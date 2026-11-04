@@ -258,7 +258,7 @@ internal sealed class SystemBreaker
             // drawn before this bar line, so the break gate must price it here too.
             var springs = layouter.CreateTimingSprings(
                 score.TextMetrics, primaryMeasure, allTimings, spacing, allMeasures,
-                i + 1 < measures.Length ? measures[i + 1] : null,
+                i + 1 < measures.Length ? MultiStaffLayouter.MeasureForTheClosingGap(score, measures[i + 1], i + 1) : null,
                 SpacingRules.RunLeftBoundBarline(measures, i),
                 MultiStaffLayouter.CollectStavesOfMeasuresAtIndex(score, i),
                 MultiStaffLayouter.BarOpensWithLeadingGrace(score, i + 1));

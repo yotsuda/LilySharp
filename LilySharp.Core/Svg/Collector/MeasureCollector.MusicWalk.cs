@@ -1658,6 +1658,7 @@ public sealed partial class MeasureCollector
                     bool unchanged = head is { } h ? h.Clef == newType : newType == ParseClefType(_v.Meta.Clef);
                     bool theResetsChange = head != null && !unchanged && newType == ParseClefType(_v.Meta.Clef);
                     _v.Meta.Clef = newClef;
+                    ShareClefWithSpanBranches();
                     if (unchanged && !clefDecl.IsForced)
                     {
                         if (head != null)
@@ -2069,6 +2070,15 @@ public sealed partial class MeasureCollector
                 continue;
             }
 
+            // A clef in the body is the staff's at the member's moment, as outside it (a tuplet
+            // scales time and nothing else). It used to be dropped without a word, and the notes
+            // after it stood in the old clef (LilySharp-Omr REQUESTS #22).
+            if (item is ClefDeclarationSyntax)
+            {
+                await ProcessMusicNode(item, builder);
+                continue;
+            }
+
             // Lookahead over the RUN of tie/slur/beam markers that annotate the
             // preceding note — the same rule ProcessMusicNodeSequence applies to
             // the top-level stream. Without this, a tie/slur/beam written inside
@@ -2131,6 +2141,10 @@ public sealed partial class MeasureCollector
             while (startNoteIndex <= endNoteIndex && current[startNoteIndex].GraceTime)
                 startNoteIndex++;
         }
+        // A clef opening the body stands before the bracket's first column, as a clef before the
+        // tuplet would (LilyPond's bracket spans the note columns).
+        while (startNoteIndex <= endNoteIndex && builder.CurrentItems[startNoteIndex] is ClefChangeItem)
+            startNoteIndex++;
 
         // Only add bracket if we have at least 2 notes.
         // ⚠️ AND NEVER IN GRACE TIME. A tuplet inside a grace body is a CONTAINER there — its
@@ -2204,7 +2218,7 @@ public sealed partial class MeasureCollector
         // The clock first, as at the head of ProcessMusicNode: a tuplet's members are several
         // moments of one node, and each is judged once the clock stands at it.
         if (_clock.SpanOpen)
-            await _clock.ReachAsync(builder);
+            await _clock.ReachAsync(builder, head: true);
         else
             _clock.CountReach();
         if (_v.PendingGrace is { } pendingGrace)

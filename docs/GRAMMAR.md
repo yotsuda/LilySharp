@@ -2287,7 +2287,10 @@ MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
    (no colon) — distinct from a part header which uses the same bare form to set the
    INITIAL value. *)
 MidMusicCommand = 'clef' , [ '!' ] , ClefName       (* '!' forces a clef that changes
-                                                      nothing — see KeyDecl §2 *)
+                                                      nothing — see KeyDecl §2. A clef is the
+                                                      staff's: whichever voice writes it, every
+                                                      voice stands in it from that moment, as in
+                                                      LilyPond; a tuplet's body may hold one. *)
                | 'key' , [ '!' ] , PitchBase , [ Accidental-text ] , Mode
                | 'time' , [ '!' ] , Integer , '/' , Integer
                | 'time' , [ '!' ] , 'none'          (* unmetered from here to the next
