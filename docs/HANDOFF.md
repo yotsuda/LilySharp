@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。OMR の `open` は 0。残り（急がない）: 点の列の共有は 2 声部の音と和音だけ＝休符が混ざる列（`ElementCoordinator` の註）・3 声部以上・段位置以外（点の列の x を縦の輪郭やタイが読む `DotColumn`）は各 item の答えのまま。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。**OMR の `open` は #22（声部の中の `clef`）**。
+- **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。OMR の `open` は 0。残り（急がない）: 点の列の共有は 2 声部の音と和音だけ＝休符が混ざる列（`ElementCoordinator` の註）・3 声部以上・段位置以外（点の列の x を縦の輪郭やタイが読む `DotColumn`）は各 item の答えのまま。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release は `1200c035a` より前＝作り直しはオーナー判断**。
 - **`@cross` の音が別の段に描かれる＝第1093 で実装（OMR の REQUESTS #20）**: 設計は §1.1 第1093。**OMR の返事（`..\LilySharp-Omr\docs\repro\lilysharp-feedback-2026-11-04.md`）: #19〜#21 は `done`・今直してほしい不具合はない。**段をまたぐタイ・同音や 2 度の重なり・MusicXML は OMR が生成器で避ける＝今は依頼なし（必要なら OMR が行を足す）。読み手が段をまたぐ形をまだ読めないのは OMR 側の宿題。 残りの制限: ⑴ 弧は実装済み（下の語り）・スラーの上のスクリプトと点は元の段で読むまま／⑵ 段をまたぐタイは最初の音の段に描く（LP は斜め）／⑶ 連桁の採点は実装済み（下の語り）・他の段の連桁と、別の声部から同じ段へ移った音は避けない／⑷ 移った先の段の音とは衝突処理をしない（LP は 2 度・同音の頭を横へずらす＝Lab `sessions/p1093/rc` 7〜8 小節。⚠️ LP 自身が「this Voice needs a \voiceXx」と警告する形。休符は実装済み）／⑸ 臨時記号は実装済み（下の語り）・LP が落とす再確認の記号は残す（オーナー決定 2026-10-02 の ⑴ と同じ扱い）／⑹ 観測者なし＝連桁のない棒を移った先の輪郭へ入れる行と、弧の端の棒の枠の行は、8 冊の探り譜で出力が動かず毒が緑（LP の規則なので残した）／⑻ 双子は譜の最初の瞬間の `\change Staff` が LP で効かない（`k1`）／⑼ プレビューの実機は未確認（増分はフルと一致＝網 4 本）。
 - **チャットで Lily# を教わる＝第1043 で実装（`docs/LEARN_FOR_LLM.md`・`HANDOFF-LEARNING.md`）**: 残りは実物の Copilot での確認（MANUAL-CHECKS C59）。
 - **ペダルの音＝第1041 で実装（`@sustain` だけ・`docs/pedal-playback-design.md`）**: 残りは耳の確認（MANUAL-CHECKS C57）。`@sostenuto`・`@unaCorda` は描くだけのまま。
@@ -138,7 +138,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ### 1.1 第1099セッション（2026-11-04・YT-DELL2）
 
-開始時 full **14462 / 0 / 2**（`-Start p1099`・HEAD `1a3b7a84c`・OMR の open は #22）。作業場所は Lab `sessions/p1099/`。
+開始時 full **14462 / 0 / 2**（`-Start p1099`・HEAD `1a3b7a84c`・OMR の open は #22）。終了時 **14482 / 0 / 2**（`end1.log`）。作業場所は Lab `sessions/p1099/`。OMR の #22 に着手（オーナー「続けて」）。
+
+- **結果**（`1200c035a`）: 声部の中の `clef` は段のもの。再現譜 `clef-in-voice-2026-11-04` と探り譜 `sessions/p1099/clef/w.lys` は LilyPond の絵と同じ配置。⑴ `ShareClefWithSpanBranches`＝`key` と同じく全 branch に書く ⑵ 連符の本体の `clef` は黙って捨てられていた → 読む（括弧は記号の後から）⑶ `SharedRenderer.ResolveClefAt` は全声部の最新の記号 ⑷ 記号の隣の音は同じ段の全声部から読む（`LooseChangeLeftNeighborTiming`。2 声目のスペーサーの後の記号が loose に読まれ、1 声目の音に重なっていた）⑸ 小節頭の記号の幅は全声部から（`MeasureForTheClosingGap`・break gate も）。
+- **本質の穴**: 小節頭や span の頭では、上の声部が自分の音まで一気に進み、下の声部が小節線の先に書く `clef` を聞く前に判定していた。`key` も同じ穴。LP は 1 時刻の指示を全部聞いてから音を判定する → `ReachAsync(head: true)`＋`Span.HeadsWaitForStaffChanges`。`clef`・`key`・フレーズ参照を含む span だけ音が待つ＝それ以外の譜の処理順は変えない。
+- **計器**: 全 svg 1262 枚の差 0（`svg/sweep.log`）・`ClefInAVoiceTests` 20 本・毒 `poisons1.ps1` 22 本（緑だった 7 本のうち 6 本はテストを足して赤、`keyChange` に `clef` を足す行は観測者なしで消した。「他の branch が後にいても待つ」の毒は待ちが増えるだけで出力が同じ＝省略の最適化として残した）。
+- ⚠️ **残りの制限**: ⑴ 違う `clef` を同じ時刻に 2 声が書くと両方描く（LP は最後の 1 つ）⑵ `lysc xml` の小節の途中の `clef` は次の小節の頭に出る＝以前からの制限（`SyncAttributes` の註）⑶ 連符の本体の `key`・`time` は未確認。
 
 ## 以下は第1098セッションの経緯
 
