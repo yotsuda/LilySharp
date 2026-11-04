@@ -499,6 +499,146 @@ public class MusicXmlCrossStaffTests
         }
     }
 
+    private static string DivisionsBook(string music) => $$"""
+        octave absolute
+        time 4/4
+        part m { clef treble }
+        section A { m { {{music}} } }
+        form { ~A }
+        score { staff m }
+        """;
+
+    private static (int Divisions, int[] Durations) Counted(string music)
+    {
+        var xml = new MusicXmlExporter().Export(SyntaxTree.Parse(DivisionsBook(music))).ToXml();
+        return (int.Parse(xml.Descendants("divisions").First().Value),
+            xml.Descendants("note").Select(n => int.Parse(n.Element("duration")!.Value)).ToArray());
+    }
+
+    [Fact]
+    public void AScoreOf24sThirdsStaysAt24()
+    {
+        var (divisions, durations) = Counted("tuplet 3/2 { c''8 d'' e'' } c''4 c''32 r32 r16 r8 r4 |");
+        Assert.Equal(24, divisions);
+        Assert.Equal([8, 8, 8, 24, 3, 3, 6, 12, 24], durations);
+    }
+
+    [Theory]
+    // Dichterliebe 8 bar 36: an eighth in a quintuplet of sixteenths is 0.4 of a beat.
+    [InlineData("tuplet 5/4 { c''8 d''16 e'' f'' } r2. |", 120, new[] { 48, 24, 24, 24 })]
+    [InlineData("c''64 r64 r32 r16 r8 r4 r2 |", 48, new[] { 3 })]
+    [InlineData("tuplet 7/4 { c''16 d'' e'' f'' g'' a'' b'' } r2. |", 168, new[] { 24 })]
+    public void DivisionsRiseToSayADurationExactly(string music, int expected, int[] first)
+    {
+        var (divisions, durations) = Counted(music);
+        Assert.Equal(expected, divisions);
+        Assert.Equal(first, durations.Take(first.Length));
+        // The bar still adds up: to four quarters, in its own divisions.
+        Assert.Equal(4 * divisions, durations.Sum());
+    }
+
+    [Fact]
+    public void EveryMeasureStatesTheOneDivisions()
+    {
+        var xml = new MusicXmlExporter().Export(SyntaxTree.Parse(
+            DivisionsBook("tuplet 5/4 { c''16 d'' e'' f'' g'' } r2. | time 3/4 c''2. |"))).ToXml();
+        Assert.All(xml.Descendants("divisions"), d => Assert.Equal("120", d.Value));
+    }
+
+    [Fact]
+    public void AQuintupletComesBackAsWritten()
+    {
+        const string Music = "tuplet 5/4 { c''8 d''16 e''16 f''16 } r4 r2 |";
+        var xml = new MusicXmlExporter().Export(SyntaxTree.Parse(DivisionsBook(Music))).ToXml();
+        Assert.Contains(Music, new MusicXmlImporter().Import(xml.ToString()).Item1);
+    }
+
+    [Fact]
+    public void RaisingTheDivisionsKeepsTheScoreChosen()
+    {
+        // The second build is a fresh exporter: it has to be told which score it is writing.
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            part a { clef treble }
+            part b { clef bass }
+            section A { a { tuplet 5/4 { c''16 d'' e'' f'' g'' } r2. | } b { c1 | } }
+            form { ~A }
+            score one { staff a }
+            score two { staff b }
+            """);
+        var specs = LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree);
+        var xml = new MusicXmlExporter { Score = specs[1] }.Export(tree).ToXml();
+        Assert.Equal("F", xml.Descendants("sign").First().Value);
+        Assert.Equal("C3", string.Concat(xml.Descendants("pitch").First().Elements().Select(e => e.Value)).Replace("0", ""));
+    }
+
+    [Fact]
+    public void EachScoresFileHoldsThatScore()
+    {
+        // `lysc xml` of a book of two scores wrote the same two parts into both files.
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            part a { clef treble }
+            part b { clef bass }
+            section A { a { c''1 | } b { c1 | } }
+            form { ~A }
+            score one { staff a }
+            score two { staff b }
+            """);
+        string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "lys-xml-" + System.Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(dir);
+        try
+        {
+            var scores = tree.GetRoot().DescendantNodes().OfType<RenderDeclarationSyntax>().ToArray();
+            string Written(int i, string name)
+            {
+                string path = System.IO.Path.Combine(dir, name + ".xml");
+                var spec = LilySharp.Core.Svg.Collector.RenderSpecParser.Parse(scores[i])!;
+                LilySharp.Core.Export.ScoreExport.Write(tree, "musicxml", path, (scores[i], spec));
+                var xml = XDocument.Load(path);
+                Assert.Single(xml.Root!.Elements("part"));
+                return xml.Descendants("sign").First().Value;
+            }
+            Assert.Equal("G", Written(0, "one"));
+            Assert.Equal("F", Written(1, "two"));
+        }
+        finally
+        {
+            System.IO.Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ATremoloFoldsAtTheRaisedDivisions()
+    {
+        // Another bar's quintuplet raises the score's divisions: the pair's span is read from them.
+        var all = Exported(TremoloBook("repeat tremolo 6 { c''16 f'16 } | tuplet 5/4 { c''16 d'' e'' f'' g'' } r4. |"));
+        Assert.Equal("start:2", Tremolo(all[0]));
+        Assert.Equal("half", all[0].Element("type")!.Value);
+    }
+
+    [Fact]
+    public void ASongsTimingIsItsOwnWhateverTheDivisions()
+    {
+        // VsqxExporter reads the document's durations: a quintuplet must not rescale the bar.
+        string Book(string first) => $$"""
+            time 4/4
+            part v { clef treble }
+            section A { v { {{first}} | c''1 | } lyrics words sings v { la la la la la la la la | } }
+            form { ~A }
+            score { staff v }
+            """;
+        int LastNoteAt(string first)
+        {
+            var doc = new LilySharp.Core.Vocaloid.VsqxExporter().Export(SyntaxTree.Parse(Book(first)));
+            return doc.Descendants().Where(e => e.Name.LocalName == "note")
+                .Select(n => int.Parse(n.Elements().First(e => e.Name.LocalName == "t").Value)).Last();
+        }
+        Assert.Equal(LastNoteAt("c''4 c'' c'' c''"), LastNoteAt("tuplet 5/4 { c''16 d'' e'' f'' g'' } c''4 r2"));
+    }
+
     [Fact]
     public void ASpanTheValueCannotDivideKeepsItsNotes()
     {

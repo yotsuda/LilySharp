@@ -76,11 +76,13 @@ public class RepeatOutputsTests
         """;
 
     [Theory]
-    // 32 passes of the one printed pair; 3 passes of the one printed bar.
-    [InlineData(Tremolo, 32, new[] { 79, 81 })]
-    [InlineData(Percent, 3, new[] { 79, 81, 83, 84, 86, 88, 89, 91 })]
+    // 32 passes of the one printed pair; 3 passes of the one printed bar. The MusicXML folds the
+    // tremolo into its own notation, one written pair (WriteTremoloOnce); it wrote 32 here only
+    // while a 64th was truncated at 24 divisions and the span spelled no value (until 2026-11-04).
+    [InlineData(Tremolo, 32, 1, new[] { 79, 81 })]
+    [InlineData(Percent, 3, 3, new[] { 79, 81, 83, 84, 86, 88, 89, 91 })]
     public void AnEngravedOnceRepeat_PlaysAndExportsThePrintedCopyEveryPass(
-        string book, int passes, int[] printed)
+        string book, int passes, int writtenPasses, int[] printed)
     {
         var tree = SyntaxTree.Parse(book);
 
@@ -100,8 +102,8 @@ public class RepeatOutputsTests
             .Where(n => !n.IsRest && !n.IsBackup && !n.IsUnpitched && n.Step != null)
             .Select(n => RelativeOctave.StepToMidi("CDEFGAB".IndexOf(n.Step![0]),
                 (int)System.Math.Round(n.Alter ?? 0), n.Octave!.Value)).ToArray();
-        Assert.Equal(printed.Length * passes, xml.Length);
-        Assert.Equal(Enumerable.Repeat(printed, passes).SelectMany(p => p).OrderBy(k => k),
+        Assert.Equal(printed.Length * writtenPasses, xml.Length);
+        Assert.Equal(Enumerable.Repeat(printed, writtenPasses).SelectMany(p => p).OrderBy(k => k),
             xml.OrderBy(k => k));
     }
 

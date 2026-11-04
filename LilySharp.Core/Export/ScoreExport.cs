@@ -228,7 +228,7 @@ public static class ScoreExport
 
             case "musicxml":
             {
-                var (parts, measures) = new MusicXmlExporter { Form = form }.ExportToFile(tree, outputPath);
+                var (parts, measures) = new MusicXmlExporter { Form = form, Score = spec }.ExportToFile(tree, outputPath);
                 return new ExportResult([outputPath], [$"Parts: {parts}", $"Measures: {measures}"], []);
             }
 

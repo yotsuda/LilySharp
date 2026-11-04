@@ -29,6 +29,8 @@ internal sealed class MusicXmlDocument
     public string? Subtitle { get; set; }
     public string? Poet { get; set; }
     public List<MusicXmlPart> Parts { get; } = new();
+    /// <summary>The divisions per quarter its notes' durations are counted in.</summary>
+    public int Divisions { get; set; } = 24;
 
     /// <summary>
     /// The score's staff groups over runs of consecutive parts (<c>&lt;part-group&gt;</c>), outer

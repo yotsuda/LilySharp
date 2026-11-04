@@ -28,10 +28,15 @@ namespace LilySharp.Core.MusicXml;
 /// </summary>
 public sealed class MusicXmlExporter
 {
-    // Divisions per quarter note. 24 is divisible by 2/3/4/6/8/12, so triplets
-    // (and other tuplets) and notes down to 32nds get exact integer <duration>
-    // values — 4 truncated a triplet eighth to 1 and a 32nd to 0.
-    private const int DivisionsPerQuarter = 24;
+    // Divisions per quarter note. 24 is divisible by 2/3/4/6/8/12, so triplets and notes down to
+    // 32nds get exact integer <duration> values — 4 truncated a triplet eighth to 1 and a 32nd to 0.
+    // Whatever 24 cannot say exactly — a quintuplet's fifth of a beat, a 64th — raises the score's
+    // own number to the least that can (Export): truncated, a voice in fives ran short of its bar
+    // and every note after it stood early (Dichterliebe 8: 0.375 for the 0.4 of a beat written).
+    private const int DefaultDivisions = 24;
+    private const long MostDivisions = 1_000_000;
+    private int _divisions = DefaultDivisions;
+    private long _neededDivisions = DefaultDivisions;
 
     private int _currentOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
     private int _currentStep = RelativeOctave.FrameStartStep;     // c=0..b=6, for LilyPond relative-octave resolution (mirrors MidiExporter)
@@ -312,9 +317,19 @@ public sealed class MusicXmlExporter
 
     internal MusicXmlDocument Export(SyntaxTree tree)
     {
+        var document = ExportAtDivisions(tree);
+        // Asked of a fresh exporter, the score's state being this one's to spend once.
+        if (_neededDivisions == _divisions || _neededDivisions > MostDivisions)
+            return document;
+        return new MusicXmlExporter { Form = Form, Score = Score, _divisions = (int)_neededDivisions, _neededDivisions = _neededDivisions }
+            .ExportAtDivisions(tree);
+    }
+
+    private MusicXmlDocument ExportAtDivisions(SyntaxTree tree)
+    {
         _diagramsWord = default;
         _scoreLayoutPlan = null;
-        _document = new MusicXmlDocument();
+        _document = new MusicXmlDocument { Divisions = _divisions };
         _pageModel = null;
         _tempoStated = false;
 
@@ -376,11 +391,31 @@ public sealed class MusicXmlExporter
         if (hasSections)
             WriteSectionLabels(tree);
         WritePartNames();
+        KeepTheScoresParts();
         MergeGrandStaves();
         WritePartGroups();
 
         return _document;
     }
+
+    /// <summary>
+    /// A score named for this document holds the parts it engraves, as its page and its MIDI do.
+    /// Until 2026-11-04 every part of the book was written whichever score was asked for, so
+    /// <c>lysc xml</c> of a book of two scores wrote the same file twice under two names.
+    /// </summary>
+    private void KeepTheScoresParts()
+    {
+        if (Score == null)
+            return;
+        var kept = new HashSet<string>(Score.EngravedPartNames, StringComparer.Ordinal);
+        kept.UnionWith(_placedChordRows.Select(RowsOwnPart));
+        foreach (var (name, part) in _partsByName)
+            if (!kept.Contains(name))
+                Document.Parts.Remove(part);
+    }
+
+    /// <summary>The name of the part a lead sheet's chord row is written into.</summary>
+    private static string RowsOwnPart(string row) => row + " (chords)";
 
     /// <summary>
     /// The score's staff groups as <c>&lt;part-group&gt;</c>s (<see cref="MusicXmlDocument.PartGroups"/>),
@@ -2029,7 +2064,7 @@ public sealed class MusicXmlExporter
         // B's bars in 3/4 while the page draws them in 4/4.
         // The bar the play BEFORE this one closed in — a bar full under its own meter leaves
         // nothing for this play's first bar to complete (ContinueSplitBar).
-        int barTicksBefore = _bars.SenzaMisura ? 0 : 4 * DivisionsPerQuarter * _bars.Meter.Beats / _bars.Meter.BeatType;
+        int barTicksBefore = _bars.SenzaMisura ? 0 : MeterTicks();
         if (_sectionTime is null)
             _bars.RevertToHome();
         // ⚠️ AND A RESTORE HAS TO BE *WRITTEN*, not merely held. Both reverts above only
@@ -2069,7 +2104,7 @@ public sealed class MusicXmlExporter
         if (_sectionTempo is { } sectionTempo && isFirst)
             ProcessTempo(sectionTempo);
         // The bar the play opens in — what a split bar's two halves must add up to.
-        int barTicksAtStart = _bars.SenzaMisura ? 0 : 4 * DivisionsPerQuarter * _bars.Meter.Beats / _bars.Meter.BeatType;
+        int barTicksAtStart = _bars.SenzaMisura ? 0 : MeterTicks();
         StartNewMeasure(addAttributes: isFirst);
         if (_sectionTempo is { } laterSectionTempo && !isFirst)
             ProcessTempo(laterSectionTempo);
@@ -2329,7 +2364,7 @@ public sealed class MusicXmlExporter
         if (_currentMeasure is not { Notes.Count: > 0 } open || _currentPart == null
             || _bars.SenzaMisura || _bars.Partial is not null)
             return;
-        int barTicks = 4 * DivisionsPerQuarter * _bars.Meter.Beats / _bars.Meter.BeatType;
+        int barTicks = MeterTicks();
         if (ElapsedTicks(open) < barTicks)
             return;
         _currentPart.Measures.Add(open);
@@ -2431,7 +2466,7 @@ public sealed class MusicXmlExporter
         {
             _currentMeasure.Attributes = new MusicXmlAttributes
             {
-                Divisions = DivisionsPerQuarter,
+                Divisions = _divisions,
                 TimeBeats = _bars.Meter.Beats,
                 TimeBeatsText = _bars.Meter.BeatsText,
                 TimeSenzaMisura = _bars.SenzaMisura,
@@ -2572,9 +2607,9 @@ public sealed class MusicXmlExporter
     /// section opening restates — kept its attributes and lost the mark: the file had
     /// <c>start</c>s and no <c>stop</c> (LilySharp-Omr docs/repro/musicxml-exporter-bugs.md #3).
     /// </remarks>
-    private static void MarkMeasureRepeat(MusicXmlMeasure measure, string type, int bars)
+    private void MarkMeasureRepeat(MusicXmlMeasure measure, string type, int bars)
     {
-        measure.Attributes ??= new MusicXmlAttributes { Divisions = DivisionsPerQuarter };
+        measure.Attributes ??= new MusicXmlAttributes { Divisions = _divisions };
         measure.Attributes.MeasureRepeat = type;
         measure.Attributes.MeasureRepeatBars = bars;
     }
@@ -5499,7 +5534,7 @@ public sealed class MusicXmlExporter
     /// </summary>
     /// <remarks>The last pass is the one kept, because a <c>~</c> in the body is open on it; a tie
     /// INTO the tremolo stands on the first pass, so it is carried across.</remarks>
-    private static void WriteTremoloOnce(MusicXmlMeasure? measure, int from, int passes)
+    private void WriteTremoloOnce(MusicXmlMeasure? measure, int from, int passes)
     {
         if (measure == null)
             return;
@@ -5511,19 +5546,20 @@ public sealed class MusicXmlExporter
         int bodyHeads = heads.Count / passes;
         if (bodyHeads is not (1 or 2) || heads.Count != bodyHeads * passes)
             return;
-        (string Type, int Dots)? spanType = heads.Sum(n => n.Duration) switch
-        {
-            144 => ("whole", 1),
-            96 => ("whole", 0),
-            72 => ("half", 1),
-            48 => ("half", 0),
-            36 => ("quarter", 1),
-            24 => ("quarter", 0),
-            18 => ("eighth", 1),
-            12 => ("eighth", 0),
-            _ => null,
-        };
         int span = heads.Sum(n => n.Duration);
+        // In eighths of a quarter's quarter: the span's length whatever the score's divisions.
+        (string Type, int Dots)? spanType = span * 4 % _divisions != 0 ? null : (span * 4 / _divisions) switch
+        {
+            24 => ("whole", 1),
+            16 => ("whole", 0),
+            12 => ("half", 1),
+            8 => ("half", 0),
+            6 => ("quarter", 1),
+            4 => ("quarter", 0),
+            3 => ("eighth", 1),
+            2 => ("eighth", 0),
+            _ => ((string, int)?)null,
+        };
         int beams = BeamsOf(heads[0].Type);
         if (spanType is not { } written || beams == 0)
             return;
@@ -6402,7 +6438,7 @@ public sealed class MusicXmlExporter
     /// harmonies at their offsets, in the treble clef, the section's key and meter.</summary>
     private void EmitRowAsItsOwnPart(PendingChordRow pending, List<List<SyntaxNode>> bars, int typedDrop)
     {
-        EnsurePart(pending.Row + " (chords)");
+        EnsurePart(RowsOwnPart(pending.Row));
         _currentTranspose = null;
         _partTransposeSemitones = 0;
         _partTransposeWritten = 0;
@@ -6532,12 +6568,31 @@ public sealed class MusicXmlExporter
 
     private int FractionToTicks(Fraction frac)
     {
-        long ticks = (long)frac.Numerator * DivisionsPerQuarter * 4 / frac.Denominator;
-        // Each enclosing tuplet shrinks the played duration to normal/actual.
+        // In quarters, as a fraction: each enclosing tuplet shrinks it to normal/actual.
+        long quarters = frac.Numerator * 4L, over = frac.Denominator;
         foreach (var (actual, normal) in _tupletStack)
-            ticks = ticks * normal / actual;
-        return (int)ticks;
+        {
+            quarters *= normal;
+            over *= actual;
+        }
+        NeedDivisions(quarters, over);
+        return (int)(quarters * _divisions / over);
     }
+
+    /// <summary>Asks for divisions that say <paramref name="quarters"/> / <paramref name="over"/>
+    /// of a quarter exactly: their least common multiple with what is asked already.</summary>
+    private void NeedDivisions(long quarters, long over)
+    {
+        if (over == 0)
+            return;
+        long reduced = over / (long)System.Numerics.BigInteger.GreatestCommonDivisor(quarters, over);
+        long common = (long)System.Numerics.BigInteger.GreatestCommonDivisor(_neededDivisions, reduced);
+        if (_neededDivisions <= MostDivisions)
+            _neededDivisions = _neededDivisions / common * reduced;
+    }
+
+    /// <summary>A bar of the meter in force, in divisions.</summary>
+    private int MeterTicks() => 4 * _divisions * _bars.Meter.Beats / _bars.Meter.BeatType;
 
     /// <summary>
     /// The cumulative tuplet ratio to stamp on a note as &lt;time-modification&gt;:

@@ -38,8 +38,6 @@ namespace LilySharp.Core.Vocaloid;
 public sealed class VsqxExporter
 {
     private const int Resolution = 480;                 // vsq4 ticks per quarter
-    private const int DivisionsPerQuarter = 24;         // MusicXML divisions (MusicXmlExporter)
-    private const int TickFactor = Resolution / DivisionsPerQuarter;
 
     /// <summary>Exports the piece's vocal line as a VOCALOID4 (.vsqx) document.</summary>
     public XDocument Export(SyntaxTree tree)
@@ -86,7 +84,7 @@ public sealed class VsqxExporter
                     // part exported its backup as a note.
                     if (n.IsBackup || n.RawElement != null)
                         continue;
-                    int dur = n.Duration * TickFactor;
+                    int dur = (int)((long)n.Duration * Resolution / xml.Divisions);
                     if (n.IsRest)
                     {
                         tick += dur;

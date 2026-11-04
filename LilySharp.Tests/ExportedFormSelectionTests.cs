@@ -97,6 +97,26 @@ public class ExportedFormSelectionTests
     }
 
     [Fact]
+    public void MusicXml_RaisingTheDivisionsKeepsTheNamedForm()
+    {
+        // A quintuplet of 16ths is not whole at 24 divisions, so the document is built again;
+        // the second build has to be told the form too.
+        var tree = SyntaxTree.Parse("""
+            part m { clef treble }
+            section First  { m { c'4 c c c | } }
+            section Second { m { tuplet 5/4 { g'16 g g g g } r2. | } }
+            form   { First }
+            form encore { Second }
+            score first { staff m }
+            score second { form encore staff m }
+            """);
+        var steps = new MusicXmlExporter { Form = FormNamed(tree, "encore") }.Export(tree).Parts
+            .SelectMany(p => p.Measures).SelectMany(m => m.Notes)
+            .Where(n => n.Step != null).Select(n => n.Step!).ToArray();
+        Assert.Equal(new[] { "G", "G", "G", "G", "G" }, steps);
+    }
+
+    [Fact]
     public void LilyPondTwin_WritesThePrimaryFormByDefaultAndTheNamedOneWhenAsked()
     {
         var tree = SyntaxTree.Parse(TwoMovements);
