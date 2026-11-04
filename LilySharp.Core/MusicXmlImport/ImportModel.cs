@@ -237,6 +237,16 @@ internal sealed class ImportNote : ImportItem
     /// <summary>A single-note tremolo subdivision (8/16/32) → a <c>:N</c> slash after
     /// the duration; 0 = none.</summary>
     public int TremoloMarks { get; set; }
+    /// <summary>The beams of a two-note tremolo this note opens (<c>&lt;tremolo type="start"&gt;</c>),
+    /// 0 = none; read, then settled against its stop by the reader.</summary>
+    public int TremoloPairBeams { get; set; }
+    /// <summary>This note closes a two-note tremolo (<c>&lt;tremolo type="stop"&gt;</c>).</summary>
+    public bool TremoloPairStop { get; set; }
+    /// <summary>The settled pair's count, on its first note: <c>repeat tremolo N { a b }</c> opens
+    /// here, the two written at the alternation's value (<see cref="NoteValue"/>). 0 = none.</summary>
+    public int TremoloPairRepeat { get; set; }
+    /// <summary>The settled pair's second note: the block closes after it.</summary>
+    public bool TremoloPairEnd { get; set; }
     /// <summary>Sung syllables, one per verse, in MusicXML note order.</summary>
     public List<ImportLyric> Lyrics { get; } = new();
     /// <summary>

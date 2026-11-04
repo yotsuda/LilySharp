@@ -765,6 +765,9 @@ internal static class LysWriter
                     dotted += value;
                 }
                 total += dotted * scale;
+                // A tremolo pair lasts its N pairs, where the items hold its two notes once.
+                if (note.TremoloPairRepeat > 0)
+                    total += new Fraction(2 * note.TremoloPairRepeat - 2, note.NoteValue) * scale;
             }
             if (note.TupletStop && tuplets.Count > 0)
                 scale = tuplets.Pop();
@@ -1226,7 +1229,11 @@ internal static class LysWriter
             // Leading grace notes hang before the main note (inside any tuplet wrap).
             if (graceToken != null)
                 tokens.Add(graceToken);
+            if (note.TremoloPairRepeat > 0)
+                tokens.Add($"repeat tremolo {note.TremoloPairRepeat} {{");
             tokens.Add(token);
+            if (note.TremoloPairEnd)
+                tokens.Add("}");
             if (note.TupletStop)
             {
                 tokens.Add("}");

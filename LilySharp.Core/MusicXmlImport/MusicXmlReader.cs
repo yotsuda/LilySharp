@@ -239,6 +239,7 @@ internal static class MusicXmlReader
             int position = 0;           // divisions from the bar's head, along the stream
             var voiceAt = new Dictionary<int, int>();   // where each voice's written music ends
             bool cursorMoved = false;   // a <forward> naming no voice moved the position alone
+            var openTremolos = new Dictionary<int, (ImportNote First, int Ticks)>();   // per voice
             ImportNote? lastNote = null;
 
             void AttachDue(ImportNote note, int staff)
@@ -371,8 +372,10 @@ internal static class MusicXmlReader
                             AttachDue(note, staff);
                             note.LeadingGrace.AddRange(pendingGrace);
                             pendingGrace.Clear();
-                            position += int.TryParse(Local(el, "duration")?.Value, out int ndur) ? ndur : 0;
+                            int noteTicks = int.TryParse(Local(el, "duration")?.Value, out int ndur) ? ndur : 0;
+                            position += noteTicks;
                             voiceAt[voice] = position;
+                            SettleTremoloPair(note, noteTicks, voice, divisions, openTremolos);
                             lastNote = note;
                             lastNoteOfStaff[staff] = note;
                             partLastNote = note;
@@ -762,6 +765,11 @@ internal static class MusicXmlReader
                     && (string?)o.Attribute("type") is null or "single"
                     && int.TryParse(o.Value, out int beams) && beams is >= 1 and <= 3)
                     note.TremoloMarks = 4 << beams;
+                if (o.Name.LocalName == "tremolo" && (string?)o.Attribute("type") == "start"
+                    && int.TryParse(o.Value, out int pairBeams) && pairBeams is >= 1 and <= 4)
+                    note.TremoloPairBeams = pairBeams;
+                if (o.Name.LocalName == "tremolo" && (string?)o.Attribute("type") == "stop")
+                    note.TremoloPairStop = true;
             }
             // A glissando / slide prints @glissando on the note it leaves from.
             if ((Els(notations, "glissando").Concat(Els(notations, "slide")))
@@ -805,6 +813,41 @@ internal static class MusicXmlReader
         foreach (var a in Local(notations, "articulations")?.Elements() ?? Enumerable.Empty<XElement>())
             if (ArticulationMark(a.Name.LocalName) is { } mark && !note.Articulations.Contains(mark))
                 note.Articulations.Add(mark);
+    }
+
+    /// <summary>
+    /// Settles a two-note tremolo on its closing note: MusicXML writes each note with half the
+    /// sounding span and the WHOLE span's <c>&lt;type&gt;</c>, Lily# the alternation
+    /// (<c>repeat tremolo N { a16 b16 }</c>), N pairs at the value the beams name.
+    /// </summary>
+    /// <remarks>
+    /// Read as they stood the two notes were each the whole span long, and the bar overflowed
+    /// (kinkel10-4: <c>c''2. fis'2.</c> in 6/8, 18 errors). A span the value does not divide into
+    /// whole pairs keeps the notes as written, as does a start with no stop: the bar then reports
+    /// itself rather than the import guessing a length.
+    /// </remarks>
+    private static void SettleTremoloPair(ImportNote note, int ticks, int voice, int divisions,
+        Dictionary<int, (ImportNote First, int Ticks)> open)
+    {
+        if (note.TremoloPairBeams > 0)
+        {
+            open[voice] = (note, ticks);
+            return;
+        }
+        if (!note.TremoloPairStop || !open.Remove(voice, out var first))
+            return;
+        int value = 4 << first.First.TremoloPairBeams;
+        // Pairs = span / (2 / value of a whole), a whole being 4 × divisions ticks.
+        int numerator = (first.Ticks + ticks) * value, denominator = 2 * 4 * Math.Max(1, divisions);
+        if (numerator <= 0 || numerator % denominator != 0)
+            return;
+        first.First.TremoloPairRepeat = numerator / denominator;
+        note.TremoloPairEnd = true;
+        foreach (var pairNote in new[] { first.First, note })
+        {
+            pairNote.NoteValue = value;
+            pairNote.Dots = 0;
+        }
     }
 
     /// <summary>Tuplet bracket ends on a note or a rest; the ratio comes from

@@ -215,6 +215,77 @@ public class MusicXmlCrossStaffTests
         Assert.Contains("} f''4", lys);
     }
 
+    private static string TremNote(string step, int octave, int duration, string type, bool dot, string kind, int beams, bool chord = false) =>
+        $"<note>{(chord ? "<chord/>" : "")}<pitch><step>{step}</step><octave>{octave}</octave></pitch><duration>{duration}</duration><voice>1</voice><type>{type}</type>{(dot ? "<dot/>" : "")}"
+        + $"<notations><ornaments><tremolo type=\"{kind}\">{beams}</tremolo></ornaments></notations></note>";
+
+    private static string TremBar(int beats, int beatType, string music) => $"""
+        <score-partwise version="4.0">
+          <part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>
+          <part id="P1"><measure number="1">
+            <attributes><divisions>8</divisions><time><beats>{beats}</beats><beat-type>{beatType}</beat-type></time>
+              <clef><sign>G</sign><line>2</line></clef></attributes>
+            {music}
+          </measure></part>
+        </score-partwise>
+        """;
+
+    [Theory]
+    // kinkel10-4 bar 5: 6/8, each note half the bar and written as the whole bar's dotted half.
+    [InlineData(6, 8, 12, "half", true, 2, "repeat tremolo 6 { c''16 f'16 } |")]
+    [InlineData(4, 4, 16, "whole", false, 3, "repeat tremolo 16 { c''32 f'32 } |")]
+    [InlineData(4, 4, 16, "whole", false, 1, "repeat tremolo 4 { c''8 f'8 } |")]
+    public void ATwoNoteTremoloIsWrittenAsItsAlternation(int beats, int beatType, int each, string type, bool dot, int marks, string expected)
+    {
+        var (lys, _) = new MusicXmlImporter().Import(TremBar(beats, beatType,
+            TremNote("C", 5, each, type, dot, "start", marks) + TremNote("F", 4, each, type, dot, "stop", marks)));
+        Assert.Contains(expected, lys);
+        Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(lys))
+            .Where(d => d.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void ATremoloPairKeepsTheBarsOtherNotesAndItsChord()
+    {
+        var (lys, _) = new MusicXmlImporter().Import(TremBar(4, 4,
+            N("G", 4, 1, 16, "half")
+            + TremNote("C", 5, 8, "half", false, "start", 2) + TremNote("E", 5, 8, "half", false, "start", 2, chord: true)
+            + TremNote("F", 4, 8, "half", false, "stop", 2)));
+        Assert.Contains("g'2 repeat tremolo 4 { <c'' e''>16 f'16 } |", lys);
+        Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(lys))
+            .Where(d => d.Severity == DiagnosticSeverity.Error));
+    }
+
+    [Fact]
+    public void AnotherVoiceIsFilledToThePairsWholeLength()
+    {
+        // The pair lasts the bar though the items hold its two notes once (LysWriter.LengthOf).
+        var (lys, _) = new MusicXmlImporter().Import(TremBar(4, 4,
+            TremNote("C", 5, 16, "whole", false, "start", 2) + TremNote("F", 4, 16, "whole", false, "stop", 2)
+            + Backup(32) + N("G", 4, 2, 8, "quarter")));
+        Assert.Contains("repeat tremolo 8 { c''16 f'16 } |", lys);
+        Assert.Contains("g'4 s2. |", lys);
+    }
+
+    [Fact]
+    public void ASpanTheValueCannotDivideKeepsItsNotes()
+    {
+        // 7 ticks at divisions 8 is no whole number of 16th pairs: no block is guessed.
+        var (lys, _) = new MusicXmlImporter().Import(TremBar(4, 4,
+            TremNote("C", 5, 7, "half", false, "start", 2) + TremNote("F", 4, 8, "half", false, "stop", 2)));
+        Assert.DoesNotContain("repeat tremolo", lys);
+        Assert.Contains("c''2 f'2", lys);
+    }
+
+    [Fact]
+    public void ATremoloStartWithNoStopKeepsItsNote()
+    {
+        var (lys, _) = new MusicXmlImporter().Import(TremBar(4, 4,
+            TremNote("C", 5, 16, "half", false, "start", 2) + N("F", 4, 1, 16, "half")));
+        Assert.DoesNotContain("repeat tremolo", lys);
+        Assert.Contains("c''2 f'2 |", lys);
+    }
+
     [Fact]
     public void ANoteOnItsVoicesOwnStaffIsNotMarked()
     {
