@@ -4,7 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **A `key` or `tempo` in a tuplet is drawn**: both were dropped without a word.
+- **A `key`, `tempo`, `octave` or `override` in a tuplet takes effect**: each was dropped without a word.
 - **A `time` or `partial` in a tuplet is an error** (LYS1065): both were dropped without a word. Write it before the tuplet.
 - **Two voices' clefs at one moment draw one**: the last one heard, where both were drawn on top of each other.
 - **A tie crosses a clef change**: `c'1~ | clef bass c'1` drew no tie and warned that the pitches differed.

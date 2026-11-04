@@ -2075,11 +2075,12 @@ public sealed partial class MeasureCollector
                 continue;
             }
 
-            // A clef, a key or a tempo in the body stands at the member's moment, as outside it (a
-            // tuplet scales time and nothing else). Each used to be dropped without a word, and the
-            // notes after it stood in the old clef or key (LilySharp-Omr REQUESTS #22). A `time` and
-            // a `partial` are errors here and stay undrawn (TupletMeterValidator, LYS1065).
-            if (item is ClefDeclarationSyntax or KeySignatureSyntax or TempoDeclarationSyntax)
+            // A directive in the body stands at the member's moment, as outside it (a tuplet scales
+            // time and nothing else). Each used to be dropped without a word, and the notes after it
+            // stood in the old clef, key or octave mode (LilySharp-Omr REQUESTS #22). A `time` and a
+            // `partial` are errors here and stay undrawn (TupletMeterValidator, LYS1065).
+            if (item is ClefDeclarationSyntax or KeySignatureSyntax or TempoDeclarationSyntax
+                or OctaveDirectiveSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax)
             {
                 await ProcessMusicNode(item, builder);
                 continue;

@@ -144,7 +144,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`time`・`partial` は LYS1065（エラー）**＝オーナー決定 2026-11-05（`TupletMeterValidator`）。意味を持つのは小節頭の先頭だけで、連符の前に書くのと同じ。**LP は `\time` を受ける＝意図した差**。小節線をまたぐ連符は元から LYS2017 で、この決定で失う形はない（`probe/cross.lys`）。
 - **同じ時刻の違う `clef`**: 後から聞いた 1 つだけ描く（`WithdrawClefAtThisMoment`。比べる相手はその時刻より前の記号）。LP と同じ絵（`probe/twoclef.lys`）。
 - **計器**: 全 svg 1262 枚の差 0（`svg/sweep.log`＝base は Release `21cee0cb9`）・`DirectivesInATupletTests` 24 件。終了時 full **14538 / 0 / 2**（`end1.log`）。毒 `poisons1.ps1`＋`poisons2-list.ps1`: 緑だった 4 本のうち 2 本はテストを足して赤、2 本（自分の声部の除外・同じ記号の除外）は観測者なしで条件を消した。⚠️ 掃きの差 0 は、この形の本が母集団にないだけ。
-- ⚠️ **残り（未着手）**: 連符の本体の `octave` も譜面と `.ly` で捨てられている（`probe/dirs2.lys` の 2 小節目）。`override`・`revert`・`once`・ナビゲーションの記号は同じ経路を通らないので捨てられているはずだが、未確認。
+- **`octave`・`override`・`revert`・`once`**（オーナー「続けて」）: 同じく捨てられていた → 本体で読む。`.ly` は連符の外でも途中の `octave` と `override` を書かない＝連符の問題ではなく今のまま。ナビゲーションの記号は元から LYS1034。毒 `poisons3.ps1` 4 本すべて赤（最初の回は `revert` のテストの期待値の誤りで全部赤に見えた＝直して取り直した）。
+- ⚠️ **未解決＝連符の中のフレーズ参照・`cue`・`<< >>`・`voice`**: 譜面だけ音が消える（MusicXML と MIDI は全部出す・`lysc check` は黙る）。`probe/body.lys` の 8〜11 小節・`probe/lost.ps1`。
 
 ## 以下は第1099セッションの経緯
 

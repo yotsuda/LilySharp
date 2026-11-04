@@ -146,6 +146,30 @@ public class DirectivesInATupletTests
             Staff("voice { c'4 clef bass clef alto c' c' c' | } { c'1 | }"))).NewClef);
 
     [Fact]
+    public void AnOctaveModeInTheBody_RulesTheNotesAfterIt()
+    {
+        static int[] Heads(Staff s) => All<NoteItem>(s).Select(n => n.StaffPosition).ToArray();
+        var outside = Heads(Staff("c'2 octave relative d'8 e f octave absolute g'4 r8 |"));
+        var inside = Heads(Staff("c'2 tuplet 3/2 { octave relative d'8 e f } octave absolute g'4 |"));
+        Assert.Equal(outside, inside);
+    }
+
+    [Fact]
+    public void AnOverrideInTheBody_IsCollected_AtItsMember()
+    {
+        var o = Assert.Single(Score("c'2 tuplet 3/2 { d'8 override NoteHead.color = red e' f' } g'4 |").GrobOverrides);
+        Assert.Equal("NoteHead", o.GrobType);
+    }
+
+    [Fact]
+    public void ARevertInTheBody_IsCollected()
+        => Assert.Single(Score("override NoteHead.color = red c'2 tuplet 3/2 { d'8 revert NoteHead.color e' f' } g'4 |").GrobReverts);
+
+    [Fact]
+    public void AOnceInTheBody_IsCollected()
+        => Assert.Single(Score("c'2 tuplet 3/2 { once override NoteHead.color = blue d'8 e' f' } g'4 |").GrobOverrides);
+
+    [Fact]
     public void AVoicesClefThereAndBack_AtOneMoment_DrawsNone()
         => Assert.Empty(All<ClefChangeItem>(Staff("voice { c'4 clef bass clef treble c' c' c' | } { c'1 | }")));
 
