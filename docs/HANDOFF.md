@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。OMR の `open` は 0。残り（急がない）: ⑴ 連符の途中の空き（読み込みは報告だけ）／⑵ 点の列の共有は 2 声部の音と和音だけ＝休符が混ざる列（`ElementCoordinator` の註）・3 声部以上・段位置以外（点の列の x を縦の輪郭やタイが読む `DotColumn`）は各 item の答えのまま。⚠️ **Release の lysc は `e6c4de1fd` のまま**（読み込みの変更が OMR の評価に効くのでオーナー判断）。
+- **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。OMR の `open` は 0。残り（急がない）: 点の列の共有は 2 声部の音と和音だけ＝休符が混ざる列（`ElementCoordinator` の註）・3 声部以上・段位置以外（点の列の x を縦の輪郭やタイが読む `DotColumn`）は各 item の答えのまま。⚠️ **Release の lysc は `e6c4de1fd` のまま**（読み込みの変更が OMR の評価に効くのでオーナー判断）。
 - **`@cross` の音が別の段に描かれる＝第1093 で実装（OMR の REQUESTS #20）**: 設計は §1.1 第1093。**OMR の返事（`..\LilySharp-Omr\docs\repro\lilysharp-feedback-2026-11-04.md`）: #19〜#21 は `done`・今直してほしい不具合はない。**段をまたぐタイ・同音や 2 度の重なり・MusicXML は OMR が生成器で避ける＝今は依頼なし（必要なら OMR が行を足す）。読み手が段をまたぐ形をまだ読めないのは OMR 側の宿題。 残りの制限: ⑴ 弧は実装済み（下の語り）・スラーの上のスクリプトと点は元の段で読むまま／⑵ 段をまたぐタイは最初の音の段に描く（LP は斜め）／⑶ 連桁の採点は実装済み（下の語り）・他の段の連桁と、別の声部から同じ段へ移った音は避けない／⑷ 移った先の段の音とは衝突処理をしない（LP は 2 度・同音の頭を横へずらす＝Lab `sessions/p1093/rc` 7〜8 小節。⚠️ LP 自身が「this Voice needs a \voiceXx」と警告する形。休符は実装済み）／⑸ 臨時記号は実装済み（下の語り）・LP が落とす再確認の記号は残す（オーナー決定 2026-10-02 の ⑴ と同じ扱い）／⑹ 観測者なし＝連桁のない棒を移った先の輪郭へ入れる行と、弧の端の棒の枠の行は、8 冊の探り譜で出力が動かず毒が緑（LP の規則なので残した）／⑻ 双子は譜の最初の瞬間の `\change Staff` が LP で効かない（`k1`）／⑼ プレビューの実機は未確認（増分はフルと一致＝網 4 本）。
 - **チャットで Lily# を教わる＝第1043 で実装（`docs/LEARN_FOR_LLM.md`・`HANDOFF-LEARNING.md`）**: 残りは実物の Copilot での確認（MANUAL-CHECKS C59）。
 - **ペダルの音＝第1041 で実装（`@sustain` だけ・`docs/pedal-playback-design.md`）**: 残りは耳の確認（MANUAL-CHECKS C57）。`@sostenuto`・`@unaCorda` は描くだけのまま。
@@ -138,7 +138,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ### 1.1 第1096セッション（2026-11-04・YT-DELL2）
 
-開始時 full **14224 / 0 / 2**（`-Start p1096`・HEAD `3a6c5328`・OMR の open 0）。作業場所は Lab `sessions/p1096/`。⚠️ **ユーザー指示「手元の曲は判断の基準とすべきでない」**（`CLAUDE-OPERATIONS.md` §2）。
+開始時 full **14224 / 0 / 2**（`-Start p1096`・HEAD `3a6c5328`・OMR の open 0）。終了時 **14259 / 0 / 2**。作業場所は Lab `sessions/p1096/`。⚠️ **ユーザー指示「手元の曲は判断の基準とすべきでない」**（`CLAUDE-OPERATIONS.md` §2）＝影響する本の数を、直す・直さないの理由にしない。
+
+- ⚠️ **第1095 の「連符の途中の空き」は誤診だった**: 原本に空きは無い。`lysc xml` が 1 拍 24 divisions 固定で音価を切り捨てていた（5 連符の 16 分 2.4 → 2）。読み込みの警告 "a voice's gap has no plain note value" は本当に綴れない空き用として残す。
+- **`lysc xml` の divisions**（`6f531d34`）: 1 回目の組み立てで必要な最小公倍数を集め、24 で足りなければその値で組み直す（`Export`／`ExportAtDivisions`・Form と Score を引き継ぐ・100 万超は切り捨てのまま）。`MusicXmlDocument.Divisions` を vsqx も読む。64 分の tremolo も畳めるようになった（切り捨てで畳めていなかっただけ＝`RepeatOutputsTests` の期待を 1 パスへ直した）。
+- **`lysc xml` のスコア**（同）: `ScoreExport` が exporter に Score を渡しておらず、exporter も全パートを書いていた＝2 スコアの本で同じ中身の 2 ファイル。`KeepTheScoresParts`（Score を渡したときだけ。刻むパートとリードシートのコード行）。Score なしの呼び出しは従来どおり全パート。
+- **`@arpeggio(~`**（`f6841ab7`）: 引数が任意の名前の `(` が `~`・`@`・`[` に接していても引数として読み、次の音が消えて小節が短くなっていた。`lysc import` が書く綴り。パーサと LSP の配置補完を直した。SVG は全 1262 枚で差 0（Release 比）。
+- **MIDI の連符**（`f64a44ae`）: 1 音ずつ丸めて 7 連符が 483 tick、9 連符が 477 tick＝群のたびに累積していた。`ClockTicks` が丸めの余りを正確な分数で次へ渡す（レーンの開始で 0）。`FractionToTicks` は小節長など時計を進めない読み手用に残した。
+- **計器**: `sessions/p1095/xml/fidelity.ps1`（往復で小節・拍位置・音高・段が保たれる割合）が 46 件すべて 100（全 commit 後の実測）。これは回帰の計器であって、直す範囲の根拠ではない。毒は `sessions/p1096/poisons*.ps1`・`poison-form.ps1`＝すべて赤（途中で緑だった form 喪失・必須引数・carry の初期化はテストを足して赤にした。冗長だった初期化 1 箇所は消した）。
+- ⚠️ **一度だけの赤**: 1 回目の full で `SvgSnapshotTests` の `test/system-count-line-start-ink` と `test/dead-note` が落ち、以後の full 5 回と単独実行では再現せず。原因は未確認（SVG を動かす変更はこの時点で無い）。
+- ⚠️ **Release の lysc は `e6c4de1fd` のまま**（読み込みの変更が OMR の評価に効くのでオーナー判断）。未分類の残り: `lysc check` の 16 件（第1095 から）。
 
 ## 以下は第1095セッションの経緯
 
