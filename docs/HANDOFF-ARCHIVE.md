@@ -267,6 +267,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1096セッションの経緯
+
+### 1.1 第1096セッション（2026-11-04・YT-DELL2）
+
+開始時 full **14224 / 0 / 2**（`-Start p1096`・HEAD `3a6c5328`・OMR の open 0）。終了時 **14259 / 0 / 2**。作業場所は Lab `sessions/p1096/`。⚠️ **ユーザー指示「手元の曲は判断の基準とすべきでない」**（`CLAUDE-OPERATIONS.md` §2）＝影響する本の数を、直す・直さないの理由にしない。
+
+- ⚠️ **第1095 の「連符の途中の空き」は誤診だった**: 原本に空きは無い。`lysc xml` が 1 拍 24 divisions 固定で音価を切り捨てていた（5 連符の 16 分 2.4 → 2）。読み込みの警告 "a voice's gap has no plain note value" は本当に綴れない空き用として残す。
+- **`lysc xml` の divisions**（`6f531d34`）: 1 回目の組み立てで必要な最小公倍数を集め、24 で足りなければその値で組み直す（`Export`／`ExportAtDivisions`・Form と Score を引き継ぐ・100 万超は切り捨てのまま）。`MusicXmlDocument.Divisions` を vsqx も読む。64 分の tremolo も畳めるようになった（切り捨てで畳めていなかっただけ＝`RepeatOutputsTests` の期待を 1 パスへ直した）。
+- **`lysc xml` のスコア**（同）: `ScoreExport` が exporter に Score を渡しておらず、exporter も全パートを書いていた＝2 スコアの本で同じ中身の 2 ファイル。`KeepTheScoresParts`（Score を渡したときだけ。刻むパートとリードシートのコード行）。Score なしの呼び出しは従来どおり全パート。
+- **`@arpeggio(~`**（`f6841ab7`）: 引数が任意の名前の `(` が `~`・`@`・`[` に接していても引数として読み、次の音が消えて小節が短くなっていた。`lysc import` が書く綴り。パーサと LSP の配置補完を直した。SVG は全 1262 枚で差 0（Release 比）。
+- **MIDI の連符**（`f64a44ae`）: 1 音ずつ丸めて 7 連符が 483 tick、9 連符が 477 tick＝群のたびに累積していた。`ClockTicks` が丸めの余りを正確な分数で次へ渡す（レーンの開始で 0）。`FractionToTicks` は小節長など時計を進めない読み手用に残した。
+- **計器**: `sessions/p1095/xml/fidelity.ps1`（往復で小節・拍位置・音高・段が保たれる割合）が 46 件すべて 100（全 commit 後の実測）。これは回帰の計器であって、直す範囲の根拠ではない。毒は `sessions/p1096/poisons*.ps1`・`poison-form.ps1`＝すべて赤（途中で緑だった form 喪失・必須引数・carry の初期化はテストを足して赤にした。冗長だった初期化 1 箇所は消した）。
+- ⚠️ **一度だけの赤**: 1 回目の full で `SvgSnapshotTests` の `test/system-count-line-start-ink` と `test/dead-note` が落ち、以後の full 5 回と単独実行では再現せず。原因は未確認（SVG を動かす変更はこの時点で無い）。
+- ⚠️ **Release の lysc は `e6c4de1fd` のまま**（読み込みの変更が OMR の評価に効くのでオーナー判断）。未分類の残り: `lysc check` の 16 件（第1095 から）。
+
 ## 以下は第1095セッションの経緯
 
 ### 1.1 第1095セッション（2026-11-04・YT-DELL2）
