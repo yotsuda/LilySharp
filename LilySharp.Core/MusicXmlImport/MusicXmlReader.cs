@@ -1531,11 +1531,20 @@ internal static class MusicXmlReader
 
     private static ImportLyric? ReadLyric(XElement el)
     {
-        // Join elision-separated texts (rare) into one syllable.
-        var texts = Els(el, "text").Select(t => t.Value).ToList();
-        if (texts.Count == 0)
+        // One syllable from all its texts, an elision standing as Lily#'s `~`: an <elision>, or the
+        // private-use glyph MuseScore writes as a <text> of its own in a music font. Until 2026-11-04
+        // both vanished, and "E‿o" came back "Eo".
+        if (!Els(el, "text").Any())
             return null;
-        string text = string.Join("", texts);
+        var joined = new System.Text.StringBuilder();
+        foreach (var part in el.Elements())
+        {
+            if (part.Name.LocalName == "elision")
+                joined.Append('~');
+            else if (part.Name.LocalName == "text")
+                joined.Append(System.Text.RegularExpressions.Regex.Replace(part.Value, "[\uE000-\uF8FF]+", "~"));
+        }
+        string text = joined.ToString();
         if (string.IsNullOrWhiteSpace(text))
             return null;
         int verse = int.TryParse((string?)el.Attribute("number"), out int n) ? n : 1;

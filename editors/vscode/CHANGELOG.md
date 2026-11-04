@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **MusicXML import keeps each syllable on its note, and every sung part's words**: a note with no syllable is held with `~`, a slur over notes with their own syllables becomes a phrasing slur, and a syllable of several words is quoted. The MusicXML export puts each syllable where the page does.
 - **MusicXML import declares a pickup with `partial`**, so bar numbers start after it and its parts carry no warning. The check no longer calls a voice opening on bar lines an overfull pickup, and a piece's short last bar may complete the pickup in another section.
 - **MusicXML export keeps a tuplet pickup in one bar.**
 - **`g1@cresc@!cresc` is a hairpin as long as its note**: the end written after the start spans that note, and `@!cresc@decresc` still ends one hairpin and opens the next.

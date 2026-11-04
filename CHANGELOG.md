@@ -6,6 +6,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **`lysc import` keeps each syllable on its note.** A note with no syllable was skipped, so the next syllable fell on it; a slur over notes with their own syllables held them, so each fell a note later; and a source's "1. Rau" came back as two syllables. Such a note is now held with `~`, such a slur is written as a phrasing slur, and a syllable of several words is quoted. A verse's number in its syllable is dropped where the rows print one. On the real songs measured, the syllables that come back on their own note go from 84% to 99%.
+- **`lysc import` keeps every sung part's words and more of them.** Only the first sung part's words were written; a lower voice's were lost, and now stand under the first voice at the same moment, with a line in the report; an elision (`E‿o`) and a syllable's extender line come through.
+- **`lysc xml` puts a syllable where the page does.** A slur held nothing, a later voice's notes took syllables, every track went on the section's first part, a verse lost its number in a section without verse 1, and a tie carried over a section edge took a syllable.
 - **`lysc import` declares a pickup.** A short first bar came back bare, with a warning on every part and the bar numbers one too high. It now writes `partial`, and so does a later bar the source calls implicit or that makes up one bar with the short bar before it (a bar split around a repeat sign), which opens a section of its own.
 - **A piece's short last bar may complete the pickup in another section.** It was exempt only when both stood in one section, so `~Pickup |: ~Body :| ~Close` warned on a bar that is right.
 - **A voice opening on bar lines has passed the pickup.** `voice { c4 | d1 | e1 | } { | | g1 | }` drew the `g1` where it belongs, but the check called it an overfull pickup and counted a bar too many.

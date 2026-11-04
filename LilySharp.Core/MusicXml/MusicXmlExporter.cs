@@ -383,6 +383,7 @@ public sealed class MusicXmlExporter
             // rows' homes). A flat top-level chord track is not handled, as the MIDI's is not.
             EmitPendingChordRows();
         }
+        WritePendingLyrics();
         WriteCapo();
         WriteBeams(tree, hasSections);
         WriteTab(tree);
@@ -1492,19 +1493,26 @@ public sealed class MusicXmlExporter
 
             MusicXmlPart? firstPart = null;
             int firstBefore = 0;
+            var barsBefore = new Dictionary<string, int>();
             foreach (var partBlock in partBlocks)
             {
+                int before = _partsByName.TryGetValue(partBlock.Name, out var fp) ? fp.Measures.Count : 0;
+                barsBefore.TryAdd(partBlock.Name, before);
                 if (firstPart == null)
-                {
-                    firstBefore = _partsByName.TryGetValue(partBlock.Name, out var fp)
-                        ? fp.Measures.Count
-                        : 0;
-                }
+                    firstBefore = before;
                 ProcessPartBlock(partBlock);
                 firstPart ??= _partsByName[partBlock.Name];
             }
-            if (firstPart != null && sectionLyrics.Count > 0)
-                AttachLyrics(firstPart, firstBefore, sectionLyrics);
+            // A track goes on the part it sings; one that names none, on the section's first.
+            // Until 2026-11-04 every track went on the first, a tenor's words under the soprano.
+            if (firstPart != null)
+                foreach (var sung in sectionLyrics.GroupBy(b => b.SingsTargetToken?.Text is { } name && barsBefore.ContainsKey(name) ? name : ""))
+                {
+                    if (sung.Key.Length > 0)
+                        AttachLyrics(_partsByName[sung.Key], barsBefore[sung.Key], sung.ToList());
+                    else
+                        AttachLyrics(firstPart, firstBefore, sung.ToList());
+                }
         }
         else if (IsHeaderOnly(section)
                  || (DirectChildren(section).Any() && DirectChildren(section).All(c => c is ChordPartBlockSyntax or LyricsBlockSyntax)))
@@ -2151,14 +2159,51 @@ public sealed class MusicXmlExporter
     /// and melisma marks hold notes without new syllables. Vocal editors
     /// (VOCALOID, Synthesizer V, CeVIO, NEUTRINO) read these on import.
     /// </summary>
-    private static void AttachLyrics(MusicXmlPart part, int measuresBefore, List<LyricsBlockSyntax> lyricsBlocks)
+    private void AttachLyrics(MusicXmlPart part, int measuresBefore, List<LyricsBlockSyntax> lyricsBlocks)
     {
-        if (lyricsBlocks.Count == 0)
-            return;
-        var measures = part.Measures.Skip(measuresBefore).ToList();
+        // Written once every play is: a tie carried into this play's first note is not known to
+        // stop there until then (FinishCarriedTies), and that note takes no syllable.
+        if (lyricsBlocks.Count > 0)
+            _pendingLyrics.Add((part, part.Measures.Skip(measuresBefore).ToList(), lyricsBlocks));
+    }
+
+    private readonly List<(MusicXmlPart Part, List<MusicXmlMeasure> Measures, List<LyricsBlockSyntax> Blocks)> _pendingLyrics = new();
+
+    /// <summary>A track's verse number in its part: the same in every section, so a section
+    /// that sings only verses 2 and 3 does not call them 1 and 2.</summary>
+    private readonly Dictionary<(string? Part, string? Track), int> _lyricVerses = new();
+
+    private void WritePendingLyrics()
+    {
+        foreach (var (part, measures, blocks) in _pendingLyrics)
+            WriteLyricsOn(part, measures, blocks);
+        _pendingLyrics.Clear();
+    }
+
+    private void WriteLyricsOn(MusicXmlPart part, List<MusicXmlMeasure> measures, List<LyricsBlockSyntax> lyricsBlocks)
+    {
+        // The page's reading of a syllable's note (LyricsCollector.BuildNoteIndices): the first
+        // voice's notes that no slur or tie holds. Until 2026-11-04 a later voice's notes and a
+        // <backup> took syllables too, and a slur held nothing.
+        var held = new HashSet<MusicXmlNote>();
+        bool inSlur = false;
+        foreach (var n in measures.SelectMany(m => m.Notes).Where(FirstVoiceHead))
+        {
+            if (inSlur)
+                held.Add(n);
+            if (n.SlurStop)
+                inSlur = false;
+            if (n.SlurStart)
+                inSlur = true;
+        }
+        static bool FirstVoiceHead(MusicXmlNote n)
+            => !n.IsRest && !n.IsChord && !n.IsGrace && !n.IsBackup && n.RawElement == null && (n.Voice ?? 1) == 1;
         for (int verse = 0; verse < lyricsBlocks.Count; verse++)
         {
             var syllables = Svg.Collector.LyricCollector.ParseSyllables(lyricsBlocks[verse]);
+            var track = (part.Name, lyricsBlocks[verse].VoiceName);
+            if (!_lyricVerses.TryGetValue(track, out int verseNumber))
+                _lyricVerses[track] = verseNumber = _lyricVerses.Keys.Count(k => k.Part == part.Name) + 1;
             int mi = 0, ni = 0;
             bool prevHyphen = false;
 
@@ -2174,7 +2219,7 @@ public sealed class MusicXmlExporter
                         // the note stream but are not sung — skip them, else a chord
                         // symbol before the first note steals its syllable (and, being
                         // serialized verbatim, drops it).
-                        if (!n.IsRest && !n.IsChord && !n.IsGrace && !n.TieStop && n.RawElement == null)
+                        if (FirstVoiceHead(n) && !n.TieStop && !held.Contains(n))
                             return n;
                     }
                     mi++;
@@ -2204,7 +2249,7 @@ public sealed class MusicXmlExporter
                 string syllabic = prevHyphen
                     ? (hyphen ? "middle" : "end")
                     : (hyphen ? "begin" : "single");
-                target.Lyrics.Add((verse + 1, text, syllabic,
+                target.Lyrics.Add((verseNumber, text, syllabic,
                     connector == Svg.Model.LyricConnectorType.Extender));
                 prevHyphen = hyphen;
             }

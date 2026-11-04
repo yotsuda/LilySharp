@@ -49,6 +49,8 @@ internal static class LysWriter
         int longest = doc.Parts.Count > 0 ? doc.Parts.Max(p => p.Measures.Count) : 0;
         var cuts = TryFactorVoltas(firstMeasures) ?? TryFactorPlainRepeats(firstMeasures, report)
             ?? new VoltaLayout([new VoltaSegment("A", 0, longest, EndBar: true)], HiddenLabel("A"));
+        BringSyllablesToTheSungVoice(doc, report);
+        KeepSyllablesOutOfSlurs(doc, report);
         var systemStarts = SystemStarts(doc);
         var marks = CutPoints(RehearsalMarks(doc), doc, systemStarts);
         var header = HeaderState(doc, cuts.Segments.Select(s => s.Start).Concat(marks.Keys));
@@ -224,8 +226,8 @@ internal static class LysWriter
                 sb.Append("  }\n");
             }
             // Lyrics for just this section's measures, so each ending sings its own text.
-            if (lyricPart != null)
-                foreach (var line in WriteLyrics(lyricPart, seg.Start, seg.End))
+            foreach (var sung in doc.Parts.Where(HasLyrics))
+                foreach (var line in WriteLyrics(sung, lyricPart!, seg.Start, seg.End, report))
                     sb.Append("  ").Append(line).Append('\n');
             sb.Append("}\n\n");
         }
@@ -1805,7 +1807,8 @@ internal static class LysWriter
     /// place its row (<c>lyrics NAME</c> under the staff) — there is no auto-attach.
     /// Stable across sections (keyed on the verse number) so one row collects every
     /// section's cell for that verse.</summary>
-    private static string LyricTrackName(int verse) => verse <= 1 ? "words" : "words" + verse;
+    private static string LyricTrackName(ImportPart part, ImportPart first, int verse)
+        => (verse <= 1 ? "words" : "words" + verse) + (part == first ? "" : "_" + part.SafeName);
 
     /// <summary>The <c>lyrics NAME</c> row lines a staff needs directly under it when
     /// its part carries the score's lyrics (each verse is its own row, stacking as
@@ -1813,44 +1816,213 @@ internal static class LysWriter
     /// it appends after the staff's own line at the given indent.</summary>
     private static string LyricRowLines(ImportPart part, ImportPart? lyricPart, string indent)
     {
-        if (part != lyricPart || lyricPart == null)
+        if (lyricPart == null || !HasLyrics(part))
             return "";
         var sb = new StringBuilder();
-        foreach (int verse in LyricVerses(lyricPart))
-            sb.Append('\n').Append(indent).Append("lyrics ").Append(LyricTrackName(verse));
+        foreach (int verse in LyricVerses(part))
+            sb.Append('\n').Append(indent).Append("lyrics ").Append(LyricTrackName(part, lyricPart, verse));
         return sb.ToString();
     }
 
     /// <summary>One <c>lyrics NAME { ... }</c> block per verse present in the part's
-    /// measures [start, end). Syllables walk the singable notes (no rests, chord
-    /// members or tie continuations), synced to the music by a <c>|</c> per measure.</summary>
-    private static IEnumerable<string> WriteLyrics(ImportPart part, int start, int end)
+    /// measures [start, end), synced to the music by a <c>|</c> per measure.</summary>
+    /// <remarks>
+    /// A Lily# syllable lands on the next note a slur or tie does not hold, so a note the source
+    /// leaves without a syllable has to say so, or the next syllable falls on it: `~` holds it (only
+    /// before a later syllable of its bar, the bar line resyncs the rest). Until 2026-11-04 it was
+    /// skipped, and 16% of the syllables of the imported songs stood on another note.
+    /// </remarks>
+    private static IEnumerable<string> WriteLyrics(ImportPart part, ImportPart first, int start, int end, ImportReport report)
     {
         var measures = part.Measures.Skip(start).Take(end - start).ToList();
         var verses = measures.SelectMany(m => m.PrimaryItems).OfType<ImportNote>()
             .SelectMany(n => n.Lyrics).Select(l => l.Verse).Distinct().OrderBy(v => v);
+        var heads = part.Measures.SelectMany(m => m.PrimaryItems).OfType<ImportNote>().Where(n => !n.ChordWithPrev).ToList();
+        var held = HeldBySlurOrTie(heads);
+        bool numbered = LyricVerses(part).Count() > 1;
+        var next = new Dictionary<ImportNote, ImportNote>();
+        for (int i = 0; i + 1 < heads.Count; i++)
+            next[heads[i]] = heads[i + 1];
 
         foreach (int verse in verses)
         {
             // The track sings the part whose notes carried the syllables — the
             // binding lives at the definition; the score row only places it.
-            var sb = new StringBuilder("lyrics " + LyricTrackName(verse) + " sings " + part.SafeName + " { ");
-            foreach (var measure in measures)
+            var sb = new StringBuilder("lyrics " + LyricTrackName(part, first, verse) + " sings " + part.SafeName + " { ");
+            for (int b = 0; b < measures.Count; b++)
             {
-                foreach (var note in measure.PrimaryItems.OfType<ImportNote>())
+                int silent = 0;
+                foreach (var note in measures[b].PrimaryItems.OfType<ImportNote>())
                 {
-                    if (note.IsRest || note.ChordWithPrev || note.TieStop)
+                    if (note.IsRest || note.ChordWithPrev)
                         continue;
                     var lyric = note.Lyrics.FirstOrDefault(l => l.Verse == verse);
-                    if (lyric.Text == null)
+                    if (held.Contains(note))
+                    {
+                        if (lyric.Text != null)
+                            report.Warn(start + b + 1, $"the syllable '{lyric.Text}' stands on a tied note, which takes none in Lily#, so it is dropped.");
                         continue;
-                    bool hyphen = lyric.Syllabic is "begin" or "middle";
-                    sb.Append(lyric.Text).Append(hyphen ? "- " : " ");
+                    }
+                    if (lyric.Text == null)
+                    {
+                        silent++;
+                        continue;
+                    }
+                    for (; silent > 0; silent--)
+                        sb.Append("~ ");
+                    sb.Append(Syllable(lyric, note, next, held, verse, numbered));
                 }
                 sb.Append("| ");
             }
             sb.Append('}');
             yield return sb.ToString();
+        }
+    }
+
+    /// <summary>A syllable as a lyrics block spells it, with its hyphen or extender.</summary>
+    /// <remarks>
+    /// Quoted when its text is not one plain word: a source's "1. Rau" (the verse's number set in
+    /// the syllable) came back as the two syllables `1.` and `Rau`, and the verse a note late. A
+    /// quoted syllable's hyphen stands apart, as <c>--</c>.
+    /// </remarks>
+    private static string Syllable(ImportLyric lyric, ImportNote note, Dictionary<ImportNote, ImportNote> next,
+        HashSet<ImportNote> held, int verse, bool numbered)
+    {
+        string text = lyric.Text.Trim();
+        // A verse's number set in its first syllable ("2. Horch"): the verses' rows print it already.
+        if (numbered)
+            text = System.Text.RegularExpressions.Regex.Replace(text, "^" + verse + @"\.\s+", "");
+        bool quoted = System.Text.RegularExpressions.Regex.IsMatch(text, @"[\s|_""{}/]|^-|-$|^\d");
+        bool hyphen = lyric.Syllabic is "begin" or "middle";
+        string spelled = quoted
+            ? "\"" + EscapeString(text) + "\"" + (hyphen ? " -- " : " ")
+            : text + (hyphen ? "- " : " ");
+        // The line runs over notes held or left silent: none is drawn into the next syllable.
+        if (lyric.Extend && !hyphen && next.TryGetValue(note, out var after) && !after.IsRest
+            && (held.Contains(after) || after.Lyrics.All(l => l.Verse != verse)))
+            spelled += "__ ";
+        return spelled;
+    }
+
+    /// <summary>The notes a slur or a tie holds: no syllable lands on them (LyricsCollector).</summary>
+    private static HashSet<ImportNote> HeldBySlurOrTie(List<ImportNote> heads)
+    {
+        var held = new HashSet<ImportNote>();
+        bool inSlur = false;
+        foreach (var note in heads)
+        {
+            if (note.IsRest)
+                continue;
+            if (inSlur || note.TieStop)
+                held.Add(note);
+            if (note.SlurStop)
+                inSlur = false;
+            if (note.SlurStart)
+                inSlur = true;
+        }
+        return held;
+    }
+
+    /// <summary>
+    /// A syllable on a voice other than the first goes on the first voice's note at its moment: a
+    /// Lily# track sings its part's first voice, and until 2026-11-04 these were lost in silence
+    /// (Dichterliebe 7, where the voice divides and the words stay with the lower notes). The words
+    /// keep their time and move to the upper pitch, and the report says so.
+    /// </summary>
+    private static void BringSyllablesToTheSungVoice(ImportDocument doc, ImportReport report)
+    {
+        static Dictionary<Fraction, ImportNote>? Onsets(List<ImportItem> items)
+        {
+            var at = new Dictionary<Fraction, ImportNote>();
+            for (int i = 0; i < items.Count; i++)
+                if (items[i] is ImportNote { ChordWithPrev: false } note)
+                {
+                    if (LengthOf(items.Take(i).ToList()) is not { } onset)
+                        return null;
+                    at[onset] = note;
+                }
+            return at;
+        }
+        foreach (var part in doc.Parts)
+            for (int m = 0; m < part.Measures.Count; m++)
+            {
+                var voices = part.Measures[m].VoiceItems;
+                if (voices.Count < 2)
+                    continue;
+                var firstVoice = Onsets(voices[voices.Keys.First()]);
+                foreach (var (_, items) in voices.Skip(1))
+                {
+                    if (!items.OfType<ImportNote>().Any(n => n.Lyrics.Count > 0) || Onsets(items) is not { } onsets)
+                        continue;
+                    bool moved = false, lost = false;
+                    foreach (var (onset, note) in onsets)
+                    {
+                        foreach (var lyric in note.Lyrics)
+                        {
+                            if (firstVoice != null && firstVoice.TryGetValue(onset, out var home) && !home.IsRest
+                                && home.Lyrics.All(l => l.Verse != lyric.Verse))
+                            {
+                                home.Lyrics.Add(lyric);
+                                moved = true;
+                            }
+                            else
+                                lost = true;
+                        }
+                        note.Lyrics.Clear();
+                    }
+                    if (moved)
+                        report.Warn(m + 1, "syllables on a lower voice stand under the first voice's notes at the same moments.");
+                    if (lost)
+                        report.Warn(m + 1, "a syllable on a lower voice has no note of the first voice at its moment, so it is dropped.");
+                }
+            }
+    }
+
+    /// <summary>
+    /// A slur over notes that carry their own syllables is a phrase mark, not a melisma: written as
+    /// a Lily# slur it would hold them, and each syllable would fall a note later. So it is written
+    /// as the phrasing slur, which holds none. Where a phrasing slur already runs, one curve has to
+    /// go, and the words matter more: the slur is dropped and reported.
+    /// </summary>
+    private static void KeepSyllablesOutOfSlurs(ImportDocument doc, ImportReport report)
+    {
+        foreach (var part in doc.Parts.Where(HasLyrics))
+        {
+            ImportNote? start = null;
+            bool sung = false, phrasingOpen = false, phrasingMet = false;
+            for (int m = 0; m < part.Measures.Count; m++)
+                foreach (var note in part.Measures[m].PrimaryItems.OfType<ImportNote>().Where(n => !n.ChordWithPrev && !n.IsRest))
+                {
+                    if (start != null && note.Lyrics.Count > 0)
+                        sung = true;
+                    if (note.PhrasingSlurStop)
+                        phrasingOpen = false;
+                    if (note.SlurStop && start != null)
+                    {
+                        if (sung && phrasingMet)
+                        {
+                            (start.SlurStart, note.SlurStop) = (false, false);
+                            report.Warn(m + 1, "a slur over notes with their own syllables has to be a phrasing slur, and one already runs there, so the slur is dropped.");
+                        }
+                        else if (sung)
+                        {
+                            (start.SlurStart, note.SlurStop) = (false, false);
+                            (start.PhrasingSlurStart, note.PhrasingSlurStop) = (true, true);
+                        }
+                        start = null;
+                    }
+                    if (note.SlurStart)
+                    {
+                        start = note;
+                        sung = false;
+                        phrasingMet = phrasingOpen;
+                    }
+                    if (note.PhrasingSlurStart)
+                    {
+                        phrasingOpen = true;
+                        phrasingMet = true;
+                    }
+                }
         }
     }
 

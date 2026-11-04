@@ -522,7 +522,239 @@ public class MusicXmlImportSpanTests
         Assert.Contains("c'4)", lys);
     }
 
-    private static string Part(params string[] measures) => Book(measures);
+    private static string Sung(string step, string text, string syllabic = "single", int verse = 1, int voice = 1, string slur = "", string extra = "")
+    {
+        string notations = slur.Length == 0 ? "" : $"<notations><slur type=\"{slur}\" number=\"1\"/></notations>";
+        string lyric = text.Length == 0 ? "" : $"<lyric number=\"{verse}\"><syllabic>{syllabic}</syllabic><text>{text}</text>{extra}</lyric>";
+        return $"<note><pitch><step>{step}</step><octave>4</octave></pitch><duration>1</duration><voice>{voice}</voice><type>quarter</type><staff>1</staff>{notations}{lyric}</note>";
+    }
+
+    private static string LyricsLine(string lys) =>
+        lys.Replace("\r", "").Split('\n').First(l => l.TrimStart().StartsWith("lyrics words", System.StringComparison.Ordinal) && l.Contains('{'));
+
+    [Fact]
+    public void ANoteWithNoSyllableIsHeldSoTheNextSyllableStaysOnItsNote()
+    {
+        var (lys, _) = Import(Book(Sung("C", "la") + Sung("D", "") + Sung("E", "li") + Sung("F", "")));
+        Assert.Contains("{ la ~ li | }", LyricsLine(lys));
+    }
+
+    [Fact]
+    public void ABarLineResyncsSoASilentBarEndWritesNoHold()
+    {
+        var (lys, _) = Import(Book(
+            Sung("C", "la") + Sung("D", "") + Sung("E", "") + Sung("F", ""),
+            Sung("G", "li") + Sung("A", "") + Sung("B", "") + Sung("C", "")));
+        Assert.Contains("{ la | li | }", LyricsLine(lys));
+    }
+
+    [Fact]
+    public void ASlurOverOneSyllableStaysAMelisma()
+    {
+        var (lys, _) = Import(Book(Sung("C", "la", slur: "start") + Sung("D", "", slur: "stop") + Sung("E", "li") + Sung("F", "lo")));
+        Assert.Contains("c'4( d'4)", lys);
+        Assert.Contains("{ la li lo | }", LyricsLine(lys));
+    }
+
+    [Fact]
+    public void ASlurOverNotesWithTheirOwnSyllablesIsAPhrasingSlur()
+    {
+        var (lys, _) = Import(Book(Sung("C", "la", slur: "start") + Sung("D", "li", slur: "stop") + Sung("E", "lo") + Sung("F", "lu")));
+        Assert.Contains("c'4@phrasingSlur d'4@!phrasingSlur", lys);
+        Assert.DoesNotContain("4(", lys);
+    }
+
+    [Fact]
+    public void ASlurOverSyllablesWhereAPhrasingSlurRunsIsDroppedAndReported()
+    {
+        const string phrase = "<slur type=\"start\" number=\"2\"/>";
+        var first = Sung("C", "la", slur: "start").Replace("<slur type=\"start\" number=\"1\"/>", "<slur type=\"start\" number=\"1\"/>" + phrase);
+        var last = Sung("E", "lo").Replace("</staff>", "</staff><notations><slur type=\"stop\" number=\"2\"/></notations>");
+        var (lys, report) = Import(Book(first + Sung("D", "li", slur: "stop") + last + Sung("F", "lu")));
+        Assert.DoesNotContain("4(", lys);
+        Assert.Contains("e'4@!phrasingSlur", lys);
+        Assert.Contains(report.Warnings, w => w.Contains("already runs"));
+    }
+
+    [Fact]
+    public void ASyllableOfManyWordsIsQuoted()
+    {
+        var (lys, _) = Import(Book(Sung("C", "1. Rau", "begin") + Sung("D", "sche", "end") + Sung("E", "- bas,") + Sung("F", "12")));
+        Assert.Contains("{ \"1. Rau\" -- sche \"- bas,\" \"12\" | }", LyricsLine(lys));
+        Assert.Empty(Errors(lys));
+    }
+
+    [Fact]
+    public void AVersesNumberInItsSyllableIsDroppedWhereTheRowsPrintOne()
+    {
+        var two = Sung("C", "1. Rau").Replace("</lyric>", "</lyric><lyric number=\"2\"><syllabic>single</syllabic><text>2. Horch</text></lyric>");
+        var (lys, _) = Import(Book(two + Sung("D", "") + Sung("E", "") + Sung("F", "")));
+        Assert.Contains("{ Rau | }", lys);
+        Assert.Contains("{ Horch | }", lys);
+    }
+
+    [Fact]
+    public void AVersesNumberOfAnotherVerseStays()
+    {
+        var two = Sung("C", "3. Rau").Replace("</lyric>", "</lyric><lyric number=\"2\"><syllabic>single</syllabic><text>x</text></lyric>");
+        var (lys, _) = Import(Book(two + Sung("D", "") + Sung("E", "") + Sung("F", "")));
+        Assert.Contains("\"3. Rau\"", lys);
+    }
+
+    [Fact]
+    public void AnExtendedSyllableDrawsItsLineOverNotesItHolds()
+    {
+        const string extend = "<extend/>";
+        var (lys, _) = Import(Book(
+            Sung("C", "la", extra: extend, slur: "start") + Sung("D", "", slur: "stop") + Sung("E", "li", extra: extend) + Sung("F", "lo")));
+        Assert.Contains("{ la __ li lo | }", LyricsLine(lys));
+    }
+
+    [Fact]
+    public void AnElisionStaysInItsSyllable()
+    {
+        const string written = "<note><pitch><step>C</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><type>quarter</type><staff>1</staff>"
+            + "<lyric number=\"1\"><syllabic>single</syllabic><text>E</text><elision>‿</elision><text>o</text></lyric></note>";
+        const string glyph = "<note><pitch><step>D</step><octave>4</octave></pitch><duration>1</duration><voice>1</voice><type>quarter</type><staff>1</staff>"
+            + "<lyric number=\"1\"><syllabic>single</syllabic><text>e</text><text>\uE551</text><text>o</text></lyric></note>";
+        var (lys, _) = Import(Book(written + glyph + Sung("E", "") + Sung("F", "")));
+        Assert.Contains("{ E~o e~o | }", LyricsLine(lys));
+    }
+
+    [Fact]
+    public void ASyllableOnATiedNoteIsDroppedAndReported()
+    {
+        var tied = Tied("C", "stop").Replace("</note>", "<lyric number=\"1\"><syllabic>single</syllabic><text>li</text></lyric></note>");
+        var first = Tied("C", "start").Replace("</note>", "<lyric number=\"1\"><syllabic>single</syllabic><text>la</text></lyric></note>");
+        var (lys, report) = Import(Book(first + tied + Sung("E", "lo") + Sung("F", "lu")));
+        Assert.Contains("{ la lo lu | }", LyricsLine(lys));
+        Assert.Contains(report.Warnings, w => w.Contains("'li'"));
+    }
+
+    [Fact]
+    public void ASyllableOnALowerVoiceStandsOnTheFirstVoiceAtItsMoment()
+    {
+        var (lys, report) = Import(Book(
+            Sung("C", "") + Sung("D", "") + Sung("E", "") + Sung("F", "") + Back
+            + Sung("G", "la", voice: 2) + Sung("A", "", voice: 2) + Sung("B", "li", voice: 2) + Sung("C", "", voice: 2)));
+        Assert.Contains("{ la ~ li | }", LyricsLine(lys));
+        Assert.Contains(report.Warnings, w => w.Contains("lower voice stand"));
+    }
+
+    [Fact]
+    public void ASyllableOnALowerVoiceWithNoNoteAboveIsDroppedAndReported()
+    {
+        const string rest = "<note><rest/><duration>1</duration><voice>1</voice><type>quarter</type><staff>1</staff></note>";
+        var (_, report) = Import(Book(
+            rest + Sung("D", "") + Sung("E", "") + Sung("F", "") + Back
+            + Sung("G", "la", voice: 2) + Sung("A", "", voice: 2) + Sung("B", "", voice: 2) + Sung("C", "", voice: 2)));
+        Assert.Contains(report.Warnings, w => w.Contains("is dropped") && w.Contains("lower voice"));
+    }
+
+    private const string TwoSongs = """
+        <score-partwise version="4.0"><part-list><score-part id="P1"><part-name>S</part-name></score-part><score-part id="P2"><part-name>T</part-name></score-part></part-list>
+        <part id="P1"><measure number="1"><attributes><divisions>1</divisions><time><beats>2</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>ONE</measure></part>
+        <part id="P2"><measure number="1"><attributes><divisions>1</divisions><time><beats>2</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>TWO</measure></part>
+        </score-partwise>
+        """;
+
+    [Fact]
+    public void EveryPartsWordsAreWrittenAndGoBackOnThatPart()
+    {
+        var (lys, _) = Import(TwoSongs.Replace("ONE", Sung("C", "so") + Sung("D", "pra")).Replace("TWO", Sung("E", "te") + Sung("F", "nor")));
+        Assert.Contains("so pra", lys);
+        Assert.Contains("te nor", lys);
+        Assert.Empty(Errors(lys));
+        Assert.Contains("lyrics words_", lys[lys.IndexOf("score {", System.StringComparison.Ordinal)..]);
+        var parts = new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().Descendants("part").ToArray();
+        Assert.Equal(new[] { "so", "pra" }, parts[0].Descendants("lyric").Select(l => l.Element("text")!.Value));
+        Assert.Equal(new[] { "te", "nor" }, parts[1].Descendants("lyric").Select(l => l.Element("text")!.Value));
+    }
+
+    private static (string Text, string Step)[] ExportedSyllables(string source) =>
+        new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().Descendants("note")
+            .Where(n => n.Element("lyric") != null)
+            .Select(n => (n.Element("lyric")!.Element("text")!.Value, n.Element("pitch")!.Element("step")!.Value)).ToArray();
+
+    [Fact]
+    public void ExportPutsASyllableWhereThePageDoes_PastASlur()
+    {
+        const string source = """
+            octave absolute
+            time 4/4
+            part a { clef treble }
+            section A {
+              a { c'4( d' e') f' | }
+              lyrics one sings a { la li | }
+            }
+            form { ~A }
+            score { staff a lyrics one }
+            """;
+        Assert.Equal(new[] { ("la", "C"), ("li", "F") }, ExportedSyllables(source));
+    }
+
+    [Fact]
+    public void ExportPutsSyllablesOnTheFirstVoiceOnly()
+    {
+        const string source = """
+            octave absolute
+            time 2/4
+            part a { clef treble }
+            section A {
+              a { voice { c''4 d'' | } { e'4 f' | } }
+              lyrics one sings a { la li lo | }
+            }
+            form { ~A }
+            score { staff a lyrics one }
+            """;
+        // `lo` has no note of the first voice left in its bar; the second voice's e' is not one.
+        Assert.Equal(new[] { ("la", "C"), ("li", "D") }, ExportedSyllables(source));
+    }
+
+    [Fact]
+    public void ATiedNoteOverASectionEdgeTakesNoSyllableInExport()
+    {
+        const string source = """
+            octave absolute
+            time 2/4
+            part a { clef treble }
+            section A {
+              a { c'2~ | }
+              lyrics one sings a { la | }
+            }
+            section B {
+              a { c'4 d' | }
+              lyrics one sings a { li | }
+            }
+            form { ~A ~B }
+            score { staff a lyrics one }
+            """;
+        Assert.Equal(new[] { ("la", "C"), ("li", "D") }, ExportedSyllables(source));
+    }
+
+    [Fact]
+    public void AVerseKeepsItsNumberInASectionThatLacksTheFirst()
+    {
+        const string source = """
+            octave absolute
+            time 2/4
+            part a { clef treble }
+            section A {
+              a { c'2 | }
+              lyrics one sings a { la | }
+              lyrics two sings a { li | }
+            }
+            section B {
+              a { d'2 | }
+              lyrics two sings a { lo | }
+            }
+            form { ~A ~B }
+            score { staff a lyrics one lyrics two }
+            """;
+        var lyric = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().Descendants("lyric").Last();
+        Assert.Equal("lo", lyric.Element("text")!.Value);
+        Assert.Equal("2", lyric.Attribute("number")!.Value);
+    }
 
     private static string Implicit(string book, int number) =>
         book.Replace($"<measure number=\"{number}\">", $"<measure number=\"{number}\" implicit=\"yes\">");
