@@ -37,7 +37,7 @@ internal static class LyricSyllableReader
         Syllable,
         /// <summary>A sung syllable whose word ends in a hyphen (<c>Mu-</c>): it is
         /// rendered without the trailing dash and carries a hyphen connector to the
-        /// next syllable. Use <see cref="TrimHyphenWord"/> for the display text.</summary>
+        /// next syllable.</summary>
         HyphenWord,
         /// <summary>A standalone hyphen marker (<c>--</c> / <c>-</c>): the previous
         /// syllable continues into the next as one word.</summary>
