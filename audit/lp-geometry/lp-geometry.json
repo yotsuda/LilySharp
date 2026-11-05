@@ -3911,7 +3911,7 @@
       "residual": 0.0,
       "why": "OPENED 2026-11-05 (session 1103): two same dotted notes merge and one dot survives, and the later up stem still moves the column."
     },
-    "dots.column.own-stem-bottom-edge-control": {
+    "dots.column.later-up-stem-bottom-edge-control": {
       "probe": "dot-column-later-up-stem.ly",
       "score": "DLF",
       "lilypond": 1.7542,

@@ -16012,7 +16012,7 @@ internal static class LpGeometryProbes
         new("dots.column.only-one-voice-dotted", DLU, g => g.DotFromFirstHead()),
         new("dots.column.down-voice-on-the-row-control", DLV, g => g.DotFromFirstHead()),
         new("dots.column.merged-dot", DLW, g => g.DotFromFirstHead()),
-        new("dots.column.own-stem-bottom-edge-control", DLF, g => g.DotFromFirstHead()),
+        new("dots.column.later-up-stem-bottom-edge-control", DLF, g => g.DotFromFirstHead()),
         new("dots.column.rest-dot-row-next-head", DLR, g => g.NoteheadAnchor(2) - g.NoteheadAnchor(0)),
         new("dots.column.rest-dot-lifted-off-the-line", DLQ, g => g.NoteheadAnchor(2) - g.NoteheadAnchor(0)),
         new("dots.column.two-notes-control", DSN, g => g.DotColumnSpread()),
