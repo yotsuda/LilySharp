@@ -1310,7 +1310,21 @@ internal static class TupletBracketEngraver
                 lastTipUp = tipUp;
                 lastStemX = stemX;
                 lastColX = colX;
-                lpPoints.Add((colX, tipUp));
+                // The point is the column's whole extent, and an unbeamed stem's flag is in it:
+                // an eighth's stands 0.025 past the stem's end. The slope bounds above stay on
+                // the stem's end, as LilyPond's get_bounds reads the heads and not the column.
+                // LILYPOND-REF: lily/note-column.cc:251-258 Note_column::cross_staff_extent;
+                // LILYPOND-REF: lily/flag.cc:183-196 Flag::internal_calc_y_offset.
+                // MEASURED (2.26.0, Lab sessions/p1100/probe/flag.ly): \tuplet 3/2 { c''8 r c'' }
+                // stands at -4.125, the flag's -3.025 + padding 1.1; quarters at -4.1.
+                double pointUp = tipUp;
+                if (probedBeam is null && itemUp == isStemUp
+                    && GlyphMetrics.GetFlagBBox(GlyphMetrics.NoteValueOf(item), itemUp) is var flagBox && flagBox != default)
+                {
+                    var (flagMin, flagMax) = ItemSkylineFactory.FlagInkBand(tip, itemUp, flagBox);
+                    pointUp = isStemUp ? Math.Max(tipUp, 2.0 - flagMin) : Math.Min(tipUp, 2.0 - flagMax);
+                }
+                lpPoints.Add((colX, pointUp));
             }
             else
             {

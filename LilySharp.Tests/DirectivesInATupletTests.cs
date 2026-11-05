@@ -251,6 +251,25 @@ public class DirectivesInATupletTests
         Assert.InRange(both[0].NumberYUp - both[1].NumberYUp, 2.118 - 0.08, 2.118 + 0.01);
     }
 
+    // MEASURED, LilyPond 2.26.0 (Lab sessions/p1100/probe/flag.ly): the bracket's distance past
+    // the stems: 0.025 more for a flag, which stands past its stem's end, up or down; a beam's
+    // own reach where the last note is beamed.
+    [Theory]
+    [InlineData("tuplet 3/2 { c''8 r8 c''8 } c''4 c''2 |", "tuplet 3/2 { c''4 r4 c''4 } c''2 |", -0.025)]
+    [InlineData("tuplet 3/2 { c''16 r8 c''16 } c''8. c''2 |", "tuplet 3/2 { c''4 r4 c''4 } c''2 |", -0.05)]
+    [InlineData("tuplet 3/2 { a'8 r8 a'8 } a'4 a'2 |", "tuplet 3/2 { a'4 r4 a'4 } a'2 |", 0.025)]
+    [InlineData("tuplet 3/2 { a'16 r8 a'16 } a'4 a'4 a'4 |", "tuplet 3/2 { a'4 r4 a'4 } a'2 |", 0.025)]
+    public void AFlagIsInTheColumnsPoint(string flagged, string quarters, double beyond)
+        => Assert.Equal(beyond, Laid(flagged)[0].StartYUp - Laid(quarters)[0].StartYUp, 3);
+
+    [Fact]
+    public void ABeamHasNoFlag()
+    {
+        // The same eighths beamed: the bracket is hidden and follows the beam, no flag's reach.
+        var beamed = Laid("tuplet 3/2 { c''8[ d''8 c''8] } c''4 c''2 |")[0];
+        Assert.False(beamed.ShowBracket);
+    }
+
     private static double Gap(TupletBracketLayout[] four, int first) => four[first].NumberYUp - four[first + 1].NumberYUp;
 
     [Fact]

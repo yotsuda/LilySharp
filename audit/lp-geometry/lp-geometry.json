@@ -5784,8 +5784,8 @@
       "probe": "tuplet-nested.ly",
       "score": "TNESTN",
       "lilypond": 9.530433396899607,
-      "residual": -0.024957905,
-      "why": "OPEN: LilyPond's inner bracket stands at (-4.125 . -4.125), 0.025 deeper than the plain -4.1 of the control, and the outer follows it; Lily# stands 0.025 shallower, the whole of this residual. Suspect, not established: the flagged eighths' reach in the column's extent. OPENED 2026-11-05 (session 1100): the outer bracket clears the inner's box and number (lily/tuplet-bracket.cc:646-680). Lily# had this for tab staves only and stood a notation staff's outer a fixed 2.0 per depth beyond where it would be alone; the port is EnclosedTupletPoints. PREDICTION written before measuring: under 1e-3. It missed by the 0.025 above."
+      "residual": 0.000042095,
+      "why": "UPDATED 2026-11-05 (session 1100): CLOSED to +0.000042095 (twice the TupletNumber's half-ink face sliver, TU/TNB's why) by reading an unbeamed stem's flag as part of the column's point (lily/note-column.cc:251-258): the eighth's flag stands 0.025 past the stem's end, so LilyPond's inner bracket is at -4.125 where quarters give -4.1 (MEASURED, Lab sessions/p1100/probe/flag.ly: flag -6.801, stem -6.776). It read -0.024957905 before. OPENED 2026-11-05 (session 1100): the outer bracket clears the inner's box and number (lily/tuplet-bracket.cc:646-680). Lily# had this for tab staves only and stood a notation staff's outer a fixed 2.0 per depth beyond where it would be alone; the port is EnclosedTupletPoints. PREDICTION written before measuring: under 1e-3. It missed by the 0.025 above."
     },
     "staff.staff.tuplet-nested-number": {
       "probe": "tuplet-nested.ly",
