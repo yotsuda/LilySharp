@@ -115,7 +115,7 @@ public static class LyricBindings
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
         bool unnamedTrack = false;
-        foreach (var node in root.DescendantNodes<LyricsBlockSyntax>())
+        foreach (var node in root.SitesOfKinds(SyntaxKind.LyricsBlock).OfType<LyricsBlockSyntax>())
         {
             if (node is LyricsBlockSyntax { NameToken: null })
                 unnamedTrack = true;
@@ -129,7 +129,7 @@ public static class LyricBindings
         if (unnamedTrack && !map.ContainsKey(SyntaxFacts.UnnamedLyricsName))
         {
             var parts = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var n in root.DescendantNodesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
+            foreach (var n in root.SitesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
                 if (Editing.PartReferenceFinder.DeclaredName(n) is { } declared)
                     parts.Add(declared.Text);
             if (parts.Count <= 1)
@@ -178,7 +178,7 @@ public static class LyricBindings
         // The two spellings that declare a part, asked of the index by the kind list that
         // stands beside PartReferenceFinder.DeclaredName (the same switch as below, pinned
         // to that list by SymbolKindsTests). The walk INSIDE each part stays a subtree walk.
-        foreach (var n in root.DescendantNodesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
+        foreach (var n in root.SitesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
         {
             string? part = n switch
             {

@@ -62,7 +62,7 @@ internal sealed class SectionMeterPlan
         // common spelling — nothing to apply, and the plan stays Empty) from one some part
         // does not.
         var parts = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var n in root.DescendantNodesOfKinds([SyntaxKind.PartDeclaration, SyntaxKind.PartBlock]))
+        foreach (var n in root.SitesOfKinds(SyntaxKind.PartDeclaration, SyntaxKind.PartBlock))
             if (PartNameOf(n) is { } name)
                 parts.Add(name);
         var ownByPart = new Dictionary<(string Section, string Part), HashSet<int>>();
@@ -214,8 +214,7 @@ internal sealed class SectionMeterPlan
     /// (<see cref="Semantics.SectionHeaders"/>) — the only books with a plan to build.</summary>
     private static bool WritesTimeInMusic(SyntaxNode root)
     {
-        // Green: every keystroke asks this, and it must not build the index.
-        foreach (var n in root.KindSites(SyntaxKind.TimeSignature))
+        foreach (var n in root.SitesOfKinds(SyntaxKind.TimeSignature))
         {
             if (n is not TimeSignatureSyntax ts || SectionBarCounts.IsScoreLevel(ts))
                 continue;

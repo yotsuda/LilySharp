@@ -122,7 +122,7 @@ public static class ChordTrackPitch
     private static Dictionary<string, string> BuildMap(SyntaxNode root)
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var block in root.DescendantNodes().OfType<ChordPartBlockSyntax>())
+        foreach (var block in root.SitesOfKinds(SyntaxKind.ChordPartBlock).OfType<ChordPartBlockSyntax>())
             if (block.PartName is { } name && block.ForTarget is { } target)
                 map.TryAdd(name, target);
         return map;

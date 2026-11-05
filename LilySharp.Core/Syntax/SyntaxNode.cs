@@ -611,6 +611,18 @@ public abstract class SyntaxNode
     public IEnumerable<SyntaxNode> DescendantNodesOfKinds(params SyntaxKind[] kinds)
         => this is CompilationUnitSyntax root ? root.Descendants.OfKinds(kinds) : WalkDescendantsOfKinds(kinds);
 
+    /// <summary>
+    /// <see cref="DescendantNodesOfKinds"/> for a question the render path of a keystroke asks:
+    /// the same nodes in the same order, without building the root's
+    /// <see cref="DescendantIndex"/>, which materializes every red in the book. An index the
+    /// diagnostics pass already built answers it; otherwise a green walk, with reds only where
+    /// a kind matches. KeystrokeStaysRedFreeTests holds the render path to this.
+    /// </summary>
+    internal IEnumerable<SyntaxNode> SitesOfKinds(params SyntaxKind[] kinds)
+        => this is CompilationUnitSyntax { DescendantIndexBuilt: true } root
+            ? root.Descendants.OfKinds(kinds)
+            : GreenSites(g => (Array.IndexOf(kinds, g.Kind) >= 0, Descend: true));
+
     private IEnumerable<SyntaxNode> WalkDescendantsOfKinds(SyntaxKind[] kinds)
     {
         foreach (var node in WalkDescendants())

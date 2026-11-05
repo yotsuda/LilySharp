@@ -64,13 +64,34 @@ public class KeystrokeStaysRedFreeTests
         Assert.False(RenderBuildsTheIndex(text, text.Remove(at, 3).Insert(at, "e'4")));
     }
 
-    [Fact]
-    public void ABookThatWritesATimeInItsMusic_MayBuildIt()
+    [Theory]
+    [InlineData("LilySharp.Tests/Fixtures/showcase/06-meter-changes.lys")]   // a time in the music
+    [InlineData("LilySharp.Lsp/Lessons/en/lesson-07-lyrics.lys")]            // lyrics
+    [InlineData("LilySharp.Tests/Fixtures/test/lead-sheet-lyrics.lys")]      // lyrics on a lead sheet
+    [InlineData("LilySharp.Lsp/Lessons/en/lesson-08-chords.lys")]            // a chord track
+    [InlineData("LilySharp.Tests/Fixtures/test/arpeggio-second.lys")]        // a staff that may name a part
+    public void AKeystroke_InABookThatAsksAboutTheWholeBook_BuildsNoIndex(string book)
     {
-        // The other side of the first test: the plan is really built here, so the question is
-        // still answered, and the seam the tests above read does report a build.
-        var text = Bars("c'4 d'4 e'4 f'4", 4).Replace("    c'4", "    time 3/4 c'4 d'4 e'4 |\n    time 4/4 c'4");
-        int at = text.LastIndexOf("d'4", System.StringComparison.Ordinal);
-        Assert.True(RenderBuildsTheIndex(text, text.Remove(at, 3).Insert(at, "e'4")));
+        var text = System.IO.File.ReadAllText(System.IO.Path.Combine(CollectResumeTests.FindRepoRoot(), book));
+        var note = new System.Text.RegularExpressions.Regex(@"(?<=[ \t\r\n|{(<])([a-f])([',]*)(1|2|4|8|16)?(?=[ \t\r\n|)>~(\]\[@.])");
+        var m = note.Match(text, text.Length / 2) is { Success: true } later ? later : note.Match(text);
+        Assert.True(m.Success, "no note to edit");
+        Assert.False(RenderBuildsTheIndex(text, text.Remove(m.Index, 1).Insert(m.Index, ((char)(m.Value[0] + 1)).ToString())));
+    }
+
+    [Fact]
+    public void TheSeamReportsABuild_AndTheQuestionAnswersTheSameEitherWay()
+    {
+        var root = (CompilationUnitSyntax)SyntaxTree.Parse(Bars("c'4 d'4 e'4 f'4", 2)).GetRoot();
+        var kinds = new[] { SyntaxKind.Note, SyntaxKind.Barline, SyntaxKind.PartDeclaration };
+        var green = root.SitesOfKinds(kinds).ToArray();
+        Assert.False(root.DescendantIndexBuilt);
+        var red = root.DescendantNodesOfKinds(kinds).ToArray();
+        Assert.True(root.DescendantIndexBuilt);
+        Assert.Equal(red.Length, green.Length);
+        Assert.NotEmpty(green);
+        for (int i = 0; i < red.Length; i++)
+            Assert.Same(red[i], green[i]);
+        Assert.Equal(red.Length, root.SitesOfKinds(kinds).Count());
     }
 }

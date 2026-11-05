@@ -75,7 +75,7 @@ public sealed class CompilationUnitSyntax : SyntaxNode
             if (names != null)
                 return names;
             var built = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var node in DescendantNodesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
+            foreach (var node in SitesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
                 if (Editing.PartReferenceFinder.DeclaredName(node) is { } name && name.Text.Length > 0)
                     built.Add(name.Text);
             return Interlocked.CompareExchange(ref _declaredPartNames, built, null) ?? built;

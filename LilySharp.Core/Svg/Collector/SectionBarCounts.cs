@@ -131,7 +131,7 @@ internal static class SectionBarCounts
 
         var voices = new List<SemanticVoice>();
         var time = DurationCalculator.ParseTimeSignature(4, 4);
-        foreach (var n in root.DescendantNodesOfKinds(SemanticVoiceKinds))
+        foreach (var n in root.SitesOfKinds(SemanticVoiceKinds))
         {
             if (n is TimeSignatureSyntax ts && !ts.IsSenzaMisura && IsScoreLevel(ts))
                 time = DurationCalculator.ParseTimeSignature(ts.Beats, ts.BeatType);
@@ -186,8 +186,7 @@ internal static class SectionBarCounts
     public static IReadOnlyDictionary<string, SyntaxNode> PhraseBodies(SyntaxNode root)
     {
         var gathered = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
-        // Green: the keystroke's walk asks this (WrittenBarAt), and it must not build the index.
-        foreach (var n in root.GreenSites(g => (Array.IndexOf(Semantics.PhraseCycleValidator.DeclaringKinds, g.Kind) >= 0, Descend: true)))
+        foreach (var n in root.SitesOfKinds(Semantics.PhraseCycleValidator.DeclaringKinds))
         {
             if (n is PhraseDeclarationSyntax ph)
                 gathered[ph.Name.Text] = ph.Body;
