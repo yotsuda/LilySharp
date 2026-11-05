@@ -267,6 +267,31 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1109セッションの経緯
+
+### 1.1 第1109セッション（2026-11-05・YT-DELL2）
+
+開始時 full **14691 / 0 / 2**（`-Start p1109`・HEAD `10143f773`）・終了時 **14708 / 0 / 2**。作業場所は Lab `sessions/p1109/`。オーナー指示「入れて。もう少し詳しく調べる価値がありそうだね。続けて」＝第1108 の P1〜P4 を入れて、調査を続ける。
+
+- **本体に入れた 3 commit**（どれも全 svg 1262 枚で差 0・毒は下に）:
+  - `8a056e47b`: 第1108 の P1〜P4 と `KeystrokeStaysRedFreeTests`（打鍵の描画経路は `DescendantIndex` を建てない）。
+  - `c3bbde922`: ⑴ **小節末の音に印があると小節線の先読みが外れていた**（`c4@p |`。歩きのリストでは次が印なので `SetFollowingBoundary` が小節線を見つけず、埋まるたびに `WrittenBarAt` が scope 全体を割った）＝`PeekMarkers` と同じ列を飛ばす。第1108 の残り ⑴ の答えで、和音の問題ではない。`fingbeam1k` の編集方向の collect 48 → 11 ms・18.8 → 2.0 MB ⑵ `LineBreakDpSession`: 再利用できる行が 0 でも n が同じなら表を使い回す（1 小節目の編集で 20 MB を LOH に確保していた）。`v2bow1k` 42.6 → 23.4 MB・gen2 0.4 → 0.1 回／打鍵 ⑶ `KnuthPlassBreaker`: 各行が `i = 0` から全部の開始を読んでいた（1000 小節で n²/2）→ 収まり得ない開始を飛ばす。上限は本全体で取り、行頭と行末の小節が最小幅から引ける分を足す。`plain1k` の layout 27 → 24 ms ⑷ `WritesAStaffChange` を緑の歩きに。`v2bow1k` の collect 21 → 11 ms ⑸ 指番号の配列をちょうどの大きさで確保。`fingbeam1k` 36 → 27 MB。
+  - `eee3470be`: **全コーパスで打鍵を再現して索引を建てる呼び手を洗い出した**（`sessions/p1109/idx`）。995 冊中 154 冊（15%）で建っていた＝歌詞・コード行・曲中の `time`・パート名かもしれない `staff`。`SyntaxNode.SitesOfKinds`（索引があれば使い、なければ緑の歩き）に 6 か所を替えて **0 / 995**。
+- **最終値**（`10143f773` 対 HEAD・交互に 5 回・`ab.log` の `END`。床は両方向の低いほう、中央値は編集方向）:
+  | 本 | 床 | 中央値 | 割当（編集方向） | 第615 の床 |
+  |---|---|---|---|---|
+  | `fingbeam1k` | 103 → 41 ms | 132 → 56 ms | 121 → 27 MB | 35 ms |
+  | `plain1k`＋小節の挿入 | 92 → 57 ms | 116 → 71 ms | 48 → 40 MB | 51 ms |
+  | `plain1k` | 36 → 29 ms | 52 → 31 ms | 15.9 → 7.2 MB | 24 ms |
+  | `v2bow1k` | 52 → 45 ms | 75 → 63 ms | 44.6 → 21.2 MB | 45 ms |
+  | 実物 `choir-chorale` | 6.5 → 6.5 ms | 6.9 → 6.8 ms | 3.85 → 3.57 MB | |
+  | 実物 `bigband-swing` | 3.4 → 3.2 ms | 4.2 → 3.9 ms | 3.34 → 2.53 MB | |
+  GC も減った（`fingbeam1k` の gen0 が打鍵あたり 5.0 → 0.6 回・停止の中央値 43 → 7 ms）。第1108 で「2 峰」と書いた中央値の開きはこの GC。
+- **毒**: 判定で見張れるものは全部赤。⚠️ P5・P10 の余裕分は出力の検査では緑（全テスト緑）だった＝出力に出ない。そこで `MeasureBuilderLookAheadTests`（`t_boundaryRewrites`）・`LineBreakDpSessionTests`・`LineBreakStartBoundTests`（乱数の本で全部読むのと等しい・読む数が少ない）を足して赤を確認した。
+- ✖ **試して捨てた**: ⑴ `SpringSolver` の挿入ソートの `List.Insert` をやめる＝動かないか少し悪い。**CPU プロファイルは 50% と言っていた**が、`Array.Copy` が GC 安全点なので偏っただけ。⚠️ CPU の % を根拠にしない・A/B で読む ⑵ n が変わるときの予備の表＝割当は半減するが時間は動かず、常駐が表 1 枚分増える。
+- **残り（値段はこの便のプロファイル・直していない）**: ⑴ 実物の本の上位は `VerticalSkyline` の合成（`choir-chorale` の割当の 53% が `SkylineBuilding[]`）。`RebuildKeepingHighest` の註のとおり過去に何度も測った場所で、短い直しは見えない ⑵ `ChooseSystemCount` と `PageBreaker.SolveUnconstrained` ⑶ `StaffTimeline.OfMeasure` が `plain1k` の割当の 16%（1 声なら merge が要らない）⑷ 小節の挿入の render 34 ms と `LineBreakDpSession` の表の確保（予備の表は値段だけ付けた）⑸ `v2bow1k` は全曲にまたがる声部の編集が live で歩く（`9874a5eff` の設計の代金）⑹ `9a261f5dc` の cold 619 → 853 ms は未調査。
+- **計器**: `idx/`（全コーパスで索引を建てる呼び手）・`EditKeystrokeBench3.cs`（GC 回数と停止を足した）・`ab.ps1`・`read-prof.ps1`。⚠️ 全 svg の掃きを Debug の exe で回すと終わらない＝`dotnet build LilySharp.Cli -c Release -o <Lab の exe-head>`（本体の `bin\Release` に触らない）。⚠️ PowerShell の `if` の値は配列を 1 段ほどく＝`$x = if (…) { ,@(a, b) }` は入れ子にならない。
+
 ## 以下は第1108セッションの経緯
 
 ### 1.1 第1108セッション（2026-11-05・YT-DELL2）
