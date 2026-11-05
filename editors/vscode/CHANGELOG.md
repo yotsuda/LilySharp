@@ -7,6 +7,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A `key`, `tempo`, `octave` or `override` in a tuplet takes effect**: each was dropped without a word.
 - **A phrase, a `cue` or a `<< >>` in a tuplet is drawn**: the page left their notes out while the playback had them.
 - **A `voice { } { }` in a tuplet is an error** (LYS1066): the page left its notes out. Write a tuplet inside each voice.
+- **Nested tuplets stack as in LilyPond**: the outer clears the inner's bracket and number, where a fixed step let them cross. A single-note tuplet draws its number alone.
 - **A tuplet of the same ratio over the same notes as the tuplet around it is drawn once**, as in LilyPond.
 - **A `time` or `partial` in a tuplet is an error** (LYS1065): both were dropped without a word. Write it before the tuplet.
 - **Two voices' clefs at one moment draw one**: the last one heard, where both were drawn on top of each other.

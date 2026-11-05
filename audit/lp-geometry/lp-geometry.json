@@ -5773,6 +5773,34 @@
       "residual": -0.006512447,
       "why": "OPENED 2026-09-07 (session 343), the FALSIFIER of the follow-beam pair: the same four notes beamed with no tuplet at all, so no bracket and no number. Its 6.590000 is the clef-bound quantity, and its residual is byte-identical to staff.staff.tuplet-bracket-partial-beam-control's -0.006512447 -- the same TNC sliver, the clef binding on both sides. It earns its place because the FIRST draft of this probe was deaf: with the tuplet on the lower staff and the bracket above, a follow-beam bracket sits only one padding off the BEAM and never cleared that staff's own treble clef, so all three books printed an identical 6.826. This entry is what says the pair above is bracket-bound rather than clef-bound."
     },
+    "staff.staff.tuplet-nested-control": {
+      "probe": "tuplet-nested.ly",
+      "score": "TNESTC",
+      "lilypond": 7.777716698449803,
+      "residual": 0.000021048,
+      "why": "OPENED 2026-11-05 (session 1100), the CONTROL of the nested pair: no inner tuplet. c'' stems down over a bass staff of middle-line wholes, so the gap is the number's ink bottom + 2.05 + 1, as TQC. PREDICTION written before measuring: exact to the family's floor. MEASURED +0.000021048, the TupletNumber's half-ink face sliver (TU/TNB's why). Do not close further."
+    },
+    "staff.staff.tuplet-nested-bracket": {
+      "probe": "tuplet-nested.ly",
+      "score": "TNESTN",
+      "lilypond": 9.530433396899607,
+      "residual": -0.024957905,
+      "why": "OPEN: LilyPond's inner bracket stands at (-4.125 . -4.125), 0.025 deeper than the plain -4.1 of the control, and the outer follows it; Lily# stands 0.025 shallower, the whole of this residual. Suspect, not established: the flagged eighths' reach in the column's extent. OPENED 2026-11-05 (session 1100): the outer bracket clears the inner's box and number (lily/tuplet-bracket.cc:646-680). Lily# had this for tab staves only and stood a notation staff's outer a fixed 2.0 per depth beyond where it would be alone; the port is EnclosedTupletPoints. PREDICTION written before measuring: under 1e-3. It missed by the 0.025 above."
+    },
+    "staff.staff.tuplet-nested-number": {
+      "probe": "tuplet-nested.ly",
+      "score": "TNESTB",
+      "lilypond": 9.555433396899607,
+      "residual": 0.000042095,
+      "why": "OPENED 2026-11-05 (session 1100): the inner tuplet is beamed, so its bracket is hidden and only its number is a point (lily/tuplet-bracket.cc:672-679 against :651-652's extent of a hidden bracket). PREDICTION written before measuring: under 1e-3. MEASURED +0.000042095: twice the TupletNumber's half-ink face sliver (TU/TNB's why), one number under the other. Do not close further."
+    },
+    "staff.staff.tuplet-nested-identical": {
+      "probe": "tuplet-nested.ly",
+      "score": "TNESTI",
+      "lilypond": 7.777716698449801,
+      "residual": 0.000021048,
+      "why": "OPENED 2026-11-05 (session 1100): an inner tuplet of the outer's ratio over the same notes is one tuplet (lily/tuplet-engraver.cc:74-77, lily/tuplet-description.cc:84-89), so the depth is one bracket's, as the control's. PREDICTION written before measuring: exact to the family's floor. MEASURED +0.000021048, the TupletNumber's half-ink face sliver (TU/TNB's why). Do not close further."
+    },
     "staff.staff.tuplet-bracket-rest-point-control": {
       "probe": "tuplet-bracket-rest-point.ly",
       "score": "TQC",

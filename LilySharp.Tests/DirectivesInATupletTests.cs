@@ -18,6 +18,7 @@ using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -213,6 +214,97 @@ public class DirectivesInATupletTests
         var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\npart p { clef treble }\npart q { clef treble }\n"
             + "section A { p { " + music + " } q { " + music + " } }\nform { A }\nscore { staff p staff q }\n");
         Assert.Equal(2, new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!).TupletBrackets.Length);
+    }
+
+    private static TupletBracketLayout[] Laid(string music)
+        => new LayoutEngine().Layout(Score(music)).TupletBracketLayouts.OrderBy(b => b.StartX).ThenByDescending(b => b.EndX).ToArray();
+
+    // MEASURED, LilyPond 2.26.0 (Lab sessions/p1100/probe/nestpin.lys, --pin-fonts svg): the number
+    // of a tuplet stands this far beyond the number it encloses. 29 numbers of ten nested bars
+    // agreed in x and y up to one offset, to within 0.027.
+    [Theory]
+    [InlineData("tuplet 3/2 { c'4 tuplet 3/2 { a'8 r8 g'8 } e'4 } c''2 |", 1.728)]
+    [InlineData("tuplet 3/2 { g''4 tuplet 3/2 { f''8 r8 e''8 } d''4 } c''2 |", -1.709)]
+    // A steep inner tuplet: the outer clears its box's high end, and slopes down from it, so its number stands under the inner's.
+    [InlineData("tuplet 3/2 { tuplet 3/2 { c'4 r4 c'''4 } r2 } tuplet 3/2 { c''2 } |", -1.449)]
+    // Its hidden bracket is no box (the same rise under a beam): only the number is cleared.
+    [InlineData("tuplet 3/2 { tuplet 3/2 { c'8 g' c'' } a'4 } tuplet 3/2 { c''4 } c''2 |", 1.829)]
+    public void ATupletStandsBeyondTheOneItEncloses(string music, double overTheInner)
+    {
+        var laid = Laid(music).Where(b => b.NumberX < Laid(music)[1].EndX + 1).ToArray();
+        var outer = laid[0];
+        var inner = laid[1];
+        Assert.InRange(outer.NumberYUp - inner.NumberYUp, overTheInner - 0.015, overTheInner + 0.015);
+    }
+
+    // The other nest reaches higher with its stems still up, so its bracket stays on this side.
+    private const string LowNest = "tuplet 3/2 { c'8 tuplet 3/2 { c'16 r16 d'16 } c'8 }";
+    private const string HighNest = "tuplet 3/2 { c'8 tuplet 3/2 { a'16 r16 a'16 } c'8 }";
+
+    [Fact]
+    public void TheOuterClears_TheHighEndOfTheBoxItEncloses()
+    {
+        // MEASURED, LilyPond 2.26.0 (Lab sessions/p1100/probe/nestpin.lys, its last bar): 2.118 over
+        // the inner number. Lily# stands 0.07 lower, a residual not yet explained; without the box's
+        // points it stands 0.33 lower still.
+        var both = Laid("tuplet 3/2 { tuplet 3/2 { a4 r4 c'''4 } c'2 } tuplet 3/2 { c''2 } |");
+        Assert.InRange(both[0].NumberYUp - both[1].NumberYUp, 2.118 - 0.08, 2.118 + 0.01);
+    }
+
+    private static double Gap(TupletBracketLayout[] four, int first) => four[first].NumberYUp - four[first + 1].NumberYUp;
+
+    [Fact]
+    public void AnotherNestInTheBar_IsNotThisOnesChild()
+    {
+        double alone = Gap(Laid(LowNest + " " + LowNest + " c''2 |"), 0);
+        Assert.InRange(alone, 1.0, 3.0);
+        var highAfter = Laid(LowNest + " " + HighNest + " c''2 |");
+        var highBefore = Laid(HighNest + " " + LowNest + " c''2 |");
+        Assert.Equal(alone, Gap(highAfter, 0), 6);
+        Assert.Equal(alone, Gap(highBefore, 2), 6);
+    }
+
+    [Fact]
+    public void TheNestAtTheSameIndicesOfTheNextBar_IsNotThisOnesChild()
+    {
+        const string low = "tuplet 3/2 { c'4 tuplet 3/2 { c'8 r8 d'8 } c'4 } c''2 |";
+        const string high = "tuplet 3/2 { c'4 tuplet 3/2 { a'8 r8 a'8 } c'4 } c''2 |";
+        Assert.Equal(Gap(Laid(low), 0), Gap(Laid(low + " " + high).OrderBy(b => b.MeasureIndex).ThenBy(b => b.StartX).ToArray(), 0), 6);
+    }
+
+    [Fact]
+    public void BothNumbersOfABeamedNest_Stack_TheOuterBeyond()
+    {
+        var both = Laid("tuplet 3/2 { tuplet 5/4 { c'16 d' e' f' g' } } c'2 r8 r16 r32 |");
+        Assert.Equal(2, both.Length);
+        var outer = both.Single(b => b.NumberText == "3");
+        var inner = both.Single(b => b.NumberText == "5");
+        Assert.True(outer.NumberYUp > inner.NumberYUp);
+    }
+
+    [Fact]
+    public void ANestOnALowerStaff_StandsAsOnTheFirst()
+    {
+        const string music = "tuplet 3/2 { c'4 tuplet 3/2 { a'8 r8 g'8 } e'4 } c''2 |";
+        var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\npart p { clef treble }\npart q { clef treble }\n"
+            + "section A { p { " + music + " } q { " + music + " } }\nform { A }\nscore { staff p staff q }\n");
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        var all = new LayoutEngine().Layout(score).TupletBracketLayouts;
+        foreach (var staff in new[] { 0, 1 })
+        {
+            var ordered = all.Where(b => b.StaffIndex == staff).OrderBy(b => b.StartX).ToArray();
+            Assert.Equal(1.728, ordered[0].NumberYUp - ordered[1].NumberYUp, 2);
+        }
+    }
+
+    [Theory]
+    [InlineData("tuplet 3/2 { c'4 } c'2 c'4 r8. r16 |", false)]
+    [InlineData("tuplet 3/2 { c'4 d' } c'2 r4 |", true)]
+    public void ASingleNoteTuplet_DrawsItsNumberAlone(string music, bool bracket)
+    {
+        var b = Assert.Single(Laid(music));
+        Assert.Equal(bracket, b.ShowBracket);
+        Assert.False(string.IsNullOrEmpty(b.NumberText));
     }
 
     private static string[] BarReports(string music, string phrases)

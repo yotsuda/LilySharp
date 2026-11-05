@@ -6990,6 +6990,23 @@ internal static class LpGeometryProbes
     private static readonly string TQU = BeamedTupletScore("TQU",
         "tuplet 3/2 { c'4 a'4@rest c' } c'2 | tuplet 3/2 { c'4 a'4@rest c' } c'2 | c'1 |");
 
+    /// <summary>
+    /// TNESTC / TNESTN / TNESTB / TNESTI (audit/lp-geometry/probes/tuplet-nested.ly): a bracket
+    /// clears the tuplets it encloses (lily/tuplet-bracket.cc:646-680): the control with none, an
+    /// inner one with its bracket, one beamed with only its number, and one the same as the outer.
+    /// </summary>
+    private static readonly string TNESTC = BeamedTupletScore("TNESTC",
+        "tuplet 3/2 { c'4 c'4 c'4 } c'2 | tuplet 3/2 { c'4 c'4 c'4 } c'2 | c'1 |");
+
+    private static readonly string TNESTN = BeamedTupletScore("TNESTN",
+        "tuplet 3/2 { c'4 tuplet 3/2 { c'8 r8 c'8 } c'4 } c'2 | tuplet 3/2 { c'4 tuplet 3/2 { c'8 r8 c'8 } c'4 } c'2 | c'1 |");
+
+    private static readonly string TNESTB = BeamedTupletScore("TNESTB",
+        "tuplet 3/2 { c'4 tuplet 3/2 { c'8 c'8 c'8 } c'4 } c'2 | tuplet 3/2 { c'4 tuplet 3/2 { c'8 c'8 c'8 } c'4 } c'2 | c'1 |");
+
+    private static readonly string TNESTI = BeamedTupletScore("TNESTI",
+        "tuplet 3/2 { tuplet 3/2 { c'4 r4 c'4 } } c'2 tuplet 3/2 { c'4 } | tuplet 3/2 { tuplet 3/2 { c'4 r4 c'4 } } c'2 tuplet 3/2 { c'4 } | c'1 |");
+
     /// <summary>The deep rest at the LEFT bound — no slope bound, still a point.</summary>
     private static readonly string TQB = BeamedTupletScore("TQB",
         "tuplet 3/2 { c4@rest c'4 c' } c'2 | tuplet 3/2 { c4@rest c'4 c' } c'2 | c'1 |");
@@ -16987,6 +17004,10 @@ internal static class LpGeometryProbes
         // (lily/tuplet-bracket.cc:554-562); Lily# pushed notes and chords only. TQD/TQB are
         // an LP-identity pair in depth (a deep rest in the middle / at a bound), TQC/TQU
         // another (a middle-line rest / a rest raised to the wrong side). See TQC's remark.
+        new("staff.staff.tuplet-nested-control", TNESTC, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.tuplet-nested-bracket", TNESTN, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.tuplet-nested-number", TNESTB, g => g.StaffGap(), ZeroStaffStaffPaper),
+        new("staff.staff.tuplet-nested-identical", TNESTI, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.tuplet-bracket-rest-point-control", TQC, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.tuplet-bracket-rest-point-deep", TQD, g => g.StaffGap(), ZeroStaffStaffPaper),
         new("staff.staff.tuplet-bracket-rest-point-up", TQU, g => g.StaffGap(), ZeroStaffStaffPaper),

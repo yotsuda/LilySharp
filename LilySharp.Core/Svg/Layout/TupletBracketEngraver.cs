@@ -407,6 +407,10 @@ internal static class TupletBracketEngraver
             bool showBracket = !(beamLayouts.IsDefaultOrEmpty
                 ? HasEquallyLongBeam(tuplet, beamGroups, tupMeasures)
                 : HasEquallyLongStaffBeam(tuplet, beamLayouts, tupMeasures));
+            // A single-note tuplet spans no column: its number stands alone.
+            // LILYPOND-REF: lily/tuplet-bracket.cc:130-143 bracket_basic_visibility
+            if (tuplet.StartNoteIndex == tuplet.EndNoteIndex)
+                showBracket = false;
 
             // Tab staves keep the raw-reach fallback: their staff positions are
             // string slots, not pitches, and no ledger point measures the tab
@@ -414,6 +418,24 @@ internal static class TupletBracketEngraver
             bool isTabStaff = staffByIndex != null
                 && staffByIndex.TryGetValue(tuplet.StaffIndex, out var encStaff)
                 && encStaff.IsTab;
+
+            // The brackets this one encloses, already laid out (inner first, above).
+            // LILYPOND-REF: lily/tuplet-engraver.cc:177-183 process_music — add_tuplet_bracket
+            //   hands a tuplet the one directly inside it.
+            List<TupletBracketLayout>? children = null;
+            if (anyNested)
+                for (int j = 0; j < tuplets.Length; j++)
+                {
+                    var inner = tuplets[j];
+                    if (results[j] is { } innerLayout
+                        && inner.NestingDepth == tuplet.NestingDepth + 1
+                        && inner.StaffIndex == tuplet.StaffIndex
+                        && inner.VoiceIndex == tuplet.VoiceIndex
+                        && inner.MeasureIndex == tuplet.MeasureIndex
+                        && inner.StartNoteIndex >= tuplet.StartNoteIndex
+                        && inner.EndNoteIndex <= tuplet.EndNoteIndex)
+                        (children ??= new()).Add(innerLayout);
+                }
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:566-629 slope calculation
             // Calculate slope based on first/last note staff positions
@@ -423,7 +445,8 @@ internal static class TupletBracketEngraver
                 restShifts: restShiftsOf?.Invoke(tuplet.StaffIndex),
                 staffLines: staffByIndex != null
                     && staffByIndex.TryGetValue(tuplet.StaffIndex, out var linesStaff)
-                    ? linesStaff.Lines : 5);
+                    ? linesStaff.Lines : 5,
+                fonts: fonts, children: children, staffOffset: staffOffset);
 
             // When the bracket is suppressed (fully beamed), the NUMBER
             // attaches to the BEAM: centered between the outer stems, sitting
@@ -451,20 +474,6 @@ internal static class TupletBracketEngraver
             {
                 var staffLocal = new TabStaffGeometry(fonts, tabStaff.Tuning!.Value, 0.0,
                     tabStaff.TabSourceClef, tabStaff.Transposition);
-                // The brackets this one encloses, already laid out (inner first, above).
-                List<TupletBracketLayout>? children = null;
-                for (int j = 0; j < tuplets.Length; j++)
-                {
-                    var inner = tuplets[j];
-                    if (results[j] is { } innerLayout
-                        && inner.NestingDepth == tuplet.NestingDepth + 1
-                        && inner.StaffIndex == tuplet.StaffIndex
-                        && inner.VoiceIndex == tuplet.VoiceIndex
-                        && inner.MeasureIndex == tuplet.MeasureIndex
-                        && inner.StartNoteIndex >= tuplet.StartNoteIndex
-                        && inner.EndNoteIndex <= tuplet.EndNoteIndex)
-                        (children ??= new()).Add(innerLayout);
-                }
                 (startY, endY) = TabBracketPositions(tuplet, tupMeasures, measureLayout, isStemUp,
                     startX, endX, staffLocal, beamLayouts, fonts, scripts, children, staffOffset);
             }
@@ -551,6 +560,47 @@ internal static class TupletBracketEngraver
             if (r is { } layout)
                 layouts.Add(layout);
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// What a bracket clears of the tuplets it encloses: each one's box at its two ends, and its
+    /// number. X from <paramref name="x0"/>; Y through <paramref name="yUp"/>, the caller's frame.
+    /// The layouts carry the staff offset (Y-up from the system top); that comes off first.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/tuplet-bracket.cc:646-680 calc_position_and_height.</remarks>
+    private static IEnumerable<(double X, double YUp)> EnclosedTupletPoints(
+        IReadOnlyList<TupletBracketLayout>? children, Rendering.ScoreTextMetrics? fonts, double x0, int dir,
+        double staffOffset, Func<double, double> yUp)
+    {
+        if (children is null || fonts is null)
+            yield break;
+        var numberStyle = NumberStyle(fonts);
+        double numberEm = NumberEm(fonts);
+        double halfThick = EngravingDefaults.TupletBracketThickness / 2.0;
+        foreach (var c in children)
+        {
+            double y0 = yUp(-c.StartYUp - staffOffset), y1 = yUp(-c.EndYUp - staffOffset);
+            if (c.ShowBracket)
+            {
+                int cdir = c.IsStemUp ? 1 : -1;
+                double edge = GetEdgeHeight() * c.LineSpacing;
+                double lo = Math.Min(Math.Min(y0, y1), Math.Min(y0 - cdir * edge, y1 - cdir * edge)) - halfThick;
+                double hi = Math.Max(Math.Max(y0, y1), Math.Max(y0 - cdir * edge, y1 - cdir * edge)) + halfThick;
+                int otherSign = Math.Sign(y1 - y0);
+                foreach (int d in new[] { -1, 1 })
+                {
+                    double l = d * otherSign;
+                    double y = ((1 - l) * lo + (1 + l) * hi) / 2.0;
+                    double x = (d < 0 ? c.DrawnStartX - halfThick : c.DrawnEndX + halfThick) - x0;
+                    yield return (x, y);
+                }
+            }
+            if (!string.IsNullOrEmpty(c.NumberText))
+            {
+                double halfH = fonts.InkHeight(c.NumberText, numberEm, Rendering.TextRole.Tuplet, numberStyle) / 2.0;
+                yield return (c.NumberX - x0, (y0 + y1) / 2.0 + dir * halfH);
+            }
+        }
     }
 
     /// <summary>
@@ -997,7 +1047,8 @@ internal static class TupletBracketEngraver
         bool useRealExtents = false, double bracketStartX = double.NaN,
         ImmutableArray<ArticulationLayout> scripts = default,
         IReadOnlyDictionary<RestShiftKey, double>? restShifts = null,
-        int staffLines = 5)
+        int staffLines = 5, Rendering.ScoreTextMetrics? fonts = null,
+        IReadOnlyList<TupletBracketLayout>? children = null, double staffOffset = 0)
     {
         double nestingOffset = tuplet.NestingDepth * NestingDepthOffset;
         // Fallback only — when no note positions are found the bracket
@@ -1307,8 +1358,9 @@ internal static class TupletBracketEngraver
         //   ⑵ the scripts term (:682-706 avoid-scripts) — PORTED into the offset
         //     pass below (tuplet-bracket-avoid-scripts.ly pinned it), with its
         //     own narrowings disclosed at the port site;
-        //   ⑶ nested-tuplet points (:646-680) — the Lily#-own NestingDepthOffset
-        //     step below stands in;
+        //   ⑶ nested-tuplet points (:646-680) — PORTED into the offset pass below
+        //     (EnclosedTupletPoints); the Lily#-own NestingDepthOffset step stays only in the
+        //     fallbacks that run with no bound positions;
         //   ⑷ staff-padding's cross-staff gate (:466-477) — every bracket this
         //     engraver sees lives on one staff, vacuously true;
         //   ⑸ x0/x1 come from the caller's stem-attach faces for BOTH bounds —
@@ -1520,10 +1572,10 @@ internal static class TupletBracketEngraver
                         a.YUp + (dir > 0 ? a.Ink.Top : a.Ink.Bottom));
                 }
             }
+            // The tuplets this one encloses (:646-680), in this frame: Y-up from the middle line.
+            foreach (var (cx, cy) in EnclosedTupletPoints(children, fonts, x0, dir, staffOffset, device => 2.0 - device))
+                Clear(cx, cy);
             offsetUp += BracketPadding * dir;
-            // Nested brackets keep the Lily#-own stacking step (LP stacks via the
-            // inner tuplets' boxes, :646-680 — not ported; no pinned point).
-            offsetUp += nestingOffset * dir;
 
             // A flat bracket quantizes onto a line/space and steps OFF a line
             // when it lands inside the widened staff (:726-746).
@@ -1989,36 +2041,8 @@ internal static class TupletBracketEngraver
         // The enclosed tuplets (:646-680): each one's box at its two ends, and its number.
         // Their layouts carry the staff offset (Y-up from the system top); this frame is
         // the staff-local one, so it comes off again.
-        if (children is not null)
-        {
-            var numberStyle = NumberStyle(fonts);
-            double numberEm = NumberEm(fonts);
-            double halfThick = EngravingDefaults.TupletBracketThickness / 2.0;
-            foreach (var c in children)
-            {
-                double y0 = YUp(-c.StartYUp - staffOffset), y1 = YUp(-c.EndYUp - staffOffset);
-                if (c.ShowBracket)
-                {
-                    int cdir = c.IsStemUp ? 1 : -1;
-                    double edge = GetEdgeHeight() * c.LineSpacing;
-                    double lo = Math.Min(Math.Min(y0, y1), Math.Min(y0 - cdir * edge, y1 - cdir * edge)) - halfThick;
-                    double hi = Math.Max(Math.Max(y0, y1), Math.Max(y0 - cdir * edge, y1 - cdir * edge)) + halfThick;
-                    int otherSign = Math.Sign(y1 - y0);
-                    foreach (int d in new[] { -1, 1 })
-                    {
-                        double l = d * otherSign;
-                        double y = ((1 - l) * lo + (1 + l) * hi) / 2.0;
-                        double x = (d < 0 ? c.DrawnStartX - halfThick : c.DrawnEndX + halfThick) - x0;
-                        points.Add((x, y));
-                    }
-                }
-                if (!string.IsNullOrEmpty(c.NumberText))
-                {
-                    double halfH = fonts.InkHeight(c.NumberText, numberEm, Rendering.TextRole.Tuplet, numberStyle) / 2.0;
-                    points.Add((c.NumberX - x0, (y0 + y1) / 2.0 + dir * halfH));
-                }
-            }
-        }
+        foreach (var p in EnclosedTupletPoints(children, fonts, x0, dir, staffOffset, YUp))
+            points.Add(p);
 
         // avoid-scripts (:682-706): every script of the tuplet's notes with no
         // outside-staff-priority, at its ink centre and its edge on the bracket's side. A tab
