@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 303 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **427** | |
+| `OWN` | 304 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **428** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -242,7 +242,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（303 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（304 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -413,6 +413,7 @@
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **`MeasureBuilder.SectionHead`** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
+- **`MeasureCollector.SolveCrossCollisions`** LILYSHARP-OWN: the moved voice's slot. LilyPond keeps the Voice's own horizontal-shift,
 - **`MeasureCollector.DefaultExpansionBudgetCap`** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
 - **`MeasureCollector.ProcessPercentRepeat`** LILYSHARP-OWN, owner's decision 2026-10-14, session 905). Whole bars: the body opens
 - **`MeasureCollector.ProcessGraceRegion`** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a

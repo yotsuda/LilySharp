@@ -3750,10 +3750,12 @@ public sealed partial class MeasureCollector
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/note-collision.cc:403-472 calc_positioning_done, per Staff.
-    /// The moved voice's slot is a Lily# choice: LilyPond keeps the Voice's own horizontal-shift,
+    /// LILYSHARP-OWN: the moved voice's slot. LilyPond keeps the Voice's own horizontal-shift,
     /// and two voices of the same shift and direction share a slot with a warning ("this Voice
     /// needs a \voiceXx or \shiftXx setting"). Here the moved voice takes a slot of its own, so
     /// same-way heads stand side by side (Lab sessions/p1093/rc bar 7, as LilyPond drew them).
+    ///   departs from: lily/note-collision.cc:539-581 calc_positioning_done's shift groups.
+    ///   observed by: CrossStaffDrawingTests.AMovedNoteTheSameWayStandsBesideTheHeadItMeets.
     /// </remarks>
     private static void SolveCrossCollisions(Staff[] staves)
     {
