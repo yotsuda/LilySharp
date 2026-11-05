@@ -306,7 +306,11 @@ internal sealed partial class LayoutEngine
         var spanOf = new Dictionary<int, (int Start, int Length)>(liveSpans.Count);
         foreach (var (unit, start, length) in liveSpans)
             spanOf[unit] = (start, length);
-        var fingerings = ImmutableArray.CreateBuilder<FingeringLayout>();
+        int fingeringCount = liveAdjusted.Length;
+        foreach (var unit in units)
+            if (unit.Hit != null)
+                fingeringCount += unit.Hit.Adjusted.Length;
+        var fingerings = ImmutableArray.CreateBuilder<FingeringLayout>(fingeringCount);
         for (int u = 0; u < units.Count; u++)
         {
             var unit = units[u];
@@ -326,7 +330,7 @@ internal sealed partial class LayoutEngine
                 memo.Store(unit.Staff, unit.System, unit.Probe);
             }
         }
-        return (articulationLayouts, fingerings.ToImmutable());
+        return (articulationLayouts, fingerings.Count == fingeringCount ? fingerings.MoveToImmutable() : fingerings.ToImmutable());
     }
 
     /// <summary>Whether any note of the voices the fingering island walks

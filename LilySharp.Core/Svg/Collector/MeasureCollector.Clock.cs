@@ -808,9 +808,10 @@ public sealed partial class MeasureCollector
     /// perhaps in a phrase it names.</summary>
     private static bool WritesAStaffChange(ParallelExpressionSyntax parallel)
     {
-        foreach (var node in parallel.DescendantNodes())
-            if (node is ClefDeclarationSyntax or KeySignatureSyntax or VariableReferenceSyntax)
-                return true;
+        foreach (var _ in parallel.GreenSites(static g => (
+            g.Kind is SyntaxKind.ClefDeclaration or SyntaxKind.KeySignature or SyntaxKind.VariableReference,
+            Descend: true)))
+            return true;
         return false;
     }
 

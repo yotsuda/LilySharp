@@ -119,9 +119,11 @@ internal sealed class LineBreakDpSession
         }
         int c = Math.Max(0, e - 1);
 
-        if (c > 0 && _springs!.Length == n)
+        if (_springs != null && _springs.Length == n)
         {
-            // Same n: keep the arrays, reset only the rows to recompute.
+            // Same n: keep the arrays, reset only the rows to recompute. With nothing reusable
+            // that is every row but the base one, which no run writes: an edit in the first
+            // bar must not put a new table on the large object heap.
             dp = _dp!;
             prev = _prev!;
             lineForce = _lineForce!;

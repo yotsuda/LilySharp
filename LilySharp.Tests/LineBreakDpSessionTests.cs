@@ -47,6 +47,34 @@ public class LineBreakDpSessionTests
     }
 
     [Fact]
+    public void AnEditThatKeepsNoRow_KeepsTheTable_AndAFreshOnesRows()
+    {
+        // An edit in the first bar reuses no row. The table is 8 MB at 1000 bars, so a new one
+        // each keystroke goes on the large object heap; the same n needs none.
+        var springs = Vector(0);
+        var session = new LineBreakDpSession();
+        session.Begin(springs, springs.Length, 100, 5, 4, 0, false, out var dp, out var prev, out var force, out var min, out var max);
+        // Dirty the rows as a run would.
+        int cols = springs.Length + 1;
+        for (int k = 0; k < cols; k++) { dp[3 * cols + k] = 7; prev[3 * cols + k] = 2; }
+        min[3] = 1; max[3] = 2;
+        session.Store(springs, 100, 5, 4, 0, false, dp, prev, force, min, max);
+
+        int first = session.Begin(springs, springs.Length, 90, 5, 4, 0, false, out var dp2, out var prev2, out _, out var min2, out var max2);
+        Assert.Equal(1, first);
+        Assert.Same(dp, dp2);
+        Assert.Same(prev, prev2);
+        // What a fresh table would hold: the base row, and nothing reached.
+        Assert.Equal(0, dp2[0]);
+        Assert.Equal(0, min2[0]);
+        Assert.Equal(0, max2[0]);
+        Assert.Equal(KnuthPlassBreaker.Infinity, dp2[3 * cols + 1]);
+        Assert.Equal(-1, prev2[3 * cols + 1]);
+        Assert.Equal(int.MaxValue, min2[3]);
+        Assert.Equal(int.MinValue, max2[3]);
+    }
+
+    [Fact]
     public void ASpringThatDiffersOnlyInItsCourtesy_ResolvesTheRowThatEndsBeforeIt()
     {
         var session = new LineBreakDpSession();

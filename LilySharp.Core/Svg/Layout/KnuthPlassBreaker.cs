@@ -184,6 +184,17 @@ internal sealed class KnuthPlassBreaker
     // bit-identity the row-prefix resume stands on).
     internal const double Infinity = 1e18;
 
+    /// <summary>Reads every start of every row, as the table did before it bounded them: the
+    /// other side of the equality in <c>LineBreakStartBoundTests</c>, which alone says the bound
+    /// drops nothing (a page cannot, where no book's line depends on the allowance).</summary>
+    [ThreadStatic]
+    internal static bool t_readEveryStart;
+
+    /// <summary>The starts this thread's tables have read: the bound's liveness, for the same
+    /// tests. An output cannot see it.</summary>
+    [ThreadStatic]
+    internal static long t_startsRead;
+
     /// <summary>
     /// Creates a new Knuth-Plass line breaker.
     /// </summary>
@@ -407,9 +418,38 @@ internal sealed class KnuthPlassBreaker
         // nothing (its Solve returns two scalars).
         var lineSprings = ListPool<Spring>.Rent();
 
+        // A line whose minimum cannot fit is dropped below (unless it spans one bar), so a row
+        // need not visit the starts too far back for that: n²/2 candidates on the way to the
+        // few that can be a line. The bound is the widest any line may be and the most a line's
+        // first and last bars can take off its minimum, read over the whole book, so it only
+        // ever skips what the test below would drop. cumMin and cumPairMin must never fall, or
+        // a start's minimum would not grow with its distance: then every start is read.
+        double narrowestPrefix = Math.Min(_firstPrefixWidth, _continuationPrefixWidth);
+        double leastEdge = 0, mostOffALine = 0, mostOffAnEnd = 0;
+        double leastCourtesy = 0;
+        bool startsCanBeBounded = true;
+        for (int m = 0; m < n; m++)
+        {
+            ref readonly var d = ref springData[m];
+            leastEdge = Math.Min(leastEdge, d.LineStartPrefixExtra);
+            leastCourtesy = Math.Min(leastCourtesy, d.LineEndCourtesyWidth);
+            if (d.LineStartSpring is { } start)
+                mostOffALine = Math.Max(mostOffALine,
+                    -(start.MinDistance - d.Spring0Min + d.LineStartRunMinDelta));
+            if (lineEndDeltas != null)
+                mostOffAnEnd = Math.Max(mostOffAnEnd, -lineEndDeltas[5 * m + 1]);
+            if (d.MinWidth < 0 || cumPairMin[m + 1] < cumPairMin[m])
+                startsCanBeBounded = false;
+        }
+        double widestLine = _lineWidth - narrowestPrefix - leastEdge - leastCourtesy + mostOffALine + mostOffAnEnd;
+        int firstStart = 0;
         for (int j = startRow; j <= n; j++)
         {
-            for (int i = 0; i < j; i++)
+            if (startsCanBeBounded && !t_readEveryStart)
+                while (firstStart < j - 1 && cumMin[j] - cumMin[firstStart] > widestLine)
+                    firstStart++;
+            t_startsRead += j - firstStart;
+            for (int i = firstStart; i < j; i++)
             {
                 // A start no line count reaches prices to nothing: every k below would hit
                 // the dp[from] >= Infinity `continue`, so the whole line pricing for this

@@ -75,6 +75,32 @@ public sealed class MeasureBuilderLookAheadTests
     }
 
     [Fact]
+    public void ABarAfterAMarkedNote_IsReadAheadToo_AndNothingIsRewritten()
+    {
+        // The note's own marks and the markers after it stand between it and its bar in the
+        // walk's list. Unread, the fill asked the written bars, which splits the whole scope.
+        string music = "c4 d e f@p | g a b c@text(\"x\") | <c e>2 <d f>2@mf | c4( d e f) | c2 d2~ | d1 |";
+        string src = Book(music);
+        var (m, rewrites) = Collect(src);
+        Assert.Equal(6, m.Length);
+        int body = src.IndexOf(music, StringComparison.Ordinal);
+        Assert.Equal(body + music.IndexOf('|'), m[0].SourceEnd);
+        Assert.Equal(0, rewrites);
+    }
+
+    [Theory]
+    [InlineData("c1 c1 | d1 |", "c1 c1@p | d1 |")]
+    [InlineData("c2 d e f | g1 |", "c2 d e f@p | g1 |")]
+    public void AMarkOnTheLastNote_DoesNotChangeWhereTheBarsClose(string plain, string marked)
+    {
+        var (a, _) = Collect(Book(plain));
+        var (b, _) = Collect(Book(marked));
+        Assert.Equal(a.Length, b.Length);
+        for (int i = 0; i < a.Length; i++)
+            Assert.Equal(a[i].Items.Length, b[i].Items.Length);
+    }
+
+    [Fact]
     public void ABreakAfterTheBar_IsThePermissionFromTheEmit_AndNothingIsRewritten()
     {
         // `| break` is the corpus's spelling (6,106 sites to 3 of `break |`): the directive

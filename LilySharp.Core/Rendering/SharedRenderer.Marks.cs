@@ -437,9 +437,13 @@ internal static partial class SharedRenderer
                     if (m.MeasureIndex >= 0 && m.MeasureIndex <= maxMeasure)
                         measureToPage[m.MeasureIndex] = pi;
             }
+        var counts = new int[pages.Length];
+        foreach (var f in layout.FingeringLayouts)
+            if (f.MeasureIndex >= 0 && f.MeasureIndex <= maxMeasure && measureToPage[f.MeasureIndex] is >= 0 and var at)
+                counts[at]++;
         var byPage = new List<FingeringLayout>[pages.Length];
         for (int i = 0; i < byPage.Length; i++)
-            byPage[i] = new List<FingeringLayout>();
+            byPage[i] = new List<FingeringLayout>(counts[i]);
         foreach (var f in layout.FingeringLayouts)
         {
             int pi = f.MeasureIndex >= 0 && f.MeasureIndex <= maxMeasure

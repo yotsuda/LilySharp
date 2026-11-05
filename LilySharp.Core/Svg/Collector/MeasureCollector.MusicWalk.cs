@@ -183,8 +183,22 @@ public sealed partial class MeasureCollector
             or SyntaxKind.Chord or SyntaxKind.ChordRepetition or SyntaxKind.SlashNote
             or SyntaxKind.BareDuration))
             return -1;
-        if (!nodes.TryGet(i + 1, out var next) || next.Kind != SyntaxKind.Barline)
-            return -1;
+        // The item's own marks and the markers after it stand between it and its bar, the
+        // run PeekMarkers reads for this same site: `c4@p |` is read ahead like `c4 |`, or
+        // the fill asks the written bars (MeasureCollector.WrittenBarAt), which splits the
+        // whole scope.
+        int barAt = i + 1;
+        GreenSite next;
+        while (true)
+        {
+            if (!nodes.TryGet(barAt, out next))
+                return -1;
+            if (next.Kind == SyntaxKind.Barline)
+                break;
+            if (!IsAttachedMark(in next) && !IsMarkerNode(next.Node))
+                return -1;
+            barAt++;
+        }
         var token = next.Green.GetSlot(0);
         if (token is null)
             return -1;
@@ -197,7 +211,7 @@ public sealed partial class MeasureCollector
         // boundary-time setters run in order and each writes its own value, so an emit
         // holding the FINAL value of `| break noBreak` would still be rewritten by the
         // first setter (it finds Forbid, writes Force) — a second directive writes as before.
-        if (!nodes.TryGet(i + 2, out var after) || after.Kind != SyntaxKind.Break)
+        if (!nodes.TryGet(barAt + 1, out var after) || after.Kind != SyntaxKind.Break)
             return -1;
         builder.SetFollowingBreak(BreakSyntax.DirectiveOf(after.Green));
         return after.Position + after.Green.FullWidth;
