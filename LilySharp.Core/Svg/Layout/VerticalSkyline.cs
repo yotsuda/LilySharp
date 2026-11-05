@@ -420,17 +420,14 @@ internal sealed class VerticalSkyline
         var batch = _batch;
         if (batch is null && !IsEmpty)
         {
-            // EXACTLY the sequence MergeInternal would have been handed — this skyline's
-            // buildings, then the placed ones — so the sort sees the same input in the same
-            // order and the resolve the same output. The list `placed` used to be is the
-            // walk's own input now, which is the one it always was.
-            var input = RentMergeInput(_buildings.Count + resolved.Count);
-            input.AddRange(_buildings);
+            // MergeInternal's sequence — this skyline's buildings, then the placed ones — over
+            // the window the placed ones reach. A resolved profile is sorted and has no padders.
+            var input = OpenWindow(resolved[0].Start + dx, resolved[^1].End + dx, resolved.Count, out int first, out int count);
             // Indexed, not walked, at both sites: `resolved` is an interface and foreach
             // boxes its enumerator on every merge (RULES §5.3, measured session 446).
             for (int i = 0; i < resolved.Count; i++)
                 input.Add(resolved[i].ShiftedHorizon(dx).RaisedBy(raise));
-            ResolveFrom(input);
+            CloseWindow(input, first, count);
             return;
         }
         // Batch (or empty): append the placed buildings straight in — the same filtering
@@ -648,12 +645,109 @@ internal sealed class VerticalSkyline
             return;
         }
 
-        // Collect all buildings and resolve keeping the highest at each point.
-        var allBuildings = RentMergeInput(_buildings.Count + otherBuildings.Count);
-        allBuildings.AddRange(_buildings);
-        allBuildings.AddRange(otherBuildings);
-        ResolveFrom(allBuildings);
+        // Where the other's ink is: its ±inf padders reach everywhere and hold nothing.
+        double lo = PositiveInfinity, hi = NegativeInfinity;
+        for (int i = 0; i < otherBuildings.Count; i++)
+        {
+            var b = otherBuildings[i];
+            if (double.IsNegativeInfinity(b.ValueAt(b.Start)) && double.IsNegativeInfinity(b.ValueAt(b.End)))
+                continue;
+            lo = Math.Min(lo, b.Start);
+            hi = Math.Max(hi, b.End);
+        }
+        var window = OpenWindow(lo, hi, otherBuildings.Count, out int first, out int count);
+        window.AddRange(otherBuildings);
+        CloseWindow(window, first, count);
     }
+
+    /// <summary>
+    /// A merge into this RESOLVED skyline, read over the buildings it can touch and no others:
+    /// the lent input holding those buildings of this skyline that reach into
+    /// [<paramref name="lo"/>, <paramref name="hi"/>], for the caller to append the incoming
+    /// ones to. <see cref="CloseWindow"/> resolves it and puts the answer in their place.
+    /// </summary>
+    /// <remarks>
+    /// The whole-skyline walk leaves the rest as it found it: this skyline's buildings do not
+    /// overlap, so a building before the window takes the walk's no-overlap arm and so does one
+    /// after it, and an overlap merges only with the buildings it overlaps. So the answer is
+    /// that walk's, read over less: the tie between two buildings of one Start is the only order
+    /// the two can see differently, and the sort over the whole list was not stable either.
+    /// <c>SkylineWindowTests</c> holds the two equal over random merges.
+    /// <para>
+    /// ⚠️ WHY IT IS WORTH A METHOD. MEASURED (session 1110, the owner's 518 books, eight forward
+    /// keystrokes a book): 154 merges a keystroke, 98% of them of at most four buildings into a
+    /// skyline of 60, and each one copied, sorted and rewrote all 64. The walks were 10% of a
+    /// keystroke's time and their sort was 4.5%. LilyPond merges two resolved skylines in one
+    /// linear pass (lily/skyline.cc:178-260 internal_merge_skyline).
+    /// </para>
+    /// <para>
+    /// The ±inf padders a first merge copied in (<see cref="Merge(VerticalSkyline)"/>, an empty
+    /// skyline takes the other's list as it is) can stand only at the two ends, and the walk
+    /// always dropped them, so they go here. <see cref="t_wholeWalk"/> reads the whole skyline.
+    /// </para>
+    /// </remarks>
+    private List<SkylineBuilding> OpenWindow(double lo, double hi, int incoming, out int first, out int count)
+    {
+        static bool Empty(in SkylineBuilding b)
+            => double.IsNegativeInfinity(b.ValueAt(b.Start)) && double.IsNegativeInfinity(b.ValueAt(b.End));
+        while (_buildings.Count > 0 && Empty(_buildings[^1]))
+            _buildings.RemoveAt(_buildings.Count - 1);
+        while (_buildings.Count > 0 && Empty(_buildings[0]))
+            _buildings.RemoveAt(0);
+
+        int n = _buildings.Count;
+        if (t_wholeWalk)
+        {
+            first = 0;
+            count = n;
+        }
+        else
+        {
+            // The first building ending past lo, then those starting before hi. Nothing real
+            // incoming (lo > hi) opens an empty window, at the end.
+            int a = 0, z = n;
+            while (a < z)
+            {
+                int m = (a + z) / 2;
+                if (_buildings[m].End > lo)
+                    z = m;
+                else
+                    a = m + 1;
+            }
+            first = a;
+            int e = a;
+            while (e < n && _buildings[e].Start < hi)
+                e++;
+            count = e - a;
+        }
+        var input = RentMergeInput(count + incoming);
+        if (count > 0)
+            input.AddRange(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_buildings).Slice(first, count));
+        t_windowRead += count + incoming;
+        return input;
+    }
+
+    /// <summary>Resolves what <see cref="OpenWindow"/> opened and puts the answer where the
+    /// window's buildings stood. The buffer goes back for the next walk on this thread.</summary>
+    private void CloseWindow(List<SkylineBuilding> input, int first, int count)
+    {
+        var result = ResolveWalk(input);
+        t_mergeInput = input;
+        if (count > 0)
+            _buildings.RemoveRange(first, count);
+        _buildings.InsertRange(first, result);
+        ReturnResolveOutput(result);
+    }
+
+    /// <summary>Reads the whole skyline at every merge, as it did before the window: the other
+    /// side of the equality in <c>SkylineWindowTests</c>.</summary>
+    [ThreadStatic]
+    internal static bool t_wholeWalk;
+
+    /// <summary>The buildings this thread's merges have read: the window's liveness, for the
+    /// same tests. An output cannot see it.</summary>
+    [ThreadStatic]
+    internal static long t_windowRead;
 
     /// <summary>
     /// Sorts the combined building list by X and rebuilds THIS skyline keeping the
@@ -747,6 +841,30 @@ internal sealed class VerticalSkyline
     private void RebuildKeepingHighest(
         List<SkylineBuilding> allBuildings, bool sizeResultExactly = false)
     {
+        var result = ResolveWalk(allBuildings);
+
+        // ⚠️ R IS KNOWN ONLY NOW, and that is the whole point. Clearing first means the sizing
+        // has nothing to copy, and the AddRange below then takes ONE growth step — to R, or to
+        // twice what this list already holds, whichever is larger. That is ACCUMULATION's
+        // policy, and it is List's own: a skyline merged into for the first time is sized at
+        // exactly the answer, and one merged into again keeps the headroom it amortises with.
+        _buildings.Clear();
+        if (sizeResultExactly)
+        {
+            // CONSTRUCTION overrides it: the array is the answer and nothing more. The
+            // Capacity setter, because the growth AddRange would do is the doubling this is
+            // here to retire.
+            if (_buildings.Capacity < result.Count)
+                _buildings.Capacity = result.Count;
+        }
+        _buildings.AddRange(result);
+        ReturnResolveOutput(result);
+    }
+
+    /// <summary>The walk: <paramref name="allBuildings"/> sorted and resolved into the lent
+    /// output, keeping the highest at each point. The caller returns that buffer.</summary>
+    private List<SkylineBuilding> ResolveWalk(List<SkylineBuilding> allBuildings)
+    {
         // The contract in the param remark, said by the machine rather than by prose.
         System.Diagnostics.Debug.Assert(
             !ReferenceEquals(allBuildings, _buildings),
@@ -797,23 +915,7 @@ internal sealed class VerticalSkyline
 
         if (scratch is not null)
             ReturnScratch(scratch);
-
-        // ⚠️ R IS KNOWN ONLY NOW, and that is the whole point. Clearing first means the sizing
-        // has nothing to copy, and the AddRange below then takes ONE growth step — to R, or to
-        // twice what this list already holds, whichever is larger. That is ACCUMULATION's
-        // policy, and it is List's own: a skyline merged into for the first time is sized at
-        // exactly the answer, and one merged into again keeps the headroom it amortises with.
-        _buildings.Clear();
-        if (sizeResultExactly)
-        {
-            // CONSTRUCTION overrides it: the array is the answer and nothing more. The
-            // Capacity setter, because the growth AddRange would do is the doubling this is
-            // here to retire.
-            if (_buildings.Capacity < result.Count)
-                _buildings.Capacity = result.Count;
-        }
-        _buildings.AddRange(result);
-        ReturnResolveOutput(result);
+        return result;
     }
 
     /// <summary>
@@ -1322,12 +1424,19 @@ internal sealed class VerticalSkyline
         }
 
         // MergeInternal's sequence — ours, then the other's — with the other's raised on the
-        // way into the lent input.
-        var allBuildings = RentMergeInput(_buildings.Count + other._buildings.Count);
-        allBuildings.AddRange(_buildings);
+        // way into the lent input. A raise moves nothing along the horizon.
+        double lo = PositiveInfinity, hi = NegativeInfinity;
+        foreach (var b in other._buildings)
+        {
+            if (double.IsNegativeInfinity(b.ValueAt(b.Start)) && double.IsNegativeInfinity(b.ValueAt(b.End)))
+                continue;
+            lo = Math.Min(lo, b.Start);
+            hi = Math.Max(hi, b.End);
+        }
+        var window = OpenWindow(lo, hi, other._buildings.Count, out int first, out int count);
         for (int i = 0; i < other._buildings.Count; i++)
-            allBuildings.Add(Raised(other._buildings[i], delta));
-        ResolveFrom(allBuildings);
+            window.Add(Raised(other._buildings[i], delta));
+        CloseWindow(window, first, count);
     }
 
     /// <summary>

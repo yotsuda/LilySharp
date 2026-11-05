@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **★ 打鍵の増加の監査＝第1108〜1109 で閉じた（§1.1 第1109）。** 10 件を本体に入れた（`8a056e47b`・`c3bbde922`・`eee3470be`）。1000 小節の本の床は `fingbeam1k` 118 → 44 ms／`plain1k`＋小節の挿入 98 → 64 ms／`plain1k` 36 → 30 ms／`v2bow1k` 67 → 52 ms、9 月の水準の近くまで戻った。実物の 2 冊は時間がほぼ動かない（割当は 3.85 → 3.57 MB／3.34 → 2.53 MB）。**残りの候補（設計の話で、提案はオーナーに訊いてから）**: 実物の本の上位は `VerticalSkyline` の合成（`choir-chorale` の割当の 53% が `SkylineBuilding[]`・`RebuildKeepingHighest` は過去の便が何度も測った場所）／`plain1k` の `ChooseSystemCount` と `PageBreaker.SolveUnconstrained`（`hit` 1001 → 1201 は `31195a9f1`..`a8fee10e6`・機能の代金か未確認）。第1107 の最悪ケースの増分（`perf-3vdot300`・`perf-kitmix300`、数 ms）を受け入れるかはオーナーの返事待ち。
+- **★ 打鍵の増加の監査＝第1108〜1109 で閉じた（§1.1 第1109）。** 10 件を本体に入れた（`8a056e47b`・`c3bbde922`・`eee3470be`）。1000 小節の本の床は `fingbeam1k` 118 → 44 ms／`plain1k`＋小節の挿入 98 → 64 ms／`plain1k` 36 → 30 ms／`v2bow1k` 67 → 52 ms、9 月の水準の近くまで戻った。実物の 2 冊は時間がほぼ動かない（割当は 3.85 → 3.57 MB／3.34 → 2.53 MB）。**残りの候補（設計の話で、提案はオーナーに訊いてから）**: 実物の本の上位は `VerticalSkyline` の合成（`choir-chorale` の割当の 53% が `SkylineBuilding[]`・`RebuildKeepingHighest` は過去の便が何度も測った場所）／`plain1k` の `ChooseSystemCount` と `PageBreaker.SolveUnconstrained`（`hit` 1001 → 1201 は `31195a9f1`..`a8fee10e6`・機能の代金か未確認）。第1107 の最悪ケースの増分（`perf-3vdot300`・`perf-kitmix300`、数 ms）は受け入れる（オーナー決定 2026-11-06）。
 - **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。第1100 は連符の本体に書けるものと入れ子の連符の上下を閉じた（§1.1）。OMR の `open` は 0。点の列の共有は第1101 で閉じた（§1.1）。休符の声部の wish は第1102 で閉じた（§1.1）。付点のない声部の符尾は第1103 で閉じた（§1.1）。`lysc ly` のフレーズのドラムは第1104 で閉じた（§1.1）。ドラムの和音の揃え方は第1105 で閉じた（§1.1）。`Untitled-1` の段割れの差は名前の字下げと第1106 で分かった（§1.1）。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release の lysc は `1200c035a`**（オーナー決定 2026-11-04・第1099。OMR の REQUESTS #22 の行に書いた＝OMR の repo では未 commit）。
 - **`@cross` の音が別の段に描かれる＝第1093 で実装（OMR の REQUESTS #20）**: 設計は §1.1 第1093。**OMR の返事（`..\LilySharp-Omr\docs\repro\lilysharp-feedback-2026-11-04.md`）: #19〜#21 は `done`・今直してほしい不具合はない。**段をまたぐタイ・同音や 2 度の重なり・MusicXML は OMR が生成器で避ける＝今は依頼なし（必要なら OMR が行を足す）。読み手が段をまたぐ形をまだ読めないのは OMR 側の宿題。 残りの制限: ⑴ 弧は実装済み（下の語り）・スラーの上のスクリプトと点は元の段で読むまま／⑵ 段をまたぐタイは最初の音の段に描く（LP は斜め）／⑶ 連桁の採点は実装済み（下の語り）・他の段の連桁と、別の声部から同じ段へ移った音は避けない／⑷ 移った先の段の音とは衝突処理をしない（LP は 2 度・同音の頭を横へずらす＝Lab `sessions/p1093/rc` 7〜8 小節。⚠️ LP 自身が「this Voice needs a \voiceXx」と警告する形。休符は実装済み）／⑸ 臨時記号は実装済み（下の語り）・LP が落とす再確認の記号は残す（オーナー決定 2026-10-02 の ⑴ と同じ扱い）／⑹ 観測者なし＝連桁のない棒を移った先の輪郭へ入れる行と、弧の端の棒の枠の行は、8 冊の探り譜で出力が動かず毒が緑（LP の規則なので残した）／⑻ 双子は譜の最初の瞬間の `\change Staff` が LP で効かない（`k1`）／⑼ プレビューの実機は未確認（増分はフルと一致＝網 4 本）。
 - **チャットで Lily# を教わる＝第1043 で実装（`docs/LEARN_FOR_LLM.md`・`HANDOFF-LEARNING.md`）**: 残りは実物の Copilot での確認（MANUAL-CHECKS C59）。
@@ -137,6 +137,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1110セッション（2026-11-06・YT-DELL2）
+
+開始時 full **14708 / 0 / 2**（`-Start p1110`・HEAD `d7f921966`）。作業場所は Lab `sessions/p1110/`。オーナー指示「設計に進んで」（`VerticalSkyline` の合成）「受け入れる」（第1107 の増分）。
+
+## 以下は第1109セッションの経緯
+
 ### 1.1 第1109セッション（2026-11-05・YT-DELL2）
 
 開始時 full **14691 / 0 / 2**（`-Start p1109`・HEAD `10143f773`）・終了時 **14708 / 0 / 2**。作業場所は Lab `sessions/p1109/`。オーナー指示「入れて。もう少し詳しく調べる価値がありそうだね。続けて」＝第1108 の P1〜P4 を入れて、調査を続ける。
@@ -159,42 +165,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ✖ **試して捨てた**: ⑴ `SpringSolver` の挿入ソートの `List.Insert` をやめる＝動かないか少し悪い。**CPU プロファイルは 50% と言っていた**が、`Array.Copy` が GC 安全点なので偏っただけ。⚠️ CPU の % を根拠にしない・A/B で読む ⑵ n が変わるときの予備の表＝割当は半減するが時間は動かず、常駐が表 1 枚分増える。
 - **残り（値段はこの便のプロファイル・直していない）**: ⑴ 実物の本の上位は `VerticalSkyline` の合成（`choir-chorale` の割当の 53% が `SkylineBuilding[]`）。`RebuildKeepingHighest` の註のとおり過去に何度も測った場所で、短い直しは見えない ⑵ `ChooseSystemCount` と `PageBreaker.SolveUnconstrained` ⑶ `StaffTimeline.OfMeasure` が `plain1k` の割当の 16%（1 声なら merge が要らない）⑷ 小節の挿入の render 34 ms と `LineBreakDpSession` の表の確保（予備の表は値段だけ付けた）⑸ `v2bow1k` は全曲にまたがる声部の編集が live で歩く（`9874a5eff` の設計の代金）⑹ `9a261f5dc` の cold 619 → 853 ms は未調査。
 - **計器**: `idx/`（全コーパスで索引を建てる呼び手）・`EditKeystrokeBench3.cs`（GC 回数と停止を足した）・`ab.ps1`・`read-prof.ps1`。⚠️ 全 svg の掃きを Debug の exe で回すと終わらない＝`dotnet build LilySharp.Cli -c Release -o <Lab の exe-head>`（本体の `bin\Release` に触らない）。⚠️ PowerShell の `if` の値は配列を 1 段ほどく＝`$x = if (…) { ,@(a, b) }` は入れ子にならない。
-
-## 以下は第1108セッションの経緯
-
-### 1.1 第1108セッション（2026-11-05・YT-DELL2）
-
-開始時・終了時とも full **14691 / 0 / 2**（`-Start p1108`／`-End p1108`・開始時 HEAD `2be052a11`）。作業場所は Lab `sessions/p1108/`。オーナー指示「打鍵の増加の監査をして。今静かなのでベンチを回してよい」。本体のコードは変えていない。
-
-- ✖ **第1107 の比較の誤り**: `bench3b.ps1` は古いコミットに HEAD の本を読ませた。オクターブの基準の変更（`6fbd44e8b`・2026-10-28）の前では音が 1 オクターブ高く読まれ、別の音楽を比べていた。`v2bow1k` の「11 → 56 ms・約 5 倍」と `gate` の False → True はこの錯覚で、**コミット自身の本なら `746123f19` の時点で床 45 ms・`gate` True**。
-- **本当の増加**（`scan2.ps1`＝コミット自身の本と綴り・16 点・各 2 回・`DOTNET_TieredCompilation=0`。床は両方向の低いほう）:
-  | 本 | 床 `746123f19` → HEAD | 中央値 | 増えた段 |
-  |---|---|---|---|
-  | `fingbeam1k` | 35 → 103 ms（2.9 倍） | 40〜45 → 128 ms | collect 9 → 89 ms・1.35 → 87 MB |
-  | `plain1k`＋小節の挿入 | 51 → 92 ms（1.8 倍） | 56〜61 → 111 ms | render 27 → 58 ms・collect 4 → 21 ms |
-  | `plain1k` | 24 → 35 ms（1.5 倍） | 25 → 51 ms | layout 21 → 27 ms・collect 2 → 10 ms |
-  | `v2bow1k` | 45 → 52 ms（中央値で約 1.4 倍） | 47〜52 → 74 ms | collect 5 → 24 ms・layout 40 → 47 ms |
-- **効いたコミット**（二分探索は `bisect.result`。割当は HEAD の本で測った値＝どのコミットで動くかの目印）:
-  - `d67d3e278`（10-06・`SectionMeterPlan`）: `WritesTimeInMusic` が `DescendantNodesOfKinds` で赤の索引を全部建てる。呼ばれるのは打鍵ごと。`plain1k` 5.7 → 11 MB。**無駄**（註は「free」と書くが、`DescendantIndex` の註が禁じる形）。
-  - `31195a9f1`..`a8fee10e6`（10-06〜10-07）: `hit` 1001 → 1201・`plain1k` の layout 21 → 27 ms。この間は二分していない。`a8fee10e6`（ページの割り）が候補で、機能の代金か未確認。
-  - `1aca41cd2`（10-20・`StaffAccidentals`）: 全小節の全符頭を毎打鍵読み、符頭ごとに閉包を作る。`fingbeam1k` 56 → 97 MB。`78164829a`..`7eed3c46b` にもう 1 段（97 → 117 MB・二分していない）。**機能の代金だが、何も付かない小節の分は無駄**。
-  - `9874a5eff`（10-23）: 全曲にまたがる声部の中の編集は live で歩く（`v2bow1k` 22 → 27 MB）。commit 本文に「手放した」とある設計の代金。
-  - `1200c035a`（11-04・`ResolveClefAt`）: 音部記号のない本でも段ごとに頭から `Fraction` を足す。`plain1k`＋小節の挿入の床 76 → 96 ms。割当は動かない。**無駄**。
-  - `9a261f5dc`（11-05）: `v2bow1k` の cold が 619 → 853 ms（JIT 込みの cold だけ・打鍵は動かない）。原因は未調査。
-- **試作と値段**（`lily-bench-h` の中だけ・`prototype.diff`・`patches.ps1`。`final.log`＝素の HEAD と交互に 5 回）: **P1** `ResolveClefAt` は記号のあるときだけ足す／**P2** `WritesTimeInMusic` を `KindSites` で／**P3** `StaffAccidentals` は小節ごとに集めて、1 声で全符頭のずれが同じ小節を飛ばす（⑴ は他の声部、⑵⑶ は同じ線に別のオクターブが要る）・リストを使い回す／**P4** `PhraseBodies` を `GreenSites` で。
-  | 本 | 床 | 中央値 | 割当 |
-  |---|---|---|---|
-  | `fingbeam1k` | 103 → 45 ms | 128 → 94 ms | 121 → 53 MB |
-  | `plain1k`＋小節の挿入 | 92 → 61 ms | 111 → 73 ms | 48 → 40 MB |
-  | `plain1k` | 35 → 32 ms | 51 → 34 ms | 15.9 → 7.2 MB |
-  | `v2bow1k` | 52 → 52 ms | 74 → 68 ms | 44.6 → 42.6 MB |
-  | 実物 `choir-chorale` | 6.5 → 6.5 ms | 6.9 → 6.8 ms | 3.85 → 3.68 MB |
-  | 実物 `bigband-swing` | 3.4 → 3.2 ms | 4.1 → 4.0 ms | 3.34 → 2.59 MB |
-  確かめ: full 14691 / 0 / 2・全 svg 1262 枚で差 0（1036 冊）・毒 4 本すべて赤（`poison.log`。P3 の判定 3 本は 5・3・2 本赤、P1 の時刻は 1 本赤）。P2・P4 は緑の歩きに替えただけで判定を持たないので毒なし。⚠️ `prototype.diff` の `SectionBarCounts.cs` は BOM が 1 行動いている＝入れるときは当て直す。
-- ✖ **予測が外れた点**: P2 は `fingbeam1k` で割当が 1 B も減らなかった。`WrittenBarAt` → `SectionBarCounts.PhraseBodies` が同じ索引を建てていたから（P4 で 25.5 → 18.8 MB）。
-- **残り（値段はこの便の割当プロファイル・直していない）**: ⑴ `fingbeam1k` の collect は P1〜P4 の後も 45 ms（9/25 は 9 ms）＝`MeasureBuilder.OverflowsTheWrittenBar` → `WrittenBarAt` → `MeasureModel.Split`。先読み `SetFollowingBarline` があるはずの本でここへ入る理由は未特定 ⑵ `FingeringLayout[]` が `fingbeam1k` の割当の 36%（`ComputeFingeringsAndScripts`・`ImmutableArray.Builder.AddRange`）⑶ `SkylineBuilding[]` が `plain1k` の割当の 30%（`PagingAugmentProgram.ExecuteForBreaker`）⑷ `LineBreakDpSession.Begin` が `v2bow1k` の割当の 52%（`Double[]`・第615 以前から）⑸ `SpringSolver.RentSortedByBlockingForce` の挿入ソート（`v2bow1k` の CPU 上位・第615 以前から）⑹ `WritesAStaffChange` が `v2bow1k` の割当の 6%（span ごとの赤の歩き）⑺ `StaffTimeline.OfMeasure` が試作後の `plain1k` の割当の 16%。
-- ⚠️ **読み方**: ⑴ CPU の % は安全点に偏る（`PollGC` が self 17〜62%）＝順位の目安で、値段は A/B で読む ⑵ `plain1k` などの中央値は 2 峰（GC の有無）で、床と中央値が大きく離れる ⑶ `DescendantIndex` の註によれば診断の pass も同じ索引を使う＝P2・P4 は描画の待ちを減らすが、打鍵が落ち着いたあとの診断へ費用が移る分がある（測っていない）。
-- **計器**: `scan2.ps1`（コミット自身の本）・`bisect.ps1`・`EditKeystrokeBench2.cs`（方向別の時間と割当・段ごとの内訳）・`prof.ps1`＋`traceread/`（dotnet-trace の CPU と割当を呼び手で読む）。⚠️ `dotnet build` に `-p:BaseIntermediateOutputPath` を渡すと参照先の Core まで同じ obj を使い、2 回目で CS0579 になる。
 
 ## 2. 開いている作業
 

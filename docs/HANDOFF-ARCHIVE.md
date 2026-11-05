@@ -267,6 +267,42 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1108セッションの経緯
+
+### 1.1 第1108セッション（2026-11-05・YT-DELL2）
+
+開始時・終了時とも full **14691 / 0 / 2**（`-Start p1108`／`-End p1108`・開始時 HEAD `2be052a11`）。作業場所は Lab `sessions/p1108/`。オーナー指示「打鍵の増加の監査をして。今静かなのでベンチを回してよい」。本体のコードは変えていない。
+
+- ✖ **第1107 の比較の誤り**: `bench3b.ps1` は古いコミットに HEAD の本を読ませた。オクターブの基準の変更（`6fbd44e8b`・2026-10-28）の前では音が 1 オクターブ高く読まれ、別の音楽を比べていた。`v2bow1k` の「11 → 56 ms・約 5 倍」と `gate` の False → True はこの錯覚で、**コミット自身の本なら `746123f19` の時点で床 45 ms・`gate` True**。
+- **本当の増加**（`scan2.ps1`＝コミット自身の本と綴り・16 点・各 2 回・`DOTNET_TieredCompilation=0`。床は両方向の低いほう）:
+  | 本 | 床 `746123f19` → HEAD | 中央値 | 増えた段 |
+  |---|---|---|---|
+  | `fingbeam1k` | 35 → 103 ms（2.9 倍） | 40〜45 → 128 ms | collect 9 → 89 ms・1.35 → 87 MB |
+  | `plain1k`＋小節の挿入 | 51 → 92 ms（1.8 倍） | 56〜61 → 111 ms | render 27 → 58 ms・collect 4 → 21 ms |
+  | `plain1k` | 24 → 35 ms（1.5 倍） | 25 → 51 ms | layout 21 → 27 ms・collect 2 → 10 ms |
+  | `v2bow1k` | 45 → 52 ms（中央値で約 1.4 倍） | 47〜52 → 74 ms | collect 5 → 24 ms・layout 40 → 47 ms |
+- **効いたコミット**（二分探索は `bisect.result`。割当は HEAD の本で測った値＝どのコミットで動くかの目印）:
+  - `d67d3e278`（10-06・`SectionMeterPlan`）: `WritesTimeInMusic` が `DescendantNodesOfKinds` で赤の索引を全部建てる。呼ばれるのは打鍵ごと。`plain1k` 5.7 → 11 MB。**無駄**（註は「free」と書くが、`DescendantIndex` の註が禁じる形）。
+  - `31195a9f1`..`a8fee10e6`（10-06〜10-07）: `hit` 1001 → 1201・`plain1k` の layout 21 → 27 ms。この間は二分していない。`a8fee10e6`（ページの割り）が候補で、機能の代金か未確認。
+  - `1aca41cd2`（10-20・`StaffAccidentals`）: 全小節の全符頭を毎打鍵読み、符頭ごとに閉包を作る。`fingbeam1k` 56 → 97 MB。`78164829a`..`7eed3c46b` にもう 1 段（97 → 117 MB・二分していない）。**機能の代金だが、何も付かない小節の分は無駄**。
+  - `9874a5eff`（10-23）: 全曲にまたがる声部の中の編集は live で歩く（`v2bow1k` 22 → 27 MB）。commit 本文に「手放した」とある設計の代金。
+  - `1200c035a`（11-04・`ResolveClefAt`）: 音部記号のない本でも段ごとに頭から `Fraction` を足す。`plain1k`＋小節の挿入の床 76 → 96 ms。割当は動かない。**無駄**。
+  - `9a261f5dc`（11-05）: `v2bow1k` の cold が 619 → 853 ms（JIT 込みの cold だけ・打鍵は動かない）。原因は未調査。
+- **試作と値段**（`lily-bench-h` の中だけ・`prototype.diff`・`patches.ps1`。`final.log`＝素の HEAD と交互に 5 回）: **P1** `ResolveClefAt` は記号のあるときだけ足す／**P2** `WritesTimeInMusic` を `KindSites` で／**P3** `StaffAccidentals` は小節ごとに集めて、1 声で全符頭のずれが同じ小節を飛ばす（⑴ は他の声部、⑵⑶ は同じ線に別のオクターブが要る）・リストを使い回す／**P4** `PhraseBodies` を `GreenSites` で。
+  | 本 | 床 | 中央値 | 割当 |
+  |---|---|---|---|
+  | `fingbeam1k` | 103 → 45 ms | 128 → 94 ms | 121 → 53 MB |
+  | `plain1k`＋小節の挿入 | 92 → 61 ms | 111 → 73 ms | 48 → 40 MB |
+  | `plain1k` | 35 → 32 ms | 51 → 34 ms | 15.9 → 7.2 MB |
+  | `v2bow1k` | 52 → 52 ms | 74 → 68 ms | 44.6 → 42.6 MB |
+  | 実物 `choir-chorale` | 6.5 → 6.5 ms | 6.9 → 6.8 ms | 3.85 → 3.68 MB |
+  | 実物 `bigband-swing` | 3.4 → 3.2 ms | 4.1 → 4.0 ms | 3.34 → 2.59 MB |
+  確かめ: full 14691 / 0 / 2・全 svg 1262 枚で差 0（1036 冊）・毒 4 本すべて赤（`poison.log`。P3 の判定 3 本は 5・3・2 本赤、P1 の時刻は 1 本赤）。P2・P4 は緑の歩きに替えただけで判定を持たないので毒なし。⚠️ `prototype.diff` の `SectionBarCounts.cs` は BOM が 1 行動いている＝入れるときは当て直す。
+- ✖ **予測が外れた点**: P2 は `fingbeam1k` で割当が 1 B も減らなかった。`WrittenBarAt` → `SectionBarCounts.PhraseBodies` が同じ索引を建てていたから（P4 で 25.5 → 18.8 MB）。
+- **残り（値段はこの便の割当プロファイル・直していない）**: ⑴ `fingbeam1k` の collect は P1〜P4 の後も 45 ms（9/25 は 9 ms）＝`MeasureBuilder.OverflowsTheWrittenBar` → `WrittenBarAt` → `MeasureModel.Split`。先読み `SetFollowingBarline` があるはずの本でここへ入る理由は未特定 ⑵ `FingeringLayout[]` が `fingbeam1k` の割当の 36%（`ComputeFingeringsAndScripts`・`ImmutableArray.Builder.AddRange`）⑶ `SkylineBuilding[]` が `plain1k` の割当の 30%（`PagingAugmentProgram.ExecuteForBreaker`）⑷ `LineBreakDpSession.Begin` が `v2bow1k` の割当の 52%（`Double[]`・第615 以前から）⑸ `SpringSolver.RentSortedByBlockingForce` の挿入ソート（`v2bow1k` の CPU 上位・第615 以前から）⑹ `WritesAStaffChange` が `v2bow1k` の割当の 6%（span ごとの赤の歩き）⑺ `StaffTimeline.OfMeasure` が試作後の `plain1k` の割当の 16%。
+- ⚠️ **読み方**: ⑴ CPU の % は安全点に偏る（`PollGC` が self 17〜62%）＝順位の目安で、値段は A/B で読む ⑵ `plain1k` などの中央値は 2 峰（GC の有無）で、床と中央値が大きく離れる ⑶ `DescendantIndex` の註によれば診断の pass も同じ索引を使う＝P2・P4 は描画の待ちを減らすが、打鍵が落ち着いたあとの診断へ費用が移る分がある（測っていない）。
+- **計器**: `scan2.ps1`（コミット自身の本）・`bisect.ps1`・`EditKeystrokeBench2.cs`（方向別の時間と割当・段ごとの内訳）・`prof.ps1`＋`traceread/`（dotnet-trace の CPU と割当を呼び手で読む）。⚠️ `dotnet build` に `-p:BaseIntermediateOutputPath` を渡すと参照先の Core まで同じ obj を使い、2 回目で CS0579 になる。
+
 ## 以下は第1107セッションの経緯
 
 ### 1.1 第1107セッション（2026-11-05・YT-DELL2）

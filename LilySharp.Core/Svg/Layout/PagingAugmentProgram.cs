@@ -208,7 +208,11 @@ internal sealed class PagingAugmentProgram
             return Math.Max(prefixTop, top);
         }
 
+        // In one batch: nothing below reads these until they are done, and a merge per box
+        // re-read the whole silhouette once per bar number (5.3% of a keystroke's allocation,
+        // the box's carrier skyline on top of it, MEASURED session 1110).
         var outUp = new VerticalSkyline(VerticalDirection.Up);
+        outUp.BeginBatch();
         outUp.Merge(staves.up);
         VerticalSkyline? outDown = null;
         for (int i = 0; i < boxes.Count; i += SystemBoxArgs)
@@ -249,11 +253,14 @@ internal sealed class PagingAugmentProgram
                 if (outDown is null)
                 {
                     outDown = new VerticalSkyline(VerticalDirection.Down);
+                    outDown.BeginBatch();
                     outDown.Merge(staves.down);
                 }
                 outDown.MergeBox(bx0, bx1, bottom + lift, top + lift);
             }
         }
+        outUp.EndBatch();
+        outDown?.EndBatch();
         return (outUp, outDown ?? staves.down);
     }
 
