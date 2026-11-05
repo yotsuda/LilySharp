@@ -6,6 +6,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **`lysc ly` writes a drum part played through phrases.** `drums { hats beat }` and a bare `kit { hats }` went out as pitched music, with every drum note dropped and only the rests left. They are now in `\drummode` on a `DrumStaff`, a voice a line.
+- `[engraving]` **An up voice's dots clear the later up voices' stems.** With three or more voices, a dot could stand on the third voice's stem; the column now moves past it, as in LilyPond. A dotted rest's dot is also spaced on its own row, not always the same one, which can change line breaks in drum charts.
+- `[engraving]` **A voice of rests counts in the spacing.** Beside rests, on the same staff or another, a note's stem correction applied in full; LilyPond averages it with the rests' voice. Some columns and bar lines move by about 0.1 spaces.
 - `[engraving]` **A `key`, `tempo`, `octave` or `override` in a tuplet takes effect.** Written inside `tuplet { }`, each was dropped without a word (`revert` and `once` too), and the notes after a key or an octave mode stood in the old one. They now stand at their note's moment, as outside a tuplet.
 - `[engraving]` **A phrase, a `cue` or a `<< >>` in a tuplet is drawn.** The page left their notes out without a word, while the playback and MusicXML had them. A phrase named in a tuplet now also counts toward its bar and is not checked as a short bar of its own.
 - **A `voice { } { }` in a tuplet is an error (LYS1066).** The page left its notes out without a word, while the playback and MusicXML had them, and LilyPond draws no number for it. Write a tuplet inside each voice: `voice { tuplet 3/2 { … } } { tuplet 3/2 { … } }`. A phrase holding a voice span counts too.
