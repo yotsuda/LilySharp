@@ -170,6 +170,9 @@ public sealed partial class LilyPondExporter
             // the page, the MIDI and the MusicXML all dropped the marks in silence. It was
             // right about what happened and wrong about what should — see
             // MeasureCollector.EnterDefaultFrame.
+            // \drummode has no pitch to read a reference from: `\relative c` there is an error.
+            if (_drumMode)
+                return inner;
             if (_octaveAbsolute)
                 return v.OctaveOffset == 0
                     ? inner

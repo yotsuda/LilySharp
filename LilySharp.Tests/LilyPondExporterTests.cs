@@ -2310,6 +2310,61 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
+    /// A drum chart of phrases names no drum in the part itself, only in the phrases it plays.
+    /// Until session 1104 that read as a pitched part: `\relative`, every drum note dropped, and a
+    /// twin whose staff held the lines' rests alone (Lab sessions/p1104, corpora Untitled-1).
+    /// </summary>
+    [Fact]
+    public void ADrumChartOfPhrases_IsWrittenInDrummode_WithItsNotes()
+    {
+        var ly = Export("""
+            part kit { clef percussion }
+            phrase hats { hh8 hh hh hh hh hh hh hh | }
+            phrase beat { bd4 r8 bd8 sn4 bd4 | }
+            section S { kit { drums { hats beat } | drums { hats beat } | } }
+            form { ~S }
+            score { staff kit }
+            """);
+        Assert.Contains("kit = \\drummode {", ly);
+        Assert.Contains("\\new DrumStaff { \\kit }", ly);
+        Assert.Contains("hh8 hh hh hh hh hh hh hh", ly);
+        Assert.Contains("bd4 r8 bd8 sn4 bd4", ly);
+        Assert.DoesNotContain("\\relative", ly);
+    }
+
+    /// <summary>A phrase played bare is the same case, and a phrase inside a phrase.</summary>
+    [Fact]
+    public void ADrumPhrase_PlayedBareOrNested_IsDrumMusic()
+    {
+        var ly = Export("""
+            part kit { clef percussion }
+            phrase inner { hh4 sn hh sn | }
+            phrase outer { inner }
+            section S { kit { outer } }
+            form { ~S }
+            score { staff kit }
+            """);
+        Assert.Contains("kit = \\drummode {", ly);
+        Assert.Contains("hh4 sn hh sn", ly);
+        Assert.DoesNotContain("\\relative", ly);
+    }
+
+    /// <summary>A phrase of pitches stays pitched, however a chart may read it.</summary>
+    [Fact]
+    public void APitchedPhrase_StaysOutOfDrummode()
+    {
+        var ly = Export("""
+            part m { clef treble }
+            phrase tune { c'4 d e f | }
+            section S { m { tune } }
+            form { ~S }
+            score { staff m }
+            """);
+        Assert.DoesNotContain("\\drummode", ly);
+        Assert.Contains("\\relative", ly);
+    }
+
+    /// <summary>
     /// A drum part writes NO key: inside \drummode the tonic reads as a drum name, and LilyPond
     /// refused the twin ("Expecting pitch, found \"f\"") — the DrumStaff has no Key_engraver
     /// anyway, as the page draws none. A pitched part in the same book keeps its key. Found

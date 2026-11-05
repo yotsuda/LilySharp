@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1102セッションの経緯
+
+### 1.1 第1102セッション（2026-11-05・YT-DELL2）
+
+開始時 full **14659 / 0 / 2**（`-Start p1102`・HEAD `056f33a28`）。終了時 full **14664 / 0 / 2**（`run3.log`）。作業場所は Lab `sessions/p1102/`。オーナーの選択「`r2a` の間隔の差」。
+
+- **原因と修正**: 付点は関係なかった。LP の `Note_spacing::stem_dir_correction` は符尾のない列で早く返すだけで、休符の声部の wish は `merge_springs` の平均に入る（note-spacing.cc:248-249・spacing-spanner.cc:364-393）。`MergeVoiceStemWishes`／`…ToBarline` は休符の声部を飛ばして、他の声部の補正を丸ごと掛けていた。`SpacingRules.WishColumnAt`（音・和音・休符。spacer は列を作らないので wish なし）で平均に入れた。段をまたいでも同じ（wish は声部のもの）。
+- **計器**: `probe/rests.ps1`・`multi.ps1`＝`r2a` の族 9 形、小節線の手前、段をまたぐ休符、スラッシュの段、`removeEmpty` で隠した段、すべて 0.01 以内（丸め）。詰まった行 `tight` も 2.85／3.11（LP 2.85／3.10、修正前 2.73／3.24）。台帳 `spacing.rest-wish.*` 5 点（`probes/rest-voice-wish.ly`）。毒 `poisons.ps1` 3 本とも赤（exit code で判定）。予測の外れ: RWA と RWN の差は 0.125 でなく 0.0521＝休符の幅も平均に入るのを忘れていた（probe に記録）。
+- **全 svg**: `svg/sweep1.log` 1262 枚中 12 枚が動いた。`probe/moved.ps1` で LP に近づいた: `grammar-tour` 0.050→0.039・`feature-tour` 0.083→0.067・`fur-elise` 0.061→0.029・`ぐるぐるワンダーランド` 0.114→0.101、`rest-avoid-note`・`restavoid` は差 0 のまま。⚠️ `Untitled-1` はほぼ同じ（0.123→0.122。ただし 0.02 超の頭は 235→242 と増えた）。⚠️ `lesson-11-band`・`harbour-lights`・`morning-light`・`blues-in-f` はこの計器で判定できなかった（ページ全体の頭の x を 1 つのずらしで合わせる計器で、値が大きく崩れる。`lesson-11-band` は別スコアの `.ly` を読んだ計器の誤り）。`blues-in-f` の形は `multi.ps1` の `blues2`・`noslash` で LP と一致を確かめたが、残り 3 冊の本体は未確認。
+- **絵の更新**（オーナー承認 2026-11-05）: `test/instrument-defaults`（小節線 42.61→42.68、LP 42.684）・`programmatic/hara-kiri`・`programmatic/hara-kiri-paged`（譜そのものは LP と未照合。同じ形の `hide2` で 2.57→2.70、LP 2.70）。根拠の台帳キーは `spacing.rest-wish.note-over-rests`。
+- **Release の lysc は `0d09b8f61`**（オーナー「Release を作り直して」2026-11-05）。前は `21cee0cb9`。全 svg は前の Release と 17 枚差＝この便の 12 枚＋第1100〜1101 の既知 5 枚（`svg2/sweep.log`）。その後の commit は docs だけ。OMR の REQUESTS にお知らせを足した＝OMR の repo では未 commit。
+- ⚠️ 打鍵の時間は未計測（ベンチは静かな窓をもらってから）。走査の回数は変わらない。休符だけの列の組も `MergeSprings` を通るようになった分だけ増える。
+
 ## 以下は第1101セッションの経緯
 
 ### 1.1 第1101セッション（2026-11-05・YT-DELL2）

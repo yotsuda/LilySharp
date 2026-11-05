@@ -258,12 +258,15 @@ public sealed partial class LilyPondExporter
     /// <c>c</c> is not a pitch, and outside it <c>hh</c> is not a drum. Lily# has no such
     /// mode — a bare identifier is a drum name wherever the registry knows it — so a part
     /// that writes both cannot be spelled at all, and saying so is better than writing a
-    /// <c>.ly</c> LilyPond refuses to read.
+    /// <c>.ly</c> LilyPond refuses to read. A phrase's body counts as the part's own: until
+    /// session 1104 `drums { hats kick }` named no drum here, so the part went out in
+    /// <c>\relative</c>, every drum note was dropped, and the twin's staff had only rests.
     /// </remarks>
     private bool IsDrumPart(string partName, List<SyntaxNode> music)
     {
         bool drums = false, pitched = false;
-        foreach (var item in music)
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        void Read(SyntaxNode item)
         {
             foreach (var n in item.DescendantNodes().Prepend(item))
             {
@@ -275,9 +278,14 @@ public sealed partial class LilyPondExporter
                         if (c.DrumNames.Any()) drums = true;
                         if (c.Pitches.Any() || c.Degrees.Any()) pitched = true;
                         break;
+                    case VariableReferenceSyntax v when seen.Add(v.Name.Text) && _shared.Phrases.TryGetValue(v.Name.Text, out var body):
+                        Read(body);
+                        break;
                 }
             }
         }
+        foreach (var item in music)
+            Read(item);
         if (drums && pitched)
         {
             _warnings.Add(
