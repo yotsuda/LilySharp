@@ -214,7 +214,8 @@ internal sealed class SectionMeterPlan
     /// (<see cref="Semantics.SectionHeaders"/>) — the only books with a plan to build.</summary>
     private static bool WritesTimeInMusic(SyntaxNode root)
     {
-        foreach (var n in root.DescendantNodesOfKinds([SyntaxKind.TimeSignature]))
+        // Green: every keystroke asks this, and it must not build the index.
+        foreach (var n in root.KindSites(SyntaxKind.TimeSignature))
         {
             if (n is not TimeSignatureSyntax ts || SectionBarCounts.IsScoreLevel(ts))
                 continue;

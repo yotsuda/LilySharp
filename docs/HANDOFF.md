@@ -137,6 +137,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1109セッション（2026-11-05・YT-DELL2）
+
+開始時 full **14691 / 0 / 2**（`-Start p1109`・HEAD `10143f773`）。作業場所は Lab `sessions/p1109/`。オーナー指示「入れて。もう少し詳しく調べる価値がありそうだね。続けて」。
+
+## 以下は第1108セッションの経緯
+
 ### 1.1 第1108セッション（2026-11-05・YT-DELL2）
 
 開始時・終了時とも full **14691 / 0 / 2**（`-Start p1108`／`-End p1108`・開始時 HEAD `2be052a11`）。作業場所は Lab `sessions/p1108/`。オーナー指示「打鍵の増加の監査をして。今静かなのでベンチを回してよい」。本体のコードは変えていない。
@@ -170,19 +176,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **残り（値段はこの便の割当プロファイル・直していない）**: ⑴ `fingbeam1k` の collect は P1〜P4 の後も 45 ms（9/25 は 9 ms）＝`MeasureBuilder.OverflowsTheWrittenBar` → `WrittenBarAt` → `MeasureModel.Split`。先読み `SetFollowingBarline` があるはずの本でここへ入る理由は未特定 ⑵ `FingeringLayout[]` が `fingbeam1k` の割当の 36%（`ComputeFingeringsAndScripts`・`ImmutableArray.Builder.AddRange`）⑶ `SkylineBuilding[]` が `plain1k` の割当の 30%（`PagingAugmentProgram.ExecuteForBreaker`）⑷ `LineBreakDpSession.Begin` が `v2bow1k` の割当の 52%（`Double[]`・第615 以前から）⑸ `SpringSolver.RentSortedByBlockingForce` の挿入ソート（`v2bow1k` の CPU 上位・第615 以前から）⑹ `WritesAStaffChange` が `v2bow1k` の割当の 6%（span ごとの赤の歩き）⑺ `StaffTimeline.OfMeasure` が試作後の `plain1k` の割当の 16%。
 - ⚠️ **読み方**: ⑴ CPU の % は安全点に偏る（`PollGC` が self 17〜62%）＝順位の目安で、値段は A/B で読む ⑵ `plain1k` などの中央値は 2 峰（GC の有無）で、床と中央値が大きく離れる ⑶ `DescendantIndex` の註によれば診断の pass も同じ索引を使う＝P2・P4 は描画の待ちを減らすが、打鍵が落ち着いたあとの診断へ費用が移る分がある（測っていない）。
 - **計器**: `scan2.ps1`（コミット自身の本）・`bisect.ps1`・`EditKeystrokeBench2.cs`（方向別の時間と割当・段ごとの内訳）・`prof.ps1`＋`traceread/`（dotnet-trace の CPU と割当を呼び手で読む）。⚠️ `dotnet build` に `-p:BaseIntermediateOutputPath` を渡すと参照先の Core まで同じ obj を使い、2 回目で CS0579 になる。
-
-## 以下は第1107セッションの経緯
-
-### 1.1 第1107セッション（2026-11-05・YT-DELL2）
-
-開始時 full **14691 / 0 / 2**（`-Start p1107`・HEAD `e9e19a736`）。作業場所は Lab `sessions/p1107/`。オーナー指示「ベンチして」。
-
-- **打鍵の A/B**（オーナー指示 2026-11-05＝`056f33a28`（第1102 の前）対 `e9e19a736`、worktree の Release で交互に 5 回・`bench2/bench.log`。1 回目の 3 回は揺れが大きく `bench/`）。本は既存 5 本に、この場で作った 300 小節の 3 本（`perf-3vdot300`＝付点 1 声＋3 声、`perf-restv300`＝音符の下に休符の声部、`perf-kitmix300`＝形の混ざるドラムの和音。worktree の中だけで repo には入れていない）を足した。
-  - 揺れの範囲: `plain1k`・`plain1k`＋小節の挿入・`fingbeam1k`・`restv300`。`restdot300` は床 +1.3 ms・中央値 −2 ms。
-  - **増えた**: `perf-3vdot300`（床 10.2〜11.5 → 12.3〜14.6 ms、中央値 15.0〜23.7 → 24.5〜28.9 ms）＝第1103 の `MayShareADotColumn` で 3 声の小節が衝突の答えを解く分。`perf-kitmix300`（床 2.8〜3.0 → 5.7〜6.3 ms、中央値 3.2〜4.5 → 6.3〜7.2 ms）＝第1105。ただし `hit` が 191 → 216 で段割れが変わっており、全部が計算の増分ではない。
-  - ⚠️ `perf-v2bow1k`: 床は 53.5〜65.5 → 65.3〜73.2 ms と高めだが、中央値は 73.5〜81.8 → 74.8〜81.6 ms で重なる。修正前の床が 54 前後と 63 前後の 2 つに割れているので、増えたとは言い切れない。原因は未調査。
-  - 追うかどうかはオーナーへ。memo は未着手。
-- **第615 との比較**（`bench3b.ps1`・`746123f19`（2026-09-25）対 HEAD・本と計器は今のものを両方へ写す・3 回・`bench3b/bench.log`）: 床の前 → 後、中央値の前 → 後。`plain1k` 27〜35 → 44〜48 ms、62〜70 → 72〜83 ms／`plain1k`＋小節の挿入 53〜57 → 94〜98 ms、61〜67 → 116〜121 ms／`fingbeam1k` 41〜45 → 115〜132 ms、57〜61 → 157〜163 ms／**`v2bow1k` 11〜12 → 56〜72 ms、13〜14 → 88〜90 ms**／実物 `choir-chorale` 6.7〜7.6 → 8.5〜8.8 ms、9〜9 → 12〜13 ms／実物 `bigband-swing` 3.2〜3.5 → 5.2〜5.3 ms、5 → 7〜8 ms。⚠️ `hit` が違う（`plain1k` 1001 → 1201・`v2bow1k` 785 → 889）＝段割れや機能も変わっているので、全部が無駄な増加とは限らない。本の中身は今のもの。コーパス 518 冊の `|` の数は中央値 51・p99 171・最大 265＝実物の打鍵は今でも 5〜13 ms。
 
 ## 2. 開いている作業
 

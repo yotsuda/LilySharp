@@ -186,7 +186,8 @@ internal static class SectionBarCounts
     public static IReadOnlyDictionary<string, SyntaxNode> PhraseBodies(SyntaxNode root)
     {
         var gathered = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
-        foreach (var n in root.DescendantNodesOfKinds(Semantics.PhraseCycleValidator.DeclaringKinds))
+        // Green: the keystroke's walk asks this (WrittenBarAt), and it must not build the index.
+        foreach (var n in root.GreenSites(g => (Array.IndexOf(Semantics.PhraseCycleValidator.DeclaringKinds, g.Kind) >= 0, Descend: true)))
         {
             if (n is PhraseDeclarationSyntax ph)
                 gathered[ph.Name.Text] = ph.Body;

@@ -91,19 +91,21 @@ internal static class StaffAccidentals
         // any voice's key change in timeline order (stage ⑥ of the moment-order walk, as the
         // collector shares it among a span's branches); the voice's last sounding item
         // (TiedInto) is per voice. Both are carried across the bars.
-        var heads = new List<Head>[measureCount];
-        var clefChange = new bool[measureCount];
+        var bar = new List<Head>();
+        Dictionary<(int Voice, int Measure, int Item, int Member), string>? added = null;
         var previous = new MusicItem?[voices.Length];
         var key = openingKey;
         for (int mi = 0; mi < measureCount; mi++)
         {
+            bar.Clear();
+            bool clefChange = false;
             foreach (var e in StaffTimeline.OfMeasure(voices, mi))
             {
                 int vi = e.VoiceIndex;
                 switch (e.Item)
                 {
                     case ClefChangeItem:
-                        clefChange[mi] = true;
+                        clefChange = true;
                         break;
                     case KeySignatureChangeItem change:
                         if (key != null)
@@ -111,7 +113,7 @@ internal static class StaffAccidentals
                         break;
                     case NoteItem n:
                         if (n.WrittenPitch != 0)
-                            (heads[mi] ??= new()).Add(new Head(vi, e.ItemIndex, -1, e.Onset, e.GraceRank,
+                            bar.Add(new Head(vi, e.ItemIndex, -1, e.Onset, e.GraceRank,
                                 n.WrittenPitch, n.StaffPosition,
                                 n.Accidental != null || n.LineStartAccidental != null || n.EditorialAccidental != null,
                                 TiedInto(previous[vi], n.StaffPosition, n.Midi), key));
@@ -122,7 +124,7 @@ internal static class StaffAccidentals
                         {
                             var member = c.Notes[k];
                             if (member.WrittenPitch != 0)
-                                (heads[mi] ??= new()).Add(new Head(vi, e.ItemIndex, k, e.Onset, e.GraceRank,
+                                bar.Add(new Head(vi, e.ItemIndex, k, e.Onset, e.GraceRank,
                                     member.WrittenPitch, member.StaffPosition,
                                     member.Accidental != null || member.LineStartAccidental != null,
                                     TiedInto(previous[vi], member.StaffPosition, member.Midi), key));
@@ -134,6 +136,8 @@ internal static class StaffAccidentals
                         break;
                 }
             }
+            if (bar.Count < 2 || OwesNothing(bar))
+                continue;
             // Owed scans a bar's heads in VOICE order (the order the voice-by-voice gather
             // produced until session 969): when several heads at one moment in different
             // voices differ, the first one scanned names the alteration the natural restores
@@ -141,16 +145,8 @@ internal static class StaffAccidentals
             // observes it (session 969 poisoned it to Reverse(): 382 targeted nets stayed
             // green) — the case needs two same-moment heads in different voices with
             // different alterations, which no book in the nets writes.
-            heads[mi]?.Sort(static (a, b) => a.Voice != b.Voice ? a.Voice.CompareTo(b.Voice)
+            bar.Sort(static (a, b) => a.Voice != b.Voice ? a.Voice.CompareTo(b.Voice)
                 : a.Item != b.Item ? a.Item.CompareTo(b.Item) : a.Member.CompareTo(b.Member));
-        }
-
-        Dictionary<(int Voice, int Measure, int Item, int Member), string>? added = null;
-        for (int mi = 0; mi < measureCount; mi++)
-        {
-            var bar = heads[mi];
-            if (bar == null || bar.Count < 2)
-                continue;
             foreach (var head in bar)
             {
                 if (head.HasAccidental || head.TiedIn)
@@ -161,14 +157,14 @@ internal static class StaffAccidentals
                     e => WrittenPitch.StepOctave(e.Packed) == WrittenPitch.StepOctave(head.Packed),
                     e => e.Voice != head.Voice);
                 // ⑵ The same line or space, last shown for another octave (an ottava's two sides).
-                if (owed is null && !clefChange[mi])
+                if (owed is null && !clefChange)
                     owed = Owed(bar, head, alter,
                         e => e.StaffPosition == head.StaffPosition
                              && WrittenPitch.Step(e.Packed) == WrittenPitch.Step(head.Packed),
                         e => WrittenPitch.Octave(e.Packed) != WrittenPitch.Octave(head.Packed));
                 // ⑶ The pitch's memory came from a head drawn ELSEWHERE (an ottava's other side),
                 // and this line or space reads otherwise.
-                if (owed is null && !clefChange[mi])
+                if (owed is null && !clefChange)
                     owed = OwedWhereDrawn(bar, head, alter);
                 if (owed is { } previousAlter)
                     (added ??= new())[(head.Voice, mi, head.Item, head.Member)] =
@@ -176,6 +172,25 @@ internal static class StaffAccidentals
             }
         }
         return added == null ? voices : Written(voices, added);
+    }
+
+    /// <summary>
+    /// True when no rule can owe anything in this bar: every head is one voice's (⑴ reads another
+    /// voice) and every head is drawn where its pitch says, the same offset between staff position
+    /// and step-and-octave throughout (⑵ needs one line for two octaves, ⑶ one pitch on two lines;
+    /// only an ottava's two sides, or a clef change, give either). Nearly every bar of a one-voice staff.
+    /// </summary>
+    private static bool OwesNothing(List<Head> bar)
+    {
+        var first = bar[0];
+        int offset = DrawnOffset(first);
+        for (int i = 1; i < bar.Count; i++)
+            if (bar[i].Voice != first.Voice || DrawnOffset(bar[i]) != offset)
+                return false;
+        return true;
+
+        static int DrawnOffset(in Head h)
+            => h.StaffPosition - (7 * WrittenPitch.Octave(h.Packed)) - WrittenPitch.Step(h.Packed);
     }
 
     /// <summary><paramref name="voices"/> with the accidentals <paramref name="added"/> names written

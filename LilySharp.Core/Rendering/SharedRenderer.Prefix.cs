@@ -102,18 +102,25 @@ internal static partial class SharedRenderer
             // first measure, which surface as system-start clefs (LP groups them with the prefix).
             for (int m = 0; m <= firstMeasureIndex && m < voice.Measures.Length; m++)
             {
-                var at = Fraction.Zero;
-                foreach (var item in voice.Measures[m].Items)
+                var items = voice.Measures[m].Items;
+                for (int i = 0; i < items.Length; i++)
                 {
+                    var item = items[i];
                     if (m == firstMeasureIndex && item.Duration > Fraction.Zero)
                         break;
-                    if (item is ClefChangeItem cc && (m > latestMeasure || (m == latestMeasure && at >= latestAt)))
+                    if (item is not ClefChangeItem cc || m < latestMeasure)
+                        continue;
+                    // The moment is summed only where a clef stands: this runs for every line of
+                    // the book, and nearly every bar of nearly every book holds none.
+                    var at = Fraction.Zero;
+                    for (int k = 0; k < i; k++)
+                        at += items[k].Duration;
+                    if (m > latestMeasure || at >= latestAt)
                     {
                         activeClef = cc.NewClef;
                         sourcePosition = cc.SourcePosition;
                         (latestMeasure, latestAt) = (m, at);
                     }
-                    at += item.Duration;
                 }
             }
         }

@@ -51,6 +51,9 @@ public sealed class CompilationUnitSyntax : SyntaxNode
         }
     }
 
+    /// <summary>Whether <see cref="Descendants"/> has been built (KeystrokeStaysRedFreeTests).</summary>
+    internal bool DescendantIndexBuilt => Volatile.Read(ref _descendants) != null;
+
     private HashSet<string>? _declaredPartNames;
 
     /// <summary>
