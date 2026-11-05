@@ -866,6 +866,10 @@ public static class DiagnosticCodes
     /// (owner's decision 2026-11-05; <c>Semantics.TupletMeterValidator</c>).</summary>
     public const string MeterInTuplet = "LYS1065";
 
+    /// <summary>A <c>voice { } { }</c> in a tuplet's body: write a tuplet inside each voice
+    /// (owner's decision 2026-11-05; <c>Semantics.TupletVoiceValidator</c>).</summary>
+    public const string VoiceInTuplet = "LYS1066";
+
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
     /// root (a root that is no A–G is the parser's error); the message names the spelling's fix, as the

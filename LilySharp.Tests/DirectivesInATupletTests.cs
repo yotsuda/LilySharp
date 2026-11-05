@@ -181,6 +181,40 @@ public class DirectivesInATupletTests
     private static readonly string[] Quiet = [DiagnosticCodes.MeasureOverflow, DiagnosticCodes.MeasureIncomplete, DiagnosticCodes.PickupWithoutPartial,
         DiagnosticCodes.MissingBarLine, DiagnosticCodes.TupletNotANoteValue];
 
+    private static TupletBracketItem[] Brackets(string music) => Score(music).TupletBrackets.ToArray();
+
+    [Theory]
+    [InlineData("tuplet 3/2 { tuplet 3/2 { c'8 d' e' } } c'2 |", 1)]
+    [InlineData("tuplet 3/2 { tuplet 3/2 { tuplet 3/2 { c'8 d' e' } } } c'2 |", 1)]
+    [InlineData("tuplet 3/2 { << c' 3 5 >>4 } c'2 |", 1)]
+    [InlineData("tuplet 3/2 { tuplet 5/4 { c'16 d' e' f' g' } } c'2 |", 2)]
+    [InlineData("tuplet 3/2 { tuplet 3/4 { c'8 d' e' } } c'2 |", 2)]
+    [InlineData("tuplet 3/2 { tuplet 5/2 { c'8 d' e' f' g' } } c'2 |", 2)]
+    [InlineData("tuplet 3/2 { tuplet 3/2 { c'8 d' e' } f'8 g' } c'2 |", 2)]
+    [InlineData("tuplet 3/2 { f'8 g' tuplet 3/2 { c'8 d' e' } } c'2 |", 2)]
+    [InlineData("tuplet 3/2 { c'8 d' e' } tuplet 3/2 { c'8 d' e' } c'2 |", 2)]
+    public void ATupletOfTheSameRatioOverTheSameNotes_IsOne(string music, int brackets)
+        => Assert.Equal(brackets, Brackets(music).Length);
+
+    [Fact]
+    public void TheOneThatStays_IsTheOuter()
+    {
+        var b = Assert.Single(Brackets("tuplet 3/2 bare { tuplet 3/2 { c'8 d' e' } } c'2 |"));
+        Assert.Equal(0, b.NestingDepth);
+        Assert.True(b.Bare);
+    }
+
+    [Fact]
+    public void TheSameTupletAtTheSameIndices_InAnotherVoiceOrStaffOrBar_IsAnother()
+    {
+        Assert.Equal(2, Brackets("voice { tuplet 3/2 { c'8 d' e' } c'2. | } { tuplet 3/2 { c'8 d' e' } c'2. | }").Length);
+        Assert.Equal(2, Brackets("tuplet 3/2 { c'8 d' e' } c'2. | tuplet 3/2 { c'8 d' e' } c'2. |").Length);
+        const string music = "tuplet 3/2 { c'8 d' e' } c'2. |";
+        var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\npart p { clef treble }\npart q { clef treble }\n"
+            + "section A { p { " + music + " } q { " + music + " } }\nform { A }\nscore { staff p staff q }\n");
+        Assert.Equal(2, new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!).TupletBrackets.Length);
+    }
+
     private static string[] BarReports(string music, string phrases)
         // The bar after: a short LAST bar is reported by no one.
         => SemanticValidation.Run(SyntaxTree.Parse("octave absolute\ntime 4/4\npart p { clef treble }\n" + phrases
@@ -233,7 +267,7 @@ public class DirectivesInATupletTests
     [Fact]
     public void AGroupsBracket_IsNestedInTheTuplets()
     {
-        var depths = Score("c'2 tuplet 3/2 { << d' 3 5 >>4 } g'4 |").TupletBrackets.Select(b => b.NestingDepth).OrderBy(d => d).ToArray();
+        var depths = Score("c'2 tuplet 3/2 { << d' 3 5 >>4 e'8 } g'4 |").TupletBrackets.Select(b => b.NestingDepth).OrderBy(d => d).ToArray();
         Assert.Equal(new[] { 0, 1 }, depths);
     }
 
@@ -344,6 +378,36 @@ public class DirectivesInATupletTests
     [Fact]
     public void ACueInTheBody_IsACueRegion()
         => Assert.All(Bar0Notes("c'2 tuplet 3/2 { cue { d'8 e'8 f'8 } } g'4 |").Skip(1).Take(3), n => Assert.True(n.IsCue));
+
+    private static int VoiceErrors(string music, string phrases = "")
+        => SemanticValidation.Run(SyntaxTree.Parse("octave absolute\ntime 4/4\npart p { clef treble }\n" + phrases
+                + "\nsection A { p { " + music + " } }\nform { A }\nscore { staff p }\n"))
+            .Count(d => d.Code == DiagnosticCodes.VoiceInTuplet);
+
+    [Theory]
+    [InlineData("c'2 tuplet 3/2 { voice { d'8 e' f' } { g'8 a' b' } } g'4 |", "")]
+    [InlineData("c'2 tuplet 3/2 { cue { voice { d'8 e' f' } { g'8 a' b' } } } g'4 |", "")]
+    [InlineData("c'2 tuplet 3/2 { y } g'4 |", "phrase y { voice { d'8 e' f' } { g'8 a' b' } }")]
+    [InlineData("c'2 tuplet 3/2 { w } g'4 |", "phrase y { voice { d'8 e' f' } { g'8 a' b' } }\nphrase w { y }")]
+    [InlineData("c'2 tuplet 3/2 { y y } g'4 |", "phrase y { voice { d'8 e' f' } { g'8 a' b' } }")]
+    public void AVoiceInTheBody_IsAnError(string music, string phrases)
+        => Assert.True(VoiceErrors(music, phrases) >= 1);
+
+    [Theory]
+    [InlineData("c'2 voice { tuplet 3/2 { d'8 e' f' } g'4 } { tuplet 3/2 { g'8 a' b' } g'4 } |", "")]
+    [InlineData("c'2 voice { d'4 g'4 } { g'4 g'4 } |", "")]
+    [InlineData("c'2 tuplet 3/2 { x } g'4 |", X)]
+    [InlineData("y tuplet 3/2 { c'8 d' e' } c'4 |", "phrase y { voice { c'2 } { e'2 } }")]
+    public void ATupletInsideEachVoice_IsNoError(string music, string phrases)
+        => Assert.Equal(0, VoiceErrors(music, phrases));
+
+    [Fact]
+    public void AReferenceInANestedTuplet_IsReportedOnce()
+        => Assert.Equal(1, VoiceErrors("c'2 tuplet 3/2 { tuplet 3/2 { y } } g'4 |", "phrase y { voice { d'8 e' f' } { g'8 a' b' } }"));
+
+    [Fact]
+    public void APhraseOfVoicesNamingItselfInATuplet_EndsTheCheck()
+        => Assert.True(VoiceErrors("z |", "phrase z { voice { c'4 } { e'4 } tuplet 3/2 { z } }") >= 1);
 
     [Fact]
     public void AVoicesClefThereAndBack_AtOneMoment_DrawsNone()

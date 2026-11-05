@@ -2238,6 +2238,13 @@ public sealed partial class MeasureCollector
         return (writtenDuration, lastSourcePosition);
     }
 
+    /// <summary>Whether two tuplets of one voice are the same over the same notes
+    /// (<see cref="CloseTuplet"/>).</summary>
+    private static bool SameTuplet(TupletBracketItem a, TupletBracketItem b)
+        => a.Numerator == b.Numerator && a.Denominator == b.Denominator
+            && a.StartNoteIndex == b.StartNoteIndex && a.EndNoteIndex == b.EndNoteIndex
+            && a.MeasureIndex == b.MeasureIndex && a.StaffIndex == b.StaffIndex && a.VoiceIndex == b.VoiceIndex;
+
     /// <summary>Records a walked tuplet's bracket and, at the top level, hands the bar its
     /// scaled length, which it returns.</summary>
     private async ValueTask<Fraction> CloseTuplet(TupletExpressionSyntax tuplet, MeasureBuilder builder, int nestingDepth,
@@ -2275,7 +2282,7 @@ public sealed partial class MeasureCollector
         // ⚠️ SCAFFOLDING: ⒝2 draws it at the grace font and the drop retires.
         if (endNoteIndex >= startNoteIndex && _v.GraceDepth == 0)
         {
-            _tupletBrackets.Add(new TupletBracketItem(
+            var bracket = new TupletBracketItem(
                 tuplet.TupletRatio,
                 tuplet.BaseDivision,
                 startNoteIndex,
@@ -2286,7 +2293,15 @@ public sealed partial class MeasureCollector
                 _v.Cursor.StaffIndex,
                 _v.Cursor.VoiceIndex,
                 tuplet.IsBare
-            ));
+            );
+            // A tuplet of the same ratio over the same notes is one tuplet, the outer: it was
+            // heard first in LilyPond, and this inner one closed just before it here.
+            // LILYPOND-REF: lily/tuplet-engraver.cc:74-77 listen_tuplet_span — do not add already-existing tuplet
+            // LILYPOND-REF: lily/tuplet-description.cc:84-89 Tuplet_description's operator== — start, stop, parent, numerator, denominator
+            if (_tupletBrackets.Count > 0 && SameTuplet(_tupletBrackets[^1], bracket))
+                _tupletBrackets[^1] = bracket;
+            else
+                _tupletBrackets.Add(bracket);
         }
         // In grace time the span is kept for the grace beam's beamlets instead
         // (GraceNoteItem.WithBeamletCounts): LilyPond's beam engraver hands every stem its

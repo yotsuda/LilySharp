@@ -117,6 +117,7 @@ public static class SemanticValidation
         new ChordFingeringValidator(),      // a chord a fretted part's player cannot finger
         new ChordUnisonValidator(),         // one pitch twice in a <…> chord
         new TupletMeterValidator(),         // a time or partial in a tuplet's body
+        new TupletVoiceValidator(),         // a voice { } { } in a tuplet's body
         new PercentRepeatValidator(),       // the old repeat percent/unfold; a % mark that repeats nothing
         new EmptyScoreValidator(),          // a score block with no staff to engrave
         new MissingScoreValidator(),        // a book with music and no score block at all
