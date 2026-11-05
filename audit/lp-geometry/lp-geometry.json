@@ -3855,6 +3855,83 @@
       "residual": 0.0,
       "why": "OPENED 2026-11-05 (session 1102), THE CONTROL of the bar line: the same over a spacer."
     },
+    "dots.column.later-up-stem": {
+      "probe": "dot-column-later-up-stem.ly",
+      "score": "DLA",
+      "lilypond": 2.4063,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1103): an up voice's dots clear the stem of a later up voice, dotted or not (lily/note-collision.cc:586-594). PREDICTION written before measuring: 2.406, the voice's shift 0.652 + the head 1.304 + the padding 0.45. Lily# stood the dot at 1.754, on the stem, until ElementCoordinator.LaterUpStemsReach."
+    },
+    "dots.column.later-up-stem-top-edge": {
+      "probe": "dot-column-later-up-stem.ly",
+      "score": "DLE",
+      "lilypond": 2.4063,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1103): the stem's box ends exactly on the dot's row, and Skyline::height reads a row at a building's edge from the first building whose end reaches it (lily/skyline.cc:658-665), so a box owns its top edge. DotColumn.OffsetX was open at both edges until this point."
+    },
+    "dots.column.later-up-stem-below-control": {
+      "probe": "dot-column-later-up-stem.ly",
+      "score": "DLB",
+      "lilypond": 1.7542,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1103), THE CONTROL of the top edge: one position lower, the box stops under the dot's row and the column stands at the head's own."
+    },
+    "dots.column.down-voice-control": {
+      "probe": "dot-column-later-up-stem.ly",
+      "score": "DLD",
+      "lilypond": 3.0584,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1103), THE CONTROL of direction: the dotted voice is a down voice, whose column takes no later stem (the loop at note-collision.cc:586-594 reads UP only)."
+    },
+    "dots.column.earlier-up-stem-control": {
+      "probe": "dot-column-later-up-stem.ly",
+      "score": "DLG",
+      "lilypond": 3.0584,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1103), THE CONTROL of order: the dotted voice is the third, which takes nothing from the first voice's stem."
+    },
+    "dots.column.only-one-voice-dotted": {
+      "probe": "dot-column-later-up-stem.ly",
+      "score": "DLU",
+      "lilypond": 2.4063,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1103): the first voice alone has dots, so the column has one member and still moves."
+    },
+    "dots.column.down-voice-on-the-row-control": {
+      "probe": "dot-column-later-up-stem.ly",
+      "score": "DLV",
+      "lilypond": 1.7542,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1103), THE CONTROL of direction on the row: a down voice's dots on row 3 under a later up stem covering it; the loop at note-collision.cc:586-594 asks only an up voice."
+    },
+    "dots.column.merged-dot": {
+      "probe": "dot-column-later-up-stem.ly",
+      "score": "DLW",
+      "lilypond": 2.4063,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1103): two same dotted notes merge and one dot survives, and the later up stem still moves the column."
+    },
+    "dots.column.own-stem-bottom-edge-control": {
+      "probe": "dot-column-later-up-stem.ly",
+      "score": "DLF",
+      "lilypond": 1.7542,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1103), THE CONTROL of the bottom edge: a voice-three e'' whose up stem's box begins on the dot's row 3; a box does not own its bottom edge (lily/skyline.cc:658-665 Skyline::height), so the dot stays at the head's own, on the shifted head."
+    },
+    "dots.column.rest-dot-lifted-off-the-line": {
+      "probe": "dot-column-later-up-stem.ly",
+      "score": "DLQ",
+      "lilypond": 3.2563,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1103): the rest's dots' pure row is the row the configuration gave them (lily/dot-column.cc:226-227 calc_positioning_done), off the line it would stand on. On the rest's own line -4 the next head on a' stands 3.19; lifted to -3 it stands 3.2563."
+    },
+    "dots.column.rest-dot-row-next-head": {
+      "probe": "dot-column-later-up-stem.ly",
+      "score": "DLR",
+      "lilypond": 3.1563,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1103): shared dots pushed out by a later stem, a dotted rest in voice two. The next head on e'' does not meet the rest's dot, whose box stood on row 1 until ItemSkylineFactory.AddDots read the rest's own row."
+    },
     "dots.column.two-notes-control": {
       "probe": "dot-column-share.ly",
       "score": "DSN",

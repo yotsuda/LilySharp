@@ -208,10 +208,13 @@ internal static class DotColumn
         //   `max over dots of problem_->head_skyline ().height (position)`, and
         //   lily/skyline.cc Skyline::height (Real y) reads the profile AT y: a taller building
         //   never lends its height to a shorter one's rows.
-        // ⚠️ STRICT AT BOTH EDGES, and one measured book turns on it: a full-size `f8.` in a
-        // space keeps its dot on the head's own row, which is exactly where an up stem's box
-        // begins, and LilyPond leaves that dot at the head's ink right (1.754200). Widening
-        // either comparison to >= pushes it to 2.517400.
+        // ⚠️ OPEN BELOW, CLOSED ABOVE, as Skyline::height reads a row between two buildings: the
+        // first whose end reaches it (lily/skyline.cc:658-665 Skyline::height), so a box owns its top edge and
+        // not its bottom. A full-size `f8.` in a space keeps its dot on the head's own row,
+        // which is exactly where an up stem's box begins, and LilyPond leaves that dot at the
+        // head's ink right (1.754200); closing the bottom pushes it to 2.517400.
+        // MEASURED, 2.26.0 (Lab sessions/p1103/probe/flag.ps1): `e''4.` over a voice-three `e'4`,
+        // whose stem's box ends on the dot's row 3, stands at 2.41; over `d'4`, 1.75.
         double off = headInkRight;
         // Indexed, not foreach: a span's foreach costs nothing, but this loop reads the same
         // two fields per support and the index is what the second loop needs anyway.
@@ -221,7 +224,7 @@ internal static class DotColumn
             for (int j = 0; j < dotPositions.Length; j++)
             {
                 int p = dotPositions[j];
-                if (s.PositionBottom < p && p < s.PositionTop)
+                if (s.PositionBottom < p && p <= s.PositionTop)
                     off = Math.Max(off, s.XRight);
             }
         }
@@ -286,6 +289,27 @@ internal static class DotColumn
 
         // At most two: the stem, and the flag hung off it (see OffsetX's remarks).
         Span<Support> supports = stackalloc Support[2];
+        int supportCount = StemSupports(item, noteValue, supports);
+        int[] rows = solvedRows ?? DotConfiguration.Resolve(headPositions);
+        return (OffsetX(headInkRight, supports[..supportCount], rows, dotWidth) + item.DotColumnShift, rows);
+    }
+
+    /// <summary>
+    /// How far right a column's dots must stand, in the item's own frame, to clear this item's
+    /// stem and flag on <paramref name="rows"/>; negative infinity when neither stands on a row.
+    /// </summary>
+    internal static double ClearOfStem(MusicItem item, ReadOnlySpan<int> rows)
+    {
+        Span<Support> supports = stackalloc Support[2];
+        int count = StemSupports(item, GlyphMetrics.NoteValueOf(item), supports);
+        return OffsetX(double.NegativeInfinity, supports[..count], rows,
+            MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width);
+    }
+
+    /// <summary>Fills <paramref name="supports"/> (room for two) with the item's stem and flag, and
+    /// says how many there are.</summary>
+    private static int StemSupports(MusicItem item, int noteValue, Span<Support> supports)
+    {
         int supportCount = 0;
         // Null is exactly "no Stem grob": a whole note has no stem and no flag.
         if (SpacingRules.StemSpacingInfo(item) is { } stem)
@@ -315,8 +339,7 @@ internal static class DotColumn
                 }
             }
         }
-        int[] rows = solvedRows ?? DotConfiguration.Resolve(headPositions);
-        return (OffsetX(headInkRight, supports[..supportCount], rows, dotWidth) + item.DotColumnShift, rows);
+        return supportCount;
     }
 
     /// <summary>

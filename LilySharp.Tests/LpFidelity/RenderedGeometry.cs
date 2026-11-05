@@ -5975,6 +5975,19 @@ internal sealed class RenderedGeometry
         return heads[index].X;
     }
 
+    /// <summary>The leftmost dot's left edge less the leftmost head's.</summary>
+    public double DotFromFirstHead(int page = 0)
+    {
+        var dots = _pages[page].Glyphs.Where(g => g.Glyph == EmmentalerGlyphs.AugmentationDot).Select(g => g.X).ToList();
+        if (dots.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: no augmentation dot is drawn — the probe is not "
+                + "measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        return dots.Min() - NoteheadAnchor(0);
+    }
+
     /// <summary>
     /// Notehead <paramref name="index"/>'s anchor → the next notehead's, 0-based, left to
     /// right. For a probe with one head per column this is the COLUMN STEP.

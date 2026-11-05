@@ -222,8 +222,10 @@ internal sealed class ElementCoordinator
     /// <param name="Rows">The rows of its dots, in its dotted heads' order (a rest's one row).</param>
     /// <param name="OwnX">Where its own dots would stand, in the staff column's frame.</param>
     /// <param name="PureRest">A rest's pure position, which its row is relative to.</param>
+    /// <param name="StemsReach">Where a later up voice's stem or flag puts the column
+    /// (<see cref="LaterUpStemsReach"/>), the same for every member.</param>
     internal readonly record struct DotColumnMember(
-        int Voice, int ItemIndex, MusicItem Item, int[] Rows, double OwnX, int PureRest);
+        int Voice, int ItemIndex, MusicItem Item, int[] Rows, double OwnX, int PureRest, double StemsReach);
 
     /// <summary>
     /// The staff with each dotted item's <see cref="MusicItem.DotColumnShift"/>: how far right of
@@ -243,14 +245,14 @@ internal sealed class ElementCoordinator
         {
             // This runs on every collect, so a bar that cannot hold a shared column solves nothing:
             // the collision answer costs a keystroke's worth over a long book (VoiceCollisionTable).
-            if (!HasTwoDottedVoices(held, m))
+            if (!MayShareADotColumn(held, m))
                 continue;
             var columns = SolveDotColumns(held, m, ComputeVoiceCollisionsOfMeasure(held, m), staff.Lines);
             if (columns is null)
                 continue;
             foreach (var column in columns)
             {
-                double x = column.Max(c => c.OwnX);
+                double x = Math.Max(column.Max(c => c.OwnX), column[0].StemsReach);
                 foreach (var member in column)
                 {
                     if (x <= member.OwnX + 1e-9)
@@ -273,23 +275,27 @@ internal sealed class ElementCoordinator
         return staff with { Voices = voices.ToImmutable() };
     }
 
-    private static bool HasTwoDottedVoices(ImmutableArray<Voice> voices, int measureIndex)
+    /// <summary>Whether a bar can move a dot: two voices with dots, or one and a third voice, whose
+    /// up stem may stand after the dotted voice's.</summary>
+    /// <remarks>A stem the writer turned up in a two-voice bar stays out: its column takes no shift
+    /// and the two stems stand together. MEASURED, 2.26.0 (Lab sessions/p1103/probe/forced2.ps1):
+    /// `e''4.` over `f'8@stemUp` 1.75.</remarks>
+    private static bool MayShareADotColumn(ImmutableArray<Voice> voices, int measureIndex)
     {
-        int dotted = 0;
+        int dotted = 0, sounding = 0;
         foreach (var voice in voices)
         {
             if (measureIndex >= voice.Measures.Length)
                 continue;
+            sounding++;
             foreach (var item in voice.Measures[measureIndex].Items)
                 if (item is NoteItem { Dots: > 0 } or ChordItem { Dots: > 0 } or RestItem { Dots: > 0 })
                 {
                     dotted++;
                     break;
                 }
-            if (dotted == 2)
-                return true;
         }
-        return false;
+        return dotted >= 2 || (dotted == 1 && sounding >= 3);
     }
 
     /// <summary>
@@ -307,8 +313,10 @@ internal sealed class ElementCoordinator
     /// merged `&lt;e g&gt;4.` (sessions/p1094/dd) on 3, 1 and -1; and in every bar of 18 the column's
     /// dots share one X. Ties in the insertion order are the voice order (see
     /// <see cref="_restDotOffsets"/>).
-    /// ⚠️ Not read: a voice with no dots at this moment, whose stem is a support of the column too
-    /// (lily/dot-column.cc:103-112), and a note moved by `@cross`, whose dot is the other staff's.
+    /// LILYPOND-REF: lily/note-collision.cc:586-594 automatic_shift — "the dots of outer voices avoid
+    ///   stems and flags of the inner voices": the column of an up voice with dots takes the stem of
+    ///   every later up voice, dotted or not, as a support (see <see cref="LaterUpStemsReach"/>).
+    /// ⚠️ Not read: a note moved by `@cross`, whose dot is the other staff's.
     /// </remarks>
     private static List<List<DotColumnMember>>? SolveDotColumns(ImmutableArray<Voice> voices, int measureIndex,
         IReadOnlyList<VoiceCollisionEntry>? collisions, int staffLines = 5)
@@ -348,7 +356,7 @@ internal sealed class ElementCoordinator
 
         List<List<DotColumnMember>>? solved = null;
         double dotWidth = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width;
-        foreach (var column in moments.Values)
+        foreach (var (moment, column) in moments)
         {
             var positions = new List<int>();
             var dirs = new List<int>();
@@ -366,12 +374,8 @@ internal sealed class ElementCoordinator
                 switch (item)
                 {
                     case RestItem rest:
-                        // Pure position from the STAMPED direction (zero = outside every span →
-                        // the neutral origin), the same slot ItemSkylineFactory prices.
                         int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                        pure = rest.VoiceDirection == 0 && rest.StaffPosition is null
-                            ? (int) NeutralRestPosition(staffLines, restValue)
-                            : (int) RestStaffPosition(rest, rest.VoiceDirection, restValue, staffLines);
+                        pure = PureRestPosition(rest, staffLines);
                         positions.Add(pure + RestDotStaffOffset(restValue));
                         dirs.Add(0);   // a rest's dot declares no direction (dp.dir_ is set for
                                        // note heads only, dot-column.cc:203-205)
@@ -399,10 +403,11 @@ internal sealed class ElementCoordinator
                 if (positions.Count > from)
                     slots.Add((v, item, i, from, positions.Count - from, voiceUp, collided.XOffset, pure));
             }
-            if (slots.Count < 2)
+            if (slots.Count == 0)
                 continue;
 
             var rows = DotConfiguration.Resolve(positions, dirs);
+            double stems = LaterUpStemsReach(voices, measureIndex, moment, collisions, rows);
             var members = new List<DotColumnMember>(slots.Count);
             foreach (var s in slots)
             {
@@ -419,11 +424,66 @@ internal sealed class ElementCoordinator
                             + Math.Max(0, ChordHeadPositioning.CalculateOffsets(chord.Notes, s.StemUp, value).Max()), own).OffsetX,
                     _ => s.Shift + DotColumn.Reserved(s.Item, value, GlyphMetrics.GetNoteheadBBox(value).Right, own).OffsetX,
                 };
-                members.Add(new DotColumnMember(s.Voice, s.ItemIndex, s.Item, own, ownX, s.Pure));
+                members.Add(new DotColumnMember(s.Voice, s.ItemIndex, s.Item, own, ownX, s.Pure, stems));
             }
+            // One voice's dots with no later stem on their rows are that voice's own business.
+            if (slots.Count < 2 && stems <= members[0].OwnX)
+                continue;
             (solved ??= new()).Add(members);
         }
         return solved;
+    }
+
+    /// <summary>
+    /// Where the later up voices' stems and flags at <paramref name="moment"/> put the column's
+    /// dots, in the staff column's frame; negative infinity when none stands on
+    /// <paramref name="rows"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision.cc:586-594 Note_collision_interface::automatic_shift. Only UP voices; a voice takes
+    ///   this from the voices after it, so a dotted third voice does not read the first's stem; and
+    ///   the column is the first dotted up voice's, so its other dots, a rest's or a down voice's,
+    ///   move with it. A rest is in no clash group (a rest's column is not a Note_column element).
+    /// LILYPOND-REF: lily/dot-column.cc:103-112 calc_positioning_done — the stem's box; :126-141 its flag.
+    /// MEASURED, 2.26.0 (Lab sessions/p1103/probe/up.ps1): `e''4.` over a voice-three `c''4` 2.41 from
+    ///   the leftmost head, 2.48 with `c''2`; on a row below the stem 1.75; two down voices 3.06 from
+    ///   their own heads, no stem read. Lily# drew 1.76 on the stem before this.
+    /// </remarks>
+    private static double LaterUpStemsReach(ImmutableArray<Voice> voices, int measureIndex, Fraction moment,
+        IReadOnlyList<VoiceCollisionEntry>? collisions, int[] rows)
+    {
+        double reach = double.NegativeInfinity;
+        bool dotted = false;
+        for (int v = 0; v < voices.Length; v++)
+        {
+            if (measureIndex >= voices[v].Measures.Length)
+                continue;
+            var items = voices[v].Measures[measureIndex].Items;
+            var t = new Fraction(0, 1);
+            for (int i = 0; i < items.Length && t <= moment; i++)
+            {
+                var item = items[i];
+                if (t == moment && !item.GraceTime && item.CrossStaffIndex < 0
+                    && item is NoteItem or ChordItem)
+                {
+                    var collided = default(VoiceCollisionEntry);
+                    if (collisions is not null)
+                        foreach (var e in collisions)
+                            if (e.VoiceId == v + 1 && e.ItemIndex == i)
+                                collided = e;
+                    bool? forced = item is NoteItem n ? n.ForcedStemUp : ((ChordItem) item).ForcedStemUp;
+                    if (forced ?? VoiceDefaults.GetDefaultStemUpAt(voices, v, measureIndex, i) ?? (v % 2 == 0))
+                    {
+                        if (dotted)
+                            reach = Math.Max(reach, collided.XOffset + DotColumn.ClearOfStem(item, rows));
+                        int dots = item is NoteItem note ? note.Dots : ((ChordItem) item).Dots;
+                        dotted |= dots > 0 && !collided.Dot.DotWiped;
+                    }
+                }
+                t += GetItemDuration(item);
+            }
+        }
+        return reach;
     }
 
     /// <summary>
@@ -2320,6 +2380,16 @@ internal sealed class ElementCoordinator
         rest.StaffPosition is { } written
             ? (restValue == 1 ? written + 2.0 : written)
             : VoicedRestPosition(dir, restValue, staffLines);
+
+    /// <summary>A rest's pure position, from the STAMPED direction (zero = outside every span →
+    /// the neutral origin).</summary>
+    internal static int PureRestPosition(RestItem rest, int staffLines)
+    {
+        int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+        return rest.VoiceDirection == 0 && rest.StaffPosition is null
+            ? (int) NeutralRestPosition(staffLines, restValue)
+            : (int) RestStaffPosition(rest, rest.VoiceDirection, restValue, staffLines);
+    }
 
     /// <summary>
     /// Where a rest RESTS when nothing voices or pitches it — the NEUTRAL letter every

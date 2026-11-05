@@ -1015,7 +1015,7 @@ internal static class ItemSkylineFactory
 
         AddStem(parts, item, noteheadLeftX, staffY, headFont);
         AddFlag(parts, item, noteheadLeftX, staffY, noteValue, cueFont, headFont);
-        AddDots(parts, item, noteheadLeftX, maxNoteheadRightX, staffY, noteValue);
+        AddDots(parts, item, noteheadLeftX, maxNoteheadRightX, staffY, noteValue, staffLines);
         AddSemiTies(parts, item, noteheadLeftX, staffY, noteValue);
 
         return parts;
@@ -1286,7 +1286,7 @@ internal static class ItemSkylineFactory
     /// </remarks>
     private static void AddDots(List<ColumnPart> parts, MusicItem item,
                                 double noteheadLeftX, double maxNoteheadRightX, double staffY,
-                                int noteValue)
+                                int noteValue, int staffLines)
     {
         int dots = SpacingRules.GetDots(item);
         if (dots == 0 || item is RestItem { IsSpacer: true } or RestItem { IsMultiMeasure: true })
@@ -1324,11 +1324,19 @@ internal static class ItemSkylineFactory
         var headRows = DotColumn.HeadPositions(item);
         for (int r = 0; r < rows.Length; r++)
         {
-            // ⚠️ A REST HAS NO HEAD, so it keeps the row DotColumn.Reserved drew its dot on.
-            // LilyPond's pure row for a rest's dots is its rest's own position and NOT row 1,
-            // but no measurement of that case exists yet, so it is left as it was rather than
-            // moved on a guess (RULES §7.6 ⒞).
-            double dotYCenter = staffY - (r < headRows.Length ? headRows[r] : rows[r]) / 2.0;
+            // A rest has no head: its dots' pure row is the row the configuration gave them, the
+            // rest's own position lifted off a line (lily/dot-column.cc:226-227
+            // calc_positioning_done — pure_set_position), row 1 for a neutral rest.
+            // MEASURED, 2.26.0 (Lab sessions/p1103/probe/up.ps1): with a voice-three stem pushing the
+            // dots out to 2.41 over `r4.` in voice two, a next head on `e''` stands 3.16 away, where
+            // row 1 read 3.26.
+            double dotYCenter = staffY - (r < headRows.Length
+                ? headRows[r]
+                : item is RestItem pureRest
+                    ? DotConfiguration.Resolve(
+                        [ElementCoordinator.PureRestPosition(pureRest, staffLines)
+                            + ElementCoordinator.RestDotStaffOffset(GlyphMetrics.NoteValueOf(pureRest.BaseDuration))])[0]
+                    : rows[r]) / 2.0;
             for (int d = 0; d < dots; d++)
             {
                 double dotX = noteheadLeftX + offset + d * 2 * dotWidth;

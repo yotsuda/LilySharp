@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。第1100 は連符の本体に書けるものと入れ子の連符の上下を閉じた（§1.1）。OMR の `open` は 0。点の列の共有は第1101 で閉じた（§1.1）。休符の声部の wish は第1102 で閉じた（§1.1）。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release の lysc は `1200c035a`**（オーナー決定 2026-11-04・第1099。OMR の REQUESTS #22 の行に書いた＝OMR の repo では未 commit）。
+- **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。第1100 は連符の本体に書けるものと入れ子の連符の上下を閉じた（§1.1）。OMR の `open` は 0。点の列の共有は第1101 で閉じた（§1.1）。休符の声部の wish は第1102 で閉じた（§1.1）。付点のない声部の符尾は第1103 で閉じた（§1.1）。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release の lysc は `1200c035a`**（オーナー決定 2026-11-04・第1099。OMR の REQUESTS #22 の行に書いた＝OMR の repo では未 commit）。
 - **`@cross` の音が別の段に描かれる＝第1093 で実装（OMR の REQUESTS #20）**: 設計は §1.1 第1093。**OMR の返事（`..\LilySharp-Omr\docs\repro\lilysharp-feedback-2026-11-04.md`）: #19〜#21 は `done`・今直してほしい不具合はない。**段をまたぐタイ・同音や 2 度の重なり・MusicXML は OMR が生成器で避ける＝今は依頼なし（必要なら OMR が行を足す）。読み手が段をまたぐ形をまだ読めないのは OMR 側の宿題。 残りの制限: ⑴ 弧は実装済み（下の語り）・スラーの上のスクリプトと点は元の段で読むまま／⑵ 段をまたぐタイは最初の音の段に描く（LP は斜め）／⑶ 連桁の採点は実装済み（下の語り）・他の段の連桁と、別の声部から同じ段へ移った音は避けない／⑷ 移った先の段の音とは衝突処理をしない（LP は 2 度・同音の頭を横へずらす＝Lab `sessions/p1093/rc` 7〜8 小節。⚠️ LP 自身が「this Voice needs a \voiceXx」と警告する形。休符は実装済み）／⑸ 臨時記号は実装済み（下の語り）・LP が落とす再確認の記号は残す（オーナー決定 2026-10-02 の ⑴ と同じ扱い）／⑹ 観測者なし＝連桁のない棒を移った先の輪郭へ入れる行と、弧の端の棒の枠の行は、8 冊の探り譜で出力が動かず毒が緑（LP の規則なので残した）／⑻ 双子は譜の最初の瞬間の `\change Staff` が LP で効かない（`k1`）／⑼ プレビューの実機は未確認（増分はフルと一致＝網 4 本）。
 - **チャットで Lily# を教わる＝第1043 で実装（`docs/LEARN_FOR_LLM.md`・`HANDOFF-LEARNING.md`）**: 残りは実物の Copilot での確認（MANUAL-CHECKS C59）。
 - **ペダルの音＝第1041 で実装（`@sustain` だけ・`docs/pedal-playback-design.md`）**: 残りは耳の確認（MANUAL-CHECKS C57）。`@sostenuto`・`@unaCorda` は描くだけのまま。
@@ -136,6 +136,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1103セッション（2026-11-05・YT-DELL2）
+
+開始時 full **14664 / 0 / 2**（`-Start p1103`・HEAD `fd21a5fdc`）。作業場所は Lab `sessions/p1103/`。オーナー指示「付点のない声部の符尾をやって」。終了時 full **14675 / 0 / 2**（`run5.log`）。
+
+- **前提の訂正**: 第1101 の残差の「付点のない声部の符尾も列の支え（dot-column.cc:103-112）」は箇所が足りなかった。他の声部の符尾を支えに足すのは `note-collision.cc:586-594` だけで、**上向きの声部の点の列が、それより後ろの上向きの声部の符尾を受ける**。つまり 3 声以上で起きる。実害あり: `e''4.` の点が 3 声目の `c''4` の符尾に載っていた（LP 2.41、Lily# 1.76）。
+- **修正**: `ElementCoordinator.LaterUpStemsReach`（`DotColumnMember.StemsReach`）・`DotColumn.ClearOfStem`／`StemSupports`。`HasTwoDottedVoices` は `MayShareADotColumn`（付点 2 声、または付点 1 声＋3 声以上）。⚠️ `DotColumn.OffsetX` の上端を閉じた（`Skyline::height` は下端を持たず上端を持つ。`e'4` の符尾の箱の上端が点の段 3 に当たる）。⚠️ 休符の点の輪郭は、構成が決めた段（線の上なら 1 つ上）に立てる（`AddDots`・dot-column.cc:226-227）。ふつうの休符は今までどおり段 1。声部の休符は `r4.` で段 -3。
+- **計器**: `probe/up.ps1`・`up2`・`band`・`band2`・`flag`・`edge`・`forced`・`forced2`（双子の dump と svg の突き合わせ）で点の x は全形一致（丸めの 0.01 以内）。`e'8` の 1 形（`neq`）は `up` の修正後に一致。台帳 `dots.column.*` 11 点（`probes/dot-column-later-up-stem.ly`・`DotFromFirstHead`）。予測は当たった。`@stemUp` の 2 声は LP でも押さない（`forced2`）。絵の更新はなし。
+- **毒** `poisons.ps1`（exit code で判定）: 赤＝支えなし・下向きも数える・前の声部も数える・声部のずれを落とす・1 声の列を落とす・押印が無視する・番人が 2 声を要求・上端を開く・下端を閉じる・休符の点を段 1 に戻す・線から上げない。⚠️ 緑のまま 3 本＝消えた点を数える（`!DotWiped`）・装飾音を数える（`!GraceTime`）・段を移った音を数える（`CrossStaffIndex`）。効く譜を作れていない。
+- **全 svg**: `svg/sweep2.log` 1262 枚中 1 枚＝`Untitled-1` だけ。⚠️ 原因はドラム譜の付点休符の点の段（`probe/restdbg.ps1`＝`r4.` 系）で、2〜3 段目以降の段割れが変わる（1 段あたり 5 小節 → 4 小節）。**この本は LP と比べられない**: `lysc ly` の双子にドラムの音が出ない（`.ly` の 134 行目が `\relative c { r8 | }` で bar check failed）ので、前の段割れが LP と揃って見えたのは偶然の可能性がある。同じ規則は DLQ・DLR で確かめたが、ドラム譜そのものは未確認。
+- ⚠️ **残差**: ⑴ `g1`（3 声目が付点）の後ろの列 8.21 対 8.28 ⑵ `j1`（5 声）の次の列の並びが LP と違う。どちらも修正前から（`exe-base` で同じ）で点の列ではない ⑶ 打鍵の時間は未計測。3 声以上で付点のある小節は衝突の答えを解くようになった。⑷ Release の lysc は `0d09b8f61` のまま＝この変更を含まない。
+
+## 以下は第1102セッションの経緯
+
 ### 1.1 第1102セッション（2026-11-05・YT-DELL2）
 
 開始時 full **14659 / 0 / 2**（`-Start p1102`・HEAD `056f33a28`）。終了時 full **14664 / 0 / 2**（`run3.log`）。作業場所は Lab `sessions/p1102/`。オーナーの選択「`r2a` の間隔の差」。
@@ -146,17 +159,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **絵の更新**（オーナー承認 2026-11-05）: `test/instrument-defaults`（小節線 42.61→42.68、LP 42.684）・`programmatic/hara-kiri`・`programmatic/hara-kiri-paged`（譜そのものは LP と未照合。同じ形の `hide2` で 2.57→2.70、LP 2.70）。根拠の台帳キーは `spacing.rest-wish.note-over-rests`。
 - **Release の lysc は `0d09b8f61`**（オーナー「Release を作り直して」2026-11-05）。前は `21cee0cb9`。全 svg は前の Release と 17 枚差＝この便の 12 枚＋第1100〜1101 の既知 5 枚（`svg2/sweep.log`）。その後の commit は docs だけ。OMR の REQUESTS にお知らせを足した＝OMR の repo では未 commit。
 - ⚠️ 打鍵の時間は未計測（ベンチは静かな窓をもらってから）。走査の回数は変わらない。休符だけの列の組も `MergeSprings` を通るようになった分だけ増える。
-
-## 以下は第1101セッションの経緯
-
-### 1.1 第1101セッション（2026-11-05・YT-DELL2）
-
-開始時 full **14607 / 0 / 2**（`-Start p1101`・HEAD `be4c3d9d6`・OMR の open 0）。作業場所は Lab `sessions/p1101/`。オーナー指示「付点の列の共有をやって」（`41699e719`）。
-
-- **1 瞬間に 1 回解く**（`ElementCoordinator.SolveDotColumns`）: `Dot_column_engraver` は Staff の engraver＝段と瞬間に列は 1 つ（dot-column.cc:194-232）。全声部の音・和音・休符の点を 1 つの configuration に入れ、x は全員の答えの最大。旧 `NoteCollision.SharedDotRows`（上下の先頭 1 本ずつ）と休符だけの解を置き換えた。⑴ 3 声部以上で点が重なっていた（`v3b` は 3,3 → LP と同じ 1,3,5）⑵ 休符の点が音の列から最大 1.66 ずれていた → 1 列 ⑶ 全休符の点の段（`dots::calc-staff-position` の -2 が新しい解に要る）。
-- **x は `MusicItem.DotColumnShift`**（`StampDotColumns`・`SvgGenerator.WithShadowedMarksRecorded`＝収集の 2 経路が共有する出口で押す）。`DotColumn.Reserved` と描画が足す＝間隔・タイの輪郭・スクリプトも同じ x を読む。⚠️ `CollectMultiStaff` で押して 1 パートの譜だけ効かない、を一度やった＝テストで見つけた。
-- **計器**: `probe/dots*.ps1`（各 1 小節の双子の grob dump と svg の突き合わせ）＝ 30 余の形で段は全一致・x の差は 0.01 以内。`DotColumnTests` 52 件。終了時 full **14659 / 0 / 2**（`end3.log`）。全 svg は `svg/sweep1.log`＝Release との差 5 枚のうち 2 枚は第1100 の既知、3 枚は休符の点の x（`scripts-dynamics`・`dot-column-vertical-positioning`＝LP と 2 桁で一致・`perf-restdot300`）。⚠️ `StampDotColumns` は収集の出口＝打鍵ごとに走る。2 声部に付点がある小節だけ解く。**打鍵の A/B**（2026-11-05・オーナー承認の窓・`be4c3d9d6` 対 HEAD を worktree の Release で交互に 3 回・`bench/bench.log`）: `perf-plain1k`・`fingbeam1k`・`v2bow1k`・小節挿入は床も中央値も揺れの範囲（hit/miss も同じ）。**全小節に付点の列がある最悪の `perf-restdot300`（300 小節）だけ床 16.6→22.8 ms（+6.2）・中央値 30.3→39.1 ms（+8.8）**。**オーナー判断 2026-11-05＝受け入れる・追わない**（memo は作っていない。効くかも未確認）。台帳 `dots.column.*` 3 点（`probes/dot-column-share.ly`・広がり 0 の予測どおり）。`test/scripts-dynamics` の絵を更新（オーナー承認 2026-11-05＝休符の点の x 79.67→79.79、LP 79.79）。毒 `poisons1.ps1`＋`poisons2.ps1`: 緑だった 3 本は条件ごと消した（段の差だけ渡す・印の引き算・1 声の列）・テストの穴は測って足した。⚠️ 緑のまま: 衝突の点の向き（note-collision.cc:374-397 の行）・和音の頭の入れ替わり・`@cross` の除外（`HeldHere` が先に除く）＝効く譜を作れていない。
-- ⚠️ **残差**: ⑴ 付点休符の下で上の声部に次の音がある形の次の列が 0.09〜0.13 狭い（`r2a` 3.98 対 4.10）＝**第1102 で閉じた**（休符の声部の wish） ⑵ 付点のない声部の符尾も列の支え（dot-column.cc:103-112）は未移植・`undot*` は差なし ⑶ 輪郭の種（`SkylineBuilder`）とスラーの障害物は今も点の段を各 item で解く。
 
 ## 2. 開いている作業
 

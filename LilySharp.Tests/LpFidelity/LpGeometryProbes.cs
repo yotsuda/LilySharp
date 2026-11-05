@@ -1005,6 +1005,22 @@ internal static class LpGeometryProbes
     private static readonly string RWB = RestWishScore("RWB", "voice { c''4 c'' c'' c'' } { r4 r r r } | c''1 |");
     private static readonly string RWR = RestWishScore("RWR", "voice { c''4 c'' c'' c'' } { s4 s s s } | c''1 |");
 
+    /// <summary>
+    /// DLA / DLE / DLB / DLD / DLG / DLR (audit/lp-geometry/probes/dot-column-later-up-stem.ly): an
+    /// up voice's dots clear the stems of the later up voices.
+    /// </summary>
+    private static readonly string DLA = RestWishScore("DLA", "voice { e''4. c''8 c''2 } { r4. c'8 c'2 } { c''4 c''4 c''2 } |");
+    private static readonly string DLE = RestWishScore("DLE", "voice { e''4. c''8 c''2 } { s4. c'8 c'2 } { e'4 c''8 c''8 c''2 } |");
+    private static readonly string DLB = RestWishScore("DLB", "voice { e''4. c''8 c''2 } { s4. c'8 c'2 } { d'4 c''8 c''8 c''2 } |");
+    private static readonly string DLD = RestWishScore("DLD", "voice { c'''4 c''4 c''2 } { e'4. c'8 c'2 } { c'''4 c''4 c''2 } { c'4 c'4 c'2 } |");
+    private static readonly string DLG = RestWishScore("DLG", "voice { c''4 c''4 c''2 } { r4. c'8 c'2 } { e''4. c''8 c''2 } |");
+    private static readonly string DLU = RestWishScore("DLU", "voice { e''4. c''8 c''2 } { c'4 c'4 c'2 } { c''4 c''4 c''2 } |");
+    private static readonly string DLV = RestWishScore("DLV", "voice { g''4 c''4 c''2 } { e''4. c'8 c'2 } { c''4 c''4 c''2 } |");
+    private static readonly string DLW = RestWishScore("DLW", "voice { e''4. c''8 c''2 } { e''4. c'8 c'2 } { c''4 c''4 c''2 } |");
+    private static readonly string DLQ = RestWishScore("DLQ", "voice { e''4. c''8 c''2 } { r4. c'8 c'2 } { a'8 a'8 c''4 c''2 } |");
+    private static readonly string DLF = RestWishScore("DLF", "voice { e''4. c''8 c''2 } { r4. c'8 c'2 } { e''4 c''4 c''2 } |");
+    private static readonly string DLR = RestWishScore("DLR", "voice { c'''4. c''8 c''2 } { r4. c'8 c'2 } { e''8 e''8 c''4 c''2 } |");
+
     /// <summary>The dotted cross-voice book: the rod col0 → col1/4 runs through the dot.</summary>
     private static readonly string DCX = DotColumnScore("DCX", "2/4", "c'4 c'4", "b4. b8");
 
@@ -15988,6 +16004,17 @@ internal static class LpGeometryProbes
         new("spacing.rest-wish.spacer-control", RWN, g => g.NoteheadAnchorStep(0)),
         new("spacing.rest-wish.into-bar-line", RWB, g => g.NoteheadAnchorStep(3)),
         new("spacing.rest-wish.into-bar-line-control", RWR, g => g.NoteheadAnchorStep(3)),
+        new("dots.column.later-up-stem", DLA, g => g.DotFromFirstHead()),
+        new("dots.column.later-up-stem-top-edge", DLE, g => g.DotFromFirstHead()),
+        new("dots.column.later-up-stem-below-control", DLB, g => g.DotFromFirstHead()),
+        new("dots.column.down-voice-control", DLD, g => g.DotFromFirstHead()),
+        new("dots.column.earlier-up-stem-control", DLG, g => g.DotFromFirstHead()),
+        new("dots.column.only-one-voice-dotted", DLU, g => g.DotFromFirstHead()),
+        new("dots.column.down-voice-on-the-row-control", DLV, g => g.DotFromFirstHead()),
+        new("dots.column.merged-dot", DLW, g => g.DotFromFirstHead()),
+        new("dots.column.own-stem-bottom-edge-control", DLF, g => g.DotFromFirstHead()),
+        new("dots.column.rest-dot-row-next-head", DLR, g => g.NoteheadAnchor(2) - g.NoteheadAnchor(0)),
+        new("dots.column.rest-dot-lifted-off-the-line", DLQ, g => g.NoteheadAnchor(2) - g.NoteheadAnchor(0)),
         new("dots.column.two-notes-control", DSN, g => g.DotColumnSpread()),
         new("dots.column.rest-beside-note", DSR, g => g.DotColumnSpread()),
         new("dots.column.flag-pushed-beside-note", DSF, g => g.DotColumnSpread()),
