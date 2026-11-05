@@ -138,7 +138,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ### 1.1 第1105セッション（2026-11-05・YT-DELL2）
 
-開始時 full **14678 / 0 / 2**（`-Start p1105`・HEAD `fd403690b`）。作業場所は Lab `sessions/p1105/`。オーナー「続けて」＝勧めたドラムの和音の揃え方。終了時 full **14690 / 0 / 2**（`run3.log`。その後の追加 1 点は `-End`）。
+開始時 full **14678 / 0 / 2**（`-Start p1105`・HEAD `fd403690b`）。作業場所は Lab `sessions/p1105/`。オーナー「続けて」＝勧めたドラムの和音の揃え方。終了時 full **14691 / 0 / 2**（`-End p1105`）。
 
 - **直したこと**（`ChordHeadPositioning`）: 形の混ざる和音（`HasMixedHeads`）は ⑴ 全部の頭を 1 本の符尾に付ける（`Stem::calc_positioning_done` stem.cc:627-664）。支えの頭は符尾の内側がいちばん広いもの（`SupportStyle`・stem.cc:181-204）⑵ 符尾はその形の取り付け点（`StemStyle`＝`NoteheadStyleOf` ほか 4 か所）⑶ 反転する頭はその頭の右端で動く（stem.cc:684）⑷ 同じ段の 2 音は書いた順で、下向きは逆順（stem.cc:619-623）⑸ 次の列は最初の頭の右端（`FirstHeadRight`）。同じ段なら動かないほう ⑹ 点は右端の頭の先（`InkRight`）⑺ 輪郭は頭ごとの形（`ItemSkylineFactory`）。形が揃った和音の経路は変えていない。
 - **計器**: `probe/chord.ps1`・`chord2.ps1`＝32 形で頭・次の列・点は丸めの 0.01 以内（全音符を除く）。台帳 `drums.mixed-chord.*` 13 点（`probes/mixed-head-chord.ly`）。予測は当たった。`probe/wide.ps1`＝`Untitled-1` の全 31 小節が LP と 0.01 以内（`hats fill` 20.84、LP 20.83）。
