@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。第1100 は連符の本体に書けるものと入れ子の連符の上下を閉じた（§1.1）。OMR の `open` は 0。残り（急がない）: 点の列の共有は 2 声部の音と和音だけ＝休符が混ざる列（`ElementCoordinator` の註）・3 声部以上・段位置以外（点の列の x を縦の輪郭やタイが読む `DotColumn`）は各 item の答えのまま。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release の lysc は `1200c035a`**（オーナー決定 2026-11-04・第1099。OMR の REQUESTS #22 の行に書いた＝OMR の repo では未 commit）。
+- **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。第1100 は連符の本体に書けるものと入れ子の連符の上下を閉じた（§1.1）。OMR の `open` は 0。点の列の共有は第1101 で閉じた（§1.1）。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release の lysc は `1200c035a`**（オーナー決定 2026-11-04・第1099。OMR の REQUESTS #22 の行に書いた＝OMR の repo では未 commit）。
 - **`@cross` の音が別の段に描かれる＝第1093 で実装（OMR の REQUESTS #20）**: 設計は §1.1 第1093。**OMR の返事（`..\LilySharp-Omr\docs\repro\lilysharp-feedback-2026-11-04.md`）: #19〜#21 は `done`・今直してほしい不具合はない。**段をまたぐタイ・同音や 2 度の重なり・MusicXML は OMR が生成器で避ける＝今は依頼なし（必要なら OMR が行を足す）。読み手が段をまたぐ形をまだ読めないのは OMR 側の宿題。 残りの制限: ⑴ 弧は実装済み（下の語り）・スラーの上のスクリプトと点は元の段で読むまま／⑵ 段をまたぐタイは最初の音の段に描く（LP は斜め）／⑶ 連桁の採点は実装済み（下の語り）・他の段の連桁と、別の声部から同じ段へ移った音は避けない／⑷ 移った先の段の音とは衝突処理をしない（LP は 2 度・同音の頭を横へずらす＝Lab `sessions/p1093/rc` 7〜8 小節。⚠️ LP 自身が「this Voice needs a \voiceXx」と警告する形。休符は実装済み）／⑸ 臨時記号は実装済み（下の語り）・LP が落とす再確認の記号は残す（オーナー決定 2026-10-02 の ⑴ と同じ扱い）／⑹ 観測者なし＝連桁のない棒を移った先の輪郭へ入れる行と、弧の端の棒の枠の行は、8 冊の探り譜で出力が動かず毒が緑（LP の規則なので残した）／⑻ 双子は譜の最初の瞬間の `\change Staff` が LP で効かない（`k1`）／⑼ プレビューの実機は未確認（増分はフルと一致＝網 4 本）。
 - **チャットで Lily# を教わる＝第1043 で実装（`docs/LEARN_FOR_LLM.md`・`HANDOFF-LEARNING.md`）**: 残りは実物の Copilot での確認（MANUAL-CHECKS C59）。
 - **ペダルの音＝第1041 で実装（`@sustain` だけ・`docs/pedal-playback-design.md`）**: 残りは耳の確認（MANUAL-CHECKS C57）。`@sostenuto`・`@unaCorda` は描くだけのまま。
@@ -136,6 +136,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1101セッション（2026-11-05・YT-DELL2）
+
+開始時 full **14607 / 0 / 2**（`-Start p1101`・HEAD `be4c3d9d6`・OMR の open 0）。作業場所は Lab `sessions/p1101/`。オーナー指示「付点の列の共有をやって」（`41699e719`）。
+
+- **1 瞬間に 1 回解く**（`ElementCoordinator.SolveDotColumns`）: `Dot_column_engraver` は Staff の engraver＝段と瞬間に列は 1 つ（dot-column.cc:194-232）。全声部の音・和音・休符の点を 1 つの configuration に入れ、x は全員の答えの最大。旧 `NoteCollision.SharedDotRows`（上下の先頭 1 本ずつ）と休符だけの解を置き換えた。⑴ 3 声部以上で点が重なっていた（`v3b` は 3,3 → LP と同じ 1,3,5）⑵ 休符の点が音の列から最大 1.66 ずれていた → 1 列 ⑶ 全休符の点の段（`dots::calc-staff-position` の -2 が新しい解に要る）。
+- **x は `MusicItem.DotColumnShift`**（`StampDotColumns`・`SvgGenerator.WithShadowedMarksRecorded`＝収集の 2 経路が共有する出口で押す）。`DotColumn.Reserved` と描画が足す＝間隔・タイの輪郭・スクリプトも同じ x を読む。⚠️ `CollectMultiStaff` で押して 1 パートの譜だけ効かない、を一度やった＝テストで見つけた。
+- **計器**: `probe/dots*.ps1`（各 1 小節の双子の grob dump と svg の突き合わせ）＝ 30 余の形で段は全一致・x の差は 0.01 以内。`DotColumnTests` 52 件。終了時 full **14659 / 0 / 2**（`end3.log`）。全 svg は `svg/sweep1.log`＝Release との差 5 枚のうち 2 枚は第1100 の既知、3 枚は休符の点の x（`scripts-dynamics`・`dot-column-vertical-positioning`＝LP と 2 桁で一致・`perf-restdot300`）。⚠️ `StampDotColumns` は収集の出口＝打鍵ごとに走る。2 声部に付点がある小節だけ解くが、打鍵の時間は未計測（ベンチはオーナーに一声かけてから）。台帳 `dots.column.*` 3 点（`probes/dot-column-share.ly`・広がり 0 の予測どおり）。`test/scripts-dynamics` の絵を更新（オーナー承認 2026-11-05＝休符の点の x 79.67→79.79、LP 79.79）。毒 `poisons1.ps1`＋`poisons2.ps1`: 緑だった 3 本は条件ごと消した（段の差だけ渡す・印の引き算・1 声の列）・テストの穴は測って足した。⚠️ 緑のまま: 衝突の点の向き（note-collision.cc:374-397 の行）・和音の頭の入れ替わり・`@cross` の除外（`HeldHere` が先に除く）＝効く譜を作れていない。
+- ⚠️ **残差**: ⑴ 付点休符の下で上の声部に次の音がある形の次の列が 0.09〜0.13 狭い（`r2a` 3.98 対 4.10）＝Release でも同じ＝点の列ではない。休符の点の段を純粋な位置に直す案は試して動かず、戻した ⑵ 付点のない声部の符尾も列の支え（dot-column.cc:103-112）は未移植・`undot*` は差なし ⑶ 輪郭の種（`SkylineBuilder`）とスラーの障害物は今も点の段を各 item で解く。
+
+## 以下は第1100セッションの経緯
+
 ### 1.1 第1100セッション（2026-11-05・YT-DELL2）
 
 開始時 full **14514 / 0 / 2**（`-Start p1100`・HEAD `5ef5ac6ca`・OMR の open 0）。作業場所は Lab `sessions/p1100/`。オーナーの選択「連符の中の key/time」。第1099 の残りの制限 ⑴⑶ を閉じた（`e1ce6dffe`）。
@@ -149,24 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **連符の中の `voice` は LYS1066（エラー）**（オーナーの「続けて」を推奨案「エラー」への承認と読んだ＝違うなら戻す）: `TupletVoiceValidator`。本体に書いたものと、本体が呼ぶフレーズが持つものの両方。⚠️ `.ly`・MIDI・MusicXML は今も音を出す（エラーの譜なので直さない）。
 - **同じ比・同じ音の入れ子の連符は 1 つ**（tuplet-engraver.cc:74-77・tuplet-description.cc:84-89）: `SameTuplet`＝外側が残る（`probe/same.lys`）。毒 `poisons5.ps1` すべて赤（緑 2 本＝比の分子はテストを足した・二重報告は `DiagnosticBag` がまとめるので条件を消した）。⚠️ **隠し窓の毒は全部「緑」と出た**（失敗の行を拾えていない。`no cycle guard` だけ赤で気づいた）＝終了コードで判定する型に直した。
 - **入れ子の連符の上下**（オーナー「続けて」）: 外側は内側の箱と数字を避ける（tuplet-bracket.cc:646-680）＝tab の移植を `EnclosedTupletPoints` に括り出して共有。独自の `NestingDepthOffset` は主経路から外した（点が無いときのフォールバックだけに残る）。照合は `probe/nestpin.lys`＋`nestcmp.ps1`（`--pin-fonts`）: 数字 29 個の x は一定差・y は一定差から最大 0.027。**1 音の連符は括弧なし**（:130-143）。台帳 `staff.staff.tuplet-nested-{control,bracket,number,identical}`（`probes/tuplet-nested.ly`）。見本 `showcase/05-special-techniques` の絵を更新（オーナー承認 2026-11-05）。⚠️ 残差: 内側が急な形で外側の数字が LP より 0.07 低い（テストに幅を明記）。**`-bracket` の −0.025 は閉じた**（オーナー「続けて」）: 連桁のない音の旗は符尾の先より 0.025 外へ出て、LP の列の extent に入る（note-column.cc:251-258・`probe/flag.ly`）→ 括弧の点に足した。毒 `poisons8.ps1`: 緑 3 本のうち 4 分音符の判定は条件を消し、反対向きの符尾と `unite` は LP の行で観測者なしとして残した。⚠️ 探り譜の小節が足りないと LP の位置だけずれ、連桁の差に見えた＝まず `bar check` の警告を読む。毒 `poisons6.ps1`＋`poisons7.ps1`: 緑のまま残したのは 3 本（子の深さ・声部・内側を先に解く順）＝LP の行で観測者なし。
-
-## 以下は第1099セッションの経緯
-
-### 1.1 第1099セッション（2026-11-04・YT-DELL2）
-
-開始時 full **14462 / 0 / 2**（`-Start p1099`・HEAD `1a3b7a84c`・OMR の open は #22）。終了時 **14514 / 0 / 2**（`end3.log`）。作業場所は Lab `sessions/p1099/`。OMR の #22 に着手（オーナー「続けて」）。
-
-- **結果**（`1200c035a`）: 声部の中の `clef` は段のもの。再現譜 `clef-in-voice-2026-11-04` と探り譜 `sessions/p1099/clef/w.lys` は LilyPond の絵と同じ配置。⑴ `ShareClefWithSpanBranches`＝`key` と同じく全 branch に書く ⑵ 連符の本体の `clef` は黙って捨てられていた → 読む（括弧は記号の後から）⑶ `SharedRenderer.ResolveClefAt` は全声部の最新の記号 ⑷ 記号の隣の音は同じ段の全声部から読む（`LooseChangeLeftNeighborTiming`。2 声目のスペーサーの後の記号が loose に読まれ、1 声目の音に重なっていた）⑸ 小節頭の記号の幅は全声部から（`MeasureForTheClosingGap`・break gate も）。
-- **本質の穴**: 小節頭や span の頭では、上の声部が自分の音まで一気に進み、下の声部が小節線の先に書く `clef` を聞く前に判定していた。`key` も同じ穴。LP は 1 時刻の指示を全部聞いてから音を判定する → `ReachAsync(head: true)`＋`Span.HeadsWaitForStaffChanges`。`clef`・`key`・フレーズ参照を含む span だけ音が待つ＝それ以外の譜の処理順は変えない。
-- **計器**: 全 svg 1262 枚の差 0（`svg/sweep.log`）・`ClefInAVoiceTests` 20 本・毒 `poisons1.ps1` 22 本（緑だった 7 本のうち 6 本はテストを足して赤、`keyChange` に `clef` を足す行は観測者なしで消した。「他の branch が後にいても待つ」の毒は待ちが増えるだけで出力が同じ＝省略の最適化として残した）。
-- ⚠️ **残りの制限**: ⑴ 違う `clef` を同じ時刻に 2 声が書くと両方描く（LP は最後の 1 つ）⑵ ⑶ 連符の本体の `key`・`time` は未確認。
-
-- **`lysc xml` の小節の途中の `clef`（オーナー指示）**: 次の小節の頭へ送っていたのを、音の流れの中の `<attributes>` として時刻どおりに書く（`WriteClefHere`）。大譜表は `number` 1／2・tab の隣は 1・tab だけの譜は書かない。`MusicXmlMidBarClefTests`・毒 `poisons2.ps1` 12 本すべて赤（緑の 2 本はテストを足した）。⚠️ 下の声部がより早い時刻に別の `clef` を書くと、書き出しの「今の記号」は歩いた順で最後のものになる。Release は下記。
-
-- **`lysc import` の `clef`（オーナー「続けて」）**: 小節途中の `clef` は小節頭の 1 つに読まれ、大譜表の片方の変更は全部落ちていた → `ImportNote.ClefBefore`＝その時刻の音の前（強弱と同じ待ちの列を使う・小節の最後の音の後なら次の小節の頭）。音楽の中で綴れない `soprano` などは落としてレポートする（書くとエラーだった）。往復で #22 の再現譜が同じ絵に戻る。
-- **音部記号をまたぐタイ**（同・読み込みで `clef` が残ると実害が出るので直した）: `TieDetector.SamePitch` が段の位置で比べていて、タイが消え LYS4007 の誤報が出ていた（註に既知の穴として残っていた）→ `WrittenPitch` で比べる＝異名同音は従来どおり別物。タイの先の臨時記号も同じ（`MeasureBuilder.TiesInto`）。LP の絵と同じ（`sessions/p1099/clef/t.ly`・`a.ly`）。全 svg 差 0・警告 17 のまま・歌詞 99.26% と音 46 曲 100 も同じ（`lyrfid.log`・`fidelity.log`）・毒 `poisons3.ps1` 19 本すべて赤（緑の 1 本は自分のテストの誤りで、直した）。⚠️ 空虚な assert（`!x || x`）を一度書いた＝毒の前に読み直して書き直した。
-
-- **Release の lysc は `21cee0cb9`**（オーナー「Release を直して」2026-11-05）。前は `1200c035a`。`lysc xml` と `lysc import` の `clef`・記号をまたぐタイが入った。その後の commit は docs だけ。OMR の REQUESTS にお知らせを足した＝OMR の repo では未 commit。
 
 ## 2. 開いている作業
 

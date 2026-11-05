@@ -267,6 +267,24 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1099セッションの経緯
+
+### 1.1 第1099セッション（2026-11-04・YT-DELL2）
+
+開始時 full **14462 / 0 / 2**（`-Start p1099`・HEAD `1a3b7a84c`・OMR の open は #22）。終了時 **14514 / 0 / 2**（`end3.log`）。作業場所は Lab `sessions/p1099/`。OMR の #22 に着手（オーナー「続けて」）。
+
+- **結果**（`1200c035a`）: 声部の中の `clef` は段のもの。再現譜 `clef-in-voice-2026-11-04` と探り譜 `sessions/p1099/clef/w.lys` は LilyPond の絵と同じ配置。⑴ `ShareClefWithSpanBranches`＝`key` と同じく全 branch に書く ⑵ 連符の本体の `clef` は黙って捨てられていた → 読む（括弧は記号の後から）⑶ `SharedRenderer.ResolveClefAt` は全声部の最新の記号 ⑷ 記号の隣の音は同じ段の全声部から読む（`LooseChangeLeftNeighborTiming`。2 声目のスペーサーの後の記号が loose に読まれ、1 声目の音に重なっていた）⑸ 小節頭の記号の幅は全声部から（`MeasureForTheClosingGap`・break gate も）。
+- **本質の穴**: 小節頭や span の頭では、上の声部が自分の音まで一気に進み、下の声部が小節線の先に書く `clef` を聞く前に判定していた。`key` も同じ穴。LP は 1 時刻の指示を全部聞いてから音を判定する → `ReachAsync(head: true)`＋`Span.HeadsWaitForStaffChanges`。`clef`・`key`・フレーズ参照を含む span だけ音が待つ＝それ以外の譜の処理順は変えない。
+- **計器**: 全 svg 1262 枚の差 0（`svg/sweep.log`）・`ClefInAVoiceTests` 20 本・毒 `poisons1.ps1` 22 本（緑だった 7 本のうち 6 本はテストを足して赤、`keyChange` に `clef` を足す行は観測者なしで消した。「他の branch が後にいても待つ」の毒は待ちが増えるだけで出力が同じ＝省略の最適化として残した）。
+- ⚠️ **残りの制限**: ⑴ 違う `clef` を同じ時刻に 2 声が書くと両方描く（LP は最後の 1 つ）⑵ ⑶ 連符の本体の `key`・`time` は未確認。
+
+- **`lysc xml` の小節の途中の `clef`（オーナー指示）**: 次の小節の頭へ送っていたのを、音の流れの中の `<attributes>` として時刻どおりに書く（`WriteClefHere`）。大譜表は `number` 1／2・tab の隣は 1・tab だけの譜は書かない。`MusicXmlMidBarClefTests`・毒 `poisons2.ps1` 12 本すべて赤（緑の 2 本はテストを足した）。⚠️ 下の声部がより早い時刻に別の `clef` を書くと、書き出しの「今の記号」は歩いた順で最後のものになる。Release は下記。
+
+- **`lysc import` の `clef`（オーナー「続けて」）**: 小節途中の `clef` は小節頭の 1 つに読まれ、大譜表の片方の変更は全部落ちていた → `ImportNote.ClefBefore`＝その時刻の音の前（強弱と同じ待ちの列を使う・小節の最後の音の後なら次の小節の頭）。音楽の中で綴れない `soprano` などは落としてレポートする（書くとエラーだった）。往復で #22 の再現譜が同じ絵に戻る。
+- **音部記号をまたぐタイ**（同・読み込みで `clef` が残ると実害が出るので直した）: `TieDetector.SamePitch` が段の位置で比べていて、タイが消え LYS4007 の誤報が出ていた（註に既知の穴として残っていた）→ `WrittenPitch` で比べる＝異名同音は従来どおり別物。タイの先の臨時記号も同じ（`MeasureBuilder.TiesInto`）。LP の絵と同じ（`sessions/p1099/clef/t.ly`・`a.ly`）。全 svg 差 0・警告 17 のまま・歌詞 99.26% と音 46 曲 100 も同じ（`lyrfid.log`・`fidelity.log`）・毒 `poisons3.ps1` 19 本すべて赤（緑の 1 本は自分のテストの誤りで、直した）。⚠️ 空虚な assert（`!x || x`）を一度書いた＝毒の前に読み直して書き直した。
+
+- **Release の lysc は `21cee0cb9`**（オーナー「Release を直して」2026-11-05）。前は `1200c035a`。`lysc xml` と `lysc import` の `clef`・記号をまたぐタイが入った。その後の commit は docs だけ。OMR の REQUESTS にお知らせを足した＝OMR の repo では未 commit。
+
 ## 以下は第1098セッションの経緯
 
 ### 1.1 第1098セッション（2026-11-04・YT-DELL2）
