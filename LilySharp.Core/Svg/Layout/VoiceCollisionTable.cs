@@ -77,7 +77,7 @@ internal sealed class VoiceCollisionTable
         int n = 0;
         foreach (var v in voices)
             n = Math.Max(n, v.Measures.Length);
-        _measures = new ImmutableArray<VoiceCollisionEntry>[voices.Length < 2 ? 0 : n];
+        _measures = new ImmutableArray<VoiceCollisionEntry>[voices.Length < 2 && !CrossCollisionMark.AnyIn(voices) ? 0 : n];
     }
 
     /// <summary>The measures this table answers for (the longest voice's count; 0 when the

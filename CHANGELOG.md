@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **A note moved with `@cross` makes room for the heads where it lands.** It was drawn on top of the other staff's notes: a second's two heads overlapped and a unison hid one of them. The heads now step aside as two voices on one staff do, and the spacing leaves room for them, as in LilyPond. A unison with stems the opposite way shares one head.
 - `[engraving]` **A drum chord of different head shapes attaches them to one stem.** `<cb sn>` and `<hh cymc>` drew every head from one left edge with a plain head's width. Each head now stands at its own attachment, the stem at the widest head's, and the next column and the dots read the real heads, as in LilyPond. A whole-note chord is still a little off.
 - **`lysc ly` writes a drum part played through phrases.** `drums { hats beat }` and a bare `kit { hats }` went out as pitched music, with every drum note dropped and only the rests left. They are now in `\drummode` on a `DrumStaff`, a voice a line.
 - `[engraving]` **An up voice's dots clear the later up voices' stems.** With three or more voices, a dot could stand on the third voice's stem; the column now moves past it, as in LilyPond. A dotted rest's dot is also spaced on its own row, not always the same one, which can change line breaks in drum charts.

@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A note moved with `@cross` makes room for the heads where it lands**: a second's two heads overlapped and a unison hid one.
 - **A `key`, `tempo`, `octave` or `override` in a tuplet takes effect**: each was dropped without a word.
 - **A phrase, a `cue` or a `<< >>` in a tuplet is drawn**: the page left their notes out while the playback had them.
 - **A `voice { } { }` in a tuplet is an error** (LYS1066): the page left its notes out. Write a tuplet inside each voice.

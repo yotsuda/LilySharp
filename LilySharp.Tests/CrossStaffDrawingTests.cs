@@ -290,6 +290,65 @@ public class CrossStaffDrawingTests
         Assert.Equal(0, table.ShiftOf(0, 2, 0));
     }
 
+    /// <summary>LilyPond 2.26.0's shifts (Lab sessions/p1111/x1, -dbackend=svg): a moved note
+    /// collides with the heads of the staff it stands on, as two voices of one staff do. The down
+    /// head a second below the up one steps right by 1.30; a second above, the up head does (1.04).
+    /// </summary>
+    [Theory]
+    [InlineData(1, 0.0, 1.30)]   // e''@stemUp over d''@cross@stemDown
+    [InlineData(2, 1.04, 0.0)]   // e''@stemUp under f''@cross@stemDown
+    [InlineData(3, 0.0, 1.30)]   // f''@stemUp over e''@cross@stemDown
+    [InlineData(0, 0.0, 0.0)]    // the unison shares its column
+    public void AMovedNoteCollidesWithTheHeadsOfTheStaffItStandsOn(int item, double up, double down)
+    {
+        var layout = new LayoutEngine().Layout(Score(Book(
+            "e''4@stemUp e''@stemUp e''@stemUp f''@stemUp | c''1 |",
+            "e''4@cross@stemDown d''4@cross@stemDown f''4@cross@stemDown e''4@cross@stemDown | c1 |")));
+        Assert.InRange(layout.GetVoiceOffset(0, 0, 1, item), up - 0.02, up + 0.02);
+        Assert.InRange(layout.GetVoiceOffset(1, 0, 1, item), down - 0.02, down + 0.02);
+    }
+
+    [Fact]
+    public void AMovedNoteTheSameWayStandsBesideTheHeadItMeets()
+    {
+        // Both stems down, a unison: Lily# gives the moved voice a slot of its own (LilyPond keeps
+        // them in one and warns), so the heads stand side by side as LilyPond drew them (p1093/rc).
+        var layout = new LayoutEngine().Layout(Score(Book("e''4 e'' r2 |", "e''4@cross e''@cross r2 |")));
+        Assert.True(System.Math.Abs(layout.GetVoiceOffset(0, 0, 1, 0) - layout.GetVoiceOffset(1, 0, 1, 0)) > 1.2);
+    }
+
+    /// <summary>Lab sessions/p1111/x3: the gaps LilyPond 2.26.0 spaces the shared columns at
+    /// (-dbackend=svg). The wish of the moved voice is averaged with the wishes of the staff it
+    /// stands on, and its heads meet theirs as rods.</summary>
+    private const string SharedColumnBook = """
+        octave absolute
+        time 4/4
+        part rh { clef treble }
+        part lh { clef bass }
+        section A { rh { e''4@stemUp e''@stemUp e''@stemUp f''@stemUp | a'2@stemUp g'2@stemUp | e''4 e'' e'' e'' | e''4@stemUp e''@stemUp r2 | e''4@stemUp e''@stemUp e''@stemUp r4 | c1 | } lh { r4 d''4@cross@stemDown f''4@cross@stemDown e''4@cross@stemDown | g'2@cross@stemDown g'2@cross@stemDown | r4 e''4@cross e''4@cross r4 | d''8@cross@stemDown c''@cross@stemDown f''@cross@stemDown e''@cross@stemDown r2 | r4 d''4@cross@stemDown r2 | c1 | } }
+        form { ~A }
+        score { grandStaff { staff rh staff lh } }
+        """;
+
+    [Theory]
+    [InlineData(0, 3, 6.60)]     // bar 1: the first column to the third (LilyPond 6.60)
+    [InlineData(1, 3, 3.78)]     // …the second, shared, to the third (3.78)
+    [InlineData(0, 5, 10.12)]    // …the first to the fourth (10.12)
+    [InlineData(5, 7, 4.65)]     // …the fourth, shared, to the next bar: the closing wish (4.65)
+    [InlineData(11, 13, 3.66)]   // bar 3: the second column to the third, both same-way pairs (3.66)
+    [InlineData(19, 21, 2.65)]   // bar 4: f''8 to the e''8 beside the shifted e''4 (2.65)
+    [InlineData(23, 25, 3.66)]   // bar 5: only the moved head shifts, its next item on its own staff (3.66)
+    public void ASharedColumnIsSpacedAsLilyPondSpacesIt(int from, int to, double gap)
+    {
+        // The black and half heads (U+E0FE, U+E0FD) in X order; equal X counts once.
+        var heads = System.Text.RegularExpressions.Regex
+            .Matches(LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(SharedColumnBook)),
+                "<text class=\"music\" x=\"([-\\d.]+)\"[^>]*>[]</text>")
+            .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
+            .Distinct().OrderBy(x => x).ToArray();
+        Assert.InRange(heads[to] - heads[from], gap - 0.03, gap + 0.03);
+    }
+
     /// <summary>LilyPond's shapes (Lab sessions/p1093/rc, 2.26.0): a rest under a moved note goes
     /// down past it. <c>r1</c> on the treble staff at c, whose head stands at -13.</summary>
     [Fact]
@@ -569,6 +628,7 @@ public class CrossStaffDrawingTests
     [InlineData("g8@cross c'8 r4 r2 | c1", "g8 c'8 r4 r2 | c1")]         // @cross written away
     [InlineData("g8 c'8 r4 r2 | c1", "g8@cross c'8 r4 r2 | c1")]         // @cross written in
     [InlineData("g8@cross c'8 r4 r2 | c1", "c,8@cross c'8 r4 r2 | c1")]  // far enough to move the staves
+    [InlineData("b'8@cross c'8 r4 r2 | c1", "c''8@cross c'8 r4 r2 | c1")] // a second, then a unison, with c''1
     public void AnIncrementalEditMatchesAFullCompile(string before, string after)
     {
         var opt = new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false };

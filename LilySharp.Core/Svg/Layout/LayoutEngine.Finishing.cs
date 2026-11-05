@@ -446,7 +446,7 @@ internal sealed partial class LayoutEngine
         var dotAdjustBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, DotAdjustment>();
         foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
         {
-            if (staff.Voices.Length < 2)
+            if (staff.Voices.Length < 2 && !CrossCollisionMark.AnyIn(staff.Voices))
                 continue;
 
             var table = SpacingRules.VoiceCollisionShiftsOf(staff);

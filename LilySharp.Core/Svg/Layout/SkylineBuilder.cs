@@ -877,7 +877,7 @@ internal sealed class SkylineBuilder
         // shifted voice's down stem is the whole inter-staff constraint.
         // (A one-voice staff — every staff, mostly — asks nothing; a multi-voice bar that
         // moved nothing answers each item from an empty entry list.)
-        var collisionShifts = staff.Voices.Length >= 2
+        var collisionShifts = staff.Voices.Length >= 2 || CrossCollisionMark.AnyIn(staff.Voices)
             ? SpacingRules.VoiceCollisionShiftsOf(staff)
             : null;
 
@@ -1053,7 +1053,8 @@ internal sealed class SkylineBuilder
                 if (measureLayout.MeasureIndex != crossed.MeasureIndex)
                     continue;
                 double crossedX = measureLayout.X + LayoutUtilities.GetItemXOffset(
-                    crossed.Measures, crossed.MeasureIndex, crossed.ItemIndex, measureLayout);
+                    crossed.Measures, crossed.MeasureIndex, crossed.ItemIndex, measureLayout)
+                    + crossed.CollisionShift;
                 AddMusicItemToSkylines(crossed.Item, crossedX, staffMiddleUp, StaffSize.Of(staff),
                     upSkyline, downSkyline, forcedStemUp: null,
                     reserveStem: crossed.Item is NoteItem { BeamId: null } or ChordItem { BeamId: null },

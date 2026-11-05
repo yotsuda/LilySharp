@@ -78,7 +78,7 @@ internal sealed class ElementCoordinator
         var offsetBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
         var headWipeBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
         var dotAdjustBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, DotAdjustment>();
-        if (voices.Length > 1)
+        if (voices.Length > 1 || CrossCollisionMark.AnyIn(voices))
         {
             int measureCount = 0;
             foreach (var voice in voices)
@@ -130,8 +130,15 @@ internal sealed class ElementCoordinator
     internal static ImmutableArray<VoiceCollisionEntry> ComputeVoiceCollisionsOfMeasure(
         ImmutableArray<Voice> voices, int measureIndex, GrobPropertyResolver? resolver = null)
     {
+        bool crossed = CrossCollisionMark.AnyIn(voices);
         if (voices.Length <= 1)
-            return ImmutableArray<VoiceCollisionEntry>.Empty;
+        {
+            if (!crossed)
+                return ImmutableArray<VoiceCollisionEntry>.Empty;
+            ImmutableArray<VoiceCollisionEntry>.Builder? alone = null;
+            AddCrossCollisions(voices, measureIndex, ref alone);
+            return alone?.ToImmutable() ?? ImmutableArray<VoiceCollisionEntry>.Empty;
+        }
 
         var voiceColumns = VoiceCollector.CollectMeasure(voices, measureIndex);
 
@@ -184,8 +191,34 @@ internal sealed class ElementCoordinator
             }
         }
 
+        if (crossed)
+            AddCrossCollisions(voices, measureIndex, ref entries);
         AddDotColumns(voices, measureIndex, ref entries);
         return entries?.ToImmutable() ?? ImmutableArray<VoiceCollisionEntry>.Empty;
+    }
+
+    /// <summary>The columns of the bar a note <c>@cross</c> shares across staves: their answer,
+    /// solved with the moved notes on the staff the heads stand on (<see cref="Voice.CrossCollisions"/>),
+    /// takes the place of this staff's own for the items in them.</summary>
+    private static void AddCrossCollisions(ImmutableArray<Voice> voices, int measureIndex,
+        ref ImmutableArray<VoiceCollisionEntry>.Builder? entries)
+    {
+        for (int v = 0; v < voices.Length; v++)
+            foreach (var mark in voices[v].CrossCollisions)
+            {
+                if (mark.MeasureIndex != measureIndex)
+                    continue;
+                int at = -1;
+                if (entries != null)
+                    for (int e = 0; e < entries.Count; e++)
+                        if (entries[e].VoiceId == v + 1 && entries[e].ItemIndex == mark.ItemIndex)
+                            at = e;
+                if (at >= 0)
+                    entries![at] = entries[at] with { XOffset = mark.XOffset, HeadTransparent = mark.HeadTransparent };
+                else if (mark.XOffset != 0 || mark.HeadTransparent)
+                    (entries ??= ImmutableArray.CreateBuilder<VoiceCollisionEntry>()).Add(
+                        new VoiceCollisionEntry(measureIndex, v + 1, mark.ItemIndex, mark.XOffset, mark.HeadTransparent, default));
+            }
     }
 
     /// <summary>The solved dot columns of a bar, written onto its notes' and chords' collision

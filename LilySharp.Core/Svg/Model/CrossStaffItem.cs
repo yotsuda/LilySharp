@@ -68,6 +68,36 @@ internal static class HeldHere
     }
 }
 /// <summary>
+/// One item's place in a note column shared across staves by <c>@cross</c>: its voice's
+/// <see cref="Voice.CrossCollisions"/>. The column is solved once, on the staff the heads stand
+/// on, with that staff's own voices and the notes moved onto it; each voice keeps the answer for
+/// its own items, so the staff that draws an item reads it from its own collision table.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/note-collision.cc:403-472 calc_positioning_done — the NoteCollision grob is
+///   the Staff's (Collision_engraver), so a Voice that <c>\change Staff</c> moved in collides
+///   with the voices it now stands among.
+/// MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/x1): `e''4@stemUp` over `d''4@cross@stemDown`
+///   sets the down head beside the up one, as in one staff's two voices.
+/// </remarks>
+/// <param name="MeasureIndex">The measure of the item.</param>
+/// <param name="ItemIndex">The item's index in its own voice's measure.</param>
+/// <param name="XOffset">Its column's shift, in staff spaces.</param>
+/// <param name="HeadTransparent">Whether a merge wiped its head.</param>
+public readonly record struct CrossCollisionMark(int MeasureIndex, int ItemIndex, double XOffset, bool HeadTransparent)
+{
+    /// <summary>Whether any of <paramref name="voices"/> shares a column with a moved note — a staff
+    /// of one voice then still has a collision answer.</summary>
+    internal static bool AnyIn(ImmutableArray<Voice> voices)
+    {
+        foreach (var voice in voices)
+            if (!voice.CrossCollisions.IsEmpty)
+                return true;
+        return false;
+    }
+}
+
+/// <summary>
 /// One note standing on a staff that is not its voice's (<see cref="Staff.CrossedIn"/>): the
 /// address in that voice's measures, where its column is read.
 /// </summary>
@@ -75,6 +105,11 @@ public sealed record CrossedNote(ImmutableArray<Measure> Measures, int MeasureIn
 {
     /// <summary>The moved note.</summary>
     public MusicItem Item => Measures[MeasureIndex].Items[ItemIndex];
+
+    /// <summary>Its column's note-collision shift among the heads it stands with
+    /// (<see cref="CrossCollisionMark"/>), 0 when it shares no column — what the staff it stands
+    /// on spaces it at.</summary>
+    public double CollisionShift { get; init; }
 
     // Identity, not value equality: see ModelIdentity.
     public bool Equals(CrossedNote? other) => ReferenceEquals(this, other);

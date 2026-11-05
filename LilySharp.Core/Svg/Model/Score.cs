@@ -94,6 +94,13 @@ public sealed record Voice(
     ImmutableArray<Measure> Measures
 )
 {
+    /// <summary>
+    /// This voice's items in a column a note <c>@cross</c> shares with another staff's voice: the
+    /// note-collision answer of that column, solved on the staff the heads stand on
+    /// (<see cref="CrossCollisionMark"/>). Empty for a voice no moved note meets.
+    /// </summary>
+    public ImmutableArray<CrossCollisionMark> CrossCollisions { get; init; } = ImmutableArray<CrossCollisionMark>.Empty;
+
     // Identity, not value equality: see ModelIdentity.
     public bool Equals(Voice? other) => ReferenceEquals(this, other);
 

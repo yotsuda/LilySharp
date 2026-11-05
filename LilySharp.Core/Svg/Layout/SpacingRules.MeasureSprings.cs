@@ -1191,7 +1191,7 @@ internal static partial class SpacingRules
     {
         // A single voice collides with nothing: answering here keeps the one-voice book —
         // every book, mostly — off the table entirely.
-        if (voices.Length < 2)
+        if (voices.Length < 2 && !CrossCollisionMark.AnyIn(voices))
             return VoiceCollisionTable.Empty;
 
         var key = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(voices)!;
@@ -1271,14 +1271,14 @@ internal static partial class SpacingRules
         int measureIndex)
     {
         var staffVoices = staff.Voices;
-        if (staffVoices.Length < 2 || springs.Length != timings.Count + 1)
+        if ((staffVoices.Length < 2 && !CrossCollisionMark.AnyIn(staffVoices)) || springs.Length != timings.Count + 1)
             return springs;
 
         var offsets = VoiceCollisionShiftsOf(staff);
 
         // The items STARTING at each timing column, each with the shift it is drawn at.
         // VoiceId is 1-based, matching VoiceCollector / the renderer's VoiceItemKey.
-        var columns = new List<(MusicItem Item, double Shift, int Voice)>?[timings.Count];
+        var columns = new List<(MusicItem Item, double Shift, int Voice, double StaffY, bool Wish)>?[timings.Count];
         for (int v = 0; v < staffVoices.Length; v++)
         {
             if (measureIndex >= staffVoices[v].Measures.Length)
@@ -1298,11 +1298,65 @@ internal static partial class SpacingRules
                         {
                             (columns[t] ??= new()).Add((item,
                                 offsets.ShiftOf(measureIndex, v + 1, oi),
-                                v));
+                                v, 0.0, item.CrossStaffIndex < 0));
                             break;
                         }
                 onset += item.Duration;
             }
+        }
+        // The notes @cross moved onto this staff at the shift they share a column with its heads
+        // at (CrossedNote.CollisionShift), read about this staff (their skyline is otherwise read
+        // about their own, ItemSkylineFactory's CrossPureShift). Each moved voice is a voice here,
+        // and its wish is priced here, averaged with this staff's (its own staff leaves it out).
+        // LILYPOND-REF: lily/separation-item.cc:120-190 Separation_item::boxes — the Staff's separation item boxes
+        //   every grob of the column standing on it, a Voice moved in by \change Staff included;
+        //   lily/spring.cc:101-129 merge_springs averages the wishes of the column.
+        // MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/x2): `e''4@stemUp e''` over
+        //   `r4 d''4@cross@stemDown f''` — the gap after the shared column is the half shift wider.
+        // Only in a bar where a moved note's column shifted something: elsewhere the moved notes
+        //   are spaced as they were before the shift was solved here.
+        var visitorIds = new List<ImmutableArray<Model.Measure>>();
+        int VisitorOf(ImmutableArray<Model.Measure> measures)
+        {
+            int at = visitorIds.IndexOf(measures);
+            if (at < 0)
+            {
+                visitorIds.Add(measures);
+                at = visitorIds.Count - 1;
+            }
+            return staffVoices.Length + at;
+        }
+        bool ownShifted = false;
+        foreach (var voice in staffVoices)
+            foreach (var mark in voice.CrossCollisions)
+                ownShifted |= mark.MeasureIndex == measureIndex && mark.XOffset != 0;
+        foreach (var crossed in staff.CrossedIn)
+            ownShifted |= crossed.MeasureIndex == measureIndex && crossed.CollisionShift != 0;
+        // A moved note's wish runs to its voice's next item, on whichever staff that stands: the
+        // spring it ends on (timings.Count = the bar line's), with its shift.
+        List<(int Spring, double Shift)>? visitorWishes = null;
+        foreach (var crossed in staff.CrossedIn)
+        {
+            if (crossed.MeasureIndex != measureIndex || !ownShifted)
+                continue;
+            var items = crossed.Measures[measureIndex].Items;
+            var onset = Fraction.Zero;
+            for (int oi = 0; oi < crossed.ItemIndex; oi++)
+                onset += items[oi].Duration;
+            for (int t = 0; t < timings.Count; t++)
+                if (timings[t] == onset)
+                {
+                    (columns[t] ??= new()).Add((crossed.Item, crossed.CollisionShift, VisitorOf(crossed.Measures),
+                        crossed.Item.CrossPureShift / 2.0, false));
+                    int next = crossed.ItemIndex + 1;
+                    while (next < items.Length && !IsMusicalColumn(items[next]))
+                        next++;
+                    int spring = next >= items.Length ? (t == timings.Count - 1 ? timings.Count : -1)
+                        : t + 1 < timings.Count && timings[t + 1] == onset + crossed.Item.Duration ? t + 1 : -1;
+                    if (spring > 0)
+                        (visitorWishes ??= new()).Add((spring, crossed.CollisionShift));
+                    break;
+                }
         }
 
         var result = springs.ToBuilder();
@@ -1340,7 +1394,8 @@ internal static partial class SpacingRules
                 {
                     var l = left[li];
                     var r = right[ri];
-                    if (l.Voice == r.Voice)
+                    // A moved note's wish is priced on the staff it stands on (above).
+                    if (l.Voice == r.Voice && l.Wish)
                     {
                         wishes++;
                         shiftSum += l.Shift;
@@ -1351,10 +1406,10 @@ internal static partial class SpacingRules
                     // the same frame CalculateSkylineDistance / SeparationRodDistance use.
                     if (!rightSkyOf.TryGetValue((t - 1, li), out var rs))
                         rightSkyOf[(t - 1, li)] = rs =
-                            ItemSkylineFactory.SharedRightSkylineAtColumn(l.Item, l.Shift, 0, staff.Lines);
+                            ItemSkylineFactory.SharedRightSkylineAtColumn(l.Item, l.Shift, l.StaffY, staff.Lines);
                     if (!leftSkyOf.TryGetValue((t, ri), out var ls))
                         leftSkyOf[(t, ri)] = ls =
-                            ItemSkylineFactory.SharedLeftSkylineAtColumn(r.Item, r.Shift, 0, staff.Lines);
+                            ItemSkylineFactory.SharedLeftSkylineAtColumn(r.Item, r.Shift, r.StaffY, staff.Lines);
                     var (_, rod) = SkylineFloorPair(rs, ls);
                     // A SAME-voice pair is spanned by that voice's wish, and the wish's
                     // skyline minimum is measured between the voice's OWN note columns in
@@ -1367,14 +1422,21 @@ internal static partial class SpacingRules
                     {
                         if (!wishRightOf.TryGetValue((t - 1, li), out var wrs))
                             wishRightOf[(t - 1, li)] = wrs =
-                                ItemSkylineFactory.SharedWishRightSkylineAtColumn(l.Item, l.Shift, 0, staff.Lines);
+                                ItemSkylineFactory.SharedWishRightSkylineAtColumn(l.Item, l.Shift, l.StaffY, staff.Lines);
                         if (!wishLeftOf.TryGetValue((t, ri), out var wls))
                             wishLeftOf[(t, ri)] = wls =
-                                ItemSkylineFactory.SharedWishLeftSkylineAtColumn(r.Item, r.Shift, 0, staff.Lines);
+                                ItemSkylineFactory.SharedWishLeftSkylineAtColumn(r.Item, r.Shift, r.StaffY, staff.Lines);
                         maxSky = Math.Max(maxSky, SkylineFloorPair(wrs, wls).SkyMin);
                     }
                     maxRod = Math.Max(maxRod, rod);
                 }
+            if (visitorWishes != null)
+                foreach (var (spring, shift) in visitorWishes)
+                    if (spring == t)
+                    {
+                        wishes++;
+                        shiftSum += shift;
+                    }
             if (shiftSum == 0 && maxSky <= result[t].MinDistance && maxRod <= result[t].MinDistance)
                 continue;
             var s = result[t];
@@ -1404,13 +1466,25 @@ internal static partial class SpacingRules
         if (columns[timings.Count - 1] is { } last && last.Count > 0)
         {
             double shiftSum = 0;
+            int wishes = 0;
             foreach (var l in last)
-                shiftSum += l.Shift;
+                if (l.Wish) // a moved note's wish is the staff's it stands on
+                {
+                    shiftSum += l.Shift;
+                    wishes++;
+                }
+            if (visitorWishes != null)
+                foreach (var (spring, shift) in visitorWishes)
+                    if (spring == timings.Count)
+                    {
+                        shiftSum += shift;
+                        wishes++;
+                    }
             if (shiftSum != 0)
             {
                 int closing = timings.Count;
                 result[closing] = result[closing].WithIdealDistance(
-                    Math.Max(0.0, result[closing].IdealDistance + shiftSum / last.Count));
+                    Math.Max(0.0, result[closing].IdealDistance + shiftSum / wishes));
                 widened = true;
             }
         }
