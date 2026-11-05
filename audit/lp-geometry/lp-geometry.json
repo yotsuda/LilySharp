@@ -3820,6 +3820,41 @@
       "residual": 0.0,
       "why": "EXACT: the family digit, in-book."
     },
+    "spacing.rest-wish.note-over-rests": {
+      "probe": "rest-voice-wish.ly",
+      "score": "RWA",
+      "lilypond": 2.700144999134613,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1102): the voice of rests wishes too, uncorrected (note-spacing.cc:248-249), so merge_springs averages the up-stem pair's -0.25 with its 0. Lily# skipped the rest's wish and charged the correction whole, 2.575. This point justifies rebasing programmatic/hara-kiri, programmatic/hara-kiri-paged and test/instrument-defaults."
+    },
+    "spacing.rest-wish.rests-on-another-staff": {
+      "probe": "rest-voice-wish.ly",
+      "score": "RWS",
+      "lilypond": 2.700144999134613,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1102): the same wish from a voice on another staff: a wish is the voice's, and the column's springs merge across the system."
+    },
+    "spacing.rest-wish.spacer-control": {
+      "probe": "rest-voice-wish.ly",
+      "score": "RWN",
+      "lilypond": 2.752244999134613,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1102), THE CONTROL: a spacer makes no column, so it wishes nothing and the correction stays whole."
+    },
+    "spacing.rest-wish.into-bar-line": {
+      "probe": "rest-voice-wish.ly",
+      "score": "RWB",
+      "lilypond": 4.962066427706041,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1102): the last column into the bar line, a voice of rests under up stems."
+    },
+    "spacing.rest-wish.into-bar-line-control": {
+      "probe": "rest-voice-wish.ly",
+      "score": "RWR",
+      "lilypond": 5.18608785627747,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1102), THE CONTROL of the bar line: the same over a spacer."
+    },
     "dots.column.two-notes-control": {
       "probe": "dot-column-share.ly",
       "score": "DSN",

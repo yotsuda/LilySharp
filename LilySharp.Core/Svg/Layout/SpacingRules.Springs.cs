@@ -447,10 +447,19 @@ internal static partial class SpacingRules
         for (int v = 0; v < voices.Count; v++)
         {
             var voice = voices[v];
-            var left = NoteColumnAt(voice, tLeft);
-            var right = NoteColumnAt(voice, tRight);
+            var left = WishColumnAt(voice, tLeft);
+            var right = WishColumnAt(voice, tRight);
             if (left is null || right is null)
                 continue;
+            // A rest's voice wishes all the same, uncorrected: stem_dir_correction returns at the
+            // first column with no stem (note-spacing.cc:248-249), and the wish still goes into
+            // the average. MEASURED, 2.26.0 (Lab sessions/p1102): `f''4. c''8` over `r4. c'8`,
+            // the up-stem pair's −0.25 halved by the rest's wish, 4.10; charged whole, 3.98.
+            if (left is RestItem || right is RestItem)
+            {
+                wishes.Add(baseSpring.WithIdealDistance(Math.Max(0.0, baseSpring.IdealDistance)));
+                continue;
+            }
 
             var approach = ApproachColumn(right);
             double corr = TabOf(staves, voices.Count, v) is { } tab
@@ -715,8 +724,14 @@ internal static partial class SpacingRules
         var wishes = RentWishes(); // given back once MergeSprings has read it (see RentWishes)
         for (int v = 0; v < voices.Count; v++)
         {
-            if (NoteColumnAt(voices[v], tLeft) is not { } left)
+            if (WishColumnAt(voices[v], tLeft) is not { } left)
                 continue;
+            // As in MergeVoiceStemWishes: the rest's wish counts, with no correction of its own.
+            if (left is RestItem)
+            {
+                wishes.Add(baseSpring.WithIdealDistance(Math.Max(0.0, baseSpring.IdealDistance)));
+                continue;
+            }
 
             double corr = TabOf(staves, voices.Count, v) is { } tab
                 // The bar spans the tab's own lines: ±(strings − 1) of its positions.
@@ -928,6 +943,25 @@ internal static partial class SpacingRules
     /// </remarks>
     private static double BarlineToStemOpticalCorrection(MusicItem? item)
         => item is null ? 0 : StaffSpacingOpticalCorrection(item, null, null, 2.0);
+
+    /// <summary>
+    /// The column a voice's <c>Note_spacing</c> wish reads at moment <paramref name="t"/>: a
+    /// note, a chord or a rest, or null with none starting there.
+    /// </summary>
+    private static MusicItem? WishColumnAt(Measure measure, Fraction t)
+    {
+        var cur = Fraction.Zero;
+        foreach (var item in measure.Items)
+        {
+            // Not a grace, as NoteColumnAt; a spacer makes no column, so it wishes nothing.
+            if (cur == t && !item.GraceTime && item is NoteItem or ChordItem or RestItem { IsSpacer: false })
+                return item;
+            if (cur > t)
+                return null;
+            cur += item.Duration;
+        }
+        return null;
+    }
 
     /// <summary>
     /// The note or chord column starting exactly at moment <paramref name="t"/> in

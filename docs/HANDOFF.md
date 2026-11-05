@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。第1100 は連符の本体に書けるものと入れ子の連符の上下を閉じた（§1.1）。OMR の `open` は 0。点の列の共有は第1101 で閉じた（§1.1）。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release の lysc は `1200c035a`**（オーナー決定 2026-11-04・第1099。OMR の REQUESTS #22 の行に書いた＝OMR の repo では未 commit）。
+- **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。第1100 は連符の本体に書けるものと入れ子の連符の上下を閉じた（§1.1）。OMR の `open` は 0。点の列の共有は第1101 で閉じた（§1.1）。休符の声部の wish は第1102 で閉じた（§1.1）。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release の lysc は `1200c035a`**（オーナー決定 2026-11-04・第1099。OMR の REQUESTS #22 の行に書いた＝OMR の repo では未 commit）。
 - **`@cross` の音が別の段に描かれる＝第1093 で実装（OMR の REQUESTS #20）**: 設計は §1.1 第1093。**OMR の返事（`..\LilySharp-Omr\docs\repro\lilysharp-feedback-2026-11-04.md`）: #19〜#21 は `done`・今直してほしい不具合はない。**段をまたぐタイ・同音や 2 度の重なり・MusicXML は OMR が生成器で避ける＝今は依頼なし（必要なら OMR が行を足す）。読み手が段をまたぐ形をまだ読めないのは OMR 側の宿題。 残りの制限: ⑴ 弧は実装済み（下の語り）・スラーの上のスクリプトと点は元の段で読むまま／⑵ 段をまたぐタイは最初の音の段に描く（LP は斜め）／⑶ 連桁の採点は実装済み（下の語り）・他の段の連桁と、別の声部から同じ段へ移った音は避けない／⑷ 移った先の段の音とは衝突処理をしない（LP は 2 度・同音の頭を横へずらす＝Lab `sessions/p1093/rc` 7〜8 小節。⚠️ LP 自身が「this Voice needs a \voiceXx」と警告する形。休符は実装済み）／⑸ 臨時記号は実装済み（下の語り）・LP が落とす再確認の記号は残す（オーナー決定 2026-10-02 の ⑴ と同じ扱い）／⑹ 観測者なし＝連桁のない棒を移った先の輪郭へ入れる行と、弧の端の棒の枠の行は、8 冊の探り譜で出力が動かず毒が緑（LP の規則なので残した）／⑻ 双子は譜の最初の瞬間の `\change Staff` が LP で効かない（`k1`）／⑼ プレビューの実機は未確認（増分はフルと一致＝網 4 本）。
 - **チャットで Lily# を教わる＝第1043 で実装（`docs/LEARN_FOR_LLM.md`・`HANDOFF-LEARNING.md`）**: 残りは実物の Copilot での確認（MANUAL-CHECKS C59）。
 - **ペダルの音＝第1041 で実装（`@sustain` だけ・`docs/pedal-playback-design.md`）**: 残りは耳の確認（MANUAL-CHECKS C57）。`@sostenuto`・`@unaCorda` は描くだけのまま。
@@ -136,6 +136,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1102セッション（2026-11-05・YT-DELL2）
+
+開始時 full **14659 / 0 / 2**（`-Start p1102`・HEAD `056f33a28`）。終了時 full **14664 / 0 / 2**（`run3.log`）。作業場所は Lab `sessions/p1102/`。オーナーの選択「`r2a` の間隔の差」。
+
+- **原因と修正**: 付点は関係なかった。LP の `Note_spacing::stem_dir_correction` は符尾のない列で早く返すだけで、休符の声部の wish は `merge_springs` の平均に入る（note-spacing.cc:248-249・spacing-spanner.cc:364-393）。`MergeVoiceStemWishes`／`…ToBarline` は休符の声部を飛ばして、他の声部の補正を丸ごと掛けていた。`SpacingRules.WishColumnAt`（音・和音・休符。spacer は列を作らないので wish なし）で平均に入れた。段をまたいでも同じ（wish は声部のもの）。
+- **計器**: `probe/rests.ps1`・`multi.ps1`＝`r2a` の族 9 形、小節線の手前、段をまたぐ休符、スラッシュの段、`removeEmpty` で隠した段、すべて 0.01 以内（丸め）。詰まった行 `tight` も 2.85／3.11（LP 2.85／3.10、修正前 2.73／3.24）。台帳 `spacing.rest-wish.*` 5 点（`probes/rest-voice-wish.ly`）。毒 `poisons.ps1` 3 本とも赤（exit code で判定）。予測の外れ: RWA と RWN の差は 0.125 でなく 0.0521＝休符の幅も平均に入るのを忘れていた（probe に記録）。
+- **全 svg**: `svg/sweep1.log` 1262 枚中 12 枚が動いた。`probe/moved.ps1` で LP に近づいた: `grammar-tour` 0.050→0.039・`feature-tour` 0.083→0.067・`fur-elise` 0.061→0.029・`ぐるぐるワンダーランド` 0.114→0.101、`rest-avoid-note`・`restavoid` は差 0 のまま。⚠️ `Untitled-1` はほぼ同じ（0.123→0.122。ただし 0.02 超の頭は 235→242 と増えた）。⚠️ `lesson-11-band`・`harbour-lights`・`morning-light`・`blues-in-f` はこの計器で判定できなかった（ページ全体の頭の x を 1 つのずらしで合わせる計器で、値が大きく崩れる。`lesson-11-band` は別スコアの `.ly` を読んだ計器の誤り）。`blues-in-f` の形は `multi.ps1` の `blues2`・`noslash` で LP と一致を確かめたが、残り 3 冊の本体は未確認。
+- **絵の更新**（オーナー承認 2026-11-05）: `test/instrument-defaults`（小節線 42.61→42.68、LP 42.684）・`programmatic/hara-kiri`・`programmatic/hara-kiri-paged`（譜そのものは LP と未照合。同じ形の `hide2` で 2.57→2.70、LP 2.70）。根拠の台帳キーは `spacing.rest-wish.note-over-rests`。
+- ⚠️ 打鍵の時間は未計測（ベンチは静かな窓をもらってから）。走査の回数は変わらない。休符だけの列の組も `MergeSprings` を通るようになった分だけ増える。
+
+## 以下は第1101セッションの経緯
+
 ### 1.1 第1101セッション（2026-11-05・YT-DELL2）
 
 開始時 full **14607 / 0 / 2**（`-Start p1101`・HEAD `be4c3d9d6`・OMR の open 0）。作業場所は Lab `sessions/p1101/`。オーナー指示「付点の列の共有をやって」（`41699e719`）。
@@ -143,23 +155,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **1 瞬間に 1 回解く**（`ElementCoordinator.SolveDotColumns`）: `Dot_column_engraver` は Staff の engraver＝段と瞬間に列は 1 つ（dot-column.cc:194-232）。全声部の音・和音・休符の点を 1 つの configuration に入れ、x は全員の答えの最大。旧 `NoteCollision.SharedDotRows`（上下の先頭 1 本ずつ）と休符だけの解を置き換えた。⑴ 3 声部以上で点が重なっていた（`v3b` は 3,3 → LP と同じ 1,3,5）⑵ 休符の点が音の列から最大 1.66 ずれていた → 1 列 ⑶ 全休符の点の段（`dots::calc-staff-position` の -2 が新しい解に要る）。
 - **x は `MusicItem.DotColumnShift`**（`StampDotColumns`・`SvgGenerator.WithShadowedMarksRecorded`＝収集の 2 経路が共有する出口で押す）。`DotColumn.Reserved` と描画が足す＝間隔・タイの輪郭・スクリプトも同じ x を読む。⚠️ `CollectMultiStaff` で押して 1 パートの譜だけ効かない、を一度やった＝テストで見つけた。
 - **計器**: `probe/dots*.ps1`（各 1 小節の双子の grob dump と svg の突き合わせ）＝ 30 余の形で段は全一致・x の差は 0.01 以内。`DotColumnTests` 52 件。終了時 full **14659 / 0 / 2**（`end3.log`）。全 svg は `svg/sweep1.log`＝Release との差 5 枚のうち 2 枚は第1100 の既知、3 枚は休符の点の x（`scripts-dynamics`・`dot-column-vertical-positioning`＝LP と 2 桁で一致・`perf-restdot300`）。⚠️ `StampDotColumns` は収集の出口＝打鍵ごとに走る。2 声部に付点がある小節だけ解く。**打鍵の A/B**（2026-11-05・オーナー承認の窓・`be4c3d9d6` 対 HEAD を worktree の Release で交互に 3 回・`bench/bench.log`）: `perf-plain1k`・`fingbeam1k`・`v2bow1k`・小節挿入は床も中央値も揺れの範囲（hit/miss も同じ）。**全小節に付点の列がある最悪の `perf-restdot300`（300 小節）だけ床 16.6→22.8 ms（+6.2）・中央値 30.3→39.1 ms（+8.8）**。**オーナー判断 2026-11-05＝受け入れる・追わない**（memo は作っていない。効くかも未確認）。台帳 `dots.column.*` 3 点（`probes/dot-column-share.ly`・広がり 0 の予測どおり）。`test/scripts-dynamics` の絵を更新（オーナー承認 2026-11-05＝休符の点の x 79.67→79.79、LP 79.79）。毒 `poisons1.ps1`＋`poisons2.ps1`: 緑だった 3 本は条件ごと消した（段の差だけ渡す・印の引き算・1 声の列）・テストの穴は測って足した。⚠️ 緑のまま: 衝突の点の向き（note-collision.cc:374-397 の行）・和音の頭の入れ替わり・`@cross` の除外（`HeldHere` が先に除く）＝効く譜を作れていない。
-- ⚠️ **残差**: ⑴ 付点休符の下で上の声部に次の音がある形の次の列が 0.09〜0.13 狭い（`r2a` 3.98 対 4.10）＝Release でも同じ＝点の列ではない。休符の点の段を純粋な位置に直す案は試して動かず、戻した ⑵ 付点のない声部の符尾も列の支え（dot-column.cc:103-112）は未移植・`undot*` は差なし ⑶ 輪郭の種（`SkylineBuilder`）とスラーの障害物は今も点の段を各 item で解く。
-
-## 以下は第1100セッションの経緯
-
-### 1.1 第1100セッション（2026-11-05・YT-DELL2）
-
-開始時 full **14514 / 0 / 2**（`-Start p1100`・HEAD `5ef5ac6ca`・OMR の open 0）。作業場所は Lab `sessions/p1100/`。オーナーの選択「連符の中の key/time」。第1099 の残りの制限 ⑴⑶ を閉じた（`e1ce6dffe`）。
-
-- **連符の本体**: `key`・`tempo` は黙って捨てられていた → `clef` と同じくその音の時刻に立つ（`ProcessTuplet`）。本体の先頭の `key` は括弧の前。`tempo` の錨は `CurrentMoment`（`CurrentDuration` は連符の本体で止まっている）。
-- **`time`・`partial` は LYS1065（エラー）**＝オーナー決定 2026-11-05（`TupletMeterValidator`）。意味を持つのは小節頭の先頭だけで、連符の前に書くのと同じ。**LP は `\time` を受ける＝意図した差**。小節線をまたぐ連符は元から LYS2017 で、この決定で失う形はない（`probe/cross.lys`）。
-- **同じ時刻の違う `clef`**: 後から聞いた 1 つだけ描く（`WithdrawClefAtThisMoment`。比べる相手はその時刻より前の記号）。LP と同じ絵（`probe/twoclef.lys`）。
-- **計器**: 全 svg 1262 枚の差 0（`svg/sweep.log`＝base は Release `21cee0cb9`）・`DirectivesInATupletTests` 89 件（便の終わり）。終了時 full **14607 / 0 / 2**（`end8.log`）。全 svg は `svg/sweep6.log`＝Release との差は承認した見本とコーパスの 1 冊（`If I Ain't Got You`＝旗の 0.025 だけ）。棚卸しは OWN +2（`TupletMeterValidator`・`TupletVoiceValidator`）。毒 `poisons1.ps1`＋`poisons2-list.ps1`: 緑だった 4 本のうち 2 本はテストを足して赤、2 本（自分の声部の除外・同じ記号の除外）は観測者なしで条件を消した。⚠️ 掃きの差 0 は、この形の本が母集団にないだけ。
-- **`octave`・`override`・`revert`・`once`**（オーナー「続けて」）: 同じく捨てられていた → 本体で読む。`.ly` は連符の外でも途中の `octave` と `override` を書かない＝連符の問題ではなく今のまま。ナビゲーションの記号は元から LYS1034。毒 `poisons3.ps1` 4 本すべて赤（最初の回は `revert` のテストの期待値の誤りで全部赤に見えた＝直して取り直した）。
-- **連符の中のフレーズ参照・`cue`・`<< >>`**: 譜面だけ音が消えていた（MusicXML と MIDI は全部出す・`lysc check` は黙る。`probe/body.lys` の 8〜10 小節・`probe/lost.ps1`）→ `WalkTupletBody` がその拍率で歩く。`<< >>` の分割は連符の拍率に掛ける。小節の数えは `MeasureDurations.PhraseInATuplet`。連符からだけ呼ばれる本体は単独で検査しない（`MarkPhrasesPlayedInATuplet`＝弱起の誤報を消した）。⚠️ 自分を呼ぶフレーズで `lysc check` が落ちる欠陥を一度書いた＝テストが落として直した（連符をまたぐとガードが切れていた）。毒 `poisons4.ps1` と 3 本すべて赤（緑だった 10 本はテストの穴＝足した。最後の短い小節は誰も報告しない・最初の短い小節は LYS2006）。
-- **連符の中の `voice` は LYS1066（エラー）**（オーナーの「続けて」を推奨案「エラー」への承認と読んだ＝違うなら戻す）: `TupletVoiceValidator`。本体に書いたものと、本体が呼ぶフレーズが持つものの両方。⚠️ `.ly`・MIDI・MusicXML は今も音を出す（エラーの譜なので直さない）。
-- **同じ比・同じ音の入れ子の連符は 1 つ**（tuplet-engraver.cc:74-77・tuplet-description.cc:84-89）: `SameTuplet`＝外側が残る（`probe/same.lys`）。毒 `poisons5.ps1` すべて赤（緑 2 本＝比の分子はテストを足した・二重報告は `DiagnosticBag` がまとめるので条件を消した）。⚠️ **隠し窓の毒は全部「緑」と出た**（失敗の行を拾えていない。`no cycle guard` だけ赤で気づいた）＝終了コードで判定する型に直した。
-- **入れ子の連符の上下**（オーナー「続けて」）: 外側は内側の箱と数字を避ける（tuplet-bracket.cc:646-680）＝tab の移植を `EnclosedTupletPoints` に括り出して共有。独自の `NestingDepthOffset` は主経路から外した（点が無いときのフォールバックだけに残る）。照合は `probe/nestpin.lys`＋`nestcmp.ps1`（`--pin-fonts`）: 数字 29 個の x は一定差・y は一定差から最大 0.027。**1 音の連符は括弧なし**（:130-143）。台帳 `staff.staff.tuplet-nested-{control,bracket,number,identical}`（`probes/tuplet-nested.ly`）。見本 `showcase/05-special-techniques` の絵を更新（オーナー承認 2026-11-05）。⚠️ 残差: 内側が急な形で外側の数字が LP より 0.07 低い（テストに幅を明記）。**`-bracket` の −0.025 は閉じた**（オーナー「続けて」）: 連桁のない音の旗は符尾の先より 0.025 外へ出て、LP の列の extent に入る（note-column.cc:251-258・`probe/flag.ly`）→ 括弧の点に足した。毒 `poisons8.ps1`: 緑 3 本のうち 4 分音符の判定は条件を消し、反対向きの符尾と `unite` は LP の行で観測者なしとして残した。⚠️ 探り譜の小節が足りないと LP の位置だけずれ、連桁の差に見えた＝まず `bar check` の警告を読む。毒 `poisons6.ps1`＋`poisons7.ps1`: 緑のまま残したのは 3 本（子の深さ・声部・内側を先に解く順）＝LP の行で観測者なし。
+- ⚠️ **残差**: ⑴ 付点休符の下で上の声部に次の音がある形の次の列が 0.09〜0.13 狭い（`r2a` 3.98 対 4.10）＝**第1102 で閉じた**（休符の声部の wish） ⑵ 付点のない声部の符尾も列の支え（dot-column.cc:103-112）は未移植・`undot*` は差なし ⑶ 輪郭の種（`SkylineBuilder`）とスラーの障害物は今も点の段を各 item で解く。
 
 ## 2. 開いている作業
 
