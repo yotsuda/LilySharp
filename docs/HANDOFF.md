@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **★ 次の候補: 打鍵の増加の監査（オーナー指示 2026-11-05「包括的にパフォーマンス向上の側面からコードを監査」・第1107 の判断でこの節へ。第615 の「perf は一時停止」を解く指示）**: 第615 の後の約 1000 commit で 1000 小節の本が遅くなった（§1.1 第1107＝`v2bow1k` 約 5 倍・`fingbeam1k` 約 2.8 倍・`plain1k` 約 1.6 倍。実物の本は 5〜13 ms）。手順の提案: ⑴ **読んで探すより先に測って絞る**＝`v2bow1k` と `fingbeam1k` で `746123f19`..HEAD を二分探索（1 点およそ 1 分・`sessions/p1107/bench3b.ps1` が worktree・本・計器の写しの雛形。`hit` が変わる段割れの変化は別に見る）⑵ 効いた commit ごとに、機能の代金か無駄かを分ける（RULES §5.3「呼び手を確かめる」）⑶ 打鍵のプロファイル（Lab `sessions/p613/lathost`）で残りの上位を読む ⑷ 忠実度を変える高速化はオーナーに訊く（`⒴⁗` など §1.0 ⒞ の「触らない」は守る）。⚠️ ベンチはオーナーに静かな窓をもらう。⚠️ `dotnet test` は `Cli\bin\Debug` も作り直す＝毒の最中に Cli を計器に使わない（第1104）。第1107 の最悪ケースの増分（`perf-3vdot300`・`perf-kitmix300`、数 ms）を受け入れるかはオーナーの返事待ち。
+- **★ 打鍵の増加の監査＝第1108 で測って絞った（§1.1 第1108）。オーナーの返事待ち: 試作 P1〜P4 を入れるか**（`LilySharp-Lab/sessions/p1108/prototype.diff`・本体 repo には未適用）。値段は 1000 小節の本で床 `fingbeam1k` 103 → 45 ms／`plain1k`＋小節の挿入 92 → 61 ms／`plain1k` 35 → 32 ms（中央値 51 → 34 ms）・`v2bow1k` は床が動かず中央値 74 → 68 ms・実物の 2 冊は時間がほぼ動かない（割当 3.85 → 3.68 MB／3.34 → 2.59 MB）。⚠️ 第1107 の「`v2bow1k` 約 5 倍」は計器の誤り＝本当は約 1.4 倍（§1.1 第1108）。残りの候補も §1.1 第1108。第1107 の最悪ケースの増分（`perf-3vdot300`・`perf-kitmix300`、数 ms）を受け入れるかもオーナーの返事待ち。
 - **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。第1100 は連符の本体に書けるものと入れ子の連符の上下を閉じた（§1.1）。OMR の `open` は 0。点の列の共有は第1101 で閉じた（§1.1）。休符の声部の wish は第1102 で閉じた（§1.1）。付点のない声部の符尾は第1103 で閉じた（§1.1）。`lysc ly` のフレーズのドラムは第1104 で閉じた（§1.1）。ドラムの和音の揃え方は第1105 で閉じた（§1.1）。`Untitled-1` の段割れの差は名前の字下げと第1106 で分かった（§1.1）。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release の lysc は `1200c035a`**（オーナー決定 2026-11-04・第1099。OMR の REQUESTS #22 の行に書いた＝OMR の repo では未 commit）。
 - **`@cross` の音が別の段に描かれる＝第1093 で実装（OMR の REQUESTS #20）**: 設計は §1.1 第1093。**OMR の返事（`..\LilySharp-Omr\docs\repro\lilysharp-feedback-2026-11-04.md`）: #19〜#21 は `done`・今直してほしい不具合はない。**段をまたぐタイ・同音や 2 度の重なり・MusicXML は OMR が生成器で避ける＝今は依頼なし（必要なら OMR が行を足す）。読み手が段をまたぐ形をまだ読めないのは OMR 側の宿題。 残りの制限: ⑴ 弧は実装済み（下の語り）・スラーの上のスクリプトと点は元の段で読むまま／⑵ 段をまたぐタイは最初の音の段に描く（LP は斜め）／⑶ 連桁の採点は実装済み（下の語り）・他の段の連桁と、別の声部から同じ段へ移った音は避けない／⑷ 移った先の段の音とは衝突処理をしない（LP は 2 度・同音の頭を横へずらす＝Lab `sessions/p1093/rc` 7〜8 小節。⚠️ LP 自身が「this Voice needs a \voiceXx」と警告する形。休符は実装済み）／⑸ 臨時記号は実装済み（下の語り）・LP が落とす再確認の記号は残す（オーナー決定 2026-10-02 の ⑴ と同じ扱い）／⑹ 観測者なし＝連桁のない棒を移った先の輪郭へ入れる行と、弧の端の棒の枠の行は、8 冊の探り譜で出力が動かず毒が緑（LP の規則なので残した）／⑻ 双子は譜の最初の瞬間の `\change Staff` が LP で効かない（`k1`）／⑼ プレビューの実機は未確認（増分はフルと一致＝網 4 本）。
 - **チャットで Lily# を教わる＝第1043 で実装（`docs/LEARN_FOR_LLM.md`・`HANDOFF-LEARNING.md`）**: 残りは実物の Copilot での確認（MANUAL-CHECKS C59）。
@@ -137,6 +137,42 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1108セッション（2026-11-05・YT-DELL2）
+
+開始時・終了時とも full **14691 / 0 / 2**（`-Start p1108`／`-End p1108`・開始時 HEAD `2be052a11`）。作業場所は Lab `sessions/p1108/`。オーナー指示「打鍵の増加の監査をして。今静かなのでベンチを回してよい」。本体のコードは変えていない。
+
+- ✖ **第1107 の比較の誤り**: `bench3b.ps1` は古いコミットに HEAD の本を読ませた。オクターブの基準の変更（`6fbd44e8b`・2026-10-28）の前では音が 1 オクターブ高く読まれ、別の音楽を比べていた。`v2bow1k` の「11 → 56 ms・約 5 倍」と `gate` の False → True はこの錯覚で、**コミット自身の本なら `746123f19` の時点で床 45 ms・`gate` True**。
+- **本当の増加**（`scan2.ps1`＝コミット自身の本と綴り・16 点・各 2 回・`DOTNET_TieredCompilation=0`。床は両方向の低いほう）:
+  | 本 | 床 `746123f19` → HEAD | 中央値 | 増えた段 |
+  |---|---|---|---|
+  | `fingbeam1k` | 35 → 103 ms（2.9 倍） | 40〜45 → 128 ms | collect 9 → 89 ms・1.35 → 87 MB |
+  | `plain1k`＋小節の挿入 | 51 → 92 ms（1.8 倍） | 56〜61 → 111 ms | render 27 → 58 ms・collect 4 → 21 ms |
+  | `plain1k` | 24 → 35 ms（1.5 倍） | 25 → 51 ms | layout 21 → 27 ms・collect 2 → 10 ms |
+  | `v2bow1k` | 45 → 52 ms（中央値で約 1.4 倍） | 47〜52 → 74 ms | collect 5 → 24 ms・layout 40 → 47 ms |
+- **効いたコミット**（二分探索は `bisect.result`。割当は HEAD の本で測った値＝どのコミットで動くかの目印）:
+  - `d67d3e278`（10-06・`SectionMeterPlan`）: `WritesTimeInMusic` が `DescendantNodesOfKinds` で赤の索引を全部建てる。呼ばれるのは打鍵ごと。`plain1k` 5.7 → 11 MB。**無駄**（註は「free」と書くが、`DescendantIndex` の註が禁じる形）。
+  - `31195a9f1`..`a8fee10e6`（10-06〜10-07）: `hit` 1001 → 1201・`plain1k` の layout 21 → 27 ms。この間は二分していない。`a8fee10e6`（ページの割り）が候補で、機能の代金か未確認。
+  - `1aca41cd2`（10-20・`StaffAccidentals`）: 全小節の全符頭を毎打鍵読み、符頭ごとに閉包を作る。`fingbeam1k` 56 → 97 MB。`78164829a`..`7eed3c46b` にもう 1 段（97 → 117 MB・二分していない）。**機能の代金だが、何も付かない小節の分は無駄**。
+  - `9874a5eff`（10-23）: 全曲にまたがる声部の中の編集は live で歩く（`v2bow1k` 22 → 27 MB）。commit 本文に「手放した」とある設計の代金。
+  - `1200c035a`（11-04・`ResolveClefAt`）: 音部記号のない本でも段ごとに頭から `Fraction` を足す。`plain1k`＋小節の挿入の床 76 → 96 ms。割当は動かない。**無駄**。
+  - `9a261f5dc`（11-05）: `v2bow1k` の cold が 619 → 853 ms（JIT 込みの cold だけ・打鍵は動かない）。原因は未調査。
+- **試作と値段**（`lily-bench-h` の中だけ・`prototype.diff`・`patches.ps1`。`final.log`＝素の HEAD と交互に 5 回）: **P1** `ResolveClefAt` は記号のあるときだけ足す／**P2** `WritesTimeInMusic` を `KindSites` で／**P3** `StaffAccidentals` は小節ごとに集めて、1 声で全符頭のずれが同じ小節を飛ばす（⑴ は他の声部、⑵⑶ は同じ線に別のオクターブが要る）・リストを使い回す／**P4** `PhraseBodies` を `GreenSites` で。
+  | 本 | 床 | 中央値 | 割当 |
+  |---|---|---|---|
+  | `fingbeam1k` | 103 → 45 ms | 128 → 94 ms | 121 → 53 MB |
+  | `plain1k`＋小節の挿入 | 92 → 61 ms | 111 → 73 ms | 48 → 40 MB |
+  | `plain1k` | 35 → 32 ms | 51 → 34 ms | 15.9 → 7.2 MB |
+  | `v2bow1k` | 52 → 52 ms | 74 → 68 ms | 44.6 → 42.6 MB |
+  | 実物 `choir-chorale` | 6.5 → 6.5 ms | 6.9 → 6.8 ms | 3.85 → 3.68 MB |
+  | 実物 `bigband-swing` | 3.4 → 3.2 ms | 4.1 → 4.0 ms | 3.34 → 2.59 MB |
+  確かめ: full 14691 / 0 / 2・全 svg 1262 枚で差 0（1036 冊）・毒 4 本すべて赤（`poison.log`。P3 の判定 3 本は 5・3・2 本赤、P1 の時刻は 1 本赤）。P2・P4 は緑の歩きに替えただけで判定を持たないので毒なし。⚠️ `prototype.diff` の `SectionBarCounts.cs` は BOM が 1 行動いている＝入れるときは当て直す。
+- ✖ **予測が外れた点**: P2 は `fingbeam1k` で割当が 1 B も減らなかった。`WrittenBarAt` → `SectionBarCounts.PhraseBodies` が同じ索引を建てていたから（P4 で 25.5 → 18.8 MB）。
+- **残り（値段はこの便の割当プロファイル・直していない）**: ⑴ `fingbeam1k` の collect は P1〜P4 の後も 45 ms（9/25 は 9 ms）＝`MeasureBuilder.OverflowsTheWrittenBar` → `WrittenBarAt` → `MeasureModel.Split`。先読み `SetFollowingBarline` があるはずの本でここへ入る理由は未特定 ⑵ `FingeringLayout[]` が `fingbeam1k` の割当の 36%（`ComputeFingeringsAndScripts`・`ImmutableArray.Builder.AddRange`）⑶ `SkylineBuilding[]` が `plain1k` の割当の 30%（`PagingAugmentProgram.ExecuteForBreaker`）⑷ `LineBreakDpSession.Begin` が `v2bow1k` の割当の 52%（`Double[]`・第615 以前から）⑸ `SpringSolver.RentSortedByBlockingForce` の挿入ソート（`v2bow1k` の CPU 上位・第615 以前から）⑹ `WritesAStaffChange` が `v2bow1k` の割当の 6%（span ごとの赤の歩き）⑺ `StaffTimeline.OfMeasure` が試作後の `plain1k` の割当の 16%。
+- ⚠️ **読み方**: ⑴ CPU の % は安全点に偏る（`PollGC` が self 17〜62%）＝順位の目安で、値段は A/B で読む ⑵ `plain1k` などの中央値は 2 峰（GC の有無）で、床と中央値が大きく離れる ⑶ `DescendantIndex` の註によれば診断の pass も同じ索引を使う＝P2・P4 は描画の待ちを減らすが、打鍵が落ち着いたあとの診断へ費用が移る分がある（測っていない）。
+- **計器**: `scan2.ps1`（コミット自身の本）・`bisect.ps1`・`EditKeystrokeBench2.cs`（方向別の時間と割当・段ごとの内訳）・`prof.ps1`＋`traceread/`（dotnet-trace の CPU と割当を呼び手で読む）。⚠️ `dotnet build` に `-p:BaseIntermediateOutputPath` を渡すと参照先の Core まで同じ obj を使い、2 回目で CS0579 になる。
+
+## 以下は第1107セッションの経緯
+
 ### 1.1 第1107セッション（2026-11-05・YT-DELL2）
 
 開始時 full **14691 / 0 / 2**（`-Start p1107`・HEAD `e9e19a736`）。作業場所は Lab `sessions/p1107/`。オーナー指示「ベンチして」。
@@ -147,17 +183,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - ⚠️ `perf-v2bow1k`: 床は 53.5〜65.5 → 65.3〜73.2 ms と高めだが、中央値は 73.5〜81.8 → 74.8〜81.6 ms で重なる。修正前の床が 54 前後と 63 前後の 2 つに割れているので、増えたとは言い切れない。原因は未調査。
   - 追うかどうかはオーナーへ。memo は未着手。
 - **第615 との比較**（`bench3b.ps1`・`746123f19`（2026-09-25）対 HEAD・本と計器は今のものを両方へ写す・3 回・`bench3b/bench.log`）: 床の前 → 後、中央値の前 → 後。`plain1k` 27〜35 → 44〜48 ms、62〜70 → 72〜83 ms／`plain1k`＋小節の挿入 53〜57 → 94〜98 ms、61〜67 → 116〜121 ms／`fingbeam1k` 41〜45 → 115〜132 ms、57〜61 → 157〜163 ms／**`v2bow1k` 11〜12 → 56〜72 ms、13〜14 → 88〜90 ms**／実物 `choir-chorale` 6.7〜7.6 → 8.5〜8.8 ms、9〜9 → 12〜13 ms／実物 `bigband-swing` 3.2〜3.5 → 5.2〜5.3 ms、5 → 7〜8 ms。⚠️ `hit` が違う（`plain1k` 1001 → 1201・`v2bow1k` 785 → 889）＝段割れや機能も変わっているので、全部が無駄な増加とは限らない。本の中身は今のもの。コーパス 518 冊の `|` の数は中央値 51・p99 171・最大 265＝実物の打鍵は今でも 5〜13 ms。
-
-## 以下は第1106セッションの経緯
-
-### 1.1 第1106セッション（2026-11-05・YT-DELL2）
-
-開始時 full **14691 / 0 / 2**（`-Start p1106`・HEAD `b286cb5bc`）。作業場所は Lab `sessions/p1106/`。オーナー「続けて」＝勧めた `Untitled-1` の段割れの調査。コードの変更なし。
-
-- **答え＝不具合ではない**: 差は `LayoutEngine.EffectiveIndent`／`EffectiveShortIndent`（`NameFitIndent`・LILYSHARP-OWN・オーナー報告 2026-10-27「名前が紙の端で切れる」）。LP は `indent` 15mm・`short-indent` 0 のまま長い名前を余白へはみ出させ、Lily# は名前が紙に収まるまで字下げを増やす。この本は 1 段目 +0.83・2 段目以降 +1.79＝行が短いので、A4 で LP の 7 段（4 5 5 5 5 4 4）に対して 8 段（4 が 8 回）になる。
-- **確かめ方**: `probe/scan2.ps1`＝手書きの 2 声の双子に `indent = 9.37`・`short-indent = 1.79`（staff space）を与えると、LP も A4 で 8 段になり、**全 8 段の全小節線が 0.01 以内で一致**（`scan-head-ind/lp210.log`）。切り分けの順: `scan.ps1`（紙の幅を振る）→ `fit.ps1`（N 小節が 1 段に収まる幅・パートを抜く）→ `prefix.ps1`（行の頭の要素）。
-- ⚠️ **計器の罠**: 双子の `indent` は 15mm のままで Lily# の字下げを写さない。名前のある本を LP と段割れで比べると、この差が毎回出る。✖ 誤った絞り込み: 「ギターと他のパートの組で差が出る」は名前の幅の違いで、音楽の問題ではなかった。
-- ⚠️ **残差**: ⑴ 字下げを揃えても切り替わる紙の幅が 1 か所だけ 1 mm 違う（Lily# 211 mm、LP 212 mm。次の切り替わりは両方 219 mm）。LP に与えた字下げは A4 の値の固定で、紙の幅に合わせていない。原因は未確認 ⑵ 打鍵の時間は第1103 から未計測 ⑶ Release の lysc は `0d09b8f61` のまま。
 
 ## 2. 開いている作業
 
