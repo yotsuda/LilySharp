@@ -274,7 +274,7 @@ internal static class DotColumn
     /// </para>
     /// </remarks>
     internal static (double OffsetX, int[] Rows) Reserved(
-        MusicItem item, int noteValue, double headInkRight)
+        MusicItem item, int noteValue, double headInkRight, int[]? solvedRows = null)
     {
         double dotWidth = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width;
         int[] headPositions = HeadPositions(item);
@@ -282,7 +282,7 @@ internal static class DotColumn
             // A rest's dots: one dot width past its glyph, in the space above the middle line
             // (a whole rest hangs one space up and its dot one row DOWN off that — the same
             // row; SharedRenderer.DrawRest, ElementCoordinator.RestDotDefaultOffset).
-            return (headInkRight + EngravingDefaults.DotPadding(dotWidth), new[] { 1 });
+            return (headInkRight + EngravingDefaults.DotPadding(dotWidth) + item.DotColumnShift, new[] { 1 });
 
         // At most two: the stem, and the flag hung off it (see OffsetX's remarks).
         Span<Support> supports = stackalloc Support[2];
@@ -315,8 +315,8 @@ internal static class DotColumn
                 }
             }
         }
-        int[] rows = DotConfiguration.Resolve(headPositions);
-        return (OffsetX(headInkRight, supports[..supportCount], rows, dotWidth), rows);
+        int[] rows = solvedRows ?? DotConfiguration.Resolve(headPositions);
+        return (OffsetX(headInkRight, supports[..supportCount], rows, dotWidth) + item.DotColumnShift, rows);
     }
 
     /// <summary>

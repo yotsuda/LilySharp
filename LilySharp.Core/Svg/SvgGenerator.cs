@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using System.Text;
 using System.Globalization;
 using LilySharp.Core.Rendering;
@@ -316,6 +317,13 @@ public static class SvgGenerator
         // `layout { compressRests true }` merges the written rests here, before the break
         // permissions below are closed (it reads the written `break` / `noBreak`).
         score = Collector.CompressRests.Apply(score);
+        // The dot columns the voices of a staff share, once the bars stand as they will.
+        score = score with
+        {
+            StaffGroups = score.StaffGroups
+                .Select(g => g with { Staves = g.Staves.Select(Layout.ElementCoordinator.StampDotColumns).ToImmutableArray() })
+                .ToImmutableArray(),
+        };
         // `paper { breaksOnly }` closes every open break here, the exit both collects share.
         return Collector.BreaksOnly.Apply(score);
     }

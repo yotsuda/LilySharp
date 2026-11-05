@@ -1020,7 +1020,7 @@ internal static partial class SharedRenderer
             double dotStartX = x + DotColumn.OffsetX(
                 GlyphMetrics.GetNoteheadBBox(
                     GrobFontSize.FontOf(note, SizedGrob.NoteHead), noteValue).Right,
-                dotSupports[..dotSupportCount], [dotPos], dotWidth);
+                dotSupports[..dotSupportCount], [dotPos], dotWidth) + note.DotColumnShift;
             // A collision's dot side supports push the whole dot column right of the
             // opposite voice's heads; the minimum X is in the staff column's frame
             // (x − voiceX), settled in NoteCollision.CalculateVoiceOffsets.
@@ -1297,7 +1297,7 @@ internal static partial class SharedRenderer
                 GlyphMetrics.GetNoteheadBBox(
                         GrobFontSize.FontOf(chord, SizedGrob.NoteHead), noteValue).Right
                     + Math.Max(0, headOffsets.Max()),
-                dotSupports[..dotSupportCount], resolved, dotWidth);
+                dotSupports[..dotSupportCount], resolved, dotWidth) + chord.DotColumnShift;
             // Collision dot side supports — same push as the single-note branch.
             // LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — add_support.
             if (dotAdjust.ColumnMinX is { } dotMinX)
@@ -1726,7 +1726,7 @@ internal static partial class SharedRenderer
         {
             double dotScale = GrobFontSize.ScaleOf(rest, SizedGrob.Dots);
             double dotWidth = GrobFontSize.FontOf(rest, SizedGrob.Dots).Box(MusicGlyph.AugmentationDot).Width;
-            double dotStartX = x + GlyphMetrics.GetRestBBox(rest, noteValue).Right + EngravingDefaults.DotPadding(dotWidth);
+            double dotStartX = x + GlyphMetrics.GetRestBBox(rest, noteValue).Right + EngravingDefaults.DotPadding(dotWidth) + rest.DotColumnShift;
             double dotY = y
                 + (dotOffset ?? LilySharp.Core.Svg.Layout.ElementCoordinator.RestDotDefaultOffset(noteValue)) * 0.5;
             for (int d = 0; d < rest.Dots; d++)

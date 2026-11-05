@@ -3820,6 +3820,27 @@
       "residual": 0.0,
       "why": "EXACT: the family digit, in-book."
     },
+    "dots.column.two-notes-control": {
+      "probe": "dot-column-share.ly",
+      "score": "DSN",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1101), the CONTROL of the dot-column points: two dotted notes whose own answers already agree. PREDICTION written before measuring: LilyPond 0, Lily# exact."
+    },
+    "dots.column.rest-beside-note": {
+      "probe": "dot-column-share.ly",
+      "score": "DSR",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1101): a dotted rest beside a dotted note. Dot_column_engraver is a Staff engraver, so the staff has one DotColumn a moment (lily/dot-column.cc:229-232). PREDICTION written before measuring: LilyPond 0. Lily# stood the rest's dot 0.36 left of the note's until ElementCoordinator.StampDotColumns; this point justifies rebasing test/scripts-dynamics."
+    },
+    "dots.column.flag-pushed-beside-note": {
+      "probe": "dot-column-share.ly",
+      "score": "DSF",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1101): the upper dot pushed by its flag, the lower with no flag to do so, so one column stands where the push asks. PREDICTION written before measuring: LilyPond 0, Lily# exact."
+    },
     "dots.cross-voice.dotted-quarter-to-quarter": {
       "probe": "dot-column-spacing.ly",
       "score": "DCX",

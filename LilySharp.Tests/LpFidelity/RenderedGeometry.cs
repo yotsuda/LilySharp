@@ -5764,6 +5764,20 @@ internal sealed class RenderedGeometry
         return dots[0].X - NoteheadAnchor(0);
     }
 
+    /// <summary>How far apart the dots of the page stand: the rightmost's left less the leftmost's,
+    /// on a book whose only dots are one moment's.</summary>
+    public double DotColumnSpread(int page = 0)
+    {
+        var dots = _pages[page].Glyphs.Where(g => g.Glyph == EmmentalerGlyphs.AugmentationDot).Select(g => g.X).ToList();
+        if (dots.Count < 2)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: fewer than two augmentation dots are drawn — the probe is not "
+                + "measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        return dots.Max() - dots.Min();
+    }
+
     /// <summary>
     /// The first notehead's anchor → the sole FINGERING's ink centre. A Fingering is
     /// <c>self-alignment-X = CENTER</c> on its head, and what that centres on is the

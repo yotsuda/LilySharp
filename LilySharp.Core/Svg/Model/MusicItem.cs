@@ -166,6 +166,7 @@ internal sealed record MusicItemRare
     public bool CrossWritten { get; init; }
     public int CrossStaffIndex { get; init; } = -1;
     public bool ClosesWithoutWish { get; init; }
+    public double DotColumnShift { get; init; }
 }
 
 /// <summary>
@@ -280,6 +281,18 @@ public abstract record MusicItem
     {
         get => _rareBase?.ClosesWithoutWish ?? false;
         init { if (value != ClosesWithoutWish) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { ClosesWithoutWish = value }; }
+    }
+
+    /// <summary>How far right of this item's own dots the dot column it shares stands: voices at
+    /// one moment have one column (<c>ElementCoordinator.StampDotColumns</c>).</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/dot-column.cc:229-232 calc_positioning_done — the one column is translated
+    ///   by the configuration's x_offset, the rightmost any of its dots needs.
+    /// </remarks>
+    public double DotColumnShift
+    {
+        get => _rareBase?.DotColumnShift ?? 0;
+        init { if (value != DotColumnShift) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { DotColumnShift = value }; }
     }
 
     /// <summary>

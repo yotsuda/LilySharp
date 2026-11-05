@@ -949,18 +949,15 @@ internal sealed class NoteCollision
         double wid = HeadWidth(GetNoteInfo(
             downEntries.Count > 0 ? downEntries[0] : upEntries[0]).noteValue);
 
-        var (upRows, downRows) = upEntries.Count > 0 && downEntries.Count > 0
-            ? SharedDotRows(upEntries[0], downEntries[0], collision)
-            : (null, null);
         var raw = new List<(int VoiceId, int ItemIndex, double Offset, bool Hide, DotAdjustment Dot)>();
         for (int i = 0; i < upEntries.Count; i++)
             raw.Add((upEntries[i].VoiceId, upEntries[i].ItemIndex, off[0][i],
                 i == 0 && collision.UpHeadTransparent,
-                i == 0 ? new DotAdjustment(false, null, collision.UpDotWiped, upRows) : default));
+                i == 0 ? new DotAdjustment(false, null, collision.UpDotWiped) : default));
         for (int i = 0; i < downEntries.Count; i++)
             raw.Add((downEntries[i].VoiceId, downEntries[i].ItemIndex, off[1][i],
                 i == 0 && collision.DownHeadTransparent,
-                i == 0 ? new DotAdjustment(collision.DownDotDirectionUp, null, collision.DownDotWiped, downRows) : default));
+                i == 0 ? new DotAdjustment(collision.DownDotDirectionUp, null, collision.DownDotWiped) : default));
 
         // :440-468 — translate by amount − left_most, where left_most starts 0.0 and
         // only amounts BELOW it move it: an all-positive set keeps the slot in place.
@@ -1273,48 +1270,6 @@ internal sealed class NoteCollision
             }
         }
         return positions;
-    }
-
-    /// <summary>
-    /// The rows of two dotted voices' dots, resolved together, or nulls where that lands each
-    /// voice on the rows it finds alone (the renderer's per-item answer, and nearly every case).
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: ly/engraver-init.ly Staff — \consists Dot_column_engraver: ONE DotColumn a
-    ///   staff and moment, so lily/dot-column.cc:194-224 configures all its dots together; a
-    ///   wiped dot is dead by then (lily/note-collision.cc:310-314; :50-52 runs first).
-    /// MEASURED, 2.26.0 (Lab sessions/p1094/dd): merged `&lt;e g&gt;4.` stands on rows 3, 1 and -1,
-    /// where each voice alone would answer 3, 1 and 1.
-    /// </remarks>
-    private static (int[]? Up, int[]? Down) SharedDotRows(VoiceEntry up, VoiceEntry down, NoteCollisionInfo collision)
-    {
-        if (GetNoteInfo(up).dots == 0 || GetNoteInfo(down).dots == 0)
-            return (null, null);
-        var upHeads = GetStaffPositions(new List<VoiceEntry> { up }).Select(p => (int)p).ToList();
-        var downHeads = GetStaffPositions(new List<VoiceEntry> { down }).Select(p => (int)p).ToList();
-        if (upHeads.Count == 0 || downHeads.Count == 0)
-            return (null, null);
-        // Stem::first_head: the head the stem starts from.
-        if (collision.UpDotWiped)
-            upHeads.Remove(upHeads.Min());
-        if (collision.DownDotWiped)
-            downHeads.Remove(downHeads.Max());
-        int downDir = collision.DownDotDirectionUp ? 1 : -1;
-        var all = new int[upHeads.Count + downHeads.Count];
-        var dirs = new int[all.Length];
-        upHeads.CopyTo(all);
-        downHeads.CopyTo(all, upHeads.Count);
-        for (int i = 0; i < dirs.Length; i++)
-            dirs[i] = i < upHeads.Count ? 1 : downDir;
-        var rows = DotConfiguration.Resolve(all, dirs);
-        var upRows = rows.Take(upHeads.Count).ToArray();
-        var downRows = rows.Skip(upHeads.Count).ToArray();
-        int[] Alone(List<int> heads, int dir) => heads.Count == 0
-            ? []
-            : DotConfiguration.Resolve(heads.ToArray(), Enumerable.Repeat(dir, heads.Count).ToArray()).ToArray();
-        return upRows.SequenceEqual(Alone(upHeads, 1)) && downRows.SequenceEqual(Alone(downHeads, downDir))
-            ? (null, null)
-            : (upRows, downRows);
     }
 
     private static (int noteValue, int dots) GetNoteInfo(VoiceEntry entry)

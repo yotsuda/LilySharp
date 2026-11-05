@@ -966,6 +966,24 @@ internal static class LpGeometryProbes
         }
         """;
 
+    /// <summary>
+    /// DSN / DSR / DSF (audit/lp-geometry/probes/dot-column-share.ly): voices of a staff share one
+    /// dot column at a moment. Absolute pitches, as the probe's: the twin of each is its own book.
+    /// </summary>
+    private static string DotShareScore(string name, string upper, string lower) => $$"""
+        octave absolute
+        time 4/4
+        key c major
+        part m { clef treble }
+        section A { m { voice { {{upper}} | } { {{lower}} | } } }
+        form { A }
+        score {{name}} { staff m }
+        """;
+
+    private static readonly string DSN = DotShareScore("DSN", "e''4. c''8 c''2", "d'4. c'8 c'2");
+    private static readonly string DSR = DotShareScore("DSR", "f''4. c''8 c''2", "r4. c'8 c'2");
+    private static readonly string DSF = DotShareScore("DSF", "g'8. r16 g'4 g'2", "c'8. c'16 c'4 c'2");
+
     /// <summary>The dotted cross-voice book: the rod col0 → col1/4 runs through the dot.</summary>
     private static readonly string DCX = DotColumnScore("DCX", "2/4", "c'4 c'4", "b4. b8");
 
@@ -15944,6 +15962,9 @@ internal static class LpGeometryProbes
             g => g.NoteheadAnchor(3) - g.NoteheadAnchor(2)),
         new("dots.cross-voice.undotted-control", DCC,
             g => g.NoteheadAnchor(2) - g.NoteheadAnchor(0)),
+        new("dots.column.two-notes-control", DSN, g => g.DotColumnSpread()),
+        new("dots.column.rest-beside-note", DSR, g => g.DotColumnSpread()),
+        new("dots.column.flag-pushed-beside-note", DSF, g => g.DotColumnSpread()),
         new("dots.flag-pushed.dotted-eighth-to-sixteenth", DPF, g => g.NoteheadAnchorStep(0)),
         // The dots are the PAPER column's and not the NOTE column's, so the WISH's minimum
         // runs head to head under them and only the ROD carries the dot (book DCW). Heads by

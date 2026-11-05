@@ -134,8 +134,6 @@ internal sealed class ElementCoordinator
             return ImmutableArray<VoiceCollisionEntry>.Empty;
 
         var voiceColumns = VoiceCollector.CollectMeasure(voices, measureIndex);
-        if (voiceColumns.Length == 0)
-            return ImmutableArray<VoiceCollisionEntry>.Empty;
 
         var noteCollision = new NoteCollision();
         ImmutableArray<VoiceCollisionEntry>.Builder? entries = null;
@@ -186,7 +184,246 @@ internal sealed class ElementCoordinator
             }
         }
 
+        AddDotColumns(voices, measureIndex, ref entries);
         return entries?.ToImmutable() ?? ImmutableArray<VoiceCollisionEntry>.Empty;
+    }
+
+    /// <summary>The solved dot columns of a bar, written onto its notes' and chords' collision
+    /// entries. A rest's goes through
+    /// <see cref="RestDotOffsetsOf"/>, the column's X through <see cref="StampDotColumns"/>.</summary>
+    private static void AddDotColumns(ImmutableArray<Voice> voices, int measureIndex,
+        ref ImmutableArray<VoiceCollisionEntry>.Builder? entries)
+    {
+        var columns = SolveDotColumns(voices, measureIndex, entries);
+        if (columns is null)
+            return;
+        foreach (var column in columns)
+        {
+            foreach (var member in column)
+            {
+                if (member.Item is RestItem)
+                    continue;
+                int? rows = null;
+                entries ??= ImmutableArray.CreateBuilder<VoiceCollisionEntry>();
+                for (int e = 0; e < entries.Count; e++)
+                    if (entries[e].VoiceId == member.Voice + 1 && entries[e].ItemIndex == member.ItemIndex)
+                        rows = e;
+                var old = rows is { } at ? entries[at] : new VoiceCollisionEntry(measureIndex, member.Voice + 1, member.ItemIndex, 0, false, default);
+                var entry = old with { Dot = old.Dot with { Rows = member.Rows } };
+                if (rows is { } index)
+                    entries[index] = entry;
+                else if (entry.Dot != default)
+                    entries.Add(entry);
+            }
+        }
+    }
+
+    /// <summary>One dotted item of a dot column.</summary>
+    /// <param name="Rows">The rows of its dots, in its dotted heads' order (a rest's one row).</param>
+    /// <param name="OwnX">Where its own dots would stand, in the staff column's frame.</param>
+    /// <param name="PureRest">A rest's pure position, which its row is relative to.</param>
+    internal readonly record struct DotColumnMember(
+        int Voice, int ItemIndex, MusicItem Item, int[] Rows, double OwnX, int PureRest);
+
+    /// <summary>
+    /// The staff with each dotted item's <see cref="MusicItem.DotColumnShift"/>: how far right of
+    /// its own dots the column it shares stands. The same staff where no column moves anything.
+    /// By copy, not in place: an item here is shared with the collect's recording.
+    /// </summary>
+    internal static Staff StampDotColumns(Staff staff)
+    {
+        if (staff.Voices.Length < 2)
+            return staff;
+        var held = HeldHere.Of(staff.Voices);
+        int measureCount = 0;
+        foreach (var voice in held)
+            measureCount = Math.Max(measureCount, voice.Measures.Length);
+        Measure[][]? stamped = null;
+        for (int m = 0; m < measureCount; m++)
+        {
+            // This runs on every collect, so a bar that cannot hold a shared column solves nothing:
+            // the collision answer costs a keystroke's worth over a long book (VoiceCollisionTable).
+            if (!HasTwoDottedVoices(held, m))
+                continue;
+            var columns = SolveDotColumns(held, m, ComputeVoiceCollisionsOfMeasure(held, m), staff.Lines);
+            if (columns is null)
+                continue;
+            foreach (var column in columns)
+            {
+                double x = column.Max(c => c.OwnX);
+                foreach (var member in column)
+                {
+                    if (x <= member.OwnX + 1e-9)
+                        continue;
+                    stamped ??= staff.Voices.Select(v => v.Measures.ToArray()).ToArray();
+                    var measure = stamped[member.Voice][m];
+                    stamped[member.Voice][m] = measure with
+                    {
+                        Items = measure.Items.SetItem(member.ItemIndex,
+                            measure.Items[member.ItemIndex] with { DotColumnShift = x - member.OwnX }),
+                    };
+                }
+            }
+        }
+        if (stamped is null)
+            return staff;
+        var voices = staff.Voices.ToBuilder();
+        for (int v = 0; v < voices.Count; v++)
+            voices[v] = voices[v] with { Measures = ImmutableArray.Create(stamped[v]) };
+        return staff with { Voices = voices.ToImmutable() };
+    }
+
+    private static bool HasTwoDottedVoices(ImmutableArray<Voice> voices, int measureIndex)
+    {
+        int dotted = 0;
+        foreach (var voice in voices)
+        {
+            if (measureIndex >= voice.Measures.Length)
+                continue;
+            foreach (var item in voice.Measures[measureIndex].Items)
+                if (item is NoteItem { Dots: > 0 } or ChordItem { Dots: > 0 } or RestItem { Dots: > 0 })
+                {
+                    dotted++;
+                    break;
+                }
+            if (dotted == 2)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// The bar's dot columns of two or more voices, each solved once: all its dots on one
+    /// configuration, and one X, the rightmost any of them needs. Null when the bar has none.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly Staff — \consists Dot_column_engraver: ONE DotColumn a
+    ///   staff and moment, whichever voices its dots come from.
+    /// LILYPOND-REF: lily/dot-column.cc:194-224 calc_positioning_done — every dot enters one
+    ///   Dot_configuration, inserted at its pure position; :229-232 — the one column is translated
+    ///   by the configuration's x_offset; :81-102 — base_x unites the stems' first heads and the
+    ///   rests. A wiped dot is dead by then (lily/note-collision.cc:310-314).
+    /// MEASURED, 2.26.0 (Lab sessions/p1101/probe/dots.ps1): `f''4. e'' d''` stands on rows 5, 3, 1;
+    /// merged `&lt;e g&gt;4.` (sessions/p1094/dd) on 3, 1 and -1; and in every bar of 18 the column's
+    /// dots share one X. Ties in the insertion order are the voice order (see
+    /// <see cref="_restDotOffsets"/>).
+    /// ⚠️ Not read: a voice with no dots at this moment, whose stem is a support of the column too
+    /// (lily/dot-column.cc:103-112), and a note moved by `@cross`, whose dot is the other staff's.
+    /// </remarks>
+    private static List<List<DotColumnMember>>? SolveDotColumns(ImmutableArray<Voice> voices, int measureIndex,
+        IReadOnlyList<VoiceCollisionEntry>? collisions, int staffLines = 5)
+    {
+        if (voices.Length < 2)
+            return null;
+
+        Dictionary<Fraction, List<(int Voice, MusicItem Item, int ItemIndex)>>? moments = null;
+        for (int v = 0; v < voices.Length; v++)
+        {
+            if (measureIndex >= voices[v].Measures.Length)
+                continue;
+            var t = new Fraction(0, 1);
+            var items = voices[v].Measures[measureIndex].Items;
+            for (int i = 0; i < items.Length; i++)
+            {
+                var item = items[i];
+                bool dotted = item.CrossStaffIndex < 0 && !item.GraceTime && item switch
+                {
+                    RestItem r => r.Dots > 0 && !r.IsSpacer && !r.IsMultiMeasure,
+                    NoteItem n => n.Dots > 0,
+                    ChordItem c => c.Dots > 0,
+                    _ => false,
+                };
+                if (dotted)
+                {
+                    moments ??= new Dictionary<Fraction, List<(int, MusicItem, int)>>();
+                    if (!moments.TryGetValue(t, out var list))
+                        moments[t] = list = new List<(int, MusicItem, int)>();
+                    list.Add((v, item, i));
+                }
+                t += GetItemDuration(item);
+            }
+        }
+        if (moments is null)
+            return null;
+
+        List<List<DotColumnMember>>? solved = null;
+        double dotWidth = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width;
+        foreach (var column in moments.Values)
+        {
+            var positions = new List<int>();
+            var dirs = new List<int>();
+            var slots = new List<(int Voice, MusicItem Item, int ItemIndex, int From, int Count, bool StemUp, double Shift, int Pure)>();
+            foreach (var (v, item, i) in column)
+            {
+                var collided = default(VoiceCollisionEntry);
+                if (collisions is not null)
+                    foreach (var e in collisions)
+                        if (e.VoiceId == v + 1 && e.ItemIndex == i)
+                            collided = e;
+                bool voiceUp = VoiceDefaults.GetDefaultStemUpAt(voices, v, measureIndex, i) ?? (v % 2 == 0);
+                int dir = collided.Dot.DirectionUp || voiceUp ? 1 : -1;
+                int from = positions.Count, pure = 0;
+                switch (item)
+                {
+                    case RestItem rest:
+                        // Pure position from the STAMPED direction (zero = outside every span →
+                        // the neutral origin), the same slot ItemSkylineFactory prices.
+                        int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+                        pure = rest.VoiceDirection == 0 && rest.StaffPosition is null
+                            ? (int) NeutralRestPosition(staffLines, restValue)
+                            : (int) RestStaffPosition(rest, rest.VoiceDirection, restValue, staffLines);
+                        positions.Add(pure + RestDotStaffOffset(restValue));
+                        dirs.Add(0);   // a rest's dot declares no direction (dp.dir_ is set for
+                                       // note heads only, dot-column.cc:203-205)
+                        dir = 0;
+                        break;
+                    case NoteItem note:
+                        if (!collided.Dot.DotWiped)
+                        {
+                            positions.Add(note.StaffPosition);
+                            dirs.Add(dir);
+                        }
+                        break;
+                    case ChordItem chord:
+                        var heads = chord.Notes.Select(n => n.StaffPosition).ToList();
+                        // Stem::first_head: the head the stem starts from.
+                        if (collided.Dot.DotWiped)
+                            heads.Remove(voiceUp ? heads.Min() : heads.Max());
+                        foreach (int p in heads)
+                        {
+                            positions.Add(p);
+                            dirs.Add(dir);
+                        }
+                        break;
+                }
+                if (positions.Count > from)
+                    slots.Add((v, item, i, from, positions.Count - from, voiceUp, collided.XOffset, pure));
+            }
+            if (slots.Count < 2)
+                continue;
+
+            var rows = DotConfiguration.Resolve(positions, dirs);
+            var members = new List<DotColumnMember>(slots.Count);
+            foreach (var s in slots)
+            {
+                var own = new int[s.Count];
+                for (int k = 0; k < s.Count; k++)
+                    own[k] = rows[s.From + k];
+                int value = GlyphMetrics.NoteValueOf(s.Item);
+                double ownX = s.Item switch
+                {
+                    RestItem rest => GlyphMetrics.GetRestBBox(rest, GlyphMetrics.NoteValueOf(rest.BaseDuration)).Right
+                        + EngravingDefaults.DotPadding(dotWidth),
+                    ChordItem chord => s.Shift + DotColumn.Reserved(chord, value,
+                        GlyphMetrics.GetNoteheadBBox(value).Right
+                            + Math.Max(0, ChordHeadPositioning.CalculateOffsets(chord.Notes, s.StemUp, value).Max()), own).OffsetX,
+                    _ => s.Shift + DotColumn.Reserved(s.Item, value, GlyphMetrics.GetNoteheadBBox(value).Right, own).OffsetX,
+                };
+                members.Add(new DotColumnMember(s.Voice, s.ItemIndex, s.Item, own, ownX, s.Pure));
+            }
+            (solved ??= new()).Add(members);
+        }
+        return solved;
     }
 
     /// <summary>
@@ -2219,12 +2456,7 @@ internal sealed class ElementCoordinator
     /// tie, this ordering — not the badness — is the suspect.
     /// </para>
     /// <para>
-    /// ⚠️ NOTE dots are read here only as column NEIGHBOURS. Two dotted NOTES resolve together
-    /// in NoteCollision (<see cref="DotAdjustment.Rows"/>); a column of dotted notes AND a dotted
-    /// rest moving a note's dot would disagree with that answer — no corpus book binds one yet,
-    /// and the seam is named here rather than discovered. The note-collision direction override
-    /// and a merge's wiped dot are likewise not read here (voice-default directions only, as
-    /// the renderer's fallback arm).
+    /// The notes of the column read the same solve (<see cref="SolveDotColumns"/>).
     /// </para>
     /// </remarks>
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<
@@ -2232,6 +2464,19 @@ internal sealed class ElementCoordinator
 
     internal static ImmutableDictionary<RestShiftKey, int> RestDotOffsetsOf(Staff staff)
         => _restDotOffsets.GetValue(staff, CalculateRestDotOffsets);
+
+
+    /// <summary>Where a rest's dot enters the column against the rest's own position.</summary>
+    /// <remarks>LILYPOND-REF: scm/output-lib.scm:652-664 dots::calc-staff-position — by duration
+    /// log: 0 → -2, 5 and 6 → 2, 7 and 8 → 4, 9 and 10 → 6, else 0.</remarks>
+    internal static int RestDotStaffOffset(int restValue) => restValue switch
+    {
+        1 => -2,
+        32 or 64 => 2,
+        128 or 256 => 4,
+        512 or 1024 => 6,
+        _ => 0,
+    };
 
     /// <summary>
     /// The solo answer of the same solve, for rests the table holds no entry for: one
@@ -2250,89 +2495,22 @@ internal sealed class ElementCoordinator
 
         var offsets = ImmutableDictionary.CreateBuilder<RestShiftKey, int>();
         int measureCount = staff.Voices.Min(v => v.Measures.Length);
-
         for (int m = 0; m < measureCount; m++)
         {
-            // Dotted items by onset, voices in order — the column is "starts at the same
-            // moment": a held note's dot lives at its own earlier column (LP acknowledges
-            // grobs during their timestep), so onset equality is the membership.
-            Dictionary<Fraction, List<(int Voice, MusicItem Item, int ItemIndex)>>? moments = null;
             bool anyDottedRest = false;
-            for (int v = 0; v < staff.Voices.Length; v++)
-            {
-                var t = new Fraction(0, 1);
-                var items = staff.Voices[v].Measures[m].Items;
-                for (int i = 0; i < items.Length; i++)
-                {
-                    var item = items[i];
-                    bool dotted = item.CrossStaffIndex < 0 && item switch
-                    {
-                        RestItem r => r.Dots > 0 && !r.IsSpacer && !r.IsMultiMeasure,
-                        NoteItem n => n.Dots > 0,
-                        ChordItem c => c.Dots > 0,
-                        _ => false,
-                    };
-                    if (dotted)
-                    {
-                        moments ??= new Dictionary<Fraction, List<(int, MusicItem, int)>>();
-                        if (!moments.TryGetValue(t, out var list))
-                            moments[t] = list = new List<(int, MusicItem, int)>();
-                        list.Add((v, item, i));
-                        anyDottedRest |= item is RestItem;
-                    }
-                    t += GetItemDuration(item);
-                }
-            }
+            foreach (var voice in staff.Voices)
+                foreach (var item in voice.Measures[m].Items)
+                    anyDottedRest |= item is RestItem { Dots: > 0 };
             if (!anyDottedRest)
                 continue;
-
-            foreach (var column in moments!.Values)
-            {
-                if (!column.Exists(e => e.Item is RestItem))
-                    continue;
-
-                var positions = new List<int>();
-                var dirs = new List<int>();
-                var restSlots = new List<(int InputIndex, int Voice, int ItemIndex, int Pure)>();
-                foreach (var (v, item, i) in column)
-                {
-                    bool voiceUp = VoiceDefaults.GetDefaultStemUpAt(staff.Voices, v, m, i) ?? (v % 2 == 0);
-                    int dir = voiceUp ? 1 : -1;
-                    switch (item)
-                    {
-                        case RestItem rest:
-                            // Pure position from the STAMPED direction (zero = outside
-                            // every span → the neutral origin), the same slot
-                            // ItemSkylineFactory prices — not a re-derived voice default.
-                            int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                            int pure = rest.VoiceDirection == 0 && rest.StaffPosition is null
-                                ? (int) NeutralRestPosition(staff.Lines, restValue)
-                                : (int) RestStaffPosition(rest, rest.VoiceDirection, restValue, staff.Lines);
-                            restSlots.Add((positions.Count, v, i, pure));
-                            positions.Add(pure);
-                            dirs.Add(0);   // a rest's dot declares no direction (dp.dir_
-                                           // is set for note heads only, dot-column.cc:203-205)
-                            break;
-                        case NoteItem note:
-                            positions.Add(note.StaffPosition);
-                            dirs.Add(dir);
-                            break;
-                        case ChordItem chord:
-                            foreach (var n in chord.Notes)
-                            {
-                                positions.Add(n.StaffPosition);
-                                dirs.Add(dir);
-                            }
-                            break;
-                    }
-                }
-
-                var solved = DotConfiguration.Resolve(positions, dirs);
-                foreach (var (idx, v, i, pure) in restSlots)
-                    offsets[new RestShiftKey(m, v, i)] = solved[idx] - pure;
-            }
+            var columns = SolveDotColumns(staff.Voices, m, ComputeVoiceCollisionsOfMeasure(staff.Voices, m), staff.Lines);
+            if (columns is null)
+                continue;
+            foreach (var column in columns)
+                foreach (var member in column)
+                    if (member.Item is RestItem)
+                        offsets[new RestShiftKey(m, member.Voice, member.ItemIndex)] = member.Rows[0] - member.PureRest;
         }
-
         return offsets.ToImmutable();
     }
 
