@@ -417,6 +417,8 @@ internal static partial class SpacingRules
                 //   A rest inside a cue prices the cue font's rest box since session 1034
                 //   (RestItem.IsCue; GetRestBBox(RestItem, int) in the branch below).
                 // ...and of the head's own SHAPE: a slash head's right edge, not a plain one's.
+                ChordItem mixed when ChordHeadPositioning.HasMixedHeads(mixed.Notes) =>
+                    ChordHeadPositioning.FirstHeadRight(mixed, GetNoteValue(mixed), HeadFontOf(mixed)),
                 NoteItem or ChordItem => GlyphMetrics.GetNoteheadBBox(
                     HeadFontOf(p) ?? MusicFont.Current.DesignAt(0),
                     GlyphMetrics.HeadStyleOf(p),

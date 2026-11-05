@@ -68,9 +68,95 @@ public static class ChordHeadPositioning
     internal static double[] CalculateOffsets(
         IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue,
         MusicFontDesign? headFont = null)
+    {
         // LILYPOND-REF: stem.cc:684 — ell = head right ink extent.
-        => OffsetsForEll(notes, stemUp, noteValue,
-            GlyphMetrics.GetNoteheadBBox(headFont ?? MusicFont.Current.DesignAt(0), noteValue).Right);
+        bool mixed = HasMixedHeads(notes);
+        var offsets = OffsetsForEll(notes, stemUp, noteValue,
+            GlyphMetrics.GetNoteheadBBox(headFont ?? MusicFont.Current.DesignAt(0), noteValue).Right,
+            mixed ? headFont ?? GlyphMetrics.StaffHeadFont : null);
+        if (mixed)
+        {
+            double support = LayoutUtilities.StemAttachX(stemUp, noteValue, SupportStyle(notes, stemUp, noteValue, headFont), headFont);
+            for (int i = 0; i < notes.Count; i++)
+                offsets[i] += support - LayoutUtilities.StemAttachX(stemUp, noteValue, notes[i].Notehead, headFont);
+        }
+        return offsets;
+    }
+
+    /// <summary>Whether a chord's members draw different head shapes, as a drum chord's may.</summary>
+    internal static bool HasMixedHeads(IReadOnlyList<ChordNoteInfo> notes)
+    {
+        for (int i = 1; i < notes.Count; i++)
+            if (notes[i].Notehead != notes[0].Notehead)
+                return true;
+        return false;
+    }
+
+    /// <summary>
+    /// The shape of the head a mixed chord's stem and other heads align to: the one with the most
+    /// of itself inside the stem.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:181-204 Stem::support_head — "the head with the widest part
+    ///   inside the stem"; :627-664 calc_positioning_done — every other head moves by the support
+    ///   head's attachment less its own, so all of them attach to one stem.
+    /// MEASURED, 2.26.0 (Lab sessions/p1105/probe/chord.ps1): `&lt;cb sn&gt;4`, up, stands the triangle
+    ///   0.22 left of the plain head; `&lt;bd tomfl&gt;4` the seconds' 1.24 either side.
+    /// </remarks>
+    private static NoteheadStyle SupportStyle(IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue, MusicFontDesign? headFont)
+    {
+        var font = headFont ?? GlyphMetrics.StaffHeadFont;
+        var best = notes[0].Notehead;
+        double widest = double.NegativeInfinity;
+        foreach (var note in notes)
+        {
+            var box = GlyphMetrics.GetNoteheadBBox(font, note.Notehead, noteValue);
+            double attach = LayoutUtilities.StemAttachX(stemUp, noteValue, note.Notehead, headFont);
+            double inside = Math.Abs((stemUp ? box.Left : box.Right) - attach);
+            if (inside > widest)
+                (widest, best) = (inside, note.Notehead);
+        }
+        return best;
+    }
+
+    /// <summary>The head shape a chord's stem attaches to: its own, or a mixed chord's support head's.</summary>
+    internal static NoteheadStyle StemStyle(ChordItem chord, bool stemUp, int noteValue, MusicFontDesign? headFont = null)
+        => HasMixedHeads(chord.Notes)
+            ? SupportStyle(chord.Notes, stemUp, noteValue, headFont)
+            : chord.Notehead;
+
+    /// <summary>The right edge of a chord's rightmost head in its own frame: what a dot column is
+    /// floored on (lily/dot-column.cc:82-84 calc_positioning_done).</summary>
+    internal static double InkRight(IReadOnlyList<ChordNoteInfo> notes, double[] offsets, int noteValue, MusicFontDesign? headFont)
+    {
+        var font = headFont ?? GlyphMetrics.StaffHeadFont;
+        double max = 0;
+        if (HasMixedHeads(notes))
+        {
+            max = double.NegativeInfinity;
+            for (int i = 0; i < notes.Count; i++)
+                max = Math.Max(max, offsets[i] + GlyphMetrics.GetNoteheadBBox(font, notes[i].Notehead, noteValue).Right);
+            return max;
+        }
+        return GlyphMetrics.GetNoteheadBBox(font, noteValue).Right + Math.Max(0, offsets.Max());
+    }
+
+    /// <summary>The right edge of a mixed chord's first head, the one at the stem's far end, in
+    /// the chord's frame: what the next column's ideal is measured from.</summary>
+    /// <remarks>LILYPOND-REF: lily/note-spacing.cc:46-77 Note_spacing::get_spacing — first_head's
+    /// extent; lily/stem.cc:214-221 Stem::first_head.</remarks>
+    internal static double FirstHeadRight(ChordItem chord, int noteValue, MusicFontDesign? headFont)
+    {
+        var offsets = CalculateOffsets(chord.Notes, chord.StemUp, noteValue, headFont);
+        // On one row the head the walk leaves where it is, as measured: `&lt;cb cymc&gt;4`, down, steps
+        // 3.00 from the circled cross, the later written; up, 3.08 from the triangle, the earlier.
+        int first = 0;
+        for (int i = 1; i < chord.Notes.Length; i++)
+            if (chord.StemUp ? chord.Notes[i].StaffPosition < chord.Notes[first].StaffPosition
+                             : chord.Notes[i].StaffPosition >= chord.Notes[first].StaffPosition)
+                first = i;
+        return offsets[first] + GlyphMetrics.GetNoteheadBBox(headFont ?? GlyphMetrics.StaffHeadFont, chord.Notes[first].Notehead, noteValue).Right;
+    }
 
     /// <summary>
     /// Sorts the head indices by staff position in the stem direction.
@@ -118,8 +204,10 @@ public static class ChordHeadPositioning
     }
 
     /// <summary>The rule itself, over the head right extent its caller resolved.</summary>
+    /// <param name="mixedFont">Set for a chord of mixed heads: each reversed head moves by its own
+    /// right edge (stem.cc:684, <c>heads[i]</c>).</param>
     private static double[] OffsetsForEll(
-        IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue, double ell)
+        IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue, double ell, MusicFontDesign? mixedFont = null)
     {
         var offsets = new double[notes.Count];
         if (notes.Count < 2)
@@ -133,6 +221,15 @@ public static class ChordHeadPositioning
         var order = new int[notes.Count];
         for (int i = 0; i < notes.Count; i++) order[i] = i;
         SortInStemDirection(order, notes, dir);
+        // Two mixed heads on one row keep the written order, turned over for a down stem (stem.cc:
+        // 619-623 reverses the sorted heads): which one the walk reverses shows.
+        // MEASURED, 2.26.0 (Lab sessions/p1105/probe/chord.ps1): `&lt;cymc cymr&gt;4`, down, moves
+        // the circled cross, 1.41.
+        if (mixedFont is not null)
+            for (int i = 1; i < order.Length; i++)
+                for (int j = i; j > 0 && notes[order[j - 1]].StaffPosition == notes[order[j]].StaffPosition
+                        && dir * order[j - 1] > dir * order[j]; j--)
+                    (order[j - 1], order[j]) = (order[j], order[j - 1]);
 
         // LILYPOND-REF: stem.cc:667-760 — parity walk over adjacent intervals.
         bool parity = true;
@@ -159,7 +256,10 @@ public static class ChordHeadPositioning
                     if (noteValue == 1)
                         reverseOverlap = 2; // stemless semibreve chord
 
-                    offsets[order[k]] = (ell - thick * reverseOverlap) * dir;
+                    double headEll = mixedFont is null
+                        ? ell
+                        : GlyphMetrics.GetNoteheadBBox(mixedFont, notes[order[k]].Notehead, noteValue).Right;
+                    offsets[order[k]] = (headEll - thick * reverseOverlap) * dir;
                 }
                 parity = !parity;
             }

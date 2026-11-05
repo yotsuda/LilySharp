@@ -863,13 +863,18 @@ internal static class ItemSkylineFactory
             double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
                 chord.Notes, chord.StemUp, noteValue, headFont);
 
+            // A mixed drum chord boxes each head in its own shape.
+            bool mixedHeads = ChordHeadPositioning.HasMixedHeads(chord.Notes);
             for (int i = 0; i < chord.Notes.Length; i++)
             {
                 double noteY = staffY - chord.Notes[i].StaffPosition / 2.0;
+                var box = mixedHeads
+                    ? GlyphMetrics.GetNoteheadBBox(headFont ?? GlyphMetrics.StaffHeadFont, chord.Notes[i].Notehead, noteValue)
+                    : noteheadBBox;
                 double thisLeftX = noteheadLeftX + headOffsets[i];
-                double thisRightX = thisLeftX + noteheadWidth;
+                double thisRightX = thisLeftX + (mixedHeads ? box.Right : noteheadWidth);
                 parts.Add(ColumnPart.Head(
-                    noteY - noteheadBBox.Top, noteY - noteheadBBox.Bottom, thisLeftX, thisRightX));
+                    noteY - box.Top, noteY - box.Bottom, thisLeftX, thisRightX));
                 maxNoteheadRightX = Math.Max(maxNoteheadRightX, thisRightX);
             }
 

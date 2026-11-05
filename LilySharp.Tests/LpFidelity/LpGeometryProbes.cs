@@ -1021,6 +1021,27 @@ internal static class LpGeometryProbes
     private static readonly string DLF = RestWishScore("DLF", "voice { e''4. c''8 c''2 } { r4. c'8 c'2 } { e''4 c''4 c''2 } |");
     private static readonly string DLR = RestWishScore("DLR", "voice { c'''4. c''8 c''2 } { r4. c'8 c'2 } { e''8 e''8 c''4 c''2 } |");
 
+    /// <summary>MHA / MHD / MHU / MHR / MHC (audit/lp-geometry/probes/mixed-head-chord.ly): a drum
+    /// chord's heads of different shapes attach to one stem.</summary>
+    private static string MixedHeadScore(string name, string body) => $$"""
+        time 4/4
+        part kit { clef percussion }
+        section A { kit { {{body}} } }
+        form { A }
+        score {{name}} { staff kit }
+        """;
+
+    private static readonly string MHA = MixedHeadScore("MHA", "<cb sn>4 sn4 sn4 sn4 |");
+    private static readonly string MHD = MixedHeadScore("MHD", "<hh cymc>4 sn4 sn4 sn4 |");
+    private static readonly string MHU = MixedHeadScore("MHU", "<cb cymc>4 sn4 sn4 sn4 |");
+    private static readonly string MHR = MixedHeadScore("MHR", "<cymc cymr>4 sn4 sn4 sn4 |");
+    private static readonly string MHP = MixedHeadScore("MHP", "<cb sn>4@stemUp sn4 sn2 |");
+    private static readonly string MHB = MixedHeadScore("MHB", "<sn cb>4@stemUp sn4 sn2 |");
+    private static readonly string MHO = MixedHeadScore("MHO", "<hh cymc>4. sn8 sn2 |");
+    private static readonly string MHT = MixedHeadScore("MHT", "<cb cymc>4@stemUp sn4 sn2 |");
+    private static readonly string MHQ = MixedHeadScore("MHQ", "<hh cymc>32 cymc32 cymc16 sn8 sn4 sn2 |");
+    private static readonly string MHC = MixedHeadScore("MHC", "<hh sn>4 sn4 sn4 sn4 |");
+
     /// <summary>The dotted cross-voice book: the rod col0 → col1/4 runs through the dot.</summary>
     private static readonly string DCX = DotColumnScore("DCX", "2/4", "c'4 c'4", "b4. b8");
 
@@ -16004,6 +16025,19 @@ internal static class LpGeometryProbes
         new("spacing.rest-wish.spacer-control", RWN, g => g.NoteheadAnchorStep(0)),
         new("spacing.rest-wish.into-bar-line", RWB, g => g.NoteheadAnchorStep(3)),
         new("spacing.rest-wish.into-bar-line-control", RWR, g => g.NoteheadAnchorStep(3)),
+        new("drums.mixed-chord.plain-moves-to-triangle", MHA, g => g.AnyHeadDistance(0, 1)),
+        new("drums.mixed-chord.stem-at-support-attachment", MHA, g => g.StemLeftFromNotehead(0, 0)),
+        new("drums.mixed-chord.next-column-reads-first-head", MHD, g => g.AnyHeadDistance(0, 2)),
+        new("drums.mixed-chord.one-row-reversed-triangle", MHU, g => g.AnyHeadDistance(0, 1)),
+        new("drums.mixed-chord.one-row-next-column", MHU, g => g.AnyHeadDistance(0, 2)),
+        new("drums.mixed-chord.one-row-reversed-circle", MHR, g => g.AnyHeadDistance(0, 1)),
+        new("drums.mixed-chord.alike-control", MHC, g => g.AnyHeadDistance(0, 1)),
+        new("drums.mixed-chord.up-stem-at-support-attachment", MHP, g => g.StemLeftFromNotehead(0, 0)),
+        new("drums.mixed-chord.support-is-the-shape-not-the-order", MHB, g => g.StemLeftFromNotehead(0, 0)),
+        new("drums.mixed-chord.support-is-the-column-origin", MHB, g => g.AnyHeadDistance(0, 2)),
+        new("drums.mixed-chord.dots-past-the-wider-head", MHO, g => g.DotFromFirstAnyHead()),
+        new("drums.mixed-chord.up-one-row-next-column", MHT, g => g.AnyHeadDistance(0, 2)),
+        new("drums.mixed-chord.short-next-column", MHQ, g => g.AnyHeadDistance(0, 2)),
         new("dots.column.later-up-stem", DLA, g => g.DotFromFirstHead()),
         new("dots.column.later-up-stem-top-edge", DLE, g => g.DotFromFirstHead()),
         new("dots.column.later-up-stem-below-control", DLB, g => g.DotFromFirstHead()),

@@ -112,7 +112,7 @@ internal readonly record struct AccidentalStem(
     /// <summary>A chord's own stem, in the direction <paramref name="up"/> it is drawn.</summary>
     public static AccidentalStem Of(
         ChordItem chord, bool up, MusicFontDesign? headFont = null) =>
-        Of(up, GlyphMetrics.NoteValueOf(chord.BaseDuration), chord.Notehead, chord.Notes,
+        Of(up, GlyphMetrics.NoteValueOf(chord.BaseDuration), ChordHeadPositioning.StemStyle(chord, up, GlyphMetrics.NoteValueOf(chord.BaseDuration)), chord.Notes,
             0, headFont);
 }
 

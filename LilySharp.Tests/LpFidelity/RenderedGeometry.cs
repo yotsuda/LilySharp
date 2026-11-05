@@ -3116,6 +3116,14 @@ internal sealed class RenderedGeometry
         return stems[stemIndex];
     }
 
+    /// <summary>The leftmost dot's left edge less the leftmost head's, a styled head included.</summary>
+    public double DotFromFirstAnyHead(int page = 0)
+        => _pages[page].Glyphs.Where(g => g.Glyph == EmmentalerGlyphs.AugmentationDot).Min(g => g.X) - HeadAt(0, page).X;
+
+    /// <summary>Any head's left edge less another's, the styled shapes included, left to right.</summary>
+    public double AnyHeadDistance(int from, int to, int page = 0)
+        => HeadAt(to, page).X - HeadAt(from, page).X;
+
     /// <summary>1 when notehead <paramref name="headIndex"/> (left to right) is drawn as a
     /// CROSS — a dead note's head, LilyPond's <c>noteheads.s2cross</c> — 0 otherwise.</summary>
     public double NoteheadIsCross(int headIndex, int page = 0)

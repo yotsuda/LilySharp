@@ -3855,6 +3855,97 @@
       "residual": 0.0,
       "why": "OPENED 2026-11-05 (session 1102), THE CONTROL of the bar line: the same over a spacer."
     },
+    "drums.mixed-chord.up-stem-at-support-attachment": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHP",
+      "lilypond": 1.2528,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105): turned up, the triangle has the most of itself inside the stem and is the support (lily/stem.cc:181-204 Stem::support_head); the stem stands at its attachment."
+    },
+    "drums.mixed-chord.support-is-the-shape-not-the-order": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHB",
+      "lilypond": 1.2528,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105): the same chord written the other way: the support is chosen by shape."
+    },
+    "drums.mixed-chord.support-is-the-column-origin": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHB",
+      "lilypond": 3.080845,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105): the support head stays at the column's origin, so the next column is measured from it, wherever the other heads stand."
+    },
+    "drums.mixed-chord.dots-past-the-wider-head": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHO",
+      "lilypond": 2.0009999999999994,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105): the dot column stands past the wider head (lily/dot-column.cc:82-84 calc_positioning_done). Lily# floored it on a plain head, 0.25 short, until ChordHeadPositioning.InkRight."
+    },
+    "drums.mixed-chord.up-one-row-next-column": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHT",
+      "lilypond": 3.080845,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105): one row, stem up: the first head is the earlier written, the one the walk leaves where it is."
+    },
+    "drums.mixed-chord.short-next-column": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHQ",
+      "lilypond": 2.751,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105): short values, where the column's boxes meet the next head."
+    },
+    "drums.mixed-chord.plain-moves-to-triangle": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHA",
+      "lilypond": 0.2186,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105): every head of a chord attaches to one stem (lily/stem.cc:627-664 Stem::calc_positioning_done). A triangle attaches a down stem 0.2186 inside its left edge, so the plain head beside it moves right. Lily# drew both from one left edge until ChordHeadPositioning aligned mixed heads."
+    },
+    "drums.mixed-chord.stem-at-support-attachment": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHA",
+      "lilypond": 0.2186,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105): the stem stands at the support head's attachment (lily/stem.cc:181-204 Stem::support_head), not the chord's plain default."
+    },
+    "drums.mixed-chord.next-column-reads-first-head": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHD",
+      "lilypond": 2.999045,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105): the next column's ideal reads the first head's right edge (lily/note-spacing.cc:46-77 Note_spacing::get_spacing), here a circled cross 1.551 wide. Lily# read a plain head, 2.75, until ChordHeadPositioning.FirstHeadRight."
+    },
+    "drums.mixed-chord.one-row-reversed-triangle": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHU",
+      "lilypond": 1.4584,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105): two shapes on one row, stem down: the walk reads the written order turned over and moves the triangle, by its own right edge (lily/stem.cc:684 Stem::calc_positioning_done)."
+    },
+    "drums.mixed-chord.one-row-next-column": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHU",
+      "lilypond": 4.457445,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105): the next column of that book: the first head on one row is the later written."
+    },
+    "drums.mixed-chord.one-row-reversed-circle": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHR",
+      "lilypond": 1.408,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105): the same with the written order the other way: the circled cross moves, and by its wider right edge."
+    },
+    "drums.mixed-chord.alike-control": {
+      "probe": "mixed-head-chord.ly",
+      "score": "MHC",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "OPENED 2026-11-05 (session 1105), THE CONTROL: a cross and a plain head attach alike and stand together."
+    },
     "dots.column.later-up-stem": {
       "probe": "dot-column-later-up-stem.ly",
       "score": "DLA",

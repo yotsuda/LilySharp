@@ -3279,7 +3279,7 @@ internal static class ArticulationEngraver
                         beam.Group.ItemOf(i) switch
                         {
                             NoteItem note => note.Notehead,
-                            ChordItem chord => chord.Notehead,
+                            ChordItem chord => ChordHeadPositioning.StemStyle(chord, up, GlyphMetrics.NoteValueOf(chord)),
                             _ => NoteheadStyle.Default,
                         });
         var line = TabBeamQuant.Compute(beam.Group, xs, geom, up);

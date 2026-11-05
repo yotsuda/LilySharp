@@ -420,8 +420,7 @@ internal sealed class ElementCoordinator
                     RestItem rest => GlyphMetrics.GetRestBBox(rest, GlyphMetrics.NoteValueOf(rest.BaseDuration)).Right
                         + EngravingDefaults.DotPadding(dotWidth),
                     ChordItem chord => s.Shift + DotColumn.Reserved(chord, value,
-                        GlyphMetrics.GetNoteheadBBox(value).Right
-                            + Math.Max(0, ChordHeadPositioning.CalculateOffsets(chord.Notes, s.StemUp, value).Max()), own).OffsetX,
+                        ChordHeadPositioning.InkRight(chord.Notes, ChordHeadPositioning.CalculateOffsets(chord.Notes, s.StemUp, value), value, null), own).OffsetX,
                     _ => s.Shift + DotColumn.Reserved(s.Item, value, GlyphMetrics.GetNoteheadBBox(value).Right, own).OffsetX,
                 };
                 members.Add(new DotColumnMember(s.Voice, s.ItemIndex, s.Item, own, ownX, s.Pure, stems));

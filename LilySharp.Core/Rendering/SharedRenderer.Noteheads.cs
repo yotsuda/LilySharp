@@ -1213,7 +1213,7 @@ internal static partial class SharedRenderer
             // The stem attaches at the head's own right (up) or left (down) edge, read from
             // the HEAD'S OWN font — see DrawNote for the measured cue and grace numbers.
             stemX = x + LayoutUtilities.StemAttachX(
-                stemUp, noteValue, chord.Notehead,
+                stemUp, noteValue, ChordHeadPositioning.StemStyle(chord, stemUp, noteValue),
                 GrobFontSize.IsReduced(chord) ? GrobFontSize.FontOf(chord, SizedGrob.NoteHead) : null);
             // The length is reckoned from the stem-tip-side notehead (top note for
             // stem-up, bottom for stem-down), following LilyPond's
@@ -1294,9 +1294,7 @@ internal static partial class SharedRenderer
             // what LilyPond gets from uniting the heads' own extents.
             // LILYPOND-REF: lily/dot-column.cc:82-84 — base_x.unite (Stem::first_head (…)).
             double dotStartX = x + DotColumn.OffsetX(
-                GlyphMetrics.GetNoteheadBBox(
-                        GrobFontSize.FontOf(chord, SizedGrob.NoteHead), noteValue).Right
-                    + Math.Max(0, headOffsets.Max()),
+                ChordHeadPositioning.InkRight(chord.Notes, headOffsets, noteValue, GrobFontSize.FontOf(chord, SizedGrob.NoteHead)),
                 dotSupports[..dotSupportCount], resolved, dotWidth) + chord.DotColumnShift;
             // Collision dot side supports — same push as the single-note branch.
             // LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — add_support.
@@ -1370,7 +1368,7 @@ internal static partial class SharedRenderer
             // The stem attaches at the FAR notehead (the length was reckoned from the
             // tip-side one above).
             double stemStartY = (stemUp ? bottomY : topY)
-                - StemAttachYOffset(chord.Notehead, stemUp, noteValue);
+                - StemAttachYOffset(ChordHeadPositioning.StemStyle(chord, stemUp, noteValue), stemUp, noteValue);
             if (!stemTransparent)
                 using (gc.Kind("stem"))
                     gc.DrawLine(stemX, stemStartY, stemX, stemEndY,

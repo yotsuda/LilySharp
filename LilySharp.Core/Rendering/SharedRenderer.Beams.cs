@@ -188,7 +188,7 @@ internal static partial class SharedRenderer
         NoteheadStyle MemberStyle(int i) => grp.ItemOf(i) switch
         {
             NoteItem n => n.Notehead,
-            ChordItem ch => ch.Notehead,
+            ChordItem ch => ChordHeadPositioning.StemStyle(ch, ch.StemUp, GlyphMetrics.NoteValueOf(ch)),
             _ => NoteheadStyle.Default,
         };
         double StemAttachX(int i) =>

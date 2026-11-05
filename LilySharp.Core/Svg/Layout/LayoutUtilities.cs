@@ -116,7 +116,7 @@ internal static class LayoutUtilities
     public static NoteheadStyle NoteheadStyleOf(MusicItem? item) => item switch
     {
         NoteItem n => n.Notehead,
-        ChordItem c => c.Notehead,
+        ChordItem c => ChordHeadPositioning.StemStyle(c, c.StemUp, GlyphMetrics.NoteValueOf(c)),
         _ => NoteheadStyle.Default,
     };
 
