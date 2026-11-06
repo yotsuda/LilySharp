@@ -73,7 +73,11 @@ internal static class CrossStaffPure
                 return;
             lo = Math.Min(lo, bottom / 2.0 - 0.5);
             hi = Math.Max(hi, top / 2.0 + 0.5);
-            if (stem && item is NoteItem { StemUp: var up })
+            // A whole note or breve has no stem to reach with (lily/stem.cc:370-377 Stem::is_normal_stem).
+            // MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/c2): a `c1` on each staff gave the
+            // estimate two stems, 11.0 apart where LilyPond's pure distance is 10.10, and kneed a
+            // beam LilyPond does not.
+            if (stem && item is NoteItem { StemUp: var up } && Layout.NoteColumnLayout.Of(item) is { HasStem: true })
             {
                 if (up) hi = Math.Max(hi, bottom / 2.0 + StemLength);
                 else lo = Math.Min(lo, top / 2.0 - StemLength);

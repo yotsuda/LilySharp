@@ -444,6 +444,17 @@ public class CrossStaffDrawingTests
     }
 
     [Fact]
+    public void AWholeNoteLendsThePureDistanceNoStem()
+    {
+        // MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/c2): with a `c1` on each staff the pure
+        // distance is 10.10 and `c8 a@cross c a@cross` does not knee — every stem up. Counting a
+        // stem on each whole note made it 11.0, and the beam kneed.
+        var notes = Notes(Score(Book("r1 | c1 |", "c8 a@cross c a@cross r2 | c1 |")), 1);
+        Assert.All(notes.Take(4), n => Assert.True(n.StemUp));
+        Assert.InRange(notes[1].CrossPureShift, 19.9, 20.3);
+    }
+
+    [Fact]
     public void AKneeIsStampedBeforeTheSpacing()
     {
         // Before any layout: `c8 g@cross` knees, the low stem up and the moved one down.

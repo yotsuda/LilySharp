@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **A whole note does not push the staves apart in the knee test of an `@cross` beam.** The estimate of the distance between the staves gave whole notes a stem, so a beam could knee across staves where LilyPond keeps every stem one way.
 - `[engraving]` **A beam whose notes all moved with `@cross` is that staff's beam.** It was scored as a beam across the staves, which skips the flattening of a concave beam and resists any slope: `d''8 c'' f'' e''` moved to the upper staff came out sloped. It is now quanted against the staff its notes stand on and comes out as it would there, as in LilyPond.
 - `[engraving]` **A note moved with `@cross` makes room for the heads where it lands.** It was drawn on top of the other staff's notes: a second's two heads overlapped and a unison hid one of them. The heads now step aside as two voices on one staff do, and the spacing leaves room for them, as in LilyPond. A unison with stems the opposite way shares one head.
 - `[engraving]` **A drum chord of different head shapes attaches them to one stem.** `<cb sn>` and `<hh cymc>` drew every head from one left edge with a plain head's width. Each head now stands at its own attachment, the stem at the widest head's, and the next column and the dots read the real heads, as in LilyPond. A whole-note chord is still a little off.
