@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
 | `OWN` | 303 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **427** | |
+| **計** | **428** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -137,7 +137,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **`BeamRestStem`** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（63 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
 
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **`SharedRenderer.AccidentalGroupLength`** no observer; add the paren widths when a book brings one. The unpacked
@@ -239,6 +239,8 @@
 ### `LilySharp.Core/Svg/Layout/VoltaBracketEngraver.cs`
 - **`VoltaBracketEngraver.Bounds`** bar line, which a form never writes. No observer; it goes when the column is modelled.
 - **`VoltaBracketEngraver.BarWalk`** (SharedRenderer.IsMmrInnerEndBarline). No observer.
+### `LilySharp.Core/Svg/Model/MusicItem.cs`
+- **`NoteItem.ClearBeamStamp`** ⚠️ INSURANCE WITH NO OBSERVER, kept by decision (owner, 2026-11-07, session 1118).
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 

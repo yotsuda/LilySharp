@@ -1099,6 +1099,17 @@ public sealed record NoteItem : MusicItem
 
     /// <summary>Takes the bake's three stamps off, so a re-bake cannot inherit the last
     /// one's answer. See <see cref="StampBeam"/>.</summary>
+    /// <remarks>
+    /// ⚠️ INSURANCE WITH NO OBSERVER, kept by decision (owner, 2026-11-07, session 1118).
+    /// MEASURED (session 517, Lab sessions/p517): 9.3% of the items a bake receives arrive
+    /// already stamped (340,977 of 3,683,264 — the re-bake is no idle path), yet every
+    /// re-bake wrote back the SAME three values (RE-BAKE DIFFERED 0), so taking this clear
+    /// out moves no test, no book of the corpus and neither of the two books written to
+    /// break it. The argument above is still sound — a note that leaves its beam between two
+    /// keystrokes would keep a stale direction and tip that MeasureContentKey believes — but
+    /// no keystroke that does so has been found. Do not read a green poison here as a net;
+    /// the two tests nearby pin the neighbouring behaviour only.
+    /// </remarks>
     internal void ClearBeamStamp()
     {
         _stemUpOverride = null;
