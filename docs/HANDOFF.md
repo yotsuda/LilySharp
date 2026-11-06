@@ -105,7 +105,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`@todo` の memo の置き場＝第899〜900・第910 で閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4 と MANUAL-CHECKS §2.1 の実機確認。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **線数の少ない譜表の点検＝済み**（第902・第910・第913 で閉じた・全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **VS Code の手動確認＝第909 で 107 / 107 済**（手順と期待は `editors/vscode/MANUAL-CHECKS.md`・次の版で足した項目は `[ ]` から。ステップのキーは Ctrl+Shift+↑↓＝調の次の音・Ctrl+Shift+PgUp/PgDn＝オクターブ。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
-- **v0.14.0 は出した（2026-10-26・tag `4188f209f`・表示名は Lily# Studio）**: push とタグはこの回だけユーザー許可で Claude が打った（規則は「push はユーザー」のまま）。OMR の床 `OMR_MIN_VERSION` 0.4.0。手動確認の `[ ]` は MANUAL-CHECKS §3.6・§3.5 末尾。CHANGELOG は両方の `## Unreleased` に書き release 時に版番号へ（`RELEASING.md` §3）。Lab の本の警告は直さない（ユーザー決定 2026-10-17）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
+- **v0.15.0 は出した（2026-11-07・tag `8111ba3eb`・Release run `42292827975` 13/13・Marketplace 8/8・§1.1 第1119）**。v0.14.0 は 2026-10-26（tag `4188f209f`・表示名 Lily# Studio から）。push とタグはどちらもユーザー許可で Claude が打った（規則は「push はユーザー」のまま）。OMR の床 `OMR_MIN_VERSION` 0.4.0。手動確認の `[ ]` は MANUAL-CHECKS §3.6・§3.5 末尾。CHANGELOG は両方の `## Unreleased` に書き release 時に版番号へ（`RELEASING.md` §3）。Lab の本の警告は直さない（ユーザー決定 2026-10-17）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
 - **T7 の残り＝双子と段割れが違う score 16 は全部分類が付いた**（F9 の族 13＝tab の数字の大きさ・計器 3・製品 1 は閉じた。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **双子の計器の残り（第881）＝分類済み**（本の側 8・ABC は LP の癖・LP 落ち 3＝本の側・全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
@@ -145,6 +145,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **ローカル検証（§4）**: `dotnet build LilySharp.slnx --no-incremental` 0 エラー（Core 警告 0・残る警告は Lsp の nullable 3 件と NU1902 MessagePack＝前からのもの）・full **14770 / 0 / 2**・`lysc --version` = **0.15.0**・`npm install --package-lock-only` は差分を増やさず・`npm run check-types` 緑。VSIX の試し build はしていない（CI が作る）。
 - **残りはオーナー（§5〜§7）**: ⑴ `git push origin master` → CI 緑を待つ ⑵ `git tag -a v0.15.0 -m "Lily# 0.15.0 …"` → `git push origin v0.15.0` ⑶ 約 14 分後に RELEASING §7 の Marketplace の問い合わせ（8/8・HEAD 200）と `gh release view v0.15.0`（12 資産）。
 - 終了時 full **14770 / 0 / 2**（`-End p1119 -DiffBase 89745d73b`＝`sessions/p1119/end.log`・門は全部 OK）。§7 7.5: Core `+0` 行（版と changelog だけ）・REF 0・OWN 0。
+- **出した（オーナー「あなたがタグを打ってリリースして」＝この回も push とタグはユーザーの許可で Claude が打った・規則は「push はユーザー」のまま）**: `git push origin master`（3 commit）→ CI run `42291049850` success（12 分 32 秒）→ `git tag -a v0.15.0` on `8111ba3eb` → `git push origin v0.15.0` → Release run **`42292827975` 13 job 全部 success（19 分）**→ Release **12 資産**（8 VSIX ＋ 4 CLI・draft でも pre-release でもない）→ Marketplace の問い合わせは **4/8 → 7/8（8 分・darwin-arm64 が最後）→ 8/8（12 分）**＝0.5.0 と同じ索引の遅れで、何も欠けていなかった（`vsce show` は最初から 0.15.0）。win32-x64 の VSIX に HEAD 200。計器は `sessions/p1119/verify-release.ps1`（§7 の 3 つの問いを 1 本に）・ログ `verify-release1..3.log`・`release-watch.log`。この docs commit と Lab の push はオーナー。
 
 ## 以下は第1118セッションの経緯
 
