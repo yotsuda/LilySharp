@@ -5042,7 +5042,8 @@ internal sealed class ElementCoordinator
         ImmutableArray<InsideSlurScript> insideScripts = default,
         ImmutableArray<TieLayout> tieLayouts = default,
         IReadOnlyDictionary<int, int>? measureToSystemIdx = null,
-        VoiceCollisionTable? voiceShifts = null)
+        VoiceCollisionTable? voiceShifts = null,
+        int staffIndex = -1)
     {
         // thickness_ = Slur.thickness (1.2, define-grobs.scm) * the layout
         // line-thickness dimension (0.1 ss at default staff size) = 0.12 ss.
@@ -5083,7 +5084,7 @@ internal sealed class ElementCoordinator
         // Same frame as the beam's accidental collisions (AddAccidentalCollisions): the
         // packed column X when the collector packed one, else the per-item solve; scale 1,
         // the simplification this set already discloses for heads and dots.
-        void AddAccidentals(MusicItem item, double columnX)
+        void AddAccidentals(MusicItem item, double columnX, double middleDown)
         {
             // A cue note's accidental is the cue font's glyph, placed against the cue head —
             // the solve SharedRenderer.DrawNote / DrawChord draw by (BowFont).
@@ -5109,7 +5110,7 @@ internal sealed class ElementCoordinator
                         ? pf.Box(MusicGlyph.AccidentalParensLeft).Width + pf.Box(MusicGlyph.AccidentalParensRight).Width
                         : MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalParensLeft).Width + MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalParensRight).Width;
                 double left = columnX + layout.XOffset;
-                double centreDown = staffMiddleDown - layout.StaffPosition / 2.0;
+                double centreDown = middleDown - layout.StaffPosition / 2.0;
                 double topDown = centreDown - box.Top, bottomDown = centreDown - box.Bottom;
                 double idx = layout.IsCourtesy || layout.Accidental.StartsWith("natural", StringComparison.Ordinal)
                         && layout.Accidental != "natural"
@@ -5152,8 +5153,13 @@ internal sealed class ElementCoordinator
                 if (x < segStartX - eps || x > segEndX + eps)
                     continue;
 
+                // A note @cross moved: its accidentals and dots stand on the staff it moved
+                // to, as its head does in the encompass.
+                // LILYPOND-REF: lily/slur-scoring.cc:850-884 get_extra_encompass_infos — each
+                //   extra object's extent in the common Y frame.
+                double middleDown = staffMiddleDown + MovedDown(items[i], segSystem, staffIndex);
                 if (!items[i].GraceTime)
-                    AddAccidentals(items[i], x);
+                    AddAccidentals(items[i], x, middleDown);
 
                 switch (items[i])
                 {
@@ -5166,7 +5172,7 @@ internal sealed class ElementCoordinator
                         var (dotOffset, rows) = DotColumn.Reserved(
                             note, value, GlyphMetrics.GetNoteheadBBox(value).Right);
                         foreach (int p in rows)
-                            AddDotRow(note.Dots, x + dotOffset, staffMiddleDown - p / 2.0);
+                            AddDotRow(note.Dots, x + dotOffset, middleDown - p / 2.0);
                         break;
                     }
                     case ChordItem { Dots: > 0 } chord when chord.Notes.Length > 0:
@@ -5179,7 +5185,7 @@ internal sealed class ElementCoordinator
                             chord, value,
                             GlyphMetrics.GetNoteheadBBox(value).Right + Math.Max(0, headOffsets.Max()));
                         foreach (int p in rows)
-                            AddDotRow(chord.Dots, x + dotOffset, staffMiddleDown - p / 2.0);
+                            AddDotRow(chord.Dots, x + dotOffset, middleDown - p / 2.0);
                         break;
                     }
                     case RestItem { Dots: > 0, IsSpacer: false, IsMultiMeasure: false } rest:
@@ -5305,9 +5311,18 @@ internal sealed class ElementCoordinator
                 if (ink.Right - ink.Left <= 0 || ink.Top - ink.Bottom <= 0)
                     continue;
 
-                // YUp is up-positive about THIS staff's middle line; page device Y down.
-                double topDown = staffMiddleDown - (s.YUp + ink.Top);
-                double bottomDown = staffMiddleDown - (s.YUp + ink.Bottom);
+                // YUp is up-positive about its note's staff's middle line — the staff a note
+                // @cross moved stands on, where the mark is drawn (LayoutEngine.CrossStaff
+                // restamps it) — page device Y down.
+                // LILYPOND-REF: lily/slur-scoring.cc:850-884 get_extra_encompass_infos — each extra
+                //   object's extent in the common Y frame: the script beside its moved head.
+                // MEASURED, LilyPond 2.26.0 (Lab sessions/p1112/s2): `c4( g@cross@staccato
+                //   b@cross c)` bows just under the two c's, as without the staccato; read on
+                //   the slur's staff, the staccato took the bow four spaces lower.
+                double middleDown = staffMiddleDown
+                    + MovedDown(ItemAt(voice, s.MeasureIndex, s.ItemIndex), segSystem, staffIndex);
+                double topDown = middleDown - (s.YUp + ink.Top);
+                double bottomDown = middleDown - (s.YUp + ink.Bottom);
                 extras.Add(new SlurExtraObject(
                     s.X + ink.Left - slurThickness,
                     s.X + ink.Right + slurThickness,
@@ -5972,7 +5987,7 @@ internal sealed class ElementCoordinator
                     score.TextMetrics, score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX,
                     out var tieEnds,
                     tupletNumberLayouts, score.TupletBrackets, insideScriptLayouts,
-                    tieLayouts, measureToSystemIdx, voiceShifts);
+                    tieLayouts, measureToSystemIdx, voiceShifts, staffIndex);
 
                 // The slurs already laid out are NOT obstacles: a slur never avoids a slur in
                 // LilyPond (SlurScoringProblem.ScoreExtraEncompass's ⚠️) — only a PhrasingSlur

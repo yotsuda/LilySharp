@@ -443,6 +443,54 @@ public class CrossStaffDrawingTests
         Assert.InRange(slur.EndYUp - slur.StartYUp, dyUp - tolerance, dyUp + tolerance);
     }
 
+    [Theory]
+    [InlineData("g@cross@staccato b@cross")]
+    [InlineData("g@cross@staccato b@cross@staccato")]
+    [InlineData("g@cross@tenuto b@cross")]
+    public void AScriptOnAMovedNoteIsWhereItIsDrawn_NotUnderTheSlur(string moved)
+    {
+        // MEASURED, LilyPond 2.26.0 (Lab sessions/p1112/s2): `c4( g@cross@staccato b@cross c)`
+        // bows just under the two c's, the same curve as without the staccato (both 9.26 wide,
+        // ends 22.24, sag 1.42). The staccato stands under g on the upper staff; read on the
+        // slur's staff, it took the bow four spaces lower.
+        SlurLayout SlurOf(string middle) => new LayoutEngine()
+            .Layout(Score(Book("r1 | r1 |", "c4( " + middle + " c) | c1 |"))).SlurLayouts.Single();
+        var bare = SlurOf("g@cross b@cross");
+        var marked = SlurOf(moved);
+        Assert.Equal(bare.StartYUp, marked.StartYUp, 6);
+        Assert.Equal(bare.EndYUp, marked.EndYUp, 6);
+        Assert.Equal(bare.Control1.Y, marked.Control1.Y, 6);
+        Assert.Equal(bare.Control2.Y, marked.Control2.Y, 6);
+    }
+
+    /// <summary>MEASURED, LilyPond 2.26.0 (Lab sessions/p1112/s3, -dbackend=svg): the slur under
+    /// the two c's over moved notes with dots or accidentals, as width and outer depth below its
+    /// ends. Read on the slur's staff, the dots took the bow three spaces lower and the sharp
+    /// and flat made it 3.4 deep.</summary>
+    [Theory]
+    [InlineData(0, 10.61, 1.49)]   // c4( g4.@cross b8@cross c4)
+    [InlineData(1, 11.37, 1.52)]   // c4( gis@cross bes@cross c)
+    [InlineData(2, 10.61, 1.49)]   // c4( <g b>4.@cross d'8@cross c4)
+    public void TheDotsAndAccidentalsOfAMovedNoteAreWhereTheyAreDrawn(int slur, double width, double depth)
+    {
+        var svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(Book("r1 | r1 | r1 | r1 |",
+            "r1 | c4( g4.@cross b8@cross c4) | c4( gis@cross bes@cross c) | c4( <g b>4.@cross d'8@cross c4) |")));
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var m = System.Text.RegularExpressions.Regex.Matches(svg,
+            "d=\"M ([-\\d.]+),([-\\d.]+) C [-\\d.]+,([-\\d.]+) [-\\d.]+,[-\\d.]+ ([-\\d.]+),[-\\d.]+ C [-\\d.]+,([-\\d.]+)")
+            .OrderBy(x => double.Parse(x.Groups[1].Value, inv)).ElementAt(slur);
+        double V(int g) => double.Parse(m.Groups[g].Value, inv);
+        // The ends hang 3.55 below the lower staff's top line, under the c's, in every bar.
+        double lowerTop = System.Text.RegularExpressions.Regex
+            .Matches(svg, "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"([-\\d.]+)\"")
+            .Where(l => l.Groups[2].Value == l.Groups[4].Value
+                && double.Parse(l.Groups[3].Value, inv) - double.Parse(l.Groups[1].Value, inv) > 5)
+            .Select(l => double.Parse(l.Groups[2].Value, inv)).Distinct().OrderBy(y => y).ElementAt(5);
+        Assert.InRange(V(2) - lowerTop, 3.55 - 0.02, 3.55 + 0.02);
+        Assert.InRange(V(4) - V(1), width - 0.02, width + 0.02);
+        Assert.InRange(Math.Max(V(3), V(5)) - V(2), depth - 0.02, depth + 0.02);
+    }
+
     [Fact]
     public void ABeamClearsTheHeadsMovedOntoItsStaff()
     {
