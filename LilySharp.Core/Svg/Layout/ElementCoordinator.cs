@@ -630,7 +630,7 @@ internal sealed class ElementCoordinator
         Score score, ImmutableArray<SystemLayout> systems, int staffIndex,
         ImmutableArray<BeamGroup>? precomputedGroups = null,
         int staffLines = EngravingDefaults.DefaultStaffLines,
-        Func<int, ImmutableArray<Voice>>? voicesOfStaff = null)
+        Func<int, Staff?>? voicesOfStaff = null)
     {
         var beamGroups = precomputedGroups ?? _beamDetector.DetectBeamGroups(score);
 
@@ -763,7 +763,7 @@ internal sealed class ElementCoordinator
     private IEnumerable<BeamLayout> LayoutCrossMeasureBeamPieces(
         Score score, BeamGroup group,
         IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
-        int staffIndex, int staffLines, Func<int, ImmutableArray<Voice>>? voicesOfStaff)
+        int staffIndex, int staffLines, Func<int, Staff?>? voicesOfStaff)
     {
         // Group members by their system index. Members of the same system stay
         // on the same beam piece; the break happens between systems.
@@ -822,7 +822,7 @@ internal sealed class ElementCoordinator
     private BeamLayout? LayoutSingleSystemBeamPiece(
         Score score, BeamGroup group,
         IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
-        int staffIndex, int systemIndex, int staffLines, Func<int, ImmutableArray<Voice>>? voicesOfStaff)
+        int staffIndex, int systemIndex, int staffLines, Func<int, Staff?>? voicesOfStaff)
     {
         // The same collision shifts the single-measure path adds to its table — see
         // ApplyVoiceCollisionShifts. A beam that crosses a bar line has members in two
@@ -950,7 +950,7 @@ internal sealed class ElementCoordinator
         Score score, BeamGroup group, BeamGroup renumberedGroup, List<double> memberXs,
         IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
         VoiceCollisionTable voiceShifts, Func<int, int, double?> resolveX,
-        Func<int, ImmutableArray<Voice>>? voicesOfStaff = null)
+        Func<int, Staff?>? voicesOfStaff = null)
     {
         int n = group.Members.Length;
         if (n == 0)
@@ -1714,6 +1714,15 @@ internal sealed class ElementCoordinator
             beamEdgeLeftX, beamEdgeRightX, beamOriginX);
     }
 
+    /// <summary>Whether <paramref name="item"/> is one of the beam's own members — the same object.</summary>
+    private static bool IsMemberOf(BeamGroup group, MusicItem item)
+    {
+        for (int i = 0; i < group.Members.Length; i++)
+            if (ReferenceEquals(group.ItemOf(i), item))
+                return true;
+        return false;
+    }
+
     /// <summary>
     /// The notes another staff's voices moved onto this staff (<see cref="Score.CrossedIn"/>) in
     /// measure <paramref name="measureIndex"/>: covered as another voice's notes are — the head,
@@ -1728,13 +1737,14 @@ internal sealed class ElementCoordinator
     /// </remarks>
     private void AppendCrossedInCollisions(ref List<BeamCollision>? collisions,
         ImmutableArray<CrossedNote> crossedIn, int measureIndex, MeasureLayout measureLayout,
-        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
+        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX,
+        Func<MusicItem, bool>? skip = null)
     {
         if (crossedIn.IsEmpty || measureLayout.Columns.IsDefaultOrEmpty || measureLayout.Columns.Length == 0)
             return;
         foreach (var crossed in crossedIn)
         {
-            if (crossed.MeasureIndex != measureIndex)
+            if (crossed.MeasureIndex != measureIndex || skip?.Invoke(crossed.Item) == true)
                 continue;
             var written = crossed.Measures[measureIndex];
             var timing = Fraction.Zero;
@@ -1769,14 +1779,15 @@ internal sealed class ElementCoordinator
     ///   frame, less the beam's own y: here the member's <see cref="BeamMember.StaffOffset"/>.
     /// ⚠️ NOT THE OTHER STAFF'S BEAMS: a covered Beam (:173-175) is not booked here, as a beam of
     ///   another voice on one staff is not (<see cref="AppendCrossVoiceBeamCollisions"/>).
-    /// ⚠️ NOT THE NOTES OF ANOTHER VOICE MOVED ONTO THE SAME STAFF.
     /// MEASURED, LilyPond 2.26.0 (OMR cross-try-2026-11-04.lys bar 6): the beam rises clear of the
     /// right hand's eighth where it ran through the flag.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/e1 bar 1): the beam rises clear of the head
+    /// another voice moved onto the staff its members went to (<see cref="Staff.CrossedIn"/>).
     /// </remarks>
     private void AppendAcrossStaves(ref List<BeamCollision>? collisions, BeamGroup group,
         BeamGroup framed, int measureIndex, MeasureLayout measureLayout, Measure written,
         IReadOnlyList<double> itemXs, double beamOriginX, double lastStemX,
-        Func<int, ImmutableArray<Voice>> voicesOfStaff)
+        Func<int, Staff?> voicesOfStaff)
     {
         double halfStem = EngravingDefaults.StemThickness / 2;
         double edgeLeft = beamOriginX - halfStem, edgeRight = lastStemX + halfStem;
@@ -1790,10 +1801,15 @@ internal sealed class ElementCoordinator
                 continue;
             List<BeamCollision>? theirs = null;
 
-            var voices = HeldHere.Of(voicesOfStaff(target));
+            var targetStaff = voicesOfStaff(target);
+            var voices = HeldHere.Of(targetStaff?.Voices ?? ImmutableArray<Voice>.Empty);
             AppendVoicesMeasureCollisions(ref theirs, voices, beamVoiceIndex: -1, measureIndex,
                 measureLayout, SpacingRules.VoiceCollisionShiftsOf(voices),
                 edgeLeft, edgeRight, beamOriginX);
+            // …and what another voice moved onto that staff — but not the beam's own members.
+            if (targetStaff is not null)
+                AppendCrossedInCollisions(ref theirs, targetStaff.CrossedIn, measureIndex, measureLayout,
+                    edgeLeft, edgeRight, beamOriginX, item => IsMemberOf(group, item));
 
             // The members standing there: only their accidentals, a member's head and stem being
             // the beam's own (beam-collision-engraver.cc:179-187).

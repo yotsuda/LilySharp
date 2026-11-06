@@ -101,8 +101,8 @@ internal sealed partial class LayoutEngine
                 {
                     foreach (var (_, st, si) in score.EnumerateStaves())
                         if (si == target)
-                            return st.Voices;
-                    return ImmutableArray<Voice>.Empty;
+                            return st;
+                    return null;
                 });
             var merged = ImmutableArray.CreateBuilder<BeamLayout>(laid.Length);
             foreach (var beam in laid)

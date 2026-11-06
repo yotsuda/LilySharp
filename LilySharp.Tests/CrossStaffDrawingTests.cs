@@ -463,6 +463,23 @@ public class CrossStaffDrawingTests
     }
 
     [Fact]
+    public void ACrossStaffBeamClearsWhatAnotherVoiceMovedWhereItsNotesWent()
+    {
+        // MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/e1, -dbackend=svg): the bass voice's beam
+        // to the a's moved up rises clear of the e' the second voice moved up — its left end's
+        // middle at 12.60; through the head it stood at 14.29 (without the e', 13.60 in both).
+        // ⚠️ Lily# stands at 12.79: 0.19 off LilyPond's, cause not found (the bookings are the
+        // ones LilyPond's collision-interfaces name, and the control without the e' agrees).
+        string book = Book("r1 | c1 |", "voice { c8 a@cross c a@cross r2 } { r8 e'4.@cross r2 } | c1 |");
+        var beam = System.Text.RegularExpressions.Regex.Match(
+            LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(book)),
+            "<polygon points=\"[-\\d.]+,([-\\d.]+) ");
+        Assert.True(beam.Success);
+        double leftMiddle = double.Parse(beam.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) + 0.24;
+        Assert.InRange(leftMiddle, 12.55, 12.85);
+    }
+
+    [Fact]
     public void AWholeNoteLendsThePureDistanceNoStem()
     {
         // MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/c2): with a `c1` on each staff the pure
