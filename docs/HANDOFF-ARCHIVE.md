@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1114セッションの経緯
+
+### 1.1 第1114セッション（2026-11-06・YT-DELL2）
+
+開始時 full **14759 / 0 / 2**（`-Start p1114`・HEAD `04494cb4b`・OMR の open は 0）。作業場所は Lab `sessions/p1114/`。オーナー「続けて」＝第1113 の「見つけたが直していない」`b6`（休符の後から始まる段をまたぐ連桁が LP より 0.7 低い）に着手。
+
+- **切り分け**（`b9`〜`b16`・LP と照合）: 連桁の規則ではなかった。`b6` の差は、同じ小節に高音部の連桁が*在るだけ*で出て（向き・位置に関わらず）、段の間隔が 10.09（LP 9.00）に広がっていた。計器（`CalculateStaffGapWithSkylines` の輪郭を刷る一時の差し込み）で、高音部の下の輪郭に `r8` が 7.0 まで垂れていた＝**高音部の休符が、同じ瞬間に立つ移動音 g'（低音部の連桁 `r8 c8 e'@cross g'@cross` の一員・棒は段の間の連桁まで下へ）の*棒の先*まで退いていた**（中線の下 6.0）。LP は 3.5＝頭だけを避ける: 段をまたぐ連桁の棒は cross-staff grob で、Note_column の extent に入らない（axis-group-interface.cc:96-106 `relative_maybe_bound_group_extent`・stem.cc:1279-1283 `Stem::is_cross_staff`）。
+- **本体 `361165dd8`＝`AddCrossedRestCollisions` は、段をまたぐ連桁の一員の棒を数えない**（`BeamSpansStaves`＝その小節の中で同じ BeamId の音が別の段に立つか）。`b6`: 休符 −3.5（LP −3.5・`Rest.after-line-breaking` で実測）・段間 9.00・段をまたぐ連桁 6.19..4.81＝LP と一致（`b15`・`b16` も）。網 `CrossStaffDrawingTests.ARestUnderANoteOfACrossStaffBeamClearsItsHeadAndNotItsStem`（休符・段間・連桁の 3 点）。全 svg の掃きは差 0 / 1262（`sweep/sweep.log`）。毒 2 本: 頭だけの行は赤、「同じ段に乗った連桁も spanning と読む」は緑＝観測者なし（その形 `b19` は下の別の差が先に出る）。
+- ⚠️ **見つけたが直していない**: `b19`（`r8 r8 c''8@cross d''8@cross`＝移った音の連桁が高音部の中に収まり棒が下向き・同じ瞬間に高音部の `r8`）は LP が休符を −4.0 に置くのに Lily# は −5.0／−4.5＝休符衝突が連桁の音の棒を*既定の長さ*で読む（`StemTipPositionOf` の註が前から開示: LP は列の extent＝連桁の位置で読む）。@cross に限らない（同じ段の 2 声でも同じ形）。直すなら休符衝突が連桁の位置を読む順序の設計。
+- 終了時 full **14760 / 0 / 2**（`-End p1114 -DiffBase 04494cb4b`＝`sessions/p1114/end.log`・門は全部 OK）。§7 7.5: Core `+28` 行・REF 1・OWN 0（新しい逸脱なし）。Release の lysc は作り直していない（`8fc8e2be1` のまま）。
+
 ## 以下は第1113セッションの経緯
 
 ### 1.1 第1113セッション（2026-11-06・YT-DELL2）

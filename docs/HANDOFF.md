@@ -117,7 +117,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
-- ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
+- **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す＝第1116 で閉じた**（`BowShiftsOf`／`ReanchorBows` 退役・§1.1 第1116）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
 
 - ★ **⒵ perf は第615 で区切り（ユーザー判断）**: render −24%・割当 −31%（第598〜第615＝ARCHIVE）。照合の基準は `SvgGenerator.Generate`（Lab `sessions/p611/verify-all.ps1`）・打鍵ごとの計器は Lab `sessions/p613/lathost`。残る大物は設計級＝長い score の段ごと引き継ぎと collect の尾の `_tieTargetWarnings` abort（第613 ⒝）。⚠️ 弱参照の表で全 item を memo する形は GC で負ける（第602）
@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1116セッション（2026-11-06・YT-DELL2）
+
+開始時 full **14765 / 0 / 2**（`-Start p1116`・HEAD `78f95048b`・OMR の open は 0）。作業場所は Lab `sessions/p1116/`。オーナー指示「Bow の採点」＝§1.0 ⒝ ⒡′（bow を staff 自身の枠で採点し offset は描画時に足す・第424 起票）。
+
+- **設計＝枠の宣言を 1 つ動かす**（`BowLayout` の COORDINATE FRAME の註）: bow の Y は**自分の staff の上線**についての page Y-up。採点の土台 3 つを staff 内に戻した＝tie `BuildTieSpecification` の `staffY = 0`・slur `LayoutSlurs` の `staffMiddleDown = StaffHeight / 2`・tab slur `BuildTabSlurLayout` の `staffY = 0`（どれも採点は Y の*差*で推論するので土台の移動は出力の剛体移動＝第424 の測定どおり）。読み手が段内 offset を 1 回ずつ足す: `DrawTiesLive`／`DrawSlursLive`（`os.StaffLayoutOf(StaffIndex, mi).Y`・`FoldBow` の replay 鍵にも入れた）・`ArticulationEngraver.SlurAvoidanceShift`／`TieSupportSkyline`（`dy = StaffMiddle` だけ・`staffOffset` 引数は script 側の扉のまま残す）・`LayoutEngine.PagingSkylines.AddCurve`（`BowLayout` を受けて `StaffOffsetInSystemUp(systems[s], StaffIndex)`）・`PagingAugmentProgram.AddBowGroup(bows, system)`（鍵の 8 数は系の枠）。`TiesOnTheirNotesStaff`（@cross の tie を音の staff へ）は段どうしの差を足すだけなので不変＝`ShiftedUp` はこの 1 軒のために残る。
+- **Prelim の carry**: `BowShiftsOf`／`ReanchorBows` を削除（94 行）。tie は `prelimSystems.Length == systemsArray.Length` だけで運ぶ・slur は従来どおり `HasMovedNotes` の staff を再計算。履歴（第141 の門・第424 の払い戻し・5,552 本中 89 本の 1 ULP）は `LayoutEngine.Prelim` 冒頭の註と carry 地点の註に畳んだ。
+- **本体 `f554d5ada`**（Core 7 ファイル＋網＋棚卸し・+266/−184）。**照合**: 全 svg の掃き **差 0 / 1262**（base＝p1115 の exe-head＝HEAD のコード・`sweep/sweep.log`）＝描く絵は 1 本も変わらない。網 `BowStaffFrameTests` 5 本＝grandStaff の段の順を入れ替え、同じ音楽が下段でも上段でも**同じ tie・同じ slur（bit 一致）・同じ script の YUp（slur の上の trill・tie の上の accent）**、描いた tie は段の距離だけ下。**毒 12 本**（`poisons.log`・`poisons2.log`・`paging-poisons.log`）: 赤 10＝土台 3（tie・slur は網、tab slur は `BowTwinTests`）・描画 2・script の dy 2・`paging-curve-no-offset` と `paging-program-no-offset` は網に観測者が無く**掃きが観測者**（頁の bow の張り出しを段 0 で読む→ 4 冊／paging の鍵→ 5 冊が変わる）。**観測者なし 2**＝`hash-no-staff-top`（replay 鍵の段の上端: 段が動いた頁を replay する網が無い）・`carry-across-system-counts`（1,036 冊すべてで prelim と final の系の数が同じ＝門は保険。掃き 0 差）。⚠️ FULL で毒を回すと `BenchmarkFurElise` が負荷で 1 本赤になる＝観測者ではない。
+- ⚠️ **第424 の数（0.074%・1 ULP の尾）は測り直していない**＝消した経路の割当がそのまま消えるだけ（`BowShiftsOf` は動いた staff だけ配列を作っていた）。perf は §1.0 ⒝ の島のまま。
+- 終了時 full **14770 / 0 / 2**（`-End p1116 -DiffBase 78f95048b`＝`sessions/p1116/end.log`・門は全部 OK。1 回目（`end1.log`）は新しい網のファイルに GPL の頭が無く `LicenceHeaderTests` が 1 本赤→足して commit してから回し直した）。§7 7.5: Core `+112` 行・REF 0・OWN 0（新しい逸脱なし。棚卸しは OWN 304→303＝`BowShiftsOf` の LILYSHARP-OWN が消えた分・magic は tie／tab の `staffY = 0.0` 2 点が入れ替わり）。Release の lysc は `exe-head` に写した（`f554d5ada` のコード）。
+
+## 以下は第1115セッションの経緯
+
 ### 1.1 第1115セッション（2026-11-06・YT-DELL2）
 
 開始時 full **14760 / 0 / 2**（`-Start p1115`・HEAD `1a0c7d222`・OMR の open は 0）。作業場所は Lab `sessions/p1115/`。`b19` はオーナーの問い「音楽的に直すべきか」に「今は直さなくてよい」と答えて据え置き（意味は変わらず、休符が 0.5〜1 間深いだけ）。オーナー指示「二声グレース」＝§2 U8b。
@@ -147,17 +159,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **照合**: v1〜v7 の全部で両端 0.02 以内（v2 の 4 点、v7 の 4 点を含む）。網 `TwoVoiceGraceColumnTests` 5 本（対で主張）。全 svg の掃きは差 0 / 1262（`sweep/sweep.log`）＝コーパスに二声の同時 grace は無い（第357 の射程 0 のまま）。毒 8 本のうち赤 7・緑 1（`average-off`＝各声の ideal の平均は床が勝つ形しか無く観測者なし。LP の規則なので残した。`poisons3.log`）。
 - ⚠️ **残した制限**（`StampGraceCompanions` の註）: 同じ向きの 2 列（Note_collision の同方向の歩き）と 3 声以上の瞬間は組むが shift しない／相手の run がこちらの最後の列より後に続く形（8 分対 2 つの 16 分）は chain が知らない／grace の和音の `ChordNoteInfo.AccidentalX` は刻まない（単音だけ）。
 - 終了時 full **14765 / 0 / 2**（`-End p1115 -DiffBase 1a0c7d222`＝`sessions/p1115/end2.log`・門は全部 OK。1 回目は `ModelEqualityKindTests` が `GraceCompanion` の分類を求めて 1 本赤 → Values に入れて amend）。§7 7.5: Core `+509` 行・REF 8・OWN 0（新しい逸脱なし）。Release の lysc は作り直していない（`8fc8e2be1` のまま）。
-
-## 以下は第1114セッションの経緯
-
-### 1.1 第1114セッション（2026-11-06・YT-DELL2）
-
-開始時 full **14759 / 0 / 2**（`-Start p1114`・HEAD `04494cb4b`・OMR の open は 0）。作業場所は Lab `sessions/p1114/`。オーナー「続けて」＝第1113 の「見つけたが直していない」`b6`（休符の後から始まる段をまたぐ連桁が LP より 0.7 低い）に着手。
-
-- **切り分け**（`b9`〜`b16`・LP と照合）: 連桁の規則ではなかった。`b6` の差は、同じ小節に高音部の連桁が*在るだけ*で出て（向き・位置に関わらず）、段の間隔が 10.09（LP 9.00）に広がっていた。計器（`CalculateStaffGapWithSkylines` の輪郭を刷る一時の差し込み）で、高音部の下の輪郭に `r8` が 7.0 まで垂れていた＝**高音部の休符が、同じ瞬間に立つ移動音 g'（低音部の連桁 `r8 c8 e'@cross g'@cross` の一員・棒は段の間の連桁まで下へ）の*棒の先*まで退いていた**（中線の下 6.0）。LP は 3.5＝頭だけを避ける: 段をまたぐ連桁の棒は cross-staff grob で、Note_column の extent に入らない（axis-group-interface.cc:96-106 `relative_maybe_bound_group_extent`・stem.cc:1279-1283 `Stem::is_cross_staff`）。
-- **本体 `361165dd8`＝`AddCrossedRestCollisions` は、段をまたぐ連桁の一員の棒を数えない**（`BeamSpansStaves`＝その小節の中で同じ BeamId の音が別の段に立つか）。`b6`: 休符 −3.5（LP −3.5・`Rest.after-line-breaking` で実測）・段間 9.00・段をまたぐ連桁 6.19..4.81＝LP と一致（`b15`・`b16` も）。網 `CrossStaffDrawingTests.ARestUnderANoteOfACrossStaffBeamClearsItsHeadAndNotItsStem`（休符・段間・連桁の 3 点）。全 svg の掃きは差 0 / 1262（`sweep/sweep.log`）。毒 2 本: 頭だけの行は赤、「同じ段に乗った連桁も spanning と読む」は緑＝観測者なし（その形 `b19` は下の別の差が先に出る）。
-- ⚠️ **見つけたが直していない**: `b19`（`r8 r8 c''8@cross d''8@cross`＝移った音の連桁が高音部の中に収まり棒が下向き・同じ瞬間に高音部の `r8`）は LP が休符を −4.0 に置くのに Lily# は −5.0／−4.5＝休符衝突が連桁の音の棒を*既定の長さ*で読む（`StemTipPositionOf` の註が前から開示: LP は列の extent＝連桁の位置で読む）。@cross に限らない（同じ段の 2 声でも同じ形）。直すなら休符衝突が連桁の位置を読む順序の設計。
-- 終了時 full **14760 / 0 / 2**（`-End p1114 -DiffBase 04494cb4b`＝`sessions/p1114/end.log`・門は全部 OK）。§7 7.5: Core `+28` 行・REF 1・OWN 0（新しい逸脱なし）。Release の lysc は作り直していない（`8fc8e2be1` のまま）。
 
 ## 2. 開いている作業
 
