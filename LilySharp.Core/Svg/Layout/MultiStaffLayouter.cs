@@ -5459,11 +5459,11 @@ internal sealed class MultiStaffLayouter
             ? new Score(
                 staff.Voices, score.TimeSignature, score.KeySignature,
                 LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
-                tupletBrackets: staffTuplets)
+                tupletBrackets: staffTuplets) { CrossedIn = staff.CrossedIn }
             : new Score(
                 staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
                 LayoutEngine.ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
-                tupletBrackets: staffTuplets);
+                tupletBrackets: staffTuplets) { CrossedIn = staff.CrossedIn };
     }
 
     private sealed record StaffBeamGroupsEntry(

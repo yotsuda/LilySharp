@@ -1683,7 +1683,7 @@ internal sealed class ElementCoordinator
         // that reach here are monophonic, so the guard below returns before the first Add.
         // Appending here is the same order the AddRange gave: this voice's entries first,
         // the other voices' after (session 451).
-        if (score.Voices.Length <= 1
+        if ((score.Voices.Length <= 1 && score.CrossedIn.IsEmpty)
             || measureLayout.Columns.IsDefaultOrEmpty || measureLayout.Columns.Length == 0)
             return;
 
@@ -1707,10 +1707,53 @@ internal sealed class ElementCoordinator
         int measureIndex, MeasureLayout measureLayout, VoiceCollisionTable voiceShifts,
         double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
     {
-        if (score.Voices.Length <= 1)
+        if (score.Voices.Length > 1)
+            AppendVoicesMeasureCollisions(ref collisions, score.Voices, beamVoiceIndex, measureIndex,
+                measureLayout, voiceShifts, beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+        AppendCrossedInCollisions(ref collisions, score.CrossedIn, measureIndex, measureLayout,
+            beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+    }
+
+    /// <summary>
+    /// The notes another staff's voices moved onto this staff (<see cref="Score.CrossedIn"/>) in
+    /// measure <paramref name="measureIndex"/>: covered as another voice's notes are — the head,
+    /// an unbeamed stem and flag, the accidental — at the x they are drawn at.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-collision-engraver.cc:150-191 Beam_collision_engraver::finalize — a
+    ///   grob of a vertical axis group the beam's stems stand in is covered, whichever context
+    ///   made it; a beamed stem is not (:179-181).
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/c1 bar 1): the treble staff's beam drops
+    ///   0.69 below the heads of the bass notes moved onto it (16.88 against 16.19 through them).
+    /// </remarks>
+    private void AppendCrossedInCollisions(ref List<BeamCollision>? collisions,
+        ImmutableArray<CrossedNote> crossedIn, int measureIndex, MeasureLayout measureLayout,
+        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
+    {
+        if (crossedIn.IsEmpty || measureLayout.Columns.IsDefaultOrEmpty || measureLayout.Columns.Length == 0)
             return;
-        AppendVoicesMeasureCollisions(ref collisions, score.Voices, beamVoiceIndex, measureIndex,
-            measureLayout, voiceShifts, beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+        foreach (var crossed in crossedIn)
+        {
+            if (crossed.MeasureIndex != measureIndex)
+                continue;
+            var written = crossed.Measures[measureIndex];
+            var timing = Fraction.Zero;
+            for (int i = 0; i < crossed.ItemIndex; i++)
+                timing += GetItemDuration(written.Items[i]);
+            double x = measureLayout.X + measureLayout.GetXForTiming(timing) + crossed.CollisionShift;
+            AddItemCollisions(ref collisions, crossed.Item, x,
+                beamEdgeLeftX, beamEdgeRightX, beamOriginX, _beamEngraver.Parameters.StemCollisionFactor);
+            // Its accidental: the measure as it stands here holds this note alone.
+            var alone = new MusicItem[written.Items.Length];
+            var xs = new double[alone.Length];
+            for (int i = 0; i < alone.Length; i++)
+                alone[i] = i == crossed.ItemIndex ? crossed.Item
+                    : new RestItem(written.Items[i].Duration, 0, written.Items[i].SourcePosition) { IsSpacer = true };
+            xs[crossed.ItemIndex] = x;
+            double shift = crossed.CollisionShift;
+            AddAccidentalCollisions(ref collisions, written with { Items = ImmutableArray.Create(alone) }, xs,
+                _ => shift, beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+        }
     }
 
     /// <summary>

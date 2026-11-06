@@ -144,6 +144,11 @@ public sealed record Score
     /// <summary>Textual tempo marking ("Grave") for the opening metronome mark.</summary>
     public string? TempoText { get; init; }
 
+    /// <summary>On one staff's beam score (<c>MultiStaffLayouter.StaffBeamScoreOf</c>): the notes
+    /// another staff's voices moved onto it with <c>@cross</c> (<see cref="Staff.CrossedIn"/>),
+    /// which its beams keep clear of. Empty elsewhere.</summary>
+    public ImmutableArray<CrossedNote> CrossedIn { get; init; } = ImmutableArray<CrossedNote>.Empty;
+
     /// <summary>Metronome beat unit of the opening tempo (4 = quarter).</summary>
     public int TempoBeatUnit { get; init; } = 4;
 

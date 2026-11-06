@@ -444,6 +444,25 @@ public class CrossStaffDrawingTests
     }
 
     [Fact]
+    public void ABeamClearsTheHeadsMovedOntoItsStaff()
+    {
+        // MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/c1, -dbackend=svg): the treble staff's
+        // beam under the a's moved up from the bass stands at 16.88 (its middle), clear of their
+        // heads; read through them it stood at 16.19. The other beams stood where LilyPond's do.
+        string book = Book(
+            "e'8@stemDown f'@stemDown e'@stemDown f'@stemDown r2 | d'8@stemDown e'@stemDown d'@stemDown e'@stemDown r2 | c1 |",
+            "c8 a@cross c a@cross r2 | e8 f'@cross e f'@cross r2 | c1 |");
+        var tops = System.Text.RegularExpressions.Regex.Matches(
+                LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(book)),
+                "<polygon points=\"([-\\d.]+),([-\\d.]+) ")
+            .Select(m => (X: double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture),
+                          Y: double.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture)))
+            .OrderBy(b => b.X).ToArray();
+        // The first beam from the left is the treble staff's in bar 1; its middle is its top + 0.24.
+        Assert.InRange(tops[0].Y + 0.24, 16.86, 16.90);
+    }
+
+    [Fact]
     public void AWholeNoteLendsThePureDistanceNoStem()
     {
         // MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/c2): with a `c1` on each staff the pure
@@ -676,6 +695,27 @@ public class CrossStaffDrawingTests
         int at = seed.IndexOf(before, System.StringComparison.Ordinal);
         var change = new TextChange(new TextSpan(at, before.Length), after);
         string incremental = session.Edit(change).Replace("\r\n", "\n");
+        string full = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(Text(after)), opt).Replace("\r\n", "\n");
+        Assert.Equal(full, incremental);
+    }
+
+    /// <summary>The other staff's beam reads the notes moved under it (<see cref="Score.CrossedIn"/>):
+    /// an edit of the moved note re-lays a beam on the staff it was not written on.</summary>
+    [Theory]
+    [InlineData("c8 a@cross c a@cross r2", "c8 b@cross c b@cross r2")]
+    [InlineData("c8 a@cross c a@cross r2", "c8 a c a r2")]
+    public void AnEditOfAMovedNoteReLaysTheBeamItStandsUnder(string before, string after)
+    {
+        var opt = new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false };
+        string bars = string.Concat(Enumerable.Repeat("c8 e g c' e g c' e | ", 16));
+        string Text(string lh) => Book(
+            "e'8@stemDown f'@stemDown e'@stemDown f'@stemDown r2 | " + string.Concat(Enumerable.Repeat("c''1 | ", 17)),
+            lh + " | " + bars + "c1 |");
+        string seed = Text(before);
+        var session = new LilySharp.Core.Svg.IncrementalCompiler(SyntaxTree.Parse(seed), opt);
+        session.Render();
+        int at = seed.IndexOf(before, System.StringComparison.Ordinal);
+        string incremental = session.Edit(new TextChange(new TextSpan(at, before.Length), after)).Replace("\r\n", "\n");
         string full = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(Text(after)), opt).Replace("\r\n", "\n");
         Assert.Equal(full, incremental);
     }
