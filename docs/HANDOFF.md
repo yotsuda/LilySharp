@@ -128,15 +128,25 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒞ ユーザー決定が先・触らない**
 
-- ★★ **⒴⁗ 天井 2.03%**＝安くすると `アゲハ蝶.lys` 1 冊が 24→26 系になる＝perf ではなく*忠実度の判断*
-  （実装は Lab `sessions/p423/zz423-deferred-prelim.diff.txt`）・**先に LP 双子**
+- **⒴⁗ 天井 2.03%＝入れない（オーナー決定 2026-11-07・第1118）**: 「1 打鍵 0.1 ms なら、絵が変わる楽譜が 1 冊でもあるなら要らない」（`アゲハ蝶.lys` 24→26 系・実装は Lab `sessions/p423/zz423-deferred-prelim.diff.txt` に残る）＝**提案しない**
 - ⚠️ **`RestCollisionsOf`／`RestDotOffsetsOf` は「今はやらない。着手はずっと後だ」**（第407 ⑺⑴）＝**提案しない**
-- ⚠️ **⒩⁶ の残り＝`ClearBeamStamp`（刻んで良いのは*消したあと*）に観測者が居ない**（第517 実測・計器は Lab `sessions/p517/`）。二択＝破れる 1 冊を見つけて網にする／「効かない保険」として畳む。**ユーザー「後回し」（第523）＝提案しない**
+- **⒩⁶ の残り `ClearBeamStamp`＝「効かない保険」として畳んだ（オーナー決定 2026-11-07・第1118）**: 観測者なしの実測（第517）は `NoteItem.ClearBeamStamp` の remarks に・行は残す＝**網は探さない・提案しない**
 - ⚠️ **`g4.core` 1.21% と `p1.s1.beams` 5.538% は*もう実仕事*＝この 2 島には戻らない**（割当の話。**時間では第589 が beam の二度解きを閉じた**＝§1.1 第589 ⑵）
 - ⚠️ **⒜ と push は「後回し」＝催促しない**（第407 ⑺⑸）。**push はユーザー**（Lab も）
-- ⒜ **R13⒝ の実機確認**（第404 ⑵）／⒝ 群単位の item／⒝′ frame 変更の `applyFrame`（実機の 2 行を見てから）
+- **R13⒝ の実機計測はしない（オーナー決定 2026-11-07・第1118）**＝群単位の item・`applyFrame` の後続案も落とした。**perf の改善余地は後日オーナーの指示で改めて監査する**（それまで perf の島は提案しない）
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
+
+### 1.1 第1118セッション（2026-11-07・YT-DELL2）
+
+開始時 full **14770 / 0 / 2**（`-Start p1118`・HEAD `b8505e98c`・**オーナーが push 済み＝未 push 0**・OMR の open は 0）。作業場所は Lab `sessions/p1118/`。オーナー決定 3 つで §1.0 ⒞ を畳む便。
+
+- **オーナー決定（2026-11-07）**: ⑴ **⒴⁗ は入れない**＝「1 打鍵 0.1 ms の差なら、絵が変わる楽譜が 1 冊でもあるなら要らない」（天井 2.03%＝5 ms の打鍵の 0.1 ms・`アゲハ蝶.lys` が 24→26 系）＝提案しない・LP 双子も撮らない／⑵ **⒩⁶ の `ClearBeamStamp` は (b)「効かない保険」として畳む**＝`NoteItem.ClearBeamStamp` に remarks（第517 の実測＝刻印済みで bake に来る item 9.3%・再 bake は全件同じ値・毒は suite もコーパスも狙った 2 冊も緑・論理は正しいが観測者なし）を置いて残す（`ChordItem`／`RestItem` は inheritdoc で同じ註を指す）／⑶ **R13⒝ の実機計測はしない**（第404 の頁差分送りの効き目の実測・「群単位の item」「`applyFrame`」の後続案も落とす）＝**後日、perf の改善余地を改めて監査する**（オーナーの意向・時期はオーナー）。
+- R13⒝ の正体（オーナーの問いに答えた）: 不具合報告ではなく第395 起票の perf 項目「プレビュー遅延の構造」の ⒝＝打鍵ごとに SVG 全文が 2 プロセスをまたいで約 7 回写されていた（plain1k で JSON 3.6 MB／打鍵）→ 第404 `2f6bba07` が頁ごとの差分（Same／Shifted／Changed）送りにした。残っていた「実機未確認」は*効き目の実測*のことで、プレビュー自体は第909 の手動確認 107 項目で実機を通っている。
+- Core の変更は `NoteItem.ClearBeamStamp` の remarks だけ（挙動 0）＝`63e9dadd1`。
+- 終了時 full **14770 / 0 / 2**（`-End p1118 -DiffBase b8505e98c`＝`sessions/p1118/end.log`・門は全部 OK。1 回目（`end1.log`）は remarks で行番号がずれて `ApproximationInventoryTests` が 1 本赤→ `docs/APPROXIMATIONS.md` を再生成して amend）。§7 7.5: Core `+11` 行（註のみ）・REF 0・OWN 0。**§1.0 ⒞ に残る判断待ちは 0**＝perf は「後日オーナーが改めて監査」まで提案しない。
+
+## 以下は第1117セッションの経緯
 
 ### 1.1 第1117セッション（2026-11-06・YT-DELL2）
 
@@ -148,18 +158,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **実測 ⑶ 器を入れると負ける**: score ごとの memo（`ScoreSideTables.LineStartPrefixes`＝CWT ＋ `Dictionary<(m0, first), LineStartPrefix>`・lock）を実装して測った: 呼び出しは 24.2 回／打鍵に落ちたが **割当 +7,956 B／打鍵（+0.5%）**（辞書の成長と CWT の項・`after*.log`）、時間は 5.13／4.45／4.65 対 5.67／4.55／4.46 ＝ノイズの中。⇒ **元に戻した（Core 不変・commit なし）**。
 - ⇒ 判定: **⒵⁴ は反証して閉じた**。§1.0 ⒝ に残る perf の島は ⒵（第615 の一時停止）だけ。⚠️ 教訓は RULES-CASES 5.3-127 の続き＝*解き直し*の病は在っても、**払う物が 0 なら器は要らない**（器自身が割当を持つ）。
 - 終了時 full **14770 / 0 / 2**（`-End p1117 -DiffBase 3837e5018`＝`sessions/p1117/end.log`・門は全部 OK）。§7 7.5: Core `+0` 行・REF 0・OWN 0＝Core は HEAD のまま（計器は全部外した・`Zz1117` 0 件）。棚卸しは差分なし。
-
-## 以下は第1116セッションの経緯
-
-### 1.1 第1116セッション（2026-11-06・YT-DELL2）
-
-開始時 full **14765 / 0 / 2**（`-Start p1116`・HEAD `78f95048b`・OMR の open は 0）。作業場所は Lab `sessions/p1116/`。オーナー指示「Bow の採点」＝§1.0 ⒝ ⒡′（bow を staff 自身の枠で採点し offset は描画時に足す・第424 起票）。
-
-- **設計＝枠の宣言を 1 つ動かす**（`BowLayout` の COORDINATE FRAME の註）: bow の Y は**自分の staff の上線**についての page Y-up。採点の土台 3 つを staff 内に戻した＝tie `BuildTieSpecification` の `staffY = 0`・slur `LayoutSlurs` の `staffMiddleDown = StaffHeight / 2`・tab slur `BuildTabSlurLayout` の `staffY = 0`（どれも採点は Y の*差*で推論するので土台の移動は出力の剛体移動＝第424 の測定どおり）。読み手が段内 offset を 1 回ずつ足す: `DrawTiesLive`／`DrawSlursLive`（`os.StaffLayoutOf(StaffIndex, mi).Y`・`FoldBow` の replay 鍵にも入れた）・`ArticulationEngraver.SlurAvoidanceShift`／`TieSupportSkyline`（`dy = StaffMiddle` だけ・`staffOffset` 引数は script 側の扉のまま残す）・`LayoutEngine.PagingSkylines.AddCurve`（`BowLayout` を受けて `StaffOffsetInSystemUp(systems[s], StaffIndex)`）・`PagingAugmentProgram.AddBowGroup(bows, system)`（鍵の 8 数は系の枠）。`TiesOnTheirNotesStaff`（@cross の tie を音の staff へ）は段どうしの差を足すだけなので不変＝`ShiftedUp` はこの 1 軒のために残る。
-- **Prelim の carry**: `BowShiftsOf`／`ReanchorBows` を削除（94 行）。tie は `prelimSystems.Length == systemsArray.Length` だけで運ぶ・slur は従来どおり `HasMovedNotes` の staff を再計算。履歴（第141 の門・第424 の払い戻し・5,552 本中 89 本の 1 ULP）は `LayoutEngine.Prelim` 冒頭の註と carry 地点の註に畳んだ。
-- **本体 `f554d5ada`**（Core 7 ファイル＋網＋棚卸し・+266/−184）。**照合**: 全 svg の掃き **差 0 / 1262**（base＝p1115 の exe-head＝HEAD のコード・`sweep/sweep.log`）＝描く絵は 1 本も変わらない。網 `BowStaffFrameTests` 5 本＝grandStaff の段の順を入れ替え、同じ音楽が下段でも上段でも**同じ tie・同じ slur（bit 一致）・同じ script の YUp（slur の上の trill・tie の上の accent）**、描いた tie は段の距離だけ下。**毒 12 本**（`poisons.log`・`poisons2.log`・`paging-poisons.log`）: 赤 10＝土台 3（tie・slur は網、tab slur は `BowTwinTests`）・描画 2・script の dy 2・`paging-curve-no-offset` と `paging-program-no-offset` は網に観測者が無く**掃きが観測者**（頁の bow の張り出しを段 0 で読む→ 4 冊／paging の鍵→ 5 冊が変わる）。**観測者なし 2**＝`hash-no-staff-top`（replay 鍵の段の上端: 段が動いた頁を replay する網が無い）・`carry-across-system-counts`（1,036 冊すべてで prelim と final の系の数が同じ＝門は保険。掃き 0 差）。⚠️ FULL で毒を回すと `BenchmarkFurElise` が負荷で 1 本赤になる＝観測者ではない。
-- ⚠️ **第424 の数（0.074%・1 ULP の尾）は測り直していない**＝消した経路の割当がそのまま消えるだけ（`BowShiftsOf` は動いた staff だけ配列を作っていた）。perf は §1.0 ⒝ の島のまま。
-- 終了時 full **14770 / 0 / 2**（`-End p1116 -DiffBase 78f95048b`＝`sessions/p1116/end.log`・門は全部 OK。1 回目（`end1.log`）は新しい網のファイルに GPL の頭が無く `LicenceHeaderTests` が 1 本赤→足して commit してから回し直した）。§7 7.5: Core `+112` 行・REF 0・OWN 0（新しい逸脱なし。棚卸しは OWN 304→303＝`BowShiftsOf` の LILYSHARP-OWN が消えた分・magic は tie／tab の `staffY = 0.0` 2 点が入れ替わり）。Release の lysc は `exe-head` に写した（`f554d5ada` のコード）。
 
 ## 2. 開いている作業
 
