@@ -349,6 +349,30 @@ public class CrossStaffDrawingTests
         Assert.InRange(heads[to] - heads[from], gap - 0.03, gap + 0.03);
     }
 
+    /// <summary>Lab sessions/p1111/b1, LilyPond 2.26.0: a beam whose every note moved is that
+    /// staff's beam, not a cross-staff one — `d''8 c'' f'' e''` (concave) beams flat, at the
+    /// height the same notes beam at on their own staff.</summary>
+    [Theory]
+    [InlineData("d''8@cross@stemDown c''@cross@stemDown f''@cross@stemDown e''@cross@stemDown r2", "d''8@stemDown c''@stemDown f''@stemDown e''@stemDown r2", true)]
+    [InlineData("d''8@cross c''@cross f''@cross e''@cross r2", "d''8 c'' f'' e'' r2", true)]
+    // Sloped: the slope is charged as a one-staff beam's, and quanted against that staff's lines.
+    [InlineData("g'8@cross a'@cross b'@cross d''@cross r2", "g'8 a' b' d'' r2", false)]
+    [InlineData("c''8@cross b'@cross a'@cross e'@cross r2", "c''8 b' a' e' r2", false)]
+    [InlineData("e'8@cross f'@cross g'@cross c''@cross r2", "e'8 f' g' c'' r2", false)]
+    public void ABeamWhoseNotesAllMovedIsTheirStaffsBeam(string moved, string home, bool flat)
+    {
+        // The beam's top edge at its two ends: points="x,yLeft x,yRight …".
+        System.Text.RegularExpressions.Match Beam(string book) => System.Text.RegularExpressions.Regex.Match(
+            LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(book)),
+            "<polygon points=\"[-\\d.]+,([-\\d.]+) [-\\d.]+,([-\\d.]+) ");
+        var m = Beam(Book("r1 |", moved + " |"));
+        var h = Beam(Book(home + " |", "r1 |"));
+        Assert.True(m.Success && h.Success);
+        Assert.Equal(flat, m.Groups[1].Value == m.Groups[2].Value);
+        Assert.Equal(h.Groups[1].Value, m.Groups[1].Value);   // where it stands at home
+        Assert.Equal(h.Groups[2].Value, m.Groups[2].Value);
+    }
+
     /// <summary>LilyPond's shapes (Lab sessions/p1093/rc, 2.26.0): a rest under a moved note goes
     /// down past it. <c>r1</c> on the treble staff at c, whose head stands at -13.</summary>
     [Fact]

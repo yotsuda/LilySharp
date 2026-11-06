@@ -110,6 +110,43 @@ public sealed record BeamGroup
         }
     }
 
+    /// <summary>
+    /// Whether the beam's stems stand on more than one staff — the quanter's cross-staff test.
+    /// A beam whose every member <c>@cross</c> moved to the same staff is cross-staff to the
+    /// layout (<see cref="IsCrossStaff"/>: its voice's staff is another), but not to LilyPond's
+    /// quanter: all its stems are on one staff.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:332 Beam_scoring_problem::init_instance_variables — is_xstaff_
+    ///   when the stems' common Y refpoint is the system's alignment, i.e. they stand on more
+    ///   than one staff (read at :696 and :1224).
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/b1): `d''8 c'' f'' e''`, all four moved,
+    ///   beams flat as on their own staff (concave), where the cross-staff exemption sloped it.
+    /// </remarks>
+    public bool SpansStaves
+    {
+        get
+        {
+            for (int i = 1; i < Members.Length; i++)
+                if (Members[i].TargetStaffIndex != Members[0].TargetStaffIndex)
+                    return true;
+            return false;
+        }
+    }
+
+    /// <summary>The same group with every member's <see cref="BeamMember.StaffOffset"/> 0: read
+    /// about the staff its members stand on.</summary>
+    internal BeamGroup WithoutStaffOffsets()
+    {
+        var members = ImmutableArray.CreateBuilder<BeamMember>(Members.Length);
+        foreach (var m in Members)
+            members.Add(new BeamMember(m.DetectedItem, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
+                m.HeadPositionMin, m.ItemIndex, m.MemberStemUp, m.TargetStaffIndex, m.MeasureIndex,
+                m.HeadPositionMin, m.HeadPositionMax));
+        return new BeamGroup(members.MoveToImmutable(), MeasureIndex, StartIndex, StemUp, GrowDirection,
+            VoiceIndex, RestStems);
+    }
+
     /// <summary>Gets the number of notes in this beam group.</summary>
     public int Count => Members.Length;
 

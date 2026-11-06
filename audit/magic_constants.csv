@@ -230,6 +230,7 @@
 "Svg/Layout/BeamScoringProblem.cs","BeamScoringProblem..ctor","2.0","double staffRadius = 2.0,","(file-level) LILYPOND-REF: lily/beam-quanting.cc (full file)","Yellow"
 "Svg/Layout/BeamScoringProblem.cs","BeamScoringProblem.SolveLent","1.0","double lengthFraction = 1.0,","(file-level) LILYPOND-REF: lily/beam-quanting.cc (full file)","Yellow"
 "Svg/Layout/BeamScoringProblem.cs","BeamScoringProblem.SolveLent","2.0","double staffRadius = 2.0,","(file-level) LILYPOND-REF: lily/beam-quanting.cc (full file)","Yellow"
+"Svg/Layout/BeamScoringProblem.cs","BeamScoringProblem.SolveLent","2.0, 2.0","moved[i] = collisions[i] with { MinY = collisions[i].MinY - common / 2.0, MaxY = collisions[i].MaxY - common / 2.0 };","(file-level) LILYPOND-REF: lily/beam-quanting.cc (full file)","Yellow"
 "Svg/Layout/BeamScoringProblem.cs","BeamScoringProblem.Bind","2.0","double halfBeamOverhang = EngravingDefaults.StemThickness / 2.0;","(file-level) LILYPOND-REF: lily/beam-quanting.cc (full file)","Yellow"
 "Svg/Layout/BeamScoringProblem.cs","BeamScoringProblem.Bind","0.48","_beamThickness = beamThickness;                         // 0.48 staff spaces full size","LILYPOND-REF: lily/beam-quanting.cc:232-234","Green"
 "Svg/Layout/BeamScoringProblem.cs","BeamScoringProblem.Bind","0.1","_lineThickness = lineThickness;                         // 0.1 staff spaces full size","LILYPOND-REF: lily/beam-quanting.cc:232-234","Green"

@@ -372,6 +372,24 @@ internal sealed class BeamScoringProblem
         bool noStemExtend = false,
         bool uniformBeamedLength = false)
     {
+        // Every stem on one other staff (@cross moved them all): the beam is that staff's, and is
+        // quanted against its lines — solved in its frame, the answer moved back into this one.
+        // LILYPOND-REF: lily/beam-quanting.cc:332 Beam_scoring_problem::init_instance_variables —
+        //   the beam's y is about the stems' common refpoint, their staff when they share one.
+        if (CommonStaffOffset(group) is { } common)
+        {
+            BeamCollision[]? moved = null;
+            if (collisions != null)
+            {
+                moved = new BeamCollision[collisions.Count];
+                for (int i = 0; i < moved.Length; i++)
+                    moved[i] = collisions[i] with { MinY = collisions[i].MinY - common / 2.0, MaxY = collisions[i].MaxY - common / 2.0 };
+            }
+            var own = SolveLent(s_ownFrame.GetValue(group, static g => g.WithoutStaffOffsets()), itemXPositions,
+                parameters, moved, stemPositions, lengthFraction, beamThickness, headFont, lineThickness,
+                staffRadius, beamLengthFraction, restXPositions, noStemExtend, uniformBeamedLength);
+            return (own.LeftY + common, own.RightY + common, own.OuterMemberStemXs);
+        }
         double beamThick = beamThickness ?? EngravingDefaults.BeamThickness;
         double lineThick = lineThickness ?? EngravingDefaults.StaffLineThickness;
         // Resolved before the memo is asked: the style's damping lives in the parameters, which
@@ -449,6 +467,23 @@ internal sealed class BeamScoringProblem
     /// </para>
     /// </remarks>
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<BeamGroup, SolvedBeam[]> s_solved = new();
+
+    /// <summary>A group's own-frame twin (<see cref="BeamGroup.WithoutStaffOffsets"/>), one per
+    /// group, so <see cref="s_solved"/> keys the same object on every ask.</summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<BeamGroup, BeamGroup> s_ownFrame = new();
+
+    /// <summary>The staff offset every member shares, when it is not 0 — the members all stand
+    /// on one staff other than the beam's; null otherwise.</summary>
+    private static double? CommonStaffOffset(BeamGroup group)
+    {
+        if (group.Members.Length == 0 || group.Members[0].StaffOffset == 0)
+            return null;
+        double first = group.Members[0].StaffOffset;
+        for (int i = 1; i < group.Members.Length; i++)
+            if (group.Members[i].StaffOffset != first)
+                return null;
+        return first;
+    }
 
     /// <summary>How many <see cref="SolveLent"/> calls on this thread were answered from
     /// <see cref="s_solved"/> — the memo's liveness counter (tests).</summary>
@@ -1473,7 +1508,7 @@ internal sealed class BeamScoringProblem
     {
         // LILYPOND-REF: lily/beam-quanting.cc:696-697 — knees and cross-staff
         // beams are exempt from concaveness flattening (is_knee_ || is_xstaff_).
-        if (_isKnee || _group.IsCrossStaff)
+        if (_isKnee || _group.SpansStaves)
             return 0;
 
         if (_memberCount <= 2)
@@ -1958,7 +1993,7 @@ internal sealed class BeamScoringProblem
 
         // LILYPOND-REF: lily/beam-quanting.cc:1224-1226 — cross-staff beams tend
         // to use extreme slopes to get short stems; penalise the slope 10×.
-        if (_group.IsCrossStaff)
+        if (_group.SpansStaves)
             slopePenalty *= 10;
 
         // LILYPOND-REF: lily/beam-quanting.cc:1228-1230
