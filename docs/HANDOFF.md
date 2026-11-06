@@ -111,6 +111,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **双子の計器の残り（第881）＝分類済み**（本の側 8・ABC は LP の癖・LP 落ち 3＝本の側・全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **U9 ユーザー報告 `space.lys` の小節頭の余白＝保留（ユーザー判断「一旦この件は忘れて」・第477）**。4 通りすべてで再現せず LP とも同比率（Lab `sessions/p477/`）。⚠️ **毒は今後も同じフォルダで回してよい**（ユーザー決定）＝毒の最中のビルドはユーザー側で避ける
 - ⏸ **perf の島（⒭⁸・⒮*・⒩⁴・⒨・⒯ …）は第615 で区切り＝一時停止（ユーザー判断・忠実度が先）**。本文と掃き終わった島（第434〜第456）の教訓は `HANDOFF-ARCHIVE.md`「§1.0 から移した perf の島」（第660）・閉じた島の一覧は第654 が畳んだ（各便の §1＝ARCHIVE・RULES §5.4 末尾）
+- **U8b 二声の同時 grace＝第1115 で閉じた**（列の合体・衝突の shift・臨時記号の 1 列。§1.1 第1115）。
 - ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486・LYS5003・Lab `sessions/p486/lys5003-corpus.txt`）: 書いた `\N` の弦では弾けない音＝Lily# は黙って別の弦に描く（LP も同じ）。**ユーザー決定「放置」（第523）＝本は直さない・描画は今までと同じ**
 
 - ⚠️ **LP を `-dbackend=svg` で描く計器は `lysc ly --pin-fonts` 必須**（第690〜第695 の 6 本は無しで、数字の幅・高さが汎用 serif だった＝第736 ⑴⑵）。tab の tuplet の残差は全部 beam の決定（`uniformBeamedLength`）の帰結＝第737
@@ -137,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1115セッション（2026-11-06・YT-DELL2）
+
+開始時 full **14760 / 0 / 2**（`-Start p1115`・HEAD `1a0c7d222`・OMR の open は 0）。作業場所は Lab `sessions/p1115/`。`b19` はオーナーの問い「音楽的に直すべきか」に「今は直さなくてよい」と答えて据え置き（意味は変わらず、休符が 0.5〜1 間深いだけ）。オーナー指示「二声グレース」＝§2 U8b。
+
+- **LP の実測**（`gpair.ps1`＝`lysc ly` の双子に NoteHead／Accidental の X を刷る hook を足して LP 2.26.0 で描く・`v1`〜`v7`）: 二声の同時 grace は 1 つの紙の列に立つ。`grace { d'16 }` 対 `grace { g16 }` は両方とも主音の 1.939 前（Lily# は g だけ 1.418＝自分の gap・`v1`）／`cis'` 対 `bis`（二度）は cis' 3.482・bis 2.564＝0.918 右（grace の頭の幅）、♯ は 4.525 と 5.387 の 1 列（`v2`）／`a16 b16` 対 `g16` は b と g が同じ列（モーメントで末尾から揃う・`v3`）／同音は同じ x（`v6`）／`a16 b16` 対 `ais16` は ais が b と二度で 1.418・♯ 3.379（`v7`）。
+- **本体 `2a47f06b8`＝列の合体**: ⑴ モデル: `GraceColumnInfo.Companions`（同じ列に立つ他声の列の写し＝`GraceCompanion` は参照型。struct にすると `GraceColumnInfo`→`ImmutableArray<GraceCompanion>`→`GraceColumnInfo` のレイアウト循環で型が読めない）と `CollisionShift`（Note_collision の答え）。`MeasureCollector.StampGraceCompanions` が、同じ瞬間に主音を持つ声部の run を**モーメント＝末尾からの長さの和**で列ごとに組み、上下の対には `NoteCollision.AnalyzeCollision` の答え × 下声の頭の幅（LP :427-437 の wid）を刻み、臨時記号は `GraceColumnHeads.SharedAccidentalOffsets`（両声の頭を 1 つの `AccidentalPlacement` に）で各頭の `AccidentalX` に刻む（列の写しと、描画が読む grace の NoteItem にも）。3 つの collect の出口（単声・単段多声・多段）のうち多声の 2 つで呼ぶ。⑵ 間隔: `SpacingRules.GraceColumns` は列の wish skyline を companions と合体（`CreateGraceWishSkyline` に dx）、主音の列も他声の主音と合体、ideal は各声の wish の平均（merge_springs）、床は合体した skyline。shift は chain の後で offsets／ToMain に畳む＝読み手は全部そのまま。⑶ `GraceColumnHeads.AccidentalOffsets` は刻まれた `AccidentalX` があればそれを返す（1 つの家）。
+- **照合**: v1〜v7 の全部で両端 0.02 以内（v2 の 4 点、v7 の 4 点を含む）。網 `TwoVoiceGraceColumnTests` 5 本（対で主張）。全 svg の掃きは差 0 / 1262（`sweep/sweep.log`）＝コーパスに二声の同時 grace は無い（第357 の射程 0 のまま）。毒 8 本のうち赤 7・緑 1（`average-off`＝各声の ideal の平均は床が勝つ形しか無く観測者なし。LP の規則なので残した。`poisons3.log`）。
+- ⚠️ **残した制限**（`StampGraceCompanions` の註）: 同じ向きの 2 列（Note_collision の同方向の歩き）と 3 声以上の瞬間は組むが shift しない／相手の run がこちらの最後の列より後に続く形（8 分対 2 つの 16 分）は chain が知らない／grace の和音の `ChordNoteInfo.AccidentalX` は刻まない（単音だけ）。
+- 終了時 full **14765 / 0 / 2**（`-End p1115 -DiffBase 1a0c7d222`＝`sessions/p1115/end2.log`・門は全部 OK。1 回目は `ModelEqualityKindTests` が `GraceCompanion` の分類を求めて 1 本赤 → Values に入れて amend）。§7 7.5: Core `+509` 行・REF 8・OWN 0（新しい逸脱なし）。Release の lysc は作り直していない（`8fc8e2be1` のまま）。
+
+## 以下は第1114セッションの経緯
+
 ### 1.1 第1114セッション（2026-11-06・YT-DELL2）
 
 開始時 full **14759 / 0 / 2**（`-Start p1114`・HEAD `04494cb4b`・OMR の open は 0）。作業場所は Lab `sessions/p1114/`。オーナー「続けて」＝第1113 の「見つけたが直していない」`b6`（休符の後から始まる段をまたぐ連桁が LP より 0.7 低い）に着手。
@@ -145,19 +158,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **本体 `361165dd8`＝`AddCrossedRestCollisions` は、段をまたぐ連桁の一員の棒を数えない**（`BeamSpansStaves`＝その小節の中で同じ BeamId の音が別の段に立つか）。`b6`: 休符 −3.5（LP −3.5・`Rest.after-line-breaking` で実測）・段間 9.00・段をまたぐ連桁 6.19..4.81＝LP と一致（`b15`・`b16` も）。網 `CrossStaffDrawingTests.ARestUnderANoteOfACrossStaffBeamClearsItsHeadAndNotItsStem`（休符・段間・連桁の 3 点）。全 svg の掃きは差 0 / 1262（`sweep/sweep.log`）。毒 2 本: 頭だけの行は赤、「同じ段に乗った連桁も spanning と読む」は緑＝観測者なし（その形 `b19` は下の別の差が先に出る）。
 - ⚠️ **見つけたが直していない**: `b19`（`r8 r8 c''8@cross d''8@cross`＝移った音の連桁が高音部の中に収まり棒が下向き・同じ瞬間に高音部の `r8`）は LP が休符を −4.0 に置くのに Lily# は −5.0／−4.5＝休符衝突が連桁の音の棒を*既定の長さ*で読む（`StemTipPositionOf` の註が前から開示: LP は列の extent＝連桁の位置で読む）。@cross に限らない（同じ段の 2 声でも同じ形）。直すなら休符衝突が連桁の位置を読む順序の設計。
 - 終了時 full **14760 / 0 / 2**（`-End p1114 -DiffBase 04494cb4b`＝`sessions/p1114/end.log`・門は全部 OK）。§7 7.5: Core `+28` 行・REF 1・OWN 0（新しい逸脱なし）。Release の lysc は作り直していない（`8fc8e2be1` のまま）。
-
-## 以下は第1113セッションの経緯
-
-### 1.1 第1113セッション（2026-11-06・YT-DELL2）
-
-開始時 full **14753 / 0 / 2**（`-Start p1113`・HEAD `7bd73ecf1`・OMR の open は 0）。作業場所は Lab `sessions/p1113/`。オーナー指示（選択肢から）「`@cross` ⑶ 連桁どうし」＝LP の beam-collision-engraver の規則の移植。
-
-- **本体 `277a391d7`＝連桁は、後から始まる連桁を避ける**: 探り譜 `c1`（1 段・2 声＝第 1 声 `c'8 d' e' f'`・第 2 声 `r8 e'8@stemUp f' g'`）で LP は先に始まる第 1 声の連桁を第 2 声の連桁の上（中線の上 2.81..3.50）へ逃がすのに、Lily# は貫いて 0.19..1.19 に描いていた。LP の規則（beam-collision-engraver.cc:173-175）は「自分より後の列で始まる連桁だけを covered に入れる」＝重なる 2 本は先に始まる方が後の方を避け、どちらの声部かは問わない（`c3`＝声部を入れ替えても先に始まる方が 1.19..2.19 → 2.00..2.81 と動く）、同時に始まる 2 本は何もしない（`c2`＝LP も貫く）。段をまたぐ連桁は covered にしない（beam-quanting.cc:373-375）。箱は連桁の stencil の extent＝外側の棒の縁（`BeamLayout.DrawnLeftX/RightX`）× 主線の両端と頭側の段（stack）＋太さの半分で、x の両縁に 1 点ずつ（他の covered grob と同じ `AddBoxCollision`・`ElementCoordinator.AppendCoveredBeams`）。**解く順**: covered の連桁の*位置*を読むので、`LayoutBeams` は後から始まる連桁から解き（`BeamStartOf`＝小節と拍）、結果は元の順で返す。段をまたぐ連桁の 2 回目の解き（`LayCrossStaffBeams`）には各段の普通の連桁の layout を `beamsOfStaff` で渡し、棒の立つ段ごとに `StaffOffset/2` で枠を合わせる（`b7`: 低音部から高音部へ上がる連桁が、後から始まる高音部の `r8 e'8@stemDown f' g'` の連桁を避けて 6.19..4.00＝LP と一致。前は 6.00..3.81）。
-- **LP と照合**（`-dbackend=svg` の polygon・計器 `beams.ps1`＝両端の中心を中線からの staff space で）: `c1`〜`c4`・`c5`〜`c8`（頭の衝突が先に効き連桁の箱は観測されない形）・`b1`〜`b8`（段をまたぐ）の全部で両端 0.02 以内。網は `BeamCoversLaterBeamTests` 7 本（対で主張）。全 svg の掃きは差 0 / 1262（`sweep/sweep2.log`）。毒 11 本のうち赤 7、緑 4（stack の項＝c5〜c8 で観測者を探したが頭の衝突が先に効く・covered に段をまたぐ連桁を入れる 2 行・膝の両側＝LP の stencil の箱の規則なので残した。`poisons3.log`）。
-- ⚠️ **最初の掃きは 422 / 1262 が動いた**＝別の系に立つ連桁の x をその系の枠のまま比べていた（`StartsAfter` が後の小節も通し、x の reject がすり抜けた）。1 小節の連桁が届くのは同じ小節だけ＝そこに絞って差 0。
-- **ついでに直した 2 つ**（同じ commit）: ⑴ `voice { } { }` の中で全部の音に `@stemUp` を書いても第 2 声の連桁が下を向いていた（`BeamDetector` が声部の既定を先に取っていた。LP は `\voiceTwo` の Stem.direction を各棒に持たせ `\once \override` が 1 本ずつ上書き＝全部 forced の投票。`lysc ly` の双子は前から正しく書いていた）→ `VoiceBeamStemUp`＝書いた音があれば `StemVote`（書かない棒は声部の側で投票）、無ければ声部の側。網 `ASecondVoicesBeamTurnedUpByEveryNoteIsBeamedUp`（対）。⑵ **量子化器の segment の端を含める**（`BeamScoringProblem.AddCollision` に 1e-9・flower の `Interval::contains` は inclusive）: 連桁の最後の列に立つ covered grob の右縁が、別の和で segment の端に 1 ulp 届かず落ちていた（`c1` の右端がそれで、無いと Lily# は 0.19 下へ逃げる）。p1112 の `b1`（高音部の連桁 LP 3.50..2.81 に対し 2.81..2.19＝「同点の刃の上」）もこれで LP と一致＝**第1112 ⑵ の残差は閉じた**。網 `ACoveredGrobsEdgeOnTheBeamsOwnEndIsStillOverTheBeam`。
-- ⚠️ **見つけたが直していない**: `b6`（低音部 `r8 c8 e'@cross g'@cross`＝休符の後から始まる段をまたぐ連桁）は Lily# 6.90..5.09 対 LP 6.19..4.81（base の exe でも同じ＝今回の変更と無関係・前からの差）。／他の段の声部が*丸ごと*この段へ移した連桁（IsCrossStaff かつ !SpansStaves）は LP ではこの段の axis group に居て covered になるが、Lily# は自分の段の呼び出しで解くので入れていない（`AppendCoveredBeams` の註）。
-- 終了時 full **14759 / 0 / 2**（`-End p1113 -DiffBase 7bd73ecf1`＝`sessions/p1113/end2.log`・門は全部 OK。1 回目の `-End` は `LpReferenceCitationTests` が 1 本赤＝新しい LILYPOND-REF の 3 行が「名前」（`_` 入りか 3 節のハイフン名・**同じ行に**）を欠いていた → 名指して amend）。§7 7.5: Core `+278 −30` 行・REF 10・OWN 0（新しい逸脱なし。segment の端の 1e-9 は flower の inclusive `contains` に寄せたもの）。Release の lysc は作り直していない（`8fc8e2be1` のまま）。
 
 ## 2. 開いている作業
 
@@ -830,7 +830,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   綴っている族が、番人には 1 行も無かった**。⇒ ★★ **「閉じたら赤くなる網」は*族ごとに*在るか数えること**
   （§5.4 の「毒 0 赤は網が無い報せ」の、*毒を打つ前*版）。
 
-- **U8b. ⚠️⚠️⚠️ 起票（2026-08-31・第308）＝*二声の同時 grace* は LP では 1 本の staff column に立つのに、Lily# は同じ X に重ねて描く。和音を待たずに、今日、裸の音符 1 個で出る**
+- **U8b. ✅ 閉じた（第1115・`2a47f06b8`）＝二声の同時 grace は 1 つの列に立つ**（列の合体・Note_collision の shift・臨時記号の 1 列。`MeasureCollector.StampGraceCompanions`・§1.1 第1115）。**以下は起票時からの経緯**: *二声の同時 grace* は LP では 1 本の staff column に立つのに、Lily# は同じ X に重ねて描く。和音を待たずに、今日、裸の音符 1 個で出る
 
   ★★★ **出どころは §2 U8 ⒜ の宿題**（「`StaffAccidentalColumns` と `NoteCollision` が grace を知らないのは
   *要らないから*か*取りこぼしているから*かを 1 冊で測ってから決めよ」）。**答えは「取りこぼしている」。**

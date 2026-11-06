@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1113セッションの経緯
+
+### 1.1 第1113セッション（2026-11-06・YT-DELL2）
+
+開始時 full **14753 / 0 / 2**（`-Start p1113`・HEAD `7bd73ecf1`・OMR の open は 0）。作業場所は Lab `sessions/p1113/`。オーナー指示（選択肢から）「`@cross` ⑶ 連桁どうし」＝LP の beam-collision-engraver の規則の移植。
+
+- **本体 `277a391d7`＝連桁は、後から始まる連桁を避ける**: 探り譜 `c1`（1 段・2 声＝第 1 声 `c'8 d' e' f'`・第 2 声 `r8 e'8@stemUp f' g'`）で LP は先に始まる第 1 声の連桁を第 2 声の連桁の上（中線の上 2.81..3.50）へ逃がすのに、Lily# は貫いて 0.19..1.19 に描いていた。LP の規則（beam-collision-engraver.cc:173-175）は「自分より後の列で始まる連桁だけを covered に入れる」＝重なる 2 本は先に始まる方が後の方を避け、どちらの声部かは問わない（`c3`＝声部を入れ替えても先に始まる方が 1.19..2.19 → 2.00..2.81 と動く）、同時に始まる 2 本は何もしない（`c2`＝LP も貫く）。段をまたぐ連桁は covered にしない（beam-quanting.cc:373-375）。箱は連桁の stencil の extent＝外側の棒の縁（`BeamLayout.DrawnLeftX/RightX`）× 主線の両端と頭側の段（stack）＋太さの半分で、x の両縁に 1 点ずつ（他の covered grob と同じ `AddBoxCollision`・`ElementCoordinator.AppendCoveredBeams`）。**解く順**: covered の連桁の*位置*を読むので、`LayoutBeams` は後から始まる連桁から解き（`BeamStartOf`＝小節と拍）、結果は元の順で返す。段をまたぐ連桁の 2 回目の解き（`LayCrossStaffBeams`）には各段の普通の連桁の layout を `beamsOfStaff` で渡し、棒の立つ段ごとに `StaffOffset/2` で枠を合わせる（`b7`: 低音部から高音部へ上がる連桁が、後から始まる高音部の `r8 e'8@stemDown f' g'` の連桁を避けて 6.19..4.00＝LP と一致。前は 6.00..3.81）。
+- **LP と照合**（`-dbackend=svg` の polygon・計器 `beams.ps1`＝両端の中心を中線からの staff space で）: `c1`〜`c4`・`c5`〜`c8`（頭の衝突が先に効き連桁の箱は観測されない形）・`b1`〜`b8`（段をまたぐ）の全部で両端 0.02 以内。網は `BeamCoversLaterBeamTests` 7 本（対で主張）。全 svg の掃きは差 0 / 1262（`sweep/sweep2.log`）。毒 11 本のうち赤 7、緑 4（stack の項＝c5〜c8 で観測者を探したが頭の衝突が先に効く・covered に段をまたぐ連桁を入れる 2 行・膝の両側＝LP の stencil の箱の規則なので残した。`poisons3.log`）。
+- ⚠️ **最初の掃きは 422 / 1262 が動いた**＝別の系に立つ連桁の x をその系の枠のまま比べていた（`StartsAfter` が後の小節も通し、x の reject がすり抜けた）。1 小節の連桁が届くのは同じ小節だけ＝そこに絞って差 0。
+- **ついでに直した 2 つ**（同じ commit）: ⑴ `voice { } { }` の中で全部の音に `@stemUp` を書いても第 2 声の連桁が下を向いていた（`BeamDetector` が声部の既定を先に取っていた。LP は `\voiceTwo` の Stem.direction を各棒に持たせ `\once \override` が 1 本ずつ上書き＝全部 forced の投票。`lysc ly` の双子は前から正しく書いていた）→ `VoiceBeamStemUp`＝書いた音があれば `StemVote`（書かない棒は声部の側で投票）、無ければ声部の側。網 `ASecondVoicesBeamTurnedUpByEveryNoteIsBeamedUp`（対）。⑵ **量子化器の segment の端を含める**（`BeamScoringProblem.AddCollision` に 1e-9・flower の `Interval::contains` は inclusive）: 連桁の最後の列に立つ covered grob の右縁が、別の和で segment の端に 1 ulp 届かず落ちていた（`c1` の右端がそれで、無いと Lily# は 0.19 下へ逃げる）。p1112 の `b1`（高音部の連桁 LP 3.50..2.81 に対し 2.81..2.19＝「同点の刃の上」）もこれで LP と一致＝**第1112 ⑵ の残差は閉じた**。網 `ACoveredGrobsEdgeOnTheBeamsOwnEndIsStillOverTheBeam`。
+- ⚠️ **見つけたが直していない**: `b6`（低音部 `r8 c8 e'@cross g'@cross`＝休符の後から始まる段をまたぐ連桁）は Lily# 6.90..5.09 対 LP 6.19..4.81（base の exe でも同じ＝今回の変更と無関係・前からの差）。／他の段の声部が*丸ごと*この段へ移した連桁（IsCrossStaff かつ !SpansStaves）は LP ではこの段の axis group に居て covered になるが、Lily# は自分の段の呼び出しで解くので入れていない（`AppendCoveredBeams` の註）。
+- 終了時 full **14759 / 0 / 2**（`-End p1113 -DiffBase 7bd73ecf1`＝`sessions/p1113/end2.log`・門は全部 OK。1 回目の `-End` は `LpReferenceCitationTests` が 1 本赤＝新しい LILYPOND-REF の 3 行が「名前」（`_` 入りか 3 節のハイフン名・**同じ行に**）を欠いていた → 名指して amend）。§7 7.5: Core `+278 −30` 行・REF 10・OWN 0（新しい逸脱なし。segment の端の 1e-9 は flower の inclusive `contains` に寄せたもの）。Release の lysc は作り直していない（`8fc8e2be1` のまま）。
+
 ## 以下は第1112セッションの経緯
 
 ### 1.1 第1112セッション（2026-11-06・YT-DELL2）
