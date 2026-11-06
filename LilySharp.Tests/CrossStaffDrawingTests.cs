@@ -468,8 +468,11 @@ public class CrossStaffDrawingTests
         // MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/e1, -dbackend=svg): the bass voice's beam
         // to the a's moved up rises clear of the e' the second voice moved up — its left end's
         // middle at 12.60; through the head it stood at 14.29 (without the e', 13.60 in both).
-        // ⚠️ Lily# stands at 12.79: 0.19 off LilyPond's, cause not found (the bookings are the
-        // ones LilyPond's collision-interfaces name, and the control without the e' agrees).
+        // ⚠️ Lily# stands at 12.79, 0.19 off. The e' is dotted and crosses the a, and Lily# meshes
+        // a dotted head by the undotted 0.17 (NoteCollision, LILYSHARP-OWN, owner 2026-09-26) where
+        // LilyPond takes 0.1 — the a stands 0.44 right of the e' against LilyPond's 0.26, and the
+        // beam's least squares sees that stem. With LilyPond's 0.1 bar 2 of e1 lands exactly on
+        // LilyPond's beam, but this bar goes to 11.98: a second cause here, not found.
         string book = Book("r1 | c1 |", "voice { c8 a@cross c a@cross r2 } { r8 e'4.@cross r2 } | c1 |");
         var beam = System.Text.RegularExpressions.Regex.Match(
             LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(book)),
