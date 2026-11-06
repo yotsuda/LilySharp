@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1117セッションの経緯
+
+### 1.1 第1117セッション（2026-11-06・YT-DELL2）
+
+開始時 full **14770 / 0 / 2**（`-Start p1117`・HEAD `3837e5018`・OMR の open は 0）。作業場所は Lab `sessions/p1117/`。オーナー「あなたのお勧めをやって」＝§1.0 ⒝ ⒵⁴（`prefixMarkAnchorX` の解き直し 0.338%・第420 起票・memo は反証済み）。
+
+- **計器**: Lab `sessions/p1117/allochost/`（p613 の lathost の打鍵列＝235 冊 × 8 打鍵、打鍵ごとの `GC.GetAllocatedBytesForCurrentThread` と ms、Core に一時の `Zz1117` カウンタ＝`SolveLineStartPrefix` の呼び出し数・distinct (score, m0, first)・呼び元・mark anchor の B と ticks）。HEAD の床: **1,509,542 B／打鍵・4.46〜5.67 ms／打鍵**（3 走・`base*.log`）。
+- **実測 ⑴ 解き直しの形は在る**: `SolveLineStartPrefix` は **95.1 回／打鍵、distinct は 24.2**（比 3.9）。呼び元は `LineStartStaffRights`・`LineStartSlurRights`・`BuildPrefixMarkAnchorX`・`LineStartSpringForLine`・`SystemBreaker`・`LayoutMeasures`・`LineStartBarGap`＝第420 の「call 内 memo の hit 0.53%」は、系ごとに*各 site が 1 回ずつ*訊くからで、site をまたげば同じ系が 7 回訊かれる（`trace1.log`）。
+- **実測 ⑵ しかし賞金が無い**: 解き 1 回の割当は **0 B**（24 回／打鍵で 10 B）、mark anchor の lambda も **0 B／回**（21.3 回／打鍵・6 B／打鍵）・時間は **0.0125 ms／打鍵＝打鍵の 0.249%**（`anchor.log`）。第420 の「1 回 1,399 B・0.338%」は 2026-09-19 の測定で、その後に割当が消えている（候補は `f27e39f86` 2026-09-20「the accessors stop building an iterator」＝`EnumerateStaves` 系の iterator。§1.0 の値段は 2 か月のあいだ古いままだった＝**値段は測り直してから着手する**）。
+- **実測 ⑶ 器を入れると負ける**: score ごとの memo（`ScoreSideTables.LineStartPrefixes`＝CWT ＋ `Dictionary<(m0, first), LineStartPrefix>`・lock）を実装して測った: 呼び出しは 24.2 回／打鍵に落ちたが **割当 +7,956 B／打鍵（+0.5%）**（辞書の成長と CWT の項・`after*.log`）、時間は 5.13／4.45／4.65 対 5.67／4.55／4.46 ＝ノイズの中。⇒ **元に戻した（Core 不変・commit なし）**。
+- ⇒ 判定: **⒵⁴ は反証して閉じた**。§1.0 ⒝ に残る perf の島は ⒵（第615 の一時停止）だけ。⚠️ 教訓は RULES-CASES 5.3-127 の続き＝*解き直し*の病は在っても、**払う物が 0 なら器は要らない**（器自身が割当を持つ）。
+- 終了時 full **14770 / 0 / 2**（`-End p1117 -DiffBase 3837e5018`＝`sessions/p1117/end.log`・門は全部 OK）。§7 7.5: Core `+0` 行・REF 0・OWN 0＝Core は HEAD のまま（計器は全部外した・`Zz1117` 0 件）。棚卸しは差分なし。
+
 ## 以下は第1116セッションの経緯
 
 ### 1.1 第1116セッション（2026-11-06・YT-DELL2）

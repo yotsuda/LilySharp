@@ -137,6 +137,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1119セッション（2026-11-07・YT-DELL2）
+
+開始時 full **14770 / 0 / 2**（`-Start p1119`・HEAD `89745d73b`・OMR の open は 0）。作業場所は Lab `sessions/p1119/`。オーナー「v0.15.0 をリリースしたい」＝`docs/RELEASING.md` の手順で版を用意する便（tag と push はオーナー）。
+
+- **用意した＝`92ad06897` release: 0.15.0**（RELEASING §2〜§4）: 版の 7 か所（`Directory.Build.props`・拡張の `package.json`・`package-lock.json` の 2 か所・README の banner・DEPLOY の path）を 0.15.0 に（`package.json` は numstat 1/1）。両 CHANGELOG の `## Unreleased` を `## 0.15.0` に替え、`git log v0.14.0..HEAD`（765 commit）と突き合わせて書かれていなかった 5 件を頭に足した＝二声の同時 grace の 1 列（第1115）・後から始まる連桁を避ける（第1113）・段をまたぐ連桁の音の下の休符（第1114）・長い譜の打鍵の高速化（第1108〜1110）・プレビューのマウス編集の廃止（2026-11-03 オーナー決定）。第1116 の bow の枠は絵が 1 枚も変わらないので書かない。`OMR_MIN_VERSION` 0.4.0・`OMR_PROTOCOLS` 1 は据え置き（この版は新しい読み手に依らない）。
+- **ローカル検証（§4）**: `dotnet build LilySharp.slnx --no-incremental` 0 エラー（Core 警告 0・残る警告は Lsp の nullable 3 件と NU1902 MessagePack＝前からのもの）・full **14770 / 0 / 2**・`lysc --version` = **0.15.0**・`npm install --package-lock-only` は差分を増やさず・`npm run check-types` 緑。VSIX の試し build はしていない（CI が作る）。
+- **残りはオーナー（§5〜§7）**: ⑴ `git push origin master` → CI 緑を待つ ⑵ `git tag -a v0.15.0 -m "Lily# 0.15.0 …"` → `git push origin v0.15.0` ⑶ 約 14 分後に RELEASING §7 の Marketplace の問い合わせ（8/8・HEAD 200）と `gh release view v0.15.0`（12 資産）。
+- 終了時 full **14770 / 0 / 2**（`-End p1119 -DiffBase 89745d73b`＝`sessions/p1119/end.log`・門は全部 OK）。§7 7.5: Core `+0` 行（版と changelog だけ）・REF 0・OWN 0。
+
+## 以下は第1118セッションの経緯
+
 ### 1.1 第1118セッション（2026-11-07・YT-DELL2）
 
 開始時 full **14770 / 0 / 2**（`-Start p1118`・HEAD `b8505e98c`・**オーナーが push 済み＝未 push 0**・OMR の open は 0）。作業場所は Lab `sessions/p1118/`。オーナー決定 3 つで §1.0 ⒞ を畳む便。
@@ -145,19 +156,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - R13⒝ の正体（オーナーの問いに答えた）: 不具合報告ではなく第395 起票の perf 項目「プレビュー遅延の構造」の ⒝＝打鍵ごとに SVG 全文が 2 プロセスをまたいで約 7 回写されていた（plain1k で JSON 3.6 MB／打鍵）→ 第404 `2f6bba07` が頁ごとの差分（Same／Shifted／Changed）送りにした。残っていた「実機未確認」は*効き目の実測*のことで、プレビュー自体は第909 の手動確認 107 項目で実機を通っている。
 - Core の変更は `NoteItem.ClearBeamStamp` の remarks だけ（挙動 0）＝`63e9dadd1`。
 - 終了時 full **14770 / 0 / 2**（`-End p1118 -DiffBase b8505e98c`＝`sessions/p1118/end.log`・門は全部 OK。1 回目（`end1.log`）は remarks で行番号がずれて `ApproximationInventoryTests` が 1 本赤→ `docs/APPROXIMATIONS.md` を再生成して amend）。§7 7.5: Core `+11` 行（註のみ）・REF 0・OWN 0。**§1.0 ⒞ に残る判断待ちは 0**＝perf は「後日オーナーが改めて監査」まで提案しない。
-
-## 以下は第1117セッションの経緯
-
-### 1.1 第1117セッション（2026-11-06・YT-DELL2）
-
-開始時 full **14770 / 0 / 2**（`-Start p1117`・HEAD `3837e5018`・OMR の open は 0）。作業場所は Lab `sessions/p1117/`。オーナー「あなたのお勧めをやって」＝§1.0 ⒝ ⒵⁴（`prefixMarkAnchorX` の解き直し 0.338%・第420 起票・memo は反証済み）。
-
-- **計器**: Lab `sessions/p1117/allochost/`（p613 の lathost の打鍵列＝235 冊 × 8 打鍵、打鍵ごとの `GC.GetAllocatedBytesForCurrentThread` と ms、Core に一時の `Zz1117` カウンタ＝`SolveLineStartPrefix` の呼び出し数・distinct (score, m0, first)・呼び元・mark anchor の B と ticks）。HEAD の床: **1,509,542 B／打鍵・4.46〜5.67 ms／打鍵**（3 走・`base*.log`）。
-- **実測 ⑴ 解き直しの形は在る**: `SolveLineStartPrefix` は **95.1 回／打鍵、distinct は 24.2**（比 3.9）。呼び元は `LineStartStaffRights`・`LineStartSlurRights`・`BuildPrefixMarkAnchorX`・`LineStartSpringForLine`・`SystemBreaker`・`LayoutMeasures`・`LineStartBarGap`＝第420 の「call 内 memo の hit 0.53%」は、系ごとに*各 site が 1 回ずつ*訊くからで、site をまたげば同じ系が 7 回訊かれる（`trace1.log`）。
-- **実測 ⑵ しかし賞金が無い**: 解き 1 回の割当は **0 B**（24 回／打鍵で 10 B）、mark anchor の lambda も **0 B／回**（21.3 回／打鍵・6 B／打鍵）・時間は **0.0125 ms／打鍵＝打鍵の 0.249%**（`anchor.log`）。第420 の「1 回 1,399 B・0.338%」は 2026-09-19 の測定で、その後に割当が消えている（候補は `f27e39f86` 2026-09-20「the accessors stop building an iterator」＝`EnumerateStaves` 系の iterator。§1.0 の値段は 2 か月のあいだ古いままだった＝**値段は測り直してから着手する**）。
-- **実測 ⑶ 器を入れると負ける**: score ごとの memo（`ScoreSideTables.LineStartPrefixes`＝CWT ＋ `Dictionary<(m0, first), LineStartPrefix>`・lock）を実装して測った: 呼び出しは 24.2 回／打鍵に落ちたが **割当 +7,956 B／打鍵（+0.5%）**（辞書の成長と CWT の項・`after*.log`）、時間は 5.13／4.45／4.65 対 5.67／4.55／4.46 ＝ノイズの中。⇒ **元に戻した（Core 不変・commit なし）**。
-- ⇒ 判定: **⒵⁴ は反証して閉じた**。§1.0 ⒝ に残る perf の島は ⒵（第615 の一時停止）だけ。⚠️ 教訓は RULES-CASES 5.3-127 の続き＝*解き直し*の病は在っても、**払う物が 0 なら器は要らない**（器自身が割当を持つ）。
-- 終了時 full **14770 / 0 / 2**（`-End p1117 -DiffBase 3837e5018`＝`sessions/p1117/end.log`・門は全部 OK）。§7 7.5: Core `+0` 行・REF 0・OWN 0＝Core は HEAD のまま（計器は全部外した・`Zz1117` 0 件）。棚卸しは差分なし。
 
 ## 2. 開いている作業
 
