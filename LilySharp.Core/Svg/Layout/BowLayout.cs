@@ -37,14 +37,23 @@ internal abstract record BowLayout
     /// model's own start measure (single-system bows).</summary>
     public int RenderMeasureIndex { get; init; } = -1;
 
-    // COORDINATE FRAME: every Y here is stored in the LilyPond-native PAGE Y-up
-    // frame — up-positive, the exact negation of the shared absolute device Y
-    // (yUp = -yDevice). This is the frame both bow scorers already reason in
-    // (SlurScoringProblem/slur-scoring.cc and TieFormattingProblem/
-    // tie-formatting-problem.cc, sign-for-sign), so each CreateLayout stores the
-    // scored Y verbatim with no exit negation; the renderer emits these page-Y-up
-    // and its YFlipDrawingContext performs the single device flip. The
-    // Control1/Control2 tuples' .Y members are page Y-up too.
+    // COORDINATE FRAME: every Y here is Y-up — up-positive, the exact negation of device Y
+    // (yUp = -yDevice), the frame both bow scorers reason in (SlurScoringProblem/
+    // slur-scoring.cc and TieFormattingProblem/tie-formatting-problem.cc, sign-for-sign), so
+    // each CreateLayout stores the scored Y verbatim with no exit negation — and ITS ORIGIN
+    // IS THE BOW'S OWN STAFF'S TOP LINE (session 1116): the scorers run with no within-system
+    // offset (ElementCoordinator.LayoutTies' staffY 0, LayoutSlurs' staffMiddleDown
+    // StaffHeight/2), so a bow depends on nothing but its staff's own music and the
+    // preliminary pass and the page agree bit for bit. A reader puts it on the page by adding
+    // the staff's top ONCE: page Y-up = LayoutUtilities.FindStaffYInSystem(system, StaffIndex)
+    // + YUp (SharedRenderer.DrawTies/DrawSlurs), within-system Y-up =
+    // StaffOffsetInSystemUp(system, StaffIndex) + YUp (the paging skylines), and a script's
+    // frame about the staff middle = YUp + StaffMiddle (ArticulationEngraver). The
+    // Control1/Control2 tuples' .Y members are in the same frame.
+    // ⚠️ Until session 1115 the within-system offset was baked in as an additive base, and a
+    // bow carried from the preliminary pass onto paged systems was moved by the offset's
+    // delta (LayoutEngine.BowShiftsOf / ReanchorBows) — 5,552 bows a keystroke, 89 of them
+    // one ulp off the page's own answer. Scoring in the staff's frame retired that.
 
     /// <summary>X coordinate of the start point.</summary>
     public double StartX { get; }
@@ -86,10 +95,11 @@ internal abstract record BowLayout
     /// direction, the broken-piece flags, the model it carries — unchanged.
     /// </summary>
     /// <remarks>
-    /// For a bow CARRIED from the preliminary pass onto systems whose staff paging then
-    /// moved: the bow bakes its staff's within-system offset into its Y as an additive base,
-    /// so the two passes' answers differ by exactly that offset's delta. The carry site
-    /// (<c>LayoutEngine.BowShiftsOf</c>) holds the measurement behind "exactly".
+    /// For a tie whose notes <c>@cross</c> moved onto another staff: it was scored about its
+    /// voice's staff and stands about the other, so it moves by the distance between the two
+    /// (<c>LayoutEngine.TiesOnTheirNotesStaff</c>). It no longer moves a bow carried from the
+    /// preliminary pass — a bow is scored in its staff's own frame (the frame remark above),
+    /// so the two passes' answers are one.
     /// </remarks>
     internal abstract BowLayout ShiftedUp(double dyUp);
 

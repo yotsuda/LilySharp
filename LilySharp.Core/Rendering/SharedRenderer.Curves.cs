@@ -69,6 +69,9 @@ internal static partial class SharedRenderer
                 continue;
             hc.Add(mi);
             hc.Add(syUp);
+            // …and the staff's within-system top, which the drawing adds (DrawTiesLive): a page
+            // whose staves paging moved must not replay the bows drawn at the old places.
+            hc.Add(os.StaffLayoutOf(tie.StaffIndex, mi)?.Y ?? 0.0);
             FoldBow(ref hc, tie.StartX, tie.StartYUp, tie.EndX, tie.EndYUp, tie.Control1, tie.Control2, tie.StaffIndex);
             hc.Add(tie.Tie.SourcePosition >= 0);
             anchors.Add(tie.Tie.SourcePosition);
@@ -107,10 +110,11 @@ internal static partial class SharedRenderer
             int mi = tie.RenderMeasureIndex >= 0 ? tie.RenderMeasureIndex : tie.Tie.StartMeasureIndex;
             if (!sysTopYUp.TryGetValue(mi, out double syUp))
                 continue; // not on this page (geometry is page-local)
-            // The layout stores WITHIN-SYSTEM Y-up offsets (the engraver no longer bakes
-            // in the system-top Y-up); add this measure's system-top Y-up here to restore
-            // the absolute page-Y-up the bow frame expects (byte-identical to the former
-            // absolute StartYUp). See ElementCoordinator step 2d.
+            // The layout's Y is about the bow's own STAFF'S TOP LINE (BowLayout's frame remark):
+            // add this measure's system-top Y-up and the staff's within-system Y-up — the page
+            // Y-up of that staff's top, LayoutUtilities.FindStaffYInSystem — once, here.
+            double staffUp = os.StaffLayoutOf(tie.StaffIndex, mi)?.Y ?? 0.0;
+            syUp += staffUp;
             // The bow cites the `~` THAT WROTE IT, so a caret on that character lights
             // this path instead of the nearest preceding address — which, before this,
             // was the note, and the reader could not point at a tie at all (HANDOFF §2
@@ -155,6 +159,7 @@ internal static partial class SharedRenderer
                 continue;
             hc.Add(mi);
             hc.Add(syUp);
+            hc.Add(os.StaffLayoutOf(slur.StaffIndex, mi)?.Y ?? 0.0);
             FoldBow(ref hc, slur.StartX, slur.StartYUp, slur.EndX, slur.EndYUp, slur.Control1, slur.Control2, slur.StaffIndex);
             hc.Add(slur.Slur.StartSourcePosition >= 0);
             hc.Add(slur.Slur.EndSourcePosition >= 0);
@@ -181,10 +186,11 @@ internal static partial class SharedRenderer
             int mi = slur.RenderMeasureIndex >= 0 ? slur.RenderMeasureIndex : slur.Slur.StartMeasureIndex;
             if (!sysTopYUp.TryGetValue(mi, out double syUp))
                 continue; // not on this page (geometry is page-local)
-            // The layout stores WITHIN-SYSTEM Y-up offsets (the engraver no longer bakes
-            // in the system-top Y-up); add this measure's system-top Y-up here to restore
-            // the absolute page-Y-up the bow frame expects (byte-identical to the former
-            // absolute StartYUp). See ElementCoordinator step 2d.
+            // The layout's Y is about the bow's own STAFF'S TOP LINE (BowLayout's frame remark):
+            // add this measure's system-top Y-up and the staff's within-system Y-up — the page
+            // Y-up of that staff's top, LayoutUtilities.FindStaffYInSystem — once, here.
+            double staffUp = os.StaffLayoutOf(slur.StaffIndex, mi)?.Y ?? 0.0;
+            syUp += staffUp;
             // ONE BOW, TWO WRITTEN PLACES: the `(` is the click target (data-pos) and the
             // `)` an alias (data-alt), so a caret on either end lights the slur — the same
             // pair a barline uses when several written bars collapse onto one drawn line,

@@ -675,12 +675,15 @@ internal sealed partial class LayoutEngine
             up[s] = Math.Max(up[s], -(rel - capTop));
         }
 
-        // Ties and slurs now store WITHIN-SYSTEM device Y (step 2d), so the negated
-        // bow Y each caller passes is already system-relative — no system.Y subtraction.
-        void AddCurve(int measureIndex, double y0, double y1, double c1, double c2)
+        // A bow's Y is about its own STAFF'S TOP line (BowLayout's frame remark); this pass is
+        // system-relative device, so the staff's within-system top comes on here, once.
+        void AddCurve(int measureIndex, BowLayout bow)
         {
             if (!measureToSystem.TryGetValue(measureIndex, out int s))
                 return;
+            double up = LayoutUtilities.StaffOffsetInSystemUp(systems[s], bow.StaffIndex);
+            double y0 = -(bow.StartYUp + up), y1 = -(bow.EndYUp + up);
+            double c1 = -(bow.Control1.Y + up), c2 = -(bow.Control2.Y + up);
             // Curve extreme ~ 3/4 of the way from endpoints to controls.
             double topRel = Math.Min(Math.Min(y0, y1), Math.Min(y0, y1) * 0.25 + Math.Min(c1, c2) * 0.75);
             double botRel = Math.Max(Math.Max(y0, y1), Math.Max(y0, y1) * 0.25 + Math.Max(c1, c2) * 0.75);
@@ -695,8 +698,7 @@ internal sealed partial class LayoutEngine
             // its END, or its low Y leaks onto the start system and forces a huge
             // inter-system gap.
             int mi = t.IsBrokenLeft ? t.Tie.EndMeasureIndex : t.Tie.StartMeasureIndex;
-            // Bow Y is now page Y-up (= -device); reflect back for this device extent pass.
-            AddCurve(mi, -t.StartYUp, -t.EndYUp, -t.Control1.Y, -t.Control2.Y);
+            AddCurve(mi, t);
         }
         // A slur's curve is not its pure height either (lily/slur.cc:74-130, an estimate off
         // its notes) — the breaker reads that estimate from its own silhouette
@@ -704,7 +706,7 @@ internal sealed partial class LayoutEngine
         foreach (var sl in slurs)
         {
             int mi = sl.IsBrokenLeft ? sl.Slur.EndMeasureIndex : sl.Slur.StartMeasureIndex;
-            AddCurve(mi, -sl.StartYUp, -sl.EndYUp, -sl.Control1.Y, -sl.Control2.Y);
+            AddCurve(mi, sl);
         }
         noPure = false;
 
@@ -1033,7 +1035,7 @@ internal sealed partial class LayoutEngine
             for (int s = 0; s < systemCount; s++)
                 if (slursBySystem[s] is { } sysSlurs)
                 {
-                    BuilderAt(s).AddBowGroup(sysSlurs);
+                    BuilderAt(s).AddBowGroup(sysSlurs, systems[s]);
                     ListPool<SlurLayout>.Give(sysSlurs);
                 }
         }
@@ -1063,7 +1065,7 @@ internal sealed partial class LayoutEngine
             for (int s = 0; s < systemCount; s++)
                 if (tiesBySystem[s] is { } sysTies)
                 {
-                    BuilderAt(s).AddBowGroup(sysTies);
+                    BuilderAt(s).AddBowGroup(sysTies, systems[s]);
                     ListPool<TieLayout>.Give(sysTies);
                 }
         }

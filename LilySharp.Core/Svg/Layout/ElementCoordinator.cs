@@ -3822,14 +3822,15 @@ internal sealed class ElementCoordinator
         }
 
         // Tie Y position is uniform (same pitch on both ends).
-        // Within-system staff-top offset (device, down from system top), NOT an
-        // absolute page Y — so the scored tie (and the tab-digit geometry below)
-        // is system-independent. TieFormattingProblem reasons over Y DIFFERENCES,
-        // so feeding the relative base shifts every output Y by exactly system.Y,
-        // undone once in DrawTies (byte-identical to the former absolute origin).
-        // Decouples the tie from SystemLayout.Y for the W2 stacking-origin flip
-        // (step 2d, shared with slurs).
-        double staffY = LayoutUtilities.StaffOffsetInSystemDown(segSystem, staffIndex);
+        // THE STAFF'S OWN FRAME: the base is the staff's top line (device, down from it), no
+        // within-system offset — so the scored tie (and the tab-digit geometry below) depends
+        // on nothing but the staff's own music, and the preliminary pass and the page agree
+        // bit for bit whatever paging does to the staff's place. TieFormattingProblem reasons
+        // over Y DIFFERENCES, so the base shifts every output Y rigidly; the offset is added
+        // once, at the reader (BowLayout's frame remark: DrawTies, the paging skylines, the
+        // scripts' tie support). Until session 1116 the base carried the within-system offset
+        // and a carried bow was paid back by the offset's delta (LayoutEngine.BowShiftsOf).
+        double staffY = 0.0;
         double y;
         var tieForProblem = tie;
         if (staff is { IsTab: true })
@@ -6018,16 +6019,18 @@ internal sealed class ElementCoordinator
                     : EdgeNoteStaffPosition(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: false)
                         ?? slur.StartStaffPosition;
 
-                // Within-system Y offset (device, down from the system top) of the staff
-                // middle, NOT an absolute page Y. Every Y the scorer sees (segStartY/
-                // segEndY via PositionToDevice, obstacles, beamed stem tips) is derived
-                // from this, and LP slur-scoring reasons over note-position DIFFERENCES,
-                // so feeding the relative middle shifts every scored output Y by exactly
-                // system.Y — undone once in DrawSlurs (byte-identical to the former
-                // absolute origin). Decouples the scored slur from SystemLayout.Y for the
-                // Stage-4 W2 stacking-origin flip (step 2d).
-                double staffMiddleDown = LayoutUtilities.StaffOffsetInSystemDown(segSystem, staffIndex)
-                    + _options.StaffHeight / 2.0;
+                // THE STAFF'S OWN FRAME: the staff middle, device-down from the staff's TOP
+                // line — no within-system offset. Every Y the scorer sees (segStartY/segEndY
+                // via PositionToDevice, obstacles, beamed stem tips, the tuplet numbers and
+                // 'inside scripts, which arrive about the staff) is derived from this, and LP
+                // slur-scoring reasons over note-position DIFFERENCES, so the base shifts every
+                // scored Y rigidly; a reader adds the staff's within-system offset once
+                // (BowLayout's frame remark). The scored slur therefore depends on nothing but
+                // the staff's own music: the preliminary pass and the page agree bit for bit,
+                // and there is nothing to pay back when paging moves the staff (session 1116;
+                // the within-system offset lived here from step 2d to session 1115, and
+                // LayoutEngine.BowShiftsOf paid its delta back).
+                double staffMiddleDown = _options.StaffHeight / 2.0;
 
                 // LILYPOND-REF: slur-scoring.cc:549-557 get_base_attachments — the endpoint
                 // attaches to the STEM TIP (the beam it joins), 0.5 ss beyond it, when the
@@ -6468,7 +6471,9 @@ internal sealed class ElementCoordinator
         // (shared with the notation slur) can add the system-top Y-up back uniformly.
         // TabStaffGeometry is additive in staffY (StringY = StaffY + n·space), so this is
         // a pure origin shift that leaves the device string frame intact (island 2).
-        double staffY = LayoutUtilities.StaffOffsetInSystemDown(segSystem, staffIndex);
+        // …and, as for every bow, in the staff's own frame (the tab's top string at 0): the
+        // reader adds the within-system offset (BowLayout's frame remark).
+        double staffY = 0.0;
         var geom = new TabStaffGeometry(fonts, staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef, staff.Transposition);
         double space = geom.StringSpace;
         double staffMiddleDown = staffY + (geom.StringCount - 1) * space / 2.0;

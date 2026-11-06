@@ -510,7 +510,11 @@ internal sealed class PagingAugmentProgram
         /// <summary>One family's bows for this system, in array order — slurs and ties are
         /// separate calls, in that order, mirroring the family loops. The eight numbers per
         /// bow are exactly <c>SeedBowInk</c>'s inputs.</summary>
-        public void AddBowGroup<T>(List<T> bows) where T : BowLayout
+        /// <param name="system">The system the bows stand on: a bow's Y is about its own
+        /// staff's TOP line (BowLayout's frame remark), and the program's frame is the
+        /// system's, so the staff's within-system top is added here, once, as the numbers
+        /// are copied — the eight numbers the key holds are the system-frame ones.</param>
+        public void AddBowGroup<T>(List<T> bows, SystemLayout system) where T : BowLayout
         {
             bool ties = typeof(T) == typeof(TieLayout);
             _kinds.Add(ties ? Kind.TieGroup : Kind.BowGroup);
@@ -519,14 +523,15 @@ internal sealed class PagingAugmentProgram
             _args.Add(bows.Count);
             foreach (var b in bows)
             {
+                double up = LayoutUtilities.StaffOffsetInSystemUp(system, b.StaffIndex);
                 _args.Add(b.StartX);
-                _args.Add(b.StartYUp);
+                _args.Add(b.StartYUp + up);
                 _args.Add(b.Control1.X);
-                _args.Add(b.Control1.Y);
+                _args.Add(b.Control1.Y + up);
                 _args.Add(b.Control2.X);
-                _args.Add(b.Control2.Y);
+                _args.Add(b.Control2.Y + up);
                 _args.Add(b.EndX);
-                _args.Add(b.EndYUp);
+                _args.Add(b.EndYUp + up);
             }
         }
 

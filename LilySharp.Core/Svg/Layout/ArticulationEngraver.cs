@@ -2092,7 +2092,11 @@ internal static class ArticulationEngraver
         // LP's guard is on extent length, not emptiness (0-extent tab scripts).
         if (xR - xL <= 0 || ink.Top - ink.Bottom <= 0)
             return 0.0;
-        double dy = staffOffset + StaffMiddle;
+        // The bow's Y is about its staff's TOP line (BowLayout's frame remark); the script's is
+        // about the staff's MIDDLE — the half staff between them, and no within-system offset.
+        // (staffOffset is the script's own door to the system, which the bow no longer carries.)
+        _ = staffOffset;
+        double dy = StaffMiddle;
         double p0x = piece.StartX, p0y = piece.StartYUp + dy;
         double p3x = piece.EndX, p3y = piece.EndYUp + dy;
         double p1x = piece.Control1.X, p1y = piece.Control1.Y + dy;
@@ -2221,9 +2225,9 @@ internal static class ArticulationEngraver
     /// <summary>
     /// One tie's drawn bow as a side-position support profile, in the script frame
     /// (staff-spaces about this staff's middle line, up-positive). The tie scorer hands
-    /// its Y system-relative with the staff offset baked in (BowLayout's frame,
-    /// <c>yUp = −yDevice</c>), so the door conversion is that offset plus the middle
-    /// line — the inverse of the "no staff offset" the script's own YUp carries. The
+    /// its Y about the staff's TOP line (BowLayout's frame, <c>yUp = −yDevice</c>, no
+    /// within-system offset since session 1116), so the door conversion is the half staff
+    /// to the middle line and nothing else. The
     /// outline model is <see cref="SkylineBuilder.MergeBowOuterEdge"/>, the SAME core the
     /// staff skyline's bow reservation flattens (SkylineBuilder.SeedBowInk) — the support
     /// a script clears and the band the staff reserves come from one sandwich, not two.
@@ -2233,7 +2237,8 @@ internal static class ArticulationEngraver
     {
         var direction = above ? VerticalDirection.Up : VerticalDirection.Down;
         var sky = new VerticalSkyline(direction);
-        double dy = staffOffset + StaffMiddle;
+        _ = staffOffset;
+        double dy = StaffMiddle;
         SkylineBuilder.MergeBowOuterEdge(
             sky, direction,
             t.StartX, t.StartYUp + dy,
