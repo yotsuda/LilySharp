@@ -137,6 +137,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1114セッション（2026-11-06・YT-DELL2）
+
+開始時 full **14759 / 0 / 2**（`-Start p1114`・HEAD `04494cb4b`・OMR の open は 0）。作業場所は Lab `sessions/p1114/`。オーナー「続けて」＝第1113 の「見つけたが直していない」`b6`（休符の後から始まる段をまたぐ連桁が LP より 0.7 低い）に着手。
+
+- **切り分け**（`b9`〜`b16`・LP と照合）: 連桁の規則ではなかった。`b6` の差は、同じ小節に高音部の連桁が*在るだけ*で出て（向き・位置に関わらず）、段の間隔が 10.09（LP 9.00）に広がっていた。計器（`CalculateStaffGapWithSkylines` の輪郭を刷る一時の差し込み）で、高音部の下の輪郭に `r8` が 7.0 まで垂れていた＝**高音部の休符が、同じ瞬間に立つ移動音 g'（低音部の連桁 `r8 c8 e'@cross g'@cross` の一員・棒は段の間の連桁まで下へ）の*棒の先*まで退いていた**（中線の下 6.0）。LP は 3.5＝頭だけを避ける: 段をまたぐ連桁の棒は cross-staff grob で、Note_column の extent に入らない（axis-group-interface.cc:96-106 `relative_maybe_bound_group_extent`・stem.cc:1279-1283 `Stem::is_cross_staff`）。
+- **本体 `361165dd8`＝`AddCrossedRestCollisions` は、段をまたぐ連桁の一員の棒を数えない**（`BeamSpansStaves`＝その小節の中で同じ BeamId の音が別の段に立つか）。`b6`: 休符 −3.5（LP −3.5・`Rest.after-line-breaking` で実測）・段間 9.00・段をまたぐ連桁 6.19..4.81＝LP と一致（`b15`・`b16` も）。網 `CrossStaffDrawingTests.ARestUnderANoteOfACrossStaffBeamClearsItsHeadAndNotItsStem`（休符・段間・連桁の 3 点）。全 svg の掃きは差 0 / 1262（`sweep/sweep.log`）。毒 2 本: 頭だけの行は赤、「同じ段に乗った連桁も spanning と読む」は緑＝観測者なし（その形 `b19` は下の別の差が先に出る）。
+- ⚠️ **見つけたが直していない**: `b19`（`r8 r8 c''8@cross d''8@cross`＝移った音の連桁が高音部の中に収まり棒が下向き・同じ瞬間に高音部の `r8`）は LP が休符を −4.0 に置くのに Lily# は −5.0／−4.5＝休符衝突が連桁の音の棒を*既定の長さ*で読む（`StemTipPositionOf` の註が前から開示: LP は列の extent＝連桁の位置で読む）。@cross に限らない（同じ段の 2 声でも同じ形）。直すなら休符衝突が連桁の位置を読む順序の設計。
+- 終了時 full **14760 / 0 / 2**（`-End p1114 -DiffBase 04494cb4b`＝`sessions/p1114/end.log`・門は全部 OK）。§7 7.5: Core `+28` 行・REF 1・OWN 0（新しい逸脱なし）。Release の lysc は作り直していない（`8fc8e2be1` のまま）。
+
+## 以下は第1113セッションの経緯
+
 ### 1.1 第1113セッション（2026-11-06・YT-DELL2）
 
 開始時 full **14753 / 0 / 2**（`-Start p1113`・HEAD `7bd73ecf1`・OMR の open は 0）。作業場所は Lab `sessions/p1113/`。オーナー指示（選択肢から）「`@cross` ⑶ 連桁どうし」＝LP の beam-collision-engraver の規則の移植。
@@ -147,19 +158,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **ついでに直した 2 つ**（同じ commit）: ⑴ `voice { } { }` の中で全部の音に `@stemUp` を書いても第 2 声の連桁が下を向いていた（`BeamDetector` が声部の既定を先に取っていた。LP は `\voiceTwo` の Stem.direction を各棒に持たせ `\once \override` が 1 本ずつ上書き＝全部 forced の投票。`lysc ly` の双子は前から正しく書いていた）→ `VoiceBeamStemUp`＝書いた音があれば `StemVote`（書かない棒は声部の側で投票）、無ければ声部の側。網 `ASecondVoicesBeamTurnedUpByEveryNoteIsBeamedUp`（対）。⑵ **量子化器の segment の端を含める**（`BeamScoringProblem.AddCollision` に 1e-9・flower の `Interval::contains` は inclusive）: 連桁の最後の列に立つ covered grob の右縁が、別の和で segment の端に 1 ulp 届かず落ちていた（`c1` の右端がそれで、無いと Lily# は 0.19 下へ逃げる）。p1112 の `b1`（高音部の連桁 LP 3.50..2.81 に対し 2.81..2.19＝「同点の刃の上」）もこれで LP と一致＝**第1112 ⑵ の残差は閉じた**。網 `ACoveredGrobsEdgeOnTheBeamsOwnEndIsStillOverTheBeam`。
 - ⚠️ **見つけたが直していない**: `b6`（低音部 `r8 c8 e'@cross g'@cross`＝休符の後から始まる段をまたぐ連桁）は Lily# 6.90..5.09 対 LP 6.19..4.81（base の exe でも同じ＝今回の変更と無関係・前からの差）。／他の段の声部が*丸ごと*この段へ移した連桁（IsCrossStaff かつ !SpansStaves）は LP ではこの段の axis group に居て covered になるが、Lily# は自分の段の呼び出しで解くので入れていない（`AppendCoveredBeams` の註）。
 - 終了時 full **14759 / 0 / 2**（`-End p1113 -DiffBase 7bd73ecf1`＝`sessions/p1113/end2.log`・門は全部 OK。1 回目の `-End` は `LpReferenceCitationTests` が 1 本赤＝新しい LILYPOND-REF の 3 行が「名前」（`_` 入りか 3 節のハイフン名・**同じ行に**）を欠いていた → 名指して amend）。§7 7.5: Core `+278 −30` 行・REF 10・OWN 0（新しい逸脱なし。segment の端の 1e-9 は flower の inclusive `contains` に寄せたもの）。Release の lysc は作り直していない（`8fc8e2be1` のまま）。
-
-## 以下は第1112セッションの経緯
-
-### 1.1 第1112セッション（2026-11-06・YT-DELL2）
-
-開始時 full **14739 / 0 / 2**（`-Start p1112`・HEAD `7f85f31ef`・OMR の open は 0）。作業場所は Lab `sessions/p1112/`。オーナー指示（選択肢から）「`@cross`：付点の列」。
-
-- **本体 `a13347513`＝移った音の付点は移った先の段の付点の列に入る**: 探り譜 `d1` の `e''4.@stemUp` の下に `d''4.@cross@stemDown`（2 度）で、LP は付点を行 3 と 1・左の頭から 3.06 の 1 列に置くのに、Lily# は移った音を単独で読み、両方を行 3（1.76 と 3.06）に描いていた（LP の DotColumn は Staff のもの＝`\change Staff` した声部の付点はその段の列に入る）。`MeasureCollector.SolveCrossDots` が、移った音の立つ瞬間ごとに、段自身の声部（`HeldHere`）と、その段へ移した音だけを持つ移った声部で付点の列を解き（`ElementCoordinator.SolveDotColumns` の `movedIn`）、各メンバーの声部に行と列のずれを置く（`CrossCollisionMark.DotRows`／`DotShift`・休符は純位置からの行）。段自身の解き（`AddDotColumns`・`StampDotColumns`・休符の付点）はその瞬間を飛ばし、ずれは写しで刻んで `CrossedIn` の住所を写しへ向け直す（`StampCrossDotShifts`）。⚠️ 見つけて直した: `SolveDotColumns` は和音の頭の並びを声部の既定の符尾で読み、書いた `@stemDown` を無視していた（移った和音の付点の x が 1.24 右）＝書いた符尾で読む（掃きでは差 0）。
-- **LP と照合**（`-dbackend=svg` の Dots grob・`d1`〜`d3`）: 2 度・2 声の段への合流・和音・休符・下の段へ移る音・後の上向きの符尾・段自身の点が行を譲る 2 形の 8 例で行は一致、x は 0.01 以内。網は `CrossStaffDrawingTests.AMovedNotesDotsJoinTheColumnOfTheStaffItStandsOn` の 8 本。全 svg の掃きは差 0 / 1262（`sessions/p1112/sweep`）。毒 11 本のうち赤 9、緑 2（瞬間の絞り＝外しても同じ答えを解き直すだけ・休符の行＝休符は移った音から退くので付点は出会わない。LP の規則なので残した。`poisons2.log`）。最初の網では `skip`・`rows` も緑で、段自身の点が行を譲る 2 例（`d3` の 2・5 小節）を足して赤にした。
-- ⚠️ **見つけたが直していない**: ⑴ `d3` の 4 小節目（第 2 声の `r4.` と移った `f'4.`）で、LP の計器は g'' の付点を拾わなかった（絵には在る＝計器の Y 親の読みの問題・Lily# と LP の絵は同じ形）⑵ （害なしと確かめた）元の段の `StampDotColumns` が小節を写すと他の段の `CrossedIn` の住所は古い配列を指したままだが、後の読み手（間隔・輪郭・連桁）がそこから読むのは移った音そのものと前の音の長さだけで、`StampDotColumns` は移った音を写し替えない（移った音は元の段の付点の列に入らない）＝値は同じ。参照で比べるのは collect の中（`SolveCrossCollisions`）だけ。`d4`（元の段に付点の 2 声・別の小節で移った音）で LP と付点が一致。
-- **続けて（オーナー「続けて」）＝本体 `925d850ee`＝スラーは移った音の印を移った先の段で読む**: 探り譜 `s1`／`s2` の `c4( g@cross@staccato b@cross c)` で、Lily# の弧が下の段の 4 間下へ落ちていた（LP は 2 つの c のすぐ下＝スタッカートが無いときと同じ弧）。頭の encompass は `MovedDown` で移った先の段に読んでいたが、`BuildSlurExtraObjects` の 'inside のスクリプト・付点・臨時記号は弧の段の中線で読んでいた＝無い所の印を避けた。段の番号を渡し、3 つとも `MovedDown` を足す（`get_extra_encompass_infos` の共通の Y の枠）。`s3`（付点の音・臨時記号・付点の和音）で、前は付点で 3 間下・臨時記号で深さ 3.4 → 端（下の段の第 5 線から 3.55）・幅・深さが LP と 0.01 以内。網は `AScriptOnAMovedNoteIsWhereItIsDrawn_NotUnderTheSlur`（印の有無で弧が同じ・3 本）と `TheDotsAndAccidentalsOfAMovedNoteAreWhereTheyAreDrawn`（LP の数・3 本）。全 svg の掃きは差 0 / 1262（`sweep2.log`）。毒 5 本すべて赤（最初は付点の 2 本が緑＝幅と深さは弧の端からの相対で、弧ごと落ちても変わらない→端の絶対の高さを網に足した）。⚠️ 付点の行はここでも自分の行（`DotColumn.Reserved`）で読む＝共有の列の行ではない（前からの簡略・`d1` の形の 2 度の付点の下にスラーがある形は未実測）。
-- **続けて（オーナー「続けて」）＝実測だけ・コードは変えていない**: ⑴ 付点の 2 度の下のスラー（`s4`）は LP と一致（幅 8.36・頂 6.63）＝付点を自分の行で読む簡略は効いていない ⑵ 連桁どうし（`b1`〜`b4`）: LP の規則は §1.0 ⑶。段をまたぐ連桁は全部 LP と一致。高音部の連桁（`a' b' c''` の下向き、その下に移った `e' g' c''`）は LP 15.19→14.50 に対し Lily# 14.50→13.88 で、文脈で入れ替わる（`b2` の 4 小節目は逆に LP 14.50・Lily# 15.19）＝2 つの量子がほぼ同点の刃の上。幅が LP より約 0.05 広い（6.70 対 6.65・段をまたぐ方 8.46 対 8.42）＝間隔の小さな差の族（上の ⚠️ ⑵ の 5.63 対 5.75 と同じかは未確認）。memo は無関係（単独の譜 `b3`／`b4` でも同じ）。
-- 終了時 full **14753 / 0 / 2**（`-End p1112 -DiffBase 7f85f31ef`＝`sessions/p1112/end2.log`）。§7 7.5: Core `+244` 行・REF 4・OWN 0（新しい逸脱なし＝付点は LP の Staff ごとの DotColumn、スラーの印は共通の Y の枠に揃えた）。Release の lysc は作り直していない（`8fc8e2be1` のまま）。
 
 ## 2. 開いている作業
 
