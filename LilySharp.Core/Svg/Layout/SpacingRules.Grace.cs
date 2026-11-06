@@ -209,11 +209,14 @@ internal static partial class SpacingRules
                 // and the optical stem correction on the ideal. MEASURED (Lab sessions/p728/first):
                 // 1.147939 / 1.647939 / 1.726510 where the flat reaches gave 1.417939 to all three.
                 // LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the minimum; :111 the correction.
+                // …as the PAPER column holds them: a column of a staff column shared by voices
+                // (GraceColumnInfo.Companions) brings every voice's column with it, each at its
+                // Note_collision shift, and the main column every voice's main note.
                 (minDistance, rod) = SkylineFloorPair(
-                    ItemSkylineFactory.CreateGraceWishSkyline(notes[i], beamed, HorizontalDirection.Right),
+                    MergedGraceWishSkyline(notes[i], beamed, HorizontalDirection.Right),
                     next is { } nc
-                        ? ItemSkylineFactory.CreateGraceWishSkyline(nc, nextBeamed, HorizontalDirection.Left)
-                        : ItemSkylineFactory.SharedWishLeftSkylineAtColumn(mainItem!, 0.0, 0.0));
+                        ? MergedGraceWishSkyline(nc, nextBeamed, HorizontalDirection.Left)
+                        : MergedMainLeftSkyline(notes[i], mainItem!));
                 correction = GraceStemCorrection(notes[i], beamed, next, nextBeamed, mainItem,
                     NoteSpacingParameters.Default, gp.SpacingIncrement);
             }
@@ -230,8 +233,14 @@ internal static partial class SpacingRules
                 correction = 0;
             }
             double dotRod = GraceDotRod(notes[i], beamed, next, mainItem);
-            double gap = Math.Max(
-                GraceColumnGap(notes[i], dtMin, gp, minDistance, correction), dotRod);
+            double ideal = GraceIdeal(notes[i], dtMin, gp, correction);
+            // The companions' wishes — one Note_spacing per voice's note column — average into
+            // the merged spring's ideal with this one's; the floor is the merged skylines'.
+            // LILYPOND-REF: lily/spring.cc:103-129 merge_springs — the average distance, the
+            //   largest minimum; lily/spacing-spanner.cc:380-393 — one wish per note column.
+            if (!notes[i].Companions.IsDefaultOrEmpty && !notes[i].IsRest)
+                ideal = AveragedWithCompanions(ideal, notes[i], next, nextBeamed, mainItem, dtMin, gp);
+            double gap = Math.Max(GraceColumnGapOfIdeal(ideal, minDistance), dotRod);
             rod = Math.Max(rod, dotRod);
             // A slur from this column to the next (or out to the main note) rods the two
             // columns the Slur's minimum-length apart — the rule SlurPairRod states for the
@@ -309,16 +318,93 @@ internal static partial class SpacingRules
         ApplyChordNameChain(notes, gapLengths, rods);
         ApplyDiagramRods(notes, mainItem, beamedPrefix, gapLengths, rods);
 
+        // The chain runs between the SHARED columns; a column of a staff column shared by voices
+        // is drawn its CollisionShift right of its shared column (Note_collision), and that is
+        // folded in here — the first column's own shift sets the run's x, the last one's comes
+        // off the gap to the main note — so every reader of the run's offsets (the placement,
+        // the beam quanter, the published column X's, the reservation) draws the shifted column.
         var offsets = ImmutableArray.CreateBuilder<double>(notes.Length);
         var gaps = ImmutableArray.CreateBuilder<(double Rod, double InverseCompress)>(notes.Length);
         double x = 0, toMain = 0;
+        double firstShift = notes[0].CollisionShift;
         for (int i = 0; i < notes.Length; i++)
         {
-            offsets.Add(x);
+            offsets.Add(x + notes[i].CollisionShift - firstShift);
             gaps.Add((Math.Min(rods[i], gapLengths[i]), compresses[i]));
-            if (i + 1 < notes.Length) x += gapLengths[i]; else toMain = gapLengths[i];
+            if (i + 1 < notes.Length) x += gapLengths[i]; else toMain = gapLengths[i] - notes[i].CollisionShift;
         }
         return new GraceColumnLayout(offsets.ToImmutable(), toMain, gaps.MoveToImmutable());
+    }
+
+    /// <summary>
+    /// A grace column's wish skyline as the PAPER column holds it: the column's own and, for a
+    /// column of a staff column shared by voices (<see cref="GraceColumnInfo.Companions"/>),
+    /// every companion's, each standing at its own <see cref="GraceColumnInfo.CollisionShift"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods; lily/note-spacing.cc:78-83 get_spacing
+    ///   — the skylines are the paper column's (Separation_item over every grob of it, whichever
+    ///   voice's), and the grace column IS one paper column for the voices.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1115/v1): <c>grace { d'16 }</c> over
+    ///   <c>grace { g16 }</c> — the d' needs 1.939 before the main note and the g alone 1.418;
+    ///   both stand at 1.939.
+    /// </remarks>
+    private static HorizontalSkyline MergedGraceWishSkyline(
+        GraceColumnInfo column, bool beamed, HorizontalDirection direction)
+    {
+        var sky = ItemSkylineFactory.CreateGraceWishSkyline(column, beamed, direction, column.CollisionShift);
+        if (!column.Companions.IsDefaultOrEmpty)
+            foreach (var c in column.Companions)
+                sky.Merge(ItemSkylineFactory.CreateGraceWishSkyline(c.Column, c.Beamed, direction, c.Column.CollisionShift));
+        return sky;
+    }
+
+    /// <summary>The main column's left wish skyline as the paper column holds it: this voice's
+    /// main item and, through the run's last column's companions, the other voices' main items
+    /// at that moment (<see cref="GraceCompanion.MainItem"/>).</summary>
+    private static HorizontalSkyline MergedMainLeftSkyline(GraceColumnInfo last, MusicItem mainItem)
+    {
+        var sky = ItemSkylineFactory.SharedWishLeftSkylineAtColumn(mainItem, 0.0, 0.0);
+        if (!last.Companions.IsDefaultOrEmpty)
+            foreach (var c in last.Companions)
+                if (c.MainItem is { } theirs)
+                    sky.Merge(ItemSkylineFactory.SharedWishLeftSkylineAtColumn(theirs, 0.0, 0.0));
+        return sky;
+    }
+
+    /// <summary>
+    /// The merged spring's ideal over a shared column: the average of this column's wish and each
+    /// companion's — every voice's Note_spacing wish, with its own stem correction against ITS
+    /// next column (the companion of this run's next column from the same voice, else its main
+    /// note), over the one floor the merged skylines gave.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/spring.cc:103-129 merge_springs — <c>avg_distance /= springs.size ()</c>.</remarks>
+    private static double AveragedWithCompanions(double ideal, GraceColumnInfo column,
+        GraceColumnInfo? next, bool nextBeamed, MusicItem? mainItem, double dtMin, GraceSpacingParameters gp)
+    {
+        double sum = ideal;
+        int count = 1;
+        foreach (var c in column.Companions)
+        {
+            if (c.Column.IsRest)
+                continue;
+            GraceColumnInfo? theirNext = null;
+            bool theirNextBeamed = false;
+            if (next is { } nx && !nx.Companions.IsDefaultOrEmpty)
+                foreach (var cn in nx.Companions)
+                    if (cn.VoiceIndex == c.VoiceIndex)
+                    {
+                        theirNext = cn.Column;
+                        theirNextBeamed = cn.Beamed;
+                        break;
+                    }
+            var theirMain = theirNext is null ? (c.MainItem ?? mainItem) : null;
+            double correction = GraceStemCorrection(c.Column, c.Beamed, theirNext, theirNextBeamed, theirMain,
+                NoteSpacingParameters.Default, gp.SpacingIncrement);
+            sum += GraceIdeal(c.Column, dtMin, gp, correction);
+            count++;
+        }
+        return sum / count;
     }
 
     /// <summary>
@@ -571,7 +657,7 @@ internal static partial class SpacingRules
     /// <remarks>
     /// LILYPOND-REF: lily/separation-item.cc:47-68 Separation_item::set_distance — padding plus
     ///   <c>lines[LEFT][RIGHT].distance (right)</c>, the right column's left skyline merged with
-    ///   its conditional one. The rod and the spring (<see cref="GraceColumnGap"/>) are separate
+    ///   its conditional one. The rod and the spring (<see cref="GraceColumnGapOfIdeal"/>) are separate
     ///   constraints, and the gap is the larger.
     /// MEASURED (2.26.0, scratch/p393/lpdump, grace-dot-flag-column, main note c''1): the rods
     /// through the dots are 2.4559 (d''8., d''16.), 2.3151 (g'16.) and 1.9352 (g'16. to a
@@ -717,9 +803,8 @@ internal static partial class SpacingRules
     }
 
     /// <summary>One gap of a grace run — the spring, floored by the skyline distance.</summary>
-    private static double GraceColumnGap(GraceColumnInfo left, double dtMin,
-                                         GraceSpacingParameters gp, double minDistance,
-                                         double stemCorrection)
+    private static double GraceIdeal(GraceColumnInfo left, double dtMin,
+                                     GraceSpacingParameters gp, double stemCorrection)
     {
         var baseSpring = CreateGraceSpring(left.Length, gp, dtMin);
         // LILYPOND-REF: lily/note-spacing.cc:77 — ideal = base.ideal - increment + left_head_end.
@@ -727,11 +812,16 @@ internal static partial class SpacingRules
         // A tab-only grace's head is its fret digit (GraceColumnInfo.TabDigitHalfWidth: drawn
         // centred on the column, so its right edge is that half width).
         double headEnd = left.TabDigitHalfWidth > 0 ? left.TabDigitHalfWidth : GraceHeadEnd(left);
-        double ideal = Math.Max(0.0,
+        return Math.Max(0.0,
             baseSpring.IdealDistance - gp.SpacingIncrement + headEnd + stemCorrection);
-        // LILYPOND-REF: lily/note-spacing.cc:78-83 set_min_distance, then lily/spring.cc:122.
-        return Math.Max(ideal, minDistance + SpringHeadroom);
     }
+
+    /// <summary>The gap a grace spring of ideal <paramref name="ideal"/> takes over the floor
+    /// <paramref name="minDistance"/> — the two halves <see cref="GraceIdeal"/> and the skyline
+    /// floor, joined as LilyPond joins them.</summary>
+    /// <remarks>LILYPOND-REF: lily/note-spacing.cc:78-83 set_min_distance, then lily/spring.cc:122.</remarks>
+    private static double GraceColumnGapOfIdeal(double ideal, double minDistance)
+        => Math.Max(ideal, minDistance + SpringHeadroom);
 
     /// <summary>
     /// The grace note head's right edge in its own column — LilyPond's

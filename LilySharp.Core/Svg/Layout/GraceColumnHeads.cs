@@ -95,6 +95,12 @@ internal static class GraceColumnHeads
     {
         if (column.Heads.IsDefaultOrEmpty)
             return ImmutableArray<double?>.Empty;
+        // A column of a staff column SHARED by voices (GraceColumnInfo.Companions) carries the
+        // answer stamped on its heads: one AccidentalPlacement over every voice's heads there
+        // (SharedAccidentalOffsets, run by the collector, which alone sees every voice), in this
+        // column's own frame. Read when every accidental-bearing head has it.
+        if (StampedAccidentalOffsets(column) is { } stamped)
+            return stamped;
         var heads = column.Heads;
         var result = new double?[heads.Length];
         var notes = AsChordNotes(column);
@@ -117,6 +123,99 @@ internal static class GraceColumnHeads
                     result[i] = al.XOffset;
                     break;
                 }
+            }
+        }
+        return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(result);
+    }
+
+    /// <summary>The heads' stamped accidental X's (<see cref="GraceHeadInfo.AccidentalX"/>), or
+    /// null when some accidental-bearing head has none — then the column is placed alone.</summary>
+    private static ImmutableArray<double?>? StampedAccidentalOffsets(GraceColumnInfo column)
+    {
+        var heads = column.Heads;
+        bool any = false;
+        var result = new double?[heads.Length];
+        for (int i = 0; i < heads.Length; i++)
+        {
+            if (heads[i].Accidental is null)
+                continue;
+            if (heads[i].AccidentalX is not { } x)
+                return null;
+            result[i] = x;
+            any = true;
+        }
+        return any ? System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(result) : null;
+    }
+
+    /// <summary>
+    /// The accidentals of a staff column SHARED by voices: this column's heads and every
+    /// companion's (<see cref="GraceColumnInfo.Companions"/>), through ONE
+    /// <see cref="AccidentalPlacement"/> with each head at its own shift — LilyPond's one
+    /// AccidentalPlacement per paper column, whichever voices' heads it holds. Answered per
+    /// member, this column first and its companions in their order: each head's accidental
+    /// ink-left X in THAT member's own frame (its <see cref="GraceColumnInfo.CollisionShift"/>
+    /// taken out), null where the head carries none. The collector stamps these on the heads
+    /// (<see cref="GraceHeadInfo.AccidentalX"/>); <see cref="AccidentalOffsets"/> reads them.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-placement.cc:482 Accidental_placement::calc_positioning_done
+    ///   — every accidental of the column, grouped by note column, through position_apes (:392);
+    ///   lily/accidental-engraver.cc:317 Accidental_placement::add_accidental — one AccidentalPlacement
+    ///   per Staff per moment, whichever Voices' accidentals.
+    /// MEASURED (scratch/p308/lp x6_gaccsec2v against x7_gaccchord; Lab sessions/p1115/v2): the two
+    ///   voices' sharps stand 4.525 and 5.387 before the main note, 0.862 apart — the pair a
+    ///   one-voice chord <c>&lt;bis cis'&gt;</c> gets, to four digits.
+    /// </remarks>
+    internal static ImmutableArray<ImmutableArray<double?>> SharedAccidentalOffsets(GraceColumnInfo column)
+    {
+        var members = new List<GraceColumnInfo>(1 + column.Companions.Length) { column };
+        foreach (var c in column.Companions)
+            members.Add(c.Column);
+        // Every head of the shared column, with its x: the member's own chord offsets plus
+        // its shift, in the shared frame. position_apes keys an accidental by its staff
+        // position, so the heads are handed over low to high as a chord's are.
+        var all = new List<(ChordNoteInfo Note, double X, int Member, int Head)>();
+        for (int mi = 0; mi < members.Count; mi++)
+        {
+            var m = members[mi];
+            if (m.Heads.IsDefaultOrEmpty)
+                continue;
+            var notes = AsChordNotes(m);
+            var offsets = HeadOffsetsOrNull(m);
+            for (int h = 0; h < notes.Length; h++)
+                all.Add((notes[h], (offsets?[h] ?? 0.0) + m.CollisionShift, mi, h));
+        }
+        all.Sort((a, b) => a.Note.StaffPosition.CompareTo(b.Note.StaffPosition));
+        var notesUnion = new ChordNoteInfo[all.Count];
+        var xsUnion = new double[all.Count];
+        for (int i = 0; i < all.Count; i++)
+        {
+            notesUnion[i] = all[i].Note;
+            xsUnion[i] = all[i].X;
+        }
+        var ownNotes = AsChordNotes(column);
+        var layouts = new AccidentalPlacement().CalculatePositions(
+            notesUnion, headOffsets: xsUnion,
+            accidentalFont: column.AccidentalFont, column.Font,
+            AccidentalStem.Of(column.StemUp, GlyphMetrics.NoteValueOf(column.BaseDuration),
+                column.HeadStyle, ownNotes, 0, column.Font));
+        var result = new ImmutableArray<double?>[members.Count];
+        for (int mi = 0; mi < members.Count; mi++)
+            result[mi] = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(
+                new double?[members[mi].Heads.IsDefaultOrEmpty ? 0 : members[mi].Heads.Length]);
+        foreach (var al in layouts)
+        {
+            // The first head at that position still without an answer takes it — a unison
+            // across the voices shares one x, and both heads read it.
+            for (int i = 0; i < all.Count; i++)
+            {
+                var (note, _, mi, h) = all[i];
+                if (note.StaffPosition != al.StaffPosition || note.Accidental is null
+                    || result[mi][h] is not null)
+                    continue;
+                var arr = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(result[mi])!;
+                arr[h] = al.XOffset - members[mi].CollisionShift;
+                break;
             }
         }
         return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(result);

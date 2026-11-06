@@ -78,6 +78,10 @@ public class ModelEqualityKindTests
         // original until an init replaces it, so two items legitimately hold one box. The item
         // itself is still the entity — these are its storage, not occurrences.
         "MusicItemRare", "NoteItemRare",
+        // another voice's grace column as a column of a shared staff column carries it (session
+        // 1115): a COPY of that column with its shift and flags — a description, so two identical
+        // ones are the same one (and the measure's content key reads them so).
+        "GraceCompanion",
     ];
 
     [Fact]

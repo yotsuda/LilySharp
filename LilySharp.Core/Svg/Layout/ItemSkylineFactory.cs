@@ -675,8 +675,11 @@ internal static class ItemSkylineFactory
     /// wins; Lily# drew the flat-reach floor 1.417939 until session 728.
     /// A REST column is not built here (<c>SpacingRules.GraceColumns</c> keeps its flat reach).
     /// </remarks>
+    /// <param name="dx">How far right of the frame's origin the column stands — a voice's
+    /// <see cref="GraceColumnInfo.CollisionShift"/> in the column the voices share
+    /// (<c>SpacingRules.MergedGraceWishSkyline</c>); 0 for a column standing alone.</param>
     internal static HorizontalSkyline CreateGraceWishSkyline(
-        GraceColumnInfo column, bool beamed, HorizontalDirection direction)
+        GraceColumnInfo column, bool beamed, HorizontalDirection direction, double dx = 0.0)
     {
         var parts = new List<ColumnPart>();
         if (!column.IsRest)
@@ -727,6 +730,9 @@ internal static class ItemSkylineFactory
         var boxes = BoxesOf(parts, 0.0,
             direction == HorizontalDirection.Left ? ColumnElements.WishLeft : ColumnElements.NoteColumn,
             EngravingDefaults.DefaultStaffLines);
+        if (dx != 0.0)
+            for (int i = 0; i < boxes.Count; i++)
+                boxes[i] = (boxes[i].YBottom, boxes[i].YTop, boxes[i].XLeft + dx, boxes[i].XRight + dx);
         var skyline = HorizontalSkyline.FromBoxesPadded(
             boxes, direction, SpacingRules.NoteColumnSkylineVerticalPadding);
         HorizontalSkyline.GiveBoxList(boxes);

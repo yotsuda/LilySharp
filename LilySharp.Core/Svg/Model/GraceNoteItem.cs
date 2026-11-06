@@ -73,6 +73,28 @@ public readonly record struct GraceHeadInfo(
 );
 
 /// <summary>
+/// Another voice's grace column standing in the SAME column of the staff as the one that
+/// carries it (<see cref="GraceColumnInfo.Companions"/>): the column itself (its own
+/// <see cref="GraceColumnInfo.CollisionShift"/> set, no companions of its own), whether its run's
+/// beam covers it, the main item its run ends on when this is its LAST column (null otherwise),
+/// and the voice it came from.
+/// </summary>
+/// <remarks>
+/// Two voices' graces before one moment stand in one paper column per grace moment in
+/// LilyPond — the Moment's grace part is the column's address, whichever Voice wrote the note
+/// — so their spacing, their note collision and their accidental column are one column's
+/// (HANDOFF §2 U8b; stamped by <c>MeasureCollector.StampGraceCompanions</c>).
+/// LILYPOND-REF: lily/include/moment.hh:46 grace_part_ — the grace part of a Moment;
+///   lily/paper-column-engraver.cc:153 Paper_column_engraver::process_music — one column per
+///   moment; lily/note-collision.cc:424-468 calc_positioning_done — the clash groups of one column.
+/// </remarks>
+// ⚠️ A CLASS, not a struct: GraceColumnInfo is a struct holding ImmutableArray&lt;GraceCompanion&gt;,
+// and a struct companion holding a GraceColumnInfo closes a layout cycle the type loader
+// refuses ("Could not load type GraceColumnInfo"; session 1115 saw it).
+public sealed record GraceCompanion(
+    GraceColumnInfo Column, bool Beamed, MusicItem? MainItem, int VoiceIndex);
+
+/// <summary>
 /// One COLUMN of a grace group: the noteheads that sound together at one written duration.
 /// </summary>
 /// <remarks>
@@ -178,7 +200,22 @@ public readonly record struct GraceColumnInfo(
     // shape an `@chord` chose (session 964) — as the page's spec: Lily#'s own `\textLengthOn`
     // rule rods its box against the neighbouring columns of the run
     // (SpacingRules.GraceColumns), as ApplyFretFrameSpacing rods a full-size note's.
-    string? FrameSpec = null
+    string? FrameSpec = null,
+    // The OTHER voices' columns standing in this column of the staff (session 1115, HANDOFF §2
+    // U8b): two voices' simultaneous graces share one paper column in LilyPond, so the run's
+    // gaps read the union of the columns' skylines (SpacingRules.GraceColumns), Note_collision
+    // shifts the heads apart (CollisionShift) and one accidental column packs every head's
+    // accidental (GraceColumnHeads.AccidentalOffsets, through each head's stamped AccidentalX).
+    // Stamped by MeasureCollector.StampGraceCompanions on both copies of the column; a
+    // companion's own column carries none (one level). Empty for a grace standing alone.
+    ImmutableArray<GraceCompanion> Companions = default,
+    // How far RIGHT of the shared column this column's heads and stem are drawn —
+    // Note_collision's answer for the two voices' columns at this moment, in staff spaces: 0
+    // for the voice that keeps the column and for a column with no companion. Folded into the
+    // run's column offsets by SpacingRules.GraceColumns, so every reader of a column's X has it.
+    // LILYPOND-REF: lily/note-collision.cc:424-468 calc_positioning_done — the shift in units of
+    //   the support head's width (:427-437), translated less the leftmost (:441-468).
+    double CollisionShift = 0
 )
 {
     /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>

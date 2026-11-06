@@ -2314,6 +2314,26 @@ public sealed partial class MeasureCollector
             StaffAccidentals.SyncGraceNotes(_graceNotes, si => si >= 0 && si < stavesInOrder.Count
                 ? stavesInOrder[si].Voices : default);
         }
+
+        // The staff columns two voices' graces SHARE (HANDOFF §2 U8b): paired by moment, shifted
+        // apart by Note_collision, their accidentals packed as one column — on both copies, after
+        // the accidentals are final.
+        {
+            int gsi = 0;
+            staffGroups = staffGroups
+                .Select(sg => sg with
+                {
+                    Staves = sg.Staves
+                        .Select(st =>
+                        {
+                            int idx = gsi++;
+                            var stamped = StampGraceCompanions(st.Voices, idx);
+                            return stamped == st.Voices ? st : st with { Voices = stamped };
+                        })
+                        .ToImmutableArray()
+                })
+                .ToImmutableArray();
+        }
         var content = CaptureScoreContent(
             staffGroups.SelectMany(sg => sg.Staves).SelectMany(st => st.Voices)
                 .Select(v => v.Measures.Length).DefaultIfEmpty(0).Max());
@@ -2657,6 +2677,8 @@ public sealed partial class MeasureCollector
         resolved = StampGraceMainChordNames(resolved, _v.Cursor.StaffIndex);
         // The grace groups' heads as the voices now have them (StaffAccidentals added some).
         StaffAccidentals.SyncGraceNotes(_graceNotes, _ => resolved);
+        // The staff columns two voices' graces share (HANDOFF §2 U8b) — after the accidentals.
+        resolved = StampGraceCompanions(resolved, _v.Cursor.StaffIndex);
         return ScoreAssembler.BuildScore(
             resolved,
             CaptureScoreContent(voices.Select(v => v.Measures.Length).DefaultIfEmpty(0).Max()));
@@ -6894,6 +6916,245 @@ public sealed partial class MeasureCollector
             columnItemIndices) { IsAfterGrace = grace.IsAfterGrace });
         // Hand the infos to the next main note/chord so it can reserve front space.
         _v.PendingLeadingGrace = graceColumns;
+    }
+
+    /// <summary>
+    /// Stamps on every grace column the OTHER voices' columns that stand in the same column of
+    /// the staff (<see cref="GraceColumnInfo.Companions"/>), the Note_collision shift between
+    /// them (<see cref="GraceColumnInfo.CollisionShift"/>) and the shared accidental column's
+    /// answer (<see cref="GraceHeadInfo.AccidentalX"/>, on the columns and on the grace items the
+    /// page draws) — on the main items' <c>LeadingGrace</c> and on the score-level groups alike
+    /// (HANDOFF §2 U8b, session 1115). A staff of one voice is left as it is.
+    /// </summary>
+    /// <remarks>
+    /// Two voices' graces before main notes at one moment stand in one paper column per grace
+    /// moment: a grace's Moment carries the time to its main note as a negative grace part, so
+    /// <c>grace { a16 b16 }</c> over <c>grace { g16 }</c> stands b and g in one column (−1/16)
+    /// and a alone (−1/8). The columns are paired by that moment, counted back from the main note.
+    /// LILYPOND-REF: lily/include/moment.hh:46 grace_part_ — the grace part of a Moment;
+    ///   lily/paper-column-engraver.cc:153 Paper_column_engraver::process_music — one musical
+    ///   column per moment; lily/note-collision.cc:424-468 calc_positioning_done — the clash
+    ///   groups of one column, shifted in units of the support head's width (:427-437, :447);
+    ///   lily/accidental-engraver.cc:317 Accidental_placement::add_accidental — every accidental
+    ///   of the Staff's moment joins the one AccidentalPlacement.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1115/v1–v6): <c>grace { d'16 }</c> over
+    ///   <c>grace { g16 }</c> stand 1.939 before the main note, both, where Lily# stood the g 1.418
+    ///   (v1); <c>cis'</c> over <c>bis</c>, a second: cis' 3.482 before, bis 2.564 — shifted right
+    ///   0.918, the grace head's width — their sharps 4.525 and 5.387 (v2); the same pitch in both
+    ///   voices on one x (v6); <c>a16 b16</c> over <c>g16</c>: b and g on one x (v3).
+    /// ⚠️ Two columns pointing the SAME way are paired for the spacing and the accidentals and
+    ///   not shifted — the same-direction walk of Note_collision (:539-581) is not read here, and
+    ///   a lower voice's grace points down by the voice props (no probe). A moment shared by
+    ///   THREE voices is paired and not shifted either. A companion's run that goes on past this
+    ///   voice's last column (an eighth over two sixteenths) stands its later column between
+    ///   this run's last and the main note; the chain here does not know it.
+    /// </remarks>
+    private ImmutableArray<Voice> StampGraceCompanions(ImmutableArray<Voice> voices, int staffIndex)
+    {
+        if (voices.IsDefaultOrEmpty || voices.Length < 2 || _graceNotes.Count == 0)
+            return voices;
+        int measureCount = 0;
+        foreach (var v in voices)
+            measureCount = Math.Max(measureCount, v.Measures.Length);
+        var collision = new Svg.Layout.NoteCollision();
+        Dictionary<int, ImmutableArray<Measure>.Builder>? voiceMeasures = null;
+        for (int m = 0; m < measureCount; m++)
+        {
+            // The runs of this measure, with the moment their main items stand at.
+            List<(int Voice, int Item, ImmutableArray<GraceColumnInfo> Run, Fraction Onset, MusicItem Main)>? runs = null;
+            for (int v = 0; v < voices.Length; v++)
+            {
+                if (m >= voices[v].Measures.Length)
+                    continue;
+                var items = voices[v].Measures[m].Items;
+                var onset = new Fraction(0, 1);
+                for (int ii = 0; ii < items.Length; ii++)
+                {
+                    var lead = Svg.Layout.SpacingRules.GraceNotesOf(items[ii]);
+                    if (!lead.IsDefaultOrEmpty && !items[ii].GraceTime)
+                        (runs ??= new()).Add((v, ii, lead, onset, items[ii]));
+                    if (!items[ii].GraceTime)
+                        onset += items[ii].Duration;
+                }
+            }
+            if (runs is null || runs.Count < 2)
+                continue;
+            for (int gStart = 0; gStart < runs.Count; gStart++)
+            {
+                // The runs at one onset (each voice has at most one), led by the first of them.
+                var members = new List<int>();
+                for (int r = 0; r < runs.Count; r++)
+                    if (runs[r].Onset == runs[gStart].Onset)
+                        members.Add(r);
+                if (members.Count < 2 || members[0] != gStart)
+                    continue;
+                // tails[a][k]: the length from column k to the main note — the column's moment.
+                var tails = new Fraction[members.Count][];
+                var prefixes = new int[members.Count];
+                for (int a = 0; a < members.Count; a++)
+                {
+                    var run = runs[members[a]].Run;
+                    tails[a] = new Fraction[run.Length];
+                    var acc = new Fraction(0, 1);
+                    for (int k = run.Length - 1; k >= 0; k--)
+                    {
+                        acc += run[k].Length;
+                        tails[a][k] = acc;
+                    }
+                    prefixes[a] = Svg.Layout.GraceNoteEngraver.BeamedPrefix(run);
+                }
+                int PartnerColumn(int b, Fraction moment)
+                {
+                    for (int k = 0; k < tails[b].Length; k++)
+                        if (tails[b][k] == moment)
+                            return k;
+                    return -1;
+                }
+                // The shift of each column: Note_collision over an up/down pair standing alone.
+                var shifts = new double[members.Count][];
+                for (int a = 0; a < members.Count; a++)
+                    shifts[a] = new double[runs[members[a]].Run.Length];
+                for (int a = 0; a < members.Count; a++)
+                    for (int k = 0; k < runs[members[a]].Run.Length; k++)
+                    {
+                        int partners = 0, bOnly = -1, kOnly = -1;
+                        for (int b = 0; b < members.Count; b++)
+                        {
+                            if (b == a) continue;
+                            int kb = PartnerColumn(b, tails[a][k]);
+                            if (kb < 0) continue;
+                            partners++;
+                            bOnly = b;
+                            kOnly = kb;
+                        }
+                        if (partners != 1 || bOnly < a)
+                            continue;
+                        var ca = runs[members[a]].Run[k];
+                        var cb = runs[members[bOnly]].Run[kOnly];
+                        if (ca.IsRest || cb.IsRest || ca.StemUp == cb.StemUp)
+                            continue;
+                        var up = ca.StemUp ? ca : cb;
+                        var down = ca.StemUp ? cb : ca;
+                        var info = collision.AnalyzeCollision(
+                            up.Heads.Select(h => h.StaffPosition).ToList(),
+                            down.Heads.Select(h => h.StaffPosition).ToList(),
+                            Svg.Layout.GlyphMetrics.NoteValueOf(up.BaseDuration),
+                            Svg.Layout.GlyphMetrics.NoteValueOf(down.BaseDuration),
+                            up.Dots, down.Dots, sameHeadStyle: up.HeadStyle == down.HeadStyle);
+                        // :441-468 — each column by amount − left_most; :427-437 — wid is the
+                        // DOWN group's support head's width (the loop's last write).
+                        double pin = Math.Min(0.0, Math.Min(info.UpStemXOffset, info.DownStemXOffset));
+                        double wid = down.HeadBox.Width;
+                        double upShift = (info.UpStemXOffset - pin) * wid;
+                        double downShift = (info.DownStemXOffset - pin) * wid;
+                        shifts[a][k] = ca.StemUp ? upShift : downShift;
+                        shifts[bOnly][kOnly] = ca.StemUp ? downShift : upShift;
+                    }
+                // Each run's columns with their companions and shifts…
+                var stampedRuns = new GraceColumnInfo[members.Count][];
+                for (int a = 0; a < members.Count; a++)
+                {
+                    var run = runs[members[a]].Run;
+                    stampedRuns[a] = new GraceColumnInfo[run.Length];
+                    for (int k = 0; k < run.Length; k++)
+                    {
+                        var comps = ImmutableArray.CreateBuilder<GraceCompanion>();
+                        for (int b = 0; b < members.Count; b++)
+                        {
+                            if (b == a) continue;
+                            int kb = PartnerColumn(b, tails[a][k]);
+                            if (kb < 0) continue;
+                            var theirRun = runs[members[b]].Run;
+                            comps.Add(new GraceCompanion(
+                                theirRun[kb] with { CollisionShift = shifts[b][kb], Companions = default },
+                                kb < prefixes[b],
+                                kb == theirRun.Length - 1 ? runs[members[b]].Main : null,
+                                runs[members[b]].Voice));
+                        }
+                        stampedRuns[a][k] = comps.Count == 0
+                            ? run[k]
+                            : run[k] with { Companions = comps.ToImmutable(), CollisionShift = shifts[a][k] };
+                    }
+                }
+                // …then the shared accidental column's answer on every head, the companions'
+                // copies included (the skylines read a companion's accidentals off its copy).
+                for (int a = 0; a < members.Count; a++)
+                    for (int k = 0; k < stampedRuns[a].Length; k++)
+                    {
+                        var col = stampedRuns[a][k];
+                        if (col.Companions.IsDefaultOrEmpty || col.Heads.IsDefaultOrEmpty)
+                            continue;
+                        var shared = Svg.Layout.GraceColumnHeads.SharedAccidentalOffsets(col);
+                        var comps = ImmutableArray.CreateBuilder<GraceCompanion>(col.Companions.Length);
+                        for (int ci = 0; ci < col.Companions.Length; ci++)
+                        {
+                            var c = col.Companions[ci];
+                            comps.Add(c with { Column = c.Column with { Heads = WithAccidentalXs(c.Column.Heads, shared[ci + 1]) } });
+                        }
+                        stampedRuns[a][k] = col with
+                        {
+                            Heads = WithAccidentalXs(col.Heads, shared[0]),
+                            Companions = comps.MoveToImmutable(),
+                        };
+                    }
+                // Write back: the main items' LeadingGrace, the grace items' AccidentalX, the groups.
+                for (int a = 0; a < members.Count; a++)
+                {
+                    var (v, ii, _, _, _) = runs[members[a]];
+                    var columns = ImmutableArray.Create(stampedRuns[a]);
+                    voiceMeasures ??= new();
+                    if (!voiceMeasures.TryGetValue(v, out var mb))
+                        voiceMeasures[v] = mb = voices[v].Measures.ToBuilder();
+                    var ib = mb[m].Items.ToBuilder();
+                    ib[ii] = ib[ii] switch
+                    {
+                        NoteItem n => n with { LeadingGrace = columns },
+                        ChordItem c => c with { LeadingGrace = columns },
+                        RestItem r => r with { LeadingGrace = columns },
+                        var other => other,
+                    };
+                    for (int g = 0; g < _graceNotes.Count; g++)
+                    {
+                        var gn = _graceNotes[g];
+                        if (gn.StaffIndex != staffIndex || gn.VoiceIndex != v || gn.MeasureIndex != m
+                            || gn.MainNoteItemIndex != ii || gn.Columns.Length != columns.Length)
+                            continue;
+                        _graceNotes[g] = new GraceNoteItem(gn.Type, columns, gn.MeasureIndex,
+                            gn.MainNoteItemIndex, gn.SourcePosition, gn.StaffIndex, gn.VoiceIndex,
+                            gn.ColumnItemIndices) { IsAfterGrace = gn.IsAfterGrace };
+                        // The page draws a grace's accidental off the grace ITEM, at its stamped X
+                        // (SharedRenderer: a packed column's X, else the single-ape solve).
+                        for (int k = 0; k < columns.Length && k < gn.ColumnItemIndices.Length; k++)
+                        {
+                            int gi = gn.ColumnItemIndices[k];
+                            if (gi < 0 || gi >= ib.Count || columns[k].Heads.Length != 1
+                                || columns[k].Heads[0].AccidentalX is not { } ax)
+                                continue;
+                            if (ib[gi] is NoteItem gnote && gnote.Accidental is not null)
+                                ib[gi] = gnote with { AccidentalX = ax };
+                        }
+                    }
+                    mb[m] = mb[m] with { Items = ib.MoveToImmutable() };
+                }
+            }
+        }
+        if (voiceMeasures is null)
+            return voices;
+        var vb = voices.ToBuilder();
+        foreach (var (v, mb) in voiceMeasures)
+            vb[v] = vb[v] with { Measures = mb.MoveToImmutable() };
+        return vb.MoveToImmutable();
+
+        static ImmutableArray<GraceHeadInfo> WithAccidentalXs(ImmutableArray<GraceHeadInfo> heads, ImmutableArray<double?> xs)
+        {
+            if (heads.IsDefaultOrEmpty)
+                return heads;
+            var b = heads.ToBuilder();
+            for (int h = 0; h < b.Count && h < xs.Length; h++)
+                if (xs[h] is { } x && b[h].Accidental is not null)
+                    b[h] = b[h] with { AccidentalX = x };
+            return b.MoveToImmutable();
+        }
     }
 
     /// <summary>
