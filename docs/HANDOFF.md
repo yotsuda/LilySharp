@@ -118,7 +118,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
 - **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す＝第1116 で閉じた**（`BowShiftsOf`／`ReanchorBows` 退役・§1.1 第1116）
-- ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
+- **⒵⁴ `prefixMarkAnchorX` の解き直し＝第1117 で反証して閉じた（Core 不変）**: 今の HEAD では 1 回 **0 B**（第420 の 1,399 B は消えていた）・時間 0.249%／打鍵・score ごとの memo は +7,956 B／打鍵で時間は動かず（§1.1 第1117）
 
 - ★ **⒵ perf は第615 で区切り（ユーザー判断）**: render −24%・割当 −31%（第598〜第615＝ARCHIVE）。照合の基準は `SvgGenerator.Generate`（Lab `sessions/p611/verify-all.ps1`）・打鍵ごとの計器は Lab `sessions/p613/lathost`。残る大物は設計級＝長い score の段ごと引き継ぎと collect の尾の `_tieTargetWarnings` abort（第613 ⒝）。⚠️ 弱参照の表で全 item を memo する形は GC で負ける（第602）
 
@@ -138,6 +138,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1117セッション（2026-11-06・YT-DELL2）
+
+開始時 full **14770 / 0 / 2**（`-Start p1117`・HEAD `3837e5018`・OMR の open は 0）。作業場所は Lab `sessions/p1117/`。オーナー「あなたのお勧めをやって」＝§1.0 ⒝ ⒵⁴（`prefixMarkAnchorX` の解き直し 0.338%・第420 起票・memo は反証済み）。
+
+- **計器**: Lab `sessions/p1117/allochost/`（p613 の lathost の打鍵列＝235 冊 × 8 打鍵、打鍵ごとの `GC.GetAllocatedBytesForCurrentThread` と ms、Core に一時の `Zz1117` カウンタ＝`SolveLineStartPrefix` の呼び出し数・distinct (score, m0, first)・呼び元・mark anchor の B と ticks）。HEAD の床: **1,509,542 B／打鍵・4.46〜5.67 ms／打鍵**（3 走・`base*.log`）。
+- **実測 ⑴ 解き直しの形は在る**: `SolveLineStartPrefix` は **95.1 回／打鍵、distinct は 24.2**（比 3.9）。呼び元は `LineStartStaffRights`・`LineStartSlurRights`・`BuildPrefixMarkAnchorX`・`LineStartSpringForLine`・`SystemBreaker`・`LayoutMeasures`・`LineStartBarGap`＝第420 の「call 内 memo の hit 0.53%」は、系ごとに*各 site が 1 回ずつ*訊くからで、site をまたげば同じ系が 7 回訊かれる（`trace1.log`）。
+- **実測 ⑵ しかし賞金が無い**: 解き 1 回の割当は **0 B**（24 回／打鍵で 10 B）、mark anchor の lambda も **0 B／回**（21.3 回／打鍵・6 B／打鍵）・時間は **0.0125 ms／打鍵＝打鍵の 0.249%**（`anchor.log`）。第420 の「1 回 1,399 B・0.338%」は 2026-09-19 の測定で、その後に割当が消えている（候補は `f27e39f86` 2026-09-20「the accessors stop building an iterator」＝`EnumerateStaves` 系の iterator。§1.0 の値段は 2 か月のあいだ古いままだった＝**値段は測り直してから着手する**）。
+- **実測 ⑶ 器を入れると負ける**: score ごとの memo（`ScoreSideTables.LineStartPrefixes`＝CWT ＋ `Dictionary<(m0, first), LineStartPrefix>`・lock）を実装して測った: 呼び出しは 24.2 回／打鍵に落ちたが **割当 +7,956 B／打鍵（+0.5%）**（辞書の成長と CWT の項・`after*.log`）、時間は 5.13／4.45／4.65 対 5.67／4.55／4.46 ＝ノイズの中。⇒ **元に戻した（Core 不変・commit なし）**。
+- ⇒ 判定: **⒵⁴ は反証して閉じた**。§1.0 ⒝ に残る perf の島は ⒵（第615 の一時停止）だけ。⚠️ 教訓は RULES-CASES 5.3-127 の続き＝*解き直し*の病は在っても、**払う物が 0 なら器は要らない**（器自身が割当を持つ）。
+- 終了時 full **14770 / 0 / 2**（`-End p1117 -DiffBase 3837e5018`＝`sessions/p1117/end.log`・門は全部 OK）。§7 7.5: Core `+0` 行・REF 0・OWN 0＝Core は HEAD のまま（計器は全部外した・`Zz1117` 0 件）。棚卸しは差分なし。
+
+## 以下は第1116セッションの経緯
+
 ### 1.1 第1116セッション（2026-11-06・YT-DELL2）
 
 開始時 full **14765 / 0 / 2**（`-Start p1116`・HEAD `78f95048b`・OMR の open は 0）。作業場所は Lab `sessions/p1116/`。オーナー指示「Bow の採点」＝§1.0 ⒝ ⒡′（bow を staff 自身の枠で採点し offset は描画時に足す・第424 起票）。
@@ -147,18 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **本体 `f554d5ada`**（Core 7 ファイル＋網＋棚卸し・+266/−184）。**照合**: 全 svg の掃き **差 0 / 1262**（base＝p1115 の exe-head＝HEAD のコード・`sweep/sweep.log`）＝描く絵は 1 本も変わらない。網 `BowStaffFrameTests` 5 本＝grandStaff の段の順を入れ替え、同じ音楽が下段でも上段でも**同じ tie・同じ slur（bit 一致）・同じ script の YUp（slur の上の trill・tie の上の accent）**、描いた tie は段の距離だけ下。**毒 12 本**（`poisons.log`・`poisons2.log`・`paging-poisons.log`）: 赤 10＝土台 3（tie・slur は網、tab slur は `BowTwinTests`）・描画 2・script の dy 2・`paging-curve-no-offset` と `paging-program-no-offset` は網に観測者が無く**掃きが観測者**（頁の bow の張り出しを段 0 で読む→ 4 冊／paging の鍵→ 5 冊が変わる）。**観測者なし 2**＝`hash-no-staff-top`（replay 鍵の段の上端: 段が動いた頁を replay する網が無い）・`carry-across-system-counts`（1,036 冊すべてで prelim と final の系の数が同じ＝門は保険。掃き 0 差）。⚠️ FULL で毒を回すと `BenchmarkFurElise` が負荷で 1 本赤になる＝観測者ではない。
 - ⚠️ **第424 の数（0.074%・1 ULP の尾）は測り直していない**＝消した経路の割当がそのまま消えるだけ（`BowShiftsOf` は動いた staff だけ配列を作っていた）。perf は §1.0 ⒝ の島のまま。
 - 終了時 full **14770 / 0 / 2**（`-End p1116 -DiffBase 78f95048b`＝`sessions/p1116/end.log`・門は全部 OK。1 回目（`end1.log`）は新しい網のファイルに GPL の頭が無く `LicenceHeaderTests` が 1 本赤→足して commit してから回し直した）。§7 7.5: Core `+112` 行・REF 0・OWN 0（新しい逸脱なし。棚卸しは OWN 304→303＝`BowShiftsOf` の LILYSHARP-OWN が消えた分・magic は tie／tab の `staffY = 0.0` 2 点が入れ替わり）。Release の lysc は `exe-head` に写した（`f554d5ada` のコード）。
-
-## 以下は第1115セッションの経緯
-
-### 1.1 第1115セッション（2026-11-06・YT-DELL2）
-
-開始時 full **14760 / 0 / 2**（`-Start p1115`・HEAD `1a0c7d222`・OMR の open は 0）。作業場所は Lab `sessions/p1115/`。`b19` はオーナーの問い「音楽的に直すべきか」に「今は直さなくてよい」と答えて据え置き（意味は変わらず、休符が 0.5〜1 間深いだけ）。オーナー指示「二声グレース」＝§2 U8b。
-
-- **LP の実測**（`gpair.ps1`＝`lysc ly` の双子に NoteHead／Accidental の X を刷る hook を足して LP 2.26.0 で描く・`v1`〜`v7`）: 二声の同時 grace は 1 つの紙の列に立つ。`grace { d'16 }` 対 `grace { g16 }` は両方とも主音の 1.939 前（Lily# は g だけ 1.418＝自分の gap・`v1`）／`cis'` 対 `bis`（二度）は cis' 3.482・bis 2.564＝0.918 右（grace の頭の幅）、♯ は 4.525 と 5.387 の 1 列（`v2`）／`a16 b16` 対 `g16` は b と g が同じ列（モーメントで末尾から揃う・`v3`）／同音は同じ x（`v6`）／`a16 b16` 対 `ais16` は ais が b と二度で 1.418・♯ 3.379（`v7`）。
-- **本体 `2a47f06b8`＝列の合体**: ⑴ モデル: `GraceColumnInfo.Companions`（同じ列に立つ他声の列の写し＝`GraceCompanion` は参照型。struct にすると `GraceColumnInfo`→`ImmutableArray<GraceCompanion>`→`GraceColumnInfo` のレイアウト循環で型が読めない）と `CollisionShift`（Note_collision の答え）。`MeasureCollector.StampGraceCompanions` が、同じ瞬間に主音を持つ声部の run を**モーメント＝末尾からの長さの和**で列ごとに組み、上下の対には `NoteCollision.AnalyzeCollision` の答え × 下声の頭の幅（LP :427-437 の wid）を刻み、臨時記号は `GraceColumnHeads.SharedAccidentalOffsets`（両声の頭を 1 つの `AccidentalPlacement` に）で各頭の `AccidentalX` に刻む（列の写しと、描画が読む grace の NoteItem にも）。3 つの collect の出口（単声・単段多声・多段）のうち多声の 2 つで呼ぶ。⑵ 間隔: `SpacingRules.GraceColumns` は列の wish skyline を companions と合体（`CreateGraceWishSkyline` に dx）、主音の列も他声の主音と合体、ideal は各声の wish の平均（merge_springs）、床は合体した skyline。shift は chain の後で offsets／ToMain に畳む＝読み手は全部そのまま。⑶ `GraceColumnHeads.AccidentalOffsets` は刻まれた `AccidentalX` があればそれを返す（1 つの家）。
-- **照合**: v1〜v7 の全部で両端 0.02 以内（v2 の 4 点、v7 の 4 点を含む）。網 `TwoVoiceGraceColumnTests` 5 本（対で主張）。全 svg の掃きは差 0 / 1262（`sweep/sweep.log`）＝コーパスに二声の同時 grace は無い（第357 の射程 0 のまま）。毒 8 本のうち赤 7・緑 1（`average-off`＝各声の ideal の平均は床が勝つ形しか無く観測者なし。LP の規則なので残した。`poisons3.log`）。
-- ⚠️ **残した制限**（`StampGraceCompanions` の註）: 同じ向きの 2 列（Note_collision の同方向の歩き）と 3 声以上の瞬間は組むが shift しない／相手の run がこちらの最後の列より後に続く形（8 分対 2 つの 16 分）は chain が知らない／grace の和音の `ChordNoteInfo.AccidentalX` は刻まない（単音だけ）。
-- 終了時 full **14765 / 0 / 2**（`-End p1115 -DiffBase 1a0c7d222`＝`sessions/p1115/end2.log`・門は全部 OK。1 回目は `ModelEqualityKindTests` が `GraceCompanion` の分類を求めて 1 本赤 → Values に入れて amend）。§7 7.5: Core `+509` 行・REF 8・OWN 0（新しい逸脱なし）。Release の lysc は作り直していない（`8fc8e2be1` のまま）。
 
 ## 2. 開いている作業
 

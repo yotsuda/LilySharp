@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1115セッションの経緯
+
+### 1.1 第1115セッション（2026-11-06・YT-DELL2）
+
+開始時 full **14760 / 0 / 2**（`-Start p1115`・HEAD `1a0c7d222`・OMR の open は 0）。作業場所は Lab `sessions/p1115/`。`b19` はオーナーの問い「音楽的に直すべきか」に「今は直さなくてよい」と答えて据え置き（意味は変わらず、休符が 0.5〜1 間深いだけ）。オーナー指示「二声グレース」＝§2 U8b。
+
+- **LP の実測**（`gpair.ps1`＝`lysc ly` の双子に NoteHead／Accidental の X を刷る hook を足して LP 2.26.0 で描く・`v1`〜`v7`）: 二声の同時 grace は 1 つの紙の列に立つ。`grace { d'16 }` 対 `grace { g16 }` は両方とも主音の 1.939 前（Lily# は g だけ 1.418＝自分の gap・`v1`）／`cis'` 対 `bis`（二度）は cis' 3.482・bis 2.564＝0.918 右（grace の頭の幅）、♯ は 4.525 と 5.387 の 1 列（`v2`）／`a16 b16` 対 `g16` は b と g が同じ列（モーメントで末尾から揃う・`v3`）／同音は同じ x（`v6`）／`a16 b16` 対 `ais16` は ais が b と二度で 1.418・♯ 3.379（`v7`）。
+- **本体 `2a47f06b8`＝列の合体**: ⑴ モデル: `GraceColumnInfo.Companions`（同じ列に立つ他声の列の写し＝`GraceCompanion` は参照型。struct にすると `GraceColumnInfo`→`ImmutableArray<GraceCompanion>`→`GraceColumnInfo` のレイアウト循環で型が読めない）と `CollisionShift`（Note_collision の答え）。`MeasureCollector.StampGraceCompanions` が、同じ瞬間に主音を持つ声部の run を**モーメント＝末尾からの長さの和**で列ごとに組み、上下の対には `NoteCollision.AnalyzeCollision` の答え × 下声の頭の幅（LP :427-437 の wid）を刻み、臨時記号は `GraceColumnHeads.SharedAccidentalOffsets`（両声の頭を 1 つの `AccidentalPlacement` に）で各頭の `AccidentalX` に刻む（列の写しと、描画が読む grace の NoteItem にも）。3 つの collect の出口（単声・単段多声・多段）のうち多声の 2 つで呼ぶ。⑵ 間隔: `SpacingRules.GraceColumns` は列の wish skyline を companions と合体（`CreateGraceWishSkyline` に dx）、主音の列も他声の主音と合体、ideal は各声の wish の平均（merge_springs）、床は合体した skyline。shift は chain の後で offsets／ToMain に畳む＝読み手は全部そのまま。⑶ `GraceColumnHeads.AccidentalOffsets` は刻まれた `AccidentalX` があればそれを返す（1 つの家）。
+- **照合**: v1〜v7 の全部で両端 0.02 以内（v2 の 4 点、v7 の 4 点を含む）。網 `TwoVoiceGraceColumnTests` 5 本（対で主張）。全 svg の掃きは差 0 / 1262（`sweep/sweep.log`）＝コーパスに二声の同時 grace は無い（第357 の射程 0 のまま）。毒 8 本のうち赤 7・緑 1（`average-off`＝各声の ideal の平均は床が勝つ形しか無く観測者なし。LP の規則なので残した。`poisons3.log`）。
+- ⚠️ **残した制限**（`StampGraceCompanions` の註）: 同じ向きの 2 列（Note_collision の同方向の歩き）と 3 声以上の瞬間は組むが shift しない／相手の run がこちらの最後の列より後に続く形（8 分対 2 つの 16 分）は chain が知らない／grace の和音の `ChordNoteInfo.AccidentalX` は刻まない（単音だけ）。
+- 終了時 full **14765 / 0 / 2**（`-End p1115 -DiffBase 1a0c7d222`＝`sessions/p1115/end2.log`・門は全部 OK。1 回目は `ModelEqualityKindTests` が `GraceCompanion` の分類を求めて 1 本赤 → Values に入れて amend）。§7 7.5: Core `+509` 行・REF 8・OWN 0（新しい逸脱なし）。Release の lysc は作り直していない（`8fc8e2be1` のまま）。
+
 ## 以下は第1114セッションの経緯
 
 ### 1.1 第1114セッション（2026-11-06・YT-DELL2）
