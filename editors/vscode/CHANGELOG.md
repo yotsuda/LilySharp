@@ -2,8 +2,13 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
-## Unreleased
+## 0.15.0
 
+- **Two voices' grace notes at one moment stand in one column**: each stood against its own note, and a second between them drew the heads on top of each other.
+- **A beam keeps clear of a beam that starts after it**: two overlapping beams could run through each other. A note's own `@stemUp` / `@stemDown` in `voice { } { }` turns its beam.
+- **A rest under a note a cross-staff beam moved to its staff clears the head, not the stem**: it went down to the beam and pushed the staves apart.
+- **The preview answers a keystroke faster on a long score**: a 1000-bar score's floor went from 118 to 44 ms with beams and fingerings, 36 to 30 ms plain.
+- **No more editing with the mouse in the preview**: dragging a note or a tempo, and the padlock, are gone; put the caret on the note and press `Ctrl+Shift+Up` / `Down` in the editor. A click on the preview still goes to its source.
 - **A slur over notes moved with `@cross` stays by its own notes**: a staccato, dot or accidental on a moved note pushed it far below the staff.
 - **A note moved with `@cross` shares the dot column of the staff it lands on**: two dots a second apart stood in the same space.
 - **A beam keeps clear of the notes `@cross` moved onto its staff**: it could run through their heads.
