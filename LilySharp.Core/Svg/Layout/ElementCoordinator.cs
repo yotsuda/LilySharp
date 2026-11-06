@@ -2574,7 +2574,16 @@ internal sealed class ElementCoordinator
                             noteHigh = Math.Max(noteHigh, p + half);
                         }
                         bool stemUp = item is NoteItem n ? n.StemUp : ((ChordItem)item).StemUp;
-                        if ((stemUp ? 1 : -1) == dir && onset == time)
+                        // …but not the stem of a beam that spans the staves: that stem is a
+                        // cross-staff grob, and the column's extent leaves it out — the head
+                        // alone, as for a note of another column. MEASURED (Lab
+                        // sessions/p1114/b6): the treble's r8 under the g' a bass beam reaches
+                        // sits 1.5 spaces below the middle line in LilyPond; cleared past the
+                        // stem's tip it sat 6 below, and pushed the bass staff 1.09 away.
+                        // LILYPOND-REF: lily/stem.cc:1279-1283 Stem::is_cross_staff — its beam's;
+                        //   lily/axis-group-interface.cc:96-106 relative_maybe_bound_group_extent
+                        //   — a cross-staff element is not in the group's extent.
+                        if ((stemUp ? 1 : -1) == dir && onset == time && !BeamSpansStaves(theirs, item))
                         {
                             double tip = StemTipPositionOf(item, stemUp);
                             noteLow = Math.Min(noteLow, tip);
@@ -2594,6 +2603,24 @@ internal sealed class ElementCoordinator
                 }
             }
         }
+    }
+
+    /// <summary>Whether <paramref name="item"/>'s beam has a member of <paramref name="items"/>
+    /// (its voice's measure) standing on another staff than it — the stem is then LilyPond's
+    /// cross-staff Stem (<c>Stem::is_cross_staff</c> → <c>Beam::is_cross_staff</c>). A beam
+    /// over the bar line is read within this measure only.</summary>
+    private static bool BeamSpansStaves(ImmutableArray<MusicItem> items, MusicItem item)
+    {
+        int? id = item switch { NoteItem n => n.BeamId, ChordItem c => c.BeamId, _ => null };
+        if (id is null)
+            return false;
+        foreach (var other in items)
+        {
+            int? otherId = other switch { NoteItem n => n.BeamId, ChordItem c => c.BeamId, _ => null };
+            if (otherId == id && other.CrossStaffIndex != item.CrossStaffIndex)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>

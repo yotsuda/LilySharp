@@ -531,6 +531,45 @@ public class CrossStaffDrawingTests
     }
 
     [Fact]
+    public void ARestUnderANoteOfACrossStaffBeamClearsItsHeadAndNotItsStem()
+    {
+        // MEASURED, LilyPond 2.26.0 (Lab sessions/p1114/b6, Rest.after-line-breaking): the treble's
+        // r8 shares its moment with the g' the bass voice's beam `r8 c8 e'@cross g'@cross` moved up,
+        // whose stem goes DOWN to the beam between the staves. The rest goes down 3.5 spaces —
+        // clear of the HEAD and not of the stem: that stem is a cross-staff grob, which the note
+        // column's extent leaves out (axis-group-interface.cc:96-106). Lily# cleared the stem's
+        // tip and put the rest 6 below, which pushed the bass staff 1.09 away (10.09 against 9.00)
+        // and the cross-staff beam with it (6.90..5.09 against 6.19..4.81 below the treble middle).
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(Book(
+            "r1 | f'8@stemDown g'@stemDown a'@stemDown r8 r2 |",
+            "r1 | r8 c8 e'@cross g'@cross r2 |")));
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var lines = System.Text.RegularExpressions.Regex
+            .Matches(svg, "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"([-\\d.]+)\"")
+            .Where(l => l.Groups[2].Value == l.Groups[4].Value
+                && double.Parse(l.Groups[3].Value, inv) - double.Parse(l.Groups[1].Value, inv) > 5)
+            .Select(l => double.Parse(l.Groups[2].Value, inv)).Distinct().OrderBy(y => y).ToArray();
+        Assert.Equal(10, lines.Length);
+        double trebleMiddle = lines[2], bassMiddle = lines[7];
+        Assert.InRange(bassMiddle - trebleMiddle, 9.0 - 0.02, 9.0 + 0.02);
+        // The rest: the one music glyph between the treble's lowest head (f', two spaces below
+        // the middle line) and the bass staff — 3.5 below the treble middle.
+        var glyphs = System.Text.RegularExpressions.Regex
+            .Matches(svg, "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"")
+            .Select(m => (X: double.Parse(m.Groups[1].Value, inv), Y: double.Parse(m.Groups[2].Value, inv)))
+            .Where(g => g.Y > trebleMiddle + 2.5 && g.Y < bassMiddle - 2.5).ToArray();
+        var rest = Assert.Single(glyphs);
+        Assert.InRange(rest.Y - trebleMiddle, 3.5 - 0.02, 3.5 + 0.02);
+        // …and the cross-staff beam where LilyPond's is.
+        var beam = System.Text.RegularExpressions.Regex.Matches(svg, "<polygon points=\"([-\\d.]+),([-\\d.]+) [-\\d.]+,([-\\d.]+) [-\\d.]+,([-\\d.]+) [-\\d.]+,([-\\d.]+)\"")
+            .Select(m => (X: double.Parse(m.Groups[1].Value, inv), L: (double.Parse(m.Groups[2].Value, inv) + double.Parse(m.Groups[5].Value, inv)) / 2 - trebleMiddle,
+                          R: (double.Parse(m.Groups[3].Value, inv) + double.Parse(m.Groups[4].Value, inv)) / 2 - trebleMiddle))
+            .OrderByDescending(b => b.X).First();
+        Assert.InRange(beam.L, 6.19 - 0.02, 6.19 + 0.02);
+        Assert.InRange(beam.R, 4.81 - 0.02, 4.81 + 0.02);
+    }
+
+    [Fact]
     public void AWholeNoteLendsThePureDistanceNoStem()
     {
         // MEASURED, LilyPond 2.26.0 (Lab sessions/p1111/c2): with a `c1` on each staff the pure
