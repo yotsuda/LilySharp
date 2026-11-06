@@ -985,7 +985,12 @@ internal sealed class BeamScoringProblem
         for (int j = 0; j < segments.Count; j++)
         {
             var seg = segments[j];
-            if (seg.XLeft <= x && x <= seg.XRight)
+            // Inclusive at both ends (flower Interval::contains), with a hair of tolerance:
+            // the edge of a covered grob built from another stem of the same column — the box
+            // of a beam ending where this one ends (AppendCoveredBeams) — reaches this segment's
+            // end by a different sum and may miss it by an ulp, which LilyPond's one grob
+            // coordinate never does. Lab sessions/p1113/c1 dropped the right edge that way.
+            if (seg.XLeft - 1e-9 <= x && x <= seg.XRight + 1e-9)
             {
                 double y = seg.Rank * _beamTranslation;
                 beamYMin = Math.Min(beamYMin, y);

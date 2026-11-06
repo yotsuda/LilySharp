@@ -664,11 +664,16 @@ internal sealed class ElementCoordinator
     /// internally, exactly as before (no production caller passes null any more).</param>
     /// <param name="staffLines">The staff's drawn line count — the quanter's
     /// <c>staff_radius_</c> (BeamEngraver.CalculateBeamLayout).</param>
+    /// <param name="beamsOfStaff">The beams already laid on a staff, by staff index — the
+    /// cross-staff pass (<c>LayoutEngine.LayCrossStaffBeams</c>) hands over the plain beams of
+    /// every staff, so a cross-staff beam can avoid the later-starting ones where its stems
+    /// stand (<see cref="AppendCoveredBeams"/>). Null ⇒ only the beams this call lays.</param>
     public ImmutableArray<BeamLayout> LayoutBeams(
         Score score, ImmutableArray<SystemLayout> systems, int staffIndex,
         ImmutableArray<BeamGroup>? precomputedGroups = null,
         int staffLines = EngravingDefaults.DefaultStaffLines,
-        Func<int, Staff?>? voicesOfStaff = null)
+        Func<int, Staff?>? voicesOfStaff = null,
+        Func<int, ImmutableArray<BeamLayout>>? beamsOfStaff = null)
     {
         var beamGroups = precomputedGroups ?? _beamDetector.DetectBeamGroups(score);
 
@@ -680,13 +685,40 @@ internal sealed class ElementCoordinator
         var beamLayouts = ListPool<BeamLayout>.Rent();
         var voiceShifts = SpacingRules.VoiceCollisionShiftsOf(score.Voices);
 
-        foreach (var group in beamGroups)
+        // A beam avoids the beams that START AFTER it, and reads their laid-out boxes to do so
+        // (AppendCoveredBeams) — so the later-starting beam is solved first: the groups are
+        // walked latest start first, and the layouts handed back in the groups' own order.
+        // LILYPOND-REF: lily/beam-collision-engraver.cc:173-175 Beam_collision_engraver::finalize —
+        //   the covered beam starts later; its extent (beam-quanting.cc:379) triggers its own
+        //   positions first.
+        var starts = new (int Measure, Fraction Start)[beamGroups.Length];
+        for (int gi = 0; gi < beamGroups.Length; gi++)
+            starts[gi] = BeamStartOf(score.Voices, beamGroups[gi]);
+        var order = new int[beamGroups.Length];
+        for (int gi = 0; gi < order.Length; gi++) order[gi] = gi;
+        Array.Sort(order, (a, b) =>
         {
+            int c = starts[b].Measure.CompareTo(starts[a].Measure);
+            if (c != 0) return c;
+            if (starts[a].Start < starts[b].Start) return 1;
+            if (starts[b].Start < starts[a].Start) return -1;
+            return a.CompareTo(b);
+        });
+        var laidByGroup = new BeamLayout?[beamGroups.Length];
+        List<BeamLayout>?[]? crossPieces = null;
+        // The plain beams this call laid so far — the candidates a beam walked later covers.
+        var laidPlain = new List<(BeamLayout Beam, (int Measure, Fraction Start) Start)>();
+
+        foreach (int gi in order)
+        {
+            var group = beamGroups[gi];
             // LILYPOND-REF: lily/beam.cc — multi-measure beams get a dedicated path.
             if (IsCrossMeasureGroup(group))
             {
+                var pieces = new List<BeamLayout>();
                 foreach (var crossLayout in LayoutCrossMeasureBeamPieces(score, group, measureMap, staffIndex, staffLines, voicesOfStaff))
-                    beamLayouts.Add(crossLayout);
+                    pieces.Add(crossLayout);
+                (crossPieces ??= new List<BeamLayout>?[beamGroups.Length])[gi] = pieces;
                 continue;
             }
 
@@ -752,6 +784,10 @@ internal sealed class ElementCoordinator
                     score.Voices[group.VoiceIndex].Measures[group.MeasureIndex], itemXPositions,
                     BeamStemX(group, 0, beamLeftX),
                     BeamStemX(group, group.Members.Length - 1, beamRightX), voicesOfStaff);
+            // …and the beams that start after this one, where its stems stand.
+            AppendCoveredBeams(ref collisions, group, starts[gi], laidPlain, beamsOfStaff, voicesOfStaff,
+                score.Voices, staffIndex, system.SystemIndex,
+                BeamStemX(group, 0, beamLeftX), BeamStemX(group, group.Members.Length - 1, beamRightX));
 
             // The system comes from the SAME measureMap lookup that gave the X positions, so
             // the stamp and the frame the X is in cannot disagree.
@@ -763,7 +799,17 @@ internal sealed class ElementCoordinator
                 collisions,
                 staffLines);
 
-            beamLayouts.Add(beamLayout);
+            laidByGroup[gi] = beamLayout;
+            if (!group.IsCrossStaff)
+                laidPlain.Add((beamLayout, starts[gi]));
+        }
+
+        for (int gi = 0; gi < beamGroups.Length; gi++)
+        {
+            if (laidByGroup[gi] is { } one)
+                beamLayouts.Add(one);
+            else if (crossPieces?[gi] is { } pieces)
+                beamLayouts.AddRange(pieces);
         }
 
         var laid = beamLayouts.ToImmutableArray();
@@ -1865,6 +1911,154 @@ internal sealed class ElementCoordinator
             foreach (var c in theirs)
                 collisions.Add(c with { MinY = c.MinY + offset, MaxY = c.MaxY + offset });
         }
+    }
+
+    /// <summary>Where a beam starts: its measure and the moment of its first member in it —
+    /// LilyPond's <c>spanned_column_rank_interval ()[LEFT]</c>, read as a moment since two
+    /// voices' columns at one moment are one column.</summary>
+    private static (int Measure, Fraction Start) BeamStartOf(ImmutableArray<Voice> voices, BeamGroup group)
+    {
+        int measureIndex = group.Members[0].ResolveMeasureIndex(group.MeasureIndex);
+        var start = Fraction.Zero;
+        if (group.VoiceIndex >= 0 && group.VoiceIndex < voices.Length
+            && measureIndex >= 0 && measureIndex < voices[group.VoiceIndex].Measures.Length)
+        {
+            var items = voices[group.VoiceIndex].Measures[measureIndex].Items;
+            for (int i = 0; i < group.Members[0].ItemIndex && i < items.Length; i++)
+                start += GetItemDuration(items[i]);
+        }
+        return (measureIndex, start);
+    }
+
+    /// <summary>
+    /// The beams that start AFTER <paramref name="group"/> on the staves its stems stand on, as
+    /// covered grobs: each one's drawn box — its outer stems' edges by the extent of its stack —
+    /// booked at the box's two x edges, as every other covered grob is.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-collision-engraver.cc:68 acknowledge_beam — a Beam is a covered
+    ///   grob; :173-175 finalize — not one that starts at or before the beam's own first column
+    ///   (<c>covered_grob_spanned_rank[LEFT] &lt;= beam_spanned_rank[LEFT]</c>): of two beams that
+    ///   overlap, the EARLIER one avoids the LATER, whichever voice either is in, and two that
+    ///   start together avoid nothing; :153-155 finalize — only a grob of a vertical axis group one
+    ///   of the beam's stems stands in.
+    /// LILYPOND-REF: lily/beam-quanting.cc:373-375 init_instance_variables — a covered beam that
+    ///   is itself cross-staff is skipped, so a plain beam never avoids a cross-staff one; :377-392
+    ///   init_instance_variables — the grob's extent on both axes, two entries at its x edges
+    ///   carrying the whole y.
+    /// LILYPOND-REF: scm/define-grobs.scm:496-504 Beam's collision-interfaces: note-head-interface,
+    ///   stem-interface, inline-accidental-interface … and beam-interface itself, so a Beam is in
+    ///   the default list; collision-voice-only is #f.
+    /// The box: a Beam's X-extent is its stencil's — the outer stems' far edges
+    ///   (<see cref="BeamLayout.DrawnLeftX"/>/<see cref="BeamLayout.DrawnRightX"/>, beam.cc:631);
+    ///   its Y-extent the stencil's too — the primary line's two ends, the stack of secondary
+    ///   lines toward the heads (SharedRenderer.Beams' rank walk), half the thickness beyond. A
+    ///   secondary line that runs only part of the way is counted over the whole box: a rounding
+    ///   of the stencil's bounding box by at most the slope over the part it does not run.
+    /// ⚠️ SOLVED IN ORDER: the covered beam's LAYOUT is read, so the caller lays the
+    ///   later-starting beam first (<see cref="LayoutBeams"/>' walk; the cross-staff pass comes
+    ///   after every plain beam). In LilyPond the extent callback triggers the covered beam's own
+    ///   positions, which is the same order.
+    /// ⚠️ A beam another staff's voice moved wholly onto this staff (IsCrossStaff, not
+    ///   SpansStaves) is on this staff's axis group in LilyPond and would be covered here; it is
+    ///   not booked — it is laid in its own staff's call, where this staff's beams are not seen.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1113/c1–c4, -dbackend=svg), on one staff: voice
+    ///   1's <c>c'8 d' e' f'</c> under voice 2's <c>r8 e'8@stemUp f' g'</c> is beamed 2.81..3.50
+    ///   above the middle line, over the second voice's beam at 1.19..1.81 — read through it, it
+    ///   stood at 0.19..1.19 (c1); it is the beam that starts first that moves, whichever voice:
+    ///   voice 2's <c>e'8@stemUp f' g' a'</c> under voice 1's <c>r8 c'8 d' e'</c> rises 1.19..2.19 →
+    ///   2.00..2.81 (c3); in sixteenths the two-line stack is cleared, 0.19 → 3.50 (c4). Two beams
+    ///   starting together run through each other, each where it stands alone (c2).
+    /// </remarks>
+    private static void AppendCoveredBeams(ref List<BeamCollision>? collisions, BeamGroup group,
+        (int Measure, Fraction Start) start,
+        List<(BeamLayout Beam, (int Measure, Fraction Start) Start)> laidPlain,
+        Func<int, ImmutableArray<BeamLayout>>? beamsOfStaff, Func<int, Staff?>? voicesOfStaff,
+        ImmutableArray<Voice> ownVoices, int staffIndex, int systemIndex,
+        double beamOriginX, double lastStemX)
+    {
+        double halfStem = EngravingDefaults.StemThickness / 2;
+        double edgeLeft = beamOriginX - halfStem, edgeRight = lastStemX + halfStem;
+        // The staves the beam's stems stand on: the home staff unless every member moved.
+        bool anyHome = false;
+        foreach (var m in group.Members)
+            if (m.TargetStaffIndex < 0) { anyHome = true; break; }
+
+        if (anyHome)
+        {
+            // This call's own plain beams laid before this one.
+            foreach (var (beam, s) in laidPlain)
+                if (StartsAfter(s, start) && !ReferenceEquals(beam.Group, group))
+                    AddBeamBoxCollision(ref collisions, beam, 0.0, edgeLeft, edgeRight, beamOriginX);
+            // …and, in a pass that lays none of them, the staff's plain beams laid before it.
+            if (beamsOfStaff is not null)
+                AppendStaffsCoveredBeams(ref collisions, group, start, beamsOfStaff(staffIndex), ownVoices,
+                    systemIndex, 0.0, edgeLeft, edgeRight, beamOriginX);
+        }
+        if (beamsOfStaff is null || voicesOfStaff is null)
+            return;
+        // The other staves a member moved to: that staff's plain beams, in this beam's frame.
+        for (int i = 0; i < group.Members.Length; i++)
+        {
+            int target = group.Members[i].TargetStaffIndex;
+            bool first = target >= 0;
+            for (int j = 0; first && j < i; j++)
+                first = group.Members[j].TargetStaffIndex != target;
+            if (!first)
+                continue;
+            var voices = voicesOfStaff(target)?.Voices ?? ImmutableArray<Voice>.Empty;
+            AppendStaffsCoveredBeams(ref collisions, group, start, beamsOfStaff(target), voices,
+                systemIndex, group.Members[i].StaffOffset / 2.0, edgeLeft, edgeRight, beamOriginX);
+        }
+    }
+
+    /// <summary>The plain beams of one staff (<paramref name="laid"/>, in this system) that start
+    /// after <paramref name="start"/>, booked <paramref name="yOffsetSs"/> staff spaces up into
+    /// the beam's frame (<see cref="AppendCoveredBeams"/>).</summary>
+    private static void AppendStaffsCoveredBeams(ref List<BeamCollision>? collisions, BeamGroup group,
+        (int Measure, Fraction Start) start, ImmutableArray<BeamLayout> laid, ImmutableArray<Voice> voices,
+        int systemIndex, double yOffsetSs, double edgeLeft, double edgeRight, double beamOriginX)
+    {
+        foreach (var beam in laid)
+        {
+            if (beam.SystemIndex != systemIndex || beam.Group.IsCrossStaff || ReferenceEquals(beam.Group, group))
+                continue;
+            if (StartsAfter(BeamStartOf(voices, beam.Group), start))
+                AddBeamBoxCollision(ref collisions, beam, yOffsetSs, edgeLeft, edgeRight, beamOriginX);
+        }
+    }
+
+    /// <summary>Whether a beam starting at <paramref name="a"/> starts after one starting at
+    /// <paramref name="b"/> IN THE SAME MEASURE — the only place a beam of one measure can
+    /// reach. ⚠️ Not a later measure: a beam laid on another system has its x in that system's
+    /// frame, and the x-span reject cannot tell it from one standing here (the first sweep moved
+    /// 422 of 1262 pages that way).</summary>
+    private static bool StartsAfter((int Measure, Fraction Start) a, (int Measure, Fraction Start) b)
+        => a.Measure == b.Measure && b.Start < a.Start;
+
+    /// <summary>
+    /// One laid-out beam's drawn box as a covered grob (<see cref="AppendCoveredBeams"/>): x from
+    /// its outer stems' far edges; y from the primary line's lower end less the stack and half
+    /// the thickness, to its upper end plus — the stack hangs toward the heads, below an up-stem
+    /// beam and above a down-stem one, and to both sides of a knee. The two Y are halved from
+    /// staff positions to the quanter's staff spaces.
+    /// </summary>
+    private static void AddBeamBoxCollision(ref List<BeamCollision>? collisions, BeamLayout covered,
+        double yOffsetSs, double edgeLeft, double edgeRight, double beamOriginX)
+    {
+        double yLeft = covered.LeftY / 2.0 + yOffsetSs, yRight = covered.RightY / 2.0 + yOffsetSs;
+        double low = Math.Min(yLeft, yRight), high = Math.Max(yLeft, yRight);
+        int count = 1;
+        foreach (var m in covered.Group.Members)
+            count = Math.Max(count, m.BeamCount);
+        double stack = (count - 1) * EngravingDefaults.BeamTranslationOf(
+            covered.Group.Thickness, covered.Group.LengthFraction, count);
+        double half = covered.Group.Thickness / 2.0;
+        bool knee = covered.Group.IsKnee;
+        double bottom = low - half - (knee || covered.Group.StemUp ? stack : 0.0);
+        double top = high + half + (knee || !covered.Group.StemUp ? stack : 0.0);
+        AddBoxCollision(ref collisions, covered.DrawnLeftX, covered.DrawnRightX, bottom, top,
+            edgeLeft, edgeRight, beamOriginX);
     }
 
     /// <summary>The body of <see cref="AppendCrossVoiceMeasureCollisions"/> over any voices of a

@@ -103,7 +103,10 @@ internal sealed partial class LayoutEngine
                         if (si == target)
                             return st;
                     return null;
-                });
+                },
+                // The plain beams of every staff are laid: a cross-staff beam avoids the
+                // later-starting ones where its stems stand (ElementCoordinator.AppendCoveredBeams).
+                target => byStaff.TryGetValue(target, out var theirs) ? theirs : ImmutableArray<BeamLayout>.Empty);
             var merged = ImmutableArray.CreateBuilder<BeamLayout>(laid.Length);
             foreach (var beam in laid)
                 if (!beam.Group.IsCrossStaff)

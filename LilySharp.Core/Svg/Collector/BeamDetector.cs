@@ -711,9 +711,12 @@ internal sealed class BeamDetector
         }
         var visible = new ReadOnlySpan<StemCandidate>(stems, 0, stemCount);
 
-        // A polyphonic voice forces its direction; otherwise the farthest head decides.
+        // A polyphonic voice forces its direction (unless the writer turned a member —
+        // VoiceBeamStemUp); otherwise the farthest head decides.
         // The beam is asked where it STARTS — one beam has one direction.
-        bool stemUp = forceStemUpAt?.Invoke(startMeasure, startItem) ?? DefaultBeamStemUp(visible);
+        bool stemUp = forceStemUpAt?.Invoke(startMeasure, startItem) is { } voiceSide
+            ? VoiceBeamStemUp(visible, voiceSide)
+            : DefaultBeamStemUp(visible);
 
         bool boundRestLeft = HasBoundRest(restStems, 0);
         bool boundRestRight = HasBoundRest(restStems, stemCount);
@@ -1112,7 +1115,9 @@ internal sealed class BeamDetector
         // Asked at the group's FIRST member: one beam has one direction (and a span that opens
         // or closes mid-bar forces only the part of the bar it covers).
         bool? forcedStemUp = forceStemUpAt?.Invoke(measureIndex, group[0].index);
-        bool stemUp = forcedStemUp ?? DefaultBeamStemUp(visible);
+        bool stemUp = forcedStemUp is { } voiceSide
+            ? VoiceBeamStemUp(visible, voiceSide)
+            : DefaultBeamStemUp(visible);
 
         // Check if first note has feathered beam direction
         // LILYPOND-REF: beam.cc:1039-1082 grow-direction
@@ -1771,32 +1776,73 @@ internal sealed class BeamDetector
             if (extremeUp < -extremeDown) return true;            // UP
         }
 
-        // Tie: per-stem majority vote by each stem's own natural direction.
-        // A stem whose head is exactly on (or symmetric about) the middle line has no
-        // natural direction, so LP counts it with neutral-direction = DOWN: its
-        // Stem::calc_default_direction is CENTER, and get_default_dir falls back to
-        // neutral-direction before tallying. Counting it UP flipped whole beams centred
-        // on the line (e.g. g'..d'' straddling the middle equally: LP=down, us=up), so
-        // the test is `>=`, not `>`.
-        // LILYPOND-REF: lily/beam.cc:895-916 (per-stem default/neutral direction tally),
-        // LILYPOND-REF: lily/beam.cc:928 (count[UP] - count[DOWN] majority vote).
-        // Each stem also contributes HOW FAR it reaches on its own side, which is what
-        // breaks a tied vote: LilyPond accumulates
-        // `total[dir] += max (int (-dir * head_positions (s)[-dir]), 0)` — the position of
-        // the head the stem STARTS from, i.e. the far one, and never below zero.
-        // LILYPOND-REF: lily/beam.cc:913-914 in get_default_dir, over head_positions.
-        // ⚠️ A FORCED STEM VOTES ITS OWN WAY, not its pitch's. LilyPond reads
-        // `get_property_data (s, "direction")` first and only falls back to
-        // `default-direction` when nothing set it — the same branch that raises force_dir.
-        // The DISTANCE it contributes is still read off its heads, on the side its
-        // (forced) direction starts from.
-        // LILYPOND-REF: lily/beam.cc:895-916 Beam::get_default_dir (the per-stem tally).
+        // Tie: the per-stem vote (StemVote), each stem by its own natural direction.
+        return StemVote(members, unturnedSide: null);
+    }
+
+    /// <summary>
+    /// The direction of a beam inside a <c>voice { } { }</c> span: the voice's side — unless the
+    /// writer turned a member (<c>@stemUp</c> / <c>@stemDown</c>), when the per-stem vote decides,
+    /// the unturned stems voting the voice's side.
+    /// </summary>
+    /// <remarks>
+    /// In LilyPond the span's <c>\voiceTwo</c> puts <c>Stem.direction</c> on the Voice, so EVERY
+    /// stem of the beam carries a direction — a <c>\once \override</c> on one note replaces it for
+    /// that stem alone — and <c>get_default_dir</c> sees them all as forced: the farthest-head
+    /// rule is off and the tally decides. With nothing turned, the tally is unanimous and the
+    /// answer is the voice's side, as before.
+    /// LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set —
+    ///   each <c>\\</c> sublist sets Stem.direction at its head.
+    /// LILYPOND-REF: lily/beam.cc:894-905 Beam::get_default_dir — a stem whose direction is set
+    ///   tallies it and raises force_dir; :918 get_default_dir — force_dir skips the extremes check.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1113/c1): the second voice's
+    ///   <c>r8 e'8@stemUp f'@stemUp g'@stemUp</c> is beamed stems UP, its beam 1.19..1.81 above
+    ///   the middle line; Lily# took the voice's side and drew it 4.5 below, stems down — the
+    ///   twin <c>lysc ly</c> writes carried the overrides and LilyPond read them.
+    /// </remarks>
+    private static bool VoiceBeamStemUp(ReadOnlySpan<StemCandidate> members, bool voiceSide)
+    {
+        foreach (var m in members)
+            if (ForcedStemUpOf(m.Item) is not null)
+                return StemVote(members, voiceSide);
+        return voiceSide;
+    }
+
+    /// <summary>
+    /// LilyPond's per-stem majority vote, then total distance, then the neutral direction.
+    /// <paramref name="unturnedSide"/> is what a stem nobody turned votes: null for its own
+    /// natural direction (a neutral voice), the voice's side inside a <c>voice { } { }</c> span
+    /// (<see cref="VoiceBeamStemUp"/>).
+    /// </summary>
+    /// <remarks>
+    /// A stem whose head is exactly on (or symmetric about) the middle line has no
+    /// natural direction, so LP counts it with neutral-direction = DOWN: its
+    /// Stem::calc_default_direction is CENTER, and get_default_dir falls back to
+    /// neutral-direction before tallying. Counting it UP flipped whole beams centred
+    /// on the line (e.g. g'..d'' straddling the middle equally: LP=down, us=up), so
+    /// the test is <c>&gt;=</c>, not <c>&gt;</c>.
+    /// LILYPOND-REF: lily/beam.cc:895-916 (per-stem default/neutral direction tally),
+    /// LILYPOND-REF: lily/beam.cc:928 (count[UP] - count[DOWN] majority vote).
+    /// Each stem also contributes HOW FAR it reaches on its own side, which is what
+    /// breaks a tied vote: LilyPond accumulates
+    /// <c>total[dir] += max (int (-dir * head_positions (s)[-dir]), 0)</c> — the position of
+    /// the head the stem STARTS from, i.e. the far one, and never below zero.
+    /// LILYPOND-REF: lily/beam.cc:913-914 in get_default_dir, over head_positions.
+    /// ⚠️ A FORCED STEM VOTES ITS OWN WAY, not its pitch's. LilyPond reads
+    /// <c>get_property_data (s, "direction")</c> first and only falls back to
+    /// <c>default-direction</c> when nothing set it — the same branch that raises force_dir.
+    /// The DISTANCE it contributes is still read off its heads, on the side its
+    /// (forced) direction starts from.
+    /// LILYPOND-REF: lily/beam.cc:895-916 Beam::get_default_dir (the per-stem tally).
+    /// </remarks>
+    private static bool StemVote(ReadOnlySpan<StemCandidate> members, bool? unturnedSide)
+    {
         int upVotes = 0, downVotes = 0, totalUp = 0, totalDown = 0;
         foreach (var m in members)
         {
             int mUp = Math.Max(0, m.HeadMax);
             int mDown = Math.Min(0, m.HeadMin);
-            bool voteUp = ForcedStemUpOf(m.Item) ?? !(Math.Abs(mUp) >= -mDown);
+            bool voteUp = ForcedStemUpOf(m.Item) ?? unturnedSide ?? !(Math.Abs(mUp) >= -mDown);
             if (!voteUp)
             {
                 downVotes++;
