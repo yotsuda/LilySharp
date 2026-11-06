@@ -532,6 +532,71 @@ public class CrossStaffDrawingTests
         Assert.InRange(heads[head + 1] - heads[head], gap - 0.02, gap + 0.02);
     }
 
+    /// <summary>
+    /// Each drawn dot as "staff:row@dx": its staff (0 the upper), its row in half
+    /// spaces off that staff's middle line, and its x from the leftmost head within 3.5 spaces to
+    /// its left; sorted.
+    /// </summary>
+    private static string DotsOfBar(string svg)
+    {
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var lines = System.Text.RegularExpressions.Regex
+            .Matches(svg, "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"([-\\d.]+)\"")
+            .Where(m => m.Groups[2].Value == m.Groups[4].Value
+                && double.Parse(m.Groups[3].Value, inv) - double.Parse(m.Groups[1].Value, inv) > 5)
+            .Select(m => double.Parse(m.Groups[2].Value, inv)).Distinct().OrderBy(y => y).ToArray();
+        var middles = Enumerable.Range(0, lines.Length / 5).Select(s => lines[5 * s + 2]).ToArray();
+        var glyphs = System.Text.RegularExpressions.Regex
+            .Matches(svg, "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*>(.)</text>")
+            .Select(m => (C: (int)m.Groups[3].Value[0], X: double.Parse(m.Groups[1].Value, inv), Y: double.Parse(m.Groups[2].Value, inv)))
+            .ToArray();
+        var heads = glyphs.Where(g => g.C is 0xE0FE or 0xE0FD or 0xE0FC or 0xE0FB).ToArray();
+        return string.Join(" ", glyphs.Where(g => g.C == 0xE038).Select(dot =>
+        {
+            int staff = Array.IndexOf(middles, middles.OrderBy(y => Math.Abs(y - dot.Y)).First());
+            double left = heads.Where(h => h.X <= dot.X && h.X > dot.X - 3.5).Min(h => h.X);
+            return $"{staff}:{(int)Math.Round((middles[staff] - dot.Y) * 2)}@{(dot.X - left).ToString("F2", inv)}";
+        }).OrderBy(s => s, StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1112/d1, d2; the Dots grobs' X off the left head):
+    /// a moved note's dots join the dot column of the staff it stands on — one configuration of
+    /// rows, one X. Lily# read them apart, both on row 3 at 1.76 and 3.06 (the first case).
+    /// </summary>
+    [Theory]
+    [InlineData("e''4.@stemUp f''8@stemUp e''2@stemUp |", "d''4.@cross@stemDown c''8@cross@stemDown d''2@cross@stemDown |",
+        "0:1@3.06 0:3@3.06")]
+    [InlineData("voice { g''4. a''8 g''2 } { c''4. d''8 c''2 } |", "e''4.@cross f''8@cross e''2@cross |",
+        "0:1@2.41 0:3@2.41 0:5@2.41")]
+    [InlineData("<e'' g''>4.@stemUp f''8@stemUp e''2@stemUp |", "<c'' d''>4.@cross@stemDown c''8@cross@stemDown d''2@cross@stemDown |",
+        "0:-1@3.06 0:1@3.06 0:3@3.06 0:5@3.06")]
+    [InlineData("r4. f''8 e''2 |", "d''4.@cross b'8@cross c''2@cross |",
+        "0:-9@1.75 0:3@1.75")]
+    [InlineData("c'4.@cross@stemUp d'8@cross@stemUp c'2@cross@stemUp |", "b4.@stemDown a8@stemDown b2@stemDown |",
+        "1:5@3.06 1:7@3.06")]
+    // The moved dot takes row 3, so the staff's own d'' gives it up for row 1 (Lab sessions/p1112/d3).
+    [InlineData("voice { d''4. c''8 d''2 } { g'4. a'8 g'2 } |", "e''4.@cross@stemDown d''8@cross e''2@cross |",
+        "0:-3@3.06 0:1@3.06 0:3@3.06")]
+    [InlineData("voice { e''4. c''8 d''2 } { b'4. a'8 g'2 } |", "c''4.@cross@stemDown r8 r2 |",
+        "0:-1@3.06 0:1@3.06 0:3@3.06")]
+    // A moved up stem after the staff's own up voice is a support of its dots.
+    [InlineData("e''4.@stemUp f''8@stemUp e''2@stemUp |", "c''4@cross@stemUp c''4@cross@stemUp c''2@cross@stemUp |",
+        "0:3@2.41")]
+    public void AMovedNotesDotsJoinTheColumnOfTheStaffItStandsOn(string rh, string lh, string dots)
+    {
+        var svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(Book("r1 | " + rh, "r1 | " + lh)));
+        var expected = dots.Split(' ');
+        var actual = DotsOfBar(svg).Split(' ');
+        Assert.Equal(expected.Length, actual.Length);
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        foreach (var (e, a) in expected.OrderBy(s => s, StringComparer.Ordinal).Zip(actual))
+        {
+            Assert.Equal(e.Split('@')[0], a.Split('@')[0]);
+            Assert.InRange(double.Parse(a.Split('@')[1], inv), double.Parse(e.Split('@')[1], inv) - 0.02, double.Parse(e.Split('@')[1], inv) + 0.02);
+        }
+    }
+
     [Fact]
     public void AMovedStemSharesItsBeamsPureTip_AcrossTheStaves()
     {

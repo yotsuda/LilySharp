@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A note moved with `@cross` shares the dot column of the staff it lands on**: two dots a second apart stood in the same space.
 - **A beam keeps clear of the notes `@cross` moved onto its staff**: it could run through their heads.
 - **A beam whose notes all moved with `@cross` is drawn as on that staff**: a concave beam came out sloped.
 - **A note moved with `@cross` makes room for the heads where it lands**: a second's two heads overlapped and a unison hid one.

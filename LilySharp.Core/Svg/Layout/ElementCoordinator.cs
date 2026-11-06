@@ -213,12 +213,32 @@ internal sealed class ElementCoordinator
                     for (int e = 0; e < entries.Count; e++)
                         if (entries[e].VoiceId == v + 1 && entries[e].ItemIndex == mark.ItemIndex)
                             at = e;
+                // A rest's dot row goes through RestDotOffsetsOf. (A moved note may be read here
+                // as HeldHere's spacer.)
+                if (voices[v].Measures[measureIndex].Items[mark.ItemIndex] is RestItem { IsSpacer: false })
+                    continue;
                 if (at >= 0)
-                    entries![at] = entries[at] with { XOffset = mark.XOffset, HeadTransparent = mark.HeadTransparent };
-                else if (mark.XOffset != 0 || mark.HeadTransparent)
+                {
+                    var entry = entries![at] with { XOffset = mark.XOffset, HeadTransparent = mark.HeadTransparent };
+                    if (mark.DotRows is { } rows)
+                        entry = entry with { Dot = entry.Dot with { Rows = rows } };
+                    entries[at] = entry;
+                }
+                else if (mark.XOffset != 0 || mark.HeadTransparent || mark.DotRows is not null)
                     (entries ??= ImmutableArray.CreateBuilder<VoiceCollisionEntry>()).Add(
-                        new VoiceCollisionEntry(measureIndex, v + 1, mark.ItemIndex, mark.XOffset, mark.HeadTransparent, default));
+                        new VoiceCollisionEntry(measureIndex, v + 1, mark.ItemIndex, mark.XOffset, mark.HeadTransparent,
+                            mark.DotRows is { } rows ? default(DotAdjustment) with { Rows = rows } : default));
             }
+    }
+
+    /// <summary>Whether item <paramref name="itemIndex"/> of the voice's bar has its dots in a column
+    /// shared with a moved note (<see cref="CrossCollisionMark.DotRows"/>).</summary>
+    private static bool HasCrossDots(Voice voice, int measureIndex, int itemIndex)
+    {
+        foreach (var mark in voice.CrossCollisions)
+            if (mark.MeasureIndex == measureIndex && mark.ItemIndex == itemIndex && mark.DotRows is not null)
+                return true;
+        return false;
     }
 
     /// <summary>The solved dot columns of a bar, written onto its notes' and chords' collision
@@ -349,15 +369,24 @@ internal sealed class ElementCoordinator
     /// LILYPOND-REF: lily/note-collision.cc:586-594 automatic_shift — "the dots of outer voices avoid
     ///   stems and flags of the inner voices": the column of an up voice with dots takes the stem of
     ///   every later up voice, dotted or not, as a support (see <see cref="LaterUpStemsReach"/>).
-    /// ⚠️ Not read: a note moved by `@cross`, whose dot is the other staff's.
+    /// A note moved by `@cross` is not read here: its dots are the column of the staff it stands
+    /// on, solved with that staff's voices (<see cref="CrossCollisionMark.DotRows"/>), and a moment
+    /// whose column holds one is left to that answer.
     /// </remarks>
-    private static List<List<DotColumnMember>>? SolveDotColumns(ImmutableArray<Voice> voices, int measureIndex,
-        IReadOnlyList<VoiceCollisionEntry>? collisions, int staffLines = 5)
+    /// <param name="movedIn">The voices are a staff's own and the notes moved onto it, each moved
+    /// voice holding only those (MeasureCollector.SolveCrossCollisions): every item counts, and
+    /// no moment is left to a cross answer.</param>
+    /// <param name="voiceUpAt">With <paramref name="movedIn"/>: each voice's default stem at an
+    /// item, which its own staff's voices decide.</param>
+    internal static List<List<DotColumnMember>>? SolveDotColumns(ImmutableArray<Voice> voices, int measureIndex,
+        IReadOnlyList<VoiceCollisionEntry>? collisions, int staffLines = 5,
+        bool movedIn = false, Func<int, int, bool>? voiceUpAt = null)
     {
         if (voices.Length < 2)
             return null;
 
         Dictionary<Fraction, List<(int Voice, MusicItem Item, int ItemIndex)>>? moments = null;
+        HashSet<Fraction>? crossAnswered = null;
         for (int v = 0; v < voices.Length; v++)
         {
             if (measureIndex >= voices[v].Measures.Length)
@@ -367,7 +396,9 @@ internal sealed class ElementCoordinator
             for (int i = 0; i < items.Length; i++)
             {
                 var item = items[i];
-                bool dotted = item.CrossStaffIndex < 0 && !item.GraceTime && item switch
+                if (!movedIn && HasCrossDots(voices[v], measureIndex, i))
+                    (crossAnswered ??= new()).Add(t);
+                bool dotted = (movedIn || item.CrossStaffIndex < 0) && !item.GraceTime && item switch
                 {
                     RestItem r => r.Dots > 0 && !r.IsSpacer && !r.IsMultiMeasure,
                     NoteItem n => n.Dots > 0,
@@ -391,6 +422,8 @@ internal sealed class ElementCoordinator
         double dotWidth = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width;
         foreach (var (moment, column) in moments)
         {
+            if (crossAnswered is not null && crossAnswered.Contains(moment))
+                continue;
             var positions = new List<int>();
             var dirs = new List<int>();
             var slots = new List<(int Voice, MusicItem Item, int ItemIndex, int From, int Count, bool StemUp, double Shift, int Pure)>();
@@ -401,7 +434,8 @@ internal sealed class ElementCoordinator
                     foreach (var e in collisions)
                         if (e.VoiceId == v + 1 && e.ItemIndex == i)
                             collided = e;
-                bool voiceUp = VoiceDefaults.GetDefaultStemUpAt(voices, v, measureIndex, i) ?? (v % 2 == 0);
+                bool voiceUp = voiceUpAt?.Invoke(v, i)
+                    ?? VoiceDefaults.GetDefaultStemUpAt(voices, v, measureIndex, i) ?? (v % 2 == 0);
                 int dir = collided.Dot.DirectionUp || voiceUp ? 1 : -1;
                 int from = positions.Count, pure = 0;
                 switch (item)
@@ -440,7 +474,7 @@ internal sealed class ElementCoordinator
                 continue;
 
             var rows = DotConfiguration.Resolve(positions, dirs);
-            double stems = LaterUpStemsReach(voices, measureIndex, moment, collisions, rows);
+            double stems = LaterUpStemsReach(voices, measureIndex, moment, collisions, rows, movedIn, voiceUpAt);
             var members = new List<DotColumnMember>(slots.Count);
             foreach (var s in slots)
             {
@@ -453,7 +487,9 @@ internal sealed class ElementCoordinator
                     RestItem rest => GlyphMetrics.GetRestBBox(rest, GlyphMetrics.NoteValueOf(rest.BaseDuration)).Right
                         + EngravingDefaults.DotPadding(dotWidth),
                     ChordItem chord => s.Shift + DotColumn.Reserved(chord, value,
-                        ChordHeadPositioning.InkRight(chord.Notes, ChordHeadPositioning.CalculateOffsets(chord.Notes, s.StemUp, value), value, null), own).OffsetX,
+                        // The heads stand as the stem the writer turned puts them (a second's
+                        // head is the stem's other side), not the voice's.
+                        ChordHeadPositioning.InkRight(chord.Notes, ChordHeadPositioning.CalculateOffsets(chord.Notes, chord.ForcedStemUp ?? s.StemUp, value), value, null), own).OffsetX,
                     _ => s.Shift + DotColumn.Reserved(s.Item, value, GlyphMetrics.GetNoteheadBBox(value).Right, own).OffsetX,
                 };
                 members.Add(new DotColumnMember(s.Voice, s.ItemIndex, s.Item, own, ownX, s.Pure, stems));
@@ -482,7 +518,8 @@ internal sealed class ElementCoordinator
     ///   their own heads, no stem read. Lily# drew 1.76 on the stem before this.
     /// </remarks>
     private static double LaterUpStemsReach(ImmutableArray<Voice> voices, int measureIndex, Fraction moment,
-        IReadOnlyList<VoiceCollisionEntry>? collisions, int[] rows)
+        IReadOnlyList<VoiceCollisionEntry>? collisions, int[] rows,
+        bool movedIn = false, Func<int, int, bool>? voiceUpAt = null)
     {
         double reach = double.NegativeInfinity;
         bool dotted = false;
@@ -495,7 +532,7 @@ internal sealed class ElementCoordinator
             for (int i = 0; i < items.Length && t <= moment; i++)
             {
                 var item = items[i];
-                if (t == moment && !item.GraceTime && item.CrossStaffIndex < 0
+                if (t == moment && !item.GraceTime && (movedIn || item.CrossStaffIndex < 0)
                     && item is NoteItem or ChordItem)
                 {
                     var collided = default(VoiceCollisionEntry);
@@ -504,7 +541,8 @@ internal sealed class ElementCoordinator
                             if (e.VoiceId == v + 1 && e.ItemIndex == i)
                                 collided = e;
                     bool? forced = item is NoteItem n ? n.ForcedStemUp : ((ChordItem) item).ForcedStemUp;
-                    if (forced ?? VoiceDefaults.GetDefaultStemUpAt(voices, v, measureIndex, i) ?? (v % 2 == 0))
+                    if (forced ?? voiceUpAt?.Invoke(v, i)
+                        ?? VoiceDefaults.GetDefaultStemUpAt(voices, v, measureIndex, i) ?? (v % 2 == 0))
                     {
                         if (dotted)
                             reach = Math.Max(reach, collided.XOffset + DotColumn.ClearOfStem(item, rows));
@@ -2651,10 +2689,16 @@ internal sealed class ElementCoordinator
 
     private static ImmutableDictionary<RestShiftKey, int> CalculateRestDotOffsets(Staff staff)
     {
-        if (staff.Voices.Length < 2)
-            return ImmutableDictionary<RestShiftKey, int>.Empty;
-
         var offsets = ImmutableDictionary.CreateBuilder<RestShiftKey, int>();
+        // A rest in a column shared with a moved note: its row, off its pure position.
+        for (int v = 0; v < staff.Voices.Length; v++)
+            foreach (var mark in staff.Voices[v].CrossCollisions)
+                if (mark.DotRows is [int off] && mark.MeasureIndex < staff.Voices[v].Measures.Length
+                    && staff.Voices[v].Measures[mark.MeasureIndex].Items[mark.ItemIndex] is RestItem)
+                    offsets[new RestShiftKey(mark.MeasureIndex, v, mark.ItemIndex)] = off;
+        if (staff.Voices.Length < 2)
+            return offsets.ToImmutable();
+
         int measureCount = staff.Voices.Min(v => v.Measures.Length);
         for (int m = 0; m < measureCount; m++)
         {

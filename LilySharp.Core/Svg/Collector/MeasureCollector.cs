@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -3834,18 +3834,25 @@ public sealed partial class MeasureCollector
                     Add(at, new VoiceEntry(id, item, crossed.ItemIndex, (item is NoteItem n ? n.ForcedStemUp : ((ChordItem)item).ForcedStemUp)
                         ?? VoiceDefaults.GetDefaultStemUpAt(homeVoices, home.Voice, m, crossed.ItemIndex)));
                 }
+                // The heads' answer, by the voices of the dot solve below: the staff's own, then
+                // each moved voice in its slot.
+                var solved = new List<Layout.VoiceCollisionEntry>();
                 foreach (var entries in columns.Values)
                 {
                     if (entries.Count < 2 || !entries.Any(e => origin.ContainsKey(e.VoiceId)))
                         continue;
-                    foreach (var (voiceId, itemIndex, x, wiped, _) in noteCollision.CalculateVoiceOffsets(new VoiceColumn(entries.ToImmutableArray(), m)))
+                    foreach (var (voiceId, itemIndex, x, wiped, dot) in noteCollision.CalculateVoiceOffsets(new VoiceColumn(entries.ToImmutableArray(), m)))
                     {
                         var owner = origin.TryGetValue(voiceId, out var home) ? home : (t, voiceId - 1);
                         if (!marks.TryGetValue(owner, out var list))
                             marks[owner] = list = new List<CrossCollisionMark>();
-                        list.Add(new CrossCollisionMark(m, itemIndex, Math.Abs(x) <= 0.001 ? 0 : x, wiped));
+                        double shift = Math.Abs(x) <= 0.001 ? 0 : x;
+                        list.Add(new CrossCollisionMark(m, itemIndex, shift, wiped));
+                        solved.Add(new Layout.VoiceCollisionEntry(m, origin.ContainsKey(voiceId) ? (voiceId - 1) / 2 + 1 : voiceId,
+                            itemIndex, shift, wiped, dot));
                     }
                 }
+                SolveCrossDots(staves, t, own, visitors, m, solved, marks);
             }
             // The staff spaces the moved notes at their shift.
             var shifted = staves[t].CrossedIn.ToBuilder();
@@ -3868,6 +3875,142 @@ public sealed partial class MeasureCollector
                     Voices = voices.SetItem(v, voice with { CrossCollisions = voice.CrossCollisions.AddRange(list) }),
                 };
             }
+        }
+        StampCrossDotShifts(staves);
+    }
+
+    /// <summary>
+    /// The dot columns of bar <paramref name="m"/> of staff <paramref name="t"/> that hold a moved
+    /// note's dots: solved once with the staff's own voices (<see cref="HeldHere"/>) and each moved
+    /// voice holding only the notes it moved here, and filed on every member's voice as its
+    /// <see cref="CrossCollisionMark.DotRows"/> and <see cref="CrossCollisionMark.DotShift"/> (a
+    /// rest's one row, off its pure position).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly Staff — \consists Dot_column_engraver: one DotColumn a
+    ///   Staff and moment, whichever Voice the dots come from — a Voice <c>\change Staff</c> moved
+    ///   in among them.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1112/d1): `e''4.@stemUp` over `d''4.@cross@stemDown`
+    ///   sets the dots on rows 3 and 1, both 3.06 right of the left head; Lily# drew both on row 3,
+    ///   1.76 and 3.06.
+    /// </remarks>
+    private static void SolveCrossDots(Staff[] staves, int t, ImmutableArray<Voice> own,
+        List<(int Staff, int Voice)> visitors, int m, List<Layout.VoiceCollisionEntry> solved,
+        Dictionary<(int Staff, int Voice), List<CrossCollisionMark>> marks)
+    {
+        // The moments a moved note stands at: its dots join the column there, and its up stem is
+        // a support of the dots of the staff's own up voices (ElementCoordinator.LaterUpStemsReach).
+        HashSet<Fraction>? moments = null;
+        foreach (var crossed in staves[t].CrossedIn)
+            if (crossed.MeasureIndex == m && !crossed.Item.GraceTime && crossed.Item.Duration > Fraction.Zero)
+                (moments ??= new()).Add(OnsetOf(crossed.Measures[m], crossed.ItemIndex));
+        if (moments is null || visitors.Count == 0)
+            return;
+
+        var voices = own.ToBuilder();
+        foreach (var (s, v) in visitors)
+        {
+            var home = staves[s].Voices[v];
+            var measures = home.Measures.ToArray();
+            if (m < measures.Length)
+            {
+                var items = measures[m].Items.ToArray();
+                for (int i = 0; i < items.Length; i++)
+                    if (items[i].CrossStaffIndex != t)
+                        items[i] = new RestItem(items[i].Duration, 0, items[i].SourcePosition) { IsSpacer = true };
+                measures[m] = measures[m] with { Items = ImmutableArray.Create(items) };
+            }
+            voices.Add(home with { Measures = ImmutableArray.Create(measures), CrossCollisions = ImmutableArray<CrossCollisionMark>.Empty });
+        }
+        var all = voices.ToImmutable();
+        bool VoiceUpAt(int v, int i)
+        {
+            if (v < own.Length)
+                return VoiceDefaults.GetDefaultStemUpAt(own, v, m, i) ?? (v % 2 == 0);
+            var (s, hv) = visitors[v - own.Length];
+            return VoiceDefaults.GetDefaultStemUpAt(staves[s].Voices, hv, m, i) ?? (hv % 2 == 0);
+        }
+        var columns = Layout.ElementCoordinator.SolveDotColumns(all, m, solved, staves[t].Lines,
+            movedIn: true, voiceUpAt: VoiceUpAt);
+        if (columns is null)
+            return;
+        foreach (var column in columns)
+        {
+            // Only the columns at a moved note's moment: the others are the staff's own business.
+            var first = column[0];
+            if (!moments.Contains(OnsetOf(all[first.Voice].Measures[m], first.ItemIndex)))
+                continue;
+            double x = Math.Max(column.Max(c => c.OwnX), column[0].StemsReach);
+            foreach (var member in column)
+            {
+                var owner = member.Voice < own.Length ? (t, member.Voice) : visitors[member.Voice - own.Length];
+                if (!marks.TryGetValue(owner, out var list))
+                    marks[owner] = list = new List<CrossCollisionMark>();
+                int[] rows = member.Item is RestItem ? new[] { member.Rows[0] - member.PureRest } : member.Rows;
+                double shift = x > member.OwnX + 1e-9 ? x - member.OwnX : 0;
+                int at = list.FindIndex(k => k.MeasureIndex == m && k.ItemIndex == member.ItemIndex);
+                if (at >= 0)
+                    list[at] = list[at] with { DotRows = rows, DotShift = shift };
+                else
+                    list.Add(new CrossCollisionMark(m, member.ItemIndex, 0, false) { DotRows = rows, DotShift = shift });
+            }
+        }
+    }
+
+    private static Fraction OnsetOf(Measure measure, int itemIndex)
+    {
+        var at = Fraction.Zero;
+        for (int i = 0; i < itemIndex; i++)
+            at += measure.Items[i].Duration;
+        return at;
+    }
+
+    /// <summary>
+    /// Writes each <see cref="CrossCollisionMark.DotShift"/> onto its item's
+    /// <see cref="MusicItem.DotColumnShift"/>, by copy (an item here is shared with the collect's
+    /// recording), and points every <see cref="Staff.CrossedIn"/> address at the copied measures.
+    /// </summary>
+    private static void StampCrossDotShifts(Staff[] staves)
+    {
+        Dictionary<ImmutableArray<Measure>, ImmutableArray<Measure>>? moved = null;
+        for (int s = 0; s < staves.Length; s++)
+        {
+            var voices = staves[s].Voices;
+            Voice[]? copy = null;
+            for (int v = 0; v < voices.Length; v++)
+            {
+                Measure[]? measures = null;
+                foreach (var mark in voices[v].CrossCollisions)
+                {
+                    if (mark.DotShift <= 1e-9 || mark.MeasureIndex >= voices[v].Measures.Length)
+                        continue;
+                    measures ??= voices[v].Measures.ToArray();
+                    var measure = measures[mark.MeasureIndex];
+                    measures[mark.MeasureIndex] = measure with
+                    {
+                        Items = measure.Items.SetItem(mark.ItemIndex, measure.Items[mark.ItemIndex] with { DotColumnShift = mark.DotShift }),
+                    };
+                }
+                if (measures is null)
+                    continue;
+                var now = ImmutableArray.Create(measures);
+                (moved ??= new()).Add(voices[v].Measures, now);
+                (copy ??= voices.ToArray())[v] = voices[v] with { Measures = now };
+            }
+            if (copy != null)
+                staves[s] = staves[s] with { Voices = ImmutableArray.Create(copy) };
+        }
+        if (moved is null)
+            return;
+        for (int s = 0; s < staves.Length; s++)
+        {
+            if (staves[s].CrossedIn.IsEmpty)
+                continue;
+            var crossedIn = staves[s].CrossedIn.ToBuilder();
+            for (int c = 0; c < crossedIn.Count; c++)
+                if (moved.TryGetValue(crossedIn[c].Measures, out var now))
+                    crossedIn[c] = crossedIn[c] with { Measures = now };
+            staves[s] = staves[s] with { CrossedIn = crossedIn.ToImmutable() };
         }
     }
 

@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **A note moved with `@cross` shares the dot column of the staff it lands on.** Its dots were placed as if it stood alone, so a dotted note a second away from a dotted note of the other staff put both dots in the same space, side by side. The dots now take one set of rows and one column, as two voices on one staff do — the staff's own dots too, which may give up their space or move right for it — as in LilyPond. A chord whose stem the writer turned also places its dots by that stem.
 - `[engraving]` **A beam keeps clear of the notes `@cross` moved onto its staff.** The other staff's notes were invisible to it, so a beam could run through their heads. It now avoids them as it avoids another voice's notes, as in LilyPond — a beam across the staves too, where another voice moved a note onto the staff its own notes went to.
 - `[engraving]` **A whole note does not push the staves apart in the knee test of an `@cross` beam.** The estimate of the distance between the staves gave whole notes a stem, so a beam could knee across staves where LilyPond keeps every stem one way.
 - `[engraving]` **A beam whose notes all moved with `@cross` is that staff's beam.** It was scored as a beam across the staves, which skips the flattening of a concave beam and resists any slope: `d''8 c'' f'' e''` moved to the upper staff came out sloped. It is now quanted against the staff its notes stand on and comes out as it would there, as in LilyPond.

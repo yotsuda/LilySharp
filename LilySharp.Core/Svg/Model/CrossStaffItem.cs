@@ -86,6 +86,20 @@ internal static class HeldHere
 /// <param name="HeadTransparent">Whether a merge wiped its head.</param>
 public readonly record struct CrossCollisionMark(int MeasureIndex, int ItemIndex, double XOffset, bool HeadTransparent)
 {
+    /// <summary>The rows of its dots in the dot column it shares with a moved note, in its dotted
+    /// heads' order; null when its dots are no such column's.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly Staff — \consists Dot_column_engraver: the DotColumn is the
+    ///   Staff's, so the dots of a Voice that <c>\change Staff</c> moved in join the column of the
+    ///   voices it now stands among.
+    /// MEASURED, LilyPond 2.26.0 (Lab sessions/p1112/d1): `e''4.@stemUp` over `d''4.@cross@stemDown`
+    ///   sets the dots on rows 3 and 1, one column 3.06 right of the left head.
+    /// </remarks>
+    public int[]? DotRows { get; init; }
+
+    /// <summary>How far right of its own dots that column stands (<see cref="MusicItem.DotColumnShift"/>).</summary>
+    public double DotShift { get; init; }
+
     /// <summary>Whether any of <paramref name="voices"/> shares a column with a moved note — a staff
     /// of one voice then still has a collision answer.</summary>
     internal static bool AnyIn(ImmutableArray<Voice> voices)
