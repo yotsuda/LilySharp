@@ -29,6 +29,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
+import type { AudioFormat, AudioJob } from './audioRender';
 import {
     EXPORT_FORMATS, ExportFormat, ExportTally,
     duplicateStems, lysTargets, samePath, summarizeExport,
@@ -44,9 +45,12 @@ export interface ExportBatchDeps {
     showLog: () => void;
     /** Opens a folder in the OS file manager (the "Open Folder" button). */
     openFolder: (dir: string) => void;
-    /** The SoundFont 2 a WAV export plays through — the preview's font when it is one, else
-     *  the one the writer picks; undefined when they cancel. */
+    /** The sound font a WAV or MP3 export plays through — the preview's, else the one the
+     *  writer picks; undefined when they cancel. */
     wavSoundFont: () => Promise<string | undefined>;
+    /** Renders the files the server named (their notes) through a sound font, as the preview
+     *  plays them, and writes them as WAV or MP3 (audioRender.ts). */
+    renderAudio: (jobs: AudioJob[], soundFont: string, format: AudioFormat) => Promise<void>;
 }
 
 interface ExportResponse {
@@ -54,8 +58,13 @@ interface ExportResponse {
     OutputPath: string | null;
     OutputPaths?: string[] | null;
     Warnings?: string[] | null;
+    /** A WAV or MP3 asked for with playbackOnly: each file and its notes, for the editor to render. */
+    Playbacks?: AudioJob[] | null;
     Error: string | null;
 }
+
+/** The formats whose sound the editor renders, rather than the server writing them. */
+const isAudio = (id: string): id is AudioFormat => id === 'wav' || id === 'mp3';
 
 export function registerExportBatch(context: vscode.ExtensionContext, deps: ExportBatchDeps): void {
     for (const format of EXPORT_FORMATS) {
@@ -128,9 +137,9 @@ async function exportBatch(
         }
     }
 
-    // A WAV needs a font before anything else is asked: no font, no export.
+    // A WAV or an MP3 needs a font before anything else is asked: no font, no export.
     let soundFont: string | undefined;
-    if (format.id === 'wav') {
+    if (isAudio(format.id)) {
         soundFont = await deps.wavSoundFont();
         if (!soundFont) {
             return;
@@ -179,7 +188,9 @@ async function exportBatch(
                 format: format.id,
                 all: true,
                 outputDirectory: dir,
-                soundFont: soundFont ?? null,
+                // A WAV or an MP3: the server names the files and gives their notes; the editor
+                // renders them through the preview's synth and font below.
+                playbackOnly: isAudio(format.id),
             };
             attempted++;
             deps.log(`  ${file}${open ? ' (open editor)' : ''}`);
@@ -189,6 +200,9 @@ async function exportBatch(
                     failed++;
                     deps.log(`    FAILED: ${response.Error}`);
                     continue;
+                }
+                if (soundFont && response.Playbacks && isAudio(format.id)) {
+                    await deps.renderAudio(response.Playbacks, soundFont, format.id);
                 }
                 for (const out of response.OutputPaths ?? []) {
                     outputs++;

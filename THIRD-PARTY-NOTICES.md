@@ -125,12 +125,22 @@ ships with the binaries.
 |---|---|---|
 | vscode-languageclient | © Microsoft Corporation | MIT |
 | spessasynth_lib, spessasynth_core | © Spessasus | Apache-2.0 |
+| @breezystack/lamejs (lamejs) | © Alex Zhukov and the lamejs contributors; a port of LAME, © the LAME project | LGPL-3.0 |
 
 spessasynth_lib is the preview's SoundFont synthesizer (`docs/playback-design.md`): its
 browser half is bundled into `out/synth/preview-synth.js` and its AudioWorklet processor
 ships unmodified as `out/synth/spessasynth_processor.min.js`. Both carry MIT-licensed code
 the project vendors (hajimehoshi's stbvorbis.js, 101arrowz's fflate), noticed in the
-processor file's own legal comments.
+processor file's own legal comments. spessasynth_core renders the WAV and MP3 exports
+through the preview's sound font (`editors/vscode/src/audioRender.ts`).
+
+lamejs encodes the MP3 export. It is the JavaScript port of **LAME** (<https://lame.sourceforge.io/>,
+formerly lame.sourceforge.net), published on npm as `@breezystack/lamejs` 1.2.7 (source:
+<https://github.com/shijinyu/lamejs>, forked from <https://github.com/zhuker/lamejs>). It is
+bundled unmodified into `out/extension.js`, under the GNU Lesser General Public License,
+version 3, whose text ships as [LICENSE-LGPL-3.0.txt](LICENSE-LGPL-3.0.txt) beside the GNU GPL
+it supplements ([LICENSE](LICENSE)). The extension is free software under the GPL with its
+complete source published, so anyone may change and rebuild the library inside it.
 
 ## Sound font (none bundled)
 
@@ -138,8 +148,8 @@ The VS Code extension bundles no sound font (owner's decision, 2026-10-12). The 
 the General MIDI bank the operating system ships for its own synthesizer — Windows'
 `gm.dls`, macOS's DLS bank — read in place where it is installed, never copied or
 redistributed; or a sound font the user downloads and names in `lilysharp.playback.soundFont`.
-`lysc wav` likewise plays through a SoundFont 2 the user names (`--soundfont`); MeltySynth,
-above, is the synthesizer.
+The extension's WAV and MP3 exports play through that same font. `lysc wav` plays through a
+SoundFont 2 the user names (`--soundfont`); MeltySynth, above, is the synthesizer.
 
 ## Deliberately NOT bundled
 

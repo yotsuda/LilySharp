@@ -226,7 +226,8 @@ public class ExportParams
     /// (the Explorer's batch export). Read as the CLI reads it, <c>using</c> includes
     /// resolved against its own folder.</summary>
     public string? Path { get; set; }
-    /// <summary>Output format: svg, png, pdf, midi, musicxml, vsqx, ly, or wav.</summary>
+    /// <summary>Output format: svg, png, pdf, midi, musicxml, vsqx, ly, wav, or mp3 (mp3 only
+    /// with <see cref="PlaybackOnly"/>: the editor encodes it).</summary>
     public string? Format { get; set; }
     /// <summary>Absolute path to write the exported file to (one score). Ignored when
     /// <see cref="All"/> is set.</summary>
@@ -249,6 +250,20 @@ public class ExportParams
     /// (<c>lysc wav --soundfont</c>). None is bundled, so the editor names one: its playback
     /// font when that is a SoundFont 2, else the one it asks for.</summary>
     public string? SoundFont { get; set; }
+    /// <summary>A WAV the EDITOR renders (owner's request 2026-11-07: the exported sound is the
+    /// preview's — its synth, spessasynth, and its font, a <c>.sf3</c> or a DLS bank included,
+    /// which the server's MeltySynth cannot read). With <see cref="Format"/> <c>wav</c> or <c>mp3</c>, nothing
+    /// is written and no font is asked for: <see cref="ExportResponse.Playbacks"/> carries each
+    /// score's file and the notes the preview's Play would sound for it.</summary>
+    public bool PlaybackOnly { get; set; }
+}
+
+/// <summary>One WAV or MP3 the editor renders: where it goes, and the notes of its score as
+/// <c>lilysharp/playback</c> gives them (<see cref="ExportParams.PlaybackOnly"/>).</summary>
+public class PlaybackExport
+{
+    public string OutputPath { get; set; } = "";
+    public PlaybackNote[] Notes { get; set; } = [];
 }
 
 /// <summary>
@@ -266,6 +281,10 @@ public class ExportResponse
     /// <summary>What the export left out or doubled, in words (a <c>.vsqx</c> holds
     /// one arrangement; two scores resolving to one file name).</summary>
     public string[]? Warnings { get; set; }
+    /// <summary>Under <see cref="ExportParams.PlaybackOnly"/>: the WAVs or MP3s for the editor to
+    /// render, one per file in <see cref="OutputPaths"/>, in the same order. Nothing is on the
+    /// disk yet.</summary>
+    public PlaybackExport[]? Playbacks { get; set; }
     public string? Error { get; set; }
 }
 

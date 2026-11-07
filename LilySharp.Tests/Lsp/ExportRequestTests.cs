@@ -210,6 +210,49 @@ public sealed class ExportRequestTests : IDisposable
         Assert.False(Directory.Exists(Out));
     }
 
+    // A WAV the editor renders through the preview's synth and font (PlaybackOnly): no font asked
+    // for, nothing written, and each score's file named as the server names it, with the notes
+    // the preview's Play sounds for that score — `sub` plays Main twice.
+    [Fact]
+    public void Wav_PlaybackOnly_GivesEachScoresNotes_AndWritesNothing()
+    {
+        var book = Book("two.lys", TwoScores);
+        var subOnly = Path.Combine(_dir, "sub-only.wav");
+
+        var sub = Server().Export(new ExportParams { Path = book, Format = "wav", OutputPath = subOnly, RenderName = "sub", PlaybackOnly = true });
+        var all = Server().Export(new ExportParams { Path = book, Format = "wav", All = true, OutputDirectory = Out, PlaybackOnly = true });
+
+        Assert.True(sub.Success, sub.Error);
+        Assert.True(all.Success, all.Error);
+        var one = Assert.Single(sub.Playbacks!);
+        Assert.Equal(subOnly, one.OutputPath);
+        Assert.False(File.Exists(subOnly));
+        Assert.Equal(new[] { Path.Combine(Out, "two.wav"), Path.Combine(Out, "two-sub.wav") }, all.OutputPaths);
+        Assert.Equal(all.OutputPaths, all.Playbacks!.Select(p => p.OutputPath));
+        Assert.All(all.OutputPaths!, p => Assert.False(File.Exists(p), p));
+        Assert.Equal(8, all.Playbacks[0].Notes.Length);
+        Assert.Equal(16, all.Playbacks[1].Notes.Length);
+        Assert.Equal(one.Notes.Select(n => (n.T, n.P)), all.Playbacks[1].Notes.Select(n => (n.T, n.P)));
+    }
+
+    // An MP3 is the editor's alone (it encodes what it renders): asked with PlaybackOnly, each
+    // score's file under the .mp3 name and its notes, nothing written; asked to write, refused.
+    [Fact]
+    public void Mp3_IsTheEditors_NamedAndGivenItsNotes_NeverWritten()
+    {
+        var book = Book("two.lys", TwoScores);
+
+        var all = Server().Export(new ExportParams { Path = book, Format = "mp3", All = true, OutputDirectory = Out, PlaybackOnly = true });
+        var written = Server().Export(new ExportParams { Path = book, Format = "mp3", All = true, OutputDirectory = Out });
+
+        Assert.True(all.Success, all.Error);
+        Assert.Equal(new[] { Path.Combine(Out, "two.mp3"), Path.Combine(Out, "two-sub.mp3") }, all.OutputPaths);
+        Assert.Equal(new[] { 8, 16 }, all.Playbacks!.Select(p => p.Notes.Length));
+        Assert.All(all.OutputPaths!, p => Assert.False(File.Exists(p), p));
+        Assert.False(written.Success);
+        Assert.Contains("editor", written.Error);
+    }
+
     [Fact]
     public void All_NoScoreBlock_WritesOneFile_UnderTheFilesName()
     {

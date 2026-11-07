@@ -44,6 +44,7 @@ export const EXPORT_FORMATS: readonly ExportFormat[] = [
     { id: 'musicxml', command: 'lilysharp.exportMusicXml', title: 'MusicXML' },
     { id: 'midi', command: 'lilysharp.exportMidi', title: 'MIDI' },
     { id: 'wav', command: 'lilysharp.exportWav', title: 'WAV' },
+    { id: 'mp3', command: 'lilysharp.exportMp3', title: 'MP3' },
     { id: 'vsqx', command: 'lilysharp.exportVsqx', title: 'VOCALOID' },
 ];
 

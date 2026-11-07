@@ -321,10 +321,15 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C46**（第1030・`@!` の補完）: `c'4@rit d' e'` の後に `@!` と打つ → `!` で一覧が開き、先頭に `rit`（選択済み）、ほかに `ottava` `8va` `sustain` `phrasingSlur` `cresc` など。`@!8` → `ottava` `8va` `8vb`。歌詞や文字列の中の `!` では一覧が開かない。`@` だけ打った一覧に `!` の行があり、選ぶと `@!` になって span の終わりの一覧が開く（`@st` まで打つと `!` の行は消える）。
 - [ ] **C47**（第1030・設定のブロック）: `paper { size a▮ }` で `5` → `a5`（消えない）、`3` → `a3`（`a32` にならない）。`section` の中の `c4` の後の `8` は従来どおり `c8`。
 - [ ] **C45**（第1030・`@` の直後の数字）: `c'4@` の後に `8` → `c'4@8`（音価は 4 のまま）で、補完の一覧に `8va` `8vb`（と `ottava`）。`8va` を選ぶと `c'4@8va`。`@1` → `15ma` `15mb`。`c8@fermata` の後で `4` を打つと従来どおり `c4@fermata`。
-- [ ] **C44**（第1030・WAV の書き出し）:
-  - (1) プレビューの音源を `.sf2`（GeneralUser GS など）にしてプレビューの Export → 保存ダイアログの種類に *WAV audio (through a SoundFont 2)*。選ぶと「rendering the WAV through …」の通知の後に「Exported to … (played through ….sf2)」。Open File で鳴る音がプレビューの ▶ と同じ楽器。
-  - (2) 音源を既定（gm.dls）か `.sf3` にして同じ操作 → 「A WAV export plays the score through a SoundFont 2 (.sf2), and the preview's gm.dls is not one」と言って `.sf2` を訊く（初回は確認ダイアログ → ファイル選択、2 回目からは前に使った `.sf2` の一覧）。書き出した後もプレビューの音源の設定は変わらない。
-  - (3) エクスプローラーで `.lys` を 2 つ選び右クリック → *Lily#: Export* に *Export as WAV (through a SoundFont 2)*（MIDI の次）。フォルダを選ぶ前に音源を訊き、全 score の `.wav` が書かれる。
+- [ ] **C44**（第1030・WAV の書き出し。2026-11-07 にプレビューの合成器で描く形に変えた）:
+  - (1) プレビューの音源を既定（gm.dls）のままプレビューの Export → 保存ダイアログの種類に *WAV audio (as the preview plays it)*。選ぶと音源を訊かずに「rendering the WAV through gm.dls…」の通知の後に「Exported to … (played through gm.dls)」。Open File で鳴る音がプレビューの ▶ と同じ音（楽器・ペダル・強弱）。
+  - (2) 音源を `.sf3`（MuseScore_General など）と `.sf2` にして同じ操作 → どちらも訊かずに書き出し、その音源の音で鳴る。ピークは −1 dBFS（小さすぎも割れもしない）。書き出した後もプレビューの音源の設定は変わらない。
+  - (3) エクスプローラーで `.lys` を 2 つ選び右クリック → *Lily#: Export* に *Export as WAV*（MIDI の次）。音源は訊かれず、全 score の `.wav` が書かれる。
+  - (4) Linux で音源を未設定（プレビューは単純な音）→ WAV の書き出しは音源を訊く（`.sf2`・`.sf3`・`.dls` を選べる）。
+- [ ] **C50**（2026-11-07・MP3 の書き出し）:
+  - (1) プレビューの Export → 保存ダイアログの種類に *MP3 audio (as the preview plays it)*（WAV の次）。選ぶと「rendering the MP3 through …」の通知の後に「Exported to ….mp3」。OS の既定のプレーヤーで鳴り、音は同じ曲の WAV と同じ（192 kbps、約 100 秒で 2.3 MB 前後）。
+  - (2) エクスプローラーで `.lys` を 2 つ選び右クリック → *Lily#: Export* に *Export as MP3*（WAV の次）。全 score の `.mp3` が書かれる。コマンドパレットの *Lily#: Export as MP3* も同じ。
+  - (3) 書き出しの途中もエディタの入力が止まらない（長い曲で数秒、拡張ホストが合間に応答する）。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

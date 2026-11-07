@@ -139,7 +139,8 @@ const LICENSE_BANNER = `/*!
  * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License (LICENSE) for more details.
  *
- * This file also bundles MIT-licensed dependencies; see THIRD-PARTY-NOTICES.md.
+ * This file also bundles MIT- and Apache-2.0-licensed dependencies, and lamejs
+ * (LGPL-3.0, LICENSE-LGPL-3.0.txt); see THIRD-PARTY-NOTICES.md.
  * Source: https://github.com/yotsuda/LilySharp
  */`;
 

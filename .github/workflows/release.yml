@@ -196,6 +196,9 @@ jobs:
           cp THIRD-PARTY-NOTICES.md editors/vscode/THIRD-PARTY-NOTICES.md
           cp THIRD-PARTY-NOTICES-SkiaSharp.txt editors/vscode/THIRD-PARTY-NOTICES-SkiaSharp.txt
           cp LICENSE-Apache-2.0.txt editors/vscode/LICENSE-Apache-2.0.txt
+          # The extension alone carries lamejs (the MP3 export), so the LGPL's text travels
+          # with the VSIX and not the CLI archives.
+          cp LICENSE-LGPL-3.0.txt editors/vscode/LICENSE-LGPL-3.0.txt
           cp LILYPOND-ATTRIBUTION.md editors/vscode/LILYPOND-ATTRIBUTION.md
       - name: Sync extension version to tag
         working-directory: editors/vscode

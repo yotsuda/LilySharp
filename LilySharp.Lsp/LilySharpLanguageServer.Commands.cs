@@ -786,11 +786,38 @@ public sealed partial class LilySharpLanguageServer
         }
 
         var format = (@params.Format ?? "svg").ToLowerInvariant();
-        if (!LilySharp.Core.Export.ScoreExport.Extensions.TryGetValue(format, out var ext))
+        string ext;
+        if (format == "mp3")
+        {
+            // Only the editor writes an MP3 (it encodes the sound it renders; the command line has
+            // no encoder), so the server only names the files and gives the notes.
+            if (!@params.PlaybackOnly)
+                return new ExportResponse { Success = false, Error = "An MP3 is rendered by the editor: ask with playbackOnly" };
+            ext = ".mp3";
+        }
+        else if (!LilySharp.Core.Export.ScoreExport.Extensions.TryGetValue(format, out ext!))
             return new ExportResponse { Success = false, Error = $"Unknown format: {format}" };
 
+        // A WAV or an MP3 the editor renders (PlaybackOnly): each score's notes and file are
+        // collected where the file would be written — the same scores under the same names as
+        // every other format, since the choosing and the naming below are not repeated for it.
+        bool editorRenders = (format == "wav" || format == "mp3") && @params.PlaybackOnly;
+        var playbacks = new List<PlaybackExport>();
+        LilySharp.Core.Export.ExportResult WriteOne(string path,
+            (RenderDeclarationSyntax Declaration, RenderSpec Spec)? score,
+            LilySharp.Core.Export.ExportOptions? options)
+        {
+            if (!editorRenders)
+                return LilySharp.Core.Export.ScoreExport.Write(tree, format, path, score, options);
+            var pb = PlaybackOf(tree, score?.Spec);
+            if (pb.Error != null)
+                throw new InvalidOperationException(pb.Error);
+            playbacks.Add(new PlaybackExport { OutputPath = path, Notes = pb.Notes ?? [] });
+            return new LilySharp.Core.Export.ExportResult([path], [], []);
+        }
+
         // A WAV needs a font it can read; refuse before a folder is made or a file begun.
-        if (format == "wav")
+        if (format == "wav" && !editorRenders)
         {
             if (string.IsNullOrEmpty(@params.SoundFont))
                 return new ExportResponse { Success = false, Error = "A WAV export needs a SoundFont 2 (.sf2)" };
@@ -806,7 +833,7 @@ public sealed partial class LilySharpLanguageServer
                 // with its declaration — the one the playback request plays, too. The
                 // writing is ScoreExport's, the command line's home (its remarks say why).
                 var chosen = RenderSpecParser.ChooseDeclared(tree, @params.RenderName);
-                var result = LilySharp.Core.Export.ScoreExport.Write(tree, format, @params.OutputPath, chosen,
+                var result = WriteOne(@params.OutputPath, chosen,
                     new LilySharp.Core.Export.ExportOptions { TodoMarks = @params.TodoMarks, SoundFont = @params.SoundFont });
                 var written = result.Files;
                 // The dialog's path names ONE file; a multi-page PNG writes several, so
@@ -821,6 +848,7 @@ public sealed partial class LilySharpLanguageServer
                     OutputPath = reported,
                     OutputPaths = written.ToArray(),
                     Warnings = result.Warnings.ToArray(),
+                    Playbacks = editorRenders ? playbacks.ToArray() : null,
                 };
             }
 
@@ -837,7 +865,7 @@ public sealed partial class LilySharpLanguageServer
             {
                 // A file with no `score` block has exactly one thing to write (the CLI's
                 // RunFormOutput says the same), under the file's own name.
-                Add(LilySharp.Core.Export.ScoreExport.Write(tree, format, Path.Combine(dir, stem + ext), null, options));
+                Add(WriteOne(Path.Combine(dir, stem + ext), null, options));
             }
             else if (format == "vsqx")
             {
@@ -863,7 +891,7 @@ public sealed partial class LilySharpLanguageServer
                             + "already written by an earlier score of this file — skipped");
                         continue;
                     }
-                    Add(LilySharp.Core.Export.ScoreExport.Write(tree, format, target, score, options));
+                    Add(WriteOne(target, score, options));
                 }
             }
             // The exporters' own warnings (a MIDI note beyond the keyboard, a twin's
@@ -879,6 +907,7 @@ public sealed partial class LilySharpLanguageServer
                 OutputPath = dir,
                 OutputPaths = outputs.ToArray(),
                 Warnings = warnings.ToArray(),
+                Playbacks = editorRenders ? playbacks.ToArray() : null,
             };
         }
         catch (Exception ex)
@@ -994,12 +1023,31 @@ public sealed partial class LilySharpLanguageServer
     {
         if (tree.HasErrors)
             return new PlaybackResponse { Error = "Score has errors" };
+        RenderSpec? score;
         try
         {
             // The score the preview DRAWS (the same choice the svg request makes), so its
             // Play sounds that score's parts and form — `score p2 { staff p2 }`
             // used to play p1 as well.
-            var score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName);
+            score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName);
+        }
+        catch (Exception ex)
+        {
+            return new PlaybackResponse { Error = ex.Message };
+        }
+        return PlaybackOf(tree, score);
+    }
+
+    /// <summary>The note events of one score (null: a file with no <c>score</c> block — its
+    /// primary form, every part), as <see cref="PlaybackOf(SyntaxTree, string?)"/> gives them
+    /// for the score it chooses. The WAV the editor renders asks for each score it writes
+    /// (<see cref="ExportParams.PlaybackOnly"/>).</summary>
+    private static PlaybackResponse PlaybackOf(SyntaxTree tree, RenderSpec? score)
+    {
+        if (tree.HasErrors)
+            return new PlaybackResponse { Error = "Score has errors" };
+        try
+        {
             var midi = new LilySharp.Core.Midi.MidiExporter { Form = score?.Form, Score = score }.Export(tree);
             int tpq = midi.TicksPerQuarterNote;
 
