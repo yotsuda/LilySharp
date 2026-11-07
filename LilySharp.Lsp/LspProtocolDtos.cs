@@ -226,8 +226,8 @@ public class ExportParams
     /// (the Explorer's batch export). Read as the CLI reads it, <c>using</c> includes
     /// resolved against its own folder.</summary>
     public string? Path { get; set; }
-    /// <summary>Output format: svg, png, pdf, midi, musicxml, vsqx, ly, wav, or mp3 (mp3 only
-    /// with <see cref="PlaybackOnly"/>: the editor encodes it).</summary>
+    /// <summary>Output format: svg, png, pdf, midi, musicxml, vsqx, ly, wav, mp3 or mp4 (mp3 and
+    /// mp4 only with <see cref="PlaybackOnly"/>: the editor encodes them).</summary>
     public string? Format { get; set; }
     /// <summary>Absolute path to write the exported file to (one score). Ignored when
     /// <see cref="All"/> is set.</summary>
@@ -252,7 +252,8 @@ public class ExportParams
     public string? SoundFont { get; set; }
     /// <summary>A WAV the EDITOR renders (owner's request 2026-11-07: the exported sound is the
     /// preview's — its synth, spessasynth, and its font, a <c>.sf3</c> or a DLS bank included,
-    /// which the server's MeltySynth cannot read). With <see cref="Format"/> <c>wav</c> or <c>mp3</c>, nothing
+    /// which the server's MeltySynth cannot read). With <see cref="Format"/> <c>wav</c>, <c>mp3</c>
+    /// or <c>mp4</c> (whose pictures are drawn into a temp folder, <see cref="PlaybackExport.Frames"/>), nothing
     /// is written and no font is asked for: <see cref="ExportResponse.Playbacks"/> carries each
     /// score's file and the notes the preview's Play would sound for it.</summary>
     public bool PlaybackOnly { get; set; }
@@ -264,6 +265,15 @@ public class PlaybackExport
 {
     public string OutputPath { get; set; } = "";
     public PlaybackNote[] Notes { get; set; } = [];
+    /// <summary>An MP4: the ffmpeg concat list of the video's pictures
+    /// (<c>LilySharp.Core.Export.ScoreVideo</c>), drawn into <see cref="WorkDirectory"/>, which the
+    /// editor deletes once the video is written. Null for a WAV or an MP3.</summary>
+    public string? Frames { get; set; }
+    /// <summary>An MP4: the folder of its pictures — a new one under the temp folder.</summary>
+    public string? WorkDirectory { get; set; }
+    /// <summary>An MP4: the seconds of still score before the music; the editor starts the sound
+    /// that late.</summary>
+    public double Lead { get; set; }
 }
 
 /// <summary>

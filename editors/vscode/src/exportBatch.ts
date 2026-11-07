@@ -30,6 +30,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import type { AudioFormat, AudioJob } from './audioRender';
+import type { VideoJob } from './videoExport';
 import {
     EXPORT_FORMATS, ExportFormat, ExportTally,
     duplicateStems, lysTargets, samePath, summarizeExport,
@@ -51,6 +52,12 @@ export interface ExportBatchDeps {
     /** Renders the files the server named (their notes) through a sound font, as the preview
      *  plays them, and writes them as WAV or MP3 (audioRender.ts). */
     renderAudio: (jobs: AudioJob[], soundFont: string, format: AudioFormat) => Promise<void>;
+    /** The ffmpeg an MP4 export runs, once it is known to run; undefined (the writer told how
+     *  to get it) when it does not. */
+    ffmpeg: () => Promise<string | undefined>;
+    /** Writes the MP4s the server prepared: their sound, joined by ffmpeg to their pictures
+     *  (videoExport.ts). */
+    renderVideo: (jobs: VideoJob[], soundFont: string, ffmpeg: string) => Promise<void>;
 }
 
 interface ExportResponse {
@@ -58,13 +65,16 @@ interface ExportResponse {
     OutputPath: string | null;
     OutputPaths?: string[] | null;
     Warnings?: string[] | null;
-    /** A WAV or MP3 asked for with playbackOnly: each file and its notes, for the editor to render. */
-    Playbacks?: AudioJob[] | null;
+    /** A WAV, MP3 or MP4 asked for with playbackOnly: each file and its notes (and an MP4's
+     *  pictures), for the editor to render. */
+    Playbacks?: VideoJob[] | null;
     Error: string | null;
 }
 
 /** The formats whose sound the editor renders, rather than the server writing them. */
 const isAudio = (id: string): id is AudioFormat => id === 'wav' || id === 'mp3';
+/** The formats the editor writes from the server's notes: the sounds and the video. */
+const editorWrites = (id: string) => isAudio(id) || id === 'mp4';
 
 export function registerExportBatch(context: vscode.ExtensionContext, deps: ExportBatchDeps): void {
     for (const format of EXPORT_FORMATS) {
@@ -137,9 +147,17 @@ async function exportBatch(
         }
     }
 
-    // A WAV or an MP3 needs a font before anything else is asked: no font, no export.
+    // A video needs ffmpeg, and a WAV, an MP3 or a video a font, before anything else is asked:
+    // without them, no export.
+    let ffmpeg: string | undefined;
+    if (format.id === 'mp4') {
+        ffmpeg = await deps.ffmpeg();
+        if (!ffmpeg) {
+            return;
+        }
+    }
     let soundFont: string | undefined;
-    if (isAudio(format.id)) {
+    if (editorWrites(format.id)) {
         soundFont = await deps.wavSoundFont();
         if (!soundFont) {
             return;
@@ -188,9 +206,10 @@ async function exportBatch(
                 format: format.id,
                 all: true,
                 outputDirectory: dir,
-                // A WAV or an MP3: the server names the files and gives their notes; the editor
-                // renders them through the preview's synth and font below.
-                playbackOnly: isAudio(format.id),
+                // A WAV, an MP3 or an MP4: the server names the files and gives their notes (and
+                // draws a video's pictures); the editor renders them through the preview's synth
+                // and font below.
+                playbackOnly: editorWrites(format.id),
             };
             attempted++;
             deps.log(`  ${file}${open ? ' (open editor)' : ''}`);
@@ -203,6 +222,8 @@ async function exportBatch(
                 }
                 if (soundFont && response.Playbacks && isAudio(format.id)) {
                     await deps.renderAudio(response.Playbacks, soundFont, format.id);
+                } else if (soundFont && ffmpeg && response.Playbacks && format.id === 'mp4') {
+                    await deps.renderVideo(response.Playbacks, soundFont, ffmpeg);
                 }
                 for (const out of response.OutputPaths ?? []) {
                     outputs++;

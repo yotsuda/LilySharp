@@ -787,13 +787,14 @@ public sealed partial class LilySharpLanguageServer
 
         var format = (@params.Format ?? "svg").ToLowerInvariant();
         string ext;
-        if (format == "mp3")
+        if (format == "mp3" || format == "mp4")
         {
-            // Only the editor writes an MP3 (it encodes the sound it renders; the command line has
-            // no encoder), so the server only names the files and gives the notes.
+            // Only the editor writes an MP3 or an MP4 (it encodes the sound it renders, and the
+            // video through ffmpeg; the command line has neither), so the server names the files,
+            // gives the notes and, for a video, draws its pictures.
             if (!@params.PlaybackOnly)
-                return new ExportResponse { Success = false, Error = "An MP3 is rendered by the editor: ask with playbackOnly" };
-            ext = ".mp3";
+                return new ExportResponse { Success = false, Error = $"An {format.ToUpperInvariant()} is rendered by the editor: ask with playbackOnly" };
+            ext = "." + format;
         }
         else if (!LilySharp.Core.Export.ScoreExport.Extensions.TryGetValue(format, out ext!))
             return new ExportResponse { Success = false, Error = $"Unknown format: {format}" };
@@ -801,7 +802,7 @@ public sealed partial class LilySharpLanguageServer
         // A WAV or an MP3 the editor renders (PlaybackOnly): each score's notes and file are
         // collected where the file would be written — the same scores under the same names as
         // every other format, since the choosing and the naming below are not repeated for it.
-        bool editorRenders = (format == "wav" || format == "mp3") && @params.PlaybackOnly;
+        bool editorRenders = (format == "wav" || format == "mp3" || format == "mp4") && @params.PlaybackOnly;
         var playbacks = new List<PlaybackExport>();
         LilySharp.Core.Export.ExportResult WriteOne(string path,
             (RenderDeclarationSyntax Declaration, RenderSpec Spec)? score,
@@ -812,8 +813,25 @@ public sealed partial class LilySharpLanguageServer
             var pb = PlaybackOf(tree, score?.Spec);
             if (pb.Error != null)
                 throw new InvalidOperationException(pb.Error);
-            playbacks.Add(new PlaybackExport { OutputPath = path, Notes = pb.Notes ?? [] });
-            return new LilySharp.Core.Export.ExportResult([path], [], []);
+            var job = new PlaybackExport { OutputPath = path, Notes = pb.Notes ?? [] };
+            var warnings = new List<string>();
+            if (format == "mp4")
+            {
+                var notes = job.Notes.Where(n => n.P >= 0).ToList();
+                // As long as the sound the editor renders runs: the last note's end and two
+                // seconds to ring out (audioRenderCore.ts frameCount, WAV_TAIL_S).
+                double seconds = notes.Count == 0 ? 2 : notes.Max(n => n.T + Math.Max(0.03, n.D)) + 2;
+                var look = LilySharp.Core.Export.ScoreVideoOptions.Default;
+                job.WorkDirectory = Path.Combine(Path.GetTempPath(), "lilysharp-video-" + Guid.NewGuid().ToString("N"));
+                var frames = LilySharp.Core.Export.ScoreVideo.WriteFrames(tree, score?.Spec,
+                    notes.Select(n => new LilySharp.Core.Export.VideoNote(n.T, n.T + n.D, n.S, n.O)).ToList(),
+                    seconds, job.WorkDirectory, look);
+                job.Frames = frames.ConcatList;
+                job.Lead = look.Lead;
+                warnings.AddRange(frames.Warnings);
+            }
+            playbacks.Add(job);
+            return new LilySharp.Core.Export.ExportResult([path], [], warnings);
         }
 
         // A WAV needs a font it can read; refuse before a folder is made or a file begun.

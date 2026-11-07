@@ -359,13 +359,20 @@ ges'4 aes' bes' ces'' | des''4 ees'' f'' ges'' | ges'1 |</pre>
   <h2>Export</h2>
   <p><i>Export as PDF</i>, <i>SVG</i>, <i>PNG</i>, <i>LilyPond (.ly)</i>, <i>MusicXML</i>,
   <i>MIDI</i>, <i>WAV</i> and <i>MP3</i> (the score as the preview plays it — its synth and its
-  sound font, <code>.sf2</code>, <code>.sf3</code> or <code>.dls</code>; the MP3 at 192 kbps) and
+  sound font, <code>.sf2</code>, <code>.sf3</code> or <code>.dls</code>; the MP3 at 192 kbps),
+  <i>MP4 Video</i> (the pages, each note lit orange while it sounds, with that sound) and
   <i>VOCALOID sequence (.vsqx)</i>.
   They are in the command palette, in the
   preview, and in the <i>Lily#: Export</i> submenu when you right-click <code>.lys</code> files in
   the Explorer — select several to export every score of every file into one folder. From the
   preview, the export is the score the preview shows, under that score's own form. Whichever
-  way, the file written is the one <code>lysc</code> writes from the command line.</p>
+  way, the pictures and files are the ones <code>lysc</code> writes from the command line; the
+  sound and the video are the editor's own.</p>
+  <p><i>MP4 Video</i> needs <b>ffmpeg</b>, which Lily# does not bundle: install it (Windows
+  <code>winget install Gyan.FFmpeg</code>, a Mac <code>brew install ffmpeg</code>, Linux its
+  package manager) or name the program in <code>lilysharp.export.ffmpegPath</code>. The first
+  page shows until the music reaches a note printed on the next; then the picture turns to
+  that page.</p>
 </section>
 
 <section id="ai">

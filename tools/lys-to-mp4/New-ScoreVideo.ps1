@@ -3,10 +3,11 @@
     Makes an MP4 of a .lys score: the engraved pages, the sounding notes lit, and the sound.
 
 .DESCRIPTION
-    Engraves the score with lysc (page PNGs, symbol boxes, MIDI), plays the MIDI through the
-    preview's synthesizer and sound bank, draws one picture per playback state (ScoreVideo), and
-    joins pictures and sound with ffmpeg. The first page shows until the music reaches a note
-    printed on the next one; then the whole picture turns to that page. See README.md.
+    Writes the score's MIDI with lysc, plays it through the preview's synthesizer and sound bank,
+    draws one picture per playback state (ScoreVideo, which runs LilySharp.Core.Export.ScoreVideo,
+    the code behind the editor's Export as MP4 Video), and joins pictures and sound with ffmpeg.
+    The first page shows until the music reaches a note printed on the next one; then the whole
+    picture turns to that page. See README.md.
 
 .EXAMPLE
     ./tools/lys-to-mp4/New-ScoreVideo.ps1 ~/Downloads/Haru-no-Kaze.lys
@@ -74,11 +75,8 @@ $lysc = Get-ChildItem (Join-Path $repo 'LilySharp.Cli\bin\Release') -Recurse -In
 $scoreVideo = Get-ChildItem (Join-Path $here 'ScoreVideo\bin\Release') -Recurse -Include 'ScoreVideo.exe', 'ScoreVideo' -File |
     Sort-Object LastWriteTime | Select-Object -Last 1 -ExpandProperty FullName
 
-Write-Host '2/5 Engraving (pages, boxes, MIDI)'
+Write-Host '2/5 Writing the MIDI'
 $setArgs = @($Set | ForEach-Object { '--set', $_ })
-Get-ChildItem $WorkDir -Filter "$name*.png" -ErrorAction SilentlyContinue | Remove-Item
-Invoke-Native 'lysc png' { & $lysc png --scale $Scale.ToString($inv) @setArgs -d $WorkDir $Path } | Out-Null
-Invoke-Native 'lysc boxes' { & $lysc boxes @setArgs -d $WorkDir $Path } | Out-Null
 Invoke-Native 'lysc midi' { & $lysc midi -d $WorkDir $Path } | Out-Null
 $mid = Join-Path $WorkDir "$name.mid"
 $wav = Join-Path $WorkDir 'audio.wav'
@@ -97,7 +95,7 @@ $fadeStart = [Math]::Max(0, $end - 1.5)
 Write-Host '4/5 Drawing the pictures'
 Invoke-Native 'ScoreVideo' {
     & $scoreVideo $Path $WorkDir --width $Width --height $Height --fps $Fps `
-        --lead $Lead.ToString($inv) --length $end.ToString($inv) --color $Color
+        --lead $Lead.ToString($inv) --length $end.ToString($inv) --color $Color --scale $Scale.ToString($inv) @setArgs
 } | Write-Host
 
 Write-Host '5/5 Encoding'
@@ -105,7 +103,7 @@ $af = "[1:a]atrim=0:{0},afade=t=out:st={1}:d=1.5,adelay={2}:all=1,loudnorm=I=-16
     $end.ToString($inv), $fadeStart.ToString($inv), [int]($Lead * 1000)
 $total = ($Lead + $end).ToString($inv)
 Invoke-Native 'ffmpeg' {
-    ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i (Join-Path $WorkDir 'concat.txt') -i $wav `
+    ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i (Join-Path $WorkDir 'frames\frames.txt') -i $wav `
         -filter_complex $af -map 0:v -map '[a]' -r $Fps -t $total `
         -c:v libx264 -pix_fmt yuv420p -crf 20 -tune stillimage -c:a aac -b:a 192k -movflags +faststart $Out
 } | Out-Null

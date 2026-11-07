@@ -344,6 +344,12 @@
             "default": true,
             "description": "Sound notes as you edit: the note the caret lands on, a note as you type it, and what the step keys (Ctrl+Shift+Up / Down, Ctrl+Shift+PageUp / PageDown) step a note or a chord shape to. Plays through the open preview, so nothing sounds while no preview is open. Play Note at Cursor (Alt+P) and Play Current Measure (Alt+M) are not affected."
           },
+          "lilysharp.export.ffmpegPath": {
+            "type": "string",
+            "default": "",
+            "scope": "machine-overridable",
+            "markdownDescription": "The `ffmpeg` program **Export as MP4** encodes the video with (Lily# does not bundle one). Empty: `ffmpeg` found on your `PATH`. Install it from [ffmpeg.org](https://ffmpeg.org/download.html) — on Windows `winget install Gyan.FFmpeg`, on a Mac `brew install ffmpeg`, on Linux your package manager — or name the program's full path here."
+          },
           "lilysharp.playback.soundFont": {
             "type": "string",
             "default": "",
@@ -754,6 +760,11 @@
         "title": "Export as MP3"
       },
       {
+        "command": "lilysharp.exportMp4",
+        "category": "Lily#",
+        "title": "Export as MP4 Video"
+      },
+      {
         "command": "lilysharp.exportVsqx",
         "category": "Lily#",
         "title": "Export as VOCALOID sequence (.vsqx)"
@@ -800,8 +811,12 @@
           "group": "3_sound@3"
         },
         {
-          "command": "lilysharp.exportVsqx",
+          "command": "lilysharp.exportMp4",
           "group": "3_sound@4"
+        },
+        {
+          "command": "lilysharp.exportVsqx",
+          "group": "3_sound@5"
         }
       ],
       "file/newFile": [
@@ -1033,6 +1048,10 @@
         },
         {
           "command": "lilysharp.exportMp3",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.exportMp4",
           "when": "resourceLangId == lilysharp"
         },
         {

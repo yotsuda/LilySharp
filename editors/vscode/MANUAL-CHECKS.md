@@ -330,6 +330,11 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
   - (1) プレビューの Export → 保存ダイアログの種類に *MP3 audio (as the preview plays it)*（WAV の次）。選ぶと「rendering the MP3 through …」の通知の後に「Exported to ….mp3」。OS の既定のプレーヤーで鳴り、音は同じ曲の WAV と同じ（192 kbps、約 100 秒で 2.3 MB 前後）。
   - (2) エクスプローラーで `.lys` を 2 つ選び右クリック → *Lily#: Export* に *Export as MP3*（WAV の次）。全 score の `.mp3` が書かれる。コマンドパレットの *Lily#: Export as MP3* も同じ。
   - (3) 書き出しの途中もエディタの入力が止まらない（長い曲で数秒、拡張ホストが合間に応答する）。
+- [ ] **C51**（2026-11-07・MP4 動画の書き出し）:
+  - (1) ffmpeg が PATH にある状態でプレビューの Export → 保存ダイアログの種類に *MP4 video (the pages, each note lit as it sounds)*（MP3 の次）。「drawing the video and rendering its sound through …」の通知の後に「Exported to ….mp4」。再生すると A4 縦の紙面に、鳴っている符頭だけがオレンジで光り、音とずれない。最初の 1.5 秒は楽譜だけ。2 ページ以上の曲は、次のページの音が鳴った所で画面ごと切り替わる。
+  - (2) `lilysharp.export.ffmpegPath` に存在しないパスを入れて同じ操作 → 何も描かずに「Export as MP4 needs ffmpeg, and "…" could not be run…」と *Open Setting*。押すとその設定が開く。空に戻すと PATH の ffmpeg で書ける。
+  - (3) エクスプローラーで `.lys` を 2 つ選び右クリック → *Lily#: Export* に *Export as MP4 Video*（MP3 の次）。全 score の `.mp4` が書かれる。一時フォルダ（`%TEMP%\lilysharp-video-*`）が残らない。
+  - (4) `form { A A }` の曲で、2 回目の A の音が 2 回目に印刷された位置で光る。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

@@ -253,6 +253,63 @@ public sealed class ExportRequestTests : IDisposable
         Assert.Contains("editor", written.Error);
     }
 
+    // An MP4 (owner's request 2026-11-07): the server draws the video's pictures and the editor
+    // encodes them with the sound. A section the form plays twice is printed twice, and the note
+    // that sounds is lit where it is printed that time — the second c'' on the second copy.
+    [Fact]
+    public void Mp4_DrawsThePictures_TheSoundingCopyLit()
+    {
+        var book = Book("twice.lys", """
+            tempo 120
+            part m { clef treble }
+            section A { m { c''4 d e f | } }
+            form { A A }
+            score { staff m }
+            """);
+        var response = Server().Export(new ExportParams { Path = book, Format = "mp4", OutputPath = Path.Combine(_dir, "twice.mp4"), PlaybackOnly = true });
+        Assert.True(response.Success, response.Error);
+        var job = Assert.Single(response.Playbacks!);
+        try
+        {
+            Assert.False(File.Exists(job.OutputPath));
+            Assert.Equal(1.5, job.Lead);
+            // The list: each picture and its duration, the last named again for its duration to count.
+            var lines = File.ReadAllLines(job.Frames!);
+            var shown = new List<(string File, double Seconds)>();
+            for (int i = 0; i + 1 < lines.Length; i += 2)
+                shown.Add((lines[i][6..^1], double.Parse(lines[i + 1]["duration ".Length..], System.Globalization.CultureInfo.InvariantCulture)));
+            // Eight quarters at 120 (4 s), two to ring out, and the lead.
+            Assert.Equal(1.5 + 4 + 2, shown.Sum(s => s.Seconds), 1);
+            string At(double t)
+            {
+                double end = 0;
+                foreach (var (file, seconds) in shown) { end += seconds; if (t < end) return file; }
+                return shown[^1].File;
+            }
+            double LitX(string file)
+            {
+                using var bitmap = SkiaSharp.SKBitmap.Decode(file);
+                double sum = 0; int count = 0;
+                for (int y = 0; y < bitmap.Height; y++)
+                    for (int x = 0; x < bitmap.Width; x++)
+                    {
+                        var p = bitmap.GetPixel(x, y);
+                        if (p.Red > 200 && p.Green is > 80 and < 170 && p.Blue < 90) { sum += x; count++; }
+                    }
+                Assert.True(count > 0, $"something is lit in {file}");
+                return sum / count;
+            }
+            using (var still = SkiaSharp.SKBitmap.Decode(At(0.5)))
+                Assert.Equal((1240, 1754), (still.Width, still.Height));
+            double first = LitX(At(1.5 + 0.25)), second = LitX(At(1.5 + 2.25));
+            Assert.True(second > first + 100, $"the second c'' ({second:0}) is lit right of the first ({first:0})");
+        }
+        finally
+        {
+            Directory.Delete(job.WorkDirectory!, true);
+        }
+    }
+
     [Fact]
     public void All_NoScoreBlock_WritesOneFile_UnderTheFilesName()
     {

@@ -148,8 +148,15 @@ The VS Code extension bundles no sound font (owner's decision, 2026-10-12). The 
 the General MIDI bank the operating system ships for its own synthesizer — Windows'
 `gm.dls`, macOS's DLS bank — read in place where it is installed, never copied or
 redistributed; or a sound font the user downloads and names in `lilysharp.playback.soundFont`.
-The extension's WAV and MP3 exports play through that same font. `lysc wav` plays through a
+The extension's WAV, MP3 and MP4 exports play through that same font. `lysc wav` plays through a
 SoundFont 2 the user names (`--soundfont`); MeltySynth, above, is the synthesizer.
+
+## ffmpeg (none bundled)
+
+The extension's **Export as MP4 Video** encodes the video with an **ffmpeg** the user installs
+(the one on the `PATH`, or the program `lilysharp.export.ffmpegPath` names). Lily# runs it as a
+separate program, with arguments, and neither bundles, links nor redistributes it; its licence
+and its codecs' are the user's copy's own.
 
 ## Deliberately NOT bundled
 

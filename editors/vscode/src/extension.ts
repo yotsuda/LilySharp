@@ -47,7 +47,9 @@ import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSection
 import { onAngleChord, onShapeItem, shapeItemAt, sameDocumentUri } from './shapeItemCore';
 import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
-import { AudioFormat, AudioJob, renderAudioFiles } from './audioRender';
+import { AudioFormat, renderAudioFiles } from './audioRender';
+import { VideoJob, ffmpegRuns, writeVideos } from './videoExport';
+import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1069,6 +1071,8 @@ export function activate(context: vscode.ExtensionContext) {
         openFolder: (dir: string) => openInDefaultApp(dir),
         wavSoundFont: () => wavSoundFont(context),
         renderAudio: (jobs, soundFont, format) => renderAudioFiles(jobs, soundFont, format),
+        ffmpeg: () => videoFfmpeg(),
+        renderVideo: (jobs, soundFont, ffmpeg) => writeVideos(jobs, soundFont, ffmpeg),
     });
 
     // Smart typing: the brackets it started with (`<` before c4 -> `<c>4`, and a
@@ -2097,8 +2101,9 @@ interface ExportResponse {
     Success: boolean;
     OutputPath: string | null;
     Error: string | null;
-    /** A WAV or MP3 asked for with playbackOnly: the file and the notes, for the editor to render. */
-    Playbacks?: AudioJob[] | null;
+    /** A WAV, MP3 or MP4 asked for with playbackOnly: the file and the notes (and an MP4's
+     *  pictures), for the editor to render. */
+    Playbacks?: VideoJob[] | null;
 }
 
 // Opening/revealing an exported file goes to the OS directly rather than through
@@ -2238,6 +2243,7 @@ async function exportPreview(
             'MIDI': ['mid', 'midi'],
             'WAV audio (as the preview plays it)': ['wav'],
             'MP3 audio (as the preview plays it)': ['mp3'],
+            'MP4 video (the pages, each note lit as it sounds)': ['mp4'],
             'VOCALOID sequence (vocal + lyrics)': ['vsqx'],
         }
     });
@@ -2250,7 +2256,7 @@ async function exportPreview(
     const format = ext === 'mid' || ext === 'midi' ? 'midi'
         : ext === 'xml' || ext === 'musicxml' ? 'musicxml'
         : ext; // png / pdf / svg / ly
-    if (!['png', 'pdf', 'svg', 'midi', 'musicxml', 'vsqx', 'ly', 'wav', 'mp3'].includes(format)) {
+    if (!['png', 'pdf', 'svg', 'midi', 'musicxml', 'vsqx', 'ly', 'wav', 'mp3', 'mp4'].includes(format)) {
         vscode.window.showErrorMessage(`Lily#: unsupported export type ".${ext}".`);
         return;
     }
@@ -2274,9 +2280,20 @@ async function exportPreview(
     // A WAV or an MP3 is the score as the preview plays it: the server gives the notes
     // (playbackOnly) and the editor renders them through the preview's synth and sound font
     // (audioRender.ts).
+    // An MP4 is the same sound with the score's pages, the notes lit as they sound: the server
+    // draws the pictures, and the editor joins them to the sound with the user's ffmpeg
+    // (videoExport.ts).
     const audio: AudioFormat | undefined = format === 'wav' || format === 'mp3' ? format : undefined;
+    const video = format === 'mp4';
+    let ffmpeg: string | undefined;
+    if (video) {
+        ffmpeg = await videoFfmpeg();
+        if (!ffmpeg) {
+            return;
+        }
+    }
     let soundFont: string | undefined;
-    if (audio) {
+    if (audio || video) {
         soundFont = await wavSoundFont(context);
         if (!soundFont) {
             return;
@@ -2290,20 +2307,24 @@ async function exportPreview(
                 format,
                 outputPath: target.fsPath,
                 todoMarks,
-                playbackOnly: audio !== undefined,
+                playbackOnly: audio !== undefined || video,
                 renderName: renderName || null
             });
             if (answer.Success && audio && soundFont && answer.Playbacks) {
                 await renderAudioFiles(answer.Playbacks, soundFont, audio);
+            } else if (answer.Success && video && soundFont && ffmpeg && answer.Playbacks) {
+                await writeVideos(answer.Playbacks, soundFont, ffmpeg);
             }
             return answer;
         };
-        // Rendering the sound takes as long as the synth needs for the whole piece; the
-        // pictures and files are quick enough to need no notice.
-        const response = audio && soundFont
+        // Rendering the sound takes as long as the synth needs for the whole piece (and a video
+        // its pictures and ffmpeg); the pictures and files are quick enough to need no notice.
+        const response = soundFont
             ? await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `Lily#: rendering the ${audio.toUpperCase()} through ${path.basename(soundFont)}…`,
+                title: video
+                    ? `Lily#: drawing the video and rendering its sound through ${path.basename(soundFont)}…`
+                    : `Lily#: rendering the ${(audio ?? 'wav').toUpperCase()} through ${path.basename(soundFont)}…`,
             }, request)
             : await request();
 
@@ -3458,7 +3479,22 @@ async function rememberSoundFont(context: vscode.ExtensionContext, file: string)
     await context.globalState.update(SOUND_FONT_HISTORY_KEY, recordFont(soundFontHistory(context), file, PATHS_IGNORE_CASE));
 }
 
-/** The sound font a WAV or MP3 export plays the score through: the one the preview plays
+/** The ffmpeg an MP4 export runs (lilysharp.export.ffmpegPath, else `ffmpeg` on the PATH), once
+ *  it is known to run; else the writer is told how to get it, and undefined. Asked before the
+ *  server draws anything. */
+async function videoFfmpeg(): Promise<string | undefined> {
+    const program = ffmpegProgram(vscode.workspace.getConfiguration('lilysharp').get<string>('export.ffmpegPath', ''));
+    if (await ffmpegRuns(program)) {
+        return program;
+    }
+    const open = 'Open Setting';
+    if (await vscode.window.showErrorMessage(ffmpegMissing(program), open) === open) {
+        await vscode.commands.executeCommand('workbench.action.openSettings', 'lilysharp.export.ffmpegPath');
+    }
+    return undefined;
+}
+
+/** The sound font a WAV, MP3 or MP4 export plays the score through: the one the preview plays
  *  (soundFontFile — the setting, else this build's own, else the OS's bank), so the file sounds
  *  as Play does (owner's request 2026-11-07; until then the server's synth rendered it and read
  *  `.sf2` only, so the default gm.dls and a `.sf3` were refused). Only when the preview has none

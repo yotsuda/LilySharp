@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Draws the pictures of a score video: one per playback state, the sounding noteheads lit.
+  <!-- The pictures of a score video, drawn by LilySharp.Core.Export.ScoreVideo (the editor's
+       Export as MP4 Video runs the same) from the language server's playback list.
        Run by ../New-ScoreVideo.ps1; not part of LilySharp.slnx. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -10,8 +11,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\LilySharp.Lsp\LilySharp.Lsp.csproj" />
-    <!-- Core directly too, for SkiaSharp (the pictures are drawn with it; ImageSharp is kept out of
-         every output by Directory.Build.props). -->
+    <!-- Core directly too: ScoreVideo, the parser's UsingExpander and SkiaSharp's natives. -->
     <ProjectReference Include="..\..\..\LilySharp.Core\LilySharp.Core.csproj" />
   </ItemGroup>
 </Project>
