@@ -290,7 +290,7 @@ public static class CompositionChecks
             // One bar's rhythm on most of the melody's bars (owner's trial 2026-10-29: a pop song sang
             // `r8 x8 x8 x8~ x4 x4` in every bar, four syllables poured into each and a breath at every
             // bar line, in the middle of words) — a mix of values the count above passes.
-            if (melody && SameRhythmBars(OutsideTheFrame(midi, onsets), midi.BarTicks) is var (alike, inBars) && inBars >= SameRhythmFewestBars
+            if (melody && SameRhythmBars(FirstPlays(midi, OutsideTheFrame(midi, onsets)), midi.BarTicks) is var (alike, inBars) && inBars >= SameRhythmFewestBars
                 && alike >= inBars * SameRhythmShare)
                 findings.Add(new("rhythm.same-bars", $"{part}, the melody: {alike} of its {inBars} bars have the same rhythm — a pattern poured full, not a line: "
                     + "let the rhythm follow the words and the phrase — a longer note at a phrase's end and a breath only there, "
@@ -2362,6 +2362,16 @@ public static class CompositionChecks
         var framed = starts.Select((s, i) => (Name: s.Value, From: s.Key, To: i + 1 < starts.Count ? starts[i + 1].Key : int.MaxValue))
             .Where(s => FrameSection.IsMatch(s.Name)).ToList();
         return onsets.Where(o => !framed.Any(f => o.Start >= f.From && o.Start < f.To)).ToList();
+    }
+
+    /// <summary>The onsets in each section's first playing: a section the form plays again is written once,
+    /// and its rhythm is counted once, as <see cref="SameRhythmSections"/> reads it (owner's trial 2026-11-07:
+    /// a song whose chorus came back after each verse, as the composing guide asks, was told 25 of its 48 bars
+    /// had one rhythm — its chorus and its verse counted at every playing). All of them when no section is played.</summary>
+    private static List<(int Start, int Length)> FirstPlays(MidiFile midi, IReadOnlyList<(int Start, int Length)> onsets)
+    {
+        var spans = PlayedSpans(midi);
+        return spans.Count == 0 ? [.. onsets] : onsets.Where(o => spans.Any(s => o.Start >= s.Start && o.Start < s.End)).ToList();
     }
 
     /// <summary>The sections (as the form first plays them) in which <paramref name="onsets"/>'s bars

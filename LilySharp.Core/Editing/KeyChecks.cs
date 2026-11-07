@@ -200,9 +200,21 @@ public static class KeyChecks
                 if (Beside(i - 1) || Beside(i + 1))
                     continue;
                 var note = notes[i];
-                var around = everything.Where(o => (o.Part != line.Key || o.Voice != lineVoices[line.Key])
+                bool Other((string Part, int Voice, int StartTick, int DurationTicks, int Pitch) o) => o.Part != line.Key || o.Voice != lineVoices[line.Key];
+                var around = everything.Where(o => Other(o)
                     && o.StartTick < note.StartTick + note.DurationTicks && note.StartTick < o.StartTick + o.DurationTicks).ToList();
-                if (around.Any(o => Pc(o.Pitch) == pc) || (around.Count > 0 && around.All(o => o.Pitch > note.Pitch)))
+                // The harmony of its beat, as well: an accompaniment that breaks its chord sounds the note's pitch
+                // in the beat, not at its instant (owner's trial 2026-11-07: a song's B♯ in a G♯7 the piano spread
+                // over the dotted quarter, `bis8 dis fis`, was told a slip). The bottom of the harmony is still read
+                // at its instant.
+                var (beatStart, beatEnd) = BeatOf(midi, bars, note.StartTick);
+                // …and of the bass it stands over, for as long as that bass holds: a broken chord that comes round
+                // twice in the bar over one held bass is one chord (the same song's second B♯, a beat after the voice's).
+                var bass = around.Where(o => o.Pitch < note.Pitch).OrderBy(o => o.Pitch).Select(o => ((int, int)?)(o.StartTick, o.StartTick + o.DurationTicks)).FirstOrDefault();
+                bool InSpan(int from, int to, (string Part, int Voice, int StartTick, int DurationTicks, int Pitch) o) => o.StartTick < to && from < o.StartTick + o.DurationTicks;
+                bool inBeat = everything.Any(o => Other(o) && Pc(o.Pitch) == pc
+                    && (InSpan(beatStart, beatEnd, o) || (bass is var (bassFrom, bassTo) && InSpan(bassFrom, bassTo, o))));
+                if (inBeat || around.Any(o => Pc(o.Pitch) == pc) || (around.Count > 0 && around.All(o => o.Pitch > note.Pitch)))
                     continue;
                 strays.Add(i);
             }
@@ -214,6 +226,22 @@ public static class KeyChecks
                 + (at.Count > 1 ? $" first; bars {string.Join(", ", at.Take(6))}{(at.Count > 6 ? ", …" : "")}" : "")
                 + ", as the form plays them): no semitone into a note of the key, and no chord around it has that note. Is it the note you meant?") { Parts = [line.Key], Bars = at };
         }
+    }
+
+    /// <summary>The beat <paramref name="tick"/> falls in, as ticks from its start to its end: a beat of the
+    /// meter in force, counted from the bar line — the denominator's note, or three of them in a compound
+    /// meter (6/8, 9/8, 12/8: a dotted quarter). <paramref name="bars"/> are the bar lines after the first.</summary>
+    private static (int Start, int End) BeatOf(MidiFile midi, IReadOnlyList<int> bars, int tick)
+    {
+        int numerator = 4, denominator = 4, at = -1;
+        foreach (var m in midi.Tracks.SelectMany(t => t.TimeSignatures))
+            if (m.Tick <= tick && m.Tick >= at)
+                (numerator, denominator, at) = (m.Numerator, m.Denominator, m.Tick);
+        int unit = System.Math.Max(1, midi.TicksPerQuarterNote * 4 / System.Math.Max(1, denominator));
+        int beat = numerator > 3 && numerator % 3 == 0 && denominator >= 8 ? unit * 3 : unit;
+        int bar = bars.LastOrDefault(b => b <= tick);
+        int start = bar + (tick - bar) / beat * beat;
+        return (start, start + beat);
     }
 
     /// <summary>A chromatic passing note, a semitone on each side and moving on the same way, written against

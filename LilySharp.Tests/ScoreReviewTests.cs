@@ -307,6 +307,42 @@ public class ScoreReviewTests
         Assert.False(Says(TwoParts.Replace("HARMONY", borrowed), "key.outside"));
     }
 
+    // Owner's trial 2026-11-07: a song's B♯ in a G♯7 the piano broke over the beat was told a slip — the
+    // piano's B♯ fell in the beat, not at the voice's instant; and the piano's own second B♯, a beat later
+    // over the same held bass.
+    private const string Broken = """
+        title "Broken"
+        key c major
+        time 4/4
+        octave absolute
+        part m { instrument flute }
+        part h { instrument viola }
+        part b { instrument cello }
+        section A { m { c''4 d'' e'' g'' | c''8 ees''8 c''4 a'4 g'4 | e''4 f'' g'' a'' | g''4 e'' c''2 | }
+                    h { c'1 | ARPEGGIO | c'1 | c'1 | }
+                    b { BASS | c1 | c1 | c1 | } }
+        form { A }
+        score { staff m staff h staff b }
+        """;
+
+    [Fact]
+    public void ANoteTheHarmonyBreaksInItsBeat_IsAChord_NotASlip()
+    {
+        // The viola's E♭ comes on the beat's first eighth, the flute's on its second.
+        Assert.False(Says(Broken.Replace("ARPEGGIO", "ees'8 g' c'' g' ees' g' c'' g'").Replace("BASS", "c1"), "key.outside"));
+        Assert.True(Says(Broken.Replace("ARPEGGIO", "e'8 g' c'' g' e' g' c'' g'").Replace("BASS", "c1"), "key.outside"));
+    }
+
+    [Fact]
+    public void ANoteTheHarmonySoundedOverTheSameHeldBass_IsAChord_NotASlip()
+    {
+        // The flute's E♭ on beat 2; the viola's on beat 1 only — over the cello's C held through the bar,
+        // and over a bass that changes on beat 2.
+        string held = Broken.Replace("c''8 ees''8 c''4 a'4 g'4", "c''4 ees''4 c''4 g'4").Replace("ARPEGGIO", "ees'8 g' r4 r2");
+        Assert.False(Says(held.Replace("BASS", "c1 | c1").Replace("| c1 | c1 | c1 | }", "| c1 | c1 | }"), "key.outside"));
+        Assert.True(Says(held.Replace("BASS", "c1 | c4 g,4 r2").Replace("| c1 | c1 | c1 | }", "| c1 | c1 | }"), "key.outside"));
+    }
+
     [Fact]
     public void ANoteTheLinesOwnPartHolds_IsAChord_NotASlip()
     {

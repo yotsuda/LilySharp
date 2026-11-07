@@ -788,6 +788,31 @@ public class CompositionChecksTests
         Assert.Contains(CompositionChecks.Of(InC(Rock3("g'4 b' a'2", "g,4 a, aes,2"), swing: true)), f => f.Contains("a semitone from the harmony"));
     }
 
+    // Owner's trial 2026-11-07: a song whose chorus came back after each verse, as the composing guide asks,
+    // was told 25 of its 48 bars had one rhythm — its sections counted at every playing. A section the form
+    // plays again is written once, and its rhythm counted once.
+    private static string Played(string form, bool copied)
+    {
+        const string x = "e''4 d''8 c''8 d''2";
+        string a = $"c''2 d''2 | e''4 f''4 g''2 | {x} | a''1 | g''4. f''8 e''2 | {x} | d''8 e''8 f''4 g''2 | c''1 |";
+        string b = $"{x} | {x} | g''2 e''2 | {x} | a''4 g''4 f''4 e''4 | {x} | d''2. r4 | {x} |";
+        // A flute beside a piano: the flute is the melody.
+        const string lh = "c1 | f1 | g1 | c1 | f1 | g1 | g1 | c1 |";
+        string sections = $"section A {{ m {{ {a} }} p {{ {lh} }} }}\nsection B {{ m {{ {b} }} p {{ {lh} }} }}\n"
+            + (copied ? $"section B2 {{ m {{ {b} }} p {{ {lh} }} }}\nsection B3 {{ m {{ {b} }} p {{ {lh} }} }}\n" : "");
+        return $"title \"Played\"\ntime 4/4\nkey c major\noctave absolute\npart m {{ instrument flute }}\npart p {{ instrument piano-left }}\n"
+            + $"{sections}form {{ {form} }}\nscore {{ staff m staff p }}\n";
+    }
+
+    [Fact]
+    public void ASectionPlayedAgain_HasItsRhythmCountedOnce()
+    {
+        // 7 of 16 written bars share a rhythm; played A B B B, it is 17 of 32.
+        Assert.DoesNotContain(CompositionChecks.Of(Played("A B B B", copied: false)), f => f.Contains("bars have the same rhythm"));
+        // Written out three times, it is 17 of 32 written bars.
+        Assert.Contains(CompositionChecks.Of(Played("A B B2 B3", copied: true)), f => f.Contains("bars have the same rhythm"));
+    }
+
     [Fact]
     public void LowCloseChords_AndAPartInTheBasssRegister_AreSaid()
     {
