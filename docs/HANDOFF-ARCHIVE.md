@@ -267,6 +267,22 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1121セッションの経緯
+
+### 1.1 第1121セッション（2026-11-07・YT-DELL2）
+
+開始時 full **14779 / 0 / 2**（`-Start p1121`・HEAD `a39f8da90`・未 push 3・OMR の open は 0）。同じ会話で第1120 から続けた便。第1120 末に ⑵「音楽より長いコード行の余りの小節」の実測の表を AskUserQuestion で訊き、オーナーが **「全部出す＝ページが段を延ばす」**を選んだ（推奨どおり）。作業場所は Lab `sessions/p1121/`。
+
+- **規則＝余りの小節は score の拍子（`ScoreHomeMeter`）・home の調・弱起なしの小節**（見出しの無い section が開く形と同じ。4 読み手で 1 つ）。「最後に効いていた拍子」案は XML の `EmitPartMusic` が `_sectionTime` null で home に戻す作りと衝突し、合わせるなら新しい機械が要った＝home に揃えた。
+- **ページ**（`MeasureCollector.ExtendStavesToTheRows`・`FitRowsToMusicBars` の直後）: 音楽の全長の voice を、コード行の最長まで `IsEmptyPlaceholder` の小節（home 長の spacer）で埋める。音楽が home を離れたまま終わっていれば最初の埋め小節に `TimeSignatureChangeItem(home)`（`r-rev`: 3/4 の 1 小節のあと C が描かれた）。行の格子も音楽の後は home（`RowMeterTimeline` が末尾に `(musicLen, home)` を足す）。⚠️ **「home」は `_v.Meta` ではない**＝開幕 section の見出しの `time` は `AtPieceOpening` で `_v.Meta` に吸われる（`m3-open` で確認＝第1120 の `MeterByMeasure` の開始値としてはそれで正しい）ので、戻し先は `ScoreHomeMeter.Read(_root)`。
+- **MIDI**（`Export` の `Rest()` の前）: `_bars.OpenSection(null, null)` で home に戻し（動けば conductor に拍子イベント＝`r-rev` で t=1440 に 4/4）、`_ambientTonic`／`_keySharps` も home・余りの小節線を `BarTicks` に足す（メトロノームとループ）。
+- **XML**（`EmitFlatRowsPastTheMusic`・`ProcessSections` の後）: 1 つ printed play を立て（`_xmlRole = None`・section 状態は null）、engraved part 全部に `|` × 余りの小節を `EmitPartMusic`（`PadPartsSilentInThisPlay` と同じ型＝silent bar・`_playStartMeasure` が立つ）→ `RememberChordRow("", row, items)` → `EmitPendingChordRows` が置く（リードシートは `EmitRowAsItsOwnPart`）。`Export` の古い註「A flat top-level chord track is not handled, as the MIDI's is not」を直した。
+- **`.ly`**（`ChordBarsPastTheMusic`）: 余りは前から home で書いていた。LP の Timing は Score のものなので、最後の play の小節の拍子（`SectionBarMeters(_lastChordPlay)[^1]`）が home と違えば最初の余りの小節に `\time H` を前置（`\chordmode` の中の `\time` も Score の Timing を動かす）。`_lastChordPlay` は `AppendSection`／`AppendSilentPlay` の chord arm が立てる。
+- **網**: `ChordSlotGridTests.AFlatRowPastTheMusic_PadsTheStaves_InTheScoresMeter`（譜表の小節 3・placeholder・home 長・戻しの change item 1 本）、`ChordRowMidiTests.AFlatTopLevelRow_PastTheMusic_IsInTheScoresMeter_Everywhere`（MIDI の打点と BarTicks・XML の `<beats>4`・`.ly` の `\time 4/4 c1`）・`…_IsInTheMusicXml_BesideAStaff_AndOnALeadSheet`。毒 3 本（`sessions/p1121/poisons.ps1`＝ページ埋めなし／XML 書かず／MIDI 戻さず）。
+- ⚠️ 網の罠: `MusicXmlExporter.Export(tree)` を `Score` なしで呼ぶと `KeepTheScoresParts` が早期 return＝置かない part も文書に残る（`Descendants("part").First()` がリードシートで melody を掴んだ）→ part-name で選ぶ。
+- ⚠️ **打鍵の罠（1 回目の `-End` で `KeystrokeStaysRedFreeTests` が lesson-08-chords で 1 赤）**: ページ側の home を `Semantics.ScoreHomeMeter.Read(_root)` で読んだら、それは `root.DescendantNodes()` の red walk＝打鍵ごとに索引を建てる。collector の中では **`HomeMeterOfScore`（`_scoreTime`＝全 builder の home）**を読む。`Semantics` の読み手を collector の打鍵経路に持ち込むときは、この網が番人。
+- **掃き（`sessions/p1121/sweep-and-regen.ps1`・base `a39f8da90`）: 1036 冊・1262 枚で動いた svg 0**（コーパスに音楽より長い flat の行の本は無い）。毒 3 本＝ページ埋めなし 2 赤／XML 書かず 2 赤／MIDI 戻さず 1 赤（`poison1..3.log`）。**commit `689ecae75`**（Core 5 ファイル＋網 2＋CHANGELOG 2）。終了時 full **14783 / 0 / 2**（`-End p1121 -DiffBase a39f8da90`＝`end2.log`・門は全部 OK。1 回目 `end.log` は上の打鍵の罠で 1 赤）。§7 7.5: Core `+166` 行・REF 0・OWN 0＝新しい近似なし（規則は「見出しの無い section が開く形」の延長）。この docs commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1120セッションの経緯
 
 ### 1.1 第1120セッション（2026-11-07・YT-DELL2）
