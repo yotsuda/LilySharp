@@ -113,7 +113,11 @@ What makes it music:
   to a cadence — so the ear half-knows what comes next and is pleased when it comes, and once or
   twice surprised. One feature makes it remembered: a leap the tune keeps, a rhythm, a note leaned
   on against its chord (an appoggiatura on the strong beat, resolving a step down). A tune of notes
-  that only follow the chords is not yet a theme. (Owner's goals 2026-11-07, with the five that
+  that only follow the chords is not yet a theme. **The motif's shape is kept, its rhythm is not
+  frozen**: its own rhythm in one bar of two at most, longer notes at a phrase's peak and end, a
+  phrase that runs on over the bar line, a section that moves in other values (owner's trials
+  2026-11-07: a waltz and a rain piece, two models, poured the motif's one-bar rhythm into half
+  their bars or more, and the tune became a pattern). (Owner's goals 2026-11-07, with the five that
   follow: a melody that is remembered, chords that are more than a stock pattern, a countermelody
   of its own, a key change with a story, an orchestra's instruments written as they sound, and one
   piece from its first bar to its last.)
