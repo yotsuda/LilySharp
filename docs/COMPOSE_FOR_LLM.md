@@ -305,6 +305,13 @@ What makes it music:
     chorus that opens with the verse's phrase, or stays below the verse, is no chorus; a
     tune whose every two-bar phrase has one rhythm (`8 8 4 2 | 4 2 r4` thirteen times) is a formula,
     not a tune.
+  - **The chorus comes back after every verse**: verse 1, chorus, verse 2, chorus — the form names
+    the chorus again each time (`form { Intro A B A B Coda }`, A's two verses as `verse 1` and
+    `verse 2`), and its last time is the strongest: louder, an octave fuller in the piano, or its
+    last line sung twice (a section of its own, `B2`, when its notes change). A song does not end on
+    a verse, nor on its hook said once in a coda: the whole chorus is the last thing sung before the
+    coda (owner's trial 2026-11-07: a spring song sang its chorus once, between its two verses, and
+    went from the second verse to a coda that hummed its hook).
   - Count every bar: as many units as notes, less the notes a slur or a tie carries over.
   - Words the request gives are set as they stand. Words written for it tell their story in the
     verses and come back unchanged in the chorus, its hook the title.

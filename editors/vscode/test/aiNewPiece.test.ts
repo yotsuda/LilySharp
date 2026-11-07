@@ -230,6 +230,9 @@ describe('the composing guide', () => {
     it('says how a tune grows, chords move, a countermelody, a key change, an orchestra and one piece', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*The tune grows from its motif\*\*: every phrase of the melody is made of the theme's motif/);
+        // Owner's trial the same day: a song sang its chorus once, between its verses, and ended on a verse.
+        assert.match(guide, /\*\*The chorus comes back after every verse\*\*: verse 1, chorus, verse 2, chorus — the form names\s+the chorus again each time/);
+        assert.match(guide, /A song does not end on\s+a verse, nor on its hook said once in a coda/);
         // Owner's trials the same day: the motif's rhythm poured into half the bars, two models.
         assert.match(guide, /\*\*The motif's shape is kept, its rhythm is not\s+frozen\*\*: its own rhythm in one bar of two at most/);
         assert.match(guide, /\*\*Harmony that moves\*\*: past the first phrase, colour the progression/);
