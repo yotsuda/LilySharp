@@ -41,7 +41,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, newPieceOverScore, guidePages, headerLanguageNote, diagLines,
     lastUserMessageAt, heldClashesOf, noTuneOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
@@ -183,7 +183,9 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
         // `selected` names what the preview handed over ("3 bars selected"), for the input box.
         vscode.commands.registerCommand('lilysharp.aiTransform', (opts?: { whole?: boolean; selected?: string }) =>
             runAiTransform(deps, opts?.whole === true, opts?.selected)),
-        vscode.commands.registerCommand('lilysharp.composeWithAi', () => runCompose(deps)),
+        // Composing is Copilot's chat's alone (owner's decision 2026-11-07: two composers, "Compose
+        // with AI…" and "Compose with AI in Chat…", were hard to tell apart; the chat's, where the
+        // model is picked and its thinking seen, stays).
         vscode.commands.registerCommand('lilysharp.composeWithAiInChat', () => runComposeInChat(deps)),
     );
     registerProposeScoreTool(context, deps);
@@ -388,9 +390,13 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
     // 2026-10-29: a piece composed this way began at `octave absolute`, saying nothing of itself).
     // Named after its title (owner's request 2026-10-29: "e.g. Composed.lys" here was taken for the
     // name, and the musician renamed each piece by hand), and a name not taken: a score there would
-    // be proposed to as a change.
-    const start = 'Compose the new piece in Lily# for the .lys file you were given — else a new one in the folder you '
-        + 'were given, or the workspace folder, its absolute path; it is not on the disk until the musician saves it. '
+    // be proposed to as a change. Always a NEW file (owner's request 2026-11-07: asked with a score
+    // open, the chat took that score for "the file you were given" and proposed to overwrite it).
+    const start = 'Compose the new piece in Lily# as a NEW .lys file. Never write it into a score that is open, attached or '
+        + 'in front, even when the chat was given that file: that score is the musician\'s, and a new piece there would '
+        + 'replace it. Only an empty .lys, or a file the musician asks in so many words to write the piece into, takes it. '
+        + 'Put the new file in the folder you were given, else the folder of the .lys in front, else the workspace '
+        + 'folder, its absolute path; it is not on the disk until the musician saves it. '
         + 'Name a new file after the piece\'s title, in letters, digits and hyphens (a title in another script '
         + 'romanized: 風のリボン → Kaze-no-Ribbon.lys), never a placeholder (Composed, Untitled), and a name no file in '
         + 'that folder has yet — check it with the lilysharp_checkName tool (#checkName). Its first '
@@ -695,6 +701,15 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     const uri = doc?.uri ?? vscode.Uri.file(input.file);
     const exists = doc !== undefined;
     const current = doc?.getText() ?? '';
+    // A new piece goes to a new file, never over the musician's score (owner's request 2026-11-07:
+    // asked with a score open, the chat proposed the new piece over it). The guide says so; this
+    // holds when a model does not listen.
+    if (newPieceOverScore(current, input.text)) {
+        deps.log(`AI proposal (chat): turned down — a new piece sent over another score (${input.file}).`);
+        return `Not shown to the musician: this is a new piece, and ${input.file} holds another score of theirs, which it `
+            + 'would replace. Propose it to a NEW file in the same folder instead: name it after the piece\'s title, check '
+            + 'the name with lilysharp_checkName, and call lilysharp_proposeScore again with that path and the same text.';
+    }
     // The file's opening comments kept, where the proposal left them out (owner's request 2026-10-29).
     let text = withLeadingComments(current, input.text);
     // Errors go back unseen: the musician is shown only a score that compiles.
@@ -1007,7 +1022,7 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
  */
 async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
     const description = await vscode.window.showInputBox({
-        title: 'Lily# — Compose with AI in Chat',
+        title: 'Lily# — Compose with Copilot',
         prompt: 'What should the AI compose? Copilot\'s chat writes it into a new, unsaved score, its thinking in view.',
         placeHolder: 'e.g. a dramatic string quartet in D minor, about 3 minutes, slow – fast – slow',
         ignoreFocusOut: true,
@@ -1035,87 +1050,6 @@ async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
             await vscode.commands.executeCommand('workbench.action.chat.open', query);
         } catch (err) {
             void vscode.window.showErrorMessage(`Lily#: Copilot's chat could not be opened (${err}). Is GitHub Copilot Chat installed and signed in?`);
-        }
-    }
-}
-
-/**
- * "Lily#: Compose with AI…" (owner's request 2026-10-26: composing as a menu of its own, not a
- * Ctrl+I that discards the score): asks what to compose, opens a new score, and has the AI write
- * it whole — the grammar's "Compose a piece" recipe, the musical check after it compiles, the
- * candidate reviewed and accepted as any other.
- */
-async function runCompose(deps: AiTransformDeps, asked?: string): Promise<void> {
-    // Run from File > New File… (owner's request 2026-10-29), nothing may have started the
-    // language server yet: it is started here, as opening a .lys would.
-    await deps.ensureReady?.();
-    const client = deps.getClient();
-    if (!client || !deps.isReady()) {
-        vscode.window.showErrorMessage('Lily#: language server not ready.');
-        return;
-    }
-    const description = await vscode.window.showInputBox({
-        title: 'Lily# — Compose with AI',
-        prompt: 'What should the AI compose? Say the instruments, the length and the character.',
-        placeHolder: 'e.g. a dramatic string quartet in D minor, about 3 minutes, slow – fast – slow',
-        // Asked again after a failure: the request as it was, to send or to shorten.
-        value: asked,
-        ignoreFocusOut: true,
-    });
-    if (description === undefined || description.trim().length === 0) {
-        return;
-    }
-    const chat = await resolveChatClient(false);
-    if (!chat) {
-        return;
-    }
-    // The AI starts from an empty score held in memory; no document opens until the piece comes
-    // (owner's request 2026-10-27: a file holding only a title opened while it was waited for).
-    // No title in it: a placeholder title is one the AI may keep, and a composed piece is to have
-    // a title of its own (owner's request, the same day).
-    const start = '// A new piece: its title, its parts and its music are yet to be written.\n';
-    const snapshot = {
-        version: 0,
-        startOffset: 0,
-        endOffset: start.length,
-        origFullText: start,
-        origSelectedText: start,
-        uri: vscode.Uri.parse('untitled:Composed.lys'),
-    };
-    const grammar = await loadGrammar(deps);
-    await loadComposeGuide(deps);
-    const systemTokens = estimateTokens(composeSystemPrompt(grammar, chat.modelName));
-    if (!tellsTooSmall(chat, systemTokens, 'compose with')) {
-        return;
-    }
-    const budget = documentBudget(chat.maxInputTokens, systemTokens);
-    const began = Date.now();
-    const hint = compositionHint();
-    deps.log(`AI transform: ${hint}`);
-    try {
-        // In the octaves the AI writes it: a new piece has no octave mode of its own to go back to.
-        const ai: AiSpace = { snap: snapshot, converted: false };
-        await drive(deps, client, chat, snapshot, ai,
-            `Compose a new piece: ${description.trim()}\nThe file is an empty start: plan the piece in <plan>, then `
-            + 'write it whole in <file>, as the composing guide says for '
-            + 'its kind of music — concert music (an instrument for every part, a staffGroup for an ensemble, '
-            + 'a form whose sections contrast and a theme that returns), a solo instrument with piano (the solo on its staff '
-            + 'above the piano\'s), a band — rock, pop — (the whole rhythm section — drums, electric bass, guitar or '
-            + 'keyboards — at one tempo), jazz (a combo; a lead sheet — one melody staff under a chords row — '
-            + 'only when a lead sheet is asked for), gospel (piano or organ under a voice or a choir), a song (a voice part '
-            + 'with its words under it, set as the composing guide\'s "A song with words" says) — with melody and accompaniment, varied rhythm, '
-            + 'articulations and dynamics. One staff only for a lead sheet, a melody alone or a solo. Give the piece a title of its own that '
-            + 'fits its music and its mood, on a `title "…"` line at the top, in the language of the request.\n'
-            // A starting point drawn at random, the request's own word first (owner's request
-            // 2026-10-29: every "dramatic string quartet" came out D minor, 4/4, A–B–A, the same opening).
-            + hint,
-            true, grammar, documentContext(ai.snap, budget, true), true, description.trim());
-    } catch (err: any) {
-        const failed = aiFailure('compose', String(err?.message ?? err), Date.now() - began);
-        if (failed.retry && await vscode.window.showErrorMessage(failed.text, 'Try Again') === 'Try Again') {
-            await runCompose(deps, description.trim());
-        } else if (!failed.retry) {
-            vscode.window.showErrorMessage(failed.text);
         }
     }
 }

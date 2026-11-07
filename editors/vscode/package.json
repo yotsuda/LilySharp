@@ -46,7 +46,7 @@
         "canBeReferencedInPrompt": true,
         "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"],
         "userDescription": "Shows the AI's new version of a .lys file beside the score as it stands, to play and to accept or reject.",
-        "modelDescription": "Use this to write or change a Lily# (.lys) file, instead of editing the file yourself. Give the file's absolute path and the WHOLE new text of the file. Lily# compiles it first: if it has errors they come back and nothing is shown — fix them and call again. Otherwise a new piece (the file empty) is written straight into the file; a change to a score is shown to the musician beside the score as it stands, to play and to accept or reject, and the result says which. Accepted, it is in the editor, not saved: read it with lilysharp_readScore, not from the disk. What to change next, the musician says in the chat; call it again with the whole new text.",
+        "modelDescription": "Use this to write or change a Lily# (.lys) file, instead of editing the file yourself. Give the file's absolute path and the WHOLE new text of the file. A NEW piece goes to a new file (name it with lilysharp_checkName), never over a score that is open or attached, unless the musician asks for that file in so many words. Lily# compiles it first: if it has errors they come back and nothing is shown — fix them and call again. Otherwise a new piece (the file empty) is written straight into the file; a change to a score is shown to the musician beside the score as it stands, to play and to accept or reject, and the result says which. Accepted, it is in the editor, not saved: read it with lilysharp_readScore, not from the disk. What to change next, the musician says in the chat; call it again with the whole new text.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -395,7 +395,7 @@
           "lilysharp.ai.editModel": {
             "type": "string",
             "default": "",
-            "markdownDescription": "The language model the features that write or change the music use — *Ask AI…*, *Compose with AI…* and *Fix OMR Marks with AI…*: a model id or family from **Lily#: Select AI Model…**. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`.\n\n**[Choose a model…](command:lilysharp.selectAiModel?%5B%22edit%22%5D)**"
+            "markdownDescription": "The language model Lily#'s own features that change the music use — *Lily#: Ask AI…* (the command palette) and *Fix OMR Marks with AI…*: a model id or family from **Lily#: Select AI Model…**. Copilot's chat — *Ask AI in Chat* (Ctrl+I) and *Compose with Copilot…* — uses the model picked in the chat instead. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`.\n\n**[Choose a model…](command:lilysharp.selectAiModel?%5B%22edit%22%5D)**"
           },
           "lilysharp.ai.ghostModel": {
             "type": "string",
@@ -560,13 +560,6 @@
         "title": "Ask AI…"
       },
       {
-        "command": "lilysharp.composeWithAi",
-        "category": "Lily#",
-        "icon": "$(sparkle)",
-        "title": "Compose with AI…",
-        "shortTitle": "Lily# Score, Composed with AI…"
-      },
-      {
         "command": "lilysharp.askAiInChat",
         "category": "Lily#",
         "icon": "$(comment-discussion)",
@@ -581,7 +574,7 @@
         "command": "lilysharp.composeWithAiInChat",
         "category": "Lily#",
         "icon": "$(comment-discussion)",
-        "title": "Compose with AI in Chat…",
+        "title": "Compose with Copilot…",
         "shortTitle": "Lily# Score, Composed with Copilot…"
       },
       {

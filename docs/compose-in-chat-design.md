@@ -5,6 +5,12 @@ Copilot's chat through Lily#'s tools, and Lily# checks it as music. This file ho
 checks, the rules for sending a piece back, and the procedure each review session follows. The
 next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
 
+**The one composer** (owner's decision 2026-11-07): Lily#'s own composer without the chat
+(*Compose with AI…*, `runCompose`) was taken out — it and the chat's were hard to tell apart. The
+chat's is *Compose with Copilot…* (command `lilysharp.composeWithAiInChat`, its id kept). Left
+behind: `drive()`'s `compose` branches (and `composeSystemPrompt`, `composeAsked`), which nothing
+calls with `compose = true` now; to be folded out with the tests that read them.
+
 ## 1. The flow
 
 1. **The guide.** The chat reads the guide with the `lilysharp_readGuide` tool (topic `composing`,
@@ -27,6 +33,12 @@ next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
    `chatModelName`). In a chat that keeps no such log, the line stays as it is.
 4. **`lilysharp_proposeScore`** (`aiTransform.ts`, `proposeScore`) decides what happens to each
    proposal, in this order:
+   - **A new piece sent over another score** goes back, every time, before anything is compiled
+     (owner's request 2026-11-07: asked with a score open, the chat proposed the new piece over it).
+     A new piece is a proposal whose header names a request (`chatPieceRequest`); it may go into an
+     empty file, or into its own file when revised — the file's header names the same request
+     (`newPieceOverScore`). The guide's start, the always-on instructions and the tool's own
+     description say the same: a new piece is a new file.
    - **A compile error** goes back, every time.
    - **A bar that does not add up** goes back, every time. This covers LYS2001, 2002, 2004 and
      2006; **LYS2007**, a section longer in one part than in another; and **LYS2019**, a later voice

@@ -742,56 +742,68 @@ public sealed partial class LilySharpLanguageServer
     public Task<ExportResponse> ExportAsync(ExportParams @params, CancellationToken token)
         => OffDispatch(() => Export(@params), token);
 
-    public ExportResponse Export(ExportParams @params)
+    /// <summary>The tree an export reads — the open document's (its unsaved edits included, as the
+    /// preview shows them) or a file's from the disk, its <c>using</c>s resolved — and the stem
+    /// its files are named by; or why there is none (the errors of a score that does not compile).
+    /// Shared by <see cref="Export"/> and <see cref="VideoFrames"/>, so a video's pictures are
+    /// drawn from the very tree its notes came from.</summary>
+    private string? ExportTreeOf(TextDocumentIdentifier? document, string? path, out SyntaxTree tree, out string stem)
     {
-        SyntaxTree tree;
-        string stem;
-        if (@params.TextDocument != null)
+        tree = null!;
+        stem = "";
+        if (document != null)
         {
-            var uri = @params.TextDocument.Uri;
+            var uri = document.Uri;
             var doc = _documentManager.GetDocument(uri);
             if (doc == null)
-                return new ExportResponse { Success = false, Error = "Document not found" };
+                return "Document not found";
             (tree, _) = ExpandUsings(doc, uri);
             stem = Path.GetFileNameWithoutExtension(uri.IsFile ? uri.LocalPath : uri.ToString());
         }
-        else if (!string.IsNullOrEmpty(@params.Path))
+        else if (!string.IsNullOrEmpty(path))
         {
-            if (!File.Exists(@params.Path))
-                return new ExportResponse { Success = false, Error = $"File not found: {@params.Path}" };
+            if (!File.Exists(path))
+                return $"File not found: {path}";
             // Not open in the editor: read it the way the CLI does, `using` includes
             // resolved against the file's own folder.
-            var text = File.ReadAllText(@params.Path);
-            (tree, _) = ExpandUsings(text, SyntaxTree.Parse(text), @params.Path,
+            var text = File.ReadAllText(path);
+            (tree, _) = ExpandUsings(text, SyntaxTree.Parse(text), path,
                 p => File.Exists(p) ? File.ReadAllText(p) : null);
-            stem = Path.GetFileNameWithoutExtension(@params.Path);
+            stem = Path.GetFileNameWithoutExtension(path);
         }
         else
         {
-            return new ExportResponse { Success = false, Error = "Nothing to export: no document and no path was given" };
+            return "Nothing to export: no document and no path was given";
         }
 
         if (tree.HasErrors)
         {
-            var errors = string.Join("\n", tree.Diagnostics
+            var errors = tree;
+            return string.Join("\n", tree.Diagnostics
                 .Where(d => d.Severity == CoreDiagnosticSeverity.Error)
                 .Select(d =>
                 {
-                    var (line, col) = GetLineAndColumn(tree.Text, d.Span.Start);
+                    var (line, col) = GetLineAndColumn(errors.Text, d.Span.Start);
                     // GetLineAndColumn is 0-based (LSP protocol); the preview text is read by
                     // a human, so show 1-based line/column to match the editor gutter.
                     return $"Line {line + 1}, Col {col + 1}: {d.Message}";
                 }));
-            return new ExportResponse { Success = false, Error = errors };
         }
+        return null;
+    }
+
+    public ExportResponse Export(ExportParams @params)
+    {
+        if (ExportTreeOf(@params.TextDocument, @params.Path, out var tree, out var stem) is { } unreadable)
+            return new ExportResponse { Success = false, Error = unreadable };
 
         var format = (@params.Format ?? "svg").ToLowerInvariant();
         string ext;
         if (format == "mp3" || format == "mp4")
         {
             // Only the editor writes an MP3 or an MP4 (it encodes the sound it renders, and the
-            // video through ffmpeg; the command line has neither), so the server names the files,
-            // gives the notes and, for a video, draws its pictures.
+            // video through ffmpeg; the command line has neither), so the server names the files
+            // and gives the notes; a video's pictures it draws when asked (VideoFrames).
             if (!@params.PlaybackOnly)
                 return new ExportResponse { Success = false, Error = $"An {format.ToUpperInvariant()} is rendered by the editor: ask with playbackOnly" };
             ext = "." + format;
@@ -813,25 +825,12 @@ public sealed partial class LilySharpLanguageServer
             var pb = PlaybackOf(tree, score?.Spec);
             if (pb.Error != null)
                 throw new InvalidOperationException(pb.Error);
-            var job = new PlaybackExport { OutputPath = path, Notes = pb.Notes ?? [] };
-            var warnings = new List<string>();
-            if (format == "mp4")
+            playbacks.Add(new PlaybackExport
             {
-                var notes = job.Notes.Where(n => n.P >= 0).ToList();
-                // As long as the sound the editor renders runs: the last note's end and two
-                // seconds to ring out (audioRenderCore.ts frameCount, WAV_TAIL_S).
-                double seconds = notes.Count == 0 ? 2 : notes.Max(n => n.T + Math.Max(0.03, n.D)) + 2;
-                var look = LilySharp.Core.Export.ScoreVideoOptions.Default;
-                job.WorkDirectory = Path.Combine(Path.GetTempPath(), "lilysharp-video-" + Guid.NewGuid().ToString("N"));
-                var frames = LilySharp.Core.Export.ScoreVideo.WriteFrames(tree, score?.Spec,
-                    notes.Select(n => new LilySharp.Core.Export.VideoNote(n.T, n.T + n.D, n.S, n.O)).ToList(),
-                    seconds, job.WorkDirectory, look);
-                job.Frames = frames.ConcatList;
-                job.Lead = look.Lead;
-                warnings.AddRange(frames.Warnings);
-            }
-            playbacks.Add(job);
-            return new LilySharp.Core.Export.ExportResult([path], [], warnings);
+                OutputPath = path, Notes = pb.Notes ?? [], Parts = pb.Parts ?? [], Beats = pb.Beats ?? [],
+                Score = score?.Spec.Name,
+            });
+            return new LilySharp.Core.Export.ExportResult([path], [], []);
         }
 
         // A WAV needs a font it can read; refuse before a folder is made or a file begun.
@@ -931,6 +930,47 @@ public sealed partial class LilySharpLanguageServer
         catch (Exception ex)
         {
             return new ExportResponse { Success = false, Error = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// The pictures of an MP4 the editor writes (owner's requests 2026-11-07): the score the export
+    /// named (<see cref="PlaybackExport.Score"/>), drawn by <c>LilySharp.Core.Export.ScoreVideo</c>
+    /// with the notes the editor will sound — the export's own, under the practice menu's tempo,
+    /// parts and count-in, which the editor applies (playbackCore.exportNotes) — into a new temp
+    /// folder the editor deletes.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/videoFrames", UseSingleObjectParameterDeserialization = true)]
+    public Task<VideoFramesResponse> VideoFramesAsync(VideoFramesParams @params, CancellationToken token)
+        => OffDispatch(() => VideoFrames(@params), token);
+
+    public VideoFramesResponse VideoFrames(VideoFramesParams @params)
+    {
+        if (ExportTreeOf(@params.TextDocument, @params.Path, out var tree, out _) is { } problem)
+            return new VideoFramesResponse { Error = problem };
+        string? directory = null;
+        try
+        {
+            // The score by its name ("" the unnamed one — Choose takes it for ""), null for a
+            // file that declares none.
+            var score = @params.Score == null ? null : RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), @params.Score);
+            var look = LilySharp.Core.Export.ScoreVideoOptions.Default;
+            directory = Path.Combine(Path.GetTempPath(), "lilysharp-video-" + Guid.NewGuid().ToString("N"));
+            var frames = LilySharp.Core.Export.ScoreVideo.WriteFrames(tree, score,
+                @params.Notes.Where(n => n.P >= 0)
+                    .Select(n => new LilySharp.Core.Export.VideoNote(n.T, n.T + n.D, n.S, n.O)).ToList(),
+                @params.Seconds, directory, look);
+            return new VideoFramesResponse
+            {
+                Frames = frames.ConcatList, WorkDirectory = directory, Lead = look.Lead,
+                Warnings = frames.Warnings.ToArray(),
+            };
+        }
+        catch (Exception ex)
+        {
+            if (directory != null && Directory.Exists(directory))
+                try { Directory.Delete(directory, true); } catch (IOException) { }
+            return new VideoFramesResponse { Error = ex.Message };
         }
     }
 

@@ -94,6 +94,8 @@ function copyGrammar() {
         // A scan read and mended in Lily#'s own panels (owner's request 2026-10-29). And (owner's reports
         // 2026-10-30) an attached .lys viewed from the disk ("Allow reading file outside of workspace?"), a
         // drum line's phrases counted in a script ("Run in terminal?").
+        // A new piece in a new file (owner's request 2026-11-07: asked with a score open, the chat
+        // proposed the new piece over it).
         const everywhere = [
             '---',
             'name: Lily# is here',
@@ -105,6 +107,7 @@ function copyGrammar() {
             'When the request is to compose or write out music as a score — a piece, a song, a hymn, an',
             'arrangement — and names no other format, write it in Lily#: first read how with the',
             'lilysharp_readGuide tool (topic "composing"), then propose it with lilysharp_proposeScore.',
+            'A new piece goes into a NEW .lys file, never over an open score unless asked for that file.',
             'Asked how to write Lily# or .lys, or to be taught it, read that tool with topic "learn" and teach from it.',
             'Asked to turn images or a PDF of sheet music into a score, read them with lilysharp_readScan.',
             'A score read from a scan (its .omr.json beside it) is not corrected by you: asked to fix its',

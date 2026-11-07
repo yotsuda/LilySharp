@@ -1,6 +1,7 @@
 # Composing in Lily# — a guide for LLMs
 
-Sent with Compose with AI, after `docs/GRAMMAR_FOR_LLM.md` (the language itself). It says what
+Read through the `lilysharp_readGuide` tool (topic `composing`) when a piece is composed in
+Copilot's chat, after `docs/GRAMMAR_FOR_LLM.md` (the language itself). It says what
 makes a new piece music for its players; the grammar says how each thing is written. Kept apart
 from the grammar so that Ask AI, which edits a score, is not sent it (owner's decision 2026-10-29).
 

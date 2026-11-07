@@ -331,6 +331,38 @@ export function countIn(notes: readonly PlaybackNote[], start: number, origin: n
     return { notes: [...clicks, ...music].sort((a, b) => a.T - b.T), lead };
 }
 
+/** The practice menu as a preview holds it: the tempo, the parts silenced and the metronome
+ *  (Practice), and the count-in. The loop is not here: an export plays the piece once. */
+export interface PracticeState extends Practice { countIn: boolean }
+
+/**
+ * The notes a WAV, MP3 or MP4 export sounds (owner's request 2026-11-07: the export follows the
+ * practice menu, the loop aside): the preview's Play of the whole piece under `practice` — the
+ * same practiceNotes and countIn, in the same order and on the same beats, so the file is what
+ * Play sounds. No practice (no preview open): the notes as written.
+ */
+export function exportNotes(notes: readonly PlaybackNote[], parts: readonly string[] | null,
+    beats: readonly PlaybackBeat[] | null, practice: PracticeState | null | undefined): PlaybackNote[] {
+    if (!practice) { return [...notes]; }
+    const played = practiceNotes(notes, parts, beats, practice);
+    if (!practice.countIn || !beats) { return played; }
+    const k = 1 / (practice.speed > 0 ? practice.speed : 1);
+    const counted = countIn(played, 0, 0, beats.map(b => ({ T: b.T * k, A: b.A })));
+    return counted ? counted.notes : played;
+}
+
+/** What the practice menu changes, in words for the export's message ("at 80%, with the
+ *  metronome, …"); empty when it plays the score as written. */
+export function practiceSummary(practice: PracticeState | null | undefined): string {
+    if (!practice) { return ''; }
+    const said: string[] = [];
+    if (practice.speed > 0 && Math.abs(practice.speed - 1) > 1e-9) { said.push(`at ${Math.round(practice.speed * 100)}%`); }
+    if (practice.click) { said.push('with the metronome'); }
+    if (practice.countIn) { said.push('with a count-in'); }
+    if (practice.muted.length > 0) { said.push(`without ${practice.muted.join(', ')}`); }
+    return said.join(', ');
+}
+
 /**
  * A loop laid out ahead (owner's report 2026-10-25): `list` (from 0) one round after another,
  * each round as long as the list sounds, until `seconds` are filled — so the player's own clock

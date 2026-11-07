@@ -20,13 +20,56 @@ import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
     CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, playSpan, playSpanWindow, practiceNotes,
     programOf, toEvents,
-    fromOffset,
+    fromOffset, exportNotes, practiceSummary, PracticeState,
 } from '../src/webview/playbackCore';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const note = (t: number, d: number, p: number, extra: Partial<PlaybackNote> = {}): PlaybackNote =>
     ({ T: t, D: d, P: p, V: 90, S: 10 * t, O: 0, I: 0, C: 0, G: 0, ...extra });
+
+// The WAV, MP3 and MP4 exports play under the preview's practice menu, the loop aside (owner's
+// request 2026-11-07): the same practiceNotes and countIn as a Play of the whole piece.
+describe('the exports under the practice menu', () => {
+    // 4/4 at one second a beat, two bars; the melody on track 1, the bass on track 2.
+    const beats = Array.from({ length: 8 }, (_, i) => ({ T: i, A: i % 4 === 0 }));
+    const parts = ['Tempo', 'melody', 'bass'];
+    const tune = [0, 1, 2, 3, 4, 5, 6, 7].map(t => note(t, 1, 60 + t, { S: 100 + t, N: 1 }))
+        .concat([note(0, 4, 36, { S: 200, N: 2 }), note(4, 4, 38, { S: 201, N: 2 })]);
+    const asWritten: PracticeState = { speed: 1, muted: [], click: false, countIn: false };
+
+    it('are the notes as written with no menu, or a menu that changes nothing', () => {
+        assert.deepEqual(exportNotes(tune, parts, beats, undefined), tune);
+        assert.deepEqual(exportNotes(tune, parts, beats, asWritten), tune);
+    });
+
+    it('are what Play sounds: the tempo, the parts, the metronome, then the count-in', () => {
+        const practice: PracticeState = { speed: 0.5, muted: ['bass'], click: true, countIn: true };
+        const played = practiceNotes(tune, parts, beats, practice);
+        const expected = countIn(played, 0, 0, beats.map(b => ({ T: b.T * 2, A: b.A })))!.notes;
+        assert.deepEqual(exportNotes(tune, parts, beats, practice), expected);
+    });
+
+    it('count in one bar of clicks, the music after it, at the menu\'s tempo', () => {
+        const out = exportNotes(tune, parts, beats, { ...asWritten, speed: 0.5, countIn: true });
+        const clicks = out.filter(n => n.S < 0);
+        assert.deepEqual(clicks.map(n => n.T), [0, 2, 4, 6], 'one bar at half speed: a click every 2 s');
+        assert.equal(out.filter(n => n.S >= 0)[0].T, 8, 'the music comes in after the bar');
+    });
+
+    it('leave a silenced part out and keep the rest', () => {
+        const out = exportNotes(tune, parts, beats, { ...asWritten, muted: ['bass'] });
+        assert.ok(out.every(n => n.N !== 2));
+        assert.equal(out.length, 8);
+    });
+
+    it('are said in words for the message, nothing when as written', () => {
+        assert.equal(practiceSummary(undefined), '');
+        assert.equal(practiceSummary(asWritten), '');
+        assert.equal(practiceSummary({ speed: 0.8, muted: ['Piano', 'Bass'], click: true, countIn: true }),
+            'at 80%, with the metronome, with a count-in, without Piano, Bass');
+    });
+});
 
 // A count-in (owner's choice 2026-10-26): one bar of clicks, the music moved after it so the
 // bar line falls where the count ends — as a player counts in.

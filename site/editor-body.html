@@ -539,7 +539,7 @@
     <tr><td>Step Up · Step Down an Octave</td><td><kbd>Ctrl+Shift+PageUp</kbd> · <kbd>Ctrl+Shift+PageDown</kbd> — <a href="#step">above</a></td></tr>
     <tr><td>Open Preview · Open Preview to Side</td><td><kbd>Ctrl+Shift+V</kbd> · <kbd>Ctrl+K</kbd> <kbd>V</kbd></td></tr>
     <tr><td>Export as PDF / SVG / PNG / LilyPond / MusicXML / MIDI / WAV / MP3 / MP4 Video / VOCALOID</td><td>writes the file's scores</td></tr>
-    <tr><td>Ask AI… · Select AI Model…</td><td><kbd>Ctrl+I</kbd> — <a href="#ai">below</a></td></tr>
+    <tr><td>Ask AI… · Compose with Copilot… · Select AI Model…</td><td><kbd>Ctrl+I</kbd> — <a href="#ai">below</a></td></tr>
   </table>
   <!-- VIDEO editor-split-sections: a file grouped by part — vn1 has `section A` (2 bars) and
        `section B` (2 bars), vn2 still writes all 4 bars in `section A`, form { A }. Hover
@@ -627,35 +627,29 @@
     <figcaption>Ask AI: the answer arrives compiled and engraved, what changed in green.</figcaption>
   </figure>
 
-  <h3>Compose with AI</h3>
-  <p><i>Compose with AI…</i> (<i>File › New File…</i> → <i>Lily# Score, Composed with AI…</i>, the command palette, or a right-click in a <code>.lys</code>
-  editor) writes a new piece into a new score: describe it — the instruments, the length, the
-  character (<i>“a dramatic string quartet in D minor, about 3 minutes, slow – fast – slow”</i>).
-  The score you have open stays as it is.</p>
+  <h3>Compose with Copilot</h3>
+  <p>A new piece is composed in <b>Copilot's chat</b>. Ask it there in words —
+  <i>“a jazz piano trio playing a swinging blues”</i>, <i>“a dramatic string quartet in D minor,
+  about 3 minutes, slow – fast – slow”</i> — or choose <i>File › New File…</i> →
+  <i>Lily# Score, Composed with Copilot…</i> (<i>Lily#: Compose with Copilot…</i> in the command
+  palette), which asks what to compose and hands it to the chat. You see the model think and try,
+  and you pick the model in the chat's own model menu: with <i>Auto</i>, the chat may take a light
+  model for a short request, so for a piece choose a strong one by name.</p>
   <ul>
-    <li><b>The AI is shown how a piece for players is written</b>: an <code>instrument</code>
-    for every part (without one a part sounds as a piano), a <code>staffGroup</code> for an
-    ensemble, sections that contrast in key, tempo and texture, a melody against its
-    accompaniment, varied rhythm, articulations and dynamics — with a short string quartet as
-    its example.</li>
-    <li><b>Once it compiles, the piece is checked as music</b>: a part with no instrument, an
-    ensemble braced as one piano, a part of one note value, every part in the same rhythm. What
-    is found goes back to the AI for one revision of the whole piece; the same check follows a
-    whole new file asked for with <kbd>Ctrl+I</kbd>.</li>
-    <li><b>It is written the way its kind of music is written.</b> Concert music has contrasting
-    sections and its players' instruments. A band — any request naming an electric guitar, an
-    electric bass, drums or band keyboards — gets the whole rhythm section (drums, an electric bass,
-    a guitar or keyboards; <i>“guitar and drums”</i> brings a bass, <i>“guitar and bass”</i> brings
-    drums) and keeps one tempo from start to end. A jazz piece is a combo — piano or guitar, bass and
-    drums under a melody instrument — and a lead sheet, asked for as one, is one melody staff under
-    a chords row, with jazz changes — sevenths, ii–V–I, a ♭9, a turnaround — and a swing feel.
-    <b>One staff only when it is asked for</b>: a lead sheet, a melody alone, a solo. What is
-    missing is found by the check below and sent back.</li>
-    <li><b>It always has a title</b> that fits it: the AI is asked for one, and a piece that
-    comes without one (or with a placeholder) is given one before it opens.</li>
-    <li>Nothing opens while the AI works. The piece opens in an editor of its own when it comes,
-    headed by comments — what you asked for, the model and the date, and what the AI says about
-    the piece. Save it to keep it; <kbd>Ctrl+I</kbd> asks for changes to it.</li>
+    <li><b>The chat reads how a piece for players is written</b> through Lily#'s guide: an
+    <code>instrument</code> for every part, a <code>staffGroup</code> for an ensemble, sections
+    that contrast, a melody against its accompaniment, varied rhythm, articulations and dynamics —
+    and how each kind of music is written: concert music, a band with its whole rhythm section, a
+    jazz combo or a lead sheet, a song with its words.</li>
+    <li><b>It goes into a new score</b>, named after the piece's title, unsaved, the request and
+    the model at its head. The score you have open stays as it is — the chat is told so, and a new
+    piece sent over another score is turned back.</li>
+    <li><b>It is checked before you see it.</b> A piece that does not compile, a bar that does not
+    add up, a note its instrument cannot play or a word with no note goes back to the chat; once it
+    compiles, it is checked as music once — a part with no instrument, every part in one rhythm —
+    and what is found goes back for one revision.</li>
+    <li><b>Ask for changes in the same chat</b> (<i>“slow it down a little”</i>): each one is shown
+    beside the piece to play, and to Accept or Reject. Save the piece to keep it.</li>
   </ul>
 
   <h3>Fix the marks of a scan</h3>
@@ -674,9 +668,11 @@
 
   <h3>Choosing the model</h3>
   <p><i>Lily#: Select AI Model…</i> picks one for good: <code>lilysharp.ai.editModel</code> for
-  Ask AI and Fix OMR Marks, <code>lilysharp.ai.ghostModel</code> for ghost completion. Without a
-  choice, Ask AI takes the largest model on offer and passes over the small ones, which write
-  poor Lily#; ghost completion takes a small, fast one.</p>
+  Lily#'s own <i>Ask AI…</i> (the command palette) and Fix OMR Marks, <code>lilysharp.ai.ghostModel</code>
+  for ghost completion. Without a choice, Ask AI takes the largest model on offer and passes over
+  the small ones, which write poor Lily#; ghost completion takes a small, fast one. Copilot's chat —
+  <i>Ask AI in Chat</i> (<kbd>Ctrl+I</kbd>) and <i>Compose with Copilot</i> — uses the model picked in
+  the chat's own model menu, not this one.</p>
 
   <h3>Copilot Chat knows the grammar</h3>
   <p>Lily# Studio gives Copilot the Lily# grammar as an instructions file for

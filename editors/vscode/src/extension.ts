@@ -47,8 +47,9 @@ import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSection
 import { onAngleChord, onShapeItem, shapeItemAt, sameDocumentUri } from './shapeItemCore';
 import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
-import { AudioFormat, renderAudioFiles } from './audioRender';
-import { VideoJob, ffmpegRuns, writeVideos } from './videoExport';
+import { AudioFormat, AudioJob, renderAudioFiles } from './audioRender';
+import { PracticeState, exportNotes, practiceSummary } from './webview/playbackCore';
+import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
@@ -75,6 +76,15 @@ function ensureClientReady(): Promise<void> {
     return clientReadyPromise;
 }
 const previewPanels = new Map<string, vscode.WebviewPanel>();
+// Each preview page's practice menu (tempo, parts, metronome, count-in), as the page last said:
+// the WAV, MP3 and MP4 exports of the file a page shows play under it (owner's request
+// 2026-11-07). A page's, not a file's — the follower keeps its menu as it turns to another file.
+const previewPractice = new WeakMap<vscode.WebviewPanel, PracticeState>();
+/** The practice menu of the preview showing `uri`; undefined when none shows it. */
+function practiceFor(uri: string): PracticeState | undefined {
+    const panel = previewPanels.get(uri);
+    return panel ? previewPractice.get(panel) : undefined;
+}
 // The follower: the one preview that is not locked. It turns to whichever .lys comes to the
 // front, the Markdown preview's way (owner's decision 2026-10-12), so opening another score
 // reuses the pane instead of adding a tab. Every other panel is locked to its own file.
@@ -1072,7 +1082,9 @@ export function activate(context: vscode.ExtensionContext) {
         wavSoundFont: () => wavSoundFont(context),
         renderAudio: (jobs, soundFont, format) => renderAudioFiles(jobs, soundFont, format),
         ffmpeg: () => videoFfmpeg(),
-        renderVideo: (jobs, soundFont, ffmpeg) => writeVideos(jobs, soundFont, ffmpeg),
+        renderVideo: (jobs, soundFont, ffmpeg, source) => writeVideos(jobs, soundFont, ffmpeg, drawFramesFor(source)),
+        practisedJobs: (jobs, uri) => practisedJobs(jobs, uri ? practiceFor(uri) : undefined),
+        practiceSummary: uri => uri ? practiceSummary(practiceFor(uri)) : '',
     });
 
     // Smart typing: the brackets it started with (`<` before c4 -> `<c>4`, and a
@@ -1646,6 +1658,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 outputChannel.appendLine(`PREVIEW ${message.text}`);
                 return;
             }
+            if (message.type === 'practiceState') {
+                // The page's practice menu, for the exports of the file it shows.
+                previewPractice.set(panel, message.practice as PracticeState);
+                return;
+            }
             if (message.type === 'requestPlayback') {
                 // The webview cannot reach the LSP: fetch note events here and
                 // hand them back for WebAudio scheduling.
@@ -2103,7 +2120,7 @@ interface ExportResponse {
     Error: string | null;
     /** A WAV, MP3 or MP4 asked for with playbackOnly: the file and the notes (and an MP4's
      *  pictures), for the editor to render. */
-    Playbacks?: VideoJob[] | null;
+    Playbacks?: AudioJob[] | null;
 }
 
 // Opening/revealing an exported file goes to the OS directly rather than through
@@ -2282,7 +2299,9 @@ async function exportPreview(
     // (audioRender.ts).
     // An MP4 is the same sound with the score's pages, the notes lit as they sound: the server
     // draws the pictures, and the editor joins them to the sound with the user's ffmpeg
-    // (videoExport.ts).
+    // (videoExport.ts). All three play under the preview's practice menu, the loop aside — its
+    // tempo, parts, metronome and count-in (owner's request 2026-11-07; exportNotes).
+    const practice = practiceFor(uri);
     const audio: AudioFormat | undefined = format === 'wav' || format === 'mp3' ? format : undefined;
     const video = format === 'mp4';
     let ffmpeg: string | undefined;
@@ -2310,10 +2329,11 @@ async function exportPreview(
                 playbackOnly: audio !== undefined || video,
                 renderName: renderName || null
             });
-            if (answer.Success && audio && soundFont && answer.Playbacks) {
-                await renderAudioFiles(answer.Playbacks, soundFont, audio);
-            } else if (answer.Success && video && soundFont && ffmpeg && answer.Playbacks) {
-                await writeVideos(answer.Playbacks, soundFont, ffmpeg);
+            const jobs = answer.Success && answer.Playbacks ? practisedJobs(answer.Playbacks, practice) : null;
+            if (jobs && audio && soundFont) {
+                await renderAudioFiles(jobs, soundFont, audio);
+            } else if (jobs && video && soundFont && ffmpeg) {
+                await writeVideos(jobs, soundFont, ffmpeg, drawFramesFor({ textDocument: { uri } }));
             }
             return answer;
         };
@@ -2331,7 +2351,8 @@ async function exportPreview(
         if (response.Success) {
             const openAction = 'Open File';
             const revealAction = 'Reveal in Explorer';
-            const through = soundFont ? ` (played through ${path.basename(soundFont)})` : '';
+            const practised = soundFont ? practiceSummary(practice) : '';
+            const through = soundFont ? ` (played through ${path.basename(soundFont)}${practised ? ', ' + practised : ''})` : '';
             const choice = await vscode.window.showInformationMessage(
                 `Exported to ${response.OutputPath}${through}`, openAction, revealAction);
             if (choice === openAction) {
@@ -3477,6 +3498,22 @@ function soundFontHistory(context: vscode.ExtensionContext): string[] {
 async function rememberSoundFont(context: vscode.ExtensionContext, file: string): Promise<void> {
     if (!file || !fs.existsSync(file)) { return; }
     await context.globalState.update(SOUND_FONT_HISTORY_KEY, recordFont(soundFontHistory(context), file, PATHS_IGNORE_CASE));
+}
+
+/** The jobs of a WAV, MP3 or MP4 export with their notes as Play sounds them under `practice`
+ *  (exportNotes; as written when no preview holds a menu for the file). */
+function practisedJobs(jobs: readonly AudioJob[], practice: PracticeState | undefined): AudioJob[] {
+    return jobs.map(job => ({ ...job, Notes: exportNotes(job.Notes, job.Parts ?? null, job.Beats ?? null, practice) }));
+}
+
+/** Asks the server for a video's pictures (lilysharp/videoFrames), the file named as the export
+ *  named it — the open document, or a path on the disk. */
+function drawFramesFor(source: { textDocument?: { uri: string }; path?: string }): DrawFrames {
+    return (job, seconds) => {
+        if (!client) { return Promise.resolve({ Error: 'language server not running' }); }
+        return client.sendRequest<FramesAnswer>('lilysharp/videoFrames', {
+            ...source, score: job.Score === undefined ? null : job.Score, notes: job.Notes, seconds });
+    };
 }
 
 /** The ffmpeg an MP4 export runs (lilysharp.export.ffmpegPath, else `ffmpeg` on the PATH), once
@@ -6469,6 +6506,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             clickBtn.textContent = practice.click ? 'On' : 'Off';
             countInBtn.setAttribute('aria-pressed', String(practice.countIn));
             countInBtn.textContent = practice.countIn ? 'On' : 'Off';
+            // The exports play as the menu does, the loop aside (owner's request 2026-11-07): the
+            // extension keeps this page's menu for them (previewPractice).
+            vscode.postMessage({ type: 'practiceState', practice: {
+                speed: practice.speed, muted: practice.muted.slice(), click: practice.click, countIn: practice.countIn } });
         }
         function practiceChanged(oldSpeed) {
             showPractice();

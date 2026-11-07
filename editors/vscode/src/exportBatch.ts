@@ -30,7 +30,6 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import type { AudioFormat, AudioJob } from './audioRender';
-import type { VideoJob } from './videoExport';
 import {
     EXPORT_FORMATS, ExportFormat, ExportTally,
     duplicateStems, lysTargets, samePath, summarizeExport,
@@ -55,9 +54,15 @@ export interface ExportBatchDeps {
     /** The ffmpeg an MP4 export runs, once it is known to run; undefined (the writer told how
      *  to get it) when it does not. */
     ffmpeg: () => Promise<string | undefined>;
-    /** Writes the MP4s the server prepared: their sound, joined by ffmpeg to their pictures
-     *  (videoExport.ts). */
-    renderVideo: (jobs: VideoJob[], soundFont: string, ffmpeg: string) => Promise<void>;
+    /** Writes the MP4s the server named: the pictures it draws for their notes, their sound,
+     *  joined by ffmpeg (videoExport.ts); `source` names the file as the export named it. */
+    renderVideo: (jobs: AudioJob[], soundFont: string, ffmpeg: string,
+        source: { textDocument?: { uri: string }; path?: string }) => Promise<void>;
+    /** The jobs with their notes under the practice menu of the preview showing `uri` — as
+     *  written for a file no preview shows (undefined: not open at all). */
+    practisedJobs: (jobs: AudioJob[], uri: string | undefined) => AudioJob[];
+    /** That menu in words for the log; empty when it plays the score as written. */
+    practiceSummary: (uri: string | undefined) => string;
 }
 
 interface ExportResponse {
@@ -65,9 +70,9 @@ interface ExportResponse {
     OutputPath: string | null;
     OutputPaths?: string[] | null;
     Warnings?: string[] | null;
-    /** A WAV, MP3 or MP4 asked for with playbackOnly: each file and its notes (and an MP4's
-     *  pictures), for the editor to render. */
-    Playbacks?: VideoJob[] | null;
+    /** A WAV, MP3 or MP4 asked for with playbackOnly: each file and its notes, for the editor to
+     *  render. */
+    Playbacks?: AudioJob[] | null;
     Error: string | null;
 }
 
@@ -220,10 +225,19 @@ async function exportBatch(
                     deps.log(`    FAILED: ${response.Error}`);
                     continue;
                 }
-                if (soundFont && response.Playbacks && isAudio(format.id)) {
-                    await deps.renderAudio(response.Playbacks, soundFont, format.id);
-                } else if (soundFont && ffmpeg && response.Playbacks && format.id === 'mp4') {
-                    await deps.renderVideo(response.Playbacks, soundFont, ffmpeg);
+                if (soundFont && response.Playbacks) {
+                    // As the preview showing the file plays it, the loop aside (owner's request
+                    // 2026-11-07); a file no preview shows, as written.
+                    const openUri = open?.uri.toString();
+                    const jobs = deps.practisedJobs(response.Playbacks, openUri);
+                    const practised = deps.practiceSummary(openUri);
+                    if (practised) { deps.log(`    played ${practised}`); }
+                    if (isAudio(format.id)) {
+                        await deps.renderAudio(jobs, soundFont, format.id);
+                    } else if (ffmpeg && format.id === 'mp4') {
+                        await deps.renderVideo(jobs, soundFont, ffmpeg,
+                            open ? { textDocument: { uri: open.uri.toString() } } : { path: file });
+                    }
                 }
                 for (const out of response.OutputPaths ?? []) {
                     outputs++;

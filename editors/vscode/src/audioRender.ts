@@ -24,13 +24,20 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { SoundBankLoader, SpessaSynthProcessor, audioToWav } from 'spessasynth_core';
 import { Mp3Encoder } from '@breezystack/lamejs';
-import type { PlaybackNote } from './webview/playbackCore';
+import type { PlaybackBeat, PlaybackNote } from './webview/playbackCore';
 import {
     MP3_KBPS, OfflineSynth, WAV_SAMPLE_RATE, encodeMp3, fileLevel, renderNotes,
 } from './audioRenderCore';
 
-/** One file to write, as the server gives it (PlaybackExport). */
-export interface AudioJob { OutputPath: string; Notes: PlaybackNote[] }
+/** One file to write, as the server gives it (PlaybackExport): where it goes and the notes it
+ *  sounds, with what the practice menu needs (the parts, the beats) and its score's name. */
+export interface AudioJob {
+    OutputPath: string;
+    Notes: PlaybackNote[];
+    Parts?: string[] | null;
+    Beats?: PlaybackBeat[] | null;
+    Score?: string | null;
+}
 
 /** The sound formats the editor renders itself. */
 export type AudioFormat = 'wav' | 'mp3';

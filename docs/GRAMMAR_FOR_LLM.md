@@ -1193,8 +1193,8 @@ length. **"Add dynamics / articulations"** — marks glued to the note: `c4@p`, 
 `tempo 96`), or at the start of a bar, in a section header or in the music, from there on.
 
 **"Compose a piece"** — a new piece is a whole file. What makes it music for its players (form,
-harmony, theme, parts, the kinds of music, the setting of words) is the composing guide sent with
-Compose with AI (`docs/COMPOSE_FOR_LLM.md`).
+harmony, theme, parts, the kinds of music, the setting of words) is the composing guide, read
+with the `lilysharp_readGuide` tool, topic `composing` (`docs/COMPOSE_FOR_LLM.md`).
 
 ## Rules and gotchas
 

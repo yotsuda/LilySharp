@@ -905,6 +905,33 @@ export function isEmptyScore(text: string): boolean {
     return text.split(/\r?\n/).every(l => /^\s*(\/\/.*|octave\s+\w+|pitch\s+\w+)?\s*$/.test(l));
 }
 
+/** The request a piece composed in Copilot's chat says it was written for — its header's
+ *  `// Asked: …` line, among the comments it opens with — or undefined for a text that does not
+ *  open with that header. */
+export function chatPieceRequest(text: string): string | undefined {
+    const head: string[] = [];
+    for (const line of text.split(/\r?\n/)) {
+        if (/^\s*\/\//.test(line)) { head.push(line.trim()); continue; }
+        if (line.trim() === '' && head.length === 0) { continue; }
+        break;
+    }
+    if (!head.some(l => l.startsWith("// Composed in Copilot's chat"))) { return undefined; }
+    const asked = head.find(l => l.startsWith('// Asked:'));
+    return asked === undefined ? undefined : asked.slice('// Asked:'.length).trim();
+}
+
+/**
+ * True when a proposal is a NEW piece composed in the chat — its header names a request — sent to
+ * a file that holds another score (owner's request 2026-11-07: asked to compose with a score open,
+ * the chat proposed the new piece over it). A file that is empty takes it, and so does the piece's
+ * own file: a revision keeps the request it was composed for.
+ */
+export function newPieceOverScore(current: string, proposed: string): boolean {
+    const asked = chatPieceRequest(proposed);
+    if (asked === undefined || isEmptyScore(current)) { return false; }
+    return chatPieceRequest(current) !== asked;
+}
+
 /** The choices a starting point is drawn from (compositionHint). The key is its tonic alone, major
  *  or minor as the music asks (owner's report 2026-10-29: two "bright waltzes" drew C minor and F♯
  *  minor, set the draw aside as the wrong mode, and fell back on G major both times). */

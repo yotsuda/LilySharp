@@ -26,8 +26,41 @@ import {
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
     aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
     lastUserMessageAt, heldClashesOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN,
-    noTuneOf,
+    noTuneOf, chatPieceRequest, newPieceOverScore,
 } from '../src/aiTransformCore';
+
+// Owner's request 2026-11-07: asked to compose with a score open, the chat proposed the new piece
+// over it. A new piece (its header names the request) goes to a new file; the piece's own file, a
+// revision of it, and an empty file take it.
+describe('a new piece is not proposed over another score', () => {
+    const piece = (asked: string) => `// Composed in Copilot's chat (GPT-6 Luna), 2026-11-07\n// Asked: ${asked}\n`
+        + `// The AI: a blues.\n\noctave absolute\npitch concert\ntitle "Blue"\npart p { clef treble }\n`;
+    const score = 'title "Harbour Lights"\npart singer { clef treble }\nsection A { singer { c\'4 d e f | } }\n';
+
+    it('reads the request a chat piece was composed for, and nothing from another score', () => {
+        assert.equal(chatPieceRequest(piece('a swinging blues')), 'a swinging blues');
+        assert.equal(chatPieceRequest(score), undefined);
+        assert.equal(chatPieceRequest('// a note of my own\n// Asked: nothing\n' + score), undefined, 'the header, not any comment');
+    });
+
+    it('turns down a new piece sent over a score of the musician\'s', () => {
+        assert.equal(newPieceOverScore(score, piece('a swinging blues')), true);
+    });
+
+    it('turns down a new piece sent over an earlier chat piece composed for another request', () => {
+        assert.equal(newPieceOverScore(piece('a waltz'), piece('a swinging blues')), true);
+    });
+
+    it('lets a revision of the piece into its own file', () => {
+        assert.equal(newPieceOverScore(piece('a swinging blues'), piece('a swinging blues') + 'section B { }\n'), false);
+    });
+
+    it('lets a new piece into an empty file, and a change that is no new piece anywhere', () => {
+        assert.equal(newPieceOverScore('', piece('a swinging blues')), false);
+        assert.equal(newPieceOverScore('octave absolute\n', piece('a swinging blues')), false);
+        assert.equal(newPieceOverScore(score, score.replace('d e f', 'e f g')), false);
+    });
+});
 
 // Owner's decision 2026-11-01: a solo guitar's 14 chords no hand can hold were written in.
 describe('chords no hand can hold', () => {
@@ -274,10 +307,10 @@ describe('a starting point drawn at random', () => {
         const seen = new Set(Array.from({ length: 20 }, () => compositionHint()));
         assert.ok(seen.size > 1);
     });
-    it('goes with every Compose with AI request', () => {
+    it('goes with the composing guide Copilot\'s chat reads, one draw a piece', () => {
         const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
-        assert.match(src, /in the language of the request\.\\n'\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*\+ hint,/);
-        assert.match(src, /const hint = compositionHint\(\);\s*deps\.log\(`AI transform: \$\{hint\}`\);/);
+        assert.match(src, /const hint = drawnHint \?\?= compositionHint\(\);/);
+        assert.match(src, /\+ `\$\{hint\}\\n`;/);
     });
 });
 
@@ -291,9 +324,8 @@ describe('instructions too large for a model', () => {
         assert.ok(promptFits(undefined, 30_000));
         assert.ok(promptFits(0, 30_000));
     });
-    it('is checked before Ask and Compose send anything', () => {
+    it('is checked before Ask sends anything', () => {
         const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
-        assert.match(src, /if \(!tellsTooSmall\(chat, systemTokens, 'compose with'\)\) \{\s*return;/);
         assert.match(src, /if \(!tellsTooSmall\(chat, systemTokens, 'Ask'\)\) \{\s*return;/);
     });
 });

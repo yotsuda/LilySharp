@@ -266,15 +266,24 @@ public sealed class ExportRequestTests : IDisposable
             form { A A }
             score { staff m }
             """);
-        var response = Server().Export(new ExportParams { Path = book, Format = "mp4", OutputPath = Path.Combine(_dir, "twice.mp4"), PlaybackOnly = true });
+        var server = Server();
+        var response = server.Export(new ExportParams { Path = book, Format = "mp4", OutputPath = Path.Combine(_dir, "twice.mp4"), PlaybackOnly = true });
         Assert.True(response.Success, response.Error);
         var job = Assert.Single(response.Playbacks!);
+        Assert.False(File.Exists(job.OutputPath));
+        // What the practice menu needs rides along: the parts, the beats (8 quarters), the score's name.
+        Assert.Contains("m", job.Parts);   // by track, the MIDI's tempo track first
+        Assert.All(job.Notes.Where(n => n.P >= 0), n => Assert.Equal("m", job.Parts[n.N]));
+        Assert.Equal(8, job.Beats.Length);
+        Assert.Equal("", job.Score);
+        // The editor asks the pictures for the notes it will sound (here as written).
+        var video = server.VideoFrames(new VideoFramesParams { Path = book, Score = job.Score, Notes = job.Notes, Seconds = 4 + 2 });
+        Assert.Null(video.Error);
         try
         {
-            Assert.False(File.Exists(job.OutputPath));
-            Assert.Equal(1.5, job.Lead);
+            Assert.Equal(1.5, video.Lead);
             // The list: each picture and its duration, the last named again for its duration to count.
-            var lines = File.ReadAllLines(job.Frames!);
+            var lines = File.ReadAllLines(video.Frames!);
             var shown = new List<(string File, double Seconds)>();
             for (int i = 0; i + 1 < lines.Length; i += 2)
                 shown.Add((lines[i][6..^1], double.Parse(lines[i + 1]["duration ".Length..], System.Globalization.CultureInfo.InvariantCulture)));
@@ -306,8 +315,37 @@ public sealed class ExportRequestTests : IDisposable
         }
         finally
         {
-            Directory.Delete(job.WorkDirectory!, true);
+            Directory.Delete(video.WorkDirectory!, true);
         }
+    }
+
+    // The pictures follow the notes the editor hands over — at the practice menu's half tempo the
+    // second copy's c'' sounds at 4 s, not 2 — and a named score is found again by its name.
+    [Fact]
+    public void Mp4_Pictures_FollowTheNotesGiven_AndTheScoreNamed()
+    {
+        var book = Book("two.lys", TwoScores);
+        var server = Server();
+        var all = server.Export(new ExportParams { Path = book, Format = "mp4", All = true, OutputDirectory = Out, PlaybackOnly = true });
+        Assert.True(all.Success, all.Error);
+        var sub = all.Playbacks!.Single(p => p.Score == "sub");
+        var slow = sub.Notes.Select(n => new PlaybackNote { T = n.T * 2, D = n.D * 2, P = n.P, V = n.V, S = n.S, O = n.O }).ToArray();
+        var video = server.VideoFrames(new VideoFramesParams { Path = book, Score = "sub", Notes = slow, Seconds = 2 * 8 + 2 });
+        Assert.Null(video.Error);
+        try
+        {
+            var lines = File.ReadAllLines(video.Frames!);
+            double total = 0;
+            for (int i = 1; i < lines.Length; i += 2)
+                total += double.Parse(lines[i]["duration ".Length..], System.Globalization.CultureInfo.InvariantCulture);
+            Assert.Equal(1.5 + 16 + 2, total, 1);
+        }
+        finally
+        {
+            Directory.Delete(video.WorkDirectory!, true);
+        }
+        var missing = server.VideoFrames(new VideoFramesParams { Path = Path.Combine(_dir, "none.lys"), Score = "", Notes = [], Seconds = 1 });
+        Assert.NotNull(missing.Error);
     }
 
     [Fact]

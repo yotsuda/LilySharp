@@ -163,13 +163,13 @@ describe('the composing guide', () => {
     // thinking in view — the file started absolute, no Lily# check yet (the owner's choice).
     it('is handed to Copilot\'s chat by a menu of its own, the file started in absolute octaves', () => {
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
-        assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"category": "Lily#",[\s\S]*?"title": "Compose with AI in Chat…"/);
+        // Named for Copilot in the palette and in File > New File… alike (owner's decisions 2026-10-29
+        // and 2026-11-07: the one composer).
+        assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"category": "Lily#",[\s\S]*?"title": "Compose with Copilot…"/);
         assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"group": "file@2"/);
-        // Named there for Copilot, apart from Lily#'s own Compose with AI in the palette (owner's
-        // request 2026-10-29).
         assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",[^}]*"shortTitle": "Lily# Score, Composed with Copilot…"/);
         assert.match(transform, /registerCommand\('lilysharp\.composeWithAiInChat', \(\) => runComposeInChat\(deps\)\)/);
-        const fn = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
+        const fn = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runAiTransform('));
         // Nothing opened before the piece comes (owner's request 2026-10-29): the chat writes the
         // header the guide gives, and its proposal opens the piece.
         assert.ok(!/newPieceHeader|openTextDocument|applyEdit/.test(fn));
@@ -200,6 +200,19 @@ describe('the composing guide', () => {
         assert.match(guide, /'Name a new file after the piece\\'s title, in letters, digits and hyphens \(a title in another script '/);
         assert.match(guide, /never a placeholder \(Composed, Untitled\), and a name no file in '\s*\+ 'that folder has yet — check it with the lilysharp_checkName tool/);
         assert.ok(!/\+ 'folder \(e\.g\. Composed\.lys\)/.test(guide));
+    });
+    // Owner's request 2026-11-07: asked to compose with a score open, the chat took that score for
+    // "the .lys file you were given" and proposed the new piece over it. A new piece is a new file,
+    // said where the chat reads how to begin, in the tool it proposes with, and in every request.
+    it('writes a new piece into a new file, never over a score that is open', () => {
+        const guide = transform.slice(transform.indexOf('async function readGuide('), transform.indexOf('function newPieceHeader('));
+        assert.match(guide, /'Compose the new piece in Lily# as a NEW \.lys file\. Never write it into a score that is open, attached or '/);
+        assert.match(guide, /Only an empty \.lys, or a file the musician asks in so many words to write the piece into, takes it\./);
+        assert.ok(!/for the \.lys file you were given/.test(guide));
+        const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
+        assert.match(pkg, /A NEW piece goes to a new file \(name it with lilysharp_checkName\), never over a score that is open or attached/);
+        const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
+        assert.match(build, /'A new piece goes into a NEW \.lys file, never over an open score unless asked for that file\.',/);
     });
     // Owner's request 2026-10-29: Copilot's chat proposes a score through Lily#'s tool, the musician
     // deciding on the score — compiled first, an error sent back unseen.
@@ -383,7 +396,7 @@ describe('the composing guide', () => {
         assert.match(fix, /if \(marked\) \{\s*void runOmrAiFix\(context, deps, doc\.uri, doc\.offsetAt\(doc\.lineAt\(chosen\[0\]\)\.range\.start\)\);\s*\} else \{\s*editor\.selections = chosen\.map/);
         assert.match(fix, /'The musician decides there, and Accept writes the bar: do not change these bars yourself\.'/);
         assert.match(pkg, /"path": "\.\/out\/lilysharp-here\.instructions\.md"/);
-        const compose = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
+        const compose = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runAiTransform('));
         assert.match(compose, /lilysharp_readGuide, topic "composing"/);
     });
     // Owner's trials 2026-10-29: a chat's hymns crossed the alto under the tenor, set the alto in the
@@ -427,13 +440,11 @@ describe('the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*"Compose a piece" \/ "write it for a string quartet, …"\*\*/);
         assert.doesNotMatch(grammar, /\*\*A piano piece\*\*|\*\*Gospel\*\*|\*\*A song with words\*\*/);
-        assert.match(grammar, /the composing guide sent with\s+Compose with AI \(`docs\/COMPOSE_FOR_LLM\.md`\)/);
+        assert.match(grammar, /the composing guide, read\s+with the `lilysharp_readGuide` tool, topic `composing` \(`docs\/COMPOSE_FOR_LLM\.md`\)/);
     });
-    it('is sent with the composer\'s prompt and not with Ask AI\'s', () => {
-        assert.match(transform, /\.\.\.\(guide \? \['<composing-guide>', guide, '<\/composing-guide>', ''\] : \[\]\)/);
+    it('is not sent with Ask AI\'s prompt', () => {
         const ask = transform.slice(transform.indexOf('function systemPrompt(grammar'));
         assert.ok(!ask.slice(0, 3000).includes('composing-guide'));
-        assert.match(transform, /await loadComposeGuide\(deps\);\s*const systemTokens = estimateTokens\(composeSystemPrompt\(grammar, chat\.modelName\)\);/);
     });
     it('is bundled beside the grammar, and given to Copilot\'s chat with it', () => {
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
@@ -483,31 +494,16 @@ describe('a new piece in place of the score', () => {
         assert.match(transform, /if \(candidate === null && flat && !newerWarned\) \{\s*candidate = flat\.edit;/);
     });
 
-    it('Compose with AI is a command of its own, writing into a new score', () => {
-        assert.match(transform, /registerCommand\('lilysharp\.composeWithAi', \(\) => runCompose\(deps\)\)/);
-        // No document while the AI works (owner's request 2026-10-27): the start is in memory, and
-        // the piece opens in an editor of its own when it comes — no review panel, nothing to compare.
-        assert.match(transform, /uri: vscode\.Uri\.parse\('untitled:Composed\.lys'\),/);
-        assert.doesNotMatch(transform.slice(transform.indexOf('async function runCompose('), transform.indexOf('async function runAiTransform')), /openTextDocument/);
-        assert.match(transform, /if \(compose\) \{[\s\S]{0,5500}?openTextDocument\(\{ language: 'lilysharp', content: `\$\{preface\}\$\{eol\}\$\{eol\}\$\{text\}` \}\);\s*await vscode\.window\.showTextDocument\(piece\);/);
-        // The request and the AI's note head the piece as comments (owner's request 2026-10-27).
-        assert.match(transform, /line\(`Asked: \$\{composeAsked \?\? instruction\}`\),\s*\.\.\.\(note \? \[line\(`The AI: \$\{note\}`\)\] : \[\]\),/);
-        // What the notification says is the musician's request, not the instruction to the AI.
-        assert.match(transform, /const said = composeAsked \?\? instruction;/);
+    // Owner's decision 2026-11-07: "Compose with AI…" (Lily#'s own composer, no chat) and "Compose
+    // with AI in Chat…" were hard to tell apart; the chat's alone stays, as "Compose with Copilot…".
+    it('composes in Copilot\'s chat alone: no composer of Lily#\'s own', () => {
+        assert.doesNotMatch(transform, /registerCommand\('lilysharp\.composeWithAi'/);
+        assert.doesNotMatch(transform, /async function runCompose\(/);
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
-        assert.match(pkg, /"command": "lilysharp\.composeWithAi",\s*"category": "Lily#",\s*"icon": "\$\(sparkle\)",\s*"title": "Compose with AI…",\s*"shortTitle": "Lily# Score, Composed with AI…"/);
+        assert.doesNotMatch(pkg, /"lilysharp\.composeWithAi"/);
         // Found where a piece is begun (owner's request 2026-10-29): File > New File… beside New
-        // Score, the language server started for it when no .lys has started it yet.
-        // New Score first, then Compose (owner's request 2026-10-29): by order, not by title. The
-        // composer there is the chat's (owner's decision, the same day); this one is in the palette.
+        // Score, New Score first — by order, not by title.
         assert.match(pkg, /"command": "lilysharp\.newScore",\s*"group": "file@1"\s*\},\s*\{\s*"command": "lilysharp\.composeWithAiInChat",\s*"group": "file@2"\s*\}\s*\]/);
-        assert.match(transform, /async function runCompose\(deps: AiTransformDeps, asked\?: string\): Promise<void> \{[\s\S]{0,300}?await deps\.ensureReady\?\.\(\);/);
-        // A broken connection offers Try Again, the request in the box to send or shorten
-        // (owner's report 2026-10-29: net::ERR_HTTP2_PROTOCOL_ERROR two minutes into a piece).
-        assert.match(transform, /const failed = aiFailure\('compose', String\(err\?\.message \?\? err\), Date\.now\(\) - began\);\s*if \(failed\.retry && await vscode\.window\.showErrorMessage\(failed\.text, 'Try Again'\) === 'Try Again'\) \{\s*await runCompose\(deps, description\.trim\(\)\);/);
-        assert.match(transform, /value: asked,/);
-        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
-        assert.match(ext, /ensureReady: ensureClientReady,/);
     });
 });
 
@@ -688,7 +684,6 @@ describe('the composer\'s prompt', () => {
         assert.match(grammarDoc, /Lily# splits nothing: text written together\s+is ONE unit on one note, with no warning\./);
         assert.match(grammarDoc, /\*\*The melody follows the words' own shape\*\*/);
         assert.match(transform, /WORDS \(a song only\) — each line of the words written out WHOLE first/);
-        assert.match(transform, /gospel \(piano or organ under a voice or a choir\), a song \(a voice part/);
     });
     it('has the plan fill in every heading, the theme in notes, and the file held to the plan', () => {
         for (const heading of ['LENGTH AND FORM', 'KEY, METER, TEMPO', 'HARMONY', 'THEME', 'PHRASES', 'CLIMAX', 'PARTS', 'DYNAMICS', 'CHARACTER', 'WORDS', 'ENDING']) {
@@ -790,7 +785,6 @@ describe('a composed piece has a title', () => {
     const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
 
     it('is asked for, never seeded with a placeholder, and asked for alone when it does not come', () => {
-        assert.match(transform, /Give the piece a title of its own that '\s*\+ 'fits its music and its mood/);
         assert.doesNotMatch(transform, /const start = 'title "New Piece"/);
         assert.match(transform, /if \(!had \|\| isPlaceholderTitle\(had\)\) \{\s*const title = await titleFor\(chat, text, composeAsked \?\? instruction\);/);
     });

@@ -253,27 +253,58 @@ public class ExportParams
     /// <summary>A WAV the EDITOR renders (owner's request 2026-11-07: the exported sound is the
     /// preview's — its synth, spessasynth, and its font, a <c>.sf3</c> or a DLS bank included,
     /// which the server's MeltySynth cannot read). With <see cref="Format"/> <c>wav</c>, <c>mp3</c>
-    /// or <c>mp4</c> (whose pictures are drawn into a temp folder, <see cref="PlaybackExport.Frames"/>), nothing
-    /// is written and no font is asked for: <see cref="ExportResponse.Playbacks"/> carries each
-    /// score's file and the notes the preview's Play would sound for it.</summary>
+    /// or <c>mp4</c>, nothing is written and no font is asked for: <see cref="ExportResponse.Playbacks"/>
+    /// carries each score's file and the notes the preview's Play would sound for it, with what the
+    /// practice menu needs to play them as the preview does (owner's request 2026-11-07). The
+    /// editor applies the menu, then asks a video's pictures of <c>lilysharp/videoFrames</c>.</summary>
     public bool PlaybackOnly { get; set; }
 }
 
-/// <summary>One WAV or MP3 the editor renders: where it goes, and the notes of its score as
+/// <summary>One WAV, MP3 or MP4 the editor writes: where it goes, and its score's notes as
 /// <c>lilysharp/playback</c> gives them (<see cref="ExportParams.PlaybackOnly"/>).</summary>
 public class PlaybackExport
 {
     public string OutputPath { get; set; } = "";
     public PlaybackNote[] Notes { get; set; } = [];
-    /// <summary>An MP4: the ffmpeg concat list of the video's pictures
-    /// (<c>LilySharp.Core.Export.ScoreVideo</c>), drawn into <see cref="WorkDirectory"/>, which the
-    /// editor deletes once the video is written. Null for a WAV or an MP3.</summary>
+    /// <summary>The notes' tracks by <see cref="PlaybackNote.N"/> — the practice menu silences a
+    /// part by its name (<see cref="PlaybackResponse.Parts"/>).</summary>
+    public string[] Parts { get; set; } = [];
+    /// <summary>The beats the metronome and the count-in click (<see cref="PlaybackResponse.Beats"/>).</summary>
+    public PlaybackBeat[] Beats { get; set; } = [];
+    /// <summary>The score's name, as <see cref="VideoFramesParams.Score"/> names it back for an
+    /// MP4's pictures: "" for the unnamed score, null for a file that declares none.</summary>
+    public string? Score { get; set; }
+}
+
+/// <summary>Parameters for lilysharp/videoFrames: the pictures of an MP4 the editor writes
+/// (<c>LilySharp.Core.Export.ScoreVideo</c>), for the notes it will sound — the export's, under the
+/// practice menu's tempo, parts and count-in (owner's request 2026-11-07).</summary>
+public class VideoFramesParams
+{
+    /// <summary>The open document, as <see cref="ExportParams.TextDocument"/>.</summary>
+    public TextDocumentIdentifier? TextDocument { get; set; }
+    /// <summary>A file not open, as <see cref="ExportParams.Path"/>.</summary>
+    public string? Path { get; set; }
+    /// <summary>The score, as the export named it (<see cref="PlaybackExport.Score"/>).</summary>
+    public string? Score { get; set; }
+    /// <summary>The notes that sound: their onsets and lengths in seconds, their source offsets
+    /// and printed copies (<see cref="PlaybackNote.T"/>, <c>D</c>, <c>S</c>, <c>O</c>).</summary>
+    public PlaybackNote[] Notes { get; set; } = [];
+    /// <summary>How long the sound runs, from its start.</summary>
+    public double Seconds { get; set; }
+}
+
+/// <summary>Response for lilysharp/videoFrames.</summary>
+public class VideoFramesResponse
+{
+    /// <summary>The ffmpeg concat list of the pictures, drawn into <see cref="WorkDirectory"/> —
+    /// a new folder under the temp folder, which the editor deletes once the video is written.</summary>
     public string? Frames { get; set; }
-    /// <summary>An MP4: the folder of its pictures — a new one under the temp folder.</summary>
     public string? WorkDirectory { get; set; }
-    /// <summary>An MP4: the seconds of still score before the music; the editor starts the sound
-    /// that late.</summary>
+    /// <summary>The seconds of still score before the music; the editor starts the sound that late.</summary>
     public double Lead { get; set; }
+    public string[]? Warnings { get; set; }
+    public string? Error { get; set; }
 }
 
 /// <summary>
