@@ -433,7 +433,11 @@ function newPieceHeader(asked: string, note: string, eol: string): string {
  * bundled one is named only for a file written without the tool.
  */
 function newPieceSteps(lysc: string | undefined): string {
-    return 'Propose it, whole, with the lilysharp_proposeScore tool (#proposeScore), giving that path: it compiles the '
+    // The plan before the notes (owner's decision 2026-11-07: Compose with AI's prompt asked for it,
+    // the chat's composing never did, and the guide spoke of "the plan" to a chat that wrote none).
+    return 'Before any note, write in your reply the plan the composing guide asks for — its "Plan before the first note", '
+        + 'every heading filled in — then write the piece to it.\n'
+        + 'Propose it, whole, with the lilysharp_proposeScore tool (#proposeScore), giving that path: it compiles the '
         + 'piece, sends back its errors and warnings to fix, and writes it into the document — do not run a compiler '
         + 'yourself, nor anything else in a terminal: Lily#\'s tools and your file tools do all a new piece needs. If that tool is not available, write the piece into the file instead'
         + (lysc ? `, and check it with \`& "${lysc}" check <file>\`` : '') + '.\n'

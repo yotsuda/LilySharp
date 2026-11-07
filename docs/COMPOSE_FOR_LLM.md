@@ -19,6 +19,39 @@ C), and a slip stays one note instead of carrying every note after it away. With
 pitch is read relative to the one before it, and pitches written as absolute fly off by octaves
 (owner's report 2026-10-29: a piece composed in Copilot's chat did just that).
 
+**Plan before the first note.** Write the plan in your reply before you propose the piece, every
+heading below filled in and in this order — a heading left vague is a decision not made. The
+musician may read it; it is your working notes, short lines, not prose. The headings say what to
+decide; how, the rest of this guide says. (Owner's trials 2026-10-29: a piece planned only in words
+padded itself out to 32 bars, copied its "A′" from A, never wrote its theme into a bar, had phrases
+that did not answer and no high point, and planned its coda quiet and wrote it loud; the plan below
+was what mended them, and it went missing from the chat's composing until 2026-11-07.)
+- **LENGTH AND FORM** — the sections and their bars (about 24 to 32 bars unless the request gives a
+  length, or what the piece needs); a section that comes back as it was is named again in the form
+  (`form { A B A Coda }`), never copied.
+- **KEY, METER, TEMPO** — and a key change, if any: its bar, the chord that prepares it, the way home.
+- **HARMONY** — every phrase's chords, bar by bar, and its cadence; where it is coloured (a
+  secondary dominant, a borrowed chord, a deceptive cadence) — or that the style keeps it plain.
+- **THEME** — its one or two bars WRITTEN OUT in this file's notes, its rhythm with them
+  (`fis''2 e''8 d''8 | d''4 b'4 g''4 |`), and the bars where it comes back.
+- **PHRASES** — for each phrase its bars, the note it starts on, its highest note and the note it
+  ends on over its cadence (a pair answering, as *Phrases that answer* says).
+- **CLIMAX** — its bar and note, and how the dynamics lead there and away.
+- **PARTS** — what each part does in each section (melody, bass line, inner parts, the accompaniment
+  figure and its rhythm) and its register, as sounding pitches (C4 = middle C) AND as you will write
+  them (a right hand round C5, D4–A5, is written `d'` – `a''`); a countermelody, if any, and the
+  bar of its own peak.
+- **DYNAMICS** — the level each phrase starts at and the hairpins between.
+- **CHARACTER** — each device of the character asked for, how it is written and the bars it is in
+  (`@sf` in bar 13, a tremolo `d'2:32` in bars 14–15, …).
+- **WORDS** (a song only) — each line of the words written out WHOLE first, its sung units counted;
+  then the phrase that sings it, given that many notes (*A song with words*).
+- **ENDING** — in the home key, on a held tonic chord, at the dynamic planned for it.
+
+Then write the piece to the plan: the theme in the bars the plan names, the climax where it says,
+the dynamics as planned. Where the piece turns out better another way, change the plan, not only the
+notes.
+
 What makes it music:
 - **A title of its own**: `title "…"` at the top, words that fit its music and mood — never a
   placeholder (`New Piece`, `Untitled`). **No `composer` line** unless the request asks for one
@@ -62,10 +95,28 @@ What makes it music:
   sounds its third — the accompaniment has it, or the melody does on the beat: a left hand of bare
   fifths (`b, fis`) is hollow and leaves the chord unsaid (major or minor? V of the relative
   minor needs its raised third, `ais` under B minor), unless a drone or a power chord is meant.
+- **Harmony that moves**: past the first phrase, colour the progression where the music asks — a
+  secondary dominant leading into the next chord (V/V, V/vi), a chord borrowed from the minor (iv,
+  ♭VI in a major key), an inversion that lets the bass walk by step, a deceptive cadence (V–vi)
+  where a phrase would close too soon — and let the chords change faster toward a cadence. **The
+  chord changes with the note**: a melody's note from outside the key belongs to the accompaniment's
+  chord as well, written into it (a flute's A♮ for V/vi in D♭ major is an F major chord in the
+  piano, not F minor's A♭ under it — owner's trial 2026-11-07: the two clashed for a beat). A pop
+  song's loop of four chords, a blues's twelve bars and a hymn's plain triads are their own idiom:
+  there the colour is in the melody, the voicing and the rhythm, not in new chords.
 - **A theme**: a motif of a bar or two that the piece is made of — a melody's motif, a song's hook,
   a band's riff, a jazz head's opening figure — with a rhythm of its own, not even quarters —
   stated, repeated, sequenced, varied, and back near the end. Decide it in notes
   before writing the piece: a theme that is only words ("a rising broken chord") is not one yet.
+- **The tune grows from its motif**: every phrase of the melody is made of the theme's motif —
+  repeated, sequenced a step higher or lower, inverted, its rhythm kept under new notes, lengthened
+  to a cadence — so the ear half-knows what comes next and is pleased when it comes, and once or
+  twice surprised. One feature makes it remembered: a leap the tune keeps, a rhythm, a note leaned
+  on against its chord (an appoggiatura on the strong beat, resolving a step down). A tune of notes
+  that only follow the chords is not yet a theme. (Owner's goals 2026-11-07, with the five that
+  follow: a melody that is remembered, chords that are more than a stock pattern, a countermelody
+  of its own, a key change with a story, an orchestra's instruments written as they sound, and one
+  piece from its first bar to its last.)
 - **A section that returns is named again, not copied**: one that comes back as it was is written
   once and played twice by the form (`form { A B A Coda }`) — never a second section with the same
   notes. A return that changes (the tune an octave higher, a new accompaniment, another ending) is a
@@ -79,7 +130,14 @@ What makes it music:
   minor in a D major piece, A minor in C) keeps the signature and writes no `key` line: the same
   sharps or flats would only be printed again. The tempo stays unless the
   character changes with it (a slow middle section, `tempo "Adagio" 4 = 60`), never a new tempo
-  for every section.
+  for every section. **A key change is an event**: it comes where the piece turns — the middle
+  section, the last chorus up a step — prepared by a chord the two keys share or by the new key's V,
+  and the way home is heard arriving (the home key's V before the return). A development takes the
+  theme apart — a fragment of it sequenced through the keys — rather than bringing new tunes.
+- **The contrast is made of the theme too**: a middle section takes the theme's motif inverted,
+  augmented or in the minor, rather than a tune from nowhere, and a coda recalls the opening's first
+  bars. The accompaniment's figures, the character's devices and the plan of the dynamics run through
+  the piece, so it is one piece from its first bar to its last.
 - **The end**: the last phrase closes in the home key — V (or V7) to I, the tonic chord held
   through the final bar in every part, the bass on the tonic.
 - **Registers**: every part where its player plays (see *Instrument ranges* — a piano's left hand
@@ -300,6 +358,22 @@ What makes it music:
   accompanying parts do not stop together bar after bar (three lower strings all resting on beat
   4 of every bar leave the tune alone there, and the music hiccups) — while one breathes, another
   holds a note or moves on; they rest together only at a phrase's end, or for an effect.
+- **A countermelody is a second tune**, not a harmony part — an accompaniment's top line, an inner
+  string part, a piano's right hand under a solo when it is not striking chords: it moves when the
+  melody holds and holds when it moves, goes against it (contrary or oblique motion more than
+  parallel), peaks in another bar, and could be sung alone. Thirds or sixths under the tune for a
+  phrase are a colour; for a whole section they are a doubling. Between the melody and the bass, and
+  the melody and a countermelody, no parallel fifths or octaves unless a doubling is meant. An
+  accompaniment of one figure from the first bar to the last (a bass on 1, chords on 2 and 3) leaves
+  the tune alone: let a line answer it where it holds or rests.
+- **An orchestra or a string ensemble** writes each instrument where it sounds well, not only where
+  it can play: a flute's low octave is weak (its tune lies above G5), an oboe carries a tune in its
+  middle, a horn sings round C4–C5 and rests between phrases, a cello's tenor register sings. Strings
+  play `@text("pizz.").up` and back `@text("arco").up` (the preview still plays them bowed: the
+  marks are for the players), a tremolo `c'2:32` for tension, sustained notes under a moving tune.
+  Layers: one tune, one countermelody, a harmony held, a bass — doubled at the octave for weight at
+  the climax, thinned to a few players for a quiet passage. Winds and brass breathe: no part plays
+  every bar.
 - **Rhythm and articulation**: long and short notes mixed, rests that let a line breathe,
   slurs over a phrase, `@staccato`, `@accent`, and dynamics with hairpins
   (`@p … @cresc … @f`) that shape each section — every mark for a reason, the same level never

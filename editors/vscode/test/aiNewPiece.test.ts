@@ -201,6 +201,42 @@ describe('the composing guide', () => {
         assert.match(guide, /never a placeholder \(Composed, Untitled\), and a name no file in '\s*\+ 'that folder has yet — check it with the lilysharp_checkName tool/);
         assert.ok(!/\+ 'folder \(e\.g\. Composed\.lys\)/.test(guide));
     });
+    // Owner's decision 2026-11-07: the plan Compose with AI's prompt asked for went missing from the
+    // chat's composing — the guide spoke of "the plan" to a chat told to write none. The guide holds
+    // its headings now, and the steps ask for it before any note.
+    it('asks the chat for the plan, its headings in the composing guide', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /\*\*Plan before the first note\.\*\* Write the plan in your reply before you propose the piece/);
+        let at = 0;
+        for (const heading of ['LENGTH AND FORM', 'KEY, METER, TEMPO', 'HARMONY', 'THEME', 'PHRASES', 'CLIMAX', 'PARTS', 'DYNAMICS', 'CHARACTER', 'WORDS', 'ENDING']) {
+            const i = guide.indexOf(`- **${heading}**`, at);
+            assert.ok(i > 0, `${heading}, in order`);
+            at = i;
+        }
+        assert.match(guide, /THEME\*\* — its one or two bars WRITTEN OUT in this file's notes/);
+        // Before "What makes it music": read on the guide's first page, with how a piece begins.
+        assert.ok(guide.indexOf('**Plan before the first note.**') < guide.indexOf('What makes it music:'));
+        const steps = transform.slice(transform.indexOf('function newPieceSteps('), transform.indexOf('async function writeWhole'));
+        assert.match(steps, /'Before any note, write in your reply the plan the composing guide asks for — its "Plan before the first note", '/);
+    });
+    // Owner's goals 2026-11-07: a remembered melody, chords past a stock pattern, a countermelody of
+    // its own, a key change with a story, an orchestra written as it sounds, one piece throughout.
+    it('says how a tune grows, chords move, a countermelody, a key change, an orchestra and one piece', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /\*\*The tune grows from its motif\*\*: every phrase of the melody is made of the theme's motif/);
+        assert.match(guide, /\*\*Harmony that moves\*\*: past the first phrase, colour the progression/);
+        // Owner's trial the same day: a flute's A♮ over the piano's F minor.
+        assert.match(guide, /\*\*The\s+chord changes with the note\*\*: a melody's note from outside the key belongs to the accompaniment's\s+chord as well/);
+        assert.match(guide, /A pop\s+song's loop of four chords, a blues's twelve bars and a hymn's plain triads are their own idiom/);
+        assert.match(guide, /\*\*A countermelody is a second tune\*\*, not a harmony part/);
+        assert.match(guide, /\*\*A key change is an event\*\*: it comes where the piece turns/);
+        assert.match(guide, /\*\*An orchestra or a string ensemble\*\* writes each instrument where it sounds well/);
+        assert.match(guide, /\*\*The contrast is made of the theme too\*\*/);
+        // …and the plan decides each.
+        assert.match(guide, /\*\*KEY, METER, TEMPO\*\* — and a key change, if any: its bar, the chord that prepares it, the way home\./);
+        assert.match(guide, /where it is coloured \(a\s+secondary dominant, a borrowed chord, a deceptive cadence\) — or that the style keeps it plain\./);
+        assert.match(guide, /a countermelody, if any, and the\s+bar of its own peak\./);
+    });
     // Owner's request 2026-11-07: asked to compose with a score open, the chat took that score for
     // "the .lys file you were given" and proposed the new piece over it. A new piece is a new file,
     // said where the chat reads how to begin, in the tool it proposes with, and in every request.
