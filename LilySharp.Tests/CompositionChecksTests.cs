@@ -763,6 +763,31 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Rock3("f'4 g' a'2", "d,8 d, d, d, d, d, d, d,")), f => f.Contains("a semitone from the harmony"));
     }
 
+    // Owner's trial 2026-11-07: a swinging jazz blues's blue notes and its walking bass's chromatic
+    // approaches were told wrong notes. A piece written to swing speaks that language; the same notes in
+    // a piece that does not swing are told as before — the swing marking is the only difference here.
+    private static string InC(string book, bool swing) => book.Replace("tempo 168", swing ? "tempo 168 swing\nkey c major" : "tempo 168\nkey c major");
+
+    [Fact]
+    public void ABlueNoteHeldInASwingingPiece_IsNotAWrongNote()
+    {
+        // E♭ — C's minor third — held over a D bass.
+        string book = Rock3("ees'4 ees' ees'2", "d,8 d, d, d, d, d, d, d,");
+        Assert.Contains(CompositionChecks.Of(InC(book, swing: false)), f => f.Contains("a semitone from the harmony"));
+        Assert.DoesNotContain(CompositionChecks.Of(InC(book, swing: true)), f => f.Contains("a semitone from the harmony"));
+    }
+
+    [Fact]
+    public void AWalkingBasssChromaticApproach_IsNotTheHarmony_InASwingingPiece()
+    {
+        // The bass's A♭ on beat 4 leads by a semitone into the next bar's G; the tune's A over it is no wrong note.
+        string book = Rock3("g'4 b' d'' a'", "g,4 a, b, aes,");
+        Assert.Contains(CompositionChecks.Of(InC(book, swing: false)), f => f.Contains("a semitone from the harmony"));
+        Assert.DoesNotContain(CompositionChecks.Of(InC(book, swing: true)), f => f.Contains("a semitone from the harmony"));
+        // A bass note that stays — a half note, though it too moves on by a semitone — is the harmony, swing or not.
+        Assert.Contains(CompositionChecks.Of(InC(Rock3("g'4 b' a'2", "g,4 a, aes,2"), swing: true)), f => f.Contains("a semitone from the harmony"));
+    }
+
     [Fact]
     public void LowCloseChords_AndAPartInTheBasssRegister_AreSaid()
     {

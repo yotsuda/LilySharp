@@ -264,6 +264,19 @@ public class ScoreReviewTests
         Assert.Contains("E♭5 in bar 2, as the form plays them", (string?)found["what"]);
     }
 
+    // Owner's trial 2026-11-07: a swinging blues's D and G in E were told slips. In a piece written to swing
+    // the blue notes — the tonic's minor third, diminished fifth and minor seventh — are the key's own.
+    [Fact]
+    public void ABlueNoteInASwingingPiece_IsTheKeysOwn()
+    {
+        string book = Tune("c major", "c'4 d' e' g' | ees'' c'' a' g' | e' f' g' a' | g' e' c'2 |");
+        Assert.True(Says(book, "key.outside"));
+        Assert.False(Says(book.Replace("time 4/4", "time 4/4\ntempo 120 swing"), "key.outside"));
+        // A note outside the key that is no blue note is still asked of, swing or not.
+        Assert.True(Says(Tune("c major", "c'4 d' e' g' | aes'' c'' a' g' | e' f' g' a' | g' e' c'2 |")
+            .Replace("time 4/4", "time 4/4\ntempo 120 swing"), "key.outside"));
+    }
+
     [Theory]
     [InlineData("a minor", InAMinor)]                                                     // the leading tone, and its key's own
     [InlineData("a minor", "e'4 gis' b' e'' | c'' a' e' a' | e'' d'' c'' b' | a' c'' a'2 |")]   // the leading tone, a leap from anything

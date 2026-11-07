@@ -106,7 +106,7 @@ public static class KeyChecks
         int fifths = WrittenFifths(root, keys);
         if (Signature(midi, keys, fifths) is { } signature)
             findings.Add(signature);
-        findings.AddRange(Outside(midi, keys.Mode == "minor", fifths));
+        findings.AddRange(Outside(midi, keys.Mode == "minor", fifths, CompositionChecks.SwungBlueNotes(root)));
         if (ChordChecks.ChordKey.Of(keys.Tonic, keys.Mode) is { } key)
             findings.AddRange(ChordChecks.Findings(source, root, midi, key));
         return findings;
@@ -164,10 +164,15 @@ public static class KeyChecks
     /// holds, Cafe-no-Midori), nor
     /// the bottom of the harmony: a line in a bass's register, or the lowest note sounding, plays the root of
     /// whatever chord is there, and an out-of-key root is that chord's, not a slip (the census: nearly all
-    /// of 168 such notes were in the bass lines of the owner's books, under chords no part wrote out).</summary>
-    private static IEnumerable<CompositionFinding> Outside(MidiFile midi, bool minor, int fifths)
+    /// of 168 such notes were in the bass lines of the owner's books, under chords no part wrote out).
+    /// In a piece that swings, its blue notes (<paramref name="blueNotes"/>,
+    /// <see cref="CompositionChecks.SwungBlueNotes"/>) are the key's own, as a minor key's raised sixth
+    /// and seventh are (owner's trial 2026-11-07: a swinging blues's D and G in E were told slips).</summary>
+    private static IEnumerable<CompositionFinding> Outside(MidiFile midi, bool minor, int fifths, int[]? blueNotes = null)
     {
         var scale = ScaleOf(fifths);
+        if (blueNotes != null)
+            scale.UnionWith(blueNotes);
         if (minor)
         {
             // The raised sixth and seventh are the minor key's own (in A minor, F♯ and G♯): from its

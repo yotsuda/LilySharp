@@ -552,7 +552,7 @@ public static class CompositionChecks
                     + "figure stays within an octave and a half, climbing from its bass by the chord's tones and turning back.") { Parts = [lefts[0]], Bars = [.. over.Select(o => o.Bar)] });
         }
 
-        findings.AddRange(Clashes(midi, melodies, barList, fifths));
+        findings.AddRange(Clashes(midi, melodies, barList, fifths, SwungBlueNotes(root)));
         findings.AddRange(LowChords(midi, barList, fifths));
         findings.AddRange(ThickChordsOnADistortedSound(midi, parts, barList, fifths));
         // A band's part crowding its bass (owner's trial 2026-10-30: a rock guitar mostly D2–D3 over a
@@ -765,10 +765,33 @@ public static class CompositionChecks
     private const int ClashFewest = 3;
     private const double ClashShare = 0.05;
 
+    /// <summary>
+    /// The blue notes of a piece written to swing (a <c>tempo … swing</c>): its home key's tonic's minor
+    /// third, diminished fifth and minor seventh, as pitch classes; null for a piece that does not swing,
+    /// or that writes no key.
+    /// </summary>
+    /// <remarks>
+    /// Jazz's and the blues's own language (owner's trial 2026-11-07, a jazz piano trio's swinging blues in E
+    /// written as the composing guide asks): its tune's D and G over E7 and A7, and its walking bass's
+    /// chromatic approach notes, were told wrong notes and slips. The swing marking says which language a
+    /// piece speaks; a piece that does not swing is read as before.
+    /// </remarks>
+    internal static int[]? SwungBlueNotes(SyntaxNode root)
+    {
+        if (!root.DescendantNodes<TempoDeclarationSyntax>().Any(t => t.SwingSubdivision > 0) || PlayedKeys(root) is not { } keys)
+            return null;
+        int tonic = PitchClass(keys.Home.Tonic);
+        return [(tonic + 3) % 12, (tonic + 6) % 12, (tonic + 10) % 12];
+    }
+
     /// <summary>A melody's notes held on the beat (a quarter or longer) a semitone or a minor ninth over
     /// a note another part sounds with them at their start, or a semitone under one. A suspension is
-    /// struck before the harmony moves under it, so it is not one.</summary>
-    private static IEnumerable<CompositionFinding> Clashes(MidiFile midi, HashSet<string> melodies, List<int> barList, int fifths)
+    /// struck before the harmony moves under it, so it is not one. In a piece that swings
+    /// (<paramref name="blueNotes"/>), a blue note in the tune is the language's own, and so is a walking
+    /// line's chromatic approach — a note of a quarter or less moving straight on by a semitone — which is
+    /// not the harmony the tune is heard against.</summary>
+    private static IEnumerable<CompositionFinding> Clashes(MidiFile midi, HashSet<string> melodies, List<int> barList, int fifths,
+        int[]? blueNotes = null)
     {
         int tpq = midi.TicksPerQuarterNote;
         var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9)
@@ -780,7 +803,13 @@ public static class CompositionChecks
             int voice = voices.GetValueOrDefault(part);
             var line = notes.Where(n => n.Part == part && n.Voice == voice).GroupBy(n => n.StartTick).Where(g => g.Count() == 1).Select(g => g.First()).ToList();
             var others = notes.Where(n => n.Part != part || n.Voice != voice).ToList();
-            var held = line.Where(m => m.DurationTicks >= tpq && (m.StartTick - barList.LastOrDefault(b => b <= m.StartTick)) % tpq == 0).ToList();
+            // A walking line's chromatic approach: a quarter or less, its line's next note starting as it ends,
+            // a semitone away (a swinging piece's alone; see SwungBlueNotes).
+            bool Approach((string Part, int Voice, int StartTick, int DurationTicks, int Pitch) n)
+                => blueNotes != null && n.DurationTicks <= tpq && notes.Any(o => o.Part == n.Part && o.Voice == n.Voice
+                    && o.StartTick == n.StartTick + n.DurationTicks && System.Math.Abs(o.Pitch - n.Pitch) == 1);
+            var held = line.Where(m => m.DurationTicks >= tpq && (m.StartTick - barList.LastOrDefault(b => b <= m.StartTick)) % tpq == 0
+                && !(blueNotes != null && blueNotes.Contains((m.Pitch % 12 + 12) % 12))).ToList();
             var clashes = new List<(int Bar, int Note, int Against)>();
             foreach (var m in held)
             {
@@ -788,7 +817,8 @@ public static class CompositionChecks
                 // seventh over the bass, a chord's colour (owner's trial 2026-10-30: B♭ over a C♭ bass,
                 // ♭VImaj7, was told a wrong note).
                 var against = others.FirstOrDefault(n => n.StartTick <= m.StartTick && m.StartTick < n.StartTick + n.DurationTicks
-                    && (m.Pitch - n.Pitch) is var gap && (gap > 0 ? gap % 12 == 1 || gap == 11 : -gap % 12 is 1 or 11));
+                    && (m.Pitch - n.Pitch) is var gap && (gap > 0 ? gap % 12 == 1 || gap == 11 : -gap % 12 is 1 or 11)
+                    && !Approach(n));
                 if (against.Part != null)
                     clashes.Add((barList.Count(b => b <= m.StartTick), m.Pitch, against.Pitch));
             }
