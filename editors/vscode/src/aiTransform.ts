@@ -1027,7 +1027,11 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
 async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
     const description = await vscode.window.showInputBox({
         title: 'Lily# — Compose with Copilot',
-        prompt: 'What should the AI compose? Copilot\'s chat writes it into a new, unsaved score, its thinking in view.',
+        // The model decides the piece more than anything the guide says (owner's trials 2026-11-07:
+        // the same guide, a light model kept little of it and Claude Sonnet 5.5 nearly all), and the
+        // chat's Auto takes a light one for a short request.
+        prompt: 'What should the AI compose? Copilot\'s chat writes it into a new, unsaved score, its thinking in view. '
+            + 'Pick a strong model in the chat\'s model menu: Auto may take a light one for a short request.',
         placeHolder: 'e.g. a dramatic string quartet in D minor, about 3 minutes, slow – fast – slow',
         ignoreFocusOut: true,
     });

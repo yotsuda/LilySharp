@@ -204,6 +204,12 @@ describe('the composing guide', () => {
     // Owner's decision 2026-11-07: the plan Compose with AI's prompt asked for went missing from the
     // chat's composing — the guide spoke of "the plan" to a chat told to write none. The guide holds
     // its headings now, and the steps ask for it before any note.
+    // Owner's trials 2026-11-07: the same guide, GPT-6 Luna kept little of it and Claude Sonnet 5.5
+    // nearly all — and the chat's Auto had taken Luna for "a short request".
+    it('tells the musician to pick a strong model in the chat', () => {
+        const fn = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runAiTransform('));
+        assert.match(fn, /'Pick a strong model in the chat\\'s model menu: Auto may take a light one for a short request\.'/);
+    });
     it('asks the chat for the plan, its headings in the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*Plan before the first note\.\*\* Write the plan in your reply before you propose the piece/);
