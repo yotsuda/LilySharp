@@ -122,6 +122,43 @@ public class ChordRowMidiTests
             Assert.Equal(new[] { 0, Bar }, flat.Select(n => n.Item1).Distinct());
     }
 
+    /// <summary>
+    /// A row's bar sounds on THE METER OF THAT BAR (SectionMeterPlan.MeterOfBar — the one
+    /// answer the page's grid, the MusicXML and the LilyPond twin read too): a <c>time</c>
+    /// written inside the section's music moves the bar's length and its slot grid from
+    /// there, for a flat track and for a row written in the section alike. Until 2026-11-07
+    /// both took the meter the section opened with: under <c>time 3/4</c> the row's bars ran a
+    /// beat long and <c>G . A</c> put A at beat 3⅔ (Lab sessions/p1120/probe/m-flat).
+    /// </summary>
+    [Theory]
+    [InlineData("section A { melody { c''1 | time 3/4 d''4 d''4 d''4 | e''2. | } }\nchords harmony { C | G . A | Am . . | }")]
+    [InlineData("section A { melody { c''1 | time 3/4 d''4 d''4 d''4 | e''2. | } chords harmony { C | G . A | Am . . | } }")]
+    public void ARow_UnderATimeWrittenInTheMusic_SoundsOnThatBarsMeter(string music)
+    {
+        var midi = Export($"time 4/4\npart melody\n{music}\nform {{ A }}\nscore {{ chords harmony  staff melody }}\n");
+        // C at bar 1; G at bar 2 (a 3/4 bar from here); A on its beat 3; Am at bar 3.
+        Assert.Equal(new[] { 0, Bar, Bar + 2 * 480, Bar + 3 * 480 }, ChordNotes(midi).Select(n => n.Start).Distinct().ToArray());
+    }
+
+    [Theory]
+    [InlineData("score { chords harmony  staff melody }", "melody")]
+    [InlineData("score { chords harmony }", "harmony (chords)")]
+    public void ARow_UnderATimeWrittenInTheMusic_IsInTheMusicXml_OnThatBarsMeter(string score, string partName)
+    {
+        var xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(
+            "time 4/4\npart melody\nsection A { melody { c''1 | time 3/4 d''4 d''4 d''4 | e''2. | } }\n"
+            + $"chords harmony {{ C | G . A | Am . . | }}\nform {{ A }}\n{score}\n")).ToXml();
+        var part = xml.Descendants("part").Single(p =>
+            xml.Descendants("score-part").Single(sp => (string)sp.Attribute("id")! == (string)p.Attribute("id")!)
+               .Element("part-name")!.Value == partName);
+        int divisions = (int)part.Descendants("divisions").First();
+        var bar2 = part.Elements("measure").Single(m => (string)m.Attribute("number")! == "2");
+        // The bar is 3/4 (the lead sheet's own part writes the change too) and A stands on beat 3.
+        Assert.Equal("3", bar2.Descendants("beats").Single().Value);
+        var a = bar2.Elements("harmony").Single(h => h.Element("root")!.Element("root-step")!.Value == "A");
+        Assert.Equal(2 * divisions, (int)a.Element("offset")!);
+    }
+
     [Fact]
     public void AFlatTopLevelRow_OnADaCapo_ReadsItsBarsAgain()
     {
@@ -161,6 +198,26 @@ public class ChordRowMidiTests
         string flat = Ly($"{sections}\nchords harmony {{ {row} }}", form);
         Assert.Contains("\\chordmode", flat);
         Assert.Equal(Ly(same, form), flat);
+    }
+
+    /// <summary>
+    /// With NO form, the twin plays every declared section once in declaration order (as the
+    /// music stream and the page do) and a flat track gives each the bars it prints — its
+    /// pickup, its meter, its key. Until 2026-11-07 the flat bars were written whole at the
+    /// head: <c>s1 | c1 | g1*2/3 a1*1/3 |</c> for a one-beat pickup and a 3/4 section.
+    /// </summary>
+    [Theory]
+    [InlineData("section A { partial 4 melody { g'4 | c''1 | } }\nsection B { time 3/4 melody { d''2. | } }", "| C | G . A |",
+        "section A { partial 4 melody { g'4 | c''1 | } chords harmony { | C | } }\nsection B { time 3/4 melody { d''2. | } chords harmony { G . A | } }")]
+    [InlineData("section A { key d major melody { d''1 | } }\nsection B { melody { c''1 | time 3/4 d''2. | } }", "I | C | G . A |",
+        "section A { key d major melody { d''1 | } chords harmony { I | } }\nsection B { melody { c''1 | time 3/4 d''2. | } chords harmony { C | G . A | } }")]
+    public void AFlatTopLevelRow_WithNoForm_IsInTheLilyPondTwin_AsItsBarsWrittenInTheSections(string sections, string row, string same)
+    {
+        static string Ly(string music) => new LilySharp.Core.LilyPond.LilyPondExporter()
+            .Export(SyntaxTree.Parse($"time 4/4\npart melody\n{music}\nscore {{ chords harmony  staff melody }}\n"));
+        string flat = Ly($"{sections}\nchords harmony {{ {row} }}");
+        Assert.Contains("\\chordmode", flat);
+        Assert.Equal(Ly(same), flat);
     }
 
     [Fact]

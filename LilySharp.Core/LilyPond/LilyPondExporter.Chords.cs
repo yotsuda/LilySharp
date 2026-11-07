@@ -411,23 +411,18 @@ public sealed partial class LilyPondExporter
     /// A by-part track (<c>chords P { section A { … } }</c>) registers each inner section
     /// under its name; a flat block registers under the section that encloses it; a flat
     /// block at top level gives each section of the form the bars it prints
-    /// (<see cref="Semantics.FlatChordRows"/>, <see cref="AppendSilentPlay"/>), and with no
-    /// form plays once, first (the collector anchors it at bar 0).
+    /// (<see cref="Semantics.FlatChordRows"/>, <see cref="AppendSilentPlay"/>) — with no form,
+    /// each declared section in declaration order (the collector anchors it at bar 0).
     /// </summary>
     private List<SyntaxNode> OrderedChordItems(List<ChordPartBlockSyntax> blocks,
         FormDeclarationSyntax? form, List<SectionDeclarationSyntax> allSections)
     {
         _sectionHeaders = Semantics.SectionHeaders.Read(allSections);
-        _allSections = allSections;
         var byName = new Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)>(
             StringComparer.Ordinal);
-        var inOrder = new List<(SectionDeclarationSyntax Section, SyntaxNode Container)>();
         var loose = new List<ChordPartBlockSyntax>();
         void Register(SectionDeclarationSyntax section, SyntaxNode container)
-        {
-            byName[section.SectionName] = (section, container);
-            inOrder.Add((section, container));
-        }
+            => byName[section.SectionName] = (section, container);
         foreach (var block in blocks)
         {
             if (block.HasSections)
@@ -459,14 +454,20 @@ public sealed partial class LilyPondExporter
         }
         else
         {
-            foreach (var block in loose)
-                result.AddRange(ChordBars(block, (_homeTonic.Step, _homeKeySharps)));
-            foreach (var entry in inOrder)
-            {
-                result.AddRange(ChordBars(entry.Container, ChordKeyFor(entry.Section.SectionName),
-                    meters: SectionBarMeters(entry.Section, entry.Section.SectionName)));
-                result.AddRange(PaddingBars(entry.Container));
-            }
+            // No form: every declared section plays once, in declaration order (the music
+            // stream's OrderedMusic and the page agree), and a flat track gives each the bars
+            // it prints, as under a form. Until 2026-11-07 the flat bars were written whole at
+            // the head — in the home meter, with no pickup — and a section without a cell of
+            // this row was skipped, so the chord stream parted from the music's (Lab
+            // sessions/p1120/probe/f-flat: `s1 | c1 | g1*2/3 a1*1/3 |` for `s4 | c1 | g2 a4 |`).
+            _flatChordBars = loose.Count > 0 ? Semantics.FlatChordRows.Of(loose) : null;
+            var played = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var declaration in allSections)
+                if (played.Add(declaration.SectionName))
+                    AppendSection(declaration.SectionName, byName, result);
+            if (_flatChordBars != null)
+                result.AddRange(ChordBarsOf(_flatChordBars.Rest().SelectMany(r => r.Items), (_homeTonic.Step, _homeKeySharps)));
+            _flatChordBars = null;
         }
         _chordTrack = false;
         return result;
@@ -494,113 +495,21 @@ public sealed partial class LilyPondExporter
         => _sectionHeaders.Partials.GetValueOrDefault(sectionName)?.ToFraction();
 
     /// <summary>
-    /// The meter of each bar of a section's play, as its MUSIC writes it — the length a chord
-    /// row's bar must have to stay with it. The section starts on its header's <c>time</c>, or
-    /// the score's (a section resets the meter, as the page's collector does), and each
-    /// <c>time</c> inside the section's first music part moves it from the bar it stands in.
-    /// Null when the section has no music part to read.
+    /// The meter of each bar of a section's play — the length a chord row's bar must have to
+    /// stay with the music. The section opens on its header's <c>time</c>, or the score's (a
+    /// section resets the meter, as the page's collector does), and every <c>time</c> ANY part
+    /// writes at a bar's start moves it from that bar (<see cref="SectionMeterPlan.MeterOfBar"/>
+    /// — the one answer the MIDI, the MusicXML and the page's grid read too; until 2026-11-07
+    /// this reader walked the first part's music itself, a second spelling). One length per
+    /// canonical bar of the section; past them the last holds (<see cref="ChordBarsOf"/>).
     /// </summary>
-    /// <remarks>
-    /// Read off the first part block that is not a chord row, in document order, one voice
-    /// branch only (a <c>voice { } { }</c> writes each bar once per voice). A <c>time</c>
-    /// written only inside a phrase the part references is not seen — the section keeps the
-    /// meter it had — and a <c>repeat</c>'s body counts its bars once; past the bars read, the
-    /// last meter read holds.
-    /// </remarks>
-    private List<Fraction>? SectionBarMeters(SectionDeclarationSyntax section, string sectionName)
+    private List<Fraction> SectionBarMeters(string sectionName)
     {
-        var start = _bars.HomeMeter.Length;
+        var opening = (_bars.HomeMeter.Beats, _bars.HomeMeter.BeatType);
         if (_sectionHeaders.Times.GetValueOrDefault(sectionName) is { IsSenzaMisura: false } headerTime)
-            start = new Fraction(headerTime.Beats, headerTime.BeatType);
-
-        // The music of the name: in the section given, else in any declaration of the name
-        // — a by-part chord track (`chords prog { section Bridge { … } }`) registers its OWN
-        // inner section, which holds no part block, and until 2026-10-03 that read as "no
-        // meters" and the bars fell back to the SCORE's: a row under a 3/4 Bridge wrote
-        // `d1:m` and LilyPond's bar check failed there (Lab corpora/dogfood/collide,
-        // sessions/p767/twin). With no music to read at all, the header's meter holds.
-        PartBlockSyntax? part = FirstPartBlock(section);
-        if (part is null)
-            foreach (var declaration in _allSections)
-                if (declaration.SectionName == sectionName && FirstPartBlock(declaration) is { } other)
-                {
-                    part = other;
-                    break;
-                }
-        if (part is null)
-            return [start];
-
-        var meters = new List<Fraction>();
-        var current = start;
-        bool pendingNotes = false;
-        void Walk(SyntaxNode node)
-        {
-            // A voice span: its first branch only.
-            if (node.SlotCount > 0 && node.GetChild(0) is SyntaxTokenNode { Kind: SyntaxKind.VoiceKeyword })
-            {
-                for (int i = 1; i < node.SlotCount; i++)
-                    if (node.GetChild(i) is MusicBlockSyntax branch) { Walk(branch); return; }
-                return;
-            }
-            for (int i = 0; i < node.SlotCount; i++)
-            {
-                switch (node.GetChild(i))
-                {
-                    case TimeSignatureSyntax { IsSenzaMisura: false } t:
-                        current = new Fraction(t.Beats, t.BeatType);
-                        break;
-                    case BarlineSyntax:
-                        meters.Add(current);
-                        pendingNotes = false;
-                        break;
-                    case SyntaxTokenNode:
-                        break;
-                    case SyntaxNode child:
-                        pendingNotes = true;
-                        Walk(child);
-                        break;
-                }
-            }
-        }
-        Walk(part);
-        if (pendingNotes)
-            meters.Add(current);
-        if (meters.Count == 0)
-            meters.Add(start);
-        // The score's meter (SectionMeterPlan): a `time` ANY part writes at a bar's start is
-        // that bar's meter, over the section's whole length — the first part may write fewer
-        // bars than the section, or none of the changes.
-        if (_meterPlan.ChangesOf(sectionName) is { } changes)
-        {
-            int length = Math.Max(meters.Count, _sectionBars.Canonical.GetValueOrDefault(sectionName));
-            var own = meters;
-            var merged = new List<Fraction>(length);
-            var running = own[0];
-            for (int i = 0; i < length; i++)
-            {
-                if (i < own.Count && (i == 0 || own[i] != own[i - 1]))
-                    running = own[i];   // the first part's own change
-                if (changes.TryGetValue(i, out var t) && !t.IsSenzaMisura)
-                    running = new Fraction(t.Beats, t.BeatType);
-                merged.Add(running);
-            }
-            return merged;
-        }
-        return meters;
+            opening = (headerTime.Beats, headerTime.BeatType);
+        return _meterPlan.BarMeters(sectionName, _sectionBars.Canonical.GetValueOrDefault(sectionName), opening);
     }
-
-    private static PartBlockSyntax? FirstPartBlock(SectionDeclarationSyntax section)
-    {
-        foreach (var node in section.DescendantNodes())
-            if (node is PartBlockSyntax pb)
-                return pb;
-        return null;
-    }
-
-    /// <summary>Every section declaration of the book in document order (the caller's
-    /// <c>allSections</c>), for <see cref="SectionBarMeters"/> to find the music of a name
-    /// whose chord row was registered under its own inner section.</summary>
-    private List<SectionDeclarationSyntax> _allSections = new();
 
     /// <summary>
     /// One chord container's bars as stream items: each bar's slots pre-spelled into ONE

@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1121,6 +1121,7 @@ public sealed partial class MeasureCollector
                 voiceName == null ? null : renderSpec?.VerseVoiceMapOf(voiceName));
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
+        _chordNameCollector.MeterByMeasure = MeterTimeline(measures, _v.Meta.TimeBeats, _v.Meta.TimeBeatType);
         // (The nameless `chords { }` auto-attach is gone — LYS0032. A chord part
         // renders only where a score places its row.)
         if (attachedChordPart != null)
@@ -1241,6 +1242,51 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
+    /// THE SCORE'S METER along a voice's measures, as a timeline: (start measure, beats, beat
+    /// type), opening on <paramref name="beats"/>/<paramref name="beatType"/> (the score's — the
+    /// opening section's header, when the walk absorbed it) and re-armed at every measure whose
+    /// items carry a metered <see cref="TimeSignatureChangeItem"/>; an unmetered change
+    /// (<c>time none</c>) keeps the last metered pair, as the lengths do. One reading for every
+    /// consumer that asks "the meter at measure i" of a finished voice — the section-boundary
+    /// split test here and the chord rows' grid (<see cref="ChordNameCollector.MeterByMeasure"/>).
+    /// </summary>
+    internal static List<(int Measure, int Beats, int BeatType)> MeterTimeline(
+        IReadOnlyList<Measure> measures, int beats, int beatType)
+    {
+        var timeline = new List<(int Measure, int Beats, int BeatType)> { (0, beats, beatType) };
+        for (int i = 0; i < measures.Count; i++)
+            foreach (var item in measures[i].Items)
+                if (item is TimeSignatureChangeItem tsc && !tsc.NewTime.SenzaMisura
+                    && (tsc.NewTime.Beats, tsc.NewTime.BeatType) != (timeline[^1].Beats, timeline[^1].BeatType))
+                    timeline.Add((i, tsc.NewTime.Beats, tsc.NewTime.BeatType));
+        return timeline;
+    }
+
+    /// <summary>The meter timeline the chord rows grid their bars on: the longest music
+    /// voice's (<see cref="MeterTimeline"/>), or — on a rows-only sheet, which has none — the
+    /// structure's bar table (<see cref="RowsOnlyBarLengths"/>: the section headers' meters).</summary>
+    private List<(int Measure, int Beats, int BeatType)> RowMeterTimeline(
+        Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames,
+        IReadOnlyList<RowsOnlyBar>? rowsOnlyBars)
+    {
+        Voice? longest = null;
+        foreach (var (name, voices) in staffVoices)
+            if (!rowNames.Contains(name))
+                foreach (var v in voices)
+                    if (longest == null || v.Measures.Length > longest.Measures.Length)
+                        longest = v;
+        if (longest != null)
+            return MeterTimeline(longest.Measures, _v.Meta.TimeBeats, _v.Meta.TimeBeatType);
+        var timeline = new List<(int Measure, int Beats, int BeatType)> { (0, _v.Meta.TimeBeats, _v.Meta.TimeBeatType) };
+        if (rowsOnlyBars != null)
+            for (int m = 0; m < rowsOnlyBars.Count; m++)
+                if (rowsOnlyBars[m].Meter is { SenzaMisura: false } meter
+                    && (meter.Beats, meter.BeatType) != (timeline[^1].Beats, timeline[^1].BeatType))
+                    timeline.Add((m, meter.Beats, meter.BeatType));
+        return timeline;
+    }
+
+    /// <summary>
     /// The measure indices at which a section opens with the rest of the bar its
     /// predecessor left short — the two together exactly one bar of the meter in force (a
     /// mid-piece <c>time</c> is read from the change items, as everywhere else) — each with
@@ -1273,14 +1319,13 @@ public sealed partial class MeasureCollector
 
         // The meter in force at each measure — the score's, re-armed by every metered `time`
         // change item met on the way (an unmetered change keeps the last metered length).
-        var meter = TimeSignatureFraction;
+        var timeline = MeterTimeline(measures, _v.Meta.TimeBeats, _v.Meta.TimeBeatType);
         var meters = new Fraction[measures.Count];
-        for (int i = 0; i < measures.Count; i++)
+        for (int i = 0, t = 0; i < measures.Count; i++)
         {
-            foreach (var item in measures[i].Items)
-                if (item is TimeSignatureChangeItem tsc && !tsc.NewTime.SenzaMisura)
-                    meter = new Fraction(tsc.NewTime.Beats, tsc.NewTime.BeatType);
-            meters[i] = meter;
+            while (t + 1 < timeline.Count && timeline[t + 1].Measure <= i)
+                t++;
+            meters[i] = new Fraction(timeline[t].Beats, timeline[t].BeatType);
         }
 
         foreach (int i in starts)
@@ -1784,6 +1829,24 @@ public sealed partial class MeasureCollector
             EnsureSectionStartsForRows(tree.GetRoot());
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
+        // A ROW's bar is as long as the MUSIC's bar at that index, and gridded on its meter.
+        // The row grids its slots on the score meter (ChordRhythm / the even spread), so a
+        // PICKUP bar — or any bar under a mid-piece meter change the row never saw — came out
+        // a whole meter long and priced the bar for that length: amazing-grace's one-beat
+        // pickup stood 6.34 staff spaces wider with its chords row than without (MEASURED,
+        // session 350, scratch/p351/pk: 20.46 against 14.12 to the first bar line; LilyPond
+        // 14.585). The lengths are fitted below (FitRowsToMusicBars); the GRID takes the
+        // meter of each bar here (ChordNameCollector.MeterByMeasure, session 1120).
+        // LILYPOND-REF: ly/engraver-init.ly:756-759 Timing_translator (\alias Timing) —
+        //   the Score holds the one Timing every context reads, so a ChordNames or Lyrics
+        //   bar IS the staff's bar, pickup and meter change included.
+        var rowNames = new HashSet<string>(_lyricsRowNames);
+        foreach (var (rowName, _, _, _) in pendingChordRows)
+            rowNames.Add(rowName);
+        // …and a score with NO music voice reads the same clock off its structure
+        // (RowsOnlyBarLengths): the header's pickup and meter, which no walk applied to a row.
+        var rowsOnlyBars = RowsOnlyBarLengths(tree.GetRoot(), staffVoices, rowNames);
+        _chordNameCollector.MeterByMeasure = RowMeterTimeline(staffVoices, rowNames, rowsOnlyBars);
         // How many rows of each (track, diagram tuning) the score places: the LAST of them
         // draws the diagrams, the ones above it the names alone — name, name, diagram
         // (ChordNameCollector.DiagramsDrawOnALaterRow).
@@ -1861,27 +1924,13 @@ public sealed partial class MeasureCollector
             }
         }
 
-        // A ROW's bar is as long as the MUSIC's bar at that index. The row grids its slots
-        // on the score meter (ChordRhythm / the even spread), so a PICKUP bar — or any bar
-        // under a mid-piece meter change the row never saw — came out a whole meter long
-        // and priced the bar for that length: amazing-grace's one-beat pickup stood 6.34
-        // staff spaces wider with its chords row than without (MEASURED, session 350,
-        // scratch/p351/pk: 20.46 against 14.12 to the first bar line; LilyPond 14.585).
-        // LILYPOND-REF: ly/engraver-init.ly:756-759 Timing_translator (\alias Timing) —
-        //   the Score holds the one Timing every context reads, so a ChordNames or Lyrics
-        //   bar IS the staff's bar, pickup and meter change included.
-        var rowNames = new HashSet<string>(_lyricsRowNames);
-        foreach (var (rowName, _, _, _) in pendingChordRows)
-            rowNames.Add(rowName);
-        // …and a score with NO music voice reads the same clock off its structure
-        // (RowsOnlyBarLengths): the header's pickup and meter, which no walk applied to a row.
+        // The rows' bar lengths follow the music's (see the remark above the row walk).
         var rowStaffIndex = new Dictionary<string, int>();
         foreach (var (rowName, rowIdx, _, _) in pendingChordRows)
             rowStaffIndex[rowName] = rowIdx;
         foreach (var (rowName, rowIdx, _) in pendingLyricsRows)
             rowStaffIndex[rowName] = rowIdx;
-        FitRowsToMusicBars(staffVoices, rowNames, RowsOnlyBarLengths(tree.GetRoot(), staffVoices, rowNames),
-            rowStaffIndex);
+        FitRowsToMusicBars(staffVoices, rowNames, rowsOnlyBars, rowStaffIndex);
 
         // A rows-only score prints its section labels from the FIRST row's
         // measures (that row is the PrimaryContentStaff fallback the mark
@@ -2653,6 +2702,7 @@ public sealed partial class MeasureCollector
                 voiceName == null ? null : renderSpec?.VerseVoiceMapOf(voiceName));
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
+        _chordNameCollector.MeterByMeasure = MeterTimeline(track0, _v.Meta.TimeBeats, _v.Meta.TimeBeatType);
         // Attached chords on a multi-voice single staff — collected here because
         // Collect's own CollectAttached is skipped by the multi-voice early return.
         if (attachedChordPart != null)

@@ -4,6 +4,12 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## Unreleased
+
+- `[midi]` `[musicxml]` `[ly]` **A chord row's bar is read in the meter of that bar.** A `time` written inside a section's music moves the bar's length and its slot grid from there. The MIDI, the MusicXML and the LilyPond twin read every bar of a row — a flat `chords X { … }` at the top of the file or a row written in the section — in the meter the section opened with, so under a `time 3/4` the row sounded a beat long a bar and `G . A` put A at beat 3⅔. The three now ask one place for the score's meter at each bar.
+- `[engraving]` `[check]` **A chord row's slots are gridded on the meter of their bar.** The page gridded every bar of a row on the score's opening meter and only then fitted the bar to the music's length, so `G . A` under a 3/4 section was warned off the grid (LYS2009) though it stood on the beats, and under 5/8 the `[3,2]` groups were not the grid at all.
+- `[ly]` **A flat chord track in a book with no form follows its sections.** `lysc ly` wrote the track's bars whole at the head, in the home meter and with no pickup (`s1 | c1 | g1*2/3 a1*1/3 |` where the sections say `s4 | c1 | g2 a4 |`), and skipped a section the row wrote no cell for; each declared section now takes the bars it prints, in declaration order, as the page and the sound do.
+
 ## 0.15.0
 
 - `[engraving]` **Two voices' grace notes at one moment stand in one column.** Each voice's graces stood against its own note, so the lower voice's grace stood 1.4 spaces before the note where the upper's needed 1.9, and a second between the voices drew the two heads on top of each other. They now share one column per grace moment, step aside for a second as two voices' notes do, and pack their accidentals together, as in LilyPond.

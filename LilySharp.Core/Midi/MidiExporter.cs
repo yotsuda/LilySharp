@@ -1276,7 +1276,7 @@ public sealed class MidiExporter
         {
             if (chordTrack.PartName is { } row && _soundingChordRows.Contains(row))
                 _currentTick = PlayChordRow(Svg.Collector.ChordNameCollector.SectionItems(section),
-                    row, _currentTick, track, _strokesByRow.GetValueOrDefault(row));
+                    row, _currentTick, track, _strokesByRow.GetValueOrDefault(row), SectionMeterOfBar(section.SectionName));
             return;
         }
 
@@ -1495,18 +1495,28 @@ public sealed class MidiExporter
     private int PlaySectionChordRows(SectionDeclarationSyntax section, MidiTrack track)
     {
         int start = _currentTick, end = _currentTick;
+        var meterOfBar = SectionMeterOfBar(section.SectionName);
         for (int i = 0; i < section.SlotCount; i++)
             if (section.GetChild(i) is ChordPartBlockSyntax { HasSections: false, PartName: { } row } cell
                 && _soundingChordRows.Contains(row))
-                end = Math.Max(end, PlayChordRow(cell.Items, row, start, track, _strokesByRow.GetValueOrDefault(row)));
+                end = Math.Max(end, PlayChordRow(cell.Items, row, start, track, _strokesByRow.GetValueOrDefault(row), meterOfBar));
         // A flat chord track gives this play the bars it prints. A section declared twice is one play.
         if (_flatRowsPlay != _sectionPlaySerial)
         {
             _flatRowsPlay = _sectionPlaySerial;
             foreach (var (flat, items) in _flatRows.Take(_sectionBars.Canonical.GetValueOrDefault(section.SectionName)))
-                end = Math.Max(end, PlayChordRow(items, flat, start, track, _strokesByRow.GetValueOrDefault(flat)));
+                end = Math.Max(end, PlayChordRow(items, flat, start, track, _strokesByRow.GetValueOrDefault(flat), meterOfBar));
         }
         return end;
+    }
+
+    /// <summary>The score's meter at each bar of <paramref name="sectionName"/>'s play, from
+    /// the meter the section opened with (the one in force here: <c>_bars.OpenSection</c>
+    /// applied its header) — <see cref="Svg.Collector.SectionMeterPlan.MeterOfBar"/>.</summary>
+    private Func<int, (int Beats, int BeatType)> SectionMeterOfBar(string sectionName)
+    {
+        var opening = (_bars.Meter.Beats, _bars.Meter.BeatType);
+        return bar => _meterPlan.MeterOfBar(sectionName, bar, opening);
     }
 
     // The chord tracks written flat at the top level, and the section play that last took bars of them.
@@ -1652,20 +1662,36 @@ public sealed class MidiExporter
     /// ChordNames context and performs nothing for it. A pickup bar keeps the full meter's
     /// grid and cuts what runs past its end.
     /// </remarks>
+    /// <param name="meterOfBar">The score's meter at each bar of the row, by bar index
+    /// (<see cref="Svg.Collector.SectionMeterPlan.MeterOfBar"/> of the section the row sounds
+    /// in): a <c>time</c> a part writes inside the section moves the bar's length and its grid
+    /// from there. Null (a row past every section) keeps the meter in force. Until 2026-11-07
+    /// every bar took the meter the section opened with, so under a <c>time 3/4</c> written in
+    /// the music the row ran a beat long a bar (Lab sessions/p1120/probe/m-flat).</param>
     private int PlayChordRow(IEnumerable<SyntaxNode> items, string rowName, int startTick, MidiTrack track,
-        IReadOnlyList<Stroke>? strokes = null)
+        IReadOnlyList<Stroke>? strokes = null, Func<int, (int Beats, int BeatType)>? meterOfBar = null)
     {
         string part = rowName + ChordRowTrackSuffix;
         int timbre = PartTimbre(part);
         // The row's OWN lane: a row writes no dynamic, so this is the default — not whatever
         // the part lane played before it left in _velocity (the leak the per-part lanes close).
         int velocity = Math.Max(1, LaneVelocity(part) * 7 / 10);
+        int barIndex = 0;
+        int gridBeats = _bars.Meter.Beats, gridBeatType = _bars.Meter.BeatType;
         int barTicks = FractionToTicks(_bars.MeterLength);
+        void ArmBar()
+        {
+            if (meterOfBar == null)
+                return;
+            (gridBeats, gridBeatType) = meterOfBar(barIndex);
+            barTicks = FractionToTicks(new Fraction(gridBeats, gridBeatType));
+        }
+        ArmBar();
         // A section's pickup shortens the row's FIRST bar as it shortens every part's (the
         // page's pickup measure): amazing-grace's row opens with an empty `|` over the
         // one-beat pickup, and a full bar there played every later bar a bar late and ran the
         // section past its parts.
-        int thisBarTicks = FractionToTicks(_bars.BarLength);
+        int thisBarTicks = _bars.BarLength != _bars.MeterLength ? FractionToTicks(_bars.BarLength) : barTicks;
         int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
         int barStart = startTick;
         var bar = new List<SyntaxNode>();
@@ -1689,7 +1715,7 @@ public sealed class MidiExporter
                 typedDrop = Semantics.ChordTrackPitch.TypedDrop(root, rowName, Semantics.ConcertPitch.FileIsConcert(root));
             }
             foreach (var (node, timing, duration) in
-                     Svg.Collector.ChordNameCollector.SlotGroups(bar, _bars.Meter.Beats, _bars.Meter.BeatType, out _))
+                     Svg.Collector.ChordNameCollector.SlotGroups(bar, gridBeats, gridBeatType, out _))
             {
                 if (node is not ChordEntrySyntax entry
                     || Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, tonicStep, _keySharps)
@@ -1752,6 +1778,8 @@ public sealed class MidiExporter
         {
             Sound();
             barStart += thisBarTicks;
+            barIndex++;
+            ArmBar();
             thisBarTicks = barTicks;
         }
 

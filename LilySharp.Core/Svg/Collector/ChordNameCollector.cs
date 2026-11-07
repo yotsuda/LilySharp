@@ -181,6 +181,29 @@ internal sealed class ChordNameCollector
         return structure.ToRomanNumeral(tonicStep, sharps);
     }
 
+    /// <summary>The meter timeline of the score's measures: (start measure, beats, beat type)
+    /// sorted ascending — the score's meter in force at each bar, read off the music's
+    /// measures (<c>MeasureCollector.MeterTimeline</c>) or, on a rows-only sheet, its section
+    /// headers — so a row's bar is gridded on the meter of THAT bar. Set by the collector
+    /// before any row is walked; empty falls back to the meter the walk was handed (the
+    /// score's). Until 2026-11-07 every bar of a row took that one meter: a <c>G . A</c> under
+    /// a section's <c>time 3/4</c> was gridded on 4/4 (LYS2009 said so, wrongly) and only the
+    /// fit to the music's bar length put A on the beat; under 5/8 the groups differ outright.</summary>
+    public IReadOnlyList<(int Measure, int Beats, int BeatType)> MeterByMeasure { get; set; } = [];
+
+    /// <summary>The meter in force at <paramref name="measure"/> — the last timeline entry that
+    /// begins at or before it, else the fallback the walk was handed.</summary>
+    private (int Beats, int BeatType) MeterAt(int measure, int fallbackBeats, int fallbackBeatType)
+    {
+        (int Beats, int BeatType) eff = (fallbackBeats, fallbackBeatType);
+        foreach (var e in MeterByMeasure)
+        {
+            if (e.Measure <= measure) eff = (e.Beats, e.BeatType);
+            else break;
+        }
+        return eff;
+    }
+
     /// <summary>EVERY start measure of each section across the structure, so a chord
     /// track repeats under a reprise (A played again as "A2" gets its chords again).
     /// Null falls back to the single first-occurrence start.</summary>
@@ -293,6 +316,7 @@ internal sealed class ChordNameCollector
     {
         _items.Clear();
         _gridWarnings.Clear();
+        MeterByMeasure = [];
     }
 
     /// <summary>Adds one inline chord name (a <c>@chord(c:m)</c> mark on a note). The
@@ -427,7 +451,8 @@ internal sealed class ChordNameCollector
                 return;
             int mi = MeasureOfBar(startMeasure, localMeasure, out var split);
             int emittedFrom = _items.Count;
-            ForEachSlotGroup(pending, timeBeats, timeBeatType, (node, timing, _) =>
+            var (barBeats, barBeatType) = MeterAt(mi, timeBeats, timeBeatType);
+            ForEachSlotGroup(pending, barBeats, barBeatType, (node, timing, _) =>
             {
                 if (node is RestSyntax rest)
                 {
@@ -666,7 +691,8 @@ internal sealed class ChordNameCollector
                 if (pending.Count > 0)
                 {
                     int emittedFrom = _items.Count;
-                    var rests = EmitChordPartMeasure(pending, mi, staffIndex, timeBeats, timeBeatType, mode);
+                    var (barBeats, barBeatType) = MeterAt(mi, timeBeats, timeBeatType);
+                    var rests = EmitChordPartMeasure(pending, mi, staffIndex, barBeats, barBeatType, mode);
                     if (split is { } cut)
                     {
                         MoveSymbolsAfterSplit(emittedFrom, mi, cut.Offset);
@@ -741,12 +767,6 @@ internal sealed class ChordNameCollector
         if (maxIndex < 0)
             return ImmutableArray<Measure>.Empty;
 
-        // An empty bar (the explicit "| |" pair) gets one whole-measure spacer rest so
-        // it keeps its width even with no music staff (standalone lead sheet), matching
-        // how empty lyric measures work.
-        var emptyBar = ImmutableArray.Create<MusicItem>(
-            new RestItem(new Fraction(timeBeats, timeBeatType), 0, 0) { IsSpacer = true });
-
         var measures = ImmutableArray.CreateBuilder<Measure>(maxIndex + 1);
         for (int i = 0; i <= maxIndex; i++)
         {
@@ -754,11 +774,15 @@ internal sealed class ChordNameCollector
             // wrote that bar: its bar lines and its length must agree with the music's
             // (the score-wide bar-line sync merges the two by index).
             var (isHead, isTail, cut) = SplitHalfAt(MidBarBreaks, i);
-            var barLength = new Fraction(timeBeats, timeBeatType);
+            var (barBeats, barBeatType) = MeterAt(i, timeBeats, timeBeatType);
+            var barLength = new Fraction(barBeats, barBeatType);
+            // An empty bar (the explicit "| |" pair) gets one whole-measure spacer rest so
+            // it keeps its width even with no music staff (standalone lead sheet), matching
+            // how empty lyric measures work.
             var items = measureItems.TryGetValue(i, out var it) ? it
                 : isHead ? ImmutableArray.Create<MusicItem>(new RestItem(cut, 0, 0) { IsSpacer = true })
                 : isTail ? ImmutableArray.Create<MusicItem>(new RestItem(barLength - cut, 0, 0) { IsSpacer = true })
-                : emptyBar;
+                : ImmutableArray.Create<MusicItem>(new RestItem(barLength, 0, 0) { IsSpacer = true });
             var start = measureStartBar.GetValueOrDefault(i, BarlineType.None);
             var end = isHead ? BarlineType.None : measureEndBar.GetValueOrDefault(i, BarlineType.Single);
             measures.Add(new Measure(items, start, end, null, 0, 0,

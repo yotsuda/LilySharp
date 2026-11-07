@@ -1434,16 +1434,16 @@ public sealed class MusicXmlExporter
         if (section.Parent is ChordPartBlockSyntax byPartTrack)
         {
             if (byPartTrack.PartName is { } trackRow && _placedChordRows.Contains(trackRow))
-                RememberChordRow(trackRow, Svg.Collector.ChordNameCollector.SectionItems(section));
+                RememberChordRow(section.SectionName, trackRow, Svg.Collector.ChordNameCollector.SectionItems(section));
             return;
         }
         for (int i = 0; i < section.SlotCount; i++)
             if (section.GetChild(i) is ChordPartBlockSyntax { HasSections: false, PartName: { } cellRow } cell
                 && _placedChordRows.Contains(cellRow))
-                RememberChordRow(cellRow, cell.Items);
+                RememberChordRow(section.SectionName, cellRow, cell.Items);
         // A flat chord track gives this section the bars it prints (a repeat's are printed once, as here).
         foreach (var (flatRow, flatItems) in _flatRows.Take(_sectionBars.Canonical.GetValueOrDefault(section.SectionName)))
-            RememberChordRow(flatRow, flatItems);
+            RememberChordRow(section.SectionName, flatRow, flatItems);
 
         // Each section may contain part blocks
         var partBlocks = section.DescendantNodes().OfType<PartBlockSyntax>().ToList();
@@ -6115,11 +6115,21 @@ public sealed class MusicXmlExporter
     // own lead sheets carry their harmonies in the melody's part, which is what this mirrors.
 
     /// <summary>One placed chord row's bars in one printed play, with the section state its
-    /// symbols are read in (meter for the slot grid, key for a degree, the pickup that cuts
-    /// its first bar).</summary>
+    /// symbols are read in (the meter the section opens with, and of each of its bars for the
+    /// slot grid — <see cref="Meters"/>; key for a degree; the pickup that cuts its first bar).</summary>
     private sealed record PendingChordRow(int Play, string Row, List<SyntaxNode> Items,
         int Beats, int BeatType, Fraction? Pickup, int TonicStep, int Sharps,
-        (int Fifths, string Mode, string? Custom) Key);
+        (int Fifths, string Mode, string? Custom) Key, IReadOnlyList<(int Beats, int BeatType)> Meters)
+    {
+        /// <summary>The score's meter at bar <paramref name="bar"/> of the play
+        /// (<see cref="Svg.Collector.SectionMeterPlan.MeterOfBar"/>): a <c>time</c> a part writes
+        /// inside the section moves the grid of the bars from there. Past the bars the section
+        /// prints, the last holds. Until 2026-11-07 every bar took the opening meter, so a row's
+        /// <c>G . A</c> under a <c>time 3/4</c> written in the music put A at offset 8/3 of a
+        /// 3-beat bar (Lab sessions/p1120/probe/m-flat).</summary>
+        public (int Beats, int BeatType) MeterOf(int bar)
+            => Meters.Count == 0 ? (Beats, BeatType) : Meters[Math.Min(bar, Meters.Count - 1)];
+    }
 
     private readonly List<PendingChordRow> _pendingChordRows = new();
     private FlatChordRows _flatRows = FlatChordRows.None;
@@ -6129,9 +6139,10 @@ public sealed class MusicXmlExporter
     private RenderSpec? _playedSpec;
 
     /// <summary>Remembers a placed row's bars of the section being emitted, with the section's
-    /// meter, key and pickup — the state <see cref="EmitPartMusic"/> applies to its parts
-    /// (the section's header, else the score's home).</summary>
-    private void RememberChordRow(string row, IEnumerable<SyntaxNode> items)
+    /// meter (its opening one, and each bar's — <see cref="PendingChordRow.MeterOf"/>), key
+    /// and pickup — the state <see cref="EmitPartMusic"/> applies to its parts (the section's
+    /// header, else the score's home).</summary>
+    private void RememberChordRow(string sectionName, string row, IEnumerable<SyntaxNode> items)
     {
         int beats = _bars.Meter.Beats, beatType = _bars.Meter.BeatType;
         if (_sectionTime is { } st)
@@ -6155,8 +6166,13 @@ public sealed class MusicXmlExporter
                 custom = null;
             }
         }
-        _pendingChordRows.Add(new PendingChordRow(_xmlPlaySerial, row, items.ToList(), beats, beatType,
-            _sectionPartial?.ToFraction(), tonic.Valid ? tonic.Step : 0, fifths, (fifths, mode, custom)));
+        var list = items.ToList();
+        int bars = RowBars(list).Count;
+        var meters = new List<(int Beats, int BeatType)>(bars);
+        for (int k = 0; k < bars; k++)
+            meters.Add(_meterPlan.MeterOfBar(sectionName, k, (beats, beatType)));
+        _pendingChordRows.Add(new PendingChordRow(_xmlPlaySerial, row, list, beats, beatType,
+            _sectionPartial?.ToFraction(), tonic.Valid ? tonic.Step : 0, fifths, (fifths, mode, custom), meters));
     }
 
     /// <summary>A row's items split into bars, as the page and the MIDI split them
@@ -6277,7 +6293,7 @@ public sealed class MusicXmlExporter
                 for (int k = 0; k < bars.Count && start + k < part.Measures.Count; k++)
                 {
                     var measure = part.Measures[start + k];
-                    AddRowHarmonies(measure, bars[k], pending, tuning, k == 0 && measure.Implicit ? pending.Pickup : null,
+                    AddRowHarmonies(measure, bars[k], k, pending, tuning, k == 0 && measure.Implicit ? pending.Pickup : null,
                         // The file's `shift N` moves the row's names with the piece (FileShift.RowDrop).
                         Semantics.FileShift.RowDrop(WrittenDrop(header.TranspositionSemitones),
                             _root != null ? Semantics.FileShift.ReadSemitones(_root) : 0), typedDrop);
@@ -6292,18 +6308,20 @@ public sealed class MusicXmlExporter
     /// <summary>
     /// One bar's symbols as harmonies at the head of <paramref name="measure"/>'s stream, each
     /// with its slot's offset — the grid every reader of a row shares
-    /// (<see cref="Svg.Collector.ChordNameCollector.SlotGroups"/>) — dropping an @chord of the
-    /// same chord at the same moment. A slot past a pickup's end (<paramref name="cut"/>) is
-    /// not written, as the MIDI does not play it.
+    /// (<see cref="Svg.Collector.ChordNameCollector.SlotGroups"/>), on the meter of THAT bar
+    /// (<see cref="PendingChordRow.MeterOf"/>, bar <paramref name="barIndex"/> of the play) —
+    /// dropping an @chord of the same chord at the same moment. A slot past a pickup's end
+    /// (<paramref name="cut"/>) is not written, as the MIDI does not play it.
     /// </summary>
-    private void AddRowHarmonies(MusicXmlMeasure measure, List<SyntaxNode> bar, PendingChordRow pending,
+    private void AddRowHarmonies(MusicXmlMeasure measure, List<SyntaxNode> bar, int barIndex, PendingChordRow pending,
         TuningType? tuning, Fraction? cut, int drop = 0, int typedDrop = 0)
     {
         if (bar.Count == 0)
             return;
         var existing = HarmoniesWithOnsets(measure);
         int insertAt = 0;
-        foreach (var (node, timing, _) in Svg.Collector.ChordNameCollector.SlotGroups(bar, pending.Beats, pending.BeatType, out _))
+        var (beats, beatType) = pending.MeterOf(barIndex);
+        foreach (var (node, timing, _) in Svg.Collector.ChordNameCollector.SlotGroups(bar, beats, beatType, out _))
         {
             if (node is not ChordEntrySyntax entry)
                 continue;   // N.C. and a bar-head '.' write nothing
@@ -6407,8 +6425,16 @@ public sealed class MusicXmlExporter
         for (int k = 0; k < bars.Count; k++)
         {
             bool first = _currentPart!.Measures.Count == 0;
+            // The score's meter at this bar (PendingChordRow.MeterOf): a change inside the section
+            // is this part's <time> from here, as it is every staff's.
+            var (beats, beatType) = pending.MeterOf(k);
+            if (beats != _bars.Meter.Beats || beatType != _bars.Meter.BeatType)
+            {
+                _bars.SetMeter(new Semantics.Meter(beats, beatType));
+                _attributesDirty = true;
+            }
             StartNewMeasure(addAttributes: first);
-            var length = new Fraction(pending.Beats, pending.BeatType);
+            var length = new Fraction(beats, beatType);
             Fraction? cut = null;
             if (k == 0 && pending.Pickup is { } pickup && pickup < length)
             {
@@ -6423,7 +6449,7 @@ public sealed class MusicXmlExporter
             }
             var (type, dots) = GetNoteType(length);
             _currentMeasure!.Notes.Add(new MusicXmlNote { IsRest = true, Duration = FractionToTicks(length), Type = type, Dots = dots });
-            AddRowHarmonies(_currentMeasure, bars[k], pending, tuning, cut, typedDrop: typedDrop);
+            AddRowHarmonies(_currentMeasure, bars[k], k, pending, tuning, cut, typedDrop: typedDrop);
             _currentPart.Measures.Add(_currentMeasure);
             _currentMeasure = null;
         }

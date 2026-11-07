@@ -115,6 +115,30 @@ public class ChordSlotGridTests
             .Where(x => x.Severity >= DiagnosticSeverity.Warning));
     }
 
+    /// <summary>
+    /// A bar is gridded on THE METER OF THAT BAR (ChordNameCollector.MeterByMeasure, the
+    /// score's meter the music's measures carry): a section header's <c>time</c>, or a
+    /// <c>time</c> written inside the music, moves the grid of every bar from there. Until
+    /// 2026-11-07 every bar of a row took the score's opening meter — <c>G . A</c> under a
+    /// 3/4 section was gridded on 4/4 and LYS2009 named a fault the bar did not have (the fit to
+    /// the music's length put A on the beat anyway), and under 5/8 the groups differed outright.
+    /// </summary>
+    [Theory]
+    [InlineData("section A { melody { c''1 | } }\nsection B { time 3/4 melody { d''2. | e''2. | } }", "C | G . A | Am . . |")]
+    [InlineData("section A { melody { c''1 | time 3/4 d''2. | e''2. | } }", "C | G . A | Am . . |")]
+    [InlineData("section A { melody { c''1 | } }\nsection B { time 5/8 melody { d''4. d''4 | e''4. e''4 | } }", "C | G A | Am . |")]
+    public void ABarUnderAnotherMeter_IsGriddedOnThatMeter(string sections, string row)
+    {
+        string flat = $"time 4/4\npart melody\n{sections}\nchords harmony {{ {row} }}\nform {{ A{(sections.Contains("section B") ? " B" : "")} }}\nscore {{ chords harmony  staff melody }}\n";
+        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(flat)),
+            x => x.Code == DiagnosticCodes.ChordSlotMismatch);
+        // The row's A stands where the melody's own @chord(A) stands: on the bar's second beat
+        // group (beat 3 of 3/4; the 2/8 group of 5/8's [3,2]).
+        var chords = Chords(flat);
+        var a = Assert.Single(chords, c => c.Text == "A");
+        Assert.Equal(row.Contains("G . A") ? 0.5 : 0.375, a.Timing);
+    }
+
     [Fact]
     public void AReplayedSection_ReportsEachGridFaultOnce()
     {

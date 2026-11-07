@@ -41,8 +41,15 @@ internal sealed class SectionMeterPlan
 {
     public static readonly SectionMeterPlan Empty = new();
 
-    /// <summary>Per section name: bar index within the section → the change in force from it.</summary>
+    /// <summary>Per section name: bar index within the section → the change in force from it —
+    /// the changes some part does NOT write itself (what a reader of that part applies).</summary>
     private readonly Dictionary<string, SortedDictionary<int, TimeSignatureSyntax>> _changes = new(StringComparer.Ordinal);
+
+    /// <summary>Per section name: EVERY change at a bar's start, own or foreign (first voice in
+    /// document order at a bar) — the score's meter bar by bar, for a reader that is not a
+    /// part's walk: a chord row's bars (<see cref="MeterOfBar"/>). Kept when
+    /// <see cref="_changes"/> is emptied because every part writes every change itself.</summary>
+    private readonly Dictionary<string, SortedDictionary<int, TimeSignatureSyntax>> _timeline = new(StringComparer.Ordinal);
 
     /// <summary>Per voice container: the bars at whose start it writes a <c>time</c> itself.</summary>
     private readonly Dictionary<SyntaxNode, HashSet<int>> _own = new(ReferenceEqualityComparer.Instance);
@@ -97,16 +104,53 @@ internal sealed class SectionMeterPlan
                 ownByPart[(voice.SectionName, part)] = own;
         }
         foreach (var (section, changes) in plan._changes)
+            plan._timeline[section] = changes;
+        foreach (var (section, changes) in plan._changes)
             foreach (var bar in changes.Keys)
                 foreach (var part in parts)
                     if (!ownByPart.TryGetValue((section, part), out var own) || !own.Contains(bar))
                         return plan;
-        // Every part writes every change itself: nothing to apply — but a conflict is still
-        // the validator's to name.
-        if (plan.Conflicts.Count == 0)
-            return Empty;
+        // Every part writes every change itself: nothing to apply (IsEmpty) — but a conflict is
+        // still the validator's to name, and the timeline still answers a chord row's bars.
         plan._changes.Clear();
         return plan;
+    }
+
+    /// <summary>
+    /// THE SCORE'S METER at <paramref name="bar"/> of <paramref name="section"/>: the latest
+    /// metered <c>time</c> any voice writes at a bar's start at or before it, else
+    /// <paramref name="opening"/> — the meter the section opens with (its header's, else the
+    /// score's), which the caller holds. The one answer every reader of a chord row's bars takes
+    /// (the page's grid, the MIDI, the MusicXML and the LilyPond twin): until 2026-11-07 the
+    /// three exporters read a row's every bar in the section's opening meter, so a row under a
+    /// <c>time 3/4</c> written in the music sounded and exported its bars a beat long.
+    /// </summary>
+    public (int Beats, int BeatType) MeterOfBar(string section, int bar, (int Beats, int BeatType) opening)
+    {
+        if (!_timeline.TryGetValue(section, out var c))
+            return opening;
+        var found = opening;
+        foreach (var (at, time) in c)
+        {
+            if (at > bar)
+                break;
+            if (!time.IsSenzaMisura)
+                found = (time.Beats, time.BeatType);
+        }
+        return found;
+    }
+
+    /// <summary>The meter of each of the <paramref name="bars"/> bars of <paramref name="section"/>
+    /// (<see cref="MeterOfBar"/>), as lengths.</summary>
+    public List<Fraction> BarMeters(string section, int bars, (int Beats, int BeatType) opening)
+    {
+        var meters = new List<Fraction>(Math.Max(1, bars));
+        for (int i = 0; i < Math.Max(1, bars); i++)
+        {
+            var (beats, beatType) = MeterOfBar(section, i, opening);
+            meters.Add(new Fraction(beats, beatType));
+        }
+        return meters;
     }
 
     /// <summary>The part a voice container (or a part declaration) belongs to: a by-section

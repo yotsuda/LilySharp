@@ -59,7 +59,6 @@ public sealed partial class LilyPondExporter
         // walk the collector registers from (every declaration of a name contributes;
         // the played declaration may be a different node — see the field's remarks).
         _sectionHeaders = Semantics.SectionHeaders.Read(allSections);
-        _allSections = allSections;
 
         var partSections = part?.DescendantNodes<SectionDeclarationSyntax>().ToList()
             ?? new List<SectionDeclarationSyntax>();
@@ -403,7 +402,7 @@ public sealed partial class LilyPondExporter
         if (_chordTrack)
         {
             result.AddRange(ChordBars(entry.Container, ChordKeyFor(name), ChordPickupFor(name),
-                SectionBarMeters(entry.Section, name)));
+                SectionBarMeters(name)));
             result.AddRange(PaddingBars(entry.Container));
             return;
         }
@@ -467,8 +466,7 @@ public sealed partial class LilyPondExporter
             // Each bar as long as the MUSIC's bar there (SectionBarMeters — what a row that
             // writes the section is measured by): a `time` in the section's music is the
             // score's meter (HANDOFF §2 F-partmeter ⒜), and a row silent under a 3/4 bar wrote `s1`.
-            var meters = _allSections.FirstOrDefault(s => s.SectionName == name) is { } declaration
-                ? SectionBarMeters(declaration, name) : null;
+            var meters = SectionBarMeters(name);
             // A flat chord track at the top level writes the bars it has for this play, on the
             // same bars' lengths; a track that has run out is silent, as a row that writes nothing.
             int flatBars = 0;
@@ -568,7 +566,7 @@ public sealed partial class LilyPondExporter
             // not the score's, which a row short of a 3/4 section was padded with until
             // 2026-10-03 (`s1` beside `c2.`, the same family as the bars it did write).
             var meters = SectionOf(container) is { } section
-                ? SectionBarMeters(section, section.SectionName) : null;
+                ? SectionBarMeters(section.SectionName) : null;
             for (int i = 0; i < missing; i++)
             {
                 var meter = meters is { Count: > 0 }
