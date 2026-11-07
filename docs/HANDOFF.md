@@ -96,7 +96,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **作曲ガイダンスの改善＝クローズ（オーナー決定 2026-11-02・第1042）**: 「ユーザーが使う機会が少ない機能にかなり投資している。どうしても入れるべき内容でなければクローズして別の課題へ」。**講評のループと検査の追加を、オーナーが言うまで再開しない・提案しない。** 入れなかったもの: W3（section の中の急な落ち込み・試作は Lab `sessions/p1042/proto-w3.ps1`）。未調査のまま: 書き込みの後の再提案で差し戻しが最初からやり直しになる動き。
 - **作曲ガイダンス（Copilot のチャットで作曲 → Lily# が音楽として検査）＝第1042 でクローズ（上の行）**: 流れ・検査の一覧・差し戻しの規則・**講評の手順**（オーナーが Downloads の .lys を送る → ログ `~\.copilot\session-state\*\events.jsonl` → 検査を DLL で → `lysc octave --absolute` → 日本語で講評し「入れて」で実装）・残りは **`docs/compose-in-chat-design.md`**。
 - **人間の曲のレビュー（オーナーの設計 2026-10-30）＝第1038 で §6 の 1〜4 を実装**: ツールとコマンドは実物の VS Code で確認済み。残りは Copilot の AI の振る舞い（MANUAL-CHECKS C55）・目視（C56）・§6-5（消音・頼まれてから）。設計との差は **`docs/review-tool-design.md` §7**（`what` と `fix.say` が 1 文のまま・`fix.edit`／`ask` なし）。
-- **section の外のコード行（`chords X { C | G7 | }`・`Semantics.FlatChordRows`）の残りの制限＝第1038**: ⑴ section の途中で拍子が変わる小節も、MIDI と MusicXML ではコード行を section 冒頭の拍子で読む（`.ly` は小節の長さだけ合わせる・section 内に書いた行と同じ動き）／⑵ 音楽より長い行の余りの小節は MusicXML に載せない（譜面・MIDI・`.ly` には出る）／⑶ form の無い本の `.ly` は今も行を先頭に一括で書く（弱起・拍子は見ない・実測していない）。コーパスにこの形の本は 0 冊＝急がない。
+- **section の外のコード行（`chords X { C | G7 | }`・`Semantics.FlatChordRows`）の残り＝第1120 で ⑴⑶ を閉じた（§1.1 第1120）**: ⑴ 小節ごとの拍子は `SectionMeterPlan.MeterOfBar` の 1 か所から（ページの格子・MIDI・XML・`.ly` の 4 読み手。section 内の行も同じだった）／⑶ form の無い `.ly` は宣言順に section を歩く。**⑵ 音楽より長い行の余りの小節＝オーナー判断待ち（第1120 実測の表）**: ページはリードシートでは描き、譜表つきでは描かない・MIDI は常に鳴らす・`.ly` は常に書く・XML は常に落とす＝4 読み手が 3 通り。第1038 の「余りも鳴らす・as the page draws it」はページを測らずに書かれていた。選択肢 ⒜ ページに合わせる（譜表つきは MIDI と `.ly` も切る・リードシートは XML が余りの小節を足す）／⒝ 全部出す（譜表つきもページが段を延ばす＝section 内の長い行と同じ扱い・XML が足す）。コードは触っていない。
 - **コード図の文法の整理＝第1036 で実装済（§1.1 第1036）**: 残りは MANUAL-CHECKS §2.2 の `[ ]`（実機）だけ。旧綴りの本は普通の語のエラー＝Claude は直さない（全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **OMR の読みを AI で直す＝M1〜M3 実装済・実機未確認**（MANUAL-CHECKS §5 B9〜B11・設計は `docs/omr-ai-fix-design.md`・照合の lysc は VSIX の `server` に同梱済＝§1.1 第975。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **GitHub Pages の OMR デモ動画の撮影＝ユーザーのタスク（第961）**: `site/videos/SHOTLIST.md` の 16・17。置き場は `site/scan-body.html` の `figure.demo-video[data-pending]`（置いたら `data-pending` を外す）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
@@ -137,6 +137,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1120セッション（2026-11-07・YT-DELL2）
+
+開始時 full **14770 / 0 / 2**（`-Start p1120`・HEAD `e48307588`・未 push 1＝第1119 の docs・OMR の open は 0）。作業場所は Lab `sessions/p1120/`。§1.0 に次の一手の指示が無かったので候補 3 つを AskUserQuestion で訊き、オーナーが **「section の外のコード行の残り」**（第1038 の制限 ⑴〜⑶）を選んだ。
+
+- **実測が先（探り譜 10 冊＝`sessions/p1120/probe/`・MIDI の読み手は `midi-dump.ps1`）**: ⑴ は HANDOFF の記述より広かった。**ページ**＝行の格子（`ChordRhythm.SlotDurations`）が score の開始拍子に固定で、section 見出しの `time 3/4` の下の `G . A` にも LYS2009 が出ていた（長さは `FitRowsToMusicBars` が後から合わせるので 3/4 では偶然当たり、5/8 の `[3,2]` では配置も違う）。**MIDI**＝flat の行も section 内の行も、音楽の中に書いた `time 3/4` を見ない（`m-flat`: A が t=3200・正は 2880）。**XML**＝同じ（A の offset 64・正は 48）。**`.ly` だけ正しかった**が、`SectionBarMeters` が第 1 パートの音楽を自分で歩く第 2 の綴りだった。⑶＝`f-flat.ly` が `s1 | c1 | g1*2/3 a1*1/3 |`（section 内に書けば `s4 | c1 | g2 a4 |`）。
+- **直し＝答えを 1 か所に**: `SectionMeterPlan` に**時間軸 `_timeline`**（小節頭の `time` を own／foreign を問わず全部・voice の文書順で先勝ち・「全パートが自分で書く」で `_changes` を空にしても残す）と **`MeterOfBar(section, bar, opening)`**／`BarMeters` を足し、4 読み手がそれを読む。`.ly`＝`SectionBarMeters(name)` は opening（見出しの `time` か home）＋時間軸だけ（第 1 パートの walk・`FirstPartBlock`・`_allSections` は退役）。MIDI＝`PlayChordRow(…, meterOfBar)`（`PlaySectionChordRows` と by-part の経路が `SectionMeterOfBar(name)` を渡す・音楽の後の `Rest()` は null）。XML＝`PendingChordRow.Meters`／`MeterOf(k)`（`RememberChordRow` に section 名・`AddRowHarmonies` に bar index・リードシートの行の part は拍子が変わる小節で `<time>` も書く）。ページ＝`ChordNameCollector.MeterByMeasure`（`KeyByMeasure` と同じ形）を `MeasureCollector.MeterTimeline(measures)` が埋める＝最長の音楽 voice の `TimeSignatureChangeItem` の walk（1276 行目の段境界の walk も同じ関数へ畳んだ）・rows-only は `RowsOnlyBarLengths` の表（行の walk の前に動かした）。
+- **⑶**: `OrderedChordItems` の form なしの枝＝宣言順の section 名ごとに `AppendSection`（行の cell があればそれ・無ければ `AppendSilentPlay` が flat の小節を取る）→ `Rest()`。section 内に書いた行とバイト一致（`f-flat` == `f-sec`・調の違う section も）。副作用＝この行の cell を持たない section に silent bars が入るようになった（旧は飛ばしていた＝音楽の流れとずれていた）。
+- **⑵ は触らず実測だけ**（§1.0 ⒜ の表＝オーナー判断待ち）: `r-flat`（譜表つき）はページが音楽の 1 小節で切る・`r-lead`（`score { chords harmony }`）は 3 小節描く・`r-two`（2 譜表）も切る。MIDI は常に 3 小節鳴らし、`.ly` は常に 3 小節書き、XML は常に 1 小節。
+- **網**: `ChordRowMidiTests` に MIDI（flat／section 内の 2 冊）・XML（譜表つき／リードシートの 2 冊＝`<beats>3` と A の offset ＝ 2 拍）・`.ly` form なし（弱起＋3/4・調違い＋音楽の中の time）の 3 Theory、`ChordSlotGridTests.ABarUnderAnotherMeter_IsGriddedOnThatMeter`（見出し 3/4・音楽の中の 3/4・見出し 5/8＝LYS2009 なし＋A の timing 0.5／0.375）。**毒 2 本**（`sessions/p1120/poisons.ps1`）＝plan の `MeterOfBar` が時間軸を無視→ 4 赤・ページの `MeterAt` が無視→ 3 赤（`poison1.log`・`poison2.log`）。
+- **掃き（`sessions/p723/svg2/sweep-all.ps1`・base `e48307588` を worktree で build→`exe-base`・head→`exe-head`）: 1036 冊・1262 枚を比べて動いた svg 0**（`sweep-and-regen.log`）。`APPROXIMATIONS.md`・`magic_constants.csv` は再生成して差 0。
+- ⚠️ 残り・注: ⒜ section の中の inline の `repeat` と flat の行＝`Canonical` は意味の小節数（演奏長）、ページは 1 回しか印刷しない＝flat の行の取り方が食い違いうる（未実測・本 0）／⒝ 小節の途中に書いた `time` は、`.ly` の行では旧 walk が「その小節から」と読んだが、時間軸は plan と同じく「その voice だけのもの」として飛ばす（LP も小節の途中の `\time` は拒む）／⒞ CHANGELOG は両方の `## Unreleased` を立てて 3 行（root）・2 行（vscode）。
+- **commit `399245171`**（Core 7 ファイル＋網 2＋CHANGELOG 2）。終了時 full **14779 / 0 / 2**（`-End p1120 -DiffBase e48307588`＝`sessions/p1120/end2.log`・門は全部 OK。1 回目 `end.log` は `DocCommentPlacementTests` が 1 赤＝`MeterTimeline` を `SectionBoundaryContinuations` の doc と宣言のあいだに挟んでいた→上へ移して amend）。§7 7.5: Core `+266` 行・REF 1（移した `Timing_translator` の註＝新規の出典ではない）・OWN 0＝新しい近似なし（答えを 1 か所に畳み、読み手 4 つがそれを読むだけ）。この docs commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1119セッションの経緯
+
 ### 1.1 第1119セッション（2026-11-07・YT-DELL2）
 
 開始時 full **14770 / 0 / 2**（`-Start p1119`・HEAD `89745d73b`・OMR の open は 0）。作業場所は Lab `sessions/p1119/`。オーナー「v0.15.0 をリリースしたい」＝`docs/RELEASING.md` の手順で版を用意する便（tag と push はオーナー）。
@@ -146,17 +161,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **残りはオーナー（§5〜§7）**: ⑴ `git push origin master` → CI 緑を待つ ⑵ `git tag -a v0.15.0 -m "Lily# 0.15.0 …"` → `git push origin v0.15.0` ⑶ 約 14 分後に RELEASING §7 の Marketplace の問い合わせ（8/8・HEAD 200）と `gh release view v0.15.0`（12 資産）。
 - 終了時 full **14770 / 0 / 2**（`-End p1119 -DiffBase 89745d73b`＝`sessions/p1119/end.log`・門は全部 OK）。§7 7.5: Core `+0` 行（版と changelog だけ）・REF 0・OWN 0。
 - **出した（オーナー「あなたがタグを打ってリリースして」＝この回も push とタグはユーザーの許可で Claude が打った・規則は「push はユーザー」のまま）**: `git push origin master`（3 commit）→ CI run `42291049850` success（12 分 32 秒）→ `git tag -a v0.15.0` on `8111ba3eb` → `git push origin v0.15.0` → Release run **`42292827975` 13 job 全部 success（19 分）**→ Release **12 資産**（8 VSIX ＋ 4 CLI・draft でも pre-release でもない）→ Marketplace の問い合わせは **4/8 → 7/8（8 分・darwin-arm64 が最後）→ 8/8（12 分）**＝0.5.0 と同じ索引の遅れで、何も欠けていなかった（`vsce show` は最初から 0.15.0）。win32-x64 の VSIX に HEAD 200。計器は `sessions/p1119/verify-release.ps1`（§7 の 3 つの問いを 1 本に）・ログ `verify-release1..3.log`・`release-watch.log`。この docs commit と Lab の push はオーナー。
-
-## 以下は第1118セッションの経緯
-
-### 1.1 第1118セッション（2026-11-07・YT-DELL2）
-
-開始時 full **14770 / 0 / 2**（`-Start p1118`・HEAD `b8505e98c`・**オーナーが push 済み＝未 push 0**・OMR の open は 0）。作業場所は Lab `sessions/p1118/`。オーナー決定 3 つで §1.0 ⒞ を畳む便。
-
-- **オーナー決定（2026-11-07）**: ⑴ **⒴⁗ は入れない**＝「1 打鍵 0.1 ms の差なら、絵が変わる楽譜が 1 冊でもあるなら要らない」（天井 2.03%＝5 ms の打鍵の 0.1 ms・`アゲハ蝶.lys` が 24→26 系）＝提案しない・LP 双子も撮らない／⑵ **⒩⁶ の `ClearBeamStamp` は (b)「効かない保険」として畳む**＝`NoteItem.ClearBeamStamp` に remarks（第517 の実測＝刻印済みで bake に来る item 9.3%・再 bake は全件同じ値・毒は suite もコーパスも狙った 2 冊も緑・論理は正しいが観測者なし）を置いて残す（`ChordItem`／`RestItem` は inheritdoc で同じ註を指す）／⑶ **R13⒝ の実機計測はしない**（第404 の頁差分送りの効き目の実測・「群単位の item」「`applyFrame`」の後続案も落とす）＝**後日、perf の改善余地を改めて監査する**（オーナーの意向・時期はオーナー）。
-- R13⒝ の正体（オーナーの問いに答えた）: 不具合報告ではなく第395 起票の perf 項目「プレビュー遅延の構造」の ⒝＝打鍵ごとに SVG 全文が 2 プロセスをまたいで約 7 回写されていた（plain1k で JSON 3.6 MB／打鍵）→ 第404 `2f6bba07` が頁ごとの差分（Same／Shifted／Changed）送りにした。残っていた「実機未確認」は*効き目の実測*のことで、プレビュー自体は第909 の手動確認 107 項目で実機を通っている。
-- Core の変更は `NoteItem.ClearBeamStamp` の remarks だけ（挙動 0）＝`63e9dadd1`。
-- 終了時 full **14770 / 0 / 2**（`-End p1118 -DiffBase b8505e98c`＝`sessions/p1118/end.log`・門は全部 OK。1 回目（`end1.log`）は remarks で行番号がずれて `ApproximationInventoryTests` が 1 本赤→ `docs/APPROXIMATIONS.md` を再生成して amend）。§7 7.5: Core `+11` 行（註のみ）・REF 0・OWN 0。**§1.0 ⒞ に残る判断待ちは 0**＝perf は「後日オーナーが改めて監査」まで提案しない。
 
 ## 2. 開いている作業
 
