@@ -267,6 +267,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1120セッションの経緯
+
+### 1.1 第1120セッション（2026-11-07・YT-DELL2）
+
+開始時 full **14770 / 0 / 2**（`-Start p1120`・HEAD `e48307588`・未 push 1＝第1119 の docs・OMR の open は 0）。作業場所は Lab `sessions/p1120/`。§1.0 に次の一手の指示が無かったので候補 3 つを AskUserQuestion で訊き、オーナーが **「section の外のコード行の残り」**（第1038 の制限 ⑴〜⑶）を選んだ。
+
+- **実測が先（探り譜 10 冊＝`sessions/p1120/probe/`・MIDI の読み手は `midi-dump.ps1`）**: ⑴ は HANDOFF の記述より広かった。**ページ**＝行の格子（`ChordRhythm.SlotDurations`）が score の開始拍子に固定で、section 見出しの `time 3/4` の下の `G . A` にも LYS2009 が出ていた（長さは `FitRowsToMusicBars` が後から合わせるので 3/4 では偶然当たり、5/8 の `[3,2]` では配置も違う）。**MIDI**＝flat の行も section 内の行も、音楽の中に書いた `time 3/4` を見ない（`m-flat`: A が t=3200・正は 2880）。**XML**＝同じ（A の offset 64・正は 48）。**`.ly` だけ正しかった**が、`SectionBarMeters` が第 1 パートの音楽を自分で歩く第 2 の綴りだった。⑶＝`f-flat.ly` が `s1 | c1 | g1*2/3 a1*1/3 |`（section 内に書けば `s4 | c1 | g2 a4 |`）。
+- **直し＝答えを 1 か所に**: `SectionMeterPlan` に**時間軸 `_timeline`**（小節頭の `time` を own／foreign を問わず全部・voice の文書順で先勝ち・「全パートが自分で書く」で `_changes` を空にしても残す）と **`MeterOfBar(section, bar, opening)`**／`BarMeters` を足し、4 読み手がそれを読む。`.ly`＝`SectionBarMeters(name)` は opening（見出しの `time` か home）＋時間軸だけ（第 1 パートの walk・`FirstPartBlock`・`_allSections` は退役）。MIDI＝`PlayChordRow(…, meterOfBar)`（`PlaySectionChordRows` と by-part の経路が `SectionMeterOfBar(name)` を渡す・音楽の後の `Rest()` は null）。XML＝`PendingChordRow.Meters`／`MeterOf(k)`（`RememberChordRow` に section 名・`AddRowHarmonies` に bar index・リードシートの行の part は拍子が変わる小節で `<time>` も書く）。ページ＝`ChordNameCollector.MeterByMeasure`（`KeyByMeasure` と同じ形）を `MeasureCollector.MeterTimeline(measures)` が埋める＝最長の音楽 voice の `TimeSignatureChangeItem` の walk（1276 行目の段境界の walk も同じ関数へ畳んだ）・rows-only は `RowsOnlyBarLengths` の表（行の walk の前に動かした）。
+- **⑶**: `OrderedChordItems` の form なしの枝＝宣言順の section 名ごとに `AppendSection`（行の cell があればそれ・無ければ `AppendSilentPlay` が flat の小節を取る）→ `Rest()`。section 内に書いた行とバイト一致（`f-flat` == `f-sec`・調の違う section も）。副作用＝この行の cell を持たない section に silent bars が入るようになった（旧は飛ばしていた＝音楽の流れとずれていた）。
+- **⑵ は触らず実測だけ**（§1.0 ⒜ の表＝オーナー判断待ち）: `r-flat`（譜表つき）はページが音楽の 1 小節で切る・`r-lead`（`score { chords harmony }`）は 3 小節描く・`r-two`（2 譜表）も切る。MIDI は常に 3 小節鳴らし、`.ly` は常に 3 小節書き、XML は常に 1 小節。
+- **網**: `ChordRowMidiTests` に MIDI（flat／section 内の 2 冊）・XML（譜表つき／リードシートの 2 冊＝`<beats>3` と A の offset ＝ 2 拍）・`.ly` form なし（弱起＋3/4・調違い＋音楽の中の time）の 3 Theory、`ChordSlotGridTests.ABarUnderAnotherMeter_IsGriddedOnThatMeter`（見出し 3/4・音楽の中の 3/4・見出し 5/8＝LYS2009 なし＋A の timing 0.5／0.375）。**毒 2 本**（`sessions/p1120/poisons.ps1`）＝plan の `MeterOfBar` が時間軸を無視→ 4 赤・ページの `MeterAt` が無視→ 3 赤（`poison1.log`・`poison2.log`）。
+- **掃き（`sessions/p723/svg2/sweep-all.ps1`・base `e48307588` を worktree で build→`exe-base`・head→`exe-head`）: 1036 冊・1262 枚を比べて動いた svg 0**（`sweep-and-regen.log`）。`APPROXIMATIONS.md`・`magic_constants.csv` は再生成して差 0。
+- ⚠️ 残り・注: ⒜ section の中の inline の `repeat` と flat の行＝`Canonical` は意味の小節数（演奏長）、ページは 1 回しか印刷しない＝flat の行の取り方が食い違いうる（未実測・本 0）／⒝ 小節の途中に書いた `time` は、`.ly` の行では旧 walk が「その小節から」と読んだが、時間軸は plan と同じく「その voice だけのもの」として飛ばす（LP も小節の途中の `\time` は拒む）／⒞ CHANGELOG は両方の `## Unreleased` を立てて 3 行（root）・2 行（vscode）。
+- **commit `399245171`**（Core 7 ファイル＋網 2＋CHANGELOG 2）。終了時 full **14779 / 0 / 2**（`-End p1120 -DiffBase e48307588`＝`sessions/p1120/end2.log`・門は全部 OK。1 回目 `end.log` は `DocCommentPlacementTests` が 1 赤＝`MeterTimeline` を `SectionBoundaryContinuations` の doc と宣言のあいだに挟んでいた→上へ移して amend）。§7 7.5: Core `+266` 行・REF 1（移した `Timing_translator` の註＝新規の出典ではない）・OWN 0＝新しい近似なし（答えを 1 か所に畳み、読み手 4 つがそれを読むだけ）。この docs commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1119セッションの経緯
 
 ### 1.1 第1119セッション（2026-11-07・YT-DELL2）
