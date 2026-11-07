@@ -106,7 +106,7 @@ public static class KeyChecks
         int fifths = WrittenFifths(root, keys);
         if (Signature(midi, keys, fifths) is { } signature)
             findings.Add(signature);
-        findings.AddRange(Outside(midi, keys.Mode == "minor", fifths, CompositionChecks.SwungBlueNotes(root)));
+        findings.AddRange(Outside(source, midi, keys.Mode == "minor", fifths, CompositionChecks.SwungBlueNotes(root)));
         if (ChordChecks.ChordKey.Of(keys.Tonic, keys.Mode) is { } key)
             findings.AddRange(ChordChecks.Findings(source, root, midi, key));
         return findings;
@@ -167,8 +167,11 @@ public static class KeyChecks
     /// of 168 such notes were in the bass lines of the owner's books, under chords no part wrote out).
     /// In a piece that swings, its blue notes (<paramref name="blueNotes"/>,
     /// <see cref="CompositionChecks.SwungBlueNotes"/>) are the key's own, as a minor key's raised sixth
-    /// and seventh are (owner's trial 2026-11-07: a swinging blues's D and G in E were told slips).</summary>
-    private static IEnumerable<CompositionFinding> Outside(MidiFile midi, bool minor, int fifths, int[]? blueNotes = null)
+    /// and seventh are (owner's trial 2026-11-07: a swinging blues's D and G in E were told slips).
+    /// A note that reaches a semitone neighbour one note later leads there too: a leading tone that steps
+    /// onto its chord's next note first, `fis a g` (owner's trial 2026-11-07: a duo's F♯ over D, the
+    /// third of a secondary dominant going to G minor, was told a slip). The note is named as written.</summary>
+    private static IEnumerable<CompositionFinding> Outside(string? source, MidiFile midi, bool minor, int fifths, int[]? blueNotes = null)
     {
         var scale = ScaleOf(fifths);
         if (blueNotes != null)
@@ -197,7 +200,7 @@ public static class KeyChecks
                 if (scale.Contains(pc))
                     continue;
                 bool Beside(int j) => j >= 0 && j < notes.Count && System.Math.Abs(notes[j].Pitch - notes[i].Pitch) == 1;
-                if (Beside(i - 1) || Beside(i + 1))
+                if (Beside(i - 1) || Beside(i + 1) || Beside(i + 2))
                     continue;
                 var note = notes[i];
                 bool Other((string Part, int Voice, int StartTick, int DurationTicks, int Pitch) o) => o.Part != line.Key || o.Voice != lineVoices[line.Key];
@@ -221,8 +224,13 @@ public static class KeyChecks
             if (strays.Count == 0 || strays.Count > notes.Count * OutsideMostShare)
                 continue;
             var at = strays.Select(i => 1 + bars.Count(b => b <= notes[i].StartTick)).Distinct().ToList();
+            // Named as the page writes it (owner's trial 2026-11-07: a `fis` in D minor was told "G♭5"), else as the key spells it.
+            var first = notes[strays[0]];
+            int pos = midi.Tracks.SelectMany(t => t.Notes.Where(n => (n.Part ?? t.Name) == line.Key && n.StartTick == first.StartTick && n.Pitch == first.Pitch))
+                .Select(n => n.SourcePos).FirstOrDefault(-1);
+            string name = PartRanges.WrittenName(source, pos, first.Pitch) ?? PartRanges.SpelledFromPitch(first.Pitch, fifths);
             yield return new("key.outside", $"{line.Key}: {strays.Count} {(strays.Count == 1 ? "note" : "notes")} outside the key that "
-                + $"{(strays.Count == 1 ? "leads" : "lead")} nowhere ({PartRanges.SpelledFromPitch(notes[strays[0]].Pitch, fifths)} in bar {at[0]}"
+                + $"{(strays.Count == 1 ? "leads" : "lead")} nowhere ({name} in bar {at[0]}"
                 + (at.Count > 1 ? $" first; bars {string.Join(", ", at.Take(6))}{(at.Count > 6 ? ", …" : "")}" : "")
                 + ", as the form plays them): no semitone into a note of the key, and no chord around it has that note. Is it the note you meant?") { Parts = [line.Key], Bars = at };
         }

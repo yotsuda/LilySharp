@@ -333,6 +333,30 @@ public class ScoreReviewTests
         Assert.True(Says(Broken.Replace("ARPEGGIO", "e'8 g' c'' g' e' g' c'' g'").Replace("BASS", "c1"), "key.outside"));
     }
 
+    // Owner's trial 2026-11-07: a flute-and-cello duo's F♯ over the cello's D, the third of a secondary
+    // dominant reaching G a note later (`fis a g`), was told a slip — and named G♭.
+    private const string Duo = """
+        title "Duo"
+        key d minor
+        time 3/4
+        octave absolute
+        part fl { instrument flute }
+        part vc { instrument cello }
+        section A { fl { d''4 f''4 e''4 | d''4 a'2 | LINE | bes'2. | a'4 e''4 cis''4 | d''2. | }
+                    vc { d2. | f2. | d2. | g2. | a2. | d2. | } }
+        form { A }
+        score { staff fl staff vc }
+        """;
+
+    [Fact]
+    public void ANoteThatReachesItsNeighbourANoteLater_LeadsThere_AndIsNamedAsWritten()
+    {
+        Assert.False(Says(Duo.Replace("LINE", "fis'4 a'4 g'4"), "key.outside"));
+        // Leaping away and never stepping on: asked of, by the name the page writes.
+        var stray = KeyFindings(Duo.Replace("LINE", "fis'4 a'4 d''4")).Single(f => (string?)f["id"] == "key.outside");
+        Assert.Contains("(F♯4 in bar 3", (string?)stray["what"]);
+    }
+
     [Fact]
     public void ANoteTheHarmonySoundedOverTheSameHeldBass_IsAChord_NotASlip()
     {

@@ -278,6 +278,11 @@ public static class CompositionChecks
             bool melody = melodies.Contains(part);
             if ((asOne || choirAsOne) && part != top)
                 continue;
+            // A part that breaks its chords, as a piano's left hand does, keeps one value by nature
+            // (owner's trials 2026-11-07: two wind quintets' clarinets rocked in eighths under the tune,
+            // a pastorale's cradle, and were told "91% eighth notes" twice).
+            if (!melody && BrokenChords(lineNotes, part))
+                continue;
             if (melody && common.Count() >= onsets.Count * MelodyOneValue)
                 oneValueShare[part] = (common.Count() * 100 / onsets.Count, common.Key);
             if (common.Count() >= onsets.Count * (melody ? MelodyOneValue : PartOneValue))
@@ -1184,10 +1189,15 @@ public static class CompositionChecks
         // `bars`: the bar starts from tick 0, the piece's end the last of them.
         if (bars.Count < 2)
             yield break;
+        var winds = new List<(string Name, int Bars, int Start)>();
         foreach (var part in parts)
         {
             string name = part.Name.Text;
-            if (!(sung.Contains(name) || InstrumentOf(part) is "soprano" or "alto" or "tenor" or "baritone" or "voice-bass"))
+            bool singer = sung.Contains(name) || InstrumentOf(part) is "soprano" or "alto" or "tenor" or "baritone" or "voice-bass";
+            // A wind or brass player breathes as a singer does (owner's trials 2026-11-07: two wind
+            // quintets' clarinets rocked in eighths from the first bar to the last, their horns and
+            // bassoons 23 bars with no rest; the guide's "no part plays every bar").
+            if (!singer && !Breathing.Contains(InstrumentOf(part)))
                 continue;
             var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && (n.Part ?? t.Name) == name))
                 .Select(n => (Start: n.StartTick, End: n.StartTick + n.DurationTicks)).OrderBy(n => n.Start).ToList();
@@ -1217,11 +1227,19 @@ public static class CompositionChecks
                 else
                     run = 0;
             }
-            if (best >= NoBreathFewestBars)
+            if (best >= NoBreathFewestBars && singer)
                 yield return new("singers.no-breath", $"{name}: sings {best} bars in a row without a rest (bars {bestStart + 1}–{bestStart + best}, as the form plays them) — "
                     + "a singer breathes: a line of words is a phrase, and each phrase ends on a longer note with a rest after it; "
                     + "a comma in the words is a breath in the line.") { Parts = [name], Bars = [.. Enumerable.Range(bestStart + 1, best)] };
+            else if (best >= NoBreathFewestBars)
+                winds.Add((name, best, bestStart));
         }
+        // The winds told together: a quintet's five players are one finding, not five.
+        if (winds.Count > 0)
+            yield return new("winds.no-breath", $"{string.Join(", ", winds.Select(w => $"{w.Name} plays {w.Bars} bars (bars {w.Start + 1}–{w.Start + w.Bars})"))} "
+                + "in a row without a rest, as the form plays them — a wind player breathes: a rest between the phrases, a beat or more "
+                + "every four or eight bars, or another part taking the figure or the held note while this one rests.")
+            { Parts = [.. winds.Select(w => w.Name)], Bars = [.. winds.SelectMany(w => Enumerable.Range(w.Start + 1, w.Bars)).Distinct().Order()] };
     }
 
     // ---- The tune's shape across the song (owner's review 2026-11-01: 夜明けのうた — every one of its 13
@@ -1699,7 +1717,10 @@ public static class CompositionChecks
                 if (patterns.Count < 2)
                     return null;
                 var top = patterns.GroupBy(p => p).OrderByDescending(g => g.Count()).First();
-                return top.Count() * 2 >= patterns.Count ? top.Key : null;
+                // No bar owning half the section is a figure of its own — the part sings a tune there,
+                // the contrast the finding asks for (owner's trial 2026-11-07: a wind quintet's horn held
+                // notes in four sections and sang the theme in the fifth, and was told "every section").
+                return top.Count() * 2 >= patterns.Count ? top.Key : $"free:{start}";
             }
             var figures = spans.Select(s => (s.Name, Figure: Commonest(s.Start, s.End))).Where(f => f.Figure != null).ToList();
             if (figures.Count < 3)
@@ -1719,6 +1740,23 @@ public static class CompositionChecks
                 + (figures.Any(f => FrameSection.IsMatch(f.Name)) ? " An intro or a coda may keep the figure: the change belongs in the sections between them." : "")) { Parts = [part.Key] };
         }
     }
+
+    /// <summary>A part's single notes moving mostly by leap: a broken chord, the accompaniment's figure.</summary>
+    private static bool BrokenChords(IEnumerable<(string Part, int StartTick, int DurationTicks, int Pitch)> lineNotes, string part)
+    {
+        var line = lineNotes.Where(n => n.Part == part)
+            .GroupBy(n => n.StartTick).OrderBy(g => g.Key).Where(g => g.Count() == 1).Select(g => g.First().Pitch).ToList();
+        var moves = line.Zip(line.Skip(1), (a, b) => System.Math.Abs(a - b)).Where(d => d > 0).ToList();
+        return moves.Count >= LeapsFewestMoves && moves.Count(d => d <= 2) < moves.Count * MelodyStepShare;
+    }
+
+    /// <summary>The wind and brass instruments: a player who breathes.</summary>
+    private static readonly HashSet<string> Breathing = new(System.StringComparer.OrdinalIgnoreCase)
+    {
+        "flute", "piccolo", "oboe", "clarinet", "clarinet-a", "bassoon",
+        "soprano-sax", "alto-sax", "tenor-sax", "baritone-sax",
+        "trumpet", "trumpet-c", "horn", "trombone", "tuba",
+    };
 
     /// <summary>A band's drums playing one groove in every section: the commonest bar of each the same
     /// (owner's trial 2026-10-30: a rock trio's kick and snare `bd4 sn4 bd8 bd8 sn4` in all 52 bars),

@@ -109,6 +109,7 @@ public static class ReviewNotes
         ["singers.inner-leaps"] = new(S, D, "A singer holds a line by ear, and leap after leap between chord tones has no line to hold.", "The part is written for trained singers in a style that leaps."),
         ["singers.no-words"] = new(M, D, "A voice sings words, and bars with none usually mean a lyric track has not reached them.", "A vocalise, a hum or an ah is meant."),
         ["singers.no-breath"] = new(M, D, "A singer has to breathe, and a phrase of words ends on a longer note with a rest after it.", "Staggered breathing in a choir, or a wordless drone."),
+        ["winds.no-breath"] = new(M, D, "A wind or brass player has to breathe, and a line with no rest makes them break it where the music does not.", "Two players share the part and take turns, or the line is written for circular breathing."),
         ["piano.holds"] = new(S, D, "An accompaniment moves a song on. Held chords under every bar leave it standing still.", "A still, chorale-like setting is meant."),
 
         // The accompaniments and the harmony

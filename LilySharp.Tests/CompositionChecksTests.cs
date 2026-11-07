@@ -456,6 +456,35 @@ public class CompositionChecksTests
             + string.Concat(Enumerable.Repeat("la la la la | ", 16)) + "}\n}\nform")), f => f.Contains("without a rest"));
     }
 
+    // Owner's trials 2026-11-07: two wind quintets' clarinets rocked in eighths from the first bar to the
+    // last, their horns and bassoons 23 bars with no rest.
+    [Fact]
+    public void AWindPlayerWithNoRestInSixteenBars_IsSaid()
+    {
+        string Piece(string instrument, int bars, string bar8 = "g'4 a'4 b'4 c''4 |") => $"title \"Breath\"\ntime 4/4\noctave absolute\npart w {{ instrument {instrument} }}\nsection A {{\n  w {{ "
+            + string.Concat(Enumerable.Range(1, bars).Select(i => i == 8 ? bar8 + " " : "c''4 b'4 a'4 g'4 | ")) + "}\n}\nform { A }\nscore { staff w }\n";
+        Assert.Contains(CompositionChecks.Of(Piece("clarinet", 16)),
+            f => f.StartsWith("w plays 16 bars (bars 1–16) in a row without a rest, as the form plays them — a wind player breathes"));
+        Assert.Contains(CompositionChecks.Of(Piece("horn", 16)), f => f.Contains("a wind player breathes"));
+        // A rest in bar 8, or fifteen bars: nothing to say.
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("clarinet", 16, "g'4 a'4 b'4 r4 |")), f => f.Contains("without a rest"));
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("clarinet", 15)), f => f.Contains("without a rest"));
+    }
+
+    // Owner's trials 2026-11-07: two wind quintets' clarinets rocked in broken chords under the tune, a
+    // pastorale's cradle, and were told "91% eighth notes" twice.
+    [Fact]
+    public void ABrokenChordAccompaniment_IsNotToldOfItsOneValue()
+    {
+        string Piece(string bar) => "title \"Cradle\"\ntime 6/8\noctave absolute\npart ob { instrument oboe }\npart cl { instrument clarinet }\nsection A {\n"
+            + "  ob { " + string.Concat(Enumerable.Repeat("c''4@p d''8 e''4. | f''8 e''8 d''8 c''4. | ", 4)) + "}\n"
+            + "  cl { " + string.Concat(Enumerable.Repeat(bar + " r2. | ", 4)) + "}\n}\nform { A }\nscore { staff ob  staff cl }\n";
+        // Broken chords: nothing to say of their eighths.
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("c'8@p e'8 g'8 e'8 g'8 e'8 | c'8 e'8 g'8 e'8 g'8 c''8 |")), f => f.StartsWith("cl:") && f.Contains("eighth notes"));
+        // A line of steps in eighths still is.
+        Assert.Contains(CompositionChecks.Of(Piece("c'8@p d'8 e'8 f'8 e'8 d'8 | c'8 d'8 e'8 f'8 g'8 f'8 |")), f => f.StartsWith("cl:") && f.Contains("eighth notes"));
+    }
+
     // Owner's review 2026-11-01 (Yoru-Ake-no-Uta): every two-bar phrase in `8 8 4 2 | 4 2 r4`, the chorus
     // opening with the verse's first phrase note for note, the top note spent in bar 3.
     private static string Hook(string verse, string chorus) => "title \"Hook\"\ntime 4/4\noctave absolute\npart singer { instrument alto }\n"
@@ -1127,6 +1156,21 @@ public class CompositionChecksTests
         const string Keep = "An intro or a coda may keep the figure";
         Assert.Contains(CompositionChecks.Of(Book("Intro")), f => f.StartsWith("lh: the same figure in every section (Intro, B, C)") && f.EndsWith(Keep + ": the change belongs in the sections between them."));
         Assert.Contains(CompositionChecks.Of(Book("A")), f => f.StartsWith("lh: the same figure in every section (A, B, C)") && !f.Contains(Keep));
+    }
+
+    // Owner's trial 2026-11-07: a wind quintet's horn held notes in four sections and sang the theme in
+    // the fifth; that section had no bar owning half of it, was left out, and the rest were "every section".
+    [Fact]
+    public void ASectionWhereThePartPlaysNoRepeatedBar_IsAFigureOfItsOwn()
+    {
+        const string Held = "c1 | g,1 | c1 | g,1 |";
+        static string Book(string middle) => $"title \"Figure\"\ntime 4/4\noctave absolute\n{Hands}\n"
+            + string.Concat(new[] { ("A", Held), ("B", middle), ("C", Held), ("D", Held) }.Select(s => $"section {s.Item1} {{\n  rh {{ c''1@p | d''1 | e''1 | d''1 | }}\n  lh {{ {s.Item2} }}\n}}\n"))
+            + "form { A B C D }\nscore { grandStaff { staff rh  staff lh } }\n";
+        // A tune in B: four sections, three alike — not told.
+        Assert.DoesNotContain(CompositionChecks.Of(Book("c4 e8 g8 c'2 | b4. a8 g2 | a8 g8 f8 e8 d2 | g,2. r4 |")), f => f.StartsWith("lh: the same figure"));
+        // The held notes in B too: every section.
+        Assert.Contains(CompositionChecks.Of(Book(Held)), f => f.StartsWith("lh: the same figure in every section (A, B, C, D)"));
     }
 
     // Owner's review 2026-11-02: 雨音の午後's `form { ~Intro A B A2 Coda }`: the review's form began at A.

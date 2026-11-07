@@ -384,7 +384,9 @@ What makes it music:
   marks are for the players), a tremolo `c'2:32` for tension, sustained notes under a moving tune.
   Layers: one tune, one countermelody, a harmony held, a bass — doubled at the octave for weight at
   the climax, thinned to a few players for a quiet passage. Winds and brass breathe: no part plays
-  every bar.
+  every bar. The key suits the players: a clarinet in B♭ reads two sharps more than it sounds, a horn
+  in F one more, so winds and brass live in the flat keys (F, B♭, E♭) and their sharp neighbours
+  (C, G, D) — no part's written key past four or five sharps or flats.
 - **Rhythm and articulation**: long and short notes mixed, rests that let a line breathe,
   slurs over a phrase, `@staccato`, `@accent`, and dynamics with hairpins
   (`@p … @cresc … @f`) that shape each section — every mark for a reason, the same level never
