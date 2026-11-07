@@ -73,14 +73,8 @@ public static class ScoreHomeMeter
         return home;
     }
 
-    // A `time` inside a section/phrase/part is a change, not the score home.
-    // Mirrors ScoreHomeKey.IsInsideMusicContent, which owns the same question for the key.
+    // A `time` inside a section/phrase/part cell is a change, not the score home; a part
+    // HEADER writes no `time` of the file's either way. The one spelling is DeclarationScope.
     private static bool IsInsideMusicContent(SyntaxNode node)
-    {
-        for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is PhraseDeclarationSyntax or SectionDeclarationSyntax
-                or VariableDeclarationSyntax or PartBlockSyntax)
-                return true;
-        return false;
-    }
+        => DeclarationScope.IsInsideMusicContent(node, partHeaderIsMusic: false);
 }

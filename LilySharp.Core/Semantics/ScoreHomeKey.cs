@@ -114,15 +114,9 @@ public static class ScoreHomeKey
     // session 570 — a part's header key used to become EVERY part's home, the last part's
     // winning). Sharps still counts it: the MIDI exporter's scale-degree reset reads that, and
     // moving it is a separate question.
+    // The one spelling of the container list is DeclarationScope (session 1123).
     private static bool IsInsideMusicContent(SyntaxNode node, bool excludePartHeader)
-    {
-        for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is PhraseDeclarationSyntax or SectionDeclarationSyntax
-                or VariableDeclarationSyntax or PartBlockSyntax
-                || (excludePartHeader && p is PartDeclarationSyntax))
-                return true;
-        return false;
-    }
+        => DeclarationScope.IsInsideMusicContent(node, partHeaderIsMusic: excludePartHeader);
 
     /// <summary>The nearest enclosing declaration or cell of <paramref name="node"/>.</summary>
     internal static SyntaxNode? NearestContainer(SyntaxNode node)

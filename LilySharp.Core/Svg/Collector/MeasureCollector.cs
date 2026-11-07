@@ -5842,23 +5842,12 @@ public sealed partial class MeasureCollector
     /// Checks if a node is inside music content (phrase/section/variable body).
     /// Used by CollectDefinitions to distinguish top-level declarations from mid-music changes.
     /// </summary>
+    // A directive in a part header (`part p { key bes major … }`) is a PER-PART default,
+    // applied when that part is collected (GetPartDefaults), NOT a global one — otherwise it
+    // would overwrite the file-level key for every part, including those that set none of
+    // their own. The one spelling of the container list is Semantics.DeclarationScope.
     private static bool IsInsideMusicContent(SyntaxNode node)
-    {
-        var parent = node.Parent;
-        while (parent != null)
-        {
-            if (parent is PhraseDeclarationSyntax or SectionDeclarationSyntax
-                or VariableDeclarationSyntax or PartBlockSyntax
-                // A directive in a part header (`part p { key bes major … }`) is a
-                // PER-PART default, applied when that part is collected (GetPartDefaults),
-                // NOT a global one — otherwise it would overwrite the file-level key for
-                // every part, including those that set none of their own.
-                or PartDeclarationSyntax)
-                return true;
-            parent = parent.Parent;
-        }
-        return false;
-    }
+        => Semantics.DeclarationScope.IsInsideMusicContent(node, partHeaderIsMusic: true);
 
     // (The six per-container IsInside* predicates that stood here — Tuplet, Parallel, Once,
     // Grace, Repeat, InlineVolta — were deleted in session 407. Nothing had called any of them

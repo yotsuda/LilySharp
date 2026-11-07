@@ -3385,18 +3385,14 @@ public sealed class MusicXmlExporter
 
     /// <summary>Drum note → &lt;unpitched&gt; note: display position from the
     /// drums-style staff position mapped onto treble letters (middle line =
-    /// B4), notehead from the same table.</summary>
+    /// B4), notehead from the same table — the one spelling a drum chord's member takes too
+    /// (<see cref="DrumChordMember"/>; until session 1123 this method built the note a second
+    /// time with the same fields).</summary>
     /// <remarks>LILYPOND-REF: ly/drumpitch-init.ly drums-style.</remarks>
     private void ProcessDrumNote(DrumNoteSyntax drum)
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
-        var info = DrumOverrides.Resolve(DrumOverridesMap, drum.DrumName);
-
-        // Staff position → display step/octave (B4 = middle line).
-        int idx = 6 + info.StaffPosition;
-        int oct = 4 + (int)Math.Floor(idx / 7.0);
-        string step = "CDEFGAB"[((idx % 7) + 7) % 7].ToString();
 
         var duration = GetDuration(drum.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -3404,21 +3400,8 @@ public sealed class MusicXmlExporter
         EmitPendingDynamic();
 
         var (tupletActual, tupletNormal) = CurrentTupletRatio();
-        var xmlNote = new MusicXmlNote
-        {
-            IsUnpitched = true,
-            Step = step,
-            Octave = oct,
-            Duration = durationTicks,
-            Type = type,
-            Dots = dots,
-            ActualNotes = tupletActual,
-            NormalNotes = tupletNormal,
-            Notehead = NoteheadName(info.Notehead),
-            NoteheadParentheses = WritesParenthesize(drum.Articulations),
-        };
-        AddDrumMark(xmlNote, info);
-        _currentMeasure.Notes.Add(xmlNote);
+        _currentMeasure.Notes.Add(DrumChordMember(drum, durationTicks, type, dots,
+            isChord: false, tupletActual, tupletNormal, chordParenthesized: false));
         MaybeClosePickup(duration);
     }
 
@@ -3488,14 +3471,7 @@ public sealed class MusicXmlExporter
             Duration = durationTicks,
             Type = type,
             Dots = dots,
-            AccidentalName = (alter, quarter) switch
-            {
-                (0, 1) => "quarter-sharp",
-                (1, 1) => "three-quarters-sharp",
-                (0, -1) => "quarter-flat",
-                (-1, -1) => "three-quarters-flat",
-                _ => null,
-            },
+            AccidentalName = QuarterToneAccidentalName(alter, quarter),
             Notehead = NoteheadFromMarks(note.Articulations),
             NoteheadParentheses = WritesParenthesize(note.Articulations),
             ActualNotes = tupletActual,
@@ -3762,14 +3738,7 @@ public sealed class MusicXmlExporter
                 Duration = durationTicks,
                 Type = type,
                 Dots = dots,
-                AccidentalName = (alter, quarter) switch
-                {
-                    (0, 1) => "quarter-sharp",
-                    (1, 1) => "three-quarters-sharp",
-                    (0, -1) => "quarter-flat",
-                    (-1, -1) => "three-quarters-flat",
-                    _ => null,
-                },
+                AccidentalName = QuarterToneAccidentalName(alter, quarter),
                 Notehead = NoteheadFromMarks(pitch.Articulations),
                 ActualNotes = tupletActual,
                 NormalNotes = tupletNormal,
@@ -6561,16 +6530,24 @@ public sealed class MusicXmlExporter
         return targetOctave;
     }
 
-    /// <summary>True when <paramref name="node"/> is nested inside a phrase /
-    /// section / part body (music content) rather than a top-level declaration.</summary>
+    /// <summary>True when <paramref name="node"/> is nested inside a phrase / section / part
+    /// body (music content) rather than a top-level declaration — a part HEADER's directive is
+    /// read here (ApplyPartHeader applies it again per part). The one spelling is
+    /// <see cref="Semantics.DeclarationScope"/>.</summary>
     private static bool IsInsideMusicContent(SyntaxNode node)
+        => Semantics.DeclarationScope.IsInsideMusicContent(node, partHeaderIsMusic: false);
+
+    /// <summary>MusicXML's name for a quarter-tone accidental — the one table both the note
+    /// and the arpeggio's member read (session 1123); null for a whole-tone alteration, which
+    /// the reader derives from <c>&lt;alter&gt;</c>.</summary>
+    private static string? QuarterToneAccidentalName(int alter, int quarter) => (alter, quarter) switch
     {
-        for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is PhraseDeclarationSyntax or SectionDeclarationSyntax
-                or VariableDeclarationSyntax or PartBlockSyntax)
-                return true;
-        return false;
-    }
+        (0, 1) => "quarter-sharp",
+        (1, 1) => "three-quarters-sharp",
+        (0, -1) => "quarter-flat",
+        (-1, -1) => "three-quarters-flat",
+        _ => null,
+    };
 
     private static int StepIndex(char baseName) => RelativeOctave.StepIndex(baseName);
 
