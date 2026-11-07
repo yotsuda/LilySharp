@@ -96,7 +96,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **作曲ガイダンスの改善＝クローズ（オーナー決定 2026-11-02・第1042）**: 「ユーザーが使う機会が少ない機能にかなり投資している。どうしても入れるべき内容でなければクローズして別の課題へ」。**講評のループと検査の追加を、オーナーが言うまで再開しない・提案しない。** 入れなかったもの: W3（section の中の急な落ち込み・試作は Lab `sessions/p1042/proto-w3.ps1`）。未調査のまま: 書き込みの後の再提案で差し戻しが最初からやり直しになる動き。
 - **作曲ガイダンス（Copilot のチャットで作曲 → Lily# が音楽として検査）＝第1042 でクローズ（上の行）**: 流れ・検査の一覧・差し戻しの規則・**講評の手順**（オーナーが Downloads の .lys を送る → ログ `~\.copilot\session-state\*\events.jsonl` → 検査を DLL で → `lysc octave --absolute` → 日本語で講評し「入れて」で実装）・残りは **`docs/compose-in-chat-design.md`**。
 - **人間の曲のレビュー（オーナーの設計 2026-10-30）＝第1038 で §6 の 1〜4 を実装**: ツールとコマンドは実物の VS Code で確認済み。残りは Copilot の AI の振る舞い（MANUAL-CHECKS C55）・目視（C56）・§6-5（消音・頼まれてから）。設計との差は **`docs/review-tool-design.md` §7**（`what` と `fix.say` が 1 文のまま・`fix.edit`／`ask` なし）。
-- **section の外のコード行（`chords X { C | G7 | }`・`Semantics.FlatChordRows`）の残り＝第1120 で ⑴⑶ を閉じた（§1.1 第1120）**: ⑴ 小節ごとの拍子は `SectionMeterPlan.MeterOfBar` の 1 か所から（ページの格子・MIDI・XML・`.ly` の 4 読み手。section 内の行も同じだった）／⑶ form の無い `.ly` は宣言順に section を歩く。**⑵ 音楽より長い行の余りの小節＝オーナー判断待ち（第1120 実測の表）**: ページはリードシートでは描き、譜表つきでは描かない・MIDI は常に鳴らす・`.ly` は常に書く・XML は常に落とす＝4 読み手が 3 通り。第1038 の「余りも鳴らす・as the page draws it」はページを測らずに書かれていた。選択肢 ⒜ ページに合わせる（譜表つきは MIDI と `.ly` も切る・リードシートは XML が余りの小節を足す）／⒝ 全部出す（譜表つきもページが段を延ばす＝section 内の長い行と同じ扱い・XML が足す）。コードは触っていない。
+- **section の外のコード行（`chords X { C | G7 | }`・`Semantics.FlatChordRows`）の残り＝第1120〜1121 で全部閉じた**: ⑴ 小節ごとの拍子は `SectionMeterPlan.MeterOfBar` の 1 か所から（ページの格子・MIDI・XML・`.ly` の 4 読み手・§1.1 第1120）／⑶ form の無い `.ly` は宣言順に section を歩く（同）／⑵ **音楽より長い行の余りの小節は全部出す（オーナー決定 2026-11-07・第1121）**＝score の拍子・home の調の小節として、ページは譜表を空の小節で延ばし（`ExtendStavesToTheRows`・拍子が違えば戻しを描く）、XML は小節を足し（`EmitFlatRowsPastTheMusic`）、MIDI は home に戻して鳴らし、`.ly` は `\time` の戻しを書く（§1.1 第1121）。残る注: section の中の inline の `repeat` と flat の行（`Canonical` は演奏長・ページは 1 回印刷）は未実測・本 0。
 - **コード図の文法の整理＝第1036 で実装済（§1.1 第1036）**: 残りは MANUAL-CHECKS §2.2 の `[ ]`（実機）だけ。旧綴りの本は普通の語のエラー＝Claude は直さない（全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **OMR の読みを AI で直す＝M1〜M3 実装済・実機未確認**（MANUAL-CHECKS §5 B9〜B11・設計は `docs/omr-ai-fix-design.md`・照合の lysc は VSIX の `server` に同梱済＝§1.1 第975。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」）。
 - **GitHub Pages の OMR デモ動画の撮影＝ユーザーのタスク（第961）**: `site/videos/SHOTLIST.md` の 16・17。置き場は `site/scan-body.html` の `figure.demo-video[data-pending]`（置いたら `data-pending` を外す）。全文は ARCHIVE「§1.0 から移した閉じた段落（2026-11-01）」。
@@ -137,6 +137,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1121セッション（2026-11-07・YT-DELL2）
+
+開始時 full **14779 / 0 / 2**（`-Start p1121`・HEAD `a39f8da90`・未 push 3・OMR の open は 0）。同じ会話で第1120 から続けた便。第1120 末に ⑵「音楽より長いコード行の余りの小節」の実測の表を AskUserQuestion で訊き、オーナーが **「全部出す＝ページが段を延ばす」**を選んだ（推奨どおり）。作業場所は Lab `sessions/p1121/`。
+
+- **規則＝余りの小節は score の拍子（`ScoreHomeMeter`）・home の調・弱起なしの小節**（見出しの無い section が開く形と同じ。4 読み手で 1 つ）。「最後に効いていた拍子」案は XML の `EmitPartMusic` が `_sectionTime` null で home に戻す作りと衝突し、合わせるなら新しい機械が要った＝home に揃えた。
+- **ページ**（`MeasureCollector.ExtendStavesToTheRows`・`FitRowsToMusicBars` の直後）: 音楽の全長の voice を、コード行の最長まで `IsEmptyPlaceholder` の小節（home 長の spacer）で埋める。音楽が home を離れたまま終わっていれば最初の埋め小節に `TimeSignatureChangeItem(home)`（`r-rev`: 3/4 の 1 小節のあと C が描かれた）。行の格子も音楽の後は home（`RowMeterTimeline` が末尾に `(musicLen, home)` を足す）。⚠️ **「home」は `_v.Meta` ではない**＝開幕 section の見出しの `time` は `AtPieceOpening` で `_v.Meta` に吸われる（`m3-open` で確認＝第1120 の `MeterByMeasure` の開始値としてはそれで正しい）ので、戻し先は `ScoreHomeMeter.Read(_root)`。
+- **MIDI**（`Export` の `Rest()` の前）: `_bars.OpenSection(null, null)` で home に戻し（動けば conductor に拍子イベント＝`r-rev` で t=1440 に 4/4）、`_ambientTonic`／`_keySharps` も home・余りの小節線を `BarTicks` に足す（メトロノームとループ）。
+- **XML**（`EmitFlatRowsPastTheMusic`・`ProcessSections` の後）: 1 つ printed play を立て（`_xmlRole = None`・section 状態は null）、engraved part 全部に `|` × 余りの小節を `EmitPartMusic`（`PadPartsSilentInThisPlay` と同じ型＝silent bar・`_playStartMeasure` が立つ）→ `RememberChordRow("", row, items)` → `EmitPendingChordRows` が置く（リードシートは `EmitRowAsItsOwnPart`）。`Export` の古い註「A flat top-level chord track is not handled, as the MIDI's is not」を直した。
+- **`.ly`**（`ChordBarsPastTheMusic`）: 余りは前から home で書いていた。LP の Timing は Score のものなので、最後の play の小節の拍子（`SectionBarMeters(_lastChordPlay)[^1]`）が home と違えば最初の余りの小節に `\time H` を前置（`\chordmode` の中の `\time` も Score の Timing を動かす）。`_lastChordPlay` は `AppendSection`／`AppendSilentPlay` の chord arm が立てる。
+- **網**: `ChordSlotGridTests.AFlatRowPastTheMusic_PadsTheStaves_InTheScoresMeter`（譜表の小節 3・placeholder・home 長・戻しの change item 1 本）、`ChordRowMidiTests.AFlatTopLevelRow_PastTheMusic_IsInTheScoresMeter_Everywhere`（MIDI の打点と BarTicks・XML の `<beats>4`・`.ly` の `\time 4/4 c1`）・`…_IsInTheMusicXml_BesideAStaff_AndOnALeadSheet`。毒 3 本（`sessions/p1121/poisons.ps1`＝ページ埋めなし／XML 書かず／MIDI 戻さず）。
+- ⚠️ 網の罠: `MusicXmlExporter.Export(tree)` を `Score` なしで呼ぶと `KeepTheScoresParts` が早期 return＝置かない part も文書に残る（`Descendants("part").First()` がリードシートで melody を掴んだ）→ part-name で選ぶ。
+- ⚠️ **打鍵の罠（1 回目の `-End` で `KeystrokeStaysRedFreeTests` が lesson-08-chords で 1 赤）**: ページ側の home を `Semantics.ScoreHomeMeter.Read(_root)` で読んだら、それは `root.DescendantNodes()` の red walk＝打鍵ごとに索引を建てる。collector の中では **`HomeMeterOfScore`（`_scoreTime`＝全 builder の home）**を読む。`Semantics` の読み手を collector の打鍵経路に持ち込むときは、この網が番人。
+- **掃き（`sessions/p1121/sweep-and-regen.ps1`・base `a39f8da90`）: 1036 冊・1262 枚で動いた svg 0**（コーパスに音楽より長い flat の行の本は無い）。毒 3 本＝ページ埋めなし 2 赤／XML 書かず 2 赤／MIDI 戻さず 1 赤（`poison1..3.log`）。**commit `689ecae75`**（Core 5 ファイル＋網 2＋CHANGELOG 2）。終了時 full **14783 / 0 / 2**（`-End p1121 -DiffBase a39f8da90`＝`end2.log`・門は全部 OK。1 回目 `end.log` は上の打鍵の罠で 1 赤）。§7 7.5: Core `+166` 行・REF 0・OWN 0＝新しい近似なし（規則は「見出しの無い section が開く形」の延長）。この docs commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1120セッションの経緯
+
 ### 1.1 第1120セッション（2026-11-07・YT-DELL2）
 
 開始時 full **14770 / 0 / 2**（`-Start p1120`・HEAD `e48307588`・未 push 1＝第1119 の docs・OMR の open は 0）。作業場所は Lab `sessions/p1120/`。§1.0 に次の一手の指示が無かったので候補 3 つを AskUserQuestion で訊き、オーナーが **「section の外のコード行の残り」**（第1038 の制限 ⑴〜⑶）を選んだ。
@@ -149,18 +165,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **掃き（`sessions/p723/svg2/sweep-all.ps1`・base `e48307588` を worktree で build→`exe-base`・head→`exe-head`）: 1036 冊・1262 枚を比べて動いた svg 0**（`sweep-and-regen.log`）。`APPROXIMATIONS.md`・`magic_constants.csv` は再生成して差 0。
 - ⚠️ 残り・注: ⒜ section の中の inline の `repeat` と flat の行＝`Canonical` は意味の小節数（演奏長）、ページは 1 回しか印刷しない＝flat の行の取り方が食い違いうる（未実測・本 0）／⒝ 小節の途中に書いた `time` は、`.ly` の行では旧 walk が「その小節から」と読んだが、時間軸は plan と同じく「その voice だけのもの」として飛ばす（LP も小節の途中の `\time` は拒む）／⒞ CHANGELOG は両方の `## Unreleased` を立てて 3 行（root）・2 行（vscode）。
 - **commit `399245171`**（Core 7 ファイル＋網 2＋CHANGELOG 2）。終了時 full **14779 / 0 / 2**（`-End p1120 -DiffBase e48307588`＝`sessions/p1120/end2.log`・門は全部 OK。1 回目 `end.log` は `DocCommentPlacementTests` が 1 赤＝`MeterTimeline` を `SectionBoundaryContinuations` の doc と宣言のあいだに挟んでいた→上へ移して amend）。§7 7.5: Core `+266` 行・REF 1（移した `Timing_translator` の註＝新規の出典ではない）・OWN 0＝新しい近似なし（答えを 1 か所に畳み、読み手 4 つがそれを読むだけ）。この docs commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1119セッションの経緯
-
-### 1.1 第1119セッション（2026-11-07・YT-DELL2）
-
-開始時 full **14770 / 0 / 2**（`-Start p1119`・HEAD `89745d73b`・OMR の open は 0）。作業場所は Lab `sessions/p1119/`。オーナー「v0.15.0 をリリースしたい」＝`docs/RELEASING.md` の手順で版を用意する便（tag と push はオーナー）。
-
-- **用意した＝`92ad06897` release: 0.15.0**（RELEASING §2〜§4）: 版の 7 か所（`Directory.Build.props`・拡張の `package.json`・`package-lock.json` の 2 か所・README の banner・DEPLOY の path）を 0.15.0 に（`package.json` は numstat 1/1）。両 CHANGELOG の `## Unreleased` を `## 0.15.0` に替え、`git log v0.14.0..HEAD`（765 commit）と突き合わせて書かれていなかった 5 件を頭に足した＝二声の同時 grace の 1 列（第1115）・後から始まる連桁を避ける（第1113）・段をまたぐ連桁の音の下の休符（第1114）・長い譜の打鍵の高速化（第1108〜1110）・プレビューのマウス編集の廃止（2026-11-03 オーナー決定）。第1116 の bow の枠は絵が 1 枚も変わらないので書かない。`OMR_MIN_VERSION` 0.4.0・`OMR_PROTOCOLS` 1 は据え置き（この版は新しい読み手に依らない）。
-- **ローカル検証（§4）**: `dotnet build LilySharp.slnx --no-incremental` 0 エラー（Core 警告 0・残る警告は Lsp の nullable 3 件と NU1902 MessagePack＝前からのもの）・full **14770 / 0 / 2**・`lysc --version` = **0.15.0**・`npm install --package-lock-only` は差分を増やさず・`npm run check-types` 緑。VSIX の試し build はしていない（CI が作る）。
-- **残りはオーナー（§5〜§7）**: ⑴ `git push origin master` → CI 緑を待つ ⑵ `git tag -a v0.15.0 -m "Lily# 0.15.0 …"` → `git push origin v0.15.0` ⑶ 約 14 分後に RELEASING §7 の Marketplace の問い合わせ（8/8・HEAD 200）と `gh release view v0.15.0`（12 資産）。
-- 終了時 full **14770 / 0 / 2**（`-End p1119 -DiffBase 89745d73b`＝`sessions/p1119/end.log`・門は全部 OK）。§7 7.5: Core `+0` 行（版と changelog だけ）・REF 0・OWN 0。
-- **出した（オーナー「あなたがタグを打ってリリースして」＝この回も push とタグはユーザーの許可で Claude が打った・規則は「push はユーザー」のまま）**: `git push origin master`（3 commit）→ CI run `42291049850` success（12 分 32 秒）→ `git tag -a v0.15.0` on `8111ba3eb` → `git push origin v0.15.0` → Release run **`42292827975` 13 job 全部 success（19 分）**→ Release **12 資産**（8 VSIX ＋ 4 CLI・draft でも pre-release でもない）→ Marketplace の問い合わせは **4/8 → 7/8（8 分・darwin-arm64 が最後）→ 8/8（12 分）**＝0.5.0 と同じ索引の遅れで、何も欠けていなかった（`vsce show` は最初から 0.15.0）。win32-x64 の VSIX に HEAD 200。計器は `sessions/p1119/verify-release.ps1`（§7 の 3 つの問いを 1 本に）・ログ `verify-release1..3.log`・`release-watch.log`。この docs commit と Lab の push はオーナー。
 
 ## 2. 開いている作業
 

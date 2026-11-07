@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1119セッションの経緯
+
+### 1.1 第1119セッション（2026-11-07・YT-DELL2）
+
+開始時 full **14770 / 0 / 2**（`-Start p1119`・HEAD `89745d73b`・OMR の open は 0）。作業場所は Lab `sessions/p1119/`。オーナー「v0.15.0 をリリースしたい」＝`docs/RELEASING.md` の手順で版を用意する便（tag と push はオーナー）。
+
+- **用意した＝`92ad06897` release: 0.15.0**（RELEASING §2〜§4）: 版の 7 か所（`Directory.Build.props`・拡張の `package.json`・`package-lock.json` の 2 か所・README の banner・DEPLOY の path）を 0.15.0 に（`package.json` は numstat 1/1）。両 CHANGELOG の `## Unreleased` を `## 0.15.0` に替え、`git log v0.14.0..HEAD`（765 commit）と突き合わせて書かれていなかった 5 件を頭に足した＝二声の同時 grace の 1 列（第1115）・後から始まる連桁を避ける（第1113）・段をまたぐ連桁の音の下の休符（第1114）・長い譜の打鍵の高速化（第1108〜1110）・プレビューのマウス編集の廃止（2026-11-03 オーナー決定）。第1116 の bow の枠は絵が 1 枚も変わらないので書かない。`OMR_MIN_VERSION` 0.4.0・`OMR_PROTOCOLS` 1 は据え置き（この版は新しい読み手に依らない）。
+- **ローカル検証（§4）**: `dotnet build LilySharp.slnx --no-incremental` 0 エラー（Core 警告 0・残る警告は Lsp の nullable 3 件と NU1902 MessagePack＝前からのもの）・full **14770 / 0 / 2**・`lysc --version` = **0.15.0**・`npm install --package-lock-only` は差分を増やさず・`npm run check-types` 緑。VSIX の試し build はしていない（CI が作る）。
+- **残りはオーナー（§5〜§7）**: ⑴ `git push origin master` → CI 緑を待つ ⑵ `git tag -a v0.15.0 -m "Lily# 0.15.0 …"` → `git push origin v0.15.0` ⑶ 約 14 分後に RELEASING §7 の Marketplace の問い合わせ（8/8・HEAD 200）と `gh release view v0.15.0`（12 資産）。
+- 終了時 full **14770 / 0 / 2**（`-End p1119 -DiffBase 89745d73b`＝`sessions/p1119/end.log`・門は全部 OK）。§7 7.5: Core `+0` 行（版と changelog だけ）・REF 0・OWN 0。
+- **出した（オーナー「あなたがタグを打ってリリースして」＝この回も push とタグはユーザーの許可で Claude が打った・規則は「push はユーザー」のまま）**: `git push origin master`（3 commit）→ CI run `42291049850` success（12 分 32 秒）→ `git tag -a v0.15.0` on `8111ba3eb` → `git push origin v0.15.0` → Release run **`42292827975` 13 job 全部 success（19 分）**→ Release **12 資産**（8 VSIX ＋ 4 CLI・draft でも pre-release でもない）→ Marketplace の問い合わせは **4/8 → 7/8（8 分・darwin-arm64 が最後）→ 8/8（12 分）**＝0.5.0 と同じ索引の遅れで、何も欠けていなかった（`vsce show` は最初から 0.15.0）。win32-x64 の VSIX に HEAD 200。計器は `sessions/p1119/verify-release.ps1`（§7 の 3 つの問いを 1 本に）・ログ `verify-release1..3.log`・`release-watch.log`。この docs commit と Lab の push はオーナー。
+
 ## 以下は第1118セッションの経緯
 
 ### 1.1 第1118セッション（2026-11-07・YT-DELL2）
