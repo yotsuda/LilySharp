@@ -43,6 +43,10 @@ internal enum GraceDropKind
     /// names a decoration lost off music that DID reach the page, rather than music that
     /// did not.</summary>
     Bracket,
+    /// <summary>An <c>@cross</c> on SOME of a run's notes: a grace run moves to the other staff
+    /// whole (every note of the body writes it, <see cref="GraceBodySupport.AllColumnsWriteCross"/>)
+    /// or not at all, so this one is not engraved.</summary>
+    CrossPartial,
 }
 
 /// <summary>One thing a grace body holds that does not reach the page, at the span it
@@ -291,6 +295,38 @@ internal static class GraceBodySupport
             foreach (var a in drum.Articulations)
                 yield return a;
         }
+    }
+
+    /// <summary>The <c>@cross</c> mark — the one annotation whose carrying is a property of the
+    /// whole run (<see cref="AllColumnsWriteCross"/>), not of the note it stands on.</summary>
+    internal static bool IsCrossMark(SyntaxNode annotation)
+        => annotation is ArticulationSyntax { Name: "cross" };
+
+    /// <summary>
+    /// True when EVERY column of the body that has a head (a note, a chord, a drum — a rest has
+    /// none to move) writes <c>@cross</c>, and there is at least one: the run then stands on the
+    /// other staff whole, as LilyPond's <c>\change Staff</c> inside <c>\grace { }</c> moves the
+    /// Voice there (session 1122; the twin writes exactly that). A run some of whose notes write
+    /// it is not moved at all — its grace beam is one beam, and a kneed grace beam across the
+    /// staves is not drawn — and those marks are reported (<see cref="GraceDropKind.CrossPartial"/>).
+    /// THE question the collector (<c>MeasureCollector.ProcessGraceRegion</c>) and the drop list
+    /// both ask.
+    /// </summary>
+    internal static bool AllColumnsWriteCross(IReadOnlyList<GraceBodyElement> elements)
+    {
+        bool any = false;
+        foreach (var (item, _) in elements)
+        {
+            if (!IsCarried(item) || CarriedRest(item) != null)
+                continue;
+            bool cross = false;
+            foreach (var annotation in CarriedAnnotations(item))
+                if (IsCrossMark(annotation)) { cross = true; break; }
+            if (!cross)
+                return false;
+            any = true;
+        }
+        return any;
     }
 
     /// <summary>
@@ -1067,6 +1103,8 @@ internal static class GraceBodySupport
         // the ones on its inner columns (session 936).
         var carriedBreath = CarriedBreath(elements, afterGrace);
         var innerBreaths = InnerBreaths(elements, afterGrace);
+        // …and whether the run moves to the other staff whole (session 1122).
+        bool crossAll = AllColumnsWriteCross(elements);
         for (int index = 0; index < elements.Count; index++)
         {
             var (item, via) = elements[index];
@@ -1115,6 +1153,12 @@ internal static class GraceBodySupport
             // column a thing asks for. See GraceColumnInfo.Dots and Svg.Layout.DotColumn.
             foreach (var annotation in CarriedAnnotations(item))
             {
+                if (IsCrossMark(annotation))
+                {
+                    if (!crossAll)
+                        yield return new GraceDrop(GraceDropKind.CrossPartial, annotation.Span, Describe(annotation), via);
+                    continue;
+                }
                 if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedBendAfter(annotation)
                     || IsCarriedGesture(annotation) || IsCarriedTabTechnique(annotation)
                     || IsCarriedThumb(annotation)

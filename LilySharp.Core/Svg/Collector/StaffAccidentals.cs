@@ -609,7 +609,7 @@ internal static class StaffAccidentals
             if (b != null)
                 graceNotes[g] = new GraceNoteItem(gn.Type, b.MoveToImmutable(), gn.MeasureIndex,
                     gn.MainNoteItemIndex, gn.SourcePosition, gn.StaffIndex, gn.VoiceIndex, gn.ColumnItemIndices)
-                { IsAfterGrace = gn.IsAfterGrace };
+                { IsAfterGrace = gn.IsAfterGrace, CrossStaffIndex = gn.CrossStaffIndex };
         }
     }
 

@@ -2983,9 +2983,12 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                      session 935), and a '@breath' /
                      '@caesura' on the body's LAST note or chord, a column of its own
                      between the run and the main note (session 934; on an inner grace
-                     or an afterGrace it is reported). What is still reported (LYS4020)
-                     is '@cross': a grace note is not moved to the neighbouring staff
-                     (session 968 counted; '@diagram(…)' and '@pluck(…)' are drawn). *)
+                     or an afterGrace it is reported). '@cross' on EVERY note of the body
+                     moves the run to the neighbouring staff whole, read under that
+                     staff's clef (session 1122, as LilyPond's \change Staff inside
+                     \grace); on only some of them it is reported (LYS4020) and the run
+                     stays. Nothing else is known to be reported (session 968 counted;
+                     '@diagram(…)' and '@pluck(…)' are drawn). *)
 Repeat         = 'repeat' , 'tremolo' , Integer , MusicBlock ;
                  (* a tremolo: the note, or the two notes, alternated Integer times.
                     Volta repeats use the form's |: … :|, NOT a 'repeat' keyword.

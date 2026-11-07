@@ -57,6 +57,10 @@ public readonly record struct GraceNoteLayout(
     int TabTransposition = 0,
     int SourceIndex = -1,                // F3/B: index into score.GraceNotes (data-pos resolved at render)
     int StaffIndex = -1,                 // owning staff (ossia shrink); -1 = unknown/test construction
+    // The staff the run is DRAWN on when every note of it @cross moved (GraceNoteItem.CrossStaffIndex,
+    // session 1122): StaffYOffset is that staff's, and so is the ossia affine the renderer draws
+    // through. −1 when the run stands on its own staff — read DrawnStaff.
+    int CrossStaffIndex = -1,
     // The quanted beam, when this group has one: LilyPond's Beam.positions, i.e. the beam
     // centre's height at each DRAWN end (half a stem thickness outside the outer stems), in
     // staff positions up from the middle line. Null when the group draws flags instead.
@@ -77,7 +81,12 @@ public readonly record struct GraceNoteLayout(
     // ordinary engraver reaches a grob by its item index, and until session 310 a grace
     // column had none. Empty for a hand-built layout, which then publishes no addresses.
     ImmutableArray<int> ColumnItemIndices = default
-);
+)
+{
+    /// <summary>The staff the run is drawn on: <see cref="CrossStaffIndex"/> when it moved,
+    /// else <see cref="StaffIndex"/>.</summary>
+    public int DrawnStaff => CrossStaffIndex >= 0 ? CrossStaffIndex : StaffIndex;
+}
 
 /// <summary>
 /// Calculates positions for grace notes.
@@ -166,16 +175,20 @@ internal static class GraceNoteEngraver
             // stood off its heads by the difference (scratch/SongsByChatGPT/
             // 01_glass_harbor_suite.lys page 6, owner report 2026-09-25). The single map is
             // the fallback for a pass without the resolver.
+            // …of the staff the run is DRAWN on: a run every note of which @cross moved stands on
+            // the other staff (GraceNoteItem.CrossStaffIndex, session 1122), its heads' positions
+            // already read under that staff's clef, while its items stay in its own voice.
+            int drawnStaff = grace.DrawnStaffIndex;
             double staffOffset = staffYAt != null
-                ? staffYAt(grace.MeasureIndex, grace.StaffIndex)
+                ? staffYAt(grace.MeasureIndex, drawnStaff)
                 : staffYByIndex != null
-                    && staffYByIndex.TryGetValue(grace.StaffIndex, out var so) ? so : 0;
+                    && staffYByIndex.TryGetValue(drawnStaff, out var so) ? so : 0;
             // Tab staves render grace notes as small fret numbers, not noteheads.
             TuningType? tabTuning = null;
             var tabClef = ClefType.Treble;
             int tabTransposition = 0;
             if (staffByIndex != null
-                && staffByIndex.TryGetValue(grace.StaffIndex, out var gst) && gst.IsTab)
+                && staffByIndex.TryGetValue(drawnStaff, out var gst) && gst.IsTab)
             {
                 tabTuning = gst.Tuning ?? TuningType.Guitar;
                 tabClef = gst.TabSourceClef;
@@ -221,6 +234,7 @@ internal static class GraceNoteEngraver
                 TabTransposition: tabTransposition,
                 SourceIndex: gi,
                 StaffIndex: grace.StaffIndex,
+                CrossStaffIndex: grace.CrossStaffIndex,
                 BeamLeftY: beamLeftY,
                 BeamRightY: beamRightY,
                 ColumnOffsets: columns.Offsets,

@@ -335,7 +335,8 @@ internal sealed class SkylineBuilder
             return null;
         foreach (var (_, st, gi) in score.EnumerateStaves())
             if (ReferenceEquals(st, staff))
-                return GraceSeedsFor(staff, gi, score.GraceNotes, score.Articulations, measureLayouts);
+                return GraceSeedsFor(staff, gi, score.GraceNotes, score.Articulations, measureLayouts,
+                    i => StaffAt(score, i));
         return null;
     }
 
@@ -1061,6 +1062,16 @@ internal sealed class SkylineBuilder
                     clef: staff.Clef, staffLines: staff.Lines);
             }
         }
+        // ...and the columns another staff's voice @cross moved onto this one (GraceSeeds.Foreign,
+        // session 1122): the walk above never meets them, so they are seeded here with the same
+        // boxes a column of this staff takes, at the X their run placed them.
+        if (graceSeeds is not null)
+            foreach (var (item, seed) in graceSeeds.Foreign)
+                AddMusicItemToSkylines(item, seed.X, staffMiddleUp, StaffSize.Of(staff),
+                    upSkyline, downSkyline,
+                    forcedStemUp: !item.GraceStemDown,
+                    reserveStem: !seed.Beamed,
+                    clef: staff.Clef, staffLines: staff.Lines);
         // ...and the beams of this staff's grace runs, with the stems that end on them — the
         // grace counterpart of AddBeamsToSkyline, run after the columns because it seeds
         // the drawn geometry the withheld stems above were left to.
@@ -1145,6 +1156,21 @@ internal sealed class SkylineBuilder
     {
         internal readonly Dictionary<(int Voice, int Measure, int Item), GraceColumnSeed> Columns = new();
         internal readonly List<GraceRunSeed> BeamedRuns = new();
+        /// <summary>The columns of another staff's voice drawn on THIS staff — a run every note of
+        /// which <c>@cross</c> moved (GraceNoteItem.CrossStaffIndex, session 1122) — each with the X
+        /// the run placed it at. The staff's own walk never meets them (they are not its voices'
+        /// items), so <c>AddStaffToSkylines</c> seeds them after it, with the same item boxes.</summary>
+        internal readonly List<(MusicItem Item, GraceColumnSeed Seed)> Foreign = new();
+    }
+
+    /// <summary>The staff at global index <paramref name="staffIndex"/> of <paramref name="score"/>,
+    /// or null — the owner of a run another staff draws (<see cref="GraceSeeds.Foreign"/>).</summary>
+    internal static Staff? StaffAt(MultiStaffScore score, int staffIndex)
+    {
+        foreach (var (_, st, gi) in score.EnumerateStaves())
+            if (gi == staffIndex)
+                return st;
+        return null;
     }
 
     /// <summary>
@@ -1167,23 +1193,29 @@ internal sealed class SkylineBuilder
     internal static GraceSeeds? GraceSeedsFor(
         Staff staff, int staffIndex, ImmutableArray<GraceNoteItem> graceNotes,
         ImmutableArray<ArticulationItem> articulations,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts, Func<int, Staff?>? staffOf = null)
     {
         if (graceNotes.IsDefaultOrEmpty || staff.IsTab || staff.IsTextRow)
             return null;
         GraceSeeds? seeds = null;
         foreach (var grace in graceNotes)
         {
-            if (grace.StaffIndex != staffIndex || grace.ColumnItemIndices.IsDefaultOrEmpty)
+            // The runs DRAWN on this staff: its own, and another staff's voice's that @cross
+            // moved here whole (GraceNoteItem.CrossStaffIndex) — never one of its own that moved away.
+            if (grace.DrawnStaffIndex != staffIndex || grace.ColumnItemIndices.IsDefaultOrEmpty)
+                continue;
+            bool foreign = grace.StaffIndex != staffIndex;
+            var owner = foreign ? staffOf?.Invoke(grace.StaffIndex) : staff;
+            if (owner is null)
                 continue;
             MeasureLayout? ml = null;
             foreach (var m in measureLayouts)
                 if (m.MeasureIndex == grace.MeasureIndex) { ml = m; break; }
             if (ml is not { } measureLayout)
                 continue;
-            if (grace.VoiceIndex < 0 || grace.VoiceIndex >= staff.Voices.Length)
+            if (grace.VoiceIndex < 0 || grace.VoiceIndex >= owner.Voices.Length)
                 continue;
-            var graceMeasures = staff.Voices[grace.VoiceIndex].Measures;
+            var graceMeasures = owner.Voices[grace.VoiceIndex].Measures;
             if (grace.MeasureIndex >= graceMeasures.Length)
                 continue;
             var (x, _, columns) = GraceNoteEngraver.RunPlacement(
@@ -1193,9 +1225,15 @@ internal sealed class SkylineBuilder
             int beamedPrefix = GraceNoteEngraver.BeamedPrefix(grace.Columns);
             seeds ??= new GraceSeeds();
             int n = Math.Min(grace.ColumnItemIndices.Length, columns.Offsets.Length);
+            var ownerItems = graceMeasures[grace.MeasureIndex].Items;
             for (int i = 0; i < n; i++)
-                seeds.Columns[(grace.VoiceIndex, grace.MeasureIndex, grace.ColumnItemIndices[i])]
-                    = new GraceColumnSeed(x + columns.Offsets[i], i < beamedPrefix);
+            {
+                var seed = new GraceColumnSeed(x + columns.Offsets[i], i < beamedPrefix);
+                if (!foreign)
+                    seeds.Columns[(grace.VoiceIndex, grace.MeasureIndex, grace.ColumnItemIndices[i])] = seed;
+                else if (grace.ColumnItemIndices[i] >= 0 && grace.ColumnItemIndices[i] < ownerItems.Length)
+                    seeds.Foreign.Add((ownerItems[grace.ColumnItemIndices[i]], seed));
+            }
             if (beamedPrefix >= 2)
             {
                 var (beamLeftY, beamRightY) = GraceNoteEngraver.QuantGraceBeam(grace, columns.Offsets);

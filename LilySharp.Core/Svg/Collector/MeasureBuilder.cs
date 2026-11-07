@@ -853,6 +853,10 @@ internal sealed class MeasureBuilder
                 TodoMemo = n.TodoMemo,
                 TodoBelow = n.TodoBelow,
                 TodoSideWritten = n.TodoSideWritten,
+                // ⚠️ THE @cross SURVIVES (session 1122): a run every note of which writes it
+                // moves to the other staff whole (MeasureCollector.MoveCrossStaffNotes reads the
+                // flag off the item, as off a full-size note's).
+                CrossWritten = n.CrossWritten,
             },
 
             ChordItem c => new ChordItem(
@@ -902,6 +906,8 @@ internal sealed class MeasureBuilder
                 TodoMemo = c.TodoMemo,
                 TodoBelow = c.TodoBelow,
                 TodoSideWritten = c.TodoSideWritten,
+                // The @cross (session 1122), as on the note above.
+                CrossWritten = c.CrossWritten,
             },
 
             // A REST TAKES NO SLASH: the stroke is the Flag's, and a rest has none.

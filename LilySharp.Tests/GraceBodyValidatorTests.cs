@@ -117,27 +117,59 @@ public class GraceBodyValidatorTests
         Assert.Equal(Page(control), Page(written));
     }
 
+    private static string GrandBook(string rh, string lh = "c1 | e1 |") =>
+        "part rh { clef treble }\npart lh { clef bass }\nsection A {\n  rh { " + rh + " }\n"
+        + "  lh { " + lh + " }\n}\nform { ~A }\nscore { grandStaff { staff rh staff lh } }\n";
+
+    // Through the render spec: the grand staff's BOTH staves (LiveRender.Svg draws one voice).
+    private static string Masked(string book)
+        => Regex.Replace(LiveRender.SvgFromRenderSpec(book), "data-pos=\"\\d+\"", "data-pos=\"#\"");
+
     /// <summary>
-    /// <c>@cross</c> is the one mark a grace note still does not carry — session 968 wrote
-    /// 27 annotation kinds into grace bodies and this was the only LYS4020 left (Lab
-    /// sessions/p968/probe/grace-survey*.lys). The grace note stays on its own staff, so the
-    /// page is the control's, and the sentence says that and no more: the old "there is no
-    /// column for it to hang off" stopped being true when grace notes became measure items
-    /// (HANDOFF §2 U8 ⒝2) and must not come back.
+    /// <c>@cross</c> on EVERY note of a grace run moves the run to the other staff whole
+    /// (session 1122; it was the last LYS4020 standing, Lab sessions/p968/probe/grace-survey*.lys):
+    /// the run keeps its voice and its addresses, takes the staff it is drawn on
+    /// (GraceNoteItem.CrossStaffIndex), and its heads are read under that staff's clef — d' is
+    /// −5 in the treble and +7 in the bass, as LilyPond's <c>\change Staff</c> inside
+    /// <c>\grace</c> draws it (Lab sessions/p1122/probe/gx1, against LilyPond 2.26.0's own page).
+    /// Nothing is reported, and the page is not the control's.
     /// </summary>
     [Fact]
-    public void ACrossStaffMarkOnAGrace_IsReported_AndTheGraceStaysOnItsStaff()
+    public void ACrossStaffMarkOnEveryGraceNote_MovesTheRun_AndIsNotReported()
     {
-        static string GrandBook(string rh) =>
-            "part rh { clef treble }\npart lh { clef bass }\nsection A {\n  rh { " + rh + " }\n"
-            + "  lh { c1 | e1 | }\n}\nform { ~A }\nscore { grandStaff { staff rh staff lh } }\n";
-        static string Masked(string book)
-            => Regex.Replace(LiveRender.Svg(book), "data-pos=\"\\d+\"", "data-pos=\"#\"");
         string written = GrandBook("grace { d'8@cross } c'1 | e'1 |");
         string control = GrandBook("grace { d'8 } c'1 | e'1 |");
+        Assert.Empty(Warnings(written));
+        Assert.NotEqual(Masked(control), Masked(written));
 
+        var tree = SyntaxTree.Parse(written);
+        var score = new LilySharp.Core.Svg.Collector.MeasureCollector().CollectMultiStaff(
+            tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!);
+        var run = Assert.Single(score.GraceNotes);
+        Assert.Equal(0, run.StaffIndex);
+        Assert.Equal(1, run.CrossStaffIndex);
+        Assert.Equal(1, run.DrawnStaffIndex);
+        Assert.Equal(7, Assert.Single(Assert.Single(run.Columns).Heads).StaffPosition);
+        // …and the control's run stands on its own staff at the treble position.
+        var controlTree = SyntaxTree.Parse(control);
+        var controlRun = Assert.Single(new LilySharp.Core.Svg.Collector.MeasureCollector().CollectMultiStaff(
+            controlTree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(controlTree)!).GraceNotes);
+        Assert.Equal(-1, controlRun.CrossStaffIndex);
+        Assert.Equal(-5, Assert.Single(Assert.Single(controlRun.Columns).Heads).StaffPosition);
+    }
+
+    /// <summary>
+    /// <c>@cross</c> on SOME of a run's notes moves nothing — a grace beam is one beam, and a
+    /// kneed one across the staves is not drawn — and each such mark is reported, with the
+    /// sentence that says what to write; the page is the control's.
+    /// </summary>
+    [Fact]
+    public void ACrossStaffMarkOnSomeGraceNotes_IsReported_AndTheRunStaysOnItsStaff()
+    {
+        string written = GrandBook("grace { d'8@cross e'8 } c'1 | e'1 |");
+        string control = GrandBook("grace { d'8 e'8 } c'1 | e'1 |");
         var warning = Assert.Single(Warnings(written));
-        Assert.Contains("stays on its own staff", warning.Message);
+        Assert.Contains("whole or not at all", warning.Message);
         Assert.DoesNotContain("no column", warning.Message);
         Assert.Equal(Masked(control), Masked(written));
     }

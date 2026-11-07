@@ -2375,6 +2375,9 @@ public sealed partial class MeasureCollector
             var stavesInOrder = staffGroups.SelectMany(sg => sg.Staves).ToList();
             StaffAccidentals.SyncGraceNotes(_graceNotes, si => si >= 0 && si < stavesInOrder.Count
                 ? stavesInOrder[si].Voices : default);
+            // …and the runs @cross moved whole take the staff they are drawn on (session 1122).
+            if (_crossStaffItems.Count > 0)
+                StampMovedGraceRuns(stavesInOrder);
         }
 
         // The staff columns two voices' graces SHARE (HANDOFF §2 U8b): paired by moment, shifted
@@ -3748,6 +3751,9 @@ public sealed partial class MeasureCollector
                     }
                     if (newItems != null)
                     {
+                        // A grace run that moved (every note @cross): its main item's LeadingGrace
+                        // columns — the copy the grace engraver places — take the moved positions.
+                        SyncMovedLeadingGrace(newItems);
                         (newMeasures ??= measures.ToArray())[m] = measures[m] with { Items = ImmutableArray.Create(newItems) };
                     }
                 }
@@ -3772,14 +3778,16 @@ public sealed partial class MeasureCollector
             if (owed[i] != finals[i].Voices)
                 finals[i] = finals[i] with { Voices = RepackAccidentalColumns(owed[i]) };
 
-        // The addresses last: they hold the measures as they finally stand.
+        // The addresses last: they hold the measures as they finally stand. A moved GRACE item
+        // is not among them: its run is placed and seeded by the grace engraver's own chain
+        // (SkylineBuilder.GraceSeedsFor's foreign runs), not by the staff's column walk.
         foreach (var staff in finals)
             foreach (var voice in staff.Voices)
                 for (int m = 0; m < voice.Measures.Length; m++)
                 {
                     var items = voice.Measures[m].Items;
                     for (int i = 0; i < items.Length; i++)
-                        if (items[i].CrossStaffIndex >= 0)
+                        if (items[i].CrossStaffIndex >= 0 && !items[i].GraceTime)
                             (crossedIn[items[i].CrossStaffIndex] ??= new()).Add(new CrossedNote(voice.Measures, m, i));
                 }
         for (int i = 0; i < finals.Length; i++)
@@ -3795,6 +3803,99 @@ public sealed partial class MeasureCollector
         {
             Staves = g.Staves.Select(_ => finals[walk++]).ToImmutableArray(),
         }).ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Re-reads each main item's <c>LeadingGrace</c> heads — position and accidental, column for
+    /// column, head for head — off the grace items before it, once <c>@cross</c> moved them
+    /// (<see cref="MoveCrossStaffNotes"/>): the run's columns are the copy the grace engraver
+    /// places (<c>StaffAccidentals.SyncGraceNotes</c> reads them into the score's groups), and
+    /// a head's position is what moved. The accidental sync (<c>StaffAccidentals.SyncLeadingGrace</c>)
+    /// matches heads BY position, which a move breaks, so this one matches by order.
+    /// </summary>
+    private static void SyncMovedLeadingGrace(MusicItem[] items)
+    {
+        for (int m = 0; m < items.Length; m++)
+        {
+            var lead = items[m] switch
+            {
+                NoteItem n => n.LeadingGrace,
+                ChordItem c => c.LeadingGrace,
+                RestItem r => r.LeadingGrace,
+                _ => default,
+            };
+            if (lead.IsDefaultOrEmpty)
+                continue;
+            var run = new List<MusicItem>();
+            for (int j = m - 1; j >= 0 && items[j].GraceTime; j--)
+                if (items[j] is NoteItem or ChordItem { Notes.Length: > 0 } or RestItem)
+                    run.Insert(0, items[j]);
+            if (run.Count != lead.Length || !run.Any(r => r.CrossStaffIndex >= 0))
+                continue;
+            ImmutableArray<GraceColumnInfo>.Builder? b = null;
+            for (int k = 0; k < run.Count; k++)
+            {
+                var heads = lead[k].Heads;
+                var newHeads = heads;
+                for (int h = 0; h < heads.Length; h++)
+                {
+                    (int Position, string? Accidental)? moved = run[k] switch
+                    {
+                        NoteItem n when heads.Length == 1 => (n.StaffPosition, n.Accidental),
+                        ChordItem c when h < c.Notes.Length => (c.Notes[h].StaffPosition, c.Notes[h].Accidental),
+                        _ => null,
+                    };
+                    if (moved is { } to && (to.Position != heads[h].StaffPosition || to.Accidental != heads[h].Accidental))
+                        newHeads = newHeads.SetItem(h, heads[h] with { StaffPosition = to.Position, Accidental = to.Accidental });
+                }
+                if (newHeads != heads)
+                    (b ??= lead.ToBuilder())[k] = lead[k] with { Heads = newHeads };
+            }
+            if (b == null)
+                continue;
+            var synced = b.MoveToImmutable();
+            items[m] = items[m] switch
+            {
+                NoteItem n => n with { LeadingGrace = synced },
+                ChordItem c => c with { LeadingGrace = synced },
+                RestItem r => r with { LeadingGrace = synced },
+                _ => items[m],
+            };
+        }
+    }
+
+    /// <summary>
+    /// The score's grace runs whose every column <c>@cross</c> moved (<see cref="MoveCrossStaffNotes"/>
+    /// stamped the items): the run takes the staff it is drawn on
+    /// (<see cref="GraceNoteItem.CrossStaffIndex"/>), so the engraver places it in that staff's
+    /// frame and that staff's profile reserves it (SkylineBuilder.GraceSeedsFor).
+    /// </summary>
+    private void StampMovedGraceRuns(IReadOnlyList<Staff> stavesInOrder)
+    {
+        for (int g = 0; g < _graceNotes.Count; g++)
+        {
+            var gn = _graceNotes[g];
+            if (gn.ColumnItemIndices.IsDefaultOrEmpty || gn.StaffIndex < 0 || gn.StaffIndex >= stavesInOrder.Count)
+                continue;
+            var voices = stavesInOrder[gn.StaffIndex].Voices;
+            if (gn.VoiceIndex < 0 || gn.VoiceIndex >= voices.Length)
+                continue;
+            var measures = voices[gn.VoiceIndex].Measures;
+            if (gn.MeasureIndex < 0 || gn.MeasureIndex >= measures.Length)
+                continue;
+            var items = measures[gn.MeasureIndex].Items;
+            int target = -1;
+            foreach (int index in gn.ColumnItemIndices)
+                if (index >= 0 && index < items.Length && items[index].CrossStaffIndex >= 0)
+                {
+                    target = items[index].CrossStaffIndex;
+                    break;
+                }
+            if (target >= 0 && target != gn.CrossStaffIndex)
+                _graceNotes[g] = new GraceNoteItem(gn.Type, gn.Columns, gn.MeasureIndex,
+                    gn.MainNoteItemIndex, gn.SourcePosition, gn.StaffIndex, gn.VoiceIndex, gn.ColumnItemIndices)
+                { IsAfterGrace = gn.IsAfterGrace, CrossStaffIndex = target };
+        }
     }
 
     /// <summary>
@@ -6965,6 +7066,8 @@ public sealed partial class MeasureCollector
         _v.CarriedGraceBreathStart = carriedBreath?.SourceStart ?? -1;
         var innerBreaths = Semantics.GraceBodySupport.InnerBreaths(bodyElements, grace.IsAfterGrace);
         _v.InnerGraceBreathStarts = innerBreaths.Count == 0 ? null : innerBreaths.Select(b => b.SourceStart).ToHashSet();
+        // The run moves to the other staff whole, or not at all (session 1122).
+        _v.GraceAllCross = Semantics.GraceBodySupport.AllColumnsWriteCross(bodyElements);
         _v.InnerGraceBreathItems = null;
         _v.GraceTupletSpans = null;
         _v.GraceChordNames = null;
@@ -6984,6 +7087,7 @@ public sealed partial class MeasureCollector
         await ProcessMusicNodeSequence(graceSites, builder);
         builder.ExitGraceTime(slash);
         _v.GraceDepth--;
+        _v.GraceAllCross = false;
         // The breathing sign the body ends on stands in a column of its own between the last
         // grace and the main note — added HERE, out of grace time, in the order a change written
         // after the grace has (GraceBodySupport.CarriedBreath; the walk adds none in grace time,
@@ -7249,7 +7353,7 @@ public sealed partial class MeasureCollector
                             continue;
                         _graceNotes[g] = new GraceNoteItem(gn.Type, columns, gn.MeasureIndex,
                             gn.MainNoteItemIndex, gn.SourcePosition, gn.StaffIndex, gn.VoiceIndex,
-                            gn.ColumnItemIndices) { IsAfterGrace = gn.IsAfterGrace };
+                            gn.ColumnItemIndices) { IsAfterGrace = gn.IsAfterGrace, CrossStaffIndex = gn.CrossStaffIndex };
                         // The page draws a grace's accidental off the grace ITEM, at its stamped X
                         // (SharedRenderer: a packed column's X, else the single-ape solve).
                         for (int k = 0; k < columns.Length && k < gn.ColumnItemIndices.Length; k++)
@@ -7331,7 +7435,8 @@ public sealed partial class MeasureCollector
             if (gn.StaffIndex != staffIndex)
                 continue;
             _graceNotes[g] = new GraceNoteItem(gn.Type, Stamp(gn.Columns), gn.MeasureIndex,
-                gn.MainNoteItemIndex, gn.SourcePosition, gn.StaffIndex, gn.VoiceIndex, gn.ColumnItemIndices);
+                gn.MainNoteItemIndex, gn.SourcePosition, gn.StaffIndex, gn.VoiceIndex, gn.ColumnItemIndices)
+            { IsAfterGrace = gn.IsAfterGrace, CrossStaffIndex = gn.CrossStaffIndex };
         }
         var voices = staff.Voices.ToBuilder();
         for (int vi = 0; vi < voices.Count; vi++)
@@ -7549,7 +7654,7 @@ public sealed partial class MeasureCollector
                             && gn.MainNoteItemIndex == ii && gn.Columns.Length == columns.Length)
                             _graceNotes[g] = new GraceNoteItem(gn.Type, columns, gn.MeasureIndex,
                                 gn.MainNoteItemIndex, gn.SourcePosition, gn.StaffIndex, gn.VoiceIndex,
-                                gn.ColumnItemIndices) { IsAfterGrace = gn.IsAfterGrace };
+                                gn.ColumnItemIndices) { IsAfterGrace = gn.IsAfterGrace, CrossStaffIndex = gn.CrossStaffIndex };
                     }
                 }
                 if (ib is not null)

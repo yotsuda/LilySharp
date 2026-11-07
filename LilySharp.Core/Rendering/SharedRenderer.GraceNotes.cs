@@ -58,11 +58,14 @@ internal static partial class SharedRenderer
             // score (0 for the first staff / single-staff). Y-up: below the system
             // top is smaller Y-up.
             double staffMiddleY = syUp - g.StaffYOffset - StaffHeight / 2;
+            // The staff the run is drawn on — the other one when every note of it @cross moved
+            // (GraceNoteLayout.CrossStaffIndex, session 1122): its offset above, its affine below.
+            int drawnStaff = g.DrawnStaff;
             // On an ossia staff the whole group shrinks again: head Ys go
             // through the staff-top affine and the grace's own scale compounds
             // with the ossia scale (a grace on a magnified staff is scaled
             // twice in LP too — fontSize composes).
-            double eff = os.Size(g.Scale, g.StaffIndex);
+            double eff = os.Size(g.Scale, drawnStaff);
             // The run's column offsets come from the LAYOUT — the same chain the reservation
             // and the beam quanter read (SpacingRules.GraceColumns). The renderer places, it
             // does not decide: it used to step by its own literal (1.2 + 0.3) * eff, which
@@ -75,7 +78,7 @@ internal static partial class SharedRenderer
             // keeps the BEAM, drawn out here in the overlay pass, over the heads the staff
             // pass drew — and it is why an ossia grace is the one place the two houses can
             // still disagree about X (HANDOFF §2 U8 ⒝2; test/ossia-beams is the book).
-            double unit = os.Size(1.0, g.StaffIndex);
+            double unit = os.Size(1.0, drawnStaff);
             // THE FONT the beam's stems attach through — the design the head's font-size
             // selected, magnified again by the ossia the staff carries (fontSize composes in
             // LilyPond too). It is the same table the LAYOUT reserved with and the same one
@@ -149,7 +152,7 @@ internal static partial class SharedRenderer
                     foreach (var head in note.Heads)
                     {
                         double hy = os.YUp(staffMiddleY + head.StaffPosition / 2.0,
-                            g.StaffIndex, g.MeasureIndex);
+                            drawnStaff, g.MeasureIndex);
                         lowestY = Math.Min(lowestY, hy);
                         highestY = Math.Max(highestY, hy);
                     }
@@ -186,8 +189,8 @@ internal static partial class SharedRenderer
                 //   residual (ledger beam.quant.grace.left).
                 (double, double)? beamEnds =
                     g.BeamLeftY is { } bl && g.BeamRightY is { } br
-                        ? (os.YUp(staffMiddleY + bl / 2.0, g.StaffIndex, g.MeasureIndex),
-                           os.YUp(staffMiddleY + br / 2.0, g.StaffIndex, g.MeasureIndex))
+                        ? (os.YUp(staffMiddleY + bl / 2.0, drawnStaff, g.MeasureIndex),
+                           os.YUp(staffMiddleY + br / 2.0, drawnStaff, g.MeasureIndex))
                         : null;
                 DrawGraceBeam(headX, headY, headTopY, beamCounts, stemUps, eff, graceFont,
                     beamEnds, beamedPrefix, GraceNoteItem.BeamRanksOf(g.Columns), gc);

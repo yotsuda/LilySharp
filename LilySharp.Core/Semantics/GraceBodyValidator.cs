@@ -144,6 +144,13 @@ internal sealed class GraceBodyValidator : ISemanticValidator
                         $"{drop.Written} inside {body} are not engraved: a grace column "
                         + "carries no tuplet bracket and no tuplet number"
                         + (engravesNothing ? "" : ", although the notes it holds ARE drawn"),
+                    // An @cross on SOME of a run's notes (session 1122): the run moves whole
+                    // (GraceBodySupport.AllColumnsWriteCross) — a grace beam is one beam, and a
+                    // kneed one across the staves is not drawn — so a partial mark moves nothing.
+                    GraceDropKind.CrossPartial =>
+                        $"{drop.Written} on a grace note is not engraved: a grace run moves to "
+                        + "the other staff whole or not at all - write @cross on every note of "
+                        + $"{body}, or on none",
                     // ⚠️ WHAT REACHES THIS ARM IS WHAT NO IsCarried* PREDICATE CLAIMS. Until
                     // session 935 that was most annotation families and the sentence said "a
                     // grace note is not a measure item, so there is no column for it to hang
@@ -151,7 +158,7 @@ internal sealed class GraceBodyValidator : ISemanticValidator
                     // stale for every mark ported since (scripts, dynamics, texts, fingerings,
                     // spanners, head styles, stem directions, breaths ...). Session 968 counted
                     // what is left (Lab sessions/p968/probe/grace-survey*.lys): '@cross' alone,
-                    // and the sentence says only what is still true of it.
+                    // which session 1122 carried (whole runs); nothing is known to reach here.
                     _ =>
                         $"{drop.Written} on a grace note is not engraved: nothing moves or "
                         + "draws it in grace time yet - the grace note stays on its own staff "

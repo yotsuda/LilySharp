@@ -694,8 +694,10 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void CollectCrossStaff(SyntaxNode node, int measureIndex, int itemIndex)
     {
-        // Grace time has no column for it to hang off — see CollectArticulations.
-        if (_v.GraceDepth > 0)
+        // A grace run moves to the other staff whole — every note of it writes @cross
+        // (GraceBodySupport.AllColumnsWriteCross, session 1122) — or not at all: a partial
+        // mark is the validator's (LYS4020), and until that session every grace @cross was.
+        if (_v.GraceDepth > 0 && !_v.GraceAllCross)
             return;
         var articulations = ArticulationsOf(node);
 

@@ -4166,7 +4166,8 @@ internal sealed class MultiStaffLayouter
                 // other note's, and a mover above the staff clears them (SkylineBuilder's
                 // grace seed says why, and ledger mark.over-grace.staff-to-baseline measures it).
                 var graceSeeds = SkylineBuilder.GraceSeedsFor(
-                    staff, thisStaff, score.GraceNotes, score.Articulations, measureLayouts);
+                    staff, thisStaff, score.GraceNotes, score.Articulations, measureLayouts,
+                    i => SkylineBuilder.StaffAt(score, i));
                 var insideSky = skylineBuilder.BuildInsideStaffSkylines(
                     staff, measureLayouts, articulations, tupletBrackets, slurs, ties, beams,
                     CurrentIndent, restShifts, fingerings, graceSeeds);

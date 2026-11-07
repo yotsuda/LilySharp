@@ -534,7 +534,8 @@ internal sealed partial class LayoutEngine
                     ? default
                     : [.. fingerings.Where(f => f.StaffIndex == staffIndex && InThisRoom(f.MeasureIndex))],
                 graceSeeds: SkylineBuilder.GraceSeedsFor(
-                    staff, staffIndex, ctx.GraceNotes, ctx.Articulations, measures),
+                    staff, staffIndex, ctx.GraceNotes, ctx.Articulations, measures,
+                    i => staffByIndex.TryGetValue(i, out var other) ? other : null),
                 clearedDiagrams: cleared);
             foreach (var d in cleared)
                 raised[d.SourceIndex] = d.YUp;

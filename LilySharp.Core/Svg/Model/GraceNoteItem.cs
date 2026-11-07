@@ -500,6 +500,21 @@ public sealed record GraceNoteItem
     /// </remarks>
     public ImmutableArray<int> ColumnItemIndices { get; }
 
+    /// <summary>
+    /// The global index of the staff this run is DRAWN on when every note of it writes
+    /// <c>@cross</c> (<c>MeasureCollector.StampMovedGraceRuns</c>, session 1122), −1 when it stands
+    /// on its own. The run's items keep their voice and their addresses
+    /// (<see cref="StaffIndex"/>, <see cref="VoiceIndex"/>, <see cref="ColumnItemIndices"/>) —
+    /// as a moved full-size note does (<see cref="MusicItem.CrossStaffIndex"/>) — and its heads'
+    /// positions are read under that staff's clef; what asks "which staff's frame" asks
+    /// <see cref="DrawnStaffIndex"/>.
+    /// </summary>
+    public int CrossStaffIndex { get; init; } = -1;
+
+    /// <summary>The staff the run is drawn on: <see cref="CrossStaffIndex"/> when it moved, else
+    /// <see cref="StaffIndex"/>.</summary>
+    public int DrawnStaffIndex => CrossStaffIndex >= 0 ? CrossStaffIndex : StaffIndex;
+
     /// <summary>Creates a grace note group attached to a main note.</summary>
     public GraceNoteItem(
         GraceNoteType type,

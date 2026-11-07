@@ -409,6 +409,15 @@ public sealed partial class MeasureCollector
         public int GraceDepth = 0;
 
         /// <summary>
+        /// True while the <c>grace { }</c> body being walked moves to the other staff whole —
+        /// every note of it writes <c>@cross</c> (<see cref="Semantics.GraceBodySupport.AllColumnsWriteCross"/>,
+        /// session 1122) — so its items take <see cref="MusicItem.CrossWritten"/> as a full-size
+        /// note does and <c>MoveCrossStaffNotes</c> moves them; false for any other body, whose
+        /// <c>@cross</c> marks are the validator's to report. Set and cleared with <see cref="GraceDepth"/>.
+        /// </summary>
+        public bool GraceAllCross;
+
+        /// <summary>
         /// How many <c>cue { … }</c> regions enclose the item being collected. A cue is a
         /// REGION in LilyPond — the size comes from the CueVoice context's <c>fontSize = #-4</c>
         /// and nothing is attached to a note — so this depth, not an annotation, is what makes
