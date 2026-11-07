@@ -615,9 +615,26 @@ public sealed class MidiExporter
         _pedalLog.Clear();
         _anyPedal = tree.GetRoot().DescendantNodes().Any(n => PedalMark(n) != null);
         ProcessNode(_root, mainTrack, conductorTrack);
-        // A flat chord track's bars past the music, as the page goes on drawing them.
-        foreach (var (row, items) in _flatRows.Rest())
-            PlayChordRow(items, row, _currentTick, mainTrack, _strokesByRow.GetValueOrDefault(row));
+        // A flat chord track's bars past the music go on (owner's decision 2026-11-07): bars of
+        // the SCORE's meter in its home key — they stand after every section, and a section
+        // that states no meter opens at the home — as the page pads the staves with them
+        // (MeasureCollector.ExtendStavesToTheRows), the twin writes them and the MusicXML adds
+        // their measures (MusicXmlExporter.EmitFlatRowsPastTheMusic).
+        var pastTheMusic = _flatRows.Rest().ToList();
+        if (pastTheMusic.Count > 0)
+        {
+            if (_bars.OpenSection(null, null))
+                conductorTrack.SetTimeSignature(_currentTick, _bars.Meter.Beats, _bars.Meter.BeatType);
+            _ambientTonic = _homeTonic;
+            _keySharps = _homeKeySharps;
+            int end = _currentTick;
+            foreach (var (row, items) in pastTheMusic)
+                end = Math.Max(end, PlayChordRow(items, row, _currentTick, mainTrack, _strokesByRow.GetValueOrDefault(row)));
+            // Their bar lines, for the metronome and the loop (MidiFile.BarTicks), as the page draws them.
+            int barTicks = FractionToTicks(_bars.MeterLength);
+            for (int t = _currentTick + barTicks; t <= end && barTicks > 0; t += barTicks)
+                _barTicks.Add(t);
+        }
         ShareGrandStaffDynamics(mainTrack);
         // The notes an overfull bar ran past its bar line (AlignBarLine), once nothing indexes
         // the track any more.

@@ -234,6 +234,46 @@ public class ChordRowMidiTests
     public void AFlatTopLevelRow_PastTheMusic_GoesOn_AsThePageDrawsIt()
         => Assert.Equal(new[] { 0, Bar, 2 * Bar }, Onsets("section A { melody { c''1 | } }\nchords harmony { C | G | Am | }"));
 
+    /// <summary>
+    /// The bars past the music are bars of the SCORE's meter in the home key, as a section that
+    /// states no meter opens (owner's decision 2026-11-07) — in the sound, the MusicXML and the
+    /// twin alike, as the page pads its staves (ChordSlotGridTests.AFlatRowPastTheMusic…).
+    /// </summary>
+    [Fact]
+    public void AFlatTopLevelRow_PastTheMusic_IsInTheScoresMeter_Everywhere()
+    {
+        const string book = "time 4/4\npart melody\nsection A { time 3/4 melody { d''2. | } }\nchords harmony { G . A | C | D | }\nform { A }\nscore { chords harmony  staff melody }\n";
+        var midi = Export(book);
+        // G . A over the 3/4 bar; then C and D over two 4/4 bars, the conductor reverting at bar 2.
+        Assert.Equal(new[] { 0, 960, 1440, 1440 + Bar }, ChordNotes(midi).Select(n => n.Start).Distinct().ToArray());
+        Assert.Equal(new[] { 1440, 1440 + Bar, 1440 + 2 * Bar }, midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b).ToArray());
+
+        var xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(book)).ToXml();
+        var measures = xml.Descendants("part").First().Elements("measure").ToList();
+        Assert.Equal(3, measures.Count);
+        Assert.Equal("4", measures[1].Descendants("beats").Single().Value);
+        Assert.Equal(["C", "D"], measures.Skip(1).Select(m => m.Descendants("root-step").Single().Value).ToArray());
+        Assert.All(measures.Skip(1), m => Assert.Single(m.Elements("note"), n => n.Element("rest") != null));
+
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(book)).ReplaceLineEndings("\n");
+        Assert.Matches(@"g2 a4 \|\s+\\time 4/4 c1 \|\s+d1 \|", ly);
+    }
+
+    [Fact]
+    public void AFlatTopLevelRow_PastTheMusic_IsInTheMusicXml_BesideAStaff_AndOnALeadSheet()
+    {
+        static System.Xml.Linq.XDocument Xml(string score) => new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(
+            $"time 4/4\npart melody\nsection A {{ melody {{ c''1 | }} }}\nchords harmony {{ C | G | Am | }}\nform {{ A }}\n{score}\n")).ToXml();
+        foreach (var (score, partName) in new[] { ("score { chords harmony  staff melody }", "melody"), ("score { chords harmony }", "harmony (chords)") })
+        {
+            var xml = Xml(score);
+            var part = xml.Descendants("part").Single(p =>
+                xml.Descendants("score-part").Single(sp => (string)sp.Attribute("id")! == (string)p.Attribute("id")!)
+                   .Element("part-name")!.Value == partName);
+            Assert.Equal(["C", "G", "A"], part.Elements("measure").Select(m => m.Descendants("root-step").Single().Value).ToArray());
+        }
+    }
+
     [Fact]
     public void AFlatTopLevelRow_WithNoMusicAtAll_Sounds()
     {

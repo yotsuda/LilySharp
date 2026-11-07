@@ -443,13 +443,12 @@ public sealed partial class LilyPondExporter
         var result = new List<SyntaxNode>();
         _repeatTiePlays = new HashSet<int>(); // a chord track carries no ties
         _chordTrack = true;
+        _lastChordPlay = null;
         if (form != null)
         {
             _flatChordBars = loose.Count > 0 ? Semantics.FlatChordRows.Of(loose) : null;
             AppendFormItems(FormWalk.Read(form), byName, result);
-            // What is left past the music goes on, as the page draws it.
-            if (_flatChordBars != null)
-                result.AddRange(ChordBarsOf(_flatChordBars.Rest().SelectMany(r => r.Items), (_homeTonic.Step, _homeKeySharps)));
+            result.AddRange(ChordBarsPastTheMusic());
             _flatChordBars = null;
         }
         else
@@ -465,8 +464,7 @@ public sealed partial class LilyPondExporter
             foreach (var declaration in allSections)
                 if (played.Add(declaration.SectionName))
                     AppendSection(declaration.SectionName, byName, result);
-            if (_flatChordBars != null)
-                result.AddRange(ChordBarsOf(_flatChordBars.Rest().SelectMany(r => r.Items), (_homeTonic.Step, _homeKeySharps)));
+            result.AddRange(ChordBarsPastTheMusic());
             _flatChordBars = null;
         }
         _chordTrack = false;
@@ -475,6 +473,30 @@ public sealed partial class LilyPondExporter
 
     /// <summary>The flat chord tracks at the top level of the file, while their form is walked.</summary>
     private Semantics.FlatChordRows? _flatChordBars;
+
+    /// <summary>The section the chord track last wrote a play of (<see cref="AppendSection"/>,
+    /// <see cref="AppendSilentPlay"/>) — whose last bar's meter is the one in force when the
+    /// music ends.</summary>
+    private string? _lastChordPlay;
+
+    /// <summary>
+    /// What a flat chord track has left past the music goes on (owner's decision 2026-11-07):
+    /// bars of the SCORE's meter in the home key, as a section that states no meter opens —
+    /// what the page pads its staves with (MeasureCollector.ExtendStavesToTheRows), the MIDI
+    /// sounds and the MusicXML adds. LilyPond's Timing is the Score's and keeps the last bar's
+    /// meter, so where the music left the home the first bar restates it (<c>\time</c> inside
+    /// <c>\chordmode</c> moves the Score's Timing like any other), as the page draws the change.
+    /// </summary>
+    private IEnumerable<SyntaxNode> ChordBarsPastTheMusic()
+    {
+        if (_flatChordBars == null)
+            return [];
+        var bars = ChordBarsOf(_flatChordBars.Rest().SelectMany(r => r.Items), (_homeTonic.Step, _homeKeySharps)).ToList();
+        if (bars.Count > 0 && _lastChordPlay is { } last && SectionBarMeters(last)[^1] != _bars.HomeMeter.Length
+            && bars[0] is ChordBarMarker first && first.Green is ChordBarGreen g)
+            bars[0] = new ChordBarMarker($"\\time {_bars.HomeMeter.Beats}/{_bars.HomeMeter.BeatType} {g.Entries}");
+        return bars;
+    }
 
     /// <summary>The key a scale-degree entry of the named section stacks in: the section's
     /// own header key, else the score's home key — the two keys the collector's timeline

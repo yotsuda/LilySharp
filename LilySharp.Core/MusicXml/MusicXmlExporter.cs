@@ -380,8 +380,9 @@ public sealed class MusicXmlExporter
             _bars.CaptureHome();
             BuildSectionHeaderRegistry(root);
             ProcessSections(root);
-            // The chord rows, once every part has written its bars (their measures are the
-            // rows' homes). A flat top-level chord track is not handled, as the MIDI's is not.
+            // A flat top-level chord track's bars past the music (FlatChordRows.Rest), then the
+            // chord rows, once every part has written its bars (their measures are the rows' homes).
+            EmitFlatRowsPastTheMusic();
             EmitPendingChordRows();
         }
         WriteCapo();
@@ -6265,6 +6266,41 @@ public sealed class MusicXmlExporter
         CombinedStaffSpec cb => cb.PartNames.FirstOrDefault(),
         _ => null,
     };
+
+    /// <summary>
+    /// A flat chord track's bars past the music (owner's decision 2026-11-07): one more printed
+    /// play of as many bars as the longest track has left, every engraved part silent in it —
+    /// bars of the SCORE's meter in the home key, as a section that states no meter opens, and
+    /// as the page pads its staves (MeasureCollector.ExtendStavesToTheRows) and the MIDI sounds
+    /// them — and each track's leftover remembered as a row of that play, so
+    /// <see cref="EmitPendingChordRows"/> writes its harmonies into those measures (or into the
+    /// row's own part on a lead sheet). Until then the document stopped at the music's last bar
+    /// while the page's lead sheet, the MIDI and the twin went on.
+    /// </summary>
+    private void EmitFlatRowsPastTheMusic()
+    {
+        var pastTheMusic = _flatRows.Rest().ToList();
+        int bars = 0;
+        foreach (var (_, items) in pastTheMusic)
+            bars = Math.Max(bars, RowBars(items).Count);
+        if (bars == 0)
+            return;
+        _xmlRole = Svg.Model.SectionRepeatRole.None;
+        BeginPrintedPlay();
+        (_sectionKey, _sectionTime, _sectionTempo, _sectionPartial) = (null, null, null, null);
+        _sectionOctaveOffset = 0;
+        if (_playedSpec is { } spec)
+        {
+            var bar = new BarlineSyntax(new Syntax.InternalSyntax.BarlineGreen(
+                new Syntax.InternalSyntax.SyntaxToken(SyntaxKind.Bar, "|"), null, null), null, 0);
+            var silent = Enumerable.Repeat<SyntaxNode>(bar, bars).ToList();
+            foreach (var partName in spec.EngravedPartNames)
+                if (partName.Length > 0)
+                    EmitPartMusic(partName, silent);
+        }
+        foreach (var (row, items) in pastTheMusic)
+            RememberChordRow("", row, items);
+    }
 
     /// <summary>Writes every remembered row into its target part's measures of its play, or
     /// into a part of its own on a lead sheet.</summary>

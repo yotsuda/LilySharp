@@ -139,6 +139,34 @@ public class ChordSlotGridTests
         Assert.Equal(row.Contains("G . A") ? 0.5 : 0.375, a.Timing);
     }
 
+    /// <summary>
+    /// A flat chord track's bars past the music are drawn (owner's decision 2026-11-07): the
+    /// staves are padded with empty bars up to the track's length — bars of the SCORE's meter,
+    /// the home restated where the music left it, as a section that states no meter opens —
+    /// so the page, the sound, the twin and the MusicXML all go on together. Until then the page
+    /// cut the row at the music's last bar beside a staff (and drew it whole on a lead sheet).
+    /// </summary>
+    [Theory]
+    [InlineData("section A { melody { c''1 | } }", "C | G | Am |", 4)]
+    [InlineData("section A { time 3/4 melody { d''2. | } }", "G . A | C | D |", 4)]
+    public void AFlatRowPastTheMusic_PadsTheStaves_InTheScoresMeter(string sections, string row, int homeBeats)
+    {
+        var tree = SyntaxTree.Parse($"time 4/4\npart melody\n{sections}\nchords harmony {{ {row} }}\nform {{ A }}\nscore {{ chords harmony  staff melody }}\n");
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        Assert.Equal(3, score.MeasureCount);
+        var melody = score.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices).Single(v => v.Name == "melody");
+        Assert.Equal(3, melody.Measures.Length);
+        Assert.True(melody.Measures[1].IsEmptyPlaceholder && melody.Measures[2].IsEmptyPlaceholder);
+        Assert.Equal(new Fraction(homeBeats, 4), melody.Measures[2].Items.Sum(i => i.Duration.ToDouble()) is var d ? new Fraction((int)System.Math.Round(d * 4), 4) : default);
+        // The home is restated where the music left it, once, and nowhere else.
+        var changes = melody.Measures.Skip(1).SelectMany(m => m.Items.OfType<TimeSignatureChangeItem>()).ToList();
+        if (sections.Contains("time 3/4"))
+            Assert.Equal(4, Assert.Single(changes).NewTime.Beats);
+        else
+            Assert.Empty(changes);
+        Assert.Equal([0, 1, 2], score.ChordNames.Select(c => c.MeasureIndex).Distinct().OrderBy(i => i).ToArray());
+    }
+
     [Fact]
     public void AReplayedSection_ReportsEachGridFaultOnce()
     {

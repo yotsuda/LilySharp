@@ -1276,7 +1276,19 @@ public sealed partial class MeasureCollector
                     if (longest == null || v.Measures.Length > longest.Measures.Length)
                         longest = v;
         if (longest != null)
-            return MeterTimeline(longest.Measures, _v.Meta.TimeBeats, _v.Meta.TimeBeatType);
+        {
+            var music = MeterTimeline(longest.Measures, _v.Meta.TimeBeats, _v.Meta.TimeBeatType);
+            // Past the music a row's bars are bars of the SCORE's meter (ExtendStavesToTheRows
+            // pads the staves with them; the sound and the exports read the same): the revert a
+            // section that states no meter makes, here made once the last one is over. The
+            // score's (_scoreTime, every builder's home), not _v.Meta's — the opening section's
+            // header replaced that (AtPieceOpening). Not ScoreHomeMeter.Read: that is a red walk
+            // of the whole book, which a keystroke must not pay (KeystrokeStaysRedFreeTests).
+            var home = HomeMeterOfScore;
+            if ((music[^1].Beats, music[^1].BeatType) != (home.Beats, home.BeatType))
+                music.Add((longest.Measures.Length, home.Beats, home.BeatType));
+            return music;
+        }
         var timeline = new List<(int Measure, int Beats, int BeatType)> { (0, _v.Meta.TimeBeats, _v.Meta.TimeBeatType) };
         if (rowsOnlyBars != null)
             for (int m = 0; m < rowsOnlyBars.Count; m++)
@@ -1931,6 +1943,7 @@ public sealed partial class MeasureCollector
         foreach (var (rowName, rowIdx, _) in pendingLyricsRows)
             rowStaffIndex[rowName] = rowIdx;
         FitRowsToMusicBars(staffVoices, rowNames, rowsOnlyBars, rowStaffIndex);
+        ExtendStavesToTheRows(staffVoices, rowNames, pendingChordRows.Select(r => r.Item1));
 
         // A rows-only score prints its section labels from the FIRST row's
         // measures (that row is the PrimaryContentStaff fallback the mark
@@ -3149,6 +3162,71 @@ public sealed partial class MeasureCollector
                 }
             if (fitted != null)
                 staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, fitted.ToImmutableArray()));
+        }
+    }
+
+    /// <summary>
+    /// A flat chord track's bars past the music are drawn (owner's decision 2026-11-07): every
+    /// full-length music voice is padded with empty placeholder bars up to the longest chord
+    /// row — bars of the SCORE's meter, in the home key, as a section that states no meter
+    /// opens (the row's grid past the music reads the same, <see cref="RowMeterTimeline"/>;
+    /// so do the sound, the twin and the MusicXML) — with the home meter restated where the
+    /// music left it (a change item, as <see cref="MeasureBuilder.RevertMeterToHome"/> draws
+    /// at a section boundary). Until then a row longer than the music was cut at the music's
+    /// last bar beside a staff while a lead sheet drew it whole, and the MIDI and the twin
+    /// went on past the page (Lab sessions/p1120/probe/r-flat, r-lead, r-two). A row INSIDE a
+    /// section longer than its parts never comes here: the section's canonical count padded
+    /// the staves in the walk (ProcessSection).
+    /// </summary>
+    private void ExtendStavesToTheRows(
+        Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames,
+        IEnumerable<string> chordRowNames)
+    {
+        int rowBars = 0;
+        foreach (var name in chordRowNames)
+            if (staffVoices.TryGetValue(name, out var rowVoices))
+                foreach (var v in rowVoices)
+                    rowBars = Math.Max(rowBars, v.Measures.Length);
+        int musicBars = 0;
+        foreach (var (name, voices) in staffVoices)
+            if (!rowNames.Contains(name))
+                foreach (var v in voices)
+                    musicBars = Math.Max(musicBars, v.Measures.Length);
+        if (musicBars == 0 || rowBars <= musicBars)
+            return;
+        // The SCORE's meter (_scoreTime, every builder's home), not _v.Meta's: the opening
+        // section's header replaced that one (AtPieceOpening), and a section that states no
+        // meter reverts to the score's, as the sound and the exports do here (BarContext.RevertToHome).
+        var homeMeter = HomeMeterOfScore;
+        var home = homeMeter.Length;
+        var homeSig = new TimeSignature(homeMeter.Beats, homeMeter.BeatType, homeMeter.BeatsText,
+            _scoreTime.SenzaMisura, homeMeter.Grouping);
+        foreach (var key in staffVoices.Keys.ToArray())
+        {
+            if (rowNames.Contains(key))
+                continue;
+            staffVoices[key] = staffVoices[key].Select(v =>
+            {
+                // Only a voice the whole music long (a staff's extra voice may stop earlier).
+                if (v.Measures.Length != musicBars)
+                    return v;
+                var last = MeterTimeline(v.Measures, _v.Meta.TimeBeats, _v.Meta.TimeBeatType)[^1];
+                bool restate = (last.Beats, last.BeatType) != (homeSig.Beats, homeSig.BeatType);
+                int at = v.Measures[^1].SourceEnd;
+                var b = v.Measures.ToBuilder();
+                for (int i = musicBars; i < rowBars; i++)
+                {
+                    var items = ImmutableArray.CreateBuilder<MusicItem>(2);
+                    if (restate && i == musicBars)
+                        items.Add(new TimeSignatureChangeItem(homeSig, at));
+                    items.Add(new RestItem(home, 0, at) { IsSpacer = true });
+                    b.Add(new Measure(items.ToImmutable(), BarlineType.None, BarlineType.Single, null, at, at)
+                    {
+                        IsEmptyPlaceholder = true,
+                    });
+                }
+                return v with { Measures = b.ToImmutable() };
+            }).ToImmutableArray();
         }
     }
 

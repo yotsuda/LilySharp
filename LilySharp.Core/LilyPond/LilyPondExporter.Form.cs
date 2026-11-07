@@ -401,6 +401,7 @@ public sealed partial class LilyPondExporter
         // header directives — the key is read for the degree spelling instead.
         if (_chordTrack)
         {
+            _lastChordPlay = name;
             result.AddRange(ChordBars(entry.Container, ChordKeyFor(name), ChordPickupFor(name),
                 SectionBarMeters(name)));
             result.AddRange(PaddingBars(entry.Container));
@@ -459,6 +460,7 @@ public sealed partial class LilyPondExporter
         var headers = _sectionHeaders.DirectivesOf(name);
         if (_chordTrack)
         {
+            _lastChordPlay = name;
             var meter = _sectionHeaders.Times.GetValueOrDefault(name) is { IsSenzaMisura: false } t
                 ? new Fraction(t.Beats, t.BeatType)
                 : _bars.HomeMeter.Length;
