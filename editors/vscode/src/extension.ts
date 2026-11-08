@@ -4586,7 +4586,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         /* One line a part: the toggle, then its fader (owner's request 2026-11-09). */
         .practice-panel .parts .pline { display: flex; align-items: center; gap: 8px; }
         .practice-panel .parts .pline button { flex: 1 1 auto; min-width: 0; }
-        .practice-panel .parts input.fader { width: 76px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
+        /* As long as the tempo's slider (owner's request 2026-11-09, session 1159: longer, the 200% end further right). */
+        .practice-panel .parts input.fader { width: 160px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
         .practice-panel .parts .flevel { width: 2.8em; flex: 0 0 auto; text-align: right; font-size: 11px; opacity: 0.8; font-variant-numeric: tabular-nums; }
         .practice-panel .presets { padding-top: 0; }
         .practice-panel .parts button { text-align: left; }

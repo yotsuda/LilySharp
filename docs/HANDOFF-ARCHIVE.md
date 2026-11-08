@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1157セッションの経緯
+
+### 1.1 第1157セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14861 / 0 / 2**（`-Start p1157`・HEAD `004302579`・未 push 57・OMR の open 0）。同じ会話で第1156 から続けた便。オーナー「再現しなくなってしまった。パート選択を選択中の score に戻すリセットボタンと、すべてのフェーダーを元に戻すリセットボタンを足して」→ 続けて「フェーダーの上限は 100% ではなく 200% にして」。作業場所は Lab `sessions/p1157/`（`notes.md`）。
+
+- **リセット 2 つ（ページ）**: Parts の下に `.prow.presets`＝**Reset parts**（`muted`／`extraOn`／`voicesOff` を空に＝見ている score のとおり: 自分のパートは on・score に無いパートは off・声は on。トグルは名前ごとに全ファイル共通なので、別ファイルで消したパートから戻る道でもある）と **Reset faders**（`levels`／`voiceLevels` の項目を**その場で**消す＝各行のクロージャがオブジェクトを握っているので差し替えない）。各行は `partRefreshers` に「トグルの押し込みとフェーダーの値を読み直す」関数を登録し、リセットはそれを全部呼んでから `practiceChanged`。`showPractice` は戻すものが無ければボタンを無効に。
+- **フェーダー 0〜200%**: ページ `FADER_MAX = 2`・playbackCore `LEVEL_MAX = 2`（`levelOf` は 0〜2 に clamp・`velocityAt` は 127 で頭打ち・声の gain は 2 まで）。`change` は値がちょうど 100 のときだけ項目を消す。
+- 網: playbackCore.test（150% → 127 の天井・上下の clamp）＝npm **907 / 907**・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: playback-design・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7「リセット 2 つ」とフェーダーの行。
+- 残り: 実機（オーナー）・前便の問い（鳴らない件は再現せず＝Reset parts／Reset faders で戻せる）・前々便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- **Chrome のハーネスで確認**（第1156 の `probe/`・`page.html` を作り直して）: melody を mute・kit を on・声を off・フェーダー 150％と 40％ → Reset parts で選択が score どおりに戻りトグルの押し込みも戻る（フェーダーは残る）→ Reset faders で全部 100・数字が消える・両ボタンが無効に。例外 0。
+- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1157 -DiffBase 004302579`＝`end.log`・門は全部 OK・§1 現在便 16,021 字＝残り 3,979）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所はオーナーの要望とハーネスの実測。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1156セッションの経緯
 
 ### 1.1 第1156セッション（2026-11-09・YT-DELL2）
