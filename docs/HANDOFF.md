@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1149セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14857 / 0 / 2**（`-Start p1149`・HEAD `5c3557cfa`・未 push 49・OMR の open 0）。同じ会話で第1148 から続けた便。オーナー報告「プレビューの再生ボタンを押すと、なぜか再生せずにメトロノームウィンドウが開くことがある」。作業場所は Lab `sessions/p1149/`。
+
+- **原因（コードから）**: 第1141〜1142 で ▶ の右下隅に重ねた声のバッジ（マイク・`right:-5px; bottom:-5px; 15px`）のクリックが **practice メニュー**（Tempo, loop, metronome, parts＝オーナーの言う「メトロノームウィンドウ」）を開く作り（`practiceBtn.click()`）だった。隅を狙った ▶ がバッジに当たると再生ではなくメニューが開く。
+- **直し（ページ 1 行）**: バッジのクリックは **▶ のクリック**（`playBtn.click()`）。バッジは状態であってボタンではない（オーナー決定 第1142）＝title はそのまま。docs: MANUAL-CHECKS §3.7 のバッジの行・editors CHANGELOG「A click on it is a click on ▶」。
+- 網: `check-types` 0・npm **904 / 904**。`Deploy-Lsp.ps1` で配布（`deploy.log`・0.15.0+5c3557cfa）＝オーナーは Reload Window。
+- 残り: 実機（オーナー・§3.7「声を用意する時機」と「マイクをクリック → ▶ と同じ」）・前便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み・MP4 の網の `s00000.png` の競合が再発したら絵のフォルダを試験ごとに分ける）。
+- 終了時 full **14857 / 0 / 2 / 14859**（`-End p1149 -DiffBase 5c3557cfa`＝`end.log`・門は全部 OK・§1 現在便 15,707 字＝残り 4,293）。§7 7.5: Core `+` 0・REF 0・OWN 0（ページの 1 行と docs だけ）。7.6: 出所はコードの読み（バッジの click handler と CSS の位置）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1148セッションの経緯
+
 ### 1.1 第1148セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14857 / 0 / 2**（`-Start p1148`・HEAD `5ecba80c3`・未 push 48・OMR の open 0）。同じ会話で第1147 から続けた便。オーナー報告「音声がまだない・準備中・準備完了の状態が正しく表示されない。準備中でないのにマイクが点滅し続ける。どの時機に声の準備を始めるか丁寧に検討。歌詞を編集したらすぐ始めてよいならその方が良いが、マシン全体が重くなるなら別の時機を」→ 提案（手を止めて 1.5 秒・既定 `afterEdit`・構文エラー中は状態を保つ）に「良い。進めて」。作業場所は Lab `sessions/p1148/`（`notes.md`）。
@@ -148,19 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **網**: npm **904 / 904**（`npmtest.log`・PrepareQueue 3・prepareMode 1・badge の waiting 1・manifest の設定）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`・0.15.0+5ecba80c）＝**オーナーは Reload Window を 2 回**（package.json が変わった）。docs: singing-design §5「When the voice is prepared」・MANUAL-CHECKS §3.7「声を用意する時機」・editors CHANGELOG・CHANGELOG `[editor]`。
 - 残り: 実機（オーナー・§3.7 の新しい行）・前便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
 - 終了時 full **14856 / 1 / 2 / 14859**（`-End p1148 -DiffBase 5ecba80c3`＝`end.log`・門は全部 OK・§1 現在便 17,268 字＝残り 2,732）。赤 1 は `ExportRequestTests.Mp4_DrawsThePictures_TheSoundingCopyLit`＝`IOException: s00000.png is being used by another process`（並列 full の中で絵のフォルダを共有した競合・**単独の再走は緑** `rerun.log`・この便の変更は TS だけで Core／Lsp 不変）⇒ 引継ぎの合計は 14857 相当。⚠️ 同じ赤が次も出たら MP4 の網の絵のフォルダを試験ごとに分ける（未着手）。§7 7.5: Core `+` 0・REF 0・OWN 0（Core／Lsp／Cli は触っていない）。7.6: 出所はコードの読みと npm の網・engine の費用は singing-roadmap §1 の表の値。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1147セッションの経緯
-
-### 1.1 第1147セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14856 / 0 / 2**（`-Start p1147`・HEAD `78f0beffb`・未 push 47・OMR の open 0）。同じ会話で第1146 から続けた便。オーナー報告「かえるのうた.lys の歌詞を『ささるの』で始めているのに『たさるの』と発音する」。作業場所は Lab `sessions/p1147/`。
-
-- **原因（実測）**: NEUTRINO のラベル（`*.timing.lab`）で曲頭の さ は **s が 0.897〜1.011 s・a が 1.011 s から**、導入の休符は 1.000 s＝s の 114 ms のうち 103 ms が拍の前。Cantilena は導入の 1.000 s ちょうどで切るので s が 11 ms だけ残り、破裂音「た」に聞こえる。2 つ目の さ の s（1.457〜1.612）は前の母音の中＝切れない。**影響は曲頭の最初の音節だけ**（休符の後の子音は休符の中に在る）。
-- **直し（Lily# だけ・Cantilena 不変＝engine には休符）**: 歌わせる譜を **0.3 s 後ろへ**（`VOICE_LEAD_S`／`SungScoreJson.Lead`）送り、WAV の 0.3 s を楽譜の 0 と読む＝曲頭の子音はその 0.3 s の中に残る。ページは声ごとに `lead` と **`pre`＝lead の中で音が鳴り始めてから拍までの長さ**（`soundStart`・0.02 超の最初のサンプル）を測り、曲頭からの ▶（count-in なし）では楽器を `pre` だけ遅らせ（`voicePreroll`）、声は子音から始める（`withVoiceLead`＝offset に lead を足し、楽譜の 0 から始まる cue だけ `min(pre, lead, at+room)` 早める。曲の途中からの開始は前の母音が在るので早めない・MIDI 出力は room 0）。Export は `at = Lead − 0.3`、`pre` を測ってファイル全体（Notes・Lit・Lead・声）を遅らせる＝動画の絵もずれない。CLI は `VoiceTrack.At = −0.3`、`WavRenderer.RenderWithVoices` が同じ preroll を計算して synth の出力の前に無音を置き `Rendered(Length, Preroll)` を返す・ScoreExport が「Voice lead: 0.10 s」を刷る。網: playbackCore（`soundStart`・`withVoiceLead`）・singerCore（start +0.3）・WavExportTests（FakeSinger が lead の無音を書く・`Consonant = 0.1` でファイル頭が声、楽器は 0.1 s 後）＝.NET 40 / 40・npm 899 / 899。⚠️ ページのスクリプトのコメントにまたバッククォートを書いて TS1005（3 度目）。
-- **E2E**（`checks.log`）: `sasaru.lys`（さ さ る の）を `lysc wav --singer`＋入れ直し済みの cantilena（NEUTRINO）で＝下の行。`Deploy-Lsp.ps1` で配布＝オーナーは Reload Window。docs: singing-design §3・editors CHANGELOG・CHANGELOG `[cli]`・MANUAL-CHECKS §3.7。
-- 残り: 実機で「ささるの」（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み・同じ本の編集直後の ▶）。
-- **E2E の結果**: `Voice: cantilena sings melody (7 notes, 7.7 s)`・**`Voice lead: 0.08 s`**（テンポ 100 の s は拍の 80 ms 前から）・WAV の最初の音は 0 s＝子音から始まり、楽器は 0.08 s 後。
-- 終了時 full **14857 / 0 / 2 / 14859**（`-End p1147 -DiffBase 78f0beffb`＝`end.log`・門は全部 OK・§1 現在便 16,311 字＝残り 3,689）。§7 7.5: `-End` は commit 前の diff なので Core `+` 0 と出るが、実際は `SingingEngine`（Lead）・`WavReader`（`SoundStart`）・`WavRenderer`（preroll・`Rendered`）・`ScoreExport` の変更（REF 0・OWN 0＝規則は数と時刻）。7.6: 出所は NEUTRINO のラベルの実測。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

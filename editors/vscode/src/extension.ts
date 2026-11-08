@@ -6254,7 +6254,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 btn.title = s ? base + (s.state === 'ready' ? ' — ready' : s.state === 'preparing' ? ' — being sung…' : s.state === 'waiting' ? ' — not sung yet' : ' — not sung' + (s.detail ? ': ' + s.detail : '')) : base;
             }
         }
-        document.getElementById('voiceBadge').addEventListener('click', () => practiceBtn.click());
+        // The badge sits on the corner of the Play button and takes the clicks that land there: they
+        // are Play's (owner's report 2026-11-09, session 1149: a Play on that corner opened the
+        // practice menu, which the badge used to open, instead of playing). The badge is a status,
+        // not a button; its title says what it knows.
+        document.getElementById('voiceBadge').addEventListener('click', () => document.getElementById('playBtn').click());
         // The tracks a voice stands in for now: a part with a voice at this speed, not muted.
         function sungTracks() {
             const set = new Set();
