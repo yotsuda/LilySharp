@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1132セッションの経緯
+
+### 1.1 第1132セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14828 / 0 / 2**（`-Start p1132`・HEAD `656978138`・未 push 31・OMR の open は 0）。新しい会話。オーナー「開発のロードマップを計画して」→ **`docs/singing-roadmap.md`**（製品＝目標・現在地・長期 A〜G・短期 8 行・オーナーの決定 5 つ・リスク）と Cantilena **`docs/roadmap.md`**（エンジン側＝backend の順・契約の変更・platform・初回の声）を書いた（ROADMAP.md・singing-design.md §7・Cantilena design.md から指す）→ オーナー「開発に着手して」→ 短期の 2 行目＝**span の終わりで声を止める・ループで歌う**。作業場所は Lab `sessions/p1132/`。
+
+- **設計＝声の cue を純粋関数に**: `playbackCore.voiceCues(listTime, lead, pieces, rounds, bufferSeconds)` → `{ at, offset, duration? }[]`。声の WAV は楽譜の秒、鳴らす列は count-in の lead で動き span で切られ loop で並ぶ＝その写像を 1 か所に。`playSpanWindow` が **`pieces`**（列が鳴らす楽譜の区間の並び。`once` で閉じた反復は抜ける＝声もそこを飛ぶ）を返し、`loopNotes` の周回数は `loopRounds` に出した。page は `voiceOrigin`（number|null）を **`voicePlan`**（null＝声なし／`{ pieces: null }`＝全曲／`{ pieces, rounds }`＝span とループ・`rounds` は `looped()` が実際に並べた数 `loopRoundCount`）に替え、`startVoices` が cue ごとに `AudioBufferSourceNode.start(when, offset, duration)`。
+- **ついでに直った罠＝count-in の分だけ声が先走っていた**: 旧 `startVoices` は `offset = max(listTime, countInFix) + voiceOrigin`＝lead を楽譜の秒に足していた（MANUAL-CHECKS §3.7 の count-in の行は未確認のままだった）。新しい写像は `offset = (from − lead) + origin`。
+- **網**: `playbackCore.test.ts` に `voiceCues` 5 本＋`pieces` 1 本、`previewRanges`・`aiCandidatePlay` の正規表現を新しい形に。`npm test` **893 / 893**・`npm run compile` 0。毒 3 本（lead を足す・duration を落とす・pieces の端を誤る）は 1・4・1 赤。実機は MANUAL-CHECKS §3.7 の行を書き直した（オーナー）。
+- 残り: roadmap §3 の順＝`engine/voice` と `voices()`（Cantilena＋Lily#）・漢字のかな（オーナー決定待ち・提案は ⒜ 音節の中の読み）・`lysc wav --singer`・DiffSinger の spike。
+- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1132 -DiffBase 656978138`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` 0＝拡張と docs（REF 0・OWN 0）。この docs commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1131セッションの経緯
 
 ### 1.1 第1131セッション（2026-11-08・YT-DELL2）

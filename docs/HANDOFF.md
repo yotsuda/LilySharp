@@ -138,6 +138,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1134セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14828 / 0 / 2**（`-Start p1134`・HEAD `a332e9a1a`・未 push 33・OMR の open は 0）。同じ会話で第1133 から続けた便。オーナー「続けて」→ roadmap 短期の 6 行目＝**DiffSinger の spike**（Cantilena `docs/roadmap.md` B1: 声を 1 つ読んで 1 フレーズを CPU で歌わせ、時間と許諾を記録）。オーナー指示「OpenUtau のコードを読むなら `C:\MyProj` の下に clone して」＝`C:\MyProj\openutau-src`（MIT・depth 1）と `C:\MyProj\openutau-wiki`。作業場所は Lab `sessions/p1134/`（計器は `dsspike/`）。
+
+- **結果＝OpenUtau 形式の DiffSinger の声が C#（ONNX Runtime 1.23.0）で Cantilena の楽譜を歌った**。計器 `dsspike`（Lab `sessions/p1134/dsspike/`・`dsspike <voice> <vocoder> <score.json> <out.wav>`）は OpenUtau の `DiffSingerBasePhonemizer`／`DsPitch`／`DsVariance`／`DiffSingerRenderer` を段ごとに写した: かな → `dsdur/dsdict-ja.yaml`（**TIGER の見出しは kana そのもの**＝ローマ字より先に kana で引く）→ dsdur の linguistic＋dur で音素の時刻（母音が音の頭・前の子音は dur model が前の音の尻を食う＝OpenUtau と同じ）→ dspitch で f0 → acoustic で mel → 声が同梱する vocoder で波形。`examples/yukiyakonko.json`（12 音・6.8 s）を **`dsspike analyze`（音ごとの自己相関の音程）で検算: 12 音とも有声・書いた音高との差は平均 0.19 半音**（DirectML でも 0.22）。
+- **時間（7.1 s の音・613 frames）**: CPU は process 全体 5〜18 s（acoustic が 10〜20 steps で 1.3〜13.9 s と振れる・未調査）、**DirectML（`-p:Dml=true`・`Microsoft.ML.OnnxRuntime.DirectML`）は warm で全体 3.0 s・acoustic 0.29 s・model の load が大半**＝NEUTRINO と同じく常駐（`serve`）が要る。GPU の provider は別パッケージ＝B3 の設計事項。
+- **声と許諾**: TIGER DS v106（`C:\Tools\voices\TIGER`・CC BY-NC-ND＋Commons Clause・ローカルの試験だけ・repo には何も入れない）。vocoder は声が同梱（`dsvocoder/`）。OpenVPI の nsf_hifigan（CC BY-NC-SA）も `C:\Tools\voices\nsf_hifigan` に取った（GitHub の release 配信が約 20 分 504 だったので Hugging Face のミラーから。TIGER は `gh release download`＝API 経由で通った）。ダウンロードは `C:\Tools\voices\_dl\`（zip 555 MB・oudep 53 MB）＝残すか消すかはオーナー。
+- **形式で分かったこと**（Cantilena `docs/roadmap.md` B1・B2 と Lab `notes.md` に書いた）: module ごと（`dsdur/`・`dspitch/`・`dsvariance/`）に自分の `dsconfig.yaml`・`phonemes.txt`・`.emb`・辞書。`languages.json` は `use_lang_id` のときだけ（TIGER は無し＝辞書だけで多言語）。TIGER に variance は無い＝**variance の経路は未検証**（B2 で variance のある声で先に試す）。入力名は model が宣言するものだけ渡し、足りない名を報告する作りが効いた。
+- **Lily# は Core・拡張とも不変**（この便は Cantilena の docs と Lab と HANDOFF だけ）。
+- 残り: roadmap §3 の 4（漢字のかな＝オーナー決定待ち）・5（`lysc wav --singer`）・**B2（backend の本実装）**。
+- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1134 -DiffBase a332e9a1a`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` 0（REF 0・OWN 0）。この docs commit と Lab・Cantilena の commit は Claude・push はオーナー。
+
+## 以下は第1133セッションの経緯
+
 ### 1.1 第1133セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14828 / 0 / 2**（`-Start p1133`・HEAD `48b071dee`・未 push 32・OMR の open は 0）。同じ会話で第1132 から続けた便。roadmap 短期の 3 行目＝**声の名前を `engine/voice` に・API に `voices()`**（第 2 エンジンの前提）。作業場所は Lab `sessions/p1133/`。
@@ -146,18 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **Lily# 側**: `singerCore.CantilenaApi` に `voices?()` と `CantilenaVoice`（任意＝古い拡張には無い）、`renderer()` が `singer: the Cantilena extension 0.2.0, voice neutrino/MERROW` と名乗る（拡張のときだけ）。MANUAL-CHECKS §3.7 の 2 行目を書き直した。`npm test` 893 / 893・compile 0。Core 不変。
 - 残り: roadmap §3 の 4（漢字のかな＝オーナー決定待ち）・5（`lysc wav --singer`）・6（DiffSinger の spike）。
 - 終了時 full **14828 / 0 / 2 / 14830**（`-End p1133 -DiffBase 48b071dee`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` 0（REF 0・OWN 0）。この docs commit と Lab・Cantilena の commit は Claude・push と VSIX の入れ直し（`deploy-extension.ps1`）はオーナー。
-
-## 以下は第1132セッションの経緯
-
-### 1.1 第1132セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14828 / 0 / 2**（`-Start p1132`・HEAD `656978138`・未 push 31・OMR の open は 0）。新しい会話。オーナー「開発のロードマップを計画して」→ **`docs/singing-roadmap.md`**（製品＝目標・現在地・長期 A〜G・短期 8 行・オーナーの決定 5 つ・リスク）と Cantilena **`docs/roadmap.md`**（エンジン側＝backend の順・契約の変更・platform・初回の声）を書いた（ROADMAP.md・singing-design.md §7・Cantilena design.md から指す）→ オーナー「開発に着手して」→ 短期の 2 行目＝**span の終わりで声を止める・ループで歌う**。作業場所は Lab `sessions/p1132/`。
-
-- **設計＝声の cue を純粋関数に**: `playbackCore.voiceCues(listTime, lead, pieces, rounds, bufferSeconds)` → `{ at, offset, duration? }[]`。声の WAV は楽譜の秒、鳴らす列は count-in の lead で動き span で切られ loop で並ぶ＝その写像を 1 か所に。`playSpanWindow` が **`pieces`**（列が鳴らす楽譜の区間の並び。`once` で閉じた反復は抜ける＝声もそこを飛ぶ）を返し、`loopNotes` の周回数は `loopRounds` に出した。page は `voiceOrigin`（number|null）を **`voicePlan`**（null＝声なし／`{ pieces: null }`＝全曲／`{ pieces, rounds }`＝span とループ・`rounds` は `looped()` が実際に並べた数 `loopRoundCount`）に替え、`startVoices` が cue ごとに `AudioBufferSourceNode.start(when, offset, duration)`。
-- **ついでに直った罠＝count-in の分だけ声が先走っていた**: 旧 `startVoices` は `offset = max(listTime, countInFix) + voiceOrigin`＝lead を楽譜の秒に足していた（MANUAL-CHECKS §3.7 の count-in の行は未確認のままだった）。新しい写像は `offset = (from − lead) + origin`。
-- **網**: `playbackCore.test.ts` に `voiceCues` 5 本＋`pieces` 1 本、`previewRanges`・`aiCandidatePlay` の正規表現を新しい形に。`npm test` **893 / 893**・`npm run compile` 0。毒 3 本（lead を足す・duration を落とす・pieces の端を誤る）は 1・4・1 赤。実機は MANUAL-CHECKS §3.7 の行を書き直した（オーナー）。
-- 残り: roadmap §3 の順＝`engine/voice` と `voices()`（Cantilena＋Lily#）・漢字のかな（オーナー決定待ち・提案は ⒜ 音節の中の読み）・`lysc wav --singer`・DiffSinger の spike。
-- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1132 -DiffBase 656978138`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` 0＝拡張と docs（REF 0・OWN 0）。この docs commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 
