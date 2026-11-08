@@ -14,39 +14,67 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// The singing engine as a process (docs/singing-design.md §5): one resident `cantilena serve`
-// per extension host, spoken to in JSON lines, and the WAVs it rendered, kept by their key so a
-// phrase is sung once. The engine is the user's (lilysharp.playback.singer names it, as a sound
-// font is named); nothing of it is linked or shipped. No vscode here: the settings, the status
-// bar and the previews are extension.ts's.
+// The singing engine behind the preview's voice (docs/singing-design.md §5), two ways: the
+// Cantilena extension's API (the usual way — it carries the program and holds the voice and
+// NEUTRINO's folder), or a `cantilena` program named in lilysharp.playback.singer, run here as
+// one resident `cantilena serve` spoken to in JSON lines (a developer's build). Both give a WAV
+// per voice, kept by the key of its score so a phrase is sung once. No vscode here: the
+// settings, the extension lookup, the status bar and the previews are extension.ts's.
 
 import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as readline from 'readline';
-import { CantilenaScore, SungVoiceDto, cantilenaScore, parseServeLine, serveRequestLine, voiceKey } from './singerCore';
+import { CantilenaApi, CantilenaScore, SungVoiceDto, cantilenaScore, parseServeLine, serveRequestLine, voiceKey } from './singerCore';
 
 /** A voice the engine rendered: the WAV's path and its length. */
 export interface RenderedVoice { wav: string; duration: number }
 
+/** What sings: the extension's API, or the program here. */
+export interface VoiceBackend {
+    /** For the log: `extension 0.1.0`, or the program's path. */
+    readonly name: string;
+    /** The voice the engine will use, for the cache key: the extension's setting now, the program's default. */
+    voiceName(): Promise<string>;
+    /** Sings `score`; `key` names the request and the file where the backend lets the caller name it. */
+    sing(key: string, score: CantilenaScore): Promise<RenderedVoice>;
+    dispose(): void;
+}
+
+/** The Cantilena extension as the backend: its `sing` keeps the WAVs under its own storage. */
+export class CantilenaExtensionBackend implements VoiceBackend {
+    readonly name: string;
+    constructor(private readonly api: CantilenaApi) { this.name = `the Cantilena extension ${api.version}`; }
+    async voiceName(): Promise<string> { return (await this.api.status()).voice; }
+    async sing(_key: string, score: CantilenaScore): Promise<RenderedVoice> {
+        const v = await this.api.sing(score);
+        return { wav: v.wav, duration: v.duration };
+    }
+    dispose(): void { /* the extension's engine is its own to keep */ }
+}
+
 /**
- * The resident engine: started on the first render, spoken to on stdin, answered on stdout one
- * line a request, in order. A request is named by its key, and the WAV by it too, so a repeat of
- * a request writes the same file. An engine that dies fails what it owed and starts again on
- * the next render.
+ * A program named in the setting, as the backend: started on the first render, spoken to on
+ * stdin, answered on stdout one line a request, in order. A request is named by its key, and
+ * the WAV by it too, so a repeat of a request writes the same file. An engine that dies fails
+ * what it owed and starts again on the next render.
  */
-export class SingerProcess {
+export class SingerProcess implements VoiceBackend {
     private child: cp.ChildProcess | undefined;
     private readonly pending = new Map<string, { resolve: (v: RenderedVoice) => void; reject: (e: Error) => void }>();
     readonly outDir: string;
+    readonly name: string;
 
     constructor(readonly exe: string, private readonly log: (line: string) => void) {
         this.outDir = path.join(os.tmpdir(), 'lilysharp-voice');
+        this.name = exe;
     }
 
     /** Whether the engine is running now. */
     get running(): boolean { return this.child !== undefined; }
+
+    voiceName(): Promise<string> { return Promise.resolve('default'); }
 
     private start(): cp.ChildProcess {
         fs.mkdirSync(this.outDir, { recursive: true });
@@ -78,13 +106,13 @@ export class SingerProcess {
         this.pending.clear();
     }
 
-    /** Sings `score` in `voice` into `<outDir>/<key>.wav`; the answer when the engine has. */
-    render(key: string, score: CantilenaScore, voice: string): Promise<RenderedVoice> {
+    /** Sings `score` into `<outDir>/<key>.wav`; the answer when the engine has. */
+    sing(key: string, score: CantilenaScore): Promise<RenderedVoice> {
         const child = this.child ?? this.start();
         const output = path.join(this.outDir, `${key}.wav`);
         return new Promise<RenderedVoice>((resolve, reject) => {
             this.pending.set(key, { resolve, reject });
-            child.stdin!.write(serveRequestLine(key, score, voice, output), e => {
+            child.stdin!.write(serveRequestLine(key, score, output), e => {
                 if (e) { this.pending.delete(key); reject(e); }
             });
         });
@@ -105,33 +133,30 @@ export class SingerProcess {
 }
 
 /**
- * The voices rendered so far, by key, and the engine that renders what is missing. One per
- * extension host, remade when the setting that names the engine changes.
+ * The voices rendered so far, by key, and the backend that renders what is missing. One per
+ * extension host, remade when the setting that names the engine, or the extensions installed,
+ * change.
  */
 export class VoiceRenderer {
-    private readonly process: SingerProcess;
     private readonly done = new Map<string, RenderedVoice>();
     private readonly inFlight = new Map<string, Promise<RenderedVoice>>();
 
-    constructor(exe: string, log: (line: string) => void) {
-        this.process = new SingerProcess(exe, log);
-    }
+    constructor(readonly backend: VoiceBackend) {}
 
-    get exe(): string { return this.process.exe; }
+    get name(): string { return this.backend.name; }
 
     /**
-     * The voice for `dto` at `speed` in `voiceName`: its key, and the rendered WAV — at once when
-     * it was sung before, else when the engine has sung it. A second ask for a voice in flight
-     * joins the first.
+     * The voice for `dto` at `speed`: its key, and the rendered WAV — at once when it was sung
+     * before, else when the engine has sung it. A second ask for a voice in flight joins the first.
      */
-    render(dto: SungVoiceDto, speed: number, voiceName: string): { key: string; rendered: Promise<RenderedVoice>; cached: boolean } {
+    async render(dto: SungVoiceDto, speed: number): Promise<{ key: string; rendered: Promise<RenderedVoice>; cached: boolean }> {
         const score = cantilenaScore(dto, speed);
-        const key = voiceKey(score, voiceName);
+        const key = voiceKey(score, await this.backend.voiceName());
         const hit = this.done.get(key);
         if (hit && fs.existsSync(hit.wav)) { return { key, rendered: Promise.resolve(hit), cached: true }; }
         let rendered = this.inFlight.get(key);
         if (!rendered) {
-            rendered = this.process.render(key, score, voiceName).then(v => { this.done.set(key, v); return v; });
+            rendered = this.backend.sing(key, score).then(v => { this.done.set(key, v); return v; });
             this.inFlight.set(key, rendered);
             rendered.finally(() => this.inFlight.delete(key)).catch(() => undefined);
         }
@@ -139,7 +164,7 @@ export class VoiceRenderer {
     }
 
     dispose(): void {
-        this.process.dispose();
+        this.backend.dispose();
         this.inFlight.clear();
     }
 }

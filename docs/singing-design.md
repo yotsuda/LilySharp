@@ -100,17 +100,25 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 
 ## 5. The editor
 
-- **Setting `lilysharp.playback.singer`** (machine-overridable): the path of `cantilena`
-  (the exe, or a `dotnet tool` on the PATH); empty = no voice, nothing else changes.
-  `lilysharp.playback.singerVoice` names the voice (`neutrino/MERROW` by default; `cantilena
-  voices` lists them, and **Lily#: Choose Singing Voice…** will show that list). NEUTRINO's
-  folder is Cantilena's business (`CANTILENA_NEUTRINO_DIR` or its `cantilena.json`).
-- **One resident `cantilena serve`** per extension host, started on the first score with a
-  voice and killed on deactivate: JSON lines on stdin/stdout — a request `{ id, score, voice }`
-  and an answer `{ id, wav, duration }` or `{ id, error }`, `wav` a file under the OS temp
-  folder. Resident because the engine's server is warm only inside one process (NEUTRINO
-  binds its server to the owner's pid; a `cantilena sing` per Play would pay the cold start
-  every time). The protocol is Cantilena's (`docs/design.md` §4 there); Lily# only speaks it.
+- **The engine is the Cantilena extension** (`yotsuda.cantilena`, owner's decision 2026-11-08,
+  session 1127 — the shape the OMR reader took: a separate extension that carries the program,
+  holds its own settings, and is called through its API). It holds the voice
+  (`cantilena.voice`) and NEUTRINO's folder (`cantilena.neutrinoFolder`), with pickers and a
+  **Check Setup**; its `activate` returns `{ version, apiVersion: 1, status(), sing(score),
+  release() }` (its README, "For extension authors"; `singerCore.cantilenaApiOf` checks the
+  shape). Lily# finds it with `vscode.extensions.getExtension`, activates it (no process
+  starts), and asks `sing` per voice; the extension keeps one resident `cantilena serve` and
+  the WAVs under its own storage. Installed or removed later, `extensions.onDidChange` makes
+  Lily# look again. Without it the lyrics are not sung and nothing is said.
+- **Setting `lilysharp.playback.singer`** (machine-overridable) is usually empty. A path names
+  a `cantilena` program to run here instead — a developer's build — as **one resident
+  `cantilena serve`** per extension host (`singer.ts` `SingerProcess`: JSON lines on
+  stdin/stdout, `{ id, score, output }` in, `{ id, wav, duration }` or `{ id, error }` out,
+  the WAV under the OS temp folder; the protocol is Cantilena's `docs/design.md` §4.1). Both
+  ways are a `VoiceBackend` behind the `VoiceRenderer`, whose cache key takes the backend's
+  voice name (`voiceName()`: the extension's setting now, the program's default), so a changed
+  voice sings anew.
+- `lilysharp.playback.singerReplacesPart` (default on): the sung part's instrument is silent.
 - **Rendered ahead, not at Play.** When the preview fetches its note list after a compile
   (`refreshPlayback`), the extension asks `lilysharp/sung`, hashes each voice's score with
   the voice name and the speed, and renders what the cache (a Map of hash → wav path, the
@@ -165,7 +173,11 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
    end if the stretch is shorter (noted, not built: a stop at the span's end). Nets:
    `test/singerCore.test.ts` (the score, the key, the wire, the manifest); the engine itself was
    driven from node against the real `cantilena serve` (Lab `sessions/p1126/probe-singer.js`).
-   The real VS Code is the owner's to check (MANUAL-CHECKS §3.7).
+   The real VS Code is the owner's to check (MANUAL-CHECKS §3.7). Session 1127 (owner's
+   decision): the engine became the **Cantilena extension** (`yotsuda.cantilena`, in the
+   Cantilena repository's `editors/vscode`, packed by its `tools/pack-extension.ps1`), and
+   Lily#'s `singerVoice` setting and **Choose Singing Voice…** went away — the voice is
+   Cantilena's; `lilysharp.playback.singer` stayed as the developer's override.
 4. **Export mixing**; then MIDI-out alignment if the jitter is heard; then `lysc wav`.
 
 Open for the owner before stage 3:

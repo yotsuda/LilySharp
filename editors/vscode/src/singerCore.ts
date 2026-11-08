@@ -35,6 +35,24 @@ export interface CantilenaScore { sampleRate: number; language: string; notes: C
 /** The rate the voice is asked for — NEUTRINO's own, so nothing is resampled on the way. */
 export const VOICE_SAMPLE_RATE = 48000;
 
+/** The Cantilena extension, the engine's own home on the Marketplace (docs/singing-design.md §5). */
+export const CANTILENA_EXTENSION_ID = 'yotsuda.cantilena';
+
+/** What that extension's `activate` returns, as far as Lily# reads it (its README, "For extension authors"). */
+export interface CantilenaApi {
+    readonly version: string;
+    readonly apiVersion: number;
+    status(): Promise<{ ready: boolean; voice: string; problems: string[] }>;
+    sing(score: CantilenaScore, options?: { voice?: string }): Promise<{ wav: string; duration: number; cached?: boolean }>;
+    release(): void;
+}
+
+/** The API from an extension's exports, or undefined when they are not that shape. */
+export function cantilenaApiOf(exports: unknown): CantilenaApi | undefined {
+    const e = exports as Partial<CantilenaApi> | undefined;
+    return e && typeof e.sing === 'function' && typeof e.status === 'function' && e.apiVersion === 1 ? e as CantilenaApi : undefined;
+}
+
 const round = (x: number): number => Math.round(x * 1e4) / 1e4;
 
 /**
@@ -62,13 +80,6 @@ export function voiceKey(score: CantilenaScore, voice: string): string {
     return createHash('sha1').update(voice).update('\n').update(JSON.stringify(score)).digest('hex');
 }
 
-/** The voice `lilysharp.playback.singerVoice` names, as the engine takes it: `cantilena voices`
- *  lists `neutrino/MERROW`, the engine's request wants `MERROW`; empty is the engine's default. */
-export function singerVoiceName(setting: string | null | undefined): string {
-    const bare = (setting ?? '').trim().replace(/^neutrino\//i, '');
-    return bare || 'MERROW';
-}
-
 /** One line of `cantilena serve`'s stdout. */
 export interface ServeAnswer {
     ready?: boolean; voices?: string[];
@@ -87,7 +98,8 @@ export function parseServeLine(line: string): ServeAnswer | null {
     }
 }
 
-/** One request of `cantilena serve`'s stdin: the score, the voice, where the WAV goes. */
-export function serveRequestLine(id: string, score: CantilenaScore, voice: string, output: string): string {
-    return JSON.stringify({ id, score, voice, output }) + '\n';
+/** One request of `cantilena serve`'s stdin: the score, where the WAV goes, and the engine's
+ *  default voice (its `--voice`, else MERROW) — Lily# names none. */
+export function serveRequestLine(id: string, score: CantilenaScore, output: string): string {
+    return JSON.stringify({ id, score, output }) + '\n';
 }

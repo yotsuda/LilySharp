@@ -51,8 +51,8 @@ import { AudioFormat, AudioJob, renderAudioFiles } from './audioRender';
 import { PracticeState, exportNotes, practiceSummary } from './webview/playbackCore';
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
-import { VoiceRenderer } from './singer';
-import { SungVoiceDto, singerVoiceName } from './singerCore';
+import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
+import { CANTILENA_EXTENSION_ID, SungVoiceDto, cantilenaApiOf } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -784,8 +784,7 @@ export function activate(context: vscode.ExtensionContext) {
                 midiPlaybackPanel = undefined;
                 void midiOutRequest('lilysharp/midiOut/stop', {});
             }
-            if (e.affectsConfiguration('lilysharp.playback.singer') || e.affectsConfiguration('lilysharp.playback.singerVoice')
-                || e.affectsConfiguration('lilysharp.playback.singerReplacesPart')) {
+            if (e.affectsConfiguration('lilysharp.playback.singer') || e.affectsConfiguration('lilysharp.playback.singerReplacesPart')) {
                 // Another engine or voice: the previews forget what was rendered and the engine is
                 // let go (one starts again on the next notes); the mute follows the setting.
                 disposeSinger();
@@ -813,8 +812,8 @@ export function activate(context: vscode.ExtensionContext) {
         // `lilysharp.playback.midiOutput` through a picker of the machine's MIDI output ports
         // (the server lists them); the open previews pick it up through onDidChangeConfiguration.
         vscode.commands.registerCommand('lilysharp.chooseMidiOutput', () => chooseMidiOutput()),
-        // `lilysharp.playback.singerVoice` through a picker of the voices the singing engine lists.
-        vscode.commands.registerCommand('lilysharp.chooseSingingVoice', () => chooseSingingVoice()),
+        // The Cantilena extension installed or removed: the engine is looked for again on the next notes.
+        vscode.extensions.onDidChange(() => disposeSinger()),
         vscode.commands.registerCommand('lilysharp.openPreview', () => {
             outputChannel.appendLine('openPreview command triggered');
             openPreview(context, vscode.ViewColumn.Active);
@@ -3709,14 +3708,10 @@ function reportMidiOutError(port: string, error: string): void {
 
 // ---- The singing voice (docs/singing-design.md §5) ----
 
-/** `lilysharp.playback.singer`: the path of the singing engine (`cantilena`), or '' for none. */
+/** `lilysharp.playback.singer`: the path of a `cantilena` program to run here (a developer's
+ *  build), or '' — the usual case — for the Cantilena extension when it is installed. */
 function singerSetting(): string {
     return vscode.workspace.getConfiguration('lilysharp').get<string>('playback.singer', '').trim();
-}
-
-/** `lilysharp.playback.singerVoice`, as the engine takes it (`MERROW`). */
-function singerVoiceSetting(): string {
-    return singerVoiceName(vscode.workspace.getConfiguration('lilysharp').get<string>('playback.singerVoice', ''));
 }
 
 /** `lilysharp.playback.singerReplacesPart`: a sung part's instrument is silent. */
@@ -3724,18 +3719,38 @@ function singerReplacesPartSetting(): boolean {
     return vscode.workspace.getConfiguration('lilysharp').get<boolean>('playback.singerReplacesPart', true);
 }
 
-/** The one engine of this host, made for the setting's program on the first voice asked for;
- *  let go when the setting changes and on deactivate. */
+/** The one engine of this host, found on the first voice asked for — the setting's program,
+ *  else the Cantilena extension (CANTILENA_EXTENSION_ID, activated here; activating it starts
+ *  no process) — and let go when the setting or the extensions change, and on deactivate.
+ *  Undefined when there is neither: the lyrics are not sung and nothing is said. */
 let voiceRenderer: VoiceRenderer | undefined;
-function renderer(): VoiceRenderer | undefined {
+let voiceRendererFor: string | undefined;   // the setting the renderer was made for
+async function renderer(): Promise<VoiceRenderer | undefined> {
     const exe = singerSetting();
-    if (!exe) { return undefined; }
-    if (voiceRenderer && voiceRenderer.exe !== exe) { disposeSinger(); }
-    return voiceRenderer ??= new VoiceRenderer(exe, line => outputChannel.appendLine(line));
+    if (voiceRenderer && voiceRendererFor === exe) { return voiceRenderer; }
+    disposeSinger();
+    if (exe) {
+        voiceRenderer = new VoiceRenderer(new SingerProcess(exe, line => outputChannel.appendLine(line)));
+    } else {
+        const ext = vscode.extensions.getExtension(CANTILENA_EXTENSION_ID);
+        if (!ext) { return undefined; }
+        try {
+            const api = cantilenaApiOf(ext.isActive ? ext.exports : await ext.activate());
+            if (!api) { outputChannel.appendLine(`singer: ${CANTILENA_EXTENSION_ID} is installed but its API is not the shape Lily# reads`); return undefined; }
+            voiceRenderer = new VoiceRenderer(new CantilenaExtensionBackend(api));
+        } catch (e) {
+            outputChannel.appendLine(`singer: ${CANTILENA_EXTENSION_ID} did not activate: ${String(e)}`);
+            return undefined;
+        }
+    }
+    voiceRendererFor = exe;
+    outputChannel.appendLine(`singer: ${voiceRenderer.name}`);
+    return voiceRenderer;
 }
 function disposeSinger(): void {
     voiceRenderer?.dispose();
     voiceRenderer = undefined;
+    voiceRendererFor = undefined;
     for (const panel of previewPanels.values()) {
         postedVoices.delete(panel);
         panel.webview.postMessage({ type: 'clearVoices' });
@@ -3763,8 +3778,9 @@ function tellSingerOnce(panel: vscode.WebviewPanel, text: string): void {
  * instruments, and the voice joins the next.
  */
 async function singVoices(panel: vscode.WebviewPanel, uri: string): Promise<void> {
-    const engine = renderer();
-    if (!engine || !client || !clientReady) { return; }
+    if (!client || !clientReady) { return; }
+    const engine = await renderer();
+    if (!engine) { return; }
     let sung: { Voices?: SungVoiceDto[] | null; Error?: string | null };
     try {
         sung = await client.sendRequest('lilysharp/sung', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
@@ -3774,14 +3790,19 @@ async function singVoices(panel: vscode.WebviewPanel, uri: string): Promise<void
     }
     if (sung.Error || !sung.Voices) { return; }
     const speed = previewPractice.get(panel)?.speed ?? 1;
-    const voiceName = singerVoiceSetting();
     let posted = postedVoices.get(panel);
     if (!posted) { postedVoices.set(panel, posted = new Map()); }
     const mine = posted;
     for (const voice of sung.Voices) {
         for (const warning of voice.Warnings ?? []) { tellSingerOnce(panel, `${voice.Part}: ${warning}`); }
         if (voice.Notes.length === 0) { continue; }
-        const { key, rendered, cached } = engine.render(voice, speed, voiceName);
+        let key: string, rendered: Promise<{ wav: string; duration: number }>, cached: boolean;
+        try {
+            ({ key, rendered, cached } = await engine.render(voice, speed));
+        } catch (e) {
+            tellSingerOnce(panel, `the voice of ${voice.Part} was not sung — ${String(e)} (see Lily# Extension output)`);
+            continue;
+        }
         if (mine.get(voice.Part) === key) { continue; }
         const singing = rendered.then(async v => {
             if (postedVoices.get(panel) !== mine) { return; }   // the engine changed meanwhile
@@ -3792,36 +3813,6 @@ async function singVoices(panel: vscode.WebviewPanel, uri: string): Promise<void
         }, (e: Error) => tellSingerOnce(panel, `the voice of ${voice.Part} was not sung — ${e.message} (see Lily# Extension output)`));
         if (!cached) { vscode.window.setStatusBarMessage(`Lily#: singing ${voice.Part}…`, singing); }
     }
-}
-
-/** The picker behind `Lily#: Choose Singing Voice…` and the setting's link: the voices the
- *  engine lists (`cantilena voices`), written to `lilysharp.playback.singerVoice`. */
-async function chooseSingingVoice(): Promise<void> {
-    const exe = singerSetting();
-    if (!exe) {
-        const open = 'Open Settings';
-        const pick = await vscode.window.showInformationMessage(
-            'Lily#: no singing engine is named yet — set lilysharp.playback.singer to the cantilena program first.', open);
-        if (pick === open) { void vscode.commands.executeCommand('workbench.action.openSettings', 'lilysharp.playback.singer'); }
-        return;
-    }
-    const listed = await new Promise<string[]>(resolve => {
-        cp.execFile(exe, ['voices'], { windowsHide: true }, (error, stdout, stderr) => {
-            if (error) { outputChannel.appendLine(`singer: ${exe} voices: ${String(stderr) || error.message}`); }
-            resolve(String(stdout).split(/\r?\n/).map(s => s.trim()).filter(s => s.length > 0));
-        });
-    });
-    if (listed.length === 0) {
-        vscode.window.showWarningMessage('Lily#: the singing engine lists no voice (see Lily# Extension output).');
-        return;
-    }
-    const current = singerVoiceSetting();
-    const pick = await vscode.window.showQuickPick(
-        listed.map(name => ({ label: name, description: singerVoiceName(name) === current ? '(current)' : '' })),
-        { title: 'Lily#: Choose Singing Voice', placeHolder: 'The voice the lyrics are sung in' });
-    if (!pick) { return; }
-    await vscode.workspace.getConfiguration('lilysharp').update('playback.singerVoice', pick.label, vscode.ConfigurationTarget.Global);
-    vscode.window.setStatusBarMessage(`Lily#: the lyrics are sung in ${pick.label}`, 4000);
 }
 
 /** The picker behind `Lily#: Choose MIDI Output…` and the setting's link: the preview's

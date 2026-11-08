@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1125セッションの経緯
+
+### 1.1 第1125セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14802 / 0 / 2**（`-Start p1125`・HEAD `3d22e95d5`・未 push 22・OMR の open は 0＝#23 は `question`）。同じ会話で第1124 から続けた便。オーナー「続けて」→ `singing-design.md` §7 の**段 2＝`lilysharp/sung`**。§7 の問い 3 つは仮置きで進めた（かなだけ・歌詞のあるパートは全部それぞれ歌う・楽器は置き換え＝段 3 の既定）。作業場所は Lab `sessions/p1125/`。
+
+- **Core `Midi/SungVoices.cs`**（`SungNote`・`SungVoice`・`Read(midi, secondsAt)`）: 歌詞イベントに**歌うパート**を持たせ（`LyricEvent.Part`・`SingLyrics` が書く。イベントは全部最初の part track に載るので track では分けられない）、パートごとに「言葉の立つ声部の、各 onset の最高音」の線を取り、言葉のある onset は音節・直前に歌った音の終わりにぴったり続く無言の音は melisma（スラー。⚠️ 言葉が尽きたフレーズの残りも休符まで melisma＝イベントではスラーと区別できない）・休符の後の無言は歌わない・休符の前と最後は breath・同じ onset の 2 行目は無視（1 パート 1 声）・かな以外は `Warnings`。**秒は `Midi/MidiClock.SecondsOf`**＝`PlaybackOf` の local を Core へ出して両方が読む（2 綴りにしない）。
+- **LSP `lilysharp/sung`**（`SungParams`／`SungResponse`／`SungVoiceDto`／`SungNoteDto`＝T D P L M B S・`Commands.cs` の `GetSung`）。
+- **網**: `Midi/SungVoicesTests` 9 本（雪やこんこの 6 音の秒と音高・breath・スラー・和音の上・言葉切れ・かな警告・2 パート・2 行）＋`Lsp/SungRequestTests` 2 本（秒と S が `lilysharp/playback` の melody と一致・言葉の無い score は声 0）。**毒 5 本中 4 本赤**（`poisons.ps1`・`poisons.log`）: 緑だった P2「空文字の held を音節に」は**ページが `_`／`~` に音節を立てない**（`SungSyllables` に来ない）ので空文字のイベントは生まれず＝枝は観測者なし（註に書いた。`_` は隣接で melisma・休符の後の `_` は歌わない＝`e2e/held.lys` で実測）。
+- **E2E**: `e2e/sung-dump.ps1`（Core の DLL を別 pwsh で読んで Cantilena の JSON を書く）→ オーナーの `雪やこんこ.lys` が 12 音の JSON → `cantilena sing` → `e2e/yuki-lily-to-cantilena.wav`（4 s・4.3 s で）＝ページ→MIDI→秒→声が 1 本につながった。
+- 次＝**段 3（エディタ）**: 設定 `lilysharp.playback.singer`・常駐 `cantilena serve`・先読みと cache・`voice` message・`startPlayback` の buffer・mute・status bar。問い 3 つの答えがあれば既定を変える。
+- 終了時 full **14813 / 0 / 2 / 14815**（`-End p1125 -DiffBase 3d22e95d5`＝`end.log`・門は全部 OK）。棚卸し: `APPROXIMATIONS.md` UNWATCHED 64 → 65（`SungVoices.Read` の空文字の枝）・OWN 303 → 304（`SungVoices`）＝計 430。§7 7.5: Core の `+` は `SungVoices.cs`・`MidiClock.cs`（`PlaybackOf` の local の移植）・`LyricEvent.Part`＝REF 0・OWN 1（LP に音は無い＝⒞）。CHANGELOG はまだ書かない（エディタが使うまで見えない）。この docs commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1124セッションの経緯
 
 ### 1.1 第1124セッション（2026-11-08・YT-DELL2）

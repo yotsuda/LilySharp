@@ -18,10 +18,11 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { SungVoiceDto, cantilenaScore, parseServeLine, serveRequestLine, singerVoiceName, voiceKey } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, SungVoiceDto, cantilenaApiOf, cantilenaScore, parseServeLine, serveRequestLine, voiceKey } from '../src/singerCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
-// engine's score, the key names the render, and the engine's lines are read.
+// engine's score, the key names the render, the engine's lines are read, and the Cantilena
+// extension's exports are recognised.
 describe('the engine\'s score of a sung voice', () => {
     // The owner's 雪やこんこ, its first bar: ゆ, the vowel held on the d, き, や with a breath.
     const voice: SungVoiceDto = {
@@ -61,14 +62,7 @@ describe('the engine\'s score of a sung voice', () => {
     });
 });
 
-describe('the voice setting and the engine\'s wire', () => {
-    it('names the voice as the engine takes it: the listed form stripped, empty the default', () => {
-        assert.equal(singerVoiceName('neutrino/MERROW'), 'MERROW');
-        assert.equal(singerVoiceName('  MERROW '), 'MERROW');
-        assert.equal(singerVoiceName(''), 'MERROW');
-        assert.equal(singerVoiceName(undefined), 'MERROW');
-    });
-
+describe('the engine\'s wire, and the extension\'s API', () => {
     it('reads the engine\'s answers and leaves its chatter alone', () => {
         assert.deepEqual(parseServeLine('{"ready":true,"backend":"neutrino","voices":["MERROW"]}'), { ready: true, backend: 'neutrino', voices: ['MERROW'] });
         assert.deepEqual(parseServeLine('{"id":"k1","wav":"C:\\\\x.wav","duration":8,"sampleRate":48000,"seconds":0.4}'),
@@ -79,38 +73,37 @@ describe('the voice setting and the engine\'s wire', () => {
         assert.equal(parseServeLine('{not json'), null);
     });
 
-    it('writes one request a line, the WAV named by the key', () => {
-        const line = serveRequestLine('abc', { sampleRate: 48000, language: 'ja', notes: [] }, 'MERROW', 'C:\\tmp\\abc.wav');
+    it('writes one request a line, the WAV named by the key, the voice the engine\'s own', () => {
+        const line = serveRequestLine('abc', { sampleRate: 48000, language: 'ja', notes: [] }, 'C:\\tmp\\abc.wav');
         assert.ok(line.endsWith('\n'));
-        assert.deepEqual(JSON.parse(line), { id: 'abc', score: { sampleRate: 48000, language: 'ja', notes: [] }, voice: 'MERROW', output: 'C:\\tmp\\abc.wav' });
+        assert.deepEqual(JSON.parse(line), { id: 'abc', score: { sampleRate: 48000, language: 'ja', notes: [] }, output: 'C:\\tmp\\abc.wav' });
+    });
+
+    it('takes the Cantilena extension\'s exports when they are the first API, and nothing else', () => {
+        assert.equal(CANTILENA_EXTENSION_ID, 'yotsuda.cantilena');
+        const api = { version: '0.1.0', apiVersion: 1, status: async () => ({ ready: true, voice: 'MERROW', problems: [] }), sing: async () => ({ wav: 'x', duration: 1 }), release: () => undefined };
+        assert.equal(cantilenaApiOf(api), api);
+        assert.equal(cantilenaApiOf({ ...api, apiVersion: 2 }), undefined);
+        assert.equal(cantilenaApiOf({ path: 'omr.exe' }), undefined);
+        assert.equal(cantilenaApiOf(undefined), undefined);
     });
 });
 
-// The manifest's side: the three settings, the picker command and its link — as the MIDI
-// output's (midiOutputSetting.test.ts).
+// The manifest's side: the two settings, and no voice setting or picker of Lily#'s own (the
+// voice is the Cantilena extension's) — as the MIDI output's (midiOutputSetting.test.ts).
 describe('the singer settings', () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
     const settings = Object.assign({}, ...manifest.contributes.configuration.map((c: { properties: object }) => c.properties));
     const commands = manifest.contributes.commands as { command: string; title: string }[];
-    const palette = manifest.contributes.menus.commandPalette as { command: string; when?: string }[];
 
-    it('name the engine and the voice as machine-overridable strings, empty and MERROW by default', () => {
+    it('name a program only for developers, empty by default (the Cantilena extension), and whether the instrument is silent', () => {
         assert.equal(settings['lilysharp.playback.singer'].type, 'string');
         assert.equal(settings['lilysharp.playback.singer'].default, '');
         assert.equal(settings['lilysharp.playback.singer'].scope, 'machine-overridable');
-        assert.equal(settings['lilysharp.playback.singerVoice'].type, 'string');
-        assert.equal(settings['lilysharp.playback.singerVoice'].default, 'MERROW');
+        assert.match(settings['lilysharp.playback.singer'].markdownDescription, /yotsuda\.cantilena/);
         assert.equal(settings['lilysharp.playback.singerReplacesPart'].type, 'boolean');
         assert.equal(settings['lilysharp.playback.singerReplacesPart'].default, true);
-    });
-
-    it('link to the voice picker, which is in the palette without a language condition', () => {
-        assert.match(settings['lilysharp.playback.singerVoice'].markdownDescription, /\(command:lilysharp\.chooseSingingVoice\)/);
-        const command = commands.find(c => c.command === 'lilysharp.chooseSingingVoice');
-        assert.ok(command, 'the command is contributed');
-        assert.match(command!.title, /Singing Voice/);
-        const entry = palette.find(p => p.command === 'lilysharp.chooseSingingVoice');
-        assert.ok(entry, 'the command is in the palette');
-        assert.equal(entry!.when, undefined);
+        assert.equal(settings['lilysharp.playback.singerVoice'], undefined);
+        assert.equal(commands.find(c => c.command === 'lilysharp.chooseSingingVoice'), undefined);
     });
 });
