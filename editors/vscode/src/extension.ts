@@ -3802,7 +3802,9 @@ async function renderer(): Promise<VoiceRenderer | undefined> {
         }
     }
     voiceRendererFor = exe;
-    outputChannel.appendLine(`singer: ${voiceRenderer.name}`);
+    // The extension's voice is named with it (`engine/name`); a program's is its own default.
+    const voice = voiceRenderer.backend instanceof CantilenaExtensionBackend ? await voiceRenderer.backend.voiceName().catch(() => '') : '';
+    outputChannel.appendLine(`singer: ${voiceRenderer.name}${voice ? `, voice ${voice}` : ''}`);
     return voiceRenderer;
 }
 function disposeSinger(): void {

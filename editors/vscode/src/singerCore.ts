@@ -38,11 +38,18 @@ export const VOICE_SAMPLE_RATE = 48000;
 /** The Cantilena extension, the engine's own home on the Marketplace (docs/singing-design.md §5). */
 export const CANTILENA_EXTENSION_ID = 'yotsuda.cantilena';
 
-/** What that extension's `activate` returns, as far as Lily# reads it (its README, "For extension authors"). */
+/** A voice the Cantilena extension lists: `id` is `engine/name` (`neutrino/MERROW`), what its
+ *  `sing` takes and its setting holds. */
+export interface CantilenaVoice { id: string; engine: string; name: string; label?: string; language?: string; licence?: string }
+
+/** What that extension's `activate` returns, as far as Lily# reads it (its README, "For extension
+ *  authors"). `status().voice` is the setting's voice as `engine/name`; `voices()` came with
+ *  Cantilena 0.2 and an older extension has none. */
 export interface CantilenaApi {
     readonly version: string;
     readonly apiVersion: number;
     status(): Promise<{ ready: boolean; voice: string; problems: string[] }>;
+    voices?(): Promise<CantilenaVoice[]>;
     sing(score: CantilenaScore, options?: { voice?: string }): Promise<{ wav: string; duration: number; cached?: boolean }>;
     release(): void;
 }

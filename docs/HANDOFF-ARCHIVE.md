@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1131セッションの経緯
+
+### 1.1 第1131セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14828 / 0 / 2**（`-Start p1131`・HEAD `afff81425`・未 push 30・OMR の open は 0）。同じ会話で第1130 から続けた便。オーナー「続けて」→ `singing-design.md` §7 の**段 4＝Export への声の混ぜ込み**。作業場所は Lab `sessions/p1131/`。
+
+- **host `singJobs(jobs, uri, practice)`**（`exportDocument` の `practisedJobs` の後）: file ごとに `lilysharp/sung`（`renderName = job.Score || null`）→ score が歌うパート（`PlaybackExport.Sung`／`Played` を足した）で mute でも `♪` off でもないものを engine で速度ごとに描き → `AudioJob.Voices`（`VoiceTrack { wav, at, duration }`・`at` は count-in の lead＝`exportPlan` が `exportNotes` の横に返す）。楽器の段が無いパートの音符は楽器の列から外し、動画の点灯用に `Lit` に全列を残す（`drawFramesFor` が読む）。engine なし／失敗は楽器のまま＋出力チャネル。
+- **render**: `audioRenderCore.decodeWav`（RIFF・PCM 16/24/32・float32・多ch 平均）・`mixIn`（線形リサンプルで両 ch に加算・声が長ければ配列を伸ばす・tail 2 s）・`fileSeconds`（動画の長さに声を数える）。`renderAudioFiles` が `fileLevel` の前に混ぜる・`writeVideos` も同じ経路。`lysc wav` は楽器だけのまま。
+- **網**: `test/voiceMix.test.ts` 6 本（WAV の読み・多ch・拒否・offset とリサンプル・伸長・長さ・count-in の lead）。`npm test` **887 / 887**。実機は MANUAL-CHECKS §3.7 に 1 項。
+- 残り: span の終わりで声を止める・ループで歌う・`lysc wav`。
+- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1131 -DiffBase afff81425`＝`end.log`・門は全部 OK・Core の `+` 0＝LSP の DTO と拡張と docs）。⚠️ 1 回目の `-End`（`end1-flaky.log`）は `ExportRequestTests.Mp4_DrawsThePictures_TheSoundingCopyLit` が赤 1＝一時フォルダの `s00005.png` を別プロセスが掴んだ IOException（単独で緑・取り直しで緑＝環境の揺れ・コードは触っていない）。§7 7.5: REF 0・OWN 0。この docs commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1130セッションの経緯
 
 ### 1.1 第1130セッション（2026-11-08・YT-DELL2）
