@@ -43,6 +43,7 @@ public class SungRequestTests
         form { A }
         score { staff melody  lyrics verse sings melody  staff bass }
         score bare { staff bass }
+        score unseen { staff bass  lyrics verse sings melody }
         """;
 
     private static LilySharpLanguageServer Open(out Uri uri)
@@ -76,6 +77,30 @@ public class SungRequestTests
         var melody = playback.Notes!.Where(n => n.P != PlaybackNote.PedalPitch && playback.Parts![n.N] == "melody").ToArray();
         Assert.Equal(melody.Select(n => n.T), voice.Notes.Select(n => n.T));
         Assert.Equal(melody.Select(n => n.S), voice.Notes.Select(n => n.S));
+    }
+
+    /// <summary>Owner's decision 2026-11-09 (雪やこんこ.lys: <c>staff m2  lyrics verse sings melody</c>,
+    /// no staff of the melody): the melody is sung, not drawn, not played — the voice has its
+    /// words, the playback carries its notes as a sung part (the stand-in while there is no
+    /// voice), and the practice menu does not list it as a part the score leaves out.</summary>
+    [Fact]
+    public void APartNoStaffShows_IsSungUnseen_WhenARowSingsIt()
+    {
+        var server = Open(out var uri);
+        var sung = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, RenderName = "unseen" });
+        Assert.Null(sung.Error);
+        var voice = Assert.Single(sung.Voices!);
+        Assert.Equal("melody", voice.Part);
+        Assert.Equal(new[] { "ゆ", null, "き", "や", "こん", "こ" }, voice.Notes.Select(n => n.L));
+
+        var playback = server.GetPlayback(new PlaybackParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, RenderName = "unseen" });
+        Assert.Null(playback.Error);
+        Assert.Equal(new[] { "melody" }, playback.Sung);
+        Assert.Equal(new[] { "bass" }, playback.Played);
+        Assert.Contains("melody", playback.Parts!);
+        Assert.Empty(playback.Extra!);
+        var melody = playback.Notes!.Where(n => n.P != PlaybackNote.PedalPitch && playback.Parts![n.N] == "melody").ToArray();
+        Assert.Equal(melody.Select(n => n.T), voice.Notes.Select(n => n.T));
     }
 
     [Fact]

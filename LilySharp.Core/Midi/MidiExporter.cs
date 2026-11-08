@@ -602,6 +602,12 @@ public sealed class MidiExporter
         _flatRows = Semantics.FlatChordRows.Of(_root, _soundingChordRows);
         _flatRowsPlay = -1;
         _soundingParts = SoundingParts(_playedSpec);
+        // A part a placed lyrics row sings sounds although no staff shows it (owner's decision
+        // 2026-11-09, docs/singing-design.md §3): the row is the lyric line of a melody the score
+        // does not engrave, and the preview sings it — so its notes are here, with the singer's
+        // stand-in sound, and its words land on them (SingLyrics).
+        if (_soundingParts != null && _playedSpec != null)
+            _soundingParts.UnionWith(Svg.Collector.SungStaves.UnseenSungParts(_root, _playedSpec));
         // The rows that strum to a strokes part take that part's strokes (a recorder's walk
         // reads them first); the recorder itself reads none.
         _strokesByRow = _recordStrokesFor == null ? StrokesOfPlacedRows(tree) : new(StringComparer.Ordinal);

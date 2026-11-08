@@ -455,7 +455,7 @@
 - **`StaffAccidentals`** LILYSHARP-OWN, two ways, both because a reader reads what is drawn (owner's decision
 - **`StaffAccidentals.ApplyAcrossStaves`** ⚠️ LILYSHARP-OWN, as ⑴: only ADDS. A moved note repeating the sharp
 ### `LilySharp.Core/Svg/Collector/SungStaves.cs`
-- **`SungStaves`** LILYSHARP-OWN: LilyPond plays nothing.
+- **`SungStaves`** Until then such a row gave no voice. LILYSHARP-OWN: LilyPond plays nothing.
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
 - **`TabResolver.ResolveTabStrings`** built on (LILYSHARP-OWN and deliberately not LilyPond's). REFINED 2026-09-14: only a
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`

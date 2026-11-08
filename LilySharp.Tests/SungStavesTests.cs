@@ -67,9 +67,32 @@ public class SungStavesTests
     public void TheAccompaniment_IsPlayed_WhileTheSingerIsSung()
         => Assert.Equal(("melody", "piano"), Of("staff melody  lyrics verse sings melody  staff piano"));
 
+    // Owner's decision 2026-11-09 (雪やこんこ: `staff m2  lyrics verse sings melody`): the melody
+    // no staff shows is sung, not drawn, not played — until then its words gave no voice.
     [Fact]
-    public void WordsOfAPartNoStaffShows_GiveNoVoice_TheStaffAboveIsPlayed()
-        => Assert.Equal(("", "horn"), Of("staff horn  lyrics verse sings melody"));
+    public void WordsOfAPartNoStaffShows_SingThatPartUnseen_TheStaffAboveIsPlayed()
+    {
+        Assert.Equal(("melody", "horn"), Of("staff horn  lyrics verse sings melody"));
+        Assert.Equal(("melody", "horn piano"), Of("staff horn  lyrics verse sings melody  staff piano"));
+    }
+
+    [Fact]
+    public void ARowThatSingsAVoiceOfAnEngravedPart_IsNotAnUnseenSinger()
+    {
+        var source = """
+            part melody { clef treble }
+            section A {
+              melody { voice alt { c'4 d e f | } { c4 d e f | } }
+              lyrics verse sings alt { a b c d | }
+            }
+            form { A }
+            score { staff melody  lyrics verse }
+            """;
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+        var spec = RenderSpecParser.FindAll(tree).First();
+        Assert.Empty(SungStaves.UnseenSungParts(tree.GetRoot(), spec));
+    }
 
     [Fact]
     public void WordsAboveTheirStaff_BelongToTheFirstStaffOfThatPartBelow()

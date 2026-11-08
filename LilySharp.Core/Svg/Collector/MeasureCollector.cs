@@ -1685,6 +1685,8 @@ public sealed partial class MeasureCollector
         // (used to auto-wrap one block's verses) is known from the real content.
         // Sings = the row's OWN `sings` target (null = the track's default applies).
         var pendingLyricsRows = new List<(string Name, int StaffIndex, string? Sings)>();
+        // The melody a row sings when the score shows no staff of it (MultiStaffScore.RowMelodies).
+        var rowMelodies = ImmutableDictionary.CreateBuilder<string, (string Part, ImmutableArray<Measure> Measures)>(StringComparer.Ordinal);
         // `staff NAME with chords CHORDPART` attachments, applied post-loop.
         // Voice = the staff's part, whose instrument the row's diagrams draw on (StaffDiagramTuning).
         var attachedChords = new List<(string PartName, int StaffIndex, ChordDisplayMode Mode, string Voice)>();
@@ -1920,12 +1922,20 @@ public sealed partial class MeasureCollector
                         ? mv[0].Measures
                         : EngravedVoiceNamed(tree.GetRoot(), sings, staffVoices) is { IsDefaultOrEmpty: false } sungVoice
                         ? sungVoice
-                        : CollectMelodyFor(tree, renderSpec, sings);
+                        : default;
+                    // A melody no staff shows: collected for the row's rhythm, and kept for the
+                    // files (MultiStaffScore.RowMelodies) — the preview sings it (owner's decision
+                    // 2026-11-09: `staff m2  lyrics verse sings melody` sings the melody unseen).
+                    bool unseen = melody.IsDefaultOrEmpty;
+                    if (unseen)
+                        melody = CollectMelodyFor(tree, renderSpec, sings);
                     if (!melody.IsDefaultOrEmpty)
                     {
                         _lyricsCollector.CollectBoundRow(tree.GetRoot(), name, idx,
                             melody.ToList(), _sectionState.StartMeasure, _sectionState.AllStarts);
                         staffVoices[name] = ImmutableArray.Create(new Voice(name, SpacerSkeleton(melody)));
+                        if (unseen)
+                            rowMelodies[name] = (sings, melody);
                         continue;
                     }
                 }
@@ -2411,7 +2421,9 @@ public sealed partial class MeasureCollector
         // the parts as they were collected, which is the space they are still in there.
         if (combinedAddressings.Count > 0)
             content = CombinedStaffReaddress.Apply(content, combinedAddressings);
-        return ScoreAssembler.BuildMultiStaffScore(staffGroups, content);
+        var built = ScoreAssembler.BuildMultiStaffScore(staffGroups, content);
+        // The rows' unseen melodies ride on the model for the files (almost always none: no copy then).
+        return rowMelodies.Count == 0 ? built : built with { RowMelodies = rowMelodies.ToImmutable() };
     }
 
     /// <summary>

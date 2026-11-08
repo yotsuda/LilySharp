@@ -1151,7 +1151,13 @@ PartProperty   = 'clef'          , PartClefName
                                                        staff of the same part with no words
                                                        under it plays this sound as well, so
                                                        'staff m  staff m  lyrics v sings m'
-                                                       sounds m both ways, once each.
+                                                       sounds m both ways, once each. A lyrics
+                                                       row that sings a part NO staff shows
+                                                       ('staff m2  lyrics v sings m') makes m
+                                                       an unseen singer (owner's decision
+                                                       2026-11-09): nothing of m is drawn, the
+                                                       row stands at m's rhythm, the preview
+                                                       sings m and the .mid plays this sound.
                                                        docs/singing-design.md §3. *) ;
                (* 'lines' left this list 2026-08-19 and 'removeEmpty' 2026-09-08 (user
                   decisions): the staff-line count and hara-kiri are presentation, not

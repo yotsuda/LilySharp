@@ -879,8 +879,9 @@ public sealed class MusicXmlExporter
     /// <para>The number is the verse: a <c>verse N { }</c>'s N, else the track's place among its
     /// part's tracks and not the page's row, so a section that sings only the second track does
     /// not call it 1.</para>
-    /// ⚠️ A row singing a part the score does not engrave has no page note to stand on, and is
-    /// not written.
+    /// ⚠️ A row singing a part the score does not engrave stands on that unseen melody's notes
+    /// (SungSyllables, for the MIDI and the preview's voice), but the MusicXML has no part to
+    /// write them on, so they are not written here.
     /// </remarks>
     private void WriteLyrics(SyntaxTree tree)
     {

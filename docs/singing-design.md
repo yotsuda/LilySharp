@@ -94,10 +94,20 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   `staff melody  staff melody  lyrics verse sings melody  staff melody` sounds the melody
   both ways, once each, while `staff melody  lyrics verse sings melody` is voice alone. A
   lyrics row belongs to the nearest staff of its part above it (the page draws it there), else
-  the first such staff below; words of a part no staff shows give no voice (the page writes
-  no syllable for them). `Svg.Collector.SungStaves` reads this off the score's rows for
-  `lilysharp/playback` (`Sung`, `Played`); the preview lets the voice stand in for the
-  instrument only where the part is sung and not played.
+  the first such staff below. **A row that sings a part no staff shows makes that part an
+  unseen singer** (owner's decision 2026-11-09, 雪やこんこ: `staff m2  lyrics verse sings
+  melody` — "the melody's notes are not drawn, and the song must be sung"): the page already
+  places such a row by the melody's rhythm (`MeasureCollector.CollectMelodyFor`, LilyPond's
+  `\lyricsto` over a NullVoice) and now keeps that melody on the model
+  (`MultiStaffScore.RowMelodies`); `SungSyllables` puts the syllables on its notes, the MIDI
+  export sounds the part beside the parts the score engraves (`SungStaves.UnseenSungParts`,
+  the stand-in sound — so the `.mid` carries it too), and `SungStaves` lists it as sung and
+  not played, after the staves. The preview then sings it with nothing to light; the practice
+  menu shows `♪ melody` and no italic `melody`. Until then the words of a part no staff
+  showed gave no voice. The MusicXML has no part to write those words on and leaves them out.
+  `Svg.Collector.SungStaves` reads all this off the score's rows for `lilysharp/playback`
+  (`Sung`, `Played`); the preview lets the voice stand in for the instrument only where the
+  part is sung and not played.
 - **Language**: `ja` when the syllables are kana; otherwise the score is passed as it is and
   the engine answers that it cannot sing it (NEUTRINO: kanji, romaji). The editor shows the
   engine's sentence once per score and plays the instruments alone.

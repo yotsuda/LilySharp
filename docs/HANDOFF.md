@@ -138,6 +138,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1151セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14857 / 0 / 2**（`-Start p1151`・HEAD `80765684b`・未 push 51・OMR の open 0）。同じ会話で第1150 から続けた便。オーナー報告「`corpora\ベースタブLy\雪やこんこ.lys` の score（`staff m2  lyrics verse sings melody`・`staff melody` は無い）はメロディの音符は描かずに歌を歌唱しないといけないのに、再生しても歌唱しない」。作業場所は Lab `sessions/p1151/`（`notes.md`）。
+
+- **原因＝不具合ではなく規則**: singing-design §3 は「譜表の無いパートの言葉は声にならない（ページがその音節を書かない）」と定めていた＝`SungStaves` は Sung に出さず、`SungSyllables.RowSungItem` は対象の譜表を探して見つけず、MIDI 書き出しの `_soundingParts`（score が描く・名指すパート）にも melody は無く、practice メニューの斜体 `melody`（Extra・既定オフ）だった。一方ページは `MeasureCollector.CollectMelodyFor`（LP の `\lyricsto` over NullVoice の形）で**メロディを集めて歌詞行をそのリズムに置いていた**＝音符は集めて捨てていた。
+- **オーナー決定 2026-11-09＝譜表の無いパートを歌う歌詞行は、そのパートを「見えない歌い手」にする**（描かない・楽器は鳴らさない・歌う）。
+- **直し（Core・LILYSHARP-OWN）**: `MultiStaffScore.RowMelodies`（internal・init＝行名 → (パート, 集めたメロディの小節)。`CollectMultiStaff` が `CollectMelodyFor` で置いた行だけ記録・空でなければ `with` で載せる）。`SungSyllables.Read` はその小節の printing も数え、`RowSungItem` は譜表に無ければそこへ落ちる。**`SungStaves.UnseenSungParts(root, spec)`**（行が歌う対象のうち宣言済みパートで譜表に無いもの・声名は除く）を `Of` が Sung の末尾に足し、`MidiExporter` が `_soundingParts` に union（代役の音＝midiInstrument／preset／Choir Aahs）。MusicXML は書く part が無いので変わらず（remark を直した）。**`.mid` にその melody のトラックが入るようになる**（歌う段の代役と同じ規則＝注記）。
+- **網**: `SungStavesTests`（`staff horn  lyrics verse sings melody` → ("melody", "horn")・声名の対象は unseen でない）・`SungRequestTests.APartNoStaffShows_IsSungUnseen_WhenARowSingsIt`（`score unseen { staff bass  lyrics verse sings melody }` → 声は melody の言葉・Sung=[melody]・Played=[bass]・Parts に melody・Extra 空）＝Sung／Sings／Lyric の網 526 / 526。**E2E**（`e2e.log`）: 実物の 雪やこんこ.lys を `lysc wav --singer`（NEUTRINO・MERROW）→ 既定 score は **`Voice: neutrino/MERROW sings melody (25 notes, 7.7 s)`**・`another`（`staff melody` だけ・歌詞行なし）は声なし。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §3・GRAMMAR の midiInstrument の注・CHANGELOG `[lyrics]`・editors CHANGELOG・MANUAL-CHECKS §3.7「譜表の無いメロディを歌う」。
+- 残り: 実機（オーナー・§3.7 の新しい行＝▶ で melody が声・`♪ melody` が並ぶ・斜体の melody は無い）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
+- 終了時 full **14858 / 1 / 2 / 14861**（`-End p1151 -DiffBase 80765684b`＝`end.log`・門は全部 OK・§1 現在便 16,914 字＝残り 3,086）。赤 1 は `ApproximationInventoryTests.TheInventoryIsNotStale`＝`SungStaves` の LILYSHARP-OWN の要約文を書き換えたので棚卸しが古くなった → `LILYSHARP_UPDATE_DOCS=1` で `docs/APPROXIMATIONS.md` を再生成（1 行・CRLF に直した）→ 単独緑（`inv2.log`）＝合計 **14861**（+2 本）。§7 7.5: Core `+` は `-End` が diff を取った時点で 0 と出るが、実際は `MultiStaffScore`・`MeasureCollector`・`SungSyllables`・`SungStaves`・`MidiExporter`・`MusicXmlExporter` の変更（REF 0・OWN の新しい印は 0＝既存の SungStaves の印の文を直しただけ）。7.6: 出所はコードの読みとオーナーの決定・E2E は実物の本と NEUTRINO。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1150セッションの経緯
+
 ### 1.1 第1150セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14857 / 0 / 2**（`-Start p1150`・HEAD `258cd7c7e`・未 push 50・OMR の open 0）。同じ会話で第1149 から続けた便。オーナー報告「歌詞のある曲で Alt+M を押すと現在の小節だけを再生すべきなのに 1 小節目の歌詞を歌唱してしまう」。作業場所は Lab `sessions/p1150/`。
@@ -147,18 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 網: `check-types` 0・npm **904 / 904**。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。
 - 残り: 実機（オーナー・§3.7「Alt+M の小節」「声を用意する時機」「マイクをクリック」）・前便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み・MP4 の網の `s00000.png` の競合）。
 - 終了時 full **14857 / 0 / 2 / 14859**（`-End p1150 -DiffBase 258cd7c7e`＝`end.log`・門は全部 OK・§1 現在便 15,828 字＝残り 4,172）。§7 7.5: Core `+` 0・REF 0・OWN 0（ページの 1 行と docs だけ）。7.6: 出所はコードの読み（`auditionMeasure` と `voicePlan`）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1149セッションの経緯
-
-### 1.1 第1149セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14857 / 0 / 2**（`-Start p1149`・HEAD `5c3557cfa`・未 push 49・OMR の open 0）。同じ会話で第1148 から続けた便。オーナー報告「プレビューの再生ボタンを押すと、なぜか再生せずにメトロノームウィンドウが開くことがある」。作業場所は Lab `sessions/p1149/`。
-
-- **原因（コードから）**: 第1141〜1142 で ▶ の右下隅に重ねた声のバッジ（マイク・`right:-5px; bottom:-5px; 15px`）のクリックが **practice メニュー**（Tempo, loop, metronome, parts＝オーナーの言う「メトロノームウィンドウ」）を開く作り（`practiceBtn.click()`）だった。隅を狙った ▶ がバッジに当たると再生ではなくメニューが開く。
-- **直し（ページ 1 行）**: バッジのクリックは **▶ のクリック**（`playBtn.click()`）。バッジは状態であってボタンではない（オーナー決定 第1142）＝title はそのまま。docs: MANUAL-CHECKS §3.7 のバッジの行・editors CHANGELOG「A click on it is a click on ▶」。
-- 網: `check-types` 0・npm **904 / 904**。`Deploy-Lsp.ps1` で配布（`deploy.log`・0.15.0+5c3557cfa）＝オーナーは Reload Window。
-- 残り: 実機（オーナー・§3.7「声を用意する時機」と「マイクをクリック → ▶ と同じ」）・前便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み・MP4 の網の `s00000.png` の競合が再発したら絵のフォルダを試験ごとに分ける）。
-- 終了時 full **14857 / 0 / 2 / 14859**（`-End p1149 -DiffBase 5c3557cfa`＝`end.log`・門は全部 OK・§1 現在便 15,707 字＝残り 4,293）。§7 7.5: Core `+` 0・REF 0・OWN 0（ページの 1 行と docs だけ）。7.6: 出所はコードの読み（バッジの click handler と CSS の位置）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

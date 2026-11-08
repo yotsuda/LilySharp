@@ -28,13 +28,47 @@ namespace LilySharp.Core.Svg.Collector;
 /// voice; a staff row of the same part with no words under it is an instrument's — the part
 /// sounds both ways, once each. A lyrics row belongs to the nearest staff of the part it sings
 /// above it (the page draws it there), else the first such staff below it; a row that sings a
-/// part no staff shows gives no voice, as the page writes no syllable for it (SungSyllables).
-/// LILYSHARP-OWN: LilyPond plays nothing.
+/// part no staff shows makes that part a singer the page does not draw (owner's decision
+/// 2026-11-09: `staff m2  lyrics verse sings melody` sings the melody unseen — the page places
+/// the row by the melody's rhythm already, <c>MeasureCollector.CollectMelodyFor</c>; the files
+/// put the syllables on its notes, <c>SungSyllables</c>; the MIDI sounds it, <c>MidiExporter</c>).
+/// Until then such a row gave no voice. LILYSHARP-OWN: LilyPond plays nothing.
 /// </summary>
 public static class SungStaves
 {
     /// <summary>The parts with a sung staff and the parts with a played staff, each in row order.</summary>
     public sealed record Sounds(IReadOnlyList<string> Sung, IReadOnlyList<string> Played);
+
+    /// <summary>
+    /// The parts the score's lyrics rows sing that NO staff of the score shows, in row order: the
+    /// unseen singers. Each is a declared part (a row may also name a voice of an engraved part,
+    /// which is that staff's affair). What <see cref="Of"/> adds to <c>Sung</c> after the staves,
+    /// and what the MIDI export sounds beside the parts the score engraves.
+    /// </summary>
+    public static List<string> UnseenSungParts(SyntaxNode root, RenderSpec spec)
+    {
+        var shown = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in Flat(spec.Items))
+            switch (item)
+            {
+                case SingleStaffSpec s: shown.Add(s.Staff.VoiceName); break;
+                case TabStaffSpec t: shown.Add(t.Staff.VoiceName); break;
+                case CondensedStaffSpec c: shown.UnionWith(c.PartNames); break;
+                case CombinedStaffSpec c: shown.UnionWith(c.PartNames); break;
+            }
+        HashSet<string>? declared = null;
+        var unseen = new List<string>();
+        foreach (var row in Flat(spec.Items).OfType<LyricsRowSpec>())
+        {
+            var target = LyricBindings.TargetOfRow(root, row.PartName, row.Sings);
+            if (target == null || shown.Contains(target) || unseen.Contains(target))
+                continue;
+            declared ??= root.DescendantNodes<PartDeclarationSyntax>().Select(p => p.Name.Text).ToHashSet(StringComparer.Ordinal);
+            if (declared.Contains(target))
+                unseen.Add(target);
+        }
+        return unseen;
+    }
 
     public static Sounds Of(SyntaxNode root, RenderSpec spec)
     {
@@ -92,6 +126,10 @@ public static class SungStaves
             if (!list.Contains(part))
                 list.Add(part);
         }
+        // The singers no staff shows, after the staves.
+        foreach (var part in UnseenSungParts(root, spec))
+            if (!sung.Contains(part))
+                sung.Add(part);
         return new Sounds(sung, played);
     }
 
