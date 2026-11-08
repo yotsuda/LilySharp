@@ -78,7 +78,8 @@ Cantilena's side (its `docs/roadmap.md` has the detail):
   `Microsoft.ML.OnnxRuntime`, GPU provider when present.
 - The same `ISinger`; `serve` serves both engines; `voices` lists both.
 - Builds for `osx-arm64` and `linux-x64` beside `win-x64` (self-contained .NET, as now); the
-  extension carries them per platform target.
+  extension carries them per platform target. *Built 2026-11-08 (session 1140, Cantilena 0.4.0:
+  three VSIX targets, CI on the three platforms); not yet heard off Windows.*
 
 Lily#'s side: nothing in Core. The extension shows the engine's name in its status line and
 passes `language` from the lyrics block (Phase C) — that is all.
@@ -208,7 +209,9 @@ Each blocks the row named; a default is proposed so work can start.
    a pitch line, or wait for a downloadable DiffSinger voice? **Proposed: wait** until the
    first-run download is tried; revisit if no voice with usable terms is found.
 4. **Platform order** after Windows (Phase B): macOS first or Linux first? **Proposed: Linux**
-   (CI can test it; the owner has no Mac at hand as far as the record says).
+   (CI can test it; the owner has no Mac at hand as far as the record says). *Moot since
+   session 1140: both are built from Windows and CI runs the program on both; what is left is
+   hearing a phrase there, which needs a machine and a voice.*
 5. **Where romaji → kana lives** (Phase C): Lily# (it owns the text) or Cantilena (it owns the
    voice's needs)? **Proposed: Cantilena**, as part of the Japanese phonemiser, so every caller
    gets it.

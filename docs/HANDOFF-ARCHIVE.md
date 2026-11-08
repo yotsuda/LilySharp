@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1138セッションの経緯
+
+### 1.1 第1138セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14834 / 0 / 2**（`-Start p1138`・HEAD `7983783ff`・未 push 37・OMR の open 0・作業ツリーに下の除去が未 commit のまま回した）。同じ会話で第1137 から続けた便。オーナー「判断の材料を」→ 材料（漢字のかな ⒜⒝⒞・B3 の DirectML パッケージ事情・§4 の残り）を出した → **オーナー指示「`[` は歌詞で特別な意味が無い。後方互換のエラーは除去。`[` を読み仮名に使えるか検討」**。作業場所は Lab `sessions/p1138/`。
+
+- **除去（commit 1 本目）**: 退役した verse の綴り `[1. … ]` を読んで LYS4003 を出す腕を消した＝`Parser.Sections.ParseLyricVerse` の bracket 分岐・`ParseLyricMeasure` の `]` 停止・`DiagnosticCodes.LyricVerseBracketRetired`（**LYS4003 は空き番**）・`LyricsCollector`／`LyricSyllableReader` の `Dot` 代替・`GreenNodes`／`SyntaxKind`／`RepeatStructureScopeValidator` の註・GRAMMAR／GRAMMAR_FOR_LLM／SYNTAX_REFERENCE／site manual／MANUAL-CHECKS C45／CHANGELOG `[lyrics]`。網は `LyricVerseBlockTests` の退役テストを「`[` は無意味・`[1.` は普通の語」に置き換え（Lyric／Parser／Verse 648 / 648）。⚠️ 小節の最後の `|` の後に残った `]` は新しい小節を開いて `verse 2 {` を飲む（verse は小節の頭でしか始まらない既存の規則＝どんな迷子の語でも同じ）。
+- **検討 → オーナー決定 2026-11-08（3 つとも提案どおり）**: ⑴ `.mid` の lyric イベントは刷り字＝漢字 ⑵ ルビは刷らない ⑶ 区切りは `[ ]`。
+- **読み `漢[かん]` の実装（commit 2 本目）**: `Music/LyricReading.cs`（`Split`＝刷り字／歌う字／不備の 1 文・`Readings`・`IsKana` の一本化）。Parser `ParseLyricSyllable` は綴じた語に括弧があれば読んで **LYS4036**（離れた `[`・語の無い読み・空・入れ子・閉じない・迷子の `]`＝エラー・音節は書いたまま刷る）と **LYS4037**（かな以外の読み＝警告）＝木は従来どおり Identifier 1 つで round trip 不変。`LyricSyllableReader.LyricToken.Sung`（init・3 要素の分解はそのまま）。`SungSyllables` が `LyricSyllable` トークンから「source offset → 歌う字」の表を 1 回作り `SungSyllable.Sung` に＝ページの `LyricItem` は不変。`LyricEvent.Sung`（.mid には書かない）→ `SungVoices` は `Sung ?? Text` を歌う。MusicXML の `Lyrics` 組に `Sung`（`<text>` は刷り字）→ `VsqxExporter` が読みを歌う。tmLanguage で `[…]` に色。網 `LyricReadingTests` 13 本＋`LyricVerseBlockTests` の 1 本を LYS4036 ×2 に。docs: GRAMMAR `LyricText`・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・site manual の表・singing-design §3／§7・singing-roadmap §1／§3 の 4／§4-1・CHANGELOG `[lyrics]` 2 本・editors CHANGELOG・MANUAL-CHECKS §3.7。`APPROXIMATIONS.md`（OWN +1＝`LyricReading`）再生成。
+- **E2E**（Lab `sessions/p1138/notes.md`）: `kanji.lys`（`漢[かん] 字[じ] 雪[ゆき] や | こん 子[こ] |`）→ `lysc check` 0・`.mid` の lyric は 漢 字 雪 や こん 子・`lysc wav --singer … diffsinger/TIGER` が **6 音・警告なし**で歌う。読み無しの同じ本は従来の「4 syllable(s) are not kana」。`kanji-bad.lys` は LYS4036 ×2＋LYS4037 がそれぞれの音節の列に出る。
+- 残り: 実機（MANUAL-CHECKS §3.7 の読みの行＝色・歌・警告）・学習セットの lesson-07 に読みの 1 行（`HANDOFF-LEARNING.md` 側で）・ローマ字→かなは Cantilena 側（roadmap §4-5）・B3（DirectML＝提案 A・オーナー判断待ち）・Cantilena の公開（オーナー）。
+- 終了時 full **14855 / 0 / 2 / 14857**（`-End p1138 -DiffBase 7983783ff`＝`end.log`・門は全部 OK・§1 現在便 16,815 字＝残り 3,185・HANDOFF 402,391 B）。§7 7.5: `-End` の Core `+` 27 行は commit 1 本目（除去）の分で REF 0・OWN 0。2 本目（読み）は新規 `Music/LyricReading.cs`（OWN 1）＋Parser・Collector・Midi・MusicXml・Vocaloid の変更＝REF 0・OWN 1。7.6: 規則の出所は言語の設計（オーナー決定）＝LP に対応物なし・数値なし。7.7: 匂いなし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1137セッションの経緯
 
 ### 1.1 第1137セッション（2026-11-08・YT-DELL2）
