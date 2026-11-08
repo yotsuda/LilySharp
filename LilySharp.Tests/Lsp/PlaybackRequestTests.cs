@@ -81,9 +81,14 @@ public class PlaybackRequestTests
     [Fact]
     public void ThePickedScore_PlaysItsPartsAlone()
     {
+        // The score's own tracks come first; p1, which it does not sound, follows as an Extra the
+        // editor leaves silent unless the practice menu turns it on (ExtraPartsPlaybackTests).
         var pb = Playback("p2");
-        Assert.Equal(6, pb.Notes!.Length);
-        Assert.Equal(new[] { 64 }, PitchesAtOnset0(pb));
+        Assert.Equal(new[] { "p1" }, pb.Extra);
+        int own = pb.Parts!.Length - pb.Extra!.Length;
+        var ownNotes = pb.Notes!.Where(n => n.N < own).ToArray();
+        Assert.Equal(6, ownNotes.Length);
+        Assert.Equal(new[] { 64 }, ownNotes.Where(n => n.T == 0).Select(n => (int)n.P).ToArray());
     }
 
     [Fact]

@@ -827,7 +827,7 @@ public sealed partial class LilySharpLanguageServer
                 throw new InvalidOperationException(pb.Error);
             playbacks.Add(new PlaybackExport
             {
-                OutputPath = path, Notes = pb.Notes ?? [], Parts = pb.Parts ?? [], Beats = pb.Beats ?? [],
+                OutputPath = path, Notes = pb.Notes ?? [], Parts = pb.Parts ?? [], Extra = pb.Extra ?? [], Beats = pb.Beats ?? [],
                 Score = score?.Spec.Name,
             });
             return new LilySharp.Core.Export.ExportResult([path], [], []);
@@ -1157,11 +1157,34 @@ public sealed partial class LilySharpLanguageServer
             var clock = LilySharp.Core.Midi.MidiClock.SecondsOf(midi);
             double SecondsAt(int tick) => clock(tick);
 
+            // The score's tracks, then the parts the score does NOT sound (owner's request
+            // 2026-11-08: the practice menu turns them on; off until it does — PlaybackResponse.Extra):
+            // the file's every part in this score's form, less the tracks above, each on a channel
+            // the score's tracks leave free (two parts on one channel would fight over its program).
+            // The preview's list only: the .mid export is untouched.
+            var tracks = midi.Tracks.Select(t => (Track: t, Channel: t.Channel)).ToList();
+            var extra = new List<string>();
+            if (score != null)
+            {
+                var all = new LilySharp.Core.Midi.MidiExporter { Form = score.Form, Score = null }.Export(tree);
+                var names = midi.Tracks.Select(t => t.Name).ToHashSet(StringComparer.Ordinal);
+                var used = midi.Tracks.Where(t => t.Notes.Count > 0).Select(t => t.Channel).ToHashSet();
+                foreach (var t in all.Tracks)
+                {
+                    if (names.Contains(t.Name) || t.Notes.Count == 0)
+                        continue;
+                    int channel = t.Channel == 9 ? 9 : Enumerable.Range(0, 16).FirstOrDefault(c => c != 9 && !used.Contains(c), t.Channel);
+                    used.Add(channel);
+                    tracks.Add((t, channel));
+                    extra.Add(t.Name);
+                }
+            }
+
             // Each note with its track: the channel and the program the .mid would play it
             // with (SplitIntoPartTracks gave every part a track and a channel), so the
             // preview's SoundFont synth sounds the same instruments the export does.
-            var notes = midi.Tracks
-                .SelectMany((t, ti) => t.Notes.Select(n => (Track: t, Note: n, Index: ti)))
+            var notes = tracks
+                .SelectMany((x, ti) => x.Track.Notes.Select(n => (x.Track, x.Channel, Note: n, Index: ti)))
                 .OrderBy(x => x.Note.StartTick)
                 .Select(x =>
                 {
@@ -1176,20 +1199,20 @@ public sealed partial class LilySharpLanguageServer
                         S = n.SourcePos,
                         O = n.SourceOrdinal,
                         I = n.Timbre,
-                        C = n.Channel,
+                        C = n.Channel == 9 ? 9 : x.Channel,
                         G = n.Channel == 9 ? 0 : x.Track.Program ?? 0,
                         N = x.Index,
                         K = n.Strike,
                     };
                 })
-                .Concat(midi.Tracks.SelectMany((t, ti) => t.Pedals.Select(c => new PlaybackNote
+                .Concat(tracks.SelectMany((x, ti) => x.Track.Pedals.Select(c => new PlaybackNote
                 {
                     T = SecondsAt(c.Tick),
                     P = PlaybackNote.PedalPitch,
                     V = c.Down ? 127 : 0,
                     S = -1,
-                    C = t.Channel,
-                    G = t.Program ?? 0,
+                    C = x.Channel,
+                    G = x.Track.Program ?? 0,
                     N = ti,
                 })))
                 .OrderBy(n => n.T)
@@ -1199,7 +1222,8 @@ public sealed partial class LilySharpLanguageServer
             return new PlaybackResponse
             {
                 Notes = notes,
-                Parts = midi.Tracks.Select(t => t.Name).ToArray(),
+                Parts = tracks.Select(x => x.Track.Name).ToArray(),
+                Extra = extra.ToArray(),
                 Beats = beats,
                 BarEnd = SecondsAt(barEnd),
             };

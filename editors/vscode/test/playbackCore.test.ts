@@ -243,6 +243,19 @@ describe('the notes the practice menu plays', () => {
         assert.deepEqual(clicks.map(n => [n.T, n.P, n.S]), [[0, 76, -1], [1, 77, -1]]);
         assert.ok(clicks[0].V > clicks[1].V);
     });
+
+    // The parts the score does not sound ride in the list after its tracks (PlaybackResponse.Extra,
+    // owner's request 2026-11-08): silent until the menu turns one on, and a muted one stays silent.
+    it('leaves the parts the score does not sound out, unless the menu turned them on', () => {
+        const withExtra = ['Tempo', 'sop', 'alt', 'bass'];
+        const list = [...notes, note(0, 2, 40, { N: 3 })];
+        assert.deepEqual(practiceNotes(list, withExtra, beats, as, ['bass']).map(n => n.P), [72, 64, 74]);
+        assert.deepEqual(practiceNotes(list, withExtra, beats, { ...as, extraOn: ['bass'] }, ['bass']).map(n => n.P), [72, 64, 74, 40]);
+        assert.deepEqual(practiceNotes(list, withExtra, beats, { ...as, extraOn: ['bass'], muted: ['bass'] }, ['bass']).map(n => n.P), [72, 64, 74]);
+        // An export with no menu open plays the score as written: without them.
+        assert.deepEqual(exportNotes(list, withExtra, beats, undefined, ['bass']).map(n => n.P), [72, 64, 74]);
+        assert.deepEqual(exportNotes(list, withExtra, beats, { ...as, countIn: false, extraOn: ['bass'] }, ['bass']).map(n => n.P), [72, 64, 74, 40]);
+    });
 });
 
 describe('the events a note list becomes (docs/playback-design.md §2)', () => {

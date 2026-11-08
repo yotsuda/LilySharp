@@ -167,6 +167,15 @@ Now:
   answer in the history, leaving `lilysharp.playback.soundFont` alone. The server refuses a
   missing or unreadable font before it makes a folder or begins a file.
 
+- **The parts the score does not sound** (owner's request 2026-11-08) ride in `lilysharp/playback`'s
+  list after the score's tracks, named in `Extra`: the file's every part in the score's form,
+  less the score's own, each on a channel the score's tracks leave free (the `.mid` export is
+  untouched). The practice menu lists them after the parts, in italics, off until pressed
+  (`Practice.extraOn`; `practiceNotes` / `exportNotes` take `extra`), so a part left out of
+  the score can be heard against it. The sung lyrics are listed there too (`♪ part`,
+  `Practice.voicesOff`; docs/singing-design.md §5). The header's length and the exports
+  leave the extra parts out unless the menu turned them on.
+
 ### MIDI out
 
 Closing the preview whose Play the output is sounding stops it (`midiPlaybackPanel`, owner's request 2026-11-02): the server plays on a thread of its own, and a closed page takes nothing with it. Closing another preview leaves it playing, and a hidden preview goes on.

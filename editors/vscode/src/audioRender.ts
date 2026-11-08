@@ -35,6 +35,8 @@ export interface AudioJob {
     OutputPath: string;
     Notes: PlaybackNote[];
     Parts?: string[] | null;
+    /** The parts the score does not sound: played only when the menu turned them on. */
+    Extra?: string[] | null;
     Beats?: PlaybackBeat[] | null;
     Score?: string | null;
 }

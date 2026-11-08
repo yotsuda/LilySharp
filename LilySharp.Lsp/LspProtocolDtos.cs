@@ -269,6 +269,9 @@ public class PlaybackExport
     /// <summary>The notes' tracks by <see cref="PlaybackNote.N"/> — the practice menu silences a
     /// part by its name (<see cref="PlaybackResponse.Parts"/>).</summary>
     public string[] Parts { get; set; } = [];
+    /// <summary>The parts the score does not sound, off unless the menu turned them on
+    /// (<see cref="PlaybackResponse.Extra"/>).</summary>
+    public string[] Extra { get; set; } = [];
     /// <summary>The beats the metronome and the count-in click (<see cref="PlaybackResponse.Beats"/>).</summary>
     public PlaybackBeat[] Beats { get; set; } = [];
     /// <summary>The score's name, as <see cref="VideoFramesParams.Score"/> names it back for an
@@ -437,6 +440,11 @@ public class PlaybackResponse
     /// <summary>The name of each track the notes play on (<see cref="PlaybackNote.N"/>): a part's,
     /// a chord row's (<c>NAME (chords)</c>), in the export's track order.</summary>
     public string[]? Parts { get; set; }
+    /// <summary>The names among <see cref="Parts"/> of the parts the score does NOT sound — the
+    /// file's other parts in this score's form, appended after the score's tracks with their
+    /// notes, for the practice menu to turn on; the editor plays them only when it does (owner's
+    /// request 2026-11-08). Empty for a file with no score.</summary>
+    public string[]? Extra { get; set; }
     /// <summary>The beats a metronome clicks, in seconds: one per beat of the meter in force,
     /// the first of each bar accented.</summary>
     public PlaybackBeat[]? Beats { get; set; }

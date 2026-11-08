@@ -37,8 +37,13 @@ export interface PlaybackNote {
 export interface PlaybackBeat { T: number; A: boolean }
 
 /** How the practice menu plays the score: its tempo (1 = as written), the parts silenced
- *  (by track name), and whether the metronome clicks. */
-export interface Practice { speed: number; muted: readonly string[]; click: boolean }
+ *  (by track name), whether the metronome clicks, the parts the score does not sound that it
+ *  turned on (`extraOn`, by name; owner's request 2026-11-08), and the sung lyrics it turned
+ *  off (`voicesOff`, by part; docs/singing-design.md §5). */
+export interface Practice {
+    speed: number; muted: readonly string[]; click: boolean;
+    extraOn?: readonly string[]; voicesOff?: readonly string[];
+}
 
 /** The metronome's sounds, GM drum keys: the high wood block on a bar's first beat, the low
  *  one on the others. */
@@ -49,14 +54,16 @@ export const CLICK_BEAT = 77;
  * The notes the preview plays under the practice menu (owner's request 2026-10-25): the muted
  * parts' notes left out, every time stretched to the tempo (80% plays each second in 1.25),
  * and, with the metronome on, a wood-block click on every beat. The clicks carry no source
- * position, so nothing lights for them.
+ * position, so nothing lights for them. `extra` names the parts the score does not sound
+ * (PlaybackResponse.Extra): their notes are left out unless the menu turned them on.
  */
 export function practiceNotes(notes: readonly PlaybackNote[], parts: readonly string[] | null,
-    beats: readonly PlaybackBeat[] | null, practice: Practice): PlaybackNote[] {
-    const muted = new Set(practice.muted);
+    beats: readonly PlaybackBeat[] | null, practice: Practice, extra: readonly string[] | null = null): PlaybackNote[] {
+    const silent = new Set([...practice.muted, ...(extra ?? [])]);
+    for (const name of practice.extraOn ?? []) { if (!practice.muted.includes(name)) { silent.delete(name); } }
     const k = 1 / (practice.speed > 0 ? practice.speed : 1);
     const out = notes
-        .filter(n => !(parts && typeof n.N === 'number' && muted.has(parts[n.N])))
+        .filter(n => !(parts && typeof n.N === 'number' && silent.has(parts[n.N])))
         .map(n => k === 1 ? n : { ...n, T: n.T * k, D: n.D * k });
     if (practice.click && beats) {
         for (const b of beats) {
@@ -342,9 +349,14 @@ export interface PracticeState extends Practice { countIn: boolean }
  * Play sounds. No practice (no preview open): the notes as written.
  */
 export function exportNotes(notes: readonly PlaybackNote[], parts: readonly string[] | null,
-    beats: readonly PlaybackBeat[] | null, practice: PracticeState | null | undefined): PlaybackNote[] {
-    if (!practice) { return [...notes]; }
-    const played = practiceNotes(notes, parts, beats, practice);
+    beats: readonly PlaybackBeat[] | null, practice: PracticeState | null | undefined,
+    extra: readonly string[] | null = null): PlaybackNote[] {
+    // No practice: the score as written — the parts it does not sound stay silent.
+    const silentExtra = extra && extra.length > 0 && parts
+        ? notes.filter(n => !(typeof n.N === 'number' && extra.includes(parts[n.N])))
+        : [...notes];
+    if (!practice) { return silentExtra; }
+    const played = practiceNotes(notes, parts, beats, practice, extra);
     if (!practice.countIn || !beats) { return played; }
     const k = 1 / (practice.speed > 0 ? practice.speed : 1);
     const counted = countIn(played, 0, 0, beats.map(b => ({ T: b.T * k, A: b.A })));

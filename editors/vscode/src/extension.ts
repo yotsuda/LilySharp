@@ -1687,11 +1687,12 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     // form: with `score p2 { staff p2 }` picked, p1 stayed audible
                     // until the server was told which score (user report 2026-09-29).
                     const pb = await client.sendRequest<{ Notes?: { T: number, D: number, P: number, V: number }[], Error?: string,
-                        Parts?: string[] | null, Beats?: { T: number; A: boolean }[] | null; BarEnd?: number }>(
+                        Parts?: string[] | null, Extra?: string[] | null, Beats?: { T: number; A: boolean }[] | null; BarEnd?: number }>(
                         'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
-                    // The tracks and the beats ride along for the practice menu's parts and metronome.
+                    // The tracks and the beats ride along for the practice menu's parts and metronome;
+                    // the parts the score does not sound (Extra) too, off until the menu turns them on.
                     panel.webview.postMessage({ type: 'playbackData', notes: pb.Notes ?? null, error: pb.Error ?? null,
-                        parts: pb.Parts ?? null, beats: pb.Beats ?? null, barEnd: pb.BarEnd ?? null });
+                        parts: pb.Parts ?? null, extra: pb.Extra ?? null, beats: pb.Beats ?? null, barEnd: pb.BarEnd ?? null });
                     // The lyrics' voice, rendered ahead so the next Play finds it (docs/singing-design.md §5).
                     void singVoices(panel, uri);
                 } catch (e) {
@@ -1700,28 +1701,41 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 return;
             }
             // The practice menu's part switches (owner's request 2026-10-25): the tracks of the
-            // score shown that sound a note, in score order.
+            // score shown that sound a note, in score order; then (owner's request 2026-11-08) the
+            // sung lyrics, one a part with a voice, and the file's parts the score does not sound.
             if (message.type === 'requestParts') {
                 if (!client || !clientReady) { return; }
                 try {
-                    const pb = await client.sendRequest<{ Notes?: { N?: number }[] | null; Parts?: string[] | null }>(
+                    const pb = await client.sendRequest<{ Notes?: { N?: number }[] | null; Parts?: string[] | null; Extra?: string[] | null }>(
                         'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
                     const sounding = new Set((pb.Notes ?? []).map(n => n.N));
-                    const parts = (pb.Parts ?? []).filter((_, i) => sounding.has(i));
-                    panel.webview.postMessage({ type: 'partsData', parts });
+                    const extraSet = new Set(pb.Extra ?? []);
+                    const parts = (pb.Parts ?? []).filter((p, i) => sounding.has(i) && !extraSet.has(p));
+                    const extra = (pb.Parts ?? []).filter((p, i) => sounding.has(i) && extraSet.has(p));
+                    let voices: string[] = [];
+                    if (await renderer()) {
+                        const sung = await client.sendRequest<{ Voices?: { Part: string; Notes: unknown[] }[] | null }>(
+                            'lilysharp/sung', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
+                        voices = (sung.Voices ?? []).filter(v => v.Notes.length > 0).map(v => v.Part);
+                    }
+                    panel.webview.postMessage({ type: 'partsData', parts, extra, voices });
                 } catch {
-                    panel.webview.postMessage({ type: 'partsData', parts: [] });
+                    panel.webview.postMessage({ type: 'partsData', parts: [], extra: [], voices: [] });
                 }
                 return;
             }
             // The header's length (owner's request 2026-10-25): how long the score shown plays,
-            // repeats and tempo changes included — when its last note ends.
+            // repeats and tempo changes included — when its last note ends (the parts the score
+            // does not sound left out).
             if (message.type === 'requestLength') {
                 if (!client || !clientReady) { return; }
                 try {
-                    const pb = await client.sendRequest<{ Notes?: { T: number; D: number }[] | null }>(
+                    const pb = await client.sendRequest<{ Notes?: { T: number; D: number; N?: number }[] | null; Parts?: string[] | null; Extra?: string[] | null }>(
                         'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
-                    const seconds = (pb.Notes ?? []).reduce((end, n) => Math.max(end, n.T + n.D), 0);
+                    const extraSet = new Set(pb.Extra ?? []);
+                    const seconds = (pb.Notes ?? [])
+                        .filter(n => !(pb.Parts && typeof n.N === 'number' && extraSet.has(pb.Parts[n.N])))
+                        .reduce((end, n) => Math.max(end, n.T + n.D), 0);
                     panel.webview.postMessage({ type: 'lengthData', seconds: pb.Notes ? seconds : null });
                 } catch {
                     panel.webview.postMessage({ type: 'lengthData', seconds: null });
@@ -3517,7 +3531,7 @@ async function rememberSoundFont(context: vscode.ExtensionContext, file: string)
 /** The jobs of a WAV, MP3 or MP4 export with their notes as Play sounds them under `practice`
  *  (exportNotes; as written when no preview holds a menu for the file). */
 function practisedJobs(jobs: readonly AudioJob[], practice: PracticeState | undefined): AudioJob[] {
-    return jobs.map(job => ({ ...job, Notes: exportNotes(job.Notes, job.Parts ?? null, job.Beats ?? null, practice) }));
+    return jobs.map(job => ({ ...job, Notes: exportNotes(job.Notes, job.Parts ?? null, job.Beats ?? null, practice, job.Extra ?? null) }));
 }
 
 /** Asks the server for a video's pictures (lilysharp/videoFrames), the file named as the export
@@ -4310,6 +4324,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .practice-panel .parts { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
         .practice-panel .parts button { text-align: left; }
         .practice-panel .parts button[aria-pressed="false"] { color: #888; }
+        /* A part the score does not sound (off unless pressed), and a sung voice. */
+        .practice-panel .parts button.extra { font-style: italic; }
         .range-panel table { border-collapse: collapse; }
         .range-panel th { text-align: left; font-weight: 600; opacity: 0.75; padding: 2px 8px; }
         .range-panel td { padding: 2px 8px; white-space: nowrap; }
@@ -5926,7 +5942,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (voiceOrigin === null || !rawParts) { return set; }
             rawParts.forEach((name, i) => {
                 const v = voices.get(name);
-                if (v && Math.abs(v.speed - practice.speed) < 1e-6 && !practice.muted.includes(name)) { set.add(i); }
+                if (v && Math.abs(v.speed - practice.speed) < 1e-6 && !practice.voicesOff.includes(name)) { set.add(i); }
             });
             return set;
         }
@@ -6669,14 +6685,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // controls a practice session wants and the header has no room for — the tempo (a slider,
         // 50–150%), the loop, the metronome, the parts on and off (a toggle each). A change while
         // playing goes on from the same place.
-        const practice = { speed: 1, muted: [], click: false, countIn: false };
-        let rawNotes = null, rawParts = null, rawBeats = null, rawBarEnd = null;  // the server's last answer, as written
+        // extraOn: the parts the score does not sound that the menu turned on; voicesOff: the sung
+        // lyrics it turned off (owner's request 2026-11-08: both beside the parts).
+        const practice = { speed: 1, muted: [], click: false, countIn: false, extraOn: [], voicesOff: [] };
+        let rawNotes = null, rawParts = null, rawBeats = null, rawBarEnd = null, rawExtra = null;  // the server's last answer, as written
         let lastSpan;               // what plays: undefined the whole score, null/[lo, hi] a playSpan
         let lastOnce = false;
         let playOffset = 0, playClock = null;   // where the playback stands (startPlayback / midiStarted)
         function practiced(notes) {
             return window.LysSynth && window.LysSynth.practiceNotes
-                ? window.LysSynth.practiceNotes(notes, rawParts, rawBeats, practice)
+                ? window.LysSynth.practiceNotes(notes, rawParts, rawBeats, practice, rawExtra)
                 : notes;
         }
         const practiceBtn = document.getElementById('practiceBtn');
@@ -6688,7 +6706,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const speedOn = practice.speed !== 1;
             document.getElementById('practiceSpeed').textContent = speedOn ? Math.round(practice.speed * 100) + '%' : '';
             // Pressed in while anything differs from the score as written.
-            practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.countIn || practice.muted.length > 0 || loopOn));
+            practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.countIn || practice.muted.length > 0
+                || practice.extraOn.length > 0 || practice.voicesOff.length > 0 || loopOn));
             // The loop lives here too (owner's request 2026-10-25), an On/Off as the metronome's.
             loopBtn.setAttribute('aria-pressed', String(loopOn));
             loopBtn.textContent = loopOn ? 'On' : 'Off';
@@ -6702,7 +6721,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // The exports play as the menu does, the loop aside (owner's request 2026-11-07): the
             // extension keeps this page's menu for them (previewPractice).
             vscode.postMessage({ type: 'practiceState', practice: {
-                speed: practice.speed, muted: practice.muted.slice(), click: practice.click, countIn: practice.countIn } });
+                speed: practice.speed, muted: practice.muted.slice(), click: practice.click, countIn: practice.countIn,
+                extraOn: practice.extraOn.slice(), voicesOff: practice.voicesOff.slice() } });
         }
         function practiceChanged(oldSpeed) {
             showPractice();
@@ -6717,24 +6737,44 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             startPlayback(loopOn ? looped(list) : list, at);
             loopList = loopOn ? list : null;
         }
-        function renderParts(names) {
+        function renderParts(message) {
             const list = document.getElementById('partsList');
             list.textContent = '';
-            if (!names || names.length === 0) { list.textContent = '—'; return; }
-            // One toggle a part, pressed in while it sounds (owner's request 2026-10-25). A part
-            // muted in another score stays muted: the list is by name.
-            for (const name of names) {
+            const parts = message.parts || [], voices = message.voices || [], extra = message.extra || [];
+            if (parts.length + voices.length + extra.length === 0) { list.textContent = '—'; return; }
+            // One toggle each, pressed in while it sounds; the lists are by name, so a part muted
+            // in another score stays muted.
+            const without = (names, name) => names.filter(n => n !== name);
+            const toggle = (label, title, isOn, flip, cls) => {
                 const b = document.createElement('button');
                 b.type = 'button';
-                b.textContent = name;
-                b.setAttribute('aria-pressed', String(!practice.muted.includes(name)));
+                b.textContent = label;
+                if (title) b.title = title;
+                if (cls) b.classList.add(cls);
+                b.setAttribute('aria-pressed', String(isOn()));
                 b.addEventListener('click', () => {
-                    const on = practice.muted.includes(name);
-                    practice.muted = on ? practice.muted.filter(n => n !== name) : practice.muted.concat([name]);
-                    b.setAttribute('aria-pressed', String(on));
+                    flip();
+                    b.setAttribute('aria-pressed', String(isOn()));
                     practiceChanged(practice.speed);
                 });
                 list.appendChild(b);
+            };
+            // The score's parts (owner's request 2026-10-25).
+            for (const name of parts) {
+                toggle(name, '', () => !practice.muted.includes(name),
+                    () => { practice.muted = practice.muted.includes(name) ? without(practice.muted, name) : practice.muted.concat([name]); });
+            }
+            // The sung lyrics, one a part with a voice, beside the parts (owner's request
+            // 2026-11-08; docs/singing-design.md §5): off silences the voice, the instrument plays on.
+            for (const name of voices) {
+                toggle('♪ ' + name, 'The lyrics of ' + name + ', sung', () => !practice.voicesOff.includes(name),
+                    () => { practice.voicesOff = practice.voicesOff.includes(name) ? without(practice.voicesOff, name) : practice.voicesOff.concat([name]); }, 'voice');
+            }
+            // The file's other parts, which this score does not sound: off until pressed (owner's
+            // request 2026-11-08).
+            for (const name of extra) {
+                toggle(name, 'Not in this score — silent unless pressed', () => practice.extraOn.includes(name),
+                    () => { practice.extraOn = practice.extraOn.includes(name) ? without(practice.extraOn, name) : practice.extraOn.concat([name]); }, 'extra');
             }
         }
         function closePractice() {
@@ -7178,7 +7218,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     if (followTick) followTick();
                     break;
                 case 'partsData':
-                    renderParts(message.parts);
+                    renderParts(message);
                     // Its width is known once filled: keep it inside the window.
                     if (!practicePanel.hidden && practicePanel.dataset.moved) clampPanel(practicePanel);
                     else if (!practicePanel.hidden) {
@@ -7273,7 +7313,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     } else if ((pendingSpan || (loopOn && !pendingFromHere)) && window.LysSynth && window.LysSynth.playSpan) {
                         // The selected bars, where they first play — and, looping, the stretch
                         // (or the whole score) as written once, round and round.
-                        rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null;
+                        rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null;
                         playbackNotes = practiced(rawNotes);
                         const span = pendingSpan;
                         pendingSpan = null;
@@ -7290,7 +7330,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         else startPlayback(toPlay, 0);
                     } else {
                         // The practice menu's tempo, parts and metronome, from the notes as written.
-                        rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null;
+                        rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null;
                         playbackNotes = practiced(rawNotes);
                         pendingSpan = null;
                         pendingFromHere = false;

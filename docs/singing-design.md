@@ -135,6 +135,10 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   stops it; a loop restarts it with the notes.
 - **The sung part's instrument plays on under the voice** (the decision above): the synth's
   list is the whole list, the voice a buffer beside it.
+- **The practice menu lists each voice** beside the parts, as `♪ part` (owner's request
+  2026-11-08), on by default; off silences the voice and leaves the instrument (so voice alone
+  is the part's toggle off and the voice's on). `Practice.voicesOff`, read by `sungTracks()`;
+  the host lists the voices from `lilysharp/sung` when an engine is there (`requestParts`).
 - **MIDI out** (`lilysharp.playback.midiOutput` set): the port plays the instruments, the
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The
   alignment is the round trip's jitter, some tens of milliseconds; acceptable for a preview,

@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **★ 歌わせる（Cantilena）＝第1124 設計・第1125 段 2（`lilysharp/sung`）・第1126 段 3（エディタ）・第1127 で Cantilena は拡張 `yotsuda.cantilena` になり Lily# は API で呼ぶ（§1.1 第1127）**: 残りは段 4＝Export の混ぜ込み・span の終わりで止める・ループ・`lysc wav`。**実機確認はオーナー（MANUAL-CHECKS §3.7）・Cantilena の VSIX の公開もオーナー**。問い 3 つ（漢字歌詞のかな・複数パート・置き換えか重ねか）はオーナー＝仮置きはかなだけ・全部・置き換え。Cantilena は `C:\MyProj\cantilena`（Apache-2.0・未 push）。**OMR #23 は `question`**（オーナー決定 2026-10-14 の規則そのもの＝オーナー判断待ち）。
+- **★ 歌わせる（Cantilena）＝第1124 設計・第1125 段 2（`lilysharp/sung`）・第1126 段 3（エディタ）・第1127 で Cantilena は拡張 `yotsuda.cantilena` になり Lily# は API で呼ぶ（§1.1 第1127）**: 第1128 で practice メニューに声（`♪ part`）と score に無いパート（既定オフ・`Extra`）のトグル。残りは段 4＝Export の混ぜ込み・span の終わりで止める・ループ・`lysc wav`。**実機確認はオーナー（MANUAL-CHECKS §3.7）・Cantilena の VSIX の公開もオーナー**。問い 3 つ（漢字歌詞のかな・複数パート・置き換えか重ねか）はオーナー＝仮置きはかなだけ・全部・置き換え。Cantilena は `C:\MyProj\cantilena`（Apache-2.0・未 push）。**OMR #23 は `question`**（オーナー決定 2026-10-14 の規則そのもの＝オーナー判断待ち）。
 - **★ 打鍵の増加の監査＝第1108〜1110 で閉じた（§1.1 第1109・第1110）。** 1000 小節の本の床は `fingbeam1k` 118 → 44 ms／`plain1k`＋小節の挿入 98 → 63 ms／`plain1k` 36 → 30 ms／`v2bow1k` 67 → 52 ms。518 冊の打鍵は第1110 の分で 3.69 → 3.59 ms。第1107 の最悪ケースの増分（`perf-3vdot300`・`perf-kitmix300`、数 ms）は受け入れた（オーナー決定 2026-11-06）。**skyline の残りは急がない**（`docs/skyline-merge-design.md` §3・§4）。**Release の lysc は `8fc8e2be1`**（オーナー決定 2026-11-06。前は `0d09b8f61`。全 svg 1262 枚のうち前の Release と違うのは `Untitled-1.lys` の 1 枚で、第1108〜1110 の高速化の分は差 0。OMR の REQUESTS にお知らせを書いた＝OMR の repo では未 commit）。
 - **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。第1100 は連符の本体に書けるものと入れ子の連符の上下を閉じた（§1.1）。OMR の `open` は 0。点の列の共有は第1101 で閉じた（§1.1）。休符の声部の wish は第1102 で閉じた（§1.1）。付点のない声部の符尾は第1103 で閉じた（§1.1）。`lysc ly` のフレーズのドラムは第1104 で閉じた（§1.1）。ドラムの和音の揃え方は第1105 で閉じた（§1.1）。`Untitled-1` の段割れの差は名前の字下げと第1106 で分かった（§1.1）。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release の lysc は `1200c035a`**（オーナー決定 2026-11-04・第1099。OMR の REQUESTS #22 の行に書いた＝OMR の repo では未 commit）。
 - **`@cross` の音が別の段に描かれる＝第1093 で実装（OMR の REQUESTS #20）**: 設計は §1.1 第1093。**OMR の返事（`..\LilySharp-Omr\docs\repro\lilysharp-feedback-2026-11-04.md`）: #19〜#21 は `done`・今直してほしい不具合はない。**段をまたぐタイ・同音や 2 度の重なり・MusicXML は OMR が生成器で避ける＝今は依頼なし（必要なら OMR が行を足す）。読み手が段をまたぐ形をまだ読めないのは OMR 側の宿題。 残りの制限: ⑴ 弧は実装済み（下の語り）・移った音のスクリプト・付点・臨時記号は第1112 でスラーが移った先の段で読む（`925d850ee`）／⑵ 段をまたぐタイは最初の音の段に描く＝**オーナー決定 2026-11-06: 将来の実装の余地は残すが、すぐには着手しない**（今のまま。必要が出たら頭から頭への斜めのタイを LILYSHARP-OWN として設計する案が第一候補。OMR の要請は無い＝`lilysharp-feedback-2026-11-04.md` で「生成器で避ける」。音のつながり＝再生・MusicXML は今も正しい。第1111 の実測: LP 2.26.0 自身が `programming error: My pure_y_common is a VerticalAlignment` と循環依存を出し、タイは段の外へ浮く＝写す形がない・Lab `sessions/p1111/t1`。斜めに描くなら LILYSHARP-OWN）／⑶ 連桁の採点は実装済み（下の語り）・移った音が全部同じ段なら第1111 でその段の連桁（`725146d03`）・段の普通の連桁は移ってきた音を避ける（第1111 `8f20b95db`・`c1` で LP と同じ 16.88）・段をまたぐ連桁も、移った先の段へ別の声部が移した音を避ける（`e8d0a4875`・`e1` の残差の内訳は §1.1 第1111 ⑷）・**連桁どうしは第1113 で移植**（`277a391d7`＝先に始まる連桁が後から始まる連桁を避ける・同時に始まる 2 本は避けない・段をまたぐ連桁は避けられないが避ける。§1.1 第1113）／⑷ 移った先の段の音との衝突は第1111 で実装（§1.1 第1111）・付点は第1112 で移った先の段の付点の列に入る（`a13347513`・§1.1 第1112）／⑸ 臨時記号は実装済み（下の語り）・LP が落とす再確認の記号は残す（オーナー決定 2026-10-02 の ⑴ と同じ扱い）／⑹ 観測者なし＝連桁のない棒を移った先の輪郭へ入れる行と、弧の端の棒の枠の行は、8 冊の探り譜で出力が動かず毒が緑（LP の規則なので残した）／⑻ 双子は譜の最初の瞬間の `\change Staff` が LP で効かない（`k1`）／⑼ プレビューの実機は未確認（増分はフルと一致＝網 4 本）。
@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1128セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14813 / 0 / 2**（`-Start p1128`・HEAD `491d7a270`・未 push 27・OMR の open は 0）。同じ会話で第1127 から続けた便。オーナー「practice（metronome）の窓に lyrics がパートとして出ない。lyrics もパートと並べてオンオフ、score に無いパートもここでオンオフ（既定オフ）」。作業場所は Lab `sessions/p1128/`。
+
+- **サーバー `lilysharp/playback`**: score が選ばれているとき、同じ form で `Score = null` の export をもう 1 本取り、score に無い（＝最初の export に track の無い）パートを**後ろに足す**（`PlaybackResponse.Extra`＝名前の一覧・`Parts` は全部・音は `N` で続き番号）。チャネルは score の track が使っていないものから（同じチャネルに 2 パートだと program を奪い合う）・ドラムは 9 のまま。`.mid` は触らない。`PlaybackExport.Extra` も運ぶ。網 `Lsp/ExtraPartsPlaybackTests` 2 本（全部鳴らす score は Extra 空／`solo` は `pno`・`kit` が後ろに・自分の 4 音はそのまま・pno は別チャネル・kit は 9・時刻は同じ）、`PlaybackRequestTests.ThePickedScore_PlaysItsPartsAlone` は「自分の track の音だけ数える」に。
+- **`playbackCore.ts`**: `Practice` に `extraOn`／`voicesOff`（任意）、`practiceNotes(…, extra)`＝extra のパートは `extraOn` に無ければ落とす（muted が勝つ）、`exportNotes(…, extra)`＝メニュー無しでも extra は落とす。網 1 本。
+- **page**: `rawExtra`・`practiced()` が渡す・`practiceState` に 2 列を足す・`renderParts(message)`＝パート → `♪ part`（声。`voicesOff`・楽器は残る）→ 斜体の extra（`extraOn`・既定オフ）・`sungTracks()` は `voicesOff` を読む（楽器の mute とは独立＝「声だけ」も作れる）。**host**: `requestParts` が `lilysharp/sung` の声の一覧も返す（engine があるとき）・`requestLength` と export は extra を除く。`npm test` **881 / 881**。
+- 残り: 実機（MANUAL-CHECKS §3.7 に 1 項）。
+- 終了時 full **14815 / 0 / 2 / 14817**（`-End p1128 -DiffBase 491d7a270`＝`end.log`・門は全部 OK・Core の `+` 0＝LSP と拡張と docs）。§7 7.5: REF 0・OWN 0（LP に再生は無い）。この docs commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1127セッションの経緯
+
 ### 1.1 第1127セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14813 / 0 / 2**（`-Start p1127`・HEAD `1f48bac1f`・未 push 24・OMR の open は 0）。同じ会話で第1126 から続けた便。オーナーの問い「Cantilena も VS Code 拡張にしてしまえば良くないか」→ 提案（OMR 拡張と同じ形・Lily# は API で呼ぶ）→ オーナー「続けて」。作業場所は Lab `sessions/p1127/`。
@@ -147,20 +159,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 残り: 実機（MANUAL-CHECKS §3.7 を拡張の手順に書き直した）・段 4。
 - **オーナー実機確認 2026-11-08（同じ会話・-End の後の docs commit）**: Cantilena 拡張を `deploy-extension.ps1` で入れ、NEUTRINO フォルダを選び Check Setup が ready → Lily# の開発版で ▶ →「ばっちり声と音源が同期して鳴っている」（`singerReplacesPart` off＝声と楽器を重ねて）。歌う経路（`lilysharp/sung` → 拡張 API → webview の buffer）は実機で閉じた。残りの細目は MANUAL-CHECKS §3.7 の `[ ]`。**オーナー決定（同日）「その設定が不要」＝`singerReplacesPart` を消した**: 声は楽器に重なって鳴る・楽器を消す設定も `setSinger` message も `played` の絞り込みも退役（仮置き 3 つのうち「置き換えか重ねか」は「重ねる・設定なし」で決着）。
 - 終了時 full **14813 / 0 / 2 / 14815**（`-End p1127 -DiffBase 1f48bac1f`＝`end.log`・門は全部 OK・Core の `+` 0＝拡張と docs だけ）。§7 7.5: REF 0・OWN 0。この docs commit と Lab・Cantilena の commit は Claude・push はオーナー。
-
-## 以下は第1126セッションの経緯
-
-### 1.1 第1126セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14813 / 0 / 2**（`-Start p1126`・HEAD `b10f502cc`・未 push 23・OMR の open は 0）。同じ会話で第1125 から続けた便。オーナー「続けて」→ `singing-design.md` §7 の**段 3＝エディタ**。作業場所は Lab `sessions/p1126/`。
-
-- **設定 3 つ**（`package.json`・Playback 群）: `lilysharp.playback.singer`（`cantilena` のパス・空＝歌わない）・`singerVoice`（既定 `MERROW`・`neutrino/` 付きでも可）・`singerReplacesPart`（既定 on）。コマンド **Lily#: Choose Singing Voice…**（`cantilena voices` の一覧から書く）。
-- **host**: `src/singer.ts`＝`SingerProcess`（常駐 `cantilena serve`・stdin/stdout の JSON 行・key を id と WAV 名に・死んだら次で再起動）と `VoiceRenderer`（key → WAV の cache・同じ key の同時要求は 1 本に）／`src/singerCore.ts`＝純粋部（`cantilenaScore`＝速度で秒を割る・`voiceKey`＝sha1・`singerVoiceName`・`parseServeLine`）／`extension.ts` の `singVoices(panel, uri)`＝`requestPlayback` の後と `practiceState` の速度変化で `lilysharp/sung` → 描画 → `voice` message（part・key・speed・WAV の bytes）。警告と失敗は status bar に 1 回＋出力チャネル。設定変更で engine を捨て `clearVoices`。deactivate で dispose。
-- **page**: `voices`（part → AudioBuffer）・`startVoices(ctx, when, listTime)`＝`startPlayback` の `t0` にシンセと同じ時計で `AudioBufferSourceNode`（gain 0.9＋compressor）・`voiceOrigin`（列の 0 の楽譜時刻: 通常 0・span は `spanStart`・loop と候補の `playNotes` は null＝歌わない）・count-in は `countInFix` の後から・**歌うパートの音は楽器の列から外す**（`played`・highlight は全列）・MIDI out でも声はここ（`midiStarted` の wall clock から）。速度の違う声は使わない（楽器が鳴る・host が歌い直す）。
-- **網**: `test/singerCore.test.ts` 10 本（score・key・wire・manifest）＋既存 2 本の正規表現を新しい形に。`npm test` **881 / 881**。**実機の代わり**: `sessions/p1126/probe-singer.js`（tsc で `singer.ts` を単体にコンパイルし node から本物の `cantilena serve` を駆動）＝初回 6.4 s（server 起動込み）・cache hit・速度 0.8 は別 key で 0.6 s・歌詞なしの音は error 行で拒否・dispose で shutdown。VS Code の実機はオーナー（MANUAL-CHECKS §3.7）。
-- ⚠️ 罠: ページ script のコメントにバッククォートを書くとテンプレート文字列が切れる（esbuild「Expected ";"」・この便で 2 回）。
-- 残り＝段 4: Export への混ぜ込み・span の終わりで声を止める・ループで歌う・`lysc wav`。
-- 終了時 full **14813 / 0 / 2 / 14815**（`-End p1126 -DiffBase b10f502cc`＝`end.log`・門は全部 OK・Core の `+` は 0＝この便は拡張と docs だけ）。§7 7.5: REF 0・OWN 0（Core 不変）。CHANGELOG 2 本に「The preview sings the lyrics」。この docs commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

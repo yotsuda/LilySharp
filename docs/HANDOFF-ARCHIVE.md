@@ -267,6 +267,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1126セッションの経緯
+
+### 1.1 第1126セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14813 / 0 / 2**（`-Start p1126`・HEAD `b10f502cc`・未 push 23・OMR の open は 0）。同じ会話で第1125 から続けた便。オーナー「続けて」→ `singing-design.md` §7 の**段 3＝エディタ**。作業場所は Lab `sessions/p1126/`。
+
+- **設定 3 つ**（`package.json`・Playback 群）: `lilysharp.playback.singer`（`cantilena` のパス・空＝歌わない）・`singerVoice`（既定 `MERROW`・`neutrino/` 付きでも可）・`singerReplacesPart`（既定 on）。コマンド **Lily#: Choose Singing Voice…**（`cantilena voices` の一覧から書く）。
+- **host**: `src/singer.ts`＝`SingerProcess`（常駐 `cantilena serve`・stdin/stdout の JSON 行・key を id と WAV 名に・死んだら次で再起動）と `VoiceRenderer`（key → WAV の cache・同じ key の同時要求は 1 本に）／`src/singerCore.ts`＝純粋部（`cantilenaScore`＝速度で秒を割る・`voiceKey`＝sha1・`singerVoiceName`・`parseServeLine`）／`extension.ts` の `singVoices(panel, uri)`＝`requestPlayback` の後と `practiceState` の速度変化で `lilysharp/sung` → 描画 → `voice` message（part・key・speed・WAV の bytes）。警告と失敗は status bar に 1 回＋出力チャネル。設定変更で engine を捨て `clearVoices`。deactivate で dispose。
+- **page**: `voices`（part → AudioBuffer）・`startVoices(ctx, when, listTime)`＝`startPlayback` の `t0` にシンセと同じ時計で `AudioBufferSourceNode`（gain 0.9＋compressor）・`voiceOrigin`（列の 0 の楽譜時刻: 通常 0・span は `spanStart`・loop と候補の `playNotes` は null＝歌わない）・count-in は `countInFix` の後から・**歌うパートの音は楽器の列から外す**（`played`・highlight は全列）・MIDI out でも声はここ（`midiStarted` の wall clock から）。速度の違う声は使わない（楽器が鳴る・host が歌い直す）。
+- **網**: `test/singerCore.test.ts` 10 本（score・key・wire・manifest）＋既存 2 本の正規表現を新しい形に。`npm test` **881 / 881**。**実機の代わり**: `sessions/p1126/probe-singer.js`（tsc で `singer.ts` を単体にコンパイルし node から本物の `cantilena serve` を駆動）＝初回 6.4 s（server 起動込み）・cache hit・速度 0.8 は別 key で 0.6 s・歌詞なしの音は error 行で拒否・dispose で shutdown。VS Code の実機はオーナー（MANUAL-CHECKS §3.7）。
+- ⚠️ 罠: ページ script のコメントにバッククォートを書くとテンプレート文字列が切れる（esbuild「Expected ";"」・この便で 2 回）。
+- 残り＝段 4: Export への混ぜ込み・span の終わりで声を止める・ループで歌う・`lysc wav`。
+- 終了時 full **14813 / 0 / 2 / 14815**（`-End p1126 -DiffBase b10f502cc`＝`end.log`・門は全部 OK・Core の `+` は 0＝この便は拡張と docs だけ）。§7 7.5: REF 0・OWN 0（Core 不変）。CHANGELOG 2 本に「The preview sings the lyrics」。この docs commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1125セッションの経緯
 
 ### 1.1 第1125セッション（2026-11-08・YT-DELL2）
