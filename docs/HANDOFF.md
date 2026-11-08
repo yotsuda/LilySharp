@@ -138,6 +138,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1152セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14859 / 0 / 2**（`-Start p1152`・HEAD `7060f8e0c`・未 push 52・OMR の open 0）。同じ会話で第1151 から続けた便。オーナー報告「雪やこんこ.lys の L27（`lyrics verse sings melody`）をコメントアウトしても、再生ボタン上のマイクが消えない」。作業場所は Lab `sessions/p1152/`（`notes.md`・`probe/`）。
+
+- **サーバーは正常（実測・`probe/`）**: L27 を外した本を `lysc svg` → ゆ は描かれない・`lysc midi` → 2 トラック 4 音（m2 だけ）で lyric event なし・`lysc check` → エラーなし＝`lilysharp/sung` は声 0 を返し、`prepareVoices` は `voiceParts []` を送ってページは空になる。
+- **原因（コード）**: `renderVoice`（engine の仕事）は着地のとき「プレビューが別の本に変わっていない」「同じパートの新しい job が待っていない」しか見ていなかった。**歌わなくなったパートには新しい job が無い**ので、前の本文に対する engine の答え（コメントアウトした瞬間に歌っていた melody・NEUTRINO で数秒）が着地して `voice` を送り、ページがそのパートを `ready` にしてマイクが青に戻る。1.5 s 待ちの job が残っていても同じ。
+- **直し（拡張）**: `sungParts`（panel → 最後の `voiceParts` のパート集合）を置き、`renderVoice.wanted()` がそのパートが今も歌われることを要求・`prepareVoices` は歌わなくなったパートを `mine` から消して slot を cancel・`followVoices`／`forgetVoices` で消す。`PrepareQueue.cancelSlot(slot)`（prefix の `cancel` と違い完全一致＝`p1/melody` と `p1/melody2` を混同しない）を足し、1 パートの job を指す所はこれに替えた（網 1 本）。
+- 網: `check-types` 0・npm **905 / 905**（`npmtest.log`）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・editors CHANGELOG・MANUAL-CHECKS §3.7（「歌詞行をコメントアウト → マイクが消える」を足した）。
+- 残り: 実機（オーナー・§3.7＝点滅中に歌詞行をコメントアウトしても消えたまま）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
+- 終了時 full **14859 / 0 / 2 / 14861**（`-End p1152 -DiffBase 7060f8e0c`＝`end.log`・門は全部 OK・§1 現在便 16,173 字＝残り 3,827）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所はコードの読みと `probe/` の実測。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1151セッションの経緯
+
 ### 1.1 第1151セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14857 / 0 / 2**（`-Start p1151`・HEAD `80765684b`・未 push 51・OMR の open 0）。同じ会話で第1150 から続けた便。オーナー報告「`corpora\ベースタブLy\雪やこんこ.lys` の score（`staff m2  lyrics verse sings melody`・`staff melody` は無い）はメロディの音符は描かずに歌を歌唱しないといけないのに、再生しても歌唱しない」。作業場所は Lab `sessions/p1151/`（`notes.md`）。
@@ -148,18 +161,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **網**: `SungStavesTests`（`staff horn  lyrics verse sings melody` → ("melody", "horn")・声名の対象は unseen でない）・`SungRequestTests.APartNoStaffShows_IsSungUnseen_WhenARowSingsIt`（`score unseen { staff bass  lyrics verse sings melody }` → 声は melody の言葉・Sung=[melody]・Played=[bass]・Parts に melody・Extra 空）＝Sung／Sings／Lyric の網 526 / 526。**E2E**（`e2e.log`）: 実物の 雪やこんこ.lys を `lysc wav --singer`（NEUTRINO・MERROW）→ 既定 score は **`Voice: neutrino/MERROW sings melody (25 notes, 7.7 s)`**・`another`（`staff melody` だけ・歌詞行なし）は声なし。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §3・GRAMMAR の midiInstrument の注・CHANGELOG `[lyrics]`・editors CHANGELOG・MANUAL-CHECKS §3.7「譜表の無いメロディを歌う」。
 - 残り: 実機（オーナー・§3.7 の新しい行＝▶ で melody が声・`♪ melody` が並ぶ・斜体の melody は無い）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
 - 終了時 full **14858 / 1 / 2 / 14861**（`-End p1151 -DiffBase 80765684b`＝`end.log`・門は全部 OK・§1 現在便 16,914 字＝残り 3,086）。赤 1 は `ApproximationInventoryTests.TheInventoryIsNotStale`＝`SungStaves` の LILYSHARP-OWN の要約文を書き換えたので棚卸しが古くなった → `LILYSHARP_UPDATE_DOCS=1` で `docs/APPROXIMATIONS.md` を再生成（1 行・CRLF に直した）→ 単独緑（`inv2.log`）＝合計 **14861**（+2 本）。§7 7.5: Core `+` は `-End` が diff を取った時点で 0 と出るが、実際は `MultiStaffScore`・`MeasureCollector`・`SungSyllables`・`SungStaves`・`MidiExporter`・`MusicXmlExporter` の変更（REF 0・OWN の新しい印は 0＝既存の SungStaves の印の文を直しただけ）。7.6: 出所はコードの読みとオーナーの決定・E2E は実物の本と NEUTRINO。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1150セッションの経緯
-
-### 1.1 第1150セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14857 / 0 / 2**（`-Start p1150`・HEAD `258cd7c7e`・未 push 50・OMR の open 0）。同じ会話で第1149 から続けた便。オーナー報告「歌詞のある曲で Alt+M を押すと現在の小節だけを再生すべきなのに 1 小節目の歌詞を歌唱してしまう」。作業場所は Lab `sessions/p1150/`。
-
-- **原因（コードから）**: ページの `auditionMeasure(start, end)` は小節の音符を T=0 に寄せて `startPlayback(sub, 0)` を呼ぶが、**`voicePlan` を直前の ▶ のまま**（`{ pieces: null }`＝曲全体を 0 から）にしていた。`startVoices` は声を楽譜の 0 から鳴らし、歌うパートの音符は楽器の列から外れる（1 段 1 音）ので、小節のメロディは聞こえず 1 小節目の言葉だけが鳴った。
-- **直し（ページ 1 行）**: `startPlayback` の前に **`voicePlan = { pieces: [[minT, maxEnd]], rounds: 1 }`**（小節の音符の最小 T から最大 T+D＝楽譜の（練習速度の）時間の区間）。小節を選んだ ▶ の `spanPieces` と同じ形＝`voiceCues(0, 0, [[a, b]], 1, …)` が offset a・長さ b−a の cue 1 本を返す（既存の網 `playbackCore.test`）。docs: editors CHANGELOG・MANUAL-CHECKS §3.7「Alt+M の小節」。
-- 網: `check-types` 0・npm **904 / 904**。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。
-- 残り: 実機（オーナー・§3.7「Alt+M の小節」「声を用意する時機」「マイクをクリック」）・前便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み・MP4 の網の `s00000.png` の競合）。
-- 終了時 full **14857 / 0 / 2 / 14859**（`-End p1150 -DiffBase 258cd7c7e`＝`end.log`・門は全部 OK・§1 現在便 15,828 字＝残り 4,172）。§7 7.5: Core `+` 0・REF 0・OWN 0（ページの 1 行と docs だけ）。7.6: 出所はコードの読み（`auditionMeasure` と `voicePlan`）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

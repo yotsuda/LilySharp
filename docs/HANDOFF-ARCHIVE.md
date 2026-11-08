@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1150セッションの経緯
+
+### 1.1 第1150セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14857 / 0 / 2**（`-Start p1150`・HEAD `258cd7c7e`・未 push 50・OMR の open 0）。同じ会話で第1149 から続けた便。オーナー報告「歌詞のある曲で Alt+M を押すと現在の小節だけを再生すべきなのに 1 小節目の歌詞を歌唱してしまう」。作業場所は Lab `sessions/p1150/`。
+
+- **原因（コードから）**: ページの `auditionMeasure(start, end)` は小節の音符を T=0 に寄せて `startPlayback(sub, 0)` を呼ぶが、**`voicePlan` を直前の ▶ のまま**（`{ pieces: null }`＝曲全体を 0 から）にしていた。`startVoices` は声を楽譜の 0 から鳴らし、歌うパートの音符は楽器の列から外れる（1 段 1 音）ので、小節のメロディは聞こえず 1 小節目の言葉だけが鳴った。
+- **直し（ページ 1 行）**: `startPlayback` の前に **`voicePlan = { pieces: [[minT, maxEnd]], rounds: 1 }`**（小節の音符の最小 T から最大 T+D＝楽譜の（練習速度の）時間の区間）。小節を選んだ ▶ の `spanPieces` と同じ形＝`voiceCues(0, 0, [[a, b]], 1, …)` が offset a・長さ b−a の cue 1 本を返す（既存の網 `playbackCore.test`）。docs: editors CHANGELOG・MANUAL-CHECKS §3.7「Alt+M の小節」。
+- 網: `check-types` 0・npm **904 / 904**。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。
+- 残り: 実機（オーナー・§3.7「Alt+M の小節」「声を用意する時機」「マイクをクリック」）・前便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み・MP4 の網の `s00000.png` の競合）。
+- 終了時 full **14857 / 0 / 2 / 14859**（`-End p1150 -DiffBase 258cd7c7e`＝`end.log`・門は全部 OK・§1 現在便 15,828 字＝残り 4,172）。§7 7.5: Core `+` 0・REF 0・OWN 0（ページの 1 行と docs だけ）。7.6: 出所はコードの読み（`auditionMeasure` と `voicePlan`）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1149セッションの経緯
 
 ### 1.1 第1149セッション（2026-11-09・YT-DELL2）

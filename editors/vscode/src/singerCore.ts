@@ -145,6 +145,14 @@ export class PrepareQueue<J> {
         }
     }
 
+    /** Forgets one slot's waiting job, this slot alone (`p1/melody`, not `p1/melody2`). */
+    cancelSlot(slot: string): void {
+        const s = this.slots.get(slot);
+        if (!s) { return; }
+        if (s.timer !== undefined) { this.timers.clearTimeout(s.timer); s.timer = undefined; }
+        s.waiting = undefined;
+    }
+
     private fire(slot: string): void {
         const s = this.slots.get(slot);
         if (!s || s.running || s.waiting === undefined) { return; }

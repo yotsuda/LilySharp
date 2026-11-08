@@ -241,7 +241,11 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   engine is actually asked; `PREPARE_TIMEOUT_MS` = 120 s without an answer is `failed`. When
   the server cannot answer (a syntax error) the voices the page has stay as they are and the
   nameless placeholder of a turn is settled (`voiceSettled`), so nothing pulses over nothing;
-  with no engine everything is dropped. Nets: `test/singerCore.test.ts` (the queue, the mode),
+  with no engine everything is dropped. A part the score sings no more (its lyrics row
+  commented out) is forgotten on the host too (`sungParts`, the last `voiceParts`): the
+  engine's answer to the earlier text, had it still been singing, lands nowhere — it used to
+  arrive after the page had emptied and light the microphone again (owner's report, session
+  1152). Nets: `test/singerCore.test.ts` (the queue, the mode),
   `test/playbackCore.test.ts` (the badge's `waiting`).
 - **MIDI out** (`lilysharp.playback.midiOutput` set): the port plays the instruments, the
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The

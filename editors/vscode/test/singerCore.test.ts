@@ -152,6 +152,19 @@ describe('the prepare queue', () => {
         assert.deepEqual(ran, ['b']);
     });
 
+    it('forgets one slot exactly when a part is sung no more; a part whose name begins the same keeps its job', async () => {
+        const t = timers();
+        const ran: string[] = [];
+        const q = new PrepareQueue<string>(async j => { ran.push(j); }, t.api);
+        q.schedule('p1/melody', 'a', 1500);
+        q.schedule('p1/melody2', 'b', 1500);
+        q.cancelSlot('p1/melody');
+        assert.equal(q.hasWaiting('p1/melody'), false);
+        t.tick(1500);
+        await flush();
+        assert.deepEqual(ran, ['b']);
+    });
+
     it('reads the prepare mode, afterEdit unless onPlay is said', () => {
         assert.equal(prepareModeOf('onPlay'), 'onPlay');
         assert.equal(prepareModeOf('afterEdit'), 'afterEdit');

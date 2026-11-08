@@ -3862,6 +3862,11 @@ const postedVoices = new WeakMap<vscode.WebviewPanel, Map<string, string>>();
 const voiceDocs = new WeakMap<vscode.WebviewPanel, string>();
 /** The previews that just turned to another document: its voices go to the engine at once, not after the rest an edit gets. */
 const voiceTurned = new WeakSet<vscode.WebviewPanel>();
+/** The parts each preview's score sings now (the last `voiceParts`): a voice landing for any
+ *  other part is of a text that sang it and is dropped (owner's report 2026-11-09, session 1152:
+ *  the lyrics row commented out, the microphone stayed — the engine's answer to the earlier text
+ *  arrived after the page had emptied, and lit it again). Unknown until the first answer. */
+const sungParts = new WeakMap<vscode.WebviewPanel, Set<string>>();
 /** A number per preview, for the prepare queue's slots (`<id>/<part>`). */
 const panelIds = new WeakMap<vscode.WebviewPanel, number>();
 let nextPanelId = 0;
@@ -3884,6 +3889,7 @@ function followVoices(panel: vscode.WebviewPanel, uri: string): boolean {
     if (voiceDocs.get(panel) === voiceDoc) { return false; }
     voiceDocs.set(panel, voiceDoc);
     postedVoices.delete(panel);
+    sungParts.delete(panel);
     voiceTurned.add(panel);
     prepareQueue.cancel(`${panelId(panel)}/`);
     void panel.webview.postMessage({ type: 'clearVoices', pending: true });
@@ -3893,6 +3899,7 @@ function followVoices(panel: vscode.WebviewPanel, uri: string): boolean {
 function forgetVoices(panel: vscode.WebviewPanel): void {
     voiceDocs.delete(panel);
     postedVoices.delete(panel);
+    sungParts.delete(panel);
     voiceTurned.delete(panel);
     prepareQueue.cancel(`${panelId(panel)}/`);
 }
@@ -3962,11 +3969,18 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     // Which parts this score sings now: the page drops the voices and the badge's states of any
     // other (a score or a file with no lyrics empties it — owner's report 2026-11-08: the
     // microphone stayed on after the lyrics were gone).
-    void panel.webview.postMessage({ type: 'voiceParts', parts: sung.Voices.filter(v => v.Notes.length > 0).map(v => v.Part) });
+    const parts = new Set(sung.Voices.filter(v => v.Notes.length > 0).map(v => v.Part));
+    void panel.webview.postMessage({ type: 'voiceParts', parts: [...parts] });
+    sungParts.set(panel, parts);
     const speed = previewPractice.get(panel)?.speed ?? 1;
     let posted = postedVoices.get(panel);
     if (!posted) { postedVoices.set(panel, posted = new Map()); }
     const mine = posted;
+    // A part sung no more (its words gone): its voice is forgotten here as the page forgets it,
+    // and a job of its earlier text, waiting or singing, lands nowhere (renderVoice's wanted).
+    for (const part of [...mine.keys()]) {
+        if (!parts.has(part)) { mine.delete(part); prepareQueue.cancelSlot(`${panelId(panel)}/${part}`); }
+    }
     const turned = voiceTurned.delete(panel);
     const mode = prepareModeSetting();
     for (const voice of sung.Voices) {
@@ -3981,12 +3995,12 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
             continue;
         }
         if (!current()) { return; }
-        if (mine.get(voice.Part) === key) { prepareQueue.cancel(slot); continue; }   // the page has this text's voice; a job of an older text can go
+        if (mine.get(voice.Part) === key) { prepareQueue.cancelSlot(slot); continue; }   // the page has this text's voice; a job of an older text can go
         mine.delete(voice.Part);
         const rests = reason === 'edit' && !turned && !engine.has(key);
         if (rests && mode === 'onPlay') {
             void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'waiting' });
-            prepareQueue.cancel(slot);
+            prepareQueue.cancelSlot(slot);
             continue;
         }
         void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: rests ? 'waiting' : 'preparing' });
@@ -3998,12 +4012,14 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
  * One queued voice: rendered by the engine unless rendered before, and handed to the page as WAV
  * bytes (`voice`), with `preparing` on the badge while the engine sings and `failed` when it
  * cannot, or when it has not answered in PREPARE_TIMEOUT_MS. A voice whose preview turned to
- * another document, or whose part has a newer text waiting in the queue, is dropped on landing.
+ * another document, whose part the score sings no more, or whose part has a newer text waiting
+ * in the queue, is dropped on landing.
  */
 async function renderVoice(job: PrepareJob): Promise<void> {
     const { panel, voice, speed, mine } = job;
     const slot = `${panelId(panel)}/${voice.Part}`;
-    const wanted = () => postedVoices.get(panel) === mine && !prepareQueue.hasWaiting(slot);
+    const wanted = () => postedVoices.get(panel) === mine && !prepareQueue.hasWaiting(slot)
+        && (sungParts.get(panel)?.has(voice.Part) ?? true);
     const engine = voiceRenderer;
     if (!engine || !wanted()) { return; }
     let key: string, rendered: Promise<{ wav: string; duration: number }>, cached: boolean;
