@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1152セッションの経緯
+
+### 1.1 第1152セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14859 / 0 / 2**（`-Start p1152`・HEAD `7060f8e0c`・未 push 52・OMR の open 0）。同じ会話で第1151 から続けた便。オーナー報告「雪やこんこ.lys の L27（`lyrics verse sings melody`）をコメントアウトしても、再生ボタン上のマイクが消えない」。作業場所は Lab `sessions/p1152/`（`notes.md`・`probe/`）。
+
+- **サーバーは正常（実測・`probe/`）**: L27 を外した本を `lysc svg` → ゆ は描かれない・`lysc midi` → 2 トラック 4 音（m2 だけ）で lyric event なし・`lysc check` → エラーなし＝`lilysharp/sung` は声 0 を返し、`prepareVoices` は `voiceParts []` を送ってページは空になる。
+- **原因（コード）**: `renderVoice`（engine の仕事）は着地のとき「プレビューが別の本に変わっていない」「同じパートの新しい job が待っていない」しか見ていなかった。**歌わなくなったパートには新しい job が無い**ので、前の本文に対する engine の答え（コメントアウトした瞬間に歌っていた melody・NEUTRINO で数秒）が着地して `voice` を送り、ページがそのパートを `ready` にしてマイクが青に戻る。1.5 s 待ちの job が残っていても同じ。
+- **直し（拡張）**: `sungParts`（panel → 最後の `voiceParts` のパート集合）を置き、`renderVoice.wanted()` がそのパートが今も歌われることを要求・`prepareVoices` は歌わなくなったパートを `mine` から消して slot を cancel・`followVoices`／`forgetVoices` で消す。`PrepareQueue.cancelSlot(slot)`（prefix の `cancel` と違い完全一致＝`p1/melody` と `p1/melody2` を混同しない）を足し、1 パートの job を指す所はこれに替えた（網 1 本）。
+- 網: `check-types` 0・npm **905 / 905**（`npmtest.log`）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・editors CHANGELOG・MANUAL-CHECKS §3.7（「歌詞行をコメントアウト → マイクが消える」を足した）。
+- 残り: 実機（オーナー・§3.7＝点滅中に歌詞行をコメントアウトしても消えたまま）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
+- 終了時 full **14859 / 0 / 2 / 14861**（`-End p1152 -DiffBase 7060f8e0c`＝`end.log`・門は全部 OK・§1 現在便 16,173 字＝残り 3,827）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所はコードの読みと `probe/` の実測。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1151セッションの経緯
 
 ### 1.1 第1151セッション（2026-11-09・YT-DELL2）

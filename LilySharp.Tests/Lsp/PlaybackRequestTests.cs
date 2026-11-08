@@ -91,6 +91,25 @@ public class PlaybackRequestTests
         Assert.Equal(new[] { 64 }, ownNotes.Where(n => n.T == 0).Select(n => (int)n.P).ToArray());
     }
 
+    /// <summary>Owner's request 2026-11-09 ("the menu lists only the score's parts; list every
+    /// part, whatever the score"): the parts the FIRST score leaves out are Extras too — the
+    /// list used to come from an export with no score named, which fell to the first score
+    /// itself, so it was empty exactly when the first (the default) score was shown.</summary>
+    [Fact]
+    public void TheFirstScore_ListsThePartsItLeavesOut_AsExtra()
+    {
+        const string doc =
+            "section A {\n  p1 { c''4 d e f | }\n  p2 { e' f g a | }\n  p3 { c4 d e f | }\n}\n\nform { A }\n\n" +
+            "score {\n  staff p1\n}\n\nscore all {\n  staff p1\n  staff p2\n  staff p3\n}\n";
+        var pb = Playback(doc, null);
+        Assert.Null(pb.Error);
+        Assert.Equal(new[] { "p2", "p3" }, pb.Extra);
+        Assert.Equal(new[] { "Tempo", "p1", "p2", "p3" }, pb.Parts);   // the conductor track leads the list
+        // Their notes ride in the list on the extra tracks, where the menu can turn them on.
+        Assert.Equal(12, pb.Notes!.Length);
+        Assert.Empty(Playback(doc, "all").Extra!);
+    }
+
     [Fact]
     public void NoScoreNamed_PlaysTheFirstScore()
     {

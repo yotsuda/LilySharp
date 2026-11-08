@@ -138,6 +138,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1154セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14860 / 0 / 2**（`-Start p1154`・HEAD `b309bdefc`・未 push 54・OMR の open 0）。同じ会話で第1153 から続けた便。オーナー要望「プレビューのメトロノームボタンのウインドウではパートのオンオフができるけど、今は score にあるパートしかリストしない。score によらず全てのパートをリストし、score にないパートも鳴らせるようにしたい」。作業場所は Lab `sessions/p1154/`（`notes.md`）。
+
+- **原因（コード）**: 機能自体は第1128 から在る（`PlaybackResponse.Extra`＝斜体・既定オフ）。その「全パート」の MIDI を `PlaybackOf` が `new MidiExporter { Form = score.Form, Score = null }` で書いていて、score 名無しの `PlayedSpec(tree, null, form)` は form を描く score、form を持たない score の本では**ファイルの最初の score** に落ちる＝「全パート」が最初の score のパートになる。既定（最初）の score を見ているときは Extra が空＝オーナーの「score にあるパートしか並ばない」。網 `ThePickedScore_PlaysItsPartsAlone` は 2 番目の score を選んでいたので動いて見えていた。
+- **直し（Core 1 行＋Lsp 1 行）**: `MidiExporter.AllParts`（init）＝`_soundingParts = null` で全パートが鳴る（form・bare section の持ち主・鳴らす chord 行は score のまま＝時間軸は score の）。`PlaybackOf` は `{ Form, Score = score, AllParts = true }`。`.mid` の書き出しは立てない。網 `PlaybackRequestTests.TheFirstScore_ListsThePartsItLeavesOut_AsExtra`（最初の score `staff p1`・3 パート → Extra p2 p3・Parts は Tempo p1 p2 p3・`all` では空）＝Playback／Sung／Midi の網 550 / 550（1 回目は Parts の先頭の `Tempo` を忘れた私の期待値ミス）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: playback-design「The parts the score does not sound」・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7 の practice メニューの行に「最初の score でも同じ」。
+- 残り: 実機（オーナー・§3.7＝既定の score で斜体のパートが並び押すと鳴る）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
+- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1154 -DiffBase b309bdefc`＝`end.log`・門は全部 OK・§1 現在便 16,282 字＝残り 3,718・+1 本）。§7 7.5: Core `+` は `-End` が diff を取った時点の数で 0 と出るが、実際は `MidiExporter.AllParts`（REF 0・OWN 0＝score の選び方の配管）。7.6: 出所はコードの読み（`PlayedSpec` の落ち方）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1153セッションの経緯
+
 ### 1.1 第1153セッション（2026-11-09・YT-DELL2）
 
 開始時 `-Start p1153`（HEAD `c02677001`・未 push 53・OMR の open 0）は **build 赤＝私のせい**: `-Start` の full run の最中に Lsp の C# を書き替えていて（`SungParams.Path` を足す前の `Commands.cs` が先にビルドされた・`start.log` の CS1061）、trx 無し。前便末の full は 14859 / 0 / 2。⚠️ 規則の再確認＝**full run の最中はコードも docs も触らない**（§7）。同じ会話で第1152 から続けた便。オーナー報告「mp4 exporter に、歌唱が入らない」。作業場所は Lab `sessions/p1153/`（`notes.md`・再現は `sessions/p1152/probe/mp4repro.js`）。
@@ -147,19 +158,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **直し**: `exportBatch.ts` に `deps.singJobs(jobs, source, openUri)`（出力チャネルに `sung: N voice(s) in …`）・`extension.ts` の `singJobs(jobs, source, practice)` は `{ textDocument } | { path }` を取る・**`lilysharp/sung` が開いていないファイルの `Path` を受ける**（`SungParams.Path`・`ExportTreeOf`＝Export と同じ）・`mixIn` は負の `at` のぶん声の頭を捨てて 0 から置く。網: `SungRequestTests.AFileNotOpen_IsSungByItsPath`（Sung／Export の網 641 / 641）・`voiceMix.test`「leaves out the head…」（npm 906 / 906）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5 Export・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7「右クリックの Export も歌う」。
 - 残り: 実機（オーナー・§3.7＝右クリックの MP4 に声・開いていない .lys も・声の入りが遅れない）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
 - 終了時 full **14860 / 0 / 2 / 14862**（`-End p1153 -DiffBase c02677001`＝`end.log`・門は全部 OK・§1 現在便 16,607 字＝残り 3,393・+1 本＝`AFileNotOpen_IsSungByItsPath`）。npm は 1 回目 905 / 906（`npmtest.log`＝新しい網の私の期待値が間違い: 声の後ろに `WAV_TAIL_S`＝2 s の尾が付くので file は伸びる）→ 期待値を直して **906 / 906**（`npmtest2.log`・実装は変えていない＝配布済みの build のまま）。§7 7.5: Core `+` 0・REF 0・OWN 0（Lsp の `SungParams.Path`・`GetSung` と拡張・docs）。7.6: 出所は `mp4repro.js` の実測とコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1152セッションの経緯
-
-### 1.1 第1152セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14859 / 0 / 2**（`-Start p1152`・HEAD `7060f8e0c`・未 push 52・OMR の open 0）。同じ会話で第1151 から続けた便。オーナー報告「雪やこんこ.lys の L27（`lyrics verse sings melody`）をコメントアウトしても、再生ボタン上のマイクが消えない」。作業場所は Lab `sessions/p1152/`（`notes.md`・`probe/`）。
-
-- **サーバーは正常（実測・`probe/`）**: L27 を外した本を `lysc svg` → ゆ は描かれない・`lysc midi` → 2 トラック 4 音（m2 だけ）で lyric event なし・`lysc check` → エラーなし＝`lilysharp/sung` は声 0 を返し、`prepareVoices` は `voiceParts []` を送ってページは空になる。
-- **原因（コード）**: `renderVoice`（engine の仕事）は着地のとき「プレビューが別の本に変わっていない」「同じパートの新しい job が待っていない」しか見ていなかった。**歌わなくなったパートには新しい job が無い**ので、前の本文に対する engine の答え（コメントアウトした瞬間に歌っていた melody・NEUTRINO で数秒）が着地して `voice` を送り、ページがそのパートを `ready` にしてマイクが青に戻る。1.5 s 待ちの job が残っていても同じ。
-- **直し（拡張）**: `sungParts`（panel → 最後の `voiceParts` のパート集合）を置き、`renderVoice.wanted()` がそのパートが今も歌われることを要求・`prepareVoices` は歌わなくなったパートを `mine` から消して slot を cancel・`followVoices`／`forgetVoices` で消す。`PrepareQueue.cancelSlot(slot)`（prefix の `cancel` と違い完全一致＝`p1/melody` と `p1/melody2` を混同しない）を足し、1 パートの job を指す所はこれに替えた（網 1 本）。
-- 網: `check-types` 0・npm **905 / 905**（`npmtest.log`）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・editors CHANGELOG・MANUAL-CHECKS §3.7（「歌詞行をコメントアウト → マイクが消える」を足した）。
-- 残り: 実機（オーナー・§3.7＝点滅中に歌詞行をコメントアウトしても消えたまま）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
-- 終了時 full **14859 / 0 / 2 / 14861**（`-End p1152 -DiffBase 7060f8e0c`＝`end.log`・門は全部 OK・§1 現在便 16,173 字＝残り 3,827）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所はコードの読みと `probe/` の実測。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

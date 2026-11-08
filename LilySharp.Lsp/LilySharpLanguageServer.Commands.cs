@@ -1161,12 +1161,15 @@ public sealed partial class LilySharpLanguageServer
             // 2026-11-08: the practice menu turns them on; off until it does — PlaybackResponse.Extra):
             // the file's every part in this score's form, less the tracks above, each on a channel
             // the score's tracks leave free (two parts on one channel would fight over its program).
-            // The preview's list only: the .mid export is untouched.
+            // The preview's list only: the .mid export is untouched. Every part of THIS score's
+            // export (AllParts): an export with no score named fell to the file's first score, so
+            // the list was empty whenever the first score was the one shown (owner's report
+            // 2026-11-09: "only the score's parts are listed").
             var tracks = midi.Tracks.Select(t => (Track: t, Channel: t.Channel)).ToList();
             var extra = new List<string>();
             if (score != null)
             {
-                var all = new LilySharp.Core.Midi.MidiExporter { Form = score.Form, Score = null }.Export(tree);
+                var all = new LilySharp.Core.Midi.MidiExporter { Form = score.Form, Score = score, AllParts = true }.Export(tree);
                 var names = midi.Tracks.Select(t => t.Name).ToHashSet(StringComparer.Ordinal);
                 var used = midi.Tracks.Where(t => t.Notes.Count > 0).Select(t => t.Channel).ToHashSet();
                 foreach (var t in all.Tracks)

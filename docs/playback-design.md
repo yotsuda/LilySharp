@@ -172,7 +172,10 @@ Now:
 - **The parts the score does not sound** (owner's request 2026-11-08) ride in `lilysharp/playback`'s
   list after the score's tracks, named in `Extra`: the file's every part in the score's form,
   less the score's own, each on a channel the score's tracks leave free (the `.mid` export is
-  untouched). The practice menu lists them after the parts, in italics, off until pressed
+  untouched). The "every part" export is the shown score's with `MidiExporter.AllParts`
+  (session 1154, owner's report: only the score's parts were listed — the list had come from
+  an export with no score named, which falls to the file's first score, so it was empty
+  whenever the first, default score was the one shown). The practice menu lists them after the parts, in italics, off until pressed
   (`Practice.extraOn`; `practiceNotes` / `exportNotes` take `extra`), so a part left out of
   the score can be heard against it. The sung lyrics are listed there too (`♪ part`: sung,
   or played by the part's instrument instead — `Practice.voicesOff`; docs/singing-design.md

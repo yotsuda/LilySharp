@@ -506,6 +506,17 @@ public sealed class MidiExporter
     public RenderSpec? Score { get; init; }
 
     /// <summary>
+    /// True: every part of the file sounds, whatever <see cref="Score"/> shows — the score still
+    /// decides the form, the bare sections' owner and the chord rows that sound, so the timeline
+    /// is the score's. The preview's practice menu lists the parts the score leaves out this way
+    /// (owner's request 2026-11-09: "list every part, whatever the score; let the parts not in
+    /// the score sound too"); until then that list was taken from an export with no score
+    /// named, which falls to the FILE'S FIRST score — empty whenever the first score was the
+    /// one shown. The <c>.mid</c> export never sets it.
+    /// </summary>
+    public bool AllParts { get; init; }
+
+    /// <summary>
     /// The part a section that declares no <c>partName { }</c> block belongs to: the one
     /// part the score engraves, or null when the score names none or several.
     /// </summary>
@@ -601,7 +612,7 @@ public sealed class MidiExporter
         _soundingChordRows = SoundingChordRows(tree, Score, Form);
         _flatRows = Semantics.FlatChordRows.Of(_root, _soundingChordRows);
         _flatRowsPlay = -1;
-        _soundingParts = SoundingParts(_playedSpec);
+        _soundingParts = AllParts ? null : SoundingParts(_playedSpec);
         // A part a placed lyrics row sings sounds although no staff shows it (owner's decision
         // 2026-11-09, docs/singing-design.md §3): the row is the lyric line of a melody the score
         // does not engrave, and the preview sings it — so its notes are here, with the singer's
