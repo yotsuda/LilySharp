@@ -778,13 +778,20 @@ public sealed class MidiExporter
             .Concat(order.Where(p => p is not null && IsChordRowTrack(p)))
             .ToList();
 
+        // A part a lyrics row sings is a singer (owner's decision 2026-11-08, docs/singing-design.md
+        // §3): the preview gives it the singing voice, and its instrument is the stand-in — the
+        // named midiInstrument, else the preset's sound, else, for a singer that names neither,
+        // the General MIDI choir (52, "choir aahs") rather than LilyPond's acoustic grand.
+        var sungParts = mainTrack.Lyrics.Select(l => l.Part).Where(p => p != null).ToHashSet(StringComparer.Ordinal);
         var channelByProgram = new Dictionary<int, int>();
         int nextChannel = 0;
         bool first = true;
         foreach (var part in order)
         {
             var notes = part is null ? unclaimed! : byPart[part];
-            int program = part is null ? 0 : Header(part).MidiProgram;
+            int program = part is null ? 0
+                : Header(part) is { MidiInstrument: null, Preset: null } && sungParts.Contains(part) ? GeneralMidi.ChoirAahs
+                : Header(part).MidiProgram;
             bool pitched = notes.Any(n => n.Channel != 9);
 
             int channel = 9;

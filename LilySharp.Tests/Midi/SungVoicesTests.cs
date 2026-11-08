@@ -147,6 +147,26 @@ public class SungVoicesTests
         Assert.Equal(6, voice.Notes.Count);
     }
 
+    /// <summary>A part a lyrics row sings is a singer (owner's decision 2026-11-08): its track's
+    /// program — the stand-in the preview plays while there is no voice, and what the .mid plays —
+    /// is its named instrument, else its preset's sound, else the General MIDI choir; a part with
+    /// no words keeps LilyPond's acoustic grand.</summary>
+    [Theory]
+    [InlineData("part melody { clef treble }", true, 52)]
+    [InlineData("part melody { clef treble }", false, 0)]
+    [InlineData("part melody { midiInstrument \"flute\" }", true, 73)]
+    [InlineData("part melody { instrument soprano }", true, 52)]
+    [InlineData("part melody { instrument piano }", true, 0)]
+    public void ASungPartsStandIn_IsItsInstrument_ElseTheChoir(string part, bool sung, int program)
+    {
+        var tree = SyntaxTree.Parse(Book(YukiMusic, YukiWords, parts: part, rows: sung ? "staff melody  lyrics verse sings melody" : "staff melody"));
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+        var score = RenderSpecParser.FindAll(tree).First();
+        var midi = new MidiExporter { Form = score.Form, Score = score }.Export(tree);
+        var track = midi.Tracks.Single(t => t.Name == "melody");
+        Assert.Equal(program, track.Program);
+    }
+
     [Fact]
     public void Kana_IsHiraganaKatakanaAndTheLongVowelMark()
     {

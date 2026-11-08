@@ -172,9 +172,10 @@ Now:
   less the score's own, each on a channel the score's tracks leave free (the `.mid` export is
   untouched). The practice menu lists them after the parts, in italics, off until pressed
   (`Practice.extraOn`; `practiceNotes` / `exportNotes` take `extra`), so a part left out of
-  the score can be heard against it. The sung lyrics are listed there too (`♪ part`,
-  `Practice.voicesOff`; docs/singing-design.md §5). The header's length and the exports
-  leave the extra parts out unless the menu turned them on.
+  the score can be heard against it. The sung lyrics are listed there too (`♪ part`: sung,
+  or played by the part's instrument instead — `Practice.voicesOff`; docs/singing-design.md
+  §5; a sung part's instrument is its stand-in, "choir aahs" when it names none). The
+  header's length and the exports leave the extra parts out unless the menu turned them on.
 
 ### MIDI out
 

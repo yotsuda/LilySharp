@@ -5906,10 +5906,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // ---- The singing voice (docs/singing-design.md §5): the host renders each sung part's
         // words through the singing engine and hands the WAV here (the 'voice' message); a Play
         // starts the buffer at the same clock as the synth's notes, through a limiter of its own,
-        // over the part's instrument (owner's decision 2026-11-08, having heard both together: the
-        // voice doubles the instrument, no setting). A voice is for one practice speed; at another
-        // the instrument plays alone until the host has sung it anew. A loop and a candidate's
-        // notes play without the voice (voiceOrigin null).
+        // IN PLACE OF the part's instrument (owner's decision 2026-11-08: one sound a part — a
+        // part a lyrics row sings is a singer, and its instrument is the stand-in while there is
+        // no voice: no engine, kana missing, not rendered yet, or the menu's ♪ switched to the
+        // instrument). A voice is for one practice speed; at another the instrument plays until
+        // the host has sung it anew. A loop and a candidate's notes play without the voice
+        // (voiceOrigin null).
         const voices = new Map();           // part -> { buffer, speed, key }
         let voiceSources = [];
         let voiceOrigin = 0;                // the score's (practiced) time at the played list's 0; null = no voice
@@ -6220,6 +6222,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // worse than starting cleanly at the next onset).
             notes = window.LysSynth ? window.LysSynth.fromOffset(notes, offset) : notes.filter(n => n.T >= offset - 0.001);
             if (notes.length === 0) { return; }
+            // A part whose voice sings now is sung, not played: its notes leave the instruments'
+            // list (owner's decision 2026-11-08: one sound a part — the instrument is the stand-in
+            // while there is no voice, or the voice is switched off). The highlight follows the
+            // whole list still.
+            const sung = sungTracks();
+            const played = sung.size > 0 ? notes.filter(n => !sung.has(n.N)) : notes;
             if (midiOutput && !here) {
                 // The MIDI output: the server plays the list from the offset and answers
                 // (midiStarted) with the clock the highlight follows; a port that is not
@@ -6227,7 +6235,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const gen = ++playGeneration;
                 midiPlayPending = { gen, notes, offset };
                 setPlayUi(true);
-                vscode.postMessage({ type: 'midiPlay', port: midiOutput, notes, offset });
+                vscode.postMessage({ type: 'midiPlay', port: midiOutput, notes: played, offset });
                 return;
             }
             const ctx = audio();
@@ -6244,15 +6252,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 return;
             }
             let t0 = ctx.currentTime + 0.15;
-            let end;
+            let end = notes.reduce((e, n) => Math.max(e, n.T + n.D), 0);   // the whole list's, voice included
             if (sf && sf.ready && !plainTones) {
-                sfPlayer = sf.play(notes, offset, t0);
-                t0 = sfPlayer.t0;
-                end = sfPlayer.end;
+                if (played.length > 0) {
+                    sfPlayer = sf.play(played, offset, t0);
+                    t0 = sfPlayer.t0;
+                    end = Math.max(end, sfPlayer.end);
+                }
             } else {
-                end = startOscillators(ctx, notes, offset, t0);
+                end = Math.max(end, startOscillators(ctx, played, offset, t0));
             }
-            // The sung parts' voices, over their instruments, from the same clock.
+            // The sung parts' voices, in the instruments' place, from the same clock.
             startVoices(ctx, t0, offset);
             setPlayUi(true);
             // A loop goes round when the last note ends; a plain playback lets it ring a moment.
@@ -6765,9 +6775,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     () => { practice.muted = practice.muted.includes(name) ? without(practice.muted, name) : practice.muted.concat([name]); });
             }
             // The sung lyrics, one a part with a voice, beside the parts (owner's request
-            // 2026-11-08; docs/singing-design.md §5): off silences the voice, the instrument plays on.
+            // 2026-11-08; docs/singing-design.md §5): on, the part is sung; off, its instrument
+            // plays in the voice's place.
             for (const name of voices) {
-                toggle('♪ ' + name, 'The lyrics of ' + name + ', sung', () => !practice.voicesOff.includes(name),
+                toggle('♪ ' + name, name + ': sung (on), or played by its instrument (off)', () => !practice.voicesOff.includes(name),
                     () => { practice.voicesOff = practice.voicesOff.includes(name) ? without(practice.voicesOff, name) : practice.voicesOff.concat([name]); }, 'voice');
             }
             // The file's other parts, which this score does not sound: off until pressed (owner's

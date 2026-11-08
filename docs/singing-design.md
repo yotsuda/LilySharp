@@ -63,6 +63,13 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 - **Which parts sing**: every part a placed lyrics row sings (the same set the MIDI gives
   lyric events to), one voice per (part, lyrics track); verses sing on their own pass as the
   MIDI already does (`SingLyrics`' pass rule). A part with no words is not a voice.
+  **A sung part is a singer, whatever its `instrument` or `midiInstrument` says** (owner's
+  decision 2026-11-08: "if the score sings the part, the voice sounds"): its instrument is the
+  **stand-in** — what the `.mid` plays, and what the preview plays while there is no voice (no
+  engine, syllables not kana, not rendered yet, the menu's ♪ switched off). A singer that names
+  no instrument and no preset stands in with the General MIDI choir (`GeneralMidi.ChoirAahs`,
+  `MidiExporter.SplitIntoPartTracks`), not LilyPond's acoustic grand. One sound a part: the
+  voice and the instrument never sound together (a doubling instrument is a second part).
 - **Language**: `ja` when the syllables are kana; otherwise the score is passed as it is and
   the engine answers that it cannot sing it (NEUTRINO: kanji, romaji). The editor shows the
   engine's sentence once per score and plays the instruments alone. A kana reading of kanji
@@ -118,10 +125,12 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   ways are a `VoiceBackend` behind the `VoiceRenderer`, whose cache key takes the backend's
   voice name (`voiceName()`: the extension's setting now, the program's default), so a changed
   voice sings anew.
-- **The voice doubles the part's instrument** — owner's decision 2026-11-08, having heard
-  both together ("in time, just right"): no setting to silence the instrument (a
-  `singerReplacesPart` existed for a day). A part that should be voice alone can name a quiet
-  `midiInstrument`; a switch in the practice menu is the place if one is ever wanted.
+- **The voice takes the instrument's place** (owner's decision 2026-11-08, later the same
+  day: hearing both together, then "that is unnatural — one sound a part"; a `singerReplacesPart`
+  setting existed for a day in between). While a part's voice plays, its notes leave the
+  instruments' list (`played` in `startPlayback`, and the list the MIDI port gets); the
+  highlight follows the whole list. No voice yet, or the ♪ off: the instrument — the
+  stand-in of §3 — plays.
 - **Rendered ahead, not at Play.** When the preview fetches its note list after a compile
   (`refreshPlayback`), the extension asks `lilysharp/sung`, hashes each voice's score with
   the voice name and the speed, and renders what the cache (a Map of hash → wav path, the
@@ -133,12 +142,11 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   page decodes once (`decodeAudioData`), and `startPlayback` starts an `AudioBufferSourceNode`
   at `t0` with `offset` into the buffer (a seek, Play from Here) through the limiter. Stop
   stops it; a loop restarts it with the notes.
-- **The sung part's instrument plays on under the voice** (the decision above): the synth's
-  list is the whole list, the voice a buffer beside it.
 - **The practice menu lists each voice** beside the parts, as `♪ part` (owner's request
-  2026-11-08), on by default; off silences the voice and leaves the instrument (so voice alone
-  is the part's toggle off and the voice's on). `Practice.voicesOff`, read by `sungTracks()`;
-  the host lists the voices from `lilysharp/sung` when an engine is there (`requestParts`).
+  2026-11-08): on, the part is sung; off, its instrument plays in the voice's place — a switch
+  between the two sounds, never both. `Practice.voicesOff`, read by `sungTracks()`; the host
+  lists the voices from `lilysharp/sung` when an engine is there (`requestParts`). The part's
+  own toggle silences it altogether.
 - **MIDI out** (`lilysharp.playback.midiOutput` set): the port plays the instruments, the
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The
   alignment is the round trip's jitter, some tens of milliseconds; acceptable for a preview,

@@ -31,6 +31,11 @@ namespace LilySharp.Core.Midi;
 /// </remarks>
 public static class GeneralMidi
 {
+    /// <summary>"choir aahs" (53rd, 0-based 52): the stand-in of a sung part that names no
+    /// instrument (<c>MidiExporter.SplitIntoPartTracks</c>, docs/singing-design.md §3).</summary>
+    // LILYPOND-REF: scm/midi.scm:21-180 instrument-names-alist — "choir aahs" is the 53rd name, program 52.
+    public const int ChoirAahs = 52;
+
     /// <summary>The 128 instrument names; the index is the 0-based program number.</summary>
     public static readonly IReadOnlyList<string> InstrumentNames =
     [

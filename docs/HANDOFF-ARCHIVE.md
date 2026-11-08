@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1127セッションの経緯
+
+### 1.1 第1127セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14813 / 0 / 2**（`-Start p1127`・HEAD `1f48bac1f`・未 push 24・OMR の open は 0）。同じ会話で第1126 から続けた便。オーナーの問い「Cantilena も VS Code 拡張にしてしまえば良くないか」→ 提案（OMR 拡張と同じ形・Lily# は API で呼ぶ）→ オーナー「続けて」。作業場所は Lab `sessions/p1127/`。
+
+- **Cantilena 拡張 `yotsuda.cantilena`**（Cantilena repo の `editors/vscode`・TypeScript＋esbuild・網 11 本）: `cantilena` を同梱（`bin/win-x64`・`tools/pack-extension.ps1`＝self-contained publish → `vsce package --target win32-x64`）、設定 `cantilena.neutrinoFolder`／`voice`／`gpu`／`threads`／`program`（開発者の差し替え）、コマンド **Choose NEUTRINO Folder…／Choose Voice…／Check Setup／Forget Rendered Voices**、**API**＝`activate` が返す `{ version, apiVersion: 1, status(), sing(score, {voice}) → {wav, duration, cached}, release() }`。engine は拡張の中で常駐（`src/engine.ts`・JSON 行・key 名の WAV を `globalStorage/voices` に・設定変更で捨てる）。VSIX は `artifacts/extension/cantilena-win32-x64-0.1.0.vsix`（35.2 MB・bin 76.9 MB＝self-contained の .NET・`pack.log`）。公開はオーナー。
+- **Lily# 側**: `lilysharp.playback.singer` は**空が普通＝Cantilena 拡張を使う**（`extensions.getExtension` → `activate` → `cantilenaApiOf` が形を確かめる・`extensions.onDidChange` で取り直し）、パスは開発者の差し替え（`SingerProcess`）。`singerVoice` と **Choose Singing Voice…** は消した（声は Cantilena の設定。`VoiceBackend.voiceName()` を cache の key に入れる）。`singer.ts` は `VoiceBackend`（拡張 API／プロセス）を `VoiceRenderer` が抱く形。網 `test/singerCore.test.ts` を作り直し（`cantilenaApiOf`・voice なしの要求行）・`npm test` **880 / 880**。
+- 残り: 実機（MANUAL-CHECKS §3.7 を拡張の手順に書き直した）・段 4。
+- **オーナー実機確認 2026-11-08（同じ会話・-End の後の docs commit）**: Cantilena 拡張を `deploy-extension.ps1` で入れ、NEUTRINO フォルダを選び Check Setup が ready → Lily# の開発版で ▶ →「ばっちり声と音源が同期して鳴っている」（`singerReplacesPart` off＝声と楽器を重ねて）。歌う経路（`lilysharp/sung` → 拡張 API → webview の buffer）は実機で閉じた。残りの細目は MANUAL-CHECKS §3.7 の `[ ]`。**オーナー決定（同日）「その設定が不要」＝`singerReplacesPart` を消した**: 声は楽器に重なって鳴る・楽器を消す設定も `setSinger` message も `played` の絞り込みも退役（仮置き 3 つのうち「置き換えか重ねか」は「重ねる・設定なし」で決着）。
+- 終了時 full **14813 / 0 / 2 / 14815**（`-End p1127 -DiffBase 1f48bac1f`＝`end.log`・門は全部 OK・Core の `+` 0＝拡張と docs だけ）。§7 7.5: REF 0・OWN 0。この docs commit と Lab・Cantilena の commit は Claude・push はオーナー。
+
 ## 以下は第1126セッションの経緯
 
 ### 1.1 第1126セッション（2026-11-08・YT-DELL2）
