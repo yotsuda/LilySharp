@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1150セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14857 / 0 / 2**（`-Start p1150`・HEAD `258cd7c7e`・未 push 50・OMR の open 0）。同じ会話で第1149 から続けた便。オーナー報告「歌詞のある曲で Alt+M を押すと現在の小節だけを再生すべきなのに 1 小節目の歌詞を歌唱してしまう」。作業場所は Lab `sessions/p1150/`。
+
+- **原因（コードから）**: ページの `auditionMeasure(start, end)` は小節の音符を T=0 に寄せて `startPlayback(sub, 0)` を呼ぶが、**`voicePlan` を直前の ▶ のまま**（`{ pieces: null }`＝曲全体を 0 から）にしていた。`startVoices` は声を楽譜の 0 から鳴らし、歌うパートの音符は楽器の列から外れる（1 段 1 音）ので、小節のメロディは聞こえず 1 小節目の言葉だけが鳴った。
+- **直し（ページ 1 行）**: `startPlayback` の前に **`voicePlan = { pieces: [[minT, maxEnd]], rounds: 1 }`**（小節の音符の最小 T から最大 T+D＝楽譜の（練習速度の）時間の区間）。小節を選んだ ▶ の `spanPieces` と同じ形＝`voiceCues(0, 0, [[a, b]], 1, …)` が offset a・長さ b−a の cue 1 本を返す（既存の網 `playbackCore.test`）。docs: editors CHANGELOG・MANUAL-CHECKS §3.7「Alt+M の小節」。
+- 網: `check-types` 0・npm **904 / 904**。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。
+- 残り: 実機（オーナー・§3.7「Alt+M の小節」「声を用意する時機」「マイクをクリック」）・前便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み・MP4 の網の `s00000.png` の競合）。
+- 終了時 full **14857 / 0 / 2 / 14859**（`-End p1150 -DiffBase 258cd7c7e`＝`end.log`・門は全部 OK・§1 現在便 15,828 字＝残り 4,172）。§7 7.5: Core `+` 0・REF 0・OWN 0（ページの 1 行と docs だけ）。7.6: 出所はコードの読み（`auditionMeasure` と `voicePlan`）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1149セッションの経緯
+
 ### 1.1 第1149セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14857 / 0 / 2**（`-Start p1149`・HEAD `5c3557cfa`・未 push 49・OMR の open 0）。同じ会話で第1148 から続けた便。オーナー報告「プレビューの再生ボタンを押すと、なぜか再生せずにメトロノームウィンドウが開くことがある」。作業場所は Lab `sessions/p1149/`。
@@ -147,19 +159,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 網: `check-types` 0・npm **904 / 904**。`Deploy-Lsp.ps1` で配布（`deploy.log`・0.15.0+5c3557cfa）＝オーナーは Reload Window。
 - 残り: 実機（オーナー・§3.7「声を用意する時機」と「マイクをクリック → ▶ と同じ」）・前便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み・MP4 の網の `s00000.png` の競合が再発したら絵のフォルダを試験ごとに分ける）。
 - 終了時 full **14857 / 0 / 2 / 14859**（`-End p1149 -DiffBase 5c3557cfa`＝`end.log`・門は全部 OK・§1 現在便 15,707 字＝残り 4,293）。§7 7.5: Core `+` 0・REF 0・OWN 0（ページの 1 行と docs だけ）。7.6: 出所はコードの読み（バッジの click handler と CSS の位置）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1148セッションの経緯
-
-### 1.1 第1148セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14857 / 0 / 2**（`-Start p1148`・HEAD `5ecba80c3`・未 push 48・OMR の open 0）。同じ会話で第1147 から続けた便。オーナー報告「音声がまだない・準備中・準備完了の状態が正しく表示されない。準備中でないのにマイクが点滅し続ける。どの時機に声の準備を始めるか丁寧に検討。歌詞を編集したらすぐ始めてよいならその方が良いが、マシン全体が重くなるなら別の時機を」→ 提案（手を止めて 1.5 秒・既定 `afterEdit`・構文エラー中は状態を保つ）に「良い。進めて」。作業場所は Lab `sessions/p1148/`（`notes.md`）。
-
-- **原因（コードから）**: `singVoices` は ▶・速度変更・別の本への切り替えでしか走らず**編集では走らない**＝編集後も古い言葉の声が「準備完了」のまま（▶ で古い言葉が鳴る）。`followVoices` が置く無名の placeholder（`''`＝準備中）を、`singVoices` の早期 return（構文エラーの `sung.Error`・engine なし・要求失敗）が消さない＝**点滅し続ける**。engine の答えに timeout が無い。
-- **直し（エディタだけ・Core／Lsp 不変）**: `singerCore.PrepareQueue`（slot `<panelId>/<part>` ごとに 1 本・`schedule(slot, job, delay)` は delay を打ち直す・走るのは 1 本で、終わったら**待っている最新だけ**が走る・`cancel(prefix)`・`hasWaiting`・timer は注入＝fake timer の網 3 本）。`VoiceRenderer.key()`（engine を呼ばずに鍵）と `has(key)`。`singVoices` → **`prepareVoices(panel, uri, reason: edit|play|speed)`**＝**描画のたび**（`updatePreviewContent` の SVG／エラーの post の後）・▶・速度変更に呼ぶ。`lilysharp/sung` → `voiceParts` → パートごとに鍵をページの声（`postedVoices`）と比べ、違えば捨てて **`waiting`**（新しい第 4 の状態＝灰で静止・ページの `setVoiceState` は buffer も捨てる＝その間の ▶ は楽器）にし、job を積む: 待つのは **`edit` で切り替え直後でなく cache にも無いときだけ `PREPARE_IDLE_MS`＝1.5 s**（打鍵ごとに打ち直し＝engine は打鍵の下で働かない・休みごとに高々 1 回）・▶／速度／切り替え／cache 済みは即時・設定 **`lilysharp.playback.singerPrepare`＝`onPlay`** なら `waiting` のまま ▶ まで積まない。`renderVoice(job)` は engine に本当に頼むときだけ `preparing`（点滅）・**`PREPARE_TIMEOUT_MS`＝120 s で `failed`**・切り替え後（`postedVoices` の Map が替わった）や新しい job が待つ声は着地で捨てる。早期 return: client なし／`sung.Error`／要求失敗 → 新メッセージ **`voiceSettled`**（ページは `''` だけ消す＝構文エラー中は今の状態を保つ）・engine なし → `clearVoices`。`followVoices(panel, uri)` は `voiceTurned` を立て slot を cancel・`forgetVoices(panel)` を dispose に。`playbackCore.voiceBadge` は failed > preparing > waiting > ready。
-- **費用の見立て（オーナーの問い）**: 描画は既に打鍵ごと（debounce）にサーバーを呼ぶ。`lilysharp/sung` は MIDI 書き出し 1 回＋SHA-1＝ms 単位。重いのは engine（NEUTRINO は GPU で実時間の 0.1 倍・CPU の DiffSinger は句ごとに数秒）なので、engine だけを 1.5 s の休みの後・パートごとに 1 本・`onPlay` で止められる形にした。
-- **網**: npm **904 / 904**（`npmtest.log`・PrepareQueue 3・prepareMode 1・badge の waiting 1・manifest の設定）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`・0.15.0+5ecba80c）＝**オーナーは Reload Window を 2 回**（package.json が変わった）。docs: singing-design §5「When the voice is prepared」・MANUAL-CHECKS §3.7「声を用意する時機」・editors CHANGELOG・CHANGELOG `[editor]`。
-- 残り: 実機（オーナー・§3.7 の新しい行）・前便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
-- 終了時 full **14856 / 1 / 2 / 14859**（`-End p1148 -DiffBase 5ecba80c3`＝`end.log`・門は全部 OK・§1 現在便 17,268 字＝残り 2,732）。赤 1 は `ExportRequestTests.Mp4_DrawsThePictures_TheSoundingCopyLit`＝`IOException: s00000.png is being used by another process`（並列 full の中で絵のフォルダを共有した競合・**単独の再走は緑** `rerun.log`・この便の変更は TS だけで Core／Lsp 不変）⇒ 引継ぎの合計は 14857 相当。⚠️ 同じ赤が次も出たら MP4 の網の絵のフォルダを試験ごとに分ける（未着手）。§7 7.5: Core `+` 0・REF 0・OWN 0（Core／Lsp／Cli は触っていない）。7.6: 出所はコードの読みと npm の網・engine の費用は singing-roadmap §1 の表の値。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

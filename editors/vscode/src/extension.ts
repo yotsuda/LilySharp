@@ -6938,8 +6938,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!playbackNotes) { return; }
             const sub = playbackNotes.filter(n => n.S >= start && n.S < end);
             if (sub.length === 0) { return; }
-            let minT = Infinity;
-            for (const n of sub) { if (n.T < minT) { minT = n.T; } }
+            let minT = Infinity, maxEnd = 0;
+            for (const n of sub) { if (n.T < minT) { minT = n.T; } if (n.T + n.D > maxEnd) { maxEnd = n.T + n.D; } }
+            // The sung voice is cut to the bar too (owner's report 2026-11-09, session 1150: Alt+M
+            // sang the first bar's words — the voice plan was the last Play's, the whole piece from
+            // its 0, while the instruments played the bar moved to 0). One piece: the bar's stretch
+            // of the score's time, as a Play with bars selected plays (spanPieces).
+            voicePlan = { pieces: [[minT, maxEnd]], rounds: 1 };
             // Reschedule the measure to start at t=0, then reuse the full scheduler.
             startPlayback(sub.map(n => Object.assign({}, n, { T: n.T - minT })), 0);
         }
