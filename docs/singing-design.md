@@ -190,11 +190,14 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   preparing if any, else ready). Each time the host asks `lilysharp/sung` it also posts
   `voiceParts`, the parts the score sings now, and the page drops the voices and states of any
   other — so a score or a text with no lyrics shows no microphone (owner's report, session 1143:
-  it stayed on). Another document or another score (`voiceDocs`, `uri\nrender`) empties the
-  page's voices before its notes go out (`clearVoices` ahead of `playbackData`, in order): the
-  voices are kept by part name, and a Play right after a tab switch sang the previous file's
-  `melody` over the new notes (owner's report, session 1145). A Play still never waits: the
-  badge says why the instrument stood in.
+  it stayed on). Another document or another score (`followVoices`: `voiceDocs`, `uri\nrender`)
+  empties the page's voices as the preview turns to it (`updatePreviewContent`) and again ahead
+  of its notes (`clearVoices` before `playbackData`, in order): the voices are kept by part
+  name, and a Play right after a tab switch sang the previous file's `melody` over the new notes
+  (owner's report, session 1145). The emptying leaves a nameless `preparing` placeholder, so the
+  microphone turns grey, not blue or gone, until `voiceParts` names the new voices (owner's
+  report, session 1146: it stayed blue), and the new voices are asked for at once. A Play still
+  never waits: the badge says why the instrument stood in.
 - **MIDI out** (`lilysharp.playback.midiOutput` set): the port plays the instruments, the
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The
   alignment is the round trip's jitter, some tens of milliseconds; acceptable for a preview,

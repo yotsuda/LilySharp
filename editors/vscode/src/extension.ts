@@ -1687,13 +1687,9 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // by PART NAME, and a Play right after the switch would sing them over the new notes
                 // (owner's report 2026-11-08: the previous .lys's voice). Cleared before the notes
                 // go out — the messages arrive in order — so this Play plays the instruments, and
-                // singVoices below sends the new file's voices as they are ready.
-                const voiceDoc = `${uri}\n${selectedRenders.get(uri) || ''}`;
-                if (voiceDocs.get(panel) !== voiceDoc) {
-                    voiceDocs.set(panel, voiceDoc);
-                    postedVoices.delete(panel);
-                    panel.webview.postMessage({ type: 'clearVoices' });
-                }
+                // singVoices below sends the new file's voices as they are ready. (The render path
+                // does the same the moment the preview turns to another document: followVoices.)
+                followVoices(panel, uri, false);
                 try {
                     // Name the score the preview is showing, so Play sounds ITS parts and
                     // form: with `score p2 { staff p2 }` picked, p1 stayed audible
@@ -1917,6 +1913,8 @@ async function updatePreviewContent(
     // Whether the right-click menu offers the OMR doors (owner, 2026-10-24: not for a file
     // the reader did not write) — asked again with each render, as an import adds the file.
     void panel.webview.postMessage({ type: 'scanState', hasScan: hasScan(document.uri) });
+    // Another document or score: its voices replace the last one's, asked for now (singing-design §5).
+    followVoices(panel, uri, true);
     // The chords of the text, for Select Chord on a member right-clicked (owner's request 2026-10-27).
     void panel.webview.postMessage({ type: 'chordSpans', spans: chordSpans(document.getText()) });
     // The @todo marks of the text, for Resolve This TODO on the bar right-clicked and Resolve
@@ -3832,6 +3830,24 @@ function disposeSinger(): void {
 const postedVoices = new WeakMap<vscode.WebviewPanel, Map<string, string>>();
 /** The document and score each preview's voices are of (`uri\nrender`): another one empties them first. */
 const voiceDocs = new WeakMap<vscode.WebviewPanel, string>();
+
+/**
+ * Keeps a preview's voices to the document and score it shows. When they change, what the page
+ * holds is the last document's (kept by part name — two files with a `melody` would share a
+ * buffer): the page is told to drop it and to show the microphone as PREPARING until the new
+ * document's voices are named (owner's report 2026-11-08, session 1146: after the switch the
+ * microphone stayed blue), and — with `sing` — the new voices are asked for at once, so the
+ * microphone turns blue as they land, not at the next Play. Answers whether anything changed.
+ */
+function followVoices(panel: vscode.WebviewPanel, uri: string, sing: boolean): boolean {
+    const voiceDoc = `${uri}\n${selectedRenders.get(uri) || ''}`;
+    if (voiceDocs.get(panel) === voiceDoc) { return false; }
+    voiceDocs.set(panel, voiceDoc);
+    postedVoices.delete(panel);
+    void panel.webview.postMessage({ type: 'clearVoices', pending: true });
+    if (sing) { void singVoices(panel, uri); }
+    return true;
+}
 /** What was said once per preview (a warning of the server's, a voice that was not sung). */
 const singerTold = new WeakMap<vscode.WebviewPanel, Set<string>>();
 function tellSingerOnce(panel: vscode.WebviewPanel, text: string): void {
@@ -6053,7 +6069,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 setVoiceState(message.part, 'failed', 'the WAV could not be decoded');
             });
         }
-        function clearVoices() { stopVoices(); voices.clear(); voiceStates.clear(); renderVoiceBadge(); }
+        // pending: another document's voices are on their way (the host asked for them) — the
+        // microphone stays grey as "preparing" until 'voiceParts' names them (or names none).
+        // (No backticks in this script: it lives in a template literal.)
+        function clearVoices(pending) {
+            stopVoices(); voices.clear(); voiceStates.clear();
+            if (pending) { voiceStates.set('', { state: 'preparing' }); }
+            renderVoiceBadge();
+        }
         // The parts the score sings now ('voiceParts', each time the host asks lilysharp/sung): a
         // voice or a state of any other part is from an earlier score or an earlier text of this
         // one, and goes — so a score with no lyrics shows no microphone.
@@ -7440,7 +7463,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     keepVoices(message.parts);
                     break;
                 case 'clearVoices':
-                    clearVoices();
+                    clearVoices(!!message.pending);
                     break;
                 case 'midiStarted':
                     midiStarted(message);

@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1144セッションの経緯
+
+### 1.1 第1144セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14855 / 0 / 2**（`-Start p1144`・HEAD `78e2be3eb`・未 push 44・OMR の open 0）。同じ会話で第1143 から続けた便。オーナー報告「`corpora/ベースタブLy/雪やこんこ.lys` の score の歌が出ない: melody: not sung — note 22 at 6.364 s: starts before note 21 ends (6.364 s)」。作業場所は Lab `sessions/p1144/`。
+
+- **原因**: Lily# の両方の呼び手（エディタ `singerCore.cantilenaScore`＝1e-4・CLI `Audio.SungScoreJson`＝1e-6）が音の **start と duration を別々に丸めていた**。132 の 16 分は 60/132/4＝0.113636…の循環小数で、`round(start_n)` が `round(start_{n-1}) + round(dur_{n-1})` より 1 単位小さくなり、Cantilena の `Validate`（許容 1e-9）が重なりとして断った。`lysc wav --singer` でも再現（note 23 at 6.591 s）。
+- **直し（両側）**: Lily# は**音の両端で丸める**（`start = round(T)`・`end = round(T+D)`・`duration = end − start`）＝接する音は接したまま（速度を変えても）。Cantilena は `SungScore.Tidy()`（1 ms 未満の重なりは前の音を次の頭まで切る＝呼び手の丸め・`ScoreJson.Read` が必ず通す・それ以上の重なりは従来どおり Validate が言う）。網: `SungScoreJsonTests`（雪やこんこの旋律 25 音が Cantilena の規則で通る）・`singerCore.test.ts`（132 の付点 8 分 40 音・速度 1／0.85／0.5／1.1）・Cantilena `ScoreJsonTests`（1e-6 の重なりは接触・10 ms は問題）。Lily# 44 / 44・npm 896 / 896・Cantilena 42 / 42。
+- **配布**: Cantilena は `deploy-extension.ps1`（動いていた engine を止めて win32-x64 0.4.0 を入れ直し）・Lily# は `Deploy-Lsp.ps1`。**E2E**: `lysc wav --singer`＋入れ直した cantilena.exe（NEUTRINO）で雪やこんこが **`Voice: cantilena sings melody (25 notes, 8.0 s)`**＝警告なし。オーナーは Reload Window。docs: singing-design §3・Cantilena design §2・両 CHANGELOG。
+- 残り: 実機で雪やこんこの ▶（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
+- 終了時 full **14856 / 0 / 2 / 14858**（`-End p1144 -DiffBase 78e2be3eb`＝`end.log`・門は全部 OK・§1 現在便 16,091 字＝残り 3,909）。§7 7.5: `-End` は commit 前の diff なので Core `+` 0 と出るが、実際は `Audio/SingingEngine.cs` の丸めの 4 行（REF 0・OWN 0＝規則は数の丸め）。7.6: 出所はオーナー報告の再現。7.7: なし。この commit と Lab・Cantilena の commit は Claude・push はオーナー。
+
 ## 以下は第1143セッションの経緯
 
 ### 1.1 第1143セッション（2026-11-08・YT-DELL2）

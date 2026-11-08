@@ -475,7 +475,9 @@ export interface VoiceStatus { part: string; state: VoiceState; detail?: string 
 export function voiceBadge(voices: readonly VoiceStatus[]): { state: VoiceState; title: string } | null {
     if (voices.length === 0) { return null; }
     const of = (state: VoiceState) => voices.filter(v => v.state === state);
-    const names = (list: readonly VoiceStatus[]) => list.map(v => v.part).join(', ');
+    // A nameless entry is the placeholder the page keeps between one document's voices being
+    // dropped and the next document's being named (the mic stays grey, not blue or gone).
+    const names = (list: readonly VoiceStatus[]) => list.map(v => v.part).filter(Boolean).join(', ');
     const failed = of('failed'), preparing = of('preparing'), ready = of('ready');
     const rest = [preparing.length > 0 ? `preparing: ${names(preparing)}` : '', ready.length > 0 ? `ready: ${names(ready)}` : ''].filter(Boolean);
     if (failed.length > 0) {
@@ -483,7 +485,8 @@ export function voiceBadge(voices: readonly VoiceStatus[]): { state: VoiceState;
         return { state: 'failed', title: [...lines, ...rest].join('\n') };
     }
     if (preparing.length > 0) {
-        return { state: 'preparing', title: [`singing ${names(preparing)}… (the instrument plays until the voice is ready)`, ...(ready.length > 0 ? [`ready: ${names(ready)}`] : [])].join('\n') };
+        const who = names(preparing);
+        return { state: 'preparing', title: [`singing${who ? ' ' + who : ''}… (the instrument plays until the voice is ready)`, ...(ready.length > 0 ? [`ready: ${names(ready)}`] : [])].join('\n') };
     }
     return { state: 'ready', title: `voice ready: ${names(ready)}` };
 }

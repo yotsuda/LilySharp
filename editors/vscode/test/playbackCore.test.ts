@@ -88,6 +88,13 @@ describe('the voice badge', () => {
             { state: 'ready', title: 'voice ready: melody, alto' });
     });
 
+    it('stays preparing on the nameless placeholder between one document\'s voices and the next\'s', () => {
+        assert.deepEqual(voiceBadge([{ part: '', state: 'preparing' }]),
+            { state: 'preparing', title: 'singing… (the instrument plays until the voice is ready)' });
+        assert.deepEqual(voiceBadge([{ part: '', state: 'preparing' }, { part: 'melody', state: 'ready' }]),
+            { state: 'preparing', title: 'singing… (the instrument plays until the voice is ready)\nready: melody' });
+    });
+
     it('is failed when any voice is, with the engine\'s sentence, and still lists the rest', () => {
         assert.deepEqual(voiceBadge([{ part: 'melody', state: 'failed', detail: 'no engine is set up' }, { part: 'alto', state: 'ready' }]),
             { state: 'failed', title: 'melody: not sung — no engine is set up (its instrument plays)\nready: alto' });

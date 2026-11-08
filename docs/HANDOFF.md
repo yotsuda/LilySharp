@@ -138,6 +138,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1146セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14856 / 0 / 2**（`-Start p1146`・HEAD `0aa68a994`・未 push 46・OMR の open 0）。同じ会話で第1145 から続けた便。オーナー報告「直前の本の歌唱は鳴らなくなったが、マイクが準備完了のまま。歌を捨てたら準備中の表示にして」。作業場所は Lab `sessions/p1146/`。
+
+- **原因**: 第1145 は声を捨てるのを `requestPlayback`（▶）のときだけにしていて、ページの `clearVoices` は状態を空にするだけ＝印は一瞬消えてすぐ（キャッシュ済みの）新しい声で青に戻るか、▶ を押すまで古い青のまま。文書が替わったことをページに言う者がいなかった。
+- **直し**: host `followVoices(panel, uri, sing)` を `updatePreviewContent`（プレビューが文書／score に向いた瞬間）と `requestPlayback` の両方で。別の `uri\nrender` なら `postedVoices` を捨て、**`clearVoices` に `pending: true`** を付けて post し、描画経路からは **すぐ `singVoices`**（▶ を待たずに新しい声を頼む）。ページは `pending` のとき名無しの `preparing` を 1 つ置く＝マイクは灰のまま、`voiceParts`（`lilysharp/sung` の答えごと）が名無しを落として本物の部の状態に替える（歌詞の無い本なら消える）。`playbackCore.voiceBadge` は名無しを title に書かない（「singing… (the instrument plays until the voice is ready)」）。網 +1（898 / 898）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・MANUAL-CHECKS §3.7・editors CHANGELOG。
+- 残り: 実機（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み・同じ本の編集直後の ▶ は旧声を鳴らしうる＝第1145 の註）。
+- 終了時 full **14856 / 0 / 2 / 14858**（`-End p1146 -DiffBase 0aa68a994`＝`end.log`・門は全部 OK・§1 現在便 15,720 字＝残り 4,280）。⚠️ 同じ pipeline の npm は **TS1005 で落ちていた**＝ページのスクリプト（テンプレート文字列）に書いたコメントの**バッククォート**が文字列を閉じた（第1141 の `'\n'` と同じ族＝ページのスクリプトにバッククォートと `\` を書かない）→ 直して npm 897 / 897・配布し直し（`followVoices` が入った `extension.js` を確認）。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6: 出所はオーナー報告。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1145セッションの経緯
+
 ### 1.1 第1145セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14856 / 0 / 2**（`-Start p1145`・HEAD `96dbe8eea`・未 push 45・OMR の open 0）。同じ会話で第1144 から続けた便。オーナー報告「タブで .lys を切り替えてすぐプレビューの ▶ を押すと、直前の .lys の歌唱が鳴る」。作業場所は Lab `sessions/p1145/`。
@@ -147,18 +158,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 残る小さな親戚（直していない）: 同じ本を編集した直後の ▶ は、新しい声ができるまで編集前の声を鳴らしうる（同名・同文書）。
 - 残り: 実機（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
 - 終了時 full **14856 / 0 / 2 / 14858**（`-End p1145 -DiffBase 96dbe8eea`＝`end.log`・門は全部 OK・§1 現在便 15,586 字＝残り 4,414）。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6: 出所はオーナー報告の再現。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1144セッションの経緯
-
-### 1.1 第1144セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14855 / 0 / 2**（`-Start p1144`・HEAD `78e2be3eb`・未 push 44・OMR の open 0）。同じ会話で第1143 から続けた便。オーナー報告「`corpora/ベースタブLy/雪やこんこ.lys` の score の歌が出ない: melody: not sung — note 22 at 6.364 s: starts before note 21 ends (6.364 s)」。作業場所は Lab `sessions/p1144/`。
-
-- **原因**: Lily# の両方の呼び手（エディタ `singerCore.cantilenaScore`＝1e-4・CLI `Audio.SungScoreJson`＝1e-6）が音の **start と duration を別々に丸めていた**。132 の 16 分は 60/132/4＝0.113636…の循環小数で、`round(start_n)` が `round(start_{n-1}) + round(dur_{n-1})` より 1 単位小さくなり、Cantilena の `Validate`（許容 1e-9）が重なりとして断った。`lysc wav --singer` でも再現（note 23 at 6.591 s）。
-- **直し（両側）**: Lily# は**音の両端で丸める**（`start = round(T)`・`end = round(T+D)`・`duration = end − start`）＝接する音は接したまま（速度を変えても）。Cantilena は `SungScore.Tidy()`（1 ms 未満の重なりは前の音を次の頭まで切る＝呼び手の丸め・`ScoreJson.Read` が必ず通す・それ以上の重なりは従来どおり Validate が言う）。網: `SungScoreJsonTests`（雪やこんこの旋律 25 音が Cantilena の規則で通る）・`singerCore.test.ts`（132 の付点 8 分 40 音・速度 1／0.85／0.5／1.1）・Cantilena `ScoreJsonTests`（1e-6 の重なりは接触・10 ms は問題）。Lily# 44 / 44・npm 896 / 896・Cantilena 42 / 42。
-- **配布**: Cantilena は `deploy-extension.ps1`（動いていた engine を止めて win32-x64 0.4.0 を入れ直し）・Lily# は `Deploy-Lsp.ps1`。**E2E**: `lysc wav --singer`＋入れ直した cantilena.exe（NEUTRINO）で雪やこんこが **`Voice: cantilena sings melody (25 notes, 8.0 s)`**＝警告なし。オーナーは Reload Window。docs: singing-design §3・Cantilena design §2・両 CHANGELOG。
-- 残り: 実機で雪やこんこの ▶（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
-- 終了時 full **14856 / 0 / 2 / 14858**（`-End p1144 -DiffBase 78e2be3eb`＝`end.log`・門は全部 OK・§1 現在便 16,091 字＝残り 3,909）。§7 7.5: `-End` は commit 前の diff なので Core `+` 0 と出るが、実際は `Audio/SingingEngine.cs` の丸めの 4 行（REF 0・OWN 0＝規則は数の丸め）。7.6: 出所はオーナー報告の再現。7.7: なし。この commit と Lab・Cantilena の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 
