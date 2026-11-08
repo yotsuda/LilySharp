@@ -181,8 +181,10 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   (`preparing` before the engine is asked, `failed` with the reason); `ready` is the page's
   own, when `setVoice` has decoded the WAV, so it means playable; a speed change starts the
   cycle again. One badge for all voices: `playbackCore.voiceBadge` (failed if any, else
-  preparing if any, else ready). A Play still never waits: the badge says why the instrument
-  stood in.
+  preparing if any, else ready). Each time the host asks `lilysharp/sung` it also posts
+  `voiceParts`, the parts the score sings now, and the page drops the voices and states of any
+  other — so a score or a text with no lyrics shows no microphone (owner's report, session 1143:
+  it stayed on). A Play still never waits: the badge says why the instrument stood in.
 - **MIDI out** (`lilysharp.playback.midiOutput` set): the port plays the instruments, the
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The
   alignment is the round trip's jitter, some tens of milliseconds; acceptable for a preview,

@@ -3849,6 +3849,10 @@ async function singVoices(panel: vscode.WebviewPanel, uri: string): Promise<void
         return;
     }
     if (sung.Error || !sung.Voices) { return; }
+    // Which parts this score sings now: the page drops the voices and the badge's states of any
+    // other (a score or a file with no lyrics empties it — owner's report 2026-11-08: the
+    // microphone stayed on after the lyrics were gone).
+    panel.webview.postMessage({ type: 'voiceParts', parts: sung.Voices.filter(v => v.Notes.length > 0).map(v => v.Part) });
     const speed = previewPractice.get(panel)?.speed ?? 1;
     let posted = postedVoices.get(panel);
     if (!posted) { postedVoices.set(panel, posted = new Map()); }
@@ -6037,6 +6041,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             });
         }
         function clearVoices() { stopVoices(); voices.clear(); voiceStates.clear(); renderVoiceBadge(); }
+        // The parts the score sings now ('voiceParts', each time the host asks lilysharp/sung): a
+        // voice or a state of any other part is from an earlier score or an earlier text of this
+        // one, and goes — so a score with no lyrics shows no microphone.
+        function keepVoices(parts) {
+            const keep = new Set(parts || []);
+            for (const part of [...voices.keys()]) { if (!keep.has(part)) { voices.delete(part); } }
+            for (const part of [...voiceStates.keys()]) { if (!keep.has(part)) { voiceStates.delete(part); } }
+            renderVoiceBadge();
+        }
         // The pane's sign of the voices (owner's request 2026-11-08): what the host says of each
         // (preparing, failed — the 'voiceState' message) and what this page decoded (ready), shown
         // as one badge beside the transport (playbackCore.voiceBadge) and as a sign on each
@@ -7409,6 +7422,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'voiceState':
                     setVoiceState(message.part, message.state, message.detail);
+                    break;
+                case 'voiceParts':
+                    keepVoices(message.parts);
                     break;
                 case 'clearVoices':
                     clearVoices();

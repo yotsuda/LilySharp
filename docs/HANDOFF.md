@@ -138,6 +138,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1143セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14855 / 0 / 2**（`-Start p1143`・HEAD `466d94e36`・未 push 43・OMR の open 0）。同じ会話で第1142 から続けた便。オーナー「この UI は悪くない、なかなか良い。でも score に歌詞がない場合にはマイクを消してほしい」。作業場所は Lab `sessions/p1143/`。
+
+- **原因**: page の `voiceStates`（と `voices` の WAV）は `voiceState`／`voice` が届いて増えるだけで、消すのは engine が替わったときの `clearVoices` だけ＝歌詞の無い score や本に切り替えても古い部が残り、マイクが出たままだった。
+- **直し**: host の `singVoices` が `lilysharp/sung` の答えを得るたびに **`voiceParts`**（今この score が歌うパート＝音のある声）を post し、page の `keepVoices(parts)` が一覧に無い部の声と状態を落として描き直す（空なら全部消える）。`lilysharp/sung` が Error（本が通らない）のときは何も送らない＝一時的なエラーで消さない。npm 896 / 896・`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・MANUAL-CHECKS §3.7。
+- 残り: マイクの最終確認（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
+- 終了時 full **14855 / 0 / 2 / 14857**（`-End p1143 -DiffBase 466d94e36`＝`end.log`・門は全部 OK・§1 現在便 15,429 字＝残り 4,571）。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6・7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1142セッションの経緯
+
 ### 1.1 第1142セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14855 / 0 / 2**（`-Start p1142`・HEAD `ea90bb174`・未 push 42・OMR の open 0）。同じ会話で第1141 から続けた便。オーナーの見立て「インジケーターがボタンみたいな見た目だが押す物ではない＝良くない。▶ に重ねるのはよいかも。ただ ♪ では歌と結びつかない（楽器の音も音符だから）」。作業場所は Lab `sessions/p1142/`。
@@ -145,17 +156,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **バッジの 2 つ目の形**: `<span id="voiceBadge" role="status">` に inline SVG の**マイク**（声の記号）を入れ、`.play-wrap { position: relative }` で ▶ を包んで**右下の隅に重ねる**（枠なし・丸い白地（dark は #2d2d2d）・12 px）。色は前と同じ＝灰の点滅（preparing）／青（ready・#0078d7、dark #4fa3ff）／error 色（failed）。クリックで practice メニューは前のまま。JS（`voiceStates`・`renderVoiceBadge`・`data-state`）とトグルの `…`／`✓`／`⚠` は不変。check-types 0・npm 896 / 896。`Deploy-Lsp.ps1` で配布（`deploy.log`・入った `extension.js` に `play-wrap`）＝オーナーは Reload Window。docs: singing-design §5（2 つの形とオーナーの理由）・MANUAL-CHECKS §3.7・editors CHANGELOG。
 - 残り: マイクの見た目の最終判断（オーナーの目・大きさ／位置／色は CSS 数行）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
 - 終了時 full **14855 / 0 / 2 / 14857**（`-End p1142 -DiffBase ea90bb174`＝`end.log`・門は全部 OK・§1 現在便 15,519 字＝残り 4,481）。§7 7.5: Core `+` 0（エディタの HTML／CSS と docs だけ）。7.6・7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1141セッションの経緯
-
-### 1.1 第1141セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14855 / 0 / 2**（`-Start p1141`・HEAD `c2523fcc5`・未 push 41・OMR の open 0）。同じ会話で第1140 から続けた便。オーナー報告「プレビューの ▶ で歌唱が出ない（かえるのうた.lys）」→ 原因と直し → オーナー指示「deploy-extension.ps1 で win 版を VS Code を kill せずに配れるように」→ オーナー要望「プレビューペインに歌唱の準備中／準備完了のサイン」（位置は見てから決める）。作業場所は Lab `sessions/p1141/`。
-
-- **歌わない原因**: 入っていた Cantilena 0.4.0 が **darwin-arm64 の VSIX**（`bin\osx-arm64` だけ・`cantilena.exe` 無し・engine が起動せず Cantilena の出力チャネル 0 B）。楽譜は正常。Cantilena の `deploy-extension.ps1` が「いちばん新しい .vsix」を選んでいて、3 target の pack 直後（21:53:52／21:54:00／21:54:07）の 21:54:07 に走ったので darwin 版が入った。**Cantilena の commit（tools: deploy-extension.ps1）**: win32-x64 を名前で選ぶ・pack は win-x64 だけ・動いている engine（拡張の `cantilena.exe` とその子の NEUTRINO）だけ止めて VS Code は閉じない・uninstall → install・入った物の manifest と exe を検証。実走して win32-x64 0.4.0 が入った。**Cantilena のもう 1 本（extension: Check Setup）**: Check Setup が「この VSIX は osx-arm64 用、cantilena-win32-x64-<版>.vsix を入れよ」と名指す（`missingProgramNote`・npm 15 / 15）。
-- **声のバッジ（Lily# のエディタ）**: host `singVoices` が `voiceState`（`preparing`＝engine に頼む前・キャッシュ命中では出さない／`failed`＝理由つき）を post・`ready` はページが `setVoice` で WAV を decode したとき＝再生できる状態。ページは `voiceStates` と `renderVoiceBadge()`＝⏹ の右の **`#voiceBadge`（♪）**（声が無ければ非表示・灰の点滅／押し込み青／赤・title に部の名と理由・クリックで practice メニュー）と practice の `♪ part` トグルの `…`／`✓`／`⚠`（CSS `::after`・`data-state`）。要約は `playbackCore.voiceBadge`（failed があれば failed・preparing があれば preparing・残りは ready）＝`window.LysSynth` に出す。網 3 本（`playbackCore.test.ts`）＝npm 896 / 896。⚠️ ページのスクリプトはテンプレート文字列の中なので `'\n'` が本物の改行になり壊れた（`webviewScript.test` が捕まえた）→ `String.fromCharCode(10)`。docs: singing-design §5・MANUAL-CHECKS §3.7・editors CHANGELOG。**`Deploy-Lsp.ps1` で入っている拡張に配った**（`deploy.log`・server 116 files 検証）＝オーナーは Reload Window。**位置（▶ ⏹ の隣）は仮置き＝オーナーが見てから決める**。
-- 残り: バッジの位置と見た目の調整（オーナーの目）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
-- 終了時 full **14854 / 1 / 2 / 14857**（`-End p1141 -DiffBase c2523fcc5`＝`end.log`）: 赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`＝この語りに書いた **Cantilena の SHA 2 つ**（この repo の履歴に無い＝949 / 947）→ SHA を消して説明に替え、`HistoryCitation`＋`HandoffArchiveContinuity`＋`TheHandoffStaysReadable` 8 / 8 緑。⚠️ **他 repo の commit は HANDOFF に SHA で書かない**（Lab の notes には書いてよい）。他の門は全部 OK・§1 現在便 16,440 字＝残り 3,560。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6・7.7: なし。この commit と Lab・Cantilena の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

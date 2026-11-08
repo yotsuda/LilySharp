@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1141セッションの経緯
+
+### 1.1 第1141セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14855 / 0 / 2**（`-Start p1141`・HEAD `c2523fcc5`・未 push 41・OMR の open 0）。同じ会話で第1140 から続けた便。オーナー報告「プレビューの ▶ で歌唱が出ない（かえるのうた.lys）」→ 原因と直し → オーナー指示「deploy-extension.ps1 で win 版を VS Code を kill せずに配れるように」→ オーナー要望「プレビューペインに歌唱の準備中／準備完了のサイン」（位置は見てから決める）。作業場所は Lab `sessions/p1141/`。
+
+- **歌わない原因**: 入っていた Cantilena 0.4.0 が **darwin-arm64 の VSIX**（`bin\osx-arm64` だけ・`cantilena.exe` 無し・engine が起動せず Cantilena の出力チャネル 0 B）。楽譜は正常。Cantilena の `deploy-extension.ps1` が「いちばん新しい .vsix」を選んでいて、3 target の pack 直後（21:53:52／21:54:00／21:54:07）の 21:54:07 に走ったので darwin 版が入った。**Cantilena の commit（tools: deploy-extension.ps1）**: win32-x64 を名前で選ぶ・pack は win-x64 だけ・動いている engine（拡張の `cantilena.exe` とその子の NEUTRINO）だけ止めて VS Code は閉じない・uninstall → install・入った物の manifest と exe を検証。実走して win32-x64 0.4.0 が入った。**Cantilena のもう 1 本（extension: Check Setup）**: Check Setup が「この VSIX は osx-arm64 用、cantilena-win32-x64-<版>.vsix を入れよ」と名指す（`missingProgramNote`・npm 15 / 15）。
+- **声のバッジ（Lily# のエディタ）**: host `singVoices` が `voiceState`（`preparing`＝engine に頼む前・キャッシュ命中では出さない／`failed`＝理由つき）を post・`ready` はページが `setVoice` で WAV を decode したとき＝再生できる状態。ページは `voiceStates` と `renderVoiceBadge()`＝⏹ の右の **`#voiceBadge`（♪）**（声が無ければ非表示・灰の点滅／押し込み青／赤・title に部の名と理由・クリックで practice メニュー）と practice の `♪ part` トグルの `…`／`✓`／`⚠`（CSS `::after`・`data-state`）。要約は `playbackCore.voiceBadge`（failed があれば failed・preparing があれば preparing・残りは ready）＝`window.LysSynth` に出す。網 3 本（`playbackCore.test.ts`）＝npm 896 / 896。⚠️ ページのスクリプトはテンプレート文字列の中なので `'\n'` が本物の改行になり壊れた（`webviewScript.test` が捕まえた）→ `String.fromCharCode(10)`。docs: singing-design §5・MANUAL-CHECKS §3.7・editors CHANGELOG。**`Deploy-Lsp.ps1` で入っている拡張に配った**（`deploy.log`・server 116 files 検証）＝オーナーは Reload Window。**位置（▶ ⏹ の隣）は仮置き＝オーナーが見てから決める**。
+- 残り: バッジの位置と見た目の調整（オーナーの目）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
+- 終了時 full **14854 / 1 / 2 / 14857**（`-End p1141 -DiffBase c2523fcc5`＝`end.log`）: 赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`＝この語りに書いた **Cantilena の SHA 2 つ**（この repo の履歴に無い＝949 / 947）→ SHA を消して説明に替え、`HistoryCitation`＋`HandoffArchiveContinuity`＋`TheHandoffStaysReadable` 8 / 8 緑。⚠️ **他 repo の commit は HANDOFF に SHA で書かない**（Lab の notes には書いてよい）。他の門は全部 OK・§1 現在便 16,440 字＝残り 3,560。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6・7.7: なし。この commit と Lab・Cantilena の commit は Claude・push はオーナー。
+
 ## 以下は第1140セッションの経緯
 
 ### 1.1 第1140セッション（2026-11-08・YT-DELL2）
