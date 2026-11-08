@@ -4,7 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **No microphone on a file with no lyrics**: switching to such a file while the engine was being asked for the previous file's voice left the microphone pulsing for ever; a late word about a part the score does not sing is dropped on both sides.
+- **No microphone on a file with no lyrics**: switching to such a file while the engine was being asked for the previous file's voice left the microphone pulsing for ever; a late word about a part the score does not sing is dropped on both sides, and the grey placeholder shown while the voices are being named gives up after ten seconds. The Lily# Extension output says what each ask for the voices found.
 - **The practice menu follows a change of score**: with the menu open, switching the score (or the file the preview follows) kept the last score's parts in the list; the list is rebuilt for the score shown.
 - **Two resets under the practice menu's parts**: *Reset parts* puts the part selection back to the score shown (nothing muted, the parts it leaves out off, every voice sung — the toggles are kept by name across files, so this is also the way back from a part silenced in another file), *Reset faders* puts every fader at 100 %.
 - **A volume fader beside each part in the practice menu**: to the right of every part, sung voice and left-out part, a slider from 0 to 200 % (a note's velocity stops at 127). It shapes Play, the MIDI output and the WAV, MP3 and MP4 exports alike (the export's message says "alt at 50%"); an instrument's slider scales its notes' velocity, a voice's its level in the mix, and 0 silences it. A slider that is not at 100 % shows its number beside it, and a double-click puts it back to 100 %.

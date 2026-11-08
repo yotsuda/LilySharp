@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1159セッションの経緯
+
+### 1.1 第1159セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14861 / 0 / 2**（`-Start p1159`・HEAD `578f62922`・未 push 59・OMR の open 0）。同じ会話で第1158 から続けた便。オーナー要望「フェーダーの横幅をもっと長くして。200% の先端を右に伸ばして」。作業場所は Lab `sessions/p1159/`。
+
+- **直し（CSS 1 行）**: `.practice-panel .parts input.fader` の幅 76px → **160px**（Tempo のスライダーと同じ）。行は右へ伸び、パネルの幅も広がる。網: npm 907 / 907・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: MANUAL-CHECKS §3.7 のフェーダーの行。
+- 残り: 実機（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1159 -DiffBase 578f62922`＝`end.log`・門は全部 OK・§1 現在便 15,321 字＝残り 4,679）。§7 7.5: Core `+` 0・REF 0・OWN 0（CSS 1 行と docs）。7.6: 出所はオーナーの要望。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1158セッションの経緯
 
 ### 1.1 第1158セッション（2026-11-09・YT-DELL2）

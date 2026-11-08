@@ -138,6 +138,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1161セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14861 / 0 / 2**（`-Start p1161`・HEAD `78f77b1ef`・未 push 61・OMR の open 0）。同じ会話で第1160 から続けた便。オーナー報告「直っていない。`Downloads\Untitled-9.lys` は歌詞がないのに、開くとプレビューでマイクが点滅したまま」。作業場所は Lab `sessions/p1161/`（`notes.md`）。
+
+- **確かめたこと**: サーバーは正常（一時 probe・削除済み: `lilysharp/sung` はエラー無し・声 0、Svg の SelectedRender は `""`＝score 名のずれ無し）。host は pages／svg／error のどの枝でも描画の後に `prepareVoices('edit')` へ達する。**読みでは placeholder が答え無しで残る経路を特定できず**＝第1160 の直し（遅れた `preparing`）とは別の穴が在る。
+- **直し（3 つ・症状を確実に塞ぐ＋次に読めるように）**: ⑴ ページの無名 placeholder（声を名指すまでの灰の点滅）は **10 秒で期限切れ**（`PLACEHOLDER_MS`・サーバーは ms で答えるので古い placeholder は失われた答え・出力チャネルに `voice: the placeholder outlived its answer`）。⑵ `prepareVoices` は最初に `followVoices` を呼んで鍵をページと揃え（描画が score 名を直した場合に `current()` が偽になって黙って return する経路を潰す）、**1 回の問い合わせごとに出力チャネルへ 1 行**（`singer: prepare (edit) Untitled-9.lys: no sung part` ／ `sung: melody` ／ `no engine` ／ `the preview turned meanwhile` ／ `lilysharp/sung failed` ／ `no answer`）。⑶ 第1158 の取りこぼし＝**pages の post に `scoreKey` が無かった**（練習メニューの追従は pages の経路では効いていなかった）を直した。
+- 網: npm **907 / 907**・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・editors CHANGELOG・MANUAL-CHECKS §3.7（Untitled-9 の手順と、残ったときに貼る行）。
+- **オーナーへ**: それでも点滅が残ったら、出力チャネル「Lily# Extension」の `singer: prepare` の行と `PREVIEW` の行を貼ってほしい（どの経路で答えが失われたかが読める）。
+- 残り: 前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1161 -DiffBase 78f77b1ef`＝`end.log`・門は全部 OK・§1 現在便 16,239 字＝残り 3,761）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所は probe の実測とコードの読み。7.7: placeholder が残る経路は未特定＝出力チャネルの行で次に読む。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1160セッションの経緯
+
 ### 1.1 第1160セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14861 / 0 / 2**（`-Start p1160`・HEAD `3e738aede`・未 push 60・OMR の open 0）。同じ会話で第1159 から続けた便。オーナー報告「歌詞をひとつも持たない .lys で、再生ボタン上のマイクが点滅したままになる。歌詞がない .lys ではマイクは非表示にして」。作業場所は Lab `sessions/p1160/`（`notes.md`）。
@@ -147,16 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 網: npm **907 / 907**・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・editors CHANGELOG・MANUAL-CHECKS §3.7「歌詞の無い .lys にマイクは出ない」。
 - 残り: 実機（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
 - 終了時 full **14861 / 0 / 2 / 14863**（`-End p1160 -DiffBase 3e738aede`＝`end.log`・門は全部 OK・§1 現在便 15,829 字＝残り 4,171）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所はコードの読み（`renderVoice` の await の前後）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1159セッションの経緯
-
-### 1.1 第1159セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14861 / 0 / 2**（`-Start p1159`・HEAD `578f62922`・未 push 59・OMR の open 0）。同じ会話で第1158 から続けた便。オーナー要望「フェーダーの横幅をもっと長くして。200% の先端を右に伸ばして」。作業場所は Lab `sessions/p1159/`。
-
-- **直し（CSS 1 行）**: `.practice-panel .parts input.fader` の幅 76px → **160px**（Tempo のスライダーと同じ）。行は右へ伸び、パネルの幅も広がる。網: npm 907 / 907・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: MANUAL-CHECKS §3.7 のフェーダーの行。
-- 残り: 実機（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
-- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1159 -DiffBase 578f62922`＝`end.log`・門は全部 OK・§1 現在便 15,321 字＝残り 4,679）。§7 7.5: Core `+` 0・REF 0・OWN 0（CSS 1 行と docs）。7.6: 出所はオーナーの要望。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

@@ -2084,7 +2084,8 @@ async function updatePreviewContent(
                 pages,
                 error: response.Error ?? undefined,
                 renders: response.Renders || [],
-                selectedRender: drawnRender
+                selectedRender: drawnRender,
+                scoreKey: `${uri}\n${drawnRender}`     // the pages path too (session 1161: it was left out in 1158)
             });
         } else if (response.Svg) {
             // The response may carry an error TOO: a file with parse errors still
@@ -3956,13 +3957,22 @@ const prepareQueue = new PrepareQueue<PrepareJob>(job => renderVoice(job));
  * settled), and everything is dropped when there is no engine.
  */
 async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: PrepareReason): Promise<void> {
+    // The preview may have turned since the caller looked (a render that corrected the score's
+    // name, selectedRenders): the keys are made to agree here, so a drift never leaves the
+    // page's placeholder unanswered (session 1161).
+    followVoices(panel, uri);
     const voiceDoc = `${uri}\n${selectedRenders.get(uri) || ''}`;
     const current = () => voiceDocs.get(panel) === voiceDoc;   // false once the preview turned or closed meanwhile
+    const file = path.basename(vscode.Uri.parse(uri).fsPath);
+    // One line per ask in the output channel: what was asked and how it ended, so a microphone
+    // that stays can be read back (owner's report 2026-11-09, session 1161).
+    const log = (what: string) => outputChannel.appendLine(`singer: prepare (${reason}) ${file}: ${what}`);
     const settled = () => { if (current()) { void panel.webview.postMessage({ type: 'voiceSettled' }); } };
-    if (!client || !clientReady) { settled(); return; }
+    if (!client || !clientReady) { log('the server is not up'); settled(); return; }
     const engine = await renderer();
-    if (!current()) { return; }
+    if (!current()) { log('the preview turned meanwhile'); return; }
     if (!engine) {
+        log('no engine: the voices are dropped');
         postedVoices.delete(panel);
         void panel.webview.postMessage({ type: 'clearVoices' });
         return;
@@ -3971,16 +3981,17 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     try {
         sung = await client.sendRequest('lilysharp/sung', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
     } catch (e) {
-        outputChannel.appendLine(`singer: lilysharp/sung failed: ${String(e)}`);
+        log(`lilysharp/sung failed: ${String(e)}`);
         settled();
         return;
     }
-    if (!current()) { return; }
-    if (sung.Error || !sung.Voices) { settled(); return; }
+    if (!current()) { log('the preview turned meanwhile'); return; }
+    if (sung.Error || !sung.Voices) { log(`no answer (${sung.Error ?? 'no voices'}): the states stay`); settled(); return; }
     // Which parts this score sings now: the page drops the voices and the badge's states of any
     // other (a score or a file with no lyrics empties it — owner's report 2026-11-08: the
     // microphone stayed on after the lyrics were gone).
     const parts = new Set(sung.Voices.filter(v => v.Notes.length > 0).map(v => v.Part));
+    log(parts.size === 0 ? 'no sung part' : `sung: ${[...parts].join(', ')}`);
     void panel.webview.postMessage({ type: 'voiceParts', parts: [...parts] });
     sungParts.set(panel, parts);
     const speed = previewPractice.get(panel)?.speed ?? 1;
@@ -6243,10 +6254,27 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // pending: another document's voices are on their way (the host asked for them) — the
         // microphone stays grey as "preparing" until 'voiceParts' names them (or names none).
         // (No backticks in this script: it lives in a template literal.)
+        // The placeholder lives until the host names the parts (voiceParts) or says it cannot
+        // (voiceSettled) - and at most PLACEHOLDER_MS, whatever happened to that answer (owner's
+        // report 2026-11-09, session 1161: a file with no lyrics opened with the microphone
+        // pulsing for ever; the server answers in milliseconds, so a placeholder older than this
+        // is a lost answer, not a slow one).
+        const PLACEHOLDER_MS = 10000;
+        let placeholderTimer = null;
         function clearVoices(pending) {
             stopVoices(); voices.clear(); voiceStates.clear();
             sungNow = null;
-            if (pending) { voiceStates.set('', { state: 'preparing' }); }
+            if (placeholderTimer) { clearTimeout(placeholderTimer); placeholderTimer = null; }
+            if (pending) {
+                voiceStates.set('', { state: 'preparing' });
+                placeholderTimer = setTimeout(() => {
+                    placeholderTimer = null;
+                    if (voiceStates.has('')) {
+                        vscode.postMessage({ type: 'webviewPerf', text: 'voice: the placeholder outlived its answer (' + PLACEHOLDER_MS + ' ms) - settled' });
+                        settleVoices();
+                    }
+                }, PLACEHOLDER_MS);
+            }
             renderVoiceBadge();
         }
         // The parts the score sings now ('voiceParts', each time the host asks lilysharp/sung): a
@@ -6258,6 +6286,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function keepVoices(parts) {
             const keep = new Set(parts || []);
             sungNow = keep;
+            if (placeholderTimer) { clearTimeout(placeholderTimer); placeholderTimer = null; }
             for (const part of [...voices.keys()]) { if (!keep.has(part)) { voices.delete(part); } }
             for (const part of [...voiceStates.keys()]) { if (!keep.has(part)) { voiceStates.delete(part); } }
             renderVoiceBadge();
@@ -6280,6 +6309,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // The host asked for the voices and got none to name (the text has an error, the server
         // is not up): the nameless placeholder of clearVoices goes, what is known stays.
         function settleVoices() {
+            if (placeholderTimer) { clearTimeout(placeholderTimer); placeholderTimer = null; }
             voiceStates.delete('');
             renderVoiceBadge();
         }

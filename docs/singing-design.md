@@ -252,7 +252,13 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   file with no lyrics while the engine was being asked — the `preparing` landed after the empty
   `voiceParts` and pulsed for ever), and the page keeps the last `voiceParts` (`sungNow`) and
   refuses a `voiceState` or a `voice` of any other part, so a file with no lyrics shows no
-  microphone whatever arrives late. Nets: `test/singerCore.test.ts` (the queue, the mode),
+  microphone whatever arrives late. The nameless placeholder itself expires after 10 s
+  (`PLACEHOLDER_MS`, session 1161: Untitled-9.lys, no lyrics, opened with the microphone
+  pulsing for ever — the server answers in milliseconds, so an older placeholder is a lost
+  answer, not a slow one; the page says so in the output channel). `prepareVoices` writes one
+  line per ask in the output channel (`singer: prepare (edit) file: no sung part`), and makes
+  the page's key agree with its own first (`followVoices`), so a render that corrected the
+  score's name cannot leave the placeholder unanswered. Nets: `test/singerCore.test.ts` (the queue, the mode),
   `test/playbackCore.test.ts` (the badge's `waiting`).
 - **MIDI out** (`lilysharp.playback.midiOutput` set): the port plays the instruments, the
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The
