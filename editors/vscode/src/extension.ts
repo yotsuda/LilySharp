@@ -4583,6 +4583,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .practice-panel .parts .pline { display: flex; align-items: center; gap: 8px; }
         .practice-panel .parts .pline button { flex: 1 1 auto; min-width: 0; }
         .practice-panel .parts input.fader { width: 76px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
+        .practice-panel .parts .flevel { width: 2.8em; flex: 0 0 auto; text-align: right; font-size: 11px; opacity: 0.8; font-variant-numeric: tabular-nums; }
         .practice-panel .parts button { text-align: left; }
         .practice-panel .parts button[aria-pressed="false"] { color: #888; }
         /* A part the score does not sound (off unless pressed), and a sung voice. */
@@ -7177,16 +7178,28 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const fader = document.createElement('input');
                 fader.type = 'range'; fader.min = '0'; fader.max = '100'; fader.step = '1';
                 fader.className = 'fader';
-                const sayLevel = () => { fader.title = 'Volume ' + fader.value + '%'; fader.setAttribute('aria-label', levelKey + ' volume ' + fader.value + '%'); };
+                // The number beside the thumb while it is not at 100 (session 1156: a click on the
+                // slider's track puts the thumb where the click lands, and a thumb at the far left
+                // was easy to miss - the part then sounded as good as silent); a double-click is 100.
+                const num = document.createElement('span');
+                num.className = 'flevel';
+                const sayLevel = () => {
+                    fader.title = 'Volume ' + fader.value + '% (double-click: 100%)';
+                    fader.setAttribute('aria-label', levelKey + ' volume ' + fader.value + '%');
+                    num.textContent = fader.value === '100' ? '' : fader.value + '%';
+                };
                 fader.value = String(Math.round(levelIn(levels, levelKey) * 100));
                 sayLevel();
                 fader.addEventListener('input', sayLevel);
                 fader.addEventListener('change', () => {
                     const v = Number(fader.value);
                     if (v >= 100) { delete levels[levelKey]; } else { levels[levelKey] = v / 100; }
+                    sayLevel();
                     practiceChanged(practice.speed);
                 });
+                fader.addEventListener('dblclick', () => { fader.value = '100'; fader.dispatchEvent(new Event('change')); });
                 line.appendChild(fader);
+                line.appendChild(num);
                 list.appendChild(line);
             };
             // The score's parts (owner's request 2026-10-25).

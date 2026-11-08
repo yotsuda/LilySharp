@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1154セッションの経緯
+
+### 1.1 第1154セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14860 / 0 / 2**（`-Start p1154`・HEAD `b309bdefc`・未 push 54・OMR の open 0）。同じ会話で第1153 から続けた便。オーナー要望「プレビューのメトロノームボタンのウインドウではパートのオンオフができるけど、今は score にあるパートしかリストしない。score によらず全てのパートをリストし、score にないパートも鳴らせるようにしたい」。作業場所は Lab `sessions/p1154/`（`notes.md`）。
+
+- **原因（コード）**: 機能自体は第1128 から在る（`PlaybackResponse.Extra`＝斜体・既定オフ）。その「全パート」の MIDI を `PlaybackOf` が `new MidiExporter { Form = score.Form, Score = null }` で書いていて、score 名無しの `PlayedSpec(tree, null, form)` は form を描く score、form を持たない score の本では**ファイルの最初の score** に落ちる＝「全パート」が最初の score のパートになる。既定（最初）の score を見ているときは Extra が空＝オーナーの「score にあるパートしか並ばない」。網 `ThePickedScore_PlaysItsPartsAlone` は 2 番目の score を選んでいたので動いて見えていた。
+- **直し（Core 1 行＋Lsp 1 行）**: `MidiExporter.AllParts`（init）＝`_soundingParts = null` で全パートが鳴る（form・bare section の持ち主・鳴らす chord 行は score のまま＝時間軸は score の）。`PlaybackOf` は `{ Form, Score = score, AllParts = true }`。`.mid` の書き出しは立てない。網 `PlaybackRequestTests.TheFirstScore_ListsThePartsItLeavesOut_AsExtra`（最初の score `staff p1`・3 パート → Extra p2 p3・Parts は Tempo p1 p2 p3・`all` では空）＝Playback／Sung／Midi の網 550 / 550（1 回目は Parts の先頭の `Tempo` を忘れた私の期待値ミス）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: playback-design「The parts the score does not sound」・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7 の practice メニューの行に「最初の score でも同じ」。
+- 残り: 実機（オーナー・§3.7＝既定の score で斜体のパートが並び押すと鳴る）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
+- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1154 -DiffBase b309bdefc`＝`end.log`・門は全部 OK・§1 現在便 16,282 字＝残り 3,718・+1 本）。§7 7.5: Core `+` は `-End` が diff を取った時点の数で 0 と出るが、実際は `MidiExporter.AllParts`（REF 0・OWN 0＝score の選び方の配管）。7.6: 出所はコードの読み（`PlayedSpec` の落ち方）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1153セッションの経緯
 
 ### 1.1 第1153セッション（2026-11-09・YT-DELL2）

@@ -37,6 +37,27 @@ public sealed class ExportRequestTests : IDisposable
 
     public ExportRequestTests() => Directory.CreateDirectory(_dir);
 
+    /// <summary>Deletes a video's frames folder, trying again for a moment when a picture is still
+    /// held (sessions 1148 and 1156, the parallel full run on Windows: "s00001.png is being used by
+    /// another process" — a decoder's stream not yet collected, or the indexer reading a fresh PNG).
+    /// The folder is a temp one and not what the test asserts, so a hold that outlasts the retries
+    /// is let be rather than failing the net.</summary>
+    private static void DeleteFrames(string? dir)
+    {
+        if (dir == null || !Directory.Exists(dir)) return;
+        for (int attempt = 0; ; attempt++)
+        {
+            try { Directory.Delete(dir, true); return; }
+            catch (IOException) when (attempt < 20)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                System.Threading.Thread.Sleep(100);
+            }
+            catch (IOException) { return; }
+        }
+    }
+
     public void Dispose()
     {
         try { Directory.Delete(_dir, true); } catch (IOException) { }
@@ -315,7 +336,7 @@ public sealed class ExportRequestTests : IDisposable
         }
         finally
         {
-            Directory.Delete(video.WorkDirectory!, true);
+            DeleteFrames(video.WorkDirectory);
         }
     }
 
@@ -342,7 +363,7 @@ public sealed class ExportRequestTests : IDisposable
         }
         finally
         {
-            Directory.Delete(video.WorkDirectory!, true);
+            DeleteFrames(video.WorkDirectory);
         }
         var missing = server.VideoFrames(new VideoFramesParams { Path = Path.Combine(_dir, "none.lys"), Score = "", Notes = [], Seconds = 1 });
         Assert.NotNull(missing.Error);
