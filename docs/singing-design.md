@@ -74,14 +74,25 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 - **Answer**: `Voices[]` — `{ Part, Track, Language, Notes[] }` with `Notes` in the contract's
   shape (`T`, `D`, `P`, `L`, `M`, `B`, and `S` the source offset so the voice's notes can be
   told apart in the playback list) — and `Error`.
-- **How it is built**: the same `MidiExporter.Export` the playback uses (the tempo map and
-  `SecondsAt` are shared with `PlaybackOf`), then for each part track with lyric events: the
-  track's notes in onset order, a note whose onset has a lyric event takes it, a note after a
-  lyric'd note with none is a melisma, a note whose onset is a chord's keeps the highest
-  pitch. The lyric events' ticks are the page's placement (`SingLyrics`); nothing is
-  re-counted. ⚠️ `LyricEvent` carries text only: the connector and the holder markers
-  (`_`, `~`) must travel too — `LyricEvent` grows a `Melisma` flag written where
-  `SingLyrics` reads `LyricItem.ConnectorType` / `LyricSyllableReader.Marker`.
+- **How it is built** (`LilySharp.Core/Midi/SungVoices.cs`, session 1125): the same
+  `MidiExporter.Export` the playback uses, and the same clock (`MidiClock.SecondsOf`, which
+  `PlaybackOf` now reads too). The lyric events carry the part that sings them
+  (`LyricEvent.Part`, written by `SingLyrics`; the events all land on the first part track), so
+  a voice is a part's events over that part's notes. The rules, as built:
+  - At each onset the highest note of the voice the words stand on most (a chord sings its
+    top; a part in two voices sings the one its syllables are on); grace notes and drums are
+    not sung; a note is cut where the next begins.
+  - A note whose onset carries words takes them. A note with no words that begins exactly
+    where the sung note before it ends is a melisma (a slur's; `_` and a detached `~`, for
+    which the page files no syllable, come here too). ⚠️ So are the notes of a phrase whose
+    words ran out before it did, up to the next rest — the events cannot tell a slur from no
+    words; a note after a rest with no words is not sung, a `_` after a rest included
+    (measured, Lab `sessions/p1125/e2e/held.lys`).
+  - A breath after the last note before a gap, and after the last note.
+  - The first words at an onset win: a second row on the same part (the verse printed twice,
+    a translation) is not a second voice.
+  - `Warnings`: the syllables that are not kana (hiragana, katakana, the long-vowel mark), which
+    the Japanese voice will not sing; the notes are still in the list.
 - **The practice menu**: speed scales the seconds (a voice cannot be resampled without a
   pitch change, so a speed change re-renders), muted parts drop their voice, the loop and the
   count-in move it with the notes — all in the editor, on the list the server gave, as the
@@ -137,9 +148,12 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 
 1. **Cantilena `serve`** (the resident JSON-lines process) — done 2026-11-08 in the
    Cantilena repo (its `docs/design.md` §4).
-2. **The server's `lilysharp/sung`** and `LyricEvent.Melisma`, with nets: the example
-   score's 12 notes (`雪やこんこ`: one melisma, two breaths), a chord's top note, a verse's
-   pass, a muted part, a part with no words.
+2. **The server's `lilysharp/sung`** — done 2026-11-08 (session 1125): `SungVoices`,
+   `MidiClock`, `LyricEvent.Part`, the request and its DTOs; nets `SungVoicesTests` (the
+   held note, the slur, the chord's top, the words running out, the kana warning, two parts,
+   two rows on one part) and `SungRequestTests` (the voice's seconds are the playback's).
+   End to end: the owner's `雪やこんこ.lys` through Core to Cantilena's JSON and NEUTRINO's WAV
+   (Lab `sessions/p1125/e2e`).
 3. **The editor**: the settings, the resident child, the cache and the ahead render, the
    `voice` message, the buffer in `startPlayback`, the mute, the status bar, the picker.
 4. **Export mixing**; then MIDI-out alignment if the jitter is heard; then `lysc wav`.

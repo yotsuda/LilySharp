@@ -1012,6 +1012,49 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
+    /// The words of the score the preview shows, on their notes in seconds — one voice per part a
+    /// lyrics row sings — for the editor to have sung by a singing engine (docs/singing-design.md
+    /// §4; <see cref="LilySharp.Core.Midi.SungVoices"/>). The same export and clock as
+    /// <c>lilysharp/playback</c>, so the voice lands where the synth's notes do.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/sung", UseSingleObjectParameterDeserialization = true)]
+    public Task<SungResponse> GetSungAsync(SungParams @params, CancellationToken token)
+        => OffDispatch(() => GetSung(@params), token);
+
+    public SungResponse GetSung(SungParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new SungResponse { Error = "Document not found" };
+        var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
+        if (tree.HasErrors)
+            return new SungResponse { Error = "Score has errors" };
+        try
+        {
+            var score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), @params.RenderName);
+            var midi = new LilySharp.Core.Midi.MidiExporter { Form = score?.Form, Score = score }.Export(tree);
+            var voices = LilySharp.Core.Midi.SungVoices.Read(midi, LilySharp.Core.Midi.MidiClock.SecondsOf(midi));
+            return new SungResponse
+            {
+                Voices = voices.Select(v => new SungVoiceDto
+                {
+                    Part = v.Part,
+                    Language = v.Language,
+                    Warnings = v.Warnings.ToArray(),
+                    Notes = v.Notes.Select(n => new SungNoteDto
+                    {
+                        T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos,
+                    }).ToArray(),
+                }).ToArray(),
+            };
+        }
+        catch (Exception ex)
+        {
+            return new SungResponse { Error = ex.Message };
+        }
+    }
+
+    /// <summary>
     /// The lowest and highest note of each part of the score the preview shows, and where each is
     /// written (owner's request 2026-10-25: check the parts' ranges; find a singer's top note) —
     /// read off the notes Play sounds (<see cref="LilySharp.Core.Midi.PartRanges"/>).
@@ -1109,24 +1152,10 @@ public sealed partial class LilySharpLanguageServer
             var midi = new LilySharp.Core.Midi.MidiExporter { Form = score?.Form, Score = score }.Export(tree);
             int tpq = midi.TicksPerQuarterNote;
 
-            // Tempo map: merged from all tracks, sorted; default 120 bpm.
-            var tempos = midi.Tracks.SelectMany(t => t.TempoChanges)
-                .OrderBy(t => t.Tick).ToList();
-            double SecondsAt(int tick)
-            {
-                double sec = 0;
-                int prevTick = 0;
-                double usPerBeat = 500000; // 120 bpm
-                foreach (var tc in tempos)
-                {
-                    if (tc.Tick >= tick)
-                        break;
-                    sec += (tc.Tick - prevTick) * usPerBeat / tpq / 1e6;
-                    prevTick = tc.Tick;
-                    usPerBeat = tc.MicrosecondsPerBeat;
-                }
-                return sec + (tick - prevTick) * usPerBeat / tpq / 1e6;
-            }
+            // Tempo map: merged from all tracks, sorted; default 120 bpm — the clock the singing
+            // voice (lilysharp/sung) reads too.
+            var clock = LilySharp.Core.Midi.MidiClock.SecondsOf(midi);
+            double SecondsAt(int tick) => clock(tick);
 
             // Each note with its track: the channel and the program the .mid would play it
             // with (SplitIntoPartTracks gave every part a track and a channel), so the

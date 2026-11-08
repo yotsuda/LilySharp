@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 303 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **428** | |
+| `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
+| `OWN` | 304 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **430** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -137,8 +137,10 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **`BeamRestStem`** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（65 件）
 
+### `LilySharp.Core/Midi/SungVoices.cs`
+- **`SungVoices.Read`** ⚠️ An empty text has no observer: the page files no syllable for `_` or a
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **`SharedRenderer.AccidentalGroupLength`** no observer; add the paren widths when a book brings one. The unpacked
 - **`SharedRenderer.AccidentalGroupLength`** bare glyph width, which is exact for one and unobserved for many.
@@ -244,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（303 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（304 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -281,6 +283,8 @@
 - **`MidiExporter.PlayChordRow`** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
 - **`MidiExporter.SwingNotes`** LILYSHARP-OWN: LilyPond's MIDI plays its swing equation straight unless the score asks for
 - **`MidiExporter.ProcessGrace`** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+### `LilySharp.Core/Midi/SungVoices.cs`
+- **`SungVoices`** drifted from the page). LILYSHARP-OWN: LilyPond writes no sound.
 ### `LilySharp.Core/Music/ArpeggioSpread.cs`
 - **`ArpeggioSpread`** LILYSHARP-OWN: the owner's decision (2026-09-30) — &lt;&lt; diagram(C x32010) &gt;&gt;2
 ### `LilySharp.Core/Music/BarRest.cs`

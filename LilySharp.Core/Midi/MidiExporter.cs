@@ -3966,7 +3966,7 @@ public sealed class MidiExporter
                 : wrappedTracks.Contains(sungTrack) ? new[] { lyric.WrapRow }
                 : Enumerable.Range(0, onsets.Count);
             foreach (int tick in passes.Select(pass => onsets[Math.Min(pass, onsets.Count - 1)]).Distinct())
-                track.Lyrics.Add(new LyricEvent(tick, lyric.Text));
+                track.Lyrics.Add(new LyricEvent(tick, lyric.Text, part));
         }
     }
 }

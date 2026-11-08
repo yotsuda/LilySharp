@@ -350,6 +350,46 @@ public class PlaybackTextParams
     public string? RenderName { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/sung: the score the preview shows, as
+/// <see cref="PlaybackParams"/>.</summary>
+public class SungParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public string? RenderName { get; set; }
+}
+
+/// <summary>One note a voice sings (docs/singing-design.md §3), in SECONDS: the syllable
+/// <see cref="L"/> (null on a melisma), <see cref="M"/> a melisma carrying the previous syllable's
+/// vowel on, <see cref="B"/> a breath after it, <see cref="S"/> the note's source offset as the
+/// playback list carries it.</summary>
+public class SungNoteDto
+{
+    public double T { get; set; }
+    public double D { get; set; }
+    public double P { get; set; }
+    public string? L { get; set; }
+    public bool M { get; set; }
+    public bool B { get; set; }
+    public int S { get; set; }
+}
+
+/// <summary>A part's words on its notes: what the editor hands a singing engine, with what the
+/// engine will not sing said in <see cref="Warnings"/>.</summary>
+public class SungVoiceDto
+{
+    public string Part { get; set; } = "";
+    public string Language { get; set; } = "ja";
+    public SungNoteDto[] Notes { get; set; } = [];
+    public string[] Warnings { get; set; } = [];
+}
+
+/// <summary>Response for the lilysharp/sung request: one voice per part a lyrics row sings.</summary>
+public class SungResponse
+{
+    public SungVoiceDto[]? Voices { get; set; }
+    public string? Error { get; set; }
+}
+
 /// <summary>One playable note, in SECONDS (tempo map already applied).</summary>
 public class PlaybackNote
 {

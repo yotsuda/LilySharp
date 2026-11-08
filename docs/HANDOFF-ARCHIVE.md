@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1123セッションの経緯
+
+### 1.1 第1123セッション（2026-11-07・YT-DELL2）
+
+開始時 full **14784 / 0 / 2**（`-Start p1123`・HEAD `e0cee3737`・未 push 7・OMR の open は 0）。同じ会話で第1122 から続けた便。オーナー「続けて」→ 前便の報告で次の候補に挙げた **§2 R15 ⒠「2 綴り」一族の統合**（保守性・出力は動かさない）。作業場所は Lab `sessions/p1123/`。
+
+- **裏取りが先**（R15 の教訓「一覧ではなく呼び手を読む」）: 第407 の一覧 8 項目のうち、今も 2 綴りなのは 4 つ・もう 1 か所になっているのが 3 つ（MIDI の post-event switch・tuplet bracket・twin の nested exporter）・意図した 2 綴りが 1 つ（clef の表＝`InstrumentDefaults.ClefWord` の remarks が表示用 2 表を lossy と明記）。
+- **畳んだ 3 つ（出力はバイト同一）**: ⑴ `IsInsideMusicContent`＝MusicXML・collector・`ScoreHomeKey`・`ScoreHomeMeter` の 4 軒 → **`Semantics.DeclarationScope.IsInsideMusicContent(node, partHeaderIsMusic)`**。容れ物の一覧は 1 か所、違いは「part 見出しを音楽に数えるか」の旗だけ（collector と `ScoreHomeKey.Read`＝数える・MusicXML の metadata と `ScoreHomeMeter`・`ScoreHomeKey.Sharps`＝数えない）。各軒は 1 行の forwarder に。⑵ XML の quarter-tone `AccidentalName` の switch ×2（音とアルペッジョの構成音）→ `QuarterToneAccidentalName`。⑶ XML の `ProcessDrumNote` が `DrumChordMember` と同じ note を 2 度組み立てていた → 1 本を呼ぶ。
+- **残した 1 つ**: beam の平行四辺形（`SharedRenderer.DrawBeamSegment` と `DrawGraceBeam` の local）＝同じ幾何（LP `Lookup::beam`）だが grace 側は半 stem の張り出しと列ごとの rank を自分で持つ別の腕＝畳むなら grace 連桁の描画の作り直し・利得は保守性だけ・提案しない。
+- **検証**: 網 653＋831 本（ScoreHome／PartHeader／MusicXml／Drum の filter）緑。**掃き（base `e0cee3737`）: 1036 冊・1262 枚で動いた svg 0**。**MusicXML も比べた**（`sessions/p1123/xml-compare.ps1`＝追跡 697 冊・709 ファイルを base／head の exe で `lysc xml --batch`・バイト同一 0 差）。毒は書いていない（畳みは同値変換＝網は既存のまま・出力の同一性が証明）。**commit `66252ebc3`**（Core 5 ファイル・新規 `Semantics/DeclarationScope.cs`）。終了時 full **14784 / 0 / 2**（`-End p1123 -DiffBase e0cee3737`＝`end.log`・門は全部 OK）。§7 7.5: Core `+86` 行・REF 0・OWN 0。この docs commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1122セッションの経緯
 
 ### 1.1 第1122セッション（2026-11-07・YT-DELL2）

@@ -86,7 +86,13 @@ public readonly record struct TimeSignatureChange(
 /// <summary>
 /// Represents a MIDI lyric event (Meta event 0x05).
 /// </summary>
+/// <param name="Part">The part the syllable is sung by (the page's placement, MidiExporter.SingLyrics),
+/// or null for an event read from a file. Not written to .mid files: the singing voice
+/// (<see cref="SungVoices"/>) groups the words by it, since the events all land on the first
+/// part track. An empty <paramref name="Text"/> is a held note (<c>_</c>, a detached <c>~</c>): the
+/// previous syllable's vowel goes on.</param>
 public readonly record struct LyricEvent(
     int Tick,
-    string Text
+    string Text,
+    string? Part = null
 );
