@@ -61,10 +61,7 @@ describe('the preview routes its sounds to the MIDI output', () => {
         const play = html.indexOf('function startPlayback(');
         const playBody = html.slice(play, html.indexOf('function midiStarted(', play));
         assert.match(playBody, /if \(midiOutput && !here\)/);
-        // The list the port plays is the instruments' (a sung part's notes left out while its
-        // voice plays here, docs/singing-design.md §5); the highlight keeps the whole list.
-        assert.match(playBody, /midiPlayPending = \{ gen, notes, offset \};/);
-        assert.match(playBody, /type: 'midiPlay', port: midiOutput, notes: played, offset/);
+        assert.match(playBody, /type: 'midiPlay', port: midiOutput, notes, offset/);
         const hold = html.indexOf('function holdNotes(');
         const holdBody = html.slice(hold, html.indexOf('function auditionNote(', hold));
         assert.match(holdBody, /type: 'midiStrike', port: midiOutput/);

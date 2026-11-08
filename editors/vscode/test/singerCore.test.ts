@@ -96,13 +96,13 @@ describe('the singer settings', () => {
     const settings = Object.assign({}, ...manifest.contributes.configuration.map((c: { properties: object }) => c.properties));
     const commands = manifest.contributes.commands as { command: string; title: string }[];
 
-    it('name a program only for developers, empty by default (the Cantilena extension), and whether the instrument is silent', () => {
+    it('name a program only for developers, empty by default (the Cantilena extension), and nothing else', () => {
         assert.equal(settings['lilysharp.playback.singer'].type, 'string');
         assert.equal(settings['lilysharp.playback.singer'].default, '');
         assert.equal(settings['lilysharp.playback.singer'].scope, 'machine-overridable');
         assert.match(settings['lilysharp.playback.singer'].markdownDescription, /yotsuda\.cantilena/);
-        assert.equal(settings['lilysharp.playback.singerReplacesPart'].type, 'boolean');
-        assert.equal(settings['lilysharp.playback.singerReplacesPart'].default, true);
+        // The voice doubles the part's instrument (owner's decision 2026-11-08): no mute setting, no voice setting.
+        assert.equal(settings['lilysharp.playback.singerReplacesPart'], undefined);
         assert.equal(settings['lilysharp.playback.singerVoice'], undefined);
         assert.equal(commands.find(c => c.command === 'lilysharp.chooseSingingVoice'), undefined);
     });

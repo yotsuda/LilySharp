@@ -118,7 +118,10 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   ways are a `VoiceBackend` behind the `VoiceRenderer`, whose cache key takes the backend's
   voice name (`voiceName()`: the extension's setting now, the program's default), so a changed
   voice sings anew.
-- `lilysharp.playback.singerReplacesPart` (default on): the sung part's instrument is silent.
+- **The voice doubles the part's instrument** — owner's decision 2026-11-08, having heard
+  both together ("in time, just right"): no setting to silence the instrument (a
+  `singerReplacesPart` existed for a day). A part that should be voice alone can name a quiet
+  `midiInstrument`; a switch in the practice menu is the place if one is ever wanted.
 - **Rendered ahead, not at Play.** When the preview fetches its note list after a compile
   (`refreshPlayback`), the extension asks `lilysharp/sung`, hashes each voice's score with
   the voice name and the speed, and renders what the cache (a Map of hash → wav path, the
@@ -130,9 +133,8 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   page decodes once (`decodeAudioData`), and `startPlayback` starts an `AudioBufferSourceNode`
   at `t0` with `offset` into the buffer (a seek, Play from Here) through the limiter. Stop
   stops it; a loop restarts it with the notes.
-- **The sung part's instrument is muted** while its voice plays (the notes with that `N`
-  are left out of the synth's list; the highlight follows the full list as before):
-  `lilysharp.playback.singerReplacesPart`, default on; off doubles the voice with the preset.
+- **The sung part's instrument plays on under the voice** (the decision above): the synth's
+  list is the whole list, the voice a buffer beside it.
 - **MIDI out** (`lilysharp.playback.midiOutput` set): the port plays the instruments, the
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The
   alignment is the round trip's jitter, some tens of milliseconds; acceptable for a preview,
