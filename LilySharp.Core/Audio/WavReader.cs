@@ -25,6 +25,17 @@ public sealed record MonoAudio(float[] Samples, int SampleRate)
 {
     /// <summary>How long the sound plays.</summary>
     public double Seconds => (double)Samples.Length / SampleRate;
+
+    /// <summary>Where sound begins within the first <paramref name="within"/> seconds: the first
+    /// sample past <paramref name="threshold"/>, in seconds; null when nothing sounds that long.</summary>
+    public double? SoundStart(double within, float threshold = 0.02f)
+    {
+        int n = (int)Math.Min(Samples.Length, Math.Ceiling(within * SampleRate));
+        for (int i = 0; i < n; i++)
+            if (Math.Abs(Samples[i]) > threshold)
+                return (double)i / SampleRate;
+        return null;
+    }
 }
 
 /// <summary>

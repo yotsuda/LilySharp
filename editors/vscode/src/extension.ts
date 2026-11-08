@@ -48,8 +48,8 @@ import { onAngleChord, onShapeItem, shapeItemAt, sameDocumentUri } from './shape
 import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
 import { AudioFormat, AudioJob, renderAudioFiles } from './audioRender';
-import { VoiceTrack } from './audioRenderCore';
-import { PracticeState, exportPlan, practiceSummary } from './webview/playbackCore';
+import { VoiceTrack, decodeWav } from './audioRenderCore';
+import { PracticeState, VOICE_LEAD_S, exportPlan, practiceSummary, soundStart } from './webview/playbackCore';
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
@@ -3580,16 +3580,32 @@ async function singJobs(jobs: readonly AudioJob[], uri: string, practice: Practi
             try {
                 const { rendered } = await engine.render(voice, speed);
                 const v = await rendered;
-                voices.push({ wav: v.wav, at: job.Lead ?? 0, duration: v.duration });
+                // The WAV begins VOICE_LEAD_S before the score's 0 (the first consonant's room).
+                voices.push({ wav: v.wav, at: (job.Lead ?? 0) - VOICE_LEAD_S, duration: v.duration });
                 const track = job.Parts?.indexOf(voice.Part) ?? -1;
                 if (track >= 0 && !playedParts.has(voice.Part)) { silenced.add(track); }
             } catch (e) {
                 outputChannel.appendLine(`singer: export: the voice of ${voice.Part} was not sung — ${String(e)}; its instrument plays`);
             }
         }
+        // A consonant before the beat (in the lead) that would fall before the file's start: the
+        // whole file — notes, lit notes, the count-in's lead, the voices — moves later by what the
+        // earliest such sound needs, so it is heard (docs/singing-design.md §3). Silence in the
+        // lead is not waited for.
+        let pre = 0;
+        for (const v of voices) {
+            try {
+                const d = decodeWav(fs.readFileSync(v.wav));
+                const s = soundStart(d.samples, d.sampleRate, VOICE_LEAD_S);
+                if (s !== null) { pre = Math.max(pre, -(v.at + s)); }
+            } catch { /* a WAV the render will refuse too */ }
+        }
+        pre = Math.max(0, pre);
+        const later = <T extends { T: number }>(list: T[]): T[] => pre > 0 ? list.map(n => ({ ...n, T: n.T + pre })) : list;
+        const notes = silenced.size > 0 ? job.Notes.filter(n => !(typeof n.N === 'number' && silenced.has(n.N))) : job.Notes;
         out.push({
-            ...job, Voices: voices, Lit: job.Notes,
-            Notes: silenced.size > 0 ? job.Notes.filter(n => !(typeof n.N === 'number' && silenced.has(n.N))) : job.Notes,
+            ...job, Voices: voices.map(v => ({ ...v, at: v.at + pre })), Lit: later(job.Notes),
+            Notes: later(notes), Lead: (job.Lead ?? 0) + pre,
         });
     }
     return out;
@@ -3908,7 +3924,7 @@ async function singVoices(panel: vscode.WebviewPanel, uri: string): Promise<void
             if (postedVoices.get(panel) !== mine) { return; }   // the engine changed meanwhile
             const bytes = await fs.promises.readFile(v.wav);
             mine.set(voice.Part, key);
-            panel.webview.postMessage({ type: 'voice', part: voice.Part, key, speed, bytes: new Uint8Array(bytes) });
+            panel.webview.postMessage({ type: 'voice', part: voice.Part, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array(bytes) });
             outputChannel.appendLine(`singer: ${voice.Part} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
         }, (e: Error) => failed(e.message));
         if (!cached) { vscode.window.setStatusBarMessage(`Lily#: singing ${voice.Part}…`, singing); }
@@ -6062,7 +6078,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!bytes || !bytes.buffer) { return; }
             const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
             audioContext().decodeAudioData(copy).then(buffer => {
-                voices.set(message.part, { buffer, speed: message.speed || 1, key: message.key });
+                // The buffer begins lead seconds before the score's 0 (VOICE_LEAD_S), with the
+                // first syllable's consonant in that lead: pre is how much of it sounds before the
+                // beat — what a Play from the top lets the instruments wait for (startPlayback).
+                // (No backticks in this script: it lives in a template literal.)
+                const lead = message.lead || 0;
+                const s = lead > 0 && window.LysSynth && window.LysSynth.soundStart
+                    ? window.LysSynth.soundStart(buffer.getChannelData(0), buffer.sampleRate, lead) : null;
+                voices.set(message.part, { buffer, speed: message.speed || 1, key: message.key, lead, pre: s === null ? 0 : Math.max(0, lead - s) });
                 setVoiceState(message.part, 'ready');
             }, e => {
                 vscode.postMessage({ type: 'webviewPerf', text: 'voice: ' + message.part + ' could not be decoded: ' + e });
@@ -6132,17 +6155,29 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // Starts every voice so that the list's time listTime sounds at the context's time when:
         // after a count-in (countInFix), each stretch of the score the list plays cut from the
         // buffer (voiceCues) — a selected stretch stops at its end, a loop's rounds each sing it again.
-        function startVoices(ctx, when, listTime) {
+        // How long the instruments wait for the voices' consonants before the beat on a Play from
+        // the score's 0 with no count-in (the count-in gives the room itself; a start inside the
+        // score has the previous syllable before it, not a consonant in silence).
+        function voicePreroll(offset, countFix) {
+            if ((countFix || 0) > 0 || offset > 0 || voicePlan === null) { return 0; }
+            if (voicePlan.pieces && !(voicePlan.pieces.length > 0 && voicePlan.pieces[0][0] < 1e-6)) { return 0; }
+            let pre = 0;
+            for (const i of sungTracks()) { pre = Math.max(pre, voices.get(rawParts[i]).pre || 0); }
+            return pre;
+        }
+        function startVoices(ctx, when, listTime, room) {
             stopVoices();
             const tracks = sungTracks();
             if (tracks.size === 0) { return; }
-            if (!window.LysSynth || !window.LysSynth.voiceCues) {
-                vscode.postMessage({ type: 'webviewPerf', text: 'voice: the synth script is an old build (no voiceCues) - reload the window' });
+            if (!window.LysSynth || !window.LysSynth.voiceCues || !window.LysSynth.withVoiceLead) {
+                vscode.postMessage({ type: 'webviewPerf', text: 'voice: the synth script is an old build (no voiceCues / withVoiceLead) - reload the window' });
                 return;
             }
             for (const i of tracks) {
                 const v = voices.get(rawParts[i]);
-                for (const cue of window.LysSynth.voiceCues(listTime, countInFix, voicePlan.pieces, voicePlan.rounds, v.buffer.duration)) {
+                const lead = v.lead || 0;
+                const cues = window.LysSynth.voiceCues(listTime, countInFix, voicePlan.pieces, voicePlan.rounds, v.buffer.duration - lead);
+                for (const cue of window.LysSynth.withVoiceLead(cues, lead, v.pre || 0, room || 0)) {
                     const src = ctx.createBufferSource();
                     src.buffer = v.buffer;
                     src.connect(voiceOutput(ctx));
@@ -6435,7 +6470,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 });
                 return;
             }
-            let t0 = ctx.currentTime + 0.15;
+            // From the score's 0: the instruments wait for the voices' first consonant (voicePreroll).
+            const pre = voicePreroll(offset, countFix);
+            let t0 = ctx.currentTime + 0.15 + pre;
             let end = notes.reduce((e, n) => Math.max(e, n.T + n.D), 0);   // the whole list's, voice included
             if (sf && sf.ready && !plainTones) {
                 if (played.length > 0) {
@@ -6447,7 +6484,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 end = Math.max(end, startOscillators(ctx, played, offset, t0));
             }
             // The sung parts' voices, in the instruments' place, from the same clock.
-            startVoices(ctx, t0, offset);
+            startVoices(ctx, t0, offset, pre);
             setPlayUi(true);
             // A loop goes round when the last note ends; a plain playback lets it ring a moment.
             playEndTimer = setTimeout(playEnded, (end - offset + (loopList ? 0 : 0.5)) * 1000);
@@ -6472,7 +6509,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // The voice plays here, from where the port's playback stands now (the round trip's jitter).
             if (sungTracks().size > 0) {
                 const ctx = audio();
-                startVoices(ctx, ctx.currentTime + 0.05, pending.offset + (Date.now() - t0Ms) / 1000 + 0.05);
+                startVoices(ctx, ctx.currentTime + 0.05, pending.offset + (Date.now() - t0Ms) / 1000 + 0.05, 0);
             }
             playEndTimer = setTimeout(playEnded, (message.end - pending.offset + (loopList ? 0 : 0.5)) * 1000);
             playOffset = pending.offset;

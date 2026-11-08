@@ -218,11 +218,11 @@ public static class ScoreExport
                 var notes = new List<string>();
                 var warnings = exporter.Warnings.ToList();
                 var voices = options.Singer != null ? SingTheSungParts(tree, spec, midi, options.Singer, notes, warnings) : null;
-                TimeSpan length;
+                Audio.WavRenderer.Rendered rendered;
                 try
                 {
                     using var stream = File.Create(outputPath);
-                    length = Audio.WavRenderer.Render(midi, options.SoundFont, stream, voices: voices);
+                    rendered = Audio.WavRenderer.RenderWithVoices(midi, options.SoundFont, stream, voices: voices);
                 }
                 catch
                 {
@@ -230,8 +230,10 @@ public static class ScoreExport
                     File.Delete(outputPath);
                     throw;
                 }
-                notes.Insert(0, $"Length: {length:m\\:ss}");
+                notes.Insert(0, $"Length: {rendered.Length:m\\:ss}");
                 notes.Insert(1, $"Sound font: {Path.GetFileName(options.SoundFont)}");
+                if (rendered.Preroll > 0)
+                    notes.Add($"Voice lead: {rendered.Preroll:0.00} s (the first consonant before the beat; the instruments start after it)");
                 return new ExportResult([outputPath], notes, warnings);
             }
 
@@ -292,12 +294,13 @@ public static class ScoreExport
                 warnings.Add($"{voice.Part} is not sung ({error}); its instrument plays");
                 continue;
             }
-            tracks.Add(new Audio.VoiceTrack(voice.Part, sound));
+            // The engine's WAV begins SungScoreJson.Lead before the score's 0 (the first consonant's room).
+            tracks.Add(new Audio.VoiceTrack(voice.Part, sound, -Audio.SungScoreJson.Lead));
             bool played = sounds.Played.Contains(voice.Part, StringComparer.Ordinal);
             if (!played)
                 foreach (var track in midi.Tracks)
                     track.Notes.RemoveAll(n => n.Part == voice.Part);
-            notes.Add($"Voice: {singer.Name} sings {voice.Part} ({voice.Notes.Count} notes, {sound.Seconds:0.0} s)"
+            notes.Add($"Voice: {singer.Name} sings {voice.Part} ({voice.Notes.Count} notes, {Math.Max(0, sound.Seconds - Audio.SungScoreJson.Lead):0.0} s)"
                 + (played ? ", its instrument too" : ""));
         }
         return tracks;

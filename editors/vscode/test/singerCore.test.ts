@@ -35,22 +35,24 @@ describe('the engine\'s score of a sung voice', () => {
         ],
     };
 
-    it('is seconds, pitch and the syllable; a melisma has no lyric; a breath is kept', () => {
+    it('is seconds, pitch and the syllable; a melisma has no lyric; a breath is kept; the whole moved by the lead', () => {
+        // VOICE_LEAD_S (0.3 s) before the score's 0: the room for the first syllable's consonant,
+        // which the engine places before the beat (owner's report 2026-11-08: さ at 0 sang as た).
         const score = cantilenaScore(voice, 1);
         assert.equal(score.sampleRate, 48000);
         assert.equal(score.language, 'ja');
         assert.deepEqual(score.notes, [
-            { start: 0, duration: 0.375, pitch: 60, lyric: 'ゆ' },
-            { start: 0.375, duration: 0.125, pitch: 62, melisma: true },
-            { start: 0.5, duration: 0.375, pitch: 60, lyric: 'き' },
-            { start: 0.875, duration: 0.125, pitch: 62, lyric: 'や', breath: true },
+            { start: 0.3, duration: 0.375, pitch: 60, lyric: 'ゆ' },
+            { start: 0.675, duration: 0.125, pitch: 62, melisma: true },
+            { start: 0.8, duration: 0.375, pitch: 60, lyric: 'き' },
+            { start: 1.175, duration: 0.125, pitch: 62, lyric: 'や', breath: true },
         ]);
     });
 
     it('is slower at a practice speed below one, the way the notes are', () => {
         const score = cantilenaScore(voice, 0.5);
-        assert.deepEqual(score.notes.map(n => [n.start, n.duration]), [[0, 0.75], [0.75, 0.25], [1, 0.75], [1.75, 0.25]]);
-        assert.deepEqual(cantilenaScore(voice, 0).notes[1].start, 0.375, 'a speed of 0 is read as 1');
+        assert.deepEqual(score.notes.map(n => [n.start, n.duration]), [[0.3, 0.75], [1.05, 0.25], [1.3, 0.75], [2.05, 0.25]]);
+        assert.deepEqual(cantilenaScore(voice, 0).notes[1].start, 0.675, 'a speed of 0 is read as 1');
     });
 
     it('is keyed by the voice and the score, so the speed and the voice each sing anew', () => {

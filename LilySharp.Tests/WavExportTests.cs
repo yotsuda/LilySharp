@@ -150,7 +150,8 @@ public sealed class WavExportTests : IDisposable
         Assert.Equal("ja", json.RootElement.GetProperty("language").GetString());
         var notes = json.RootElement.GetProperty("notes").EnumerateArray().ToList();
         Assert.Equal(new[] { "か", "き", "く", "け" }, notes.Select(n => n.GetProperty("lyric").GetString()));
-        Assert.Equal(new[] { 0.0, 0.5, 1.0, 1.5 }, notes.Select(n => n.GetProperty("start").GetDouble()));
+        // Moved later by the lead (SungScoreJson.Lead): the room for the first consonant before the beat.
+        Assert.Equal(new[] { 0.3, 0.8, 1.3, 1.8 }, notes.Select(n => n.GetProperty("start").GetDouble()));
         Assert.Equal(new[] { 60, 64, 67, 72 }, notes.Select(n => n.GetProperty("pitch").GetInt32()));
         Assert.True(notes[3].GetProperty("breath").GetBoolean());
         Assert.Contains("か", singer.ScoreJson);                               // written as kana, not \u escapes
@@ -159,6 +160,24 @@ public sealed class WavExportTests : IDisposable
         Assert.True(Peak(bytes, 1.0, 2.0) < 50, "the instrument is silent in the voice's place");
         Assert.Contains(result.Notes, n => n == "Voice: fake/voice sings melody (4 notes, 0.5 s)");
         Assert.Empty(result.Warnings);
+    }
+
+    [Fact]
+    public void AConsonantBeforeTheBeat_IsHeardWhole_TheInstrumentsWaitingForIt()
+    {
+        // The engine sings the first syllable's consonant 0.1 s before the beat, in the lead
+        // (owner's report 2026-11-08: さ at 0 sang as た when the lead was cut): the file begins
+        // with it, and the instruments — the score's other staff — start 0.1 s later.
+        var singer = new FakeSinger { Seconds = 0.5, SampleRate = 48000, Amplitude = 0.5f, Consonant = 0.1 };
+        var (bytes, result) = Export(SungBook("staff melody  lyrics verse sings melody  staff melody"), singer);
+
+        Assert.Contains(result.Notes, n => n == "Voice lead: 0.10 s (the first consonant before the beat; the instruments start after it)");
+        Assert.True(Peak(bytes, 0.0, 0.08) > 12000, "the consonant sounds from the file's start");
+        Assert.InRange(Seconds(bytes), 4.0, 4.2);                             // 0.1 + 2 s of notes + 2 s of tail
+        // The instrument's staff comes in at 0.1 s: the voice alone is a 440 Hz sine of amplitude 0.5
+        // (about 16,000); once the instrument joins, the peaks are higher.
+        Assert.True(Peak(bytes, 0.0, 0.09) < 17500, "before the beat only the voice sounds");
+        Assert.True(Peak(bytes, 0.12, 0.5) > 17500, "from the beat the instrument sounds too");
     }
 
     [Fact]
@@ -229,13 +248,17 @@ public sealed class WavExportTests : IDisposable
     }
 }
 
-/// <summary>A singing engine for the tests: writes a sine of its own length and rate for any
-/// score it is given (and keeps the score), or fails with its sentence.</summary>
+/// <summary>A singing engine for the tests: like the real one it is handed a score moved later by
+/// <see cref="SungScoreJson.Lead"/>, and writes silence for that lead, then a sine of its own
+/// length and rate (a <see cref="Consonant"/> starts the sine that much before the beat, inside
+/// the lead); keeps the score; or fails with its sentence.</summary>
 internal sealed class FakeSinger : SingingEngine
 {
     public double Seconds { get; init; } = 1.0;
     public int SampleRate { get; init; } = 48000;
     public float Amplitude { get; init; } = 0.5f;
+    /// <summary>Seconds of sound before the beat (the first syllable's consonant), within the lead.</summary>
+    public double Consonant { get; init; }
     public string? Error { get; init; }
     public string? ScoreJson { get; private set; }
 
@@ -246,12 +269,15 @@ internal sealed class FakeSinger : SingingEngine
         ScoreJson = File.ReadAllText(scoreJsonPath);
         if (Error != null)
             return Error;
-        int n = (int)(Seconds * SampleRate);
+        int silent = (int)((SungScoreJson.Lead - Consonant) * SampleRate);
+        int n = (int)((Seconds + Consonant) * SampleRate);
         using var f = File.Create(outputWavPath);
         var w = new BinaryWriter(f);
-        w.Write(Encoding.ASCII.GetBytes("RIFF")); w.Write(36 + n * 2); w.Write(Encoding.ASCII.GetBytes("WAVEfmt "));
+        w.Write(Encoding.ASCII.GetBytes("RIFF")); w.Write(36 + (silent + n) * 2); w.Write(Encoding.ASCII.GetBytes("WAVEfmt "));
         w.Write(16); w.Write((short)1); w.Write((short)1); w.Write(SampleRate); w.Write(SampleRate * 2); w.Write((short)2); w.Write((short)16);
-        w.Write(Encoding.ASCII.GetBytes("data")); w.Write(n * 2);
+        w.Write(Encoding.ASCII.GetBytes("data")); w.Write((silent + n) * 2);
+        for (int i = 0; i < silent; i++)
+            w.Write((short)0);
         for (int i = 0; i < n; i++)
             w.Write((short)(Math.Sin(2 * Math.PI * 440 * i / SampleRate) * Amplitude * 32767));
         return null;

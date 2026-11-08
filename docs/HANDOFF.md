@@ -138,6 +138,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1147セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14856 / 0 / 2**（`-Start p1147`・HEAD `78f0beffb`・未 push 47・OMR の open 0）。同じ会話で第1146 から続けた便。オーナー報告「かえるのうた.lys の歌詞を『ささるの』で始めているのに『たさるの』と発音する」。作業場所は Lab `sessions/p1147/`。
+
+- **原因（実測）**: NEUTRINO のラベル（`*.timing.lab`）で曲頭の さ は **s が 0.897〜1.011 s・a が 1.011 s から**、導入の休符は 1.000 s＝s の 114 ms のうち 103 ms が拍の前。Cantilena は導入の 1.000 s ちょうどで切るので s が 11 ms だけ残り、破裂音「た」に聞こえる。2 つ目の さ の s（1.457〜1.612）は前の母音の中＝切れない。**影響は曲頭の最初の音節だけ**（休符の後の子音は休符の中に在る）。
+- **直し（Lily# だけ・Cantilena 不変＝engine には休符）**: 歌わせる譜を **0.3 s 後ろへ**（`VOICE_LEAD_S`／`SungScoreJson.Lead`）送り、WAV の 0.3 s を楽譜の 0 と読む＝曲頭の子音はその 0.3 s の中に残る。ページは声ごとに `lead` と **`pre`＝lead の中で音が鳴り始めてから拍までの長さ**（`soundStart`・0.02 超の最初のサンプル）を測り、曲頭からの ▶（count-in なし）では楽器を `pre` だけ遅らせ（`voicePreroll`）、声は子音から始める（`withVoiceLead`＝offset に lead を足し、楽譜の 0 から始まる cue だけ `min(pre, lead, at+room)` 早める。曲の途中からの開始は前の母音が在るので早めない・MIDI 出力は room 0）。Export は `at = Lead − 0.3`、`pre` を測ってファイル全体（Notes・Lit・Lead・声）を遅らせる＝動画の絵もずれない。CLI は `VoiceTrack.At = −0.3`、`WavRenderer.RenderWithVoices` が同じ preroll を計算して synth の出力の前に無音を置き `Rendered(Length, Preroll)` を返す・ScoreExport が「Voice lead: 0.10 s」を刷る。網: playbackCore（`soundStart`・`withVoiceLead`）・singerCore（start +0.3）・WavExportTests（FakeSinger が lead の無音を書く・`Consonant = 0.1` でファイル頭が声、楽器は 0.1 s 後）＝.NET 40 / 40・npm 899 / 899。⚠️ ページのスクリプトのコメントにまたバッククォートを書いて TS1005（3 度目）。
+- **E2E**（`checks.log`）: `sasaru.lys`（さ さ る の）を `lysc wav --singer`＋入れ直し済みの cantilena（NEUTRINO）で＝下の行。`Deploy-Lsp.ps1` で配布＝オーナーは Reload Window。docs: singing-design §3・editors CHANGELOG・CHANGELOG `[cli]`・MANUAL-CHECKS §3.7。
+- 残り: 実機で「ささるの」（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み・同じ本の編集直後の ▶）。
+- **E2E の結果**: `Voice: cantilena sings melody (7 notes, 7.7 s)`・**`Voice lead: 0.08 s`**（テンポ 100 の s は拍の 80 ms 前から）・WAV の最初の音は 0 s＝子音から始まり、楽器は 0.08 s 後。
+- 終了時 full **14857 / 0 / 2 / 14859**（`-End p1147 -DiffBase 78f0beffb`＝`end.log`・門は全部 OK・§1 現在便 16,311 字＝残り 3,689）。§7 7.5: `-End` は commit 前の diff なので Core `+` 0 と出るが、実際は `SingingEngine`（Lead）・`WavReader`（`SoundStart`）・`WavRenderer`（preroll・`Rendered`）・`ScoreExport` の変更（REF 0・OWN 0＝規則は数と時刻）。7.6: 出所は NEUTRINO のラベルの実測。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1146セッションの経緯
+
 ### 1.1 第1146セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14856 / 0 / 2**（`-Start p1146`・HEAD `0aa68a994`・未 push 46・OMR の open 0）。同じ会話で第1145 から続けた便。オーナー報告「直前の本の歌唱は鳴らなくなったが、マイクが準備完了のまま。歌を捨てたら準備中の表示にして」。作業場所は Lab `sessions/p1146/`。
@@ -146,18 +159,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **直し**: host `followVoices(panel, uri, sing)` を `updatePreviewContent`（プレビューが文書／score に向いた瞬間）と `requestPlayback` の両方で。別の `uri\nrender` なら `postedVoices` を捨て、**`clearVoices` に `pending: true`** を付けて post し、描画経路からは **すぐ `singVoices`**（▶ を待たずに新しい声を頼む）。ページは `pending` のとき名無しの `preparing` を 1 つ置く＝マイクは灰のまま、`voiceParts`（`lilysharp/sung` の答えごと）が名無しを落として本物の部の状態に替える（歌詞の無い本なら消える）。`playbackCore.voiceBadge` は名無しを title に書かない（「singing… (the instrument plays until the voice is ready)」）。網 +1（898 / 898）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・MANUAL-CHECKS §3.7・editors CHANGELOG。
 - 残り: 実機（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み・同じ本の編集直後の ▶ は旧声を鳴らしうる＝第1145 の註）。
 - 終了時 full **14856 / 0 / 2 / 14858**（`-End p1146 -DiffBase 0aa68a994`＝`end.log`・門は全部 OK・§1 現在便 15,720 字＝残り 4,280）。⚠️ 同じ pipeline の npm は **TS1005 で落ちていた**＝ページのスクリプト（テンプレート文字列）に書いたコメントの**バッククォート**が文字列を閉じた（第1141 の `'\n'` と同じ族＝ページのスクリプトにバッククォートと `\` を書かない）→ 直して npm 897 / 897・配布し直し（`followVoices` が入った `extension.js` を確認）。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6: 出所はオーナー報告。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1145セッションの経緯
-
-### 1.1 第1145セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14856 / 0 / 2**（`-Start p1145`・HEAD `96dbe8eea`・未 push 45・OMR の open 0）。同じ会話で第1144 から続けた便。オーナー報告「タブで .lys を切り替えてすぐプレビューの ▶ を押すと、直前の .lys の歌唱が鳴る」。作業場所は Lab `sessions/p1145/`。
-
-- **原因**: ページの声は**パート名**で引く（`voices.get('melody')`）。ページの ▶ は `requestPlayback` で新しい本の音を受け取ってすぐ鳴らし始めるが、新しい本の声は `singVoices`（`lilysharp/sung` の往復＋描画）の後に届く。同じ `melody` を持つ 2 冊なら古い WAV がそのまま当たる。第1143 の `voiceParts` は「新しい score が歌わない部」しか落とさないので、同名の部は残った。
-- **直し（host）**: `voiceDocs`（panel → `uri\nrender`）。`requestPlayback` で文書か score が替わっていたら `postedVoices` を捨てて **`clearVoices` を `playbackData` より先に post**（順序どおりに届く）＝その ▶ は楽器・新しい声はできしだい送り直される（マイクが灰→青）。同じ本の編集では声を保つ。npm 896 / 896・`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・MANUAL-CHECKS §3.7・editors CHANGELOG。
-- 残る小さな親戚（直していない）: 同じ本を編集した直後の ▶ は、新しい声ができるまで編集前の声を鳴らしうる（同名・同文書）。
-- 残り: 実機（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
-- 終了時 full **14856 / 0 / 2 / 14858**（`-End p1145 -DiffBase 96dbe8eea`＝`end.log`・門は全部 OK・§1 現在便 15,586 字＝残り 4,414）。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6: 出所はオーナー報告の再現。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1145セッションの経緯
+
+### 1.1 第1145セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14856 / 0 / 2**（`-Start p1145`・HEAD `96dbe8eea`・未 push 45・OMR の open 0）。同じ会話で第1144 から続けた便。オーナー報告「タブで .lys を切り替えてすぐプレビューの ▶ を押すと、直前の .lys の歌唱が鳴る」。作業場所は Lab `sessions/p1145/`。
+
+- **原因**: ページの声は**パート名**で引く（`voices.get('melody')`）。ページの ▶ は `requestPlayback` で新しい本の音を受け取ってすぐ鳴らし始めるが、新しい本の声は `singVoices`（`lilysharp/sung` の往復＋描画）の後に届く。同じ `melody` を持つ 2 冊なら古い WAV がそのまま当たる。第1143 の `voiceParts` は「新しい score が歌わない部」しか落とさないので、同名の部は残った。
+- **直し（host）**: `voiceDocs`（panel → `uri\nrender`）。`requestPlayback` で文書か score が替わっていたら `postedVoices` を捨てて **`clearVoices` を `playbackData` より先に post**（順序どおりに届く）＝その ▶ は楽器・新しい声はできしだい送り直される（マイクが灰→青）。同じ本の編集では声を保つ。npm 896 / 896・`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・MANUAL-CHECKS §3.7・editors CHANGELOG。
+- 残る小さな親戚（直していない）: 同じ本を編集した直後の ▶ は、新しい声ができるまで編集前の声を鳴らしうる（同名・同文書）。
+- 残り: 実機（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
+- 終了時 full **14856 / 0 / 2 / 14858**（`-End p1145 -DiffBase 96dbe8eea`＝`end.log`・門は全部 OK・§1 現在便 15,586 字＝残り 4,414）。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6: 出所はオーナー報告の再現。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1144セッションの経緯
 
 ### 1.1 第1144セッション（2026-11-08・YT-DELL2）

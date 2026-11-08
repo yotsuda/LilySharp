@@ -52,6 +52,19 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 
 - **Seconds, not ticks**: tempo, meter, repeats and the practice speed are resolved before
   the engine sees anything. Gaps are rests. `pitch` is MIDI (fractional for a quarter tone).
+- **A lead of 0.3 s before the score's 0** (`VOICE_LEAD_S`, `SungScoreJson.Lead`; session 1147):
+  every note is sent 0.3 s later than the score says, and the WAV's 0.3 s is the score's 0. The
+  room is for the first syllable's consonant, which a singer places BEFORE the beat: rendered
+  from the score's 0 it was cut away — NEUTRINO's さ at 0 had its s from −0.103 to +0.011 s, and
+  the 11 ms left sounded as た (owner's report 2026-11-08). Inside the score a consonant lies in
+  the previous syllable or a rest and was never cut; only the piece's first syllable was. The
+  page keeps `lead` with each voice and measures `pre`, how much sound the lead holds (the
+  first sample over 0.02, `soundStart`): a Play from the score's 0 with no count-in starts the
+  instruments `pre` later and the voice from its consonant (`withVoiceLead`; a count-in gives
+  the room itself; a start inside the score, or on a MIDI output, pulls nothing). An export
+  moves the whole file — notes, lit notes, the count-in's lead, the voices — by `pre`;
+  `lysc wav --singer` the same (`WavRenderer.RenderWithVoices`, "Voice lead: 0.10 s" in its
+  notes). Cantilena is not changed: the lead is a rest to it.
   ⚠️ Rounded at the note's ENDS (`start` and `start + duration` each rounded, the duration
   their difference), never start and duration apart: sixteenths at 132 are repeating
   decimals, and the engine refuses notes that overlap — 雪やこんこ's melody was refused with

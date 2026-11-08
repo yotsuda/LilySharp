@@ -174,6 +174,13 @@ public sealed class CantilenaProgram : SingingEngine
 /// </summary>
 public static class SungScoreJson
 {
+    /// <summary>Seconds the score is moved later before it goes to the engine, so its WAV begins this
+    /// long before the score's 0: the room for the first syllable's consonant, which a singer places
+    /// before the beat — rendered from the score's 0 it was cut away (owner's report 2026-11-08:
+    /// NEUTRINO's さ, its s from −0.103 s to +0.011 s, sounded as た). The editor's
+    /// <c>VOICE_LEAD_S</c> is the same number (docs/singing-design.md §3).</summary>
+    public const double Lead = 0.3;
+
     private static readonly JsonWriterOptions Options = new()
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,   // kana as kana, not \uXXXX
@@ -195,7 +202,7 @@ public static class SungScoreJson
                 // can put the next note's start a millionth before this one's end (16ths at 132 are
                 // repeating decimals), and the engine refuses a score whose notes overlap (owner's
                 // report 2026-11-08, 雪やこんこ: "note 23 at 6.591 s starts before note 22 ends").
-                double start = Math.Round(n.Start, 6), end = Math.Round(n.Start + n.Duration, 6);
+                double start = Math.Round(n.Start + Lead, 6), end = Math.Round(n.Start + n.Duration + Lead, 6);
                 w.WriteStartObject();
                 w.WriteNumber("start", start);
                 w.WriteNumber("duration", Math.Round(end - start, 6));
@@ -216,5 +223,6 @@ public static class SungScoreJson
 }
 
 /// <summary>A sung voice mixed into a rendered file: the sound, and where its first sample
-/// falls in the file's seconds (0: the score's zero, where a WAV from the engine starts).</summary>
+/// falls in the score's seconds — <c>−SungScoreJson.Lead</c> for a WAV from the engine, which
+/// begins that long before the score's 0 with the first consonant in the lead.</summary>
 public sealed record VoiceTrack(string Part, MonoAudio Sound, double At = 0);

@@ -20,7 +20,7 @@ import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
     CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, loopRounds, playSpan, playSpanWindow, practiceNotes,
     programOf, toEvents,
-    fromOffset, exportNotes, practiceSummary, PracticeState, voiceCues, voiceBadge,
+    fromOffset, exportNotes, practiceSummary, PracticeState, voiceCues, voiceBadge, soundStart, withVoiceLead,
 } from '../src/webview/playbackCore';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -73,6 +73,35 @@ describe('the exports under the practice menu', () => {
 
 // A count-in (owner's choice 2026-10-26): one bar of clicks, the music moved after it so the
 // bar line falls where the count ends — as a player counts in.
+// The first syllable's consonant before the beat (docs/singing-design.md §3): the voice's WAV
+// begins VOICE_LEAD_S before the score's 0, and a Play from the top lets the instruments wait for
+// what sounds in that lead.
+describe('the voice\'s lead before the beat', () => {
+    it('finds where the sound begins in the lead, or nothing', () => {
+        const rate = 1000;
+        const samples = new Float32Array(1000);
+        for (let i = 200; i < 1000; i++) { samples[i] = 0.5; }
+        assert.equal(soundStart(samples, rate, 0.3), 0.2);
+        assert.equal(soundStart(samples, rate, 0.1), null);            // silent for the first 100 ms
+        assert.equal(soundStart(new Float32Array(50), rate, 0.3), null);
+        assert.equal(soundStart([0.01, 0.01, 0.5], 1, 10, 0.02), 2);    // under the threshold is silence
+    });
+
+    it('moves the cues by the lead and pulls the one from the score\'s 0 earlier, as far as there is room', () => {
+        // A Play from the top with no count-in: the instruments wait `room` (= the pull), the voice
+        // starts from where its consonant begins in the lead.
+        assert.deepEqual(withVoiceLead([{ at: 0, offset: 0 }], 0.3, 0.1, 0.1), [{ at: -0.1, offset: 0.2 }]);
+        // No room (a MIDI-out Play): no pull, the lead's consonant is not heard.
+        assert.deepEqual(withVoiceLead([{ at: 0, offset: 0 }], 0.3, 0.1, 0), [{ at: 0, offset: 0.3 }]);
+        // A count-in gives the room itself.
+        assert.deepEqual(withVoiceLead([{ at: 2, offset: 0, duration: 4 }], 0.3, 0.1), [{ at: 1.9, offset: 0.2, duration: 4.1 }]);
+        // Never more than the lead holds, nor than the voice needs.
+        assert.deepEqual(withVoiceLead([{ at: 2, offset: 0 }], 0.3, 0.5), [{ at: 1.7, offset: 0 }]);
+        // A cue from inside the score is only moved by the lead: before it lies the previous syllable.
+        assert.deepEqual(withVoiceLead([{ at: 0, offset: 4.5, duration: 2 }], 0.3, 0.1, 0.1), [{ at: 0, offset: 4.8, duration: 2 }]);
+    });
+});
+
 // The pane's voice badge (owner's request 2026-11-08): one sign for the score's voices.
 describe('the voice badge', () => {
     it('shows nothing without a voice', () => {

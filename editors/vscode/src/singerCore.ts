@@ -20,6 +20,7 @@
 // drives it under node.
 
 import { createHash } from 'crypto';
+import { VOICE_LEAD_S } from './webview/playbackCore';
 
 /** One note of `lilysharp/sung`, in seconds: its syllable `L` (null on a melisma), `M` a melisma
  *  carrying the previous syllable's vowel on, `B` a breath after it, `S` the source offset. */
@@ -77,7 +78,9 @@ export function cantilenaScore(voice: SungVoiceDto, speed: number): CantilenaSco
             // put the next note's start a ten-thousandth before this one's end (16ths at 132 are
             // repeating decimals), and the engine refuses overlapping notes (owner's report
             // 2026-11-08, 雪やこんこ: "note 22 at 6.364 s starts before note 21 ends (6.364 s)").
-            const start = round(n.T * k), end = round((n.T + n.D) * k);
+            // Moved later by VOICE_LEAD_S, the room for the first syllable's consonant before the
+            // beat (the WAV's time VOICE_LEAD_S is the score's 0; docs/singing-design.md §3).
+            const start = round(n.T * k + VOICE_LEAD_S), end = round((n.T + n.D) * k + VOICE_LEAD_S);
             const note: CantilenaNote = { start, duration: round(end - start), pitch: n.P };
             if (n.M) { note.melisma = true; } else if (n.L) { note.lyric = n.L; }
             if (n.B) { note.breath = true; }

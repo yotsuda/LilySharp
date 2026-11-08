@@ -55,6 +55,10 @@ public static class WavRenderer
 
     private const int BlockFrames = 4096;
 
+    /// <summary>What a render wrote: how long the file plays, and the seconds it put before the
+    /// score's 0 for a voice's first consonant (0 without one).</summary>
+    public sealed record Rendered(TimeSpan Length, double Preroll);
+
     /// <summary>
     /// Why the file at <paramref name="soundFontPath"/> cannot be used, or null when it reads
     /// as a SoundFont 2 — the check made before the synth is asked.
@@ -95,6 +99,11 @@ public static class WavRenderer
     /// (<see cref="SoundFontProblem"/>), or MeltySynth could not read it.</exception>
     public static TimeSpan Render(Midi.MidiFile midi, string soundFontPath, Stream output,
         int sampleRate = DefaultSampleRate, IReadOnlyList<VoiceTrack>? voices = null)
+        => RenderWithVoices(midi, soundFontPath, output, sampleRate, voices).Length;
+
+    /// <summary><see cref="Render"/>, answering the preroll too.</summary>
+    public static Rendered RenderWithVoices(Midi.MidiFile midi, string soundFontPath, Stream output,
+        int sampleRate = DefaultSampleRate, IReadOnlyList<VoiceTrack>? voices = null)
     {
         if (SoundFontProblem(soundFontPath) is { } problem)
             throw new InvalidDataException(problem);
@@ -115,11 +124,20 @@ public static class WavRenderer
         var sequencer = new MidiFileSequencer(synth);
         sequencer.Play(sequence, false);
 
-        double seconds = sequence.Length.TotalSeconds;
+        // A voice that begins before the score's 0 (At < 0: the engine's lead, the first syllable's
+        // consonant in it) is heard whole: the instruments start `preroll` later, as far as the
+        // voice's sound before the beat reaches — silence in the lead is not waited for.
+        double preroll = 0;
+        foreach (var voice in voices ?? [])
+            if (voice.At < 0 && voice.Sound.SoundStart(-voice.At) is { } sounds)
+                preroll = Math.Max(preroll, -voice.At - sounds);
+
+        double seconds = sequence.Length.TotalSeconds + preroll;
         var mixed = new List<(long Start, long Frames, double Ratio, float[] Samples)>();
         foreach (var voice in voices ?? [])
         {
-            long start = Math.Max(0, (long)Math.Round(voice.At * sampleRate));
+            // A start before the file's 0 drops that much of the voice — silence, by the preroll's construction.
+            long start = (long)Math.Round((voice.At + preroll) * sampleRate);
             double ratio = (double)voice.Sound.SampleRate / sampleRate;
             long count = (long)Math.Floor(voice.Sound.Samples.Length / ratio);
             if (count <= 0)
@@ -128,6 +146,7 @@ public static class WavRenderer
             seconds = Math.Max(seconds, (double)(start + count) / sampleRate);
         }
         long frames = (long)Math.Ceiling((seconds + ReleaseTail) * sampleRate);
+        long prerollFrames = (long)Math.Round(preroll * sampleRate);
         WriteHeader(output, sampleRate, frames);
 
         var left = new float[BlockFrames];
@@ -136,10 +155,17 @@ public static class WavRenderer
         for (long done = 0; done < frames; done += BlockFrames)
         {
             int n = (int)Math.Min(BlockFrames, frames - done);
-            sequencer.Render(left.AsSpan(0, n), right.AsSpan(0, n));
+            // The synth's output begins at the preroll: silence before it.
+            Array.Clear(left, 0, n);
+            Array.Clear(right, 0, n);
+            if (done + n > prerollFrames)
+            {
+                int skip = (int)Math.Max(0, prerollFrames - done);
+                sequencer.Render(left.AsSpan(skip, n - skip), right.AsSpan(skip, n - skip));
+            }
             foreach (var (start, count, ratio, src) in mixed)
             {
-                long from = Math.Max(done, start), to = Math.Min(done + n, start + count);
+                long from = Math.Max(done, Math.Max(0, start)), to = Math.Min(done + n, start + count);
                 for (long f = from; f < to; f++)
                 {
                     double pos = (f - start) * ratio;
@@ -157,7 +183,7 @@ public static class WavRenderer
             }
             output.Write(pcm, 0, n * 4);
         }
-        return TimeSpan.FromSeconds((double)frames / sampleRate);
+        return new Rendered(TimeSpan.FromSeconds((double)frames / sampleRate), preroll);
     }
 
     private static void WriteSample(byte[] buffer, int at, float value)

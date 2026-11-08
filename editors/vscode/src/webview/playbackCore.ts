@@ -320,6 +320,41 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
 export interface VoiceCue { at: number; offset: number; duration?: number }
 
 /**
+ * Seconds the sung score is moved later before it goes to the engine, so the engine's WAV begins
+ * this long before the score's 0 (docs/singing-design.md §3): the room for the first syllable's
+ * consonant, which a singer places before the beat. Rendered from the score's 0 it was cut away —
+ * NEUTRINO's さ at 0 had its s from −0.103 s to +0.011 s, and the 11 ms left sounded as た
+ * (owner's report 2026-11-08). The WAV's time VOICE_LEAD_S is the score's 0.
+ */
+export const VOICE_LEAD_S = 0.3;
+
+/** Where sound begins in `samples` within the first `within` seconds: the first sample past
+ *  `threshold`, in seconds; null when nothing sounds that long. */
+export function soundStart(samples: ArrayLike<number>, sampleRate: number, within: number, threshold = 0.02): number | null {
+    const n = Math.min(samples.length, Math.ceil(within * sampleRate));
+    for (let i = 0; i < n; i++) {
+        if (Math.abs(samples[i]) > threshold) { return i / sampleRate; }
+    }
+    return null;
+}
+
+/**
+ * The cues over a buffer that begins `lead` seconds before the score's 0 (VOICE_LEAD_S): every
+ * offset moves by `lead`; a cue from the score's 0 — where the consonant before the beat lies in
+ * the lead — starts `pull` seconds earlier and longer (what the voice's sound before the beat
+ * needs, `pre`), as far as `at + room` allows (the instruments' own delay, `room`, when they wait
+ * for it; a count-in gives the room itself). A cue from inside the score is not pulled: the
+ * buffer before it is the previous syllable, not silence.
+ */
+export function withVoiceLead(cues: readonly VoiceCue[], lead: number, pull: number, room = 0): VoiceCue[] {
+    const r6 = (x: number) => Math.round(x * 1e6) / 1e6;
+    return cues.map(c => {
+        const p = Math.abs(c.offset) < 1e-6 ? Math.max(0, Math.min(pull, lead, c.at + room)) : 0;
+        return { at: r6(c.at - p), offset: r6(c.offset + lead - p), ...(c.duration === undefined ? {} : { duration: r6(c.duration + p) }) };
+    });
+}
+
+/**
  * The voice's cues for a Play from the list's time `listTime` (docs/singing-design.md §5). The
  * voice is a WAV in the score's time; the list the instruments play is the score's time moved by
  * `lead` (a count-in's clicks before the music) and, for a stretch, cut to `pieces` — the
