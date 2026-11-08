@@ -351,6 +351,15 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
   - (3) 点検で差し戻されたとき（「sent back once」）、チャットは曲を全部書き直さず、*Writing ….lys's draft…* で直してから出し直す。
   - (4) 応答が 10 分を超えて切れない（`~/.copilot/session-state/<id>/events.jsonl` に `errorOccurred` の `model_call` が出ない）。
 
+### 3.7 歌わせる（第1124〜1126・`docs/singing-design.md`。実機は未確認＝node から本物の `cantilena serve` を駆動した所まで）
+
+- [ ] 設定 `lilysharp.playback.singer` に `C:\MyProj\cantilena\src\Cantilena.Cli\bin\Debug\net10.0\cantilena.exe` を入れる（NEUTRINO の場所は環境変数 `CANTILENA_NEUTRINO_DIR` か `%APPDATA%\cantilena\cantilena.json` の `neutrino.folder`）。パレット **Lily#: Choose Singing Voice…** → `neutrino/MERROW` が並び、選ぶと `lilysharp.playback.singerVoice` に入る。設定 UI の説明の「Choose a voice…」リンクでも同じ picker。
+- [ ] `雪やこんこ.lys` を開いてプレビュー → 出力チャネル「Lily# Extension」に `singer ready: MERROW` と `singer: melody sung (4.0 s at speed 1)`（初回は数十秒かかることがある・その間 status bar に `Lily#: singing melody…`）。▶ → **メロディは歌声**（その楽器は鳴らない）・他のパートは楽器・追従の点灯はメロディにも付く。⏹ で声も止まる。音符をクリック → そこから歌う。▶ を押し直す → 頭から。
+- [ ] practice の速度を 80% に → 直後の ▶ は楽器（声は速度ごとに描き直す）、出力チャネルに `sung (5.0 s at speed 0.8)` が出た後の ▶ は 80% の声。`singerReplacesPart` を off → 声と楽器が重なる。count-in On → 数えた後から声。
+- [ ] 漢字の歌詞の本 → status bar に `Lily#: melody: 1 syllable(s) are not kana…` が 1 回・楽器で鳴る。歌詞のない本 → 何も起きない。
+- [ ] ループ On → 声なし（楽器）。小節を選んで ▶ → 選んだ所から声（選んだ所を過ぎても声が続くのは既知＝段 4）。MIDI 出力を名指し → 楽器はポート・声はプレビュー（ずれは数十 ms）。AI 候補の Play → 声なし。
+- [ ] 設定 `singer` を空に → 次の ▶ から楽器だけ。VS Code を閉じる → `cantilena.exe`・`neutrino_server.exe` が残らない（タスクマネージャ）。
+
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 
 - [x] 出力チャネル「Lily#」を開いたまま、1 頁の本で音を 1 つ打つ → epages kepte の行（頁が丸ごと届き直していない）。

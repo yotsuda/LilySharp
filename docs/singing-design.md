@@ -154,8 +154,18 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
    two rows on one part) and `SungRequestTests` (the voice's seconds are the playback's).
    End to end: the owner's `雪やこんこ.lys` through Core to Cantilena's JSON and NEUTRINO's WAV
    (Lab `sessions/p1125/e2e`).
-3. **The editor**: the settings, the resident child, the cache and the ahead render, the
-   `voice` message, the buffer in `startPlayback`, the mute, the status bar, the picker.
+3. **The editor** — done 2026-11-08 (session 1126), as §5 says, with these notes: the host
+   renders when the preview fetches its notes (`requestPlayback`) and when its tempo changes
+   (`practiceState`); a voice is keyed by its score at the speed and the voice name
+   (`singerCore.voiceKey`) and the WAV named by the key under the temp folder
+   (`lilysharp-voice/`); the page plays it from `voiceOrigin` (the score time of the played
+   list's 0: 0 for a plain Play, the stretch's start for a span, null for a loop or a candidate's
+   notes, where the voice stays out) and after a count-in (`countInFix`); a span's voice is cut
+   where the stretch ends only by the instruments' end timer — the buffer plays on to the piece's
+   end if the stretch is shorter (noted, not built: a stop at the span's end). Nets:
+   `test/singerCore.test.ts` (the score, the key, the wire, the manifest); the engine itself was
+   driven from node against the real `cantilena serve` (Lab `sessions/p1126/probe-singer.js`).
+   The real VS Code is the owner's to check (MANUAL-CHECKS §3.7).
 4. **Export mixing**; then MIDI-out alignment if the jitter is heard; then `lysc wav`.
 
 Open for the owner before stage 3:

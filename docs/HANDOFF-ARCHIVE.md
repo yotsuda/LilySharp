@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1124セッションの経緯
+
+### 1.1 第1124セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14801 / 0 / 2**（`-Start p1124`・HEAD `124c3aba3`・未 push 21・**OMR の open は 1（#23）**）。同じ会話で第1123 から続けた便。オーナーの朝の報告「プレビューの音がしょぼい・mp4 は良い音」→ 原因は VS Code の設定 `lilysharp.playback.midiOutput` が「Microsoft GS Wavetable Synth」を指していたこと（Play が OS の GS シンセへ流れていた・`playback-design.md` §6「port wins」のとおり）＝設定を消して解決・Lily# のコードは無傷。続けてオーナー「OpenUtau で歌わせられるか」→ OpenUtau は GUI だけで CLI なし（PR #2162 未 merge・声なし）、NEUTRINO Tau v3.2.6 を入れて実走（MusicXML → label → 常駐 server）、**オーナー決定「ライセンスに注意・Lily# とは独立した repo で」**→ 新 repo **Cantilena**（`C:\MyProj\cantilena`・Apache-2.0・名はオーナー選択）を立て `neutrino` backend と `serve` を実装。作業場所は Lab `sessions/p1124/`。
+
+- **歌わせる設計＝`docs/singing-design.md`（ROADMAP に 1 項）**: Lily# は歌うパートを秒の楽譜に解く（`lilysharp/sung`＝`SungSyllables` の置き場所と `PlaybackOf` の秒・数え直しなし・`LyricEvent` に melisma 旗）／Cantilena が声にする（`cantilena serve`＝stdin/stdout の JSON 行・常駐。実測 初回 3.8 s・2 回目 0.4 s）／webview が `AudioBuffer` をシンセと同じ時計で鳴らし歌うパートの楽器を消す／Export は WAV を混ぜる。リンクなし・同梱なし（設定 `lilysharp.playback.singer` は soundFont と同じ「パスを指す」形）。**オーナーへの問い 3 つ**（同 §7: 漢字歌詞のかな・複数パートの声・楽器を置き換えるか重ねるか）。Lily# のコードは未着手（段 2 から）。
+- **OMR #23（段の途中の clef の後、調号どおりの音の変化記号）＝`question`**: 不具合ではなく**オーナー決定 2026-10-14（第905）の規則**（`MeasureCollector.KeyCourtesyDue`・網 `ClefChangeKeyReminderTests`・LILYSHARP-OWN）。再現の絵 `sessions/p1124/omr23/repro.png` は 2・3・5 小節で規則どおり。選択肢 ⒜ 残して OMR の検算が許す／⒝ 外して LilyPond と同じ／⒞ layout の鍵。REQUESTS の行に書いた（OMR の repo では未 commit）。コードは触っていない。
+- **直した 1 つ＝MusicXML の題名漏れ**: `MusicXmlExporter.CollectMetadata` が score ブロックの `title`／`composer` も読み、ファイルの最後の score が勝っていた（`雪やこんこ.xml` が `score another` の「別の楽譜／ふがふが」を持つ・Lab `sessions/p1124/utau/xml`）。score ブロックの metadata は file walk で飛ばし（`IsInsideAScoreBlock`）、書く score の `HeaderOverrides` を最後に当てる（collector `CollectDefinitions` と同じ道）。網 `MusicXmlTests.AScoreBlocksHeader_IsItsOwn_AndTheDefaultScoreKeepsTheFiles`（毒＝helper を常に偽で赤）。**XML の掃き（`sessions/p1124/xml-compare.ps1`＝追跡 697 冊・709 ファイルを base `124c3aba3`／head の exe で）: 差 0**＝追跡の本に「score ブロックが題名を書き直す複数 score の本」は無い。CHANGELOG 2 本。
+- **その他**: Cantilena の commit は 3 本（骨組み・neutrino backend・serve。push はオーナー。`gh repo create yotsuda/cantilena --public --source . --push` 待ち。⚠️ 他 repo の SHA を HANDOFF に書くと `HistoryCitationTests.DeadCitationsDoNotGrow` が「死んだ引用」に数える＝書かない）。OpenUtau 0.1.576 は入れた（声なし・オーナー判断）。NEUTRINO は `C:\Tools\neutrino\windows（調声支援ツール）.v3.2.6.ex\NEUTRINO 調声支援ツール`。
+- 終了時 full **14801 / 1 / 2 / 14804**（`-End p1124 -DiffBase 124c3aba3`＝`end.log`・門の表は全部 OK）。**赤 1 本＝`DeadCitationsDoNotGrow`（947 → 950）**: 上の Cantilena の SHA 3 つが原因＝語に直して単独で緑（下に再測）。§7 7.5: Core の `+` は `MusicXmlExporter` の 20 行＝REF 0・OWN 0＝近似なし（score ブロックの判定は構文の問い・collector の `HeaderOverrides` と同じ読み）。7.6 ⒟ 既存の家（`RenderSpec.HeaderOverrides`）を指し直しただけ。この docs commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1123セッションの経緯
 
 ### 1.1 第1123セッション（2026-11-07・YT-DELL2）

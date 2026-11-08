@@ -383,6 +383,24 @@
             "default": "",
             "scope": "machine-overridable",
             "markdownDescription": "A MIDI output port of this machine to play through instead of the preview's own synth — the Play button, Alt+P / Alt+M and the auditions all go there — named as the **Lily#: Choose MIDI Output…** command lists it. **While a port is named, `#lilysharp.playback.soundFont#` is not used**; the port's own instruments sound (if the port cannot be opened, the preview plays with its sound font and says so). Empty: the preview's sound font. On Windows *Microsoft GS Wavetable Synth* plays with no setup; a virtual port (loopMIDI on Windows, an IAC bus on a Mac) carries the notes into a DAW or a VST host, where your own instruments are. Each part keeps its channel and sends its General MIDI program (its `midiInstrument` or preset), as the exported MIDI does; the drums are on channel 10. Takes effect on the next sound.\n\n**[Choose a port…](command:lilysharp.chooseMidiOutput)**"
+          },
+          "lilysharp.playback.singer": {
+            "type": "string",
+            "default": "",
+            "scope": "machine-overridable",
+            "markdownDescription": "The singing engine that sings the lyrics in the preview: the path of the `cantilena` program ([Cantilena](https://github.com/yotsuda/cantilena), a separate, Apache-2.0 project that drives your own installation of NEUTRINO — Lily# bundles neither). Empty: the lyrics are not sung and the part plays its instrument. With it named, Play sings every part a lyrics row sings, in the voice `#lilysharp.playback.singerVoice#`, in time with the other parts; the voice is rendered when the preview fetches the notes and kept, so a Play of the same music is not sung again. The engine's Japanese voices need hiragana or katakana on every syllable; other syllables are said in the status bar and the part plays its instrument. Takes effect on the next Play."
+          },
+          "lilysharp.playback.singerVoice": {
+            "type": "string",
+            "default": "MERROW",
+            "scope": "machine-overridable",
+            "markdownDescription": "The voice `#lilysharp.playback.singer#` sings with, as the **Lily#: Choose Singing Voice…** command lists them (`neutrino/MERROW`, or just `MERROW`). A voice is its author's work under its author's terms, installed where the engine looks for it.\n\n**[Choose a voice…](command:lilysharp.chooseSingingVoice)**"
+          },
+          "lilysharp.playback.singerReplacesPart": {
+            "type": "boolean",
+            "default": true,
+            "scope": "machine-overridable",
+            "markdownDescription": "While a part is sung, its instrument is silent (on) — or sounds under the voice (off). Takes effect on the next Play."
           }
         }
       },
@@ -675,6 +693,11 @@
         "title": "Choose MIDI Output…"
       },
       {
+        "command": "lilysharp.chooseSingingVoice",
+        "category": "Lily#",
+        "title": "Choose Singing Voice…"
+      },
+      {
         "command": "lilysharp.playNoteAtCursor",
         "category": "Lily#",
         "title": "Play Note at Cursor (hold)"
@@ -865,6 +888,9 @@
         },
         {
           "command": "lilysharp.chooseMidiOutput"
+        },
+        {
+          "command": "lilysharp.chooseSingingVoice"
         },
         {
           "command": "lilysharp.previewAiTransform",

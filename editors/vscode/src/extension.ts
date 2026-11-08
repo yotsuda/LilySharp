@@ -51,6 +51,8 @@ import { AudioFormat, AudioJob, renderAudioFiles } from './audioRender';
 import { PracticeState, exportNotes, practiceSummary } from './webview/playbackCore';
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
+import { VoiceRenderer } from './singer';
+import { SungVoiceDto, singerVoiceName } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -782,6 +784,15 @@ export function activate(context: vscode.ExtensionContext) {
                 midiPlaybackPanel = undefined;
                 void midiOutRequest('lilysharp/midiOut/stop', {});
             }
+            if (e.affectsConfiguration('lilysharp.playback.singer') || e.affectsConfiguration('lilysharp.playback.singerVoice')
+                || e.affectsConfiguration('lilysharp.playback.singerReplacesPart')) {
+                // Another engine or voice: the previews forget what was rendered and the engine is
+                // let go (one starts again on the next notes); the mute follows the setting.
+                disposeSinger();
+                for (const panel of previewPanels.values()) {
+                    panel.webview.postMessage({ type: 'setSinger', replacesPart: singerReplacesPartSetting() });
+                }
+            }
             if (!e.affectsConfiguration('lilysharp.preview.theme')) {
                 return;
             }
@@ -802,6 +813,8 @@ export function activate(context: vscode.ExtensionContext) {
         // `lilysharp.playback.midiOutput` through a picker of the machine's MIDI output ports
         // (the server lists them); the open previews pick it up through onDidChangeConfiguration.
         vscode.commands.registerCommand('lilysharp.chooseMidiOutput', () => chooseMidiOutput()),
+        // `lilysharp.playback.singerVoice` through a picker of the voices the singing engine lists.
+        vscode.commands.registerCommand('lilysharp.chooseSingingVoice', () => chooseSingingVoice()),
         vscode.commands.registerCommand('lilysharp.openPreview', () => {
             outputChannel.appendLine('openPreview command triggered');
             openPreview(context, vscode.ViewColumn.Active);
@@ -1660,7 +1673,10 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             }
             if (message.type === 'practiceState') {
                 // The page's practice menu, for the exports of the file it shows.
+                const before = previewPractice.get(panel)?.speed;
                 previewPractice.set(panel, message.practice as PracticeState);
+                // A new tempo: the voice is sung again at it (docs/singing-design.md §5).
+                if ((message.practice as PracticeState).speed !== before) { void singVoices(panel, uri); }
                 return;
             }
             if (message.type === 'requestPlayback') {
@@ -1680,6 +1696,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     // The tracks and the beats ride along for the practice menu's parts and metronome.
                     panel.webview.postMessage({ type: 'playbackData', notes: pb.Notes ?? null, error: pb.Error ?? null,
                         parts: pb.Parts ?? null, beats: pb.Beats ?? null, barEnd: pb.BarEnd ?? null });
+                    // The lyrics' voice, rendered ahead so the next Play finds it (docs/singing-design.md §5).
+                    void singVoices(panel, uri);
                 } catch (e) {
                     panel.webview.postMessage({ type: 'playbackData', error: String(e) });
                 }
@@ -1838,7 +1856,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     outputChannel.appendLine('Setting webview HTML');
     panel.webview.html = getPreviewHtml(fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(), getPreviewTheme(),
         textFontFaceCss(panel.webview, context.extensionUri), synthUrls(panel.webview, context.extensionUri),
-        midiOutputSetting());
+        midiOutputSetting(), singerReplacesPartSetting());
 
     // Then load content
     outputChannel.appendLine('Calling updatePreviewContent');
@@ -3689,6 +3707,123 @@ function reportMidiOutError(port: string, error: string): void {
     vscode.window.setStatusBarMessage(`Lily#: ${error} — playing in the preview (see Lily# Extension output)`, 8000);
 }
 
+// ---- The singing voice (docs/singing-design.md §5) ----
+
+/** `lilysharp.playback.singer`: the path of the singing engine (`cantilena`), or '' for none. */
+function singerSetting(): string {
+    return vscode.workspace.getConfiguration('lilysharp').get<string>('playback.singer', '').trim();
+}
+
+/** `lilysharp.playback.singerVoice`, as the engine takes it (`MERROW`). */
+function singerVoiceSetting(): string {
+    return singerVoiceName(vscode.workspace.getConfiguration('lilysharp').get<string>('playback.singerVoice', ''));
+}
+
+/** `lilysharp.playback.singerReplacesPart`: a sung part's instrument is silent. */
+function singerReplacesPartSetting(): boolean {
+    return vscode.workspace.getConfiguration('lilysharp').get<boolean>('playback.singerReplacesPart', true);
+}
+
+/** The one engine of this host, made for the setting's program on the first voice asked for;
+ *  let go when the setting changes and on deactivate. */
+let voiceRenderer: VoiceRenderer | undefined;
+function renderer(): VoiceRenderer | undefined {
+    const exe = singerSetting();
+    if (!exe) { return undefined; }
+    if (voiceRenderer && voiceRenderer.exe !== exe) { disposeSinger(); }
+    return voiceRenderer ??= new VoiceRenderer(exe, line => outputChannel.appendLine(line));
+}
+function disposeSinger(): void {
+    voiceRenderer?.dispose();
+    voiceRenderer = undefined;
+    for (const panel of previewPanels.values()) {
+        postedVoices.delete(panel);
+        panel.webview.postMessage({ type: 'clearVoices' });
+    }
+}
+
+/** The voices each preview holds, part → key: a voice already there is not sent again. */
+const postedVoices = new WeakMap<vscode.WebviewPanel, Map<string, string>>();
+/** What was said once per preview (a warning of the server's, a voice that was not sung). */
+const singerTold = new WeakMap<vscode.WebviewPanel, Set<string>>();
+function tellSingerOnce(panel: vscode.WebviewPanel, text: string): void {
+    outputChannel.appendLine(`singer: ${text}`);
+    let told = singerTold.get(panel);
+    if (!told) { singerTold.set(panel, told = new Set()); }
+    if (told.has(text)) { return; }
+    told.add(text);
+    vscode.window.setStatusBarMessage(`Lily#: ${text}`, 8000);
+}
+
+/**
+ * Sings the score `panel` shows: the server's sung voices (`lilysharp/sung`) at the preview's
+ * practice speed, rendered by the engine unless rendered before, and handed to the page as WAV
+ * bytes — one message a voice, as each is ready. Called when the preview fetches its notes and
+ * when its tempo changes, so a Play finds the voice there; a Play that comes first plays the
+ * instruments, and the voice joins the next.
+ */
+async function singVoices(panel: vscode.WebviewPanel, uri: string): Promise<void> {
+    const engine = renderer();
+    if (!engine || !client || !clientReady) { return; }
+    let sung: { Voices?: SungVoiceDto[] | null; Error?: string | null };
+    try {
+        sung = await client.sendRequest('lilysharp/sung', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
+    } catch (e) {
+        outputChannel.appendLine(`singer: lilysharp/sung failed: ${String(e)}`);
+        return;
+    }
+    if (sung.Error || !sung.Voices) { return; }
+    const speed = previewPractice.get(panel)?.speed ?? 1;
+    const voiceName = singerVoiceSetting();
+    let posted = postedVoices.get(panel);
+    if (!posted) { postedVoices.set(panel, posted = new Map()); }
+    const mine = posted;
+    for (const voice of sung.Voices) {
+        for (const warning of voice.Warnings ?? []) { tellSingerOnce(panel, `${voice.Part}: ${warning}`); }
+        if (voice.Notes.length === 0) { continue; }
+        const { key, rendered, cached } = engine.render(voice, speed, voiceName);
+        if (mine.get(voice.Part) === key) { continue; }
+        const singing = rendered.then(async v => {
+            if (postedVoices.get(panel) !== mine) { return; }   // the engine changed meanwhile
+            const bytes = await fs.promises.readFile(v.wav);
+            mine.set(voice.Part, key);
+            panel.webview.postMessage({ type: 'voice', part: voice.Part, key, speed, bytes: new Uint8Array(bytes) });
+            outputChannel.appendLine(`singer: ${voice.Part} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
+        }, (e: Error) => tellSingerOnce(panel, `the voice of ${voice.Part} was not sung — ${e.message} (see Lily# Extension output)`));
+        if (!cached) { vscode.window.setStatusBarMessage(`Lily#: singing ${voice.Part}…`, singing); }
+    }
+}
+
+/** The picker behind `Lily#: Choose Singing Voice…` and the setting's link: the voices the
+ *  engine lists (`cantilena voices`), written to `lilysharp.playback.singerVoice`. */
+async function chooseSingingVoice(): Promise<void> {
+    const exe = singerSetting();
+    if (!exe) {
+        const open = 'Open Settings';
+        const pick = await vscode.window.showInformationMessage(
+            'Lily#: no singing engine is named yet — set lilysharp.playback.singer to the cantilena program first.', open);
+        if (pick === open) { void vscode.commands.executeCommand('workbench.action.openSettings', 'lilysharp.playback.singer'); }
+        return;
+    }
+    const listed = await new Promise<string[]>(resolve => {
+        cp.execFile(exe, ['voices'], { windowsHide: true }, (error, stdout, stderr) => {
+            if (error) { outputChannel.appendLine(`singer: ${exe} voices: ${String(stderr) || error.message}`); }
+            resolve(String(stdout).split(/\r?\n/).map(s => s.trim()).filter(s => s.length > 0));
+        });
+    });
+    if (listed.length === 0) {
+        vscode.window.showWarningMessage('Lily#: the singing engine lists no voice (see Lily# Extension output).');
+        return;
+    }
+    const current = singerVoiceSetting();
+    const pick = await vscode.window.showQuickPick(
+        listed.map(name => ({ label: name, description: singerVoiceName(name) === current ? '(current)' : '' })),
+        { title: 'Lily#: Choose Singing Voice', placeHolder: 'The voice the lyrics are sung in' });
+    if (!pick) { return; }
+    await vscode.workspace.getConfiguration('lilysharp').update('playback.singerVoice', pick.label, vscode.ConfigurationTarget.Global);
+    vscode.window.setStatusBarMessage(`Lily#: the lyrics are sung in ${pick.label}`, 4000);
+}
+
 /** The picker behind `Lily#: Choose MIDI Output…` and the setting's link: the preview's
  *  own synth (empties the setting), or one of the machine's MIDI output ports as the server
  *  lists them now. Written to the user settings as `lilysharp.playback.midiOutput`. */
@@ -3774,7 +3909,7 @@ interface SynthUrls { script: string; processor: string; soundFont: string }
 function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
                         theme: 'auto' | 'light' | 'dark', textFontCss: string,
                         synth: SynthUrls = { script: '', processor: '', soundFont: '' },
-                        midiOutput: string = ''): string {
+                        midiOutput: string = '', singerReplacesPart: boolean = true): string {
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -3794,8 +3929,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         })();
         // The SoundFont synth's files (docs/playback-design.md): the worklet processor
         // and the sound font ('' = none, the page then plays its oscillator patches); and
-        // the MIDI output port's name ('' = the synth here), lilysharp.playback.midiOutput.
-        window.lysSynthConfig = { processor: '${synth.processor}', soundFont: '${synth.soundFont}', midiOutput: ${JSON.stringify(midiOutput)} };
+        // the MIDI output port's name ('' = the synth here), lilysharp.playback.midiOutput; and
+        // whether a sung part's instrument is silent, lilysharp.playback.singerReplacesPart.
+        window.lysSynthConfig = { processor: '${synth.processor}', soundFont: '${synth.soundFont}', midiOutput: ${JSON.stringify(midiOutput)}, singerReplacesPart: ${singerReplacesPart ? 'true' : 'false'} };
     </script>
     <script nonce="${nonce}" src="${synth.script}"></script>
     <style>
@@ -5769,6 +5905,74 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             midiOutput = name || '';
         }
 
+        // ---- The singing voice (docs/singing-design.md §5): the host renders each sung part's
+        // words through the singing engine and hands the WAV here (the 'voice' message); a Play
+        // starts the buffer at the same clock as the synth's notes, through a limiter of its own,
+        // and leaves the sung part's instrument out while the setting says so. A voice is for one
+        // practice speed; at another the instrument plays until the host has sung it anew. A loop
+        // and a candidate's notes play without the voice (voiceOrigin null).
+        const voices = new Map();           // part -> { buffer, speed, key }
+        let voiceSources = [];
+        let voiceOrigin = 0;                // the score's (practiced) time at the played list's 0; null = no voice
+        let voiceOut = null;
+        let singerReplacesPart = !!(window.lysSynthConfig && window.lysSynthConfig.singerReplacesPart);
+        function setSinger(message) { singerReplacesPart = !!message.replacesPart; }
+        function voiceOutput(ctx) {
+            if (!voiceOut) {
+                const gain = ctx.createGain();
+                gain.gain.value = 0.9;
+                const limiter = ctx.createDynamicsCompressor();
+                limiter.threshold.value = -10; limiter.knee.value = 12; limiter.ratio.value = 12;
+                limiter.attack.value = 0.002; limiter.release.value = 0.12;
+                gain.connect(limiter);
+                limiter.connect(ctx.destination);
+                voiceOut = gain;
+            }
+            return voiceOut;
+        }
+        function setVoice(message) {
+            const bytes = message.bytes;
+            if (!bytes || !bytes.buffer) { return; }
+            const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+            audioContext().decodeAudioData(copy).then(buffer => {
+                voices.set(message.part, { buffer, speed: message.speed || 1, key: message.key });
+            }, e => vscode.postMessage({ type: 'webviewPerf', text: 'voice: ' + message.part + ' could not be decoded: ' + e }));
+        }
+        function clearVoices() { stopVoices(); voices.clear(); }
+        // The tracks a voice stands in for now: a part with a voice at this speed, not muted.
+        function sungTracks() {
+            const set = new Set();
+            if (voiceOrigin === null || !rawParts) { return set; }
+            rawParts.forEach((name, i) => {
+                const v = voices.get(name);
+                if (v && Math.abs(v.speed - practice.speed) < 1e-6 && !practice.muted.includes(name)) { set.add(i); }
+            });
+            return set;
+        }
+        function stopVoices() {
+            for (const s of voiceSources) { try { s.stop(); } catch (e) { /* ended */ } }
+            voiceSources = [];
+        }
+        // Starts every voice so that the list's time listTime sounds at the context's time when:
+        // after a count-in (countInFix), from where the buffer's score time stands.
+        function startVoices(ctx, when, listTime) {
+            stopVoices();
+            const tracks = sungTracks();
+            if (tracks.size === 0) { return; }
+            const from = Math.max(listTime, countInFix);
+            const at = when + (from - listTime);
+            for (const i of tracks) {
+                const v = voices.get(rawParts[i]);
+                const offset = from + voiceOrigin;
+                if (offset >= v.buffer.duration) { continue; }
+                const src = ctx.createBufferSource();
+                src.buffer = v.buffer;
+                src.connect(voiceOutput(ctx));
+                src.start(at, offset);
+                voiceSources.push(src);
+            }
+        }
+
         let playingOscs = [];
         let playEndTimer = null;
         let playheadTimer = null;
@@ -5963,6 +6167,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         function stopPlayback() {
             playGeneration++;   // a Play waiting for the sound font is off
+            stopVoices();
             clearTimeout(playEndTimer);
             playEndTimer = null;
             clearInterval(playheadTimer);
@@ -6018,6 +6223,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // worse than starting cleanly at the next onset).
             notes = window.LysSynth ? window.LysSynth.fromOffset(notes, offset) : notes.filter(n => n.T >= offset - 0.001);
             if (notes.length === 0) { return; }
+            // The sung parts' notes leave the instruments' list while a voice stands in for them
+            // (the highlight follows the whole list still).
+            const sung = sungTracks();
+            const played = sung.size > 0 && singerReplacesPart ? notes.filter(n => !sung.has(n.N)) : notes;
             if (midiOutput && !here) {
                 // The MIDI output: the server plays the list from the offset and answers
                 // (midiStarted) with the clock the highlight follows; a port that is not
@@ -6025,7 +6234,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const gen = ++playGeneration;
                 midiPlayPending = { gen, notes, offset };
                 setPlayUi(true);
-                vscode.postMessage({ type: 'midiPlay', port: midiOutput, notes, offset });
+                vscode.postMessage({ type: 'midiPlay', port: midiOutput, notes: played, offset });
                 return;
             }
             const ctx = audio();
@@ -6042,14 +6251,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 return;
             }
             let t0 = ctx.currentTime + 0.15;
-            let end;
+            let end = notes.reduce((e, n) => Math.max(e, n.T + n.D), 0);   // the whole list's, voice included
             if (sf && sf.ready && !plainTones) {
-                sfPlayer = sf.play(notes, offset, t0);
-                t0 = sfPlayer.t0;
-                end = sfPlayer.end;
+                if (played.length > 0) {
+                    sfPlayer = sf.play(played, offset, t0);
+                    t0 = sfPlayer.t0;
+                    end = Math.max(end, sfPlayer.end);
+                }
             } else {
-                end = startOscillators(ctx, notes, offset, t0);
+                end = Math.max(end, startOscillators(ctx, played, offset, t0));
             }
+            startVoices(ctx, t0, offset);
             setPlayUi(true);
             // A loop goes round when the last note ends; a plain playback lets it ring a moment.
             playEndTimer = setTimeout(playEnded, (end - offset + (loopList ? 0 : 0.5)) * 1000);
@@ -6071,6 +6283,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             midiPlaying = true;
             const t0Ms = message.t0Ms;
+            // The voice plays here, from where the port's playback stands now (the round trip's jitter).
+            if (sungTracks().size > 0) {
+                const ctx = audio();
+                startVoices(ctx, ctx.currentTime + 0.05, pending.offset + (Date.now() - t0Ms) / 1000 + 0.05);
+            }
             playEndTimer = setTimeout(playEnded, (message.end - pending.offset + (loopList ? 0 : 0.5)) * 1000);
             playOffset = pending.offset;
             playClock = () => (Date.now() - t0Ms) / 1000;
@@ -6517,8 +6734,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!playing || relaying || !rawNotes || !playClock) return;
             const at = Math.max(0, playOffset + playClock() - countInFix) * oldSpeed / practice.speed;
             playbackNotes = practiced(rawNotes);
-            if (lastSpan === undefined) { startPlayback(playbackNotes, at); return; }
+            if (lastSpan === undefined) { voiceOrigin = 0; startPlayback(playbackNotes, at); return; }
             const list = spanOf(playbackNotes, lastSpan, lastOnce);
+            voiceOrigin = loopOn ? null : spanStart;
             loopList = loopOn ? list : null;
             startPlayback(loopOn ? looped(list) : list, at);
             loopList = loopOn ? list : null;
@@ -7007,6 +7225,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'playNotes':
                     loopList = null;
+                    voiceOrigin = null;     // another text's notes: no voice of this score's
                     startPlayback(message.notes, 0);
                     break;
                 case 'setSoundFont':
@@ -7014,6 +7233,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'setMidiOutput':
                     setMidiOutput(message.name);
+                    break;
+                case 'voice':
+                    setVoice(message);
+                    break;
+                case 'clearVoices':
+                    clearVoices();
+                    break;
+                case 'setSinger':
+                    setSinger(message);
                     break;
                 case 'midiStarted':
                     midiStarted(message);
@@ -7081,6 +7309,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         lastSpan = span;
                         lastOnce = loopOn;
                         const list = spanOf(playbackNotes, span, loopOn);
+                        voiceOrigin = loopOn ? null : spanStart;
                         loopList = loopOn ? list : null;
                         const toPlay = loopOn ? looped(list) : list;
                         const c = counted(toPlay, 0, spanStart);
@@ -7094,6 +7323,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         pendingFromHere = false;
                         lastSpan = undefined;
                         loopList = null;
+                        voiceOrigin = 0;
                         let startAt = 0;
                         if (pendingStartPos >= 0) {
                             let first = Infinity;
@@ -7455,6 +7685,9 @@ export function deactivate(): Thenable<void> | undefined {
     // Clear all debounce timers
     debounceTimers.forEach(timer => clearTimeout(timer));
     debounceTimers.clear();
+    // The singing engine, and its own server with it.
+    voiceRenderer?.dispose();
+    voiceRenderer = undefined;
 
     if (!client) {
         return undefined;
