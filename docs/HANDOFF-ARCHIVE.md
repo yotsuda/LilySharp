@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1158セッションの経緯
+
+### 1.1 第1158セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14861 / 0 / 2**（`-Start p1158`・HEAD `1fa4ef9ff`・未 push 58・OMR の open 0）。同じ会話で第1157 から続けた便。オーナー報告「メトロノームのウィンドウを出したままプレビューの score を切り替えると、メトロノームのウィンドウの状態が更新されない」。作業場所は Lab `sessions/p1158/`（`notes.md`）。
+
+- **原因**: Parts の一覧はメニューを開いたときだけ `requestParts` で取っていた。Score: の切り替えや追従で別ファイルに移ってもページは描き直すだけで問い直さない。
+- **直し（拡張）**: `updateContent` に **`scoreKey`**（`uri\nrender`・SVG の post とエラー＋renders の post の両方）を載せ、ページは `lastScoreKey` と `partsKey`（一覧を作った鍵）を持ち、メニューが開いていて鍵が違えば `requestParts()` を呼び直す（開くときも鍵を記録）。**描画ごとには問い直さない**（一覧 1 回＝サーバーの playback 書き出し＋sung 書き出し）ので、編集でパートを足しても開いたままでは増えない＝閉じて開く（MANUAL-CHECKS と playback-design に明記）。
+- 網: npm **907 / 907**（ページは parse の網）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: playback-design・editors CHANGELOG・MANUAL-CHECKS §3.7「score を切り替えても練習メニューが追う」。
+- 残り: 実機（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1158 -DiffBase 1fa4ef9ff`＝`end.log`・門は全部 OK・§1 現在便 15,743 字＝残り 4,257）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所はコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1157セッションの経緯
 
 ### 1.1 第1157セッション（2026-11-09・YT-DELL2）

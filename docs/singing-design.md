@@ -248,7 +248,11 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   commented out) is forgotten on the host too (`sungParts`, the last `voiceParts`): the
   engine's answer to the earlier text, had it still been singing, lands nowhere — it used to
   arrive after the page had emptied and light the microphone again (owner's report, session
-  1152). Nets: `test/singerCore.test.ts` (the queue, the mode),
+  1152). The host checks the same before it posts `preparing` too (session 1160: a switch to a
+  file with no lyrics while the engine was being asked — the `preparing` landed after the empty
+  `voiceParts` and pulsed for ever), and the page keeps the last `voiceParts` (`sungNow`) and
+  refuses a `voiceState` or a `voice` of any other part, so a file with no lyrics shows no
+  microphone whatever arrives late. Nets: `test/singerCore.test.ts` (the queue, the mode),
   `test/playbackCore.test.ts` (the badge's `waiting`).
 - **MIDI out** (`lilysharp.playback.midiOutput` set): the port plays the instruments, the
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The

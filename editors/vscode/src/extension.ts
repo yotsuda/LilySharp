@@ -4037,9 +4037,13 @@ async function renderVoice(job: PrepareJob): Promise<void> {
     try {
         ({ key, rendered, cached } = await engine.render(voice, speed));
     } catch (e) {
-        failVoice(panel, voice.Part, speed, String(e));
+        if (wanted()) { failVoice(panel, voice.Part, speed, String(e)); }
         return;
     }
+    // Asked again after the await: the preview may have turned to a file with no lyrics
+    // meanwhile, whose empty `voiceParts` had already gone out — a `preparing` landing after it
+    // kept the microphone pulsing for ever (owner's report 2026-11-09, session 1160).
+    if (!wanted()) { return; }
     if (!cached) { void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'preparing' }); }
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
@@ -6219,6 +6223,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function setVoice(message) {
             const bytes = message.bytes;
             if (!bytes || !bytes.buffer) { return; }
+            if (!sungNowHas(message.part)) { return; }  // a voice of a part this score does not sing (session 1160)
             const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
             audioContext().decodeAudioData(copy).then(buffer => {
                 // The buffer begins lead seconds before the score's 0 (VOICE_LEAD_S), with the
@@ -6240,24 +6245,31 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // (No backticks in this script: it lives in a template literal.)
         function clearVoices(pending) {
             stopVoices(); voices.clear(); voiceStates.clear();
+            sungNow = null;
             if (pending) { voiceStates.set('', { state: 'preparing' }); }
             renderVoiceBadge();
         }
         // The parts the score sings now ('voiceParts', each time the host asks lilysharp/sung): a
         // voice or a state of any other part is from an earlier score or an earlier text of this
-        // one, and goes — so a score with no lyrics shows no microphone.
+        // one, and goes — so a score with no lyrics shows no microphone. Kept (sungNow) so that a
+        // voice or a state arriving late for any other part is refused too (session 1160: the
+        // host's late 'preparing' after a switch to a file with no lyrics pulsed for ever).
+        let sungNow = null;     // null: not named yet since the last clearVoices
         function keepVoices(parts) {
             const keep = new Set(parts || []);
+            sungNow = keep;
             for (const part of [...voices.keys()]) { if (!keep.has(part)) { voices.delete(part); } }
             for (const part of [...voiceStates.keys()]) { if (!keep.has(part)) { voiceStates.delete(part); } }
             renderVoiceBadge();
         }
+        function sungNowHas(part) { return sungNow === null || sungNow.has(part); }
         // The pane's sign of the voices (owner's request 2026-11-08): what the host says of each
         // (preparing, failed — the 'voiceState' message) and what this page decoded (ready), shown
         // as one badge beside the transport (playbackCore.voiceBadge) and as a sign on each
         // voice's toggle in the practice menu.
         const voiceStates = new Map();      // part -> { state, detail }
         function setVoiceState(part, state, detail) {
+            if (!sungNowHas(part)) { return; }      // a part this score does not sing: a late word of another text
             // A voice told waiting or preparing is of a text that is gone (the host compares the
             // keys): the buffer goes with it, so a Play meanwhile plays the instrument, not the
             // old words (session 1148).
