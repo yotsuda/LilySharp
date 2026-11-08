@@ -267,6 +267,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1156セッションの経緯
+
+### 1.1 第1156セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14861 / 0 / 2**（`-Start p1156`・HEAD `8fd0ec5e7`・未 push 56・OMR の open 0）。同じ会話で第1155 から続けた便。オーナー報告「メトロノームのウィンドウのパートをすこし触ったら、どの楽譜も再生が鳴らなくなってしまった」。作業場所は Lab `sessions/p1156/`（`notes.md`・`probe/`）。
+
+- **サーバーは正常（実測）**: 一時的な xunit probe（削除済み）で 雪やこんこ.lys・かえるのうた.lys の `lilysharp/playback`／`lilysharp/sung` はエラー無し（29 音・Tempo/melody/m2・sung melody）＝第1154 の `AllParts` の後も答える。
+- **ページも正常（本物のブラウザで実測）**: `probe/harness.js` が webview のテンプレートから `page.html` を作り（`acquireVsCodeApi` を stub・synth の bundle と `sine.sf2` を `probe/serve.js` で配信・出力先の前に AnalyserNode を挟んで `window.__peak()` で**実際に鳴る音量**を測る）、Chrome（claude-in-chrome）で ▶ を本物のクリック: 楽譜どおり peak 0.190 → melody のフェーダー 60 で 0.128 → 両方 60 で 0.069 → **両方 0 で 0.000（再生もすぐ終わる）→ 100 に戻すと 0.190** → melody を mute で 0.098 → 両方 mute で 0.000 → 戻すと 0.190。読み込み・`partsData`・フェーダーの `change`・トグル・▶ のどこでも例外 0。声（WAV を合成して `voice` を送る）のフェーダー 50／0 も例外 0。
+- **読み**: コードの故障としては再現しない。「どの楽譜も」を黙らせうる唯一の状態は練習メニュー自身＝トグルとフェーダーは**パート名ごとに全ファイル共通**（第1128 からの mute の設計）なので、`melody` の mute、またはスライダーの溝をクリックして**つまみが左端へ飛んだ**（velocity 5% は無音同然）状態は、melody を持つ全ファイル（オーナーの試験ファイルは全部そう）を黙らせる。
+- **この便でしたこと**: 100% でないフェーダーの右に数字（`60%`）を出し、**ダブルクリックで 100%** に戻す（左端のつまみは見落としやすかった）。MANUAL-CHECKS §3.7 に「鳴らないときの見方」（沈んだ練習ボタン・灰色の名・左端のフェーダー・出力チャネルの `PREVIEW` 行）を書いた。npm 907 / 907・`check-types` 0・`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。
+- **オーナーへの問い**: 練習メニューを開いて、パートが灰色か・フェーダーが左端かを見てほしい。どちらでもなく鳴らないなら、出力チャネル「Lily# Extension」の `PREVIEW` 行を貼ってほしい（ページの実行時エラーは `webviewError` としてそこに出る）。
+- 残り: 前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
+- 終了時 full **14860 / 1 / 2 / 14863**（`-End p1156 -DiffBase 8fd0ec5e7`＝`end.log`・門は全部 OK・§1 現在便 16,417 字＝残り 3,583）。赤 1 は `ExportRequestTests.Mp4_DrawsThePictures_TheSoundingCopyLit`＝**第1148 と同じ `s00001.png is being used by another process`（2 度目）**＝第1148 の約束どおり直した: 絵のフォルダの後片付け `DeleteFrames`（IOException なら GC＋100 ms で最大 20 回やり直し・それでも握られていれば temp なので放す）を MP4 の網 2 本に。`ExportRequestTests` 単独 **25 / 25**（`rerun.log`）＝合計は 14861 相当。§7 7.5: Core `+` 0・REF 0・OWN 0（ページの TS・網・docs だけ）。7.6: 出所は Chrome 上の実測（`probe/`）と probe の xunit。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1155セッションの経緯
 
 ### 1.1 第1155セッション（2026-11-09・YT-DELL2）

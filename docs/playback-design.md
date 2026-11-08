@@ -190,7 +190,11 @@ Now:
   off, every voice sung — the lists are by name across files, so it is also the way out of a
   part silenced in another file) and **Reset faders** puts every fader at 100 %; each is live
   only while there is something to put back. The number beside a fader shows while it is not at
-  100 %, and a double-click on one is 100 %.
+  100 %, and a double-click on one is 100 %. The Parts list follows the score shown while the
+  menu is open (session 1158, owner's report: it kept the last score's parts after a switch):
+  `updateContent` carries `scoreKey` (`uri\nrender`), and the page asks `requestParts` again
+  when it differs from the key the list was built for — not on every render, since a parts
+  list costs the server a playback export, so a part added by an edit shows on the next opening.
   An instrument's level scales its notes' VELOCITY (`Practice.levels`, by track name;
   `practiceNotes`, `velocityAt`: rounded, never below 1 while above 0, 0 silences the part as a
   mute would), so one rule reaches the preview's synth, the MIDI output and every export

@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1158セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14861 / 0 / 2**（`-Start p1158`・HEAD `1fa4ef9ff`・未 push 58・OMR の open 0）。同じ会話で第1157 から続けた便。オーナー報告「メトロノームのウィンドウを出したままプレビューの score を切り替えると、メトロノームのウィンドウの状態が更新されない」。作業場所は Lab `sessions/p1158/`（`notes.md`）。
+
+- **原因**: Parts の一覧はメニューを開いたときだけ `requestParts` で取っていた。Score: の切り替えや追従で別ファイルに移ってもページは描き直すだけで問い直さない。
+- **直し（拡張）**: `updateContent` に **`scoreKey`**（`uri\nrender`・SVG の post とエラー＋renders の post の両方）を載せ、ページは `lastScoreKey` と `partsKey`（一覧を作った鍵）を持ち、メニューが開いていて鍵が違えば `requestParts()` を呼び直す（開くときも鍵を記録）。**描画ごとには問い直さない**（一覧 1 回＝サーバーの playback 書き出し＋sung 書き出し）ので、編集でパートを足しても開いたままでは増えない＝閉じて開く（MANUAL-CHECKS と playback-design に明記）。
+- 網: npm **907 / 907**（ページは parse の網）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: playback-design・editors CHANGELOG・MANUAL-CHECKS §3.7「score を切り替えても練習メニューが追う」。
+- 残り: 実機（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1158 -DiffBase 1fa4ef9ff`＝`end.log`・門は全部 OK・§1 現在便 15,743 字＝残り 4,257）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所はコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1157セッションの経緯
+
 ### 1.1 第1157セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14861 / 0 / 2**（`-Start p1157`・HEAD `004302579`・未 push 57・OMR の open 0）。同じ会話で第1156 から続けた便。オーナー「再現しなくなってしまった。パート選択を選択中の score に戻すリセットボタンと、すべてのフェーダーを元に戻すリセットボタンを足して」→ 続けて「フェーダーの上限は 100% ではなく 200% にして」。作業場所は Lab `sessions/p1157/`（`notes.md`）。
@@ -148,20 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 残り: 実機（オーナー）・前便の問い（鳴らない件は再現せず＝Reset parts／Reset faders で戻せる）・前々便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
 - **Chrome のハーネスで確認**（第1156 の `probe/`・`page.html` を作り直して）: melody を mute・kit を on・声を off・フェーダー 150％と 40％ → Reset parts で選択が score どおりに戻りトグルの押し込みも戻る（フェーダーは残る）→ Reset faders で全部 100・数字が消える・両ボタンが無効に。例外 0。
 - 終了時 full **14861 / 0 / 2 / 14863**（`-End p1157 -DiffBase 004302579`＝`end.log`・門は全部 OK・§1 現在便 16,021 字＝残り 3,979）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所はオーナーの要望とハーネスの実測。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1156セッションの経緯
-
-### 1.1 第1156セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14861 / 0 / 2**（`-Start p1156`・HEAD `8fd0ec5e7`・未 push 56・OMR の open 0）。同じ会話で第1155 から続けた便。オーナー報告「メトロノームのウィンドウのパートをすこし触ったら、どの楽譜も再生が鳴らなくなってしまった」。作業場所は Lab `sessions/p1156/`（`notes.md`・`probe/`）。
-
-- **サーバーは正常（実測）**: 一時的な xunit probe（削除済み）で 雪やこんこ.lys・かえるのうた.lys の `lilysharp/playback`／`lilysharp/sung` はエラー無し（29 音・Tempo/melody/m2・sung melody）＝第1154 の `AllParts` の後も答える。
-- **ページも正常（本物のブラウザで実測）**: `probe/harness.js` が webview のテンプレートから `page.html` を作り（`acquireVsCodeApi` を stub・synth の bundle と `sine.sf2` を `probe/serve.js` で配信・出力先の前に AnalyserNode を挟んで `window.__peak()` で**実際に鳴る音量**を測る）、Chrome（claude-in-chrome）で ▶ を本物のクリック: 楽譜どおり peak 0.190 → melody のフェーダー 60 で 0.128 → 両方 60 で 0.069 → **両方 0 で 0.000（再生もすぐ終わる）→ 100 に戻すと 0.190** → melody を mute で 0.098 → 両方 mute で 0.000 → 戻すと 0.190。読み込み・`partsData`・フェーダーの `change`・トグル・▶ のどこでも例外 0。声（WAV を合成して `voice` を送る）のフェーダー 50／0 も例外 0。
-- **読み**: コードの故障としては再現しない。「どの楽譜も」を黙らせうる唯一の状態は練習メニュー自身＝トグルとフェーダーは**パート名ごとに全ファイル共通**（第1128 からの mute の設計）なので、`melody` の mute、またはスライダーの溝をクリックして**つまみが左端へ飛んだ**（velocity 5% は無音同然）状態は、melody を持つ全ファイル（オーナーの試験ファイルは全部そう）を黙らせる。
-- **この便でしたこと**: 100% でないフェーダーの右に数字（`60%`）を出し、**ダブルクリックで 100%** に戻す（左端のつまみは見落としやすかった）。MANUAL-CHECKS §3.7 に「鳴らないときの見方」（沈んだ練習ボタン・灰色の名・左端のフェーダー・出力チャネルの `PREVIEW` 行）を書いた。npm 907 / 907・`check-types` 0・`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。
-- **オーナーへの問い**: 練習メニューを開いて、パートが灰色か・フェーダーが左端かを見てほしい。どちらでもなく鳴らないなら、出力チャネル「Lily# Extension」の `PREVIEW` 行を貼ってほしい（ページの実行時エラーは `webviewError` としてそこに出る）。
-- 残り: 前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
-- 終了時 full **14860 / 1 / 2 / 14863**（`-End p1156 -DiffBase 8fd0ec5e7`＝`end.log`・門は全部 OK・§1 現在便 16,417 字＝残り 3,583）。赤 1 は `ExportRequestTests.Mp4_DrawsThePictures_TheSoundingCopyLit`＝**第1148 と同じ `s00001.png is being used by another process`（2 度目）**＝第1148 の約束どおり直した: 絵のフォルダの後片付け `DeleteFrames`（IOException なら GC＋100 ms で最大 20 回やり直し・それでも握られていれば temp なので放す）を MP4 の網 2 本に。`ExportRequestTests` 単独 **25 / 25**（`rerun.log`）＝合計は 14861 相当。§7 7.5: Core `+` 0・REF 0・OWN 0（ページの TS・網・docs だけ）。7.6: 出所は Chrome 上の実測（`probe/`）と probe の xunit。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

@@ -2116,7 +2116,10 @@ async function updatePreviewContent(
                     svg: response.Svg,
                     error: response.Error ?? undefined,
                     renders: response.Renders || [],
-                    selectedRender: drawnRender
+                    selectedRender: drawnRender,
+                    // Which document and score this is: the practice menu's parts follow it while
+                    // the menu is open (owner's report 2026-11-09, session 1158).
+                    scoreKey: `${uri}\n${drawnRender}`
                 });
             }
         } else if (response.Error) {
@@ -2131,7 +2134,8 @@ async function updatePreviewContent(
                 type: 'updateContent',
                 error: response.Error,
                 renders: response.Renders || [],
-                selectedRender: drawnRender
+                selectedRender: drawnRender,
+                scoreKey: `${uri}\n${drawnRender}`
             });
         } else {
             outputChannel.appendLine('Response has neither error nor SVG');
@@ -7100,6 +7104,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         // What each line of the Parts list shows, refreshed after a reset (partsReset / fadersReset).
         let partRefreshers = [];
+        // The document and score the page shows (updateContent's scoreKey), and the one the Parts
+        // list was built for: the list is asked again when they differ while the menu is open
+        // (owner's report 2026-11-09, session 1158: the menu kept the last score's parts after a
+        // switch). Not on every render - a parts list costs the server a playback export - so a
+        // part added by an edit shows on the next opening.
+        let lastScoreKey = null, partsKey = null;
+        function requestParts() {
+            partsKey = lastScoreKey;
+            vscode.postMessage({ type: 'requestParts' });
+        }
         let rawNotes = null, rawParts = null, rawBeats = null, rawBarEnd = null, rawExtra = null;  // the server's last answer, as written
         let rawSung = null, rawPlayed = null;    // the parts the score sings, and plays (a part may be both: two staves)
         let lastSpan;               // what plays: undefined the whole score, null/[lo, hi] a playSpan
@@ -7256,7 +7270,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 practicePanel.style.left = Math.max(6, Math.min(b.left, window.innerWidth - practicePanel.offsetWidth - 6)) + 'px';
             }
             practiceBtn.setAttribute('aria-expanded', 'true');
-            vscode.postMessage({ type: 'requestParts' });
+            requestParts();
         });
         // It closes as the Range panel does, by its × and its button, and stays open beside the
         // score (owner's request 2026-11-02: a click on the score closed it).
@@ -7591,6 +7605,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'updateContent': {
                     updateRenderSelect(message.renders, message.selectedRender);
+                    if (message.scoreKey) {
+                        lastScoreKey = message.scoreKey;
+                        if (!practicePanel.hidden && partsKey !== lastScoreKey) requestParts();
+                    }
                     const hasPreview = !!svgContainer.querySelector('svg');
                     if (message.loading) {
                         // Don't replace an existing preview with a spinner — keep
