@@ -73,7 +73,12 @@ export function cantilenaScore(voice: SungVoiceDto, speed: number): CantilenaSco
         sampleRate: VOICE_SAMPLE_RATE,
         language: voice.Language || 'ja',
         notes: voice.Notes.map(n => {
-            const note: CantilenaNote = { start: round(n.T * k), duration: round(n.D * k), pitch: n.P };
+            // Rounded at the note's ends, not its length: a start and a duration rounded apart can
+            // put the next note's start a ten-thousandth before this one's end (16ths at 132 are
+            // repeating decimals), and the engine refuses overlapping notes (owner's report
+            // 2026-11-08, 雪やこんこ: "note 22 at 6.364 s starts before note 21 ends (6.364 s)").
+            const start = round(n.T * k), end = round((n.T + n.D) * k);
+            const note: CantilenaNote = { start, duration: round(end - start), pitch: n.P };
             if (n.M) { note.melisma = true; } else if (n.L) { note.lyric = n.L; }
             if (n.B) { note.breath = true; }
             return note;

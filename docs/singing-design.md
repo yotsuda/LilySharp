@@ -52,6 +52,12 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 
 - **Seconds, not ticks**: tempo, meter, repeats and the practice speed are resolved before
   the engine sees anything. Gaps are rests. `pitch` is MIDI (fractional for a quarter tone).
+  ⚠️ Rounded at the note's ENDS (`start` and `start + duration` each rounded, the duration
+  their difference), never start and duration apart: sixteenths at 132 are repeating
+  decimals, and the engine refuses notes that overlap — 雪やこんこ's melody was refused with
+  "note 22 at 6.364 s starts before note 21 ends (6.364 s)" until session 1144
+  (`singerCore.cantilenaScore`, `Audio.SungScoreJson`; Cantilena's `ScoreJson.Read` also trims
+  an overlap under a millisecond as a caller's rounding).
 - **A syllable, not phonemes**, in the language's own script. `lyric` is the page's text
   with no connector (the hyphen and the extender are `LyricItem.ConnectorType`, not text);
   the elision `‿` (`va~ga`) stays one syllable.

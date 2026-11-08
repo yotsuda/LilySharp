@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1144セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14855 / 0 / 2**（`-Start p1144`・HEAD `78e2be3eb`・未 push 44・OMR の open 0）。同じ会話で第1143 から続けた便。オーナー報告「`corpora/ベースタブLy/雪やこんこ.lys` の score の歌が出ない: melody: not sung — note 22 at 6.364 s: starts before note 21 ends (6.364 s)」。作業場所は Lab `sessions/p1144/`。
+
+- **原因**: Lily# の両方の呼び手（エディタ `singerCore.cantilenaScore`＝1e-4・CLI `Audio.SungScoreJson`＝1e-6）が音の **start と duration を別々に丸めていた**。132 の 16 分は 60/132/4＝0.113636…の循環小数で、`round(start_n)` が `round(start_{n-1}) + round(dur_{n-1})` より 1 単位小さくなり、Cantilena の `Validate`（許容 1e-9）が重なりとして断った。`lysc wav --singer` でも再現（note 23 at 6.591 s）。
+- **直し（両側）**: Lily# は**音の両端で丸める**（`start = round(T)`・`end = round(T+D)`・`duration = end − start`）＝接する音は接したまま（速度を変えても）。Cantilena は `SungScore.Tidy()`（1 ms 未満の重なりは前の音を次の頭まで切る＝呼び手の丸め・`ScoreJson.Read` が必ず通す・それ以上の重なりは従来どおり Validate が言う）。網: `SungScoreJsonTests`（雪やこんこの旋律 25 音が Cantilena の規則で通る）・`singerCore.test.ts`（132 の付点 8 分 40 音・速度 1／0.85／0.5／1.1）・Cantilena `ScoreJsonTests`（1e-6 の重なりは接触・10 ms は問題）。Lily# 44 / 44・npm 896 / 896・Cantilena 42 / 42。
+- **配布**: Cantilena は `deploy-extension.ps1`（動いていた engine を止めて win32-x64 0.4.0 を入れ直し）・Lily# は `Deploy-Lsp.ps1`。**E2E**: `lysc wav --singer`＋入れ直した cantilena.exe（NEUTRINO）で雪やこんこが **`Voice: cantilena sings melody (25 notes, 8.0 s)`**＝警告なし。オーナーは Reload Window。docs: singing-design §3・Cantilena design §2・両 CHANGELOG。
+- 残り: 実機で雪やこんこの ▶（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
+- 終了時 full **14856 / 0 / 2 / 14858**（`-End p1144 -DiffBase 78e2be3eb`＝`end.log`・門は全部 OK・§1 現在便 16,091 字＝残り 3,909）。§7 7.5: `-End` は commit 前の diff なので Core `+` 0 と出るが、実際は `Audio/SingingEngine.cs` の丸めの 4 行（REF 0・OWN 0＝規則は数の丸め）。7.6: 出所はオーナー報告の再現。7.7: なし。この commit と Lab・Cantilena の commit は Claude・push はオーナー。
+
+## 以下は第1143セッションの経緯
+
 ### 1.1 第1143セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14855 / 0 / 2**（`-Start p1143`・HEAD `466d94e36`・未 push 43・OMR の open 0）。同じ会話で第1142 から続けた便。オーナー「この UI は悪くない、なかなか良い。でも score に歌詞がない場合にはマイクを消してほしい」。作業場所は Lab `sessions/p1143/`。
@@ -146,16 +158,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **直し**: host の `singVoices` が `lilysharp/sung` の答えを得るたびに **`voiceParts`**（今この score が歌うパート＝音のある声）を post し、page の `keepVoices(parts)` が一覧に無い部の声と状態を落として描き直す（空なら全部消える）。`lilysharp/sung` が Error（本が通らない）のときは何も送らない＝一時的なエラーで消さない。npm 896 / 896・`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・MANUAL-CHECKS §3.7。
 - 残り: マイクの最終確認（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
 - 終了時 full **14855 / 0 / 2 / 14857**（`-End p1143 -DiffBase 466d94e36`＝`end.log`・門は全部 OK・§1 現在便 15,429 字＝残り 4,571）。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6・7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1142セッションの経緯
-
-### 1.1 第1142セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14855 / 0 / 2**（`-Start p1142`・HEAD `ea90bb174`・未 push 42・OMR の open 0）。同じ会話で第1141 から続けた便。オーナーの見立て「インジケーターがボタンみたいな見た目だが押す物ではない＝良くない。▶ に重ねるのはよいかも。ただ ♪ では歌と結びつかない（楽器の音も音符だから）」。作業場所は Lab `sessions/p1142/`。
-
-- **バッジの 2 つ目の形**: `<span id="voiceBadge" role="status">` に inline SVG の**マイク**（声の記号）を入れ、`.play-wrap { position: relative }` で ▶ を包んで**右下の隅に重ねる**（枠なし・丸い白地（dark は #2d2d2d）・12 px）。色は前と同じ＝灰の点滅（preparing）／青（ready・#0078d7、dark #4fa3ff）／error 色（failed）。クリックで practice メニューは前のまま。JS（`voiceStates`・`renderVoiceBadge`・`data-state`）とトグルの `…`／`✓`／`⚠` は不変。check-types 0・npm 896 / 896。`Deploy-Lsp.ps1` で配布（`deploy.log`・入った `extension.js` に `play-wrap`）＝オーナーは Reload Window。docs: singing-design §5（2 つの形とオーナーの理由）・MANUAL-CHECKS §3.7・editors CHANGELOG。
-- 残り: マイクの見た目の最終判断（オーナーの目・大きさ／位置／色は CSS 数行）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
-- 終了時 full **14855 / 0 / 2 / 14857**（`-End p1142 -DiffBase ea90bb174`＝`end.log`・門は全部 OK・§1 現在便 15,519 字＝残り 4,481）。§7 7.5: Core `+` 0（エディタの HTML／CSS と docs だけ）。7.6・7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

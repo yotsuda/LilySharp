@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1142セッションの経緯
+
+### 1.1 第1142セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14855 / 0 / 2**（`-Start p1142`・HEAD `ea90bb174`・未 push 42・OMR の open 0）。同じ会話で第1141 から続けた便。オーナーの見立て「インジケーターがボタンみたいな見た目だが押す物ではない＝良くない。▶ に重ねるのはよいかも。ただ ♪ では歌と結びつかない（楽器の音も音符だから）」。作業場所は Lab `sessions/p1142/`。
+
+- **バッジの 2 つ目の形**: `<span id="voiceBadge" role="status">` に inline SVG の**マイク**（声の記号）を入れ、`.play-wrap { position: relative }` で ▶ を包んで**右下の隅に重ねる**（枠なし・丸い白地（dark は #2d2d2d）・12 px）。色は前と同じ＝灰の点滅（preparing）／青（ready・#0078d7、dark #4fa3ff）／error 色（failed）。クリックで practice メニューは前のまま。JS（`voiceStates`・`renderVoiceBadge`・`data-state`）とトグルの `…`／`✓`／`⚠` は不変。check-types 0・npm 896 / 896。`Deploy-Lsp.ps1` で配布（`deploy.log`・入った `extension.js` に `play-wrap`）＝オーナーは Reload Window。docs: singing-design §5（2 つの形とオーナーの理由）・MANUAL-CHECKS §3.7・editors CHANGELOG。
+- 残り: マイクの見た目の最終判断（オーナーの目・大きさ／位置／色は CSS 数行）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
+- 終了時 full **14855 / 0 / 2 / 14857**（`-End p1142 -DiffBase ea90bb174`＝`end.log`・門は全部 OK・§1 現在便 15,519 字＝残り 4,481）。§7 7.5: Core `+` 0（エディタの HTML／CSS と docs だけ）。7.6・7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1141セッションの経緯
 
 ### 1.1 第1141セッション（2026-11-08・YT-DELL2）

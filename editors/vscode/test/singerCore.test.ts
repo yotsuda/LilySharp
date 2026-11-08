@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, SungVoiceDto, cantilenaApiOf, cantilenaScore, parseServeLine, serveRequestLine, voiceKey } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, SungNoteDto, SungVoiceDto, cantilenaApiOf, cantilenaScore, parseServeLine, serveRequestLine, voiceKey } from '../src/singerCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
 // engine's score, the key names the render, the engine's lines are read, and the Cantilena

@@ -191,9 +191,14 @@ public static class SungScoreJson
             w.WriteStartArray("notes");
             foreach (var n in voice.Notes)
             {
+                // Rounded at the note's ENDS, not its length: a start and a duration rounded apart
+                // can put the next note's start a millionth before this one's end (16ths at 132 are
+                // repeating decimals), and the engine refuses a score whose notes overlap (owner's
+                // report 2026-11-08, 雪やこんこ: "note 23 at 6.591 s starts before note 22 ends").
+                double start = Math.Round(n.Start, 6), end = Math.Round(n.Start + n.Duration, 6);
                 w.WriteStartObject();
-                w.WriteNumber("start", Math.Round(n.Start, 6));
-                w.WriteNumber("duration", Math.Round(n.Duration, 6));
+                w.WriteNumber("start", start);
+                w.WriteNumber("duration", Math.Round(end - start, 6));
                 w.WriteNumber("pitch", n.Pitch);
                 if (n.Melisma)
                     w.WriteBoolean("melisma", true);
