@@ -23,7 +23,7 @@ import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AudioJob, renderAudioFiles } from './audioRender';
-import { WAV_SAMPLE_RATE, frameCount } from './audioRenderCore';
+import { fileSeconds } from './audioRenderCore';
 import { videoArgs } from './videoExportCore';
 
 /** The server's answer to lilysharp/videoFrames (VideoFramesResponse). */
@@ -65,14 +65,15 @@ export async function writeVideos(jobs: readonly AudioJob[], bankPath: string, f
     const folders: string[] = [];
     try {
         for (const job of jobs) {
-            const seconds = frameCount(job.Notes) / WAV_SAMPLE_RATE;
+            // As long as the sound runs, the sung voices included (a voice may outlast the notes).
+            const seconds = fileSeconds(job.Notes, job.Voices);
             const frames = await drawFrames(job, seconds);
             if (frames.WorkDirectory) { folders.push(frames.WorkDirectory); }
             if (frames.Error || !frames.Frames || !frames.WorkDirectory) {
                 throw new Error(`the pictures of ${path.basename(job.OutputPath)} were not drawn: ${frames.Error ?? 'no list came back'}`);
             }
             const wav = path.join(frames.WorkDirectory, 'sound.wav');
-            await renderAudioFiles([{ OutputPath: wav, Notes: job.Notes }], bankPath, 'wav');
+            await renderAudioFiles([{ OutputPath: wav, Notes: job.Notes, Voices: job.Voices }], bankPath, 'wav');
             const lead = frames.Lead ?? 0;
             fs.mkdirSync(path.dirname(job.OutputPath), { recursive: true });
             const failure = await run(ffmpeg, videoArgs(frames.Frames, wav, job.OutputPath, lead, lead + seconds));

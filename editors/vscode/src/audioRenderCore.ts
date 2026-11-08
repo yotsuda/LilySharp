@@ -66,6 +66,90 @@ export function frameCount(notes: readonly PlaybackNote[], sampleRate = WAV_SAMP
     return Math.ceil((endOf(notes) + WAV_TAIL_S) * sampleRate);
 }
 
+/** A sung voice mixed into a file (docs/singing-design.md §5): its WAV, where in the file it
+ *  starts (seconds — a count-in's lead), and its length. */
+export interface VoiceTrack { wav: string; at: number; duration: number }
+
+/** How long the file runs with its voices: the notes' end or the last voice's, and the tail. */
+export function fileSeconds(notes: readonly PlaybackNote[], voices: readonly VoiceTrack[] | null | undefined,
+    sampleRate = WAV_SAMPLE_RATE): number {
+    let seconds = frameCount(notes, sampleRate) / sampleRate;
+    for (const v of voices ?? []) { seconds = Math.max(seconds, v.at + v.duration + WAV_TAIL_S); }
+    return seconds;
+}
+
+/** A decoded WAV: one channel (several averaged), at the file's own rate. */
+export interface DecodedWav { sampleRate: number; samples: Float32Array }
+
+/**
+ * Reads a RIFF WAVE file: 16-bit PCM (what the singing engine writes), 24- and 32-bit PCM and
+ * 32-bit float, any channel count, averaged to one. Throws on anything else.
+ */
+export function decodeWav(bytes: Uint8Array): DecodedWav {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const tag = (at: number) => String.fromCharCode(bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]);
+    if (bytes.length < 12 || tag(0) !== 'RIFF' || tag(8) !== 'WAVE') { throw new Error('not a WAV file'); }
+    let format = 0, channels = 0, sampleRate = 0, bits = 0;
+    let data: { at: number; length: number } | undefined;
+    for (let at = 12; at + 8 <= bytes.length; ) {
+        const id = tag(at), size = view.getUint32(at + 4, true);
+        if (id === 'fmt ') {
+            format = view.getUint16(at + 8, true);
+            channels = view.getUint16(at + 10, true);
+            sampleRate = view.getUint32(at + 12, true);
+            bits = view.getUint16(at + 22, true);
+            if (format === 0xFFFE && size >= 26) { format = view.getUint16(at + 32, true); }   // WAVE_FORMAT_EXTENSIBLE: the sub-format's first word
+        } else if (id === 'data') {
+            data = { at: at + 8, length: Math.min(size, bytes.length - at - 8) };
+            break;
+        }
+        at += 8 + size + (size & 1);
+    }
+    if (!data || channels === 0 || sampleRate === 0) { throw new Error('a WAV with no fmt or data chunk'); }
+    const bytesPer = bits / 8;
+    const frames = Math.floor(data.length / (bytesPer * channels));
+    const read: (i: number) => number =
+        format === 1 && bits === 16 ? i => view.getInt16(data!.at + i * 2, true) / 32768
+        : format === 1 && bits === 24 ? i => { const b = data!.at + i * 3; return ((bytes[b] | (bytes[b + 1] << 8) | (bytes[b + 2] << 16)) << 8 >> 8) / 8388608; }
+        : format === 1 && bits === 32 ? i => view.getInt32(data!.at + i * 4, true) / 2147483648
+        : format === 3 && bits === 32 ? i => view.getFloat32(data!.at + i * 4, true)
+        : (() => { throw new Error(`a WAV of format ${format}, ${bits} bits is not read`); })();
+    const samples = new Float32Array(frames);
+    for (let f = 0; f < frames; f++) {
+        let sum = 0;
+        for (let c = 0; c < channels; c++) { sum += read(f * channels + c); }
+        samples[f] = sum / channels;
+    }
+    return { sampleRate, samples };
+}
+
+/**
+ * Adds a mono voice into both channels from `at` seconds, resampled to `sampleRate` by linear
+ * interpolation. The channels grow when the voice and its tail run past them; the two arrays
+ * returned are the channels to use from here on.
+ */
+export function mixIn(left: Float32Array, right: Float32Array, voice: DecodedWav, at: number,
+    sampleRate = WAV_SAMPLE_RATE, gain = 1): [Float32Array, Float32Array] {
+    const start = Math.max(0, Math.round(at * sampleRate));
+    const ratio = voice.sampleRate / sampleRate;
+    const frames = Math.floor(voice.samples.length / ratio);
+    const needed = start + frames + Math.ceil(WAV_TAIL_S * sampleRate);
+    if (needed > left.length) {
+        const l = new Float32Array(needed), r = new Float32Array(needed);
+        l.set(left); r.set(right);
+        left = l; right = r;
+    }
+    const src = voice.samples;
+    for (let i = 0; i < frames; i++) {
+        const pos = i * ratio;
+        const i0 = Math.floor(pos), t = pos - i0;
+        const s = i0 + 1 < src.length ? src[i0] * (1 - t) + src[i0 + 1] * t : src[i0];
+        left[start + i] += s * gain;
+        right[start + i] += s * gain;
+    }
+    return [left, right];
+}
+
 /**
  * Plays `notes` through `synth` from the start and returns the two channels. Every event is
  * given to the synth before the block it falls in is rendered. `pause`, when given, is awaited

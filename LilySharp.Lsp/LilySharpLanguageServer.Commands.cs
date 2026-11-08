@@ -828,6 +828,7 @@ public sealed partial class LilySharpLanguageServer
             playbacks.Add(new PlaybackExport
             {
                 OutputPath = path, Notes = pb.Notes ?? [], Parts = pb.Parts ?? [], Extra = pb.Extra ?? [], Beats = pb.Beats ?? [],
+                Sung = pb.Sung ?? [], Played = pb.Played ?? [],
                 Score = score?.Spec.Name,
             });
             return new LilySharp.Core.Export.ExportResult([path], [], []);

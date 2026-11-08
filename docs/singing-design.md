@@ -160,10 +160,18 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The
   alignment is the round trip's jitter, some tens of milliseconds; acceptable for a preview,
   noted here.
-- **Export** (`audioRender.ts`, the offline synth): each voice's WAV is read in node
-  (16-bit mono, the engine's rate), resampled to `WAV_SAMPLE_RATE` (linear), and added to
-  both channels before `fileLevel`, so a WAV, an MP3 and an MP4 carry the voice. `lysc wav`
-  (Core, MeltySynth) stays instruments-only until a `--singer <cantilena>` is wanted.
+- **Export** (built 2026-11-08, session 1131): `singJobs` in the host asks `lilysharp/sung`
+  for each file's score, has the engine sing every part the score sings (not muted, its ♪
+  on) at the practice speed, and hands the WAVs to the render as `AudioJob.Voices`
+  (`VoiceTrack`: the file, where it starts — the count-in's lead, `exportPlan` — and its
+  length); where the score does not also play the part, its notes leave the instruments'
+  list (a video still lights them: `AudioJob.Lit`). `renderAudioFiles` reads each WAV
+  (`decodeWav`: 16-bit PCM and the other PCM widths, channels averaged), resamples it to
+  `WAV_SAMPLE_RATE` and adds it to both channels from its offset (`mixIn`, the file grown when
+  the voice outlasts the notes) before `fileLevel`; a video's length counts the voices
+  (`fileSeconds`). So a WAV, an MP3 and an MP4 carry the voice as Play does. No engine, or a
+  voice that fails: the instruments, and a line in the output channel. `lysc wav` (Core,
+  MeltySynth) stays instruments-only until a `--singer <cantilena>` is wanted.
 
 ## 6. Licensing boundaries
 
@@ -201,7 +209,9 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
    Cantilena repository's `editors/vscode`, packed by its `tools/pack-extension.ps1`), and
    Lily#'s `singerVoice` setting and **Choose Singing Voice…** went away — the voice is
    Cantilena's; `lilysharp.playback.singer` stayed as the developer's override.
-4. **Export mixing**; then MIDI-out alignment if the jitter is heard; then `lysc wav`.
+4. **Export mixing** — done 2026-11-08 (session 1131, §5 "Export"; nets `test/voiceMix.test.ts`);
+   then MIDI-out alignment if the jitter is heard; then `lysc wav`. Still open: a span's voice
+   stopping at the span's end, and the voice in a loop.
 
 Open for the owner before stage 3:
 - **Kana for kanji lyrics**: a second track (`lyrics ja sings melody { … }` kept hidden), a

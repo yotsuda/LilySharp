@@ -48,7 +48,8 @@ import { onAngleChord, onShapeItem, shapeItemAt, sameDocumentUri } from './shape
 import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
 import { AudioFormat, AudioJob, renderAudioFiles } from './audioRender';
-import { PracticeState, exportNotes, practiceSummary } from './webview/playbackCore';
+import { VoiceTrack } from './audioRenderCore';
+import { PracticeState, exportPlan, practiceSummary } from './webview/playbackCore';
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
@@ -2360,7 +2361,7 @@ async function exportPreview(
                 playbackOnly: audio !== undefined || video,
                 renderName: renderName || null
             });
-            const jobs = answer.Success && answer.Playbacks ? practisedJobs(answer.Playbacks, practice) : null;
+            const jobs = answer.Success && answer.Playbacks ? await singJobs(practisedJobs(answer.Playbacks, practice), uri, practice) : null;
             if (jobs && audio && soundFont) {
                 await renderAudioFiles(jobs, soundFont, audio);
             } else if (jobs && video && soundFont && ffmpeg) {
@@ -3534,7 +3535,55 @@ async function rememberSoundFont(context: vscode.ExtensionContext, file: string)
 /** The jobs of a WAV, MP3 or MP4 export with their notes as Play sounds them under `practice`
  *  (exportNotes; as written when no preview holds a menu for the file). */
 function practisedJobs(jobs: readonly AudioJob[], practice: PracticeState | undefined): AudioJob[] {
-    return jobs.map(job => ({ ...job, Notes: exportNotes(job.Notes, job.Parts ?? null, job.Beats ?? null, practice, job.Extra ?? null) }));
+    return jobs.map(job => {
+        const plan = exportPlan(job.Notes, job.Parts ?? null, job.Beats ?? null, practice, job.Extra ?? null);
+        return { ...job, Notes: plan.notes, Lead: plan.lead };
+    });
+}
+
+/**
+ * The sung voices of each export (docs/singing-design.md §5): for every part the job's score
+ * sings — not muted, its ♪ on — the engine's WAV at the practice speed, to be mixed in from the
+ * count-in's lead; where the score does not also play the part, its notes leave the
+ * instruments' list (a video still lights them: `Lit`). No engine, or a voice that fails: the
+ * instruments as before, the failure in the output channel.
+ */
+async function singJobs(jobs: readonly AudioJob[], uri: string, practice: PracticeState | undefined): Promise<AudioJob[]> {
+    const engine = await renderer();
+    if (!engine || !client || !clientReady) { return [...jobs]; }
+    const speed = practice?.speed ?? 1;
+    const silentVoices = new Set([...(practice?.voicesOff ?? []), ...(practice?.muted ?? [])]);
+    const out: AudioJob[] = [];
+    for (const job of jobs) {
+        let sung: { Voices?: SungVoiceDto[] | null; Error?: string | null };
+        try {
+            sung = await client.sendRequest('lilysharp/sung', { textDocument: { uri }, renderName: job.Score || null });
+        } catch (e) {
+            outputChannel.appendLine(`singer: export: lilysharp/sung failed: ${String(e)}`);
+            out.push(job);
+            continue;
+        }
+        const sungParts = new Set(job.Sung ?? []), playedParts = new Set(job.Played ?? []);
+        const voices: VoiceTrack[] = [];
+        const silenced = new Set<number>();
+        for (const voice of sung.Voices ?? []) {
+            if (voice.Notes.length === 0 || !sungParts.has(voice.Part) || silentVoices.has(voice.Part)) { continue; }
+            try {
+                const { rendered } = await engine.render(voice, speed);
+                const v = await rendered;
+                voices.push({ wav: v.wav, at: job.Lead ?? 0, duration: v.duration });
+                const track = job.Parts?.indexOf(voice.Part) ?? -1;
+                if (track >= 0 && !playedParts.has(voice.Part)) { silenced.add(track); }
+            } catch (e) {
+                outputChannel.appendLine(`singer: export: the voice of ${voice.Part} was not sung — ${String(e)}; its instrument plays`);
+            }
+        }
+        out.push({
+            ...job, Voices: voices, Lit: job.Notes,
+            Notes: silenced.size > 0 ? job.Notes.filter(n => !(typeof n.N === 'number' && silenced.has(n.N))) : job.Notes,
+        });
+    }
+    return out;
 }
 
 /** Asks the server for a video's pictures (lilysharp/videoFrames), the file named as the export
@@ -3543,7 +3592,7 @@ function drawFramesFor(source: { textDocument?: { uri: string }; path?: string }
     return (job, seconds) => {
         if (!client) { return Promise.resolve({ Error: 'language server not running' }); }
         return client.sendRequest<FramesAnswer>('lilysharp/videoFrames', {
-            ...source, score: job.Score === undefined ? null : job.Score, notes: job.Notes, seconds });
+            ...source, score: job.Score === undefined ? null : job.Score, notes: job.Lit ?? job.Notes, seconds });
     };
 }
 

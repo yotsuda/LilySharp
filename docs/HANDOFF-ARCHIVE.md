@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1129セッションの経緯
+
+### 1.1 第1129セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14815 / 0 / 2**（`-Start p1129`・HEAD `612e23fef`・未 push 28・OMR の open は 0）。同じ会話で第1128 から続けた便。オーナー「歌うパートで音源と歌が両方鳴るのは不自然。統一的に扱いたい」→ 設計の往復 → **オーナー決定「instrument を指定していても、score でそのパートを sings していれば声を鳴らす」＝1 パート 1 音・歌うパートは歌い手・楽器は声の無いときの代役**。作業場所は Lab `sessions/p1129/`。
+
+- **規則**（`singing-design.md` §3・GRAMMAR の `midiInstrument` の注）: 歌詞の行が歌うパートは歌い手。声が鳴れるとき（engine・かな・描けた・`♪` on）は声だけ、それ以外は楽器＝名指しの `midiInstrument` → preset の音 → どちらも無ければ **Choir Aahs（52・`GeneralMidi.ChoirAahs`・LILYPOND-REF midi.scm の表）**。`.mid` の program も同じ（楽器名の無い歌い手は piano 0 → 52 に変わる＝CHANGELOG `[midi]`）。声と楽器は同時に鳴らない（重ねたければパートを 2 つ）。
+- **実装**: `MidiExporter.SplitIntoPartTracks` が `mainTrack.Lyrics` の `Part`（第1125 の `LyricEvent.Part`）で歌い手を知り、`Header(part) is { MidiInstrument: null, Preset: null }` なら 52。page の `startPlayback` は声が鳴る track の音を楽器の列から外す（`played`・第1127 で消した形を設定なしで復活・MIDI out にも同じ列）。`♪ part` は「歌う／楽器で弾く」の切り替えに（title を直した）。網 `SungVoicesTests.ASungPartsStandIn_IsItsInstrument_ElseTheChoir` 5 例（無名→52・歌わない→0・flute→73・soprano→52・piano→0）・`midiOutputSetting.test.ts` は `notes: played` に戻す。`npm test` 881 / 881。
+- 残り: 実機（MANUAL-CHECKS §3.7 を直した）・段 4。
+- 終了時 full **14820 / 0 / 2 / 14822**（`-End p1129 -DiffBase 612e23fef`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` は `SplitIntoPartTracks` の 4 行と `GeneralMidi.ChoirAahs`（REF 1＝midi.scm の表・OWN 0）。この docs commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1128セッションの経緯
 
 ### 1.1 第1128セッション（2026-11-08・YT-DELL2）

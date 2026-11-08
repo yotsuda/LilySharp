@@ -26,7 +26,7 @@ import { SoundBankLoader, SpessaSynthProcessor, audioToWav } from 'spessasynth_c
 import { Mp3Encoder } from '@breezystack/lamejs';
 import type { PlaybackBeat, PlaybackNote } from './webview/playbackCore';
 import {
-    MP3_KBPS, OfflineSynth, WAV_SAMPLE_RATE, encodeMp3, fileLevel, renderNotes,
+    MP3_KBPS, OfflineSynth, VoiceTrack, WAV_SAMPLE_RATE, decodeWav, encodeMp3, fileLevel, mixIn, renderNotes,
 } from './audioRenderCore';
 
 /** One file to write, as the server gives it (PlaybackExport): where it goes and the notes it
@@ -37,8 +37,18 @@ export interface AudioJob {
     Parts?: string[] | null;
     /** The parts the score does not sound: played only when the menu turned them on. */
     Extra?: string[] | null;
+    /** The parts the score sings and plays (PlaybackResponse.Sung / Played). */
+    Sung?: string[] | null;
+    Played?: string[] | null;
     Beats?: PlaybackBeat[] | null;
     Score?: string | null;
+    /** Where the music's time 0 stands in the file: a count-in's lead, else 0 (exportPlan). */
+    Lead?: number;
+    /** The sung voices mixed into the file (docs/singing-design.md §5), rendered by the singing
+     *  engine for the practice speed; a sung-only part's notes are already out of `Notes`. */
+    Voices?: VoiceTrack[] | null;
+    /** The notes a video lights: the whole list, where `Notes` lost a sung part's to its voice. */
+    Lit?: PlaybackNote[] | null;
 }
 
 /** The sound formats the editor renders itself. */
@@ -67,8 +77,13 @@ export async function renderAudioFiles(jobs: readonly AudioJob[], bankPath: stri
         await synth.processorInitialized;
         // The synth's defaults are the preview's (spessasynth_lib's worklet sets none of its
         // own: the same voice cap, effects on), so nothing is set here.
-        const [left, right] = await renderNotes(synth as unknown as OfflineSynth, job.Notes, WAV_SAMPLE_RATE, breathe);
+        let [left, right] = await renderNotes(synth as unknown as OfflineSynth, job.Notes, WAV_SAMPLE_RATE, breathe);
         synth.destroySynthProcessor();
+        // The sung voices, in the instruments' place, from the music's zero (after a count-in).
+        for (const voice of job.Voices ?? []) {
+            [left, right] = mixIn(left, right, decodeWav(fs.readFileSync(voice.wav)), voice.at, WAV_SAMPLE_RATE);
+            await breathe();
+        }
         fileLevel(left, right);
         const data = format === 'mp3'
             ? await encodeMp3(new Mp3Encoder(2, WAV_SAMPLE_RATE, MP3_KBPS), left, right, breathe)

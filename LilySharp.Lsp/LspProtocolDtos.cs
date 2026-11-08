@@ -272,6 +272,10 @@ public class PlaybackExport
     /// <summary>The parts the score does not sound, off unless the menu turned them on
     /// (<see cref="PlaybackResponse.Extra"/>).</summary>
     public string[] Extra { get; set; } = [];
+    /// <summary>The parts the score sings and plays (<see cref="PlaybackResponse.Sung"/>): the
+    /// editor mixes a sung part's voice into the file in its instrument's place.</summary>
+    public string[] Sung { get; set; } = [];
+    public string[] Played { get; set; } = [];
     /// <summary>The beats the metronome and the count-in click (<see cref="PlaybackResponse.Beats"/>).</summary>
     public PlaybackBeat[] Beats { get; set; } = [];
     /// <summary>The score's name, as <see cref="VideoFramesParams.Score"/> names it back for an

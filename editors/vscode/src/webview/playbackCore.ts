@@ -351,16 +351,26 @@ export interface PracticeState extends Practice { countIn: boolean }
 export function exportNotes(notes: readonly PlaybackNote[], parts: readonly string[] | null,
     beats: readonly PlaybackBeat[] | null, practice: PracticeState | null | undefined,
     extra: readonly string[] | null = null): PlaybackNote[] {
+    return exportPlan(notes, parts, beats, practice, extra).notes;
+}
+
+/**
+ * {@link exportNotes} with the count-in's lead beside the notes: where the music's time 0
+ * stands in the file (0 without a count-in), which a sung voice mixed into the file starts at.
+ */
+export function exportPlan(notes: readonly PlaybackNote[], parts: readonly string[] | null,
+    beats: readonly PlaybackBeat[] | null, practice: PracticeState | null | undefined,
+    extra: readonly string[] | null = null): { notes: PlaybackNote[]; lead: number } {
     // No practice: the score as written — the parts it does not sound stay silent.
     const silentExtra = extra && extra.length > 0 && parts
         ? notes.filter(n => !(typeof n.N === 'number' && extra.includes(parts[n.N])))
         : [...notes];
-    if (!practice) { return silentExtra; }
+    if (!practice) { return { notes: silentExtra, lead: 0 }; }
     const played = practiceNotes(notes, parts, beats, practice, extra);
-    if (!practice.countIn || !beats) { return played; }
+    if (!practice.countIn || !beats) { return { notes: played, lead: 0 }; }
     const k = 1 / (practice.speed > 0 ? practice.speed : 1);
     const counted = countIn(played, 0, 0, beats.map(b => ({ T: b.T * k, A: b.A })));
-    return counted ? counted.notes : played;
+    return counted ? { notes: counted.notes, lead: counted.lead } : { notes: played, lead: 0 };
 }
 
 /** What the practice menu changes, in words for the export's message ("at 80%, with the
