@@ -359,7 +359,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] practice の速度を 80% に → 直後の ▶ は楽器（声は速度ごとに描き直す）、出力チャネルに `sung (5.0 s at speed 0.8)` が出た後の ▶ は 80% の声。count-in On → 数えた後から声。
 - [ ] 漢字の歌詞の本 → status bar に `Lily#: melody: 1 syllable(s) are not kana…` が 1 回・楽器で鳴る。歌詞のない本 → 何も起きない。
 - [ ] ループ On → 声なし（楽器）。小節を選んで ▶ → 選んだ所から声（選んだ所を過ぎても声が続くのは既知＝段 4）。MIDI 出力を名指し → 楽器はポート・声はプレビュー（ずれは数十 ms）。AI 候補の Play → 声なし。
-- [ ] **practice メニューの Parts**（第1128〜1129）: パートの下に `♪ melody` が並ぶ（engine があるときだけ）。押して消す → 声が止まり、代わりに楽器（`midiInstrument` が無ければ Choir Aahs）が鳴る。戻す → また声。`melody` を消す → 声も楽器も鳴らない。`part melody { midiInstrument "flute" }` に直す → `♪` off でフルート・on で声。score に無いパート（`score solo { staff vn }` の本の `pno`・`kit`）は斜体で並び、既定は消音。押す → 鳴る（violin と同じ時刻・別のチャネル）。ヘッダの長さは score の分のまま。Export WAV はメニューで付けたものだけ入る。
+- [ ] **practice メニューの Parts**（第1128〜1129）: パートの下に `♪ melody` が並ぶ（engine があるときだけ）。押して消す → 声が止まり、代わりに楽器（`midiInstrument` が無ければ Choir Aahs）が鳴る。戻す → また声。`melody` を消す → 声も楽器も鳴らない。`part melody { midiInstrument "flute" }` に直す → `♪` off でフルート・on で声。**段ごと**（第1130）: `staffGroup { staff melody  staff melody  lyrics verse sings melody  staff melody }` の本 → 声と楽器の両方が鳴る（楽器は 1 本）。`staff melody  lyrics verse sings melody` だけに戻す → 声だけ。score に無いパート（`score solo { staff vn }` の本の `pno`・`kit`）は斜体で並び、既定は消音。押す → 鳴る（violin と同じ時刻・別のチャネル）。ヘッダの長さは score の分のまま。Export WAV はメニューで付けたものだけ入る。
 - [ ] Cantilena 拡張を無効にする → 次の ▶ から楽器だけ（Lily# の出力チャネルに何も言わない）。**Cantilena: Forget Rendered Voices** → 次の ▶ は歌い直す。VS Code を閉じる → `cantilena.exe`・`neutrino_server.exe` が残らない（タスクマネージャ）。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）

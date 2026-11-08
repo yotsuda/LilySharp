@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1128セッションの経緯
+
+### 1.1 第1128セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14813 / 0 / 2**（`-Start p1128`・HEAD `491d7a270`・未 push 27・OMR の open は 0）。同じ会話で第1127 から続けた便。オーナー「practice（metronome）の窓に lyrics がパートとして出ない。lyrics もパートと並べてオンオフ、score に無いパートもここでオンオフ（既定オフ）」。作業場所は Lab `sessions/p1128/`。
+
+- **サーバー `lilysharp/playback`**: score が選ばれているとき、同じ form で `Score = null` の export をもう 1 本取り、score に無い（＝最初の export に track の無い）パートを**後ろに足す**（`PlaybackResponse.Extra`＝名前の一覧・`Parts` は全部・音は `N` で続き番号）。チャネルは score の track が使っていないものから（同じチャネルに 2 パートだと program を奪い合う）・ドラムは 9 のまま。`.mid` は触らない。`PlaybackExport.Extra` も運ぶ。網 `Lsp/ExtraPartsPlaybackTests` 2 本（全部鳴らす score は Extra 空／`solo` は `pno`・`kit` が後ろに・自分の 4 音はそのまま・pno は別チャネル・kit は 9・時刻は同じ）、`PlaybackRequestTests.ThePickedScore_PlaysItsPartsAlone` は「自分の track の音だけ数える」に。
+- **`playbackCore.ts`**: `Practice` に `extraOn`／`voicesOff`（任意）、`practiceNotes(…, extra)`＝extra のパートは `extraOn` に無ければ落とす（muted が勝つ）、`exportNotes(…, extra)`＝メニュー無しでも extra は落とす。網 1 本。
+- **page**: `rawExtra`・`practiced()` が渡す・`practiceState` に 2 列を足す・`renderParts(message)`＝パート → `♪ part`（声。`voicesOff`・楽器は残る）→ 斜体の extra（`extraOn`・既定オフ）・`sungTracks()` は `voicesOff` を読む（楽器の mute とは独立＝「声だけ」も作れる）。**host**: `requestParts` が `lilysharp/sung` の声の一覧も返す（engine があるとき）・`requestLength` と export は extra を除く。`npm test` **881 / 881**。
+- 残り: 実機（MANUAL-CHECKS §3.7 に 1 項）。
+- 終了時 full **14815 / 0 / 2 / 14817**（`-End p1128 -DiffBase 491d7a270`＝`end.log`・門は全部 OK・Core の `+` 0＝LSP と拡張と docs）。§7 7.5: REF 0・OWN 0（LP に再生は無い）。この docs commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1127セッションの経緯
 
 ### 1.1 第1127セッション（2026-11-08・YT-DELL2）

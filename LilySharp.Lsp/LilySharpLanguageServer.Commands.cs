@@ -1219,11 +1219,17 @@ public sealed partial class LilySharpLanguageServer
                 .ToArray();
 
             var beats = MetronomeBeats(midi, tpq, out int barEnd).Select(b => new PlaybackBeat { T = SecondsAt(b.Tick), A = b.Accent }).ToArray();
+            // Which parts the score sings and which it plays, off its rows (a file with no score
+            // block plays every part).
+            var shown = score ?? RenderSpecParser.PlayedSpec(tree, null, null);
+            var sounds = shown != null ? LilySharp.Core.Svg.Collector.SungStaves.Of(tree.GetRoot(), shown) : null;
             return new PlaybackResponse
             {
                 Notes = notes,
                 Parts = tracks.Select(x => x.Track.Name).ToArray(),
                 Extra = extra.ToArray(),
+                Sung = sounds?.Sung.ToArray() ?? [],
+                Played = sounds?.Played.ToArray() ?? midi.Tracks.Select(t => t.Name).ToArray(),
                 Beats = beats,
                 BarEnd = SecondsAt(barEnd),
             };

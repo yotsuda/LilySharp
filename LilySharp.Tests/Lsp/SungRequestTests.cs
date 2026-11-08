@@ -70,6 +70,9 @@ public class SungRequestTests
         Assert.True(voice.Notes[5].B);
 
         var playback = server.GetPlayback(new PlaybackParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        // The score sings the melody (the words under its staff) and plays the bass.
+        Assert.Equal(new[] { "melody" }, playback.Sung);
+        Assert.Equal(new[] { "bass" }, playback.Played);
         var melody = playback.Notes!.Where(n => n.P != PlaybackNote.PedalPitch && playback.Parts![n.N] == "melody").ToArray();
         Assert.Equal(melody.Select(n => n.T), voice.Notes.Select(n => n.T));
         Assert.Equal(melody.Select(n => n.S), voice.Notes.Select(n => n.S));

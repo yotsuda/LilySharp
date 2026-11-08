@@ -1687,12 +1687,15 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     // form: with `score p2 { staff p2 }` picked, p1 stayed audible
                     // until the server was told which score (user report 2026-09-29).
                     const pb = await client.sendRequest<{ Notes?: { T: number, D: number, P: number, V: number }[], Error?: string,
-                        Parts?: string[] | null, Extra?: string[] | null, Beats?: { T: number; A: boolean }[] | null; BarEnd?: number }>(
+                        Parts?: string[] | null, Extra?: string[] | null, Sung?: string[] | null, Played?: string[] | null,
+                        Beats?: { T: number; A: boolean }[] | null; BarEnd?: number }>(
                         'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
                     // The tracks and the beats ride along for the practice menu's parts and metronome;
-                    // the parts the score does not sound (Extra) too, off until the menu turns them on.
+                    // the parts the score does not sound (Extra) too, off until the menu turns them on;
+                    // and which parts the score sings and plays (docs/singing-design.md §3).
                     panel.webview.postMessage({ type: 'playbackData', notes: pb.Notes ?? null, error: pb.Error ?? null,
-                        parts: pb.Parts ?? null, extra: pb.Extra ?? null, beats: pb.Beats ?? null, barEnd: pb.BarEnd ?? null });
+                        parts: pb.Parts ?? null, extra: pb.Extra ?? null, sung: pb.Sung ?? null, played: pb.Played ?? null,
+                        beats: pb.Beats ?? null, barEnd: pb.BarEnd ?? null });
                     // The lyrics' voice, rendered ahead so the next Play finds it (docs/singing-design.md §5).
                     void singVoices(panel, uri);
                 } catch (e) {
@@ -5944,7 +5947,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (voiceOrigin === null || !rawParts) { return set; }
             rawParts.forEach((name, i) => {
                 const v = voices.get(name);
-                if (v && Math.abs(v.speed - practice.speed) < 1e-6 && !practice.voicesOff.includes(name)) { set.add(i); }
+                if (v && Math.abs(v.speed - practice.speed) < 1e-6 && !practice.voicesOff.includes(name)
+                    && (!rawSung || rawSung.includes(name))) { set.add(i); }
             });
             return set;
         }
@@ -6223,11 +6227,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             notes = window.LysSynth ? window.LysSynth.fromOffset(notes, offset) : notes.filter(n => n.T >= offset - 0.001);
             if (notes.length === 0) { return; }
             // A part whose voice sings now is sung, not played: its notes leave the instruments'
-            // list (owner's decision 2026-11-08: one sound a part — the instrument is the stand-in
-            // while there is no voice, or the voice is switched off). The highlight follows the
-            // whole list still.
+            // list (owner's decision 2026-11-08: one sound a staff — the instrument is the stand-in
+            // while there is no voice, or the voice is switched off) — unless the score shows the
+            // part on another staff with no words under it (rawPlayed): that staff is an
+            // instrument's, and the part sounds both ways. The highlight follows the whole list.
             const sung = sungTracks();
-            const played = sung.size > 0 ? notes.filter(n => !sung.has(n.N)) : notes;
+            const played = sung.size > 0
+                ? notes.filter(n => !(sung.has(n.N) && !(rawPlayed && rawParts && rawPlayed.includes(rawParts[n.N]))))
+                : notes;
             if (midiOutput && !here) {
                 // The MIDI output: the server plays the list from the offset and answers
                 // (midiStarted) with the clock the highlight follows; a port that is not
@@ -6699,6 +6706,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // lyrics it turned off (owner's request 2026-11-08: both beside the parts).
         const practice = { speed: 1, muted: [], click: false, countIn: false, extraOn: [], voicesOff: [] };
         let rawNotes = null, rawParts = null, rawBeats = null, rawBarEnd = null, rawExtra = null;  // the server's last answer, as written
+        let rawSung = null, rawPlayed = null;    // the parts the score sings, and plays (a part may be both: two staves)
         let lastSpan;               // what plays: undefined the whole score, null/[lo, hi] a playSpan
         let lastOnce = false;
         let playOffset = 0, playClock = null;   // where the playback stands (startPlayback / midiStarted)
@@ -7324,7 +7332,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     } else if ((pendingSpan || (loopOn && !pendingFromHere)) && window.LysSynth && window.LysSynth.playSpan) {
                         // The selected bars, where they first play — and, looping, the stretch
                         // (or the whole score) as written once, round and round.
-                        rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null;
+                        rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
                         playbackNotes = practiced(rawNotes);
                         const span = pendingSpan;
                         pendingSpan = null;
@@ -7341,7 +7349,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         else startPlayback(toPlay, 0);
                     } else {
                         // The practice menu's tempo, parts and metronome, from the notes as written.
-                        rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null;
+                        rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null; rawExtra = message.extra || null; rawSung = message.sung || null; rawPlayed = message.played || null;
                         playbackNotes = practiced(rawNotes);
                         pendingSpan = null;
                         pendingFromHere = false;

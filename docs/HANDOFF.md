@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- **★ 歌わせる（Cantilena）＝第1124 設計・第1125 段 2（`lilysharp/sung`）・第1126 段 3（エディタ）・第1127 で Cantilena は拡張 `yotsuda.cantilena` になり Lily# は API で呼ぶ（§1.1 第1127）**: 第1128 で practice メニューに声（`♪ part`）と score に無いパート（既定オフ・`Extra`）のトグル。**第1129 オーナー決定＝歌うパートは歌い手・1 パート 1 音**（声が鳴れば楽器は鳴らない・楽器は代役・無名の歌い手は Choir Aahs・`♪` は歌う／弾くの切り替え）。残りは段 4＝Export の混ぜ込み・span の終わりで止める・ループ・`lysc wav`。**実機確認はオーナー（MANUAL-CHECKS §3.7）・Cantilena の VSIX の公開もオーナー**。問い 3 つ（漢字歌詞のかな・複数パート・置き換えか重ねか）はオーナー＝仮置きはかなだけ・全部・置き換え。Cantilena は `C:\MyProj\cantilena`（Apache-2.0・未 push）。**OMR #23 は `question`**（オーナー決定 2026-10-14 の規則そのもの＝オーナー判断待ち）。
+- **★ 歌わせる（Cantilena）＝第1124 設計・第1125 段 2（`lilysharp/sung`）・第1126 段 3（エディタ）・第1127 で Cantilena は拡張 `yotsuda.cantilena` になり Lily# は API で呼ぶ（§1.1 第1127）**: 第1128 で practice メニューに声（`♪ part`）と score に無いパート（既定オフ・`Extra`）のトグル。**第1129 オーナー決定＝歌うパートは歌い手・1 パート 1 音**（声が鳴れば楽器は鳴らない・楽器は代役・無名の歌い手は Choir Aahs・`♪` は歌う／弾くの切り替え）。**第1130＝1 段 1 音・言葉はその上の譜のもの**（`SungStaves`・`Sung`／`Played`・同じパートの言葉の無い段は楽器＝両方鳴らせる）。残りは段 4＝Export の混ぜ込み・span の終わりで止める・ループ・`lysc wav`。**実機確認はオーナー（MANUAL-CHECKS §3.7）・Cantilena の VSIX の公開もオーナー**。問い 3 つ（漢字歌詞のかな・複数パート・置き換えか重ねか）はオーナー＝仮置きはかなだけ・全部・置き換え。Cantilena は `C:\MyProj\cantilena`（Apache-2.0・未 push）。**OMR #23 は `question`**（オーナー決定 2026-10-14 の規則そのもの＝オーナー判断待ち）。
 - **★ 打鍵の増加の監査＝第1108〜1110 で閉じた（§1.1 第1109・第1110）。** 1000 小節の本の床は `fingbeam1k` 118 → 44 ms／`plain1k`＋小節の挿入 98 → 63 ms／`plain1k` 36 → 30 ms／`v2bow1k` 67 → 52 ms。518 冊の打鍵は第1110 の分で 3.69 → 3.59 ms。第1107 の最悪ケースの増分（`perf-3vdot300`・`perf-kitmix300`、数 ms）は受け入れた（オーナー決定 2026-11-06）。**skyline の残りは急がない**（`docs/skyline-merge-design.md` §3・§4）。**Release の lysc は `8fc8e2be1`**（オーナー決定 2026-11-06。前は `0d09b8f61`。全 svg 1262 枚のうち前の Release と違うのは `Untitled-1.lys` の 1 枚で、第1108〜1110 の高速化の分は差 0。OMR の REQUESTS にお知らせを書いた＝OMR の repo では未 commit）。
 - **オーナー指示 2026-11-04「横幅と付点の差を順に着手」は第1094 で閉じた**（語りは ARCHIVE に出る前の §1.1）。第1095 は MusicXML の `@cross`、第1096 は連符の時刻（`lysc xml`・MIDI）とスコアごとのパート、第1097 は読み込みの `lysc check` 16 件 → 0・線とタイの往復・1 音の hairpin・弱起の宣言・歌詞、第1098 は歌詞の綴りと書き出しの一本化（§1.1）。次の一手の指示はまだ無い＝下の残りから選ぶならオーナーに訊く。第1100 は連符の本体に書けるものと入れ子の連符の上下を閉じた（§1.1）。OMR の `open` は 0。点の列の共有は第1101 で閉じた（§1.1）。休符の声部の wish は第1102 で閉じた（§1.1）。付点のない声部の符尾は第1103 で閉じた（§1.1）。`lysc ly` のフレーズのドラムは第1104 で閉じた（§1.1）。ドラムの和音の揃え方は第1105 で閉じた（§1.1）。`Untitled-1` の段割れの差は名前の字下げと第1106 で分かった（§1.1）。**Release の lysc は `d6fd3b912`**（オーナー決定 2026-11-04・第1098。OMR の REQUESTS にお知らせを書いた）。#22（声部の中の `clef`）は第1099 で `fixed`＝OMR の `open` は 0。**Release の lysc は `1200c035a`**（オーナー決定 2026-11-04・第1099。OMR の REQUESTS #22 の行に書いた＝OMR の repo では未 commit）。
 - **`@cross` の音が別の段に描かれる＝第1093 で実装（OMR の REQUESTS #20）**: 設計は §1.1 第1093。**OMR の返事（`..\LilySharp-Omr\docs\repro\lilysharp-feedback-2026-11-04.md`）: #19〜#21 は `done`・今直してほしい不具合はない。**段をまたぐタイ・同音や 2 度の重なり・MusicXML は OMR が生成器で避ける＝今は依頼なし（必要なら OMR が行を足す）。読み手が段をまたぐ形をまだ読めないのは OMR 側の宿題。 残りの制限: ⑴ 弧は実装済み（下の語り）・移った音のスクリプト・付点・臨時記号は第1112 でスラーが移った先の段で読む（`925d850ee`）／⑵ 段をまたぐタイは最初の音の段に描く＝**オーナー決定 2026-11-06: 将来の実装の余地は残すが、すぐには着手しない**（今のまま。必要が出たら頭から頭への斜めのタイを LILYSHARP-OWN として設計する案が第一候補。OMR の要請は無い＝`lilysharp-feedback-2026-11-04.md` で「生成器で避ける」。音のつながり＝再生・MusicXML は今も正しい。第1111 の実測: LP 2.26.0 自身が `programming error: My pure_y_common is a VerticalAlignment` と循環依存を出し、タイは段の外へ浮く＝写す形がない・Lab `sessions/p1111/t1`。斜めに描くなら LILYSHARP-OWN）／⑶ 連桁の採点は実装済み（下の語り）・移った音が全部同じ段なら第1111 でその段の連桁（`725146d03`）・段の普通の連桁は移ってきた音を避ける（第1111 `8f20b95db`・`c1` で LP と同じ 16.88）・段をまたぐ連桁も、移った先の段へ別の声部が移した音を避ける（`e8d0a4875`・`e1` の残差の内訳は §1.1 第1111 ⑷）・**連桁どうしは第1113 で移植**（`277a391d7`＝先に始まる連桁が後から始まる連桁を避ける・同時に始まる 2 本は避けない・段をまたぐ連桁は避けられないが避ける。§1.1 第1113）／⑷ 移った先の段の音との衝突は第1111 で実装（§1.1 第1111）・付点は第1112 で移った先の段の付点の列に入る（`a13347513`・§1.1 第1112）／⑸ 臨時記号は実装済み（下の語り）・LP が落とす再確認の記号は残す（オーナー決定 2026-10-02 の ⑴ と同じ扱い）／⑹ 観測者なし＝連桁のない棒を移った先の輪郭へ入れる行と、弧の端の棒の枠の行は、8 冊の探り譜で出力が動かず毒が緑（LP の規則なので残した）／⑻ 双子は譜の最初の瞬間の `\change Staff` が LP で効かない（`k1`）／⑼ プレビューの実機は未確認（増分はフルと一致＝網 4 本）。
@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1130セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14820 / 0 / 2**（`-Start p1130`・HEAD `1f8f3030f`・未 push 29・OMR の open は 0）。同じ会話で第1129 から続けた便。オーナーの問い「`staffGroup { staff melody  staff melody  lyrics verse sings melody  staff melody }` で melody の音源と声を両方鳴らしたい。一貫していて自明な規則で」→ 提案 → オーナー「着手して」。作業場所は Lab `sessions/p1130/`。
+
+- **規則＝「言葉はその上の譜のもの」・1 段 1 音**（`singing-design.md` §3・GRAMMAR の `midiInstrument` の注・CHANGELOG）: 直下に自分を `sings` する歌詞の行がある譜は歌い、無い譜は楽器で弾く。同じパートが何段もあれば段ごとの音を出し、同じ音は 1 回。歌詞の行は、歌うパートの最寄りの*上の*譜に属し、上に無ければ下の最初の譜。譜の無いパートの言葉は声を出さない（ページが音節を書かないのと同じ）。
+- **実装**: `Svg/Collector/SungStaves.Of(root, spec)` → `Sounds(Sung, Played)`。⚠️ 罠: `staff` 直下の `lyrics … sings` 行は RenderSpecParser が **`StaffSpec.WithLyrics` に畳み込む**ので RenderItemSpec には残らない＝畳まれた譜はその場で「歌う」、行として残ったもの（unbound・他パートの譜の下）だけを上下で探す。`lilysharp/playback` が `Sung`／`Played` を返し（`PlaybackResponse`・score 無しは全部 Played）、page は「声が鳴っていて、かつ楽器の段が無いパート」の音符だけを楽器の列から外す（`played`・`rawPlayed`）・`sungTracks()` は `rawSung` のパートだけ。
+- **網**: `SungStavesTests` 8 本（オーナーの例＝声と楽器・言葉の下だけ＝声だけ・言葉なし＝楽器・伴奏は楽器・譜の無いパートの言葉＝声なし・譜より上の言葉・unbound の行・他パートの譜の下の言葉）、`SungRequestTests` に `Sung`／`Played`。⚠️ タプルに配列を入れた `Assert.Equal` は参照比較＝文字列に畳んで比べる。`npm test` 881 / 881。
+- 残り: 実機（MANUAL-CHECKS §3.7 に 1 項）・段 4。
+- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1130 -DiffBase 1f8f3030f`＝`end.log`・門は全部 OK）。棚卸し: `APPROXIMATIONS.md` OWN 304 → 305（`SungStaves`）。§7 7.5: Core の `+` は `SungStaves.cs` 1 本＝REF 0・OWN 1（LP に再生は無い＝⒞）。この docs commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1129セッションの経緯
+
 ### 1.1 第1129セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14815 / 0 / 2**（`-Start p1129`・HEAD `612e23fef`・未 push 28・OMR の open は 0）。同じ会話で第1128 から続けた便。オーナー「歌うパートで音源と歌が両方鳴るのは不自然。統一的に扱いたい」→ 設計の往復 → **オーナー決定「instrument を指定していても、score でそのパートを sings していれば声を鳴らす」＝1 パート 1 音・歌うパートは歌い手・楽器は声の無いときの代役**。作業場所は Lab `sessions/p1129/`。
@@ -146,18 +158,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **実装**: `MidiExporter.SplitIntoPartTracks` が `mainTrack.Lyrics` の `Part`（第1125 の `LyricEvent.Part`）で歌い手を知り、`Header(part) is { MidiInstrument: null, Preset: null }` なら 52。page の `startPlayback` は声が鳴る track の音を楽器の列から外す（`played`・第1127 で消した形を設定なしで復活・MIDI out にも同じ列）。`♪ part` は「歌う／楽器で弾く」の切り替えに（title を直した）。網 `SungVoicesTests.ASungPartsStandIn_IsItsInstrument_ElseTheChoir` 5 例（無名→52・歌わない→0・flute→73・soprano→52・piano→0）・`midiOutputSetting.test.ts` は `notes: played` に戻す。`npm test` 881 / 881。
 - 残り: 実機（MANUAL-CHECKS §3.7 を直した）・段 4。
 - 終了時 full **14820 / 0 / 2 / 14822**（`-End p1129 -DiffBase 612e23fef`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` は `SplitIntoPartTracks` の 4 行と `GeneralMidi.ChoirAahs`（REF 1＝midi.scm の表・OWN 0）。この docs commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1128セッションの経緯
-
-### 1.1 第1128セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14813 / 0 / 2**（`-Start p1128`・HEAD `491d7a270`・未 push 27・OMR の open は 0）。同じ会話で第1127 から続けた便。オーナー「practice（metronome）の窓に lyrics がパートとして出ない。lyrics もパートと並べてオンオフ、score に無いパートもここでオンオフ（既定オフ）」。作業場所は Lab `sessions/p1128/`。
-
-- **サーバー `lilysharp/playback`**: score が選ばれているとき、同じ form で `Score = null` の export をもう 1 本取り、score に無い（＝最初の export に track の無い）パートを**後ろに足す**（`PlaybackResponse.Extra`＝名前の一覧・`Parts` は全部・音は `N` で続き番号）。チャネルは score の track が使っていないものから（同じチャネルに 2 パートだと program を奪い合う）・ドラムは 9 のまま。`.mid` は触らない。`PlaybackExport.Extra` も運ぶ。網 `Lsp/ExtraPartsPlaybackTests` 2 本（全部鳴らす score は Extra 空／`solo` は `pno`・`kit` が後ろに・自分の 4 音はそのまま・pno は別チャネル・kit は 9・時刻は同じ）、`PlaybackRequestTests.ThePickedScore_PlaysItsPartsAlone` は「自分の track の音だけ数える」に。
-- **`playbackCore.ts`**: `Practice` に `extraOn`／`voicesOff`（任意）、`practiceNotes(…, extra)`＝extra のパートは `extraOn` に無ければ落とす（muted が勝つ）、`exportNotes(…, extra)`＝メニュー無しでも extra は落とす。網 1 本。
-- **page**: `rawExtra`・`practiced()` が渡す・`practiceState` に 2 列を足す・`renderParts(message)`＝パート → `♪ part`（声。`voicesOff`・楽器は残る）→ 斜体の extra（`extraOn`・既定オフ）・`sungTracks()` は `voicesOff` を読む（楽器の mute とは独立＝「声だけ」も作れる）。**host**: `requestParts` が `lilysharp/sung` の声の一覧も返す（engine があるとき）・`requestLength` と export は extra を除く。`npm test` **881 / 881**。
-- 残り: 実機（MANUAL-CHECKS §3.7 に 1 項）。
-- 終了時 full **14815 / 0 / 2 / 14817**（`-End p1128 -DiffBase 491d7a270`＝`end.log`・門は全部 OK・Core の `+` 0＝LSP と拡張と docs）。§7 7.5: REF 0・OWN 0（LP に再生は無い）。この docs commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

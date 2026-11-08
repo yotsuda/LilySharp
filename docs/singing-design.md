@@ -68,8 +68,17 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   **stand-in** — what the `.mid` plays, and what the preview plays while there is no voice (no
   engine, syllables not kana, not rendered yet, the menu's ♪ switched off). A singer that names
   no instrument and no preset stands in with the General MIDI choir (`GeneralMidi.ChoirAahs`,
-  `MidiExporter.SplitIntoPartTracks`), not LilyPond's acoustic grand. One sound a part: the
-  voice and the instrument never sound together (a doubling instrument is a second part).
+  `MidiExporter.SplitIntoPartTracks`), not LilyPond's acoustic grand. **One sound a staff**
+  (owner's decision 2026-11-08, evening): the words belong to the staff they are printed
+  under. A staff row with a lyrics row under it that sings its part is a singer's staff — the
+  voice; a staff row of the same part with no words under it is an instrument's — so
+  `staff melody  staff melody  lyrics verse sings melody  staff melody` sounds the melody
+  both ways, once each, while `staff melody  lyrics verse sings melody` is voice alone. A
+  lyrics row belongs to the nearest staff of its part above it (the page draws it there), else
+  the first such staff below; words of a part no staff shows give no voice (the page writes
+  no syllable for them). `Svg.Collector.SungStaves` reads this off the score's rows for
+  `lilysharp/playback` (`Sung`, `Played`); the preview lets the voice stand in for the
+  instrument only where the part is sung and not played.
 - **Language**: `ja` when the syllables are kana; otherwise the score is passed as it is and
   the engine answers that it cannot sing it (NEUTRINO: kanji, romaji). The editor shows the
   engine's sentence once per score and plays the instruments alone. A kana reading of kanji

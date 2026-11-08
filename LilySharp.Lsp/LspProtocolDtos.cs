@@ -445,6 +445,13 @@ public class PlaybackResponse
     /// notes, for the practice menu to turn on; the editor plays them only when it does (owner's
     /// request 2026-11-08). Empty for a file with no score.</summary>
     public string[]? Extra { get; set; }
+    /// <summary>The parts the score SINGS — shown on a staff with a lyrics row under it that sings
+    /// the part — and the parts it PLAYS — shown on a staff with no words under it; a part may be
+    /// both, on two staves (<c>Svg.Collector.SungStaves</c>, owner's decision 2026-11-08). The
+    /// editor lets a voice stand in for the instrument only where the part is sung and not
+    /// played.</summary>
+    public string[]? Sung { get; set; }
+    public string[]? Played { get; set; }
     /// <summary>The beats a metronome clicks, in seconds: one per beat of the meter in force,
     /// the first of each bar accented.</summary>
     public PlaybackBeat[]? Beats { get; set; }

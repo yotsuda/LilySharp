@@ -1139,14 +1139,19 @@ PartProperty   = 'clef'          , PartClefName
                                                        LilyPond's 128 names, e.g.
                                                        midiInstrument "acoustic guitar (nylon)";
                                                        default = the preset's, else
-                                                       "acoustic grand". A PART A LYRICS ROW
-                                                       SINGS is a singer (owner's decision
-                                                       2026-11-08): the preview sings it with
-                                                       the singing engine when one is there,
-                                                       and this sound is its stand-in — in the
-                                                       .mid, and in the preview while there is
-                                                       no voice; a singer naming no sound and
-                                                       no preset stands in with "choir aahs".
+                                                       "acoustic grand". A STAFF WITH A LYRICS
+                                                       ROW UNDER IT that sings its part is a
+                                                       singer's (owner's decision 2026-11-08):
+                                                       the preview sings it with the singing
+                                                       engine when one is there, and this
+                                                       sound is the stand-in — in the .mid,
+                                                       and in the preview while there is no
+                                                       voice; a singer naming no sound and no
+                                                       preset stands in with "choir aahs". A
+                                                       staff of the same part with no words
+                                                       under it plays this sound as well, so
+                                                       'staff m  staff m  lyrics v sings m'
+                                                       sounds m both ways, once each.
                                                        docs/singing-design.md §3. *) ;
                (* 'lines' left this list 2026-08-19 and 'removeEmpty' 2026-09-08 (user
                   decisions): the staff-line count and hara-kiri are presentation, not
