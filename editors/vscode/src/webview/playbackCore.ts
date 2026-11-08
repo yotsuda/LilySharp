@@ -43,6 +43,23 @@ export interface PlaybackBeat { T: number; A: boolean }
 export interface Practice {
     speed: number; muted: readonly string[]; click: boolean;
     extraOn?: readonly string[]; voicesOff?: readonly string[];
+    /** The menu's faders (owner's request 2026-11-09): each part's level, 0–1, by track name —
+     *  a part not named is at 1. An instrument's level scales its notes' velocity (one rule for
+     *  the preview's synth, the MIDI output and the exports); a sung voice's (`voiceLevels`, by
+     *  part) is a gain on its WAV. */
+    levels?: Readonly<Record<string, number>>; voiceLevels?: Readonly<Record<string, number>>;
+}
+
+/** The level a fader gives `name`: 1 when none is set; clamped to 0–1. */
+export function levelOf(levels: Readonly<Record<string, number>> | undefined, name: string): number {
+    const v = levels?.[name];
+    return typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1;
+}
+
+/** A note's velocity at `level`: scaled and rounded, never below 1 while the level is above 0
+ *  (a MIDI velocity of 0 is a note off). */
+export function velocityAt(velocity: number, level: number): number {
+    return level <= 0 ? 0 : Math.max(1, Math.min(127, Math.round(velocity * level)));
 }
 
 /** The metronome's sounds, GM drum keys: the high wood block on a bar's first beat, the low
@@ -55,16 +72,26 @@ export const CLICK_BEAT = 77;
  * parts' notes left out, every time stretched to the tempo (80% plays each second in 1.25),
  * and, with the metronome on, a wood-block click on every beat. The clicks carry no source
  * position, so nothing lights for them. `extra` names the parts the score does not sound
- * (PlaybackResponse.Extra): their notes are left out unless the menu turned them on.
+ * (PlaybackResponse.Extra): their notes are left out unless the menu turned them on. A part's
+ * fader (`levels`) scales its notes' velocity; at 0 the part is silent, as if muted (a pedal
+ * change carries no velocity and is left as it is).
  */
 export function practiceNotes(notes: readonly PlaybackNote[], parts: readonly string[] | null,
     beats: readonly PlaybackBeat[] | null, practice: Practice, extra: readonly string[] | null = null): PlaybackNote[] {
     const silent = new Set([...practice.muted, ...(extra ?? [])]);
     for (const name of practice.extraOn ?? []) { if (!practice.muted.includes(name)) { silent.delete(name); } }
+    if (practice.levels && parts) {
+        for (const name of parts) { if (levelOf(practice.levels, name) <= 0) { silent.add(name); } }
+    }
     const k = 1 / (practice.speed > 0 ? practice.speed : 1);
+    const faded = practice.levels && parts && Object.keys(practice.levels).length > 0;
     const out = notes
         .filter(n => !(parts && typeof n.N === 'number' && silent.has(parts[n.N])))
-        .map(n => k === 1 ? n : { ...n, T: n.T * k, D: n.D * k });
+        .map(n => {
+            const level = faded && typeof n.N === 'number' && n.N >= 0 && n.N < parts!.length && !isPedal(n) ? levelOf(practice.levels, parts![n.N]) : 1;
+            if (k === 1 && level === 1) { return n; }
+            return { ...n, T: n.T * k, D: n.D * k, V: level === 1 ? n.V : velocityAt(n.V, level) };
+        });
     if (practice.click && beats) {
         for (const b of beats) {
             out.push({ T: b.T * k, D: 0.08, P: b.A ? CLICK_ACCENT : CLICK_BEAT, V: b.A ? 120 : 95,
@@ -468,6 +495,12 @@ export function practiceSummary(practice: PracticeState | null | undefined): str
     if (practice.click) { said.push('with the metronome'); }
     if (practice.countIn) { said.push('with a count-in'); }
     if (practice.muted.length > 0) { said.push(`without ${practice.muted.join(', ')}`); }
+    for (const [name, level] of Object.entries(practice.levels ?? {})) {
+        if (level !== 1 && !practice.muted.includes(name)) { said.push(`${name} at ${Math.round(levelOf(practice.levels, name) * 100)}%`); }
+    }
+    for (const [name, level] of Object.entries(practice.voiceLevels ?? {})) {
+        if (level !== 1) { said.push(`the voice of ${name} at ${Math.round(levelOf(practice.voiceLevels, name) * 100)}%`); }
+    }
     return said.join(', ');
 }
 

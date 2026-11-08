@@ -198,7 +198,10 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   2026-11-08): on, the part is sung; off, its instrument plays in the voice's place — a switch
   between the two sounds, never both. `Practice.voicesOff`, read by `sungTracks()`; the host
   lists the voices from `lilysharp/sung` when an engine is there (`requestParts`). The part's
-  own toggle silences it altogether.
+  own toggle silences it altogether. The fader to its right (owner's request 2026-11-09,
+  docs/playback-design.md "A fader beside each part") is the voice's gain: a `GainNode` in the
+  page (`startVoices`), `VoiceTrack.gain` into `mixIn` in the exports (`singJobs` reads
+  `Practice.voiceLevels`); at 0 the voice is as switched off.
 - **The pane says where the voices stand** (owner's request 2026-11-08, session 1141): a small
   **microphone over the corner of ▶** — hidden with no voice; grey and pulsing while the engine
   sings (`preparing`); blue when every voice is decoded and a Play will use it (`ready`); the

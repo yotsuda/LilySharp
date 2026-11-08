@@ -21,6 +21,7 @@ import {
     CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, loopRounds, playSpan, playSpanWindow, practiceNotes,
     programOf, toEvents,
     fromOffset, exportNotes, practiceSummary, PracticeState, voiceCues, voiceBadge, soundStart, withVoiceLead,
+    levelOf, velocityAt,
 } from '../src/webview/playbackCore';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -368,6 +369,22 @@ describe('the notes the practice menu plays', () => {
         const clicks = practiceNotes(notes, parts, beats, { ...as, click: true, speed: 0.5 }).filter(n => n.C === DRUM_CHANNEL);
         assert.deepEqual(clicks.map(n => [n.T, n.P, n.S]), [[0, 76, -1], [1, 77, -1]]);
         assert.ok(clicks[0].V > clicks[1].V);
+    });
+
+    // The menu's faders (owner's request 2026-11-09): a part's level scales its velocity, 0 silences it.
+    it('scales a part\'s velocity by its fader, and silences it at 0', () => {
+        const faded = practiceNotes(notes, parts, beats, { ...as, levels: { alt: 0.5 } });
+        assert.deepEqual(faded.map(n => [n.P, n.V]), [[72, 90], [64, 45], [74, 90]]);
+        assert.deepEqual(practiceNotes(notes, parts, beats, { ...as, levels: { alt: 0 } }).map(n => n.P), [72, 74]);
+        // A part at 1, or not named, is untouched (the very same objects); a tiny level still sounds.
+        assert.deepEqual(practiceNotes(notes, parts, beats, { ...as, levels: { sop: 1 } }), notes);
+        assert.equal(velocityAt(80, 0.001), 1);
+        assert.equal(velocityAt(127, 1), 127);
+        assert.equal(levelOf({ a: 2 }, 'a'), 1, 'clamped');
+        assert.equal(levelOf(undefined, 'a'), 1);
+        // In words, for the export's message.
+        assert.equal(practiceSummary({ speed: 1, muted: [], click: false, countIn: false, levels: { alt: 0.5 }, voiceLevels: { sop: 0.7 } }),
+            'alt at 50%, the voice of sop at 70%');
     });
 
     // The parts the score does not sound ride in the list after its tracks (PlaybackResponse.Extra,

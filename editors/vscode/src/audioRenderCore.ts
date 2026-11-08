@@ -68,7 +68,11 @@ export function frameCount(notes: readonly PlaybackNote[], sampleRate = WAV_SAMP
 
 /** A sung voice mixed into a file (docs/singing-design.md §5): its WAV, where in the file it
  *  starts (seconds — a count-in's lead), and its length. */
-export interface VoiceTrack { wav: string; at: number; duration: number }
+export interface VoiceTrack {
+    wav: string; at: number; duration: number;
+    /** The practice menu's fader for the voice (0–1); 1, or absent, as rendered. */
+    gain?: number;
+}
 
 /** How long the file runs with its voices: the notes' end or the last voice's, and the tail. */
 export function fileSeconds(notes: readonly PlaybackNote[], voices: readonly VoiceTrack[] | null | undefined,

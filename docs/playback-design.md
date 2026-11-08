@@ -182,6 +182,19 @@ Now:
   §5; a sung part's instrument is its stand-in, "choir aahs" when it names none). The
   header's length and the exports leave the extra parts out unless the menu turned them on.
 
+- **A fader beside each part** (owner's request 2026-11-09, session 1155): to the right of every
+  toggle — the score's parts, the `♪ part` voices, the italic extras — a range of 0 to 100 %.
+  An instrument's level scales its notes' VELOCITY (`Practice.levels`, by track name;
+  `practiceNotes`, `velocityAt`: rounded, never below 1 while above 0, 0 silences the part as a
+  mute would), so one rule reaches the preview's synth, the MIDI output and every export
+  through `exportPlan`; a voice's level (`Practice.voiceLevels`, by part) is a gain on its WAV
+  — a `GainNode` before the voices' output in the page, `VoiceTrack.gain` into `mixIn` in the
+  exports, and at 0 the voice is as switched off (its instrument stands in). The number follows
+  the thumb, the sound changes when it is let go (`change`, as the tempo's slider); 100 % is "as
+  written" and is not kept, so the menu's pressed look and `practiceSummary` ("alt at 50%, the
+  voice of sop at 70%") say only what differs. Velocity, not a channel volume (CC 7): parts may
+  share a channel, and a velocity rides along wherever the notes go.
+
 ### MIDI out
 
 Closing the preview whose Play the output is sounding stops it (`midiPlaybackPanel`, owner's request 2026-11-02): the server plays on a thread of its own, and a closed page takes nothing with it. Closing another preview leaves it playing, and a hidden preview goes on.

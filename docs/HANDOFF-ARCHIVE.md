@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1153セッションの経緯
+
+### 1.1 第1153セッション（2026-11-09・YT-DELL2）
+
+開始時 `-Start p1153`（HEAD `c02677001`・未 push 53・OMR の open 0）は **build 赤＝私のせい**: `-Start` の full run の最中に Lsp の C# を書き替えていて（`SungParams.Path` を足す前の `Commands.cs` が先にビルドされた・`start.log` の CS1061）、trx 無し。前便末の full は 14859 / 0 / 2。⚠️ 規則の再確認＝**full run の最中はコードも docs も触らない**（§7）。同じ会話で第1152 から続けた便。オーナー報告「mp4 exporter に、歌唱が入らない」。作業場所は Lab `sessions/p1153/`（`notes.md`・再現は `sessions/p1152/probe/mp4repro.js`）。
+
+- **再現（VS Code の外・`p1152/probe/mp4/repro.log`）**: `renderAudioFiles`（2 音＋オーナーの最新の Cantilena の声 WAV を −0.3 s に）→ `videoArgs`／ffmpeg → MP4 の音を戻す＝rms 0.134（音＋声）／0.337（音だけ・3.5 s）／戻し 0.141（9 s）＝**声は WAV と ffmpeg の段を生き残る**。落ちているのは上流＝どの扉から出したか。
+- **原因 2 つ**: ⑴ **エクスプローラーの右クリック／パレットのフォルダ Export（`exportBatch.ts`）は `singJobs` を一度も呼んでいなかった**＝`practisedJobs` → 描画・楽器だけ（WAV・MP3・MP4 とも）。第1131 の Export 混合はプレビューの Export ボタン（`exportMedia`）だけに配線していた。⑵ **`mixIn` が負の開始位置を 0 に丸めていた**: engine の WAV は楽譜の 0 より `VOICE_LEAD_S`＝0.3 s 前から始まるので、count-in の無い Export の声は第1147 以降ずっと **0.3 s 遅れて**入っていた（CLI の `WavRenderer.RenderWithVoices` は処理済み・エディタだけ）。
+- **直し**: `exportBatch.ts` に `deps.singJobs(jobs, source, openUri)`（出力チャネルに `sung: N voice(s) in …`）・`extension.ts` の `singJobs(jobs, source, practice)` は `{ textDocument } | { path }` を取る・**`lilysharp/sung` が開いていないファイルの `Path` を受ける**（`SungParams.Path`・`ExportTreeOf`＝Export と同じ）・`mixIn` は負の `at` のぶん声の頭を捨てて 0 から置く。網: `SungRequestTests.AFileNotOpen_IsSungByItsPath`（Sung／Export の網 641 / 641）・`voiceMix.test`「leaves out the head…」（npm 906 / 906）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5 Export・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7「右クリックの Export も歌う」。
+- 残り: 実機（オーナー・§3.7＝右クリックの MP4 に声・開いていない .lys も・声の入りが遅れない）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
+- 終了時 full **14860 / 0 / 2 / 14862**（`-End p1153 -DiffBase c02677001`＝`end.log`・門は全部 OK・§1 現在便 16,607 字＝残り 3,393・+1 本＝`AFileNotOpen_IsSungByItsPath`）。npm は 1 回目 905 / 906（`npmtest.log`＝新しい網の私の期待値が間違い: 声の後ろに `WAV_TAIL_S`＝2 s の尾が付くので file は伸びる）→ 期待値を直して **906 / 906**（`npmtest2.log`・実装は変えていない＝配布済みの build のまま）。§7 7.5: Core `+` 0・REF 0・OWN 0（Lsp の `SungParams.Path`・`GetSung` と拡張・docs）。7.6: 出所は `mp4repro.js` の実測とコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1152セッションの経緯
 
 ### 1.1 第1152セッション（2026-11-09・YT-DELL2）

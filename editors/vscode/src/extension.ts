@@ -49,7 +49,7 @@ import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
 import { AudioFormat, AudioJob, renderAudioFiles } from './audioRender';
 import { VoiceTrack, decodeWav } from './audioRenderCore';
-import { PracticeState, VOICE_LEAD_S, exportPlan, practiceSummary, soundStart } from './webview/playbackCore';
+import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soundStart } from './webview/playbackCore';
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
@@ -3589,12 +3589,14 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
         const voices: VoiceTrack[] = [];
         const silenced = new Set<number>();
         for (const voice of sung.Voices ?? []) {
-            if (voice.Notes.length === 0 || !sungParts.has(voice.Part) || silentVoices.has(voice.Part)) { continue; }
+            // The menu's fader for the voice (owner's request 2026-11-09): its gain in the mix; at 0 it is as switched off.
+            const gain = levelOf(practice?.voiceLevels, voice.Part);
+            if (voice.Notes.length === 0 || !sungParts.has(voice.Part) || silentVoices.has(voice.Part) || gain <= 0) { continue; }
             try {
                 const { rendered } = await engine.render(voice, speed);
                 const v = await rendered;
                 // The WAV begins VOICE_LEAD_S before the score's 0 (the first consonant's room).
-                voices.push({ wav: v.wav, at: (job.Lead ?? 0) - VOICE_LEAD_S, duration: v.duration });
+                voices.push({ wav: v.wav, at: (job.Lead ?? 0) - VOICE_LEAD_S, duration: v.duration, gain });
                 const track = job.Parts?.indexOf(voice.Part) ?? -1;
                 if (track >= 0 && !playedParts.has(voice.Part)) { silenced.add(track); }
             } catch (e) {
@@ -4577,6 +4579,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         /* A part sounds while its button is pressed in; one let out is silent, its name grey (no strike-through:
            the line sat off the letters' middle in VS Code's font — owner's report 2026-10-25). */
         .practice-panel .parts { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+        /* One line a part: the toggle, then its fader (owner's request 2026-11-09). */
+        .practice-panel .parts .pline { display: flex; align-items: center; gap: 8px; }
+        .practice-panel .parts .pline button { flex: 1 1 auto; min-width: 0; }
+        .practice-panel .parts input.fader { width: 76px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
         .practice-panel .parts button { text-align: left; }
         .practice-panel .parts button[aria-pressed="false"] { color: #888; }
         /* A part the score does not sound (off unless pressed), and a sung voice. */
@@ -6286,8 +6292,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (voicePlan === null || !rawParts) { return set; }
             rawParts.forEach((name, i) => {
                 const v = voices.get(name);
+                // A voice whose fader stands at 0 is as switched off: its instrument stands in.
                 if (v && Math.abs(v.speed - practice.speed) < 1e-6 && !practice.voicesOff.includes(name)
-                    && (!rawSung || rawSung.includes(name))) { set.add(i); }
+                    && levelIn(practice.voiceLevels, name) > 0 && (!rawSung || rawSung.includes(name))) { set.add(i); }
             });
             return set;
         }
@@ -6320,10 +6327,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const v = voices.get(rawParts[i]);
                 const lead = v.lead || 0;
                 const cues = window.LysSynth.voiceCues(listTime, countInFix, voicePlan.pieces, voicePlan.rounds, v.buffer.duration - lead);
+                // The menu's fader for the voice: a gain of its own before the voices' output.
+                const level = levelIn(practice.voiceLevels, rawParts[i]);
+                let out = voiceOutput(ctx);
+                if (level < 1) {
+                    const g = ctx.createGain();
+                    g.gain.value = level;
+                    g.connect(out);
+                    out = g;
+                }
                 for (const cue of window.LysSynth.withVoiceLead(cues, lead, v.pre || 0, room || 0)) {
                     const src = ctx.createBufferSource();
                     src.buffer = v.buffer;
-                    src.connect(voiceOutput(ctx));
+                    src.connect(out);
                     if (cue.duration === undefined) { src.start(when + cue.at, cue.offset); }
                     else { src.start(when + cue.at, cue.offset, cue.duration); }
                     voiceSources.push(src);
@@ -7070,7 +7086,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // playing goes on from the same place.
         // extraOn: the parts the score does not sound that the menu turned on; voicesOff: the sung
         // lyrics it turned off (owner's request 2026-11-08: both beside the parts).
-        const practice = { speed: 1, muted: [], click: false, countIn: false, extraOn: [], voicesOff: [] };
+        // levels / voiceLevels: the faders beside the parts and the voices (owner's request
+        // 2026-11-09), part -> 0..1; a part at 1 is not listed.
+        const practice = { speed: 1, muted: [], click: false, countIn: false, extraOn: [], voicesOff: [], levels: {}, voiceLevels: {} };
+        function levelIn(levels, name) {
+            const v = levels[name];
+            return typeof v === 'number' ? Math.min(1, Math.max(0, v)) : 1;
+        }
         let rawNotes = null, rawParts = null, rawBeats = null, rawBarEnd = null, rawExtra = null;  // the server's last answer, as written
         let rawSung = null, rawPlayed = null;    // the parts the score sings, and plays (a part may be both: two staves)
         let lastSpan;               // what plays: undefined the whole score, null/[lo, hi] a playSpan
@@ -7091,7 +7113,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.getElementById('practiceSpeed').textContent = speedOn ? Math.round(practice.speed * 100) + '%' : '';
             // Pressed in while anything differs from the score as written.
             practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.countIn || practice.muted.length > 0
-                || practice.extraOn.length > 0 || practice.voicesOff.length > 0 || loopOn));
+                || practice.extraOn.length > 0 || practice.voicesOff.length > 0 || loopOn
+                || Object.keys(practice.levels).length > 0 || Object.keys(practice.voiceLevels).length > 0));
             // The loop lives here too (owner's request 2026-10-25), an On/Off as the metronome's.
             loopBtn.setAttribute('aria-pressed', String(loopOn));
             loopBtn.textContent = loopOn ? 'On' : 'Off';
@@ -7106,7 +7129,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // extension keeps this page's menu for them (previewPractice).
             vscode.postMessage({ type: 'practiceState', practice: {
                 speed: practice.speed, muted: practice.muted.slice(), click: practice.click, countIn: practice.countIn,
-                extraOn: practice.extraOn.slice(), voicesOff: practice.voicesOff.slice() } });
+                extraOn: practice.extraOn.slice(), voicesOff: practice.voicesOff.slice(),
+                levels: Object.assign({}, practice.levels), voiceLevels: Object.assign({}, practice.voiceLevels) } });
         }
         function practiceChanged(oldSpeed) {
             showPractice();
@@ -7130,7 +7154,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // One toggle each, pressed in while it sounds; the lists are by name, so a part muted
             // in another score stays muted.
             const without = (names, name) => names.filter(n => n !== name);
-            const toggle = (label, title, isOn, flip, cls, part) => {
+            // One line a part: its toggle, and to its right a fader (owner's request 2026-11-09)
+            // - 0 to 100%, the instrument's velocity or the voice's gain. The number follows the
+            // thumb; the sound changes when it is let go (as the tempo's does), 100 means "as
+            // written" and is not kept.
+            const toggle = (label, title, isOn, flip, cls, part, levels, levelKey) => {
+                const line = document.createElement('span');
+                line.className = 'pline';
                 const b = document.createElement('button');
                 b.type = 'button';
                 b.textContent = label;
@@ -7143,25 +7173,42 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     b.setAttribute('aria-pressed', String(isOn()));
                     practiceChanged(practice.speed);
                 });
-                list.appendChild(b);
+                line.appendChild(b);
+                const fader = document.createElement('input');
+                fader.type = 'range'; fader.min = '0'; fader.max = '100'; fader.step = '1';
+                fader.className = 'fader';
+                const sayLevel = () => { fader.title = 'Volume ' + fader.value + '%'; fader.setAttribute('aria-label', levelKey + ' volume ' + fader.value + '%'); };
+                fader.value = String(Math.round(levelIn(levels, levelKey) * 100));
+                sayLevel();
+                fader.addEventListener('input', sayLevel);
+                fader.addEventListener('change', () => {
+                    const v = Number(fader.value);
+                    if (v >= 100) { delete levels[levelKey]; } else { levels[levelKey] = v / 100; }
+                    practiceChanged(practice.speed);
+                });
+                line.appendChild(fader);
+                list.appendChild(line);
             };
             // The score's parts (owner's request 2026-10-25).
             for (const name of parts) {
                 toggle(name, '', () => !practice.muted.includes(name),
-                    () => { practice.muted = practice.muted.includes(name) ? without(practice.muted, name) : practice.muted.concat([name]); });
+                    () => { practice.muted = practice.muted.includes(name) ? without(practice.muted, name) : practice.muted.concat([name]); },
+                    '', '', practice.levels, name);
             }
             // The sung lyrics, one a part with a voice, beside the parts (owner's request
             // 2026-11-08; docs/singing-design.md §5): on, the part is sung; off, its instrument
             // plays in the voice's place.
             for (const name of voices) {
                 toggle('♪ ' + name, name + ': sung (on), or played by its instrument (off)', () => !practice.voicesOff.includes(name),
-                    () => { practice.voicesOff = practice.voicesOff.includes(name) ? without(practice.voicesOff, name) : practice.voicesOff.concat([name]); }, 'voice', name);
+                    () => { practice.voicesOff = practice.voicesOff.includes(name) ? without(practice.voicesOff, name) : practice.voicesOff.concat([name]); },
+                    'voice', name, practice.voiceLevels, name);
             }
             // The file's other parts, which this score does not sound: off until pressed (owner's
             // request 2026-11-08).
             for (const name of extra) {
                 toggle(name, 'Not in this score — silent unless pressed', () => practice.extraOn.includes(name),
-                    () => { practice.extraOn = practice.extraOn.includes(name) ? without(practice.extraOn, name) : practice.extraOn.concat([name]); }, 'extra');
+                    () => { practice.extraOn = practice.extraOn.includes(name) ? without(practice.extraOn, name) : practice.extraOn.concat([name]); },
+                    'extra', '', practice.levels, name);
             }
             renderVoiceBadge();     // the voices' signs on their fresh toggles
         }

@@ -81,7 +81,7 @@ export async function renderAudioFiles(jobs: readonly AudioJob[], bankPath: stri
         synth.destroySynthProcessor();
         // The sung voices, in the instruments' place, from the music's zero (after a count-in).
         for (const voice of job.Voices ?? []) {
-            [left, right] = mixIn(left, right, decodeWav(fs.readFileSync(voice.wav)), voice.at, WAV_SAMPLE_RATE);
+            [left, right] = mixIn(left, right, decodeWav(fs.readFileSync(voice.wav)), voice.at, WAV_SAMPLE_RATE, voice.gain ?? 1);
             await breathe();
         }
         fileLevel(left, right);
