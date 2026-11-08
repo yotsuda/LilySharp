@@ -98,7 +98,10 @@ public sealed class VsqxExporter
                         tick += dur;
                         continue;
                     }
-                    string lyric = n.Lyrics.FirstOrDefault(l => l.Verse == 1).Text ?? "-";
+                    // The word as SUNG: a reading (漢[かん]) is the kana VOCALOID needs, where the
+                    // MusicXML's <text> keeps the kanji.
+                    var first = n.Lyrics.FirstOrDefault(l => l.Verse == 1);
+                    string lyric = first.Sung ?? first.Text ?? "-";
                     if (string.IsNullOrEmpty(lyric))
                         lyric = "-"; // melisma: continue the previous vowel
                     int pitch = MidiPitch(n.Step, (int)Math.Round(n.Alter ?? 0), n.Octave ?? 4);

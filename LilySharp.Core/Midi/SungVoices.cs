@@ -40,7 +40,8 @@ public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungN
 /// <remarks>
 /// <para>
 /// The rules, as docs/singing-design.md §3 states them: a note whose onset carries words takes
-/// them; an empty text at an onset is a held note (<c>_</c>, a detached <c>~</c>) and a melisma;
+/// them — the words as SUNG: a syllable with a reading (<c>漢[かん]</c>, <c>LyricEvent.Sung</c>)
+/// sings its kana while the file prints its kanji; an empty text at an onset is a held note (<c>_</c>, a detached <c>~</c>) and a melisma;
 /// a note with no words that begins exactly where the sung note before it ends is a melisma too
 /// (a slur's, a tie the export did not merge) — ⚠️ so are the notes of a phrase whose words ran
 /// out before it did, until a rest; a note after a rest with no words is not sung. A chord sings
@@ -65,7 +66,7 @@ public static class SungVoices
             var words = new Dictionary<int, string>();
             foreach (var l in lyrics)
                 if (l.Part == part)
-                    words.TryAdd(l.Tick, l.Text);
+                    words.TryAdd(l.Tick, l.Sung ?? l.Text);     // a reading (漢[かん]) sings かん
             var line = Line(midi, part, words);
 
             var sung = new List<(MidiNote Note, int End, string? Lyric, bool Melisma)>();
@@ -149,14 +150,8 @@ public static class SungVoices
         return line;
     }
 
-    /// <summary>Hiragana, katakana (the long-vowel mark among them) and half-width katakana only.</summary>
-    public static bool IsKana(string text)
-    {
-        if (text.Length == 0)
-            return false;
-        foreach (char c in text)
-            if (!(c is >= 'ぁ' and <= 'ゟ' or >= '゠' and <= 'ヿ' or >= 'ｦ' and <= 'ﾟ'))
-                return false;
-        return true;
-    }
+    /// <summary>Hiragana, katakana (the long-vowel mark among them) and half-width katakana only
+    /// (<see cref="Music.LyricReading.IsKana"/>, the one definition — the parser's reading check
+    /// uses it too).</summary>
+    public static bool IsKana(string text) => Music.LyricReading.IsKana(text);
 }

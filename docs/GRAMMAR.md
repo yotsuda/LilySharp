@@ -1443,6 +1443,18 @@ LyricVerse     = 'verse' , [ '~' ] , Integer , { ( ',' | '-' ) , Integer } , '{'
                     spelling '[1. … ]' was read with an error until 2026-11-08; dropped, owner's
                     decision). *)
 LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
+LyricText      = { Word , [ '[' , Reading , ']' ] } ;
+                 (* A READING glued to the word it reads (owner's decision 2026-11-08): the page
+                    prints the word, a singing engine sings the reading — '漢[かん]' prints 漢 and
+                    sings かん; '大[おお]空[ぞら]' prints 大空 and sings おおぞら; a stretch with no
+                    reading sings as written. The MusicXML, the LilyPond twin and the .mid's
+                    lyric events carry the PRINTED word (neither format has a reading); the sung
+                    voice (lilysharp/sung, lysc wav --singer) and the VSQX sing the reading.
+                    Music.LyricReading. A reading is of the stretch right before it: a '[' after
+                    a space, a reading with no word before it, an empty, nested or unclosed one,
+                    or a ']' on its own is an error on the syllable (LYS4036), which still prints
+                    as written; a reading that is not kana is a warning (LYS4037). A QUOTED
+                    syllable keeps its brackets, as it keeps every character. *)
                  (* MEASURED 2026-08-16 — and the spacing is part of the rule, because
                     the two arms that fuse tokens keep only the pair's OUTER trivia:
                       GLUED to the word   "Hap- py"   continues that word (one syllable);

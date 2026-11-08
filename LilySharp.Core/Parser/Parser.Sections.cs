@@ -693,6 +693,7 @@ internal sealed partial class Parser
         // must still render. The special lyric tokens (~ _ -) are handled above
         // and the measure delimiters (| }) are stopped by the caller, so anything
         // reaching here is a syllable — normalize it to a plain identifier token.
+        int inkStart = _textPosition + Current.LeadingTriviaWidth;
         var text = Advance();
         var word = new System.Text.StringBuilder(text.Text);
 
@@ -731,6 +732,30 @@ internal sealed partial class Parser
             prev = Advance();
             word.Append(prev.Text);
             merged = true;
+        }
+
+        // A READING glued to the word — 漢[かん] (Music.LyricReading; owner's decision
+        // 2026-11-08): '[' and ']' lex as their own tokens and the loop above glued them on, so
+        // the word is read here for its shape. Malformed brackets (a '[' after a space, an
+        // unclosed or empty reading, a stray ']') are an error on the syllable, which still
+        // prints as written; a reading that is not kana is a warning — the voices sing kana.
+        // A quoted syllable is its words and nothing else, brackets included.
+        string raw = word.ToString();
+        if (Music.LyricReading.HasBrackets(raw) && !Syntax.StringLiteral.IsClosed(raw))
+        {
+            var span = new TextSpan(inkStart, _textPosition - prev.TrailingTriviaWidth - inkStart);
+            var (_, _, problem) = Music.LyricReading.Split(raw);
+            if (problem != null)
+                _diagnostics.Error(span, DiagnosticCodes.LyricReadingMalformed, problem);
+            else
+                foreach (var reading in Music.LyricReading.Readings(raw))
+                    if (!Music.LyricReading.IsKana(reading))
+                    {
+                        _diagnostics.Warning(span, DiagnosticCodes.LyricReadingNotKana,
+                            $"the reading [{reading}] is not kana — a Japanese voice sings hiragana or katakana; "
+                            + "the word still prints and the reading is handed to the voice as written");
+                        break;
+                    }
         }
 
         // Trailing hyphen (word continuation, e.g. "Hap-"). Keep the first token's

@@ -1601,6 +1601,16 @@ public static class DiagnosticCodes
     /// 2026-10-30: <c>@decresc … @fff</c> after <c>@ff</c>). <c>Semantics.HairpinTargetValidator</c>.</summary>
     public const string HairpinAgainstItsLevel = "LYS4035";
 
+    /// <summary>Lyric error: a syllable's brackets are not a reading — <c>漢[かん]</c> is the
+    /// shape (owner's decision 2026-11-08; <see cref="Music.LyricReading"/>): a <c>[</c> after a
+    /// space, a reading with no word before it, an empty, nested or unclosed one, or a <c>]</c>
+    /// on its own. The syllable still prints as written. The parser.</summary>
+    public const string LyricReadingMalformed = "LYS4036";
+
+    /// <summary>Lyric warning: a reading (<c>漢[kan]</c>) is not kana, which the Japanese voices
+    /// sing; it is still handed to the voice as written. The parser.</summary>
+    public const string LyricReadingNotKana = "LYS4037";
+
     /// <summary>Warning: a drum staff's voices write two different levels at one moment —
     /// <c>@f</c> on the hands' line and <c>@p</c> on the feet's (owner's decision 2026-10-30).
     /// One drummer plays one level; the same level in both lines prints once

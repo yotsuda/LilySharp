@@ -1898,6 +1898,16 @@ bar, the one that OPENS the run included — so `| きら | ひかる |` is one 
 longer than `きら | ひかる`, its first bar carrying no syllables. That leading
 `|` is how a verse skips the rest bar the melody opens with.
 
+**A reading** (ruby) is glued to the word it reads, in square brackets: `漢[かん]` prints 漢 and
+sings かん — the preview's voice and `lysc wav --singer` sing the reading; the page, the
+MusicXML, the LilyPond export and the `.mid`'s lyric events keep the printed word (neither
+format has a reading). One syllable may carry several: `大[おお]空[ぞら]` prints 大空 and sings
+おおぞら, and a stretch with no reading sings as written (`漢[かん]じ`). The brackets must
+touch the word: a `[` after a space, a reading with no word before it, an empty or unclosed one
+and a `]` on its own are an error on the syllable (LYS4036), which still prints as written;
+a reading that is not kana is a warning (LYS4037). A kanji with no reading prints as always
+and is not sung — the voice says so once. (VSQX, VOCALOID's format, takes the reading too.)
+
 **Melismas** follow LilyPond's `\lyricsto`. A **slur** or a **tie** makes one on its own:
 the syllable on the slur's first note is sung over every note up to the one that closes
 it (and a tied note takes no syllable), so the next syllable lands after the slur.

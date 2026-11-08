@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A reading in the lyrics is coloured**: the kana of `漢[かん]` as a string, its brackets as punctuation (the language's new reading syntax: the page prints the word, the voice sings the reading).
 - **The sung voice follows the selected bars, the loop and the count-in**: it stops where the selected stretch ends instead of singing on to the end of the piece, each round of a loop sings the stretch again (the loop played the instruments alone), and after a count-in it comes in with the instruments.
 - **Export as WAV, MP3 and MP4 carry the sung voice**: with the Cantilena extension installed, the exports sing every part the score sings, as Play does — at the practice menu's tempo, after its count-in, the voice in the instrument's place where the score does not also play the part (a video still lights those notes).
 - **The practice menu lists the sung lyrics and the parts the score leaves out**: beside the parts, a toggle per sung voice (`♪ part` — on, the part is sung; off, its instrument plays in the voice's place); after them, in italics, the file's parts the score does not sound, off until pressed, so a part left out of the score can be heard against it. The exports and the header's length leave those out unless the menu turned them on.

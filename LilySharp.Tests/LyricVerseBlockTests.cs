@@ -70,15 +70,17 @@ public sealed class LyricVerseBlockTests
     }
 
     [Fact]
-    public void ABracket_IsNoVerse_AndNoError_TheBracketIsFreeInLyrics()
+    public void ABracket_IsNoVerse_TheBracketIsAReadingsInLyrics()
     {
-        // `[` has no meaning in a lyrics block since 2026-11-08: the old `[1. … ]` is read as
-        // words — no verse node, no diagnostic — and the brackets print as written. (A `]`
-        // AFTER the last `|` would open a measure of its own that runs on into `verse 2 {`, as
-        // any stray word there does: a verse starts only at a measure's head.)
+        // `[` is a READING's bracket in a lyrics block since 2026-11-08 (LyricReadingTests): the
+        // old `[1. … ]` is no verse — `[1.` is a reading with no word before it and `]` a stray
+        // bracket, each an error on its syllable (LYS4036) — and the words print as written. (A
+        // `]` AFTER the last `|` would open a measure of its own that runs on into `verse 2 {`,
+        // as any stray word there does: a verse starts only at a measure's head.)
         string book = WrittenOut.Replace(Verse1, "[1. Twin- kle twin- kle | lit- tle star ] |");
         var tree = SyntaxTree.Parse(book);
-        Assert.Empty(tree.Diagnostics);
+        Assert.Equal(2, tree.Diagnostics.Count(d => d.Code == DiagnosticCodes.LyricReadingMalformed));
+        Assert.Equal(2, tree.Diagnostics.Count());
         Assert.Single(tree.GetRoot().DescendantNodes().Where(n => n.Kind == SyntaxKind.LyricVerse));   // verse 2 alone
         var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" });
         Assert.Contains(score.Lyrics, l => l.Text == "[1." && l.MeasureIndex == 0);

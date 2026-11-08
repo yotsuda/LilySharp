@@ -921,7 +921,7 @@ internal sealed class MusicXmlNote
     /// <summary>Sung syllables (verse, text, syllabic form, extender) — one per
     /// verse. Vocal editors (VOCALOID, Synthesizer V, CeVIO, NEUTRINO …)
     /// read these on import.</summary>
-    public List<(int Verse, string Text, string Syllabic, bool Extend)> Lyrics { get; } = new();
+    public List<(int Verse, string Text, string Syllabic, bool Extend, string? Sung)> Lyrics { get; } = new();
 
     /// <summary>Where the note was written — the syntax node's <c>SourceStart</c>, the offset the
     /// page's items carry as <c>SourcePosition</c> — or −1 for a note no written item stands
@@ -1150,7 +1150,9 @@ internal sealed class MusicXmlNote
         }
 
         // <lyric> — after notations per the MusicXML order.
-        foreach (var (verse, text, syllabic, extend) in tabCopy ? [] : Lyrics)
+        // The printed word goes to the file; the sung word (a reading, 漢[かん]) has no element
+        // in MusicXML and stays with the VSQX export (VsqxExporter).
+        foreach (var (verse, text, syllabic, extend, _) in tabCopy ? [] : Lyrics)
         {
             var lyric = new XElement("lyric", new XAttribute("number", verse));
             // A '~' inside the syllable is an ELISION: two texts joined by

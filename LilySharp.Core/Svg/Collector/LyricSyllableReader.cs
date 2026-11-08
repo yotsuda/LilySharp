@@ -54,8 +54,13 @@ internal static class LyricSyllableReader
         Blank,
     }
 
-    /// <summary>One lyric token as read by <see cref="Read"/>.</summary>
-    internal readonly record struct LyricToken(Marker Role, string Text, int Position);
+    /// <summary>One lyric token as read by <see cref="Read"/>. <see cref="Sung"/> is the word a
+    /// voice sings where it differs from the word printed — a syllable with a reading,
+    /// <c>漢[かん]</c> (<see cref="Music.LyricReading"/>) — else null.</summary>
+    internal readonly record struct LyricToken(Marker Role, string Text, int Position)
+    {
+        public string? Sung { get; init; }
+    }
 
     /// <summary>
     /// Reads a lyric measure's child node (a syllable or the trailing barline token): the role
@@ -98,12 +103,18 @@ internal static class LyricSyllableReader
         }
 
         var role = Classify(text);
-        return new LyricToken(role, role switch
+        if (role is Marker.Syllable or Marker.HyphenWord)
         {
-            Marker.Syllable => DisplaySyllable(text),
-            Marker.HyphenWord => DisplaySyllable(text.TrimEnd('-')),
-            _ => text,
-        }, position);
+            // A reading glued to the word (漢[かん]): the page prints the word, the voice sings
+            // the reading. A malformed one (the parser's LYS4036) prints as written.
+            var word = role == Marker.HyphenWord ? text.TrimEnd('-') : text;
+            var (printed, sung, problem) = Music.LyricReading.Split(word);
+            return new LyricToken(role, DisplaySyllable(printed), position)
+            {
+                Sung = problem == null && sung != printed ? sung : null,
+            };
+        }
+        return new LyricToken(role, text, position);
     }
 
     /// <summary>Classifies an unquoted lyric token into its <see cref="Marker"/> role.</summary>

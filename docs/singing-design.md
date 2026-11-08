@@ -81,8 +81,17 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   instrument only where the part is sung and not played.
 - **Language**: `ja` when the syllables are kana; otherwise the score is passed as it is and
   the engine answers that it cannot sing it (NEUTRINO: kanji, romaji). The editor shows the
-  engine's sentence once per score and plays the instruments alone. A kana reading of kanji
-  lyrics (a second track, or furigana in the syllable) is an open question for the owner (§7).
+  engine's sentence once per score and plays the instruments alone.
+- **Kanji with a reading** (owner's decision 2026-11-08, session 1138): the reading is glued to
+  the word in the syllable — `漢[かん]` prints 漢 and sings かん, `大[おお]空[ぞら]` prints 大空
+  and sings おおぞら (`Music.LyricReading`; GRAMMAR.md `LyricText`). One row, one place: the file
+  that prints the kanji says how it is sung, and nothing is counted twice — the page's syllable
+  carries the printed word, `SungSyllables` reads the sung word off the same token by its source
+  offset, `LyricEvent.Sung` carries it to `SungVoices`. The `.mid`'s lyric events, the MusicXML
+  `<text>` and the LilyPond twin keep the PRINTED word (a karaoke display shows the words as
+  written; neither format has a reading); the VSQX sings the reading. No ruby is printed (the
+  page is unchanged; LilyPond prints none). A malformed reading is LYS4036, one that is not kana
+  LYS4037; a kanji with no reading is still the engine's one sentence.
 
 ## 4. The server: `lilysharp/sung`
 
@@ -240,11 +249,13 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
    `test/playbackCore.test.ts`). **`lysc wav --singer`** — done 2026-11-08 (session 1137, §5).
    Then MIDI-out alignment if the jitter is heard (`docs/singing-roadmap.md` §3).
 
-Open for the owner before stage 3:
+Open for the owner before stage 3 (as decided since):
 - **Kana for kanji lyrics**: a second track (`lyrics ja sings melody { … }` kept hidden), a
-  reading in the syllable (`漢字|かんじ`), or kana-only for now (the engine's sentence).
+  reading in the syllable, or kana-only for now (the engine's sentence). **Decided 2026-11-08
+  (session 1138): a reading in the syllable, `漢[かん]` (§3); the `.mid` keeps the kanji; no
+  ruby is printed.**
 - **A choir**: several parts with words sing the same voice each, or only the first.
-- **Replace or double** the part's instrument (the setting's default).
+- **Replace or double** the part's instrument (the setting's default). **Replace (session 1129).**
 
 ## 8. Where things are
 

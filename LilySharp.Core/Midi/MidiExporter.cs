@@ -3956,7 +3956,7 @@ public sealed class MidiExporter
             return;
         var bySource = track.Notes.ToLookup(n => n.SourcePos);
         var wrappedTracks = sung.Where(s => s.Lyric.WrapRow > 0).Select(s => s.Track).ToHashSet();
-        foreach (var (lyric, item, printing, part, sungTrack) in sung)
+        foreach (var (lyric, item, printing, part, sungTrack, reading) in sung)
         {
             var notes = bySource[item.SourcePosition].ToList();
             // A phrase two parts play stands at one source position, and its ordinals run on
@@ -3973,7 +3973,7 @@ public sealed class MidiExporter
                 : wrappedTracks.Contains(sungTrack) ? new[] { lyric.WrapRow }
                 : Enumerable.Range(0, onsets.Count);
             foreach (int tick in passes.Select(pass => onsets[Math.Min(pass, onsets.Count - 1)]).Distinct())
-                track.Lyrics.Add(new LyricEvent(tick, lyric.Text, part));
+                track.Lyrics.Add(new LyricEvent(tick, lyric.Text, part, reading));
         }
     }
 }

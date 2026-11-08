@@ -829,6 +829,11 @@ slurred notes). `__` only draws the extender line and takes NO note; `_` takes O
 with no syllable (a melisma without a slur: `c4 d e f` with `la _ lu li`) and draws the
 extender line under it; a standalone `~` takes one note the same way with NO line.
 
+**A reading for a kanji word** is glued to it in square brackets: `漢[かん]` prints 漢 and
+sings かん (the preview's voice and `lysc wav --singer`); `大[おお]空[ぞら]` prints 大空 and sings
+おおぞら. Write the reading in kana. The brackets must touch the word — `漢 [かん]` is an error
+(LYS4036) — and a kanji without a reading prints but is not sung (the voice says so once).
+
 ```
 part melody
 section Main {

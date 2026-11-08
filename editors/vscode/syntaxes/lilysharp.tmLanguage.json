@@ -185,6 +185,15 @@
                     "comment": "Lyric connectors: hyphen (--), extender (__ or _), melisma (~)",
                     "name": "punctuation.separator.lyric-connector.lilysharp",
                     "match": "--|__|~|_"
+                },
+                {
+                    "comment": "A reading glued to the word it reads, sung in its place: 漢[かん] (2026-11-08). The kana inside are coloured as a string, the brackets as punctuation; the word before them stays plain text.",
+                    "match": "(\\[)([^\\[\\]\\s|]*)(\\])",
+                    "captures": {
+                        "1": { "name": "punctuation.definition.lyric-reading.lilysharp" },
+                        "2": { "name": "string.other.lyric-reading.lilysharp" },
+                        "3": { "name": "punctuation.definition.lyric-reading.lilysharp" }
+                    }
                 }
             ]
         },

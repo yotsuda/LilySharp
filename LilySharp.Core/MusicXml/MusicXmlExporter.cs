@@ -892,7 +892,7 @@ public sealed class MusicXmlExporter
         var byPart = Document.Parts.ToDictionary(p => p, p => PrintingsBySource(p, unpitchedToo: true));
         var hyphenBefore = new Dictionary<(string? Part, string? Track, int Verse), bool>();
         var trackPlaces = new Dictionary<(string? Part, string? Track), int>();
-        foreach (var (lyric, item, k, sungPart, track) in sung)
+        foreach (var (lyric, item, k, sungPart, track, reading) in sung)
         {
             // The sung part's own note: a phrase two parts play stands at one source position.
             var (part, note) = byPart
@@ -912,7 +912,7 @@ public sealed class MusicXmlExporter
             bool hyphen = lyric.ConnectorType == Svg.Model.LyricConnectorType.Hyphen;
             note.Lyrics.Add((verse, lyric.Text,
                 prevHyphen ? (hyphen ? "middle" : "end") : (hyphen ? "begin" : "single"),
-                lyric.ConnectorType == Svg.Model.LyricConnectorType.Extender));
+                lyric.ConnectorType == Svg.Model.LyricConnectorType.Extender, reading));
             hyphenBefore[key] = hyphen;
         }
     }

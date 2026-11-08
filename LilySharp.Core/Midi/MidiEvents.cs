@@ -91,8 +91,13 @@ public readonly record struct TimeSignatureChange(
 /// (<see cref="SungVoices"/>) groups the words by it, since the events all land on the first
 /// part track. An empty <paramref name="Text"/> is a held note (<c>_</c>, a detached <c>~</c>): the
 /// previous syllable's vowel goes on.</param>
+/// <param name="Sung">The word a voice sings where it is not <paramref name="Text"/> — a syllable
+/// with a reading, <c>漢[かん]</c> (<see cref="Music.LyricReading"/>): the file writes the kanji
+/// (a karaoke display shows the words as printed; owner's decision 2026-11-08) and the voice
+/// sings the kana. Null when the printed word is the sung one. Not written to .mid files.</param>
 public readonly record struct LyricEvent(
     int Tick,
     string Text,
-    string? Part = null
+    string? Part = null,
+    string? Sung = null
 );
