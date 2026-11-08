@@ -170,16 +170,19 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   between the two sounds, never both. `Practice.voicesOff`, read by `sungTracks()`; the host
   lists the voices from `lilysharp/sung` when an engine is there (`requestParts`). The part's
   own toggle silences it altogether.
-- **The pane says where the voices stand** (owner's request 2026-11-08, session 1141): a `♪`
-  badge beside the transport — hidden with no voice; grey and pulsing while the engine sings
-  (`preparing`); pressed-in blue when every voice is decoded and a Play will use it (`ready`);
-  the error colour when one will not be sung (`failed`, the engine's sentence in the title) —
-  and a sign after each `♪ part` toggle (`…`, `✓`, `⚠`). The host posts `voiceState`
+- **The pane says where the voices stand** (owner's request 2026-11-08, session 1141): a small
+  **microphone over the corner of ▶** — hidden with no voice; grey and pulsing while the engine
+  sings (`preparing`); blue when every voice is decoded and a Play will use it (`ready`); the
+  error colour when one will not be sung (`failed`, the engine's sentence in the title) — and a
+  sign after each `♪ part` toggle (`…`, `✓`, `⚠`). The first shape was a `♪` button beside ⏹;
+  the owner's look (session 1142): it looked like a button and was none, and a note does not
+  say *singing* when the instruments are notes too — so a status, not a button, over the Play
+  it speaks of, drawn as what sings. The host posts `voiceState`
   (`preparing` before the engine is asked, `failed` with the reason); `ready` is the page's
   own, when `setVoice` has decoded the WAV, so it means playable; a speed change starts the
   cycle again. One badge for all voices: `playbackCore.voiceBadge` (failed if any, else
-  preparing if any, else ready). Its place beside ▶ is a first guess the owner wanted to see
-  before deciding. A Play still never waits: the badge says why the instrument stood in.
+  preparing if any, else ready). A Play still never waits: the badge says why the instrument
+  stood in.
 - **MIDI out** (`lilysharp.playback.midiOutput` set): the port plays the instruments, the
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The
   alignment is the round trip's jitter, some tens of milliseconds; acceptable for a preview,

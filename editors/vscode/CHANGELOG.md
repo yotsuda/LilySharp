@@ -4,7 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **The preview says where the sung voice stands**: a `♪` badge beside the transport, grey and pulsing while the engine sings the lyrics, blue when the voice is ready for Play, red when a part will not be sung (the reason in its tooltip); the practice menu's `♪ part` toggles carry the same sign (`…`, `✓`, `⚠`). Nothing is shown when the score has no sung voice. A click opens the practice menu.
+- **The preview says where the sung voice stands**: a small microphone over the corner of ▶, grey and pulsing while the engine sings the lyrics, blue when the voice is ready for Play, red when a part will not be sung (the reason in its tooltip); the practice menu's `♪ part` toggles carry the same sign (`…`, `✓`, `⚠`). Nothing is shown when the score has no sung voice. A click opens the practice menu.
 - **A reading in the lyrics is coloured**: the kana of `漢[かん]` as a string, its brackets as punctuation (the language's new reading syntax: the page prints the word, the voice sings the reading).
 - **The sung voice follows the selected bars, the loop and the count-in**: it stops where the selected stretch ends instead of singing on to the end of the piece, each round of a loop sings the stretch again (the loop played the instruments alone), and after a count-in it comes in with the instruments.
 - **Export as WAV, MP3 and MP4 carry the sung voice**: with the Cantilena extension installed, the exports sing every part the score sings, as Play does — at the practice menu's tempo, after its count-in, the voice in the instrument's place where the score does not also play the part (a video still lights those notes).

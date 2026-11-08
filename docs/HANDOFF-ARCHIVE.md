@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1140セッションの経緯
+
+### 1.1 第1140セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14855 / 0 / 2**（`-Start p1140`・HEAD `f04caee74`・未 push 40・OMR の open 0）。同じ会話で第1139 から続けた便。オーナー「続けて」→ **Cantilena roadmap B5＝linux-x64／osx-arm64 のビルドと platform ごとの VSIX**。Lily# の Core とエディタは不変＝Cantilena（0.4.0 のまま・未公開）と docs。作業場所は Lab `sessions/p1140/`。
+
+- **Cantilena（commit 1 本）**: `pack-extension.ps1` が `-Targets win-x64,linux-x64,osx-arm64` を順に publish（DirectML パッケージは win-x64 だけ・bin は target ごとに作り直す）→ `vsce package --target win32-x64|linux-x64|darwin-arm64`＝**各 VSIX は自分の rid の program だけ**（zip の中身で確認）。`engine.ts` は Linux/mac で起動前に `chmod 755`（Windows で pack した VSIX は file mode を持たない）。**NEUTRINO は Windows 限定**＝CLI は Windows 以外で folder を未設定と読んで 1 文・拡張の Check Setup も 1 文。`OnnxProvider.CoreML`（mac・名指しのみ・`auto` は Windows 以外 CPU＝聴くまで）・`--provider auto|cpu|directml|coreml`・**`cantilena providers`**（CPU／DirectML／CoreML の可否と auto の選択）・`NotSupportedException` も「無い」に数える。`.github/workflows/ci.yml`＝ubuntu／macos／windows で test・自分の rid を publish・`--version`／`check`／`providers` を実走・Windows は DirectML.dll の存在・拡張の check-types と test。網 `OnnxProvidersTests` 4 本（platform で分岐）＝41 / 41・npm 14 / 14。docs: README・拡張 README／CHANGELOG・design §4／§4.2・roadmap B5。
+- **pack**: win32-x64 50.6 MB・linux-x64 43.4 MB・darwin-arm64 42.0 MB（`artifacts/extension/`）。⚠️ **Linux／mac では未聴**（この機械は Windows・WSL なし・CI に声は無い）＝最初の 1 フレーズはオーナーか VSIX を入れた人。CI が ONNX Runtime の読み込みを各 OS で証明するのは repo が GitHub に上がってから。
+- Lily# 側: `singing-roadmap.md` Phase B の項と §4-4（順序の問いは両方ビルドしたので解消）。HANDOFF。
+- 残り: Cantilena の公開（repo・Marketplace 3 target）と VSIX 0.4.0 の入れ直し（オーナー）・Linux／mac で聴く・CoreML を聴いたら `auto` に・ローマ字→かな（Cantilena 側）・lesson-07 に読みの 1 行。
+- 終了時 full **14855 / 0 / 2 / 14857**（`-End p1140 -DiffBase f04caee74`＝`end.log`・門は全部 OK・§1 現在便 16,290 字＝残り 3,710）。§7 7.5: Lily# の Core `+` 0（Cantilena と docs だけ）。7.6・7.7: なし。この commit と Lab・Cantilena の commit は Claude・push と VSIX の入れ直し・公開はオーナー。
+
 ## 以下は第1139セッションの経緯
 
 ### 1.1 第1139セッション（2026-11-08・YT-DELL2）

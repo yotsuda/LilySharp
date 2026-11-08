@@ -4316,14 +4316,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             height: 28px; width: 42px; padding: 0; line-height: 1;
         }
         .toolbar button.icon svg { display: block; width: 15px; height: 15px; }
-        /* The voice badge: grey and pulsing while the engine sings, pressed-in blue when every
-           voice is ready, the error colour when one will not be sung. */
-        .toolbar button.voice-badge { width: 32px; font-size: 15px; }
-        .toolbar button.voice-badge[data-state="preparing"] { color: #777; animation: voice-pulse 1.2s ease-in-out infinite; }
-        .toolbar button.voice-badge[data-state="ready"] { background: #d6e6f8; border-color: #0078d7; color: #0b4a8b; }
-        .toolbar button.voice-badge[data-state="ready"]:hover { background: #c8ddf5; }
-        .toolbar button.voice-badge[data-state="failed"] { color: var(--vscode-errorForeground, #b00020); border-color: var(--vscode-errorForeground, #b00020); }
-        @keyframes voice-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+        /* The voice badge: a small microphone over the bottom-right corner of ▶ — no border, no
+           background, not a button. Grey and pulsing while the engine sings, blue when every voice
+           is ready, the error colour when one will not be sung. */
+        .toolbar .play-wrap { position: relative; display: inline-flex; }
+        .toolbar .voice-badge {
+            position: absolute; right: -5px; bottom: -5px; width: 15px; height: 15px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 50%; background: white; padding: 1px; box-sizing: border-box;
+            cursor: pointer; line-height: 0;
+        }
+        .toolbar .voice-badge svg { width: 12px; height: 12px; display: block; }
+        .toolbar .voice-badge[data-state="preparing"] { color: #888; animation: voice-pulse 1.2s ease-in-out infinite; }
+        .toolbar .voice-badge[data-state="ready"] { color: #0078d7; }
+        .toolbar .voice-badge[data-state="failed"] { color: var(--vscode-errorForeground, #b00020); }
+        :root.theme-dark .toolbar .voice-badge { background: #2d2d2d; }
+        :root.theme-dark .toolbar .voice-badge[data-state="ready"] { color: #4fa3ff; }
+        @keyframes voice-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
         /* How long the score plays (owner's request 2026-10-25), beside the transport. */
         .toolbar .length {
             font-family: system-ui, sans-serif; font-size: 12px; color: #555;
@@ -4439,13 +4448,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </span>
         <span class="sep"></span>
         <span class="group">
+        <!-- The voice badge (owner's request 2026-11-08): a small microphone over the corner of ▶ —
+             hidden until the score has a sung voice; then preparing (grey, pulsing), ready, or
+             failed, its title naming the parts. Not a button (the owner's first look at a ♪ button
+             beside ⏹: "looks like a button but is not one; a note does not say singing, the
+             instruments are notes too"): a status over the Play it speaks of, drawn as what sings.
+             A click still opens the practice menu, where each voice has its own toggle and sign. -->
+        <span class="play-wrap">
         <button id="playBtn" type="button" title="Play">▶</button>
+        <span id="voiceBadge" class="voice-badge" role="status" hidden aria-label="Voice"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="1.2" width="4" height="7.6" rx="2"/><path d="M3.6 7.4a4.4 4.4 0 0 0 8.8 0"/><path d="M8 11.8v2.6M5.6 14.4h4.8"/></svg></span>
+        </span>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
-        <!-- The voice badge (owner's request 2026-11-08): hidden until the score has a sung voice;
-             then preparing (pulsing), ready, or failed, its title naming the parts. A click opens
-             the practice menu, where each voice has its own toggle and sign. Its place beside the
-             transport is a first guess — the owner wanted to see it before deciding. -->
-        <button id="voiceBadge" class="icon voice-badge" type="button" hidden aria-label="Voice">♪</button>
         <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Tempo, loop, metronome, parts"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>

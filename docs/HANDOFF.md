@@ -138,6 +138,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1142セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14855 / 0 / 2**（`-Start p1142`・HEAD `ea90bb174`・未 push 42・OMR の open 0）。同じ会話で第1141 から続けた便。オーナーの見立て「インジケーターがボタンみたいな見た目だが押す物ではない＝良くない。▶ に重ねるのはよいかも。ただ ♪ では歌と結びつかない（楽器の音も音符だから）」。作業場所は Lab `sessions/p1142/`。
+
+- **バッジの 2 つ目の形**: `<span id="voiceBadge" role="status">` に inline SVG の**マイク**（声の記号）を入れ、`.play-wrap { position: relative }` で ▶ を包んで**右下の隅に重ねる**（枠なし・丸い白地（dark は #2d2d2d）・12 px）。色は前と同じ＝灰の点滅（preparing）／青（ready・#0078d7、dark #4fa3ff）／error 色（failed）。クリックで practice メニューは前のまま。JS（`voiceStates`・`renderVoiceBadge`・`data-state`）とトグルの `…`／`✓`／`⚠` は不変。check-types 0・npm 896 / 896。`Deploy-Lsp.ps1` で配布（`deploy.log`・入った `extension.js` に `play-wrap`）＝オーナーは Reload Window。docs: singing-design §5（2 つの形とオーナーの理由）・MANUAL-CHECKS §3.7・editors CHANGELOG。
+- 残り: マイクの見た目の最終判断（オーナーの目・大きさ／位置／色は CSS 数行）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
+- 終了時 full **14855 / 0 / 2 / 14857**（`-End p1142 -DiffBase ea90bb174`＝`end.log`・門は全部 OK・§1 現在便 15,519 字＝残り 4,481）。§7 7.5: Core `+` 0（エディタの HTML／CSS と docs だけ）。7.6・7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1141セッションの経緯
+
 ### 1.1 第1141セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14855 / 0 / 2**（`-Start p1141`・HEAD `c2523fcc5`・未 push 41・OMR の open 0）。同じ会話で第1140 から続けた便。オーナー報告「プレビューの ▶ で歌唱が出ない（かえるのうた.lys）」→ 原因と直し → オーナー指示「deploy-extension.ps1 で win 版を VS Code を kill せずに配れるように」→ オーナー要望「プレビューペインに歌唱の準備中／準備完了のサイン」（位置は見てから決める）。作業場所は Lab `sessions/p1141/`。
@@ -146,18 +156,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **声のバッジ（Lily# のエディタ）**: host `singVoices` が `voiceState`（`preparing`＝engine に頼む前・キャッシュ命中では出さない／`failed`＝理由つき）を post・`ready` はページが `setVoice` で WAV を decode したとき＝再生できる状態。ページは `voiceStates` と `renderVoiceBadge()`＝⏹ の右の **`#voiceBadge`（♪）**（声が無ければ非表示・灰の点滅／押し込み青／赤・title に部の名と理由・クリックで practice メニュー）と practice の `♪ part` トグルの `…`／`✓`／`⚠`（CSS `::after`・`data-state`）。要約は `playbackCore.voiceBadge`（failed があれば failed・preparing があれば preparing・残りは ready）＝`window.LysSynth` に出す。網 3 本（`playbackCore.test.ts`）＝npm 896 / 896。⚠️ ページのスクリプトはテンプレート文字列の中なので `'\n'` が本物の改行になり壊れた（`webviewScript.test` が捕まえた）→ `String.fromCharCode(10)`。docs: singing-design §5・MANUAL-CHECKS §3.7・editors CHANGELOG。**`Deploy-Lsp.ps1` で入っている拡張に配った**（`deploy.log`・server 116 files 検証）＝オーナーは Reload Window。**位置（▶ ⏹ の隣）は仮置き＝オーナーが見てから決める**。
 - 残り: バッジの位置と見た目の調整（オーナーの目）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
 - 終了時 full **14854 / 1 / 2 / 14857**（`-End p1141 -DiffBase c2523fcc5`＝`end.log`）: 赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`＝この語りに書いた **Cantilena の SHA 2 つ**（この repo の履歴に無い＝949 / 947）→ SHA を消して説明に替え、`HistoryCitation`＋`HandoffArchiveContinuity`＋`TheHandoffStaysReadable` 8 / 8 緑。⚠️ **他 repo の commit は HANDOFF に SHA で書かない**（Lab の notes には書いてよい）。他の門は全部 OK・§1 現在便 16,440 字＝残り 3,560。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6・7.7: なし。この commit と Lab・Cantilena の commit は Claude・push はオーナー。
-
-## 以下は第1140セッションの経緯
-
-### 1.1 第1140セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14855 / 0 / 2**（`-Start p1140`・HEAD `f04caee74`・未 push 40・OMR の open 0）。同じ会話で第1139 から続けた便。オーナー「続けて」→ **Cantilena roadmap B5＝linux-x64／osx-arm64 のビルドと platform ごとの VSIX**。Lily# の Core とエディタは不変＝Cantilena（0.4.0 のまま・未公開）と docs。作業場所は Lab `sessions/p1140/`。
-
-- **Cantilena（commit 1 本）**: `pack-extension.ps1` が `-Targets win-x64,linux-x64,osx-arm64` を順に publish（DirectML パッケージは win-x64 だけ・bin は target ごとに作り直す）→ `vsce package --target win32-x64|linux-x64|darwin-arm64`＝**各 VSIX は自分の rid の program だけ**（zip の中身で確認）。`engine.ts` は Linux/mac で起動前に `chmod 755`（Windows で pack した VSIX は file mode を持たない）。**NEUTRINO は Windows 限定**＝CLI は Windows 以外で folder を未設定と読んで 1 文・拡張の Check Setup も 1 文。`OnnxProvider.CoreML`（mac・名指しのみ・`auto` は Windows 以外 CPU＝聴くまで）・`--provider auto|cpu|directml|coreml`・**`cantilena providers`**（CPU／DirectML／CoreML の可否と auto の選択）・`NotSupportedException` も「無い」に数える。`.github/workflows/ci.yml`＝ubuntu／macos／windows で test・自分の rid を publish・`--version`／`check`／`providers` を実走・Windows は DirectML.dll の存在・拡張の check-types と test。網 `OnnxProvidersTests` 4 本（platform で分岐）＝41 / 41・npm 14 / 14。docs: README・拡張 README／CHANGELOG・design §4／§4.2・roadmap B5。
-- **pack**: win32-x64 50.6 MB・linux-x64 43.4 MB・darwin-arm64 42.0 MB（`artifacts/extension/`）。⚠️ **Linux／mac では未聴**（この機械は Windows・WSL なし・CI に声は無い）＝最初の 1 フレーズはオーナーか VSIX を入れた人。CI が ONNX Runtime の読み込みを各 OS で証明するのは repo が GitHub に上がってから。
-- Lily# 側: `singing-roadmap.md` Phase B の項と §4-4（順序の問いは両方ビルドしたので解消）。HANDOFF。
-- 残り: Cantilena の公開（repo・Marketplace 3 target）と VSIX 0.4.0 の入れ直し（オーナー）・Linux／mac で聴く・CoreML を聴いたら `auto` に・ローマ字→かな（Cantilena 側）・lesson-07 に読みの 1 行。
-- 終了時 full **14855 / 0 / 2 / 14857**（`-End p1140 -DiffBase f04caee74`＝`end.log`・門は全部 OK・§1 現在便 16,290 字＝残り 3,710）。§7 7.5: Lily# の Core `+` 0（Cantilena と docs だけ）。7.6・7.7: なし。この commit と Lab・Cantilena の commit は Claude・push と VSIX の入れ直し・公開はオーナー。
 
 ## 2. 開いている作業
 
