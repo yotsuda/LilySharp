@@ -267,6 +267,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1137セッションの経緯
+
+### 1.1 第1137セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14828 / 0 / 2**（`-Start p1137`・HEAD `d7c8d9fc7`・未 push 36・OMR の open 0）。新しい会話。オーナー「HANDOFF を読んで着手」→ §1.0 の順でオーナー判断を要しない **roadmap §3 の 5＝`lysc wav --singer <cantilena>`**（CLI の WAV に歌声を混ぜる）。作業場所は Lab `sessions/p1137/`。
+
+- **Core**: `Audio/SingingEngine.cs`＝`SingingEngine`（JSON の譜を渡して WAV を受ける抽象・失敗は 1 文）・`CantilenaProgram`（`cantilena sing score.json -o voice.wav [--voice engine/name]` を別プロセスで 1 声 1 回・何も link しない＝singing-design §6・`Problem` はパスが無ければ描く前に断る）・`SungScoreJson`（`singerCore.cantilenaScore` と同じ形・かなは escape しない）・`VoiceTrack`。`Audio/WavReader.cs`（PCM 8〜32／float・ch 平均）。`WavRenderer.Render(…, voices)`＝両 ch に線形リサンプルで加算・gain 1（エディタの `mixIn` と同じ）・声が長ければファイルを延ばし tail 2 s は最後に終わる方の後。`ScoreExport.SingTheSungParts`＝`SungVoices`＋`MidiClock`（プレビューの声と同じ読み）＋`SungStaves`（sung／played）で歌うパートだけを歌わせ、歌えた声は played でなければ MIDI からその part の音を抜く（1 段 1 音・オーナー決定 2026-11-08）・失敗は warning「X is not sung (…); its instrument plays」・score の無い本は歌わない（プレビューの `Sung` も空）。`ExportOptions.Singer`。
+- **CLI**: `lysc wav --singer <program> [--voice engine/name]`・環境変数 `LILYSHARP_SINGER`・`--voice` だけはエラー。help・`docs/CLI_REFERENCE.md`・CHANGELOG `[cli]`。
+- **網**: `WavExportTests` +6（`FakeSinger`: 声が 0 から混ざり楽器が消える＋JSON の中身・失敗で楽器が残り warning・sung＋played は両方・22.05 kHz の長い声でファイルが延びる・`WavReader`・`CantilenaProgram.Problem`）＝8 / 8。最初の期待値が 2 回間違い（relative の `c'4 e'4 g'4 c''4`）＝コードは正しかった。
+- **E2E**（Lab `sessions/p1137/notes.md`）: `yuki.lys`（雪やこんこ 2 小節）を Debug lysc＋Release cantilena＋`diffsinger/TIGER`（`CANTILENA_VOICES_DIR=C:\Tools\voices`）で **`Voice: diffsinger/TIGER sings melody (6 notes, 1.9 s)`**・0〜1.9 s にピーク約 1 万の声・sine の楽器（ピーク約 2,500）は消え・クリップ 0。無い声は warning＋楽器で exit 0・`--singer` 無しは不変。sf2 は `tiny-sf2.ps1`（網の `TinySoundFont` の移植。⚠️ 関数が返す `byte[]` は unroll されて 20 byte の名前が 19 byte になった＝`Write-Output -NoEnumerate`）。NEUTRINO は回していない（同じ `cantilena sing` の道）。
+- docs: `singing-design.md` §5・§7、`singing-roadmap.md` §1・§3 の 5、`playback-design.md`、MANUAL-CHECKS §3.7 に耳の確認 1 行（オーナー）。`APPROXIMATIONS.md`（OWN 305 → 306＝`SingingEngine`）と `magic_constants.csv` は再生成＝CRLF に揃えた。
+- 残り: 漢字のかな（オーナー決定待ち・提案は ⒜）・B3（DirectML）・variance の検証・Cantilena の公開（オーナー）・`lysc wav --singer` を実在の声で聴く（オーナー・§3.7）。
+- 終了時 full **14834 / 0 / 2 / 14836**（`-End p1137 -DiffBase d7c8d9fc7`＝`end.log`・門は全部 OK・§1 現在便 16,639 字＝残り 3,361）。§7 7.5: `-End` は commit 前の diff なので Core `+` 0 と出るが、実際は新規 `Audio/SingingEngine.cs`・`Audio/WavReader.cs` と `WavRenderer`・`ScoreExport` の変更（REF 0・OWN 1＝`SingingEngine`）。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1136セッションの経緯
 
 ### 1.1 第1136セッション（2026-11-08・YT-DELL2）

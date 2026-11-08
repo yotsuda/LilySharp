@@ -34,6 +34,7 @@ editor plays both** (`singing-design.md` §2). Everything below sorts into those
 |---|---|
 | Contract (`SungScore`: seconds, MIDI pitch, syllable, melisma, breath) | Shipped, Cantilena `README.md` |
 | `neutrino` backend (NEUTRINO Tau v3.2.x, Japanese, Windows) | Sings; warm render ≈ 0.1× real time on a GPU |
+| `diffsinger` backend (in-process ONNX; OpenUtau-format voices; kana) | Sings (sessions 1134–1136); on Windows through DirectML on any DirectX 12 GPU, the CPU where there is none (session 1139, Cantilena 0.4.0) |
 | `cantilena serve` (resident JSON-lines engine) and the CLI | Shipped |
 | Cantilena VS Code extension `yotsuda.cantilena` (settings, pickers, API) | Built, VSIX packed, **not yet published**; repository **not yet on GitHub** |
 | `lilysharp/sung`, the editor's voice playback, the practice menu's `♪ part` | Shipped; the owner heard it synchronised in the real VS Code |
