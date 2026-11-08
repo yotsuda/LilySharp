@@ -175,8 +175,24 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   `WAV_SAMPLE_RATE` and adds it to both channels from its offset (`mixIn`, the file grown when
   the voice outlasts the notes) before `fileLevel`; a video's length counts the voices
   (`fileSeconds`). So a WAV, an MP3 and an MP4 carry the voice as Play does. No engine, or a
-  voice that fails: the instruments, and a line in the output channel. `lysc wav` (Core,
-  MeltySynth) stays instruments-only until a `--singer <cantilena>` is wanted.
+  voice that fails: the instruments, and a line in the output channel.
+- **`lysc wav --singer <cantilena> [--voice engine/name]`** (built 2026-11-08, session 1137;
+  `LILYSHARP_SINGER` names the program once, as `LILYSHARP_SOUNDFONT` names the font): the
+  command line's offline render, the same rules in Core. `ScoreExport.SingTheSungParts` reads
+  the voices off the export's MIDI and clock (`SungVoices`, `MidiClock`) and the sung and played
+  parts off the score's rows (`SungStaves`); each sung part's score goes as Cantilena's JSON
+  (`Audio.SungScoreJson`, the shape `singerCore.cantilenaScore` sends) to the engine —
+  `Audio.CantilenaProgram`, one `cantilena sing score.json -o voice.wav` per voice, a separate
+  process and nothing linked (§6); the WAV is read back (`Audio.WavReader`: PCM 8–32 and float,
+  channels averaged) and `WavRenderer.Render` adds it to both channels from the score's zero,
+  resampled by linear interpolation at the engine's own level, the file grown when the voice
+  outlasts the notes, as the editor's `mixIn` does. Where the score does not also play the
+  part, its notes leave the MIDI before the synth plays it. A voice the engine cannot sing
+  leaves the instrument and a warning (`melody is not sung (…); its instrument plays`); the
+  voice's kana warning comes along. A file with no `score` block has no sung staff, so nothing
+  is sung there, as in the preview. Each voice is one `cantilena sing`, so NEUTRINO's cold
+  start is paid once per sung part; `serve` would save nothing (its engines are one server per
+  voice too). Nets: `WavExportTests` with a stand-in engine (`FakeSinger`).
 
 ## 6. Licensing boundaries
 
@@ -221,8 +237,8 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 4. **Export mixing** — done 2026-11-08 (session 1131, §5 "Export"; nets `test/voiceMix.test.ts`).
    **A span's voice stopping at the span's end, the voice in a loop, and the count-in's lead** —
    done 2026-11-08 (session 1132: `voiceCues`, `playSpanWindow.pieces`, `loopRounds`; nets in
-   `test/playbackCore.test.ts`). Then MIDI-out alignment if the jitter is heard; then `lysc wav`
-   (`docs/singing-roadmap.md` §3).
+   `test/playbackCore.test.ts`). **`lysc wav --singer`** — done 2026-11-08 (session 1137, §5).
+   Then MIDI-out alignment if the jitter is heard (`docs/singing-roadmap.md` §3).
 
 Open for the owner before stage 3:
 - **Kana for kanji lyrics**: a second track (`lyrics ja sings melody { … }` kept hidden), a

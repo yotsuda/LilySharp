@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using MeltySynth;
@@ -79,14 +80,21 @@ public static class WavRenderer
     }
 
     /// <summary>
-    /// Plays <paramref name="midi"/> through the SoundFont at <paramref name="soundFontPath"/>
-    /// and writes the sound to <paramref name="output"/> as a WAV file; answers how long the
-    /// file plays.
+    /// Plays <paramref name="midi"/> through the SoundFont at <paramref name="soundFontPath"/>,
+    /// adds the sung <paramref name="voices"/> (<c>lysc wav --singer</c>), and writes the sound
+    /// to <paramref name="output"/> as a WAV file; answers how long the file plays.
     /// </summary>
+    /// <remarks>
+    /// A voice is added to both channels from its <see cref="VoiceTrack.At"/>, resampled to
+    /// <paramref name="sampleRate"/> by linear interpolation, at the engine's own level — the
+    /// editor's export mixes the same way (<c>audioRenderCore.mixIn</c>, gain 1); the file grows
+    /// when a voice outlasts the notes, and keeps the <see cref="ReleaseTail"/> after whichever
+    /// ends last. A sample the sum pushes past full scale is held there (<see cref="WriteSample"/>).
+    /// </remarks>
     /// <exception cref="InvalidDataException">The font is not a SoundFont 2
     /// (<see cref="SoundFontProblem"/>), or MeltySynth could not read it.</exception>
     public static TimeSpan Render(Midi.MidiFile midi, string soundFontPath, Stream output,
-        int sampleRate = DefaultSampleRate)
+        int sampleRate = DefaultSampleRate, IReadOnlyList<VoiceTrack>? voices = null)
     {
         if (SoundFontProblem(soundFontPath) is { } problem)
             throw new InvalidDataException(problem);
@@ -107,7 +115,19 @@ public static class WavRenderer
         var sequencer = new MidiFileSequencer(synth);
         sequencer.Play(sequence, false);
 
-        long frames = (long)Math.Ceiling((sequence.Length.TotalSeconds + ReleaseTail) * sampleRate);
+        double seconds = sequence.Length.TotalSeconds;
+        var mixed = new List<(long Start, long Frames, double Ratio, float[] Samples)>();
+        foreach (var voice in voices ?? [])
+        {
+            long start = Math.Max(0, (long)Math.Round(voice.At * sampleRate));
+            double ratio = (double)voice.Sound.SampleRate / sampleRate;
+            long count = (long)Math.Floor(voice.Sound.Samples.Length / ratio);
+            if (count <= 0)
+                continue;
+            mixed.Add((start, count, ratio, voice.Sound.Samples));
+            seconds = Math.Max(seconds, (double)(start + count) / sampleRate);
+        }
+        long frames = (long)Math.Ceiling((seconds + ReleaseTail) * sampleRate);
         WriteHeader(output, sampleRate, frames);
 
         var left = new float[BlockFrames];
@@ -117,6 +137,19 @@ public static class WavRenderer
         {
             int n = (int)Math.Min(BlockFrames, frames - done);
             sequencer.Render(left.AsSpan(0, n), right.AsSpan(0, n));
+            foreach (var (start, count, ratio, src) in mixed)
+            {
+                long from = Math.Max(done, start), to = Math.Min(done + n, start + count);
+                for (long f = from; f < to; f++)
+                {
+                    double pos = (f - start) * ratio;
+                    int i0 = (int)pos;
+                    float t = (float)(pos - i0);
+                    float s = i0 + 1 < src.Length ? src[i0] * (1 - t) + src[i0 + 1] * t : src[i0];
+                    left[f - done] += s;
+                    right[f - done] += s;
+                }
+            }
             for (int i = 0; i < n; i++)
             {
                 WriteSample(pcm, i * 4, left[i]);

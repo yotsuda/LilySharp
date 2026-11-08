@@ -39,7 +39,8 @@ editor plays both** (`singing-design.md` §2). Everything below sorts into those
 | `lilysharp/sung`, the editor's voice playback, the practice menu's `♪ part` | Shipped; the owner heard it synchronised in the real VS Code |
 | Export (WAV/MP3/MP4) with the voice mixed in | Shipped (session 1131); manual checks open (`MANUAL-CHECKS.md` §3.7) |
 | Rules: a sung part is a singer, one sound a staff, the instrument stands in | Decided and built (sessions 1129–1130) |
-| Open questions | Kana for kanji lyrics; a choir (every part with words, or the first); the two small leftovers (a span's end, the loop); `lysc wav` |
+| `lysc wav --singer <cantilena>` (the command line sings through the same engine) | Shipped (session 1137); heard on a real voice is the owner's |
+| Open questions | Kana for kanji lyrics; a choir (every part with words, or the first) |
 
 ## 2. Long term — the phases
 
@@ -182,7 +183,7 @@ In order; each is a session or two. The owner's items are marked.
 | 2 | **The two leftovers**: the span's voice stops at the span's end; the loop sings (restart the buffer with the notes) | LilySharp (editor) | §3.7 items for span and loop tick; `npm test` green |
 | 3 | **`engine/voice` naming and `voices()`**: the extension's API lists installed voices as `{ id: 'neutrino/MERROW', engine, language, licence? }`; `cantilena.voice` accepts and shows the prefixed form; Lily#'s status line names it | cantilena, LilySharp (editor) | the same setting shape will take a DiffSinger voice unchanged; `apiVersion` stays 1 (additive) |
 | 4 | **Kana for kanji** (owner decides §4; then build): the grammar, the page unchanged, `SungVoices` reads the reading, the kana warning goes away for read syllables | LilySharp (Core, GRAMMAR.md) | a kanji verse sings; a kanji verse without readings still warns once |
-| 5 | **`lysc wav --singer <cantilena>`**: the CLI's offline render asks a `cantilena` program (serve or sing) and mixes as the editor does | LilySharp (Cli/Core) | `lysc wav 雪やこんこ.lys --singer …` carries the voice |
+| 5 | **`lysc wav --singer <cantilena>`**: the CLI's offline render asks a `cantilena` program (`sing`, once per voice) and mixes as the editor does — *done 2026-11-08, session 1137* (`singing-design.md` §5) | LilySharp (Cli/Core) | `lysc wav 雪やこんこ.lys --singer …` carries the voice |
 | 6 | **DiffSinger spike** (Cantilena `docs/roadmap.md` B1): load one voice folder, sing one phrase on the CPU, measure; decide the vocoder and provider choices | cantilena | a WAV from a DiffSinger voice; a note of times and the licence of the voice used |
 | 7 | **The demo**: a 30-second shot "type the words, press Play, hear it" for the site (`site/videos/SHOTLIST.md`; owner shoots); a `Sing` paragraph on the site and in the Lily# README | LilySharp (site) | the video is on the page; the README's feature list says *sings* |
 | 8 | **Lily# release** with singing in the notes (v0.16.0 when the owner says), `OMR_MIN_VERSION` unchanged | LilySharp | the CHANGELOG's "The preview sings the lyrics" is under a version |

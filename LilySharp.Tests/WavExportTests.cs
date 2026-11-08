@@ -102,6 +102,160 @@ public sealed class WavExportTests : IDisposable
             new ExportOptions { SoundFont = dls }));
         Assert.False(File.Exists(wav));
     }
+
+    // ---- `lysc wav --singer`: the sung parts' voices mixed in (docs/singing-design.md §5) ----
+
+    // One bar of 4/4 at 120 (2 s), a syllable on each note; the score sings the part (a staff
+    // with its words under it), and — `rows` — may play it on a second staff too.
+    private static string SungBook(string rows = "staff melody  lyrics verse sings melody") =>
+        "tempo 4 = 120\ntime 4/4\npart melody { clef treble }\n" +
+        "section A { melody { c'4 e4 g4 c4 | } lyrics verse { か き く け | } }\nform { A }\n" +
+        $"score {{ {rows} }}\n";
+
+    private (byte[] Bytes, ExportResult Result) Export(string book, SingingEngine singer, string name = "sung.wav")
+    {
+        string font = TinySoundFont.Write(Path.Combine(_dir, "sine.sf2"));
+        string wav = Path.Combine(_dir, name);
+        var tree = SyntaxTree.Parse(book);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+        var score = LilySharp.Core.Svg.Collector.RenderSpecParser.FindAllDeclared(tree).Single();
+        var result = ScoreExport.Write(tree, "wav", wav, score, new ExportOptions { SoundFont = font, Singer = singer });
+        return (File.ReadAllBytes(wav), result);
+    }
+
+    private static short Peak(byte[] bytes, double fromSeconds, double toSeconds)
+    {
+        int frames = BitConverter.ToInt32(bytes, 40) / 4;
+        int from = (int)(fromSeconds * WavRenderer.DefaultSampleRate), to = Math.Min(frames, (int)(toSeconds * WavRenderer.DefaultSampleRate));
+        short peak = 0;
+        for (int f = from; f < to; f++)
+            peak = Math.Max(peak, Math.Abs(BitConverter.ToInt16(bytes, 44 + f * 4)));
+        return peak;
+    }
+
+    private static double Seconds(byte[] bytes) => BitConverter.ToInt32(bytes, 40) / 4.0 / WavRenderer.DefaultSampleRate;
+
+    [Fact]
+    public void ASungPart_IsSungFromTheScoresZero_InItsInstrumentsPlace()
+    {
+        // The engine's half-second voice at 48 kHz: resampled into the file from 0; the part's
+        // notes, which the score only sings, leave the instruments — so from 1 s on nothing sounds.
+        var singer = new FakeSinger { Seconds = 0.5, SampleRate = 48000, Amplitude = 0.5f };
+        var (bytes, result) = Export(SungBook(), singer);
+
+        // What the engine was given: Cantilena's score (its README), the syllables as kana.
+        Assert.NotNull(singer.ScoreJson);
+        using var json = System.Text.Json.JsonDocument.Parse(singer.ScoreJson);
+        Assert.Equal(WavRenderer.DefaultSampleRate, json.RootElement.GetProperty("sampleRate").GetInt32());
+        Assert.Equal("ja", json.RootElement.GetProperty("language").GetString());
+        var notes = json.RootElement.GetProperty("notes").EnumerateArray().ToList();
+        Assert.Equal(new[] { "か", "き", "く", "け" }, notes.Select(n => n.GetProperty("lyric").GetString()));
+        Assert.Equal(new[] { 0.0, 0.5, 1.0, 1.5 }, notes.Select(n => n.GetProperty("start").GetDouble()));
+        Assert.Equal(new[] { 60, 64, 67, 72 }, notes.Select(n => n.GetProperty("pitch").GetInt32()));
+        Assert.True(notes[3].GetProperty("breath").GetBoolean());
+        Assert.Contains("か", singer.ScoreJson);                               // written as kana, not \u escapes
+
+        Assert.True(Peak(bytes, 0.0, 0.5) > 12000, "the voice sounds from the score's zero");
+        Assert.True(Peak(bytes, 1.0, 2.0) < 50, "the instrument is silent in the voice's place");
+        Assert.Contains(result.Notes, n => n == "Voice: fake/voice sings melody (4 notes, 0.5 s)");
+        Assert.Empty(result.Warnings);
+    }
+
+    [Fact]
+    public void AVoiceTheEngineCannotSing_LeavesTheInstrument_AndIsSaid()
+    {
+        var singer = new FakeSinger { Error = "no voice installed" };
+        var (bytes, result) = Export(SungBook(), singer);
+
+        Assert.True(Peak(bytes, 0.0, 1.0) > 1000, "the instrument stands in");
+        Assert.Contains("melody is not sung (no voice installed); its instrument plays", result.Warnings);
+        Assert.DoesNotContain(result.Notes, n => n.StartsWith("Voice:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void APartTheScoreSingsAndPlays_SoundsBothWays()
+    {
+        // A silent voice, so what is heard is the instrument's second staff.
+        var singer = new FakeSinger { Seconds = 0.1, Amplitude = 0f };
+        var (bytes, result) = Export(SungBook("staff melody  lyrics verse sings melody  staff melody"), singer);
+
+        Assert.True(Peak(bytes, 0.0, 1.0) > 1000, "the instrument plays on its own staff");
+        Assert.Contains(result.Notes, n => n == "Voice: fake/voice sings melody (4 notes, 0.1 s), its instrument too");
+    }
+
+    [Fact]
+    public void AVoiceLongerThanTheNotes_GrowsTheFile_WhateverItsRate()
+    {
+        var singer = new FakeSinger { Seconds = 5.0, SampleRate = 22050, Amplitude = 0.5f };
+        var (bytes, _) = Export(SungBook(), singer);
+
+        Assert.InRange(Seconds(bytes), 6.9, 7.2);                             // 5 s of voice, 2 s of tail
+        Assert.True(Peak(bytes, 4.0, 4.5) > 12000, "the voice sounds past the notes' end");
+        Assert.True(Peak(bytes, 6.5, 7.0) < 50, "then the tail");
+    }
+
+    [Fact]
+    public void TheWavReader_AveragesChannels_AndReadsPcmAndFloat()
+    {
+        static byte[] Wav(short format, short channels, short bits, byte[] data)
+        {
+            var m = new MemoryStream();
+            var w = new BinaryWriter(m);
+            w.Write(Encoding.ASCII.GetBytes("RIFF")); w.Write(36 + data.Length); w.Write(Encoding.ASCII.GetBytes("WAVEfmt "));
+            w.Write(16); w.Write(format); w.Write(channels); w.Write(8000); w.Write(8000 * channels * bits / 8);
+            w.Write((short)(channels * bits / 8)); w.Write(bits);
+            w.Write(Encoding.ASCII.GetBytes("data")); w.Write(data.Length); w.Write(data);
+            return m.ToArray();
+        }
+        var stereo = WavReader.Read(Wav(1, 2, 16, [.. BitConverter.GetBytes((short)16384), .. BitConverter.GetBytes((short)-16384),
+            .. BitConverter.GetBytes((short)16384), .. BitConverter.GetBytes((short)16384)]));
+        Assert.Equal(8000, stereo.SampleRate);
+        Assert.Equal(new[] { 0f, 0.5f }, stereo.Samples);
+        var floats = WavReader.Read(Wav(3, 1, 32, [.. BitConverter.GetBytes(0.25f), .. BitConverter.GetBytes(-1f)]));
+        Assert.Equal(new[] { 0.25f, -1f }, floats.Samples);
+        var bytes8 = WavReader.Read(Wav(1, 1, 8, [128, 255]));
+        Assert.Equal(0f, bytes8.Samples[0]);
+        Assert.InRange(bytes8.Samples[1], 0.99f, 1f);
+        Assert.Throws<InvalidDataException>(() => WavReader.Read(Encoding.ASCII.GetBytes("not a wav file at all")));
+    }
+
+    [Fact]
+    public void TheCantilenaProgram_IsRefusedBeforeAnyScoreIsRendered_WhenItsPathNamesNoFile()
+    {
+        Assert.Contains("not found", CantilenaProgram.Problem(Path.Combine(_dir, "none", "cantilena.exe")));
+        Assert.Null(CantilenaProgram.Problem("cantilena"));                     // a bare name: the PATH's
+        Assert.Equal("neutrino/MERROW", new CantilenaProgram("cantilena", "neutrino/MERROW").Name);
+        Assert.Equal("cantilena", new CantilenaProgram(@"C:\x\cantilena.exe").Name);
+    }
+}
+
+/// <summary>A singing engine for the tests: writes a sine of its own length and rate for any
+/// score it is given (and keeps the score), or fails with its sentence.</summary>
+internal sealed class FakeSinger : SingingEngine
+{
+    public double Seconds { get; init; } = 1.0;
+    public int SampleRate { get; init; } = 48000;
+    public float Amplitude { get; init; } = 0.5f;
+    public string? Error { get; init; }
+    public string? ScoreJson { get; private set; }
+
+    public override string Name => "fake/voice";
+
+    public override string? Sing(string scoreJsonPath, string outputWavPath)
+    {
+        ScoreJson = File.ReadAllText(scoreJsonPath);
+        if (Error != null)
+            return Error;
+        int n = (int)(Seconds * SampleRate);
+        using var f = File.Create(outputWavPath);
+        var w = new BinaryWriter(f);
+        w.Write(Encoding.ASCII.GetBytes("RIFF")); w.Write(36 + n * 2); w.Write(Encoding.ASCII.GetBytes("WAVEfmt "));
+        w.Write(16); w.Write((short)1); w.Write((short)1); w.Write(SampleRate); w.Write(SampleRate * 2); w.Write((short)2); w.Write((short)16);
+        w.Write(Encoding.ASCII.GetBytes("data")); w.Write(n * 2);
+        for (int i = 0; i < n; i++)
+            w.Write((short)(Math.Sin(2 * Math.PI * 440 * i / SampleRate) * Amplitude * 32767));
+        return null;
+    }
 }
 
 /// <summary>

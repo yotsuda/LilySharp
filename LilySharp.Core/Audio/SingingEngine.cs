@@ -1,0 +1,215 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using LilySharp.Core.Midi;
+
+namespace LilySharp.Core.Audio;
+
+/// <summary>
+/// What sings a part's words for <c>lysc wav --singer</c>: a program given a sung score (a
+/// JSON file, docs/singing-design.md §3) that writes a WAV whose first sample is the score's
+/// zero. <see cref="CantilenaProgram"/> is the one shipped; a test stands another in. Nothing
+/// is linked: the engine is a separate process, as the editor's is a separate extension
+/// (singing-design §6). LILYSHARP-OWN.
+/// </summary>
+public abstract class SingingEngine
+{
+    /// <summary>What the export reports the voice as ("neutrino/MERROW", or the program's own default).</summary>
+    public abstract string Name { get; }
+
+    /// <summary>
+    /// Sings the score written at <paramref name="scoreJsonPath"/> into <paramref name="outputWavPath"/>.
+    /// Answers null when the WAV is there, else one sentence saying why not — the export then
+    /// leaves the instrument in the voice's place and says so in its warnings.
+    /// </summary>
+    public abstract string? Sing(string scoreJsonPath, string outputWavPath);
+
+    /// <summary>
+    /// Sings <paramref name="voice"/> and reads the sound back: the score written as Cantilena's
+    /// JSON (<see cref="SungScoreJson"/>) under a folder of its own in the temp directory, the
+    /// engine run, the WAV decoded (<see cref="WavReader"/>) and the folder removed. An engine
+    /// that fails answers its sentence in <c>Error</c> and no sound.
+    /// </summary>
+    public (MonoAudio? Sound, string? Error) Sing(SungVoice voice, int sampleRate)
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "lilysharp-sing", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            string json = Path.Combine(dir, "score.json");
+            string wav = Path.Combine(dir, "voice.wav");
+            File.WriteAllText(json, SungScoreJson.Write(voice, sampleRate), new UTF8Encoding(false));
+            string? error;
+            try
+            {
+                error = Sing(json, wav);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+                return (null, e.Message);
+            }
+            if (error != null)
+                return (null, error);
+            if (!File.Exists(wav))
+                return (null, $"{Name} wrote no WAV");
+            try
+            {
+                return (WavReader.Read(File.ReadAllBytes(wav)), null);
+            }
+            catch (InvalidDataException e)
+            {
+                return (null, $"{Name}'s WAV could not be read: {e.Message}");
+            }
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
+    }
+}
+
+/// <summary>
+/// The <c>cantilena</c> command line (<c>C:\MyProj\cantilena</c>; Apache-2.0, the owner's, never
+/// linked): <c>cantilena sing score.json -o voice.wav [--voice engine/name]</c>. Where its
+/// engines and voices are is its own configuration (its environment, its
+/// <c>cantilena.json</c>), as the Cantilena extension's settings are for the preview; the
+/// user names the voice here as <c>engine/name</c> (<c>neutrino/MERROW</c>,
+/// <c>diffsinger/TIGER</c>) or lets the program choose its default.
+/// </summary>
+public sealed class CantilenaProgram : SingingEngine
+{
+    /// <summary>The program to run: a path, or a name found on the PATH.</summary>
+    public string Program { get; }
+
+    /// <summary>The voice asked for (<c>engine/name</c>), or null for the program's default.</summary>
+    public string? Voice { get; }
+
+    public CantilenaProgram(string program, string? voice = null)
+    {
+        Program = program;
+        Voice = string.IsNullOrWhiteSpace(voice) ? null : voice;
+    }
+
+    public override string Name => Voice ?? Path.GetFileNameWithoutExtension(Program);
+
+    /// <summary>
+    /// Why <paramref name="program"/> cannot be run, or null: a path that names no file is
+    /// refused here, before any score is rendered; a bare name is left to the PATH.
+    /// </summary>
+    public static string? Problem(string program)
+    {
+        if (string.IsNullOrWhiteSpace(program))
+            return "name a cantilena program with --singer <program>";
+        bool isPath = program.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) >= 0
+            || Path.HasExtension(program) && !program.Equals("cantilena", StringComparison.OrdinalIgnoreCase);
+        if (isPath && !File.Exists(program))
+            return $"singer not found: {program}";
+        return null;
+    }
+
+    public override string? Sing(string scoreJsonPath, string outputWavPath)
+    {
+        var start = new ProcessStartInfo(Program)
+        {
+            UseShellExecute = false,
+            RedirectStandardInput = true,       // the engine reads no console; closed at once
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
+        };
+        start.ArgumentList.Add("sing");
+        start.ArgumentList.Add(scoreJsonPath);
+        start.ArgumentList.Add("-o");
+        start.ArgumentList.Add(outputWavPath);
+        if (Voice != null)
+        {
+            start.ArgumentList.Add("--voice");
+            start.ArgumentList.Add(Voice);
+        }
+        using var process = Process.Start(start) ?? throw new InvalidOperationException($"could not start {Program}");
+        process.StandardInput.Close();
+        // Both pipes drained while it runs, so a chatty engine cannot fill one and stall.
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        process.WaitForExit();
+        string err = stderr.GetAwaiter().GetResult();
+        _ = stdout.GetAwaiter().GetResult();
+        if (process.ExitCode == 0)
+            return null;
+        // Its last line is the sentence ("cantilena: …"); a silent failure gets the exit code.
+        string last = "";
+        foreach (var line in err.Split('\n'))
+            if (line.Trim().Length > 0) last = line.Trim();
+        return last.Length > 0 ? last : $"{Path.GetFileName(Program)} exited with code {process.ExitCode}";
+    }
+}
+
+/// <summary>
+/// A <see cref="SungVoice"/> as the JSON Cantilena reads (its README; docs/singing-design.md §3):
+/// seconds, MIDI pitch, the syllable as pronounced; a melisma note carries no lyric; a breath
+/// where the voice put one. The same shape the editor sends (<c>singerCore.cantilenaScore</c>),
+/// at the speed written.
+/// </summary>
+public static class SungScoreJson
+{
+    private static readonly JsonWriterOptions Options = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,   // kana as kana, not \uXXXX
+        Indented = false,
+    };
+
+    public static string Write(SungVoice voice, int sampleRate)
+    {
+        using var buffer = new MemoryStream();
+        using (var w = new Utf8JsonWriter(buffer, Options))
+        {
+            w.WriteStartObject();
+            w.WriteNumber("sampleRate", sampleRate);
+            w.WriteString("language", voice.Language);
+            w.WriteStartArray("notes");
+            foreach (var n in voice.Notes)
+            {
+                w.WriteStartObject();
+                w.WriteNumber("start", Math.Round(n.Start, 6));
+                w.WriteNumber("duration", Math.Round(n.Duration, 6));
+                w.WriteNumber("pitch", n.Pitch);
+                if (n.Melisma)
+                    w.WriteBoolean("melisma", true);
+                else if (n.Lyric != null)
+                    w.WriteString("lyric", n.Lyric);
+                if (n.Breath)
+                    w.WriteBoolean("breath", true);
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+            w.WriteEndObject();
+        }
+        return Encoding.UTF8.GetString(buffer.ToArray());
+    }
+}
+
+/// <summary>A sung voice mixed into a rendered file: the sound, and where its first sample
+/// falls in the file's seconds (0: the score's zero, where a WAV from the engine starts).</summary>
+public sealed record VoiceTrack(string Part, MonoAudio Sound, double At = 0);

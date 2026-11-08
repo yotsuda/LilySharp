@@ -344,10 +344,24 @@ is one) with `--soundfont`, or once in the `LILYSHARP_SOUNDFONT` environment var
 compressed `.sf3` (MuseScore's) and a DLS bank (Windows' `gm.dls`, which the preview plays)
 cannot be read here, and are refused with that sentence.
 
+With `--singer`, the lyrics are sung. The parts the score **sings** — a staff with its words
+under it (`staff melody  lyrics verse sings melody`) — are given, with their syllables and seconds,
+to a [`cantilena`](https://github.com/yotsuda/cantilena) program (a separate Apache-2.0 project
+that drives the singing engines installed on the machine, NEUTRINO or a DiffSinger voice; Lily#
+bundles none of it), and each voice is mixed into the file from the score's zero **in the
+instrument's place**, as the preview and its Export sing (`docs/singing-design.md` §3, §5). A
+part the score also **plays**, on a staff with no words under it, sounds both ways. Where the
+engine cannot sing a part — no engine set up, syllables that are not kana — its instrument plays
+and a warning says why. `--voice` names the engine's voice as `engine/name` (`neutrino/MERROW`,
+`diffsinger/TIGER`); without it the program's default sings. Where the engines and voices are is
+Cantilena's own configuration (its environment variables or `cantilena.json`).
+
 **Options:**
 | Option | Description |
 |--------|-------------|
 | `--soundfont <file>` | The SoundFont 2 to play through (default: `LILYSHARP_SOUNDFONT`) |
+| `--singer <program>` | The `cantilena` program that sings the lyrics (default: `LILYSHARP_SINGER`; none: the instruments alone) |
+| `--voice <engine/name>` | Its voice (default: the program's) |
 | `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
 | `--score <name>` | Write only the named score's form |
 | `-h, --help` | Show help |
@@ -358,6 +372,7 @@ One file holds one form, as for `midi`.
 ```bash
 lysc wav --soundfont GeneralUser.sf2 score.lys           # Creates score.wav (+ score-<name>.wav)
 lysc wav --soundfont GeneralUser.sf2 -d out score.lys    # The same, into out/
+lysc wav --soundfont GeneralUser.sf2 --singer cantilena --voice neutrino/MERROW song.lys   # The lyrics sung
 ```
 
 ### xml - Export to MusicXML

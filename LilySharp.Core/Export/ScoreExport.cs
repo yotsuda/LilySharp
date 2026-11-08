@@ -64,6 +64,12 @@ public sealed class ExportOptions
     /// (<c>lysc wav --soundfont</c>). No font is bundled, so a WAV export without one fails.</summary>
     public string? SoundFont { get; init; }
 
+    /// <summary>WAV: what sings the parts the score sings (<c>lysc wav --singer</c>;
+    /// <see cref="Audio.CantilenaProgram"/>), their voices mixed into the file in the
+    /// instrument's place where the score does not also play the part. Null: the instruments
+    /// alone, as before.</summary>
+    public Audio.SingingEngine? Singer { get; init; }
+
     public static ExportOptions Default { get; } = new();
 }
 
@@ -209,11 +215,14 @@ public static class ScoreExport
                     throw new InvalidDataException(problem);
                 var exporter = new MidiExporter { Form = form, Score = spec };
                 var midi = exporter.Export(tree);
+                var notes = new List<string>();
+                var warnings = exporter.Warnings.ToList();
+                var voices = options.Singer != null ? SingTheSungParts(tree, spec, midi, options.Singer, notes, warnings) : null;
                 TimeSpan length;
                 try
                 {
                     using var stream = File.Create(outputPath);
-                    length = Audio.WavRenderer.Render(midi, options.SoundFont, stream);
+                    length = Audio.WavRenderer.Render(midi, options.SoundFont, stream, voices: voices);
                 }
                 catch
                 {
@@ -221,9 +230,9 @@ public static class ScoreExport
                     File.Delete(outputPath);
                     throw;
                 }
-                return new ExportResult([outputPath],
-                    [$"Length: {length:m\\:ss}", $"Sound font: {Path.GetFileName(options.SoundFont)}"],
-                    exporter.Warnings.ToList());
+                notes.Insert(0, $"Length: {length:m\\:ss}");
+                notes.Insert(1, $"Sound font: {Path.GetFileName(options.SoundFont)}");
+                return new ExportResult([outputPath], notes, warnings);
             }
 
             case "musicxml":
@@ -250,6 +259,48 @@ public static class ScoreExport
             default:
                 throw new ArgumentException($"Unknown format: {format}");
         }
+    }
+
+    /// <summary>
+    /// The sung voices of a WAV export (<c>lysc wav --singer</c>), as the editor's export mixes
+    /// them (docs/singing-design.md §5 "Export"): every part the score SINGS — a staff with its
+    /// words under it (<see cref="SungStaves"/>) — is sung by <paramref name="singer"/> from the
+    /// same export and clock the preview's voice uses (<see cref="SungVoices"/>,
+    /// <see cref="MidiClock"/>); where the score does not also PLAY the part, its notes leave
+    /// <paramref name="midi"/>, so the voice sounds in the instrument's place — one sound a staff
+    /// (owner's decision 2026-11-08). A voice the engine cannot sing leaves the instrument in, and
+    /// says why in <paramref name="warnings"/>; the voice's own warnings (syllables not kana) come
+    /// along too. <paramref name="notes"/> gets one line per voice sung.
+    /// </summary>
+    private static List<Audio.VoiceTrack> SingTheSungParts(SyntaxTree tree, RenderSpec? spec, MidiFile midi,
+        Audio.SingingEngine singer, List<string> notes, List<string> warnings)
+    {
+        var tracks = new List<Audio.VoiceTrack>();
+        var shown = spec ?? RenderSpecParser.PlayedSpec(tree, null, null);
+        var sounds = shown != null ? SungStaves.Of(tree.GetRoot(), shown) : null;
+        foreach (var voice in SungVoices.Read(midi, MidiClock.SecondsOf(midi)))
+        {
+            // A file with no score block has no staff with words under it: the preview sings
+            // nothing there (`lilysharp/playback` answers no Sung part), nor does this.
+            if (sounds == null || !sounds.Sung.Contains(voice.Part, StringComparer.Ordinal))
+                continue;
+            foreach (var w in voice.Warnings)
+                warnings.Add($"{voice.Part}: {w}");
+            var (sound, error) = singer.Sing(voice, Audio.WavRenderer.DefaultSampleRate);
+            if (sound == null)
+            {
+                warnings.Add($"{voice.Part} is not sung ({error}); its instrument plays");
+                continue;
+            }
+            tracks.Add(new Audio.VoiceTrack(voice.Part, sound));
+            bool played = sounds.Played.Contains(voice.Part, StringComparer.Ordinal);
+            if (!played)
+                foreach (var track in midi.Tracks)
+                    track.Notes.RemoveAll(n => n.Part == voice.Part);
+            notes.Add($"Voice: {singer.Name} sings {voice.Part} ({voice.Notes.Count} notes, {sound.Seconds:0.0} s)"
+                + (played ? ", its instrument too" : ""));
+        }
+        return tracks;
     }
 
     /// <summary>

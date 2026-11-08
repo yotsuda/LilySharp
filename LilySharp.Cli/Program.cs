@@ -533,6 +533,8 @@ static int RunWav(string[] args)
     var r = OutputOptions()
         .Value("score", "--score requires a score name", "--score")
         .Value("soundfont", "--soundfont requires a SoundFont 2 file (.sf2)", "--soundfont")
+        .Value("singer", "--singer requires a cantilena program", "--singer")
+        .Value("voice", "--voice requires a voice name (engine/name)", "--voice")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "wav");
 
@@ -544,7 +546,21 @@ static int RunWav(string[] args)
     if (LilySharp.Core.Audio.WavRenderer.SoundFontProblem(font) is { } problem)
         return OptionError(problem, "wav");
 
-    var options = new ExportOptions { SoundFont = font };
+    // Nor is a singing engine (docs/singing-design.md §6): a `cantilena` program the user
+    // names, here or once in the environment, sings the parts the score sings.
+    string? singer = r.Get("singer") ?? Environment.GetEnvironmentVariable("LILYSHARP_SINGER");
+    if (string.IsNullOrWhiteSpace(singer))
+        singer = null;
+    if (singer != null && LilySharp.Core.Audio.CantilenaProgram.Problem(singer) is { } singerProblem)
+        return OptionError(singerProblem, "wav");
+    if (singer == null && r.Get("voice") != null)
+        return OptionError("--voice names the singer's voice: name the singer too, with --singer <program> or LILYSHARP_SINGER", "wav");
+
+    var options = new ExportOptions
+    {
+        SoundFont = font,
+        Singer = singer != null ? new LilySharp.Core.Audio.CantilenaProgram(singer, r.Get("voice")) : null,
+    };
     return RunScoreOutputs("wav", r, ".wav", (tree, output) =>
     {
         int rc = Report(ScoreExport.Write(tree, "wav", output.Path, output.Score, options));
@@ -568,8 +584,18 @@ static void ShowWavHelp()
         one — with --soundfont, or once in the LILYSHARP_SOUNDFONT environment variable.
         A compressed .sf3 and Windows' gm.dls (DLS) cannot be read here.
 
+        With --singer, the parts the score sings — a staff with its words under it — are
+        sung by a cantilena program (https://github.com/yotsuda/cantilena; it drives the
+        voices installed on this machine, NEUTRINO or DiffSinger) and the voice is mixed
+        into the file in the instrument's place, as the preview's Export does. A part the
+        score also plays on a staff without words sounds both ways. A voice that cannot
+        be sung (no engine set up, syllables that are not kana) leaves the instrument,
+        with a warning.
+
         Options:
           --soundfont <file>     The SoundFont 2 to play through (default: LILYSHARP_SOUNDFONT)
+          --singer <program>     The cantilena program that sings the lyrics (default: LILYSHARP_SINGER)
+          --voice <engine/name>  Its voice, e.g. neutrino/MERROW or diffsinger/TIGER (default: the program's)
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
           --score <name>         Write only the named score's form
           -h, --help             Show this help
@@ -577,6 +603,7 @@ static void ShowWavHelp()
         Examples:
           lysc wav --soundfont GeneralUser.sf2 score.lys
           lysc wav --soundfont GeneralUser.sf2 -d out --score movement2 suite.lys
+          lysc wav --soundfont GeneralUser.sf2 --singer cantilena --voice neutrino/MERROW song.lys
         """);
 }
 
