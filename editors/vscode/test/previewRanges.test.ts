@@ -64,7 +64,8 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /const list = spanOf\(playbackNotes, span, loopOn\);/);
         // A loop's rounds laid out ahead, each whole bars long.
         assert.match(html, /window\.LysSynth\.loopNotes\(list, 600, loopRound\)/);
-        assert.match(html, /const toPlay = loopOn \? looped\(list\) : list;\s*const c = counted\(toPlay, 0, spanStart\);/);
+        // ...and the voice follows the stretch and its rounds (docs/singing-design.md §5).
+        assert.match(html, /const toPlay = loopOn \? looped\(list\) : list;\s*voicePlan = \{ pieces: spanPieces, rounds: loopOn \? loopRoundCount : 1 \};\s*const c = counted\(toPlay, 0, spanStart\);/);
         assert.match(html, /else startPlayback\(toPlay, 0\);/);
         // The practice menu's count-in (owner's choice 2026-10-26): a toggle beside the metronome,
         // and a Play of the whole score or from a note counts in too; a tempo change, the loop's

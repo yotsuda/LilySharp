@@ -5962,11 +5962,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // part a lyrics row sings is a singer, and its instrument is the stand-in while there is
         // no voice: no engine, kana missing, not rendered yet, or the menu's ♪ switched to the
         // instrument). A voice is for one practice speed; at another the instrument plays until
-        // the host has sung it anew. A loop and a candidate's notes play without the voice
-        // (voiceOrigin null).
+        // the host has sung it anew. A stretch's voice stops where the stretch ends and a loop
+        // sings it round after round (LysSynth.voiceCues); a candidate's notes play without the
+        // voice (voicePlan null).
         const voices = new Map();           // part -> { buffer, speed, key }
         let voiceSources = [];
-        let voiceOrigin = 0;                // the score's (practiced) time at the played list's 0; null = no voice
+        // Where the voice stands for the played list: null = no voice; { pieces: null } the whole
+        // piece from its 0; { pieces, rounds } a stretch — the score's times it plays, in order
+        // (spanOf) — laid out rounds times (the loop's, looped).
+        let voicePlan = { pieces: null, rounds: 1 };
         let voiceOut = null;
         function voiceOutput(ctx) {
             if (!voiceOut) {
@@ -5993,7 +5997,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // The tracks a voice stands in for now: a part with a voice at this speed, not muted.
         function sungTracks() {
             const set = new Set();
-            if (voiceOrigin === null || !rawParts) { return set; }
+            if (voicePlan === null || !rawParts) { return set; }
             rawParts.forEach((name, i) => {
                 const v = voices.get(name);
                 if (v && Math.abs(v.speed - practice.speed) < 1e-6 && !practice.voicesOff.includes(name)
@@ -6006,22 +6010,26 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             voiceSources = [];
         }
         // Starts every voice so that the list's time listTime sounds at the context's time when:
-        // after a count-in (countInFix), from where the buffer's score time stands.
+        // after a count-in (countInFix), each stretch of the score the list plays cut from the
+        // buffer (voiceCues) — a selected stretch stops at its end, a loop's rounds each sing it again.
         function startVoices(ctx, when, listTime) {
             stopVoices();
             const tracks = sungTracks();
             if (tracks.size === 0) { return; }
-            const from = Math.max(listTime, countInFix);
-            const at = when + (from - listTime);
+            if (!window.LysSynth || !window.LysSynth.voiceCues) {
+                vscode.postMessage({ type: 'webviewPerf', text: 'voice: the synth script is an old build (no voiceCues) - reload the window' });
+                return;
+            }
             for (const i of tracks) {
                 const v = voices.get(rawParts[i]);
-                const offset = from + voiceOrigin;
-                if (offset >= v.buffer.duration) { continue; }
-                const src = ctx.createBufferSource();
-                src.buffer = v.buffer;
-                src.connect(voiceOutput(ctx));
-                src.start(at, offset);
-                voiceSources.push(src);
+                for (const cue of window.LysSynth.voiceCues(listTime, countInFix, voicePlan.pieces, voicePlan.rounds, v.buffer.duration)) {
+                    const src = ctx.createBufferSource();
+                    src.buffer = v.buffer;
+                    src.connect(voiceOutput(ctx));
+                    if (cue.duration === undefined) { src.start(when + cue.at, cue.offset); }
+                    else { src.start(when + cue.at, cue.offset, cue.duration); }
+                    voiceSources.push(src);
+                }
             }
         }
 
@@ -6710,10 +6718,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 return list;
             }
             const rounds = window.LysSynth.loopNotes(list, 600, loopRound);
+            loopRoundCount = list.length ? rounds.length / list.length : 1;
             vscode.postMessage({ type: 'webviewPerf', text: 'loop: ' + (list.length ? rounds.length / list.length : 0)
                 + ' rounds of ' + (loopRound || 0).toFixed(3) + ' s, ' + rounds.length + ' notes' });
             return rounds;
         }
+        let loopRoundCount = 1;     // how many rounds looped() laid out last — the voice sings each
         // The stretch ▶ plays, from its bar's start to the next bar's (playSpanWindow), and how
         // long it lasts — the loop's round. The bars are the metronome's accented beats, in the
         // practice menu's tempo.
@@ -6727,9 +6737,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 : { notes: window.LysSynth.playSpan(notes, span ? span[0] : null, span ? span[1] : null, once), length: 0 };
             loopRound = w.length;
             spanStart = w.start || 0;
+            spanPieces = w.pieces || [[spanStart, spanStart + loopRound]];
             return w.notes;
         }
         let spanStart = 0;          // where the stretch spanOf cut starts in the score's time (the count-in's bar)
+        let spanPieces = null;      // the score's times the stretch plays, in order — the voice is cut from them
         // A count-in before what the user starts (practice.countIn): one bar of clicks, the music
         // moved after it (LysSynth.countIn). Null when off or there is no bar to count. Only a Play
         // counts in — a tempo change, the loop's next round and a seek go on at once.
@@ -6797,11 +6809,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!playing || relaying || !rawNotes || !playClock) return;
             const at = Math.max(0, playOffset + playClock() - countInFix) * oldSpeed / practice.speed;
             playbackNotes = practiced(rawNotes);
-            if (lastSpan === undefined) { voiceOrigin = 0; startPlayback(playbackNotes, at); return; }
+            if (lastSpan === undefined) { voicePlan = { pieces: null, rounds: 1 }; startPlayback(playbackNotes, at); return; }
             const list = spanOf(playbackNotes, lastSpan, lastOnce);
-            voiceOrigin = loopOn ? null : spanStart;
             loopList = loopOn ? list : null;
-            startPlayback(loopOn ? looped(list) : list, at);
+            const toPlay = loopOn ? looped(list) : list;
+            voicePlan = { pieces: spanPieces, rounds: loopOn ? loopRoundCount : 1 };
+            startPlayback(toPlay, at);
             loopList = loopOn ? list : null;
         }
         function renderParts(message) {
@@ -7309,7 +7322,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'playNotes':
                     loopList = null;
-                    voiceOrigin = null;     // another text's notes: no voice of this score's
+                    voicePlan = null;       // another text's notes: no voice of this score's
                     startPlayback(message.notes, 0);
                     break;
                 case 'setSoundFont':
@@ -7390,9 +7403,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         lastSpan = span;
                         lastOnce = loopOn;
                         const list = spanOf(playbackNotes, span, loopOn);
-                        voiceOrigin = loopOn ? null : spanStart;
                         loopList = loopOn ? list : null;
                         const toPlay = loopOn ? looped(list) : list;
+                        voicePlan = { pieces: spanPieces, rounds: loopOn ? loopRoundCount : 1 };
                         const c = counted(toPlay, 0, spanStart);
                         if (c) startPlayback(c.notes, 0, false, false, c.lead);
                         else startPlayback(toPlay, 0);
@@ -7404,7 +7417,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         pendingFromHere = false;
                         lastSpan = undefined;
                         loopList = null;
-                        voiceOrigin = 0;
+                        voicePlan = { pieces: null, rounds: 1 };
                         let startAt = 0;
                         if (pendingStartPos >= 0) {
                             let first = Infinity;

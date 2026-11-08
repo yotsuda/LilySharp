@@ -50,8 +50,8 @@ describe('an AI candidate plays before it is accepted', () => {
         const end = extension.indexOf('</html>`;', start) + '</html>`'.length;
         const html = new vm.Script(extension.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
         // Never round the header's loop: a candidate plays once — and without this score's
-        // singing voice (docs/singing-design.md §5: voiceOrigin null).
-        assert.match(html, /case 'playNotes':\s*loopList = null;\s*voiceOrigin = null;[^\n]*\n\s*startPlayback\(message\.notes, 0\);/);
+        // singing voice (docs/singing-design.md §5: voicePlan null).
+        assert.match(html, /case 'playNotes':\s*loopList = null;\s*voicePlan = null;[^\n]*\n\s*startPlayback\(message\.notes, 0\);/);
         assert.match(extension, /void panel\.webview\.postMessage\(\{ type: 'playNotes', notes \}\);/);
     });
 

@@ -218,7 +218,7 @@ export function playSpan(notes: readonly PlaybackNote[], lo: number | null, hi: 
  * its last.
  */
 export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null, hi: number | null, once: boolean,
-    bars?: readonly number[]): { notes: PlaybackNote[]; length: number; start: number } {
+    bars?: readonly number[]): { notes: PlaybackNote[]; length: number; start: number; pieces: [number, number][] } {
     // A printed note is its place, its copy and its pitch: a chord row's chord sounds its members
     // from one place (owner's report 2026-10-25: taken for repeats, its second and third were
     // dropped and every note fell to 0 — the whole piece sounded at once, round after round).
@@ -241,7 +241,7 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
         t0 = Math.min(t0, n.T);
         t1 = Math.max(t1, n.T + n.D);
     }
-    if (t0 === Infinity) { return { notes: [], length: 0, start: 0 }; }
+    if (t0 === Infinity) { return { notes: [], length: 0, start: 0, pieces: [] }; }
     if (bars && bars.length > 0) {
         let start = -Infinity, end = Infinity;
         for (const b of bars) {
@@ -259,7 +259,7 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
         if (isPedal(n)) { first.add(n); if (n.V > 0) { down.set(channelOf(n), n); } else { down.delete(channelOf(n)); } }
     }
     for (const n of down.values()) { const lift = { ...n, T: t1, V: 0 }; first.add(lift); window.push(lift); }
-    if (!once) { return { notes: window.map(n => ({ ...n, T: n.T - t0 })), length: t1 - t0, start: t0 }; }
+    if (!once) { return { notes: window.map(n => ({ ...n, T: n.T - t0 })), length: t1 - t0, start: t0, pieces: [[t0, t1]] }; }
 
     // The repeats' time: the merged spans the dropped notes sound in, less the time a kept note
     // sounds in — only a stretch nothing kept plays through is closed up, so a note taken for a
@@ -295,12 +295,63 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
     };
     // A note of no printed place (a metronome click) goes with the time it falls in.
     const inGone = (t: number) => gone.some(([a, b]) => t >= a - 1e-6 && t < b - 1e-6);
+    // The stretches of the score's time the list plays, in order: the window less what was closed
+    // up — where a sung part's voice, a WAV in the score's time, is cut from (voiceCues).
+    const pieces: [number, number][] = [];
+    let at = t0;
+    for (const [a, b] of gone) {
+        if (a >= t1 - 1e-6) { break; }
+        if (a > at + 1e-6) { pieces.push([at, a]); }
+        at = Math.max(at, Math.min(b, t1));
+    }
+    if (at < t1 - 1e-6) { pieces.push([at, t1]); }
     return {
         notes: window.filter(n => first.has(n) && !(n.S < 0 && inGone(n.T)))
             .map(n => ({ ...n, T: n.T - t0 - cut(n.T) })),
         length: t1 - t0 - cut(t1),
         start: t0,
+        pieces,
     };
+}
+
+/** Where a sung part's voice is started for a Play: `at` seconds after the list's time `listTime`
+ *  sounds, the buffer from `offset` (the score's seconds), for `duration` seconds — none when it
+ *  plays to the buffer's end. */
+export interface VoiceCue { at: number; offset: number; duration?: number }
+
+/**
+ * The voice's cues for a Play from the list's time `listTime` (docs/singing-design.md §5). The
+ * voice is a WAV in the score's time; the list the instruments play is the score's time moved by
+ * `lead` (a count-in's clicks before the music) and, for a stretch, cut to `pieces` — the
+ * stretches of the score it plays, in order (playSpanWindow), laid out `rounds` times when the
+ * loop is on. `pieces` null is the whole piece from its 0, to the buffer's end. A stretch stops at
+ * its end, a repeat closed up in it is skipped in the voice too, and a round sings it again; a
+ * buffer shorter than the music gives what it has.
+ */
+export function voiceCues(listTime: number, lead: number, pieces: readonly (readonly [number, number])[] | null,
+    rounds: number, bufferSeconds: number): VoiceCue[] {
+    const from = Math.max(listTime, lead);      // the list's time the music is heard from
+    if (!pieces) {
+        const offset = from - lead;
+        return offset < bufferSeconds - 1e-6 ? [{ at: from - listTime, offset }] : [];
+    }
+    const length = pieces.reduce((s, [a, b]) => s + (b - a), 0);
+    if (!(length > 0)) { return []; }
+    const cues: VoiceCue[] = [];
+    for (let r = 0; r < Math.max(1, rounds); r++) {
+        let t = lead + r * length;              // the list's time this piece begins
+        for (const [a, b] of pieces) {
+            const end = t + (b - a);
+            if (end > from + 1e-6) {
+                const start = Math.max(t, from);
+                const offset = a + (start - t);
+                const duration = Math.min(end - start, bufferSeconds - offset);
+                if (duration > 1e-6) { cues.push({ at: start - listTime, offset, duration }); }
+            }
+            t = end;
+        }
+    }
+    return cues;
 }
 
 /**
@@ -396,12 +447,17 @@ export function loopNotes(list: readonly PlaybackNote[], seconds: number, round?
     let length = round ?? 0;
     if (!(length > 0)) { for (const n of list) { length = Math.max(length, n.T + n.D); } }
     if (length <= 0) { return [...list]; }
-    const rounds = Math.max(1, Math.min(500, Math.ceil(seconds / length)));
+    const rounds = loopRounds(seconds, length);
     const out: PlaybackNote[] = [];
     for (let r = 0; r < rounds; r++) {
         for (const n of list) { out.push(r === 0 ? n : { ...n, T: n.T + r * length }); }
     }
     return out;
+}
+
+/** How many rounds of `length` seconds loopNotes lays out to cover `seconds`: at least one, at most 500. */
+export function loopRounds(seconds: number, length: number): number {
+    return Math.max(1, Math.min(500, Math.ceil(seconds / length)));
 }
 
 /** The channels `events` touch — what a stop has to silence. */

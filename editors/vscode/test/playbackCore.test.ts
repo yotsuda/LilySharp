@@ -18,9 +18,9 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
-    CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, playSpan, playSpanWindow, practiceNotes,
+    CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, loopRounds, playSpan, playSpanWindow, practiceNotes,
     programOf, toEvents,
-    fromOffset, exportNotes, practiceSummary, PracticeState,
+    fromOffset, exportNotes, practiceSummary, PracticeState, voiceCues,
 } from '../src/webview/playbackCore';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -122,6 +122,53 @@ describe('the count-in', () => {
     });
 });
 
+// The sung part's voice is a WAV in the score's time; a Play's list is that time moved by a count-in
+// and cut to a stretch, so the voice is cut to match (docs/singing-design.md §5, session 1132).
+describe('where the voice is cut from for a Play', () => {
+    const cues = (listTime: number, lead: number, pieces: [number, number][] | null, rounds = 1, buffer = 100) =>
+        voiceCues(listTime, lead, pieces, rounds, buffer);
+
+    it('the whole piece: from the list\'s time, to the buffer\'s end', () => {
+        assert.deepEqual(cues(0, 0, null), [{ at: 0, offset: 0 }]);
+        assert.deepEqual(cues(3, 0, null), [{ at: 0, offset: 3 }]);
+        assert.deepEqual(cues(0, 0, null, 1, 2.5), [{ at: 0, offset: 0 }]);
+        assert.deepEqual(cues(3, 0, null, 1, 2.5), []);
+    });
+
+    it('after a count-in the voice comes in with the music, from the score\'s 0', () => {
+        // The count's lead is list time with no score under it: the voice waits for it, and does
+        // not skip its first seconds (it ran a count-in ahead of the instruments before).
+        assert.deepEqual(cues(0, 2, null), [{ at: 2, offset: 0 }]);
+        assert.deepEqual(cues(0, 2, [[4, 8]]), [{ at: 2, offset: 4, duration: 4 }]);
+    });
+
+    it('a selected stretch stops at its end, and a seek into it starts inside', () => {
+        assert.deepEqual(cues(0, 0, [[4, 8]]), [{ at: 0, offset: 4, duration: 4 }]);
+        assert.deepEqual(cues(1.5, 0, [[4, 8]]), [{ at: 0, offset: 5.5, duration: 2.5 }]);
+        assert.deepEqual(cues(4, 0, [[4, 8]]), []);
+        // A buffer shorter than the stretch gives what it has.
+        assert.deepEqual(cues(0, 0, [[4, 8]], 1, 5), [{ at: 0, offset: 4, duration: 1 }]);
+        assert.deepEqual(cues(0, 0, [], 1), []);
+    });
+
+    it('a stretch whose repeat was closed up is sung piece by piece', () => {
+        assert.deepEqual(cues(0, 0, [[0, 4], [8, 12]]), [{ at: 0, offset: 0, duration: 4 }, { at: 4, offset: 8, duration: 4 }]);
+        assert.deepEqual(cues(6, 0, [[0, 4], [8, 12]]), [{ at: 0, offset: 10, duration: 2 }]);
+    });
+
+    it('a loop sings the stretch round after round, as many rounds as are laid out', () => {
+        assert.deepEqual(cues(0, 0, [[4, 8]], 3), [0, 4, 8].map(at => ({ at, offset: 4, duration: 4 })));
+        assert.deepEqual(cues(5, 0, [[4, 8]], 3), [{ at: 0, offset: 5, duration: 3 }, { at: 3, offset: 4, duration: 4 }]);
+        assert.deepEqual(cues(0, 1, [[4, 8]], 2), [{ at: 1, offset: 4, duration: 4 }, { at: 5, offset: 4, duration: 4 }]);
+        // The rounds loopNotes lays out, which the voice follows.
+        assert.equal(loopRounds(600, 4), 150);
+        assert.equal(loopRounds(10, 4), 3);
+        assert.equal(loopRounds(600, 0.5), 500);
+        const bar = [0, 1, 2, 3].map(t => note(t, 1, 60 + t));
+        assert.equal(loopNotes(bar, 10).length / bar.length, loopRounds(10, 4));
+    });
+});
+
 // Play of a selected stretch, and the loop that ignores repeats (owner's request 2026-10-25).
 describe('the stretch a Play sounds', () => {
     // A bar A (written at 0..3) played twice — a repeat — then a bar B (10..13), one second a
@@ -150,6 +197,15 @@ describe('the stretch a Play sounds', () => {
         const clicks = [0, 2, 4, 6, 8, 10].map(t => note(t, 0.1, 76, { S: -1, C: 9 }));
         const once = playSpan([...piece, ...clicks], null, null, true).filter(n => n.S < 0);
         assert.deepEqual(once.map(n => n.T), [0, 2, 4, 6]);
+    });
+
+    it('says which stretches of the score the list plays, for the voice to be cut from them', () => {
+        // The whole piece once: bar A, then bar B — the repeat's second pass (4..8) is not played.
+        assert.deepEqual(playSpanWindow(piece, null, null, true).pieces, [[0, 4], [8, 12]]);
+        // Bar B as a stretch: one piece, where it first plays — with or without the loop.
+        assert.deepEqual(playSpanWindow(piece, 10, 13, false).pieces, [[8, 12]]);
+        assert.deepEqual(playSpanWindow(piece, 10, 13, true, [0, 4, 8, 12]).pieces, [[8, 12]]);
+        assert.deepEqual(playSpanWindow(piece, 50, 60, false).pieces, []);
     });
 
     it('lays a loop\'s rounds out ahead, each as long as the stretch sounds', () => {

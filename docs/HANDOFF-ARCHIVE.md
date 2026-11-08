@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1130セッションの経緯
+
+### 1.1 第1130セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14820 / 0 / 2**（`-Start p1130`・HEAD `1f8f3030f`・未 push 29・OMR の open は 0）。同じ会話で第1129 から続けた便。オーナーの問い「`staffGroup { staff melody  staff melody  lyrics verse sings melody  staff melody }` で melody の音源と声を両方鳴らしたい。一貫していて自明な規則で」→ 提案 → オーナー「着手して」。作業場所は Lab `sessions/p1130/`。
+
+- **規則＝「言葉はその上の譜のもの」・1 段 1 音**（`singing-design.md` §3・GRAMMAR の `midiInstrument` の注・CHANGELOG）: 直下に自分を `sings` する歌詞の行がある譜は歌い、無い譜は楽器で弾く。同じパートが何段もあれば段ごとの音を出し、同じ音は 1 回。歌詞の行は、歌うパートの最寄りの*上の*譜に属し、上に無ければ下の最初の譜。譜の無いパートの言葉は声を出さない（ページが音節を書かないのと同じ）。
+- **実装**: `Svg/Collector/SungStaves.Of(root, spec)` → `Sounds(Sung, Played)`。⚠️ 罠: `staff` 直下の `lyrics … sings` 行は RenderSpecParser が **`StaffSpec.WithLyrics` に畳み込む**ので RenderItemSpec には残らない＝畳まれた譜はその場で「歌う」、行として残ったもの（unbound・他パートの譜の下）だけを上下で探す。`lilysharp/playback` が `Sung`／`Played` を返し（`PlaybackResponse`・score 無しは全部 Played）、page は「声が鳴っていて、かつ楽器の段が無いパート」の音符だけを楽器の列から外す（`played`・`rawPlayed`）・`sungTracks()` は `rawSung` のパートだけ。
+- **網**: `SungStavesTests` 8 本（オーナーの例＝声と楽器・言葉の下だけ＝声だけ・言葉なし＝楽器・伴奏は楽器・譜の無いパートの言葉＝声なし・譜より上の言葉・unbound の行・他パートの譜の下の言葉）、`SungRequestTests` に `Sung`／`Played`。⚠️ タプルに配列を入れた `Assert.Equal` は参照比較＝文字列に畳んで比べる。`npm test` 881 / 881。
+- 残り: 実機（MANUAL-CHECKS §3.7 に 1 項）・段 4。
+- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1130 -DiffBase 1f8f3030f`＝`end.log`・門は全部 OK）。棚卸し: `APPROXIMATIONS.md` OWN 304 → 305（`SungStaves`）。§7 7.5: Core の `+` は `SungStaves.cs` 1 本＝REF 0・OWN 1（LP に再生は無い＝⒞）。この docs commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1129セッションの経緯
 
 ### 1.1 第1129セッション（2026-11-08・YT-DELL2）

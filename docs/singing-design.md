@@ -148,9 +148,14 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   sound font's loading has: never a Play that waits).
 - **The webview plays the buffer.** The host reads the WAV and posts its bytes
   (`voice` message: part, bytes, the score's offset of the buffer's first sample — 0); the
-  page decodes once (`decodeAudioData`), and `startPlayback` starts an `AudioBufferSourceNode`
-  at `t0` with `offset` into the buffer (a seek, Play from Here) through the limiter. Stop
-  stops it; a loop restarts it with the notes.
+  page decodes once (`decodeAudioData`), and `startPlayback` starts `AudioBufferSourceNode`s
+  at `t0` through the limiter, where `playbackCore.voiceCues` says (session 1132): the whole
+  piece from `offset` into the buffer (a seek, Play from Here), to the buffer's end; a selected
+  stretch cut to the score's times it plays (`playSpanWindow`'s `pieces` — one piece, or several
+  when the loop closed a repeat up), so the voice stops where the stretch ends; a loop with one
+  cue per round laid out (`loopRounds`), so each round sings the stretch again; and after a
+  count-in the voice waits for the music instead of running its lead ahead of it. Stop stops
+  them all.
 - **The practice menu lists each voice** beside the parts, as `♪ part` (owner's request
   2026-11-08): on, the part is sung; off, its instrument plays in the voice's place — a switch
   between the two sounds, never both. `Practice.voicesOff`, read by `sungTracks()`; the host
@@ -185,6 +190,10 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 
 ## 7. Stages, and the owner's questions
 
+> The stages below are the first release's. What follows them — the second engine, languages,
+> expression, the choir, more engines and platforms — and the short-term order of work is
+> `docs/singing-roadmap.md` (2026-11-08).
+
 1. **Cantilena `serve`** (the resident JSON-lines process) — done 2026-11-08 in the
    Cantilena repo (its `docs/design.md` §4).
 2. **The server's `lilysharp/sung`** — done 2026-11-08 (session 1125): `SungVoices`,
@@ -199,9 +208,9 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
    (`singerCore.voiceKey`) and the WAV named by the key under the temp folder
    (`lilysharp-voice/`); the page plays it from `voiceOrigin` (the score time of the played
    list's 0: 0 for a plain Play, the stretch's start for a span, null for a loop or a candidate's
-   notes, where the voice stays out) and after a count-in (`countInFix`); a span's voice is cut
-   where the stretch ends only by the instruments' end timer — the buffer plays on to the piece's
-   end if the stretch is shorter (noted, not built: a stop at the span's end). Nets:
+   notes, where the voice stays out) and after a count-in (`countInFix`); a span's voice was cut
+   where the stretch ends only by the instruments' end timer — the buffer played on to the piece's
+   end if the stretch was shorter, until session 1132 (§5, `voiceCues`). Nets:
    `test/singerCore.test.ts` (the score, the key, the wire, the manifest); the engine itself was
    driven from node against the real `cantilena serve` (Lab `sessions/p1126/probe-singer.js`).
    The real VS Code is the owner's to check (MANUAL-CHECKS §3.7). Session 1127 (owner's
@@ -209,9 +218,11 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
    Cantilena repository's `editors/vscode`, packed by its `tools/pack-extension.ps1`), and
    Lily#'s `singerVoice` setting and **Choose Singing Voice…** went away — the voice is
    Cantilena's; `lilysharp.playback.singer` stayed as the developer's override.
-4. **Export mixing** — done 2026-11-08 (session 1131, §5 "Export"; nets `test/voiceMix.test.ts`);
-   then MIDI-out alignment if the jitter is heard; then `lysc wav`. Still open: a span's voice
-   stopping at the span's end, and the voice in a loop.
+4. **Export mixing** — done 2026-11-08 (session 1131, §5 "Export"; nets `test/voiceMix.test.ts`).
+   **A span's voice stopping at the span's end, the voice in a loop, and the count-in's lead** —
+   done 2026-11-08 (session 1132: `voiceCues`, `playSpanWindow.pieces`, `loopRounds`; nets in
+   `test/playbackCore.test.ts`). Then MIDI-out alignment if the jitter is heard; then `lysc wav`
+   (`docs/singing-roadmap.md` §3).
 
 Open for the owner before stage 3:
 - **Kana for kanji lyrics**: a second track (`lyrics ja sings melody { … }` kept hidden), a
