@@ -197,8 +197,7 @@ internal static class LyricSyllableReader
     }
 
     /// <summary>The lyric measures inside a <c>verse N { measures }</c> block: the non-token
-    /// children AFTER the header's '{' (the retired bracket form's '.'), skipping the closing
-    /// token and null slots. ONE HOME — <c>LyricsCollector</c> places the verses this reads,
+    /// children AFTER the header's '{', skipping the closing token and null slots. ONE HOME — <c>LyricsCollector</c> places the verses this reads,
     /// and a grid sized from them must see the same measures the placer does.</summary>
     internal static IEnumerable<SyntaxNode> VerseMeasures(SyntaxNode verse)
     {
@@ -208,7 +207,7 @@ internal static class LyricSyllableReader
             var child = verse.GetChild(i);
             if (!inBody)
             {
-                if (child is SyntaxTokenNode t && t.Kind is SyntaxKind.OpenBrace or SyntaxKind.Dot) inBody = true;
+                if (child is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace }) inBody = true;
                 continue;
             }
             if (child is SyntaxNode node and not SyntaxTokenNode)

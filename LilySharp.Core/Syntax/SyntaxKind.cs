@@ -419,8 +419,7 @@ public enum SyntaxKind : ushort
     /// <summary>A single lyric syllable node.</summary>
     LyricSyllable,
     /// <summary>A verse inside a lyric section — the words for the section's Nth play:
-    /// <c>verse 1 { syllables | } verse 2 { syllables | }</c> (owner's design 2026-11-01; the
-    /// <c>[1. … ]</c> bracket of the same meaning is read with an error, LYS4003).</summary>
+    /// <c>verse 1 { syllables | } verse 2 { syllables | }</c> (owner's design 2026-11-01).</summary>
     LyricVerse,
     /// <summary>A chord-names block node (<c>chordnames { ... }</c> inside a section).</summary>
     ChordNamesBlock,

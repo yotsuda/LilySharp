@@ -1942,8 +1942,8 @@ line: under a `|: B :|` repeat the section is printed once, so its verses stack 
 order; a section the form sings again written out (`Verse Verse`) takes each verse at its own
 printing, on the first line under the staff, with its number before it — `2.` before the
 second printing's words. Words written with no `verse` are sung every time. The word `verse`
-is contextual (a syllable elsewhere, and a legal track name). The former spelling `[1. … ]` is
-read as the same verse with an error (LYS4003).
+is contextual (a syllable elsewhere, and a legal track name). `[` and `]` mean nothing in a
+lyrics block (the former verse spelling `[1. … ]` is not read).
 
 ```
 part melody

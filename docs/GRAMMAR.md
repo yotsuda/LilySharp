@@ -1439,8 +1439,9 @@ LyricVerse     = 'verse' , [ '~' ] , Integer , { ( ',' | '-' ) , Integer } , '{'
                     the line, and the second printing drew an empty first line over its words).
                     Words with no 'verse' are sung every time. Not a repeat ending: a lyric
                     row never changes the playing order (the REPEAT STRUCTURE note in §8.1).
-                    ⚠️ The former spelling '[1. … ]' is read as the same verse with an error
-                    (LYS4003) — it read like a form's repeat ending. *)
+                    '[' and ']' mean nothing in a lyrics block (the pre-2026-11-01 verse
+                    spelling '[1. … ]' was read with an error until 2026-11-08; dropped, owner's
+                    decision). *)
 LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
                  (* MEASURED 2026-08-16 — and the spacing is part of the rule, because
                     the two arms that fuse tokens keep only the pair's OUTER trivia:

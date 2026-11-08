@@ -27,7 +27,9 @@ namespace LilySharp.Tests;
 /// Verses are <c>verse N { … }</c> (owner's design 2026-11-01: "the lyrics rules are hard to
 /// follow; `[1.` is unclear"). Three rules: one track is one line; words with no <c>verse</c>
 /// are sung every time; <c>verse N</c> is the words for the Nth time, placed by the form — the
-/// number is a LABEL, never the line. The former <c>[N. … ]</c> is read with an error.
+/// number is a LABEL, never the line. (The former <c>[N. … ]</c> was read with an error until
+/// 2026-11-08, when the owner dropped that reading: <c>[</c> means nothing in lyrics, and
+/// <c>[1.</c> is now words like any other.)
 /// (<c>LyricVerseTests</c> is the older net for a block wrapping into stacked verses.)
 /// </summary>
 [Trait("Category", "Unit")]
@@ -49,7 +51,6 @@ public sealed class LyricVerseBlockTests
         """.ReplaceLineEndings("\n");
 
     private const string Verse1 = "verse 1 { Twin- kle twin- kle | lit- tle star | }";
-    private const string Bracket1 = "[1. Twin- kle twin- kle | lit- tle star |]";
 
     [Fact]
     public void AVerseBlock_Parses_AndTheWordIsContextual()
@@ -69,17 +70,20 @@ public sealed class LyricVerseBlockTests
     }
 
     [Fact]
-    public void TheRetiredBracket_IsAnError_ButStillReadAsTheVerse()
+    public void ABracket_IsNoVerse_AndNoError_TheBracketIsFreeInLyrics()
     {
-        string book = WrittenOut.Replace(Verse1, Bracket1);
+        // `[` has no meaning in a lyrics block since 2026-11-08: the old `[1. … ]` is read as
+        // words — no verse node, no diagnostic — and the brackets print as written. (A `]`
+        // AFTER the last `|` would open a measure of its own that runs on into `verse 2 {`, as
+        // any stray word there does: a verse starts only at a measure's head.)
+        string book = WrittenOut.Replace(Verse1, "[1. Twin- kle twin- kle | lit- tle star ] |");
         var tree = SyntaxTree.Parse(book);
-        var d = Assert.Single(tree.Diagnostics);
-        Assert.Equal(DiagnosticCodes.LyricVerseBracketRetired, d.Code);
-        Assert.Contains("verse N { … }", d.Message);
-        Assert.StartsWith("[", book.Substring(d.Span.Start, d.Span.Length).TrimStart());
+        Assert.Empty(tree.Diagnostics);
+        Assert.Single(tree.GetRoot().DescendantNodes().Where(n => n.Kind == SyntaxKind.LyricVerse));   // verse 2 alone
         var score = new MeasureCollector().Collect(tree, "melody", attachedLyricParts: new[] { "w" });
-        Assert.Contains(score.Lyrics, l => l.Text == "Twin" && l.MeasureIndex == 0 && l.VerseNumber == 1);
-        Assert.Contains(score.Lyrics, l => l.Text == "How" && l.MeasureIndex == 2);
+        Assert.Contains(score.Lyrics, l => l.Text == "[1." && l.MeasureIndex == 0);
+        Assert.Contains(score.Lyrics, l => l.Text == "star" && l.MeasureIndex == 1);
+        Assert.Contains(score.Lyrics, l => l.Text == "]");
     }
 
     [Fact]

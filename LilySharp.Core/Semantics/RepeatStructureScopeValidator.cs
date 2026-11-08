@@ -47,7 +47,7 @@ namespace LilySharp.Core.Semantics;
 /// </para>
 /// <para>
 /// ⚠️ TWO SPELLINGS THIS MUST NOT CATCH, and neither needs an exclusion: a LYRIC verse
-/// <c>verse 1 { … }</c> (its retired bracket spelling too) is a <c>LyricVerse</c> node (the words for the Nth play — not a repeat), and
+/// <c>verse 1 { … }</c> is a <c>LyricVerse</c> node (the words for the Nth play — not a repeat), and
 /// a lyric row's barline stays a raw token inside <c>LyricMeasureGreen</c>, so it is not a
 /// <see cref="BarlineSyntax"/> at all. Both are invisible to a rule written on node types;
 /// they were NOT invisible to the text-matching counters that preceded it, which is how two of

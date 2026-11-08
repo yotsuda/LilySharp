@@ -1316,10 +1316,10 @@ internal sealed class LyricMeasureGreen : GreenSyntaxNode
 /// (<c>verse ~1 { }</c>). The body is lyric measures, exactly like a plain verse's.
 /// </summary>
 /// <remarks>Slot layout: the <c>verse</c> word, header tokens (<c>~</c>? number ((<c>,</c>|<c>-</c>)
-/// number)*), <c>{</c>, measures…, <c>}</c>. ⚠️ The retired bracket spelling <c>[1. … ]</c>
-/// is parsed into the SAME shape with its own tokens in the three punctuation slots — <c>[</c>,
-/// <c>.</c>, <c>]</c> — and an error (LYS4003); readers find the header's end by the kind of the
-/// token (<c>{</c> or <c>.</c>), never by its text.</remarks>
+/// number)*), <c>{</c>, measures…, <c>}</c>. Readers find the header's end by the kind of the
+/// <c>{</c> token, never by its text. (Until 2026-11-08 the pre-2026-11-01 bracket <c>[1. … ]</c>
+/// was parsed into this shape with <c>[</c> <c>.</c> <c>]</c> in the punctuation slots and an
+/// error; dropped so <c>[</c> is free in lyrics.)</remarks>
 internal sealed class LyricVerseGreen : GreenSyntaxNode
 {
     public LyricVerseGreen(

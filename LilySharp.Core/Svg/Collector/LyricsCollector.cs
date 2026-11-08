@@ -328,7 +328,7 @@ internal sealed class LyricsCollector
     /// <summary>Parses a <c>verse ~? N ((,|-) N)* {</c> header into its play set and
     /// label: <c>,</c> lists, <c>-</c> ranges, a leading <c>~</c> hides the number label.
     /// The primary (label) number is the first written. The header ends at the body's
-    /// opener — <c>{</c>, or the retired bracket form's <c>.</c>.</summary>
+    /// opener <c>{</c>.</summary>
     private static VerseSpec ParseVerseSpec(SyntaxNode verse)
     {
         bool hide = false, range = false;
@@ -338,7 +338,7 @@ internal sealed class LyricsCollector
         for (int i = 1; i < verse.SlotCount; i++)
         {
             if (verse.GetChild(i) is not SyntaxTokenNode t) continue;
-            if (t.Kind is SyntaxKind.OpenBrace or SyntaxKind.Dot) break;
+            if (t.Kind is SyntaxKind.OpenBrace) break;
             switch (t.Kind)
             {
                 case SyntaxKind.Tilde: hide = true; break;

@@ -1019,8 +1019,8 @@ public static class DiagnosticCodes
     /// </para>
     /// <para>
     /// ⚠️ TWO SPELLINGS THIS MUST NOT CATCH, both of which a naive count did catch (three
-    /// separate miscounts, HANDOFF §2 F ⒫): a LYRIC verse <c>verse 1 { … }</c> (and its retired
-    /// bracket spelling) is a <c>LyricVerse</c> node — the words for the Nth play, not a repeat — and a lyric row's
+    /// separate miscounts, HANDOFF §2 F ⒫): a LYRIC verse <c>verse 1 { … }</c> is a
+    /// <c>LyricVerse</c> node — the words for the Nth play, not a repeat — and a lyric row's
     /// barline is a raw token inside <c>LyricMeasureGreen</c>, not a
     /// <see cref="Syntax.BarlineSyntax"/> at all. Both are invisible to this rule by
     /// construction rather than by an exclusion list, which is why the rule is written on the
@@ -1301,12 +1301,9 @@ public static class DiagnosticCodes
     /// <summary>Lyric error: a top-level lyrics track in a by-part file is written
     /// flat; it must group its verses by section (<c>lyrics { section A { … } }</c>).</summary>
     public const string LyricTrackNeedsSections = "LYS4002";
-    /// <summary>Lyric error: a verse written in the retired bracket spelling <c>[N. … ]</c>
-    /// (owner's design 2026-11-01: a verse is <c>verse N { … }</c>; the bracket read like a
-    /// form's repeat ending). The words are still read as that verse, so the page shows what
-    /// was meant. (LYS4003 was NavigationMarkMidMeasure until 2026-10-04, retired unreused;
-    /// taken again here.)</summary>
-    public const string LyricVerseBracketRetired = "LYS4003";
+    // LYS4003 is free: NavigationMarkMidMeasure until 2026-10-04, then LyricVerseBracketRetired
+    // (the pre-2026-11-01 verse spelling `[N. … ]` read with an error) until 2026-11-08, when the
+    // owner dropped that reading so `[` means nothing in lyrics (session 1138).
     /// <summary>Lyric warning: a section's plain (unnumbered) words are fully shadowed
     /// by its <c>verse N { … }</c> verses — every written-out play already has a numbered
     /// verse, so the plain line (a fallback for uncovered plays) never renders.</summary>

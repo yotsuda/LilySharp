@@ -849,7 +849,7 @@ form: under `|: B :|` (printed once) the verses stack under B in order, each wit
 own printing, on the first line, with its number before it (`2.` before the second). `verse 1,3
 { }` / `verse 1-2 { }` cover several times; `verse ~1 { }` keeps the words and hides the number.
 This is NOT a repeat ending — it never changes the order. (`[1. … ]` was this construct's old
-spelling; it is an error now, LYS4003.)
+spelling; `[` means nothing in lyrics now.)
 
 ```
 part melody
@@ -1086,7 +1086,7 @@ and a `lyrics NAME` row directly below the part's staff. See *Lyrics*.
 **"Add a second verse" / "the words for the second time"** — `verse N { … }` blocks in the SAME
 track, not a second track and not a repeat ending: `verse 1 { … } verse 2 { … }` in the section's
 lyrics, and the form sings the section twice (`|: A :|` stacks the verses under it; `A A` prints
-each at its own time). Never `[1. … ]` in lyrics (LYS4003) and never the music written out again.
+each at its own time). Never `[1. … ]` in lyrics (it is not a verse) and never the music written out again.
 
 ```
 part melody { clef treble }

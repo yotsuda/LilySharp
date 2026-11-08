@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1136セッションの経緯
+
+### 1.1 第1136セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14828 / 0 / 2**（`-Start p1136`・HEAD `9659c755a`・未 push 35・OMR の open は 0）。同じ会話で第1135 から続けた便。オーナー「続けて」→ **B4＝Cantilena 拡張に DiffSinger を通す**（roadmap B2 の拡張側）。作業場所は Lab `sessions/p1136/`。
+
+- **Cantilena 拡張 0.3.0**: 設定 **`cantilena.voicesFolder`**（DiffSinger の声の親フォルダ）と `cantilena.vocoderFolder`、コマンド **Choose Voices Folder… (DiffSinger)**。`core.ts` に `ENGINES = ['neutrino','diffsinger']`・`diffSingerVoicesIn`／`diffSingerEntriesIn`（`dsconfig.yaml` を持つ子フォルダ・`character.yaml` の `name:` を label・`dsdur/dsdict-ja.yaml` があれば `ja`）・`characterNameOf`・`voicesFolderProblems`、`serveArgs` に `--voices-dir`／`--vocoder-dir`。`neutrinoFolderProblems` は空設定を問題にしない＝**どちらか一方のエンジンだけで完全な setup**（両方空のときだけ「no engine is set up」）。`engine.ts` の `EngineSetup` に 2 フォルダ・env の `CANTILENA_NEUTRINO_DIR` は設定があるときだけ。`extension.ts` は書き直し: `voices()` と Choose Voice… が両エンジンを並べ、`status().voices` は全部の id、`sing` は id をそのまま engine へ（key も id）、`voiceProblems` が engine ごとに「無い」を言う、Check Setup の文が engine で変わる。README・CHANGELOG 0.3.0・版は csproj 2 本と package.json を 0.3.0 に。網 `core.test.ts` 14 / 14・`check-types` 0。**VSIX `artifacts/extension/cantilena-win32-x64-0.3.0.vsix`（40.7 MB＝ONNX Runtime の分）**。同梱の program で `voices`／`sing --voice diffsinger/TIGER` を実走（下）。
+- **Lily# 側**: コードは不変。MANUAL-CHECKS §3.7 に DiffSinger の行を足した（入れ直しと実機はオーナー）。
+- 残り: B3（DirectML）・variance の検証・漢字のかな（オーナー決定待ち）・`lysc wav --singer`・Cantilena の公開（repo・Marketplace＝オーナー）。
+- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1136 -DiffBase 9659c755a`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` 0（REF 0・OWN 0）。この docs commit と Lab・Cantilena の commit は Claude・push と VSIX の入れ直しはオーナー。
+
 ## 以下は第1135セッションの経緯
 
 ### 1.1 第1135セッション（2026-11-08・YT-DELL2）

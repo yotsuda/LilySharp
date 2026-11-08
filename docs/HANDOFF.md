@@ -138,6 +138,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1138セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14834 / 0 / 2**（`-Start p1138`・HEAD `7983783ff`・未 push 37・OMR の open 0・作業ツリーに下の除去が未 commit のまま回した）。同じ会話で第1137 から続けた便。オーナー「判断の材料を」→ 材料（漢字のかな ⒜⒝⒞・B3 の DirectML パッケージ事情・§4 の残り）を出した → **オーナー指示「`[` は歌詞で特別な意味が無い。後方互換のエラーは除去。`[` を読み仮名に使えるか検討」**。作業場所は Lab `sessions/p1138/`。
+
+- **除去（commit 1 本目）**: 退役した verse の綴り `[1. … ]` を読んで LYS4003 を出す腕を消した＝`Parser.Sections.ParseLyricVerse` の bracket 分岐・`ParseLyricMeasure` の `]` 停止・`DiagnosticCodes.LyricVerseBracketRetired`（**LYS4003 は空き番**）・`LyricsCollector`／`LyricSyllableReader` の `Dot` 代替・`GreenNodes`／`SyntaxKind`／`RepeatStructureScopeValidator` の註・GRAMMAR／GRAMMAR_FOR_LLM／SYNTAX_REFERENCE／site manual／MANUAL-CHECKS C45／CHANGELOG `[lyrics]`。網は `LyricVerseBlockTests` の退役テストを「`[` は無意味・`[1.` は普通の語」に置き換え（Lyric／Parser／Verse 648 / 648）。⚠️ 小節の最後の `|` の後に残った `]` は新しい小節を開いて `verse 2 {` を飲む（verse は小節の頭でしか始まらない既存の規則＝どんな迷子の語でも同じ）。
+- **検討の答え（オーナーへ出した）**: `[` は字句で独立トークン・`漢[かん]` は密着で 1 語に綴じる既存の腕に乗る＝障害なし。提案の文法は `漢[かん]`（密着・複数組可・連結記号は外側・中身はかな・離れた `[` と閉じない `[` はエラー）。読みは歌声と VSQX が使い、ページ・MusicXML・`.ly` は刷り字。**判断待ち 3 つ**: ⑴ `.mid` の lyric イベントは刷り字か読みか（提案: 刷り字）⑵ ルビを刷るか（提案: 刷らない）⑶ 区切りは `[ ]` で確定か（提案: 確定）。費用約 1 便。
+- 終了時 full **（-End p1138 の後に記入）**。
+
+## 以下は第1137セッションの経緯
+
 ### 1.1 第1137セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14828 / 0 / 2**（`-Start p1137`・HEAD `d7c8d9fc7`・未 push 36・OMR の open 0）。新しい会話。オーナー「HANDOFF を読んで着手」→ §1.0 の順でオーナー判断を要しない **roadmap §3 の 5＝`lysc wav --singer <cantilena>`**（CLI の WAV に歌声を混ぜる）。作業場所は Lab `sessions/p1137/`。
@@ -149,17 +159,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - docs: `singing-design.md` §5・§7、`singing-roadmap.md` §1・§3 の 5、`playback-design.md`、MANUAL-CHECKS §3.7 に耳の確認 1 行（オーナー）。`APPROXIMATIONS.md`（OWN 305 → 306＝`SingingEngine`）と `magic_constants.csv` は再生成＝CRLF に揃えた。
 - 残り: 漢字のかな（オーナー決定待ち・提案は ⒜）・B3（DirectML）・variance の検証・Cantilena の公開（オーナー）・`lysc wav --singer` を実在の声で聴く（オーナー・§3.7）。
 - 終了時 full **14834 / 0 / 2 / 14836**（`-End p1137 -DiffBase d7c8d9fc7`＝`end.log`・門は全部 OK・§1 現在便 16,639 字＝残り 3,361）。§7 7.5: `-End` は commit 前の diff なので Core `+` 0 と出るが、実際は新規 `Audio/SingingEngine.cs`・`Audio/WavReader.cs` と `WavRenderer`・`ScoreExport` の変更（REF 0・OWN 1＝`SingingEngine`）。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1136セッションの経緯
-
-### 1.1 第1136セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14828 / 0 / 2**（`-Start p1136`・HEAD `9659c755a`・未 push 35・OMR の open は 0）。同じ会話で第1135 から続けた便。オーナー「続けて」→ **B4＝Cantilena 拡張に DiffSinger を通す**（roadmap B2 の拡張側）。作業場所は Lab `sessions/p1136/`。
-
-- **Cantilena 拡張 0.3.0**: 設定 **`cantilena.voicesFolder`**（DiffSinger の声の親フォルダ）と `cantilena.vocoderFolder`、コマンド **Choose Voices Folder… (DiffSinger)**。`core.ts` に `ENGINES = ['neutrino','diffsinger']`・`diffSingerVoicesIn`／`diffSingerEntriesIn`（`dsconfig.yaml` を持つ子フォルダ・`character.yaml` の `name:` を label・`dsdur/dsdict-ja.yaml` があれば `ja`）・`characterNameOf`・`voicesFolderProblems`、`serveArgs` に `--voices-dir`／`--vocoder-dir`。`neutrinoFolderProblems` は空設定を問題にしない＝**どちらか一方のエンジンだけで完全な setup**（両方空のときだけ「no engine is set up」）。`engine.ts` の `EngineSetup` に 2 フォルダ・env の `CANTILENA_NEUTRINO_DIR` は設定があるときだけ。`extension.ts` は書き直し: `voices()` と Choose Voice… が両エンジンを並べ、`status().voices` は全部の id、`sing` は id をそのまま engine へ（key も id）、`voiceProblems` が engine ごとに「無い」を言う、Check Setup の文が engine で変わる。README・CHANGELOG 0.3.0・版は csproj 2 本と package.json を 0.3.0 に。網 `core.test.ts` 14 / 14・`check-types` 0。**VSIX `artifacts/extension/cantilena-win32-x64-0.3.0.vsix`（40.7 MB＝ONNX Runtime の分）**。同梱の program で `voices`／`sing --voice diffsinger/TIGER` を実走（下）。
-- **Lily# 側**: コードは不変。MANUAL-CHECKS §3.7 に DiffSinger の行を足した（入れ直しと実機はオーナー）。
-- 残り: B3（DirectML）・variance の検証・漢字のかな（オーナー決定待ち）・`lysc wav --singer`・Cantilena の公開（repo・Marketplace＝オーナー）。
-- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1136 -DiffBase 9659c755a`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` 0（REF 0・OWN 0）。この docs commit と Lab・Cantilena の commit は Claude・push と VSIX の入れ直しはオーナー。
 
 ## 2. 開いている作業
 
