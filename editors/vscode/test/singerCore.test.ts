@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, SungNoteDto, SungVoiceDto, cantilenaApiOf, cantilenaScore, parseServeLine, serveRequestLine, voiceKey } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, SungNoteDto, SungVoiceDto, cantilenaApiOf, cantilenaScore, parseServeLine, prepareModeOf, serveRequestLine, voiceKey } from '../src/singerCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
 // engine's score, the key names the render, the engine's lines are read, and the Cantilena
@@ -93,6 +93,74 @@ describe('the engine\'s wire, and the extension\'s API', () => {
 
 // The manifest's side: the two settings, and no voice setting or picker of Lily#'s own (the
 // voice is the Cantilena extension's) — as the MIDI output's (midiOutputSetting.test.ts).
+// When an edited voice goes to the engine (docs/singing-design.md §5): after the text rests, one
+// job a slot, the newest winning.
+describe('the prepare queue', () => {
+    // Fake timers: `tick(ms)` fires what is due.
+    const timers = () => {
+        let now = 0, id = 0;
+        const due = new Map<number, { at: number; fn: () => void }>();
+        return {
+            api: { setTimeout: (fn: () => void, ms: number) => { due.set(++id, { at: now + ms, fn }); return id; }, clearTimeout: (h: unknown) => { due.delete(h as number); } },
+            tick(ms: number) { now += ms; for (const [k, d] of [...due]) { if (d.at <= now) { due.delete(k); d.fn(); } } },
+        };
+    };
+    const flush = () => new Promise<void>(r => setTimeout(r, 0));
+
+    it('runs the newest job once the text has rested, however many times it was scheduled', async () => {
+        const t = timers();
+        const ran: string[] = [];
+        const q = new PrepareQueue<string>(async j => { ran.push(j); }, t.api);
+        q.schedule('p1/melody', 'a', 1500);
+        t.tick(1000);
+        q.schedule('p1/melody', 'b', 1500);     // typing again: the clock restarts
+        t.tick(1000);
+        assert.deepEqual(ran, []);
+        t.tick(600);
+        await flush();
+        assert.deepEqual(ran, ['b']);
+    });
+
+    it('runs at once with no delay, lets one job run at a time, and runs only the newest waiting one after it', async () => {
+        const t = timers();
+        const ran: string[] = [];
+        let release: () => void = () => undefined;
+        const q = new PrepareQueue<string>(j => { ran.push(j); return new Promise<void>(r => { release = r; }); }, t.api);
+        q.schedule('s', 'a', 0);
+        assert.deepEqual(ran, ['a']);
+        q.schedule('s', 'b', 0);
+        q.schedule('s', 'c', 0);
+        assert.deepEqual(ran, ['a'], 'b and c wait while a runs');
+        assert.equal(q.hasWaiting('s'), true);
+        release();
+        await flush(); await flush();
+        assert.deepEqual(ran, ['a', 'c'], 'b was never sung');
+        assert.equal(q.hasWaiting('s'), false);
+        release();
+        await flush();
+    });
+
+    it('forgets what waits for a prefix when cancelled; other slots keep theirs', async () => {
+        const t = timers();
+        const ran: string[] = [];
+        const q = new PrepareQueue<string>(async j => { ran.push(j); }, t.api);
+        q.schedule('p1/melody', 'a', 1500);
+        q.schedule('p2/melody', 'b', 1500);
+        q.cancel('p1/');
+        t.tick(1500);
+        await flush();
+        assert.deepEqual(ran, ['b']);
+    });
+
+    it('reads the prepare mode, afterEdit unless onPlay is said', () => {
+        assert.equal(prepareModeOf('onPlay'), 'onPlay');
+        assert.equal(prepareModeOf('afterEdit'), 'afterEdit');
+        assert.equal(prepareModeOf(undefined), 'afterEdit');
+        assert.equal(prepareModeOf('typo'), 'afterEdit');
+        assert.equal(PREPARE_IDLE_MS, 1500);
+    });
+});
+
 describe('the singer settings', () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
     const settings = Object.assign({}, ...manifest.contributes.configuration.map((c: { properties: object }) => c.properties));
@@ -106,6 +174,9 @@ describe('the singer settings', () => {
         // The voice doubles the part's instrument (owner's decision 2026-11-08): no mute setting, no voice setting.
         assert.equal(settings['lilysharp.playback.singerReplacesPart'], undefined);
         assert.equal(settings['lilysharp.playback.singerVoice'], undefined);
+        // When an edited voice is prepared (owner's decision 2026-11-08): after the text rests, or at Play.
+        assert.deepEqual(settings['lilysharp.playback.singerPrepare'].enum, ['afterEdit', 'onPlay']);
+        assert.equal(settings['lilysharp.playback.singerPrepare'].default, 'afterEdit');
         assert.equal(commands.find(c => c.command === 'lilysharp.chooseSingingVoice'), undefined);
     });
 });

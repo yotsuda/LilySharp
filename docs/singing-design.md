@@ -211,6 +211,28 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   microphone turns grey, not blue or gone, until `voiceParts` names the new voices (owner's
   report, session 1146: it stayed blue), and the new voices are asked for at once. A Play still
   never waits: the badge says why the instrument stood in.
+- **When the voice is prepared** (owner's request 2026-11-08, session 1148: the microphone said
+  ready over a voice of the old words, pulsed while nothing was being sung, and "if the voice
+  can be prepared as soon as the lyrics are edited, better — unless the whole machine slows").
+  The host's `prepareVoices(panel, uri, reason)` runs after **every render** (`edit`), at Play
+  (`play`) and at a speed change (`speed`): it asks `lilysharp/sung`, posts `voiceParts`, and
+  for each part compares the key its score and the engine's voice would give
+  (`VoiceRenderer.key`, no engine call) with the key of the voice the page holds
+  (`postedVoices`). Equal: nothing. Different: the page drops the old voice (a Play meanwhile
+  plays the instrument, not the old words) and the part is shown **`waiting`** — a grey, still
+  microphone, a fourth state between none and `preparing` — and the render is queued
+  (`singerCore.PrepareQueue`, one job per preview and part, the newest text winning, one in
+  flight): at once after a Play, a speed change or a turn to another document, or when the
+  engine has the voice already; after `PREPARE_IDLE_MS` = 1.5 s of rest when the text was
+  edited — typing restarts the clock, so the engine never works under the keystrokes and sings
+  each phrase at most once per pause; and not before Play with
+  `lilysharp.playback.singerPrepare` = `onPlay` (for the CPU's DiffSinger, where every pause
+  would cost seconds; the default is `afterEdit`). `preparing` (pulsing) is posted only when the
+  engine is actually asked; `PREPARE_TIMEOUT_MS` = 120 s without an answer is `failed`. When
+  the server cannot answer (a syntax error) the voices the page has stay as they are and the
+  nameless placeholder of a turn is settled (`voiceSettled`), so nothing pulses over nothing;
+  with no engine everything is dropped. Nets: `test/singerCore.test.ts` (the queue, the mode),
+  `test/playbackCore.test.ts` (the badge's `waiting`).
 - **MIDI out** (`lilysharp.playback.midiOutput` set): the port plays the instruments, the
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The
   alignment is the round trip's jitter, some tens of milliseconds; acceptable for a preview,

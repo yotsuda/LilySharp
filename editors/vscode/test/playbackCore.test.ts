@@ -124,6 +124,17 @@ describe('the voice badge', () => {
             { state: 'preparing', title: 'singing… (the instrument plays until the voice is ready)\nready: melody' });
     });
 
+    it('is waiting, grey and still, on a voice whose text is new and not yet sent to the engine (session 1148)', () => {
+        assert.deepEqual(voiceBadge([{ part: 'melody', state: 'waiting' }]),
+            { state: 'waiting', title: 'voice not sung yet: melody (the instrument plays until it is)' });
+        assert.deepEqual(voiceBadge([{ part: 'melody', state: 'waiting' }, { part: 'alto', state: 'ready' }]),
+            { state: 'waiting', title: 'voice not sung yet: melody (the instrument plays until it is)\nready: alto' });
+        // The engine at work outranks it; so does a failure.
+        assert.deepEqual(voiceBadge([{ part: 'melody', state: 'waiting' }, { part: 'alto', state: 'preparing' }]),
+            { state: 'preparing', title: 'singing alto… (the instrument plays until the voice is ready)\nnot sung yet: melody' });
+        assert.equal(voiceBadge([{ part: 'melody', state: 'waiting' }, { part: 'alto', state: 'failed' }])!.state, 'failed');
+    });
+
     it('is failed when any voice is, with the engine\'s sentence, and still lists the rest', () => {
         assert.deepEqual(voiceBadge([{ part: 'melody', state: 'failed', detail: 'no engine is set up' }, { part: 'alto', state: 'ready' }]),
             { state: 'failed', title: 'melody: not sung — no engine is set up (its instrument plays)\nready: alto' });

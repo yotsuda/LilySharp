@@ -145,6 +145,18 @@ export class VoiceRenderer {
 
     get name(): string { return this.backend.name; }
 
+    /** The key `render` would give `dto` at `speed`: the score's bytes and the voice's name — what
+     *  tells one text's voice from another's without asking the engine (prepareVoices). */
+    async key(dto: SungVoiceDto, speed: number): Promise<string> {
+        return voiceKey(cantilenaScore(dto, speed), await this.backend.voiceName());
+    }
+
+    /** True when the voice of `key` was sung before and its WAV is still there. */
+    has(key: string): boolean {
+        const hit = this.done.get(key);
+        return !!hit && fs.existsSync(hit.wav);
+    }
+
     /**
      * The voice for `dto` at `speed`: its key, and the rendered WAV — at once when it was sung
      * before, else when the engine has sung it. A second ask for a voice in flight joins the first.

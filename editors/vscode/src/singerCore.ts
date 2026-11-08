@@ -89,6 +89,75 @@ export function cantilenaScore(voice: SungVoiceDto, speed: number): CantilenaSco
     };
 }
 
+/** Milliseconds the text must rest before an edited voice is sent to the engine (owner's decision
+ *  2026-11-08, session 1148): typing never asks the engine; a pause does. */
+export const PREPARE_IDLE_MS = 1500;
+
+/** How long the engine may take over one voice before the preview gives it up as `failed`
+ *  (the microphone pulsed for ever over an engine that never answered; a long score on the
+ *  CPU's DiffSinger takes tens of seconds, so two minutes). */
+export const PREPARE_TIMEOUT_MS = 120_000;
+
+/** When an edited voice is prepared: as the text rests (`afterEdit`, the default), or only when
+ *  Play is pressed (`onPlay`: for a slow engine — the CPU's DiffSinger — where every pause would
+ *  cost seconds of rendering; that Play plays the instruments). The setting `lilysharp.playback.singerPrepare`. */
+export type PrepareMode = 'afterEdit' | 'onPlay';
+export function prepareModeOf(setting: unknown): PrepareMode {
+    return setting === 'onPlay' ? 'onPlay' : 'afterEdit';
+}
+
+/** The timers a PrepareQueue runs on — the host's, or a test's. */
+export interface PrepareTimers { setTimeout(fn: () => void, ms: number): unknown; clearTimeout(handle: unknown): void }
+
+/**
+ * One job at a time per slot, the newest winning (docs/singing-design.md §5 "When the voice is
+ * prepared"): a job scheduled with a delay waits that long after the LAST schedule of its slot
+ * (typing resets it); one scheduled while another runs waits its turn, and only the newest one
+ * waiting runs then — the engine sings each phrase at most twice over an edit, not once per
+ * keystroke. `cancel` forgets a slot's waiting job (a preview turned to another document).
+ */
+export class PrepareQueue<J> {
+    private readonly slots = new Map<string, { timer?: unknown; waiting?: J; running: boolean }>();
+
+    constructor(private readonly run: (job: J) => Promise<void>,
+        private readonly timers: PrepareTimers = { setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: h => clearTimeout(h as ReturnType<typeof setTimeout>) }) {}
+
+    schedule(slot: string, job: J, delayMs: number): void {
+        let s = this.slots.get(slot);
+        if (!s) { this.slots.set(slot, s = { running: false }); }
+        if (s.timer !== undefined) { this.timers.clearTimeout(s.timer); s.timer = undefined; }
+        s.waiting = job;
+        if (delayMs > 0) { s.timer = this.timers.setTimeout(() => { s.timer = undefined; this.fire(slot); }, delayMs); }
+        else { this.fire(slot); }
+    }
+
+    /** True while a newer job of `slot` waits (its timer, or its turn): a result landing now is of an older text. */
+    hasWaiting(slot: string): boolean {
+        const s = this.slots.get(slot);
+        return !!s && s.waiting !== undefined;
+    }
+
+    cancel(slotPrefix: string): void {
+        for (const [slot, s] of this.slots) {
+            if (!slot.startsWith(slotPrefix)) { continue; }
+            if (s.timer !== undefined) { this.timers.clearTimeout(s.timer); s.timer = undefined; }
+            s.waiting = undefined;
+        }
+    }
+
+    private fire(slot: string): void {
+        const s = this.slots.get(slot);
+        if (!s || s.running || s.waiting === undefined) { return; }
+        const job = s.waiting;
+        s.waiting = undefined;
+        s.running = true;
+        this.run(job).catch(() => undefined).then(() => {
+            s.running = false;
+            if (s.waiting !== undefined && s.timer === undefined) { this.fire(slot); }
+        });
+    }
+}
+
 /** What a rendered voice is cached and named by: the voice and the score's bytes, so the same
  *  phrase at the same speed in the same voice is sung once per machine. */
 export function voiceKey(score: CantilenaScore, voice: string): string {

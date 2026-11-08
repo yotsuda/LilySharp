@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, practiceSummary, soundStart } 
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, SungVoiceDto, cantilenaApiOf } from './singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, SungVoiceDto, cantilenaApiOf, prepareModeOf } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1533,6 +1533,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             previewPanels.delete(key);
             panelReady.delete(key);
             selectedRenders.delete(key);
+            forgetVoices(panel);
             lastPostedSvg.delete(key);
             shownPagesVersion.delete(key);
             cancelSvgRequest(key);
@@ -1673,7 +1674,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 const before = previewPractice.get(panel)?.speed;
                 previewPractice.set(panel, message.practice as PracticeState);
                 // A new tempo: the voice is sung again at it (docs/singing-design.md §5).
-                if ((message.practice as PracticeState).speed !== before) { void singVoices(panel, uri); }
+                if ((message.practice as PracticeState).speed !== before) { void prepareVoices(panel, uri, 'speed'); }
                 return;
             }
             if (message.type === 'requestPlayback') {
@@ -1687,9 +1688,9 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // by PART NAME, and a Play right after the switch would sing them over the new notes
                 // (owner's report 2026-11-08: the previous .lys's voice). Cleared before the notes
                 // go out — the messages arrive in order — so this Play plays the instruments, and
-                // singVoices below sends the new file's voices as they are ready. (The render path
+                // prepareVoices below sends the new file's voices as they are ready. (The render path
                 // does the same the moment the preview turns to another document: followVoices.)
-                followVoices(panel, uri, false);
+                followVoices(panel, uri);
                 try {
                     // Name the score the preview is showing, so Play sounds ITS parts and
                     // form: with `score p2 { staff p2 }` picked, p1 stayed audible
@@ -1704,8 +1705,9 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     panel.webview.postMessage({ type: 'playbackData', notes: pb.Notes ?? null, error: pb.Error ?? null,
                         parts: pb.Parts ?? null, extra: pb.Extra ?? null, sung: pb.Sung ?? null, played: pb.Played ?? null,
                         beats: pb.Beats ?? null, barEnd: pb.BarEnd ?? null });
-                    // The lyrics' voice, rendered ahead so the next Play finds it (docs/singing-design.md §5).
-                    void singVoices(panel, uri);
+                    // The lyrics' voice, rendered now — a voice the text's rest had not yet sent to
+                    // the engine goes at once — so the next Play finds it (docs/singing-design.md §5).
+                    void prepareVoices(panel, uri, 'play');
                 } catch (e) {
                     panel.webview.postMessage({ type: 'playbackData', error: String(e) });
                 }
@@ -1913,8 +1915,9 @@ async function updatePreviewContent(
     // Whether the right-click menu offers the OMR doors (owner, 2026-10-24: not for a file
     // the reader did not write) — asked again with each render, as an import adds the file.
     void panel.webview.postMessage({ type: 'scanState', hasScan: hasScan(document.uri) });
-    // Another document or score: its voices replace the last one's, asked for now (singing-design §5).
-    followVoices(panel, uri, true);
+    // Another document or score: its voices replace the last one's, asked for once the server
+    // has answered the render below (prepareVoices; singing-design §5).
+    followVoices(panel, uri);
     // The chords of the text, for Select Chord on a member right-clicked (owner's request 2026-10-27).
     void panel.webview.postMessage({ type: 'chordSpans', spans: chordSpans(document.getText()) });
     // The @todo marks of the text, for Resolve This TODO on the bar right-clicked and Resolve
@@ -2130,6 +2133,11 @@ async function updatePreviewContent(
         } else {
             outputChannel.appendLine('Response has neither error nor SVG');
         }
+        // The sung voice follows the text (owner's request 2026-11-08, session 1148): after each
+        // render the host learns which parts' voices are of an earlier text, drops them from the
+        // page (the microphone turns grey), and sends them to the engine once the text has rested
+        // PREPARE_IDLE_MS — or, with the setting at onPlay, at the next Play (singing-design §5).
+        void prepareVoices(panel, uri, 'edit');
     } catch (error) {
         // Our own cancellation (a newer request took over, or the panel/URI went
         // away): expected, and the newer request repaints — no error banner.
@@ -3838,31 +3846,55 @@ function disposeSinger(): void {
     voiceRendererFor = undefined;
     for (const panel of previewPanels.values()) {
         postedVoices.delete(panel);
+        prepareQueue.cancel(`${panelId(panel)}/`);
         panel.webview.postMessage({ type: 'clearVoices' });
     }
+}
+
+/** `lilysharp.playback.singerPrepare`: when a voice whose text changed goes to the engine. */
+function prepareModeSetting(): PrepareMode {
+    return prepareModeOf(vscode.workspace.getConfiguration('lilysharp').get<string>('playback.singerPrepare'));
 }
 
 /** The voices each preview holds, part → key: a voice already there is not sent again. */
 const postedVoices = new WeakMap<vscode.WebviewPanel, Map<string, string>>();
 /** The document and score each preview's voices are of (`uri\nrender`): another one empties them first. */
 const voiceDocs = new WeakMap<vscode.WebviewPanel, string>();
+/** The previews that just turned to another document: its voices go to the engine at once, not after the rest an edit gets. */
+const voiceTurned = new WeakSet<vscode.WebviewPanel>();
+/** A number per preview, for the prepare queue's slots (`<id>/<part>`). */
+const panelIds = new WeakMap<vscode.WebviewPanel, number>();
+let nextPanelId = 0;
+function panelId(panel: vscode.WebviewPanel): number {
+    let id = panelIds.get(panel);
+    if (id === undefined) { panelIds.set(panel, id = ++nextPanelId); }
+    return id;
+}
 
 /**
  * Keeps a preview's voices to the document and score it shows. When they change, what the page
  * holds is the last document's (kept by part name — two files with a `melody` would share a
  * buffer): the page is told to drop it and to show the microphone as PREPARING until the new
  * document's voices are named (owner's report 2026-11-08, session 1146: after the switch the
- * microphone stayed blue), and — with `sing` — the new voices are asked for at once, so the
- * microphone turns blue as they land, not at the next Play. Answers whether anything changed.
+ * microphone stayed blue); the caller's prepareVoices then asks for the new voices, which go
+ * to the engine at once (voiceTurned). Answers whether anything changed.
  */
-function followVoices(panel: vscode.WebviewPanel, uri: string, sing: boolean): boolean {
+function followVoices(panel: vscode.WebviewPanel, uri: string): boolean {
     const voiceDoc = `${uri}\n${selectedRenders.get(uri) || ''}`;
     if (voiceDocs.get(panel) === voiceDoc) { return false; }
     voiceDocs.set(panel, voiceDoc);
     postedVoices.delete(panel);
+    voiceTurned.add(panel);
+    prepareQueue.cancel(`${panelId(panel)}/`);
     void panel.webview.postMessage({ type: 'clearVoices', pending: true });
-    if (sing) { void singVoices(panel, uri); }
     return true;
+}
+/** A preview closed: nothing more is sung for it, and a voice in flight is dropped on landing. */
+function forgetVoices(panel: vscode.WebviewPanel): void {
+    voiceDocs.delete(panel);
+    postedVoices.delete(panel);
+    voiceTurned.delete(panel);
+    prepareQueue.cancel(`${panelId(panel)}/`);
 }
 /** What was said once per preview (a warning of the server's, a voice that was not sung). */
 const singerTold = new WeakMap<vscode.WebviewPanel, Set<string>>();
@@ -3875,60 +3907,134 @@ function tellSingerOnce(panel: vscode.WebviewPanel, text: string): void {
     vscode.window.setStatusBarMessage(`Lily#: ${text}`, 8000);
 }
 
+/** The pane's voice badge (owner's request 2026-11-08): a voice that will not be sung, with the
+ *  engine's sentence (`ready` is the page's own, when it has decoded the WAV). */
+function failVoice(panel: vscode.WebviewPanel, part: string, speed: number, why: string): void {
+    tellSingerOnce(panel, `the voice of ${part} was not sung — ${why} (see Lily# Extension output)`);
+    void panel.webview.postMessage({ type: 'voiceState', part, speed, state: 'failed', detail: why });
+}
+
+/** Why the voices are asked for: the text was rendered (`edit`), Play was pressed, the practice speed changed. */
+type PrepareReason = 'edit' | 'play' | 'speed';
+
+/** One voice to render for one preview; `mine` is the preview's postedVoices at the time (another map means the engine or the document changed). */
+interface PrepareJob { panel: vscode.WebviewPanel; voice: SungVoiceDto; speed: number; mine: Map<string, string> }
+
+/** The engine's work, one job at a time per preview and part, the newest text winning (singerCore.PrepareQueue). */
+const prepareQueue = new PrepareQueue<PrepareJob>(job => renderVoice(job));
+
 /**
- * Sings the score `panel` shows: the server's sung voices (`lilysharp/sung`) at the preview's
- * practice speed, rendered by the engine unless rendered before, and handed to the page as WAV
- * bytes — one message a voice, as each is ready. Called when the preview fetches its notes and
- * when its tempo changes, so a Play finds the voice there; a Play that comes first plays the
- * instruments, and the voice joins the next.
+ * Keeps the voices of the score `panel` shows up to its text (owner's request 2026-11-08,
+ * session 1148: the microphone said ready over a voice of the old words, and pulsed while
+ * nothing was being sung). Asks the server for the sung voices (`lilysharp/sung`), names their
+ * parts to the page (`voiceParts`), and for each compares the key its score and the engine's
+ * voice would give with the key of the voice the page holds: the same — nothing to do; another —
+ * the page drops the old voice and shows the part as WAITING, and the render is queued: at once
+ * after a Play, a speed change or a turn to another document, or when the engine already has
+ * the voice; after PREPARE_IDLE_MS of rest when the text was edited (typing restarts the clock,
+ * and the engine never works under the keystrokes); not at all, until Play, with
+ * `lilysharp.playback.singerPrepare` at onPlay. Nothing is asked when the server cannot answer
+ * (the text has an error: the voices the page has stay as they are, the placeholder of a turn is
+ * settled), and everything is dropped when there is no engine.
  */
-async function singVoices(panel: vscode.WebviewPanel, uri: string): Promise<void> {
-    if (!client || !clientReady) { return; }
+async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: PrepareReason): Promise<void> {
+    const voiceDoc = `${uri}\n${selectedRenders.get(uri) || ''}`;
+    const current = () => voiceDocs.get(panel) === voiceDoc;   // false once the preview turned or closed meanwhile
+    const settled = () => { if (current()) { void panel.webview.postMessage({ type: 'voiceSettled' }); } };
+    if (!client || !clientReady) { settled(); return; }
     const engine = await renderer();
-    if (!engine) { return; }
+    if (!current()) { return; }
+    if (!engine) {
+        postedVoices.delete(panel);
+        void panel.webview.postMessage({ type: 'clearVoices' });
+        return;
+    }
     let sung: { Voices?: SungVoiceDto[] | null; Error?: string | null };
     try {
         sung = await client.sendRequest('lilysharp/sung', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
     } catch (e) {
         outputChannel.appendLine(`singer: lilysharp/sung failed: ${String(e)}`);
+        settled();
         return;
     }
-    if (sung.Error || !sung.Voices) { return; }
+    if (!current()) { return; }
+    if (sung.Error || !sung.Voices) { settled(); return; }
     // Which parts this score sings now: the page drops the voices and the badge's states of any
     // other (a score or a file with no lyrics empties it — owner's report 2026-11-08: the
     // microphone stayed on after the lyrics were gone).
-    panel.webview.postMessage({ type: 'voiceParts', parts: sung.Voices.filter(v => v.Notes.length > 0).map(v => v.Part) });
+    void panel.webview.postMessage({ type: 'voiceParts', parts: sung.Voices.filter(v => v.Notes.length > 0).map(v => v.Part) });
     const speed = previewPractice.get(panel)?.speed ?? 1;
     let posted = postedVoices.get(panel);
     if (!posted) { postedVoices.set(panel, posted = new Map()); }
     const mine = posted;
+    const turned = voiceTurned.delete(panel);
+    const mode = prepareModeSetting();
     for (const voice of sung.Voices) {
         for (const warning of voice.Warnings ?? []) { tellSingerOnce(panel, `${voice.Part}: ${warning}`); }
         if (voice.Notes.length === 0) { continue; }
-        let key: string, rendered: Promise<{ wav: string; duration: number }>, cached: boolean;
-        // The pane's voice badge (owner's request 2026-11-08): `preparing` while the engine sings,
-        // `failed` with the sentence; `ready` is the page's own, when it has decoded the WAV.
-        const failed = (why: string) => {
-            tellSingerOnce(panel, `the voice of ${voice.Part} was not sung — ${why} (see Lily# Extension output)`);
-            panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'failed', detail: why });
-        };
+        const slot = `${panelId(panel)}/${voice.Part}`;
+        let key: string;
         try {
-            ({ key, rendered, cached } = await engine.render(voice, speed));
+            key = await engine.key(voice, speed);
         } catch (e) {
-            failed(String(e));
+            failVoice(panel, voice.Part, speed, String(e));
             continue;
         }
-        if (mine.get(voice.Part) === key) { continue; }
-        if (!cached) { panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'preparing' }); }
-        const singing = rendered.then(async v => {
-            if (postedVoices.get(panel) !== mine) { return; }   // the engine changed meanwhile
-            const bytes = await fs.promises.readFile(v.wav);
-            mine.set(voice.Part, key);
-            panel.webview.postMessage({ type: 'voice', part: voice.Part, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array(bytes) });
-            outputChannel.appendLine(`singer: ${voice.Part} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
-        }, (e: Error) => failed(e.message));
-        if (!cached) { vscode.window.setStatusBarMessage(`Lily#: singing ${voice.Part}…`, singing); }
+        if (!current()) { return; }
+        if (mine.get(voice.Part) === key) { prepareQueue.cancel(slot); continue; }   // the page has this text's voice; a job of an older text can go
+        mine.delete(voice.Part);
+        const rests = reason === 'edit' && !turned && !engine.has(key);
+        if (rests && mode === 'onPlay') {
+            void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'waiting' });
+            prepareQueue.cancel(slot);
+            continue;
+        }
+        void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: rests ? 'waiting' : 'preparing' });
+        prepareQueue.schedule(slot, { panel, voice, speed, mine }, rests ? PREPARE_IDLE_MS : 0);
     }
+}
+
+/**
+ * One queued voice: rendered by the engine unless rendered before, and handed to the page as WAV
+ * bytes (`voice`), with `preparing` on the badge while the engine sings and `failed` when it
+ * cannot, or when it has not answered in PREPARE_TIMEOUT_MS. A voice whose preview turned to
+ * another document, or whose part has a newer text waiting in the queue, is dropped on landing.
+ */
+async function renderVoice(job: PrepareJob): Promise<void> {
+    const { panel, voice, speed, mine } = job;
+    const slot = `${panelId(panel)}/${voice.Part}`;
+    const wanted = () => postedVoices.get(panel) === mine && !prepareQueue.hasWaiting(slot);
+    const engine = voiceRenderer;
+    if (!engine || !wanted()) { return; }
+    let key: string, rendered: Promise<{ wav: string; duration: number }>, cached: boolean;
+    try {
+        ({ key, rendered, cached } = await engine.render(voice, speed));
+    } catch (e) {
+        failVoice(panel, voice.Part, speed, String(e));
+        return;
+    }
+    if (!cached) { void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'preparing' }); }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`the engine gave no answer in ${PREPARE_TIMEOUT_MS / 1000} s`)), PREPARE_TIMEOUT_MS);
+    });
+    const singing = (async () => {
+        try {
+            const v = await Promise.race([rendered, timeout]);
+            if (!wanted()) { return; }
+            const bytes = await fs.promises.readFile(v.wav);
+            if (!wanted()) { return; }
+            mine.set(voice.Part, key);
+            void panel.webview.postMessage({ type: 'voice', part: voice.Part, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array(bytes) });
+            outputChannel.appendLine(`singer: ${voice.Part} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
+        } catch (e) {
+            if (wanted()) { failVoice(panel, voice.Part, speed, e instanceof Error ? e.message : String(e)); }
+        } finally {
+            if (timer !== undefined) { clearTimeout(timer); }
+        }
+    })();
+    if (!cached) { vscode.window.setStatusBarMessage(`Lily#: singing ${voice.Part}…`, singing); }
+    await singing;
 }
 
 /** The picker behind `Lily#: Choose MIDI Output…` and the setting's link: the preview's
@@ -4376,6 +4482,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             cursor: pointer; line-height: 0;
         }
         .toolbar .voice-badge svg { width: 12px; height: 12px; display: block; }
+        .toolbar .voice-badge[data-state="waiting"] { color: #888; }
         .toolbar .voice-badge[data-state="preparing"] { color: #888; animation: voice-pulse 1.2s ease-in-out infinite; }
         .toolbar .voice-badge[data-state="ready"] { color: #0078d7; }
         .toolbar .voice-badge[data-state="failed"] { color: var(--vscode-errorForeground, #b00020); }
@@ -4453,7 +4560,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .practice-panel .parts button[aria-pressed="false"] { color: #888; }
         /* A part the score does not sound (off unless pressed), and a sung voice. */
         .practice-panel .parts button.extra { font-style: italic; }
-        /* Each voice's own sign after its name: being sung, ready, not sung. */
+        /* Each voice's own sign after its name: not sung yet, being sung, ready, not sung. */
+        .practice-panel .parts button.voice[data-state="waiting"]::after { content: " …"; opacity: 0.35; }
         .practice-panel .parts button.voice[data-state="preparing"]::after { content: " …"; opacity: 0.6; }
         .practice-panel .parts button.voice[data-state="ready"]::after { content: " ✓"; }
         .practice-panel .parts button.voice[data-state="failed"]::after { content: " ⚠"; color: var(--vscode-errorForeground, #b00020); }
@@ -6115,7 +6223,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // voice's toggle in the practice menu.
         const voiceStates = new Map();      // part -> { state, detail }
         function setVoiceState(part, state, detail) {
+            // A voice told waiting or preparing is of a text that is gone (the host compares the
+            // keys): the buffer goes with it, so a Play meanwhile plays the instrument, not the
+            // old words (session 1148).
+            if (state === 'waiting' || state === 'preparing') { voices.delete(part); }
             voiceStates.set(part, { state, detail });
+            renderVoiceBadge();
+        }
+        // The host asked for the voices and got none to name (the text has an error, the server
+        // is not up): the nameless placeholder of clearVoices goes, what is known stays.
+        function settleVoices() {
+            voiceStates.delete('');
             renderVoiceBadge();
         }
         function renderVoiceBadge() {
@@ -6133,7 +6251,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const s = voiceStates.get(btn.dataset.part);
                 if (s) { btn.dataset.state = s.state; } else { delete btn.dataset.state; }
                 const base = btn.dataset.title || '';
-                btn.title = s ? base + (s.state === 'ready' ? ' — ready' : s.state === 'preparing' ? ' — being sung…' : ' — not sung' + (s.detail ? ': ' + s.detail : '')) : base;
+                btn.title = s ? base + (s.state === 'ready' ? ' — ready' : s.state === 'preparing' ? ' — being sung…' : s.state === 'waiting' ? ' — not sung yet' : ' — not sung' + (s.detail ? ': ' + s.detail : '')) : base;
             }
         }
         document.getElementById('voiceBadge').addEventListener('click', () => practiceBtn.click());
@@ -7501,6 +7619,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'clearVoices':
                     clearVoices(!!message.pending);
+                    break;
+                case 'voiceSettled':
+                    settleVoices();
                     break;
                 case 'midiStarted':
                     midiStarted(message);

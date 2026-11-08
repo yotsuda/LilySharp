@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1146セッションの経緯
+
+### 1.1 第1146セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14856 / 0 / 2**（`-Start p1146`・HEAD `0aa68a994`・未 push 46・OMR の open 0）。同じ会話で第1145 から続けた便。オーナー報告「直前の本の歌唱は鳴らなくなったが、マイクが準備完了のまま。歌を捨てたら準備中の表示にして」。作業場所は Lab `sessions/p1146/`。
+
+- **原因**: 第1145 は声を捨てるのを `requestPlayback`（▶）のときだけにしていて、ページの `clearVoices` は状態を空にするだけ＝印は一瞬消えてすぐ（キャッシュ済みの）新しい声で青に戻るか、▶ を押すまで古い青のまま。文書が替わったことをページに言う者がいなかった。
+- **直し**: host `followVoices(panel, uri, sing)` を `updatePreviewContent`（プレビューが文書／score に向いた瞬間）と `requestPlayback` の両方で。別の `uri\nrender` なら `postedVoices` を捨て、**`clearVoices` に `pending: true`** を付けて post し、描画経路からは **すぐ `singVoices`**（▶ を待たずに新しい声を頼む）。ページは `pending` のとき名無しの `preparing` を 1 つ置く＝マイクは灰のまま、`voiceParts`（`lilysharp/sung` の答えごと）が名無しを落として本物の部の状態に替える（歌詞の無い本なら消える）。`playbackCore.voiceBadge` は名無しを title に書かない（「singing… (the instrument plays until the voice is ready)」）。網 +1（898 / 898）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・MANUAL-CHECKS §3.7・editors CHANGELOG。
+- 残り: 実機（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み・同じ本の編集直後の ▶ は旧声を鳴らしうる＝第1145 の註）。
+- 終了時 full **14856 / 0 / 2 / 14858**（`-End p1146 -DiffBase 0aa68a994`＝`end.log`・門は全部 OK・§1 現在便 15,720 字＝残り 4,280）。⚠️ 同じ pipeline の npm は **TS1005 で落ちていた**＝ページのスクリプト（テンプレート文字列）に書いたコメントの**バッククォート**が文字列を閉じた（第1141 の `'\n'` と同じ族＝ページのスクリプトにバッククォートと `\` を書かない）→ 直して npm 897 / 897・配布し直し（`followVoices` が入った `extension.js` を確認）。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6: 出所はオーナー報告。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1145セッションの経緯
 
 ### 1.1 第1145セッション（2026-11-08・YT-DELL2）

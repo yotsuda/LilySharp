@@ -495,17 +495,19 @@ export function loopRounds(seconds: number, length: number): number {
     return Math.max(1, Math.min(500, Math.ceil(seconds / length)));
 }
 
-/** A sung voice's state in the preview: the host is having it sung (`preparing`), the page has
- *  decoded its WAV and a Play will use it (`ready`), or it will not be sung (`failed`, with the
- *  engine's sentence). */
-export type VoiceState = 'preparing' | 'ready' | 'failed';
+/** A sung voice's state in the preview: its text is new and the engine has not been asked yet
+ *  (`waiting` — the text is resting, or the setting leaves it to Play), the host is having it
+ *  sung (`preparing`), the page has decoded its WAV and a Play will use it (`ready`), or it
+ *  will not be sung (`failed`, with the engine's sentence). The microphone pulses only in
+ *  `preparing` (owner's report 2026-11-08, session 1148: it pulsed while nothing was being sung). */
+export type VoiceState = 'waiting' | 'preparing' | 'ready' | 'failed';
 export interface VoiceStatus { part: string; state: VoiceState; detail?: string }
 
 /**
  * The toolbar's voice badge (owner's request 2026-11-08: the pane says whether the voice is
  * being prepared or ready): one sign for all the score's voices — `failed` if any is, else
- * `preparing` if any is, else `ready` — with a title that names the parts; null with no voice
- * (no engine, no sung part), when nothing is shown.
+ * `preparing` if any is, else `waiting` if any is, else `ready` — with a title that names the
+ * parts; null with no voice (no engine, no sung part), when nothing is shown.
  */
 export function voiceBadge(voices: readonly VoiceStatus[]): { state: VoiceState; title: string } | null {
     if (voices.length === 0) { return null; }
@@ -513,15 +515,21 @@ export function voiceBadge(voices: readonly VoiceStatus[]): { state: VoiceState;
     // A nameless entry is the placeholder the page keeps between one document's voices being
     // dropped and the next document's being named (the mic stays grey, not blue or gone).
     const names = (list: readonly VoiceStatus[]) => list.map(v => v.part).filter(Boolean).join(', ');
-    const failed = of('failed'), preparing = of('preparing'), ready = of('ready');
-    const rest = [preparing.length > 0 ? `preparing: ${names(preparing)}` : '', ready.length > 0 ? `ready: ${names(ready)}` : ''].filter(Boolean);
+    const failed = of('failed'), preparing = of('preparing'), waiting = of('waiting'), ready = of('ready');
+    const readyLine = ready.length > 0 ? [`ready: ${names(ready)}`] : [];
+    const waitingLine = waiting.length > 0 ? [`not sung yet: ${names(waiting)}`] : [];
     if (failed.length > 0) {
         const lines = failed.map(v => `${v.part}: not sung${v.detail ? ` — ${v.detail}` : ''} (its instrument plays)`);
+        const rest = [preparing.length > 0 ? `preparing: ${names(preparing)}` : '', ...waitingLine, ...readyLine].filter(Boolean);
         return { state: 'failed', title: [...lines, ...rest].join('\n') };
     }
     if (preparing.length > 0) {
         const who = names(preparing);
-        return { state: 'preparing', title: [`singing${who ? ' ' + who : ''}… (the instrument plays until the voice is ready)`, ...(ready.length > 0 ? [`ready: ${names(ready)}`] : [])].join('\n') };
+        return { state: 'preparing', title: [`singing${who ? ' ' + who : ''}… (the instrument plays until the voice is ready)`, ...waitingLine, ...readyLine].join('\n') };
+    }
+    if (waiting.length > 0) {
+        const who = names(waiting);
+        return { state: 'waiting', title: [`voice not sung yet${who ? ': ' + who : ''} (the instrument plays until it is)`, ...readyLine].join('\n') };
     }
     return { state: 'ready', title: `voice ready: ${names(ready)}` };
 }
