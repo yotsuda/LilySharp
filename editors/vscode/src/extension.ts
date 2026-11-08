@@ -3857,20 +3857,27 @@ async function singVoices(panel: vscode.WebviewPanel, uri: string): Promise<void
         for (const warning of voice.Warnings ?? []) { tellSingerOnce(panel, `${voice.Part}: ${warning}`); }
         if (voice.Notes.length === 0) { continue; }
         let key: string, rendered: Promise<{ wav: string; duration: number }>, cached: boolean;
+        // The pane's voice badge (owner's request 2026-11-08): `preparing` while the engine sings,
+        // `failed` with the sentence; `ready` is the page's own, when it has decoded the WAV.
+        const failed = (why: string) => {
+            tellSingerOnce(panel, `the voice of ${voice.Part} was not sung — ${why} (see Lily# Extension output)`);
+            panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'failed', detail: why });
+        };
         try {
             ({ key, rendered, cached } = await engine.render(voice, speed));
         } catch (e) {
-            tellSingerOnce(panel, `the voice of ${voice.Part} was not sung — ${String(e)} (see Lily# Extension output)`);
+            failed(String(e));
             continue;
         }
         if (mine.get(voice.Part) === key) { continue; }
+        if (!cached) { panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'preparing' }); }
         const singing = rendered.then(async v => {
             if (postedVoices.get(panel) !== mine) { return; }   // the engine changed meanwhile
             const bytes = await fs.promises.readFile(v.wav);
             mine.set(voice.Part, key);
             panel.webview.postMessage({ type: 'voice', part: voice.Part, key, speed, bytes: new Uint8Array(bytes) });
             outputChannel.appendLine(`singer: ${voice.Part} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
-        }, (e: Error) => tellSingerOnce(panel, `the voice of ${voice.Part} was not sung — ${e.message} (see Lily# Extension output)`));
+        }, (e: Error) => failed(e.message));
         if (!cached) { vscode.window.setStatusBarMessage(`Lily#: singing ${voice.Part}…`, singing); }
     }
 }
@@ -4309,6 +4316,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             height: 28px; width: 42px; padding: 0; line-height: 1;
         }
         .toolbar button.icon svg { display: block; width: 15px; height: 15px; }
+        /* The voice badge: grey and pulsing while the engine sings, pressed-in blue when every
+           voice is ready, the error colour when one will not be sung. */
+        .toolbar button.voice-badge { width: 32px; font-size: 15px; }
+        .toolbar button.voice-badge[data-state="preparing"] { color: #777; animation: voice-pulse 1.2s ease-in-out infinite; }
+        .toolbar button.voice-badge[data-state="ready"] { background: #d6e6f8; border-color: #0078d7; color: #0b4a8b; }
+        .toolbar button.voice-badge[data-state="ready"]:hover { background: #c8ddf5; }
+        .toolbar button.voice-badge[data-state="failed"] { color: var(--vscode-errorForeground, #b00020); border-color: var(--vscode-errorForeground, #b00020); }
+        @keyframes voice-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
         /* How long the score plays (owner's request 2026-10-25), beside the transport. */
         .toolbar .length {
             font-family: system-ui, sans-serif; font-size: 12px; color: #555;
@@ -4380,6 +4395,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .practice-panel .parts button[aria-pressed="false"] { color: #888; }
         /* A part the score does not sound (off unless pressed), and a sung voice. */
         .practice-panel .parts button.extra { font-style: italic; }
+        /* Each voice's own sign after its name: being sung, ready, not sung. */
+        .practice-panel .parts button.voice[data-state="preparing"]::after { content: " …"; opacity: 0.6; }
+        .practice-panel .parts button.voice[data-state="ready"]::after { content: " ✓"; }
+        .practice-panel .parts button.voice[data-state="failed"]::after { content: " ⚠"; color: var(--vscode-errorForeground, #b00020); }
         .range-panel table { border-collapse: collapse; }
         .range-panel th { text-align: left; font-weight: 600; opacity: 0.75; padding: 2px 8px; }
         .range-panel td { padding: 2px 8px; white-space: nowrap; }
@@ -4422,6 +4441,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <span class="group">
         <button id="playBtn" type="button" title="Play">▶</button>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
+        <!-- The voice badge (owner's request 2026-11-08): hidden until the score has a sung voice;
+             then preparing (pulsing), ready, or failed, its title naming the parts. A click opens
+             the practice menu, where each voice has its own toggle and sign. Its place beside the
+             transport is a first guess — the owner wanted to see it before deciding. -->
+        <button id="voiceBadge" class="icon voice-badge" type="button" hidden aria-label="Voice">♪</button>
         <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Tempo, loop, metronome, parts"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>
@@ -5993,9 +6017,41 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
             audioContext().decodeAudioData(copy).then(buffer => {
                 voices.set(message.part, { buffer, speed: message.speed || 1, key: message.key });
-            }, e => vscode.postMessage({ type: 'webviewPerf', text: 'voice: ' + message.part + ' could not be decoded: ' + e }));
+                setVoiceState(message.part, 'ready');
+            }, e => {
+                vscode.postMessage({ type: 'webviewPerf', text: 'voice: ' + message.part + ' could not be decoded: ' + e });
+                setVoiceState(message.part, 'failed', 'the WAV could not be decoded');
+            });
         }
-        function clearVoices() { stopVoices(); voices.clear(); }
+        function clearVoices() { stopVoices(); voices.clear(); voiceStates.clear(); renderVoiceBadge(); }
+        // The pane's sign of the voices (owner's request 2026-11-08): what the host says of each
+        // (preparing, failed — the 'voiceState' message) and what this page decoded (ready), shown
+        // as one badge beside the transport (playbackCore.voiceBadge) and as a sign on each
+        // voice's toggle in the practice menu.
+        const voiceStates = new Map();      // part -> { state, detail }
+        function setVoiceState(part, state, detail) {
+            voiceStates.set(part, { state, detail });
+            renderVoiceBadge();
+        }
+        function renderVoiceBadge() {
+            const badge = document.getElementById('voiceBadge');
+            const all = [...voiceStates].map(([part, s]) => ({ part, state: s.state, detail: s.detail }));
+            const b = window.LysSynth.voiceBadge(all);
+            badge.hidden = !b;
+            if (b) {
+                badge.dataset.state = b.state;
+                badge.title = b.title;
+                // (The page script lives in a template literal: a backslash-n here would be a real newline.)
+                badge.setAttribute('aria-label', b.title.split(String.fromCharCode(10))[0]);
+            }
+            for (const btn of document.querySelectorAll('#partsList button.voice')) {
+                const s = voiceStates.get(btn.dataset.part);
+                if (s) { btn.dataset.state = s.state; } else { delete btn.dataset.state; }
+                const base = btn.dataset.title || '';
+                btn.title = s ? base + (s.state === 'ready' ? ' — ready' : s.state === 'preparing' ? ' — being sung…' : ' — not sung' + (s.detail ? ': ' + s.detail : '')) : base;
+            }
+        }
+        document.getElementById('voiceBadge').addEventListener('click', () => practiceBtn.click());
         // The tracks a voice stands in for now: a part with a voice at this speed, not muted.
         function sungTracks() {
             const set = new Set();
@@ -6827,12 +6883,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // One toggle each, pressed in while it sounds; the lists are by name, so a part muted
             // in another score stays muted.
             const without = (names, name) => names.filter(n => n !== name);
-            const toggle = (label, title, isOn, flip, cls) => {
+            const toggle = (label, title, isOn, flip, cls, part) => {
                 const b = document.createElement('button');
                 b.type = 'button';
                 b.textContent = label;
-                if (title) b.title = title;
+                if (title) { b.title = title; b.dataset.title = title; }
                 if (cls) b.classList.add(cls);
+                if (part) b.dataset.part = part;
                 b.setAttribute('aria-pressed', String(isOn()));
                 b.addEventListener('click', () => {
                     flip();
@@ -6851,7 +6908,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // plays in the voice's place.
             for (const name of voices) {
                 toggle('♪ ' + name, name + ': sung (on), or played by its instrument (off)', () => !practice.voicesOff.includes(name),
-                    () => { practice.voicesOff = practice.voicesOff.includes(name) ? without(practice.voicesOff, name) : practice.voicesOff.concat([name]); }, 'voice');
+                    () => { practice.voicesOff = practice.voicesOff.includes(name) ? without(practice.voicesOff, name) : practice.voicesOff.concat([name]); }, 'voice', name);
             }
             // The file's other parts, which this score does not sound: off until pressed (owner's
             // request 2026-11-08).
@@ -6859,6 +6916,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 toggle(name, 'Not in this score — silent unless pressed', () => practice.extraOn.includes(name),
                     () => { practice.extraOn = practice.extraOn.includes(name) ? without(practice.extraOn, name) : practice.extraOn.concat([name]); }, 'extra');
             }
+            renderVoiceBadge();     // the voices' signs on their fresh toggles
         }
         function closePractice() {
             practicePanel.hidden = true;
@@ -7335,6 +7393,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'voice':
                     setVoice(message);
+                    break;
+                case 'voiceState':
+                    setVoiceState(message.part, message.state, message.detail);
                     break;
                 case 'clearVoices':
                     clearVoices();

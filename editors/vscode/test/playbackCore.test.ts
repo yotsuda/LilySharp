@@ -20,7 +20,7 @@ import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
     CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, loopRounds, playSpan, playSpanWindow, practiceNotes,
     programOf, toEvents,
-    fromOffset, exportNotes, practiceSummary, PracticeState, voiceCues,
+    fromOffset, exportNotes, practiceSummary, PracticeState, voiceCues, voiceBadge,
 } from '../src/webview/playbackCore';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -73,6 +73,29 @@ describe('the exports under the practice menu', () => {
 
 // A count-in (owner's choice 2026-10-26): one bar of clicks, the music moved after it so the
 // bar line falls where the count ends — as a player counts in.
+// The pane's voice badge (owner's request 2026-11-08): one sign for the score's voices.
+describe('the voice badge', () => {
+    it('shows nothing without a voice', () => {
+        assert.equal(voiceBadge([]), null);
+    });
+
+    it('is preparing while any voice is, ready when all are, and names the parts', () => {
+        assert.deepEqual(voiceBadge([{ part: 'melody', state: 'preparing' }]),
+            { state: 'preparing', title: 'singing melody… (the instrument plays until the voice is ready)' });
+        assert.deepEqual(voiceBadge([{ part: 'melody', state: 'ready' }, { part: 'alto', state: 'preparing' }]),
+            { state: 'preparing', title: 'singing alto… (the instrument plays until the voice is ready)\nready: melody' });
+        assert.deepEqual(voiceBadge([{ part: 'melody', state: 'ready' }, { part: 'alto', state: 'ready' }]),
+            { state: 'ready', title: 'voice ready: melody, alto' });
+    });
+
+    it('is failed when any voice is, with the engine\'s sentence, and still lists the rest', () => {
+        assert.deepEqual(voiceBadge([{ part: 'melody', state: 'failed', detail: 'no engine is set up' }, { part: 'alto', state: 'ready' }]),
+            { state: 'failed', title: 'melody: not sung — no engine is set up (its instrument plays)\nready: alto' });
+        assert.deepEqual(voiceBadge([{ part: 'melody', state: 'failed' }]),
+            { state: 'failed', title: 'melody: not sung (its instrument plays)' });
+    });
+});
+
 describe('the count-in', () => {
     // 4/4 at one second a beat: bar lines at 0, 4, 8, 12.
     const beats = Array.from({ length: 12 }, (_, i) => ({ T: i, A: i % 4 === 0 }));

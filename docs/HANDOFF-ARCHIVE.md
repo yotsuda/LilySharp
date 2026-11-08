@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1139セッションの経緯
+
+### 1.1 第1139セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14855 / 0 / 2**（`-Start p1139`・HEAD `7395a6212`・未 push 39・OMR の open 0）。同じ会話で第1138 から続けた便。オーナー「続けて」→ **Cantilena roadmap B3＝DiffSinger の DirectML（提案 A: Windows は DirectML パッケージ 1 本・既定は自動で CPU に落ちる）**。Lily# の Core とエディタは不変＝この便は Cantilena（0.4.0）と docs。作業場所は Lab `sessions/p1139/`。
+
+- **Cantilena（commit 1 本）**: `DiffSinger/OnnxProviders.cs`（`OnnxProvider { Auto, Cpu, DirectML }`・`Create`＝DML は sequential＋memory pattern off で append・無ければ Auto は理由つきで CPU・DirectML 指定なら SingerException）。`DiffSingerOptions.Provider`（既定 Auto）。`DiffSingerVoice.Open` を instance に＝声ごとに 1 つの `SessionOptions`・最初のモデルで provider が決まる・DML の session が作れなければ Auto は以後 CPU（`Provider`／`ProviderNote`）。CLI は `--cpu`→Cpu・`sing` が「on DirectML」「on the CPU (…)」・`serve` の答えに `provider`。csproj は `UseDirectML=true` で `Microsoft.ML.OnnxRuntime.DirectML`（CPU 版と同時参照不可・native は CPU provider も持つ）＋**`PlatformTarget=x64`**（⚠️ 1 回目の pack は DirectML.dll が入らず＝package の props は PlatformTarget が名指しのときだけ写す・この機械は Windows 同梱の `System32\DirectML.dll` 1.15.6 で動いていた）。`pack-extension.ps1` は `-p:UseDirectML=true`。拡張 0.4.0: `ServeAnswer.provider` をログ・`cantilena.gpu` の説明・README・CHANGELOG。docs: README・design §3.2・roadmap B3・THIRD-PARTY-NOTICES（DirectML は Microsoft のライセンス＝ML アプリに同梱して配布可・OSS ではない）。網 +1（env で TIGER があるとき・両パッケージで 37 / 37）。
+- **実測**（TIGER・RTX 5070 Ti・7 s の例）: CPU パッケージの dev ビルドでは Auto が「this build of the program has no DirectML」で CPU に落ちる／DirectML パッケージでは `sing` 全体 4.6 s（cold）→ 2.8 s・`--cpu` 4.1 s・pack した exe 3.1 s **on DirectML**。acoustic 単体は spike の 0.29 s（CPU 1.3〜14 s）＝差が出るのは常駐 `serve`。**VSIX 0.4.0 = 50.6 MB**（0.3.0 は 40.7・DirectML.dll 17.7 MB）。
+- Lily# 側: `singing-roadmap.md` §1 の表に diffsinger の行。HANDOFF。
+- 残り: VSIX 0.4.0 の入れ直しと実機（オーナー・MANUAL-CHECKS §3.7 の DiffSinger の行で「run on DirectML」のログ）・Cantilena の公開（オーナー）・B5（linux-x64／osx-arm64 のビルド・CoreML は標準パッケージに在る）・ローマ字→かな（Cantilena 側）・lesson-07 に読みの 1 行。
+- 終了時 full **14855 / 0 / 2 / 14857**（`-End p1139 -DiffBase 7395a6212`＝`end.log`・門は全部 OK・§1 現在便 16,501 字＝残り 3,499）。⚠️ **1 回目の `-End` の full は snapshot の網 2 本が赤**（`test/dead-note`・`test/system-count-line-start-ink`・`end-1st-red.log`）＝Core は `-Start p1139` の緑の full と同じ HEAD・`SvgSnapshotTests` 単独は 248 / 248・2 回目の full は緑＝**並列の full でだけ出た揺らぎ・原因未特定**（次に出たら trx の 2 本の差分を読む）。§7 7.5: Lily# の Core `+` 0（この便は Cantilena と docs だけ）。7.6・7.7: なし。この commit と Lab・Cantilena の commit は Claude・push と VSIX の入れ直しはオーナー。
+
 ## 以下は第1138セッションの経緯
 
 ### 1.1 第1138セッション（2026-11-08・YT-DELL2）

@@ -460,6 +460,34 @@ export function loopRounds(seconds: number, length: number): number {
     return Math.max(1, Math.min(500, Math.ceil(seconds / length)));
 }
 
+/** A sung voice's state in the preview: the host is having it sung (`preparing`), the page has
+ *  decoded its WAV and a Play will use it (`ready`), or it will not be sung (`failed`, with the
+ *  engine's sentence). */
+export type VoiceState = 'preparing' | 'ready' | 'failed';
+export interface VoiceStatus { part: string; state: VoiceState; detail?: string }
+
+/**
+ * The toolbar's voice badge (owner's request 2026-11-08: the pane says whether the voice is
+ * being prepared or ready): one sign for all the score's voices — `failed` if any is, else
+ * `preparing` if any is, else `ready` — with a title that names the parts; null with no voice
+ * (no engine, no sung part), when nothing is shown.
+ */
+export function voiceBadge(voices: readonly VoiceStatus[]): { state: VoiceState; title: string } | null {
+    if (voices.length === 0) { return null; }
+    const of = (state: VoiceState) => voices.filter(v => v.state === state);
+    const names = (list: readonly VoiceStatus[]) => list.map(v => v.part).join(', ');
+    const failed = of('failed'), preparing = of('preparing'), ready = of('ready');
+    const rest = [preparing.length > 0 ? `preparing: ${names(preparing)}` : '', ready.length > 0 ? `ready: ${names(ready)}` : ''].filter(Boolean);
+    if (failed.length > 0) {
+        const lines = failed.map(v => `${v.part}: not sung${v.detail ? ` — ${v.detail}` : ''} (its instrument plays)`);
+        return { state: 'failed', title: [...lines, ...rest].join('\n') };
+    }
+    if (preparing.length > 0) {
+        return { state: 'preparing', title: [`singing ${names(preparing)}… (the instrument plays until the voice is ready)`, ...(ready.length > 0 ? [`ready: ${names(ready)}`] : [])].join('\n') };
+    }
+    return { state: 'ready', title: `voice ready: ${names(ready)}` };
+}
+
 /** The channels `events` touch — what a stop has to silence. */
 export function channelsOf(events: readonly MidiEvent[]): number[] {
     const set = new Set<number>();
