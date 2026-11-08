@@ -125,14 +125,18 @@ export function decodeWav(bytes: Uint8Array): DecodedWav {
 
 /**
  * Adds a mono voice into both channels from `at` seconds, resampled to `sampleRate` by linear
- * interpolation. The channels grow when the voice and its tail run past them; the two arrays
- * returned are the channels to use from here on.
+ * interpolation. A negative `at` is a voice that begins before the file does (the engine's WAV
+ * starts VOICE_LEAD_S before the score's 0, docs/singing-design.md §3): that much of its head is
+ * left out and the rest starts at 0 — until session 1153 it was moved to 0 whole, and sang
+ * 0.3 s late in every export. The channels grow when the voice and its tail run past them; the
+ * two arrays returned are the channels to use from here on.
  */
 export function mixIn(left: Float32Array, right: Float32Array, voice: DecodedWav, at: number,
     sampleRate = WAV_SAMPLE_RATE, gain = 1): [Float32Array, Float32Array] {
     const start = Math.max(0, Math.round(at * sampleRate));
+    const skip = at < 0 ? Math.min(voice.samples.length, Math.round(-at * voice.sampleRate)) : 0;
     const ratio = voice.sampleRate / sampleRate;
-    const frames = Math.floor(voice.samples.length / ratio);
+    const frames = Math.floor((voice.samples.length - skip) / ratio);
     const needed = start + frames + Math.ceil(WAV_TAIL_S * sampleRate);
     if (needed > left.length) {
         const l = new Float32Array(needed), r = new Float32Array(needed);
@@ -141,7 +145,7 @@ export function mixIn(left: Float32Array, right: Float32Array, voice: DecodedWav
     }
     const src = voice.samples;
     for (let i = 0; i < frames; i++) {
-        const pos = i * ratio;
+        const pos = skip + i * ratio;
         const i0 = Math.floor(pos), t = pos - i0;
         const s = i0 + 1 < src.length ? src[i0] * (1 - t) + src[i0 + 1] * t : src[i0];
         left[start + i] += s * gain;

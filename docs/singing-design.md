@@ -261,7 +261,14 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   `WAV_SAMPLE_RATE` and adds it to both channels from its offset (`mixIn`, the file grown when
   the voice outlasts the notes) before `fileLevel`; a video's length counts the voices
   (`fileSeconds`). So a WAV, an MP3 and an MP4 carry the voice as Play does. No engine, or a
-  voice that fails: the instruments, and a line in the output channel.
+  voice that fails: the instruments, and a line in the output channel. **Both doors** sing
+  (session 1153, owner's report "the MP4 export carries no voice"): the preview's Export
+  button (`exportMedia`) and the Explorer's / palette's folder export (`exportBatch.ts`,
+  `deps.singJobs`), which had rendered the instruments alone since session 1131; for a file
+  not open, `lilysharp/sung` takes its `path` as `lilysharp/export` does. The engine's WAV
+  begins `VOICE_LEAD_S` before the score's 0, so a voice with no count-in starts at a negative
+  offset: `mixIn` leaves that much of its head out and starts the rest at 0 (it moved the whole
+  voice to 0 from session 1147 to 1153 — 0.3 s late).
 - **`lysc wav --singer <cantilena> [--voice engine/name]`** (built 2026-11-08, session 1137;
   `LILYSHARP_SINGER` names the program once, as `LILYSHARP_SOUNDFONT` names the font): the
   command line's offline render, the same rules in Core. `ScoreExport.SingTheSungParts` reads

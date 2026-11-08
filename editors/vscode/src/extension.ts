@@ -1094,6 +1094,9 @@ export function activate(context: vscode.ExtensionContext) {
         ffmpeg: () => videoFfmpeg(),
         renderVideo: (jobs, soundFont, ffmpeg, source) => writeVideos(jobs, soundFont, ffmpeg, drawFramesFor(source)),
         practisedJobs: (jobs, uri) => practisedJobs(jobs, uri ? practiceFor(uri) : undefined),
+        // The sung voices, as the preview's Export mixes them (owner's report 2026-11-09, session
+        // 1153: the Explorer's Export as MP4 carried no voice).
+        singJobs: (jobs, source, uri) => singJobs(jobs, source, uri ? practiceFor(uri) : undefined),
         practiceSummary: uri => uri ? practiceSummary(practiceFor(uri)) : '',
     });
 
@@ -2378,7 +2381,7 @@ async function exportPreview(
                 playbackOnly: audio !== undefined || video,
                 renderName: renderName || null
             });
-            const jobs = answer.Success && answer.Playbacks ? await singJobs(practisedJobs(answer.Playbacks, practice), uri, practice) : null;
+            const jobs = answer.Success && answer.Playbacks ? await singJobs(practisedJobs(answer.Playbacks, practice), { textDocument: { uri } }, practice) : null;
             if (jobs && audio && soundFont) {
                 await renderAudioFiles(jobs, soundFont, audio);
             } else if (jobs && video && soundFont && ffmpeg) {
@@ -3565,7 +3568,8 @@ function practisedJobs(jobs: readonly AudioJob[], practice: PracticeState | unde
  * instruments' list (a video still lights them: `Lit`). No engine, or a voice that fails: the
  * instruments as before, the failure in the output channel.
  */
-async function singJobs(jobs: readonly AudioJob[], uri: string, practice: PracticeState | undefined): Promise<AudioJob[]> {
+async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { uri: string }; path?: string },
+    practice: PracticeState | undefined): Promise<AudioJob[]> {
     const engine = await renderer();
     if (!engine || !client || !clientReady) { return [...jobs]; }
     const speed = practice?.speed ?? 1;
@@ -3574,7 +3578,8 @@ async function singJobs(jobs: readonly AudioJob[], uri: string, practice: Practi
     for (const job of jobs) {
         let sung: { Voices?: SungVoiceDto[] | null; Error?: string | null };
         try {
-            sung = await client.sendRequest('lilysharp/sung', { textDocument: { uri }, renderName: job.Score || null });
+            // The open document, or a file on the disk the folder export names (as lilysharp/export).
+            sung = await client.sendRequest('lilysharp/sung', { ...source, renderName: job.Score || null });
         } catch (e) {
             outputChannel.appendLine(`singer: export: lilysharp/sung failed: ${String(e)}`);
             out.push(job);

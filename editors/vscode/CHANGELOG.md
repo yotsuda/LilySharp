@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **The Explorer's Export as WAV, MP3 and MP4 sing**: the right-click (and palette) export of one or more files wrote the instruments alone while the preview's Export button sang; both carry the voice now, for files the editor never opened too. And a voice with no count-in came in 0.3 s late in every export since the first consonant's room was added; it is on time.
 - **The microphone goes when the lyrics row goes**: with the row commented out while the engine was still singing it, the engine's late answer lit the microphone again; a voice of a part the score sings no more is dropped now.
 - **A melody the score does not draw is sung**: with `score { staff m2  lyrics verse sings melody }` the page shows the accompaniment and the words only, and Play now sings the melody (the practice menu lists `♪ melody`; its instrument stands in until the voice is ready). The melody used to be silent there.
 - **Play Current Measure (Alt+M) sings the measure**: with a sung part, Alt+M played the bar's instruments but sang the piece's first bar; the voice is now cut to the bar, as a Play with bars selected cuts it.

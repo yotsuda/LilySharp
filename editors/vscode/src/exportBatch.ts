@@ -61,6 +61,10 @@ export interface ExportBatchDeps {
     /** The jobs with their notes under the practice menu of the preview showing `uri` — as
      *  written for a file no preview shows (undefined: not open at all). */
     practisedJobs: (jobs: AudioJob[], uri: string | undefined) => AudioJob[];
+    /** The jobs with the sung voices the singing engine renders for them (docs/singing-design.md
+     *  §5), a sung-only part's notes out of the instruments' list — as the preview's Export; the
+     *  jobs as they are when there is no engine. `source` names the file as the export did. */
+    singJobs: (jobs: AudioJob[], source: { textDocument?: { uri: string }; path?: string }, uri: string | undefined) => Promise<AudioJob[]>;
     /** That menu in words for the log; empty when it plays the score as written. */
     practiceSummary: (uri: string | undefined) => string;
 }
@@ -229,14 +233,19 @@ async function exportBatch(
                     // As the preview showing the file plays it, the loop aside (owner's request
                     // 2026-11-07); a file no preview shows, as written.
                     const openUri = open?.uri.toString();
-                    const jobs = deps.practisedJobs(response.Playbacks, openUri);
+                    const source = open ? { textDocument: { uri: open.uri.toString() } } : { path: file };
+                    // …and sung, where the score sings (owner's report 2026-11-09: this door
+                    // wrote the instruments alone while the preview's Export sang).
+                    const jobs = await deps.singJobs(deps.practisedJobs(response.Playbacks, openUri), source, openUri);
                     const practised = deps.practiceSummary(openUri);
                     if (practised) { deps.log(`    played ${practised}`); }
+                    for (const job of jobs) {
+                        if (job.Voices && job.Voices.length > 0) { deps.log(`    sung: ${job.Voices.length} voice(s) in ${path.basename(job.OutputPath)}`); }
+                    }
                     if (isAudio(format.id)) {
                         await deps.renderAudio(jobs, soundFont, format.id);
                     } else if (ffmpeg && format.id === 'mp4') {
-                        await deps.renderVideo(jobs, soundFont, ffmpeg,
-                            open ? { textDocument: { uri: open.uri.toString() } } : { path: file });
+                        await deps.renderVideo(jobs, soundFont, ffmpeg, source);
                     }
                 }
                 for (const out of response.OutputPaths ?? []) {

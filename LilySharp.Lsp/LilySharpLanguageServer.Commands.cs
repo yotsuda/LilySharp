@@ -1024,10 +1024,9 @@ public sealed partial class LilySharpLanguageServer
 
     public SungResponse GetSung(SungParams @params)
     {
-        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
-        if (doc == null)
-            return new SungResponse { Error = "Document not found" };
-        var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
+        // The open document, or a file on the disk the folder export names (session 1153).
+        if (ExportTreeOf(@params.TextDocument, @params.Path, out var tree, out _) is { } problem)
+            return new SungResponse { Error = problem };
         if (tree.HasErrors)
             return new SungResponse { Error = "Score has errors" };
         try

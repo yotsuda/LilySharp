@@ -361,7 +361,11 @@ public class PlaybackTextParams
 /// <see cref="PlaybackParams"/>.</summary>
 public class SungParams
 {
-    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    /// <summary>The open document — or null with <see cref="Path"/> for a file not open (the
+    /// folder export of session 1153 sings files the editor never opened), as
+    /// <see cref="ExportParams"/> names them.</summary>
+    public TextDocumentIdentifier? TextDocument { get; set; }
+    public string? Path { get; set; }
     public string? RenderName { get; set; }
 }
 

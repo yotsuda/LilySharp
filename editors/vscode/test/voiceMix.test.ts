@@ -71,6 +71,19 @@ describe('a voice mixed into the file', () => {
         assert.equal(l[start + 2], 0, 'two source frames at 48 kHz are two frames at 4 kHz');
     });
 
+    it('leaves out the head of a voice that begins before the file, and starts the rest at 0 (session 1153)', () => {
+        // The engine's WAV begins 0.3 s before the score's 0 (VOICE_LEAD_S): at −0.3, its first
+        // 0.3 s go, and the sample at 0.3 s of the voice is the file's first.
+        const rate = 1000;
+        const samples = new Float32Array(1000);
+        for (let i = 0; i < samples.length; i++) { samples[i] = i / 1000; }   // 0.000, 0.001, … a ramp
+        const [l] = mixIn(new Float32Array(2000), new Float32Array(2000), { sampleRate: rate, samples }, -0.3, rate);
+        assert.ok(Math.abs(l[0] - 0.3) < 1e-6, 'the file starts 0.3 s into the voice');
+        assert.ok(Math.abs(l[699] - 0.999) < 1e-6, 'the voice\'s last sample lands 0.7 s in');
+        assert.equal(l[700], 0, 'nothing after it');
+        assert.equal(l.length, 700 + WAV_TAIL_S * rate, 'the file runs to the voice\'s end and the tail, not to the head left out');
+    });
+
     it('grows the file when the voice and its tail run past the notes', () => {
         const rate = 1000;
         const voice = { sampleRate: 1000, samples: new Float32Array(2500).fill(0.2) };

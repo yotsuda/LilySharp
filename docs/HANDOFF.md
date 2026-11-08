@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1153セッション（2026-11-09・YT-DELL2）
+
+開始時 `-Start p1153`（HEAD `c02677001`・未 push 53・OMR の open 0）は **build 赤＝私のせい**: `-Start` の full run の最中に Lsp の C# を書き替えていて（`SungParams.Path` を足す前の `Commands.cs` が先にビルドされた・`start.log` の CS1061）、trx 無し。前便末の full は 14859 / 0 / 2。⚠️ 規則の再確認＝**full run の最中はコードも docs も触らない**（§7）。同じ会話で第1152 から続けた便。オーナー報告「mp4 exporter に、歌唱が入らない」。作業場所は Lab `sessions/p1153/`（`notes.md`・再現は `sessions/p1152/probe/mp4repro.js`）。
+
+- **再現（VS Code の外・`p1152/probe/mp4/repro.log`）**: `renderAudioFiles`（2 音＋オーナーの最新の Cantilena の声 WAV を −0.3 s に）→ `videoArgs`／ffmpeg → MP4 の音を戻す＝rms 0.134（音＋声）／0.337（音だけ・3.5 s）／戻し 0.141（9 s）＝**声は WAV と ffmpeg の段を生き残る**。落ちているのは上流＝どの扉から出したか。
+- **原因 2 つ**: ⑴ **エクスプローラーの右クリック／パレットのフォルダ Export（`exportBatch.ts`）は `singJobs` を一度も呼んでいなかった**＝`practisedJobs` → 描画・楽器だけ（WAV・MP3・MP4 とも）。第1131 の Export 混合はプレビューの Export ボタン（`exportMedia`）だけに配線していた。⑵ **`mixIn` が負の開始位置を 0 に丸めていた**: engine の WAV は楽譜の 0 より `VOICE_LEAD_S`＝0.3 s 前から始まるので、count-in の無い Export の声は第1147 以降ずっと **0.3 s 遅れて**入っていた（CLI の `WavRenderer.RenderWithVoices` は処理済み・エディタだけ）。
+- **直し**: `exportBatch.ts` に `deps.singJobs(jobs, source, openUri)`（出力チャネルに `sung: N voice(s) in …`）・`extension.ts` の `singJobs(jobs, source, practice)` は `{ textDocument } | { path }` を取る・**`lilysharp/sung` が開いていないファイルの `Path` を受ける**（`SungParams.Path`・`ExportTreeOf`＝Export と同じ）・`mixIn` は負の `at` のぶん声の頭を捨てて 0 から置く。網: `SungRequestTests.AFileNotOpen_IsSungByItsPath`（Sung／Export の網 641 / 641）・`voiceMix.test`「leaves out the head…」（npm 906 / 906）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5 Export・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7「右クリックの Export も歌う」。
+- 残り: 実機（オーナー・§3.7＝右クリックの MP4 に声・開いていない .lys も・声の入りが遅れない）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
+- 終了時 full **14860 / 0 / 2 / 14862**（`-End p1153 -DiffBase c02677001`＝`end.log`・門は全部 OK・§1 現在便 16,607 字＝残り 3,393・+1 本＝`AFileNotOpen_IsSungByItsPath`）。npm は 1 回目 905 / 906（`npmtest.log`＝新しい網の私の期待値が間違い: 声の後ろに `WAV_TAIL_S`＝2 s の尾が付くので file は伸びる）→ 期待値を直して **906 / 906**（`npmtest2.log`・実装は変えていない＝配布済みの build のまま）。§7 7.5: Core `+` 0・REF 0・OWN 0（Lsp の `SungParams.Path`・`GetSung` と拡張・docs）。7.6: 出所は `mp4repro.js` の実測とコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1152セッションの経緯
+
 ### 1.1 第1152セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14859 / 0 / 2**（`-Start p1152`・HEAD `7060f8e0c`・未 push 52・OMR の open 0）。同じ会話で第1151 から続けた便。オーナー報告「雪やこんこ.lys の L27（`lyrics verse sings melody`）をコメントアウトしても、再生ボタン上のマイクが消えない」。作業場所は Lab `sessions/p1152/`（`notes.md`・`probe/`）。
@@ -148,19 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 網: `check-types` 0・npm **905 / 905**（`npmtest.log`）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・editors CHANGELOG・MANUAL-CHECKS §3.7（「歌詞行をコメントアウト → マイクが消える」を足した）。
 - 残り: 実機（オーナー・§3.7＝点滅中に歌詞行をコメントアウトしても消えたまま）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
 - 終了時 full **14859 / 0 / 2 / 14861**（`-End p1152 -DiffBase 7060f8e0c`＝`end.log`・門は全部 OK・§1 現在便 16,173 字＝残り 3,827）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所はコードの読みと `probe/` の実測。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1151セッションの経緯
-
-### 1.1 第1151セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14857 / 0 / 2**（`-Start p1151`・HEAD `80765684b`・未 push 51・OMR の open 0）。同じ会話で第1150 から続けた便。オーナー報告「`corpora\ベースタブLy\雪やこんこ.lys` の score（`staff m2  lyrics verse sings melody`・`staff melody` は無い）はメロディの音符は描かずに歌を歌唱しないといけないのに、再生しても歌唱しない」。作業場所は Lab `sessions/p1151/`（`notes.md`）。
-
-- **原因＝不具合ではなく規則**: singing-design §3 は「譜表の無いパートの言葉は声にならない（ページがその音節を書かない）」と定めていた＝`SungStaves` は Sung に出さず、`SungSyllables.RowSungItem` は対象の譜表を探して見つけず、MIDI 書き出しの `_soundingParts`（score が描く・名指すパート）にも melody は無く、practice メニューの斜体 `melody`（Extra・既定オフ）だった。一方ページは `MeasureCollector.CollectMelodyFor`（LP の `\lyricsto` over NullVoice の形）で**メロディを集めて歌詞行をそのリズムに置いていた**＝音符は集めて捨てていた。
-- **オーナー決定 2026-11-09＝譜表の無いパートを歌う歌詞行は、そのパートを「見えない歌い手」にする**（描かない・楽器は鳴らさない・歌う）。
-- **直し（Core・LILYSHARP-OWN）**: `MultiStaffScore.RowMelodies`（internal・init＝行名 → (パート, 集めたメロディの小節)。`CollectMultiStaff` が `CollectMelodyFor` で置いた行だけ記録・空でなければ `with` で載せる）。`SungSyllables.Read` はその小節の printing も数え、`RowSungItem` は譜表に無ければそこへ落ちる。**`SungStaves.UnseenSungParts(root, spec)`**（行が歌う対象のうち宣言済みパートで譜表に無いもの・声名は除く）を `Of` が Sung の末尾に足し、`MidiExporter` が `_soundingParts` に union（代役の音＝midiInstrument／preset／Choir Aahs）。MusicXML は書く part が無いので変わらず（remark を直した）。**`.mid` にその melody のトラックが入るようになる**（歌う段の代役と同じ規則＝注記）。
-- **網**: `SungStavesTests`（`staff horn  lyrics verse sings melody` → ("melody", "horn")・声名の対象は unseen でない）・`SungRequestTests.APartNoStaffShows_IsSungUnseen_WhenARowSingsIt`（`score unseen { staff bass  lyrics verse sings melody }` → 声は melody の言葉・Sung=[melody]・Played=[bass]・Parts に melody・Extra 空）＝Sung／Sings／Lyric の網 526 / 526。**E2E**（`e2e.log`）: 実物の 雪やこんこ.lys を `lysc wav --singer`（NEUTRINO・MERROW）→ 既定 score は **`Voice: neutrino/MERROW sings melody (25 notes, 7.7 s)`**・`another`（`staff melody` だけ・歌詞行なし）は声なし。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §3・GRAMMAR の midiInstrument の注・CHANGELOG `[lyrics]`・editors CHANGELOG・MANUAL-CHECKS §3.7「譜表の無いメロディを歌う」。
-- 残り: 実機（オーナー・§3.7 の新しい行＝▶ で melody が声・`♪ melody` が並ぶ・斜体の melody は無い）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
-- 終了時 full **14858 / 1 / 2 / 14861**（`-End p1151 -DiffBase 80765684b`＝`end.log`・門は全部 OK・§1 現在便 16,914 字＝残り 3,086）。赤 1 は `ApproximationInventoryTests.TheInventoryIsNotStale`＝`SungStaves` の LILYSHARP-OWN の要約文を書き換えたので棚卸しが古くなった → `LILYSHARP_UPDATE_DOCS=1` で `docs/APPROXIMATIONS.md` を再生成（1 行・CRLF に直した）→ 単独緑（`inv2.log`）＝合計 **14861**（+2 本）。§7 7.5: Core `+` は `-End` が diff を取った時点で 0 と出るが、実際は `MultiStaffScore`・`MeasureCollector`・`SungSyllables`・`SungStaves`・`MidiExporter`・`MusicXmlExporter` の変更（REF 0・OWN の新しい印は 0＝既存の SungStaves の印の文を直しただけ）。7.6: 出所はコードの読みとオーナーの決定・E2E は実物の本と NEUTRINO。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

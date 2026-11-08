@@ -103,6 +103,27 @@ public class SungRequestTests
         Assert.Equal(melody.Select(n => n.T), voice.Notes.Select(n => n.T));
     }
 
+    /// <summary>The folder export sings files the editor never opened (session 1153: the Explorer's
+    /// Export as MP4 carried no voice): the request takes a path, as the export does.</summary>
+    [Fact]
+    public void AFileNotOpen_IsSungByItsPath()
+    {
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"lilysharp-sung-{Guid.NewGuid():N}.lys");
+        System.IO.File.WriteAllText(path, Doc);
+        try
+        {
+            var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+            var sung = server.GetSung(new SungParams { Path = path });
+            Assert.Null(sung.Error);
+            Assert.Equal("melody", Assert.Single(sung.Voices!).Part);
+            Assert.Equal("File not found: nowhere.lys", server.GetSung(new SungParams { Path = "nowhere.lys" }).Error);
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
+
     [Fact]
     public void AScoreWithNoWords_HasNoVoice()
     {
