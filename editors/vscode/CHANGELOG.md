@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Switching files no longer sings the previous one**: a Play right after a tab switch (or a change of score) sang the last file's voice over the new notes when the parts shared a name; the voices are dropped as the new notes are fetched, so that Play plays the instruments and the voice joins once it is ready (the microphone says when).
 - **A part whose notes touch is sung**: the score handed to the singing engine rounded each note's start and length apart, so at tempos whose sixteenths are repeating decimals (132) the next note began a ten-thousandth before the last one ended, and the engine refused the part ("note 22 at 6.364 s: starts before note 21 ends") — 雪やこんこ played its melody on the instrument. The ends are rounded now, so touching notes stay touching; `lysc wav --singer` the same.
 - **The preview says where the sung voice stands**: a small microphone over the corner of ▶, grey and pulsing while the engine sings the lyrics, blue when the voice is ready for Play, red when a part will not be sung (the reason in its tooltip); the practice menu's `♪ part` toggles carry the same sign (`…`, `✓`, `⚠`). Nothing is shown when the score has no sung voice. A click opens the practice menu.
 - **A reading in the lyrics is coloured**: the kana of `漢[かん]` as a string, its brackets as punctuation (the language's new reading syntax: the page prints the word, the voice sings the reading).

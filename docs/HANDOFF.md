@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1145セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14856 / 0 / 2**（`-Start p1145`・HEAD `96dbe8eea`・未 push 45・OMR の open 0）。同じ会話で第1144 から続けた便。オーナー報告「タブで .lys を切り替えてすぐプレビューの ▶ を押すと、直前の .lys の歌唱が鳴る」。作業場所は Lab `sessions/p1145/`。
+
+- **原因**: ページの声は**パート名**で引く（`voices.get('melody')`）。ページの ▶ は `requestPlayback` で新しい本の音を受け取ってすぐ鳴らし始めるが、新しい本の声は `singVoices`（`lilysharp/sung` の往復＋描画）の後に届く。同じ `melody` を持つ 2 冊なら古い WAV がそのまま当たる。第1143 の `voiceParts` は「新しい score が歌わない部」しか落とさないので、同名の部は残った。
+- **直し（host）**: `voiceDocs`（panel → `uri\nrender`）。`requestPlayback` で文書か score が替わっていたら `postedVoices` を捨てて **`clearVoices` を `playbackData` より先に post**（順序どおりに届く）＝その ▶ は楽器・新しい声はできしだい送り直される（マイクが灰→青）。同じ本の編集では声を保つ。npm 896 / 896・`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・MANUAL-CHECKS §3.7・editors CHANGELOG。
+- 残る小さな親戚（直していない）: 同じ本を編集した直後の ▶ は、新しい声ができるまで編集前の声を鳴らしうる（同名・同文書）。
+- 残り: 実機（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
+- 終了時 full **14856 / 0 / 2 / 14858**（`-End p1145 -DiffBase 96dbe8eea`＝`end.log`・門は全部 OK・§1 現在便 15,586 字＝残り 4,414）。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6: 出所はオーナー報告の再現。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1144セッションの経緯
+
 ### 1.1 第1144セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14855 / 0 / 2**（`-Start p1144`・HEAD `78e2be3eb`・未 push 44・OMR の open 0）。同じ会話で第1143 から続けた便。オーナー報告「`corpora/ベースタブLy/雪やこんこ.lys` の score の歌が出ない: melody: not sung — note 22 at 6.364 s: starts before note 21 ends (6.364 s)」。作業場所は Lab `sessions/p1144/`。
@@ -147,17 +159,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **配布**: Cantilena は `deploy-extension.ps1`（動いていた engine を止めて win32-x64 0.4.0 を入れ直し）・Lily# は `Deploy-Lsp.ps1`。**E2E**: `lysc wav --singer`＋入れ直した cantilena.exe（NEUTRINO）で雪やこんこが **`Voice: cantilena sings melody (25 notes, 8.0 s)`**＝警告なし。オーナーは Reload Window。docs: singing-design §3・Cantilena design §2・両 CHANGELOG。
 - 残り: 実機で雪やこんこの ▶（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
 - 終了時 full **14856 / 0 / 2 / 14858**（`-End p1144 -DiffBase 78e2be3eb`＝`end.log`・門は全部 OK・§1 現在便 16,091 字＝残り 3,909）。§7 7.5: `-End` は commit 前の diff なので Core `+` 0 と出るが、実際は `Audio/SingingEngine.cs` の丸めの 4 行（REF 0・OWN 0＝規則は数の丸め）。7.6: 出所はオーナー報告の再現。7.7: なし。この commit と Lab・Cantilena の commit は Claude・push はオーナー。
-
-## 以下は第1143セッションの経緯
-
-### 1.1 第1143セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14855 / 0 / 2**（`-Start p1143`・HEAD `466d94e36`・未 push 43・OMR の open 0）。同じ会話で第1142 から続けた便。オーナー「この UI は悪くない、なかなか良い。でも score に歌詞がない場合にはマイクを消してほしい」。作業場所は Lab `sessions/p1143/`。
-
-- **原因**: page の `voiceStates`（と `voices` の WAV）は `voiceState`／`voice` が届いて増えるだけで、消すのは engine が替わったときの `clearVoices` だけ＝歌詞の無い score や本に切り替えても古い部が残り、マイクが出たままだった。
-- **直し**: host の `singVoices` が `lilysharp/sung` の答えを得るたびに **`voiceParts`**（今この score が歌うパート＝音のある声）を post し、page の `keepVoices(parts)` が一覧に無い部の声と状態を落として描き直す（空なら全部消える）。`lilysharp/sung` が Error（本が通らない）のときは何も送らない＝一時的なエラーで消さない。npm 896 / 896・`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・MANUAL-CHECKS §3.7。
-- 残り: マイクの最終確認（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
-- 終了時 full **14855 / 0 / 2 / 14857**（`-End p1143 -DiffBase 466d94e36`＝`end.log`・門は全部 OK・§1 現在便 15,429 字＝残り 4,571）。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6・7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

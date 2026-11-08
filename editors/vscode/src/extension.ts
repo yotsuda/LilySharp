@@ -1683,6 +1683,17 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     panel.webview.postMessage({ type: 'playbackData', error: 'language server not running' });
                     return;
                 }
+                // Another file, or another score of it: the page's voices are the last one's, kept
+                // by PART NAME, and a Play right after the switch would sing them over the new notes
+                // (owner's report 2026-11-08: the previous .lys's voice). Cleared before the notes
+                // go out — the messages arrive in order — so this Play plays the instruments, and
+                // singVoices below sends the new file's voices as they are ready.
+                const voiceDoc = `${uri}\n${selectedRenders.get(uri) || ''}`;
+                if (voiceDocs.get(panel) !== voiceDoc) {
+                    voiceDocs.set(panel, voiceDoc);
+                    postedVoices.delete(panel);
+                    panel.webview.postMessage({ type: 'clearVoices' });
+                }
                 try {
                     // Name the score the preview is showing, so Play sounds ITS parts and
                     // form: with `score p2 { staff p2 }` picked, p1 stayed audible
@@ -3819,6 +3830,8 @@ function disposeSinger(): void {
 
 /** The voices each preview holds, part → key: a voice already there is not sent again. */
 const postedVoices = new WeakMap<vscode.WebviewPanel, Map<string, string>>();
+/** The document and score each preview's voices are of (`uri\nrender`): another one empties them first. */
+const voiceDocs = new WeakMap<vscode.WebviewPanel, string>();
 /** What was said once per preview (a warning of the server's, a voice that was not sung). */
 const singerTold = new WeakMap<vscode.WebviewPanel, Set<string>>();
 function tellSingerOnce(panel: vscode.WebviewPanel, text: string): void {

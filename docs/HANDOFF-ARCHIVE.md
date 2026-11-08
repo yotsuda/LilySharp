@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1143セッションの経緯
+
+### 1.1 第1143セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14855 / 0 / 2**（`-Start p1143`・HEAD `466d94e36`・未 push 43・OMR の open 0）。同じ会話で第1142 から続けた便。オーナー「この UI は悪くない、なかなか良い。でも score に歌詞がない場合にはマイクを消してほしい」。作業場所は Lab `sessions/p1143/`。
+
+- **原因**: page の `voiceStates`（と `voices` の WAV）は `voiceState`／`voice` が届いて増えるだけで、消すのは engine が替わったときの `clearVoices` だけ＝歌詞の無い score や本に切り替えても古い部が残り、マイクが出たままだった。
+- **直し**: host の `singVoices` が `lilysharp/sung` の答えを得るたびに **`voiceParts`**（今この score が歌うパート＝音のある声）を post し、page の `keepVoices(parts)` が一覧に無い部の声と状態を落として描き直す（空なら全部消える）。`lilysharp/sung` が Error（本が通らない）のときは何も送らない＝一時的なエラーで消さない。npm 896 / 896・`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・MANUAL-CHECKS §3.7。
+- 残り: マイクの最終確認（オーナー）・前の便の残り（Cantilena の公開・Linux／mac で聴く・ローマ字→かな・lesson-07 の読み）。
+- 終了時 full **14855 / 0 / 2 / 14857**（`-End p1143 -DiffBase 466d94e36`＝`end.log`・門は全部 OK・§1 現在便 15,429 字＝残り 4,571）。§7 7.5: Core `+` 0（エディタの TypeScript と docs だけ）。7.6・7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1142セッションの経緯
 
 ### 1.1 第1142セッション（2026-11-08・YT-DELL2）
