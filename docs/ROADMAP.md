@@ -18,6 +18,16 @@ A command and `lysc review` do the same without an AI. The review adds key check
 against the key written, notes outside the key, spelling by direction, and chords outside the
 scale. The design and the order of work are in `docs/review-tool-design.md`.
 
+### Singing the lyrics (proposed 2026-11-08, the owner's request)
+
+The preview sings a part's words instead of playing its preset: the server resolves the sung
+part to a score in seconds (`lilysharp/sung`), a separate engine — Cantilena, the owner's
+Apache-2.0 repository, driving the user's own NEUTRINO today — renders a voice, and the webview
+plays it beside the sound font; exports mix it in. Nothing is linked and no voice is shipped:
+`lilysharp.playback.singer` names the engine as `soundFont` names a font. The design, the
+stages and the owner's open questions (kana for kanji lyrics, a choir, replace or double the
+instrument) are in `docs/singing-design.md`.
+
 ### Page-turn check (proposed 2026-10-25)
 
 Whether each page ends where the player can turn — on a rest, or a held note — and a mark where

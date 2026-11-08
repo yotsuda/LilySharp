@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1122セッションの経緯
+
+### 1.1 第1122セッション（2026-11-07・YT-DELL2）
+
+開始時 full **14783 / 0 / 2**（`-Start p1122`・HEAD `4a94dd77b`・未 push 5・OMR の open は 0）。同じ会話で第1121 から続けた便。オーナー「続けて」→ 候補 2 つを訊き **「grace の `@cross`」**（§2 U8 の最後の残り）を選んだ。作業場所は Lab `sessions/p1122/`。
+
+- **規則＝全部の音が `@cross` を書く grace 群は隣の譜に立つ・一部だけなら動かさず LYS4020**（LP の `\grace { \change Staff = "lh" d8 \change Staff = "rh" }` と同じ形。grace の連桁は 1 本で、譜をまたぐ膝の grace 連桁は描かないので「群ごと」が単位）。1 つの述語 `GraceBodySupport.AllColumnsWriteCross`（音・和音・ドラムの列全部が `@cross`・休符は数えない・1 列以上）を collector（`ProcessGraceRegion` → `VoiceState.GraceAllCross`）と LYS4020（`Drops` → 混在は `GraceDropKind.CrossPartial`「whole or not at all」）が読む。
+- **配管は既存の `@cross` の道に乗せた**: ⑴ `DecorateSoundingItem`／`CollectCrossStaff` の「grace 時間は飛ばす」門を `GraceAllCross` で開ける ⑵ **`MeasureBuilder.NarrowToGraceTime` が `CrossWritten` を落としていた**（grace 項目を作り直す腕＝最初の探りで絵が動かなかった原因）→ 音・和音とも運ぶ ⑶ `MoveCrossStaffNotes` は grace 項目も普通の音と同じく動かす（`CrossStaffIndex`・移る先の音部記号で位置を読み直す）。ただし `CrossedIn` には入れない（列の walk ではなく grace の鎖が輪郭に入れる）。主音符の `LeadingGrace`（grace engraver が置く写し）は **`SyncMovedLeadingGrace`** が順番で頭ごとに位置と臨時記号を写す（`StaffAccidentals.SyncLeadingGrace` は位置で突き合わせるので移動後は合わない） ⑷ **`GraceNoteItem.CrossStaffIndex`／`DrawnStaffIndex`**（`StampMovedGraceRuns`＝`SyncGraceNotes` の後・列の項目の `CrossStaffIndex` から）。群を作り直す 4 か所（`SyncGraceNotes`・companions・tab の字・accidental の列）が写す ⑸ `GraceNoteEngraver.Calculate` は描く譜（`DrawnStaffIndex`）の Y オフセットと tab 判定を読み、`GraceNoteLayout.CrossStaffIndex`／`DrawnStaff` を描画器へ（`SharedRenderer.DrawGraceNotes` の連桁と ossia の affine）。頭・加線・臨時記号・旗・単独の符尾は普通の pass が `MiddleYOf(item)` で既に移る先に描く ⑹ 輪郭: `SkylineBuilder.GraceSeedsFor` は「描かれる譜」で選び、他の譜の voice の群は **`GraceSeeds.Foreign`**（項目と X）として `AddStaffToSkylines` が walk の後に同じ箱で入れる（呼び手 3 か所に `staffOf`）。元の譜の walk は `CrossStaffIndex` のある項目を飛ばす（既存）。
+- **実測**: `sessions/p1122/probe/gx1.lys`（rh の bar 2 に `grace { d'8@cross }`・lh の bar 3 に `grace { e8@cross f8@cross }`）を LP 2.26.0 の自前の png（`gx1-lp.png`・双子は前から `\change Staff` を書く）と並べ、d' は下の譜の +7（treble の −5 から +12）に加線つき・e f は上の譜の下に連桁つき＝同じ形（目視・位置は模型どおり・数字の照合はしていない）。LYS4020 は 3 → 0。
+- **網**: `GraceBodyValidatorTests.ACrossStaffMarkOnEveryGraceNote_MovesTheRun_AndIsNotReported`（警告 0・ページが対照と違う・群の `CrossStaffIndex` 1・頭 +7／対照は −1 と −5）・`…OnSomeGraceNotes_IsReported_AndTheRunStaysOnItsStaff`。旧 `ACrossStaffMarkOnAGrace_IsReported_AndTheGraceStaysOnItsStaff` は退役。⚠️ 網の罠: `LiveRender.Svg` は `Collect(tree)`＝1 voice の道で grandStaff を描かない → `SvgFromRenderSpec` を使う（旧網はそれで「ページが同じ」と言えていた）。
+- ⚠️ 残り・注: ⒜ 移った grace に付くスラー・タイ・記号・運指は元の譜の枠で置かれる（第1093 ⑴ の第1112 前と同じ族・本 0）／⒝ 単一譜の本で grace に `@cross` を書くと、動かず警告も出ない（LYS4031 は普通の音の話＝要ユーザー判断のまま・第957 の棚）／⒞ GRAMMAR.md の Grace の注と CHANGELOG 両方を書いた。
+- **毒 4 本全部赤**（`sessions/p1122/poisons.ps1`＝述語が常に偽／群に描く譜を刻まない／`NarrowToGraceTime` が旗を落とす／walk が grace に旗を立てない・`poison1..4.log`）。**掃き（base `4a94dd77b`）: 1036 冊・1262 枚で動いた svg 0**（コーパスに grace の `@cross` は無い）。**commit `7b5d0cc9a`**（Core 14 ファイル＋網 1＋GRAMMAR＋CHANGELOG 2）。終了時 full **14784 / 0 / 2**（`-End p1122 -DiffBase 4a94dd77b`＝`end.log`・門は全部 OK）。§7 7.5: Core `+274` 行・REF 0・OWN 0＝新しい近似なし（LP の `\change Staff` の形を既存の `@cross` の道に乗せただけ・数字の照合は未）。この docs commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1121セッションの経緯
 
 ### 1.1 第1121セッション（2026-11-07・YT-DELL2）

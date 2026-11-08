@@ -65,6 +65,39 @@ c4 d4";
     }
 
     [Fact]
+    public void AScoreBlocksHeader_IsItsOwn_AndTheDefaultScoreKeepsTheFiles()
+    {
+        // Until 2026-11-08 the metadata pass read every score's `title` and the LAST in the file
+        // won, so the default score's MusicXML carried `score another { title … }`'s title
+        // (session 1124: 雪やこんこ.xml said 別の楽譜 / ふがふが).
+        var source = """
+            title "Snow"
+            composer "A"
+            part m { clef treble }
+            section A { m { c'4 d' e' f' | } }
+            form { A }
+            score { staff m }
+            score another { title "Other" composer "B" staff m }
+            """;
+        var tree = SyntaxTree.Parse(source);
+        var scores = LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree);
+        Assert.Equal(2, scores.Count);
+
+        var first = new MusicXmlExporter { Score = scores[0], Form = scores[0].Form }.Export(tree);
+        Assert.Equal("Snow", first.Title);
+        Assert.Equal("A", first.Composer);
+
+        var other = new MusicXmlExporter { Score = scores[1], Form = scores[1].Form }.Export(tree);
+        Assert.Equal("Other", other.Title);
+        Assert.Equal("B", other.Composer);
+
+        // No score named: the first is written, with the file's header.
+        var unnamed = new MusicXmlExporter().Export(tree);
+        Assert.Equal("Snow", unnamed.Title);
+        Assert.Equal("A", unnamed.Composer);
+    }
+
+    [Fact]
     public void ExportWithComposer()
     {
         var source = @"

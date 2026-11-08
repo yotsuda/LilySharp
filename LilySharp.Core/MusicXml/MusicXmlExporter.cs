@@ -1050,7 +1050,13 @@ public sealed class MusicXmlExporter
             switch (node)
             {
                 case MetadataDeclarationSyntax metadata:
-                    ProcessMetadata(metadata);
+                    // A score block's `title` / `composer` is that score's own header
+                    // (RenderSpec.HeaderOverrides), applied below for the score being written.
+                    // Until 2026-11-08 every score's was read here and the LAST in the file
+                    // won: the default score's MusicXML carried `score another { title … }`'s
+                    // title (session 1124, Lab sessions/p1124/utau/xml).
+                    if (!IsInsideAScoreBlock(metadata))
+                        ProcessMetadata(metadata);
                     break;
                 // ⚠️ ONLY THE TOP-LEVEL ONES. This pass runs to the end of the file before a
                 // single note is written, so an unguarded case left the document's opening
@@ -1088,6 +1094,22 @@ public sealed class MusicXmlExporter
                     break;
             }
         }
+        // LAST, so it wins: the written score's own header, the collector's road
+        // (MeasureCollector.CollectDefinitions applies HeaderOverrides after its file-level
+        // walk). A score that restates one of the two keeps the file's other.
+        if (_playedSpec is { HeaderOverrides: { IsDefaultOrEmpty: false } overrides })
+            foreach (var meta in overrides)
+                ProcessMetadata(meta);
+    }
+
+    /// <summary>True when <paramref name="node"/> stands inside a <c>score</c> block — whose
+    /// header is read through <see cref="RenderSpec.HeaderOverrides"/>, never from the file walk.</summary>
+    private static bool IsInsideAScoreBlock(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is RenderDeclarationSyntax)
+                return true;
+        return false;
     }
 
     private void ProcessSections(SyntaxNode root)

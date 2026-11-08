@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A score block's title is its own in the MusicXML export**: with several scores in a file, the title and composer of the last `score X { title "…" }` no longer reach the other scores' files; a score that restates neither keeps the file's header.
 - **A chord row's bar is read in the meter of that bar**: a `time` written inside a section's music moves the bar's length and its slot grid from there, in the preview, the sound, the MusicXML and the LilyPond export alike. `G . A` under a 3/4 bar no longer warns LYS2009 or sounds a beat late.
 - **A flat chord track in a book with no form follows its sections' pickup and meter** in the LilyPond export.
 - **A chord row longer than the music goes on in the preview and the MusicXML**: the staves are padded with empty bars up to the row, as the sound already played them.
