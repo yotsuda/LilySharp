@@ -218,7 +218,7 @@ public static class CompositionChecks
         var bandBasses = band
             ? parts.Where(p => RoleOf(p).Bass).Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)
             : [];
-        var melodies = MelodiesOf(source, parts, hands, band);
+        var melodies = MelodiesOf(source, parts, hands, band, midi);
         var barList = midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b).Prepend(0).ToList();
         // A band's instrumental: the bars where each part over the bass plays a line (said below when
         // there are few), and the part playing them its melody, held to a melody's rhythm (owner's
@@ -556,6 +556,7 @@ public static class CompositionChecks
                     + $"({PartRanges.SpelledFromPitch(over[0].Low, fifths)} to {PartRanges.SpelledFromPitch(over[0].High, fifths)} in bar {over[0].Bar}): a hand's "
                     + "figure stays within an octave and a half, climbing from its bass by the chord's tones and turning back.") { Parts = [lefts[0]], Bars = [.. over.Select(o => o.Bar)] });
         }
+        findings.AddRange(WideChords(source, root, midi, hands.Keys, barList, fifths));
 
         findings.AddRange(Clashes(midi, melodies, barList, fifths, SwungBlueNotes(root)));
         findings.AddRange(LowChords(midi, barList, fifths));
@@ -1438,7 +1439,11 @@ public static class CompositionChecks
         if (Opening(chorus.Start, out int chorusBar) is not { } hook)
             yield break;
         // Another chorus (a FinalChorus) opens as the chorus does by right.
-        static bool IsChorusName(string name) => System.Text.RegularExpressions.Regex.IsMatch(name, "chorus|sabi|refrain|hook", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        // …and so does the chorus named again with a number, B and B2 (owner's trial 2026-11-08: a choir's
+        // last chorus, B2, louder over a fuller piano, was told the chorus opened with its phrase).
+        static string Stem(string name) => System.Text.RegularExpressions.Regex.Replace(name, @"[\d'_-]+$", "").ToLowerInvariant();
+        bool IsChorusName(string name) => Stem(name) == Stem(chorus.Name)
+            || System.Text.RegularExpressions.Regex.IsMatch(name, "chorus|sabi|refrain|hook", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         foreach (var (name, start, _) in PlayedSpans(midi))
         {
             if (name == chorus.Name || IsChorusName(name) || Opening(start, out int bar) != hook)
@@ -1738,6 +1743,46 @@ public static class CompositionChecks
                 // Owner's review 2026-11-02: 雨音の午後, drawn an intro on its figure and told of it, took the figure and the
                 // pedal out of its intro and coda, and the pedal was lost from the coda's harmony.
                 + (figures.Any(f => FrameSection.IsMatch(f.Name)) ? " An intro or a coda may keep the figure: the change belongs in the sections between them." : "")) { Parts = [part.Key] };
+        }
+    }
+
+    /// <summary>The widest chord one hand strikes: a major tenth, which a large hand just reaches.</summary>
+    private const int WidestHandChord = 16;
+
+    /// <summary>
+    /// A chord one piano hand strikes wider than <see cref="WidestHandChord"/> — no hand reaches it
+    /// (owner's question 2026-11-07: a theme and variations' left hand struck F♯1 F♯2 A♯3 and B1 B2 F♯3,
+    /// its top note an octave above what it meant: written absolute, <c>&lt;fis,, fis, ais&gt;</c> for <c>ais,</c>).
+    /// A rolled chord (`@arpeggio`) is played from the bottom up and may be wider; a written-out
+    /// broken chord is not struck at once.
+    /// </summary>
+    private static IEnumerable<CompositionFinding> WideChords(string source, SyntaxNode root, MidiFile midi, IEnumerable<string> hands, List<int> barList, int fifths)
+    {
+        var rolled = root.DescendantNodes<ChordSyntax>()
+            .Where(c => System.Text.RegularExpressions.Regex.IsMatch(c.ToFullString(), @"@arpeggio(?!\s*\(\s*bracket)"))
+            .Select(c => c.Span.Start).ToHashSet();
+        foreach (var hand in hands)
+        {
+            var wide = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && !n.IsGrace && (n.Part ?? t.Name) == hand))
+                // One voice's chord: a staff's two voices struck together may be two hands — Chopin's E minor
+                // prelude ends with the right hand's chord over the left hand's octave on the bass staff.
+                .GroupBy(n => (n.StartTick, n.Voice))
+                .Where(g => g.Count() >= 2 && !g.Any(n => rolled.Contains(n.SourcePos)))
+                .Select(g => (Tick: g.Key.StartTick, Low: g.MinBy(n => n.Pitch), High: g.MaxBy(n => n.Pitch)))
+                .Where(c => c.High.Pitch - c.Low.Pitch > WidestHandChord)
+                .OrderBy(c => c.Tick).ToList();
+            if (wide.Count == 0)
+                continue;
+            string Name(MidiNote n) => PartRanges.WrittenName(source, n.SourcePos, n.Pitch) ?? PartRanges.SpelledFromPitch(n.Pitch, fifths);
+            var bars = wide.Select(c => barList.Count(b => b <= c.Tick)).Distinct().ToList();
+            var first = wide[0];
+            int chords = wide.Select(c => c.Tick).Distinct().Count();
+            yield return new("piano.chord-wide", $"{hand}: {chords} {(chords == 1 ? "chord" : "chords")} wider than a hand reaches ({Name(first.Low)} to {Name(first.High)} in bar {bars[0]}"
+                + (bars.Count > 1 ? $" first; bars {string.Join(", ", bars.Take(6))}{(bars.Count > 6 ? ", …" : "")}" : "")
+                + ", as the form plays them) — one hand strikes a chord within an octave, a ninth at most; a wider sound is shared "
+                + "between the hands, or its bass is struck first and the chord after it. Is its top note an octave too high? In "
+                + "absolute octaves each note of a chord says its own octave: F♯1 F♯2 A♯2 is `<fis,, fis, ais,>`, not `<fis,, fis, ais>`.")
+                { Parts = [hand], Bars = bars };
         }
     }
 
@@ -2513,10 +2558,22 @@ public static class CompositionChecks
     /// else a piano's right hand.
     /// </summary>
     private static HashSet<string> MelodiesOf(string source, IReadOnlyList<PartDeclarationSyntax> parts,
-        IReadOnlyDictionary<string, bool> hands, bool band)
+        IReadOnlyDictionary<string, bool> hands, bool band, MidiFile? midi = null)
     {
         var sung = System.Text.RegularExpressions.Regex.Matches(source, @"\blyrics\s+\w+\s+sings\s+(\w+)")
             .Select(m => m.Groups[1].Value).ToHashSet(System.StringComparer.Ordinal);
+        // A choir — three voices or more singing words — has its tune in the top voice; the voices under
+        // it sing the harmony, a bass leaping by its roots (owner's trial 2026-11-08: a mixed choir's
+        // tenor and bass, humming whole notes under a verse, were told their rhythm and their leaps as
+        // the melody's). A duet's two singers are both its tune.
+        if (sung.Count >= 3 && midi != null)
+        {
+            var middles = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.Pitch)))
+                .Where(n => sung.Contains(n.Part)).GroupBy(n => n.Part)
+                .Select(g => (Part: g.Key, Middle: g.Select(n => n.Pitch).Order().ElementAt(g.Count() / 2))).ToList();
+            if (middles.Count > 0)
+                return [middles.MaxBy(m => m.Middle).Part];
+        }
         if (sung.Count > 0)
             return sung;
         // Beside a piano only (owner's trial 2026-10-29: in strings with drums, every string — the

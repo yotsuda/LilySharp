@@ -471,6 +471,23 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Piece("clarinet", 15)), f => f.Contains("without a rest"));
     }
 
+    // Owner's question 2026-11-07: a theme and variations' left hand struck F♯1 F♯2 A♯3, written
+    // `<fis,, fis, ais>` for `ais,` — no hand reaches it, and the review said nothing.
+    [Fact]
+    public void AChordWiderThanAHandReaches_IsSaid_UnlessRolled()
+    {
+        static string Piece(string chord) => $"title \"Reach\"\ntime 4/4\noctave absolute\n{Hands}\nsection A {{\n"
+            + "  rh { c''2@p d''2 | e''2 d''2 | c''1 | }\n"
+            + $"  lh {{ c2@p g,2 | {chord} | c1 | }}\n}}\nform {{ A }}\nscore {{ grandStaff {{ staff rh  staff lh }} }}\n";
+        var wide = Assert.Single(CompositionChecks.Of(Piece("<fis,, fis, ais>1")), f => f.StartsWith("lh: 1 chord wider than a hand reaches"));
+        Assert.Contains("(F♯1 to A♯3 in bar 2", wide);
+        // A tenth is reached; a rolled chord is played from the bottom up.
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("<fis, ais>1")), f => f.Contains("wider than a hand reaches"));
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("<fis,, fis, ais>1@arpeggio")), f => f.Contains("wider than a hand reaches"));
+        // Two voices struck together may be two hands, as at the end of Chopin's E minor prelude.
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("voice { <e fis b>1 } { <b,, b,>1 }")), f => f.Contains("wider than a hand reaches"));
+    }
+
     // Owner's trials 2026-11-07: two wind quintets' clarinets rocked in broken chords under the tune, a
     // pastorale's cradle, and were told "91% eighth notes" twice.
     [Fact]
@@ -511,6 +528,41 @@ public class CompositionChecksTests
             f => f.StartsWith("singer, the melody: the chorus (Chorus) opens with Verse's first phrase, note for note (bars 1–2 and 9–10, as the form plays them)"));
         // One note changed: its own opening.
         Assert.DoesNotContain(CompositionChecks.Of(Hook(P + Q + Q + Q, "a'8 b'8 c''4 e''2 | d''4 c''2 r4 | " + R + R + R)), f => f.Contains("opens with Verse's first phrase"));
+    }
+
+    // Owner's trial 2026-11-08: a mixed choir's tenor and bass, humming whole notes under the verse and
+    // leaping by the roots, were told their rhythm and their leaps as the melody's.
+    [Fact]
+    public void AChoirsLowerVoices_AreNotHeldToTheMelodysRules()
+    {
+        string bars(string bar) => string.Concat(Enumerable.Repeat(bar + " ", 8));
+        string choir = "title \"Choir\"\ntime 4/4\noctave absolute\n"
+            + "part s { instrument soprano }\npart a { instrument alto }\npart t { instrument tenor }\npart b { instrument voice-bass }\n"
+            + "section A {\n"
+            + "  s { " + bars("e'4 f'8 g'8 a'4 g'4 |").TrimEnd() + " }\n"
+            + "  a { " + bars("c'4 d'8 e'8 f'4 e'4 |").TrimEnd() + " }\n"
+            + "  t { " + bars("g1 |").TrimEnd() + " }\n"
+            + "  b { " + bars("c4 g,4 c4 g,4 |").TrimEnd() + " }\n"
+            + "  lyrics w sings s { " + bars("la la la la la |").TrimEnd() + " }\n"
+            + "  lyrics x sings a { " + bars("la la la la la |").TrimEnd() + " }\n"
+            + "  lyrics y sings t { " + bars("n |").TrimEnd() + " }\n"
+            + "  lyrics z sings b { " + bars("la la la la |").TrimEnd() + " }\n"
+            + "}\nform { A }\nscore { choirStaff { staff s lyrics w staff a lyrics x staff t lyrics y staff b lyrics z } }\n";
+        var findings = CompositionChecks.Of(choir);
+        Assert.DoesNotContain(findings, f => f.StartsWith("t, the melody") || f.StartsWith("b, the melody") || f.StartsWith("a, the melody"));
+    }
+
+    // Owner's trial 2026-11-08: a choir's last chorus, B2 — the chorus B again, louder over a fuller
+    // piano — was told the chorus opened with B2's first phrase.
+    [Fact]
+    public void TheChorusNamedAgainWithANumber_OpensAsTheChorusByRight()
+    {
+        string song = "title \"Hook\"\ntime 4/4\noctave absolute\npart singer { instrument alto }\n"
+            + "section A {\n  singer { " + Q + X + Q + X + "}\n  lyrics w sings singer { la la | }\n}\n"
+            + "section B {\n  singer { " + R + P + R + P + "}\n}\n"
+            + "section B2 {\n  singer { " + R + P + R + "a'4 g'4 f'2 | e'1 | }\n}\n"
+            + "form { A B A B B2 }\nscore { staff singer  lyrics w }\n";
+        Assert.DoesNotContain(CompositionChecks.Of(song), f => f.Contains("opens with"));
     }
 
     [Fact]

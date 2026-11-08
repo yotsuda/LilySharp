@@ -142,6 +142,7 @@ public static class ReviewNotes
         ["piano.hand-register"] = new(M, D, "A pianist's left hand lies round C3 and the right round C5. Far from there, an octave mark has often slipped.", "The register is the effect meant."),
         ["piano.hands-apart"] = new(S, D, "With the hands far apart the middle of the keyboard is empty, and the sound is thin and hollow.", "The hollow sound is the effect meant."),
         ["piano.left-reaches-melody"] = new(S, D, "A left-hand figure on the melody's own note or above it hides the melody.", "A hand crossing is written as a figure of its own."),
+        ["piano.chord-wide"] = new(M, H, "A hand spans an octave, a ninth or a tenth at most. A chord struck wider cannot be played as written, and its top note is usually an octave mark slipped.", "The chord is meant to be rolled: write `@arpeggio` on it."),
         ["piano.figure-wide"] = new(S, D, "A hand's figure usually stays within an octave and a half. Wider, it needs the pedal and a jump.", "A virtuoso texture is meant."),
 
         // Voicing and spelling

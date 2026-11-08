@@ -8,6 +8,12 @@ from the grammar so that Ask AI, which edits a score, is not sent it (owner's de
 **"Compose a piece" / "write it for a string quartet, …"** — a new piece is a whole file, and
 it should sound like the ensemble asked for.
 
+**Answer each reply within five minutes, thinking included.** A long think can be cut off by the
+connection, and the whole reply is lost — the musician waits and gets nothing.
+Five minutes is roughly 30,000 tokens of thinking: think about this step only, and leave the next
+step to its own reply. (Owner's trials 2026-11-08: a choir piece thought over whole before its plan was
+cut off three times running, half an hour lost each time it was asked.)
+
 **These are a composer's habits, not a form to fill** (owner's wish 2026-10-29: rules held too
 tight make every piece the same). Any of them may be broken where the piece is better for it — the
 plan says which and why. Compose with pleasure: write a piece you would enjoy hearing, with
@@ -15,7 +21,9 @@ choices of your own — a key, a meter, a colour, a turn the listener does not e
 
 **Start in absolute octaves**: a new piece begins with `octave absolute` (and `pitch concert`) at
 the top of the file, before anything else — every pitch then says where it sounds (`c'` is middle
-C), and a slip stays one note instead of carrying every note after it away. Without that line every
+C), and a slip stays one note instead of carrying every note after it away. Inside a chord too each
+note says its own octave, not its distance from the note before: F♯1 F♯2 A♯2 is `<fis,, fis, ais,>`
+(`<fis,, fis, ais>` would put the A♯ an octave higher, out of the hand's reach). Without that line every
 pitch is read relative to the one before it, and pitches written as absolute fly off by octaves
 (owner's report 2026-10-29: a piece composed in Copilot's chat did just that).
 
@@ -26,29 +34,43 @@ decide; how, the rest of this guide says. (Owner's trials 2026-10-29: a piece pl
 padded itself out to 32 bars, copied its "A′" from A, never wrote its theme into a bar, had phrases
 that did not answer and no high point, and planned its coda quiet and wrote it loud; the plan below
 was what mended them, and it went missing from the chat's composing until 2026-11-07.)
+The plan is the piece's shape, a page — not the piece: do not compose its sections in your head
+before you write it. Each section's detail is decided in its own step, its section notes (below).
+(Owner's trials 2026-11-08: asked to plan every bar's chord, every phrase's notes and every line
+of the words up front, a choir piece was composed whole in thought before its plan — ten minutes
+of thinking, a reply all but cut off.)
 - **LENGTH AND FORM** — the sections and their bars (about 24 to 32 bars unless the request gives a
   length, or what the piece needs); a section that comes back as it was is named again in the form
   (`form { A B A Coda }`), never copied.
 - **KEY, METER, TEMPO** — and a key change, if any: its bar, the chord that prepares it, the way home.
-- **HARMONY** — every phrase's chords, bar by bar, and its cadence; where it is coloured (a
-  secondary dominant, a borrowed chord, a deceptive cadence) — or that the style keeps it plain.
+- **HARMONY** — each section's progression in one line and its cadence (half, full, deceptive); where it is coloured (a
+  secondary dominant, a borrowed chord, a deceptive cadence) — or that the style keeps it plain. The bars
+  of each chord are the section notes'.
 - **THEME** — its one or two bars WRITTEN OUT in this file's notes, its rhythm with them
   (`fis''2 e''8 d''8 | d''4 b'4 g''4 |`), and the bars where it comes back.
-- **PHRASES** — for each phrase its bars, the note it starts on, its highest note and the note it
-  ends on over its cadence (a pair answering, as *Phrases that answer* says).
+- **PHRASES** — how the phrases pair (which asks, which answers, as *Phrases that answer* says) and
+  the range the melody climbs to in each section.
 - **CLIMAX** — its bar and note, and how the dynamics lead there and away.
 - **PARTS** — what each part does in each section (melody, bass line, inner parts, the accompaniment
   figure and its rhythm) and its register, as sounding pitches (C4 = middle C) AND as you will write
   them (a right hand round C5, D4–A5, is written `d'` – `a''`); a countermelody, if any, and the
   bar of its own peak.
-- **DYNAMICS** — the level each phrase starts at and the hairpins between.
+- **DYNAMICS** — the level each section starts at and where it swells or falls.
 - **CHARACTER** — each device of the character asked for, how it is written and the bars it is in
   (`@sf` in bar 13, a tremolo `d'2:32` in bars 14–15, …).
-- **WORDS** (a song only) — each line of the words written out WHOLE first, its sung units counted;
-  then the phrase that sings it, given that many notes (*A song with words*).
+- **WORDS** (a song only) — what each section's words say, in a line, and the chorus's first line
+  written out WHOLE: the hook the song is remembered by.
 - **ENDING** — in the home key, on a held tonic chord, at the dynamic planned for it.
 
-Then write the piece to the plan: the theme in the bars the plan names, the climax where it says,
+**Section notes, then the section.** Write the piece a section at a time, each in its own step. Just
+before you write a section's music, put its section notes in your reply, short lines: its chords bar by
+bar and its cadence; for each phrase its bars, the note it starts on, its highest note and the note
+it ends on over its cadence; its dynamics phrase by phrase; and in a song each line of its words
+written out WHOLE first, its sung units counted, then the phrase that sings it, given that many notes
+(*A song with words*). Then write that section to them, and think of the next section only in its own
+step.
+
+Write the piece to the plan: the theme in the bars the plan names, the climax where it says,
 the dynamics as planned. Where the piece turns out better another way, change the plan, not only the
 notes.
 
@@ -359,7 +381,9 @@ What makes it music:
   left hand may keep one note value through a section: its figure is the rhythm; the melody is
   where the rhythm varies. A contrasting section takes a figure of its own. A broken-chord figure
   stays within an octave and a half (a twelfth), climbing from its bass by the chord's tones and
-  turning back — not leaping two octaves from a low bass to the treble. Broken chords and a slow
+  turning back — not leaping two octaves from a low bass to the treble. A chord one hand strikes
+  lies within an octave, a ninth at most: a wider sound is shared between the hands, or its bass
+  struck first and the chord after it. Broken chords and a slow
   or quiet tune are held in the pedal, or each note stops where it is written: `@sustain` on the
   harmony's first bass note, the same mark again at each change of harmony, `@!sustain` on the
   last note (`d,4@sustain a, d a, | g,4@sustain d g d | a,1@!sustain |`).
@@ -401,3 +425,10 @@ What makes it music:
   through the piece**, not spent in one place: each comes back in more than one section (a
   quartet's tremolo and `@sf` only in two bars of its middle section left its opening merely
   loud and soft), growing toward the climax, where they are strongest and come together.
+
+**The first step, once this guide is read**: give the piece its title and call `lilysharp_checkName`
+for its file — nothing more in that reply, and no music thought out yet. Its answer says the next
+step, and each answer after it says the one after that: the plan, then one section at a time. (Owner's
+trials 2026-11-08: a model that read the whole way at once composed the whole piece in thought before
+writing a word, and its reply was cut off three times over.)
+

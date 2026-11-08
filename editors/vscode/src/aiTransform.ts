@@ -43,6 +43,7 @@ import {
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
     cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, newPieceOverScore, guidePages, headerLanguageNote, diagLines,
     lastUserMessageAt, heldClashesOf, noTuneOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
+    applyDraft, draftSummary, DraftInput, FROM_DRAFT_NOTE,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -246,10 +247,35 @@ function currentUri(uri: vscode.Uri): vscode.Uri {
 interface ProposeScoreInput {
     /** The .lys file, its absolute path. */
     file: string;
-    /** The whole new text of the file. */
-    text: string;
+    /** The whole new text of the file — or none, with `draft`. */
+    text?: string;
     /** A sentence or two to the musician about the change. */
     note?: string;
+    /** Propose the piece written into the file's draft (lilysharp_draftScore), not a text given here. */
+    draft?: boolean;
+}
+
+/** Each new piece's draft, by its file (draftKey): written a part at a time with lilysharp_draftScore,
+ *  never shown nor compiled, until lilysharp_proposeScore proposes it with `draft: true`. Kept after,
+ *  for the chat to mend and propose again. */
+const drafts = new Map<string, string>();
+const draftKey = (file: string) => path.resolve(file).toLowerCase();
+
+/** One call of the draft tool: the draft as it stands after it, said to the chat, or why nothing changed. */
+function draftScore(deps: AiTransformDeps, input: DraftInput | undefined): string {
+    if (!input || typeof input.file !== 'string' || !path.isAbsolute(input.file)) {
+        return 'Nothing drafted: give `file`, the new .lys file\'s absolute path.';
+    }
+    const key = draftKey(input.file);
+    const result = applyDraft(drafts.get(key), input);
+    if ('error' in result) {
+        return result.error;
+    }
+    drafts.set(key, result.text);
+    deps.log(`AI proposal (chat): draft of ${path.basename(input.file)} — ${result.text.length} characters.`);
+    // Edits alone are the mending of a proposal sent back: its next step is proposing it again.
+    const mended = Array.isArray(input.edits) && input.edits.length > 0 && !(typeof input.text === 'string' && input.text.length > 0);
+    return draftSummary(path.basename(input.file), result.text, mended);
 }
 
 /**
@@ -270,8 +296,21 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
         prepareInvocation: options => ({
             invocationMessage: `Showing the proposed score of ${path.basename(options.input?.file ?? 'the file')}…`,
         }),
-        invoke: async (options, token) => new vscode.LanguageModelToolResult([
-            new vscode.LanguageModelTextPart(await proposeScore(deps, options.input, token)),
+        invoke: async (options, token) => {
+            const said = await proposeScore(deps, options.input, token);
+            // From the draft, mended in the draft: not the whole piece written again in one reply.
+            const fromDraft = options.input?.draft === true && !said.startsWith('Nothing shown');
+            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(fromDraft ? said + FROM_DRAFT_NOTE : said)]);
+        },
+    }));
+    // A new piece written a part at a time (owner's report 2026-11-08: a choir piece written in one
+    // reply ran past ten minutes and was cut off, three times over, nothing kept).
+    context.subscriptions.push(lm.registerTool<DraftInput>('lilysharp_draftScore', {
+        prepareInvocation: options => ({
+            invocationMessage: `Writing ${path.basename(options.input?.file ?? 'the piece')}'s draft…`,
+        }),
+        invoke: async options => new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(draftScore(deps, options.input)),
         ]),
     }));
     context.subscriptions.push(lm.registerTool<ReadScoreInput>('lilysharp_readScore', {
@@ -437,7 +476,22 @@ function newPieceSteps(lysc: string | undefined): string {
     // the chat's composing never did, and the guide spoke of "the plan" to a chat that wrote none).
     return 'Before any note, write in your reply the plan the composing guide asks for — its "Plan before the first note", '
         + 'every heading filled in — then write the piece to it.\n'
-        + 'Propose it, whole, with the lilysharp_proposeScore tool (#proposeScore), giving that path: it compiles the '
+        // Owner's report 2026-11-08: a choir piece, plan and score in one reply, ran past ten minutes and
+        // was cut off three times, nothing kept. A reply is kept short: the plan in one, the notes in the
+        // draft a part at a time, the proposal last.
+        // Owner's trial 2026-11-08: drafted so, the choir piece's writing took two minutes — but before its
+        // plan the model thought 77,000 tokens for ten minutes, the whole piece composed in its head, and
+        // came within seconds of the cut. The thinking is a reply's too.
+        // Owner's request 2026-11-08: said plainly — the reason, and a limit to keep to.
+        + 'Answer each reply within five minutes, thinking included (roughly 30,000 tokens of thinking): a long think '
+        + 'can be cut off by the connection, and the whole reply is lost. So think out the plan, not the notes, '
+        + 'and think each section\'s notes as you draft that section. Write in short steps, each its own reply — the answer '
+        + 'to each tool call says the step after it: first the piece\'s title and the lilysharp_checkName call for its file, '
+        + 'nothing more in that reply; then the plan, and the draft begun with the lilysharp_draftScore '
+        + 'tool (#draftScore) — the header and the parts; then each section (a long one in halves), '
+        + 'its section notes written in your reply just before it as the composing guide says, '
+        + 'then the form and the score — `text` added at the draft\'s end each time; nothing of it is shown until you propose it.\n'
+        + 'Propose it, whole, with the lilysharp_proposeScore tool (#proposeScore), giving that path and `draft: true`: it compiles the '
         + 'piece, sends back its errors and warnings to fix, and writes it into the document — do not run a compiler '
         + 'yourself, nor anything else in a terminal: Lily#\'s tools and your file tools do all a new piece needs. If that tool is not available, write the piece into the file instead'
         + (lysc ? `, and check it with \`& "${lysc}" check <file>\`` : '') + '.\n'
@@ -604,6 +658,14 @@ async function saidOf(deps: AiTransformDeps, text: string): Promise<string> {
  * or not, by that name — else the first free one beside it (`Name-2.lys`, …). Owner's request
  * 2026-10-29: the chat listed the folder in a terminal to check, asking "Run in terminal?".
  */
+/** The step after a new piece's name, said in the answer that names it (owner's trials 2026-11-08: told
+ *  the whole way at the start, a model composed the whole piece in thought before its plan — ten minutes,
+ *  and cut off; each answer now says the next step alone). */
+const PLAN_NEXT = 'Next: the plan alone — the composing guide\'s headings, the piece\'s shape in short lines, no section\'s '
+    + 'chords bar by bar nor its notes yet — then start the draft with lilysharp_draftScore: the header lines, the title, '
+    + 'tempo, meter, key and the parts. Think of no section\'s music in this step: each section is its own step after it. '
+    + 'Answer within five minutes, thinking included: a longer think is cut off by the connection and lost.';
+
 async function checkName(input: ReadScoreInput): Promise<string> {
     if (!input || typeof input.file !== 'string' || !path.isAbsolute(input.file)) {
         return 'Nothing checked: give `file`, the new .lys file\'s absolute path.';
@@ -611,7 +673,7 @@ async function checkName(input: ReadScoreInput): Promise<string> {
     const file = path.resolve(input.file);
     const taken = async (p: string) => fs.existsSync(p) || (await scoreDocument(p)) !== undefined;
     if (!await taken(file)) {
-        return `Free: ${path.basename(file)} is not taken in ${path.dirname(file)} — propose the new piece there.`;
+        return `Free: ${path.basename(file)} is not taken in ${path.dirname(file)} — propose the new piece there. ` + PLAN_NEXT;
     }
     const ext = path.extname(file) || '.lys';
     const stem = path.basename(file, path.extname(file)).replace(/-\d+$/, '');
@@ -619,7 +681,7 @@ async function checkName(input: ReadScoreInput): Promise<string> {
         const free = path.join(path.dirname(file), `${stem}-${n}${ext}`);
         if (!await taken(free)) {
             return `Taken: ${path.basename(file)} is already a score in ${path.dirname(file)}. Name the new piece ${free} — `
-                + 'it is free — or after another title.';
+                + 'it is free — or after another title. ' + PLAN_NEXT;
         }
     }
     return `Taken: ${path.basename(file)} and its numbered names are all in use in ${path.dirname(file)}; name the piece after another title.`;
@@ -692,10 +754,23 @@ const warningRecheckedFor = new Set<string>();
 const findingKey = (finding: string) => finding.replace(/\d+/g, '#');
 
 /** The proposal shown and decided on; what is told to the chat. */
-async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, token: vscode.CancellationToken): Promise<string> {
-    if (!input || typeof input.file !== 'string' || typeof input.text !== 'string') {
-        return 'Nothing shown: give `file` (the .lys file\'s absolute path) and `text` (its whole new text).';
+async function proposeScore(deps: AiTransformDeps, given: ProposeScoreInput, token: vscode.CancellationToken): Promise<string> {
+    if (!given || typeof given.file !== 'string') {
+        return 'Nothing shown: give `file` (the .lys file\'s absolute path) and `text` (its whole new text), or `draft: true`.';
     }
+    // The piece written into its draft, a part at a time (lilysharp_draftScore).
+    if (given.draft === true) {
+        const draft = drafts.get(draftKey(given.file));
+        if (draft === undefined) {
+            return `Nothing shown: ${path.basename(given.file)} has no draft. Write the piece into it with lilysharp_draftScore first, `
+                + 'a part at a time, then propose it with `draft: true`.';
+        }
+        given = { ...given, text: draft };
+    }
+    if (typeof given.text !== 'string') {
+        return 'Nothing shown: give `file` (the .lys file\'s absolute path) and `text` (its whole new text), or `draft: true`.';
+    }
+    const input = { ...given, text: given.text };
     await deps.ensureReady?.();
     const client = deps.getClient();
     if (!client || !deps.isReady()) {

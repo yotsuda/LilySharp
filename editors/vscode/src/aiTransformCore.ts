@@ -1194,3 +1194,100 @@ export function rangeFixOf(d: { Code: string | null; Offset: number; Message: st
     const moved = up ? (marks.includes(',') ? marks.slice(1) : marks + "'") : (marks.includes("'") ? marks.slice(1) : marks + ',');
     return ` — you wrote \`${name}${marks}${tail}\`: write it an octave ${up ? 'higher' : 'lower'}, \`${name}${moved}${tail}\``;
 }
+
+/** A change to a piece's draft: `old`, found once in the draft, becomes `new`. */
+export interface DraftEdit {
+    old: string;
+    new: string;
+}
+
+/** What the chat hands the draft tool: text to append, edits to make, or both; `restart` begins again. */
+export interface DraftInput {
+    file: string;
+    text?: string;
+    edits?: DraftEdit[];
+    restart?: boolean;
+}
+
+/**
+ * A new piece's draft after one call of the draft tool (owner's report 2026-11-08: a choir piece
+ * written in one reply ran past ten minutes, was cut off three times and lost each time — the piece
+ * is written into a draft a part at a time, unseen and unchecked, and proposed whole at the end).
+ * The edits first, each `old` found exactly once in the draft as it stands — else nothing changes and
+ * the reason goes back — then `text` appended, on a line of its own.
+ */
+export function applyDraft(current: string | undefined, input: DraftInput): { text: string } | { error: string } {
+    const edits = Array.isArray(input.edits) ? input.edits : [];
+    const append = typeof input.text === 'string' ? input.text : '';
+    if (edits.length === 0 && append.length === 0) {
+        return { error: 'Nothing changed: give `text` to add to the draft, or `edits` to change it.' };
+    }
+    let draft = input.restart ? '' : current ?? '';
+    for (const [i, edit] of edits.entries()) {
+        if (!edit || typeof edit.old !== 'string' || typeof edit.new !== 'string' || edit.old.length === 0) {
+            return { error: `Nothing changed: edit ${i + 1} needs \`old\` (text in the draft) and \`new\`.` };
+        }
+        const at = draft.indexOf(edit.old);
+        if (at < 0) {
+            return { error: `Nothing changed: edit ${i + 1}'s \`old\` is not in the draft — copy it exactly as the draft has it.` };
+        }
+        if (draft.indexOf(edit.old, at + 1) >= 0) {
+            return { error: `Nothing changed: edit ${i + 1}'s \`old\` is in the draft more than once — give a longer one, found once.` };
+        }
+        draft = draft.slice(0, at) + edit.new + draft.slice(at + edit.old.length);
+    }
+    if (append.length > 0) {
+        draft = draft.length === 0 || draft.endsWith('\n') ? draft + append : `${draft}\n${append}`;
+        if (!draft.endsWith('\n')) {
+            draft += '\n';
+        }
+    }
+    return { text: draft };
+}
+
+/**
+ * What a draft holds so far, for the chat, and its next step alone (owner's trials 2026-11-08: told
+ * the whole way at the start, a model composed the whole piece in thought before its plan and was cut
+ * off — each answer now says only what comes next, and the step stays short): mended after a
+ * proposal, propose it again; no section yet, the first; form and score in, propose it; else the next
+ * section of the plan, its section notes first.
+ */
+export function draftSummary(name: string, draft: string, mended = false): string {
+    const lines = draft.split('\n').filter(l => l.trim().length > 0).length;
+    const sections = [...draft.matchAll(/^\s*section\s+([A-Za-z_][\w-]*)/gm)].map(m => m[1]);
+    const form = /^\s*form\b/m.test(draft);
+    const score = /^\s*score\s*\{/m.test(draft);
+    const holds = `Draft of ${name}: ${lines} lines`
+        + (sections.length > 0 ? `, sections ${sections.join(', ')}` : ', no section yet')
+        + `; form ${form ? 'written' : 'not yet'}, score ${score ? 'written' : 'not yet'}. `
+        + 'Not shown to the musician and not compiled. ';
+    // The form names its sections: those not drafted yet are named.
+    const formLine = /^\s*form\s*\{([^}]*)\}/m.exec(draft)?.[1] ?? '';
+    const missing = [...new Set(formLine.split(/\s+/).map(s => s.replace(/^~/, '')).filter(s => /^[A-Za-z_][\w-]*$/.test(s)))]
+        .filter(s => !sections.includes(s));
+    let next: string;
+    if (mended) {
+        next = 'Next: propose it again with lilysharp_proposeScore, this file and `draft: true`.';
+    } else if (form && score && missing.length === 0 && sections.length > 0) {
+        next = 'The piece looks whole. Next: propose it with lilysharp_proposeScore, giving this file and `draft: true` — no text.';
+    } else if (missing.length > 0) {
+        next = `Next: section ${missing[0]} alone — its section notes in your reply (its chords bar by bar, its phrases' notes`
+            + `, its words written out and counted in a song), then that section with lilysharp_draftScore. Think of no other section in this step.`;
+    } else if (sections.length === 0) {
+        next = 'Next: the first section of your plan alone — its section notes in your reply (its chords bar by bar, its '
+            + 'phrases\' notes, its words written out and counted in a song), then that section with lilysharp_draftScore. '
+            + 'Think of no other section in this step.';
+    } else {
+        next = 'Next: the section your plan has after these, alone — its section notes in your reply, then that section with '
+            + 'lilysharp_draftScore; think of no other section in this step. When every section is in, add the form and the score.';
+    }
+    // The limit said again where a section's thinking begins (owner's request 2026-11-08).
+    const limit = next.includes('section notes') ? ' Answer within five minutes, thinking included: a longer think is cut off by the connection and lost.' : '';
+    return holds + next + limit + ' Mend what is there with `edits`.';
+}
+
+/** Added to what proposing a draft says, where it asks for the piece again: mend the draft, not a whole new text. */
+export const FROM_DRAFT_NOTE = '\n\nThis was proposed from your draft. Where this says to call lilysharp_proposeScore again with the '
+    + 'whole text, mend the draft instead with lilysharp_draftScore\'s `edits` — only what changes, not the piece again — '
+    + 'and call lilysharp_proposeScore with `draft: true`.';
+

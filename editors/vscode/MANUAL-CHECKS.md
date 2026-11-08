@@ -345,6 +345,11 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
   - (2) 続けて同じチャットで「テンポを少し落として」→ 新しい曲のファイルへの変更として候補パネルが出る（別のファイルは作らない）。
   - (3) 空の `.lys` を開いて作曲を頼む → その空のファイルに書かれる。
   - (4) 出力パネル（Lily#）に「turned down — a new piece sent over another score」が出た場合は、モデルが開いている楽譜に出そうとしてツールが差し戻した印。その後、新しいファイルに出し直されること。
+- [ ] **C54**（2026-11-08・作曲は下書きに少しずつ・manifest が変わった＝Reload Window を 2 回）:
+  - (1) Copilot Chat（Claude Sonnet 5.5）に「混声四部合唱で、日本語の歌詞のついた、卒業式で歌えるような曲を書いて」→ チャットに計画が出て、*Checking that … is free…* の後に *Writing ….lys's draft…* が数回続き、最後に *Showing the proposed score of …* で曲がエディターに開く。途中でエディターに書きかけの曲は開かず、候補パネルも出ない。
+  - (2) 出力パネル（Lily# Extension）に「draft of ….lys — N characters」が呼び出しごとに出て、N が増えていく。
+  - (3) 点検で差し戻されたとき（「sent back once」）、チャットは曲を全部書き直さず、*Writing ….lys's draft…* で直してから出し直す。
+  - (4) 応答が 10 分を超えて切れない（`~/.copilot/session-state/<id>/events.jsonl` に `errorOccurred` の `model_call` が出ない）。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

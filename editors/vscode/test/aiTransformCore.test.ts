@@ -868,3 +868,54 @@ describe('guidePages and code blocks', () => {
         assert.equal(pages.join('\n\n').replace(/\n+/g, '\n'), `${'x'.repeat(30)}\n\n${example}\n\nafter`.replace(/\n+/g, '\n'));
     });
 });
+
+// Owner's report 2026-11-08: a choir piece written in one reply ran past ten minutes and was cut off
+// three times, nothing kept — the piece goes into a draft a part at a time, proposed whole at the end.
+import { applyDraft, draftSummary, FROM_DRAFT_NOTE } from '../src/aiTransformCore';
+describe('applyDraft', () => {
+    const file = 'C:\\x\\Piece.lys';
+    it('adds each part at the end, on a line of its own', () => {
+        const one = applyDraft(undefined, { file, text: 'title "A"' });
+        assert.deepEqual(one, { text: 'title "A"\n' });
+        const two = applyDraft('title "A"\n', { file, text: 'section A {\n}' });
+        assert.deepEqual(two, { text: 'title "A"\nsection A {\n}\n' });
+        assert.deepEqual(applyDraft('a', { file, text: 'b\n' }), { text: 'a\nb\n' });
+    });
+    it('mends the draft with edits found once, before the text is added', () => {
+        assert.deepEqual(applyDraft('c4 d4 e4\n', { file, edits: [{ old: 'd4', new: 'f4' }], text: 'g4' }), { text: 'c4 f4 e4\ng4\n' });
+        const missing = applyDraft('c4 d4\n', { file, edits: [{ old: 'b4', new: 'a4' }] });
+        assert.ok('error' in missing && /not in the draft/.test(missing.error));
+        const twice = applyDraft('c4 c4\n', { file, edits: [{ old: 'c4', new: 'a4' }] });
+        assert.ok('error' in twice && /more than once/.test(twice.error));
+    });
+    it('begins again on restart, and says when nothing was given', () => {
+        assert.deepEqual(applyDraft('old\n', { file, restart: true, text: 'new' }), { text: 'new\n' });
+        const empty = applyDraft('old\n', { file });
+        assert.ok('error' in empty && /Nothing changed/.test(empty.error));
+    });
+    // Owner's trials 2026-11-08: told the whole way at the start, a model composed the whole piece in
+    // thought before its plan — each answer says the next step alone.
+    it('says what the draft holds and its next step alone', () => {
+        const said = draftSummary('Piece.lys', 'title "A"\nsection Verse {\n}\nsection Chorus {\n}\n');
+        assert.match(said, /^Draft of Piece\.lys: 5 lines, sections Verse, Chorus; form not yet, score not yet\./);
+        assert.match(said, /Next: the section your plan has after these, alone — its section notes in your reply/);
+        assert.match(draftSummary('P.lys', 'title "A"\npart s { instrument soprano }\n'), /Next: the first section of your plan alone/);
+        // The form names the sections still to write.
+        assert.match(draftSummary('P.lys', 'section A {\n}\nform { A ~B A C }\n'), /Next: section B alone — its section notes in your reply/);
+        // Whole: propose it.
+        assert.match(draftSummary('P.lys', 'section A {\n}\nform { A }\nscore {\n}\n'), /The piece looks whole\. Next: propose it with lilysharp_proposeScore, giving this file and `draft: true`/);
+        // Mended after a proposal: propose it again.
+        assert.match(draftSummary('P.lys', 'section A {\n}\n', true), /Next: propose it again with lilysharp_proposeScore, this file and `draft: true`\./);
+        assert.match(draftSummary('P.lys', 'form { A }\nscore {\n}\n'), /no section yet; form written, score written/);
+        assert.match(FROM_DRAFT_NOTE, /mend the draft instead with lilysharp_draftScore's `edits`/);
+    });
+});
+
+describe('draftSummary limit', () => {
+    // Owner's request 2026-11-08: the five minutes said where a section's thinking begins, not where it ends.
+    it('says the five minutes with a section to write, not with a proposal', () => {
+        assert.match(draftSummary('P.lys', 'title "A"\n'), /Answer within five minutes, thinking included/);
+        assert.doesNotMatch(draftSummary('P.lys', 'section A {\n}\nform { A }\nscore {\n}\n'), /five minutes/);
+    });
+});
+

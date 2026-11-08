@@ -27,6 +27,7 @@
     "onLanguage:lilysharp",
     "onLanguage:markdown",
     "onLanguageModelTool:lilysharp_proposeScore",
+    "onLanguageModelTool:lilysharp_draftScore",
     "onLanguageModelTool:lilysharp_readScore",
     "onLanguageModelTool:lilysharp_reviewScore",
     "onLanguageModelTool:lilysharp_checkName",
@@ -46,15 +47,36 @@
         "canBeReferencedInPrompt": true,
         "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"],
         "userDescription": "Shows the AI's new version of a .lys file beside the score as it stands, to play and to accept or reject.",
-        "modelDescription": "Use this to write or change a Lily# (.lys) file, instead of editing the file yourself. Give the file's absolute path and the WHOLE new text of the file. A NEW piece goes to a new file (name it with lilysharp_checkName), never over a score that is open or attached, unless the musician asks for that file in so many words. Lily# compiles it first: if it has errors they come back and nothing is shown — fix them and call again. Otherwise a new piece (the file empty) is written straight into the file; a change to a score is shown to the musician beside the score as it stands, to play and to accept or reject, and the result says which. Accepted, it is in the editor, not saved: read it with lilysharp_readScore, not from the disk. What to change next, the musician says in the chat; call it again with the whole new text.",
+        "modelDescription": "Use this to write or change a Lily# (.lys) file, instead of editing the file yourself. Give the file's absolute path and the WHOLE new text of the file — or, for a new piece written with lilysharp_draftScore, `draft: true` and no text. A NEW piece goes to a new file (name it with lilysharp_checkName), never over a score that is open or attached, unless the musician asks for that file in so many words. Lily# compiles it first: if it has errors they come back and nothing is shown — fix them and call again. Otherwise a new piece (the file empty) is written straight into the file; a change to a score is shown to the musician beside the score as it stands, to play and to accept or reject, and the result says which. Accepted, it is in the editor, not saved: read it with lilysharp_readScore, not from the disk. What to change next, the musician says in the chat; call it again with the whole new text.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "file": { "type": "string", "description": "The .lys file's absolute path — for a score open in the editor and not saved yet, the path it is named by." },
-            "text": { "type": "string", "description": "The whole new text of the file." },
-            "note": { "type": "string", "description": "One or two sentences to the musician about the change, in their language." }
+            "text": { "type": "string", "description": "The whole new text of the file. Leave it out with `draft`." },
+            "note": { "type": "string", "description": "One or two sentences to the musician about the change, in their language." },
+            "draft": { "type": "boolean", "description": "true: propose the piece written into this file's draft with lilysharp_draftScore, instead of a text given here." }
           },
-          "required": ["file", "text"]
+          "required": ["file"]
+        }
+      },
+      {
+        "name": "lilysharp_draftScore",
+        "toolReferenceName": "draftScore",
+        "displayName": "Write a new Lily# piece's draft",
+        "icon": "$(edit)",
+        "canBeReferencedInPrompt": true,
+        "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"],
+        "userDescription": "Writes a new piece into a draft a part at a time, unseen until the AI proposes it whole.",
+        "modelDescription": "Use this to write a NEW Lily# piece a part at a time before proposing it: one reply that runs long is cut off and lost. Give the new file's absolute path and `text`, the next part of the file (the header and the parts, then a section, then the next, then the form and the score); it is added at the draft's end. `edits` (each `old`, found once in the draft, and its `new`) mend what is there; `restart` begins the draft again. The draft is not shown to the musician and not compiled; the answer says what it holds. When the whole piece is in it, propose it with lilysharp_proposeScore, the same file and `draft: true`.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file": { "type": "string", "description": "The new .lys file's absolute path, as lilysharp_checkName found it free." },
+            "text": { "type": "string", "description": "The next part of the file, added at the draft's end." },
+            "edits": { "type": "array", "items": { "type": "object", "properties": { "old": { "type": "string" }, "new": { "type": "string" } }, "required": ["old", "new"] }, "description": "Changes to the draft as it stands: each `old`, copied exactly and found once, becomes `new`. Made before `text` is added." },
+            "restart": { "type": "boolean", "description": "true: throw the draft away and begin it again with `text`." }
+          },
+          "required": ["file"]
         }
       },
       {

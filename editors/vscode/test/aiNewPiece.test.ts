@@ -185,7 +185,19 @@ describe('the composing guide', () => {
         // request 2026-10-29: its check on a temp copy asked "Run terminal?" mid-composing) — the
         // bundled lysc named only for a file written without the tool.
         const steps = transform.slice(transform.indexOf('function newPieceSteps('), transform.indexOf('async function writeWhole'));
-        assert.match(steps, /'Propose it, whole, with the lilysharp_proposeScore tool \(#proposeScore\), giving that path: it compiles the '/);
+        assert.match(steps, /'Propose it, whole, with the lilysharp_proposeScore tool \(#proposeScore\), giving that path and `draft: true`: it compiles the '/);
+        // Owner's report 2026-11-08: plan and score in one reply ran past ten minutes and were cut off —
+        // the plan its own reply, the notes into the draft a part at a time.
+        // Owner's request 2026-11-08: the reason and the limit said plainly.
+        assert.match(steps, /'Answer each reply within five minutes, thinking included \(roughly 30,000 tokens of thinking\): a long think '/);
+        // No minutes for the cut itself: seen with one model only, it may be another's (owner's note 2026-11-08).
+        assert.match(steps, /'can be cut off by the connection, and the whole reply is lost\. So think out the plan, not the notes, '/);
+        assert.match(steps, /'and think each section\\'s notes as you draft that section\. Write in short steps, each its own reply — the answer '/);
+        // The name first, alone; each tool's answer says the step after it (owner's trials 2026-11-08).
+        assert.match(steps, /'to each tool call says the step after it: first the piece\\'s title and the lilysharp_checkName call for its file, '/);
+        assert.match(transform, /return `Free: \$\{path\.basename\(file\)\} is not taken in \$\{path\.dirname\(file\)\} — propose the new piece there\. ` \+ PLAN_NEXT;/);
+        assert.match(transform, /const PLAN_NEXT = 'Next: the plan alone — /);
+        assert.match(steps, /then the plan, and the draft begun with the lilysharp_draftScore '/);
         assert.match(steps, /a new piece needs\. If that tool is not available, write the piece into the file instead'\s*\+ \(lysc \? `, and check it with/);
         assert.match(steps, /do not run a compiler '/);
         assert.ok(!/on a copy of your text/.test(steps));
@@ -267,7 +279,11 @@ describe('the composing guide', () => {
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
         assert.match(pkg, /"name": "lilysharp_proposeScore",\s*"toolReferenceName": "proposeScore"/);
         assert.match(pkg, /"onLanguageModelTool:lilysharp_proposeScore"/);
-        assert.match(pkg, /"required": \["file", "text"\]/);
+        // The text, or the draft written a part at a time (owner's report 2026-11-08).
+        assert.match(pkg, /"draft": \{ "type": "boolean"[^\n]*\}\s*\},\s*"required": \["file"\]/);
+        assert.match(pkg, /"name": "lilysharp_draftScore",\s*"toolReferenceName": "draftScore"/);
+        assert.match(pkg, /"onLanguageModelTool:lilysharp_draftScore"/);
+        assert.match(transform, /lm\.registerTool<DraftInput>\('lilysharp_draftScore'/);
         assert.match(transform, /lm\.registerTool<ProposeScoreInput>\('lilysharp_proposeScore'/);
         const fn = transform.slice(transform.indexOf('async function proposeScore'), transform.indexOf('async function runComposeInChat'));
         assert.match(fn, /if \(errors\.length > 0\) \{[\s\S]*?return `Not shown to the musician: it does not compile\./);
@@ -367,7 +383,7 @@ describe('the composing guide', () => {
         assert.match(pkg, /"name": "lilysharp_readGuide",\s*"toolReferenceName": "readGuide",\s*"displayName": "Read the Lily# guide"/);
         assert.match(pkg, /"onLanguageModelTool:lilysharp_readGuide"/);
         const tags = '"tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"]';
-        assert.equal(pkg.split(tags).length - 1, 5);   // proposeScore, readScore, reviewScore, checkName, readGuide
+        assert.equal(pkg.split(tags).length - 1, 6);   // proposeScore, draftScore, readScore, reviewScore, checkName, readGuide
         assert.match(pkg, /"modelDescription": "Use this before composing music — a piece, a song, a score — or writing or changing Lily# \(\.lys\) text/);
         assert.match(transform, /lm\.registerTool<ReadGuideInput>\('lilysharp_readGuide'/);
         const fn = transform.slice(transform.indexOf('async function readGuide('), transform.indexOf('function newPieceSteps('));
