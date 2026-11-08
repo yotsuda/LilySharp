@@ -138,6 +138,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1135セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14828 / 0 / 2**（`-Start p1135`・HEAD `b2d2f60b5`・未 push 34・OMR の open は 0）。同じ会話で第1134 から続けた便。オーナー「続けて」→ **B2＝DiffSinger backend の本実装**（Cantilena `docs/roadmap.md` B2。この便は library と CLI・拡張側は B4 に分けた）。作業場所は Lab `sessions/p1135/`。
+
+- **Cantilena.Core `DiffSinger/`**（Apache-2.0・OpenUtau の MIT 実装を写して書き直し・各ファイル頭と THIRD-PARTY-NOTICES に明記）: `DsConfig`／`DsVocoderConfig`／`G2pDictionaryData`（YamlDotNet・snake_case・未知の鍵は無視）、`DsDictionary`、`KanaPhonemizer`（モーラ → kana そのもの → ローマ字の順に辞書を引く・`ー` は直前の母音の**音素を繰り返す**＝辞書を引かない。spike はここで TIGER の辞書に負けていた）、`DsMath`（frame の累積丸め・`FitSum`・`Stretch`・`Speedup`・`WordDivAndDur`＝**歌う母音だけが錨で頭尾・隙間の SP は数えない**・model が宣言する入力だけ渡し足りない名を言う `Run`）、`DiffSingerOptions`（folder・vocoder・speaker・steps・`Voices(folder)`）、`DiffSingerVoice`（root＋module ごとの config・音素表・`.emb`・辞書・session は初回に作って保持）、`DiffSingerSinger : ISinger`（dur の timing → pitch → variance（acoustic が要るときだけ・未検証）→ acoustic → vocoder・breath は隙間に `AP`・WAV の 0 ＝楽譜の 0）。Core は `Microsoft.ML.OnnxRuntime` 1.23.0（CPU）と `YamlDotNet` 15.1.2 を参照（repo 直下に `NuGet.config`＝nuget.org だけ・死んだ私設 feed 対策）。
+- **CLI**（`Engines.cs`＋`Program.cs` 書き直し）: 声は `engine/name`（`neutrino/MERROW`・`diffsinger/TIGER`・`dsconfig.yaml` を持つパスも可・裸の名前は neutrino）、`--voices-dir`／`--vocoder-dir`／`--steps`、環境変数 `CANTILENA_VOICES_DIR`／`CANTILENA_VOCODER_DIR`、`cantilena.json` の `diffsinger.voices`／`vocoder`。`voices` は両エンジンを並べ、`serve` は `voice` の engine で singer を分け `{"command":"voices"}` に答え、答えに `voice` を足した。旧 `--backend X --voice Y` は `X/Y` に読む。実走: `voices` → `neutrino/MERROW`・`diffsinger/TIGER`、`sing --voice diffsinger/TIGER` 4.0 s（CPU・10 steps）、パス指定・不明エンジン・無い声のエラー文・`serve` の 5 行（voices／a／b／foo/X のエラー／shutdown）＝`sessions/p1135/serve-*`。
+- **網**: `DiffSingerCoreTests` 11 本（frame 丸め・FitSum・Stretch・Speedup・word division・Resample・モーラと見出し・辞書・音素化・config の depth の 2 綴り・Options と Voices）＋`DiffSingerSingerTests` 2 本（env `CANTILENA_DIFFSINGER_VOICE` があるときだけ実走＝TIGER で: 0.4 s 以上の音節 6 音以上が有声 80% 超・書いた音高 ±0.5 半音・音は 0.15 s 以内に始まる・2 回歌って同じ長さ／辞書に無い音節だけの楽譜は `no syllable` で拒否）＋`PitchCheck`（spike の analyze の移植）。`dotnet test` **36 / 36**（TIGER あり）。毒 2 本（f0 を 1 半音上げる・WAV の頭合わせを 0 にする）はどちらも赤。
+- **docs**: README（両 backend が歌う・`engine/name`）・design.md §3.2（実装の形・CPU の時間・variance 未検証）・§4／§4.1（CLI と serve の新しい形）・roadmap B2（library と CLI は済・拡張は B4）・THIRD-PARTY-NOTICES（OpenUtau＝adapted・ONNX Runtime と YamlDotNet＝referenced）。
+- **Lily# は不変**（Core・拡張とも。この便は Cantilena と Lab と HANDOFF だけ）。
+- 残り: **B4＝拡張**（`cantilena.voicesFolder`・`voices()` に diffsinger・`ENGINES` に足す・pack）・B3（DirectML＝別パッケージ）・B2 の variance の検証（`dsvariance` のある声で）・漢字のかな（オーナー決定待ち）・`lysc wav --singer`。
+- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1135 -DiffBase b2d2f60b5`＝`end.log`・門は全部 OK・§1 現在便 17,140 字＝残り 2,860）。§7 7.5: Core の `+` 0（REF 0・OWN 0）。この docs commit と Lab・Cantilena の commit は Claude・push はオーナー。
+
+## 以下は第1134セッションの経緯
+
 ### 1.1 第1134セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14828 / 0 / 2**（`-Start p1134`・HEAD `a332e9a1a`・未 push 33・OMR の open は 0）。同じ会話で第1133 から続けた便。オーナー「続けて」→ roadmap 短期の 6 行目＝**DiffSinger の spike**（Cantilena `docs/roadmap.md` B1: 声を 1 つ読んで 1 フレーズを CPU で歌わせ、時間と許諾を記録）。オーナー指示「OpenUtau のコードを読むなら `C:\MyProj` の下に clone して」＝`C:\MyProj\openutau-src`（MIT・depth 1）と `C:\MyProj\openutau-wiki`。作業場所は Lab `sessions/p1134/`（計器は `dsspike/`）。
@@ -149,17 +163,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **Lily# は Core・拡張とも不変**（この便は Cantilena の docs と Lab と HANDOFF だけ）。
 - 残り: roadmap §3 の 4（漢字のかな＝オーナー決定待ち）・5（`lysc wav --singer`）・**B2（backend の本実装）**。
 - 終了時 full **14828 / 0 / 2 / 14830**（`-End p1134 -DiffBase a332e9a1a`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` 0（REF 0・OWN 0）。この docs commit と Lab・Cantilena の commit は Claude・push はオーナー。
-
-## 以下は第1133セッションの経緯
-
-### 1.1 第1133セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14828 / 0 / 2**（`-Start p1133`・HEAD `48b071dee`・未 push 32・OMR の open は 0）。同じ会話で第1132 から続けた便。roadmap 短期の 3 行目＝**声の名前を `engine/voice` に・API に `voices()`**（第 2 エンジンの前提）。作業場所は Lab `sessions/p1133/`。
-
-- **Cantilena 拡張 0.2.0**（`editors/vscode`）: `core.ts` に `ENGINES`・`VoiceEntry { id, engine, name, label, language?, licence? }`・`voiceId`／`splitVoiceId`（裸の名前は neutrino・空は MERROW・エンジンは検めない）・`speakerOf`（`info.toml` の `[speaker]` の `name`／`language`）・`languageTag`（Japanese → `ja`）・`voiceEntriesIn`。拡張は設定 `cantilena.voice` の既定を `neutrino/MERROW` に（裸の名前も読む）、**Choose Voice…** は id を並べて書き（説明に `Merrow · ja`）、`status().voice` は id、`sing(score, { voice })` は id か裸の名前（無いエンジンは `no engine named foo in foo/MERROW (there is: neutrino)`）、**`voices()`** を足した（`apiVersion` 1 のまま＝追加だけ）。`Engine.sing(score, name, id)`＝WAV の key は id。網 `core.test.ts` 13 / 13・`check-types` 0。README（拡張と repo）・CHANGELOG 0.2.0・design.md §4.2・roadmap A に反映。版は csproj 2 本（`0.1.0-alpha` → `0.2.0`）と package.json を揃えた（pack が program の版と照合する）。VSIX は `artifacts/extension/cantilena-win32-x64-0.2.0.vsix`（`pack-extension.ps1`）。
-- **Lily# 側**: `singerCore.CantilenaApi` に `voices?()` と `CantilenaVoice`（任意＝古い拡張には無い）、`renderer()` が `singer: the Cantilena extension 0.2.0, voice neutrino/MERROW` と名乗る（拡張のときだけ）。MANUAL-CHECKS §3.7 の 2 行目を書き直した。`npm test` 893 / 893・compile 0。Core 不変。
-- 残り: roadmap §3 の 4（漢字のかな＝オーナー決定待ち）・5（`lysc wav --singer`）・6（DiffSinger の spike）。
-- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1133 -DiffBase 48b071dee`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` 0（REF 0・OWN 0）。この docs commit と Lab・Cantilena の commit は Claude・push と VSIX の入れ直し（`deploy-extension.ps1`）はオーナー。
 
 ## 2. 開いている作業
 

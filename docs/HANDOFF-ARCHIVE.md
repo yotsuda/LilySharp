@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1133セッションの経緯
+
+### 1.1 第1133セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14828 / 0 / 2**（`-Start p1133`・HEAD `48b071dee`・未 push 32・OMR の open は 0）。同じ会話で第1132 から続けた便。roadmap 短期の 3 行目＝**声の名前を `engine/voice` に・API に `voices()`**（第 2 エンジンの前提）。作業場所は Lab `sessions/p1133/`。
+
+- **Cantilena 拡張 0.2.0**（`editors/vscode`）: `core.ts` に `ENGINES`・`VoiceEntry { id, engine, name, label, language?, licence? }`・`voiceId`／`splitVoiceId`（裸の名前は neutrino・空は MERROW・エンジンは検めない）・`speakerOf`（`info.toml` の `[speaker]` の `name`／`language`）・`languageTag`（Japanese → `ja`）・`voiceEntriesIn`。拡張は設定 `cantilena.voice` の既定を `neutrino/MERROW` に（裸の名前も読む）、**Choose Voice…** は id を並べて書き（説明に `Merrow · ja`）、`status().voice` は id、`sing(score, { voice })` は id か裸の名前（無いエンジンは `no engine named foo in foo/MERROW (there is: neutrino)`）、**`voices()`** を足した（`apiVersion` 1 のまま＝追加だけ）。`Engine.sing(score, name, id)`＝WAV の key は id。網 `core.test.ts` 13 / 13・`check-types` 0。README（拡張と repo）・CHANGELOG 0.2.0・design.md §4.2・roadmap A に反映。版は csproj 2 本（`0.1.0-alpha` → `0.2.0`）と package.json を揃えた（pack が program の版と照合する）。VSIX は `artifacts/extension/cantilena-win32-x64-0.2.0.vsix`（`pack-extension.ps1`）。
+- **Lily# 側**: `singerCore.CantilenaApi` に `voices?()` と `CantilenaVoice`（任意＝古い拡張には無い）、`renderer()` が `singer: the Cantilena extension 0.2.0, voice neutrino/MERROW` と名乗る（拡張のときだけ）。MANUAL-CHECKS §3.7 の 2 行目を書き直した。`npm test` 893 / 893・compile 0。Core 不変。
+- 残り: roadmap §3 の 4（漢字のかな＝オーナー決定待ち）・5（`lysc wav --singer`）・6（DiffSinger の spike）。
+- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1133 -DiffBase 48b071dee`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` 0（REF 0・OWN 0）。この docs commit と Lab・Cantilena の commit は Claude・push と VSIX の入れ直し（`deploy-extension.ps1`）はオーナー。
+
 ## 以下は第1132セッションの経緯
 
 ### 1.1 第1132セッション（2026-11-08・YT-DELL2）
