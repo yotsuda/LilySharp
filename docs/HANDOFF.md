@@ -138,6 +138,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1157セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14861 / 0 / 2**（`-Start p1157`・HEAD `004302579`・未 push 57・OMR の open 0）。同じ会話で第1156 から続けた便。オーナー「再現しなくなってしまった。パート選択を選択中の score に戻すリセットボタンと、すべてのフェーダーを元に戻すリセットボタンを足して」→ 続けて「フェーダーの上限は 100% ではなく 200% にして」。作業場所は Lab `sessions/p1157/`（`notes.md`）。
+
+- **リセット 2 つ（ページ）**: Parts の下に `.prow.presets`＝**Reset parts**（`muted`／`extraOn`／`voicesOff` を空に＝見ている score のとおり: 自分のパートは on・score に無いパートは off・声は on。トグルは名前ごとに全ファイル共通なので、別ファイルで消したパートから戻る道でもある）と **Reset faders**（`levels`／`voiceLevels` の項目を**その場で**消す＝各行のクロージャがオブジェクトを握っているので差し替えない）。各行は `partRefreshers` に「トグルの押し込みとフェーダーの値を読み直す」関数を登録し、リセットはそれを全部呼んでから `practiceChanged`。`showPractice` は戻すものが無ければボタンを無効に。
+- **フェーダー 0〜200%**: ページ `FADER_MAX = 2`・playbackCore `LEVEL_MAX = 2`（`levelOf` は 0〜2 に clamp・`velocityAt` は 127 で頭打ち・声の gain は 2 まで）。`change` は値がちょうど 100 のときだけ項目を消す。
+- 網: playbackCore.test（150% → 127 の天井・上下の clamp）＝npm **907 / 907**・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: playback-design・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7「リセット 2 つ」とフェーダーの行。
+- 残り: 実機（オーナー）・前便の問い（鳴らない件は再現せず＝Reset parts／Reset faders で戻せる）・前々便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- **Chrome のハーネスで確認**（第1156 の `probe/`・`page.html` を作り直して）: melody を mute・kit を on・声を off・フェーダー 150％と 40％ → Reset parts で選択が score どおりに戻りトグルの押し込みも戻る（フェーダーは残る）→ Reset faders で全部 100・数字が消える・両ボタンが無効に。例外 0。
+- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1157 -DiffBase 004302579`＝`end.log`・門は全部 OK・§1 現在便 16,021 字＝残り 3,979）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所はオーナーの要望とハーネスの実測。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1156セッションの経緯
+
 ### 1.1 第1156セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14861 / 0 / 2**（`-Start p1156`・HEAD `8fd0ec5e7`・未 push 56・OMR の open 0）。同じ会話で第1155 から続けた便。オーナー報告「メトロノームのウィンドウのパートをすこし触ったら、どの楽譜も再生が鳴らなくなってしまった」。作業場所は Lab `sessions/p1156/`（`notes.md`・`probe/`）。
@@ -149,18 +162,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **オーナーへの問い**: 練習メニューを開いて、パートが灰色か・フェーダーが左端かを見てほしい。どちらでもなく鳴らないなら、出力チャネル「Lily# Extension」の `PREVIEW` 行を貼ってほしい（ページの実行時エラーは `webviewError` としてそこに出る）。
 - 残り: 前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
 - 終了時 full **14860 / 1 / 2 / 14863**（`-End p1156 -DiffBase 8fd0ec5e7`＝`end.log`・門は全部 OK・§1 現在便 16,417 字＝残り 3,583）。赤 1 は `ExportRequestTests.Mp4_DrawsThePictures_TheSoundingCopyLit`＝**第1148 と同じ `s00001.png is being used by another process`（2 度目）**＝第1148 の約束どおり直した: 絵のフォルダの後片付け `DeleteFrames`（IOException なら GC＋100 ms で最大 20 回やり直し・それでも握られていれば temp なので放す）を MP4 の網 2 本に。`ExportRequestTests` 単独 **25 / 25**（`rerun.log`）＝合計は 14861 相当。§7 7.5: Core `+` 0・REF 0・OWN 0（ページの TS・網・docs だけ）。7.6: 出所は Chrome 上の実測（`probe/`）と probe の xunit。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1155セッションの経緯
-
-### 1.1 第1155セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14861 / 0 / 2**（`-Start p1155`・HEAD `83ccc868b`・未 push 55・OMR の open 0）。同じ会話で第1154 から続けた便。オーナー要望「メトロノームのウインドウの各パートの右に、音量を調節するフェーダーを出して」。作業場所は Lab `sessions/p1155/`（`notes.md`）。
-
-- **設計（playback-design「A fader beside each part」）**: `Practice.levels`（トラック名 → 0〜1）と `Practice.voiceLevels`（パート → 0〜1）。1 のパートは載せない＝沈む見た目と `practiceSummary`（"alt at 50%, the voice of sop at 70%"）は違う所だけ言う。**楽器は velocity を比率で**（`practiceNotes`・`velocityAt`＝丸めて 0 より上なら 1 以上・0 は mute と同じく鳴らさない）＝1 つの規則でプレビューの synth・MIDI 出力・`exportPlan` 経由の全 Export に届く。CC7（チャネル音量）にしなかった理由: パートがチャネルを共有しうる・Export の `renderNotes` に event の配管が要る。**声は gain**＝ページは `startVoices` の `GainNode`・Export は `VoiceTrack.gain` → `mixIn(…, gain)`（`singJobs` が `voiceLevels` を読む）・0 は `♪` off と同じ（楽器が代役・`sungTracks` と `singJobs` が揃う）。
-- **ページ**: Parts の各行を `.pline`（トグル＋`<input type=range class=fader>` 0〜100）に。`input` は title の数字だけ・`change` で level を置き `practiceChanged`（テンポのスライダーと同じく、離したとき同じ場所から続く）・100 は消す。`practiceState` に 2 つの辞書を足した（host は `PracticeState` をそのまま Export に渡す）。
-- 網: playbackCore.test「scales a part's velocity by its fader…」（velocity 半分・0 で無音・1 は同じオブジェクト・`velocityAt`・`levelOf`・summary の文）＝npm **907 / 907**（1 回目は fixture の velocity 90 を 80 と書いた私の期待値ミス）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: playback-design・singing-design §5・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7「パートのフェーダー」。
-- 残り: 実機（オーナー・§3.7＝見た目の調整はオーナーの目で。幅 76px・dark theme）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
-- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1155 -DiffBase 83ccc868b`＝`end.log`・門は全部 OK・§1 現在便 16,369 字＝残り 3,631）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ・Core／Lsp 不変）。7.6: 出所はオーナーの要望とコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

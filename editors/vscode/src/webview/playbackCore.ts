@@ -43,21 +43,24 @@ export interface PlaybackBeat { T: number; A: boolean }
 export interface Practice {
     speed: number; muted: readonly string[]; click: boolean;
     extraOn?: readonly string[]; voicesOff?: readonly string[];
-    /** The menu's faders (owner's request 2026-11-09): each part's level, 0–1, by track name —
-     *  a part not named is at 1. An instrument's level scales its notes' velocity (one rule for
-     *  the preview's synth, the MIDI output and the exports); a sung voice's (`voiceLevels`, by
-     *  part) is a gain on its WAV. */
+    /** The menu's faders (owner's request 2026-11-09): each part's level, 0–2 (0 to 200 %), by
+     *  track name — a part not named is at 1. An instrument's level scales its notes' velocity
+     *  (one rule for the preview's synth, the MIDI output and the exports; 127 is the ceiling);
+     *  a sung voice's (`voiceLevels`, by part) is a gain on its WAV. */
     levels?: Readonly<Record<string, number>>; voiceLevels?: Readonly<Record<string, number>>;
 }
 
-/** The level a fader gives `name`: 1 when none is set; clamped to 0–1. */
+/** A fader's top: 200 % (owner's request 2026-11-09, session 1157; it was 100 % for a day). */
+export const LEVEL_MAX = 2;
+
+/** The level a fader gives `name`: 1 when none is set; clamped to 0–LEVEL_MAX. */
 export function levelOf(levels: Readonly<Record<string, number>> | undefined, name: string): number {
     const v = levels?.[name];
-    return typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1;
+    return typeof v === 'number' && Number.isFinite(v) ? Math.min(LEVEL_MAX, Math.max(0, v)) : 1;
 }
 
 /** A note's velocity at `level`: scaled and rounded, never below 1 while the level is above 0
- *  (a MIDI velocity of 0 is a note off). */
+ *  (a MIDI velocity of 0 is a note off) and never above 127. */
 export function velocityAt(velocity: number, level: number): number {
     return level <= 0 ? 0 : Math.max(1, Math.min(127, Math.round(velocity * level)));
 }

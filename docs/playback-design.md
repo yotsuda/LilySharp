@@ -183,7 +183,14 @@ Now:
   header's length and the exports leave the extra parts out unless the menu turned them on.
 
 - **A fader beside each part** (owner's request 2026-11-09, session 1155): to the right of every
-  toggle — the score's parts, the `♪ part` voices, the italic extras — a range of 0 to 100 %.
+  toggle — the score's parts, the `♪ part` voices, the italic extras — a range of 0 to 200 %
+  (`LEVEL_MAX`; 100 % for a day, session 1157 raised it at the owner's request — a velocity
+  stops at 127, a voice's gain goes to 2). Under the list, two resets (session 1157): **Reset
+  parts** puts the selection back to the score shown (nothing muted, the parts it leaves out
+  off, every voice sung — the lists are by name across files, so it is also the way out of a
+  part silenced in another file) and **Reset faders** puts every fader at 100 %; each is live
+  only while there is something to put back. The number beside a fader shows while it is not at
+  100 %, and a double-click on one is 100 %.
   An instrument's level scales its notes' VELOCITY (`Practice.levels`, by track name;
   `practiceNotes`, `velocityAt`: rounded, never below 1 while above 0, 0 silences the part as a
   mute would), so one rule reaches the preview's synth, the MIDI output and every export

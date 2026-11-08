@@ -4584,6 +4584,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .practice-panel .parts .pline button { flex: 1 1 auto; min-width: 0; }
         .practice-panel .parts input.fader { width: 76px; flex: 0 0 auto; margin: 0; accent-color: #0078d7; cursor: pointer; }
         .practice-panel .parts .flevel { width: 2.8em; flex: 0 0 auto; text-align: right; font-size: 11px; opacity: 0.8; font-variant-numeric: tabular-nums; }
+        .practice-panel .presets { padding-top: 0; }
         .practice-panel .parts button { text-align: left; }
         .practice-panel .parts button[aria-pressed="false"] { color: #888; }
         /* A part the score does not sound (off unless pressed), and a sung voice. */
@@ -4666,6 +4667,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <div class="prow"><span class="plbl">Metronome</span><button type="button" id="clickBtn" class="toggle" aria-pressed="false">Off</button></div>
         <div class="prow"><span class="plbl">Count-in</span><button type="button" id="countInBtn" class="toggle" aria-pressed="false" title="One bar of clicks before the music starts">Off</button></div>
         <div class="prow"><span class="plbl">Parts</span><span id="partsList" class="parts"></span></div>
+        <div class="prow presets"><span class="plbl"></span><span class="tempo"><button type="button" id="partsReset" title="The parts as the score has them: its own on, the ones it leaves out off, every voice sung">Reset parts</button><button type="button" id="fadersReset" title="Every fader back to 100%">Reset faders</button></span></div>
     </div>
     <div class="main-content">
         <div class="container">
@@ -7090,10 +7092,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // levels / voiceLevels: the faders beside the parts and the voices (owner's request
         // 2026-11-09), part -> 0..1; a part at 1 is not listed.
         const practice = { speed: 1, muted: [], click: false, countIn: false, extraOn: [], voicesOff: [], levels: {}, voiceLevels: {} };
+        // A fader runs 0 to 200% (owner's request 2026-11-09, session 1157): levelIn clamps to that.
+        const FADER_MAX = 2;
         function levelIn(levels, name) {
             const v = levels[name];
-            return typeof v === 'number' ? Math.min(1, Math.max(0, v)) : 1;
+            return typeof v === 'number' ? Math.min(FADER_MAX, Math.max(0, v)) : 1;
         }
+        // What each line of the Parts list shows, refreshed after a reset (partsReset / fadersReset).
+        let partRefreshers = [];
         let rawNotes = null, rawParts = null, rawBeats = null, rawBarEnd = null, rawExtra = null;  // the server's last answer, as written
         let rawSung = null, rawPlayed = null;    // the parts the score sings, and plays (a part may be both: two staves)
         let lastSpan;               // what plays: undefined the whole score, null/[lo, hi] a playSpan
@@ -7126,6 +7132,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             clickBtn.textContent = practice.click ? 'On' : 'Off';
             countInBtn.setAttribute('aria-pressed', String(practice.countIn));
             countInBtn.textContent = practice.countIn ? 'On' : 'Off';
+            // The two resets under the parts (owner's request 2026-11-09): live while there is something to put back.
+            document.getElementById('partsReset').disabled = practice.muted.length === 0 && practice.extraOn.length === 0 && practice.voicesOff.length === 0;
+            document.getElementById('fadersReset').disabled = Object.keys(practice.levels).length === 0 && Object.keys(practice.voiceLevels).length === 0;
             // The exports play as the menu does, the loop aside (owner's request 2026-11-07): the
             // extension keeps this page's menu for them (previewPractice).
             vscode.postMessage({ type: 'practiceState', practice: {
@@ -7150,6 +7159,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function renderParts(message) {
             const list = document.getElementById('partsList');
             list.textContent = '';
+            partRefreshers = [];
             const parts = message.parts || [], voices = message.voices || [], extra = message.extra || [];
             if (parts.length + voices.length + extra.length === 0) { list.textContent = '—'; return; }
             // One toggle each, pressed in while it sounds; the lists are by name, so a part muted
@@ -7176,7 +7186,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 });
                 line.appendChild(b);
                 const fader = document.createElement('input');
-                fader.type = 'range'; fader.min = '0'; fader.max = '100'; fader.step = '1';
+                fader.type = 'range'; fader.min = '0'; fader.max = String(FADER_MAX * 100); fader.step = '1';
                 fader.className = 'fader';
                 // The number beside the thumb while it is not at 100 (session 1156: a click on the
                 // slider's track puts the thumb where the click lands, and a thumb at the far left
@@ -7193,7 +7203,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 fader.addEventListener('input', sayLevel);
                 fader.addEventListener('change', () => {
                     const v = Number(fader.value);
-                    if (v >= 100) { delete levels[levelKey]; } else { levels[levelKey] = v / 100; }
+                    if (v === 100) { delete levels[levelKey]; } else { levels[levelKey] = v / 100; }
                     sayLevel();
                     practiceChanged(practice.speed);
                 });
@@ -7201,6 +7211,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 line.appendChild(fader);
                 line.appendChild(num);
                 list.appendChild(line);
+                partRefreshers.push(() => {
+                    b.setAttribute('aria-pressed', String(isOn()));
+                    fader.value = String(Math.round(levelIn(levels, levelKey) * 100));
+                    sayLevel();
+                });
             };
             // The score's parts (owner's request 2026-10-25).
             for (const name of parts) {
@@ -7326,6 +7341,21 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         });
         tempoSlider.addEventListener('change', () => setSpeed(Number(tempoSlider.value)));
         document.getElementById('tempoReset').addEventListener('click', () => setSpeed(100));
+        // The parts as the score shown has them (owner's request 2026-11-09): nothing muted, the
+        // parts it leaves out off, every voice sung. The lists are by name across files, so this
+        // is also the way out of a part silenced in another file.
+        document.getElementById('partsReset').addEventListener('click', () => {
+            practice.muted = []; practice.extraOn = []; practice.voicesOff = [];
+            for (const refresh of partRefreshers) refresh();
+            practiceChanged(practice.speed);
+        });
+        // Every fader back to 100% — the objects stay (the lines hold them), their entries go.
+        document.getElementById('fadersReset').addEventListener('click', () => {
+            for (const k of Object.keys(practice.levels)) delete practice.levels[k];
+            for (const k of Object.keys(practice.voiceLevels)) delete practice.voiceLevels[k];
+            for (const refresh of partRefreshers) refresh();
+            practiceChanged(practice.speed);
+        });
         clickBtn.addEventListener('click', () => {
             practice.click = !practice.click;
             practiceChanged(practice.speed);

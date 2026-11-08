@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1155セッションの経緯
+
+### 1.1 第1155セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14861 / 0 / 2**（`-Start p1155`・HEAD `83ccc868b`・未 push 55・OMR の open 0）。同じ会話で第1154 から続けた便。オーナー要望「メトロノームのウインドウの各パートの右に、音量を調節するフェーダーを出して」。作業場所は Lab `sessions/p1155/`（`notes.md`）。
+
+- **設計（playback-design「A fader beside each part」）**: `Practice.levels`（トラック名 → 0〜1）と `Practice.voiceLevels`（パート → 0〜1）。1 のパートは載せない＝沈む見た目と `practiceSummary`（"alt at 50%, the voice of sop at 70%"）は違う所だけ言う。**楽器は velocity を比率で**（`practiceNotes`・`velocityAt`＝丸めて 0 より上なら 1 以上・0 は mute と同じく鳴らさない）＝1 つの規則でプレビューの synth・MIDI 出力・`exportPlan` 経由の全 Export に届く。CC7（チャネル音量）にしなかった理由: パートがチャネルを共有しうる・Export の `renderNotes` に event の配管が要る。**声は gain**＝ページは `startVoices` の `GainNode`・Export は `VoiceTrack.gain` → `mixIn(…, gain)`（`singJobs` が `voiceLevels` を読む）・0 は `♪` off と同じ（楽器が代役・`sungTracks` と `singJobs` が揃う）。
+- **ページ**: Parts の各行を `.pline`（トグル＋`<input type=range class=fader>` 0〜100）に。`input` は title の数字だけ・`change` で level を置き `practiceChanged`（テンポのスライダーと同じく、離したとき同じ場所から続く）・100 は消す。`practiceState` に 2 つの辞書を足した（host は `PracticeState` をそのまま Export に渡す）。
+- 網: playbackCore.test「scales a part's velocity by its fader…」（velocity 半分・0 で無音・1 は同じオブジェクト・`velocityAt`・`levelOf`・summary の文）＝npm **907 / 907**（1 回目は fixture の velocity 90 を 80 と書いた私の期待値ミス）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: playback-design・singing-design §5・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7「パートのフェーダー」。
+- 残り: 実機（オーナー・§3.7＝見た目の調整はオーナーの目で。幅 76px・dark theme）・前便の残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07・MP4 の網の競合）。
+- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1155 -DiffBase 83ccc868b`＝`end.log`・門は全部 OK・§1 現在便 16,369 字＝残り 3,631）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ・Core／Lsp 不変）。7.6: 出所はオーナーの要望とコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1154セッションの経緯
 
 ### 1.1 第1154セッション（2026-11-09・YT-DELL2）

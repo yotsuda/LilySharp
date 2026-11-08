@@ -380,7 +380,13 @@ describe('the notes the practice menu plays', () => {
         assert.deepEqual(practiceNotes(notes, parts, beats, { ...as, levels: { sop: 1 } }), notes);
         assert.equal(velocityAt(80, 0.001), 1);
         assert.equal(velocityAt(127, 1), 127);
-        assert.equal(levelOf({ a: 2 }, 'a'), 1, 'clamped');
+        // Up to 200 % (session 1157): louder, within MIDI's 127.
+        assert.equal(velocityAt(60, 2), 120);
+        assert.equal(velocityAt(90, 2), 127, 'the ceiling');
+        assert.deepEqual(practiceNotes(notes, parts, beats, { ...as, levels: { alt: 1.5 } }).map(n => n.V), [90, 127, 90]);
+        assert.equal(levelOf({ a: 2 }, 'a'), 2);
+        assert.equal(levelOf({ a: 3 }, 'a'), 2, 'clamped at the top');
+        assert.equal(levelOf({ a: -1 }, 'a'), 0, 'clamped at the bottom');
         assert.equal(levelOf(undefined, 'a'), 1);
         // In words, for the export's message.
         assert.equal(practiceSummary({ speed: 1, muted: [], click: false, countIn: false, levels: { alt: 0.5 }, voiceLevels: { sop: 0.7 } }),
