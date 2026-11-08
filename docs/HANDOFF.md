@@ -138,6 +138,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1136セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14828 / 0 / 2**（`-Start p1136`・HEAD `9659c755a`・未 push 35・OMR の open は 0）。同じ会話で第1135 から続けた便。オーナー「続けて」→ **B4＝Cantilena 拡張に DiffSinger を通す**（roadmap B2 の拡張側）。作業場所は Lab `sessions/p1136/`。
+
+- **Cantilena 拡張 0.3.0**: 設定 **`cantilena.voicesFolder`**（DiffSinger の声の親フォルダ）と `cantilena.vocoderFolder`、コマンド **Choose Voices Folder… (DiffSinger)**。`core.ts` に `ENGINES = ['neutrino','diffsinger']`・`diffSingerVoicesIn`／`diffSingerEntriesIn`（`dsconfig.yaml` を持つ子フォルダ・`character.yaml` の `name:` を label・`dsdur/dsdict-ja.yaml` があれば `ja`）・`characterNameOf`・`voicesFolderProblems`、`serveArgs` に `--voices-dir`／`--vocoder-dir`。`neutrinoFolderProblems` は空設定を問題にしない＝**どちらか一方のエンジンだけで完全な setup**（両方空のときだけ「no engine is set up」）。`engine.ts` の `EngineSetup` に 2 フォルダ・env の `CANTILENA_NEUTRINO_DIR` は設定があるときだけ。`extension.ts` は書き直し: `voices()` と Choose Voice… が両エンジンを並べ、`status().voices` は全部の id、`sing` は id をそのまま engine へ（key も id）、`voiceProblems` が engine ごとに「無い」を言う、Check Setup の文が engine で変わる。README・CHANGELOG 0.3.0・版は csproj 2 本と package.json を 0.3.0 に。網 `core.test.ts` 14 / 14・`check-types` 0。**VSIX `artifacts/extension/cantilena-win32-x64-0.3.0.vsix`（40.7 MB＝ONNX Runtime の分）**。同梱の program で `voices`／`sing --voice diffsinger/TIGER` を実走（下）。
+- **Lily# 側**: コードは不変。MANUAL-CHECKS §3.7 に DiffSinger の行を足した（入れ直しと実機はオーナー）。
+- 残り: B3（DirectML）・variance の検証・漢字のかな（オーナー決定待ち）・`lysc wav --singer`・Cantilena の公開（repo・Marketplace＝オーナー）。
+- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1136 -DiffBase 9659c755a`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` 0（REF 0・OWN 0）。この docs commit と Lab・Cantilena の commit は Claude・push と VSIX の入れ直しはオーナー。
+
+## 以下は第1135セッションの経緯
+
 ### 1.1 第1135セッション（2026-11-08・YT-DELL2）
 
 開始時 full **14828 / 0 / 2**（`-Start p1135`・HEAD `b2d2f60b5`・未 push 34・OMR の open は 0）。同じ会話で第1134 から続けた便。オーナー「続けて」→ **B2＝DiffSinger backend の本実装**（Cantilena `docs/roadmap.md` B2。この便は library と CLI・拡張側は B4 に分けた）。作業場所は Lab `sessions/p1135/`。
@@ -149,20 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **Lily# は不変**（Core・拡張とも。この便は Cantilena と Lab と HANDOFF だけ）。
 - 残り: **B4＝拡張**（`cantilena.voicesFolder`・`voices()` に diffsinger・`ENGINES` に足す・pack）・B3（DirectML＝別パッケージ）・B2 の variance の検証（`dsvariance` のある声で）・漢字のかな（オーナー決定待ち）・`lysc wav --singer`。
 - 終了時 full **14828 / 0 / 2 / 14830**（`-End p1135 -DiffBase b2d2f60b5`＝`end.log`・門は全部 OK・§1 現在便 17,140 字＝残り 2,860）。§7 7.5: Core の `+` 0（REF 0・OWN 0）。この docs commit と Lab・Cantilena の commit は Claude・push はオーナー。
-
-## 以下は第1134セッションの経緯
-
-### 1.1 第1134セッション（2026-11-08・YT-DELL2）
-
-開始時 full **14828 / 0 / 2**（`-Start p1134`・HEAD `a332e9a1a`・未 push 33・OMR の open は 0）。同じ会話で第1133 から続けた便。オーナー「続けて」→ roadmap 短期の 6 行目＝**DiffSinger の spike**（Cantilena `docs/roadmap.md` B1: 声を 1 つ読んで 1 フレーズを CPU で歌わせ、時間と許諾を記録）。オーナー指示「OpenUtau のコードを読むなら `C:\MyProj` の下に clone して」＝`C:\MyProj\openutau-src`（MIT・depth 1）と `C:\MyProj\openutau-wiki`。作業場所は Lab `sessions/p1134/`（計器は `dsspike/`）。
-
-- **結果＝OpenUtau 形式の DiffSinger の声が C#（ONNX Runtime 1.23.0）で Cantilena の楽譜を歌った**。計器 `dsspike`（Lab `sessions/p1134/dsspike/`・`dsspike <voice> <vocoder> <score.json> <out.wav>`）は OpenUtau の `DiffSingerBasePhonemizer`／`DsPitch`／`DsVariance`／`DiffSingerRenderer` を段ごとに写した: かな → `dsdur/dsdict-ja.yaml`（**TIGER の見出しは kana そのもの**＝ローマ字より先に kana で引く）→ dsdur の linguistic＋dur で音素の時刻（母音が音の頭・前の子音は dur model が前の音の尻を食う＝OpenUtau と同じ）→ dspitch で f0 → acoustic で mel → 声が同梱する vocoder で波形。`examples/yukiyakonko.json`（12 音・6.8 s）を **`dsspike analyze`（音ごとの自己相関の音程）で検算: 12 音とも有声・書いた音高との差は平均 0.19 半音**（DirectML でも 0.22）。
-- **時間（7.1 s の音・613 frames）**: CPU は process 全体 5〜18 s（acoustic が 10〜20 steps で 1.3〜13.9 s と振れる・未調査）、**DirectML（`-p:Dml=true`・`Microsoft.ML.OnnxRuntime.DirectML`）は warm で全体 3.0 s・acoustic 0.29 s・model の load が大半**＝NEUTRINO と同じく常駐（`serve`）が要る。GPU の provider は別パッケージ＝B3 の設計事項。
-- **声と許諾**: TIGER DS v106（`C:\Tools\voices\TIGER`・CC BY-NC-ND＋Commons Clause・ローカルの試験だけ・repo には何も入れない）。vocoder は声が同梱（`dsvocoder/`）。OpenVPI の nsf_hifigan（CC BY-NC-SA）も `C:\Tools\voices\nsf_hifigan` に取った（GitHub の release 配信が約 20 分 504 だったので Hugging Face のミラーから。TIGER は `gh release download`＝API 経由で通った）。ダウンロードは `C:\Tools\voices\_dl\`（zip 555 MB・oudep 53 MB）＝残すか消すかはオーナー。
-- **形式で分かったこと**（Cantilena `docs/roadmap.md` B1・B2 と Lab `notes.md` に書いた）: module ごと（`dsdur/`・`dspitch/`・`dsvariance/`）に自分の `dsconfig.yaml`・`phonemes.txt`・`.emb`・辞書。`languages.json` は `use_lang_id` のときだけ（TIGER は無し＝辞書だけで多言語）。TIGER に variance は無い＝**variance の経路は未検証**（B2 で variance のある声で先に試す）。入力名は model が宣言するものだけ渡し、足りない名を報告する作りが効いた。
-- **Lily# は Core・拡張とも不変**（この便は Cantilena の docs と Lab と HANDOFF だけ）。
-- 残り: roadmap §3 の 4（漢字のかな＝オーナー決定待ち）・5（`lysc wav --singer`）・**B2（backend の本実装）**。
-- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1134 -DiffBase a332e9a1a`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` 0（REF 0・OWN 0）。この docs commit と Lab・Cantilena の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

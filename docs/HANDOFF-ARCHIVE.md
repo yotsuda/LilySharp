@@ -267,6 +267,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1134セッションの経緯
+
+### 1.1 第1134セッション（2026-11-08・YT-DELL2）
+
+開始時 full **14828 / 0 / 2**（`-Start p1134`・HEAD `a332e9a1a`・未 push 33・OMR の open は 0）。同じ会話で第1133 から続けた便。オーナー「続けて」→ roadmap 短期の 6 行目＝**DiffSinger の spike**（Cantilena `docs/roadmap.md` B1: 声を 1 つ読んで 1 フレーズを CPU で歌わせ、時間と許諾を記録）。オーナー指示「OpenUtau のコードを読むなら `C:\MyProj` の下に clone して」＝`C:\MyProj\openutau-src`（MIT・depth 1）と `C:\MyProj\openutau-wiki`。作業場所は Lab `sessions/p1134/`（計器は `dsspike/`）。
+
+- **結果＝OpenUtau 形式の DiffSinger の声が C#（ONNX Runtime 1.23.0）で Cantilena の楽譜を歌った**。計器 `dsspike`（Lab `sessions/p1134/dsspike/`・`dsspike <voice> <vocoder> <score.json> <out.wav>`）は OpenUtau の `DiffSingerBasePhonemizer`／`DsPitch`／`DsVariance`／`DiffSingerRenderer` を段ごとに写した: かな → `dsdur/dsdict-ja.yaml`（**TIGER の見出しは kana そのもの**＝ローマ字より先に kana で引く）→ dsdur の linguistic＋dur で音素の時刻（母音が音の頭・前の子音は dur model が前の音の尻を食う＝OpenUtau と同じ）→ dspitch で f0 → acoustic で mel → 声が同梱する vocoder で波形。`examples/yukiyakonko.json`（12 音・6.8 s）を **`dsspike analyze`（音ごとの自己相関の音程）で検算: 12 音とも有声・書いた音高との差は平均 0.19 半音**（DirectML でも 0.22）。
+- **時間（7.1 s の音・613 frames）**: CPU は process 全体 5〜18 s（acoustic が 10〜20 steps で 1.3〜13.9 s と振れる・未調査）、**DirectML（`-p:Dml=true`・`Microsoft.ML.OnnxRuntime.DirectML`）は warm で全体 3.0 s・acoustic 0.29 s・model の load が大半**＝NEUTRINO と同じく常駐（`serve`）が要る。GPU の provider は別パッケージ＝B3 の設計事項。
+- **声と許諾**: TIGER DS v106（`C:\Tools\voices\TIGER`・CC BY-NC-ND＋Commons Clause・ローカルの試験だけ・repo には何も入れない）。vocoder は声が同梱（`dsvocoder/`）。OpenVPI の nsf_hifigan（CC BY-NC-SA）も `C:\Tools\voices\nsf_hifigan` に取った（GitHub の release 配信が約 20 分 504 だったので Hugging Face のミラーから。TIGER は `gh release download`＝API 経由で通った）。ダウンロードは `C:\Tools\voices\_dl\`（zip 555 MB・oudep 53 MB）＝残すか消すかはオーナー。
+- **形式で分かったこと**（Cantilena `docs/roadmap.md` B1・B2 と Lab `notes.md` に書いた）: module ごと（`dsdur/`・`dspitch/`・`dsvariance/`）に自分の `dsconfig.yaml`・`phonemes.txt`・`.emb`・辞書。`languages.json` は `use_lang_id` のときだけ（TIGER は無し＝辞書だけで多言語）。TIGER に variance は無い＝**variance の経路は未検証**（B2 で variance のある声で先に試す）。入力名は model が宣言するものだけ渡し、足りない名を報告する作りが効いた。
+- **Lily# は Core・拡張とも不変**（この便は Cantilena の docs と Lab と HANDOFF だけ）。
+- 残り: roadmap §3 の 4（漢字のかな＝オーナー決定待ち）・5（`lysc wav --singer`）・**B2（backend の本実装）**。
+- 終了時 full **14828 / 0 / 2 / 14830**（`-End p1134 -DiffBase a332e9a1a`＝`end.log`・門は全部 OK）。§7 7.5: Core の `+` 0（REF 0・OWN 0）。この docs commit と Lab・Cantilena の commit は Claude・push はオーナー。
+
 ## 以下は第1133セッションの経緯
 
 ### 1.1 第1133セッション（2026-11-08・YT-DELL2）
