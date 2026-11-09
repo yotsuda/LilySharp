@@ -2471,9 +2471,9 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>After <c>lyrics NAME</c> on a SCORE row: the <c>sings</c>
     /// binding, then the score's normal continuations — the lyrics-row sibling
     /// of <see cref="GetStaffAttachNameCompletions"/>.</summary>
-    internal static CompletionList GetLyricsRowAttachNameCompletions()
+    internal static CompletionList GetLyricsRowAttachNameCompletions(System.Collections.Generic.IReadOnlySet<string>? written = null)
     {
-        var items = new System.Collections.Generic.List<CompletionItem> { RowSingsItem(), SingerItem("1") };
+        var items = new[] { RowSingsItem(), SingerItem("1") }.Where(i => written?.Contains(i.Label) != true).ToList();
         foreach (var it in GetScoreBlockCompletions().Items)
         {
             it.SortText = "9" + (it.SortText ?? "");
@@ -2486,9 +2486,9 @@ public sealed partial class LilySharpLanguageServer
     /// binding, then the group's own narrow continuations (never the score-wide
     /// list — LYS6011), the group-body sibling of
     /// <see cref="GetLyricsRowAttachNameCompletions"/>.</summary>
-    internal static CompletionList GetGroupLyricsRowAttachNameCompletions()
+    internal static CompletionList GetGroupLyricsRowAttachNameCompletions(System.Collections.Generic.IReadOnlySet<string>? written = null)
     {
-        var items = new System.Collections.Generic.List<CompletionItem> { RowSingsItem() };
+        var items = new[] { RowSingsItem(), SingerItem("1") }.Where(i => written?.Contains(i.Label) != true).ToList();
         foreach (var it in GetStaffGroupBlockCompletions().Items)
         {
             it.SortText = "9" + (it.SortText ?? "");
@@ -2755,7 +2755,11 @@ public sealed partial class LilySharpLanguageServer
             .ToArray(),
     };
 
-    internal static CompletionList GetLyricsTrackNameCompletions() => new()
+    /// <summary>What a definition's head may say next: the clauses <paramref name="written"/> does not hold.</summary>
+    internal static CompletionList GetLyricsTrackNameCompletions(System.Collections.Generic.IReadOnlySet<string>? written = null)
+        => new() { Items = LyricsTrackClauses().Items.Where(i => written?.Contains(i.Label) != true).ToArray() };
+
+    private static CompletionList LyricsTrackClauses() => new()
     {
         Items =
         [

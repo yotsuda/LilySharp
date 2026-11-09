@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1167セッションの経緯
+
+### 1.1 第1167セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14862 / 0 / 2**（`-Start p1167`・HEAD `990c905cf`・未 push 67・OMR の open 0）。同じ会話で第1166 から続けた便。オーナー決定「singer の前に歌詞の言語を指定できるように」「コードでなく Japanese のような名前（補完が効くから）」「いったん小文字」。作業場所は Lab `sessions/p1167/`（`notes.md`）。
+
+- **実装**: `language japanese`（ファイル）と `lyrics en language english sings melody { … }`（トラック・`sings` と順不同・トラックが勝つ・無ければ japanese）。`Music.LyricLanguage`（japanese／english／chinese／korean → ja／en／zh／ko の表は 1 か所）・誤字は LYS4038。`language` は予約語にしない（`lyrics language { }` はトラック名のまま）。`LyricsBlockGreen` の頭を「slot 1＝名前か null・slot 2 から (語, 値) の対」に＝`lyrics sings m { }` の無名トラックも正しく読むようになった（従来は sings が名前に読まれていた）。`LyricEvent.Language`→`SungVoices`（パートの最初の言葉の言語・かな検査は ja のみ）。補完 `AfterLanguage`・top-level と `lyrics NAME` の候補に `language`・tmLanguage。
+- **未対応＝Cantilena 側**: どちらの backend も language を見ない（DiffSinger の辞書は ja 固定・NEUTRINO は日本語のみ）。roadmap Phase C に記載。
+- **`singer` の語順**: オーナーの形 `lyrics verse singer "neutrino/MERROW" sings melody` を roadmap §4 に反映（節は順不同・未実装）。
+- 網: `LyricLanguageTests`・Lyric／Sings／Sung の網 546 / 546・npm（`npmtest.log`）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: GRAMMAR・SYNTAX_REFERENCE・GRAMMAR_FOR_LLM・singing-design §3・roadmap・CHANGELOG 2 つ・MANUAL-CHECKS §3.7。
+- 1 回目の `-End` は赤 3 本（私の取りこぼし）: 補完の新しい関数を別の関数の doc comment との間に入れた（DocCommentPlacement）・`language` を予約語でないのにキーワードの色の列に足した（EditorColouring → `capo` と同じ行頭アンカーの `language-directive` に）・補完 fixture の更新漏れ（`LILYSHARP_UPDATE_DOCS=1` で再生成）。
+- 終了時 full **14880 / 0 / 2 / 14882**（`-End p1167 -DiffBase 990c905cf`＝`end.log`・門は全部 OK・§1 現在便 16,054 字＝残り 3,946・+18 本）。§7 7.5: `-End` は commit 前の diff なので Core `+` 0 と出るが、実際は Parser・Syntax・`Music.LyricLanguage`・`SungVoices`・`MidiExporter`（REF 0・OWN 0＝描画には触れない）。7.6: 出所はオーナーの決定とコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1166セッションの経緯
 
 ### 1.1 第1166セッション（2026-11-09・YT-DELL2）

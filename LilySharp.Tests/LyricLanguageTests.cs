@@ -224,6 +224,82 @@ public class LyricLanguageTests
     public void ElsewhereIsNoSlot(string source)
         => Assert.Null(SlotLanguage(source));
 
+    // ── the head goes on after a clause (owner's request 2026-11-09, session 1169) ──
+
+    private const string Declared = "part sop { clef treble }\n";
+
+    private static string[] Offered(string text)
+    {
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///head.lys");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = text, Version = 1, LanguageId = "lilysharp" },
+        });
+        var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(text, text.Length);
+        return [.. (server.Completion(new CompletionParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Position = new Position(line, character),
+        })?.Items ?? []).Select(i => i.Label!)];
+    }
+
+    [Theory]
+    [InlineData("lyrics words sings sop ", new[] { "singer", "language" }, new[] { "sings" })]      // the owner's position
+    [InlineData("lyrics words sings sop si", new[] { "singer", "language" }, new[] { "sings" })]    // being typed
+    [InlineData("lyrics sings sop ", new[] { "singer", "language" }, new[] { "sings" })]            // an unnamed track
+    [InlineData("section A { lyrics words sings sop ", new[] { "singer", "language" }, new[] { "sings" })]
+    [InlineData("lyrics words language english sings sop ", new[] { "singer" }, new[] { "sings", "language" })]
+    [InlineData("lyrics words singer \"neutrino/MERROW\" ", new[] { "sings", "language" }, new[] { "singer" })]
+    public void AfterAClause_TheHeadOffersTheOthers(string head, string[] offered, string[] gone)
+    {
+        var labels = Offered(Declared + head);
+        Assert.All(offered, l => Assert.Contains(l, labels));
+        Assert.All(gone, l => Assert.DoesNotContain(l, labels));
+    }
+
+    [Theory]
+    [InlineData("score { lyrics words sings sop ", "singer", "sings")]
+    [InlineData("score { lyrics words singer \"x\" ", "sings", "singer")]
+    [InlineData("score { grandStaff { staff sop  lyrics words sings sop ", "singer", "sings")]
+    public void AfterAClause_AScoresRowOffersTheOther(string row, string offered, string gone)
+    {
+        var labels = Offered(Declared + row);
+        Assert.Contains(offered, labels);
+        Assert.DoesNotContain(gone, labels);
+    }
+
+    [Theory]
+    [InlineData("lyrics words singer \"x\" sings ")]
+    [InlineData("lyrics words language english sings ")]
+    [InlineData("score { lyrics words singer \"x\" sings ")]
+    public void ASingsAfterAClause_StillTakesThePart(string head)
+        => Assert.Contains("sop", Offered(Declared + head));
+
+    [Theory]
+    [InlineData("lyrics words sings sop { la ")]             // the words themselves
+    [InlineData("lyrics { lyrics sings sop ")]               // a syllable that reads like a head
+    [InlineData("title \"the lyrics w sings sop ")]          // a string
+    [InlineData("// lyrics w sings sop ")]                   // a comment
+    public void TheBodyAndOtherText_AreNoHead(string text)
+        => Assert.DoesNotContain("singer", Offered(Declared + text));
+
+    [Fact]
+    public void TheSingerItem_LeavesTheCaretBetweenTheQuotes_AndOpensTheList()
+    {
+        var item = Assert.Single(LilySharpLanguageServer.GetLyricsTrackNameCompletions(new System.Collections.Generic.HashSet<string> { "sings", "language" }).Items);
+        Assert.Equal("singer \"$0\"", item.InsertText);
+        Assert.Equal(InsertTextFormat.Snippet, item.InsertTextFormat);
+        Assert.Equal("editor.action.triggerSuggest", item.Command!.CommandIdentifier);
+    }
+
+    [Theory]
+    [InlineData("lyrics words sings sop singer \"§\"\n", "ja")]
+    [InlineData("language korean\nlyrics words sings sop singer \"§\"\n", "ko")]
+    [InlineData("lyrics words language english sings sop singer \"§\"\n", "en")]
+    public void TheOwnersPosition_IsASlot_ThatKnowsTheLanguage(string source, string expected)
+        => Assert.Equal(expected, SlotLanguage(source));
+
     [Fact]
     public void TheNames_AreTheLowerCaseVocabulary()
     {

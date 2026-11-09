@@ -437,7 +437,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterPlaysTarget => GetDeclaredNameCompletions(doc.Text, "strokes", "Strokes part the row plays — its chords struck at the strokes"),
             CompletionContext.AfterLyricsRef => GetLyricsRowNameCompletions(doc.Text, offset),
             CompletionContext.AfterLyricsName => GetVoiceBindingNameCompletions(doc.Text),
-            CompletionContext.AfterLyricsTrackName => GetLyricsTrackNameCompletions(),
+            CompletionContext.AfterLyricsTrackName => GetLyricsTrackNameCompletions(LyricsHeadAt(doc.Text, offset)?.Written),
             CompletionContext.AfterLanguage => GetLanguageNameCompletions(),
             CompletionContext.AfterSinger => new CompletionList { Items = [] },
             CompletionContext.AfterSingsTarget => GetVoiceBindingNameCompletions(doc.Text,
@@ -448,8 +448,8 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterStaffAttachName => WithoutOssiaPitch(GetStaffAttachNameCompletions(), doc.Text, offset),
             CompletionContext.AfterTabAttachName => GetTabAttachNameCompletions(),
             CompletionContext.AfterGroupStaffAttachName => WithoutOssiaPitch(GetGroupStaffAttachNameCompletions(), doc.Text, offset),
-            CompletionContext.AfterLyricsRowAttachName => GetLyricsRowAttachNameCompletions(),
-            CompletionContext.AfterGroupLyricsRowAttachName => GetGroupLyricsRowAttachNameCompletions(),
+            CompletionContext.AfterLyricsRowAttachName => GetLyricsRowAttachNameCompletions(LyricsHeadAt(doc.Text, offset)?.Written),
+            CompletionContext.AfterGroupLyricsRowAttachName => GetGroupLyricsRowAttachNameCompletions(LyricsHeadAt(doc.Text, offset)?.Written),
             CompletionContext.AfterStaffLinesAs => WithoutOssiaPitch(GetStaffLinesSelectorCompletions(), doc.Text, offset),
             // `as lines 1 |` — the chain may go on (bare, sharing the one `as`) or the row
             // may end; the selectors already written are dropped.

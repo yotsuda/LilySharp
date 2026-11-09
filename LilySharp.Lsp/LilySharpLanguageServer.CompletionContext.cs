@@ -559,6 +559,37 @@ public sealed partial class LilySharpLanguageServer
         return null;
     }
 
+    /// <summary>The clauses a lyrics head or row has whole before the caret (<c>lyrics w sings m ▮</c>,
+    /// owner's request 2026-11-09, session 1169: the head goes on after its first clause, in any
+    /// order), and whether a <c>sings</c> after them waits for its part. Null when no clause is
+    /// whole — a bare <c>lyrics w ▮</c> is the older rules' — and on a comment's line.</summary>
+    internal static (System.Collections.Generic.IReadOnlySet<string> Written, bool AwaitsSingsTarget)? LyricsHeadAt(string text, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
+        int end = Math.Clamp(offset, 0, text.Length);
+        while (end > 0 && IsWordChar(text[end - 1])) end--;     // a partial word is not a written one
+        int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
+        string line = text[lineStart..end];
+        if (line.Contains("//", StringComparison.Ordinal))
+            return null;
+        var head = System.Text.RegularExpressions.Regex.Match(line,
+            @"(?:^|[\s{}])lyrics(?:[ \t]+(?<w>[^\s{}""]+|""[^""]*""))*[ \t]+$");
+        if (!head.Success)
+            return null;
+        var words = head.Groups["w"].Captures.Select(c => c.Value).ToList();
+        bool awaits = words.Count >= 3 && words[^1] == "sings";
+        if (awaits)
+            words.RemoveAt(words.Count - 1);
+        var written = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = words.Count % 2; i + 1 < words.Count; i += 2)      // the clauses are pairs: an odd word is the track's name
+        {
+            if (words[i] is not ("sings" or LilySharp.Core.Music.LyricLanguage.Keyword or LilySharp.Core.Music.LyricSinger.Keyword))
+                return null;
+            written.Add(words[i]);
+        }
+        return written.Count == 0 ? null : (written, awaits);
+    }
+
     // A named part (`part rh {`) has `part` one word before the brace; the nameless one
     // (`part {`) has it right before. Until 2026-10-28 only the named form was read, so the
     // nameless part's body got the music completions and no `instrument` (owner's report).
@@ -1058,6 +1089,21 @@ public sealed partial class LilySharpLanguageServer
         // Between a `singer`'s quotes: the voices are the editor's to list (lilysharp/singerSlot).
         if (SingerSlotAt(text, offset) != null)
             return CompletionContext.AfterSinger;
+
+        // A lyrics head after a whole clause: the clauses not written yet (a body's words are
+        // in a lyrics frame, a title's in a string).
+        if (LyricsHeadAt(text, offset) is { } lyricsHead
+            && !IsInsideStringLiteral(text, offset)
+            && !(scan.Stack.Count > 0 && IsLyricsFrame(scan.Stack[^1].Frame)))
+        {
+            if (lyricsHead.AwaitsSingsTarget)
+                return CompletionContext.AfterSingsTarget;
+            if (!scan.Stack.Exists(o => o.IsScoreOpener || o.Frame.Name == "score" || o.Frame.Prefix == "score"))
+                return CompletionContext.AfterLyricsTrackName;
+            return IsStaffGroupKeyword(scan.Stack[^1].Frame.Name)
+                ? CompletionContext.AfterGroupLyricsRowAttachName
+                : CompletionContext.AfterLyricsRowAttachName;
+        }
 
         // Right after a complete articulation name or its '.', offer the .up/.down
         // placement qualifier — '@fermata|', '@fermata.|', '@fermata.d|'. Checked

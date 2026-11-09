@@ -138,6 +138,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1169セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14898 / 0 / 2**（`-Start p1169`・HEAD `7bb169024`・未 push 69）。オーナー「`lyrics words sings sop |` の位置で singer を補完入力できるようにして。singer を補完で入れたら、直後に自動で声の名前一覧を候補ウィンドウで開いて」。作業場所は Lab `sessions/p1169/`。
+
+- **補完**: `LyricsHeadAt`（CompletionContext）が行の頭を語の対として読む＝節が 1 つ以上そろった位置（順不同・無名トラックも）で、まだ書いていない節だけを出す。定義は `singer`／`language`／`sings`、score の行とグループの行は `singer`／`sings`＋続きの項目。グループの行に `singer` が無かったのも足した。`singer "x" sings ▮` や `language english sings ▮` はパート名を出す（2 語前を見る旧規則では届かなかった）。本文・文字列・`//` の行では読まない。
+- **声の一覧を開く**: 補完項目は第1168 の形のまま（`singer "$0"`＋`editor.action.triggerSuggest`）で、この位置もその経路に乗った。`singerSlot` はこの位置でも言語を返す（網あり）。
+- 網: `LyricLanguageTests` に頭の続きの 4 群と item の形・slot を追加。実機（候補ウィンドウが本当に開く）はオーナー＝ extension host では確かめていない。
+- 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1169 -DiffBase 7bb169024`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（拡張の TS は変えていない＝Reload Window 1 回）。
+
+## 以下は第1168セッションの経緯
+
 ### 1.1 第1168セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14880 / 0 / 2**（`-Start p1168`・HEAD `51b943ce6`・未 push 68・OMR の open 0）。同じ会話で第1167 から続けた便。オーナー「singer を実装して。言語に適切な名前だけを補完で提案できるようにして」。作業場所は Lab `sessions/p1168/`（`notes.md`・`e2e.lys`）。
@@ -149,19 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 網: `LyricLanguageTests` に singer／slot を追加・Lyric／Sings／Sung／WavExport 571 / 571・npm 911 / 911・Cantilena npm 19 / 19。docs: GRAMMAR・SYNTAX_REFERENCE・GRAMMAR_FOR_LLM・singing-design §3・roadmap・CHANGELOG 3 つ・MANUAL-CHECKS §3.7。
 - **未実装**: 1 パート 1 声のまま（同じパートの 2 トラックで singer が違っても最初が勝つ）・`lysc wav --cast`・DiffSinger の ja 以外（辞書が ja 固定）。実機（補完の見た目・▶ の声）はオーナー＝ extension host では確かめていない。
 - 終了時 full **14898 合格 / 0 失敗 / skip 2 / 合計 14900**（`-End p1168 -DiffBase 51b943ce6`、BUILD 0）。一度だけ赤: `DocKeywordListTests.ThePartHeaderProductions_NameTheLanguagesVocabulary` — GRAMMAR の `PartProperty` のコメントに `;` を書いたせいで、最初の `;` まで読む抽出が `midiInstrument` を落としていた。production の中のコメントに `;` を書かない。
-
-## 以下は第1167セッションの経緯
-
-### 1.1 第1167セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14862 / 0 / 2**（`-Start p1167`・HEAD `990c905cf`・未 push 67・OMR の open 0）。同じ会話で第1166 から続けた便。オーナー決定「singer の前に歌詞の言語を指定できるように」「コードでなく Japanese のような名前（補完が効くから）」「いったん小文字」。作業場所は Lab `sessions/p1167/`（`notes.md`）。
-
-- **実装**: `language japanese`（ファイル）と `lyrics en language english sings melody { … }`（トラック・`sings` と順不同・トラックが勝つ・無ければ japanese）。`Music.LyricLanguage`（japanese／english／chinese／korean → ja／en／zh／ko の表は 1 か所）・誤字は LYS4038。`language` は予約語にしない（`lyrics language { }` はトラック名のまま）。`LyricsBlockGreen` の頭を「slot 1＝名前か null・slot 2 から (語, 値) の対」に＝`lyrics sings m { }` の無名トラックも正しく読むようになった（従来は sings が名前に読まれていた）。`LyricEvent.Language`→`SungVoices`（パートの最初の言葉の言語・かな検査は ja のみ）。補完 `AfterLanguage`・top-level と `lyrics NAME` の候補に `language`・tmLanguage。
-- **未対応＝Cantilena 側**: どちらの backend も language を見ない（DiffSinger の辞書は ja 固定・NEUTRINO は日本語のみ）。roadmap Phase C に記載。
-- **`singer` の語順**: オーナーの形 `lyrics verse singer "neutrino/MERROW" sings melody` を roadmap §4 に反映（節は順不同・未実装）。
-- 網: `LyricLanguageTests`・Lyric／Sings／Sung の網 546 / 546・npm（`npmtest.log`）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: GRAMMAR・SYNTAX_REFERENCE・GRAMMAR_FOR_LLM・singing-design §3・roadmap・CHANGELOG 2 つ・MANUAL-CHECKS §3.7。
-- 1 回目の `-End` は赤 3 本（私の取りこぼし）: 補完の新しい関数を別の関数の doc comment との間に入れた（DocCommentPlacement）・`language` を予約語でないのにキーワードの色の列に足した（EditorColouring → `capo` と同じ行頭アンカーの `language-directive` に）・補完 fixture の更新漏れ（`LILYSHARP_UPDATE_DOCS=1` で再生成）。
-- 終了時 full **14880 / 0 / 2 / 14882**（`-End p1167 -DiffBase 990c905cf`＝`end.log`・門は全部 OK・§1 現在便 16,054 字＝残り 3,946・+18 本）。§7 7.5: `-End` は commit 前の diff なので Core `+` 0 と出るが、実際は Parser・Syntax・`Music.LyricLanguage`・`SungVoices`・`MidiExporter`（REF 0・OWN 0＝描画には触れない）。7.6: 出所はオーナーの決定とコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 
