@@ -74,6 +74,28 @@ describe('the preview routes its sounds to the MIDI output', () => {
         assert.match(html.slice(release, hold), /type: 'midiRelease', channel: heldChannel, pitches: heldPitches/);
     });
 
+    // What sounds is what is on, each on its own (session 1165): lifted out of the page script.
+    it('sounds a sung-only part\'s instrument when turned on or standing in, and not when both are off', () => {
+        const at = html.indexOf('function instrumentSounds(');
+        let depth = 0, close = -1;
+        for (let i = html.indexOf('{', at); i < html.length; i++) {
+            if (html[i] === '{') depth++;
+            else if (html[i] === '}' && --depth === 0) { close = i + 1; break; }
+        }
+        const practice = { instrumentsOn: [] as string[], voicesOff: [] as string[] };
+        const sounds = new vm.Script('(' + html.slice(at, close) + ')').runInNewContext({
+            rawParts: ['Tempo', 'melody', 'm2'], rawSung: ['melody'], rawPlayed: ['m2'], practice,
+        }) as (i: number, sung: Set<number>) => boolean;
+        assert.equal(sounds(2, new Set([1])), true, 'a played part sounds');
+        assert.equal(sounds(1, new Set([1])), false, 'the voice sings: its instrument is off');
+        assert.equal(sounds(1, new Set()), true, 'no voice yet: the instrument stands in');
+        practice.instrumentsOn = ['melody'];
+        assert.equal(sounds(1, new Set([1])), true, 'turned on: both sound');
+        practice.instrumentsOn = [];
+        practice.voicesOff = ['melody'];
+        assert.equal(sounds(1, new Set()), false, 'both switched off: silence');
+    });
+
     it('follows the wall clock from the server\'s zero, and plays here when the server refused', () => {
         const at = html.indexOf('function midiStarted(');
         const body = html.slice(at, html.indexOf('function followAlong(', at));

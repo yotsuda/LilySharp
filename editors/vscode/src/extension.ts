@@ -1726,12 +1726,16 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             if (message.type === 'requestParts') {
                 if (!client || !clientReady) { return; }
                 try {
-                    const pb = await client.sendRequest<{ Notes?: { N?: number }[] | null; Parts?: string[] | null; Extra?: string[] | null }>(
+                    const pb = await client.sendRequest<{ Notes?: { N?: number }[] | null; Parts?: string[] | null; Extra?: string[] | null; Sung?: string[] | null; Played?: string[] | null }>(
                         'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
                     const sounding = new Set((pb.Notes ?? []).map(n => n.N));
                     const extraSet = new Set(pb.Extra ?? []);
                     const parts = (pb.Parts ?? []).filter((p, i) => sounding.has(i) && !extraSet.has(p));
                     const extra = (pb.Parts ?? []).filter((p, i) => sounding.has(i) && extraSet.has(p));
+                    // The parts the score only sings (a singer's staff, no staff without words): their
+                    // instrument is off by default, the voice sings (session 1165).
+                    const played = new Set(pb.Played ?? []);
+                    const sungOnly = (pb.Sung ?? []).filter(p => !played.has(p));
                     // Every singable lyrics of the file (session 1163), and which of them the
                     // score shown sings itself — the others are off until the menu turns them on.
                     let voices: string[] = [], voicesInScore: string[] = [];
@@ -1742,7 +1746,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                         voices = singable.map(v => v.Part);
                         voicesInScore = singable.filter(v => v.InScore !== false).map(v => v.Part);
                     }
-                    panel.webview.postMessage({ type: 'partsData', parts, extra, voices, voicesInScore });
+                    panel.webview.postMessage({ type: 'partsData', parts, extra, voices, voicesInScore, sungOnly });
                 } catch {
                     panel.webview.postMessage({ type: 'partsData', parts: [], extra: [], voices: [] });
                 }
@@ -3610,16 +3614,23 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
             // The score's own voice unless the menu switched it off; one the score does not sing
             // only when the menu turned it on (voicesOn, session 1163).
             const sings = voice.InScore !== false ? sungParts.has(voice.Part) && !silentVoices.has(voice.Part) : voicesOn.has(voice.Part) && !silentVoices.has(voice.Part);
+            // A sung-only part with its voice switched off and its instrument not turned on: silent, as in Play.
+            if (silentVoices.has(voice.Part) && sungParts.has(voice.Part) && !playedParts.has(voice.Part) && !(practice?.instrumentsOn ?? []).includes(voice.Part)) {
+                const off = job.Parts?.indexOf(voice.Part) ?? -1;
+                if (off >= 0) { silenced.add(off); }
+            }
             if (voice.Notes.length === 0 || !sings || gain <= 0) { continue; }
             try {
                 const { rendered } = await engine.render(voice, speed);
                 const v = await rendered;
                 // The WAV begins VOICE_LEAD_S before the score's 0 (the first consonant's room).
                 voices.push({ wav: v.wav, at: (job.Lead ?? 0) - VOICE_LEAD_S, duration: v.duration, gain });
-                // The voice stands in for the instrument, unless the score shows the part on a staff
-                // of its own with no words (sung AND played: both sound).
+                // A part the score only sings keeps its instrument out of the mix unless the menu
+                // turned it on (instrumentsOn; session 1165) - a part it plays, or the menu's own
+                // voice of a played part, sounds both ways.
                 const track = job.Parts?.indexOf(voice.Part) ?? -1;
-                if (track >= 0 && !(playedParts.has(voice.Part) && sungParts.has(voice.Part))) { silenced.add(track); }
+                const sungOnly = sungParts.has(voice.Part) && !playedParts.has(voice.Part);
+                if (track >= 0 && sungOnly && !(practice?.instrumentsOn ?? []).includes(voice.Part)) { silenced.add(track); }
             } catch (e) {
                 outputChannel.appendLine(`singer: export: the voice of ${voice.Part} was not sung — ${String(e)}; its instrument plays`);
             }
@@ -6396,6 +6407,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             for (const i of sungTracks()) { pre = Math.max(pre, voices.get(rawParts[i]).pre || 0); }
             return pre;
         }
+        // Whether track i's instrument sounds in this Play (session 1165): a part the score only
+        // sings keeps its instrument off unless the menu turned it on, standing in only while its
+        // voice is not there (not sung now: off, not ready, or its fader at 0); every other part's
+        // instrument sounds (the muted and the extras left off are already out of the list).
+        function instrumentSounds(i, sung) {
+            if (!rawParts || typeof i !== 'number' || i < 0) { return true; }
+            const name = rawParts[i];
+            const sungOnly = rawSung && rawSung.includes(name) && !(rawPlayed && rawPlayed.includes(name));
+            if (!sungOnly) { return true; }
+            if (practice.instrumentsOn.includes(name)) { return true; }
+            if (practice.voicesOff.includes(name)) { return false; }    // both switched off: silence
+            return !sung.has(i);      // the stand-in, until the voice is there
+        }
         // Where the voices end in the list's time: the whole buffer after the count-in's lead, or
         // the plan's pieces laid out their rounds (for a Play with no note left to end on).
         function voicesEnd() {
@@ -6699,18 +6723,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // worse than starting cleanly at the next onset).
             notes = window.LysSynth ? window.LysSynth.fromOffset(notes, offset) : notes.filter(n => n.T >= offset - 0.001);
             if (notes.length === 0 && !voiced) { return; }
-            // A part whose voice sings now is sung, not played: its notes leave the instruments'
-            // list (owner's decision 2026-11-08: one sound a staff — the instrument is the stand-in
-            // while there is no voice, or the voice is switched off) — unless the score shows the
-            // part on another staff with no words under it (rawPlayed): that staff is an
-            // instrument's, and the part sounds both ways. The highlight follows the whole list.
-            // (A part the score both sings and plays - two staves - sounds both ways; a voice turned
-            // on for a part the score only plays stands in for the instrument, session 1163.)
+            // What sounds is what the menu has on: the instruments whose buttons are on, the voices
+            // whose notes are on - each on its own (session 1165; until then a voice took the
+            // instrument's place). The score's intent is the DEFAULT: a part it only sings (a
+            // singer's staff, no staff without words) has its instrument off unless the menu
+            // turned it on (instrumentsOn) - but the instrument stands in while the voice is not
+            // there yet (owner's decision 2026-11-08: a Play never waits). The highlight follows
+            // the whole list.
             const sung = sungTracks();
-            const both = (i) => rawPlayed && rawSung && rawParts && rawPlayed.includes(rawParts[i]) && rawSung.includes(rawParts[i]);
-            const played = sung.size > 0
-                ? notes.filter(n => !(sung.has(n.N) && !both(n.N)))
-                : notes;
+            const played = notes.filter(n => instrumentSounds(n.N, sung));
             if (midiOutput && !here && played.length > 0) {
                 // The MIDI output: the server plays the list from the offset and answers
                 // (midiStarted) with the clock the highlight follows; a port that is not
@@ -7197,7 +7218,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // 2026-11-09), part -> 0..1; a part at 1 is not listed.
         // voicesOn: the file's other singable lyrics the menu turned on (the score does not sing
         // them itself; session 1163).
-        const practice = { speed: 1, muted: [], click: false, countIn: false, extraOn: [], voicesOff: [], voicesOn: [], levels: {}, voiceLevels: {} };
+        // instrumentsOn: the instruments turned on for parts the score only sings (session 1165).
+        const practice = { speed: 1, muted: [], click: false, countIn: false, extraOn: [], voicesOff: [], voicesOn: [], instrumentsOn: [], levels: {}, voiceLevels: {} };
         // A fader runs 0 to 200% (owner's request 2026-11-09, session 1157): levelIn clamps to that.
         const FADER_MAX = 2;
         function levelIn(levels, name) {
@@ -7236,7 +7258,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.getElementById('practiceSpeed').textContent = speedOn ? Math.round(practice.speed * 100) + '%' : '';
             // Pressed in while anything differs from the score as written.
             practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.countIn || practice.muted.length > 0
-                || practice.extraOn.length > 0 || practice.voicesOff.length > 0 || practice.voicesOn.length > 0 || loopOn
+                || practice.extraOn.length > 0 || practice.voicesOff.length > 0 || practice.voicesOn.length > 0 || practice.instrumentsOn.length > 0 || loopOn
                 || Object.keys(practice.levels).length > 0 || Object.keys(practice.voiceLevels).length > 0));
             // The loop lives here too (owner's request 2026-10-25), an On/Off as the metronome's.
             loopBtn.setAttribute('aria-pressed', String(loopOn));
@@ -7249,13 +7271,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             countInBtn.setAttribute('aria-pressed', String(practice.countIn));
             countInBtn.textContent = practice.countIn ? 'On' : 'Off';
             // The two resets under the parts (owner's request 2026-11-09): live while there is something to put back.
-            document.getElementById('partsReset').disabled = practice.muted.length === 0 && practice.extraOn.length === 0 && practice.voicesOff.length === 0 && practice.voicesOn.length === 0;
+            document.getElementById('partsReset').disabled = practice.muted.length === 0 && practice.extraOn.length === 0 && practice.voicesOff.length === 0 && practice.voicesOn.length === 0 && practice.instrumentsOn.length === 0;
             document.getElementById('fadersReset').disabled = Object.keys(practice.levels).length === 0 && Object.keys(practice.voiceLevels).length === 0;
             // The exports play as the menu does, the loop aside (owner's request 2026-11-07): the
             // extension keeps this page's menu for them (previewPractice).
             vscode.postMessage({ type: 'practiceState', practice: {
                 speed: practice.speed, muted: practice.muted.slice(), click: practice.click, countIn: practice.countIn,
                 extraOn: practice.extraOn.slice(), voicesOff: practice.voicesOff.slice(), voicesOn: practice.voicesOn.slice(),
+                instrumentsOn: practice.instrumentsOn.slice(),
                 levels: Object.assign({}, practice.levels), voiceLevels: Object.assign({}, practice.voiceLevels) } });
         }
         function practiceChanged(oldSpeed) {
@@ -7333,11 +7356,22 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     sayLevel();
                 });
             };
-            // The score's parts (owner's request 2026-10-25).
+            // The score's parts (owner's request 2026-10-25). A part the score only sings (a
+            // singer's staff) has its instrument off by default - the voice sings - and on when
+            // pressed, both then sounding (session 1165: the part's button is the instrument's,
+            // the voice is the note's, each on its own).
+            const sungOnly = new Set(message.sungOnly || []);
             for (const name of parts) {
-                toggle(name, '', () => !practice.muted.includes(name),
-                    () => { practice.muted = practice.muted.includes(name) ? without(practice.muted, name) : practice.muted.concat([name]); },
-                    '', '', practice.levels, name);
+                if (sungOnly.has(name)) {
+                    toggle(name, 'Sung by its voice - press for its instrument too', () => practice.instrumentsOn.includes(name),
+                        // (A mute left by another score, where this part is played, would keep it silent: it goes.)
+                        () => { practice.muted = without(practice.muted, name); practice.instrumentsOn = practice.instrumentsOn.includes(name) ? without(practice.instrumentsOn, name) : practice.instrumentsOn.concat([name]); },
+                        '', '', practice.levels, name);
+                } else {
+                    toggle(name, '', () => !practice.muted.includes(name),
+                        () => { practice.muted = practice.muted.includes(name) ? without(practice.muted, name) : practice.muted.concat([name]); },
+                        '', '', practice.levels, name);
+                }
             }
             // The sung lyrics, one a part with a voice, beside the parts (owner's request
             // 2026-11-08; docs/singing-design.md §5): on, the part is sung; off, its instrument
@@ -7348,7 +7382,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const inScore = new Set(message.voicesInScore || voices);
             for (const name of voices) {
                 if (!inScore.has(name)) continue;
-                toggle('♪ ' + name, name + ': sung (on), or played by its instrument (off)', () => !practice.voicesOff.includes(name),
+                toggle('♪ ' + name, name + ': its voice, on or off (the part button beside it is its instrument)', () => !practice.voicesOff.includes(name),
                     () => { practice.voicesOff = practice.voicesOff.includes(name) ? without(practice.voicesOff, name) : practice.voicesOff.concat([name]); },
                     'voice', name, practice.voiceLevels, name);
             }
@@ -7472,7 +7506,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // parts it leaves out off, every voice sung. The lists are by name across files, so this
         // is also the way out of a part silenced in another file.
         document.getElementById('partsReset').addEventListener('click', () => {
-            practice.muted = []; practice.extraOn = []; practice.voicesOff = []; practice.voicesOn = [];
+            practice.muted = []; practice.extraOn = []; practice.voicesOff = []; practice.voicesOn = []; practice.instrumentsOn = [];
             for (const refresh of partRefreshers) refresh();
             practiceChanged(practice.speed);
         });

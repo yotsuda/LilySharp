@@ -202,7 +202,18 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   on gave silence — `startPlayback` returned on an empty note list before the voices started;
   it plays a list with no note when a voice sings, the end being the voices', and the export's
   `singJobs` no longer drops a muted part's voice). Until then the part's toggle silenced the
-  voice too. **Every singable lyrics of the file is listed** (owner's
+  voice too. **What sounds is what is on, each on its own** (session 1165, owner's report: the
+  default score with `melody`, `♪ melody` and `m2` all on played no melody instrument — the
+  voice still took the instrument's place): the instruments whose buttons are on, plus the
+  voices whose notes are on. The score's intent is the **default**: a part the score only sings
+  (`Sung` and not `Played` — a singer's staff with no staff without words; `partsData.sungOnly`)
+  has its instrument button off, the voice on; pressed, `Practice.instrumentsOn` names it and
+  both sound (Play: `instrumentSounds`; exports: `singJobs` silences a sung-only part's track
+  unless `instrumentsOn`). The stand-in survives: a sung-only part's instrument plays while its
+  voice is not there (not ready, failed, or its fader at 0); with its `♪` switched off and its
+  button off nothing sounds, and this replaces the session-1129 reading of `♪` off above as
+  "its instrument plays". A part the score plays keeps its
+  instrument on by default, and a voice turned on for it (`voicesOn`) sounds beside it. **Every singable lyrics of the file is listed** (owner's
   request 2026-11-09, session 1163: "whatever score is selected, show every part and every
   singable lyrics"): `lilysharp/sung` with `allLyrics` adds, to the score's rows, a row for each
   lyrics track the score does not place, singing the track's default part (`LyricBindings.

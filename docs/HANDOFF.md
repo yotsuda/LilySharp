@@ -138,6 +138,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1165セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14862 / 0 / 2**（`-Start p1165`・HEAD `9d4578523`・未 push 65・OMR の open 0）。同じ会話で第1164 から続けた便。オーナー報告「雪やこんこの既定の score で、m2 と ♪melody と melody をすべて有効にして再生すると、melody が鳴らない」。作業場所は Lab `sessions/p1165/`（`notes.md`）。
+
+- **原因**: 第1164 でパートのボタンを「楽器」としたのに、「声が在るパートの音符は楽器の列から外す」（1 段 1 音・第1129）が残っていた＝声が居る間はボタンが効かない。
+- **規則＝鳴るもの＝on の楽器 ＋ on の声・それぞれ独立**。score の意図は**既定値**で表す: score が歌うだけのパート（`Sung` にあって `Played` に無い＝歌詞付きの段だけ・`partsData.sungOnly`）は楽器のボタンが**既定 off**・声は on。押せば `Practice.instrumentsOn` に入り両方鳴る。score が弾くパートは楽器 on が既定で、`voicesOn` で付けた声はその横で鳴る。**代役は残る**＝歌うだけのパートの楽器は声が無い間（準備中・失敗・フェーダー 0・engine 無し）は鳴る（`instrumentSounds(i, sung)`）。Export は `singJobs` が歌うだけのパートのトラックを `instrumentsOn` でなければ黙らせる（声が失敗すれば楽器が残る＝従来どおり）。
+- **直し**: playbackCore `Practice.instrumentsOn`・`practiceSummary` の語（`with the instrument of melody`）・host `requestParts` が `sungOnly` を送る・ページは sungOnly のパート行を `instrumentsOn` のトグルに（title「Sung by its voice - press for its instrument too」）・`startPlayback` は `instrumentSounds` で楽器を選ぶ・Reset parts／沈み／practiceState に `instrumentsOn`。網: npm **907 / 907**・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5「What sounds is what is on」・editors CHANGELOG・MANUAL-CHECKS §3.7 の Parts の行を書き直した。
+- 残り: 実機（オーナー）・声の名前の置き場（roadmap §4）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- **`-End` の後に読み直して直した 2 点（私の誤り）**: ⑴ `instrumentSounds` が `♪` を消した状態も「代役」と数え、`melody` と `♪ melody` の両方 off でも楽器が鳴っていた（MANUAL-CHECKS に書いた「何も鳴らない」と食い違い）→ `voicesOff` なら false・Export も同じに。⑵ 別の score で mute した名前が残ると `melody` を押しても鳴らない → 歌うだけのパートの行を押すと `muted` から外す。`♪` の title も「声の on／off」に。網 `midiOutputSetting.test`「sounds a sung-only part's instrument…」を足した（ページの関数を vm で取り出す）。npm **908 / 908**（`npmtest2.log`）・`check-types` 0・配布し直し（`deploy2.log`）。
+- 終了時 full **14862 / 0 / 2 / 14864**（`-End p1165 -DiffBase 9d4578523`＝`end.log`・門は全部 OK・§1 現在便 16,188 字＝残り 3,812。⚠️ この full は上の 2 点の前＝その後に触ったのは拡張の TS・網・docs だけで .NET は不変）。§7 7.5: Core `+` 0・REF 0・OWN 0。7.6: 出所はオーナーの報告とコードの読み。7.7: なし。実機の音は未確認（オーナー）。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1164セッションの経緯
+
 ### 1.1 第1164セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14862 / 0 / 2**（`-Start p1164`・HEAD `221ae642c`・未 push 64・OMR の open 0）。同じ会話で第1163 から続けた便。オーナー報告「雪やこんこ.lys で `another` を選択し、m2 を外して `♪ melody` だけにすると、再生しても歌唱せず何も音が鳴らない」。作業場所は Lab `sessions/p1164/`（`notes.md`）。
@@ -147,18 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **直し**: `startPlayback` は声が歌うなら空のリストでも進み（`voicesEnd()`＝count-in の lead の後のバッファ長、または plan の pieces × rounds を終わりに数える）、MIDI 出力でポートに送るものが無ければここで鳴らす。`singJobs` の `silentVoices` は `voicesOff` だけ（muted は `exportPlan` が音符を落とすだけ）＝Export でも声だけが混ざる。網: npm **907 / 907**（1 回目は `midiOutputSetting.test` の文字列の網が `if (midiOutput && !here)` を探していた＝新しい文に合わせた）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・editors CHANGELOG・MANUAL-CHECKS §3.7（第1128 の行「声も楽器も鳴らない」を「声だけが鳴る」に）。
 - 残り: 実機（オーナー）・声の名前の置き場の決定（roadmap §4）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
 - 終了時 full **14862 / 0 / 2 / 14864**（`-End p1164 -DiffBase 221ae642c`＝`end.log`・門は全部 OK・§1 現在便 15,981 字＝残り 4,019）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS・網・docs だけ）。7.6: 出所はコードの読み（`startPlayback` の早期 return）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1163セッションの経緯
-
-### 1.1 第1163セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14861 / 0 / 2**（`-Start p1163`・HEAD `c52ce7355`・未 push 63・OMR の open 0）。同じ会話で第1162 から続けた便。オーナー「かなりややこしい。どんな使い方がありがちかまだ分からない。いったんは実装の都合上妥当な形で。複数の声は lys の文法と設定から詰めるべき。声は楽器のようなものだから名前は lys に書くのが妥当にも思えるが、楽譜は誰でも歌えるものと捉えると楽譜に声の名前を書くのは正しくないようにも思える」。作業場所は Lab `sessions/p1163/`（`notes.md`）。
-
-- **声の名前の置き場＝提案を roadmap §4 の 2 に書いた（未決定・着手しない）**: 楽器と同じ**二層**＝lys には**役**（`part sop { instrument soprano }` の既存 preset、または自由なラベル `singer "A"` をパートか歌詞トラックに）、機械の設定に配役（`cantilena.voices = { soprano: "neutrino/MERROW", … }`・今の `cantilena.voice` は `default`）、API は `sing(score, { voice })`（v2・追加のみ）。同じ旋律を別の声／SATB／ユニゾンの合唱はこの上に乗る。2 つ目の声が在るまで作らない。
-- **作った＝それに依存しない部分**: 練習メニューに**ファイルの歌える歌詞を全部**並べる（1 パート 1 声のまま）。サーバー `SungParams.AllLyrics`＝score の spec に、score が置いていない歌詞トラックごとに `LyricsRowSpec(track, 既定のパート)` を足して（既定＝`LyricBindings.TargetOf`・無ければ他の score の行の `sings` か fold 先・それも無ければファイルの唯一のパート）`MidiExporter { Score = spec', AllParts = true }`＝第1151 の見えない歌い手の仕組みでそのパートの旋律から声を作る。`SungVoiceDto.InScore`（`SungStaves.Of(root, score).Sung`）で score 自身が歌うものを区別・score のものが先。host は `requestParts`／`prepareVoices`／`singJobs` が `allLyrics` で問い、score に無い声は `Practice.voicesOn` に在るときだけ描く・鳴らす・混ぜる（`practiceState` で `voicesOn` が変われば即 prepare）。ページは `♪` を score のもの（on・`voicesOff`）→ 斜体（off・`voicesOn`）の順に並べ、`sungTracks()` と `startPlayback` の楽器の除外は「score が歌いかつ弾く（段 2 本）ときだけ両方鳴る」に（Export の `silenced` も同じ）・Reset parts は `voicesOn` も空に・`practiceSummary` は `singing melody`。
-- 網: `SungRequestTests.AllLyrics_ListsTheFilesSingableVoices_SayingWhichTheScoreSings`（bare score でも melody の声・`InScore=false`・既定 score では true・AllLyrics 無しは今までどおり空）＝Sung／Playback 153 / 153・npm **907 / 907**（1 回目はページ script に `\'` を書いて parse 赤＝テンプレートリテラルの中は backslash 禁止、言い換えた）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-roadmap §4・singing-design §5・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7「どの score でも歌える歌詞が全部並ぶ」。
-- 残り: 実機（オーナー・雪やこんこ `another` で斜体の `♪ melody` → 押すと声）・声の名前の置き場の決定（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
-- 終了時 full **14862 / 0 / 2 / 14864**（`-End p1163 -DiffBase c52ce7355`＝`end.log`・門は全部 OK・§1 現在便 16,892 字＝残り 3,108・+1 本）。§7 7.5: Core `+` 0・REF 0・OWN 0（Lsp の `GetSung`／DTO・拡張の TS・docs＝Core 不変）。7.6: 出所はオーナーの言葉とコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1163セッションの経緯
+
+### 1.1 第1163セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14861 / 0 / 2**（`-Start p1163`・HEAD `c52ce7355`・未 push 63・OMR の open 0）。同じ会話で第1162 から続けた便。オーナー「かなりややこしい。どんな使い方がありがちかまだ分からない。いったんは実装の都合上妥当な形で。複数の声は lys の文法と設定から詰めるべき。声は楽器のようなものだから名前は lys に書くのが妥当にも思えるが、楽譜は誰でも歌えるものと捉えると楽譜に声の名前を書くのは正しくないようにも思える」。作業場所は Lab `sessions/p1163/`（`notes.md`）。
+
+- **声の名前の置き場＝提案を roadmap §4 の 2 に書いた（未決定・着手しない）**: 楽器と同じ**二層**＝lys には**役**（`part sop { instrument soprano }` の既存 preset、または自由なラベル `singer "A"` をパートか歌詞トラックに）、機械の設定に配役（`cantilena.voices = { soprano: "neutrino/MERROW", … }`・今の `cantilena.voice` は `default`）、API は `sing(score, { voice })`（v2・追加のみ）。同じ旋律を別の声／SATB／ユニゾンの合唱はこの上に乗る。2 つ目の声が在るまで作らない。
+- **作った＝それに依存しない部分**: 練習メニューに**ファイルの歌える歌詞を全部**並べる（1 パート 1 声のまま）。サーバー `SungParams.AllLyrics`＝score の spec に、score が置いていない歌詞トラックごとに `LyricsRowSpec(track, 既定のパート)` を足して（既定＝`LyricBindings.TargetOf`・無ければ他の score の行の `sings` か fold 先・それも無ければファイルの唯一のパート）`MidiExporter { Score = spec', AllParts = true }`＝第1151 の見えない歌い手の仕組みでそのパートの旋律から声を作る。`SungVoiceDto.InScore`（`SungStaves.Of(root, score).Sung`）で score 自身が歌うものを区別・score のものが先。host は `requestParts`／`prepareVoices`／`singJobs` が `allLyrics` で問い、score に無い声は `Practice.voicesOn` に在るときだけ描く・鳴らす・混ぜる（`practiceState` で `voicesOn` が変われば即 prepare）。ページは `♪` を score のもの（on・`voicesOff`）→ 斜体（off・`voicesOn`）の順に並べ、`sungTracks()` と `startPlayback` の楽器の除外は「score が歌いかつ弾く（段 2 本）ときだけ両方鳴る」に（Export の `silenced` も同じ）・Reset parts は `voicesOn` も空に・`practiceSummary` は `singing melody`。
+- 網: `SungRequestTests.AllLyrics_ListsTheFilesSingableVoices_SayingWhichTheScoreSings`（bare score でも melody の声・`InScore=false`・既定 score では true・AllLyrics 無しは今までどおり空）＝Sung／Playback 153 / 153・npm **907 / 907**（1 回目はページ script に `\'` を書いて parse 赤＝テンプレートリテラルの中は backslash 禁止、言い換えた）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-roadmap §4・singing-design §5・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7「どの score でも歌える歌詞が全部並ぶ」。
+- 残り: 実機（オーナー・雪やこんこ `another` で斜体の `♪ melody` → 押すと声）・声の名前の置き場の決定（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- 終了時 full **14862 / 0 / 2 / 14864**（`-End p1163 -DiffBase c52ce7355`＝`end.log`・門は全部 OK・§1 現在便 16,892 字＝残り 3,108・+1 本）。§7 7.5: Core `+` 0・REF 0・OWN 0（Lsp の `GetSung`／DTO・拡張の TS・docs＝Core 不変）。7.6: 出所はオーナーの言葉とコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1162セッションの経緯
 
 ### 1.1 第1162セッション（2026-11-09・YT-DELL2）
