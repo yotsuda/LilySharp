@@ -7,7 +7,7 @@ workflow attaches that section to the GitHub Release verbatim.
 ## Unreleased
 
 - **`@shiftOff` keeps a note in its voice group's first column** (LilyPond's `\once \shiftOff`): in `voice { } { }`, a third voice's head can stand under the voice above instead of a column aside. A score that does not write it does not change.
-- `[singing]` **Words are sung where a voice is asked for**: a `singer`, or the part's `instrument` being a voice (`soprano`, `alto`, `tenor`, `baritone`, `voice-bass`). Words on any other part are printed only and the part plays its instrument; a clef alone asks for nothing. Until now every lyrics row was sung. The `.mid` does not change.
+- `[singing]` **Words are sung where a voice is asked for**: a `singer`, or the part's `instrument` being a voice (`soprano`, `alto`, `tenor`, `baritone`, `voice-bass`). Words on any other part are printed only and the part plays its instrument; a clef alone asks for nothing. Until now every lyrics row was sung. A part with words, no voice asked for and no instrument named now plays the piano, in the `.mid` too, where it played the choir.
 - **A `singer` on a score's row that names a voice of a part** (`lyrics w sings alt singer "…"`) is heard; it was ignored.
 - **A part's `singer` takes several voices** (`part m { singer "neutrino/MERROW","diffsinger/TIGER" }`), as a lyrics track and a score's row do. It was refused there.
 

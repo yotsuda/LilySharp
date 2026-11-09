@@ -95,7 +95,7 @@ public class SungStavesTests
     }
 
     [Fact]
-    public void WordsOfAPartNoStaffShows_WithNoVoice_PlayItsStandIn()
+    public void WordsOfAPartNoStaffShows_WithNoVoice_ArePlayed()
     {
         var sounds = PrintedOf("staff horn  lyrics verse sings melody");
         Assert.Empty(sounds.Sung);

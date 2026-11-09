@@ -127,8 +127,8 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   soprano, alto, tenor, baritone, voice-bass); `Music.LyricSinger.SungReaderOf` is the one reading.
   A clef asks for nothing. Other words are printed only: `SungVoices` gives them no voice and the
   engine is not run; `SungStaves` lists the staff as played and the part in `PrintedWords`, which
-  the editor says once on Play; the `.mid` is as before, the stand-in sound included. A part no
-  staff shows with no voice asked for sounds its stand-in. The reasons: what is heard is said by
+  the editor says once on Play; the part sounds as any part does, its instrument, else the piano (owner's decision 2026-11-10: the choir stand-in is for a voice asked for, as words alone do not ask for one). A part no
+  staff shows with no voice asked for sounds the same way. The reasons: what is heard is said by
   the score and not by the machine, words printed over an instrument keep the instrument, and
   no render runs for words nobody asked to hear.
 - **Language**: a fact of the words (session 1167): `language NAME` on the file or a lyrics

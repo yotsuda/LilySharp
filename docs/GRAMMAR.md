@@ -1454,7 +1454,7 @@ SingerGender   = 'male' | 'female' ;
                     once. WORDS ARE SUNG WHERE A VOICE IS ASKED FOR (owner's decision 2026-11-10):
                     a 'singer' reaching them, or the part's instrument being a voice (soprano, alto,
                     tenor, baritone, voice-bass). A clef asks for nothing. Other words are printed
-                    only: the staff plays, no voice is rendered, the .mid is as before. The
+                    only: the staff plays its instrument (the piano when none is named), no voice is rendered. The
                     default voice's gender is the singer's word, else the instrument's, else the
                     clef's: bass, baritone, tenor and treble_8 clefs are male, others female. *)
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'lyrics' row.

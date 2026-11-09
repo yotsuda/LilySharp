@@ -315,12 +315,13 @@ public class SungVoicesTests
         Assert.Equal(6, voice.Notes.Count);
     }
 
-    /// <summary>A part a lyrics row sings is a singer (owner's decision 2026-11-08): its track's
+    /// <summary>A part a lyrics row sings, a voice asked for, is a singer (owner's decisions 2026-11-08 and 2026-11-10): its track's
     /// program — the stand-in the preview plays while there is no voice, and what the .mid plays —
     /// is its named instrument, else its preset's sound, else the General MIDI choir; a part with
     /// no words keeps LilyPond's acoustic grand.</summary>
     [Theory]
-    [InlineData("part melody { clef treble }", true, 52)]
+    [InlineData("part melody { clef treble }", true, 0)]              // words alone ask for no voice
+    [InlineData("part melody { clef treble  singer \"a/b\" }", true, 52)]
     [InlineData("part melody { clef treble }", false, 0)]
     [InlineData("part melody { midiInstrument \"flute\" }", true, 73)]
     [InlineData("part melody { instrument soprano }", true, 52)]
@@ -371,6 +372,27 @@ public class SungVoicesTests
             score { staff melody  lyrics verse sings alt singer "a/b" }
             """));
         Assert.Equal("a/b", voice.Singer);
+    }
+
+    [Fact]
+    public void APartNoStaffShows_WithNoVoiceAskedFor_PlaysThePiano()
+    {
+        var tree = SyntaxTree.Parse("""
+            time 2/4
+            part melody { clef treble }
+            part horn { instrument horn }
+            section A {
+              melody { c'4 d | e2 | }
+              horn { c'4 d | e2 | }
+              lyrics verse { ラ ラ | ラ | }
+            }
+            form { A }
+            score { staff horn  lyrics verse sings melody }
+            """);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+        var score = RenderSpecParser.FindAll(tree).First();
+        var midi = new MidiExporter { Form = score.Form, Score = score }.Export(tree);
+        Assert.Equal(0, midi.Tracks.Single(t => t.Name == "melody").Program);
     }
 
     [Fact]
