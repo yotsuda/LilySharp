@@ -138,6 +138,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1210セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1210`・HEAD `8f14330c5`・未 push 110）。オーナー「author を統一して」。作業場所は Lab `sessions/p1210/`。
+
+- 著者名は **Yoshifumi Tsuda** に統一: 3 拡張の `author`、ソースの著作権表示、README とサイトの「by」。`yotsuda` は発行者 ID・GitHub・URL（変更不可）だけ。VS Code の表示は VSIX で入れた Cantoria と Calamo だけ `yotsuda`（表示名は Marketplace から来る）。公開後は Yoshifumi Tsuda。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1210 -DiffBase 8f14330c5`、BUILD 0）。動作の変更なしのため配布なし。
+
+## 以下は第1209セッションの経緯
+
 ### 1.1 第1209セッション（2026-11-09・YT-DELL2）
 
 開始時 full **15013 / 0 / 2**（`-Start p1209`・HEAD `0973efa41`・未 push 109）。オーナー「Calamo に変更して」。作業場所は Lab `sessions/p1209/`。
@@ -145,16 +154,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **読み取りの拡張は Copista から Calamo に改名**（拡張 `yotsuda.calamo`）。Copista は OMR モデルの kobimusic copista-mini と同名で分野も同じため。この行より下の「Copista」「Scan Import」は当時の名前。Marketplace の旧 ID は `yotsuda.lilysharp-omr`（`yotsuda.copista` は未公開）。
 - 商標は未確認。公開の順番は Calamo を先、Lily# を後。
 - 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1209 -DiffBase 0973efa41`、BUILD 0）・npm 942 / 942。`Deploy-Lsp.ps1` と読み取りの拡張を配布済み（Reload Window 2 回）。
-
-## 以下は第1208セッションの経緯
-
-### 1.1 第1208セッション（2026-11-09・YT-DELL2）
-
-開始時 full **15013 / 0 / 2**（`-Start p1208`・HEAD `d7a4e985a`・未 push 108）。オーナー「Preview タグがあるので名前から Beta を除去」「著者表記を寄せたい」。作業場所は Lab `sessions/p1208/`。
-
-- Copista の表示名と README 見出し、サイトの名前から Beta を除去（本文の Beta の注意と Marketplace の Preview は残す）。第1207 で漏れた `editors/vscode/README.md` ほかの Scan Import も Copista に。
-- 著者: Marketplace の発行者表示名は既に Yoshifumi Tsuda、著作権表示も同じ。`yotsuda` は発行者 ID と URL だけ（変更不可）なので、変更なし。
-- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1208 -DiffBase d7a4e985a`、BUILD 0）。Copista は配布済み。Lily# の実行コードの変更なし。
 
 ## 2. 開いている作業
 

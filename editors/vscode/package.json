@@ -4,6 +4,7 @@
   "description": "Sheet music from plain text — LilyPond-derived engraving, live as you type.",
   "version": "0.15.0",
   "publisher": "yotsuda",
+  "author": "Yoshifumi Tsuda",
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",

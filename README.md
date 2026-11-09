@@ -118,7 +118,7 @@ type, and to be recompiled incrementally on every keystroke.
 ### Lily# Studio — the VS Code extension (recommended)
 
 Open the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`), search for **Lily#**, and
-click **Install** on **Lily# Studio** by *yotsuda* — or install it from its
+click **Install** on **Lily# Studio** by *Yoshifumi Tsuda* — or install it from its
 [Marketplace listing](https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp).
 Then open any `.lys` file: you get diagnostics as you type, completion, and a live
 score preview beside the source.
