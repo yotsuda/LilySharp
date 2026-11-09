@@ -475,7 +475,7 @@ describe('the composing guide', () => {
         assert.match(guide, /part sop \{ instrument soprano singer "neutrino\/MERROW" \}/);
         assert.match(guide, /lyrics words singer "neutrino\/MERROW" sings melody \{ … \}/);
         assert.match(guide, /score \{ staff melody  lyrics words sings melody singer "neutrino\/MERROW" \}/);
-        assert.match(guide, /On a track or a score's row, names with commas\s+between them sing the part together/);
+        assert.match(guide, /Names with commas between them sing the part\s+together \(`singer "neutrino\/MERROW","diffsinger\/TIGER"`\), in any of the three places\./);
     });
     // Owner's trials 2026-10-29: a jazz trio's drums came as a rock backbeat, its bass the chord's
     // notes in a row; the next time they swung — the guide said only "swinging on the ride".

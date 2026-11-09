@@ -254,13 +254,16 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                     CheckValue(valueTokens, PitchModes, "pitch", "modes");
                 break;
             case Music.LyricSinger.Keyword:
-                // One quoted name, a voice or a role, which no compiler can check against a machine;
-                // male or female may stand before it, or alone (the engine picks such a voice).
+                // A quoted name, a voice or a role, which no compiler can check against a machine, or
+                // several with commas between them (LyricSinger.Joiner); male or female may stand
+                // before them, or alone (the engine picks such a voice).
                 bool genderFirst = Music.LyricSinger.Genders.Contains(valueTokens[0].Text);
-                bool quotedLast = IsQuoted(valueTokens[^1].Text);
-                if (!(valueTokens.Count == 1 && (genderFirst || (quotedLast && Music.LyricSinger.ValueOf(valueTokens[0].Text).Length > 0)))
-                    && !(valueTokens.Count == 2 && genderFirst && quotedLast))
-                    Error(valueTokens[0], "'singer' takes one quoted name, male or female, or both: a voice, singer \"neutrino/MERROW\", singer male \"neutrino/SOMA\", singer male, or a role, singer \"soprano\".");
+                var singerNames = valueTokens.Skip(genderFirst ? 1 : 0).ToList();
+                bool namesListed = singerNames.Count % 2 == 1
+                    && singerNames.Select((t, i) => i % 2 == 0 ? IsQuoted(t.Text) : t.Kind == SyntaxKind.Comma).All(ok => ok);
+                if (!(genderFirst && singerNames.Count == 0)
+                    && !(namesListed && (genderFirst || Music.LyricSinger.ValueOf(valueTokens[0].Text).Length > 0)))
+                    Error(valueTokens[0], "'singer' takes a quoted name, or several with commas between them, after male or female if wanted: a voice, singer \"neutrino/MERROW\", voices together, singer \"neutrino/MERROW\",\"diffsinger/TIGER\", singer male \"neutrino/SOMA\", singer male, or a role, singer \"soprano\".");
                 break;
             case "midiInstrument":
                 // One quoted name from LilyPond's General MIDI table, exactly as LilyPond

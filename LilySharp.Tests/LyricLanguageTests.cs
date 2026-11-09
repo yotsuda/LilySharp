@@ -18,6 +18,7 @@ using System;
 using System.IO;
 using System.Linq;
 using LilySharp.Core.Music;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 using LilySharp.Lsp;
 using LilySharp.Lsp.Protocol;
@@ -201,6 +202,32 @@ public class LyricLanguageTests
             score { staff m  lyrics w }
             """;
         Assert.Equal("a/b+c/d", Sung(source).Singer);
+    }
+
+    // Owner's request 2026-11-10, session 1217: a part's singer takes what a track's and a row's do.
+    [Theory]
+    [InlineData("\"a/b\"")]
+    [InlineData("\"a/b\",\"c/d\"")]
+    [InlineData("\"a/b\", \"c/d\", \"e/f\"")]
+    [InlineData("male")]
+    [InlineData("male \"a/b\"")]
+    [InlineData("female \"a/b\",\"c/d\"")]
+    public void APartsSinger_Accepts(string value)
+    {
+        var validator = new SymbolCaseValidator();
+        validator.Validate(SyntaxTree.Parse($"part m {{ clef treble  singer {value} }}\n"));
+        Assert.Empty(validator.Diagnostics);
+    }
+
+    [Theory]
+    [InlineData("nobody")]
+    [InlineData("\"\"")]
+    [InlineData("\"\",\"c/d\"")]
+    public void APartsSinger_Refuses(string value)
+    {
+        var validator = new SymbolCaseValidator();
+        validator.Validate(SyntaxTree.Parse($"part m {{ clef treble  singer {value} }}\n"));
+        Assert.Contains(validator.Diagnostics, d => d.Message.Contains("'singer' takes a quoted name"));
     }
 
     [Fact]

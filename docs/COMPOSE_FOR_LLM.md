@@ -354,9 +354,9 @@ What makes it music:
     lyrics words singer "neutrino/MERROW" sings melody { … }
     score { staff melody  lyrics words sings melody singer "neutrino/MERROW" }
     ```
-    A choir's voices each take their own on the part. On a track or a score's row, names with commas
-    between them sing the part together (`singer "neutrino/MERROW","diffsinger/TIGER"`); a part takes
-    one name. `singer "soprano"`, `"alto"`, `"tenor"` or `"bass"` asks for a role, not a voice, and
+    A choir's voices each take their own on the part. Names with commas between them sing the part
+    together (`singer "neutrino/MERROW","diffsinger/TIGER"`), in any of the three places.
+    `singer "soprano"`, `"alto"`, `"tenor"` or `"bass"` asks for a role, not a voice, and
     `singer male` or `singer female` for that gender's default voice: neither needs the list.
     `singer male "neutrino/SOMA"` is a voice with its gender said, the gender narrowing what the
     editor offers.

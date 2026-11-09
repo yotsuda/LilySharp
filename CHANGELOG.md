@@ -7,6 +7,7 @@ workflow attaches that section to the GitHub Release verbatim.
 ## Unreleased
 
 - **`@shiftOff` keeps a note in its voice group's first column** (LilyPond's `\once \shiftOff`): in `voice { } { }`, a third voice's head can stand under the voice above instead of a column aside. A score that does not write it does not change.
+- **A part's `singer` takes several voices** (`part m { singer "neutrino/MERROW","diffsinger/TIGER" }`), as a lyrics track and a score's row do. It was refused there.
 
 ## 0.16.0
 
