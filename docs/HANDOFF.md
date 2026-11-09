@@ -138,6 +138,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1212セッション（2026-11-09・YT-DELL2）
+
+- **3 拡張のアイコンを、Emmentaler の記号ひとつずつに揃えた**。Lily# はト音記号（旧版は Bravura 由来）、Cantoria はハ音記号（高さ 90/128）、Calamo はフェルマータ（目に見える）。同じ暗いタイルで色だけ違う（#5aa7e8 / #e8b45a / #6fcf97）。音符を組み合わせた案は持ち主の判断で捨てた。生成元は Lab の `sessions/p1212/icons`。
+- Emmentaler は GPL と OFL の二重ライセンスで、Apache-2.0 の Cantoria と Calamo は OFL 側で使う。各 `THIRD-PARTY-NOTICES.md` に書いた。site の favicon は `build-site.ps1` が `editors/vscode/icon.png` を写すので自動で変わる。
+- Lily# のコードは触っていない。`Deploy-Lsp` はアイコンを写さないので、入れ済み拡張へは手で写した。Calamo は別便の未コミット変更（0.6.0 への上げと `ReadCommand.cs`）があるため pack せず、入れ済みの 0.5.0 にアイコンと manifest の 1 行だけ足した。
+- 終了時 full 15012 合格 / 0 失敗 / skip 2 / 合計 15014。
+
+## 以下は第1211セッションの経緯
+
 ### 1.1 第1211セッション（2026-11-09・YT-DELL2）
 
 開始時 full **15013 / 0 / 2**（`-Start p1211`・HEAD `2d2d86102`・未 push 111）。オーナー「Calamo OMR からきた request #23 と #24 を直して」。作業場所は Lab `sessions/p1211/`。
@@ -145,15 +154,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **#23**（オーナー決定 ⒝）: 段の途中の音部記号の後に調号の変化記号を書く規則（第905）を撤去。`KeyCourtesyDue`・`LineStartMeasures`・`ClefChangesMidLine`・2 度目の collect・プレビューの `ChangesClef` の分岐も撤去し、音部記号を変える譜も通常の増分経路に戻った。網は `ClefChangeKeepsTheKeyTests`。`[engraving]`。
 - **#24**: 2 段の `grandStaff` の `@cross` はもう一方の手へ。それ以外の 3 段以上は次の段、最後の段は 1 つ上（折り返しをやめた）。`.ly` の `\change Staff` も同じ。`[engraving]`。
 - 終了時 full **15012 合格 / 0 失敗 / skip 2 / 合計 15014**（`-End p1211 -DiffBase 2d2d86102`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。REQUESTS の 23・24 は fixed。
-
-## 以下は第1210セッションの経緯
-
-### 1.1 第1210セッション（2026-11-09・YT-DELL2）
-
-開始時 full **15013 / 0 / 2**（`-Start p1210`・HEAD `8f14330c5`・未 push 110）。オーナー「author を統一して」。作業場所は Lab `sessions/p1210/`。
-
-- 著者名は **Yoshifumi Tsuda** に統一: 3 拡張の `author`、ソースの著作権表示、README とサイトの「by」。`yotsuda` は発行者 ID・GitHub・URL（変更不可）だけ。VS Code の表示は VSIX で入れた Cantoria と Calamo だけ `yotsuda`（表示名は Marketplace から来る）。公開後は Yoshifumi Tsuda。
-- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1210 -DiffBase 8f14330c5`、BUILD 0）。動作の変更なしのため配布なし。
 
 ## 2. 開いている作業
 

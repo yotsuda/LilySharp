@@ -267,6 +267,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1210セッションの経緯
+
+### 1.1 第1210セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1210`・HEAD `8f14330c5`・未 push 110）。オーナー「author を統一して」。作業場所は Lab `sessions/p1210/`。
+
+- 著者名は **Yoshifumi Tsuda** に統一: 3 拡張の `author`、ソースの著作権表示、README とサイトの「by」。`yotsuda` は発行者 ID・GitHub・URL（変更不可）だけ。VS Code の表示は VSIX で入れた Cantoria と Calamo だけ `yotsuda`（表示名は Marketplace から来る）。公開後は Yoshifumi Tsuda。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1210 -DiffBase 8f14330c5`、BUILD 0）。動作の変更なしのため配布なし。
+
 ## 以下は第1209セッションの経緯
 
 ### 1.1 第1209セッション（2026-11-09・YT-DELL2）
