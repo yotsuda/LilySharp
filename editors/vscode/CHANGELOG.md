@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **An English voice says "Hello, how are you?"** when chosen, five syllables on the notes of the Japanese phrase.
 - **A voice heard from just past its closing quote says the words' language**: on an English line it says hello wherever on the `singer` the caret is.
 - **Several voices can sing one part**: `singer "neutrino/MERROW","diffsinger/TIGER"`. After a comma the voices are offered again, and the completion and the step keys change only the name the caret is on.
 - **`singer ` completes before any quote**: the space after the word opens `male`, `female` and the voices that sing the words; a voice goes in with its quotes.

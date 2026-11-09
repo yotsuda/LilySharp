@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[editor]` **An English voice says "Hello, how are you?"** when chosen, five syllables on the notes of the Japanese phrase.
 - `[editor]` **A voice heard from just past its closing quote says the words' language.** A voice of several languages said its first one's phrase there.
 - `[singing]` **Several voices can sing one part.** Write them with commas: `singer "neutrino/MERROW","diffsinger/TIGER"`. The part stays one part, its voices sung and laid together by Cantilena.
 - `[editor]` **`singer ` completes before any quote.** Right after the word, the list holds `male`, `female` and the voices that sing the words; a name goes in with its quotes.

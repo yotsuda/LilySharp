@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1199セッションの経緯
+
+### 1.1 第1199セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1199`・HEAD `801c8ac2d`・未 push 99）。オーナー「英語で歌える声が少ない」→「(話者を声として出すのを) 進めて」。作業場所は Lab `sessions/p1199/`。
+
+- Cantilena のみ（Lily# のコード変更なし）: DiffSinger の話者を `diffsinger/TIGER/tiger_disco` として一覧に出す（`character.yaml` の名前をラベルに、モデルは共有）。
+- TIGER の話者は 7 つで、同じ歌手の声の調子（Fresh、Disco、Electric、Vinyl、Glam、Mystic、Royal）。`dsacoustic/dsconfig.yaml` の `alex_*` など 41 人は埋め込みファイルが無く使えない（読み違えの訂正）。TIGER は商用利用に別途ライセンスが要る（`extra\LICENSE.md`）。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1199 -DiffBase 801c8ac2d`、BUILD 0）。Cantilena の `deploy-extension.ps1` で配布済み（Reload Window 1 回）。
+
 ## 以下は第1198セッションの経緯
 
 ### 1.1 第1198セッション（2026-11-09・YT-DELL2）

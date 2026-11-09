@@ -138,22 +138,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1201セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1201`・HEAD `355b53d8c`・未 push 101）。オーナー「hello は音節が少なくていまいち」→「Hello, how are you?」に決定。作業場所は Lab `sessions/p1201/`。
+
+- 英語の試聴を こんにちわ と同じ 5 音のメロディに。英語の版だけ上げ（`VOICE_SAMPLE_EN_VERSION`）、日本語の保存済みはそのまま。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1201 -DiffBase 355b53d8c`、BUILD 0）・npm 939 / 939。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
+## 以下は第1200セッションの経緯
+
 ### 1.1 第1200セッション（2026-11-09・YT-DELL2）
 
 開始時 full **15013 / 0 / 2**（`-Start p1200`・HEAD `b86abfea2`・未 push 100）。オーナー報告「閉じた引用符の直後をクリックすると英語の行なのに日本語で こんにちわ」。作業場所は Lab `sessions/p1200/`。
 
 - `hearSinger` が言語を問う位置を、カーソルではなく `singerLanguageColumn`（名前の中、名前のない性別はその語の末尾）に。
 - 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1200 -DiffBase b86abfea2`、BUILD 0）・npm 939 / 939。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
-
-## 以下は第1199セッションの経緯
-
-### 1.1 第1199セッション（2026-11-09・YT-DELL2）
-
-開始時 full **15013 / 0 / 2**（`-Start p1199`・HEAD `801c8ac2d`・未 push 99）。オーナー「英語で歌える声が少ない」→「(話者を声として出すのを) 進めて」。作業場所は Lab `sessions/p1199/`。
-
-- Cantilena のみ（Lily# のコード変更なし）: DiffSinger の話者を `diffsinger/TIGER/tiger_disco` として一覧に出す（`character.yaml` の名前をラベルに、モデルは共有）。
-- TIGER の話者は 7 つで、同じ歌手の声の調子（Fresh、Disco、Electric、Vinyl、Glam、Mystic、Royal）。`dsacoustic/dsconfig.yaml` の `alex_*` など 41 人は埋め込みファイルが無く使えない（読み違えの訂正）。TIGER は商用利用に別途ライセンスが要る（`extra\LICENSE.md`）。
-- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1199 -DiffBase 801c8ac2d`、BUILD 0）。Cantilena の `deploy-extension.ps1` で配布済み（Reload Window 1 回）。
 
 ## 2. 開いている作業
 

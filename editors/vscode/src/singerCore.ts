@@ -176,6 +176,8 @@ export function learnRenderRate(rate: number, elapsedMs: number, seconds: number
 
 /** Bumped when the phrase below changes: the samples kept on disk are named with it. */
 export const VOICE_SAMPLE_VERSION = 2;
+/** The same for the English phrase, on its own so that a change to it leaves the Japanese samples. */
+export const VOICE_SAMPLE_EN_VERSION = 3;
 
 /** The time each stage of hearing a voice took, for the output channel (owner's request 2026-11-09, session 1171). */
 export class StageClock {
@@ -196,7 +198,7 @@ export class StageClock {
 /** A sample's file name: letters of any script kept, so that two VOICEVOX voices, whose names are
  *  kana, do not come to one file. */
 export function voiceSampleFileName(key: string): string {
-    return `${key.replace(/[^\p{L}\p{N}_.-]+/gu, '_')}-${VOICE_SAMPLE_VERSION}.wav`;
+    return `${key.replace(/[^\p{L}\p{N}_.-]+/gu, '_')}-${key.endsWith('@en') ? VOICE_SAMPLE_EN_VERSION : VOICE_SAMPLE_VERSION}.wav`;
 }
 
 /** What a voice's sample is kept under: Japanese under the voice alone, as the samples already sung are,
@@ -210,9 +212,13 @@ export function voiceSampleKey(id: string, language?: string): string {
 export function voiceSampleScore(language: string, gender?: string): CantilenaScore | undefined {
     const octave = gender === 'male' ? -12 : 0;
     if (language === 'en') {
+        // Five syllables to the five of こんにちわ, on the same notes (owner's decision 2026-11-09, session 1201).
         return { sampleRate: VOICE_SAMPLE_RATE, language, notes: [
-            { start: 0.3, duration: 0.5, pitch: 60 + octave, lyric: 'hel', hyphen: true },
-            { start: 0.8, duration: 1, pitch: 64 + octave, lyric: 'lo' },
+            { start: 0.3, duration: 0.25, pitch: 60 + octave, lyric: 'hel', hyphen: true },
+            { start: 0.55, duration: 0.25, pitch: 62 + octave, lyric: 'lo' },
+            { start: 0.8, duration: 0.25, pitch: 64 + octave, lyric: 'how' },
+            { start: 1.05, duration: 0.25, pitch: 65 + octave, lyric: 'are' },
+            { start: 1.3, duration: 0.5, pitch: 67 + octave, lyric: 'you' },
         ] };
     }
     if (language !== 'ja') { return undefined; }
