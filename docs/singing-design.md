@@ -258,7 +258,12 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   answer, not a slow one; the page says so in the output channel). `prepareVoices` writes one
   line per ask in the output channel (`singer: prepare (edit) file: no sung part`), and makes
   the page's key agree with its own first (`followVoices`), so a render that corrected the
-  score's name cannot leave the placeholder unanswered. Nets: `test/singerCore.test.ts` (the queue, the mode),
+  score's name cannot leave the placeholder unanswered. **The actual cause** (session 1162,
+  read off the owner's output channel, where every ask ended in `no sung part`): the badge's
+  own `display: inline-flex` beat the `hidden` attribute, so from session 1142 on the badge
+  never hid and kept the look of its last state — the pulsing placeholder — on a file with no
+  lyrics; `.voice-badge[hidden] { display: none }` as the other panels have, and the state
+  attribute is removed when there is nothing to say. Nets: `test/singerCore.test.ts` (the queue, the mode),
   `test/playbackCore.test.ts` (the badge's `waiting`).
 - **MIDI out** (`lilysharp.playback.midiOutput` set): the port plays the instruments, the
   voice plays here, started from the server's wall-clock zero (`midiStarted`'s `t0Ms`). The

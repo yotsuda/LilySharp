@@ -4523,6 +4523,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             border-radius: 50%; background: white; padding: 1px; box-sizing: border-box;
             cursor: pointer; line-height: 0;
         }
+        /* The display rule above beats the hidden attribute's own display:none (the range panel and
+           the tip say this too): without this line the badge never hid, and kept the look of its
+           last state - the pulsing placeholder - on a file with no lyrics (owner's reports, sessions
+           1160-1162; the host and the page had the state right all along). */
+        .toolbar .voice-badge[hidden] { display: none; }
         .toolbar .voice-badge svg { width: 12px; height: 12px; display: block; }
         .toolbar .voice-badge[data-state="waiting"] { color: #888; }
         .toolbar .voice-badge[data-state="preparing"] { color: #888; animation: voice-pulse 1.2s ease-in-out infinite; }
@@ -6323,6 +6328,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 badge.title = b.title;
                 // (The page script lives in a template literal: a backslash-n here would be a real newline.)
                 badge.setAttribute('aria-label', b.title.split(String.fromCharCode(10))[0]);
+            } else {
+                // Nothing to say: no state left on the element either (session 1162).
+                delete badge.dataset.state;
+                badge.removeAttribute('title');
+                badge.setAttribute('aria-label', 'Voice');
             }
             for (const btn of document.querySelectorAll('#partsList button.voice')) {
                 const s = voiceStates.get(btn.dataset.part);

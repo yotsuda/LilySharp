@@ -138,6 +138,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1162セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14861 / 0 / 2**（`-Start p1162`・HEAD `b2e32a17b`・未 push 62・OMR の open 0）。同じ会話で第1161 から続けた便。オーナー「直らない」＋出力チャネルの貼り付け。作業場所は Lab `sessions/p1162/`（`notes.md`）。
+
+- **ログの読み**: 問い合わせは全部正しく終わっていた＝`singer: prepare (edit) Untitled-9.lys: no sung part`（描画ごとに 1 回）・最初の `prepare (speed) …: the server is not up`（ページ初期の practiceState）→ settled。つまり host は `voiceParts []` を送り、ページは状態を空にして `badge.hidden = true` にしていた。
+- **原因＝CSS**: `.toolbar .voice-badge { … display: inline-flex; … }`（第1142 の ▶ の隅のマイク）。著者の `display` 規則は UA の `[hidden] { display: none }` に勝つので、**第1142 以来バッジは一度も隠れていなかった**＝最後の `data-state`（placeholder の `preparing`）の見た目のまま、歌詞の無い本で点滅し続けた。range パネルと tip には `[hidden] { display: none }` が在ったがバッジには無かった。第1160・1161 の直し（遅れた `preparing`・答え無しの placeholder）は実在した別の穴で、症状はこれ。
+- **直し**: `.toolbar .voice-badge[hidden] { display: none; }`・`renderVoiceBadge` は言うことが無いとき `data-state` と title も外す。網: npm **907 / 907**・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5「The actual cause」・editors CHANGELOG・MANUAL-CHECKS §3.7。
+- **教訓（RULES 級）**: ログの状態は正しいのに画面が違うときは、状態機械より先に**その要素の CSS**を読む。第1156 の Chrome ハーネスでも隠れたバッジの `getComputedStyle` を見ていれば分かった。
+- 残り: 実機（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1162 -DiffBase b2e32a17b`＝`end.log`・門は全部 OK・§1 現在便 16,107 字＝残り 3,893）。§7 7.5: Core `+` 0・REF 0・OWN 0（CSS 1 行＋ページ 4 行＋docs）。7.6: 出所はオーナーの出力チャネルと CSS の読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1161セッションの経緯
+
 ### 1.1 第1161セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14861 / 0 / 2**（`-Start p1161`・HEAD `78f77b1ef`・未 push 61・OMR の open 0）。同じ会話で第1160 から続けた便。オーナー報告「直っていない。`Downloads\Untitled-9.lys` は歌詞がないのに、開くとプレビューでマイクが点滅したまま」。作業場所は Lab `sessions/p1161/`（`notes.md`）。
@@ -148,18 +161,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **オーナーへ**: それでも点滅が残ったら、出力チャネル「Lily# Extension」の `singer: prepare` の行と `PREVIEW` の行を貼ってほしい（どの経路で答えが失われたかが読める）。
 - 残り: 前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
 - 終了時 full **14861 / 0 / 2 / 14863**（`-End p1161 -DiffBase 78f77b1ef`＝`end.log`・門は全部 OK・§1 現在便 16,239 字＝残り 3,761）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所は probe の実測とコードの読み。7.7: placeholder が残る経路は未特定＝出力チャネルの行で次に読む。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1160セッションの経緯
-
-### 1.1 第1160セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14861 / 0 / 2**（`-Start p1160`・HEAD `3e738aede`・未 push 60・OMR の open 0）。同じ会話で第1159 から続けた便。オーナー報告「歌詞をひとつも持たない .lys で、再生ボタン上のマイクが点滅したままになる。歌詞がない .lys ではマイクは非表示にして」。作業場所は Lab `sessions/p1160/`（`notes.md`）。
-
-- **原因（コード）**: `renderVoice` は `wanted()` を `await engine.render(...)`（engine の `voiceName()` が async）の**前にしか**見ていなかった。その await の間に歌詞の無いファイルへ切り替わると、新しいファイルの `prepareVoices` が `voiceParts []` を送ってページが空になった**後**に、古い job が melody の `voiceState preparing` を送る＝消す者が居らず点滅し続ける。catch の `failVoice` も同じ穴。
-- **直し**: host は await の後にもう一度 `wanted()` を見てから `preparing`（catch の `failVoice` も guard）。ページは最後の `voiceParts` を `sungNow` に持ち（`clearVoices` で null）、その集合に無いパートの `voiceState`／`voice` を捨てる＝歌詞の無いファイルには何が遅れて届いてもマイクは出ない（両側で塞いだ）。
-- 網: npm **907 / 907**・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・editors CHANGELOG・MANUAL-CHECKS §3.7「歌詞の無い .lys にマイクは出ない」。
-- 残り: 実機（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
-- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1160 -DiffBase 3e738aede`＝`end.log`・門は全部 OK・§1 現在便 15,829 字＝残り 4,171）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所はコードの読み（`renderVoice` の await の前後）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 
