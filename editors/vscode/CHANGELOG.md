@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **#listVoices**: Copilot's chat can ask which singing voices this machine has, by provider, gender or language, before writing a `singer`.
 - **An English voice says "Hello, how are you?"** when chosen, five syllables on the notes of the Japanese phrase.
 - **A voice heard from just past its closing quote says the words' language**: on an English line it says hello wherever on the `singer` the caret is.
 - **Several voices can sing one part**: `singer "neutrino/MERROW","diffsinger/TIGER"`. After a comma the voices are offered again, and the completion and the step keys change only the name the caret is on.

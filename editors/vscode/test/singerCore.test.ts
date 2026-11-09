@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -112,6 +112,30 @@ describe('the singer choices', () => {
         assert.equal(afterSingerWord('singer "a/b", '), true);
         assert.equal(afterSingerWord('singer "a/b","c/d",'), true);
         assert.equal(afterSingerWord('singer "a/b" '), false);
+    });
+
+    it('lists the voices for the chat, narrowed as asked', () => {
+        const all = [
+            { id: 'neutrino/A', engine: 'neutrino', name: 'A', label: 'Ann', language: 'ja', gender: 'female' },
+            { id: 'neutrino/B', engine: 'neutrino', name: 'B', label: 'B', language: 'ja', gender: 'male' },
+            { id: 'diffsinger/T', engine: 'diffsinger', name: 'T', label: 'Tiger', language: 'ja', languages: ['ja', 'en'] },
+            { id: 'voicevox/Z', engine: 'voicevox', name: 'Z', label: 'Zed', language: 'ja', licence: 'Credit it' },
+        ];
+        const names = (text: string) => [...text.matchAll(/^([a-z]+\/\w+):/gm)].map(m => m[1]);
+        assert.deepEqual(names(voiceListText(all, {})), ['diffsinger/T', 'neutrino/A', 'neutrino/B', 'voicevox/Z']);
+        assert.deepEqual(names(voiceListText(all, { provider: 'Neutrino' })), ['neutrino/A', 'neutrino/B']);
+        assert.deepEqual(names(voiceListText(all, { gender: 'male' })), ['diffsinger/T', 'neutrino/B', 'voicevox/Z'], 'a voice that does not state one stays');
+        assert.deepEqual(names(voiceListText(all, { provider: 'neutrino', gender: 'female' })), ['neutrino/A']);
+        assert.deepEqual(names(voiceListText(all, { language: 'english' })), ['diffsinger/T']);
+        assert.deepEqual(names(voiceListText(all, { language: 'en' })), ['diffsinger/T']);
+        const one = voiceListText(all, { provider: 'diffsinger' });
+        assert.match(one, /^1 voice \(diffsinger\):\ndiffsinger\/T: Tiger · gender not stated · sings ja, en$/m);
+        assert.match(one, /singer "a\/b","c\/d"/);
+        assert.match(voiceListText(all, { provider: 'voicevox' }), /Credit it/);
+        assert.match(voiceListText(all, { provider: 'nope' }), /There are: diffsinger, neutrino, voicevox\./);
+        assert.match(voiceListText(all, { gender: 'robot' }), /male or female/);
+        assert.match(voiceListText(all, { provider: 'neutrino', language: 'en' }), /No voice matches \(neutrino, en\)\. 4 voices/);
+        assert.match(voiceListText([], {}), /No singing voice/);
     });
 
     it('asks the language from inside the name, wherever the caret is on the singer', () => {

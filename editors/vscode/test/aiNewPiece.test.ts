@@ -422,6 +422,9 @@ describe('the composing guide', () => {
         assert.match(pkg, /"sound": \{ "type": "string", "description": "The part's midiInstrument/);
         assert.match(pkg, /"onLanguageModelTool:lilysharp_chordVoicings"/);
         assert.match(pkg, /"name": "lilysharp_chordVoicings",\s*"toolReferenceName": "chordVoicings"/);
+        assert.match(pkg, /"onLanguageModelTool:lilysharp_listVoices"/);
+        assert.match(pkg, /"name": "lilysharp_listVoices",\s*"toolReferenceName": "listVoices"/);
+        assert.match(transform, /lm\.registerTool<ListVoicesInput>\('lilysharp_listVoices'/);
         assert.match(transform, /lm\.registerTool<ChordVoicingsInput>\('lilysharp_chordVoicings'/);
         assert.match(transform, /client\.sendRequest<\{ Text: string \}>\('lilysharp\/chordVoicings'/);
         const read = transform.slice(transform.indexOf('async function readScore('), transform.indexOf('async function checkName('));

@@ -45,6 +45,7 @@ import {
     lastUserMessageAt, heldClashesOf, noTuneOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
     applyDraft, draftSummary, DraftInput, FROM_DRAFT_NOTE,
 } from './aiTransformCore';
+import { CANTILENA_EXTENSION_ID, cantilenaApiOf, voiceListText } from './singerCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -339,6 +340,13 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
             new vscode.LanguageModelTextPart(await chordVoicings(deps, options.input)),
         ]),
     }));
+    // The voices a score can name here (owner's request 2026-11-09, session 1202).
+    context.subscriptions.push(lm.registerTool<ListVoicesInput>('lilysharp_listVoices', {
+        prepareInvocation: () => ({ invocationMessage: 'Listing the singing voices…' }),
+        invoke: async options => new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(await listVoices(options.input)),
+        ]),
+    }));
     context.subscriptions.push(lm.registerTool<ReadScoreInput>('lilysharp_checkName', {
         prepareInvocation: options => ({
             invocationMessage: `Checking that ${path.basename(options.input?.file ?? 'the name')} is free…`,
@@ -356,6 +364,22 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
             new vscode.LanguageModelTextPart(await readGuide(deps, options.input)),
         ]),
     }));
+}
+
+/** What Copilot's chat hands the voice list. */
+interface ListVoicesInput { provider?: string; gender?: string; language?: string }
+
+/** The voices the Cantilena extension lists, narrowed as asked. */
+async function listVoices(input: ListVoicesInput | undefined): Promise<string> {
+    const extension = vscode.extensions.getExtension(CANTILENA_EXTENSION_ID);
+    if (!extension) { return `No voice can be listed: the Cantilena extension (${CANTILENA_EXTENSION_ID}), which sings, is not installed. A score can still be written without a singer.`; }
+    try {
+        const api = cantilenaApiOf(extension.isActive ? extension.exports : await extension.activate());
+        if (!api?.voices) { return 'No voice can be listed: the installed Cantilena extension does not list its voices.'; }
+        return voiceListText(await api.voices(), input ?? {});
+    } catch (e) {
+        return `No voice can be listed: ${e instanceof Error ? e.message : String(e)}`;
+    }
 }
 
 /** What Copilot's chat hands the guide tool. */

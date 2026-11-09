@@ -367,6 +367,9 @@ What makes it music:
   - **The bridge is a change**: a chord the verse and the chorus do not use (Am, Bm, D7, a borrowed
     chord), a tune of its own, or the strum's pattern changed there — not the same four chords
     walked from another one of them under the verse's tune again.
+  - **Who sings**: to name a voice, ask `lilysharp_listVoices` what this machine has and write a name it
+    gives on the score's lyrics row: `lyrics words sings melody singer "neutrino/MERROW"`. Never guess a
+    name. With no `singer`, the machine's default voice sings.
   - **The singer breathes**: every line of words ends on a longer note with a rest after it (a
     bar's last beat, at least), never four quarters in every bar from the first word to the last.
   - **The diagrams, always**: `layout { chordDiagrams all  chordList true }` — every chord draws

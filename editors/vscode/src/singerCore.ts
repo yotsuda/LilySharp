@@ -69,6 +69,32 @@ export function fitsGender(voice: Pick<CantilenaVoice, 'gender'>, gender?: strin
     return !gender || !voice.gender || voice.gender === gender;
 }
 
+const LANGUAGE_CODES: Record<string, string> = { japanese: 'ja', english: 'en', chinese: 'zh', korean: 'ko' };
+
+/** The answer of the chat's voice list (owner's request 2026-11-09, session 1202): the names a score can
+ *  write, narrowed by provider, gender and language. As in the completion, a voice that does not state its
+ *  gender stays when a gender is asked for, and the answer says so. */
+export function voiceListText(voices: readonly CantilenaVoice[], filter: { provider?: string; gender?: string; language?: string }): string {
+    const provider = (filter.provider ?? '').trim().toLowerCase();
+    const gender = (filter.gender ?? '').trim().toLowerCase();
+    const written = (filter.language ?? '').trim().toLowerCase();
+    const language = LANGUAGE_CODES[written] ?? written;
+    if (gender && gender !== 'male' && gender !== 'female') { return `"${filter.gender}" is no gender of a voice: ask for male or female.`; }
+    if (voices.length === 0) { return 'No singing voice is available on this machine. A score can still be written without a singer.'; }
+    const providers = [...new Set(voices.map(v => v.engine))].sort();
+    if (provider && !providers.includes(provider)) { return `No provider named "${filter.provider}" has voices here. There are: ${providers.join(', ')}.`; }
+    const found = byVoiceId(voices.filter(v => (!provider || v.engine === provider) && fitsGender(v, gender) && (!language || singsLanguage(v, language))));
+    const asked = [provider, gender, language].filter(Boolean).join(', ');
+    if (found.length === 0) { return `No voice matches (${asked}). ${voices.length} voices are available with no condition.`; }
+    const lines = found.map(v => {
+        const languages = v.languages ?? (v.language ? [v.language] : []);
+        return [`${v.id}:`, v.label && v.label !== v.name ? v.label : undefined, v.gender ?? 'gender not stated',
+            languages.length > 0 ? `sings ${languages.join(', ')}` : 'languages not stated', v.licence].filter(Boolean).join(' · ').replace(': · ', ': ');
+    });
+    return [`${found.length} voice${found.length === 1 ? '' : 's'}${asked ? ` (${asked})` : ''}:`, ...lines, '',
+        'Write a name after singer on a lyrics track or a score\'s lyrics row: singer "neutrino/MERROW". Names with commas between them sing the part together: singer "a/b","c/d". A voice sings only the languages it lists.'].join('\n');
+}
+
 /** One choice between a `singer`'s quotes. */
 export interface SingerChoice { label: string; detail: string }
 

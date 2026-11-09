@@ -34,7 +34,8 @@
     "onLanguageModelTool:lilysharp_readGuide",
     "onLanguageModelTool:lilysharp_readScan",
     "onLanguageModelTool:lilysharp_fixScanBars",
-    "onLanguageModelTool:lilysharp_chordVoicings"
+    "onLanguageModelTool:lilysharp_chordVoicings",
+    "onLanguageModelTool:lilysharp_listVoices"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -134,6 +135,24 @@
             "sound": { "type": "string", "description": "The part's midiInstrument (\"overdriven guitar\", \"electric guitar (clean)\" …): on a distorted sound, power chords of two or three notes come first (optional)." }
           },
           "required": ["chord"]
+        }
+      },
+      {
+        "name": "lilysharp_listVoices",
+        "toolReferenceName": "listVoices",
+        "displayName": "List the singing voices",
+        "icon": "$(mic)",
+        "canBeReferencedInPrompt": true,
+        "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song", "singer", "voice"],
+        "userDescription": "Lists the singing voices available on this machine, by provider, gender or language, with the names a score writes after singer.",
+        "modelDescription": "Use this BEFORE writing a singer \"…\" in a score, to know which voices exist on this machine: never guess a voice's name. With no input it lists them all; give provider, gender or language to narrow it. It answers each voice's name as a score writes it (engine/name), what it calls itself, its gender where it says, and the languages it sings. A voice that does not state its gender is kept when you ask for a gender, and marked so.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "provider": { "type": "string", "description": "Only this provider's voices: neutrino, diffsinger or voicevox (optional)." },
+            "gender": { "type": "string", "enum": ["male", "female"], "description": "Only voices of this gender, and those that do not state one (optional)." },
+            "language": { "type": "string", "description": "Only voices that sing this language: japanese or english, or ja or en (optional)." }
+          }
         }
       },
       {
