@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, singerChoices, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from './singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -3971,8 +3971,10 @@ async function hearSinger(label: unknown): Promise<void> {
     clock.mark('engine');
     const voice = await engine.backend.voiceName(label);
     clock.mark('name');
+    const caret = editor.selection.active;
+    const asked = new vscode.Position(caret.line, singerLanguageColumn(editor.document.lineAt(caret.line).text, caret.character));
     const slot = client && clientReady ? await client.sendRequest<{ Language?: string | null }>('lilysharp/singerSlot',
-        { textDocument: { uri: editor.document.uri.toString() }, offset: editor.document.offsetAt(editor.selection.active) }).then(s => s, () => undefined) : undefined;
+        { textDocument: { uri: editor.document.uri.toString() }, offset: editor.document.offsetAt(asked) }).then(s => s, () => undefined) : undefined;
     await auditionVoice(editor.document.uri.toString(), voice, clock, slot?.Language ?? undefined);
 }
 

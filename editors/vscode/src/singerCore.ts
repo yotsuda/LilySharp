@@ -99,6 +99,18 @@ export function singerValueAt(line: string, character: number): { start: number;
     return undefined;
 }
 
+/** Where on the line to ask what language a `singer`'s words are in, wherever on the `singer` the caret
+ *  is (owner's report 2026-11-09, session 1200: just past the closing quote the answer was none, and a voice
+ *  of several languages said its first one's phrase): inside the name, or at the end of a bare gender. */
+export function singerLanguageColumn(line: string, character: number): number {
+    const named = singerValueAt(line, character);
+    if (named) { return named.start; }
+    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:male|female)(?![\w-])/g)) {
+        if (character >= m.index && character <= m.index + m[0].length) { return m.index + m[0].length; }
+    }
+    return character;
+}
+
 /**
  * What the `singer` that holds `from`..`to` on this line writes, for hearing it (owner's request
  * 2026-11-09, session 1180): its name (several: joined as the engine takes them, to be heard together),

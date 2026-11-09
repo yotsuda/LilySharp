@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1198セッションの経緯
+
+### 1.1 第1198セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15002 / 0 / 2**（`-Start p1198`・HEAD `86735d0e2`・未 push 98）。オーナー「それだと自動補完が使いにくい。カンマで連結できないかな」`singer "neutrino/MERROW","diffsinger/TIGER"`。作業場所は Lab `sessions/p1198/`。
+
+- 文法 `SingerValue = String , { ',' , String } | SingerGender , [ ... ]`（part・歌詞の頭・score の行）。Lily# は `+` でつないだ文字列として運び、engine への渡し方は第1197 のまま。第1197 の文字列内 `+` の案内と `singerPiece` は廃止。
+- 編集: 文字列ごとに補完と声送りが効く。`,` と `, ` で次の名前の一覧が開く（引用符付きで入る）。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1198 -DiffBase 86735d0e2`、BUILD 0）・npm 938 / 938。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
 ## 以下は第1197セッションの経緯
 
 ### 1.1 第1197セッション（2026-11-09・YT-DELL2）

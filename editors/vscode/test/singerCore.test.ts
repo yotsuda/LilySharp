@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, singerChoices, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -112,6 +112,14 @@ describe('the singer choices', () => {
         assert.equal(afterSingerWord('singer "a/b", '), true);
         assert.equal(afterSingerWord('singer "a/b","c/d",'), true);
         assert.equal(afterSingerWord('singer "a/b" '), false);
+    });
+
+    it('asks the language from inside the name, wherever the caret is on the singer', () => {
+        const line = 'lyrics v singer "a/b" {';
+        assert.equal(singerLanguageColumn(line, line.indexOf('{') - 1), 17, 'just past the closing quote');
+        assert.equal(singerLanguageColumn(line, 10), 17, 'on the word');
+        assert.equal(singerLanguageColumn('singer male x', 2), 11, 'a bare gender');
+        assert.equal(singerLanguageColumn('lyrics v {', 3), 3, 'off a singer');
     });
 
     it('finds the one name the caret stands on, and hears them together', () => {
