@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, singerChoices, singerPiece, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, singerChoices, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -108,19 +108,21 @@ describe('the singer choices', () => {
         assert.equal(afterSingerWord('lyrics verse sings melody '), false);
         assert.equal(afterSingerWord('misinger '), false);
         assert.equal(afterSingerWord('// singer '), false);
-        assert.equal(afterSingerWord('singer "a/b + '), true, 'the next voice of a chorus');
-        assert.equal(afterSingerWord('singer "a/b+'), true);
-        assert.equal(afterSingerWord('singer "a/b '), false);
+        assert.equal(afterSingerWord('singer "a/b",'), true, 'the next voice');
+        assert.equal(afterSingerWord('singer "a/b", '), true);
+        assert.equal(afterSingerWord('singer "a/b","c/d",'), true);
+        assert.equal(afterSingerWord('singer "a/b" '), false);
     });
 
-    it('finds the one voice the caret stands on', () => {
-        const at = { start: 10, end: 19, value: 'a/b + c/d' };
-        assert.deepEqual(singerPiece(at, 11), { start: 10, end: 13, value: 'a/b' });
-        assert.deepEqual(singerPiece(at, 13), { start: 10, end: 13, value: 'a/b' });
-        assert.deepEqual(singerPiece(at, 17), { start: 16, end: 19, value: 'c/d' });
-        assert.deepEqual(singerPiece(at, 5), { start: 10, end: 13, value: 'a/b' }, 'on the word singer');
-        assert.deepEqual(singerPiece({ start: 10, end: 16, value: 'a/b + ' }, 16), { start: 16, end: 16, value: '' }, 'the next one, not yet written');
-        assert.deepEqual(singerPiece({ start: 0, end: 3, value: 'a/b' }, 3), { start: 0, end: 3, value: 'a/b' });
+    it('finds the one name the caret stands on, and hears them together', () => {
+        const line = 'singer "a/b", "c/d"';
+        assert.deepEqual(singerValueAt(line, 9), { start: 8, end: 11, value: 'a/b' });
+        assert.deepEqual(singerValueAt(line, 17), { start: 15, end: 18, value: 'c/d' });
+        assert.deepEqual(singerValueAt(line, 1), { start: 8, end: 11, value: 'a/b' }, 'on the word');
+        assert.deepEqual(singerValueAt(line, 12), { start: 8, end: 11, value: 'a/b' }, 'on the comma');
+        assert.equal(singerWrittenAt(line, 0, 6), 'a/b+c/d');
+        assert.equal(singerWrittenAt('singer male "a/b","c/d"', 0, 6), 'a/b+c/d');
+        assert.equal(singerWrittenAt('singer male', 0, 6), 'male');
     });
 
     it('counts every language a voice sings', () => {

@@ -171,6 +171,42 @@ public class LyricLanguageTests
         Assert.Equal(expected, Sung(source).Singer);
     }
 
+    // ── several voices on one part (owner's request 2026-11-09, session 1198) ──
+
+    [Theory]
+    [InlineData("lyrics w singer \"a/b\",\"c/d\" sings m { さ く ら ら | }", "staff m  lyrics w")]
+    [InlineData("lyrics w sings m singer \"a/b\", \"c/d\" { さ く ら ら | }", "staff m  lyrics w")]
+    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w singer \"a/b\",\"c/d\" sings m")]
+    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w sings m singer male \"a/b\",\"c/d\"")]
+    public void CommasJoinTheVoices(string lyrics, string row)
+    {
+        string source = $$"""
+            part m { clef treble }
+            {{lyrics}}
+            section A { m { c'4 d e f | } }
+            form { A }
+            score { {{row}} }
+            """;
+        Assert.Equal("a/b+c/d", Sung(source).Singer);
+    }
+
+    [Fact]
+    public void CommasJoinThePartsVoices()
+    {
+        const string source = """
+            part m { clef treble  singer "a/b","c/d" }
+            lyrics w sings m { さ く ら ら | }
+            section A { m { c'4 d e f | } }
+            form { A }
+            score { staff m  lyrics w }
+            """;
+        Assert.Equal("a/b+c/d", Sung(source).Singer);
+    }
+
+    [Fact]
+    public void AnEmptyLaterName_IsAnError()
+        => Assert.Contains(SyntaxTree.Parse("part m { clef treble }\nlyrics w singer \"a/b\",\"\" sings m { さ く ら ら | }\n").Diagnostics, d => d.Code == DiagnosticCodes.SingerEmpty);
+
     [Fact]
     public void NoSingerWritten_IsNull()
         => Assert.Null(Sung(Book("", "lyrics w sings m { さ く ら ら | }")).Singer);
@@ -358,7 +394,7 @@ public class LyricLanguageTests
 
     // ── before any quote (owner's report 2026-11-09, session 1196) ──
 
-    private static (string? Track, string? Part, string? Language, string? Gender, bool Quoted)? Slot(string source)
+    private static (string? Track, string? Part, string? Language, string? Gender, bool Quoted, bool Another)? Slot(string source)
     {
         int at = source.IndexOf('§');
         return LilySharpLanguageServer.SingerSlotAt(source.Remove(at, 1), at);
@@ -374,6 +410,21 @@ public class LyricLanguageTests
         var slot = Assert.NotNull(Slot(source));
         Assert.False(slot.Quoted);
     }
+
+    [Theory]
+    [InlineData("lyrics w singer \"a\",§\n", false)]
+    [InlineData("lyrics w singer \"a\", §\n", false)]
+    [InlineData("lyrics w singer \"a\",\"§\n", true)]
+    [InlineData("score { staff m  lyrics w sings m singer male \"a\",\"b\", § }\n", false)]
+    public void AfterACommaIsAnother(string source, bool quoted)
+    {
+        var slot = Assert.NotNull(Slot(source));
+        Assert.True(slot.Another);
+        Assert.Equal(quoted, slot.Quoted);
+    }
+
+    [Fact]
+    public void AfterAWholeListTheNextClausesAreOffered() => Assert.Contains("language", Offered(Declared + "lyrics words sings sop singer \"a\",\"b\" "));
 
     [Fact]
     public void BetweenTheQuotes_IsQuoted() => Assert.True(Assert.NotNull(Slot("lyrics w singer \"§\" { la | }\n")).Quoted);

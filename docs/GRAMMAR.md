@@ -1435,7 +1435,7 @@ PartBlock      = PartName , MusicBlock ;
    it does not sing it simply stays an independent band. *)
 LyricsBlock    = 'lyrics' , [ Identifier ] , { LyricsClause } , '{' , { LyricMeasure | LyricVerse } , '}' ;
 LyricsClause   = 'sings' , PartRef | 'language' , LanguageName | 'singer' , SingerValue ;
-SingerValue    = String | SingerGender , [ String ] ;
+SingerValue    = String , { ',' , String } | SingerGender , [ String , { ',' , String } ] ;
 SingerGender   = 'male' | 'female' ;
                  (* Before a name, a gender leaves out of the editor's completion and step keys the
                     voices that say they are the other, and a singer sings by its name. With no name
@@ -1447,7 +1447,7 @@ SingerGender   = 'male' | 'female' ;
                     { ... }', 'lyrics language sings m { ... }' and 'lyrics singer { ... }' are
                     tracks with those names. 'singer' names who sings: a voice as engine/name
                     ('neutrino/MERROW') or a role ('soprano', 'tenor') that says a gender, and
-                    several joined by + in the one string sing the part together; the
+                    several written with commas between them sing the part together; the
                     score's row wins over the track, the track over the part's 'singer'. An
                     empty one is an error (LYS4039); a name is never checked against a machine:
                     a voice that is not there sings as the default voice of the part's gender, said

@@ -242,7 +242,7 @@ internal sealed partial class Parser
                     && (Peek(2)?.Kind == SyntaxKind.StringLiteral || Music.LyricSinger.Genders.Contains(Peek(1)!.Text))));
 
     /// <summary>The clause's tokens in source order: the word, the gender if written, the name if
-    /// written. After a gender the name may be missing or empty: the engine picks such a voice.</summary>
+    /// written and any more names after commas. After a gender the name may be missing or empty: the engine picks such a voice.</summary>
     private List<SyntaxToken> ParseSingerClause()
     {
         var tokens = new List<SyntaxToken> { Advance() };
@@ -254,7 +254,14 @@ internal sealed partial class Parser
             tokens.Add(gender);
         }
         if (Check(SyntaxKind.StringLiteral))
+        {
             tokens.Add(ParseSingerName(allowEmpty: gendered));
+            while (Check(SyntaxKind.Comma) && Peek(1)?.Kind == SyntaxKind.StringLiteral)
+            {
+                tokens.Add(Advance());
+                tokens.Add(ParseSingerName(allowEmpty: false));
+            }
+        }
         return tokens;
     }
 

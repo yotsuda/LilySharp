@@ -67,12 +67,12 @@ public sealed class LyricsBlockSyntax : SyntaxNode
 
     /// <summary>Who sings the track as the block names it (<c>lyrics en singer "neutrino/MERROW" { … }</c>),
     /// or null (<see cref="Music.LyricSinger"/>).</summary>
-    public string? Singer => HeadClause(Music.LyricSinger.Keyword).Value is { } t ? Music.LyricSinger.ValueOf(t.Text) : null;
+    public string? Singer => HeadClause(Music.LyricSinger.Keyword) is { Value: { } t } c ? Music.LyricSinger.Joined(t, c.Index, GetChild, OpenBraceIndex) : null;
 
     /// <summary>A clause of the head by its word: the pairs stand from slot 2 to the brace, in
     /// the order they were written, so `sings` and `language` may come either way round. A
     /// <c>singer</c>'s gender stands between its pair. With no name, the gender is the value.</summary>
-    private (SyntaxTokenNode? Keyword, SyntaxTokenNode? Value) HeadClause(string word)
+    private (SyntaxTokenNode? Keyword, SyntaxTokenNode? Value, int Index) HeadClause(string word)
     {
         int open = OpenBraceIndex;
         for (int i = 2; i + 1 < open; i += 2)
@@ -84,7 +84,10 @@ public sealed class LyricsBlockSyntax : SyntaxNode
                 && GetChild(i + 2) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } literal ? literal : null;
             bool gendered = name != null;
             if (keyword.Text == word)
-                return (keyword, GetChild(name != null && Music.LyricSinger.ValueOf(name.Text).Length > 0 ? i + 2 : i + 1) as SyntaxTokenNode);
+            {
+                int value = name != null && Music.LyricSinger.ValueOf(name.Text).Length > 0 ? i + 2 : i + 1;
+                return (keyword, GetChild(value) as SyntaxTokenNode, value);
+            }
             if (gendered)
                 i++;
         }

@@ -365,7 +365,7 @@ internal sealed partial class Parser
             // that compiles today — only spellings that are errors today. User decision, taken
             // before 0.3.0 was tagged.
             var values = new List<GreenNode?> { value };
-            while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma)
+            while (Check(SyntaxKind.Apostrophe) || (Check(SyntaxKind.Comma) && propName.Text != Music.LyricSinger.Keyword)
                    || (Check(SyntaxKind.Minus) && IsHyphenatedValueTail(Peek(1))))
             {
                 if (Check(SyntaxKind.Minus))
@@ -388,6 +388,15 @@ internal sealed partial class Parser
             {
                 CheckSingerGender(value);
                 values.Add(Advance());
+            }
+            // `singer "a","b"`: more voices on the part.
+            if (propName.Text == Music.LyricSinger.Keyword && (value.Kind == SyntaxKind.StringLiteral || values.Count > 1))
+            {
+                while (Check(SyntaxKind.Comma) && Peek(1)?.Kind == SyntaxKind.StringLiteral)
+                {
+                    values.Add(Advance());
+                    values.Add(ParseSingerName(allowEmpty: false));
+                }
             }
             return new PropertyAssignmentGreen(propName, colon, [.. values]);
         }

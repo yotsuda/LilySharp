@@ -267,6 +267,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1196セッションの経緯
+
+### 1.1 第1196セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14991 / 0 / 2**（`-Start p1196`・HEAD `8d2ba9aff`・未 push 96）。オーナー「`lyrics verse sings melody singer |` の補完がうまく動かない」→「直して」。作業場所は Lab `sessions/p1196/`。
+
+- `SingerSlotAt` が引用符の前（`singer ▮`）も席と読む（`Quoted=false`）。`singer male ▮` はサーバーの残りの節も出したまま、エディタが声を足す。エディタは `singer ` の空白で候補を開き、`male`・`female` と声の一覧を出し、選ぶと引用符付きで入る。
+- 終了時 full **15002 合格 / 0 失敗 / skip 2 / 合計 15004**（`-End p1196 -DiffBase 8d2ba9aff`、BUILD 0）・npm 937 / 937。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
 ## 以下は第1195セッションの経緯
 
 ### 1.1 第1195セッション（2026-11-09・YT-DELL2）

@@ -431,6 +431,8 @@ public class SingerSlotResponse
     public string? Gender { get; set; }
     /// <summary>False before any quote (<c>singer |</c>): the name goes in with its quotes.</summary>
     public bool Quoted { get; set; }
+    /// <summary>Names stand before this one (<c>singer "a",|</c>).</summary>
+    public bool Another { get; set; }
 }
 
 /// <summary>Response for the lilysharp/sung request: one voice per part a lyrics row sings.</summary>

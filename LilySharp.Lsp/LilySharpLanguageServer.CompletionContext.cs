@@ -524,28 +524,30 @@ public sealed partial class LilySharpLanguageServer
             && System.Text.RegularExpressions.Regex.IsMatch(line, @"^[ \t]*language[ \t]+\w*$"))
             return true;
         return !stack.Exists(o => o.IsScoreOpener || o.Frame.Name == "score" || o.Frame.Prefix == "score")
-            && System.Text.RegularExpressions.Regex.IsMatch(line, @"(?:^|[\s{}])lyrics(?:[ \t]+(?:\w+|""[^""]*""))*?[ \t]+language[ \t]+\w*$");
+            && System.Text.RegularExpressions.Regex.IsMatch(line, @"(?:^|[\s{}])lyrics(?:[ \t]+(?:\w+|""[^""]*""(?:[ \t]*,[ \t]*""[^""]*"")*))*?[ \t]+language[ \t]+\w*$");
     }
 
     /// <summary>Where a <c>singer "…|</c> the caret is in stands: a lyrics head or row (its track, and
     /// the language it writes), or a part's header (the part); null for anywhere else — a lyric
     /// body's words among them. <c>Quoted</c> is false before any quote (<c>singer |</c>, owner's report
-    /// 2026-11-09, session 1196), where a name is still to be written.</summary>
-    internal static (string? Track, string? Part, string? Language, string? Gender, bool Quoted)? SingerSlotAt(string text, int offset)
+    /// 2026-11-09, session 1196), where a name is still to be written. <c>Another</c>: names stand before
+    /// this one (<c>singer "a",|</c>).</summary>
+    internal static (string? Track, string? Part, string? Language, string? Gender, bool Quoted, bool Another)? SingerSlotAt(string text, int offset)
     {
         int end = Math.Clamp(offset, 0, text.Length);
         int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
         string line = text[lineStart..end];
-        var quote = System.Text.RegularExpressions.Regex.Match(line, @"(?:^|[\s{}])singer[ \t]+(?:(?<gender>male|female)[ \t]+)?(?:""[^""]*|(?<bare>[^\s""{}]*))$");
+        var quote = System.Text.RegularExpressions.Regex.Match(line, @"(?:^|[\s{}])singer[ \t]+(?:(?<gender>male|female)[ \t]+)?(?<earlier>(?:""[^""]*""[ \t]*,[ \t]*)*)(?:""[^""]*|(?<bare>[^\s""{},]*))$");
         if (!quote.Success)
             return null;
         bool quoted = !quote.Groups["bare"].Success;
+        bool another = quote.Groups["earlier"].Length > 0;
         // Before any quote a `singer` could be a comment's word or a string's.
         if (!quoted && (line.Contains("//", StringComparison.Ordinal) || line[..quote.Index].Count(c => c == '"') % 2 == 1))
             return null;
         string? gender = quote.Groups["gender"].Success ? quote.Groups["gender"].Value : null;
         var head = System.Text.RegularExpressions.Regex.Match(line[..quote.Index],
-            @"(?:^|[\s{}])lyrics(?:[ \t]+(?<w>[^\s{}""]+|""[^""]*""))*[ \t]*$");
+            @"(?:^|[\s{}])lyrics(?:[ \t]+(?<w>[^\s{}""]+|""[^""]*""(?:[ \t]*,[ \t]*""[^""]*"")*))*[ \t]*$");
         if (head.Success)
         {
             var words = ClauseWords(head.Groups["w"].Captures.Select(c => c.Value));
@@ -554,13 +556,13 @@ public sealed partial class LilySharpLanguageServer
                 if (words[i] == LilySharp.Core.Music.LyricLanguage.Keyword)
                     language = words[i + 1];
             bool named = words.Count % 2 == 1;   // the clauses are pairs: an odd word is the track's name
-            return (named ? words[0] : LilySharp.Core.Music.LyricSinger.UnnamedTrack, null, language, gender, quoted);
+            return (named ? words[0] : LilySharp.Core.Music.LyricSinger.UnnamedTrack, null, language, gender, quoted, another);
         }
         var stack = new BlockContextScan(text, offset).Stack;
         if (stack.Count > 0 && FrameKeyword(stack[^1].Frame) == "part")
         {
             var frame = stack[^1].Frame;
-            return (null, frame.Prefix == "part" ? frame.Name : "", null, gender, quoted);
+            return (null, frame.Prefix == "part" ? frame.Name : "", null, gender, quoted, another);
         }
         return null;
     }
@@ -594,7 +596,7 @@ public sealed partial class LilySharpLanguageServer
         if (line.Contains("//", StringComparison.Ordinal))
             return null;
         var head = System.Text.RegularExpressions.Regex.Match(line,
-            @"(?:^|[\s{}])lyrics(?:[ \t]+(?<w>[^\s{}""]+|""[^""]*""))*[ \t]+$");
+            @"(?:^|[\s{}])lyrics(?:[ \t]+(?<w>[^\s{}""]+|""[^""]*""(?:[ \t]*,[ \t]*""[^""]*"")*))*[ \t]+$");
         if (!head.Success)
             return null;
         var words = ClauseWords(head.Groups["w"].Captures.Select(c => c.Value));
@@ -1112,7 +1114,7 @@ public sealed partial class LilySharpLanguageServer
 
         // A `singer`'s name: the voices are the editor's to list (lilysharp/singerSlot). After a bare
         // `singer male ` the name is optional, so the clauses that may follow are still offered below.
-        if (SingerSlotAt(text, offset) is { } singerSlot && (singerSlot.Quoted || singerSlot.Gender == null))
+        if (SingerSlotAt(text, offset) is { } singerSlot && (singerSlot.Quoted || singerSlot.Gender == null || singerSlot.Another))
             return CompletionContext.AfterSinger;
 
         // A lyrics head after a whole clause: the clauses not written yet (a body's words are

@@ -1049,7 +1049,7 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
 
     /// <summary>A clause of the row by its word: pairs after the name, in the order written, a
     /// <c>singer</c>'s gender standing between its pair. With no name, the gender is the value.</summary>
-    private (SyntaxTokenNode? Keyword, SyntaxTokenNode? Value) Clause(string word)
+    private (SyntaxTokenNode? Keyword, SyntaxTokenNode? Value, int Index) Clause(string word)
     {
         for (int i = NameToken != null ? 2 : 1; i < SlotCount; i += 2)
         {
@@ -1061,7 +1061,7 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
             bool gendered = name != null;
             int value = name != null && Music.LyricSinger.ValueOf(name.Text).Length > 0 ? i + 2 : i + 1;
             if (keyword.Text == word)
-                return (keyword, value < SlotCount ? GetChild(value) as SyntaxTokenNode : null);
+                return (keyword, value < SlotCount ? GetChild(value) as SyntaxTokenNode : null, value);
             if (gendered)
                 i++;
         }
@@ -1079,7 +1079,7 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
 
     /// <summary>Who sings THIS placement (<c>lyrics verse singer "neutrino/MERROW" sings melody</c>),
     /// or null (<see cref="Music.LyricSinger"/>).</summary>
-    public string? Singer => Clause(Music.LyricSinger.Keyword).Value is { } t ? Music.LyricSinger.ValueOf(t.Text) : null;
+    public string? Singer => Clause(Music.LyricSinger.Keyword) is { Value: { } t } c ? Music.LyricSinger.Joined(t, c.Index, GetChild, SlotCount) : null;
 
     /// <summary>The part THIS ROW sings (<c>lyrics verse sings melody</c> →
     /// "melody"), or null when the row states none and the track's default (the

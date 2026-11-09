@@ -43,6 +43,20 @@ public static class LyricSinger
     /// <summary>The track name of the file's unnamed lyrics, for the language server's reading of a head.</summary>
     public const string UnnamedTrack = SyntaxFacts.UnnamedLyricsName;
 
+    /// <summary>What joins the voices of one <c>singer "a","b"</c> (owner's request 2026-11-09, sessions
+    /// 1197 and 1198: several voices on one part) in the string the engine is given.</summary>
+    public const char Joiner = '+';
+
+    /// <summary>The singer written from the token at <paramref name="index"/>: the name, and every
+    /// <c>,"…"</c> after it, as one string for the engine.</summary>
+    internal static string Joined(SyntaxTokenNode first, int index, Func<int, SyntaxNode?> child, int end)
+    {
+        var names = new List<string> { ValueOf(first.Text) };
+        for (int i = index + 1; i + 1 < end && child(i) is SyntaxTokenNode { Kind: SyntaxKind.Comma } && child(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } next; i += 2)
+            names.Add(ValueOf(next.Text));
+        return string.Join(Joiner, names);
+    }
+
     /// <summary>The text between a string token's quotes.</summary>
     public static string ValueOf(string token)
         => StringLiteral.IsClosed(token) ? StringLiteral.Value(token) : token.Trim('"');

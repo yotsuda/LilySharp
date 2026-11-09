@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, singerChoices, singerPiece, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from './singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, singerChoices, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1079,7 +1079,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel',
         (use?: unknown) => pickAiModel(use === 'edit' || use === 'ghost' ? use : undefined)));
 
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singerCompletion, '"', ' ', '+'));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singerCompletion, '"', ' ', ','));
     voiceSamplesDir = path.join(context.globalStorageUri.fsPath, 'voice-samples');
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.hearSinger', hearSinger));
 
@@ -3869,8 +3869,8 @@ function tellSingerNote(text: string): void {
 const singerCompletion: vscode.CompletionItemProvider = {
     async provideCompletionItems(document, position, _token, context) {
         if (!client || !clientReady) { return undefined; }
-        if ((context.triggerCharacter === ' ' || context.triggerCharacter === '+') && !afterSingerWord(document.lineAt(position.line).text.slice(0, position.character))) { return undefined; }
-        const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null; Gender?: string | null; Quoted?: boolean }>('lilysharp/singerSlot',
+        if ((context.triggerCharacter === ' ' || context.triggerCharacter === ',') && !afterSingerWord(document.lineAt(position.line).text.slice(0, position.character))) { return undefined; }
+        const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null; Gender?: string | null; Quoted?: boolean; Another?: boolean }>('lilysharp/singerSlot',
             { textDocument: { uri: document.uri.toString() }, offset: document.offsetAt(position) });
         if (!slot.InSlot || !slot.Language) { return undefined; }
         const engine = await renderer();
@@ -3881,11 +3881,9 @@ const singerCompletion: vscode.CompletionItemProvider = {
         const line = document.lineAt(position.line).text;
         const open = line.lastIndexOf('"', position.character - 1);
         const close = line.indexOf('"', position.character);
-        const end = close >= 0 ? close : position.character;
-        const piece = singerPiece({ start: open + 1, end, value: line.slice(open + 1, end) }, position.character);
         const range = slot.Quoted
-            ? new vscode.Range(position.line, piece.start, position.line, piece.end)
-            : new vscode.Range(position.line, position.character - (/[^\s]*$/.exec(line.slice(0, position.character))?.[0].length ?? 0), position.line, position.character);
+            ? new vscode.Range(position.line, open + 1, position.line, close >= 0 ? close : position.character)
+            : new vscode.Range(position.line, position.character - (/[^\s,"]*$/.exec(line.slice(0, position.character))?.[0].length ?? 0), position.line, position.character);
         const items = singerChoices(voices, slot.Language, slot.Gender).map((c, i) => {
             const item = new vscode.CompletionItem(c.label, vscode.CompletionItemKind.Value);
             item.detail = c.detail;
@@ -3896,7 +3894,7 @@ const singerCompletion: vscode.CompletionItemProvider = {
             item.command = { command: 'lilysharp.hearSinger', title: 'Hear this voice', arguments: [c.label] };
             return item;
         });
-        if (!slot.Quoted && !slot.Gender) {
+        if (!slot.Quoted && !slot.Gender && !slot.Another) {
             for (const gender of ['female', 'male']) {
                 const item = new vscode.CompletionItem(gender, vscode.CompletionItemKind.Keyword);
                 item.detail = `any ${gender} voice, or name one`;
@@ -3989,8 +3987,7 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, byVoic
     const doc = editor.document;
     const version = doc.version;
     const line = editor.selection.active.line;
-    const whole = singerValueAt(doc.lineAt(line).text, editor.selection.active.character);
-    const at = whole && singerPiece(whole, editor.selection.active.character);
+    const at = singerValueAt(doc.lineAt(line).text, editor.selection.active.character);
     if (!at) { return false; }
     const clock = new StageClock(pressedAt);
     clock.mark('key queue');

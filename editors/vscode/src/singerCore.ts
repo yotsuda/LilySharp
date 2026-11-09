@@ -85,42 +85,32 @@ export function singerChoices(voices: readonly CantilenaVoice[], language: strin
 
 /** Whether a line's text before the caret ends with `singer ` or `singer male `: a space that opens the list of voices. */
 export function afterSingerWord(before: string): boolean {
-    return /(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?(?:"[^"]*\+[ \t]*)?$/.test(before) && !before.includes('//');
+    return /(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?(?:(?:"[^"]*"[ \t]*,[ \t]*)+)?$/.test(before) && !before.includes('//');
 }
 
-/** The one voice the caret stands on among those a `+` joins (`"a + b|"`): where it is on the line.
- *  `at`: the whole name, as `singerValueAt` gives it. */
-export function singerPiece(at: { start: number; end: number; value: string }, character: number): { start: number; end: number; value: string } {
-    const offset = Math.max(0, Math.min(at.value.length, character - at.start));
-    let from = offset === 0 ? 0 : at.value.lastIndexOf('+', offset - 1) + 1;
-    let to = at.value.indexOf('+', offset);
-    if (to < 0) { to = at.value.length; }
-    while (from < to && at.value[from] === ' ') { from++; }
-    while (to > from && at.value[to - 1] === ' ') { to--; }
-    return { start: at.start + from, end: at.start + to, value: at.value.slice(from, to) };
-}
-
-/** The `singer "…"` the caret stands on (the word, the quotes, or between them): where its name is on the line. */
+/** The name of a `singer "…","…"` the caret stands on (off the names, on the word or a comma: the one before it, else the first): where it is on the line. */
 export function singerValueAt(line: string, character: number): { start: number; end: number; value: string } | undefined {
-    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?"([^"]*)"/g)) {
-        const whole = m.index + m[0].length;
-        if (character >= m.index && character <= whole) {
-            return { start: whole - 1 - m[1].length, end: whole - 1, value: m[1] };
-        }
+    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?("[^"]*"(?:[ \t]*,[ \t]*"[^"]*")*)/g)) {
+        if (character < m.index || character > m.index + m[0].length) { continue; }
+        const from = m.index + m[0].length - m[1].length;
+        const names = [...m[1].matchAll(/"([^"]*)"/g)].map(n => ({ start: from + n.index + 1, end: from + n.index + 1 + n[1].length, value: n[1] }));
+        return [...names].reverse().find(n => n.start - 1 <= character) ?? names[0];
     }
     return undefined;
 }
 
 /**
  * What the `singer` that holds `from`..`to` on this line writes, for hearing it (owner's request
- * 2026-11-09, session 1180): its name, its gender if it has no name, '' for `singer ""`. Undefined
- * off one, in a comment and inside another string.
+ * 2026-11-09, session 1180): its name (several: joined as the engine takes them, to be heard together),
+ * its gender if it has no name, '' for `singer ""`. Undefined off one, in a comment and inside another string.
  */
 export function singerWrittenAt(line: string, from: number, to: number): string | undefined {
-    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:(male|female)(?![\w-])(?:[ \t]+"([^"]*)")?|"([^"]*)")/g)) {
+    const list = '"[^"]*"(?:[ \\t]*,[ \\t]*"[^"]*")*';
+    const names = (written: string | undefined) => [...(written ?? '').matchAll(/"([^"]*)"/g)].map(n => n[1]).filter(Boolean).join('+');
+    for (const m of line.matchAll(new RegExp(`(?<![\\w-])singer[ \\t]+(?:(male|female)(?![\\w-])(?:[ \\t]+(${list}))?|(${list}))`, 'g'))) {
         const before = line.slice(0, m.index);
         if (before.includes('//') || (before.split('"').length - 1) % 2 === 1) { continue; }
-        if (from >= m.index && to <= m.index + m[0].length) { return m[2] || m[3] || m[1] || ''; }
+        if (from >= m.index && to <= m.index + m[0].length) { return names(m[2]) || names(m[3]) || m[1] || ''; }
     }
     return undefined;
 }

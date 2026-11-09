@@ -4,7 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **Several voices can sing one part**: `singer "neutrino/MERROW + diffsinger/TIGER"`. After a `+` the voices are offered again, and the completion and the step keys change only the voice the caret is on.
+- **Several voices can sing one part**: `singer "neutrino/MERROW","diffsinger/TIGER"`. After a comma the voices are offered again, and the completion and the step keys change only the name the caret is on.
 - **`singer ` completes before any quote**: the space after the word opens `male`, `female` and the voices that sing the words; a voice goes in with its quotes.
 - **VOICEVOX voices**: a running VOICEVOX's singing voices are offered on Japanese lyrics, each heard by its own sample.
 - **The preview sings the words the score names**: with two lyrics tracks on one part, the one the score places sings, in its own singer.
