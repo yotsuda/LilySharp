@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1164セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14862 / 0 / 2**（`-Start p1164`・HEAD `221ae642c`・未 push 64・OMR の open 0）。同じ会話で第1163 から続けた便。オーナー報告「雪やこんこ.lys で `another` を選択し、m2 を外して `♪ melody` だけにすると、再生しても歌唱せず何も音が鳴らない」。作業場所は Lab `sessions/p1164/`（`notes.md`）。
+
+- **原因**: `melody` のパートボタンを消す → `practiceNotes` がその音符を落とす → 音符リストが空 → `startPlayback` の `if (!notes || notes.length === 0) return;` が `startVoices` の前に返る。第1128 の規則「パートのボタンは声も楽器も黙らせる」がこの早期 return に焼き付いていた。第1163 で score が歌わない声も on にできるようになり、「声だけ」が正当な形になった。
+- **規則の変更**: パートのボタンは**楽器**・`♪` は**声**（独立）。両方消せば無音。
+- **直し**: `startPlayback` は声が歌うなら空のリストでも進み（`voicesEnd()`＝count-in の lead の後のバッファ長、または plan の pieces × rounds を終わりに数える）、MIDI 出力でポートに送るものが無ければここで鳴らす。`singJobs` の `silentVoices` は `voicesOff` だけ（muted は `exportPlan` が音符を落とすだけ）＝Export でも声だけが混ざる。網: npm **907 / 907**（1 回目は `midiOutputSetting.test` の文字列の網が `if (midiOutput && !here)` を探していた＝新しい文に合わせた）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・editors CHANGELOG・MANUAL-CHECKS §3.7（第1128 の行「声も楽器も鳴らない」を「声だけが鳴る」に）。
+- 残り: 実機（オーナー）・声の名前の置き場の決定（roadmap §4）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- 終了時 full **14862 / 0 / 2 / 14864**（`-End p1164 -DiffBase 221ae642c`＝`end.log`・門は全部 OK・§1 現在便 15,981 字＝残り 4,019）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS・網・docs だけ）。7.6: 出所はコードの読み（`startPlayback` の早期 return）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1163セッションの経緯
+
 ### 1.1 第1163セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14861 / 0 / 2**（`-Start p1163`・HEAD `c52ce7355`・未 push 63・OMR の open 0）。同じ会話で第1162 から続けた便。オーナー「かなりややこしい。どんな使い方がありがちかまだ分からない。いったんは実装の都合上妥当な形で。複数の声は lys の文法と設定から詰めるべき。声は楽器のようなものだから名前は lys に書くのが妥当にも思えるが、楽譜は誰でも歌えるものと捉えると楽譜に声の名前を書くのは正しくないようにも思える」。作業場所は Lab `sessions/p1163/`（`notes.md`）。
@@ -147,19 +159,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 網: `SungRequestTests.AllLyrics_ListsTheFilesSingableVoices_SayingWhichTheScoreSings`（bare score でも melody の声・`InScore=false`・既定 score では true・AllLyrics 無しは今までどおり空）＝Sung／Playback 153 / 153・npm **907 / 907**（1 回目はページ script に `\'` を書いて parse 赤＝テンプレートリテラルの中は backslash 禁止、言い換えた）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-roadmap §4・singing-design §5・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7「どの score でも歌える歌詞が全部並ぶ」。
 - 残り: 実機（オーナー・雪やこんこ `another` で斜体の `♪ melody` → 押すと声）・声の名前の置き場の決定（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
 - 終了時 full **14862 / 0 / 2 / 14864**（`-End p1163 -DiffBase c52ce7355`＝`end.log`・門は全部 OK・§1 現在便 16,892 字＝残り 3,108・+1 本）。§7 7.5: Core `+` 0・REF 0・OWN 0（Lsp の `GetSung`／DTO・拡張の TS・docs＝Core 不変）。7.6: 出所はオーナーの言葉とコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1162セッションの経緯
-
-### 1.1 第1162セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14861 / 0 / 2**（`-Start p1162`・HEAD `b2e32a17b`・未 push 62・OMR の open 0）。同じ会話で第1161 から続けた便。オーナー「直らない」＋出力チャネルの貼り付け。作業場所は Lab `sessions/p1162/`（`notes.md`）。
-
-- **ログの読み**: 問い合わせは全部正しく終わっていた＝`singer: prepare (edit) Untitled-9.lys: no sung part`（描画ごとに 1 回）・最初の `prepare (speed) …: the server is not up`（ページ初期の practiceState）→ settled。つまり host は `voiceParts []` を送り、ページは状態を空にして `badge.hidden = true` にしていた。
-- **原因＝CSS**: `.toolbar .voice-badge { … display: inline-flex; … }`（第1142 の ▶ の隅のマイク）。著者の `display` 規則は UA の `[hidden] { display: none }` に勝つので、**第1142 以来バッジは一度も隠れていなかった**＝最後の `data-state`（placeholder の `preparing`）の見た目のまま、歌詞の無い本で点滅し続けた。range パネルと tip には `[hidden] { display: none }` が在ったがバッジには無かった。第1160・1161 の直し（遅れた `preparing`・答え無しの placeholder）は実在した別の穴で、症状はこれ。
-- **直し**: `.toolbar .voice-badge[hidden] { display: none; }`・`renderVoiceBadge` は言うことが無いとき `data-state` と title も外す。網: npm **907 / 907**・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5「The actual cause」・editors CHANGELOG・MANUAL-CHECKS §3.7。
-- **教訓（RULES 級）**: ログの状態は正しいのに画面が違うときは、状態機械より先に**その要素の CSS**を読む。第1156 の Chrome ハーネスでも隠れたバッジの `getComputedStyle` を見ていれば分かった。
-- 残り: 実機（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
-- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1162 -DiffBase b2e32a17b`＝`end.log`・門は全部 OK・§1 現在便 16,107 字＝残り 3,893）。§7 7.5: Core `+` 0・REF 0・OWN 0（CSS 1 行＋ページ 4 行＋docs）。7.6: 出所はオーナーの出力チャネルと CSS の読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

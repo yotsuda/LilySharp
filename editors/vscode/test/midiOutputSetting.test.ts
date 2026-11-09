@@ -60,7 +60,8 @@ describe('the preview routes its sounds to the MIDI output', () => {
     it('sends a Play to the host when a port is named, and the strike and its release too', () => {
         const play = html.indexOf('function startPlayback(');
         const playBody = html.slice(play, html.indexOf('function midiStarted(', play));
-        assert.match(playBody, /if \(midiOutput && !here\)/);
+        // …when there is anything for the port: the voices alone play here (session 1164).
+        assert.match(playBody, /if \(midiOutput && !here && played\.length > 0\)/);
         // The port plays the instruments' list: a part sung by its voice here leaves it
         // (docs/singing-design.md §5); the highlight keeps the whole list.
         assert.match(playBody, /midiPlayPending = \{ gen, notes, offset \};/);

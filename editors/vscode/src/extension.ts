@@ -3586,7 +3586,9 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
     const engine = await renderer();
     if (!engine || !client || !clientReady) { return [...jobs]; }
     const speed = practice?.speed ?? 1;
-    const silentVoices = new Set([...(practice?.voicesOff ?? []), ...(practice?.muted ?? [])]);
+    // The part's button is the instrument's (exportPlan drops a muted part's notes); the voice is
+    // its own toggle's (session 1164) - so a muted part with its voice on is sung alone.
+    const silentVoices = new Set(practice?.voicesOff ?? []);
     const out: AudioJob[] = [];
     for (const job of jobs) {
         let sung: { Voices?: SungVoiceDto[] | null; Error?: string | null };
@@ -6394,6 +6396,22 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             for (const i of sungTracks()) { pre = Math.max(pre, voices.get(rawParts[i]).pre || 0); }
             return pre;
         }
+        // Where the voices end in the list's time: the whole buffer after the count-in's lead, or
+        // the plan's pieces laid out their rounds (for a Play with no note left to end on).
+        function voicesEnd() {
+            let end = 0;
+            if (voicePlan === null) { return 0; }
+            for (const i of sungTracks()) {
+                const v = voices.get(rawParts[i]);
+                const seconds = v.buffer.duration - (v.lead || 0);
+                if (!voicePlan.pieces) { end = Math.max(end, countInFix + seconds); }
+                else {
+                    const length = voicePlan.pieces.reduce((s, p) => s + (p[1] - p[0]), 0);
+                    end = Math.max(end, countInFix + Math.min(seconds, length) * Math.max(1, voicePlan.rounds || 1));
+                }
+            }
+            return end;
+        }
         function startVoices(ctx, when, listTime, room) {
             stopVoices();
             const tracks = sungTracks();
@@ -6670,12 +6688,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             offset = offset || 0;
             stopPlayback();
             countInFix = countFix || 0;
-            if (!notes || notes.length === 0) { return; }
+            // A list with no note still plays when a voice sings (owner's report 2026-11-09,
+            // session 1164: the part's button off and its voice on - the voice alone - gave
+            // silence): the part's button is the instrument's, the voice is its own toggle's.
+            notes = notes || [];
+            const voiced = sungTracks().size > 0;
+            if (notes.length === 0 && !voiced) { return; }
             // Seek = re-schedule from the offset; notes already past it are
             // dropped (mid-note tails too — re-striking half a note reads
             // worse than starting cleanly at the next onset).
             notes = window.LysSynth ? window.LysSynth.fromOffset(notes, offset) : notes.filter(n => n.T >= offset - 0.001);
-            if (notes.length === 0) { return; }
+            if (notes.length === 0 && !voiced) { return; }
             // A part whose voice sings now is sung, not played: its notes leave the instruments'
             // list (owner's decision 2026-11-08: one sound a staff — the instrument is the stand-in
             // while there is no voice, or the voice is switched off) — unless the score shows the
@@ -6688,10 +6711,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const played = sung.size > 0
                 ? notes.filter(n => !(sung.has(n.N) && !both(n.N)))
                 : notes;
-            if (midiOutput && !here) {
+            if (midiOutput && !here && played.length > 0) {
                 // The MIDI output: the server plays the list from the offset and answers
                 // (midiStarted) with the clock the highlight follows; a port that is not
-                // there comes back as an error, and the list plays here instead.
+                // there comes back as an error, and the list plays here instead. (Nothing for
+                // the port - the voices alone - plays here.)
                 const gen = ++playGeneration;
                 midiPlayPending = { gen, notes, offset };
                 setPlayUi(true);
@@ -6714,7 +6738,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // From the score's 0: the instruments wait for the voices' first consonant (voicePreroll).
             const pre = voicePreroll(offset, countFix);
             let t0 = ctx.currentTime + 0.15 + pre;
-            let end = notes.reduce((e, n) => Math.max(e, n.T + n.D), 0);   // the whole list's, voice included
+            // The whole list's end, and the voices' (a voice alone has no note to end on).
+            let end = Math.max(notes.reduce((e, n) => Math.max(e, n.T + n.D), 0), voicesEnd());
             if (sf && sf.ready && !plainTones) {
                 if (played.length > 0) {
                     sfPlayer = sf.play(played, offset, t0);

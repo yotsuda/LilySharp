@@ -198,7 +198,11 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   2026-11-08): on, the part is sung; off, its instrument plays in the voice's place — a switch
   between the two sounds, never both. `Practice.voicesOff`, read by `sungTracks()`; the host
   lists the voices from `lilysharp/sung` when an engine is there (`requestParts`). The part's
-  own toggle silences it altogether. **Every singable lyrics of the file is listed** (owner's
+  own toggle is the instrument's alone (session 1164, owner's report: the part off and its voice
+  on gave silence — `startPlayback` returned on an empty note list before the voices started;
+  it plays a list with no note when a voice sings, the end being the voices', and the export's
+  `singJobs` no longer drops a muted part's voice). Until then the part's toggle silenced the
+  voice too. **Every singable lyrics of the file is listed** (owner's
   request 2026-11-09, session 1163: "whatever score is selected, show every part and every
   singable lyrics"): `lilysharp/sung` with `allLyrics` adds, to the score's rows, a row for each
   lyrics track the score does not place, singing the track's default part (`LyricBindings.

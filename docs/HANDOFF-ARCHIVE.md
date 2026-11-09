@@ -267,6 +267,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1162セッションの経緯
+
+### 1.1 第1162セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14861 / 0 / 2**（`-Start p1162`・HEAD `b2e32a17b`・未 push 62・OMR の open 0）。同じ会話で第1161 から続けた便。オーナー「直らない」＋出力チャネルの貼り付け。作業場所は Lab `sessions/p1162/`（`notes.md`）。
+
+- **ログの読み**: 問い合わせは全部正しく終わっていた＝`singer: prepare (edit) Untitled-9.lys: no sung part`（描画ごとに 1 回）・最初の `prepare (speed) …: the server is not up`（ページ初期の practiceState）→ settled。つまり host は `voiceParts []` を送り、ページは状態を空にして `badge.hidden = true` にしていた。
+- **原因＝CSS**: `.toolbar .voice-badge { … display: inline-flex; … }`（第1142 の ▶ の隅のマイク）。著者の `display` 規則は UA の `[hidden] { display: none }` に勝つので、**第1142 以来バッジは一度も隠れていなかった**＝最後の `data-state`（placeholder の `preparing`）の見た目のまま、歌詞の無い本で点滅し続けた。range パネルと tip には `[hidden] { display: none }` が在ったがバッジには無かった。第1160・1161 の直し（遅れた `preparing`・答え無しの placeholder）は実在した別の穴で、症状はこれ。
+- **直し**: `.toolbar .voice-badge[hidden] { display: none; }`・`renderVoiceBadge` は言うことが無いとき `data-state` と title も外す。網: npm **907 / 907**・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5「The actual cause」・editors CHANGELOG・MANUAL-CHECKS §3.7。
+- **教訓（RULES 級）**: ログの状態は正しいのに画面が違うときは、状態機械より先に**その要素の CSS**を読む。第1156 の Chrome ハーネスでも隠れたバッジの `getComputedStyle` を見ていれば分かった。
+- 残り: 実機（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1162 -DiffBase b2e32a17b`＝`end.log`・門は全部 OK・§1 現在便 16,107 字＝残り 3,893）。§7 7.5: Core `+` 0・REF 0・OWN 0（CSS 1 行＋ページ 4 行＋docs）。7.6: 出所はオーナーの出力チャネルと CSS の読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1161セッションの経緯
 
 ### 1.1 第1161セッション（2026-11-09・YT-DELL2）
