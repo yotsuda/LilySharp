@@ -42,7 +42,7 @@ export const CANTILENA_EXTENSION_ID = 'yotsuda.cantilena';
 
 /** A voice the Cantilena extension lists: `id` is `engine/name` (`neutrino/MERROW`), what its
  *  `sing` takes and its setting holds. */
-export interface CantilenaVoice { id: string; engine: string; name: string; label?: string; language?: string; licence?: string }
+export interface CantilenaVoice { id: string; engine: string; name: string; label?: string; language?: string; gender?: string; licence?: string }
 
 /** What that extension's `activate` returns, as far as Lily# reads it (its README, "For extension
  *  authors"). `status().voice` is the setting's voice as `engine/name`; `voices()` came with
@@ -67,10 +67,11 @@ export interface SingerChoice { label: string; detail: string; isRole: boolean }
 /**
  * What the editor offers between a `singer`'s quotes (owner's request 2026-11-09, session 1168:
  * only the names right for the language): the installed voices that sing `language`, then the
- * roles cast to one. A voice that does not say what it sings is left out.
+ * roles cast to one. A voice that does not say what it sings is left out; with `gender` (session
+ * 1173, `singer male "…"`), so is one that does not say it is that.
  */
-export function singerChoices(voices: readonly CantilenaVoice[], cast: Readonly<Record<string, string>>, language: string): SingerChoice[] {
-    const sings = voices.filter(v => v.language === language);
+export function singerChoices(voices: readonly CantilenaVoice[], cast: Readonly<Record<string, string>>, language: string, gender?: string | null): SingerChoice[] {
+    const sings = voices.filter(v => v.language === language && (!gender || v.gender === gender));
     const out: SingerChoice[] = sings.map(v => ({ label: v.id, detail: v.label && v.label !== v.name ? v.label : v.name, isRole: false }));
     for (const [role, bound] of Object.entries(cast)) {
         if (role.includes('/')) { continue; }
@@ -82,7 +83,7 @@ export function singerChoices(voices: readonly CantilenaVoice[], cast: Readonly<
 
 /** The `singer "…"` the caret stands on (the word, the quotes, or between them): where its name is on the line. */
 export function singerValueAt(line: string, character: number): { start: number; end: number; value: string } | undefined {
-    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+"([^"]*)"/g)) {
+    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?"([^"]*)"/g)) {
         const whole = m.index + m[0].length;
         if (character >= m.index && character <= whole) {
             return { start: whole - 1 - m[1].length, end: whole - 1, value: m[1] };
@@ -92,10 +93,11 @@ export function singerValueAt(line: string, character: number): { start: number;
 }
 
 /**
- * The voice a step key moves to (owner's request 2026-11-09, sessions 1170 and 1172): the next or previous of
- * the current voice's own engine, stopping at its ends, or with `acrossEngines` the next or previous engine's
- * voice last chosen (`lastOf`, else its first). A `singer` that names none of `voices` (a role, an
- * empty string) starts at the first engine's ends. Undefined when there is nowhere else to go.
+ * The voice a step key moves to (owner's requests 2026-11-09, sessions 1170, 1172 and 1173): Up
+ * (`direction` 1) is the voice above in the list of the current voice's own engine, Down the one below,
+ * or with `acrossEngines` the next or previous engine's voice last chosen (`lastOf`, else its first).
+ * Neither goes round. A `singer` that names none of `voices` (a role, an empty string) enters the
+ * first engine's list at the end the key moves away from. Undefined when there is nowhere else to go.
  */
 export function stepVoice(voices: readonly Pick<CantilenaVoice, 'id' | 'engine'>[], current: string, direction: 1 | -1,
     acrossEngines: boolean, lastOf?: ReadonlyMap<string, string>): string | undefined {
@@ -104,15 +106,15 @@ export function stepVoice(voices: readonly Pick<CantilenaVoice, 'id' | 'engine'>
     const here = voices.find(v => v.id === current);
     if (acrossEngines) {
         if (engines.length < 2) { return undefined; }
-        const n = engines.length;
-        const engine = engines[here ? (engines.indexOf(here.engine) + direction + n) % n : direction > 0 ? 0 : n - 1];
+        const engine = engines[here ? engines.indexOf(here.engine) + direction : direction > 0 ? 0 : engines.length - 1];
+        if (engine === undefined) { return undefined; }
         const theirs = voices.filter(v => v.engine === engine);
         const kept = lastOf?.get(engine);
         return theirs.some(v => v.id === kept) ? kept : theirs[0].id;
     }
     const list = voices.filter(v => v.engine === (here ? here.engine : engines[0]));
-    if (!here) { return (direction > 0 ? list[0] : list[list.length - 1]).id; }
-    return list[list.findIndex(v => v.id === current) + direction]?.id;
+    if (!here) { return (direction > 0 ? list[list.length - 1] : list[0]).id; }
+    return list[list.findIndex(v => v.id === current) - direction]?.id;
 }
 
 /** Bumped when the phrase below changes: the samples kept on disk are named with it. */

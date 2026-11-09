@@ -1921,7 +1921,8 @@ has the last say over a voice's name too. Nothing written is the default voice, 
 that cannot be had sings as the default, said once. Between the quotes the editor offers the
 voices that sing the words' language; on a `singer "…"`, `Ctrl+Shift+Up` / `Down` step through
 those voices and `Ctrl+Shift+PageUp` / `PageDown` change the engine, the chosen voice heard in the
-preview.
+preview. `singer male "neutrino/SOMA"` (or `female`) narrows both to the voices that say they are
+that; it changes nothing else, and another word there is an error (LYS4040).
 
 **Melismas** follow LilyPond's `\lyricsto`. A **slur** or a **tie** makes one on its own:
 the syllable on the slur's first note is sung over every note up to the one that closes

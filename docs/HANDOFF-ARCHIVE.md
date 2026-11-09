@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1171セッションの経緯
+
+### 1.1 第1171セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14918 / 0 / 2**（`-Start p1171`・HEAD `017ae8c05`・未 push 71）。オーナー「こんにちは がすぐに出ない。各段階の時間をログに出して」「語尾が HA になる。WA で」。作業場所は Lab `sessions/p1171/`。
+
+- **調べた事実**: 14 声の試聴は `voice-samples/` にあり生成し直された形跡がない＝曲の生成待ちは原因でない（ファイルが無い声では、エンジンが 1 件ずつなので待つ）。どの段階が遅いかは未確定＝次のログを読む。
+- **ログ**（出力チャネル Lily# Extension）: `singer: hear <声>: key queue / server / engine / voices / edit / sample / read`（`StageClock`・曲を生成中だったかも出す）と、ページの `PREVIEW voice sample <声>: delivery / decode / start / キーからの合計 / AudioContext / output latency`。
+- **語尾**: 歌詞を `わ` に。`VOICE_SAMPLE_VERSION` 2＝古い `-1.wav` は読まれない。手元の 14 声は CLI で作り直した。
+- 試聴は VSIX に入らない（ユーザーごとの globalStorage）。生成は `singer` の候補を開いたときと step キーのとき（`warm`）、選んだ声が最優先（`ask`）。
+- 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1171 -DiffBase 017ae8c05`、BUILD 0）・npm 923 / 923。`Deploy-Lsp.ps1` で配布済み（manifest は不変＝Reload Window 1 回）。
+
 ## 以下は第1170セッションの経緯
 
 ### 1.1 第1170セッション（2026-11-09・YT-DELL2）

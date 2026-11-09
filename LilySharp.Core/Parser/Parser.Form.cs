@@ -1054,8 +1054,7 @@ internal sealed partial class Parser
             else if (!singer && IsLyricsSingerClause())
             {
                 singer = true;
-                tokens.Add(Advance());
-                tokens.Add(ParseSingerName());
+                tokens.AddRange(ParseSingerClause());
             }
             else
                 break;

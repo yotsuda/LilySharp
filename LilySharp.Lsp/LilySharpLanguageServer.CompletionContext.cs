@@ -530,33 +530,49 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>Where a <c>singer "…|</c> the caret is in stands: a lyrics head or row (its track, and
     /// the language it writes), or a part's header (the part); null for anywhere else — a lyric
     /// body's words among them.</summary>
-    internal static (string? Track, string? Part, string? Language)? SingerSlotAt(string text, int offset)
+    internal static (string? Track, string? Part, string? Language, string? Gender)? SingerSlotAt(string text, int offset)
     {
         int end = Math.Clamp(offset, 0, text.Length);
         int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
         string line = text[lineStart..end];
-        var quote = System.Text.RegularExpressions.Regex.Match(line, @"(?:^|[\s{}])singer[ \t]+""[^""]*$");
+        var quote = System.Text.RegularExpressions.Regex.Match(line, @"(?:^|[\s{}])singer[ \t]+(?:(?<gender>male|female)[ \t]+)?""[^""]*$");
         if (!quote.Success)
             return null;
+        string? gender = quote.Groups["gender"].Success ? quote.Groups["gender"].Value : null;
         var head = System.Text.RegularExpressions.Regex.Match(line[..quote.Index],
             @"(?:^|[\s{}])lyrics(?:[ \t]+(?<w>[^\s{}""]+|""[^""]*""))*[ \t]*$");
         if (head.Success)
         {
-            var words = head.Groups["w"].Captures.Select(c => c.Value).ToList();
+            var words = ClauseWords(head.Groups["w"].Captures.Select(c => c.Value));
             string? language = null;
             for (int i = 0; i + 1 < words.Count; i++)
                 if (words[i] == LilySharp.Core.Music.LyricLanguage.Keyword)
                     language = words[i + 1];
             bool named = words.Count % 2 == 1;   // the clauses are pairs: an odd word is the track's name
-            return (named ? words[0] : LilySharp.Core.Music.LyricSinger.UnnamedTrack, null, language);
+            return (named ? words[0] : LilySharp.Core.Music.LyricSinger.UnnamedTrack, null, language, gender);
         }
         var stack = new BlockContextScan(text, offset).Stack;
         if (stack.Count > 0 && FrameKeyword(stack[^1].Frame) == "part")
         {
             var frame = stack[^1].Frame;
-            return (null, frame.Prefix == "part" ? frame.Name : "", null);
+            return (null, frame.Prefix == "part" ? frame.Name : "", null, gender);
         }
         return null;
+    }
+
+    /// <summary>A head's words with a <c>singer</c>'s gender taken out, so its clauses read as pairs.</summary>
+    private static List<string> ClauseWords(IEnumerable<string> written)
+    {
+        var all = written.ToList();
+        var words = new List<string>();
+        for (int i = 0; i < all.Count; i++)
+        {
+            words.Add(all[i]);
+            if (all[i] == LilySharp.Core.Music.LyricSinger.Keyword && i + 2 < all.Count
+                && LilySharp.Core.Music.LyricSinger.Genders.Contains(all[i + 1]) && all[i + 2].StartsWith('"'))
+                i++;
+        }
+        return words;
     }
 
     /// <summary>The clauses a lyrics head or row has whole before the caret (<c>lyrics w sings m ▮</c>,
@@ -576,7 +592,7 @@ public sealed partial class LilySharpLanguageServer
             @"(?:^|[\s{}])lyrics(?:[ \t]+(?<w>[^\s{}""]+|""[^""]*""))*[ \t]+$");
         if (!head.Success)
             return null;
-        var words = head.Groups["w"].Captures.Select(c => c.Value).ToList();
+        var words = ClauseWords(head.Groups["w"].Captures.Select(c => c.Value));
         bool awaits = words.Count >= 3 && words[^1] == "sings";
         if (awaits)
             words.RemoveAt(words.Count - 1);
@@ -585,6 +601,8 @@ public sealed partial class LilySharpLanguageServer
         {
             if (words[i] is not ("sings" or LilySharp.Core.Music.LyricLanguage.Keyword or LilySharp.Core.Music.LyricSinger.Keyword))
                 return null;
+            if (words[i] == LilySharp.Core.Music.LyricSinger.Keyword && !words[i + 1].StartsWith('"'))
+                return null;        // `singer male ▮`: the name is still to come
             written.Add(words[i]);
         }
         return written.Count == 0 ? null : (written, awaits);

@@ -3866,7 +3866,7 @@ function tellSingerNote(text: string): void {
 const singerCompletion: vscode.CompletionItemProvider = {
     async provideCompletionItems(document, position) {
         if (!client || !clientReady) { return undefined; }
-        const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null }>('lilysharp/singerSlot',
+        const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null; Gender?: string | null }>('lilysharp/singerSlot',
             { textDocument: { uri: document.uri.toString() }, offset: document.offsetAt(position) });
         if (!slot.InSlot || !slot.Language) { return undefined; }
         const engine = await renderer();
@@ -3878,7 +3878,7 @@ const singerCompletion: vscode.CompletionItemProvider = {
         const open = line.lastIndexOf('"', position.character - 1);
         const close = line.indexOf('"', position.character);
         const range = new vscode.Range(position.line, open + 1, position.line, close >= 0 ? close : position.character);
-        return singerChoices(voices, cast, slot.Language).map((c, i) => {
+        return singerChoices(voices, cast, slot.Language, slot.Gender).map((c, i) => {
             const item = new vscode.CompletionItem(c.label, c.isRole ? vscode.CompletionItemKind.Variable : vscode.CompletionItemKind.Value);
             item.detail = c.detail;
             item.range = range;
@@ -3968,7 +3968,7 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, within
     if (!at) { return false; }
     const clock = new StageClock(pressedAt);
     clock.mark('key queue');
-    const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null }>('lilysharp/singerSlot',
+    const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null; Gender?: string | null }>('lilysharp/singerSlot',
         { textDocument: { uri: doc.uri.toString() }, offset: doc.offsetAt(new vscode.Position(line, at.start)) });
     clock.mark('server');
     if (!slot.InSlot || !slot.Language) { return false; }
@@ -3979,13 +3979,14 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, within
         vscode.window.setStatusBarMessage('Lily#: the Cantilena extension lists the voices, and it is not there', 4000);
         return true;
     }
-    const voices = (await api.voices()).filter(v => v.language === slot.Language);
-    samples().warm(voices.map(v => v.id));
+    const sings = (await api.voices()).filter(v => v.language === slot.Language);
+    samples().warm(sings.map(v => v.id));
+    const voices = slot.Gender ? sings.filter(v => v.gender === slot.Gender) : sings;
     clock.mark('voices');
     const next = stepVoice(voices, at.value, direction, !withinEngine, lastVoiceOfEngine);
     if (!next) {
         vscode.window.setStatusBarMessage(withinEngine ? `Lily#: ${at.value} is the end of the voices that sing ${slot.Language}`
-            : `Lily#: only one provider has voices for ${slot.Language} here`, 4000);
+            : `Lily#: no further provider has voices for ${slot.Language} that way`, 4000);
         return true;
     }
     if (doc.version !== version) { return true; }     // typed into meanwhile: the place is about another text

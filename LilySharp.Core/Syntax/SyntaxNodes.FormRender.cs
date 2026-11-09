@@ -1037,19 +1037,30 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
     /// file's unnamed track.</summary>
     public SyntaxTokenNode? NameToken =>
         GetChild(1) is SyntaxTokenNode t && !(t.Kind == SyntaxKind.Identifier && t.Text == "sings" && SlotCount > 2)
-            && !(t.Kind == SyntaxKind.Identifier && t.Text == Music.LyricSinger.Keyword && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral })
+            && !(t.Kind == SyntaxKind.Identifier && t.Text == Music.LyricSinger.Keyword
+                && (GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral }
+                    || (GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } && GetChild(3) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral })))
             ? t : null;
 
     /// <summary>The lyrics part name to place (e.g. <c>lyrics verse</c> → "verse"; a bare
     /// <c>lyrics</c> → <see cref="SyntaxFacts.UnnamedLyricsName"/>).</summary>
     public string PartName => NameToken?.Text ?? SyntaxFacts.UnnamedLyricsName;
 
-    /// <summary>A clause of the row by its word: pairs after the name, in the order written.</summary>
+    /// <summary>A clause of the row by its word: pairs after the name, in the order written, a
+    /// <c>singer</c>'s gender standing between its pair.</summary>
     private (SyntaxTokenNode? Keyword, SyntaxTokenNode? Value) Clause(string word)
     {
         for (int i = NameToken != null ? 2 : 1; i < SlotCount; i += 2)
-            if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } keyword && keyword.Text == word)
-                return (keyword, i + 1 < SlotCount ? GetChild(i + 1) as SyntaxTokenNode : null);
+        {
+            if (GetChild(i) is not SyntaxTokenNode { Kind: SyntaxKind.Identifier } keyword)
+                continue;
+            bool gendered = keyword.Text == Music.LyricSinger.Keyword && GetChild(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier };
+            int value = gendered ? i + 2 : i + 1;
+            if (keyword.Text == word)
+                return (keyword, value < SlotCount ? GetChild(value) as SyntaxTokenNode : null);
+            if (gendered)
+                i++;
+        }
         return default;
     }
 

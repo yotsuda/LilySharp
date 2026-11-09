@@ -70,13 +70,21 @@ public sealed class LyricsBlockSyntax : SyntaxNode
     public string? Singer => HeadClause(Music.LyricSinger.Keyword).Value is { } t ? Music.LyricSinger.ValueOf(t.Text) : null;
 
     /// <summary>A clause of the head by its word: the pairs stand from slot 2 to the brace, in
-    /// the order they were written, so `sings` and `language` may come either way round.</summary>
+    /// the order they were written, so `sings` and `language` may come either way round. A
+    /// <c>singer</c>'s gender stands between its pair.</summary>
     private (SyntaxTokenNode? Keyword, SyntaxTokenNode? Value) HeadClause(string word)
     {
         int open = OpenBraceIndex;
         for (int i = 2; i + 1 < open; i += 2)
-            if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } keyword && keyword.Text == word)
-                return (keyword, GetChild(i + 1) as SyntaxTokenNode);
+        {
+            if (GetChild(i) is not SyntaxTokenNode { Kind: SyntaxKind.Identifier } keyword)
+                continue;
+            bool gendered = keyword.Text == Music.LyricSinger.Keyword && GetChild(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier };
+            if (keyword.Text == word)
+                return (keyword, GetChild(gendered ? i + 2 : i + 1) as SyntaxTokenNode);
+            if (gendered)
+                i++;
+        }
         return default;
     }
 

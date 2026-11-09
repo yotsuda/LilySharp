@@ -223,7 +223,8 @@ public sealed class PartHeaderDefaults
                         : written;
                     break;
                 case "singer":
-                    singer = Music.LyricSinger.ValueOf(Joined());
+                    // The name is the last token: male or female may stand before it.
+                    singer = prop.GetChild(prop.SlotCount - 1) is SyntaxTokenNode named ? Music.LyricSinger.ValueOf(named.Text) : null;
                     break;
             }
         }

@@ -1619,6 +1619,10 @@ public static class DiagnosticCodes
     /// (<see cref="Music.LyricSinger"/>). The parser.</summary>
     public const string SingerEmpty = "LYS4039";
 
+    /// <summary>Lyric error: the word between <c>singer</c> and its name is neither <c>male</c> nor
+    /// <c>female</c> (<see cref="Music.LyricSinger.Genders"/>). The parser.</summary>
+    public const string SingerGenderUnknown = "LYS4040";
+
     /// <summary>Warning: a drum staff's voices write two different levels at one moment —
     /// <c>@f</c> on the hands' line and <c>@p</c> on the feet's (owner's decision 2026-10-30).
     /// One drummer plays one level; the same level in both lines prints once

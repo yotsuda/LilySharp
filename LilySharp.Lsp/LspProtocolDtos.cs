@@ -417,6 +417,8 @@ public class SingerSlotResponse
 {
     public bool InSlot { get; set; }
     public string? Language { get; set; }
+    /// <summary>The <c>male</c> or <c>female</c> written before the name, or null.</summary>
+    public string? Gender { get; set; }
 }
 
 /// <summary>Response for the lilysharp/sung request: one voice per part a lyrics row sings.</summary>

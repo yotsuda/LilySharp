@@ -1042,7 +1042,7 @@ public sealed partial class LilySharpLanguageServer
                 .FirstOrDefault(name => name != null
                     && (LilySharp.Core.Music.LyricBindings.TargetOf(root, name) ?? (declared.Count == 1 ? declared[0] : null)) == slot.Part);
         }
-        return new SingerSlotResponse { InSlot = true, Language = LilySharp.Core.Music.LyricLanguage.CodeOf(slot.Language) ?? languageOf(track) };
+        return new SingerSlotResponse { InSlot = true, Language = LilySharp.Core.Music.LyricLanguage.CodeOf(slot.Language) ?? languageOf(track), Gender = slot.Gender };
     }
 
     [JsonRpcMethod("lilysharp/sung", UseSingleObjectParameterDeserialization = true)]

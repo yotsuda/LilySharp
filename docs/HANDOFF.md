@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1173セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14918 / 0 / 2**（`-Start p1173`・HEAD `082470196`・未 push 73）。オーナー「ctrl+shift+up/down を逆順に。プロバイダの切り替えも一周しないように。singer "male" よりも singer male "具体的な名前" とできる方が良い」。作業場所は Lab `sessions/p1173/`。
+
+- **順序**: Up は一覧の上へ、Down は下へ（`stepVoice`）。名前が一覧に無いときは、キーが離れる側の端から入る。プロバイダも一周しない。
+- **文法**: `singer [male|female] "名前"` を part・lyrics の頭・score の行に（LYS4040＝他の語）。`Genders` は小文字の閉じた語彙。木の上では `singer`・性別・名前の順の 3 スロットで、`HeadClause`／`Clause` が読み飛ばす。
+- **読むのはエディタだけ**: `singerSlot` の `Gender` で補完（`singerChoices`）と step キーを絞る。歌う声は名前だけで決まる＝その名前が無い環境でも、同じ性別の声には落ちない（未実装）。補完には `singer male`／`singer female` の項目を足した。
+- **Cantilena**: `voices()` が `info.toml` の `gender` を返す。DiffSinger の声は性別を名乗らないので、性別を書くと出ない。
+- 終了時 full **14939 合格 / 0 失敗 / skip 2 / 合計 14941**（`-End p1173 -DiffBase 082470196`、BUILD 0）・npm 925 / 925・Cantilena npm 19 / 19。両方を配布済み（Reload Window 1 回）。実機（性別の絞り込みの見え方）はオーナー。
+
+## 以下は第1172セッションの経緯
+
 ### 1.1 第1172セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14918 / 0 / 2**（`-Start p1172`・HEAD `675b45950`・未 push 72）。オーナー「ctrl+shift+up で音声を切り替えるとき、上端と下端をつながないようにして。一番上と一番下で行き止まりにして」。作業場所は Lab `sessions/p1172/`。
@@ -145,18 +157,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - `stepVoice` の声の順送りは両端で止まる（undefined）＝ステータスバーが端だと言い、音は出ない。PageUp / PageDown のプロバイダ切り替えは一周のまま（要望は声の話）。
 - 第1171 の後始末: Reload 前の古い拡張が `-1.wav`（は）を作り直していたので、オーナーの指示で 14 件と Cantilena のキャッシュの同一内容 14 件を削除。
 - 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1172 -DiffBase 675b45950`、BUILD 0）・npm 923 / 923。`Deploy-Lsp.ps1` で配布済み（manifest は不変＝Reload Window 1 回）。
-
-## 以下は第1171セッションの経緯
-
-### 1.1 第1171セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14918 / 0 / 2**（`-Start p1171`・HEAD `017ae8c05`・未 push 71）。オーナー「こんにちは がすぐに出ない。各段階の時間をログに出して」「語尾が HA になる。WA で」。作業場所は Lab `sessions/p1171/`。
-
-- **調べた事実**: 14 声の試聴は `voice-samples/` にあり生成し直された形跡がない＝曲の生成待ちは原因でない（ファイルが無い声では、エンジンが 1 件ずつなので待つ）。どの段階が遅いかは未確定＝次のログを読む。
-- **ログ**（出力チャネル Lily# Extension）: `singer: hear <声>: key queue / server / engine / voices / edit / sample / read`（`StageClock`・曲を生成中だったかも出す）と、ページの `PREVIEW voice sample <声>: delivery / decode / start / キーからの合計 / AudioContext / output latency`。
-- **語尾**: 歌詞を `わ` に。`VOICE_SAMPLE_VERSION` 2＝古い `-1.wav` は読まれない。手元の 14 声は CLI で作り直した。
-- 試聴は VSIX に入らない（ユーザーごとの globalStorage）。生成は `singer` の候補を開いたときと step キーのとき（`warm`）、選んだ声が最優先（`ask`）。
-- 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1171 -DiffBase 017ae8c05`、BUILD 0）・npm 923 / 923。`Deploy-Lsp.ps1` で配布済み（manifest は不変＝Reload Window 1 回）。
 
 ## 2. 開いている作業
 

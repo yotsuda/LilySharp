@@ -1142,7 +1142,7 @@ PartProperty   = 'clef'          , PartClefName
                | 'pitch'         , PitchMode        (* this part's convention — own wins
                                                        over the top-level PitchDecl, §2.3 *)
                | 'pedal'         , PedalStyleName
-               | 'singer'        , String           (* who sings this part's lyrics: a voice or a
+               | 'singer'        , [ SingerGender ] , String  (* who sings this part's lyrics: a voice or a
                                                        role (LyricsClause), nearer ones win *)
                | 'midiInstrument' , String         (* the General MIDI sound: one of
                                                        LilyPond's 128 names, e.g.
@@ -1434,7 +1434,11 @@ PartBlock      = PartName , MusicBlock ;
    its own 'sings' cannot re-decide the association by position: after a staff
    it does not sing it simply stays an independent band. *)
 LyricsBlock    = 'lyrics' , [ Identifier ] , { LyricsClause } , '{' , { LyricMeasure | LyricVerse } , '}' ;
-LyricsClause   = 'sings' , PartRef | 'language' , LanguageName | 'singer' , String ;
+LyricsClause   = 'sings' , PartRef | 'language' , LanguageName | 'singer' , [ SingerGender ] , String ;
+SingerGender   = 'male' | 'female' ;
+                 (* Between 'singer' and its name: the voices the editor offers for it (its completion
+                    and its step keys). Nothing else reads it, so a singer sings by its name. Another
+                    word before the name is an error (LYS4040). *)
                  (* Each at most once, in any order. A track's language and singer are the first
                     block of that name that writes one (the rule 'sings' has). 'lyrics language
                     { ... }', 'lyrics language sings m { ... }' and 'lyrics singer { ... }' are
@@ -1903,7 +1907,7 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         it a row holds each chord over its slot.
                                                         It draws nothing: the strokes' one-line
                                                         staff is the 'strokes NAME' item *)
-               | 'lyrics' , [ PartRef ] , { 'sings' , PartRef | 'singer' , String }
+               | 'lyrics' , [ PartRef ] , { 'sings' , PartRef | 'singer' , [ SingerGender ] , String }
                                                      (* lyrics ROW. The optional 'sings' names
                                                         the melody THIS ROW sings - it overrides
                                                         the definition's default for this

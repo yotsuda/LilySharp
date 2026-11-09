@@ -137,25 +137,48 @@ describe('choosing a voice with the step keys', () => {
         assert.equal(singerValueAt('a-singer "x"', 4), undefined);
     });
 
-    it('walks the voices of the engine it is on, and stops at both ends', () => {
-        assert.equal(stepVoice(voices, 'neutrino/A', 1, false), 'neutrino/B');
-        assert.equal(stepVoice(voices, 'neutrino/B', -1, false), 'neutrino/A');
-        assert.equal(stepVoice(voices, 'diffsinger/X', 1, false), 'diffsinger/Y');
-        assert.equal(stepVoice(voices, 'neutrino/C', 1, false), undefined);
-        assert.equal(stepVoice(voices, 'neutrino/A', -1, false), undefined);
-        assert.equal(stepVoice(voices, 'diffsinger/Y', 1, false), undefined);
+    it('goes up the list with Up and down it with Down, and stops at both ends', () => {
+        assert.equal(stepVoice(voices, 'neutrino/B', 1, false), 'neutrino/A');
+        assert.equal(stepVoice(voices, 'neutrino/A', -1, false), 'neutrino/B');
+        assert.equal(stepVoice(voices, 'diffsinger/Y', 1, false), 'diffsinger/X');
+        assert.equal(stepVoice(voices, 'neutrino/A', 1, false), undefined);
+        assert.equal(stepVoice(voices, 'neutrino/C', -1, false), undefined);
+        assert.equal(stepVoice(voices, 'diffsinger/Y', -1, false), undefined);
     });
 
-    it('starts a role or an empty name at the first engine\'s ends', () => {
-        assert.equal(stepVoice(voices, 'soprano', 1, false), 'neutrino/A');
-        assert.equal(stepVoice(voices, '', -1, false), 'neutrino/C');
+    it('enters the first engine\'s list from a role or an empty name, at the end the key leaves', () => {
+        assert.equal(stepVoice(voices, '', -1, false), 'neutrino/A');
+        assert.equal(stepVoice(voices, 'soprano', 1, false), 'neutrino/C');
     });
 
-    it('crosses to the next engine, its first voice or the one last chosen there', () => {
+    it('crosses to the next engine, its first voice or the one last chosen there, and does not go round', () => {
         assert.equal(stepVoice(voices, 'neutrino/B', 1, true), 'diffsinger/X');
-        assert.equal(stepVoice(voices, 'diffsinger/X', 1, true), 'neutrino/A');
+        assert.equal(stepVoice(voices, 'diffsinger/X', -1, true), 'neutrino/A');
         assert.equal(stepVoice(voices, 'diffsinger/X', -1, true, new Map([['neutrino', 'neutrino/C']])), 'neutrino/C');
-        assert.equal(stepVoice(voices, 'diffsinger/X', 1, true, new Map([['neutrino', 'neutrino/GONE']])), 'neutrino/A');
+        assert.equal(stepVoice(voices, 'diffsinger/X', -1, true, new Map([['neutrino', 'neutrino/GONE']])), 'neutrino/A');
+        assert.equal(stepVoice(voices, 'diffsinger/X', 1, true), undefined);
+        assert.equal(stepVoice(voices, 'neutrino/A', -1, true), undefined);
+    });
+
+    it('reads a singer with a gender before the name as one', () => {
+        const line = 'singer male "neutrino/A"';
+        const start = line.indexOf('neutrino');
+        const whole = { start, end: start + 'neutrino/A'.length, value: 'neutrino/A' };
+        assert.deepEqual(singerValueAt(line, line.indexOf('male')), whole);
+        assert.deepEqual(singerValueAt(line, start), whole);
+        assert.equal(singerValueAt('singer man "x"', 8), undefined);
+    });
+
+    it('lists only the voices of the gender written, and of a cast role\'s', () => {
+        const all = [
+            { id: 'n/A', engine: 'n', name: 'A', language: 'ja', gender: 'male' },
+            { id: 'n/B', engine: 'n', name: 'B', language: 'ja', gender: 'female' },
+            { id: 'n/C', engine: 'n', name: 'C', language: 'ja' },
+        ];
+        const labels = (gender?: string | null) => singerChoices(all, { tenor: 'n/A', alto: 'n/B' }, 'ja', gender).map(c => c.label);
+        assert.deepEqual(labels(), ['n/A', 'n/B', 'n/C', 'tenor', 'alto']);
+        assert.deepEqual(labels('male'), ['n/A', 'tenor']);
+        assert.deepEqual(labels('female'), ['n/B', 'alto']);
     });
 
     it('has nowhere to go with one engine or one voice', () => {

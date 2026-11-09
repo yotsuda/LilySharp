@@ -250,7 +250,7 @@ public sealed partial class LilySharpLanguageServer
         // are offered there, not here (LYS1026 rejects them in a part header).
         // `section` is not a property at all: it is the OTHER thing a part body holds.
         props.Add(("section", "Inner section (file grouped by part)", true));
-        return new CompletionList
+        return WithSingerGenders(new CompletionList
         {
             Items = props.Select((p, i) => new CompletionItem
             {
@@ -269,7 +269,18 @@ public sealed partial class LilySharpLanguageServer
                     : null,
                 SortText = i.ToString("D2"),
             }).ToArray()
-        };
+        });
+    }
+
+    /// <summary>A part's list with <c>singer male</c> and <c>singer female</c> right after its <c>singer</c>.</summary>
+    private static CompletionList WithSingerGenders(CompletionList list)
+    {
+        var items = list.Items.ToList();
+        int at = items.FindIndex(i => i.Label == LilySharp.Core.Music.LyricSinger.Keyword);
+        if (at >= 0)
+            items.InsertRange(at + 1, LilySharp.Core.Music.LyricSinger.Genders
+                .Select((gender, i) => SingerItem(items[at].SortText + (i + 1), gender)));
+        return new CompletionList { Items = items.ToArray() };
     }
 
     // Prose per value, in the order a reader wants them (the two hiding modes, then the
@@ -2456,24 +2467,29 @@ public sealed partial class LilySharpLanguageServer
     };
 
     /// <summary>The <c>singer</c> keyword after a lyrics track's or row's name: the quotes written,
-    /// the caret between them, where the editor lists the voices for the words' language.</summary>
-    private static CompletionItem SingerItem(string sort) => new()
+    /// the caret between them, where the editor lists the voices for the words' language; with
+    /// <paramref name="gender"/>, written before the quotes, and only those voices are listed.</summary>
+    private static CompletionItem SingerItem(string sort, string? gender = null) => new()
     {
-        Label = LilySharp.Core.Music.LyricSinger.Keyword,
+        Label = gender == null ? LilySharp.Core.Music.LyricSinger.Keyword : $"{LilySharp.Core.Music.LyricSinger.Keyword} {gender}",
         Kind = CompletionItemKind.Keyword,
         InsertTextFormat = InsertTextFormat.Snippet,
-        InsertText = "singer \"$0\"",
-        Detail = "Who sings these words: a voice, or a role your settings cast",
+        InsertText = gender == null ? "singer \"$0\"" : $"singer {gender} \"$0\"",
+        Detail = gender == null ? "Who sings these words: a voice, or a role your settings cast" : $"Who sings these words: a {gender} voice",
         SortText = sort,
         Command = new Command { Title = "Suggest singer", CommandIdentifier = "editor.action.triggerSuggest" },
     };
+
+    /// <summary>Not yet written in the head, an item's first word being its clause (<c>singer male</c> is a <c>singer</c>).</summary>
+    private static bool IsUnwritten(CompletionItem item, System.Collections.Generic.IReadOnlySet<string>? written)
+        => written?.Contains(item.Label.Split(' ')[0]) != true;
 
     /// <summary>After <c>lyrics NAME</c> on a SCORE row: the <c>sings</c>
     /// binding, then the score's normal continuations — the lyrics-row sibling
     /// of <see cref="GetStaffAttachNameCompletions"/>.</summary>
     internal static CompletionList GetLyricsRowAttachNameCompletions(System.Collections.Generic.IReadOnlySet<string>? written = null)
     {
-        var items = new[] { RowSingsItem(), SingerItem("1") }.Where(i => written?.Contains(i.Label) != true).ToList();
+        var items = new[] { RowSingsItem(), SingerItem("1"), SingerItem("11", "male"), SingerItem("12", "female") }.Where(i => IsUnwritten(i, written)).ToList();
         foreach (var it in GetScoreBlockCompletions().Items)
         {
             it.SortText = "9" + (it.SortText ?? "");
@@ -2488,7 +2504,7 @@ public sealed partial class LilySharpLanguageServer
     /// <see cref="GetLyricsRowAttachNameCompletions"/>.</summary>
     internal static CompletionList GetGroupLyricsRowAttachNameCompletions(System.Collections.Generic.IReadOnlySet<string>? written = null)
     {
-        var items = new[] { RowSingsItem(), SingerItem("1") }.Where(i => written?.Contains(i.Label) != true).ToList();
+        var items = new[] { RowSingsItem(), SingerItem("1"), SingerItem("11", "male"), SingerItem("12", "female") }.Where(i => IsUnwritten(i, written)).ToList();
         foreach (var it in GetStaffGroupBlockCompletions().Items)
         {
             it.SortText = "9" + (it.SortText ?? "");
@@ -2757,13 +2773,15 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>What a definition's head may say next: the clauses <paramref name="written"/> does not hold.</summary>
     internal static CompletionList GetLyricsTrackNameCompletions(System.Collections.Generic.IReadOnlySet<string>? written = null)
-        => new() { Items = LyricsTrackClauses().Items.Where(i => written?.Contains(i.Label) != true).ToArray() };
+        => new() { Items = LyricsTrackClauses().Items.Where(i => IsUnwritten(i, written)).ToArray() };
 
     private static CompletionList LyricsTrackClauses() => new()
     {
         Items =
         [
             SingerItem("2"),
+            SingerItem("21", "male"),
+            SingerItem("22", "female"),
             new CompletionItem
             {
                 Label = LilySharp.Core.Music.LyricLanguage.Keyword,

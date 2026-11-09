@@ -287,7 +287,7 @@ public class LyricLanguageTests
     [Fact]
     public void TheSingerItem_LeavesTheCaretBetweenTheQuotes_AndOpensTheList()
     {
-        var item = Assert.Single(LilySharpLanguageServer.GetLyricsTrackNameCompletions(new System.Collections.Generic.HashSet<string> { "sings", "language" }).Items);
+        var item = Assert.Single(LilySharpLanguageServer.GetLyricsTrackNameCompletions(new System.Collections.Generic.HashSet<string> { "sings", "language" }).Items, i => i.Label == "singer");
         Assert.Equal("singer \"$0\"", item.InsertText);
         Assert.Equal(InsertTextFormat.Snippet, item.InsertTextFormat);
         Assert.Equal("editor.action.triggerSuggest", item.Command!.CommandIdentifier);
@@ -299,6 +299,85 @@ public class LyricLanguageTests
     [InlineData("lyrics words language english sings sop singer \"§\"\n", "en")]
     public void TheOwnersPosition_IsASlot_ThatKnowsTheLanguage(string source, string expected)
         => Assert.Equal(expected, SlotLanguage(source));
+
+    // ── singer male "…" (owner's decision 2026-11-09, session 1173) ──
+
+    [Theory]
+    [InlineData("lyrics w singer male \"neutrino/SOMA\" sings m { さ く ら ら | }", "staff m  lyrics w", "neutrino/SOMA")]
+    [InlineData("lyrics w sings m singer female \"neutrino/REINA\" { さ く ら ら | }", "staff m  lyrics w", "neutrino/REINA")]
+    [InlineData("lyrics singer male \"neutrino/SOMA\" sings m { さ く ら ら | }", "staff m  lyrics", "neutrino/SOMA")]
+    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w singer male \"neutrino/SOMA\" sings m", "neutrino/SOMA")]
+    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w sings m singer female \"neutrino/REINA\"", "neutrino/REINA")]
+    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics singer male \"neutrino/SOMA\" sings m", null)]
+    public void AGender_MayStandBeforeTheName(string lyrics, string row, string? expected)
+    {
+        string source = Sheet(lyrics, row);
+        Parsed(source);
+        if (expected != null)
+            Assert.Equal(expected, Sung(source).Singer);
+    }
+
+    [Fact]
+    public void AGender_MayStandBeforeThePartsSinger()
+    {
+        string source = Sheet("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w").Replace("singer \"soprano\"", "singer male \"neutrino/SOMA\"");
+        Parsed(source);
+        Assert.Equal("neutrino/SOMA", Sung(source).Singer);
+    }
+
+    [Theory]
+    [InlineData("lyrics w singer man \"x\" { さ く ら ら | }", DiagnosticCodes.SingerGenderUnknown)]
+    [InlineData("lyrics w singer Male \"x\" { さ く ら ら | }", DiagnosticCodes.SingerGenderUnknown)]
+    [InlineData("lyrics w singer male \"\" { さ く ら ら | }", DiagnosticCodes.SingerEmpty)]
+    public void ABadGenderOrAnEmptyName_IsAnError(string lyrics, string code)
+    {
+        var error = Assert.Single(SyntaxTree.Parse(Book("", lyrics)).Diagnostics, d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
+        Assert.Equal(code, error.Code);
+    }
+
+    [Theory]
+    [InlineData("man \"x\"", DiagnosticCodes.SingerGenderUnknown)]
+    [InlineData("Male \"x\"", DiagnosticCodes.SingerGenderUnknown)]
+    public void APartsSinger_RefusesAnotherWord(string value, string code)
+        => Assert.Contains(SyntaxTree.Parse($"part m {{ clef treble  singer {value} }}\nsection A {{ m {{ c'4 | }} }}\nform {{ A }}\nscore {{ staff m }}\n").Diagnostics,
+            d => d.Code == code);
+
+    private static string? SlotGender(string source)
+    {
+        int at = source.IndexOf('§');
+        return LilySharpLanguageServer.SingerSlotAt(source.Remove(at, 1), at)?.Gender;
+    }
+
+    [Theory]
+    [InlineData("part m { singer male \"§\" }\n", "male")]
+    [InlineData("lyrics w singer female \"neu§\" { la | }\n", "female")]
+    [InlineData("score { staff m  lyrics w sings m singer male \"§\" }\n", "male")]
+    [InlineData("lyrics w singer \"§\" { la | }\n", null)]
+    public void TheSlot_SaysTheGender(string source, string? expected)
+        => Assert.Equal(expected, SlotGender(source));
+
+    [Theory]
+    [InlineData("lyrics words singer male \"neutrino/SOMA\" ", new[] { "sings", "language" }, new[] { "singer", "singer male", "singer female" })]
+    [InlineData("lyrics words sings sop singer male \"x\" ", new[] { "language" }, new[] { "sings", "singer male" })]
+    [InlineData("lyrics words sings sop ", new[] { "singer", "singer male", "singer female" }, new[] { "sings" })]
+    public void AGenderedSinger_IsOneClause(string head, string[] offered, string[] gone)
+    {
+        var labels = Offered(Declared + head);
+        Assert.All(offered, l => Assert.Contains(l, labels));
+        Assert.All(gone, l => Assert.DoesNotContain(l, labels));
+    }
+
+    [Fact]
+    public void WaitingForAGenderedName_IsNoWholeClause()
+        => Assert.Null(LilySharpLanguageServer.LyricsHeadAt("lyrics words singer male ", "lyrics words singer male ".Length));
+
+    [Fact]
+    public void TheGenderedItem_WritesTheWordAndOpensTheList()
+    {
+        var item = Assert.Single(LilySharpLanguageServer.GetLyricsTrackNameCompletions().Items, i => i.Label == "singer male");
+        Assert.Equal("singer male \"$0\"", item.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", item.Command!.CommandIdentifier);
+    }
 
     [Fact]
     public void TheNames_AreTheLowerCaseVocabulary()

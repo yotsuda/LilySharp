@@ -179,8 +179,7 @@ internal sealed partial class Parser
             if (!singer && IsLyricsSingerClause())
             {
                 singer = true;
-                clauses.Add(Advance());
-                clauses.Add(ParseSingerName());
+                clauses.AddRange(ParseSingerClause());
                 continue;
             }
             if (!sings && Check(SyntaxKind.Identifier) && Current.Text == "sings" && Peek(1)?.Kind != SyntaxKind.OpenBrace)
@@ -233,11 +232,35 @@ internal sealed partial class Parser
         return new LyricsBlockGreen(keyword, name, [.. clauses], openBrace, [.. items], closeBrace);
     }
 
-    /// <summary><c>singer "…"</c> in a lyrics head or a score's lyrics row: the word with a string
-    /// after it, so <c>lyrics singer { … }</c> stays a track called singer.</summary>
+    /// <summary><c>singer "…"</c> or <c>singer male "…"</c> in a lyrics head or a score's lyrics row:
+    /// the word with a string after it, so <c>lyrics singer { … }</c> stays a track called singer.</summary>
     private bool IsLyricsSingerClause()
         => Check(SyntaxKind.Identifier) && Current.Text == Music.LyricSinger.Keyword
-            && Peek(1)?.Kind == SyntaxKind.StringLiteral;
+            && (Peek(1)?.Kind == SyntaxKind.StringLiteral
+                || (Peek(1)?.Kind == SyntaxKind.Identifier && Peek(2)?.Kind == SyntaxKind.StringLiteral));
+
+    /// <summary>The clause's tokens in source order: the word, the gender if written, the name.</summary>
+    private List<SyntaxToken> ParseSingerClause()
+    {
+        var tokens = new List<SyntaxToken> { Advance() };
+        if (Check(SyntaxKind.Identifier))
+        {
+            var gender = Advance();
+            CheckSingerGender(gender);
+            tokens.Add(gender);
+        }
+        tokens.Add(ParseSingerName());
+        return tokens;
+    }
+
+    /// <summary>Refuses, at the word, one that is neither <c>male</c> nor <c>female</c>. Called right after advancing past it.</summary>
+    private void CheckSingerGender(SyntaxToken gender)
+    {
+        if (!Music.LyricSinger.Genders.Contains(gender.Text))
+            _diagnostics.Error(new TextSpan(_textPosition - gender.FullWidth + gender.LeadingTriviaWidth, Math.Max(1, gender.Width)),
+                DiagnosticCodes.SingerGenderUnknown,
+                $"'{gender.Text}' is no gender of a singer: write male or female before the name, singer male \"neutrino/SOMA\".");
+    }
 
     /// <summary>The singer's string; an empty one is refused (LYS4039), a name is the engine's to resolve.</summary>
     private SyntaxToken ParseSingerName()
