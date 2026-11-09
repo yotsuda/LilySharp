@@ -3861,7 +3861,7 @@ function tellSingerNote(text: string): void {
 /**
  * Between a `singer`'s quotes, the names right for the words' language (owner's request
  * 2026-11-09, session 1168): the server says whether the caret is in one and what the language
- * is (lilysharp/singerSlot), the Cantilena extension what is installed and cast (singerChoices).
+ * is (lilysharp/singerSlot), the Cantilena extension what is installed (singerChoices).
  * The quotes' inside is replaced whole, so a name with a slash completes as one.
  */
 const singerCompletion: vscode.CompletionItemProvider = {
@@ -3873,14 +3873,14 @@ const singerCompletion: vscode.CompletionItemProvider = {
         const engine = await renderer();
         const api = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend.api : undefined;
         if (!api?.voices) { return undefined; }
-        const [voices, cast] = await Promise.all([api.voices(), api.cast?.() ?? Promise.resolve({})]);
+        const voices = await api.voices();
         samples().warm(voices.filter(v => v.language === slot.Language).map(v => v.id));
         const line = document.lineAt(position.line).text;
         const open = line.lastIndexOf('"', position.character - 1);
         const close = line.indexOf('"', position.character);
         const range = new vscode.Range(position.line, open + 1, position.line, close >= 0 ? close : position.character);
-        return singerChoices(voices, cast, slot.Language, slot.Gender).map((c, i) => {
-            const item = new vscode.CompletionItem(c.label, c.isRole ? vscode.CompletionItemKind.Variable : vscode.CompletionItemKind.Value);
+        return singerChoices(voices, slot.Language, slot.Gender).map((c, i) => {
+            const item = new vscode.CompletionItem(c.label, vscode.CompletionItemKind.Value);
             item.detail = c.detail;
             item.range = range;
             item.filterText = c.label;
@@ -3941,7 +3941,7 @@ async function auditionVoice(uri: string, id: string, clock: StageClock): Promis
     void panel.webview.postMessage({ type: 'playVoiceSample', bytes: new Uint8Array(bytes), id, pressedAt: clock.startedAt, sentAt: Date.now() });
 }
 
-/** A name taken from the `singer` list: heard at once. A role is heard as the voice it is cast to. */
+/** A name taken from the `singer` list: heard at once. A gender or a role is heard as the default voice it comes to. */
 async function hearSinger(label: unknown): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (typeof label !== 'string' || !editor) { return; }

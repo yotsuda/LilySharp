@@ -100,16 +100,11 @@ describe('the singer choices', () => {
         { id: 'diffsinger/ALICE', engine: 'diffsinger', name: 'ALICE', label: 'Alice', language: 'en' },
         { id: 'diffsinger/NOTSAID', engine: 'diffsinger', name: 'NOTSAID', label: 'x' },
     ];
-    const cast = { soprano: 'neutrino/MERROW', lead: 'diffsinger/ALICE', 'neutrino/MERROW': 'diffsinger/TIGER' };
 
-    it('offers the voices that sing the language, and the roles cast to one of them', () => {
-        assert.deepEqual(singerChoices(voices, cast, 'ja').map(c => c.label), ['neutrino/MERROW', 'diffsinger/TIGER', 'soprano']);
-        assert.deepEqual(singerChoices(voices, cast, 'en').map(c => c.label), ['diffsinger/ALICE', 'lead']);
-        assert.deepEqual(singerChoices(voices, cast, 'ko'), [], 'no voice sings it: nothing to offer');
-    });
-
-    it('says who a role is', () => {
-        assert.equal(singerChoices(voices, cast, 'ja').find(c => c.isRole)?.detail, 'role: neutrino/MERROW');
+    it('offers the voices that sing the language', () => {
+        assert.deepEqual(singerChoices(voices, 'ja').map(c => c.label), ['neutrino/MERROW', 'diffsinger/TIGER']);
+        assert.deepEqual(singerChoices(voices, 'en').map(c => c.label), ['diffsinger/ALICE']);
+        assert.deepEqual(singerChoices(voices, 'ko'), [], 'no voice sings it: nothing to offer');
     });
 
     it('names the voice on the engine\'s wire when one is asked for', () => {
@@ -198,16 +193,16 @@ describe('choosing a voice with the step keys', () => {
         assert.equal(fitsGender({ gender: 'female' }, null), true);
     });
 
-    it('lists the voices of the gender written and those that name none, and their cast roles', () => {
+    it('lists the voices of the gender written and those that name none', () => {
         const all = [
             { id: 'n/A', engine: 'n', name: 'A', language: 'ja', gender: 'male' },
             { id: 'n/B', engine: 'n', name: 'B', language: 'ja', gender: 'female' },
             { id: 'n/C', engine: 'n', name: 'C', language: 'ja' },
         ];
-        const labels = (gender?: string | null) => singerChoices(all, { tenor: 'n/A', alto: 'n/B' }, 'ja', gender).map(c => c.label);
-        assert.deepEqual(labels(), ['n/A', 'n/B', 'n/C', 'tenor', 'alto']);
-        assert.deepEqual(labels('male'), ['n/A', 'n/C', 'tenor']);
-        assert.deepEqual(labels('female'), ['n/B', 'n/C', 'alto']);
+        const labels = (gender?: string | null) => singerChoices(all, 'ja', gender).map(c => c.label);
+        assert.deepEqual(labels(), ['n/A', 'n/B', 'n/C']);
+        assert.deepEqual(labels('male'), ['n/A', 'n/C']);
+        assert.deepEqual(labels('female'), ['n/B', 'n/C']);
     });
 
     it('has nowhere to go with one engine or one voice', () => {

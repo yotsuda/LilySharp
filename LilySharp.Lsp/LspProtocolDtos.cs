@@ -408,6 +408,8 @@ public class SungVoiceDto
     public bool InScore { get; set; } = true;
     /// <summary>Who the file says sings this voice, as written (a voice or a role), or null.</summary>
     public string? Singer { get; set; }
+    /// <summary>The gender of the engine's default voice for it: what the singer says, else the part.</summary>
+    public string? Gender { get; set; }
 }
 
 /// <summary>Parameters for lilysharp/singerSlot: the caret in an open document.</summary>

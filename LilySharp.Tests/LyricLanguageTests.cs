@@ -415,6 +415,47 @@ public class LyricLanguageTests
     public void ARowNamingNoPart_IsTheTracksEverywhere()
         => Assert.Equal("a/A", SingersByPart(Choir("staff sop  lyrics words singer \"a/A\"  staff alt"))["sop"]);
 
+    // ── which default voice sings a part (owner's decision 2026-11-09, session 1187) ──
+
+    private static string? GenderOf(string partHead, string? singer = null)
+    {
+        string clause = singer == null ? "" : $" singer {singer}";
+        return Sung($$"""
+            part m { {{partHead}}{{clause}} }
+            section A {
+              m { c'4 d e f | }
+              lyrics w sings m { さ く ら ら | }
+            }
+            form { A }
+            score { staff m  lyrics w }
+            """).Gender;
+    }
+
+    [Theory]
+    [InlineData("instrument soprano", "female")]
+    [InlineData("instrument alto", "female")]
+    [InlineData("instrument voice-alto", "female")]
+    [InlineData("instrument tenor", "male")]
+    [InlineData("instrument baritone", "male")]
+    [InlineData("instrument voice-bass", "male")]
+    [InlineData("clef treble", "female")]
+    [InlineData("clef treble^8", "female")]
+    [InlineData("clef treble_8", "male")]
+    [InlineData("clef bass", "male")]
+    [InlineData("clef tenor", "male")]
+    public void APart_TellsItsDefaultVoice(string head, string expected)
+        => Assert.Equal(expected, GenderOf(head));
+
+    [Theory]
+    [InlineData("clef bass", "female", "female")]
+    [InlineData("clef treble", "male", "male")]
+    [InlineData("clef bass", "\"soprano\"", "female")]
+    [InlineData("clef treble", "\"tenor\"", "male")]
+    [InlineData("clef bass", "\"neutrino/MERROW\"", "male")]              // a named voice says nothing: the part does
+    [InlineData("instrument soprano", "\"someone\"", "female")]
+    public void TheSingersWord_WinsOverThePart(string head, string singer, string expected)
+        => Assert.Equal(expected, GenderOf(head, singer));
+
     // ── a gender with no name: the engine picks such a voice (session 1175) ──
 
     [Theory]

@@ -240,6 +240,9 @@ Each blocks the row named; a default is proposed so work can start.
      against an installation (the file is the same on every machine).
    - **A name with a `/` is a voice** (`engine/name`, as `cantilena.defaultVoice` writes it); **without
      one it is a role** (`"soprano"`, `"A"`).
+   - **Superseded by the owner's decision of session 1187**: no cast. Two settings, a default female
+     and a default male voice, and the part says which (docs/singing-design.md §3). What follows is
+     the earlier plan.
    - **What sings** (resolved by Cantilena, so the editor and the command line agree), for the
      string written, or for `default` when nothing is written:
      1. `cantilena.voices[string]` when the settings bind it — a role, or a voice's name the

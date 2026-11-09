@@ -1439,17 +1439,19 @@ SingerValue    = String | SingerGender , [ String ] ;
 SingerGender   = 'male' | 'female' ;
                  (* Before a name, a gender leaves out of the editor's completion and step keys the
                     voices that say they are the other, and a singer sings by its name. With no name
-                    (or an empty one) the engine picks: cantilena.voices casts 'male' on each machine,
-                    else the first installed voice that says it is male and sings the words' language.
+                    (or an empty one) that gender's default voice sings: each machine's setting, else
+                    the first installed voice that says it is that and sings the words' language.
                     Another word before a name is an error (LYS4040). *)
                  (* Each at most once, in any order. A track's language and singer are the first
                     block of that name that writes one (the rule 'sings' has). 'lyrics language
                     { ... }', 'lyrics language sings m { ... }' and 'lyrics singer { ... }' are
                     tracks with those names. 'singer' names who sings: a voice as engine/name
-                    ('neutrino/MERROW') or a role ('soprano') the listener's settings cast; the
+                    ('neutrino/MERROW') or a role ('soprano', 'tenor') that says a gender; the
                     score's row wins over the track, the track over the part's 'singer'. An
                     empty one is an error (LYS4039); a name is never checked against a machine:
-                    a voice that is not there sings as the default, said once. *)
+                    a voice that is not there sings as the default voice of the part's gender, said
+                    once. With no singer a part's instrument, else its clef, says the gender: bass,
+                    baritone, tenor and treble_8 clefs are male, others female. *)
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'lyrics' row.
                     With no 'sings' it sings the file's one part - the unnamed part, the only
                     declared one, or the music written straight into the sections; with

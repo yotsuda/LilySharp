@@ -32,7 +32,8 @@ public sealed record SungNote(double Start, double Duration, double Pitch, strin
 /// that <c>cantilena</c> reads. <paramref name="Warnings"/> says what the engine will not sing
 /// (syllables that are not kana).</summary>
 /// <paramref name="Singer"/> is who the file says sings it, as written, or null for the engine's default.
-public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungNote> Notes, IReadOnlyList<string> Warnings, string? Singer = null);
+/// <paramref name="Gender"/> is the gender of the engine's default voice for it (<see cref="Music.LyricSinger.GenderReaderOf"/>).
+public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungNote> Notes, IReadOnlyList<string> Warnings, string? Singer = null, string? Gender = null);
 
 /// <summary>
 /// The sung voices of an exported piece: one per part a placed lyrics row sings. Which note a
@@ -131,7 +132,7 @@ public static class SungVoices
             if (strange.Count > 0)
                 warnings.Add($"{strange.Count} syllable(s) are not kana, which the Japanese voice needs: "
                     + string.Join(" ", strange.Take(8)) + (strange.Count > 8 ? " …" : ""));
-            voices.Add(new SungVoice(part, language, notes, warnings, first.Singer));
+            voices.Add(new SungVoice(part, language, notes, warnings, first.Singer, first.Gender));
         }
         return voices;
     }

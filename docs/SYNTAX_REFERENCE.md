@@ -1916,14 +1916,15 @@ on a line of its own for the whole file, or on a track, `lyrics en language engl
 **Who sings** is `singer "…"`, on a part (`part sop { singer "neutrino/MERROW" }`), on a track
 (`lyrics en singer "diffsinger/TIGER" sings melody { … }`) or on a score's row
 (`lyrics verse singer "soprano" sings melody`), the nearest winning. A name with a `/` is a
-voice; one without is a role, which `cantilena.voices` casts on each machine, and that setting
-has the last say over a voice's name too. Nothing written is the default voice, and a singer
-that cannot be had sings as the default, said once. Between the quotes the editor offers the
+voice; `"soprano"`, `"alto"`, `"tenor"` and `"bass"` say a gender. With no singer the part's
+instrument, else its clef, says the gender (a bass, baritone, tenor or `treble_8` clef is male), and
+each machine's default voice of that gender sings. A singer that cannot be had sings as that default,
+said once. Between the quotes the editor offers the
 voices that sing the words' language; on a `singer "…"`, `Ctrl+Shift+Up` / `Down` step through
 those voices and `Ctrl+Shift+PageUp` / `PageDown` change the engine, the chosen voice heard in the
 preview. `singer male "neutrino/SOMA"` (or `female`) leaves out of both the voices that say they are
 the other; it changes nothing else, and another word there is an error (LYS4040). With no name,
-`singer male` lets each machine pick: the voice `cantilena.voices` casts to `male`, else the first
+`singer male` is that gender's default voice: each machine's setting, else the first
 installed voice that says it is male and sings the words' language. An `@breath` on a sung note is a breath: the singer stops a little early, and the next note starts on its beat; `@caesura` the same. Dynamics, accents and hairpins set how loud the voice is, and a grace note is sung on the syllable of its note.
 
 **Melismas** follow LilyPond's `\lyricsto`. A **slur** or a **tie** makes one on its own:

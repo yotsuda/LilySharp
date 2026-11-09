@@ -47,6 +47,34 @@ public static class LyricSinger
     public static string ValueOf(string token)
         => StringLiteral.IsClosed(token) ? StringLiteral.Value(token) : token.Trim('"');
 
+    /// <summary>
+    /// A reader of whether a part is sung by a male or a female voice when no voice is named, for the
+    /// engine's default voice of that gender (owner's decision 2026-11-09, session 1187): what the
+    /// singer's word says (<c>male</c>, <c>soprano</c>), else the part's preset, else its clef, a
+    /// clef for male voices being bass, baritone, tenor or the treble an octave down.
+    /// </summary>
+    public static Func<string?, string?, string> GenderReaderOf(SyntaxNode root)
+    {
+        var parts = new Dictionary<string, Semantics.PartHeaderDefaults>(StringComparer.Ordinal);
+        foreach (var part in root.DescendantNodes<PartDeclarationSyntax>())
+            parts.TryAdd(part.Name.Text, Semantics.PartHeaderDefaults.Read(part));
+        return (singer, part) => GenderOfWord(singer)
+            ?? (part != null && parts.TryGetValue(part, out var header) ? GenderOfPart(header.Preset, header.ClefWord) : Female);
+    }
+
+    private const string Female = "female", Male = "male";
+
+    private static string? GenderOfWord(string? word) => word switch
+    {
+        "female" or "soprano" or "mezzosoprano" or "alto" or "contralto" => Female,
+        "male" or "tenor" or "baritone" or "bass" => Male,
+        _ => null,
+    };
+
+    private static string GenderOfPart(string? preset, string? clef)
+        => GenderOfWord(preset?.StartsWith("voice-", StringComparison.Ordinal) == true ? preset["voice-".Length..] : preset)
+            ?? (clef is "bass" or "bass_8" or "baritone" or "tenor" or "treble_8" ? Male : Female);
+
     /// <summary>The key a score row's singer is kept under: the track and the part the row says it
     /// sings, as one track may stand under several staves (owner's report 2026-11-09, session 1176:
     /// two rows of one track, each with its own singer, both sang the first's); the track alone for a

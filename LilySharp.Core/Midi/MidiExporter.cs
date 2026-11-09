@@ -4013,6 +4013,7 @@ public sealed class MidiExporter
         var wrappedTracks = sung.Where(s => s.Lyric.WrapRow > 0).Select(s => s.Track).ToHashSet();
         var languageOf = Music.LyricLanguage.ReaderOf(tree.GetRoot());
         var singerOf = Music.LyricSinger.ReaderOf(tree.GetRoot(), spec);
+        var genderOf = Music.LyricSinger.GenderReaderOf(tree.GetRoot());
         foreach (var (lyric, item, printing, part, sungTrack, reading) in sung)
         {
             var notes = bySource[item.SourcePosition].ToList();
@@ -4030,7 +4031,7 @@ public sealed class MidiExporter
                 : wrappedTracks.Contains(sungTrack) ? new[] { lyric.WrapRow }
                 : Enumerable.Range(0, onsets.Count);
             foreach (int tick in passes.Select(pass => onsets[Math.Min(pass, onsets.Count - 1)]).Distinct())
-                track.Lyrics.Add(new LyricEvent(tick, lyric.Text, part, reading, languageOf(sungTrack), singerOf(sungTrack, part)));
+                track.Lyrics.Add(new LyricEvent(tick, lyric.Text, part, reading, languageOf(sungTrack), singerOf(sungTrack, part), genderOf(singerOf(sungTrack, part), part)));
         }
     }
 }

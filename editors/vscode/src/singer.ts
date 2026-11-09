@@ -37,7 +37,7 @@ export interface VoiceBackend {
     readonly name: string;
     /** The voice the engine will use for the file's `singer` (none written: its default), for the cache key.
      *  `language`: the words', for a `singer male`, whose voice must sing them. */
-    voiceName(singer?: string | null, language?: string): Promise<string>;
+    voiceName(singer?: string | null, language?: string, gender?: string | null): Promise<string>;
     /** Sings `score` in `voice` (from voiceName); `key` names the request and the file where the backend lets the caller name it. */
     sing(key: string, score: CantilenaScore, voice: string): Promise<RenderedVoice>;
     dispose(): void;
@@ -48,9 +48,9 @@ export class CantilenaExtensionBackend implements VoiceBackend {
     readonly name: string;
     /** `note`: tells the writer a `singer` came to another voice than it asked for. */
     constructor(readonly api: CantilenaApi, private readonly note?: (text: string) => void) { this.name = `the Cantilena extension ${api.version}`; }
-    async voiceName(singer?: string | null, language?: string): Promise<string> {
-        if (singer && this.api.resolveSinger) {
-            const r = await this.api.resolveSinger(singer, { language });
+    async voiceName(singer?: string | null, language?: string, gender?: string | null): Promise<string> {
+        if (this.api.resolveSinger) {
+            const r = await this.api.resolveSinger(singer ?? '', { language, gender: gender ?? undefined });
             if (r.note) { this.note?.(r.note); }
             return r.voice;
         }
@@ -160,7 +160,7 @@ export class VoiceRenderer {
     /** The key `render` would give `dto` at `speed`: the score's bytes and the voice's name — what
      *  tells one text's voice from another's without asking the engine (prepareVoices). */
     async key(dto: SungVoiceDto, speed: number): Promise<string> {
-        return voiceKey(cantilenaScore(dto, speed), await this.backend.voiceName(dto.Singer, dto.Language));
+        return voiceKey(cantilenaScore(dto, speed), await this.backend.voiceName(dto.Singer, dto.Language, dto.Gender));
     }
 
     /** True when the voice of `key` was sung before and its WAV is still there. */
@@ -175,7 +175,7 @@ export class VoiceRenderer {
      */
     async render(dto: SungVoiceDto, speed: number): Promise<{ key: string; rendered: Promise<RenderedVoice>; cached: boolean }> {
         const score = cantilenaScore(dto, speed);
-        const voice = await this.backend.voiceName(dto.Singer, dto.Language);
+        const voice = await this.backend.voiceName(dto.Singer, dto.Language, dto.Gender);
         const key = voiceKey(score, voice);
         const hit = this.done.get(key);
         if (hit && fs.existsSync(hit.wav)) { return { key, rendered: Promise.resolve(hit), cached: true }; }

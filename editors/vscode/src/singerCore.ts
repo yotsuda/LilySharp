@@ -28,7 +28,7 @@ export interface SungNoteDto { T: number; D: number; P: number; L?: string | nul
 
 /** A part's words on its notes, as the server answers `lilysharp/sung`. */
 /** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
-export interface SungVoiceDto { Part: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null }
+export interface SungVoiceDto { Part: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null; Gender?: string | null }
 
 /** The score Cantilena reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
 export interface CantilenaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean }
@@ -56,9 +56,7 @@ export interface CantilenaApi {
     release(): void;
     /** The voice a `.lys` file's `singer` string comes to on this machine, and what to tell the
      *  writer when it was not the one asked for. Cantilena 0.4 on. */
-    resolveSinger?(singer: string, options?: { language?: string }): Promise<{ voice: string; note?: string }>;
-    /** The roles this machine casts (`cantilena.voices`): role or voice → voice. */
-    cast?(): Promise<Record<string, string>>;
+    resolveSinger?(singer: string, options?: { language?: string; gender?: string }): Promise<{ voice: string; note?: string }>;
 }
 
 /** Whether a `singer`'s written gender lets this voice be offered: no gender written, a voice that names none, or the same one. */
@@ -67,23 +65,17 @@ export function fitsGender(voice: Pick<CantilenaVoice, 'gender'>, gender?: strin
 }
 
 /** One choice between a `singer`'s quotes. */
-export interface SingerChoice { label: string; detail: string; isRole: boolean }
+export interface SingerChoice { label: string; detail: string }
 
 /**
  * What the editor offers between a `singer`'s quotes (owner's request 2026-11-09, session 1168:
- * only the names right for the language): the installed voices that sing `language`, then the
- * roles cast to one. A voice that does not say what it sings is left out; with `gender` (`singer
- * male "…"`, sessions 1173 and 1174), so is one that says it is the other.
+ * only the names right for the language): the installed voices that sing `language`. A voice that
+ * does not say what it sings is left out; with `gender` (`singer male "…"`, sessions 1173 and
+ * 1174), so is one that says it is the other.
  */
-export function singerChoices(voices: readonly CantilenaVoice[], cast: Readonly<Record<string, string>>, language: string, gender?: string | null): SingerChoice[] {
-    const sings = voices.filter(v => v.language === language && fitsGender(v, gender));
-    const out: SingerChoice[] = sings.map(v => ({ label: v.id, detail: v.label && v.label !== v.name ? v.label : v.name, isRole: false }));
-    for (const [role, bound] of Object.entries(cast)) {
-        if (role.includes('/')) { continue; }
-        const voice = sings.find(v => v.id === bound || v.name === bound);
-        if (voice) { out.push({ label: role, detail: `role: ${voice.id}`, isRole: true }); }
-    }
-    return out;
+export function singerChoices(voices: readonly CantilenaVoice[], language: string, gender?: string | null): SingerChoice[] {
+    return voices.filter(v => v.language === language && fitsGender(v, gender))
+        .map(v => ({ label: v.id, detail: v.label && v.label !== v.name ? v.label : v.name }));
 }
 
 /** The `singer "…"` the caret stands on (the word, the quotes, or between them): where its name is on the line. */

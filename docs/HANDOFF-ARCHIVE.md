@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1185セッションの経緯
+
+### 1.1 第1185セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14971 / 0 / 2**（`-Start p1185`・HEAD `b28de4215`・未 push 85）。オーナー報告「音声生成中に再生ボタンを押すと、マイクの点滅は止まらないけどプログレスバーが消えてしまう」→「直して」。作業場所は Lab `sessions/p1185/`。
+
+- **原因**: `prepareVoices` の `preparing` は `singing` を持たず、ページがそれで印を上書きしていた（第1179 の抜け）。
+- **修正**: `voiceStillSinging`（playbackCore）＝歌っているパートへの `preparing` は印を保つ。`ready`／`failed`／`waiting` で外れる。
+- 終了時 full **14971 合格 / 0 失敗 / skip 2 / 合計 14973**（`-End p1185 -DiffBase b28de4215`、BUILD 0）・npm 935 / 935。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
 ## 以下は第1184セッションの経緯
 
 ### 1.1 第1184セッション（2026-11-09・YT-DELL2）
