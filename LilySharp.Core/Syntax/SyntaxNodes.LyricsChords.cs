@@ -53,15 +53,28 @@ public sealed class LyricsBlockSyntax : SyntaxNode
 
     /// <summary>The <c>sings</c> keyword token of a melody-bound track
     /// (<c>lyrics ja sings vocal { … }</c>), or null when the block writes none.</summary>
-    public SyntaxTokenNode? SingsKeyword =>
-        GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } s
-            && s.Text == "sings" ? s : null;
+    public SyntaxTokenNode? SingsKeyword => HeadClause("sings").Keyword;
 
     /// <summary>The token naming the part this track sings, or null when this block
     /// declares no binding.</summary>
     public SyntaxTokenNode? SingsTargetToken =>
-        SingsKeyword != null && GetChild(3) is SyntaxTokenNode t2 && SyntaxFacts.IsPartNameToken(t2.Kind, t2.Text)
-            ? t2 : null;
+        HeadClause("sings").Value is { } t2 && SyntaxFacts.IsPartNameToken(t2.Kind, t2.Text) ? t2 : null;
+
+    /// <summary>The language the track's words are written in as the block names it
+    /// (<c>lyrics en language english { … }</c>), or null when it names none
+    /// (<see cref="Music.LyricLanguage"/>).</summary>
+    public string? Language => HeadClause(Music.LyricLanguage.Keyword).Value?.Text;
+
+    /// <summary>A clause of the head by its word: the pairs stand from slot 2 to the brace, in
+    /// the order they were written, so `sings` and `language` may come either way round.</summary>
+    private (SyntaxTokenNode? Keyword, SyntaxTokenNode? Value) HeadClause(string word)
+    {
+        int open = OpenBraceIndex;
+        for (int i = 2; i + 1 < open; i += 2)
+            if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } keyword && keyword.Text == word)
+                return (keyword, GetChild(i + 1) as SyntaxTokenNode);
+        return default;
+    }
 
     /// <summary>The part this track sings (<c>lyrics ja sings vocal</c> → "vocal"),
     /// or null when this block declares no binding. The binding is a property of

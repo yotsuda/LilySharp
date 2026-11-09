@@ -191,6 +191,7 @@ TopLevelItem   = MetadataDecl                     (* title, subtitle, composer, 
                | CheckDecl                        (* a check the file turns on - a pragma *)
                | CapoDecl                         (* the capo every pressed shape is relative to *)
                | ChordShapesDecl                  (* the chord-shape table: the shape each chord draws *)
+               | LanguageDecl                     (* the language the file's lyrics are written in *)
                ;
 
 (* MUSIC IS NOT A TopLevelItem, and is rejected with LYS0020: a note stream, a bare
@@ -238,6 +239,12 @@ CheckRule      = 'voiceLeading' ;
 
 CapoDecl       = 'capo' , Integer ;                    (* 1..11; to the end of its line *)
 ChordShapesDecl = 'chordShapes' , ShapeTable ;
+LanguageDecl   = 'language' , LanguageName ;
+LanguageName   = 'japanese' | 'english' | 'chinese' | 'korean' ;
+                 (* What the lyrics are written in: a fact of the words, not of who sings them.
+                    A track's own 'language' (LyricsBlock) wins, nothing written is japanese, the
+                    last line wins if the file repeats it. Another word is an error (LYS4038).
+                    'language' is no keyword: a part or a track may still be named language. *)
 ShapeTable     = '{' , { ShapeEntry | 'section' , Identifier , '{' , { ShapeEntry } , '}' } , '}' ;
 ShapeEntry     = ChordSymbol , { ShapeWord } ;        (* ShapeWords: a ChordRowEntry's, §4 *)
                  (* THE PIECE'S CHORD DATA (owner's grammar 2026-10-31, docs/ROADMAP.md
@@ -1424,7 +1431,11 @@ PartBlock      = PartName , MusicBlock ;
    part names its voices: there the likelier reading is a misspelled voice. A row without
    its own 'sings' cannot re-decide the association by position: after a staff
    it does not sing it simply stays an independent band. *)
-LyricsBlock    = 'lyrics' , [ Identifier ] , [ 'sings' , PartRef ] , '{' , { LyricMeasure | LyricVerse } , '}' ;
+LyricsBlock    = 'lyrics' , [ Identifier ] , { LyricsClause } , '{' , { LyricMeasure | LyricVerse } , '}' ;
+LyricsClause   = 'sings' , PartRef | 'language' , LanguageName ;
+                 (* Each at most once, in either order. A track's language is the first block of
+                    that name that writes one (the rule 'sings' has). 'lyrics language { ... }' and
+                    'lyrics language sings m { ... }' are a track called language. *)
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'lyrics' row.
                     With no 'sings' it sings the file's one part - the unnamed part, the only
                     declared one, or the music written straight into the sections; with

@@ -1908,6 +1908,11 @@ and a `]` on its own are an error on the syllable (LYS4036), which still prints 
 a reading that is not kana is a warning (LYS4037). A kanji with no reading prints as always
 and is not sung — the voice says so once. (VSQX, VOCALOID's format, takes the reading too.)
 
+**The language of the words** is `japanese` unless the file says otherwise: `language english`
+on a line of its own for the whole file, or on a track, `lyrics en language english sings melody { … }`
+(`sings` and `language` in either order; the track's wins). The names are `japanese`, `english`,
+`chinese` and `korean`; another word is an error (LYS4038). The kana check is for Japanese words only.
+
 **Melismas** follow LilyPond's `\lyricsto`. A **slur** or a **tie** makes one on its own:
 the syllable on the slur's first note is sung over every note up to the one that closes
 it (and a tied note takes no syllable), so the next syllable lands after the slur.

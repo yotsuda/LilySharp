@@ -166,15 +166,29 @@ internal sealed partial class Parser
         // grammar says may be called `bass` (found writing a hymn probe).
         // No name before `sings`: the unnamed track (SyntaxFacts.UnnamedLyricsName, 2026-10-09).
         var name = IsPartNameToken(Current)
-            && !(Current.Text == "sings" && Peek(1)?.Kind != SyntaxKind.OpenBrace) ? Advance() : (SyntaxToken?)null;
-        // Optional melody binding: `lyrics ja sings vocal { … }` — the track sings
-        // the named part. Contextual like `q`: 'sings' stays an ordinary identifier
-        // everywhere else, claimed only between a track name and its brace.
-        SyntaxToken? singsKeyword = null, singsTarget = null;
-        if (Check(SyntaxKind.Identifier) && Current.Text == "sings" && Peek(1)?.Kind != SyntaxKind.OpenBrace)
+            && !(Current.Text == "sings" && Peek(1)?.Kind != SyntaxKind.OpenBrace)
+            && !IsLyricsLanguageClause() ? Advance() : (SyntaxToken?)null;
+        // The clauses, each at most once and in either order, as pairs in source order:
+        // `sings vocal` — the track sings the named part — and `language english` — what its
+        // words are written in. Contextual like `q`: both stay ordinary identifiers everywhere
+        // else, claimed only between a track name and its brace.
+        var clauses = new List<SyntaxToken?>();
+        for (bool sings = false, language = false; ;)
         {
-            singsKeyword = Advance();
-            singsTarget = IsPartNameToken(Current) ? Advance() : null;
+            if (!sings && Check(SyntaxKind.Identifier) && Current.Text == "sings" && Peek(1)?.Kind != SyntaxKind.OpenBrace)
+            {
+                sings = true;
+                clauses.Add(Advance());
+                clauses.Add(IsPartNameToken(Current) ? Advance() : null);
+            }
+            else if (!language && IsLyricsLanguageClause())
+            {
+                language = true;
+                clauses.Add(Advance());
+                clauses.Add(ParseLanguageName());
+            }
+            else
+                break;
         }
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
@@ -208,7 +222,29 @@ internal sealed partial class Parser
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
 
-        return new LyricsBlockGreen(keyword, name, singsKeyword, singsTarget, openBrace, [.. items], closeBrace);
+        return new LyricsBlockGreen(keyword, name, [.. clauses], openBrace, [.. items], closeBrace);
+    }
+
+    /// <summary>The file's <c>language NAME</c>: contextual, so a part may still be called language.</summary>
+    private bool IsLanguageDeclaration()
+        => Current.Text == Music.LyricLanguage.Keyword && Peek(1)?.Kind == SyntaxKind.Identifier;
+
+    /// <summary><c>language NAME</c> in a lyrics head: the word with a bare word after it. So
+    /// <c>lyrics language { … }</c> and <c>lyrics language sings m { … }</c> stay a track
+    /// called language.</summary>
+    private bool IsLyricsLanguageClause()
+        => Check(SyntaxKind.Identifier) && Current.Text == Music.LyricLanguage.Keyword
+            && Peek(1) is { Kind: SyntaxKind.Identifier, Text: not "sings" };
+
+    /// <summary>The language's name, refused (LYS4038) unless it is one of the closed vocabulary.</summary>
+    private SyntaxToken ParseLanguageName()
+    {
+        var value = Advance();
+        if (Music.LyricLanguage.CodeOf(value.Text) == null)
+            _diagnostics.Error(new TextSpan(_textPosition - value.FullWidth + value.LeadingTriviaWidth, Math.Max(1, value.Width)),
+                DiagnosticCodes.LyricLanguageUnknown,
+                $"'{value.Text}' is not a language: write one of {string.Join(", ", Music.LyricLanguage.Names)}.");
+        return value;
     }
 
     /// <summary>A lyric track's inner section (by-part grouping): <c>section NAME {

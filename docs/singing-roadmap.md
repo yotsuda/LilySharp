@@ -96,9 +96,14 @@ sung** and **the language it is in**.
 - **Kanji lyrics** (decided in Phase A, §4): a reading travels with the syllable; the page
   prints the kanji, the voice sings the kana. Romaji lyrics are read as kana for a Japanese
   voice (a small table; Lily# or Cantilena — decide with the kanji answer).
-- **A language on the lyrics block** (`lyrics en verse sings melody { … }` or the file's
-  `language` for all): the sung score carries it; an engine without a voice for it says so in
-  one sentence, as now.
+- **A language on the lyrics block** — *built 2026-11-09, session 1167* (owner: the language
+  belongs to the words, before any singer's; names, not codes, lower-case, for the editor's
+  completion): `language english` for the file, `lyrics en language english sings melody { … }`
+  for a track, `japanese` when nothing is written (`Music.LyricLanguage`, LYS4038). The sung
+  score carries the tag. **Left for Cantilena:** neither backend reads the language yet (the
+  DiffSinger dictionary is fixed at `ja`, NEUTRINO is Japanese only), and a voice that cannot
+  sing the language should refuse in one sentence, the instrument playing; `voices()` already
+  has the voice's language to compare.
 - **English and others** come with DiffSinger voices and their dictionaries (Phase B); the
   syllable split Lily# already prints (`-`, `__`) is what the engine needs.
 - **Elisions, diphthongs, consonant clusters**: what the page treats as one syllable is sent
@@ -219,13 +224,13 @@ Each blocks the row named; a default is proposed so work can start.
      part sop { singer "neutrino/MERROW" }            // the part's singer, by the voice's name
      part hero { singer "A" }                         // or by a role, a cast to fill in
      lyrics en sings melody singer "diffsinger/TIGER" { … }   // this track's singer
-     score { staff melody  lyrics verse sings melody singer "B" }  // this placement's
+     score { lyrics verse singer "neutrino/MERROW" sings melody }  // this placement's (the owner's shape)
      ```
 
      ```
      PartProperty = … | 'singer' , String ;
-     LyricsBlock  = 'lyrics' , [ Identifier ] , [ 'sings' , PartRef ] , [ 'singer' , String ] , '{' , … ;
-     ScoreItem    = … | 'lyrics' , [ PartRef ] , [ 'sings' , PartRef ] , [ 'singer' , String ] ;
+     LyricsClause = 'sings' , PartRef | 'language' , LanguageName | 'singer' , String ;   (* built but for singer: any order *)
+     ScoreItem    = … | 'lyrics' , [ PartRef ] , { 'sings' , PartRef | 'singer' , String } ;
      ```
 
      `singer` is not reserved: a part or a track may keep that name (GRAMMAR's own examples have

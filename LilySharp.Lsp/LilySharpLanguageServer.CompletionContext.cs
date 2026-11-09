@@ -512,6 +512,21 @@ public sealed partial class LilySharpLanguageServer
             @"(?<![A-Za-z0-9_])" + ChordShapesDirective.Keyword + @"\s*$");
     }
 
+    /// <summary>True on the name after <c>language</c>: on a line of its own at the top level, or
+    /// in a lyrics head at a definition site (a score's row takes no language; a body has a
+    /// brace between the caret and <c>lyrics</c>, which the head's words cannot cross).</summary>
+    private static bool IsLanguageValueSlot(string text, int offset, List<OpenBlock> stack)
+    {
+        int end = Math.Min(offset, text.Length);
+        int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
+        string line = text[lineStart..end];
+        if (stack.Count == 0
+            && System.Text.RegularExpressions.Regex.IsMatch(line, @"^[ \t]*language[ \t]+\w*$"))
+            return true;
+        return !stack.Exists(o => o.Frame.Name == "score" || o.Frame.Prefix == "score")
+            && System.Text.RegularExpressions.Regex.IsMatch(line, @"(?:^|[\s{}])lyrics(?:[ \t]+\w+)*?[ \t]+language[ \t]+\w*$");
+    }
+
     // A named part (`part rh {`) has `part` one word before the brace; the nameless one
     // (`part {`) has it right before. Until 2026-10-28 only the named form was read, so the
     // nameless part's body got the music completions and no `instrument` (owner's report).
@@ -734,6 +749,8 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutChordTuning,
         /// <summary>The top-level <c>capo |</c> — the frets, ranked (CapoAdvisor).</summary>
         AfterCapo,
+        /// <summary><c>language |</c> — the language names (<c>Music.LyricLanguage</c>).</summary>
+        AfterLanguage,
         /// <summary>Inside the top-level <c>chordShapes { | }</c> (or a <c>section</c> of it) — the
         /// chord names an entry starts with, and <c>section</c> at the table's own level.</summary>
         ChordDiagramTable,
@@ -999,6 +1016,10 @@ public sealed partial class LilySharpLanguageServer
         // Every IsInside* judgement below reads this shared stack instead of
         // re-scanning [0, offset) on its own.
         var scan = new BlockContextScan(text, offset);
+
+        // The language's name: the file's `language |` and a lyrics head's (`lyrics en language |`).
+        if (IsLanguageValueSlot(text, offset, scan.Stack))
+            return CompletionContext.AfterLanguage;
 
         // Right after a complete articulation name or its '.', offer the .up/.down
         // placement qualifier — '@fermata|', '@fermata.|', '@fermata.d|'. Checked

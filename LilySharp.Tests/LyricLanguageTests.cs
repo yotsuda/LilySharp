@@ -1,0 +1,154 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+using System;
+using System.IO;
+using System.Linq;
+using LilySharp.Core.Music;
+using LilySharp.Core.Syntax;
+using LilySharp.Lsp;
+using LilySharp.Lsp.Protocol;
+using Xunit;
+
+namespace LilySharp.Tests;
+
+/// <summary>
+/// The language lyrics are written in (owner's decisions 2026-11-09, session 1167): the file's
+/// <c>language japanese</c> and a track's <c>lyrics en language english { … }</c>, names from a
+/// closed lower-case vocabulary, the track's winning, Japanese when nothing is written.
+/// </summary>
+[Trait("Category", "Unit")]
+public class LyricLanguageTests
+{
+    private static string Book(string head, string lyrics) => $$"""
+        {{head}}
+        part m { clef treble }
+        section A {
+          m { c'4 d e f | }
+          {{lyrics}}
+        }
+        form { A }
+        score { staff m  lyrics w }
+        """;
+
+    private static SyntaxTree Parsed(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+        Assert.Equal(source, tree.GetRoot().ToFullString());
+        return tree;
+    }
+
+    private static SungVoiceDto Sung(string source)
+    {
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///language.lys");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = source, Version = 1, LanguageId = "lilysharp" },
+        });
+        var sung = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        Assert.Null(sung.Error);
+        return Assert.Single(sung.Voices!);
+    }
+
+    [Theory]
+    [InlineData("lyrics w language english sings m { la la la la | }")]
+    [InlineData("lyrics w sings m language english { la la la la | }")]
+    [InlineData("lyrics w language english { la la la la | }")]
+    public void ATracksLanguage_ComesEitherSideOfSings_AndIsSung(string lyrics)
+    {
+        string source = Book("", lyrics);
+        var block = Assert.Single(Parsed(source).GetRoot().DescendantNodes<LyricsBlockSyntax>());
+        Assert.Equal("w", block.VoiceName);
+        Assert.Equal("english", block.Language);
+        if (lyrics.Contains("sings"))
+            Assert.Equal("m", block.SingsTarget);
+        var voice = Sung(source);
+        Assert.Equal("en", voice.Language);
+        Assert.Empty(voice.Warnings);               // the kana check is the Japanese words'
+    }
+
+    [Fact]
+    public void TheFilesLanguage_IsEveryTracks_UnlessTheTrackNamesItsOwn()
+    {
+        Assert.Equal("ko", Sung(Book("language korean", "lyrics w sings m { la la la la | }")).Language);
+        Assert.Equal("en", Sung(Book("language korean", "lyrics w language english sings m { la la la la | }")).Language);
+    }
+
+    [Fact]
+    public void NothingWritten_IsJapanese_WhoseSyllablesAreChecked()
+    {
+        var kana = Sung(Book("", "lyrics w sings m { さ く ら ら | }"));
+        Assert.Equal("ja", kana.Language);
+        Assert.Empty(kana.Warnings);
+        Assert.NotEmpty(Sung(Book("", "lyrics w sings m { la la la la | }")).Warnings);
+    }
+
+    [Theory]
+    [InlineData("language japanes", "lyrics w sings m { さ く ら ら | }")]
+    [InlineData("", "lyrics w language English sings m { la la la la | }")]    // the names are lower-case
+    public void AWordThatIsNoLanguage_IsAnError_OnTheWord(string head, string lyrics)
+    {
+        string source = Book(head, lyrics);
+        var error = Assert.Single(SyntaxTree.Parse(source).Diagnostics, d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
+        Assert.Equal(DiagnosticCodes.LyricLanguageUnknown, error.Code);
+        Assert.Contains(source[error.Span.Start..error.Span.End], new[] { "japanes", "English" });
+    }
+
+    [Theory]
+    [InlineData("lyrics language { la la la la | }", null)]
+    [InlineData("lyrics language sings m { la la la la | }", "m")]
+    public void ATrackMayStillBeCalledLanguage(string lyrics, string? target)
+    {
+        var block = Assert.Single(Parsed(Book("", lyrics)).GetRoot().DescendantNodes<LyricsBlockSyntax>());
+        Assert.Equal("language", block.VoiceName);
+        Assert.Null(block.Language);
+        Assert.Equal(target, block.SingsTarget);
+    }
+
+    [Fact]
+    public void AnUnnamedTrack_TakesTheClauses()
+    {
+        var block = Assert.Single(Parsed(Book("", "lyrics language english sings m { la la la la | }")).GetRoot().DescendantNodes<LyricsBlockSyntax>());
+        Assert.Equal(SyntaxFacts.UnnamedLyricsName, block.VoiceName);
+        Assert.Equal("english", block.Language);
+        Assert.Equal("m", block.SingsTarget);
+    }
+
+    [Theory]
+    [InlineData("language ")]
+    [InlineData("language ja")]
+    [InlineData("lyrics w language ")]
+    [InlineData("lyrics w sings m language en")]
+    [InlineData("section A { m { c4 d } lyrics w language ")]
+    public void TheEditor_OffersTheNames(string text)
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterLanguage, LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+
+    [Theory]
+    [InlineData("lyrics w { the language ")]                 // a body's words
+    [InlineData("score { staff m  lyrics w language ")]      // a score's row takes none
+    public void TheEditor_OffersNoNames_Elsewhere(string text)
+        => Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterLanguage, LilySharpLanguageServer.GetCompletionContext(text, text.Length));
+
+    [Fact]
+    public void TheNames_AreTheLowerCaseVocabulary()
+    {
+        Assert.Equal(new[] { "japanese", "english", "chinese", "korean" }, LyricLanguage.Names);
+        Assert.Equal("ja", LyricLanguage.CodeOf("japanese"));
+        Assert.Null(LyricLanguage.CodeOf("Japanese"));
+    }
+}

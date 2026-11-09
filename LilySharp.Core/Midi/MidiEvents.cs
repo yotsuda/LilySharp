@@ -99,5 +99,6 @@ public readonly record struct LyricEvent(
     int Tick,
     string Text,
     string? Part = null,
-    string? Sung = null
+    string? Sung = null,
+    string? Language = null     // the words' language tag (Music.LyricLanguage), null from a file; not written to .mid
 );

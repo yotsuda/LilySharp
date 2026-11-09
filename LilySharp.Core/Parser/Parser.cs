@@ -572,6 +572,7 @@ internal sealed partial class Parser
         SyntaxKind.Identifier when Current.Text == Semantics.CheckPragma.Keyword => false,
         SyntaxKind.Identifier when Current.Text == Semantics.CapoDirective.Keyword => false,
         SyntaxKind.Identifier when Current.Text == Semantics.ChordShapesDirective.Keyword => false,
+        SyntaxKind.Identifier when IsLanguageDeclaration() => false,
         // A bare clef or dynamic word is a phrase reference INSIDE a music stream
         // (IsBareReferenceKind), and nothing at the file level: it keeps falling to the
         // skip path, where `treble { … }` gets its grand-staff hint (LYS0011) and anything
@@ -639,6 +640,8 @@ internal sealed partial class Parser
             // piece's data (owner's decision 2026-10-31; Semantics.CapoDirective, ChordShapesDirective).
             SyntaxKind.Identifier when Current.Text == Semantics.CapoDirective.Keyword => ParseCapoDirective(),
             SyntaxKind.Identifier when Current.Text == Semantics.ChordShapesDirective.Keyword => ParseChordShapesDeclaration(),
+            // `language japanese` — what the file's lyrics are written in (Music.LyricLanguage).
+            SyntaxKind.Identifier when IsLanguageDeclaration() => new LanguageDeclarationGreen(Advance(), ParseLanguageName()),
 
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword
                 or SyntaxKind.SubtitleKeyword or SyntaxKind.PoetKeyword => ParseMetadataDeclaration(),

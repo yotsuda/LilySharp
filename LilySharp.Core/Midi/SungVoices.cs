@@ -53,7 +53,8 @@ public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungN
 /// </remarks>
 public static class SungVoices
 {
-    /// <summary>The one language the voices speak today (NEUTRINO's kana).</summary>
+    /// <summary>The tag of the language lyrics are in when nothing names one, the only one
+    /// whose syllables are checked here (kana; <see cref="Music.LyricLanguage"/>).</summary>
     public const string Japanese = "ja";
 
     /// <summary>Every voice of <paramref name="midi"/>, in the order their parts first sing.</summary>
@@ -63,6 +64,8 @@ public static class SungVoices
         var lyrics = midi.Tracks.SelectMany(t => t.Lyrics).Where(l => l.Part != null).ToList();
         foreach (var part in lyrics.Select(l => l.Part!).Distinct(StringComparer.Ordinal))
         {
+            // The part's language: its first words' (one voice a part; the first words at an onset win).
+            string language = lyrics.First(l => l.Part == part).Language ?? Japanese;
             var words = new Dictionary<int, string>();
             foreach (var l in lyrics)
                 if (l.Part == part)
@@ -106,14 +109,14 @@ public static class SungVoices
                 double start = secondsAt(note.StartTick);
                 double duration = Math.Max(0.001, secondsAt(end) - start);
                 notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos));
-                if (lyric != null && !IsKana(lyric) && !strange.Contains(lyric, StringComparer.Ordinal))
+                if (lyric != null && language == Japanese && !IsKana(lyric) && !strange.Contains(lyric, StringComparer.Ordinal))
                     strange.Add(lyric);
             }
             var warnings = new List<string>();
             if (strange.Count > 0)
                 warnings.Add($"{strange.Count} syllable(s) are not kana, which the Japanese voice needs: "
                     + string.Join(" ", strange.Take(8)) + (strange.Count > 8 ? " …" : ""));
-            voices.Add(new SungVoice(part, Japanese, notes, warnings));
+            voices.Add(new SungVoice(part, language, notes, warnings));
         }
         return voices;
     }

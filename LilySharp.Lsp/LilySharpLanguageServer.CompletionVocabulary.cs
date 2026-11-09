@@ -2734,10 +2734,27 @@ public sealed partial class LilySharpLanguageServer
     /// same-name blocks may repeat it identically or omit it). A score then only
     /// PLACES the row — under the staff it sings, it is that staff's verse;
     /// anywhere else, words-only at the melody's rhythm.</summary>
+    internal static CompletionList GetLanguageNameCompletions() => new()
+    {
+        Items = LilySharp.Core.Music.LyricLanguage.Names
+            .Select((name, i) => new CompletionItem { Label = name, Kind = CompletionItemKind.EnumMember, SortText = i.ToString("00"), Detail = "The language of the lyrics" })
+            .ToArray(),
+    };
+
     internal static CompletionList GetLyricsTrackNameCompletions() => new()
     {
         Items =
         [
+            new CompletionItem
+            {
+                Label = LilySharp.Core.Music.LyricLanguage.Keyword,
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "language $0",
+                Detail = "The language this track's words are written in",
+                SortText = "1",
+                Command = new Command { Title = "Suggest language", CommandIdentifier = "editor.action.triggerSuggest" },
+            },
             new CompletionItem
             {
                 Label = "sings",
@@ -3936,6 +3953,7 @@ public sealed partial class LilySharpLanguageServer
                 // The piece's chord data (owner's grammar 2026-10-31): the capo every pressed shape
                 // is relative to (the frets open after the space, ranked), and the shape table.
                 new CompletionItem { Label = LilySharp.Core.Semantics.CapoDirective.Keyword, Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "capo $0", Detail = "A capo on fret N (1-11): every shape is the pressed shape, the names the pressed chords' (chordNames), \"Capo N\" at the head — the list ranks the frets by barre chords", Command = new Command { Title = "Suggest capo fret", CommandIdentifier = "editor.action.triggerSuggest" } },
+                new CompletionItem { Label = LilySharp.Core.Music.LyricLanguage.Keyword, Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "language $0", Detail = "The language the file's lyrics are written in (default: japanese)", Command = new Command { Title = "Suggest language", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = LilySharp.Core.Semantics.ChordShapesDirective.Keyword, Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "chordShapes {\n\t$0\n}", Detail = "The shape each chord draws wherever it is named — `chordShapes { Cm7 x35343  G  section Chorus { C x35553 } }` (a name alone: its usual shape)" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).

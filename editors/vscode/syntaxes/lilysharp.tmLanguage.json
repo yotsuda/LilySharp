@@ -12,6 +12,7 @@
         { "include": "#paper-block" },
         { "include": "#layout-block" },
         { "include": "#capo-directive" },
+        { "include": "#language-directive" },
         { "include": "#chord-shapes-block" },
         { "include": "#part-body" },
         { "include": "#instrument-value" },
@@ -433,6 +434,14 @@
             "captures": {
                 "1": { "name": "keyword.other.lilysharp" },
                 "2": { "name": "constant.numeric.lilysharp" }
+            }
+        },
+        "language-directive": {
+            "comment": "The top-level `language NAME` (Music.LyricLanguage): anchored at the start of a line, as `capo` is, for `language` is not a reserved word.",
+            "match": "^[ \\t]*(language)\\s+(japanese|english|chinese|korean)\\b",
+            "captures": {
+                "1": { "name": "keyword.other.lilysharp" },
+                "2": { "name": "constant.language.lilysharp" }
             }
         },
         "chord-shapes-block": {

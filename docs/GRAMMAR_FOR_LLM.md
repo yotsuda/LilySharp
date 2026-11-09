@@ -833,6 +833,8 @@ extender line under it; a standalone `~` takes one note the same way with NO lin
 sings かん (the preview's voice and `lysc wav --singer`); `大[おお]空[ぞら]` prints 大空 and sings
 おおぞら. Write the reading in kana. The brackets must touch the word — `漢 [かん]` is an error
 (LYS4036) — and a kanji without a reading prints but is not sung (the voice says so once).
+Words are `japanese` unless a line `language english` says so for the file, or a track does:
+`lyrics en language english sings melody { … }` (the names: japanese english chinese korean).
 
 ```
 part melody

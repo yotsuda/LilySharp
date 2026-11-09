@@ -392,6 +392,8 @@ public enum SyntaxKind : ushort
     /// <summary>The file's chord-shape table (<c>chordShapes { Cm7 x35343  section A { … } }</c>),
     /// a top-level block (owner's decision 2026-10-31).</summary>
     ChordShapesDeclaration,
+    /// <summary>The language of the file's lyrics (<c>language japanese</c>).</summary>
+    LanguageDeclaration,
     /// <summary>A variable declaration node (legacy, <c>name = { ... }</c>).</summary>
     VariableDeclaration,
     /// <summary>A phrase declaration node (<c>phrase name { ... }</c>).</summary>

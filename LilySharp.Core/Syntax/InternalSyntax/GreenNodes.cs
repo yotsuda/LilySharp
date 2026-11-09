@@ -501,6 +501,15 @@ internal sealed class ChordShapesDeclarationGreen : GreenSyntaxNode
     }
 }
 
+/// <summary>The language of the file's lyrics: language japanese (Music.LyricLanguage).</summary>
+internal sealed class LanguageDeclarationGreen : GreenSyntaxNode
+{
+    public LanguageDeclarationGreen(SyntaxToken keyword, SyntaxToken value)
+        : base(SyntaxKind.LanguageDeclaration, [keyword, value])
+    {
+    }
+}
+
 /// <summary>
 /// Variable declaration: name = expr (new style) or let name = expr (legacy)
 /// </summary>
@@ -1265,30 +1274,28 @@ internal sealed class BreakGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class LyricsBlockGreen : GreenSyntaxNode
 {
-    // `lyrics [name] [sings part] { … }` — the optional name binds the lyrics to a
-    // same-named voice or part; the optional `sings part` pair binds the track to
-    // the named part's melody at the DEFINITION (the score only places it). The
-    // optional tokens sit between the keyword and the brace, present-or-absent as
-    // slots (the red side finds the brace by kind, not by index).
+    // `lyrics [name] { clause } { … }` — the optional name binds the lyrics to a
+    // same-named voice or part; each clause is a pair of tokens in source order, the word
+    // and its value (`sings part` binds the track to the named part's melody at the
+    // DEFINITION, `language english` says what its words are written in). Slot 1 is the
+    // name or null, the clauses are pairs from slot 2 (a value that is missing is a null),
+    // so the red side reads them by position whatever their order and finds the brace by kind.
     public LyricsBlockGreen(
         SyntaxToken lyricsKeyword,
         SyntaxToken? name,
-        SyntaxToken? singsKeyword,
-        SyntaxToken? singsTarget,
+        SyntaxToken?[] clauses,
         SyntaxToken openBrace,
         GreenNode?[] measures,
         SyntaxToken closeBrace)
-        : base(SyntaxKind.LyricsBlock, Slots(lyricsKeyword, name, singsKeyword, singsTarget, openBrace, measures, closeBrace))
+        : base(SyntaxKind.LyricsBlock, Slots(lyricsKeyword, name, clauses, openBrace, measures, closeBrace))
     {
     }
 
-    private static GreenNode?[] Slots(SyntaxToken kw, SyntaxToken? name, SyntaxToken? singsKw,
-        SyntaxToken? singsTarget, SyntaxToken open, GreenNode?[] measures, SyntaxToken close)
+    private static GreenNode?[] Slots(SyntaxToken kw, SyntaxToken? name, SyntaxToken?[] clauses,
+        SyntaxToken open, GreenNode?[] measures, SyntaxToken close)
     {
-        var head = new List<GreenNode?> { kw };
-        if (name != null) head.Add(name);
-        if (singsKw != null) head.Add(singsKw);
-        if (singsTarget != null) head.Add(singsTarget);
+        var head = new List<GreenNode?> { kw, name };
+        head.AddRange(clauses);
         head.Add(open);
         head.AddRange(measures);
         head.Add(close);

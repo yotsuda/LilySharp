@@ -1611,6 +1611,10 @@ public static class DiagnosticCodes
     /// sing; it is still handed to the voice as written. The parser.</summary>
     public const string LyricReadingNotKana = "LYS4037";
 
+    /// <summary>Lyric error: <c>language</c> names no language of the closed vocabulary
+    /// (<see cref="Music.LyricLanguage"/>). The parser.</summary>
+    public const string LyricLanguageUnknown = "LYS4038";
+
     /// <summary>Warning: a drum staff's voices write two different levels at one moment —
     /// <c>@f</c> on the hands' line and <c>@p</c> on the feet's (owner's decision 2026-10-30).
     /// One drummer plays one level; the same level in both lines prints once

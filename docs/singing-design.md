@@ -108,8 +108,10 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   `Svg.Collector.SungStaves` reads all this off the score's rows for `lilysharp/playback`
   (`Sung`, `Played`); the preview lets the voice stand in for the instrument only where the
   part is sung and not played.
-- **Language**: `ja` when the syllables are kana; otherwise the score is passed as it is and
-  the engine answers that it cannot sing it (NEUTRINO: kanji, romaji). The editor shows the
+- **Language**: a fact of the words (session 1167): `language NAME` on the file or a lyrics
+  track, `japanese` when nothing is written (`Music.LyricLanguage`); the voice's `Language` is
+  its first words' tag, and only Japanese words are checked for kana. Otherwise the score is
+  passed as it is and the engine answers that it cannot sing it (NEUTRINO: kanji, romaji). The editor shows the
   engine's sentence once per score and plays the instruments alone.
 - **Kanji with a reading** (owner's decision 2026-11-08, session 1138): the reading is glued to
   the word in the syllable — `漢[かん]` prints 漢 and sings かん, `大[おお]空[ぞら]` prints 大空
