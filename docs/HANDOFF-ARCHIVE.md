@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1197セッションの経緯
+
+### 1.1 第1197セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15002 / 0 / 2**（`-Start p1197`・HEAD `23df55f3c`・未 push 97）。オーナー「同じパートを複数の声で歌えるようにして」。作業場所は Lab `sessions/p1197/`。
+
+- 書き方は文字列の中の `+`（`singer "neutrino/MERROW + diffsinger/TIGER"`）。文法は増やさない（Lily# は文字列を運ぶだけ）。パートは 1 つのまま、Cantilena が各声で歌って重ねる（`ChorusSinger`、1/√n、一番高いレートへ）。
+- エディタ: 補完と Ctrl+Shift+Up/Down はカーソルのある 1 人だけを替える（`singerPiece`）。`+` と `+ ` で候補が開く。カーソルで聞くと全員の合唱。
+- 実測: NEUTRINO MERROW と DiffSinger TIGER の 7 音を CLI で歌わせて 1 つの WAV。
+- 終了時 full **15002 合格 / 0 失敗 / skip 2 / 合計 15004**（`-End p1197 -DiffBase 23df55f3c`、BUILD 0）・npm 938 / 938。`Deploy-Lsp.ps1` と Cantilena の `deploy-extension.ps1` で配布済み（Reload Window 1 回）。
+
 ## 以下は第1196セッションの経緯
 
 ### 1.1 第1196セッション（2026-11-09・YT-DELL2）

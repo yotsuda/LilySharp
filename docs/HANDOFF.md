@@ -138,6 +138,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1199セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1199`・HEAD `801c8ac2d`・未 push 99）。オーナー「英語で歌える声が少ない」→「(話者を声として出すのを) 進めて」。作業場所は Lab `sessions/p1199/`。
+
+- Cantilena のみ（Lily# のコード変更なし）: DiffSinger の話者を `diffsinger/TIGER/tiger_disco` として一覧に出す（`character.yaml` の名前をラベルに、モデルは共有）。
+- TIGER の話者は 7 つで、同じ歌手の声の調子（Fresh、Disco、Electric、Vinyl、Glam、Mystic、Royal）。`dsacoustic/dsconfig.yaml` の `alex_*` など 41 人は埋め込みファイルが無く使えない（読み違えの訂正）。TIGER は商用利用に別途ライセンスが要る（`extra\LICENSE.md`）。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1199 -DiffBase 801c8ac2d`、BUILD 0）。Cantilena の `deploy-extension.ps1` で配布済み（Reload Window 1 回）。
+
+## 以下は第1198セッションの経緯
+
 ### 1.1 第1198セッション（2026-11-09・YT-DELL2）
 
 開始時 full **15002 / 0 / 2**（`-Start p1198`・HEAD `86735d0e2`・未 push 98）。オーナー「それだと自動補完が使いにくい。カンマで連結できないかな」`singer "neutrino/MERROW","diffsinger/TIGER"`。作業場所は Lab `sessions/p1198/`。
@@ -145,17 +155,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 文法 `SingerValue = String , { ',' , String } | SingerGender , [ ... ]`（part・歌詞の頭・score の行）。Lily# は `+` でつないだ文字列として運び、engine への渡し方は第1197 のまま。第1197 の文字列内 `+` の案内と `singerPiece` は廃止。
 - 編集: 文字列ごとに補完と声送りが効く。`,` と `, ` で次の名前の一覧が開く（引用符付きで入る）。
 - 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1198 -DiffBase 86735d0e2`、BUILD 0）・npm 938 / 938。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
-
-## 以下は第1197セッションの経緯
-
-### 1.1 第1197セッション（2026-11-09・YT-DELL2）
-
-開始時 full **15002 / 0 / 2**（`-Start p1197`・HEAD `23df55f3c`・未 push 97）。オーナー「同じパートを複数の声で歌えるようにして」。作業場所は Lab `sessions/p1197/`。
-
-- 書き方は文字列の中の `+`（`singer "neutrino/MERROW + diffsinger/TIGER"`）。文法は増やさない（Lily# は文字列を運ぶだけ）。パートは 1 つのまま、Cantilena が各声で歌って重ねる（`ChorusSinger`、1/√n、一番高いレートへ）。
-- エディタ: 補完と Ctrl+Shift+Up/Down はカーソルのある 1 人だけを替える（`singerPiece`）。`+` と `+ ` で候補が開く。カーソルで聞くと全員の合唱。
-- 実測: NEUTRINO MERROW と DiffSinger TIGER の 7 音を CLI で歌わせて 1 つの WAV。
-- 終了時 full **15002 合格 / 0 失敗 / skip 2 / 合計 15004**（`-End p1197 -DiffBase 23df55f3c`、BUILD 0）・npm 938 / 938。`Deploy-Lsp.ps1` と Cantilena の `deploy-extension.ps1` で配布済み（Reload Window 1 回）。
 
 ## 2. 開いている作業
 
