@@ -578,6 +578,12 @@ export function voiceBadge(voices: readonly VoiceStatus[]): { state: VoiceState;
     return { state: 'ready', title: `voice ready: ${names(ready)}` };
 }
 
+/** Whether the bar under Play shows: only while the engine is singing a voice (owner's request
+ *  2026-11-09, session 1179), not for a voice waiting, read from the cache, or not named yet. */
+export function voiceBarShown(parts: readonly { state: VoiceState; singing?: boolean }[]): boolean {
+    return parts.some(p => p.state === 'preparing' && p.singing === true);
+}
+
 /** A voice's weight in the bar when nothing is known of how long it takes. */
 const VOICE_DEFAULT_ESTIMATE_MS = 3000;
 /** How far the bar goes on a voice's estimate alone: only the engine's answer finishes it. */

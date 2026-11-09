@@ -4252,7 +4252,7 @@ async function renderVoice(job: PrepareJob): Promise<void> {
     // meanwhile, whose empty `voiceParts` had already gone out — a `preparing` landing after it
     // kept the microphone pulsing for ever (owner's report 2026-11-09, session 1160).
     if (!wanted()) { return; }
-    if (!cached) { void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'preparing', estimateMs: voiceEstimateMs(voice, speed) }); }
+    if (!cached) { void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'preparing', estimateMs: voiceEstimateMs(voice, speed), singing: true }); }
     const askedAt = Date.now();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
@@ -4722,7 +4722,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
            is ready, the error colour when one will not be sung. */
         .toolbar .play-wrap { position: relative; display: inline-flex; }
         .toolbar .voice-badge {
-            position: absolute; right: -5px; bottom: -5px; width: 15px; height: 15px;
+            position: absolute; right: -5px; bottom: -5px; width: 15px; height: 15px; z-index: 1;
             display: inline-flex; align-items: center; justify-content: center;
             border-radius: 50%; background: white; padding: 1px; box-sizing: border-box;
             cursor: pointer; line-height: 0;
@@ -4733,11 +4733,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
            1160-1162; the host and the page had the state right all along). */
         .toolbar .voice-badge[hidden] { display: none; }
         .toolbar .voice-badge svg { width: 12px; height: 12px; display: block; }
-        /* The voices' progress (owner's request 2026-11-09, session 1178): a thin bar under Play while
-           the microphone pulses, stopping short of the microphone. An estimate: the engine says
-           nothing until a voice is done. */
+        /* The voices' progress (owner's requests 2026-11-09, sessions 1178 and 1179): a thin bar under
+           Play while the engine sings, running in under the microphone, its goal. An estimate: the
+           engine says nothing until a voice is done. */
         .toolbar .voice-bar {
-            position: absolute; left: 0; right: 11px; bottom: -5px; height: 3px;
+            position: absolute; left: 0; right: 2px; bottom: -5px; height: 3px;
             border-radius: 2px; background: rgba(128, 128, 128, 0.3); overflow: hidden; pointer-events: none;
         }
         .toolbar .voice-bar[hidden] { display: none; }
@@ -6542,31 +6542,28 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // as one badge beside the transport (playbackCore.voiceBadge) and as a sign on each
         // voice's toggle in the practice menu.
         const voiceStates = new Map();      // part -> { state, detail }
-        function setVoiceState(part, state, detail, estimateMs) {
+        function setVoiceState(part, state, detail, estimateMs, singing) {
             if (!sungNowHas(part)) { return; }      // a part this score does not sing: a late word of another text
             if (state === 'ready' || state === 'failed') { voiceBarFrom = Date.now(); }     // the next one's time begins
             // A voice told waiting or preparing is of a text that is gone (the host compares the
             // keys): the buffer goes with it, so a Play meanwhile plays the instrument, not the
             // old words (session 1148).
             if (state === 'waiting' || state === 'preparing') { voices.delete(part); }
-            voiceStates.set(part, { state, detail, estimateMs: estimateMs || (voiceStates.get(part) || {}).estimateMs });
+            voiceStates.set(part, { state, detail, estimateMs: estimateMs || (voiceStates.get(part) || {}).estimateMs, singing: !!singing });
             renderVoiceBadge();
         }
-        // The bar under Play, for as long as the microphone pulses. Not shown for the first moments,
-        // so a voice that comes from the cache does not flash it.
-        const VOICE_BAR_DELAY_MS = 200;
+        // The bar under Play, for as long as the engine is singing a voice (voiceBarShown).
         let voiceBarTimer = null, voiceBarStarted = 0, voiceBarFrom = 0;
         function paintVoiceBar() {
             const bar = document.getElementById('voiceBar');
             const now = Date.now();
-            if (now - voiceBarStarted < VOICE_BAR_DELAY_MS) { return; }
             bar.hidden = false;
             const parts = [...voiceStates.values()].map(s => ({ state: s.state, estimateMs: s.estimateMs }));
             bar.firstElementChild.style.width = Math.round(window.LysSynth.voiceProgress(parts, now - voiceBarFrom) * 100) + '%';
         }
-        function renderVoiceBar(pulsing) {
+        function renderVoiceBar(singing) {
             const bar = document.getElementById('voiceBar');
-            if (!pulsing) {
+            if (!singing) {
                 if (voiceBarTimer) { clearInterval(voiceBarTimer); voiceBarTimer = null; }
                 voiceBarStarted = 0;
                 bar.hidden = true;
@@ -6588,7 +6585,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const badge = document.getElementById('voiceBadge');
             const all = [...voiceStates].map(([part, s]) => ({ part, state: s.state, detail: s.detail }));
             const b = window.LysSynth.voiceBadge(all);
-            renderVoiceBar(!!b && b.state === 'preparing');
+            renderVoiceBar(window.LysSynth.voiceBarShown([...voiceStates.values()]));
             badge.hidden = !b;
             if (b) {
                 badge.dataset.state = b.state;
@@ -8138,7 +8135,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     playVoiceSample(message);
                     break;
                 case 'voiceState':
-                    setVoiceState(message.part, message.state, message.detail, message.estimateMs);
+                    setVoiceState(message.part, message.state, message.detail, message.estimateMs, message.singing);
                     break;
                 case 'voiceParts':
                     keepVoices(message.parts);
