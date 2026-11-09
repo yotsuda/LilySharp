@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1176セッションの経緯
+
+### 1.1 第1176セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14950 / 0 / 2**（`-Start p1176`・HEAD `355cebf05`・未 push 76）。オーナー報告「Harukaze-no-Mukou-e.lys の alt は YOKO で歌うように記載したのに CHANKO で歌っている」→「直して」。作業場所は Lab `sessions/p1176/`。
+
+- **原因**: `RenderSpec.RowSingers` が歌詞トラック名だけを鍵にしていた＝同じトラックを 2 行に置くと最初の行の `singer` が両方に効く（バスも RUNO になっていた）。
+- **修正**: `LyricSinger.RowKey(track, part)`＝トラックと、その行の `sings` の組を鍵に。`sings` のない行はトラック名だけ（従来どおり）。
+- 終了時 full **14953 合格 / 0 失敗 / skip 2 / 合計 14955**（`-End p1176 -DiffBase 355cebf05`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
 ## 以下は第1175セッションの経緯
 
 ### 1.1 第1175セッション（2026-11-09・YT-DELL2）

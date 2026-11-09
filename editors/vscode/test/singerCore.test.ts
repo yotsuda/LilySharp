@@ -18,7 +18,8 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, stepVoice, voiceKey, voiceSampleScore } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleScore } from '../src/singerCore';
+import { voiceProgress } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
 // engine's score, the key names the render, the engine's lines are read, and the Cantilena
@@ -218,6 +219,39 @@ describe('choosing a voice with the step keys', () => {
         clock.mark('server');
         assert.equal(clock.toString(), 'key queue 3 ms, server 7 ms');
         assert.equal(clock.startedAt, 100);
+    });
+});
+
+describe('the bar under Play', () => {
+    it('counts the voices ready whole and the one being sung against its estimate', () => {
+        const parts = [
+            { state: 'ready' as const, estimateMs: 2000 },
+            { state: 'preparing' as const, estimateMs: 1000 },
+            { state: 'preparing' as const, estimateMs: 1000 },
+        ];
+        assert.equal(voiceProgress(parts, 0), 0.5);
+        assert.equal(voiceProgress(parts, 500), 0.625);
+    });
+
+    it('does not finish on an estimate alone, only on the engine\'s answer', () => {
+        const one = [{ state: 'preparing' as const, estimateMs: 1000 }];
+        assert.equal(voiceProgress(one, 60000), 0.95);
+        assert.equal(voiceProgress([{ state: 'ready' as const, estimateMs: 1000 }], 0), 1);
+    });
+
+    it('leaves a failed voice out, and a voice of unknown length has a weight', () => {
+        assert.equal(voiceProgress([{ state: 'failed' as const, estimateMs: 1000 }], 500), 0);
+        assert.equal(voiceProgress([{ state: 'failed' as const, estimateMs: 1000 }, { state: 'ready' as const }], 0), 1);
+        assert.equal(voiceProgress([{ state: 'preparing' as const }], 1500), 0.5);
+        assert.equal(voiceProgress([], 100), 0);
+    });
+
+    it('estimates from what is sung and learns the engine\'s speed', () => {
+        assert.equal(sungSeconds({ Notes: [{ T: 0, D: 1, P: 60 }, { T: 3, D: 2, P: 60 }] }, 2), 2.5);
+        assert.equal(voiceRenderEstimateMs(10, 100), 2500);
+        assert.equal(learnRenderRate(100, 11500, 100), 100);
+        assert.equal(learnRenderRate(100, 21500, 100), 150);
+        assert.equal(learnRenderRate(100, 21500, 0), 100);
     });
 });
 

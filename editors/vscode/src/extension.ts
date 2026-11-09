@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_SAMPLE_VERSION, VoiceSampleQueue, cantilenaApiOf, fitsGender, prepareModeOf, singerChoices, singerValueAt, stepVoice, voiceSampleScore } from './singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, singerChoices, singerValueAt, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleScore } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -4119,6 +4119,15 @@ function failVoice(panel: vscode.WebviewPanel, part: string, speed: number, why:
     void panel.webview.postMessage({ type: 'voiceState', part, speed, state: 'failed', detail: why });
 }
 
+/** The engine's speed as last timed, and when it last answered: the bar's estimates (session 1178). */
+let voiceRenderRate = VOICE_RENDER_FIRST_RATE;
+let voiceLastLanded = 0;
+
+/** How long the engine should take over this voice at `speed`, for the bar under Play. */
+function voiceEstimateMs(voice: SungVoiceDto, speed: number): number {
+    return voiceRenderEstimateMs(sungSeconds(voice, speed), voiceRenderRate);
+}
+
 /** Why the voices are asked for: the text was rendered (`edit`), Play was pressed, the practice speed changed. */
 type PrepareReason = 'edit' | 'play' | 'speed';
 
@@ -4209,11 +4218,11 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
         mine.delete(voice.Part);
         const rests = reason === 'edit' && !turned && !engine.has(key);
         if (rests && mode === 'onPlay') {
-            void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'waiting' });
+            void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'waiting', estimateMs: voiceEstimateMs(voice, speed) });
             prepareQueue.cancelSlot(slot);
             continue;
         }
-        void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: rests ? 'waiting' : 'preparing' });
+        void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: rests ? 'waiting' : 'preparing', estimateMs: voiceEstimateMs(voice, speed) });
         prepareQueue.schedule(slot, { panel, voice, speed, mine }, rests ? PREPARE_IDLE_MS : 0);
     }
 }
@@ -4243,7 +4252,8 @@ async function renderVoice(job: PrepareJob): Promise<void> {
     // meanwhile, whose empty `voiceParts` had already gone out — a `preparing` landing after it
     // kept the microphone pulsing for ever (owner's report 2026-11-09, session 1160).
     if (!wanted()) { return; }
-    if (!cached) { void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'preparing' }); }
+    if (!cached) { void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'preparing', estimateMs: voiceEstimateMs(voice, speed) }); }
+    const askedAt = Date.now();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
         timer = setTimeout(() => reject(new Error(`the engine gave no answer in ${PREPARE_TIMEOUT_MS / 1000} s`)), PREPARE_TIMEOUT_MS);
@@ -4251,6 +4261,12 @@ async function renderVoice(job: PrepareJob): Promise<void> {
     const singing = (async () => {
         try {
             const v = await Promise.race([rendered, timeout]);
+            if (!cached) {
+                // The engine sings one at a time: this voice's time began when the last one landed.
+                const now = Date.now();
+                voiceRenderRate = learnRenderRate(voiceRenderRate, now - Math.max(askedAt, voiceLastLanded), v.duration);
+                voiceLastLanded = now;
+            }
             if (!wanted()) { return; }
             const bytes = await fs.promises.readFile(v.wav);
             if (!wanted()) { return; }
@@ -4717,6 +4733,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
            1160-1162; the host and the page had the state right all along). */
         .toolbar .voice-badge[hidden] { display: none; }
         .toolbar .voice-badge svg { width: 12px; height: 12px; display: block; }
+        /* The voices' progress (owner's request 2026-11-09, session 1178): a thin bar under Play while
+           the microphone pulses, stopping short of the microphone. An estimate: the engine says
+           nothing until a voice is done. */
+        .toolbar .voice-bar {
+            position: absolute; left: 0; right: 11px; bottom: -5px; height: 3px;
+            border-radius: 2px; background: rgba(128, 128, 128, 0.3); overflow: hidden; pointer-events: none;
+        }
+        .toolbar .voice-bar[hidden] { display: none; }
+        .toolbar .voice-bar > span { display: block; height: 100%; width: 0; background: #0078d7; transition: width 0.15s linear; }
+        :root.theme-dark .toolbar .voice-bar > span { background: #4fa3ff; }
         .toolbar .voice-badge[data-state="waiting"] { color: #888; }
         .toolbar .voice-badge[data-state="preparing"] { color: #888; animation: voice-pulse 1.2s ease-in-out infinite; }
         .toolbar .voice-badge[data-state="ready"] { color: #0078d7; }
@@ -4856,6 +4882,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <span class="play-wrap">
         <button id="playBtn" type="button" title="Play">▶</button>
         <span id="voiceBadge" class="voice-badge" role="status" hidden aria-label="Voice"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="1.2" width="4" height="7.6" rx="2"/><path d="M3.6 7.4a4.4 4.4 0 0 0 8.8 0"/><path d="M8 11.8v2.6M5.6 14.4h4.8"/></svg></span>
+        <span id="voiceBar" class="voice-bar" hidden aria-hidden="true"><span></span></span>
         </span>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
         <button id="practiceBtn" class="toggle icon practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Tempo, loop, metronome, parts"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3.6 14.8 6.3 1.4h3.4l2.7 13.4zM7.3 3 5.9 10.2h4.2L8.7 3z"/><path d="M7.7 11.2 12.4 3.9l1 .65-4.7 7.3z"/></svg><span id="practiceSpeed"></span></button>
@@ -6515,14 +6542,40 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // as one badge beside the transport (playbackCore.voiceBadge) and as a sign on each
         // voice's toggle in the practice menu.
         const voiceStates = new Map();      // part -> { state, detail }
-        function setVoiceState(part, state, detail) {
+        function setVoiceState(part, state, detail, estimateMs) {
             if (!sungNowHas(part)) { return; }      // a part this score does not sing: a late word of another text
+            if (state === 'ready' || state === 'failed') { voiceBarFrom = Date.now(); }     // the next one's time begins
             // A voice told waiting or preparing is of a text that is gone (the host compares the
             // keys): the buffer goes with it, so a Play meanwhile plays the instrument, not the
             // old words (session 1148).
             if (state === 'waiting' || state === 'preparing') { voices.delete(part); }
-            voiceStates.set(part, { state, detail });
+            voiceStates.set(part, { state, detail, estimateMs: estimateMs || (voiceStates.get(part) || {}).estimateMs });
             renderVoiceBadge();
+        }
+        // The bar under Play, for as long as the microphone pulses. Not shown for the first moments,
+        // so a voice that comes from the cache does not flash it.
+        const VOICE_BAR_DELAY_MS = 200;
+        let voiceBarTimer = null, voiceBarStarted = 0, voiceBarFrom = 0;
+        function paintVoiceBar() {
+            const bar = document.getElementById('voiceBar');
+            const now = Date.now();
+            if (now - voiceBarStarted < VOICE_BAR_DELAY_MS) { return; }
+            bar.hidden = false;
+            const parts = [...voiceStates.values()].map(s => ({ state: s.state, estimateMs: s.estimateMs }));
+            bar.firstElementChild.style.width = Math.round(window.LysSynth.voiceProgress(parts, now - voiceBarFrom) * 100) + '%';
+        }
+        function renderVoiceBar(pulsing) {
+            const bar = document.getElementById('voiceBar');
+            if (!pulsing) {
+                if (voiceBarTimer) { clearInterval(voiceBarTimer); voiceBarTimer = null; }
+                voiceBarStarted = 0;
+                bar.hidden = true;
+                bar.firstElementChild.style.width = '0';
+                return;
+            }
+            if (!voiceBarStarted) { voiceBarStarted = voiceBarFrom = Date.now(); }
+            if (!voiceBarTimer) { voiceBarTimer = setInterval(paintVoiceBar, 100); }
+            paintVoiceBar();
         }
         // The host asked for the voices and got none to name (the text has an error, the server
         // is not up): the nameless placeholder of clearVoices goes, what is known stays.
@@ -6535,6 +6588,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const badge = document.getElementById('voiceBadge');
             const all = [...voiceStates].map(([part, s]) => ({ part, state: s.state, detail: s.detail }));
             const b = window.LysSynth.voiceBadge(all);
+            renderVoiceBar(!!b && b.state === 'preparing');
             badge.hidden = !b;
             if (b) {
                 badge.dataset.state = b.state;
@@ -8084,7 +8138,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     playVoiceSample(message);
                     break;
                 case 'voiceState':
-                    setVoiceState(message.part, message.state, message.detail);
+                    setVoiceState(message.part, message.state, message.detail, message.estimateMs);
                     break;
                 case 'voiceParts':
                     keepVoices(message.parts);

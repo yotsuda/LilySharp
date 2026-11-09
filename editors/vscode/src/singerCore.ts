@@ -122,6 +122,28 @@ export function stepVoice(voices: readonly Pick<CantilenaVoice, 'id' | 'engine'>
     return list[list.findIndex(v => v.id === current) - direction]?.id;
 }
 
+/** What a render costs before its length counts: the bar's estimate (session 1178). */
+const VOICE_RENDER_BASE_MS = 1500;
+/** A first guess at the engine's speed, in milliseconds per second sung, until a render is timed. */
+export const VOICE_RENDER_FIRST_RATE = 100;
+
+/** How many seconds a voice lasts at `speed`, from its first note's start at 0. */
+export function sungSeconds(dto: Pick<SungVoiceDto, 'Notes'>, speed: number): number {
+    return dto.Notes.reduce((end, n) => Math.max(end, n.T + n.D), 0) / speed;
+}
+
+/** How long the engine should take over `seconds` sung, at its `rate`. */
+export function voiceRenderEstimateMs(seconds: number, rate: number): number {
+    return VOICE_RENDER_BASE_MS + seconds * rate;
+}
+
+/** The engine's speed after a render of `seconds` took `elapsedMs`, the earlier speed counting half. */
+export function learnRenderRate(rate: number, elapsedMs: number, seconds: number): number {
+    if (seconds <= 0) { return rate; }
+    const measured = Math.max(0, elapsedMs - VOICE_RENDER_BASE_MS) / seconds;
+    return Math.min(3000, Math.max(10, (rate + measured) / 2));
+}
+
 /** Bumped when the phrase below changes: the samples kept on disk are named with it. */
 export const VOICE_SAMPLE_VERSION = 2;
 

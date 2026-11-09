@@ -138,22 +138,23 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1178セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14953 / 0 / 2**（`-Start p1178`・HEAD `fe0f32fc6`・未 push 78）。オーナー「声を生成完了するまで、マイクの点滅が点灯に変わるまでの間に、小さなプログレスバーを再生ボタンの下に出して」。作業場所は Lab `sessions/p1178/`。
+
+- **バー**: `#voiceBar`（play-wrap の下・マイクの手前まで）。バッジが preparing の間だけ・200 ms 待ってから出す（キャッシュの声で点滅させない）。`.voice-bar[hidden]` を書いた（第1162 の罠）。
+- **進み具合は見積もり**: エンジンは声が出来上がるまで何も言わない。`voiceProgress`（playbackCore）＝出来た声は丸ごと・歌っている声は経過時間 / 見積もり（95% で止まり、答えで進む）。見積もりは `1.5 秒 + 歌う秒数 × 速度`、速度は初回 100 ms/秒、実測ごとに半分ずつ寄せる（`learnRenderRate`・その拡張ホストの間だけ）。部分ごとの重みは見積もり。
+- 実機の見た目（位置・太さ）はオーナー。
+- 終了時 full **14953 合格 / 0 失敗 / skip 2 / 合計 14955**（`-End p1178 -DiffBase fe0f32fc6`、BUILD 0）・npm 931 / 931。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
+## 以下は第1177セッションの経緯
+
 ### 1.1 第1177セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14953 / 0 / 2**（`-Start p1177`・HEAD `247f66a77`・未 push 77）。オーナー「男性の音声を選択したときの「こんにちわ」は、1オクターブ低くして」。作業場所は Lab `sessions/p1177/`。
 
 - `voiceSampleScore(language, gender)`: 性別が male の声だけ 12 半音下。`VOICE_SAMPLE_VERSION` は 2 のまま（試聴の機能は未公開で、ファイルはオーナーの手元だけ＝男性 3 声を CLI で同じ名前に作り直した）。
 - 終了時 full **14953 合格 / 0 失敗 / skip 2 / 合計 14955**（`-End p1177 -DiffBase 247f66a77`、BUILD 0）・npm 927 / 927。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
-
-## 以下は第1176セッションの経緯
-
-### 1.1 第1176セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14950 / 0 / 2**（`-Start p1176`・HEAD `355cebf05`・未 push 76）。オーナー報告「Harukaze-no-Mukou-e.lys の alt は YOKO で歌うように記載したのに CHANKO で歌っている」→「直して」。作業場所は Lab `sessions/p1176/`。
-
-- **原因**: `RenderSpec.RowSingers` が歌詞トラック名だけを鍵にしていた＝同じトラックを 2 行に置くと最初の行の `singer` が両方に効く（バスも RUNO になっていた）。
-- **修正**: `LyricSinger.RowKey(track, part)`＝トラックと、その行の `sings` の組を鍵に。`sings` のない行はトラック名だけ（従来どおり）。
-- 終了時 full **14953 合格 / 0 失敗 / skip 2 / 合計 14955**（`-End p1176 -DiffBase 355cebf05`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
 
 ## 2. 開いている作業
 

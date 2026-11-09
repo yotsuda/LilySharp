@@ -578,6 +578,28 @@ export function voiceBadge(voices: readonly VoiceStatus[]): { state: VoiceState;
     return { state: 'ready', title: `voice ready: ${names(ready)}` };
 }
 
+/** A voice's weight in the bar when nothing is known of how long it takes. */
+const VOICE_DEFAULT_ESTIMATE_MS = 3000;
+/** How far the bar goes on a voice's estimate alone: only the engine's answer finishes it. */
+const VOICE_ESTIMATE_CEILING = 0.95;
+
+/**
+ * How far the voices are, 0 to 1, for the bar under Play (owner's request 2026-11-09, session 1178).
+ * The engine says nothing until a voice is done, and sings one at a time: so the voices ready count
+ * whole, and the one being sung by `elapsedMs` (since the last one landed) against its estimate.
+ * An estimate, each part weighed by how long it should take; a part that failed does not count.
+ */
+export function voiceProgress(parts: readonly { state: VoiceState; estimateMs?: number }[], elapsedMs: number): number {
+    const weight = (p: { estimateMs?: number }) => p.estimateMs && p.estimateMs > 0 ? p.estimateMs : VOICE_DEFAULT_ESTIMATE_MS;
+    const counted = parts.filter(p => p.state !== 'failed');
+    const total = counted.reduce((sum, p) => sum + weight(p), 0);
+    if (total === 0) { return 0; }
+    const ready = counted.filter(p => p.state === 'ready').reduce((sum, p) => sum + weight(p), 0);
+    const singing = counted.find(p => p.state === 'preparing');
+    const running = singing ? Math.min(weight(singing) * VOICE_ESTIMATE_CEILING, Math.max(0, elapsedMs)) : 0;
+    return Math.min(1, (ready + running) / total);
+}
+
 /** The channels `events` touch — what a stop has to silence. */
 export function channelsOf(events: readonly MidiEvent[]): number[] {
     const set = new Set<number>();
