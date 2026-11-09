@@ -367,6 +367,54 @@ public class LyricLanguageTests
         Assert.All(gone, l => Assert.DoesNotContain(l, labels));
     }
 
+    // ── one track under several staves, a singer each (owner's report, session 1176) ──
+
+    private static string Choir(string rows) => $$"""
+        part sop { clef treble }
+        part alt { clef treble }
+        section A {
+          sop { c'4 d e f | }
+          alt { a4 b c d | }
+          lyrics words sings sop { さ く ら ら | }
+        }
+        form { A }
+        score { {{rows}} }
+        """;
+
+    private static System.Collections.Generic.Dictionary<string, string?> SingersByPart(string source)
+    {
+        Parsed(source);
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///choir.lys");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = source, Version = 1, LanguageId = "lilysharp" },
+        });
+        var sung = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        Assert.Null(sung.Error);
+        return sung.Voices!.ToDictionary(v => v.Part, v => v.Singer);
+    }
+
+    [Fact]
+    public void TwoRowsOfOneTrack_SingWithTheirOwnSingers()
+    {
+        var singers = SingersByPart(Choir("staff sop  lyrics words singer \"a/A\" sings sop  staff alt  lyrics words singer \"b/B\" sings alt"));
+        Assert.Equal("a/A", singers["sop"]);
+        Assert.Equal("b/B", singers["alt"]);
+    }
+
+    [Fact]
+    public void ARowsSinger_IsNotAnotherRowsOfTheSameTrack()
+    {
+        var singers = SingersByPart(Choir("staff sop  lyrics words singer \"a/A\" sings sop  staff alt  lyrics words sings alt"));
+        Assert.Equal("a/A", singers["sop"]);
+        Assert.Null(singers["alt"]);
+    }
+
+    [Fact]
+    public void ARowNamingNoPart_IsTheTracksEverywhere()
+        => Assert.Equal("a/A", SingersByPart(Choir("staff sop  lyrics words singer \"a/A\"  staff alt"))["sop"]);
+
     // ── a gender with no name: the engine picks such a voice (session 1175) ──
 
     [Theory]

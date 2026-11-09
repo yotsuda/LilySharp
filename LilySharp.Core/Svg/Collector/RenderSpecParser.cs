@@ -271,13 +271,14 @@ public static class RenderSpecParser
             RowSingers: RowSingersOf(render));
     }
 
-    /// <summary>The score's <c>lyrics … singer "…"</c> rows by track, or null for none.</summary>
+    /// <summary>The score's <c>lyrics … singer "…"</c> rows by <see cref="LilySharp.Core.Music.LyricSinger.RowKey"/>, or null for none.</summary>
     private static ImmutableDictionary<string, string>? RowSingersOf(RenderDeclarationSyntax render)
     {
         ImmutableDictionary<string, string>.Builder? singers = null;
         foreach (var row in render.DescendantNodes<LyricsRowRenderSyntax>())
             if (row.Singer is { Length: > 0 } singer)
-                (singers ??= ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal)).TryAdd(row.PartName, singer);
+                (singers ??= ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal))
+                    .TryAdd(LilySharp.Core.Music.LyricSinger.RowKey(row.PartName, row.SingsTarget), singer);
         return singers?.ToImmutable();
     }
 

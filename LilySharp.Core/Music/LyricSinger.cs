@@ -47,6 +47,12 @@ public static class LyricSinger
     public static string ValueOf(string token)
         => StringLiteral.IsClosed(token) ? StringLiteral.Value(token) : token.Trim('"');
 
+    /// <summary>The key a score row's singer is kept under: the track and the part the row says it
+    /// sings, as one track may stand under several staves (owner's report 2026-11-09, session 1176:
+    /// two rows of one track, each with its own singer, both sang the first's); the track alone for a
+    /// row that names no part.</summary>
+    public static string RowKey(string track, string? part) => part == null ? track : $"{track}\0{part}";
+
     /// <summary>
     /// A reader of the file under <paramref name="root"/> for the score <paramref name="spec"/>:
     /// the singer of a track on a part — the score row's, else the first block of the track that
@@ -64,7 +70,7 @@ public static class LyricSinger
                 parts.TryAdd(part.Name.Text, singer);
         var rows = spec?.RowSingers;
         return (track, part) =>
-            track != null && rows != null && rows.TryGetValue(track, out var row) ? row
+            track != null && rows != null && (rows.TryGetValue(RowKey(track, part), out var row) || rows.TryGetValue(track, out row)) ? row
             : track != null && tracks.TryGetValue(track, out var own) ? own
             : part != null && parts.TryGetValue(part, out var theirs) ? theirs
             : null;
