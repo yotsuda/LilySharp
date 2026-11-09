@@ -138,6 +138,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1191セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14990 / 0 / 2**（`-Start p1191`・HEAD `102f51a32`・未 push 91）。オーナー「プレビューの再生ボタンの上のマイクが赤くなるときは、マイクをマウスでホバーしたらエラーがポップアップするようにして」。作業場所は Lab `sessions/p1191/`。
+
+- 赤いマイクのホバーは待たずにページのツールチップを出す（他は 0.5 秒のまま）。ホバー中に赤くなっても出す・文が変われば出し直す。ツールチップは改行を保ち、長いパスも折り返す。
+- 終了時 full **14990 合格 / 0 失敗 / skip 2 / 合計 14992**（`-End p1191 -DiffBase 102f51a32`、BUILD 0）・npm 936 / 936。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。実物の VS Code では未確認（MANUAL-CHECKS）。
+
+## 以下は第1190セッションの経緯
+
 ### 1.1 第1190セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14988 / 0 / 2**（`-Start p1190`・HEAD `031eab3a4`・未 push 90）。オーナー「DiffSinger の英語対応を実装して」。作業場所は Lab `sessions/p1190/`。
@@ -146,15 +155,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - Lily#: 音節の続きを `SungNote.Hyphen`→ DTO `H`→ `hyphen`。声の絞り込みは `singsLanguage`。英語の行の試聴は hello（`voiceSampleKey`、`id@en`）。
 - 実測: TIGER で `language:"en"` の「Twin-kle twin-kle lit-tle star」は 7 音すべて声が出る。耳と実物の VS Code は未確認（MANUAL-CHECKS）。辞書に無い語は黙る。
 - 終了時 full **14990 合格 / 0 失敗 / skip 2 / 合計 14992**（`-End p1190 -DiffBase 031eab3a4`、BUILD 0）・npm 936 / 936。`Deploy-Lsp.ps1` と Cantilena の `deploy-extension.ps1` で配布済み（Reload Window）。
-
-## 以下は第1189セッションの経緯
-
-### 1.1 第1189セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14988 / 0 / 2**（`-Start p1189`・HEAD `48d76078a`・未 push 89）。オーナー「pgup で一覧の上側のプロバイダへ移るように揃えて」。作業場所は Lab `sessions/p1189/`。
-
-- `stepVoice` の `acrossEngines` を Up と同じ向きに（PageUp＝一覧の上のプロバイダの先頭の声）。
-- 終了時 full **14988 合格 / 0 失敗 / skip 2 / 合計 14990**（`-End p1189 -DiffBase 48d76078a`、BUILD 0）・npm 935 / 935。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
 
 ## 2. 開いている作業
 

@@ -4793,6 +4793,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             color: var(--vscode-editorHoverWidget-foreground, #333);
             border: 1px solid var(--vscode-editorHoverWidget-border, #c8c8c8);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+            white-space: pre-line; overflow-wrap: anywhere;
         }
         .tip[hidden] { display: none; }
         /* The practice menu (owner's request 2026-10-25): the button opens it under itself; its
@@ -6281,7 +6282,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // shows, was too small to read and no CSS reaches it): the same words, in VS Code's
         // hover font and colours. A title — an attribute, or an SVG <title> child (the
         // tessitura chart's) — moves to data-tip when the pointer first comes over it, so the
-        // browser's never shows; one set again later (updateAiButton) moves again.
+        // browser's never shows; one set again later (updateAiButton) moves again. A red microphone
+        // says what went wrong at once, without the wait (owner's request 2026-11-09, session 1191).
+        let refreshTip = () => {};
         (() => {
             const tip = document.createElement('div');
             tip.className = 'tip';
@@ -6303,24 +6306,34 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 return null;
             };
             const hide = () => { clearTimeout(timer); timer = null; tip.hidden = true; shownFor = null; };
+            const show = (el) => {
+                tip.textContent = el.getAttribute('data-tip');
+                tip.hidden = false;
+                const r = el.getBoundingClientRect();
+                const w = tip.offsetWidth, h = tip.offsetHeight;
+                let x = Math.min(Math.max(4, r.left + r.width / 2 - w / 2), window.innerWidth - w - 4);
+                let y = r.bottom + 6;
+                if (y + h > window.innerHeight - 4) y = Math.max(4, r.top - h - 6);
+                tip.style.left = x + 'px';
+                tip.style.top = y + 'px';
+                shownFor = el;
+            };
+            const atOnce = (el) => el.dataset && el.dataset.state === 'failed' && el.classList.contains('voice-badge');
             document.addEventListener('pointerover', (ev) => {
                 const el = tipOf(ev.target);
                 if (el === shownFor) return;
                 hide();
                 if (!el) return;
-                timer = setTimeout(() => {
-                    tip.textContent = el.getAttribute('data-tip');
-                    tip.hidden = false;
-                    const r = el.getBoundingClientRect();
-                    const w = tip.offsetWidth, h = tip.offsetHeight;
-                    let x = Math.min(Math.max(4, r.left + r.width / 2 - w / 2), window.innerWidth - w - 4);
-                    let y = r.bottom + 6;
-                    if (y + h > window.innerHeight - 4) y = Math.max(4, r.top - h - 6);
-                    tip.style.left = x + 'px';
-                    tip.style.top = y + 'px';
-                    shownFor = el;
-                }, 500);
+                if (atOnce(el)) { show(el); return; }
+                timer = setTimeout(() => show(el), 500);
             });
+            // The element's words changed under a resting pointer, which sends no pointerover.
+            refreshTip = (el) => {
+                const showing = shownFor === el;
+                const over = !el.hidden && el.matches(':hover') && (showing || atOnce(el));
+                if (showing || over) hide();
+                if (over && tipOf(el) === el) show(el);
+            };
             document.addEventListener('pointerdown', hide, true);
             document.addEventListener('keydown', hide, true);
             document.addEventListener('scroll', hide, true);
@@ -6600,8 +6613,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // Nothing to say: no state left on the element either (session 1162).
                 delete badge.dataset.state;
                 badge.removeAttribute('title');
+                badge.removeAttribute('data-tip');
                 badge.setAttribute('aria-label', 'Voice');
             }
+            refreshTip(badge);
             for (const btn of document.querySelectorAll('#partsList button.voice')) {
                 const s = voiceStates.get(btn.dataset.part);
                 if (s) { btn.dataset.state = s.state; } else { delete btn.dataset.state; }
