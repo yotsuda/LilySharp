@@ -665,6 +665,7 @@ internal sealed class ChordNameCollector
         var measureStartBar = new Dictionary<int, BarlineType>();
         var measureEndBar = new Dictionary<int, BarlineType>();
         int maxIndex = -1;
+        int lastWrittenBar = -1;
 
         // Process one run of chord items (flat block, or one inner section) whose
         // first bar sits at absolute measure <paramref>startMeasure</paramref>.
@@ -700,8 +701,11 @@ internal sealed class ChordNameCollector
                     }
                     else
                         measureItems[mi] = rests;
-                    maxIndex = Math.Max(maxIndex, endMeasure);
                 }
+                if (pending.Count > 0)
+                    maxIndex = Math.Max(maxIndex, endMeasure);
+                if (endBar != BarlineType.None)
+                    lastWrittenBar = Math.Max(lastWrittenBar, endMeasure);
                 if (pendingStart != BarlineType.None)
                     measureStartBar[mi] = pendingStart;
                 if (endBar != BarlineType.None)
@@ -766,6 +770,10 @@ internal sealed class ChordNameCollector
 
         if (maxIndex < 0)
             return ImmutableArray<Measure>.Empty;
+        // A written bar line closes a bar whether or not it holds a chord: the empty bars that END
+        // a row are bars too, as the sound and the LilyPond twin always had them. A row with no
+        // chord at all stays nothing to draw (above).
+        maxIndex = Math.Max(maxIndex, lastWrittenBar);
 
         var measures = ImmutableArray.CreateBuilder<Measure>(maxIndex + 1);
         for (int i = 0; i <= maxIndex; i++)

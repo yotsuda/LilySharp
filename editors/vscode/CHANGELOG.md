@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A staff with no notes yet shows its bars**: beside a chord track, an empty part's staff draws the track's bar lines, and the empty bars that end a track are drawn.
 - **The icon's clef is LilyPond's**: the treble clef is now drawn from Emmentaler, and the icon is sharper at 256 pixels.
 - **The scan reader is now Calamo** (`yotsuda.calamo`, formerly Lily# Scan Import): the offer to install it, and its update, name it so.
 - **Lily# offers to install Cantoria** when a voice is asked for and the extension is not there (the `singer` list, hearing a voice, the step keys, or Play on a score naming a singer), once a session. Lyrics alone say nothing.

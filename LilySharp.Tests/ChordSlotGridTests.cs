@@ -167,6 +167,36 @@ public class ChordSlotGridTests
         Assert.Equal([0, 1, 2], score.ChordNames.Select(c => c.MeasureIndex).Distinct().OrderBy(i => i).ToArray());
     }
 
+    /// <summary>
+    /// A staff whose part has no notes yet, beside a chord track (owner's report 2026-11-09,
+    /// "My Life (chord).lys"): the track is the clock and the staff takes its bars, silent, for
+    /// a bar line is drawn from its staff's own measures and this staff had none.
+    /// </summary>
+    [Fact]
+    public void AStaffWithNoMusic_TakesTheRowsBars()
+    {
+        var tree = SyntaxTree.Parse("time 4/4\npart l {\n}\nchords prog {\n  section A { C | | G | }\n}\nform { A }\nscore {\n  chords prog\n  staff l\n}\n");
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        var staff = score.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices).Single(v => v.Name == "l");
+        Assert.Equal(3, staff.Measures.Length);
+        Assert.All(staff.Measures, m => Assert.Equal(BarlineType.Single, m.EndBarline));
+    }
+
+    /// <summary>
+    /// A written bar line closes a bar whether or not it holds a chord, the empty bars that END
+    /// a row too. Until 2026-11-09 those were dropped from the page while the sound and the
+    /// LilyPond twin kept them; a bar in the middle was always kept, for a later chord reached past it.
+    /// </summary>
+    [Theory]
+    [InlineData("C | | |", 3)]
+    [InlineData("C | | G |", 3)]
+    [InlineData("C | G |", 2)]
+    public void EmptyBarsEndingARow_AreBars(string row, int bars)
+    {
+        var tree = SyntaxTree.Parse(Sheet(row));
+        Assert.Equal(bars, new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!).MeasureCount);
+    }
+
     [Fact]
     public void AReplayedSection_ReportsEachGridFaultOnce()
     {

@@ -1963,6 +1963,8 @@ public sealed partial class MeasureCollector
             }
         }
 
+        GiveBlankStavesTheRowsBars(staffVoices, rowNames, pendingChordRows.Select(r => r.Item1));
+
         // Bar lines are score-synchronized: LilyPond's Timing context lives
         // at Score level, so a repeat/double/final bar set by ANY part
         // appears in EVERY part at that measure.
@@ -3222,6 +3224,36 @@ public sealed partial class MeasureCollector
                 return v with { Measures = b.ToImmutable() };
             }).ToImmutableArray();
         }
+    }
+
+    /// <summary>
+    /// A staff whose part has no music yet, beside a chord row (owner's report 2026-11-09,
+    /// "My Life (chord).lys": <c>part l { }</c>, a chord track, <c>staff l as lines 1</c>). The
+    /// score has no music voice, so the rows are the clock (<see cref="RowsOnlyBarLengths"/>) and
+    /// the page is spaced by them; but a bar line is drawn from its staff's own measures, and this
+    /// staff had none, so it stood without one. It takes the row's bars, silent, with the row's bar
+    /// lengths and bar lines. Only where no staff has music: beside music the music is the clock.
+    /// Run after the rows have their labels, which the skeleton carries with the bars.
+    /// </summary>
+    private static void GiveBlankStavesTheRowsBars(
+        Dictionary<string, ImmutableArray<Voice>> staffVoices, IReadOnlySet<string> rowNames,
+        IEnumerable<string> chordRowNames)
+    {
+        ImmutableArray<Measure> grid = default;
+        foreach (var name in chordRowNames)
+            if (staffVoices.TryGetValue(name, out var rowVoices))
+                foreach (var v in rowVoices)
+                    if (grid.IsDefault || v.Measures.Length > grid.Length)
+                        grid = v.Measures;
+        if (grid.IsDefaultOrEmpty)
+            return;
+        foreach (var (name, voices) in staffVoices)
+            if (!rowNames.Contains(name) && voices.Any(v => v.Measures.Length > 0))
+                return;
+        var bars = SpacerSkeleton(grid);
+        foreach (var key in staffVoices.Keys.ToArray())
+            if (!rowNames.Contains(key) && staffVoices[key].Length > 0)
+                staffVoices[key] = staffVoices[key].SetItem(0, staffVoices[key][0] with { Measures = bars });
     }
 
     /// <summary>

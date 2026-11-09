@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1211セッションの経緯
+
+### 1.1 第1211セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1211`・HEAD `2d2d86102`・未 push 111）。オーナー「Calamo OMR からきた request #23 と #24 を直して」。作業場所は Lab `sessions/p1211/`。
+
+- **#23**（オーナー決定 ⒝）: 段の途中の音部記号の後に調号の変化記号を書く規則（第905）を撤去。`KeyCourtesyDue`・`LineStartMeasures`・`ClefChangesMidLine`・2 度目の collect・プレビューの `ChangesClef` の分岐も撤去し、音部記号を変える譜も通常の増分経路に戻った。網は `ClefChangeKeepsTheKeyTests`。`[engraving]`。
+- **#24**: 2 段の `grandStaff` の `@cross` はもう一方の手へ。それ以外の 3 段以上は次の段、最後の段は 1 つ上（折り返しをやめた）。`.ly` の `\change Staff` も同じ。`[engraving]`。
+- 終了時 full **15012 合格 / 0 失敗 / skip 2 / 合計 15014**（`-End p1211 -DiffBase 2d2d86102`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。REQUESTS の 23・24 は fixed。
+
 ## 以下は第1210セッションの経緯
 
 ### 1.1 第1210セッション（2026-11-09・YT-DELL2）
