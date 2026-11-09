@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1173セッションの経緯
+
+### 1.1 第1173セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14918 / 0 / 2**（`-Start p1173`・HEAD `082470196`・未 push 73）。オーナー「ctrl+shift+up/down を逆順に。プロバイダの切り替えも一周しないように。singer "male" よりも singer male "具体的な名前" とできる方が良い」。作業場所は Lab `sessions/p1173/`。
+
+- **順序**: Up は一覧の上へ、Down は下へ（`stepVoice`）。名前が一覧に無いときは、キーが離れる側の端から入る。プロバイダも一周しない。
+- **文法**: `singer [male|female] "名前"` を part・lyrics の頭・score の行に（LYS4040＝他の語）。`Genders` は小文字の閉じた語彙。木の上では `singer`・性別・名前の順の 3 スロットで、`HeadClause`／`Clause` が読み飛ばす。
+- **読むのはエディタだけ**: `singerSlot` の `Gender` で補完（`singerChoices`）と step キーを絞る。歌う声は名前だけで決まる＝その名前が無い環境でも、同じ性別の声には落ちない（未実装）。補完には `singer male`／`singer female` の項目を足した。
+- **Cantilena**: `voices()` が `info.toml` の `gender` を返す。DiffSinger の声は性別を名乗らないので、性別を書くと出ない。
+- 終了時 full **14939 合格 / 0 失敗 / skip 2 / 合計 14941**（`-End p1173 -DiffBase 082470196`、BUILD 0）・npm 925 / 925・Cantilena npm 19 / 19。両方を配布済み（Reload Window 1 回）。実機（性別の絞り込みの見え方）はオーナー。
+
 ## 以下は第1172セッションの経緯
 
 ### 1.1 第1172セッション（2026-11-09・YT-DELL2）

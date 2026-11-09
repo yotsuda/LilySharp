@@ -1922,7 +1922,9 @@ that cannot be had sings as the default, said once. Between the quotes the edito
 voices that sing the words' language; on a `singer "…"`, `Ctrl+Shift+Up` / `Down` step through
 those voices and `Ctrl+Shift+PageUp` / `PageDown` change the engine, the chosen voice heard in the
 preview. `singer male "neutrino/SOMA"` (or `female`) leaves out of both the voices that say they are
-the other; it changes nothing else, and another word there is an error (LYS4040).
+the other; it changes nothing else, and another word there is an error (LYS4040). With no name,
+`singer male` lets each machine pick: the voice `cantilena.voices` casts to `male`, else the first
+installed voice that says it is male and sings the words' language.
 
 **Melismas** follow LilyPond's `\lyricsto`. A **slur** or a **tie** makes one on its own:
 the syllable on the slur's first note is sung over every note up to the one that closes

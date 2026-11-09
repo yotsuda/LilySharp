@@ -56,7 +56,7 @@ export interface CantilenaApi {
     release(): void;
     /** The voice a `.lys` file's `singer` string comes to on this machine, and what to tell the
      *  writer when it was not the one asked for. Cantilena 0.4 on. */
-    resolveSinger?(singer: string): Promise<{ voice: string; note?: string }>;
+    resolveSinger?(singer: string, options?: { language?: string }): Promise<{ voice: string; note?: string }>;
     /** The roles this machine casts (`cantilena.voices`): role or voice → voice. */
     cast?(): Promise<Record<string, string>>;
 }

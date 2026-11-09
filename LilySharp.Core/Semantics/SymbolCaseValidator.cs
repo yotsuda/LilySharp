@@ -255,11 +255,12 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                 break;
             case Music.LyricSinger.Keyword:
                 // One quoted name, a voice or a role, which no compiler can check against a machine;
-                // male or female may stand before it.
-                if (valueTokens.Count > 2
-                    || (valueTokens.Count == 2 && !Music.LyricSinger.Genders.Contains(valueTokens[0].Text))
-                    || !IsQuoted(valueTokens[^1].Text) || Music.LyricSinger.ValueOf(valueTokens[^1].Text).Length == 0)
-                    Error(valueTokens[0], "'singer' takes one quoted name, after male or female if you wish: a voice, singer \"neutrino/MERROW\", singer male \"neutrino/SOMA\", or a role, singer \"soprano\".");
+                // male or female may stand before it, or alone (the engine picks such a voice).
+                bool genderFirst = Music.LyricSinger.Genders.Contains(valueTokens[0].Text);
+                bool quotedLast = IsQuoted(valueTokens[^1].Text);
+                if (!(valueTokens.Count == 1 && (genderFirst || (quotedLast && Music.LyricSinger.ValueOf(valueTokens[0].Text).Length > 0)))
+                    && !(valueTokens.Count == 2 && genderFirst && quotedLast))
+                    Error(valueTokens[0], "'singer' takes one quoted name, male or female, or both: a voice, singer \"neutrino/MERROW\", singer male \"neutrino/SOMA\", singer male, or a role, singer \"soprano\".");
                 break;
             case "midiInstrument":
                 // One quoted name from LilyPond's General MIDI table, exactly as LilyPond

@@ -601,8 +601,9 @@ public sealed partial class LilySharpLanguageServer
         {
             if (words[i] is not ("sings" or LilySharp.Core.Music.LyricLanguage.Keyword or LilySharp.Core.Music.LyricSinger.Keyword))
                 return null;
-            if (words[i] == LilySharp.Core.Music.LyricSinger.Keyword && !words[i + 1].StartsWith('"'))
-                return null;        // `singer male ▮`: the name is still to come
+            if (words[i] == LilySharp.Core.Music.LyricSinger.Keyword && !words[i + 1].StartsWith('"')
+                && !LilySharp.Core.Music.LyricSinger.Genders.Contains(words[i + 1]))
+                return null;        // `singer so▮`-like: no clause yet (`singer male ▮` is one, the name being optional)
             written.Add(words[i]);
         }
         return written.Count == 0 ? null : (written, awaits);

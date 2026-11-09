@@ -232,24 +232,29 @@ internal sealed partial class Parser
         return new LyricsBlockGreen(keyword, name, [.. clauses], openBrace, [.. items], closeBrace);
     }
 
-    /// <summary><c>singer "…"</c> or <c>singer male "…"</c> in a lyrics head or a score's lyrics row:
-    /// the word with a string after it, so <c>lyrics singer { … }</c> stays a track called singer.</summary>
+    /// <summary><c>singer "…"</c>, <c>singer male "…"</c> or a bare <c>singer male</c> in a lyrics head
+    /// or a score's lyrics row: the word with a string or a gender after it, so
+    /// <c>lyrics singer { … }</c> stays a track called singer.</summary>
     private bool IsLyricsSingerClause()
         => Check(SyntaxKind.Identifier) && Current.Text == Music.LyricSinger.Keyword
             && (Peek(1)?.Kind == SyntaxKind.StringLiteral
-                || (Peek(1)?.Kind == SyntaxKind.Identifier && Peek(2)?.Kind == SyntaxKind.StringLiteral));
+                || (Peek(1)?.Kind == SyntaxKind.Identifier
+                    && (Peek(2)?.Kind == SyntaxKind.StringLiteral || Music.LyricSinger.Genders.Contains(Peek(1)!.Text))));
 
-    /// <summary>The clause's tokens in source order: the word, the gender if written, the name.</summary>
+    /// <summary>The clause's tokens in source order: the word, the gender if written, the name if
+    /// written. After a gender the name may be missing or empty: the engine picks such a voice.</summary>
     private List<SyntaxToken> ParseSingerClause()
     {
         var tokens = new List<SyntaxToken> { Advance() };
-        if (Check(SyntaxKind.Identifier))
+        bool gendered = Check(SyntaxKind.Identifier);
+        if (gendered)
         {
             var gender = Advance();
             CheckSingerGender(gender);
             tokens.Add(gender);
         }
-        tokens.Add(ParseSingerName());
+        if (Check(SyntaxKind.StringLiteral))
+            tokens.Add(ParseSingerName(allowEmpty: gendered));
         return tokens;
     }
 
@@ -263,10 +268,10 @@ internal sealed partial class Parser
     }
 
     /// <summary>The singer's string; an empty one is refused (LYS4039), a name is the engine's to resolve.</summary>
-    private SyntaxToken ParseSingerName()
+    private SyntaxToken ParseSingerName(bool allowEmpty)
     {
         var value = Advance();
-        if (Music.LyricSinger.ValueOf(value.Text).Length == 0)
+        if (!allowEmpty && Music.LyricSinger.ValueOf(value.Text).Length == 0)
             _diagnostics.Error(new TextSpan(_textPosition - value.FullWidth + value.LeadingTriviaWidth, Math.Max(1, value.Width)),
                 DiagnosticCodes.SingerEmpty,
                 "'singer' names a voice, singer \"neutrino/MERROW\", or a role, singer \"soprano\".");

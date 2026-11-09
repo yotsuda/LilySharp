@@ -835,7 +835,7 @@ sings かん (the preview's voice and `lysc wav --singer`); `大[おお]空[ぞ�
 (LYS4036) — and a kanji without a reading prints but is not sung (the voice says so once).
 Words are `japanese` unless a line `language english` says so for the file, or a track does:
 `lyrics en language english sings melody { … }` (the names: japanese english chinese korean).
-Who sings is `singer "neutrino/MERROW"` (a voice) or `singer "soprano"` (a role) on a part, a track or a score's lyrics row; `singer male "neutrino/SOMA"` (or `female`) narrows what the editor offers.
+Who sings is `singer "neutrino/MERROW"` (a voice) or `singer "soprano"` (a role) on a part, a track or a score's lyrics row; `singer male "neutrino/SOMA"` (or `female`) narrows what the editor offers; `singer male` with no name lets each machine pick a male voice.
 
 ```
 part melody

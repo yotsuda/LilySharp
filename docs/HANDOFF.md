@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1175セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14939 / 0 / 2**（`-Start p1175`・HEAD `1b07b9739`・未 push 75）。オーナー「良い。進めて」＝名前なしの `singer male` で声を自動で選ぶ。作業場所は Lab `sessions/p1175/`。
+
+- **文法**: `SingerValue = String | SingerGender , [ String ]`。part・lyrics の頭・score の行。`singer male ""` も同じ意味（補完で `singer male` を確定して候補を閉じると書かれる形）。`lyrics singer male …` は `singer` 節（トラック名 singer の後に語が続く形は従来エラーだった）。
+- **運び方**: 名前なしは歌い手の文字列 `male`／`female` として運ぶ＝木から engine まで形は変えていない。`voiceName(singer, language)` が `resolveSinger(singer, { language })` に語の言語を渡す。
+- **Cantilena**: `resolveSinger` は配役 → インストール済みの名前 → `male`／`female` は `firstOfGender`（その言語を歌い、その性別を名乗る、一覧の先頭＝毎回同じ声）→ 既定の声＋一文。性別を名乗らない声は自動では選ばない。
+- `lysc wav` は役として既定の声＋警告のまま。
+- 終了時 full **14950 合格 / 0 失敗 / skip 2 / 合計 14952**（`-End p1175 -DiffBase 1b07b9739`、BUILD 0）・npm 926 / 926・Cantilena npm 20 / 20。両方を配布済み（Reload Window 1 回）。実機の声はオーナー。
+
+## 以下は第1174セッションの経緯
+
 ### 1.1 第1174セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14939 / 0 / 2**（`-Start p1174`・HEAD `9ecdbea8a`・未 push 74）。オーナー「性別の情報がない声は、male/female の指定があっても候補に出して」「singer male とだけ書いて名前が無ければ、male の声を自動で選べるの？」。作業場所は Lab `sessions/p1174/`。
@@ -145,18 +157,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - `fitsGender`（singerCore）: 性別を書いていない・声が性別を名乗らない・同じ性別なら候補に残す＝反対の性別を名乗る声だけ外す。補完と step キーの両方。
 - **問い（未実装）**: 名前なしの `singer male` は今は 3 箇所ともエラー。作れる。要るのは文法で名前を省略可に・性別を `SungVoice` まで運ぶ・Cantilena の解決に性別を足す・`lysc wav` の扱い。
 - 終了時 full **14939 合格 / 0 失敗 / skip 2 / 合計 14941**（`-End p1174 -DiffBase 9ecdbea8a`、BUILD 0）・npm 926 / 926。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
-
-## 以下は第1173セッションの経緯
-
-### 1.1 第1173セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14918 / 0 / 2**（`-Start p1173`・HEAD `082470196`・未 push 73）。オーナー「ctrl+shift+up/down を逆順に。プロバイダの切り替えも一周しないように。singer "male" よりも singer male "具体的な名前" とできる方が良い」。作業場所は Lab `sessions/p1173/`。
-
-- **順序**: Up は一覧の上へ、Down は下へ（`stepVoice`）。名前が一覧に無いときは、キーが離れる側の端から入る。プロバイダも一周しない。
-- **文法**: `singer [male|female] "名前"` を part・lyrics の頭・score の行に（LYS4040＝他の語）。`Genders` は小文字の閉じた語彙。木の上では `singer`・性別・名前の順の 3 スロットで、`HeadClause`／`Clause` が読み飛ばす。
-- **読むのはエディタだけ**: `singerSlot` の `Gender` で補完（`singerChoices`）と step キーを絞る。歌う声は名前だけで決まる＝その名前が無い環境でも、同じ性別の声には落ちない（未実装）。補完には `singer male`／`singer female` の項目を足した。
-- **Cantilena**: `voices()` が `info.toml` の `gender` を返す。DiffSinger の声は性別を名乗らないので、性別を書くと出ない。
-- 終了時 full **14939 合格 / 0 失敗 / skip 2 / 合計 14941**（`-End p1173 -DiffBase 082470196`、BUILD 0）・npm 925 / 925・Cantilena npm 19 / 19。両方を配布済み（Reload Window 1 回）。実機（性別の絞り込みの見え方）はオーナー。
 
 ## 2. 開いている作業
 

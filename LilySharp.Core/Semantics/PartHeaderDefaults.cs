@@ -223,8 +223,11 @@ public sealed class PartHeaderDefaults
                         : written;
                     break;
                 case "singer":
-                    // The name is the last token: male or female may stand before it.
-                    singer = prop.GetChild(prop.SlotCount - 1) is SyntaxTokenNode named ? Music.LyricSinger.ValueOf(named.Text) : null;
+                    // The name is the last token: male or female may stand before it. With no
+                    // name (or an empty one) the gender is the value: the engine picks such a voice.
+                    if (prop.GetChild(prop.SlotCount - 1) is SyntaxTokenNode named)
+                        singer = Music.LyricSinger.ValueOf(named.Text) is { Length: > 0 } writtenName
+                            ? writtenName : (prop.GetChild(2) as SyntaxTokenNode)?.Text;
                     break;
             }
         }

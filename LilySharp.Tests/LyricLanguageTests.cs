@@ -328,7 +328,7 @@ public class LyricLanguageTests
     [Theory]
     [InlineData("lyrics w singer man \"x\" { さ く ら ら | }", DiagnosticCodes.SingerGenderUnknown)]
     [InlineData("lyrics w singer Male \"x\" { さ く ら ら | }", DiagnosticCodes.SingerGenderUnknown)]
-    [InlineData("lyrics w singer male \"\" { さ く ら ら | }", DiagnosticCodes.SingerEmpty)]
+    [InlineData("lyrics w singer \"\" { さ く ら ら | }", DiagnosticCodes.SingerEmpty)]
     public void ABadGenderOrAnEmptyName_IsAnError(string lyrics, string code)
     {
         var error = Assert.Single(SyntaxTree.Parse(Book("", lyrics)).Diagnostics, d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
@@ -367,9 +367,48 @@ public class LyricLanguageTests
         Assert.All(gone, l => Assert.DoesNotContain(l, labels));
     }
 
+    // ── a gender with no name: the engine picks such a voice (session 1175) ──
+
+    [Theory]
+    [InlineData("lyrics w singer male sings m { さ く ら ら | }", "staff m  lyrics w", "male")]
+    [InlineData("lyrics w sings m singer female { さ く ら ら | }", "staff m  lyrics w", "female")]
+    [InlineData("lyrics w singer male \"\" sings m { さ く ら ら | }", "staff m  lyrics w", "male")]       // what taking `singer male` and leaving the list writes
+    [InlineData("lyrics singer male sings m { さ く ら ら | }", "staff m  lyrics", "male")]
+    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w singer female sings m", "female")]
+    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w sings m singer male", "male")]
+    public void AGenderAlone_IsTheSinger(string lyrics, string row, string expected)
+    {
+        string source = Sheet(lyrics, row);
+        Parsed(source);
+        Assert.Equal(expected, Sung(source).Singer);
+    }
+
+    [Theory]
+    [InlineData("singer male")]
+    [InlineData("singer female")]
+    [InlineData("singer male \"\"")]
+    public void AGenderAlone_IsThePartsSinger(string written)
+    {
+        string source = Sheet("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w").Replace("singer \"soprano\"", written);
+        Parsed(source);
+        Assert.StartsWith(written.Split(' ')[1], Sung(source).Singer);
+    }
+
     [Fact]
-    public void WaitingForAGenderedName_IsNoWholeClause()
-        => Assert.Null(LilySharpLanguageServer.LyricsHeadAt("lyrics words singer male ", "lyrics words singer male ".Length));
+    public void ATrackMayStillBeCalledSinger_BeforeOtherWords()
+    {
+        var block = Assert.Single(Parsed(Book("", "lyrics singer sings m { la la la la | }")).GetRoot().DescendantNodes<LyricsBlockSyntax>());
+        Assert.Equal("singer", block.VoiceName);
+        Assert.Equal("m", block.SingsTarget);
+    }
+
+    [Fact]
+    public void AGenderAlone_IsAWholeClause()
+        => Assert.Equal(new[] { "singer" }, LilySharpLanguageServer.LyricsHeadAt("lyrics words singer male ", "lyrics words singer male ".Length)!.Value.Written);
+
+    [Fact]
+    public void AnotherWordAfterSinger_IsNoClause()
+        => Assert.Null(LilySharpLanguageServer.LyricsHeadAt("lyrics words singer so ", "lyrics words singer so ".Length));
 
     [Fact]
     public void TheGenderedItem_WritesTheWordAndOpensTheList()

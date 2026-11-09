@@ -35,7 +35,9 @@ public static class LyricSinger
     public const string Keyword = "singer";
 
     /// <summary>The words that may stand between <c>singer</c> and its name (<c>singer male "neutrino/SOMA"</c>,
-    /// owner's decision 2026-11-09, session 1173): which voices the editor offers for it. Lower-case, closed.</summary>
+    /// owner's decisions 2026-11-09, sessions 1173 and 1175): which voices the editor offers for it, and,
+    /// written with no name, the singer itself (carried as the string <c>male</c>, for the engine to pick a
+    /// voice of that gender). Lower-case, closed.</summary>
     public static readonly IReadOnlyList<string> Genders = ["male", "female"];
 
     /// <summary>The track name of the file's unnamed lyrics, for the language server's reading of a head.</summary>
