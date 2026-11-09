@@ -124,6 +124,36 @@ public class SungRequestTests
         }
     }
 
+    /// <summary>Owner's report 2026-11-09, session 1192: a verse written first took the place of the
+    /// one the score named, its singer lost with it.</summary>
+    [Fact]
+    public void AllLyrics_ThePartTheScoreSings_KeepsTheScoresWordsAndSinger()
+    {
+        const string source = """
+            time 4/4
+            part melody { clef treble  section A { c'4 d e f | g a b c' | } }
+            lyrics first sings melody { section A { か え る の | う た が き | } }
+            lyrics chosen sings melody { section A { frog frog frog frog | | } }
+            form { A }
+            score { staff melody  lyrics chosen sings melody singer "diffsinger/TIGER" }
+            """;
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"lilysharp-sung-{Guid.NewGuid():N}.lys");
+        System.IO.File.WriteAllText(path, source);
+        try
+        {
+            var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+            var sung = server.GetSung(new SungParams { Path = path, AllLyrics = true });
+            Assert.Null(sung.Error);
+            var voice = Assert.Single(sung.Voices!);
+            Assert.Equal("diffsinger/TIGER", voice.Singer);
+            Assert.Equal(new[] { "frog", "frog", "frog", "frog" }, voice.Notes.Where(n => n.L != null).Select(n => n.L));
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
+
     [Fact]
     public void AScoreWithNoWords_HasNoVoice()
     {

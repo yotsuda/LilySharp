@@ -1063,9 +1063,12 @@ public sealed partial class LilySharpLanguageServer
             // Every singable lyrics of the file (AllLyrics, session 1163): the score's rows, and
             // for each lyrics track the score does not place, a row singing the track's default
             // part — over that part's melody, which the export then sounds whether or not the score
-            // shows it (MidiExporter.AllParts). One voice a part, the first words at an onset
-            // winning, as always (SungVoices).
+            // shows it (MidiExporter.AllParts). One voice a part: a track never joins a part the score
+            // already sings, whose words and singer are the score's (owner's report 2026-11-09,
+            // session 1192: a verse written first took the place of the verse the score named).
             var spec = score;
+            // Which parts the score shown sings itself (its rows and the singers no staff shows).
+            var inScore = score != null ? new HashSet<string>(LilySharp.Core.Svg.Collector.SungStaves.Of(root, score).Sung, StringComparer.Ordinal) : null;
             if (@params.AllLyrics && score != null)
             {
                 var placed = new HashSet<string>(StringComparer.Ordinal);
@@ -1097,7 +1100,7 @@ public sealed partial class LilySharpLanguageServer
                     var target = LilySharp.Core.Music.LyricBindings.TargetOf(root, name)
                         ?? (hints.TryGetValue(name, out var hinted) ? hinted : null)
                         ?? (declared.Count == 1 ? declared[0] : null);
-                    if (target == null || !declared.Contains(target))
+                    if (target == null || !declared.Contains(target) || inScore!.Contains(target))
                         continue;
                     added.Add(new LilySharp.Core.Svg.Collector.LyricsRowSpec(name, target));
                 }
@@ -1106,8 +1109,6 @@ public sealed partial class LilySharpLanguageServer
             }
             var midi = new LilySharp.Core.Midi.MidiExporter { Form = spec?.Form, Score = spec, AllParts = @params.AllLyrics && spec != null }.Export(tree);
             var voices = LilySharp.Core.Midi.SungVoices.Read(midi, LilySharp.Core.Midi.MidiClock.SecondsOf(midi));
-            // Which of them the score shown sings itself (its rows and the singers no staff shows).
-            var inScore = score != null ? new HashSet<string>(LilySharp.Core.Svg.Collector.SungStaves.Of(root, score).Sung, StringComparer.Ordinal) : null;
             return new SungResponse
             {
                 Voices = voices.Select(v => new SungVoiceDto

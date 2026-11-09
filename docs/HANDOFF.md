@@ -138,23 +138,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1192セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14990 / 0 / 2**（`-Start p1192`・HEAD `93b1b8928`・未 push 92）。オーナー報告「かえるのうた.lys が歌唱できない」→「直して」。作業場所は Lab `sessions/p1192/`。
+
+- 楽譜が歌詞を置いたパートには、楽譜に置かれていない歌詞を足さない（`GetSung` の AllLyrics）。ファイルの先の歌詞が勝って `singer` も言語の読みも失われていた。
+- Cantilena: 辞書に無い英単語はつづりから発音を推定して歌う（`EnglishLetters`、engine のログに語を出す）。かなを英語で読むなど推定できないものは従来どおり失敗。
+- 終了時 full **14991 合格 / 0 失敗 / skip 2 / 合計 14993**（`-End p1192 -DiffBase 93b1b8928`、BUILD 0）。`Deploy-Lsp.ps1` と Cantilena の `deploy-extension.ps1` で配布済み（Reload Window）。
+
+## 以下は第1191セッションの経緯
+
 ### 1.1 第1191セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14990 / 0 / 2**（`-Start p1191`・HEAD `102f51a32`・未 push 91）。オーナー「プレビューの再生ボタンの上のマイクが赤くなるときは、マイクをマウスでホバーしたらエラーがポップアップするようにして」。作業場所は Lab `sessions/p1191/`。
 
 - 赤いマイクのホバーは待たずにページのツールチップを出す（他は 0.5 秒のまま）。ホバー中に赤くなっても出す・文が変われば出し直す。ツールチップは改行を保ち、長いパスも折り返す。
 - 終了時 full **14990 合格 / 0 失敗 / skip 2 / 合計 14992**（`-End p1191 -DiffBase 102f51a32`、BUILD 0）・npm 936 / 936。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。実物の VS Code では未確認（MANUAL-CHECKS）。
-
-## 以下は第1190セッションの経緯
-
-### 1.1 第1190セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14988 / 0 / 2**（`-Start p1190`・HEAD `031eab3a4`・未 push 90）。オーナー「DiffSinger の英語対応を実装して」。作業場所は Lab `sessions/p1190/`。
-
-- Cantilena: `EnglishPhonemizer`（ハイフンで繋がる音節を 1 語として辞書を引き、母音ごとに音符へ配る。`twinkle` は辞書の `twinkles` から作る）。声の辞書は楽譜の `language` で切り替える（`ja`・`en`、ほかは理由を言って失敗）。`VoiceEntry.languages`。`DsYaml` の Deserializer が並行で壊れていたので直列に。
-- Lily#: 音節の続きを `SungNote.Hyphen`→ DTO `H`→ `hyphen`。声の絞り込みは `singsLanguage`。英語の行の試聴は hello（`voiceSampleKey`、`id@en`）。
-- 実測: TIGER で `language:"en"` の「Twin-kle twin-kle lit-tle star」は 7 音すべて声が出る。耳と実物の VS Code は未確認（MANUAL-CHECKS）。辞書に無い語は黙る。
-- 終了時 full **14990 合格 / 0 失敗 / skip 2 / 合計 14992**（`-End p1190 -DiffBase 031eab3a4`、BUILD 0）・npm 936 / 936。`Deploy-Lsp.ps1` と Cantilena の `deploy-extension.ps1` で配布済み（Reload Window）。
 
 ## 2. 開いている作業
 
