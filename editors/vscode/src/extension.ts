@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, SungVoiceDto, VOICE_SAMPLE_VERSION, VoiceSampleQueue, cantilenaApiOf, prepareModeOf, singerChoices, singerValueAt, stepVoice, voiceSampleScore } from './singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_SAMPLE_VERSION, VoiceSampleQueue, cantilenaApiOf, prepareModeOf, singerChoices, singerValueAt, stepVoice, voiceSampleScore } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -3920,23 +3920,37 @@ async function singVoiceSample(id: string): Promise<void> {
 }
 
 /** Lets the document's preview say a short phrase in `id` (with no preview open it is silent, as every audition is). */
-async function auditionVoice(uri: string, id: string): Promise<void> {
+async function auditionVoice(uri: string, id: string, clock: StageClock): Promise<void> {
     voiceSampleWanted = id;
-    if (!vscode.workspace.getConfiguration('lilysharp').get<boolean>('audition.enabled', true) || !previewPanels.get(uri)) { return; }
-    if (!await samples().ask(id) || voiceSampleWanted !== id) { return; }
+    const songAtStart = voiceRenderer?.singing ? 'being sung' : 'not being sung';
+    const say = (end: string) => outputChannel.appendLine(`singer: hear ${id}: ${clock}${end} (the song was ${songAtStart} at the start)`);
+    if (!vscode.workspace.getConfiguration('lilysharp').get<boolean>('audition.enabled', true)) { say(', auditions are off'); return; }
+    if (!previewPanels.get(uri)) { say(', no preview is open'); return; }
+    const onDisk = fs.existsSync(voiceSampleFile(id));
+    const ready = await samples().ask(id);
+    clock.mark(onDisk ? 'sample on disk' : 'sample sung');
+    if (!ready) { say(', the sample could not be sung'); return; }
+    if (voiceSampleWanted !== id) { say(', another voice was chosen meanwhile'); return; }
     const panel = previewPanels.get(uri);
-    if (!panel) { return; }
+    if (!panel) { say(', the preview closed meanwhile'); return; }
     const bytes = await fs.promises.readFile(voiceSampleFile(id));
-    if (voiceSampleWanted === id) { void panel.webview.postMessage({ type: 'playVoiceSample', bytes: new Uint8Array(bytes) }); }
+    clock.mark('read');
+    if (voiceSampleWanted !== id) { say(', another voice was chosen meanwhile'); return; }
+    say('');
+    void panel.webview.postMessage({ type: 'playVoiceSample', bytes: new Uint8Array(bytes), id, pressedAt: clock.startedAt, sentAt: Date.now() });
 }
 
 /** A name taken from the `singer` list: heard at once. A role is heard as the voice it is cast to. */
 async function hearSinger(label: unknown): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (typeof label !== 'string' || !editor) { return; }
+    const clock = new StageClock(Date.now());
     const engine = await renderer();
     if (!engine) { return; }
-    await auditionVoice(editor.document.uri.toString(), await engine.backend.voiceName(label));
+    clock.mark('engine');
+    const voice = await engine.backend.voiceName(label);
+    clock.mark('name');
+    await auditionVoice(editor.document.uri.toString(), voice, clock);
 }
 
 /**
@@ -3945,17 +3959,21 @@ async function hearSinger(label: unknown): Promise<void> {
  * the voices that sing the words' language. The chosen voice says its phrase, and the score's own
  * voice follows from the edit (prepareVoices). False when the caret is not on one.
  */
-async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, withinEngine: boolean): Promise<boolean> {
+async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, withinEngine: boolean, pressedAt: number): Promise<boolean> {
     if (!client || !clientReady || editor.selections.length !== 1) { return false; }
     const doc = editor.document;
     const version = doc.version;
     const line = editor.selection.active.line;
     const at = singerValueAt(doc.lineAt(line).text, editor.selection.active.character);
     if (!at) { return false; }
+    const clock = new StageClock(pressedAt);
+    clock.mark('key queue');
     const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null }>('lilysharp/singerSlot',
         { textDocument: { uri: doc.uri.toString() }, offset: doc.offsetAt(new vscode.Position(line, at.start)) });
+    clock.mark('server');
     if (!slot.InSlot || !slot.Language) { return false; }
     const engine = await renderer();
+    clock.mark('engine');
     const api = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend.api : undefined;
     if (!api?.voices) {
         vscode.window.setStatusBarMessage('Lily#: the Cantilena extension lists the voices, and it is not there', 4000);
@@ -3963,6 +3981,7 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, within
     }
     const voices = (await api.voices()).filter(v => v.language === slot.Language);
     samples().warm(voices.map(v => v.id));
+    clock.mark('voices');
     const next = stepVoice(voices, at.value, direction, !withinEngine, lastVoiceOfEngine);
     if (!next) {
         vscode.window.setStatusBarMessage(withinEngine ? `Lily#: no other voice sings ${slot.Language} here`
@@ -3972,12 +3991,13 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, within
     if (doc.version !== version) { return true; }     // typed into meanwhile: the place is about another text
     const applied = await editor.edit(b => b.replace(new vscode.Range(line, at.start, line, at.end), next), { undoStopBefore: true, undoStopAfter: true });
     if (!applied) { return true; }
+    clock.mark('edit');
     const caret = new vscode.Position(line, at.start + next.length);
     editor.selection = new vscode.Selection(caret, caret);
     lastVoiceOfEngine.set(next.slice(0, next.indexOf('/')), next);
     const label = voices.find(v => v.id === next)?.label;
     vscode.window.setStatusBarMessage(`Lily#: singer ${next}${label ? ` (${label})` : ''}`, 4000);
-    void auditionVoice(doc.uri.toString(), next);
+    void auditionVoice(doc.uri.toString(), next, clock);
     return true;
 }
 
@@ -6405,17 +6425,25 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         // A chosen voice's short phrase: the next one cuts it off (session 1170).
         let voiceSampleSource = null;
-        function playVoiceSample(bytes) {
+        function playVoiceSample(message) {
+            const got = Date.now();
+            const bytes = message.bytes;
             if (!bytes || !bytes.buffer) { return; }
             const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
             const ctx = audio();
             ctx.decodeAudioData(copy).then(buffer => {
+                const decoded = Date.now();
                 if (voiceSampleSource) { try { voiceSampleSource.stop(); } catch (e) { /* ended */ } }
                 const src = ctx.createBufferSource();
                 src.buffer = buffer;
                 src.connect(voiceOutput(ctx));
                 src.start();
                 voiceSampleSource = src;
+                const started = Date.now();
+                vscode.postMessage({ type: 'webviewPerf', text: 'voice sample ' + message.id
+                    + ': delivery ' + (got - message.sentAt) + ' ms, decode ' + (decoded - got) + ' ms, start ' + (started - decoded) + ' ms, '
+                    + (started - message.pressedAt) + ' ms from the key; AudioContext ' + ctx.state
+                    + ', output latency ' + Math.round(((ctx.baseLatency || 0) + (ctx.outputLatency || 0)) * 1000) + ' ms' });
             }, e => {
                 vscode.postMessage({ type: 'webviewPerf', text: 'voice sample could not be decoded: ' + e });
             });
@@ -8052,7 +8080,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     setVoice(message);
                     break;
                 case 'playVoiceSample':
-                    playVoiceSample(message.bytes);
+                    playVoiceSample(message);
                     break;
                 case 'voiceState':
                     setVoiceState(message.part, message.state, message.detail);

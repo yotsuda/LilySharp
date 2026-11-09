@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1169セッションの経緯
+
+### 1.1 第1169セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14898 / 0 / 2**（`-Start p1169`・HEAD `7bb169024`・未 push 69）。オーナー「`lyrics words sings sop |` の位置で singer を補完入力できるようにして。singer を補完で入れたら、直後に自動で声の名前一覧を候補ウィンドウで開いて」。作業場所は Lab `sessions/p1169/`。
+
+- **補完**: `LyricsHeadAt`（CompletionContext）が行の頭を語の対として読む＝節が 1 つ以上そろった位置（順不同・無名トラックも）で、まだ書いていない節だけを出す。定義は `singer`／`language`／`sings`、score の行とグループの行は `singer`／`sings`＋続きの項目。グループの行に `singer` が無かったのも足した。`singer "x" sings ▮` や `language english sings ▮` はパート名を出す（2 語前を見る旧規則では届かなかった）。本文・文字列・`//` の行では読まない。
+- **声の一覧を開く**: 補完項目は第1168 の形のまま（`singer "$0"`＋`editor.action.triggerSuggest`）で、この位置もその経路に乗った。`singerSlot` はこの位置でも言語を返す（網あり）。
+- 網: `LyricLanguageTests` に頭の続きの 4 群と item の形・slot を追加。実機（候補ウィンドウが本当に開く）はオーナー＝ extension host では確かめていない。
+- 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1169 -DiffBase 7bb169024`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（拡張の TS は変えていない＝Reload Window 1 回）。
+
 ## 以下は第1168セッションの経緯
 
 ### 1.1 第1168セッション（2026-11-09・YT-DELL2）

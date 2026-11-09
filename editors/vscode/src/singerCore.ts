@@ -117,7 +117,23 @@ export function stepVoice(voices: readonly Pick<CantilenaVoice, 'id' | 'engine'>
 }
 
 /** Bumped when the phrase below changes: the samples kept on disk are named with it. */
-export const VOICE_SAMPLE_VERSION = 1;
+export const VOICE_SAMPLE_VERSION = 2;
+
+/** The time each stage of hearing a voice took, for the output channel (owner's request 2026-11-09, session 1171). */
+export class StageClock {
+    private readonly stages: string[] = [];
+    private last: number;
+
+    constructor(readonly startedAt: number, private readonly now: () => number = Date.now) { this.last = startedAt; }
+
+    mark(stage: string): void {
+        const t = this.now();
+        this.stages.push(`${stage} ${t - this.last} ms`);
+        this.last = t;
+    }
+
+    toString(): string { return this.stages.join(', '); }
+}
 
 /** The short phrase a voice is heard by when it is chosen; undefined for a language it has no words for. */
 export function voiceSampleScore(language: string): CantilenaScore | undefined {
@@ -127,7 +143,7 @@ export function voiceSampleScore(language: string): CantilenaScore | undefined {
         { start: 0.55, duration: 0.25, pitch: 62, lyric: 'ん' },
         { start: 0.8, duration: 0.25, pitch: 64, lyric: 'に' },
         { start: 1.05, duration: 0.25, pitch: 65, lyric: 'ち' },
-        { start: 1.3, duration: 0.5, pitch: 67, lyric: 'は' },
+        { start: 1.3, duration: 0.5, pitch: 67, lyric: 'わ' },     // as it is said: a は here would be sung ha
     ];
     return { sampleRate: VOICE_SAMPLE_RATE, language, notes };
 }

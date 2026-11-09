@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, stepVoice, voiceKey, voiceSampleScore } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, stepVoice, voiceKey, voiceSampleScore } from '../src/singerCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
 // engine's score, the key names the render, the engine's lines are read, and the Cantilena
@@ -165,6 +165,21 @@ describe('choosing a voice with the step keys', () => {
     it('has a phrase for Japanese, and none it cannot write', () => {
         assert.equal(voiceSampleScore('ja')?.language, 'ja');
         assert.equal(voiceSampleScore('en'), undefined);
+    });
+
+    it('ends the phrase as it is said, with wa', () => {
+        assert.equal(voiceSampleScore('ja')?.notes.map(n => n.lyric).join(''), 'こんにちわ');
+    });
+
+    it('times each stage from the one before it', () => {
+        let t = 100;
+        const clock = new StageClock(100, () => t);
+        t = 103;
+        clock.mark('key queue');
+        t = 110;
+        clock.mark('server');
+        assert.equal(clock.toString(), 'key queue 3 ms, server 7 ms');
+        assert.equal(clock.startedAt, 100);
     });
 });
 

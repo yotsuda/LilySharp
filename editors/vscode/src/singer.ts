@@ -153,6 +153,9 @@ export class VoiceRenderer {
 
     get name(): string { return this.backend.name; }
 
+    /** True while the engine is singing a score's voice for this renderer. */
+    get singing(): boolean { return this.inFlight.size > 0; }
+
     /** The key `render` would give `dto` at `speed`: the score's bytes and the voice's name — what
      *  tells one text's voice from another's without asking the engine (prepareVoices). */
     async key(dto: SungVoiceDto, speed: number): Promise<string> {

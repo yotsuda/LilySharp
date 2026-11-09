@@ -42,7 +42,7 @@ export interface StepAuditionDeps {
     getPreview: (uri: string) => vscode.WebviewPanel | undefined;
     log: (msg: string) => void;
     /** A step on a `singer "…"`: true when the caret was on one (the voices are the editor's to list, not the server's). */
-    stepSinger: (editor: vscode.TextEditor, direction: 1 | -1, withinEngine: boolean) => Promise<boolean>;
+    stepSinger: (editor: vscode.TextEditor, direction: 1 | -1, withinEngine: boolean, pressedAt: number) => Promise<boolean>;
 }
 
 interface StepResponse {
@@ -139,7 +139,8 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
     // answers, and each step must see the text the previous one left.
     let stepChain: Promise<void> = Promise.resolve();
     const step = (direction: 1 | -1, semitone: boolean) => {
-        stepChain = stepChain.then(() => runStep(direction, semitone)).catch(err => deps.log(`step: ${err}`));
+        const pressedAt = Date.now();
+        stepChain = stepChain.then(() => runStep(direction, semitone, pressedAt)).catch(err => deps.log(`step: ${err}`));
         return stepChain;
     };
 
@@ -150,14 +151,14 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         if (command) { await vscode.commands.executeCommand(command); }
     };
 
-    const runStep = async (direction: 1 | -1, semitone: boolean) => {
+    const runStep = async (direction: 1 | -1, semitone: boolean, pressedAt: number) => {
         const editor = vscode.window.activeTextEditor;
         const client = deps.getClient();
         if (!editor || editor.document.languageId !== 'lilysharp' || !client || !deps.isReady()) {
             await fallback(direction, semitone);
             return;
         }
-        if (await deps.stepSinger(editor, direction, semitone)) { return; }
+        if (await deps.stepSinger(editor, direction, semitone, pressedAt)) { return; }
         const doc = editor.document;
         const version = doc.version;
         const response = await client.sendRequest<StepResponse>('lilysharp/step', {

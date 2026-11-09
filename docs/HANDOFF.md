@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1171セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14918 / 0 / 2**（`-Start p1171`・HEAD `017ae8c05`・未 push 71）。オーナー「こんにちは がすぐに出ない。各段階の時間をログに出して」「語尾が HA になる。WA で」。作業場所は Lab `sessions/p1171/`。
+
+- **調べた事実**: 14 声の試聴は `voice-samples/` にあり生成し直された形跡がない＝曲の生成待ちは原因でない（ファイルが無い声では、エンジンが 1 件ずつなので待つ）。どの段階が遅いかは未確定＝次のログを読む。
+- **ログ**（出力チャネル Lily# Extension）: `singer: hear <声>: key queue / server / engine / voices / edit / sample / read`（`StageClock`・曲を生成中だったかも出す）と、ページの `PREVIEW voice sample <声>: delivery / decode / start / キーからの合計 / AudioContext / output latency`。
+- **語尾**: 歌詞を `わ` に。`VOICE_SAMPLE_VERSION` 2＝古い `-1.wav` は読まれない。手元の 14 声は CLI で作り直した。
+- 試聴は VSIX に入らない（ユーザーごとの globalStorage）。生成は `singer` の候補を開いたときと step キーのとき（`warm`）、選んだ声が最優先（`ask`）。
+- 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1171 -DiffBase 017ae8c05`、BUILD 0）・npm 923 / 923。`Deploy-Lsp.ps1` で配布済み（manifest は不変＝Reload Window 1 回）。
+
+## 以下は第1170セッションの経緯
+
 ### 1.1 第1170セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14918 / 0 / 2**（`-Start p1170`・HEAD `efd93e197`・未 push 70）。オーナー「lys で声を選択したら、その声が出るようにして。すぐに出る声が良い。また、ctrl+shift+up/down で声を選択できるように。ctrl+shift+pgup で、プロバイダを切り替えられるように」。作業場所は Lab `sessions/p1170/`。
@@ -148,17 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **プロバイダ**: Cantilena の engine は neutrino と diffsinger の 2 つ。`C:\Tools\voices\TIGER` はあるが VS Code の `cantilena.voicesFolder` が未設定＝エディタからは neutrino だけ。設定はオーナーの判断に残した。
 - 網: `singerCore.test.ts` に step と queue を追加。実機（キー・音）はオーナー＝ extension host では確かめていない。
 - 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1170 -DiffBase efd93e197`、BUILD 0）・npm 921 / 921。`Deploy-Lsp.ps1` で配布済み（manifest は不変＝Reload Window 1 回）。
-
-## 以下は第1169セッションの経緯
-
-### 1.1 第1169セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14898 / 0 / 2**（`-Start p1169`・HEAD `7bb169024`・未 push 69）。オーナー「`lyrics words sings sop |` の位置で singer を補完入力できるようにして。singer を補完で入れたら、直後に自動で声の名前一覧を候補ウィンドウで開いて」。作業場所は Lab `sessions/p1169/`。
-
-- **補完**: `LyricsHeadAt`（CompletionContext）が行の頭を語の対として読む＝節が 1 つ以上そろった位置（順不同・無名トラックも）で、まだ書いていない節だけを出す。定義は `singer`／`language`／`sings`、score の行とグループの行は `singer`／`sings`＋続きの項目。グループの行に `singer` が無かったのも足した。`singer "x" sings ▮` や `language english sings ▮` はパート名を出す（2 語前を見る旧規則では届かなかった）。本文・文字列・`//` の行では読まない。
-- **声の一覧を開く**: 補完項目は第1168 の形のまま（`singer "$0"`＋`editor.action.triggerSuggest`）で、この位置もその経路に乗った。`singerSlot` はこの位置でも言語を返す（網あり）。
-- 網: `LyricLanguageTests` に頭の続きの 4 群と item の形・slot を追加。実機（候補ウィンドウが本当に開く）はオーナー＝ extension host では確かめていない。
-- 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1169 -DiffBase 7bb169024`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（拡張の TS は変えていない＝Reload Window 1 回）。
 
 ## 2. 開いている作業
 
