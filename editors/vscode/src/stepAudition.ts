@@ -30,10 +30,11 @@
 import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
-    AuditionMemory, CARET_DEBOUNCE_MS, Debouncer, SOUNDS_WHEN_CHANGED, TYPING_SETTLE_MS,
+    AuditionMemory, CARET_DEBOUNCE_MS, Debouncer, EDIT_SELECTION_WINDOW_MS, SOUNDS_WHEN_CHANGED, TYPING_SETTLE_MS,
     auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument, reselectAfterStep,
     stepFallbackCommand, strumGapMs,
 } from './auditionCore';
+import { singerWrittenAt } from './singerCore';
 
 export interface StepAuditionDeps {
     getClient: () => LanguageClient | undefined;
@@ -43,6 +44,8 @@ export interface StepAuditionDeps {
     log: (msg: string) => void;
     /** A step on a `singer "…"`: true when the caret was on one (the voices are the editor's to list, not the server's). */
     stepSinger: (editor: vscode.TextEditor, direction: 1 | -1, withinEngine: boolean, pressedAt: number) => Promise<boolean>;
+    /** Lets what a `singer` writes be heard, in the voice it comes to here. */
+    hearSinger: (written: string) => Promise<void>;
 }
 
 interface StepResponse {
@@ -93,6 +96,9 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
     const memory = new AuditionMemory();
     const caretWait = new Debouncer(CARET_DEBOUNCE_MS);
     const typingWait = new Debouncer(TYPING_SETTLE_MS);
+    const singerWait = new Debouncer(CARET_DEBOUNCE_MS);
+    // The `singer` each document's caret stands on: heard on arriving, not on every move inside it.
+    const singerLanded = new Map<string, string>();
     // When each document last changed — a selection change right after one is the
     // edit's own caret movement, not a move to audition.
     const lastEdit = new Map<string, number>();
@@ -261,6 +267,27 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
                 allEmpty: event.selections.every(s => s.isEmpty),
                 msSinceEdit: Date.now() - (lastEdit.get(uri) ?? 0),
             };
+            // The caret or a selection coming to a `singer` (owner's request 2026-11-09, session
+            // 1180): its voice says its phrase. A step or an edit landing there has its own say.
+            const one = event.selections.length === 1 && event.selections[0].isSingleLine ? event.selections[0] : undefined;
+            const written = one ? singerWrittenAt(doc.lineAt(one.start.line).text, one.start.character, one.end.character) : undefined;
+            if (written === undefined) {
+                singerLanded.delete(uri);
+                singerWait.cancel();
+            } else {
+                const landed = `${one!.start.line}:${written}`;
+                if (singerLanded.get(uri) !== landed) {
+                    singerLanded.set(uri, landed);
+                    const byHand = event.kind === vscode.TextEditorSelectionChangeKind.Keyboard || event.kind === vscode.TextEditorSelectionChangeKind.Mouse;
+                    if (byHand && facts.msSinceEdit >= EDIT_SELECTION_WINDOW_MS && auditionEnabled() && deps.getPreview(uri)) {
+                        singerWait.poke(() => {
+                            if (vscode.window.activeTextEditor === editor) { void deps.hearSinger(written); }
+                        });
+                    }
+                }
+                caretWait.cancel();
+                return;
+            }
             if (!caretMoveMaySound(facts)) {
                 caretWait.cancel();
                 return;
@@ -282,6 +309,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             const uri = doc.uri.toString();
             memory.forget(uri);
             lastEdit.delete(uri);
+            singerLanded.delete(uri);
         }),
     );
 }

@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleScore } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, singerWrittenAt, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleScore } from '../src/singerCore';
 import { voiceBarShown, voiceProgress } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -136,6 +136,27 @@ describe('choosing a voice with the step keys', () => {
         assert.equal(singerValueAt(line, whole.end + 5), undefined);
         assert.equal(singerValueAt('title "singer"', 8), undefined);
         assert.equal(singerValueAt('a-singer "x"', 4), undefined);
+    });
+
+    it('reads what the singer under a caret or a selection writes', () => {
+        const line = '  lyrics w singer "neutrino/A" sings m';
+        const start = line.indexOf('singer');
+        assert.equal(singerWrittenAt(line, start, start), 'neutrino/A');
+        assert.equal(singerWrittenAt(line, start, start + 6), 'neutrino/A');           // the word selected
+        assert.equal(singerWrittenAt(line, line.indexOf('neutrino') + 2, line.indexOf('neutrino') + 2), 'neutrino/A');
+        assert.equal(singerWrittenAt(line, 3, 3), undefined);
+        assert.equal(singerWrittenAt(line, line.indexOf('sings'), line.indexOf('sings')), undefined);
+        assert.equal(singerWrittenAt(line, 3, start + 2), undefined);                  // reaching outside it
+    });
+
+    it('takes the gender when no name is written, and nothing in a comment or a string', () => {
+        assert.equal(singerWrittenAt('singer male "n/A"', 0, 0), 'n/A');
+        assert.equal(singerWrittenAt('singer male', 3, 3), 'male');
+        assert.equal(singerWrittenAt('singer female ""', 3, 3), 'female');
+        assert.equal(singerWrittenAt('singer ""', 3, 3), '');
+        assert.equal(singerWrittenAt('singer manly', 3, 3), undefined);
+        assert.equal(singerWrittenAt('// singer "n/A"', 6, 6), undefined);
+        assert.equal(singerWrittenAt('title "the singer male"', 13, 13), undefined);
     });
 
     it('goes up the list with Up and down it with Down, and stops at both ends', () => {

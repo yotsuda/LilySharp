@@ -1122,6 +1122,7 @@ export function activate(context: vscode.ExtensionContext) {
         getPreview: (uri: string) => previewPanels.get(uri),
         log: (msg: string) => outputChannel.appendLine(msg),
         stepSinger: stepSingerAt,
+        hearSinger,
     });
 
     // The caret's status line (owner's request 2026-10-24): what the setting under the caret

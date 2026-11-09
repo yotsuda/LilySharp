@@ -98,6 +98,20 @@ export function singerValueAt(line: string, character: number): { start: number;
 }
 
 /**
+ * What the `singer` that holds `from`..`to` on this line writes, for hearing it (owner's request
+ * 2026-11-09, session 1180): its name, its gender if it has no name, '' for `singer ""`. Undefined
+ * off one, in a comment and inside another string.
+ */
+export function singerWrittenAt(line: string, from: number, to: number): string | undefined {
+    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:(male|female)(?![\w-])(?:[ \t]+"([^"]*)")?|"([^"]*)")/g)) {
+        const before = line.slice(0, m.index);
+        if (before.includes('//') || (before.split('"').length - 1) % 2 === 1) { continue; }
+        if (from >= m.index && to <= m.index + m[0].length) { return m[2] || m[3] || m[1] || ''; }
+    }
+    return undefined;
+}
+
+/**
  * The voice a step key moves to (owner's requests 2026-11-09, sessions 1170, 1172 and 1173): Up
  * (`direction` 1) is the voice above in the list of the current voice's own engine, Down the one below,
  * or with `acrossEngines` the next or previous engine's voice last chosen (`lastOf`, else its first).
