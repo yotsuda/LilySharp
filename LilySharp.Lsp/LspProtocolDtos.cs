@@ -367,6 +367,11 @@ public class SungParams
     public TextDocumentIdentifier? TextDocument { get; set; }
     public string? Path { get; set; }
     public string? RenderName { get; set; }
+    /// <summary>True: every singable lyrics track of the FILE, not only the rows the score places
+    /// (the practice menu lists them all, session 1163) — a track the score does not place is read
+    /// as a row singing its default part, over the part's own melody; <see cref="SungVoiceDto.InScore"/>
+    /// says which ones the score itself sings.</summary>
+    public bool AllLyrics { get; set; }
 }
 
 /// <summary>One note a voice sings (docs/singing-design.md §3), in SECONDS: the syllable
@@ -392,6 +397,9 @@ public class SungVoiceDto
     public string Language { get; set; } = "ja";
     public SungNoteDto[] Notes { get; set; } = [];
     public string[] Warnings { get; set; } = [];
+    /// <summary>Whether the score shown sings this part itself (its rows); false for a voice the
+    /// file's other lyrics could sing (<see cref="SungParams.AllLyrics"/>), off until the menu turns it on.</summary>
+    public bool InScore { get; set; } = true;
 }
 
 /// <summary>Response for the lilysharp/sung request: one voice per part a lyrics row sings.</summary>

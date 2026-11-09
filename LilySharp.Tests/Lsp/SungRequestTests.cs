@@ -132,4 +132,25 @@ public class SungRequestTests
         Assert.Null(sung.Error);
         Assert.Empty(sung.Voices!);
     }
+
+    /// <summary>The practice menu lists every singable lyrics of the file, whatever the score shows
+    /// (owner's request 2026-11-09, session 1163): asked with AllLyrics, the bare score — a staff of
+    /// the bass alone — still answers the melody's voice, marked as not the score's own; the default
+    /// score's answer marks it as its own.</summary>
+    [Fact]
+    public void AllLyrics_ListsTheFilesSingableVoices_SayingWhichTheScoreSings()
+    {
+        var server = Open(out var uri);
+        var bare = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, RenderName = "bare", AllLyrics = true });
+        Assert.Null(bare.Error);
+        var voice = Assert.Single(bare.Voices!);
+        Assert.Equal("melody", voice.Part);
+        Assert.False(voice.InScore);
+        Assert.Equal(new[] { "ゆ", null, "き", "や", "こん", "こ" }, voice.Notes.Select(n => n.L));
+
+        var own = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, AllLyrics = true });
+        Assert.True(Assert.Single(own.Voices!).InScore);
+        // Without AllLyrics the bare score has no voice, as before.
+        Assert.Empty(server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, RenderName = "bare" }).Voices!);
+    }
 }

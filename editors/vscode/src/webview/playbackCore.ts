@@ -43,6 +43,9 @@ export interface PlaybackBeat { T: number; A: boolean }
 export interface Practice {
     speed: number; muted: readonly string[]; click: boolean;
     extraOn?: readonly string[]; voicesOff?: readonly string[];
+    /** The voices the score does not sing itself that the menu turned on (the file's other
+     *  singable lyrics, by part; session 1163) — the voice then sings in the part's instrument's place. */
+    voicesOn?: readonly string[];
     /** The menu's faders (owner's request 2026-11-09): each part's level, 0–2 (0 to 200 %), by
      *  track name — a part not named is at 1. An instrument's level scales its notes' velocity
      *  (one rule for the preview's synth, the MIDI output and the exports; 127 is the ceiling);
@@ -498,6 +501,7 @@ export function practiceSummary(practice: PracticeState | null | undefined): str
     if (practice.click) { said.push('with the metronome'); }
     if (practice.countIn) { said.push('with a count-in'); }
     if (practice.muted.length > 0) { said.push(`without ${practice.muted.join(', ')}`); }
+    if (practice.voicesOn && practice.voicesOn.length > 0) { said.push(`singing ${practice.voicesOn.join(', ')}`); }
     for (const [name, level] of Object.entries(practice.levels ?? {})) {
         if (level !== 1 && !practice.muted.includes(name)) { said.push(`${name} at ${Math.round(levelOf(practice.levels, name) * 100)}%`); }
     }

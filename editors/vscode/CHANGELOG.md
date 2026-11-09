@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **The practice menu lists every singable lyrics of the file**: whatever score is shown, a `♪ part` row for every lyrics track that can sing — the score's own first (on), then, in italics, the ones the score does not sing (off until pressed; pressed, the voice sings in the part's instrument's place, in Play and in the exports). *Reset parts* turns them off again.
 - **No microphone on a file with no lyrics**: the microphone never actually hid — its style beat the hidden attribute — so it kept the look of its last state, the grey pulsing of a voice being named, on every file with no lyrics. It hides now. Also: a late word about a part the score does not sing is dropped on both sides, the grey placeholder gives up after ten seconds, and the Lily# Extension output says what each ask for the voices found.
 - **The practice menu follows a change of score**: with the menu open, switching the score (or the file the preview follows) kept the last score's parts in the list; the list is rebuilt for the score shown.
 - **Two resets under the practice menu's parts**: *Reset parts* puts the part selection back to the score shown (nothing muted, the parts it leaves out off, every voice sung — the toggles are kept by name across files, so this is also the way back from a part silenced in another file), *Reset faders* puts every fader at 100 %.

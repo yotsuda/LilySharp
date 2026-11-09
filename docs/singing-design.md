@@ -198,7 +198,17 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   2026-11-08): on, the part is sung; off, its instrument plays in the voice's place — a switch
   between the two sounds, never both. `Practice.voicesOff`, read by `sungTracks()`; the host
   lists the voices from `lilysharp/sung` when an engine is there (`requestParts`). The part's
-  own toggle silences it altogether. The fader to its right (owner's request 2026-11-09,
+  own toggle silences it altogether. **Every singable lyrics of the file is listed** (owner's
+  request 2026-11-09, session 1163: "whatever score is selected, show every part and every
+  singable lyrics"): `lilysharp/sung` with `allLyrics` adds, to the score's rows, a row for each
+  lyrics track the score does not place, singing the track's default part (`LyricBindings.
+  TargetOf`, or the file's one part), over that part's melody (`MidiExporter.AllParts`, the
+  unseen-singer machinery of session 1151); `SungVoiceDto.InScore` says which voices the score
+  sings itself (`SungStaves`). The menu lists the score's own first (on unless `voicesOff`),
+  then the others in italics (off unless `Practice.voicesOn`); pressed, the host renders the
+  voice at once and it sings in the part's instrument's place (the instrument sounds beside a
+  voice only where the score both sings and plays the part — two staves). One voice a part
+  still: two tracks on one part give one voice, the first words at an onset winning. The fader to its right (owner's request 2026-11-09,
   docs/playback-design.md "A fader beside each part") is the voice's gain: a `GainNode` in the
   page (`startVoices`), `VoiceTrack.gain` into `mixIn` in the exports (`singJobs` reads
   `Practice.voiceLevels`); at 0 the voice is as switched off.

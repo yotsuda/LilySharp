@@ -1032,8 +1032,55 @@ public sealed partial class LilySharpLanguageServer
         try
         {
             var score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), @params.RenderName);
-            var midi = new LilySharp.Core.Midi.MidiExporter { Form = score?.Form, Score = score }.Export(tree);
+            var root = tree.GetRoot();
+            // Every singable lyrics of the file (AllLyrics, session 1163): the score's rows, and
+            // for each lyrics track the score does not place, a row singing the track's default
+            // part — over that part's melody, which the export then sounds whether or not the score
+            // shows it (MidiExporter.AllParts). One voice a part, the first words at an onset
+            // winning, as always (SungVoices).
+            var spec = score;
+            if (@params.AllLyrics && score != null)
+            {
+                var placed = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var binding in score.GetVoiceBindings())
+                    foreach (var track in binding.WithLyrics)
+                        placed.Add(track);
+                foreach (var row in score.Items.OfType<LilySharp.Core.Svg.Collector.LyricsRowSpec>())
+                    placed.Add(row.PartName);
+                var declared = root.DescendantNodes<LilySharp.Core.Syntax.PartDeclarationSyntax>().Select(p => p.Name.Text).Distinct(StringComparer.Ordinal).ToList();
+                // What the file's OTHER scores say a track sings (a row's own `sings`, or the staff
+                // a row is folded under): the hint for a track whose definition names no part.
+                var hints = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (var other in RenderSpecParser.FindAll(tree))
+                {
+                    foreach (var row in other.Items.OfType<LilySharp.Core.Svg.Collector.LyricsRowSpec>())
+                        if (row.Sings != null)
+                            hints.TryAdd(row.PartName, row.Sings);
+                    foreach (var binding in other.GetVoiceBindings())
+                        foreach (var track in binding.WithLyrics)
+                            hints.TryAdd(track, binding.VoiceName);
+                }
+                var added = new List<LilySharp.Core.Svg.Collector.RenderItemSpec>();
+                foreach (var name in root.DescendantNodes<LilySharp.Core.Syntax.LyricsBlockSyntax>().Select(b => b.VoiceName).Distinct(StringComparer.Ordinal))
+                {
+                    if (name == null || placed.Contains(name))
+                        continue;
+                    // The track's default part, else what another score makes it sing, else the
+                    // file's one part.
+                    var target = LilySharp.Core.Music.LyricBindings.TargetOf(root, name)
+                        ?? (hints.TryGetValue(name, out var hinted) ? hinted : null)
+                        ?? (declared.Count == 1 ? declared[0] : null);
+                    if (target == null || !declared.Contains(target))
+                        continue;
+                    added.Add(new LilySharp.Core.Svg.Collector.LyricsRowSpec(name, target));
+                }
+                if (added.Count > 0)
+                    spec = score with { Items = score.Items.AddRange(added) };
+            }
+            var midi = new LilySharp.Core.Midi.MidiExporter { Form = spec?.Form, Score = spec, AllParts = @params.AllLyrics && spec != null }.Export(tree);
             var voices = LilySharp.Core.Midi.SungVoices.Read(midi, LilySharp.Core.Midi.MidiClock.SecondsOf(midi));
+            // Which of them the score shown sings itself (its rows and the singers no staff shows).
+            var inScore = score != null ? new HashSet<string>(LilySharp.Core.Svg.Collector.SungStaves.Of(root, score).Sung, StringComparer.Ordinal) : null;
             return new SungResponse
             {
                 Voices = voices.Select(v => new SungVoiceDto
@@ -1041,11 +1088,12 @@ public sealed partial class LilySharpLanguageServer
                     Part = v.Part,
                     Language = v.Language,
                     Warnings = v.Warnings.ToArray(),
+                    InScore = inScore == null || inScore.Contains(v.Part),
                     Notes = v.Notes.Select(n => new SungNoteDto
                     {
                         T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos,
                     }).ToArray(),
-                }).ToArray(),
+                }).OrderByDescending(v => v.InScore).ToArray(),
             };
         }
         catch (Exception ex)

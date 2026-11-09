@@ -205,6 +205,27 @@ Each blocks the row named; a default is proposed so work can start.
    is both printed and sung.
 2. **A choir** (Phase E, affects nothing short term). Today every part with words sings, each in
    the same voice. **Proposed: keep**, and add a voice per part when a second voice exists.
+   **Owner, 2026-11-09 (session 1163): settle the grammar and the settings before building
+   several voices** — "a voice is like an instrument, so its name belongs in the .lys; but a
+   score is something anyone may sing, so a voice's name in the score feels wrong too."
+   **Proposal — two layers, as the instruments already are**: the `.lys` names the **role**, not
+   the singer; the machine's settings name the singer for each role.
+   - In the score, a role on the part or on the lyrics track, the way `instrument`/`midiInstrument`
+     name a General MIDI sound and never a sound font: `part sop { instrument soprano }` (the
+     existing preset carries clef and range; the voice type is the stand-in sound's family too),
+     or a free label for a cast — `part hero { singer "A" }`, `lyrics en sings melody singer "B"`.
+     A file with no role is sung as today, by the one default voice.
+   - In Cantilena's settings, the cast: `cantilena.voices = { "soprano": "neutrino/MERROW",
+     "alto": "diffsinger/TIGER", "A": "…", "default": "…" }` (today's `cantilena.voice` is the
+     `default` entry). The API grows `sing(score, { voice })` (v2, additive); Lily# passes the
+     role's binding; a role no setting binds falls to `default` and says so once.
+   - Then: two lyrics tracks on one part may both sing when their roles differ (a translation,
+     a duet on one line); a unison chorus is one role rendered by several bound voices, slightly
+     spread in time and pitch; SATB is four parts with four roles. The practice menu's rows become
+     `♪ part (track · role)`.
+   - Until a second voice exists, nothing of this is built. Session 1163 built the part that does
+     not depend on it: the practice menu lists every singable lyrics of the file (one voice per
+     part, the score's sung parts on by default, the others off until pressed).
 3. **A built-in guide voice** (Phase F). Ship a model-free vowel synth so every install can sing
    a pitch line, or wait for a downloadable DiffSinger voice? **Proposed: wait** until the
    first-run download is tried; revisit if no voice with usable terms is found.

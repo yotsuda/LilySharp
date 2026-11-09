@@ -391,6 +391,7 @@ describe('the notes the practice menu plays', () => {
         // In words, for the export's message.
         assert.equal(practiceSummary({ speed: 1, muted: [], click: false, countIn: false, levels: { alt: 0.5 }, voiceLevels: { sop: 0.7 } }),
             'alt at 50%, the voice of sop at 70%');
+        assert.equal(practiceSummary({ speed: 1, muted: [], click: false, countIn: false, voicesOn: ['melody'] }), 'singing melody');
     });
 
     // The parts the score does not sound ride in the list after its tracks (PlaybackResponse.Extra,

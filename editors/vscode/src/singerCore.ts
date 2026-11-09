@@ -27,7 +27,8 @@ import { VOICE_LEAD_S } from './webview/playbackCore';
 export interface SungNoteDto { T: number; D: number; P: number; L?: string | null; M?: boolean; B?: boolean; S?: number }
 
 /** A part's words on its notes, as the server answers `lilysharp/sung`. */
-export interface SungVoiceDto { Part: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null }
+/** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
+export interface SungVoiceDto { Part: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean }
 
 /** The score Cantilena reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
 export interface CantilenaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean }

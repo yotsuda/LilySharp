@@ -138,6 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1163セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14861 / 0 / 2**（`-Start p1163`・HEAD `c52ce7355`・未 push 63・OMR の open 0）。同じ会話で第1162 から続けた便。オーナー「かなりややこしい。どんな使い方がありがちかまだ分からない。いったんは実装の都合上妥当な形で。複数の声は lys の文法と設定から詰めるべき。声は楽器のようなものだから名前は lys に書くのが妥当にも思えるが、楽譜は誰でも歌えるものと捉えると楽譜に声の名前を書くのは正しくないようにも思える」。作業場所は Lab `sessions/p1163/`（`notes.md`）。
+
+- **声の名前の置き場＝提案を roadmap §4 の 2 に書いた（未決定・着手しない）**: 楽器と同じ**二層**＝lys には**役**（`part sop { instrument soprano }` の既存 preset、または自由なラベル `singer "A"` をパートか歌詞トラックに）、機械の設定に配役（`cantilena.voices = { soprano: "neutrino/MERROW", … }`・今の `cantilena.voice` は `default`）、API は `sing(score, { voice })`（v2・追加のみ）。同じ旋律を別の声／SATB／ユニゾンの合唱はこの上に乗る。2 つ目の声が在るまで作らない。
+- **作った＝それに依存しない部分**: 練習メニューに**ファイルの歌える歌詞を全部**並べる（1 パート 1 声のまま）。サーバー `SungParams.AllLyrics`＝score の spec に、score が置いていない歌詞トラックごとに `LyricsRowSpec(track, 既定のパート)` を足して（既定＝`LyricBindings.TargetOf`・無ければ他の score の行の `sings` か fold 先・それも無ければファイルの唯一のパート）`MidiExporter { Score = spec', AllParts = true }`＝第1151 の見えない歌い手の仕組みでそのパートの旋律から声を作る。`SungVoiceDto.InScore`（`SungStaves.Of(root, score).Sung`）で score 自身が歌うものを区別・score のものが先。host は `requestParts`／`prepareVoices`／`singJobs` が `allLyrics` で問い、score に無い声は `Practice.voicesOn` に在るときだけ描く・鳴らす・混ぜる（`practiceState` で `voicesOn` が変われば即 prepare）。ページは `♪` を score のもの（on・`voicesOff`）→ 斜体（off・`voicesOn`）の順に並べ、`sungTracks()` と `startPlayback` の楽器の除外は「score が歌いかつ弾く（段 2 本）ときだけ両方鳴る」に（Export の `silenced` も同じ）・Reset parts は `voicesOn` も空に・`practiceSummary` は `singing melody`。
+- 網: `SungRequestTests.AllLyrics_ListsTheFilesSingableVoices_SayingWhichTheScoreSings`（bare score でも melody の声・`InScore=false`・既定 score では true・AllLyrics 無しは今までどおり空）＝Sung／Playback 153 / 153・npm **907 / 907**（1 回目はページ script に `\'` を書いて parse 赤＝テンプレートリテラルの中は backslash 禁止、言い換えた）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-roadmap §4・singing-design §5・CHANGELOG `[editor]`・editors CHANGELOG・MANUAL-CHECKS §3.7「どの score でも歌える歌詞が全部並ぶ」。
+- 残り: 実機（オーナー・雪やこんこ `another` で斜体の `♪ melody` → 押すと声）・声の名前の置き場の決定（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- 終了時 full **14862 / 0 / 2 / 14864**（`-End p1163 -DiffBase c52ce7355`＝`end.log`・門は全部 OK・§1 現在便 16,892 字＝残り 3,108・+1 本）。§7 7.5: Core `+` 0・REF 0・OWN 0（Lsp の `GetSung`／DTO・拡張の TS・docs＝Core 不変）。7.6: 出所はオーナーの言葉とコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1162セッションの経緯
+
 ### 1.1 第1162セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14861 / 0 / 2**（`-Start p1162`・HEAD `b2e32a17b`・未 push 62・OMR の open 0）。同じ会話で第1161 から続けた便。オーナー「直らない」＋出力チャネルの貼り付け。作業場所は Lab `sessions/p1162/`（`notes.md`）。
@@ -148,19 +160,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **教訓（RULES 級）**: ログの状態は正しいのに画面が違うときは、状態機械より先に**その要素の CSS**を読む。第1156 の Chrome ハーネスでも隠れたバッジの `getComputedStyle` を見ていれば分かった。
 - 残り: 実機（オーナー）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
 - 終了時 full **14861 / 0 / 2 / 14863**（`-End p1162 -DiffBase b2e32a17b`＝`end.log`・門は全部 OK・§1 現在便 16,107 字＝残り 3,893）。§7 7.5: Core `+` 0・REF 0・OWN 0（CSS 1 行＋ページ 4 行＋docs）。7.6: 出所はオーナーの出力チャネルと CSS の読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1161セッションの経緯
-
-### 1.1 第1161セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14861 / 0 / 2**（`-Start p1161`・HEAD `78f77b1ef`・未 push 61・OMR の open 0）。同じ会話で第1160 から続けた便。オーナー報告「直っていない。`Downloads\Untitled-9.lys` は歌詞がないのに、開くとプレビューでマイクが点滅したまま」。作業場所は Lab `sessions/p1161/`（`notes.md`）。
-
-- **確かめたこと**: サーバーは正常（一時 probe・削除済み: `lilysharp/sung` はエラー無し・声 0、Svg の SelectedRender は `""`＝score 名のずれ無し）。host は pages／svg／error のどの枝でも描画の後に `prepareVoices('edit')` へ達する。**読みでは placeholder が答え無しで残る経路を特定できず**＝第1160 の直し（遅れた `preparing`）とは別の穴が在る。
-- **直し（3 つ・症状を確実に塞ぐ＋次に読めるように）**: ⑴ ページの無名 placeholder（声を名指すまでの灰の点滅）は **10 秒で期限切れ**（`PLACEHOLDER_MS`・サーバーは ms で答えるので古い placeholder は失われた答え・出力チャネルに `voice: the placeholder outlived its answer`）。⑵ `prepareVoices` は最初に `followVoices` を呼んで鍵をページと揃え（描画が score 名を直した場合に `current()` が偽になって黙って return する経路を潰す）、**1 回の問い合わせごとに出力チャネルへ 1 行**（`singer: prepare (edit) Untitled-9.lys: no sung part` ／ `sung: melody` ／ `no engine` ／ `the preview turned meanwhile` ／ `lilysharp/sung failed` ／ `no answer`）。⑶ 第1158 の取りこぼし＝**pages の post に `scoreKey` が無かった**（練習メニューの追従は pages の経路では効いていなかった）を直した。
-- 網: npm **907 / 907**・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・editors CHANGELOG・MANUAL-CHECKS §3.7（Untitled-9 の手順と、残ったときに貼る行）。
-- **オーナーへ**: それでも点滅が残ったら、出力チャネル「Lily# Extension」の `singer: prepare` の行と `PREVIEW` の行を貼ってほしい（どの経路で答えが失われたかが読める）。
-- 残り: 前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
-- 終了時 full **14861 / 0 / 2 / 14863**（`-End p1161 -DiffBase 78f77b1ef`＝`end.log`・門は全部 OK・§1 現在便 16,239 字＝残り 3,761）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS と docs だけ）。7.6: 出所は probe の実測とコードの読み。7.7: placeholder が残る経路は未特定＝出力チャネルの行で次に読む。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 
