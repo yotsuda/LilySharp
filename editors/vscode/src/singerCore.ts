@@ -24,14 +24,14 @@ import { VOICE_LEAD_S } from './webview/playbackCore';
 
 /** One note of `lilysharp/sung`, in seconds: its syllable `L` (null on a melisma), `M` a melisma
  *  carrying the previous syllable's vowel on, `B` a breath after it, `S` the source offset. */
-export interface SungNoteDto { T: number; D: number; P: number; L?: string | null; M?: boolean; B?: boolean; S?: number }
+export interface SungNoteDto { T: number; D: number; P: number; L?: string | null; M?: boolean; B?: boolean; S?: number; V?: number | null; E?: number | null }
 
 /** A part's words on its notes, as the server answers `lilysharp/sung`. */
 /** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
 export interface SungVoiceDto { Part: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null }
 
 /** The score Cantilena reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
-export interface CantilenaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean }
+export interface CantilenaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number }
 export interface CantilenaScore { sampleRate: number; language: string; notes: CantilenaNote[] }
 
 /** The rate the voice is asked for — NEUTRINO's own, so nothing is resampled on the way. */
@@ -278,6 +278,8 @@ export function cantilenaScore(voice: SungVoiceDto, speed: number): CantilenaSco
             const note: CantilenaNote = { start, duration: round(end - start), pitch: n.P };
             if (n.M) { note.melisma = true; } else if (n.L) { note.lyric = n.L; }
             if (n.B) { note.breath = true; }
+            if (n.V != null) { note.level = n.V; }
+            if (n.E != null) { note.levelEnd = n.E; }
             return note;
         }),
     };

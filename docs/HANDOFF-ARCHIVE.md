@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1181セッションの経緯
+
+### 1.1 第1181セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14953 / 0 / 2**（`-Start p1181`・HEAD `8973f737b`・未 push 81）。オーナー報告「Harukaze-no-Mukou-e.lys L124 M24 の f1 の発声タイミングが遅れる。調べて直して」。作業場所は Lab `sessions/p1181/`。
+
+- **原因は Lily# でなく NEUTRINO のタイミング予測**: 楽譜の時刻は正しい。`ん` が続く全音符の境目を、モデルが +0.404 秒に置いた（`timing.lab` 11.704・`full.lab` 11.300）。単独の 9 音で再現。
+- **修正は Cantilena**: `NeutrinoTiming.AlignRepeats`＝同じ音素が続く境目を楽譜の位置へ。そういう境目がある譜だけ、`--skip-f0 --skip-melspec --skip-wav` でタイミングだけ出し、直して `--skip-timing` で続ける。子音のある境目はモデルのまま（前に出すのが歌）。修正後は同じ句のどの小節線でも拍の上で音が変わる（`f0.js` で確認）。
+- Lily# のコードは変更なし。Cantilena を本体ごと配布（`deploy-extension.ps1`）。
+- 終了時 full **14953 合格 / 0 失敗 / skip 2 / 合計 14955**（`-End p1181 -DiffBase 8973f737b`、BUILD 0）・Cantilena dotnet 47 / 47。実機の耳はオーナー（Reload Window 1 回）。
+
 ## 以下は第1180セッションの経緯
 
 ### 1.1 第1180セッション（2026-11-09・YT-DELL2）

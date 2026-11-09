@@ -23,7 +23,9 @@ namespace LilySharp.Core.Midi;
 /// <summary>One note a voice sings, in seconds (docs/singing-design.md §3): its syllable, or
 /// a melisma carrying the previous syllable's vowel on; a breath after it where the phrase ends.
 /// <paramref name="SourcePos"/> is the note's, as the playback list carries it.</summary>
-public sealed record SungNote(double Start, double Duration, double Pitch, string? Lyric, bool Melisma, bool Breath, int SourcePos);
+/// <paramref name="Level"/> is the note's loudness as a factor on the sung audio, null for 1;
+/// <paramref name="LevelEnd"/> the factor at its end, where a hairpin crosses it.
+public sealed record SungNote(double Start, double Duration, double Pitch, string? Lyric, bool Melisma, bool Breath, int SourcePos, double? Level = null, double? LevelEnd = null);
 
 /// <summary>A part's words on its notes, as a singing engine takes them: the score in seconds
 /// that <c>cantilena</c> reads. <paramref name="Warnings"/> says what the engine will not sing
@@ -76,6 +78,7 @@ public static class SungVoices
                 if (l.Part == part)
                     words.TryAdd(l.Tick, l.Sung ?? l.Text);     // a reading (漢[かん]) sings かん
             var line = Line(midi, part, words);
+            MoveWordsOntoGraces(line, words);
 
             var sung = new List<(MidiNote Note, int End, string? Lyric, bool Melisma)>();
             bool singing = false;
@@ -105,6 +108,7 @@ public static class SungVoices
             if (sung.Count == 0)
                 continue;
 
+            var levels = Levels(sung.Select(s => s.Note).ToList(), sung.Select(s => s.End).ToList(), secondsAt);
             var notes = new List<SungNote>(sung.Count);
             var strange = new List<string>();
             for (int i = 0; i < sung.Count; i++)
@@ -118,7 +122,7 @@ public static class SungVoices
                 // the next one still starts on its beat.
                 if (joined && note.BreathAfter)
                     duration -= Math.Min(BreathSeconds, duration / 3);
-                notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos));
+                notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos, levels[i].Level, levels[i].End));
                 if (lyric != null && language == Japanese && !IsKana(lyric) && !strange.Contains(lyric, StringComparer.Ordinal))
                     strange.Add(lyric);
             }
@@ -131,15 +135,79 @@ public static class SungVoices
         return voices;
     }
 
+    /// <summary>How far a hairpin that names no end goes, in MIDI velocity: about two dynamics.</summary>
+    private const int HairpinReach = 16;
+
+    /// <summary>The loudness of each note, as a factor on the sung audio (owner's request 2026-11-09,
+    /// session 1183; the engines do not sing louder for a marking). The velocity the instruments
+    /// play at, on the square law their volume follows, 1 being the level of a part with no marking:
+    /// a voice keeps its balance with them. A hairpin goes from its first note to the first level
+    /// written after it, or two dynamics on when none follows; null where there is nothing to do.</summary>
+    private static (double? Level, double? End)[] Levels(IReadOnlyList<MidiNote> notes, IReadOnlyList<int> ends, Func<int, double> secondsAt)
+    {
+        double Factor(double velocity) => Math.Min(2, Math.Pow(Math.Clamp(velocity, 1, 127) / MidiExporter.DefaultVelocity, 2));
+        double? Written(double factor) => Math.Abs(factor - 1) < 1e-6 ? null : Math.Round(factor, 4);
+
+        var at = notes.Select(n => (double)n.Velocity).ToArray();
+        var after = new double?[notes.Count];
+        for (int i = 0; i < notes.Count; i++)
+        {
+            if (notes[i].Swell == 0)
+                continue;
+            int stop = i + 1;
+            while (stop < notes.Count && notes[stop].Velocity == notes[i].Velocity && notes[stop].Swell == 0 && !notes[stop].SwellEnds)
+                stop++;
+            bool landsOnALevel = stop < notes.Count && Math.Sign(notes[stop].Velocity - notes[i].Velocity) == notes[i].Swell;
+            double target = landsOnALevel ? notes[stop].Velocity : notes[i].Velocity + (notes[i].Swell * HairpinReach);
+            double from = secondsAt(notes[i].StartTick);
+            double until = stop < notes.Count ? secondsAt(notes[stop].StartTick) : secondsAt(ends[^1]);
+            double Along(double t) => notes[i].Velocity + ((target - notes[i].Velocity) * Math.Clamp((t - from) / Math.Max(1e-6, until - from), 0, 1));
+            for (int k = i; k < stop && k < notes.Count; k++)
+            {
+                at[k] = Along(secondsAt(notes[k].StartTick));
+                after[k] = Along(secondsAt(ends[k]));
+            }
+            // With no level to land on, what the hairpin reached stands until one is written.
+            if (!landsOnALevel)
+                for (int k = stop; k < notes.Count && notes[k].Velocity == notes[i].Velocity && notes[k].Swell == 0; k++)
+                    at[k] = target;
+            i = stop - 1;
+        }
+        var levels = new (double? Level, double? End)[notes.Count];
+        bool any = at.Any(v => Written(Factor(v)) != null) || after.Any(v => v != null);
+        if (!any)
+            return levels;
+        for (int i = 0; i < notes.Count; i++)
+            levels[i] = (Math.Round(Factor(at[i]), 4), after[i] is { } end ? Math.Round(Factor(end), 4) : null);
+        return levels;
+    }
+
+    /// <summary>A leading grace is sung on the syllable of the note it leads to: the word moves to the
+    /// run's first note, and the rest of the run and the note itself carry its vowel on.</summary>
+    private static void MoveWordsOntoGraces(List<(MidiNote Note, int End)> line, Dictionary<int, string> words)
+    {
+        for (int i = 0; i < line.Count; i++)
+        {
+            bool leading = line[i].Note is { IsGrace: true, IsAfterGrace: false };
+            if (!leading || (i > 0 && line[i - 1].Note.IsGrace))
+                continue;
+            int main = i;
+            while (main < line.Count && line[main].Note.IsGrace)
+                main++;
+            if (main < line.Count && line[main - 1].End == line[main].Note.StartTick && words.Remove(line[main].Note.StartTick, out var word))
+                words[line[i].Note.StartTick] = word;
+        }
+    }
+
     /// <summary>
     /// The part's line, each note with its end: at each onset the highest note of the voice the
-    /// words stand on most (a chord sings its top), grace notes and drums left out, a note cut
-    /// where the next begins.
+    /// words stand on most (a chord sings its top), drums left out, a note cut where the next
+    /// begins. Grace notes are of the line: they are sung.
     /// </summary>
     private static List<(MidiNote Note, int End)> Line(MidiFile midi, string part, Dictionary<int, string> words)
     {
         var all = midi.Tracks.SelectMany(t => t.Notes)
-            .Where(n => n.Part == part && !n.IsGrace && n.Channel != 9 && n.DurationTicks > 0)
+            .Where(n => n.Part == part && n.Channel != 9 && n.DurationTicks > 0)
             .ToList();
         int voice = all.Where(n => words.ContainsKey(n.StartTick))
             .GroupBy(n => n.Voice)

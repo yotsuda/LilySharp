@@ -387,6 +387,10 @@ public class SungNoteDto
     public bool M { get; set; }
     public bool B { get; set; }
     public int S { get; set; }
+    /// <summary>The note's loudness as a factor on the sung audio, null for 1.</summary>
+    public double? V { get; set; }
+    /// <summary>The factor at the note's end, where a hairpin crosses it; null for <see cref="V"/>.</summary>
+    public double? E { get; set; }
 }
 
 /// <summary>A part's words on its notes: what the editor hands a singing engine, with what the

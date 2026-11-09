@@ -64,9 +64,17 @@ public readonly record struct MidiNote(
     // each stroke from one place, and a repeat's pass counts them again, so the preview's loop
     // tells a later stroke from a repeat by it (playSpanWindow). Not written to .mid files.
     int Strike = 0,
-    // `@breath` was written on this note: a singer breathes after it (SungVoices). Not written to
-    // .mid files, and an instrument plays on.
-    bool BreathAfter = false
+    // `@breath` or `@caesura` was written on this note: a singer breathes after it (SungVoices).
+    // Not written to .mid files, and an instrument plays on.
+    bool BreathAfter = false,
+    // A hairpin starts on this note, 1 `@cresc`, -1 `@decresc`/`@dim`: a singer swells (SungVoices).
+    // Not written to .mid files: the MIDI plays each note at the last level written.
+    int Swell = 0,
+    // `@!cresc` or `@!decresc` was written on this note. Not written to .mid files.
+    bool SwellEnds = false,
+    // An `afterGrace` run's note: it ends the note before it, where a leading grace begins the
+    // note after it. Not written to .mid files.
+    bool IsAfterGrace = false
 );
 
 /// <summary>

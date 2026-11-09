@@ -390,14 +390,32 @@ public sealed class MidiExporter
         _lastOnsetSerial = _sectionPlaySerial;
     }
 
-    /// <summary>The onset's notes, when its marks hold an <c>@breath</c>: a singer breathes after them
-    /// (owner's request 2026-11-09, session 1182). A note tied into counts, its breath being after the tie's end.</summary>
-    private static void MarkBreath(MidiTrack track, IReadOnlyList<int> onset, IEnumerable<SyntaxNode> marks)
+    /// <summary>What the onset's marks ask of a singer and not of an instrument (owner's requests
+    /// 2026-11-09, sessions 1182 and 1183): a breath after it (<c>@breath</c>, <c>@caesura</c>; a
+    /// note tied into counts, its breath being after the tie's end), a hairpin beginning or ending.</summary>
+    private static void MarkForSinger(MidiTrack track, IReadOnlyList<int> onset, IEnumerable<SyntaxNode> marks)
     {
-        if (!marks.OfType<ArticulationSyntax>().Any(a => a.Type == ArticulationType.Breath))
+        bool breath = false, ends = false;
+        int swell = 0;
+        foreach (var mark in marks)
+        {
+            switch (mark)
+            {
+                case ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura }:
+                    breath = true;
+                    break;
+                case DynamicSyntax { Level: DynamicLevel.None } hairpin when SyntaxFacts.IsDynamicSpannerName(hairpin.DynamicToken.Text):
+                    swell = hairpin.DynamicToken.Text == "cresc" ? 1 : -1;
+                    break;
+                case MusicMarkSyntax { IsSpanEnd: true } end when SyntaxFacts.IsDynamicSpannerName(end.Name):
+                    ends = true;
+                    break;
+            }
+        }
+        if (!breath && !ends && swell == 0)
             return;
         foreach (int i in onset)
-            track.Notes[i] = track.Notes[i] with { BreathAfter = true };
+            track.Notes[i] = track.Notes[i] with { BreathAfter = breath, Swell = swell, SwellEnds = ends };
     }
 
     /// <summary>A silence (a rest, a slash) ends the tie memory both ways: no tie is pending
@@ -2935,7 +2953,7 @@ public sealed class MidiExporter
         int tiedInto = ExtendTied(track, targets, midiPitch, durationTicks);
         if (tiedInto >= 0)
         {
-            MarkBreath(track, [tiedInto], note.Articulations);
+            MarkForSinger(track, [tiedInto], note.Articulations);
             CloseOnset(track, [tiedInto], startsTie); // continue a tie chain (c~ c~ c)
             _currentTick += durationTicks;
             return;
@@ -2945,7 +2963,7 @@ public sealed class MidiExporter
             _currentTick, actualDuration, note.SourceStart,
             QuarterBend: note.Pitch.QuarterOffset,
             SourceOrdinal: NextOrdinal(note.SourceStart), Timbre: _currentTimbre, Part: _currentPart));
-        MarkBreath(track, [track.Notes.Count - 1], note.Articulations);
+        MarkForSinger(track, [track.Notes.Count - 1], note.Articulations);
         CloseOnset(track, [track.Notes.Count - 1], startsTie);
         _currentTick += durationTicks;
     }
@@ -3070,7 +3088,7 @@ public sealed class MidiExporter
                 int tiedInto = ExtendTied(track, targets, sound.MidiPitch, durationTicks);
                 if (tiedInto >= 0)
                 {
-                    MarkBreath(track, [tiedInto], bare.Articulations);
+                    MarkForSinger(track, [tiedInto], bare.Articulations);
                     CloseOnset(track, [tiedInto], startsTie);
                     break;
                 }
@@ -3078,7 +3096,7 @@ public sealed class MidiExporter
                     startTick, actualDuration, bare.SourceStart,
                     QuarterBend: sound.QuarterBend,
                     SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: _currentTimbre, Part: _currentPart));
-                MarkBreath(track, [track.Notes.Count - 1], bare.Articulations);
+                MarkForSinger(track, [track.Notes.Count - 1], bare.Articulations);
                 CloseOnset(track, [track.Notes.Count - 1], startsTie);
                 break;
             }
@@ -3106,7 +3124,7 @@ public sealed class MidiExporter
                         bare.SourceStart, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart));
                     onset.Add(track.Notes.Count - 1);
                 }
-                MarkBreath(track, onset, bare.Articulations);
+                MarkForSinger(track, onset, bare.Articulations);
                 CloseOnset(track, onset, startsTie);
                 break;
             }
@@ -3391,7 +3409,7 @@ public sealed class MidiExporter
             resolved.Add((dinfo.GmKey, 0, true));
         }
         _resolvedChordNotes[chord] = resolved;
-        MarkBreath(track, onset, chord.Articulations);
+        MarkForSinger(track, onset, chord.Articulations);
         CloseOnset(track, tiedMembers is null ? onset : onTiedMembers, startsTie);
 
         // The next note is relative to the chord's ANCHOR (the root's bare letter or the
@@ -3455,7 +3473,7 @@ public sealed class MidiExporter
                 onset.Add(track.Notes.Count - 1);
             }
         }
-        MarkBreath(track, onset, rep.Articulations);
+        MarkForSinger(track, onset, rep.Articulations);
         CloseOnset(track, onset, startsTie);
 
         _currentTick = startTick + durationTicks;
@@ -3662,7 +3680,7 @@ public sealed class MidiExporter
             return;
         int at = Math.Max(mainStart + 1, end - run);
         for (int i = first; i < track.Notes.Count; i++)
-            track.Notes[i] = track.Notes[i] with { StartTick = track.Notes[i].StartTick - (end - at) };
+            track.Notes[i] = track.Notes[i] with { StartTick = track.Notes[i].StartTick - (end - at), IsAfterGrace = true };
         for (int i = first - 1; i >= 0 && track.Notes[i].StartTick >= mainStart; i--)
             if (!track.Notes[i].IsGrace && track.Notes[i].StartTick + track.Notes[i].DurationTicks > at)
                 track.Notes[i] = track.Notes[i] with { DurationTicks = at - track.Notes[i].StartTick };

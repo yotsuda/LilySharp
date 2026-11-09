@@ -80,7 +80,15 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 - **`breath: true`** on the last note before a rest (a gap in the part), on a note marked
   `@breath`, and on the part's last note — where a singer breathes; the engine shapes the phrase
   end. An `@breath` with a sung note right after it takes the room out of its own note (a quarter
-  of a second, at most a third of the note), so the next note still starts on its beat.
+  of a second, at most a third of the note), so the next note still starts on its beat. `@caesura`
+  sings the same way.
+- **`level` / `levelEnd`** on a note: its loudness as a factor on the sung audio, from the velocity
+  the instruments play at on the square law of their volume (1 for a part with no marking).
+  Measured 2026-11-09: NEUTRINO reads a dynamic in its MusicXML and sings no louder, pp and ff alike,
+  so Cantilena scales what was sung (`SungLevels`). A hairpin swells across its notes to the next
+  level written, or two dynamics on when none follows; the MIDI does not ramp it.
+- **Grace notes are sung**: a leading grace takes the syllable of its note and the note carries the
+  vowel on; an `afterGrace` run carries the vowel of the note before it.
 - **Which parts sing**: every part a placed lyrics row sings (the same set the MIDI gives
   lyric events to), one voice per (part, lyrics track); verses sing on their own pass as the
   MIDI already does (`SingLyrics`' pass rule). A part with no words is not a voice.

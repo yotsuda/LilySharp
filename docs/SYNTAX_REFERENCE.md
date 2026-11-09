@@ -1924,7 +1924,7 @@ those voices and `Ctrl+Shift+PageUp` / `PageDown` change the engine, the chosen 
 preview. `singer male "neutrino/SOMA"` (or `female`) leaves out of both the voices that say they are
 the other; it changes nothing else, and another word there is an error (LYS4040). With no name,
 `singer male` lets each machine pick: the voice `cantilena.voices` casts to `male`, else the first
-installed voice that says it is male and sings the words' language. An `@breath` on a sung note is a breath: the singer stops a little early, and the next note starts on its beat.
+installed voice that says it is male and sings the words' language. An `@breath` on a sung note is a breath: the singer stops a little early, and the next note starts on its beat; `@caesura` the same. Dynamics, accents and hairpins set how loud the voice is, and a grace note is sung on the syllable of its note.
 
 **Melismas** follow LilyPond's `\lyricsto`. A **slur** or a **tie** makes one on its own:
 the syllable on the slur's first note is sung over every note up to the one that closes

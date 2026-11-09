@@ -219,6 +219,10 @@ public static class SungScoreJson
                     w.WriteString("lyric", n.Lyric);
                 if (n.Breath)
                     w.WriteBoolean("breath", true);
+                if (n.Level is { } level)
+                    w.WriteNumber("level", level);
+                if (n.LevelEnd is { } levelEnd)
+                    w.WriteNumber("levelEnd", levelEnd);
                 w.WriteEndObject();
             }
             w.WriteEndArray();

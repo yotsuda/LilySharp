@@ -58,6 +58,76 @@ public class SungVoicesTests
     private const string YukiMusic = "c'8. d16 c8. d16 | c4 a8 r |";
     private const string YukiWords = "ゆ _ き や | こん こ |";
 
+    // ── dynamics and graces (owner's request 2026-11-09, session 1183) ──
+
+    private static double Square(double velocity) => Math.Round(Math.Pow(velocity / 90, 2), 4);
+
+    [Fact]
+    public void NoMarking_LeavesTheAudioAlone()
+        => Assert.All(Assert.Single(Voices(Book("c'4 d | e f |", "さ く | ら よ |"))).Notes, n => { Assert.Null(n.Level); Assert.Null(n.LevelEnd); });
+
+    [Fact]
+    public void ADynamic_IsTheLevelOfItsNotes()
+    {
+        var notes = Assert.Single(Voices(Book("c'4@p d | e f@f |", "さ く | ら よ |"))).Notes;
+        Assert.Equal(new double?[] { Square(70), Square(70), Square(70), Square(95) }, notes.Select(n => n.Level));
+        Assert.All(notes, n => Assert.Null(n.LevelEnd));
+    }
+
+    [Fact]
+    public void AnAccent_IsItsNotesAlone()
+    {
+        var notes = Assert.Single(Voices(Book("c'4@p d@accent | e f |", "さ く | ら よ |"))).Notes;
+        Assert.True(notes[1].Level > notes[0].Level);
+        Assert.Equal(notes[0].Level, notes[2].Level);
+    }
+
+    [Fact]
+    public void AHairpin_RunsToTheNextLevel()
+    {
+        var notes = Assert.Single(Voices(Book("c'4@p@cresc d | e f@f |", "さ く | ら よ |"))).Notes;
+        Assert.Equal(Square(70), notes[0].Level);
+        Assert.Equal(Square(70 + (25.0 / 3)), notes[0].LevelEnd);
+        Assert.Equal(Square(70 + (25.0 / 3)), notes[1].Level);
+        Assert.Equal(Square(70 + (50.0 / 3)), notes[1].LevelEnd);
+        Assert.Equal(Square(95), notes[3].Level);
+        Assert.Null(notes[3].LevelEnd);
+    }
+
+    [Fact]
+    public void AHairpinWithNothingAfterIt_GoesTwoDynamics_AndStays()
+    {
+        var notes = Assert.Single(Voices(Book("c'4@decresc d | e f@!decresc | g a |", "さ く | ら よ | き く |"))).Notes;
+        Assert.True(notes[2].Level < notes[0].Level);
+        Assert.Equal(Square(74), notes[3].Level);
+        Assert.Equal(Square(74), notes[5].Level);
+    }
+
+    [Fact]
+    public void ACaesura_IsABreath()
+    {
+        var notes = Assert.Single(Voices(Book("c'4@caesura d | e f |", "さ く | ら よ |"))).Notes;
+        Assert.True(notes[0].Breath);
+        Assert.Equal(1.0 / 3, notes[0].Duration, 6);
+    }
+
+    [Fact]
+    public void ALeadingGrace_TakesTheSyllable_AndItsNoteCarriesTheVowelOn()
+    {
+        var notes = Assert.Single(Voices(Book("grace { d'16 } c'4 d | e f |", "さ く | ら よ |"))).Notes;
+        Assert.Equal(new[] { "さ", null, "く", "ら", "よ" }, notes.Select(n => n.Lyric));
+        Assert.True(notes[1].Melisma);
+        Assert.Equal(notes[1].Start, notes[0].Start + notes[0].Duration, 6);
+    }
+
+    [Fact]
+    public void AnAfterGrace_CarriesTheVowelOfTheNoteBefore()
+    {
+        var notes = Assert.Single(Voices(Book("c'2 afterGrace { d16 } | e2 |", "さ | く |"))).Notes;
+        Assert.Equal(new[] { "さ", null, "く" }, notes.Select(n => n.Lyric));
+        Assert.True(notes[1].Melisma);
+    }
+
     // ── @breath (owner's request 2026-11-09, session 1182) ──
 
     [Fact]
