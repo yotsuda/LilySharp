@@ -138,21 +138,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1203セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1203`・HEAD `94f519e3e`・未 push 103）。オーナー報告「`singer` を選ぶと "" まで入って male と female が選べない」→「直して」。作業場所は Lab `sessions/p1203/`。
+
+- `singer` の候補は引用符を入れず `singer ` まで（歌詞の頭、score の行、part）。続く候補はエディタの female・male・声の一覧。`singer male`、`singer female` の別候補は廃止。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1203 -DiffBase 94f519e3e`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
+## 以下は第1202セッションの経緯
+
 ### 1.1 第1202セッション（2026-11-09・YT-DELL2）
 
 開始時 full **15013 / 0 / 2**（`-Start p1202`・HEAD `c74319579`・未 push 102）。オーナー「AI に作曲させるときに、AI から呼び出せるツールを追加して。今利用できる声の名前を返す」。作業場所は Lab `sessions/p1202/`。
 
 - `lilysharp_listVoices`（#listVoices）: provider・gender・language（任意）で絞った声の名前と、書き方。性別不明の声は性別指定でも残す（補完と同じ規則）。`voiceListText` が本体。`COMPOSE_FOR_LLM.md` に「名前を推測しない」を追加（常時読まれる指示文は 2000 字の上限があり入らない）。
 - 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1202 -DiffBase c74319579`、BUILD 0）・npm 940 / 940。`Deploy-Lsp.ps1` で配布済み（ツールを足したので Reload Window 2 回）。
-
-## 以下は第1201セッションの経緯
-
-### 1.1 第1201セッション（2026-11-09・YT-DELL2）
-
-開始時 full **15013 / 0 / 2**（`-Start p1201`・HEAD `355b53d8c`・未 push 101）。オーナー「hello は音節が少なくていまいち」→「Hello, how are you?」に決定。作業場所は Lab `sessions/p1201/`。
-
-- 英語の試聴を こんにちわ と同じ 5 音のメロディに。英語の版だけ上げ（`VOICE_SAMPLE_EN_VERSION`）、日本語の保存済みはそのまま。
-- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1201 -DiffBase 355b53d8c`、BUILD 0）・npm 939 / 939。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
 
 ## 2. 開いている作業
 

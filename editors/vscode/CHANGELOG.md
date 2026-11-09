@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Choosing `singer` leaves the gender open**: it writes the word and a space, and the list that opens holds `female`, `male` and the voices.
 - **#listVoices**: Copilot's chat can ask which singing voices this machine has, by provider, gender or language, before writing a `singer`.
 - **An English voice says "Hello, how are you?"** when chosen, five syllables on the notes of the Japanese phrase.
 - **A voice heard from just past its closing quote says the words' language**: on an English line it says hello wherever on the `singer` the caret is.

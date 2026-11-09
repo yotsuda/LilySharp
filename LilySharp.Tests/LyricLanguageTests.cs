@@ -324,7 +324,7 @@ public class LyricLanguageTests
     public void TheSingerItem_LeavesTheCaretBetweenTheQuotes_AndOpensTheList()
     {
         var item = Assert.Single(LilySharpLanguageServer.GetLyricsTrackNameCompletions(new System.Collections.Generic.HashSet<string> { "sings", "language" }).Items, i => i.Label == "singer");
-        Assert.Equal("singer \"$0\"", item.InsertText);
+        Assert.Equal("singer $0", item.InsertText);
         Assert.Equal(InsertTextFormat.Snippet, item.InsertTextFormat);
         Assert.Equal("editor.action.triggerSuggest", item.Command!.CommandIdentifier);
     }
@@ -445,7 +445,7 @@ public class LyricLanguageTests
     [Theory]
     [InlineData("lyrics words singer male \"neutrino/SOMA\" ", new[] { "sings", "language" }, new[] { "singer", "singer male", "singer female" })]
     [InlineData("lyrics words sings sop singer male \"x\" ", new[] { "language" }, new[] { "sings", "singer male" })]
-    [InlineData("lyrics words sings sop ", new[] { "singer", "singer male", "singer female" }, new[] { "sings" })]
+    [InlineData("lyrics words sings sop ", new[] { "singer" }, new[] { "sings", "singer male", "singer female" })]
     public void AGenderedSinger_IsOneClause(string head, string[] offered, string[] gone)
     {
         var labels = Offered(Declared + head);
@@ -586,11 +586,13 @@ public class LyricLanguageTests
         => Assert.Null(LilySharpLanguageServer.LyricsHeadAt("lyrics words singer so ", "lyrics words singer so ".Length));
 
     [Fact]
-    public void TheGenderedItem_WritesTheWordAndOpensTheList()
+    public void TheSingerItem_WritesTheWordAndOpensTheList_TheGendersBeingChosenThere()
     {
-        var item = Assert.Single(LilySharpLanguageServer.GetLyricsTrackNameCompletions().Items, i => i.Label == "singer male");
-        Assert.Equal("singer male \"$0\"", item.InsertText);
+        var items = LilySharpLanguageServer.GetLyricsTrackNameCompletions().Items;
+        var item = Assert.Single(items, i => i.Label == "singer");
+        Assert.Equal("singer $0", item.InsertText);
         Assert.Equal("editor.action.triggerSuggest", item.Command!.CommandIdentifier);
+        Assert.DoesNotContain(items, i => i.Label.StartsWith("singer ", StringComparison.Ordinal));
     }
 
     [Fact]
