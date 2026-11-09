@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, singerChoices, singerValueAt, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleScore } from './singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, singerChoices, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleKey, voiceSampleScore } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -3874,7 +3874,7 @@ const singerCompletion: vscode.CompletionItemProvider = {
         const api = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend.api : undefined;
         if (!api?.voices) { return undefined; }
         const voices = await api.voices();
-        samples().warm(voices.filter(v => v.language === slot.Language).map(v => v.id));
+        samples().warm(voices.filter(v => singsLanguage(v, slot.Language!)).map(v => voiceSampleKey(v.id, slot.Language!)));
         const line = document.lineAt(position.line).text;
         const open = line.lastIndexOf('"', position.character - 1);
         const close = line.indexOf('"', position.character);
@@ -3906,35 +3906,38 @@ function samples(): VoiceSampleQueue {
         (id, e) => outputChannel.appendLine(`singer: the sample of ${id} was not sung: ${String(e)}`));
 }
 
-async function singVoiceSample(id: string): Promise<void> {
+async function singVoiceSample(key: string): Promise<void> {
     const engine = await renderer();
     const backend = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend : undefined;
     if (!backend?.api.voices) { throw new Error('no engine that lists its voices'); }
+    const [id, asked] = key.split('@');
     const voice = (await backend.api.voices()).find(v => v.id === id);
-    const score = voice?.language ? voiceSampleScore(voice.language, voice.gender) : undefined;
-    if (!score) { throw new Error(`no sample phrase for the language ${voice?.language ?? 'it does not name'}`); }
-    const v = await backend.sing(`sample-${id}`, score, id);
-    await fs.promises.mkdir(path.dirname(voiceSampleFile(id)), { recursive: true });
-    await fs.promises.copyFile(v.wav, voiceSampleFile(id));
+    const language = asked ?? voice?.language;
+    const score = language ? voiceSampleScore(language, voice?.gender) : undefined;
+    if (!score) { throw new Error(`no sample phrase for the language ${language ?? 'it does not name'}`); }
+    const v = await backend.sing(`sample-${key}`, score, id);
+    await fs.promises.mkdir(path.dirname(voiceSampleFile(key)), { recursive: true });
+    await fs.promises.copyFile(v.wav, voiceSampleFile(key));
 }
 
 /** Lets the document's preview say a short phrase in `id` (with no preview open it is silent, as every audition is). */
-async function auditionVoice(uri: string, id: string, clock: StageClock): Promise<void> {
-    voiceSampleWanted = id;
+async function auditionVoice(uri: string, id: string, clock: StageClock, language?: string): Promise<void> {
+    const key = voiceSampleKey(id, language);
+    voiceSampleWanted = key;
     const songAtStart = voiceRenderer?.singing ? 'being sung' : 'not being sung';
     const say = (end: string) => outputChannel.appendLine(`singer: hear ${id}: ${clock}${end} (the song was ${songAtStart} at the start)`);
     if (!vscode.workspace.getConfiguration('lilysharp').get<boolean>('audition.enabled', true)) { say(', auditions are off'); return; }
     if (!previewPanels.get(uri)) { say(', no preview is open'); return; }
-    const onDisk = fs.existsSync(voiceSampleFile(id));
-    const ready = await samples().ask(id);
+    const onDisk = fs.existsSync(voiceSampleFile(key));
+    const ready = await samples().ask(key);
     clock.mark(onDisk ? 'sample on disk' : 'sample sung');
     if (!ready) { say(', the sample could not be sung'); return; }
-    if (voiceSampleWanted !== id) { say(', another voice was chosen meanwhile'); return; }
+    if (voiceSampleWanted !== key) { say(', another voice was chosen meanwhile'); return; }
     const panel = previewPanels.get(uri);
     if (!panel) { say(', the preview closed meanwhile'); return; }
-    const bytes = await fs.promises.readFile(voiceSampleFile(id));
+    const bytes = await fs.promises.readFile(voiceSampleFile(key));
     clock.mark('read');
-    if (voiceSampleWanted !== id) { say(', another voice was chosen meanwhile'); return; }
+    if (voiceSampleWanted !== key) { say(', another voice was chosen meanwhile'); return; }
     say('');
     void panel.webview.postMessage({ type: 'playVoiceSample', bytes: new Uint8Array(bytes), id, pressedAt: clock.startedAt, sentAt: Date.now() });
 }
@@ -3949,7 +3952,9 @@ async function hearSinger(label: unknown): Promise<void> {
     clock.mark('engine');
     const voice = await engine.backend.voiceName(label);
     clock.mark('name');
-    await auditionVoice(editor.document.uri.toString(), voice, clock);
+    const slot = client && clientReady ? await client.sendRequest<{ Language?: string | null }>('lilysharp/singerSlot',
+        { textDocument: { uri: editor.document.uri.toString() }, offset: editor.document.offsetAt(editor.selection.active) }).then(s => s, () => undefined) : undefined;
+    await auditionVoice(editor.document.uri.toString(), voice, clock, slot?.Language ?? undefined);
 }
 
 /**
@@ -3978,8 +3983,8 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, byVoic
         vscode.window.setStatusBarMessage('Lily#: the Cantilena extension lists the voices, and it is not there', 4000);
         return true;
     }
-    const sings = (await api.voices()).filter(v => v.language === slot.Language);
-    samples().warm(sings.map(v => v.id));
+    const sings = (await api.voices()).filter(v => singsLanguage(v, slot.Language!));
+    samples().warm(sings.map(v => voiceSampleKey(v.id, slot.Language!)));
     const voices = sings.filter(v => fitsGender(v, slot.Gender));
     clock.mark('voices');
     const next = stepVoice(byVoiceId(voices), at.value, direction, !byVoice);
@@ -3996,7 +4001,7 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, byVoic
     editor.selection = new vscode.Selection(caret, caret);
     const label = voices.find(v => v.id === next)?.label;
     vscode.window.setStatusBarMessage(`Lily#: singer ${next}${label ? ` (${label})` : ''}`, 4000);
-    void auditionVoice(doc.uri.toString(), next, clock);
+    void auditionVoice(doc.uri.toString(), next, clock, slot.Language);
     return true;
 }
 

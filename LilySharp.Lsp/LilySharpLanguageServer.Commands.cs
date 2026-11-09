@@ -1120,7 +1120,7 @@ public sealed partial class LilySharpLanguageServer
                     Gender = v.Gender,
                     Notes = v.Notes.Select(n => new SungNoteDto
                     {
-                        T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos, V = n.Level, E = n.LevelEnd, I = n.Inhale,
+                        T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos, V = n.Level, E = n.LevelEnd, I = n.Inhale, H = n.Hyphen,
                     }).ToArray(),
                 }).OrderByDescending(v => v.InScore).ToArray(),
             };

@@ -26,7 +26,7 @@ namespace LilySharp.Core.Midi;
 /// <paramref name="Level"/> is the note's loudness as a factor on the sung audio, null for 1;
 /// <paramref name="LevelEnd"/> the factor at its end, where a hairpin crosses it; <paramref name="Inhale"/>
 /// an audible breath before the note right after it (<c>@breath</c>; a rest is only silence).
-public sealed record SungNote(double Start, double Duration, double Pitch, string? Lyric, bool Melisma, bool Breath, int SourcePos, double? Level = null, double? LevelEnd = null, bool Inhale = false);
+public sealed record SungNote(double Start, double Duration, double Pitch, string? Lyric, bool Melisma, bool Breath, int SourcePos, double? Level = null, double? LevelEnd = null, bool Inhale = false, bool Hyphen = false);
 
 /// <summary>A part's words on its notes, as a singing engine takes them: the score in seconds
 /// that <c>cantilena</c> reads. <paramref name="Warnings"/> says what the engine will not sing
@@ -76,11 +76,12 @@ public static class SungVoices
             var first = lyrics.First(l => l.Part == part);
             string language = first.Language ?? Japanese;
             var words = new Dictionary<int, string>();
+            var hyphens = new HashSet<int>();
             foreach (var l in lyrics)
-                if (l.Part == part)
-                    words.TryAdd(l.Tick, l.Sung ?? l.Text);     // a reading (漢[かん]) sings かん
+                if (l.Part == part && words.TryAdd(l.Tick, l.Sung ?? l.Text) && l.Hyphen)     // a reading (漢[かん]) sings かん
+                    hyphens.Add(l.Tick);
             var line = Line(midi, part, words);
-            MoveWordsOntoGraces(line, words);
+            MoveWordsOntoGraces(line, words, hyphens);
 
             var sung = new List<(MidiNote Note, int End, string? Lyric, bool Melisma)>();
             bool singing = false;
@@ -124,7 +125,7 @@ public static class SungVoices
                 // the next one still starts on its beat.
                 if (joined && note.BreathAfter)
                     duration -= Math.Min(BreathSeconds, duration / 3);
-                notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos, levels[i].Level, levels[i].End, joined && note.Inhale));
+                notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos, levels[i].Level, levels[i].End, joined && note.Inhale, lyric != null && hyphens.Contains(note.StartTick)));
                 if (lyric != null && language == Japanese && !IsKana(lyric) && !strange.Contains(lyric, StringComparer.Ordinal))
                     strange.Add(lyric);
             }
@@ -186,7 +187,7 @@ public static class SungVoices
 
     /// <summary>A leading grace is sung on the syllable of the note it leads to: the word moves to the
     /// run's first note, and the rest of the run and the note itself carry its vowel on.</summary>
-    private static void MoveWordsOntoGraces(List<(MidiNote Note, int End)> line, Dictionary<int, string> words)
+    private static void MoveWordsOntoGraces(List<(MidiNote Note, int End)> line, Dictionary<int, string> words, HashSet<int> hyphens)
     {
         for (int i = 0; i < line.Count; i++)
         {
@@ -197,7 +198,11 @@ public static class SungVoices
             while (main < line.Count && line[main].Note.IsGrace)
                 main++;
             if (main < line.Count && line[main - 1].End == line[main].Note.StartTick && words.Remove(line[main].Note.StartTick, out var word))
+            {
                 words[line[i].Note.StartTick] = word;
+                if (hyphens.Remove(line[main].Note.StartTick))
+                    hyphens.Add(line[i].Note.StartTick);
+            }
         }
     }
 

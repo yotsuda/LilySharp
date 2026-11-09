@@ -393,6 +393,8 @@ public class SungNoteDto
     public double? E { get; set; }
     /// <summary>An audible breath before the note right after it (<c>@breath</c>).</summary>
     public bool I { get; set; }
+    /// <summary>The next syllable is of the same word (<c>Twin- kle</c>).</summary>
+    public bool H { get; set; }
 }
 
 /// <summary>A part's words on its notes: what the editor hands a singing engine, with what the

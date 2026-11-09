@@ -24,14 +24,14 @@ import { VOICE_LEAD_S } from './webview/playbackCore';
 
 /** One note of `lilysharp/sung`, in seconds: its syllable `L` (null on a melisma), `M` a melisma
  *  carrying the previous syllable's vowel on, `B` a breath after it, `S` the source offset. */
-export interface SungNoteDto { T: number; D: number; P: number; L?: string | null; M?: boolean; B?: boolean; S?: number; V?: number | null; E?: number | null; I?: boolean }
+export interface SungNoteDto { T: number; D: number; P: number; L?: string | null; M?: boolean; B?: boolean; S?: number; V?: number | null; E?: number | null; I?: boolean; H?: boolean }
 
 /** A part's words on its notes, as the server answers `lilysharp/sung`. */
 /** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
 export interface SungVoiceDto { Part: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null; Gender?: string | null }
 
 /** The score Cantilena reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
-export interface CantilenaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean }
+export interface CantilenaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean }
 export interface CantilenaScore { sampleRate: number; language: string; notes: CantilenaNote[] }
 
 /** The rate the voice is asked for — NEUTRINO's own, so nothing is resampled on the way. */
@@ -42,7 +42,12 @@ export const CANTILENA_EXTENSION_ID = 'yotsuda.cantilena';
 
 /** A voice the Cantilena extension lists: `id` is `engine/name` (`neutrino/MERROW`), what its
  *  `sing` takes and its setting holds. */
-export interface CantilenaVoice { id: string; engine: string; name: string; label?: string; language?: string; gender?: string; licence?: string }
+export interface CantilenaVoice { id: string; engine: string; name: string; label?: string; language?: string; languages?: string[]; gender?: string; licence?: string }
+
+/** Whether a voice says it sings `language`: its list of languages, else its one. */
+export function singsLanguage(voice: Pick<CantilenaVoice, 'language' | 'languages'>, language: string): boolean {
+    return voice.languages?.includes(language) ?? voice.language === language;
+}
 
 /** What that extension's `activate` returns, as far as Lily# reads it (its README, "For extension
  *  authors"). `status().voice` is the setting's voice as `engine/name`; `voices()` came with
@@ -74,7 +79,7 @@ export interface SingerChoice { label: string; detail: string }
  * 1174), so is one that says it is the other.
  */
 export function singerChoices(voices: readonly CantilenaVoice[], language: string, gender?: string | null): SingerChoice[] {
-    return byVoiceId(voices.filter(v => v.language === language && fitsGender(v, gender)))
+    return byVoiceId(voices.filter(v => singsLanguage(v, language) && fitsGender(v, gender)))
         .map(v => ({ label: v.id, detail: v.label && v.label !== v.name ? v.label : v.name }));
 }
 
@@ -169,11 +174,23 @@ export class StageClock {
     toString(): string { return this.stages.join(', '); }
 }
 
+/** What a voice's sample is kept under: Japanese under the voice alone, as the samples already sung are,
+ *  and another language after an `@`, since one voice now says a phrase in each language it sings. */
+export function voiceSampleKey(id: string, language?: string): string {
+    return language && language !== 'ja' ? `${id}@${language}` : id;
+}
+
 /** The short phrase a voice is heard by when it is chosen, an octave lower for a male voice (owner's
  *  request 2026-11-09, session 1177); undefined for a language it has no words for. */
 export function voiceSampleScore(language: string, gender?: string): CantilenaScore | undefined {
-    if (language !== 'ja') { return undefined; }
     const octave = gender === 'male' ? -12 : 0;
+    if (language === 'en') {
+        return { sampleRate: VOICE_SAMPLE_RATE, language, notes: [
+            { start: 0.3, duration: 0.5, pitch: 60 + octave, lyric: 'hel', hyphen: true },
+            { start: 0.8, duration: 1, pitch: 64 + octave, lyric: 'lo' },
+        ] };
+    }
+    if (language !== 'ja') { return undefined; }
     const notes: CantilenaNote[] = [
         { start: 0.3, duration: 0.25, pitch: 60, lyric: 'こ' },
         { start: 0.55, duration: 0.25, pitch: 62, lyric: 'ん' },
@@ -273,6 +290,7 @@ export function cantilenaScore(voice: SungVoiceDto, speed: number): CantilenaSco
             if (n.V != null) { note.level = n.V; }
             if (n.E != null) { note.levelEnd = n.E; }
             if (n.I) { note.inhale = true; }
+            if (n.H) { note.hyphen = true; }
             return note;
         }),
     };

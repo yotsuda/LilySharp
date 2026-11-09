@@ -138,21 +138,23 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1190セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14988 / 0 / 2**（`-Start p1190`・HEAD `031eab3a4`・未 push 90）。オーナー「DiffSinger の英語対応を実装して」。作業場所は Lab `sessions/p1190/`。
+
+- Cantilena: `EnglishPhonemizer`（ハイフンで繋がる音節を 1 語として辞書を引き、母音ごとに音符へ配る。`twinkle` は辞書の `twinkles` から作る）。声の辞書は楽譜の `language` で切り替える（`ja`・`en`、ほかは理由を言って失敗）。`VoiceEntry.languages`。`DsYaml` の Deserializer が並行で壊れていたので直列に。
+- Lily#: 音節の続きを `SungNote.Hyphen`→ DTO `H`→ `hyphen`。声の絞り込みは `singsLanguage`。英語の行の試聴は hello（`voiceSampleKey`、`id@en`）。
+- 実測: TIGER で `language:"en"` の「Twin-kle twin-kle lit-tle star」は 7 音すべて声が出る。耳と実物の VS Code は未確認（MANUAL-CHECKS）。辞書に無い語は黙る。
+- 終了時 full **14990 合格 / 0 失敗 / skip 2 / 合計 14992**（`-End p1190 -DiffBase 031eab3a4`、BUILD 0）・npm 936 / 936。`Deploy-Lsp.ps1` と Cantilena の `deploy-extension.ps1` で配布済み（Reload Window）。
+
+## 以下は第1189セッションの経緯
+
 ### 1.1 第1189セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14988 / 0 / 2**（`-Start p1189`・HEAD `48d76078a`・未 push 89）。オーナー「pgup で一覧の上側のプロバイダへ移るように揃えて」。作業場所は Lab `sessions/p1189/`。
 
 - `stepVoice` の `acrossEngines` を Up と同じ向きに（PageUp＝一覧の上のプロバイダの先頭の声）。
 - 終了時 full **14988 合格 / 0 失敗 / skip 2 / 合計 14990**（`-End p1189 -DiffBase 48d76078a`、BUILD 0）・npm 935 / 935。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
-
-## 以下は第1188セッションの経緯
-
-### 1.1 第1188セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14988 / 0 / 2**（`-Start p1188`・HEAD `fc54c00ed`・未 push 88）。オーナー「singer の補完はアルファベット順に。diffsinger を一番前に」「ctrl+shift+up はプロバイダをまたいで動くように」「ctrl+shift+pgup/down は各プロバイダの先頭の声に移動」。作業場所は Lab `sessions/p1188/`。
-
-- `byVoiceId`（singerCore）で補完も step も名前順＝`diffsinger/` が先。`stepVoice` は一覧全体を歩く（両端で止まる）。`acrossEngines` は隣のプロバイダの先頭へ（プロバイダごとの直近の記憶は廃止）。PageUp は従来どおり一覧の下の方向のプロバイダへ（要望外で変えていない）。
-- 終了時 full **14988 合格 / 0 失敗 / skip 2 / 合計 14990**（`-End p1188 -DiffBase fc54c00ed`、BUILD 0）・npm 935 / 935。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
 
 ## 2. 開いている作業
 

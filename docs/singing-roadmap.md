@@ -34,7 +34,7 @@ editor plays both** (`singing-design.md` §2). Everything below sorts into those
 |---|---|
 | Contract (`SungScore`: seconds, MIDI pitch, syllable, melisma, breath) | Shipped, Cantilena `README.md` |
 | `neutrino` backend (NEUTRINO Tau v3.2.x, Japanese, Windows) | Sings; warm render ≈ 0.1× real time on a GPU |
-| `diffsinger` backend (in-process ONNX; OpenUtau-format voices; kana) | Sings (sessions 1134–1136); on Windows through DirectML on any DirectX 12 GPU, the CPU where there is none (session 1139, Cantilena 0.4.0) |
+| `diffsinger` backend (in-process ONNX; OpenUtau-format voices; kana, and English through a voice's `dsdict-en.yaml`, session 1190) | Sings (sessions 1134–1136); on Windows through DirectML on any DirectX 12 GPU, the CPU where there is none (session 1139, Cantilena 0.4.0) |
 | `cantilena serve` (resident JSON-lines engine) and the CLI | Shipped |
 | Cantilena VS Code extension `yotsuda.cantilena` (settings, pickers, API) | Built, VSIX packed, **not yet published**; repository **not yet on GitHub** |
 | `lilysharp/sung`, the editor's voice playback, the practice menu's `♪ part` | Shipped; the owner heard it synchronised in the real VS Code |
@@ -103,8 +103,9 @@ sung** and **the language it is in**.
   score carries the tag, and a voice that says it sings another language refuses in one
   sentence, the instrument playing (session 1168). **Left for Cantilena:** the DiffSinger
   dictionary is still fixed at `ja`, so no voice sings another language yet.
-- **English and others** come with DiffSinger voices and their dictionaries (Phase B); the
-  syllable split Lily# already prints (`-`, `__`) is what the engine needs.
+- **English** sings through a DiffSinger voice's dictionary (session 1190): the hyphens Lily# already
+  prints mark a word's syllables, the engine looks the word up whole and deals its phonemes back.
+  **Others** (a voice's `es`, `fr`, `it`, `pt`, `zh` dictionaries) still need their syllable rules.
 - **Elisions, diphthongs, consonant clusters**: what the page treats as one syllable is sent
   as one; the voice's dictionary decides the rest. Where a language needs a hint the page
   cannot give (stress, a split the dictionary gets wrong), a per-note `phonemes` override in

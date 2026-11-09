@@ -81,7 +81,8 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   `@breath`, and on the part's last note — where a singer breathes; the engine shapes the phrase
   end. An `@breath` with a sung note right after it takes the room out of its own note (a quarter
   of a second, at most a third of the note), so the next note still starts on its beat. `@caesura`
-  sings the same way, in silence. An `@breath` with a note right after it is also `inhale: true`
+  sings the same way, in silence. A syllable a hyphen joins to the next carries `hyphen: true`, so an
+  English voice can look the word up whole (session 1190). An `@breath` with a note right after it is also `inhale: true`
   (owner's decisions 2026-11-09, session 1184: an audible breath there, none before a rest, and none
   made from noise): NEUTRINO then gets no rest and sings its own `br` phoneme from the breath mark,
   the model choosing its length; DiffSinger puts the voice's `AP` in the gap, as at any breath.

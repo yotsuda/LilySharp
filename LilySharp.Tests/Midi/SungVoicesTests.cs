@@ -58,6 +58,24 @@ public class SungVoicesTests
     private const string YukiMusic = "c'8. d16 c8. d16 | c4 a8 r |";
     private const string YukiWords = "ゆ _ き や | こん こ |";
 
+    // ── words over syllables (owner's request 2026-11-09, session 1190) ──
+
+    [Fact]
+    public void AHyphen_SaysTheNextSyllableIsOfTheSameWord()
+    {
+        var notes = Assert.Single(Voices(Book("c'4 d | e f |", "Twin- kle | lit- tle |"))).Notes;
+        Assert.Equal(new[] { true, false, true, false }, notes.Select(n => n.Hyphen));
+        Assert.Equal(new[] { "Twin", "kle", "lit", "tle" }, notes.Select(n => n.Lyric));
+    }
+
+    [Fact]
+    public void AHyphen_MovesWithItsSyllableOntoAGrace()
+    {
+        var notes = Assert.Single(Voices(Book("grace { d'16 } c'4 d | e f |", "Twin- kle | lit- tle |"))).Notes;
+        Assert.True(notes[0].Hyphen);       // the grace took the syllable
+        Assert.False(notes[1].Hyphen);      // its note carries the vowel on
+    }
+
     // ── the breath heard (owner's decisions 2026-11-09, session 1184) ──
 
     [Fact]

@@ -115,5 +115,6 @@ public readonly record struct LyricEvent(
     string? Sung = null,
     string? Language = null,    // the words' language tag (Music.LyricLanguage), null from a file; not written to .mid
     string? Singer = null,      // who sings them, as written (Music.LyricSinger); not written to .mid
-    string? Gender = null       // the gender of the default voice for them (Music.LyricSinger); not written to .mid
+    string? Gender = null,      // the gender of the default voice for them (Music.LyricSinger); not written to .mid
+    bool Hyphen = false         // the next syllable is of the same word; not written to .mid
 );

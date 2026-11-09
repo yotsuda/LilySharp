@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, singerWrittenAt, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleScore } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleKey, voiceSampleScore } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -100,6 +100,12 @@ describe('the singer choices', () => {
         { id: 'diffsinger/ALICE', engine: 'diffsinger', name: 'ALICE', label: 'Alice', language: 'en' },
         { id: 'diffsinger/NOTSAID', engine: 'diffsinger', name: 'NOTSAID', label: 'x' },
     ];
+
+    it('counts every language a voice sings', () => {
+        const both = [{ id: 'd/T', engine: 'd', name: 'T', language: 'ja', languages: ['ja', 'en'] }];
+        assert.deepEqual(singerChoices(both, 'en').map(c => c.label), ['d/T']);
+        assert.deepEqual(singerChoices(both, 'ko'), []);
+    });
 
     it('offers the voices that sing the language', () => {
         assert.deepEqual(singerChoices(voices, 'ja').map(c => c.label), ['diffsinger/TIGER', 'neutrino/MERROW'], 'by name');
@@ -217,7 +223,12 @@ describe('choosing a voice with the step keys', () => {
 
     it('has a phrase for Japanese, and none it cannot write', () => {
         assert.equal(voiceSampleScore('ja')?.language, 'ja');
-        assert.equal(voiceSampleScore('en'), undefined);
+        assert.equal(voiceSampleScore('ko'), undefined);
+        assert.equal(voiceSampleKey('d/T', 'ja'), 'd/T', 'the samples already sung keep their files');
+        assert.equal(voiceSampleKey('d/T', 'en'), 'd/T@en');
+        assert.equal(voiceSampleKey('d/T'), 'd/T');
+        assert.deepEqual(voiceSampleScore('en')?.notes.map(n => [n.lyric, !!n.hyphen]), [['hel', true], ['lo', false]]);
+        assert.deepEqual(voiceSampleScore('en', 'male')?.notes.map(n => n.pitch), [48, 52]);
     });
 
     it('sings the phrase an octave lower for a male voice only', () => {

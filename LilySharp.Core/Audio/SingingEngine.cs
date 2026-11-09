@@ -225,6 +225,8 @@ public static class SungScoreJson
                     w.WriteNumber("levelEnd", levelEnd);
                 if (n.Inhale)
                     w.WriteBoolean("inhale", true);
+                if (n.Hyphen)
+                    w.WriteBoolean("hyphen", true);
                 w.WriteEndObject();
             }
             w.WriteEndArray();

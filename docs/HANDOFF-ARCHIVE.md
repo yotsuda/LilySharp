@@ -267,6 +267,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1188セッションの経緯
+
+### 1.1 第1188セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14988 / 0 / 2**（`-Start p1188`・HEAD `fc54c00ed`・未 push 88）。オーナー「singer の補完はアルファベット順に。diffsinger を一番前に」「ctrl+shift+up はプロバイダをまたいで動くように」「ctrl+shift+pgup/down は各プロバイダの先頭の声に移動」。作業場所は Lab `sessions/p1188/`。
+
+- `byVoiceId`（singerCore）で補完も step も名前順＝`diffsinger/` が先。`stepVoice` は一覧全体を歩く（両端で止まる）。`acrossEngines` は隣のプロバイダの先頭へ（プロバイダごとの直近の記憶は廃止）。PageUp は従来どおり一覧の下の方向のプロバイダへ（要望外で変えていない）。
+- 終了時 full **14988 合格 / 0 失敗 / skip 2 / 合計 14990**（`-End p1188 -DiffBase fc54c00ed`、BUILD 0）・npm 935 / 935。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
 ## 以下は第1187セッションの経緯
 
 ### 1.1 第1187セッション（2026-11-09・YT-DELL2）
