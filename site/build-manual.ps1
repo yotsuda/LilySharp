@@ -119,7 +119,7 @@ $pages = @(
        Sub = 'Lily# Studio commands — what each one does'
        Authority = $byExtension },
     @{ Out = 'scan.html'; Body = 'scan-body.html'; Section = 'editor.html'
-       Title = 'Lily# — Copista (Beta)'
+       Title = 'Lily# — Copista'
        Desc = 'Copista reads a scan or PDF of printed music into editable Lily# text, marks what it was unsure of, opens the page beside the score to check against, and has the AI propose fixes for the marked bars.'
        Sub = 'Copista — printed music read from a scan or PDF (Beta)'
        Authority = 'The two extensions are the authority: where this page and Lily# Studio or Copista disagree, the extension is right and this page is a bug.' },

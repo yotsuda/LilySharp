@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1206セッションの経緯
+
+### 1.1 第1206セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1206`・HEAD `26f41cdce`・未 push 106）。オーナー「Cantoria に名前を変更して」。作業場所は Lab `sessions/p1206/`。
+
+- **歌声の拡張は Cantilena から Cantoria に改名**（拡張 `yotsuda.cantoria`・設定 `cantoria.*`・プログラム `cantoria`・`CANTORIA_*`・`cantoria.json`・名前空間）。この行より下の HANDOFF と ARCHIVE の「Cantilena」は当時の名前。Lily# の識別子と文書も追随（変更履歴は未公開分だけ）。
+- オーナーの `settings.json` の `cantilena.*` 3 件を `cantoria.*` に。旧拡張はアンインストール。リポジトリのフォルダ `C:\MyProj\cantilena` は使用中で改名できていない可能性あり（下の報告を確認）。
+- 商標は未確認（J-PlatPat・USPTO・EUIPO は公開前にオーナーが確認）。GSi の iPad アプリ Cantoria（オルガン）と同名。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1206 -DiffBase 26f41cdce`、BUILD 0）・npm 942 / 942。`Deploy-Lsp.ps1` と Cantoria の `deploy-extension.ps1` で配布済み（Reload Window 2 回）。
+
 ## 以下は第1205セッションの経緯
 
 ### 1.1 第1205セッション（2026-11-09・YT-DELL2）
