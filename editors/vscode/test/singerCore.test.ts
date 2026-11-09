@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, stepVoice, voiceKey, voiceSampleScore } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, stepVoice, voiceKey, voiceSampleScore } from '../src/singerCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
 // engine's score, the key names the render, the engine's lines are read, and the Cantilena
@@ -169,7 +169,14 @@ describe('choosing a voice with the step keys', () => {
         assert.equal(singerValueAt('singer man "x"', 8), undefined);
     });
 
-    it('lists only the voices of the gender written, and of a cast role\'s', () => {
+    it('leaves out only a voice that says it is the other gender, in the list and for the keys', () => {
+        assert.equal(fitsGender({ gender: 'male' }, 'male'), true);
+        assert.equal(fitsGender({ gender: 'female' }, 'male'), false);
+        assert.equal(fitsGender({}, 'male'), true);
+        assert.equal(fitsGender({ gender: 'female' }, null), true);
+    });
+
+    it('lists the voices of the gender written and those that name none, and their cast roles', () => {
         const all = [
             { id: 'n/A', engine: 'n', name: 'A', language: 'ja', gender: 'male' },
             { id: 'n/B', engine: 'n', name: 'B', language: 'ja', gender: 'female' },
@@ -177,8 +184,8 @@ describe('choosing a voice with the step keys', () => {
         ];
         const labels = (gender?: string | null) => singerChoices(all, { tenor: 'n/A', alto: 'n/B' }, 'ja', gender).map(c => c.label);
         assert.deepEqual(labels(), ['n/A', 'n/B', 'n/C', 'tenor', 'alto']);
-        assert.deepEqual(labels('male'), ['n/A', 'tenor']);
-        assert.deepEqual(labels('female'), ['n/B', 'alto']);
+        assert.deepEqual(labels('male'), ['n/A', 'n/C', 'tenor']);
+        assert.deepEqual(labels('female'), ['n/B', 'n/C', 'alto']);
     });
 
     it('has nowhere to go with one engine or one voice', () => {

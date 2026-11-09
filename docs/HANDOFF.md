@@ -138,6 +138,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1174セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14939 / 0 / 2**（`-Start p1174`・HEAD `9ecdbea8a`・未 push 74）。オーナー「性別の情報がない声は、male/female の指定があっても候補に出して」「singer male とだけ書いて名前が無ければ、male の声を自動で選べるの？」。作業場所は Lab `sessions/p1174/`。
+
+- `fitsGender`（singerCore）: 性別を書いていない・声が性別を名乗らない・同じ性別なら候補に残す＝反対の性別を名乗る声だけ外す。補完と step キーの両方。
+- **問い（未実装）**: 名前なしの `singer male` は今は 3 箇所ともエラー。作れる。要るのは文法で名前を省略可に・性別を `SungVoice` まで運ぶ・Cantilena の解決に性別を足す・`lysc wav` の扱い。
+- 終了時 full **14939 合格 / 0 失敗 / skip 2 / 合計 14941**（`-End p1174 -DiffBase 9ecdbea8a`、BUILD 0）・npm 926 / 926。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
+## 以下は第1173セッションの経緯
+
 ### 1.1 第1173セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14918 / 0 / 2**（`-Start p1173`・HEAD `082470196`・未 push 73）。オーナー「ctrl+shift+up/down を逆順に。プロバイダの切り替えも一周しないように。singer "male" よりも singer male "具体的な名前" とできる方が良い」。作業場所は Lab `sessions/p1173/`。
@@ -147,16 +157,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **読むのはエディタだけ**: `singerSlot` の `Gender` で補完（`singerChoices`）と step キーを絞る。歌う声は名前だけで決まる＝その名前が無い環境でも、同じ性別の声には落ちない（未実装）。補完には `singer male`／`singer female` の項目を足した。
 - **Cantilena**: `voices()` が `info.toml` の `gender` を返す。DiffSinger の声は性別を名乗らないので、性別を書くと出ない。
 - 終了時 full **14939 合格 / 0 失敗 / skip 2 / 合計 14941**（`-End p1173 -DiffBase 082470196`、BUILD 0）・npm 925 / 925・Cantilena npm 19 / 19。両方を配布済み（Reload Window 1 回）。実機（性別の絞り込みの見え方）はオーナー。
-
-## 以下は第1172セッションの経緯
-
-### 1.1 第1172セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14918 / 0 / 2**（`-Start p1172`・HEAD `675b45950`・未 push 72）。オーナー「ctrl+shift+up で音声を切り替えるとき、上端と下端をつながないようにして。一番上と一番下で行き止まりにして」。作業場所は Lab `sessions/p1172/`。
-
-- `stepVoice` の声の順送りは両端で止まる（undefined）＝ステータスバーが端だと言い、音は出ない。PageUp / PageDown のプロバイダ切り替えは一周のまま（要望は声の話）。
-- 第1171 の後始末: Reload 前の古い拡張が `-1.wav`（は）を作り直していたので、オーナーの指示で 14 件と Cantilena のキャッシュの同一内容 14 件を削除。
-- 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1172 -DiffBase 675b45950`、BUILD 0）・npm 923 / 923。`Deploy-Lsp.ps1` で配布済み（manifest は不変＝Reload Window 1 回）。
 
 ## 2. 開いている作業
 

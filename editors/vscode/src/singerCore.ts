@@ -61,17 +61,22 @@ export interface CantilenaApi {
     cast?(): Promise<Record<string, string>>;
 }
 
+/** Whether a `singer`'s written gender lets this voice be offered: no gender written, a voice that names none, or the same one. */
+export function fitsGender(voice: Pick<CantilenaVoice, 'gender'>, gender?: string | null): boolean {
+    return !gender || !voice.gender || voice.gender === gender;
+}
+
 /** One choice between a `singer`'s quotes. */
 export interface SingerChoice { label: string; detail: string; isRole: boolean }
 
 /**
  * What the editor offers between a `singer`'s quotes (owner's request 2026-11-09, session 1168:
  * only the names right for the language): the installed voices that sing `language`, then the
- * roles cast to one. A voice that does not say what it sings is left out; with `gender` (session
- * 1173, `singer male "…"`), so is one that does not say it is that.
+ * roles cast to one. A voice that does not say what it sings is left out; with `gender` (`singer
+ * male "…"`, sessions 1173 and 1174), so is one that says it is the other.
  */
 export function singerChoices(voices: readonly CantilenaVoice[], cast: Readonly<Record<string, string>>, language: string, gender?: string | null): SingerChoice[] {
-    const sings = voices.filter(v => v.language === language && (!gender || v.gender === gender));
+    const sings = voices.filter(v => v.language === language && fitsGender(v, gender));
     const out: SingerChoice[] = sings.map(v => ({ label: v.id, detail: v.label && v.label !== v.name ? v.label : v.name, isRole: false }));
     for (const [role, bound] of Object.entries(cast)) {
         if (role.includes('/')) { continue; }

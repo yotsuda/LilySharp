@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_SAMPLE_VERSION, VoiceSampleQueue, cantilenaApiOf, prepareModeOf, singerChoices, singerValueAt, stepVoice, voiceSampleScore } from './singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_SAMPLE_VERSION, VoiceSampleQueue, cantilenaApiOf, fitsGender, prepareModeOf, singerChoices, singerValueAt, stepVoice, voiceSampleScore } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -3981,7 +3981,7 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, within
     }
     const sings = (await api.voices()).filter(v => v.language === slot.Language);
     samples().warm(sings.map(v => v.id));
-    const voices = slot.Gender ? sings.filter(v => v.gender === slot.Gender) : sings;
+    const voices = sings.filter(v => fitsGender(v, slot.Gender));
     clock.mark('voices');
     const next = stepVoice(voices, at.value, direction, !withinEngine, lastVoiceOfEngine);
     if (!next) {
