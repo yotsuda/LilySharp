@@ -138,6 +138,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1182セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14953 / 0 / 2**（`-Start p1182`・HEAD `b4a2c85e7`・未 push 82）。オーナー「音声を生成するとき、@breath も考慮するようにして」。作業場所は Lab `sessions/p1182/`。
+
+- `MidiNote.BreathAfter`（`MarkBreath`＝音符・省略音価・和音・q、タイの終わりも）。`SungVoices`: `Breath` を立て、直後に歌う音が続くときは自分の音から `min(0.25 秒, 音の 1/3)` を削る＝次の音は拍どおり。楽器の発音は変えない。
+- NEUTRINO で確認: 休符なしの 2 音で、`@breath` 相当だと境目に約 0.25 秒の無音ができる。息の音そのものは入らない。
+- `@caesura` は対象外（要望は @breath）。
+- 終了時 full **14959 合格 / 0 失敗 / skip 2 / 合計 14961**（`-End p1182 -DiffBase b4a2c85e7`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
+## 以下は第1181セッションの経緯
+
 ### 1.1 第1181セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14953 / 0 / 2**（`-Start p1181`・HEAD `8973f737b`・未 push 81）。オーナー報告「Harukaze-no-Mukou-e.lys L124 M24 の f1 の発声タイミングが遅れる。調べて直して」。作業場所は Lab `sessions/p1181/`。
@@ -146,16 +157,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **修正は Cantilena**: `NeutrinoTiming.AlignRepeats`＝同じ音素が続く境目を楽譜の位置へ。そういう境目がある譜だけ、`--skip-f0 --skip-melspec --skip-wav` でタイミングだけ出し、直して `--skip-timing` で続ける。子音のある境目はモデルのまま（前に出すのが歌）。修正後は同じ句のどの小節線でも拍の上で音が変わる（`f0.js` で確認）。
 - Lily# のコードは変更なし。Cantilena を本体ごと配布（`deploy-extension.ps1`）。
 - 終了時 full **14953 合格 / 0 失敗 / skip 2 / 合計 14955**（`-End p1181 -DiffBase 8973f737b`、BUILD 0）・Cantilena dotnet 47 / 47。実機の耳はオーナー（Reload Window 1 回）。
-
-## 以下は第1180セッションの経緯
-
-### 1.1 第1180セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14953 / 0 / 2**（`-Start p1180`・HEAD `2d41b45ac`・未 push 80）。オーナー「エディタで singer を選択したときは、現在の声で こんにちは を発声して」。作業場所は Lab `sessions/p1180/`。
-
-- **読み**: キーボードかマウスでカーソルや選択が `singer` 節の上に来たとき（`singerWrittenAt`）。移動の間引きは caret と同じ。到着ごとに 1 回（行と書かれた値で覚える）・節の中を動いても鳴らない・離れて戻ると鳴る。step キーや編集で来たときは鳴らさない（step は自分で鳴らす）。プレビューが無い・audition が off なら無音。
-- 役名・`singer male`・空の名前は `voiceName` で今の環境の声に解決してから鳴らす。
-- 終了時 full **14953 合格 / 0 失敗 / skip 2 / 合計 14955**（`-End p1180 -DiffBase 2d41b45ac`、BUILD 0）・npm 934 / 934。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
 
 ## 2. 開いている作業
 

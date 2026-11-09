@@ -77,8 +77,10 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 - **`melisma: true`** on a note that carries the previous syllable's vowel on: a note the
   page gave no syllable (inside a slur, the end of a tie that the MIDI did not merge, a
   `_` or a detached `~` holder, `__`'s span). A chord in a sung part sings its top note.
-- **`breath: true`** on the last note before a rest (a gap in the part), before `@breath`,
-  and on the part's last note — where a singer breathes; the engine shapes the phrase end.
+- **`breath: true`** on the last note before a rest (a gap in the part), on a note marked
+  `@breath`, and on the part's last note — where a singer breathes; the engine shapes the phrase
+  end. An `@breath` with a sung note right after it takes the room out of its own note (a quarter
+  of a second, at most a third of the note), so the next note still starts on its beat.
 - **Which parts sing**: every part a placed lyrics row sings (the same set the MIDI gives
   lyric events to), one voice per (part, lyrics track); verses sing on their own pass as the
   MIDI already does (`SingLyrics`' pass rule). A part with no words is not a voice.

@@ -63,7 +63,10 @@ public readonly record struct MidiNote(
     // Which stroke of its chord this is, in a row that plays a strokes part: one symbol sounds at
     // each stroke from one place, and a repeat's pass counts them again, so the preview's loop
     // tells a later stroke from a repeat by it (playSpanWindow). Not written to .mid files.
-    int Strike = 0
+    int Strike = 0,
+    // `@breath` was written on this note: a singer breathes after it (SungVoices). Not written to
+    // .mid files, and an instrument plays on.
+    bool BreathAfter = false
 );
 
 /// <summary>

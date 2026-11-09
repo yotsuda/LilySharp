@@ -390,6 +390,16 @@ public sealed class MidiExporter
         _lastOnsetSerial = _sectionPlaySerial;
     }
 
+    /// <summary>The onset's notes, when its marks hold an <c>@breath</c>: a singer breathes after them
+    /// (owner's request 2026-11-09, session 1182). A note tied into counts, its breath being after the tie's end.</summary>
+    private static void MarkBreath(MidiTrack track, IReadOnlyList<int> onset, IEnumerable<SyntaxNode> marks)
+    {
+        if (!marks.OfType<ArticulationSyntax>().Any(a => a.Type == ArticulationType.Breath))
+            return;
+        foreach (int i in onset)
+            track.Notes[i] = track.Notes[i] with { BreathAfter = true };
+    }
+
     /// <summary>A silence (a rest, a slash) ends the tie memory both ways: no tie is pending
     /// past it, and nothing before it can be extended by a tie written after it.</summary>
     private void ForgetOnset()
@@ -2925,6 +2935,7 @@ public sealed class MidiExporter
         int tiedInto = ExtendTied(track, targets, midiPitch, durationTicks);
         if (tiedInto >= 0)
         {
+            MarkBreath(track, [tiedInto], note.Articulations);
             CloseOnset(track, [tiedInto], startsTie); // continue a tie chain (c~ c~ c)
             _currentTick += durationTicks;
             return;
@@ -2934,6 +2945,7 @@ public sealed class MidiExporter
             _currentTick, actualDuration, note.SourceStart,
             QuarterBend: note.Pitch.QuarterOffset,
             SourceOrdinal: NextOrdinal(note.SourceStart), Timbre: _currentTimbre, Part: _currentPart));
+        MarkBreath(track, [track.Notes.Count - 1], note.Articulations);
         CloseOnset(track, [track.Notes.Count - 1], startsTie);
         _currentTick += durationTicks;
     }
@@ -3058,6 +3070,7 @@ public sealed class MidiExporter
                 int tiedInto = ExtendTied(track, targets, sound.MidiPitch, durationTicks);
                 if (tiedInto >= 0)
                 {
+                    MarkBreath(track, [tiedInto], bare.Articulations);
                     CloseOnset(track, [tiedInto], startsTie);
                     break;
                 }
@@ -3065,6 +3078,7 @@ public sealed class MidiExporter
                     startTick, actualDuration, bare.SourceStart,
                     QuarterBend: sound.QuarterBend,
                     SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: _currentTimbre, Part: _currentPart));
+                MarkBreath(track, [track.Notes.Count - 1], bare.Articulations);
                 CloseOnset(track, [track.Notes.Count - 1], startsTie);
                 break;
             }
@@ -3092,6 +3106,7 @@ public sealed class MidiExporter
                         bare.SourceStart, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart));
                     onset.Add(track.Notes.Count - 1);
                 }
+                MarkBreath(track, onset, bare.Articulations);
                 CloseOnset(track, onset, startsTie);
                 break;
             }
@@ -3376,6 +3391,7 @@ public sealed class MidiExporter
             resolved.Add((dinfo.GmKey, 0, true));
         }
         _resolvedChordNotes[chord] = resolved;
+        MarkBreath(track, onset, chord.Articulations);
         CloseOnset(track, tiedMembers is null ? onset : onTiedMembers, startsTie);
 
         // The next note is relative to the chord's ANCHOR (the root's bare letter or the
@@ -3439,6 +3455,7 @@ public sealed class MidiExporter
                 onset.Add(track.Notes.Count - 1);
             }
         }
+        MarkBreath(track, onset, rep.Articulations);
         CloseOnset(track, onset, startsTie);
 
         _currentTick = startTick + durationTicks;

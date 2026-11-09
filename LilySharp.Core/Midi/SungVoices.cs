@@ -47,7 +47,7 @@ public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungN
 /// (a slur's, a tie the export did not merge) — ⚠️ so are the notes of a phrase whose words ran
 /// out before it did, until a rest; a note after a rest with no words is not sung. A chord sings
 /// its top note; a part in two voices sings the voice its words stand on most; grace notes and
-/// drums are not sung. A breath is after the last note before a gap, and after the last note.
+/// drums are not sung. A breath is after the last note before a gap, after the last note, and after a note marked <c>@breath</c>.
 /// The first words at an onset win: a second track on the same part (another verse printed
 /// under the first, a translation) is not a second voice.
 /// </para>
@@ -57,6 +57,9 @@ public static class SungVoices
     /// <summary>The tag of the language lyrics are in when nothing names one, the only one
     /// whose syllables are checked here (kana; <see cref="Music.LyricLanguage"/>).</summary>
     public const string Japanese = "ja";
+
+    /// <summary>The time an <c>@breath</c> takes from the note it stands on, at most a third of the note.</summary>
+    private const double BreathSeconds = 0.25;
 
     /// <summary>Every voice of <paramref name="midi"/>, in the order their parts first sing.</summary>
     public static List<SungVoice> Read(MidiFile midi, Func<int, double> secondsAt)
@@ -107,9 +110,14 @@ public static class SungVoices
             for (int i = 0; i < sung.Count; i++)
             {
                 var (note, end, lyric, melisma) = sung[i];
-                bool breath = i == sung.Count - 1 || sung[i + 1].Note.StartTick > end;
+                bool joined = i < sung.Count - 1 && sung[i + 1].Note.StartTick <= end;
+                bool breath = !joined || note.BreathAfter;
                 double start = secondsAt(note.StartTick);
                 double duration = Math.Max(0.001, secondsAt(end) - start);
+                // `@breath` between two sung notes: the room to breathe comes out of this note, so
+                // the next one still starts on its beat.
+                if (joined && note.BreathAfter)
+                    duration -= Math.Min(BreathSeconds, duration / 3);
                 notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos));
                 if (lyric != null && language == Japanese && !IsKana(lyric) && !strange.Contains(lyric, StringComparer.Ordinal))
                     strange.Add(lyric);

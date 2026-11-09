@@ -58,6 +58,58 @@ public class SungVoicesTests
     private const string YukiMusic = "c'8. d16 c8. d16 | c4 a8 r |";
     private const string YukiWords = "ゆ _ き や | こん こ |";
 
+    // ── @breath (owner's request 2026-11-09, session 1182) ──
+
+    [Fact]
+    public void ABreathMark_MakesRoomInItsNote_AndTheNextStartsOnTheBeat()
+    {
+        var notes = Assert.Single(Voices(Book("c'4@breath d | e f |", "さ く | ら よ |"))).Notes;
+        Assert.True(notes[0].Breath);
+        Assert.Equal(1.0 / 3, notes[0].Duration, 6);        // a third of a 0.5 s note, under the quarter-second
+        Assert.Equal(0.5, notes[1].Start, 6);
+        Assert.False(notes[1].Breath);
+        Assert.Equal(0.5, notes[1].Duration, 6);
+    }
+
+    [Fact]
+    public void ALongNote_GivesAQuarterOfASecond()
+    {
+        var notes = Assert.Single(Voices(Book("c'2@breath | d2 |", "さ | く |"))).Notes;
+        Assert.Equal(0.75, notes[0].Duration, 6);
+        Assert.Equal(1.0, notes[1].Start, 6);
+    }
+
+    [Fact]
+    public void ABreathBeforeARest_TakesNothingMore()
+    {
+        var notes = Assert.Single(Voices(Book("c'4@breath r | d e |", "さ | く ら |"))).Notes;
+        Assert.True(notes[0].Breath);
+        Assert.Equal(0.5, notes[0].Duration, 6);
+    }
+
+    [Fact]
+    public void ABreathOnAChord_IsItsTopNotes()
+    {
+        var notes = Assert.Single(Voices(Book("<c' e>4@breath d | e f |", "さ く | ら よ |"))).Notes;
+        Assert.Equal(64, notes[0].Pitch);
+        Assert.True(notes[0].Breath);
+        Assert.Equal(1.0 / 3, notes[0].Duration, 6);
+    }
+
+    [Fact]
+    public void ABreathOnABareDuration_AndOnTheTiesEnd_Count()
+    {
+        var bare = Assert.Single(Voices(Book("c'4 4@breath | d e |", "さ く | ら よ |"))).Notes;
+        Assert.True(bare[1].Breath);
+        var tied = Assert.Single(Voices(Book("c'4~ c@breath | d e |", "さ | ら よ |"))).Notes;
+        Assert.True(tied[0].Breath);
+        Assert.Equal(1.0 - 0.25, tied[0].Duration, 6);
+    }
+
+    [Fact]
+    public void NoMark_NoBreathBetweenJoinedNotes()
+        => Assert.All(Assert.Single(Voices(Book("c'4 d | e f |", "さ く | ら よ |"))).Notes.SkipLast(1), n => Assert.False(n.Breath));
+
     [Fact]
     public void TheWords_StandOnTheirNotes_InSeconds_AndAHeldNoteIsAMelisma()
     {
