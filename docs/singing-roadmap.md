@@ -188,7 +188,7 @@ In order; each is a session or two. The owner's items are marked.
 |---|---|---|---|
 | 1 | **Publish Cantilena** (owner): `gh repo create yotsuda/cantilena --public --source . --push`; the VSIX to the Marketplace; `MANUAL-CHECKS.md` §3.7 ticked | cantilena | the README's links resolve; a second PC installs both extensions and sings |
 | 2 | **The two leftovers**: the span's voice stops at the span's end; the loop sings (restart the buffer with the notes) | LilySharp (editor) | §3.7 items for span and loop tick; `npm test` green |
-| 3 | **`engine/voice` naming and `voices()`**: the extension's API lists installed voices as `{ id: 'neutrino/MERROW', engine, language, licence? }`; `cantilena.voice` accepts and shows the prefixed form; Lily#'s status line names it | cantilena, LilySharp (editor) | the same setting shape will take a DiffSinger voice unchanged; `apiVersion` stays 1 (additive) |
+| 3 | **`engine/voice` naming and `voices()`**: the extension's API lists installed voices as `{ id: 'neutrino/MERROW', engine, language, licence? }`; `cantilena.defaultVoice` accepts and shows the prefixed form; Lily#'s status line names it | cantilena, LilySharp (editor) | the same setting shape will take a DiffSinger voice unchanged; `apiVersion` stays 1 (additive) |
 | 4 | **Kana for kanji** — *done 2026-11-08, session 1138*: `漢[かん]` (owner's decision ⒜ of §4), the page unchanged, `SungVoices` sings the reading, the kana warning goes away for read syllables, the `.mid` keeps the kanji | LilySharp (Core, GRAMMAR.md) | a kanji verse sings; a kanji verse without readings still warns once |
 | 5 | **`lysc wav --singer <cantilena>`**: the CLI's offline render asks a `cantilena` program (`sing`, once per voice) and mixes as the editor does — *done 2026-11-08, session 1137* (`singing-design.md` §5) | LilySharp (Cli/Core) | `lysc wav 雪やこんこ.lys --singer …` carries the voice |
 | 6 | **DiffSinger spike** (Cantilena `docs/roadmap.md` B1): load one voice folder, sing one phrase on the CPU, measure; decide the vocoder and provider choices | cantilena | a WAV from a DiffSinger voice; a note of times and the licence of the voice used |
@@ -238,14 +238,14 @@ Each blocks the row named; a default is proposed so work can start.
      `lyrics singer { … }` stays a track named singer. Not `voice`: that word is the music's
      `voice sop { }`. An empty string is an error on the string; the compiler checks no name
      against an installation (the file is the same on every machine).
-   - **A name with a `/` is a voice** (`engine/name`, as `cantilena.voice` writes it); **without
+   - **A name with a `/` is a voice** (`engine/name`, as `cantilena.defaultVoice` writes it); **without
      one it is a role** (`"soprano"`, `"A"`).
    - **What sings** (resolved by Cantilena, so the editor and the command line agree), for the
      string written, or for `default` when nothing is written:
      1. `cantilena.voices[string]` when the settings bind it — a role, or a voice's name the
         listener replaces (`"neutrino/MERROW": "diffsinger/TIGER"`): the listener has the last say;
      2. the string itself when it names an installed voice;
-     3. the default voice (today's `cantilena.voice`, the `default` entry), said once: *"soprano is
+     3. the default voice (today's `cantilena.defaultVoice`, the `default` entry), said once: *"soprano is
         not cast; singing with neutrino/MERROW"* or *"neutrino/MERROW is not installed; …"*. A
         missing voice never stops the music.
    - The API grows `sing(score, { singer })` (v2, additive); `lysc wav` keeps `--voice` as the

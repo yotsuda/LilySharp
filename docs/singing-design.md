@@ -179,7 +179,7 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 - **The engine is the Cantilena extension** (`yotsuda.cantilena`, owner's decision 2026-11-08,
   session 1127 — the shape the OMR reader took: a separate extension that carries the program,
   holds its own settings, and is called through its API). It holds the voice
-  (`cantilena.voice`) and NEUTRINO's folder (`cantilena.neutrinoFolder`), with pickers and a
+  (`cantilena.defaultVoice`) and NEUTRINO's folder (`cantilena.neutrinoFolder`), with pickers and a
   **Check Setup**; its `activate` returns `{ version, apiVersion: 1, status(), sing(score),
   release() }` (its README, "For extension authors"; `singerCore.cantilenaApiOf` checks the
   shape). Lily# finds it with `vscode.extensions.getExtension`, activates it (no process

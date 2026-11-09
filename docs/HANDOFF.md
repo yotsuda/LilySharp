@@ -138,6 +138,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1186セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14971 / 0 / 2**（`-Start p1186`・HEAD `99f44a71d`・未 push 86）。オーナー「項目名は default voice のように」「未公開だから大丈夫。直して」。作業場所は Lab `sessions/p1186/`。
+
+- Cantilena の設定キーを `cantilena.voice` から `cantilena.defaultVoice` へ（旧キーの読み取りは残さない＝オーナー判断）。Cantilena は配布済み。Lily# は docs の表記だけ。
+- `cantilena.voices` のキーを決め打ちにする案はオーナーと相談中（未実装）。
+- 終了時 full **14971 合格 / 0 失敗 / skip 2 / 合計 14973**（`-End p1186 -DiffBase 99f44a71d`、BUILD 0）・Cantilena npm 24 / 24。
+
+## 以下は第1185セッションの経緯
+
 ### 1.1 第1185セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14971 / 0 / 2**（`-Start p1185`・HEAD `b28de4215`・未 push 85）。オーナー報告「音声生成中に再生ボタンを押すと、マイクの点滅は止まらないけどプログレスバーが消えてしまう」→「直して」。作業場所は Lab `sessions/p1185/`。
@@ -145,17 +155,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **原因**: `prepareVoices` の `preparing` は `singing` を持たず、ページがそれで印を上書きしていた（第1179 の抜け）。
 - **修正**: `voiceStillSinging`（playbackCore）＝歌っているパートへの `preparing` は印を保つ。`ready`／`failed`／`waiting` で外れる。
 - 終了時 full **14971 合格 / 0 失敗 / skip 2 / 合計 14973**（`-End p1185 -DiffBase b28de4215`、BUILD 0）・npm 935 / 935。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
-
-## 以下は第1184セッションの経緯
-
-### 1.1 第1184セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14967 / 0 / 2**（`-Start p1184`・HEAD `08e6b4e53`・未 push 84）。オーナー「@breath では息を吸う音も入れるのが妥当。直後が音符なら入れる、休符なら入れない」→「入れて」「ノイズから作った息の音は入れなくて良い」。作業場所は Lab `sessions/p1184/`。
-
-- **実測**: NEUTRINO は breath-mark の後に休符があると `pau`（無音）、休符が無いと `musicXMLtoLabel` が `br` を書き、モデルが息の音を歌う（RMS 約 0.01・声は約 0.18）。長さはモデルが音符に応じて決める（0.25 秒の音で 0.06・0.5 で 0.24・1 で 0.25・3.33 で 0.94）。
-- **実装**: `SungNote.Inhale`（`@breath` かつ直後に歌う音、`@caesura` は対象外）。Lily# は従来の小さな間を送り（DiffSinger の AP が間を要る）、Cantilena の NEUTRINO 書き出しが `WithInhalesClosed` で間を閉じる＝`br` が出る。ノイズ合成はしない（オーナー決定）。
-- DiffSinger は従来どおり、息継ぎ指定の音の後の間すべてに `AP`（休符の前も）。
-- 終了時 full **14971 合格 / 0 失敗 / skip 2 / 合計 14973**（`-End p1184 -DiffBase 08e6b4e53`、BUILD 0）・npm 934 / 934・Cantilena dotnet 59 / 59。両方を配布済み（Reload Window 1 回）。
 
 ## 2. 開いている作業
 
