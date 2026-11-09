@@ -138,21 +138,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1205セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1205`・HEAD `ee7623a57`・未 push 105）。オーナー「Cantilena が無いときインストールを案内して」→「実装して」。作業場所は Lab `sessions/p1205/`。
+
+- `offerCantilena`: 拡張が無いとき、`singer` の補完・試聴・Ctrl+Shift+Up/Down・`singer` を書いた楽譜の再生で 1 セッション 1 回だけ通知、Install Cantilena ボタン（失敗したら拡張の検索）。歌詞があるだけなら出さない。Marketplace 公開前はボタンが検索画面になるだけ。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1205 -DiffBase ee7623a57`、BUILD 0）・npm 942 / 942。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
+## 以下は第1204セッションの経緯
+
 ### 1.1 第1204セッション（2026-11-09・YT-DELL2）
 
 開始時 full **15013 / 0 / 2**（`-Start p1204`・HEAD `b4415203e`・未 push 104）。オーナー「clef の Ctrl+Shift+Up で一番上を treble^8 に」→「直して」。作業場所は Lab `sessions/p1204/`。
 
 - `ClefGroups` の先頭を `treble^8, treble, treble_8` に。補完の並びも同じになるので、最初に選ばれるのは `treble` のまま（`Preselect`）。
 - 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1204 -DiffBase b4415203e`、BUILD 0）・npm 940 / 940。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
-
-## 以下は第1203セッションの経緯
-
-### 1.1 第1203セッション（2026-11-09・YT-DELL2）
-
-開始時 full **15013 / 0 / 2**（`-Start p1203`・HEAD `94f519e3e`・未 push 103）。オーナー報告「`singer` を選ぶと "" まで入って male と female が選べない」→「直して」。作業場所は Lab `sessions/p1203/`。
-
-- `singer` の候補は引用符を入れず `singer ` まで（歌詞の頭、score の行、part）。続く候補はエディタの female・male・声の一覧。`singer male`、`singer female` の別候補は廃止。
-- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1203 -DiffBase 94f519e3e`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
 
 ## 2. 開いている作業
 

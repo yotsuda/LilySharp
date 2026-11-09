@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Lily# offers to install Cantilena** when a voice is asked for and the extension is not there (the `singer` list, hearing a voice, the step keys, or Play on a score naming a singer), once a session. Lyrics alone say nothing.
 - **`treble^8` stands above `treble`** in the clef list and on Ctrl+Shift+Up. The list still opens on `treble`.
 - **Choosing `singer` leaves the gender open**: it writes the word and a space, and the list that opens holds `female`, `male` and the voices.
 - **#listVoices**: Copilot's chat can ask which singing voices this machine has, by provider, gender or language, before writing a `singer`.

@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from './singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -3875,7 +3875,7 @@ const singerCompletion: vscode.CompletionItemProvider = {
         if (!slot.InSlot || !slot.Language) { return undefined; }
         const engine = await renderer();
         const api = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend.api : undefined;
-        if (!api?.voices) { return undefined; }
+        if (!api?.voices) { offerCantilena(); return undefined; }
         const voices = await api.voices();
         samples().warm(voices.filter(v => singsLanguage(v, slot.Language!)).map(v => voiceSampleKey(v.id, slot.Language!)));
         const line = document.lineAt(position.line).text;
@@ -3967,7 +3967,7 @@ async function hearSinger(label: unknown): Promise<void> {
     if (typeof label !== 'string' || !editor) { return; }
     const clock = new StageClock(Date.now());
     const engine = await renderer();
-    if (!engine) { return; }
+    if (!engine) { offerCantilena(); return; }
     clock.mark('engine');
     const voice = await engine.backend.voiceName(label);
     clock.mark('name');
@@ -4001,6 +4001,7 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, byVoic
     clock.mark('engine');
     const api = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend.api : undefined;
     if (!api?.voices) {
+        offerCantilena();
         vscode.window.setStatusBarMessage('Lily#: the Cantilena extension lists the voices, and it is not there', 4000);
         return true;
     }
@@ -4024,6 +4025,27 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, byVoic
     vscode.window.setStatusBarMessage(`Lily#: singer ${next}${label ? ` (${label})` : ''}`, 4000);
     void auditionVoice(doc.uri.toString(), next, clock, slot.Language);
     return true;
+}
+
+/** Whether this session has already said that Cantilena is needed. */
+let cantilenaOffered = false;
+
+/** Says, once a session, that voices need the Cantilena extension, and offers to install it (owner's
+ *  request 2026-11-09, session 1205). Only where a voice was asked for: lyrics alone say nothing, since
+ *  most people writing them mean them for the page. */
+function offerCantilena(): void {
+    if (cantilenaOffered || vscode.extensions.getExtension(CANTILENA_EXTENSION_ID)) { return; }
+    cantilenaOffered = true;
+    const install = 'Install Cantilena';
+    void vscode.window.showInformationMessage('Lily#: singing a score with a voice needs the Cantilena extension.', install).then(async choice => {
+        if (choice !== install) { return; }
+        try {
+            await vscode.commands.executeCommand('workbench.extensions.installExtension', CANTILENA_EXTENSION_ID);
+        } catch {
+            // Not reachable from here (offline, or a gallery that does not list it): show the search.
+            await vscode.commands.executeCommand('workbench.extensions.search', `@id:${CANTILENA_EXTENSION_ID}`);
+        }
+    });
 }
 
 /** `lilysharp.playback.singer`: the path of a `cantilena` program to run here (a developer's
@@ -4192,6 +4214,7 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     if (!current()) { log('the preview turned meanwhile'); return; }
     if (!engine) {
         log('no engine: the voices are dropped');
+        if (reason === 'play' && writesSinger(vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)?.getText() ?? '')) { offerCantilena(); }
         postedVoices.delete(panel);
         void panel.webview.postMessage({ type: 'clearVoices' });
         return;

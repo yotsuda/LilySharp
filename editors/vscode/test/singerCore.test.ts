@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -100,6 +100,22 @@ describe('the singer choices', () => {
         { id: 'diffsinger/ALICE', engine: 'diffsinger', name: 'ALICE', label: 'Alice', language: 'en' },
         { id: 'diffsinger/NOTSAID', engine: 'diffsinger', name: 'NOTSAID', label: 'x' },
     ];
+
+    it('knows a score that names who sings', () => {
+        assert.equal(writesSinger('lyrics v sings m singer "a/b" {'), true);
+        assert.equal(writesSinger('part m {\n  singer male\n}'), true);
+        assert.equal(writesSinger('lyrics v sings m { la | }'), false, 'words alone');
+        assert.equal(writesSinger('lyrics singer { la | }'), false, 'a track called singer');
+        assert.equal(writesSinger('// singer "a/b"'), false, 'a comment');
+    });
+
+    it('offers Cantilena only where a voice was asked for, once', () => {
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /if \(cantilenaOffered \|\| vscode\.extensions\.getExtension\(CANTILENA_EXTENSION_ID\)\) \{ return; \}/);
+        assert.match(ext, /'workbench\.extensions\.installExtension', CANTILENA_EXTENSION_ID/);
+        assert.match(ext, /if \(reason === 'play' && writesSinger\(/);
+        assert.equal(ext.match(/offerCantilena\(\);/g)?.length, 4, 'the completion, the hearing, the step keys, the play');
+    });
 
     it('opens the list on the space after singer', () => {
         assert.equal(afterSingerWord('lyrics verse sings melody singer '), true);

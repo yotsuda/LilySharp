@@ -109,6 +109,11 @@ export function singerChoices(voices: readonly CantilenaVoice[], language: strin
         .map(v => ({ label: v.id, detail: v.label && v.label !== v.name ? v.label : v.name }));
 }
 
+/** Whether a score names who sings: a `singer` followed by a name or a gender, off a comment. */
+export function writesSinger(text: string): boolean {
+    return text.split('\n').some(line => /(?<![\w-])singer[ \t]+(?:"|(?:male|female)(?![\w-]))/.test(line.split('//')[0]));
+}
+
 /** Whether a line's text before the caret ends with `singer ` or `singer male `: a space that opens the list of voices. */
 export function afterSingerWord(before: string): boolean {
     return /(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?(?:(?:"[^"]*"[ \t]*,[ \t]*)+)?$/.test(before) && !before.includes('//');
