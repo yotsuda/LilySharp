@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1207セッションの経緯
+
+### 1.1 第1207セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1207`・HEAD `3c3933bc1`・未 push 107）。オーナー「Copista に変更して」（Lily# Scan Import の改名）。作業場所は Lab `sessions/p1207/`。
+
+- **読み取りの拡張は Lily# Scan Import から Copista に改名**（拡張 `yotsuda.copista`）。Lily# は案内・ボタン・サイト・`OMR_EXTENSION_ID` を追随。この行より下の「Scan Import」は当時の名前。
+- 変えていないもの: リポジトリ `LilySharp-Omr` と GitHub の名前、プログラム `omr`、`.omr.json`、`LILYSHARP_OMR_PATH`、`lilysharp.omr.*`（OMR は技術の一般名）、`site/scan.html` の URL。
+- Marketplace は旧 ID のまま。新 ID の公開と旧版の取り下げはオーナー。商標は未確認。公開の順番は Copista を先、Lily# を後。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1207 -DiffBase 3c3933bc1`、BUILD 0）・npm 942 / 942。`Deploy-Lsp.ps1` で配布済み。
+
 ## 以下は第1206セッションの経緯
 
 ### 1.1 第1206セッション（2026-11-09・YT-DELL2）

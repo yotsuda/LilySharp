@@ -6,7 +6,7 @@
 #   chord-input.html <- chord-input-body.html  writing chords as notes, step by step (under Reference)
 #   editor.html   <- editor-body.html   the VS Code extension and its AI features
 #   commands.html <- commands-body.html every editor command, one by one (under Editor)
-#   scan.html     <- scan-body.html     Copista: the reader extension, reading and checking a scan (under Editor)
+#   scan.html     <- scan-body.html     Calamo: the reader extension, reading and checking a scan (under Editor)
 #   about.html    <- about-body.html    lineage, licence, speed, architecture
 # and the learn pages from the lessons themselves.
 # Shares its stylesheet with the showcase page: the CSS is lifted out of
@@ -119,10 +119,10 @@ $pages = @(
        Sub = 'Lily# Studio commands — what each one does'
        Authority = $byExtension },
     @{ Out = 'scan.html'; Body = 'scan-body.html'; Section = 'editor.html'
-       Title = 'Lily# — Copista'
-       Desc = 'Copista reads a scan or PDF of printed music into editable Lily# text, marks what it was unsure of, opens the page beside the score to check against, and has the AI propose fixes for the marked bars.'
-       Sub = 'Copista — printed music read from a scan or PDF (Beta)'
-       Authority = 'The two extensions are the authority: where this page and Lily# Studio or Copista disagree, the extension is right and this page is a bug.' },
+       Title = 'Lily# — Calamo'
+       Desc = 'Calamo reads a scan or PDF of printed music into editable Lily# text, marks what it was unsure of, opens the page beside the score to check against, and has the AI propose fixes for the marked bars.'
+       Sub = 'Calamo — printed music read from a scan or PDF (Beta)'
+       Authority = 'The two extensions are the authority: where this page and Lily# Studio or Calamo disagree, the extension is right and this page is a bug.' },
     @{ Out = 'about.html'; Body = 'about-body.html'; Section = 'about.html'
        Title = 'Lily# — about'
        Desc = 'What Lily# owes LilyPond, its licence and fonts, how it is put together, and why the preview keeps up.'

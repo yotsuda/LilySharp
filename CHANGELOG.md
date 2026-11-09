@@ -6,7 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
-- `[editor]` **The scan reader is now Copista** (`yotsuda.copista`, formerly Lily# Scan Import).
+- `[editor]` **The scan reader is now Calamo** (`yotsuda.calamo`, formerly Lily# Scan Import).
 - `[singing]` **The singing extension is now Cantoria** (`yotsuda.cantoria`, formerly Cantilena).
 - `[editor]` **Lily# offers to install Cantoria** when a voice is asked for and the extension is not there, once a session.
 - `[editor]` **`treble^8` stands above `treble`** in the clef list and on Ctrl+Shift+Up, so Up never lowers a treble clef an octave. The list still opens on `treble`.

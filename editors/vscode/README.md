@@ -67,7 +67,7 @@ Uses the language models VS Code offers — GitHub Copilot's, or another provide
 
 ### Scans (Beta)
 
-With the separate **Copista** extension (`yotsuda.copista`, Windows x64),
+With the separate **Calamo** extension (`yotsuda.calamo`, Windows x64),
 *Lily#: Convert Image/PDF to Lily# (.lys)…* reads a scan or a PDF of printed music into a
 `.lys`, marks with `@todo` what it was unsure of, and shows the page beside the score.
 *Fix OMR Marks with AI…* proposes a fix for each marked bar, checked against the scan;

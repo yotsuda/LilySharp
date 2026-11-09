@@ -88,8 +88,8 @@ cd editors/vscode && npm install --package-lock-only
 
 Then read the diff. It should be the version fields and nothing surprising.
 
-**Copista's floor.** `editors/vscode/src/omrCore.ts` carries `OMR_MIN_VERSION` (the oldest
-Copista this Lily# is written for; an older reader is offered its update when a scan is read)
+**Calamo's floor.** `editors/vscode/src/omrCore.ts` carries `OMR_MIN_VERSION` (the oldest
+Calamo this Lily# is written for; an older reader is offered its update when a scan is read)
 and `OMR_PROTOCOLS` (the output agreement it speaks). If this release leans on a newer reader — a
 command, a field in the side file, a fixed reading — raise the floor to that reader's version, and
 the protocol only when the agreement itself changed. Nothing checks this for you: a floor left

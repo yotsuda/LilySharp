@@ -231,7 +231,7 @@ score { staff melody }
 
 ### 16. `scan-read` — PDF を右クリックしてから、最初の印を直すまで
 素材は `scan-import.png` と同じ Tchaikovsky op. 39 no. 5（1904 年 Schirmer、IMSLP、パブリックドメイン）の
-PDF 1 ページ。Lily# と Copista を入れた VS Code、フォルダにその PDF だけ。
+PDF 1 ページ。Lily# と Calamo を入れた VS Code、フォルダにその PDF だけ。
 1. エクスプローラーで PDF を右クリック → *Convert Image/PDF to Lily# (.lys)…*。ページの選択はそのまま OK。
 2. 右下の進み具合の通知を見せる（数秒）。`.lys` が開き、プレビューが右に出る。赤い印が 2 つ見える所まで
    スクロール。

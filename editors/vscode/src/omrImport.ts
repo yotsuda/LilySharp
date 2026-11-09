@@ -80,9 +80,9 @@ export async function importFromImage(
     if (!speaksProtocol(v.protocol)) {
         const why = `speaks protocol ${v.protocol}; this Lily# speaks ${OMR_PROTOCOLS.min}–${OMR_PROTOCOLS.max}.`;
         if (v.protocol > OMR_PROTOCOLS.max) {
-            vscode.window.showErrorMessage(`Lily#: Copista ${v.version} ${why} Update Lily#.`);
+            vscode.window.showErrorMessage(`Lily#: Calamo ${v.version} ${why} Update Lily#.`);
         } else {
-            await offerOmrUpdate(v, `${why} Update Copista?`);
+            await offerOmrUpdate(v, `${why} Update Calamo?`);
         }
         return undefined;
     }
