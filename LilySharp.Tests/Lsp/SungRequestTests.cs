@@ -33,7 +33,7 @@ public class SungRequestTests
     private const string Doc = """
         tempo 4 = 120
         time 2/4
-        part melody { clef treble }
+        part melody { clef treble  instrument soprano }
         part bass { clef bass }
         section A {
           melody { c'8. d16 c8. d16 | c4 a8 r | }

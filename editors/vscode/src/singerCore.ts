@@ -95,6 +95,11 @@ export function voiceListText(voices: readonly CantoriaVoice[], filter: { provid
         'Write a name after singer on a part, a lyrics track or a score\'s lyrics row: singer "neutrino/MERROW". Names with commas between them sing the part together: singer "a/b","c/d". A voice sings only the languages it lists.'].join('\n');
 }
 
+/** What the status bar says, once, of a part with words in the score and no voice asked for them. */
+export function printedWordsNote(part: string): string {
+    return `the words of ${part} are printed, not sung: write singer on the part, or give it a voice (instrument soprano)`;
+}
+
 /** One choice between a `singer`'s quotes. */
 export interface SingerChoice { label: string; detail: string }
 

@@ -1927,10 +1927,11 @@ on a line of its own for the whole file, or on a track, `lyrics en language engl
 (`lyrics en singer "diffsinger/TIGER" sings melody { … }`) or on a score's row
 (`lyrics verse singer "soprano" sings melody`), the nearest winning. A name with a `/` is a
 voice; `"soprano"`, `"alto"`, `"tenor"` and `"bass"` say a gender. Names with commas between them sing the
-part together (`singer "neutrino/MERROW","diffsinger/TIGER"`). With no singer the part's
-instrument, else its clef, says the gender (a bass, baritone, tenor or `treble_8` clef is male), and
-each machine's default voice of that gender sings. A singer that cannot be had sings as that default,
-said once. Between the quotes the editor offers the
+part together (`singer "neutrino/MERROW","diffsinger/TIGER"`). **Words are sung where a
+voice is asked for**: by a `singer`, or by the part's `instrument` being a voice (`soprano`, `alto`,
+`tenor`, `baritone`, `voice-bass`), when each machine's default voice of that gender sings. Words on
+any other part are printed only, and the part plays its instrument; a clef alone asks for nothing.
+A singer that cannot be had sings as the default voice of the part's gender, said once. Between the quotes the editor offers the
 voices that sing the words' language; on a `singer "…"`, `Ctrl+Shift+Up` / `Down` step through
 those voices and `Ctrl+Shift+PageUp` / `PageDown` go to the first voice of another engine, the chosen voice heard in the
 preview. `singer male "neutrino/SOMA"` (or `female`) leaves out of both the voices that say they are

@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -3601,7 +3601,7 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
     const silentVoices = new Set(practice?.voicesOff ?? []);
     const out: AudioJob[] = [];
     for (const job of jobs) {
-        let sung: { Voices?: SungVoiceDto[] | null; Error?: string | null };
+        let sung: { Voices?: SungVoiceDto[] | null; PrintedWords?: string[] | null; Error?: string | null };
         try {
             // The open document, or a file on the disk the folder export names (as lilysharp/export).
             sung = await client.sendRequest('lilysharp/sung', { ...source, renderName: job.Score || null, allLyrics: true });
@@ -4219,7 +4219,7 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
         void panel.webview.postMessage({ type: 'clearVoices' });
         return;
     }
-    let sung: { Voices?: SungVoiceDto[] | null; Error?: string | null };
+    let sung: { Voices?: SungVoiceDto[] | null; PrintedWords?: string[] | null; Error?: string | null };
     try {
         sung = await client.sendRequest('lilysharp/sung', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null, allLyrics: true });
     } catch (e) {
@@ -4229,6 +4229,7 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     }
     if (!current()) { log('the preview turned meanwhile'); return; }
     if (sung.Error || !sung.Voices) { log(`no answer (${sung.Error ?? 'no voices'}): the states stay`); settled(); return; }
+    if (reason === 'play') { for (const part of sung.PrintedWords ?? []) { tellSingerOnce(panel, printedWordsNote(part)); } }
     // Which parts sing now: the score's own, and the file's other singable lyrics the menu turned
     // on (voicesOn, session 1163). The page drops the voices and the badge's states of any other
     // (a score or a file with no lyrics empties it — owner's report 2026-11-08: the microphone

@@ -36,7 +36,7 @@ public class LyricLanguageTests
 {
     private static string Book(string head, string lyrics) => $$"""
         {{head}}
-        part m { clef treble }
+        part m { clef treble  instrument soprano }
         section A {
           m { c'4 d e f | }
           {{lyrics}}
@@ -182,7 +182,7 @@ public class LyricLanguageTests
     public void CommasJoinTheVoices(string lyrics, string row)
     {
         string source = $$"""
-            part m { clef treble }
+            part m { clef treble  instrument soprano }
             {{lyrics}}
             section A { m { c'4 d e f | } }
             form { A }
@@ -232,7 +232,7 @@ public class LyricLanguageTests
 
     [Fact]
     public void AnEmptyLaterName_IsAnError()
-        => Assert.Contains(SyntaxTree.Parse("part m { clef treble }\nlyrics w singer \"a/b\",\"\" sings m { さ く ら ら | }\n").Diagnostics, d => d.Code == DiagnosticCodes.SingerEmpty);
+        => Assert.Contains(SyntaxTree.Parse("part m { clef treble  instrument soprano }\nlyrics w singer \"a/b\",\"\" sings m { さ く ら ら | }\n").Diagnostics, d => d.Code == DiagnosticCodes.SingerEmpty);
 
     [Fact]
     public void NoSingerWritten_IsNull()
@@ -289,7 +289,7 @@ public class LyricLanguageTests
 
     // ── the head goes on after a clause (owner's request 2026-11-09, session 1169) ──
 
-    private const string Declared = "part sop { clef treble }\n";
+    private const string Declared = "part sop { clef treble  instrument soprano }\n";
 
     private static string[] Offered(string text)
     {
@@ -483,8 +483,8 @@ public class LyricLanguageTests
     // ── one track under several staves, a singer each (owner's report, session 1176) ──
 
     private static string Choir(string rows) => $$"""
-        part sop { clef treble }
-        part alt { clef treble }
+        part sop { clef treble  instrument soprano }
+        part alt { clef treble  instrument soprano }
         section A {
           sop { c'4 d e f | }
           alt { a4 b c d | }
@@ -551,11 +551,6 @@ public class LyricLanguageTests
     [InlineData("instrument tenor", "male")]
     [InlineData("instrument baritone", "male")]
     [InlineData("instrument voice-bass", "male")]
-    [InlineData("clef treble", "female")]
-    [InlineData("clef treble^8", "female")]
-    [InlineData("clef treble_8", "male")]
-    [InlineData("clef bass", "male")]
-    [InlineData("clef tenor", "male")]
     public void APart_TellsItsDefaultVoice(string head, string expected)
         => Assert.Equal(expected, GenderOf(head));
 
@@ -565,6 +560,10 @@ public class LyricLanguageTests
     [InlineData("clef bass", "\"soprano\"", "female")]
     [InlineData("clef treble", "\"tenor\"", "male")]
     [InlineData("clef bass", "\"neutrino/MERROW\"", "male")]              // a named voice says nothing: the part does
+    [InlineData("clef treble", "\"a/b\"", "female")]
+    [InlineData("clef treble^8", "\"a/b\"", "female")]
+    [InlineData("clef treble_8", "\"a/b\"", "male")]
+    [InlineData("clef tenor", "\"a/b\"", "male")]
     [InlineData("instrument soprano", "\"someone\"", "female")]
     public void TheSingersWord_WinsOverThePart(string head, string singer, string expected)
         => Assert.Equal(expected, GenderOf(head, singer));

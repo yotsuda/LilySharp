@@ -89,6 +89,23 @@ public static class LyricSinger
         => GenderOfWord(preset?.StartsWith("voice-", StringComparison.Ordinal) == true ? preset["voice-".Length..] : preset)
             ?? (clef is "bass" or "bass_8" or "baritone" or "tenor" or "treble_8" ? Male : Female);
 
+    /// <summary>
+    /// A reader of whether a track's words on a part are SUNG (owner's decision 2026-11-10, session
+    /// 1217): a voice has been asked for, by a <c>singer</c> reaching them (<see cref="ReaderOf"/>) or
+    /// by the part's <c>instrument</c> being a voice (<see cref="Svg.Model.InstrumentDefaults.IsVoice"/>).
+    /// Words on any other part are printed only: the part keeps its instrument and no voice is
+    /// rendered. A clef says nothing here (a viola reads the alto clef).
+    /// </summary>
+    public static Func<string?, string?, bool> SungReaderOf(SyntaxNode root, RenderSpec? spec)
+    {
+        var singerOf = ReaderOf(root, spec);
+        var voices = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var part in root.DescendantNodes<PartDeclarationSyntax>())
+            if (Svg.Model.InstrumentDefaults.IsVoice(Semantics.PartHeaderDefaults.Read(part).Preset))
+                voices.Add(part.Name.Text);
+        return (track, part) => singerOf(track, part) is { Length: > 0 } || (part != null && voices.Contains(part));
+    }
+
     /// <summary>The key a score row's singer is kept under: the track and the part the row says it
     /// sings, as one track may stand under several staves (owner's report 2026-11-09, session 1176:
     /// two rows of one track, each with its own singer, both sang the first's); the track alone for a
@@ -111,8 +128,17 @@ public static class LyricSinger
             if (Semantics.PartHeaderDefaults.Read(part).Singer is { Length: > 0 } singer)
                 parts.TryAdd(part.Name.Text, singer);
         var rows = spec?.RowSingers;
+        // A row that names a voice of an engraved part (`sings alt`) is kept under that voice, and
+        // its words stand on the part: looked up by the track.
+        var declared = root.DescendantNodes<PartDeclarationSyntax>().Select(p => p.Name.Text).ToHashSet(StringComparer.Ordinal);
+        var onAVoice = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (rows != null)
+            foreach (var (key, singer) in rows)
+                if (key.IndexOf('\0') is var cut and >= 0 && !declared.Contains(key[(cut + 1)..]))
+                    onAVoice.TryAdd(key[..cut], singer);
         return (track, part) =>
             track != null && rows != null && (rows.TryGetValue(RowKey(track, part), out var row) || rows.TryGetValue(track, out row)) ? row
+            : track != null && onAVoice.TryGetValue(track, out var voiced) ? voiced
             : track != null && tracks.TryGetValue(track, out var own) ? own
             : part != null && parts.TryGetValue(part, out var theirs) ? theirs
             : null;

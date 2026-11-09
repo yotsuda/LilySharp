@@ -503,6 +503,11 @@ public static class InstrumentDefaults
     /// </summary>
     public static bool IsKnownInstrument(string name) => KnownSet.Contains(name);
 
+    /// <summary>Whether a preset is a human voice: the part's <c>instrument</c> says a singer performs it.</summary>
+    public static bool IsVoice(string? preset)
+        => preset?.ToLowerInvariant() is { } p
+            && (p == "voice-bass" || (p.StartsWith("voice-", StringComparison.Ordinal) ? p["voice-".Length..] : p) is "soprano" or "alto" or "tenor" or "baritone");
+
     /// <summary>
     /// The preset an unknown <paramref name="name"/> most likely meant, or null: a voice written
     /// with the <c>voice-</c> prefix only <c>voice-bass</c> takes (<c>voice-alto</c> → <c>alto</c>

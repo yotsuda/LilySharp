@@ -42,7 +42,7 @@ public sealed class SungScoreJsonTests
             tempo 4 = 132
             time 2/4
             key f major
-            part melody { clef treble }
+            part melody { clef treble  instrument soprano }
             section A {
               melody { c''8. d16 c8. d16 | c4 a8 r | a8. bes16 a8. bes16 | a4 f8 r | a4 f8. g16 | a4 f8. g16 | a8 bes c c | g a g r | }
               lyrics verse { ゆ ~ き や | こん こ | あ ら れ や | こん こ | ふっ て も | ふっ て も | ま だ ふ り | や ま ぬ | }

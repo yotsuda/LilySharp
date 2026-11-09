@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Collector;
 /// <summary>
 /// Which parts a score SINGS and which it PLAYS, read off its rows (owner's decision 2026-11-08,
 /// docs/singing-design.md §3): the words belong to the staff they are printed under. A staff row
-/// with a lyrics row under it that sings its part is a singer's staff — the preview gives it the
+/// with a lyrics row under it that sings its part, a voice asked for (<see cref="LyricSinger.SungReaderOf"/>), is a singer's staff — the preview gives it the
 /// voice; a staff row of the same part with no words under it is an instrument's — the part
 /// sounds both ways, once each. A lyrics row belongs to the nearest staff of the part it sings
 /// above it (the page draws it there), else the first such staff below it; a row that sings a
@@ -37,7 +37,11 @@ namespace LilySharp.Core.Svg.Collector;
 public static class SungStaves
 {
     /// <summary>The parts with a sung staff and the parts with a played staff, each in row order.</summary>
-    public sealed record Sounds(IReadOnlyList<string> Sung, IReadOnlyList<string> Played);
+    /// <param name="Sung">The parts with a staff a voice sings.</param>
+    /// <param name="Played">The parts with a staff that plays its instrument, words printed under it or not.</param>
+    /// <param name="PrintedWords">The parts that have words in this score and no voice asked for them
+    /// (<see cref="LyricSinger.SungReaderOf"/>), for the editor to say how to have them sung.</param>
+    public sealed record Sounds(IReadOnlyList<string> Sung, IReadOnlyList<string> Played, IReadOnlyList<string>? PrintedWords = null);
 
     /// <summary>
     /// The parts the score's lyrics rows sing that NO staff of the score shows, in row order: the
@@ -78,6 +82,8 @@ public static class SungStaves
         // stayed rows (unbound, or under another part's staff) are placed below.
         var rows = new List<(string? Part, LyricsRowSpec? Lyrics)>();
         var sungRows = new HashSet<int>();
+        var wordsRows = new HashSet<int>();
+        var sings = LyricSinger.SungReaderOf(root, spec);
         foreach (var item in Flat(spec.Items))
         {
             switch (item)
@@ -92,7 +98,7 @@ public static class SungStaves
         void AddStaff(StaffSpec staff)
         {
             if (!staff.WithLyrics.IsDefaultOrEmpty)
-                sungRows.Add(rows.Count);
+                (staff.WithLyrics.Any(track => sings(track, staff.VoiceName)) ? sungRows : wordsRows).Add(rows.Count);
             rows.Add((staff.VoiceName, null));
         }
         string? firstStaff = rows.FirstOrDefault(r => r.Part != null).Part;
@@ -114,7 +120,7 @@ public static class SungStaves
             for (int j = i + 1; j < rows.Count && owner < 0; j++)
                 if (rows[j].Part == target) owner = j;
             if (owner >= 0)
-                sungRows.Add(owner);
+                (sings(row.PartName, target) ? sungRows : wordsRows).Add(owner);
         }
         var sung = new List<string>();
         var played = new List<string>();
@@ -127,10 +133,21 @@ public static class SungStaves
                 list.Add(part);
         }
         // The singers no staff shows, after the staves.
+        var printed = new List<string>();
+        foreach (int i in wordsRows.Order())
+            if (rows[i].Part is { } part && !sungRows.Contains(i) && !printed.Contains(part))
+                printed.Add(part);
         foreach (var part in UnseenSungParts(root, spec))
-            if (!sung.Contains(part))
-                sung.Add(part);
-        return new Sounds(sung, played);
+        {
+            bool voiced = Flat(spec.Items).OfType<LyricsRowSpec>()
+                .Any(r => LyricBindings.TargetOfRow(root, r.PartName, r.Sings) == part && sings(r.PartName, part));
+            var list = voiced ? sung : played;
+            if (!list.Contains(part))
+                list.Add(part);
+            if (!voiced && !printed.Contains(part))
+                printed.Add(part);
+        }
+        return new Sounds(sung, played, printed);
     }
 
     private static IEnumerable<RenderItemSpec> Flat(IEnumerable<RenderItemSpec> items)

@@ -40,7 +40,7 @@ public class SungVoicesTests
         return SungVoices.Read(midi, MidiClock.SecondsOf(midi));
     }
 
-    private static string Book(string music, string words, string parts = "part melody { clef treble }",
+    private static string Book(string music, string words, string parts = "part melody { clef treble  instrument soprano }",
         string rows = "staff melody  lyrics verse sings melody", string head = "") => $$"""
         {{head}}
         tempo 4 = 120
@@ -284,10 +284,12 @@ public class SungVoicesTests
     }
 
     [Fact]
-    public void APartWithNoWords_IsNoVoice_AndEachPartWithWordsIsOne()
+    public void APartWithNoWords_IsNoVoice_AndEachPartWithWordsAndAVoiceIsOne()
     {
         var book = """
             time 2/4
+            part sop { instrument soprano }
+            part alt { instrument alto }
             section A {
               sax { c'4 d | e2 | }
               sop { g'4 a | b2 | }
@@ -331,6 +333,54 @@ public class SungVoicesTests
         var midi = new MidiExporter { Form = score.Form, Score = score }.Export(tree);
         var track = midi.Tracks.Single(t => t.Name == "melody");
         Assert.Equal(program, track.Program);
+    }
+
+    // ── who sings (owner's decision 2026-11-10, session 1217): words are sung where a voice is asked for ──
+
+    [Theory]
+    [InlineData("part melody { clef treble }", false)]
+    [InlineData("part melody { clef alto }", false)]                   // a viola's clef too
+    [InlineData("part melody { clef soprano }", false)]
+    [InlineData("part melody { instrument piano-right }", false)]
+    [InlineData("part melody { instrument bass }", false)]             // the bass guitar
+    [InlineData("part melody { instrument soprano }", true)]
+    [InlineData("part melody { instrument alto }", true)]
+    [InlineData("part melody { instrument tenor }", true)]
+    [InlineData("part melody { instrument baritone }", true)]
+    [InlineData("part melody { instrument voice-bass }", true)]
+    [InlineData("part melody { clef treble  singer \"a/b\" }", true)]
+    [InlineData("part melody { clef treble  singer \"soprano\" }", true)]
+    [InlineData("part melody { clef treble  singer male }", true)]
+    public void WordsAreSung_WhereTheInstrumentOrASingerAsksForAVoice(string part, bool sung)
+        => Assert.Equal(sung, Voices(Book(YukiMusic, YukiWords, parts: part)).Count == 1);
+
+    [Fact]
+    public void ASingerOnTheScoresRow_AsksForAVoice()
+        => Assert.Single(Voices(Book(YukiMusic, YukiWords, rows: "staff melody  lyrics verse sings melody singer \"a/b\"", parts: "part melody { clef treble }")));
+
+    [Fact]
+    public void ASingerOnARowThatNamesAVoice_ReachesThePart()
+    {
+        var voice = Assert.Single(Voices("""
+            part melody { clef treble }
+            section A {
+              melody { voice alt { c'4 d e f | } { c4 d e f | } }
+              lyrics verse { ら ら ら ら | }
+            }
+            form { A }
+            score { staff melody  lyrics verse sings alt singer "a/b" }
+            """));
+        Assert.Equal("a/b", voice.Singer);
+    }
+
+    [Fact]
+    public void WordsNotSung_StayInTheMidiFile()
+    {
+        var tree = SyntaxTree.Parse(Book(YukiMusic, YukiWords, parts: "part melody { clef treble }"));
+        var score = RenderSpecParser.FindAll(tree).First();
+        var midi = new MidiExporter { Form = score.Form, Score = score }.Export(tree);
+        Assert.Contains(midi.Tracks.SelectMany(t => t.Lyrics), l => l.Text == "ゆ" && !l.Voiced);
+        Assert.Empty(SungVoices.Read(midi, MidiClock.SecondsOf(midi)));
     }
 
     [Fact]

@@ -122,6 +122,15 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   `Svg.Collector.SungStaves` reads all this off the score's rows for `lilysharp/playback`
   (`Sung`, `Played`); the preview lets the voice stand in for the instrument only where the
   part is sung and not played.
+- **Words are sung where a voice is asked for** (owner's decision 2026-11-10, session 1217):
+  a `singer` reaching them, or the part's `instrument` being a voice (`InstrumentDefaults.IsVoice`:
+  soprano, alto, tenor, baritone, voice-bass); `Music.LyricSinger.SungReaderOf` is the one reading.
+  A clef asks for nothing. Other words are printed only: `SungVoices` gives them no voice and the
+  engine is not run; `SungStaves` lists the staff as played and the part in `PrintedWords`, which
+  the editor says once on Play; the `.mid` is as before, the stand-in sound included. A part no
+  staff shows with no voice asked for sounds its stand-in. The reasons: what is heard is said by
+  the score and not by the machine, words printed over an instrument keep the instrument, and
+  no render runs for words nobody asked to hear.
 - **Language**: a fact of the words (session 1167): `language NAME` on the file or a lyrics
   track, `japanese` when nothing is written (`Music.LyricLanguage`); the voice's `Language` is
   its first words' tag, and only Japanese words are checked for kana. Otherwise the score is

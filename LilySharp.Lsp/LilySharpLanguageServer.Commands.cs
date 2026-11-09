@@ -1068,7 +1068,8 @@ public sealed partial class LilySharpLanguageServer
             // session 1192: a verse written first took the place of the verse the score named).
             var spec = score;
             // Which parts the score shown sings itself (its rows and the singers no staff shows).
-            var inScore = score != null ? new HashSet<string>(LilySharp.Core.Svg.Collector.SungStaves.Of(root, score).Sung, StringComparer.Ordinal) : null;
+            var shownSounds = score != null ? LilySharp.Core.Svg.Collector.SungStaves.Of(root, score) : null;
+            var inScore = shownSounds != null ? new HashSet<string>(shownSounds.Sung, StringComparer.Ordinal) : null;
             if (@params.AllLyrics && score != null)
             {
                 var placed = new HashSet<string>(StringComparer.Ordinal);
@@ -1124,6 +1125,7 @@ public sealed partial class LilySharpLanguageServer
                         T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos, V = n.Level, E = n.LevelEnd, I = n.Inhale, H = n.Hyphen,
                     }).ToArray(),
                 }).OrderByDescending(v => v.InScore).ToArray(),
+                PrintedWords = shownSounds?.PrintedWords?.ToArray() ?? [],
             };
         }
         catch (Exception ex)

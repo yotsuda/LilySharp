@@ -39,7 +39,7 @@ public sealed class LyricReadingTests
     private static string Book(string words, string music = "c'4 d e f |") => $$"""
         tempo 4 = 120
         time 4/4
-        part melody { clef treble }
+        part melody { clef treble  instrument soprano }
         section A {
           melody { {{music}} }
           lyrics verse { {{words}} }

@@ -36,7 +36,7 @@ public sealed record SungNote(double Start, double Duration, double Pitch, strin
 public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungNote> Notes, IReadOnlyList<string> Warnings, string? Singer = null, string? Gender = null);
 
 /// <summary>
-/// The sung voices of an exported piece: one per part a placed lyrics row sings. Which note a
+/// The sung voices of an exported piece: one per part a placed lyrics row sings with a voice asked for (<see cref="Music.LyricSinger.SungReaderOf"/>). Which note a
 /// syllable stands on is the page's answer (<c>MidiExporter.SingLyrics</c>, from
 /// <c>Svg.Collector.SungSyllables</c>), and the seconds are the playback's (<see cref="MidiClock"/>)
 /// — nothing is counted again here (the 2026-11-04 lesson: a file that counted syllables itself
@@ -69,7 +69,7 @@ public static class SungVoices
     public static List<SungVoice> Read(MidiFile midi, Func<int, double> secondsAt)
     {
         var voices = new List<SungVoice>();
-        var lyrics = midi.Tracks.SelectMany(t => t.Lyrics).Where(l => l.Part != null).ToList();
+        var lyrics = midi.Tracks.SelectMany(t => t.Lyrics).Where(l => l.Part != null && l.Voiced).ToList();
         foreach (var part in lyrics.Select(l => l.Part!).Distinct(StringComparer.Ordinal))
         {
             // The part's language: its first words' (one voice a part; the first words at an onset win).

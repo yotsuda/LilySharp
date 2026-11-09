@@ -337,9 +337,11 @@ What makes it music:
   - Count every bar: as many units as notes, less the notes a slur or a tie carries over.
   - Words the request gives are set as they stand. Words written for it tell their story in the
     verses and come back unchanged in the chorus, its hook the title.
-  - **Who sings**: with no `singer`, the part's instrument (else its clef) says the gender (a bass,
-    baritone or tenor is male) and this machine's default voice of that gender sings. Leave it out
-    unless the request names a voice or a kind of voice, or several parts should sound different.
+  - **Who sings**: words are sung where a voice is asked for: the part's `instrument` being a voice
+    (`soprano`, `alto`, `tenor`, `baritone`, `voice-bass`), or a `singer`. With the instrument alone
+    this machine's default voice of that gender sings, and `singer` is left out unless the request
+    names a voice or a kind of voice, or several parts should sound different. Words on any other
+    part (a guitar's or a piano's, printed for reading) are not sung: it plays its instrument.
     To name a voice, call `lilysharp_listVoices` first and copy a name it answers; never guess one.
     Called with nothing it lists every voice; narrow it with `language` (the words': `japanese` or
     `english`, `ja` or `en`), `gender` (`male` or `female`; a voice that does not state one is kept and

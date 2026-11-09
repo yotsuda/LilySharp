@@ -32,7 +32,7 @@ public class SungStavesTests
     private static (string Sung, string Played) Of(string scoreBody)
     {
         var source = $$"""
-            part melody { clef treble }
+            part melody { clef treble  instrument soprano }
             part piano { clef treble }
             part horn
             section A {
@@ -59,6 +59,54 @@ public class SungStavesTests
     public void AStaffWithItsWordsUnderIt_IsSungAlone()
         => Assert.Equal(("melody", ""), Of("staff melody  lyrics verse sings melody"));
 
+    // Owner's decision 2026-11-10, session 1217: words with no voice asked for are printed; the staff plays.
+    private static SungStaves.Sounds PrintedOf(string scoreBody, string melody = "part melody { clef treble }")
+    {
+        var tree = SyntaxTree.Parse($$"""
+            {{melody}}
+            part horn
+            section A {
+              melody { c'4 d e f | }
+              horn { c'4 d e f | }
+              lyrics verse { a b c d | }
+            }
+            form { A }
+            score { {{scoreBody}} }
+            """);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+        return SungStaves.Of(tree.GetRoot(), RenderSpecParser.FindAll(tree).First());
+    }
+
+    [Fact]
+    public void WordsWithNoVoice_ArePrinted_AndTheStaffPlays()
+    {
+        var sounds = PrintedOf("staff melody  lyrics verse sings melody");
+        Assert.Empty(sounds.Sung);
+        Assert.Equal(new[] { "melody" }, sounds.Played);
+        Assert.Equal(new[] { "melody" }, sounds.PrintedWords);
+    }
+
+    [Fact]
+    public void WordsAboveTheirStaff_WithNoVoice_ArePrinted()
+    {
+        var sounds = PrintedOf("lyrics verse sings melody  staff melody");
+        Assert.Empty(sounds.Sung);
+        Assert.Equal(new[] { "melody" }, sounds.PrintedWords);
+    }
+
+    [Fact]
+    public void WordsOfAPartNoStaffShows_WithNoVoice_PlayItsStandIn()
+    {
+        var sounds = PrintedOf("staff horn  lyrics verse sings melody");
+        Assert.Empty(sounds.Sung);
+        Assert.Equal(new[] { "horn", "melody" }, sounds.Played);
+        Assert.Equal(new[] { "melody" }, sounds.PrintedWords);
+    }
+
+    [Fact]
+    public void AVoice_TakesTheWordsOffThePrintedList()
+        => Assert.Empty(PrintedOf("staff melody  lyrics verse sings melody", "part melody { instrument soprano }").PrintedWords!);
+
     [Fact]
     public void AStaffWithNoWords_IsPlayed()
         => Assert.Equal(("", "melody"), Of("staff melody"));
@@ -80,7 +128,7 @@ public class SungStavesTests
     public void ARowThatSingsAVoiceOfAnEngravedPart_IsNotAnUnseenSinger()
     {
         var source = """
-            part melody { clef treble }
+            part melody { clef treble  instrument soprano }
             section A {
               melody { voice alt { c'4 d e f | } { c4 d e f | } }
               lyrics verse sings alt { a b c d | }

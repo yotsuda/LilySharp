@@ -43,7 +43,7 @@ public sealed class WavExportTests : IDisposable
     }
 
     private const string Book =
-        "octave absolute\ntempo 4 = 120\ntime 4/4\npart p { clef treble }\n" +
+        "octave absolute\ntempo 4 = 120\ntime 4/4\npart p { clef treble  instrument soprano }\n" +
         "section S { p { c'4 e'4 g'4 c''4 | } }\nform { S }\nscore { staff p }\n";
 
     [Fact]
@@ -108,7 +108,7 @@ public sealed class WavExportTests : IDisposable
     // One bar of 4/4 at 120 (2 s), a syllable on each note; the score sings the part (a staff
     // with its words under it), and — `rows` — may play it on a second staff too.
     private static string SungBook(string rows = "staff melody  lyrics verse sings melody") =>
-        "tempo 4 = 120\ntime 4/4\npart melody { clef treble }\n" +
+        "tempo 4 = 120\ntime 4/4\npart melody { clef treble  instrument soprano }\n" +
         "section A { melody { c'4 e4 g4 c4 | } lyrics verse { か き く け | } }\nform { A }\n" +
         $"score {{ {rows} }}\n";
 

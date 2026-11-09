@@ -439,6 +439,9 @@ public class SingerSlotResponse
 public class SungResponse
 {
     public SungVoiceDto[]? Voices { get; set; }
+    /// <summary>The parts with words in the score shown and no voice asked for them
+    /// (<c>Svg.Collector.SungStaves.Sounds.PrintedWords</c>).</summary>
+    public string[]? PrintedWords { get; set; }
     public string? Error { get; set; }
 }
 
@@ -494,7 +497,7 @@ public class PlaybackResponse
     /// notes, for the practice menu to turn on; the editor plays them only when it does (owner's
     /// request 2026-11-08). Empty for a file with no score.</summary>
     public string[]? Extra { get; set; }
-    /// <summary>The parts the score SINGS — shown on a staff with a lyrics row under it that sings
+    /// <summary>The parts the score SINGS — a voice asked for, shown on a staff with a lyrics row under it that sings
     /// the part — and the parts it PLAYS — shown on a staff with no words under it; a part may be
     /// both, on two staves (<c>Svg.Collector.SungStaves</c>, owner's decision 2026-11-08). The
     /// editor lets a voice stand in for the instrument only where the part is sung and not

@@ -1149,7 +1149,7 @@ PartProperty   = 'clef'          , PartClefName
                                                        midiInstrument "acoustic guitar (nylon)";
                                                        default = the preset's, else
                                                        "acoustic grand". A STAFF WITH A LYRICS
-                                                       ROW UNDER IT that sings its part is a
+                                                       ROW UNDER IT that sings its part, a voice asked for (LyricsClause), is a
                                                        singer's (owner's decision 2026-11-08):
                                                        the preview sings it with the singing
                                                        engine when one is there, and this
@@ -1451,8 +1451,12 @@ SingerGender   = 'male' | 'female' ;
                     score's row wins over the track, the track over the part's 'singer'. An
                     empty one is an error (LYS4039); a name is never checked against a machine:
                     a voice that is not there sings as the default voice of the part's gender, said
-                    once. With no singer a part's instrument, else its clef, says the gender: bass,
-                    baritone, tenor and treble_8 clefs are male, others female. *)
+                    once. WORDS ARE SUNG WHERE A VOICE IS ASKED FOR (owner's decision 2026-11-10):
+                    a 'singer' reaching them, or the part's instrument being a voice (soprano, alto,
+                    tenor, baritone, voice-bass). A clef asks for nothing. Other words are printed
+                    only: the staff plays, no voice is rendered, the .mid is as before. The
+                    default voice's gender is the singer's word, else the instrument's, else the
+                    clef's: bass, baritone, tenor and treble_8 clefs are male, others female. *)
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'lyrics' row.
                     With no 'sings' it sings the file's one part - the unnamed part, the only
                     declared one, or the music written straight into the sections; with
