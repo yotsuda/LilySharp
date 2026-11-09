@@ -261,6 +261,12 @@ public sealed partial class LilyPondExporter
                 case ArticulationSyntax art when IsPitchedRest(art):
                     suffix.Append("\\rest");
                     break;
+                // One note's @shiftOff, as @stemUp is one note's: LilyPond's own \shiftOff is a
+                // context setting, and \once is the annotation's scope.
+                // LILYPOND-REF: ly/property-init.ly shiftOff — NoteColumn.horizontal-shift 0.
+                case ArticulationSyntax art when art.NameToken.Text.Equals("shiftOff", StringComparison.Ordinal):
+                    prefix.Append("\\once \\shiftOff ");
+                    break;
                 case ArticulationSyntax art when StemDirectionOverride(art) is { } up:
                     prefix.Append(up ? "\\once \\override Stem.direction = #UP "
                                      : "\\once \\override Stem.direction = #DOWN ");

@@ -54,7 +54,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             // A head in parentheses — a drummer's ghost note (MeasureCollector.IsParenthesizeMark).
             "parenthesize",
             "rest",
-            "stemUp", "stemDown",
+            "stemUp", "stemDown", "shiftOff",
             // '@ho' / '@po' are NOT here: retired from the registry pre-0.3.0, they stayed in
             // this list until 2026-09-27 and so compiled clean while drawing nothing.
             "hammerOn", "pullOff", "tap", "snapPizz", "slide", "stopped",

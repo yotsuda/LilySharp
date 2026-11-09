@@ -182,7 +182,7 @@ public sealed partial class MeasureCollector
             // the MusicXML notehead) answers as for any cross head. Session 562; the page
             // drew two strokes of its own until then.
             Notehead = HasNamedArticulation(note, "dead") ? NoteheadStyle.Cross : NoteheadStyle.Default,
-            ForcedStemUp = GetStemDirectionOverride(note),
+            ForcedStemUp = GetStemDirectionOverride(note), ShiftOff = HasNamedArticulation(note, "shiftOff"),
             LaissezVibrerUp = hasLv ? LaissezVibrerUpOf(note) : null,
             RepeatTieUp = hasRepeatTie ? RepeatTieUpOf(note) : null,
             // The half-tie names the '@' that wrote it, not this note's own address
@@ -266,7 +266,7 @@ public sealed partial class MeasureCollector
         {
             Notehead = info.Notehead,
             Midi = info.GmKey,
-            ForcedStemUp = GetStemDirectionOverride(drum),
+            ForcedStemUp = GetStemDirectionOverride(drum), ShiftOff = HasNamedArticulation(drum, "shiftOff"),
             TodoKey = TodoKeyOf(drum), TodoMemo = TodoMemoOf(drum), TodoBelow = TodoBelowOf(drum), TodoSideWritten = TodoSideWrittenOf(drum),
         };
     }
@@ -896,7 +896,7 @@ public sealed partial class MeasureCollector
             SlurStartHeadPosition = slurStartHead,
             SlurEndHeadPosition = slurEndHead,
             // A chord has ONE stem, so @stemUp / @stemDown on it is the same wish a note's is.
-            ForcedStemUp = GetStemDirectionOverride(chord),
+            ForcedStemUp = GetStemDirectionOverride(chord), ShiftOff = HasNamedArticulation(chord, "shiftOff"),
             TodoKey = TodoKeyOf(chord), TodoMemo = TodoMemoOf(chord), TodoBelow = TodoBelowOf(chord), TodoSideWritten = TodoSideWrittenOf(chord),
             // Read in the FACTORY so every chord-creating walk arm gets it — a walk-arm
             // read is exactly how a chord's @glissando was silently swallowed until
@@ -1009,7 +1009,7 @@ public sealed partial class MeasureCollector
         return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, rep.SourceStart, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
         {
             // The repetition's OWN post-events only — the original's are not copied.
-            ForcedStemUp = GetStemDirectionOverride(rep),
+            ForcedStemUp = GetStemDirectionOverride(rep), ShiftOff = HasNamedArticulation(rep, "shiftOff"),
             HasGlissando = HasGlissandoArticulation(rep),
             TodoKey = TodoKeyOf(rep), TodoMemo = TodoMemoOf(rep), TodoBelow = TodoBelowOf(rep), TodoSideWritten = TodoSideWrittenOf(rep),
         };
@@ -1067,7 +1067,7 @@ public sealed partial class MeasureCollector
             // the slash out — a slash has no place on a fretboard. TabResolver knows
             // this pair (slash head, Midi 0) and does not warn about it.
             Midi = 0,
-            ForcedStemUp = GetStemDirectionOverride(slash),
+            ForcedStemUp = GetStemDirectionOverride(slash), ShiftOff = HasNamedArticulation(slash, "shiftOff"),
             // `/4@todo("…")` is ringed like a note — `lysc check` counted it while the page
             // dropped it in silence (found writing the slash-chart lesson, 2026-10-12).
             TodoKey = TodoKeyOf(slash), TodoMemo = TodoMemoOf(slash), TodoBelow = TodoBelowOf(slash), TodoSideWritten = TodoSideWrittenOf(slash),
@@ -1145,7 +1145,7 @@ public sealed partial class MeasureCollector
                 }
                 return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, bare.SourceStart, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio: false, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
                 {
-                    ForcedStemUp = GetStemDirectionOverride(bare),
+                    ForcedStemUp = GetStemDirectionOverride(bare), ShiftOff = HasNamedArticulation(bare, "shiftOff"),
                     HasGlissando = HasGlissandoArticulation(bare),
                     TodoKey = TodoKeyOf(bare), TodoMemo = TodoMemoOf(bare), TodoBelow = TodoBelowOf(bare), TodoSideWritten = TodoSideWrittenOf(bare),
                 };
@@ -1173,7 +1173,7 @@ public sealed partial class MeasureCollector
                     isCue: isCue)
                 {
                     Midi = m.Midi,
-                    ForcedStemUp = GetStemDirectionOverride(bare),
+                    ForcedStemUp = GetStemDirectionOverride(bare), ShiftOff = HasNamedArticulation(bare, "shiftOff"),
                     WrittenPitch = m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value) : 0,
                 };
             }
@@ -1199,7 +1199,7 @@ public sealed partial class MeasureCollector
                 {
                     Notehead = info.Notehead,
                     Midi = info.GmKey,
-                    ForcedStemUp = GetStemDirectionOverride(bare),
+                    ForcedStemUp = GetStemDirectionOverride(bare), ShiftOff = HasNamedArticulation(bare, "shiftOff"),
                 };
             }
 
@@ -1220,7 +1220,7 @@ public sealed partial class MeasureCollector
                 {
                     Notehead = NoteheadStyle.Slash,
                     Midi = 0,
-                    ForcedStemUp = GetStemDirectionOverride(bare),
+                    ForcedStemUp = GetStemDirectionOverride(bare), ShiftOff = HasNamedArticulation(bare, "shiftOff"),
                 };
 
             default:

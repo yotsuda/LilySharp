@@ -255,6 +255,7 @@
     ["music-at", "rest"],
     ["music-at", "stemUp"],
     ["music-at", "stemDown"],
+    ["music-at", "shiftOff"],
     ["music-at", "notehead"],
     ["music-at", "finger"],
     ["music-at", "pluck"],

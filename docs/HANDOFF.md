@@ -48,7 +48,7 @@ tools\Session-Check.ps1 -End pNNN -DiffBase <開始時 HEAD>   # 終了の機械
   `project-notes/` も `notes/`、`ベースタブLy`・`dogfood`・`samples-playground` は `corpora/`、その他の話題フォルダは
   `probes/<名前>/`、直下の単発ファイルは `probes/loose/YYYY-MM/`）。**生成物（絵・trx・バイナリ）は移していない**
   ＝要るなら取り直す。コード内コメントや ARCHIVE の `scratch/` 表記は書き換えない。
-- ★★★ **開始時に `C:\MyProj\LilySharp-Omr\docs\repro\REQUESTS.md` の `open` を見る＝open があればそれに優先的に着手する**（ユーザー指示 2026-10-23・第961）。OMR 側（楽譜画像 → `.lys`）からの依頼の 1 枚で、状態は両側で書き換える（直したら `fixed <commit>`・直さないなら `won't`・聞くなら `question`。長い返事は Lab の `sessions/pNNN/` に置いて行から指す）。
+- ★★★ **開始時に `C:\MyProj\Calamo\docs\repro\REQUESTS.md` の `open` を見る＝open があればそれに優先的に着手する**（ユーザー指示 2026-10-23・第961）。OMR 側（楽譜画像 → `.lys`）からの依頼の 1 枚で、状態は両側で書き換える（直したら `fixed <commit>`・直さないなら `won't`・聞くなら `question`。長い返事は Lab の `sessions/pNNN/` に置いて行から指す）。
 - 証明 ⑴ の道具は `LilySharp-Lab\tools\rerender-ls.ps1`（RULES §5.5 のコマンド一覧）。
 - ★★★ **開始時に `LilySharp-Lab\notes\CLAUDE-OPERATIONS.md` も通読する**＝シェルと道具の使い方（Bash・PowerShell ツール・ripple は禁止・pwsh MCP の作法）・push や commit のユーザー規則・機械と社内環境の罠。**user memory は使わない**（2026-09-17・ユーザー決定。PC ローカルで他の PC に届かない）＝知見は RULES §4 の表の置き場所へ書く（公開してよい技術知見は RULES §5、private なものは Lab の notes）。
 ⚠️ **読み方の罠のうち、スクリプトが*刷れない*もの**（刷れる 4 つ——合計で読む・Release で測る・
@@ -138,16 +138,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1217セッション（2026-11-10・YT-DELL2）
+
+- **OMR の REQUESTS #25 を `@shiftOff` で閉じた**（持ち主の決定「音ごとの `@shiftOff`」）。`voice { } { }` の中で、その音の列の horizontal-shift を 0 に読む（`NoteCollision.HorizontalShift`・グループの並びも shift の順）。`.ly` は `\once \shiftOff`。再現譜の絵は LilyPond 2.26.0 と同じ形（Lab `sessions/p1217/t25`）。書かない譜は計算が変わらない。
+- 門: 全 svg の掃き 1262 枚で差 0（base は HEAD `23f99e2e0`）。毒 4 本（shift の読み・並び・和音の読み取り・`.ly`）は全部赤。開始時 full 15016 合格 / 0 失敗 / skip 2 / 合計 15018、終了時 full 15023 合格 / 0 失敗 / skip 2 / 合計 15025。
+- 棚卸しの増減は 0（`APPROXIMATIONS.md` と `magic_constants.csv` は再生成しても中身が変わらなかった）。
+- OMR の repo は `C:\MyProj\Calamo` に改名されていたので、§0 の REQUESTS のパスを直した。
+
+## 以下は第1216セッションの経緯
+
 ### 1.1 第1216セッション（2026-11-10・YT-DELL2）
 
 - 0.16.0 の push で初めて走った Ubuntu の CI が 1 件落ちた。`WavExportTests` が `C:\x\cantoria.exe` を決め打ちしていて、Linux の `Path.GetFileNameWithoutExtension` は `\` を区切りと見ない。製品は各 OS で正しいのでテストを `Path.Combine` に直した。
-- 終了時 full 15016 合格 / 0 失敗 / skip 2 / 合計 15018。
-
-## 以下は第1215セッションの経緯
-
-### 1.1 第1215セッション（2026-11-10・YT-DELL2）
-
-- **0.16.0 の版上げ**（持ち主の指示）。`Directory.Build.props`・拡張の `package.json` と lock・README・`DEPLOY.md` を 0.16.0 に、2 つの CHANGELOG の Unreleased を `## 0.16.0` にした。Cantoria 0.4.0 と Calamo 0.6.0 は公開済みで、0.16.0 が両者を案内する最初の版。旧 `yotsuda.lilysharp-omr` の取り下げは 0.16.0 の公開のあと。タグの push は持ち主の指示を待つ。
 - 終了時 full 15016 合格 / 0 失敗 / skip 2 / 合計 15018。
 
 ## 2. 開いている作業

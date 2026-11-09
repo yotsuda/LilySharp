@@ -1430,6 +1430,16 @@ c''4@stemUp d''4@stemDown e''4   // first up, second down, third automatic
 On a beamed note the beam's shared direction wins (a beam carries one direction for the
 whole group).
 
+## Voice Column Shift
+
+In `voice { } { }`, the third and fourth voices stand a column aside when their notes meet
+another voice's. `@shiftOff` keeps one note in the first column, so its head stands in line
+with the voice above:
+
+```
+voice { c''4 } { ees''4 } { g'8@stemDown@shiftOff aes8@stemDown }
+```
+
 ## Parallel Voices (Multi-Voice)
 
 ```

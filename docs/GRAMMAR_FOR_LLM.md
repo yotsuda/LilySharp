@@ -455,6 +455,8 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 
 - Stem direction: `@stemUp` / `@stemDown` force a note's stem (default is automatic).
   On a beamed note the beam's shared direction wins.
+- Voice column: `@shiftOff` keeps a note of a third or later voice in its group's first
+  column, so it stands under the voice above instead of a column aside.
 - Articulations: `@staccato @staccatissimo @accent @tenuto @marcato @fermata @portato`
 - String technique: `@upBow @downBow @flageolet` (`@harmonic` is the same mark) `@stopped` (+)
   `@snapPizz` (Bartók pizzicato) - always above

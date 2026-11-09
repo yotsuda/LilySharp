@@ -2,6 +2,10 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
+## Unreleased
+
+- **`@shiftOff`** is offered after `@`: it keeps a note of a third or later voice in the first column.
+
 ## 0.16.0
 
 - **A staff with no notes yet shows its bars**: beside a chord track, an empty part's staff draws the track's bar lines, and the empty bars that end a track are drawn.

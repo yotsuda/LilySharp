@@ -789,6 +789,7 @@ internal sealed record NoteItemRare
     public bool HasRepeatTie { get; init; }
     public bool? RepeatTieUp { get; init; }
     public bool? ForcedStemUp { get; init; }
+    public bool ShiftOff { get; init; }
     public bool? VoiceStemUp { get; init; }
     public bool TabBelowRange { get; init; }
     public string? LineStartAccidental { get; init; }
@@ -1139,6 +1140,20 @@ public sealed record NoteItem : MusicItem
     {
         get => _rare?.ForcedStemUp;
         init { if (value != ForcedStemUp) _rare = (_rare ?? NoteItemRare.Empty) with { ForcedStemUp = value }; }
+    }
+
+    /// <summary>
+    /// The writer's <c>@shiftOff</c> (OMR REQUESTS #25): this note's column stays in its voice
+    /// group's first slot, whatever the voice's number would give it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/property-init.ly <c>shiftOff</c> — <c>NoteColumn.horizontal-shift</c> 0.
+    /// One note's wish, as <c>\once \shiftOff</c>; read by <c>NoteCollision.HorizontalShift</c>.
+    /// </remarks>
+    public bool ShiftOff
+    {
+        get => _rare?.ShiftOff ?? false;
+        init { if (value != ShiftOff) _rare = (_rare ?? NoteItemRare.Empty) with { ShiftOff = value }; }
     }
 
     /// <summary>
@@ -1786,6 +1801,9 @@ public sealed record ChordItem : MusicItem
 
     /// <summary>A stem direction the writer asked for; see <see cref="NoteItem.ForcedStemUp"/>.</summary>
     public bool? ForcedStemUp { get; init; }
+
+    /// <summary>The writer's <c>@shiftOff</c>; see <see cref="NoteItem.ShiftOff"/>.</summary>
+    public bool ShiftOff { get; init; }
 
     /// <summary>The voice props' stem direction; see <see cref="NoteItem.VoiceStemUp"/>.</summary>
     public bool? VoiceStemUp { get; init; }

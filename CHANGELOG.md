@@ -4,6 +4,10 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## Unreleased
+
+- **`@shiftOff` keeps a note in its voice group's first column** (LilyPond's `\once \shiftOff`): in `voice { } { }`, a third voice's head can stand under the voice above instead of a column aside. A score that does not write it does not change.
+
 ## 0.16.0
 
 - `[engraving]` **A clef change in mid-line no longer writes the key's accidentals out**, as LilyPond and the engraving convention have it: the key still holds, and its sharps and flats are not restated until the line's next key signature. The signs gone, the bars they stood in are narrower.

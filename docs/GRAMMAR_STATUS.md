@@ -27,7 +27,7 @@ All ✅ implemented:
   (`voice { } { }`).
 - **Annotations** (`@name`, with `.up`/`.down`) — articulations (incl. staccatissimo,
   up/down-bow, harmonic), ornaments, dynamics (incl. the sfz family), free text
-  `@text("…")`, hairpins, `@stemUp/@stemDown`, `@courtesy`/`@editorial`, arpeggio,
+  `@text("…")`, hairpins, `@stemUp/@stemDown`, `@shiftOff`, `@courtesy`/`@editorial`, arpeggio,
   glissando, figured bass, inline chord names, half ties, cue/cross/dead, feathered
   beams.
 - **Structure** — parts, phrases (bare-name refs), sections, named `form`s bound by `score <Name>`,

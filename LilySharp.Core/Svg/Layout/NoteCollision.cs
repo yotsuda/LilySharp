@@ -765,6 +765,22 @@ internal sealed class NoteCollision
     }
 
     /// <summary>
+    /// The item's <c>horizontal-shift</c>: the voice's <c>(quotient n 2)</c>, or 0 where the
+    /// note wrote <c>@shiftOff</c> (OMR REQUESTS #25).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: ly/property-init.ly shiftOff — NoteColumn.horizontal-shift 0.</remarks>
+    private static int HorizontalShift(VoiceEntry entry)
+        => entry.Item is NoteItem { ShiftOff: true } or ChordItem { ShiftOff: true }
+            ? 0
+            : (entry.VoiceId - 1) / 2;
+
+    private static int ByHorizontalShift(VoiceEntry a, VoiceEntry b)
+    {
+        int byShift = HorizontalShift(a).CompareTo(HorizontalShift(b));
+        return byShift != 0 ? byShift : a.VoiceId.CompareTo(b.VoiceId);
+    }
+
+    /// <summary>
     /// Calculates collision info for a voice column with multiple voices — the literal
     /// port of LilyPond's <c>automatic_shift</c>: within each stem direction the clash
     /// groups accumulate offsets clause for clause (match / clear-heads / cross / bare
@@ -829,11 +845,11 @@ internal sealed class NoteCollision
         var offsets = new List<(int VoiceId, int ItemIndex, double XOffset, bool HeadTransparent, DotAdjustment Dot)>();
 
         // get_clash_groups: one group per stem direction, sorted by horizontal-shift
-        // (shift_less); VoiceId order IS that order under (id-1)/2, ties stable.
+        // (shift_less), ties by VoiceId: (id-1)/2 unless the note wrote @shiftOff.
         var upEntries = column.Entries.Where(e => GetStemDirection(e) == true).ToList();
         var downEntries = column.Entries.Where(e => GetStemDirection(e) == false).ToList();
-        upEntries.Sort((a, b) => a.VoiceId.CompareTo(b.VoiceId));
-        downEntries.Sort((a, b) => a.VoiceId.CompareTo(b.VoiceId));
+        upEntries.Sort(ByHorizontalShift);
+        downEntries.Sort(ByHorizontalShift);
 
         if (upEntries.Count == 0 && downEntries.Count == 0)
         {
@@ -898,7 +914,7 @@ internal sealed class NoteCollision
             int prevShift = 0;
             for (int i = 0; i < list.Count; i++)
             {
-                int hs = (list[i].VoiceId - 1) / 2; // horizontal-shift
+                int hs = HorizontalShift(list[i]);
                 if (i == 0)
                 {
                     offset = inner;

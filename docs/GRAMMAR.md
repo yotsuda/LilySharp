@@ -2903,6 +2903,9 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    - Niente:        @niente  (a hairpin's thin end on it is a circle: @decresc … @niente,
                     @niente@cresc; alone the italic word; at the thick end LYS4029)
    - Stem:          @stemUp @stemDown      (a beam's shared direction wins)
+   - Column:        @shiftOff              (in 'voice { } { }', this note's column keeps its voice
+                    group's first slot instead of standing aside by its voice number; a third
+                    voice's head can stand under the voice above. The twin writes \once \shiftOff)
    - Accidental:    @courtesy (cautionary) @editorial (musica ficta)
    - Arpeggio:      <c e g>4@arpeggio
    - Glissando:     c4@glissando d

@@ -5164,6 +5164,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "rest", Kind = CompletionItemKind.Value, Detail = "Print this note as a rest at its own pitch (a4@rest)", SortText = "6rest" },
                 new CompletionItem { Label = "stemUp", Kind = CompletionItemKind.Value, Detail = "Force the stem up", SortText = "6stemUp" },
                 new CompletionItem { Label = "stemDown", Kind = CompletionItemKind.Value, Detail = "Force the stem down", SortText = "6stemDown" },
+                new CompletionItem { Label = "shiftOff", Kind = CompletionItemKind.Value, Detail = "Keep this note in its voice group's first column (no horizontal shift)", SortText = "6shiftOff" },
 
                 ArgumentStub("notehead", "Notehead shape — offers x, cross, diamond, triangle, slash, xcircle", "6notehead"),
 
