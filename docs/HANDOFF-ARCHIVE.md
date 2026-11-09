@@ -267,6 +267,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1187セッションの経緯
+
+### 1.1 第1187セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14971 / 0 / 2**（`-Start p1187`・HEAD `4118344a3`・未 push 87）。オーナー「既定の女性声、既定の男性声のふたつで足りる。soprano/alto は女性、tenor/bass は男性、指定がなければ clef が treble なら女性」→「その形で実装して」。作業場所は Lab `sessions/p1187/`。
+
+- **Lily#**: `LyricSinger.GenderReaderOf`＝`singer` の語（male／soprano 等）→ パートの preset → clef（bass・bass_8・baritone・tenor・treble_8 は男性、他は女性）。`SungVoice.Gender`／DTO `Gender`。`voiceName(singer, language, gender)`。`singer male "x"` の性別は従来どおりエディタだけが読む。
+- **Cantilena**: 設定 `cantilena.defaultFemaleVoice`／`defaultMaleVoice`（空は言語に合うその性別の先頭）。`cantilena.voices`・Cast a Singer・API `cast` は廃止。`resolveSinger(written, voices, defaults, { language, gender })`。その性別の声が無ければ反対の性別で歌い一文を出す。
+- 候補の `isRole` は消した。`lysc wav` は既定の 1 声のまま（役名は警告）。
+- 終了時 full **14988 合格 / 0 失敗 / skip 2 / 合計 14990**（`-End p1187 -DiffBase 4118344a3`、BUILD 0）・npm 934 / 934・Cantilena npm 24 / 24。両方を配布済み（Reload Window は 2 回要ることあり）。
+
 ## 以下は第1186セッションの経緯
 
 ### 1.1 第1186セッション（2026-11-09・YT-DELL2）

@@ -173,12 +173,12 @@ describe('choosing a voice with the step keys', () => {
     });
 
     it('crosses to the first voice of the next or previous engine, and does not go round', () => {
-        assert.equal(stepVoice(voices, 'neutrino/B', 1, true), 'diffsinger/X');
-        assert.equal(stepVoice(voices, 'diffsinger/X', -1, true), 'neutrino/A');
-        assert.equal(stepVoice(voices, 'diffsinger/Y', -1, true), 'neutrino/A');
-        assert.equal(stepVoice(voices, 'neutrino/C', 1, true), 'diffsinger/X');
-        assert.equal(stepVoice(voices, 'diffsinger/X', 1, true), undefined);
-        assert.equal(stepVoice(voices, 'neutrino/A', -1, true), undefined);
+        assert.equal(stepVoice(voices, 'neutrino/B', -1, true), 'diffsinger/X');
+        assert.equal(stepVoice(voices, 'diffsinger/X', 1, true), 'neutrino/A');
+        assert.equal(stepVoice(voices, 'diffsinger/Y', 1, true), 'neutrino/A');
+        assert.equal(stepVoice(voices, 'neutrino/C', -1, true), 'diffsinger/X');
+        assert.equal(stepVoice(voices, 'diffsinger/X', -1, true), undefined);
+        assert.equal(stepVoice(voices, 'neutrino/A', 1, true), undefined);
     });
 
     it('reads a singer with a gender before the name as one', () => {

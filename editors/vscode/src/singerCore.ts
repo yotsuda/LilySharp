@@ -106,7 +106,7 @@ export function singerWrittenAt(line: string, from: number, to: number): string 
 /**
  * The voice a step key moves to (owner's requests 2026-11-09, sessions 1170, 1172, 1173 and 1188):
  * Up (`direction` 1) is the voice above in the whole list, Down the one below, from one engine into
- * the next; with `acrossEngines`, the first voice of the next or previous engine. Neither goes round.
+ * the next; with `acrossEngines` (PageUp `direction` 1, upward too), the first voice of the engine above or below. Neither goes round.
  * A `singer` that names none of `voices` (a role, an empty string) enters the list at the end the key
  * moves away from. Undefined when there is nowhere else to go.
  */
@@ -116,7 +116,7 @@ export function stepVoice(voices: readonly Pick<CantilenaVoice, 'id' | 'engine'>
     if (acrossEngines) {
         const engines = [...new Set(voices.map(v => v.engine))];
         if (engines.length < 2) { return undefined; }
-        const engine = engines[here ? engines.indexOf(here.engine) + direction : direction > 0 ? 0 : engines.length - 1];
+        const engine = engines[here ? engines.indexOf(here.engine) - direction : direction > 0 ? engines.length - 1 : 0];
         return engine === undefined ? undefined : voices.find(v => v.engine === engine)?.id;
     }
     if (!here) { return (direction > 0 ? voices[voices.length - 1] : voices[0]).id; }
