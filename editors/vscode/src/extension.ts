@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, noVoiceGuide, printedWordsNote, singerChoices, VOICE_SETUP_ACTIONS, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1082,6 +1082,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singerCompletion, '"', ' ', ','));
     voiceSamplesDir = path.join(context.globalStorageUri.fsPath, 'voice-samples');
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.hearSinger', hearSinger));
+    context.subscriptions.push(vscode.commands.registerCommand('lilysharp.setUpVoices', setUpVoices));
 
     // The Explorer's batch export: right-click one or more .lys → the format
     // submenu → a folder → every score of every file, named as `lysc` names
@@ -3875,15 +3876,19 @@ const singerCompletion: vscode.CompletionItemProvider = {
         if (!slot.InSlot || !slot.Language) { return undefined; }
         const engine = await renderer();
         const api = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend.api : undefined;
-        if (!api?.voices) { offerCantoria(); return undefined; }
-        const voices = await api.voices();
-        samples().warm(voices.filter(v => singsLanguage(v, slot.Language!)).map(v => voiceSampleKey(v.id, slot.Language!)));
         const line = document.lineAt(position.line).text;
         const open = line.lastIndexOf('"', position.character - 1);
         const close = line.indexOf('"', position.character);
         const range = slot.Quoted
             ? new vscode.Range(position.line, open + 1, position.line, close >= 0 ? close : position.character)
             : new vscode.Range(position.line, position.character - (/[^\s,"]*$/.exec(line.slice(0, position.character))?.[0].length ?? 0), position.line, position.character);
+        if (!api?.voices) {
+            offerCantoria();
+            return vscode.extensions.getExtension(CANTORIA_EXTENSION_ID) || singerSetting() ? undefined : [noVoiceItem(document, range, false)];
+        }
+        const voices = await api.voices();
+        samples().warm(voices.filter(v => singsLanguage(v, slot.Language!)).map(v => voiceSampleKey(v.id, slot.Language!)));
+        if (voices.length === 0) { offerVoiceSetup(); }
         const items = singerChoices(voices, slot.Language, slot.Gender).map((c, i) => {
             const item = new vscode.CompletionItem(c.label, vscode.CompletionItemKind.Value);
             item.detail = c.detail;
@@ -3905,9 +3910,27 @@ const singerCompletion: vscode.CompletionItemProvider = {
                 items.push(item);
             }
         }
+        if (voices.length === 0) { items.unshift(noVoiceItem(document, range, true)); }
         return items;
     },
 };
+
+/** The first line of the `singer` list when no voice is installed (owner's request 2026-11-10): it
+ *  says so and inserts nothing, the text under it kept, and taking it goes on to the setup. */
+function noVoiceItem(document: vscode.TextDocument, range: vscode.Range, cantoria: boolean): vscode.CompletionItem {
+    const guide = noVoiceGuide(cantoria);
+    const typed = document.getText(range);
+    const item = new vscode.CompletionItem(guide.label, vscode.CompletionItemKind.Issue);
+    item.detail = guide.detail;
+    item.documentation = new vscode.MarkdownString(guide.documentation);
+    item.range = range;
+    item.filterText = typed;
+    item.insertText = typed;
+    item.sortText = '  ';
+    item.preselect = true;
+    item.command = { command: 'lilysharp.setUpVoices', title: guide.detail };
+    return item;
+}
 
 /** Where a chosen voice's sample is kept, across sessions, so a voice heard once comes at once. */
 let voiceSamplesDir: string | undefined;
@@ -4037,15 +4060,41 @@ function offerCantoria(): void {
     if (cantoriaOffered || vscode.extensions.getExtension(CANTORIA_EXTENSION_ID)) { return; }
     cantoriaOffered = true;
     const install = 'Install Cantoria';
-    void vscode.window.showInformationMessage('Lily#: singing a score with a voice needs the Cantoria extension.', install).then(async choice => {
-        if (choice !== install) { return; }
-        try {
-            await vscode.commands.executeCommand('workbench.extensions.installExtension', CANTORIA_EXTENSION_ID);
-        } catch {
-            // Not reachable from here (offline, or a gallery that does not list it): show the search.
-            await vscode.commands.executeCommand('workbench.extensions.search', `@id:${CANTORIA_EXTENSION_ID}`);
-        }
+    void vscode.window.showInformationMessage(noVoiceGuide(false).message, install).then(async choice => {
+        if (choice === install) { await installCantoria(); }
     });
+}
+
+async function installCantoria(): Promise<void> {
+    try {
+        await vscode.commands.executeCommand('workbench.extensions.installExtension', CANTORIA_EXTENSION_ID);
+    } catch {
+        // Not reachable from here (offline, or a gallery that does not list it): show the search.
+        await vscode.commands.executeCommand('workbench.extensions.search', `@id:${CANTORIA_EXTENSION_ID}`);
+    }
+}
+
+/** Whether this session has already said that no voice is installed. */
+let voiceSetupOffered = false;
+
+/** Says, once a session, that Cantoria has no voice to sing with. The `singer` list says it every time. */
+function offerVoiceSetup(): void {
+    if (voiceSetupOffered) { return; }
+    voiceSetupOffered = true;
+    void showVoiceSetup();
+}
+
+/** What Cantoria needs to have a voice, as buttons on its own commands. */
+async function showVoiceSetup(): Promise<void> {
+    const choice = await vscode.window.showInformationMessage(noVoiceGuide(true).message, ...VOICE_SETUP_ACTIONS.map(a => a.label));
+    const action = VOICE_SETUP_ACTIONS.find(a => a.label === choice);
+    if (action?.command) { await vscode.commands.executeCommand(action.command); }
+    else if (action?.url) { void vscode.env.openExternal(vscode.Uri.parse(action.url)); }
+}
+
+/** The `singer` list's guide, taken: Cantoria installed, or else what a voice needs first. */
+async function setUpVoices(): Promise<void> {
+    if (vscode.extensions.getExtension(CANTORIA_EXTENSION_ID)) { await showVoiceSetup(); } else { await installCantoria(); }
 }
 
 /** `lilysharp.playback.singer`: the path of a `cantoria` program to run here (a developer's

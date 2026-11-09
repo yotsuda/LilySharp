@@ -95,6 +95,33 @@ export function voiceListText(voices: readonly CantoriaVoice[], filter: { provid
         'Write a name after singer on a part, a lyrics track or a score\'s lyrics row: singer "neutrino/MERROW". Names with commas between them sing the part together: singer "a/b","c/d". A voice sings only the languages it lists.'].join('\n');
 }
 
+/** The commands Cantoria offers for finding a voice, and where the first engine is to be had. */
+export const VOICE_SETUP_ACTIONS: readonly { label: string; command?: string; url?: string }[] = [
+    { label: 'Choose NEUTRINO Folder…', command: 'cantoria.chooseNeutrinoFolder' },
+    { label: 'Choose DiffSinger Folder…', command: 'cantoria.chooseVoicesFolder' },
+    { label: 'Choose VOICEVOX Folder…', command: 'cantoria.chooseVoicevoxFolder' },
+    { label: 'Get NEUTRINO', url: 'https://studio-neutrino.com/' },
+];
+
+/** What the editor says when no singing voice is installed: with the Cantoria extension, that an engine
+ *  is missing; without it, that the extension is the first step. */
+export function noVoiceGuide(cantoria: boolean): { label: string; detail: string; documentation: string; message: string } {
+    const engines = '[NEUTRINO](https://studio-neutrino.com/), [DiffSinger](https://github.com/openvpi/DiffSinger) or [VOICEVOX](https://voicevox.hiroshiba.jp/)';
+    return cantoria
+        ? {
+            label: 'No singing voice is installed',
+            detail: 'Set up a voice…',
+            documentation: `Cantoria has no voice to sing with. Install ${engines}, then choose its folder: take this line for the buttons.\n\nThe score can still be written: a name here is sung once that voice is installed.`,
+            message: 'Lily#: no singing voice is installed. Cantoria sings with NEUTRINO, DiffSinger or VOICEVOX: install one, then choose its folder.',
+        }
+        : {
+            label: 'No singing voice: Cantoria is not installed',
+            detail: 'Install Cantoria…',
+            documentation: `Voices are sung by the Cantoria extension, with ${engines}. Take this line to install the extension, then choose an engine's folder there.\n\nThe score can still be written: a name here is sung once that voice is installed.`,
+            message: 'Lily#: singing a score with a voice needs the Cantoria extension.',
+        };
+}
+
 /** What the status bar says, once, of a part with words in the score and no voice asked for them. */
 export function printedWordsNote(part: string): string {
     return `the words of ${part} are printed, not sung: write singer on the part, or give it a voice (instrument soprano)`;
