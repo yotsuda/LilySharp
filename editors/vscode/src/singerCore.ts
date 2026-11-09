@@ -174,6 +174,12 @@ export class StageClock {
     toString(): string { return this.stages.join(', '); }
 }
 
+/** A sample's file name: letters of any script kept, so that two VOICEVOX voices, whose names are
+ *  kana, do not come to one file. */
+export function voiceSampleFileName(key: string): string {
+    return `${key.replace(/[^\p{L}\p{N}_.-]+/gu, '_')}-${VOICE_SAMPLE_VERSION}.wav`;
+}
+
 /** What a voice's sample is kept under: Japanese under the voice alone, as the samples already sung are,
  *  and another language after an `@`, since one voice now says a phrase in each language it sings. */
 export function voiceSampleKey(id: string, language?: string): string {

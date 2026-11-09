@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleKey, voiceSampleScore } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -226,6 +226,8 @@ describe('choosing a voice with the step keys', () => {
         assert.equal(voiceSampleScore('ko'), undefined);
         assert.equal(voiceSampleKey('d/T', 'ja'), 'd/T', 'the samples already sung keep their files');
         assert.equal(voiceSampleKey('d/T', 'en'), 'd/T@en');
+        assert.equal(voiceSampleFileName('neutrino/MERROW'), 'neutrino_MERROW-2.wav', 'the samples already sung keep their files');
+        assert.notEqual(voiceSampleFileName('voicevox/ずんだもん-ノーマル'), voiceSampleFileName('voicevox/四国めたん-ノーマル'));
         assert.equal(voiceSampleKey('d/T'), 'd/T');
         assert.deepEqual(voiceSampleScore('en')?.notes.map(n => [n.lyric, !!n.hyphen]), [['hel', true], ['lo', false]]);
         assert.deepEqual(voiceSampleScore('en', 'male')?.notes.map(n => n.pitch), [48, 52]);

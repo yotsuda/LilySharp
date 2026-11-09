@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, singerChoices, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleKey, voiceSampleScore } from './singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, singerChoices, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -3898,7 +3898,7 @@ let voiceSampleQueue: VoiceSampleQueue | undefined;
 let voiceSampleWanted = '';
 
 function voiceSampleFile(id: string): string {
-    return path.join(voiceSamplesDir ?? '', `${id.replace(/[^\w.-]+/g, '_')}-${VOICE_SAMPLE_VERSION}.wav`);
+    return path.join(voiceSamplesDir ?? '', voiceSampleFileName(id));
 }
 
 function samples(): VoiceSampleQueue {

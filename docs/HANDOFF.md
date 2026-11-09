@@ -138,6 +138,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1193セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14991 / 0 / 2**（`-Start p1193`・HEAD `15d0cd188`・未 push 93）。オーナー「なかなか上手に歌えている。VOICEBOX も追加して」（VOICEVOX と解した）。作業場所は Lab `sessions/p1193/`。
+
+- Cantilena: 3 つ目のプロバイダ `voicevox`（起動中の VOICEVOX へ HTTP・`voicevox/キャラ-スタイル`・日本語のみ）。設定 `cantilena.voicevoxUrl`。engine 0.26 のソースの規則（1 ノート 1 モーラ、休符は key なし・歌詞なし、93.75 フレーム/秒）に合わせ、engine を模した stub で通した。**本物の VOICEVOX では未確認**（未導入、約 1.8 GB と利用規約はオーナーの判断）。
+- Lily#: 試聴の保存名がかなを `_` に潰して VOICEVOX の声が 1 ファイルを共有するので、文字を残す `voiceSampleFileName`。
+- 終了時 full **14991 合格 / 0 失敗 / skip 2 / 合計 14993**（`-End p1193 -DiffBase 15d0cd188`、BUILD 0）・npm 936 / 936。`Deploy-Lsp.ps1` と Cantilena の `deploy-extension.ps1` で配布済み（設定を足したので Reload Window 2 回）。
+
+## 以下は第1192セッションの経緯
+
 ### 1.1 第1192セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14990 / 0 / 2**（`-Start p1192`・HEAD `93b1b8928`・未 push 92）。オーナー報告「かえるのうた.lys が歌唱できない」→「直して」。作業場所は Lab `sessions/p1192/`。
@@ -145,15 +155,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 楽譜が歌詞を置いたパートには、楽譜に置かれていない歌詞を足さない（`GetSung` の AllLyrics）。ファイルの先の歌詞が勝って `singer` も言語の読みも失われていた。
 - Cantilena: 辞書に無い英単語はつづりから発音を推定して歌う（`EnglishLetters`、engine のログに語を出す）。かなを英語で読むなど推定できないものは従来どおり失敗。
 - 終了時 full **14991 合格 / 0 失敗 / skip 2 / 合計 14993**（`-End p1192 -DiffBase 93b1b8928`、BUILD 0）。`Deploy-Lsp.ps1` と Cantilena の `deploy-extension.ps1` で配布済み（Reload Window）。
-
-## 以下は第1191セッションの経緯
-
-### 1.1 第1191セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14990 / 0 / 2**（`-Start p1191`・HEAD `102f51a32`・未 push 91）。オーナー「プレビューの再生ボタンの上のマイクが赤くなるときは、マイクをマウスでホバーしたらエラーがポップアップするようにして」。作業場所は Lab `sessions/p1191/`。
-
-- 赤いマイクのホバーは待たずにページのツールチップを出す（他は 0.5 秒のまま）。ホバー中に赤くなっても出す・文が変われば出し直す。ツールチップは改行を保ち、長いパスも折り返す。
-- 終了時 full **14990 合格 / 0 失敗 / skip 2 / 合計 14992**（`-End p1191 -DiffBase 102f51a32`、BUILD 0）・npm 936 / 936。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。実物の VS Code では未確認（MANUAL-CHECKS）。
 
 ## 2. 開いている作業
 
