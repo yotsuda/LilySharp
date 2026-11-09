@@ -138,18 +138,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1215セッション（2026-11-10・YT-DELL2）
+
+- **0.16.0 の版上げ**（持ち主の指示）。`Directory.Build.props`・拡張の `package.json` と lock・README・`DEPLOY.md` を 0.16.0 に、2 つの CHANGELOG の Unreleased を `## 0.16.0` にした。Cantoria 0.4.0 と Calamo 0.6.0 は公開済みで、0.16.0 が両者を案内する最初の版。旧 `yotsuda.lilysharp-omr` の取り下げは 0.16.0 の公開のあと。タグの push は持ち主の指示を待つ。
+- 終了時 full 15016 合格 / 0 失敗 / skip 2 / 合計 15018。
+
+## 以下は第1214セッションの経緯
+
 ### 1.1 第1214セッション（2026-11-09・YT-DELL2）
 
 - **読み手の実行ファイルが `calamo.exe` になった**（Calamo 側の持ち主の作業）。Lily# は実行ファイルの場所を Calamo 拡張の exports の `path` から受け取るので、**名前を決め打ちしている箇所はなく動作の変更は要らない**。コメント・テストの例・`docs/omr-ai-fix-design.md`・`MANUAL-CHECKS.md` の `omr.exe` と `omr read/verify/--version` を `calamo` に揃えた。`x.omr.json`・`LILYSHARP_OMR_PATH`・`lilysharp.omr.*`・過去の CHANGELOG はそのまま。
-- 終了時 full 15016 合格 / 0 失敗 / skip 2 / 合計 15018。
-
-## 以下は第1213セッションの経緯
-
-### 1.1 第1213セッション（2026-11-09・YT-DELL2）
-
-- **空のパートの譜表に小節線が出ない**（持ち主の報告 `My Life (chord).lys`）。`part l { }` とコード行だけの楽譜は行が拍の基準になるが、小節線はその譜表自身の小節から描くので 1 本も出なかった。`GiveBlankStavesTheRowsBars` で、どの譜表にも音がないときだけ行の小節を無音で譜表に渡す。
-- コード行の末尾の空小節（`| | | |`）も、音と LilyPond の双子には 4 小節あったのにページでは消えていた。`ChordNameCollector` で、書かれた小節線は和音がなくても小節を閉じる扱いにした。
-- 和音が 1 つもない行は従来どおり描くものなし（`GenerateMultiMovement_AScoreWithNothingToDrawIsNoMovement`）。
 - 終了時 full 15016 合格 / 0 失敗 / skip 2 / 合計 15018。
 
 ## 2. 開いている作業
