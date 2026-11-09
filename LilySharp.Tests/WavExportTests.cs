@@ -244,7 +244,7 @@ public sealed class WavExportTests : IDisposable
         Assert.Contains("not found", CantoriaProgram.Problem(Path.Combine(_dir, "none", "cantoria.exe")));
         Assert.Null(CantoriaProgram.Problem("cantoria"));                     // a bare name: the PATH's
         Assert.Equal("neutrino/MERROW", new CantoriaProgram("cantoria", "neutrino/MERROW").Name);
-        Assert.Equal("cantoria", new CantoriaProgram(@"C:\x\cantoria.exe").Name);
+        Assert.Equal("cantoria", new CantoriaProgram(Path.Combine(_dir, "cantoria.exe")).Name);
     }
 }
 

@@ -267,6 +267,13 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1214セッションの経緯
+
+### 1.1 第1214セッション（2026-11-09・YT-DELL2）
+
+- **読み手の実行ファイルが `calamo.exe` になった**（Calamo 側の持ち主の作業）。Lily# は実行ファイルの場所を Calamo 拡張の exports の `path` から受け取るので、**名前を決め打ちしている箇所はなく動作の変更は要らない**。コメント・テストの例・`docs/omr-ai-fix-design.md`・`MANUAL-CHECKS.md` の `omr.exe` と `omr read/verify/--version` を `calamo` に揃えた。`x.omr.json`・`LILYSHARP_OMR_PATH`・`lilysharp.omr.*`・過去の CHANGELOG はそのまま。
+- 終了時 full 15016 合格 / 0 失敗 / skip 2 / 合計 15018。
+
 ## 以下は第1213セッションの経緯
 
 ### 1.1 第1213セッション（2026-11-09・YT-DELL2）
