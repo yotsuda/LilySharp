@@ -400,6 +400,23 @@ public class SungVoiceDto
     /// <summary>Whether the score shown sings this part itself (its rows); false for a voice the
     /// file's other lyrics could sing (<see cref="SungParams.AllLyrics"/>), off until the menu turns it on.</summary>
     public bool InScore { get; set; } = true;
+    /// <summary>Who the file says sings this voice, as written (a voice or a role), or null.</summary>
+    public string? Singer { get; set; }
+}
+
+/// <summary>Parameters for lilysharp/singerSlot: the caret in an open document.</summary>
+public class SingerSlotParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public int Offset { get; set; }
+}
+
+/// <summary>Whether the caret is between the quotes of a <c>singer "…"</c>, and the language tag of
+/// the words that singer would sing: the editor offers the voices that can.</summary>
+public class SingerSlotResponse
+{
+    public bool InSlot { get; set; }
+    public string? Language { get; set; }
 }
 
 /// <summary>Response for the lilysharp/sung request: one voice per part a lyrics row sings.</summary>

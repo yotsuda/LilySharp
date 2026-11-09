@@ -35,20 +35,28 @@ export interface RenderedVoice { wav: string; duration: number }
 export interface VoiceBackend {
     /** For the log: `extension 0.1.0`, or the program's path. */
     readonly name: string;
-    /** The voice the engine will use, for the cache key: the extension's setting now, the program's default. */
-    voiceName(): Promise<string>;
-    /** Sings `score`; `key` names the request and the file where the backend lets the caller name it. */
-    sing(key: string, score: CantilenaScore): Promise<RenderedVoice>;
+    /** The voice the engine will use for the file's `singer` (none written: its default), for the cache key. */
+    voiceName(singer?: string | null): Promise<string>;
+    /** Sings `score` in `voice` (from voiceName); `key` names the request and the file where the backend lets the caller name it. */
+    sing(key: string, score: CantilenaScore, voice: string): Promise<RenderedVoice>;
     dispose(): void;
 }
 
 /** The Cantilena extension as the backend: its `sing` keeps the WAVs under its own storage. */
 export class CantilenaExtensionBackend implements VoiceBackend {
     readonly name: string;
-    constructor(private readonly api: CantilenaApi) { this.name = `the Cantilena extension ${api.version}`; }
-    async voiceName(): Promise<string> { return (await this.api.status()).voice; }
-    async sing(_key: string, score: CantilenaScore): Promise<RenderedVoice> {
-        const v = await this.api.sing(score);
+    /** `note`: tells the writer a `singer` came to another voice than it asked for. */
+    constructor(readonly api: CantilenaApi, private readonly note?: (text: string) => void) { this.name = `the Cantilena extension ${api.version}`; }
+    async voiceName(singer?: string | null): Promise<string> {
+        if (singer && this.api.resolveSinger) {
+            const r = await this.api.resolveSinger(singer);
+            if (r.note) { this.note?.(r.note); }
+            return r.voice;
+        }
+        return singer?.includes('/') ? singer : (await this.api.status()).voice;
+    }
+    async sing(_key: string, score: CantilenaScore, voice: string): Promise<RenderedVoice> {
+        const v = await this.api.sing(score, { voice });
         return { wav: v.wav, duration: v.duration };
     }
     dispose(): void { /* the extension's engine is its own to keep */ }
@@ -74,7 +82,7 @@ export class SingerProcess implements VoiceBackend {
     /** Whether the engine is running now. */
     get running(): boolean { return this.child !== undefined; }
 
-    voiceName(): Promise<string> { return Promise.resolve('default'); }
+    voiceName(singer?: string | null): Promise<string> { return Promise.resolve(singer?.includes('/') ? singer : 'default'); }
 
     private start(): cp.ChildProcess {
         fs.mkdirSync(this.outDir, { recursive: true });
@@ -107,12 +115,12 @@ export class SingerProcess implements VoiceBackend {
     }
 
     /** Sings `score` into `<outDir>/<key>.wav`; the answer when the engine has. */
-    sing(key: string, score: CantilenaScore): Promise<RenderedVoice> {
+    sing(key: string, score: CantilenaScore, voice: string): Promise<RenderedVoice> {
         const child = this.child ?? this.start();
         const output = path.join(this.outDir, `${key}.wav`);
         return new Promise<RenderedVoice>((resolve, reject) => {
             this.pending.set(key, { resolve, reject });
-            child.stdin!.write(serveRequestLine(key, score, output), e => {
+            child.stdin!.write(serveRequestLine(key, score, output, voice === 'default' ? undefined : voice), e => {
                 if (e) { this.pending.delete(key); reject(e); }
             });
         });
@@ -148,7 +156,7 @@ export class VoiceRenderer {
     /** The key `render` would give `dto` at `speed`: the score's bytes and the voice's name — what
      *  tells one text's voice from another's without asking the engine (prepareVoices). */
     async key(dto: SungVoiceDto, speed: number): Promise<string> {
-        return voiceKey(cantilenaScore(dto, speed), await this.backend.voiceName());
+        return voiceKey(cantilenaScore(dto, speed), await this.backend.voiceName(dto.Singer));
     }
 
     /** True when the voice of `key` was sung before and its WAV is still there. */
@@ -163,12 +171,13 @@ export class VoiceRenderer {
      */
     async render(dto: SungVoiceDto, speed: number): Promise<{ key: string; rendered: Promise<RenderedVoice>; cached: boolean }> {
         const score = cantilenaScore(dto, speed);
-        const key = voiceKey(score, await this.backend.voiceName());
+        const voice = await this.backend.voiceName(dto.Singer);
+        const key = voiceKey(score, voice);
         const hit = this.done.get(key);
         if (hit && fs.existsSync(hit.wav)) { return { key, rendered: Promise.resolve(hit), cached: true }; }
         let rendered = this.inFlight.get(key);
         if (!rendered) {
-            rendered = this.backend.sing(key, score).then(v => { this.done.set(key, v); return v; });
+            rendered = this.backend.sing(key, score, voice).then(v => { this.done.set(key, v); return v; });
             this.inFlight.set(key, rendered);
             rendered.finally(() => this.inFlight.delete(key)).catch(() => undefined);
         }

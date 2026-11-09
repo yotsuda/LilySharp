@@ -1142,6 +1142,8 @@ PartProperty   = 'clef'          , PartClefName
                | 'pitch'         , PitchMode        (* this part's convention — own wins
                                                        over the top-level PitchDecl, §2.3 *)
                | 'pedal'         , PedalStyleName
+               | 'singer'        , String           (* who sings this part's lyrics: a voice or a
+                                                       role (LyricsClause), nearer ones win *)
                | 'midiInstrument' , String         (* the General MIDI sound: one of
                                                        LilyPond's 128 names, e.g.
                                                        midiInstrument "acoustic guitar (nylon)";
@@ -1432,10 +1434,15 @@ PartBlock      = PartName , MusicBlock ;
    its own 'sings' cannot re-decide the association by position: after a staff
    it does not sing it simply stays an independent band. *)
 LyricsBlock    = 'lyrics' , [ Identifier ] , { LyricsClause } , '{' , { LyricMeasure | LyricVerse } , '}' ;
-LyricsClause   = 'sings' , PartRef | 'language' , LanguageName ;
-                 (* Each at most once, in either order. A track's language is the first block of
-                    that name that writes one (the rule 'sings' has). 'lyrics language { ... }' and
-                    'lyrics language sings m { ... }' are a track called language. *)
+LyricsClause   = 'sings' , PartRef | 'language' , LanguageName | 'singer' , String ;
+                 (* Each at most once, in any order. A track's language and singer are the first
+                    block of that name that writes one (the rule 'sings' has). 'lyrics language
+                    { ... }', 'lyrics language sings m { ... }' and 'lyrics singer { ... }' are
+                    tracks with those names. 'singer' names who sings: a voice as engine/name
+                    ('neutrino/MERROW') or a role ('soprano') the listener's settings cast; the
+                    score's row wins over the track, the track over the part's 'singer'. An
+                    empty one is an error (LYS4039); a name is never checked against a machine:
+                    a voice that is not there sings as the default, said once. *)
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'lyrics' row.
                     With no 'sings' it sings the file's one part - the unnamed part, the only
                     declared one, or the music written straight into the sections; with
@@ -1896,7 +1903,7 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         it a row holds each chord over its slot.
                                                         It draws nothing: the strokes' one-line
                                                         staff is the 'strokes NAME' item *)
-               | 'lyrics' , [ PartRef ] , [ 'sings' , PartRef ]
+               | 'lyrics' , [ PartRef ] , { 'sings' , PartRef | 'singer' , String }
                                                      (* lyrics ROW. The optional 'sings' names
                                                         the melody THIS ROW sings - it overrides
                                                         the definition's default for this

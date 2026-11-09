@@ -288,7 +288,19 @@ public static class ScoreExport
                 continue;
             foreach (var w in voice.Warnings)
                 warnings.Add($"{voice.Part}: {w}");
-            var (sound, error) = singer.Sing(voice, Audio.WavRenderer.DefaultSampleRate);
+            // The file's singer (Music.LyricSinger): a voice's own name is sung in, a role is the
+            // editor's settings' to cast; a voice that cannot be had falls to the default, as there.
+            var (sound, error) = (default(Audio.MonoAudio), default(string));
+            if (voice.Singer is { } named && named.Contains('/'))
+            {
+                (sound, error) = singer.WithVoice(named).Sing(voice, Audio.WavRenderer.DefaultSampleRate);
+                if (sound == null)
+                    warnings.Add($"{voice.Part}: the singer \"{named}\" could not sing ({error}); singing with the default voice");
+            }
+            else if (voice.Singer is { } role)
+                warnings.Add($"{voice.Part}: the singer \"{role}\" is a role, which the command line does not cast; singing with the default voice");
+            if (sound == null)
+                (sound, error) = singer.Sing(voice, Audio.WavRenderer.DefaultSampleRate);
             if (sound == null)
             {
                 warnings.Add($"{voice.Part} is not sung ({error}); its instrument plays");

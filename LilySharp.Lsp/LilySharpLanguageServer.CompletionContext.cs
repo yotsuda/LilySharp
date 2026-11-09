@@ -523,8 +523,40 @@ public sealed partial class LilySharpLanguageServer
         if (stack.Count == 0
             && System.Text.RegularExpressions.Regex.IsMatch(line, @"^[ \t]*language[ \t]+\w*$"))
             return true;
-        return !stack.Exists(o => o.Frame.Name == "score" || o.Frame.Prefix == "score")
-            && System.Text.RegularExpressions.Regex.IsMatch(line, @"(?:^|[\s{}])lyrics(?:[ \t]+\w+)*?[ \t]+language[ \t]+\w*$");
+        return !stack.Exists(o => o.IsScoreOpener || o.Frame.Name == "score" || o.Frame.Prefix == "score")
+            && System.Text.RegularExpressions.Regex.IsMatch(line, @"(?:^|[\s{}])lyrics(?:[ \t]+(?:\w+|""[^""]*""))*?[ \t]+language[ \t]+\w*$");
+    }
+
+    /// <summary>Where a <c>singer "…|</c> the caret is in stands: a lyrics head or row (its track, and
+    /// the language it writes), or a part's header (the part); null for anywhere else — a lyric
+    /// body's words among them.</summary>
+    internal static (string? Track, string? Part, string? Language)? SingerSlotAt(string text, int offset)
+    {
+        int end = Math.Clamp(offset, 0, text.Length);
+        int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
+        string line = text[lineStart..end];
+        var quote = System.Text.RegularExpressions.Regex.Match(line, @"(?:^|[\s{}])singer[ \t]+""[^""]*$");
+        if (!quote.Success)
+            return null;
+        var head = System.Text.RegularExpressions.Regex.Match(line[..quote.Index],
+            @"(?:^|[\s{}])lyrics(?:[ \t]+(?<w>[^\s{}""]+|""[^""]*""))*[ \t]*$");
+        if (head.Success)
+        {
+            var words = head.Groups["w"].Captures.Select(c => c.Value).ToList();
+            string? language = null;
+            for (int i = 0; i + 1 < words.Count; i++)
+                if (words[i] == LilySharp.Core.Music.LyricLanguage.Keyword)
+                    language = words[i + 1];
+            bool named = words.Count % 2 == 1;   // the clauses are pairs: an odd word is the track's name
+            return (named ? words[0] : LilySharp.Core.Music.LyricSinger.UnnamedTrack, null, language);
+        }
+        var stack = new BlockContextScan(text, offset).Stack;
+        if (stack.Count > 0 && FrameKeyword(stack[^1].Frame) == "part")
+        {
+            var frame = stack[^1].Frame;
+            return (null, frame.Prefix == "part" ? frame.Name : "", null);
+        }
+        return null;
     }
 
     // A named part (`part rh {`) has `part` one word before the brace; the nameless one
@@ -751,6 +783,8 @@ public sealed partial class LilySharpLanguageServer
         AfterCapo,
         /// <summary><c>language |</c> — the language names (<c>Music.LyricLanguage</c>).</summary>
         AfterLanguage,
+        /// <summary><c>singer "|"</c> — nothing from here: the extension lists the installed voices.</summary>
+        AfterSinger,
         /// <summary>Inside the top-level <c>chordShapes { | }</c> (or a <c>section</c> of it) — the
         /// chord names an entry starts with, and <c>section</c> at the table's own level.</summary>
         ChordDiagramTable,
@@ -1020,6 +1054,10 @@ public sealed partial class LilySharpLanguageServer
         // The language's name: the file's `language |` and a lyrics head's (`lyrics en language |`).
         if (IsLanguageValueSlot(text, offset, scan.Stack))
             return CompletionContext.AfterLanguage;
+
+        // Between a `singer`'s quotes: the voices are the editor's to list (lilysharp/singerSlot).
+        if (SingerSlotAt(text, offset) != null)
+            return CompletionContext.AfterSinger;
 
         // Right after a complete articulation name or its '.', offer the .up/.down
         // placement qualifier — '@fermata|', '@fermata.|', '@fermata.d|'. Checked

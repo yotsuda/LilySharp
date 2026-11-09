@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A score can say who sings, and the editor knows who can**: `singer "…"` on a part, a lyrics track or a score's row; between the quotes the completion offers only the installed voices that sing the words' language, and the roles cast to one. (Needs the Cantilena extension's `cantilena.voices` for roles.)
 - **The language of the lyrics completes**: `language ` at the top of a file and in a lyrics track's head offers `japanese`, `english`, `chinese` and `korean`.
 - **A voice sings alone, and an instrument can sing along**: the part's button is the instrument's and the `♪` is the voice's, each on its own — what sounds is what is on. A part the score only sings has its instrument off by default (the voice sings; the instrument stands in while the voice is not ready); press its button and both sound. With the part off and its `♪` on, Play and the exports give the voice by itself (they gave silence).
 - **The practice menu lists every singable lyrics of the file**: whatever score is shown, a `♪ part` row for every lyrics track that can sing — the score's own first (on), then, in italics, the ones the score does not sing (off until pressed; pressed, the voice sings in the part's instrument's place, in Play and in the exports). *Reset parts* turns them off again.

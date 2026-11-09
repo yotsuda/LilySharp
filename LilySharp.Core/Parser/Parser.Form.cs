@@ -1036,16 +1036,29 @@ internal sealed partial class Parser
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.LyricsKeyword) };
         // A bare `lyrics` places the file's unnamed track (SyntaxFacts.UnnamedLyricsName,
         // 2026-10-09). ⚠️ So a bare word right after it is always the track's name.
-        if (IsPartNameStart() && !(Check(SyntaxKind.Identifier) && Current.Text == "sings"))
+        if (IsPartNameStart() && !(Check(SyntaxKind.Identifier) && Current.Text == "sings") && !IsLyricsSingerClause())
             tokens.Add(Advance());
         // Contextual like the definition's (Parser.Sections): 'sings' is claimed only
         // directly after a row's track name, and stays an ordinary identifier
         // everywhere else. Without this branch the word fell through to the score's
-        // next render item and was reported as an undefined MIDI part.
-        if (Check(SyntaxKind.Identifier) && Current.Text == "sings")
+        // next render item and was reported as an undefined MIDI part. `singer "…"`
+        // (this placement's, Music.LyricSinger) stands either side of it.
+        for (bool sings = false, singer = false; ;)
         {
-            tokens.Add(Advance());
-            tokens.Add(ExpectPartName());
+            if (!sings && Check(SyntaxKind.Identifier) && Current.Text == "sings")
+            {
+                sings = true;
+                tokens.Add(Advance());
+                tokens.Add(ExpectPartName());
+            }
+            else if (!singer && IsLyricsSingerClause())
+            {
+                singer = true;
+                tokens.Add(Advance());
+                tokens.Add(ParseSingerName());
+            }
+            else
+                break;
         }
         return new LyricsRowRenderGreen([.. tokens]);
     }

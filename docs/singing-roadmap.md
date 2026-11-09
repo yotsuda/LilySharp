@@ -100,10 +100,9 @@ sung** and **the language it is in**.
   belongs to the words, before any singer's; names, not codes, lower-case, for the editor's
   completion): `language english` for the file, `lyrics en language english sings melody { … }`
   for a track, `japanese` when nothing is written (`Music.LyricLanguage`, LYS4038). The sung
-  score carries the tag. **Left for Cantilena:** neither backend reads the language yet (the
-  DiffSinger dictionary is fixed at `ja`, NEUTRINO is Japanese only), and a voice that cannot
-  sing the language should refuse in one sentence, the instrument playing; `voices()` already
-  has the voice's language to compare.
+  score carries the tag, and a voice that says it sings another language refuses in one
+  sentence, the instrument playing (session 1168). **Left for Cantilena:** the DiffSinger
+  dictionary is still fixed at `ja`, so no voice sings another language yet.
 - **English and others** come with DiffSinger voices and their dictionaries (Phase B); the
   syllable split Lily# already prints (`-`, `__`) is what the engine needs.
 - **Elisions, diphthongs, consonant clusters**: what the page treats as one syllable is sent
@@ -216,7 +215,8 @@ Each blocks the row named; a default is proposed so work can start.
    **Owner's direction, 2026-11-09 (session 1166): both may be written, and the `.lys` must be
    able to say who sings** — "many people will want the music to sound as they intend". A role
    or a voice's own name goes in the file with one word; the listener's settings have the last
-   say. Grammar proposed below, **not built, not yet approved**:
+   say. **Built 2026-11-09, session 1168**, one voice a part still (two tracks with different
+   singers, and `lysc wav --cast`, are not):
    - **One word, `singer`, with a string**, in three places, the nearest winning — the same
      order `sings` already has (a score row over its definition):
 
@@ -229,7 +229,7 @@ Each blocks the row named; a default is proposed so work can start.
 
      ```
      PartProperty = … | 'singer' , String ;
-     LyricsClause = 'sings' , PartRef | 'language' , LanguageName | 'singer' , String ;   (* built but for singer: any order *)
+     LyricsClause = 'sings' , PartRef | 'language' , LanguageName | 'singer' , String ;   (* any order *)
      ScoreItem    = … | 'lyrics' , [ PartRef ] , { 'sings' , PartRef | 'singer' , String } ;
      ```
 

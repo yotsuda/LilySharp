@@ -1615,6 +1615,10 @@ public static class DiagnosticCodes
     /// (<see cref="Music.LyricLanguage"/>). The parser.</summary>
     public const string LyricLanguageUnknown = "LYS4038";
 
+    /// <summary>Lyric error: a lyrics track's or row's <c>singer ""</c> names nobody
+    /// (<see cref="Music.LyricSinger"/>). The parser.</summary>
+    public const string SingerEmpty = "LYS4039";
+
     /// <summary>Warning: a drum staff's voices write two different levels at one moment —
     /// <c>@f</c> on the hands' line and <c>@p</c> on the feet's (owner's decision 2026-10-30).
     /// One drummer plays one level; the same level in both lines prints once

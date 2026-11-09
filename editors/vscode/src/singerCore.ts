@@ -28,7 +28,7 @@ export interface SungNoteDto { T: number; D: number; P: number; L?: string | nul
 
 /** A part's words on its notes, as the server answers `lilysharp/sung`. */
 /** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
-export interface SungVoiceDto { Part: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean }
+export interface SungVoiceDto { Part: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null }
 
 /** The score Cantilena reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
 export interface CantilenaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean }
@@ -54,6 +54,30 @@ export interface CantilenaApi {
     voices?(): Promise<CantilenaVoice[]>;
     sing(score: CantilenaScore, options?: { voice?: string }): Promise<{ wav: string; duration: number; cached?: boolean }>;
     release(): void;
+    /** The voice a `.lys` file's `singer` string comes to on this machine, and what to tell the
+     *  writer when it was not the one asked for. Cantilena 0.4 on. */
+    resolveSinger?(singer: string): Promise<{ voice: string; note?: string }>;
+    /** The roles this machine casts (`cantilena.voices`): role or voice → voice. */
+    cast?(): Promise<Record<string, string>>;
+}
+
+/** One choice between a `singer`'s quotes. */
+export interface SingerChoice { label: string; detail: string; isRole: boolean }
+
+/**
+ * What the editor offers between a `singer`'s quotes (owner's request 2026-11-09, session 1168:
+ * only the names right for the language): the installed voices that sing `language`, then the
+ * roles cast to one. A voice that does not say what it sings is left out.
+ */
+export function singerChoices(voices: readonly CantilenaVoice[], cast: Readonly<Record<string, string>>, language: string): SingerChoice[] {
+    const sings = voices.filter(v => v.language === language);
+    const out: SingerChoice[] = sings.map(v => ({ label: v.id, detail: v.label && v.label !== v.name ? v.label : v.name, isRole: false }));
+    for (const [role, bound] of Object.entries(cast)) {
+        if (role.includes('/')) { continue; }
+        const voice = sings.find(v => v.id === bound || v.name === bound);
+        if (voice) { out.push({ label: role, detail: `role: ${voice.id}`, isRole: true }); }
+    }
+    return out;
 }
 
 /** The API from an extension's exports, or undefined when they are not that shape. */
@@ -193,6 +217,6 @@ export function parseServeLine(line: string): ServeAnswer | null {
 
 /** One request of `cantilena serve`'s stdin: the score, where the WAV goes, and the engine's
  *  default voice (its `--voice`, else MERROW) — Lily# names none. */
-export function serveRequestLine(id: string, score: CantilenaScore, output: string): string {
-    return JSON.stringify({ id, score, output }) + '\n';
+export function serveRequestLine(id: string, score: CantilenaScore, output: string, voice?: string): string {
+    return JSON.stringify(voice ? { id, score, voice, output } : { id, score, output }) + '\n';
 }

@@ -144,6 +144,86 @@ public class LyricLanguageTests
     public void TheEditor_OffersNoNames_Elsewhere(string text)
         => Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterLanguage, LilySharpLanguageServer.GetCompletionContext(text, text.Length));
 
+    // ── singer (owner's decisions 2026-11-09, sessions 1166 and 1168) ──
+
+    private const string Parts = """
+        part m { clef treble  singer "soprano" }
+        section A {
+          m { c'4 d e f | }
+          {{lyrics}}
+        }
+        form { A }
+        score { {{row}} }
+        """;
+
+    private static string Sheet(string lyrics, string row) => Parts.Replace("{{lyrics}}", lyrics).Replace("{{row}}", row);
+
+    [Theory]
+    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w", "soprano")]                                     // the part's
+    [InlineData("lyrics w singer \"alto\" sings m { さ く ら ら | }", "staff m  lyrics w", "alto")]                       // the track's over the part's
+    [InlineData("lyrics w sings m singer \"alto\" { さ く ら ら | }", "staff m  lyrics w", "alto")]                       // either side of sings
+    [InlineData("lyrics w singer \"alto\" sings m { さ く ら ら | }", "staff m  lyrics w singer \"neutrino/MERROW\" sings m", "neutrino/MERROW")]  // the row's over all (the owner's shape)
+    [InlineData("lyrics w singer \"alto\" sings m { さ く ら ら | }", "staff m  lyrics w sings m singer \"neutrino/MERROW\"", "neutrino/MERROW")]
+    public void TheNearestSinger_Wins_AndReachesTheVoice(string lyrics, string row, string expected)
+    {
+        string source = Sheet(lyrics, row);
+        Parsed(source);
+        Assert.Equal(expected, Sung(source).Singer);
+    }
+
+    [Fact]
+    public void NoSingerWritten_IsNull()
+        => Assert.Null(Sung(Book("", "lyrics w sings m { さ く ら ら | }")).Singer);
+
+    [Theory]
+    [InlineData("lyrics singer { la la la la | }")]
+    [InlineData("lyrics singer sings m { la la la la | }")]
+    public void ATrackMayStillBeCalledSinger(string lyrics)
+    {
+        var block = Assert.Single(Parsed(Book("", lyrics)).GetRoot().DescendantNodes<LyricsBlockSyntax>());
+        Assert.Equal("singer", block.VoiceName);
+        Assert.Null(block.Singer);
+    }
+
+    [Fact]
+    public void AnEmptySinger_IsAnError()
+    {
+        var error = Assert.Single(SyntaxTree.Parse(Book("", "lyrics w singer \"\" { さ く ら ら | }")).Diagnostics,
+            d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
+        Assert.Equal(DiagnosticCodes.SingerEmpty, error.Code);
+    }
+
+    private static string? SlotLanguage(string source, string marker = "§")
+    {
+        int at = source.IndexOf(marker, StringComparison.Ordinal);
+        string text = source.Remove(at, marker.Length);
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///slot.lys");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = text, Version = 1, LanguageId = "lilysharp" },
+        });
+        var slot = server.GetSingerSlot(new SingerSlotParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Offset = at });
+        return slot.InSlot ? slot.Language : null;
+    }
+
+    [Theory]
+    [InlineData("part m { singer \"§\" }\nsection A { m { c'4 | } lyrics w sings m { la | } }\n", "ja")]               // nothing written
+    [InlineData("language english\npart m { singer \"§\" }\nsection A { m { c'4 | } lyrics w sings m { la | } }\n", "en")]   // the file's
+    [InlineData("part m { singer \"§\" }\nsection A { m { c'4 | } lyrics w language korean sings m { la | } }\n", "ko")]     // the track that sings the part
+    [InlineData("section A { lyrics w language english singer \"§\" { la | } }\n", "en")]                              // the head's own
+    [InlineData("section A { lyrics w singer \"neu§\" language english { la | } }\n", "en")]                           // written after the caret
+    [InlineData("language korean\nscore { staff m  lyrics w singer \"§\" sings m }\n", "ko")]                         // a score's row
+    public void TheSlot_SaysTheLanguageOfTheWords(string source, string expected)
+        => Assert.Equal(expected, SlotLanguage(source));
+
+    [Theory]
+    [InlineData("lyrics w { singer \"§\" | }\n")]            // a syllable of the body
+    [InlineData("singer \"§\"\n")]                           // at the top level, nothing takes one
+    [InlineData("title \"§\"\n")]
+    public void ElsewhereIsNoSlot(string source)
+        => Assert.Null(SlotLanguage(source));
+
     [Fact]
     public void TheNames_AreTheLowerCaseVocabulary()
     {

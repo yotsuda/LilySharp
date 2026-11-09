@@ -138,6 +138,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1168セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14880 / 0 / 2**（`-Start p1168`・HEAD `51b943ce6`・未 push 68・OMR の open 0）。同じ会話で第1167 から続けた便。オーナー「singer を実装して。言語に適切な名前だけを補完で提案できるようにして」。作業場所は Lab `sessions/p1168/`（`notes.md`・`e2e.lys`）。
+
+- **Lily#（Core／Lsp）**: `singer "…"` を part の本体・lyrics の頭・score の lyrics 行に（近い方が勝つ・`sings`／`language` と順不同・予約語にしない・空は LYS4039）。`Music.LyricSinger.ReaderOf`・`RenderSpec.RowSingers`（行は fold で消えるので syntax から読む）・`LyricEvent.Singer`→`SungVoice.Singer`→DTO。`lysc wav --singer` は `engine/name` をその声で歌い（失敗は既定の声＋警告）、役名は既定の声＋警告（`--cast` は未実装）。
+- **補完**: `lilysharp/singerSlot`（カーソルが `singer "` の中か・その歌詞の言語タグ＝行の `language` → トラック → ファイル → ja。part ならそのパートを歌うトラック）。拡張の CompletionProvider（`"` で起動）が `singerChoices`＝**その言語を歌う声と、それに配役された役だけ**を出す（言語を名乗らない声は出さない）。サーバーの補完は `AfterSinger` で空。`singer` のキーワード補完は引用符の間にカーソルを置いて候補を開く。
+- **Cantilena（0.4.0 未公開に追加）**: 設定 `cantilena.voices`（役や声 → 声・聴く人が最後に決める）・API `resolveSinger`／`cast`・`sing` は声が名乗る言語と違う歌詞を 1 文で断る（楽器が鳴る）。`deploy-extension.ps1 -SkipPublish` で配布。Lily# は解決後の声を鍵に入れる。
+- **E2E**（`e2e.log`・NEUTRINO）: `singer "neutrino/MERROW"` は歌う・`"soprano"` は既定の声＋警告・`"diffsinger/NOPE"` は engine の文を添えて既定の声。
+- 網: `LyricLanguageTests` に singer／slot を追加・Lyric／Sings／Sung／WavExport 571 / 571・npm 911 / 911・Cantilena npm 19 / 19。docs: GRAMMAR・SYNTAX_REFERENCE・GRAMMAR_FOR_LLM・singing-design §3・roadmap・CHANGELOG 3 つ・MANUAL-CHECKS §3.7。
+- **未実装**: 1 パート 1 声のまま（同じパートの 2 トラックで singer が違っても最初が勝つ）・`lysc wav --cast`・DiffSinger の ja 以外（辞書が ja 固定）。実機（補完の見た目・▶ の声）はオーナー＝ extension host では確かめていない。
+- 終了時 full **14898 合格 / 0 失敗 / skip 2 / 合計 14900**（`-End p1168 -DiffBase 51b943ce6`、BUILD 0）。一度だけ赤: `DocKeywordListTests.ThePartHeaderProductions_NameTheLanguagesVocabulary` — GRAMMAR の `PartProperty` のコメントに `;` を書いたせいで、最初の `;` まで読む抽出が `midiInstrument` を落としていた。production の中のコメントに `;` を書かない。
+
+## 以下は第1167セッションの経緯
+
 ### 1.1 第1167セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14862 / 0 / 2**（`-Start p1167`・HEAD `990c905cf`・未 push 67・OMR の open 0）。同じ会話で第1166 から続けた便。オーナー決定「singer の前に歌詞の言語を指定できるように」「コードでなく Japanese のような名前（補完が効くから）」「いったん小文字」。作業場所は Lab `sessions/p1167/`（`notes.md`）。
@@ -148,16 +162,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 網: `LyricLanguageTests`・Lyric／Sings／Sung の網 546 / 546・npm（`npmtest.log`）。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: GRAMMAR・SYNTAX_REFERENCE・GRAMMAR_FOR_LLM・singing-design §3・roadmap・CHANGELOG 2 つ・MANUAL-CHECKS §3.7。
 - 1 回目の `-End` は赤 3 本（私の取りこぼし）: 補完の新しい関数を別の関数の doc comment との間に入れた（DocCommentPlacement）・`language` を予約語でないのにキーワードの色の列に足した（EditorColouring → `capo` と同じ行頭アンカーの `language-directive` に）・補完 fixture の更新漏れ（`LILYSHARP_UPDATE_DOCS=1` で再生成）。
 - 終了時 full **14880 / 0 / 2 / 14882**（`-End p1167 -DiffBase 990c905cf`＝`end.log`・門は全部 OK・§1 現在便 16,054 字＝残り 3,946・+18 本）。§7 7.5: `-End` は commit 前の diff なので Core `+` 0 と出るが、実際は Parser・Syntax・`Music.LyricLanguage`・`SungVoices`・`MidiExporter`（REF 0・OWN 0＝描画には触れない）。7.6: 出所はオーナーの決定とコードの読み。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1166セッションの経緯
-
-### 1.1 第1166セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14862 / 0 / 2**（`-Start p1166`・HEAD `bce9b2c97`・未 push 66・OMR の open 0）。同じ会話で第1165 から続けた便。docs だけ。オーナー「その案で roadmap に書いて。鳴る音楽を思い通りにしたい人は多いだろう。.lys にも singer を設定できる方が良い。文法を提案して」。
-
-- **`docs/singing-roadmap.md` §4 の 2 に書いた（実装なし・文法はオーナーの承認待ち）**: `singer "…"` を `part` の本体・`lyrics` ブロック・score の `lyrics` 行の 3 か所に（近い方が勝つ＝`sings` と同じ順）。`/` 入りは声の名前（`neutrino/MERROW`）・無ければ役（`"soprano"`）。解決は Cantilena: ⑴ 設定 `cantilena.voices[文字列]`（聴く人が最後に決める）⑵ その名の声が入っていればそれ ⑶ 既定の声で歌い 1 度だけ言う。`singer` は予約語にしない（GRAMMAR の例に `staff singer` が在る）・`lyrics` では直後が String のときだけ節＝`lyrics singer { }` はトラック名のまま。`voice` は `voice sop { }` が使っているので採らない。
-- 残り: 文法の承認（オーナー）・実機（第1165 の Parts の規則）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
-- 終了時 full **14862 / 0 / 2 / 14864**（`-End p1166 -DiffBase bce9b2c97`＝`end.log`・門は全部 OK・§1 現在便 15,571 字＝残り 4,429）。§7 7.5: Core `+` 0（docs だけ）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 

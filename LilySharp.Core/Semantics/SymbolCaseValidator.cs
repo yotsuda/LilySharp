@@ -43,7 +43,7 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     private static readonly HashSet<string> PropertyNames = new(StringComparer.Ordinal)
     {
         "clef", "instrument", "transpose", "transposition", "tuning",
-        "octave", "pedal", "pitch", "midiInstrument",
+        "octave", "pedal", "pitch", "midiInstrument", Music.LyricSinger.Keyword,
     };
 
     /// <summary>The two words a part header's <c>pitch</c> takes (how its notes are typed),
@@ -252,6 +252,11 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                     Error(valueTokens[0], misplaced);
                 else
                     CheckValue(valueTokens, PitchModes, "pitch", "modes");
+                break;
+            case Music.LyricSinger.Keyword:
+                // One quoted name: a voice or a role, which no compiler can check against a machine.
+                if (valueTokens.Count != 1 || !IsQuoted(Joined(valueTokens)) || Music.LyricSinger.ValueOf(Joined(valueTokens)).Length == 0)
+                    Error(valueTokens[0], "'singer' takes one quoted name: a voice, singer \"neutrino/MERROW\", or a role, singer \"soprano\".");
                 break;
             case "midiInstrument":
                 // One quoted name from LilyPond's General MIDI table, exactly as LilyPond

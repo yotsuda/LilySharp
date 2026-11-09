@@ -111,7 +111,14 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 - **Language**: a fact of the words (session 1167): `language NAME` on the file or a lyrics
   track, `japanese` when nothing is written (`Music.LyricLanguage`); the voice's `Language` is
   its first words' tag, and only Japanese words are checked for kana. Otherwise the score is
-  passed as it is and the engine answers that it cannot sing it (NEUTRINO: kanji, romaji). The editor shows the
+  passed as it is and the engine answers that it cannot sing it (NEUTRINO: kanji, romaji).
+- **Singer** (session 1168): `singer "…"` on the part, the track or the score's row, the nearest
+  winning (`Music.LyricSinger`, `SungVoice.Singer`). Lily# carries the string; the Cantilena
+  extension resolves it (`resolveSinger`: `cantilena.voices`, then the installed voices, then
+  the default with a sentence), and the resolved voice is the cache key's. Between the quotes the
+  editor asks the server for the words' language (`lilysharp/singerSlot`) and offers the voices
+  that sing it and the roles cast to one (`singerChoices`); a voice not saying what it sings is
+  left out. `lysc wav --singer` sings a written `engine/name` and takes a role as the default. The editor shows the
   engine's sentence once per score and plays the instruments alone.
 - **Kanji with a reading** (owner's decision 2026-11-08, session 1138): the reading is glued to
   the word in the syllable — `漢[かん]` prints 漢 and sings かん, `大[おお]空[ぞら]` prints 大空

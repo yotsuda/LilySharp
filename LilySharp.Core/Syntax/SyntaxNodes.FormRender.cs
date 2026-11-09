@@ -1037,26 +1037,34 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
     /// file's unnamed track.</summary>
     public SyntaxTokenNode? NameToken =>
         GetChild(1) is SyntaxTokenNode t && !(t.Kind == SyntaxKind.Identifier && t.Text == "sings" && SlotCount > 2)
+            && !(t.Kind == SyntaxKind.Identifier && t.Text == Music.LyricSinger.Keyword && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral })
             ? t : null;
 
     /// <summary>The lyrics part name to place (e.g. <c>lyrics verse</c> → "verse"; a bare
     /// <c>lyrics</c> → <see cref="SyntaxFacts.UnnamedLyricsName"/>).</summary>
     public string PartName => NameToken?.Text ?? SyntaxFacts.UnnamedLyricsName;
 
-    private int SingsIndex => NameToken != null ? 2 : 1;
+    /// <summary>A clause of the row by its word: pairs after the name, in the order written.</summary>
+    private (SyntaxTokenNode? Keyword, SyntaxTokenNode? Value) Clause(string word)
+    {
+        for (int i = NameToken != null ? 2 : 1; i < SlotCount; i += 2)
+            if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } keyword && keyword.Text == word)
+                return (keyword, i + 1 < SlotCount ? GetChild(i + 1) as SyntaxTokenNode : null);
+        return default;
+    }
 
     /// <summary>The <c>sings</c> keyword token of a binding-stating row
     /// (<c>lyrics verse sings melody</c>), or null when the row writes none.</summary>
-    public SyntaxTokenNode? SingsKeyword =>
-        SlotCount > SingsIndex && GetChild(SingsIndex) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } s
-            && s.Text == "sings" ? s : null;
+    public SyntaxTokenNode? SingsKeyword => Clause("sings").Keyword;
 
     /// <summary>The token naming the part this row says its track sings, or null when the
     /// row states no binding — what the editor colours.</summary>
     public SyntaxTokenNode? SingsTargetToken =>
-        SingsKeyword != null && SlotCount > SingsIndex + 1
-            && GetChild(SingsIndex + 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text.Length: > 0 } t2
-            ? t2 : null;
+        Clause("sings").Value is { Kind: SyntaxKind.Identifier, Text.Length: > 0 } t2 ? t2 : null;
+
+    /// <summary>Who sings THIS placement (<c>lyrics verse singer "neutrino/MERROW" sings melody</c>),
+    /// or null (<see cref="Music.LyricSinger"/>).</summary>
+    public string? Singer => Clause(Music.LyricSinger.Keyword).Value is { } t ? Music.LyricSinger.ValueOf(t.Text) : null;
 
     /// <summary>The part THIS ROW sings (<c>lyrics verse sings melody</c> →
     /// "melody"), or null when the row states none and the track's default (the

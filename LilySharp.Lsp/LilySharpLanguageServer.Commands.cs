@@ -1018,6 +1018,33 @@ public sealed partial class LilySharpLanguageServer
     /// §4; <see cref="LilySharp.Core.Midi.SungVoices"/>). The same export and clock as
     /// <c>lilysharp/playback</c>, so the voice lands where the synth's notes do.
     /// </summary>
+    [JsonRpcMethod("lilysharp/singerSlot", UseSingleObjectParameterDeserialization = true)]
+    public Task<SingerSlotResponse> GetSingerSlotAsync(SingerSlotParams @params, CancellationToken token)
+        => OffDispatch(() => GetSingerSlot(@params), token);
+
+    /// <summary>The editor's question while a <c>singer "</c> is typed (session 1168): is the caret in
+    /// one, and what language are the words it would sing? The engine's voices are the editor's to
+    /// list; the words' language is read here.</summary>
+    public SingerSlotResponse GetSingerSlot(SingerSlotParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null || SingerSlotAt(doc.Text, @params.Offset) is not { } slot)
+            return new SingerSlotResponse();
+        var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
+        var root = tree.GetRoot();
+        var languageOf = LilySharp.Core.Music.LyricLanguage.ReaderOf(root);
+        string? track = slot.Track;
+        if (track == null && slot.Part != null)
+        {
+            // A part's singer sings the words of the tracks that sing it.
+            var declared = root.DescendantNodes<LilySharp.Core.Syntax.PartDeclarationSyntax>().Select(p => p.Name.Text).Distinct(StringComparer.Ordinal).ToList();
+            track = root.DescendantNodes<LilySharp.Core.Syntax.LyricsBlockSyntax>().Select(b => b.VoiceName)
+                .FirstOrDefault(name => name != null
+                    && (LilySharp.Core.Music.LyricBindings.TargetOf(root, name) ?? (declared.Count == 1 ? declared[0] : null)) == slot.Part);
+        }
+        return new SingerSlotResponse { InSlot = true, Language = LilySharp.Core.Music.LyricLanguage.CodeOf(slot.Language) ?? languageOf(track) };
+    }
+
     [JsonRpcMethod("lilysharp/sung", UseSingleObjectParameterDeserialization = true)]
     public Task<SungResponse> GetSungAsync(SungParams @params, CancellationToken token)
         => OffDispatch(() => GetSung(@params), token);
@@ -1089,6 +1116,7 @@ public sealed partial class LilySharpLanguageServer
                     Language = v.Language,
                     Warnings = v.Warnings.ToArray(),
                     InScore = inScore == null || inScore.Contains(v.Part),
+                    Singer = v.Singer,
                     Notes = v.Notes.Select(n => new SungNoteDto
                     {
                         T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos,

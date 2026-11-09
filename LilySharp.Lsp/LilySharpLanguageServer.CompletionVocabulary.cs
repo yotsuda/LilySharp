@@ -175,7 +175,7 @@ public sealed partial class LilySharpLanguageServer
     private static readonly string[] PartPropertyOrder =
     {
         "clef", "instrument", "tuning", "octave", "transpose",
-        "transposition", "pitch", "pedal", "midiInstrument",
+        "transposition", "pitch", "pedal", "midiInstrument", LilySharp.Core.Music.LyricSinger.Keyword,
     };
 
     // Prose per property, and whether the editor has a VALUE list to enumerate for it.
@@ -213,6 +213,7 @@ public sealed partial class LilySharpLanguageServer
             ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
             ["midiInstrument"] = ("General MIDI sound for the .mid and the preview — one of LilyPond's 128 names in quotes, "
                                   + "e.g. `midiInstrument \"flute\"`; the default is the preset's", true),
+            [LilySharp.Core.Music.LyricSinger.Keyword] = ("Who sings this part's lyrics: a voice, or a role your settings cast", true),
             // (`removeEmpty` left this table 2026-09-08 with the property: hara-kiri is the
             // score's `staff m as removeEmpty V` — GetStaffAttachNameCompletions.)
         };
@@ -261,7 +262,7 @@ public sealed partial class LilySharpLanguageServer
                 // puts the caret between them, where the re-opened popup lists the names
                 // (AfterMidiInstrument) — as `fonts { music "…" }` does for its key.
                 InsertText = !p.Values ? null
-                    : p.Label == "midiInstrument" ? $"{p.Label} \"$0\""
+                    : p.Label is "midiInstrument" or LilySharp.Core.Music.LyricSinger.Keyword ? $"{p.Label} \"$0\""
                     : $"{p.Label} $0",
                 Command = p.Values
                     ? new Command { Title = "Suggest value", CommandIdentifier = "editor.action.triggerSuggest" }
@@ -2454,12 +2455,25 @@ public sealed partial class LilySharpLanguageServer
         },
     };
 
+    /// <summary>The <c>singer</c> keyword after a lyrics track's or row's name: the quotes written,
+    /// the caret between them, where the editor lists the voices for the words' language.</summary>
+    private static CompletionItem SingerItem(string sort) => new()
+    {
+        Label = LilySharp.Core.Music.LyricSinger.Keyword,
+        Kind = CompletionItemKind.Keyword,
+        InsertTextFormat = InsertTextFormat.Snippet,
+        InsertText = "singer \"$0\"",
+        Detail = "Who sings these words: a voice, or a role your settings cast",
+        SortText = sort,
+        Command = new Command { Title = "Suggest singer", CommandIdentifier = "editor.action.triggerSuggest" },
+    };
+
     /// <summary>After <c>lyrics NAME</c> on a SCORE row: the <c>sings</c>
     /// binding, then the score's normal continuations — the lyrics-row sibling
     /// of <see cref="GetStaffAttachNameCompletions"/>.</summary>
     internal static CompletionList GetLyricsRowAttachNameCompletions()
     {
-        var items = new System.Collections.Generic.List<CompletionItem> { RowSingsItem() };
+        var items = new System.Collections.Generic.List<CompletionItem> { RowSingsItem(), SingerItem("1") };
         foreach (var it in GetScoreBlockCompletions().Items)
         {
             it.SortText = "9" + (it.SortText ?? "");
@@ -2745,6 +2759,7 @@ public sealed partial class LilySharpLanguageServer
     {
         Items =
         [
+            SingerItem("2"),
             new CompletionItem
             {
                 Label = LilySharp.Core.Music.LyricLanguage.Keyword,

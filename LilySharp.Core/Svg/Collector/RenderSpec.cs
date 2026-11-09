@@ -325,7 +325,10 @@ public sealed record RenderSpec(
     ImmutableArray<string> MidiOnlyParts = default,
     // `staff tp as pitch written|concert`: the parts whose staves print by their own `pitch`,
     // over ScoreConcert (Semantics.ConcertPitch.StaffModes); null when no staff writes one.
-    ImmutableDictionary<string, bool>? StaffPitch = null
+    ImmutableDictionary<string, bool>? StaffPitch = null,
+    // `lyrics verse singer "…"`: who sings each placed track, by track name (Music.LyricSinger);
+    // read off the score's syntax, as a row folded under its staff leaves no row behind.
+    ImmutableDictionary<string, string>? RowSingers = null
 )
 {
     /// <summary>

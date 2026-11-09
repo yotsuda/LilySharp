@@ -44,6 +44,10 @@ public abstract class SingingEngine
     /// </summary>
     public abstract string? Sing(string scoreJsonPath, string outputWavPath);
 
+    /// <summary>This engine singing in the voice <paramref name="voice"/> (<c>engine/name</c>), for a
+    /// part the file names a singer of; an engine with one voice is itself.</summary>
+    public virtual SingingEngine WithVoice(string voice) => this;
+
     /// <summary>
     /// Sings <paramref name="voice"/> and reads the sound back: the score written as Cantilena's
     /// JSON (<see cref="SungScoreJson"/>) under a folder of its own in the temp directory, the
@@ -111,6 +115,8 @@ public sealed class CantilenaProgram : SingingEngine
     }
 
     public override string Name => Voice ?? Path.GetFileNameWithoutExtension(Program);
+
+    public override SingingEngine WithVoice(string voice) => new CantilenaProgram(Program, voice);
 
     /// <summary>
     /// Why <paramref name="program"/> cannot be run, or null: a path that names no file is

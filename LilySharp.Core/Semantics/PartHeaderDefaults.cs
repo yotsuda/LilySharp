@@ -126,6 +126,9 @@ public sealed class PartHeaderDefaults
     /// <summary>The part's written <c>midiInstrument</c> name (quotes removed), or null.</summary>
     public string? MidiInstrument { get; private init; }
 
+    /// <summary>The part's written <c>singer</c> (quotes removed), or null (<see cref="Music.LyricSinger"/>).</summary>
+    public string? Singer { get; private init; }
+
     /// <summary>
     /// The tuning the part's strings are tuned to: its <c>tuning</c> word, else the one its
     /// <c>instrument</c> preset implies, else the guitar.
@@ -171,7 +174,7 @@ public sealed class PartHeaderDefaults
             return Empty;
 
         int? explicitOctave = null;
-        string? preset = null, clefText = null, transText = null, tuningText = null, midiName = null;
+        string? preset = null, clefText = null, transText = null, tuningText = null, midiName = null, singer = null;
 
         foreach (var prop in part.Properties)
         {
@@ -219,6 +222,9 @@ public sealed class PartHeaderDefaults
                         ? StringLiteral.Value(written)
                         : written;
                     break;
+                case "singer":
+                    singer = Music.LyricSinger.ValueOf(Joined());
+                    break;
             }
         }
 
@@ -256,6 +262,7 @@ public sealed class PartHeaderDefaults
             TranspositionSemitones = transposition,
             MidiProgram = midiProgram,
             MidiInstrument = midiName,
+            Singer = singer,
             Tuning = Tunings.Parse(tuningText ?? InstrumentDefaults.GetTuning(preset)),
             FrettedTuningWord = FrettedWord(tuningText, preset),
         };

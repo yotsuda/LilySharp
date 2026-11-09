@@ -167,14 +167,22 @@ internal sealed partial class Parser
         // No name before `sings`: the unnamed track (SyntaxFacts.UnnamedLyricsName, 2026-10-09).
         var name = IsPartNameToken(Current)
             && !(Current.Text == "sings" && Peek(1)?.Kind != SyntaxKind.OpenBrace)
-            && !IsLyricsLanguageClause() ? Advance() : (SyntaxToken?)null;
+            && !IsLyricsLanguageClause() && !IsLyricsSingerClause() ? Advance() : (SyntaxToken?)null;
         // The clauses, each at most once and in either order, as pairs in source order:
         // `sings vocal` — the track sings the named part — and `language english` — what its
-        // words are written in. Contextual like `q`: both stay ordinary identifiers everywhere
-        // else, claimed only between a track name and its brace.
+        // words are written in, `singer "…"` — who sings them (Music.LyricSinger). Contextual like
+        // `q`: all stay ordinary identifiers everywhere else, claimed only between a track name
+        // and its brace.
         var clauses = new List<SyntaxToken?>();
-        for (bool sings = false, language = false; ;)
+        for (bool sings = false, language = false, singer = false; ;)
         {
+            if (!singer && IsLyricsSingerClause())
+            {
+                singer = true;
+                clauses.Add(Advance());
+                clauses.Add(ParseSingerName());
+                continue;
+            }
             if (!sings && Check(SyntaxKind.Identifier) && Current.Text == "sings" && Peek(1)?.Kind != SyntaxKind.OpenBrace)
             {
                 sings = true;
@@ -223,6 +231,23 @@ internal sealed partial class Parser
         var closeBrace = Expect(SyntaxKind.CloseBrace);
 
         return new LyricsBlockGreen(keyword, name, [.. clauses], openBrace, [.. items], closeBrace);
+    }
+
+    /// <summary><c>singer "…"</c> in a lyrics head or a score's lyrics row: the word with a string
+    /// after it, so <c>lyrics singer { … }</c> stays a track called singer.</summary>
+    private bool IsLyricsSingerClause()
+        => Check(SyntaxKind.Identifier) && Current.Text == Music.LyricSinger.Keyword
+            && Peek(1)?.Kind == SyntaxKind.StringLiteral;
+
+    /// <summary>The singer's string; an empty one is refused (LYS4039), a name is the engine's to resolve.</summary>
+    private SyntaxToken ParseSingerName()
+    {
+        var value = Advance();
+        if (Music.LyricSinger.ValueOf(value.Text).Length == 0)
+            _diagnostics.Error(new TextSpan(_textPosition - value.FullWidth + value.LeadingTriviaWidth, Math.Max(1, value.Width)),
+                DiagnosticCodes.SingerEmpty,
+                "'singer' names a voice, singer \"neutrino/MERROW\", or a role, singer \"soprano\".");
+        return value;
     }
 
     /// <summary>The file's <c>language NAME</c>: contextual, so a part may still be called language.</summary>

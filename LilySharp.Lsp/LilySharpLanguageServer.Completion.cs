@@ -439,6 +439,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLyricsName => GetVoiceBindingNameCompletions(doc.Text),
             CompletionContext.AfterLyricsTrackName => GetLyricsTrackNameCompletions(),
             CompletionContext.AfterLanguage => GetLanguageNameCompletions(),
+            CompletionContext.AfterSinger => new CompletionList { Items = [] },
             CompletionContext.AfterSingsTarget => GetVoiceBindingNameCompletions(doc.Text,
                 "The part - or named voice - this lyrics track sings"),
             CompletionContext.AfterChordAttachName => GetChordAttachNameCompletions(),

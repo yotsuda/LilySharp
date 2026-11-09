@@ -28,7 +28,8 @@ public sealed record SungNote(double Start, double Duration, double Pitch, strin
 /// <summary>A part's words on its notes, as a singing engine takes them: the score in seconds
 /// that <c>cantilena</c> reads. <paramref name="Warnings"/> says what the engine will not sing
 /// (syllables that are not kana).</summary>
-public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungNote> Notes, IReadOnlyList<string> Warnings);
+/// <paramref name="Singer"/> is who the file says sings it, as written, or null for the engine's default.
+public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungNote> Notes, IReadOnlyList<string> Warnings, string? Singer = null);
 
 /// <summary>
 /// The sung voices of an exported piece: one per part a placed lyrics row sings. Which note a
@@ -65,7 +66,8 @@ public static class SungVoices
         foreach (var part in lyrics.Select(l => l.Part!).Distinct(StringComparer.Ordinal))
         {
             // The part's language: its first words' (one voice a part; the first words at an onset win).
-            string language = lyrics.First(l => l.Part == part).Language ?? Japanese;
+            var first = lyrics.First(l => l.Part == part);
+            string language = first.Language ?? Japanese;
             var words = new Dictionary<int, string>();
             foreach (var l in lyrics)
                 if (l.Part == part)
@@ -116,7 +118,7 @@ public static class SungVoices
             if (strange.Count > 0)
                 warnings.Add($"{strange.Count} syllable(s) are not kana, which the Japanese voice needs: "
                     + string.Join(" ", strange.Take(8)) + (strange.Count > 8 ? " …" : ""));
-            voices.Add(new SungVoice(part, language, notes, warnings));
+            voices.Add(new SungVoice(part, language, notes, warnings, first.Singer));
         }
         return voices;
     }

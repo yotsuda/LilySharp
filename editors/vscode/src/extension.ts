@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, SungVoiceDto, cantilenaApiOf, prepareModeOf } from './singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, SungVoiceDto, cantilenaApiOf, prepareModeOf, singerChoices } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1078,6 +1078,8 @@ export function activate(context: vscode.ExtensionContext) {
     // list of features is skipped; the palette asks which.
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel',
         (use?: unknown) => pickAiModel(use === 'edit' || use === 'ghost' ? use : undefined)));
+
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singerCompletion, '"'));
 
     // The Explorer's batch export: right-click one or more .lys → the format
     // submenu → a folder → every score of every file, named as `lysc` names
@@ -3843,6 +3845,46 @@ function reportMidiOutError(port: string, error: string): void {
 
 // ---- The singing voice (docs/singing-design.md §5) ----
 
+/** A file's `singer` came to another voice than it asked for: said once a session. */
+const singerNotesTold = new Set<string>();
+function tellSingerNote(text: string): void {
+    if (singerNotesTold.has(text)) { return; }
+    singerNotesTold.add(text);
+    outputChannel.appendLine(`singer: ${text}`);
+    vscode.window.setStatusBarMessage(`Lily#: ${text}`, 8000);
+}
+
+/**
+ * Between a `singer`'s quotes, the names right for the words' language (owner's request
+ * 2026-11-09, session 1168): the server says whether the caret is in one and what the language
+ * is (lilysharp/singerSlot), the Cantilena extension what is installed and cast (singerChoices).
+ * The quotes' inside is replaced whole, so a name with a slash completes as one.
+ */
+const singerCompletion: vscode.CompletionItemProvider = {
+    async provideCompletionItems(document, position) {
+        if (!client || !clientReady) { return undefined; }
+        const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null }>('lilysharp/singerSlot',
+            { textDocument: { uri: document.uri.toString() }, offset: document.offsetAt(position) });
+        if (!slot.InSlot || !slot.Language) { return undefined; }
+        const engine = await renderer();
+        const api = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend.api : undefined;
+        if (!api?.voices) { return undefined; }
+        const [voices, cast] = await Promise.all([api.voices(), api.cast?.() ?? Promise.resolve({})]);
+        const line = document.lineAt(position.line).text;
+        const open = line.lastIndexOf('"', position.character - 1);
+        const close = line.indexOf('"', position.character);
+        const range = new vscode.Range(position.line, open + 1, position.line, close >= 0 ? close : position.character);
+        return singerChoices(voices, cast, slot.Language).map((c, i) => {
+            const item = new vscode.CompletionItem(c.label, c.isRole ? vscode.CompletionItemKind.Variable : vscode.CompletionItemKind.Value);
+            item.detail = c.detail;
+            item.range = range;
+            item.filterText = c.label;
+            item.sortText = String(i).padStart(3, '0');
+            return item;
+        });
+    },
+};
+
 /** `lilysharp.playback.singer`: the path of a `cantilena` program to run here (a developer's
  *  build), or '' — the usual case — for the Cantilena extension when it is installed. */
 function singerSetting(): string {
@@ -3867,7 +3909,7 @@ async function renderer(): Promise<VoiceRenderer | undefined> {
         try {
             const api = cantilenaApiOf(ext.isActive ? ext.exports : await ext.activate());
             if (!api) { outputChannel.appendLine(`singer: ${CANTILENA_EXTENSION_ID} is installed but its API is not the shape Lily# reads`); return undefined; }
-            voiceRenderer = new VoiceRenderer(new CantilenaExtensionBackend(api));
+            voiceRenderer = new VoiceRenderer(new CantilenaExtensionBackend(api, tellSingerNote));
         } catch (e) {
             outputChannel.appendLine(`singer: ${CANTILENA_EXTENSION_ID} did not activate: ${String(e)}`);
             return undefined;

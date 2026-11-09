@@ -267,7 +267,18 @@ public static class RenderSpecParser
             ScoreConcert: LilySharp.Core.Semantics.ConcertPitch.ScoreMode(render),
             LayoutRef: layoutRef,
             MidiOnlyParts: [.. midiOnlyParts],
-            StaffPitch: LilySharp.Core.Semantics.ConcertPitch.StaffModes(render));
+            StaffPitch: LilySharp.Core.Semantics.ConcertPitch.StaffModes(render),
+            RowSingers: RowSingersOf(render));
+    }
+
+    /// <summary>The score's <c>lyrics … singer "…"</c> rows by track, or null for none.</summary>
+    private static ImmutableDictionary<string, string>? RowSingersOf(RenderDeclarationSyntax render)
+    {
+        ImmutableDictionary<string, string>.Builder? singers = null;
+        foreach (var row in render.DescendantNodes<LyricsRowRenderSyntax>())
+            if (row.Singer is { Length: > 0 } singer)
+                (singers ??= ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal)).TryAdd(row.PartName, singer);
+        return singers?.ToImmutable();
     }
 
     /// <summary>

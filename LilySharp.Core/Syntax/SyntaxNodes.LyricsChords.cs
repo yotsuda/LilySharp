@@ -65,6 +65,10 @@ public sealed class LyricsBlockSyntax : SyntaxNode
     /// (<see cref="Music.LyricLanguage"/>).</summary>
     public string? Language => HeadClause(Music.LyricLanguage.Keyword).Value?.Text;
 
+    /// <summary>Who sings the track as the block names it (<c>lyrics en singer "neutrino/MERROW" { … }</c>),
+    /// or null (<see cref="Music.LyricSinger"/>).</summary>
+    public string? Singer => HeadClause(Music.LyricSinger.Keyword).Value is { } t ? Music.LyricSinger.ValueOf(t.Text) : null;
+
     /// <summary>A clause of the head by its word: the pairs stand from slot 2 to the brace, in
     /// the order they were written, so `sings` and `language` may come either way round.</summary>
     private (SyntaxTokenNode? Keyword, SyntaxTokenNode? Value) HeadClause(string word)

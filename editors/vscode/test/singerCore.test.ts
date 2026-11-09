@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, SungNoteDto, SungVoiceDto, cantilenaApiOf, cantilenaScore, parseServeLine, prepareModeOf, serveRequestLine, voiceKey } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, SungNoteDto, SungVoiceDto, cantilenaApiOf, cantilenaScore, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, voiceKey } from '../src/singerCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
 // engine's score, the key names the render, the engine's lines are read, and the Cantilena
@@ -88,6 +88,31 @@ describe('the engine\'s wire, and the extension\'s API', () => {
         assert.equal(cantilenaApiOf({ ...api, apiVersion: 2 }), undefined);
         assert.equal(cantilenaApiOf({ path: 'omr.exe' }), undefined);
         assert.equal(cantilenaApiOf(undefined), undefined);
+    });
+});
+
+// Between a `singer`'s quotes (owner's request 2026-11-09): only the names right for the language.
+describe('the singer choices', () => {
+    const voices = [
+        { id: 'neutrino/MERROW', engine: 'neutrino', name: 'MERROW', label: 'Merrow', language: 'ja' },
+        { id: 'diffsinger/TIGER', engine: 'diffsinger', name: 'TIGER', label: 'TIGER', language: 'ja' },
+        { id: 'diffsinger/ALICE', engine: 'diffsinger', name: 'ALICE', label: 'Alice', language: 'en' },
+        { id: 'diffsinger/NOTSAID', engine: 'diffsinger', name: 'NOTSAID', label: 'x' },
+    ];
+    const cast = { soprano: 'neutrino/MERROW', lead: 'diffsinger/ALICE', 'neutrino/MERROW': 'diffsinger/TIGER' };
+
+    it('offers the voices that sing the language, and the roles cast to one of them', () => {
+        assert.deepEqual(singerChoices(voices, cast, 'ja').map(c => c.label), ['neutrino/MERROW', 'diffsinger/TIGER', 'soprano']);
+        assert.deepEqual(singerChoices(voices, cast, 'en').map(c => c.label), ['diffsinger/ALICE', 'lead']);
+        assert.deepEqual(singerChoices(voices, cast, 'ko'), [], 'no voice sings it: nothing to offer');
+    });
+
+    it('says who a role is', () => {
+        assert.equal(singerChoices(voices, cast, 'ja').find(c => c.isRole)?.detail, 'role: neutrino/MERROW');
+    });
+
+    it('names the voice on the engine\'s wire when one is asked for', () => {
+        assert.equal(JSON.parse(serveRequestLine('k', { sampleRate: 1, language: 'ja', notes: [] }, 'x.wav', 'diffsinger/TIGER')).voice, 'diffsinger/TIGER');
     });
 });
 

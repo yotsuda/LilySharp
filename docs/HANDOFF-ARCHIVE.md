@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1166セッションの経緯
+
+### 1.1 第1166セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14862 / 0 / 2**（`-Start p1166`・HEAD `bce9b2c97`・未 push 66・OMR の open 0）。同じ会話で第1165 から続けた便。docs だけ。オーナー「その案で roadmap に書いて。鳴る音楽を思い通りにしたい人は多いだろう。.lys にも singer を設定できる方が良い。文法を提案して」。
+
+- **`docs/singing-roadmap.md` §4 の 2 に書いた（実装なし・文法はオーナーの承認待ち）**: `singer "…"` を `part` の本体・`lyrics` ブロック・score の `lyrics` 行の 3 か所に（近い方が勝つ＝`sings` と同じ順）。`/` 入りは声の名前（`neutrino/MERROW`）・無ければ役（`"soprano"`）。解決は Cantilena: ⑴ 設定 `cantilena.voices[文字列]`（聴く人が最後に決める）⑵ その名の声が入っていればそれ ⑶ 既定の声で歌い 1 度だけ言う。`singer` は予約語にしない（GRAMMAR の例に `staff singer` が在る）・`lyrics` では直後が String のときだけ節＝`lyrics singer { }` はトラック名のまま。`voice` は `voice sop { }` が使っているので採らない。
+- 残り: 文法の承認（オーナー）・実機（第1165 の Parts の規則）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- 終了時 full **14862 / 0 / 2 / 14864**（`-End p1166 -DiffBase bce9b2c97`＝`end.log`・門は全部 OK・§1 現在便 15,571 字＝残り 4,429）。§7 7.5: Core `+` 0（docs だけ）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1165セッションの経緯
 
 ### 1.1 第1165セッション（2026-11-09・YT-DELL2）
