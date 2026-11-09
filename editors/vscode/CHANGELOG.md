@@ -5,6 +5,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 ## Unreleased
 
 - **`@shiftOff`** is offered after `@`: it keeps a note of a third or later voice in the first column.
+- **The composing guide says who sings, for any song**: where `singer` is written, and how to ask `#listVoices` for the names this machine has.
 
 ## 0.16.0
 

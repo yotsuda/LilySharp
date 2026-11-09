@@ -467,6 +467,16 @@ describe('the composing guide', () => {
     });
     // Owner's trials 2026-10-29: a chat's hymns crossed the alto under the tenor, set the alto in the
     // tenor's range, and rocked the bass between root and fifth — the guide had no hymn.
+    // Owner's request 2026-11-10, session 1217: who sings, for any song, and the tool that names the voices.
+    it('says how to name a singer, from the voices this machine has', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /To name a voice, call `lilysharp_listVoices` first and copy a name it answers; never guess one\./);
+        assert.match(guide, /narrow it with `language`[\s\S]*`gender`[\s\S]*`provider`/);
+        assert.match(guide, /part sop \{ instrument soprano singer "neutrino\/MERROW" \}/);
+        assert.match(guide, /lyrics words singer "neutrino\/MERROW" sings melody \{ … \}/);
+        assert.match(guide, /score \{ staff melody  lyrics words sings melody singer "neutrino\/MERROW" \}/);
+        assert.match(guide, /On a track or a score's row, names with commas\s+between them sing the part together/);
+    });
     // Owner's trials 2026-10-29: a jazz trio's drums came as a rock backbeat, its bass the chord's
     // notes in a row; the next time they swung — the guide said only "swinging on the ride".
     it('says how a jazz rhythm section plays', () => {
