@@ -80,6 +80,115 @@ export function singerChoices(voices: readonly CantilenaVoice[], cast: Readonly<
     return out;
 }
 
+/** The `singer "…"` the caret stands on (the word, the quotes, or between them): where its name is on the line. */
+export function singerValueAt(line: string, character: number): { start: number; end: number; value: string } | undefined {
+    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+"([^"]*)"/g)) {
+        const whole = m.index + m[0].length;
+        if (character >= m.index && character <= whole) {
+            return { start: whole - 1 - m[1].length, end: whole - 1, value: m[1] };
+        }
+    }
+    return undefined;
+}
+
+/**
+ * The voice a step key moves to (owner's request 2026-11-09, session 1170): the next or previous of
+ * the current voice's own engine, going round, or with `acrossEngines` the next or previous engine's
+ * voice last chosen (`lastOf`, else its first). A `singer` that names none of `voices` (a role, an
+ * empty string) starts at the first engine's ends. Undefined when there is nowhere else to go.
+ */
+export function stepVoice(voices: readonly Pick<CantilenaVoice, 'id' | 'engine'>[], current: string, direction: 1 | -1,
+    acrossEngines: boolean, lastOf?: ReadonlyMap<string, string>): string | undefined {
+    const engines = [...new Set(voices.map(v => v.engine))];
+    if (engines.length === 0) { return undefined; }
+    const here = voices.find(v => v.id === current);
+    if (acrossEngines) {
+        if (engines.length < 2) { return undefined; }
+        const n = engines.length;
+        const engine = engines[here ? (engines.indexOf(here.engine) + direction + n) % n : direction > 0 ? 0 : n - 1];
+        const theirs = voices.filter(v => v.engine === engine);
+        const kept = lastOf?.get(engine);
+        return theirs.some(v => v.id === kept) ? kept : theirs[0].id;
+    }
+    const list = voices.filter(v => v.engine === (here ? here.engine : engines[0]));
+    if (!here) { return (direction > 0 ? list[0] : list[list.length - 1]).id; }
+    if (list.length < 2) { return undefined; }
+    return list[(list.findIndex(v => v.id === current) + direction + list.length) % list.length].id;
+}
+
+/** Bumped when the phrase below changes: the samples kept on disk are named with it. */
+export const VOICE_SAMPLE_VERSION = 1;
+
+/** The short phrase a voice is heard by when it is chosen; undefined for a language it has no words for. */
+export function voiceSampleScore(language: string): CantilenaScore | undefined {
+    if (language !== 'ja') { return undefined; }
+    const notes: CantilenaNote[] = [
+        { start: 0.3, duration: 0.25, pitch: 60, lyric: 'こ' },
+        { start: 0.55, duration: 0.25, pitch: 62, lyric: 'ん' },
+        { start: 0.8, duration: 0.25, pitch: 64, lyric: 'に' },
+        { start: 1.05, duration: 0.25, pitch: 65, lyric: 'ち' },
+        { start: 1.3, duration: 0.5, pitch: 67, lyric: 'は' },
+    ];
+    return { sampleRate: VOICE_SAMPLE_RATE, language, notes };
+}
+
+/**
+ * The samples still to sing, one at a time so the engine is never held long from a score's own
+ * voices: `ask` goes to the front and says when its sample is there, `warm` waits behind. A
+ * sample that could not be sung is not warmed again; an `ask` tries it again.
+ */
+export class VoiceSampleQueue {
+    private readonly waiting: string[] = [];
+    private readonly callers = new Map<string, ((ok: boolean) => void)[]>();
+    private readonly failed = new Set<string>();
+    private running = false;
+    private current: string | undefined;
+
+    constructor(private readonly has: (id: string) => boolean, private readonly render: (id: string) => Promise<void>,
+        private readonly tell?: (id: string, error: unknown) => void) {}
+
+    warm(ids: readonly string[]): void {
+        for (const id of ids) {
+            if (!this.has(id) && !this.failed.has(id) && id !== this.current && !this.waiting.includes(id)) { this.waiting.push(id); }
+        }
+        void this.pump();
+    }
+
+    ask(id: string): Promise<boolean> {
+        if (this.has(id)) { return Promise.resolve(true); }
+        return new Promise<boolean>(resolve => {
+            this.callers.set(id, [...(this.callers.get(id) ?? []), resolve]);
+            if (id !== this.current) {
+                const at = this.waiting.indexOf(id);
+                if (at >= 0) { this.waiting.splice(at, 1); }
+                this.waiting.unshift(id);
+            }
+            void this.pump();
+        });
+    }
+
+    private async pump(): Promise<void> {
+        if (this.running) { return; }
+        this.running = true;
+        for (let id = this.waiting.shift(); id !== undefined; id = this.waiting.shift()) {
+            this.current = id;
+            let ok = false;
+            try {
+                await this.render(id);
+                ok = true;
+                this.failed.delete(id);
+            } catch (e) {
+                this.failed.add(id);
+                this.tell?.(id, e);
+            }
+            this.current = undefined;
+            for (const resolve of this.callers.get(id) ?? []) { resolve(ok); }
+            this.callers.delete(id);
+        }
+        this.running = false;
+    }
+}
+
 /** The API from an extension's exports, or undefined when they are not that shape. */
 export function cantilenaApiOf(exports: unknown): CantilenaApi | undefined {
     const e = exports as Partial<CantilenaApi> | undefined;

@@ -41,6 +41,8 @@ export interface StepAuditionDeps {
     /** The open preview of a document, or undefined (then nothing sounds). */
     getPreview: (uri: string) => vscode.WebviewPanel | undefined;
     log: (msg: string) => void;
+    /** A step on a `singer "…"`: true when the caret was on one (the voices are the editor's to list, not the server's). */
+    stepSinger: (editor: vscode.TextEditor, direction: 1 | -1, withinEngine: boolean) => Promise<boolean>;
 }
 
 interface StepResponse {
@@ -155,6 +157,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             await fallback(direction, semitone);
             return;
         }
+        if (await deps.stepSinger(editor, direction, semitone)) { return; }
         const doc = editor.document;
         const version = doc.version;
         const response = await client.sendRequest<StepResponse>('lilysharp/step', {

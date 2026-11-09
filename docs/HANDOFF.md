@@ -138,6 +138,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1170セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14918 / 0 / 2**（`-Start p1170`・HEAD `efd93e197`・未 push 70）。オーナー「lys で声を選択したら、その声が出るようにして。すぐに出る声が良い。また、ctrl+shift+up/down で声を選択できるように。ctrl+shift+pgup で、プロバイダを切り替えられるように」。作業場所は Lab `sessions/p1170/`。
+
+- **読み**: 「すぐに出る」は選んだ瞬間にその声が聞こえること、と読んだ（確定した仕様ではない＝オーナーの反応で直す）。▶ の声は従来どおり編集の 1.5 秒後に作り直される。
+- **step キー**: `singer "…"` の上（語・引用符の間）で `stepAudition` が server に行く前に `stepSingerAt`（extension.ts）を試す。Up / Down＝同じ engine の次・前（一周）、PageUp / PageDown＝別の engine（その engine で最後に選んだ声、なければ先頭）。候補は `singerSlot` の言語を歌う声だけ。役名や空は先頭／末尾から。純粋な部分は `singerCore` の `singerValueAt`／`stepVoice`。
+- **試聴**: 選んだ声が短い句（こんにちは）を歌う。`voice-samples/`（globalStorage）に残すので 2 回目以降は engine を待たない。`VoiceSampleQueue` が 1 声ずつ（`ask` が先頭・`warm` は後ろ）。補完の確定も `lilysharp.hearSinger` で試聴。step の度に残りの声を `warm`。プレビューが無ければ無音（既存の audition と同じ）。ページは `playVoiceSample`（次の声が切る）。手元の 14 声は CLI で先に歌って置いた。
+- **プロバイダ**: Cantilena の engine は neutrino と diffsinger の 2 つ。`C:\Tools\voices\TIGER` はあるが VS Code の `cantilena.voicesFolder` が未設定＝エディタからは neutrino だけ。設定はオーナーの判断に残した。
+- 網: `singerCore.test.ts` に step と queue を追加。実機（キー・音）はオーナー＝ extension host では確かめていない。
+- 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1170 -DiffBase efd93e197`、BUILD 0）・npm 921 / 921。`Deploy-Lsp.ps1` で配布済み（manifest は不変＝Reload Window 1 回）。
+
+## 以下は第1169セッションの経緯
+
 ### 1.1 第1169セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14898 / 0 / 2**（`-Start p1169`・HEAD `7bb169024`・未 push 69）。オーナー「`lyrics words sings sop |` の位置で singer を補完入力できるようにして。singer を補完で入れたら、直後に自動で声の名前一覧を候補ウィンドウで開いて」。作業場所は Lab `sessions/p1169/`。
@@ -146,20 +159,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **声の一覧を開く**: 補完項目は第1168 の形のまま（`singer "$0"`＋`editor.action.triggerSuggest`）で、この位置もその経路に乗った。`singerSlot` はこの位置でも言語を返す（網あり）。
 - 網: `LyricLanguageTests` に頭の続きの 4 群と item の形・slot を追加。実機（候補ウィンドウが本当に開く）はオーナー＝ extension host では確かめていない。
 - 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1169 -DiffBase 7bb169024`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（拡張の TS は変えていない＝Reload Window 1 回）。
-
-## 以下は第1168セッションの経緯
-
-### 1.1 第1168セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14880 / 0 / 2**（`-Start p1168`・HEAD `51b943ce6`・未 push 68・OMR の open 0）。同じ会話で第1167 から続けた便。オーナー「singer を実装して。言語に適切な名前だけを補完で提案できるようにして」。作業場所は Lab `sessions/p1168/`（`notes.md`・`e2e.lys`）。
-
-- **Lily#（Core／Lsp）**: `singer "…"` を part の本体・lyrics の頭・score の lyrics 行に（近い方が勝つ・`sings`／`language` と順不同・予約語にしない・空は LYS4039）。`Music.LyricSinger.ReaderOf`・`RenderSpec.RowSingers`（行は fold で消えるので syntax から読む）・`LyricEvent.Singer`→`SungVoice.Singer`→DTO。`lysc wav --singer` は `engine/name` をその声で歌い（失敗は既定の声＋警告）、役名は既定の声＋警告（`--cast` は未実装）。
-- **補完**: `lilysharp/singerSlot`（カーソルが `singer "` の中か・その歌詞の言語タグ＝行の `language` → トラック → ファイル → ja。part ならそのパートを歌うトラック）。拡張の CompletionProvider（`"` で起動）が `singerChoices`＝**その言語を歌う声と、それに配役された役だけ**を出す（言語を名乗らない声は出さない）。サーバーの補完は `AfterSinger` で空。`singer` のキーワード補完は引用符の間にカーソルを置いて候補を開く。
-- **Cantilena（0.4.0 未公開に追加）**: 設定 `cantilena.voices`（役や声 → 声・聴く人が最後に決める）・API `resolveSinger`／`cast`・`sing` は声が名乗る言語と違う歌詞を 1 文で断る（楽器が鳴る）。`deploy-extension.ps1 -SkipPublish` で配布。Lily# は解決後の声を鍵に入れる。
-- **E2E**（`e2e.log`・NEUTRINO）: `singer "neutrino/MERROW"` は歌う・`"soprano"` は既定の声＋警告・`"diffsinger/NOPE"` は engine の文を添えて既定の声。
-- 網: `LyricLanguageTests` に singer／slot を追加・Lyric／Sings／Sung／WavExport 571 / 571・npm 911 / 911・Cantilena npm 19 / 19。docs: GRAMMAR・SYNTAX_REFERENCE・GRAMMAR_FOR_LLM・singing-design §3・roadmap・CHANGELOG 3 つ・MANUAL-CHECKS §3.7。
-- **未実装**: 1 パート 1 声のまま（同じパートの 2 トラックで singer が違っても最初が勝つ）・`lysc wav --cast`・DiffSinger の ja 以外（辞書が ja 固定）。実機（補完の見た目・▶ の声）はオーナー＝ extension host では確かめていない。
-- 終了時 full **14898 合格 / 0 失敗 / skip 2 / 合計 14900**（`-End p1168 -DiffBase 51b943ce6`、BUILD 0）。一度だけ赤: `DocKeywordListTests.ThePartHeaderProductions_NameTheLanguagesVocabulary` — GRAMMAR の `PartProperty` のコメントに `;` を書いたせいで、最初の `;` まで読む抽出が `midiInstrument` を落としていた。production の中のコメントに `;` を書かない。
 
 ## 2. 開いている作業
 

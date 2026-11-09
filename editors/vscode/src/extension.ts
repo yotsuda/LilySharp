@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, SungVoiceDto, cantilenaApiOf, prepareModeOf, singerChoices } from './singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, SungVoiceDto, VOICE_SAMPLE_VERSION, VoiceSampleQueue, cantilenaApiOf, prepareModeOf, singerChoices, singerValueAt, stepVoice, voiceSampleScore } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1080,6 +1080,8 @@ export function activate(context: vscode.ExtensionContext) {
         (use?: unknown) => pickAiModel(use === 'edit' || use === 'ghost' ? use : undefined)));
 
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singerCompletion, '"'));
+    voiceSamplesDir = path.join(context.globalStorageUri.fsPath, 'voice-samples');
+    context.subscriptions.push(vscode.commands.registerCommand('lilysharp.hearSinger', hearSinger));
 
     // The Explorer's batch export: right-click one or more .lys → the format
     // submenu → a folder → every score of every file, named as `lysc` names
@@ -1119,6 +1121,7 @@ export function activate(context: vscode.ExtensionContext) {
         isReady: () => clientReady,
         getPreview: (uri: string) => previewPanels.get(uri),
         log: (msg: string) => outputChannel.appendLine(msg),
+        stepSinger: stepSingerAt,
     });
 
     // The caret's status line (owner's request 2026-10-24): what the setting under the caret
@@ -3870,6 +3873,7 @@ const singerCompletion: vscode.CompletionItemProvider = {
         const api = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend.api : undefined;
         if (!api?.voices) { return undefined; }
         const [voices, cast] = await Promise.all([api.voices(), api.cast?.() ?? Promise.resolve({})]);
+        samples().warm(voices.filter(v => v.language === slot.Language).map(v => v.id));
         const line = document.lineAt(position.line).text;
         const open = line.lastIndexOf('"', position.character - 1);
         const close = line.indexOf('"', position.character);
@@ -3880,10 +3884,102 @@ const singerCompletion: vscode.CompletionItemProvider = {
             item.range = range;
             item.filterText = c.label;
             item.sortText = String(i).padStart(3, '0');
+            item.command = { command: 'lilysharp.hearSinger', title: 'Hear this voice', arguments: [c.label] };
             return item;
         });
     },
 };
+
+/** Where a chosen voice's sample is kept, across sessions, so a voice heard once comes at once. */
+let voiceSamplesDir: string | undefined;
+let voiceSampleQueue: VoiceSampleQueue | undefined;
+/** The voice last asked to be heard: a sample landing after another was chosen stays silent. */
+let voiceSampleWanted = '';
+/** The voice last chosen with the step keys, per engine, for coming back to it. */
+const lastVoiceOfEngine = new Map<string, string>();
+
+function voiceSampleFile(id: string): string {
+    return path.join(voiceSamplesDir ?? '', `${id.replace(/[^\w.-]+/g, '_')}-${VOICE_SAMPLE_VERSION}.wav`);
+}
+
+function samples(): VoiceSampleQueue {
+    return voiceSampleQueue ??= new VoiceSampleQueue(id => fs.existsSync(voiceSampleFile(id)), singVoiceSample,
+        (id, e) => outputChannel.appendLine(`singer: the sample of ${id} was not sung: ${String(e)}`));
+}
+
+async function singVoiceSample(id: string): Promise<void> {
+    const engine = await renderer();
+    const backend = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend : undefined;
+    if (!backend?.api.voices) { throw new Error('no engine that lists its voices'); }
+    const language = (await backend.api.voices()).find(v => v.id === id)?.language;
+    const score = language ? voiceSampleScore(language) : undefined;
+    if (!score) { throw new Error(`no sample phrase for the language ${language ?? 'it does not name'}`); }
+    const v = await backend.sing(`sample-${id}`, score, id);
+    await fs.promises.mkdir(path.dirname(voiceSampleFile(id)), { recursive: true });
+    await fs.promises.copyFile(v.wav, voiceSampleFile(id));
+}
+
+/** Lets the document's preview say a short phrase in `id` (with no preview open it is silent, as every audition is). */
+async function auditionVoice(uri: string, id: string): Promise<void> {
+    voiceSampleWanted = id;
+    if (!vscode.workspace.getConfiguration('lilysharp').get<boolean>('audition.enabled', true) || !previewPanels.get(uri)) { return; }
+    if (!await samples().ask(id) || voiceSampleWanted !== id) { return; }
+    const panel = previewPanels.get(uri);
+    if (!panel) { return; }
+    const bytes = await fs.promises.readFile(voiceSampleFile(id));
+    if (voiceSampleWanted === id) { void panel.webview.postMessage({ type: 'playVoiceSample', bytes: new Uint8Array(bytes) }); }
+}
+
+/** A name taken from the `singer` list: heard at once. A role is heard as the voice it is cast to. */
+async function hearSinger(label: unknown): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    if (typeof label !== 'string' || !editor) { return; }
+    const engine = await renderer();
+    if (!engine) { return; }
+    await auditionVoice(editor.document.uri.toString(), await engine.backend.voiceName(label));
+}
+
+/**
+ * The step keys on a `singer "…"` (owner's request 2026-11-09, session 1170): Ctrl+Shift+Up / Down
+ * the next or previous voice of its engine, Ctrl+Shift+PageUp / PageDown another engine's, among
+ * the voices that sing the words' language. The chosen voice says its phrase, and the score's own
+ * voice follows from the edit (prepareVoices). False when the caret is not on one.
+ */
+async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, withinEngine: boolean): Promise<boolean> {
+    if (!client || !clientReady || editor.selections.length !== 1) { return false; }
+    const doc = editor.document;
+    const version = doc.version;
+    const line = editor.selection.active.line;
+    const at = singerValueAt(doc.lineAt(line).text, editor.selection.active.character);
+    if (!at) { return false; }
+    const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null }>('lilysharp/singerSlot',
+        { textDocument: { uri: doc.uri.toString() }, offset: doc.offsetAt(new vscode.Position(line, at.start)) });
+    if (!slot.InSlot || !slot.Language) { return false; }
+    const engine = await renderer();
+    const api = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend.api : undefined;
+    if (!api?.voices) {
+        vscode.window.setStatusBarMessage('Lily#: the Cantilena extension lists the voices, and it is not there', 4000);
+        return true;
+    }
+    const voices = (await api.voices()).filter(v => v.language === slot.Language);
+    samples().warm(voices.map(v => v.id));
+    const next = stepVoice(voices, at.value, direction, !withinEngine, lastVoiceOfEngine);
+    if (!next) {
+        vscode.window.setStatusBarMessage(withinEngine ? `Lily#: no other voice sings ${slot.Language} here`
+            : `Lily#: only one provider has voices for ${slot.Language} here`, 4000);
+        return true;
+    }
+    if (doc.version !== version) { return true; }     // typed into meanwhile: the place is about another text
+    const applied = await editor.edit(b => b.replace(new vscode.Range(line, at.start, line, at.end), next), { undoStopBefore: true, undoStopAfter: true });
+    if (!applied) { return true; }
+    const caret = new vscode.Position(line, at.start + next.length);
+    editor.selection = new vscode.Selection(caret, caret);
+    lastVoiceOfEngine.set(next.slice(0, next.indexOf('/')), next);
+    const label = voices.find(v => v.id === next)?.label;
+    vscode.window.setStatusBarMessage(`Lily#: singer ${next}${label ? ` (${label})` : ''}`, 4000);
+    void auditionVoice(doc.uri.toString(), next);
+    return true;
+}
 
 /** `lilysharp.playback.singer`: the path of a `cantilena` program to run here (a developer's
  *  build), or '' — the usual case — for the Cantilena extension when it is installed. */
@@ -6307,6 +6403,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             return voiceOut;
         }
+        // A chosen voice's short phrase: the next one cuts it off (session 1170).
+        let voiceSampleSource = null;
+        function playVoiceSample(bytes) {
+            if (!bytes || !bytes.buffer) { return; }
+            const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+            const ctx = audio();
+            ctx.decodeAudioData(copy).then(buffer => {
+                if (voiceSampleSource) { try { voiceSampleSource.stop(); } catch (e) { /* ended */ } }
+                const src = ctx.createBufferSource();
+                src.buffer = buffer;
+                src.connect(voiceOutput(ctx));
+                src.start();
+                voiceSampleSource = src;
+            }, e => {
+                vscode.postMessage({ type: 'webviewPerf', text: 'voice sample could not be decoded: ' + e });
+            });
+        }
         function setVoice(message) {
             const bytes = message.bytes;
             if (!bytes || !bytes.buffer) { return; }
@@ -7937,6 +8050,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'voice':
                     setVoice(message);
+                    break;
+                case 'playVoiceSample':
+                    playVoiceSample(message.bytes);
                     break;
                 case 'voiceState':
                     setVoiceState(message.part, message.state, message.detail);

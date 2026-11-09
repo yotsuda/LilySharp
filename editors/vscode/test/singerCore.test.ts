@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, SungNoteDto, SungVoiceDto, cantilenaApiOf, cantilenaScore, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, voiceKey } from '../src/singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, stepVoice, voiceKey, voiceSampleScore } from '../src/singerCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
 // engine's score, the key names the render, the engine's lines are read, and the Cantilena
@@ -120,6 +120,109 @@ describe('the singer choices', () => {
 // voice is the Cantilena extension's) — as the MIDI output's (midiOutputSetting.test.ts).
 // When an edited voice goes to the engine (docs/singing-design.md §5): after the text rests, one
 // job a slot, the newest winning.
+describe('choosing a voice with the step keys', () => {
+    const v = (engine: string, name: string) => ({ id: `${engine}/${name}`, engine });
+    const voices = [v('neutrino', 'A'), v('neutrino', 'B'), v('neutrino', 'C'), v('diffsinger', 'X'), v('diffsinger', 'Y')];
+
+    it('finds the name from the word to the closing quote, and nowhere else', () => {
+        const line = '  lyrics w singer "neutrino/A" sings m';
+        const start = line.indexOf('neutrino');
+        const whole = { start, end: start + 'neutrino/A'.length, value: 'neutrino/A' };
+        assert.deepEqual(singerValueAt(line, line.indexOf('singer')), whole);
+        assert.deepEqual(singerValueAt(line, start + 3), whole);
+        assert.deepEqual(singerValueAt(line, whole.end + 1), whole);
+        assert.equal(singerValueAt(line, 3), undefined);
+        assert.equal(singerValueAt(line, whole.end + 5), undefined);
+        assert.equal(singerValueAt('title "singer"', 8), undefined);
+        assert.equal(singerValueAt('a-singer "x"', 4), undefined);
+    });
+
+    it('goes round the voices of the engine it is on', () => {
+        assert.equal(stepVoice(voices, 'neutrino/A', 1, false), 'neutrino/B');
+        assert.equal(stepVoice(voices, 'neutrino/C', 1, false), 'neutrino/A');
+        assert.equal(stepVoice(voices, 'neutrino/A', -1, false), 'neutrino/C');
+        assert.equal(stepVoice(voices, 'diffsinger/Y', 1, false), 'diffsinger/X');
+    });
+
+    it('starts a role or an empty name at the first engine\'s ends', () => {
+        assert.equal(stepVoice(voices, 'soprano', 1, false), 'neutrino/A');
+        assert.equal(stepVoice(voices, '', -1, false), 'neutrino/C');
+    });
+
+    it('crosses to the next engine, its first voice or the one last chosen there', () => {
+        assert.equal(stepVoice(voices, 'neutrino/B', 1, true), 'diffsinger/X');
+        assert.equal(stepVoice(voices, 'diffsinger/X', 1, true), 'neutrino/A');
+        assert.equal(stepVoice(voices, 'diffsinger/X', -1, true, new Map([['neutrino', 'neutrino/C']])), 'neutrino/C');
+        assert.equal(stepVoice(voices, 'diffsinger/X', 1, true, new Map([['neutrino', 'neutrino/GONE']])), 'neutrino/A');
+    });
+
+    it('has nowhere to go with one engine or one voice', () => {
+        assert.equal(stepVoice(voices.slice(0, 3), 'neutrino/A', 1, true), undefined);
+        assert.equal(stepVoice([v('neutrino', 'A')], 'neutrino/A', 1, false), undefined);
+        assert.equal(stepVoice([], 'x', 1, false), undefined);
+    });
+
+    it('has a phrase for Japanese, and none it cannot write', () => {
+        assert.equal(voiceSampleScore('ja')?.language, 'ja');
+        assert.equal(voiceSampleScore('en'), undefined);
+    });
+});
+
+describe('the voice sample queue', () => {
+    function queue(have: string[] = []) {
+        const sung: string[] = [];
+        const gates: (() => void)[] = [];
+        const q = new VoiceSampleQueue(id => have.includes(id), id => new Promise<void>((resolve, reject) => {
+            sung.push(id);
+            gates.push(() => { if (id === 'bad') { reject(new Error('no')); } else { have.push(id); resolve(); } });
+        }));
+        const open = async () => { gates.shift()?.(); await new Promise(r => setImmediate(r)); };
+        return { q, sung, open };
+    }
+
+    it('sings one at a time, and an asked voice before the warmed ones', async () => {
+        const { q, sung, open } = queue();
+        q.warm(['a', 'b', 'c']);
+        assert.deepEqual(sung, ['a']);
+        const asked = q.ask('c');
+        await open();
+        assert.deepEqual(sung, ['a', 'c']);
+        await open();
+        assert.equal(await asked, true);
+        assert.deepEqual(sung, ['a', 'c', 'b']);
+        await open();
+    });
+
+    it('answers at once for a sample it has, and sings nothing for it', async () => {
+        const { q, sung } = queue(['a']);
+        assert.equal(await q.ask('a'), true);
+        q.warm(['a']);
+        assert.deepEqual(sung, []);
+    });
+
+    it('joins the voice being sung', async () => {
+        const { q, sung, open } = queue();
+        const first = q.ask('a');
+        const second = q.ask('a');
+        await open();
+        assert.deepEqual(await Promise.all([first, second]), [true, true]);
+        assert.deepEqual(sung, ['a']);
+    });
+
+    it('does not warm a failed voice again, but an ask tries it', async () => {
+        const { q, sung, open } = queue();
+        const first = q.ask('bad');
+        await open();
+        assert.equal(await first, false);
+        q.warm(['bad']);
+        assert.deepEqual(sung, ['bad']);
+        const again = q.ask('bad');
+        assert.deepEqual(sung, ['bad', 'bad']);
+        await open();
+        assert.equal(await again, false);
+    });
+});
+
 describe('the prepare queue', () => {
     // Fake timers: `tick(ms)` fires what is due.
     const timers = () => {

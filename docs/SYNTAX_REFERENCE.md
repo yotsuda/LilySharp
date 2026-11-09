@@ -1919,7 +1919,9 @@ on a line of its own for the whole file, or on a track, `lyrics en language engl
 voice; one without is a role, which `cantilena.voices` casts on each machine, and that setting
 has the last say over a voice's name too. Nothing written is the default voice, and a singer
 that cannot be had sings as the default, said once. Between the quotes the editor offers the
-voices that sing the words' language.
+voices that sing the words' language; on a `singer "…"`, `Ctrl+Shift+Up` / `Down` step through
+those voices and `Ctrl+Shift+PageUp` / `PageDown` change the engine, the chosen voice heard in the
+preview.
 
 **Melismas** follow LilyPond's `\lyricsto`. A **slur** or a **tie** makes one on its own:
 the syllable on the slur's first note is sung over every note up to the one that closes

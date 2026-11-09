@@ -267,6 +267,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1168セッションの経緯
+
+### 1.1 第1168セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14880 / 0 / 2**（`-Start p1168`・HEAD `51b943ce6`・未 push 68・OMR の open 0）。同じ会話で第1167 から続けた便。オーナー「singer を実装して。言語に適切な名前だけを補完で提案できるようにして」。作業場所は Lab `sessions/p1168/`（`notes.md`・`e2e.lys`）。
+
+- **Lily#（Core／Lsp）**: `singer "…"` を part の本体・lyrics の頭・score の lyrics 行に（近い方が勝つ・`sings`／`language` と順不同・予約語にしない・空は LYS4039）。`Music.LyricSinger.ReaderOf`・`RenderSpec.RowSingers`（行は fold で消えるので syntax から読む）・`LyricEvent.Singer`→`SungVoice.Singer`→DTO。`lysc wav --singer` は `engine/name` をその声で歌い（失敗は既定の声＋警告）、役名は既定の声＋警告（`--cast` は未実装）。
+- **補完**: `lilysharp/singerSlot`（カーソルが `singer "` の中か・その歌詞の言語タグ＝行の `language` → トラック → ファイル → ja。part ならそのパートを歌うトラック）。拡張の CompletionProvider（`"` で起動）が `singerChoices`＝**その言語を歌う声と、それに配役された役だけ**を出す（言語を名乗らない声は出さない）。サーバーの補完は `AfterSinger` で空。`singer` のキーワード補完は引用符の間にカーソルを置いて候補を開く。
+- **Cantilena（0.4.0 未公開に追加）**: 設定 `cantilena.voices`（役や声 → 声・聴く人が最後に決める）・API `resolveSinger`／`cast`・`sing` は声が名乗る言語と違う歌詞を 1 文で断る（楽器が鳴る）。`deploy-extension.ps1 -SkipPublish` で配布。Lily# は解決後の声を鍵に入れる。
+- **E2E**（`e2e.log`・NEUTRINO）: `singer "neutrino/MERROW"` は歌う・`"soprano"` は既定の声＋警告・`"diffsinger/NOPE"` は engine の文を添えて既定の声。
+- 網: `LyricLanguageTests` に singer／slot を追加・Lyric／Sings／Sung／WavExport 571 / 571・npm 911 / 911・Cantilena npm 19 / 19。docs: GRAMMAR・SYNTAX_REFERENCE・GRAMMAR_FOR_LLM・singing-design §3・roadmap・CHANGELOG 3 つ・MANUAL-CHECKS §3.7。
+- **未実装**: 1 パート 1 声のまま（同じパートの 2 トラックで singer が違っても最初が勝つ）・`lysc wav --cast`・DiffSinger の ja 以外（辞書が ja 固定）。実機（補完の見た目・▶ の声）はオーナー＝ extension host では確かめていない。
+- 終了時 full **14898 合格 / 0 失敗 / skip 2 / 合計 14900**（`-End p1168 -DiffBase 51b943ce6`、BUILD 0）。一度だけ赤: `DocKeywordListTests.ThePartHeaderProductions_NameTheLanguagesVocabulary` — GRAMMAR の `PartProperty` のコメントに `;` を書いたせいで、最初の `;` まで読む抽出が `midiInstrument` を落としていた。production の中のコメントに `;` を書かない。
+
 ## 以下は第1167セッションの経緯
 
 ### 1.1 第1167セッション（2026-11-09・YT-DELL2）
