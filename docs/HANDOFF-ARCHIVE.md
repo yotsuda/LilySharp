@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1164セッションの経緯
+
+### 1.1 第1164セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14862 / 0 / 2**（`-Start p1164`・HEAD `221ae642c`・未 push 64・OMR の open 0）。同じ会話で第1163 から続けた便。オーナー報告「雪やこんこ.lys で `another` を選択し、m2 を外して `♪ melody` だけにすると、再生しても歌唱せず何も音が鳴らない」。作業場所は Lab `sessions/p1164/`（`notes.md`）。
+
+- **原因**: `melody` のパートボタンを消す → `practiceNotes` がその音符を落とす → 音符リストが空 → `startPlayback` の `if (!notes || notes.length === 0) return;` が `startVoices` の前に返る。第1128 の規則「パートのボタンは声も楽器も黙らせる」がこの早期 return に焼き付いていた。第1163 で score が歌わない声も on にできるようになり、「声だけ」が正当な形になった。
+- **規則の変更**: パートのボタンは**楽器**・`♪` は**声**（独立）。両方消せば無音。
+- **直し**: `startPlayback` は声が歌うなら空のリストでも進み（`voicesEnd()`＝count-in の lead の後のバッファ長、または plan の pieces × rounds を終わりに数える）、MIDI 出力でポートに送るものが無ければここで鳴らす。`singJobs` の `silentVoices` は `voicesOff` だけ（muted は `exportPlan` が音符を落とすだけ）＝Export でも声だけが混ざる。網: npm **907 / 907**（1 回目は `midiOutputSetting.test` の文字列の網が `if (midiOutput && !here)` を探していた＝新しい文に合わせた）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・editors CHANGELOG・MANUAL-CHECKS §3.7（第1128 の行「声も楽器も鳴らない」を「声だけが鳴る」に）。
+- 残り: 実機（オーナー）・声の名前の置き場の決定（roadmap §4）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- 終了時 full **14862 / 0 / 2 / 14864**（`-End p1164 -DiffBase 221ae642c`＝`end.log`・門は全部 OK・§1 現在便 15,981 字＝残り 4,019）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS・網・docs だけ）。7.6: 出所はコードの読み（`startPlayback` の早期 return）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
 ## 以下は第1163セッションの経緯
 
 ### 1.1 第1163セッション（2026-11-09・YT-DELL2）

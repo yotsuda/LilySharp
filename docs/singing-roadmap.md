@@ -208,22 +208,50 @@ Each blocks the row named; a default is proposed so work can start.
    **Owner, 2026-11-09 (session 1163): settle the grammar and the settings before building
    several voices** — "a voice is like an instrument, so its name belongs in the .lys; but a
    score is something anyone may sing, so a voice's name in the score feels wrong too."
-   **Proposal — two layers, as the instruments already are**: the `.lys` names the **role**, not
-   the singer; the machine's settings name the singer for each role.
-   - In the score, a role on the part or on the lyrics track, the way `instrument`/`midiInstrument`
-     name a General MIDI sound and never a sound font: `part sop { instrument soprano }` (the
-     existing preset carries clef and range; the voice type is the stand-in sound's family too),
-     or a free label for a cast — `part hero { singer "A" }`, `lyrics en sings melody singer "B"`.
-     A file with no role is sung as today, by the one default voice.
-   - In Cantilena's settings, the cast: `cantilena.voices = { "soprano": "neutrino/MERROW",
-     "alto": "diffsinger/TIGER", "A": "…", "default": "…" }` (today's `cantilena.voice` is the
-     `default` entry). The API grows `sing(score, { voice })` (v2, additive); Lily# passes the
-     role's binding; a role no setting binds falls to `default` and says so once.
-   - Then: two lyrics tracks on one part may both sing when their roles differ (a translation,
-     a duet on one line); a unison chorus is one role rendered by several bound voices, slightly
-     spread in time and pitch; SATB is four parts with four roles. The practice menu's rows become
-     `♪ part (track · role)`.
-   - Until a second voice exists, nothing of this is built. Session 1163 built the part that does
+   **Owner's direction, 2026-11-09 (session 1166): both may be written, and the `.lys` must be
+   able to say who sings** — "many people will want the music to sound as they intend". A role
+   or a voice's own name goes in the file with one word; the listener's settings have the last
+   say. Grammar proposed below, **not built, not yet approved**:
+   - **One word, `singer`, with a string**, in three places, the nearest winning — the same
+     order `sings` already has (a score row over its definition):
+
+     ```
+     part sop { singer "neutrino/MERROW" }            // the part's singer, by the voice's name
+     part hero { singer "A" }                         // or by a role, a cast to fill in
+     lyrics en sings melody singer "diffsinger/TIGER" { … }   // this track's singer
+     score { staff melody  lyrics verse sings melody singer "B" }  // this placement's
+     ```
+
+     ```
+     PartProperty = … | 'singer' , String ;
+     LyricsBlock  = 'lyrics' , [ Identifier ] , [ 'sings' , PartRef ] , [ 'singer' , String ] , '{' , … ;
+     ScoreItem    = … | 'lyrics' , [ PartRef ] , [ 'sings' , PartRef ] , [ 'singer' , String ] ;
+     ```
+
+     `singer` is not reserved: a part or a track may keep that name (GRAMMAR's own examples have
+     `staff singer`). In the two `lyrics` forms it is the clause only when a String follows, so
+     `lyrics singer { … }` stays a track named singer. Not `voice`: that word is the music's
+     `voice sop { }`. An empty string is an error on the string; the compiler checks no name
+     against an installation (the file is the same on every machine).
+   - **A name with a `/` is a voice** (`engine/name`, as `cantilena.voice` writes it); **without
+     one it is a role** (`"soprano"`, `"A"`).
+   - **What sings** (resolved by Cantilena, so the editor and the command line agree), for the
+     string written, or for `default` when nothing is written:
+     1. `cantilena.voices[string]` when the settings bind it — a role, or a voice's name the
+        listener replaces (`"neutrino/MERROW": "diffsinger/TIGER"`): the listener has the last say;
+     2. the string itself when it names an installed voice;
+     3. the default voice (today's `cantilena.voice`, the `default` entry), said once: *"soprano is
+        not cast; singing with neutrino/MERROW"* or *"neutrino/MERROW is not installed; …"*. A
+        missing voice never stops the music.
+   - The API grows `sing(score, { singer })` (v2, additive); `lysc wav` keeps `--voice` as the
+     default and gains `--cast role=voice`.
+   - Then: two lyrics tracks on one part both sing when their singers differ (a translation, a
+     duet on one line) and the first words win as today when they do not; SATB is four parts
+     with four singers. The practice menu's rows become `♪ part (track · singer)`. A unison
+     chorus (`singer "a", "b"`, one line by several voices, slightly spread in time and pitch)
+     is left for later: the list form can be added to the string without a change of meaning.
+   - The order of work: the grammar and its nets (nothing sounds different), Cantilena's
+     `voices` and `sing(score, { singer })`, the practice menu. Session 1163 built the part that does
      not depend on it: the practice menu lists every singable lyrics of the file (one voice per
      part, the score's sung parts on by default, the others off until pressed).
 3. **A built-in guide voice** (Phase F). Ship a model-free vowel synth so every install can sing

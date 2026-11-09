@@ -138,6 +138,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1166セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14862 / 0 / 2**（`-Start p1166`・HEAD `bce9b2c97`・未 push 66・OMR の open 0）。同じ会話で第1165 から続けた便。docs だけ。オーナー「その案で roadmap に書いて。鳴る音楽を思い通りにしたい人は多いだろう。.lys にも singer を設定できる方が良い。文法を提案して」。
+
+- **`docs/singing-roadmap.md` §4 の 2 に書いた（実装なし・文法はオーナーの承認待ち）**: `singer "…"` を `part` の本体・`lyrics` ブロック・score の `lyrics` 行の 3 か所に（近い方が勝つ＝`sings` と同じ順）。`/` 入りは声の名前（`neutrino/MERROW`）・無ければ役（`"soprano"`）。解決は Cantilena: ⑴ 設定 `cantilena.voices[文字列]`（聴く人が最後に決める）⑵ その名の声が入っていればそれ ⑶ 既定の声で歌い 1 度だけ言う。`singer` は予約語にしない（GRAMMAR の例に `staff singer` が在る）・`lyrics` では直後が String のときだけ節＝`lyrics singer { }` はトラック名のまま。`voice` は `voice sop { }` が使っているので採らない。
+- 残り: 文法の承認（オーナー）・実機（第1165 の Parts の規則）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
+- 終了時 full **14862 / 0 / 2 / 14864**（`-End p1166 -DiffBase bce9b2c97`＝`end.log`・門は全部 OK・§1 現在便 15,571 字＝残り 4,429）。§7 7.5: Core `+` 0（docs だけ）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
+
+## 以下は第1165セッションの経緯
+
 ### 1.1 第1165セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14862 / 0 / 2**（`-Start p1165`・HEAD `9d4578523`・未 push 65・OMR の open 0）。同じ会話で第1164 から続けた便。オーナー報告「雪やこんこの既定の score で、m2 と ♪melody と melody をすべて有効にして再生すると、melody が鳴らない」。作業場所は Lab `sessions/p1165/`（`notes.md`）。
@@ -148,18 +158,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 残り: 実機（オーナー）・声の名前の置き場（roadmap §4）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
 - **`-End` の後に読み直して直した 2 点（私の誤り）**: ⑴ `instrumentSounds` が `♪` を消した状態も「代役」と数え、`melody` と `♪ melody` の両方 off でも楽器が鳴っていた（MANUAL-CHECKS に書いた「何も鳴らない」と食い違い）→ `voicesOff` なら false・Export も同じに。⑵ 別の score で mute した名前が残ると `melody` を押しても鳴らない → 歌うだけのパートの行を押すと `muted` から外す。`♪` の title も「声の on／off」に。網 `midiOutputSetting.test`「sounds a sung-only part's instrument…」を足した（ページの関数を vm で取り出す）。npm **908 / 908**（`npmtest2.log`）・`check-types` 0・配布し直し（`deploy2.log`）。
 - 終了時 full **14862 / 0 / 2 / 14864**（`-End p1165 -DiffBase 9d4578523`＝`end.log`・門は全部 OK・§1 現在便 16,188 字＝残り 3,812。⚠️ この full は上の 2 点の前＝その後に触ったのは拡張の TS・網・docs だけで .NET は不変）。§7 7.5: Core `+` 0・REF 0・OWN 0。7.6: 出所はオーナーの報告とコードの読み。7.7: なし。実機の音は未確認（オーナー）。この commit と Lab の commit は Claude・push はオーナー。
-
-## 以下は第1164セッションの経緯
-
-### 1.1 第1164セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14862 / 0 / 2**（`-Start p1164`・HEAD `221ae642c`・未 push 64・OMR の open 0）。同じ会話で第1163 から続けた便。オーナー報告「雪やこんこ.lys で `another` を選択し、m2 を外して `♪ melody` だけにすると、再生しても歌唱せず何も音が鳴らない」。作業場所は Lab `sessions/p1164/`（`notes.md`）。
-
-- **原因**: `melody` のパートボタンを消す → `practiceNotes` がその音符を落とす → 音符リストが空 → `startPlayback` の `if (!notes || notes.length === 0) return;` が `startVoices` の前に返る。第1128 の規則「パートのボタンは声も楽器も黙らせる」がこの早期 return に焼き付いていた。第1163 で score が歌わない声も on にできるようになり、「声だけ」が正当な形になった。
-- **規則の変更**: パートのボタンは**楽器**・`♪` は**声**（独立）。両方消せば無音。
-- **直し**: `startPlayback` は声が歌うなら空のリストでも進み（`voicesEnd()`＝count-in の lead の後のバッファ長、または plan の pieces × rounds を終わりに数える）、MIDI 出力でポートに送るものが無ければここで鳴らす。`singJobs` の `silentVoices` は `voicesOff` だけ（muted は `exportPlan` が音符を落とすだけ）＝Export でも声だけが混ざる。網: npm **907 / 907**（1 回目は `midiOutputSetting.test` の文字列の網が `if (midiOutput && !here)` を探していた＝新しい文に合わせた）・`check-types` 0。`Deploy-Lsp.ps1` で配布（`deploy.log`）＝オーナーは Reload Window。docs: singing-design §5・editors CHANGELOG・MANUAL-CHECKS §3.7（第1128 の行「声も楽器も鳴らない」を「声だけが鳴る」に）。
-- 残り: 実機（オーナー）・声の名前の置き場の決定（roadmap §4）・前便までの残り（Cantilena の公開・Linux／mac・ローマ字→かな・lesson-07）。
-- 終了時 full **14862 / 0 / 2 / 14864**（`-End p1164 -DiffBase 221ae642c`＝`end.log`・門は全部 OK・§1 現在便 15,981 字＝残り 4,019）。§7 7.5: Core `+` 0・REF 0・OWN 0（拡張の TS・網・docs だけ）。7.6: 出所はコードの読み（`startPlayback` の早期 return）。7.7: なし。この commit と Lab の commit は Claude・push はオーナー。
 
 ## 2. 開いている作業
 
