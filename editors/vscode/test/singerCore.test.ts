@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, noVoiceGuide, printedWordsNote, singerChoices, VOICE_SETUP_ACTIONS, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -549,11 +549,37 @@ describe('noVoiceGuide', () => {
         const guide = noVoiceGuide(true);
         assert.match(guide.label, /No singing voice is installed/);
         for (const engine of ['NEUTRINO', 'DiffSinger', 'VOICEVOX']) { assert.match(guide.documentation, new RegExp(engine)); assert.match(guide.message, new RegExp(engine)); }
-        assert.deepEqual(VOICE_SETUP_ACTIONS.flatMap(a => a.command ? [a.command] : []), ['cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicesFolder', 'cantoria.chooseVoicevoxFolder']);
+        assert.deepEqual(guide.actions.flatMap(a => a.command ? [a.command] : []), ['cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicesFolder', 'cantoria.chooseVoicevoxFolder']);
     });
     it('without Cantoria, says the extension is the first step', () => {
         const guide = noVoiceGuide(false);
         assert.match(guide.label, /Cantoria is not installed/);
         assert.match(guide.detail, /Install Cantoria/);
+    });
+});
+
+describe('noLanguageGuide', () => {
+    const japanese = [{ id: 'neutrino/X', engine: 'neutrino', name: 'X', language: 'ja' }];
+    const commands = (guide: ReturnType<typeof noLanguageGuide>) => guide.actions.flatMap(a => a.command ? [a.command] : []);
+    it('says what the installed voices sing', () => {
+        assert.match(noLanguageGuide('en', japanese).label, /No installed voice sings English/);
+        assert.match(noLanguageGuide('en', japanese).documentation, /The installed voices sing Japanese\./);
+    });
+    it('for English, names the one engine that can and offers only its folder', () => {
+        const guide = noLanguageGuide('en', japanese);
+        assert.match(guide.message, /DiffSinger voice with a dsdict-en\.yaml/);
+        assert.deepEqual(commands(guide), ['cantoria.chooseVoicesFolder']);
+    });
+    it('for Japanese, offers every engine', () => {
+        const english = [{ id: 'diffsinger/Y', engine: 'diffsinger', name: 'Y', languages: ['en'] }];
+        assert.equal(commands(noLanguageGuide('ja', english)).length, 3);
+    });
+    it('for a language no engine sings, offers nothing and says so', () => {
+        const guide = noLanguageGuide('ko', japanese);
+        assert.match(guide.message, /do not sing it yet/);
+        assert.deepEqual(guide.actions, []);
+    });
+    it('says when the voices do not say what they sing', () => {
+        assert.match(noLanguageGuide('en', [{ id: 'a/b', engine: 'a', name: 'b' }]).documentation, /do not say what they sing/);
     });
 });

@@ -95,31 +95,68 @@ export function voiceListText(voices: readonly CantoriaVoice[], filter: { provid
         'Write a name after singer on a part, a lyrics track or a score\'s lyrics row: singer "neutrino/MERROW". Names with commas between them sing the part together: singer "a/b","c/d". A voice sings only the languages it lists.'].join('\n');
 }
 
-/** The commands Cantoria offers for finding a voice, and where the first engine is to be had. */
-export const VOICE_SETUP_ACTIONS: readonly { label: string; command?: string; url?: string }[] = [
+/** What the editor says when a voice cannot be listed, and the buttons that go on from it. */
+export interface VoiceGuide { label: string; detail: string; documentation: string; message: string; actions: readonly { label: string; command?: string; url?: string }[] }
+
+const CHOOSE_DIFFSINGER = { label: 'Choose DiffSinger Folder…', command: 'cantoria.chooseVoicesFolder' };
+const VOICE_SETUP_ACTIONS: VoiceGuide['actions'] = [
     { label: 'Choose NEUTRINO Folder…', command: 'cantoria.chooseNeutrinoFolder' },
-    { label: 'Choose DiffSinger Folder…', command: 'cantoria.chooseVoicesFolder' },
+    CHOOSE_DIFFSINGER,
     { label: 'Choose VOICEVOX Folder…', command: 'cantoria.chooseVoicevoxFolder' },
     { label: 'Get NEUTRINO', url: 'https://studio-neutrino.com/' },
 ];
+const ENGINE_LINKS = '[NEUTRINO](https://studio-neutrino.com/), [DiffSinger](https://github.com/openvpi/DiffSinger) or [VOICEVOX](https://voicevox.hiroshiba.jp/)';
+const STILL_WRITTEN = 'The score can still be written: a name here is sung once that voice is installed.';
 
 /** What the editor says when no singing voice is installed: with the Cantoria extension, that an engine
  *  is missing; without it, that the extension is the first step. */
-export function noVoiceGuide(cantoria: boolean): { label: string; detail: string; documentation: string; message: string } {
-    const engines = '[NEUTRINO](https://studio-neutrino.com/), [DiffSinger](https://github.com/openvpi/DiffSinger) or [VOICEVOX](https://voicevox.hiroshiba.jp/)';
+export function noVoiceGuide(cantoria: boolean): VoiceGuide {
     return cantoria
         ? {
             label: 'No singing voice is installed',
             detail: 'Set up a voice…',
-            documentation: `Cantoria has no voice to sing with. Install ${engines}, then choose its folder: take this line for the buttons.\n\nThe score can still be written: a name here is sung once that voice is installed.`,
+            documentation: `Cantoria has no voice to sing with. Install ${ENGINE_LINKS}, then choose its folder: take this line for the buttons.\n\n${STILL_WRITTEN}`,
             message: 'Lily#: no singing voice is installed. Cantoria sings with NEUTRINO, DiffSinger or VOICEVOX: install one, then choose its folder.',
+            actions: VOICE_SETUP_ACTIONS,
         }
         : {
             label: 'No singing voice: Cantoria is not installed',
             detail: 'Install Cantoria…',
-            documentation: `Voices are sung by the Cantoria extension, with ${engines}. Take this line to install the extension, then choose an engine's folder there.\n\nThe score can still be written: a name here is sung once that voice is installed.`,
+            documentation: `Voices are sung by the Cantoria extension, with ${ENGINE_LINKS}. Take this line to install the extension, then choose an engine's folder there.\n\n${STILL_WRITTEN}`,
             message: 'Lily#: singing a score with a voice needs the Cantoria extension.',
+            actions: [],
         };
+}
+
+const LANGUAGE_NAMES: Record<string, string> = { ja: 'Japanese', en: 'English', zh: 'Chinese', ko: 'Korean' };
+
+/** What the editor says when voices are installed and none sings the words' language (owner's
+ *  request 2026-11-10): what they do sing, and what would sing this one — NEUTRINO and VOICEVOX sing
+ *  Japanese, a DiffSinger voice Japanese and, with a dsdict-en.yaml, English (Cantoria's README). */
+export function noLanguageGuide(language: string, voices: readonly CantoriaVoice[]): VoiceGuide {
+    const name = (code: string) => LANGUAGE_NAMES[code] ?? code;
+    const sung = [...new Set(voices.flatMap(v => v.languages ?? (v.language ? [v.language] : [])))].map(name);
+    const installed = sung.length > 0 ? `The installed voices sing ${sung.join(', ')}.` : 'The installed voices do not say what they sing.';
+    const wanted = name(language);
+    const words = 'If the words are in another language, say so with `language` on the file or the lyrics track.';
+    const base = { label: `No installed voice sings ${wanted}`, detail: 'What can sing it…' };
+    if (language === 'ja') {
+        return { ...base,
+            documentation: `${installed} Install ${ENGINE_LINKS}, then choose its folder: take this line for the buttons. ${words}\n\n${STILL_WRITTEN}`,
+            message: `Lily#: no installed voice sings ${wanted}. NEUTRINO, VOICEVOX and DiffSinger voices do: install one, then choose its folder.`,
+            actions: VOICE_SETUP_ACTIONS };
+    }
+    if (language === 'en') {
+        return { ...base,
+            documentation: `${installed} A [DiffSinger](https://github.com/openvpi/DiffSinger) voice with a \`dsdict-en.yaml\` sings ${wanted}: install one, then choose its folder. ${words}\n\n${STILL_WRITTEN}`,
+            message: `Lily#: no installed voice sings ${wanted}. A DiffSinger voice with a dsdict-en.yaml does: install one, then choose its folder.`,
+            actions: [CHOOSE_DIFFSINGER] };
+    }
+    return { ...base,
+        detail: `Cantoria does not sing ${wanted} yet`,
+        documentation: `${installed} The engines Cantoria drives do not sing ${wanted} yet, so another voice would not help. ${words}\n\nThe words are still printed.`,
+        message: `Lily#: no installed voice sings ${wanted}, and the engines Cantoria drives do not sing it yet. The words are still printed.`,
+        actions: [] };
 }
 
 /** What the status bar says, once, of a part with words in the score and no voice asked for them. */

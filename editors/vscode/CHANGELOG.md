@@ -5,7 +5,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 ## Unreleased
 
 - **`@shiftOff`** is offered after `@`: it keeps a note of a third or later voice in the first column.
-- **The `singer` list says when no voice is installed**: its first line says what is missing (Cantoria, or an engine), and taking it installs Cantoria or offers the folders of NEUTRINO, DiffSinger and VOICEVOX. A notification says the same once a session.
+- **The `singer` list says when no voice is installed**: its first line says what is missing (Cantoria, or an engine), and taking it installs Cantoria or offers the folders of NEUTRINO, DiffSinger and VOICEVOX. A notification says the same once a session. Voices installed and none singing the words' language: it says what they sing and what would sing it.
 - **Only words with a voice asked for are sung**: a `singer`, or a voice as the part's `instrument`. On Play the status bar says once which parts' words are printed only.
 - **The composing guide says who sings, for any song**: where `singer` is written, and how to ask `#listVoices` for the names this machine has.
 
