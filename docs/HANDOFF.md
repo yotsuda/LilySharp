@@ -138,6 +138,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1172セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14918 / 0 / 2**（`-Start p1172`・HEAD `675b45950`・未 push 72）。オーナー「ctrl+shift+up で音声を切り替えるとき、上端と下端をつながないようにして。一番上と一番下で行き止まりにして」。作業場所は Lab `sessions/p1172/`。
+
+- `stepVoice` の声の順送りは両端で止まる（undefined）＝ステータスバーが端だと言い、音は出ない。PageUp / PageDown のプロバイダ切り替えは一周のまま（要望は声の話）。
+- 第1171 の後始末: Reload 前の古い拡張が `-1.wav`（は）を作り直していたので、オーナーの指示で 14 件と Cantilena のキャッシュの同一内容 14 件を削除。
+- 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1172 -DiffBase 675b45950`、BUILD 0）・npm 923 / 923。`Deploy-Lsp.ps1` で配布済み（manifest は不変＝Reload Window 1 回）。
+
+## 以下は第1171セッションの経緯
+
 ### 1.1 第1171セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14918 / 0 / 2**（`-Start p1171`・HEAD `017ae8c05`・未 push 71）。オーナー「こんにちは がすぐに出ない。各段階の時間をログに出して」「語尾が HA になる。WA で」。作業場所は Lab `sessions/p1171/`。
@@ -147,19 +157,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **語尾**: 歌詞を `わ` に。`VOICE_SAMPLE_VERSION` 2＝古い `-1.wav` は読まれない。手元の 14 声は CLI で作り直した。
 - 試聴は VSIX に入らない（ユーザーごとの globalStorage）。生成は `singer` の候補を開いたときと step キーのとき（`warm`）、選んだ声が最優先（`ask`）。
 - 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1171 -DiffBase 017ae8c05`、BUILD 0）・npm 923 / 923。`Deploy-Lsp.ps1` で配布済み（manifest は不変＝Reload Window 1 回）。
-
-## 以下は第1170セッションの経緯
-
-### 1.1 第1170セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14918 / 0 / 2**（`-Start p1170`・HEAD `efd93e197`・未 push 70）。オーナー「lys で声を選択したら、その声が出るようにして。すぐに出る声が良い。また、ctrl+shift+up/down で声を選択できるように。ctrl+shift+pgup で、プロバイダを切り替えられるように」。作業場所は Lab `sessions/p1170/`。
-
-- **読み**: 「すぐに出る」は選んだ瞬間にその声が聞こえること、と読んだ（確定した仕様ではない＝オーナーの反応で直す）。▶ の声は従来どおり編集の 1.5 秒後に作り直される。
-- **step キー**: `singer "…"` の上（語・引用符の間）で `stepAudition` が server に行く前に `stepSingerAt`（extension.ts）を試す。Up / Down＝同じ engine の次・前（一周）、PageUp / PageDown＝別の engine（その engine で最後に選んだ声、なければ先頭）。候補は `singerSlot` の言語を歌う声だけ。役名や空は先頭／末尾から。純粋な部分は `singerCore` の `singerValueAt`／`stepVoice`。
-- **試聴**: 選んだ声が短い句（こんにちは）を歌う。`voice-samples/`（globalStorage）に残すので 2 回目以降は engine を待たない。`VoiceSampleQueue` が 1 声ずつ（`ask` が先頭・`warm` は後ろ）。補完の確定も `lilysharp.hearSinger` で試聴。step の度に残りの声を `warm`。プレビューが無ければ無音（既存の audition と同じ）。ページは `playVoiceSample`（次の声が切る）。手元の 14 声は CLI で先に歌って置いた。
-- **プロバイダ**: Cantilena の engine は neutrino と diffsinger の 2 つ。`C:\Tools\voices\TIGER` はあるが VS Code の `cantilena.voicesFolder` が未設定＝エディタからは neutrino だけ。設定はオーナーの判断に残した。
-- 網: `singerCore.test.ts` に step と queue を追加。実機（キー・音）はオーナー＝ extension host では確かめていない。
-- 終了時 full **14918 合格 / 0 失敗 / skip 2 / 合計 14920**（`-End p1170 -DiffBase efd93e197`、BUILD 0）・npm 921 / 921。`Deploy-Lsp.ps1` で配布済み（manifest は不変＝Reload Window 1 回）。
 
 ## 2. 開いている作業
 

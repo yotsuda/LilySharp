@@ -137,11 +137,13 @@ describe('choosing a voice with the step keys', () => {
         assert.equal(singerValueAt('a-singer "x"', 4), undefined);
     });
 
-    it('goes round the voices of the engine it is on', () => {
+    it('walks the voices of the engine it is on, and stops at both ends', () => {
         assert.equal(stepVoice(voices, 'neutrino/A', 1, false), 'neutrino/B');
-        assert.equal(stepVoice(voices, 'neutrino/C', 1, false), 'neutrino/A');
-        assert.equal(stepVoice(voices, 'neutrino/A', -1, false), 'neutrino/C');
-        assert.equal(stepVoice(voices, 'diffsinger/Y', 1, false), 'diffsinger/X');
+        assert.equal(stepVoice(voices, 'neutrino/B', -1, false), 'neutrino/A');
+        assert.equal(stepVoice(voices, 'diffsinger/X', 1, false), 'diffsinger/Y');
+        assert.equal(stepVoice(voices, 'neutrino/C', 1, false), undefined);
+        assert.equal(stepVoice(voices, 'neutrino/A', -1, false), undefined);
+        assert.equal(stepVoice(voices, 'diffsinger/Y', 1, false), undefined);
     });
 
     it('starts a role or an empty name at the first engine\'s ends', () => {

@@ -92,8 +92,8 @@ export function singerValueAt(line: string, character: number): { start: number;
 }
 
 /**
- * The voice a step key moves to (owner's request 2026-11-09, session 1170): the next or previous of
- * the current voice's own engine, going round, or with `acrossEngines` the next or previous engine's
+ * The voice a step key moves to (owner's request 2026-11-09, sessions 1170 and 1172): the next or previous of
+ * the current voice's own engine, stopping at its ends, or with `acrossEngines` the next or previous engine's
  * voice last chosen (`lastOf`, else its first). A `singer` that names none of `voices` (a role, an
  * empty string) starts at the first engine's ends. Undefined when there is nowhere else to go.
  */
@@ -112,8 +112,7 @@ export function stepVoice(voices: readonly Pick<CantilenaVoice, 'id' | 'engine'>
     }
     const list = voices.filter(v => v.engine === (here ? here.engine : engines[0]));
     if (!here) { return (direction > 0 ? list[0] : list[list.length - 1]).id; }
-    if (list.length < 2) { return undefined; }
-    return list[(list.findIndex(v => v.id === current) + direction + list.length) % list.length].id;
+    return list[list.findIndex(v => v.id === current) + direction]?.id;
 }
 
 /** Bumped when the phrase below changes: the samples kept on disk are named with it. */

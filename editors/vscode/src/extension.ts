@@ -3984,7 +3984,7 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, within
     clock.mark('voices');
     const next = stepVoice(voices, at.value, direction, !withinEngine, lastVoiceOfEngine);
     if (!next) {
-        vscode.window.setStatusBarMessage(withinEngine ? `Lily#: no other voice sings ${slot.Language} here`
+        vscode.window.setStatusBarMessage(withinEngine ? `Lily#: ${at.value} is the end of the voices that sing ${slot.Language}`
             : `Lily#: only one provider has voices for ${slot.Language} here`, 4000);
         return true;
     }
