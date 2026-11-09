@@ -28,7 +28,7 @@ namespace LilySharp.Core.Audio;
 /// <summary>
 /// What sings a part's words for <c>lysc wav --singer</c>: a program given a sung score (a
 /// JSON file, docs/singing-design.md §3) that writes a WAV whose first sample is the score's
-/// zero. <see cref="CantilenaProgram"/> is the one shipped; a test stands another in. Nothing
+/// zero. <see cref="CantoriaProgram"/> is the one shipped; a test stands another in. Nothing
 /// is linked: the engine is a separate process, as the editor's is a separate extension
 /// (singing-design §6). LILYSHARP-OWN.
 /// </summary>
@@ -49,7 +49,7 @@ public abstract class SingingEngine
     public virtual SingingEngine WithVoice(string voice) => this;
 
     /// <summary>
-    /// Sings <paramref name="voice"/> and reads the sound back: the score written as Cantilena's
+    /// Sings <paramref name="voice"/> and reads the sound back: the score written as Cantoria's
     /// JSON (<see cref="SungScoreJson"/>) under a folder of its own in the temp directory, the
     /// engine run, the WAV decoded (<see cref="WavReader"/>) and the folder removed. An engine
     /// that fails answers its sentence in <c>Error</c> and no sound.
@@ -93,14 +93,14 @@ public abstract class SingingEngine
 }
 
 /// <summary>
-/// The <c>cantilena</c> command line (<c>C:\MyProj\cantilena</c>; Apache-2.0, the owner's, never
-/// linked): <c>cantilena sing score.json -o voice.wav [--voice engine/name]</c>. Where its
+/// The <c>cantoria</c> command line (<c>C:\MyProj\cantoria</c>; Apache-2.0, the owner's, never
+/// linked): <c>cantoria sing score.json -o voice.wav [--voice engine/name]</c>. Where its
 /// engines and voices are is its own configuration (its environment, its
-/// <c>cantilena.json</c>), as the Cantilena extension's settings are for the preview; the
+/// <c>cantoria.json</c>), as the Cantoria extension's settings are for the preview; the
 /// user names the voice here as <c>engine/name</c> (<c>neutrino/MERROW</c>,
 /// <c>diffsinger/TIGER</c>) or lets the program choose its default.
 /// </summary>
-public sealed class CantilenaProgram : SingingEngine
+public sealed class CantoriaProgram : SingingEngine
 {
     /// <summary>The program to run: a path, or a name found on the PATH.</summary>
     public string Program { get; }
@@ -108,7 +108,7 @@ public sealed class CantilenaProgram : SingingEngine
     /// <summary>The voice asked for (<c>engine/name</c>), or null for the program's default.</summary>
     public string? Voice { get; }
 
-    public CantilenaProgram(string program, string? voice = null)
+    public CantoriaProgram(string program, string? voice = null)
     {
         Program = program;
         Voice = string.IsNullOrWhiteSpace(voice) ? null : voice;
@@ -116,7 +116,7 @@ public sealed class CantilenaProgram : SingingEngine
 
     public override string Name => Voice ?? Path.GetFileNameWithoutExtension(Program);
 
-    public override SingingEngine WithVoice(string voice) => new CantilenaProgram(Program, voice);
+    public override SingingEngine WithVoice(string voice) => new CantoriaProgram(Program, voice);
 
     /// <summary>
     /// Why <paramref name="program"/> cannot be run, or null: a path that names no file is
@@ -125,9 +125,9 @@ public sealed class CantilenaProgram : SingingEngine
     public static string? Problem(string program)
     {
         if (string.IsNullOrWhiteSpace(program))
-            return "name a cantilena program with --singer <program>";
+            return "name a cantoria program with --singer <program>";
         bool isPath = program.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) >= 0
-            || Path.HasExtension(program) && !program.Equals("cantilena", StringComparison.OrdinalIgnoreCase);
+            || Path.HasExtension(program) && !program.Equals("cantoria", StringComparison.OrdinalIgnoreCase);
         if (isPath && !File.Exists(program))
             return $"singer not found: {program}";
         return null;
@@ -164,7 +164,7 @@ public sealed class CantilenaProgram : SingingEngine
         _ = stdout.GetAwaiter().GetResult();
         if (process.ExitCode == 0)
             return null;
-        // Its last line is the sentence ("cantilena: …"); a silent failure gets the exit code.
+        // Its last line is the sentence ("cantoria: …"); a silent failure gets the exit code.
         string last = "";
         foreach (var line in err.Split('\n'))
             if (line.Trim().Length > 0) last = line.Trim();
@@ -173,9 +173,9 @@ public sealed class CantilenaProgram : SingingEngine
 }
 
 /// <summary>
-/// A <see cref="SungVoice"/> as the JSON Cantilena reads (its README; docs/singing-design.md §3):
+/// A <see cref="SungVoice"/> as the JSON Cantoria reads (its README; docs/singing-design.md §3):
 /// seconds, MIDI pitch, the syllable as pronounced; a melisma note carries no lyric; a breath
-/// where the voice put one. The same shape the editor sends (<c>singerCore.cantilenaScore</c>),
+/// where the voice put one. The same shape the editor sends (<c>singerCore.cantoriaScore</c>),
 /// at the speed written.
 /// </summary>
 public static class SungScoreJson

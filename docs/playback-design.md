@@ -160,7 +160,7 @@ Now:
   reads SoundFont 2 only — neither the `.sf3` the recommendations list first nor the OS's DLS
   bank the preview defaults to — so those are refused with that sentence before the synth is
   asked; GeneralUser GS (`.sf2`) is the recommendation that works for both.
-  **`--singer <cantilena>` (2026-11-08, session 1137)** sings the parts the score sings and
+  **`--singer <cantoria>` (2026-11-08, session 1137)** sings the parts the score sings and
   mixes each voice in from the score's zero in the instrument's place — `docs/singing-design.md` §5.
   **The editor's doors since 2026-10-28 (session 1030)**: the preview's Export, the palette and the
   Explorer's submenu send `wav` with `SoundFont` on `lilysharp/export`. The font is the preview's

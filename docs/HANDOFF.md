@@ -138,21 +138,23 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1206セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1206`・HEAD `26f41cdce`・未 push 106）。オーナー「Cantoria に名前を変更して」。作業場所は Lab `sessions/p1206/`。
+
+- **歌声の拡張は Cantilena から Cantoria に改名**（拡張 `yotsuda.cantoria`・設定 `cantoria.*`・プログラム `cantoria`・`CANTORIA_*`・`cantoria.json`・名前空間）。この行より下の HANDOFF と ARCHIVE の「Cantilena」は当時の名前。Lily# の識別子と文書も追随（変更履歴は未公開分だけ）。
+- オーナーの `settings.json` の `cantilena.*` 3 件を `cantoria.*` に。旧拡張はアンインストール。リポジトリのフォルダ `C:\MyProj\cantilena` は使用中で改名できていない可能性あり（下の報告を確認）。
+- 商標は未確認（J-PlatPat・USPTO・EUIPO は公開前にオーナーが確認）。GSi の iPad アプリ Cantoria（オルガン）と同名。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1206 -DiffBase 26f41cdce`、BUILD 0）・npm 942 / 942。`Deploy-Lsp.ps1` と Cantoria の `deploy-extension.ps1` で配布済み（Reload Window 2 回）。
+
+## 以下は第1205セッションの経緯
+
 ### 1.1 第1205セッション（2026-11-09・YT-DELL2）
 
 開始時 full **15013 / 0 / 2**（`-Start p1205`・HEAD `ee7623a57`・未 push 105）。オーナー「Cantilena が無いときインストールを案内して」→「実装して」。作業場所は Lab `sessions/p1205/`。
 
 - `offerCantilena`: 拡張が無いとき、`singer` の補完・試聴・Ctrl+Shift+Up/Down・`singer` を書いた楽譜の再生で 1 セッション 1 回だけ通知、Install Cantilena ボタン（失敗したら拡張の検索）。歌詞があるだけなら出さない。Marketplace 公開前はボタンが検索画面になるだけ。
 - 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1205 -DiffBase ee7623a57`、BUILD 0）・npm 942 / 942。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
-
-## 以下は第1204セッションの経緯
-
-### 1.1 第1204セッション（2026-11-09・YT-DELL2）
-
-開始時 full **15013 / 0 / 2**（`-Start p1204`・HEAD `b4415203e`・未 push 104）。オーナー「clef の Ctrl+Shift+Up で一番上を treble^8 に」→「直して」。作業場所は Lab `sessions/p1204/`。
-
-- `ClefGroups` の先頭を `treble^8, treble, treble_8` に。補完の並びも同じになるので、最初に選ばれるのは `treble` のまま（`Preselect`）。
-- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1204 -DiffBase b4415203e`、BUILD 0）・npm 940 / 940。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
 
 ## 2. 開いている作業
 

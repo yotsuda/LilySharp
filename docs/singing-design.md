@@ -1,4 +1,4 @@
-# Singing the lyrics — the preview's voice through Cantilena
+# Singing the lyrics — the preview's voice through Cantoria
 
 The preview plays every part through a sound font (`docs/playback-design.md`); a part that
 carries lyrics sounds as the instrument its preset names, and the words are only read. The
@@ -19,12 +19,12 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   and tempo marks. A warm render is about a tenth of real time on this machine (RTX 5070 Ti),
   a cold one 3–50 s (the CUDA kernel cache). Its EULA forbids voice-conversion use; it is
   invoked, never included.
-- **Cantilena** (`C:\MyProj\cantilena`, Apache-2.0, the owner's) was started for this: a
+- **Cantoria** (`C:\MyProj\cantoria`, Apache-2.0, the owner's) was started for this: a
   `.NET` library with one contract — a *sung score* in, mono audio out (`ISinger`) — a CLI
-  (`cantilena sing score.json -o out.wav`), and a `neutrino` backend that sings today; a
+  (`cantoria sing score.json -o out.wav`), and a `neutrino` backend that sings today; a
   `diffsinger` backend (in-process ONNX, after OpenUtau) is planned. It ships no voice. **A
   separate repository on purpose** (owner's decision 2026-11-08): Lily# is GPL-3.0 and
-  Cantilena Apache-2.0, so Lily# may use Cantilena, Cantilena must never depend on Lily#, and
+  Cantoria Apache-2.0, so Lily# may use Cantoria, Cantoria must never depend on Lily#, and
   any other notation program may use it.
 
 ## 2. The division of labour
@@ -35,13 +35,13 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   (`MidiExporter` with the tempo map, as `lilysharp/playback` flattens them). The sung score
   is one more reading of the same two answers — no counting of its own (the 2026-11-04
   lesson: a file that counted syllables itself drifted from the page).
-- **Cantilena knows the voice.** Phonemes, pitch curves, the engine's quirks (NEUTRINO's
+- **Cantoria knows the voice.** Phonemes, pitch curves, the engine's quirks (NEUTRINO's
   lead-in bar, its `ー`, its label format) stay there, behind the score contract. Lily#
   never sees a label or a model.
 - **The editor plays both.** The webview owns the clock (the AudioContext); the voice is an
   `AudioBuffer` started at the playback's zero, through the same limiter as the synth.
 
-## 3. The sung score (Cantilena's contract, as Lily# fills it)
+## 3. The sung score (Cantoria's contract, as Lily# fills it)
 
 ```json
 { "sampleRate": 48000, "language": "ja",
@@ -64,12 +64,12 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   the room itself; a start inside the score, or on a MIDI output, pulls nothing). An export
   moves the whole file — notes, lit notes, the count-in's lead, the voices — by `pre`;
   `lysc wav --singer` the same (`WavRenderer.RenderWithVoices`, "Voice lead: 0.10 s" in its
-  notes). Cantilena is not changed: the lead is a rest to it.
+  notes). Cantoria is not changed: the lead is a rest to it.
   ⚠️ Rounded at the note's ENDS (`start` and `start + duration` each rounded, the duration
   their difference), never start and duration apart: sixteenths at 132 are repeating
   decimals, and the engine refuses notes that overlap — 雪やこんこ's melody was refused with
   "note 22 at 6.364 s starts before note 21 ends (6.364 s)" until session 1144
-  (`singerCore.cantilenaScore`, `Audio.SungScoreJson`; Cantilena's `ScoreJson.Read` also trims
+  (`singerCore.cantoriaScore`, `Audio.SungScoreJson`; Cantoria's `ScoreJson.Read` also trims
   an overlap under a millisecond as a caller's rounding).
 - **A syllable, not phonemes**, in the language's own script. `lyric` is the page's text
   with no connector (the hyphen and the extender are `LyricItem.ConnectorType`, not text);
@@ -89,7 +89,7 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 - **`level` / `levelEnd`** on a note: its loudness as a factor on the sung audio, from the velocity
   the instruments play at on the square law of their volume (1 for a part with no marking).
   Measured 2026-11-09: NEUTRINO reads a dynamic in its MusicXML and sings no louder, pp and ff alike,
-  so Cantilena scales what was sung (`SungLevels`). A hairpin swells across its notes to the next
+  so Cantoria scales what was sung (`SungLevels`). A hairpin swells across its notes to the next
   level written, or two dynamics on when none follows; the MIDI does not ramp it.
 - **Grace notes are sung**: a leading grace takes the syllable of its note and the note carries the
   vowel on; an `afterGrace` run carries the vowel of the note before it.
@@ -127,12 +127,12 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   its first words' tag, and only Japanese words are checked for kana. Otherwise the score is
   passed as it is and the engine answers that it cannot sing it (NEUTRINO: kanji, romaji).
 - **Singer** (session 1168): `singer "…"` on the part, the track or the score's row, the nearest
-  winning (`Music.LyricSinger`, `SungVoice.Singer`). Lily# carries the string; the Cantilena
+  winning (`Music.LyricSinger`, `SungVoice.Singer`). Lily# carries the string; the Cantoria
   extension resolves it (`resolveSinger`: the named voice when installed, else the default voice of
   the gender, with a sentence when that was not asked for), and the resolved voice is the cache
   key's. The gender (`SungVoice.Gender`, owner's decision session 1187) is what the singer's word
   says, else the part's preset, else its clef. The two default voices are the settings
-  `cantilena.defaultFemaleVoice` and `cantilena.defaultMaleVoice`. Between the quotes the
+  `cantoria.defaultFemaleVoice` and `cantoria.defaultMaleVoice`. Between the quotes the
   editor asks the server for the words' language (`lilysharp/singerSlot`) and offers the voices
   that sing it (`singerChoices`); a voice not saying what it sings is
   left out. `lysc wav --singer` sings a written `engine/name` and takes a role as the default. The editor shows the
@@ -180,21 +180,21 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 
 ## 5. The editor
 
-- **The engine is the Cantilena extension** (`yotsuda.cantilena`, owner's decision 2026-11-08,
+- **The engine is the Cantoria extension** (`yotsuda.cantoria`, owner's decision 2026-11-08,
   session 1127 — the shape the OMR reader took: a separate extension that carries the program,
   holds its own settings, and is called through its API). It holds the voice
-  (`cantilena.defaultVoice`) and NEUTRINO's folder (`cantilena.neutrinoFolder`), with pickers and a
+  (`cantoria.defaultVoice`) and NEUTRINO's folder (`cantoria.neutrinoFolder`), with pickers and a
   **Check Setup**; its `activate` returns `{ version, apiVersion: 1, status(), sing(score),
-  release() }` (its README, "For extension authors"; `singerCore.cantilenaApiOf` checks the
+  release() }` (its README, "For extension authors"; `singerCore.cantoriaApiOf` checks the
   shape). Lily# finds it with `vscode.extensions.getExtension`, activates it (no process
-  starts), and asks `sing` per voice; the extension keeps one resident `cantilena serve` and
+  starts), and asks `sing` per voice; the extension keeps one resident `cantoria serve` and
   the WAVs under its own storage. Installed or removed later, `extensions.onDidChange` makes
   Lily# look again. Without it the lyrics are not sung and nothing is said.
 - **Setting `lilysharp.playback.singer`** (machine-overridable) is usually empty. A path names
-  a `cantilena` program to run here instead — a developer's build — as **one resident
-  `cantilena serve`** per extension host (`singer.ts` `SingerProcess`: JSON lines on
+  a `cantoria` program to run here instead — a developer's build — as **one resident
+  `cantoria serve`** per extension host (`singer.ts` `SingerProcess`: JSON lines on
   stdin/stdout, `{ id, score, output }` in, `{ id, wav, duration }` or `{ id, error }` out,
-  the WAV under the OS temp folder; the protocol is Cantilena's `docs/design.md` §4.1). Both
+  the WAV under the OS temp folder; the protocol is Cantoria's `docs/design.md` §4.1). Both
   ways are a `VoiceBackend` behind the `VoiceRenderer`, whose cache key takes the backend's
   voice name (`voiceName()`: the extension's setting now, the program's default), so a changed
   voice sings anew.
@@ -338,13 +338,13 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   begins `VOICE_LEAD_S` before the score's 0, so a voice with no count-in starts at a negative
   offset: `mixIn` leaves that much of its head out and starts the rest at 0 (it moved the whole
   voice to 0 from session 1147 to 1153 — 0.3 s late).
-- **`lysc wav --singer <cantilena> [--voice engine/name]`** (built 2026-11-08, session 1137;
+- **`lysc wav --singer <cantoria> [--voice engine/name]`** (built 2026-11-08, session 1137;
   `LILYSHARP_SINGER` names the program once, as `LILYSHARP_SOUNDFONT` names the font): the
   command line's offline render, the same rules in Core. `ScoreExport.SingTheSungParts` reads
   the voices off the export's MIDI and clock (`SungVoices`, `MidiClock`) and the sung and played
-  parts off the score's rows (`SungStaves`); each sung part's score goes as Cantilena's JSON
-  (`Audio.SungScoreJson`, the shape `singerCore.cantilenaScore` sends) to the engine —
-  `Audio.CantilenaProgram`, one `cantilena sing score.json -o voice.wav` per voice, a separate
+  parts off the score's rows (`SungStaves`); each sung part's score goes as Cantoria's JSON
+  (`Audio.SungScoreJson`, the shape `singerCore.cantoriaScore` sends) to the engine —
+  `Audio.CantoriaProgram`, one `cantoria sing score.json -o voice.wav` per voice, a separate
   process and nothing linked (§6); the WAV is read back (`Audio.WavReader`: PCM 8–32 and float,
   channels averaged) and `WavRenderer.Render` adds it to both channels from the score's zero,
   resampled by linear interpolation at the engine's own level, the file grown when the voice
@@ -352,18 +352,18 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   part, its notes leave the MIDI before the synth plays it. A voice the engine cannot sing
   leaves the instrument and a warning (`melody is not sung (…); its instrument plays`); the
   voice's kana warning comes along. A file with no `score` block has no sung staff, so nothing
-  is sung there, as in the preview. Each voice is one `cantilena sing`, so NEUTRINO's cold
+  is sung there, as in the preview. Each voice is one `cantoria sing`, so NEUTRINO's cold
   start is paid once per sung part; `serve` would save nothing (its engines are one server per
   voice too). Nets: `WavExportTests` with a stand-in engine (`FakeSinger`).
 
 ## 6. Licensing boundaries
 
-- Lily# **invokes** Cantilena as a separate process and links nothing: no dependency in a
+- Lily# **invokes** Cantoria as a separate process and links nothing: no dependency in a
   csproj or package.json, nothing new in THIRD-PARTY-NOTICES. The setting names the exe as
   `lilysharp.playback.soundFont` names a font; the user installs both.
-- Nothing of NEUTRINO or of any voice is read, copied or shipped by Lily#. Cantilena's
+- Nothing of NEUTRINO or of any voice is read, copied or shipped by Lily#. Cantoria's
   README and THIRD-PARTY-NOTICES carry that side.
-- Should a backend ever be linked in-process (Cantilena.Core as a NuGet package), Apache-2.0
+- Should a backend ever be linked in-process (Cantoria.Core as a NuGet package), Apache-2.0
   is GPLv3-compatible: a notice entry and the NOTICE file's lines, nothing else.
 
 ## 7. Stages, and the owner's questions
@@ -372,13 +372,13 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
 > expression, the choir, more engines and platforms — and the short-term order of work is
 > `docs/singing-roadmap.md` (2026-11-08).
 
-1. **Cantilena `serve`** (the resident JSON-lines process) — done 2026-11-08 in the
-   Cantilena repo (its `docs/design.md` §4).
+1. **Cantoria `serve`** (the resident JSON-lines process) — done 2026-11-08 in the
+   Cantoria repo (its `docs/design.md` §4).
 2. **The server's `lilysharp/sung`** — done 2026-11-08 (session 1125): `SungVoices`,
    `MidiClock`, `LyricEvent.Part`, the request and its DTOs; nets `SungVoicesTests` (the
    held note, the slur, the chord's top, the words running out, the kana warning, two parts,
    two rows on one part) and `SungRequestTests` (the voice's seconds are the playback's).
-   End to end: the owner's `雪やこんこ.lys` through Core to Cantilena's JSON and NEUTRINO's WAV
+   End to end: the owner's `雪やこんこ.lys` through Core to Cantoria's JSON and NEUTRINO's WAV
    (Lab `sessions/p1125/e2e`).
 3. **The editor** — done 2026-11-08 (session 1126), as §5 says, with these notes: the host
    renders when the preview fetches its notes (`requestPlayback`) and when its tempo changes
@@ -390,12 +390,12 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
    where the stretch ends only by the instruments' end timer — the buffer played on to the piece's
    end if the stretch was shorter, until session 1132 (§5, `voiceCues`). Nets:
    `test/singerCore.test.ts` (the score, the key, the wire, the manifest); the engine itself was
-   driven from node against the real `cantilena serve` (Lab `sessions/p1126/probe-singer.js`).
+   driven from node against the real `cantoria serve` (Lab `sessions/p1126/probe-singer.js`).
    The real VS Code is the owner's to check (MANUAL-CHECKS §3.7). Session 1127 (owner's
-   decision): the engine became the **Cantilena extension** (`yotsuda.cantilena`, in the
-   Cantilena repository's `editors/vscode`, packed by its `tools/pack-extension.ps1`), and
+   decision): the engine became the **Cantoria extension** (`yotsuda.cantoria`, in the
+   Cantoria repository's `editors/vscode`, packed by its `tools/pack-extension.ps1`), and
    Lily#'s `singerVoice` setting and **Choose Singing Voice…** went away — the voice is
-   Cantilena's; `lilysharp.playback.singer` stayed as the developer's override.
+   Cantoria's; `lilysharp.playback.singer` stayed as the developer's override.
 4. **Export mixing** — done 2026-11-08 (session 1131, §5 "Export"; nets `test/voiceMix.test.ts`).
    **A span's voice stopping at the span's end, the voice in a loop, and the count-in's lead** —
    done 2026-11-08 (session 1132: `voiceCues`, `playSpanWindow.pieces`, `loopRounds`; nets in
@@ -414,11 +414,11 @@ Open for the owner before stage 3 (as decided since):
 
 | What | Where |
 |---|---|
-| The engine, its contract, the backends | `C:\MyProj\cantilena` — `README.md`, `docs/design.md`, `src/Cantilena.Core` (`SungScore`, `ISinger`, `Neutrino/`), `src/Cantilena.Cli` |
+| The engine, its contract, the backends | `C:\MyProj\cantoria` — `README.md`, `docs/design.md`, `src/Cantoria.Core` (`SungScore`, `ISinger`, `Neutrino/`), `src/Cantoria.Cli` |
 | Which note a syllable stands on | `LilySharp.Core/Svg/Collector/SungSyllables.cs`; the MIDI's events `MidiExporter.SingLyrics`; the MusicXML's `MusicXmlExporter` (`syllabic`, `extend`) |
 | The connector and the holders | `Svg/Model/LyricItem.cs` (`ConnectorType`), `Svg/Collector/LyricSyllableReader.cs` (`Marker`) |
 | The seconds | `LilySharp.Lsp/LilySharpLanguageServer.Commands.cs` (`PlaybackOf`, `SecondsAt`) |
 | The preview's clock, Play, the limiter, MIDI out | `editors/vscode/src/extension.ts` (`startPlayback`, `midiStarted`), `src/webview/previewSynth.ts` |
 | The practice menu on a list | `editors/vscode/src/webview/playbackCore.ts` (`practised`) |
 | The offline render | `editors/vscode/src/audioRender.ts`, `audioRenderCore.ts` |
-| The probes of 2026-11-08 | Lab `sessions/p1124/utau/` (MIDI and MusicXML exports, NEUTRINO's labels and WAVs, the first Cantilena WAV) |
+| The probes of 2026-11-08 | Lab `sessions/p1124/utau/` (MIDI and MusicXML exports, NEUTRINO's labels and WAVs, the first Cantoria WAV) |

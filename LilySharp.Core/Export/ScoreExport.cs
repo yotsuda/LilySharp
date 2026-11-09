@@ -65,7 +65,7 @@ public sealed class ExportOptions
     public string? SoundFont { get; init; }
 
     /// <summary>WAV: what sings the parts the score sings (<c>lysc wav --singer</c>;
-    /// <see cref="Audio.CantilenaProgram"/>), their voices mixed into the file in the
+    /// <see cref="Audio.CantoriaProgram"/>), their voices mixed into the file in the
     /// instrument's place where the score does not also play the part. Null: the instruments
     /// alone, as before.</summary>
     public Audio.SingingEngine? Singer { get; init; }

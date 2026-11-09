@@ -21,13 +21,13 @@ scale. The design and the order of work are in `docs/review-tool-design.md`.
 ### Singing the lyrics (proposed 2026-11-08, the owner's request)
 
 The preview sings a part's words instead of playing its preset: the server resolves the sung
-part to a score in seconds (`lilysharp/sung`), a separate engine — Cantilena, the owner's
+part to a score in seconds (`lilysharp/sung`), a separate engine — Cantoria, the owner's
 Apache-2.0 repository, driving the user's own NEUTRINO today — renders a voice, and the webview
 plays it beside the sound font; exports mix it in. Nothing is linked and no voice is shipped:
 `lilysharp.playback.singer` names the engine as `soundFont` names a font. The design, the
 stages and the owner's open questions (kana for kanji lyrics, a choir, replace or double the
 instrument) are in `docs/singing-design.md`. Stages 1–4 shipped the same day (sessions
-1124–1131: NEUTRINO through the Cantilena extension, Japanese, Windows); what remains, and the
+1124–1131: NEUTRINO through the Cantoria extension, Japanese, Windows); what remains, and the
 long term — a second engine (DiffSinger in-process), languages, expression, a choir, more
 engines, a voice on every platform — is `docs/singing-roadmap.md` (2026-11-08, the owner's aim:
 Lily# as the notation editor that integrates several singing engines).

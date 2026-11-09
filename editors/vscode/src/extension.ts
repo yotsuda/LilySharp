@@ -52,8 +52,8 @@ import { VoiceTrack, decodeWav } from './audioRenderCore';
 import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soundStart } from './webview/playbackCore';
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
-import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -810,7 +810,7 @@ export function activate(context: vscode.ExtensionContext) {
         // `lilysharp.playback.midiOutput` through a picker of the machine's MIDI output ports
         // (the server lists them); the open previews pick it up through onDidChangeConfiguration.
         vscode.commands.registerCommand('lilysharp.chooseMidiOutput', () => chooseMidiOutput()),
-        // The Cantilena extension installed or removed: the engine is looked for again on the next notes.
+        // The Cantoria extension installed or removed: the engine is looked for again on the next notes.
         vscode.extensions.onDidChange(() => disposeSinger()),
         vscode.commands.registerCommand('lilysharp.openPreview', () => {
             outputChannel.appendLine('openPreview command triggered');
@@ -3861,7 +3861,7 @@ function tellSingerNote(text: string): void {
 /**
  * At a `singer`'s name, the names right for the words' language (owner's request
  * 2026-11-09, session 1168): the server says whether the caret is in one and what the language
- * is (lilysharp/singerSlot), the Cantilena extension what is installed (singerChoices).
+ * is (lilysharp/singerSlot), the Cantoria extension what is installed (singerChoices).
  * The quotes' inside is replaced whole, so a name with a slash completes as one. Before any quote
  * (`singer |`, owner's report 2026-11-09, session 1196) a name goes in with its quotes, the caret
  * between them as if it had been typed there, and `male` and `female` are offered too.
@@ -3874,8 +3874,8 @@ const singerCompletion: vscode.CompletionItemProvider = {
             { textDocument: { uri: document.uri.toString() }, offset: document.offsetAt(position) });
         if (!slot.InSlot || !slot.Language) { return undefined; }
         const engine = await renderer();
-        const api = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend.api : undefined;
-        if (!api?.voices) { offerCantilena(); return undefined; }
+        const api = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend.api : undefined;
+        if (!api?.voices) { offerCantoria(); return undefined; }
         const voices = await api.voices();
         samples().warm(voices.filter(v => singsLanguage(v, slot.Language!)).map(v => voiceSampleKey(v.id, slot.Language!)));
         const line = document.lineAt(position.line).text;
@@ -3926,7 +3926,7 @@ function samples(): VoiceSampleQueue {
 
 async function singVoiceSample(key: string): Promise<void> {
     const engine = await renderer();
-    const backend = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend : undefined;
+    const backend = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend : undefined;
     if (!backend?.api.voices) { throw new Error('no engine that lists its voices'); }
     const [id, asked] = key.split('@');
     const first = id.split('+')[0].trim();      // voices singing together: the first says the language and the octave
@@ -3967,7 +3967,7 @@ async function hearSinger(label: unknown): Promise<void> {
     if (typeof label !== 'string' || !editor) { return; }
     const clock = new StageClock(Date.now());
     const engine = await renderer();
-    if (!engine) { offerCantilena(); return; }
+    if (!engine) { offerCantoria(); return; }
     clock.mark('engine');
     const voice = await engine.backend.voiceName(label);
     clock.mark('name');
@@ -3999,10 +3999,10 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, byVoic
     if (!slot.InSlot || !slot.Language) { return false; }
     const engine = await renderer();
     clock.mark('engine');
-    const api = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend.api : undefined;
+    const api = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend.api : undefined;
     if (!api?.voices) {
-        offerCantilena();
-        vscode.window.setStatusBarMessage('Lily#: the Cantilena extension lists the voices, and it is not there', 4000);
+        offerCantoria();
+        vscode.window.setStatusBarMessage('Lily#: the Cantoria extension lists the voices, and it is not there', 4000);
         return true;
     }
     const sings = (await api.voices()).filter(v => singsLanguage(v, slot.Language!));
@@ -4027,35 +4027,35 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, byVoic
     return true;
 }
 
-/** Whether this session has already said that Cantilena is needed. */
-let cantilenaOffered = false;
+/** Whether this session has already said that Cantoria is needed. */
+let cantoriaOffered = false;
 
-/** Says, once a session, that voices need the Cantilena extension, and offers to install it (owner's
+/** Says, once a session, that voices need the Cantoria extension, and offers to install it (owner's
  *  request 2026-11-09, session 1205). Only where a voice was asked for: lyrics alone say nothing, since
  *  most people writing them mean them for the page. */
-function offerCantilena(): void {
-    if (cantilenaOffered || vscode.extensions.getExtension(CANTILENA_EXTENSION_ID)) { return; }
-    cantilenaOffered = true;
-    const install = 'Install Cantilena';
-    void vscode.window.showInformationMessage('Lily#: singing a score with a voice needs the Cantilena extension.', install).then(async choice => {
+function offerCantoria(): void {
+    if (cantoriaOffered || vscode.extensions.getExtension(CANTORIA_EXTENSION_ID)) { return; }
+    cantoriaOffered = true;
+    const install = 'Install Cantoria';
+    void vscode.window.showInformationMessage('Lily#: singing a score with a voice needs the Cantoria extension.', install).then(async choice => {
         if (choice !== install) { return; }
         try {
-            await vscode.commands.executeCommand('workbench.extensions.installExtension', CANTILENA_EXTENSION_ID);
+            await vscode.commands.executeCommand('workbench.extensions.installExtension', CANTORIA_EXTENSION_ID);
         } catch {
             // Not reachable from here (offline, or a gallery that does not list it): show the search.
-            await vscode.commands.executeCommand('workbench.extensions.search', `@id:${CANTILENA_EXTENSION_ID}`);
+            await vscode.commands.executeCommand('workbench.extensions.search', `@id:${CANTORIA_EXTENSION_ID}`);
         }
     });
 }
 
-/** `lilysharp.playback.singer`: the path of a `cantilena` program to run here (a developer's
- *  build), or '' — the usual case — for the Cantilena extension when it is installed. */
+/** `lilysharp.playback.singer`: the path of a `cantoria` program to run here (a developer's
+ *  build), or '' — the usual case — for the Cantoria extension when it is installed. */
 function singerSetting(): string {
     return vscode.workspace.getConfiguration('lilysharp').get<string>('playback.singer', '').trim();
 }
 
 /** The one engine of this host, found on the first voice asked for — the setting's program,
- *  else the Cantilena extension (CANTILENA_EXTENSION_ID, activated here; activating it starts
+ *  else the Cantoria extension (CANTORIA_EXTENSION_ID, activated here; activating it starts
  *  no process) — and let go when the setting or the extensions change, and on deactivate.
  *  Undefined when there is neither: the lyrics are not sung and nothing is said. */
 let voiceRenderer: VoiceRenderer | undefined;
@@ -4067,20 +4067,20 @@ async function renderer(): Promise<VoiceRenderer | undefined> {
     if (exe) {
         voiceRenderer = new VoiceRenderer(new SingerProcess(exe, line => outputChannel.appendLine(line)));
     } else {
-        const ext = vscode.extensions.getExtension(CANTILENA_EXTENSION_ID);
+        const ext = vscode.extensions.getExtension(CANTORIA_EXTENSION_ID);
         if (!ext) { return undefined; }
         try {
-            const api = cantilenaApiOf(ext.isActive ? ext.exports : await ext.activate());
-            if (!api) { outputChannel.appendLine(`singer: ${CANTILENA_EXTENSION_ID} is installed but its API is not the shape Lily# reads`); return undefined; }
-            voiceRenderer = new VoiceRenderer(new CantilenaExtensionBackend(api, tellSingerNote));
+            const api = cantoriaApiOf(ext.isActive ? ext.exports : await ext.activate());
+            if (!api) { outputChannel.appendLine(`singer: ${CANTORIA_EXTENSION_ID} is installed but its API is not the shape Lily# reads`); return undefined; }
+            voiceRenderer = new VoiceRenderer(new CantoriaExtensionBackend(api, tellSingerNote));
         } catch (e) {
-            outputChannel.appendLine(`singer: ${CANTILENA_EXTENSION_ID} did not activate: ${String(e)}`);
+            outputChannel.appendLine(`singer: ${CANTORIA_EXTENSION_ID} did not activate: ${String(e)}`);
             return undefined;
         }
     }
     voiceRendererFor = exe;
     // The extension's voice is named with it (`engine/name`); a program's is its own default.
-    const voice = voiceRenderer.backend instanceof CantilenaExtensionBackend ? await voiceRenderer.backend.voiceName().catch(() => '') : '';
+    const voice = voiceRenderer.backend instanceof CantoriaExtensionBackend ? await voiceRenderer.backend.voiceName().catch(() => '') : '';
     outputChannel.appendLine(`singer: ${voiceRenderer.name}${voice ? `, voice ${voice}` : ''}`);
     return voiceRenderer;
 }
@@ -4214,7 +4214,7 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     if (!current()) { log('the preview turned meanwhile'); return; }
     if (!engine) {
         log('no engine: the voices are dropped');
-        if (reason === 'play' && writesSinger(vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)?.getText() ?? '')) { offerCantilena(); }
+        if (reason === 'play' && writesSinger(vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)?.getText() ?? '')) { offerCantoria(); }
         postedVoices.delete(panel);
         void panel.webview.postMessage({ type: 'clearVoices' });
         return;

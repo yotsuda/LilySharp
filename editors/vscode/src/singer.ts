@@ -15,9 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // The singing engine behind the preview's voice (docs/singing-design.md §5), two ways: the
-// Cantilena extension's API (the usual way — it carries the program and holds the voice and
-// NEUTRINO's folder), or a `cantilena` program named in lilysharp.playback.singer, run here as
-// one resident `cantilena serve` spoken to in JSON lines (a developer's build). Both give a WAV
+// Cantoria extension's API (the usual way — it carries the program and holds the voice and
+// NEUTRINO's folder), or a `cantoria` program named in lilysharp.playback.singer, run here as
+// one resident `cantoria serve` spoken to in JSON lines (a developer's build). Both give a WAV
 // per voice, kept by the key of its score so a phrase is sung once. No vscode here: the
 // settings, the extension lookup, the status bar and the previews are extension.ts's.
 
@@ -26,7 +26,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as readline from 'readline';
-import { CantilenaApi, CantilenaScore, SungVoiceDto, cantilenaScore, parseServeLine, serveRequestLine, voiceKey } from './singerCore';
+import { CantoriaApi, CantoriaScore, SungVoiceDto, cantoriaScore, parseServeLine, serveRequestLine, voiceKey } from './singerCore';
 
 /** A voice the engine rendered: the WAV's path and its length. */
 export interface RenderedVoice { wav: string; duration: number }
@@ -39,15 +39,15 @@ export interface VoiceBackend {
      *  `language`: the words', for a `singer male`, whose voice must sing them. */
     voiceName(singer?: string | null, language?: string, gender?: string | null): Promise<string>;
     /** Sings `score` in `voice` (from voiceName); `key` names the request and the file where the backend lets the caller name it. */
-    sing(key: string, score: CantilenaScore, voice: string): Promise<RenderedVoice>;
+    sing(key: string, score: CantoriaScore, voice: string): Promise<RenderedVoice>;
     dispose(): void;
 }
 
-/** The Cantilena extension as the backend: its `sing` keeps the WAVs under its own storage. */
-export class CantilenaExtensionBackend implements VoiceBackend {
+/** The Cantoria extension as the backend: its `sing` keeps the WAVs under its own storage. */
+export class CantoriaExtensionBackend implements VoiceBackend {
     readonly name: string;
     /** `note`: tells the writer a `singer` came to another voice than it asked for. */
-    constructor(readonly api: CantilenaApi, private readonly note?: (text: string) => void) { this.name = `the Cantilena extension ${api.version}`; }
+    constructor(readonly api: CantoriaApi, private readonly note?: (text: string) => void) { this.name = `the Cantoria extension ${api.version}`; }
     async voiceName(singer?: string | null, language?: string, gender?: string | null): Promise<string> {
         if (this.api.resolveSinger) {
             const r = await this.api.resolveSinger(singer ?? '', { language, gender: gender ?? undefined });
@@ -56,7 +56,7 @@ export class CantilenaExtensionBackend implements VoiceBackend {
         }
         return singer?.includes('/') ? singer : (await this.api.status()).voice;
     }
-    async sing(_key: string, score: CantilenaScore, voice: string): Promise<RenderedVoice> {
+    async sing(_key: string, score: CantoriaScore, voice: string): Promise<RenderedVoice> {
         const v = await this.api.sing(score, { voice });
         return { wav: v.wav, duration: v.duration };
     }
@@ -116,7 +116,7 @@ export class SingerProcess implements VoiceBackend {
     }
 
     /** Sings `score` into `<outDir>/<key>.wav`; the answer when the engine has. */
-    sing(key: string, score: CantilenaScore, voice: string): Promise<RenderedVoice> {
+    sing(key: string, score: CantoriaScore, voice: string): Promise<RenderedVoice> {
         const child = this.child ?? this.start();
         const output = path.join(this.outDir, `${key}.wav`);
         return new Promise<RenderedVoice>((resolve, reject) => {
@@ -160,7 +160,7 @@ export class VoiceRenderer {
     /** The key `render` would give `dto` at `speed`: the score's bytes and the voice's name — what
      *  tells one text's voice from another's without asking the engine (prepareVoices). */
     async key(dto: SungVoiceDto, speed: number): Promise<string> {
-        return voiceKey(cantilenaScore(dto, speed), await this.backend.voiceName(dto.Singer, dto.Language, dto.Gender));
+        return voiceKey(cantoriaScore(dto, speed), await this.backend.voiceName(dto.Singer, dto.Language, dto.Gender));
     }
 
     /** True when the voice of `key` was sung before and its WAV is still there. */
@@ -174,7 +174,7 @@ export class VoiceRenderer {
      * before, else when the engine has sung it. A second ask for a voice in flight joins the first.
      */
     async render(dto: SungVoiceDto, speed: number): Promise<{ key: string; rendered: Promise<RenderedVoice>; cached: boolean }> {
-        const score = cantilenaScore(dto, speed);
+        const score = cantoriaScore(dto, speed);
         const voice = await this.backend.voiceName(dto.Singer, dto.Language, dto.Gender);
         const key = voiceKey(score, voice);
         const hit = this.done.get(key);

@@ -15,8 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's sung voice turned
-// into the score the singing engine (Cantilena) reads, the key a rendered voice is cached by,
-// and the lines of `cantilena serve`'s wire. No vscode, no process here: test/singerCore.test.ts
+// into the score the singing engine (Cantoria) reads, the key a rendered voice is cached by,
+// and the lines of `cantoria serve`'s wire. No vscode, no process here: test/singerCore.test.ts
 // drives it under node.
 
 import { createHash } from 'crypto';
@@ -30,42 +30,42 @@ export interface SungNoteDto { T: number; D: number; P: number; L?: string | nul
 /** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
 export interface SungVoiceDto { Part: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null; Gender?: string | null }
 
-/** The score Cantilena reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
-export interface CantilenaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean }
-export interface CantilenaScore { sampleRate: number; language: string; notes: CantilenaNote[] }
+/** The score Cantoria reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
+export interface CantoriaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean }
+export interface CantoriaScore { sampleRate: number; language: string; notes: CantoriaNote[] }
 
 /** The rate the voice is asked for — NEUTRINO's own, so nothing is resampled on the way. */
 export const VOICE_SAMPLE_RATE = 48000;
 
-/** The Cantilena extension, the engine's own home on the Marketplace (docs/singing-design.md §5). */
-export const CANTILENA_EXTENSION_ID = 'yotsuda.cantilena';
+/** The Cantoria extension, the engine's own home on the Marketplace (docs/singing-design.md §5). */
+export const CANTORIA_EXTENSION_ID = 'yotsuda.cantoria';
 
-/** A voice the Cantilena extension lists: `id` is `engine/name` (`neutrino/MERROW`), what its
+/** A voice the Cantoria extension lists: `id` is `engine/name` (`neutrino/MERROW`), what its
  *  `sing` takes and its setting holds. */
-export interface CantilenaVoice { id: string; engine: string; name: string; label?: string; language?: string; languages?: string[]; gender?: string; licence?: string }
+export interface CantoriaVoice { id: string; engine: string; name: string; label?: string; language?: string; languages?: string[]; gender?: string; licence?: string }
 
 /** Whether a voice says it sings `language`: its list of languages, else its one. */
-export function singsLanguage(voice: Pick<CantilenaVoice, 'language' | 'languages'>, language: string): boolean {
+export function singsLanguage(voice: Pick<CantoriaVoice, 'language' | 'languages'>, language: string): boolean {
     return voice.languages?.includes(language) ?? voice.language === language;
 }
 
 /** What that extension's `activate` returns, as far as Lily# reads it (its README, "For extension
  *  authors"). `status().voice` is the setting's voice as `engine/name`; `voices()` came with
- *  Cantilena 0.2 and an older extension has none. */
-export interface CantilenaApi {
+ *  Cantoria 0.2 and an older extension has none. */
+export interface CantoriaApi {
     readonly version: string;
     readonly apiVersion: number;
     status(): Promise<{ ready: boolean; voice: string; problems: string[] }>;
-    voices?(): Promise<CantilenaVoice[]>;
-    sing(score: CantilenaScore, options?: { voice?: string }): Promise<{ wav: string; duration: number; cached?: boolean }>;
+    voices?(): Promise<CantoriaVoice[]>;
+    sing(score: CantoriaScore, options?: { voice?: string }): Promise<{ wav: string; duration: number; cached?: boolean }>;
     release(): void;
     /** The voice a `.lys` file's `singer` string comes to on this machine, and what to tell the
-     *  writer when it was not the one asked for. Cantilena 0.4 on. */
+     *  writer when it was not the one asked for. Cantoria 0.4 on. */
     resolveSinger?(singer: string, options?: { language?: string; gender?: string }): Promise<{ voice: string; note?: string }>;
 }
 
 /** Whether a `singer`'s written gender lets this voice be offered: no gender written, a voice that names none, or the same one. */
-export function fitsGender(voice: Pick<CantilenaVoice, 'gender'>, gender?: string | null): boolean {
+export function fitsGender(voice: Pick<CantoriaVoice, 'gender'>, gender?: string | null): boolean {
     return !gender || !voice.gender || voice.gender === gender;
 }
 
@@ -74,7 +74,7 @@ const LANGUAGE_CODES: Record<string, string> = { japanese: 'ja', english: 'en', 
 /** The answer of the chat's voice list (owner's request 2026-11-09, session 1202): the names a score can
  *  write, narrowed by provider, gender and language. As in the completion, a voice that does not state its
  *  gender stays when a gender is asked for, and the answer says so. */
-export function voiceListText(voices: readonly CantilenaVoice[], filter: { provider?: string; gender?: string; language?: string }): string {
+export function voiceListText(voices: readonly CantoriaVoice[], filter: { provider?: string; gender?: string; language?: string }): string {
     const provider = (filter.provider ?? '').trim().toLowerCase();
     const gender = (filter.gender ?? '').trim().toLowerCase();
     const written = (filter.language ?? '').trim().toLowerCase();
@@ -104,7 +104,7 @@ export interface SingerChoice { label: string; detail: string }
  * does not say what it sings is left out; with `gender` (`singer male "…"`, sessions 1173 and
  * 1174), so is one that says it is the other.
  */
-export function singerChoices(voices: readonly CantilenaVoice[], language: string, gender?: string | null): SingerChoice[] {
+export function singerChoices(voices: readonly CantoriaVoice[], language: string, gender?: string | null): SingerChoice[] {
     return byVoiceId(voices.filter(v => singsLanguage(v, language) && fitsGender(v, gender)))
         .map(v => ({ label: v.id, detail: v.label && v.label !== v.name ? v.label : v.name }));
 }
@@ -165,7 +165,7 @@ export function singerWrittenAt(line: string, from: number, to: number): string 
  * A `singer` that names none of `voices` (a role, an empty string) enters the list at the end the key
  * moves away from. Undefined when there is nowhere else to go.
  */
-export function stepVoice(voices: readonly Pick<CantilenaVoice, 'id' | 'engine'>[], current: string, direction: 1 | -1, acrossEngines: boolean): string | undefined {
+export function stepVoice(voices: readonly Pick<CantoriaVoice, 'id' | 'engine'>[], current: string, direction: 1 | -1, acrossEngines: boolean): string | undefined {
     if (voices.length === 0) { return undefined; }
     const here = voices.find(v => v.id === current);
     if (acrossEngines) {
@@ -240,7 +240,7 @@ export function voiceSampleKey(id: string, language?: string): string {
 
 /** The short phrase a voice is heard by when it is chosen, an octave lower for a male voice (owner's
  *  request 2026-11-09, session 1177); undefined for a language it has no words for. */
-export function voiceSampleScore(language: string, gender?: string): CantilenaScore | undefined {
+export function voiceSampleScore(language: string, gender?: string): CantoriaScore | undefined {
     const octave = gender === 'male' ? -12 : 0;
     if (language === 'en') {
         // Five syllables to the five of こんにちわ, on the same notes (owner's decision 2026-11-09, session 1201).
@@ -253,7 +253,7 @@ export function voiceSampleScore(language: string, gender?: string): CantilenaSc
         ] };
     }
     if (language !== 'ja') { return undefined; }
-    const notes: CantilenaNote[] = [
+    const notes: CantoriaNote[] = [
         { start: 0.3, duration: 0.25, pitch: 60, lyric: 'こ' },
         { start: 0.55, duration: 0.25, pitch: 62, lyric: 'ん' },
         { start: 0.8, duration: 0.25, pitch: 64, lyric: 'に' },
@@ -321,9 +321,9 @@ export class VoiceSampleQueue {
 }
 
 /** The API from an extension's exports, or undefined when they are not that shape. */
-export function cantilenaApiOf(exports: unknown): CantilenaApi | undefined {
-    const e = exports as Partial<CantilenaApi> | undefined;
-    return e && typeof e.sing === 'function' && typeof e.status === 'function' && e.apiVersion === 1 ? e as CantilenaApi : undefined;
+export function cantoriaApiOf(exports: unknown): CantoriaApi | undefined {
+    const e = exports as Partial<CantoriaApi> | undefined;
+    return e && typeof e.sing === 'function' && typeof e.status === 'function' && e.apiVersion === 1 ? e as CantoriaApi : undefined;
 }
 
 const round = (x: number): number => Math.round(x * 1e4) / 1e4;
@@ -333,7 +333,7 @@ const round = (x: number): number => Math.round(x * 1e4) / 1e4;
  * it (a voice cannot be stretched after the fact without its pitch moving, so a speed change
  * is a render of its own), a melisma with no lyric, a breath where the server put one.
  */
-export function cantilenaScore(voice: SungVoiceDto, speed: number): CantilenaScore {
+export function cantoriaScore(voice: SungVoiceDto, speed: number): CantoriaScore {
     const k = 1 / (speed > 0 ? speed : 1);
     return {
         sampleRate: VOICE_SAMPLE_RATE,
@@ -346,7 +346,7 @@ export function cantilenaScore(voice: SungVoiceDto, speed: number): CantilenaSco
             // Moved later by VOICE_LEAD_S, the room for the first syllable's consonant before the
             // beat (the WAV's time VOICE_LEAD_S is the score's 0; docs/singing-design.md §3).
             const start = round(n.T * k + VOICE_LEAD_S), end = round((n.T + n.D) * k + VOICE_LEAD_S);
-            const note: CantilenaNote = { start, duration: round(end - start), pitch: n.P };
+            const note: CantoriaNote = { start, duration: round(end - start), pitch: n.P };
             if (n.M) { note.melisma = true; } else if (n.L) { note.lyric = n.L; }
             if (n.B) { note.breath = true; }
             if (n.V != null) { note.level = n.V; }
@@ -437,11 +437,11 @@ export class PrepareQueue<J> {
 
 /** What a rendered voice is cached and named by: the voice and the score's bytes, so the same
  *  phrase at the same speed in the same voice is sung once per machine. */
-export function voiceKey(score: CantilenaScore, voice: string): string {
+export function voiceKey(score: CantoriaScore, voice: string): string {
     return createHash('sha1').update(voice).update('\n').update(JSON.stringify(score)).digest('hex');
 }
 
-/** One line of `cantilena serve`'s stdout. */
+/** One line of `cantoria serve`'s stdout. */
 export interface ServeAnswer {
     ready?: boolean; voices?: string[];
     id?: string; wav?: string; duration?: number; sampleRate?: number; seconds?: number; error?: string;
@@ -459,8 +459,8 @@ export function parseServeLine(line: string): ServeAnswer | null {
     }
 }
 
-/** One request of `cantilena serve`'s stdin: the score, where the WAV goes, and the engine's
+/** One request of `cantoria serve`'s stdin: the score, where the WAV goes, and the engine's
  *  default voice (its `--voice`, else MERROW) — Lily# names none. */
-export function serveRequestLine(id: string, score: CantilenaScore, output: string, voice?: string): string {
+export function serveRequestLine(id: string, score: CantoriaScore, output: string, voice?: string): string {
     return JSON.stringify(voice ? { id, score, voice, output } : { id, score, output }) + '\n';
 }

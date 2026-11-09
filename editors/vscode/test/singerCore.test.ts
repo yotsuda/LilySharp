@@ -18,11 +18,11 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
-// engine's score, the key names the render, the engine's lines are read, and the Cantilena
+// engine's score, the key names the render, the engine's lines are read, and the Cantoria
 // extension's exports are recognised.
 describe('the engine\'s score of a sung voice', () => {
     // The owner's 雪やこんこ, its first bar: ゆ, the vowel held on the d, き, や with a breath.
@@ -39,7 +39,7 @@ describe('the engine\'s score of a sung voice', () => {
     it('is seconds, pitch and the syllable; a melisma has no lyric; a breath is kept; the whole moved by the lead', () => {
         // VOICE_LEAD_S (0.3 s) before the score's 0: the room for the first syllable's consonant,
         // which the engine places before the beat (owner's report 2026-11-08: さ at 0 sang as た).
-        const score = cantilenaScore(voice, 1);
+        const score = cantoriaScore(voice, 1);
         assert.equal(score.sampleRate, 48000);
         assert.equal(score.language, 'ja');
         assert.deepEqual(score.notes, [
@@ -51,17 +51,17 @@ describe('the engine\'s score of a sung voice', () => {
     });
 
     it('is slower at a practice speed below one, the way the notes are', () => {
-        const score = cantilenaScore(voice, 0.5);
+        const score = cantoriaScore(voice, 0.5);
         assert.deepEqual(score.notes.map(n => [n.start, n.duration]), [[0.3, 0.75], [1.05, 0.25], [1.3, 0.75], [2.05, 0.25]]);
-        assert.deepEqual(cantilenaScore(voice, 0).notes[1].start, 0.675, 'a speed of 0 is read as 1');
+        assert.deepEqual(cantoriaScore(voice, 0).notes[1].start, 0.675, 'a speed of 0 is read as 1');
     });
 
     it('is keyed by the voice and the score, so the speed and the voice each sing anew', () => {
-        const a = voiceKey(cantilenaScore(voice, 1), 'MERROW');
+        const a = voiceKey(cantoriaScore(voice, 1), 'MERROW');
         assert.match(a, /^[0-9a-f]{40}$/);
-        assert.equal(voiceKey(cantilenaScore(voice, 1), 'MERROW'), a);
-        assert.notEqual(voiceKey(cantilenaScore(voice, 0.8), 'MERROW'), a);
-        assert.notEqual(voiceKey(cantilenaScore(voice, 1), 'OTHER'), a);
+        assert.equal(voiceKey(cantoriaScore(voice, 1), 'MERROW'), a);
+        assert.notEqual(voiceKey(cantoriaScore(voice, 0.8), 'MERROW'), a);
+        assert.notEqual(voiceKey(cantoriaScore(voice, 1), 'OTHER'), a);
     });
 });
 
@@ -71,7 +71,7 @@ describe('the engine\'s wire, and the extension\'s API', () => {
         assert.deepEqual(parseServeLine('{"id":"k1","wav":"C:\\\\x.wav","duration":8,"sampleRate":48000,"seconds":0.4}'),
             { id: 'k1', wav: 'C:\\x.wav', duration: 8, sampleRate: 48000, seconds: 0.4 });
         assert.deepEqual(parseServeLine('{"id":"k2","error":"note 0 at 0 s: no lyric"}'), { id: 'k2', error: 'note 0 at 0 s: no lyric' });
-        assert.equal(parseServeLine('cantilena: serving neutrino'), null);
+        assert.equal(parseServeLine('cantoria: serving neutrino'), null);
         assert.equal(parseServeLine(''), null);
         assert.equal(parseServeLine('{not json'), null);
     });
@@ -82,13 +82,13 @@ describe('the engine\'s wire, and the extension\'s API', () => {
         assert.deepEqual(JSON.parse(line), { id: 'abc', score: { sampleRate: 48000, language: 'ja', notes: [] }, output: 'C:\\tmp\\abc.wav' });
     });
 
-    it('takes the Cantilena extension\'s exports when they are the first API, and nothing else', () => {
-        assert.equal(CANTILENA_EXTENSION_ID, 'yotsuda.cantilena');
+    it('takes the Cantoria extension\'s exports when they are the first API, and nothing else', () => {
+        assert.equal(CANTORIA_EXTENSION_ID, 'yotsuda.cantoria');
         const api = { version: '0.1.0', apiVersion: 1, status: async () => ({ ready: true, voice: 'MERROW', problems: [] }), sing: async () => ({ wav: 'x', duration: 1 }), release: () => undefined };
-        assert.equal(cantilenaApiOf(api), api);
-        assert.equal(cantilenaApiOf({ ...api, apiVersion: 2 }), undefined);
-        assert.equal(cantilenaApiOf({ path: 'omr.exe' }), undefined);
-        assert.equal(cantilenaApiOf(undefined), undefined);
+        assert.equal(cantoriaApiOf(api), api);
+        assert.equal(cantoriaApiOf({ ...api, apiVersion: 2 }), undefined);
+        assert.equal(cantoriaApiOf({ path: 'omr.exe' }), undefined);
+        assert.equal(cantoriaApiOf(undefined), undefined);
     });
 });
 
@@ -109,12 +109,12 @@ describe('the singer choices', () => {
         assert.equal(writesSinger('// singer "a/b"'), false, 'a comment');
     });
 
-    it('offers Cantilena only where a voice was asked for, once', () => {
+    it('offers Cantoria only where a voice was asked for, once', () => {
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
-        assert.match(ext, /if \(cantilenaOffered \|\| vscode\.extensions\.getExtension\(CANTILENA_EXTENSION_ID\)\) \{ return; \}/);
-        assert.match(ext, /'workbench\.extensions\.installExtension', CANTILENA_EXTENSION_ID/);
+        assert.match(ext, /if \(cantoriaOffered \|\| vscode\.extensions\.getExtension\(CANTORIA_EXTENSION_ID\)\) \{ return; \}/);
+        assert.match(ext, /'workbench\.extensions\.installExtension', CANTORIA_EXTENSION_ID/);
         assert.match(ext, /if \(reason === 'play' && writesSinger\(/);
-        assert.equal(ext.match(/offerCantilena\(\);/g)?.length, 4, 'the completion, the hearing, the step keys, the play');
+        assert.equal(ext.match(/offerCantoria\(\);/g)?.length, 4, 'the completion, the hearing, the step keys, the play');
     });
 
     it('opens the list on the space after singer', () => {
@@ -191,7 +191,7 @@ describe('the singer choices', () => {
 });
 
 // The manifest's side: the two settings, and no voice setting or picker of Lily#'s own (the
-// voice is the Cantilena extension's) — as the MIDI output's (midiOutputSetting.test.ts).
+// voice is the Cantoria extension's) — as the MIDI output's (midiOutputSetting.test.ts).
 // When an edited voice goes to the engine (docs/singing-design.md §5): after the text rests, one
 // job a slot, the newest winning.
 describe('choosing a voice with the step keys', () => {
@@ -520,11 +520,11 @@ describe('the singer settings', () => {
     const settings = Object.assign({}, ...manifest.contributes.configuration.map((c: { properties: object }) => c.properties));
     const commands = manifest.contributes.commands as { command: string; title: string }[];
 
-    it('name a program only for developers, empty by default (the Cantilena extension), and nothing else', () => {
+    it('name a program only for developers, empty by default (the Cantoria extension), and nothing else', () => {
         assert.equal(settings['lilysharp.playback.singer'].type, 'string');
         assert.equal(settings['lilysharp.playback.singer'].default, '');
         assert.equal(settings['lilysharp.playback.singer'].scope, 'machine-overridable');
-        assert.match(settings['lilysharp.playback.singer'].markdownDescription, /yotsuda\.cantilena/);
+        assert.match(settings['lilysharp.playback.singer'].markdownDescription, /yotsuda\.cantoria/);
         // The voice doubles the part's instrument (owner's decision 2026-11-08): no mute setting, no voice setting.
         assert.equal(settings['lilysharp.playback.singerReplacesPart'], undefined);
         assert.equal(settings['lilysharp.playback.singerVoice'], undefined);

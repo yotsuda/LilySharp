@@ -29,7 +29,7 @@ namespace LilySharp.Core.Midi;
 public sealed record SungNote(double Start, double Duration, double Pitch, string? Lyric, bool Melisma, bool Breath, int SourcePos, double? Level = null, double? LevelEnd = null, bool Inhale = false, bool Hyphen = false);
 
 /// <summary>A part's words on its notes, as a singing engine takes them: the score in seconds
-/// that <c>cantilena</c> reads. <paramref name="Warnings"/> says what the engine will not sing
+/// that <c>cantoria</c> reads. <paramref name="Warnings"/> says what the engine will not sing
 /// (syllables that are not kana).</summary>
 /// <paramref name="Singer"/> is who the file says sings it, as written, or null for the engine's default.
 /// <paramref name="Gender"/> is the gender of the engine's default voice for it (<see cref="Music.LyricSinger.GenderReaderOf"/>).

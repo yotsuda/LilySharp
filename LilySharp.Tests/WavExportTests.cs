@@ -143,7 +143,7 @@ public sealed class WavExportTests : IDisposable
         var singer = new FakeSinger { Seconds = 0.5, SampleRate = 48000, Amplitude = 0.5f };
         var (bytes, result) = Export(SungBook(), singer);
 
-        // What the engine was given: Cantilena's score (its README), the syllables as kana.
+        // What the engine was given: Cantoria's score (its README), the syllables as kana.
         Assert.NotNull(singer.ScoreJson);
         using var json = System.Text.Json.JsonDocument.Parse(singer.ScoreJson);
         Assert.Equal(WavRenderer.DefaultSampleRate, json.RootElement.GetProperty("sampleRate").GetInt32());
@@ -239,12 +239,12 @@ public sealed class WavExportTests : IDisposable
     }
 
     [Fact]
-    public void TheCantilenaProgram_IsRefusedBeforeAnyScoreIsRendered_WhenItsPathNamesNoFile()
+    public void TheCantoriaProgram_IsRefusedBeforeAnyScoreIsRendered_WhenItsPathNamesNoFile()
     {
-        Assert.Contains("not found", CantilenaProgram.Problem(Path.Combine(_dir, "none", "cantilena.exe")));
-        Assert.Null(CantilenaProgram.Problem("cantilena"));                     // a bare name: the PATH's
-        Assert.Equal("neutrino/MERROW", new CantilenaProgram("cantilena", "neutrino/MERROW").Name);
-        Assert.Equal("cantilena", new CantilenaProgram(@"C:\x\cantilena.exe").Name);
+        Assert.Contains("not found", CantoriaProgram.Problem(Path.Combine(_dir, "none", "cantoria.exe")));
+        Assert.Null(CantoriaProgram.Problem("cantoria"));                     // a bare name: the PATH's
+        Assert.Equal("neutrino/MERROW", new CantoriaProgram("cantoria", "neutrino/MERROW").Name);
+        Assert.Equal("cantoria", new CantoriaProgram(@"C:\x\cantoria.exe").Name);
     }
 }
 

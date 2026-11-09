@@ -62,7 +62,7 @@ public sealed class SungScoreJsonTests
         for (int i = 1; i < notes.Count; i++)
         {
             double prevEnd = notes[i - 1].Start + notes[i - 1].Duration;
-            // Cantilena's own rule: a note may not start before the one before it ends (1e-9).
+            // Cantoria's own rule: a note may not start before the one before it ends (1e-9).
             Assert.True(notes[i].Start >= prevEnd - 1e-9,
                 $"note {i} at {notes[i].Start} starts before note {i - 1} ends ({prevEnd})");
         }
