@@ -61,7 +61,7 @@ describe('where the reader is (L1)', () => {
     });
 
     it('reads the extension\'s exports: a path, or nothing usable', () => {
-        assert.equal(OMR_EXTENSION_ID, 'yotsuda.lilysharp-omr');
+        assert.equal(OMR_EXTENSION_ID, 'yotsuda.copista');
         assert.equal(readerOfExports({ path: 'C:\\e\\bin\\omr.exe', version: '0.3.0', protocol: 1 }), 'C:\\e\\bin\\omr.exe');
         assert.equal(readerOfExports(undefined), undefined);
         assert.equal(readerOfExports({ path: '  ' }), undefined);

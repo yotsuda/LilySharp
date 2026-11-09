@@ -27,12 +27,12 @@ import * as fs from 'fs';
 /** The CLI-and-output agreement versions this extension speaks (the reader's `protocol`). */
 export const OMR_PROTOCOLS = { min: 1, max: 1 } as const;
 
-/** The oldest Scan Import this Lily# is written for. A reader answering a lower `--version` is
+/** The oldest Copista this Lily# is written for. A reader answering a lower `--version` is
  *  offered its update when a scan is read (the Marketplace keeps the extension current on its
  *  own — VS Code's auto-update, not duplicated here; this is only Lily#'s own floor). Raised with
  *  OMR_PROTOCOLS when a release leans on a newer reader (RELEASING.md §2). 0.4.0 since Lily#
  *  0.14.0: Fix OMR Marks with AI checks a proposal with `omr verify --candidate --bars` and reads
- *  the reader's `readings`, both new in Scan Import 0.4.0 (the protocol is unchanged). */
+ *  the reader's `readings`, both new in Copista 0.4.0 (the protocol is unchanged). */
 export const OMR_MIN_VERSION = '0.4.0';
 
 /** The environment variable that points at a reader by hand (development; L1 ①). */
@@ -40,7 +40,7 @@ export const OMR_PATH_VARIABLE = 'LILYSHARP_OMR_PATH';
 
 /** The VS Code extension that carries the reader (LilySharp-Omr's reply of 2026-10-12 §3: a
  *  separate, Windows-only, Beta extension; its `activate` returns {@link OmrExtensionExports}). */
-export const OMR_EXTENSION_ID = 'yotsuda.lilysharp-omr';
+export const OMR_EXTENSION_ID = 'yotsuda.copista';
 
 /** What the reader's extension exports: where its `omr.exe` is, and what `omr --version --json`
  *  answered when it was packed. `undefined` off Windows x64 or when its `bin` is broken. */

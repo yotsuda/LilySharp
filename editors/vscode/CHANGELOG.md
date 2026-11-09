@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **The scan reader is now Copista** (`yotsuda.copista`, formerly Lily# Scan Import): the offer to install it, and its update, name it so.
 - **Lily# offers to install Cantoria** when a voice is asked for and the extension is not there (the `singer` list, hearing a voice, the step keys, or Play on a score naming a singer), once a session. Lyrics alone say nothing.
 - **`treble^8` stands above `treble`** in the clef list and on Ctrl+Shift+Up. The list still opens on `treble`.
 - **Choosing `singer` leaves the gender open**: it writes the word and a space, and the list that opens holds `female`, `male` and the voices.

@@ -49,9 +49,9 @@ export function omrPlatformSupported(): boolean {
 
 /** Says the reader is missing and offers its extension. */
 export async function offerOmrExtension(): Promise<void> {
-    const install = 'Install Scan Import';
+    const install = 'Install Copista';
     const choice = await vscode.window.showInformationMessage(
-        'Lily#: reading a scan or a PDF needs the Lily# Scan Import extension (Beta, Windows). Install it?',
+        'Lily#: reading a scan or a PDF needs the Copista extension (Beta, Windows). Install it?',
         install);
     if (choice === install) {
         await installOmrExtension();
@@ -63,8 +63,8 @@ export async function offerOmrExtension(): Promise<void> {
  *  the user took it; the caller then leaves the read for after the update. Only a floor of
  *  Lily#'s own: keeping the extension current is VS Code's auto-update, not repeated here. */
 export async function offerOmrUpdate(v: OmrVersion, why: string): Promise<boolean> {
-    const update = 'Update Scan Import';
-    const choice = await vscode.window.showWarningMessage(`Lily#: Scan Import ${v.version} ${why}`, update);
+    const update = 'Update Copista';
+    const choice = await vscode.window.showWarningMessage(`Lily#: Copista ${v.version} ${why}`, update);
     if (choice !== update) {
         return false;
     }
@@ -117,6 +117,6 @@ export async function noteOmrBeta(context: vscode.ExtensionContext): Promise<voi
     }
     await context.globalState.update(key, true);
     void vscode.window.showInformationMessage(
-        'Lily#: Scan Import is a Beta. It marks every place it is unsure of with @todo — '
+        'Lily#: Copista is a Beta. It marks every place it is unsure of with @todo — '
         + 'check those against the scan (Show Original Scan) before trusting the score.');
 }

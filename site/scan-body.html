@@ -1,7 +1,7 @@
 <div class="layout">
 
 <nav class="toc">
-  <p class="grp">Scan Import</p>
+  <p class="grp">Copista</p>
   <ol>
     <li><a href="#what">What it is</a></li>
     <li><a href="#install">Install it</a></li>
@@ -17,7 +17,7 @@
 
 <section id="what">
   <h2>What it is</h2>
-  <p><b>Lily# Scan Import</b> reads a page image or a PDF of printed music and writes it as
+  <p><b>Copista</b> reads a page image or a PDF of printed music and writes it as
   Lily# text — a <code>.lys</code> you edit, play and engrave like any other. It does not
   pretend to read perfectly: the places it is unsure of are marked in the text with
   <a href="grammar.html#todo"><code>@todo</code></a>, each with a note on what to check, and the
@@ -30,11 +30,11 @@
     <figcaption>A 1904 scan (above) and the first bars as the reader wrote them, drawn by the
     preview with its marks (below): two bars where the notes it read do not fill the time.</figcaption>
   </figure>
-  <p>It is a <b>separate extension</b> by the same author, <i>Lily# Scan Import (Beta)</i>, that
+  <p>It is a <b>separate extension</b> by the same author, <i>Copista (Beta)</i>, that
   carries the reader; the commands that run it are Lily#'s, and it shows nothing without Lily#.
   It is in beta and free while it is: later versions may be offered for a fee. It runs on
   Windows (x64) only, and needs Lily# Studio, the editor for Lily#; fixing the marks with AI
-  needs Lily# Studio 0.14.0 and Scan Import 0.4.0 or later.</p>
+  needs Lily# Studio 0.14.0 and Copista 0.4.0 or later.</p>
 </section>
 
 <section id="install">
@@ -43,16 +43,16 @@
   <ul>
     <li><b>Let Lily# offer it.</b> On Windows, run <i>Convert Image/PDF to Lily# (.lys)…</i>
     from the command palette (<kbd>Ctrl+Shift+P</kbd>). When the reader is not installed, the
-    command offers <b>Install Scan Import</b> first; accept, and VS Code installs it from the
+    command offers <b>Install Copista</b> first; accept, and VS Code installs it from the
     Marketplace. Run the command again and it reads.</li>
     <li><b>From the Extensions view.</b> <kbd>Ctrl+Shift+X</kbd>, search for <b>Lily# Scan
     Import</b> and install the one by <i>yotsuda</i> — or open its
-    <a href="https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp-omr">Marketplace
+    <a href="https://marketplace.visualstudio.com/items?itemName=yotsuda.copista">Marketplace
     page</a>.</li>
   </ul>
   <p>VS Code keeps it up to date as it keeps every extension. When a Lily# needs a newer reader
   than the one installed — a command, a field, a fixed reading it is written for — it offers
-  <b>Update Scan Import</b> before it reads; decline, and it reads with the one you have.
+  <b>Update Copista</b> before it reads; decline, and it reads with the one you have.
   Not installed Lily# yet? <a href="start.html#install">Get started</a> walks through it.</p>
 </section>
 
@@ -226,7 +226,7 @@
   <p>Everything runs on your computer: a small learnt symbol detector, the rules of notation and
   Windows' own text recognition read the page. No image or result is sent anywhere, and the
   extension keeps no account or key.</p>
-  <p>Scan Import is <b>not free software</b> and is not under Lily#'s licence: it is a separate
+  <p>Copista is <b>not free software</b> and is not under Lily#'s licence: it is a separate
   program, under its own terms of use (free of charge while in beta; no redistribution; no
   warranty), that Lily# runs as a child process. It contains no Lily# code, and Lily# — GPL-3.0
   or later — contains none of it; a Lily# without it loses the scan commands and nothing else.

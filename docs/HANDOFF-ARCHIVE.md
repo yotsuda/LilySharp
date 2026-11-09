@@ -267,6 +267,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1205セッションの経緯
+
+### 1.1 第1205セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1205`・HEAD `ee7623a57`・未 push 105）。オーナー「Cantilena が無いときインストールを案内して」→「実装して」。作業場所は Lab `sessions/p1205/`。
+
+- `offerCantilena`: 拡張が無いとき、`singer` の補完・試聴・Ctrl+Shift+Up/Down・`singer` を書いた楽譜の再生で 1 セッション 1 回だけ通知、Install Cantilena ボタン（失敗したら拡張の検索）。歌詞があるだけなら出さない。Marketplace 公開前はボタンが検索画面になるだけ。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1205 -DiffBase ee7623a57`、BUILD 0）・npm 942 / 942。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
 ## 以下は第1204セッションの経緯
 
 ### 1.1 第1204セッション（2026-11-09・YT-DELL2）
