@@ -74,7 +74,7 @@ export interface SingerChoice { label: string; detail: string }
  * 1174), so is one that says it is the other.
  */
 export function singerChoices(voices: readonly CantilenaVoice[], language: string, gender?: string | null): SingerChoice[] {
-    return voices.filter(v => v.language === language && fitsGender(v, gender))
+    return byVoiceId(voices.filter(v => v.language === language && fitsGender(v, gender)))
         .map(v => ({ label: v.id, detail: v.label && v.label !== v.name ? v.label : v.name }));
 }
 
@@ -104,28 +104,28 @@ export function singerWrittenAt(line: string, from: number, to: number): string 
 }
 
 /**
- * The voice a step key moves to (owner's requests 2026-11-09, sessions 1170, 1172 and 1173): Up
- * (`direction` 1) is the voice above in the list of the current voice's own engine, Down the one below,
- * or with `acrossEngines` the next or previous engine's voice last chosen (`lastOf`, else its first).
- * Neither goes round. A `singer` that names none of `voices` (a role, an empty string) enters the
- * first engine's list at the end the key moves away from. Undefined when there is nowhere else to go.
+ * The voice a step key moves to (owner's requests 2026-11-09, sessions 1170, 1172, 1173 and 1188):
+ * Up (`direction` 1) is the voice above in the whole list, Down the one below, from one engine into
+ * the next; with `acrossEngines`, the first voice of the next or previous engine. Neither goes round.
+ * A `singer` that names none of `voices` (a role, an empty string) enters the list at the end the key
+ * moves away from. Undefined when there is nowhere else to go.
  */
-export function stepVoice(voices: readonly Pick<CantilenaVoice, 'id' | 'engine'>[], current: string, direction: 1 | -1,
-    acrossEngines: boolean, lastOf?: ReadonlyMap<string, string>): string | undefined {
-    const engines = [...new Set(voices.map(v => v.engine))];
-    if (engines.length === 0) { return undefined; }
+export function stepVoice(voices: readonly Pick<CantilenaVoice, 'id' | 'engine'>[], current: string, direction: 1 | -1, acrossEngines: boolean): string | undefined {
+    if (voices.length === 0) { return undefined; }
     const here = voices.find(v => v.id === current);
     if (acrossEngines) {
+        const engines = [...new Set(voices.map(v => v.engine))];
         if (engines.length < 2) { return undefined; }
         const engine = engines[here ? engines.indexOf(here.engine) + direction : direction > 0 ? 0 : engines.length - 1];
-        if (engine === undefined) { return undefined; }
-        const theirs = voices.filter(v => v.engine === engine);
-        const kept = lastOf?.get(engine);
-        return theirs.some(v => v.id === kept) ? kept : theirs[0].id;
+        return engine === undefined ? undefined : voices.find(v => v.engine === engine)?.id;
     }
-    const list = voices.filter(v => v.engine === (here ? here.engine : engines[0]));
-    if (!here) { return (direction > 0 ? list[list.length - 1] : list[0]).id; }
-    return list[list.findIndex(v => v.id === current) - direction]?.id;
+    if (!here) { return (direction > 0 ? voices[voices.length - 1] : voices[0]).id; }
+    return voices[voices.findIndex(v => v.id === current) - direction]?.id;
+}
+
+/** Voices in the order they are offered and stepped through: by name, so by engine first. */
+export function byVoiceId<T extends { id: string }>(voices: readonly T[]): T[] {
+    return [...voices].sort((a, b) => a.id.localeCompare(b.id, 'en'));
 }
 
 /** What a render costs before its length counts: the bar's estimate (session 1178). */

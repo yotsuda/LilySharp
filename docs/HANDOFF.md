@@ -138,6 +138,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1188セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14988 / 0 / 2**（`-Start p1188`・HEAD `fc54c00ed`・未 push 88）。オーナー「singer の補完はアルファベット順に。diffsinger を一番前に」「ctrl+shift+up はプロバイダをまたいで動くように」「ctrl+shift+pgup/down は各プロバイダの先頭の声に移動」。作業場所は Lab `sessions/p1188/`。
+
+- `byVoiceId`（singerCore）で補完も step も名前順＝`diffsinger/` が先。`stepVoice` は一覧全体を歩く（両端で止まる）。`acrossEngines` は隣のプロバイダの先頭へ（プロバイダごとの直近の記憶は廃止）。PageUp は従来どおり一覧の下の方向のプロバイダへ（要望外で変えていない）。
+- 終了時 full **14988 合格 / 0 失敗 / skip 2 / 合計 14990**（`-End p1188 -DiffBase fc54c00ed`、BUILD 0）・npm 935 / 935。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
+## 以下は第1187セッションの経緯
+
 ### 1.1 第1187セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14971 / 0 / 2**（`-Start p1187`・HEAD `4118344a3`・未 push 87）。オーナー「既定の女性声、既定の男性声のふたつで足りる。soprano/alto は女性、tenor/bass は男性、指定がなければ clef が treble なら女性」→「その形で実装して」。作業場所は Lab `sessions/p1187/`。
@@ -146,16 +155,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **Cantilena**: 設定 `cantilena.defaultFemaleVoice`／`defaultMaleVoice`（空は言語に合うその性別の先頭）。`cantilena.voices`・Cast a Singer・API `cast` は廃止。`resolveSinger(written, voices, defaults, { language, gender })`。その性別の声が無ければ反対の性別で歌い一文を出す。
 - 候補の `isRole` は消した。`lysc wav` は既定の 1 声のまま（役名は警告）。
 - 終了時 full **14988 合格 / 0 失敗 / skip 2 / 合計 14990**（`-End p1187 -DiffBase 4118344a3`、BUILD 0）・npm 934 / 934・Cantilena npm 24 / 24。両方を配布済み（Reload Window は 2 回要ることあり）。
-
-## 以下は第1186セッションの経緯
-
-### 1.1 第1186セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14971 / 0 / 2**（`-Start p1186`・HEAD `99f44a71d`・未 push 86）。オーナー「項目名は default voice のように」「未公開だから大丈夫。直して」。作業場所は Lab `sessions/p1186/`。
-
-- Cantilena の設定キーを `cantilena.voice` から `cantilena.defaultVoice` へ（旧キーの読み取りは残さない＝オーナー判断）。Cantilena は配布済み。Lily# は docs の表記だけ。
-- `cantilena.voices` のキーを決め打ちにする案はオーナーと相談中（未実装）。
-- 終了時 full **14971 合格 / 0 失敗 / skip 2 / 合計 14973**（`-End p1186 -DiffBase 99f44a71d`、BUILD 0）・Cantilena npm 24 / 24。
 
 ## 2. 開いている作業
 

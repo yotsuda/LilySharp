@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1186セッションの経緯
+
+### 1.1 第1186セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14971 / 0 / 2**（`-Start p1186`・HEAD `99f44a71d`・未 push 86）。オーナー「項目名は default voice のように」「未公開だから大丈夫。直して」。作業場所は Lab `sessions/p1186/`。
+
+- Cantilena の設定キーを `cantilena.voice` から `cantilena.defaultVoice` へ（旧キーの読み取りは残さない＝オーナー判断）。Cantilena は配布済み。Lily# は docs の表記だけ。
+- `cantilena.voices` のキーを決め打ちにする案はオーナーと相談中（未実装）。
+- 終了時 full **14971 合格 / 0 失敗 / skip 2 / 合計 14973**（`-End p1186 -DiffBase 99f44a71d`、BUILD 0）・Cantilena npm 24 / 24。
+
 ## 以下は第1185セッションの経緯
 
 ### 1.1 第1185セッション（2026-11-09・YT-DELL2）

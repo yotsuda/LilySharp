@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantilenaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, singerChoices, singerValueAt, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleScore } from './singerCore';
+import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantilenaApiOf, fitsGender, learnRenderRate, prepareModeOf, singerChoices, singerValueAt, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleScore } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -3896,8 +3896,6 @@ let voiceSamplesDir: string | undefined;
 let voiceSampleQueue: VoiceSampleQueue | undefined;
 /** The voice last asked to be heard: a sample landing after another was chosen stays silent. */
 let voiceSampleWanted = '';
-/** The voice last chosen with the step keys, per engine, for coming back to it. */
-const lastVoiceOfEngine = new Map<string, string>();
 
 function voiceSampleFile(id: string): string {
     return path.join(voiceSamplesDir ?? '', `${id.replace(/[^\w.-]+/g, '_')}-${VOICE_SAMPLE_VERSION}.wav`);
@@ -3955,12 +3953,12 @@ async function hearSinger(label: unknown): Promise<void> {
 }
 
 /**
- * The step keys on a `singer "…"` (owner's request 2026-11-09, session 1170): Ctrl+Shift+Up / Down
- * the next or previous voice of its engine, Ctrl+Shift+PageUp / PageDown another engine's, among
- * the voices that sing the words' language. The chosen voice says its phrase, and the score's own
+ * The step keys on a `singer "…"` (owner's requests 2026-11-09, sessions 1170 and 1188): Ctrl+Shift+Up /
+ * Down the voice above or below in the whole list, Ctrl+Shift+PageUp / PageDown the first voice of
+ * another engine, among the voices that sing the words' language. The chosen voice says its phrase, and the score's own
  * voice follows from the edit (prepareVoices). False when the caret is not on one.
  */
-async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, withinEngine: boolean, pressedAt: number): Promise<boolean> {
+async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, byVoice: boolean, pressedAt: number): Promise<boolean> {
     if (!client || !clientReady || editor.selections.length !== 1) { return false; }
     const doc = editor.document;
     const version = doc.version;
@@ -3984,9 +3982,9 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, within
     samples().warm(sings.map(v => v.id));
     const voices = sings.filter(v => fitsGender(v, slot.Gender));
     clock.mark('voices');
-    const next = stepVoice(voices, at.value, direction, !withinEngine, lastVoiceOfEngine);
+    const next = stepVoice(byVoiceId(voices), at.value, direction, !byVoice);
     if (!next) {
-        vscode.window.setStatusBarMessage(withinEngine ? `Lily#: ${at.value} is the end of the voices that sing ${slot.Language}`
+        vscode.window.setStatusBarMessage(byVoice ? `Lily#: ${at.value} is the end of the voices that sing ${slot.Language}`
             : `Lily#: no further provider has voices for ${slot.Language} that way`, 4000);
         return true;
     }
@@ -3996,7 +3994,6 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, within
     clock.mark('edit');
     const caret = new vscode.Position(line, at.start + next.length);
     editor.selection = new vscode.Selection(caret, caret);
-    lastVoiceOfEngine.set(next.slice(0, next.indexOf('/')), next);
     const label = voices.find(v => v.id === next)?.label;
     vscode.window.setStatusBarMessage(`Lily#: singer ${next}${label ? ` (${label})` : ''}`, 4000);
     void auditionVoice(doc.uri.toString(), next, clock);

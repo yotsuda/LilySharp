@@ -43,7 +43,7 @@ export interface StepAuditionDeps {
     getPreview: (uri: string) => vscode.WebviewPanel | undefined;
     log: (msg: string) => void;
     /** A step on a `singer "…"`: true when the caret was on one (the voices are the editor's to list, not the server's). */
-    stepSinger: (editor: vscode.TextEditor, direction: 1 | -1, withinEngine: boolean, pressedAt: number) => Promise<boolean>;
+    stepSinger: (editor: vscode.TextEditor, direction: 1 | -1, byVoice: boolean, pressedAt: number) => Promise<boolean>;
     /** Lets what a `singer` writes be heard, in the voice it comes to here. */
     hearSinger: (written: string) => Promise<void>;
 }

@@ -1921,7 +1921,7 @@ instrument, else its clef, says the gender (a bass, baritone, tenor or `treble_8
 each machine's default voice of that gender sings. A singer that cannot be had sings as that default,
 said once. Between the quotes the editor offers the
 voices that sing the words' language; on a `singer "…"`, `Ctrl+Shift+Up` / `Down` step through
-those voices and `Ctrl+Shift+PageUp` / `PageDown` change the engine, the chosen voice heard in the
+those voices and `Ctrl+Shift+PageUp` / `PageDown` go to the first voice of another engine, the chosen voice heard in the
 preview. `singer male "neutrino/SOMA"` (or `female`) leaves out of both the voices that say they are
 the other; it changes nothing else, and another word there is an error (LYS4040). With no name,
 `singer male` is that gender's default voice: each machine's setting, else the first

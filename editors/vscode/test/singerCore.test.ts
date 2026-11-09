@@ -102,7 +102,7 @@ describe('the singer choices', () => {
     ];
 
     it('offers the voices that sing the language', () => {
-        assert.deepEqual(singerChoices(voices, 'ja').map(c => c.label), ['neutrino/MERROW', 'diffsinger/TIGER']);
+        assert.deepEqual(singerChoices(voices, 'ja').map(c => c.label), ['diffsinger/TIGER', 'neutrino/MERROW'], 'by name');
         assert.deepEqual(singerChoices(voices, 'en').map(c => c.label), ['diffsinger/ALICE']);
         assert.deepEqual(singerChoices(voices, 'ko'), [], 'no voice sings it: nothing to offer');
     });
@@ -159,20 +159,24 @@ describe('choosing a voice with the step keys', () => {
         assert.equal(stepVoice(voices, 'neutrino/A', -1, false), 'neutrino/B');
         assert.equal(stepVoice(voices, 'diffsinger/Y', 1, false), 'diffsinger/X');
         assert.equal(stepVoice(voices, 'neutrino/A', 1, false), undefined);
-        assert.equal(stepVoice(voices, 'neutrino/C', -1, false), undefined);
         assert.equal(stepVoice(voices, 'diffsinger/Y', -1, false), undefined);
+    });
+
+    it('walks from one engine into the next', () => {
+        assert.equal(stepVoice(voices, 'neutrino/C', -1, false), 'diffsinger/X');
+        assert.equal(stepVoice(voices, 'diffsinger/X', 1, false), 'neutrino/C');
     });
 
     it('enters the first engine\'s list from a role or an empty name, at the end the key leaves', () => {
         assert.equal(stepVoice(voices, '', -1, false), 'neutrino/A');
-        assert.equal(stepVoice(voices, 'soprano', 1, false), 'neutrino/C');
+        assert.equal(stepVoice(voices, 'soprano', 1, false), 'diffsinger/Y');
     });
 
-    it('crosses to the next engine, its first voice or the one last chosen there, and does not go round', () => {
+    it('crosses to the first voice of the next or previous engine, and does not go round', () => {
         assert.equal(stepVoice(voices, 'neutrino/B', 1, true), 'diffsinger/X');
         assert.equal(stepVoice(voices, 'diffsinger/X', -1, true), 'neutrino/A');
-        assert.equal(stepVoice(voices, 'diffsinger/X', -1, true, new Map([['neutrino', 'neutrino/C']])), 'neutrino/C');
-        assert.equal(stepVoice(voices, 'diffsinger/X', -1, true, new Map([['neutrino', 'neutrino/GONE']])), 'neutrino/A');
+        assert.equal(stepVoice(voices, 'diffsinger/Y', -1, true), 'neutrino/A');
+        assert.equal(stepVoice(voices, 'neutrino/C', 1, true), 'diffsinger/X');
         assert.equal(stepVoice(voices, 'diffsinger/X', 1, true), undefined);
         assert.equal(stepVoice(voices, 'neutrino/A', -1, true), undefined);
     });
