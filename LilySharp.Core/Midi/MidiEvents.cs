@@ -67,6 +67,8 @@ public readonly record struct MidiNote(
     // `@breath` or `@caesura` was written on this note: a singer breathes after it (SungVoices).
     // Not written to .mid files, and an instrument plays on.
     bool BreathAfter = false,
+    // `@breath` alone, of those two: with a note right after it the breath is heard. Not written to .mid files.
+    bool Inhale = false,
     // A hairpin starts on this note, 1 `@cresc`, -1 `@decresc`/`@dim`: a singer swells (SungVoices).
     // Not written to .mid files: the MIDI plays each note at the last level written.
     int Swell = 0,

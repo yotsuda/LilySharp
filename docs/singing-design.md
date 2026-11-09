@@ -81,7 +81,10 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   `@breath`, and on the part's last note — where a singer breathes; the engine shapes the phrase
   end. An `@breath` with a sung note right after it takes the room out of its own note (a quarter
   of a second, at most a third of the note), so the next note still starts on its beat. `@caesura`
-  sings the same way.
+  sings the same way, in silence. An `@breath` with a note right after it is also `inhale: true`
+  (owner's decisions 2026-11-09, session 1184: an audible breath there, none before a rest, and none
+  made from noise): NEUTRINO then gets no rest and sings its own `br` phoneme from the breath mark,
+  the model choosing its length; DiffSinger puts the voice's `AP` in the gap, as at any breath.
 - **`level` / `levelEnd`** on a note: its loudness as a factor on the sung audio, from the velocity
   the instruments play at on the square law of their volume (1 for a part with no marking).
   Measured 2026-11-09: NEUTRINO reads a dynamic in its MusicXML and sings no louder, pp and ff alike,

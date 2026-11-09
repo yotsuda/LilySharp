@@ -391,6 +391,8 @@ public class SungNoteDto
     public double? V { get; set; }
     /// <summary>The factor at the note's end, where a hairpin crosses it; null for <see cref="V"/>.</summary>
     public double? E { get; set; }
+    /// <summary>An audible breath before the note right after it (<c>@breath</c>).</summary>
+    public bool I { get; set; }
 }
 
 /// <summary>A part's words on its notes: what the editor hands a singing engine, with what the

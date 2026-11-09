@@ -58,6 +58,32 @@ public class SungVoicesTests
     private const string YukiMusic = "c'8. d16 c8. d16 | c4 a8 r |";
     private const string YukiWords = "ゆ _ き や | こん こ |";
 
+    // ── the breath heard (owner's decisions 2026-11-09, session 1184) ──
+
+    [Fact]
+    public void ABreathBeforeANote_IsHeard()
+    {
+        var notes = Assert.Single(Voices(Book("c'4@breath d | e f |", "さ く | ら よ |"))).Notes;
+        Assert.True(notes[0].Inhale);
+        Assert.False(notes[1].Inhale);
+    }
+
+    [Fact]
+    public void ABreathBeforeARest_IsNot()
+        => Assert.False(Assert.Single(Voices(Book("c'4@breath r | d e |", "さ | く ら |"))).Notes[0].Inhale);
+
+    [Fact]
+    public void ABreathOnTheLastNote_IsNot()
+        => Assert.False(Assert.Single(Voices(Book("c'4 d | e f@breath |", "さ く | ら よ |"))).Notes[^1].Inhale);
+
+    [Fact]
+    public void ACaesura_IsASilence()
+    {
+        var notes = Assert.Single(Voices(Book("c'4@caesura d | e f |", "さ く | ら よ |"))).Notes;
+        Assert.True(notes[0].Breath);
+        Assert.False(notes[0].Inhale);
+    }
+
     // ── dynamics and graces (owner's request 2026-11-09, session 1183) ──
 
     private static double Square(double velocity) => Math.Round(Math.Pow(velocity / 90, 2), 4);

@@ -395,13 +395,16 @@ public sealed class MidiExporter
     /// note tied into counts, its breath being after the tie's end), a hairpin beginning or ending.</summary>
     private static void MarkForSinger(MidiTrack track, IReadOnlyList<int> onset, IEnumerable<SyntaxNode> marks)
     {
-        bool breath = false, ends = false;
+        bool breath = false, inhale = false, ends = false;
         int swell = 0;
         foreach (var mark in marks)
         {
             switch (mark)
             {
-                case ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura }:
+                case ArticulationSyntax { Type: ArticulationType.Breath }:
+                    breath = inhale = true;
+                    break;
+                case ArticulationSyntax { Type: ArticulationType.Caesura }:
                     breath = true;
                     break;
                 case DynamicSyntax { Level: DynamicLevel.None } hairpin when SyntaxFacts.IsDynamicSpannerName(hairpin.DynamicToken.Text):
@@ -415,7 +418,7 @@ public sealed class MidiExporter
         if (!breath && !ends && swell == 0)
             return;
         foreach (int i in onset)
-            track.Notes[i] = track.Notes[i] with { BreathAfter = breath, Swell = swell, SwellEnds = ends };
+            track.Notes[i] = track.Notes[i] with { BreathAfter = breath, Inhale = inhale, Swell = swell, SwellEnds = ends };
     }
 
     /// <summary>A silence (a rest, a slash) ends the tie memory both ways: no tie is pending

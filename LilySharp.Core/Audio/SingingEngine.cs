@@ -223,6 +223,8 @@ public static class SungScoreJson
                     w.WriteNumber("level", level);
                 if (n.LevelEnd is { } levelEnd)
                     w.WriteNumber("levelEnd", levelEnd);
+                if (n.Inhale)
+                    w.WriteBoolean("inhale", true);
                 w.WriteEndObject();
             }
             w.WriteEndArray();
