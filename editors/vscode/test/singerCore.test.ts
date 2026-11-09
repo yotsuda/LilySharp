@@ -19,7 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { CANTILENA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantilenaApiOf, cantilenaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, singerChoices, singerValueAt, singerWrittenAt, stepVoice, sungSeconds, voiceKey, voiceRenderEstimateMs, voiceSampleScore } from '../src/singerCore';
-import { voiceBarShown, voiceProgress } from '../src/webview/playbackCore';
+import { voiceBarShown, voiceProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
 // engine's score, the key names the render, the engine's lines are read, and the Cantilena
@@ -244,6 +244,16 @@ describe('choosing a voice with the step keys', () => {
 });
 
 describe('the bar under Play', () => {
+    it('stays through a repeated preparing while the engine sings, and goes with the answer', () => {
+        assert.equal(voiceStillSinging(undefined, 'preparing', true), true);
+        assert.equal(voiceStillSinging(true, 'preparing', undefined), true);        // a Play pressed meanwhile
+        assert.equal(voiceStillSinging(undefined, 'preparing', undefined), false);
+        assert.equal(voiceStillSinging(false, 'preparing', undefined), false);
+        assert.equal(voiceStillSinging(true, 'ready', undefined), false);
+        assert.equal(voiceStillSinging(true, 'failed', undefined), false);
+        assert.equal(voiceStillSinging(true, 'waiting', undefined), false);
+    });
+
     it('shows only while the engine is singing a voice', () => {
         assert.equal(voiceBarShown([{ state: 'preparing', singing: true }]), true);
         assert.equal(voiceBarShown([{ state: 'ready' }, { state: 'preparing', singing: true }]), true);

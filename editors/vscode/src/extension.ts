@@ -6550,7 +6550,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // keys): the buffer goes with it, so a Play meanwhile plays the instrument, not the
             // old words (session 1148).
             if (state === 'waiting' || state === 'preparing') { voices.delete(part); }
-            voiceStates.set(part, { state, detail, estimateMs: estimateMs || (voiceStates.get(part) || {}).estimateMs, singing: !!singing });
+            const before = voiceStates.get(part) || {};
+            voiceStates.set(part, { state, detail, estimateMs: estimateMs || before.estimateMs, singing: window.LysSynth.voiceStillSinging(before.singing, state, singing) });
             renderVoiceBadge();
         }
         // The bar under Play, for as long as the engine is singing a voice (voiceBarShown).

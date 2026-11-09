@@ -584,6 +584,13 @@ export function voiceBarShown(parts: readonly { state: VoiceState; singing?: boo
     return parts.some(p => p.state === 'preparing' && p.singing === true);
 }
 
+/** Whether a part is being sung once a state word has come: the word says so, or it only repeats
+ *  `preparing` over a part the engine is already singing (owner's report 2026-11-09, session 1185: a
+ *  Play pressed meanwhile asks the host for the voices again, and the bar went out). */
+export function voiceStillSinging(wasSinging: boolean | undefined, state: VoiceState, singing: boolean | undefined): boolean {
+    return singing === true || (state === 'preparing' && wasSinging === true);
+}
+
 /** A voice's weight in the bar when nothing is known of how long it takes. */
 const VOICE_DEFAULT_ESTIMATE_MS = 3000;
 /** How far the bar goes on a voice's estimate alone: only the engine's answer finishes it. */
