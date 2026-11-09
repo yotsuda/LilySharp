@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 307 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **433** | |
+| `OWN` | 306 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **432** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（307 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（306 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -427,8 +427,6 @@
 - **`MeasureCollector.DefaultExpansionBudgetCap`** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
 - **`MeasureCollector.ProcessPercentRepeat`** LILYSHARP-OWN, owner's decision 2026-10-14, session 905). Whole bars: the body opens
 - **`MeasureCollector.ProcessGraceRegion`** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
-### `LilySharp.Core/Svg/Collector/MeasureCollector.Definitions.cs`
-- **`MeasureCollector.KeyCourtesyDue`** LILYSHARP-OWN: LilyPond prints nothing here — a clef change draws no key signature
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Drums.cs`
 - **`MeasureCollector.PlanDrumChart`** LILYSHARP-OWN (owner's design 2026-10-11): LilyPond has no drum chart — its drum music
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`

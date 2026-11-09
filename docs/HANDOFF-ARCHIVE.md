@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1209セッションの経緯
+
+### 1.1 第1209セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1209`・HEAD `0973efa41`・未 push 109）。オーナー「Calamo に変更して」。作業場所は Lab `sessions/p1209/`。
+
+- **読み取りの拡張は Copista から Calamo に改名**（拡張 `yotsuda.calamo`）。Copista は OMR モデルの kobimusic copista-mini と同名で分野も同じため。この行より下の「Copista」「Scan Import」は当時の名前。Marketplace の旧 ID は `yotsuda.lilysharp-omr`（`yotsuda.copista` は未公開）。
+- 商標は未確認。公開の順番は Calamo を先、Lily# を後。
+- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1209 -DiffBase 0973efa41`、BUILD 0）・npm 942 / 942。`Deploy-Lsp.ps1` と読み取りの拡張を配布済み（Reload Window 2 回）。
+
 ## 以下は第1208セッションの経緯
 
 ### 1.1 第1208セッション（2026-11-09・YT-DELL2）

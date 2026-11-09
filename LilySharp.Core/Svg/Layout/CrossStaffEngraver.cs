@@ -23,11 +23,11 @@ namespace LilySharp.Core.Svg.Layout;
 public static class CrossStaffEngraver
 {
     /// <summary>
-    /// The staff an <c>@cross</c> moves a note to: the other one of two, the next one down of
-    /// more (the last staff's note wraps to the first).
+    /// The staff an <c>@cross</c> moves a note to, among <paramref name="staffCount"/> staves: the
+    /// next one down, and from the last the one above it — so of two, the other. A hand in a
+    /// two-staff grand staff is not asked this: it crosses to the other hand, whatever stands
+    /// beside the piano (OMR's report, REQUESTS #24: a song's left hand went to the voice's staff).
     /// </summary>
     public static int TargetStaffOf(int voiceStaffIndex, int staffCount) =>
-        staffCount == 2
-            ? (voiceStaffIndex == 0 ? 1 : 0)
-            : (voiceStaffIndex + 1) % staffCount;
+        voiceStaffIndex + 1 < staffCount ? voiceStaffIndex + 1 : voiceStaffIndex - 1;
 }

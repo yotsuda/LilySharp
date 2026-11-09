@@ -169,15 +169,9 @@ public static class SvgGenerator
 
     /// <summary>
     /// Collects and lays out one score — the ONE road every picture takes (SVG, PNG, PDF,
-    /// boxes, the layout report, and the preview whenever a score changes clef). A score in
-    /// which a note stands in a clef other than its staff's first is collected AGAIN with
-    /// the line starts of the first layout, so a note after a clef change in the middle of
-    /// a line can write out its key's sharp or flat (MeasureCollector.KeyCourtesyDue);
-    /// every other score is collected and laid out once, as it always was.
+    /// boxes, the layout report).
     /// </summary>
     /// <remarks>
-    /// The second layout may break the lines elsewhere (an added sign widens its bar); when
-    /// it does, the score is collected once more with those starts and that layout stands.
     /// score.Paper is the base (LayoutOptions.Default, or the snippet layout) unless the book
     /// wrote `paper { … }`, so a book without one lays out exactly as before.
     /// </remarks>
@@ -185,39 +179,9 @@ public static class SvgGenerator
         SyntaxTree tree, RenderSpec? renderSpec, LayoutOptions? paperBase = null,
         Semantics.PaperOverrides? settings = null)
     {
-        var collector = NewCollector(renderSpec, paperBase, settings, lineStarts: null);
-        var score = CollectScore(collector, tree, renderSpec);
-        var layout = new LayoutEngine(score.Paper).Layout(score);
-        if (!collector.ClefChangesMidLine)
-            return (score, layout);
-        for (int pass = 0; pass < 2; pass++)
-        {
-            var starts = LineStarts(layout);
-            score = CollectScore(NewCollector(renderSpec, paperBase, settings, starts), tree, renderSpec);
-            layout = new LayoutEngine(score.Paper).Layout(score);
-            if (LineStarts(layout).SequenceEqual(starts))
-                break;
-        }
-        return (score, layout);
+        var score = CollectScore(NewCollector(renderSpec, paperBase, settings), tree, renderSpec);
+        return (score, new LayoutEngine(score.Paper).Layout(score));
     }
-
-    /// <summary>Whether any staff of the score changes clef in its music — where
-    /// <see cref="CollectAndLayout"/> may collect twice, and the preview's session hands the
-    /// compile to it.</summary>
-    internal static bool ChangesClef(MultiStaffScore score)
-    {
-        foreach (var staff in score.EnumerateStaves())
-            foreach (var voice in staff.Staff.Voices)
-                foreach (var measure in voice.Measures)
-                    foreach (var item in measure.Items)
-                        if (item is ClefChangeItem)
-                            return true;
-        return false;
-    }
-
-    /// <summary>The measures that open the layout's lines, in order.</summary>
-    internal static int[] LineStarts(ScoreLayout layout) =>
-        [.. layout.AllSystems.Where(s => !s.Measures.IsDefaultOrEmpty).Select(s => s.Measures[0].MeasureIndex)];
 
     /// <summary>
     /// Collects a tree to a <see cref="MultiStaffScore"/> exactly the way the
@@ -231,12 +195,11 @@ public static class SvgGenerator
     /// over the paper the file says (<see cref="Semantics.PaperOverrides"/>).
     internal static MultiStaffScore CollectScore(SyntaxTree tree, RenderSpec? renderSpec,
         LayoutOptions? paperBase = null, Semantics.PaperOverrides? settings = null)
-        => CollectScore(NewCollector(renderSpec, paperBase, settings, lineStarts: null), tree, renderSpec);
+        => CollectScore(NewCollector(renderSpec, paperBase, settings), tree, renderSpec);
 
-    /// <summary>The collector the render path collects with; <paramref name="lineStarts"/> are
-    /// a first layout's line starts (<see cref="CollectAndLayout"/>).</summary>
+    /// <summary>The collector the render path collects with.</summary>
     private static MeasureCollector NewCollector(RenderSpec? renderSpec, LayoutOptions? paperBase,
-        Semantics.PaperOverrides? settings, IReadOnlyList<int>? lineStarts) => new()
+        Semantics.PaperOverrides? settings) => new()
         {
             ScoreTranspose = renderSpec?.ScoreTranspose,
             ScoreConcert = renderSpec?.ScoreConcert,
@@ -244,7 +207,6 @@ public static class SvgGenerator
             // `--set staffSpace=…` goes under the file's paper, which is read through it.
             PaperBase = settings?.OnBase(paperBase ?? LayoutOptions.Default) ?? paperBase ?? LayoutOptions.Default,
             PaperOverrides = settings,
-            LineStartMeasures = lineStarts,
         };
 
     /// <summary>

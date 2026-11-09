@@ -243,7 +243,7 @@ grace body の作業域 6＝`_carriedGraceBreathStart`・`_innerGraceBreathStart
 `_graceChordNames`・`_graceFrameSpecs`。
 
 **S（11＋`_meta` の一部）**: `_measureAccidentals`・`_accidentalBar`・`_accidentalOrder`・`_advanceAccidentalBar`・
-`_keyCourtesyBuilder`／`Staff`／`Measure`／`LineClef`／`Seen`（Key_engraver は Staff）・`_cursor.StaffIndex`・`_nextBeamId`
+`_cursor.StaffIndex`・`_nextBeamId`
 （五線内で一意）・`_keyByMeasure`＋`_keyByMeasureLog`（和音の度数の調）・**`_meta` の `Key*`／`Clef`／`InitialKey*`／
 `InitialClef`**。
 

@@ -556,27 +556,6 @@ public sealed partial class MeasureCollector
     // collector (the method group was a fresh delegate per collect — session 535).
     private Action? _advanceAccidentalBar;
 
-    /// <summary>
-    /// The measures that open a line of the laid-out score, from a first layout of the same
-    /// book — what <see cref="KeyCourtesyDue"/> needs to know which clef the line's key
-    /// signature was drawn in. Null on a first collect: no reminder is drawn, and
-    /// <see cref="ClefChangesMidLine"/> says whether a second collect is wanted
-    /// (SvgGenerator.CollectAndLayout).
-    /// </summary>
-    public IReadOnlyList<int>? LineStartMeasures { get; init; }
-
-    /// <summary>True when a note stood in a clef other than the one its staff opened with
-    /// and its key alters it — the case where the line starts matter (KeyCourtesyDue).</summary>
-    public bool ClefChangesMidLine { get; private set; }
-
-    // KeyCourtesyDue's walk state: the primary walk's builder (null in a span's later
-    // voice), the staff and measure the last pitched note stood in, the clef the line's key
-    // signature was drawn in, and the note names already met in the bar.
-    private int _keyCourtesyStaff = -1;
-    private int _keyCourtesyMeasure = -1;
-    private ClefType _keyCourtesyLineClef;
-    private readonly HashSet<int> _keyCourtesySeen = new();
-
     // The style the score asks for, read once from the resolved layout plan (the music
     // walks all run after CollectDefinitions).
     private Semantics.AccidentalStyleSpec _accidentalStyle = Semantics.AccidentalStyles.Default;
@@ -3718,6 +3697,18 @@ public sealed partial class MeasureCollector
         if (notation.Count < 2)
             return staffGroups;
 
+        // A two-staff grand staff's hands cross to each other, whatever else the score holds.
+        var otherHand = new int[staves.Length];
+        Array.Fill(otherHand, -1);
+        for (int g = 0, first = 0; g < staffGroups.Length; first += staffGroups[g].Staves.Length, g++)
+        {
+            if (staffGroups[g].Type != StaffGroupType.GrandStaff)
+                continue;
+            var hands = notation.Where(i => i >= first && i < first + staffGroups[g].Staves.Length).ToList();
+            if (hands.Count == 2)
+                (otherHand[hands[0]], otherHand[hands[1]]) = (hands[1], hands[0]);
+        }
+
         var clefEvents = new List<(int Measure, Fraction Onset, ClefType Clef)>?[staves.Length];
         List<(int Measure, Fraction Onset, ClefType Clef)> EventsOf(int i) =>
             clefEvents[i] ??= staves[i].Voices.Length > 0
@@ -3729,7 +3720,7 @@ public sealed partial class MeasureCollector
         for (int n = 0; n < notation.Count; n++)
         {
             int source = notation[n];
-            int target = notation[Layout.CrossStaffEngraver.TargetStaffOf(n, notation.Count)];
+            int target = otherHand[source] >= 0 ? otherHand[source] : notation[Layout.CrossStaffEngraver.TargetStaffOf(n, notation.Count)];
             var voices = staves[source].Voices;
             Voice[]? newVoices = null;
             for (int vi = 0; vi < voices.Length; vi++)
@@ -4425,10 +4416,6 @@ public sealed partial class MeasureCollector
             await AddItemAsync(builder, new RestItem(offset, 0, voiceNode.SourceStart) { IsSpacer = true, IsSpanLead = true });
         ResetAccidentalMemory();
         builder.MeasureCompleted = _advanceAccidentalBar ??= AdvanceAccidentalBar;
-        // A span's later voice keeps no key reminder (KeyCourtesyDue): its measures are
-        // counted from the span, not the score's. The walk it interrupts gets its own back.
-        var outerKeyCourtesyBuilder = _v.KeyCourtesyBuilder;
-        _v.KeyCourtesyBuilder = null;
 
         _v.PendingInlineVoltas.Clear();
 
@@ -4452,7 +4439,6 @@ public sealed partial class MeasureCollector
 
         var finalized = builder.FinalizeMeasures();
         _v.LastEndsOffTheBar = builder.EndsOffTheBar;
-        _v.KeyCourtesyBuilder = outerKeyCourtesyBuilder;
         return finalized;
     }
 
@@ -4595,10 +4581,6 @@ public sealed partial class MeasureCollector
         _courtesySourcePositions.Clear();
         _memberEditorialBySource.Clear();
         _v.MeasureAccidentals.Clear();
-        _keyCourtesySeen.Clear();
-        _keyCourtesyStaff = -1;
-        _keyCourtesyMeasure = -1;
-        ClefChangesMidLine = false;
         _fingeringByPosition.Clear();
         _markHostMeasure.Clear();
         // Deliberately OUTSIDE CumulativeSideTables (its remark says why): still an
@@ -4828,7 +4810,6 @@ public sealed partial class MeasureCollector
             builder.SetPartial(filePickup); // top-level partial N arms every voice
         ResetAccidentalMemory();
         builder.MeasureCompleted = _advanceAccidentalBar ??= AdvanceAccidentalBar;
-        _v.KeyCourtesyBuilder = builder;
 
         _v.PendingInlineVoltas.Clear();
 

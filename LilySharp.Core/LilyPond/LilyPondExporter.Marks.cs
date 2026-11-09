@@ -39,12 +39,19 @@ public sealed partial class LilyPondExporter
         if (render is null
             || !tree.GetRoot().DescendantNodes<ArticulationSyntax>().Any(a => a.Name == "cross"))
             return;
-        var staves = render.DescendantNodes().OfType<StaffRenderSyntax>()
-            .Select(s => RenderPartName(s)).OfType<string>().ToList();
-        if (staves.Count < 2)
+        var rows = render.DescendantNodes().OfType<StaffRenderSyntax>()
+            .Where(s => RenderPartName(s) != null).ToList();
+        if (rows.Count < 2)
             return;
-        for (int i = 0; i < staves.Count; i++)
-            _shared.CrossTargets[staves[i]] = staves[Svg.Layout.CrossStaffEngraver.TargetStaffOf(i, staves.Count)];
+        for (int i = 0; i < rows.Count; i++)
+        {
+            // A two-staff grand staff's hands cross to each other, as on the page.
+            int? group = rows[i].Parent is GrandStaffRenderSyntax g ? g.Span.Start : null;
+            var hands = group == null ? [] : rows.Where(r => r.Parent is GrandStaffRenderSyntax o && o.Span.Start == group).ToList();
+            var target = hands.Count == 2 ? hands.First(h => h.Span.Start != rows[i].Span.Start)
+                : rows[Svg.Layout.CrossStaffEngraver.TargetStaffOf(i, rows.Count)];
+            _shared.CrossTargets[RenderPartName(rows[i])!] = RenderPartName(target)!;
+        }
     }
 
     private (string Prefix, string Suffix) SplitAttachments(IEnumerable<SyntaxNode> arts)

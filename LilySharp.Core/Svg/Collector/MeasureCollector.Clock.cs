@@ -557,7 +557,6 @@ public sealed partial class MeasureCollector
         // from 0 per walk answers exactly what LilyPond's absolute measure number answers.
         public int AccidentalBar;
         public int AccidentalOrder;
-        public MeasureBuilder? KeyCourtesyBuilder;
 
         /// <summary>Where the breathing sign the grace body being walked ends on was written
         /// (<c>GraceBodySupport.CarriedBreath</c>), or -1 — the one breath the grace-time

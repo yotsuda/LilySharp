@@ -2029,8 +2029,9 @@ StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
 
                     CROSS-STAFF NOTES: a note of a part drawn in a group may be moved to the
                     OTHER staff with `@cross` (`rh { e''2 a,,2@cross }` draws the a,, on the
-                    left hand's staff — LilyPond's `\change Staff` for one note; a group of
-                    more than two moves it to the next staff down). It is a note annotation,
+                    left hand's staff — LilyPond's `\change Staff` for one note; in a two-staff
+                    grandStaff it is always the other hand, and elsewhere among more than two
+                    staves the next staff down, the last staff's the one above). It is a note annotation,
                     not a head style: `@cross` is NOT an x notehead (that is `@dead` or
                     `@notehead(cross)`). On a part that no score draws beside another staff it
                     moves nothing and is a warning, LYS4031, naming those two spellings. *)

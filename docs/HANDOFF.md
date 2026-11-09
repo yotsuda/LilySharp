@@ -138,22 +138,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1211セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15013 / 0 / 2**（`-Start p1211`・HEAD `2d2d86102`・未 push 111）。オーナー「Calamo OMR からきた request #23 と #24 を直して」。作業場所は Lab `sessions/p1211/`。
+
+- **#23**（オーナー決定 ⒝）: 段の途中の音部記号の後に調号の変化記号を書く規則（第905）を撤去。`KeyCourtesyDue`・`LineStartMeasures`・`ClefChangesMidLine`・2 度目の collect・プレビューの `ChangesClef` の分岐も撤去し、音部記号を変える譜も通常の増分経路に戻った。網は `ClefChangeKeepsTheKeyTests`。`[engraving]`。
+- **#24**: 2 段の `grandStaff` の `@cross` はもう一方の手へ。それ以外の 3 段以上は次の段、最後の段は 1 つ上（折り返しをやめた）。`.ly` の `\change Staff` も同じ。`[engraving]`。
+- 終了時 full **15012 合格 / 0 失敗 / skip 2 / 合計 15014**（`-End p1211 -DiffBase 2d2d86102`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。REQUESTS の 23・24 は fixed。
+
+## 以下は第1210セッションの経緯
+
 ### 1.1 第1210セッション（2026-11-09・YT-DELL2）
 
 開始時 full **15013 / 0 / 2**（`-Start p1210`・HEAD `8f14330c5`・未 push 110）。オーナー「author を統一して」。作業場所は Lab `sessions/p1210/`。
 
 - 著者名は **Yoshifumi Tsuda** に統一: 3 拡張の `author`、ソースの著作権表示、README とサイトの「by」。`yotsuda` は発行者 ID・GitHub・URL（変更不可）だけ。VS Code の表示は VSIX で入れた Cantoria と Calamo だけ `yotsuda`（表示名は Marketplace から来る）。公開後は Yoshifumi Tsuda。
 - 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1210 -DiffBase 8f14330c5`、BUILD 0）。動作の変更なしのため配布なし。
-
-## 以下は第1209セッションの経緯
-
-### 1.1 第1209セッション（2026-11-09・YT-DELL2）
-
-開始時 full **15013 / 0 / 2**（`-Start p1209`・HEAD `0973efa41`・未 push 109）。オーナー「Calamo に変更して」。作業場所は Lab `sessions/p1209/`。
-
-- **読み取りの拡張は Copista から Calamo に改名**（拡張 `yotsuda.calamo`）。Copista は OMR モデルの kobimusic copista-mini と同名で分野も同じため。この行より下の「Copista」「Scan Import」は当時の名前。Marketplace の旧 ID は `yotsuda.lilysharp-omr`（`yotsuda.copista` は未公開）。
-- 商標は未確認。公開の順番は Calamo を先、Lily# を後。
-- 終了時 full **15013 合格 / 0 失敗 / skip 2 / 合計 15015**（`-End p1209 -DiffBase 0973efa41`、BUILD 0）・npm 942 / 942。`Deploy-Lsp.ps1` と読み取りの拡張を配布済み（Reload Window 2 回）。
 
 ## 2. 開いている作業
 

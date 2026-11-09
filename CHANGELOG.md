@@ -6,6 +6,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[engraving]` **A clef change in mid-line no longer writes the key's accidentals out**, as LilyPond and the engraving convention have it: the key still holds, and its sharps and flats are not restated until the line's next key signature. The signs gone, the bars they stood in are narrower.
+- `[engraving]` **In a two-staff `grandStaff`, `@cross` goes to the other hand** whatever stands beside the piano (a song's left hand went to the voice's staff). Among more than two staves otherwise, the last staff's note goes to the staff above it instead of round to the top.
 - `[editor]` **The scan reader is now Calamo** (`yotsuda.calamo`, formerly Lily# Scan Import).
 - `[singing]` **The singing extension is now Cantoria** (`yotsuda.cantoria`, formerly Cantilena).
 - `[editor]` **Lily# offers to install Cantoria** when a voice is asked for and the extension is not there, once a session.

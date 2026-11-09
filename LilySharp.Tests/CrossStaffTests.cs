@@ -31,9 +31,50 @@ public class CrossStaffTests
     [InlineData(0, 2, 1)]   // the grand staff's other staff, either way
     [InlineData(1, 2, 0)]
     [InlineData(0, 3, 1)]   // the next one down of more
-    [InlineData(2, 3, 0)]   // the last wraps
+    [InlineData(2, 3, 1)]   // the last goes up, not round to the first
     public void TargetStaffOf_IsTheOtherOrTheNextDown(int staff, int count, int target) =>
         Assert.Equal(target, CrossStaffEngraver.TargetStaffOf(staff, count));
+
+    /// <summary>OMR's report (REQUESTS #24): a voice over a piano, the left hand's @cross.</summary>
+    private const string SongWithPiano = """
+        time 4/4
+        part voice_ { clef treble }
+        part rh { clef treble }
+        part lh { clef bass }
+        section A {
+          voice_ { c''1 | }
+          rh { c''2 c''2 | }
+          lh { g'4@cross e'4@cross c4 e4 | }
+        }
+        form { A }
+        score {
+          staff voice_
+          grandStaff {
+            staff rh
+            staff lh
+          }
+        }
+        """;
+
+    [Fact]
+    public void AGrandStaffsHand_CrossesToTheOtherHand_NotToTheStaffBesideThePiano()
+    {
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(SongWithPiano);
+        var (score, _) = LilySharp.Core.Svg.SvgGenerator.CollectAndLayout(tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree).FirstOrDefault());
+        var staves = score.EnumerateStaves().Select(s => s.Staff).ToList();
+        Assert.Equal(3, staves.Count);
+        Assert.Empty(staves[0].CrossedIn);
+        Assert.Equal(2, staves[1].CrossedIn.Length);
+    }
+
+    [Fact]
+    public void TheLilyPondTwin_ChangesToTheOtherHandToo()
+    {
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(SongWithPiano);
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
+        Assert.Contains("\\change Staff = \"rh\"", ly);
+        Assert.DoesNotContain("\\change Staff = \"voice_\"", ly);
+    }
 
     // --- BeamGroup cross-staff detection ---
 
