@@ -991,7 +991,8 @@ public class StepRequestTests
         {
             var listed = LilySharpLanguageServer.GetClefCompletions(header).Items
                 .OrderBy(i => i.SortText, StringComparer.Ordinal).Select(i => i.Label!).ToList();
-            Assert.Equal("treble", listed[0]);
+            Assert.Equal(header ? "treble^8" : "treble", listed[0]);     // the part header takes treble^8, music not
+            Assert.Equal("treble", Assert.Single(LilySharpLanguageServer.GetClefCompletions(header).Items, i => i.Preselect == true).Label);
             string Book(string clef) => header
                 ? $"part lh {{ clef {clef} }}\nsection A {{ lh {{ c4 d e f }} }}\n"
                 : Plain($"clef {clef} c4");
@@ -1000,9 +1001,9 @@ public class StepRequestTests
                 Assert.Equal(Book(listed[i + 1]), Step(Book("‸" + listed[i]), -1, semitone: true).After);
                 Assert.Equal(Book(listed[i]), Step(Book("‸" + listed[i + 1]), +1, semitone: true).After);
             }
-            var (top, after) = Step(Book("‸treble"), +1, semitone: true);
+            var (top, after) = Step(Book("‸" + listed[0]), +1, semitone: true);
             Assert.False(top.Fallback);
-            Assert.Equal(Book("treble"), after);
+            Assert.Equal(Book(listed[0]), after);
             Assert.Contains("first", top.Message);
             Assert.Empty(top.Pitches);
         }

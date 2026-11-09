@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[editor]` **`treble^8` stands above `treble`** in the clef list and on Ctrl+Shift+Up, so Up never lowers a treble clef an octave. The list still opens on `treble`.
 - `[editor]` **Choosing `singer` leaves the gender open.** It writes the word and a space, and the list that opens holds `female`, `male` and the voices.
 - `[editor]` **#listVoices**: Copilot's chat can ask which singing voices this machine has, by provider, gender or language, before writing a `singer`.
 - `[editor]` **An English voice says "Hello, how are you?"** when chosen, five syllables on the notes of the Japanese phrase.

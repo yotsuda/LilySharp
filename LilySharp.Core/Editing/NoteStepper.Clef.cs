@@ -26,7 +26,7 @@ namespace LilySharp.Core.Editing;
 /// where most books write it) or a <c>clef</c> inside music (<see cref="ClefDeclarationSyntax"/>).
 /// Owner's decisions 2026-10-24, replacing the first one's (2026-10-16: four clefs on the semitone
 /// pair, an octave on the other): Ctrl+Shift+Up / Down step ONE CLEF AT A TIME through
-/// <see cref="ClefOrder"/> — the order Ctrl+Space lists them in, <c>treble</c> at the top — Up
+/// <see cref="ClefOrder"/> — the order Ctrl+Space lists them in, <c>treble^8</c> at the top (owner's decision 2026-11-09, session 1204: Up never lowers a treble clef an octave) — Up
 /// up the list and Down down it; Ctrl+Shift+PageUp / PageDown JUMP A GROUP — the G clefs, the C
 /// clefs, the F clefs, percussion — to its usual clef (<c>treble</c>, <c>alto</c>, <c>bass</c>,
 /// <c>percussion</c>).
@@ -52,7 +52,7 @@ public static partial class NoteStepper
     /// clef — where PageUp / PageDown land.</summary>
     private static readonly (string Usual, string[] Clefs)[] ClefGroups =
     [
-        ("treble", ["treble", "treble^8", "treble_8"]),
+        ("treble", ["treble^8", "treble", "treble_8"]),
         ("alto", ["soprano", "mezzosoprano", "alto", "tenor", "baritone"]),
         ("bass", ["bass", "bass_8"]),
         ("percussion", ["percussion"]),
@@ -61,7 +61,7 @@ public static partial class NoteStepper
     /// <summary>
     /// Every clef in the order the editor lists them — the completion after <c>clef</c> and the
     /// step keys read this one list (owner's decision 2026-10-24: the keys switch in the order
-    /// Ctrl+Space lists): high to low sounding staff, <c>treble</c> first, each group together.
+    /// Ctrl+Space lists): high to low sounding staff, <c>treble^8</c> first, each group together (the list still opens on <c>treble</c>).
     /// </summary>
     public static IReadOnlyList<string> ClefOrder { get; } = [.. ClefGroups.SelectMany(g => g.Clefs)];
 

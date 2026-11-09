@@ -3667,6 +3667,7 @@ public sealed partial class LilySharpLanguageServer
                 Kind = CompletionItemKind.EnumMember,
                 Detail = ClefDetails.TryGetValue(name, out var d) ? d : null,
                 SortText = i.ToString("D2"),
+                Preselect = name == "treble" ? true : null,     // the usual one, though treble^8 stands above it
             }).ToArray()
         };
     }
