@@ -138,6 +138,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1194セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14991 / 0 / 2**（`-Start p1194`・HEAD `3c307f262`・未 push 94）。オーナー「VOICEVOX をインストールして」。作業場所は Lab `sessions/p1194/`。
+
+- 公式 GitHub の `voicevox-windows-directml-0.26.2.zip`（SHA-256 一致）を `C:\Tools\voicevox\VOICEVOX` へ展開。インストーラーは使っていない。
+- 実測: `vv-engine\run.exe --use_gpu` を 3 秒で起動、歌える声 82。配布済みの cantilena で ずんだもん・四国めたん・波音リツが 10 音（2 モーラの歌詞、メリスマ、休符あり）を歌い、休符の区間は無音、次の音の直前に子音。第1193 の「本物では未確認」はこれで解消。エンジンは止めた（エディタの初回起動と利用規約への同意はオーナー）。
+- 終了時 full **14991 合格 / 0 失敗 / skip 2 / 合計 14993**（`-End p1194 -DiffBase 3c307f262`、BUILD 0）。コードの変更なし、配布なし。
+
+## 以下は第1193セッションの経緯
+
 ### 1.1 第1193セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14991 / 0 / 2**（`-Start p1193`・HEAD `15d0cd188`・未 push 93）。オーナー「なかなか上手に歌えている。VOICEBOX も追加して」（VOICEVOX と解した）。作業場所は Lab `sessions/p1193/`。
@@ -145,16 +155,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - Cantilena: 3 つ目のプロバイダ `voicevox`（起動中の VOICEVOX へ HTTP・`voicevox/キャラ-スタイル`・日本語のみ）。設定 `cantilena.voicevoxUrl`。engine 0.26 のソースの規則（1 ノート 1 モーラ、休符は key なし・歌詞なし、93.75 フレーム/秒）に合わせ、engine を模した stub で通した。**本物の VOICEVOX では未確認**（未導入、約 1.8 GB と利用規約はオーナーの判断）。
 - Lily#: 試聴の保存名がかなを `_` に潰して VOICEVOX の声が 1 ファイルを共有するので、文字を残す `voiceSampleFileName`。
 - 終了時 full **14991 合格 / 0 失敗 / skip 2 / 合計 14993**（`-End p1193 -DiffBase 15d0cd188`、BUILD 0）・npm 936 / 936。`Deploy-Lsp.ps1` と Cantilena の `deploy-extension.ps1` で配布済み（設定を足したので Reload Window 2 回）。
-
-## 以下は第1192セッションの経緯
-
-### 1.1 第1192セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14990 / 0 / 2**（`-Start p1192`・HEAD `93b1b8928`・未 push 92）。オーナー報告「かえるのうた.lys が歌唱できない」→「直して」。作業場所は Lab `sessions/p1192/`。
-
-- 楽譜が歌詞を置いたパートには、楽譜に置かれていない歌詞を足さない（`GetSung` の AllLyrics）。ファイルの先の歌詞が勝って `singer` も言語の読みも失われていた。
-- Cantilena: 辞書に無い英単語はつづりから発音を推定して歌う（`EnglishLetters`、engine のログに語を出す）。かなを英語で読むなど推定できないものは従来どおり失敗。
-- 終了時 full **14991 合格 / 0 失敗 / skip 2 / 合計 14993**（`-End p1192 -DiffBase 93b1b8928`、BUILD 0）。`Deploy-Lsp.ps1` と Cantilena の `deploy-extension.ps1` で配布済み（Reload Window）。
 
 ## 2. 開いている作業
 
