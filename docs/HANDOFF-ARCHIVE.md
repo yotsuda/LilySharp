@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1175セッションの経緯
+
+### 1.1 第1175セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14939 / 0 / 2**（`-Start p1175`・HEAD `1b07b9739`・未 push 75）。オーナー「良い。進めて」＝名前なしの `singer male` で声を自動で選ぶ。作業場所は Lab `sessions/p1175/`。
+
+- **文法**: `SingerValue = String | SingerGender , [ String ]`。part・lyrics の頭・score の行。`singer male ""` も同じ意味（補完で `singer male` を確定して候補を閉じると書かれる形）。`lyrics singer male …` は `singer` 節（トラック名 singer の後に語が続く形は従来エラーだった）。
+- **運び方**: 名前なしは歌い手の文字列 `male`／`female` として運ぶ＝木から engine まで形は変えていない。`voiceName(singer, language)` が `resolveSinger(singer, { language })` に語の言語を渡す。
+- **Cantilena**: `resolveSinger` は配役 → インストール済みの名前 → `male`／`female` は `firstOfGender`（その言語を歌い、その性別を名乗る、一覧の先頭＝毎回同じ声）→ 既定の声＋一文。性別を名乗らない声は自動では選ばない。
+- `lysc wav` は役として既定の声＋警告のまま。
+- 終了時 full **14950 合格 / 0 失敗 / skip 2 / 合計 14952**（`-End p1175 -DiffBase 1b07b9739`、BUILD 0）・npm 926 / 926・Cantilena npm 20 / 20。両方を配布済み（Reload Window 1 回）。実機の声はオーナー。
+
 ## 以下は第1174セッションの経緯
 
 ### 1.1 第1174セッション（2026-11-09・YT-DELL2）

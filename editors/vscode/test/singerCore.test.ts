@@ -199,6 +199,12 @@ describe('choosing a voice with the step keys', () => {
         assert.equal(voiceSampleScore('en'), undefined);
     });
 
+    it('sings the phrase an octave lower for a male voice only', () => {
+        const pitches = (gender?: string) => voiceSampleScore('ja', gender)?.notes.map(n => n.pitch);
+        assert.deepEqual(pitches('male'), pitches()?.map(p => p - 12));
+        assert.deepEqual(pitches('female'), pitches());
+    });
+
     it('ends the phrase as it is said, with wa', () => {
         assert.equal(voiceSampleScore('ja')?.notes.map(n => n.lyric).join(''), 'こんにちわ');
     });

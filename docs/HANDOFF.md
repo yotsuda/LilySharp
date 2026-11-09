@@ -138,6 +138,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1177セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14953 / 0 / 2**（`-Start p1177`・HEAD `247f66a77`・未 push 77）。オーナー「男性の音声を選択したときの「こんにちわ」は、1オクターブ低くして」。作業場所は Lab `sessions/p1177/`。
+
+- `voiceSampleScore(language, gender)`: 性別が male の声だけ 12 半音下。`VOICE_SAMPLE_VERSION` は 2 のまま（試聴の機能は未公開で、ファイルはオーナーの手元だけ＝男性 3 声を CLI で同じ名前に作り直した）。
+- 終了時 full **14953 合格 / 0 失敗 / skip 2 / 合計 14955**（`-End p1177 -DiffBase 247f66a77`、BUILD 0）・npm 927 / 927。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
+## 以下は第1176セッションの経緯
+
 ### 1.1 第1176セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14950 / 0 / 2**（`-Start p1176`・HEAD `355cebf05`・未 push 76）。オーナー報告「Harukaze-no-Mukou-e.lys の alt は YOKO で歌うように記載したのに CHANKO で歌っている」→「直して」。作業場所は Lab `sessions/p1176/`。
@@ -145,18 +154,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **原因**: `RenderSpec.RowSingers` が歌詞トラック名だけを鍵にしていた＝同じトラックを 2 行に置くと最初の行の `singer` が両方に効く（バスも RUNO になっていた）。
 - **修正**: `LyricSinger.RowKey(track, part)`＝トラックと、その行の `sings` の組を鍵に。`sings` のない行はトラック名だけ（従来どおり）。
 - 終了時 full **14953 合格 / 0 失敗 / skip 2 / 合計 14955**（`-End p1176 -DiffBase 355cebf05`、BUILD 0）。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
-
-## 以下は第1175セッションの経緯
-
-### 1.1 第1175セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14939 / 0 / 2**（`-Start p1175`・HEAD `1b07b9739`・未 push 75）。オーナー「良い。進めて」＝名前なしの `singer male` で声を自動で選ぶ。作業場所は Lab `sessions/p1175/`。
-
-- **文法**: `SingerValue = String | SingerGender , [ String ]`。part・lyrics の頭・score の行。`singer male ""` も同じ意味（補完で `singer male` を確定して候補を閉じると書かれる形）。`lyrics singer male …` は `singer` 節（トラック名 singer の後に語が続く形は従来エラーだった）。
-- **運び方**: 名前なしは歌い手の文字列 `male`／`female` として運ぶ＝木から engine まで形は変えていない。`voiceName(singer, language)` が `resolveSinger(singer, { language })` に語の言語を渡す。
-- **Cantilena**: `resolveSinger` は配役 → インストール済みの名前 → `male`／`female` は `firstOfGender`（その言語を歌い、その性別を名乗る、一覧の先頭＝毎回同じ声）→ 既定の声＋一文。性別を名乗らない声は自動では選ばない。
-- `lysc wav` は役として既定の声＋警告のまま。
-- 終了時 full **14950 合格 / 0 失敗 / skip 2 / 合計 14952**（`-End p1175 -DiffBase 1b07b9739`、BUILD 0）・npm 926 / 926・Cantilena npm 20 / 20。両方を配布済み（Reload Window 1 回）。実機の声はオーナー。
 
 ## 2. 開いている作業
 

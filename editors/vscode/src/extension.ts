@@ -3911,9 +3911,9 @@ async function singVoiceSample(id: string): Promise<void> {
     const engine = await renderer();
     const backend = engine?.backend instanceof CantilenaExtensionBackend ? engine.backend : undefined;
     if (!backend?.api.voices) { throw new Error('no engine that lists its voices'); }
-    const language = (await backend.api.voices()).find(v => v.id === id)?.language;
-    const score = language ? voiceSampleScore(language) : undefined;
-    if (!score) { throw new Error(`no sample phrase for the language ${language ?? 'it does not name'}`); }
+    const voice = (await backend.api.voices()).find(v => v.id === id);
+    const score = voice?.language ? voiceSampleScore(voice.language, voice.gender) : undefined;
+    if (!score) { throw new Error(`no sample phrase for the language ${voice?.language ?? 'it does not name'}`); }
     const v = await backend.sing(`sample-${id}`, score, id);
     await fs.promises.mkdir(path.dirname(voiceSampleFile(id)), { recursive: true });
     await fs.promises.copyFile(v.wav, voiceSampleFile(id));

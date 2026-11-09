@@ -141,9 +141,11 @@ export class StageClock {
     toString(): string { return this.stages.join(', '); }
 }
 
-/** The short phrase a voice is heard by when it is chosen; undefined for a language it has no words for. */
-export function voiceSampleScore(language: string): CantilenaScore | undefined {
+/** The short phrase a voice is heard by when it is chosen, an octave lower for a male voice (owner's
+ *  request 2026-11-09, session 1177); undefined for a language it has no words for. */
+export function voiceSampleScore(language: string, gender?: string): CantilenaScore | undefined {
     if (language !== 'ja') { return undefined; }
+    const octave = gender === 'male' ? -12 : 0;
     const notes: CantilenaNote[] = [
         { start: 0.3, duration: 0.25, pitch: 60, lyric: 'こ' },
         { start: 0.55, duration: 0.25, pitch: 62, lyric: 'ん' },
@@ -151,7 +153,7 @@ export function voiceSampleScore(language: string): CantilenaScore | undefined {
         { start: 1.05, duration: 0.25, pitch: 65, lyric: 'ち' },
         { start: 1.3, duration: 0.5, pitch: 67, lyric: 'わ' },     // as it is said: a は here would be sung ha
     ];
-    return { sampleRate: VOICE_SAMPLE_RATE, language, notes };
+    return { sampleRate: VOICE_SAMPLE_RATE, language, notes: notes.map(n => ({ ...n, pitch: n.pitch + octave })) };
 }
 
 /**
