@@ -356,6 +356,41 @@ public class LyricLanguageTests
     public void TheSlot_SaysTheGender(string source, string? expected)
         => Assert.Equal(expected, SlotGender(source));
 
+    // ── before any quote (owner's report 2026-11-09, session 1196) ──
+
+    private static (string? Track, string? Part, string? Language, string? Gender, bool Quoted)? Slot(string source)
+    {
+        int at = source.IndexOf('§');
+        return LilySharpLanguageServer.SingerSlotAt(source.Remove(at, 1), at);
+    }
+
+    [Theory]
+    [InlineData("lyrics verse sings melody singer §\n")]
+    [InlineData("score { staff m  lyrics verse sings m singer § }\n")]
+    [InlineData("part m { clef treble  singer §\n")]
+    [InlineData("lyrics verse sings melody singer neu§\n")]
+    public void BeforeAnyQuote_IsTheSlot_NotQuoted(string source)
+    {
+        var slot = Assert.NotNull(Slot(source));
+        Assert.False(slot.Quoted);
+    }
+
+    [Fact]
+    public void BetweenTheQuotes_IsQuoted() => Assert.True(Assert.NotNull(Slot("lyrics w singer \"§\" { la | }\n")).Quoted);
+
+    [Theory]
+    [InlineData("// lyrics w singer §\n")]
+    [InlineData("part m { title \"a singer §\n")]
+    [InlineData("lyrics w singer \"x\" sings §\n")]
+    [InlineData("lyrics w { section A { singer §\n")]
+    public void NotASlot(string source) => Assert.Null(Slot(source));
+
+    [Fact]
+    public void BeforeAnyQuote_NoOtherWordsAreOffered() => Assert.Empty(Offered(Declared + "lyrics words sings sop singer "));
+
+    [Fact]
+    public void AfterABareGender_TheNextClausesAreStillOffered() => Assert.Contains("sings", Offered(Declared + "lyrics words singer male "));
+
     [Theory]
     [InlineData("lyrics words singer male \"neutrino/SOMA\" ", new[] { "sings", "language" }, new[] { "singer", "singer male", "singer female" })]
     [InlineData("lyrics words sings sop singer male \"x\" ", new[] { "language" }, new[] { "sings", "singer male" })]

@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- `[editor]` **`singer ` completes before any quote.** Right after the word, the list holds `male`, `female` and the voices that sing the words; a name goes in with its quotes.
 - `[singing]` **VOICEVOX sings.** With Cantilena's new engine, a running VOICEVOX's singing voices are offered on Japanese lyrics as `voicevox/name-style`.
 - `[singing]` **The preview sings the words the score names.** A second lyrics track of a part no longer takes the place of the one the score places, with its singer. An English word a voice's dictionary lacks is now sung from its spelling.
 - `[editor]` **A red microphone says why.** Hovering the preview's microphone when a voice failed shows the error at once, a line for each part.

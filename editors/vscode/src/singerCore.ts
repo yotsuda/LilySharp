@@ -83,6 +83,11 @@ export function singerChoices(voices: readonly CantilenaVoice[], language: strin
         .map(v => ({ label: v.id, detail: v.label && v.label !== v.name ? v.label : v.name }));
 }
 
+/** Whether a line's text before the caret ends with `singer ` or `singer male `: a space that opens the list of voices. */
+export function afterSingerWord(before: string): boolean {
+    return /(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?$/.test(before) && !before.includes('//');
+}
+
 /** The `singer "…"` the caret stands on (the word, the quotes, or between them): where its name is on the line. */
 export function singerValueAt(line: string, character: number): { start: number; end: number; value: string } | undefined {
     for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?"([^"]*)"/g)) {

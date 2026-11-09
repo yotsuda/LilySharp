@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **`singer ` completes before any quote**: the space after the word opens `male`, `female` and the voices that sing the words; a voice goes in with its quotes.
 - **VOICEVOX voices**: a running VOICEVOX's singing voices are offered on Japanese lyrics, each heard by its own sample.
 - **The preview sings the words the score names**: with two lyrics tracks on one part, the one the score places sings, in its own singer.
 - **A red microphone says why**: hovering it shows the error at once, a line for each part, and the words appear even if it turns red under a resting pointer.

@@ -138,6 +138,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1196セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14991 / 0 / 2**（`-Start p1196`・HEAD `8d2ba9aff`・未 push 96）。オーナー「`lyrics verse sings melody singer |` の補完がうまく動かない」→「直して」。作業場所は Lab `sessions/p1196/`。
+
+- `SingerSlotAt` が引用符の前（`singer ▮`）も席と読む（`Quoted=false`）。`singer male ▮` はサーバーの残りの節も出したまま、エディタが声を足す。エディタは `singer ` の空白で候補を開き、`male`・`female` と声の一覧を出し、選ぶと引用符付きで入る。
+- 終了時 full **15002 合格 / 0 失敗 / skip 2 / 合計 15004**（`-End p1196 -DiffBase 8d2ba9aff`、BUILD 0）・npm 937 / 937。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
+
+## 以下は第1195セッションの経緯
+
 ### 1.1 第1195セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14991 / 0 / 2**（`-Start p1195`・HEAD `fa41bbc02`・未 push 95）。オーナー「(自動起動を) 実装して」。作業場所は Lab `sessions/p1195/`。
@@ -145,16 +154,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - Cantilena のみ（Lily# のコード変更なし）: `cantilena.voicevoxFolder` を設定すると、VOICEVOX の声が必要なときに engine を専用ポート 50121 で起動し VS Code 終了で止める。起動済みの VOICEVOX はそのまま使い止めない。楽譜が NEUTRINO などを指定しているだけ、歌詞がないだけなら起動しない（`needsVoicevox`）。URL は要求ごとに渡すので常駐 engine は再起動しない。
 - 実測: 本物の engine を `VoicevoxServer` から起動 962 ms・82 声・専用ポートで歌唱・dispose でポートが閉じる。NEUTRINO も DiffSinger も未設定の `serve` でも動く（「エンジン未設定」で落ちていたのを警告に）。実物の VS Code では未確認。設定はオーナーが行う。
 - 終了時 full **14991 合格 / 0 失敗 / skip 2 / 合計 14993**（`-End p1195 -DiffBase fa41bbc02`、BUILD 0）。Cantilena の `deploy-extension.ps1` で配布済み（設定を足したので Reload Window 2 回）。
-
-## 以下は第1194セッションの経緯
-
-### 1.1 第1194セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14991 / 0 / 2**（`-Start p1194`・HEAD `3c307f262`・未 push 94）。オーナー「VOICEVOX をインストールして」。作業場所は Lab `sessions/p1194/`。
-
-- 公式 GitHub の `voicevox-windows-directml-0.26.2.zip`（SHA-256 一致）を `C:\Tools\voicevox\VOICEVOX` へ展開。インストーラーは使っていない。
-- 実測: `vv-engine\run.exe --use_gpu` を 3 秒で起動、歌える声 82。配布済みの cantilena で ずんだもん・四国めたん・波音リツが 10 音（2 モーラの歌詞、メリスマ、休符あり）を歌い、休符の区間は無音、次の音の直前に子音。第1193 の「本物では未確認」はこれで解消。エンジンは止めた（エディタの初回起動と利用規約への同意はオーナー）。
-- 終了時 full **14991 合格 / 0 失敗 / skip 2 / 合計 14993**（`-End p1194 -DiffBase 3c307f262`、BUILD 0）。コードの変更なし、配布なし。
 
 ## 2. 開いている作業
 
