@@ -141,11 +141,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ### 1.1 第1217セッション（2026-11-10・YT-DELL2）
 
 - **OMR の REQUESTS #25 を `@shiftOff` で閉じた**（持ち主の決定「音ごとの `@shiftOff`」）。`voice { } { }` の中で、その音の列の horizontal-shift を 0 に読む（`NoteCollision.HorizontalShift`・グループの並びも shift の順）。`.ly` は `\once \shiftOff`。再現譜の絵は LilyPond 2.26.0 と同じ形（Lab `sessions/p1217/t25`）。書かない譜は計算が変わらない。
-- 門: 全 svg の掃き 1262 枚で差 0（base は HEAD `23f99e2e0`）。毒 4 本（shift の読み・並び・和音の読み取り・`.ly`）は全部赤。開始時 full 15016 合格 / 0 失敗 / skip 2 / 合計 15018、終了時 full 15053 合格 / 0 失敗 / skip 2 / 合計 15055。
+- 門: 全 svg の掃き 1262 枚で差 0（base は HEAD `23f99e2e0`）。毒 4 本（shift の読み・並び・和音の読み取り・`.ly`）は全部赤。開始時 full 15016 合格 / 0 失敗 / skip 2 / 合計 15018、終了時 full 15054 合格 / 0 失敗 / skip 2 / 合計 15056。
 - 棚卸しの増減は 0（`APPROXIMATIONS.md` と `magic_constants.csv` は再生成しても中身が変わらなかった）。
 - **作曲ガイドに singer の書き方と `lilysharp_listVoices` の使い方を足した**（持ち主の依頼。`docs/COMPOSE_FOR_LLM.md` の *A song with words*。弾き語りの項はそこを指す）。パートの `singer` のカンマ区切りを `SymbolCaseValidator` が拒否していたので通した（持ち主の決定。パーサーと `PartHeaderDefaults` は既に読めていた）。
 - **`singer` も声の `instrument` もない歌詞は歌わないことにした**（持ち主の決定 2026-11-10）。判定は `LyricSinger.SungReaderOf` の 1 か所（`InstrumentDefaults.IsVoice`）。楽器の指定がなく声の指定もない歌詞の譜はピアノで鳴る（持ち主の決定 2026-11-10。Choir Aahs の代役は声を指定したパートだけ）。設計は `singing-design.md` §3。声部を名指しした行（`sings alt`）の `singer` が届いていなかった不具合も直した。⚠️ 歌う挙動の確認は実機未（`MANUAL-CHECKS` の第1217）。
 - **`singer` の補完で声が 1 つも無いときのガイドを足した**（持ち主の依頼）。一覧の先頭の項目（毎回）と通知（セッションで 1 度）。歌詞の言語を歌える声が 0 のときも案内する（`noLanguageGuide`・英語は DiffSinger の `dsdict-en.yaml`、中国語と韓国語は Cantoria のエンジンが未対応と言う）。項目と戻り値は実物の VS Code で 5 通り確認（Cantoria なし／声 0／声あり／英語／韓国語＝偽の Cantoria・Lab `sessions/p1217/vscode-e2e`）。通知の見た目とボタンの動きは未確認（`MANUAL-CHECKS` の第1217）。
+- **オクターブ変換がパートの中の未演奏の `section` を読むようにした**（持ち主の報告・Rose Garden の J と K）。`OctaveModeConverter.ProbeFor` が直下の節だけ見ていた。その曲で相対へ変換し、往復の一致と、J・K を form に足した SVG と MIDI の一致を確認（Lab `sessions/p1217/rose`。持ち主のファイルは書き換えていない）。
 - OMR の repo は `C:\MyProj\Calamo` に改名されていたので、§0 の REQUESTS のパスを直した。
 
 ## 以下は第1216セッションの経緯

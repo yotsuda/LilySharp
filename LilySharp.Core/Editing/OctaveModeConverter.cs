@@ -1035,14 +1035,14 @@ public static class OctaveModeConverter
     private const string ProbeName = "unplayedProbe";
 
     /// <summary>A score to add after the file that plays what no score of its own does: every
-    /// section once, in written order, by every part, when a section is unplayed, and the
+    /// section, at the top level or written inside a part, once, in written order, by every part, when a section is unplayed, and the
     /// top-level phrases no score plays in a part of the default anchor — the frame a phrase's
     /// body begins in. Null when an unplayed note is in neither.</summary>
     private static string? ProbeFor(SyntaxNode root, IEnumerable<int> unplayed)
     {
         static bool TopLevel(SyntaxNode n) => n.Parent is CompilationUnitSyntax;
         var phrases = root.DescendantNodes<PhraseDeclarationSyntax>().Where(TopLevel).ToList();
-        var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(TopLevel).ToList();
+        var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => TopLevel(s) || s.Parent is PartDeclarationSyntax).ToList();
         var inPhrases = new List<string>();
         bool inSections = false;
         foreach (int pos in unplayed)
@@ -1057,7 +1057,7 @@ public static class OctaveModeConverter
             else
                 return null;
         }
-        var played = inSections ? sections.Select(s => s.SectionName).ToList() : [];
+        var played = inSections ? sections.Select(s => s.SectionName).Distinct(StringComparer.Ordinal).ToList() : [];
         var staves = inSections
             ? root.DescendantNodes<PartDeclarationSyntax>().Where(TopLevel).Select(p => p.Name.Text).ToList()
             : [];

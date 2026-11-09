@@ -161,6 +161,19 @@ public class OctaveModeConverterTests
         Assert.Equal("octave relative\n" + src, OctaveModeConverter.Convert(absolute.NewText!, OctaveMode.Relative).NewText);
     }
 
+    // Owner's report 2026-11-10: sections written inside a part, two of them left out of the form,
+    // and the file stayed in absolute octaves.
+    [Fact]
+    public void ASectionInsideAPartNoFormPlays_IsConverted_AsAtTheTopLevel()
+    {
+        const string score = "\nscore { staff m }\n";
+        var src = "octave absolute\npart m {\n  section A { c,4 e, g, c | }\n  section B { d,4 f, a, d | }\n  section C { g,,4 b,, d, g, | }\n}\nform { A }" + score;
+        var relative = OctaveModeConverter.Convert(src, OctaveMode.Relative);
+        Assert.True(relative.NewText != null, relative.Error);
+        Assert.DoesNotContain("unplayedProbe", relative.NewText);
+        Assert.Equal(src, OctaveModeConverter.Convert(relative.NewText!, OctaveMode.Absolute).NewText);
+    }
+
     // Owner's report 2026-10-30: a composed piece kept a riff it never played and stayed in
     // absolute octaves. A phrase's body begins a fresh frame wherever it is called, so its notes
     // mean the same played or not.
