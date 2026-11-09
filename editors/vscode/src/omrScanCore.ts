@@ -125,7 +125,7 @@ export function scanTitle(pages: readonly ScanPage[], lysPath: string): string {
 }
 
 /** The scan view's slider starts here: the marks below it show, the rest hide. 0.8 is the
- *  reader's own default threshold (`omr read --todo-threshold`), so at first the view shows
+ *  reader's own default threshold (`calamo read --todo-threshold`), so at first the view shows
  *  what the .lys carries (LilySharp-Omr's reply 2026-10-12 §3). */
 export const SCAN_DEFAULT_THRESHOLD = 0.8;
 

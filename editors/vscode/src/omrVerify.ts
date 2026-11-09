@@ -16,7 +16,7 @@
 
 // Check on save (LilySharp-Omr proposal B5): when `lilysharp.omr.verifyOnSave` is on and a
 // saved .lys has an OMR reader's side file beside it, the reader engraves the .lys again and
-// compares it with the scanned pages (`omr verify`, omrCore.verifyArguments), writing the side
+// compares it with the scanned pages (`calamo verify`, omrCore.verifyArguments), writing the side
 // file's todos anew. Nothing else is needed here: the scan view reloads a side file written
 // again, and the candidates' quick fixes read it on every request. The .lys is never touched.
 

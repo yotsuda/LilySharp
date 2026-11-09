@@ -87,7 +87,7 @@ describe('the engine\'s wire, and the extension\'s API', () => {
         const api = { version: '0.1.0', apiVersion: 1, status: async () => ({ ready: true, voice: 'MERROW', problems: [] }), sing: async () => ({ wav: 'x', duration: 1 }), release: () => undefined };
         assert.equal(cantoriaApiOf(api), api);
         assert.equal(cantoriaApiOf({ ...api, apiVersion: 2 }), undefined);
-        assert.equal(cantoriaApiOf({ path: 'omr.exe' }), undefined);
+        assert.equal(cantoriaApiOf({ path: 'calamo.exe' }), undefined);
         assert.equal(cantoriaApiOf(undefined), undefined);
     });
 });

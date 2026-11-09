@@ -237,7 +237,7 @@ async function baseOf(client: LanguageClient, doc: vscode.TextDocument): Promise
     };
 }
 
-/** `omr --version --json` once per reader path (a run asks for every bar). */
+/** `calamo --version --json` once per reader path (a run asks for every bar). */
 const versions = new Map<string, Promise<OmrVersion | undefined>>();
 
 /** The verifier for a run, or undefined with the reason logged: the setting, the side file, a
@@ -272,7 +272,7 @@ async function verifierFor(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
 
 /**
  * Gate ③: the reader compares the proposal — the whole file with the bar rewritten, in a temp
- * file — with the scan, for this one bar (`omr verify x.lys --candidate tmp --bars N --no-write`),
+ * file — with the scan, for this one bar (`calamo verify x.lys --candidate tmp --bars N --no-write`),
  * and the gate reads its `bar` events (verifyVerdict). Undefined when it could not say.
  */
 async function verifyProposal(run: FixRun, target: FixTarget, spliced: string, token: vscode.CancellationToken): Promise<{ ok: boolean; memos: string[] } | undefined> {

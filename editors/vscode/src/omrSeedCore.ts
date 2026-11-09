@@ -81,7 +81,7 @@ export interface SeedRecord {
     readonly bar: string;
     /** The bar's line as the panel first had it, and whether lysCopy's differs from it (edited in
      *  the editor while the panel was open — then `barWhenOpened` is the nearer the reader's own;
-     *  the reader's own for certain is the copied page read again by the same reader, `omr` in
+     *  the reader's own for certain is the copied page read again by the same reader, `calamo` in
      *  the side file). */
     readonly barWhenOpened: string;
     readonly editedSinceOpened: boolean;

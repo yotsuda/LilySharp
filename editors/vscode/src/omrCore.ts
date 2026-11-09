@@ -31,7 +31,7 @@ export const OMR_PROTOCOLS = { min: 1, max: 1 } as const;
  *  offered its update when a scan is read (the Marketplace keeps the extension current on its
  *  own — VS Code's auto-update, not duplicated here; this is only Lily#'s own floor). Raised with
  *  OMR_PROTOCOLS when a release leans on a newer reader (RELEASING.md §2). 0.4.0 since Lily#
- *  0.14.0: Fix OMR Marks with AI checks a proposal with `omr verify --candidate --bars` and reads
+ *  0.14.0: Fix OMR Marks with AI checks a proposal with `calamo verify --candidate --bars` and reads
  *  the reader's `readings`, both new in Calamo 0.4.0 (the protocol is unchanged). */
 export const OMR_MIN_VERSION = '0.4.0';
 
@@ -42,7 +42,7 @@ export const OMR_PATH_VARIABLE = 'LILYSHARP_OMR_PATH';
  *  separate, Windows-only, Beta extension; its `activate` returns {@link OmrExtensionExports}). */
 export const OMR_EXTENSION_ID = 'yotsuda.calamo';
 
-/** What the reader's extension exports: where its `omr.exe` is, and what `omr --version --json`
+/** What the reader's extension exports: where its `calamo.exe` is, and what `calamo --version --json`
  *  answered when it was packed. `undefined` off Windows x64 or when its `bin` is broken. */
 export interface OmrExtensionExports {
     readonly path: string;
@@ -112,7 +112,7 @@ export function launchOf(readerPath: string): { command: string; prefix: string[
         : { command: readerPath, prefix: [] };
 }
 
-/** The arguments of `omr read` (§3.2), as an ARRAY — never a shell string: paths carry spaces
+/** The arguments of `calamo read` (§3.2), as an ARRAY — never a shell string: paths carry spaces
  *  and Japanese. `verify` asks the reader to engrave what it read and compare it with the scan
  *  right away (`--verify`), so the first look at the score already has the comparison's marks;
  *  a reader with no lysc to engrave with says so as a warning and skips it. */
@@ -127,7 +127,7 @@ export function readArguments(inputs: readonly string[], outDir: string, lysc?: 
     return args;
 }
 
-/** What `omr verify` is asked beyond the .lys (LilySharp-Omr's reply of 2026-10-23 to the AI
+/** What `calamo verify` is asked beyond the .lys (LilySharp-Omr's reply of 2026-10-23 to the AI
  *  fix's proposal): `candidate`, the text to compare in place of the .lys's own (an unsaved
  *  proposal, written to a temp file; the side file and the pages stay the .lys's — and the
  *  reader then writes nothing); `bars`, the reader's bar numbers to report a `bar` event for;
@@ -138,7 +138,7 @@ export interface VerifyOptions {
     readonly noWrite?: boolean;
 }
 
-/** The arguments of `omr verify` (B5, proposed to LilySharp-Omr 2026-10-05): engrave the
+/** The arguments of `calamo verify` (B5, proposed to LilySharp-Omr 2026-10-05): engrave the
  *  .lys again, compare it bar by bar with the pages its side file lists, and write the side
  *  file's todos anew — the .lys itself is not touched. An ARRAY, as readArguments'. */
 export function verifyArguments(lys: string, lysc?: string, options: VerifyOptions = {}): string[] {
@@ -159,19 +159,19 @@ export function verifyArguments(lys: string, lysc?: string, options: VerifyOptio
     return args;
 }
 
-/** What `omr --version --json` answers. */
+/** What `calamo --version --json` answers. */
 export interface OmrVersion {
     readonly version: string;
     readonly protocol: number;
     readonly inputs?: readonly string[];
     /** The commands it has beyond `read` (`verify`); absent in a reader that has only `read`. */
     readonly commands?: readonly string[];
-    /** What its commands can do beyond the agreement's floor (`verify-bars`: `omr verify
+    /** What its commands can do beyond the agreement's floor (`verify-bars`: `calamo verify
      *  --candidate --bars --no-write` with a `bar` event); absent before 2026-10-23. */
     readonly features?: readonly string[];
 }
 
-/** Whether the reader says it has `omr verify` (B5 asks it only then). */
+/** Whether the reader says it has `calamo verify` (B5 asks it only then). */
 export function canVerify(v: OmrVersion): boolean {
     return Array.isArray(v.commands) && v.commands.includes('verify');
 }
@@ -182,7 +182,7 @@ export function canVerifyBars(v: OmrVersion): boolean {
     return canVerify(v) && Array.isArray(v.features) && v.features.includes('verify-bars');
 }
 
-/** Reads `omr --version --json`'s output, or undefined when it is not that. */
+/** Reads `calamo --version --json`'s output, or undefined when it is not that. */
 export function parseVersion(stdout: string): OmrVersion | undefined {
     try {
         const v = JSON.parse(stdout.trim());

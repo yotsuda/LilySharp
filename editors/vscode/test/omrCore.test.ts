@@ -45,28 +45,28 @@ describe('where the reader is (L1)', () => {
     });
 
     it('takes the environment variable first', () => {
-        const at = locateOmr({ [OMR_PATH_VARIABLE]: ' C:\\dev\\omr.exe ' }, 'C:\\ext\\bin\\omr.exe', () => true);
-        assert.deepEqual(at, { path: 'C:\\dev\\omr.exe', source: 'environment' });
+        const at = locateOmr({ [OMR_PATH_VARIABLE]: ' C:\\dev\\calamo.exe ' }, 'C:\\ext\\bin\\calamo.exe', () => true);
+        assert.deepEqual(at, { path: 'C:\\dev\\calamo.exe', source: 'environment' });
     });
 
     it('then the reader\'s extension, when the path it exports is there', () => {
-        const exe = 'C:\\ext\\bin\\omr.exe';
+        const exe = 'C:\\ext\\bin\\calamo.exe';
         const have = new Set([exe]);
         assert.deepEqual(locateOmr({}, exe, p => have.has(p)), { path: exe, source: 'extension' });
         // The environment variable still wins: a reader under development beats the published one.
-        assert.equal(locateOmr({ [OMR_PATH_VARIABLE]: 'C:\\dev\\omr.exe' }, exe, p => have.has(p))?.source, 'environment');
+        assert.equal(locateOmr({ [OMR_PATH_VARIABLE]: 'C:\\dev\\calamo.exe' }, exe, p => have.has(p))?.source, 'environment');
         // An exported path that is not on disk (a broken bin) is no reader. There is no third
         // place (2026-10-17): a copy under Lily#'s storage would stay old outside the Marketplace.
-        assert.equal(locateOmr({}, 'C:\\gone\\omr.exe', p => have.has(p)), undefined);
+        assert.equal(locateOmr({}, 'C:\\gone\\calamo.exe', p => have.has(p)), undefined);
     });
 
     it('reads the extension\'s exports: a path, or nothing usable', () => {
         assert.equal(OMR_EXTENSION_ID, 'yotsuda.calamo');
-        assert.equal(readerOfExports({ path: 'C:\\e\\bin\\omr.exe', version: '0.3.0', protocol: 1 }), 'C:\\e\\bin\\omr.exe');
+        assert.equal(readerOfExports({ path: 'C:\\e\\bin\\calamo.exe', version: '0.3.0', protocol: 1 }), 'C:\\e\\bin\\calamo.exe');
         assert.equal(readerOfExports(undefined), undefined);
         assert.equal(readerOfExports({ path: '  ' }), undefined);
         assert.equal(readerOfExports({ path: 3 }), undefined);
-        assert.equal(readerOfExports('C:\\omr.exe'), undefined);
+        assert.equal(readerOfExports('C:\\calamo.exe'), undefined);
     });
 
     it('and nothing when neither is there', () => {
@@ -210,7 +210,7 @@ console.log(JSON.stringify({event:'done',lys,annotated:[],todos:2}));
 `;
 
 describe('checking an edited score against the scan (B5)', () => {
-    it('asks `omr verify` of the .lys, with progress, and the lysc when there is one', () => {
+    it('asks `calamo verify` of the .lys, with progress, and the lysc when there is one', () => {
         assert.deepEqual(verifyArguments('C:\\a b\\曲.lys', 'C:\\x\\lysc.exe'),
             ['verify', 'C:\\a b\\曲.lys', '--progress', 'json', '--lysc', 'C:\\x\\lysc.exe']);
         assert.deepEqual(verifyArguments('s.lys'), ['verify', 's.lys', '--progress', 'json']);

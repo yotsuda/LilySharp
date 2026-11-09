@@ -16,7 +16,7 @@
 
 // Where the OMR reader is, as VS Code sees it (LilySharp-Omr docs/repro/
 // lilysharp-handoff-2026-10-12.md §3 and its reply): the reader ships as its OWN extension
-// (OMR_EXTENSION_ID, Windows x64, Beta). Lily# asks that extension where its omr.exe is, offers
+// (OMR_EXTENSION_ID, Windows x64, Beta). Lily# asks that extension where its calamo.exe is, offers
 // to install it when it is missing, and shows the scan commands again the moment it arrives —
 // with no reload. omrCore.ts holds the order the places are tried in.
 

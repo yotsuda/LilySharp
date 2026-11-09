@@ -426,7 +426,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [x] **B5** elilysharp.omr.verifyOnSavee 入 → 保存で eomr verifye が走り、scan とクイックフィックスが更新される（**OMR 側の everifye 実装待ち**。無ければ呼ばれないことを確かめる）。
 - [x] **B6** e@todoe を含む範囲を選んで Ctrl+I → プロンプトに todo のメモ・確信度・候補が入っている（Output / デバッグで見る）。直した印は e@todoe が外れ、直さない印は残る。
 - [x] **B7**（第903・OMR 拡張の受け口）: eLILYSHARP_OMR_PATHe を外し、OMR 側の VSIX（e..\LilySharp-Omr\out\extension\lilysharp-omr-win32-x64-0.3.0.vsixe）を
-      *Install from VSIX…* で入れる → Reload なしで Explorer の画像の右クリックに *Convert Image/PDF to Lily# (.lys)… (Beta)* が出る・Output に eOMR reader (extension): …\bin\omr.exee・
+      *Install from VSIX…* で入れる → Reload なしで Explorer の画像の右クリックに *Convert Image/PDF to Lily# (.lys)… (Beta)* が出る・Output に eOMR reader (extension): …\bin\calamo.exee・
       取り込み直後に照合の e@todoe が付く（e--verifye）・初回だけ Beta の一言。拡張を外す → 右クリックの項目は **残る**（Windows・e.lyse の無いワークスペースでも・2026-10-17 のユーザー決定「OMR 未インストールでもメニューを出す」）、右クリックでもパレットでも、ファイル選択ダイアログより**先に** *Install Calamo* の案内（同日のユーザー決定・前はファイルを選んだ後で、右クリックの項目は OMR が入っているときだけだった）。
 - [x] **B7′ 古い reader**（2026-10-17）: eLILYSHARP_OMR_PATHe に e--version --jsone が eOMR_MIN_VERSIONe（eomrCore.tse）より小さい版を答える reader を指して読む → ファイルを選んだ後に警告 *Calamo 0.2.0 is older than this Lily# is written for (0.3.0 or newer). Update it?*（ボタン *Update Calamo*）。断る → その reader で読み込みが続く。押す → Marketplace の最新が入り、読み込みは行わない（もう一度実行）。保存時の verify は警告しない。
 - [x] **B8**（第903・confidence）: OMR の新しい VSIX で取り込む → Problems で OMR の印の一部が **Warning**（confidence 0.6 未満）、残りと手で書いた e@todoe は **Info**。F8 が Warning の印から回る。

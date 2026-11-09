@@ -24,7 +24,7 @@ OMR（`LilySharp-Omr`）が読んだ `.lys` の怪しい小節を、**ユーザ�
 | scan view | `omrScan.ts`／`omrScanCore.ts`（Webview・印の枠・*Marks below* のスライダー） | 「表示中の印」＝対象の既定。頭のバーにボタンを足す |
 | モデル | `modelClient.ts`（`vscode.lm`・`ModelUse`・`autoPick`・「Lily#: Select AI Model」） | `ModelUse` に `'omrFix'` を足す |
 | 検証と描画 | LSP `lilysharp/checkCandidate`・`lilysharp/renderText`（AI 変換が使う） | 門と確認パネルの絵 |
-| 照合 | `omr verify`（OMR 側・保存時の照合 `lilysharp.omr.verifyOnSave`・`omrVerify.ts`） | 小節単位の照合ができれば 3 つ目の門 |
+| 照合 | `calamo verify`（OMR 側・保存時の照合 `lilysharp.omr.verifyOnSave`・`omrVerify.ts`） | 小節単位の照合ができれば 3 つ目の門 |
 | 確認パネル | `aiTransform.ts` の candidate panel（Accept／Iterate／Reject・version／range guard の apply） | 一覧に広げる |
 
 ## 2. UI
@@ -118,7 +118,7 @@ AI 変換の candidate panel を**一覧**にしたもの。1 行＝1 小節:
 
 1. **compile**: `checkCandidate` で、置き換えた全文が**新しい**エラーを増やさない（他所の既存エラーは数えない）。
 2. **拍**: その小節に LYS2001／2002（短い・いい小節）が無い＝`checkCandidate` の診断の位置で見る。
-3. **照合**（任意・あれば）: `omr verify` をその `.lys` 候補で走らせ、対象の小節の食い違いが消えるか。OMR 側に小節を絞る
+3. **照合**（任意・あれば）: `calamo verify` をその `.lys` 候補で走らせ、対象の小節の食い違いが消えるか。OMR 側に小節を絞る
    引数（`--bars 12`）があると数秒で済む（§7）。無ければこの門は「—」。
 4. 落ちたら 1 回だけ、診断の文を添えて直させる（`MAX_REPAIR_ATTEMPTS` と同じ上限）。それでも落ちたら「no proposal」。
 
@@ -157,7 +157,7 @@ AI 変換の candidate panel を**一覧**にしたもの。1 行＝1 小節:
 |---|---|---|
 | **M1** ✅ 第972 | コマンド＋QuickPick＋見積もり＋進捗、文字だけの入力（memo・候補・前後と他パート）、門 1・2、一覧パネル（元画像の列は `box` の切り抜きを**表示だけ**）、Accept の WorkspaceEdit と `@todo` の削除。`ModelUse 'omrFix'`。 | headless の網: `omrAiFixCore.ts`（対象の選別・プロンプトの組み立て・JSON の読み・門 1・2 の判定・切り抜きの矩形）を `*Core.ts` の流儀で単体に。`.lys` 側は `OmrSideFile` の既存の網。手動: MANUAL-CHECKS に `[ ]` 3 項（入口 3 つ）。 |
 | **M2** ✅ 第973（門はユーザー） | 画像をモデルに渡す（`LanguageModelDataPart.image`・engine の床・受けない模型の再送）。クイックフィックスと scan view のボタン。 | 同じ本で M1 と M2 の提案の採用率を出力チャネルで比べる（OMR の `data/eval` の既知の誤りの小節で） |
-| **M3** ✅ 第973（精度の 1 枚はユーザーの実測後） | 門 3（`omr verify` の小節単位）・OMR 側の `candidates` が来たらプロンプトに。費用の記録（所要時間の平均→見積もり）。 | OMR 側の数字（S33 段 1）と合わせて精度を 1 枚に |
+| **M3** ✅ 第973（精度の 1 枚はユーザーの実測後） | 門 3（`calamo verify` の小節単位）・OMR 側の `candidates` が来たらプロンプトに。費用の記録（所要時間の平均→見積もり）。 | OMR 側の数字（S33 段 1）と合わせて精度を 1 枚に |
 
 M1 は OMR 側の作業を待たない（`kind: "bar"` の todo と memo は今ある）。
 
@@ -186,11 +186,11 @@ uri と印の offset）を出し、拡張はその行の対象だけを QuickPic
 ユーザーが `omrFixImages` の on／off で同じ本を 2 回回し、出力チャネルの集計行を比べる（MANUAL-CHECKS §5 B10）。
 
 **M3 の実装（第973・2026-10-23・OMR の返事 `lilysharp-reply-2026-10-23-ai-fix.md` の同日）**: ⑴ **門 3**＝`omrAiFix.verifyProposal`: 門 1・2 を
-通った提案の全文を temp の `.lys` に書き、`omr verify <x.lys> --candidate <tmp> --bars <N> --no-write --progress json`（`omrCore.verifyArguments` の
+通った提案の全文を temp の `.lys` に書き、`calamo verify <x.lys> --candidate <tmp> --bars <N> --no-write --progress json`（`omrCore.verifyArguments` の
 `VerifyOptions`）を回し、`bar` イベント（`omrCore.parseEvent`）を `omrAiFixCore.verifyVerdict` で読む＝**その小節の自パートと `part: null`（符幹・連符）の
 行が、`differs: false` か `confidence ≥ 0.8`（`VERIFY_SURE`＝OMR の助言: タイ・スラー・scan にだけある点は 0.6〜0.9 で `differs: true` になる）なら ✓**。
 小節番号は **reader の数え方**＝`readerBarOf`（`measures[].line` → `measure`・`part`。印刷の番号はいすぎる小節の後でずれる）。読み手の有無は
-`omr --version --json` の `features: ["verify-bars"]`（`canVerifyBars`・path ごとに 1 回）、無ければ「verify —」のまま。設定 **`lilysharp.ai.omrFixVerify`**（既定 on・
+`calamo --version --json` の `features: ["verify-bars"]`（`canVerifyBars`・path ごとに 1 回）、無ければ「verify —」のまま。設定 **`lilysharp.ai.omrFixVerify`**（既定 on・
 1 小節 2〜3 秒＝lysc が全文を描く）。✗ のときは `the scan says: <memo>` で 1 回直させ、それでも ✗ なら**提案は出すが `verify ✗`・Accept all の対象外**
 （照合には偽陽性があるので「no proposal」にはしない＝design §3.2 ④ からの変更）。⑵ **`readings`**＝`omrScanCore.markFactsOf` が `todos[].readings[]`
 （why・was・now・evidence・fills・x・y）を読み、`FixTarget.readings` → プロンプトに「reader が見た 1 事象の別の読み（as written -> as it might be・
@@ -209,9 +209,9 @@ bar 3 は `nothing to say`・verdict ✗／✓・side file は不変・1.1 秒�
 
 ## 7. OMR 側へ頼むもの（M3 の前）
 
-**依頼済（2026-10-23・第973）: `..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-23-ai-fix.md`** → **同日 3 件とも入った**（返事 `lilysharp-reply-2026-10-23-ai-fix.md`・OMR 0.3.0 のまま・`features: ["verify-bars"]`・`--candidate` は `--no-write` を含む・`readings` は `source: "length"` の todo だけ＝`verify` の印の小節には付かない（採用率を見てから）・`pages[].image` は side file の配下なら相対）。Lily# 側の受け口は上の「M3 の実装」。 **第973 夜**: Calamo **0.3.1**（`features: ["verify-bars"]`）がこの PC にだけ入った（返事 `lilysharp-reply-2026-10-23-ai-fix-release.md`・Marketplace は未）。入った `bin\omr.exe` で門 3 の素振りは ✓。古い reader に更新を勧める案内は、0.3.1 が Marketplace に出てから入れる（OMR の依頼）。
+**依頼済（2026-10-23・第973）: `..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-23-ai-fix.md`** → **同日 3 件とも入った**（返事 `lilysharp-reply-2026-10-23-ai-fix.md`・OMR 0.3.0 のまま・`features: ["verify-bars"]`・`--candidate` は `--no-write` を含む・`readings` は `source: "length"` の todo だけ＝`verify` の印の小節には付かない（採用率を見てから）・`pages[].image` は side file の配下なら相対）。Lily# 側の受け口は上の「M3 の実装」。 **第973 夜**: Calamo **0.3.1**（`features: ["verify-bars"]`）がこの PC にだけ入った（返事 `lilysharp-reply-2026-10-23-ai-fix-release.md`・Marketplace は未）。入った `bin\calamo.exe` で門 3 の素振りは ✓。古い reader に更新を勧める案内は、0.3.1 が Marketplace に出てから入れる（OMR の依頼）。
 
-1. `omr verify <x.lys> --candidate <tmp.lys> --bars N[,M…] --no-write --progress json`: 提案を差し込んだ temp の本文を、小節を絞って、side file を書かずに照合し、小節ごとに `{"event":"bar","measure","part","differs","confidence","memo"}` を返す（門 3 を数秒に）。有無は `--version --json` の `features: ["verify-bars"]`。
+1. `calamo verify <x.lys> --candidate <tmp.lys> --bars N[,M…] --no-write --progress json`: 提案を差し込んだ temp の本文を、小節を絞って、side file を書かずに照合し、小節ごとに `{"event":"bar","measure","part","differs","confidence","memo"}` を返す（門 3 を数秒に）。有無は `--version --json` の `features: ["verify-bars"]`。
 2. いさの todo（`source: length|verify`）に **`readings[]`**（S33 段 1 の `Fixes.Cand` の `why`・`was`・`now`・`evidence`・`fills`・`x`・`y`）＝1 事象の別の読み。`candidates` は音符の todo のまま。
 3. `x.omr.json` の `pages[].image`（`annotated`・`source` も）を side file のフォルダーからの相対パスに（今は絶対パス・Lily# は両方読める）。
 
