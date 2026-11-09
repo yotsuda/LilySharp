@@ -267,6 +267,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1195セッションの経緯
+
+### 1.1 第1195セッション（2026-11-09・YT-DELL2）
+
+開始時 full **14991 / 0 / 2**（`-Start p1195`・HEAD `fa41bbc02`・未 push 95）。オーナー「(自動起動を) 実装して」。作業場所は Lab `sessions/p1195/`。
+
+- Cantilena のみ（Lily# のコード変更なし）: `cantilena.voicevoxFolder` を設定すると、VOICEVOX の声が必要なときに engine を専用ポート 50121 で起動し VS Code 終了で止める。起動済みの VOICEVOX はそのまま使い止めない。楽譜が NEUTRINO などを指定しているだけ、歌詞がないだけなら起動しない（`needsVoicevox`）。URL は要求ごとに渡すので常駐 engine は再起動しない。
+- 実測: 本物の engine を `VoicevoxServer` から起動 962 ms・82 声・専用ポートで歌唱・dispose でポートが閉じる。NEUTRINO も DiffSinger も未設定の `serve` でも動く（「エンジン未設定」で落ちていたのを警告に）。実物の VS Code では未確認。設定はオーナーが行う。
+- 終了時 full **14991 合格 / 0 失敗 / skip 2 / 合計 14993**（`-End p1195 -DiffBase fa41bbc02`、BUILD 0）。Cantilena の `deploy-extension.ps1` で配布済み（設定を足したので Reload Window 2 回）。
+
 ## 以下は第1194セッションの経緯
 
 ### 1.1 第1194セッション（2026-11-09・YT-DELL2）

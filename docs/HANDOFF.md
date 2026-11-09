@@ -138,22 +138,23 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1197セッション（2026-11-09・YT-DELL2）
+
+開始時 full **15002 / 0 / 2**（`-Start p1197`・HEAD `23df55f3c`・未 push 97）。オーナー「同じパートを複数の声で歌えるようにして」。作業場所は Lab `sessions/p1197/`。
+
+- 書き方は文字列の中の `+`（`singer "neutrino/MERROW + diffsinger/TIGER"`）。文法は増やさない（Lily# は文字列を運ぶだけ）。パートは 1 つのまま、Cantilena が各声で歌って重ねる（`ChorusSinger`、1/√n、一番高いレートへ）。
+- エディタ: 補完と Ctrl+Shift+Up/Down はカーソルのある 1 人だけを替える（`singerPiece`）。`+` と `+ ` で候補が開く。カーソルで聞くと全員の合唱。
+- 実測: NEUTRINO MERROW と DiffSinger TIGER の 7 音を CLI で歌わせて 1 つの WAV。
+- 終了時 full **15002 合格 / 0 失敗 / skip 2 / 合計 15004**（`-End p1197 -DiffBase 23df55f3c`、BUILD 0）・npm 938 / 938。`Deploy-Lsp.ps1` と Cantilena の `deploy-extension.ps1` で配布済み（Reload Window 1 回）。
+
+## 以下は第1196セッションの経緯
+
 ### 1.1 第1196セッション（2026-11-09・YT-DELL2）
 
 開始時 full **14991 / 0 / 2**（`-Start p1196`・HEAD `8d2ba9aff`・未 push 96）。オーナー「`lyrics verse sings melody singer |` の補完がうまく動かない」→「直して」。作業場所は Lab `sessions/p1196/`。
 
 - `SingerSlotAt` が引用符の前（`singer ▮`）も席と読む（`Quoted=false`）。`singer male ▮` はサーバーの残りの節も出したまま、エディタが声を足す。エディタは `singer ` の空白で候補を開き、`male`・`female` と声の一覧を出し、選ぶと引用符付きで入る。
 - 終了時 full **15002 合格 / 0 失敗 / skip 2 / 合計 15004**（`-End p1196 -DiffBase 8d2ba9aff`、BUILD 0）・npm 937 / 937。`Deploy-Lsp.ps1` で配布済み（Reload Window 1 回）。
-
-## 以下は第1195セッションの経緯
-
-### 1.1 第1195セッション（2026-11-09・YT-DELL2）
-
-開始時 full **14991 / 0 / 2**（`-Start p1195`・HEAD `fa41bbc02`・未 push 95）。オーナー「(自動起動を) 実装して」。作業場所は Lab `sessions/p1195/`。
-
-- Cantilena のみ（Lily# のコード変更なし）: `cantilena.voicevoxFolder` を設定すると、VOICEVOX の声が必要なときに engine を専用ポート 50121 で起動し VS Code 終了で止める。起動済みの VOICEVOX はそのまま使い止めない。楽譜が NEUTRINO などを指定しているだけ、歌詞がないだけなら起動しない（`needsVoicevox`）。URL は要求ごとに渡すので常駐 engine は再起動しない。
-- 実測: 本物の engine を `VoicevoxServer` から起動 962 ms・82 声・専用ポートで歌唱・dispose でポートが閉じる。NEUTRINO も DiffSinger も未設定の `serve` でも動く（「エンジン未設定」で落ちていたのを警告に）。実物の VS Code では未確認。設定はオーナーが行う。
-- 終了時 full **14991 合格 / 0 失敗 / skip 2 / 合計 14993**（`-End p1195 -DiffBase fa41bbc02`、BUILD 0）。Cantilena の `deploy-extension.ps1` で配布済み（設定を足したので Reload Window 2 回）。
 
 ## 2. 開いている作業
 

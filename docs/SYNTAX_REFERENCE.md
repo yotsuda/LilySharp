@@ -1916,7 +1916,8 @@ on a line of its own for the whole file, or on a track, `lyrics en language engl
 **Who sings** is `singer "…"`, on a part (`part sop { singer "neutrino/MERROW" }`), on a track
 (`lyrics en singer "diffsinger/TIGER" sings melody { … }`) or on a score's row
 (`lyrics verse singer "soprano" sings melody`), the nearest winning. A name with a `/` is a
-voice; `"soprano"`, `"alto"`, `"tenor"` and `"bass"` say a gender. With no singer the part's
+voice; `"soprano"`, `"alto"`, `"tenor"` and `"bass"` say a gender. Names joined by `+` sing the part
+together (`singer "neutrino/MERROW + diffsinger/TIGER"`). With no singer the part's
 instrument, else its clef, says the gender (a bass, baritone, tenor or `treble_8` clef is male), and
 each machine's default voice of that gender sings. A singer that cannot be had sings as that default,
 said once. Between the quotes the editor offers the

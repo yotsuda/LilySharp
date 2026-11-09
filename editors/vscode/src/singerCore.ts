@@ -85,7 +85,19 @@ export function singerChoices(voices: readonly CantilenaVoice[], language: strin
 
 /** Whether a line's text before the caret ends with `singer ` or `singer male `: a space that opens the list of voices. */
 export function afterSingerWord(before: string): boolean {
-    return /(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?$/.test(before) && !before.includes('//');
+    return /(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?(?:"[^"]*\+[ \t]*)?$/.test(before) && !before.includes('//');
+}
+
+/** The one voice the caret stands on among those a `+` joins (`"a + b|"`): where it is on the line.
+ *  `at`: the whole name, as `singerValueAt` gives it. */
+export function singerPiece(at: { start: number; end: number; value: string }, character: number): { start: number; end: number; value: string } {
+    const offset = Math.max(0, Math.min(at.value.length, character - at.start));
+    let from = offset === 0 ? 0 : at.value.lastIndexOf('+', offset - 1) + 1;
+    let to = at.value.indexOf('+', offset);
+    if (to < 0) { to = at.value.length; }
+    while (from < to && at.value[from] === ' ') { from++; }
+    while (to > from && at.value[to - 1] === ' ') { to--; }
+    return { start: at.start + from, end: at.start + to, value: at.value.slice(from, to) };
 }
 
 /** The `singer "…"` the caret stands on (the word, the quotes, or between them): where its name is on the line. */

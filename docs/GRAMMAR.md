@@ -1446,7 +1446,8 @@ SingerGender   = 'male' | 'female' ;
                     block of that name that writes one (the rule 'sings' has). 'lyrics language
                     { ... }', 'lyrics language sings m { ... }' and 'lyrics singer { ... }' are
                     tracks with those names. 'singer' names who sings: a voice as engine/name
-                    ('neutrino/MERROW') or a role ('soprano', 'tenor') that says a gender; the
+                    ('neutrino/MERROW') or a role ('soprano', 'tenor') that says a gender, and
+                    several joined by + in the one string sing the part together; the
                     score's row wins over the track, the track over the part's 'singer'. An
                     empty one is an error (LYS4039); a name is never checked against a machine:
                     a voice that is not there sings as the default voice of the part's gender, said
