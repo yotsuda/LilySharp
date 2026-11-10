@@ -4237,10 +4237,17 @@ function voiceEstimateMs(voice: SungVoiceDto, speed: number): number {
 type PrepareReason = 'edit' | 'play' | 'speed';
 
 /** One voice to render for one preview; `mine` is the preview's postedVoices at the time (another map means the engine or the document changed). */
-interface PrepareJob { panel: vscode.WebviewPanel; voice: SungVoiceDto; speed: number; mine: Map<string, string> }
+interface PrepareJob { panel: vscode.WebviewPanel; voice: SungVoiceDto; speed: number; mine: Map<string, string>; key: string; letGo: AbortController }
 
-/** The engine's work, one job at a time per preview and part, the newest text winning (singerCore.PrepareQueue). */
-const prepareQueue = new PrepareQueue<PrepareJob>(job => renderVoice(job));
+/** The engine's work, one job at a time per preview and part, the newest text winning
+ *  (singerCore.PrepareQueue). A voice of an older text being sung is let go of as soon as a newer
+ *  one comes: the engine finishes the phrase it is on and moves on, keeping what it sang (owner's
+ *  decision 2026-11-10). A Play over the text already being sung changes nothing. */
+const prepareQueue = new PrepareQueue<PrepareJob>(job => renderVoice(job), undefined,
+    (running, newer) => { if (running.key !== newer.key) { running.letGo.abort(); } });
+
+/** The clock for the voice lines of the output, which say when and why a voice waited. */
+const clockNow = () => new Date().toTimeString().slice(0, 8);
 
 /**
  * Keeps the voices of the score `panel` shows up to its text (owner's request 2026-11-08,
@@ -4266,7 +4273,7 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     const file = path.basename(vscode.Uri.parse(uri).fsPath);
     // One line per ask in the output channel: what was asked and how it ended, so a microphone
     // that stays can be read back (owner's report 2026-11-09, session 1161).
-    const log = (what: string) => outputChannel.appendLine(`singer: prepare (${reason}) ${file}: ${what}`);
+    const log = (what: string) => outputChannel.appendLine(`singer: ${clockNow()} prepare (${reason}) ${file}: ${what}`);
     const settled = () => { if (current()) { void panel.webview.postMessage({ type: 'voiceSettled' }); } };
     if (!client || !clientReady) { log('the server is not up'); settled(); return; }
     const engine = await renderer();
@@ -4331,7 +4338,9 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
             continue;
         }
         void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: rests ? 'waiting' : 'preparing', estimateMs: voiceEstimateMs(voice, speed) });
-        prepareQueue.schedule(slot, { panel, voice, speed, mine }, rests ? PREPARE_IDLE_MS : 0);
+        const busy = prepareQueue.busy(slot);
+        prepareQueue.schedule(slot, { panel, voice, speed, mine, key, letGo: new AbortController() }, rests ? PREPARE_IDLE_MS : 0);
+        log(`${id}: ${rests ? `waits for the text to rest ${PREPARE_IDLE_MS} ms` : 'goes now'}${busy ? ', after what is being sung lets go' : ''}`);
     }
 }
 
@@ -4346,13 +4355,14 @@ async function renderVoice(job: PrepareJob): Promise<void> {
     const { panel, voice, speed, mine } = job;
     const id = sungKey(voice);
     const slot = `${panelId(panel)}/${id}`;
-    const wanted = () => postedVoices.get(panel) === mine && !prepareQueue.hasWaiting(slot)
+    const wanted = () => !job.letGo.signal.aborted && postedVoices.get(panel) === mine && !prepareQueue.hasWaiting(slot)
         && (sungParts.get(panel)?.has(id) ?? true);
     const engine = voiceRenderer;
     if (!engine || !wanted()) { return; }
     let key: string, rendered: Promise<{ wav: string; duration: number }>, cached: boolean;
     try {
-        ({ key, rendered, cached } = await engine.render(voice, speed));
+        outputChannel.appendLine(`singer: ${clockNow()} ${id}: to the engine`);
+        ({ key, rendered, cached } = await engine.render(voice, speed, job.letGo.signal));
     } catch (e) {
         if (wanted()) { failVoice(panel, id, speed, String(e)); }
         return;
@@ -4381,7 +4391,7 @@ async function renderVoice(job: PrepareJob): Promise<void> {
             if (!wanted()) { return; }
             mine.set(id, key);
             void panel.webview.postMessage({ type: 'voice', part: id, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array(bytes) });
-            outputChannel.appendLine(`singer: ${id} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
+            outputChannel.appendLine(`singer: ${clockNow()} ${id} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
         } catch (e) {
             if (wanted()) { failVoice(panel, id, speed, e instanceof Error ? e.message : String(e)); }
         } finally {

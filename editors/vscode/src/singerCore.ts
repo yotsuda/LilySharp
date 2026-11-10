@@ -57,7 +57,8 @@ export interface CantoriaApi {
     readonly apiVersion: number;
     status(): Promise<{ ready: boolean; voice: string; problems: string[] }>;
     voices?(): Promise<CantoriaVoice[]>;
-    sing(score: CantoriaScore, options?: { voice?: string }): Promise<{ wav: string; duration: number; cached?: boolean }>;
+    /** `options.signal` lets go of a render no longer wanted (a Cantoria that does not know it sings on). */
+    sing(score: CantoriaScore, options?: { voice?: string; signal?: AbortSignal }): Promise<{ wav: string; duration: number; cached?: boolean }>;
     release(): void;
     /** The voice a `.lys` file's `singer` string comes to on this machine, and what to tell the
      *  writer when it was not the one asked for. Cantoria 0.4 on. */
@@ -498,16 +499,23 @@ export interface PrepareTimers { setTimeout(fn: () => void, ms: number): unknown
  * (typing resets it); one scheduled while another runs waits its turn, and only the newest one
  * waiting runs then — the engine sings each phrase at most twice over an edit, not once per
  * keystroke. `cancel` forgets a slot's waiting job (a preview turned to another document).
+ * `letGo` hears of a newer job while one runs: the running one can then end early, and the newer
+ * one follows as soon as it has.
  */
 export class PrepareQueue<J> {
-    private readonly slots = new Map<string, { timer?: unknown; waiting?: J; running: boolean }>();
+    private readonly slots = new Map<string, { timer?: unknown; waiting?: J; running: boolean; current?: J }>();
 
     constructor(private readonly run: (job: J) => Promise<void>,
-        private readonly timers: PrepareTimers = { setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: h => clearTimeout(h as ReturnType<typeof setTimeout>) }) {}
+        private readonly timers: PrepareTimers = { setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: h => clearTimeout(h as ReturnType<typeof setTimeout>) },
+        private readonly letGo?: (running: J, newer: J) => void) {}
+
+    /** True while a job of `slot` runs. */
+    busy(slot: string): boolean { return this.slots.get(slot)?.running ?? false; }
 
     schedule(slot: string, job: J, delayMs: number): void {
         let s = this.slots.get(slot);
         if (!s) { this.slots.set(slot, s = { running: false }); }
+        if (s.current !== undefined) { this.letGo?.(s.current, job); }
         if (s.timer !== undefined) { this.timers.clearTimeout(s.timer); s.timer = undefined; }
         s.waiting = job;
         if (delayMs > 0) { s.timer = this.timers.setTimeout(() => { s.timer = undefined; this.fire(slot); }, delayMs); }
@@ -542,8 +550,10 @@ export class PrepareQueue<J> {
         const job = s.waiting;
         s.waiting = undefined;
         s.running = true;
+        s.current = job;
         this.run(job).catch(() => undefined).then(() => {
             s.running = false;
+            s.current = undefined;
             if (s.waiting !== undefined && s.timer === undefined) { this.fire(slot); }
         });
     }
@@ -577,4 +587,9 @@ export function parseServeLine(line: string): ServeAnswer | null {
  *  default voice (its `--voice`, else MERROW) — Lily# names none. */
 export function serveRequestLine(id: string, score: CantoriaScore, output: string, voice?: string): string {
     return JSON.stringify(voice ? { id, score, voice, output } : { id, score, output }) + '\n';
+}
+
+/** Lets go of request `id` at its next phrase. */
+export function serveCancelLine(id: string): string {
+    return JSON.stringify({ command: 'cancel', id }) + '\n';
 }

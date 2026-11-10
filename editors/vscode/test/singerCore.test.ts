@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveCancelLine, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceRowProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -489,6 +489,45 @@ describe('the prepare queue', () => {
         t.tick(600);
         await flush();
         assert.deepEqual(ran, ['b']);
+    });
+
+    it('tells of a newer job while one runs, and the newer follows as soon as it has ended', async () => {
+        const t = timers();
+        const ran: string[] = [];
+        const told: [string, string][] = [];
+        let release: () => void = () => undefined;
+        const q = new PrepareQueue<string>(j => { ran.push(j); return new Promise<void>(r => { release = r; }); }, t.api, (running, newer) => told.push([running, newer]));
+        q.schedule('s', 'a', 1500);
+        assert.deepEqual(told, [], 'nothing runs yet');
+        t.tick(1500);
+        assert.equal(q.busy('s'), true);
+        q.schedule('s', 'b', 1500);
+        assert.deepEqual(told, [['a', 'b']], 'at the new text, not when its rest is over');
+        q.schedule('s', 'c', 0);                // Play
+        assert.deepEqual(told, [['a', 'b'], ['a', 'c']]);
+        release();
+        await flush(); await flush();
+        assert.deepEqual(ran, ['a', 'c']);
+        release();
+        await flush(); await flush();
+        assert.equal(q.busy('s'), false);
+        q.schedule('s', 'd', 1500);
+        assert.equal(told.length, 2, 'nothing runs any more to let go of');
+    });
+
+    it('a slot lets go of its own running job, not another\'s', () => {
+        const t = timers();
+        const told: string[] = [];
+        const q = new PrepareQueue<string>(() => new Promise<void>(() => undefined), t.api, running => told.push(running));
+        q.schedule('p/sop', 'a', 0);
+        q.schedule('p/alt', 'x', 0);
+        assert.deepEqual(told, []);
+        q.schedule('p/alt', 'y', 0);
+        assert.deepEqual(told, ['x']);
+    });
+
+    it('the wire says which request to let go of', () => {
+        assert.deepEqual(JSON.parse(serveCancelLine('k.1')), { command: 'cancel', id: 'k.1' });
     });
 
     it('runs at once with no delay, lets one job run at a time, and runs only the newest waiting one after it', async () => {

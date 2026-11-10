@@ -300,7 +300,10 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   edited — typing restarts the clock, so the engine never works under the keystrokes and sings
   each phrase at most once per pause; and not before Play with
   `lilysharp.playback.singerPrepare` = `onPlay` (for the CPU's DiffSinger, where every pause
-  would cost seconds; the default is `afterEdit`). `preparing` (pulsing) is posted only when the
+  would cost seconds; the default is `afterEdit`). A voice of an older text still being sung is
+  let go of as soon as a newer text is queued (owner's decision 2026-11-10): the engine finishes
+  the phrase it is on, keeps what it sang, and goes on; a Play over the text already being sung
+  changes nothing. `preparing` (pulsing) is posted only when the
   engine is actually asked; `PREPARE_TIMEOUT_MS` = 120 s without an answer is `failed`. When
   the server cannot answer (a syntax error) the voices the page has stay as they are and the
   nameless placeholder of a turn is settled (`voiceSettled`), so nothing pulses over nothing;
