@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -3893,7 +3893,7 @@ const singerCompletion: vscode.CompletionItemProvider = {
         const voices = await api.voices();
         // Words not named yet and written in several languages: every voice (docs/lyrics-singer-design.md §7).
         const language = slot.AnyLanguage ? undefined : slot.Language!;
-        samples().warm(voices.filter(v => !language || singsLanguage(v, language)).map(v => voiceSampleKey(v.id, slot.Language!)));
+        samples().warm(voices.filter(v => !language || singsLanguage(v, language)).map(v => voiceSampleKey(v.id, sampleOctave(v.gender, slot.Gender), slot.Language!)));
         const guide = voices.length === 0 ? noVoiceGuide(true) : !language || voices.some(v => singsLanguage(v, language)) ? undefined : noLanguageGuide(language, voices);
         if (guide) { offerVoiceSetup(guide); }
         const items = singerChoices(voices, language, slot.Gender).map((c, i) => {
@@ -3957,11 +3957,11 @@ async function singVoiceSample(key: string): Promise<void> {
     const engine = await renderer();
     const backend = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend : undefined;
     if (!backend?.api.voices) { throw new Error('no engine that lists its voices'); }
-    const [id, asked] = key.split('@');
-    const first = id.split('+')[0].trim();      // voices singing together: the first says the language and the octave
+    const { id, language: asked, octave } = parseVoiceSampleKey(key);
+    const first = id.split('+')[0].trim();      // voices singing together: the first says the language
     const voice = (await backend.api.voices()).find(v => v.id === first);
     const language = asked ?? voice?.language;
-    const score = language ? voiceSampleScore(language, voice?.gender) : undefined;
+    const score = language ? voiceSampleScore(language, octave) : undefined;
     if (!score) { throw new Error(`no sample phrase for the language ${language ?? 'it does not name'}`); }
     const v = await backend.sing(`sample-${key}`, score, id);
     await fs.promises.mkdir(path.dirname(voiceSampleFile(key)), { recursive: true });
@@ -3969,8 +3969,12 @@ async function singVoiceSample(key: string): Promise<void> {
 }
 
 /** Lets the document's preview say a short phrase in `id` (with no preview open it is silent, as every audition is). */
-async function auditionVoice(uri: string, id: string, clock: StageClock, language?: string): Promise<void> {
-    const key = voiceSampleKey(id, language);
+async function auditionVoice(uri: string, id: string, clock: StageClock, language?: string, lineGender?: string | null): Promise<void> {
+    // Voices singing together: the first says the octave, as it says the language.
+    const first = id.split('+')[0].trim();
+    const engine = await renderer();
+    const voice = engine?.backend instanceof CantoriaExtensionBackend ? (await engine.backend.api.voices?.())?.find(v => v.id === first) : undefined;
+    const key = voiceSampleKey(id, sampleOctave(voice?.gender, lineGender), language);
     voiceSampleWanted = key;
     const songAtStart = voiceRenderer?.singing ? 'being sung' : 'not being sung';
     const say = (end: string) => outputChannel.appendLine(`singer: hear ${id}: ${clock}${end} (the song was ${songAtStart} at the start)`);
@@ -4002,9 +4006,9 @@ async function hearSinger(label: unknown): Promise<void> {
     clock.mark('name');
     const caret = editor.selection.active;
     const asked = new vscode.Position(caret.line, singerLanguageColumn(editor.document.lineAt(caret.line).text, caret.character));
-    const slot = client && clientReady ? await client.sendRequest<{ Language?: string | null }>('lilysharp/singerSlot',
+    const slot = client && clientReady ? await client.sendRequest<{ Language?: string | null; Gender?: string | null }>('lilysharp/singerSlot',
         { textDocument: { uri: editor.document.uri.toString() }, offset: editor.document.offsetAt(asked) }).then(s => s, () => undefined) : undefined;
-    await auditionVoice(editor.document.uri.toString(), voice, clock, slot?.Language ?? undefined);
+    await auditionVoice(editor.document.uri.toString(), voice, clock, slot?.Language ?? undefined, slot?.Gender);
 }
 
 /**
@@ -4035,7 +4039,7 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, byVoic
         return true;
     }
     const sings = (await api.voices()).filter(v => singsLanguage(v, slot.Language!));
-    samples().warm(sings.map(v => voiceSampleKey(v.id, slot.Language!)));
+    samples().warm(sings.map(v => voiceSampleKey(v.id, sampleOctave(v.gender, slot.Gender), slot.Language!)));
     const voices = sings.filter(v => fitsGender(v, slot.Gender));
     clock.mark('voices');
     const next = stepVoice(byVoiceId(voices), at.value, direction, !byVoice);
@@ -4052,7 +4056,7 @@ async function stepSingerAt(editor: vscode.TextEditor, direction: 1 | -1, byVoic
     editor.selection = new vscode.Selection(caret, caret);
     const label = voices.find(v => v.id === next)?.label;
     vscode.window.setStatusBarMessage(`Lily#: singer ${next}${label ? ` (${label})` : ''}`, 4000);
-    void auditionVoice(doc.uri.toString(), next, clock, slot.Language);
+    void auditionVoice(doc.uri.toString(), next, clock, slot.Language, slot.Gender);
     return true;
 }
 

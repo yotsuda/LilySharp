@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceRowProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -297,21 +297,34 @@ describe('choosing a voice with the step keys', () => {
     it('has a phrase for Japanese, and none it cannot write', () => {
         assert.equal(voiceSampleScore('ja')?.language, 'ja');
         assert.equal(voiceSampleScore('ko'), undefined);
-        assert.equal(voiceSampleKey('d/T', 'ja'), 'd/T', 'the samples already sung keep their files');
-        assert.equal(voiceSampleKey('d/T', 'en'), 'd/T@en');
-        assert.equal(voiceSampleFileName('neutrino/MERROW'), 'neutrino_MERROW-4.wav', 'sung again since a voice\'s gender, and so its octave, may have changed');
-        assert.notEqual(voiceSampleFileName('voicevox/ずんだもん-ノーマル'), voiceSampleFileName('voicevox/四国めたん-ノーマル'));
-        assert.equal(voiceSampleKey('d/T'), 'd/T');
+        assert.equal(voiceSampleKey('d/T', 'high', 'ja'), 'd/T~high');
+        assert.equal(voiceSampleKey('d/T', 'low', 'en'), 'd/T@en~low');
+        assert.equal(voiceSampleKey('d/T', 'low'), 'd/T~low');
+        assert.deepEqual(parseVoiceSampleKey('d/T@en~low'), { id: 'd/T', language: 'en', octave: 'low' });
+        assert.deepEqual(parseVoiceSampleKey('d/T~high'), { id: 'd/T', language: undefined, octave: 'high' });
+        assert.equal(voiceSampleFileName('neutrino/MERROW~low'), 'neutrino_MERROW_low-4.wav');
+        assert.notEqual(voiceSampleFileName('d/T~low'), voiceSampleFileName('d/T~high'), 'a voice is kept in each octave it is heard in');
+        assert.notEqual(voiceSampleFileName('voicevox/ずんだもん-ノーマル~low'), voiceSampleFileName('voicevox/四国めたん-ノーマル~low'));
         assert.deepEqual(voiceSampleScore('en')?.notes.map(n => [n.lyric, !!n.hyphen]), [['hel', true], ['lo', false], ['how', false], ['are', false], ['you', false]]);
-        assert.deepEqual(voiceSampleScore('en', 'male')?.notes.map(n => n.pitch), [48, 50, 52, 53, 55]);
+        assert.deepEqual(voiceSampleScore('en', 'low')?.notes.map(n => n.pitch), [48, 50, 52, 53, 55]);
         assert.deepEqual(voiceSampleScore('en')?.notes.map(n => [n.start, n.pitch]), voiceSampleScore('ja')?.notes.map(n => [n.start, n.pitch]), 'the melody of the Japanese phrase');
-        assert.equal(voiceSampleFileName('d/T@en'), 'd_T_en-5.wav', 'a new phrase, sung again');
+        assert.equal(voiceSampleFileName('d/T@en~low'), 'd_T_en_low-5.wav', 'a new phrase, sung again');
     });
 
-    it('sings the phrase an octave lower for every voice but a female one', () => {
-        const pitches = (gender?: string) => voiceSampleScore('ja', gender)?.notes.map(n => n.pitch);
-        assert.deepEqual(pitches('male'), pitches('female')?.map(p => p - 12));
-        assert.deepEqual(pitches(), pitches('male'), 'a voice that says neither is heard at the male octave');
+    it('sings the phrase an octave apart, low unless asked', () => {
+        const pitches = (octave?: 'high' | 'low') => voiceSampleScore('ja', octave)?.notes.map(n => n.pitch);
+        assert.deepEqual(pitches('low'), pitches('high')?.map(p => p - 12));
+        assert.deepEqual(pitches(), pitches('low'));
+    });
+
+    it('hears a voice in the octave its singer line says, else its own, else low', () => {
+        assert.equal(sampleOctave(undefined, 'female'), 'high', 'a voice that says no gender, on a female line');
+        assert.equal(sampleOctave(undefined, 'male'), 'low', 'and on a male line');
+        assert.equal(sampleOctave('male', 'female'), 'high', 'the line wins over the voice');
+        assert.equal(sampleOctave('female', 'male'), 'low');
+        assert.equal(sampleOctave('female', null), 'high', 'a line that says neither: the voice');
+        assert.equal(sampleOctave('male', undefined), 'low');
+        assert.equal(sampleOctave(undefined, null), 'low', 'neither says');
     });
 
     it('ends the phrase as it is said, with wa', () => {

@@ -302,8 +302,7 @@ export function learnRenderRate(rate: number, elapsedMs: number, seconds: number
     return Math.min(3000, Math.max(10, (rate + measured) / 2));
 }
 
-/** Bumped when the phrase below changes: the samples kept on disk are named with it. A voice's
- *  gender sets the phrase's octave, so a correction to Cantoria's gender tables bumps both too. */
+/** Bumped when the phrase below changes: the samples kept on disk are named with it. */
 export const VOICE_SAMPLE_VERSION = 4;
 /** The same for the English phrase, on its own so that a change to it leaves the Japanese samples. */
 export const VOICE_SAMPLE_EN_VERSION = 5;
@@ -327,20 +326,36 @@ export class StageClock {
 /** A sample's file name: letters of any script kept, so that two VOICEVOX voices, whose names are
  *  kana, do not come to one file. */
 export function voiceSampleFileName(key: string): string {
-    return `${key.replace(/[^\p{L}\p{N}_.-]+/gu, '_')}-${key.endsWith('@en') ? VOICE_SAMPLE_EN_VERSION : VOICE_SAMPLE_VERSION}.wav`;
+    return `${key.replace(/[^\p{L}\p{N}_.-]+/gu, '_')}-${parseVoiceSampleKey(key).language === 'en' ? VOICE_SAMPLE_EN_VERSION : VOICE_SAMPLE_VERSION}.wav`;
 }
 
-/** What a voice's sample is kept under: Japanese under the voice alone, as the samples already sung are,
- *  and another language after an `@`, since one voice now says a phrase in each language it sings. */
-export function voiceSampleKey(id: string, language?: string): string {
-    return language && language !== 'ja' ? `${id}@${language}` : id;
+/** The octave a voice's sample is sung in. */
+export type SampleOctave = 'high' | 'low';
+
+/** The octave to hear a voice in (owner's decision 2026-11-10): what the `singer` line says, a
+ *  `singer female` line high and a `singer male` line low; on a line that says neither, the voice's
+ *  own gender; on a voice that says none either, low. */
+export function sampleOctave(voiceGender?: string | null, lineGender?: string | null): SampleOctave {
+    return (lineGender ?? voiceGender) === 'female' ? 'high' : 'low';
 }
 
-/** The short phrase a voice is heard by when it is chosen, an octave lower for all but a female voice:
- *  a male voice (owner's request 2026-11-09, session 1177) and one that says neither (owner's
- *  request 2026-11-10); undefined for a language it has no words for. */
-export function voiceSampleScore(language: string, gender?: string): CantoriaScore | undefined {
-    const octave = gender === 'female' ? 0 : -12;
+/** What a voice's sample is kept under: the voice, its language after an `@` where that is not
+ *  Japanese, and the octave after a `~`, a voice that says no gender being heard in both. */
+export function voiceSampleKey(id: string, octave: SampleOctave, language?: string): string {
+    return `${language && language !== 'ja' ? `${id}@${language}` : id}~${octave}`;
+}
+
+/** The three parts of a {@link voiceSampleKey}. */
+export function parseVoiceSampleKey(key: string): { id: string; language?: string; octave: SampleOctave } {
+    const mark = key.lastIndexOf('~');
+    const [id, language] = key.slice(0, mark).split('@');
+    return { id, language, octave: key.slice(mark + 1) === 'high' ? 'high' : 'low' };
+}
+
+/** The short phrase a voice is heard by when it is chosen (owner's requests 2026-11-09, session 1177,
+ *  and 2026-11-10); undefined for a language it has no words for. */
+export function voiceSampleScore(language: string, sung: SampleOctave = 'low'): CantoriaScore | undefined {
+    const octave = sung === 'high' ? 0 : -12;
     if (language === 'en') {
         // Five syllables to the five of こんにちわ, on the same notes (owner's decision 2026-11-09, session 1201).
         return { sampleRate: VOICE_SAMPLE_RATE, language, notes: [
