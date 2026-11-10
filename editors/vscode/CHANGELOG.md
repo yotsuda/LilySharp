@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A voice's sample is sung again**, so that a DiffSinger voice now known to be male is heard an octave lower, as the other male voices are.
 - **One lyrics track sung on several parts is a voice on each**, also where the score prints it under only some of them: a choir of four sang as one, and the practice menu listed one.
 - **Each voice's line in the practice menu shows a progress bar while it is being sung**, as the Play button does.
 - **A `singer` line is coloured whatever its voice is called**: a name with a `/` (`"neutrino/NAKUMO"`) left the whole line plain. `singer`, `sings` and `on` take the colour of `form` and `score`, `male` and `female` the colour of a value.

@@ -299,13 +299,13 @@ describe('choosing a voice with the step keys', () => {
         assert.equal(voiceSampleScore('ko'), undefined);
         assert.equal(voiceSampleKey('d/T', 'ja'), 'd/T', 'the samples already sung keep their files');
         assert.equal(voiceSampleKey('d/T', 'en'), 'd/T@en');
-        assert.equal(voiceSampleFileName('neutrino/MERROW'), 'neutrino_MERROW-2.wav', 'the samples already sung keep their files');
+        assert.equal(voiceSampleFileName('neutrino/MERROW'), 'neutrino_MERROW-3.wav', 'sung again since a voice\'s gender, and so its octave, may have changed');
         assert.notEqual(voiceSampleFileName('voicevox/ずんだもん-ノーマル'), voiceSampleFileName('voicevox/四国めたん-ノーマル'));
         assert.equal(voiceSampleKey('d/T'), 'd/T');
         assert.deepEqual(voiceSampleScore('en')?.notes.map(n => [n.lyric, !!n.hyphen]), [['hel', true], ['lo', false], ['how', false], ['are', false], ['you', false]]);
         assert.deepEqual(voiceSampleScore('en', 'male')?.notes.map(n => n.pitch), [48, 50, 52, 53, 55]);
         assert.deepEqual(voiceSampleScore('en')?.notes.map(n => [n.start, n.pitch]), voiceSampleScore('ja')?.notes.map(n => [n.start, n.pitch]), 'the melody of the Japanese phrase');
-        assert.equal(voiceSampleFileName('d/T@en'), 'd_T_en-3.wav', 'a new phrase, sung again');
+        assert.equal(voiceSampleFileName('d/T@en'), 'd_T_en-4.wav', 'a new phrase, sung again');
     });
 
     it('sings the phrase an octave lower for a male voice only', () => {

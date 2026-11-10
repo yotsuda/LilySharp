@@ -302,10 +302,11 @@ export function learnRenderRate(rate: number, elapsedMs: number, seconds: number
     return Math.min(3000, Math.max(10, (rate + measured) / 2));
 }
 
-/** Bumped when the phrase below changes: the samples kept on disk are named with it. */
-export const VOICE_SAMPLE_VERSION = 2;
+/** Bumped when the phrase below changes: the samples kept on disk are named with it. A voice's
+ *  gender sets the phrase's octave, so a correction to Cantoria's gender tables bumps both too. */
+export const VOICE_SAMPLE_VERSION = 3;
 /** The same for the English phrase, on its own so that a change to it leaves the Japanese samples. */
-export const VOICE_SAMPLE_EN_VERSION = 3;
+export const VOICE_SAMPLE_EN_VERSION = 4;
 
 /** The time each stage of hearing a voice took, for the output channel (owner's request 2026-11-09, session 1171). */
 export class StageClock {
