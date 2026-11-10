@@ -608,7 +608,8 @@ score { staff melody }</pre>
     <li>A note takes one dynamic: in <code>c4@f@sfz</code> the second warns and is not printed.
     A dynamic and a hairpin together are fine (<code>c4@p@cresc</code>).</li>
     <li><code>@niente</code> is the silent end: a hairpin that fades into it (or grows out of
-    it) gets the small circle at its tip, and the word is not printed.</li>
+    it) gets the small circle at its tip, and the word is not printed. A note written at
+    <code>@niente</code> still sounds, as softly as <code>@pppp</code>.</li>
     <li>Playback and the MIDI export follow the levels: each sets the loudness of the notes
     from it on. A hairpin itself is drawn, not played — the loudness changes at the next
     level, not gradually.</li>

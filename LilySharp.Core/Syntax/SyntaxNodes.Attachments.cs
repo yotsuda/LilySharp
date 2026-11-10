@@ -119,7 +119,12 @@ public sealed class DynamicSyntax : SyntaxNode
     /// <summary>
     /// Gets the MIDI velocity value for this dynamic.
     /// </summary>
-    public int Velocity => (int)Level;
+    /// <remarks>LILYSHARP-OWN: a note struck at <c>@niente</c> plays as <c>@pppp</c> (owner's
+    /// decision 2026-11-10). A hairpin is not played, so at velocity 1 the fade was no fade: the
+    /// notes under it kept their level and the one written <c>@niente</c>, in both hands of a
+    /// grand staff, made no sound (Dorian Mist's last chord). A player fading to nothing still
+    /// plays that note.</remarks>
+    public int Velocity => Level == DynamicLevel.Niente ? (int)DynamicLevel.PPPP : (int)Level;
 }
 
 // ============================================================

@@ -522,7 +522,7 @@ c4@p@decresc d e@niente@cresc f | g1@f |   // both on one note share one circle
 
 Alone, `@niente` prints the word *niente* in italic. At a hairpin's thick end (a crescendo
 ending on it, a decrescendo starting from it) it warns (LYS4029) and the wedge is drawn
-plain. In MIDI it is the quietest level (velocity 1); in MusicXML it is the wedge's
+plain. A note struck at it plays at velocity 43, as softly as pppp, so it is still heard; in MusicXML it is the wedge's
 `niente="yes"` or the `<n/>` dynamic, and LilyPond writes the hairpin with `circled-tip`.
 
 `.up` / `.down` cannot be applied to `@cresc` / `@decresc` / `@dim` — a hairpin is

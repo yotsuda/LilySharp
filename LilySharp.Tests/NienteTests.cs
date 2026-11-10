@@ -189,6 +189,28 @@ public class NienteTests
     {
         var notes = new MidiExporter().Export(SyntaxTree.Parse(Book("c'4@niente d' e'@p f' |"))).Tracks
             .SelectMany(t => t.Notes).OrderBy(n => n.StartTick).ToList();
-        Assert.Equal(new[] { 1, 1, 70, 70 }, notes.Select(n => n.Velocity).ToArray());
+        Assert.Equal(new[] { 43, 43, 70, 70 }, notes.Select(n => n.Velocity).ToArray());
+    }
+
+    /// <summary>The owner's report, 2026-11-10: a last chord written <c>@niente</c> made no
+    /// sound, in either hand of the grand staff.</summary>
+    [Fact]
+    public void Midi_AChordStruckAtNiente_SoundsInBothHands()
+    {
+        const string src = """
+            octave absolute
+            part rh { clef treble }
+            part lh { clef bass }
+            section S {
+              rh { a'1@pp@decresc | <g' a'>1@niente | }
+              lh { c1 | g,1 | }
+            }
+            form { S }
+            score { grandStaff { staff rh  staff lh } }
+            """;
+        var last = new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks
+            .SelectMany(t => t.Notes).Where(n => n.StartTick > 0).ToList();
+        Assert.Equal(3, last.Count);
+        Assert.All(last, n => Assert.Equal((int)DynamicLevel.PPPP, n.Velocity));
     }
 }
