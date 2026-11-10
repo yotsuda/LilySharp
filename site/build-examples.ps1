@@ -209,25 +209,39 @@ score {
 
 'sing-first' = @'
 // A part, its words, and the line that sings them. The score's row prints the words;
-// the singer line is what makes them heard.
+// the singer line is what makes them heard. The piano has no singer line, so it plays.
+octave absolute
 time 4/4
 key g major
 tempo 96
 language english
 part melody { instrument soprano }
+part rh { instrument piano-right }
+part lh { instrument piano-left }
 section A {
   melody {
-    g'4 a b d   | c4 b a r   | b4 c d g   | fis4 e d r |
-    e4 fis g e  | d4 b g r   | a4 b c a   | b4 a g2    |
+    g'4 a' b' d''      | c''4 b' a' r      | b'4 c'' d'' g''   | fis''4 e'' d'' r  |
+    e''4 fis'' g'' e'' | d''4 b' g' r      | a'4 b' c'' a'     | b'4 a' g'2        |
   }
   lyrics words {
     Write a line of | words for me,  | set them on the | mel- o- dy;   |
     press the key and | lend an ear: | what you wrote is | what you hear. |
   }
+  rh {
+    <b d' g'>2@mp <b d' g'>2 | <a c' e'>2 <a d' fis'>2 | <b d' g'>2 <b d' g'>2 | <a d' fis'>2 <a d' fis'>2 |
+    <c' e' g'>2 <c' e' g'>2  | <b d' g'>2 <b d' g'>2   | <a c' e'>2 <a d' fis'>2 | <b d' g'>4 <a d' fis'>4 <b d' g'>2 |
+  }
+  lh {
+    g,8@mp d g d g, d g d | a,8 e a e d a d' a | g,8 d g d g, d g d | d8 a d' a d a d' a |
+    c8 g c' g c g c' g    | g,8 d g d g, d g d | a,8 e a e d a d' a | g,8 d d a, g,2 |
+  }
 }
 form { ~A }
 singer female sings words on melody
-score { staff melody  lyrics words }
+score {
+  staff melody  lyrics words
+  grandStaff { staff rh  staff lh }
+}
 '@
 
 'instrument' = @'
