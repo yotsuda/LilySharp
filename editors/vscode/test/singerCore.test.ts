@@ -302,7 +302,7 @@ describe('choosing a voice with the step keys', () => {
         assert.equal(voiceSampleKey('d/T', 'low'), 'd/T~low');
         assert.deepEqual(parseVoiceSampleKey('d/T@en~low'), { id: 'd/T', language: 'en', octave: 'low' });
         assert.deepEqual(parseVoiceSampleKey('d/T~high'), { id: 'd/T', language: undefined, octave: 'high' });
-        assert.equal(voiceSampleFileName('neutrino/MERROW~low'), 'neutrino_MERROW_low-4.wav');
+        assert.equal(voiceSampleFileName('neutrino/MERROW~low'), 'neutrino_MERROW_low-5.wav');
         assert.notEqual(voiceSampleFileName('d/T~low'), voiceSampleFileName('d/T~high'), 'a voice is kept in each octave it is heard in');
         assert.notEqual(voiceSampleFileName('voicevox/ずんだもん-ノーマル~low'), voiceSampleFileName('voicevox/四国めたん-ノーマル~low'));
         assert.deepEqual(voiceSampleScore('en')?.notes.map(n => [n.lyric, !!n.hyphen]), [['hel', true], ['lo', false], ['how', false], ['are', false], ['you', false]]);

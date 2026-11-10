@@ -311,8 +311,9 @@ export function learnRenderRate(rate: number, elapsedMs: number, seconds: number
     return Math.min(3000, Math.max(10, (rate + measured) / 2));
 }
 
-/** Bumped when the phrase below changes: the samples kept on disk are named with it. */
-export const VOICE_SAMPLE_VERSION = 4;
+/** Bumped when the phrase below changes, or how it is sung (5: VOICEVOX's low notes, 2026-11-10):
+ *  the samples kept on disk are named with it. */
+export const VOICE_SAMPLE_VERSION = 5;
 /** The same for the English phrase, on its own so that a change to it leaves the Japanese samples. */
 export const VOICE_SAMPLE_EN_VERSION = 5;
 
