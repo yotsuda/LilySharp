@@ -82,6 +82,44 @@ public class EditorColouringTests
         Path.Combine(CollectResumeTests.FindRepoRoot(),
             "editors", "vscode", "syntaxes", "lilysharp.tmLanguage.json");
 
+    private static (System.Text.RegularExpressions.Match Match, JsonElement Captures) SingerLine(string line)
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(GrammarPath));
+        var rule = doc.RootElement.GetProperty("repository").GetProperty("singer-line");
+        return (System.Text.RegularExpressions.Regex.Match(line, rule.GetProperty("match").GetString()!),
+            rule.GetProperty("captures").Clone());
+    }
+
+    /// <summary>A voice's name holds a <c>/</c>, which the rule refused so that a comment could
+    /// not supply the <c>sings</c>: the whole line went uncoloured (owner's report 2026-11-10).</summary>
+    [Theory]
+    [InlineData("singer male \"neutrino/NAKUMO\" sings word", " male \"neutrino/NAKUMO\" ", "word", "")]
+    [InlineData("singer \"a/b\",\"c/d\" sings word on sop", " \"a/b\",\"c/d\" ", "word", "sop")]
+    [InlineData("singer female sings hum on sop", " female ", "hum", "sop")]
+    [InlineData("  singer sings on sop", " ", "", "sop")]
+    public void TheSingerLine_IsReadWhateverTheVoiceIsCalled(string line, string who, string track, string on)
+    {
+        var (match, _) = SingerLine(line);
+        Assert.True(match.Success, line);
+        Assert.Equal(who, match.Groups[2].Value);
+        Assert.Equal(track, match.Groups[4].Value);
+        Assert.Equal(on, match.Groups[6].Value);
+    }
+
+    [Theory]
+    [InlineData("singer male // sings word")]
+    [InlineData("singer { c'4 d | }")]
+    [InlineData("// singer sings word")]
+    public void WhatIsNotASingerLine_IsNotRead(string line) => Assert.False(SingerLine(line).Match.Success, line);
+
+    /// <summary>The line's words take the colour of <c>form</c> and <c>score</c>.</summary>
+    [Theory]
+    [InlineData("1")]
+    [InlineData("3")]
+    [InlineData("5")]
+    public void TheSingerLinesWords_AreColouredAsFormAndScore(string capture)
+        => Assert.Equal("keyword.control.lilysharp", SingerLine("").Captures.GetProperty(capture).GetProperty("name").GetString());
+
     /// <summary>
     /// Words that are reserved so they CANNOT be taken as a name, and that no position
     /// accepts — painting them as keywords would advertise a spelling nobody may type.
