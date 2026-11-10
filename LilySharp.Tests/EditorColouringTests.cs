@@ -112,6 +112,32 @@ public class EditorColouringTests
     [InlineData("// singer sings word")]
     public void WhatIsNotASingerLine_IsNotRead(string line) => Assert.False(SingerLine(line).Match.Success, line);
 
+    /// <summary>The line is coloured as it is typed, not only once its <c>sings</c> is there
+    /// (owner's report 2026-11-10: <c>singer female</c> stayed white).</summary>
+    [Theory]
+    [InlineData("singer", true, "")]
+    [InlineData("singer ", true, "")]
+    [InlineData("singer female", true, "female")]
+    [InlineData("  singer male ", true, "male")]
+    [InlineData("singer \"neutrino/NAKUMO", true, "")]
+    [InlineData("singer { c'4 d | }", false, "")]
+    [InlineData("singer-x female", false, "")]
+    [InlineData("singers female", false, "")]
+    [InlineData("staff singer", false, "")]
+    public void ASingerLineBeingTyped_IsColoured(string line, bool read, string gender)
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(GrammarPath));
+        var rule = doc.RootElement.GetProperty("repository").GetProperty("singer-line-unfinished");
+        var match = System.Text.RegularExpressions.Regex.Match(line, rule.GetProperty("match").GetString()!);
+
+        Assert.Equal(read, match.Success);
+        if (read)
+        {
+            Assert.Equal(gender, match.Groups[2].Value);
+            Assert.Equal("keyword.control.lilysharp", rule.GetProperty("captures").GetProperty("1").GetProperty("name").GetString());
+        }
+    }
+
     /// <summary>The line's words take the colour of <c>form</c> and <c>score</c>.</summary>
     [Theory]
     [InlineData("1")]

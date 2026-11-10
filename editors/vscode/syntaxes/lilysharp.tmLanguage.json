@@ -14,6 +14,7 @@
         { "include": "#capo-directive" },
         { "include": "#language-directive" },
         { "include": "#singer-line" },
+        { "include": "#singer-line-unfinished" },
         { "include": "#chord-shapes-block" },
         { "include": "#part-body" },
         { "include": "#instrument-value" },
@@ -449,6 +450,14 @@
                 "4": { "patterns": [ { "match": "^(?:hum|solfege)$", "name": "constant.language.lilysharp" }, { "match": "^.+$", "name": "entity.name.voice.lilysharp" } ] },
                 "5": { "name": "keyword.control.lilysharp" },
                 "6": { "name": "entity.name.voice.lilysharp" }
+            }
+        },
+        "singer-line-unfinished": {
+            "comment": "A `singer` line still being typed, before its `sings`: the word alone on its line, or followed by a gender, a voice's name or `sings`. A part called singer (`singer { … }`) is none of these.",
+            "match": "^[ \\t]*(singer)(?=[ \\t]*$|[ \\t]+(?:male\\b|female\\b|\"|sings\\b))(?:[ \\t]+(male|female)\\b)?",
+            "captures": {
+                "1": { "name": "keyword.control.lilysharp" },
+                "2": { "name": "constant.language.lilysharp" }
             }
         },
         "language-directive": {
