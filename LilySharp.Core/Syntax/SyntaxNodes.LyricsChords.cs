@@ -51,54 +51,12 @@ public sealed class LyricsBlockSyntax : SyntaxNode
     /// (<see cref="Music.LyricBindings"/>).</summary>
     public string? VoiceName => NameToken?.Text ?? SyntaxFacts.UnnamedLyricsName;
 
-    /// <summary>The <c>sings</c> keyword token of a melody-bound track
-    /// (<c>lyrics ja sings vocal { … }</c>), or null when the block writes none.</summary>
-    public SyntaxTokenNode? SingsKeyword => HeadClause("sings").Keyword;
-
-    /// <summary>The token naming the part this track sings, or null when this block
-    /// declares no binding.</summary>
-    public SyntaxTokenNode? SingsTargetToken =>
-        HeadClause("sings").Value is { } t2 && SyntaxFacts.IsPartNameToken(t2.Kind, t2.Text) ? t2 : null;
-
     /// <summary>The language the track's words are written in as the block names it
     /// (<c>lyrics en language english { … }</c>), or null when it names none
     /// (<see cref="Music.LyricLanguage"/>).</summary>
-    public string? Language => HeadClause(Music.LyricLanguage.Keyword).Value?.Text;
+    public string? Language =>
+        OpenBraceIndex == 4 && GetChild(2) is SyntaxTokenNode { Text: Music.LyricLanguage.Keyword } && GetChild(3) is SyntaxTokenNode value ? value.Text : null;
 
-    /// <summary>Who sings the track as the block names it (<c>lyrics en singer "neutrino/MERROW" { … }</c>),
-    /// or null (<see cref="Music.LyricSinger"/>).</summary>
-    public string? Singer => HeadClause(Music.LyricSinger.Keyword) is { Value: { } t } c ? Music.LyricSinger.Joined(t, c.Index, GetChild, OpenBraceIndex) : null;
-
-    /// <summary>A clause of the head by its word: the pairs stand from slot 2 to the brace, in
-    /// the order they were written, so `sings` and `language` may come either way round. A
-    /// <c>singer</c>'s gender stands between its pair. With no name, the gender is the value.</summary>
-    private (SyntaxTokenNode? Keyword, SyntaxTokenNode? Value, int Index) HeadClause(string word)
-    {
-        int open = OpenBraceIndex;
-        for (int i = 2; i + 1 < open; i += 2)
-        {
-            if (GetChild(i) is not SyntaxTokenNode { Kind: SyntaxKind.Identifier } keyword)
-                continue;
-            var name = keyword.Text == Music.LyricSinger.Keyword && i + 2 < open
-                && GetChild(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier }
-                && GetChild(i + 2) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } literal ? literal : null;
-            bool gendered = name != null;
-            if (keyword.Text == word)
-            {
-                int value = name != null && Music.LyricSinger.ValueOf(name.Text).Length > 0 ? i + 2 : i + 1;
-                return (keyword, GetChild(value) as SyntaxTokenNode, value);
-            }
-            if (gendered)
-                i++;
-        }
-        return default;
-    }
-
-    /// <summary>The part this track sings (<c>lyrics ja sings vocal</c> → "vocal"),
-    /// or null when this block declares no binding. The binding is a property of
-    /// the TRACK name — see <see cref="Music.LyricBindings"/> for the resolved
-    /// answer across all of a track's blocks.</summary>
-    public string? SingsTarget => SingsTargetToken?.Text;
 
     private int OpenBraceIndex
     {

@@ -104,9 +104,9 @@ public class ScoreRowSpellingMatrixTests
         { "chords prog", ["as roman", "as names"] },
         { "chords prog as roman", [] },
         { "chords prog as names", [] },
-        // lyrics — Name ['sings' Part]
-        { "lyrics w", ["sings"] },
-        { "lyrics w sings melody", [] },
+        // lyrics — Name ['on' Part]
+        { "lyrics w", ["on"] },
+        { "lyrics w on melody", [] },
         // the bare MIDI-only row — a part name and NOTHING else (GRAMMAR §7 `PartRef`).
         { "bass", [] },
     };

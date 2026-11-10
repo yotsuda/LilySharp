@@ -212,13 +212,13 @@ public class FormNavigationTests
             section A {
               chords harmony { C | }
               melody { c'4 d' e' f' | }
-              lyrics words sings melody { la la la la | }
+              lyrics words { la la la la | }
               bass { a,,4 c, e, g, | }
             }
             section B {
               chords harmony { G | }
               melody { g'1 | }
-              lyrics words sings melody { la | }
+              lyrics words { la | }
               bass { d,1 | }
             }
             form { segno A ds al coda coda B }

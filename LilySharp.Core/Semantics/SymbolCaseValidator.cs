@@ -43,7 +43,7 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     private static readonly HashSet<string> PropertyNames = new(StringComparer.Ordinal)
     {
         "clef", "instrument", "transpose", "transposition", "tuning",
-        "octave", "pedal", "pitch", "midiInstrument", Music.LyricSinger.Keyword,
+        "octave", "pedal", "pitch", "midiInstrument",
     };
 
     /// <summary>The two words a part header's <c>pitch</c> takes (how its notes are typed),
@@ -252,18 +252,6 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                     Error(valueTokens[0], misplaced);
                 else
                     CheckValue(valueTokens, PitchModes, "pitch", "modes");
-                break;
-            case Music.LyricSinger.Keyword:
-                // A quoted name, a voice or a role, which no compiler can check against a machine, or
-                // several with commas between them (LyricSinger.Joiner); male or female may stand
-                // before them, or alone (the engine picks such a voice).
-                bool genderFirst = Music.LyricSinger.Genders.Contains(valueTokens[0].Text);
-                var singerNames = valueTokens.Skip(genderFirst ? 1 : 0).ToList();
-                bool namesListed = singerNames.Count % 2 == 1
-                    && singerNames.Select((t, i) => i % 2 == 0 ? IsQuoted(t.Text) : t.Kind == SyntaxKind.Comma).All(ok => ok);
-                if (!(genderFirst && singerNames.Count == 0)
-                    && !(namesListed && (genderFirst || Music.LyricSinger.ValueOf(valueTokens[0].Text).Length > 0)))
-                    Error(valueTokens[0], "'singer' takes a quoted name, or several with commas between them, after male or female if wanted: a voice, singer \"neutrino/MERROW\", voices together, singer \"neutrino/MERROW\",\"diffsinger/TIGER\", singer male \"neutrino/SOMA\", singer male, or a role, singer \"soprano\".");
                 break;
             case "midiInstrument":
                 // One quoted name from LilyPond's General MIDI table, exactly as LilyPond

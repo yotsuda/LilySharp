@@ -71,7 +71,7 @@ public class LeadSheetHeaderClearanceTests
         form { A }
         score {
           chords prog as names
-          lyrics verse sings melody
+          lyrics verse on melody
           staff melody
         }
         """;

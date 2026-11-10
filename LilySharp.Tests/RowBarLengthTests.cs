@@ -105,7 +105,7 @@ public class RowBarLengthTests
               lyrics words { one | two three four five | }
             }
             form { A }
-            score { staff m  lyrics words }
+            score { lyrics words  staff m }
             """);
         Assert.Equal(new Fraction(1, 4), BarLength(score, "words", 0));
         Assert.Equal(new Fraction(1, 1), BarLength(score, "words", 1));

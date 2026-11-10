@@ -30,7 +30,7 @@ section Verse {
     Am | G | Am | E |
     Am | G | Am E | Am |
   }
-  lyrics words sings melody {
+  lyrics words {
     A- |
     las my love ~ you | do me wrong ~ to |
     cast me off ~ dis- | cour- teous- ly and |
@@ -54,7 +54,7 @@ section Chorus {
     C | G | Am | E |
     C | G | Am E | Am |
   }
-  lyrics words sings melody {
+  lyrics words {
     Green- sleeves ~ was | all my joy ~ Green- |
     sleeves was my ~ de- | light ~ Green- |
     sleeves was ~ my | heart of gold ~ and |
@@ -67,7 +67,7 @@ form { Verse Chorus }
 score {
   chords prog
   staff melody
-  lyrics words
+  lyrics words on melody
 }
 
 score grid {

@@ -41,12 +41,12 @@ public class LyricExtenderCompletionTests
             octave absolute
             time 4/4
             part v { }
-            lyrics w sings v { section Main { Ah __ | | | } }
+            lyrics w { section Main { Ah __ | | | } }
             section Main {
               v { g'1( | c') | d' | }
             }
             form { ~Main }
-            score { staff ~v  lyrics w }
+            score { staff ~v  lyrics w on v }
             """);
 
         // Note columns: whole-note glyphs with data-pos, one per measure.
@@ -93,12 +93,12 @@ public class LyricExtenderCompletionTests
             octave absolute
             time 4/4
             part v { }
-            lyrics w sings v { section Main { c d e effffffffffff __ | e d c | } }
+            lyrics w { section Main { c d e effffffffffff __ | e d c | } }
             section Main {
               v { c'4 d' e' f'~ | break f'4 e' d' c' | }
             }
             form { ~Main }
-            score { staff ~v  lyrics w }
+            score { staff ~v  lyrics w on v }
             """);
 
         // Extender segments: thin (0.080 = the LyricExtender's 0.8 line-thicknesses; a flat
@@ -146,10 +146,10 @@ public class LyricExtenderCompletionTests
             part m { clef treble }
             section S {
               m { c'4 d e f | break g1 | }
-              lyrics w sings m { la _ _ _ | lu | }
+              lyrics w { la _ _ _ | lu | }
             }
             form { ~S }
-            score { staff m  lyrics w }
+            score { staff m  lyrics w on m }
             """);
 
         var segments = new List<(double X1, double X2, double Y)>();
@@ -194,10 +194,10 @@ public class LyricExtenderCompletionTests
             part m { clef treble }
             section S {
               m { {{music}} }
-              lyrics w sings m { {{words}} }
+              lyrics w { {{words}} }
             }
             form { ~S }
-            score { staff m  lyrics w }
+            score { staff m  lyrics w on m }
             """);
 
         var segments = new List<(double X1, double X2, double Y)>();

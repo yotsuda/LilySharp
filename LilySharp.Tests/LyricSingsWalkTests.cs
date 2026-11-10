@@ -52,17 +52,17 @@ public sealed class LyricSingsWalkTests
           alt { g4 a b c' | }
           low { c4 d, e, f, | }
         }
-        lyrics verse sings melody { section A { la la la la | } }
-        lyrics inner sings hi { section A { ka ka ka ka | } }
+        lyrics verse { section A { la la la la | } }
+        lyrics inner { section A { ka ka ka ka | } }
         lyrics plain { section A { na na na na | } }
         form { A }
         score {
           staff melody
-          lyrics verse
+          lyrics verse on melody
           lyrics plain
           grandStaff {
             staff alt
-            lyrics verse sings alt
+            lyrics verse on alt
           }
           staff low
         }
@@ -115,13 +115,9 @@ public sealed class LyricSingsWalkTests
             Assert.Contains(kind, root.DescendantNodes().Select(n => n.Kind));
 
         // … and it is a book the validator accepts, so a diagnostic below is the walk's.
-        // Its one remark is the warning the plain row earns by standing under a part that
-        // names a voice (LYS6013): the row is legal and drawn, which is what a warning says.
         var validator = new LyricSingsValidator();
         validator.Validate(tree);
-        var only = Assert.Single(validator.Diagnostics);
-        Assert.Equal(DiagnosticCodes.RowNamesNoVoiceOfStaffAbove, only.Code);
-        Assert.Equal(DiagnosticSeverity.Warning, only.Severity);
+        Assert.Empty(validator.Diagnostics);
     }
 
     [Fact]
@@ -137,9 +133,9 @@ public sealed class LyricSingsWalkTests
             Assert.Equal(Walk<ParallelExpressionSyntax>(root),
                 root.DescendantNodesOfKinds(PartReferenceFinder.VoiceIntroducingKinds).ToList());
 
-            // Validator walk 2: both sings sites, in document order — the order the
+            // Validator walk 2: both sites that name a melody, in document order — the order the
             // unknown-target diagnostics come out in.
-            Assert.Equal(Walk2<LyricsBlockSyntax, LyricsRowRenderSyntax>(root),
+            Assert.Equal(Walk2<LyricsRowRenderSyntax, SingerDeclarationSyntax>(root),
                 root.DescendantNodesOfKinds(PartReferenceFinder.SingsKinds).ToList());
 
             // LyricBindings: the definition blocks (Conflicts, BuildMap).
@@ -181,32 +177,7 @@ public sealed class LyricSingsWalkTests
     {
         foreach (var (name, root) in Roots())
         {
-            // The DEFAULT of every track named anywhere, and the conflicts — both read from
-            // the definition blocks alone, and both against the plain walk's answer.
-            var first = new Dictionary<string, string>(StringComparer.Ordinal);
-            var conflicts = new List<(SyntaxNode Node, string Target, string First)>();
-            foreach (var node in root.DescendantNodes())
-            {
-                if (node is not LyricsBlockSyntax b
-                    || b.VoiceName is not { } track || b.SingsTarget is not { } target)
-                    continue;
-                if (first.TryGetValue(track, out var t0))
-                {
-                    if (!string.Equals(t0, target, StringComparison.Ordinal))
-                        conflicts.Add((node, target, t0));
-                }
-                else
-                {
-                    first[track] = target;
-                }
-            }
-
-            Assert.Equal(conflicts, LyricBindings.Conflicts(root).ToList());
-            foreach (var (track, target) in first)
-                Assert.Equal(target, LyricBindings.TargetOf(root, track));
-            Assert.Null(LyricBindings.TargetOf(root, "no such track"));
-
-            // The named voices of each part, likewise.
+            // The named voices of each part, against the plain walk's answer.
             foreach (var part in root.DescendantNodes()
                          .Select(PartReferenceFinder.DeclaredName)
                          .Where(t => t != null).Select(t => t!.Text).Distinct())
@@ -228,16 +199,11 @@ public sealed class LyricSingsWalkTests
         }
     }
 
-    /// <summary>The walks still REPORT: a target no part or voice answers to, a second
-    /// definition naming a different melody, and a group row that sings neither.</summary>
+    /// <summary>The walks still REPORT: a row whose <c>on</c> names nothing, and a group row
+    /// that follows neither staff beside it.</summary>
     [Theory]
-    // The DEFINITION site and the ROW site of `sings` are two halves of one walk, so both
-    // are poisoned: a list that reached only the blocks would still pass the first.
-    [InlineData("lyrics inner sings hi", "lyrics inner sings nobody", DiagnosticCodes.SingsTargetUnknown)]
-    [InlineData("lyrics verse sings alt\n", "lyrics verse sings nobody\n", DiagnosticCodes.SingsTargetUnknown)]
-    [InlineData("lyrics plain { section A { na na na na | } }",
-        "lyrics verse sings alt { section A { na na na na | } }", DiagnosticCodes.SingsConflict)]
-    [InlineData("lyrics verse sings alt\n", "lyrics plain\n", DiagnosticCodes.GroupRowNotBoundToStaffAbove)]
+    [InlineData("lyrics verse on alt\n", "lyrics verse on nobody\n", DiagnosticCodes.SingsTargetUnknown)]
+    [InlineData("lyrics verse on alt\n", "lyrics verse on low\n", DiagnosticCodes.GroupRowNotBoundToStaffAbove)]
     public void PoisoningTheBook_StillReports(string from, string to, string code)
     {
         var poisoned = EverySpelling.Replace("\r\n", "\n").Replace(from, to);

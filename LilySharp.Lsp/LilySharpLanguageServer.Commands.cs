@@ -1034,14 +1034,6 @@ public sealed partial class LilySharpLanguageServer
         var root = tree.GetRoot();
         var languageOf = LilySharp.Core.Music.LyricLanguage.ReaderOf(root);
         string? track = slot.Track;
-        if (track == null && slot.Part != null)
-        {
-            // A part's singer sings the words of the tracks that sing it.
-            var declared = root.DescendantNodes<LilySharp.Core.Syntax.PartDeclarationSyntax>().Select(p => p.Name.Text).Distinct(StringComparer.Ordinal).ToList();
-            track = root.DescendantNodes<LilySharp.Core.Syntax.LyricsBlockSyntax>().Select(b => b.VoiceName)
-                .FirstOrDefault(name => name != null
-                    && (LilySharp.Core.Music.LyricBindings.TargetOf(root, name) ?? (declared.Count == 1 ? declared[0] : null)) == slot.Part);
-        }
         return new SingerSlotResponse { InSlot = true, Language = LilySharp.Core.Music.LyricLanguage.CodeOf(slot.Language) ?? languageOf(track), Gender = slot.Gender, Quoted = slot.Quoted, Another = slot.Another };
     }
 
@@ -1070,43 +1062,20 @@ public sealed partial class LilySharpLanguageServer
             // Which parts the score shown sings itself (its rows and the singers no staff shows).
             var shownSounds = score != null ? LilySharp.Core.Svg.Collector.SungStaves.Of(root, score) : null;
             var inScore = shownSounds != null ? new HashSet<string>(shownSounds.Sung, StringComparer.Ordinal) : null;
+            // Every singer line the shown score does not sing, for the practice menu to switch on:
+            // sung unseen, marked as not the score's own (docs/lyrics-singer-design.md §7).
             if (@params.AllLyrics && score != null)
             {
-                var placed = new HashSet<string>(StringComparer.Ordinal);
-                foreach (var binding in score.GetVoiceBindings())
-                    foreach (var track in binding.WithLyrics)
-                        placed.Add(track);
-                foreach (var row in score.Items.OfType<LilySharp.Core.Svg.Collector.LyricsRowSpec>())
-                    placed.Add(row.PartName);
-                var declared = root.DescendantNodes<LilySharp.Core.Syntax.PartDeclarationSyntax>().Select(p => p.Name.Text).Distinct(StringComparer.Ordinal).ToList();
-                // What the file's OTHER scores say a track sings (a row's own `sings`, or the staff
-                // a row is folded under): the hint for a track whose definition names no part.
-                var hints = new Dictionary<string, string>(StringComparer.Ordinal);
-                foreach (var other in RenderSpecParser.FindAll(tree))
+                var hidden = score.HiddenStaves.IsDefault ? [] : score.HiddenStaves;
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var line in LilySharp.Core.Music.LyricSinger.LinesOf(root))
                 {
-                    foreach (var row in other.Items.OfType<LilySharp.Core.Svg.Collector.LyricsRowSpec>())
-                        if (row.Sings != null)
-                            hints.TryAdd(row.PartName, row.Sings);
-                    foreach (var binding in other.GetVoiceBindings())
-                        foreach (var track in binding.WithLyrics)
-                            hints.TryAdd(track, binding.VoiceName);
-                }
-                var added = new List<LilySharp.Core.Svg.Collector.RenderItemSpec>();
-                foreach (var name in root.DescendantNodes<LilySharp.Core.Syntax.LyricsBlockSyntax>().Select(b => b.VoiceName).Distinct(StringComparer.Ordinal))
-                {
-                    if (name == null || placed.Contains(name))
+                    if (line.Part is not { } part || inScore!.Contains(part) || !seen.Add(part))
                         continue;
-                    // The track's default part, else what another score makes it sing, else the
-                    // file's one part.
-                    var target = LilySharp.Core.Music.LyricBindings.TargetOf(root, name)
-                        ?? (hints.TryGetValue(name, out var hinted) ? hinted : null)
-                        ?? (declared.Count == 1 ? declared[0] : null);
-                    if (target == null || !declared.Contains(target) || inScore!.Contains(target))
-                        continue;
-                    added.Add(new LilySharp.Core.Svg.Collector.LyricsRowSpec(name, target));
+                    hidden = hidden.Add(new LilySharp.Core.Svg.Collector.HiddenStaffSpec(part, "voice"));
                 }
-                if (added.Count > 0)
-                    spec = score with { Items = score.Items.AddRange(added) };
+                if (seen.Count > 0)
+                    spec = score with { HiddenStaves = hidden };
             }
             var midi = new LilySharp.Core.Midi.MidiExporter { Form = spec?.Form, Score = spec, AllParts = @params.AllLyrics && spec != null }.Export(tree);
             var voices = LilySharp.Core.Midi.SungVoices.Read(midi, LilySharp.Core.Midi.MidiClock.SecondsOf(midi));

@@ -8,9 +8,9 @@ part melody { clef treble
   section A { c''4 d'' e'' f'' | }
   section B { g''4 a'' b'' c''' | }
 }
-lyrics words sings melody {
+lyrics words {
   section A { la la la la | }
   section B { up up up up | }
 }
 form { A |: B :| dc A "A2" }
-score { staff melody  lyrics words }
+score { staff melody  lyrics words on melody }

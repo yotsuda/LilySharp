@@ -9,11 +9,11 @@ part melody { clef treble
   section A { c''4 d'' e'' d'' | c''4 e'' g''2 | }
   section B { g''4 g'' g'' g'' | }
 }
-lyrics words sings melody {
+lyrics words {
   section A {
     verse 1 { Twin- kle twin- kle | lit- tle star | }
     verse 2 { How I won- der | what you are | }
   }
 }
 form { A |: ~B :| A "A2" }
-score { staff melody  lyrics words }
+score { staff melody  lyrics words on melody }

@@ -44,9 +44,9 @@ public sealed class LyricSlurMelismaTests
         string src = $$"""
             time 4/4
             part m { section A { {{music}} } }
-            lyrics w sings m { section A { {{words}} } }
+            lyrics w { section A { {{words}} } }
             form { A }
-            score { staff m  lyrics w }
+            score { staff m  lyrics w on m }
             """;
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));

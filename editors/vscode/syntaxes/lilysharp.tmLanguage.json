@@ -13,6 +13,7 @@
         { "include": "#layout-block" },
         { "include": "#capo-directive" },
         { "include": "#language-directive" },
+        { "include": "#singer-line" },
         { "include": "#chord-shapes-block" },
         { "include": "#part-body" },
         { "include": "#instrument-value" },
@@ -124,11 +125,13 @@
         },
         "lyrics-block": {
             "comment": "Inside lyrics { … } the words are syllables, not code, so reserved words like 'key'/'time'/'a'/'f' must NOT be highlighted as keywords or pitches. Match the block as its own context that only knows comments, quoted syllables, barlines and the connector tokens; everything else stays plain text. The by-part grouping `lyrics { section A { … } }` nests one level: #lyrics-inner-section colours the section keyword+name AND balances its braces so this block doesn't end at the inner '}'.",
-            "begin": "\\b(lyrics)\\b(?:\\s+([A-Za-z_][A-Za-z0-9_]*))?\\s*(\\{)",
+            "begin": "\\b(lyrics)\\b(?:\\s+([A-Za-z_][A-Za-z0-9_]*))?(?:\\s+(language)\\s+([A-Za-z_]+))?\\s*(\\{)",
             "beginCaptures": {
                 "1": { "name": "keyword.control.lilysharp" },
                 "2": { "name": "entity.name.voice.lilysharp" },
-                "3": { "name": "punctuation.definition.block.lilysharp" }
+                "3": { "name": "keyword.other.lilysharp" },
+                "4": { "name": "constant.other.lilysharp" },
+                "5": { "name": "punctuation.definition.block.lilysharp" }
             },
             "end": "\\}",
             "endCaptures": {
@@ -436,6 +439,18 @@
                 "2": { "name": "constant.numeric.lilysharp" }
             }
         },
+        "singer-line": {
+            "comment": "The top-level `singer [S] sings [NAME] [on PART]` (Music.LyricSinger): `singer` is not a reserved word, so the line must start with it and say `sings`.",
+            "match": "^[ \\t]*(singer)\\b([^\\n/]*?)\\b(sings)\\b(?:\\s+(?!on\\b)([A-Za-z_][A-Za-z0-9_-]*))?(?:\\s+(on)\\s+([A-Za-z_][A-Za-z0-9_-]*))?",
+            "captures": {
+                "1": { "name": "keyword.other.lilysharp" },
+                "2": { "patterns": [ { "include": "#comments" }, { "include": "#strings" } ] },
+                "3": { "name": "keyword.other.lilysharp" },
+                "4": { "name": "entity.name.voice.lilysharp" },
+                "5": { "name": "keyword.other.lilysharp" },
+                "6": { "name": "entity.name.voice.lilysharp" }
+            }
+        },
         "language-directive": {
             "comment": "The top-level `language NAME` (Music.LyricLanguage): anchored at the start of a line, as `capo` is, for `language` is not a reserved word.",
             "match": "^[ \\t]*(language)\\s+(japanese|english|chinese|korean)\\b",
@@ -563,7 +578,7 @@
                 {
                     "comment": "The bare key, read AFTER every key/value pair above so the pair wins and the value is scoped as the value it is. `transposition` precedes `transpose`, which is a prefix of it.",
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(clef|instrument|transposition|transpose|tuning|octave|pitch|pedal|midiInstrument|singer|key)\\b"
+                    "match": "\\b(clef|instrument|transposition|transpose|tuning|octave|pitch|pedal|midiInstrument|key)\\b"
                 },
                 { "include": "#keywords" },
                 { "include": "#pitches" },

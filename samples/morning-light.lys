@@ -17,7 +17,7 @@ section Verse {
     e4@mf@phrasingSlur d b g | a4 b8 a g4 e@!phrasingSlur | d4 g a8( b) a4 | g1@fermata |.
   }
   chords harmony { G | C | G | Em | C | D | Am7 D7 | G | }
-  lyrics words sings melody {
+  lyrics words {
     Morn- ing comes a- | cross the bay, | sil- ver on the | sea |
     hold the light and | car- ry it a- way, | all the way to | me |
   }
@@ -32,7 +32,7 @@ form { ~Verse }
 score {
   chords harmony
   staff melody
-  lyrics words
+  lyrics words on melody
   staff bass
   tab bass
 }

@@ -46,10 +46,10 @@ public class LyricVerseTests
 time 4/4
 section Main {
   melody { c''4 d e f | g a b c'' | }
-  lyrics words sings melody { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
+  lyrics words { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
 form { Main }
-score x { staff melody  lyrics words }
+score x { staff melody  lyrics words on melody }
 ");
         var v1 = score.Lyrics.Where(l => l.VerseNumber == 1).ToList();
         var v2 = score.Lyrics.Where(l => l.VerseNumber == 2).ToList();
@@ -101,7 +101,7 @@ section Main {
   lyrics verse { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
 form { Main }
-score x { staff melody  lyrics verse }
+score x { lyrics verse  staff melody }
 ");
         var row = score.Lyrics.Where(l => l.IsLyricsRow).ToList();
         var v1 = row.Where(l => l.VerseNumber == 1).ToList();
@@ -130,7 +130,7 @@ section B {
   lyrics verse { Xx yy zz w1 | mm nn oo pp | }
 }
 form { A B }
-score x { staff melody  lyrics verse }
+score x { lyrics verse  staff melody }
 ");
         var a = score.Lyrics.Where(l => l.Text == "Pp").ToList(); // verse 2 of section A
         Assert.NotEmpty(a);
@@ -170,9 +170,9 @@ score x { lyrics verse }
         // lyrics and an independent lyrics row (no literal trailing dash on either).
         var noteBound = Collect(@"
 time 4/4
-section Main { melody { c''4 d e f | } lyrics words sings melody { Mu- sic is here | } }
+section Main { melody { c''4 d e f | } lyrics words { Mu- sic is here | } }
 form { Main }
-score x { staff melody  lyrics words }
+score x { staff melody  lyrics words on melody }
 ");
         var mu = noteBound.Lyrics.Single(l => l.Text.StartsWith("Mu"));
         Assert.Equal("Mu", mu.Text);
@@ -201,7 +201,7 @@ section Main {
   lyrics verse { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
 form { Main }
-score x { staff melody  lyrics verse }
+score x { lyrics verse  staff melody }
 ");
         var rowStaff = score.StaffGroups.SelectMany(g => g.Staves)
             .Single(s => s.IsTextRow);
@@ -219,10 +219,10 @@ score x { staff melody  lyrics verse }
 time 4/4
 section Main {
   melody { c''4 d' e' f' | g'4 a b' c'' | c'4 d' e' f' | }
-  lyrics words sings melody { | Twin- kle twin- kle | lit- tle star | }
+  lyrics words { | Twin- kle twin- kle | lit- tle star | }
 }
 form { Main }
-score x { staff melody  lyrics words }
+score x { staff melody  lyrics words on melody }
 ");
         Assert.Equal(1, score.Lyrics.Single(l => l.Text == "Twin").MeasureIndex);
         Assert.Equal(2, score.Lyrics.Single(l => l.Text == "lit").MeasureIndex);
@@ -248,10 +248,10 @@ score x { staff melody  lyrics words }
 time 4/4
 section Main {
   melody { c''4 d' e' f' | g'4 a b' c'' | c'4 d' e' f' | }
-  lyrics words sings melody { | Twin- kle twin- kle | lit- tle star | }
+  lyrics words { | Twin- kle twin- kle | lit- tle star | }
 }
 form { Main }
-score x { staff melody  lyrics words }
+score x { staff melody  lyrics words on melody }
 ");
         Assert.Equal(1, fenced.Lyrics.Single(l => l.Text == "Twin").MeasureIndex);
         Assert.Equal(2, fenced.Lyrics.Single(l => l.Text == "lit").MeasureIndex);
@@ -262,10 +262,10 @@ score x { staff melody  lyrics words }
 time 4/4
 section Main {
   melody { c''4 d' e' f' | g'4 a b' c'' | c'4 d' e' f' | }
-  lyrics words sings melody { Twin- kle twin- kle | lit- tle star | }
+  lyrics words { Twin- kle twin- kle | lit- tle star | }
 }
 form { Main }
-score x { staff melody  lyrics words }
+score x { staff melody  lyrics words on melody }
 ");
         Assert.Equal(0, plain.Lyrics.Single(l => l.Text == "Twin").MeasureIndex);
         Assert.Equal(
@@ -281,10 +281,10 @@ score x { staff melody  lyrics words }
 time 4/4
 section Main {
   melody { c''4 d e f | g a b c'' | }
-  lyrics words sings melody { Aa bb cc dd | | }
+  lyrics words { Aa bb cc dd | | }
 }
 form { Main }
-score x { staff melody  lyrics words }
+score x { staff melody  lyrics words on melody }
 ");
         Assert.NotEmpty(score.Lyrics);
         Assert.All(score.Lyrics, l => Assert.Equal(0, l.MeasureIndex));

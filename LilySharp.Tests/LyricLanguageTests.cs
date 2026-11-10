@@ -34,13 +34,14 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class LyricLanguageTests
 {
-    private static string Book(string head, string lyrics) => $$"""
+    private static string Book(string head, string lyrics, string singer = "singer sings w") => $$"""
         {{head}}
         part m { clef treble  instrument soprano }
         section A {
           m { c'4 d e f | }
           {{lyrics}}
         }
+        {{singer}}
         form { A }
         score { staff m  lyrics w }
         """;
@@ -66,18 +67,13 @@ public class LyricLanguageTests
         return Assert.Single(sung.Voices!);
     }
 
-    [Theory]
-    [InlineData("lyrics w language english sings m { la la la la | }")]
-    [InlineData("lyrics w sings m language english { la la la la | }")]
-    [InlineData("lyrics w language english { la la la la | }")]
-    public void ATracksLanguage_ComesEitherSideOfSings_AndIsSung(string lyrics)
+    [Fact]
+    public void ATracksLanguage_IsSung()
     {
-        string source = Book("", lyrics);
+        string source = Book("", "lyrics w language english { la la la la | }");
         var block = Assert.Single(Parsed(source).GetRoot().DescendantNodes<LyricsBlockSyntax>());
         Assert.Equal("w", block.VoiceName);
         Assert.Equal("english", block.Language);
-        if (lyrics.Contains("sings"))
-            Assert.Equal("m", block.SingsTarget);
         var voice = Sung(source);
         Assert.Equal("en", voice.Language);
         Assert.Empty(voice.Warnings);               // the kana check is the Japanese words'
@@ -86,22 +82,22 @@ public class LyricLanguageTests
     [Fact]
     public void TheFilesLanguage_IsEveryTracks_UnlessTheTrackNamesItsOwn()
     {
-        Assert.Equal("ko", Sung(Book("language korean", "lyrics w sings m { la la la la | }")).Language);
-        Assert.Equal("en", Sung(Book("language korean", "lyrics w language english sings m { la la la la | }")).Language);
+        Assert.Equal("ko", Sung(Book("language korean", "lyrics w { la la la la | }")).Language);
+        Assert.Equal("en", Sung(Book("language korean", "lyrics w language english { la la la la | }")).Language);
     }
 
     [Fact]
     public void NothingWritten_IsJapanese_WhoseSyllablesAreChecked()
     {
-        var kana = Sung(Book("", "lyrics w sings m { さ く ら ら | }"));
+        var kana = Sung(Book("", "lyrics w { さ く ら ら | }"));
         Assert.Equal("ja", kana.Language);
         Assert.Empty(kana.Warnings);
-        Assert.NotEmpty(Sung(Book("", "lyrics w sings m { la la la la | }")).Warnings);
+        Assert.NotEmpty(Sung(Book("", "lyrics w { la la la la | }")).Warnings);
     }
 
     [Theory]
-    [InlineData("language japanes", "lyrics w sings m { さ く ら ら | }")]
-    [InlineData("", "lyrics w language English sings m { la la la la | }")]    // the names are lower-case
+    [InlineData("language japanes", "lyrics w { さ く ら ら | }")]
+    [InlineData("", "lyrics w language English { la la la la | }")]    // the names are lower-case
     public void AWordThatIsNoLanguage_IsAnError_OnTheWord(string head, string lyrics)
     {
         string source = Book(head, lyrics);
@@ -110,31 +106,26 @@ public class LyricLanguageTests
         Assert.Contains(source[error.Span.Start..error.Span.End], new[] { "japanes", "English" });
     }
 
-    [Theory]
-    [InlineData("lyrics language { la la la la | }", null)]
-    [InlineData("lyrics language sings m { la la la la | }", "m")]
-    public void ATrackMayStillBeCalledLanguage(string lyrics, string? target)
+    [Fact]
+    public void ATrackMayStillBeCalledLanguage()
     {
-        var block = Assert.Single(Parsed(Book("", lyrics)).GetRoot().DescendantNodes<LyricsBlockSyntax>());
+        var block = Assert.Single(Parsed(Book("", "lyrics language { la la la la | }")).GetRoot().DescendantNodes<LyricsBlockSyntax>());
         Assert.Equal("language", block.VoiceName);
         Assert.Null(block.Language);
-        Assert.Equal(target, block.SingsTarget);
     }
 
     [Fact]
-    public void AnUnnamedTrack_TakesTheClauses()
+    public void AnUnnamedTrack_TakesTheClause()
     {
-        var block = Assert.Single(Parsed(Book("", "lyrics language english sings m { la la la la | }")).GetRoot().DescendantNodes<LyricsBlockSyntax>());
+        var block = Assert.Single(Parsed(Book("", "lyrics language english { la la la la | }")).GetRoot().DescendantNodes<LyricsBlockSyntax>());
         Assert.Equal(SyntaxFacts.UnnamedLyricsName, block.VoiceName);
         Assert.Equal("english", block.Language);
-        Assert.Equal("m", block.SingsTarget);
     }
 
     [Theory]
     [InlineData("language ")]
     [InlineData("language ja")]
     [InlineData("lyrics w language ")]
-    [InlineData("lyrics w sings m language en")]
     [InlineData("section A { m { c4 d } lyrics w language ")]
     public void TheEditor_OffersTheNames(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterLanguage, LilySharpLanguageServer.GetCompletionContext(text, text.Length));
@@ -145,29 +136,27 @@ public class LyricLanguageTests
     public void TheEditor_OffersNoNames_Elsewhere(string text)
         => Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterLanguage, LilySharpLanguageServer.GetCompletionContext(text, text.Length));
 
-    // ── singer (owner's decisions 2026-11-09, sessions 1166 and 1168) ──
+    // ── singer (docs/lyrics-singer-design.md) ──
 
-    private const string Parts = """
-        part m { clef treble  singer "soprano" }
+    private static string Sheet(string lyrics, string singer, string row = "staff m  lyrics w") => $$"""
+        part m { clef treble }
         section A {
           m { c'4 d e f | }
           {{lyrics}}
         }
+        {{singer}}
         form { A }
         score { {{row}} }
         """;
 
-    private static string Sheet(string lyrics, string row) => Parts.Replace("{{lyrics}}", lyrics).Replace("{{row}}", row);
+    private const string Words = "lyrics w { さ く ら ら | }";
 
     [Theory]
-    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w", "soprano")]                                     // the part's
-    [InlineData("lyrics w singer \"alto\" sings m { さ く ら ら | }", "staff m  lyrics w", "alto")]                       // the track's over the part's
-    [InlineData("lyrics w sings m singer \"alto\" { さ く ら ら | }", "staff m  lyrics w", "alto")]                       // either side of sings
-    [InlineData("lyrics w singer \"alto\" sings m { さ く ら ら | }", "staff m  lyrics w singer \"neutrino/MERROW\" sings m", "neutrino/MERROW")]  // the row's over all (the owner's shape)
-    [InlineData("lyrics w singer \"alto\" sings m { さ く ら ら | }", "staff m  lyrics w sings m singer \"neutrino/MERROW\"", "neutrino/MERROW")]
-    public void TheNearestSinger_Wins_AndReachesTheVoice(string lyrics, string row, string expected)
+    [InlineData("singer \"neutrino/MERROW\" sings w", "neutrino/MERROW")]
+    [InlineData("singer \"neutrino/MERROW\" sings w on m", "neutrino/MERROW")]
+    public void TheSingerLine_ReachesTheVoice(string singer, string expected)
     {
-        string source = Sheet(lyrics, row);
+        string source = Sheet(Words, singer);
         Parsed(source);
         Assert.Equal(expected, Sung(source).Singer);
     }
@@ -175,83 +164,31 @@ public class LyricLanguageTests
     // ── several voices on one part (owner's request 2026-11-09, session 1198) ──
 
     [Theory]
-    [InlineData("lyrics w singer \"a/b\",\"c/d\" sings m { さ く ら ら | }", "staff m  lyrics w")]
-    [InlineData("lyrics w sings m singer \"a/b\", \"c/d\" { さ く ら ら | }", "staff m  lyrics w")]
-    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w singer \"a/b\",\"c/d\" sings m")]
-    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w sings m singer male \"a/b\",\"c/d\"")]
-    public void CommasJoinTheVoices(string lyrics, string row)
-    {
-        string source = $$"""
-            part m { clef treble  instrument soprano }
-            {{lyrics}}
-            section A { m { c'4 d e f | } }
-            form { A }
-            score { {{row}} }
-            """;
-        Assert.Equal("a/b+c/d", Sung(source).Singer);
-    }
-
-    [Fact]
-    public void CommasJoinThePartsVoices()
-    {
-        const string source = """
-            part m { clef treble  singer "a/b","c/d" }
-            lyrics w sings m { さ く ら ら | }
-            section A { m { c'4 d e f | } }
-            form { A }
-            score { staff m  lyrics w }
-            """;
-        Assert.Equal("a/b+c/d", Sung(source).Singer);
-    }
-
-    // Owner's request 2026-11-10, session 1217: a part's singer takes what a track's and a row's do.
-    [Theory]
-    [InlineData("\"a/b\"")]
-    [InlineData("\"a/b\",\"c/d\"")]
-    [InlineData("\"a/b\", \"c/d\", \"e/f\"")]
-    [InlineData("male")]
-    [InlineData("male \"a/b\"")]
-    [InlineData("female \"a/b\",\"c/d\"")]
-    public void APartsSinger_Accepts(string value)
-    {
-        var validator = new SymbolCaseValidator();
-        validator.Validate(SyntaxTree.Parse($"part m {{ clef treble  singer {value} }}\n"));
-        Assert.Empty(validator.Diagnostics);
-    }
-
-    [Theory]
-    [InlineData("nobody")]
-    [InlineData("\"\"")]
-    [InlineData("\"\",\"c/d\"")]
-    public void APartsSinger_Refuses(string value)
-    {
-        var validator = new SymbolCaseValidator();
-        validator.Validate(SyntaxTree.Parse($"part m {{ clef treble  singer {value} }}\n"));
-        Assert.Contains(validator.Diagnostics, d => d.Message.Contains("'singer' takes a quoted name"));
-    }
+    [InlineData("singer \"a/b\",\"c/d\" sings w")]
+    [InlineData("singer \"a/b\", \"c/d\" sings w on m")]
+    [InlineData("singer male \"a/b\",\"c/d\" sings w")]
+    public void CommasJoinTheVoices(string singer)
+        => Assert.Equal("a/b+c/d", Sung(Sheet(Words, singer)).Singer);
 
     [Fact]
     public void AnEmptyLaterName_IsAnError()
-        => Assert.Contains(SyntaxTree.Parse("part m { clef treble  instrument soprano }\nlyrics w singer \"a/b\",\"\" sings m { さ く ら ら | }\n").Diagnostics, d => d.Code == DiagnosticCodes.SingerEmpty);
+        => Assert.Contains(SyntaxTree.Parse("part m { clef treble  instrument soprano }\nsinger \"a/b\",\"\" sings w\n").Diagnostics, d => d.Code == DiagnosticCodes.SingerEmpty);
 
     [Fact]
-    public void NoSingerWritten_IsNull()
-        => Assert.Null(Sung(Book("", "lyrics w sings m { さ く ら ら | }")).Singer);
+    public void NoVoiceWritten_IsNull()
+        => Assert.Null(Sung(Book("", Words)).Singer);
 
-    [Theory]
-    [InlineData("lyrics singer { la la la la | }")]
-    [InlineData("lyrics singer sings m { la la la la | }")]
-    public void ATrackMayStillBeCalledSinger(string lyrics)
+    [Fact]
+    public void ATrackMayStillBeCalledSinger()
     {
-        var block = Assert.Single(Parsed(Book("", lyrics)).GetRoot().DescendantNodes<LyricsBlockSyntax>());
+        var block = Assert.Single(Parsed(Book("", "lyrics singer { la la la la | }", "singer sings singer")).GetRoot().DescendantNodes<LyricsBlockSyntax>());
         Assert.Equal("singer", block.VoiceName);
-        Assert.Null(block.Singer);
     }
 
     [Fact]
     public void AnEmptySinger_IsAnError()
     {
-        var error = Assert.Single(SyntaxTree.Parse(Book("", "lyrics w singer \"\" { さ く ら ら | }")).Diagnostics,
+        var error = Assert.Single(SyntaxTree.Parse(Book("", Words, "singer \"\" sings w")).Diagnostics,
             d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
         Assert.Equal(DiagnosticCodes.SingerEmpty, error.Code);
     }
@@ -271,23 +208,24 @@ public class LyricLanguageTests
     }
 
     [Theory]
-    [InlineData("part m { singer \"§\" }\nsection A { m { c'4 | } lyrics w sings m { la | } }\n", "ja")]               // nothing written
-    [InlineData("language english\npart m { singer \"§\" }\nsection A { m { c'4 | } lyrics w sings m { la | } }\n", "en")]   // the file's
-    [InlineData("part m { singer \"§\" }\nsection A { m { c'4 | } lyrics w language korean sings m { la | } }\n", "ko")]     // the track that sings the part
-    [InlineData("section A { lyrics w language english singer \"§\" { la | } }\n", "en")]                              // the head's own
-    [InlineData("section A { lyrics w singer \"neu§\" language english { la | } }\n", "en")]                           // written after the caret
-    [InlineData("language korean\nscore { staff m  lyrics w singer \"§\" sings m }\n", "ko")]                         // a score's row
+    [InlineData("singer \"§\" sings w\nlyrics w { la | }\n", "ja")]                                // nothing written
+    [InlineData("language english\nsinger \"§\" sings w\nlyrics w { la | }\n", "en")]              // the file's
+    [InlineData("singer \"§\" sings w\nlyrics w language korean { la | }\n", "ko")]                // the words'
+    [InlineData("singer \"neu§\" sings w on m\nlyrics w language english { la | }\n", "en")]
+    [InlineData("language korean\nsinger \"§\"\n", "ko")]                                          // no words yet
+    [InlineData("singer \"§\" sings\nlyrics language english { la | }\n", "en")]                   // the unnamed words
     public void TheSlot_SaysTheLanguageOfTheWords(string source, string expected)
         => Assert.Equal(expected, SlotLanguage(source));
 
     [Theory]
     [InlineData("lyrics w { singer \"§\" | }\n")]            // a syllable of the body
-    [InlineData("singer \"§\"\n")]                           // at the top level, nothing takes one
+    [InlineData("part m { singer \"§\" }\n")]                // retired there
+    [InlineData("score { singer \"§\" }\n")]
     [InlineData("title \"§\"\n")]
     public void ElsewhereIsNoSlot(string source)
         => Assert.Null(SlotLanguage(source));
 
-    // ── the head goes on after a clause (owner's request 2026-11-09, session 1169) ──
+    // ── the rest of the line ──
 
     private const string Declared = "part sop { clef treble  instrument soprano }\n";
 
@@ -308,102 +246,96 @@ public class LyricLanguageTests
     }
 
     [Theory]
-    [InlineData("lyrics words sings sop ", new[] { "singer", "language" }, new[] { "sings" })]      // the owner's position
-    [InlineData("lyrics words sings sop si", new[] { "singer", "language" }, new[] { "sings" })]    // being typed
-    [InlineData("lyrics sings sop ", new[] { "singer", "language" }, new[] { "sings" })]            // an unnamed track
-    [InlineData("section A { lyrics words sings sop ", new[] { "singer", "language" }, new[] { "sings" })]
-    [InlineData("lyrics words language english sings sop ", new[] { "singer" }, new[] { "sings", "language" })]
-    [InlineData("lyrics words singer \"neutrino/MERROW\" ", new[] { "sings", "language" }, new[] { "singer" })]
-    public void AfterAClause_TheHeadOffersTheOthers(string head, string[] offered, string[] gone)
-    {
-        var labels = Offered(Declared + head);
-        Assert.All(offered, l => Assert.Contains(l, labels));
-        Assert.All(gone, l => Assert.DoesNotContain(l, labels));
-    }
-
-    [Theory]
-    [InlineData("score { lyrics words sings sop ", "singer", "sings")]
-    [InlineData("score { lyrics words singer \"x\" ", "sings", "singer")]
-    [InlineData("score { grandStaff { staff sop  lyrics words sings sop ", "singer", "sings")]
-    public void AfterAClause_AScoresRowOffersTheOther(string row, string offered, string gone)
-    {
-        var labels = Offered(Declared + row);
-        Assert.Contains(offered, labels);
-        Assert.DoesNotContain(gone, labels);
-    }
-
-    [Theory]
-    [InlineData("lyrics words singer \"x\" sings ")]
-    [InlineData("lyrics words language english sings ")]
-    [InlineData("score { lyrics words singer \"x\" sings ")]
-    public void ASingsAfterAClause_StillTakesThePart(string head)
-        => Assert.Contains("sop", Offered(Declared + head));
-
-    [Theory]
-    [InlineData("lyrics words sings sop { la ")]             // the words themselves
-    [InlineData("lyrics { lyrics sings sop ")]               // a syllable that reads like a head
-    [InlineData("title \"the lyrics w sings sop ")]          // a string
-    [InlineData("// lyrics w sings sop ")]                   // a comment
-    public void TheBodyAndOtherText_AreNoHead(string text)
-        => Assert.DoesNotContain("singer", Offered(Declared + text));
+    [InlineData("singer male ", "sings")]
+    [InlineData("singer male si", "sings")]
+    [InlineData("singer \"a/b\" ", "sings")]
+    [InlineData("singer \"a/b\",\"c/d\" ", "sings")]
+    [InlineData("singer female \"a/b\" ", "sings")]
+    [InlineData("lyrics words { la | }\nsinger \"a/b\" sings ", "words")]
+    [InlineData("singer \"a/b\" sings ", "on")]                      // the unnamed words
+    [InlineData("singer \"a/b\" sings words ", "on")]
+    [InlineData("singer \"a/b\" sings words on ", "sop")]
+    [InlineData("singer sings words on ", "sop")]
+    [InlineData("singer \"a/b\" sings on ", "sop")]
+    public void TheLine_OffersWhatComesNext(string line, string offered)
+        => Assert.Contains(offered, Offered(Declared + line));
 
     [Fact]
-    public void TheSingerItem_LeavesTheCaretBetweenTheQuotes_AndOpensTheList()
+    public void TheFile_OffersTheLine()
     {
-        var item = Assert.Single(LilySharpLanguageServer.GetLyricsTrackNameCompletions(new System.Collections.Generic.HashSet<string> { "sings", "language" }).Items, i => i.Label == "singer");
+        var item = Assert.Single(LilySharpLanguageServer.GetTopLevelCompletions().Items, i => i.Label == "singer");
         Assert.Equal("singer $0", item.InsertText);
         Assert.Equal(InsertTextFormat.Snippet, item.InsertTextFormat);
         Assert.Equal("editor.action.triggerSuggest", item.Command!.CommandIdentifier);
     }
 
+    [Fact]
+    public void AnUnnamedRow_TakesOn()
+    {
+        var row = Assert.Single(SyntaxTree.Parse("score { staff m  lyrics on m }").GetRoot().DescendantNodes<LyricsRowRenderSyntax>());
+        Assert.Null(row.NameToken);
+        Assert.Equal("m", row.SingsTarget);
+    }
+
     [Theory]
-    [InlineData("lyrics words sings sop singer \"§\"\n", "ja")]
-    [InlineData("language korean\nlyrics words sings sop singer \"§\"\n", "ko")]
-    [InlineData("lyrics words language english sings sop singer \"§\"\n", "en")]
-    public void TheOwnersPosition_IsASlot_ThatKnowsTheLanguage(string source, string expected)
-        => Assert.Equal(expected, SlotLanguage(source));
+    [InlineData("score { lyrics words ", new[] { "on" }, new[] { "singer", "sings" })]
+    [InlineData("score { lyrics words on sop ", new string[0], new[] { "on", "singer", "sings" })]
+    [InlineData("score { grandStaff { staff sop  lyrics words ", new[] { "on" }, new[] { "singer", "sings" })]
+    public void AScoresRow_OffersOn_AndNoVoice(string row, string[] offered, string[] gone)
+    {
+        var labels = Offered(Declared + row);
+        Assert.All(offered, l => Assert.Contains(l, labels));
+        Assert.All(gone, l => Assert.DoesNotContain(l, labels));
+    }
+
+    [Theory]
+    [InlineData("score { lyrics words on ")]
+    [InlineData("score { grandStaff { staff sop  lyrics words on ")]
+    public void AnOn_TakesThePart(string head)
+        => Assert.Contains("sop", Offered(Declared + head));
+
+    [Theory]
+    [InlineData("lyrics words language english ")]
+    public void ADefinitionsHead_OffersNoVoiceAndNoPart(string head)
+    {
+        var labels = Offered(Declared + head);
+        Assert.All(new[] { "singer", "sings", "on", "language" }, l => Assert.DoesNotContain(l, labels));
+    }
+
+    [Theory]
+    [InlineData("lyrics words { la ")]                       // the words themselves
+    [InlineData("lyrics { lyrics on sop ")]                  // a syllable that reads like a head
+    [InlineData("title \"the singer \"a\" sings w ")]        // a string
+    [InlineData("// singer \"a\" sings w ")]                 // a comment
+    public void TheBodyAndOtherText_AreNoLine(string text)
+    {
+        var labels = Offered(Declared + text);
+        Assert.DoesNotContain("on", labels);
+        Assert.DoesNotContain("sings", labels);
+    }
 
     // ── singer male "…" (owner's decision 2026-11-09, session 1173) ──
 
     [Theory]
-    [InlineData("lyrics w singer male \"neutrino/SOMA\" sings m { さ く ら ら | }", "staff m  lyrics w", "neutrino/SOMA")]
-    [InlineData("lyrics w sings m singer female \"neutrino/REINA\" { さ く ら ら | }", "staff m  lyrics w", "neutrino/REINA")]
-    [InlineData("lyrics singer male \"neutrino/SOMA\" sings m { さ く ら ら | }", "staff m  lyrics", "neutrino/SOMA")]
-    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w singer male \"neutrino/SOMA\" sings m", "neutrino/SOMA")]
-    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w sings m singer female \"neutrino/REINA\"", "neutrino/REINA")]
-    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics singer male \"neutrino/SOMA\" sings m", null)]
-    public void AGender_MayStandBeforeTheName(string lyrics, string row, string? expected)
+    [InlineData("singer male \"neutrino/SOMA\" sings w", Words, "staff m  lyrics w", "neutrino/SOMA")]
+    [InlineData("singer female \"neutrino/REINA\" sings w on m", Words, "staff m  lyrics w", "neutrino/REINA")]
+    [InlineData("singer male \"neutrino/SOMA\" sings", "lyrics { さ く ら ら | }", "staff m  lyrics", "neutrino/SOMA")]
+    public void AGender_MayStandBeforeTheName(string singer, string lyrics, string row, string expected)
     {
-        string source = Sheet(lyrics, row);
+        string source = Sheet(lyrics, singer, row);
         Parsed(source);
-        if (expected != null)
-            Assert.Equal(expected, Sung(source).Singer);
-    }
-
-    [Fact]
-    public void AGender_MayStandBeforeThePartsSinger()
-    {
-        string source = Sheet("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w").Replace("singer \"soprano\"", "singer male \"neutrino/SOMA\"");
-        Parsed(source);
-        Assert.Equal("neutrino/SOMA", Sung(source).Singer);
+        Assert.Equal(expected, Sung(source).Singer);
     }
 
     [Theory]
-    [InlineData("lyrics w singer man \"x\" { さ く ら ら | }", DiagnosticCodes.SingerGenderUnknown)]
-    [InlineData("lyrics w singer Male \"x\" { さ く ら ら | }", DiagnosticCodes.SingerGenderUnknown)]
-    [InlineData("lyrics w singer \"\" { さ く ら ら | }", DiagnosticCodes.SingerEmpty)]
-    public void ABadGenderOrAnEmptyName_IsAnError(string lyrics, string code)
+    [InlineData("singer man \"x\" sings w", DiagnosticCodes.SingerGenderUnknown)]
+    [InlineData("singer Male \"x\" sings w", DiagnosticCodes.SingerGenderUnknown)]
+    [InlineData("singer \"\" sings w", DiagnosticCodes.SingerEmpty)]
+    public void ABadGenderOrAnEmptyName_IsAnError(string singer, string code)
     {
-        var error = Assert.Single(SyntaxTree.Parse(Book("", lyrics)).Diagnostics, d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
+        var error = Assert.Single(SyntaxTree.Parse(Book("", Words, singer)).Diagnostics, d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
         Assert.Equal(code, error.Code);
     }
-
-    [Theory]
-    [InlineData("man \"x\"", DiagnosticCodes.SingerGenderUnknown)]
-    [InlineData("Male \"x\"", DiagnosticCodes.SingerGenderUnknown)]
-    public void APartsSinger_RefusesAnotherWord(string value, string code)
-        => Assert.Contains(SyntaxTree.Parse($"part m {{ clef treble  singer {value} }}\nsection A {{ m {{ c'4 | }} }}\nform {{ A }}\nscore {{ staff m }}\n").Diagnostics,
-            d => d.Code == code);
 
     private static string? SlotGender(string source)
     {
@@ -412,10 +344,10 @@ public class LyricLanguageTests
     }
 
     [Theory]
-    [InlineData("part m { singer male \"§\" }\n", "male")]
-    [InlineData("lyrics w singer female \"neu§\" { la | }\n", "female")]
-    [InlineData("score { staff m  lyrics w sings m singer male \"§\" }\n", "male")]
-    [InlineData("lyrics w singer \"§\" { la | }\n", null)]
+    [InlineData("singer male \"§\"\n", "male")]
+    [InlineData("singer female \"neu§\" sings w\n", "female")]
+    [InlineData("singer male \"§\" sings w on m\n", "male")]
+    [InlineData("singer \"§\" sings w\n", null)]
     public void TheSlot_SaysTheGender(string source, string? expected)
         => Assert.Equal(expected, SlotGender(source));
 
@@ -428,10 +360,9 @@ public class LyricLanguageTests
     }
 
     [Theory]
-    [InlineData("lyrics verse sings melody singer §\n")]
-    [InlineData("score { staff m  lyrics verse sings m singer § }\n")]
-    [InlineData("part m { clef treble  singer §\n")]
-    [InlineData("lyrics verse sings melody singer neu§\n")]
+    [InlineData("singer §\n")]
+    [InlineData("singer neu§\n")]
+    [InlineData("singer § sings w\n")]
     public void BeforeAnyQuote_IsTheSlot_NotQuoted(string source)
     {
         var slot = Assert.NotNull(Slot(source));
@@ -439,10 +370,10 @@ public class LyricLanguageTests
     }
 
     [Theory]
-    [InlineData("lyrics w singer \"a\",§\n", false)]
-    [InlineData("lyrics w singer \"a\", §\n", false)]
-    [InlineData("lyrics w singer \"a\",\"§\n", true)]
-    [InlineData("score { staff m  lyrics w sings m singer male \"a\",\"b\", § }\n", false)]
+    [InlineData("singer \"a\",§\n", false)]
+    [InlineData("singer \"a\", §\n", false)]
+    [InlineData("singer \"a\",\"§\n", true)]
+    [InlineData("singer male \"a\",\"b\", §\n", false)]
     public void AfterACommaIsAnother(string source, bool quoted)
     {
         var slot = Assert.NotNull(Slot(source));
@@ -451,45 +382,31 @@ public class LyricLanguageTests
     }
 
     [Fact]
-    public void AfterAWholeListTheNextClausesAreOffered() => Assert.Contains("language", Offered(Declared + "lyrics words sings sop singer \"a\",\"b\" "));
-
-    [Fact]
-    public void BetweenTheQuotes_IsQuoted() => Assert.True(Assert.NotNull(Slot("lyrics w singer \"§\" { la | }\n")).Quoted);
+    public void BetweenTheQuotes_IsQuoted() => Assert.True(Assert.NotNull(Slot("singer \"§\" sings w\n")).Quoted);
 
     [Theory]
-    [InlineData("// lyrics w singer §\n")]
+    [InlineData("// singer §\n")]
     [InlineData("part m { title \"a singer §\n")]
-    [InlineData("lyrics w singer \"x\" sings §\n")]
+    [InlineData("part m { singer §\n")]
+    [InlineData("score { singer §\n")]
+    [InlineData("singer \"x\" sings §\n")]
     [InlineData("lyrics w { section A { singer §\n")]
     public void NotASlot(string source) => Assert.Null(Slot(source));
 
     [Fact]
-    public void BeforeAnyQuote_NoOtherWordsAreOffered() => Assert.Empty(Offered(Declared + "lyrics words sings sop singer "));
-
-    [Fact]
-    public void AfterABareGender_TheNextClausesAreStillOffered() => Assert.Contains("sings", Offered(Declared + "lyrics words singer male "));
-
-    [Theory]
-    [InlineData("lyrics words singer male \"neutrino/SOMA\" ", new[] { "sings", "language" }, new[] { "singer", "singer male", "singer female" })]
-    [InlineData("lyrics words sings sop singer male \"x\" ", new[] { "language" }, new[] { "sings", "singer male" })]
-    [InlineData("lyrics words sings sop ", new[] { "singer" }, new[] { "sings", "singer male", "singer female" })]
-    public void AGenderedSinger_IsOneClause(string head, string[] offered, string[] gone)
-    {
-        var labels = Offered(Declared + head);
-        Assert.All(offered, l => Assert.Contains(l, labels));
-        Assert.All(gone, l => Assert.DoesNotContain(l, labels));
-    }
+    public void BeforeAnyQuote_NoOtherWordsAreOffered() => Assert.Empty(Offered(Declared + "singer "));
 
     // ── one track under several staves, a singer each (owner's report, session 1176) ──
 
-    private static string Choir(string rows) => $$"""
+    private static string Choir(string singers, string rows) => $$"""
         part sop { clef treble  instrument soprano }
         part alt { clef treble  instrument soprano }
         section A {
           sop { c'4 d e f | }
           alt { a4 b c d | }
-          lyrics words sings sop { さ く ら ら | }
+          lyrics words { さ く ら ら | }
         }
+        {{singers}}
         form { A }
         score { {{rows}} }
         """;
@@ -508,37 +425,40 @@ public class LyricLanguageTests
         return sung.Voices!.ToDictionary(v => v.Part, v => v.Singer);
     }
 
+    private const string BothPrinted = "staff sop  lyrics words  staff alt  lyrics words";
+
     [Fact]
-    public void TwoRowsOfOneTrack_SingWithTheirOwnSingers()
+    public void TwoLinesOfOneTrack_SingWithTheirOwnSingers()
     {
-        var singers = SingersByPart(Choir("staff sop  lyrics words singer \"a/A\" sings sop  staff alt  lyrics words singer \"b/B\" sings alt"));
+        var singers = SingersByPart(Choir("singer \"a/A\" sings words on sop\nsinger \"b/B\" sings words on alt", BothPrinted));
         Assert.Equal("a/A", singers["sop"]);
         Assert.Equal("b/B", singers["alt"]);
     }
 
     [Fact]
-    public void ARowsSinger_IsNotAnotherRowsOfTheSameTrack()
+    public void ALinesSinger_IsNotAnotherLinesOfTheSameTrack()
     {
-        var singers = SingersByPart(Choir("staff sop  lyrics words singer \"a/A\" sings sop  staff alt  lyrics words sings alt"));
+        var singers = SingersByPart(Choir("singer \"a/A\" sings words on sop\nsinger sings words on alt", BothPrinted));
         Assert.Equal("a/A", singers["sop"]);
         Assert.Null(singers["alt"]);
     }
 
     [Fact]
-    public void ARowNamingNoPart_IsTheTracksEverywhere()
-        => Assert.Equal("a/A", SingersByPart(Choir("staff sop  lyrics words singer \"a/A\"  staff alt"))["sop"]);
+    public void ALineNamingNoPart_FollowsWhereTheWordsArePrinted()
+        => Assert.Equal("a/A", SingersByPart(Choir("singer \"a/A\" sings words", "staff sop  lyrics words  staff alt"))["sop"]);
 
     // ── which default voice sings a part (owner's decision 2026-11-09, session 1187) ──
 
     private static string? GenderOf(string partHead, string? singer = null)
     {
-        string clause = singer == null ? "" : $" singer {singer}";
+        string voice = singer == null ? "" : $" {singer}";
         return Sung($$"""
-            part m { {{partHead}}{{clause}} }
+            part m { {{partHead}} }
             section A {
               m { c'4 d e f | }
-              lyrics w sings m { さ く ら ら | }
+              lyrics w { さ く ら ら | }
             }
+            singer{{voice}} sings w
             form { A }
             score { staff m  lyrics w }
             """).Gender;
@@ -557,8 +477,6 @@ public class LyricLanguageTests
     [Theory]
     [InlineData("clef bass", "female", "female")]
     [InlineData("clef treble", "male", "male")]
-    [InlineData("clef bass", "\"soprano\"", "female")]
-    [InlineData("clef treble", "\"tenor\"", "male")]
     [InlineData("clef bass", "\"neutrino/MERROW\"", "male")]              // a named voice says nothing: the part does
     [InlineData("clef treble", "\"a/b\"", "female")]
     [InlineData("clef treble^8", "\"a/b\"", "female")]
@@ -571,54 +489,15 @@ public class LyricLanguageTests
     // ── a gender with no name: the engine picks such a voice (session 1175) ──
 
     [Theory]
-    [InlineData("lyrics w singer male sings m { さ く ら ら | }", "staff m  lyrics w", "male")]
-    [InlineData("lyrics w sings m singer female { さ く ら ら | }", "staff m  lyrics w", "female")]
-    [InlineData("lyrics w singer male \"\" sings m { さ く ら ら | }", "staff m  lyrics w", "male")]       // what taking `singer male` and leaving the list writes
-    [InlineData("lyrics singer male sings m { さ く ら ら | }", "staff m  lyrics", "male")]
-    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w singer female sings m", "female")]
-    [InlineData("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w sings m singer male", "male")]
-    public void AGenderAlone_IsTheSinger(string lyrics, string row, string expected)
+    [InlineData("singer male sings w", Words, "staff m  lyrics w", "male")]
+    [InlineData("singer female sings w on m", Words, "staff m  lyrics w", "female")]
+    [InlineData("singer male \"\" sings w", Words, "staff m  lyrics w", "male")]       // what taking `singer male` and leaving the list writes
+    [InlineData("singer male sings", "lyrics { さ く ら ら | }", "staff m  lyrics", "male")]
+    public void AGenderAlone_IsTheSinger(string singer, string lyrics, string row, string expected)
     {
-        string source = Sheet(lyrics, row);
+        string source = Sheet(lyrics, singer, row);
         Parsed(source);
         Assert.Equal(expected, Sung(source).Singer);
-    }
-
-    [Theory]
-    [InlineData("singer male")]
-    [InlineData("singer female")]
-    [InlineData("singer male \"\"")]
-    public void AGenderAlone_IsThePartsSinger(string written)
-    {
-        string source = Sheet("lyrics w sings m { さ く ら ら | }", "staff m  lyrics w").Replace("singer \"soprano\"", written);
-        Parsed(source);
-        Assert.StartsWith(written.Split(' ')[1], Sung(source).Singer);
-    }
-
-    [Fact]
-    public void ATrackMayStillBeCalledSinger_BeforeOtherWords()
-    {
-        var block = Assert.Single(Parsed(Book("", "lyrics singer sings m { la la la la | }")).GetRoot().DescendantNodes<LyricsBlockSyntax>());
-        Assert.Equal("singer", block.VoiceName);
-        Assert.Equal("m", block.SingsTarget);
-    }
-
-    [Fact]
-    public void AGenderAlone_IsAWholeClause()
-        => Assert.Equal(new[] { "singer" }, LilySharpLanguageServer.LyricsHeadAt("lyrics words singer male ", "lyrics words singer male ".Length)!.Value.Written);
-
-    [Fact]
-    public void AnotherWordAfterSinger_IsNoClause()
-        => Assert.Null(LilySharpLanguageServer.LyricsHeadAt("lyrics words singer so ", "lyrics words singer so ".Length));
-
-    [Fact]
-    public void TheSingerItem_WritesTheWordAndOpensTheList_TheGendersBeingChosenThere()
-    {
-        var items = LilySharpLanguageServer.GetLyricsTrackNameCompletions().Items;
-        var item = Assert.Single(items, i => i.Label == "singer");
-        Assert.Equal("singer $0", item.InsertText);
-        Assert.Equal("editor.action.triggerSuggest", item.Command!.CommandIdentifier);
-        Assert.DoesNotContain(items, i => i.Label.StartsWith("singer ", StringComparison.Ordinal));
     }
 
     [Fact]

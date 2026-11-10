@@ -685,10 +685,10 @@ public class MusicXmlImportSpanTests
             part a { clef treble }
             section A {
               a { c'4( d' e') f' | }
-              lyrics one sings a { la li | }
+              lyrics one { la li | }
             }
             form { ~A }
-            score { staff a lyrics one }
+            score { staff a lyrics one on a }
             """;
         Assert.Equal(new[] { ("la", "C"), ("li", "F") }, ExportedSyllables(source));
     }
@@ -702,10 +702,10 @@ public class MusicXmlImportSpanTests
             part a { clef treble }
             section A {
               a { voice { c''4 d'' | } { e'4 f' | } }
-              lyrics one sings a { la li lo | }
+              lyrics one { la li lo | }
             }
             form { ~A }
-            score { staff a lyrics one }
+            score { staff a lyrics one on a }
             """;
         // `lo` has no note of the first voice left in its bar; the second voice's e' is not one.
         Assert.Equal(new[] { ("la", "C"), ("li", "D") }, ExportedSyllables(source));
@@ -720,14 +720,14 @@ public class MusicXmlImportSpanTests
             part a { clef treble }
             section A {
               a { c'2~ | }
-              lyrics one sings a { la | }
+              lyrics one { la | }
             }
             section B {
               a { c'4 d' | }
-              lyrics one sings a { li | }
+              lyrics one { li | }
             }
             form { ~A ~B }
-            score { staff a lyrics one }
+            score { staff a lyrics one on a }
             """;
         Assert.Equal(new[] { ("la", "C"), ("li", "D") }, ExportedSyllables(source));
     }
@@ -741,15 +741,15 @@ public class MusicXmlImportSpanTests
             part a { clef treble }
             section A {
               a { c'2 | }
-              lyrics one sings a { la | }
-              lyrics two sings a { li | }
+              lyrics one { la | }
+              lyrics two { li | }
             }
             section B {
               a { d'2 | }
-              lyrics two sings a { lo | }
+              lyrics two { lo | }
             }
             form { ~A ~B }
-            score { staff a lyrics one lyrics two }
+            score { staff a lyrics one on a lyrics two on a }
             """;
         var lyric = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().Descendants("lyric").Last();
         Assert.Equal("lo", lyric.Element("text")!.Value);

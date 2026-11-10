@@ -72,7 +72,7 @@ public class LyricAnchorPerSystemTests
         score {
           chords prog as names
           staff melody
-          lyrics verse sings melody
+          lyrics verse on melody
           staff melody
         }
         """;

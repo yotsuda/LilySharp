@@ -1095,7 +1095,7 @@ section S {
             score {
               chords prog
               staff melody
-              lyrics verse sings melody
+              lyrics verse on melody
             }
             """;
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -1452,8 +1452,8 @@ section S {
             "octave absolute\n"
             + "part melody { section A { " + Bars("c'4 d' e' f'", 24) + " } }\n"
             + "part back { section A { " + Bars("e'4 f' g' a'", 24) + " } }\n"
-            + "lyrics ly sings melody { section A { " + Bars("la le li lo", 24) + " } }\n"
-            + "form { A }\nscore { staff back  lyrics ly }\n";
+            + "lyrics ly { section A { " + Bars("la le li lo", 24) + " } }\n"
+            + "form { A }\nscore { staff back  lyrics ly on melody }\n";
         var options = new SvgRenderOptions { EmbedFont = false };
         var compiler = new IncrementalCompiler(SyntaxTree.Parse(source), options);
         compiler.Render();

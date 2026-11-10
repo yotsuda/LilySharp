@@ -394,6 +394,8 @@ public enum SyntaxKind : ushort
     ChordShapesDeclaration,
     /// <summary>The language of the file's lyrics (<c>language japanese</c>).</summary>
     LanguageDeclaration,
+    /// <summary>Who sings what, at the top level of a file (<c>singer female sings words on sop</c>).</summary>
+    SingerDeclaration,
     /// <summary>A variable declaration node (legacy, <c>name = { ... }</c>).</summary>
     VariableDeclaration,
     /// <summary>A phrase declaration node (<c>phrase name { ... }</c>).</summary>

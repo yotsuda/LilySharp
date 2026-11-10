@@ -50,11 +50,11 @@ public sealed class StanzaNumberAlignmentTests
         part melody { clef treble }
         section Main {
           melody { c''4 d e f | g2 a4 g | }
-          lyrics words sings melody { A- ma- zing grace | how~ sweet | }
-          lyrics words sings melody { Twas grace that taught | my~ heart | }
+          lyrics words { A- ma- zing grace | how~ sweet | }
+          lyrics words { Twas grace that taught | my~ heart | }
         }
         form { Main }
-        score { staff melody  lyrics words }
+        score { staff melody  lyrics words on melody }
         """);
 
     /// <summary>Each stanza number's right edge: its start plus its advance.</summary>

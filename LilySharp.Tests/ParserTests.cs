@@ -139,8 +139,8 @@ public class ParserTests
         // here a bare per-score display name (`staff m with` = a staff labelled
         // "with") and an English lyric syllable. Nothing fires.
         var src = "part m { section A { c'1 } }\n"
-            + "lyrics w sings m { section A { with | } }\n"
-            + "form f { A }\nscore f { form f\n  staff m with\n  lyrics w\n}";
+            + "lyrics w { section A { with | } }\n"
+            + "form f { A }\nscore f { form f\n  staff m with\n  lyrics w on m\n}";
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
@@ -517,12 +517,12 @@ key g major
     [InlineData("sing, sing; so", "sing;")]
     public void PunctuationInALyricBody_IsText(string words, string syllable)
     {
-        foreach (string head in new[] { "lyrics w", "lyrics w sings bass" })
+        foreach (string head in new[] { "lyrics w", "lyrics w language english" })
         {
             var tree = SyntaxTree.Parse(
                 "part bass { clef bass }\nsection A {\n  bass { c4 d e f | }\n  "
                 + head + " { " + words + " | }\n}\n"
-                + "form { ~A }\nscore { staff bass  lyrics w sings bass }\n");
+                + "form { ~A }\nscore { staff bass  lyrics w on bass }\n");
             Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.UnexpectedCharacter);
             var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(
                 tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree));
@@ -534,7 +534,7 @@ key g major
     public void PunctuationOutsideALyricBody_IsStillFlagged()
     {
         // A score ROW `lyrics w sings m` has no body: a ';' after it is a stray again.
-        Assert.Contains(SyntaxTree.Parse("score { staff m  lyrics w sings m ; staff n }").Diagnostics,
+        Assert.Contains(SyntaxTree.Parse("score { staff m  lyrics w on m ; staff n }").Diagnostics,
             d => d.Code == DiagnosticCodes.UnexpectedCharacter);
         Assert.Contains(SyntaxTree.Parse("c4 ; d4").Diagnostics,
             d => d.Code == DiagnosticCodes.UnexpectedCharacter);

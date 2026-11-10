@@ -93,13 +93,13 @@
   <rect x="41.02" y="39.74" width="0.19" height="4.00" data-pos="1418"/>
   <rect x="56.69" y="39.74" width="0.19" height="4.00" data-pos="1434"/>
   <text class="music" x="53.08" y="23.63" font-size="4.00" data-pos="1323"></text>
-  <text x="19.44" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1504">Praise</text>
-  <text x="25.80" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1511">God</text>
-  <text x="31.20" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1515">from</text>
-  <text x="37.73" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1520">whom</text>
-  <text x="43.06" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1527">all</text>
-  <text x="47.79" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1531">bless</text>
-  <text x="53.08" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1538">ings</text>
+  <text x="19.44" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1492">Praise</text>
+  <text x="25.80" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1499">God</text>
+  <text x="31.20" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1503">from</text>
+  <text x="37.73" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1508">whom</text>
+  <text x="43.06" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1515">all</text>
+  <text x="47.79" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1519">bless</text>
+  <text x="53.08" y="33.74" font-size="2.47" text-anchor="middle" data-pos="1526">ings</text>
   <text class="music" x="15.09" y="22.60" font-size="3.56" data-pos="1178"></text>
   <line x1="16.19" y1="22.43" x2="16.19" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="1178"/>
   <text x="16.87" y="23.08" font-size="2.20" data-pos="1178">= 80</text>

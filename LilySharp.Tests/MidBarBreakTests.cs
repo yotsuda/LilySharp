@@ -60,7 +60,7 @@ public class MidBarBreakTests
 {
     private static readonly SvgRenderOptions Opt = new() { EmbedFont = false };
 
-    private static string Book(string melody, string? bass = null, string? rows = null, string? scoreExtra = null)
+    private static string Book(string melody, string? bass = null, string? rows = null, string? scoreExtra = null, string? scoreBefore = null)
     {
         string bassPart = bass == null ? "" : "part bass { clef bass }\n";
         string bassCell = bass == null ? "" : $"  bass {{ {bass} }}\n";
@@ -75,7 +75,7 @@ public class MidBarBreakTests
             {{bassCell}}}
             {{rows ?? ""}}
             form { Main }
-            score { staff melody{{bassStaff}}{{scoreExtra ?? ""}} }
+            score { {{scoreBefore ?? ""}}staff melody{{bassStaff}}{{scoreExtra ?? ""}} }
             """;
     }
 
@@ -227,7 +227,7 @@ public class MidBarBreakTests
             "c''4 d break e f | voice { g4 a break b c } { e4 f g a } | a1 |",
             bass: "c'2 c2 | | c1 |",
             rows: "chords prog { section Main { C G | C | F | } }\nlyrics w { section Main { a b c d | e | f | } }",
-            scoreExtra: " chords prog lyrics w");
+            scoreBefore: "lyrics w ", scoreExtra: " chords prog");
         var score = Collect(book);
         var voices = score.AllVoices.ToList();
         Assert.True(voices.Count >= 5, $"voices: {voices.Count}"); // melody, melody.2, bass, prog, w

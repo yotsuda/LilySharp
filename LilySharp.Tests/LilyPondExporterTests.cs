@@ -3021,8 +3021,8 @@ public class LilyPondExporterTests
     {
         var (ly, warnings) = ExportWithWarnings(LyricBook(
             "e'4 e' f' g' | a'2 g' |",
-            "lyrics words sings melody { Mu- sic 'ry- one | air night | }",
-            "staff melody  lyrics words sings melody"));
+            "lyrics words { Mu- sic 'ry- one | air night | }",
+            "staff melody  lyrics words on melody"));
         Assert.Contains("melodyLyricsOne = \\lyricmode {", ly);
         // A hyphenated syllable carries LilyPond's `--`; a word with an apostrophe is quoted.
         Assert.Contains("Mu4 -- sic4 \"'ry\"4 -- one4 |", ly);
@@ -3038,8 +3038,8 @@ public class LilyPondExporterTests
     {
         var ly = Export(LyricBook(
             "c'4 d' e' f' | g'2 g' |",
-            "lyrics words sings melody { Twin- kle twin- kle | star _ | }",
-            "staff melody  lyrics words sings melody"));
+            "lyrics words { Twin- kle twin- kle | star _ | }",
+            "staff melody  lyrics words on melody"));
         Assert.Contains("Twin4 -- kle4 twin4 -- kle4 |", ly);
         // `star` holds over the second half: the syllable, then the extender — LEFT-aligned
         // on its note as the page aligns a melisma (LilyPond would only learn the melisma
@@ -3068,22 +3068,22 @@ public class LilyPondExporterTests
         // terminator stands on the a'4 and `star` lasts a dotted half.
         var ly = Export(LyricBook(
             "c'4 d' e' f' | g'2 g'4 a'4 |",
-            "lyrics words sings melody { Twin- kle twin- kle | star _ | }",
-            "staff melody  lyrics words sings melody"));
+            "lyrics words { Twin- kle twin- kle | star _ | }",
+            "staff melody  lyrics words on melody"));
         Assert.Contains("#LEFT star2. __ \"\"4 |", ly);
         // The held note closes its bar and another bar follows: the terminator opens that bar.
         ly = Export(LyricBook(
             "c'4 d' e' f' | g'2 g'2 | a'1 |",
-            "lyrics words sings melody { Twin- kle twin- kle | star _ | }",
-            "staff melody  lyrics words sings melody"));
+            "lyrics words { Twin- kle twin- kle | star _ | }",
+            "staff melody  lyrics words on melody"));
         Assert.Contains("#LEFT star1 __ |\n  \"\"1 |", ly);
         // An extender that held no note (a bare `__` with nothing to consume) ends after its own
         // note — the page draws its minimum stub there — rather than being left to LilyPond's
         // warning (session 776; until then it was).
         ly = Export(LyricBook(
             "c'4 d' e' f' | g'2 g' |",
-            "lyrics words sings melody { Twin- kle twin- kle | star __ | }",
-            "staff melody  lyrics words sings melody"));
+            "lyrics words { Twin- kle twin- kle | star __ | }",
+            "staff melody  lyrics words on melody"));
         Assert.Contains("star2 __ \"\"2 |", ly);
         Assert.DoesNotContain("#LEFT star", ly);
     }
@@ -3106,20 +3106,20 @@ public class LilyPondExporterTests
         // syllable of this stream does) up to the next syllable, `lu`.
         var ly = Export(LyricBook(
             "c'4 d' e' f' | g'2 g'4 a'4 | b'1 |",
-            "lyrics words sings melody { Twin- kle twin- kle | star __ | lu | }",
-            "staff melody  lyrics words sings melody"));
+            "lyrics words { Twin- kle twin- kle | star __ | lu | }",
+            "staff melody  lyrics words on melody"));
         Assert.Contains("star2 __ \"\"2 |\n  lu1 |", ly);
         // A slurred melisma g'2( g'4) with the a'4 unsung: the terminator stands on the a'4.
         ly = Export(LyricBook(
             "c'4 d' e' f' | g'2( g'4) a'4 | b'1 |",
-            "lyrics words sings melody { Twin- kle twin- kle | star __ | lu | }",
-            "staff melody  lyrics words sings melody"));
+            "lyrics words { Twin- kle twin- kle | star __ | lu | }",
+            "staff melody  lyrics words on melody"));
         Assert.Contains("#LEFT star2. __ \"\"4 |\n  lu1 |", ly);
         // The next syllable right after the melisma: no terminator.
         ly = Export(LyricBook(
             "c'4 d' e' f' | g'2( g'4) a'4 | b'1 |",
-            "lyrics words sings melody { Twin- kle twin- kle | star __ lu | li | }",
-            "staff melody  lyrics words sings melody"));
+            "lyrics words { Twin- kle twin- kle | star __ lu | li | }",
+            "staff melody  lyrics words on melody"));
         Assert.Contains("#LEFT star2. __ lu4 |\n  li1 |", ly);
         Assert.DoesNotContain("\"\"", ly);
 
@@ -3130,10 +3130,10 @@ public class LilyPondExporterTests
             part melody { clef treble }
             section A {
               melody { c''4 d'' e'' | f''2 g'' | }
-              lyrics words sings melody { a b c | d e | }
+              lyrics words { a b c | d e | }
             }
             form { A }
-            score { staff melody  lyrics words sings melody }
+            score { staff melody  lyrics words on melody }
             """);
         Assert.Contains("\\cadenzaOn", ly);
         Assert.Contains("  a4 b4 c4\n  d2 e2\n}", ly);
@@ -3145,8 +3145,8 @@ public class LilyPondExporterTests
     {
         var ly = Export(LyricBook(
             "c'4 d' e' f' |",
-            "lyrics one sings melody { a b c d | }\n  lyrics two sings melody { e f g h | }",
-            "staff melody  lyrics one sings melody  lyrics two sings melody"));
+            "lyrics one { a b c d | }\n  lyrics two { e f g h | }",
+            "staff melody  lyrics one on melody  lyrics two on melody"));
         Assert.Contains("melodyLyricsOne = \\lyricmode {", ly);
         Assert.Contains("melodyLyricsTwo = \\lyricmode {", ly);
         Assert.Contains("a4 b4 c4 d4 |", ly);
@@ -3186,10 +3186,10 @@ public class LilyPondExporterTests
             section Chorus {
               sax   { c'4 d e f | g2 g | }
               vocal { g'8 g a4 a8 a a4 | g2 f | }
-              lyrics en sings vocal { Sing it loud and clear now | ev- ery | }
+              lyrics en { Sing it loud and clear now | ev- ery | }
             }
             form { Chorus }
-            score { staff sax  lyrics en }
+            score { staff sax  lyrics en on vocal }
             """);
         Assert.Contains("enLyricsOne = \\lyricmode {", ly);
         Assert.Contains("Sing8 it8 loud4 and8 clear8 now4 |", ly);
@@ -3212,15 +3212,15 @@ public class LilyPondExporterTests
             section A {
               partial 4
               sop { c'4 | d'4 e' f' g' | }
-              lyrics v1 sings sop { The | eve- ning falls so | }
+              lyrics v1 { The | eve- ning falls so | }
             }
             section B {
               time 3/2
               sop { a'2 b' c'' | }
-              lyrics v1 sings sop { Sing to the | }
+              lyrics v1 { Sing to the | }
             }
             form { A B }
-            score { lyrics v1 }
+            score { lyrics v1 on sop }
             """);
         // The pickup is a \time of its length, not a \partial (which trips LilyPond's
         // spacing in a staff-less score); the score's meter in its own spelling.

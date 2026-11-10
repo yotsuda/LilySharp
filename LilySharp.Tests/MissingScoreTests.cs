@@ -59,7 +59,7 @@ public sealed class MissingScoreTests
     [InlineData("section A { c''4 d' e' f' | }\n", "score { staff }")]
     [InlineData("part { clef bass }\nsection A { c'4 d e f | }\n", "score { staff }")]
     [InlineData("part melody { clef treble }\nchords prog { section A { C | } }\n"
-        + "lyrics words sings melody { section A { la la la la | } }\nsection A { melody { c''4 d' e' f' | } }\n",
+        + "lyrics words { section A { la la la la | } }\nsection A { melody { c''4 d' e' f' | } }\n",
         "score { chords prog  staff melody  lyrics words }")]
     [InlineData("part b { section A { c'4 d e f | } }\npart a { section A { c''4 d' e' f' | } }\n",
         "score { staff b  staff a }")]

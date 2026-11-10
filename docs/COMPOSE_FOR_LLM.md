@@ -337,31 +337,31 @@ What makes it music:
   - Count every bar: as many units as notes, less the notes a slur or a tie carries over.
   - Words the request gives are set as they stand. Words written for it tell their story in the
     verses and come back unchanged in the chorus, its hook the title.
-  - **Who sings**: words are sung where a voice is asked for: the part's `instrument` being a voice
-    (`soprano`, `alto`, `tenor`, `baritone`, `voice-bass`), or a `singer`. With the instrument alone
-    this machine's default voice of that gender sings, and `singer` is left out unless the request
-    names a voice or a kind of voice, or several parts should sound different. Words on any other
-    part (a guitar's or a piano's, printed for reading) are not sung: it plays its instrument.
+  - **Who sings**: a top-level `singer` line sings the words: `singer sings words on sop`. A `lyrics`
+    row only prints them, and words with no `singer` line are not sung: the part plays its instrument.
+    A song meant to be heard sung has the line, for every part with words to sing. With no voice named
+    this machine's default voice of the part's gender sings, and the name is left out unless the
+    request names a voice or a kind of voice, or several parts should sound different.
     To name a voice, call `lilysharp_listVoices` first and copy a name it answers; never guess one.
     Called with nothing it lists every voice; narrow it with `language` (the words': `japanese` or
     `english`, `ja` or `en`), `gender` (`male` or `female`; a voice that does not state one is kept and
     marked so) or `provider` (`neutrino`, `diffsinger` or `voicevox`). Each line is one voice:
     the name as a score writes it (`engine/name`) before the colon, then what it calls itself, its
     gender and the languages it sings. Take a voice that sings the words' language. If it answers
-    that no voice can be listed or none is available, write the song with no `singer`.
-    `singer` goes in one of three places, the nearest to the words winning (a score's row, then the
-    track, then the part), and one place is enough:
+    that no voice can be listed or none is available, name none: `singer sings words`.
+    The line stands at the top level, and a score's `lyrics` row is not needed for it:
     ```
-    part sop { instrument soprano singer "neutrino/MERROW" }
-    lyrics words singer "neutrino/MERROW" sings melody { … }
-    score { staff melody  lyrics words sings melody singer "neutrino/MERROW" }
+    part sop { instrument soprano }
+    lyrics words { … }
+    singer "neutrino/MERROW" sings words on sop
+    score { staff sop  lyrics words }
     ```
-    A choir's voices each take their own on the part. Names with commas between them sing the part
-    together (`singer "neutrino/MERROW","diffsinger/TIGER"`), in any of the three places.
-    `singer "soprano"`, `"alto"`, `"tenor"` or `"bass"` asks for a role, not a voice, and
-    `singer male` or `singer female` for that gender's default voice: neither needs the list.
-    `singer male "neutrino/SOMA"` is a voice with its gender said, the gender narrowing what the
-    editor offers.
+    A choir's voices each take their own line, one a part. Names with commas between them sing the
+    part together (`singer "neutrino/MERROW","diffsinger/TIGER" sings words`). `singer male sings
+    words` or `singer female sings words` asks for that gender's default voice and needs no list.
+    `singer male "neutrino/SOMA" sings words` is a voice with its gender said, the gender narrowing
+    what the editor offers. `staff sop sounds both` plays the instrument with the voice;
+    `staff sop hidden` sings without drawing the staff.
 - **A song to sing and play yourself** (弾き語り; "a song with chords and lyrics", "for guitar and
   voice"): a lead sheet with the guitar's chord diagrams, not a written guitar staff.
   - **The voice**: `instrument alto` (F3–F5) for a woman's song and when the request names no
@@ -392,8 +392,8 @@ What makes it music:
   - **The bridge is a change**: a chord the verse and the chorus do not use (Am, Bm, D7, a borrowed
     chord), a tune of its own, or the strum's pattern changed there — not the same four chords
     walked from another one of them under the verse's tune again.
-  - **Who sings**: as *A song with words* says, the name on the score's lyrics row here:
-    `lyrics words sings melody singer "neutrino/MERROW"`, a name `lilysharp_listVoices` gave.
+  - **Who sings**: as *A song with words* says: `singer "…" sings words on melody`, a name
+    `lilysharp_listVoices` gave.
   - **The singer breathes**: every line of words ends on a longer note with a rest after it (a
     bar's last beat, at least), never four quarters in every bar from the first word to the last.
   - **The diagrams, always**: `layout { chordDiagrams all  chordList true }` — every chord draws

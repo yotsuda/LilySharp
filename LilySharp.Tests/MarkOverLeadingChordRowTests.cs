@@ -44,7 +44,7 @@ public sealed class MarkOverLeadingChordRowTests
         section A {
           chords harmony { C | G | Am | F | C | G | Am | F | }
           singer { c'4 d' e' f' | g'4 a' b' c'' | c''4 b' a' g' | f'4 e' d' c' | c'4 d' e' f' | g'4 a' b' c'' | c''4 b' a' g' | f'4 e' d' c' | }
-          lyrics words sings singer {
+          lyrics words {
             verse 1 { a b c d | e f g h | i j k l | m n o p | a b c d | e f g h | i j k l | m n o p | }
             verse 2 { a b c d | e f g h | i j k l | m n o p | a b c d | e f g h | i j k l | m n o p | }
           }
@@ -52,10 +52,10 @@ public sealed class MarkOverLeadingChordRowTests
         section B {
           chords harmony { C | G | Am | F | C | G | }
           singer { c'4 d' e' f' | g'4 a' b' c'' | c''4 b' a' g' | f'4 e' d' c' | c'4 d' e' f' | g'4 a' b' c'' | }
-          lyrics words sings singer { a b c d | e f g h | i j k l | m n o p | a b c d | e f g h | }
+          lyrics words { a b c d | e f g h | i j k l | m n o p | a b c d | e f g h | }
         }
         form { A A B }
-        score { chords harmony  staff singer  lyrics words }
+        score { chords harmony  staff singer  lyrics words on singer }
         """;
 
     [Fact]

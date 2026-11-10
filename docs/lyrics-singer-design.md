@@ -46,7 +46,7 @@ score { staff sop  lyrics words }
 - `on NAME` where NAME is a voice name two parts share.
 - `sounds voice` or `both` on a staff whose part no `singer` line sings.
 - `sounds` on a condensed or combined staff.
-- The old spellings (`lyrics x sings p`, `singer` on a track, a row or a part): an error naming the new one.
+- The old spellings (`lyrics x sings p`, `singer` on a track, a row or a part) are plain syntax errors, or unknown properties. No error is written for them (owner's decision 2026-11-10: nothing is built for backward compatibility).
 
 ## 4. When `on` is left out
 
@@ -114,7 +114,7 @@ cannot have two singers; a sung part's instrument stays off in bars with no word
 ## 9. Order of work
 
 1. The grammar and the migration: `on`, top-level `singer`, `staff hidden` / `sounds`, sections 3 to 5, the
-   old spellings' errors, the reserved words. Repository books, tests, docs and the composing guide.
+   the reserved words. Repository books, tests, docs and the composing guide.
    The owner's books are rewritten by machine, adding `singer sings …` where a voice instrument sang and
    `staff PART hidden` where words sang a part no staff showed. `LysWriter` (MusicXML import) writes `on`.
    **Calamo generates `lyrics … sings` (`src/Omr/Program.cs`, `src/OmrGen/Program.cs`): tell it in

@@ -826,11 +826,13 @@ public sealed class MidiExporter
             .Concat(order.Where(p => p is not null && IsChordRowTrack(p)))
             .ToList();
 
-        // A part a lyrics row sings with a voice asked for is a singer (owner's decisions 2026-11-08 and 2026-11-10, docs/singing-design.md
-        // §3): the preview gives it the singing voice, and its instrument is the stand-in — the
+        // A part only a voice sounds (docs/lyrics-singer-design.md §5): the preview gives it the
+        // singing voice, and its instrument is the stand-in — the
         // named midiInstrument, else the preset's sound, else, for a singer that names neither,
         // the General MIDI choir (52, "choir aahs") rather than LilyPond's acoustic grand.
-        var sungParts = mainTrack.Lyrics.Where(l => l.Voiced).Select(l => l.Part).Where(p => p != null).ToHashSet(StringComparer.Ordinal);
+        var partSounds = _playedSpec is { } shownSpec ? Svg.Collector.SungStaves.Of(_root, shownSpec) : null;
+        var sungParts = partSounds == null ? new HashSet<string>(StringComparer.Ordinal)
+            : partSounds.Sung.Except(partSounds.Played, StringComparer.Ordinal).ToHashSet(StringComparer.Ordinal);
         var channelByProgram = new Dictionary<int, int>();
         int nextChannel = 0;
         bool first = true;
@@ -4006,7 +4008,7 @@ public sealed class MidiExporter
     {
         if (_playedSpec is not { } spec)
             return;
-        var sung = Svg.Collector.SungSyllables.Read(tree, spec);
+        var sung = Svg.Collector.SungSyllables.Read(tree, Music.LyricSinger.WithSungWords(_root, spec));
         if (sung.Count == 0)
             return;
         var bySource = track.Notes.ToLookup(n => n.SourcePos);

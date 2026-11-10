@@ -59,9 +59,9 @@ public class LyricStaffOrderTests
         var (lyricYs, staffY) = LayoutOf(
             "part melody { section A { c'4 d e f } }\n" +
             "part back { section A { e'4 f g a } }\n" +
-            "lyrics ly sings melody { section A { la le li lo } }\n" +
+            "lyrics ly { section A { la le li lo } }\n" +
             "form { A }\n" +
-            "score {\n  staff melody  lyrics ly\n  staff back\n}\n");
+            "score {\n  staff melody  lyrics ly on melody\n  staff back\n}\n");
 
         double lyricY = lyricYs[0];
         Assert.True(lyricY > staffY[0], $"lyrics ({lyricY:F2}) should be below melody ({staffY[0]:F2})");
@@ -81,8 +81,8 @@ public class LyricStaffOrderTests
         const string tail =
             "\nform { A }\n" +
             "score {\n  staff melody  lyrics w\n  staff back\n}\n";
-        var (latin, _) = LayoutOf(head + "lyrics w sings melody { section A { la le li lo } }" + tail);
-        var (cjk, _) = LayoutOf(head + "lyrics w sings melody { section A { か え る の } }" + tail);
+        var (latin, _) = LayoutOf(head + "lyrics w { section A { la le li lo } }" + tail);
+        var (cjk, _) = LayoutOf(head + "lyrics w { section A { か え る の } }" + tail);
 
         Assert.True(cjk[0] > latin[0] + 0.1,
             $"CJK line ({cjk[0]:F2}) should sit lower than Latin ({latin[0]:F2}) to clear the staff");
@@ -97,13 +97,13 @@ public class LyricStaffOrderTests
         const string head =
             "part melody { section A { c'4 d e f } }\n" +
             "part back { section A { e'4 f g a } }\n" +
-            "lyrics v1 sings melody { section A { la le li lo } }\n" +
-            "lyrics v2 sings melody { section A { do re mi fa } }\n" +
+            "lyrics v1 { section A { la le li lo } }\n" +
+            "lyrics v2 { section A { do re mi fa } }\n" +
             "form { A }\n";
         var (_, oneVerse) = LayoutOf(head +
-            "score {\n  staff melody  lyrics v1\n  staff back\n}\n");
+            "score {\n  staff melody  lyrics v1 on melody\n  staff back\n}\n");
         var (_, twoVerse) = LayoutOf(head +
-            "score {\n  staff melody  lyrics v1  lyrics v2\n  staff back\n}\n");
+            "score {\n  staff melody  lyrics v1 on melody  lyrics v2 on melody\n  staff back\n}\n");
 
         Assert.True(twoVerse[1] > oneVerse[1] + 2.0,
             $"a 2nd verse should drop the lower staff: 1-verse Y={oneVerse[1]:F2}, 2-verse Y={twoVerse[1]:F2}");
@@ -138,11 +138,11 @@ public class LyricStaffOrderTests
             "part back { section A { e'4 f g a } }\n";
         const string tail =
             "\nform { A }\n" +
-            "score {\n  staff melody  lyrics w\n  staff back\n}\n";
+            "score {\n  staff melody  lyrics w on melody\n  staff back\n}\n";
         var (latinLyrics, latinStaff) = LayoutOf(
-            head + "lyrics w sings melody { section A { la le li lo } }" + tail);
+            head + "lyrics w { section A { la le li lo } }" + tail);
         var (cjkLyrics, cjkStaff) = LayoutOf(
-            head + "lyrics w sings melody { section A { か え る の } }" + tail);
+            head + "lyrics w { section A { か え る の } }" + tail);
 
         double latinInside = latinStaff[1] - latinStaff[0];
         double cjkInside = cjkStaff[1] - cjkStaff[0];
@@ -184,9 +184,9 @@ public class LyricStaffOrderTests
         string cjkWords = string.Concat(Enumerable.Repeat("か え る の | ", 24)).Trim();
         string Src(string words) =>
             $"part melody {{ section A {{ {bars} }} }}\n"
-            + $"lyrics w sings melody {{ section A {{ {words} }} }}\n"
+            + $"lyrics w {{ section A {{ {words} }} }}\n"
             + "form { A }\n"
-            + "score {\n  staff melody  lyrics w\n}\n";
+            + "score {\n  staff melody  lyrics w on melody\n}\n";
 
         double latin = SystemGapOf(Src(latinWords), FloorBindingPaper);
         double cjk = SystemGapOf(Src(cjkWords), FloorBindingPaper);
@@ -228,11 +228,11 @@ public class LyricStaffOrderTests
             + "  section A { e'4 f g f | e4 e e2 | e4 f g f | e2 e2 | }\n"
             + $"  section B {{ {sys2} }}\n"
             + "}\n"
-            + "lyrics w sings melody {\n"
+            + "lyrics w {\n"
             + "  section A { gyp jog pyx pug }\n"
             + "}\n"
             + "form { ~A break ~B }\n"
-            + "score {\n  staff melody\n  lyrics w\n}\n";
+            + "score {\n  staff melody\n  lyrics w on melody\n}\n";
         const string overBand = "g''4 g'' g'' g'' | a4 a a a | a4 a a a | a2 a2 |";
         const string pastBand = "a4 a a a | a4 a a a | a4 a a a | g''4 g'' g'' g'' |";
 
@@ -281,7 +281,7 @@ public class LyricStaffOrderTests
             + "  section A { gyp gyp gyp gyp | gyp gyp gyp | }\n"
             + "}\n"
             + "form { ~A break ~B }\n"
-            + "score {\n  staff melody\n  lyrics w\n}\n";
+            + "score {\n  staff melody\n  lyrics w on melody\n}\n";
 
         double row = SystemGapOf(body.Replace("{SINGS}", ""));
         double sings = SystemGapOf(body.Replace("{SINGS}", " sings melody"));
@@ -354,9 +354,9 @@ public class LyricStaffOrderTests
         var (lyricYs, staffY) = LayoutOf(
             "part up { clef treble }\n" +
             "part lo { clef bass }\n" +
-            "section A {\n  up { c''4 d' e' f' }\n  lo { c'4 d e f }\n  lyrics w sings up { la le li lo }\n}\n" +
+            "section A {\n  up { c''4 d' e' f' }\n  lo { c'4 d e f }\n  lyrics w { la le li lo }\n}\n" +
             "form { A }\n" +
-            "score {\n  grandStaff {\n    staff up  lyrics w\n    staff lo\n  }\n}\n");
+            "score {\n  grandStaff {\n    staff up  lyrics w on up\n    staff lo\n  }\n}\n");
 
         double lyricY = lyricYs[0];
         Assert.True(lyricY > staffY[0],
@@ -419,9 +419,9 @@ public class LyricStaffOrderTests
     {
         const string tail =
             "part back { section A { e'4 f g a } }\n" +
-            "lyrics w sings melody { section A { la le li lo } }\n" +
+            "lyrics w { section A { la le li lo } }\n" +
             "form { A }\n" +
-            "score {\n  staff melody  lyrics w\n  staff back\n}\n";
+            "score {\n  staff melody  lyrics w on melody\n  staff back\n}\n";
         var (plainLyrics, plainStaff) = LayoutOf(
             "part melody { section A { c'4 d e f } }\n" + tail);
         var (dynLyrics, dynStaff) = LayoutOf(
@@ -464,11 +464,11 @@ public class LyricStaffOrderTests
             "part ten { clef treble }\npart bas { clef bass }\n" +
             "section A {\n  sop { c'4 d' e' f' }\n  alt { c'4 d' e' f' }\n" +
             "  ten { c'4 d' e' f' }\n  bas { c4 d e f }\n" +
-            "  lyrics w1 sings sop { la le li lo }\n  lyrics w2 sings alt { la le li lo }\n" +
-            "  lyrics w3 sings ten { la le li lo }\n  lyrics w4 sings bas { la le li lo }\n}\n" +
+            "  lyrics w1 { la le li lo }\n  lyrics w2 { la le li lo }\n" +
+            "  lyrics w3 { la le li lo }\n  lyrics w4 { la le li lo }\n}\n" +
             "form { A }\n" +
-            "score {\n  grandStaff {\n    staff sop  lyrics w1\n    staff alt  lyrics w2\n" +
-            "    staff ten  lyrics w3\n    staff bas  lyrics w4\n  }\n}\n");
+            "score {\n  grandStaff {\n    staff sop  lyrics w1 on sop\n    staff alt  lyrics w2 on alt\n" +
+            "    staff ten  lyrics w3 on ten\n    staff bas  lyrics w4 on bas\n  }\n}\n");
 
         var baselines = lyricYs.Select(y => System.Math.Round(y, 6)).Distinct().ToList();
         Assert.Equal(4, baselines.Count);
@@ -510,9 +510,9 @@ public class LyricStaffOrderTests
         const string head =
             "part up { section A { e''1 } }\n";
         const string tail =
-            "lyrics w sings up { section A { la } }\n" +
+            "lyrics w { section A { la } }\n" +
             "form { A }\n" +
-            "score {\n  grandStaff {\n    staff up  lyrics w\n    staff lo\n  }\n}\n";
+            "score {\n  grandStaff {\n    staff up  lyrics w on up\n    staff lo\n  }\n}\n";
         var plain = LpFidelity.RenderedGeometry.Render(
             head + "part lo { section A { c'''1 } }\n" + tail);
         var fermata = LpFidelity.RenderedGeometry.Render(
@@ -570,9 +570,9 @@ public class LyricStaffOrderTests
         // under the staff rather than over it, and one staff so the multi-staff road is not
         // the one being measured.
         const string tail =
-            "lyrics w sings melody { section A { la le li lo } }\n" +
+            "lyrics w { section A { la le li lo } }\n" +
             "form { A }\n" +
-            "score { staff melody  lyrics w }\n";
+            "score { staff melody  lyrics w on melody }\n";
         var (plainLyrics, _) = LayoutOf(
             "part melody { clef treble\n  section A { c'4 c g' g } }\n" + tail);
         var (markedLyrics, _) = LayoutOf(

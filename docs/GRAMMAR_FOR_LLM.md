@@ -698,7 +698,7 @@ voice { c'2 d } { e2 f }                 // ONE `voice`, then each simultaneous 
 ```
 
 ```
-voice sop { c'2 d } alt { e2 f }         // named lines — `lyrics words sings sop { … }` sings one
+voice sop { c'2 d } alt { e2 f }         // named lines — `lyrics words { … }` sings one
 ```
 
 `voice` opens the span once; the first line's stems go up, the second's down. Writing the
@@ -800,26 +800,23 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
   line), notehead `x cross diamond triangle slash xcircle default`, midi 0…127, mark `open
   stopped staccato tenuto`. It only changes existing drums; a bad entry warns LYS0024.
 
-## Lyrics (a named track that SINGS a part)
+## Lyrics (a named track of words)
 
-A lyric track binds to its DEFAULT melody at the definition: `lyrics NAME sings PART`.
-A score row may carry its own binding: `lyrics NAME sings PART` among the score
-items binds THAT ROW's placement, overriding the default - so one track can be
-placed under several parts (a chorale's one verse under soprano, alto, tenor and
-bass: `staff alt  lyrics verse sings alt`). A row without `sings` takes the default.
-The score places its row by ORDER (score = a vertical stack of bands): a
-`lyrics NAME` row directly below the staff engraving the part it sings is that
-staff's verse (a run of rows stacks as verses); anywhere else it shows only the
-words, at the melody's rhythm, without engraving the melody. Multiple tracks may
-sing one part (two languages = two names). A track named after the part or one of
-its voices is bound by the name. An unbound row is the even-spread lead-sheet row
-(directly below a staff whose part has named voices it is still drawn, with warning
-LYS6013: name the track after the voice, or write `sings VOICE`). A track that
-`sings` a named voice follows that voice's rhythm whatever the track is called - the
-way to put a second verse or language under one voice (`lyrics en sings alt`);
-inside a staff group a row must sing the staff directly above it (LYS6012).
+A lyrics track holds its words alone. A score row PRINTS them, and a top-level
+`singer` line SINGS them (below). The score places its row by ORDER (score = a
+vertical stack of bands): a `lyrics NAME` row directly below a staff is that
+staff's verse (a run of rows stacks as verses, and a chorale writes `staff alt
+lyrics verse` once per voice). `lyrics NAME on PART` follows another part's or a
+named voice's melody instead: under another staff it shows only the words, at
+that melody's rhythm, without engraving the melody. Directly below a staff of
+several parts `on` is required (LYS4051). Multiple tracks may follow one part (two
+languages = two names). A track may not have the name of a part or voice
+(LYS7008). A row with no staff above and no `on` is the even-spread lead-sheet row.
+A track that follows a named voice takes that voice's rhythm whatever the track is
+called - the way to put a second verse or language under one voice (`lyrics en on
+alt`); inside a staff group a row must follow the staff directly above it (LYS6012).
 
-A `lyrics NAME { … }` track sits in a section next to the part it sings; the score
+A `lyrics NAME { … }` track sits in a section next to its part; the score
 places it with a `lyrics NAME` row under the staff. Syllables are separated by
 spaces; `-` joins syllables of one word; `|` mirrors the music's barlines. Barlines
 follow the music rule: every written `|` closes one bar, the one that OPENS the run
@@ -836,14 +833,14 @@ sings かん (the preview's voice and `lysc wav --singer`); `大[おお]空[ぞ�
 おおぞら. Write the reading in kana. The brackets must touch the word — `漢 [かん]` is an error
 (LYS4036) — and a kanji without a reading prints but is not sung (the voice says so once).
 Words are `japanese` unless a line `language english` says so for the file, or a track does:
-`lyrics en language english sings melody { … }` (the names: japanese english chinese korean).
-Who sings is `singer "neutrino/MERROW"` (a voice) or `singer "soprano"` (a role) on a part, a track or a score's lyrics row; `singer male "neutrino/SOMA"` (or `female`) narrows what the editor offers; `singer male` with no name lets each machine pick a male voice. Words are sung where a voice is asked for: a `singer`, or the part's `instrument` being a voice (`soprano` `alto` `tenor` `baritone` `voice-bass`). Words on any other part are printed only. A track takes a name of its own: the name of a part or a named voice is an error (LYS7008).
+`lyrics en language english { … }` (the names: japanese english chinese korean).
+**Who sings is a top-level line of its own**: `singer "neutrino/MERROW" sings words on melody`. A `lyrics` row only prints; only a `singer` line sings, whether the page shows the words or not. The voice is `"engine/name"`, several with commas (`singer "a/b","c/d" sings words`), `male` or `female` (each machine's default voice of that gender), a gender before a name (`singer male "neutrino/SOMA" sings words`), or nothing (`singer sings words`: the part's own default voice). The order is fixed. Leave out `on PART` when the file has one part or every score prints the words under one part; leave out the name for unnamed lyrics. A part takes one `singer` line. A staff with no `sounds` is its singer's voice if it has one and its instrument if not; `staff m sounds both` (or `voice`, `instrument`) says so in that score, and `staff m hidden` sounds without being drawn. A part with no `staff` in the score does not sound.
 
 ```
 part melody
 section Main {
   melody { c4 d e f | g2 g | }
-  lyrics words sings melody { Hap- py birth- day | to you | }
+  lyrics words { Hap- py birth- day | to you | }
 }
 form { Main }
 score { staff melody  lyrics words }
@@ -866,7 +863,7 @@ part melody
 section A { melody { c4 d e f | } }
 section B {
   melody { g4 a b c | }
-  lyrics words sings melody { verse 1 { up up up up | } verse 2 { down down down down | } }
+  lyrics words { verse 1 { up up up up | } verse 2 { down down down down | } }
 }
 form { A |: B :| }
 score { staff melody  lyrics words }
@@ -917,7 +914,7 @@ strokes rhythm { section A { 4 8 8 4 4 | % | % | % | } }   // a note or chord in
 chords harmony { section A { D | A | Bm | G | } }
 section A {
   singer { d'4 fis'8 a' d''2 | a'4 cis'' e'' cis'' | b'4 d'' e'' d'' | g'4 b'8 d'' b'2 | }
-  lyrics words sings singer { ゆ う や け | み ち を き | と あ る い | ね よ る の | }
+  lyrics words { ゆ う や け | み ち を き | と あ る い | ね よ る の | }
 }
 form { A }
 score { chords harmony plays rhythm  staff singer  lyrics words }
@@ -927,7 +924,7 @@ score { chords harmony plays rhythm  staff singer  lyrics words }
 nothing: the page is the lead sheet it was. To PRINT the strum, place the part: `strokes rhythm`
 in the score draws it as a ONE-LINE staff of slashes (no clef, key or name), and a chords row
 written above that item stands over it (`score { staff singer  lyrics words  chords harmony
-plays rhythm  strokes rhythm }`). `lyrics strum sings rhythm { … }` puts words under the strokes,
+plays rhythm  strokes rhythm }`). `lyrics strum { … }` puts words under the strokes,
 one syllable a stroke — the way to place a verse's words when its tune is not written out.
 
 **Roman numerals.** A chord entry may also be a DEGREE of the key in force at its bar —
@@ -1089,9 +1086,9 @@ score {
 }
 ```
 
-**"Add lyrics"** — a `lyrics NAME sings PART { … }` track in each section beside the part,
+**"Add lyrics"** — a `lyrics NAME { … }` track in each section beside the part,
 one syllable a note (`-` joins a word's syllables; a slur holds one syllable over its notes),
-and a `lyrics NAME` row directly below the part's staff. See *Lyrics*.
+and a `lyrics NAME on PART` row directly below the part's staff. See *Lyrics*.
 
 **"Add a second verse" / "the words for the second time"** — `verse N { … }` blocks in the SAME
 track, not a second track and not a repeat ending: `verse 1 { … } verse 2 { … }` in the section's
@@ -1102,7 +1099,7 @@ each at its own time). Never `[1. … ]` in lyrics (it is not a verse) and never
 part melody { clef treble }
 section A {
   melody { c4 d e f | g2 g | }
-  lyrics words sings melody {
+  lyrics words {
     verse 1 { Twin- kle twin- kle | lit- tle | }   // added: the verse blocks
     verse 2 { How I won- der | what you | }        // added
   }

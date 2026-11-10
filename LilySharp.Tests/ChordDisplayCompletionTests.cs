@@ -135,12 +135,11 @@ public class ChordDisplayCompletionTests
     [Fact]
     public void TheLyricsTrackSnippet_IsWhatTheCompilerAccepts()
     {
-        // Unlike a chord track, a lyrics track DOES take `sings` — the difference the
-        // chords test pins from its side — and its target names a part THIS DOCUMENT
-        // declares. With one part there is nothing to choose, so the name is written out.
+        // A lyrics track holds its words alone: which part they follow is the score's row, and
+        // who sings them the file's `singer` line.
         const string oneStaff = "part melody { section A { c''4 d e f } }\n";
         var item = LyricsItem(oneStaff);
-        Assert.Contains("sings melody", item.InsertText!);
+        Assert.DoesNotContain("sings", item.InsertText!);
         Assert.DoesNotContain("${", item.InsertText!.Replace("${1:verse}", "").Replace("${2:A}", ""));
 
         // …and what it leaves in the document compiles — tab stops resolved to their
@@ -154,55 +153,15 @@ public class ChordDisplayCompletionTests
     }
 
     [Fact]
-    public void WithSeveralParts_TheSnippetLeavesTheTargetToThePicker()
+    public void TheSnippet_SaysNothingOfWhoSings()
     {
-        // Nothing to guess between: the target is an empty stop 1 — where the editor puts
-        // the caret when it runs the item's command — and the command re-opens the popup,
-        // whose context there (AfterSingsTarget) is the declared parts and voices.
-        const string twoStaves = "part melody { section A { c''4 } }\npart alto { section A { a4 } }\n";
-        var item = LyricsItem(twoStaves);
-
-        Assert.Contains("sings $1 {", item.InsertText!);
-        Assert.Equal("editor.action.triggerSuggest", item.Command?.CommandIdentifier);
-        // The name is stop 2 so stop 1 can be the slot that needs the popup.
-        Assert.Contains("lyrics ${2:verse}", item.InsertText!);
-        // The picked name is typed by the writer, so the compile check picks one for them.
-        AssertCompiles(twoStaves, item, "score { staff melody  staff alto  lyrics verse }",
-            pick: "melody");
-    }
-
-    [Fact]
-    public void ThePopupThatOpensOnTheTarget_ListsThisDocumentsParts()
-    {
-        // The other end of the retrigger: the document as the EDITOR leaves it — the item's
-        // own text with its placeholders resolved and the caret in the empty stop — has to
-        // be a position the popup answers with the parts. Built from the item rather than
-        // hand-copied: a snippet that stopped leaving the caret right after `sings` (one
-        // space away, which a hand copy loses to trailing-whitespace trimming) fails here.
-        const string parts = "part melody { section A { c''4 } }\npart alto { section A { a4 } }\n";
-        string resolved = System.Text.RegularExpressions.Regex
-            .Replace(LyricsItem(parts).InsertText!, @"\$\{\d+:([^}]*)\}", "$1").Replace("$0", "");
-        int stop = resolved.IndexOf("$1", System.StringComparison.Ordinal);
-        Assert.True(stop >= 0, "the snippet no longer leaves an empty stop: " + resolved);
-        string doc = parts + resolved.Remove(stop, "$1".Length);
-        int caret = parts.Length + stop;
-
-        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterSingsTarget,
-            LilySharpLanguageServer.GetCompletionContext(doc, caret));
-        Assert.Equal(new[] { "melody", "alto" },
-            LilySharpLanguageServer.GetVoiceBindingNameCompletions(doc)
-                .Items.Select(i => i.Label).ToArray());
-    }
-
-    [Fact]
-    public void WithNoPartToSing_TheSnippetWritesNoSingsClause()
-    {
-        // The clause is optional (GRAMMAR LyricsBlock) and there is nothing it could name,
-        // so it is left out entirely rather than filled with a word that looks like a name.
-        var item = LyricsItem("");
-        Assert.DoesNotContain("sings", item.InsertText!);
-        Assert.Contains("lyrics ${1:verse} {", item.InsertText!);
-        Assert.Null(item.Command);
+        foreach (var text in new[] { "", "part melody { }\npart alto { }\n" })
+        {
+            var item = LyricsItem(text);
+            Assert.DoesNotContain("sings", item.InsertText!);
+            Assert.Contains("lyrics ${1:verse} {", item.InsertText!);
+            Assert.Null(item.Command);
+        }
     }
 
     /// <summary>The top-level <c>lyrics</c> item as offered in a document.</summary>

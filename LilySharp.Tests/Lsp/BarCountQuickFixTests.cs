@@ -272,16 +272,16 @@ public class BarCountQuickFixTests
             part vocal { }
             section A {
               vocal { g2 g | g2 g | }
-              lyrics words sings vocal { la la }
+              lyrics words { la la }
             }
             form { A | }
-            score { lyrics words }
+            score { lyrics words on vocal }
             """;
         var action = PadAction(text, text.IndexOf("lyrics words") + "lyrics ".Length + 1);
         Assert.NotNull(action);
         Assert.Equal("Add 2 bar lines to lyrics words (| |)", action!.Title);
         var fixedText = Apply(text, action);
-        Assert.Contains("lyrics words sings vocal { la la | | }", fixedText);
+        Assert.Contains("lyrics words { la la | | }", fixedText);
         Assert.Equal(0, Lys2007Count(fixedText));
     }
 

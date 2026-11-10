@@ -22,21 +22,13 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// The lyric-binding rules (user decisions, 2026-08-19 and 2026-09-02): the
-/// definition states the track's DEFAULT melody (<c>lyrics ja sings vocal { … }</c>),
-/// and a score row PLACES the track — under its default melody's staff, or,
-/// with its own <c>sings</c>, under any other part's (<c>lyrics verse sings alt</c>
-/// — one verse serving every staff of a chorale). See <see cref="LyricBindings"/>.
+/// The lyric-binding rules (docs/lyrics-singer-design.md): a score row places a track's words,
+/// under the staff nearest above it or, with its own <c>on</c>, under any other part's. See
+/// <see cref="LyricBindings"/>.
 /// <list type="bullet">
-/// <item>LYS7004 — <c>sings T</c> (either site) where T names no part or voice in
-/// the file.</item>
-/// <item>LYS7005 — two DEFINITION blocks of one track name different targets.
-/// Rows never conflict: each binds only its own placement.</item>
-/// <item>LYS6012 — a row inside a staff group that does not sing the staff
+/// <item>LYS7004 — <c>on T</c> where T names no part or voice in the file.</item>
+/// <item>LYS6012 — a row inside a staff group that does not follow the staff
 /// directly above it (a group has no independent band to fall back to).</item>
-/// <item>LYS6013 (warning) — a top-level row that binds to nothing, directly below a
-/// staff whose part has named voices: drawn as the even-spread row it is, and named
-/// as the probable misspelling of a voice.</item>
 /// </list>
 /// (LYS6009/LYS6010 guarded the <c>with lyrics</c> clause against unbound and
 /// wrong-staff tracks; both RETIRED with the clause — LYS0031. At top level a
@@ -45,6 +37,8 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 internal sealed class LyricSingsValidator : ISemanticValidator
 {
+    private static readonly HashSet<string> ReservedTrackNames = new(StringComparer.Ordinal) { "on", "hum", "solfege" };
+
     private readonly DiagnosticBag _diagnostics = new();
 
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
@@ -73,17 +67,11 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         foreach (var n in root.DescendantNodesOfKinds(PartReferenceFinder.VoiceIntroducingKinds))
             PartReferenceFinder.CollectVoiceNames(n, voiceNames);
 
-        // Both sites — the definition block (the track's default) and the score
-        // row (`lyrics verse sings melody`, this placement's own melody) — name a
-        // part, so both go through the unknown-target net.
-        // ⚠️ THE SAME TWO SITES PartReferenceFinder.SingsTargetToken answers on, which is
-        // why the loop below reaches them through that predicate's kind list (SingsKinds):
-        // this switch wants the name, the span and the target TEXT, that one the token an
-        // editor colours. A third sings site would have to be written into both switches,
-        // and LyricSingsWalkTests would fail on the list until it was.
+        // Both sites that name a melody — a score row's `on` and a singer line's — go through the
+        // unknown-target net. The singer line reports its own (CheckSingerLines), so only the row
+        // is read here; PartReferenceFinder.SingsTargetToken answers for both.
         static (string? Name, string? Target, TextSpan Span)? SingsOf(SyntaxNode node) => node switch
         {
-            LyricsBlockSyntax b => (b.VoiceName, b.SingsTarget, (b.SingsKeyword ?? b.LyricsKeyword).Span),
             LyricsRowRenderSyntax r => (r.PartName, r.SingsTarget, (r.SingsKeyword ?? r.LyricsKeyword).Span),
             _ => null,
         };
@@ -96,11 +84,11 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                 _diagnostics.Error(
                     span,
                     DiagnosticCodes.SingsTargetUnknown,
-                    $"'{name}' sings '{target}', but no part or voice of "
+                    $"'{name}' is set on '{target}', but no part or voice of "
                     + "that name exists in this file.");
         }
 
-        // A track's name only names it; who sings is `sings` (owner's decision 2026-11-10): the
+        // A track's name only names it (owner's decision 2026-11-10): the
         // same name reads as a binding, and is none when the part is renamed. Said once a track.
         var namedTracks = new HashSet<string>(StringComparer.Ordinal);
         foreach (var block in root.DescendantNodes<LyricsBlockSyntax>())
@@ -110,24 +98,8 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             string? kind = partNames.Contains(token.Text) ? "part" : voiceNames.Contains(token.Text) ? "voice" : null;
             if (kind != null)
                 _diagnostics.Error(token.Span, DiagnosticCodes.LyricsNamedAsSinger,
-                    $"lyrics '{token.Text}' has the name of a {kind}. Give the words a name of their own and say who sings them: "
-                    + $"'lyrics words sings {token.Text} {{ … }}'.");
-        }
-
-        // Definition blocks only (LyricBindings.Conflicts): a score row's `sings`
-        // binds that row's placement and may name any part — that is how one
-        // verse is placed under four staves.
-        foreach (var (node, target, first) in LyricBindings.Conflicts(root))
-        {
-            if (SingsOf(node) is not ({ } name, _, var span))
-                continue;
-            _diagnostics.Error(
-                span,
-                DiagnosticCodes.SingsConflict,
-                $"'{name}' already sings '{first}' - a track's definition states ONE default melody; "
-                + "state it once (later blocks may repeat it identically or omit it). "
-                + "To place the same words under another part, write 'sings' on the score row "
-                + $"('lyrics {name} sings {target}').");
+                    $"lyrics '{token.Text}' has the name of a {kind}. Give the words a name of their own and say who sings them on its own line: "
+                    + $"'lyrics words {{ … }}' and 'singer sings words on {token.Text}'.");
         }
 
         // (The `with lyrics` attachment checks — LYS6009/LYS6010 — died with the
@@ -135,69 +107,19 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         // wrong-staff or unbound attachment can no longer be SPELLED at top level;
         // what remains checkable is the group case below.)
 
-        // Top-level rows: an unbound row is the even-spread lead-sheet row, and stays one.
-        // Under a staff whose part NAMES its voices, though, a row that names none of them
-        // is more likely a misspelled voice than a lead-sheet row, and nothing else says so:
-        // the page draws, with the syllables off the voice's rhythm. The walk mirrors
-        // RenderSpecParser.FoldAdjacentRows' window — a staff (or a group's last plain
-        // staff) opens it, a row that folds keeps it open, anything else closes it — so
-        // the warning fires only where a correctly named row WOULD have become the verse.
-        // (The voices come from LyricBindings.VoicesOfPart, the per-tree map the fold
-        // itself asks for every row under a staff: no walk is added to the keystroke.)
-        foreach (var render in root.DescendantNodes<RenderDeclarationSyntax>())
-        {
-            string? partAbove = null;
-            foreach (var member in render.ChildNodes())
-            {
-                switch (member)
-                {
-                    case StaffRenderSyntax st:
-                        partAbove = RenderSpecParser.ParseStaffSpec(st)?.VoiceName;
-                        break;
-                    case GrandStaffRenderSyntax group:
-                        partAbove = LastStaffLikeMember(group) is StaffRenderSyntax last
-                            ? RenderSpecParser.ParseStaffSpec(last)?.VoiceName
-                            : null;
-                        break;
-                    case LyricsRowRenderSyntax row when partAbove != null
-                        && RenderSpecParser.RowBindsToPart(root, row.PartName, row.SingsTarget, partAbove):
-                        break;
-                    case LyricsRowRenderSyntax row:
-                        if (partAbove != null
-                            && LyricBindings.TargetOfRow(root, row.PartName, row.SingsTarget) == null
-                            && LyricBindings.VoicesOfPart(root, partAbove) is { Count: > 0 } voices)
-                        {
-                            var names = string.Join(", ", voices.OrderBy(v => v, StringComparer.Ordinal)
-                                .Select(v => $"'{v}'"));
-                            _diagnostics.Warning(
-                                row.LyricsKeyword.Span,
-                                DiagnosticCodes.RowNamesNoVoiceOfStaffAbove,
-                                $"lyrics '{row.PartName}' names none of the voices of '{partAbove}', the staff "
-                                + $"directly above it ({names}), so its syllables are spread evenly across each "
-                                + "bar instead of following a voice. Say which it sings on the row: "
-                                + $"'lyrics {row.PartName} sings VOICE' "
-                                + $"(or 'sings {partAbove}' to follow the part's first voice).");
-                        }
-                        partAbove = null;
-                        break;
-                    // A token (the score's own keyword, name and braces) is not an item.
-                    case SyntaxTokenNode:
-                        break;
-                    default:
-                        partAbove = null;
-                        break;
-                }
-            }
-        }
+        CheckLyricsBlocks(root);
+        CheckSingerLines(root, partNames, voiceNames);
+        CheckStaffSounds(root);
 
-        static SyntaxNode? LastStaffLikeMember(GrandStaffRenderSyntax group)
+        foreach (var row in root.DescendantNodes<LyricsRowRenderSyntax>())
         {
-            SyntaxNode? last = null;
-            foreach (var m in group.ChildNodes())
-                if (m is StaffRenderSyntax or CondensedStaffRenderSyntax
-                    or CombinedStaffRenderSyntax or GrandStaffRenderSyntax)
-                    last = m;
-            return last;
+            if (row.SingsTarget == null && LyricBindings.TargetOf(root, row.PartName) == null)
+            {
+                RenderSpecParser.NearestStaffAbove(row, out bool severalParts);
+                if (severalParts)
+                    _diagnostics.Error(row.LyricsKeyword.Span, DiagnosticCodes.LyricsRowNeedsOn,
+                        $"The staff above lyrics '{row.PartName}' carries several parts: say whose notes the words follow, 'lyrics {row.PartName} on PART'.");
+            }
         }
 
         // Rows inside a staff group: inside the braces a row IS the staff above's
@@ -236,7 +158,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                         break;
                     case LyricsRowRenderSyntax row
                         when partAbove == null
-                          || !RenderSpecParser.RowBindsToPart(root, row.PartName, row.SingsTarget, partAbove):
+                          || !RenderSpecParser.RowBindsToPart(root, row.PartName, RenderSpecParser.RowTarget(row), partAbove):
                         _diagnostics.Error(
                             row.LyricsKeyword.Span,
                             DiagnosticCodes.GroupRowNotBoundToStaffAbove,
@@ -253,11 +175,83 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                                   + "inside a group a row is the verse of the staff directly above it."
                                 : $"lyrics '{row.PartName}' does not sing '{partAbove}', the staff "
                                   + "directly above it - inside a group a row is that staff's verse; "
-                                  + $"write 'lyrics {row.PartName} sings {partAbove}' to place these words "
+                                  + $"write 'lyrics {row.PartName} on {partAbove}' to place these words "
                                   + "under it, or move a row for another part outside the braces.");
                         break;
                 }
             }
         }
+    }
+
+    private void CheckLyricsBlocks(SyntaxNode root)
+    {
+        foreach (var block in root.DescendantNodes<LyricsBlockSyntax>())
+        {
+            string name = block.NameToken?.Text ?? "words";
+            if (block.NameToken is { } token && ReservedTrackNames.Contains(token.Text))
+                _diagnostics.Error(token.Span, DiagnosticCodes.LyricsNameReserved,
+                    $"'{token.Text}' is a reserved word and cannot name lyrics.");
+            if (block.IsInside<PartDeclarationSyntax>() || block.IsInside<PartBlockSyntax>())
+                _diagnostics.Error(block.LyricsKeyword.Span, DiagnosticCodes.LyricsInsidePart,
+                    "Lyrics cannot be written inside a part: words are not a part's. Write them at the top level or directly in a section, 'lyrics words { section A { … } }'.");
+        }
+    }
+
+    private void CheckSingerLines(SyntaxNode root, HashSet<string> partNames, HashSet<string> voiceNames)
+    {
+        var lines = LyricSinger.LinesOf(root);
+        if (lines.Count == 0)
+            return;
+        var tracks = root.DescendantNodes<LyricsBlockSyntax>().Select(b => b.VoiceName).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        var sungParts = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var line in lines)
+        {
+            var node = line.Node;
+            if (node.SingsKeyword == null)
+                continue;   // the parser said so
+            var at = node.TrackToken ?? node.SingsKeyword;
+            if (line.Track is "hum" or "solfege")
+                _diagnostics.Error(at.Span, DiagnosticCodes.SingerGeneratedWordsNotYet, $"Singing '{line.Track}' is not built yet.");
+            else if (!tracks.Contains(line.Track))
+                _diagnostics.Error(at.Span, DiagnosticCodes.SingerWordsUnknown,
+                    node.TrackToken == null ? "This file has no unnamed lyrics to sing." : $"No lyrics are named '{line.Track}'.");
+            if (node.OnToken is { } on)
+            {
+                if (!partNames.Contains(on.Text) && !voiceNames.Contains(on.Text))
+                    _diagnostics.Error(on.Span, DiagnosticCodes.SingsTargetUnknown, $"No part or voice is named '{on.Text}'.");
+                else if (!partNames.Contains(on.Text) && partNames.Count(p => LyricBindings.VoicesOfPart(root, p).Contains(on.Text)) > 1)
+                    _diagnostics.Error(on.Span, DiagnosticCodes.SingerVoiceAmbiguous, $"Several parts have a voice named '{on.Text}'.");
+            }
+            else if (line.Part == null)
+                _diagnostics.Error(at.Span, DiagnosticCodes.SingerPartUnresolved,
+                    "Nothing says whose notes these words are sung on: add 'on PART'.");
+            if (line.Part != null && !sungParts.Add(line.Part))
+                _diagnostics.Error(node.Keyword.Span, DiagnosticCodes.SingerDuplicatePart,
+                    $"'{line.Part}' already has a singer. Several voices on one part are written with commas: singer \"a/b\",\"c/d\" sings ….");
+        }
+    }
+
+    private void CheckStaffSounds(SyntaxNode root)
+    {
+        var singers = LyricSinger.LinesOf(root).Select(l => l.Part).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        void Check(SyntaxTokenNode? word, string? part)
+        {
+            if (word == null)
+                return;
+            if (word.Text is not ("voice" or "instrument" or "both"))
+                _diagnostics.Error(word.Span, DiagnosticCodes.StaffSoundUnknown, $"'sounds' takes voice, instrument or both, not '{word.Text}'.");
+            else if (word.Text != "instrument" && (part == null || !singers.Contains(part)))
+                _diagnostics.Error(word.Span, DiagnosticCodes.StaffSoundNeedsSinger,
+                    $"No singer sings '{part}'. Add a line at the top level: 'singer S sings WORDS on {part}'.");
+        }
+        foreach (var render in root.DescendantNodes<RenderDeclarationSyntax>())
+            if (RenderSpecParser.Parse(render) is { Items.IsEmpty: true, HiddenStaves.IsDefaultOrEmpty: false })
+                _diagnostics.Error(render.RenderKeyword.Span, DiagnosticCodes.ScoreAllStavesHidden,
+                    "Every staff of this score is hidden, so it has nothing to print. Show at least one staff.");
+        foreach (var node in root.DescendantNodes())
+            if (node is StaffRenderSyntax staff)
+                Check(staff.SoundsToken, staff.PartToken?.Text ?? SyntaxFacts.UnnamedPartName);
+            else if (node is TabRenderSyntax tab)
+                Check(tab.SoundsToken, tab.PartToken?.Text ?? SyntaxFacts.UnnamedPartName);
     }
 }

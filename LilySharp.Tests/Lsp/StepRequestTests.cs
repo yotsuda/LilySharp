@@ -1755,7 +1755,7 @@ public class StepRequestTests
     [Fact]
     public void ALyricsTracksSings_WalksThePartsThenTheVoices()
     {
-        const string Book = "part sop {{ }}\npart alt {{ }}\nlyrics v sings {0} {{ la la }}\nsection A {{ sop {{ c''1 }} alt {{ a'1 }} }}\nform {{ A }}\nscore {{ staff sop lyrics v }}\n";
+        const string Book = "part sop {{ }}\npart alt {{ }}\nlyrics v {{ la la }}\nsection A {{ sop {{ c''1 }} alt {{ a'1 }} }}\nform {{ A }}\nscore {{ staff sop lyrics v on {0} }}\n";
         string S(string target) => string.Format(Book, target);
         Assert.Equal(S("alt"), Step(S("‸sop"), -1, semitone: true).After);
         Assert.Equal(S("sop"), Step(S("alt‸"), +1).After);

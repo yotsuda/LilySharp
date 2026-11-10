@@ -1,5 +1,5 @@
 // Named voices + voice-bound lyrics. `voice sop { … }` names a voice; a
-// `lyrics high sings sop { … }` block binds to it, so each lyric line aligns to ITS voice's
+// `lyrics high { … }` block binds to it, so each lyric line aligns to ITS voice's
 // notes even when the two voices have different rhythms — the syllable X is
 // resolved from the note's musical moment, not the primary voice's columns.
 // Here the alto's half-note delays its 2nd syllable to beat 3, off the soprano's
@@ -18,12 +18,12 @@ section Main {
     voice sop { c''4 d'' e'' f'' | g''2 e'' | }
     alt { e'2  f'4 g'4    | c''2 c''  | }
   }
-  lyrics high sings sop { Sing a love song | soft now | }
-  lyrics low sings alt { Low part deep   | slow now | }
+  lyrics high { Sing a love song | soft now | }
+  lyrics low { Low part deep   | slow now | }
 }
 
 form { Main }
 
 score namedVoices {
-  staff m  lyrics high  lyrics low
+  staff m  lyrics high on sop  lyrics low on alt
 }

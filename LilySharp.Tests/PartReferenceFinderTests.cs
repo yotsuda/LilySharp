@@ -367,13 +367,13 @@ public class PartReferenceFinderTests
         section Main {
           m { c'4 d e f | }
           chords prog { C | }
-          lyrics words sings m { la la la la | }
+          lyrics words { la la la la | }
         }
         form { Main }
         score x {
           chords prog as roman
           staff ~m "Melody"
-          lyrics words
+          lyrics words on m
           chords prog
           tab m
         }

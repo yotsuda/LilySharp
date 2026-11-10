@@ -127,7 +127,7 @@ public class LyricPartSectionsTests
               section B { sol la ti do | }
             }
             form { A B }
-            score { staff melody  lyrics words }
+            score { lyrics words  staff melody }
             """);
         var spec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(spec);
@@ -304,7 +304,7 @@ public class LyricPartSectionsTests
               section B { sol la ti do | }
             }
             form { A B A "A2" }
-            score { staff melody  lyrics words }
+            score { lyrics words  staff melody }
             """);
         // A=bar0, B=bar1, A2=bar2.
         Assert.Contains(score.Lyrics, l => l.IsLyricsRow && l.Text == "Do" && l.MeasureIndex == 0);
@@ -329,7 +329,7 @@ public class LyricPartSectionsTests
               section B { verse 1 { up up up up | } verse ~2 { down down down down | } }
             }
             form { A |: B :| }
-            score { staff melody  lyrics words }
+            score { lyrics words  staff melody }
             """);
         var atB = score.Lyrics.Where(l => l.IsLyricsRow && l.MeasureIndex == 1).ToList();
         Assert.Contains(atB, l => l.Text == "up" && l.VerseNumber == 1);
@@ -349,7 +349,7 @@ public class LyricPartSectionsTests
             part melody { clef treble section A { c''4 d' e' f' | } }
             lyrics words { section A { verse 1 { one one one one | } verse 2 { two two two two | } } }
             form { A "1" A "2" }
-            score { staff melody  lyrics words }
+            score { lyrics words  staff melody }
             """);
         var rows = score.Lyrics.Where(l => l.IsLyricsRow).ToList();
         Assert.Contains(rows, l => l.Text == "one" && l.MeasureIndex == 0);

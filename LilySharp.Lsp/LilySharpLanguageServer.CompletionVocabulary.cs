@@ -175,7 +175,7 @@ public sealed partial class LilySharpLanguageServer
     private static readonly string[] PartPropertyOrder =
     {
         "clef", "instrument", "tuning", "octave", "transpose",
-        "transposition", "pitch", "pedal", "midiInstrument", LilySharp.Core.Music.LyricSinger.Keyword,
+        "transposition", "pitch", "pedal", "midiInstrument",
     };
 
     // Prose per property, and whether the editor has a VALUE list to enumerate for it.
@@ -213,7 +213,6 @@ public sealed partial class LilySharpLanguageServer
             ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
             ["midiInstrument"] = ("General MIDI sound for the .mid and the preview — one of LilyPond's 128 names in quotes, "
                                   + "e.g. `midiInstrument \"flute\"`; the default is the preset's", true),
-            [LilySharp.Core.Music.LyricSinger.Keyword] = ("Who sings this part's lyrics: a voice, or a role your settings cast", true),
             // (`removeEmpty` left this table 2026-09-08 with the property: hara-kiri is the
             // score's `staff m as removeEmpty V` — GetStaffAttachNameCompletions.)
         };
@@ -2412,42 +2411,24 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { Items = items.ToArray() };
     }
 
-    /// <summary>
-    /// The lyrics tracks a score's <c>lyrics ▮</c> row offers, each writing <c>NAME sings </c>
-    /// and opening the part list next (the owner's request, 2026-10-25: picking the track should
-    /// go straight on to the part it sings). A row that already says <c>sings</c> after the
-    /// caret takes the name alone.
-    /// </summary>
+    /// <summary>The lyrics tracks a score's <c>lyrics ▮</c> row offers. The row follows the staff
+    /// above it, so the name alone is what it takes.</summary>
     internal static CompletionList GetLyricsRowNameCompletions(string text, int offset)
-    {
-        int at = System.Math.Min(offset, text.Length);
-        while (at < text.Length && (char.IsLetterOrDigit(text[at]) || text[at] == '_')) at++;
-        var rest = text.AsSpan(at).TrimStart(" \t");
-        bool singsFollows = rest.StartsWith("sings", StringComparison.Ordinal)
-            && (rest.Length == 5 || !char.IsLetterOrDigit(rest[5]));
-        var list = GetDeclaredNameCompletions(text, "lyrics", "Lyrics part");
-        if (singsFollows) return list;
-        foreach (var item in list.Items)
-        {
-            item.InsertTextFormat = InsertTextFormat.Snippet;
-            item.InsertText = item.Label + " sings $0";
-            item.Command = PartPickerCommand();
-        }
-        return list;
-    }
+        => GetDeclaredNameCompletions(text, "lyrics", "Lyrics part");
 
-    /// <summary>The <c>sings</c> keyword item a lyrics ROW offers after its track
-    /// name — THIS ROW's melody binding (<c>lyrics verse sings melody</c>), which
-    /// overrides the definition's default for this placement so one verse can
+
+    /// <summary>The <c>on</c> keyword item a lyrics ROW offers after its track
+    /// name — THIS ROW's melody (<c>lyrics verse on melody</c>), so one verse can
+    /// follow another part or
     /// be placed under several staves. Shared by the score-body and group-body
     /// row contexts.</summary>
     private static CompletionItem RowSingsItem() => new()
     {
-        Label = "sings",
+        Label = "on",
         Kind = CompletionItemKind.Keyword,
         InsertTextFormat = InsertTextFormat.Snippet,
-        InsertText = "sings $0",
-        Detail = "The part THIS row sings - overrides the definition's melody for this placement",
+        InsertText = "on $0",
+        Detail = "The part whose notes these words follow",
         SortText = "0",
         Command = new Command
         {
@@ -2456,9 +2437,28 @@ public sealed partial class LilySharpLanguageServer
         },
     };
 
-    /// <summary>The <c>singer</c> keyword after a lyrics track's or row's name: the word and a space, where
-    /// the editor then lists <c>female</c>, <c>male</c> and the voices for the words' language (owner's report
-    /// 2026-11-09, session 1203: with the quotes written, a gender could no longer be chosen).</summary>
+    /// <summary>The <c>sings</c> of a <c>singer</c> line, the list of the words opening after it.</summary>
+    private static CompletionItem SingsKeywordItem() => new()
+    {
+        Label = "sings",
+        Kind = CompletionItemKind.Keyword,
+        InsertTextFormat = InsertTextFormat.Snippet,
+        InsertText = "sings $0",
+        Detail = "Which words this voice sings",
+        SortText = "0",
+        Command = new Command { Title = "Suggest lyrics", CommandIdentifier = "editor.action.triggerSuggest" },
+    };
+
+    private static CompletionItem RowOnItem(string sort)
+    {
+        var item = RowSingsItem();
+        item.SortText = sort;
+        return item;
+    }
+
+    /// <summary>The top-level <c>singer</c>: the word and a space, where the editor then lists
+    /// <c>female</c>, <c>male</c> and the voices (owner's report 2026-11-09, session 1203: with the
+    /// quotes written, a gender could no longer be chosen).</summary>
     private static CompletionItem SingerItem(string sort) => new()
     {
         Label = LilySharp.Core.Music.LyricSinger.Keyword,
@@ -2479,7 +2479,7 @@ public sealed partial class LilySharpLanguageServer
     /// of <see cref="GetStaffAttachNameCompletions"/>.</summary>
     internal static CompletionList GetLyricsRowAttachNameCompletions(System.Collections.Generic.IReadOnlySet<string>? written = null)
     {
-        var items = new[] { RowSingsItem(), SingerItem("1") }.Where(i => IsUnwritten(i, written)).ToList();
+        var items = new[] { RowSingsItem() }.Where(i => IsUnwritten(i, written)).ToList();
         foreach (var it in GetScoreBlockCompletions().Items)
         {
             it.SortText = "9" + (it.SortText ?? "");
@@ -2494,7 +2494,7 @@ public sealed partial class LilySharpLanguageServer
     /// <see cref="GetLyricsRowAttachNameCompletions"/>.</summary>
     internal static CompletionList GetGroupLyricsRowAttachNameCompletions(System.Collections.Generic.IReadOnlySet<string>? written = null)
     {
-        var items = new[] { RowSingsItem(), SingerItem("1") }.Where(i => IsUnwritten(i, written)).ToList();
+        var items = new[] { RowSingsItem() }.Where(i => IsUnwritten(i, written)).ToList();
         foreach (var it in GetStaffGroupBlockCompletions().Items)
         {
             it.SortText = "9" + (it.SortText ?? "");
@@ -2748,12 +2748,7 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
-    /// <summary>After <c>lyrics NAME</c> at a definition site: the binding
-    /// keyword. <c>lyrics ja sings vocal { }</c> states at the DEFINITION which
-    /// melody the track sings (a property of the track NAME, stated once; later
-    /// same-name blocks may repeat it identically or omit it). A score then only
-    /// PLACES the row — under the staff it sings, it is that staff's verse;
-    /// anywhere else, words-only at the melody's rhythm.</summary>
+    /// <summary>After <c>lyrics NAME</c> at a definition site: what the head may still say.</summary>
     internal static CompletionList GetLanguageNameCompletions() => new()
     {
         Items = LilySharp.Core.Music.LyricLanguage.Names
@@ -2769,7 +2764,6 @@ public sealed partial class LilySharpLanguageServer
     {
         Items =
         [
-            SingerItem("2"),
             new CompletionItem
             {
                 Label = LilySharp.Core.Music.LyricLanguage.Keyword,
@@ -2779,20 +2773,6 @@ public sealed partial class LilySharpLanguageServer
                 Detail = "The language this track's words are written in",
                 SortText = "1",
                 Command = new Command { Title = "Suggest language", CommandIdentifier = "editor.action.triggerSuggest" },
-            },
-            new CompletionItem
-            {
-                Label = "sings",
-                Kind = CompletionItemKind.Keyword,
-                InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = "sings $0",
-                Detail = "Bind this track to the part it sings - a row under that staff is its verse",
-                SortText = "0",
-                Command = new Command
-                {
-                    Title = "Suggest part name",
-                    CommandIdentifier = "editor.action.triggerSuggest",
-                },
             },
         ]
     };
@@ -2820,45 +2800,6 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { Items = items.ToArray() };
     }
 
-    /// <summary>
-    /// The <c>sings PART</c> clause a lyrics-track SNIPPET writes, decided by what the
-    /// document actually declares (<see cref="GetVoiceBindingNameCompletions"/> — the same
-    /// reader the <c>sings ▮</c> popup uses, so the snippet and the dialog cannot name
-    /// different universes):
-    /// <list type="bullet">
-    /// <item>no part declared → NO clause at all. The clause is optional (GRAMMAR
-    /// LyricsBlock) and there is nothing it could legally name.</item>
-    /// <item>exactly one → that name, written out. Nothing to choose.</item>
-    /// <item>several → an empty slot at <paramref name="pickStop"/>, and
-    /// <see cref="PartPickerCommand"/> on the item opens the part list there.</item>
-    /// </list>
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ It wrote the literal word <c>part</c> as a placeholder until 2026-09-12
-    /// (<c>lyrics ${1:verse} sings ${2:part} { … }</c>) — user report: "the part of `sings
-    /// part` is invalid; a real part name has to go there". A placeholder that looks like a
-    /// keyword is worse than an empty slot: <c>sings part</c> parses, and names a part
-    /// called <c>part</c> that does not exist.
-    /// ⚠️ The picker is the RETRIGGER, not a snippet choice — the same decision as the
-    /// <c>pitch</c> item (2026-09-03): a choice would be a second copy of a vocabulary that
-    /// already has a home, and the copy is the one that goes stale.
-    /// </remarks>
-    /// <param name="pickStop">The snippet stop number to leave the empty slot at when the
-    /// writer has to choose. Make it the FIRST stop of the snippet: the editor runs the
-    /// item's command with the caret at stop 1, so that is where the popup opens.</param>
-    private static (string Clause, bool NeedsPicker) SingsClauseSnippet(string? text, int pickStop)
-    {
-        var parts = text is null
-            ? []
-            : GetVoiceBindingNameCompletions(text).Items.Select(i => i.Label!).ToArray();
-        return parts.Length switch
-        {
-            0 => ("", false),
-            1 => (" sings " + parts[0], false),
-            _ => (" sings $" + pickStop, true),
-        };
-    }
-
     /// <summary>The top-level <c>score</c> scaffold: the unnamed score while the document has
     /// none (it plays the default form and writes the input's own name), else a named one —
     /// its name is the output's suffix, a suggestion left selected.</summary>
@@ -2881,28 +2822,18 @@ public sealed partial class LilySharpLanguageServer
         new(@"(?m)^[ \t]*form[ \t]*\{");
 
     /// <summary>
-    /// The top-level <c>lyrics</c> track scaffold: a named track that sings a part of this
-    /// document, with a <c>section</c> cell inside (a flat top-level track is LYS4002 in
-    /// by-part grouping, and right in neither layout — see the note at the call site).
+    /// The top-level <c>lyrics</c> track scaffold: a named track with a <c>section</c> cell
+    /// inside (a flat top-level track is LYS4002 in by-part grouping, and right in neither
+    /// layout — see the note at the call site).
     /// </summary>
-    private static CompletionItem LyricsTrackItem(string? text)
+    private static CompletionItem LyricsTrackItem() => new()
     {
-        var (clause, needsPicker) = SingsClauseSnippet(text, pickStop: 1);
-        // With a picker the target takes stop 1 (where the command opens the popup) and the
-        // names shift up; with none, the stops read left to right.
-        string body = needsPicker
-            ? "lyrics ${2:verse}" + clause + " {\n\tsection ${3:A} {\n\t\t$0\n\t}\n}"
-            : "lyrics ${1:verse}" + clause + " {\n\tsection ${2:A} {\n\t\t$0\n\t}\n}";
-        return new CompletionItem
-        {
-            Label = "lyrics",
-            Kind = CompletionItemKind.Snippet,
-            InsertTextFormat = InsertTextFormat.Snippet,
-            InsertText = body,
-            Detail = "Named lyrics track (sings its melody; a score places it with a `lyrics NAME` row)",
-            Command = needsPicker ? PartPickerCommand() : null,
-        };
-    }
+        Label = "lyrics",
+        Kind = CompletionItemKind.Snippet,
+        InsertTextFormat = InsertTextFormat.Snippet,
+        InsertText = "lyrics ${1:verse} {\n\tsection ${2:A} {\n\t\t$0\n\t}\n}",
+        Detail = "Named lyrics track (a score prints it with a `lyrics NAME` row, a `singer` line sings it)",
+    };
 
     /// <summary>
     /// The header a top-level <c>form</c> scaffold writes: <c>form</c> alone while the
@@ -3155,28 +3086,20 @@ public sealed partial class LilySharpLanguageServer
             SortText = i.ToString("D2"),
         });
         // The two TRACK cells a by-section section also holds (GRAMMAR SectionItem:
-        // LyricsBlock / ChordsBlock) — a named lyrics track that sings a part, a named chord
+        // LyricsBlock / ChordsBlock) — a named lyrics track, a named chord
         // track. Both scaffolds are the sectioned body's dual of the top-level track items;
         // the track NAMES are placeholders (a track's name is required: LYS0032). Absent
         // from this list until 2026-09-10, so a by-section writer had to know the
         // spelling.
-        // ⚠️ The `sings` TARGET is not a placeholder — it names a part that must exist, so
-        // it comes from SingsClauseSnippet, the same reader the top-level item uses. It
-        // wrote `${2:melody}` when the document declared no part at all, which reads like a
-        // real name and is not one.
-        var (singsClause, singsNeedsPicker) = SingsClauseSnippet(text, pickStop: 1);
         var tracks = new[]
         {
             new CompletionItem
             {
                 Label = "lyrics",
                 Kind = CompletionItemKind.Snippet,
-                Detail = "Lyrics cell — a named track singing a part of this section (a score places it as a `lyrics NAME` row)",
+                Detail = "Lyrics cell — a named track's words for this section (a score prints them with a `lyrics NAME` row)",
                 InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = Body(singsNeedsPicker
-                    ? "lyrics ${2:words}" + singsClause
-                    : "lyrics ${1:words}" + singsClause),
-                Command = singsNeedsPicker ? PartPickerCommand() : null,
+                InsertText = Body("lyrics ${1:words}"),
                 SortText = "8a",
             },
             new CompletionItem
@@ -3826,8 +3749,8 @@ public sealed partial class LilySharpLanguageServer
         "  section B { g'4 g f f | e e d2 | }",
         "}",
         "",
-        "// The track sings its melody; the score places its row under the staff.",
-        "lyrics verse sings melody {",
+        "// The words; the score prints them under the staff.",
+        "lyrics verse {",
         "  section A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }",
         "  section B {",
         "    verse ~1 { Up a- bove the | world so high | }",
@@ -3980,6 +3903,7 @@ public sealed partial class LilySharpLanguageServer
                 // is relative to (the frets open after the space, ranked), and the shape table.
                 new CompletionItem { Label = LilySharp.Core.Semantics.CapoDirective.Keyword, Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "capo $0", Detail = "A capo on fret N (1-11): every shape is the pressed shape, the names the pressed chords' (chordNames), \"Capo N\" at the head — the list ranks the frets by barre chords", Command = new Command { Title = "Suggest capo fret", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = LilySharp.Core.Music.LyricLanguage.Keyword, Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "language $0", Detail = "The language the file's lyrics are written in (default: japanese)", Command = new Command { Title = "Suggest language", CommandIdentifier = "editor.action.triggerSuggest" } },
+                SingerItem("~singer"),
                 new CompletionItem { Label = LilySharp.Core.Semantics.ChordShapesDirective.Keyword, Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "chordShapes {\n\t$0\n}", Detail = "The shape each chord draws wherever it is named — `chordShapes { Cm7 x35343  G  section Chorus { C x35553 } }` (a name alone: its usual shape)" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
@@ -4019,14 +3943,7 @@ public sealed partial class LilySharpLanguageServer
                 // ⚠️ Only the CHORDS half had a net (TheChordTrackSnippet_IsWhatTheCompilerAccepts).
                 // The lyrics item had been offering the flat body since LYS4002 shipped, and the
                 // twin test was written in the same commit as this fix.
-                // ⚠️ The `sings` target is the document's own part — filled in when there is
-                // only one, picked from a popup when there are several, and omitted when
-                // there is no part to sing (SingsClauseSnippet). It wrote the literal word
-                // `part` until 2026-09-12, which parses and names a part nobody declared.
-                // The stops read left to right EXCEPT when a pick is needed: then the empty
-                // target is stop 1, because that is where the editor puts the caret when it
-                // runs the item's command — so the part list opens on the slot that needs it.
-                LyricsTrackItem(text),
+                LyricsTrackItem(),
                 // ⚠️ The two track kinds are a pair and only one of them was here (reported
                 // 2026-08-23): `chords` was offered in a SCORE body — the `chords NAME` row —
                 // so it read as a known word, and the declaration that gives that row
@@ -5471,11 +5388,7 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>The lyrics tracks the document declares, in order, deduplicated — a
-    /// <c>lyrics NAME {</c> and a <c>lyrics NAME sings PART {</c> alike. The second is the
-    /// binding spelled at the definition (user decision 2026-08-19), and the plain
-    /// <c>KEYWORD name {</c> scan read it as a declaration of <c>sings</c>: a score's
-    /// <c>lyrics ▮</c> row offered no track at all for a book whose tracks all state what
-    /// they sing (reported 2026-10-06).</summary>
+    /// <c>lyrics NAME {</c> and a <c>lyrics NAME language L {</c> alike.</summary>
     internal static IReadOnlyList<string> LyricsTrackNamesOf(string text)
     {
         var names = new System.Collections.Generic.List<string>();

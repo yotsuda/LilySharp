@@ -79,7 +79,7 @@ public class LyricRowUnderMultipleStavesTests
         "  section A { c'1 | b1 | a1 | d | }\n" +
         "  section B { c'1 | d | }\n" +
         "}\n" +
-        "lyrics verse sings melody {\n" +
+        "lyrics verse {\n" +
         "  section A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }\n" +
         "  section B {\n" +
         "    verse ~1 { Up a- bove the | world so high | }\n" +
@@ -87,7 +87,7 @@ public class LyricRowUnderMultipleStavesTests
         "  }\n" +
         "}\n" +
         "form { A |: B :| A \"A2\" }\n" +
-        "score {\n  staff melody\n  staff lower\n  lyrics verse\n}\n";
+        "score {\n  staff melody\n  staff lower\n  lyrics verse on melody\n}\n";
 
     [Fact]
     public void RowBelowTwoStaves_ClearsTheLowerStaffsNotes_OnEverySystem()

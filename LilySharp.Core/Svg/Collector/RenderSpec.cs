@@ -68,7 +68,9 @@ public sealed record StaffSpec(
     // where the ensemble rule allows (RenderSpecParser.ApplyEnsembleDefault), and MusicXML's
     // unprinted <part-name> where the page shows none. Null for a part with no preset, or
     // whose `instrument` wrote its own label.
-    string? PresetName = null
+    string? PresetName = null,
+    // `staff sop sounds voice|instrument|both`, or null for the default (docs/lyrics-singer-design.md §5).
+    string? Sounds = null
 )
 {
     /// <summary>The part's short name (`part vn1 "Violin I" "Vn. I"`), printed from the second
@@ -282,6 +284,9 @@ public sealed record ChordRowSpec(
 /// </summary>
 public sealed record LyricsRowSpec(string PartName, string? Sings = null) : RenderItemSpec;
 
+/// <summary>A part this score sounds and does not draw, with what its <c>sounds</c> says.</summary>
+public sealed record HiddenStaffSpec(string Part, string? Sounds);
+
 /// <summary>
 /// Complete render specification parsed from a render block.
 /// </summary>
@@ -326,9 +331,8 @@ public sealed record RenderSpec(
     // `staff tp as pitch written|concert`: the parts whose staves print by their own `pitch`,
     // over ScoreConcert (Semantics.ConcertPitch.StaffModes); null when no staff writes one.
     ImmutableDictionary<string, bool>? StaffPitch = null,
-    // `lyrics verse singer "…"`: who sings each placed track, by Music.LyricSinger.RowKey;
-    // read off the score's syntax, as a row folded under its staff leaves no row behind.
-    ImmutableDictionary<string, string>? RowSingers = null
+    // `staff melody hidden`: parts that sound in this score and are not drawn.
+    ImmutableArray<HiddenStaffSpec> HiddenStaves = default
 )
 {
     /// <summary>

@@ -47,8 +47,9 @@ public sealed class SungScoreJsonTests
               melody { c''8. d16 c8. d16 | c4 a8 r | a8. bes16 a8. bes16 | a4 f8 r | a4 f8. g16 | a4 f8. g16 | a8 bes c c | g a g r | }
               lyrics verse { ゆ ~ き や | こん こ | あ ら れ や | こん こ | ふっ て も | ふっ て も | ま だ ふ り | や ま ぬ | }
             }
+            singer sings verse on melody
             form { A }
-            score { staff melody  lyrics verse sings melody }
+            score { staff melody  lyrics verse on melody }
             """);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
         var score = RenderSpecParser.FindAll(tree).First();

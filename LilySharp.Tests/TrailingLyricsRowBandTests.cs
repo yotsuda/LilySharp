@@ -115,9 +115,9 @@ public class TrailingLyricsRowBandTests
 
     // The score-block orders. CB is the reported one; LC is the control that folds.
     private const string ChordsBetween =
-        "  staff melody\n  chords prog as names\n  lyrics verse sings melody";
+        "  staff melody\n  chords prog as names\n  lyrics verse on melody";
     private const string LyricsThenChords =
-        "  staff melody\n  lyrics verse sings melody\n  chords prog as names";
+        "  staff melody\n  lyrics verse on melody\n  chords prog as names";
 
     private static string Render(string source)
     {

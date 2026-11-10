@@ -344,8 +344,7 @@ is one) with `--soundfont`, or once in the `LILYSHARP_SOUNDFONT` environment var
 compressed `.sf3` (MuseScore's) and a DLS bank (Windows' `gm.dls`, which the preview plays)
 cannot be read here, and are refused with that sentence.
 
-With `--singer`, the lyrics are sung. The parts the score **sings** — a staff with its words
-under it (`staff melody  lyrics verse sings melody`) — are given, with their syllables and seconds,
+With `--singer`, the lyrics are sung. The parts a `singer` line sings (`singer sings verse on melody`) are given, with their syllables and seconds,
 to a [`cantoria`](https://github.com/yotsuda/cantoria) program (a separate Apache-2.0 project
 that drives the singing engines installed on the machine, NEUTRINO or a DiffSinger voice; Lily#
 bundles none of it), and each voice is mixed into the file from the score's zero **in the

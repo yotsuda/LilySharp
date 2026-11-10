@@ -65,9 +65,9 @@ public sealed partial class LilySharpLanguageServer
     [GeneratedRegex(@"\b(\w+)\s+(\w+)\s*\{")]
     private static partial Regex DeclaredNameRegex();
 
-    // A lyrics track's declaration, with or without its binding: `lyrics NAME {` and
-    // `lyrics NAME sings PART {` — group 1 is the track name (LyricsTrackNamesOf).
-    [GeneratedRegex(@"\blyrics\s+(\w+)(?:\s+sings\s+\w+)?\s*\{")]
+    // A lyrics track's declaration: `lyrics NAME {` and `lyrics NAME language L {` —
+    // group 1 is the track name (LyricsTrackNamesOf).
+    [GeneratedRegex(@"\blyrics\s+(\w+)(?:\s+language\s+\w+)?\s*\{")]
     private static partial Regex LyricsTrackDeclarationRegex();
 
     [GeneratedRegex(@"\s+")]
@@ -440,6 +440,9 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLyricsTrackName => GetLyricsTrackNameCompletions(LyricsHeadAt(doc.Text, offset)?.Written),
             CompletionContext.AfterLanguage => GetLanguageNameCompletions(),
             CompletionContext.AfterSinger => new CompletionList { Items = [] },
+            CompletionContext.AfterSingerVoice => new CompletionList { Items = [SingsKeywordItem()] },
+            CompletionContext.AfterSingerSings => new CompletionList { Items = [.. GetDeclaredNameCompletions(doc.Text, "lyrics", "The words this voice sings").Items, RowOnItem("9")] },
+            CompletionContext.AfterSingerWords => new CompletionList { Items = [RowOnItem("0")] },
             CompletionContext.AfterSingsTarget => GetVoiceBindingNameCompletions(doc.Text,
                 "The part - or named voice - this lyrics track sings"),
             CompletionContext.AfterChordAttachName => GetChordAttachNameCompletions(),

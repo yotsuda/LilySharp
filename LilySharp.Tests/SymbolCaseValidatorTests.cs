@@ -223,9 +223,9 @@ public class SymbolCaseValidatorTests
         tree = SyntaxTree.Parse(
             "part vln { }\npart vla { }\n"
             + "section A { vln { c4 d e f } vla { e4 f g a } "
-            + "lyrics w sings vln { la la la la | } }\n"
+            + "lyrics w { la la la la | } }\n"
             + "form { A }\n"
-            + "score s { grandStaff { staff vln as lines 1  lyrics w  staff vla } }");
+            + "score s { grandStaff { staff vln as lines 1  lyrics w on vln  staff vla } }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         var grand = RenderSpecParser.FindFirst(tree)!
             .Items.OfType<GrandStaffRenderSpec>().Single();

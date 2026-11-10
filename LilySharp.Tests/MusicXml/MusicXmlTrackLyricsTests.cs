@@ -34,7 +34,7 @@ public class MusicXmlTrackLyricsTests
     private const string Music =
         "octave absolute\ntime 4/4\npart vo { clef treble }\npart gt { clef treble }\n"
         + "section A {\n vo { c''4 d' e' f' | g'2 a | }\n gt { c'1 | c1 | }\n}\n"
-        + "lyrics words sings vo { So if you lis- | ten now | }\nform { A }\n";
+        + "lyrics words { So if you lis- | ten now | }\nform { A }\n";
 
     private static XDocument Export(string score)
     {
@@ -52,7 +52,7 @@ public class MusicXmlTrackLyricsTests
     [Fact]
     public void APlacedTrack_IsSungOnItsPartsNotes_AHyphenRunningOverTheBar()
     {
-        var doc = Export("score { staff vo\n lyrics words\n staff gt }");
+        var doc = Export("score { staff vo\n lyrics words on vo\n staff gt }");
         Assert.Equal(new[] { "So/single", "if/single", "you/single", "lis/begin", "ten/end", "now/single" },
             Lyrics(doc, 0));
         Assert.Empty(Lyrics(doc, 1));

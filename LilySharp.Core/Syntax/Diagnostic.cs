@@ -1623,6 +1623,42 @@ public static class DiagnosticCodes
     /// <c>female</c> (<see cref="Music.LyricSinger.Genders"/>). The parser.</summary>
     public const string SingerGenderUnknown = "LYS4040";
 
+    /// <summary>A <c>singer</c> line with no <c>sings</c> (docs/lyrics-singer-design.md).</summary>
+    public const string SingerNeedsSings = "LYS4041";
+
+    /// <summary><c>singer … sings NAME</c> where no lyrics track has that name.</summary>
+    public const string SingerWordsUnknown = "LYS4042";
+
+    /// <summary><c>singer … sings NAME</c> with no <c>on</c>, and nothing says whose notes it sings.</summary>
+    public const string SingerPartUnresolved = "LYS4043";
+
+    /// <summary>Two <c>singer</c> lines on one part; several voices are written with commas.</summary>
+    public const string SingerDuplicatePart = "LYS4044";
+
+    /// <summary><c>on NAME</c> where NAME is a voice two parts share.</summary>
+    public const string SingerVoiceAmbiguous = "LYS4045";
+
+    /// <summary><c>sounds</c> takes voice, instrument or both.</summary>
+    public const string StaffSoundUnknown = "LYS4046";
+
+    /// <summary><c>sounds voice</c> or <c>both</c> on a staff whose part no <c>singer</c> line sings.</summary>
+    public const string StaffSoundNeedsSinger = "LYS4047";
+
+    /// <summary>A track named <c>on</c>, <c>hum</c> or <c>solfege</c>.</summary>
+    public const string LyricsNameReserved = "LYS4048";
+
+    /// <summary>Lyrics written inside a part.</summary>
+    public const string LyricsInsidePart = "LYS4049";
+
+    /// <summary><c>singer … sings hum|solfege</c>, not built yet.</summary>
+    public const string SingerGeneratedWordsNotYet = "LYS4050";
+
+    /// <summary>A lyrics row with no <c>on</c> directly under a staff of several parts.</summary>
+    public const string LyricsRowNeedsOn = "LYS4051";
+
+    /// <summary>Every staff of a score is <c>hidden</c>: it would draw nothing.</summary>
+    public const string ScoreAllStavesHidden = "LYS4052";
+
     /// <summary>Warning: a drum staff's voices write two different levels at one moment —
     /// <c>@f</c> on the hands' line and <c>@p</c> on the feet's (owner's decision 2026-10-30).
     /// One drummer plays one level; the same level in both lines prints once
@@ -1901,18 +1937,6 @@ public static class DiagnosticCodes
     /// it.</summary>
     public const string GroupRowNotBoundToStaffAbove = "LYS6012";
 
-    /// <summary>Render warning: a top-level <c>lyrics NAME</c> row that binds to nothing
-    /// (no <c>sings</c> on the row or the definition, and NAME is neither the part nor one
-    /// of its voices) standing directly below a staff whose part HAS named voices —
-    /// <c>voice sop { } voice alt { }</c> … <c>staff m  lyrics allt</c>. An unbound row is
-    /// the legal even-spread lead-sheet row, so the page is drawn as before; but under a
-    /// part that names its voices the likelier reading is a misspelled voice, and the
-    /// syllables silently leave the voice's rhythm (MEASURED, session 802,
-    /// test/named-voice-lyrics with <c>alt</c> respelled <c>allt</c>: "part" 24.87 → 23.07,
-    /// "deep" 30.44 → 28.84, no diagnostic). A warning and not an error (user decision,
-    /// 2026-10-04): the even spread stays writable. Written by 0 of the 46,384 books on
-    /// disk when it was added.</summary>
-    public const string RowNamesNoVoiceOfStaffAbove = "LYS6013";
 
     // Structure / section-part grid errors (LYS7xxx)
 
@@ -1930,16 +1954,8 @@ public static class DiagnosticCodes
     /// duplicate is refused: no book on disk writes one, so nothing has to choose.</summary>
     public const string DuplicatePartProperty = "LYS7003";
 
-    /// <summary>Track error: <c>lyrics N sings T</c> where T names no declared part.</summary>
+    /// <summary>Track error: <c>lyrics N on T</c> where T names no declared part.</summary>
     public const string SingsTargetUnknown = "LYS7004";
-
-    /// <summary>Track error: two DEFINITION blocks of the same lyrics track name
-    /// different <c>sings</c> targets — the definition states the track's ONE default
-    /// melody (later same-name blocks may repeat it identically or omit it). A score
-    /// row's <c>sings</c> is not this: it binds only that row's placement, so
-    /// <c>lyrics verse sings sop … lyrics verse sings alt</c> in a score is legal
-    /// (one verse under every staff of a chorale).</summary>
-    public const string SingsConflict = "LYS7005";
 
     /// <summary>Track error: <c>chords N for P</c> (a definition or a score row) where P names
     /// no declared part (Semantics.ChordTrackPitch).</summary>

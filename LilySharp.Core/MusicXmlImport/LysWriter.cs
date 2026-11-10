@@ -122,8 +122,7 @@ internal static class LysWriter
         // ---- score: one staff per part; split staves regroup into a grand staff ----
         // The part carrying lyrics places them EXPLICITLY, by band order — one
         // `lyrics NAME` row per verse directly under the part's staff (score = a
-        // vertical stack of bands: the binding is the track's `sings`, the row's
-        // position is the placement). No auto-attach; an unreferenced block would
+        // vertical stack of bands: the row follows the staff above it). No auto-attach; an unreferenced block would
         // be a LYS4006 error.
         var scoreLyricPart = doc.Parts.FirstOrDefault(HasLyrics);
         sb.Append("score {\n");
@@ -1851,9 +1850,8 @@ internal static class LysWriter
 
         foreach (int verse in verses)
         {
-            // The track sings the part whose notes carried the syllables — the
-            // binding lives at the definition; the score row only places it.
-            var sb = new StringBuilder("lyrics " + LyricTrackName(part, first, verse) + " sings " + part.SafeName + " { ");
+            // The words alone: the score row directly under the part's staff follows that part.
+            var sb = new StringBuilder("lyrics " + LyricTrackName(part, first, verse) + " { ");
             for (int b = 0; b < measures.Count; b++)
             {
                 int silent = 0;

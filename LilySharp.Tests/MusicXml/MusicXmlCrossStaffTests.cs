@@ -626,7 +626,7 @@ public class MusicXmlCrossStaffTests
         string Book(string first) => $$"""
             time 4/4
             part v { clef treble }
-            section A { v { {{first}} | c''1 | } lyrics words sings v { la la la la la la la la | } }
+            section A { v { {{first}} | c''1 | } lyrics words { la la la la la la la la | } }
             form { ~A }
             score { staff v }
             """;

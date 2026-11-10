@@ -363,7 +363,7 @@ public class CompositionChecksTests
             Assert.DoesNotContain("a hymn", f);
         });
         // Sung: the words are the tune.
-        Assert.DoesNotContain(CompositionChecks.Of(chords.Replace("score {", "lyrics words sings gtr { la }\nscore {")),
+        Assert.DoesNotContain(CompositionChecks.Of(chords.Replace("score {", "lyrics words { la }\nsinger sings words on gtr\nscore {")),
             f => f.StartsWith("A tune is played"));
     }
 
@@ -452,8 +452,8 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Song("part singer { instrument alto }", 15)), f => f.Contains("without a rest"));
         // A violin may play on; a part a lyrics track sings is a singer whatever its instrument.
         Assert.DoesNotContain(CompositionChecks.Of(Song("part singer { instrument violin }", 16)), f => f.Contains("without a rest"));
-        Assert.Contains(CompositionChecks.Of(Song("part singer { instrument violin }", 16).Replace("}\n}\nform", "}\n  lyrics w sings singer { "
-            + string.Concat(Enumerable.Repeat("la la la la | ", 16)) + "}\n}\nform")), f => f.Contains("without a rest"));
+        Assert.Contains(CompositionChecks.Of(Song("part singer { instrument violin }", 16).Replace("}\n}\nform", "}\n  lyrics w { "
+            + string.Concat(Enumerable.Repeat("la la la la | ", 16)) + "}\n}\nsinger sings w on singer\nform")), f => f.Contains("without a rest"));
     }
 
     // Owner's trials 2026-11-07: two wind quintets' clarinets rocked in eighths from the first bar to the
@@ -505,8 +505,8 @@ public class CompositionChecksTests
     // Owner's review 2026-11-01 (Yoru-Ake-no-Uta): every two-bar phrase in `8 8 4 2 | 4 2 r4`, the chorus
     // opening with the verse's first phrase note for note, the top note spent in bar 3.
     private static string Hook(string verse, string chorus) => "title \"Hook\"\ntime 4/4\noctave absolute\npart singer { instrument alto }\n"
-        + "section Verse {\n  singer { " + verse + "}\n  lyrics w sings singer { la la | }\n}\nsection Chorus {\n  singer { " + chorus + "}\n}\n"
-        + "form { Verse Chorus Verse Chorus }\nscore { staff singer  lyrics w }\n";
+        + "section Verse {\n  singer { " + verse + "}\n  lyrics w { la la | }\n}\nsection Chorus {\n  singer { " + chorus + "}\n}\n"
+        + "form { Verse Chorus Verse Chorus }\nscore { staff singer  lyrics w on singer }\n";
     private const string P = "g'8 a'8 b'4 e''2 | d''4 c''2 r4 | ";      // the formula, topping at E5
     private const string Q = "e'8 f'8 g'4 c''2 | b'4 a'2 r4 | ";       // the formula, lower (C5)
     private const string R = "a'4. b'8 c''4 e''4 | d''2 c''2 | ";      // another rhythm, E5
@@ -543,11 +543,11 @@ public class CompositionChecksTests
             + "  a { " + bars("c'4 d'8 e'8 f'4 e'4 |").TrimEnd() + " }\n"
             + "  t { " + bars("g1 |").TrimEnd() + " }\n"
             + "  b { " + bars("c4 g,4 c4 g,4 |").TrimEnd() + " }\n"
-            + "  lyrics w sings s { " + bars("la la la la la |").TrimEnd() + " }\n"
-            + "  lyrics x sings a { " + bars("la la la la la |").TrimEnd() + " }\n"
-            + "  lyrics y sings t { " + bars("n |").TrimEnd() + " }\n"
-            + "  lyrics z sings b { " + bars("la la la la |").TrimEnd() + " }\n"
-            + "}\nform { A }\nscore { choirStaff { staff s lyrics w staff a lyrics x staff t lyrics y staff b lyrics z } }\n";
+            + "  lyrics w { " + bars("la la la la la |").TrimEnd() + " }\n"
+            + "  lyrics x { " + bars("la la la la la |").TrimEnd() + " }\n"
+            + "  lyrics y { " + bars("n |").TrimEnd() + " }\n"
+            + "  lyrics z { " + bars("la la la la |").TrimEnd() + " }\n"
+            + "}\nform { A }\nscore { choirStaff { staff s lyrics w on s staff a lyrics x on a staff t lyrics y on t staff b lyrics z on b } }\n";
         var findings = CompositionChecks.Of(choir);
         Assert.DoesNotContain(findings, f => f.StartsWith("t, the melody") || f.StartsWith("b, the melody") || f.StartsWith("a, the melody"));
     }
@@ -558,10 +558,10 @@ public class CompositionChecksTests
     public void TheChorusNamedAgainWithANumber_OpensAsTheChorusByRight()
     {
         string song = "title \"Hook\"\ntime 4/4\noctave absolute\npart singer { instrument alto }\n"
-            + "section A {\n  singer { " + Q + X + Q + X + "}\n  lyrics w sings singer { la la | }\n}\n"
+            + "section A {\n  singer { " + Q + X + Q + X + "}\n  lyrics w { la la | }\n}\n"
             + "section B {\n  singer { " + R + P + R + P + "}\n}\n"
             + "section B2 {\n  singer { " + R + P + R + "a'4 g'4 f'2 | e'1 | }\n}\n"
-            + "form { A B A B B2 }\nscore { staff singer  lyrics w }\n";
+            + "form { A B A B B2 }\nscore { staff singer  lyrics w on singer }\n";
         Assert.DoesNotContain(CompositionChecks.Of(song), f => f.Contains("opens with"));
     }
 
@@ -602,9 +602,9 @@ public class CompositionChecksTests
     {
         const string Lick = "d''8 c''4 b'8 a'8 g'4 r8 | ", Lick2 = "d''8 c''4 b'8 a'8 d''4 r8 | ", Other = "e'4 g'4 a'4 b'4 | ", Other2 = "d'4 e'4 fis'4 g'4 | ";
         string Song(string a, string b, string c, string d) => "title \"Tag\"\ntime 4/4\noctave absolute\npart singer { instrument alto }\n"
-            + $"section A {{ singer {{ g'4 a'4 b'4 c''4 | {a}}} lyrics w sings singer {{ la la | }} }}\nsection B {{ singer {{ e'4 g'4 a'4 b'4 | {b}}} }}\n"
+            + $"section A {{ singer {{ g'4 a'4 b'4 c''4 | {a}}} lyrics w {{ la la | }} }}\nsection B {{ singer {{ e'4 g'4 a'4 b'4 | {b}}} }}\n"
             + $"section C {{ singer {{ c''4 b'4 a'4 g'4 | {c}}} }}\nsection D {{ singer {{ a'4 b'4 c''4 d''4 | {d}}} }}\n"
-            + "form { A B C D A B }\nscore { staff singer  lyrics w }\n";
+            + "form { A B C D A B }\nscore { staff singer  lyrics w on singer }\n";
         Assert.Contains(CompositionChecks.Of(Song(Lick, Lick2, Lick, Other)),
             f => f.StartsWith("singer, the melody: 3 of its 4 sections close on the same figure (D5 C5 B4 A4 in bar 2 first, as the form plays them; A, B, C)"));
         // Two of four: not most.
@@ -658,8 +658,8 @@ public class CompositionChecksTests
     private static string Choir(string sop, string alt, string men, string intro = "") => "title \"Choir\"\ntime 4/4\noctave absolute\n"
         + "part sop { instrument soprano }\npart alt { instrument alto }\npart men { instrument baritone }\n" + intro
         + $"section A {{\n  sop {{ {sop} }}\n  alt {{ {alt} }}\n  men {{ {men} }}\n"
-        + "  lyrics w sings sop { " + string.Concat(Enumerable.Repeat("la la la la | ", 8)) + "}\n}\n"
-        + "form { " + (intro.Length > 0 ? "I " : "") + "A }\nscore { choirStaff { staff sop  staff alt  staff men }  lyrics w }\n";
+        + "  lyrics w { " + string.Concat(Enumerable.Repeat("la la la la | ", 8)) + "}\n}\n"
+        + "form { " + (intro.Length > 0 ? "I " : "") + "A }\nscore { choirStaff { staff sop  staff alt  staff men }  lyrics w on sop }\n";
     private static string Bars(string bar) => string.Concat(Enumerable.Repeat(bar + " | ", 8));
     private const string Sop = "g'4 a' b' c''";
 
@@ -703,7 +703,7 @@ public class CompositionChecksTests
     {
         string Song(string right, string left) => "title \"P\"\ntime 4/4\noctave absolute\npart sop { instrument soprano }\n"
             + "part rh { instrument piano-right }\npart lh { instrument piano-left }\nsection A {\n  sop { " + Bars(Sop) + "}\n  rh { " + Bars(right) + "}\n  lh { " + Bars(left) + "}\n"
-            + "  lyrics w sings sop { " + string.Concat(Enumerable.Repeat("la la la la | ", 8)) + "}\n}\nform { A }\nscore { staff sop  lyrics w  grandStaff { staff rh  staff lh } }\n";
+            + "  lyrics w { " + string.Concat(Enumerable.Repeat("la la la la | ", 8)) + "}\n}\nform { A }\nscore { staff sop  lyrics w on sop  grandStaff { staff rh  staff lh } }\n";
         Assert.Contains(CompositionChecks.Of(Song("<e' g' c''>2 <e' g' c''>2", "c1")), f => f.StartsWith("rh, lh: in 8 of its 8 bars the piano only holds"));
         Assert.DoesNotContain(CompositionChecks.Of(Song("e'8 g' c'' g' e' g' c'' g'", "c1")), f => f.Contains("only holds"));
     }
@@ -758,7 +758,7 @@ public class CompositionChecksTests
             f => f.StartsWith("The voices sing 2 bars with no words (I)"));
         // A second verse written `verse 2 { }` has its words.
         string verses = Choir(Bars(Sop), Bars("e'4 f' g' e'"), Bars("c4 d c g,")).Replace("form { A }", "form { A A \"A2\" }")
-            .Replace("lyrics w sings sop { ", "lyrics w sings sop { verse 1 { ").Replace("}\n}\nform", "} verse 2 { " + string.Concat(Enumerable.Repeat("do do do do | ", 8)) + "} }\n}\nform");
+            .Replace("lyrics w { ", "lyrics w { verse 1 { ").Replace("}\n}\nform", "} verse 2 { " + string.Concat(Enumerable.Repeat("do do do do | ", 8)) + "} }\n}\nform");
         Assert.DoesNotContain(CompositionChecks.Of(verses), f => f.Contains("with no words"));
         // Words in the soprano's track are the words all three sing.
         Assert.DoesNotContain(CompositionChecks.Of(Choir(Bars(Sop), Bars("e'4 f' g' e'"), Bars("c4 d c g,"))), f => f.Contains("with no words"));
@@ -779,7 +779,7 @@ public class CompositionChecksTests
         // 16 bars at ♩ = 84: 46 seconds. Sung, it is told; a one-part instrumental head is not.
         string song = Hook(Q + Q + Q + X, R + R + R + R).Replace("time 4/4", "tempo 84\ntime 4/4").Replace("form { Verse Chorus Verse Chorus }", "form { Verse Chorus }");
         Assert.Contains(CompositionChecks.Of(song), f => f.StartsWith("The piece is 16 bars long, about 46 seconds played"));
-        Assert.DoesNotContain(CompositionChecks.Of(song.Replace("  lyrics w sings singer { la la | }\n", "").Replace("  lyrics w", "")),
+        Assert.DoesNotContain(CompositionChecks.Of(song.Replace("  lyrics w { la la | }\n", "").Replace("  lyrics w on singer", "")),
             f => f.StartsWith("The piece is"));
     }
 
@@ -1053,7 +1053,7 @@ public class CompositionChecksTests
         Assert.DoesNotContain(twice, f => f.Contains("played the same each time"));
         Assert.DoesNotContain(twice, f => f.Contains("no level until"));
         // Sung, the verses change their words.
-        Assert.DoesNotContain(CompositionChecks.Of(Piece("Verse Chorus Verse Chorus Verse Chorus", "").Replace("form {", "lyrics words sings gtr { la }\nform {")),
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("Verse Chorus Verse Chorus Verse Chorus", "").Replace("form {", "lyrics words { la }\nsinger sings words on gtr\nform {")),
             f => f.Contains("played the same each time"));
     }
 
@@ -1071,7 +1071,7 @@ public class CompositionChecksTests
     public void AChoirsInnerVoices_MovingWithTheTop_AreLeftAlone()
     {
         string Book(string voices) => Hymn(Eight("g'4 a' b' a'"), Eight("d'4 e' d' e'"), Eight("b4 c' d' c'"), Eight("g,2 d2"), voices: voices)
-            .Replace("  alt {", $"  lyrics words sings sop {{ {string.Concat(Enumerable.Repeat("la la la la | ", 8))} }}\n  alt {{").Replace("staff bas }", "staff bas }  lyrics words");
+            .Replace("  alt {", $"  lyrics words {{ {string.Concat(Enumerable.Repeat("la la la la | ", 8))} }}\n  alt {{").Replace("staff bas }", "staff bas }  lyrics words on sop");
         var hymn = CompositionChecks.Of(Book(HymnVoices));
         Assert.Contains(hymn, f => f.StartsWith("sop, the melody: 100% of its notes are quarter notes"));
         Assert.DoesNotContain(hymn, f => f.StartsWith("alt:") || f.StartsWith("ten:"));
@@ -1159,7 +1159,7 @@ public class CompositionChecksTests
         Assert.Contains(findings, f => f.Id == "melody.leaps");
         // A bass's line is its own: a part named as one is not told.
         string alone = "title \"Walk\"\ntime 4/4\noctave absolute\npart b { instrument bass }\n"
-            + $"section A {{\n  b {{ {Bars("c4 e g e")} }}\n  lyrics words sings b {{ {string.Concat(Enumerable.Repeat("la la la la | ", 8))} }}\n}}\nform {{ A }}\nscore {{ staff b  lyrics words }}\n";
+            + $"section A {{\n  b {{ {Bars("c4 e g e")} }}\n  lyrics words {{ {string.Concat(Enumerable.Repeat("la la la la | ", 8))} }}\n}}\nform {{ A }}\nscore {{ staff b  lyrics words on b }}\n";
         Assert.Contains(CompositionChecks.Findings(alone), f => f.Id == "melody.leaps");
         Assert.Empty(NoTune(alone));
     }
@@ -1324,7 +1324,7 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Findings(Duo("A B A C A")), f => f.Id == "form.played-three-times");
         Assert.DoesNotContain(CompositionChecks.Findings(Duo("A B A B")), f => f.Id == "form.played-three-times");
         // Sung, the verses change their words.
-        Assert.DoesNotContain(CompositionChecks.Findings(Duo("A B A B A B", "lyrics words sings fl { la }\n")), f => f.Id == "form.played-three-times");
+        Assert.DoesNotContain(CompositionChecks.Findings(Duo("A B A B A B", "lyrics words { la }\n")), f => f.Id == "form.played-three-times");
         Assert.DoesNotContain(CompositionChecks.Findings(Duo("A B A B A B", "lyrics { la }\n")), f => f.Id == "form.played-three-times");
         // A part alone is said too: the notes cannot tell filling the time from a song written down, and the review says when it does not apply.
         string alone = Duo("A B A B A B").Replace("part vc { instrument cello }\n", "").Replace("  vc { c1 | g,1 | }\n", "").Replace(" staff vc", "");
@@ -1451,14 +1451,14 @@ public class CompositionChecksTests
               alt { {{Voice("c'4@mp e'4 c'4 g4")}} }
               ten { {{Voice("g4@mp c'4 g4 e4")}} }
               bas { {{Voice("c4@mp c4 c4 c4")}} }
-              lyrics words sings sop { {{string.Concat(Enumerable.Repeat("la la la la | ", 8))}} }
+              lyrics words { {{string.Concat(Enumerable.Repeat("la la la la | ", 8))}} }
             }
             form { V }
             score { choirStaff {
-              staff sop  lyrics words sings sop
-              staff alt  lyrics words sings alt
-              staff ten  lyrics words sings ten
-              staff bas  lyrics words sings bas
+              staff sop  lyrics words on sop
+              staff alt  lyrics words on alt
+              staff ten  lyrics words on ten
+              staff bas  lyrics words on bas
             } }
             """;
         var findings = CompositionChecks.Of(hymn);
@@ -1468,8 +1468,8 @@ public class CompositionChecksTests
         Assert.Contains(findings, f => f.Contains("every part moves in the same rhythm"));
         // Sung by the soprano alone, the lower voices are not told of one value each either (owner's
         // trial, the same day: so told, they were pulled apart).
-        string sopranoSings = hymn.Replace("  staff alt  lyrics words sings alt", "  staff alt")
-            .Replace("  staff ten  lyrics words sings ten", "  staff ten").Replace("  staff bas  lyrics words sings bas", "  staff bas");
+        string sopranoSings = hymn.Replace("  staff alt  lyrics words on alt", "  staff alt")
+            .Replace("  staff ten  lyrics words on ten", "  staff ten").Replace("  staff bas  lyrics words on bas", "  staff bas");
         var sung = CompositionChecks.Of(sopranoSings);
         // (Their line is another matter: this book's alto and tenor leap in every bar, and SingersLines says so.)
         Assert.DoesNotContain(sung, f => (f.StartsWith("alt") || f.StartsWith("ten") || f.StartsWith("bas")) && !f.Contains("moves are steps"));
@@ -1518,7 +1518,7 @@ public class CompositionChecksTests
             f => Assert.EndsWith("unless an even pace is the music's own character, as in a hymn, a chorale or a march: then keep it.", f));
         Assert.DoesNotContain(findings, f => f.StartsWith("rh"));
         // Sung: the part a lyrics track sings is the melody.
-        Assert.Contains(CompositionChecks.Of(ViolinAndPiano.Replace("  lh {", "  lyrics words sings rh { a a a a a | }\n  lh {")),
+        Assert.Contains(CompositionChecks.Of(ViolinAndPiano.Replace("  lh {", "  lyrics words { a a a a a | }\n  lh {").Replace("form {", "singer sings words on rh\nform {")),
             f => f.StartsWith("rh, the melody: "));
     }
 
@@ -1533,12 +1533,12 @@ public class CompositionChecksTests
         part lh { instrument piano-left }
         section A {
           vox { {{tune}} }
-          lyrics words sings vox { a a a a | }
+          lyrics words { a a a a | }
           rh { {{string.Concat(Enumerable.Repeat("<e' g'>2 <e' g'>4 <e' g'>4 | ", 8))}} }
           lh { {{string.Concat(Enumerable.Repeat("c4 g4 e4 g4 | ", 8))}} }
         }
         form { ~A }
-        score { staff vox  lyrics words  grandStaff { staff rh  staff lh } }
+        score { staff vox  lyrics words on vox  grandStaff { staff rh  staff lh } }
         """;
 
     // Owner's review 2026-11-01: a rock instrumental's verse played one rhythm in all 8 of its bars,
@@ -1558,18 +1558,18 @@ public class CompositionChecksTests
             part lh { instrument piano-left }
             section A {
               vox { {{a}} }
-              lyrics words sings vox { a a a a | }
+              lyrics words { a a a a | }
               rh { {{string.Concat(Enumerable.Repeat("<e' g'>2 <e' g'>4 <e' g'>4 | ", 8))}} }
               lh { {{string.Concat(Enumerable.Repeat("c4 g4 e4 g4 | ", 8))}} }
             }
             section B {
               vox { {{b}} }
-              lyrics words sings vox { a a a a | }
+              lyrics words { a a a a | }
               rh { {{string.Concat(Enumerable.Repeat("<f' a'>2 <f' a'>4 <f' a'>4 | ", 12))}} }
               lh { {{string.Concat(Enumerable.Repeat("f4 c'4 a4 c'4 | ", 12))}} }
             }
             form { ~A ~B }
-            score { staff vox  lyrics words  grandStaff { staff rh  staff lh } }
+            score { staff vox  lyrics words on vox  grandStaff { staff rh  staff lh } }
             """;
         // 8 of 20 bars over the piece — under the piece's half — and all 8 of A's.
         var findings = CompositionChecks.Of(Book(string.Concat(Enumerable.Repeat(poured, 8)), varied));

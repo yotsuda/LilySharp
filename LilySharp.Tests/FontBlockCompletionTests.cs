@@ -285,7 +285,7 @@ public class FontBlockCompletionTests
 
         section A {
           m { c'4 d e f | g2 g | }
-          lyrics w sings m { la la la la | la la | }
+          lyrics w { la la la la | la la | }
           chords prog { C | G | }
         }
 
@@ -295,7 +295,7 @@ public class FontBlockCompletionTests
           title "A Title"
           chords prog
           staff m
-          lyrics w
+          lyrics w on m
         }
         """;
 

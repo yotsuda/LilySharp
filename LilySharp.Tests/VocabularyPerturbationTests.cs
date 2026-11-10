@@ -468,10 +468,10 @@ public class VocabularyPerturbationTests
         part o { clef treble
           section A { e''4 f'' g'' a'' | break b''4 c''' d''' e''' | break f'''4 g''' a''' b''' | }
         }
-        lyrics w sings m { section A { la la la la | la la la la | la la la la | } }
-        lyrics v sings n { section A { do do do do | do do do do | do do do do | } }
+        lyrics w { section A { la la la la | la la la la | la la la la | } }
+        lyrics v { section A { do do do do | do do do do | do do do do | } }
         form { A }
-        score { staffGroup { staff m  staff n }  lyrics w  lyrics v  staff o }
+        score { staffGroup { staff m  staff n }  lyrics w on m  lyrics v on n  staff o }
 
         """;
 
@@ -556,7 +556,7 @@ public class VocabularyPerturbationTests
     /// </remarks>
     private static string UngroupedPaperBookWith(string entry) =>
         PaperBookWith(entry).Replace(
-            "score { staffGroup { staff m  staff n }  lyrics w  lyrics v  staff o }",
+            "score { staffGroup { staff m  staff n }  lyrics w on m  lyrics v on n  staff o }",
             "score { staff m  staff n  staff o }");
 
     /// <summary>

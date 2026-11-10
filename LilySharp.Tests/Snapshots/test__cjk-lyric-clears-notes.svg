@@ -25,10 +25,10 @@
   <text class="music" x="26.13" y="21.08" font-size="4.00" data-pos="416"></text>
   <line x1="27.37" y1="20.93" x2="27.37" y2="17.58" stroke="#000000" stroke-width="0.130"/>
   <rect x="29.37" y="17.08" width="0.19" height="4.00" data-pos="418"/>
-  <text x="17.77" y="25.29" font-size="2.47" text-anchor="middle" data-pos="459">き</text>
-  <text x="20.78" y="25.29" font-size="2.47" text-anchor="middle" data-pos="461">ら</text>
-  <text x="23.78" y="25.29" font-size="2.47" text-anchor="middle" data-pos="463">き</text>
-  <text x="26.78" y="25.29" font-size="2.47" text-anchor="middle" data-pos="465">ら</text>
+  <text x="17.77" y="25.29" font-size="2.47" text-anchor="middle" data-pos="451">き</text>
+  <text x="20.78" y="25.29" font-size="2.47" text-anchor="middle" data-pos="453">ら</text>
+  <text x="23.78" y="25.29" font-size="2.47" text-anchor="middle" data-pos="455">き</text>
+  <text x="26.78" y="25.29" font-size="2.47" text-anchor="middle" data-pos="457">ら</text>
   <rect x="11.90" y="13.48" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="396"/>
   <text x="13.28" y="15.87" font-size="2.77" text-anchor="middle" data-pos="396">A</text>
   </g>

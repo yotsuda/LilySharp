@@ -20,39 +20,22 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Music;
 
 /// <summary>
-/// The shared lyric-binding resolver: which part a lyrics TRACK sings. The
-/// binding has two sites, and they are NOT the same property (user decision,
-/// 2026-09-02 — it replaces the 2026-08-19 "one track property, two spellings"
-/// rule):
-/// <list type="bullet">
-/// <item>the DEFINITION states the track's DEFAULT melody —
-/// <c>lyrics ja sings vocal { … }</c> on any one block binds every block spelled
-/// <c>lyrics ja</c>; later definition blocks may repeat the target identically
-/// or omit it, and a different target is a conflict (LYS7005, reported by the
-/// validator from <see cref="Conflicts"/>);</item>
-/// <item>a SCORE ROW binds ITS OWN placement — <c>lyrics ja sings alt</c> puts
-/// this row's syllables at <c>alt</c>'s rhythm whatever the definition says,
-/// which is how ONE verse serves every staff of a chorale
-/// (<c>staff sop  lyrics verse sings sop  staff alt  lyrics verse sings alt …</c>).
-/// A row without <c>sings</c> takes the definition's default
-/// (<see cref="TargetOfRow"/>).</item>
-/// </list>
+/// The shared lyric-binding resolver: which part a lyrics TRACK follows. A score row places
+/// the words, with its own <c>on</c> or under the staff nearest above it
+/// (docs/lyrics-singer-design.md); a row with neither stays the even-spread lead-sheet row.
 /// ONE walk per tree, read by the collector, the exporters and the validators —
 /// never a per-walker re-derivation.
 /// </summary>
 /// <remarks>
-/// A track with no <c>sings</c> anywhere is UNBOUND: as a score row it stays the
-/// even-spread lead-sheet row. A track's NAME binds nothing, and the name of a part
-/// or a named voice is refused for one (LYS7008, owner's decision 2026-11-10).
+/// A track's NAME binds nothing, and the name of a part or a named voice is refused for one
+/// (LYS7008, owner's decision 2026-11-10).
 /// </remarks>
 public static class LyricBindings
 {
     private static readonly ConditionalWeakTable<SyntaxNode, Dictionary<string, string>> Maps = new();
 
-    /// <summary>The track's DEFAULT melody: the part the first definition block
-    /// of that name says it sings, or null when no definition block of that name
-    /// declares a binding. A score row's own <c>sings</c> is not consulted here —
-    /// that is the row's placement, read by <see cref="TargetOfRow"/>.</summary>
+    /// <summary>The track's melody: the part the first score row places it on, or null. A
+    /// score's own <c>on</c> is that row's placement, read by <see cref="TargetOfRow"/>.</summary>
     public static string? TargetOf(SyntaxNode root, string trackName)
     {
         while (root.Parent != null)
@@ -70,56 +53,19 @@ public static class LyricBindings
     public static string? TargetOfRow(SyntaxNode root, string trackName, string? rowSings)
         => rowSings ?? TargetOf(root, trackName);
 
-    /// <summary>The track name and stated target of a DEFINITION block
-    /// (<c>lyrics ja sings vocal { … }</c>) — the site that states the track's
-    /// default. A score row's <c>sings</c> is deliberately NOT read here: it
-    /// binds only its own placement, so it neither sets the default nor
-    /// conflicts with it.</summary>
-    private static (string? Name, string? Target) DefinitionBindingOf(SyntaxNode node) => node switch
-    {
-        LyricsBlockSyntax b => (b.VoiceName, b.SingsTarget),
-        _ => (null, null),
-    };
-
-    /// <summary>Every DEFINITION block that states a target DIFFERENT from its
-    /// track's first-declared one — the validator's input for LYS7005. The node
-    /// is a <see cref="LyricsBlockSyntax"/>. Score rows never conflict: each
-    /// binds its own placement.</summary>
-    public static IEnumerable<(SyntaxNode Node, string Target, string First)> Conflicts(SyntaxNode root)
-    {
-        while (root.Parent != null)
-            root = root.Parent;
-        var first = new Dictionary<string, string>(StringComparer.Ordinal);
-        // Definition blocks only, so the tree's descendant index answers in O(blocks)
-        // rather than O(tree) — this runs inside the diagnostics pass, after every
-        // settled keystroke, and a thousand-bar book holds no lyrics block at all.
-        foreach (var node in root.DescendantNodes<LyricsBlockSyntax>())
-        {
-            if (DefinitionBindingOf(node) is not ({ } name, { } target))
-                continue;
-            if (first.TryGetValue(name, out var t0))
-            {
-                if (!string.Equals(t0, target, StringComparison.Ordinal))
-                    yield return (node, target, t0);
-            }
-            else
-            {
-                first[name] = target;
-            }
-        }
-    }
-
     private static Dictionary<string, string> BuildMap(SyntaxNode root)
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
         bool unnamedTrack = false;
         foreach (var node in root.SitesOfKinds(SyntaxKind.LyricsBlock).OfType<LyricsBlockSyntax>())
-        {
-            if (node is LyricsBlockSyntax { NameToken: null })
+            if (node.NameToken == null)
                 unnamedTrack = true;
-            if (DefinitionBindingOf(node) is ({ } name, { } target) && !map.ContainsKey(name))
-                map[name] = target;
-        }
+        // Where the score places it (docs/lyrics-singer-design.md): the first row's melody, what
+        // the validators and the composing checks mean by a track's part. A track can be
+        // placed on several parts; each row knows its own (RenderSpecParser.RowTarget).
+        foreach (var row in root.SitesOfKinds(SyntaxKind.LyricsRowRender).OfType<LyricsRowRenderSyntax>())
+            if ((row.SingsTarget ?? Svg.Collector.RenderSpecParser.NearestStaffAbove(row, out _)) is { } placed)
+                map.TryAdd(row.PartName, placed);
         // The UNNAMED track that states no `sings` (2026-10-09) sings the file's one part: the
         // unnamed part, the only declared one, or — a file that declares none and writes its
         // music straight into its sections — the unnamed part a bare `staff` renders. With

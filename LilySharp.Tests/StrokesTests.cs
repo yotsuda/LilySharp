@@ -49,16 +49,16 @@ public class StrokesTests
         chords harmony { section A { C | G | } }
         section A {
           singer { c'4 d'4 e'4 f'4 | g'1 | }
-          lyrics words sings singer { a b c d | e | }
-          lyrics strum sings rhythm { ka e ri mi chi | % | }
+          lyrics words { a b c d | e | }
+          lyrics strum { ka e ri mi chi | % | }
         }
         form { A }
         score {
           staff singer
-          lyrics words
+          lyrics words on singer
           chords harmony plays rhythm
           strokes rhythm
-          lyrics strum
+          lyrics strum on rhythm
         }
         """;
 
@@ -262,7 +262,7 @@ public class StrokesTests
     [Fact]
     public void PlaysAlone_DrawsNoStaff_AndStillStrikes()
     {
-        string song = Song.Replace("  strokes rhythm\n", "").Replace("  lyrics strum\n", "");
+        string song = Song.Replace("  strokes rhythm\n", "").Replace("  lyrics strum on rhythm\n", "");
         var spec = RenderSpecParser.FindFirst(Parse(song))!;
         // The row under the singer's words stays a row, with its `plays`; no staff of the
         // strokes is added.
@@ -276,8 +276,8 @@ public class StrokesTests
         Assert.DoesNotContain("line-count", ly);
         Assert.DoesNotContain("\\rhythmVar", ly.Substring(ly.IndexOf("\\score", StringComparison.Ordinal)));
         // …and the row above the singer's staff, folded into it, strikes the same.
-        string above = Song.Replace("  staff singer\n  lyrics words\n  chords harmony plays rhythm\n  strokes rhythm\n  lyrics strum\n",
-            "  chords harmony plays rhythm\n  staff singer\n  lyrics words\n");
+        string above = Song.Replace("  staff singer\n  lyrics words on singer\n  chords harmony plays rhythm\n  strokes rhythm\n  lyrics strum on rhythm\n",
+            "  chords harmony plays rhythm\n  staff singer\n  lyrics words on singer\n");
         Assert.Equal(10, ChordStrikes(new MidiExporter().Export(Parse(above))).Length);
         var aboveItems = RenderSpecParser.FindFirst(Parse(above))!.Items;
         Assert.Equal("rhythm", Assert.Single(aboveItems.OfType<ChordRowSpec>()).Plays);

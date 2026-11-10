@@ -132,7 +132,7 @@ public class RowsOnlySystemGapTests
     // span" is an overlap without needing an X model at all.
     [Theory]
     // The reported shape: no staff at all.
-    [InlineData("  chords prog as names\n  lyrics verse sings melody")]
+    [InlineData("  chords prog as names\n  lyrics verse on melody")]
     public void WhatStandsAboveTheSecondSystem_ClearsTheFirst(string scoreBody)
     {
         var svg = Render(scoreBody);
@@ -157,11 +157,11 @@ public class RowsOnlySystemGapTests
     [Fact]
     public void ARowsOnlyScoreIsStillSpacedByItsOwnContent()
     {
-        var withLabel = Bands(Render("  chords prog as names\n  lyrics verse sings melody"));
+        var withLabel = Bands(Render("  chords prog as names\n  lyrics verse on melody"));
         // The same book with the reprise silent, so no label stands above system 2.
         var tree = SyntaxTree.Parse(
             Head.Replace("form { A |: B :| A \"A2\" }", "form { A |: B :| ~A }")
-            + "\nscore {\n  chords prog as names\n  lyrics verse sings melody\n}\n");
+            + "\nscore {\n  chords prog as names\n  lyrics verse on melody\n}\n");
         Assert.False(tree.HasErrors);
         var without = Bands(SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false }));
 

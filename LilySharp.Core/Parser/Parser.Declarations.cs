@@ -383,21 +383,6 @@ internal sealed partial class Parser
             // defaults while the quoted label overrides the shown instrument name.
             if (propName.Kind == SyntaxKind.InstrumentKeyword && Check(SyntaxKind.StringLiteral))
                 values.Add(Advance());
-            // `singer male "neutrino/SOMA"`: the name after the gender (Music.LyricSinger).
-            if (propName.Text == Music.LyricSinger.Keyword && value.Kind == SyntaxKind.Identifier && Check(SyntaxKind.StringLiteral))
-            {
-                CheckSingerGender(value);
-                values.Add(Advance());
-            }
-            // `singer "a","b"`: more voices on the part.
-            if (propName.Text == Music.LyricSinger.Keyword && (value.Kind == SyntaxKind.StringLiteral || values.Count > 1))
-            {
-                while (Check(SyntaxKind.Comma) && Peek(1)?.Kind == SyntaxKind.StringLiteral)
-                {
-                    values.Add(Advance());
-                    values.Add(ParseSingerName(allowEmpty: false));
-                }
-            }
             return new PropertyAssignmentGreen(propName, colon, [.. values]);
         }
         return null;

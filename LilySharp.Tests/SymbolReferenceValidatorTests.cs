@@ -481,7 +481,7 @@ undefined2
         section Main {
           m { c4 d e f | }
           chords prog { C | }
-          lyrics words sings m { la la la la | }
+          lyrics words { la la la la | }
         }
         form { Main }
         score x {
@@ -494,7 +494,7 @@ undefined2
     [InlineData("chords progg  tab m", "progg")]
     // A stack of verses: the SECOND one is the typo, so a scan that stops at the
     // first row would pass this.
-    [InlineData("staff m  lyrics words  lyrics wordz", "wordz")]
+    [InlineData("staff m  lyrics words on m  lyrics wordz", "wordz")]
     // Past a chord-display selector — the `as both` must not be read as a name.
     [InlineData("chords prog as both  staff m  lyrics wordz", "wordz")]
     // Inside a grand staff, whose rows are the same node kind as top-level rows.
@@ -509,11 +509,11 @@ undefined2
 
     [Theory]
     [InlineData("chords prog  staff m")]
-    [InlineData("staff m  lyrics words")]
+    [InlineData("staff m  lyrics words on m")]
     [InlineData("chords prog  tab m")]
-    [InlineData("chords prog as roman  staff m  lyrics words")]
+    [InlineData("chords prog as roman  staff m  lyrics words on m")]
     [InlineData("chords prog  staff ~m")]
-    [InlineData("staff m \"Melody\"  lyrics words")]
+    [InlineData("staff m \"Melody\"  lyrics words on m")]
     [InlineData("chords prog  staff treble m")]
     public void Validate_RowBesideAStaff_DefinedTrack_NoError(string scoreBody)
         => Assert.DoesNotContain(Refs(AttachSheet + scoreBody + " }"),

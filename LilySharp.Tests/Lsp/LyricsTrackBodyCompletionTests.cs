@@ -77,14 +77,14 @@ public class LyricsTrackBodyCompletionTests
     [Theory]
     [InlineData("lyrics w { ")]                    // plain track
     [InlineData("lyrics { ")]                      // nameless track
-    [InlineData("lyrics w sings melody { ")]       // bound track — the spelling that regressed
+    [InlineData("lyrics w { ")]       // bound track — the spelling that regressed
     public void EverySpellingOfTheHeader_OpensTheSameTrackContext(string doc)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.LyricsBlock,
             LilySharpLanguageServer.GetCompletionContext(doc, doc.Length));
 
     [Theory]
     [InlineData("lyrics words")]
-    [InlineData("lyrics words sings melody")]
+    [InlineData("lyrics words language english")]
     public void TrackBody_OffersItsSections_NeverMusic(string header)
     {
         var (text, offset) = At($$"""
@@ -105,7 +105,7 @@ public class LyricsTrackBodyCompletionTests
 
     [Theory]
     [InlineData("lyrics words")]
-    [InlineData("lyrics words sings melody")]
+    [InlineData("lyrics words language english")]
     public void AfterTheSectionKeyword_OffersTheSectionNames_NeverMusic(string header)
     {
         var (text, offset) = At($$"""
@@ -126,7 +126,7 @@ public class LyricsTrackBodyCompletionTests
 
     [Theory]
     [InlineData("lyrics words")]
-    [InlineData("lyrics words sings melody")]
+    [InlineData("lyrics words language english")]
     public void InsideACell_TheVerseHeaderIsWhatIsOffered(string header)
     {
         // Control: the CELL holds syllables — typed, not completed — and the one construct
@@ -149,7 +149,7 @@ public class LyricsTrackBodyCompletionTests
         // Control on the third reader of the same spelling: `repeat` inside a lyrics body is
         // the English word, not the directive — the guard has always known the `sings`
         // clause and must keep knowing it now that it asks IsLyricsFrame.
-        var (text, offset) = At("lyrics words sings melody { section A { repeat ▮ } }");
+        var (text, offset) = At("lyrics words { section A { repeat ▮ } }");
         var labels = CompletionLabelsAt(text, offset);
 
         Assert.DoesNotContain("unfold", labels);

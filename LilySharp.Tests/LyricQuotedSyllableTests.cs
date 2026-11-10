@@ -33,14 +33,14 @@ public class LyricQuotedSyllableTests
 
     /// <summary>The page's syllables of a sung line, as "text@item" with "+" for a hyphen after it.</summary>
     private static string[] Sung(string words) => Page(
-        Header + "section A { m { c''4 d'' e'' f'' | } lyrics w sings m { " + words + " } }\n"
-        + "form { A }\nscore { staff m  lyrics w }\n")
+        Header + "section A { m { c''4 d'' e'' f'' | } lyrics w { " + words + " } }\n"
+        + "form { A }\nscore { staff m  lyrics w on m }\n")
         .OrderBy(l => l.ItemIndex)
         .Select(Signature).ToArray();
 
     /// <summary>The same words on a row with no melody.</summary>
     private static string[] Row(string words) => Page(
-        "time 4/4\nlyrics w { " + words + " }\nscore { lyrics w }\n")
+        "time 4/4\nlyrics w { " + words + " }\nscore { lyrics w on m }\n")
         .Where(l => l.IsLyricsRow)
         .OrderBy(l => l.ItemIndex)
         .Select(Signature).ToArray();
@@ -87,7 +87,7 @@ public class LyricQuotedSyllableTests
     public void AQuotedBarDoesNotCloseARowsBar()
     {
         // No bar line of its own after it: the row's closing token would be the quoted one.
-        var tree = SyntaxTree.Parse("time 4/4\nlyrics w { x \"||\" }\nscore { lyrics w }\n");
+        var tree = SyntaxTree.Parse("time 4/4\nlyrics w { x \"||\" }\nscore { lyrics w on m }\n");
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
         var bars = score.StaffGroups.SelectMany(g => g.Staves).First().PrimaryVoice.Measures;
@@ -104,7 +104,7 @@ public class LyricQuotedSyllableTests
     [Fact]
     public void AMeltingMarkAfterABlank_HoldsNothing()
     {
-        var l = Page(Header + "section A { m { c''4 d'' e'' f'' | } lyrics w sings m { a \"\" ~ d | } }\nform { A }\nscore { staff m  lyrics w }\n")
+        var l = Page(Header + "section A { m { c''4 d'' e'' f'' | } lyrics w { a \"\" ~ d | } }\nform { A }\nscore { staff m  lyrics w on m }\n")
             .OrderBy(x => x.ItemIndex).ToList();
         Assert.Equal(new[] { "a", "d" }, l.Select(x => x.Text));
         Assert.False(l[0].MelismaAlignLeft);
@@ -116,7 +116,7 @@ public class LyricQuotedSyllableTests
     [InlineData("\" \"")]
     public void ABlankOnARow_KeepsItsShareOfTheBar_AndPrintsNothing(string blank)
     {
-        var words = Page("time 4/4\nlyrics w { a " + blank + " c d | }\nscore { lyrics w }\n");
+        var words = Page("time 4/4\nlyrics w { a " + blank + " c d | }\nscore { lyrics w on m }\n");
         Assert.Equal(new[] { "a", "c", "d" }, words.Select(l => l.Text));
         Assert.Equal(new[] { 0, 2, 3 }, words.Select(l => l.ItemIndex));
     }

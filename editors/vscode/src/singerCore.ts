@@ -92,7 +92,7 @@ export function voiceListText(voices: readonly CantoriaVoice[], filter: { provid
             languages.length > 0 ? `sings ${languages.join(', ')}` : 'languages not stated', v.licence].filter(Boolean).join(' · ').replace(': · ', ': ');
     });
     return [`${found.length} voice${found.length === 1 ? '' : 's'}${asked ? ` (${asked})` : ''}:`, ...lines, '',
-        'Write a name after singer on a part, a lyrics track or a score\'s lyrics row: singer "neutrino/MERROW". Names with commas between them sing the part together: singer "a/b","c/d". A voice sings only the languages it lists.'].join('\n');
+        'Write a name after singer, on a line of its own at the top level: singer "neutrino/MERROW" sings words on melody. Names with commas between them sing the part together: singer "a/b","c/d" sings words. A voice sings only the languages it lists.'].join('\n');
 }
 
 /** What the editor says when a voice cannot be listed, and the buttons that go on from it. */
@@ -167,7 +167,7 @@ export function voiceMenuLabel(track: string | null | undefined, part: string): 
 
 /** What the status bar says, once, of a part with words in the score and no voice asked for them. */
 export function printedWordsNote(part: string): string {
-    return `the words of ${part} are printed, not sung: write singer on the part, or give it a voice (instrument soprano)`;
+    return `the words of ${part} are printed, not sung: add a line of its own, singer sings WORDS on ${part}`;
 }
 
 /** One choice between a `singer`'s quotes. */
@@ -186,7 +186,7 @@ export function singerChoices(voices: readonly CantoriaVoice[], language: string
 
 /** Whether a score names who sings: a `singer` followed by a name or a gender, off a comment. */
 export function writesSinger(text: string): boolean {
-    return text.split('\n').some(line => /(?<![\w-])singer[ \t]+(?:"|(?:male|female)(?![\w-]))/.test(line.split('//')[0]));
+    return text.split('\n').some(line => /^[ \t]*singer\b.*\bsings\b/.test(line.split('//')[0]));
 }
 
 /** Whether a line's text before the caret ends with `singer ` or `singer male `: a space that opens the list of voices. */

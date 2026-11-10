@@ -48,9 +48,9 @@ public class LyricBarEdgeTests
         octave absolute
         part melody { clef treble }
         section A { r1 | c''4 c'' g'' g'' | a'' a'' g''2 | f''4 f'' e'' e'' | d'' d'' c''2 | }
-        lyrics words sings melody { | Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }
+        lyrics words { | Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }
         form { A }
-        score { staff melody  lyrics words }
+        score { staff melody  lyrics words on melody }
         """;
 
     /// <summary>

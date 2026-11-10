@@ -140,9 +140,9 @@ public class RowsOnlyBarNumberAnchorTests
     /// </remarks>
     [Theory]
     // The reported shape: no staff at all — the half this island added.
-    [InlineData("  chords prog as names\n  lyrics verse sings melody")]
+    [InlineData("  chords prog as names\n  lyrics verse on melody")]
     // …and the control that was always right, so the pair says which half it is guarding.
-    [InlineData("  staff melody\n  chords prog as names\n  lyrics verse sings melody")]
+    [InlineData("  staff melody\n  chords prog as names\n  lyrics verse on melody")]
     public void TheNumberIsPlacedFromWhateverCarriesTheBarlines(string scoreBody)
     {
         var svg = Render(scoreBody);
@@ -161,7 +161,7 @@ public class RowsOnlyBarNumberAnchorTests
     [Fact]
     public void TheBandTopAndTheSystemTop_AreDifferentPlacesInThisBook()
     {
-        var svg = Render("  chords prog as names\n  lyrics verse sings melody");
+        var svg = Render("  chords prog as names\n  lyrics verse on melody");
         var bandTops = BandTops(svg);
         Assert.True(bandTops.Count >= 2, $"expected two systems, found {bandTops.Count}");
 

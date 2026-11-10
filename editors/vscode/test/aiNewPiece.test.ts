@@ -472,10 +472,8 @@ describe('the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /To name a voice, call `lilysharp_listVoices` first and copy a name it answers; never guess one\./);
         assert.match(guide, /narrow it with `language`[\s\S]*`gender`[\s\S]*`provider`/);
-        assert.match(guide, /part sop \{ instrument soprano singer "neutrino\/MERROW" \}/);
-        assert.match(guide, /lyrics words singer "neutrino\/MERROW" sings melody \{ … \}/);
-        assert.match(guide, /score \{ staff melody  lyrics words sings melody singer "neutrino\/MERROW" \}/);
-        assert.match(guide, /Names with commas between them sing the part\s+together \(`singer "neutrino\/MERROW","diffsinger\/TIGER"`\), in any of the three places\./);
+        assert.match(guide, /singer "neutrino\/MERROW" sings words on sop/);
+        assert.match(guide, /Names with commas between them sing the\s+part together \(`singer "neutrino\/MERROW","diffsinger\/TIGER" sings words`\)\./);
     });
     // Owner's trials 2026-10-29: a jazz trio's drums came as a rock backbeat, its bass the chord's
     // notes in a row; the next time they swung — the guide said only "swinging on the ride".

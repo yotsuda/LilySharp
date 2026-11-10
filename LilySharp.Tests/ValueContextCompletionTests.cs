@@ -611,7 +611,7 @@ public class ValueContextCompletionTests
     // `repeat` is an English word: as a LYRIC (a top-level track's inner section, and a
     // note-bound lyrics cell), as a stray in a part header, and at the top level it is not
     // the directive, and the kinds are not offered.
-    [InlineData("lyrics v sings m { section A { repeat ")]
+    [InlineData("lyrics v { section A { repeat ")]
     [InlineData("lyrics v { section A { repeat ")]
     [InlineData("section A { m { c } lyrics { repeat ")]
     [InlineData("part m { repeat ")]

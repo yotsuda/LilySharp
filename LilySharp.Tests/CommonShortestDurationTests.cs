@@ -157,7 +157,7 @@ public class CommonShortestDurationTests
             lyrics verse { section A { one two three four five six seven eight | } }
             form { A }
             score {
-              {{(row ? "lyrics verse sings melody" : "")}}
+              {{(row ? "lyrics verse on melody" : "")}}
               staff melody
             }
             """;
@@ -231,12 +231,12 @@ public class CommonShortestDurationTests
             section Chorus {
               sax   { c'4 d e f | g2 g | a4 g f e | c1 | }
               vocal { g8 g a4 a8 a a4 | g2 f | e4 f g2 | c1 | }
-              lyrics en sings vocal { a b a b a b | a b | a b a | b | }
+              lyrics en { a b a b a b | a b | a b a | b | }
             }
             form { Chorus }
             score {
               staff sax
-              {{(row ? "lyrics en" : "")}}
+              {{(row ? "lyrics en on vocal" : "")}}
             }
             """;
 

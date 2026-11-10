@@ -224,7 +224,7 @@ public static class CompositionChecks
         // there are few), and the part playing them its melody, held to a melody's rhythm (owner's
         // report 2026-10-29: told it had no tune, a rock trio's guitar ran six eighths after a chord
         // in every bar of every section — single notes, no tune to remember).
-        var instrumentalLines = band && !System.Text.RegularExpressions.Regex.IsMatch(source, @"\blyrics\s+\w+\s+sings\b")
+        var instrumentalLines = band && SungPartsOf(root).Count == 0
             ? LineBars(midi, parts, barList) : ((Dictionary<string, HashSet<int>>, int)?)null;
         if (instrumentalLines is { } il && melodies.Count == 0)
             melodies.UnionWith(il.Item1.Where(l => l.Value.Count >= System.Math.Max(4, il.Item2 / 4)).Select(l => l.Key));
@@ -607,8 +607,7 @@ public static class CompositionChecks
             .Select(p => p.Key).ToHashSet(System.StringComparer.Ordinal)));
         findings.AddRange(OneProgression(midi, barList, fifths));
         findings.AddRange(StaffRestatesTheChordsRow(midi, parts, barList));
-        var sung = System.Text.RegularExpressions.Regex.Matches(source, @"\blyrics\s+\w+\s+sings\s+(\w+)")
-            .Select(m => m.Groups[1].Value).ToHashSet(System.StringComparer.Ordinal);
+        var sung = SungPartsOf(root);
         findings.AddRange(NoBreath(midi, parts, barList, sung));
         findings.AddRange(SingersLines(midi, parts, declared is { } placed
             ? placed.Declaration.DescendantNodes<StaffRenderSyntax>().Select(s => s.PartToken?.Text).OfType<string>().ToList()
@@ -2552,6 +2551,12 @@ public static class CompositionChecks
         return (lines, played);
     }
 
+    /// <summary>The parts words are set to or a singer sings: a row's melody, or a <c>singer</c> line's.</summary>
+    private static HashSet<string> SungPartsOf(SyntaxNode root)
+        => root.DescendantNodes<LyricsRowRenderSyntax>().Select(Svg.Collector.RenderSpecParser.RowTarget).OfType<string>()
+            .Concat(Music.LyricSinger.LinesOf(root).Select(l => l.Part).OfType<string>())
+            .ToHashSet(System.StringComparer.Ordinal);
+
     /// <summary>
     /// The parts that carry the melody: those a lyrics track sings; else, beside a piano, the
     /// parts that are neither the piano nor a band's drums, bass or chords (a violin's, a flute's);
@@ -2560,8 +2565,7 @@ public static class CompositionChecks
     private static HashSet<string> MelodiesOf(string source, IReadOnlyList<PartDeclarationSyntax> parts,
         IReadOnlyDictionary<string, bool> hands, bool band, MidiFile? midi = null)
     {
-        var sung = System.Text.RegularExpressions.Regex.Matches(source, @"\blyrics\s+\w+\s+sings\s+(\w+)")
-            .Select(m => m.Groups[1].Value).ToHashSet(System.StringComparer.Ordinal);
+        var sung = SungPartsOf(SyntaxTree.Parse(source).GetRoot());
         // A choir — three voices or more singing words — has its tune in the top voice; the voices under
         // it sing the harmony, a bass leaping by its roots (owner's trial 2026-11-08: a mixed choir's
         // tenor and bass, humming whole notes under a verse, were told their rhythm and their leaps as

@@ -51,7 +51,8 @@ public sealed class SymbolKindsTests
         section A { melody { riff } low { g,4 a, b, c | } }
         section B { melody { e'4 f g a | } low { c'4 d e f | } }
         chords prog { section A { | G | } section B { | C | } }
-        lyrics verse sings melody { section A { la la la la | } section B { la la la la | } }
+        lyrics verse { section A { la la la la | } section B { la la la la | } }
+        singer sings verse on melody
         form { A ~B }
         score {
           staff melody
@@ -61,7 +62,7 @@ public sealed class SymbolKindsTests
           condensedStaff { melody low }
           combinedStaff { melody low }
           chords prog
-          lyrics verse
+          lyrics verse on melody
         }
         """;
 
@@ -129,7 +130,7 @@ public sealed class SymbolKindsTests
                 .Replace("form { A ~B }", "form { A ~Nope }")
                 .Replace("combinedStaff { melody low }", "combinedStaff { melody lo }")
                 .Replace("melody { riff }", "melody { rif }"),
-            @"lyrics verse(\s*\})", "lyrics vers$1");
+            @"lyrics verse on melody(\s*\})", "lyrics vers$1");
         Assert.Contains("lyrics vers", poisoned);
         broken.Validate(SyntaxTree.Parse(poisoned));
         var codes = broken.Diagnostics.Select(d => d.Code).ToList();

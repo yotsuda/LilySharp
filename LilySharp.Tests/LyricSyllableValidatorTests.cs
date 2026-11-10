@@ -40,7 +40,7 @@ public class LyricSyllableValidatorTests
     // scored form is the only way the collector aligns syllables to notes and records the
     // overflow this validator reads back.
     private static string Scored(string music, string lyrics) =>
-        $"time 4/4\nsection S {{\n  m {{ {music} }}\n  lyrics w sings m {{ {lyrics} }}\n}}\n"
+        $"time 4/4\nsection S {{\n  m {{ {music} }}\n  lyrics w {{ {lyrics} }}\n}}\n"
         + "form { S }\nscore { staff m  lyrics w }\n";
 
     private static Diagnostic? Overflow(IReadOnlyList<Diagnostic> diags) =>

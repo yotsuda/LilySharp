@@ -91,7 +91,7 @@ public class OmrFeedbackRegressionTests
     {
         var (_, layout) = Build(Song(
             "R1 | R1 | break c'4 d'4 e'4 f'4 | g'1 |",
-            "lyrics vowords sings vo { | | la la la la | la | }"));
+            "lyrics vowords { | | la la la la | la | }"));
 
         var second = layout.AllSystems[1];
         var staves = second.StaffGroups.SelectMany(g => g.Staves).Where(s => !s.IsHidden)

@@ -5,10 +5,10 @@ key f major
 part melody { clef treble }
 section A {
   melody { f'4 g a bes | c2 a4 f4 | g4 a bes a | f1 | }
-  lyrics words sings melody {
+  lyrics words {
     Sing- ing all the | day ~ long, |
     ev- ery word a | song |
   }
 }
 form { ~A }
-score { staff melody  lyrics words }
+score { staff melody  lyrics words on melody }

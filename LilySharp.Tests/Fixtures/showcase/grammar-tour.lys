@@ -169,8 +169,8 @@ score {
 // 歌詞(lyrics)。⚠️ この 3 行は 2026-08-16 まで 3 つとも偽だった——書いてあった例は
 // いま error（無名 lyrics）・指していたパスは存在せず・「グランドスタッフでは未対応」は
 // 実測で覆った。現行の綴りは LilySharp.Tests/Fixtures/test/lyrics.lys:
-//   section Main { melody { c4 d e f | g2 g | } lyrics words sings melody { Twin- kle twin- kle | star~ | } }
-//   score { staff melody  lyrics words }
+//   section Main { melody { c4 d e f | g2 g | } lyrics words { Twin- kle twin- kle | star~ | } }
+//   score { staff melody  lyrics words on melody }
 // （- で音節区切り、~ でメリスマ。関連は定義側の sings が結び、score は行を並べて置く）
 // ⚠️ 無名の `lyrics { … }` を section に書くと error：「an unnamed 'lyrics { ... }' block has
 //    no way to be attached」——参照する術が無いため。

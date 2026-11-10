@@ -15,7 +15,7 @@ section Chorale {
   sop { b'4 b' c'' d'' | d''4 c'' b' a' | }
   alt { g'4. g'8 g'4 g' | g'4 g' g' fis' | }
   bas { g,4 g, c g, | g,8 g, c4 g, d | }
-  lyrics verse sings sop { Freu- de, schö- ner | Göt- ter- fun- ken, | }
+  lyrics verse { Freu- de, schö- ner | Göt- ter- fun- ken, | }
 }
 
 form { Chorale }
@@ -23,10 +23,10 @@ form { Chorale }
 score {
   choirStaff {
     staff sop "Soprano"
-    lyrics verse
+    lyrics verse on sop
     staff alt "Alto"
-    lyrics verse sings alt
+    lyrics verse on alt
     staff bas "Bass"
-    lyrics verse sings bas
+    lyrics verse on bas
   }
 }

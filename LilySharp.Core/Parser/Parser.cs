@@ -254,8 +254,8 @@ internal sealed partial class Parser
             else if (tableHead && t.Kind != SyntaxKind.Identifier)
                 tableHead = false;
 
-            // A lyrics { } BODY. The score row `lyrics NAME sings PART` has no brace, so the
-            // region arms only on a '{' that follows the head (name, `sings`, part).
+            // A lyrics { } BODY. The score row `lyrics NAME on PART` has no brace, so the
+            // region arms only on a '{' that follows the head (name, `language` and its word).
             if (lyricsDepth > 0)
             {
                 if (t.Kind == SyntaxKind.OpenBrace) lyricsDepth++;
@@ -573,6 +573,7 @@ internal sealed partial class Parser
         SyntaxKind.Identifier when Current.Text == Semantics.CapoDirective.Keyword => false,
         SyntaxKind.Identifier when Current.Text == Semantics.ChordShapesDirective.Keyword => false,
         SyntaxKind.Identifier when IsLanguageDeclaration() => false,
+        SyntaxKind.Identifier when IsSingerDeclaration() => false,
         // A bare clef or dynamic word is a phrase reference INSIDE a music stream
         // (IsBareReferenceKind), and nothing at the file level: it keeps falling to the
         // skip path, where `treble { … }` gets its grand-staff hint (LYS0011) and anything
@@ -642,6 +643,8 @@ internal sealed partial class Parser
             SyntaxKind.Identifier when Current.Text == Semantics.ChordShapesDirective.Keyword => ParseChordShapesDeclaration(),
             // `language japanese` — what the file's lyrics are written in (Music.LyricLanguage).
             SyntaxKind.Identifier when IsLanguageDeclaration() => new LanguageDeclarationGreen(Advance(), ParseLanguageName()),
+            // `singer female sings words on sop` — who sings what (Music.LyricSinger).
+            SyntaxKind.Identifier when IsSingerDeclaration() => ParseSingerDeclaration(),
 
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword
                 or SyntaxKind.SubtitleKeyword or SyntaxKind.PoetKeyword => ParseMetadataDeclaration(),

@@ -99,7 +99,7 @@ public sealed class SectionDeclarationTildeTests
     [Theory]
     [InlineData("time 4/4\npart m\nsection ~A { m { c'4 c c c | } }\nform { A }\nscore { staff m }\n")]
     [InlineData("time 4/4\npart m {\n  section ~A { c'4 c c c | }\n}\nform { A }\nscore { staff m }\n")]
-    [InlineData("time 4/4\npart m {\n  section A { c'4 c c c | }\n}\nlyrics verse {\n  section ~A { la la la la | }\n}\nform { A }\nscore {\n  staff m\n  lyrics verse sings m\n}\n")]
+    [InlineData("time 4/4\npart m {\n  section A { c'4 c c c | }\n}\nlyrics verse {\n  section ~A { la la la la | }\n}\nform { A }\nscore {\n  staff m\n  lyrics verse on m\n}\n")]
     [InlineData("time 4/4\npart m {\n  section A { c'4 c c c | }\n}\nchords prog {\n  section ~A { Dm7 | }\n}\nform { A }\nscore {\n  chords prog\n  staff m\n}\n")]
     public void ADeclarationTildeIsReportedOnceAndKept(string source)
     {

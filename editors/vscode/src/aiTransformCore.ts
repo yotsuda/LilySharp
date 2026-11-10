@@ -737,7 +737,7 @@ export function warningTodoLines(text: string, warnings: readonly { Line: number
  */
 export function withLyricsRows(text: string): { text: string; added: string[] } {
     const tracks = new Map<string, string>();   // track → the part it sings
-    for (const m of text.matchAll(/\blyrics\s+(\w+)\s+sings\s+(\w+)/g)) {
+    for (const m of text.matchAll(/^[ \t]*singer\b[^\n]*?\bsings[ \t]+(\w+)[ \t]+on[ \t]+(\w+)/gm)) {
         if (!tracks.has(m[1])) { tracks.set(m[1], m[2]); }
     }
     const added: string[] = [];

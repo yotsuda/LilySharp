@@ -40,10 +40,11 @@ public class SungRequestTests
           bass { c,2 | f,2 | }
           lyrics verse { ゆ _ き や | こん こ | }
         }
+        singer sings verse on melody
         form { A }
-        score { staff melody  lyrics verse sings melody  staff bass }
+        score { staff melody  lyrics verse on melody  staff bass }
         score bare { staff bass }
-        score unseen { staff bass  lyrics verse sings melody }
+        score unseen { staff melody hidden  staff bass  lyrics verse on melody }
         """;
 
     private static LilySharpLanguageServer Open(out Uri uri)
@@ -84,7 +85,7 @@ public class SungRequestTests
     /// words, the playback carries its notes as a sung part (the stand-in while there is no
     /// voice), and the practice menu does not list it as a part the score leaves out.</summary>
     [Fact]
-    public void APartNoStaffShows_IsSungUnseen_WhenARowSingsIt()
+    public void AHiddenStaff_IsSungUnseen_WhenASingerLineSingsIt()
     {
         var server = Open(out var uri);
         var sung = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, RenderName = "unseen" });
@@ -132,10 +133,11 @@ public class SungRequestTests
         const string source = """
             time 4/4
             part melody { clef treble  section A { c'4 d e f | g a b c' | } }
-            lyrics first sings melody { section A { か え る の | う た が き | } }
-            lyrics chosen sings melody { section A { frog frog frog frog | | } }
+            lyrics first { section A { か え る の | う た が き | } }
+            lyrics chosen { section A { frog frog frog frog | | } }
+            singer "diffsinger/TIGER" sings chosen
             form { A }
-            score { staff melody  lyrics chosen sings melody singer "diffsinger/TIGER" }
+            score { staff melody  lyrics chosen on melody }
             """;
         var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"lilysharp-sung-{Guid.NewGuid():N}.lys");
         System.IO.File.WriteAllText(path, source);

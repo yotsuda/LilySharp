@@ -501,6 +501,15 @@ internal sealed class ChordShapesDeclarationGreen : GreenSyntaxNode
     }
 }
 
+/// <summary>Who sings what: singer [S] sings [NAME] [on PART] (Music.LyricSinger).</summary>
+internal sealed class SingerDeclarationGreen : GreenSyntaxNode
+{
+    public SingerDeclarationGreen(params SyntaxToken[] tokens)
+        : base(SyntaxKind.SingerDeclaration, tokens)
+    {
+    }
+}
+
 /// <summary>The language of the file's lyrics: language japanese (Music.LyricLanguage).</summary>
 internal sealed class LanguageDeclarationGreen : GreenSyntaxNode
 {

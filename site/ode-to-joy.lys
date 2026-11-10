@@ -32,12 +32,12 @@ form { Chorale }
 score {
   choirStaff {
     staff sop "Soprano"
-    lyrics verse sings sop
+    lyrics verse on sop
     staff alt "Alto"
-    lyrics verse sings alt
+    lyrics verse on alt
     staff ten "Tenor"
-    lyrics verse sings ten
+    lyrics verse on ten
     staff bas "Bass"
-    lyrics verse sings bas
+    lyrics verse on bas
   }
 }

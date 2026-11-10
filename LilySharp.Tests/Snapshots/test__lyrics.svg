@@ -41,17 +41,17 @@
   <rect x="44.18" y="23.91" width="0.19" height="4.00" data-pos="205"/>
   <rect x="59.17" y="23.91" width="0.19" height="4.00" data-pos="220"/>
   <rect x="67.32" y="23.91" width="0.19" height="4.00" data-pos="229"/>
-  <text x="17.77" y="31.41" font-size="2.47" text-anchor="middle" data-pos="269">Twin</text>
-  <text x="22.57" y="31.41" font-size="2.47" text-anchor="middle" data-pos="275">kle</text>
-  <text x="27.34" y="31.41" font-size="2.47" text-anchor="middle" data-pos="279">twin</text>
-  <text x="31.76" y="31.41" font-size="2.47" text-anchor="middle" data-pos="285">kle</text>
-  <text x="36.12" y="31.41" font-size="2.47" text-anchor="middle" data-pos="295">lit</text>
-  <text x="40.40" y="31.41" font-size="2.47" text-anchor="middle" data-pos="300">tle</text>
-  <text x="45.92" y="31.41" font-size="2.47" text-anchor="middle" data-pos="310">how</text>
-  <text x="49.15" y="31.41" font-size="2.47" text-anchor="middle" data-pos="314">I</text>
-  <text x="52.39" y="31.41" font-size="2.47" text-anchor="middle" data-pos="316">won</text>
-  <text x="56.65" y="31.41" font-size="2.47" text-anchor="middle" data-pos="321">der</text>
-  <text x="63.53" y="31.41" font-size="2.47" text-anchor="middle" data-pos="331">star</text>
+  <text x="17.77" y="31.41" font-size="2.47" text-anchor="middle" data-pos="256">Twin</text>
+  <text x="22.57" y="31.41" font-size="2.47" text-anchor="middle" data-pos="262">kle</text>
+  <text x="27.34" y="31.41" font-size="2.47" text-anchor="middle" data-pos="266">twin</text>
+  <text x="31.76" y="31.41" font-size="2.47" text-anchor="middle" data-pos="272">kle</text>
+  <text x="36.12" y="31.41" font-size="2.47" text-anchor="middle" data-pos="282">lit</text>
+  <text x="40.40" y="31.41" font-size="2.47" text-anchor="middle" data-pos="287">tle</text>
+  <text x="45.92" y="31.41" font-size="2.47" text-anchor="middle" data-pos="297">how</text>
+  <text x="49.15" y="31.41" font-size="2.47" text-anchor="middle" data-pos="301">I</text>
+  <text x="52.39" y="31.41" font-size="2.47" text-anchor="middle" data-pos="303">won</text>
+  <text x="56.65" y="31.41" font-size="2.47" text-anchor="middle" data-pos="308">der</text>
+  <text x="63.53" y="31.41" font-size="2.47" text-anchor="middle" data-pos="318">star</text>
   <text class="music" x="13.42" y="22.54" font-size="3.56" data-pos="127"></text>
   <line x1="14.52" y1="22.38" x2="14.52" y2="19.87" stroke="#000000" stroke-width="0.116" data-pos="127"/>
   <text x="15.20" y="23.03" font-size="2.20" data-pos="127">= 120</text>

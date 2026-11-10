@@ -9,7 +9,7 @@ time 4/4
 
 part v { }
 
-lyrics w sings v { section Main { ha ha looong __ ho | } }
+lyrics w { section Main { ha ha looong __ ho | } }
 
 section Main {
   v { c'4 c' c'16( d' e' f') g'4 | }
@@ -17,4 +17,4 @@ section Main {
 
 form { ~Main }
 
-score { staff ~v  lyrics w }
+score { staff ~v  lyrics w on v }

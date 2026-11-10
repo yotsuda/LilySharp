@@ -827,6 +827,36 @@ public sealed partial class StaffRenderSyntax : SyntaxNode
     /// <summary>The part played to MIDI only that follows a part which is also a clef word —
     /// <c>staff bass click</c> beside <c>part bass</c> — or null (<see cref="StaffTargets"/>).</summary>
     public SyntaxTokenNode? MidiOnlyPartToken => StaffTargets.Of(this).MidiOnly;
+
+    /// <summary>Whether the item draws nothing (<c>staff m hidden</c>).</summary>
+    public bool Hidden => StaffSoundClause.Of(this).Hidden;
+
+    /// <summary>The word after <c>sounds</c> (<c>voice</c>, <c>instrument</c>, <c>both</c>), or null.</summary>
+    public SyntaxTokenNode? SoundsToken => StaffSoundClause.Of(this).Sounds;
+}
+
+/// <summary>
+/// The tail of a <c>staff</c> or <c>tab</c> item: <c>[hidden] [sounds WORD]</c>, the last tokens of
+/// the item (Parser.ConsumeStaffSound).
+/// </summary>
+internal static class StaffSoundClause
+{
+    /// <summary>Whether it hides, the value token, and the first slot of the tail.</summary>
+    internal readonly record struct Reading(bool Hidden, SyntaxTokenNode? Sounds, int End);
+
+    internal static Reading Of(SyntaxNode item)
+    {
+        int end = item.SlotCount;
+        SyntaxTokenNode? sounds = null;
+        if (end >= 3 && item.GetChild(end - 2) is SyntaxTokenNode { Text: "sounds" })
+        {
+            sounds = item.GetChild(end - 1) as SyntaxTokenNode;
+            end -= 2;
+        }
+        // At slot 1 the word is the part: `staff hidden` is a part called hidden.
+        bool hidden = end >= 3 && item.GetChild(end - 1) is SyntaxTokenNode { Text: "hidden" };
+        return new Reading(hidden, sounds, hidden ? end - 1 : end);
+    }
 }
 
 /// <summary>
@@ -878,7 +908,8 @@ internal static class StaffTargets
         var words = new List<SyntaxTokenNode>();
         SyntaxTokenNode? tilde = null, display = null, lines = null, removeEmpty = null, pitch = null;
         int i = 1;
-        for (; i < item.SlotCount; i++)
+        int itemEnd = StaffSoundClause.Of(item).End;
+        for (; i < itemEnd; i++)
         {
             if (item.GetChild(i) is not SyntaxTokenNode t)
                 continue;
@@ -894,11 +925,11 @@ internal static class StaffTargets
         // The selectors, any order, the last spelling of each winning; a selector word
         // directly followed by the other one wrote no value.
         static bool IsSelectorWord(SyntaxTokenNode t) => t.Text is "lines" or "removeEmpty" or "pitch";
-        for (i++; i < item.SlotCount; i++)
+        for (i++; i < itemEnd; i++)
         {
             if (item.GetChild(i) is not SyntaxTokenNode t || !IsSelectorWord(t))
                 continue;
-            var value = i + 1 < item.SlotCount && item.GetChild(i + 1) is SyntaxTokenNode v && !IsSelectorWord(v)
+            var value = i + 1 < itemEnd && item.GetChild(i + 1) is SyntaxTokenNode v && !IsSelectorWord(v)
                 ? v : null;
             if (t.Text == "lines")
                 lines = value;
@@ -1036,57 +1067,23 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
     /// <summary>The token naming the track to place, or null for a bare <c>lyrics</c> — the
     /// file's unnamed track.</summary>
     public SyntaxTokenNode? NameToken =>
-        GetChild(1) is SyntaxTokenNode t && !(t.Kind == SyntaxKind.Identifier && t.Text == "sings" && SlotCount > 2)
-            && !(t.Kind == SyntaxKind.Identifier && t.Text == Music.LyricSinger.Keyword && SlotCount > 2
-                && (GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral }
-                    || (GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } word
-                        && (Music.LyricSinger.Genders.Contains(word.Text) || (SlotCount > 3 && GetChild(3) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral })))))
-            ? t : null;
+        GetChild(1) is SyntaxTokenNode t && !(t.Kind == SyntaxKind.Identifier && t.Text == "on" && SlotCount > 2) ? t : null;
 
     /// <summary>The lyrics part name to place (e.g. <c>lyrics verse</c> → "verse"; a bare
     /// <c>lyrics</c> → <see cref="SyntaxFacts.UnnamedLyricsName"/>).</summary>
     public string PartName => NameToken?.Text ?? SyntaxFacts.UnnamedLyricsName;
 
-    /// <summary>A clause of the row by its word: pairs after the name, in the order written, a
-    /// <c>singer</c>'s gender standing between its pair. With no name, the gender is the value.</summary>
-    private (SyntaxTokenNode? Keyword, SyntaxTokenNode? Value, int Index) Clause(string word)
-    {
-        for (int i = NameToken != null ? 2 : 1; i < SlotCount; i += 2)
-        {
-            if (GetChild(i) is not SyntaxTokenNode { Kind: SyntaxKind.Identifier } keyword)
-                continue;
-            var name = keyword.Text == Music.LyricSinger.Keyword && i + 2 < SlotCount
-                && GetChild(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier }
-                && GetChild(i + 2) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } literal ? literal : null;
-            bool gendered = name != null;
-            int value = name != null && Music.LyricSinger.ValueOf(name.Text).Length > 0 ? i + 2 : i + 1;
-            if (keyword.Text == word)
-                return (keyword, value < SlotCount ? GetChild(value) as SyntaxTokenNode : null, value);
-            if (gendered)
-                i++;
-        }
-        return default;
-    }
+    /// <summary>The <c>on</c> of a row that names its melody (<c>lyrics verse on melody</c>), or null.</summary>
+    public SyntaxTokenNode? SingsKeyword =>
+        GetChild(NameToken != null ? 2 : 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text: "on" } on ? on : null;
 
-    /// <summary>The <c>sings</c> keyword token of a binding-stating row
-    /// (<c>lyrics verse sings melody</c>), or null when the row writes none.</summary>
-    public SyntaxTokenNode? SingsKeyword => Clause("sings").Keyword;
-
-    /// <summary>The token naming the part this row says its track sings, or null when the
-    /// row states no binding — what the editor colours.</summary>
+    /// <summary>The token naming the part this row follows, or null when the row names none —
+    /// what the editor colours.</summary>
     public SyntaxTokenNode? SingsTargetToken =>
-        Clause("sings").Value is { Kind: SyntaxKind.Identifier, Text.Length: > 0 } t2 ? t2 : null;
+        SingsKeyword != null && GetChild(NameToken != null ? 3 : 2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text.Length: > 0 } t ? t : null;
 
-    /// <summary>Who sings THIS placement (<c>lyrics verse singer "neutrino/MERROW" sings melody</c>),
-    /// or null (<see cref="Music.LyricSinger"/>).</summary>
-    public string? Singer => Clause(Music.LyricSinger.Keyword) is { Value: { } t } c ? Music.LyricSinger.Joined(t, c.Index, GetChild, SlotCount) : null;
-
-    /// <summary>The part THIS ROW sings (<c>lyrics verse sings melody</c> →
-    /// "melody"), or null when the row states none and the track's default (the
-    /// definition's <c>sings</c>) applies. The row's binding is its own
-    /// placement's — a score may place one track under several parts, each row
-    /// naming its melody; see <see cref="Music.LyricBindings.TargetOfRow"/> for
-    /// the resolved answer.</summary>
+    /// <summary>The part THIS ROW follows (<c>lyrics verse on melody</c> → "melody"), or null;
+    /// see <see cref="Svg.Collector.RenderSpecParser.RowTarget"/> for the resolved answer.</summary>
     public string? SingsTarget => SingsTargetToken?.Text;
 }
 
@@ -1290,6 +1287,12 @@ public sealed partial class TabRenderSyntax : SyntaxNode
     {
     }
 
+    /// <summary>Whether the item draws nothing (<c>tab m hidden</c>).</summary>
+    public bool Hidden => StaffSoundClause.Of(this).Hidden;
+
+    /// <summary>The word after <c>sounds</c>, or null.</summary>
+    public SyntaxTokenNode? SoundsToken => StaffSoundClause.Of(this).Sounds;
+
     /// <summary>The <c>tab</c> keyword token.</summary>
     public SyntaxTokenNode TabKeyword => (SyntaxTokenNode)GetChild(0)!;
 
@@ -1329,7 +1332,8 @@ public sealed partial class TabRenderSyntax : SyntaxNode
     internal IEnumerable<SyntaxTokenNode> SelectorWords()
     {
         bool after = false;
-        for (int i = 1; i < SlotCount; i++)
+        int end = StaffSoundClause.Of(this).End;
+        for (int i = 1; i < end; i++)
         {
             if (GetChild(i) is not SyntaxTokenNode t)
                 continue;
@@ -1347,7 +1351,8 @@ public sealed partial class TabRenderSyntax : SyntaxNode
         get
         {
             var targets = new List<SyntaxTokenNode>();
-            for (int i = 1; i < SlotCount; i++)
+            int end = StaffSoundClause.Of(this).End;
+            for (int i = 1; i < end; i++)
             {
                 if (GetChild(i) is not SyntaxTokenNode t) continue;
                 if (t.Kind is SyntaxKind.OpenBrace or SyntaxKind.CloseBrace) continue;

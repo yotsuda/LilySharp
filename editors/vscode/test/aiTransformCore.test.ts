@@ -333,7 +333,7 @@ describe('instructions too large for a model', () => {
 // Owner's report 2026-10-29: a composed song wrote `lyrics words sings lead` in every section and no
 // `lyrics words` row in its score, so the words were drawn nowhere.
 describe('a lyrics track no score shows', () => {
-    const song = 'part lead { instrument soprano }\r\nsection A {\r\n  lead { c\'\'4 d\'\' e\'\' f\'\' | }\r\n  lyrics words sings lead { a b c d | }\r\n}\r\n'
+    const song = 'part lead { instrument soprano }\r\nsection A {\r\n  lead { c\'\'4 d\'\' e\'\' f\'\' | }\r\n  lyrics words { a b c d | }\r\n}\r\nsinger sings words on lead\r\n'
         + 'form { A }\r\n\r\nscore {\r\n  staff lead\r\n  staff gtr\r\n}\r\n';
     it('is given a row under the staff it sings', () => {
         const r = withLyricsRows(song);

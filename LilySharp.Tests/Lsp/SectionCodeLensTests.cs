@@ -230,9 +230,9 @@ public class SectionCodeLensTests
         const string text = """
             part flute { section A { c1 | } }
             part oboe { section A { c1 | } }
-            lyrics words sings flute { section A { la | } }
+            lyrics words { section A { la | } }
             form { A }
-            score { staff flute  lyrics words  staff oboe }
+            score { staff flute  lyrics words on flute  staff oboe }
             """;
         var lens = LensesOf(text).First();
         Assert.Equal("lilysharp.showSectionLayers", lens.Command!.CommandIdentifier);
@@ -247,7 +247,7 @@ public class SectionCodeLensTests
         const string groupedBySection = """
             part flute
             part oboe
-            section A { flute { c1 | c1 | } oboe { c1 | } lyrics w sings flute { la | lu | } }
+            section A { flute { c1 | c1 | } oboe { c1 | } lyrics w { la | lu | } }
             form { |: A :| }
             score { staff flute  staff oboe }
             """;

@@ -42,10 +42,11 @@ public class SingsCompletionTests
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterLyricsTrackName, Ctx(text));
 
     [Theory]
-    [InlineData("lyrics verse sings ")]
-    [InlineData("lyrics verse sings vo")]                            // typing the target
-    [InlineData("section A { melody { c4 d } lyrics words sings ")]
-    public void AfterSings_OffersTheBindingTargets(string text)
+    [InlineData("score { staff m  lyrics w on ")]
+    [InlineData("score { staff m  lyrics w on vo")]                 // typing the target
+    [InlineData("singer sings w on ")]
+    [InlineData("singer \"a/b\" sings w on vo")]
+    public void AfterOn_OffersTheBindingTargets(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterSingsTarget, Ctx(text));
 
     [Theory]
@@ -60,12 +61,16 @@ public class SingsCompletionTests
     [Fact]
     public void ASyllableSpelledSings_DoesNotOfferBindingTargets()
         => Assert.NotEqual(LilySharpLanguageServer.CompletionContext.AfterSingsTarget,
-            Ctx("lyrics verse sings melody { section A { he sings "));
+            Ctx("lyrics verse { section A { he sings "));
 
     [Fact]
-    public void TrackNameCompletions_ContainSings()
-        => Assert.Contains(LilySharpLanguageServer.GetLyricsTrackNameCompletions().Items,
-            i => i.Label == "sings");
+    public void TrackNameCompletions_ContainLanguage_AndNoVoice()
+    {
+        var labels = LilySharpLanguageServer.GetLyricsTrackNameCompletions().Items.Select(i => i.Label).ToArray();
+        Assert.Contains("language", labels);
+        Assert.DoesNotContain("sings", labels);
+        Assert.DoesNotContain("singer", labels);
+    }
 
     [Fact]
     public void SingsTargets_AreTheDeclaredPartsAndNamedVoices()
@@ -105,7 +110,7 @@ public class SingsCompletionTests
     [InlineData("score chords {\n  ", "ScoreBlock")]
     [InlineData("score lyrics {\n  ", "ScoreBlock")]
     [InlineData("score tab {\n  ", "ScoreBlock")]
-    [InlineData("score chords {\n  lyrics words sings ", "AfterSingsTarget")]
+    [InlineData("score chords {\n  lyrics words on ", "AfterSingsTarget")]
     public void AScoreNamedLikeABlockKeyword_IsAScore(string head, string expected)
         => Assert.Equal(System.Enum.Parse<LilySharpLanguageServer.CompletionContext>(expected),
             LilySharpLanguageServer.GetCompletionContext(head + "\n}\n", head.Length));
@@ -121,7 +126,7 @@ public class SingsCompletionTests
             part comp
             section Song {
               guitar { a'4 a b2 | }
-              lyrics words sings guitar { さ く ら | }
+              lyrics words { さ く ら | }
               chords harmony { Am | }
               comp { /4 4 4 4 | }
             }
@@ -138,27 +143,22 @@ public class SingsCompletionTests
             """;
         const string tail = "\n}\n";
 
-        Assert.Contains("sings", LabelsAt(head + " " + tail, head.Length + 1));
-        string afterSings = head + " sings ";
-        var parts = LabelsAt(afterSings + tail, afterSings.Length);
+        Assert.Contains("on", LabelsAt(head + " " + tail, head.Length + 1));
+        string afterOn = head + " on ";
+        var parts = LabelsAt(afterOn + tail, afterOn.Length);
         Assert.Contains("guitar", parts);
         Assert.Contains("comp", parts);
     }
 
-    /// <summary>Picking the track on a score's lyrics row writes `sings ` after it and opens the
-    /// part list (the owner's request, 2026-10-25) — unless the row already says `sings`.</summary>
+    /// <summary>Picking the track on a score's lyrics row writes its name alone: the row follows
+    /// the staff above it, and <c>on</c> is the exception.</summary>
     [Fact]
-    public void PickingTheRowsTrack_GoesOnToTheBinding()
+    public void PickingTheRowsTrack_WritesItsName()
     {
         const string head = "part guitar\nlyrics words { section A { la | } }\nsection A { guitar { c4 | } }\nform { A }\nscore {\n  staff guitar\n  lyrics ";
         var item = Assert.Single(LilySharpLanguageServer.GetLyricsRowNameCompletions(head + "\n}\n", head.Length).Items);
-        Assert.Equal("words sings $0", item.InsertText);
-        Assert.Equal("editor.action.triggerSuggest", item.Command?.CommandIdentifier);
-
-        string bound = head + "wo sings guitar\n}\n";
-        var plain = Assert.Single(LilySharpLanguageServer.GetLyricsRowNameCompletions(bound, head.Length + 2).Items);
-        Assert.Null(plain.Command);
-        Assert.NotEqual("words sings $0", plain.InsertText);
+        Assert.Equal("words", item.Label);
+        Assert.Null(item.Command);
     }
 
     private static string[] LabelsAt(string text, int offset)
@@ -183,9 +183,9 @@ public class SingsCompletionTests
             Ctx("score { grandStaff { staff m  lyrics w "));
 
     [Theory]
-    [InlineData("score { staff m  lyrics w sings ")]
-    [InlineData("score { staff m  lyrics w sings vo")]          // typing the target
-    [InlineData("score { grandStaff { staff m  lyrics w sings ")]
+    [InlineData("score { staff m  lyrics w on ")]
+    [InlineData("score { staff m  lyrics w on vo")]          // typing the target
+    [InlineData("score { grandStaff { staff m  lyrics w on ")]
     public void AScoreRowsSings_OffersTheBindingTargets(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterSingsTarget, Ctx(text));
 
@@ -199,9 +199,9 @@ public class SingsCompletionTests
         const string head = """
             part melody { clef treble }
             part bass { clef bass }
-            lyrics words sings melody { section A { la la | } }
+            lyrics words { section A { la la | } }
             lyrics verse2 { section A { lo lo | } }
-            section A { melody { c4 d | } bass { c2 | } lyrics cell sings bass { do | } }
+            section A { melody { c4 d | } bass { c2 | } lyrics cell { do | } }
             score { staff melody  lyrics
             """ + " ";
         string text = head + " }";
@@ -216,8 +216,8 @@ public class SingsCompletionTests
     public void RowAttachCompletions_LeadWithSings()
     {
         Assert.Contains(LilySharpLanguageServer.GetLyricsRowAttachNameCompletions().Items,
-            i => i.Label == "sings");
+            i => i.Label == "on");
         Assert.Contains(LilySharpLanguageServer.GetGroupLyricsRowAttachNameCompletions().Items,
-            i => i.Label == "sings");
+            i => i.Label == "on");
     }
 }

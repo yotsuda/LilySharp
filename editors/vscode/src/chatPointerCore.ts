@@ -60,7 +60,7 @@ export function placeAt(text: string, offset: number): PlaceInScore {
                 stack.push({ kind: 'section', name: m[2], bars: 0 });
             } else {
                 const head = /^\s*([A-Za-z_]\w*)/.exec(word.trim())?.[1];
-                stack.push(inSection && head && !MUSIC_BLOCKS.has(head) && !/\bsings\b/.test(word)
+                stack.push(inSection && head && !MUSIC_BLOCKS.has(head)
                     ? { kind: 'part', name: head, bars: 0 }
                     : { kind: 'other', bars: 0 });
             }

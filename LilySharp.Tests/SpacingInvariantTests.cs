@@ -808,7 +808,7 @@ public class SpacingInvariantTests
               section A { a'4 a' a' a' | a'4 a' a' a' | }
             }
 
-            lyrics w sings melody {
+            lyrics w {
               section A { mummum mummum mummum mummum | mummum mummum mummum mummum }
             }
 
@@ -816,7 +816,7 @@ public class SpacingInvariantTests
 
             score x {
               staff melody
-              lyrics w
+              lyrics w on melody
             }
             """);
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);

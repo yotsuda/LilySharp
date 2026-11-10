@@ -32,7 +32,7 @@ describe('the pointer put in the chat', () => {
         '    g\'\'1 | // a "comment" with | in it',       // 6
         '    tuplet 3/2 { a\'\'8 b\'\' c\'\'\' } e\'\'2 |',// 7
         '  }',                                            // 8
-        '  lyrics words sings vn1 { la la | }',          // 9
+        '  lyrics words { la la | }',          // 9
         '}',                                              // 10
         'section B {',                                    // 11
         '  vn1 { voice { c\'4 | d\'4 | } { e4 | f4 | } }',// 12
@@ -45,7 +45,7 @@ describe('the pointer put in the chat', () => {
         // A bar line in a comment and the tuplet's braces count for nothing.
         assert.deepEqual(placeAt(text, at(7, 20)), { section: 'A', part: 'vn1', bar: 3 });
         // A lyrics track is not a part.
-        assert.deepEqual(placeAt(text, at(9, 30)), { section: 'A', part: undefined, bar: undefined });
+        assert.deepEqual(placeAt(text, at(9, 20)), { section: 'A', part: undefined, bar: undefined });
         assert.deepEqual(placeAt(text, at(2, 25)), { section: undefined, part: undefined, bar: undefined });
         assert.equal(placeAt(text, at(12, 20)).part, 'vn1');
     });

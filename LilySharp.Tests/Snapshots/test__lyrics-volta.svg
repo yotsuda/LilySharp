@@ -51,30 +51,30 @@
   <text class="music" x="90.15" y="15.69" font-size="4.00" data-pos="375"></text>
   <line x1="90.21" y1="15.69" x2="90.21" y2="19.19" stroke="#000000" stroke-width="0.130"/>
   <rect x="33.91" y="16.19" width="0.19" height="4.00" data-pos="364"/>
-  <rect x="46.80" y="16.19" width="0.60" height="4.00" data-pos="580"/>
-  <rect x="47.70" y="16.19" width="0.19" height="4.00" data-pos="580"/>
-  <circle cx="48.41" cy="17.69" r="0.23" data-pos="580"/>
-  <circle cx="48.41" cy="18.69" r="0.23" data-pos="580"/>
+  <rect x="46.80" y="16.19" width="0.60" height="4.00" data-pos="567"/>
+  <rect x="47.70" y="16.19" width="0.19" height="4.00" data-pos="567"/>
+  <circle cx="48.41" cy="17.69" r="0.23" data-pos="567"/>
+  <circle cx="48.41" cy="18.69" r="0.23" data-pos="567"/>
   <circle cx="61.73" cy="17.69" r="0.23" data-pos="415"/>
   <circle cx="61.73" cy="18.69" r="0.23" data-pos="415"/>
   <rect x="62.26" y="16.19" width="0.19" height="4.00" data-pos="415"/>
   <rect x="62.75" y="16.19" width="0.60" height="4.00" data-pos="415"/>
   <rect x="79.11" y="16.19" width="0.19" height="4.00" data-pos="364"/>
   <rect x="94.21" y="16.19" width="0.19" height="4.00" data-pos="380"/>
-  <text x="17.77" y="23.69" font-size="2.47" text-anchor="middle" data-pos="477">Twin</text>
-  <text x="22.57" y="23.69" font-size="2.47" text-anchor="middle" data-pos="483">kle</text>
-  <text x="27.34" y="23.69" font-size="2.47" text-anchor="middle" data-pos="487">twin</text>
-  <text x="31.76" y="23.69" font-size="2.47" text-anchor="middle" data-pos="493">kle</text>
-  <text x="35.78" y="23.69" font-size="2.47" text-anchor="middle" data-pos="499">lit</text>
-  <text x="39.03" y="23.69" font-size="2.47" text-anchor="middle" data-pos="504">tle</text>
-  <text x="43.24" y="23.69" font-size="2.47" text-anchor="middle" data-pos="508">star</text>
-  <text x="65.03" y="23.69" font-size="2.47" text-anchor="middle" data-pos="531">How</text>
-  <text x="68.54" y="23.69" font-size="2.47" text-anchor="middle" data-pos="535">I</text>
-  <text x="71.77" y="23.69" font-size="2.47" text-anchor="middle" data-pos="537">won</text>
-  <text x="76.03" y="23.69" font-size="2.47" text-anchor="middle" data-pos="542">der</text>
-  <text x="81.23" y="23.69" font-size="2.47" text-anchor="middle" data-pos="548">what</text>
-  <text x="86.55" y="23.69" font-size="2.47" text-anchor="middle" data-pos="553">you</text>
-  <text x="90.84" y="23.69" font-size="2.47" text-anchor="middle" data-pos="557">are</text>
+  <text x="17.77" y="23.69" font-size="2.47" text-anchor="middle" data-pos="464">Twin</text>
+  <text x="22.57" y="23.69" font-size="2.47" text-anchor="middle" data-pos="470">kle</text>
+  <text x="27.34" y="23.69" font-size="2.47" text-anchor="middle" data-pos="474">twin</text>
+  <text x="31.76" y="23.69" font-size="2.47" text-anchor="middle" data-pos="480">kle</text>
+  <text x="35.78" y="23.69" font-size="2.47" text-anchor="middle" data-pos="486">lit</text>
+  <text x="39.03" y="23.69" font-size="2.47" text-anchor="middle" data-pos="491">tle</text>
+  <text x="43.24" y="23.69" font-size="2.47" text-anchor="middle" data-pos="495">star</text>
+  <text x="65.03" y="23.69" font-size="2.47" text-anchor="middle" data-pos="518">How</text>
+  <text x="68.54" y="23.69" font-size="2.47" text-anchor="middle" data-pos="522">I</text>
+  <text x="71.77" y="23.69" font-size="2.47" text-anchor="middle" data-pos="524">won</text>
+  <text x="76.03" y="23.69" font-size="2.47" text-anchor="middle" data-pos="529">der</text>
+  <text x="81.23" y="23.69" font-size="2.47" text-anchor="middle" data-pos="535">what</text>
+  <text x="86.55" y="23.69" font-size="2.47" text-anchor="middle" data-pos="540">you</text>
+  <text x="90.84" y="23.69" font-size="2.47" text-anchor="middle" data-pos="544">are</text>
   <text x="11.81" y="23.69" font-size="2.40" font-weight="bold">1.</text>
   <text x="59.42" y="23.69" font-size="2.40" font-weight="bold">2.</text>
   <rect x="11.90" y="12.60" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="335"/>

@@ -7,11 +7,10 @@ workflow attaches that section to the GitHub Release verbatim.
 ## Unreleased
 
 - **`@shiftOff` keeps a note in its voice group's first column** (LilyPond's `\once \shiftOff`): in `voice { } { }`, a third voice's head can stand under the voice above instead of a column aside. A score that does not write it does not change.
-- `[singing]` **Words are sung where a voice is asked for**: a `singer`, or the part's `instrument` being a voice (`soprano`, `alto`, `tenor`, `baritone`, `voice-bass`). Words on any other part are printed only and the part plays its instrument; a clef alone asks for nothing. Until now every lyrics row was sung. A part with words, no voice asked for and no instrument named now plays the piano, in the `.mid` too, where it played the choir.
-- **A `singer` on a score's row that names a voice of a part** (`lyrics w sings alt singer "…"`) is heard; it was ignored.
+- `[lang]` **Lyrics and singers have a new grammar** (docs/lyrics-singer-design.md). A `lyrics` track is words alone: `lyrics NAME [language L] { … }`. A score's `lyrics NAME [on PART]` row prints them, under the staff directly above it or at another part's rhythm with `on`. A top-level line sings them: `singer [S] sings [NAME] [on PART]`, where `S` is `"engine/name"` (several with commas), `male`, `female`, a gender and a name, or nothing for the part's default voice. Only that line sings, whether or not the page shows the words. `staff PART [hidden] [sounds voice|instrument|both]` says how a part sounds in that score; a part with no `staff` does not sound. The old spellings are gone: `lyrics w sings m`, `lyrics w singer "x"`, a part's `singer`, the role names (`"soprano"`). A row directly under a staff that names no part is now that staff's verse, not an even-spread row.
+- `[singing]` **A sung part with no sound of its own stands in with the choir**, in the `.mid` too; a part with no singer plays its instrument, the piano when none is named.
 - **Converting between octave modes reaches a section written inside a part** that no form plays. Such a file was refused.
-- `[lang]` **A lyrics track can no longer have the name of a part or of a named voice** (LYS7008). A track's name only names it, and `sings` says who sings it: `lyrics words sings p1 { … }`. `lyrics sop` beside `voice sop` and `lyrics p1` beside `part p1` used to bind by the name, under that staff only.
-- **A part's `singer` takes several voices** (`part m { singer "neutrino/MERROW","diffsinger/TIGER" }`), as a lyrics track and a score's row do. It was refused there.
+- `[lang]` **A lyrics track can no longer have the name of a part or of a named voice** (LYS7008). A track's name only names it. `lyrics sop` beside `voice sop` and `lyrics p1` beside `part p1` used to bind by the name, under that staff only.
 
 ## 0.16.0
 

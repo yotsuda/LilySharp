@@ -192,6 +192,7 @@ TopLevelItem   = MetadataDecl                     (* title, subtitle, composer, 
                | CapoDecl                         (* the capo every pressed shape is relative to *)
                | ChordShapesDecl                  (* the chord-shape table: the shape each chord draws *)
                | LanguageDecl                     (* the language the file's lyrics are written in *)
+               | SingerDecl                       (* who sings which words, on which part *)
                ;
 
 (* MUSIC IS NOT A TopLevelItem, and is rejected with LYS0020: a note stream, a bare
@@ -240,6 +241,24 @@ CheckRule      = 'voiceLeading' ;
 CapoDecl       = 'capo' , Integer ;                    (* 1..11; to the end of its line *)
 ChordShapesDecl = 'chordShapes' , ShapeTable ;
 LanguageDecl   = 'language' , LanguageName ;
+SingerDecl     = 'singer' , [ SingerValue ] , 'sings' , [ Identifier ] , [ 'on' , PartRef ] ;
+SingerValue    = String , { ',' , String } | SingerGender , [ String , { ',' , String } ] ;
+SingerGender   = 'male' | 'female' ;
+                 (* WHO SINGS WHAT, at the file's top level only, in this order
+                    (docs/lyrics-singer-design.md). 'lyrics' rows print; only this line sings.
+                    The value is a voice as engine/name ('neutrino/MERROW'), several with commas
+                    singing together, or a gender; with nothing, the part's own default voice.
+                    A gender before a name narrows what the editor offers; with no name (or an
+                    empty one, LYS4039 otherwise) that gender's default voice sings. A name is
+                    never checked against a machine: a voice that is not there sings as the
+                    default voice of the part's gender, said once. A default voice's gender is
+                    the line's word, else the instrument's, else the clef's: bass, baritone,
+                    tenor and treble_8 clefs are male, others female. Another word before a name
+                    is LYS4040.
+                    With no name it sings the unnamed lyrics. 'on' names the part, or a voice of
+                    one; with none, the file's only part, else the one part every score prints
+                    the words under, else LYS4043. One singer line a part (LYS4044); a voice
+                    two parts share is LYS4045, words no lyrics defines LYS4042. *)
 LanguageName   = 'japanese' | 'english' | 'chinese' | 'korean' ;
                  (* What the lyrics are written in: a fact of the words, not of who sings them.
                     A track's own 'language' (LyricsBlock) wins, nothing written is japanese, the
@@ -1110,12 +1129,12 @@ PartDecl       = ( 'part' | 'strokes' ) , [ PartName ] , [ String ] , [ PartBody
                     draws it as a ONE-LINE staff with no clef, key or name only where it writes
                     'strokes NAME' (StaffRender). A chords row that PLAYS it ('chords NAME plays
                     STROKES', ScoreItem) says how the row SOUNDS - the MIDI strikes the row's
-                    chord at each stroke - and draws nothing of the strokes. A 'lyrics … sings
+                    chord at each stroke - and draws nothing of the strokes. A row 'lyrics … on
                     STROKES' puts words under the strokes. It needs no 'instrument' (the
                     composition checks pass it by). *)
                  (* An UNNAMED 'part { … }' (2026-10-09) is allowed only as the file's ONE
                     part (LYS1007 otherwise). A score's bare 'staff' / 'tab' renders it, a
-                    section's bare music is its music, and an unnamed lyrics track sings it.
+                    section's bare music is its music, and an unnamed lyrics track on it.
                     A file that declares no part at all writes its music straight into its
                     sections, and a bare 'staff' renders that the same way. *)
 
@@ -1142,32 +1161,16 @@ PartProperty   = 'clef'          , PartClefName
                | 'pitch'         , PitchMode        (* this part's convention — own wins
                                                        over the top-level PitchDecl, §2.3 *)
                | 'pedal'         , PedalStyleName
-               | 'singer'        , SingerValue      (* who sings this part's lyrics: a voice or a
-                                                       role (LyricsClause), nearer ones win *)
                | 'midiInstrument' , String         (* the General MIDI sound: one of
                                                        LilyPond's 128 names, e.g.
                                                        midiInstrument "acoustic guitar (nylon)";
                                                        default = the preset's, else
-                                                       "acoustic grand". A STAFF WITH A LYRICS
-                                                       ROW UNDER IT that sings its part, a voice asked for (LyricsClause), is a
-                                                       singer's (owner's decision 2026-11-08):
-                                                       the preview sings it with the singing
-                                                       engine when one is there, and this
-                                                       sound is the stand-in — in the .mid,
-                                                       and in the preview while there is no
-                                                       voice; a singer naming no sound and no
-                                                       preset stands in with "choir aahs". A
-                                                       staff of the same part with no words
-                                                       under it plays this sound as well, so
-                                                       'staff m  staff m  lyrics v sings m'
-                                                       sounds m both ways, once each. A lyrics
-                                                       row that sings a part NO staff shows
-                                                       ('staff m2  lyrics v sings m') makes m
-                                                       an unseen singer (owner's decision
-                                                       2026-11-09): nothing of m is drawn, the
-                                                       row stands at m's rhythm, the preview
-                                                       sings m and the .mid plays this sound.
-                                                       docs/singing-design.md §3. *) ;
+                                                       "acoustic grand". It is also the
+                                                       stand-in for a sung part: in the .mid,
+                                                       and in the preview while no voice is
+                                                       there; a sung part with no sound of
+                                                       its own stands in with "choir aahs".
+                                                       docs/lyrics-singer-design.md. *) ;
                (* 'lines' left this list 2026-08-19 and 'removeEmpty' 2026-09-08 (user
                   decisions): the staff-line count and hara-kiri are presentation, not
                   music, so the SCORE item that renders the part carries them —
@@ -1406,62 +1409,28 @@ PartBlock      = PartName , MusicBlock ;
                     The words that open a brace of their own in music (grace, voice, cue …)
                     are reserved, so the two shapes never meet. *)
 
-(* A lyrics track BINDS TO ITS OWN MELODY AT THE DEFINITION (user decision,
-   2026-08-19, closed before the first tag): 'lyrics ja sings vocal { ... }' says the
-   track ja sings the part vocal, and the SCORE only PLACES its row (§7) —
-     - directly BELOW the staff engraving the part it sings, the row IS that
-       staff's verse: the syllables sit under the engraved melody, and a run of
-       such rows stacks as verses in written order;
-     - anywhere else, it is an independent ROW at the melody's rhythm WITHOUT
-       engraving the melody (a part sheet carrying the chorus words —
-       LilyPond's shape is \lyricsto over a NullVoice: the moments join the
-       spacing, the notes print nothing).
-   The definition's binding is the track's DEFAULT melody, stated once; later
-   same-name definition blocks may repeat it identically or omit it (a different
-   target is LYS7005; an unknown one LYS7004). A SCORE ROW may carry its own
-   'sings' (§7): that binds THIS PLACEMENT, overriding the default, which is how
-   one verse is placed under every staff of a chorale
-   ('staff sop  lyrics verse  staff alt  lyrics verse sings alt  …' — user
-   decision, 2026-09-02; before it the row spelling was the same single track
-   property and a second target was LYS7005). A target may be a part's named
-   VOICE ('lyrics en sings alt' over 'voice alt { }'): the words then follow that
+(* A lyrics track is WORDS ALONE (owner's decision 2026-11-10, docs/lyrics-singer-design.md):
+   what it follows is the SCORE's to say, and who sings it the file's SingerDecl (§2).
+   A score row PRINTS the words (§7) —
+     - directly BELOW the staff it follows, the row IS that staff's verse: the
+       syllables sit under the engraved melody, and a run of such rows stacks as
+       verses in written order;
+     - with 'on PART' under another part's staff, it is an independent ROW at that
+       melody's rhythm WITHOUT engraving the melody (a part sheet carrying the
+       chorus words — LilyPond's shape is \lyricsto over a NullVoice: the moments
+       join the spacing, the notes print nothing).
+   One verse is placed under every staff of a chorale
+   ('staff sop  lyrics verse  staff alt  lyrics verse  …'). A target may be a part's
+   named VOICE ('lyrics en on alt' over 'voice alt { }'): the words then follow that
    voice's rhythm, under its staff or as a row. A track's NAME binds nothing: the name
    of a part or of a named voice is refused for a track (LYS7008, owner's decision
-   2026-11-10), the words take a name of their own and 'sings' says who sings them.
-   A track that binds to nothing
-   placed as a row keeps the even-spread lead-sheet reading (§7) — drawn the
-   same, but warned about (LYS6013), when it stands directly below a staff whose
-   part names its voices: there the likelier reading is a misspelled voice. A row without
-   its own 'sings' cannot re-decide the association by position: after a staff
-   it does not sing it simply stays an independent band. *)
-LyricsBlock    = 'lyrics' , [ Identifier ] , { LyricsClause } , '{' , { LyricMeasure | LyricVerse } , '}' ;
-LyricsClause   = 'sings' , PartRef | 'language' , LanguageName | 'singer' , SingerValue ;
-SingerValue    = String , { ',' , String } | SingerGender , [ String , { ',' , String } ] ;
-SingerGender   = 'male' | 'female' ;
-                 (* Before a name, a gender leaves out of the editor's completion and step keys the
-                    voices that say they are the other, and a singer sings by its name. With no name
-                    (or an empty one) that gender's default voice sings: each machine's setting, else
-                    the first installed voice that says it is that and sings the words' language.
-                    Another word before a name is an error (LYS4040). *)
-                 (* Each at most once, in any order. A track's language and singer are the first
-                    block of that name that writes one (the rule 'sings' has). 'lyrics language
-                    { ... }', 'lyrics language sings m { ... }' and 'lyrics singer { ... }' are
-                    tracks with those names. 'singer' names who sings: a voice as engine/name
-                    ('neutrino/MERROW') or a role ('soprano', 'tenor') that says a gender, and
-                    several written with commas between them sing the part together; the
-                    score's row wins over the track, the track over the part's 'singer'. An
-                    empty one is an error (LYS4039); a name is never checked against a machine:
-                    a voice that is not there sings as the default voice of the part's gender, said
-                    once. WORDS ARE SUNG WHERE A VOICE IS ASKED FOR (owner's decision 2026-11-10):
-                    a 'singer' reaching them, or the part's instrument being a voice (soprano, alto,
-                    tenor, baritone, voice-bass). A clef asks for nothing. Other words are printed
-                    only: the staff plays its instrument (the piano when none is named), no voice is rendered. The
-                    default voice's gender is the singer's word, else the instrument's, else the
-                    clef's: bass, baritone, tenor and treble_8 clefs are male, others female. *)
-                 (* The UNNAMED track (2026-10-09) is placed by a score's bare 'lyrics' row.
-                    With no 'sings' it sings the file's one part - the unnamed part, the only
-                    declared one, or the music written straight into the sections; with
-                    several parts it is unbound, like any track that names no melody. *)
+   2026-11-10), as are 'on', 'hum' and 'solfege' (LYS4048). A track inside a part is
+   LYS4049. A row with neither a staff above it nor 'on' keeps the even-spread
+   lead-sheet reading (§7). *)
+LyricsBlock    = 'lyrics' , [ Identifier ] , [ 'language' , LanguageName ] , '{' , { LyricMeasure | LyricVerse } , '}' ;
+                 (* 'lyrics language { ... }' is a track named language. A track's language is the
+                    first block of that name that writes one. *)
+                 (* The UNNAMED track (2026-10-09) is placed by a score's bare 'lyrics' row. *)
 LyricMeasure   = { LyricSyllable } , '|' ;
 LyricVerse     = 'verse' , [ '~' ] , Integer , { ( ',' | '-' ) , Integer } , '{' , { LyricMeasure } , '}' ;
                  (* A VERSE: the words for the Nth time the section is SUNG — 'verse 1 { … }
@@ -1645,13 +1614,13 @@ AssembledQuality = [ 'm' | 'min' | 'dim' | 'aug' ] , [ 'maj' ]
                     '| |' is an empty bar. r/R print N.C. in their slot — each
                     occupies one. There is no 's' (retired 2026-09-04). *)
 
-(* Example (the track sings its melody; the score attaches it under that staff —
-   or, as 'lyrics words' among the score items, shows ONLY the words at the
+(* Example (the words beside their melody; the score prints them under that staff —
+   or, as 'lyrics words on melody' under another part's staff, ONLY the words at the
    melody's rhythm, e.g. a horn part carrying the chorus lyrics):
    section Verse {
      key g major
      melody { c4 d e f | g2 g | }
-     lyrics words sings melody { Twin- kle twin- kle | lit- tle star | }
+     lyrics words { Twin- kle twin- kle | lit- tle star | }
    }
    form { Verse }
    score { staff melody  lyrics words }
@@ -1668,8 +1637,8 @@ VoicePart      = [ Identifier ] , MusicBlock ;
 
 (* Example (each voice { } is a simultaneous voice; NOT the LilyPond '<< \\ >>' form):
    section Main { piano { voice { c'2 d } { e2 f } } }
-   // Lyrics sing a named voice by 'sings':
-   //   voice sop { … } alt { … }   +   lyrics high sings sop { … }  lyrics low sings alt { … } *)
+   // Lyrics follow a named voice by a row's 'on':
+   //   voice sop { … } alt { … }   +   score { staff piano  lyrics high on sop  lyrics low on alt } *)
 
 (* The FIRST voice carries the staff's timeline: it is engraved inline, its barlines are
    the staff's barlines, and music written after the span continues in the bar it left
@@ -1877,7 +1846,7 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | 'choirStaff' , StaffGroupBody      (* a BRACKET, bar lines NOT drawn through *)
                | CondensedStaff                     (* several parts on ONE staff *)
                | CombinedStaff                      (* two parts on one staff, MERGED *)
-               | 'tab' , [ [ TuningName ] , PartRef ] , [ 'as' , TabSelector , { TabSelector } ]
+               | 'tab' , [ [ TuningName ] , PartRef ] , [ 'as' , TabSelector , { TabSelector } ] , StaffSound
                                                      (* tablature: tab partName, or
                                                         tab bass5 partName to override the
                                                         part header's own `tuning`.
@@ -1918,17 +1887,18 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         it a row holds each chord over its slot.
                                                         It draws nothing: the strokes' one-line
                                                         staff is the 'strokes NAME' item *)
-               | 'lyrics' , [ PartRef ] , { 'sings' , PartRef | 'singer' , SingerValue }
-                                                     (* lyrics ROW. The optional 'sings' names
-                                                        the melody THIS ROW sings - it overrides
-                                                        the definition's default for this
-                                                        placement, so one track can be placed
-                                                        under several parts, each row naming
-                                                        its own (an unknown target is LYS7004,
-                                                        and rows never conflict). Without it
-                                                        the row takes the definition's default.
-                                                        Unbound with no 'sings' anywhere - the
-                                                        even-spread lead-sheet row. *)
+               | 'lyrics' , [ PartRef ] , [ 'on' , PartRef ]
+                                                     (* lyrics ROW: where the words are PRINTED,
+                                                        it sounds nothing (SingerDecl sings).
+                                                        Directly below a staff the row is that
+                                                        staff's verse. 'on' names the melody
+                                                        THIS ROW follows instead, so one track
+                                                        can be placed under several parts, each
+                                                        row naming its own (an unknown target
+                                                        is LYS7004). With no staff above and no
+                                                        'on', the even-spread lead-sheet row.
+                                                        Directly below a staff of several parts,
+                                                        'on' is required (LYS4051). *)
                | ( 'title' | 'subtitle' | 'composer' | 'poet' ) , String
                                                      (* THIS score's own header — see below *)
                | 'form' , ( Identifier | '{' , { StructureItem } , '}' )
@@ -1990,17 +1960,16 @@ StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
                         | 'grandStaff' , StaffGroupBody   (* any group in any group, *)
                         | 'staffGroup' , StaffGroupBody   (* at any depth, drawn as   *)
                         | 'choirStaff' , StaffGroupBody   (* written                  *)
-                        | 'lyrics' PartRef [ 'sings' PartRef ] } , '}' ;
+                        | 'lyrics' PartRef [ 'on' PartRef ] } , '}' ;
                  (* Several staves engraved as ONE GROUP. All three take one-staff items —
                     `staff`, and a `condensedStaff { … }` / `combinedStaff { … }`, each of
                     which engraves ONE staff however many parts it carries, so the woodwind
                     bracket reads `staffGroup { condensedStaff { fl1 fl2 }  staff ob }` —
                     with `lyrics NAME` rows between them — inside the braces as outside,
-                    a bound row directly below the staff it sings is that staff's verse
+                    a row directly below the staff it follows is that staff's verse
                     (the chorale writes its words between the sopranos and the altos,
-                    and ONE verse serves every staff when each row names its own
-                    melody: `staff alt  lyrics verse sings alt`), and a row that
-                    sings no adjacent staff is LYS6012 (so is a row under a condensed or
+                    and ONE verse serves every staff: `staff alt  lyrics verse`), and a row
+                    naming with 'on' a part no adjacent staff shows is LYS6012 (so is a row under a condensed or
                     combined member: that staff carries several parts, and a verse is ONE
                     part's), anything else LYS6011. A group may stand inside a group — the
                     piano inside the orchestra's bracket, the violins' sub-bracket inside the
@@ -2098,7 +2067,14 @@ CombinedStaff  = 'combinedStaff' , [ ClefName ] , '{' , PartRef , PartRef , '}' 
                       score parts { staff fl1  staff fl2 } *)
 
 StaffRender    = 'staff' , [ [ ClefName ] , PartRef ] , [ DisplayName ] ,
-                 [ 'as' , StaffSelector , { StaffSelector } ] ;
+                  [ 'as' , StaffSelector , { StaffSelector } ] , StaffSound ;
+StaffSound     = [ 'hidden' ] , [ 'sounds' , ( 'voice' | 'instrument' | 'both' ) ] ;
+                 (* How the part sounds in THIS score (docs/lyrics-singer-design.md §5). With no
+                    'sounds', a part a SingerDecl sings is a voice and any other its instrument;
+                    two staves of one part add up. 'sounds voice' or 'both' on a part no singer
+                    sings is LYS4047, another word LYS4046. 'hidden' sounds the part and draws
+                    nothing; a score whose every staff is hidden is LYS4052. A part with no
+                    staff in the score does not sound. *)
                  (* ⚠️ A CLEF WORD IS ALSO A PART NAME, so two words read by what the file
                     declares (2026-10-09, the tab item's rule since 2026-10-03): 'staff bass
                     melody' is the bass clef over part melody — unless the file declares a part
@@ -2253,7 +2229,7 @@ DisplayName    = String ;
 
      score { staff singer  lyrics words  chords harmony plays rhythm  strokes rhythm }
 
-   'lyrics strum sings rhythm { … }' puts words under the strokes, one syllable a stroke,
+   'lyrics strum on rhythm' on a score's row puts words under the strokes, one syllable a stroke,
    which is how a verse's words are placed when the tune is not written out. *)
 
 (* WRITING THE CHORDS AS DEGREES. An entry may be an absolute symbol (C, Am, G7, F#m,
@@ -2285,7 +2261,7 @@ DisplayName    = String ;
 (* SHOWING ONE TRACK TWO WAYS. A chord row takes 'as roman' (degrees for the key) or
    'as names' (the default). There is no third mode: to show BOTH, place the track twice —
 
-     score sheet { chords prog as roman  chords prog as names  lyrics words }
+     score sheet { chords prog as roman  chords prog as names  lyrics words on melody }
 
    which is two rows, in the order written, each its own band. 'as both' — one symbol with
    the degree stacked above the name — was retired 2026-08-23. ⚠️ The two are not quite the
@@ -3176,7 +3152,7 @@ phrase riff { c4 d e f | }
 
 section Verse {
   melody { riff | g4@p a( b c') | }
-  lyrics words sings melody { Sing a song now | one two __ | }   // `two` is held over the slur
+  lyrics words { Sing a song now | one two __ | }   // `two` is held over the slur
 }
 
 // A staff-less lead sheet (chords + lyrics, no notes). Its lyric row is its

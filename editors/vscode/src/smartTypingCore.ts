@@ -2001,7 +2001,7 @@ function inWordBlock(text: string, offset: number): boolean {
         if (c === '}') { depth++; }
         else if (c === '{') {
             if (depth > 0) { depth--; continue; }
-            // The block's head: `chords NAME {`, `lyrics w sings m {`, each word looked at.
+            // The block's head: `chords NAME {`, `lyrics w language english {`, each word looked at.
             let at = i;
             for (let words = 0; words < 4; words++) {
                 const head = wordBefore(text, at);

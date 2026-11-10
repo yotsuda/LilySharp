@@ -135,7 +135,10 @@ public sealed partial class LilySharpLanguageServer
     /// a NAMED block (<c>lyrics words {</c> → "lyrics"), else the <see cref="BlockFrame.Name"/>
     /// for an unnamed one (<c>lyrics {</c> → "lyrics").</summary>
     private static string FrameKeyword(BlockFrame f)
-        => f.Prefix is "part" or "lyrics" or "chords" or "section" ? f.Prefix : f.Name;
+        => f.Prefix is "part" or "lyrics" or "chords" or "section" ? f.Prefix
+            // `lyrics w language english {`: a frame reads two words, the clause's.
+            : f.Prefix == LilySharp.Core.Music.LyricLanguage.Keyword && LilySharp.Core.Music.LyricLanguage.CodeOf(f.Name) != null ? "lyrics"
+            : f.Name;
 
     /// <summary>
     /// True when <paramref name="offset"/> sits DIRECTLY inside a top-level
@@ -546,46 +549,53 @@ public sealed partial class LilySharpLanguageServer
         if (!quoted && (line.Contains("//", StringComparison.Ordinal) || line[..quote.Index].Count(c => c == '"') % 2 == 1))
             return null;
         string? gender = quote.Groups["gender"].Success ? quote.Groups["gender"].Value : null;
-        var head = System.Text.RegularExpressions.Regex.Match(line[..quote.Index],
-            @"(?:^|[\s{}])lyrics(?:[ \t]+(?<w>[^\s{}""]+|""[^""]*""(?:[ \t]*,[ \t]*""[^""]*"")*))*[ \t]*$");
-        if (head.Success)
-        {
-            var words = ClauseWords(head.Groups["w"].Captures.Select(c => c.Value));
-            string? language = null;
-            for (int i = 0; i + 1 < words.Count; i++)
-                if (words[i] == LilySharp.Core.Music.LyricLanguage.Keyword)
-                    language = words[i + 1];
-            bool named = words.Count % 2 == 1;   // the clauses are pairs: an odd word is the track's name
-            return (named ? words[0] : LilySharp.Core.Music.LyricSinger.UnnamedTrack, null, language, gender, quoted, another);
-        }
+        // At the top level only: `singer [S] sings [NAME] [on PART]`. The words may be written
+        // after the caret; with none yet the file's language is the one to offer for.
         var stack = new BlockContextScan(text, offset).Stack;
-        if (stack.Count > 0 && FrameKeyword(stack[^1].Frame) == "part")
+        if (stack.Count == 0 && line[..quote.Index].Trim().Length == 0)
         {
-            var frame = stack[^1].Frame;
-            return (null, frame.Prefix == "part" ? frame.Name : "", null, gender, quoted, another);
+            int lineEnd = text.IndexOf('\n', end);
+            string rest = text[end..(lineEnd < 0 ? text.Length : lineEnd)];
+            var sings = System.Text.RegularExpressions.Regex.Match(rest, @"\bsings[ \t]+(?<t>(?!on\b)[^\s{}""]+)");
+            bool wrote = System.Text.RegularExpressions.Regex.IsMatch(rest, @"\bsings\b");
+            string? track = sings.Success ? sings.Groups["t"].Value : wrote ? LilySharp.Core.Music.LyricSinger.UnnamedTrack : null;
+            return (track, null, null, gender, quoted, another);
         }
         return null;
     }
 
-    /// <summary>A head's words with a <c>singer</c>'s gender taken out, so its clauses read as pairs.</summary>
-    private static List<string> ClauseWords(IEnumerable<string> written)
+    /// <summary>What a top-level <c>singer</c> line takes next once its voice is written:
+    /// <c>singer male ▮</c> the word <c>sings</c>, <c>… sings ▮</c> the words, <c>… sings w ▮</c>
+    /// the <c>on</c>, <c>… on ▮</c> the part. Null anywhere else, and while the voice is still
+    /// being written (<see cref="SingerSlotAt"/>'s).</summary>
+    private static CompletionContext? SingerLineStepAt(string text, int offset, List<OpenBlock> stack)
     {
-        var all = written.ToList();
-        var words = new List<string>();
-        for (int i = 0; i < all.Count; i++)
+        if (stack.Count != 0)
+            return null;
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
+        int end = Math.Clamp(offset, 0, text.Length);
+        while (end > 0 && IsWordChar(text[end - 1])) end--;     // a partial word is not a written one
+        int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
+        var line = System.Text.RegularExpressions.Regex.Match(text[lineStart..end],
+            @"^[ \t]*singer(?<voice>(?:[ \t]+(?:male|female))?(?:[ \t]+""[^""]*""(?:[ \t]*,[ \t]*""[^""]*"")*)?)(?:[ \t]+(?<sings>sings)(?:[ \t]+(?<w>[^\s{}""]+))*)?[ \t]+$");
+        if (!line.Success)
+            return null;
+        if (!line.Groups["sings"].Success)
+            return line.Groups["voice"].Length > 0 ? CompletionContext.AfterSingerVoice : null;
+        var words = line.Groups["w"].Captures.Select(c => c.Value).ToList();
+        return words switch
         {
-            words.Add(all[i]);
-            if (all[i] == LilySharp.Core.Music.LyricSinger.Keyword && i + 2 < all.Count
-                && LilySharp.Core.Music.LyricSinger.Genders.Contains(all[i + 1]) && all[i + 2].StartsWith('"'))
-                i++;
-        }
-        return words;
+            [] => CompletionContext.AfterSingerSings,
+            ["on"] or [_, "on"] => CompletionContext.AfterSingsTarget,
+            [_] => CompletionContext.AfterSingerWords,
+            _ => null,
+        };
     }
 
-    /// <summary>The clauses a lyrics head or row has whole before the caret (<c>lyrics w sings m ▮</c>,
-    /// owner's request 2026-11-09, session 1169: the head goes on after its first clause, in any
-    /// order), and whether a <c>sings</c> after them waits for its part. Null when no clause is
-    /// whole — a bare <c>lyrics w ▮</c> is the older rules' — and on a comment's line.</summary>
+    /// <summary>The clauses a lyrics head or row has whole before the caret
+    /// (<c>lyrics w language english ▮</c>, <c>lyrics w on m ▮</c>), and whether an <c>on</c>
+    /// after them waits for its part. Null when no clause is whole — a bare <c>lyrics w ▮</c>
+    /// is the older rules' — and on a comment's line.</summary>
     internal static (System.Collections.Generic.IReadOnlySet<string> Written, bool AwaitsSingsTarget)? LyricsHeadAt(string text, int offset)
     {
         static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
@@ -599,18 +609,15 @@ public sealed partial class LilySharpLanguageServer
             @"(?:^|[\s{}])lyrics(?:[ \t]+(?<w>[^\s{}""]+|""[^""]*""(?:[ \t]*,[ \t]*""[^""]*"")*))*[ \t]+$");
         if (!head.Success)
             return null;
-        var words = ClauseWords(head.Groups["w"].Captures.Select(c => c.Value));
-        bool awaits = words.Count >= 3 && words[^1] == "sings";
+        var words = head.Groups["w"].Captures.Select(c => c.Value).ToList();
+        bool awaits = words.Count >= 1 && words[^1] == "on";
         if (awaits)
             words.RemoveAt(words.Count - 1);
         var written = new HashSet<string>(StringComparer.Ordinal);
         for (int i = words.Count % 2; i + 1 < words.Count; i += 2)      // the clauses are pairs: an odd word is the track's name
         {
-            if (words[i] is not ("sings" or LilySharp.Core.Music.LyricLanguage.Keyword or LilySharp.Core.Music.LyricSinger.Keyword))
+            if (words[i] is not ("on" or LilySharp.Core.Music.LyricLanguage.Keyword))
                 return null;
-            if (words[i] == LilySharp.Core.Music.LyricSinger.Keyword && !words[i + 1].StartsWith('"')
-                && !LilySharp.Core.Music.LyricSinger.Genders.Contains(words[i + 1]))
-                return null;        // `singer so▮`-like: no clause yet (`singer male ▮` is one, the name being optional)
             written.Add(words[i]);
         }
         return written.Count == 0 ? null : (written, awaits);
@@ -676,25 +683,11 @@ public sealed partial class LilySharpLanguageServer
     private static bool IsInsideTopLevelChordsTrack(List<OpenBlock> stack)
         => stack.Count == 1 && FrameKeyword(stack[0].Frame) == "chords";
 
-    /// <summary>A frame opened by a lyrics track: <c>lyrics {</c> / <c>lyrics w {</c>
-    /// (the keyword is the frame's Name or Prefix), or <c>lyrics w sings m {</c> — where the
-    /// two words before the brace are the <c>sings</c> clause, the track's other spelling
-    /// (GRAMMAR LyricsBlock: <c>'lyrics' , Identifier , [ 'sings' , PartRef ] , '{'</c>).</summary>
-    /// <remarks>
-    /// ⚠️⚠️ THIS IS THE ONLY READER OF "is this frame a lyrics track", and it has to be: in
-    /// the <c>sings</c> spelling the <c>lyrics</c> keyword stands FOUR words before the
-    /// brace, and a <see cref="BlockFrame"/> reads two — so the frame of
-    /// <c>lyrics w sings melody {</c> is (Prefix=sings, Name=melody) and NO amount of
-    /// keyword-matching finds the track in it. Until 2026-09-12 only this helper and the
-    /// <c>repeat</c> guard knew that: <see cref="IsInsideTopLevelLyricsBlock"/> and
-    /// <see cref="IsInsideSectionContainer"/> asked for the keyword, so a bound track's body
-    /// fell through to the MUSIC completions and offered PITCH LETTERS at every syllable
-    /// (measured: 98 items at <c>lyrics w sings melody { |</c>, the same shape as the chords
-    /// track's — one construct, several readers, and not all of them knowing a spelling).
-    /// A new reader of a lyrics frame calls THIS, never the keyword.
-    /// </remarks>
+    /// <summary>A frame opened by a lyrics track: <c>lyrics {</c>, <c>lyrics w {</c> or
+    /// <c>lyrics w language english {</c> (<see cref="FrameKeyword"/> reads the clause).
+    /// The one reader of "is this frame a lyrics track": a new reader calls THIS.</summary>
     private static bool IsLyricsFrame(BlockFrame f)
-        => FrameKeyword(f) == "lyrics" || f.Prefix == "sings";
+        => FrameKeyword(f) == "lyrics";
 
     /// <summary>
     /// True inside a lyrics BODY at any depth but the top-level track's own: the innermost
@@ -842,6 +835,12 @@ public sealed partial class LilySharpLanguageServer
         AfterLanguage,
         /// <summary><c>singer "|"</c> — nothing from here: the extension lists the installed voices.</summary>
         AfterSinger,
+        /// <summary><c>singer male |</c> or <c>singer "a/b" |</c> — the word <c>sings</c>.</summary>
+        AfterSingerVoice,
+        /// <summary><c>singer … sings |</c> — the file's lyrics, and <c>on</c> for its unnamed words.</summary>
+        AfterSingerSings,
+        /// <summary><c>singer … sings w |</c> — <c>on</c>.</summary>
+        AfterSingerWords,
         /// <summary>Inside the top-level <c>chordShapes { | }</c> (or a <c>section</c> of it) — the
         /// chord names an entry starts with, and <c>section</c> at the table's own level.</summary>
         ChordDiagramTable,
@@ -1116,6 +1115,10 @@ public sealed partial class LilySharpLanguageServer
         // `singer male ` the name is optional, so the clauses that may follow are still offered below.
         if (SingerSlotAt(text, offset) is { } singerSlot && (singerSlot.Quoted || singerSlot.Gender == null || singerSlot.Another))
             return CompletionContext.AfterSinger;
+
+        // The rest of a `singer` line: `sings`, the words, `on`, the part.
+        if (SingerLineStepAt(text, offset, scan.Stack) is { } singerStep)
+            return singerStep;
 
         // A lyrics head after a whole clause: the clauses not written yet (a body's words are
         // in a lyrics frame, a title's in a string).
@@ -1492,9 +1495,7 @@ public sealed partial class LilySharpLanguageServer
         // so the position has to be one where the keyword is read as one: inside some block
         // (music is always braced), not a part header, not a string, and nowhere under a
         // `lyrics` frame — a syllable body is unquoted words, and "repeat after me" is a
-        // lyric, not a directive. ⚠️ A frame reads the TWO words before its brace, so
-        // `lyrics v sings m {` shows as Prefix=sings, Name=m — the `sings` clause is the
-        // lyrics track's other spelling, which IsLyricsFrame is the one reader of.
+                 // lyric, not a directive.
         // `tuplet 3/2 |`: the one word that may stand between the ratio and the body (GRAMMAR
         // TupletExpression). Under the same roof as `repeat` below: music is always braced, and a
         // lyric or a string may hold these words as plain text.
@@ -1615,12 +1616,9 @@ public sealed partial class LilySharpLanguageServer
                         return CompletionContext.AfterPlaysTarget;
                     break;
                 case "lyrics": return CompletionContext.AfterLyricsRef;
-                // `lyrics NAME sings ▮` on a score row — the binding target, the
-                // same list the definition's `sings` offers. Guarded by the word
-                // two back being `lyrics`, so a part that happens to be named
-                // sings placed as a bare MIDI item never reaches it.
-                case "sings":
-                    if (ThirdWordBeforeCursor(text, offset) == "lyrics")
+                // `lyrics NAME on ▮` on a score row: the part or voice the row follows.
+                case "on":
+                    if (ThirdWordBeforeCursor(text, offset) == "lyrics" || SecondWordBeforeCursor(text, offset) == "lyrics")
                         return CompletionContext.AfterSingsTarget;
                     break;
                 // (`lines` / `removeEmpty` value slots were read here by walking back for a
@@ -1706,14 +1704,6 @@ public sealed partial class LilySharpLanguageServer
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterLyricsTrackName;
 
-        // `lyrics NAME sings ▮` — the binding target. Guarded by the word TWO
-        // back being `lyrics`, so an English lyric syllable "sings" inside a
-        // body (`{ he sings ▮ }`) never reaches it.
-        if (prevWord == "sings"
-            && ThirdWordBeforeCursor(text, offset) == "lyrics"
-            && !IsInsideStringLiteral(text, offset))
-            return CompletionContext.AfterSingsTarget;
-
         // `chords NAME ▮` / `chords [NAME] for ▮` at a definition site: the `for PART` pair —
         // the part whose letters the track is typed in (owner's decision 2026-10-28). A `{`
         // between the words empties the scanned word, so a track BODY never triggers it.
@@ -1788,7 +1778,7 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>The word before <see cref="SecondWordBeforeCursor"/> — "lyrics" in
-    /// <c>lyrics ja sings vo|</c>. Like its sibling, any non-word, non-space
+    /// <c>lyrics ja on vo|</c>. Like its sibling, any non-word, non-space
     /// character (a brace, a quote) empties the scanned word.</summary>
     internal static string ThirdWordBeforeCursor(string text, int offset)
     {

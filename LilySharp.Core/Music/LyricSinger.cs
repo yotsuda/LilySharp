@@ -22,12 +22,9 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Music;
 
 /// <summary>
-/// Who sings a lyrics track (owner's decisions 2026-11-09, sessions 1166 and 1168): the string a
-/// file writes after <c>singer</c> — a voice's own name (<c>"neutrino/MERROW"</c>, it has a
-/// <c>/</c>) or a role a listener's settings cast (<c>"soprano"</c>). On the part, on the lyrics
-/// track and on the score's row, the nearest winning, as <c>sings</c>. Lily# only carries the
-/// string: what sings is the engine's to resolve (docs/singing-roadmap.md §4), the listener's
-/// settings having the last say.
+/// Who sings what: the file's <c>singer [S] sings [NAME] [on PART]</c> lines
+/// (docs/lyrics-singer-design.md). Lily# only carries the singer's string: what sings is the
+/// engine's to resolve (docs/singing-roadmap.md §4), the listener's settings having the last say.
 /// </summary>
 public static class LyricSinger
 {
@@ -78,69 +75,121 @@ public static class LyricSinger
 
     private const string Female = "female", Male = "male";
 
-    private static string? GenderOfWord(string? word) => word switch
+    private static string? GenderOfWord(string? word) => word switch { Female => Female, Male => Male, _ => null };
+
+    private static string? GenderOfPreset(string? preset) => preset switch
     {
-        "female" or "soprano" or "mezzosoprano" or "alto" or "contralto" => Female,
-        "male" or "tenor" or "baritone" or "bass" => Male,
+        "soprano" or "mezzosoprano" or "alto" or "contralto" => Female,
+        "tenor" or "baritone" or "bass" => Male,
         _ => null,
     };
 
     private static string GenderOfPart(string? preset, string? clef)
-        => GenderOfWord(preset?.StartsWith("voice-", StringComparison.Ordinal) == true ? preset["voice-".Length..] : preset)
+        => GenderOfPreset(preset?.StartsWith("voice-", StringComparison.Ordinal) == true ? preset["voice-".Length..] : preset)
             ?? (clef is "bass" or "bass_8" or "baritone" or "tenor" or "treble_8" ? Male : Female);
 
+    /// <summary>One <c>singer</c> line, resolved: who (null for the part's default), which track,
+    /// the part whose notes it sings (null when nothing says: an error), and the voice of that
+    /// part it names (null when it names the part).</summary>
+    public sealed record Line(string? Singer, string Track, string? Part, string? Voice, SingerDeclarationSyntax Node);
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SyntaxNode, IReadOnlyList<Line>> Lines = new();
+
+    /// <summary>The file's <c>singer</c> lines, each resolved (§4 of the design: its <c>on</c>, the
+    /// file's only part, or the one part every score prints the words under).</summary>
+    public static IReadOnlyList<Line> LinesOf(SyntaxNode root)
+    {
+        while (root.Parent != null)
+            root = root.Parent;
+        return Lines.GetValue(root, BuildLines);
+    }
+
+    private static IReadOnlyList<Line> BuildLines(SyntaxNode root)
+    {
+        var declarations = root.SitesOfKinds(SyntaxKind.SingerDeclaration).OfType<SingerDeclarationSyntax>().ToList();
+        if (declarations.Count == 0)
+            return [];
+        var parts = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var n in root.SitesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
+            if (Editing.PartReferenceFinder.DeclaredName(n) is { } declared)
+                parts.Add(declared.Text);
+        var specs = RenderSpecParser.FindAll(root);
+        var lines = new List<Line>(declarations.Count);
+        foreach (var declaration in declarations)
+        {
+            string track = declaration.TrackName;
+            string? target = declaration.OnToken?.Text
+                ?? (parts.Count == 1 ? parts.First()
+                    : parts.Count == 0 ? SyntaxFacts.UnnamedPartName
+                    : PrintedOn(specs, track));
+            string? part = target, voice = null;
+            if (target != null && parts.Count > 0 && !parts.Contains(target))
+            {
+                voice = target;
+                part = parts.FirstOrDefault(p => LyricBindings.VoicesOfPart(root, p).Contains(target));
+            }
+            lines.Add(new Line(declaration.Singer, track, part, voice, declaration));
+        }
+        return lines;
+    }
+
+    /// <summary>The one part every score prints <paramref name="track"/> under, or null.</summary>
+    private static string? PrintedOn(IReadOnlyList<RenderSpec> specs, string track)
+    {
+        var on = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var spec in specs)
+        {
+            foreach (var binding in spec.GetVoiceBindings())
+                if (!binding.WithLyrics.IsDefaultOrEmpty && binding.WithLyrics.Contains(track))
+                    on.Add(binding.VoiceName);
+            foreach (var row in spec.Items.OfType<LyricsRowSpec>())
+                if (row.PartName == track && row.Sings is { } sings)
+                    on.Add(sings);
+        }
+        return on.Count == 1 ? on.First() : null;
+    }
+
     /// <summary>
-    /// A reader of whether a track's words on a part are SUNG (owner's decision 2026-11-10, session
-    /// 1217): a voice has been asked for, by a <c>singer</c> reaching them (<see cref="ReaderOf"/>) or
-    /// by the part's <c>instrument</c> being a voice (<see cref="Svg.Model.InstrumentDefaults.IsVoice"/>).
-    /// Words on any other part are printed only: the part keeps its instrument and no voice is
-    /// rendered. A clef says nothing here (a viola reads the alto clef).
+    /// A reader of whether a track's words on a part are SUNG in the score <paramref name="spec"/>:
+    /// a <c>singer</c> line names them on that part and the part's staff sounds a voice.
     /// </summary>
     public static Func<string?, string?, bool> SungReaderOf(SyntaxNode root, RenderSpec? spec)
     {
-        var singerOf = ReaderOf(root, spec);
-        var voices = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var part in root.DescendantNodes<PartDeclarationSyntax>())
-            if (Svg.Model.InstrumentDefaults.IsVoice(Semantics.PartHeaderDefaults.Read(part).Preset))
-                voices.Add(part.Name.Text);
-        return (track, part) => singerOf(track, part) is { Length: > 0 } || (part != null && voices.Contains(part));
+        var lines = LinesOf(root);
+        if (lines.Count == 0 || spec == null)
+            return static (_, _) => false;
+        var sounds = SungStaves.Of(root, spec);
+        return (track, part) => part != null && sounds.Sung.Contains(part, StringComparer.Ordinal)
+            && lines.Any(l => l.Part == part && l.Track == track);
     }
 
-    /// <summary>The key a score row's singer is kept under: the track and the part the row says it
-    /// sings, as one track may stand under several staves (owner's report 2026-11-09, session 1176:
-    /// two rows of one track, each with its own singer, both sang the first's); the track alone for a
-    /// row that names no part.</summary>
-    public static string RowKey(string track, string? part) => part == null ? track : $"{track}\0{part}";
+    /// <summary><paramref name="spec"/> with a row for every <c>singer</c> line whose words it does
+    /// not print, so what is sung is read the way what is printed is. The words are the line's to
+    /// sing whether the page shows them or not (docs/lyrics-singer-design.md §2).</summary>
+    public static RenderSpec WithSungWords(SyntaxNode root, RenderSpec spec)
+    {
+        var lines = LinesOf(root);
+        if (lines.Count == 0)
+            return spec;
+        var placed = new HashSet<(string Track, string On)>();
+        foreach (var binding in spec.GetVoiceBindings())
+            foreach (var track in binding.WithLyrics)
+                placed.Add((track, binding.VoiceName));
+        foreach (var row in spec.Items.OfType<LyricsRowSpec>())
+            if (row.Sings is { } on)
+                placed.Add((row.PartName, on));
+        var added = new List<RenderItemSpec>();
+        foreach (var line in lines)
+            if (line.Part is { } part && !placed.Contains((line.Track, part)) && !placed.Contains((line.Track, line.Voice ?? part)))
+                added.Add(new LyricsRowSpec(line.Track, line.Voice ?? part));
+        return added.Count == 0 ? spec : spec with { Items = spec.Items.AddRange(added) };
+    }
 
-    /// <summary>
-    /// A reader of the file under <paramref name="root"/> for the score <paramref name="spec"/>:
-    /// the singer of a track on a part — the score row's, else the first block of the track that
-    /// names one, else the part's, else null (the engine's default voice).
-    /// </summary>
+    /// <summary>A reader of who sings a track on a part: the <c>singer</c> line's string, or null
+    /// (the part's default voice).</summary>
     public static Func<string?, string?, string?> ReaderOf(SyntaxNode root, RenderSpec? spec)
     {
-        var tracks = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var block in root.DescendantNodes<LyricsBlockSyntax>())
-            if (block.VoiceName is { } track && block.Singer is { Length: > 0 } singer)
-                tracks.TryAdd(track, singer);
-        var parts = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var part in root.DescendantNodes<PartDeclarationSyntax>())
-            if (Semantics.PartHeaderDefaults.Read(part).Singer is { Length: > 0 } singer)
-                parts.TryAdd(part.Name.Text, singer);
-        var rows = spec?.RowSingers;
-        // A row that names a voice of an engraved part (`sings alt`) is kept under that voice, and
-        // its words stand on the part: looked up by the track.
-        var declared = root.DescendantNodes<PartDeclarationSyntax>().Select(p => p.Name.Text).ToHashSet(StringComparer.Ordinal);
-        var onAVoice = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (rows != null)
-            foreach (var (key, singer) in rows)
-                if (key.IndexOf('\0') is var cut and >= 0 && !declared.Contains(key[(cut + 1)..]))
-                    onAVoice.TryAdd(key[..cut], singer);
-        return (track, part) =>
-            track != null && rows != null && (rows.TryGetValue(RowKey(track, part), out var row) || rows.TryGetValue(track, out row)) ? row
-            : track != null && onAVoice.TryGetValue(track, out var voiced) ? voiced
-            : track != null && tracks.TryGetValue(track, out var own) ? own
-            : part != null && parts.TryGetValue(part, out var theirs) ? theirs
-            : null;
+        var lines = LinesOf(root);
+        return (track, part) => lines.FirstOrDefault(l => l.Part == part && l.Track == track)?.Singer;
     }
 }

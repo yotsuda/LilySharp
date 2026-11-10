@@ -155,10 +155,10 @@ public class IncrementalCompilerTests
             part melody { clef treble }
             section Main {
               melody { {{bars}} }
-              lyrics w sings melody { {{sylls}} }
+              lyrics w { {{sylls}} }
             }
             form { Main }
-            score x { staff melody  lyrics w }
+            score x { staff melody  lyrics w on melody }
             """.Replace("\r\n", "\n");
 
         var tree = SyntaxTree.Parse(text);
@@ -1583,7 +1583,7 @@ public class IncrementalCompilerTests
               section A { a'4 a' a' a' | g'4 a' a' a' | f'4 a' a' a' | e'4 a' a' a' | }
             }
 
-            lyrics w sings melody {
+            lyrics w {
               section A { mum mum mum mum | mum mum mum mum | mum mum mum mum | mum mum mum mum }
             }
 
@@ -1591,7 +1591,7 @@ public class IncrementalCompilerTests
 
             score x {
               staff melody
-              lyrics w
+              lyrics w on melody
             }
             """;
         var tree = SyntaxTree.Parse(src);
@@ -2922,9 +2922,9 @@ public class IncrementalCompilerTests
         string source =
             "part melody { section A { " + bars("c4 d e f") + " } }\n"
             + "part back { section A { " + bars("e4 f g a") + " } }\n"
-            + "lyrics ly sings melody { section A { " + bars("la le li lo") + " } }\n"
+            + "lyrics ly { section A { " + bars("la le li lo") + " } }\n"
             + "form { A }\n"
-            + "score {\n  staff melody  lyrics ly\n  staff back\n}\n";
+            + "score {\n  staff melody  lyrics ly on melody\n  staff back\n}\n";
 
         var tree = SyntaxTree.Parse(source);
         var session = new IncrementalCompiler(tree, Opt);

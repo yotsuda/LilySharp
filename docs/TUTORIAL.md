@@ -247,19 +247,19 @@ tuplet 5/4 { c'16 d e f g } a4 b c |
 
 ## Lyrics
 
-A `lyrics NAME { … }` track sits in the section beside the part it sings; the
-score places it as a `lyrics NAME` row directly under the staff. The `sings`
-word is the binding: the words belong to that melody wherever the score places
-them — write the row under another part's staff (or alone) and you get ONLY the
-words, at the melody's rhythm, without the melody's staff (chorus words on a
-horn part). A row can also name its own melody — `lyrics words sings alto` —
-so one verse serves every staff of a chorale.
+A `lyrics NAME { … }` track sits in the section beside the part it follows; the
+score prints it as a `lyrics NAME` row directly under the staff. Write the row
+under another part's staff with `on` — `lyrics words on melody` — and you get
+ONLY the words, at that melody's rhythm, without the melody's staff (chorus words
+on a horn part). Placing one verse under each staff of a chorale takes one row each.
+A row only prints. To hear the words sung, add a line of its own at the top level:
+`singer "neutrino/MERROW" sings words`, or `singer sings words` for the default voice.
 
 ```
 part melody
 section Verse {
   melody { c'4 d e f | g2 g | }
-  lyrics words sings melody {
+  lyrics words {
     Hap- py birth- day |
     to you |
   }

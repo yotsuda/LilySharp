@@ -169,8 +169,8 @@ public sealed class PageBreakTests
             lyrics verse { section S { {{skips}} la la la la | la la la la | } }
             form { S }
             score {
+              lyrics verse
               staff bass
-              lyrics verse sings bass
             }
             """);
         Assert.Equal(13, layout.AllSystems.Length);
@@ -179,7 +179,7 @@ public sealed class PageBreakTests
         var first = layout.AllSystems[0].StaffGroups.SelectMany(g => g.Staves).ToList();
         var last = layout.AllSystems[^1].StaffGroups.SelectMany(g => g.Staves).ToList();
         Assert.Equal(2, first.Count);
-        Assert.Equal([false, true], first.Select(s => s.IsHidden));
+        Assert.Equal([true, false], first.Select(s => s.IsHidden));
         Assert.Equal([false, false], last.Select(s => s.IsHidden));
     }
 

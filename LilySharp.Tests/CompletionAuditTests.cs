@@ -128,10 +128,10 @@ public class CompletionAuditTests
     // Lyrics bodies, in every spelling: a by-section cell (named, bound, unnamed), a
     // by-part track's inner section, mid-verse.
     [InlineData("section A { lyrics w { ", "LyricsBody")]
-    [InlineData("section A { lyrics w sings m { ", "LyricsBody")]
+    [InlineData("section A { lyrics w { ", "LyricsBody")]
     [InlineData("section A { melody { c } lyrics { ", "LyricsBody")]
     [InlineData("lyrics w { section A { ", "LyricsBody")]
-    [InlineData("lyrics w sings m { section A { Twin- kle ", "LyricsBody")]
+    [InlineData("lyrics w { section A { Twin- kle ", "LyricsBody")]
     // The top-level track itself keeps its section-scaffold list, and a music body its own.
     [InlineData("lyrics w { ", "LyricsBlock")]
     [InlineData("section A { m { c4 d ", "MusicBlock")]
@@ -319,13 +319,7 @@ public class CompletionAuditTests
         var items = LilySharpLanguageServer.GetSectionBlockCompletions(text, text.Length).Items;
         var lyrics = items.Single(i => i.Label == "lyrics");
         var chords = items.Single(i => i.Label == "chords");
-        // TWO parts are declared, so the scaffold does not guess between them: the `sings`
-        // target is an empty stop and the item re-opens the popup on it (the part list).
-        // ⚠️ It filled in the FIRST declared part until 2026-09-12 — a real name, but one
-        // the writer never chose, and the twin item at the top level wrote the literal word
-        // `part` (user report). One reader answers both now: SingsClauseSnippet.
-        Assert.Contains("sings $1", lyrics.InsertText!, StringComparison.Ordinal);
-        Assert.Equal("editor.action.triggerSuggest", lyrics.Command?.CommandIdentifier);
+        // The scaffold writes the words alone: who sings them is the file's `singer` line.
 
         string book = $$"""
             part melody { clef treble }
@@ -427,10 +421,10 @@ public class CompletionAuditTests
         foreach (var item in items)
         {
             string verse = Resolved(item, "la la la la |");
-            AssertCompiles(Book(sectionExtra: $"lyrics w sings m {{ {verse} }}", items: "staff m  lyrics w"),
+            AssertCompiles(Book(sectionExtra: $"lyrics w {{ {verse} }}", items: "staff m  lyrics w on m"),
                 $"`{item.Label}` in a by-section lyrics cell");
-            AssertCompiles($"part m {{ section A {{ c4 d e f | }} }}\nlyrics w sings m {{ section A {{ {verse} }} }}\n"
-                           + "form { A }\nscore { staff m  lyrics w }", $"`{item.Label}` in a by-part track");
+            AssertCompiles($"part m {{ section A {{ c4 d e f | }} }}\nlyrics w {{ section A {{ {verse} }} }}\n"
+                           + "form { A }\nscore { staff m  lyrics w on m }", $"`{item.Label}` in a by-part track");
         }
         // No pitch letters in a lyrics body.
         Assert.DoesNotContain(items, i => i.Label is "c" or "d");

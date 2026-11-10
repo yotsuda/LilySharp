@@ -176,10 +176,10 @@ public class VerseInkBuilderAgreementTests
 time 4/4
 section Main {
   melody { c''4 d e f | g a b c'' | }
-  lyrics words sings melody { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
+  lyrics words { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
 form { Main }
-score x { staff melody  lyrics words }
+score x { staff melody  lyrics words on melody }
 ");
     }
 
@@ -189,9 +189,9 @@ score x { staff melody  lyrics words }
         AssertNoteBoundAgrees(
             "part melody { section A { c'4 d e f } }\n" +
             "part back { section A { e'4 f g a } }\n" +
-            "lyrics ly sings melody { section A { la le li lo } }\n" +
+            "lyrics ly { section A { la le li lo } }\n" +
             "form { A }\n" +
-            "score {\n  staff melody  lyrics ly\n  staff back\n}\n");
+            "score {\n  staff melody  lyrics ly on melody\n  staff back\n}\n");
     }
 
     [Fact]
@@ -203,10 +203,10 @@ score x { staff melody  lyrics words }
 time 4/4
 section Main {
   melody { c'4 d e f | g a b c'' | c''4 b a g | f e d c' | c'4 d e f | g a b c'' | c''4 b a g | f e d c' | c'4 d e f | g a b c'' | c''4 b a g | f e d c' | }
-  lyrics words sings melody { Aa bb cc dd | ee ff gg hh | ii jj kk ll | mm nn oo pp | qq rr ss tt | uu vv ww xx | yy zz ab cd | ef gh ij kl | mn op qr st | uv wx yz za | zb zc zd ze | zf zg zh zi | }
+  lyrics words { Aa bb cc dd | ee ff gg hh | ii jj kk ll | mm nn oo pp | qq rr ss tt | uu vv ww xx | yy zz ab cd | ef gh ij kl | mn op qr st | uv wx yz za | zb zc zd ze | zf zg zh zi | }
 }
 form { Main }
-score x { staff melody  lyrics words }
+score x { staff melody  lyrics words on melody }
 ");
     }
 
@@ -216,9 +216,9 @@ score x { staff melody  lyrics words }
         var (score, layout) = Render(
             "part melody { section A { c'4 d e f } }\n" +
             "part back { section A { e'4 f g a } }\n" +
-            "lyrics ly sings melody { section A { la le li lo la le li lo } }\n" +
+            "lyrics ly { section A { la le li lo la le li lo } }\n" +
             "form { A A }\n" +
-            "score {\n  staff melody\n  staff back\n  lyrics ly\n}\n");
+            "score {\n  staff melody\n  staff back\n  lyrics ly on melody\n}\n");
 
         var rowStaves = score.Lyrics
             .Where(l => l.IsLyricsRow).Select(l => l.StaffIndex).Distinct().ToList();

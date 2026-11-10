@@ -636,11 +636,11 @@ public class HaraKiriTests
             + "part voc { clef treble }" + Environment.NewLine
             + "part pno { clef bass }" + Environment.NewLine
             + "section A { voc { c'4 d' e' f' | } "
-            + (verse ? "lyrics w sings voc { la la la la | } " : "")
+            + (verse ? "lyrics w { la la la la | } " : "")
             + "pno { c4 d e f | } }" + Environment.NewLine
             + "section B { voc { R1 | } pno { g4 a b c' | } }" + Environment.NewLine
             + "form { A break B }" + Environment.NewLine
-            + "score { staff voc as removeEmpty true " + (verse ? " lyrics w " : "") + " staff pno }"
+            + "score { staff voc as removeEmpty true " + (verse ? " lyrics w on voc " : "") + " staff pno }"
             + Environment.NewLine;
 
         static (double Gap, int SyllablesPastSystem1) Measure(string src)

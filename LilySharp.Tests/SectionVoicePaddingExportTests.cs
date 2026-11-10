@@ -100,7 +100,7 @@ public class SectionVoicePaddingExportTests
             section D { melody { c1 | } chords prog { C | F | G | } }
             section E { c1 | c1 | }
             form { A B C D E }
-            score { chords prog  staff melody  staff bass  lyrics words sings melody }
+            score { chords prog  staff melody  staff bass  lyrics words on melody }
             """).GetRoot();
         var semantic = SectionBarCounts.BuildSemanticIndex(root).Canonical;
         var syntactic = SectionBarCounts.CanonicalByNameSyntactic(root);

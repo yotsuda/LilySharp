@@ -33,3 +33,76 @@ public sealed class LanguageDeclarationSyntax : SyntaxNode
     /// <summary>The language as written.</summary>
     public string Language => ValueToken.Text;
 }
+
+/// <summary>Who sings what, at the top level of a file: <c>singer [S] sings [NAME] [on PART]</c>
+/// (owner's decisions 2026-11-10, docs/lyrics-singer-design.md).</summary>
+public sealed class SingerDeclarationSyntax : SyntaxNode
+{
+    internal SingerDeclarationSyntax(SingerDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>singer</c> word.</summary>
+    public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
+
+    private int SingsIndex
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text: "sings" })
+                    return i;
+            return -1;
+        }
+    }
+
+    /// <summary>The <c>sings</c> word, or null where it is missing (an error).</summary>
+    public SyntaxTokenNode? SingsKeyword => SingsIndex is var i and >= 0 ? (SyntaxTokenNode)GetChild(i)! : null;
+
+    /// <summary>The written names, in order.</summary>
+    public IEnumerable<SyntaxTokenNode> NameTokens
+    {
+        get
+        {
+            int end = SingsIndex >= 0 ? SingsIndex : SlotCount;
+            for (int i = 1; i < end; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } t)
+                    yield return t;
+        }
+    }
+
+    /// <summary>The <c>male</c> or <c>female</c> written before the names, or null.</summary>
+    public SyntaxTokenNode? GenderToken =>
+        GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } t && t.Text != "sings" ? t : null;
+
+    /// <summary>Who sings, as the engine is told: the names joined, else the gender, else null (the
+    /// part's gender decides).</summary>
+    public string? Singer
+    {
+        get
+        {
+            var names = NameTokens.Select(t => Music.LyricSinger.ValueOf(t.Text)).Where(n => n.Length > 0).ToList();
+            return names.Count > 0 ? string.Join(Music.LyricSinger.Joiner, names) : GenderToken?.Text;
+        }
+    }
+
+    /// <summary>The token naming the words, or null for the file's unnamed track.</summary>
+    public SyntaxTokenNode? TrackToken =>
+        SingsIndex is var i and >= 0 && GetChild(i + 1) is SyntaxTokenNode t && t.Text != "on" ? t : null;
+
+    /// <summary>The track sung: its name, or the unnamed track's.</summary>
+    public string TrackName => TrackToken?.Text ?? SyntaxFacts.UnnamedLyricsName;
+
+    /// <summary>The token after <c>on</c>: the part or voice whose notes are sung, or null.</summary>
+    public SyntaxTokenNode? OnToken
+    {
+        get
+        {
+            for (int i = SingsIndex + 1; i >= 1 && i + 1 < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Text: "on" })
+                    return GetChild(i + 1) as SyntaxTokenNode;
+            return null;
+        }
+    }
+}

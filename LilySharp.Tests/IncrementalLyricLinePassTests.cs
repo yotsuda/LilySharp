@@ -72,7 +72,7 @@ public class IncrementalLyricLinePassTests
         form { A B }
         score {
           staff melody
-          lyrics verse sings melody
+          lyrics verse on melody
           staff melody
         }
         """;
@@ -93,7 +93,7 @@ public class IncrementalLyricLinePassTests
         form { A B }
         score {
           staff melody
-          lyrics verse sings melody
+          lyrics verse on melody
         }
         """;
 

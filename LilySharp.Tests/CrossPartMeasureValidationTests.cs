@@ -422,10 +422,10 @@ public class CrossPartMeasureValidationTests
             part vocal { }
             section A {
               vocal { g2 g | g2 g | }
-              lyrics words sings vocal { la la | }
+              lyrics words { la la | }
             }
             form { A | }
-            score { lyrics words }
+            score { lyrics words on vocal }
             """;
         var diags = Validate(source);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
@@ -443,11 +443,11 @@ public class CrossPartMeasureValidationTests
             part vocal { }
             section A {
               vocal { g2 g | g2 g | }
-              lyrics ja sings vocal { la la | la la | }
-              lyrics en sings vocal { sing it | loud | }
+              lyrics ja { la la | la la | }
+              lyrics en { sing it | loud | }
             }
             form { A | }
-            score { lyrics ja  lyrics en }
+            score { lyrics ja on vocal  lyrics en on vocal }
             """);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
     }

@@ -22,54 +22,28 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// Which parts a score sings and which it plays (owner's decision 2026-11-08, docs/singing-design.md
-/// §3): the words belong to the staff they are printed under — a staff with a lyrics row under it
-/// that sings its part is sung, a staff without is played, and a part on two staves is both.
+/// Which parts a score sings and which it plays (docs/lyrics-singer-design.md §5): a singer line
+/// makes its part a voice wherever a staff shows it, unless the staff says otherwise with
+/// <c>sounds</c>; a staff with no singer plays; a part with no staff does not sound.
 /// </summary>
 [Trait("Category", "Unit")]
 public class SungStavesTests
 {
-    private static (string Sung, string Played) Of(string scoreBody)
+    private const string OnMelody = "singer sings verse on melody";
+
+    private static SungStaves.Sounds Sounds(string scoreBody, string singers, string melody = "part melody { clef treble  instrument soprano }", string music = "c'4 d e f |")
     {
-        var source = $$"""
-            part melody { clef treble  instrument soprano }
+        var tree = SyntaxTree.Parse($$"""
+            {{melody}}
             part piano { clef treble }
             part horn
             section A {
-              melody { c'4 d e f | }
+              melody { {{music}} }
               piano { c4 d e f | }
               horn { c'4 d e f | }
               lyrics verse { a b c d | }
             }
-            form { A }
-            score { {{scoreBody}} }
-            """;
-        var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
-        var spec = RenderSpecParser.FindAll(tree).First();
-        var sounds = SungStaves.Of(tree.GetRoot(), spec);
-        return (string.Join(" ", sounds.Sung), string.Join(" ", sounds.Played));
-    }
-
-    [Fact]
-    public void TheOwnersExample_IsSungOnTheStaffWithTheWords_AndPlayedOnTheOthers()
-        => Assert.Equal(("melody", "melody"), Of("staffGroup { staff melody  staff melody  lyrics verse sings melody  staff melody }"));
-
-    [Fact]
-    public void AStaffWithItsWordsUnderIt_IsSungAlone()
-        => Assert.Equal(("melody", ""), Of("staff melody  lyrics verse sings melody"));
-
-    // Owner's decision 2026-11-10, session 1217: words with no voice asked for are printed; the staff plays.
-    private static SungStaves.Sounds PrintedOf(string scoreBody, string melody = "part melody { clef treble }")
-    {
-        var tree = SyntaxTree.Parse($$"""
-            {{melody}}
-            part horn
-            section A {
-              melody { c'4 d e f | }
-              horn { c'4 d e f | }
-              lyrics verse { a b c d | }
-            }
+            {{singers}}
             form { A }
             score { {{scoreBody}} }
             """);
@@ -77,80 +51,94 @@ public class SungStavesTests
         return SungStaves.Of(tree.GetRoot(), RenderSpecParser.FindAll(tree).First());
     }
 
-    [Fact]
-    public void WordsWithNoVoice_ArePrinted_AndTheStaffPlays()
+    private static (string Sung, string Played) Of(string scoreBody, string singers = OnMelody)
     {
-        var sounds = PrintedOf("staff melody  lyrics verse sings melody");
+        var sounds = Sounds(scoreBody, singers);
+        return (string.Join(" ", sounds.Sung), string.Join(" ", sounds.Played));
+    }
+
+    [Theory]
+    [InlineData("staff melody  lyrics verse")]
+    [InlineData("lyrics verse  staff melody")]
+    [InlineData("staff melody")]                        // words on the page are the score's to choose
+    public void ASingersPart_IsSung_AndNotPlayed(string score)
+        => Assert.Equal(("melody", ""), Of(score));
+
+    [Fact]
+    public void NoSinger_IsPlayed_WithItsWordsPrinted()
+    {
+        var sounds = Sounds("staff melody  lyrics verse", "");
         Assert.Empty(sounds.Sung);
         Assert.Equal(new[] { "melody" }, sounds.Played);
         Assert.Equal(new[] { "melody" }, sounds.PrintedWords);
     }
 
     [Fact]
-    public void WordsAboveTheirStaff_WithNoVoice_ArePrinted()
-    {
-        var sounds = PrintedOf("lyrics verse sings melody  staff melody");
-        Assert.Empty(sounds.Sung);
-        Assert.Equal(new[] { "melody" }, sounds.PrintedWords);
-    }
+    public void AVoicePreset_AsksForNothing()
+        => Assert.Equal(("", "melody"), Of("staff melody", ""));
 
     [Fact]
-    public void WordsOfAPartNoStaffShows_WithNoVoice_ArePlayed()
-    {
-        var sounds = PrintedOf("staff horn  lyrics verse sings melody");
-        Assert.Empty(sounds.Sung);
-        Assert.Equal(new[] { "horn", "melody" }, sounds.Played);
-        Assert.Equal(new[] { "melody" }, sounds.PrintedWords);
-    }
-
-    [Fact]
-    public void AVoice_TakesTheWordsOffThePrintedList()
-        => Assert.Empty(PrintedOf("staff melody  lyrics verse sings melody", "part melody { instrument soprano }").PrintedWords!);
-
-    [Fact]
-    public void AStaffWithNoWords_IsPlayed()
-        => Assert.Equal(("", "melody"), Of("staff melody"));
+    public void ASingerLine_TakesTheWordsOffThePrintedList()
+        => Assert.Empty(Sounds("staff melody  lyrics verse", OnMelody).PrintedWords!);
 
     [Fact]
     public void TheAccompaniment_IsPlayed_WhileTheSingerIsSung()
-        => Assert.Equal(("melody", "piano"), Of("staff melody  lyrics verse sings melody  staff piano"));
+        => Assert.Equal(("melody", "piano"), Of("staff melody  lyrics verse  staff piano"));
 
-    // Owner's decision 2026-11-09 (雪やこんこ: `staff m2  lyrics verse sings melody`): the melody
-    // no staff shows is sung, not drawn, not played — until then its words gave no voice.
+    [Theory]
+    [InlineData("staff melody sounds voice", "melody", "")]
+    [InlineData("staff melody sounds instrument", "", "melody")]
+    [InlineData("staff melody sounds both", "melody", "melody")]
+    [InlineData("staff melody sounds instrument  staff melody sounds voice", "melody", "melody")]     // two staves add up
+    public void SoundsSays_WhatTheStaffIsHeardAs(string score, string sung, string played)
+        => Assert.Equal((sung, played), Of(score));
+
     [Fact]
-    public void WordsOfAPartNoStaffShows_SingThatPartUnseen_TheStaffAboveIsPlayed()
+    public void APartNoStaffShows_DoesNotSound()
+        => Assert.Equal(("", "horn"), Of("staff horn  lyrics verse on melody"));
+
+    [Fact]
+    public void AHiddenStaff_SoundsWithoutBeingDrawn()
     {
-        Assert.Equal(("melody", "horn"), Of("staff horn  lyrics verse sings melody"));
-        Assert.Equal(("melody", "horn piano"), Of("staff horn  lyrics verse sings melody  staff piano"));
+        Assert.Equal(("melody", "piano"), Of("staff melody hidden  staff piano"));
+        Assert.Equal(("melody", "piano"), Of("staff melody  staff piano hidden"));
     }
 
     [Fact]
-    public void ARowThatSingsAVoiceOfAnEngravedPart_IsNotAnUnseenSinger()
+    public void AHiddenSinger_IsUnseen()
+    {
+        var tree = SyntaxTree.Parse("""
+            part melody { clef treble }
+            part piano { clef treble }
+            section A {
+              melody { c'4 d e f | }
+              piano { c4 d e f | }
+              lyrics verse { a b c d | }
+            }
+            singer sings verse on melody
+            form { A }
+            score { staff melody hidden  staff piano }
+            """);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+        Assert.Equal(new[] { "melody" }, SungStaves.UnseenSungParts(tree.GetRoot(), RenderSpecParser.FindAll(tree).First()));
+    }
+
+    [Fact]
+    public void ALineThatSingsAVoiceOfAnEngravedPart_IsNotAnUnseenSinger()
     {
         var source = """
             part melody { clef treble  instrument soprano }
             section A {
               melody { voice alt { c'4 d e f | } { c4 d e f | } }
-              lyrics verse sings alt { a b c d | }
+              lyrics verse { a b c d | }
             }
+            singer sings verse on alt
             form { A }
-            score { staff melody  lyrics verse }
+            score { staff melody  lyrics verse on alt }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
         var spec = RenderSpecParser.FindAll(tree).First();
         Assert.Empty(SungStaves.UnseenSungParts(tree.GetRoot(), spec));
     }
-
-    [Fact]
-    public void WordsAboveTheirStaff_BelongToTheFirstStaffOfThatPartBelow()
-        => Assert.Equal(("melody", ""), Of("lyrics verse sings melody  staff melody"));
-
-    [Fact]
-    public void AnUnboundRow_SingsTheStaffAboveIt()
-        => Assert.Equal(("melody", "piano"), Of("staff piano  staff melody  lyrics verse"));
-
-    [Fact]
-    public void WordsUnderAnotherPartsStaff_BelongToTheNearestStaffOfTheirPartAbove()
-        => Assert.Equal(("melody", "piano"), Of("staff melody  staff piano  lyrics verse sings melody"));
 }

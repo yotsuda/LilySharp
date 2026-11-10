@@ -62,9 +62,10 @@ public class StackedTrackRowTests
         form { A B }
         """;
 
-    private static MultiStaffScore Collect(string scoreBody)
+    private static MultiStaffScore Collect(string scoreBody, bool rowsFirst = false)
     {
-        var tree = SyntaxTree.Parse($"{Doc}\nscore {{\n  staff m\n{scoreBody}\n}}\n");
+        var body = rowsFirst ? $"{scoreBody}\n  staff m" : $"  staff m\n{scoreBody}";
+        var tree = SyntaxTree.Parse($"{Doc}\nscore {{\n{body}\n}}\n");
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         var spec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(spec);
@@ -132,7 +133,7 @@ public class StackedTrackRowTests
     [Fact]
     public void ALyricsTrackStacksTheSameWay()
     {
-        var s = Collect("  lyrics v\n  lyrics v");
+        var s = Collect("  lyrics v\n  lyrics v", rowsFirst: true);
 
         var bands = s.Lyrics.Where(l => l.IsLyricsRow).Select(l => l.StaffIndex).Distinct().ToList();
         Assert.Equal(2, bands.Count);

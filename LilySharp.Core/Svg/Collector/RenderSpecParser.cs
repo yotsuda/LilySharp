@@ -161,13 +161,13 @@ public static class RenderSpecParser
                     items.Add(ParseCombinedStaff(combined));
                     break;
 
-                case StaffRenderSyntax staff when !IsInsideGrandStaff(staff):
+                case StaffRenderSyntax staff when !IsInsideGrandStaff(staff) && !staff.Hidden:
                     var staffSpec = ParseStaff(staff);
                     if (staffSpec != null)
                         items.Add(new SingleStaffSpec(staffSpec));
                     break;
 
-                case TabRenderSyntax tab:
+                case TabRenderSyntax tab when !tab.Hidden:
                     var tabSpec = ParseTab(tab, staffParts);
                     if (tabSpec != null)
                         items.Add(tabSpec);
@@ -194,7 +194,7 @@ public static class RenderSpecParser
                 // A row inside a group body belongs to the group (ParseGrandStaff
                 // folds it into the staff above), same guard as the staff case.
                 case LyricsRowRenderSyntax lyricsRow when !IsInsideGrandStaff(lyricsRow):
-                    items.Add(new LyricsRowSpec(lyricsRow.PartName, lyricsRow.SingsTarget));
+                    items.Add(new LyricsRowSpec(lyricsRow.PartName, RowTarget(lyricsRow)));
                     break;
 
                 // A bare part name: the MIDI-only row (GRAMMAR §7 PartRef). It draws nothing,
@@ -268,18 +268,71 @@ public static class RenderSpecParser
             LayoutRef: layoutRef,
             MidiOnlyParts: [.. midiOnlyParts],
             StaffPitch: LilySharp.Core.Semantics.ConcertPitch.StaffModes(render),
-            RowSingers: RowSingersOf(render));
+            HiddenStaves: HiddenStavesOf(render));
     }
 
-    /// <summary>The score's <c>lyrics … singer "…"</c> rows by <see cref="LilySharp.Core.Music.LyricSinger.RowKey"/>, or null for none.</summary>
-    private static ImmutableDictionary<string, string>? RowSingersOf(RenderDeclarationSyntax render)
+    /// <summary>
+    /// The part a score's lyrics row is printed on: its <c>on</c>, else the nearest staff above it,
+    /// passing over lyrics and chords rows, a <c>hidden</c> staff counted; null when none stands
+    /// above or a staff of several parts does (docs/lyrics-singer-design.md §4).
+    /// </summary>
+    internal static string? RowTarget(LyricsRowRenderSyntax row)
     {
-        ImmutableDictionary<string, string>.Builder? singers = null;
-        foreach (var row in render.DescendantNodes<LyricsRowRenderSyntax>())
-            if (row.Singer is { Length: > 0 } singer)
-                (singers ??= ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal))
-                    .TryAdd(LilySharp.Core.Music.LyricSinger.RowKey(row.PartName, row.SingsTarget), singer);
-        return singers?.ToImmutable();
+        if (row.SingsTarget is { } written)
+            return written;
+        SyntaxNode root = row;
+        while (root.Parent != null)
+            root = root.Parent;
+        return NearestStaffAbove(row, out _) ?? (row.NameToken == null ? Music.LyricBindings.TargetOf(root, row.PartName) : null);
+    }
+
+    /// <summary>The nearest staff above <paramref name="row"/> among its siblings, and whether what
+    /// stands there is a staff of several parts (no answer, and an error without an <c>on</c>).</summary>
+    internal static string? NearestStaffAbove(LyricsRowRenderSyntax row, out bool severalParts)
+    {
+        string? found = null;
+        severalParts = false;
+        if (row.Parent is not { } parent)
+            return null;
+        foreach (var member in parent.ChildNodes())
+        {
+            if (ReferenceEquals(member, row))
+                break;
+            switch (member)
+            {
+                case StaffRenderSyntax staff:
+                    found = staff.PartToken?.Text ?? SyntaxFacts.UnnamedPartName;
+                    severalParts = false;
+                    break;
+                case TabRenderSyntax tab:
+                    found = tab.PartToken?.Text ?? SyntaxFacts.UnnamedPartName;
+                    severalParts = false;
+                    break;
+                case GrandStaffRenderSyntax group:
+                    found = group.ChildNodes().OfType<StaffRenderSyntax>().LastOrDefault() is { } last
+                        ? last.PartToken?.Text ?? SyntaxFacts.UnnamedPartName
+                        : null;
+                    severalParts = found == null;
+                    break;
+                case CondensedStaffRenderSyntax or CombinedStaffRenderSyntax:
+                    found = null;
+                    severalParts = true;
+                    break;
+            }
+        }
+        return found;
+    }
+
+    /// <summary>The score's <c>staff PART hidden</c> items, a group's members included.</summary>
+    private static ImmutableArray<HiddenStaffSpec> HiddenStavesOf(RenderDeclarationSyntax render)
+    {
+        var hidden = ImmutableArray.CreateBuilder<HiddenStaffSpec>();
+        foreach (var node in render.DescendantNodes())
+            if (node is StaffRenderSyntax { Hidden: true } staff)
+                hidden.Add(new HiddenStaffSpec(staff.PartToken?.Text ?? SyntaxFacts.UnnamedPartName, staff.SoundsToken?.Text));
+            else if (node is TabRenderSyntax { Hidden: true } tab)
+                hidden.Add(new HiddenStaffSpec(tab.PartToken?.Text ?? SyntaxFacts.UnnamedPartName, tab.SoundsToken?.Text));
+        return hidden.ToImmutable();
     }
 
     /// <summary>
@@ -466,10 +519,13 @@ public static class RenderSpecParser
     /// <summary>
     /// Finds all score-type render declarations in a syntax tree.
     /// </summary>
-    public static IReadOnlyList<RenderSpec> FindAll(SyntaxTree tree)
+    public static IReadOnlyList<RenderSpec> FindAll(SyntaxTree tree) => FindAll(tree.GetRoot());
+
+    /// <summary>Finds all score-type render declarations under a tree's root.</summary>
+    public static IReadOnlyList<RenderSpec> FindAll(SyntaxNode root)
     {
         var specs = new List<RenderSpec>();
-        foreach (var node in tree.GetRoot().ChildNodes())
+        foreach (var node in root.ChildNodes())
         {
             if (node is RenderDeclarationSyntax render)
             {
@@ -687,7 +743,7 @@ public static class RenderSpecParser
         {
             switch (member)
             {
-                case StaffRenderSyntax staff:
+                case StaffRenderSyntax staff when !staff.Hidden:
                     var staffSpec = ParseStaff(staff);
                     if (staffSpec != null)
                         members.Add(new SingleStaffSpec(staffSpec));
@@ -706,9 +762,9 @@ public static class RenderSpecParser
                     break;
                 case LyricsRowRenderSyntax row when members.Count > 0
                     && members[^1] is SingleStaffSpec above
-                    && RowBindsToPart(grandStaff, row.PartName, row.SingsTarget, above.Staff.VoiceName):
+                    && RowBindsToPart(grandStaff, row.PartName, RowTarget(row), above.Staff.VoiceName):
                     members[^1] = new SingleStaffSpec(
-                        WithFoldedVerse(grandStaff, above.Staff, row.PartName, row.SingsTarget));
+                        WithFoldedVerse(grandStaff, above.Staff, row.PartName, RowTarget(row)));
                     break;
             }
         }
@@ -844,7 +900,8 @@ public static class RenderSpecParser
             WithLyrics: ImmutableArray<string>.Empty,
             PedalStyle: pedalStyle,
             WrittenClef: explicitClef,
-            PresetName: presetName)
+            PresetName: presetName,
+            Sounds: staff.SoundsToken?.Text)
         {
             // The part's short name, for the systems after the first (grammar feedback B6,
             // 2026-10-13) — on the part only; ~ silences it with the long one.
@@ -936,7 +993,7 @@ public static class RenderSpecParser
         // its notes are fretted, never what the part sounds or its staff prints.
         var transposition = ResolvePartTransposition(tab, voiceName, tuning)
             + Semantics.TabRenderVocabularyValidator.OctaveSemitones(tab);
-        var staffSpec = new StaffSpec(sourceClef, voiceName);
+        var staffSpec = new StaffSpec(sourceClef, voiceName, Sounds: tab.SoundsToken?.Text);
         // The STYLE: an explicit `as` wins; otherwise the score answers. A tab beside a
         // notation staff of the same part is fret digits only, because that staff already
         // carries the meter, the rests, the dots, the stems and the ties; a tab standing

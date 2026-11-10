@@ -44,8 +44,9 @@ public sealed class LyricReadingTests
           melody { {{music}} }
           lyrics verse { {{words}} }
         }
+        singer sings verse on melody
         form { A }
-        score { staff melody  lyrics verse sings melody }
+        score { staff melody  lyrics verse on melody }
         """;
 
     [Theory]

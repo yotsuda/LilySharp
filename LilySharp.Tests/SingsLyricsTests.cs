@@ -39,10 +39,10 @@ public class SingsLyricsTests
         section Chorus {
           sax { c'4 d e f | g2 g | }
           vocal { g'8 g a4 a8 a a4 | g2 f | }
-          lyrics ja sings vocal { Sing it loud and clear now | ev- ery | }
+          lyrics ja { Sing it loud and clear now | ev- ery | }
         }
         form { Chorus }
-        score { staff sax lyrics ja }
+        score { staff sax lyrics ja on vocal }
         """;
 
     private static IReadOnlyList<Diagnostic> Validate(string src)
@@ -94,26 +94,17 @@ public class SingsLyricsTests
         // surviving refusal is the GROUP case, where no band exists to fall
         // back to.)
         Assert.Contains(Validate("""
-            section A { m { c'4 d | } v { e'4 f | } lyrics w sings v { la la | } }
+            section A { m { c'4 d | } v { e'4 f | } lyrics w { la la | } }
             form { A }
-            score { grandStaff { staff m  lyrics w  staff v } }
+            score { grandStaff { staff m  lyrics w on v  staff v } }
             """), d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
 
         // sings target that names nothing.
         Assert.Contains(Validate("""
-            section A { m { c'4 d | } lyrics w sings ghost { la la | } }
+            section A { m { c'4 d | } lyrics w { la la | } }
             form { A }
-            score { staff m }
+            score { staff m  lyrics w on ghost }
             """), d => d.Code == DiagnosticCodes.SingsTargetUnknown);
-
-        // Two blocks of one track naming different targets.
-        Assert.Contains(Validate("""
-            section A { m { c'4 d | } v { e4 f | }
-              lyrics w sings m { la la | }
-              lyrics w sings v { lo lo | } }
-            form { A }
-            score { staff m  lyrics w }
-            """), d => d.Code == DiagnosticCodes.SingsConflict);
     }
 
     [Fact]
@@ -123,9 +114,9 @@ public class SingsLyricsTests
         [
             // sings + attach to the singing staff.
             """
-            section A { m { c'4 d | } lyrics w sings m { la la | } }
+            section A { m { c'4 d | } lyrics w { la la | } }
             form { A }
-            score { staff m  lyrics w }
+            score { staff m  lyrics w on m }
             """,
             // sings + the bound ROW (the melody is not engraved).
             PartSheet,
@@ -151,84 +142,15 @@ public class SingsLyricsTests
         foreach (var src in clean)
             Assert.DoesNotContain(Validate(src), d =>
                 d.Code is DiagnosticCodes.GroupRowNotBoundToStaffAbove
-                       or DiagnosticCodes.SingsTargetUnknown
-                       or DiagnosticCodes.SingsConflict);
-    }
-
-    [Fact]
-    public void SecondBlockOfATrack_MayOmitOrRepeatTheBinding()
-    {
-        var src = """
-            section A { m { c'4 d | e4 f | }
-              lyrics w sings m { la la | }
-              lyrics w { lo lo | }
-              lyrics w sings m { le le | } }
-            form { A }
-            score { staff m  lyrics w }
-            """;
-        Assert.DoesNotContain(Validate(src), d => d.Code == DiagnosticCodes.SingsConflict);
-    }
-
-    // ── LYS6013: an unbound row under a part that names its voices (user decision, 2026-10-04) ──
-
-    private static string VoicedBook(string scoreItems, string track = "allt") => $$"""
-        section A {
-          m { voice sop { c'4 d' e' f' | } voice alt { e2 f4 g | } }
-          n { c1 | }
-          lyrics high sings sop { Sing a love song | }
-          lyrics {{track}} { Low part deep | }
-          lyrics free { la la | }
-        }
-        form { A }
-        score { {{scoreItems}} }
-        """;
-
-    [Fact]
-    public void AnUnboundRowUnderAPartWithNamedVoices_IsWarnedAbout_AndStillDrawn()
-    {
-        // `allt` for `alt`: the row binds to nothing, so it is the even-spread row —
-        // legal, drawn, and until session 802 silent.
-        var diags = Validate(VoicedBook("staff m  lyrics high  lyrics allt"));
-        var d = Assert.Single(diags, d => d.Code == DiagnosticCodes.RowNamesNoVoiceOfStaffAbove);
-        Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
-        Assert.Contains("'allt'", d.Message);
-        Assert.Contains("'alt', 'sop'", d.Message);
-        Assert.DoesNotContain(diags, x => x.Severity == DiagnosticSeverity.Error);
-
-        // …under a group's last staff too: a top-level row after the braces folds there.
-        Assert.Contains(Validate(VoicedBook("grandStaff { staff n  staff m }  lyrics allt")),
-            x => x.Code == DiagnosticCodes.RowNamesNoVoiceOfStaffAbove);
-    }
-
-    [Theory]
-    // The row says what it sings, on the row or at the definition.
-    [InlineData("staff m  lyrics allt sings m", "allt")]
-    [InlineData("staff m  lyrics allt sings alt", "allt")]
-    // …even another part: a row bound elsewhere is that melody's independent band here.
-    [InlineData("staff m  lyrics allt sings n", "allt")]
-    // The part above names no voice: the plain lead-sheet row, as ever.
-    [InlineData("staff n  lyrics free", "allt")]
-    // Not directly below the staff: the row after an unbound row, after a chords row,
-    // and before any staff, has no staff whose verse it could have been.
-    [InlineData("lyrics free  staff m", "allt")]
-    [InlineData("staff m  tab n  lyrics free", "allt")]
-    public void TheRowsThatAreNotThatMistake_AreNotWarnedAbout(string scoreItems, string track)
-        => Assert.DoesNotContain(Validate(VoicedBook(scoreItems, track)),
-            d => d.Code == DiagnosticCodes.RowNamesNoVoiceOfStaffAbove);
-
-    [Fact]
-    public void OneMisspelling_IsOneWarning()
-    {
-        var diags = Validate(VoicedBook("staff m  lyrics allt  lyrics free"));
-        Assert.Single(diags, d => d.Code == DiagnosticCodes.RowNamesNoVoiceOfStaffAbove);
+                       or DiagnosticCodes.SingsTargetUnknown);
     }
 
     // Owner's decision 2026-11-10: a track's name only names it; who sings is `sings`.
     [Theory]
     [InlineData("lyrics m { la | }", "part")]
-    [InlineData("lyrics m sings m { la | }", "part")]
+    [InlineData("lyrics m { la | }", "part")]
     [InlineData("lyrics sop { la | }", "voice")]
-    [InlineData("lyrics sop sings sop { la | }", "voice")]
+    [InlineData("lyrics sop { la | }", "voice")]
     public void ATrackNamedAsAPartOrAVoice_IsAnError(string track, string kind)
     {
         var diags = Validate($$"""
@@ -261,7 +183,7 @@ public class SingsLyricsTests
     [Theory]
     [InlineData("lyrics { la | }")]
     [InlineData("lyrics w { la | }")]
-    [InlineData("lyrics w sings m { la | }")]
+    [InlineData("lyrics w { la | }")]
     public void ATrackWithANameOfItsOwn_IsNoError(string track)
         => Assert.DoesNotContain(Validate($$"""
             time 4/4
@@ -269,28 +191,6 @@ public class SingsLyricsTests
             form { A }
             score { staff m }
             """), x => x.Code == DiagnosticCodes.LyricsNamedAsSinger);
-
-    [Fact]
-    public void ARowNamedAsAVoice_NoLongerFoldsByItsName()
-    {
-        var tree = SyntaxTree.Parse("""
-            time 4/4
-            section A { m { voice sop { c'1 | } alt { e1 | } } lyrics sop { la | } }
-            form { A }
-            score { staff m  lyrics sop }
-            """);
-        var staff = Assert.IsType<SingleStaffSpec>(RenderSpecParser.FindFirst(tree)!.Items[0]).Staff;
-        Assert.True(staff.WithLyrics.IsDefaultOrEmpty);
-    }
-
-    [Fact]
-    public void OneMisspelling_AfterItsOwnRow_IsOneWarning()
-    {
-        // The window closes on the row that failed to bind (RenderSpecParser.FoldAdjacentRows
-        // closes it the same way), so the rows after it are plain bands, not more warnings.
-        var diags = Validate(VoicedBook("staff m  lyrics allt  lyrics free"));
-        Assert.Single(diags, d => d.Code == DiagnosticCodes.RowNamesNoVoiceOfStaffAbove);
-    }
 
     // ── `sings VOICE`: the verse follows the voice it sings, whatever the track is called ──
 
@@ -317,9 +217,8 @@ public class SingsLyricsTests
 
     [Theory]
     // The row says it, the definition says it, and inside a group's braces.
-    [InlineData("lyrics en", "staff m  lyrics en sings alt")]
-    [InlineData("lyrics en sings alt", "staff m  lyrics en")]
-    [InlineData("lyrics en", "grandStaff { staff n  staff m  lyrics en sings alt }")]
+    [InlineData("lyrics en", "staff m  lyrics en on alt")]
+    [InlineData("lyrics en", "grandStaff { staff n  staff m  lyrics en on alt }")]
     public void AVerseThatSingsAVoice_StandsAtThatVoicesRhythm(string lyricsHeader, string scoreItems)
     {
         // Before session 803 `sings alt` folded the row under the staff and then set it at the
@@ -333,7 +232,7 @@ public class SingsLyricsTests
     public void AVerseThatSingsAVoice_OnTheSingleStaffPath()
     {
         // A one-staff score is collected by Collect, not CollectMultiStaff: the same answer.
-        var tree = SyntaxTree.Parse(TwoVoices("lyrics en", "staff m  lyrics en sings alt"));
+        var tree = SyntaxTree.Parse(TwoVoices("lyrics en", "staff m  lyrics en on alt"));
         var spec = RenderSpecParser.FindFirst(tree)!;
         var staff = Assert.IsType<SingleStaffSpec>(spec.Items[0]).Staff;
         Assert.Equal(new[] { ("en", "alt") }, staff.VerseVoices);
@@ -346,7 +245,7 @@ public class SingsLyricsTests
     {
         // Not directly below the staff, so an independent row — at the alto's rhythm, where
         // it used to be the even spread (0, 1/3, 2/3): no PART is called `alt`.
-        var row = Words(TwoVoices("lyrics en", "staff m  staff n  lyrics en sings alt"));
+        var row = Words(TwoVoices("lyrics en", "staff m  staff n  lyrics en on alt"));
         Assert.Equal(AltOnsets, row.Select(l => l.Timing).ToArray());
         Assert.All(row, l => Assert.True(l.IsLyricsRow));
     }
@@ -356,11 +255,11 @@ public class SingsLyricsTests
     {
         // `sings m` names the part, not a voice: nothing is recorded, and the first voice
         // (the soprano's quarters) carries the words as before.
-        var tree = SyntaxTree.Parse(TwoVoices("lyrics en", "staff m  lyrics en sings m"));
+        var tree = SyntaxTree.Parse(TwoVoices("lyrics en", "staff m  lyrics en on m"));
         Assert.True(Assert.IsType<SingleStaffSpec>(RenderSpecParser.FindFirst(tree)!.Items[0])
             .Staff.VerseVoices.IsDefaultOrEmpty);
         Assert.Equal(new Fraction[] { new(0, 1), new(1, 4), new(1, 2) },
-            Words(TwoVoices("lyrics en", "staff m  lyrics en sings m")).Select(l => l.Timing).ToArray());
+            Words(TwoVoices("lyrics en", "staff m  lyrics en on m")).Select(l => l.Timing).ToArray());
     }
 
     // ── the ROW spelling: the score row states the same track property ──
@@ -381,7 +280,7 @@ public class SingsLyricsTests
               lyrics ja { Sing it loud and clear now | ev- ery | }
             }
             form { Chorus }
-            score { staff sax  lyrics ja sings vocal }
+            score { staff sax  lyrics ja on vocal }
             """);
         Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Severity == DiagnosticSeverity.Error);
 
@@ -402,35 +301,15 @@ public class SingsLyricsTests
         Assert.Contains(Validate("""
             section A { m { c'4 d | } lyrics w { la la | } }
             form { A }
-            score { staff m  lyrics w sings ghost }
+            score { staff m  lyrics w on ghost }
             """), d => d.Code == DiagnosticCodes.SingsTargetUnknown);
-
-        // A row naming a DIFFERENT target than the definition is NOT a conflict
-        // (user decision, 2026-09-02): the row's `sings` is that placement's own
-        // melody. Until then this spelling was LYS7005 — "a track sings ONE part".
-        Assert.DoesNotContain(Validate("""
-            section A { m { c'4 d | } v { e'4 f | } lyrics w sings m { la la | } }
-            form { A }
-            score { staff m  lyrics w sings v }
-            """), d => d.Code == DiagnosticCodes.SingsConflict);
-
-        // Two DEFINITION blocks naming different targets still conflict: the
-        // definition states the track's ONE default.
-        Assert.Contains(Validate("""
-            section A { m { c'4 d | } v { e4 f | }
-              lyrics w sings m { la la | }
-              lyrics w sings v { lo lo | } }
-            form { A }
-            score { staff m  lyrics w }
-            """), d => d.Code == DiagnosticCodes.SingsConflict);
 
         // A row repeating the definition's target identically is silent.
         Assert.DoesNotContain(Validate("""
-            section A { m { c'4 d | } lyrics w sings m { la la | } }
+            section A { m { c'4 d | } lyrics w { la la | } }
             form { A }
-            score { staff m  lyrics w sings m }
-            """), d => d.Code is DiagnosticCodes.SingsConflict
-                             or DiagnosticCodes.SingsTargetUnknown);
+            score { staff m  lyrics w on m }
+            """), d => d.Code == DiagnosticCodes.SingsTargetUnknown);
     }
 
     // ── a row's `sings` is ITS OWN placement's melody (user decision, 2026-09-02) ──
@@ -447,10 +326,10 @@ public class SingsLyricsTests
             section Chorus {
               sax { c'4 d e f | g2 g | }
               vocal { g'8 g a4 a8 a a4 | g2 f | }
-              lyrics ja sings sax { Sing it loud and clear now | ev- ery | }
+              lyrics ja { Sing it loud and clear now | ev- ery | }
             }
             form { Chorus }
-            score { staff sax  lyrics ja sings vocal }
+            score { staff sax  lyrics ja on vocal }
             """);
         Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Severity == DiagnosticSeverity.Error);
 
@@ -472,10 +351,10 @@ public class SingsLyricsTests
             section Chorus {
               sax { c'4 d e f | g2 g | }
               vocal { g8 g a4 a8 a a4 | g2 f | }
-              lyrics ja sings sax { Sing it loud and clear now | ev- ery | }
+              lyrics ja { Sing it loud and clear now | ev- ery | }
             }
             form { Chorus }
-            score { staff sax  lyrics ja }
+            score { staff sax  lyrics ja on sax }
             """);
         var foldedSpec = RenderSpecParser.FindFirst(folded);
         Assert.Equal(1, foldedSpec!.Items.Length);
@@ -491,17 +370,17 @@ public class SingsLyricsTests
           sop { b'4 b' c'' d'' | d''4 c'' b' a' | }
           alt { g'4. g'8 g'4 g' | g'4 g' g' fis' | }
           bas { g,4 g, c g, | g,8 g, c4 g, d | }
-          lyrics verse sings sop { Freu- de, schö- ner | Göt- ter- fun- ken, | }
+          lyrics verse { Freu- de, schö- ner | Göt- ter- fun- ken, | }
         }
         form { Chorale }
         score {
           choirStaff {
             staff sop
-            lyrics verse
+            lyrics verse on sop
             staff alt
-            lyrics verse sings alt
+            lyrics verse on alt
             staff bas
-            lyrics verse sings bas
+            lyrics verse on bas
           }
         }
         """;
@@ -548,7 +427,7 @@ public class SingsLyricsTests
         // Positive control for LYS6012: drop the alto row's `sings` and the row
         // falls back to the definition's default (sop), which is not the staff
         // above it — the group refusal is still live.
-        var src = Chorale.Replace("lyrics verse sings alt", "lyrics verse");
+        var src = Chorale.Replace("lyrics verse on alt", "lyrics verse on sop");
         Assert.Contains(Validate(src), d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
     }
 
@@ -559,18 +438,18 @@ public class SingsLyricsTests
             part m { clef treble }
             section A {
               m { c'4 d e f | }
-              lyrics w sings m { la la la la | }
+              lyrics w { la la la la | }
             }
             form { A }
-            score { staff m  lyrics w }
+            score { staff m  lyrics w on m }
             """;
         var pm = PartSectionRegrouper.Convert(groupedBySection);
         Assert.NotNull(pm);
-        Assert.Contains("lyrics w sings m", pm);
+        Assert.Contains("lyrics w on m", pm);
 
         var back = PartSectionRegrouper.Convert(pm!);
         Assert.NotNull(back);
-        Assert.Contains("lyrics w sings m", back);
+        Assert.Contains("lyrics w on m", back);
         Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(back!)),
             d => d.Severity == DiagnosticSeverity.Error);
     }

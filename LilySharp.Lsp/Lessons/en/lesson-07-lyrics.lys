@@ -1,6 +1,6 @@
 // Lesson 7 of 12 — Lyrics
 //
-// A lyrics track `sings` a part: one syllable per note, `sleep- ing` joins a
+// A lyrics track follows a part: one syllable per note, `sleep- ing` joins a
 // word, `|` keeps in step with the bars. Each row goes under the staff.
 
 title "Frère Jacques"
@@ -14,14 +14,14 @@ part melody {
   }
 }
 
-lyrics en sings melody {
+lyrics en {
   section A {
     Are you sleep- ing, | are you sleep- ing, | Bro- ther John? | Bro- ther John? |
     Morn- ing bells are ring- ing, | morn- ing bells are ring- ing: | Ding, dang, dong! | Ding, dang, dong! |
   }
 }
 
-lyrics fr sings melody {
+lyrics fr {
   section A {
     Frè- re Jac- ques, | frè- re Jac- ques, | dor- mez- vous? | dor- mez- vous? |
     Son- nez les ma- ti- nes, | son- nez les ma- ti- nes: | Ding, dang, dong! | Ding, dang, dong! |
@@ -32,11 +32,11 @@ form { ~A }
 
 score {
   staff melody
-  lyrics en
-  lyrics fr
+  lyrics en on melody
+  lyrics fr on melody
 }
 
-// TRY: remove `lyrics fr` from the score · change the last English bar to
+// TRY: remove `lyrics fr on melody` from the score · change the last English bar to
 // `Ding, dang, dong, ding! |` — rest the mouse on the squiggle.
 //
 // NEXT — type `lesson` on a new line and pick `lesson-08-chords`.

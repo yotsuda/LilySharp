@@ -160,42 +160,15 @@ internal sealed partial class Parser
     {
         var keyword = Expect(SyntaxKind.LyricsKeyword);
         // Optional voice-binding name: `lyrics sop { … }` aligns to voice 'sop'.
-        // ⚠️ A PART NAME, not just an identifier — the clef words are legal part names
-        // (SyntaxFacts.IsPartNameToken), and until 2026-09-26 `lyrics w sings bass { … }`
-        // was a parse error ("Expected 'OpenBrace', found 'BassKeyword'") for a part the
-        // grammar says may be called `bass` (found writing a hymn probe).
-        // No name before `sings`: the unnamed track (SyntaxFacts.UnnamedLyricsName, 2026-10-09).
-        var name = IsPartNameToken(Current)
-            && !(Current.Text == "sings" && Peek(1)?.Kind != SyntaxKind.OpenBrace)
-            && !IsLyricsLanguageClause() && !IsLyricsSingerClause() ? Advance() : (SyntaxToken?)null;
-        // The clauses, each at most once and in either order, as pairs in source order:
-        // `sings vocal` — the track sings the named part — and `language english` — what its
-        // words are written in, `singer "…"` — who sings them (Music.LyricSinger). Contextual like
-        // `q`: all stay ordinary identifiers everywhere else, claimed only between a track name
-        // and its brace.
+        // A PART NAME, not just an identifier: the clef words are legal part names.
+        var name = IsPartNameToken(Current) && !IsLyricsLanguageClause() ? Advance() : (SyntaxToken?)null;
+        // `language english`: what the words are written in. Contextual: an ordinary
+        // identifier everywhere else, claimed only between a track name and its brace.
         var clauses = new List<SyntaxToken?>();
-        for (bool sings = false, language = false, singer = false; ;)
+        if (IsLyricsLanguageClause())
         {
-            if (!singer && IsLyricsSingerClause())
-            {
-                singer = true;
-                clauses.AddRange(ParseSingerClause());
-                continue;
-            }
-            if (!sings && Check(SyntaxKind.Identifier) && Current.Text == "sings" && Peek(1)?.Kind != SyntaxKind.OpenBrace)
-            {
-                sings = true;
-                clauses.Add(Advance());
-                clauses.Add(IsPartNameToken(Current) ? Advance() : null);
-            }
-            else if (!language && IsLyricsLanguageClause())
-            {
-                language = true;
-                clauses.Add(Advance());
-                clauses.Add(ParseLanguageName());
-            }
-            else
-                break;
+            clauses.Add(Advance());
+            clauses.Add(ParseLanguageName());
         }
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
@@ -232,39 +205,6 @@ internal sealed partial class Parser
         return new LyricsBlockGreen(keyword, name, [.. clauses], openBrace, [.. items], closeBrace);
     }
 
-    /// <summary><c>singer "…"</c>, <c>singer male "…"</c> or a bare <c>singer male</c> in a lyrics head
-    /// or a score's lyrics row: the word with a string or a gender after it, so
-    /// <c>lyrics singer { … }</c> stays a track called singer.</summary>
-    private bool IsLyricsSingerClause()
-        => Check(SyntaxKind.Identifier) && Current.Text == Music.LyricSinger.Keyword
-            && (Peek(1)?.Kind == SyntaxKind.StringLiteral
-                || (Peek(1)?.Kind == SyntaxKind.Identifier
-                    && (Peek(2)?.Kind == SyntaxKind.StringLiteral || Music.LyricSinger.Genders.Contains(Peek(1)!.Text))));
-
-    /// <summary>The clause's tokens in source order: the word, the gender if written, the name if
-    /// written and any more names after commas. After a gender the name may be missing or empty: the engine picks such a voice.</summary>
-    private List<SyntaxToken> ParseSingerClause()
-    {
-        var tokens = new List<SyntaxToken> { Advance() };
-        bool gendered = Check(SyntaxKind.Identifier);
-        if (gendered)
-        {
-            var gender = Advance();
-            CheckSingerGender(gender);
-            tokens.Add(gender);
-        }
-        if (Check(SyntaxKind.StringLiteral))
-        {
-            tokens.Add(ParseSingerName(allowEmpty: gendered));
-            while (Check(SyntaxKind.Comma) && Peek(1)?.Kind == SyntaxKind.StringLiteral)
-            {
-                tokens.Add(Advance());
-                tokens.Add(ParseSingerName(allowEmpty: false));
-            }
-        }
-        return tokens;
-    }
-
     /// <summary>Refuses, at the word, one that is neither <c>male</c> nor <c>female</c>. Called right after advancing past it.</summary>
     private void CheckSingerGender(SyntaxToken gender)
     {
@@ -281,8 +221,73 @@ internal sealed partial class Parser
         if (!allowEmpty && Music.LyricSinger.ValueOf(value.Text).Length == 0)
             _diagnostics.Error(new TextSpan(_textPosition - value.FullWidth + value.LeadingTriviaWidth, Math.Max(1, value.Width)),
                 DiagnosticCodes.SingerEmpty,
-                "'singer' names a voice, singer \"neutrino/MERROW\", or a role, singer \"soprano\".");
+                "'singer' names a voice as engine/name, singer \"neutrino/MERROW\" sings WORDS.");
         return value;
+    }
+
+    /// <summary><c>singer [S] sings …</c> at the top level: the word with <c>sings</c>, a name or a
+    /// gender after it, so a bare word <c>singer</c> keeps its other readings.</summary>
+    private bool IsSingerDeclaration()
+        => Current.Text == Music.LyricSinger.Keyword && Peek(1) is { } next
+            && (next.Text == "sings" || next.Kind == SyntaxKind.StringLiteral
+                || (next.Kind == SyntaxKind.Identifier && (Music.LyricSinger.Genders.Contains(next.Text) || Peek(2)?.Text == "sings" || Peek(2)?.Kind == SyntaxKind.StringLiteral)));
+
+    /// <summary>Parses <c>singer [S] sings [NAME] [on PART]</c>; the order is fixed.</summary>
+    private SingerDeclarationGreen ParseSingerDeclaration()
+    {
+        var tokens = new List<SyntaxToken> { Advance() };
+        if (Current.Text != "sings")
+        {
+            bool gendered = Check(SyntaxKind.Identifier);
+            if (gendered)
+            {
+                var gender = Advance();
+                CheckSingerGender(gender);
+                tokens.Add(gender);
+            }
+            if (Check(SyntaxKind.StringLiteral))
+            {
+                tokens.Add(ParseSingerName(allowEmpty: gendered));
+                while (Check(SyntaxKind.Comma) && Peek(1)?.Kind == SyntaxKind.StringLiteral)
+                {
+                    tokens.Add(Advance());
+                    tokens.Add(ParseSingerName(allowEmpty: false));
+                }
+            }
+        }
+        if (Check(SyntaxKind.Identifier) && Current.Text == "sings")
+            tokens.Add(Advance());
+        else
+        {
+            _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Math.Max(1, Current.Text.Length)),
+                DiagnosticCodes.SingerNeedsSings,
+                "A singer line reads 'singer S sings WORDS on PART'; 'sings' is missing here.");
+            return new SingerDeclarationGreen([.. tokens]);
+        }
+        if (IsPartNameToken(Current) && Current.Text != "on" && !IsLanguageDeclaration())
+            tokens.Add(Advance());
+        if (Current.Text == "on")
+        {
+            tokens.Add(Advance());
+            tokens.Add(ExpectPartName());
+        }
+        return new SingerDeclarationGreen([.. tokens]);
+    }
+
+    /// <summary><c>on PART</c> on a score's lyrics row: the word with a part's name after it.</summary>
+    private bool IsRowOnClause() => Current.Text == "on" && Peek(1) is { } next && IsPartNameToken(next);
+
+    /// <summary><c>[hidden] [sounds voice|instrument|both]</c> at the end of a staff or tab item:
+    /// the score's say on how the part sounds (docs/lyrics-singer-design.md §5).</summary>
+    private void ConsumeStaffSound(List<SyntaxToken> tokens)
+    {
+        if (Current.Text == "hidden")
+            tokens.Add(Advance());
+        if (Current.Text == "sounds" && Peek(1) is { Kind: not (SyntaxKind.CloseBrace or SyntaxKind.EndOfFile) })
+        {
+            tokens.Add(Advance());
+            tokens.Add(Advance());
+        }
     }
 
     /// <summary>The file's <c>language NAME</c>: contextual, so a part may still be called language.</summary>
@@ -290,11 +295,11 @@ internal sealed partial class Parser
         => Current.Text == Music.LyricLanguage.Keyword && Peek(1)?.Kind == SyntaxKind.Identifier;
 
     /// <summary><c>language NAME</c> in a lyrics head: the word with a bare word after it. So
-    /// <c>lyrics language { … }</c> and <c>lyrics language sings m { … }</c> stay a track
+    /// <c>lyrics language { … }</c> stays a track
     /// called language.</summary>
     private bool IsLyricsLanguageClause()
         => Check(SyntaxKind.Identifier) && Current.Text == Music.LyricLanguage.Keyword
-            && Peek(1) is { Kind: SyntaxKind.Identifier, Text: not "sings" };
+            && Peek(1) is { Kind: SyntaxKind.Identifier };
 
     /// <summary>The language's name, refused (LYS4038) unless it is one of the closed vocabulary.</summary>
     private SyntaxToken ParseLanguageName()

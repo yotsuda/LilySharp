@@ -102,9 +102,9 @@ describe('the singer choices', () => {
     ];
 
     it('knows a score that names who sings', () => {
-        assert.equal(writesSinger('lyrics v sings m singer "a/b" {'), true);
-        assert.equal(writesSinger('part m {\n  singer male\n}'), true);
-        assert.equal(writesSinger('lyrics v sings m { la | }'), false, 'words alone');
+        assert.equal(writesSinger('singer "a/b" sings w'), true);
+        assert.equal(writesSinger('singer sings w on m'), true);
+        assert.equal(writesSinger('lyrics v { la | }'), false, 'words alone');
         assert.equal(writesSinger('lyrics singer { la | }'), false, 'a track called singer');
         assert.equal(writesSinger('// singer "a/b"'), false, 'a comment');
     });
@@ -118,10 +118,10 @@ describe('the singer choices', () => {
     });
 
     it('opens the list on the space after singer', () => {
-        assert.equal(afterSingerWord('lyrics verse sings melody singer '), true);
+        assert.equal(afterSingerWord('singer '), true);
         assert.equal(afterSingerWord('  singer male '), true);
-        assert.equal(afterSingerWord('lyrics verse sings melody singer'), false, 'the word is still being typed');
-        assert.equal(afterSingerWord('lyrics verse sings melody '), false);
+        assert.equal(afterSingerWord('singer'), false, 'the word is still being typed');
+        assert.equal(afterSingerWord('lyrics verse '), false);
         assert.equal(afterSingerWord('misinger '), false);
         assert.equal(afterSingerWord('// singer '), false);
         assert.equal(afterSingerWord('singer "a/b",'), true, 'the next voice');
@@ -540,7 +540,7 @@ describe('printedWordsNote', () => {
         const note = printedWordsNote('melody');
         assert.match(note, /melody/);
         assert.match(note, /singer/);
-        assert.match(note, /instrument soprano/);
+        assert.match(note, /singer sings WORDS on melody/);
     });
 });
 

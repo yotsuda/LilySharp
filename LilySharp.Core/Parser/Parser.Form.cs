@@ -821,7 +821,7 @@ internal sealed partial class Parser
 
         // A bare `staff` renders the file's unnamed part (SyntaxFacts.UnnamedPartName,
         // 2026-10-09): no name to expect. ⚠️ So a bare word after it is always the part.
-        if (IsPartNameStart())
+        if (IsPartNameStart() && !(Current.Text == "sounds" && Peek(1)?.Text is "voice" or "instrument" or "both"))
             tokens.Add(Advance());
 
         // `staff flute "津田さん"` overrides the displayed instrument name. QUOTED ONLY
@@ -844,6 +844,7 @@ internal sealed partial class Parser
             tokens.Add(Advance());
 
         ConsumeStaffSelectors(tokens);
+        ConsumeStaffSound(tokens);
         return new StaffRenderGreen([.. tokens]);
     }
 
@@ -1027,37 +1028,20 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse lyrics-row render: <c>lyrics partName [sings partName]</c> (places a
-    /// lyrics part as a row; the optional <c>sings</c> names the melody THIS ROW
-    /// sings, overriding the definition's default for this placement).
+    /// Parse lyrics-row render: <c>lyrics partName [on partName]</c> (prints a lyrics part as
+    /// a row; the optional <c>on</c> names the melody THIS ROW follows).
     /// </summary>
     private LyricsRowRenderGreen ParseLyricsRowRender()
     {
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.LyricsKeyword) };
         // A bare `lyrics` places the file's unnamed track (SyntaxFacts.UnnamedLyricsName,
         // 2026-10-09). ⚠️ So a bare word right after it is always the track's name.
-        if (IsPartNameStart() && !(Check(SyntaxKind.Identifier) && Current.Text == "sings") && !IsLyricsSingerClause())
+        if (IsPartNameStart() && !IsRowOnClause())
             tokens.Add(Advance());
-        // Contextual like the definition's (Parser.Sections): 'sings' is claimed only
-        // directly after a row's track name, and stays an ordinary identifier
-        // everywhere else. Without this branch the word fell through to the score's
-        // next render item and was reported as an undefined MIDI part. `singer "…"`
-        // (this placement's, Music.LyricSinger) stands either side of it.
-        for (bool sings = false, singer = false; ;)
+        if (IsRowOnClause())
         {
-            if (!sings && Check(SyntaxKind.Identifier) && Current.Text == "sings")
-            {
-                sings = true;
-                tokens.Add(Advance());
-                tokens.Add(ExpectPartName());
-            }
-            else if (!singer && IsLyricsSingerClause())
-            {
-                singer = true;
-                tokens.AddRange(ParseSingerClause());
-            }
-            else
-                break;
+            tokens.Add(Advance());
+            tokens.Add(ExpectPartName());
         }
         return new LyricsRowRenderGreen([.. tokens]);
     }
@@ -1318,6 +1302,7 @@ internal sealed partial class Parser
         if (IsPartNameStart() && !string.Equals(Current.Text, "as", System.StringComparison.Ordinal))
             tokens.Add(Advance());
         ConsumeTabSelectors(tokens);
+        ConsumeStaffSound(tokens);
         return new TabRenderGreen([.. tokens]);
     }
 

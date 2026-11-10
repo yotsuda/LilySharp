@@ -67,8 +67,8 @@ public class RowsOnlyFormOrderTests
         {{Head}}
         form { {{form}} }
         score {
-        {{(withStaff ? "  staff melody" : "")}}
           lyrics verse
+        {{(withStaff ? "  staff melody" : "")}}
         }
         """;
 
@@ -173,7 +173,7 @@ public class RowsOnlyFormOrderTests
             form { {{form}} }
             """;
         var staffless = Collect($"{head}\nscore {{\n  lyrics verse\n}}");
-        var staffful = Collect($"{head}\nscore {{\n  staff melody\n  lyrics verse\n}}");
+        var staffful = Collect($"{head}\nscore {{\n  lyrics verse\n  staff melody\n}}");
 
         Assert.Equal(RowSyllables(staffful), RowSyllables(staffless));
         Assert.Equal(RowBarlines(staffful, "verse"), RowBarlines(staffless, "verse"));
@@ -209,7 +209,7 @@ public class RowsOnlyFormOrderTests
             form { {{form}} }
             """;
         var staffless = Collect($"{head}\nscore {{\n  lyrics verse\n}}");
-        var staffful = Collect($"{head}\nscore {{\n  staff melody\n  lyrics verse\n}}");
+        var staffful = Collect($"{head}\nscore {{\n  lyrics verse\n  staff melody\n}}");
 
         Assert.Equal(RowBarlines(staffful, "verse"), RowBarlines(staffless, "verse"));
         Assert.Equal(LilySharp.Core.Svg.Model.BarlineType.RepeatEnd, RowBarlines(staffless, "verse")[3].End);

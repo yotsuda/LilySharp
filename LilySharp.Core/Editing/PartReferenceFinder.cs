@@ -147,10 +147,10 @@ public static class PartReferenceFinder
     /// section-body block. See <see cref="ReferenceKinds"/> for why the list exists.</summary>
     public static readonly SyntaxKind[] DeclaringKinds = [SyntaxKind.PartDeclaration, SyntaxKind.PartBlock];
 
-    /// <summary>The kinds <see cref="SingsTargetToken"/> answers on — the definition block
-    /// (<c>lyrics ja sings vocal { … }</c>) and the score row (<c>lyrics ja sings alt</c>).
+    /// <summary>The kinds <see cref="SingsTargetToken"/> answers on — the score row
+    /// (<c>lyrics ja on alt</c>) and the singer line (<c>singer sings ja on vocal</c>).
     /// See <see cref="ReferenceKinds"/> for why the list exists.</summary>
-    public static readonly SyntaxKind[] SingsKinds = [SyntaxKind.LyricsBlock, SyntaxKind.LyricsRowRender];
+    public static readonly SyntaxKind[] SingsKinds = [SyntaxKind.LyricsRowRender, SyntaxKind.SingerDeclaration];
 
     /// <summary>The kinds <see cref="CollectVoiceNames"/> answers on — the parallel voice
     /// span is the only spelling that introduces a named voice, and
@@ -166,7 +166,7 @@ public static class PartReferenceFinder
     public static readonly SyntaxKind[] TrackKinds =
     [
         SyntaxKind.ChordPartBlock, SyntaxKind.LyricsBlock,
-        SyntaxKind.ChordRowRender, SyntaxKind.LyricsRowRender,
+        SyntaxKind.ChordRowRender, SyntaxKind.LyricsRowRender, SyntaxKind.SingerDeclaration,
     ];
 
     /// <summary>
@@ -329,13 +329,12 @@ public static class PartReferenceFinder
         LyricsRowRenderSyntax row => row.NameToken is { } n
             ? Referenceable(n) is { } t ? new TrackName(t, false) : null
             : new TrackName(row.LyricsKeyword, false),
+        SingerDeclarationSyntax line => line.TrackToken is { } w && Referenceable(w) is { } sung ? new TrackName(sung, false) : null,
         _ => null,
     };
 
-    /// <summary>The token naming the part a lyric track sings, or null. Both sites
-    /// name a part — the definition <c>lyrics verse sings melody { … }</c> (the track's
-    /// default) and the score row <c>lyrics verse sings melody</c> (that row's own
-    /// placement) — so both answer here.</summary>
+    /// <summary>The token naming the part a score row or a singer line follows, or null:
+    /// <c>lyrics verse on melody</c> and <c>singer sings verse on melody</c>.</summary>
     /// <remarks>
     /// ⚠️ This target resolves against a WIDER set than the score's part references do:
     /// parts AND the named voices of a <c>&lt;&lt; … &gt;&gt;</c>, which is what
@@ -345,7 +344,7 @@ public static class PartReferenceFinder
     /// </remarks>
     public static SyntaxTokenNode? SingsTargetToken(SyntaxNode node) => node switch
     {
-        LyricsBlockSyntax block => block.SingsTargetToken,
+        SingerDeclarationSyntax line => line.OnToken,
         LyricsRowRenderSyntax row => row.SingsTargetToken,
         _ => null,
     };

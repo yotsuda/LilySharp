@@ -70,7 +70,7 @@ public class RowsOnlySectionLabelTests
         form { A B }
 
         score {{{(withChords ? "\n          chords harm as names" : "")}}
-          lyrics verse sings melody
+          lyrics verse on melody
         }
         """;
 

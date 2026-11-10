@@ -12,10 +12,10 @@ part vocal { }
 section Chorus {
   sax   { c'4 d e f | g2 g | a4 g f e | c1 | }
   vocal { g'8 g a4 a8 a a4 | g2 f | e4 f g2 | c1 | }
-  lyrics ja sings vocal {
+  lyrics ja {
     きら きら ひか る- よ ぞら | ほし よ | かがや け | よ |
   }
-  lyrics en sings vocal {
+  lyrics en {
     Sing it loud and clear now | ev- ery | bo- dy sing | home |
   }
 }
@@ -24,6 +24,6 @@ form { Chorus }
 
 score {
   staff sax
-  lyrics ja
-  lyrics en
+  lyrics ja on vocal
+  lyrics en on vocal
 }

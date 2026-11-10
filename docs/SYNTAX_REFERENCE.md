@@ -1534,8 +1534,7 @@ score {
 }
 ```
 
-An unnamed `part` must be the file's only part, and an unnamed `lyrics` sings it unless it
-says `sings`. With no `part` at all, music written straight into a section is the one
+An unnamed `part` must be the file's only part. With no `part` at all, music written straight into a section is the one
 part's, and a bare `staff` renders it. A bare word right after `staff`, `tab`, `chords` or
 `lyrics` is always a name.
 
@@ -1878,17 +1877,16 @@ c4 d e f |       // 'once' applies to the next note only
 
 ## Lyrics
 
-A track takes a name of its own: the name of a part or of a named voice is an error (LYS7008), and
-only `sings` says who sings it (an unnamed `lyrics` sings the file's one part).
+A track takes a name of its own: the name of a part or of a named voice is an error (LYS7008). A `lyrics` track is words alone: a score row prints it, and a `singer` line sings it.
 
-Lyrics bind to their **default melody at the definition** — `lyrics NAME sings PART`
+Lyrics bind to their **default melody at the definition** — `lyrics NAME on PART`
 — and the score places them, by ORDER: a `lyrics NAME` row directly below
 the staff engraving PART is that staff's verse (a run of rows stacks as
 verses); anywhere else it draws **only the words, at the melody's rhythm**,
 without engraving the melody — a part sheet carrying the chorus words. A score
-row may name **its own** melody — `lyrics NAME sings OTHER` — which overrides
+row may name **its own** melody — `lyrics NAME on OTHER` — which overrides
 the default for that placement: one verse written once and placed under every
-staff of a chorale (`staff alt  lyrics verse sings alt`). Several tracks may
+staff of a chorale (`staff alt  lyrics verse`). Several tracks may
 sing the same part (Japanese and English words, a parody). A track whose name
 matches the part (or one of its voices) is bound by the name alone; a track
 with no binding is the even-spread lead-sheet row.
@@ -1897,7 +1895,7 @@ with no binding is the even-spread lead-sheet row.
 part melody
 section Main {
   melody { c4 d e f | g2 g | }
-  lyrics words sings melody {
+  lyrics words {
     Hap- py birth- day |
     to you |
   }
@@ -1922,25 +1920,29 @@ a reading that is not kana is a warning (LYS4037). A kanji with no reading print
 and is not sung — the voice says so once. (VSQX, VOCALOID's format, takes the reading too.)
 
 **The language of the words** is `japanese` unless the file says otherwise: `language english`
-on a line of its own for the whole file, or on a track, `lyrics en language english sings melody { … }`
-(`sings` and `language` in either order; the track's wins). The names are `japanese`, `english`,
+on a line of its own for the whole file, or on a track, `lyrics en language english { … }`
+(the track's wins). The names are `japanese`, `english`,
 `chinese` and `korean`; another word is an error (LYS4038). The kana check is for Japanese words only.
 
-**Who sings** is `singer "…"`, on a part (`part sop { singer "neutrino/MERROW" }`), on a track
-(`lyrics en singer "diffsinger/TIGER" sings melody { … }`) or on a score's row
-(`lyrics verse singer "soprano" sings melody`), the nearest winning. A name with a `/` is a
-voice; `"soprano"`, `"alto"`, `"tenor"` and `"bass"` say a gender. Names with commas between them sing the
-part together (`singer "neutrino/MERROW","diffsinger/TIGER"`). **Words are sung where a
-voice is asked for**: by a `singer`, or by the part's `instrument` being a voice (`soprano`, `alto`,
-`tenor`, `baritone`, `voice-bass`), when each machine's default voice of that gender sings. Words on
-any other part are printed only, and the part plays its instrument; a clef alone asks for nothing.
-A singer that cannot be had sings as the default voice of the part's gender, said once. Between the quotes the editor offers the
-voices that sing the words' language; on a `singer "…"`, `Ctrl+Shift+Up` / `Down` step through
-those voices and `Ctrl+Shift+PageUp` / `PageDown` go to the first voice of another engine, the chosen voice heard in the
-preview. `singer male "neutrino/SOMA"` (or `female`) leaves out of both the voices that say they are
-the other; it changes nothing else, and another word there is an error (LYS4040). With no name,
-`singer male` is that gender's default voice: each machine's setting, else the first
-installed voice that says it is male and sings the words' language. An `@breath` on a sung note is a breath: the singer stops a little early, and the next note starts on its beat; `@caesura` the same. Dynamics, accents and hairpins set how loud the voice is, and a grace note is sung on the syllable of its note.
+**Who sings** is a top-level line of its own: `singer "neutrino/MERROW" sings verse on melody`,
+in that order. A score's `lyrics` row prints the words and sounds nothing; only a `singer` line
+sings, whether the page shows the words or not. A name with a `/` is a voice; names with commas
+between them sing the part together (`singer "neutrino/MERROW","diffsinger/TIGER" sings verse`).
+`male` or `female` is that gender's default voice (each machine's setting, else the first installed
+voice of that gender that sings the words' language), `singer sings verse` the part's own default
+voice, and the gender before a name (`singer male "neutrino/SOMA" sings verse`) leaves out of the
+editor's offers the voices that say they are the other; another word there is an error (LYS4040).
+Leave out `on PART` when the file has one part, or every score prints the words under one part. A
+part takes one `singer` line. A voice that cannot be had sings as the default voice of the part's
+gender, said once. Between the quotes the editor offers the voices that sing the words' language;
+on a `singer "…"`, `Ctrl+Shift+Up` / `Down` step through those voices and `Ctrl+Shift+PageUp` /
+`PageDown` go to the first voice of another engine, the chosen voice heard in the preview.
+
+**What a staff sounds** is the score's: `staff PART [hidden] [sounds voice|instrument|both]` (a `tab`
+too). With no `sounds` a part a `singer` line sings is a voice, any other its instrument; two staves
+of one part add up. `hidden` sounds the part and draws nothing. A part with no `staff` in the
+score does not sound.
+An `@breath` on a sung note is a breath: the singer stops a little early, and the next note starts on its beat; `@caesura` the same. Dynamics, accents and hairpins set how loud the voice is, and a grace note is sung on the syllable of its note.
 
 **Melismas** follow LilyPond's `\lyricsto`. A **slur** or a **tie** makes one on its own:
 the syllable on the slur's first note is sung over every note up to the one that closes
@@ -1955,7 +1957,7 @@ on a short note, and for Japanese, where each kana is its own syllable:
 part melody
 section Main {
   melody { a'4 b8 a f2 | a4 b8 a f2 | }
-  lyrics words sings melody {
+  lyrics words {
     そ ら _ は |     // ら held over the next note, with a short line
     そ ら ~ は |     // the same, no line
   }
@@ -1968,7 +1970,7 @@ score { staff melody  lyrics words }
 part melody
 section Main {
   melody { c4( d e) f | c4 d e f | }
-  lyrics words sings melody {
+  lyrics words {
     la __ lu |       // lu on f
     la _ lu li |     // la on c, d held, lu on e, li on f
   }
@@ -1994,7 +1996,7 @@ part melody
 section A { melody { c4 d e f | } }
 section B {
   melody { g4 a b c | }
-  lyrics words sings melody {
+  lyrics words {
     verse 1 { up up up up | }
     verse 2 { down down down down | }
   }
@@ -2488,7 +2490,7 @@ in force at every stroke, each held to the next stroke or the slot's end — and
 To print the strum, place the part: `strokes NAME` in the score draws it as a **one-line staff**
 of slashes — no clef, key signature or name (`as lines 5` widens it, a string after the name
 labels it) — and a chords row written above that item stands over it (`chords harmony plays
-rhythm  strokes rhythm`). `lyrics NAME sings STROKES` puts words under the strokes, one syllable
+rhythm  strokes rhythm`). `lyrics NAME on STROKES` puts words under the strokes, one syllable
 a stroke.
 
 ### Chords for a transposing part — `for`

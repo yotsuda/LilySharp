@@ -81,12 +81,12 @@ public class SectionSplitterTests
         chords prog {
           section A { G | D | Em | C | }
         }
-        lyrics words sings vn2 {
+        lyrics words {
           section A { la la la la | la la la la la | la la la la la la la la | la | }
         }
 
         form { |: A :| }
-        score { chords prog staff vn1 staff vn2 lyrics words staff va staff vc }
+        score { chords prog staff vn1 staff vn2 lyrics words on vn2 staff va staff vc }
 
         """;
 
@@ -138,13 +138,13 @@ public class SectionSplitterTests
           section A { G | D | }
           section B { Em | C | }
         }
-        lyrics words sings vn2 {
+        lyrics words {
           section A { la la la la | la la la la la | }
           section B { la la la la la la la la | la | }
         }
 
         form { |: A B :| }
-        score { chords prog staff vn1 staff vn2 lyrics words staff va staff vc }
+        score { chords prog staff vn1 staff vn2 lyrics words on vn2 staff va staff vc }
 
         """;
 
@@ -278,10 +278,10 @@ public class SectionSplitterTests
             section A {
               key g major
               chords prog { G | D | Em | C | }
-              lyrics words sings ob { la la la la | la | la | la | }
+              lyrics words { la la la la | la | la | la | }
             }
             form { A }
-            score { chords prog staff fl staff ob lyrics words }
+            score { chords prog staff fl staff ob lyrics words on ob }
             """;
         var result = Split(src);
         Assert.True(result.NewText != null, result.Error);
@@ -290,11 +290,11 @@ public class SectionSplitterTests
             section A {
               key g major
               chords prog { G | D | }
-              lyrics words sings ob { la la la la | la | }
+              lyrics words { la la la la | la | }
             }
             section B {
               chords prog { Em | C | }
-              lyrics words sings ob { la | la | }
+              lyrics words { la | la | }
             }
             form { A B }
             """.ReplaceLineEndings("\n"), result.NewText);

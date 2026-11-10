@@ -68,9 +68,9 @@ public class LilyPondExporterStreamNetsTests
         var ly = Export("""
             time 4/4
             part melody { clef treble }
-            section A { melody { c''4 r d' e' | r2 f' | } lyrics words sings melody { a b c | d | } }
+            section A { melody { c''4 r d' e' | r2 f' | } lyrics words { a b c | d | } }
             form { A }
-            score { staff melody lyrics words }
+            score { staff melody lyrics words on melody }
             """);
         Assert.Contains("a2 b4 c4 |", ly);
         Assert.Contains("\\skip 2 d2 |", ly);
@@ -89,7 +89,7 @@ public class LilyPondExporterStreamNetsTests
             section Main { melody { c''4 d break e f | g1 | } }
             lyrics words { section Main { a b c d | e | } }
             form { Main }
-            score { staff melody  lyrics words }
+            score { lyrics words  staff melody }
             """);
         Assert.Contains("a4 b4\n  c4 d4 |", ly);
     }

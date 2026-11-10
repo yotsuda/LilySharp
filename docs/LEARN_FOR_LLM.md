@@ -219,7 +219,7 @@ part melody { clef treble }
 
 section A {
   melody { c'4 d e c | e f g2 | }
-  lyrics words sings melody { Are you sleep- ing, | Bro- ther John? | }
+  lyrics words { Are you sleep- ing, | Bro- ther John? | }
 }
 
 form { ~A }

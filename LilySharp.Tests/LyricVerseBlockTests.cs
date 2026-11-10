@@ -40,14 +40,14 @@ public sealed class LyricVerseBlockTests
         time 4/4
         octave absolute
         part melody { clef treble  section A { c'4 d' e' f' | g'4 a' b' c'' | } }
-        lyrics w sings melody {
+        lyrics w {
           section A {
             verse 1 { Twin- kle twin- kle | lit- tle star | }
             verse 2 { How I won- der | what you are | }
           }
         }
         form { A A "A2" }
-        score { staff melody  lyrics w }
+        score { staff melody  lyrics w on melody }
         """.ReplaceLineEndings("\n");
 
     private const string Verse1 = "verse 1 { Twin- kle twin- kle | lit- tle star | }";
@@ -61,9 +61,9 @@ public sealed class LyricVerseBlockTests
         // `verse` as a syllable, and as a track's name, stay what they were.
         var plain = SyntaxTree.Parse("""
             part m { section A { c'4 d' e' f' | } }
-            lyrics verse sings m { section A { a verse 1 of | } }
+            lyrics verse { section A { a verse 1 of | } }
             form { A }
-            score { staff m  lyrics verse }
+            score { staff m  lyrics verse on m }
             """);
         Assert.Empty(plain.Diagnostics);
         Assert.Empty(plain.GetRoot().DescendantNodes().Where(n => n.Kind == SyntaxKind.LyricVerse));
@@ -162,14 +162,14 @@ public sealed class LyricVerseBlockTests
             part melody { clef treble }
             section A {
               melody { c'4 d' e' f' | }
-              lyrics w sings melody { verse 1 { up up up up | } verse 2 { down down down down | } }
+              lyrics w { verse 1 { up up up up | } verse 2 { down down down down | } }
             }
             section B {
               melody { g'4 a' b' c'' | }
-              lyrics w sings melody { plain words sung here | }
+              lyrics w { plain words sung here | }
             }
             form { |: A :| B }
-            score { staff melody  lyrics w }
+            score { staff melody  lyrics w on melody }
             """.ReplaceLineEndings("\n");
         var numbers = RenderedGeometry.Render(song).Texts.Where(t => t.Role == TextRole.Stanza).Select(t => t.Text).OrderBy(t => t).ToArray();
         Assert.Equal(new[] { "1.", "2." }, numbers);

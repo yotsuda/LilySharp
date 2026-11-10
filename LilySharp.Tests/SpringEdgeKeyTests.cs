@@ -136,15 +136,15 @@ public class SpringEdgeKeyTests
         Assert.Equal(a[1].ReadByNext, b[1].ReadByNext);
     }
 
-    private const string Sung = "lyrics words sings melody { la la la la | la la la la | la la la la | la la la la | }";
+    private const string Sung = "lyrics words { la la la la | la la la la | la la la la | la la la la | }";
 
     [Fact]
     public void ALyricLineStartingOrEnding_MovesBothSides_ASyllableOfAPresentLineMovesNeither()
     {
-        var (a, sa) = Edges(Book(Plain, Sung, "staff melody  lyrics words"));
+        var (a, sa) = Edges(Book(Plain, Sung, "staff melody  lyrics words on melody"));
         // Measure 1 loses its whole line: both neighbours' cross-bar halves change.
         var (b, sb) = Edges(Book(Plain, Sung.Replace("| la la la la | la la la la | la la la la |",
-            "| | la la la la | la la la la |"), "staff melody  lyrics words"));
+            "| | la la la la | la la la la |"), "staff melody  lyrics words on melody"));
         Assert.NotEmpty(ScoreSideTables.Lyrics(sa).At(1));
         Assert.Empty(ScoreSideTables.Lyrics(sb).At(1));
         Assert.NotEmpty(ScoreSideTables.Lyrics(sb).At(2));
@@ -152,7 +152,7 @@ public class SpringEdgeKeyTests
         Assert.NotEqual(a[1].ReadByPrevious, b[1].ReadByPrevious);
         // A syllable's TEXT changed on a line already present: neither side moves.
         var (c, _) = Edges(Book(Plain, Sung.Replace("| la la la la | la la la la | la la la la |",
-            "| la la la la | lo la la la | la la la la |"), "staff melody  lyrics words"));
+            "| la la la la | lo la la la | la la la la |"), "staff melody  lyrics words on melody"));
         Assert.Equal(a[1], c[1]);
     }
 }

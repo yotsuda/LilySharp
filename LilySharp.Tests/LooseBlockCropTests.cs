@@ -89,7 +89,7 @@ public class LooseBlockCropTests
         + $"section A {{ m {{ {pitches} | }} }}\n"
         + "lyrics v { section A { Twin- kle twin- kle | } }\n"
         + "form { ~A }\n"
-        + $"score {name} {{\n  staff m\n  lyrics v sings m\n}}\n";
+        + $"score {name} {{\n  staff m\n  lyrics v on m\n}}\n";
 
     /// <summary>
     /// How far the deepest syllable's BASELINE stands above the page foot, in page Y-up.
@@ -169,7 +169,7 @@ public class LooseBlockCropTests
         // it — MEASURED while getting this control wrong. The liveness assertion below is
         // what keeps that from happening again silently.
         string sung = string.Concat(
-            Enumerable.Repeat($"  lyrics words sings m {{ {words}}}\n", verses));
+            Enumerable.Repeat($"  lyrics words {{ {words}}}\n", verses));
         var layout = LayoutOf(
             "key c major\n"
             + "part m { clef treble }\n"

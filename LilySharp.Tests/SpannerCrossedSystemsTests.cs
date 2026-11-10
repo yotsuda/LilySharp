@@ -75,10 +75,10 @@ public class SpannerCrossedSystemsTests
             part melody { clef treble }
             section Main {
               melody { {{music}} }
-              lyrics w sings melody { {{sylls}} }
+              lyrics w { {{sylls}} }
             }
             form { Main }
-            score x { staff melody  lyrics w }
+            score x { staff melody  lyrics w on melody }
             """;
     }
 

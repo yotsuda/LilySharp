@@ -56,7 +56,7 @@ public class NestedGrandStaffTests
           pr { e''1 | e'1 | }
           pl { c'1 | c1 | }
           vc { c'1 | c1 | }
-          lyrics words sings pl { la la | }
+          lyrics words { la la | }
         }
         form { ~A }
         """;
@@ -226,7 +226,7 @@ public class NestedGrandStaffTests
     public void ARowAfterTheNestedGroup_IsRefused()
     {
         var diags = SemanticValidation.Run(TestPaper.ParseAtIndentZero(Book(
-            "staffGroup { staff vln  grandStaff { staff pr  staff pl }  lyrics words  staff vc }")));
+            "staffGroup { staff vln  grandStaff { staff pr  staff pl }  lyrics words on pl  staff vc }")));
 
         var d = Assert.Single(diags, d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
         Assert.Contains("nested group", d.Message);
@@ -235,7 +235,7 @@ public class NestedGrandStaffTests
     [Fact]
     public void ARowInsideTheNestedGroup_StillFolds()
     {
-        var spec = Spec("staffGroup { staff vln  grandStaff { staff pr  staff pl  lyrics words }  staff vc }");
+        var spec = Spec("staffGroup { staff vln  grandStaff { staff pr  staff pl  lyrics words on pl }  staff vc }");
 
         var outer = Assert.IsType<GrandStaffRenderSpec>(Assert.Single(spec.Items)).GrandStaff;
         var inner = Assert.IsType<GrandStaffRenderSpec>(outer.Members[1]).GrandStaff;

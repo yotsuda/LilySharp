@@ -862,7 +862,7 @@ score { staff violin  staff cello }</pre>
   melody { a'8 | c4 d8 e8. f16 e8 |  }
   bass   { r8  | a4 e8 a4. |  }
   chords prog  { | Am | }         // a chord row lives here too (the pickup holds none)
-  lyrics words sings melody { A- | las my love you do | }
+  lyrics words { A- | las my love you do | }
 }</pre>
   <p>A section prints a rehearsal label by default. <code>~</code> on a form reference hides
   it for that play (<code>form { ~Verse Chorus }</code>). The tilde belongs to the
@@ -913,25 +913,21 @@ score { staff melody  staff bass }</pre>
 
 <section id="lyrics">
   <h2>Lyrics</h2>
-  <p><code>sings</code> binds a lyric track to the part it sings. It is a property of the
-  <b>track</b>, not of one place in the file, so it may be spelled at the definition, on the
-  <b>score row</b>, or both — the same one property, written wherever it reads best.</p>
-<pre>// on the definition
-lyrics words sings melody { Hap- py birth- day | to you | }
-score { staff melody  lyrics words }
-
-// or on the score row, leaving the definition bare
+  <p>A <code>lyrics</code> track is words alone. A score's <code>lyrics</code> row prints them,
+  under the staff directly above it; <code>on PART</code> makes the row follow another part or
+  named voice instead. A top-level <code>singer</code> line is what sings them.</p>
+<pre>part melody
 lyrics words { Hap- py birth- day | to you | }
-score { staff melody  lyrics words sings melody }</pre>
-  <p><b>Spelling it on the row is what lets ONE track serve several staves.</b> Place the
-  same <code>lyrics</code> row under each staff and bind it there — the words are written
-  once and appear under every voice that sings them, which is what a homophonic chorale
-  wants:</p>
+singer "neutrino/MERROW" sings words
+score { staff melody  lyrics words }</pre>
+  <p><b>One track can serve several staves.</b> Place the same <code>lyrics</code> row under each
+  staff: the words are written once and appear under every voice, which is what a homophonic
+  chorale wants:</p>
 <pre>score {
   staff sop "Soprano"
-  lyrics verse sings sop
+  lyrics verse
   staff alt "Alto"
-  lyrics verse sings alt
+  lyrics verse
 }</pre>
   <!--EXAMPLE:sings-->
   <table class="g">
@@ -959,7 +955,7 @@ score { staff melody  lyrics words sings melody }</pre>
 <pre>part melody { clef treble }
 section B {
   melody { g4 a b c | }
-  lyrics words sings melody {
+  lyrics words {
     verse 1 { up up up up | }
     verse 2 { down down down down | }
   }

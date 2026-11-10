@@ -38,7 +38,7 @@ public class LyricExportAgreesWithPageTests
     public static IEnumerable<object[]> Books()
     {
         static object[] Sec(string name, string music, string words)
-            => new object[] { name, Head + "section A { m { " + music + " } lyrics w sings m { " + words + " } }\n" + Staff };
+            => new object[] { name, Head + "section A { m { " + music + " } lyrics w { " + words + " } }\n" + Staff };
 
         yield return Sec("plain", "c''4 d'' e'' f'' | g''1 |", "a b c d | e |");
         yield return Sec("more syllables than the bar's notes", "c''1 | d''1 | e''1 | f''1 |", "one two three | four | five | six |");
@@ -65,26 +65,26 @@ public class LyricExportAgreesWithPageTests
         {
             "a by-part track, a section sung twice",
             "octave absolute\ntime 4/4\npart m { clef treble\n section A { c''2 d'' | }\n section B { e''1 | }\n}\n"
-            + "lyrics w sings m { section A { aa bb | } section B { cc | } }\nform { A B A }\nscore { staff m  lyrics w }\n",
+            + "lyrics w { section A { aa bb | } section B { cc | } }\nform { A B A }\nscore { staff m  lyrics w on m }\n",
         };
         yield return new object[]
         {
             "verses on a section written out twice",
-            Head + "section A { m { c''2 d'' | } lyrics w sings m { verse 1 { aa bb | } verse 2 { cc dd | } } }\n"
-            + "form { A A }\nscore { staff m  lyrics w }\n",
+            Head + "section A { m { c''2 d'' | } lyrics w { verse 1 { aa bb | } verse 2 { cc dd | } } }\n"
+            + "form { A A }\nscore { staff m  lyrics w on m }\n",
         };
         yield return new object[]
         {
             "two tracks on one part",
-            Head + "section A { m { c''2 d'' | } lyrics w sings m { aa bb | } lyrics x sings m { cc dd | } }\n"
-            + "form { A }\nscore { staff m  lyrics w  lyrics x }\n",
+            Head + "section A { m { c''2 d'' | } lyrics w { aa bb | } lyrics x { cc dd | } }\n"
+            + "form { A }\nscore { staff m  lyrics w on m  lyrics x on m }\n",
         };
         yield return new object[]
         {
             "a track sings the second part",
             "octave absolute\ntime 4/4\npart m { clef treble }\npart n { clef treble }\n"
-            + "section A { m { c''2 d'' | } n { e'4 f' g' a' | } lyrics w sings n { aa bb cc dd | } }\n"
-            + "form { A }\nscore { staff m\n staff n  lyrics w }\n",
+            + "section A { m { c''2 d'' | } n { e'4 f' g' a' | } lyrics w { aa bb cc dd | } }\n"
+            + "form { A }\nscore { staff m\n staff n  lyrics w on n }\n",
         };
     }
 
@@ -173,7 +173,7 @@ public class LyricExportAgreesWithPageTests
     [Fact]
     public void TheMidi_SingsTheMainNote_WhereItSounds_AfterAGraceNote()
     {
-        var source = Head + "section A { m { grace { b'8 } c''4 d'' e''2 | } lyrics w sings m { aa bb | } }\n" + Staff;
+        var source = Head + "section A { m { grace { b'8 } c''4 d'' e''2 | } lyrics w { aa bb | } }\n" + Staff;
         var midi = new MidiExporter().Export(Parse(source));
         var main = midi.Tracks.SelectMany(t => t.Notes).Where(n => !n.IsGrace).OrderBy(n => n.StartTick).First();
         Assert.Equal(new[] { (main.StartTick, "aa"), (480, "bb") }, Events(source));
@@ -183,25 +183,25 @@ public class LyricExportAgreesWithPageTests
         => new MidiExporter().Export(Parse(source)).Tracks.SelectMany(t => t.Lyrics)
             .Select(l => (l.Tick, l.Text)).OrderBy(e => e.Tick).ThenBy(e => e.Text, System.StringComparer.Ordinal).ToArray();
 
-    private const string RepeatedForm = "form { |: A :| }\nscore { staff m  lyrics w }\n";
+    private const string RepeatedForm = "form { |: A :| }\nscore { staff m  lyrics w on m }\n";
 
     [Fact]
     public void TheMidi_SingsPlainWordsEveryPass()
         => Assert.Equal(new[] { (0, "aa"), (960, "bb"), (1920, "aa"), (2880, "bb") }, Events(
-            Head + "section A { m { c''2 d'' | } lyrics w sings m { aa bb | } }\n" + RepeatedForm));
+            Head + "section A { m { c''2 d'' | } lyrics w { aa bb | } }\n" + RepeatedForm));
 
     [Fact]
     public void TheMidi_SingsEachVerseOnItsOwnPass()
         => Assert.Equal(new[] { (0, "aa"), (960, "bb"), (1920, "cc"), (2880, "dd") }, Events(
-            Head + "section A { m { c''2 d'' | } lyrics w sings m { verse 1 { aa bb | } verse 2 { cc dd | } } }\n" + RepeatedForm));
+            Head + "section A { m { c''2 d'' | } lyrics w { verse 1 { aa bb | } verse 2 { cc dd | } } }\n" + RepeatedForm));
 
     [Theory]
     [InlineData("1,3")]
     [InlineData("1-3")]
     public void TheMidi_SingsAVerseOnEveryPlayItCovers(string plays)
     {
-        var form = "form { |: A :|*3 }\nscore { staff m  lyrics w }\n";
-        var ticks = Events(Head + "section A { m { c''1 | } lyrics w sings m { verse " + plays + " { aa | } } }\n" + form)
+        var form = "form { |: A :|*3 }\nscore { staff m  lyrics w on m }\n";
+        var ticks = Events(Head + "section A { m { c''1 | } lyrics w { verse " + plays + " { aa | } } }\n" + form)
             .Select(e => e.Tick).ToArray();
         Assert.Equal(plays == "1,3" ? new[] { 0, 3840 } : new[] { 0, 1920, 3840 }, ticks);
     }
@@ -209,17 +209,17 @@ public class LyricExportAgreesWithPageTests
     [Fact]
     public void TheMidi_SingsABlankNot_AndTheNextWordOnTheNextNote()
         => Assert.Equal(new[] { (0, "aa"), (960, "cc") }, Events(
-            Head + "section A { m { c''4 d'' e'' f'' | } lyrics w sings m { aa \"\" cc | } }\n" + Staff));
+            Head + "section A { m { c''4 d'' e'' f'' | } lyrics w { aa \"\" cc | } }\n" + Staff));
 
     [Fact]
     public void TheMidi_SingsAWrappedRowOnThePassOfItsRow()
         => Assert.Equal(new[] { (0, "aa"), (1920, "bb") }, Events(
-            Head + "section A { m { c''1 | } lyrics w sings m { aa | bb | } }\n" + RepeatedForm));
+            Head + "section A { m { c''1 | } lyrics w { aa | bb | } }\n" + RepeatedForm));
 
     [Fact]
     public void TheMidi_SingsATopLevelTrack()
         => Assert.Equal(new[] { (0, "aa"), (960, "bb") }, Events(
-            Head + "section A { m { c''2 d'' | } }\nlyrics w sings m { aa bb | }\n" + Staff));
+            Head + "section A { m { c''2 d'' | } }\nlyrics w { aa bb | }\n" + Staff));
 
     [Fact]
     public void TheMidi_SingsAnUnboundRowOnTheStaffAbove()
@@ -230,12 +230,12 @@ public class LyricExportAgreesWithPageTests
     public void TheMidi_TakesAPhraseTwoPartsPlay_OnThePartSung_Once()
         => Assert.Equal(new[] { (0, "aa"), (960, "bb") }, Events(
             "octave absolute\ntime 4/4\nphrase riff { c''2 d'' | }\npart m { clef treble }\npart n { clef treble }\n"
-            + "section A { m { riff } n { riff } lyrics w sings n { aa bb | } }\n"
-            + "form { A }\nscore { staff m\n staff n  lyrics w }\n"));
+            + "section A { m { riff } n { riff } lyrics w { aa bb | } }\n"
+            + "form { A }\nscore { staff m\n staff n  lyrics w on n }\n"));
 
     private static string[] PageWords(string music, string words)
     {
-        var tree = Parse(Head + "section A { m { " + music + " } lyrics w sings m { " + words + " } }\n" + Staff);
+        var tree = Parse(Head + "section A { m { " + music + " } lyrics w { " + words + " } }\n" + Staff);
         return OnThePage(tree);
     }
 
@@ -262,8 +262,8 @@ public class LyricExportAgreesWithPageTests
     [Fact]
     public void ANamedVoicesSyllable_StandsOnItsNote_NotTheGraceNoteBeforeIt()
     {
-        var tree = Parse(Head + "section A { m { voice { e'1 | } alt { grace { b'8 } c''2 d'' | } } lyrics w sings alt { aa bb | } }\n"
-            + "form { A }\nscore { staff m  lyrics w }\n");
+        var tree = Parse(Head + "section A { m { voice { e'1 | } alt { grace { b'8 } c''2 d'' | } } lyrics w { aa bb | } }\n"
+            + "form { A }\nscore { staff m  lyrics w on alt }\n");
         var doc = new MusicXmlExporter().Export(tree).ToXml();
         Assert.Equal(new[] { "C5 aa", "D5 bb" }, doc.Descendants("note").Where(n => n.Element("lyric") != null)
             .Select(n => n.Element("pitch")!.Element("step")!.Value + n.Element("pitch")!.Element("octave")!.Value
@@ -273,25 +273,25 @@ public class LyricExportAgreesWithPageTests
     [Fact]
     public void AVersesOwnNumberIsWritten_WithNoVerseOneBeside()
         => Assert.Equal(new[] { "2:aa", "2:bb" }, Numbers(
-            Head + "section A { m { c''2 d'' | } lyrics w sings m { verse 2 { aa bb | } } }\n" + Staff));
+            Head + "section A { m { c''2 d'' | } lyrics w { verse 2 { aa bb | } } }\n" + Staff));
 
     [Fact]
     public void AWrappedRowsNumber_IsCountedFromTheWrap_NotFromANoteTaken()
         => Assert.Equal(new[] { "1:a", "2:b" }, Numbers(
-            Head + "section A { m { c''2 d'' | } lyrics w sings m { a | ~ b | } }\n" + Staff));
+            Head + "section A { m { c''2 d'' | } lyrics w { a | ~ b | } }\n" + Staff));
 
     [Fact]
     public void TwoNumbersFallingOnOneNote_BothStay()
         => Assert.Equal(new[] { "2:aa", "3:bb" }, Numbers(
-            Head + "section A { m { c''1 | } lyrics w sings m { verse 2 { aa | } } lyrics x sings m { bb | } }\n"
-            + "form { A }\nscore { staff m  lyrics w  lyrics x }\n"));
+            Head + "section A { m { c''1 | } lyrics w { verse 2 { aa | } } lyrics x { bb | } }\n"
+            + "form { A }\nscore { staff m  lyrics w on m  lyrics x on m }\n"));
 
     [Fact]
     public void ADrumNote_TakesASyllable()
     {
         var doc = new MusicXmlExporter().Export(Parse(
-            "part kit { clef percussion }\nsection A { kit { bd4 sn hh hh | } lyrics w sings kit { a b c d | } }\n"
-            + "form { A }\nscore { staff kit  lyrics w }\n")).ToXml();
+            "part kit { clef percussion }\nsection A { kit { bd4 sn hh hh | } lyrics w { a b c d | } }\n"
+            + "form { A }\nscore { staff kit  lyrics w on kit }\n")).ToXml();
         Assert.Equal(4, doc.Descendants("lyric").Count());
     }
 
@@ -299,8 +299,8 @@ public class LyricExportAgreesWithPageTests
     public void TheMidi_SingsThePartSung_WhereAPhraseIsPlayedAtTwoMoments()
         => Assert.Equal(new[] { (1920, "aa"), (2880, "bb") }, Events(
             "octave absolute\ntime 4/4\nphrase riff { c''2 d'' | }\npart m { clef treble }\npart n { clef treble }\n"
-            + "section A { m { riff s1 | } n { s1 | riff } lyrics w sings n { | aa bb | } }\n"
-            + "form { A }\nscore { staff m\n staff n  lyrics w }\n"));
+            + "section A { m { riff s1 | } n { s1 | riff } lyrics w { | aa bb | } }\n"
+            + "form { A }\nscore { staff m\n staff n  lyrics w on n }\n"));
 
     private static string[] Numbers(string source)
         => new MusicXmlExporter().Export(Parse(source)).ToXml().Descendants("lyric")
@@ -309,19 +309,19 @@ public class LyricExportAgreesWithPageTests
     [Fact]
     public void AVersesNumberIsWritten()
         => Assert.Equal(new[] { "1:aa", "2:cc", "1:bb", "2:dd" }, Numbers(
-            Head + "section A { m { c''2 d'' | } lyrics w sings m { verse 1 { aa bb | } verse 2 { cc dd | } } }\n" + Staff));
+            Head + "section A { m { c''2 d'' | } lyrics w { verse 1 { aa bb | } verse 2 { cc dd | } } }\n" + Staff));
 
     [Fact]
     public void WordsPastTheLastBar_AreTheNextVerse()
         => Assert.Equal(new[] { "1:a", "2:c", "1:b", "2:d" }, Numbers(
-            Head + "section A { m { c''1 | d''1 | } lyrics w sings m { a | b | c | d | } }\n" + Staff));
+            Head + "section A { m { c''1 | d''1 | } lyrics w { a | b | c | d | } }\n" + Staff));
 
     [Fact]
     public void ASectionSingingOnlyTheSecondTrack_KeepsItsNumber()
         => Assert.Equal(new[] { "1:aa", "2:bb", "2:cc" }, Numbers(
-            Head + "section A { m { c''1 | } lyrics w sings m { aa | } lyrics x sings m { bb | } }\n"
-            + "section B { m { d''1 | } lyrics x sings m { cc | } }\n"
-            + "form { A B }\nscore { staff m  lyrics w  lyrics x }\n"));
+            Head + "section A { m { c''1 | } lyrics w { aa | } lyrics x { bb | } }\n"
+            + "section B { m { d''1 | } lyrics x { cc | } }\n"
+            + "form { A B }\nscore { staff m  lyrics w on m  lyrics x on m }\n"));
 
     [Fact]
     public void AnUnboundRow_KeepsItsWords_OnTheStaffAbove()
@@ -339,7 +339,7 @@ public class LyricExportAgreesWithPageTests
     public void AQuotedSyllable_IsWrittenAsItsWords()
     {
         var doc = new MusicXmlExporter().Export(Parse(
-            Head + "section A { m { c''4 d'' e'' f'' | } lyrics w sings m { \"a\"- b \"-\" \"la-\" | } }\n" + Staff)).ToXml();
+            Head + "section A { m { c''4 d'' e'' f'' | } lyrics w { \"a\"- b \"-\" \"la-\" | } }\n" + Staff)).ToXml();
         Assert.Equal(new[] { "a/begin", "b/end", "-/single", "la-/single" },
             doc.Descendants("lyric").Select(l => l.Element("text")!.Value + "/" + l.Element("syllabic")!.Value));
     }
@@ -350,8 +350,8 @@ public class LyricExportAgreesWithPageTests
     {
         var doc = new MusicXmlExporter().Export(Parse(
             "octave absolute\ntime 4/4\nphrase riff { c''2 d'' | }\npart m { clef treble }\npart n { clef treble }\n"
-            + "section A { m { riff } n { riff } lyrics w sings n { aa bb | } }\n"
-            + "form { A }\nscore { staff m\n staff n  lyrics w }\n")).ToXml();
+            + "section A { m { riff } n { riff } lyrics w { aa bb | } }\n"
+            + "form { A }\nscore { staff m\n staff n  lyrics w on n }\n")).ToXml();
         var parts = doc.Descendants("part").ToList();
         Assert.Empty(parts[0].Descendants("lyric"));
         Assert.Equal(2, parts[1].Descendants("lyric").Count());

@@ -213,6 +213,7 @@ public abstract class SyntaxNode
             SyntaxKind.LayoutDeclaration => new LayoutDeclarationSyntax((LayoutDeclarationGreen)green, this, position),
             SyntaxKind.ChordShapesDeclaration => new ChordShapesDeclarationSyntax((ChordShapesDeclarationGreen)green, this, position),
             SyntaxKind.LanguageDeclaration => new LanguageDeclarationSyntax((LanguageDeclarationGreen)green, this, position),
+            SyntaxKind.SingerDeclaration => new SingerDeclarationSyntax((SingerDeclarationGreen)green, this, position),
             SyntaxKind.TimeSignature => new TimeSignatureSyntax((TimeSignatureGreen)green, this, position),
             SyntaxKind.TempoDeclaration => new TempoDeclarationSyntax((TempoDeclarationGreen)green, this, position),
             SyntaxKind.PartialDeclaration => new PartialDeclarationSyntax((PartialDeclarationGreen)green, this, position),

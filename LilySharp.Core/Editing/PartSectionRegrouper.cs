@@ -148,9 +148,6 @@ public static class PartSectionRegrouper
         // Lyric tracks: (name, ordinal) — the ordinal separates several same-named
         // (usually nameless) verse blocks in one section — and (track, section) text.
         var lyricTracks = new List<(string? Name, int Ordinal)>();
-        // The `sings` binding is a property of the track NAME - carried whole
-        // through the conversion, or the round trip would silently unbind it.
-        var lyricSings = new Dictionary<string, string>(StringComparer.Ordinal);
         var lyricCells = new Dictionary<(string? Name, int Ordinal, string Section), string>();
         // section -> its own directive text (`key g major` …): a standalone by-part
         // header, or the directives folded into a by-section section.
@@ -260,9 +257,6 @@ public static class PartSectionRegrouper
                 {
                     int ord = lyricTracks.Count(t => t.Name == topLyrics.VoiceName);
                     AddLyricTrack((topLyrics.VoiceName, ord));
-                    if (topLyrics is { VoiceName: { } tn, SingsTarget: { } tt }
-                        && !lyricSings.ContainsKey(tn))
-                        lyricSings[tn] = tt;
                     foreach (var ls in topLyrics.Sections)
                     {
                         AddSection(ls.SectionName);
@@ -315,9 +309,6 @@ public static class PartSectionRegrouper
                         int ord = lyricOrd.GetValueOrDefault(key);
                         lyricOrd[key] = ord + 1;
                         AddLyricTrack((lb.VoiceName, ord));
-                        if (lb is { VoiceName: { } ln, SingsTarget: { } lt }
-                            && !lyricSings.ContainsKey(ln))
-                            lyricSings[ln] = lt;
                         Put(lyricCells, (lb.VoiceName, ord, section.SectionName), Cell(lb),
                             $"{LyricsLabel(lb.VoiceName)} in section {section.SectionName}");
                     }
@@ -334,7 +325,7 @@ public static class PartSectionRegrouper
             if (!parts.Any(pt => pt.Name == p))
                 parts.Add((p, ""));
 
-        var tracks = new TrackData(chordParts, chordCells, lyricTracks, lyricCells, lyricSings);
+        var tracks = new TrackData(chordParts, chordCells, lyricTracks, lyricCells);
         var notes = new Notes(partNotes, sectionNotes, looseNotes);
         var body = target == Grouping.ByPart
             ? EmitGroupedByPart(parts, sectionOrder, cells, tracks, sectionHeaders, notes)
@@ -349,8 +340,7 @@ public static class PartSectionRegrouper
         List<string?> ChordParts,
         Dictionary<(string? Name, string Section), string> ChordCells,
         List<(string? Name, int Ordinal)> LyricTracks,
-        Dictionary<(string? Name, int Ordinal, string Section), string> LyricCells,
-        Dictionary<string, string> LyricSings);
+        Dictionary<(string? Name, int Ordinal, string Section), string> LyricCells);
 
     /// <summary>A chord track as a refusal names it: <c>chords 'harmony'</c>.</summary>
     private static string ChordsLabel(string? name) => name == null ? "chords" : $"chords '{name}'";
@@ -366,18 +356,12 @@ public static class PartSectionRegrouper
             sb.Append(' ').Append(name);
     }
 
-    /// <summary>Writes the <c>lyrics</c> keyword with its optional voice name and
-    /// the track's <c>sings</c> binding (repeating it on every emitted block is the
-    /// legal spelling - later blocks may restate the binding identically).</summary>
-    private static void AppendLyricsKeyword(StringBuilder sb, string? name, TrackData tracks)
+    /// <summary>Writes the <c>lyrics</c> keyword with its optional voice name.</summary>
+    private static void AppendLyricsKeyword(StringBuilder sb, string? name)
     {
         sb.Append("lyrics");
         if (name != null)
-        {
             sb.Append(' ').Append(name);
-            if (tracks.LyricSings.TryGetValue(name, out var sings))
-                sb.Append(" sings ").Append(sings);
-        }
     }
 
     /// <summary>The comments a regroup moves rather than copies (Emit's remark): those on a
@@ -437,7 +421,7 @@ public static class PartSectionRegrouper
         // ... and each lyric verse-track likewise.
         foreach (var (lyricName, ordinal) in tracks.LyricTracks)
         {
-            AppendLyricsKeyword(sb, lyricName, tracks);
+            AppendLyricsKeyword(sb, lyricName);
             sb.Append(" {\n");
             foreach (var section in sectionOrder)
                 if (tracks.LyricCells.TryGetValue((lyricName, ordinal, section), out var text))
@@ -488,7 +472,7 @@ public static class PartSectionRegrouper
                 if (tracks.LyricCells.TryGetValue((lyricName, ordinal, section), out var text))
                 {
                     sb.Append("  ");
-                    AppendLyricsKeyword(sb, lyricName, tracks);
+                    AppendLyricsKeyword(sb, lyricName);
                     sb.Append(' ').Append(Braced(text)).Append('\n');
                 }
             sb.Append("}\n");

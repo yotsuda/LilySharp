@@ -107,9 +107,9 @@ public sealed class WavExportTests : IDisposable
 
     // One bar of 4/4 at 120 (2 s), a syllable on each note; the score sings the part (a staff
     // with its words under it), and — `rows` — may play it on a second staff too.
-    private static string SungBook(string rows = "staff melody  lyrics verse sings melody") =>
+    private static string SungBook(string rows = "staff melody  lyrics verse on melody") =>
         "tempo 4 = 120\ntime 4/4\npart melody { clef treble  instrument soprano }\n" +
-        "section A { melody { c'4 e4 g4 c4 | } lyrics verse { か き く け | } }\nform { A }\n" +
+        "section A { melody { c'4 e4 g4 c4 | } lyrics verse { か き く け | } }\nsinger sings verse on melody\nform { A }\n" +
         $"score {{ {rows} }}\n";
 
     private (byte[] Bytes, ExportResult Result) Export(string book, SingingEngine singer, string name = "sung.wav")
@@ -169,7 +169,7 @@ public sealed class WavExportTests : IDisposable
         // (owner's report 2026-11-08: さ at 0 sang as た when the lead was cut): the file begins
         // with it, and the instruments — the score's other staff — start 0.1 s later.
         var singer = new FakeSinger { Seconds = 0.5, SampleRate = 48000, Amplitude = 0.5f, Consonant = 0.1 };
-        var (bytes, result) = Export(SungBook("staff melody  lyrics verse sings melody  staff melody"), singer);
+        var (bytes, result) = Export(SungBook("staff melody sounds voice  lyrics verse on melody  staff melody sounds instrument"), singer);
 
         Assert.Contains(result.Notes, n => n == "Voice lead: 0.10 s (the first consonant before the beat; the instruments start after it)");
         Assert.True(Peak(bytes, 0.0, 0.08) > 12000, "the consonant sounds from the file's start");
@@ -196,7 +196,7 @@ public sealed class WavExportTests : IDisposable
     {
         // A silent voice, so what is heard is the instrument's second staff.
         var singer = new FakeSinger { Seconds = 0.1, Amplitude = 0f };
-        var (bytes, result) = Export(SungBook("staff melody  lyrics verse sings melody  staff melody"), singer);
+        var (bytes, result) = Export(SungBook("staff melody sounds voice  lyrics verse on melody  staff melody sounds instrument"), singer);
 
         Assert.True(Peak(bytes, 0.0, 1.0) > 1000, "the instrument plays on its own staff");
         Assert.Contains(result.Notes, n => n == "Voice: fake/voice sings melody (4 notes, 0.1 s), its instrument too");

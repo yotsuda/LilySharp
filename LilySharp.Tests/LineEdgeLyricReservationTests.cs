@@ -59,10 +59,10 @@ public class LineEdgeLyricReservationTests
         part melody { clef treble }
         section Main {
           melody { {{Music}} }
-          lyrics words sings melody { {{words}} }
+          lyrics words { {{words}} }
         }
         form { Main }
-        score { staff melody  lyrics words }
+        score { staff melody  lyrics words on melody }
         """;
 
     private const string Unsung = $$"""

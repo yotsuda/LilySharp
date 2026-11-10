@@ -98,7 +98,7 @@ public sealed class SectionDeclaredLabelTests
 
     [Theory]
     [InlineData("part p1 {\n  section A2 \"A'\" { c'4 d' e' r }\n}\nform { A2 }\n", "a part")]
-    [InlineData("part p1 { section A2 { c'4 d' e' r } }\nlyrics w sings p1 { section A2 \"A'\" { la la la la } }\nform { A2 }\n", "a lyrics track")]
+    [InlineData("part p1 { section A2 { c'4 d' e' r } }\nlyrics w { section A2 \"A'\" { la la la la } }\nform { A2 }\n", "a lyrics track")]
     [InlineData("part p1 { section A2 { c'4 d' e' r } }\nchords h { section A2 \"A'\" { C } }\nform { A2 }\n", "a chords track")]
     public void ALabelInsideAPartOrATrack_IsOneErrorAndPrintsNothing(string source, string where)
     {

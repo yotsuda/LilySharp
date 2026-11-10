@@ -149,7 +149,7 @@ public class DeclaredNameTokenTests
     /// diagnostics are about to underline.</summary>
     private const string EveryTrack = """
         part melody { section A { c''4 d e f } }
-        lyrics verse sings melody { section A { la la la la } }
+        lyrics verse { section A { la la la la } }
         chords prog { section A { C | } }
         form { A }
         score {
@@ -170,7 +170,7 @@ public class DeclaredNameTokenTests
         // folding the sets would make `staff prog` legal, which is the empty staff LYS1007
         // exists to catch.
         Assert.Equal(
-            ["melody", "verse", "melody", "prog", "melody", "verse", "prog"],
+            ["melody", "verse", "prog", "melody", "verse", "prog"],
             Coloured(EveryTrack, Part));
     }
 
@@ -196,8 +196,8 @@ public class DeclaredNameTokenTests
     [InlineData("part melody { section A { c''4 c c c } }", "nobody", false)]
     public void ASingsTarget_IsColouredExactlyWhenItResolves(string part, string target, bool coloured)
     {
-        var book = $"{part}\nlyrics v sings {target} {{ section A {{ la la la la }} }}\n"
-                 + "form { A }\nscore { staff melody  lyrics v }\n";
+        var book = $"{part}\nlyrics v {{ section A {{ la la la la }} }}\n"
+                 + $"form {{ A }}\nscore {{ staff melody  lyrics v on {target} }}\n";
 
         Assert.Equal(coloured, Coloured(book, Part).Contains(target));
     }

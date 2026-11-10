@@ -28,7 +28,7 @@ section Verse {
     G | G | C | G |
     Em | D7 | G |
   }
-  lyrics words sings melody {
+  lyrics words {
     A- |
     maz- ~ ing | grace how | sweet the | sound that |
     saved ~ a | wretch like | me | I |
@@ -42,7 +42,7 @@ form { Verse }
 score {
   chords prog
   staff melody
-  lyrics words
+  lyrics words on melody
 }
 
 score grid {

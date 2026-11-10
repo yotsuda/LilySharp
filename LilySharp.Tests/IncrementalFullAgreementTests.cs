@@ -73,7 +73,7 @@ public class IncrementalFullAgreementTests
         var src = Fixture("LilySharp.Tests", "Fixtures", "test", "lyrics.lys");
         // The score block's row only — the lyrics block keeps its name, so the row names nothing.
         Assert.Contains("staff melody  lyrics words", src);
-        var withEmptyRow = src.Replace("staff melody  lyrics words", "staff melody  lyrics wwords");
+        var withEmptyRow = src.Replace("staff melody  lyrics words", "lyrics wwords  staff melody");
         Assert.NotEqual(Keys(withEmptyRow)[0], Keys(withEmptyRow.Replace("lyrics wwords", "lyric wwords"))[0]);
     }
 

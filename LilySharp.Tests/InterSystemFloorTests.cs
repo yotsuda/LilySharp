@@ -85,11 +85,11 @@ public class InterSystemFloorTests
     // between the pair in the alignment.
     private const string Plain = "  staff melody\n  staff melody";
     private const string Chords = "  staff melody\n  chords prog as names\n  staff melody";
-    private const string Lyrics = "  staff melody\n  lyrics verse sings melody\n  staff melody";
+    private const string Lyrics = "  staff melody\n  lyrics verse on melody\n  staff melody";
     private const string ChordsThenLyrics =
-        "  staff melody\n  chords prog as names\n  lyrics verse sings melody\n  staff melody";
+        "  staff melody\n  chords prog as names\n  lyrics verse on melody\n  staff melody";
     private const string LyricsThenChords =
-        "  staff melody\n  lyrics verse sings melody\n  chords prog as names\n  staff melody";
+        "  staff melody\n  lyrics verse on melody\n  chords prog as names\n  staff melody";
 
     /// <summary>
     /// System 1's LAST staff to system 2's FIRST — the distance
