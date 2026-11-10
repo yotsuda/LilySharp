@@ -374,6 +374,34 @@ public class ScoreReviewTests
         Assert.Single(ShortVariations(Variations(("Theme", 8), ("Var1", 7)).Replace("section Theme { m { ", "section Theme { partial 4 m { b'4 | ")));
     }
 
+    // Shudai-to-Hensou, 2026-11-11: Var1 hands the theme to the left hand under the right hand's
+    // sixteenths, and the right hand was read as the melody there: "20% steps", "one rhythm".
+    private static string HandedOff(string leftHand) => $$"""
+        title "Var"
+        key b minor
+        time 4/4
+        octave absolute
+        part rh { instrument piano-right }
+        part lh { instrument piano-left }
+        section Theme { rh { b'4. a'8 fis'4 d' | e'4. d'8 b4 g | a4 b cis'2 | e'2 d'4 cis' | } lh { b,2 fis, | e,2 g, | a,2 fis, | fis,1 | } }
+        section Var1 { rh { {{string.Concat(Enumerable.Repeat("b16 fis' d' fis' b fis' d' fis' b fis' d' fis' b fis' d' fis' | ", 4))}} } lh { {{leftHand}} } }
+        form { Theme Var1 }
+        score { grandStaff { staff rh staff lh } }
+        """;
+
+    [Fact]
+    public void AThemeHandedToTheOtherHand_LeavesTheFigureUnreadAsTheTune()
+    {
+        static System.Collections.Generic.List<string> Ids(string book) => CompositionChecks.Findings(book).Select(f => f.Id).ToList();
+        var handed = Ids(HandedOff("b4 a fis d | e4 d b, g, | a,4 b, cis d | e4 d cis cis |"));
+        Assert.DoesNotContain("melody.leaps", handed);
+        Assert.DoesNotContain("rhythm.same-bars-in-section", handed);
+        Assert.DoesNotContain("rhythm.same-bars", handed);
+        // A left hand that does not play the theme: the right hand's figure is its melody, and is told.
+        var kept = Ids(HandedOff("b,1 | e, | a, | fis, |"));
+        Assert.Contains("melody.leaps", kept);
+    }
+
     private const string TwoParts = """
         title "Two"
         key c major

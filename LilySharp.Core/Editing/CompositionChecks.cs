@@ -236,6 +236,15 @@ public static class CompositionChecks
             foreach (var (part, lineBars) in tuned.Item1)
                 if (lineBars.Count > 0 && byPart.TryGetValue(part, out var every))
                     byPart[part] = every.Where(o => lineBars.Contains(barList.Count(b => b <= o.Start) - 1)).ToList();
+        // A variation that hands the theme to another part (the left hand sings it under the right
+        // hand's figure): there the melody part accompanies, and those bars say nothing of its tune
+        // (Shudai-to-Hensou, 2026-11-11: Var1's sixteenths over the theme in the left hand were told
+        // "20% steps" and "one rhythm in all 16 bars").
+        var handedOff = TuneHandedOff(midi, lineNotes, melodies, parts);
+        bool HandedOff(string part, int tick) => handedOff.TryGetValue(part, out var spans) && spans.Any(s => tick >= s.Start && tick < s.End);
+        foreach (var part in handedOff.Keys)
+            if (byPart.TryGetValue(part, out var all))
+                byPart[part] = all.Where(o => !HandedOff(part, o.Start)).ToList();
         // Every part in the same rhythm, bar after bar (said at the end). Moving as one, the parts
         // share one rhythm, said of the top one alone — the melody, else the first part (owner's
         // trials 2026-10-29: a hymn sung in every voice heard the same two findings four times over,
@@ -319,7 +328,7 @@ public static class CompositionChecks
         {
             if (asOne && part != top)
                 continue;
-            var line = lineNotes.Where(n => n.Part == part)
+            var line = lineNotes.Where(n => n.Part == part && !HandedOff(part, n.StartTick))
                 .GroupBy(n => n.StartTick).OrderBy(g => g.Key).Where(g => g.Count() == 1).Select(g => g.First().Pitch).ToList();
             var moves = line.Zip(line.Skip(1), (a, b) => System.Math.Abs(a - b)).Where(d => d > 0).ToList();
             int steps = moves.Count(d => d <= 2);
@@ -1749,6 +1758,40 @@ public static class CompositionChecks
         @"^(theme|thema|主題|テーマ)[\W_]*\d*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     private static readonly System.Text.RegularExpressions.Regex VariationSection = new(
         @"^(variation|var|変奏)[\W_]*(\d+|[ivxlc]+|[一二三四五六七八九十]+)?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    // The theme's head, as pitch classes: this many single notes, and this many of them alike in place.
+    private const int ThemeHeadNotes = 8, ThemeHeadAlike = 6;
+
+    /// <summary>For each melody part, the variations (every playing) in which another part plays the theme's
+    /// head — its first single notes, as pitch classes in place, in any octave — and the melody part does not:
+    /// there the tune is handed to that part. Empty without a section named as the theme.</summary>
+    private static Dictionary<string, List<(int Start, int End)>> TuneHandedOff(MidiFile midi,
+        List<(string Part, int StartTick, int DurationTicks, int Pitch)> lineNotes, HashSet<string> melodies, IReadOnlyList<PartDeclarationSyntax> parts)
+    {
+        var result = new Dictionary<string, List<(int Start, int End)>>(System.StringComparer.Ordinal);
+        var starts = midi.SectionStarts.ToList();
+        var spans = starts.Select((s, i) => (Name: s.Value, Start: s.Key, End: i + 1 < starts.Count ? starts[i + 1].Key : midi.EndTick))
+            .Where(s => s.End > s.Start).ToList();
+        var theme = spans.FirstOrDefault(s => ThemeSection.IsMatch(s.Name));
+        if (theme.Name == null)
+            return result;
+        List<int> Head(string part, int start, int end) => lineNotes.Where(n => n.Part == part && n.StartTick >= start && n.StartTick < end)
+            .GroupBy(n => n.StartTick).OrderBy(g => g.Key).Where(g => g.Count() == 1)
+            .Select(g => (g.First().Pitch % 12 + 12) % 12).Take(ThemeHeadNotes).ToList();
+        static int Alike(List<int> a, List<int> b) => a.Zip(b, (x, y) => x == y ? 1 : 0).Sum();
+        var others = parts.Where(p => !RoleOf(p).Drums).Select(p => p.Name.Text).ToList();
+        foreach (var melody in melodies)
+        {
+            var tune = Head(melody, theme.Start, theme.End);
+            if (tune.Count < ThemeHeadNotes)
+                continue;
+            foreach (var v in spans.Where(s => VariationSection.IsMatch(s.Name)))
+                if (Alike(Head(melody, v.Start, v.End), tune) < ThemeHeadAlike
+                    && others.Any(p => p != melody && Alike(Head(p, v.Start, v.End), tune) >= ThemeHeadAlike))
+                    (result.TryGetValue(melody, out var list) ? list : result[melody] = []).Add((v.Start, v.End));
+        }
+        return result;
+    }
 
     /// <summary>Variations shorter than their theme: fragments of its course (owner's decision 2026-11-10:
     /// Kawaru-Iro-no-Shudai's theme of 8 bars, its variations of 6, 6, 6 and 4, one of them four seconds long;
