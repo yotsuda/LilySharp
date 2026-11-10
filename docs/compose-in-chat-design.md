@@ -236,7 +236,7 @@ A section named as a frame (intro, outro, coda, ending, tag, prelude, postlude, 
   the same bass and drums, the ordinary shape of a song; the 2026-10-30 rule stands — a tune changed
   in three bars of eight is music of its own.
 - The key the piece ends in.
-- The final bass note off the tonic.
+- The final bass note off the tonic. When the piece is heard in the relative key and ends on that key's tonic, the `key` line is what is said (`key.relative`; 2026-11-10: a scan of Chopin's Prelude in E minor, read as `key g major`).
 - Every part moving in one rhythm.
 
 Pitch names in the messages and in the range lines are spelled as the piece's key spells them

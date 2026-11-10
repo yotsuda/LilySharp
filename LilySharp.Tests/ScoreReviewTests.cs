@@ -304,6 +304,45 @@ public class ScoreReviewTests
         Assert.Single(KeyFindings(book), f => (string?)f["id"] == "key.outside");
     }
 
+    private static bool SaysAtAll(string source, string id)
+        => Report(source)["findings"]!.AsArray().Any(f => (string?)f!["id"] == id);
+
+    private const string InEMinor = "e'4 g' b' e'' | d'' b' g' e' | c''4 a' fis' a' | b' dis'' fis'' b' | e''4 d'' c'' b' | a' fis' dis' b | e'2 g'2 | e'1 |";
+
+    // Owner's decision 2026-11-10: a scan of Chopin's Prelude in E minor, read as `key g major`, told to end on G.
+    [Fact]
+    public void APieceHeardInTheRelativeKey_AndEndingOnItsTonic_IsToldOfItsKeyLine()
+    {
+        string book = Tune("g major", InEMinor);
+        var told = KeyFindings(book).Single(f => (string?)f["id"] == "key.relative");
+        Assert.Equal("notation", (string?)told["kind"]);
+        Assert.Contains("The key says G major, and the piece is heard in E minor and ends on E: if E minor is meant, write `key e minor`.", (string?)told["what"]);
+        Assert.False(SaysAtAll(book, "form.final-bass"));
+        Assert.DoesNotContain("It ends where it began", Report(book)["strengths"]!.ToJsonString());
+    }
+
+    [Fact]
+    public void TheKeyHeard_IsWrittenAsAKeyLineWrites_ItsAccidental()
+    {
+        string book = Tune("e major", "cis'4 e' gis' cis'' | b' gis' e' cis' | a'4 fis' dis' fis' | gis' bis' dis'' gis' | cis''4 b' a' gis' | fis' dis' bis gis | cis'2 e'2 | cis'1 |");
+        Assert.Contains("write `key cis minor`", (string?)KeyFindings(book).Single(f => (string?)f["id"] == "key.relative")["what"]);
+    }
+
+    [Fact]
+    public void AnEndingOffBothTonics_IsStillAnEndingToLookAt()
+    {
+        // Heard in E minor, written in G major, ending on neither E nor G.
+        string book = Tune("g major", InEMinor.Replace("e'2 g'2 | e'1 |", "e'2 g'2 | a'1 |"));
+        Assert.True(SaysAtAll(book, "form.final-bass"));
+        Assert.False(SaysAtAll(book, "key.relative"));
+        // Heard in a key that is no relative of the one written: the ending is still what is said.
+        Assert.True(SaysAtAll(Tune("c major", InEMinor), "form.final-bass"));
+        Assert.False(SaysAtAll(Tune("c major", InEMinor), "key.relative"));
+        // The written key's own tonic, as ever, says nothing.
+        Assert.False(SaysAtAll(Tune("e minor", InEMinor), "form.final-bass"));
+        Assert.False(SaysAtAll(Tune("e minor", InEMinor), "key.relative"));
+    }
+
     private static string Variations(params (string Name, int Bars)[] sections) => $$"""
         title "Variations"
         key c major

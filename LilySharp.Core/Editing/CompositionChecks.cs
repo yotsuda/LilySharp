@@ -677,8 +677,14 @@ public static class CompositionChecks
             int lastOnset = pitched.Max(n => n.StartTick);
             int bass = pitched.Where(n => n.StartTick <= lastOnset && n.StartTick + n.DurationTicks > lastOnset).Min(n => n.Pitch);
             if ((bass % 12 + 12) % 12 != endTonic)
-                findings.Add(new("form.final-bass", $"The piece ends over {PitchClassName(bass, fifths)}, not its tonic {PitchClassName(endTonic, fifths)}: close with a cadence "
-                    + $"(V–I) on the tonic chord, held through the last bar, the bass on {PitchClassName(endTonic, fifths)}."));
+            {
+                if (RelativeKeyHeard(midi, end, endTonic, (bass % 12 + 12) % 12) is { } heard)
+                    findings.Add(new("key.relative", $"The key says {KeyName(end)}, and the piece is heard in {heard.Name} and ends on {PitchClassName(bass, fifths)}: "
+                        + $"if {heard.Name} is meant, write `key {KeyWord(heard)}`."));
+                else
+                    findings.Add(new("form.final-bass", $"The piece ends over {PitchClassName(bass, fifths)}, not its tonic {PitchClassName(endTonic, fifths)}: close with a cadence "
+                        + $"(V–I) on the tonic chord, held through the last bar, the bass on {PitchClassName(endTonic, fifths)}."));
+            }
         }
 
         // Every part in the same rhythm, bar after bar (counted above).
@@ -1683,6 +1689,25 @@ public static class CompositionChecks
         var starts = midi.SectionStarts.ToList();
         return starts.Select((s, i) => (Name: s.Value, Start: s.Key, End: i + 1 < starts.Count ? starts[i + 1].Key : midi.EndTick))
             .Where(s => s.End > s.Start).GroupBy(s => s.Name).Select(g => g.First()).ToList();
+    }
+
+    /// <summary>The key heard, when it is the relative of the key written and the piece ends on its tonic: the
+    /// `key` line, not the ending, is what to look at (owner's decision 2026-11-10: a scan of Chopin's Prelude in
+    /// E minor, read as `key g major` from its signature, was told to end on G).</summary>
+    private static KeyChecks.HeardKey? RelativeKeyHeard(MidiFile midi, (string Tonic, string Mode) key, int tonic, int bass)
+    {
+        if (key.Mode is not ("major" or "minor") || KeyChecks.Heard(midi) is not { Count: > 0 } heard)
+            return null;
+        var best = heard[0];
+        bool minor = key.Mode == "minor";
+        return best.Minor != minor && best.Tonic == (tonic + (minor ? 3 : 9)) % 12 && bass == best.Tonic ? best : null;
+    }
+
+    /// <summary>A heard key as a `key` line writes it: `e minor`, `cis minor`, `ees major`.</summary>
+    private static string KeyWord(KeyChecks.HeardKey key)
+    {
+        string[] name = key.Name.Split(' ');
+        return $"{char.ToLowerInvariant(name[0][0])}{(name[0].Contains('♯') ? "is" : name[0].Contains('♭') ? "es" : "")} {name[1]}";
     }
 
     // A theme and its variations, by their sections' names.

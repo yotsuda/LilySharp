@@ -295,7 +295,7 @@ public static class ScoreReview
         if (pitched == 0)
             yield break;
 
-        if (HomeKey(root) is { } key && !Said("form.ends-in-another-key", "form.final-bass"))
+        if (HomeKey(root) is { } key && !Said("form.ends-in-another-key", "form.final-bass", "key.relative"))
             yield return $"It ends where it began: in {key}, over its tonic.";
         var form = CompositionChecks.PlayedSections(root);
         if (form.Distinct().Count() >= 2 && form.Distinct().Count() < form.Count && !Said("form.played-three-times"))
