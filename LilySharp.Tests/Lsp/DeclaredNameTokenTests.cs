@@ -202,6 +202,26 @@ public class DeclaredNameTokenTests
         Assert.Equal(coloured, Coloured(book, Part).Contains(target));
     }
 
+    /// <summary>A <c>singer</c> just typed is not yet a statement the parser can read, and no
+    /// token may paint over the grammar's keyword colour (owner's report 2026-11-10).</summary>
+    [Theory]
+    [InlineData("singer\n")]
+    [InlineData("part m { clef treble }\nsinger\nscore { staff m }\n")]
+    [InlineData("part m { clef treble }\nsinger\nlanguage english\nscore { staff m }\n")]
+    public void ASingerAloneOnItsLine_GetsNoTokenOverTheGrammars(string source)
+    {
+        var tokens = LilySharpLanguageServer.CollectSemanticTokens(SyntaxTree.Parse(source).GetRoot(), source);
+        Assert.DoesNotContain(tokens, t => Span(source, t) == "singer");
+    }
+
+    [Fact]
+    public void APhraseCalledSinger_IsStillColouredWhereItIsUsed()
+    {
+        const string source = "part m { clef treble }\nphrase singer { c'4 | }\nsection A { m { singer | } }\nform { A }\nscore { staff m }\n";
+        var tokens = LilySharpLanguageServer.CollectSemanticTokens(SyntaxTree.Parse(source).GetRoot(), source);
+        Assert.Equal(2, tokens.Count(t => Span(source, t) == "singer"));
+    }
+
     [Fact]
     public void AScoreNamingAPartThatDoesNotExist_LeavesItPlain()
     {

@@ -79,6 +79,19 @@ public sealed partial class LilySharpLanguageServer
     private const int TokenTypeSection = 10;
     private const int TokenTypePhrase = 11;
 
+    /// <summary>A bare <c>singer</c> with no phrase of that name is a <c>singer</c> line still being
+    /// typed: the parser cannot read it as one yet and takes it for a reference, and a token here
+    /// would paint over the grammar's keyword colour (owner's report 2026-11-10).</summary>
+    private static bool IsSingerBeingTyped(VariableReferenceSyntax reference)
+    {
+        if (reference.Name.Text != LilySharp.Core.Music.LyricSinger.Keyword)
+            return false;
+        SyntaxNode root = reference;
+        while (root.Parent != null)
+            root = root.Parent;
+        return !root.DescendantNodes<PhraseDeclarationSyntax>().Any(p => p.Name.Text == reference.Name.Text);
+    }
+
     internal static IEnumerable<SemanticToken> CollectSemanticTokens(SyntaxNode root, string text)
     {
         var tokens = new List<SemanticToken>();
@@ -282,7 +295,7 @@ public sealed partial class LilySharpLanguageServer
                 tokens.Add(new SemanticToken(line, character, node.Width, tokenType.Value));
             }
         }
-        else if (node is VariableReferenceSyntax varRef)
+        else if (node is VariableReferenceSyntax varRef && !IsSingerBeingTyped(varRef))
         {
             // Variable reference (after $ or use)
             var nameNode = varRef.Name;
