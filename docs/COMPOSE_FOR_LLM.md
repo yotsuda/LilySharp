@@ -48,6 +48,7 @@ of thinking, a reply all but cut off.)
   of each chord are the section notes'.
 - **THEME** — its one or two bars WRITTEN OUT in this file's notes, its rhythm with them
   (`fis''2 e''8 d''8 | d''4 b'4 g''4 |`), and the bars where it comes back.
+  In a piece whose parts imitate: each entry's bar, part and key, and the countersubject written out.
 - **PHRASES** — how the phrases pair (which asks, which answers, as *Phrases that answer* says) and
   the range the melody climbs to in each section.
 - **CLIMAX** — its bar and note, and how the dynamics lead there and away.
@@ -438,6 +439,13 @@ What makes it music:
   the melody and a countermelody, no parallel fifths or octaves unless a doubling is meant. An
   accompaniment of one figure from the first bar to the last (a bass on 1, chords on 2 and 3) leaves
   the tune alone: let a line answer it where it holds or rests.
+- **A fugue, a canon, any piece whose parts imitate** keeps every part a line of its own to the
+  last bar. In a fugue, a subject that opens tonic to dominant is answered dominant to tonic, and
+  the countersubject comes back with the later entries. An entry stays in one key, or changes at a
+  bar the plan names. The climax is a higher register, a stretto, a louder level, never one part
+  doubling another, whatever the character asks: a doubled part is a voice lost. Read every pair
+  of parts, the inner ones too and across each bar line: no parallel fifths or octaves, and no
+  strong beat with all the parts on one note before a cadence.
 - **An orchestra or a string ensemble** writes each instrument where it sounds well, not only where
   it can play: a flute's low octave is weak (its tune lies above G5), an oboe carries a tune in its
   middle, a horn sings round C4–C5 and rests between phrases, a cello's tenor register sings. Strings
