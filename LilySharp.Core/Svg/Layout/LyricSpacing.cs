@@ -60,10 +60,11 @@ internal static class LyricSpacing
         int measureIndex,
         IndexBuckets<LyricItem> lyrics,
         IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges,
-        System.Func<LyricItem, (double Left, double Centre)?>? ownEdge = null)
+        System.Func<LyricItem, (double Left, double Centre)?>? ownEdge = null,
+        IReadOnlySet<int>? spanBarCrossed = null)
         => ReserveLyricWidthByColumn(
             fonts, springs, columnTimings, measureIndex, lyrics, _ => true, parentAlignmentEdges,
-            ownEdge: ownEdge);
+            ownEdge: ownEdge, spanBarCrossed: spanBarCrossed);
 
     /// <summary>
     /// One lyric line's syllables per column, one entry per LINE — a verse of a voice's (or
@@ -182,6 +183,8 @@ internal static class LyricSpacing
     /// (18.686), and a next system opening under "lyrically" or "Lyrically" keeps its first
     /// note at 5.8 — so both were retired; the keep-inside-line rods (MultiStaffLayouter)
     /// are all that holds a system's first and last syllable, as in LilyPond.
+    /// <para>All of that is a line NO span bar runs through. One that does has a SpanBarStub
+    /// in its own band and keeps clear of it (<see cref="ReserveAgainstSpanBarStubs"/>).</para>
     /// </remarks>
     private static void ReserveLyricLine(
         ImmutableArray<Spring>.Builder result,
@@ -190,7 +193,8 @@ internal static class LyricSpacing
         int endColumn,
         System.Func<int, (double Left, double Centre)> edge,
         List<(int Left, int Right, double Distance)> rods,
-        bool keepEdgeHalves = false)
+        bool keepEdgeHalves = false,
+        bool crossedBySpanBar = false)
     {
         var cols = new List<int>(byCol.Keys);
 
@@ -228,7 +232,82 @@ internal static class LyricSpacing
         if (keepEdgeHalves)
             BumpSpanMin(result, last + 1, endColumn,
                 GetLyricRightExtent(fonts, byCol[last], edge(last)) + GlyphMetrics.MinItemGap);
+
+        if (crossedBySpanBar)
+            ReserveAgainstSpanBarStubs(result, fonts, byCol, first, last, endColumn, edge, rods);
     }
+
+    /// <summary>
+    /// A line a span bar runs through keeps its first and last syllable off that bar: the
+    /// bar's <c>SpanBarStub</c> stands in the line's own band, so the two columns' skylines meet.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/span-bar-stub-engraver.cc:134-152 process_acknowledged — a stub in each context between the first and the last bar of the span
+    /// LILYPOND-REF: lily/separation-item.cc:166-167 boxes — no extra-spacing-width on SpanBarStub, so the default 0.1 each side
+    /// LILYPOND-REF: scm/define-grobs.scm:2218 LyricText extra-spacing-width 0
+    /// LILYPOND-REF: lily/staff-spacing.cc:210-215 get_spacing — bar to first column: min_dist, and fixed floored at 0.3 + min_dist
+    /// LILYPOND-REF: lily/spacing-spanner.cc:265-291 set_column_rods — the rod on either side, min_dist + padding 0.1
+    /// <para>The springs start after the bar's ink and end before it, so the stub's own width
+    /// drops out, as the bar line's does in <see cref="SpacingRules.GetBarlineToItemMinimum"/>.
+    /// At a line start the prefix spring replaces spring 0 (LineStartSpringForLine), where
+    /// LilyPond's broken column has no span bar either.</para>
+    /// </remarks>
+    private static void ReserveAgainstSpanBarStubs(
+        ImmutableArray<Spring>.Builder result,
+        Rendering.ScoreTextMetrics fonts,
+        SortedDictionary<int, List<LyricItem>> byCol,
+        int first, int last, int endColumn,
+        System.Func<int, (double Left, double Centre)> edge,
+        List<(int Left, int Right, double Distance)> rods)
+    {
+        double leftMin = GetLyricLeftExtent(fonts, byCol[first], edge(first)) + SpacingRules.DefaultExtraSpacingWidth;
+        double leftRod = leftMin + SpacingRules.SeparationRodPadding;
+        if (first == 0)
+        {
+            var spring = result[0];
+            var floored = LineStartColumn.SpringWithMinimumDistanceFloor(spring.IdealDistance,
+                spring.IdealDistance - spring.InverseCompressStrength, spring.InverseStretchStrength, leftMin);
+            result[0] = floored with { MinDistance = System.Math.Max(spring.MinDistance, leftRod) };
+        }
+        else
+            rods.Add((0, first + 1, leftRod));
+
+        double rightRod = GetLyricRightExtent(fonts, byCol[last], edge(last))
+            + SpacingRules.DefaultExtraSpacingWidth + SpacingRules.SeparationRodPadding;
+        if (last + 1 == endColumn)
+            BumpSpanMin(result, endColumn, endColumn, rightRod);
+        else
+            rods.Add((last + 1, endColumn + 1, rightRod));
+    }
+
+    /// <summary>The staves whose lyric lines a span bar runs through: a staff of a group that
+    /// draws span bars, or a row in one, with a staff at or above it and one below it.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/span-bar-stub-engraver.cc:134-137 process_acknowledged — j strictly between the first and the last bar's index
+    /// LILYPOND-REF: ly/engraver-init.ly:549 ChoirStaff removes Span_bar_engraver
+    /// <para>Read per measure, before a system exists, so a staff hara-kiri hides on one system
+    /// still counts here.</para>
+    /// </remarks>
+    internal static IReadOnlySet<int> SpanBarCrossedStaves(MultiStaffScore score)
+        => _spanBarCrossed.GetValue(score, static s =>
+        {
+            var crossed = new HashSet<int>();
+            foreach (var group in s.StaffGroups)
+            {
+                if (!group.HasDelimiter || group.IsChoirStaff)
+                    continue;
+                var staves = s.EnumerateStaves().Where(t => ReferenceEquals(t.Group, group)).ToList();
+                int firstBar = staves.FindIndex(t => t.Staff.HasBarLines());
+                int lastBar = staves.FindLastIndex(t => t.Staff.HasBarLines());
+                for (int i = firstBar; firstBar >= 0 && i < lastBar; i++)
+                    crossed.Add(staves[i].GlobalStaffIndex);
+            }
+            return crossed;
+        });
+
+    private static bool HasBarLines(this Staff staff) => !staff.IsTextRow && !staff.IsOssia;
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<MultiStaffScore, IReadOnlySet<int>> _spanBarCrossed = new();
 
     /// <summary>
     /// Lead-sheet variant: reserves lyric width against the TIMING COLUMNS the springs were
@@ -340,7 +419,8 @@ internal static class LyricSpacing
         System.Func<LyricItem, bool> include,
         IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges,
         bool keepEdgeHalves = false,
-        System.Func<LyricItem, (double Left, double Centre)?>? ownEdge = null)
+        System.Func<LyricItem, (double Left, double Centre)?>? ownEdge = null,
+        IReadOnlySet<int>? spanBarCrossed = null)
     {
         (double Left, double Centre) Edge(int column) => AlignmentEdge(parentAlignmentEdges, column);
 
@@ -378,7 +458,8 @@ internal static class LyricSpacing
                 : c => (lineByCol.TryGetValue(c, out var ls) && ls.Count > 0
                             ? ownEdge(ls[0]) : null)
                        ?? AlignmentEdge(parentAlignmentEdges, c);
-            ReserveLyricLine(result, fonts, byCol, cols, lineEdge, rods, keepEdgeHalves);
+            ReserveLyricLine(result, fonts, byCol, cols, lineEdge, rods, keepEdgeHalves,
+                crossedBySpanBar: spanBarCrossed?.Contains(key.Staff) == true);
         }
         // The spanning reservations, as the RANGE rods they are in LilyPond — applied
         // measure-locally through the one Simple_spacer::add_rod port, AFTER every line's

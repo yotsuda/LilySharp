@@ -2686,7 +2686,8 @@ internal sealed class MultiStaffLayouter
                     // Per-voice edges — the same provider the ink reaches, the line
                     // edges and the drawn X read (a row has no voice, so the lead-sheet
                     // arm keeps the union/placeholder table).
-                    LyricSpacing.OwnVoiceEdgeProvider(score));
+                    LyricSpacing.OwnVoiceEdgeProvider(score),
+                    LyricSpacing.SpanBarCrossedStaves(score));
         }
         if (score.IsLeadSheet)
         {
