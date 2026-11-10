@@ -89,7 +89,8 @@ score { staff alt  lyrics solfege }   // prints them under the notes
 
 `solfege` is movable do: the key's tonic is do, a minor key's is la, and a `key` change moves it. An
 altered note takes the name of its letter and sounds as written. The file's `language` picks the words:
-ドレミファソラシ in Japanese, do re mi fa sol la ti in English. One name a note: a tied note keeps its
+ドレミファソラシ in Japanese, do re mi fa sol la ti in English, 哆来咪发唆拉西 in Chinese (simplified
+characters; owner's decision 2026-11-10), 도레미파솔라시 in Korean. One name a note: a tied note keeps its
 syllable, a chord takes its top note, a rest takes none, grace notes take none. `lyrics hum` is an error
 (there is nothing to print). `.ly` and MusicXML write the names as lyrics. How ん sounds held long has to be
 heard on each engine before it is settled; ら is the fallback.
