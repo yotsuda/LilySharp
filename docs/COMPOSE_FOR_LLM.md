@@ -307,7 +307,8 @@ What makes it music:
   - **A Japanese particle is sung as it is said, and a voice reads the letter**: the particles は and
     へ are わ and え, so each takes its reading glued to it, `ぼ く は[わ] ず ん だ`, `う み へ[え]`. Left
     bare they are sung ha and he. The page still prints は. Only the particle: the は of `は じ ま る`
-    and the へ of `へ や` stay as they are.
+    and the へ of `へ や` stay as they are. In the same way a long お written う takes its reading:
+    `あ り が と う[お]`, `じ こ しょ う[お] か い`. Not where the う is a sound of its own, as in `お も う`.
   - **The melody follows the words' own shape**: their stressed syllables on the strong beats and
     the weak ones off them (English, German, Spanish …) — a line that opens on a weak syllable (*O GOD of
     LIGHT*) opens on an upbeat, with `partial`, so that GOD and LIGHT fall on the beats, and a long note
