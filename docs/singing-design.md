@@ -266,7 +266,7 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   **microphone over the corner of ▶** — hidden with no voice; grey and pulsing while the engine
   sings (`preparing`); blue when every voice is decoded and a Play will use it (`ready`); the
   error colour when one will not be sung (`failed`, the engine's sentence in the title) — and a
-  sign after each `♪ part` toggle (`…`, `✓`, `⚠`). The first shape was a `♪` button beside ⏹;
+  microphone on the lower right of each `♪` toggle, the same drawing and the same colours (session 1217; grey with none prepared). The first shape was a `♪` button beside ⏹;
   the owner's look (session 1142): it looked like a button and was none, and a note does not
   say *singing* when the instruments are notes too — so a status, not a button, over the Play
   it speaks of, drawn as what sings. The host posts `voiceState`

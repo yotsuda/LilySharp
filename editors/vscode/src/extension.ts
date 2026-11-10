@@ -4819,18 +4819,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
            background, not a button. Grey and pulsing while the engine sings, blue when every voice
            is ready, the error colour when one will not be sung. */
         .toolbar .play-wrap { position: relative; display: inline-flex; }
-        .toolbar .voice-badge {
+        .voice-badge {
             position: absolute; right: -5px; bottom: -5px; width: 15px; height: 15px; z-index: 1;
             display: inline-flex; align-items: center; justify-content: center;
-            border-radius: 50%; background: white; padding: 1px; box-sizing: border-box;
+            border-radius: 50%; background: white; padding: 1px; box-sizing: border-box; color: #888;
             cursor: pointer; line-height: 0;
         }
         /* The display rule above beats the hidden attribute's own display:none (the range panel and
            the tip say this too): without this line the badge never hid, and kept the look of its
            last state - the pulsing placeholder - on a file with no lyrics (owner's reports, sessions
            1160-1162; the host and the page had the state right all along). */
-        .toolbar .voice-badge[hidden] { display: none; }
-        .toolbar .voice-badge svg { width: 12px; height: 12px; display: block; }
+        .voice-badge[hidden] { display: none; }
+        .voice-badge svg { width: 12px; height: 12px; display: block; }
         /* The voices' progress (owner's requests 2026-11-09, sessions 1178 and 1179): a thin bar under
            Play while the engine sings, running in under the microphone, its goal. An estimate: the
            engine says nothing until a voice is done. */
@@ -4841,12 +4841,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .toolbar .voice-bar[hidden] { display: none; }
         .toolbar .voice-bar > span { display: block; height: 100%; width: 0; background: #0078d7; transition: width 0.15s linear; }
         :root.theme-dark .toolbar .voice-bar > span { background: #4fa3ff; }
-        .toolbar .voice-badge[data-state="waiting"] { color: #888; }
-        .toolbar .voice-badge[data-state="preparing"] { color: #888; animation: voice-pulse 1.2s ease-in-out infinite; }
-        .toolbar .voice-badge[data-state="ready"] { color: #0078d7; }
-        .toolbar .voice-badge[data-state="failed"] { color: var(--vscode-errorForeground, #b00020); }
-        :root.theme-dark .toolbar .voice-badge { background: #2d2d2d; }
-        :root.theme-dark .toolbar .voice-badge[data-state="ready"] { color: #4fa3ff; }
+        .voice-badge[data-state="waiting"] { color: #888; }
+        .voice-badge[data-state="preparing"] { color: #888; animation: voice-pulse 1.2s ease-in-out infinite; }
+        .voice-badge[data-state="ready"] { color: #0078d7; }
+        .voice-badge[data-state="failed"] { color: var(--vscode-errorForeground, #b00020); }
+        :root.theme-dark .voice-badge { background: #2d2d2d; }
+        :root.theme-dark .voice-badge[data-state="ready"] { color: #4fa3ff; }
         @keyframes voice-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
         /* How long the score plays (owner's request 2026-10-25), beside the transport. */
         .toolbar .length {
@@ -4927,11 +4927,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .practice-panel .parts button[aria-pressed="false"] { color: #888; }
         /* A part the score does not sound (off unless pressed), and a sung voice. */
         .practice-panel .parts button.extra { font-style: italic; }
-        /* Each voice's own sign after its name: not sung yet, being sung, ready, not sung. */
-        .practice-panel .parts button.voice[data-state="waiting"]::after { content: " …"; opacity: 0.35; }
-        .practice-panel .parts button.voice[data-state="preparing"]::after { content: " …"; opacity: 0.6; }
-        .practice-panel .parts button.voice[data-state="ready"]::after { content: " ✓"; }
-        .practice-panel .parts button.voice[data-state="failed"]::after { content: " ⚠"; color: var(--vscode-errorForeground, #b00020); }
+        /* Each voice's own microphone, the Play button's (owner's request 2026-11-10): its shape and its
+           colours are the same rules, on the toggle's lower right. None prepared: grey, as not sung yet. */
+        .practice-panel .parts button.voice { position: relative; padding-right: 16px; }
+        .practice-panel .parts .voice-badge { right: -4px; bottom: -4px; }
         .range-panel table { border-collapse: collapse; }
         .range-panel th { text-align: left; font-weight: 600; opacity: 0.75; padding: 2px 8px; }
         .range-panel td { padding: 2px 8px; white-space: nowrap; }
@@ -6714,7 +6713,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             refreshTip(badge);
             for (const btn of document.querySelectorAll('#partsList button.voice')) {
                 const s = voiceStates.get(btn.dataset.part);
-                if (s) { btn.dataset.state = s.state; } else { delete btn.dataset.state; }
+                const mic = btn.querySelector('.voice-badge');
+                if (mic && s) { mic.dataset.state = s.state; } else if (mic) { delete mic.dataset.state; }
                 const base = btn.dataset.title || '';
                 btn.title = s ? base + (s.state === 'ready' ? ' — ready' : s.state === 'preparing' ? ' — being sung…' : s.state === 'waiting' ? ' — not sung yet' : ' — not sung' + (s.detail ? ': ' + s.detail : '')) : base;
             }
@@ -7663,6 +7663,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const b = document.createElement('button');
                 b.type = 'button';
                 b.textContent = label;
+                if (cls && cls.split(' ').includes('voice')) {
+                    // The very drawing the Play button's badge is (renderVoiceBadge sets its state).
+                    const mic = document.createElement('span');
+                    mic.className = 'voice-badge';
+                    mic.setAttribute('aria-hidden', 'true');
+                    mic.appendChild(document.querySelector('#voiceBadge svg').cloneNode(true));
+                    b.appendChild(mic);
+                }
                 if (title) { b.title = title; b.dataset.title = title; }
                 if (cls) for (const c of cls.split(' ')) b.classList.add(c);
                 if (part) b.dataset.part = part;
