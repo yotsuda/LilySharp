@@ -211,12 +211,19 @@ score {
 // A part, its words, and the line that sings them. The score's row prints the words;
 // the singer line is what makes them heard.
 time 4/4
-key c major
+key g major
 tempo 96
+language english
 part melody { instrument soprano }
 section A {
-  melody { c'4 d e f | g2 e | a4 g f e | d1 | }
-  lyrics words { あ さ の ひ | か り | は な が さ | く | }
+  melody {
+    g'4 a b d   | c4 b a r   | b4 c d g   | fis4 e d r |
+    e4 fis g e  | d4 b g r   | a4 b c a   | b4 a g2    |
+  }
+  lyrics words {
+    Write a line of | words for me,  | set them on the | mel- o- dy;   |
+    press the key and | lend an ear: | what you wrote is | what you hear. |
+  }
 }
 form { ~A }
 singer female sings words on melody
