@@ -532,6 +532,10 @@ describe('the preview\'s panels are dragged, and kept where they can be taken ba
         const z = (rule: string) => Number(new RegExp(`${rule} \\{[^}]*?z-index: (\\d+)`).exec(source)?.[1]);
         assert.ok(z('\\.range-panel') < z('\\.toolbar'), `${z('\\.range-panel')} / ${z('\\.toolbar')}`);
     });
+    it('keeps its own width wherever it stands, so nothing inside moves at the window\'s edge', () => {
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(source, /\.range-panel \{[^}]*?width: max-content;/);
+    });
     it('does not touch a panel never moved, or one hidden', () => {
         const p = panel(-500, 100); p.dataset = {}; clamp(p);
         assert.deepEqual(at(p), [-500, 100]);

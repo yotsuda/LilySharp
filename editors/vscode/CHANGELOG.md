@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A panel dragged to the edge of the preview keeps its layout**: the practice and range panels narrowed as they neared the right edge, and what was in them wrapped.
 - **The step keys walk a `language`**: on the word `language` or on its name, at the top of a file or on a lyrics track, Ctrl+Shift+Up and Down go through japanese, english, chinese and korean.
 - **A click in the editor is silent while the piece plays**: the caret landing on a note or a `singer` no longer sounds the note or says the voice's phrase over it. Typing and the step keys sound as before.
 - **The samples of voices are sung again**, so that VOICEVOX's male voices are heard as the Cantoria of this date sings them.

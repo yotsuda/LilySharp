@@ -4899,6 +4899,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             /* Under the toolbar's 10: a panel dragged up goes behind the header, which stays whole
                (owner's request 2026-11-02). */
             position: fixed; right: 12px; z-index: 5;
+            /* Its own width wherever it stands: left to the browser, a panel dragged towards the
+               right edge narrowed to what was left of the window and its contents wrapped
+               (owner's report 2026-11-10). */
+            width: max-content; max-width: calc(100vw - 12px); box-sizing: border-box;
             background: var(--vscode-editorWidget-background, #f3f3f3);
             color: var(--vscode-editorWidget-foreground, inherit);
             border: 1px solid var(--vscode-editorWidget-border, #c8c8c8);
