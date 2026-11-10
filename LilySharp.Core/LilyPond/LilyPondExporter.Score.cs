@@ -274,7 +274,7 @@ public sealed partial class LilyPondExporter
         };
         var sb = new StringBuilder();
         sb.Append(indent).Append("\\new ").Append(context).Append(" <<\n");
-        foreach (var member in group.Members)
+        foreach (var member in group.MembersAndRows)
         {
             // A nested grandStaff is its own context inside this one — LilyPond's own spelling
             // of the piano inside the orchestra's bracket.
@@ -288,6 +288,18 @@ public sealed partial class LilyPondExporter
                 var sharedRows = new List<string>(1);
                 EmitSharedStaff(member, sharedRows, parts, partVars, memberIndent);
                 foreach (var r in sharedRows) sb.Append(r);
+                continue;
+            }
+            // A row the group keeps on its own band (`on` another part) stands where it is
+            // written; a row folded into the staff above reaches the twin under that staff.
+            if (member is LyricsRowRenderSyntax standing)
+            {
+                var standingRows = new List<string>(1);
+                if (_lyricRowVars.ContainsKey(standing.PartName))
+                    AddLyricRows(standingRows, standing.PartName, memberIndent, asRow: true);
+                else if (PageKeepsLyricsRow(standing.PartName))
+                    _warnings.Add($"lyrics row '{standing.PartName}' is not exported — the page placed no syllable of it");
+                foreach (var r in standingRows) sb.Append(r);
                 continue;
             }
             if (member is not StaffRenderSyntax staff)

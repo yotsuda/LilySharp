@@ -2185,8 +2185,8 @@ public sealed partial class LilySharpLanguageServer
     /// Inside <c>grandStaff</c> / <c>staffGroup</c> / <c>choirStaff</c>: the body is a
     /// run of one-staff items — <c>staff</c>, <c>condensedStaff { … }</c>,
     /// <c>combinedStaff { … }</c> — and nested groups of any of the three types, with
-    /// <c>lyrics NAME</c> rows between them (a bound row is the plain staff above's verse —
-    /// LYS6012 refuses any other), so that is the whole list. Anything else is LYS6011.
+    /// <c>lyrics NAME [on PART]</c> rows between them (a row with no <c>on</c> is the plain
+    /// staff above's verse, LYS6012 without one), so that is the whole list. Anything else is LYS6011.
     /// </summary>
     internal static CompletionList GetStaffGroupBlockCompletions() => new()
     {

@@ -1,0 +1,14 @@
+// A row with its own `on` stands in a staff group on its own band, at that part's rhythm.
+// The bracket and the span bars run from staff to staff, through the band.
+time 4/4
+part sop { clef treble }
+part alt { clef treble }
+part bas { clef bass }
+section A {
+  sop { c''4 d e f | g1 | }
+  alt { e'8 e f f g4 a | b1 | }
+  bas { c4 d e f | g1 | }
+  lyrics words { la la la la la la | la | }
+}
+form { A }
+score { staffGroup { staff sop  lyrics words on alt  staff alt  staff bas } }

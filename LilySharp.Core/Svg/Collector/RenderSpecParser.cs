@@ -766,13 +766,21 @@ public static class RenderSpecParser
                     members[^1] = new SingleStaffSpec(
                         WithFoldedVerse(grandStaff, above.Staff, row.PartName, RowTarget(row)));
                     break;
+                // Any other row with an `on` stands where it is written, on its own band, at
+                // that part's rhythm (docs/lyrics-singer-design.md §9.3) — and so does a row
+                // under such a row, which no longer stands directly below its staff.
+                case LyricsRowRenderSyntax row
+                    when RowTarget(row) is { } target
+                      && (row.SingsTarget != null || members is [.., LyricsRowSpec]):
+                    members.Add(new LyricsRowSpec(row.PartName, target));
+                    break;
             }
         }
 
         // A staff group requires at least 2 STAVES — counted through its nested groups, so
         // `staffGroup { grandStaff { staff a  staff b } }` is two groups over the same two
-        // staves, drawn as written (LilyPond draws both), not an empty bracket.
-        if (members.Sum(m => m is GrandStaffRenderSpec g ? g.GrandStaff.StaffCount : 1) < 2)
+        // staves, drawn as written (LilyPond draws both), not an empty bracket. A row is no staff.
+        if (new GrandStaffSpec([.. members], StaffGroupType.GrandStaff).StaffCount < 2)
             return null;
 
         var type = grandStaff.GrandStaffKeyword.Kind switch

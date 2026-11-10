@@ -223,13 +223,25 @@ public class NestedGrandStaffTests
     }
 
     [Fact]
-    public void ARowAfterTheNestedGroup_IsRefused()
+    public void ARowWithNoOnAfterTheNestedGroup_IsRefused()
     {
         var diags = SemanticValidation.Run(TestPaper.ParseAtIndentZero(Book(
-            "staffGroup { staff vln  grandStaff { staff pr  staff pl }  lyrics words on pl  staff vc }")));
+            "staffGroup { staff vln  grandStaff { staff pr  staff pl }  lyrics words  staff vc }")));
 
         var d = Assert.Single(diags, d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
         Assert.Contains("nested group", d.Message);
+    }
+
+    [Fact]
+    public void ARowWithOnAfterTheNestedGroup_StandsOnItsOwnBand()
+    {
+        var src = "staffGroup { staff vln  grandStaff { staff pr  staff pl }  lyrics words on pl  staff vc }";
+        Assert.DoesNotContain(SemanticValidation.Run(TestPaper.ParseAtIndentZero(Book(src))),
+            d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
+
+        var outer = Assert.IsType<GrandStaffRenderSpec>(Assert.Single(Spec(src).Items)).GrandStaff;
+        Assert.IsType<LyricsRowSpec>(outer.Members[2]);
+        Assert.Equal(4, outer.StaffCount);
     }
 
     [Fact]

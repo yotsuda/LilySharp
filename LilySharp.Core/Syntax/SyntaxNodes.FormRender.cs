@@ -1125,6 +1125,20 @@ public sealed partial class GrandStaffRenderSyntax : SyntaxNode
             }
         }
     }
+
+    /// <summary><see cref="Members"/> and the <c>lyrics</c> rows between them, in written order.</summary>
+    public IEnumerable<SyntaxNode> MembersAndRows
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is StaffRenderSyntax or CondensedStaffRenderSyntax or CombinedStaffRenderSyntax
+                    or GrandStaffRenderSyntax or LyricsRowRenderSyntax)
+                    yield return GetChild(i)!;
+            }
+        }
+    }
 }
 
 /// <summary>

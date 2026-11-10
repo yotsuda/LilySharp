@@ -74,7 +74,7 @@ public sealed partial class LilyPondExporter
     /// name instead — so a row spec of that name is absent, and nothing is missing.</summary>
     private bool PageKeepsLyricsRow(string partName)
         => _pageSpec == null
-           || _pageSpec.Items.OfType<Svg.Collector.LyricsRowSpec>().Any(r => r.PartName == partName);
+           || _pageSpec.AllLyricsRows.Any(r => r.PartName == partName);
 
     /// <summary>The length of one bar of a voice: its items' durations summed, else (an
     /// absent voice's placeholder bar has no items) the meter in force there.</summary>

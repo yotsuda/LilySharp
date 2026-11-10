@@ -152,7 +152,7 @@ public sealed partial class LilyPondExporter
                 case TabRenderSyntax:
                 case OssiaRenderSyntax:
                 case ChordRowRenderSyntax:
-                case LyricsRowRenderSyntax:
+                case LyricsRowRenderSyntax when !IsInsideGrandStaff(child):
                     yield return child;
                     break;
                 case StaffRenderSyntax staff when !IsInsideGrandStaff(staff):

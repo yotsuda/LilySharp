@@ -469,8 +469,10 @@ internal static partial class SharedRenderer
 
         foreach (var (group, leaves) in MultiStaffLayouter.OuterRuns(system))
         {
+            // A lyrics row standing in the group is no staff: the delimiter and the span bars
+            // run from staff to staff, through its band (MEASURED, LilySharp-Lab p1218/t3).
             var staves = leaves.SelectMany(l => l.Staves)
-                .Where(s => !s.IsHidden && !s.IsOssia)
+                .Where(s => !s.IsHidden && !s.IsOssia && !s.IsTextRow)
                 .OrderByDescending(s => s.Y)
                 .ToList();
             if (staves.Count == 0)

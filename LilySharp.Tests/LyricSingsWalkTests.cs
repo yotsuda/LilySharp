@@ -200,10 +200,10 @@ public sealed class LyricSingsWalkTests
     }
 
     /// <summary>The walks still REPORT: a row whose <c>on</c> names nothing, and a group row
-    /// that follows neither staff beside it.</summary>
+    /// with no <c>on</c> and no staff above it.</summary>
     [Theory]
     [InlineData("lyrics verse on alt\n", "lyrics verse on nobody\n", DiagnosticCodes.SingsTargetUnknown)]
-    [InlineData("lyrics verse on alt\n", "lyrics verse on low\n", DiagnosticCodes.GroupRowNotBoundToStaffAbove)]
+    [InlineData("staff alt\n    lyrics verse on alt\n", "lyrics verse\n    staff alt\n", DiagnosticCodes.GroupRowNotBoundToStaffAbove)]
     public void PoisoningTheBook_StillReports(string from, string to, string code)
     {
         var poisoned = EverySpelling.Replace("\r\n", "\n").Replace(from, to);

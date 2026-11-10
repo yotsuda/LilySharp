@@ -90,13 +90,13 @@ public class SingsLyricsTests
         // (LYS6009/LYS6010 are RETIRED with the `with lyrics` clause — LYS0031.
         // The spellings that used to trip them are legal by construction now: an
         // unbound row after a staff is the lead-sheet row, and a row bound to
-        // another part is an independent band at its written place. The one
-        // surviving refusal is the GROUP case, where no band exists to fall
-        // back to.)
+        // another part is an independent band at its written place, inside a
+        // group too. The one surviving refusal is a GROUP row that says nothing
+        // and has no staff above it to belong to.)
         Assert.Contains(Validate("""
             section A { m { c'4 d | } v { e'4 f | } lyrics w { la la | } }
             form { A }
-            score { grandStaff { staff m  lyrics w on v  staff v } }
+            score { grandStaff { lyrics w  staff m  staff v } }
             """), d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
 
         // sings target that names nothing.
@@ -419,13 +419,14 @@ public class SingsLyricsTests
     }
 
     [Fact]
-    public void GroupRow_WithoutItsOwnSings_StillNeedsTheStaffAbove()
+    public void GroupRow_WithoutItsOwnOn_StillNeedsAStaffAbove()
     {
-        // Positive control for LYS6012: drop the alto row's `sings` and the row
-        // falls back to the definition's default (sop), which is not the staff
-        // above it — the group refusal is still live.
+        // Positive control for LYS6012: a row that says nothing and has no staff above it
+        // in the group belongs to nothing. A row with its own `on` stands anywhere.
         var src = Chorale.Replace("lyrics verse on alt", "lyrics verse on sop");
-        Assert.Contains(Validate(src), d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
+        Assert.DoesNotContain(Validate(src), d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
+        Assert.Contains(Validate(src.Replace("staff sop", "lyrics verse  staff sop")),
+            d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
     }
 
     [Fact]

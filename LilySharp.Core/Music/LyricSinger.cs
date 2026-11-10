@@ -142,7 +142,7 @@ public static class LyricSinger
             foreach (var binding in spec.GetVoiceBindings())
                 if (!binding.WithLyrics.IsDefaultOrEmpty && binding.WithLyrics.Contains(track))
                     on.Add(binding.VoiceName);
-            foreach (var row in spec.Items.OfType<LyricsRowSpec>())
+            foreach (var row in spec.AllLyricsRows)
                 if (row.PartName == track && row.Sings is { } sings)
                     on.Add(sings);
         }
@@ -175,7 +175,7 @@ public static class LyricSinger
         foreach (var binding in spec.GetVoiceBindings())
             foreach (var track in binding.WithLyrics)
                 placed.Add((track, binding.VoiceName));
-        foreach (var row in spec.Items.OfType<LyricsRowSpec>())
+        foreach (var row in spec.AllLyricsRows)
             if (row.Sings is { } on)
                 placed.Add((row.PartName, on));
         var added = new List<RenderItemSpec>();

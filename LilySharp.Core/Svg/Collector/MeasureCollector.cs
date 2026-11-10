@@ -1635,7 +1635,7 @@ public sealed partial class MeasureCollector
         // Phase 2: Build voice dictionary. Each staff maps to ALL its voices
         // (the primary stream plus any from << \\ >> spans inside that staff).
         var staffVoices = new Dictionary<string, ImmutableArray<Voice>>();
-        _lyricsRowNames = renderSpec.Items.OfType<LyricsRowSpec>()
+        _lyricsRowNames = renderSpec.AllLyricsRows
             .Select(s => s.PartName).ToHashSet();
         // Per-voice transposed key signature (only for transposed parts); used
         // to give that voice's staff its own key in a multi-staff score.
@@ -1676,6 +1676,7 @@ public sealed partial class MeasureCollector
         // Chord rows are also deferred (see the ChordRowSpec branch below).
         var pendingChordRows = new List<(string Name, int StaffIndex, ChordDisplayMode Mode, string? For)>();
         var chordRowsSeen = new Dictionary<string, int>(StringComparer.Ordinal);
+        var lyricsRowsSeen = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var (voiceName, withChords, chordDisplay, withLyrics, slotting) in renderSpec.GetVoiceBindings())
         {
             _voiceName = voiceName;
@@ -1742,8 +1743,21 @@ public sealed partial class MeasureCollector
             // An independent lyrics row (`lyrics name` in the score). Defer its
             // collection (placeholder voice for now) until the music bar count is
             // known, so one block of flat verses can auto-wrap to that bar count.
-            if (renderSpec.Items.OfType<LyricsRowSpec>().FirstOrDefault(c => c.PartName == voiceName) is { } lyricsRow)
+            // The row's own `on`: one track placed on two parts is two rows, met in the
+            // score's order (the chord rows' rule above).
+            LyricsRowSpec? lyricsRow = null;
+            int lyricsNth = lyricsRowsSeen.GetValueOrDefault(voiceName);
+            foreach (var row in renderSpec.AllLyricsRows)
             {
+                if (row.PartName != voiceName)
+                    continue;
+                lyricsRow = row;
+                if (lyricsNth-- == 0)
+                    break;
+            }
+            if (lyricsRow != null)
+            {
+                lyricsRowsSeen[voiceName] = lyricsRowsSeen.GetValueOrDefault(voiceName) + 1;
                 pendingLyricsRows.Add((voiceName, _v.Cursor.StaffIndex, lyricsRow.Sings));
                 staffVoices[voiceName] = ImmutableArray.Create(
                     new Voice(voiceName, ImmutableArray<Measure>.Empty));

@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
@@ -229,14 +230,113 @@ public class ScoreRowFoldingTests
         Assert.Empty(Assert.IsType<SingleStaffSpec>(group.Members[1]).Staff.WithLyrics);
     }
 
+    /// <summary>A row with its own <c>on</c> stands where it is written, on a band of its own,
+    /// at that part's rhythm (docs/lyrics-singer-design.md §9.3): LilyPond's Lyrics context
+    /// between the staves.</summary>
     [Fact]
-    public void RowInAGroupSingingNoAdjacentStaff_IsRefused()
+    public void RowInAGroupOnAnotherPart_StandsOnItsOwnBand()
     {
         var src = ChoraleBody + "score { choirStaff { staff sop  lyrics words on alt  staff alt } }";
+        var tree = SyntaxTree.Parse(src);
+        Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(tree), d => d.Code == "LYS6012");
+
+        var spec = SpecOf(src);
+        var group = Assert.IsType<GrandStaffRenderSpec>(Assert.Single(spec.Items)).GrandStaff;
+        Assert.Equal(2, group.StaffCount);
+        Assert.Equal(new LyricsRowSpec("words", "alt"), group.Members[1]);
+        Assert.Empty(Assert.IsType<SingleStaffSpec>(group.Members[0]).Staff.WithLyrics);
+
+        var score = new MeasureCollector().CollectMultiStaff(tree, spec);
+        var staves = score.StaffGroups.SelectMany(g => g.Staves).ToList();
+        Assert.Equal(new[] { false, true, false }, staves.Select(s => s.IsTextRow).ToArray());
+        Assert.All(score.StaffGroups, g => Assert.NotNull(g.Outer));
+        Assert.Equal(new[] { 1 }, score.Lyrics.Select(l => l.StaffIndex).Distinct().ToArray());
+    }
+
+    /// <summary>The twin writes the standing row between the staves, once, inside the group.</summary>
+    [Fact]
+    public void TheTwinWritesAStandingRowInsideTheGroup_BetweenTheStaves()
+    {
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(
+            SyntaxTree.Parse(ChoraleBody + "score { choirStaff { staff sop  lyrics words on alt  staff alt } }"));
+
+        int group = ly.IndexOf(@"\new ChoirStaff", StringComparison.Ordinal);
+        int row = ly.IndexOf(@"\new Lyrics", StringComparison.Ordinal);
+        int end = ly.IndexOf(">>", row, StringComparison.Ordinal);
+        Assert.True(group >= 0 && group < row, ly);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(ly, @"\\new Lyrics"));
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(ly[..row], @"\\new Staff").Count);
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(ly[row..end], @"\\new Staff").Count);
+    }
+
+    /// <summary>A singer line reads a row standing in a group the way it reads a loose one:
+    /// the row says whose notes the words follow, and needs no second, hidden row.</summary>
+    [Fact]
+    public void ASingerLineReadsTheRowStandingInAGroup()
+    {
+        var src = ChoraleBody + "singer female sings words\nscore { choirStaff { staff sop  lyrics words on alt  staff alt } }";
+        var root = SyntaxTree.Parse(src).GetRoot();
+
+        Assert.Equal("alt", Assert.Single(LilySharp.Core.Music.LyricSinger.LinesOf(root)).Part);
+        var spec = SpecOf(src);
+        Assert.Same(spec, LilySharp.Core.Music.LyricSinger.WithSungWords(root, spec));
+    }
+
+    [Fact]
+    public void RowInAGroupWithNoStaffAboveAndNoOn_IsRefused()
+    {
+        var src = ChoraleBody + "score { choirStaff { lyrics words  staff sop  staff alt } }";
         var diags = LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(src));
 
         var d = Assert.Single(diags, d => d.Code == "LYS6012");
-        Assert.Contains("does not sing 'sop'", d.Message);
+        Assert.Contains("before any staff", d.Message);
+    }
+
+    /// <summary>A second row under a standing row no longer stands directly below its staff,
+    /// so it stands too — it used to fold nowhere and vanish.</summary>
+    [Fact]
+    public void RowWithNoOnUnderAStandingRow_StandsOnTheStaffAbovesPart()
+    {
+        var src = ChoraleBody.Replace("lyrics words { la la la la | }", "lyrics words { la la la la | }\n  lyrics more { lo lo lo lo | }")
+            + "score { choirStaff { staff sop  lyrics words on alt  lyrics more  staff alt } }";
+        var group = Assert.IsType<GrandStaffRenderSpec>(Assert.Single(SpecOf(src).Items)).GrandStaff;
+
+        Assert.Equal(new LyricsRowSpec("more", "sop"), group.Members[2]);
+    }
+
+    [Fact]
+    public void TheSameWordsOnOnePartTwiceInAGroup_AreWarned()
+    {
+        var src = ChoraleBody + "score { choirStaff { staff sop  lyrics words on alt  staff alt  lyrics words on alt } }";
+        var diags = LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(src));
+
+        var d = Assert.Single(diags, d => d.Code == "LYS6015");
+        Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+    }
+
+    /// <summary>One track on two parts is two rows, each at its own part's rhythm.</summary>
+    [Fact]
+    public void OneTrackOnTwoPartsInAGroup_EachRowKeepsItsOwnRhythm()
+    {
+        const string src = """
+            time 4/4
+            part sop { clef treble }
+            part alt { clef treble }
+            section A {
+              sop { c''2 d | }
+              alt { e'4 f g a | }
+              lyrics w { la la | }
+            }
+            form { A }
+            score { staffGroup { staff sop  lyrics w on alt  staff alt  lyrics w on sop } }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var score = new MeasureCollector().CollectMultiStaff(tree, SpecOf(src));
+
+        Fraction[] Timings(int staff) => score.Lyrics.Where(l => l.StaffIndex == staff)
+            .OrderBy(l => l.Timing).Select(l => l.Timing).ToArray();
+        Assert.Equal(new[] { new Fraction(0, 1), new Fraction(1, 4) }, Timings(1));
+        Assert.Equal(new[] { new Fraction(0, 1), new Fraction(1, 2) }, Timings(3));
     }
 
     [Fact]

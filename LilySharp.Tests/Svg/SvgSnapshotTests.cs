@@ -752,6 +752,9 @@ public class SvgSnapshotTests
         // verse under every staff of a chorale, each row naming the part it sings,
         // the syllables at each staff's own onsets.
         yield return new object[] { "test/sings-per-row" };
+        // A row with its own `on` on a band of its own inside a staff group, the span bars
+        // running through the band (measured against LilyPond 2.26.0).
+        yield return new object[] { "test/lyrics-row-in-group" };
         // A pedal bracket under system 1's bottom staff clears the trill and the fermata
         // over system 2's top staff (2026-09-02): the bracket joins the paging silhouette
         // (ledger page.pedal-bracket.*).

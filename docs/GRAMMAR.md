@@ -1968,10 +1968,14 @@ StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
                     with `lyrics NAME` rows between them — inside the braces as outside,
                     a row directly below the staff it follows is that staff's verse
                     (the chorale writes its words between the sopranos and the altos,
-                    and ONE verse serves every staff: `staff alt  lyrics verse`), and a row
-                    naming with 'on' a part no adjacent staff shows is LYS6012 (so is a row under a condensed or
-                    combined member: that staff carries several parts, and a verse is ONE
-                    part's), anything else LYS6011. A group may stand inside a group — the
+                    and ONE verse serves every staff: `staff alt  lyrics verse`). A row
+                    with its own 'on' may stand anywhere in the group, on a band of its own at
+                    that part's rhythm (LilyPond's Lyrics context between the staves: the group's
+                    delimiter and span bars run from staff to staff, through the band). A row with
+                    no 'on' and no plain staff directly above it is LYS6012 (a row under a condensed
+                    or combined member needs an 'on': that staff carries several parts, and a verse
+                    is ONE part's). The same words on the same part twice in one group are
+                    warned about (LYS6015). Anything else is LYS6011. A group may stand inside a group — the
                     piano inside the orchestra's bracket, the violins' sub-bracket inside the
                     strings — of any type and at any depth, and it is drawn AS WRITTEN: each
                     group's brace or bracket stands just left of the one around it, so

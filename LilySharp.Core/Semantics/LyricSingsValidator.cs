@@ -156,9 +156,13 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                         sharedStaffAbove = true;
                         nestedGroupAbove = false;
                         break;
+                    // A row with its own `on` stands anywhere in the group, on its own band
+                    // (RenderSpecParser.ParseGrandStaff). Only a row that says nothing can
+                    // lack a staff to belong to.
                     case LyricsRowRenderSyntax row
-                        when partAbove == null
-                          || !RenderSpecParser.RowBindsToPart(root, row.PartName, RenderSpecParser.RowTarget(row), partAbove):
+                        when row.SingsTarget == null
+                          && (partAbove == null
+                              || !RenderSpecParser.RowBindsToPart(root, row.PartName, RenderSpecParser.RowTarget(row), partAbove)):
                         _diagnostics.Error(
                             row.LyricsKeyword.Span,
                             DiagnosticCodes.GroupRowNotBoundToStaffAbove,
@@ -175,12 +179,26 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                                   + "inside a group a row is the verse of the staff directly above it."
                                 : $"lyrics '{row.PartName}' does not sing '{partAbove}', the staff "
                                   + "directly above it - inside a group a row is that staff's verse; "
-                                  + $"write 'lyrics {row.PartName} on {partAbove}' to place these words "
-                                  + "under it, or move a row for another part outside the braces.");
+                                  + $"write 'lyrics {row.PartName} on PART' to say whose notes the words follow.");
                         break;
                 }
             }
         }
+
+        foreach (var group in root.DescendantNodes<GrandStaffRenderSyntax>())
+            if (!group.IsInside<GrandStaffRenderSyntax>())
+                WarnRowsPlacedTwice(group);
+    }
+
+    /// <summary>The same words on the same part, written twice in one group: two rows saying
+    /// one thing (docs/lyrics-singer-design.md §9.3). Said at the second and any later row.</summary>
+    private void WarnRowsPlacedTwice(GrandStaffRenderSyntax group)
+    {
+        var placed = new HashSet<(string Track, string Part)>();
+        foreach (var row in group.DescendantNodes<LyricsRowRenderSyntax>())
+            if (RenderSpecParser.RowTarget(row) is { } part && !placed.Add((row.PartName, part)))
+                _diagnostics.Warning(row.LyricsKeyword.Span, DiagnosticCodes.GroupRowPlacedTwice,
+                    $"lyrics '{row.PartName}' is already placed on '{part}' in this group; the same words print twice.");
     }
 
     private void CheckLyricsBlocks(SyntaxNode root)

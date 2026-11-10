@@ -146,8 +146,14 @@ public sealed record GrandStaffSpec(
     StaffGroupType Type = StaffGroupType.GrandStaff
 )
 {
-    /// <summary>Number of staves in this group — one per member, a nested group's own count.</summary>
-    public int StaffCount => Members.Sum(m => m is GrandStaffRenderSpec g ? g.GrandStaff.StaffCount : 1);
+    /// <summary>Number of staves in this group — one per member, a nested group's own count;
+    /// a lyrics row standing on its own band is no staff.</summary>
+    public int StaffCount => Members.Sum(m => m switch
+    {
+        GrandStaffRenderSpec g => g.GrandStaff.StaffCount,
+        LyricsRowSpec => 0,
+        _ => 1,
+    });
 }
 
 /// <summary>
@@ -533,6 +539,22 @@ public sealed record RenderSpec(
     /// <summary>Whether this render contains an independent lyrics row (same
     /// multi-staff-pipeline requirement as <see cref="HasChordRow"/>).</summary>
     public bool HasLyricsRow => Items.Any(i => i is LyricsRowSpec);
+
+    /// <summary>The score's independent lyrics rows in stacking order, those standing inside a
+    /// staff group included (a row a group keeps on its own band: <c>on</c> another part).</summary>
+    public IEnumerable<LyricsRowSpec> AllLyricsRows => LyricsRowsIn(Items);
+
+    private static IEnumerable<LyricsRowSpec> LyricsRowsIn(IEnumerable<RenderItemSpec> items)
+    {
+        foreach (var item in items)
+        {
+            if (item is LyricsRowSpec row)
+                yield return row;
+            else if (item is GrandStaffRenderSpec group)
+                foreach (var inner in LyricsRowsIn(group.GrandStaff.Members))
+                    yield return inner;
+        }
+    }
 
     /// <summary>Gets all voice names referenced in this render.</summary>
     public IEnumerable<string> GetVoiceNames()
@@ -935,7 +957,9 @@ public sealed record RenderSpec(
         // A group with no nested group is one leaf, built exactly as before.
         IEnumerable<StaffGroup> Leaves(GrandStaffSpec spec, OuterStaffGroup? around)
         {
-            if (!spec.Members.Any(m => m is GrandStaffRenderSpec))
+            // A row standing on its own band inside the group is a leaf too: the group's
+            // staves are no longer one run, and the row's band is laid out as a loose row's is.
+            if (!spec.Members.Any(m => m is GrandStaffRenderSpec or LyricsRowSpec))
             {
                 yield return LeafGroup(spec) with { Outer = around };
                 yield break;
@@ -947,6 +971,10 @@ public sealed record RenderSpec(
                 {
                     foreach (var leaf in Leaves(inner.GrandStaff, self))
                         yield return leaf;
+                }
+                else if (member is LyricsRowSpec row)
+                {
+                    yield return StaffGroup.CreateSingle(Staff.CreateTextRow(FirstVoiceOrEmpty(row.PartName))) with { Outer = self };
                 }
                 else
                 {

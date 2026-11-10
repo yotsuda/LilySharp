@@ -1930,12 +1930,14 @@ public static class DiagnosticCodes
     /// mistake.</summary>
     public const string StaffGroupBadMember = "LYS6011";
 
-    /// <summary>Render error: a <c>lyrics NAME</c> row inside a staff group that does
-    /// not sing the staff directly above it. Inside a group the row IS the staff
-    /// above's attached verse (score = a vertical stack of bands, inside the braces as
-    /// outside); a row belonging to no adjacent staff has no place a group can give
-    /// it.</summary>
+    /// <summary>Render error: a <c>lyrics NAME</c> row with no <c>on</c> inside a staff group
+    /// and no plain staff directly above it to be the verse of. A row that says
+    /// <c>on PART</c> stands anywhere in the group, on its own band.</summary>
     public const string GroupRowNotBoundToStaffAbove = "LYS6012";
+
+    /// <summary>Render warning: one group places the same lyrics on the same part twice, so
+    /// the same words print twice.</summary>
+    public const string GroupRowPlacedTwice = "LYS6015";
 
 
     // Structure / section-part grid errors (LYS7xxx)

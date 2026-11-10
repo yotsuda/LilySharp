@@ -814,7 +814,9 @@ languages = two names). A track may not have the name of a part or voice
 (LYS7008). A row with no staff above and no `on` is the even-spread lead-sheet row.
 A track that follows a named voice takes that voice's rhythm whatever the track is
 called - the way to put a second verse or language under one voice (`lyrics en on
-alt`); inside a staff group a row must follow the staff directly above it (LYS6012).
+alt`). Inside a staff group a row with `on` may stand anywhere, on its own band; a row
+without `on` needs a plain staff directly above it (LYS6012), and the same words on the
+same part twice in one group are warned about (LYS6015).
 
 A `lyrics NAME { … }` track sits in a section next to its part; the score
 places it with a `lyrics NAME` row under the staff. Syllables are separated by

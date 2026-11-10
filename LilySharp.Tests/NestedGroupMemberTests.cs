@@ -137,13 +137,24 @@ public class NestedGroupMemberTests
     }
 
     [Fact]
-    public void ALyricsRowUnderASharedMember_IsRefused()
+    public void ALyricsRowWithNoOnUnderASharedMember_IsRefused()
     {
         var diags = SemanticValidation.Run(
-            Parse("staffGroup { condensedStaff { fl1 fl2 }  lyrics words on fl1  staff ob }"));
+            Parse("staffGroup { condensedStaff { fl1 fl2 }  lyrics words  staff ob }"));
 
         var d = Assert.Single(diags, d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
         Assert.Contains("condensed or combined staff", d.Message);
+    }
+
+    [Fact]
+    public void ALyricsRowWithOnUnderASharedMember_StandsOnItsOwnBand()
+    {
+        var src = "staffGroup { condensedStaff { fl1 fl2 }  lyrics words on fl1  staff ob }";
+        Assert.DoesNotContain(SemanticValidation.Run(Parse(src)),
+            d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
+
+        var group = Assert.IsType<GrandStaffRenderSpec>(Assert.Single(Spec(src).Items)).GrandStaff;
+        Assert.Equal(new LyricsRowSpec("words", "fl1"), group.Members[1]);
     }
 
     [Fact]
