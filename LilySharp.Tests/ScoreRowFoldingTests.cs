@@ -270,7 +270,7 @@ public class ScoreRowFoldingTests
     }
 
     /// <summary>A singer line reads a row standing in a group the way it reads a loose one:
-    /// the row says whose notes the words follow, and needs no second, hidden row.</summary>
+    /// the row says whose notes the words follow, and the words are read once, on that part.</summary>
     [Fact]
     public void ASingerLineReadsTheRowStandingInAGroup()
     {
@@ -278,8 +278,10 @@ public class ScoreRowFoldingTests
         var root = SyntaxTree.Parse(src).GetRoot();
 
         Assert.Equal("alt", Assert.Single(LilySharp.Core.Music.LyricSinger.LinesOf(root)).Part);
-        var spec = SpecOf(src);
-        Assert.Same(spec, LilySharp.Core.Music.LyricSinger.WithSungWords(root, spec));
+        var read = LilySharp.Core.Music.LyricSinger.WithSungWords(root, SpecOf(src));
+        Assert.True(read.GetVoiceBindings().Single(b => b.VoiceName == "sop").WithLyrics.IsDefaultOrEmpty);
+        Assert.Equal(["words"], read.GetVoiceBindings().Single(b => b.VoiceName == "alt").WithLyrics);
+        Assert.DoesNotContain(((GrandStaffRenderSpec)read.Items[0]).GrandStaff.Members, m => m is LyricsRowSpec);
     }
 
     [Fact]

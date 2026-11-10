@@ -126,8 +126,9 @@ cannot have two singers; a sung part's instrument stays off in bars with no word
    **Calamo generates `lyrics … sings` (`src/Omr/Program.cs`, `src/OmrGen/Program.cs`): tell it in
    `docs/repro/REQUESTS.md` before the old spelling becomes an error.**
 2. Singing words no row prints (syllables come from a page of the score read and never drawn:
-   `LyricSinger.WithSungWords` puts a line's words on its part's staff, on a staff it adds for a part the
-   score does not draw; session 1221), and the practice menu of section 7.
+   `LyricSinger.WithSungWords` puts a line's words on its part's staff, on a staff it adds for a part with
+   none of its own, and moves a sung track's rows there too; sessions 1221, 1222), and the practice menu of
+   section 7.
 3. Done (session 1218). Inside a group a row with `on` may stand anywhere, on its own band; a track on one
    part placed twice in a group is warned about (LYS6015). Measured against LilyPond 2.26.0 under `choirStaff`,
    `staffGroup` and `grandStaff`: staff distance, row height and syllable positions agree.

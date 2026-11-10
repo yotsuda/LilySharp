@@ -180,37 +180,69 @@ public static class LyricSinger
     /// <summary><paramref name="spec"/> with every <c>singer</c> line's words on its part, where it does
     /// not print them there, so what is sung is read the way what is printed is. The words are the
     /// line's to sing whether the page shows them or not (docs/lyrics-singer-design.md §2).</summary>
-    /// <remarks>This spec is read and never drawn. The words go on the part's own staff, a staff added
-    /// for a part the score does not draw, because a row is known by its track's name alone: a row
-    /// added for one part took the track off the staves that print it, and two rows of one track
-    /// were one (a choir's four voices on one track sang as one, owner's report 2026-11-10). Only a
-    /// part on a staff that holds several (condensed, combined) or a tab is still given a row.</remarks>
+    /// <remarks>This spec is read and never drawn. A sung track's words all go on staves: the part's
+    /// own, a staff added for a part with none of its own (not drawn, or drawn on a tab or a staff of
+    /// several parts). A row is known by its track's name alone, so a row of a sung track would take
+    /// the track off the staves that print it, and two rows of one track would be one (a choir's
+    /// four voices on one track sang as one, owner's report 2026-11-10). A sung track's rows move
+    /// too, each to the part it follows, so its words there are kept whether a line sings them or not.</remarks>
     public static RenderSpec WithSungWords(SyntaxNode root, RenderSpec spec)
     {
         var lines = LinesFor(root, spec);
         if (lines.Count == 0)
             return spec;
+        var sungTracks = lines.Select(l => l.Track).ToHashSet(StringComparer.Ordinal);
+        var bound = SungSyllables.WithUnboundRowsBound(root, spec);
+        var rows = new List<LyricsRowSpec>();
+        var items = WithoutRows(bound.Items, sungTracks, rows);
         var placed = new HashSet<(string Track, string On)>();
         foreach (var binding in spec.GetVoiceBindings())
             foreach (var track in binding.WithLyrics)
                 placed.Add((track, binding.VoiceName));
-        foreach (var row in spec.AllLyricsRows)
-            if (row.Sings is { } on)
-                placed.Add((row.PartName, on));
-        var items = spec.Items;
-        foreach (var line in lines)
+        void Place(string track, string part, string sings)
         {
-            if (line.Part is not { } part || placed.Contains((line.Track, part)) || !placed.Add((line.Track, line.Voice ?? part)))
-                continue;
-            string sings = line.Voice ?? part;
-            if (WithVerse(root, items, part, line.Track, sings) is { } folded)
-                items = folded;
-            else if (DrawnOnASharedStaff(items, part))
-                items = items.Add(new LyricsRowSpec(line.Track, sings));
-            else
-                items = items.Add(new SingleStaffSpec(RenderSpecParser.WithFoldedVerse(root, new StaffSpec(ClefType.Treble, part), line.Track, sings)));
+            if (placed.Contains((track, part)) || !placed.Add((track, sings)))
+                return;
+            items = WithVerse(root, items, part, track, sings)
+                ?? items.Add(new SingleStaffSpec(RenderSpecParser.WithFoldedVerse(root, new StaffSpec(ClefType.Treble, part), track, sings)));
         }
+        foreach (var row in rows)
+            Place(row.PartName, PartOf(root, row.Sings!), row.Sings!);
+        foreach (var line in lines)
+            if (line.Part is { } part)
+                Place(line.Track, part, line.Voice ?? part);
         return items == spec.Items ? spec : spec with { Items = items };
+    }
+
+    /// <summary><paramref name="items"/> without the rows of <paramref name="tracks"/> that follow
+    /// a part, a group's included; those rows are added to <paramref name="taken"/> in written order.</summary>
+    private static ImmutableArray<RenderItemSpec> WithoutRows(ImmutableArray<RenderItemSpec> items, HashSet<string> tracks, List<LyricsRowSpec> taken)
+    {
+        var kept = ImmutableArray.CreateBuilder<RenderItemSpec>(items.Length);
+        foreach (var item in items)
+            switch (item)
+            {
+                case LyricsRowSpec { Sings: not null } row when tracks.Contains(row.PartName):
+                    taken.Add(row);
+                    break;
+                case GrandStaffRenderSpec group:
+                    var members = WithoutRows(group.GrandStaff.Members, tracks, taken);
+                    kept.Add(members.SequenceEqual(group.GrandStaff.Members) ? group : new GrandStaffRenderSpec(group.GrandStaff with { Members = members }));
+                    break;
+                default:
+                    kept.Add(item);
+                    break;
+            }
+        return kept.Count == items.Length && kept.SequenceEqual(items) ? items : kept.ToImmutable();
+    }
+
+    /// <summary>The part a row's target is: the part of that name, else the part with a voice of that name.</summary>
+    private static string PartOf(SyntaxNode root, string target)
+    {
+        foreach (var n in root.SitesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
+            if (Editing.PartReferenceFinder.DeclaredName(n) is { } declared && LyricBindings.VoicesOfPart(root, declared.Text).Contains(target))
+                return declared.Text;
+        return target;
     }
 
     /// <summary><paramref name="items"/> with the verse on the first staff of <paramref name="part"/>, or null where it has none.</summary>
@@ -228,16 +260,6 @@ public static class LyricSinger
         }
         return null;
     }
-
-    private static bool DrawnOnASharedStaff(ImmutableArray<RenderItemSpec> items, string part)
-        => items.Any(item => item switch
-        {
-            TabStaffSpec tab => tab.Staff.VoiceName == part,
-            CondensedStaffSpec condensed => condensed.PartNames.Contains(part),
-            CombinedStaffSpec combined => combined.PartNames.Contains(part),
-            GrandStaffRenderSpec group => DrawnOnASharedStaff(group.GrandStaff.Members, part),
-            _ => false,
-        });
 
     /// <summary>A reader of who sings a track on a part: the <c>singer</c> line's string, the lines'
     /// joined by <see cref="Joiner"/> where several sing it, or null (the part's default voice).</summary>

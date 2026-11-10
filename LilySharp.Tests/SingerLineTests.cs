@@ -192,6 +192,81 @@ public class SingerLineTests
         Assert.Equal([72.0, 64, 55, 48], voices.Select(v => v.Notes[0].Pitch));
     }
 
+    // A row is known by its track's name alone, so a track printed on a row that folds under no staff
+    // used to take that track off every staff another line sang it on.
+    [Theory]
+    [InlineData("staff s  staff a  staff t  staff b  lyrics w on s")]           // a row under another part's staff
+    [InlineData("lyrics w on s  staff s  staff a  staff t  staff b")]           // a row above every staff
+    [InlineData("lyrics w  staff s  staff a  staff t  staff b")]                // an even-spread row
+    [InlineData("staff s  staff a  staff t  staff b  lyrics w on s  lyrics w on t")]   // two rows of the track
+    [InlineData("choirStaff { staff s  staff a  staff t  staff b  lyrics w on s }")]   // a row inside a group
+    [InlineData("staff s  lyrics w  staff a  staff t  staff b  lyrics w on a")]  // a verse and a row of the track
+    [InlineData("tab s  staff a  staff t  staff b  lyrics w on a")]             // a tab
+    [InlineData("condensedStaff { s a }  staff t  staff b  lyrics w on t")]     // a staff of several parts
+    [InlineData("combinedStaff { s a }  staff t  staff b  lyrics w on t")]
+    public void OneTrackPrintedOnARow_IsStillAVoiceOnEveryPartThatSingsIt(string score)
+    {
+        var voices = Sung(FourOnOneTrack + "score { " + score + " }\n");
+        Assert.Equal(["s n/S", "a n/A", "t n/T", "b n/B"], voices.Select(v => $"{v.Part} {v.Singer}").Order(Comparer<string>.Create((x, y) => "satb".IndexOf(x[0]) - "satb".IndexOf(y[0]))));
+        Assert.All(voices, v => Assert.Equal(["あ", "い"], v.Notes.Select(n => n.Lyric)));
+        Assert.Equal([72.0, 64, 55, 48], voices.OrderBy(v => "satb".IndexOf(v.Part[0])).Select(v => v.Notes[0].Pitch));
+    }
+
+    [Fact]
+    public void ARowOnAPartNoLineSings_AddsNoVoice()
+    {
+        var src = Music.Replace("part m { clef treble }", "part m { clef treble }\npart n { clef treble }").Replace("m { c'2 d | }", "m { c'2 d | } n { e'2 f | }");
+        var voice = Assert.Single(Sung(src + "singer \"n/A\" sings ja on m\nscore { staff m  staff n  lyrics ja on n }\n"));
+        Assert.Equal("m", voice.Part);
+        Assert.Equal(["あ", "い"], voice.Notes.Select(n => n.Lyric));
+    }
+
+    private const string TwoParts = """
+        time 4/4
+        part m { clef treble }
+        part n { clef treble }
+        section A { m { c'2 d | } n { voice v1 { e'2 f | } v2 { c'2 d | } } }
+        lyrics ja { あ い | }
+        lyrics en { la la | }
+        form { A }
+
+        """;
+
+    [Fact]
+    public void ARowOfASungTrack_KeepsItsWordsOnThePartNoLineSings()
+    {
+        var tree = SyntaxTree.Parse(TwoParts + "singer sings ja on m\nscore { lyrics ja on n  staff m  staff n }\n");
+        var read = LyricSinger.WithSungWords(tree.GetRoot(), RenderSpecParser.FindFirst(tree)!);
+        Assert.Equal(["m", "m", "n", "n"], SungSyllables.Read(tree, read).Select(s => s.Part).Order());
+    }
+
+    [Fact]
+    public void ARowOfATrackNoLineSings_StaysARow()
+    {
+        var tree = SyntaxTree.Parse(TwoParts + "singer sings ja on m\nscore { lyrics en on n  staff m  lyrics ja  staff n }\n");
+        var read = LyricSinger.WithSungWords(tree.GetRoot(), RenderSpecParser.FindFirst(tree)!);
+        Assert.Equal("en", Assert.Single(read.AllLyricsRows).PartName);
+    }
+
+    [Fact]
+    public void ARowOnAVoice_GoesOnThatVoicesPart_NotOnAStaffOfItsOwn()
+    {
+        var tree = SyntaxTree.Parse(TwoParts + "singer sings ja on v2\nscore { lyrics ja on v2  staff m  staff n }\n");
+        var read = LyricSinger.WithSungWords(tree.GetRoot(), RenderSpecParser.FindFirst(tree)!);
+        Assert.Equal(["m", "n"], read.GetVoiceBindings().Select(b => b.VoiceName));
+        Assert.Equal(["ja"], read.GetVoiceBindings().Single(b => b.VoiceName == "n").WithLyrics);
+    }
+
+    [Fact]
+    public void SungWordsMoved_LeaveTheRowsOfTheDrawnSpecAlone()
+    {
+        var tree = SyntaxTree.Parse(FourOnOneTrack + "score { lyrics w on s  staff s  staff a  staff t  staff b }\n");
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        var read = LyricSinger.WithSungWords(tree.GetRoot(), spec);
+        Assert.Single(spec.AllLyricsRows);
+        Assert.Empty(read.AllLyricsRows);
+    }
+
     [Fact]
     public void SungWordsAdded_LeaveTheDrawnPageAlone()
     {

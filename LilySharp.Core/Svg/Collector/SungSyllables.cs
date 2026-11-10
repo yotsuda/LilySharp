@@ -179,7 +179,7 @@ internal static class SungSyllables
 
     /// <summary>The spec with each unbound lyrics row singing the staff above it (the score's first
     /// staff, when none stands above); the spec itself when no row is unbound.</summary>
-    private static RenderSpec WithUnboundRowsBound(SyntaxNode root, RenderSpec spec)
+    internal static RenderSpec WithUnboundRowsBound(SyntaxNode root, RenderSpec spec)
     {
         static string? VoiceOf(RenderItemSpec item) => item switch
         {
