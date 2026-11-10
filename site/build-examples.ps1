@@ -215,13 +215,13 @@ time 4/4
 key g major
 tempo 96
 language english
-part melody { instrument soprano }
+part melody { instrument alto }
 part rh { instrument piano-right }
 part lh { instrument piano-left }
 section A {
   melody {
-    g'4 a' b' d''      | c''4 b' a' r      | b'4 c'' d'' g''   | fis''4 e'' d'' r  |
-    e''4 fis'' g'' e'' | d''4 b' g' r      | a'4 b' c'' a'     | b'4 a' g'2        |
+    g4 a b d'      | c'4 b a r      | b4 c' d' g'   | fis'4 e' d' r  |
+    e'4 fis' g' e' | d'4 b g r      | a4 b c' a     | b4 a g2        |
   }
   lyrics words {
     Write a line of | words for me,  | set them on the | mel- o- dy;   |
