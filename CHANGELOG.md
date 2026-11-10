@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **The chord voicing tool takes the strings to play** (`strings: "1-4"`, 1 the highest): only shapes on those strings are answered, and the root need not be lowest, as a band's bass plays it. Without it the list is as before.
 - **A band's electric guitar striking its chords on the low strings is told** (`voicing.band-low-chords`): the low strings are the bass's. A power chord may stay low, and a guitar outside a band is not read.
 - **A piece heard in the relative key, and ending on its tonic, is told about its `key` line**, not its ending (`key.relative`): a scan of a piece in E minor read as `key g major` was told to end on G.
 - **Reviewing a piece is sharper in two places**: a note outside the key reached by a semitone and left by a tone (`d cis b` in A minor) is asked about, and a bass struck again on its own note counts as one chord. Variations shorter than their theme are told (`form.variation-short`). The notes outside the key are now told to the composing AI as well.

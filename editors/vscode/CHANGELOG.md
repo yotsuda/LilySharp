@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **#chordVoicings takes the strings to play** (`strings: "1-4"`): a band's clean guitar finds its chords on the upper strings, inversions included.
 - **Copilot's composing hears when a band's electric guitar strikes its chords on the low strings**, and the guide puts a clean guitar's chords on the upper strings.
 - **Copilot's composing hears of notes outside the key that lead nowhere**, and of variations shorter than their theme. Until now only the review told of the first.
 - **An MP4 takes the shape of its paper**: a score on wide paper makes a wide video, 1920 × 1080 for 16:9, where it made an upright one with white above and below. A4 upright stays 1240 × 1754.

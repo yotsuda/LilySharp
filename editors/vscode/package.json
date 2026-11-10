@@ -124,7 +124,7 @@
         "canBeReferencedInPrompt": true,
         "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song", "guitar", "chord"],
         "userDescription": "Lists the voicings of a chord a guitarist, bassist or string player can hold, in a register, as Lily# notes and chord diagrams.",
-        "modelDescription": "Use this BEFORE writing a chord for a guitar, bass, ukulele, banjo, violin, viola, cello or double bass part, to know which notes its player can hold — not every stack of a chord's notes can be fingered. Give the chord symbol (Cm7, G7/B, F#m7-5, Bbmaj7), the instrument, the part's sound (its midiInstrument) and the register you want it in (two note names, as C3 and C5 or c and c''). It answers the voicings, commonest first, each as the Lily# chord to write (<c g bes ees' g'>, in absolute octaves) with its chord diagram (x35343); on a distorted sound (overdriven guitar, distortion guitar) its power chords of two or three notes come first, since a full chord blurs there; for a bowed string, the double stops it can sound (two notes at once).",
+        "modelDescription": "Use this BEFORE writing a chord for a guitar, bass, ukulele, banjo, violin, viola, cello or double bass part, to know which notes its player can hold — not every stack of a chord's notes can be fingered. Give the chord symbol (Cm7, G7/B, F#m7-5, Bbmaj7), the instrument, the part's sound (its midiInstrument) and the register you want it in (two note names, as C3 and C5 or c and c''). It answers the voicings, commonest first, each as the Lily# chord to write (<c g bes ees' g'>, in absolute octaves) with its chord diagram (x35343); on a distorted sound (overdriven guitar, distortion guitar) its power chords of two or three notes come first, since a full chord blurs there; for a bowed string, the double stops it can sound (two notes at once). Give strings (\"1-4\": the four highest, 1 the highest) to have only shapes on those strings, the root not always lowest — a band's clean guitar plays its chords there, the bass having the low strings.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -133,7 +133,8 @@
             "low": { "type": "string", "description": "The register's lowest note, as C3 or c (optional)." },
             "high": { "type": "string", "description": "The register's highest note, as C5 or c'' (optional)." },
             "count": { "type": "number", "description": "How many voicings at most (default 6)." },
-            "sound": { "type": "string", "description": "The part's midiInstrument (\"overdriven guitar\", \"electric guitar (clean)\" …): on a distorted sound, power chords of two or three notes come first (optional)." }
+            "sound": { "type": "string", "description": "The part's midiInstrument (\"overdriven guitar\", \"electric guitar (clean)\" …): on a distorted sound, power chords of two or three notes come first (optional)." },
+            "strings": { "type": "string", "description": "A fretted instrument's strings to play, by number, 1 the highest: \"1-4\" (the four highest), \"2-5\", \"1,2,3\" (optional). A band's clean guitar: \"1-4\"." }
           },
           "required": ["chord"]
         }

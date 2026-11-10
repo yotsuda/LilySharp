@@ -932,7 +932,8 @@ public static class CompositionChecks
             yield return new("voicing.band-low-chords", $"{part.Name.Text}: {low.Count} of its {chords.Count} chords reach below D3 ("
                 + $"{string.Join(" ", low[0].Pitches.Select(p => PartRanges.SpelledFromPitch(p, fifths)))} in bar {bar} first, as the form plays them) — "
                 + "in a band the low strings are the bass's, and a chord on them crowds it: play the chord on the upper strings, three or four notes from the "
-                + "fourth string up, and leave the low strings to a power chord, the root and its fifth, on a distorted sound.") { Parts = [part.Name.Text], Bars = [bar] };
+                + "fourth string up (the voicing tool, given strings \"1-4\", answers them), and leave the low strings to a power chord, the root and its "
+                + "fifth, on a distorted sound.") { Parts = [part.Name.Text], Bars = [bar] };
         }
     }
 

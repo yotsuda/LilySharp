@@ -85,6 +85,51 @@ public class ChordVoicingFinderTests
         Assert.False(ChordVoicingFinder.Find("C/E", "guitar", null, null, 6, "overdriven guitar").Powered);
     }
 
+    // Owner's request 2026-11-10: a band's clean guitar plays its chords on the upper strings. The
+    // diagrams' list (the root lowest, every shape maximal) had no A minor on the top four.
+    [Fact]
+    public void OnTheStringsAsked_TheShapesLieThere_TheRootNotAlwaysLowest()
+    {
+        var am = ChordVoicingFinder.Find("Am", "guitar", null, null, 12, "electric guitar (clean)", "1-4");
+        Assert.Null(am.Problem);
+        Assert.All(am.Voicings, v => Assert.True(v.Frets[0] < 0 && v.Frets[1] < 0, v.Diagram));
+        Assert.Contains(am.Voicings, v => v.Diagram == "xx2210" && v.Chord == "<e a c' e'>");
+        Assert.Contains(am.Voicings, v => v.Diagram == "xx7555");
+        var c = ChordVoicingFinder.Find("C", "guitar", null, null, 12, null, "1-4");
+        Assert.Contains(c.Voicings, v => v.Diagram == "xx2010");
+        Assert.Contains(c.Voicings, v => v.Diagram == "xx5553");
+        // Every one can be held, and sounds no pitch twice.
+        Assert.All(am.Voicings.Concat(c.Voicings), v => Assert.NotNull(ChordFingeringValidator.Fingering(v.Pitches, LilySharp.Core.Tablature.Tunings.Guitar)));
+        Assert.All(am.Voicings.Concat(c.Voicings), v => Assert.Equal(v.Pitches.Count, v.Pitches.Distinct().Count()));
+        // The low positions first; the root lowest before an inversion at the same place.
+        Assert.True(am.Voicings[0].Frets.Where(f => f > 0).DefaultIfEmpty(0).Min() <= 2, am.Voicings[0].Diagram);
+        // E has none on the five highest strings with its root lowest; with the root free it has.
+        Assert.NotEmpty(ChordVoicingFinder.Find("E", "guitar", null, null, 6, null, "1-5").Voicings);
+        // A slash chord keeps its bass lowest.
+        Assert.All(ChordVoicingFinder.Find("C/G", "guitar", null, null, 12, null, "1-4").Voicings, v => Assert.Equal(7, v.Pitches[0] % 12));
+        // Strings in any order, or a list; every string is as if none were asked.
+        Assert.Equal(ChordVoicingFinder.Find("Am", "guitar", null, null, 12, null, "4-1").Voicings.Select(v => v.Diagram),
+            am.Voicings.Select(v => v.Diagram));
+        Assert.All(ChordVoicingFinder.Find("G", "guitar", null, null, 12, null, "1,2,3").Voicings, v => Assert.True(v.Frets.Take(3).All(f => f < 0), v.Diagram));
+        Assert.Equal(ChordVoicingFinder.Find("G", "guitar", null, null, 12).Voicings.Select(v => v.Diagram),
+            ChordVoicingFinder.Find("G", "guitar", null, null, 12, null, "1-6").Voicings.Select(v => v.Diagram));
+        string text = ChordVoicingFinder.Describe("Am", "guitar", null, null, 6, "electric guitar (clean)", "1-4");
+        Assert.Contains("on strings 1-4", text);
+        Assert.Contains("the root need not be lowest, as a band's bass plays it", text);
+    }
+
+    [Fact]
+    public void StringsAskedWrongly_OrOfABowedString_AreRefused()
+    {
+        Assert.Contains("numbered from 1, the highest, to 6", ChordVoicingFinder.Find("Am", "guitar", null, null, 6, null, "0-4").Problem);
+        Assert.Contains("numbered from 1, the highest, to 6", ChordVoicingFinder.Find("Am", "guitar", null, null, 6, null, "1-7").Problem);
+        Assert.Contains("numbered from 1, the highest, to 6", ChordVoicingFinder.Find("Am", "guitar", null, null, 6, null, "top").Problem);
+        Assert.Contains("a fretted instrument's strings", ChordVoicingFinder.Find("Cm7", "violin", null, null, 6, null, "1-2").Problem);
+        // On a distorted sound the power chords on those strings come first.
+        var e5 = ChordVoicingFinder.Find("E", "guitar", null, null, 6, "overdriven guitar", "1-4");
+        Assert.True(e5.Voicings[0].Pitches.Count <= 3 && e5.Voicings[0].Frets[0] < 0 && e5.Voicings[0].Frets[1] < 0, e5.Voicings[0].Diagram);
+    }
+
     [Fact]
     public void ABowedString_AnswersDoubleStops_OnNeighbouringStrings()
     {

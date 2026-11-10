@@ -182,8 +182,8 @@ What makes it music:
   `instrument piano-right` with `"rock organ"`, `"electric piano 1"` …). A distorted sound
   (overdriven, distortion) blurs a full chord: on it strike two or three notes — the root and its
   fifth, the octave above (`<e, b,>`, `<e, b, e>`), low strings included. Full chords are for a clean
-  sound, and there on the upper strings, three or four notes from the fourth string up (`<f a c' f'>`):
-  the bass has the low ones. "Guitar and drums"
+  sound, and there on the upper strings, three or four notes from the fourth string up (`<f a c' f'>`;
+  `lilysharp_chordVoicings` with `strings: "1-4"` lists them): the bass has the low ones. "Guitar and drums"
   has a bass too; "guitar and bass" has drums too; keyboards are welcome. **One tempo** from start
   to end — a single `tempo` at the top, none in the sections. The form is the song's: intro,
   verse, chorus, bridge, outro; separate staves, no bracket.

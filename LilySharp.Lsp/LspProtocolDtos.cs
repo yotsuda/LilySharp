@@ -624,6 +624,8 @@ public class ChordVoicingsParams
     public string? High { get; set; }
     public int? Count { get; set; }
     public string? Sound { get; set; }
+    /// <summary>A fretted instrument's strings to play, by number, 1 the highest ("1-4", "1,2,3").</summary>
+    public string? Strings { get; set; }
 }
 
 /// <summary>Response for lilysharp/chordVoicings: the voicings, as the AI reads them.</summary>
