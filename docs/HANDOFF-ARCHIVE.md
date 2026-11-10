@@ -267,6 +267,13 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1216セッションの経緯
+
+### 1.1 第1216セッション（2026-11-10・YT-DELL2）
+
+- 0.16.0 の push で初めて走った Ubuntu の CI が 1 件落ちた。`WavExportTests` が `C:\x\cantoria.exe` を決め打ちしていて、Linux の `Path.GetFileNameWithoutExtension` は `\` を区切りと見ない。製品は各 OS で正しいのでテストを `Path.Combine` に直した。
+- 終了時 full 15016 合格 / 0 失敗 / skip 2 / 合計 15018。
+
 ## 以下は第1215セッションの経緯
 
 ### 1.1 第1215セッション（2026-11-10・YT-DELL2）
