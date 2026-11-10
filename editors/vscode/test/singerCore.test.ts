@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, voiceMenuLabel, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -183,6 +183,10 @@ describe('the singer choices', () => {
         assert.deepEqual(singerChoices(voices, 'ja').map(c => c.label), ['diffsinger/TIGER', 'neutrino/MERROW'], 'by name');
         assert.deepEqual(singerChoices(voices, 'en').map(c => c.label), ['diffsinger/ALICE']);
         assert.deepEqual(singerChoices(voices, 'ko'), [], 'no voice sings it: nothing to offer');
+
+    it('offers every voice with no language given', () => {
+        assert.ok(singerChoices(voices, undefined).length > singerChoices(voices, 'ja').length);
+    });
     });
 
     it('names the voice on the engine\'s wire when one is asked for', () => {
@@ -584,10 +588,16 @@ describe('noLanguageGuide', () => {
     });
 });
 
-describe('voiceMenuLabel', () => {
-    it('names the words and the part they sing', () => assert.equal(voiceMenuLabel('verse', 'melody'), 'verse sings melody'));
-    it('is the part alone for words with no name of their own', () => {
-        assert.equal(voiceMenuLabel(null, 'melody'), 'melody');
-        assert.equal(voiceMenuLabel('lyrics', 'melody'), 'melody');
+describe('voiceMenuLabels', () => {
+    const v = (Part: string, Singer: string | null) => ({ Part, Singer });
+    it('names the voice, without its engine', () => assert.deepEqual(voiceMenuLabels([v('melody', 'neutrino/MERROW')]), { melody: 'MERROW' }));
+    it('joins several voices', () => assert.deepEqual(voiceMenuLabels([v('m', 'neutrino/MERROW+diffsinger/TIGER')]), { m: 'MERROW + TIGER' }));
+    it('says the part beside a voice that sings several', () => assert.deepEqual(
+        voiceMenuLabels([v('sop', 'neutrino/MERROW'), v('alt', 'neutrino/MERROW'), v('ten', 'male')]),
+        { sop: 'MERROW (sop)', alt: 'MERROW (alt)', ten: 'male' }));
+    it('is the part for its default voice', () => assert.deepEqual(voiceMenuLabels([v('melody', null)]), { melody: 'melody' }));
+    it('says on hover what is sung', () => {
+        assert.equal(voiceMenuTitle('MERROW', 'verse', 'melody'), 'MERROW sings verse on melody');
+        assert.equal(voiceMenuTitle('MERROW', 'lyrics', 'melody'), 'MERROW sings melody');
     });
 });

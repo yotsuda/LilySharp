@@ -1034,7 +1034,10 @@ public sealed partial class LilySharpLanguageServer
         var root = tree.GetRoot();
         var languageOf = LilySharp.Core.Music.LyricLanguage.ReaderOf(root);
         string? track = slot.Track;
-        return new SingerSlotResponse { InSlot = true, Language = LilySharp.Core.Music.LyricLanguage.CodeOf(slot.Language) ?? languageOf(track), Gender = slot.Gender, Quoted = slot.Quoted, Another = slot.Another };
+        // No words named yet: the file's language, or every voice where its lyrics differ.
+        bool anyLanguage = track == null && slot.Language == null
+            && root.DescendantNodes<LilySharp.Core.Syntax.LyricsBlockSyntax>().Select(b => languageOf(b.VoiceName)).Distinct(StringComparer.Ordinal).Count() > 1;
+        return new SingerSlotResponse { InSlot = true, Language = LilySharp.Core.Music.LyricLanguage.CodeOf(slot.Language) ?? languageOf(track), AnyLanguage = anyLanguage, Gender = slot.Gender, Quoted = slot.Quoted, Another = slot.Another };
     }
 
     [JsonRpcMethod("lilysharp/sung", UseSingleObjectParameterDeserialization = true)]

@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabel, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1745,16 +1745,17 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     const sungOnly = (pb.Sung ?? []).filter(p => !played.has(p));
                     // Every singable lyrics of the file (session 1163), and which of them the
                     // score shown sings itself — the others are off until the menu turns them on.
-                    let voices: string[] = [], voicesInScore: string[] = [], voiceLabels: Record<string, string> = {};
+                    let voices: string[] = [], voicesInScore: string[] = [], voiceLabels: Record<string, string> = {}, voiceTitles: Record<string, string> = {};
                     if (await renderer()) {
                         const sung = await client.sendRequest<{ Voices?: SungVoiceDto[] | null }>(
                             'lilysharp/sung', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null, allLyrics: true });
                         const singable = (sung.Voices ?? []).filter(v => v.Notes.length > 0);
                         voices = singable.map(v => v.Part);
                         voicesInScore = singable.filter(v => v.InScore !== false).map(v => v.Part);
-                        voiceLabels = Object.fromEntries(singable.map(v => [v.Part, voiceMenuLabel(v.Track, v.Part)]));
+                        voiceLabels = voiceMenuLabels(singable);
+                        voiceTitles = Object.fromEntries(singable.map(v => [v.Part, voiceMenuTitle(voiceLabels[v.Part], v.Track, v.Part)]));
                     }
-                    panel.webview.postMessage({ type: 'partsData', parts, extra, voices, voicesInScore, voiceLabels, sungOnly });
+                    panel.webview.postMessage({ type: 'partsData', parts, extra, voices, voicesInScore, voiceLabels, voiceTitles, sungOnly });
                 } catch {
                     panel.webview.postMessage({ type: 'partsData', parts: [], extra: [], voices: [] });
                 }
@@ -3872,7 +3873,7 @@ const singerCompletion: vscode.CompletionItemProvider = {
     async provideCompletionItems(document, position, _token, context) {
         if (!client || !clientReady) { return undefined; }
         if ((context.triggerCharacter === ' ' || context.triggerCharacter === ',') && !afterSingerWord(document.lineAt(position.line).text.slice(0, position.character))) { return undefined; }
-        const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null; Gender?: string | null; Quoted?: boolean; Another?: boolean }>('lilysharp/singerSlot',
+        const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null; AnyLanguage?: boolean; Gender?: string | null; Quoted?: boolean; Another?: boolean }>('lilysharp/singerSlot',
             { textDocument: { uri: document.uri.toString() }, offset: document.offsetAt(position) });
         if (!slot.InSlot || !slot.Language) { return undefined; }
         const engine = await renderer();
@@ -3888,10 +3889,12 @@ const singerCompletion: vscode.CompletionItemProvider = {
             return vscode.extensions.getExtension(CANTORIA_EXTENSION_ID) || singerSetting() ? undefined : [noVoiceItem(document, range, noVoiceGuide(false))];
         }
         const voices = await api.voices();
-        samples().warm(voices.filter(v => singsLanguage(v, slot.Language!)).map(v => voiceSampleKey(v.id, slot.Language!)));
-        const guide = voices.length === 0 ? noVoiceGuide(true) : voices.some(v => singsLanguage(v, slot.Language!)) ? undefined : noLanguageGuide(slot.Language, voices);
+        // Words not named yet and written in several languages: every voice (docs/lyrics-singer-design.md §7).
+        const language = slot.AnyLanguage ? undefined : slot.Language!;
+        samples().warm(voices.filter(v => !language || singsLanguage(v, language)).map(v => voiceSampleKey(v.id, slot.Language!)));
+        const guide = voices.length === 0 ? noVoiceGuide(true) : !language || voices.some(v => singsLanguage(v, language)) ? undefined : noLanguageGuide(language, voices);
         if (guide) { offerVoiceSetup(guide); }
-        const items = singerChoices(voices, slot.Language, slot.Gender).map((c, i) => {
+        const items = singerChoices(voices, language, slot.Gender).map((c, i) => {
             const item = new vscode.CompletionItem(c.label, vscode.CompletionItemKind.Value);
             item.detail = c.detail;
             item.range = range;
@@ -7737,18 +7740,20 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // italics the ones it does not, off until pressed - pressed, the voice sings in the
             // part's instrument's place.
             const inScore = new Set(message.voicesInScore || voices);
-            // What each voice's line says (the lists stay by part): the words' name and the part they sing.
+            // What each voice's line says (the lists stay by part): who sings, and on hover what.
             const voiceLabels = message.voiceLabels || {};
+            const voiceTitles = message.voiceTitles || {};
             const voiceLabel = name => voiceLabels[name] || name;
+            const voiceTitle = name => voiceTitles[name] || voiceLabel(name);
             for (const name of voices) {
                 if (!inScore.has(name)) continue;
-                toggle(voiceLabel(name), voiceLabel(name) + ': its voice, on or off (the part button beside it is its instrument)', () => !practice.voicesOff.includes(name),
+                toggle(voiceLabel(name), voiceTitle(name) + ': its voice, on or off (the part button beside it is its instrument)', () => !practice.voicesOff.includes(name),
                     () => { practice.voicesOff = practice.voicesOff.includes(name) ? without(practice.voicesOff, name) : practice.voicesOff.concat([name]); },
                     'voice', name, practice.voiceLevels, name);
             }
             for (const name of voices) {
                 if (inScore.has(name)) continue;
-                toggle(voiceLabel(name), voiceLabel(name) + ': lyrics this score does not sing - silent unless pressed; pressed, the voice sings in place of the instrument', () => practice.voicesOn.includes(name),
+                toggle(voiceLabel(name), voiceTitle(name) + ': this score does not sing it - silent unless pressed; pressed, the voice sings in place of the instrument', () => practice.voicesOn.includes(name),
                     () => { practice.voicesOn = practice.voicesOn.includes(name) ? without(practice.voicesOn, name) : practice.voicesOn.concat([name]); },
                     'voice extra', name, practice.voiceLevels, name);
             }

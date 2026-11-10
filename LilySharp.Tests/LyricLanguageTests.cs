@@ -218,8 +218,24 @@ public class LyricLanguageTests
         => Assert.Equal(expected, SlotLanguage(source));
 
     [Theory]
+    [InlineData("singer \"§\"\nlyrics a { la | }\nlyrics b language english { la | }\n", true)]       // nothing named, languages differ
+    [InlineData("singer \"§\" sings a\nlyrics a { la | }\nlyrics b language english { la | }\n", false)]  // the words are named
+    [InlineData("singer \"§\"\nlyrics a { la | }\nlyrics b { la | }\n", false)]                       // one language
+    public void EveryVoiceIsOffered_WhereTheFilesLyricsDiffer(string source, bool any)
+    {
+        int at = source.IndexOf('§');
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///any.lys");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = source.Remove(at, 1), Version = 1, LanguageId = "lilysharp" },
+        });
+        Assert.Equal(any, server.GetSingerSlot(new SingerSlotParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Offset = at }).AnyLanguage);
+    }
+
+    [Theory]
     [InlineData("lyrics w { singer \"§\" | }\n")]            // a syllable of the body
-    [InlineData("part m { singer \"§\" }\n")]                // retired there
+    [InlineData("part m { singer \"§\" }\n")]                // a line of its own, at the top level
     [InlineData("score { singer \"§\" }\n")]
     [InlineData("title \"§\"\n")]
     public void ElsewhereIsNoSlot(string source)

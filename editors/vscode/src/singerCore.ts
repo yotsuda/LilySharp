@@ -159,10 +159,30 @@ export function noLanguageGuide(language: string, voices: readonly CantoriaVoice
         actions: [] };
 }
 
-/** A voice's line in the practice menu (owner's request 2026-11-10): the words' name and the part they
- *  sing. The part alone for words with no name of their own. */
-export function voiceMenuLabel(track: string | null | undefined, part: string): string {
-    return !track || track === 'lyrics' ? part : `${track} sings ${part}`;
+/** The name a voice goes by in the practice menu (docs/lyrics-singer-design.md §7): what follows its
+ *  engine (`neutrino/MERROW` is MERROW), several joined by ` + `. Undefined for the part's default voice. */
+function voiceMenuName(singer: string | null | undefined): string | undefined {
+    if (!singer) { return undefined; }
+    return singer.split('+').map(one => one.includes('/') ? one.slice(one.indexOf('/') + 1) : one).join(' + ');
+}
+
+/** Each voice's line in the practice menu, by part: who sings it, with the part beside a voice that
+ *  sings several; the part alone for its default voice. */
+export function voiceMenuLabels(voices: readonly Pick<SungVoiceDto, 'Part' | 'Singer'>[]): Record<string, string> {
+    const uses = new Map<string, number>();
+    for (const v of voices) {
+        const name = voiceMenuName(v.Singer);
+        if (name) { uses.set(name, (uses.get(name) ?? 0) + 1); }
+    }
+    return Object.fromEntries(voices.map(v => {
+        const name = voiceMenuName(v.Singer);
+        return [v.Part, !name ? v.Part : (uses.get(name) ?? 0) > 1 ? `${name} (${v.Part})` : name];
+    }));
+}
+
+/** What a voice's line says when hovered: who sings what, on which part. */
+export function voiceMenuTitle(label: string, track: string | null | undefined, part: string): string {
+    return !track || track === 'lyrics' ? `${label} sings ${part}` : `${label} sings ${track} on ${part}`;
 }
 
 /** What the status bar says, once, of a part with words in the score and no voice asked for them. */
@@ -175,12 +195,12 @@ export interface SingerChoice { label: string; detail: string }
 
 /**
  * What the editor offers between a `singer`'s quotes (owner's request 2026-11-09, session 1168:
- * only the names right for the language): the installed voices that sing `language`. A voice that
+ * only the names right for the language): the installed voices that sing `language` (all, with none given). A voice that
  * does not say what it sings is left out; with `gender` (`singer male "…"`, sessions 1173 and
  * 1174), so is one that says it is the other.
  */
-export function singerChoices(voices: readonly CantoriaVoice[], language: string, gender?: string | null): SingerChoice[] {
-    return byVoiceId(voices.filter(v => singsLanguage(v, language) && fitsGender(v, gender)))
+export function singerChoices(voices: readonly CantoriaVoice[], language: string | undefined, gender?: string | null): SingerChoice[] {
+    return byVoiceId(voices.filter(v => (!language || singsLanguage(v, language)) && fitsGender(v, gender)))
         .map(v => ({ label: v.id, detail: v.label && v.label !== v.name ? v.label : v.name }));
 }
 

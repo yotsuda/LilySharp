@@ -6,7 +6,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 - **`@shiftOff`** is offered after `@`: it keeps a note of a third or later voice in the first column.
 - **Each voice's line in the practice menu carries the Play button's microphone**: grey with nothing prepared, pulsing while it is sung, blue when ready, in the error colour when it cannot be. The marks `…` and `✓` are gone.
-- **The practice menu names the words**: a voice's line reads `verse sings melody`, the lyrics track and the part it sings. Unnamed words read `melody`.
+- **The practice menu names who sings**: a voice's line reads `MERROW`, `MERROW + TIGER`, or `MERROW (sop)` when one voice sings several parts. Hovering says what it sings. Words no `singer` line sings have no line.
 - **The `singer` list says when no voice is installed**: its first line says what is missing (Cantoria, or an engine), and taking it installs Cantoria or offers the folders of NEUTRINO, DiffSinger and VOICEVOX. A notification says the same once a session. Voices installed and none singing the words' language: it says what they sing and what would sing it.
 - **Only a `singer` line sings**: on Play the status bar says once which parts' words are printed only, and how to write the line. Completion takes `singer`, then the voices, `sings`, the words, `on` and the part.
 - **The composing guide says who sings, for any song**: how a `singer` line is written, and how to ask `#listVoices` for the names this machine has.
