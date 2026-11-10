@@ -1120,6 +1120,7 @@ public sealed partial class LilySharpLanguageServer
                     InScore = inScore == null || inScore.Contains(v.Part),
                     Singer = v.Singer,
                     Gender = v.Gender,
+                    Track = v.Track,
                     Notes = v.Notes.Select(n => new SungNoteDto
                     {
                         T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos, V = n.Level, E = n.LevelEnd, I = n.Inhale, H = n.Hyphen,

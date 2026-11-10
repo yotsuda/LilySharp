@@ -28,7 +28,7 @@ export interface SungNoteDto { T: number; D: number; P: number; L?: string | nul
 
 /** A part's words on its notes, as the server answers `lilysharp/sung`. */
 /** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
-export interface SungVoiceDto { Part: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null; Gender?: string | null }
+export interface SungVoiceDto { Part: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null; Gender?: string | null; Track?: string | null }
 
 /** The score Cantoria reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
 export interface CantoriaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean }
@@ -157,6 +157,12 @@ export function noLanguageGuide(language: string, voices: readonly CantoriaVoice
         documentation: `${installed} The engines Cantoria drives do not sing ${wanted} yet, so another voice would not help. ${words}\n\nThe words are still printed.`,
         message: `Lily#: no installed voice sings ${wanted}, and the engines Cantoria drives do not sing it yet. The words are still printed.`,
         actions: [] };
+}
+
+/** A voice's line in the practice menu (owner's request 2026-11-10): the words' name and the part they
+ *  sing. The part alone for words with no name of their own, or named as the part is. */
+export function voiceMenuLabel(track: string | null | undefined, part: string): string {
+    return !track || track === 'lyrics' || track === part ? part : `${track} sings ${part}`;
 }
 
 /** What the status bar says, once, of a part with words in the score and no voice asked for them. */

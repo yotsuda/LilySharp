@@ -229,7 +229,7 @@ LILYSHARP-OWN throughout — LilyPond writes no sound.
   cue per round laid out (`loopRounds`), so each round sings the stretch again; and after a
   count-in the voice waits for the music instead of running its lead ahead of it. Stop stops
   them all.
-- **The practice menu lists each voice** beside the parts, as `♪ part` (owner's request
+- **The practice menu lists each voice** beside the parts, as `♪ words sings part` (`♪ part` for words with no name; session 1217) (owner's request
   2026-11-08): on, the part is sung; off, its instrument plays in the voice's place — a switch
   between the two sounds, never both. `Practice.voicesOff`, read by `sungTracks()`; the host
   lists the voices from `lilysharp/sung` when an engine is there (`requestParts`). The part's

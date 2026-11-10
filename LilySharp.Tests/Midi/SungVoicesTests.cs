@@ -396,6 +396,13 @@ public class SungVoicesTests
     }
 
     [Fact]
+    public void AVoice_NamesTheLyricsTrackItSings()
+    {
+        var voice = Assert.Single(Voices(Book(YukiMusic, YukiWords, parts: "part melody { instrument soprano }")));
+        Assert.Equal("verse", voice.Track);
+    }
+
+    [Fact]
     public void WordsNotSung_StayInTheMidiFile()
     {
         var tree = SyntaxTree.Parse(Book(YukiMusic, YukiWords, parts: "part melody { clef treble }"));

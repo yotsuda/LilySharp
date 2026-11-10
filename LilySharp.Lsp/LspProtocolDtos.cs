@@ -412,6 +412,8 @@ public class SungVoiceDto
     public string? Singer { get; set; }
     /// <summary>The gender of the engine's default voice for it: what the singer says, else the part.</summary>
     public string? Gender { get; set; }
+    /// <summary>The name of the lyrics track it sings, or null.</summary>
+    public string? Track { get; set; }
 }
 
 /// <summary>Parameters for lilysharp/singerSlot: the caret in an open document.</summary>

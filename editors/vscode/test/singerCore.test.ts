@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, voiceMenuLabel, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -582,4 +582,13 @@ describe('noLanguageGuide', () => {
     it('says when the voices do not say what they sing', () => {
         assert.match(noLanguageGuide('en', [{ id: 'a/b', engine: 'a', name: 'b' }]).documentation, /do not say what they sing/);
     });
+});
+
+describe('voiceMenuLabel', () => {
+    it('names the words and the part they sing', () => assert.equal(voiceMenuLabel('verse', 'melody'), 'verse sings melody'));
+    it('is the part alone for words with no name of their own', () => {
+        assert.equal(voiceMenuLabel(null, 'melody'), 'melody');
+        assert.equal(voiceMenuLabel('lyrics', 'melody'), 'melody');
+    });
+    it('does not say a name twice', () => assert.equal(voiceMenuLabel('melody', 'melody'), 'melody'));
 });
