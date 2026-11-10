@@ -451,6 +451,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterStaffAttachName => WithoutOssiaPitch(GetStaffAttachNameCompletions(), doc.Text, offset),
             CompletionContext.AfterTabAttachName => GetTabAttachNameCompletions(),
             CompletionContext.AfterGroupStaffAttachName => WithoutOssiaPitch(GetGroupStaffAttachNameCompletions(), doc.Text, offset),
+            CompletionContext.AfterPartLyrics => new CompletionList { Items = [.. GetDeclaredNameCompletions(doc.Text, "lyrics", "The words this part sings").Items, .. GeneratedLyricsItems(forSinger: true)] },
             CompletionContext.AfterLyricsRowAttachName => GetLyricsRowAttachNameCompletions(LyricsHeadAt(doc.Text, offset)?.Written),
             CompletionContext.AfterGroupLyricsRowAttachName => GetGroupLyricsRowAttachNameCompletions(LyricsHeadAt(doc.Text, offset)?.Written),
             CompletionContext.AfterStaffLinesAs => WithoutOssiaPitch(GetStaffLinesSelectorCompletions(), doc.Text, offset),

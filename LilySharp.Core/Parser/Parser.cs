@@ -271,7 +271,8 @@ internal sealed partial class Parser
             else if (lyricsHead > 0)
                 // The name, `sings` and the part, whatever they lex as (a part may be
                 // named `bass`); a fourth token means this was a score row, not a body.
-                lyricsHead = t.Kind is SyntaxKind.CloseBrace or SyntaxKind.EndOfFile ? 0 : lyricsHead - 1;
+                // `section` is what can follow a part's `lyrics NAME` and bring a brace of its own.
+                lyricsHead = t.Kind is SyntaxKind.CloseBrace or SyntaxKind.EndOfFile or SyntaxKind.SectionKeyword ? 0 : lyricsHead - 1;
 
             scanPos += t.FullWidth;
             previous = t;

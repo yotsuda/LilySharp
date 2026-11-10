@@ -167,6 +167,7 @@ public static class PartReferenceFinder
     [
         SyntaxKind.ChordPartBlock, SyntaxKind.LyricsBlock,
         SyntaxKind.ChordRowRender, SyntaxKind.LyricsRowRender, SyntaxKind.SingerDeclaration,
+        SyntaxKind.PartLyricsDeclaration,
     ];
 
     /// <summary>
@@ -330,6 +331,7 @@ public static class PartReferenceFinder
             ? Referenceable(n) is { } t ? new TrackName(t, false) : null
             : new TrackName(row.LyricsKeyword, false),
         SingerDeclarationSyntax line => line.TrackToken is { } w && Referenceable(w) is { } sung ? new TrackName(sung, false) : null,
+        PartLyricsDeclarationSyntax own => Referenceable(own.NameToken) is { } listed ? new TrackName(listed, false) : null,
         _ => null,
     };
 

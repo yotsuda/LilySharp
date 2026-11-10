@@ -34,6 +34,22 @@ public sealed class LanguageDeclarationSyntax : SyntaxNode
     public string Language => ValueToken.Text;
 }
 
+/// <summary>The words a part sings, in its header: <c>part sop { lyrics words }</c>. It names a
+/// track and defines nothing (docs/lyrics-singer-design.md §10).</summary>
+public sealed class PartLyricsDeclarationSyntax : SyntaxNode
+{
+    internal PartLyricsDeclarationSyntax(PartLyricsDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>lyrics</c> word.</summary>
+    public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The track's name; zero-width where it is missing (an error).</summary>
+    public SyntaxTokenNode NameToken => (SyntaxTokenNode)GetChild(1)!;
+}
+
 /// <summary>Who sings what, at the top level of a file: <c>singer [S] sings [NAME] [on PART]</c>
 /// (owner's decisions 2026-11-10, docs/lyrics-singer-design.md).</summary>
 public sealed class SingerDeclarationSyntax : SyntaxNode

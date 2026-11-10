@@ -248,6 +248,7 @@ public sealed partial class LilySharpLanguageServer
         // one meter and tempo). They belong at the top level or in a section header, so they
         // are offered there, not here (LYS1026 rejects them in a part header).
         // `section` is not a property at all: it is the OTHER thing a part body holds.
+        props.Add(("lyrics", "The words this part sings, named here and defined outside the part", true));
         props.Add(("section", "Inner section (file grouped by part)", true));
         return new CompletionList
         {

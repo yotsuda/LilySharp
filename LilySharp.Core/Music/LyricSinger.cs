@@ -139,6 +139,9 @@ public static class LyricSinger
                 voice = target;
                 part = parts.FirstOrDefault(p => LyricBindings.VoicesOfPart(root, p).Contains(target));
             }
+            // No name written: the track the part names (§10). Several is an error, no name none.
+            if (declaration.TrackToken == null && part != null && LyricBindings.TracksOfPart(root, part) is [var own])
+                track = own;
             lines.Add(new Line(declaration.Singer, track, part, voice, declaration, score));
         }
         return lines;

@@ -557,7 +557,9 @@ public sealed partial class LilySharpLanguageServer
             var sings = System.Text.RegularExpressions.Regex.Match(rest, @"\bsings[ \t]+(?<t>(?!on\b)[^\s{}""]+)");
             bool wrote = System.Text.RegularExpressions.Regex.IsMatch(rest, @"\bsings\b");
             string? track = sings.Success ? sings.Groups["t"].Value : wrote ? LilySharp.Core.Music.LyricSinger.UnnamedTrack : null;
-            return (track, null, null, gender, quoted);
+            // `sings on PART` with no name sings what the part names (GetSingerSlot reads it).
+            var on = sings.Success ? null : System.Text.RegularExpressions.Regex.Match(rest, @"\bsings[ \t]+on[ \t]+(?<p>[^\s{}""]+)");
+            return (track, on is { Success: true } ? on.Groups["p"].Value : null, null, gender, quoted);
         }
         return null;
     }
@@ -841,6 +843,7 @@ public sealed partial class LilySharpLanguageServer
         AfterSingerVoice,
         /// <summary><c>singer … sings |</c> — the file's lyrics, and <c>on</c> for its unnamed words.</summary>
         AfterSingerSings,
+        AfterPartLyrics,
         /// <summary><c>singer … sings w |</c> — <c>on</c>.</summary>
         AfterSingerWords,
         /// <summary>Inside the top-level <c>chordShapes { | }</c> (or a <c>section</c> of it) — the
@@ -1121,6 +1124,11 @@ public sealed partial class LilySharpLanguageServer
         // The rest of a `singer` line: `sings`, the words, `on`, the part.
         if (SingerLineStepAt(text, offset, scan.Stack) is { } singerStep)
             return singerStep;
+
+        // `part sop { lyrics ▮ }`: the words the part names (docs/lyrics-singer-design.md §10).
+        if (IsInsidePartBlock(scan.Stack) && !IsInsideStringLiteral(text, offset)
+            && System.Text.RegularExpressions.Regex.IsMatch(text[..Math.Clamp(offset, 0, text.Length)], @"(?:^|[\s{}])lyrics[ \t]+[^\s{}""]*\z"))
+            return CompletionContext.AfterPartLyrics;
 
         // A lyrics head after a whole clause: the clauses not written yet (a body's words are
         // in a lyrics frame, a title's in a string).

@@ -275,7 +275,8 @@ public static class RenderSpecParser
     /// <summary>
     /// The part a score's lyrics row is printed on: its <c>on</c>, else the nearest staff above it,
     /// passing over lyrics and chords rows, a <c>hidden</c> staff counted; null when none stands
-    /// above or a staff of several parts does (docs/lyrics-singer-design.md §4).
+    /// above or a staff of several parts does (docs/lyrics-singer-design.md §4). With no staff above,
+    /// a named row follows the one part that names its track (§10).
     /// </summary>
     internal static string? RowTarget(LyricsRowRenderSyntax row)
     {
@@ -284,7 +285,11 @@ public static class RenderSpecParser
         SyntaxNode root = row;
         while (root.Parent != null)
             root = root.Parent;
-        return NearestStaffAbove(row, out _) ?? (row.NameToken == null ? Music.LyricBindings.TargetOf(root, row.PartName) : null);
+        if (NearestStaffAbove(row, out bool severalParts) is { } above)
+            return above;
+        if (row.NameToken == null)
+            return Music.LyricBindings.TargetOf(root, row.PartName);
+        return severalParts ? null : Music.LyricBindings.OnlyPartNaming(root, row.PartName);
     }
 
     /// <summary>The nearest staff above <paramref name="row"/> among its siblings, and whether what

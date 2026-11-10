@@ -110,6 +110,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         CheckLyricsBlocks(root);
         CheckSingerLines(root, partNames, voiceNames);
         CheckStaffSounds(root);
+        WarnRowsAPartDoesNotList(root, partNames);
 
         foreach (var row in root.DescendantNodes<LyricsRowRenderSyntax>())
         {
@@ -217,8 +218,34 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                     $"'{token.Text}' is a reserved word and cannot name lyrics.");
             if (block.IsInside<PartDeclarationSyntax>() || block.IsInside<PartBlockSyntax>())
                 _diagnostics.Error(block.LyricsKeyword.Span, DiagnosticCodes.LyricsInsidePart,
-                    "Lyrics cannot be written inside a part: words are not a part's. Write them at the top level or directly in a section, 'lyrics words { section A { … } }'.");
+                    "Lyrics cannot be written inside a part: words are not a part's. Write them at the top level or directly in a section, 'lyrics words { section A { … } }', and name them in the part's header with 'lyrics words'.");
         }
+    }
+
+    /// <summary>A score row giving a part words it does not list, where it lists any
+    /// (docs/lyrics-singer-design.md §10).</summary>
+    private void WarnRowsAPartDoesNotList(SyntaxNode root, HashSet<string> partNames)
+    {
+        if (!LyricBindings.AnyPartNamesWords(root))
+            return;
+        foreach (var row in root.DescendantNodes<LyricsRowRenderSyntax>())
+        {
+            if (RenderSpecParser.RowTarget(row) is not { } target)
+                continue;
+            string? part = partNames.Contains(target) ? target : partNames.FirstOrDefault(p => LyricBindings.VoicesOfPart(root, p).Contains(target));
+            if (part != null)
+                WarnIfNotListed(root, part, row.NameToken?.Text, row.PartName, (row.NameToken ?? row.LyricsKeyword).Span);
+        }
+    }
+
+    private void WarnIfNotListed(SyntaxNode root, string part, string? written, string track, TextSpan at)
+    {
+        var listed = LyricBindings.TracksOfPart(root, part);
+        if (listed.Count == 0 || listed.Contains(track))
+            return;
+        _diagnostics.Warning(at, DiagnosticCodes.TrackNotListedByPart, written == null
+            ? $"Part '{part}' names {string.Join(", ", listed.Select(t => $"'{t}'"))}, not the unnamed lyrics."
+            : $"Part '{part}' does not list lyrics '{written}'. If these are its words too, add 'lyrics {written}' to the part.");
     }
 
     private void CheckSingerLines(SyntaxNode root, HashSet<string> partNames, HashSet<string> voiceNames)
@@ -235,7 +262,15 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             if (node.SingsKeyword == null)
                 continue;   // the parser said so
             var at = node.TrackToken ?? node.SingsKeyword;
-            if (!GeneratedLyrics.IsGenerated(line.Track) && !tracks.Contains(line.Track))
+            var own = line.Part is { } sungPart ? LyricBindings.TracksOfPart(root, sungPart) : [];
+            if (node.TrackToken == null && own.Count > 1)
+            {
+                _diagnostics.Error(at.Span, DiagnosticCodes.SingerWordsAmbiguous,
+                    $"'{line.Part}' names several lyrics ({string.Join(", ", own)}): say which, 'singer sings {own[0]} on {line.Part}'.");
+                continue;
+            }
+            // A name the part lists and no block defines is already said at the part (LYS1007).
+            if (!GeneratedLyrics.IsGenerated(line.Track) && !tracks.Contains(line.Track) && (node.TrackToken != null || own.Count == 0))
                 _diagnostics.Error(at.Span, DiagnosticCodes.SingerWordsUnknown,
                     node.TrackToken == null ? "This file has no unnamed lyrics to sing." : $"No lyrics are named '{line.Track}'.");
             if (node.OnToken is { } on)
@@ -250,6 +285,8 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                     "Nothing says whose notes these words are sung on: add 'on PART'.");
             if (line.Part is not { } part)
                 continue;
+            if (node.TrackToken is { } named)
+                WarnIfNotListed(root, part, named.Text, line.Track, named.Span);
             // One scope, one set of words a part; a second voice on the same words sings along.
             if (!wordsOfPart.TryAdd((line.Score, part), line.Track) && wordsOfPart[(line.Score, part)] != line.Track)
                 _diagnostics.Error(node.Keyword.Span, DiagnosticCodes.SingerDuplicatePart, line.Score < 0

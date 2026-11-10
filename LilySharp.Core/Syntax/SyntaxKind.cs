@@ -396,6 +396,8 @@ public enum SyntaxKind : ushort
     LanguageDeclaration,
     /// <summary>Who sings what, at the top level of a file (<c>singer female sings words on sop</c>).</summary>
     SingerDeclaration,
+    /// <summary>The words a part sings, in its header (<c>part sop { lyrics words }</c>).</summary>
+    PartLyricsDeclaration,
     /// <summary>A variable declaration node (legacy, <c>name = { ... }</c>).</summary>
     VariableDeclaration,
     /// <summary>A phrase declaration node (<c>phrase name { ... }</c>).</summary>

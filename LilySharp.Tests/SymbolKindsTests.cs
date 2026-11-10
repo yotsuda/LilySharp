@@ -44,7 +44,7 @@ public sealed class SymbolKindsTests
     /// section-body part block, each of the six render references, a named chord and lyric
     /// track and both row references.</summary>
     private const string EverySpelling = """
-        part melody { clef treble }
+        part melody { clef treble  lyrics verse }
         part low { clef bass }
         phrase riff { c'4 d e f | }
         section A { key g major }

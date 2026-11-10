@@ -1662,6 +1662,14 @@ public static class DiagnosticCodes
     /// <summary>Warning: the same voice written twice on the same words of a part.</summary>
     public const string SingerRepeated = "LYS4053";
 
+    /// <summary><c>singer … sings on PART</c> with no name, where the part names several tracks
+    /// (docs/lyrics-singer-design.md §10).</summary>
+    public const string SingerWordsAmbiguous = "LYS4054";
+
+    /// <summary>Warning: a <c>singer</c> line or a score row gives a part a track that part does
+    /// not list, where it lists any (docs/lyrics-singer-design.md §10).</summary>
+    public const string TrackNotListedByPart = "LYS4055";
+
     /// <summary>Warning: a drum staff's voices write two different levels at one moment —
     /// <c>@f</c> on the hands' line and <c>@p</c> on the feet's (owner's decision 2026-10-30).
     /// One drummer plays one level; the same level in both lines prints once

@@ -50,6 +50,16 @@ public class SingsCompletionTests
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterSingsTarget, Ctx(text));
 
     [Theory]
+    [InlineData("part m { lyrics ")]
+    [InlineData("part m { clef bass  lyrics wo")]
+    public void InAPartHeader_LyricsTakesATracksName(string text)
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterPartLyrics, Ctx(text));
+
+    [Fact]
+    public void AfterAPartsLyricsName_ThePropertiesComeBack()
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.PartBlock, Ctx("part m { lyrics words\n  "));
+
+    [Theory]
     [InlineData("lyrics verse { ")]                                  // the body, not the header
     [InlineData("score { staff m  lyrics w ")]                  // a score ROW, not a definition
     public void NeitherTheBodyNorAScoreRow_OffersTheKeyword(string text)

@@ -257,8 +257,10 @@ SingerGender   = 'male' | 'female' ;
                     the line's word, else the instrument's, else the clef's: bass, baritone,
                     tenor and treble_8 clefs are male, others female. Another word before a name
                     is LYS4040.
-                    With no name it sings the unnamed lyrics. 'on' names the part, or a voice of
-                    one; with none, the file's only part, else the one part every score prints
+                    With no name it sings the track the part names ('lyrics NAME' in its header;
+                    LYS4054 if it names several), else the unnamed lyrics. A name the part does
+                    not list, where it lists any, is warned about (LYS4055). 'on' names the part,
+                    or a voice of one; with none, the file's only part, else the one part every score prints
                     the words under, else LYS4043. One part sings one set of words in a scope
                     (LYS4044; the same voice twice on them is warned about, LYS4053); a voice
                     two parts share is LYS4045, words no lyrics defines LYS4042. *)
@@ -1154,7 +1156,12 @@ PartDecl       = ( 'part' | 'strokes' ) , [ PartName ] , [ String ] , [ PartBody
    'part percussion', 'part q' and 'part c' all compile; a name never stands bare in a
    music stream, so a pitch letter or a dynamic is no ambiguity there. *)
 PartName       = BareWord ;        (* minus the reserved words above *)
-PartBody       = '{' , { PartProperty } , '}' ;
+PartBody       = '{' , { PartProperty | PartLyrics } , '}' ;
+PartLyrics     = 'lyrics' , Identifier ;
+                 (* The words this part sings: names a track and defines nothing, one statement
+                    a track. A track named on a singer line or a row for a part that lists
+                    others is LYS4055, hum and solfege included.
+                    docs/lyrics-singer-design.md §10. *)
 PartProperty   = 'clef'          , PartClefName
                | 'instrument'    , ( InstrumentPreset , [ String ] | String )
                | 'transpose'     , PitchToken
@@ -1427,9 +1434,10 @@ PartBlock      = PartName , MusicBlock ;
    named VOICE ('lyrics en on alt' over 'voice alt { }'): the words then follow that
    voice's rhythm, under its staff or as a row. A track's NAME binds nothing: the name
    of a part or of a named voice is refused for a track (LYS7008, owner's decision
-   2026-11-10), as are 'on', 'hum' and 'solfege' (LYS4048). A track inside a part is
-   LYS4049. A row with neither a staff above it nor 'on' keeps the even-spread
-   lead-sheet reading (§7).
+   2026-11-10), as are 'on', 'hum' and 'solfege' (LYS4048). A track's body inside a part
+   is LYS4049; the part's header names the track with 'lyrics NAME' (PartLyrics). A
+   row with neither a staff above it nor 'on' follows the part that names its track
+   when exactly one does, and otherwise keeps the even-spread lead-sheet reading (§7).
 
    'hum' and 'solfege' need no definition: they are made from the notes they follow.
    'singer S sings hum on PART' hums each note on ん ('lyrics hum' is LYS4050: there is

@@ -82,6 +82,53 @@ public static class LyricBindings
         return map;
     }
 
+    private static readonly ConditionalWeakTable<SyntaxNode, Dictionary<string, List<string>>> PartWords = new();
+
+    /// <summary>The tracks a part names in its header, in written order, each once
+    /// (<c>part sop { lyrics words }</c>, docs/lyrics-singer-design.md §10).</summary>
+    public static IReadOnlyList<string> TracksOfPart(SyntaxNode root, string partName)
+        => PartWordsOf(root).TryGetValue(partName, out var tracks) ? tracks : [];
+
+    /// <summary>Whether any part of the file names its words.</summary>
+    public static bool AnyPartNamesWords(SyntaxNode root) => PartWordsOf(root).Count > 0;
+
+    /// <summary>The one part that names <paramref name="trackName"/>, or null where none or several do.</summary>
+    public static string? OnlyPartNaming(SyntaxNode root, string trackName)
+    {
+        string? found = null;
+        foreach (var (part, tracks) in PartWordsOf(root))
+        {
+            if (!tracks.Contains(trackName))
+                continue;
+            if (found != null)
+                return null;
+            found = part;
+        }
+        return found;
+    }
+
+    private static Dictionary<string, List<string>> PartWordsOf(SyntaxNode root)
+    {
+        while (root.Parent != null)
+            root = root.Parent;
+        return PartWords.GetValue(root, BuildPartWords);
+    }
+
+    private static Dictionary<string, List<string>> BuildPartWords(SyntaxNode root)
+    {
+        var map = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var statement in root.SitesOfKinds(SyntaxKind.PartLyricsDeclaration).OfType<PartLyricsDeclarationSyntax>())
+        {
+            if (statement.Parent is not PartDeclarationSyntax part || statement.NameToken.Text.Length == 0)
+                continue;
+            if (!map.TryGetValue(part.Name.Text, out var tracks))
+                map[part.Name.Text] = tracks = [];
+            if (!tracks.Contains(statement.NameToken.Text))
+                tracks.Add(statement.NameToken.Text);
+        }
+        return map;
+    }
+
     private static readonly ConditionalWeakTable<SyntaxNode, Dictionary<string, Dictionary<string, int>>> VoiceMaps = new();
 
     /// <summary>

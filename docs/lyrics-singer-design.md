@@ -42,7 +42,7 @@ score { staff sop  lyrics words }
 - `lyrics NAME` where NAME is a part or a named voice (LYS7008, built).
 - `on`, `hum` and `solfege` as a track's name.
 - `lyrics` inside a `part { }` block or inside a part's `{ }` in a section. At the top level or directly
-  in a section it may be written. (Section 10, not built, adds a `lyrics NAME` with no body to `part { }`.)
+  in a section it may be written. (`part { }` takes a `lyrics NAME` with no body, section 10.)
 - Two `singer` lines giving one part different words in one scope (LYS4044): the top level, or one score. To
   have another score sing other words on a part, its line goes inside that score. The same voice on the same
   words of a part twice is warned about (LYS4053).
@@ -134,9 +134,9 @@ cannot have two singers; a sung part's instrument stays off in bars with no word
 4. Done (session 1219), but for the ear: `hum` and `solfege` are built as section 6 says, in
    `Music/GeneratedLyrics`. Under written words the names stand on the next row. `ん` held long has not
    been heard on an engine; ら is the fallback. A hum is Japanese whatever the file's language.
-5. Not built: a part's own words, section 10.
+5. Done (session 1222): a part's own words, section 10.
 
-## 10. A part's own words (owner's decision 2026-11-10, session 1221; not built)
+## 10. A part's own words (owner's decision 2026-11-10, session 1221; built in session 1222)
 
 Words usually belong to a part, and the file had nowhere to say so. A score's row says where words are
 printed and a `singer` line says who sings them, so a part printing one track and singing another went
@@ -155,9 +155,10 @@ score { staff sop  lyrics words  staff alt  lyrics words  staff ten  lyrics mw }
 - `lyrics NAME` in a `part { }` has no braces of its own. It names a track and defines nothing, so
   section 3's refusal stays for a `lyrics` with a body. A part may name several tracks, one statement each.
 - A `singer … sings on PART` with no name sings the track the part names. Where the part names several,
-  leaving the name out is an error. Where it names none, it is the unnamed track, as today.
-- Naming a track a part does not list, on a `singer` line or on a row for that part, is a warning, and
-  only for a part that lists any. Another score singing other words is written by listing both tracks.
+  leaving the name out is an error (LYS4054). Where it names none, it is the unnamed track, as today.
+- Naming a track a part does not list, on a `singer` line or on a row for that part, is a warning
+  (LYS4055), and only for a part that lists any. `hum`, `solfege` and an unnamed row count as tracks
+  here. Another score singing other words is written by listing both tracks.
 - A `lyrics NAME` row with no `on` and no staff above it follows the part's rhythm when exactly one part
   names the track; otherwise it stays the even-spread row. A row under a staff keeps section 4's rule.
 - `lyrics` rows stay: a score prints only what it says (section 1). A file with no such statement behaves

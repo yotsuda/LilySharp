@@ -1033,7 +1033,7 @@ public sealed partial class LilySharpLanguageServer
         var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
         var root = tree.GetRoot();
         var languageOf = LilySharp.Core.Music.LyricLanguage.ReaderOf(root);
-        string? track = slot.Track;
+        string? track = slot.Part is { } part && LilySharp.Core.Music.LyricBindings.TracksOfPart(root, part) is [var own] ? own : slot.Track;
         // No words named yet: the file's language, or every voice where its lyrics differ.
         bool anyLanguage = track == null && slot.Language == null
             && root.DescendantNodes<LilySharp.Core.Syntax.LyricsBlockSyntax>().Select(b => languageOf(b.VoiceName)).Distinct(StringComparer.Ordinal).Count() > 1;

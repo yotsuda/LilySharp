@@ -98,6 +98,9 @@ internal sealed partial class Parser
             // dropping its width and shifting every following note's source offset.
             if (Check(SyntaxKind.KeyKeyword)) { properties.Add(ParseKeySignature()); continue; }
 
+            // `lyrics NAME` says which words are this part's (docs/lyrics-singer-design.md §10).
+            if (Check(SyntaxKind.LyricsKeyword)) { properties.Add(ParsePartLyrics()); continue; }
+
             // A `using` here already spoke — as the generic stray token below — and STILL lost
             // its width to that `Advance()`, so the loud spelling corrupted source positions
             // exactly like the four silent ones. Its own name (LYS0029) says which brace to
@@ -299,6 +302,34 @@ internal sealed partial class Parser
                 Advance();
         }
         return items;
+    }
+
+    /// <summary><c>lyrics NAME</c> in a part header. A <c>lyrics</c> with a body is parsed as the
+    /// block it is, for <c>LyricSingsValidator</c> to refuse there (LYS4049).</summary>
+    private GreenNode ParsePartLyrics()
+    {
+        if (IsLyricsBodyAhead())
+            return ParseLyricsBlock();
+        var keyword = Advance();
+        if (IsPartNameToken(Current))
+            return new PartLyricsDeclarationGreen(keyword, Advance());
+        // No name: said here, and the header still closes where it was written (as ParsePartProperty does).
+        _diagnostics.Error(new TextSpan(_textPosition, Current.FullWidth), DiagnosticCodes.PartPropertyMissingValue,
+            "'lyrics' has no name. A part names its words, 'lyrics NAME'.");
+        return new PartLyricsDeclarationGreen(keyword, new SyntaxToken(SyntaxKind.Identifier, "", null, null));
+    }
+
+    /// <summary>Whether the <c>lyrics</c> at the caret opens a body: <c>[NAME] [language L] {</c>.</summary>
+    private bool IsLyricsBodyAhead()
+    {
+        bool IsLanguage(int at) => Peek(at) is { Kind: SyntaxKind.Identifier, Text: Music.LyricLanguage.Keyword }
+            && Peek(at + 1) is { Kind: SyntaxKind.Identifier };
+        int i = 1;
+        if (IsPartNameToken(Peek(i)) && !IsLanguage(i))
+            i++;
+        if (IsLanguage(i))
+            i += 2;
+        return Peek(i) is { Kind: SyntaxKind.OpenBrace };
     }
 
     private GreenNode? ParsePartProperty()

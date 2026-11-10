@@ -510,6 +510,15 @@ internal sealed class SingerDeclarationGreen : GreenSyntaxNode
     }
 }
 
+/// <summary>The words a part sings, in its header: lyrics NAME (Music.LyricBindings).</summary>
+internal sealed class PartLyricsDeclarationGreen : GreenSyntaxNode
+{
+    public PartLyricsDeclarationGreen(SyntaxToken keyword, SyntaxToken name)
+        : base(SyntaxKind.PartLyricsDeclaration, [keyword, name])
+    {
+    }
+}
+
 /// <summary>The language of the file's lyrics: language japanese (Music.LyricLanguage).</summary>
 internal sealed class LanguageDeclarationGreen : GreenSyntaxNode
 {

@@ -95,6 +95,15 @@ public class RenameSymbolTests
     }
 
     [Fact]
+    public void LyricsTrack_RenamesThePartsStatementAndTheSingerLine()
+    {
+        // docs/lyrics-singer-design.md §7, §10: the block, the header, the line and the row.
+        const string text = "part m { lyrics words }\nsection A { m { c1 | } }\nlyrics words { あ | }\nform { A }\nsinger sings words on m\nscore { staff m  lyrics words }\n";
+        AssertRenames(text, text.IndexOf("words"), "words", 4);
+        AssertRenames(text, text.LastIndexOf("words"), "words", 4);
+    }
+
+    [Fact]
     public void Part_FromDeclaration_RenamesDeclarationAndStaffReference()
         => AssertRenames(Source, Source.IndexOf("tune"), "tune", 2);
 

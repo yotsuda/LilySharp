@@ -208,6 +208,12 @@ public sealed partial class LilySharpLanguageServer
                 case LyricsRowRenderSyntax { NameToken: { } rt }:
                     yield return rt;
                     break;
+                case PartLyricsDeclarationSyntax { NameToken: { Text.Length: > 0 } pt }:
+                    yield return pt;
+                    break;
+                case SingerDeclarationSyntax { TrackToken: { } st }:
+                    yield return st;
+                    break;
             }
         }
     }
