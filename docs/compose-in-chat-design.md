@@ -206,6 +206,7 @@ A section named as a frame (intro, outro, coda, ending, tag, prelude, postlude, 
 
 **Voicing and spelling**
 - Close thirds or seconds under C3.
+- A band's electric guitar striking chords of three notes or more below D3, power chords apart, 8 times or more and a third of its chords (`voicing.band-low-chords`; 2026-11-10: Zunda-to-Metan's clean guitar on five and six strings over the bass).
 - Four notes or more in half the chords (eight or more) of a part whose `midiInstrument` distorts
   (2026-11-01: an overdriven guitar in `<e, e b e' b'>`, the voicing tool's first E5 shape, from start
   to end). The tool `lilysharp_chordVoicings` takes the part's sound as `sound` and, when it

@@ -561,6 +561,7 @@ public static class CompositionChecks
         findings.AddRange(Clashes(midi, melodies, barList, fifths, SwungBlueNotes(root)));
         findings.AddRange(LowChords(midi, barList, fifths));
         findings.AddRange(ThickChordsOnADistortedSound(midi, parts, barList, fifths));
+        findings.AddRange(BandChordsOnLowStrings(midi, parts, barList, fifths));
         // A band's part crowding its bass (owner's trial 2026-10-30: a rock guitar mostly D2–D3 over a
         // bass mostly E1–E2 — two low lines in one register, a muddy sound).
         foreach (var bass in bandBasses.Where(sounding.ContainsKey))
@@ -900,6 +901,38 @@ public static class CompositionChecks
                 + "as the form plays them) — distortion blurs a full chord into a roar: strike two or three notes, the root and its fifth "
                 + "with the octave above (a power chord; the voicing tool, given the sound, answers them first), and leave the full chord "
                 + "to a clean sound or to one ringing chord at a close.") { Parts = [part.Name.Text], Bars = [barList.Count(b => b <= first.Tick)] };
+        }
+    }
+
+    // A band's electric guitar: a chord of three notes or more whose lowest is under this (D3, the fourth
+    // string open), not a power chord, this many times and in this share of its chords.
+    private const int BandLowStringsTop = 50, BandLowChordsFewest = 8;
+    private const double BandLowChordsShare = 1.0 / 3;
+
+    /// <summary>An electric guitar in a band striking its chords on the low strings, where the bass is: a chord
+    /// belongs on the upper strings, and a power chord may stay low (owner's report 2026-11-10:
+    /// Zunda-to-Metan's clean guitar, `Bb2 F3 Bb3 D4 F4` and all six strings of G, fine for a song sung to one
+    /// guitar and not in a band).</summary>
+    private static IEnumerable<CompositionFinding> BandChordsOnLowStrings(MidiFile midi, IReadOnlyList<PartDeclarationSyntax> parts,
+        List<int> barList, int fifths)
+    {
+        if (!parts.Any(p => RoleOf(p).Drums) || !parts.Any(p => RoleOf(p).Bass))
+            yield break;
+        foreach (var part in parts.Where(p => !RoleOf(p).Bass
+            && System.Text.RegularExpressions.Regex.IsMatch(PropOf(p, "midiInstrument"), "electric guitar|overdriven guitar|distortion guitar")))
+        {
+            var chords = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && (n.Part ?? t.Name) == part.Name.Text))
+                .GroupBy(n => n.StartTick).Select(g => (Tick: g.Key, Pitches: g.Select(n => n.Pitch).Distinct().OrderBy(p => p).ToList()))
+                .Where(c => c.Pitches.Count >= 3 && !c.Pitches.All(p => (p - c.Pitches[0]) % 12 is 0 or 7))
+                .OrderBy(c => c.Tick).ToList();
+            var low = chords.Where(c => c.Pitches[0] < BandLowStringsTop).ToList();
+            if (low.Count < BandLowChordsFewest || low.Count < chords.Count * BandLowChordsShare)
+                continue;
+            int bar = barList.Count(b => b <= low[0].Tick);
+            yield return new("voicing.band-low-chords", $"{part.Name.Text}: {low.Count} of its {chords.Count} chords reach below D3 ("
+                + $"{string.Join(" ", low[0].Pitches.Select(p => PartRanges.SpelledFromPitch(p, fifths)))} in bar {bar} first, as the form plays them) — "
+                + "in a band the low strings are the bass's, and a chord on them crowds it: play the chord on the upper strings, three or four notes from the "
+                + "fourth string up, and leave the low strings to a power chord, the root and its fifth, on a distorted sound.") { Parts = [part.Name.Text], Bars = [bar] };
         }
     }
 

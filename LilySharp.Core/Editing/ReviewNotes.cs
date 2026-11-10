@@ -147,6 +147,7 @@ public static class ReviewNotes
 
         // Voicing and spelling
         ["voicing.low-chords"] = new(M, D, "Thirds and seconds below about C3 blur into a rumble, because low partials clash. Low voicings are spaced in fifths and octaves.", "A dark cluster is the effect meant."),
+        ["voicing.band-low-chords"] = new(S, D, "In a band the low register is the bass's, so a chord struck on the low strings crowds it and blurs the sound. A guitar's chords sit on the upper strings there; the low strings suit a power chord.", "The guitar is the band's only chord instrument, or a low ringing chord is the sound meant."),
         ["voicing.thick-distorted"] = new(S, D, "Distortion multiplies a chord's overtones, so an electric guitar plays power chords where a clean one plays full shapes.", "A wall of noise is the effect meant."),
         ["octave.slip"] = new(M, D, "One note an octave or more away and straight back is rarely a tune's idea and often a misplaced octave mark.", "It is a wide grace or a stride figure, as a lead's accent."),
         ["key.signature"] = new(M, D, "A key signature saves writing the key's sharps or flats on every note. If the music sits in another key than the one written, the page fills with accidentals and the reader expects the wrong notes.", "The accidentals are the music's own: a mode, or a passage that has left the key."),

@@ -367,6 +367,56 @@ public class CompositionChecksTests
             f => f.StartsWith("A tune is played"));
     }
 
+    private const string LowChord = "<g, d g b d' g'>", HighChord = "<f a c' f'>";
+
+    private static string InABand(string guitar, string sound = "electric guitar (clean)") => Band(Guitar.Replace("overdriven guitar", sound) + "\n" + Bass + "\n" + Drums,
+        $"  gtr {{ {guitar} }}\n  bass {{ {string.Concat(Enumerable.Repeat("e,8 e, e, e, e, e, e, e, | c8 c c c d d d d | ", 4))} }}\n"
+        + $"  kit {{ voice {{ {string.Concat(Enumerable.Repeat("hh8 hh hh hh hh hh hh hh | ", 8))} }} {{ {string.Concat(Enumerable.Repeat("bd4 sn bd sn | ", 8))} }} }}",
+        "staff gtr  staff bass  staff kit", "tempo 120");
+
+    private static System.Collections.Generic.List<string> LowStrings(string book)
+        => CompositionChecks.Findings(book).Where(f => f.Id == "voicing.band-low-chords").Select(f => f.Message).ToList();
+
+    private static string FourTimes(string twoBars) => string.Concat(Enumerable.Repeat(twoBars, 4));
+
+    // Owner's report 2026-11-10: Zunda-to-Metan's clean guitar, on five and six strings over the bass.
+    [Fact]
+    public void ABandsGuitarOnTheLowStrings_IsTold()
+    {
+        string told = Assert.Single(LowStrings(InABand(FourTimes($"{LowChord}4 {LowChord} r2 | {LowChord}4 {LowChord} r2 | "))));
+        Assert.StartsWith("gtr: 16 of its 16 chords reach below D3 (G2 D3 G3 B3 D4 G4 in bar 1 first, as the form plays them)", told);
+        // A low triad on a distorted sound is no power chord.
+        Assert.Single(LowStrings(InABand(FourTimes("<e, gis, b,>4 q r2 | <e, gis, b,>4 q r2 | "), "overdriven guitar")));
+    }
+
+    [Fact]
+    public void ThePowerChordAndTheUpperStrings_AreNotTold()
+    {
+        Assert.Empty(LowStrings(InABand(FourTimes($"{HighChord}4 {HighChord} r2 | {HighChord}4 {HighChord} r2 | "))));
+        Assert.Empty(LowStrings(InABand(FourTimes("<e, b, e>4 q r2 | <g, d g>4 q r2 | "), "overdriven guitar")));
+    }
+
+    [Fact]
+    public void AGuitarOutsideABand_OrAnAcousticOne_IsNotRead()
+    {
+        string low = FourTimes($"{LowChord}4 {LowChord} r2 | {LowChord}4 {LowChord} r2 | ");
+        Assert.Empty(LowStrings(InABand(low, "acoustic guitar (steel)")));
+        string alone = Band(Guitar.Replace("overdriven guitar", "electric guitar (clean)"), $"  gtr {{ {low} }}", "staff gtr", "tempo 120");
+        Assert.Empty(LowStrings(alone));
+    }
+
+    [Fact]
+    public void LowStrings_AreToldFromEightChords_AndAThirdOfThem()
+    {
+        string L(int n) => string.Join(" ", Enumerable.Repeat($"{LowChord}4", n));
+        string rests = string.Concat(Enumerable.Repeat("R | ", 6));
+        Assert.Empty(LowStrings(InABand($"{L(4)} | {L(3)} r4 | {rests}")));
+        Assert.Single(LowStrings(InABand($"{L(4)} | {L(4)} | {rests}")));
+        // Eight of twenty-four is a third; eight of thirty-two is less.
+        Assert.Single(LowStrings(InABand(FourTimes($"{LowChord}4 {LowChord} r2 | {HighChord}4 {HighChord} {HighChord} {HighChord} | "))));
+        Assert.Empty(LowStrings(InABand(FourTimes($"{LowChord}4 {LowChord} r2 | {HighChord}8 {HighChord} {HighChord} {HighChord} {HighChord} {HighChord} r4 | "))));
+    }
+
     // Owner's report 2026-11-01: `Downloads/Redline.lys`, an overdriven guitar in `<e, e b e' b'>` (the
     // voicing tool's first E5 shape) from start to end — on a distorted sound a full chord blurs.
     [Fact]
