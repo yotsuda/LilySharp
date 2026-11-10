@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1754,6 +1754,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                         voicesInScore = singable.filter(v => v.InScore !== false).map(sungKey);
                         voiceLabels = voiceMenuLabels(singable);
                         voiceTitles = Object.fromEntries(singable.map(v => [sungKey(v), voiceMenuTitle(voiceLabels[sungKey(v)], v.Track, v.Part)]));
+                        menuVoices.set(panel, voiceMenuKey(singable));
                     }
                     panel.webview.postMessage({ type: 'partsData', parts, extra, voices, voicesInScore, voiceLabels, voiceTitles, sungOnly });
                 } catch {
@@ -4159,6 +4160,8 @@ function prepareModeSetting(): PrepareMode {
     return prepareModeOf(vscode.workspace.getConfiguration('lilysharp').get<string>('playback.singerPrepare'));
 }
 
+/** What each preview's practice menu last listed of the voices (voiceMenuKey). */
+const menuVoices = new WeakMap<vscode.WebviewPanel, string>();
 /** The voices each preview holds, part → key: a voice already there is not sent again. */
 const postedVoices = new WeakMap<vscode.WebviewPanel, Map<string, string>>();
 /** The document and score each preview's voices are of (`uri\nrender`): another one empties them first. */
@@ -4295,6 +4298,13 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     }
     if (!current()) { log('the preview turned meanwhile'); return; }
     if (sung.Error || !sung.Voices) { log(`no answer (${sung.Error ?? 'no voices'}): the states stay`); settled(); return; }
+    // The menu's lines follow the text: a `singer` line rewritten renames its voice there. Rarely
+    // true, so the costly parts list is asked only then.
+    const listed = voiceMenuKey(sung.Voices.filter(v => v.Notes.length > 0));
+    if (menuVoices.has(panel) && menuVoices.get(panel) !== listed) {
+        menuVoices.set(panel, listed);
+        void panel.webview.postMessage({ type: 'voiceLinesChanged' });
+    }
     if (reason === 'play') { for (const part of sung.PrintedWords ?? []) { tellSingerOnce(panel, printedWordsNote(part)); } }
     // Which parts sing now: the score's own, and the file's other singable lyrics the menu turned
     // on (voicesOn, session 1163). The page drops the voices and the badge's states of any other
@@ -7642,7 +7652,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // list was built for: the list is asked again when they differ while the menu is open
         // (owner's report 2026-11-09, session 1158: the menu kept the last score's parts after a
         // switch). Not on every render - a parts list costs the server a playback export - so a
-        // part added by an edit shows on the next opening.
+        // part added by an edit shows on the next opening; an edit that changes the voices' lines
+        // asks again too (voiceLinesChanged).
         let lastScoreKey = null, partsKey = null;
         function requestParts() {
             partsKey = lastScoreKey;
@@ -8290,6 +8301,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // positions (R) are the candidate's, followed for its panel — nothing here lights up.
                 case 'followTick':
                     if (followTick) followTick();
+                    break;
+                case 'voiceLinesChanged':
+                    if (!practicePanel.hidden) requestParts();
                     break;
                 case 'partsData':
                     renderParts(message);

@@ -191,6 +191,14 @@ export function voiceMenuTitle(label: string, track: string | null | undefined, 
     return !track || track === 'lyrics' ? `${label} sings ${part}` : `${label} sings ${track} on ${part}`;
 }
 
+/** All the practice menu's voice lines say, for telling that an edit changed them: who sings
+ *  (owner's report 2026-11-10: a `singer` line rewritten, the open menu kept the old name), which
+ *  lines there are, what each sings, and whether the score sings it. */
+export function voiceMenuKey(voices: readonly Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer' | 'Track' | 'InScore'>[]): string {
+    const labels = voiceMenuLabels(voices);
+    return JSON.stringify(voices.map(v => [sungKey(v), labels[sungKey(v)], v.Track ?? null, v.InScore !== false]));
+}
+
 /** What the status bar says, once, of a part with words in the score and no voice asked for them. */
 export function printedWordsNote(part: string): string {
     return `the words of ${part} are printed, not sung: add a line of its own, singer sings WORDS on ${part}`;

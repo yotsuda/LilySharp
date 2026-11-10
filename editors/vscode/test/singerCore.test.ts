@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveCancelLine, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveCancelLine, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
 import { voiceBarShown, voiceProgress, voiceRowProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -657,6 +657,16 @@ describe('noLanguageGuide', () => {
     it('says when the voices do not say what they sing', () => {
         assert.match(noLanguageGuide('en', [{ id: 'a/b', engine: 'a', name: 'b' }]).documentation, /do not say what they sing/);
     });
+});
+
+describe('voiceMenuKey', () => {
+    const v = (Singer: string | null, more: object = {}) => ({ Part: 't', Singer, Track: 'w', ...more });
+    it('is the same for the same lines', () => assert.equal(voiceMenuKey([v('diffsinger/TIGER')]), voiceMenuKey([v('diffsinger/TIGER')])));
+    it('changes with who sings', () => assert.notEqual(voiceMenuKey([v('diffsinger/TIGER')]), voiceMenuKey([v('voicevox/満別花丸-元気')])));
+    it('changes with a line added', () => assert.notEqual(voiceMenuKey([v('a/b')]), voiceMenuKey([v('a/b'), v('a/c', { Part: 'b' })])));
+    it('changes with what it sings', () => assert.notEqual(voiceMenuKey([v('a/b')]), voiceMenuKey([v('a/b', { Track: 'x' })])));
+    it('changes with whether the score sings it', () => assert.notEqual(voiceMenuKey([v('a/b')]), voiceMenuKey([v('a/b', { InScore: false })])));
+    it('a voice of one engine or another by the same name is the same line', () => assert.equal(voiceMenuKey([v('a/b')]), voiceMenuKey([v('c/b')])));
 });
 
 describe('voiceMenuLabels', () => {
