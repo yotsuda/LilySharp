@@ -7742,13 +7742,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const voiceLabel = name => voiceLabels[name] || name;
             for (const name of voices) {
                 if (!inScore.has(name)) continue;
-                toggle('♪ ' + voiceLabel(name), voiceLabel(name) + ': its voice, on or off (the part button beside it is its instrument)', () => !practice.voicesOff.includes(name),
+                toggle(voiceLabel(name), voiceLabel(name) + ': its voice, on or off (the part button beside it is its instrument)', () => !practice.voicesOff.includes(name),
                     () => { practice.voicesOff = practice.voicesOff.includes(name) ? without(practice.voicesOff, name) : practice.voicesOff.concat([name]); },
                     'voice', name, practice.voiceLevels, name);
             }
             for (const name of voices) {
                 if (inScore.has(name)) continue;
-                toggle('♪ ' + voiceLabel(name), voiceLabel(name) + ': lyrics this score does not sing - silent unless pressed; pressed, the voice sings in place of the instrument', () => practice.voicesOn.includes(name),
+                toggle(voiceLabel(name), voiceLabel(name) + ': lyrics this score does not sing - silent unless pressed; pressed, the voice sings in place of the instrument', () => practice.voicesOn.includes(name),
                     () => { practice.voicesOn = practice.voicesOn.includes(name) ? without(practice.voicesOn, name) : practice.voicesOn.concat([name]); },
                     'voice extra', name, practice.voiceLevels, name);
             }

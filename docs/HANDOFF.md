@@ -147,7 +147,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`singer` も声の `instrument` もない歌詞は歌わないことにした**（持ち主の決定 2026-11-10）。判定は `LyricSinger.SungReaderOf` の 1 か所（`InstrumentDefaults.IsVoice`）。楽器の指定がなく声の指定もない歌詞の譜はピアノで鳴る（持ち主の決定 2026-11-10。Choir Aahs の代役は声を指定したパートだけ）。設計は `singing-design.md` §3。声部を名指しした行（`sings alt`）の `singer` が届いていなかった不具合も直した。⚠️ 歌う挙動の確認は実機未（`MANUAL-CHECKS` の第1217）。
 - **`singer` の補完で声が 1 つも無いときのガイドを足した**（持ち主の依頼）。一覧の先頭の項目（毎回）と通知（セッションで 1 度）。歌詞の言語を歌える声が 0 のときも案内する（`noLanguageGuide`・英語は DiffSinger の `dsdict-en.yaml`、中国語と韓国語は Cantoria のエンジンが未対応と言う）。項目と戻り値は実物の VS Code で 5 通り確認（Cantoria なし／声 0／声あり／英語／韓国語＝偽の Cantoria・Lab `sessions/p1217/vscode-e2e`）。通知の見た目とボタンの動きは未確認（`MANUAL-CHECKS` の第1217）。
 - **オクターブ変換がパートの中の未演奏の `section` を読むようにした**（持ち主の報告・Rose Garden の J と K）。`OctaveModeConverter.ProbeFor` が直下の節だけ見ていた。その曲で相対へ変換し、往復の一致と、J・K を form に足した SVG と MIDI の一致を確認（Lab `sessions/p1217/rose`。持ち主のファイルは書き換えていない）。
-- **練習メニューの声の行を `♪ 歌詞の名前 sings パート` にし、状態の印を ▶ と同じマイクにした**（持ち主の依頼）。内部のキーはパート名のまま（`voiceMenuLabel`）。隔離した VS Code のプレビューで表示と CSS の色・位置を確認（Lab `sessions/p1217/vscode-e2e/mic`）。`white-space: nowrap` は狭いプレビューで × を画面外へ押し出すので入れない。本物の声での状態の遷移は実機未（`MANUAL-CHECKS` の第1217）。
+- **練習メニューの声の行を `歌詞の名前 sings パート` にし、状態の印を ▶ と同じマイクにした**（持ち主の依頼）。内部のキーはパート名のまま（`voiceMenuLabel`）。隔離した VS Code のプレビューで表示と CSS の色・位置を確認（Lab `sessions/p1217/vscode-e2e/mic`）。`white-space: nowrap` は狭いプレビューで × を画面外へ押し出すので入れない。本物の声での状態の遷移は実機未（`MANUAL-CHECKS` の第1217）。
 - **歌詞の名前にパート名・声部名を使えなくした**（持ち主の決定 2026-11-10。LYS7008）。名前は区別するだけで、歌う先は `sings`。`RenderSpecParser.RowBindsToPart` の名前の枝を落とした。名前が同じ歌詞が別の譜の下で歌わなかった不具合は、この形が書けなくなったので消えた。
 - OMR の repo は `C:\MyProj\Calamo` に改名されていたので、§0 の REQUESTS のパスを直した。
 
