@@ -368,6 +368,10 @@ public class ScoreReviewTests
         Assert.Empty(ShortVariations(Variations(("Theme", 8), ("Coda", 2), ("ThemeReturn", 4))));
         // Without a section that names the theme, there is nothing to measure against.
         Assert.Empty(ShortVariations(Variations(("A", 8), ("Var1", 4))));
+        // A theme's pickup is no bar (Shudai-to-Hensou, 2026-11-11: counted, it made 16 bars 17).
+        string pickup = Variations(("Theme", 8), ("Var1", 8)).Replace("section Theme { m { ", "section Theme { partial 4 m { b'4 | ");
+        Assert.Empty(ShortVariations(pickup));
+        Assert.Single(ShortVariations(Variations(("Theme", 8), ("Var1", 7)).Replace("section Theme { m { ", "section Theme { partial 4 m { b'4 | ")));
     }
 
     private const string TwoParts = """

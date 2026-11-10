@@ -1759,7 +1759,18 @@ public static class CompositionChecks
         var theme = spans.FirstOrDefault(s => ThemeSection.IsMatch(s.Name));
         if (theme.Name == null)
             yield break;
-        int BarsOf(int start, int end) => 1 + midi.BarTicks.Count(b => b > start && b < end);
+        // In whole bars of the section's own meter: a pickup is no bar, and a pickup with the short
+        // bar that ends on it makes one (Shudai-to-Hensou, 2026-11-11: a theme of 16 bars after an
+        // eighth's pickup was counted 17, and the chat cut the pickup to match its variations).
+        int BarsOf(int start, int end)
+        {
+            var lines = midi.BarTicks.Where(b => b > start && b < end).OrderBy(b => b).Prepend(start).Append(end).ToList();
+            var lengths = lines.Zip(lines.Skip(1), (a, b) => b - a).Where(l => l > 0).ToList();
+            if (lengths.Count == 0)
+                return 0;
+            int bar = lengths.GroupBy(l => l).OrderByDescending(g => g.Count()).ThenByDescending(g => g.Key).First().Key;
+            return (end - start + bar / 16) / bar;
+        }
         int bars = BarsOf(theme.Start, theme.End);
         var cut = spans.Where(s => VariationSection.IsMatch(s.Name)).Select(s => (s.Name, Bars: BarsOf(s.Start, s.End)))
             .Where(v => v.Bars < bars).ToList();
