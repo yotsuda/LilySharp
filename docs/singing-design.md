@@ -7,6 +7,9 @@ found, what was decided, and the design: Lily# resolves the sung part to a score
 a separate engine turns it into a voice, and the editor plays that voice beside the synth.
 LILYSHARP-OWN throughout — LilyPond writes no sound.
 
+The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
+`docs/lyrics-singer-design.md` and `GRAMMAR.md` say what is written now.
+
 ## 1. What was found (2026-11-08)
 
 - **OpenUtau** (MIT, C#) has the best open singing stack — its DiffSinger inference is C# over

@@ -363,6 +363,9 @@ What makes it music:
     `singer male "neutrino/SOMA" sings words` is a voice with its gender said, the gender narrowing
     what the editor offers. `staff sop sounds both` plays the instrument with the voice;
     `staff sop hidden` sings without drawing the staff.
+    Where parts have different words, name each part's in its header, `part ten { instrument
+    baritone  lyrics mw }`, and `singer male sings on ten` sings them: a row or a line that gives
+    that part other words is then warned about.
 - **A song to sing and play yourself** (弾き語り; "a song with chords and lyrics", "for guitar and
   voice"): a lead sheet with the guitar's chord diagrams, not a written guitar staff.
   - **The voice**: `instrument alto` (F3–F5) for a woman's song and when the request names no

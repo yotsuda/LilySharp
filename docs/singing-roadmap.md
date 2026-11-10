@@ -5,6 +5,9 @@ owner's request, after stages 1–4 of `docs/singing-design.md` §7 had shipped 
 1124–1131). The design itself stays in `singing-design.md`; this page is the order of work and
 the reasons. What is being worked on *now* is `HANDOFF.md` §1.0, as always.
 
+The score spellings here (`lyrics NAME sings PART`, `singer` on a track) were replaced on 2026-11-10:
+`docs/lyrics-singer-design.md` and `GRAMMAR.md` say what is written now.
+
 ## 0. The goal
 
 **Lily# as the notation editor that sings — through whichever engine the user has.** The owner's

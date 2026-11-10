@@ -1514,7 +1514,7 @@ ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { Chord
                     'pitch' moves it, and neither does the staff a row stands above. Any one
                     block of a name says it - another may repeat it or omit it, and a different
                     part is LYS7007; a PART that is no part is LYS7006. 'for' is contextual,
-                    as the lyrics' 'sings' is. Switching PART's typed 'pitch' (the step keys)
+                    as a SingerDecl's 'sings' is. Switching PART's typed 'pitch' (the step keys)
                     respells the track with PART's notes. *)
 ChordRowEntry  = ( ChordEntry | RomanEntry ) , [ '(' , ShapeWords , ')' ] , [ TodoMark ] ;   (* '(' GLUED to the symbol;
                                                                     the symbol's own '(' list (C7(b9, #11)) comes
@@ -1670,7 +1670,7 @@ VoicePart      = [ Identifier ] , MusicBlock ;
 
    ONE voice { } is transparent — up/down stem forcing needs a second voice — so it
    engraves exactly like the music without it, and an UNNAMED lone voice warns (LYS4011).
-   A named one does not: its name is what a 'lyrics NAME { }' block binds to. *)
+   A named one does not: its name is what a row's or a SingerDecl's 'on' follows. *)
 
 ### 5.2 Drum chart (one drum staff)
 
@@ -3181,7 +3181,7 @@ section Verse {
 }
 
 // A staff-less lead sheet (chords + lyrics, no notes). Its lyric row is its
-// own track (no `sings`): with no melody to sing, the syllables spread evenly.
+// own track (no staff above it, no `on`): with no melody, the syllables spread evenly.
 section Sheet {
   chords prog  { C Am | }
   lyrics sheetWords { Twin- kle twin- kle | }

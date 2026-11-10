@@ -1879,17 +1879,15 @@ c4 d e f |       // 'once' applies to the next note only
 
 A track takes a name of its own: the name of a part or of a named voice is an error (LYS7008). A `lyrics` track is words alone: a score row prints it, and a `singer` line sings it.
 
-Lyrics bind to their **default melody at the definition** — `lyrics NAME on PART`
-— and the score places them, by ORDER: a `lyrics NAME` row directly below
-the staff engraving PART is that staff's verse (a run of rows stacks as
-verses); anywhere else it draws **only the words, at the melody's rhythm**,
-without engraving the melody — a part sheet carrying the chorus words. A score
-row may name **its own** melody — `lyrics NAME on OTHER` — which overrides
-the default for that placement: one verse written once and placed under every
-staff of a chorale (`staff alt  lyrics verse`). Several tracks may
-sing the same part (Japanese and English words, a parody). A track whose name
-matches the part (or one of its voices) is bound by the name alone; a track
-with no binding is the even-spread lead-sheet row.
+What a track follows is **the score's to say**, by ORDER: a `lyrics NAME` row directly below
+a staff is that staff's verse (a run of rows stacks as verses), and one verse written once is
+placed under every staff of a chorale (`staff alt  lyrics verse`). `lyrics NAME on PART`
+follows another part's or a named voice's melody; under another staff it draws **only the
+words, at that melody's rhythm**, without engraving the melody — a part sheet carrying the
+chorus words. `on` belongs to the row: a definition takes none, and `lyrics NAME on PART { … }`
+is an error. Several tracks may follow one part (Japanese and English words, a parody). A row
+with no staff above it and no `on` follows the part that names its track when exactly one does
+(below), and is otherwise the even-spread lead-sheet row.
 
 ```
 part melody
@@ -1926,17 +1924,37 @@ on a line of its own for the whole file, or on a track, `lyrics en language engl
 
 **Who sings** is a top-level line of its own: `singer "neutrino/MERROW" sings verse on melody`,
 in that order. A score's `lyrics` row prints the words and sounds nothing; only a `singer` line
-sings, whether the page shows the words or not. A name with a `/` is a voice; names with commas
-between them sing the part together (`singer "neutrino/MERROW","diffsinger/TIGER" sings verse`).
+sings, whether the page shows the words or not. A name with a `/` is a voice. Each line is one
+voice: several lines with the same words on one part sing it together.
 `male` or `female` is that gender's default voice (each machine's setting, else the first installed
 voice of that gender that sings the words' language), `singer sings verse` the part's own default
 voice, and the gender before a name (`singer male "neutrino/SOMA" sings verse`) leaves out of the
 editor's offers the voices that say they are the other; another word there is an error (LYS4040).
 Leave out `on PART` when the file has one part, or every score prints the words under one part. A
-part takes one `singer` line. A voice that cannot be had sings as the default voice of the part's
+part sings one set of words in a scope (LYS4044): at the top level, or in one score, where a
+`singer` line replaces the top level's lines for its part. A voice that cannot be had sings as the default voice of the part's
 gender, said once. Between the quotes the editor offers the voices that sing the words' language;
 on a `singer "…"`, `Ctrl+Shift+Up` / `Down` step through those voices and `Ctrl+Shift+PageUp` /
 `PageDown` go to the first voice of another engine, the chosen voice heard in the preview.
+
+**A part's own words** are named in its header, with no braces: it defines nothing.
+
+```
+part sop { instrument soprano  lyrics words }
+part ten { instrument baritone lyrics mw }
+singer female sings on sop        // sings the words the part names
+```
+
+With no name a `singer` line sings the track its part names; where the part names several that is
+an error (LYS4054), and a name is written. A part may name several tracks, one statement each. A
+track a part does not list, named on a `singer` line or on a row for that part, is warned about
+(LYS4055), which catches a part printing one track and singing another. A part that lists no track
+is not checked. Words themselves (`lyrics NAME { … }`) are not written inside a part (LYS4049).
+
+**Words the file does not write**: `hum` and `solfege` are track names made from the notes, with no
+`lyrics { }` block. `singer female sings hum on sop` hums on ん; `singer female sings solfege on alt`
+sings the note names, and the row `lyrics solfege` prints them under the notes (`lyrics hum` is an
+error, LYS4050: there is nothing to print). Solfege is movable do, in the file's `language`.
 
 **What a staff sounds** is the score's: `staff PART [hidden] [sounds voice|instrument|both]` (a `tab`
 too). With no `sounds` a part a `singer` line sings is a voice, any other its instrument; two staves

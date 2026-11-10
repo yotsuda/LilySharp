@@ -823,6 +823,12 @@ sings hum on sop` hums, and `singer female sings solfege on alt` sings the note 
 (movable do, in the file's `language`). The score row `lyrics solfege` prints the names
 under the notes; `lyrics hum` is an error (LYS4050), there being nothing to print.
 
+A part may name its words in its header: `part sop { instrument soprano  lyrics words }`,
+no braces, one statement a track. `singer female sings on sop` then sings them with no name
+(several named: write the name, LYS4054). A track the part does not list, on a `singer` line or
+on a row for that part, is warned about (LYS4055). The words themselves stay outside the part
+(`lyrics NAME { … }` in a part is LYS4049), and `on` belongs to a score row, never to a definition.
+
 A `lyrics NAME { … }` track sits in a section next to its part; the score
 places it with a `lyrics NAME` row under the staff. Syllables are separated by
 spaces; `-` joins syllables of one word; `|` mirrors the music's barlines. Barlines

@@ -1,7 +1,9 @@
-# Lyrics and singers: the grammar to build
+# Lyrics and singers: the grammar
 
-The owner's decisions of 2026-11-10 (session 1217), reached over one long discussion. Nothing here is
-built yet. It replaces `sings` / `singer` on lyrics and `singer` on a part; compatibility is not a cost.
+The owner's decisions of 2026-11-10 (session 1217), reached over one long discussion, and built in sessions
+1217 to 1222. It replaced `sings` / `singer` on lyrics and `singer` on a part; compatibility was not a cost.
+The reference is `GRAMMAR.md`; this page says why. The notes in `singing-design.md` and
+`singing-roadmap.md` that write `lyrics NAME sings PART` are from before it.
 
 ## 1. The idea
 
@@ -17,6 +19,7 @@ A track's name only names it. `on` says which part's notes the words follow.
 
 ```
 lyrics [NAME] [language L] { … }                       // definition: the words only
+part PART { lyrics NAME }                              // the words this part sings (section 10)
 singer [S] sings [NAME] [on PART]                      // at the top level, or inside a score
 
 score {
@@ -123,8 +126,8 @@ cannot have two singers; a sung part's instrument stays off in bars with no word
    the reserved words. Repository books, tests, docs and the composing guide.
    The owner's books are rewritten by machine, adding `singer sings …` where a voice instrument sang and
    `staff PART hidden` where words sang a part no staff showed. `LysWriter` (MusicXML import) writes `on`.
-   **Calamo generates `lyrics … sings` (`src/Omr/Program.cs`, `src/OmrGen/Program.cs`): tell it in
-   `docs/repro/REQUESTS.md` before the old spelling becomes an error.**
+   Calamo generated `lyrics … sings` (`src/Omr/Program.cs`, `src/OmrGen/Program.cs`): told in its
+   `docs/repro/REQUESTS.md` (2026-11-10, sessions 1217 and 1222).
 2. Singing words no row prints (syllables come from a page of the score read and never drawn:
    `LyricSinger.WithSungWords` puts a line's words on its part's staff, on a staff it adds for a part with
    none of its own, and moves a sung track's rows there too; sessions 1221, 1222), and the practice menu of
