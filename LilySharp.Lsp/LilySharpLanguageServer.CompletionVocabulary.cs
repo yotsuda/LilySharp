@@ -2414,7 +2414,33 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>The lyrics tracks a score's <c>lyrics ▮</c> row offers. The row follows the staff
     /// above it, so the name alone is what it takes.</summary>
     internal static CompletionList GetLyricsRowNameCompletions(string text, int offset)
-        => GetDeclaredNameCompletions(text, "lyrics", "Lyrics part");
+        => new() { Items = [.. GetDeclaredNameCompletions(text, "lyrics", "Lyrics part").Items, .. GeneratedLyricsItems(forSinger: false)] };
+
+    /// <summary>The words a file need not write (docs/lyrics-singer-design.md §6): a singer can
+    /// hum or sing the note names, and a row can print the note names (humming has nothing to print).</summary>
+    private static CompletionItem[] GeneratedLyricsItems(bool forSinger)
+    {
+        var solfege = new CompletionItem
+        {
+            Label = LilySharp.Core.Music.GeneratedLyrics.Solfege,
+            Kind = CompletionItemKind.Keyword,
+            Detail = "The note names, made from the notes",
+            SortText = "8b",
+        };
+        return forSinger
+            ?
+            [
+                new CompletionItem
+                {
+                    Label = LilySharp.Core.Music.GeneratedLyrics.Hum,
+                    Kind = CompletionItemKind.Keyword,
+                    Detail = "Hums the notes",
+                    SortText = "8a",
+                },
+                solfege,
+            ]
+            : [solfege];
+    }
 
 
     /// <summary>The <c>on</c> keyword item a lyrics ROW offers after its track

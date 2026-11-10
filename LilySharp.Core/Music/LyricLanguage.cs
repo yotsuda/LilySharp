@@ -74,6 +74,7 @@ public static class LyricLanguage
         foreach (var block in root.DescendantNodes<LyricsBlockSyntax>())
             if (block.VoiceName is { } track && CodeOf(block.Language) is { } code)
                 tracks.TryAdd(track, code);
-        return track => track != null && tracks.TryGetValue(track, out var code) ? code : file;
+        return track => track == GeneratedLyrics.Hum ? GeneratedLyrics.HumLanguage
+            : track != null && tracks.TryGetValue(track, out var code) ? code : file;
     }
 }

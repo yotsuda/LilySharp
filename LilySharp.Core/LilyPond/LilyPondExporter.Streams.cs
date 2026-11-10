@@ -419,7 +419,8 @@ public sealed partial class LilyPondExporter
     {
         if (render == null)
             return;
-        if (!tree.GetRoot().DescendantNodes<LyricsBlockSyntax>().Any())
+        if (!tree.GetRoot().DescendantNodes<LyricsBlockSyntax>().Any()
+            && !render.DescendantNodes<LyricsRowRenderSyntax>().Any(r => Music.GeneratedLyrics.IsGenerated(r.PartName)))
             return;
         if (PageModel(tree, render) is not { } score || score.Lyrics.IsDefaultOrEmpty)
             return;

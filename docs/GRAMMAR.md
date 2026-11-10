@@ -1426,7 +1426,17 @@ PartBlock      = PartName , MusicBlock ;
    of a part or of a named voice is refused for a track (LYS7008, owner's decision
    2026-11-10), as are 'on', 'hum' and 'solfege' (LYS4048). A track inside a part is
    LYS4049. A row with neither a staff above it nor 'on' keeps the even-spread
-   lead-sheet reading (§7). *)
+   lead-sheet reading (§7).
+
+   'hum' and 'solfege' need no definition: they are made from the notes they follow.
+   'singer S sings hum on PART' hums each note on ん ('lyrics hum' is LYS4050: there is
+   nothing to print). 'singer S sings solfege on PART' sings the note names, and the row
+   'lyrics solfege' prints them under the notes (it needs a staff above it or 'on', LYS4051).
+   Movable do: the key signature's major tonic is do, so a minor key's tonic is la, and a
+   'key' change moves it. An altered note takes the name of its letter. The file's
+   'language' picks the words: ドレミファソラシ, do re mi fa sol la ti, 哆来咪发唆拉西,
+   도레미파솔라시. One name a note: a tied-into note, a rest and a grace note take none, a
+   chord takes its top note. Under written words the names stand on the next row. *)
 LyricsBlock    = 'lyrics' , [ Identifier ] , [ 'language' , LanguageName ] , '{' , { LyricMeasure | LyricVerse } , '}' ;
                  (* 'lyrics language { ... }' is a track named language. A track's language is the
                     first block of that name that writes one. *)

@@ -125,4 +125,6 @@ cannot have two singers; a sung part's instrument stays off in bars with no word
 3. Done (session 1218). Inside a group a row with `on` may stand anywhere, on its own band; a track on one
    part placed twice in a group is warned about (LYS6015). Measured against LilyPond 2.26.0 under `choirStaff`,
    `staffGroup` and `grandStaff`: staff distance, row height and syllable positions agree.
-4. `hum` and `solfege`.
+4. Done (session 1219), but for the ear: `hum` and `solfege` are built as section 6 says, in
+   `Music/GeneratedLyrics`. Under written words the names stand on the next row. `ん` held long has not
+   been heard on an engine; ら is the fallback. A hum is Japanese whatever the file's language.

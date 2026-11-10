@@ -1097,7 +1097,7 @@ public sealed partial class MeasureCollector
         if (attachedLyricParts is { Count: > 0 })
             _lyricsCollector.CollectAttached(tree.GetRoot(), attachedLyricParts, measures, 0,
                 _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts,
-                voiceName == null ? null : renderSpec?.VerseVoiceMapOf(voiceName));
+                voiceName == null ? null : renderSpec?.VerseVoiceMapOf(voiceName), _v.Meta.InitialKeySharps);
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         _chordNameCollector.MeterByMeasure = MeterTimeline(measures, _v.Meta.TimeBeats, _v.Meta.TimeBeatType);
@@ -1925,7 +1925,8 @@ public sealed partial class MeasureCollector
                     if (!melody.IsDefaultOrEmpty)
                     {
                         _lyricsCollector.CollectBoundRow(tree.GetRoot(), name, idx,
-                            melody.ToList(), _sectionState.StartMeasure, _sectionState.AllStarts);
+                            melody.ToList(), _sectionState.StartMeasure, _sectionState.AllStarts,
+                            voiceKeyDict.TryGetValue(sings, out var sungKey) ? sungKey.Sharps : _v.Meta.InitialKeySharps);
                         staffVoices[name] = ImmutableArray.Create(new Voice(name, SpacerSkeleton(melody)));
                         if (unseen)
                             rowMelodies[name] = (sings, melody);
@@ -2078,7 +2079,8 @@ public sealed partial class MeasureCollector
                     lyStaffVoices[0].Measures.ToList(), group.Key.StaffIndex,
                     _lyricsRowNames, NamedVoiceTracks(tree.GetRoot(), group.Key.StaffVoice, lyStaffVoices),
                     _sectionState.StartMeasure, _sectionState.AllStarts,
-                    renderSpec.VerseVoiceMapOf(group.Key.StaffVoice));
+                    renderSpec.VerseVoiceMapOf(group.Key.StaffVoice),
+                    voiceKeyDict.TryGetValue(group.Key.StaffVoice, out var staffKey) ? staffKey.Sharps : _v.Meta.InitialKeySharps);
         }
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
@@ -2722,7 +2724,7 @@ public sealed partial class MeasureCollector
         if (attachedLyricParts is { Count: > 0 })
             _lyricsCollector.CollectAttached(root, attachedLyricParts, track0, 0,
                 _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts,
-                voiceName == null ? null : renderSpec?.VerseVoiceMapOf(voiceName));
+                voiceName == null ? null : renderSpec?.VerseVoiceMapOf(voiceName), _v.Meta.InitialKeySharps);
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         _chordNameCollector.MeterByMeasure = MeterTimeline(track0, _v.Meta.TimeBeats, _v.Meta.TimeBeatType);

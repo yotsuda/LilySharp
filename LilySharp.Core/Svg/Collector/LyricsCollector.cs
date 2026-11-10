@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -103,10 +104,11 @@ internal sealed class LyricsCollector
         IReadOnlyDictionary<string, (int Index, List<Measure> Measures)> voiceMeasuresByName,
         IReadOnlyDictionary<string, int> sectionStartMeasure,
         IReadOnlyDictionary<string, List<int>>? sectionAllStarts = null,
-        IReadOnlyDictionary<string, string>? voiceOfTrack = null)
+        IReadOnlyDictionary<string, string>? voiceOfTrack = null,
+        int openingSharps = 0)
         => CollectNoteBound(root, measures, lyricsRowNames, voiceMeasuresByName,
             sectionStartMeasure, sectionAllStarts, onlyBlocks: blockNames, staffIndex: staffIndex,
-            voiceOfTrack: voiceOfTrack);
+            voiceOfTrack: voiceOfTrack, openingSharps: openingSharps);
 
     /// <summary>
     /// Collects note-bound lyrics from every <c>lyrics { … }</c> block (skipping the
@@ -133,10 +135,12 @@ internal sealed class LyricsCollector
         IReadOnlyList<string>? onlyBlocks = null,
         int staffIndex = 0,
         bool asRow = false,
-        IReadOnlyDictionary<string, string>? voiceOfTrack = null)
+        IReadOnlyDictionary<string, string>? voiceOfTrack = null,
+        int openingSharps = 0)
     {
         var lyricsBlocks = root.KindSites(SyntaxKind.LyricsBlock).OfType<LyricsBlockSyntax>().ToList();
-        if (lyricsBlocks.Count == 0)
+        bool generates = onlyBlocks != null && onlyBlocks.Any(GeneratedLyrics.IsGenerated);
+        if (lyricsBlocks.Count == 0 && !generates)
             return;
 
         var defaultIndices = BuildNoteIndices(measures);
@@ -252,6 +256,59 @@ internal sealed class LyricsCollector
                     ProcessRun(FirstVerse(lyricsBlock.Syllables.ToList()),
                         ResolveStartMeasure(lyricsBlock, sectionStartMeasure));
             }
+        }
+
+        // The words no block holds stack under the ones that are written.
+        if (generates)
+            foreach (var track in onlyBlocks!.Where(GeneratedLyrics.IsGenerated))
+            {
+                var source = measures;
+                int voiceId = 0;
+                if (voiceMeasuresByName.TryGetValue(
+                        voiceOfTrack != null && voiceOfTrack.TryGetValue(track, out var sung) ? sung : track, out var bound))
+                {
+                    source = bound.Measures;
+                    voiceId = bound.Index;
+                }
+                int verse = nextVerseByStart.Values.DefaultIfEmpty(1).Max();
+                PlaceGenerated(root, track, source, voiceId, verse, staffIndex, asRow, openingSharps);
+                nextVerseByStart[0] = verse + 1;
+            }
+    }
+
+    /// <summary>One line of a generated track (<see cref="GeneratedLyrics"/>): a word on each note
+    /// the line sings, none on a tied-into note, a grace note or a rest (<see cref="BuildNoteIndices"/>),
+    /// each read in the key its bar stands in (a <c>key</c> change moves do).</summary>
+    private void PlaceGenerated(SyntaxNode root, string track, List<Measure> source, int voiceId, int verse,
+        int staffIndex, bool asRow, int openingSharps)
+    {
+        string language = track == GeneratedLyrics.Hum ? GeneratedLyrics.HumLanguage : LyricLanguage.ReaderOf(root)(track);
+        int sharps = openingSharps, walkedMeasure = 0, walkedItem = 0;
+        foreach (var note in BuildNoteIndices(source))
+        {
+            while (walkedMeasure < note.MeasureIndex || (walkedMeasure == note.MeasureIndex && walkedItem <= note.ItemIndex))
+            {
+                var items = source[walkedMeasure].Items;
+                if (walkedItem >= items.Length)
+                {
+                    walkedMeasure++;
+                    walkedItem = 0;
+                    continue;
+                }
+                if (items[walkedItem] is KeySignatureChangeItem change)
+                    sharps = change.NewKey.Sharps;
+                walkedItem++;
+            }
+            if (note.TieHeld)
+                continue;
+            var item = source[note.MeasureIndex].Items[note.ItemIndex];
+            if (GeneratedLyrics.TextOf(track, item, sharps, language) is not { } text)
+                continue;
+            var lyric = new LyricItem(text, note.MeasureIndex, note.ItemIndex, VoiceId: voiceId, VerseNumber: verse,
+                Timing: note.Timing, SourcePosition: item.SourcePosition, GeneratedTrack: track);
+            _lyrics.Add(asRow
+                ? lyric with { StaffIndex = staffIndex, VoiceId = staffIndex, IsLyricsRow = true }
+                : staffIndex == 0 ? lyric : lyric with { StaffIndex = staffIndex });
         }
     }
 
@@ -399,7 +456,8 @@ internal sealed class LyricsCollector
         SyntaxNode root, string trackName, int staffIndex,
         List<Measure> melody,
         IReadOnlyDictionary<string, int> sectionStartMeasure,
-        IReadOnlyDictionary<string, List<int>>? sectionAllStarts)
+        IReadOnlyDictionary<string, List<int>>? sectionAllStarts,
+        int openingSharps = 0)
         => CollectNoteBound(root, melody,
             lyricsRowNames: new HashSet<string>(),
             voiceMeasuresByName: new Dictionary<string, (int Index, List<Measure> Measures)>
@@ -407,7 +465,7 @@ internal sealed class LyricsCollector
                 [trackName] = (staffIndex, melody),
             },
             sectionStartMeasure, sectionAllStarts,
-            onlyBlocks: new[] { trackName }, staffIndex: staffIndex, asRow: true);
+            onlyBlocks: new[] { trackName }, staffIndex: staffIndex, asRow: true, openingSharps: openingSharps);
 
     /// <summary>
     /// Collects an independent lyrics row (<c>lyrics name { … }</c> placed via

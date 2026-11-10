@@ -53,7 +53,7 @@ internal static class SungSyllables
         var result = new List<SungSyllable>();
         var root = tree.GetRoot();
         var blocks = root.DescendantNodes<LyricsBlockSyntax>().ToList();
-        if (blocks.Count == 0)
+        if (blocks.Count == 0 && !spec.HasGeneratedLyrics)
             return result;
 
         var bound = WithUnboundRowsBound(root, spec);
@@ -113,7 +113,8 @@ internal static class SungSyllables
                 : (StaffSungItem(staves[lyric.StaffIndex], lyric), staves[lyric.StaffIndex].PrimaryVoice.Name);
             if (item == null || part == null || !printing.TryGetValue(item, out int k))
                 continue;
-            var track = blocks.FirstOrDefault(b => lyric.SourcePosition >= b.Span.Start && lyric.SourcePosition < b.Span.End)?.VoiceName;
+            var track = lyric.GeneratedTrack
+                ?? blocks.FirstOrDefault(b => lyric.SourcePosition >= b.Span.Start && lyric.SourcePosition < b.Span.End)?.VoiceName;
             result.Add(new SungSyllable(lyric, item, k, part, track, readings.GetValueOrDefault(lyric.SourcePosition)));
         }
         return result;

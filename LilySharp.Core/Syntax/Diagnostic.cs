@@ -1650,8 +1650,8 @@ public static class DiagnosticCodes
     /// <summary>Lyrics written inside a part.</summary>
     public const string LyricsInsidePart = "LYS4049";
 
-    /// <summary><c>singer … sings hum|solfege</c>, not built yet.</summary>
-    public const string SingerGeneratedWordsNotYet = "LYS4050";
+    /// <summary>A score row <c>lyrics hum</c>: humming has no words to print.</summary>
+    public const string LyricsHumNotPrinted = "LYS4050";
 
     /// <summary>A lyrics row with no <c>on</c> directly under a staff of several parts.</summary>
     public const string LyricsRowNeedsOn = "LYS4051";

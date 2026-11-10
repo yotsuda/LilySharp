@@ -119,7 +119,8 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
         foreach (var (token, isChord) in tracks.References)
         {
             string keyword = isChord ? "chords" : "lyrics";
-            if ((isChord ? tracks.ChordTracks : tracks.LyricTracks).Contains(token.Text))
+            if ((isChord ? tracks.ChordTracks : tracks.LyricTracks).Contains(token.Text)
+                || (!isChord && Music.GeneratedLyrics.IsGenerated(token.Text)))     // made from the notes: nothing to define
                 continue;
             _diagnostics.Error(token.Span, DiagnosticCodes.UndefinedPart,
                 $"Undefined {keyword} part: '{token.Text}'. Define it with a named block "

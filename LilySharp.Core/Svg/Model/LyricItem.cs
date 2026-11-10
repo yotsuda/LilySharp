@@ -127,7 +127,11 @@ public sealed record LyricItem(
 
     // How many rows past its run's first this syllable stands: words past the last bar wrap to
     // the next row. The MusicXML counts a verse from it (MusicXmlExporter.WriteLyrics).
-    int WrapRow = 0
+    int WrapRow = 0,
+
+    // The reserved track that made this syllable from its note (Music.GeneratedLyrics): no
+    // lyrics block holds it, so its source position cannot say which track it is.
+    string? GeneratedTrack = null
 )
 {
     // Identity, not value equality: see ModelIdentity.

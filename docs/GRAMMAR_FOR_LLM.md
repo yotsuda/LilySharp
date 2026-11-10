@@ -818,6 +818,11 @@ alt`). Inside a staff group a row with `on` may stand anywhere, on its own band;
 without `on` needs a plain staff directly above it (LYS6012), and the same words on the
 same part twice in one group are warned about (LYS6015).
 
+Two track names need no `lyrics { }` block, being made from the notes: `singer female
+sings hum on sop` hums, and `singer female sings solfege on alt` sings the note names
+(movable do, in the file's `language`). The score row `lyrics solfege` prints the names
+under the notes; `lyrics hum` is an error (LYS4050), there being nothing to print.
+
 A `lyrics NAME { … }` track sits in a section next to its part; the score
 places it with a `lyrics NAME` row under the staff. Syllables are separated by
 spaces; `-` joins syllables of one word; `|` mirrors the music's barlines. Barlines

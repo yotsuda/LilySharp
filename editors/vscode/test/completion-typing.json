@@ -1020,6 +1020,7 @@
     ["score-body>condensedStaff", "tenor"],
     ["score-body>condensedStaff", "bass"],
     ["score-body>lyrics", "words"],
+    ["score-body>lyrics", "solfege"],
     ["layout>markTempo", "stacked"],
     ["layout>markTempo", "beside"],
     ["layout>barNumbers", "lines"],

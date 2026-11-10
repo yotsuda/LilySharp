@@ -156,9 +156,9 @@ public class SingsCompletionTests
     public void PickingTheRowsTrack_WritesItsName()
     {
         const string head = "part guitar\nlyrics words { section A { la | } }\nsection A { guitar { c4 | } }\nform { A }\nscore {\n  staff guitar\n  lyrics ";
-        var item = Assert.Single(LilySharpLanguageServer.GetLyricsRowNameCompletions(head + "\n}\n", head.Length).Items);
-        Assert.Equal("words", item.Label);
-        Assert.Null(item.Command);
+        var items = LilySharpLanguageServer.GetLyricsRowNameCompletions(head + "\n}\n", head.Length).Items;
+        Assert.Equal(new[] { "words", "solfege" }, items.Select(i => i.Label));   // humming has nothing to print
+        Assert.Null(items[0].Command);
     }
 
     private static string[] LabelsAt(string text, int offset)

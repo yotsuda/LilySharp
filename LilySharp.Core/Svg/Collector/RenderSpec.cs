@@ -540,6 +540,10 @@ public sealed record RenderSpec(
     /// multi-staff-pipeline requirement as <see cref="HasChordRow"/>).</summary>
     public bool HasLyricsRow => Items.Any(i => i is LyricsRowSpec);
 
+    /// <summary>Whether this render places a track made from the notes (<see cref="Music.GeneratedLyrics"/>).</summary>
+    public bool HasGeneratedLyrics => AllLyricsRows.Any(r => Music.GeneratedLyrics.IsGenerated(r.PartName))
+        || GetVoiceBindings().Any(b => b.WithLyrics.Any(Music.GeneratedLyrics.IsGenerated));
+
     /// <summary>The score's independent lyrics rows in stacking order, those standing inside a
     /// staff group included (a row a group keeps on its own band: <c>on</c> another part).</summary>
     public IEnumerable<LyricsRowSpec> AllLyricsRows => LyricsRowsIn(Items);

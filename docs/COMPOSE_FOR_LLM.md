@@ -393,7 +393,8 @@ What makes it music:
     chord), a tune of its own, or the strum's pattern changed there — not the same four chords
     walked from another one of them under the verse's tune again.
   - **Who sings**: as *A song with words* says: `singer "…" sings words on melody`, a name
-    `lilysharp_listVoices` gave.
+    `lilysharp_listVoices` gave. A part with no words to sing can hum (`singer "…" sings hum on
+    harmony`) or sing the note names (`sings solfege on harmony`), with no lyrics block.
   - **The singer breathes**: every line of words ends on a longer note with a rest after it (a
     bar's last beat, at least), never four quarters in every bar from the first word to the last.
   - **The diagrams, always**: `layout { chordDiagrams all  chordList true }` — every chord draws

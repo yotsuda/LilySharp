@@ -113,7 +113,13 @@ internal sealed class LyricSingsValidator : ISemanticValidator
 
         foreach (var row in root.DescendantNodes<LyricsRowRenderSyntax>())
         {
-            if (row.SingsTarget == null && LyricBindings.TargetOf(root, row.PartName) == null)
+            if (row.PartName == GeneratedLyrics.Hum)
+                _diagnostics.Error(row.LyricsKeyword.Span, DiagnosticCodes.LyricsHumNotPrinted,
+                    "Humming has no words to print: 'singer sings hum on PART' sings it.");
+            else if (row.PartName == GeneratedLyrics.Solfege && RenderSpecParser.RowTarget(row) == null)
+                _diagnostics.Error(row.LyricsKeyword.Span, DiagnosticCodes.LyricsRowNeedsOn,
+                    "The note names follow notes: say whose, 'lyrics solfege on PART'.");
+            else if (row.SingsTarget == null && LyricBindings.TargetOf(root, row.PartName) == null)
             {
                 RenderSpecParser.NearestStaffAbove(row, out bool severalParts);
                 if (severalParts)
@@ -228,9 +234,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             if (node.SingsKeyword == null)
                 continue;   // the parser said so
             var at = node.TrackToken ?? node.SingsKeyword;
-            if (line.Track is "hum" or "solfege")
-                _diagnostics.Error(at.Span, DiagnosticCodes.SingerGeneratedWordsNotYet, $"Singing '{line.Track}' is not built yet.");
-            else if (!tracks.Contains(line.Track))
+            if (!GeneratedLyrics.IsGenerated(line.Track) && !tracks.Contains(line.Track))
                 _diagnostics.Error(at.Span, DiagnosticCodes.SingerWordsUnknown,
                     node.TrackToken == null ? "This file has no unnamed lyrics to sing." : $"No lyrics are named '{line.Track}'.");
             if (node.OnToken is { } on)
