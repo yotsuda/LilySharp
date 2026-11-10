@@ -267,6 +267,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1217セッションの経緯
+
+### 1.1 第1217セッション（2026-11-10・YT-DELL2）
+
+- **OMR の REQUESTS #25 を `@shiftOff` で閉じた**（持ち主の決定「音ごとの `@shiftOff`」）。`voice { } { }` の中で、その音の列の horizontal-shift を 0 に読む（`NoteCollision.HorizontalShift`・グループの並びも shift の順）。`.ly` は `\once \shiftOff`。再現譜の絵は LilyPond 2.26.0 と同じ形（Lab `sessions/p1217/t25`）。書かない譜は計算が変わらない。
+- **歌詞と歌い手の文法を作り直した（`docs/lyrics-singer-design.md` §9 の①②）**。`lyrics` は言葉だけ、score の行は印刷だけ（`on PART`）、ファイル直下の `singer [S] sings [NAME] [on PART]` だけが歌う（印刷がなくても。`LyricSinger.WithSungWords`）。`staff PART [hidden] [sounds voice|instrument|both]`。古い書き方の読み取りは消し、案内する専用エラーは作らない（持ち主の指示）。`on` のない行が譜の直下なら、その譜の verse（均等割りは譜の上か別パートへの `on`）。メニューは声の名前（`voiceMenuLabels`）。全 svg 1262 枚で差 10 枚、すべて譜の直下の `on` なし行が verse になったもの（`test/mid-bar-break` と audit 9 冊）、手元のコーパスは差 0（Lab `sessions/p1217/sweep`、書き換え前は `corpus-backup`）。snapshot の再ベース 17 枚は data-pos のみ（`mid-bar-break` だけ高さ 0.02 が verse 化で変化）。LpGeometry の row-between-staves は譜に出さないパート `guide` への `on` で ROW のまま測る。毒 6 本すべて赤。⚠️ 実機は未（`MANUAL-CHECKS`）。全段 `hidden` の score は LYS4052 のエラー（持ち主と検討、音だけなら普通の score で足りる。実際に困ったら score に「印刷しない」指定を検討）。
+- 門（`-End`、base `23f99e2e0`）: 開始時 full 15016 合格 / 0 失敗 / skip 2 / 合計 15018、終了時 full 15007 合格 / 0 失敗 / skip 2 / 合計 15009（trx `p1217\run5.trx`。減ったのは古い書き方のテストの整理）。拡張 npm 957 合格。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 250 枚。Core `+` 728 行 / LILYPOND-REF 3 / OWN 0（REF は `@shiftOff`。残りは文法と音の経路で LP に対応物なし＝7.5〜7.7 は該当なし）。⚠️ perf ベンチは未実行（Core の歌詞の読みに触った）。`-End` が出した Core 警告 3 件はその場で直した。
+- 棚卸しの増減は 0（`APPROXIMATIONS.md` と `magic_constants.csv` は再生成しても中身が変わらなかった）。
+- **作曲ガイドに singer の書き方と `lilysharp_listVoices` の使い方を足した**（持ち主の依頼。`docs/COMPOSE_FOR_LLM.md` の *A song with words*。弾き語りの項はそこを指す）。パートの `singer` のカンマ区切りを `SymbolCaseValidator` が拒否していたので通した（持ち主の決定。パーサーと `PartHeaderDefaults` は既に読めていた）。
+- **`singer` の補完で声が 1 つも無いときのガイドを足した**（持ち主の依頼）。一覧の先頭の項目（毎回）と通知（セッションで 1 度）。歌詞の言語を歌える声が 0 のときも案内する（`noLanguageGuide`・英語は DiffSinger の `dsdict-en.yaml`、中国語と韓国語は Cantoria のエンジンが未対応と言う）。項目と戻り値は実物の VS Code で 5 通り確認（Cantoria なし／声 0／声あり／英語／韓国語＝偽の Cantoria・Lab `sessions/p1217/vscode-e2e`）。通知の見た目とボタンの動きは未確認（`MANUAL-CHECKS` の第1217）。
+- **オクターブ変換がパートの中の未演奏の `section` を読むようにした**（持ち主の報告・Rose Garden の J と K）。`OctaveModeConverter.ProbeFor` が直下の節だけ見ていた。その曲で相対へ変換し、往復の一致と、J・K を form に足した SVG と MIDI の一致を確認（Lab `sessions/p1217/rose`。持ち主のファイルは書き換えていない）。
+- **練習メニューの声の行に ▶ と同じマイクを付け、♪ を除いた**（持ち主の依頼）。隔離した VS Code のプレビューで表示と CSS の色・位置を確認（Lab `sessions/p1217/vscode-e2e/mic`）。`white-space: nowrap` は狭いプレビューで × を画面外へ押し出すので入れない。
+- **歌詞の名前にパート名・声部名を使えなくした**（持ち主の決定 2026-11-10。LYS7008）。`RenderSpecParser.RowBindsToPart` の名前の枝を落とした。
+- OMR の repo は `C:\MyProj\Calamo` に改名されていたので、§0 の REQUESTS のパスを直した。
+
 ## 以下は第1216セッションの経緯
 
 ### 1.1 第1216セッション（2026-11-10・YT-DELL2）
