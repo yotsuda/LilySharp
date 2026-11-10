@@ -156,6 +156,53 @@ public class SingerLineTests
         Assert.Equal(["sop n/S", "alt n/X"], lines.Select(l => $"{l.Part} {l.Singer}"));
     }
 
+    private const string FourOnOneTrack = """
+        time 4/4
+        part s { clef treble }
+        part a { clef treble }
+        part t { clef treble }
+        part b { clef bass }
+        section A { s { c''2 d | } a { e'2 f | } t { g2 a | } b { c2 d | } }
+        lyrics w { あ い | }
+        lyrics hm { ん ん | }
+        form { A }
+        singer "n/S" sings w on s
+        singer "n/A" sings w on a
+        singer "n/T" sings w on t
+        singer "n/B" sings w on b
+
+        """;
+
+    // Owner's report 2026-11-10: only the tenor of a four-part choir was listed, its other three lost.
+    [Fact]
+    public void OneTrackOnFourParts_PrintedUnderTwoAndNotTheOthers_IsFourVoices()
+    {
+        var voices = Sung(FourOnOneTrack + "score { choirStaff { staff s  lyrics w  staff a  lyrics w  staff t  lyrics hm  staff b  lyrics hm } }\n");
+        Assert.Equal(["s n/S", "a n/A", "t n/T", "b n/B"], voices.Select(v => $"{v.Part} {v.Singer}"));
+        Assert.All(voices, v => Assert.Equal(["あ", "い"], v.Notes.Select(n => n.Lyric)));
+        Assert.Equal([72.0, 64, 55, 48], voices.Select(v => v.Notes[0].Pitch));
+    }
+
+    [Fact]
+    public void OneTrackOnPartsNoStaffShows_IsAVoiceEach()
+    {
+        var src = FourOnOneTrack + "score { staff s  lyrics w  staff a hidden  staff t hidden  staff b hidden }\n";
+        var voices = Sung(src);
+        Assert.Equal(["s", "a", "t", "b"], voices.Select(v => v.Part));
+        Assert.Equal([72.0, 64, 55, 48], voices.Select(v => v.Notes[0].Pitch));
+    }
+
+    [Fact]
+    public void SungWordsAdded_LeaveTheDrawnPageAlone()
+    {
+        var tree = SyntaxTree.Parse(FourOnOneTrack + "score { staff s  lyrics hm  staff a }\n");
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        var read = LyricSinger.WithSungWords(tree.GetRoot(), spec);
+        Assert.NotSame(spec, read);
+        Assert.Equal(["s", "a"], spec.GetVoiceBindings().Select(b => b.VoiceName));
+        Assert.Equal(["s", "a", "t", "b"], read.GetVoiceBindings().Select(b => b.VoiceName));
+    }
+
     [Fact]
     public void SameWordsLinesInAScore_AreTwoVoices()
     {

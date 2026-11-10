@@ -485,7 +485,7 @@ public static class RenderSpecParser
     /// read the target and the collector bound the verse by track name alone, so
     /// <c>lyrics en sings alt</c> stood under the staff at the FIRST voice's rhythm.
     /// </summary>
-    private static StaffSpec WithFoldedVerse(SyntaxNode root, StaffSpec staff, string track, string? rowSings)
+    internal static StaffSpec WithFoldedVerse(SyntaxNode root, StaffSpec staff, string track, string? rowSings)
     {
         var verses = (staff.WithLyrics.IsDefault ? ImmutableArray<string>.Empty : staff.WithLyrics).Add(track);
         return Music.LyricBindings.TargetOfRow(root, track, rowSings) is { } sings
