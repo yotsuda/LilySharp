@@ -262,8 +262,8 @@ public class LyricExportAgreesWithPageTests
     [Fact]
     public void ANamedVoicesSyllable_StandsOnItsNote_NotTheGraceNoteBeforeIt()
     {
-        var tree = Parse(Head + "section A { m { voice { e'1 | } alt { grace { b'8 } c''2 d'' | } } lyrics alt { aa bb | } }\n"
-            + "form { A }\nscore { staff m  lyrics alt }\n");
+        var tree = Parse(Head + "section A { m { voice { e'1 | } alt { grace { b'8 } c''2 d'' | } } lyrics w sings alt { aa bb | } }\n"
+            + "form { A }\nscore { staff m  lyrics w }\n");
         var doc = new MusicXmlExporter().Export(tree).ToXml();
         Assert.Equal(new[] { "C5 aa", "D5 bb" }, doc.Descendants("note").Where(n => n.Element("lyric") != null)
             .Select(n => n.Element("pitch")!.Element("step")!.Value + n.Element("pitch")!.Element("octave")!.Value

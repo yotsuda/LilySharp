@@ -160,9 +160,9 @@ export function noLanguageGuide(language: string, voices: readonly CantoriaVoice
 }
 
 /** A voice's line in the practice menu (owner's request 2026-11-10): the words' name and the part they
- *  sing. The part alone for words with no name of their own, or named as the part is. */
+ *  sing. The part alone for words with no name of their own. */
 export function voiceMenuLabel(track: string | null | undefined, part: string): string {
-    return !track || track === 'lyrics' || track === part ? part : `${track} sings ${part}`;
+    return !track || track === 'lyrics' ? part : `${track} sings ${part}`;
 }
 
 /** What the status bar says, once, of a part with words in the score and no voice asked for them. */

@@ -176,10 +176,10 @@ public class VerseInkBuilderAgreementTests
 time 4/4
 section Main {
   melody { c''4 d e f | g a b c'' | }
-  lyrics melody { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
+  lyrics words sings melody { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
 form { Main }
-score x { staff melody  lyrics melody }
+score x { staff melody  lyrics words }
 ");
     }
 
@@ -203,10 +203,10 @@ score x { staff melody  lyrics melody }
 time 4/4
 section Main {
   melody { c'4 d e f | g a b c'' | c''4 b a g | f e d c' | c'4 d e f | g a b c'' | c''4 b a g | f e d c' | c'4 d e f | g a b c'' | c''4 b a g | f e d c' | }
-  lyrics melody { Aa bb cc dd | ee ff gg hh | ii jj kk ll | mm nn oo pp | qq rr ss tt | uu vv ww xx | yy zz ab cd | ef gh ij kl | mn op qr st | uv wx yz za | zb zc zd ze | zf zg zh zi | }
+  lyrics words sings melody { Aa bb cc dd | ee ff gg hh | ii jj kk ll | mm nn oo pp | qq rr ss tt | uu vv ww xx | yy zz ab cd | ef gh ij kl | mn op qr st | uv wx yz za | zb zc zd ze | zf zg zh zi | }
 }
 form { Main }
-score x { staff melody  lyrics melody }
+score x { staff melody  lyrics words }
 ");
     }
 

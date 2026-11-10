@@ -1878,6 +1878,9 @@ c4 d e f |       // 'once' applies to the next note only
 
 ## Lyrics
 
+A track takes a name of its own: the name of a part or of a named voice is an error (LYS7008), and
+only `sings` says who sings it (an unnamed `lyrics` sings the file's one part).
+
 Lyrics bind to their **default melody at the definition** — `lyrics NAME sings PART`
 — and the score places them, by ORDER: a `lyrics NAME` row directly below
 the staff engraving PART is that staff's verse (a run of rows stacks as

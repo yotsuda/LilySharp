@@ -829,14 +829,14 @@ internal static class LpGeometryProbes
             voice sop { c'4 c' c' c' | }
             alt { e2 e4 e4 | }
           }
-          lyrics {{lyricVoice}} { {{words}} }
+          lyrics words sings {{lyricVoice}} { {{words}} }
         }
 
         form { ~A }
 
         score {{name}} {
           staff m
-          lyrics {{lyricVoice}}
+          lyrics words
         }
         """;
 

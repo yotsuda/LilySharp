@@ -590,5 +590,4 @@ describe('voiceMenuLabel', () => {
         assert.equal(voiceMenuLabel(null, 'melody'), 'melody');
         assert.equal(voiceMenuLabel('lyrics', 'melody'), 'melody');
     });
-    it('does not say a name twice', () => assert.equal(voiceMenuLabel('melody', 'melody'), 'melody'));
 });

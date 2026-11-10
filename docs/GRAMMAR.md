@@ -1425,9 +1425,10 @@ PartBlock      = PartName , MusicBlock ;
    decision, 2026-09-02; before it the row spelling was the same single track
    property and a second target was LYS7005). A target may be a part's named
    VOICE ('lyrics en sings alt' over 'voice alt { }'): the words then follow that
-   voice's rhythm, under its staff or as a row. With no 'sings' anywhere the NAME
-   can be the binding — the part itself, or one of that part's voices
-   ('voice sop { }' + 'lyrics sop { }') — and a track that binds to nothing
+   voice's rhythm, under its staff or as a row. A track's NAME binds nothing: the name
+   of a part or of a named voice is refused for a track (LYS7008, owner's decision
+   2026-11-10), the words take a name of their own and 'sings' says who sings them.
+   A track that binds to nothing
    placed as a row keeps the even-spread lead-sheet reading (§7) — drawn the
    same, but warned about (LYS6013), when it stands directly below a staff whose
    part names its voices: there the likelier reading is a misspelled voice. A row without
@@ -1667,8 +1668,8 @@ VoicePart      = [ Identifier ] , MusicBlock ;
 
 (* Example (each voice { } is a simultaneous voice; NOT the LilyPond '<< \\ >>' form):
    section Main { piano { voice { c'2 d } { e2 f } } }
-   // Named voices bind their own lyrics — the name goes before each block:
-   //   voice sop { … } alt { … }   +   lyrics sop { … }  lyrics alt { … } *)
+   // Lyrics sing a named voice by 'sings':
+   //   voice sop { … } alt { … }   +   lyrics high sings sop { … }  lyrics low sings alt { … } *)
 
 (* The FIRST voice carries the staff's timeline: it is engraved inline, its barlines are
    the staff's barlines, and music written after the span continues in the bar it left

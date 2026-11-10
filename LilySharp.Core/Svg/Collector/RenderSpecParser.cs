@@ -231,7 +231,7 @@ public static class RenderSpecParser
         // SCORE = A VERTICAL STACK OF BANDS (user decision, 2026-08-19, closed
         // before the first tag): a row standing NEXT TO the staff it belongs to IS
         // that staff's attachment. The association is written at the definition
-        // (`sings`, or the name-is-binding voice rule); the score only orders the
+        // (`sings`); the score only orders the
         // bands; adjacency + affinity decide the gluing — a bound `lyrics` row
         // directly BELOW its staff folds under it (LilyPond's Lyrics,
         // staff-affinity UP), and several in a run stack as verses. A row whose
@@ -397,9 +397,7 @@ public static class RenderSpecParser
     /// part — the SAME rule the group validator applies (LyricSingsValidator):
     /// the row's resolved <c>sings</c> target (its own, else the definition's
     /// default — <see cref="Music.LyricBindings.TargetOfRow"/>) naming the part
-    /// or one of its voices binds; with no <c>sings</c> anywhere, the track's
-    /// NAME being the part or one of its voices is the binding
-    /// (<c>voice sop { } + lyrics sop { }</c>).
+    /// or one of its voices binds. A track's name binds nothing (owner's decision 2026-11-10).
     /// </summary>
     /// <param name="rowSings">The row's own <c>sings</c> target, null when the
     /// row writes none.</param>
@@ -407,8 +405,7 @@ public static class RenderSpecParser
     {
         var voices = Music.LyricBindings.VoicesOfPart(root, part);
         return Music.LyricBindings.TargetOfRow(root, track, rowSings) is { } sings
-            ? string.Equals(sings, part, StringComparison.Ordinal) || voices.Contains(sings)
-            : string.Equals(track, part, StringComparison.Ordinal) || voices.Contains(track);
+            && (string.Equals(sings, part, StringComparison.Ordinal) || voices.Contains(sings));
     }
 
     private static RenderItemSpec AddFoldedVerse(SyntaxNode root, RenderItemSpec item, string track, string? rowSings)

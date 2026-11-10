@@ -114,20 +114,20 @@ public class ScoreRowFoldingTests
     /// binding: <c>voice sop { } + lyrics sop { }</c> — a row named after one of
     /// the staff part's voices folds under that staff.</summary>
     [Fact]
-    public void RowNamedAfterAVoiceOfTheStaffsPart_Folds()
+    public void RowSingingAVoiceOfTheStaffsPart_Folds()
     {
         var spec = SpecOf("""
             time 4/4
             section A {
               m { voice sop { c''4 d' e' f' | } alt { e'4 f g a | } }
-              lyrics sop { la la la la | }
+              lyrics w sings sop { la la la la | }
             }
             form { A }
-            score { staff m  lyrics sop }
+            score { staff m  lyrics w }
             """);
 
         var staff = Assert.IsType<SingleStaffSpec>(Assert.Single(spec.Items)).Staff;
-        Assert.Equal(new[] { "sop" }, staff.WithLyrics);
+        Assert.Equal(new[] { "w" }, staff.WithLyrics);
     }
 
     /// <summary>

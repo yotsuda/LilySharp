@@ -42,10 +42,8 @@ namespace LilySharp.Core.Music;
 /// </summary>
 /// <remarks>
 /// A track with no <c>sings</c> anywhere is UNBOUND: as a score row it stays the
-/// even-spread lead-sheet row; attached via <c>with lyrics</c> it is an error
-/// (LYS6009) unless its NAME matches the staff's part or one of that part's
-/// voices — the pre-<c>sings</c> name-equality rule, kept because the name IS
-/// the voice binding (<c>voice sop { } + lyrics sop { }</c>).
+/// even-spread lead-sheet row. A track's NAME binds nothing, and the name of a part
+/// or a named voice is refused for one (LYS7008, owner's decision 2026-11-10).
 /// </remarks>
 public static class LyricBindings
 {

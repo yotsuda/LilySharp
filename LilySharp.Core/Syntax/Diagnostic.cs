@@ -1950,6 +1950,10 @@ public static class DiagnosticCodes
     /// is not this: it says only whose reading that row prints.</summary>
     public const string ChordForConflict = "LYS7007";
 
+    /// <summary>Track error: a lyrics track has the name of a part or of a named voice. A track's
+    /// name only names it; who sings is <c>sings</c> (owner's decision 2026-11-10).</summary>
+    public const string LyricsNamedAsSinger = "LYS7008";
+
     // Font warnings (LYS8xxx)
     // (LYS6xxx is already taken by the render/score-declaration band above.)
 

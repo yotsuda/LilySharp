@@ -100,6 +100,20 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                     + "that name exists in this file.");
         }
 
+        // A track's name only names it; who sings is `sings` (owner's decision 2026-11-10): the
+        // same name reads as a binding, and is none when the part is renamed. Said once a track.
+        var namedTracks = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var block in root.DescendantNodes<LyricsBlockSyntax>())
+        {
+            if (block.NameToken is not { } token || !namedTracks.Add(token.Text))
+                continue;
+            string? kind = partNames.Contains(token.Text) ? "part" : voiceNames.Contains(token.Text) ? "voice" : null;
+            if (kind != null)
+                _diagnostics.Error(token.Span, DiagnosticCodes.LyricsNamedAsSinger,
+                    $"lyrics '{token.Text}' has the name of a {kind}. Give the words a name of their own and say who sings them: "
+                    + $"'lyrics words sings {token.Text} {{ … }}'.");
+        }
+
         // Definition blocks only (LyricBindings.Conflicts): a score row's `sings`
         // binds that row's placement and may name any part — that is how one
         // verse is placed under four staves.
@@ -160,8 +174,8 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                                 DiagnosticCodes.RowNamesNoVoiceOfStaffAbove,
                                 $"lyrics '{row.PartName}' names none of the voices of '{partAbove}', the staff "
                                 + $"directly above it ({names}), so its syllables are spread evenly across each "
-                                + "bar instead of following a voice. Name the track after the voice it sings, "
-                                + $"or say it on the row: 'lyrics {row.PartName} sings VOICE' "
+                                + "bar instead of following a voice. Say which it sings on the row: "
+                                + $"'lyrics {row.PartName} sings VOICE' "
                                 + $"(or 'sings {partAbove}' to follow the part's first voice).");
                         }
                         partAbove = null;

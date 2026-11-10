@@ -698,7 +698,7 @@ voice { c'2 d } { e2 f }                 // ONE `voice`, then each simultaneous 
 ```
 
 ```
-voice sop { c'2 d } alt { e2 f }         // named lines — a `lyrics sop { … }` track binds to one by name
+voice sop { c'2 d } alt { e2 f }         // named lines — `lyrics words sings sop { … }` sings one
 ```
 
 `voice` opens the span once; the first line's stems go up, the second's down. Writing the
@@ -837,7 +837,7 @@ sings かん (the preview's voice and `lysc wav --singer`); `大[おお]空[ぞ�
 (LYS4036) — and a kanji without a reading prints but is not sung (the voice says so once).
 Words are `japanese` unless a line `language english` says so for the file, or a track does:
 `lyrics en language english sings melody { … }` (the names: japanese english chinese korean).
-Who sings is `singer "neutrino/MERROW"` (a voice) or `singer "soprano"` (a role) on a part, a track or a score's lyrics row; `singer male "neutrino/SOMA"` (or `female`) narrows what the editor offers; `singer male` with no name lets each machine pick a male voice. Words are sung where a voice is asked for: a `singer`, or the part's `instrument` being a voice (`soprano` `alto` `tenor` `baritone` `voice-bass`). Words on any other part are printed only.
+Who sings is `singer "neutrino/MERROW"` (a voice) or `singer "soprano"` (a role) on a part, a track or a score's lyrics row; `singer male "neutrino/SOMA"` (or `female`) narrows what the editor offers; `singer male` with no name lets each machine pick a male voice. Words are sung where a voice is asked for: a `singer`, or the part's `instrument` being a voice (`soprano` `alto` `tenor` `baritone` `voice-bass`). Words on any other part are printed only. A track takes a name of its own: the name of a part or a named voice is an error (LYS7008).
 
 ```
 part melody

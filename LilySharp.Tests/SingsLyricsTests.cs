@@ -175,7 +175,7 @@ public class SingsLyricsTests
         section A {
           m { voice sop { c'4 d' e' f' | } voice alt { e2 f4 g | } }
           n { c1 | }
-          lyrics sop { Sing a love song | }
+          lyrics high sings sop { Sing a love song | }
           lyrics {{track}} { Low part deep | }
           lyrics free { la la | }
         }
@@ -188,7 +188,7 @@ public class SingsLyricsTests
     {
         // `allt` for `alt`: the row binds to nothing, so it is the even-spread row —
         // legal, drawn, and until session 802 silent.
-        var diags = Validate(VoicedBook("staff m  lyrics sop  lyrics allt"));
+        var diags = Validate(VoicedBook("staff m  lyrics high  lyrics allt"));
         var d = Assert.Single(diags, d => d.Code == DiagnosticCodes.RowNamesNoVoiceOfStaffAbove);
         Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
         Assert.Contains("'allt'", d.Message);
@@ -201,9 +201,6 @@ public class SingsLyricsTests
     }
 
     [Theory]
-    // The row names a voice, or the part: the name is the binding.
-    [InlineData("staff m  lyrics sop  lyrics alt", "alt")]
-    [InlineData("staff m  lyrics m", "m")]
     // The row says what it sings, on the row or at the definition.
     [InlineData("staff m  lyrics allt sings m", "allt")]
     [InlineData("staff m  lyrics allt sings alt", "allt")]
@@ -221,6 +218,73 @@ public class SingsLyricsTests
 
     [Fact]
     public void OneMisspelling_IsOneWarning()
+    {
+        var diags = Validate(VoicedBook("staff m  lyrics allt  lyrics free"));
+        Assert.Single(diags, d => d.Code == DiagnosticCodes.RowNamesNoVoiceOfStaffAbove);
+    }
+
+    // Owner's decision 2026-11-10: a track's name only names it; who sings is `sings`.
+    [Theory]
+    [InlineData("lyrics m { la | }", "part")]
+    [InlineData("lyrics m sings m { la | }", "part")]
+    [InlineData("lyrics sop { la | }", "voice")]
+    [InlineData("lyrics sop sings sop { la | }", "voice")]
+    public void ATrackNamedAsAPartOrAVoice_IsAnError(string track, string kind)
+    {
+        var diags = Validate($$"""
+            time 4/4
+            section A {
+              m { voice sop { c'1 | } alt { e1 | } }
+              {{track}}
+            }
+            form { A }
+            score { staff m }
+            """);
+        var d = Assert.Single(diags, x => x.Code == DiagnosticCodes.LyricsNamedAsSinger);
+        Assert.Equal(DiagnosticSeverity.Error, d.Severity);
+        Assert.Contains($"name of a {kind}", d.Message);
+    }
+
+    [Fact]
+    public void ATrackNamedAsAPart_IsSaidOnce_ThoughWrittenInEverySection()
+    {
+        var diags = Validate("""
+            time 4/4
+            section A { m { c'1 | } lyrics m { la | } }
+            section B { m { d'1 | } lyrics m { la | } }
+            form { A B }
+            score { staff m }
+            """);
+        Assert.Single(diags, x => x.Code == DiagnosticCodes.LyricsNamedAsSinger);
+    }
+
+    [Theory]
+    [InlineData("lyrics { la | }")]
+    [InlineData("lyrics w { la | }")]
+    [InlineData("lyrics w sings m { la | }")]
+    public void ATrackWithANameOfItsOwn_IsNoError(string track)
+        => Assert.DoesNotContain(Validate($$"""
+            time 4/4
+            section A { m { c'1 | } {{track}} }
+            form { A }
+            score { staff m }
+            """), x => x.Code == DiagnosticCodes.LyricsNamedAsSinger);
+
+    [Fact]
+    public void ARowNamedAsAVoice_NoLongerFoldsByItsName()
+    {
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            section A { m { voice sop { c'1 | } alt { e1 | } } lyrics sop { la | } }
+            form { A }
+            score { staff m  lyrics sop }
+            """);
+        var staff = Assert.IsType<SingleStaffSpec>(RenderSpecParser.FindFirst(tree)!.Items[0]).Staff;
+        Assert.True(staff.WithLyrics.IsDefaultOrEmpty);
+    }
+
+    [Fact]
+    public void OneMisspelling_AfterItsOwnRow_IsOneWarning()
     {
         // The window closes on the row that failed to bind (RenderSpecParser.FoldAdjacentRows
         // closes it the same way), so the rows after it are plain bands, not more warnings.
@@ -258,19 +322,10 @@ public class SingsLyricsTests
     [InlineData("lyrics en", "grandStaff { staff n  staff m  lyrics en sings alt }")]
     public void AVerseThatSingsAVoice_StandsAtThatVoicesRhythm(string lyricsHeader, string scoreItems)
     {
-        // The control: the same words bound by NAME (`lyrics alt`), the one spelling that
-        // reached the alto before session 803 — `sings alt` folded the row under the staff
-        // and then set it at the soprano's quarters (0, 1/4, 1/2).
-        var byName = Words(TwoVoices("lyrics alt", scoreItems.Replace("lyrics en sings alt", "lyrics alt")
-            .Replace("lyrics en", "lyrics alt")));
+        // Before session 803 `sings alt` folded the row under the staff and then set it at the
+        // soprano's quarters (0, 1/4, 1/2).
         var bySings = Words(TwoVoices(lyricsHeader, scoreItems));
-
-        // …and the name itself reached it only on the single-staff road: collected as a
-        // multi-staff score (this is one, of one staff or three) it too stood at the soprano's.
-        Assert.Equal(AltOnsets, byName.Select(l => l.Timing).ToArray());
         Assert.Equal(AltOnsets, bySings.Select(l => l.Timing).ToArray());
-        Assert.Equal(byName.Select(l => (l.Text, l.MeasureIndex, l.Timing, l.VoiceId, l.StaffIndex)),
-            bySings.Select(l => (l.Text, l.MeasureIndex, l.Timing, l.VoiceId, l.StaffIndex)));
         Assert.All(bySings, l => Assert.False(l.IsLyricsRow));
     }
 

@@ -10,6 +10,7 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[singing]` **Words are sung where a voice is asked for**: a `singer`, or the part's `instrument` being a voice (`soprano`, `alto`, `tenor`, `baritone`, `voice-bass`). Words on any other part are printed only and the part plays its instrument; a clef alone asks for nothing. Until now every lyrics row was sung. A part with words, no voice asked for and no instrument named now plays the piano, in the `.mid` too, where it played the choir.
 - **A `singer` on a score's row that names a voice of a part** (`lyrics w sings alt singer "…"`) is heard; it was ignored.
 - **Converting between octave modes reaches a section written inside a part** that no form plays. Such a file was refused.
+- `[lang]` **A lyrics track can no longer have the name of a part or of a named voice** (LYS7008). A track's name only names it, and `sings` says who sings it: `lyrics words sings p1 { … }`. `lyrics sop` beside `voice sop` and `lyrics p1` beside `part p1` used to bind by the name, under that staff only.
 - **A part's `singer` takes several voices** (`part m { singer "neutrino/MERROW","diffsinger/TIGER" }`), as a lyrics track and a score's row do. It was refused there.
 
 ## 0.16.0
