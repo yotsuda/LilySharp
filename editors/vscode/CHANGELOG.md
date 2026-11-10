@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A click in the editor is silent while the piece plays**: the caret landing on a note or a `singer` no longer sounds the note or says the voice's phrase over it. Typing and the step keys sound as before.
 - **The samples of voices are sung again**, so that VOICEVOX's male voices are heard as the Cantoria of this date sings them.
 - **The practice menu's voice lines follow the text**: rewriting a `singer` line left the open menu showing the old voice until it was closed and opened again.
 - **A voice being sung for an older text gives way to the newer one**: the engine finishes the phrase it is on and goes on to the new text, keeping what it has sung, where it used to finish the whole voice first. Pressing Play starts the new text without its rest. Needs the Cantoria extension of this date or later; an earlier one finishes the voice as before.

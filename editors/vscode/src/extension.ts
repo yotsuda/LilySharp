@@ -1124,6 +1124,7 @@ export function activate(context: vscode.ExtensionContext) {
         log: (msg: string) => outputChannel.appendLine(msg),
         stepSinger: stepSingerAt,
         hearSinger,
+        isPlaying: (uri: string) => { const panel = previewPanels.get(uri); return !!panel && playingPanels.has(panel); },
     });
 
     // The caret's status line (owner's request 2026-10-24): what the setting under the caret

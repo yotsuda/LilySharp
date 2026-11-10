@@ -159,11 +159,13 @@ export interface SelectionFacts {
     readonly allEmpty: boolean;
     /** Milliseconds since this document last changed. */
     readonly msSinceEdit: number;
+    /** The preview is playing the piece. */
+    readonly playing?: boolean;
 }
 
 /** A selection change that may sound: carets only, not an edit's own caret move. */
 export function caretMoveMaySound(f: SelectionFacts): boolean {
-    return f.allEmpty && f.msSinceEdit >= EDIT_SELECTION_WINDOW_MS;
+    return f.allEmpty && f.msSinceEdit >= EDIT_SELECTION_WINDOW_MS && !f.playing;
 }
 
 /** One content change as VS Code reports it (the fields read here). */

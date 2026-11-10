@@ -175,6 +175,11 @@ describe('which selection changes may sound', () => {
         assert.equal(caretMoveMaySound({ allEmpty: true, msSinceEdit: EDIT_SELECTION_WINDOW_MS }), true);
     });
 
+    it('nothing a caret lands on sounds over the piece being played', () => {
+        assert.equal(caretMoveMaySound({ allEmpty: true, msSinceEdit: 5000, playing: true }), false);
+        assert.equal(caretMoveMaySound({ allEmpty: true, msSinceEdit: 5000, playing: false }), true);
+    });
+
     it('rings a chord longer than a note', () => {
         assert.equal(auditionDurationMs(1), NOTE_MS);
         assert.equal(auditionDurationMs(5), CHORD_MS);

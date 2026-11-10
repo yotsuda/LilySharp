@@ -46,6 +46,8 @@ export interface StepAuditionDeps {
     stepSinger: (editor: vscode.TextEditor, direction: 1 | -1, byVoice: boolean, pressedAt: number) => Promise<boolean>;
     /** Lets what a `singer` writes be heard, in the voice it comes to here. */
     hearSinger: (written: string) => Promise<void>;
+    /** True while the document's preview is playing the piece: the caret landing somewhere is then silent. */
+    isPlaying: (uri: string) => boolean;
 }
 
 interface StepResponse {
@@ -266,6 +268,8 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             const facts = {
                 allEmpty: event.selections.every(s => s.isEmpty),
                 msSinceEdit: Date.now() - (lastEdit.get(uri) ?? 0),
+                // Owner's request 2026-11-10: a click during Play must not sound over the piece.
+                playing: deps.isPlaying(uri),
             };
             // The caret or a selection coming to a `singer` (owner's request 2026-11-09, session
             // 1180): its voice says its phrase. A step or an edit landing there has its own say.
@@ -279,10 +283,12 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
                 if (singerLanded.get(uri) !== landed) {
                     singerLanded.set(uri, landed);
                     const byHand = event.kind === vscode.TextEditorSelectionChangeKind.Keyboard || event.kind === vscode.TextEditorSelectionChangeKind.Mouse;
-                    if (byHand && facts.msSinceEdit >= EDIT_SELECTION_WINDOW_MS && auditionEnabled() && deps.getPreview(uri)) {
+                    if (byHand && !facts.playing && facts.msSinceEdit >= EDIT_SELECTION_WINDOW_MS && auditionEnabled() && deps.getPreview(uri)) {
                         singerWait.poke(() => {
-                            if (vscode.window.activeTextEditor === editor) { void deps.hearSinger(written); }
+                            if (vscode.window.activeTextEditor === editor && !deps.isPlaying(uri)) { void deps.hearSinger(written); }
                         });
+                    } else if (facts.playing) {
+                        singerWait.cancel();
                     }
                 }
                 caretWait.cancel();
@@ -295,10 +301,10 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             if (!auditionEnabled() || !deps.getPreview(uri)) { return; }
             caretWait.poke(async () => {
                 // A note still settling from typing speaks for itself.
-                if (typingWait.pending) { return; }
+                if (typingWait.pending || deps.isPlaying(uri)) { return; }
                 const answer = await askAt(editor);
                 // An instrument or a tuning sounds when it changes, not when the caret passes it.
-                if (answer && !SOUNDS_WHEN_CHANGED.has(answer.Kind ?? '')
+                if (answer && !deps.isPlaying(uri) && !SOUNDS_WHEN_CHANGED.has(answer.Kind ?? '')
                     && memory.caretLanded(uri, { key: answer.Key, pitches: answer.Pitches, program: answer.Program })) {
                     play(uri, answer.Pitches, answer.Timbre, answer.Program);
                 }
