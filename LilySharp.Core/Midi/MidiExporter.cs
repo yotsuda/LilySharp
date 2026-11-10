@@ -830,7 +830,7 @@ public sealed class MidiExporter
         // singing voice, and its instrument is the stand-in — the
         // named midiInstrument, else the preset's sound, else, for a singer that names neither,
         // the General MIDI choir (52, "choir aahs") rather than LilyPond's acoustic grand.
-        var partSounds = _playedSpec is { } shownSpec ? Svg.Collector.SungStaves.Of(_root, shownSpec) : null;
+        var partSounds = _playedSpec is { } shownSpec ? Svg.Collector.SungStaves.Of(_root!, shownSpec) : null;
         var sungParts = partSounds == null ? new HashSet<string>(StringComparer.Ordinal)
             : partSounds.Sung.Except(partSounds.Played, StringComparer.Ordinal).ToHashSet(StringComparer.Ordinal);
         var channelByProgram = new Dictionary<int, int>();
@@ -4008,7 +4008,7 @@ public sealed class MidiExporter
     {
         if (_playedSpec is not { } spec)
             return;
-        var sung = Svg.Collector.SungSyllables.Read(tree, Music.LyricSinger.WithSungWords(_root, spec));
+        var sung = Svg.Collector.SungSyllables.Read(tree, Music.LyricSinger.WithSungWords(tree.GetRoot(), spec));
         if (sung.Count == 0)
             return;
         var bySource = track.Notes.ToLookup(n => n.SourcePos);

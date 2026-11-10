@@ -538,7 +538,7 @@ public static class RenderSpecParser
     }
 
     /// <summary>
-    /// <see cref="FindAll"/> with each spec's declaration beside it — for a caller that
+    /// <see cref="FindAll(SyntaxTree)"/> with each spec's declaration beside it — for a caller that
     /// hands the score itself on (the LilyPond twin reads its staves and plans from the
     /// declaration), where the spec's <c>Form</c> cannot tell apart two scores of one form.
     /// </summary>

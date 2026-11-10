@@ -145,11 +145,9 @@ public class SingsLyricsTests
                        or DiagnosticCodes.SingsTargetUnknown);
     }
 
-    // Owner's decision 2026-11-10: a track's name only names it; who sings is `sings`.
+    // Owner's decision 2026-11-10: a track's name only names it.
     [Theory]
     [InlineData("lyrics m { la | }", "part")]
-    [InlineData("lyrics m { la | }", "part")]
-    [InlineData("lyrics sop { la | }", "voice")]
     [InlineData("lyrics sop { la | }", "voice")]
     public void ATrackNamedAsAPartOrAVoice_IsAnError(string track, string kind)
     {
@@ -182,7 +180,6 @@ public class SingsLyricsTests
 
     [Theory]
     [InlineData("lyrics { la | }")]
-    [InlineData("lyrics w { la | }")]
     [InlineData("lyrics w { la | }")]
     public void ATrackWithANameOfItsOwn_IsNoError(string track)
         => Assert.DoesNotContain(Validate($$"""
