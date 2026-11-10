@@ -2689,6 +2689,7 @@ internal sealed class MultiStaffLayouter
                     LyricSpacing.OwnVoiceEdgeProvider(score),
                     LyricSpacing.SpanBarCrossedStaves(score));
         }
+        springs = LyricSpacing.ReserveDynamicsAgainstSpanBars(score, springs, allTimings, measureIndex);
         if (score.IsLeadSheet)
         {
             // A staff-less row keeps its empty command columns (LilyPond never

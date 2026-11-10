@@ -11,6 +11,7 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[singing]` **A sung part with no sound of its own stands in with the choir**, in the `.mid` too; a part with no singer plays its instrument, the piano when none is named.
 - **Converting between octave modes reaches a section written inside a part** that no form plays. Such a file was refused.
 - `[lang]` **Each `singer` line is one voice**: several lines with the same words on one part sing it together, and `singer "a","b"` with commas is gone. Different words on one part are refused in one scope (LYS4044); the same voice twice is warned about (LYS4053).
+- `[engraving]` **Dynamics between the staves of a `staffGroup` or `grandStaff` keep clear of the bar line running through them**, as LilyPond's do. Free text (`@text`) does not take part, in LilyPond either.
 - `[engraving]` **Lyrics between the staves of a `staffGroup` or `grandStaff` keep clear of the bar line running through them**, as LilyPond's do: a wide first or last syllable of a bar no longer touches it. A `choirStaff`, which draws no bar there, and the lyrics under a group's last staff do not change.
 - `[engraving]` **One lyrics track placed more than once in a score keeps every placement**: a staff's verse and a row of the same track both print, two rows each take their own melody's rhythm into the spacing, and the `.ly` stands each row where it is written. A score placing a track once does not change.
 - `[lang]` **`lyrics w on PART` works for every part name**: `on s`, `on a`, `on bass` and the like were silently ignored.

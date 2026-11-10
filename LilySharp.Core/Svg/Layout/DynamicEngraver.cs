@@ -1165,6 +1165,17 @@ internal static class DynamicEngraver
         return (Math.Max(a, sa), Math.Max(ds, sd));
     }
 
+    /// <summary>Half a dynamic level's width as it is drawn: the score's music font's glyphs,
+    /// else the feta outline (the same two arms as <see cref="LabelSkylines(Rendering.ScoreTextMetrics, string?, bool, double, double)"/>).</summary>
+    internal static double LevelHalfWidth(Rendering.ScoreTextMetrics fonts, string text)
+    {
+        if (SmuflGlyphRun(fonts, text) is { } run)
+            return run.Width / 2.0;
+        return text.Length > 0 && DynamicOutline.AdvanceWidth(text) is { } width
+            ? width / 2.0
+            : LabelHalfWidth(fonts, text, expressive: false);
+    }
+
     // internal, not private: MarkReserveVersusDrawTests calls it to state that the reserved    // half-width is half of the DRAWN advance. Nothing else outside this type uses it.
     internal static double LabelHalfWidth(
         Rendering.ScoreTextMetrics fonts, string text, bool expressive)

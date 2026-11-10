@@ -260,7 +260,21 @@ internal static class LyricSpacing
         System.Func<int, (double Left, double Centre)> edge,
         List<(int Left, int Right, double Distance)> rods)
     {
-        double leftMin = GetLyricLeftExtent(fonts, byCol[first], edge(first)) + SpacingRules.DefaultExtraSpacingWidth;
+        KeepOffTheBars(result, rods, first, GetLyricLeftExtent(fonts, byCol[first], edge(first)) + SpacingRules.DefaultExtraSpacingWidth,
+            last, GetLyricRightExtent(fonts, byCol[last], edge(last)) + SpacingRules.DefaultExtraSpacingWidth, endColumn);
+    }
+
+    /// <summary>Holds a column's reach off the bar line before and after it: the two column
+    /// distances <paramref name="leftMin"/> and <paramref name="rightMin"/>, each the skyline
+    /// distance measured from the bar's ink.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-spacing.cc:210-215 get_spacing — the first column's spring
+    /// LILYPOND-REF: lily/spacing-spanner.cc:265-291 set_column_rods — the rod either side, the distance + padding 0.1
+    /// </remarks>
+    private static void KeepOffTheBars(
+        ImmutableArray<Spring>.Builder result, List<(int Left, int Right, double Distance)> rods,
+        int first, double leftMin, int last, double rightMin, int endColumn)
+    {
         double leftRod = leftMin + SpacingRules.SeparationRodPadding;
         if (first == 0)
         {
@@ -272,12 +286,75 @@ internal static class LyricSpacing
         else
             rods.Add((0, first + 1, leftRod));
 
-        double rightRod = GetLyricRightExtent(fonts, byCol[last], edge(last))
-            + SpacingRules.DefaultExtraSpacingWidth + SpacingRules.SeparationRodPadding;
+        double rightRod = rightMin + SpacingRules.SeparationRodPadding;
         if (last + 1 == endColumn)
             BumpSpanMin(result, endColumn, endColumn, rightRod);
         else
             rods.Add((last + 1, endColumn + 1, rightRod));
+    }
+
+    /// <summary>
+    /// A dynamic in the gap a span bar runs through keeps off that bar: under a staff with a
+    /// barred staff below it, or over one with a barred staff above it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:475-477 StaffGroup DynamicText extra-spacing-width ##f
+    /// LILYPOND-REF: lily/separation-item.cc:166-167 boxes — so the default extra-spacing-width 0.1 each side, on the dynamic and on the bar
+    /// LILYPOND-REF: scm/output-lib.scm:965-974 pure-from-neighbor-interface::account-for-span-bar — the bar's box runs into the gap
+    /// <para>A free expressive text is LilyPond's TextScript, whose extra-spacing-width stays
+    /// empty (scm/define-grobs.scm), and takes no part. A dynamic on a grace note stands on the
+    /// grace column, which these springs do not hold. Only the bars are reserved: two dynamics
+    /// in neighbouring columns of such a gap also rod apart in LilyPond, and do not here.</para>
+    /// </remarks>
+    internal static ImmutableArray<Spring> ReserveDynamicsAgainstSpanBars(
+        MultiStaffScore score, ImmutableArray<Spring> springs, IReadOnlyList<Fraction> columnTimings, int measureIndex)
+    {
+        int cols = columnTimings.Count;
+        if (score.Dynamics.IsDefaultOrEmpty || cols == 0 || springs.Length != cols + 1)
+            return springs;
+        var plan = _dynamicsInSpanGaps.GetValue(score, BuildDynamicsInSpanGaps);
+        var here = plan.ByMeasure.At(measureIndex);
+        if (here.IsEmpty)
+            return springs;
+        var result = springs.ToBuilder();
+        var rods = new List<(int Left, int Right, double Distance)>();
+        var fonts = score.TextMetrics;
+        foreach (var d in here)
+        {
+            var voices = plan.Voices[d.StaffIndex];
+            if (DynamicEngraver.AnchorItem(voices, d.VoiceIndex, d.MeasureIndex, d.ItemIndex) is not { GraceTime: false })
+                continue;
+            var onset = LayoutUtilities.ItemOnset(voices[d.VoiceIndex].Measures[d.MeasureIndex], d.ItemIndex);
+            int column = -1;
+            for (int c = 0; c < cols && column < 0; c++)
+                if (columnTimings[c].Equals(onset))
+                    column = c;
+            if (column < 0)
+                continue;
+            double half = DynamicEngraver.LevelHalfWidth(fonts, d.Text);
+            double centre = DynamicEngraver.DynamicAnchorCentreOffset(voices, d.VoiceIndex, d.MeasureIndex, d.ItemIndex);
+            double left = half - centre + (d.IsSubito ? DynamicEngraver.SubitoWidth(fonts) : 0);
+            double spacing = 2 * SpacingRules.DefaultExtraSpacingWidth;
+            KeepOffTheBars(result, rods, column, left + spacing, column, centre + half + spacing, cols);
+        }
+        return rods.Count > 0 ? SpringSolver.ApplyRods(result.ToImmutable(), rods) : result.ToImmutable();
+    }
+
+    private sealed record DynamicsInSpanGaps(IndexBuckets<DynamicItem> ByMeasure, Dictionary<int, ImmutableArray<Voice>> Voices);
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<MultiStaffScore, DynamicsInSpanGaps> _dynamicsInSpanGaps = new();
+
+    private static DynamicsInSpanGaps BuildDynamicsInSpanGaps(MultiStaffScore score)
+    {
+        var (below, above) = SpanBarGaps(score);
+        var voices = new Dictionary<int, ImmutableArray<Voice>>();
+        foreach (var (_, staff, index) in score.EnumerateStaves())
+            voices[index] = staff.Voices;
+        var kept = TabStaffStencils.Blank(score, score.Dynamics, static d => d.StaffIndex)
+            .Where(d => !d.IsExpressiveText && !d.OnMultiMeasureRest && d.Level != Syntax.DynamicLevel.Niente
+                && (d.IsAbove ? above : below).Contains(d.StaffIndex))
+            .ToList();
+        return new DynamicsInSpanGaps(IndexBuckets<DynamicItem>.Build(kept, static d => d.MeasureIndex), voices);
     }
 
     /// <summary>The staves whose lyric lines a span bar runs through: a staff of a group that
@@ -288,10 +365,16 @@ internal static class LyricSpacing
     /// <para>Read per measure, before a system exists, so a staff hara-kiri hides on one system
     /// still counts here.</para>
     /// </remarks>
-    internal static IReadOnlySet<int> SpanBarCrossedStaves(MultiStaffScore score)
-        => _spanBarCrossed.GetValue(score, static s =>
+    internal static IReadOnlySet<int> SpanBarCrossedStaves(MultiStaffScore score) => SpanBarGaps(score).Below;
+
+    /// <summary>Per staff of a span-barred group: whether the gap below it (<c>Below</c>) and
+    /// the gap above it (<c>Above</c>) has a span bar through it.</summary>
+    private static (IReadOnlySet<int> Below, IReadOnlySet<int> Above) SpanBarGaps(MultiStaffScore score)
+    {
+        var gaps = _spanBarGaps.GetValue(score, static s =>
         {
-            var crossed = new HashSet<int>();
+            var below = new HashSet<int>();
+            var above = new HashSet<int>();
             foreach (var group in s.StaffGroups)
             {
                 if (!group.HasDelimiter || group.IsChoirStaff)
@@ -299,15 +382,24 @@ internal static class LyricSpacing
                 var staves = s.EnumerateStaves().Where(t => ReferenceEquals(t.Group, group)).ToList();
                 int firstBar = staves.FindIndex(t => t.Staff.HasBarLines());
                 int lastBar = staves.FindLastIndex(t => t.Staff.HasBarLines());
-                for (int i = firstBar; firstBar >= 0 && i < lastBar; i++)
-                    crossed.Add(staves[i].GlobalStaffIndex);
+                for (int i = firstBar; firstBar >= 0 && i <= lastBar; i++)
+                {
+                    if (i < lastBar)
+                        below.Add(staves[i].GlobalStaffIndex);
+                    if (i > firstBar)
+                        above.Add(staves[i].GlobalStaffIndex);
+                }
             }
-            return crossed;
+            return new SpanBarGapSets(below, above);
         });
+        return (gaps.Below, gaps.Above);
+    }
+
+    private sealed record SpanBarGapSets(IReadOnlySet<int> Below, IReadOnlySet<int> Above);
 
     private static bool HasBarLines(this Staff staff) => !staff.IsTextRow && !staff.IsOssia;
 
-    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<MultiStaffScore, IReadOnlySet<int>> _spanBarCrossed = new();
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<MultiStaffScore, SpanBarGapSets> _spanBarGaps = new();
 
     /// <summary>
     /// Lead-sheet variant: reserves lyric width against the TIMING COLUMNS the springs were
