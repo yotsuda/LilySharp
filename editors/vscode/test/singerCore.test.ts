@@ -578,8 +578,15 @@ describe('noLanguageGuide', () => {
         const english = [{ id: 'diffsinger/Y', engine: 'diffsinger', name: 'Y', languages: ['en'] }];
         assert.equal(commands(noLanguageGuide('ja', english)).length, 3);
     });
+    it('for Chinese and Korean, names that dictionary and offers the DiffSinger folder', () => {
+        for (const language of ['zh', 'ko']) {
+            const guide = noLanguageGuide(language, japanese);
+            assert.match(guide.message, new RegExp(`dsdict-${language}\\.yaml`));
+            assert.deepEqual(commands(guide), ['cantoria.chooseVoicesFolder']);
+        }
+    });
     it('for a language no engine sings, offers nothing and says so', () => {
-        const guide = noLanguageGuide('ko', japanese);
+        const guide = noLanguageGuide('fr', japanese);
         assert.match(guide.message, /do not sing it yet/);
         assert.deepEqual(guide.actions, []);
     });

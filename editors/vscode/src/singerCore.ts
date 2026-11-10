@@ -132,7 +132,7 @@ const LANGUAGE_NAMES: Record<string, string> = { ja: 'Japanese', en: 'English', 
 
 /** What the editor says when voices are installed and none sings the words' language (owner's
  *  request 2026-11-10): what they do sing, and what would sing this one — NEUTRINO and VOICEVOX sing
- *  Japanese, a DiffSinger voice Japanese and, with a dsdict-en.yaml, English (Cantoria's README). */
+ *  Japanese, a DiffSinger voice Japanese and, with that language's dsdict, English, Chinese and Korean (Cantoria's README). */
 export function noLanguageGuide(language: string, voices: readonly CantoriaVoice[]): VoiceGuide {
     const name = (code: string) => LANGUAGE_NAMES[code] ?? code;
     const sung = [...new Set(voices.flatMap(v => v.languages ?? (v.language ? [v.language] : [])))].map(name);
@@ -146,10 +146,10 @@ export function noLanguageGuide(language: string, voices: readonly CantoriaVoice
             message: `Lily#: no installed voice sings ${wanted}. NEUTRINO, VOICEVOX and DiffSinger voices do: install one, then choose its folder.`,
             actions: VOICE_SETUP_ACTIONS };
     }
-    if (language === 'en') {
+    if (language === 'en' || language === 'zh' || language === 'ko') {
         return { ...base,
-            documentation: `${installed} A [DiffSinger](https://github.com/openvpi/DiffSinger) voice with a \`dsdict-en.yaml\` sings ${wanted}: install one, then choose its folder. ${words}\n\n${STILL_WRITTEN}`,
-            message: `Lily#: no installed voice sings ${wanted}. A DiffSinger voice with a dsdict-en.yaml does: install one, then choose its folder.`,
+            documentation: `${installed} A [DiffSinger](https://github.com/openvpi/DiffSinger) voice with a \`dsdict-${language}.yaml\` sings ${wanted}: install one, then choose its folder. ${words}\n\n${STILL_WRITTEN}`,
+            message: `Lily#: no installed voice sings ${wanted}. A DiffSinger voice with a dsdict-${language}.yaml does: install one, then choose its folder.`,
             actions: [CHOOSE_DIFFSINGER] };
     }
     return { ...base,
