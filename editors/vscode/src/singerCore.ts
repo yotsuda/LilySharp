@@ -304,9 +304,9 @@ export function learnRenderRate(rate: number, elapsedMs: number, seconds: number
 
 /** Bumped when the phrase below changes: the samples kept on disk are named with it. A voice's
  *  gender sets the phrase's octave, so a correction to Cantoria's gender tables bumps both too. */
-export const VOICE_SAMPLE_VERSION = 3;
+export const VOICE_SAMPLE_VERSION = 4;
 /** The same for the English phrase, on its own so that a change to it leaves the Japanese samples. */
-export const VOICE_SAMPLE_EN_VERSION = 4;
+export const VOICE_SAMPLE_EN_VERSION = 5;
 
 /** The time each stage of hearing a voice took, for the output channel (owner's request 2026-11-09, session 1171). */
 export class StageClock {
@@ -336,10 +336,11 @@ export function voiceSampleKey(id: string, language?: string): string {
     return language && language !== 'ja' ? `${id}@${language}` : id;
 }
 
-/** The short phrase a voice is heard by when it is chosen, an octave lower for a male voice (owner's
- *  request 2026-11-09, session 1177); undefined for a language it has no words for. */
+/** The short phrase a voice is heard by when it is chosen, an octave lower for all but a female voice:
+ *  a male voice (owner's request 2026-11-09, session 1177) and one that says neither (owner's
+ *  request 2026-11-10); undefined for a language it has no words for. */
 export function voiceSampleScore(language: string, gender?: string): CantoriaScore | undefined {
-    const octave = gender === 'male' ? -12 : 0;
+    const octave = gender === 'female' ? 0 : -12;
     if (language === 'en') {
         // Five syllables to the five of こんにちわ, on the same notes (owner's decision 2026-11-09, session 1201).
         return { sampleRate: VOICE_SAMPLE_RATE, language, notes: [

@@ -299,19 +299,19 @@ describe('choosing a voice with the step keys', () => {
         assert.equal(voiceSampleScore('ko'), undefined);
         assert.equal(voiceSampleKey('d/T', 'ja'), 'd/T', 'the samples already sung keep their files');
         assert.equal(voiceSampleKey('d/T', 'en'), 'd/T@en');
-        assert.equal(voiceSampleFileName('neutrino/MERROW'), 'neutrino_MERROW-3.wav', 'sung again since a voice\'s gender, and so its octave, may have changed');
+        assert.equal(voiceSampleFileName('neutrino/MERROW'), 'neutrino_MERROW-4.wav', 'sung again since a voice\'s gender, and so its octave, may have changed');
         assert.notEqual(voiceSampleFileName('voicevox/ずんだもん-ノーマル'), voiceSampleFileName('voicevox/四国めたん-ノーマル'));
         assert.equal(voiceSampleKey('d/T'), 'd/T');
         assert.deepEqual(voiceSampleScore('en')?.notes.map(n => [n.lyric, !!n.hyphen]), [['hel', true], ['lo', false], ['how', false], ['are', false], ['you', false]]);
         assert.deepEqual(voiceSampleScore('en', 'male')?.notes.map(n => n.pitch), [48, 50, 52, 53, 55]);
         assert.deepEqual(voiceSampleScore('en')?.notes.map(n => [n.start, n.pitch]), voiceSampleScore('ja')?.notes.map(n => [n.start, n.pitch]), 'the melody of the Japanese phrase');
-        assert.equal(voiceSampleFileName('d/T@en'), 'd_T_en-4.wav', 'a new phrase, sung again');
+        assert.equal(voiceSampleFileName('d/T@en'), 'd_T_en-5.wav', 'a new phrase, sung again');
     });
 
-    it('sings the phrase an octave lower for a male voice only', () => {
+    it('sings the phrase an octave lower for every voice but a female one', () => {
         const pitches = (gender?: string) => voiceSampleScore('ja', gender)?.notes.map(n => n.pitch);
-        assert.deepEqual(pitches('male'), pitches()?.map(p => p - 12));
-        assert.deepEqual(pitches('female'), pitches());
+        assert.deepEqual(pitches('male'), pitches('female')?.map(p => p - 12));
+        assert.deepEqual(pitches(), pitches('male'), 'a voice that says neither is heard at the male octave');
     });
 
     it('ends the phrase as it is said, with wa', () => {
