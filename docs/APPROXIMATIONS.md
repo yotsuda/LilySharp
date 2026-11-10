@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 305 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **431** | |
+| `OWN` | 306 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **432** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（305 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（306 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -506,6 +506,7 @@
 - **`DynamicEngraver.MeasuredExpressiveInk`** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
 - **`DynamicEngraver.DrumDoubles`** LILYSHARP-OWN: LilyPond's Dynamic_engraver lives in each Voice, and a DrumStaff of two
 - **`DynamicEngraver.PlaceOnMultiMeasureRests`** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
+- **`DynamicEngraver.SubitoWidth`** word at the expressive-text em and the word space after it. LILYSHARP-OWN (owner's decision
 - **`DynamicEngraver.SmuflGlyphRun`** the ink the side-position reads. LILYSHARP-OWN: LilyPond reads no SMuFL font and sets its
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **`ElementCoordinator.BuildTieColumn`** LILYSHARP-OWN: LilyPond boxes the slash head as any head (tie-formatting-problem.cc

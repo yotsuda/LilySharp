@@ -1138,10 +1138,10 @@ internal static class DynamicEngraver
     internal const double SubitoGap = 0.6;
 
     /// <summary>How far a subito's "sub." reaches left of its level's own left edge — the italic
-    /// word at the expressive-text em and the word space after it. LilyPond hangs it there and
-    /// keeps the level where the plain one stands (MEASURED, 2.26.0, Lab sessions/p903/b9:
-    /// `make-dynamic-script` of `#:italic "sub." #:dynamic "p"` puts the p under its note as
-    /// a plain \p).</summary>
+    /// word at the expressive-text em and the word space after it. LILYSHARP-OWN (owner's decision
+    /// 2026-11-10): the level stands under its note, because it is that note's level. LilyPond has
+    /// no subito; the twin's `make-dynamic-script` centres the whole "sub. p" on the note, which
+    /// puts the p right of the head (MEASURED, 2.26.0, Lab sessions/p1222/haru/probe/dump3.ly).</summary>
     internal static double SubitoWidth(Rendering.ScoreTextMetrics fonts)
         => fonts.Advance(SubitoWord, LabelEm(fonts, true), LabelRole(true), LabelStyle(fonts, true)) + SubitoGap;
 
