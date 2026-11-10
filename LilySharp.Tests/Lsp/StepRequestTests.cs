@@ -125,6 +125,29 @@ public class StepRequestTests
     /// LilyPond's predefined x35343 — then Lily#'s maximal shapes, each once.</summary>
     private static List<string> Cm7Order(bool includeStretch = false) => Order("Cm7", includeStretch);
 
+    // Owner's decision 2026-11-11: the step offers a guitar's shapes on its four highest strings, the
+    // root not always lowest, unless a shape it already offers holds them.
+    [Fact]
+    public void TheStep_OffersTheUpperStrings_InversionsIncluded_NoMutedCopy()
+    {
+        var c = Order("C", includeStretch: false);
+        Assert.Contains("xx2553", c);                 // E lowest
+        Assert.DoesNotContain("xx2010", c);           // x32010 with its fifth string muted
+        Assert.DoesNotContain("xx5553", c);           // x35553 with its fifth string muted
+        Assert.Equal("x32010", c[0]);                 // the default stays the first
+        Assert.Contains("xx3231", Order("Dm", includeStretch: false));   // F lowest
+        // Every upper-string shape of A minor is a muted copy of one offered already: none is added.
+        var am = Order("Am", includeStretch: false);
+        Assert.DoesNotContain("xx2210", am);          // x02210 muted
+        Assert.DoesNotContain("xx7555", am);          // x07555 muted
+        // After the shapes of its own position: the root lowest comes first there.
+        int upper = c.IndexOf("xx2553");
+        Assert.All(c.Take(upper).Skip(1), s => Assert.True(Position(s) <= 2, s));
+        Assert.All(c.Skip(upper + 1).Where(s => !s.StartsWith("xx")), s => Assert.True(Position(s) > 2, s));
+
+        static int Position(string shape) => LilySharp.Core.Music.ChordVoicings.Position(ChordVoicingTests.Shape(shape));
+    }
+
     private static List<string> Order(string symbol, bool includeStretch)
     {
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(Guitar($"c'1@chord({symbol})"));
@@ -159,10 +182,12 @@ public class StepRequestTests
             includeStretch: false).Bases.Select(b => LilySharp.Core.Music.ChordVoicings.Spell(b));
         Assert.Equal(CmBases, bases);
         var order = Order("Cm", includeStretch: false);
-        Assert.Equal(29, order.Count);
+        // The 29 and, since 2026-11-11, the six upper-string shapes no other one holds.
+        Assert.Equal(35, order.Count);
         Assert.Equal(["x35543", "x31013", "x31043", "x35043", "8x58x8"], order.Take(5));
-        Assert.Equal(["8-10-10-8-8-11", "xx-10-12-13-11", "x-15-13-12-x-15", "x-15-13-12-13-x", "x-15-13-x-13-15"],
+        Assert.Equal(["x-15-13-12-x-15", "x-15-13-12-13-x", "xx-13-12-13-15", "x-15-13-x-13-15", "xx-13-0-13-15"],
             order.TakeLast(5));
+        Assert.Equal(CmBases.Length + 6, order.Count);
     }
 
     /// <summary>The step walks on past 8xx888 into frets 10–15 and writes them in the compact
@@ -174,7 +199,7 @@ public class StepRequestTests
     {
         var (response, after) = Step(Guitar("c'1@chord(Cm 8xx888‸)"), +1, semitone: true);
         Assert.Equal(Guitar("c'1@chord(Cm 8xx88-11)"), after);
-        Assert.Equal("Cm: shape 19 of 29 (8xx88-11)", response.Message);
+        Assert.Equal("Cm: shape 20 of 35 (8xx88-11)", response.Message);
         Assert.Equal(Guitar("c'1@chord(Cm 8xx888)"), Down("c'1@chord(Cm 8xx88-11‸)", Guitar, semitone: true));
         // The full-dash spelling of the same shape steps from the same place.
         Assert.Equal(Guitar("c'1@chord(Cm 8xx888)"), Down("c'1@chord(Cm 8-x-x-8-8-11‸)", Guitar, semitone: true));
@@ -608,23 +633,23 @@ public class StepRequestTests
         // The README's example, "Cm7: shape 4 of 33 (x3x546)": the normal rule's 33 bases, the
         // default among them — the 14 reaching fret 10 included since 2026-09-28 (the shape
         // grammar writes them dash-separated; until then the step left them out, 19).
-        Assert.Equal(33, off.Count);
+        Assert.Equal(34, off.Count);                      // and xx5546 on the upper strings, since 2026-11-11
         Assert.Equal(3, off.IndexOf("x3x546"));
         Assert.Contains("8xx546", on);                    // frets 4 to 8
         Assert.DoesNotContain("8xx546", off);
         Assert.True(on.Count > off.Count);
     }
 
-    /// <summary>The cycle differs: from x35346 Up is the normal order's next, 8x58x6, with the
-    /// setting off, and the stretch shape 8xx546 with it on.</summary>
+    /// <summary>The cycle differs: from x35346 Up is the normal order's next, xx5546 (on the upper
+    /// strings, since 2026-11-11), with the setting off, and the stretch shape 8xx546 with it on.</summary>
     [Fact]
     public void TheStep_WalksTheOrderTheSettingChooses()
     {
         var off = Cm7Order(includeStretch: false);
         var on = Cm7Order(includeStretch: true);
-        Assert.Equal("8x58x6", off[off.IndexOf("x35346") + 1]);
+        Assert.Equal("xx5546", off[off.IndexOf("x35346") + 1]);
         Assert.Equal("8xx546", on[on.IndexOf("x35346") + 1]);
-        Assert.Equal(Guitar("c'1@chord(Cm7 8x58x6)"), Step(Guitar("c'1@chord(Cm7 x35346‸)"), +1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@chord(Cm7 xx5546)"), Step(Guitar("c'1@chord(Cm7 x35346‸)"), +1, semitone: true).After);
         var (response, after) = Step(Guitar("c'1@chord(Cm7 x35346‸)"), +1, includeStretch: true, semitone: true);
         Assert.Equal(Guitar("c'1@chord(Cm7 8xx546)"), after);
         Assert.Equal($"Cm7: shape {on.IndexOf("8xx546") + 1} of {on.Count} (8xx546)", response.Message);
@@ -632,12 +657,12 @@ public class StepRequestTests
 
     /// <summary>A WRITTEN stretch shape with the setting off is not in the order, yet steps from
     /// where it would sort: 8xx546 (position 4) goes Up to the first normal shape after it,
-    /// 8x58x6 (position 5), and Down to the last before it, x35346 (position 3).</summary>
+    /// 8x58x6 (position 5), and Down to the last before it, xx5546 (position 4, on the upper strings).</summary>
     [Fact]
     public void AWrittenStretchShape_StepsToTheNormalShapesAroundIt()
     {
         Assert.Equal(Guitar("c'1@chord(Cm7 8x58x6)"), Up("c'1@chord(Cm7 8xx546‸)", Guitar, semitone: true));
-        Assert.Equal(Guitar("c'1@chord(Cm7 x35346)"), Down("c'1@chord(Cm7 8xx546‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar("c'1@chord(Cm7 xx5546)"), Down("c'1@chord(Cm7 8xx546‸)", Guitar, semitone: true));
         // A muted copy of it sorts as the stretch shape it mutes.
         Assert.Equal(Guitar("c'1@chord(Cm7 8x58x6)"), Up("c'1@chord(Cm7 8xx54x‸)", Guitar, semitone: true));
     }

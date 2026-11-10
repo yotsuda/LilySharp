@@ -1344,9 +1344,9 @@ public class ChordDiagramTests
             form { A }
             score g { layout gtr  staff gt }
             """;
-        Assert.Contains("guitar: `x35543` (written) — shape 1 of 29", HoverAt(doc, "@chord(Cm x-3"));
-        Assert.Contains("guitar: `8xx88-11` (written) — shape 19 of 29", HoverAt(doc, "@chord(Cm 8"));
-        Assert.Contains("guitar: `xx-10-12-13-11` (written) — shape 26 of 29", HoverAt(doc, "@chord(Cm x-x"));
+        Assert.Contains("guitar: `x35543` (written) — shape 1 of 35", HoverAt(doc, "@chord(Cm x-3"));
+        Assert.Contains("guitar: `8xx88-11` (written) — shape 20 of 35", HoverAt(doc, "@chord(Cm 8"));
+        Assert.Contains("guitar: `xx-10-12-13-11` (written) — shape 27 of 35", HoverAt(doc, "@chord(Cm x-x"));
     }
 
     [Fact]

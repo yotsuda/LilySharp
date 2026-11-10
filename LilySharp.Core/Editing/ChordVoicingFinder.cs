@@ -122,7 +122,7 @@ public static class ChordVoicingFinder
         List<int[]> shapes = bowed
             ? DoubleStops(strings, allowed, required, chord, bassPc)
             : use != null
-            ? [.. power.Where(p => p.Select((f, s) => f < 0 || use[s]).All(on => on)), .. OnStrings(strings, use, chord, allowed, required, bassPc, symbol.Contains('/'))]
+            ? [.. power.Where(p => p.Select((f, s) => f < 0 || use[s]).All(on => on)), .. OnStrings(strings, use, chord, allowed, required, bassPc)]
             : [.. power, .. ChordVoicings.For(strings, chord, includeStretch: false).Bases.Select(b => b.ToArray())];
         var voicings = shapes.Select(frets =>
         {
@@ -217,10 +217,12 @@ public static class ChordVoicingFinder
 
     /// <summary>The shapes of a chord on the strings <paramref name="use"/> picks: the diagrams' rules but the
     /// root lowest (a slash chord's bass still is), each shape maximal on those strings — a muted one of them
-    /// takes no fret it could — lowest position first, then the fewest fingers, the root lowest, the frets.</summary>
-    private static List<int[]> OnStrings(int[] tuning, bool[] use, ChordStructure chord, int allowed, int required, int bassPc, bool slash)
+    /// takes no fret it could — lowest position first, then the fewest fingers, the root lowest, the frets.
+    /// The editor's step offers those of a guitar's four highest strings too (<see cref="NoteStepper.ShapeOrder"/>).</summary>
+    internal static List<int[]> OnStrings(int[] tuning, bool[] use, ChordStructure chord, int allowed, int required, int bassPc)
     {
         int rootPc = ((Natural(((chord.RootStep % 7) + 7) % 7) + chord.RootAlter) % 12 + 12) % 12;
+        bool slash = bassPc != rootPc;
         var chosen = Enumerable.Range(0, tuning.Length).Where(s => use[s]).ToList();
         var valid = new List<int[]>();
         var frets = Enumerable.Repeat(-1, tuning.Length).ToArray();

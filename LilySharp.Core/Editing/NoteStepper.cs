@@ -1415,6 +1415,22 @@ public static partial class NoteStepper
         // On every tuning since 2026-09-29 (the ukulele's too: the rules less V4, K5 ⑥).
         foreach (var b in Music.ChordVoicings.For(tuning, pressed, includeStretch).Bases)
             Add(b);
+        // A guitar's shapes on its four highest strings, the root not always lowest, as a band's
+        // guitar plays while the bass has the root (owner's decision 2026-11-11): those no shape
+        // already offered holds — a muted copy is the player's to make — each after the shapes of
+        // its position, so the root lowest comes first there. The default stays the first.
+        if (tuning.Count >= 6 && Music.ChordVoicings.TryTones(pressed, out int allowed, out int required, out int bassPc))
+        {
+            var upper = Enumerable.Range(0, tuning.Count).Select(s => s >= tuning.Count - 4).ToArray();
+            foreach (var shape in ChordVoicingFinder.OnStrings([.. tuning], upper, pressed, allowed, required, bassPc))
+            {
+                if (order.Any(o => o.Length == shape.Length && shape.Select((f, s) => f < 0 || f == o[s]).All(held => held)))
+                    continue;
+                int position = Music.ChordVoicings.Position(shape);
+                int at = order.FindIndex(System.Math.Min(1, order.Count), o => Music.ChordVoicings.Position(o) > position);
+                order.Insert(at < 0 ? order.Count : at, [.. shape]);
+            }
+        }
         return (tuning, order);
     }
 
