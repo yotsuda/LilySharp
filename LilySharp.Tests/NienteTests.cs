@@ -185,7 +185,7 @@ public class NienteTests
     }
 
     [Fact]
-    public void Midi_PlaysNienteAtTheQuietestVelocity()
+    public void Midi_PlaysNienteAsPppp()
     {
         var notes = new MidiExporter().Export(SyntaxTree.Parse(Book("c'4@niente d' e'@p f' |"))).Tracks
             .SelectMany(t => t.Notes).OrderBy(n => n.StartTick).ToList();
