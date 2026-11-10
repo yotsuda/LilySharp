@@ -267,6 +267,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1219セッションの経緯
+
+### 1.1 第1219セッション（2026-11-10・YT-DELL2）
+
+- **歌詞の設計 §9 の④ `hum`／`solfege` を実装した**（設計 §6・`Music/GeneratedLyrics`）。`singer S sings hum on P` はハミング（`ん`、言語は常に日本語）、`singer S sings solfege on P` は階名を歌う、`lyrics solfege` は譜の下に階名を印刷（`lyrics hum` は LYS4050）。定義ブロック無しで動くように、`LyricsCollector.CollectNoteBound`（音符から `LyricItem`、書いた歌詞の下の行）・`SungSyllables`（track は `LyricItem.GeneratedTrack`）・検証器 2 つをつないだ。移動ド: 調号の長調主音が do（`(4*sharps) mod 7`）、`key` の変化は小節の `KeySignatureChangeItem` を追う。音名は `WrittenPitch` の step。中国語は漢字（オーナー決定）。`.ly`・MusicXML にも階名が出る。⚠️ `ん` の実聴は未（`MANUAL-CHECKS` 第1219）。VS Code の実機も未確認。
+- 全 svg の掃き 1263 枚で差 0（Lab `sessions/p1219/sweep`、base は第1218 の exe）。毒 15 本すべて赤（`t4/poisons.ps1`、1 本目の緑から `on` の名前付き声部のテストを足した）。
+- 門（`-End`、base `211392335`）: 開始時 full 15016 合格 / 1 失敗（`DeadCitationsDoNotGrow`＝HANDOFF に別 repo の SHA を書いた。消して解消）/ skip 2 / 合計 15018、終了時 full 15039 合格 / 0 失敗 / skip 2 / 合計 15041（trx `p1219\run3.trx`。`-End` の run2 は補完の 2 本が赤で、直して回し直した）。拡張 npm 958 合格。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` 170 行 / LILYPOND-REF 0 / OWN 0（7.5: 歌う言葉の経路で LP に対応物なし）。棚卸しの増減 0。⚠️ perf ベンチは未実行（生成は `hum`/`solfege` を置いた譜だけ）。
+
 ## 以下は第1218セッションの経緯
 
 ### 1.1 第1218セッション（2026-11-10・YT-DELL2）
