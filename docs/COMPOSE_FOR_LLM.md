@@ -151,7 +151,9 @@ What makes it music:
   written as they were. Going round the form does not make a piece longer: a section plays twice at most.
 - **A variation is of its theme**: it keeps the theme's chords or the outline of its tune, so the
   theme is heard in it, and changes its rhythm, its figure or its register. A new tune over new chords is
-  a new section, and the theme's rhythm kept under new notes is not yet a variation.
+  a new section, and the theme's rhythm kept under new notes is not yet a variation. Each variation
+  changes more than the rhythm: the accompaniment's figure, the register, or the tune's own shape
+  (ornamented, inverted, in the other hand), and no two take the same accompaniment.
 - **One home key, one tempo**: a section may move to a related key (`key g major` at its head —
   the relative, the dominant) and the piece comes home to end. A section in the RELATIVE key (B
   minor in a D major piece, A minor in C) keeps the signature and writes no `key` line: the same

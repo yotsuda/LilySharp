@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Copilot's composing hears of notes outside the key that lead nowhere**, and of variations shorter than their theme. Until now only the review told of the first.
 - **An MP4 takes the shape of its paper**: a score on wide paper makes a wide video, 1920 × 1080 for 16:9, where it made an upright one with white above and below. A4 upright stays 1240 × 1754.
 - **A note struck at `@niente` is heard in the preview**: it plays as softly as `@pppp`. A last chord written `@decresc … @niente` made no sound.
 - **A panel dragged to the edge of the preview keeps its layout**: the practice and range panels narrowed as they neared the right edge, and what was in them wrapped.

@@ -690,6 +690,8 @@ public static class CompositionChecks
                     // turned a hymn into a tune over held notes — the alto on whole notes for 16 bars).
                     + " — unless the voices moving together is the music's own character, as in a hymn or a chorale: then keep it."));
         }
+        findings.AddRange(ShortVariations(midi));
+        findings.AddRange(KeyChecks.OutsideOf(source, root, midi));
         return findings;
     }
 
@@ -1681,6 +1683,30 @@ public static class CompositionChecks
         var starts = midi.SectionStarts.ToList();
         return starts.Select((s, i) => (Name: s.Value, Start: s.Key, End: i + 1 < starts.Count ? starts[i + 1].Key : midi.EndTick))
             .Where(s => s.End > s.Start).GroupBy(s => s.Name).Select(g => g.First()).ToList();
+    }
+
+    // A theme and its variations, by their sections' names.
+    private static readonly System.Text.RegularExpressions.Regex ThemeSection = new(
+        @"^(theme|thema|主題|テーマ)[\W_]*\d*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    private static readonly System.Text.RegularExpressions.Regex VariationSection = new(
+        @"^(variation|var|変奏)[\W_]*(\d+|[ivxlc]+|[一二三四五六七八九十]+)?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    /// <summary>Variations shorter than their theme: fragments of its course (owner's decision 2026-11-10:
+    /// Kawaru-Iro-no-Shudai's theme of 8 bars, its variations of 6, 6, 6 and 4, one of them four seconds long;
+    /// told the piece was short, it added an introduction and left them as they were).</summary>
+    private static IEnumerable<CompositionFinding> ShortVariations(MidiFile midi)
+    {
+        var spans = PlayedSpans(midi);
+        var theme = spans.FirstOrDefault(s => ThemeSection.IsMatch(s.Name));
+        if (theme.Name == null)
+            yield break;
+        int BarsOf(int start, int end) => 1 + midi.BarTicks.Count(b => b > start && b < end);
+        int bars = BarsOf(theme.Start, theme.End);
+        var cut = spans.Where(s => VariationSection.IsMatch(s.Name)).Select(s => (s.Name, Bars: BarsOf(s.Start, s.End)))
+            .Where(v => v.Bars < bars).ToList();
+        if (cut.Count > 0)
+            yield return new("form.variation-short", $"{string.Join(", ", cut.Select(v => $"{v.Name} ({v.Bars} bars)"))}: shorter than the theme's {bars} bars. "
+                + "A variation runs the theme's whole course, its phrases and cadences in order: lengthen the variations themselves to the theme's length, rather than adding other sections.");
     }
 
     /// <summary>How many sections a song has before "one beat in all but one of them" is said

@@ -160,6 +160,7 @@ public static class ReviewNotes
         ["form.played-three-times"] = new(S, D, "A song's verses change their words, but an instrumental's returns repeat the same music unless they vary, and going round adds nothing to what a piece says.", "The music itself goes round: a song or a dance written down, a jazz head, a minimalist piece."),
         ["form.returns-unchanged"] = new(I, L, "A section that returns to end a piece usually lifts, and only louder is not yet new.", "A plain recapitulation suits the style."),
         ["form.length"] = new(I, L, "A piece needs room for its form to say something: phrases that close, and a return.", "A short piece was asked for: a sketch, a jingle, a study."),
+        ["form.variation-short"] = new(S, D, "A variation retells the theme's whole course, so the ear follows the same journey in new clothes. One cut short is a fragment of it.", "Short or fragmentary variations were asked for."),
         ["form.ends-in-another-key"] = new(M, D, "A piece usually closes in the key it began in, which is what makes the end sound like home.", "A progressive tonality or an open ending is meant."),
         ["form.final-bass"] = new(M, D, "A last chord over the tonic is what the ear hears as an ending.", "An open or inverted ending is meant."),
         ["form.ends-apart"] = new(S, D, "Parts that do not stop together leave the ending unresolved, since one is still running while the others hold.", "A fade or a solo tag is the ending."),

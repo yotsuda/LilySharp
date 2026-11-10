@@ -212,11 +212,13 @@ A section named as a frame (intro, outro, coda, ending, tag, prelude, postlude, 
   distorts, answers the power chords — the root and its fifth, the octave above — before the full
   shapes; the chat's instructions tell it to pass the sound.
 - Notes of the key spelled by another name (B and F♯ in E♭ minor).
+- Notes outside the key that lead nowhere (`key.outside`, `KeyChecks.OutsideOf`; the review's alone until 2026-11-10, when Kawaru-Iro-no-Shudai's C♯ in A minor never reached the AI).
 - An octave mark slipped: one note an octave away and straight back — each voice of a part read
   as its own line (`MidiNote.Voice`; 2026-11-01: a tune over its own part's chords was told of slips).
 
 **Form and length**
 - Sections copied note for note.
+- Variations shorter than their theme (`form.variation-short`: sections named `Var…`, `Variation…` or `変奏…` against one named `Theme` or `主題`; 2026-11-10: Kawaru-Iro-no-Shudai's theme of 8 bars, its variations of 6, 6, 6 and 4).
 - Sections played three times in an instrumental. Beyond a band: no words, and over half the bars played being
   repeats (`PlayedRound`; 2026-11-02: a carol went round its 24 bars four times). A rondo stays under the half.
   The notes cannot tell a piece filling its time from a song written down that goes round as the song does, in

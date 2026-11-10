@@ -24,7 +24,8 @@ namespace LilySharp.Core.Editing;
 /// <summary>
 /// What a person's piece says of its key (owner's points 2026-10-30, docs/review-tool-design.md §4): the
 /// key heard against the key written, notes outside the key that lead nowhere, and a chromatic passing
-/// note spelled against its direction. The review's alone: a composing AI spells by the guide.
+/// note spelled against its direction. The review's, but for the notes outside the key, which a composing
+/// AI is told of too (<see cref="OutsideOf"/>); it spells by the guide.
 /// </summary>
 public static class KeyChecks
 {
@@ -106,10 +107,20 @@ public static class KeyChecks
         int fifths = WrittenFifths(root, keys);
         if (Signature(midi, keys, fifths) is { } signature)
             findings.Add(signature);
-        findings.AddRange(Outside(source, midi, keys.Mode == "minor", fifths, CompositionChecks.SwungBlueNotes(root)));
         if (ChordChecks.ChordKey.Of(keys.Tonic, keys.Mode) is { } key)
             findings.AddRange(ChordChecks.Findings(source, root, midi, key));
         return findings;
+    }
+
+    /// <summary>The notes outside the key that lead nowhere, read by <see cref="CompositionChecks.Findings"/>
+    /// so that a composing AI hears of them as the review does (owner's decision 2026-11-10: Kawaru-Iro-no-Shudai's
+    /// C♯ in A minor, in seven bars, reached the review and never the AI). Not read in a piece that changes key
+    /// or is in a mode, as <see cref="Of"/> does not read them.</summary>
+    internal static IEnumerable<CompositionFinding> OutsideOf(string source, SyntaxNode root, MidiFile midi)
+    {
+        if (TheOneKey(source, root) is not { } keys || keys.Mode is not ("major" or "minor"))
+            return [];
+        return Outside(source, midi, keys.Mode == "minor", WrittenFifths(root, keys), CompositionChecks.SwungBlueNotes(root));
     }
 
     /// <summary>The written key's signature. A key past seven accidentals (`des minor`, eight flats, the notes of
@@ -157,8 +168,10 @@ public static class KeyChecks
             + $"If it is in {heard[0].Name}, write that as the `key`, and those notes need no accidentals.");
     }
 
-    /// <summary>A line's notes outside the key that lead nowhere: neither a semitone from a note of the key
-    /// before or after them (a leading tone, a passing or neighbour note), nor one of a chromatic run, nor
+    /// <summary>A line's notes outside the key that lead nowhere: neither going on by a semitone (a leading
+    /// tone, a passing or neighbour note; reached by one and left by a tone, `d cis b` in A minor, it leads
+    /// nowhere: owner's decision 2026-11-10, unless it is the line's last note, as a final chord's major third
+    /// is: Little Fugue's F♯), nor one of a chromatic run, nor
     /// sounding in the harmony around them, from another part or from the line's own part's other voices (a
     /// chord from outside the key is a chord, not a slip: a solo guitar's tune on the E of the C7 its own thumb
     /// holds, Cafe-no-Midori), nor
@@ -200,7 +213,7 @@ public static class KeyChecks
                 if (scale.Contains(pc))
                     continue;
                 bool Beside(int j) => j >= 0 && j < notes.Count && System.Math.Abs(notes[j].Pitch - notes[i].Pitch) == 1;
-                if (Beside(i - 1) || Beside(i + 1) || Beside(i + 2))
+                if (Beside(i + 1) || Beside(i + 2) || (i == notes.Count - 1 && Beside(i - 1)))
                     continue;
                 var note = notes[i];
                 bool Other((string Part, int Voice, int StartTick, int DurationTicks, int Pitch) o) => o.Part != line.Key || o.Voice != lineVoices[line.Key];
@@ -213,7 +226,9 @@ public static class KeyChecks
                 var (beatStart, beatEnd) = BeatOf(midi, bars, note.StartTick);
                 // …and of the bass it stands over, for as long as that bass holds: a broken chord that comes round
                 // twice in the bar over one held bass is one chord (the same song's second B♯, a beat after the voice's).
-                var bass = around.Where(o => o.Pitch < note.Pitch).OrderBy(o => o.Pitch).Select(o => ((int, int)?)(o.StartTick, o.StartTick + o.DurationTicks)).FirstOrDefault();
+                // A bass struck again on its own note is still that bass (Little Fugue's viola G♯ under `e2 e,2`, the
+                // violin's G♯ of the same E7 on the bar's first beat, told a slip).
+                var bass = around.Where(o => o.Pitch < note.Pitch).OrderBy(o => o.Pitch).Select(o => ((int, int)?)HeldSpan(everything, o)).FirstOrDefault();
                 bool InSpan(int from, int to, (string Part, int Voice, int StartTick, int DurationTicks, int Pitch) o) => o.StartTick < to && from < o.StartTick + o.DurationTicks;
                 bool inBeat = everything.Any(o => Other(o) && Pc(o.Pitch) == pc
                     && (InSpan(beatStart, beatEnd, o) || (bass is var (bassFrom, bassTo) && InSpan(bassFrom, bassTo, o))));
@@ -234,6 +249,24 @@ public static class KeyChecks
                 + (at.Count > 1 ? $" first; bars {string.Join(", ", at.Take(6))}{(at.Count > 6 ? ", …" : "")}" : "")
                 + ", as the form plays them): no semitone into a note of the key, and no chord around it has that note. Is it the note you meant?") { Parts = [line.Key], Bars = at };
         }
+    }
+
+    /// <summary>How long a bass note holds, from the first to the last of the notes of its own name its voice
+    /// strikes one straight after another.</summary>
+    private static (int From, int To) HeldSpan(List<(string Part, int Voice, int StartTick, int DurationTicks, int Pitch)> everything,
+        (string Part, int Voice, int StartTick, int DurationTicks, int Pitch) bass)
+    {
+        int name = (bass.Pitch % 12 + 12) % 12;
+        var same = everything.Where(o => o.Part == bass.Part && o.Voice == bass.Voice && (o.Pitch % 12 + 12) % 12 == name)
+            .OrderBy(o => o.StartTick).ToList();
+        int from = bass.StartTick, to = from + bass.DurationTicks;
+        foreach (var o in same)
+            if (o.StartTick >= from && o.StartTick <= to)
+                to = System.Math.Max(to, o.StartTick + o.DurationTicks);
+        for (int k = same.Count - 1; k >= 0; k--)
+            if (same[k].StartTick < from && same[k].StartTick + same[k].DurationTicks >= from)
+                from = same[k].StartTick;
+        return (from, to);
     }
 
     /// <summary>The beat <paramref name="tick"/> falls in, as ticks from its start to its end: a beat of the

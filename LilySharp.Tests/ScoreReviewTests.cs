@@ -286,6 +286,51 @@ public class ScoreReviewTests
     public void ANoteThatLeadsSomewhere_IsNotSaid(string key, string notes)
         => Assert.False(Says(Tune(key, notes), "key.outside"));
 
+    // Owner's decision 2026-11-10: Kawaru-Iro-no-Shudai's `d cis b` in A minor, in five bars the check let by.
+    [Fact]
+    public void ANoteReachedByASemitone_LeadsSomewhereOnlyIfItGoesOnByOne()
+    {
+        Assert.True(Says(Tune("a minor", "a'4 c'' e'' d'' | cis'' b' a' e' | c'' b' a' e' | a'1 |"), "key.outside"));
+        Assert.False(Says(Tune("a minor", "a'4 c'' e'' d'' | cis'' d'' a' e' | c'' b' a' e' | a'1 |"), "key.outside"));
+        // The line's last note, the major third of a final chord (Little Fugue's F♯).
+        Assert.False(Says(Tune("a minor", "a'4 c'' e'' d'' | c'' b' a' e' | c'' b' a' e' | d''2 cis''2 |"), "key.outside"));
+    }
+
+    [Fact]
+    public void TheComposingFlowIsToldOfANoteOutsideTheKey_AndOnlyOnce()
+    {
+        string book = Tune("a minor", "a'4 c'' e'' d'' | cis'' b' a' e' | c'' b' a' e' | a'1 |");
+        Assert.Single(CompositionChecks.Findings(book), f => f.Id == "key.outside");
+        Assert.Single(KeyFindings(book), f => (string?)f["id"] == "key.outside");
+    }
+
+    private static string Variations(params (string Name, int Bars)[] sections) => $$"""
+        title "Variations"
+        key c major
+        time 4/4
+        octave absolute
+        part m { instrument flute }
+        {{string.Join("\n", sections.Select(s => $"section {s.Name} {{ m {{ {string.Concat(Enumerable.Repeat("c''4 d'' e'' g'' | ", s.Bars))} }} }}"))}}
+        form { {{string.Join(" ", sections.Select(s => s.Name))}} }
+        score { staff m }
+        """;
+
+    private static System.Collections.Generic.List<string> ShortVariations(string book)
+        => CompositionChecks.Findings(book).Where(f => f.Id == "form.variation-short").Select(f => f.Message).ToList();
+
+    [Fact]
+    public void AVariationShorterThanItsTheme_IsTold()
+    {
+        var told = Assert.Single(ShortVariations(Variations(("Theme", 8), ("VarI", 6), ("Var2", 8), ("Variation3", 12), ("Var4", 4))));
+        Assert.StartsWith("VarI (6 bars), Var4 (4 bars): shorter than the theme's 8 bars.", told);
+        Assert.Contains("rather than adding other sections", told);
+        Assert.Empty(ShortVariations(Variations(("Theme", 8), ("VarI", 8))));
+        // A return of the theme and the sections around it are no variations.
+        Assert.Empty(ShortVariations(Variations(("Theme", 8), ("Coda", 2), ("ThemeReturn", 4))));
+        // Without a section that names the theme, there is nothing to measure against.
+        Assert.Empty(ShortVariations(Variations(("A", 8), ("Var1", 4))));
+    }
+
     private const string TwoParts = """
         title "Two"
         key c major
@@ -365,6 +410,15 @@ public class ScoreReviewTests
         string held = Broken.Replace("c''8 ees''8 c''4 a'4 g'4", "c''4 ees''4 c''4 g'4").Replace("ARPEGGIO", "ees'8 g' r4 r2");
         Assert.False(Says(held.Replace("BASS", "c1 | c1").Replace("| c1 | c1 | c1 | }", "| c1 | c1 | }"), "key.outside"));
         Assert.True(Says(held.Replace("BASS", "c1 | c4 g,4 r2").Replace("| c1 | c1 | c1 | }", "| c1 | c1 | }"), "key.outside"));
+    }
+
+    // Little Fugue for Three Strings: a viola's G♯ under `e2 e,2`, the violin's G♯ of the same E7 on the first beat.
+    [Fact]
+    public void ABassStruckAgainOnItsOwnNote_HoldsTheChord()
+    {
+        string held = Broken.Replace("c''8 ees''8 c''4 a'4 g'4", "c''4 c''4 ees''4 g'4").Replace("e''4 f'' g'' a''", "g''4 f'' g'' a''").Replace("ARPEGGIO", "ees'8 g' r4 r2");
+        Assert.False(Says(held.Replace("BASS", "c1 | c2 c,2").Replace("| c1 | c1 | c1 | }", "| c1 | c1 | }"), "key.outside"));
+        Assert.True(Says(held.Replace("BASS", "c1 | c2 g,2").Replace("| c1 | c1 | c1 | }", "| c1 | c1 | }"), "key.outside"));
     }
 
     [Fact]

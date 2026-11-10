@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Reviewing a piece is sharper in two places**: a note outside the key reached by a semitone and left by a tone (`d cis b` in A minor) is asked about, and a bass struck again on its own note counts as one chord. Variations shorter than their theme are told (`form.variation-short`). The notes outside the key are now told to the composing AI as well.
 - **An MP4 takes the shape of its paper**: a score on wide paper makes a wide video, 1920 × 1080 for 16:9, where it made an upright one with white above and below. A4 upright stays 1240 × 1754.
 - `[midi]` **A note struck at `@niente` is heard**: it plays as `@pppp` (velocity 43), in both hands of a grand staff. At velocity 1, a last chord written `@decresc … @niente` made no sound. The page does not change.
 - **`@shiftOff` keeps a note in its voice group's first column** (LilyPond's `\once \shiftOff`): in `voice { } { }`, a third voice's head can stand under the voice above instead of a column aside. A score that does not write it does not change.
