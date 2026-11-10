@@ -37,7 +37,7 @@
 | 引数 | 既定 | 意味 |
 |---|---|---|
 | `-Out` | `.lys` の隣 | 書き出す `.mp4` |
-| `-Width` / `-Height` | 1240 / 1754 | 動画の大きさ。ページは形を保って収め、余りは白 |
+| `-Width` / `-Height` | 紙の形から | 動画の大きさ。既定は紙の形のまま、縦長の紙は 1240×1754、横長の紙は 1920×1080 の内側。両方を指定すると、ページは形を保って収め、余りは白 |
 | `-Fps` | 30 | フレームレート |
 | `-Lead` | 1.5 | 鳴り始める前に楽譜だけを映す秒数 |
 | `-Color` | `F57800` | 光る符頭の色（RRGGBB） |
@@ -46,10 +46,10 @@
 | `-SoundFont` | 拡張の MuseScore_General.sf3 | 音色（.sf2 / .sf3） |
 | `-WorkDir` | 一時フォルダに新規作成 | 途中のファイルの置き場所 |
 
-横長の動画にするなら、紙も 16:9 にする:
+横長の動画にするなら、紙を 16:9 にする（動画は紙の形になり、1920×1080 で書かれる）:
 
 ```powershell
-./tools/lys-to-mp4/New-ScoreVideo.ps1 song.lys -Width 1920 -Height 1080 -Set 'paperWidth=320mm','paperHeight=180mm'
+./tools/lys-to-mp4/New-ScoreVideo.ps1 song.lys -Set 'paperWidth=320mm','paperHeight=180mm'
 ```
 
 紙を変えると段の配分も変わる。最後のページが 1 段だけになるなどで見栄えが悪いときは、

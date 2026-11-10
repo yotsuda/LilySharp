@@ -340,6 +340,46 @@ public sealed class ExportRequestTests : IDisposable
         }
     }
 
+    // The owner's report, 2026-11-10: a score on 16:9 paper was written as an upright video.
+    [Fact]
+    public void Mp4_ThePictureTakesThePapersShape()
+    {
+        var book = Book("wide.lys", """
+            part m { clef treble }
+            section A { m { c''4 d e f | } }
+            form { A }
+            paper yt { paperWidth 256mm  paperHeight 144mm }
+            paper flat { paperWidth 297mm  paperHeight 210mm }
+            score YT {
+              paper yt
+              staff m
+            }
+            score Flat {
+              paper flat
+              staff m
+            }
+            score { staff m }
+            """);
+        var server = Server();
+        (int, int) SizeOf(string score)
+        {
+            var video = server.VideoFrames(new VideoFramesParams { Path = book, Score = score, Notes = [], Seconds = 1 });
+            Assert.Null(video.Error);
+            try
+            {
+                using var picture = SkiaSharp.SKBitmap.Decode(File.ReadAllLines(video.Frames!)[0][6..^1]);
+                return (picture.Width, picture.Height);
+            }
+            finally
+            {
+                DeleteFrames(video.WorkDirectory);
+            }
+        }
+        Assert.Equal((1920, 1080), SizeOf("YT"));
+        Assert.Equal((1528, 1080), SizeOf("Flat"));
+        Assert.Equal((1240, 1754), SizeOf(""));
+    }
+
     // The pictures follow the notes the editor hands over — at the practice menu's half tempo the
     // second copy's c'' sounds at 4 s, not 2 — and a named score is found again by its name.
     [Fact]

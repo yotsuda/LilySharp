@@ -34,14 +34,17 @@ namespace LilySharp.Core.Export;
 /// <c>O</c>).</summary>
 public readonly record struct VideoNote(double Start, double End, int SourcePos, int SourceOrdinal);
 
-/// <summary>How a score video looks. The defaults are an A4 page upright, the notes lit orange.</summary>
+/// <summary>How a score video looks. By default the picture takes the page's shape and the notes
+/// are lit orange.</summary>
 public sealed class ScoreVideoOptions
 {
-    /// <summary>The picture's width in pixels. The page keeps its shape inside it; the rest is white.</summary>
-    public int Width { get; init; } = 1240;
+    /// <summary>The picture's width in pixels, or null to take it from the page. With
+    /// <see cref="Height"/> also given, the picture is that size, the page keeps its shape inside
+    /// it and the rest is white.</summary>
+    public int? Width { get; init; }
 
-    /// <summary>The picture's height in pixels.</summary>
-    public int Height { get; init; } = 1754;
+    /// <summary>The picture's height in pixels, or null to take it from the page.</summary>
+    public int? Height { get; init; }
 
     /// <summary>Pictures a second.</summary>
     public int Fps { get; init; } = 30;
@@ -110,7 +113,11 @@ public static class ScoreVideo
         if (pngs.Count != boxes.Count)
             throw new InvalidOperationException($"the pages ({pngs.Count}) and their boxes ({boxes.Count}) disagree");
 
-        int w = options.Width, h = options.Height;
+        // The paper's shape, not the first page's: a lone page is cut under its music (as the
+        // PNG's is). A content-driven paper has no height but the page's.
+        var paper = Svg.SvgGenerator.CollectScore(tree, score, settings: options.PaperOverrides).Paper;
+        var (w, h) = PictureSize(paper.PageWidth, paper.PageHeight > 0 ? paper.PageHeight : boxes[0].Height,
+            options.Width, options.Height);
         var pages = new List<(SKBitmap Picture, double Scale, int X, int Y)>();
         try
         {
@@ -189,6 +196,24 @@ public static class ScoreVideo
         {
             foreach (var p in pages) p.Picture.Dispose();
         }
+    }
+
+    /// <summary>
+    /// The picture's size for a page of this shape: both sides as given when both are, else the
+    /// page's shape inside 1240 × 1754 (a page taller than wide; A4 upright fills it) or
+    /// 1920 × 1080 (wider than tall; 16:9 fills it, the size a video site plays best), a side
+    /// given standing in for that limit (owner's report, 2026-11-10: a score on 16:9 paper made an
+    /// upright video with white above and below). Even, as H.264's 4:2:0 needs.
+    /// </summary>
+    internal static (int Width, int Height) PictureSize(double pageWidth, double pageHeight, int? width, int? height)
+    {
+        if (width is int w && height is int h)
+            return (w, h);
+        bool wide = pageWidth > pageHeight;
+        double fit = Math.Min((width ?? (wide ? 1920 : 1240)) / pageWidth, (height ?? (wide ? 1080 : 1754)) / pageHeight);
+        return (Even(pageWidth * fit), Even(pageHeight * fit));
+
+        static int Even(double pixels) => Math.Max(2, (int)Math.Round(pixels / 2) * 2);
     }
 
     /// <summary>Every notehead by the note that lights it — (source offset, printed copy) — with

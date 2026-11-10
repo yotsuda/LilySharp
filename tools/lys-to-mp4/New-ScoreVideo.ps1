@@ -13,7 +13,7 @@
     ./tools/lys-to-mp4/New-ScoreVideo.ps1 ~/Downloads/Haru-no-Kaze.lys
 
 .EXAMPLE
-    ./tools/lys-to-mp4/New-ScoreVideo.ps1 song.lys -Width 1920 -Height 1080 `
+    ./tools/lys-to-mp4/New-ScoreVideo.ps1 song.lys `
         -Set 'paperWidth=320mm','paperHeight=180mm' -Color 0066E6 -Force
 #>
 [CmdletBinding()]
@@ -21,9 +21,10 @@ param(
     [Parameter(Mandatory, Position = 0)] [string] $Path,
     # The MP4 to write. Default: beside the .lys, with its name.
     [string] $Out,
-    # Picture size. Default: A4 portrait. The page keeps its shape; what is left is white.
-    [int] $Width = 1240,
-    [int] $Height = 1754,
+    # Picture size. Default: the page's shape, within 1240x1754 upright or 1920x1080 wide.
+    # With both given, the page keeps its shape inside them and what is left is white.
+    [int] $Width,
+    [int] $Height,
     [int] $Fps = 30,
     # Seconds of still score before the music starts.
     [double] $Lead = 1.5,
@@ -77,6 +78,7 @@ $scoreVideo = Get-ChildItem (Join-Path $here 'ScoreVideo\bin\Release') -Recurse 
 
 Write-Host '2/5 Writing the MIDI'
 $setArgs = @($Set | ForEach-Object { '--set', $_ })
+$sizeArgs = @(if ($Width) { '--width', $Width }; if ($Height) { '--height', $Height })
 Invoke-Native 'lysc midi' { & $lysc midi -d $WorkDir $Path } | Out-Null
 $mid = Join-Path $WorkDir "$name.mid"
 $wav = Join-Path $WorkDir 'audio.wav'
@@ -94,7 +96,7 @@ $fadeStart = [Math]::Max(0, $end - 1.5)
 
 Write-Host '4/5 Drawing the pictures'
 Invoke-Native 'ScoreVideo' {
-    & $scoreVideo $Path $WorkDir --width $Width --height $Height --fps $Fps `
+    & $scoreVideo $Path $WorkDir @sizeArgs --fps $Fps `
         --lead $Lead.ToString($inv) --length $end.ToString($inv) --color $Color --scale $Scale.ToString($inv) @setArgs
 } | Write-Host
 

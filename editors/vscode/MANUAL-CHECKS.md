@@ -334,6 +334,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
   - (1) ffmpeg が PATH にある状態でプレビューの Export → 保存ダイアログの種類に *MP4 video (the pages, each note lit as it sounds)*（MP3 の次）。「drawing the video and rendering its sound through …」の通知の後に「Exported to ….mp4」。再生すると A4 縦の紙面に、鳴っている符頭だけがオレンジで光り、音とずれない。最初の 1.5 秒は楽譜だけ。2 ページ以上の曲は、次のページの音が鳴った所で画面ごと切り替わる。
   - (2) `lilysharp.export.ffmpegPath` に存在しないパスを入れて同じ操作 → 何も描かずに「Export as MP4 needs ffmpeg, and "…" could not be run…」と *Open Setting*。押すとその設定が開く。空に戻すと PATH の ffmpeg で書ける。
   - (3) エクスプローラーで `.lys` を 2 つ選び右クリック → *Lily#: Export* に *Export as MP4 Video*（MP3 の次）。全 score の `.mp4` が書かれる。一時フォルダ（`%TEMP%\lilysharp-video-*`）が残らない。
+  - (4)（2026-11-10）`paper { paperWidth 256mm paperHeight 144mm }` の score を Export as MP4 → 1920×1080 の横長の動画になり、上下に白い帯が無い。A4 の score は今までどおり 1240×1754。
   - (4) `form { A A }` の曲で、2 回目の A の音が 2 回目に印刷された位置で光る。
 - [ ] **C52**（2026-11-07・書き出しが練習メニューに従う）:
   - (1) プレビューの練習メニューで Tempo 80%、Metronome On、Count-in On、パートを 1 つ Off にして WAV を書き出す → 通知が「(played through …, at 80%, with the metronome, with a count-in, without …)」。鳴らすと ▶ で最初から再生したときと同じ（遅く、クリックあり、1 小節のカウントイン、そのパートなし）。

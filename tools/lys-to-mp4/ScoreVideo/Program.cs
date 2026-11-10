@@ -75,7 +75,9 @@ var score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), null);
 
 var look = new ScoreVideoOptions
 {
-    Width = (int)Num("width", 1240), Height = (int)Num("height", 1754), Fps = (int)Num("fps", 30),
+    Width = opts.ContainsKey("width") ? (int)Num("width", 0) : null,
+    Height = opts.ContainsKey("height") ? (int)Num("height", 0) : null,
+    Fps = (int)Num("fps", 30),
     Lead = Num("lead", 1.5), LitColor = Convert.ToUInt32(Opt("color", "F57800"), 16),
     PngScale = (float)Num("scale", 2.0), PaperOverrides = paper,
 };
