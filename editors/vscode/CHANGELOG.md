@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Each voice's line in the practice menu shows a progress bar while it is being sung**, as the Play button does.
 - **A `singer` line is coloured whatever its voice is called**: a name with a `/` (`"neutrino/NAKUMO"`) left the whole line plain. `singer`, `sings` and `on` take the colour of `form` and `score`, `male` and `female` the colour of a value.
 - **`@shiftOff`** is offered after `@`: it keeps a note of a third or later voice in the first column.
 - **Each voice's line in the practice menu carries the Play button's microphone**: grey with nothing prepared, pulsing while it is sung, blue when ready, in the error colour when it cannot be. The marks `…` and `✓` are gone.

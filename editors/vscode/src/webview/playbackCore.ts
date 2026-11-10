@@ -613,6 +613,18 @@ export function voiceProgress(parts: readonly { state: VoiceState; estimateMs?: 
     return Math.min(1, (ready + running) / total);
 }
 
+/**
+ * How far one voice is, 0 to 1, for the bar on its line in the practice menu; null while the engine
+ * is not singing it. The engine sings one at a time, so `elapsedMs` (since the last one landed) is
+ * the first singing voice's; another that is singing waits at 0.
+ */
+export function voiceRowProgress(parts: readonly { part: string; state: VoiceState; singing?: boolean; estimateMs?: number }[], part: string, elapsedMs: number): number | null {
+    const singing = parts.filter(p => p.state === 'preparing' && p.singing === true);
+    const me = singing.find(p => p.part === part);
+    if (!me) { return null; }
+    return me === singing[0] ? voiceProgress([me], elapsedMs) : 0;
+}
+
 /** The channels `events` touch — what a stop has to silence. */
 export function channelsOf(events: readonly MidiEvent[]): number[] {
     const set = new Set<number>();

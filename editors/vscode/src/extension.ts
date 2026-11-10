@@ -4848,6 +4848,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .toolbar .voice-bar[hidden] { display: none; }
         .toolbar .voice-bar > span { display: block; height: 100%; width: 0; background: #0078d7; transition: width 0.15s linear; }
         :root.theme-dark .toolbar .voice-bar > span { background: #4fa3ff; }
+        /* The same bar on a voice's line in the practice menu, running in under its microphone. */
+        .voice-row-bar {
+            position: absolute; left: 2px; right: 10px; bottom: 1px; height: 2px;
+            border-radius: 1px; background: rgba(128, 128, 128, 0.3); overflow: hidden; pointer-events: none;
+        }
+        .voice-row-bar[hidden] { display: none; }
+        .voice-row-bar > span { display: block; height: 100%; width: 0; background: #0078d7; transition: width 0.15s linear; }
+        :root.theme-dark .voice-row-bar > span { background: #4fa3ff; }
         .voice-badge[data-state="waiting"] { color: #888; }
         .voice-badge[data-state="preparing"] { color: #888; animation: voice-pulse 1.2s ease-in-out infinite; }
         .voice-badge[data-state="ready"] { color: #0078d7; }
@@ -6680,6 +6688,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             bar.hidden = false;
             const parts = [...voiceStates.values()].map(s => ({ state: s.state, estimateMs: s.estimateMs }));
             bar.firstElementChild.style.width = Math.round(window.LysSynth.voiceProgress(parts, now - voiceBarFrom) * 100) + '%';
+            paintVoiceRows();
+        }
+        // Each voice's own bar in the practice menu, for as long as the engine is singing it.
+        function paintVoiceRows() {
+            const states = [...voiceStates].map(([part, s]) => ({ part, state: s.state, singing: s.singing, estimateMs: s.estimateMs }));
+            for (const btn of document.querySelectorAll('#partsList button.voice')) {
+                const bar = btn.querySelector('.voice-row-bar');
+                if (!bar) { continue; }
+                const done = window.LysSynth.voiceRowProgress(states, btn.dataset.part, Date.now() - voiceBarFrom);
+                bar.hidden = done === null;
+                bar.firstElementChild.style.width = done === null ? '0' : Math.round(done * 100) + '%';
+            }
         }
         function renderVoiceBar(singing) {
             const bar = document.getElementById('voiceBar');
@@ -6727,6 +6747,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const base = btn.dataset.title || '';
                 btn.title = s ? base + (s.state === 'ready' ? ' — ready' : s.state === 'preparing' ? ' — being sung…' : s.state === 'waiting' ? ' — not sung yet' : ' — not sung' + (s.detail ? ': ' + s.detail : '')) : base;
             }
+            paintVoiceRows();
         }
         // The badge sits on the corner of the Play button and takes the clicks that land there: they
         // are Play's (owner's report 2026-11-09, session 1149: a Play on that corner opened the
@@ -7696,6 +7717,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     mic.setAttribute('aria-hidden', 'true');
                     mic.appendChild(document.querySelector('#voiceBadge svg').cloneNode(true));
                     b.appendChild(mic);
+                    const bar = document.createElement('span');
+                    bar.className = 'voice-row-bar';
+                    bar.hidden = true;
+                    bar.setAttribute('aria-hidden', 'true');
+                    bar.appendChild(document.createElement('span'));
+                    b.appendChild(bar);
                 }
                 if (title) { b.title = title; b.dataset.title = title; }
                 if (cls) for (const c of cls.split(' ')) b.classList.add(c);

@@ -19,7 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
-import { voiceBarShown, voiceProgress, voiceStillSinging } from '../src/webview/playbackCore';
+import { voiceBarShown, voiceProgress, voiceRowProgress, voiceStillSinging } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
 // engine's score, the key names the render, the engine's lines are read, and the Cantoria
@@ -348,6 +348,21 @@ describe('the bar under Play', () => {
         assert.equal(voiceBarShown([{ state: 'waiting' }, { state: 'ready' }, { state: 'failed' }]), false);
         assert.equal(voiceBarShown([{ state: 'ready', singing: true }]), false);
         assert.equal(voiceBarShown([]), false);
+    });
+
+    it('draws a voice\'s own bar only while the engine is singing it', () => {
+        const parts = [
+            { part: 'm', state: 'ready' as const, estimateMs: 1000 },
+            { part: 'm#2', state: 'preparing' as const, singing: true, estimateMs: 1000 },
+            { part: 'alt', state: 'preparing' as const, singing: true, estimateMs: 1000 },
+            { part: 'ten', state: 'preparing' as const, estimateMs: 1000 },
+        ];
+        assert.equal(voiceRowProgress(parts, 'm#2', 500), 0.5, 'the one at the engine, against its estimate');
+        assert.equal(voiceRowProgress(parts, 'alt', 500), 0, 'its turn is to come');
+        assert.equal(voiceRowProgress(parts, 'm', 500), null, 'done');
+        assert.equal(voiceRowProgress(parts, 'ten', 500), null, 'not at the engine yet');
+        assert.equal(voiceRowProgress(parts, 'nobody', 500), null);
+        assert.equal(voiceRowProgress(parts, 'm#2', 60000), 0.95, 'only the engine\'s answer finishes it');
     });
 
     it('counts the voices ready whole and the one being sung against its estimate', () => {
