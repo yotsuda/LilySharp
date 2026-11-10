@@ -419,6 +419,15 @@ public sealed partial class LilyPondExporter
     {
         if (render == null)
             return;
+        // The rows that stand on a band of their own (a folded row is its staff's verse), each
+        // told from the track's other rows by its place among them.
+        var rowsOfTrack = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var row in Svg.Collector.RenderSpecParser.Parse(render)?.AllLyricsRows ?? [])
+        {
+            int nth = rowsOfTrack.GetValueOrDefault(row.PartName);
+            rowsOfTrack[row.PartName] = nth + 1;
+            _standingRowKeys[row.SourceStart] = RowVarKey(row.PartName, nth);
+        }
         if (!tree.GetRoot().DescendantNodes<LyricsBlockSyntax>().Any()
             && !render.DescendantNodes<LyricsRowRenderSyntax>().Any(r => Music.GeneratedLyrics.IsGenerated(r.PartName)))
             return;
@@ -428,6 +437,18 @@ public sealed partial class LilyPondExporter
         var meters = Svg.Layout.ScoreSideTables.PrevailingMeters(score);
         var senza = SenzaMisuraByBar(score);
         var staves = score.EnumerateStaves().ToDictionary(t => t.GlobalStaffIndex, t => t.Staff);
+        // A row's staff is the track's k-th of that name; its lines go to the k-th row.
+        var rowKeyOfStaff = new Dictionary<int, string>();
+        var rowStavesMet = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var (index, rowStaff) in staves.OrderBy(kv => kv.Key).Select(kv => (kv.Key, kv.Value)))
+        {
+            string track = rowStaff.PrimaryVoice.Name;
+            if (!rowsOfTrack.ContainsKey(track))
+                continue;
+            int nth = rowStavesMet.GetValueOrDefault(track);
+            rowStavesMet[track] = nth + 1;
+            rowKeyOfStaff[index] = RowVarKey(track, nth);
+        }
         // One line = one staff's one voice's one verse (a row's lines key on the row's staff).
         var lines = score.Lyrics
             .GroupBy(l => (l.StaffIndex, l.VoiceId, l.VerseNumber, l.IsLyricsRow))
@@ -470,8 +491,9 @@ public sealed partial class LilyPondExporter
                 + (line.Key.VoiceId > 0 && !line.Key.IsLyricsRow ? "Voice" + NumberWord(line.Key.VoiceId) : "")
                 + "Lyrics" + NumberWord(line.Key.VerseNumber));
             var target = line.Key.IsLyricsRow ? _lyricRowVars : _lyricVars;
-            if (!target.TryGetValue(partName, out var vars))
-                target[partName] = vars = new List<string>();
+            string varsKey = line.Key.IsLyricsRow ? rowKeyOfStaff.GetValueOrDefault(line.Key.StaffIndex, partName) : partName;
+            if (!target.TryGetValue(varsKey, out var vars))
+                target[varsKey] = vars = new List<string>();
             vars.Add(varName);
 
             EmitTimedStream(varName, "lyricmode", "\\skip ", staff.PrimaryVoice.Measures, meters, items,
@@ -745,4 +767,13 @@ public sealed partial class LilyPondExporter
     private readonly Dictionary<string, List<string>> _lyricRowVars = new(StringComparer.Ordinal);
     private readonly HashSet<string> _lyricPlaced = new(StringComparer.Ordinal);
     private readonly HashSet<string> _lyricRowPlaced = new(StringComparer.Ordinal);
+
+    /// <summary>The key of each standing lyrics row in <see cref="_lyricRowVars"/>, by the row's
+    /// source offset. One track on two rows is two keys: each row stands where it is written.</summary>
+    private readonly Dictionary<int, string> _standingRowKeys = new();
+
+    private static string RowVarKey(string track, int occurrence) => occurrence == 0 ? track : track + "#" + occurrence;
+
+    /// <summary>The row's key in <see cref="_lyricRowVars"/>; null for a row folded under its staff.</summary>
+    private string? StandingRowKey(LyricsRowRenderSyntax row) => _standingRowKeys.GetValueOrDefault(row.Span.Start);
 }

@@ -288,7 +288,17 @@ public sealed record ChordRowSpec(
 /// sings part</c>), null when the row writes none and the track's default
 /// applies — resolved by <see cref="Music.LyricBindings.TargetOfRow"/>.
 /// </summary>
-public sealed record LyricsRowSpec(string PartName, string? Sings = null) : RenderItemSpec;
+public sealed record LyricsRowSpec(string PartName, string? Sings = null) : RenderItemSpec
+{
+    /// <summary>The row's offset in the source, telling it from the track's other rows (the
+    /// <c>.ly</c> stands each where it is written); -1 for a row no source wrote. Where the row
+    /// stands in the file is not what the row says, so two rows differing only here are equal.</summary>
+    public int SourceStart { get; init; } = -1;
+
+    public bool Equals(LyricsRowSpec? other) => other is not null && PartName == other.PartName && Sings == other.Sings;
+
+    public override int GetHashCode() => HashCode.Combine(PartName, Sings);
+}
 
 /// <summary>A part this score sounds and does not draw, with what its <c>sounds</c> says.</summary>
 public sealed record HiddenStaffSpec(string Part, string? Sounds);

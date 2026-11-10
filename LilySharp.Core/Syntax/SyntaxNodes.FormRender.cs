@@ -1080,7 +1080,8 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
     /// <summary>The token naming the part this row follows, or null when the row names none —
     /// what the editor colours.</summary>
     public SyntaxTokenNode? SingsTargetToken =>
-        SingsKeyword != null && GetChild(NameToken != null ? 3 : 2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text.Length: > 0 } t ? t : null;
+        // Any kind of token: a part may be called a, s or bass (ExpectPartName).
+        SingsKeyword != null && GetChild(NameToken != null ? 3 : 2) is SyntaxTokenNode { Text.Length: > 0 } t ? t : null;
 
     /// <summary>The part THIS ROW follows (<c>lyrics verse on melody</c> → "melody"), or null;
     /// see <see cref="Svg.Collector.RenderSpecParser.RowTarget"/> for the resolved answer.</summary>

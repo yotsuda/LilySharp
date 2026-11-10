@@ -153,6 +153,12 @@ public sealed partial class MeasureCollector
     // Names bound to an independent lyrics ROW (`lyrics name` score row). The
     // note-bound pass skips these — they are collected as rows instead.
     private HashSet<string> _lyricsRowNames = new();
+
+    /// <summary>A lyrics row's entry in the staff-voice table: the track's name, and for its
+    /// later rows a name no track can have. One track on two rows is two voices, each with its
+    /// own melody's moments in the spacing.</summary>
+    private static string RowKey(string track, int occurrence)
+        => occurrence == 0 ? track : track + "\u0001" + occurrence;
     // Named voices (voice sop { … }) → (voice index, measure track), so a
     // `lyrics sop { … }` block aligns to THAT voice's notes (and its index drives
     // timing-based X for non-primary voices) instead of the default first voice.
@@ -1096,7 +1102,7 @@ public sealed partial class MeasureCollector
         // LYS4006 error (a scoreless loose-music file simply cannot show lyrics).
         if (attachedLyricParts is { Count: > 0 })
             _lyricsCollector.CollectAttached(tree.GetRoot(), attachedLyricParts, measures, 0,
-                _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts,
+                _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts,
                 voiceName == null ? null : renderSpec?.VerseVoiceMapOf(voiceName), _v.Meta.InitialKeySharps);
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
@@ -1663,9 +1669,10 @@ public sealed partial class MeasureCollector
         // Lyrics rows are collected AFTER the music, so the per-section bar count
         // (used to auto-wrap one block's verses) is known from the real content.
         // Sings = the row's OWN `sings` target (null = the track's default applies).
-        var pendingLyricsRows = new List<(string Name, int StaffIndex, string? Sings)>();
+        // Key = its entry in staffVoices (RowKey): one track on two rows is two voices.
+        var pendingLyricsRows = new List<(string Name, string Key, int StaffIndex, string? Sings)>();
         // The melody a row sings when the score shows no staff of it (MultiStaffScore.RowMelodies).
-        var rowMelodies = ImmutableDictionary.CreateBuilder<string, (string Part, ImmutableArray<Measure> Measures)>(StringComparer.Ordinal);
+        var rowMelodies = ImmutableDictionary.CreateBuilder<int, (string Part, ImmutableArray<Measure> Measures)>();
         // `staff NAME with chords CHORDPART` attachments, applied post-loop.
         // Voice = the staff's part, whose instrument the row's diagrams draw on (StaffDiagramTuning).
         var attachedChords = new List<(string PartName, int StaffIndex, ChordDisplayMode Mode, string Voice)>();
@@ -1757,10 +1764,13 @@ public sealed partial class MeasureCollector
             }
             if (lyricsRow != null)
             {
-                lyricsRowsSeen[voiceName] = lyricsRowsSeen.GetValueOrDefault(voiceName) + 1;
-                pendingLyricsRows.Add((voiceName, _v.Cursor.StaffIndex, lyricsRow.Sings));
-                staffVoices[voiceName] = ImmutableArray.Create(
-                    new Voice(voiceName, ImmutableArray<Measure>.Empty));
+                int rowOccurrence = lyricsRowsSeen.GetValueOrDefault(voiceName);
+                lyricsRowsSeen[voiceName] = rowOccurrence + 1;
+                string rowKey = RowKey(voiceName, rowOccurrence);
+                _lyricsRowNames.Add(rowKey);
+                pendingLyricsRows.Add((voiceName, rowKey, _v.Cursor.StaffIndex, lyricsRow.Sings));
+                staffVoices[rowKey] = ImmutableArray.Create(
+                    new Voice(rowKey, ImmutableArray<Measure>.Empty));
                 continue;
             }
 
@@ -1898,7 +1908,7 @@ public sealed partial class MeasureCollector
             // The row's grid is written in BARS; a bar a line break split is two measures.
             if (MidBarBreaks is { IsEmpty: false } splits)
                 wrapBars = splits.ToLogical(wrapBars);
-            foreach (var (name, idx, rowSings) in pendingLyricsRows)
+            foreach (var (name, key, idx, rowSings) in pendingLyricsRows)
             {
                 // A row that SINGS a part places its syllables at that part's
                 // rhythm: the row is the lyric line of a melody the score does
@@ -1927,16 +1937,16 @@ public sealed partial class MeasureCollector
                         _lyricsCollector.CollectBoundRow(tree.GetRoot(), name, idx,
                             melody.ToList(), _sectionState.StartMeasure, _sectionState.AllStarts,
                             voiceKeyDict.TryGetValue(sings, out var sungKey) ? sungKey.Sharps : _v.Meta.InitialKeySharps);
-                        staffVoices[name] = ImmutableArray.Create(new Voice(name, SpacerSkeleton(melody)));
+                        staffVoices[key] = ImmutableArray.Create(new Voice(key, SpacerSkeleton(melody)));
                         if (unseen)
-                            rowMelodies[name] = (sings, melody);
+                            rowMelodies[idx] = (sings, melody);
                         continue;
                     }
                 }
                 var rowMeasures = _lyricsCollector.CollectRow(
                     tree.GetRoot(), name, idx, wrapBars, _sectionState.StartMeasure, _v.Meta.TimeBeats, _v.Meta.TimeBeatType,
                     _sectionState.AllStarts);
-                staffVoices[name] = ImmutableArray.Create(new Voice(name, rowMeasures));
+                staffVoices[key] = ImmutableArray.Create(new Voice(key, rowMeasures));
             }
         }
 
@@ -1944,8 +1954,8 @@ public sealed partial class MeasureCollector
         var rowStaffIndex = new Dictionary<string, int>();
         foreach (var (rowName, rowIdx, _, _) in pendingChordRows)
             rowStaffIndex[rowName] = rowIdx;
-        foreach (var (rowName, rowIdx, _) in pendingLyricsRows)
-            rowStaffIndex[rowName] = rowIdx;
+        foreach (var (_, rowKey, rowIdx, _) in pendingLyricsRows)
+            rowStaffIndex[rowKey] = rowIdx;
         FitRowsToMusicBars(staffVoices, rowNames, rowsOnlyBars, rowStaffIndex);
         ExtendStavesToTheRows(staffVoices, rowNames, pendingChordRows.Select(r => r.Item1));
 
@@ -2077,7 +2087,7 @@ public sealed partial class MeasureCollector
                 _lyricsCollector.CollectAttached(
                     tree.GetRoot(), group.Select(a => a.PartName).ToList(),
                     lyStaffVoices[0].Measures.ToList(), group.Key.StaffIndex,
-                    _lyricsRowNames, NamedVoiceTracks(tree.GetRoot(), group.Key.StaffVoice, lyStaffVoices),
+                    NamedVoiceTracks(tree.GetRoot(), group.Key.StaffVoice, lyStaffVoices),
                     _sectionState.StartMeasure, _sectionState.AllStarts,
                     renderSpec.VerseVoiceMapOf(group.Key.StaffVoice),
                     voiceKeyDict.TryGetValue(group.Key.StaffVoice, out var staffKey) ? staffKey.Sharps : _v.Meta.InitialKeySharps);
@@ -2122,6 +2132,14 @@ public sealed partial class MeasureCollector
         var handedOut = new Dictionary<string, int>();
         ImmutableArray<Voice> VoicesFor(string name)
         {
+            // A lyrics track on several rows: each row its own voice, met in binding order.
+            if (lyricsRowsSeen.TryGetValue(name, out int rowCount) && rowCount > 1)
+            {
+                int nth = handedOut.GetValueOrDefault(name);
+                handedOut[name] = nth + 1;
+                // The voice is named by its key until here: the barline sync reads voices by name.
+                return staffVoices[RowKey(name, Math.Min(nth, rowCount - 1))].Select(row => row with { Name = name }).ToImmutableArray();
+            }
             var finished = staffVoices.TryGetValue(name, out var v) ? v
                 : ImmutableArray.Create(new Voice(name, ImmutableArray<Measure>.Empty));
             if (!collectedPerBinding.TryGetValue(name, out var each) || each.Count < 2)
@@ -2723,7 +2741,7 @@ public sealed partial class MeasureCollector
         // name is a `voice NAME` bind to that voice; the rest align to voice 1.
         if (attachedLyricParts is { Count: > 0 })
             _lyricsCollector.CollectAttached(root, attachedLyricParts, track0, 0,
-                _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts,
+                _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts,
                 voiceName == null ? null : renderSpec?.VerseVoiceMapOf(voiceName), _v.Meta.InitialKeySharps);
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;

@@ -100,13 +100,12 @@ internal sealed class LyricsCollector
     /// </summary>
     public void CollectAttached(
         SyntaxNode root, IReadOnlyList<string> blockNames, List<Measure> measures, int staffIndex,
-        IReadOnlySet<string> lyricsRowNames,
         IReadOnlyDictionary<string, (int Index, List<Measure> Measures)> voiceMeasuresByName,
         IReadOnlyDictionary<string, int> sectionStartMeasure,
         IReadOnlyDictionary<string, List<int>>? sectionAllStarts = null,
         IReadOnlyDictionary<string, string>? voiceOfTrack = null,
         int openingSharps = 0)
-        => CollectNoteBound(root, measures, lyricsRowNames, voiceMeasuresByName,
+        => CollectNoteBound(root, measures, voiceMeasuresByName,
             sectionStartMeasure, sectionAllStarts, onlyBlocks: blockNames, staffIndex: staffIndex,
             voiceOfTrack: voiceOfTrack, openingSharps: openingSharps);
 
@@ -128,7 +127,6 @@ internal sealed class LyricsCollector
     /// <c>LyricItem</c> so a later staff's lyrics render beneath THAT staff.</param>
     public void CollectNoteBound(
         SyntaxNode root, List<Measure> measures,
-        IReadOnlySet<string> lyricsRowNames,
         IReadOnlyDictionary<string, (int Index, List<Measure> Measures)> voiceMeasuresByName,
         IReadOnlyDictionary<string, int> sectionStartMeasure,
         IReadOnlyDictionary<string, List<int>>? sectionAllStarts = null,
@@ -149,11 +147,6 @@ internal sealed class LyricsCollector
         var nextVerseByStart = new Dictionary<int, int>();
         foreach (var lyricsBlock in lyricsBlocks)
         {
-            // An independent lyrics row's block is collected by CollectRow (even-spread),
-            // not here — skip it so it isn't also note-bound.
-            if (lyricsBlock.VoiceName is { } rowName && lyricsRowNames.Contains(rowName))
-                continue;
-
             // Explicit-attach filter: only the blocks this `with lyrics` clause names.
             // An unnamed block can never be referenced, so it is skipped (and flagged
             // elsewhere as an unattached-lyrics error).
@@ -459,7 +452,6 @@ internal sealed class LyricsCollector
         IReadOnlyDictionary<string, List<int>>? sectionAllStarts,
         int openingSharps = 0)
         => CollectNoteBound(root, melody,
-            lyricsRowNames: new HashSet<string>(),
             voiceMeasuresByName: new Dictionary<string, (int Index, List<Measure> Measures)>
             {
                 [trackName] = (staffIndex, melody),

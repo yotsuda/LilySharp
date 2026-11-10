@@ -67,10 +67,20 @@ internal static class SungSyllables
             }.CollectMultiStaff(tree, bound);
         var staves = page.StaffGroups.SelectMany(g => g.Staves).ToList();
 
-        var rowTargets = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var row in Flat(bound.Items).OfType<LyricsRowSpec>())
-            if (LyricBindings.TargetOfRow(root, row.PartName, row.Sings) is { } target)
-                rowTargets.TryAdd(row.PartName, target);
+        // Each row's target, by its staff: a track on two rows is the k-th staff of that name.
+        var rowsOfTrack = Flat(bound.Items).OfType<LyricsRowSpec>().ToLookup(r => r.PartName, StringComparer.Ordinal);
+        var rowTargets = new Dictionary<int, string>();
+        var rowsMet = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int s = 0; s < staves.Count; s++)
+        {
+            string name = staves[s].PrimaryVoice.Name;
+            if (!rowsOfTrack.Contains(name))
+                continue;
+            int nth = rowsMet.GetValueOrDefault(name);
+            rowsMet[name] = nth + 1;
+            if (rowsOfTrack[name].ElementAtOrDefault(nth) is { } row && LyricBindings.TargetOfRow(root, name, row.Sings) is { } target)
+                rowTargets[s] = target;
+        }
 
         // Each staff's items' printings. Counted per staff: a phrase two parts play stands at one
         // source position, and is the k-th of it in each.
@@ -152,11 +162,10 @@ internal static class SungSyllables
     /// sings — that part's first voice or a named voice of an engraved part, else the melody the
     /// page placed the row by and did not draw (<see cref="MultiStaffScore.RowMelodies"/>).</summary>
     private static (MusicItem? Item, string? Part) RowSungItem(
-        List<Staff> staves, SyntaxNode root, Dictionary<string, string> rowTargets,
-        ImmutableDictionary<string, (string Part, ImmutableArray<Measure> Measures)> unseenMelodies, LyricItem lyric)
+        List<Staff> staves, SyntaxNode root, Dictionary<int, string> rowTargets,
+        ImmutableDictionary<int, (string Part, ImmutableArray<Measure> Measures)> unseenMelodies, LyricItem lyric)
     {
-        string row = staves[lyric.StaffIndex].PrimaryVoice.Name;
-        if (!rowTargets.TryGetValue(row, out var target))
+        if (!rowTargets.TryGetValue(lyric.StaffIndex, out var target))
             return (null, null);
         foreach (var staff in staves)
         {
@@ -168,7 +177,7 @@ internal static class SungSyllables
             var items = staff.Voices[slot].Measures[lyric.MeasureIndex].Items;
             return (lyric.ItemIndex >= 0 && lyric.ItemIndex < items.Length ? items[lyric.ItemIndex] : null, part);
         }
-        if (unseenMelodies.TryGetValue(row, out var unseen) && unseen.Part == target
+        if (unseenMelodies.TryGetValue(lyric.StaffIndex, out var unseen) && unseen.Part == target
             && lyric.MeasureIndex >= 0 && lyric.MeasureIndex < unseen.Measures.Length)
         {
             var items = unseen.Measures[lyric.MeasureIndex].Items;

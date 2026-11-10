@@ -177,14 +177,14 @@ public sealed record MultiStaffScore
 
     /// <summary>
     /// The melody each lyrics row sings when the score shows NO staff of that part, by the
-    /// row's name: the part sung and its measures as the row's syllables were placed on them
+    /// row's staff index: the part sung and its measures as the row's syllables were placed on them
     /// (<c>MeasureCollector.CollectMelodyFor</c> — the row is the lyric line of a melody the
     /// score does not engrave). The page draws none of it; the files read it to put each
     /// syllable on its note (<c>Svg.Collector.SungSyllables</c>), so the preview sings the part
     /// (owner's decision 2026-11-09, docs/singing-design.md §3). Empty for every other row.
     /// </summary>
-    internal ImmutableDictionary<string, (string Part, ImmutableArray<Measure> Measures)> RowMelodies { get; init; }
-        = ImmutableDictionary<string, (string Part, ImmutableArray<Measure> Measures)>.Empty;
+    internal ImmutableDictionary<int, (string Part, ImmutableArray<Measure> Measures)> RowMelodies { get; init; }
+        = ImmutableDictionary<int, (string Part, ImmutableArray<Measure> Measures)>.Empty;
 
     /// <summary>Music marks (segno, coda, fine, D.S., etc.).</summary>
     public ImmutableArray<MusicMarkItem> MusicMarks { get; }

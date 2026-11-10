@@ -145,8 +145,10 @@ public sealed partial class LilyPondExporter
                     // A lyrics row is its part's Lyrics context(s), standing where the row
                     // stands (EmitLyricTracks); a row the page placed nothing for is reported.
                     case LyricsRowRenderSyntax lyrics:
-                        if (_lyricRowVars.ContainsKey(lyrics.PartName))
-                            AddLyricRows(rows, lyrics.PartName, "    ", asRow: true);
+                        if (StandingRowKey(lyrics) is not { } rowKey)
+                            break;
+                        if (_lyricRowVars.ContainsKey(rowKey))
+                            AddLyricRows(rows, rowKey, "    ", asRow: true);
                         else if (PageKeepsLyricsRow(lyrics.PartName))
                             _warnings.Add($"lyrics row '{lyrics.PartName}' is not exported — the page placed no syllable of it");
                         break;
@@ -295,8 +297,10 @@ public sealed partial class LilyPondExporter
             if (member is LyricsRowRenderSyntax standing)
             {
                 var standingRows = new List<string>(1);
-                if (_lyricRowVars.ContainsKey(standing.PartName))
-                    AddLyricRows(standingRows, standing.PartName, memberIndent, asRow: true);
+                if (StandingRowKey(standing) is not { } standingKey)
+                    continue;
+                if (_lyricRowVars.ContainsKey(standingKey))
+                    AddLyricRows(standingRows, standingKey, memberIndent, asRow: true);
                 else if (PageKeepsLyricsRow(standing.PartName))
                     _warnings.Add($"lyrics row '{standing.PartName}' is not exported — the page placed no syllable of it");
                 foreach (var r in standingRows) sb.Append(r);

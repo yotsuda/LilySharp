@@ -194,7 +194,7 @@ public static class RenderSpecParser
                 // A row inside a group body belongs to the group (ParseGrandStaff
                 // folds it into the staff above), same guard as the staff case.
                 case LyricsRowRenderSyntax lyricsRow when !IsInsideGrandStaff(lyricsRow):
-                    items.Add(new LyricsRowSpec(lyricsRow.PartName, RowTarget(lyricsRow)));
+                    items.Add(new LyricsRowSpec(lyricsRow.PartName, RowTarget(lyricsRow)) { SourceStart = lyricsRow.Span.Start });
                     break;
 
                 // A bare part name: the MIDI-only row (GRAMMAR §7 PartRef). It draws nothing,
@@ -778,7 +778,7 @@ public static class RenderSpecParser
                 case LyricsRowRenderSyntax row
                     when RowTarget(row) is { } target
                       && (row.SingsTarget != null || members is [.., LyricsRowSpec]):
-                    members.Add(new LyricsRowSpec(row.PartName, target));
+                    members.Add(new LyricsRowSpec(row.PartName, target) { SourceStart = row.Span.Start });
                     break;
             }
         }
