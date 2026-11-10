@@ -4842,7 +4842,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
            Play while the engine sings, running in under the microphone, its goal. An estimate: the
            engine says nothing until a voice is done. */
         .toolbar .voice-bar {
-            position: absolute; left: 0; right: 2px; bottom: -5px; height: 3px;
+            position: absolute; left: 0; right: 6px; bottom: -5px; height: 3px;
             border-radius: 2px; background: rgba(128, 128, 128, 0.3); overflow: hidden; pointer-events: none;
         }
         .toolbar .voice-bar[hidden] { display: none; }
