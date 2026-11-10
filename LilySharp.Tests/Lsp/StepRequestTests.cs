@@ -1478,6 +1478,53 @@ public class StepRequestTests
             WalksTheList(v => L($"{key} {v}"), words);
     }
 
+    private const string LanguageBook = "part m { }\nsection A { m { c'4 } }\n";
+
+    [Fact]
+    public void ALanguage_WalksTheNames_OnTheFileAndOnATrack()
+    {
+        WalksTheList(v => $"language {v}\n{LanguageBook}", LilySharp.Core.Music.LyricLanguage.Names);
+        WalksTheList(v => $"{LanguageBook}lyrics w language {v} {{ a }}\n", LilySharp.Core.Music.LyricLanguage.Names);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TheWordLanguage_StepsItsName_ByEitherPair(bool semitone)
+    {
+        Assert.Equal($"language japanese\n{LanguageBook}", Step($"‸language english\n{LanguageBook}", +1, semitone: semitone).After);
+        Assert.Equal($"language chinese\n{LanguageBook}", Step($"lang‸uage english\n{LanguageBook}", -1, semitone: semitone).After);
+        Assert.Equal($"{LanguageBook}lyrics w language japanese {{ a }}\n", Step($"{LanguageBook}lyrics w ‸language english {{ a }}\n", +1, semitone: semitone).After);
+    }
+
+    [Fact]
+    public void ALanguage_StopsAtItsEnds_AndSaysSo()
+    {
+        var (first, same) = Step($"language ‸japanese\n{LanguageBook}", +1, semitone: true);
+        Assert.Equal($"language japanese\n{LanguageBook}", same);
+        Assert.Contains("first", first.Message);
+        var (last, stays) = Step($"language ‸korean\n{LanguageBook}", -1, semitone: true);
+        Assert.Equal($"language korean\n{LanguageBook}", stays);
+        Assert.Contains("last", last.Message);
+    }
+
+    [Fact]
+    public void AnotherKeyword_IsNotSteppedFromItsOwnWord()
+    {
+        var words = LilySharp.Core.Semantics.LanguageVocabulary.CompressRestsWords.ToList();
+        string L(string caret) => $"layout {{ {caret}compressRests {words[1]} }}\n{LanguageBook}";
+        Assert.Equal(L(""), Step(L("‸"), +1, semitone: true).After);
+    }
+
+    [Fact]
+    public void ATrackOrAPartNamedLanguage_IsNotALanguage()
+    {
+        string track = $"{LanguageBook}lyrics language {{ a }}\n";
+        Assert.Equal(track, Step($"{LanguageBook}lyrics ‸language {{ a }}\n", +1, semitone: true).After);
+        string part = "part language { }\nsection A { language { c'4 } }\n";
+        Assert.Equal(part, Step("part ‸language { }\nsection A { language { c'4 } }\n", +1, semitone: true).After);
+    }
+
     [Fact]
     public void BarNumbers_StepTheirPolicy_AndEverysNumber()
     {

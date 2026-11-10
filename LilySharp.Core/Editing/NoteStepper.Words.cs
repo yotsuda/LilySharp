@@ -64,6 +64,7 @@ public static partial class NoteStepper
             "voltaBracket" => VoltaBracketLength.Words,
             "chordDiagrams" => LanguageVocabulary.ChordDiagramWords,
             "chordTuning" => LanguageVocabulary.ChordTuningWords,
+            Music.LyricLanguage.Keyword => Music.LyricLanguage.Names,
             // `as` governs three different words: a chord row's display, a tab's style, and a
             // fonts entry's family — the one whose list holds the word.
             "as" => new[] { ChordAsWords, (IReadOnlyCollection<string>)LanguageVocabulary.TabStyles, FontFamilyWords }
@@ -180,7 +181,10 @@ public static partial class NoteStepper
                     previous = null;
                     continue;
                 }
-                if (previous != null && token.Span.Start <= offset && offset <= token.Span.End
+                // The word `language` steps its name too (owner's request 2026-11-10).
+                bool onKeyword = previous is { Text: Music.LyricLanguage.Keyword }
+                    && previous.Span.Start <= offset && offset <= previous.Span.End;
+                if (previous != null && (onKeyword || token.Span.Start <= offset && offset <= token.Span.End)
                     && ValuesOfKeyword(previous.Text, token.Text, InScore(node)) != null)
                     return (previous, token);
                 previous = token;
