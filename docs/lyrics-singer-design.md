@@ -17,7 +17,7 @@ A track's name only names it. `on` says which part's notes the words follow.
 
 ```
 lyrics [NAME] [language L] { … }                       // definition: the words only
-singer [S] sings [NAME] [on PART]                      // at the top level of the file, only there
+singer [S] sings [NAME] [on PART]                      // at the top level, or inside a score
 
 score {
   staff PART [hidden] [sounds voice|instrument|both]   // tab takes the same clauses
@@ -25,8 +25,9 @@ score {
 }
 ```
 
-The order of the clauses is fixed. `S` is `female`, `male`, one or more `"engine/name"` joined by commas,
-or a gender before a name (`male "neutrino/SOMA"`). With no `S`, the gender comes from the part's
+The order of the clauses is fixed. `S` is `female`, `male`, one `"engine/name"`, or a gender before a name
+(`male "neutrino/SOMA"`). Each line is one voice: several lines with the same words on one part sing it
+together. With no `S`, the gender comes from the part's
 instrument, else its clef. Role words (`"soprano"`) go.
 
 ```
@@ -42,7 +43,9 @@ score { staff sop  lyrics words }
 - `on`, `hum` and `solfege` as a track's name.
 - `lyrics` inside a `part { }` block or inside a part's `{ }` in a section. At the top level or directly
   in a section it may be written.
-- Two `singer` lines on one part (LYS new). Several voices on a part are written with commas.
+- Two `singer` lines giving one part different words in one scope (LYS4044): the top level, or one score. To
+  have another score sing other words on a part, its line goes inside that score. The same voice on the same
+  words of a part twice is warned about (LYS4053).
 - `on NAME` where NAME is a voice name two parts share.
 - `sounds voice` or `both` on a staff whose part no `singer` line sings.
 - `sounds` on a condensed or combined staff.
@@ -98,7 +101,8 @@ heard on each engine before it is settled; ら is the fallback.
 ## 7. The editor
 
 - The practice menu lists one line per `singer` line of a part in this score, named by the voice that
-  sings (`MERROW`, `MERROW + TIGER`; `MERROW (sop)` when one voice sings several parts). The hover says what
+  sings (`MERROW`; `MERROW (sop)` when one voice sings several parts), each with its own switch, fader and
+  microphone. A part's instrument stands in only when none of its voices sounds. The hover says what
   it sings and how far along it is. Words with no `singer` line have no line.
 - The microphone stays on each line (session 1217).
 - Completing the name after `singer`: the words are not written yet, so the file's `language` narrows the
@@ -109,7 +113,8 @@ heard on each engine before it is settled; ら is the fallback.
 
 ## 8. Limits kept
 
-One singer for the whole file (not per score); no change of singer within a part; two voices of one part
+A `singer` line at the top level is every score's default; a line inside a score replaces the defaults of its
+part in that score (owner's decision 2026-11-10). No change of singer within a part; two voices of one part
 cannot have two singers; a sung part's instrument stays off in bars with no words.
 
 ## 9. Order of work

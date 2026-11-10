@@ -161,19 +161,6 @@ public class LyricLanguageTests
         Assert.Equal(expected, Sung(source).Singer);
     }
 
-    // ── several voices on one part (owner's request 2026-11-09, session 1198) ──
-
-    [Theory]
-    [InlineData("singer \"a/b\",\"c/d\" sings w")]
-    [InlineData("singer \"a/b\", \"c/d\" sings w on m")]
-    [InlineData("singer male \"a/b\",\"c/d\" sings w")]
-    public void CommasJoinTheVoices(string singer)
-        => Assert.Equal("a/b+c/d", Sung(Sheet(Words, singer)).Singer);
-
-    [Fact]
-    public void AnEmptyLaterName_IsAnError()
-        => Assert.Contains(SyntaxTree.Parse("part m { clef treble  instrument soprano }\nsinger \"a/b\",\"\" sings w\n").Diagnostics, d => d.Code == DiagnosticCodes.SingerEmpty);
-
     [Fact]
     public void NoVoiceWritten_IsNull()
         => Assert.Null(Sung(Book("", Words)).Singer);
@@ -265,7 +252,6 @@ public class LyricLanguageTests
     [InlineData("singer male ", "sings")]
     [InlineData("singer male si", "sings")]
     [InlineData("singer \"a/b\" ", "sings")]
-    [InlineData("singer \"a/b\",\"c/d\" ", "sings")]
     [InlineData("singer female \"a/b\" ", "sings")]
     [InlineData("lyrics words { la | }\nsinger \"a/b\" sings ", "words")]
     [InlineData("singer \"a/b\" sings ", "on")]                      // the unnamed words
@@ -284,6 +270,19 @@ public class LyricLanguageTests
         Assert.Equal(InsertTextFormat.Snippet, item.InsertTextFormat);
         Assert.Equal("editor.action.triggerSuggest", item.Command!.CommandIdentifier);
     }
+
+    [Fact]
+    public void AScore_OffersTheLine_AtTheHeadOfALine()
+    {
+        Assert.Contains("singer", Offered(Declared + "score {\n  "));
+        Assert.DoesNotContain("singer", Offered(Declared + "score {\n  staff sop "));
+    }
+
+    [Theory]
+    [InlineData("score {\n  singer male ", "sings")]
+    [InlineData("score {\n  singer \"a/b\" sings words on ", "sop")]
+    public void AScoresLine_OffersWhatComesNext(string line, string offered)
+        => Assert.Contains(offered, Offered(Declared + line));
 
     [Fact]
     public void AnUnnamedRow_TakesOn()
@@ -369,7 +368,7 @@ public class LyricLanguageTests
 
     // ── before any quote (owner's report 2026-11-09, session 1196) ──
 
-    private static (string? Track, string? Part, string? Language, string? Gender, bool Quoted, bool Another)? Slot(string source)
+    private static (string? Track, string? Part, string? Language, string? Gender, bool Quoted)? Slot(string source)
     {
         int at = source.IndexOf('§');
         return LilySharpLanguageServer.SingerSlotAt(source.Remove(at, 1), at);
@@ -385,17 +384,19 @@ public class LyricLanguageTests
         Assert.False(slot.Quoted);
     }
 
+    /// <summary>One voice a line: after a comma there is no second name to offer.</summary>
     [Theory]
-    [InlineData("singer \"a\",§\n", false)]
-    [InlineData("singer \"a\", §\n", false)]
-    [InlineData("singer \"a\",\"§\n", true)]
-    [InlineData("singer male \"a\",\"b\", §\n", false)]
-    public void AfterACommaIsAnother(string source, bool quoted)
-    {
-        var slot = Assert.NotNull(Slot(source));
-        Assert.True(slot.Another);
-        Assert.Equal(quoted, slot.Quoted);
-    }
+    [InlineData("singer \"a\",§\n")]
+    [InlineData("singer \"a\", §\n")]
+    [InlineData("singer \"a\",\"§\n")]
+    public void AfterACommaThereIsNoSlot(string source) => Assert.Null(Slot(source));
+
+    /// <summary>A score takes a singer line too; a part's block does not.</summary>
+    [Theory]
+    [InlineData("score {\n  singer §\n}\n", true)]
+    [InlineData("score {\n  singer male \"§\"\n}\n", true)]
+    [InlineData("part m {\n  singer §\n}\n", false)]
+    public void ASingerSlotStandsInAScore(string source, bool slot) => Assert.Equal(slot, Slot(source) != null);
 
     [Fact]
     public void BetweenTheQuotes_IsQuoted() => Assert.True(Assert.NotNull(Slot("singer \"§\" sings w\n")).Quoted);

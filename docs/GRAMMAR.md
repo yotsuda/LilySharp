@@ -242,12 +242,14 @@ CapoDecl       = 'capo' , Integer ;                    (* 1..11; to the end of i
 ChordShapesDecl = 'chordShapes' , ShapeTable ;
 LanguageDecl   = 'language' , LanguageName ;
 SingerDecl     = 'singer' , [ SingerValue ] , 'sings' , [ Identifier ] , [ 'on' , PartRef ] ;
-SingerValue    = String , { ',' , String } | SingerGender , [ String , { ',' , String } ] ;
+SingerValue    = String | SingerGender , [ String ] ;
 SingerGender   = 'male' | 'female' ;
-                 (* WHO SINGS WHAT, at the file's top level only, in this order
-                    (docs/lyrics-singer-design.md). 'lyrics' rows print; only this line sings.
-                    The value is a voice as engine/name ('neutrino/MERROW'), several with commas
-                    singing together, or a gender; with nothing, the part's own default voice.
+                 (* WHO SINGS WHAT, in this order (docs/lyrics-singer-design.md). 'lyrics' rows
+                    print; only this line sings. At the file's top level it is every score's
+                    default; inside a score it replaces the top level's lines for its part in
+                    that score. The value is a voice as engine/name ('neutrino/MERROW') or a
+                    gender; with nothing, the part's own default voice. Each line is one voice:
+                    several lines with the same words on one part sing it together.
                     A gender before a name narrows what the editor offers; with no name (or an
                     empty one, LYS4039 otherwise) that gender's default voice sings. A name is
                     never checked against a machine: a voice that is not there sings as the
@@ -257,7 +259,8 @@ SingerGender   = 'male' | 'female' ;
                     is LYS4040.
                     With no name it sings the unnamed lyrics. 'on' names the part, or a voice of
                     one; with none, the file's only part, else the one part every score prints
-                    the words under, else LYS4043. One singer line a part (LYS4044); a voice
+                    the words under, else LYS4043. One part sings one set of words in a scope
+                    (LYS4044; the same voice twice on them is warned about, LYS4053); a voice
                     two parts share is LYS4045, words no lyrics defines LYS4042. *)
 LanguageName   = 'japanese' | 'english' | 'chinese' | 'korean' ;
                  (* What the lyrics are written in: a fact of the words, not of who sings them.

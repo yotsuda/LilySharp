@@ -399,8 +399,8 @@ public sealed partial class LilySharpLanguageServer
             // The render items, then the declared parts as bare MIDI-only items (GRAMMAR §7:
             // "a bare part name renders that part to MIDI only").
             // A keyword typed in front of a written body writes the keyword alone.
-            CompletionContext.ScoreBlock => KeywordOnlyBeforeAWrittenBody(
-                WithMidiOnlyParts(GetScoreBlockCompletions(), doc.Text), doc.Text, offset),
+            CompletionContext.ScoreBlock => WithSingerOnAFreshLine(KeywordOnlyBeforeAWrittenBody(
+                WithMidiOnlyParts(GetScoreBlockCompletions(), doc.Text), doc.Text, offset), doc.Text, offset),
             CompletionContext.StaffGroupBlock => KeywordOnlyBeforeAWrittenBody(
                 GetStaffGroupBlockCompletions(), doc.Text, offset),
             // `staff |` / `ossia |`: the parts, and the five clefs that may precede one.

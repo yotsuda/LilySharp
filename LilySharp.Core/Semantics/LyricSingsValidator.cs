@@ -227,7 +227,8 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         if (lines.Count == 0)
             return;
         var tracks = root.DescendantNodes<LyricsBlockSyntax>().Select(b => b.VoiceName).OfType<string>().ToHashSet(StringComparer.Ordinal);
-        var sungParts = new HashSet<string>(StringComparer.Ordinal);
+        var wordsOfPart = new Dictionary<(int Score, string Part), string>();
+        var voicesOnPart = new HashSet<(int Score, string Part, string? Singer)>();
         foreach (var line in lines)
         {
             var node = line.Node;
@@ -247,24 +248,36 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             else if (line.Part == null)
                 _diagnostics.Error(at.Span, DiagnosticCodes.SingerPartUnresolved,
                     "Nothing says whose notes these words are sung on: add 'on PART'.");
-            if (line.Part != null && !sungParts.Add(line.Part))
-                _diagnostics.Error(node.Keyword.Span, DiagnosticCodes.SingerDuplicatePart,
-                    $"'{line.Part}' already has a singer. Several voices on one part are written with commas: singer \"a/b\",\"c/d\" sings ….");
+            if (line.Part is not { } part)
+                continue;
+            // One scope, one set of words a part; a second voice on the same words sings along.
+            if (!wordsOfPart.TryAdd((line.Score, part), line.Track) && wordsOfPart[(line.Score, part)] != line.Track)
+                _diagnostics.Error(node.Keyword.Span, DiagnosticCodes.SingerDuplicatePart, line.Score < 0
+                    ? $"'{part}' already sings '{wordsOfPart[(line.Score, part)]}'. To have another score sing '{line.Track}' on it, write this line inside that score."
+                    : $"'{part}' already sings '{wordsOfPart[(line.Score, part)]}' in this score, and one part sings one set of words.");
+            else if (!voicesOnPart.Add((line.Score, part, line.Singer)))
+                _diagnostics.Warning(node.Keyword.Span, DiagnosticCodes.SingerRepeated,
+                    $"This voice already sings '{line.Track}' on '{part}'.");
         }
     }
 
     private void CheckStaffSounds(SyntaxNode root)
     {
-        var singers = LyricSinger.LinesOf(root).Select(l => l.Part).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        var lines = LyricSinger.LinesOf(root);
         void Check(SyntaxTokenNode? word, string? part)
         {
             if (word == null)
                 return;
+            // Sung where it is written: the top level's lines, and those of the score around the staff.
+            int score = -1;
+            for (SyntaxNode? n = word.Parent; n != null; n = n.Parent)
+                if (n is RenderDeclarationSyntax render)
+                    score = render.Span.Start;
             if (word.Text is not ("voice" or "instrument" or "both"))
                 _diagnostics.Error(word.Span, DiagnosticCodes.StaffSoundUnknown, $"'sounds' takes voice, instrument or both, not '{word.Text}'.");
-            else if (word.Text != "instrument" && (part == null || !singers.Contains(part)))
+            else if (word.Text != "instrument" && (part == null || !lines.Any(l => l.Part == part && (l.Score < 0 || l.Score == score))))
                 _diagnostics.Error(word.Span, DiagnosticCodes.StaffSoundNeedsSinger,
-                    $"No singer sings '{part}'. Add a line at the top level: 'singer S sings WORDS on {part}'.");
+                    $"No singer sings '{part}'. Add a line: 'singer S sings WORDS on {part}'.");
         }
         foreach (var render in root.DescendantNodes<RenderDeclarationSyntax>())
             if (RenderSpecParser.Parse(render) is { Items.IsEmpty: true, HiddenStaves.IsDefaultOrEmpty: false })

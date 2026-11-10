@@ -338,7 +338,9 @@ public sealed record RenderSpec(
     // over ScoreConcert (Semantics.ConcertPitch.StaffModes); null when no staff writes one.
     ImmutableDictionary<string, bool>? StaffPitch = null,
     // `staff melody hidden`: parts that sound in this score and are not drawn.
-    ImmutableArray<HiddenStaffSpec> HiddenStaves = default
+    ImmutableArray<HiddenStaffSpec> HiddenStaves = default,
+    // Where the score is written, which tells its own `singer` lines from another's (-1: no score block).
+    int SourceStart = -1
 )
 {
     /// <summary>

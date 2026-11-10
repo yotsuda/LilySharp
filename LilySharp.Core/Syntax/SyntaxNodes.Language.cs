@@ -60,32 +60,27 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
     /// <summary>The <c>sings</c> word, or null where it is missing (an error).</summary>
     public SyntaxTokenNode? SingsKeyword => SingsIndex is var i and >= 0 ? (SyntaxTokenNode)GetChild(i)! : null;
 
-    /// <summary>The written names, in order.</summary>
-    public IEnumerable<SyntaxTokenNode> NameTokens
+    /// <summary>The written name, or null.</summary>
+    public SyntaxTokenNode? NameToken
     {
         get
         {
             int end = SingsIndex >= 0 ? SingsIndex : SlotCount;
             for (int i = 1; i < end; i++)
                 if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } t)
-                    yield return t;
+                    return t;
+            return null;
         }
     }
 
-    /// <summary>The <c>male</c> or <c>female</c> written before the names, or null.</summary>
+    /// <summary>The <c>male</c> or <c>female</c> written before the name, or null.</summary>
     public SyntaxTokenNode? GenderToken =>
         GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } t && t.Text != "sings" ? t : null;
 
-    /// <summary>Who sings, as the engine is told: the names joined, else the gender, else null (the
-    /// part's gender decides).</summary>
-    public string? Singer
-    {
-        get
-        {
-            var names = NameTokens.Select(t => Music.LyricSinger.ValueOf(t.Text)).Where(n => n.Length > 0).ToList();
-            return names.Count > 0 ? string.Join(Music.LyricSinger.Joiner, names) : GenderToken?.Text;
-        }
-    }
+    /// <summary>Who sings, as the engine is told: the name, else the gender, else null (the part's
+    /// gender decides).</summary>
+    public string? Singer =>
+        NameToken is { } name && Music.LyricSinger.ValueOf(name.Text) is { Length: > 0 } value ? value : GenderToken?.Text;
 
     /// <summary>The token naming the words, or null for the file's unnamed track.</summary>
     public SyntaxTokenNode? TrackToken =>

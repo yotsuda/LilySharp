@@ -1632,7 +1632,7 @@ public static class DiagnosticCodes
     /// <summary><c>singer … sings NAME</c> with no <c>on</c>, and nothing says whose notes it sings.</summary>
     public const string SingerPartUnresolved = "LYS4043";
 
-    /// <summary>Two <c>singer</c> lines on one part; several voices are written with commas.</summary>
+    /// <summary>Two <c>singer</c> lines giving one part different words in one scope.</summary>
     public const string SingerDuplicatePart = "LYS4044";
 
     /// <summary><c>on NAME</c> where NAME is a voice two parts share.</summary>
@@ -1658,6 +1658,9 @@ public static class DiagnosticCodes
 
     /// <summary>Every staff of a score is <c>hidden</c>: it would draw nothing.</summary>
     public const string ScoreAllStavesHidden = "LYS4052";
+
+    /// <summary>Warning: the same voice written twice on the same words of a part.</summary>
+    public const string SingerRepeated = "LYS4053";
 
     /// <summary>Warning: a drum staff's voices write two different levels at one moment —
     /// <c>@f</c> on the hands' line and <c>@p</c> on the feet's (owner's decision 2026-10-30).

@@ -402,6 +402,8 @@ public class SungNoteDto
 public class SungVoiceDto
 {
     public string Part { get; set; } = "";
+    /// <summary>This voice among its part's: the part's name for the first, <c>part#2</c> and on for the rest.</summary>
+    public string Key { get; set; } = "";
     public string Language { get; set; } = "ja";
     public SungNoteDto[] Notes { get; set; } = [];
     public string[] Warnings { get; set; } = [];
@@ -435,8 +437,6 @@ public class SingerSlotResponse
     public string? Gender { get; set; }
     /// <summary>False before any quote (<c>singer |</c>): the name goes in with its quotes.</summary>
     public bool Quoted { get; set; }
-    /// <summary>Names stand before this one (<c>singer "a",|</c>).</summary>
-    public bool Another { get; set; }
 }
 
 /// <summary>Response for the lilysharp/sung request: one voice per part a lyrics row sings.</summary>

@@ -53,7 +53,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1750,10 +1750,10 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                         const sung = await client.sendRequest<{ Voices?: SungVoiceDto[] | null }>(
                             'lilysharp/sung', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null, allLyrics: true });
                         const singable = (sung.Voices ?? []).filter(v => v.Notes.length > 0);
-                        voices = singable.map(v => v.Part);
-                        voicesInScore = singable.filter(v => v.InScore !== false).map(v => v.Part);
+                        voices = singable.map(sungKey);
+                        voicesInScore = singable.filter(v => v.InScore !== false).map(sungKey);
                         voiceLabels = voiceMenuLabels(singable);
-                        voiceTitles = Object.fromEntries(singable.map(v => [v.Part, voiceMenuTitle(voiceLabels[v.Part], v.Track, v.Part)]));
+                        voiceTitles = Object.fromEntries(singable.map(v => [sungKey(v), voiceMenuTitle(voiceLabels[sungKey(v)], v.Track, v.Part)]));
                     }
                     panel.webview.postMessage({ type: 'partsData', parts, extra, voices, voicesInScore, voiceLabels, voiceTitles, sungOnly });
                 } catch {
@@ -3619,12 +3619,14 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
         const silenced = new Set<number>();
         for (const voice of sung.Voices ?? []) {
             // The menu's fader for the voice (owner's request 2026-11-09): its gain in the mix; at 0 it is as switched off.
-            const gain = levelOf(practice?.voiceLevels, voice.Part);
+            const key = sungKey(voice);
+            const gain = levelOf(practice?.voiceLevels, key);
             // The score's own voice unless the menu switched it off; one the score does not sing
             // only when the menu turned it on (voicesOn, session 1163).
-            const sings = voice.InScore !== false ? sungParts.has(voice.Part) && !silentVoices.has(voice.Part) : voicesOn.has(voice.Part) && !silentVoices.has(voice.Part);
-            // A sung-only part with its voice switched off and its instrument not turned on: silent, as in Play.
-            if (silentVoices.has(voice.Part) && sungParts.has(voice.Part) && !playedParts.has(voice.Part) && !(practice?.instrumentsOn ?? []).includes(voice.Part)) {
+            const sings = voice.InScore !== false ? sungParts.has(voice.Part) && !silentVoices.has(key) : voicesOn.has(key) && !silentVoices.has(key);
+            // A sung-only part with all its voices switched off and its instrument not turned on: silent, as in Play.
+            const allOff = (sung.Voices ?? []).filter(v => v.Part === voice.Part).every(v => silentVoices.has(sungKey(v)));
+            if (allOff && sungParts.has(voice.Part) && !playedParts.has(voice.Part) && !(practice?.instrumentsOn ?? []).includes(voice.Part)) {
                 const off = job.Parts?.indexOf(voice.Part) ?? -1;
                 if (off >= 0) { silenced.add(off); }
             }
@@ -3873,7 +3875,7 @@ const singerCompletion: vscode.CompletionItemProvider = {
     async provideCompletionItems(document, position, _token, context) {
         if (!client || !clientReady) { return undefined; }
         if ((context.triggerCharacter === ' ' || context.triggerCharacter === ',') && !afterSingerWord(document.lineAt(position.line).text.slice(0, position.character))) { return undefined; }
-        const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null; AnyLanguage?: boolean; Gender?: string | null; Quoted?: boolean; Another?: boolean }>('lilysharp/singerSlot',
+        const slot = await client.sendRequest<{ InSlot: boolean; Language?: string | null; AnyLanguage?: boolean; Gender?: string | null; Quoted?: boolean }>('lilysharp/singerSlot',
             { textDocument: { uri: document.uri.toString() }, offset: document.offsetAt(position) });
         if (!slot.InSlot || !slot.Language) { return undefined; }
         const engine = await renderer();
@@ -3904,7 +3906,7 @@ const singerCompletion: vscode.CompletionItemProvider = {
             item.command = { command: 'lilysharp.hearSinger', title: 'Hear this voice', arguments: [c.label] };
             return item;
         });
-        if (!slot.Quoted && !slot.Gender && !slot.Another) {
+        if (!slot.Quoted && !slot.Gender) {
             for (const gender of ['female', 'male']) {
                 const item = new vscode.CompletionItem(gender, vscode.CompletionItemKind.Keyword);
                 item.detail = `any ${gender} voice, or name one`;
@@ -4288,8 +4290,8 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     // (a score or a file with no lyrics empties it — owner's report 2026-11-08: the microphone
     // stayed on after the lyrics were gone).
     const voicesOn = new Set(previewPractice.get(panel)?.voicesOn ?? []);
-    const active = sung.Voices.filter(v => v.Notes.length > 0 && (v.InScore !== false || voicesOn.has(v.Part)));
-    const parts = new Set(active.map(v => v.Part));
+    const active = sung.Voices.filter(v => v.Notes.length > 0 && (v.InScore !== false || voicesOn.has(sungKey(v))));
+    const parts = new Set(active.map(sungKey));
     log(parts.size === 0 ? 'no sung part' : `sung: ${[...parts].join(', ')}`);
     void panel.webview.postMessage({ type: 'voiceParts', parts: [...parts] });
     sungParts.set(panel, parts);
@@ -4306,24 +4308,25 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     const mode = prepareModeSetting();
     for (const voice of active) {
         for (const warning of voice.Warnings ?? []) { tellSingerOnce(panel, `${voice.Part}: ${warning}`); }
-        const slot = `${panelId(panel)}/${voice.Part}`;
+        const id = sungKey(voice);
+        const slot = `${panelId(panel)}/${id}`;
         let key: string;
         try {
             key = await engine.key(voice, speed);
         } catch (e) {
-            failVoice(panel, voice.Part, speed, String(e));
+            failVoice(panel, id, speed, String(e));
             continue;
         }
         if (!current()) { return; }
-        if (mine.get(voice.Part) === key) { prepareQueue.cancelSlot(slot); continue; }   // the page has this text's voice; a job of an older text can go
-        mine.delete(voice.Part);
+        if (mine.get(id) === key) { prepareQueue.cancelSlot(slot); continue; }   // the page has this text's voice; a job of an older text can go
+        mine.delete(id);
         const rests = reason === 'edit' && !turned && !engine.has(key);
         if (rests && mode === 'onPlay') {
-            void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'waiting', estimateMs: voiceEstimateMs(voice, speed) });
+            void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: 'waiting', estimateMs: voiceEstimateMs(voice, speed) });
             prepareQueue.cancelSlot(slot);
             continue;
         }
-        void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: rests ? 'waiting' : 'preparing', estimateMs: voiceEstimateMs(voice, speed) });
+        void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: rests ? 'waiting' : 'preparing', estimateMs: voiceEstimateMs(voice, speed) });
         prepareQueue.schedule(slot, { panel, voice, speed, mine }, rests ? PREPARE_IDLE_MS : 0);
     }
 }
@@ -4337,23 +4340,24 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
  */
 async function renderVoice(job: PrepareJob): Promise<void> {
     const { panel, voice, speed, mine } = job;
-    const slot = `${panelId(panel)}/${voice.Part}`;
+    const id = sungKey(voice);
+    const slot = `${panelId(panel)}/${id}`;
     const wanted = () => postedVoices.get(panel) === mine && !prepareQueue.hasWaiting(slot)
-        && (sungParts.get(panel)?.has(voice.Part) ?? true);
+        && (sungParts.get(panel)?.has(id) ?? true);
     const engine = voiceRenderer;
     if (!engine || !wanted()) { return; }
     let key: string, rendered: Promise<{ wav: string; duration: number }>, cached: boolean;
     try {
         ({ key, rendered, cached } = await engine.render(voice, speed));
     } catch (e) {
-        if (wanted()) { failVoice(panel, voice.Part, speed, String(e)); }
+        if (wanted()) { failVoice(panel, id, speed, String(e)); }
         return;
     }
     // Asked again after the await: the preview may have turned to a file with no lyrics
     // meanwhile, whose empty `voiceParts` had already gone out — a `preparing` landing after it
     // kept the microphone pulsing for ever (owner's report 2026-11-09, session 1160).
     if (!wanted()) { return; }
-    if (!cached) { void panel.webview.postMessage({ type: 'voiceState', part: voice.Part, speed, state: 'preparing', estimateMs: voiceEstimateMs(voice, speed), singing: true }); }
+    if (!cached) { void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: 'preparing', estimateMs: voiceEstimateMs(voice, speed), singing: true }); }
     const askedAt = Date.now();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
@@ -4371,11 +4375,11 @@ async function renderVoice(job: PrepareJob): Promise<void> {
             if (!wanted()) { return; }
             const bytes = await fs.promises.readFile(v.wav);
             if (!wanted()) { return; }
-            mine.set(voice.Part, key);
-            void panel.webview.postMessage({ type: 'voice', part: voice.Part, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array(bytes) });
-            outputChannel.appendLine(`singer: ${voice.Part} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
+            mine.set(id, key);
+            void panel.webview.postMessage({ type: 'voice', part: id, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array(bytes) });
+            outputChannel.appendLine(`singer: ${id} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
         } catch (e) {
-            if (wanted()) { failVoice(panel, voice.Part, speed, e instanceof Error ? e.message : String(e)); }
+            if (wanted()) { failVoice(panel, id, speed, e instanceof Error ? e.message : String(e)); }
         } finally {
             if (timer !== undefined) { clearTimeout(timer); }
         }
@@ -6654,7 +6658,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // (preparing, failed — the 'voiceState' message) and what this page decoded (ready), shown
         // as one badge beside the transport (playbackCore.voiceBadge) and as a sign on each
         // voice's toggle in the practice menu.
-        const voiceStates = new Map();      // part -> { state, detail }
+        const voiceStates = new Map();      // voice key -> { state, detail }
+        let menuVoiceKeys = [];             // the voices the practice menu lists (partsData)
+        let menuVoiceNames = {};            // what its lines call them
         function setVoiceState(part, state, detail, estimateMs, singing) {
             if (!sungNowHas(part)) { return; }      // a part this score does not sing: a late word of another text
             if (state === 'ready' || state === 'failed') { voiceBarFrom = Date.now(); }     // the next one's time begins
@@ -6697,7 +6703,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         function renderVoiceBadge() {
             const badge = document.getElementById('voiceBadge');
-            const all = [...voiceStates].map(([part, s]) => ({ part, state: s.state, detail: s.detail }));
+            const all = [...voiceStates].map(([part, s]) => ({ part: menuVoiceNames[part] || part, state: s.state, detail: s.detail }));
             const b = window.LysSynth.voiceBadge(all);
             renderVoiceBar(window.LysSynth.voiceBarShown([...voiceStates.values()]));
             badge.hidden = !b;
@@ -6727,20 +6733,37 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // practice menu, which the badge used to open, instead of playing). The badge is a status,
         // not a button; its title says what it knows.
         document.getElementById('voiceBadge').addEventListener('click', () => document.getElementById('playBtn').click());
-        // The tracks a voice stands in for now: a part with a voice at this speed, not muted.
+        // A part's voices, one for each singer line: the part's name for the first, part#2 and on for the rest.
+        function voiceKeysOf(part) { return [...voices.keys()].filter(k => k === part || k.startsWith(part + '#')); }
+        // The voices that sound now, each with its own switch and fader. A voice whose fader stands
+        // at 0 is as switched off: its instrument stands in. The score's own voice sings unless
+        // switched off; one the score does not sing only when the menu turned it on (voicesOn,
+        // session 1163).
+        function soundingVoices() {
+            const keys = [];
+            if (voicePlan === null || !rawParts) { return keys; }
+            for (const name of rawParts) {
+                for (const key of voiceKeysOf(name)) {
+                    const v = voices.get(key);
+                    const own = !rawSung || rawSung.includes(name);
+                    const on = own ? !practice.voicesOff.includes(key) : practice.voicesOn.includes(key);
+                    if (Math.abs(v.speed - practice.speed) < 1e-6 && on && levelIn(practice.voiceLevels, key) > 0) { keys.push(key); }
+                }
+            }
+            return keys;
+        }
+        // The tracks a voice stands in for now: a part with at least one voice sounding.
         function sungTracks() {
             const set = new Set();
-            if (voicePlan === null || !rawParts) { return set; }
-            rawParts.forEach((name, i) => {
-                const v = voices.get(name);
-                // A voice whose fader stands at 0 is as switched off: its instrument stands in. The
-                // score's own voice sings unless switched off; one the score does not sing only when
-                // the menu turned it on (voicesOn, session 1163).
-                const own = !rawSung || rawSung.includes(name);
-                const on = own ? !practice.voicesOff.includes(name) : practice.voicesOn.includes(name);
-                if (v && Math.abs(v.speed - practice.speed) < 1e-6 && on && levelIn(practice.voiceLevels, name) > 0) { set.add(i); }
-            });
+            if (!rawParts) { return set; }
+            const sounding = soundingVoices();
+            rawParts.forEach((name, i) => { if (sounding.some(k => k === name || k.startsWith(name + '#'))) { set.add(i); } });
             return set;
+        }
+        // Every voice the menu lists for a part, whether its sound has come yet.
+        function menuVoicesOf(part) {
+            const listed = menuVoiceKeys.filter(k => k === part || k.startsWith(part + '#'));
+            return listed.length > 0 ? listed : [part];
         }
         function stopVoices() {
             for (const s of voiceSources) { try { s.stop(); } catch (e) { /* ended */ } }
@@ -6756,7 +6779,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if ((countFix || 0) > 0 || offset > 0 || voicePlan === null) { return 0; }
             if (voicePlan.pieces && !(voicePlan.pieces.length > 0 && voicePlan.pieces[0][0] < 1e-6)) { return 0; }
             let pre = 0;
-            for (const i of sungTracks()) { pre = Math.max(pre, voices.get(rawParts[i]).pre || 0); }
+            for (const key of soundingVoices()) { pre = Math.max(pre, voices.get(key).pre || 0); }
             return pre;
         }
         // Whether track i's instrument sounds in this Play (session 1165): a part the score only
@@ -6769,7 +6792,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const sungOnly = rawSung && rawSung.includes(name) && !(rawPlayed && rawPlayed.includes(name));
             if (!sungOnly) { return true; }
             if (practice.instrumentsOn.includes(name)) { return true; }
-            if (practice.voicesOff.includes(name)) { return false; }    // both switched off: silence
+            if (menuVoicesOf(name).every(k => practice.voicesOff.includes(k))) { return false; }    // both switched off: silence
             return !sung.has(i);      // the stand-in, until the voice is there
         }
         // Where the voices end in the list's time: the whole buffer after the count-in's lead, or
@@ -6777,8 +6800,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function voicesEnd() {
             let end = 0;
             if (voicePlan === null) { return 0; }
-            for (const i of sungTracks()) {
-                const v = voices.get(rawParts[i]);
+            for (const key of soundingVoices()) {
+                const v = voices.get(key);
                 const seconds = v.buffer.duration - (v.lead || 0);
                 if (!voicePlan.pieces) { end = Math.max(end, countInFix + seconds); }
                 else {
@@ -6790,18 +6813,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         function startVoices(ctx, when, listTime, room) {
             stopVoices();
-            const tracks = sungTracks();
-            if (tracks.size === 0) { return; }
+            const sounding = soundingVoices();
+            if (sounding.length === 0) { return; }
             if (!window.LysSynth || !window.LysSynth.voiceCues || !window.LysSynth.withVoiceLead) {
                 vscode.postMessage({ type: 'webviewPerf', text: 'voice: the synth script is an old build (no voiceCues / withVoiceLead) - reload the window' });
                 return;
             }
-            for (const i of tracks) {
-                const v = voices.get(rawParts[i]);
+            for (const key of sounding) {
+                const v = voices.get(key);
                 const lead = v.lead || 0;
                 const cues = window.LysSynth.voiceCues(listTime, countInFix, voicePlan.pieces, voicePlan.rounds, v.buffer.duration - lead);
                 // The menu's fader for the voice: a gain of its own before the voices' output.
-                const level = levelIn(practice.voiceLevels, rawParts[i]);
+                const level = levelIn(practice.voiceLevels, key);
                 let out = voiceOutput(ctx);
                 if (level < 1) {
                     const g = ctx.createGain();
@@ -7743,6 +7766,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // What each voice's line says (the lists stay by part): who sings, and on hover what.
             const voiceLabels = message.voiceLabels || {};
             const voiceTitles = message.voiceTitles || {};
+            menuVoiceKeys = voices;
+            menuVoiceNames = voiceLabels;
             const voiceLabel = name => voiceLabels[name] || name;
             const voiceTitle = name => voiceTitles[name] || voiceLabel(name);
             for (const name of voices) {

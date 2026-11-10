@@ -356,8 +356,9 @@ What makes it music:
     singer "neutrino/MERROW" sings words on sop
     score { staff sop  lyrics words }
     ```
-    A choir's voices each take their own line, one a part. Names with commas between them sing the
-    part together (`singer "neutrino/MERROW","diffsinger/TIGER" sings words`). `singer male sings
+    A choir's voices each take their own line, one a part. Two lines with the same words on one part
+    sing it together. A line inside a score replaces the top level's for its part there, which is how
+    one score sings Japanese words and another English ones. `singer male sings
     words` or `singer female sings words` asks for that gender's default voice and needs no list.
     `singer male "neutrino/SOMA" sings words` is a voice with its gender said, the gender narrowing
     what the editor offers. `staff sop sounds both` plays the instrument with the voice;

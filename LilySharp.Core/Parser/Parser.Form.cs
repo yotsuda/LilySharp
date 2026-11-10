@@ -750,6 +750,8 @@ internal sealed partial class Parser
     {
         return Current.Kind switch
         {
+            // Who sings in THIS score: over the top level's lines for the same part (Music.LyricSinger).
+            SyntaxKind.Identifier when IsSingerDeclaration() => ParseSingerDeclaration(),
             SyntaxKind.StaffKeyword => ParseStaffRender(),
             // `strokes NAME`: the strokes part's one-line staff (2026-11-01) — a staff item
             // under its own keyword (StaffRenderSyntax.IsStrokes).

@@ -43,7 +43,7 @@ public static class SungStaves
 
     public static Sounds Of(SyntaxNode root, RenderSpec spec)
     {
-        var lines = LyricSinger.LinesOf(root);
+        var lines = LyricSinger.LinesFor(root, spec);
         var singers = lines.Select(l => l.Part).OfType<string>().ToHashSet(StringComparer.Ordinal);
         var sung = new List<string>();
         var played = new List<string>();

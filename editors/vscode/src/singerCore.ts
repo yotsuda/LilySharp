@@ -28,7 +28,7 @@ export interface SungNoteDto { T: number; D: number; P: number; L?: string | nul
 
 /** A part's words on its notes, as the server answers `lilysharp/sung`. */
 /** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
-export interface SungVoiceDto { Part: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null; Gender?: string | null; Track?: string | null }
+export interface SungVoiceDto { Part: string; Key?: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null; Gender?: string | null; Track?: string | null }
 
 /** The score Cantoria reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
 export interface CantoriaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean }
@@ -92,7 +92,7 @@ export function voiceListText(voices: readonly CantoriaVoice[], filter: { provid
             languages.length > 0 ? `sings ${languages.join(', ')}` : 'languages not stated', v.licence].filter(Boolean).join(' · ').replace(': · ', ': ');
     });
     return [`${found.length} voice${found.length === 1 ? '' : 's'}${asked ? ` (${asked})` : ''}:`, ...lines, '',
-        'Write a name after singer, on a line of its own at the top level: singer "neutrino/MERROW" sings words on melody. Names with commas between them sing the part together: singer "a/b","c/d" sings words. A voice sings only the languages it lists.'].join('\n');
+        'Write a name after singer, on a line of its own at the top level: singer "neutrino/MERROW" sings words on melody. Two lines with the same words on one part sing it together. A voice sings only the languages it lists.'].join('\n');
 }
 
 /** What the editor says when a voice cannot be listed, and the buttons that go on from it. */
@@ -159,16 +159,21 @@ export function noLanguageGuide(language: string, voices: readonly CantoriaVoice
         actions: [] };
 }
 
-/** The name a voice goes by in the practice menu (docs/lyrics-singer-design.md §7): what follows its
- *  engine (`neutrino/MERROW` is MERROW), several joined by ` + `. Undefined for the part's default voice. */
-function voiceMenuName(singer: string | null | undefined): string | undefined {
-    if (!singer) { return undefined; }
-    return singer.split('+').map(one => one.includes('/') ? one.slice(one.indexOf('/') + 1) : one).join(' + ');
+/** What tells a voice from the others of its part: the menu's switches and the page's sounds go by it. */
+export function sungKey(voice: Pick<SungVoiceDto, 'Part' | 'Key'>): string {
+    return voice.Key || voice.Part;
 }
 
-/** Each voice's line in the practice menu, by part: who sings it, with the part beside a voice that
- *  sings several; the part alone for its default voice. */
-export function voiceMenuLabels(voices: readonly Pick<SungVoiceDto, 'Part' | 'Singer'>[]): Record<string, string> {
+/** The name a voice goes by in the practice menu (docs/lyrics-singer-design.md §7): what follows its
+ *  engine (`neutrino/MERROW` is MERROW). Undefined for the part's default voice. */
+function voiceMenuName(singer: string | null | undefined): string | undefined {
+    if (!singer) { return undefined; }
+    return singer.includes('/') ? singer.slice(singer.indexOf('/') + 1) : singer;
+}
+
+/** Each voice's line in the practice menu, by its key: who sings it, with the part beside a voice
+ *  that sings several; the part alone for its default voice. */
+export function voiceMenuLabels(voices: readonly Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer'>[]): Record<string, string> {
     const uses = new Map<string, number>();
     for (const v of voices) {
         const name = voiceMenuName(v.Singer);
@@ -176,7 +181,7 @@ export function voiceMenuLabels(voices: readonly Pick<SungVoiceDto, 'Part' | 'Si
     }
     return Object.fromEntries(voices.map(v => {
         const name = voiceMenuName(v.Singer);
-        return [v.Part, !name ? v.Part : (uses.get(name) ?? 0) > 1 ? `${name} (${v.Part})` : name];
+        return [sungKey(v), !name ? v.Part : (uses.get(name) ?? 0) > 1 ? `${name} (${v.Part})` : name];
     }));
 }
 
@@ -211,16 +216,15 @@ export function writesSinger(text: string): boolean {
 
 /** Whether a line's text before the caret ends with `singer ` or `singer male `: a space that opens the list of voices. */
 export function afterSingerWord(before: string): boolean {
-    return /(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?(?:(?:"[^"]*"[ \t]*,[ \t]*)+)?$/.test(before) && !before.includes('//');
+    return /(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?$/.test(before) && !before.includes('//');
 }
 
-/** The name of a `singer "…","…"` the caret stands on (off the names, on the word or a comma: the one before it, else the first): where it is on the line. */
+/** The name of a `singer "…"` the caret stands on, anywhere on the `singer`: where it is on the line. */
 export function singerValueAt(line: string, character: number): { start: number; end: number; value: string } | undefined {
-    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?("[^"]*"(?:[ \t]*,[ \t]*"[^"]*")*)/g)) {
+    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?"([^"]*)"/g)) {
         if (character < m.index || character > m.index + m[0].length) { continue; }
-        const from = m.index + m[0].length - m[1].length;
-        const names = [...m[1].matchAll(/"([^"]*)"/g)].map(n => ({ start: from + n.index + 1, end: from + n.index + 1 + n[1].length, value: n[1] }));
-        return [...names].reverse().find(n => n.start - 1 <= character) ?? names[0];
+        const end = m.index + m[0].length - 1;
+        return { start: end - m[1].length, end, value: m[1] };
     }
     return undefined;
 }
@@ -239,16 +243,14 @@ export function singerLanguageColumn(line: string, character: number): number {
 
 /**
  * What the `singer` that holds `from`..`to` on this line writes, for hearing it (owner's request
- * 2026-11-09, session 1180): its name (several: joined as the engine takes them, to be heard together),
- * its gender if it has no name, '' for `singer ""`. Undefined off one, in a comment and inside another string.
+ * 2026-11-09, session 1180): its name, its gender if it has no name, '' for `singer ""`. Undefined off
+ * one, in a comment and inside another string.
  */
 export function singerWrittenAt(line: string, from: number, to: number): string | undefined {
-    const list = '"[^"]*"(?:[ \\t]*,[ \\t]*"[^"]*")*';
-    const names = (written: string | undefined) => [...(written ?? '').matchAll(/"([^"]*)"/g)].map(n => n[1]).filter(Boolean).join('+');
-    for (const m of line.matchAll(new RegExp(`(?<![\\w-])singer[ \\t]+(?:(male|female)(?![\\w-])(?:[ \\t]+(${list}))?|(${list}))`, 'g'))) {
+    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:(male|female)(?![\w-])(?:[ \t]+"([^"]*)")?|"([^"]*)")/g)) {
         const before = line.slice(0, m.index);
         if (before.includes('//') || (before.split('"').length - 1) % 2 === 1) { continue; }
-        if (from >= m.index && to <= m.index + m[0].length) { return names(m[2]) || names(m[3]) || m[1] || ''; }
+        if (from >= m.index && to <= m.index + m[0].length) { return m[2] || m[3] || m[1] || ''; }
     }
     return undefined;
 }

@@ -83,8 +83,10 @@ describe('the preview routes its sounds to the MIDI output', () => {
             else if (html[i] === '}' && --depth === 0) { close = i + 1; break; }
         }
         const practice = { instrumentsOn: [] as string[], voicesOff: [] as string[] };
+        let listed: string[] = ['melody'];
         const sounds = new vm.Script('(' + html.slice(at, close) + ')').runInNewContext({
             rawParts: ['Tempo', 'melody', 'm2'], rawSung: ['melody'], rawPlayed: ['m2'], practice,
+            menuVoicesOf: () => listed,
         }) as (i: number, sung: Set<number>) => boolean;
         assert.equal(sounds(2, new Set([1])), true, 'a played part sounds');
         assert.equal(sounds(1, new Set([1])), false, 'the voice sings: its instrument is off');
@@ -94,6 +96,10 @@ describe('the preview routes its sounds to the MIDI output', () => {
         practice.instrumentsOn = [];
         practice.voicesOff = ['melody'];
         assert.equal(sounds(1, new Set()), false, 'both switched off: silence');
+        listed = ['melody', 'melody#2'];
+        assert.equal(sounds(1, new Set()), true, 'one of two voices switched off: the part is not silent');
+        practice.voicesOff = ['melody', 'melody#2'];
+        assert.equal(sounds(1, new Set()), false, 'all its voices switched off: silence');
     });
 
     it('follows the wall clock from the server\'s zero, and plays here when the server refused', () => {

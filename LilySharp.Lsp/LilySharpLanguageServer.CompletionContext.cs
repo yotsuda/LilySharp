@@ -533,51 +533,53 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>Where a <c>singer "…|</c> the caret is in stands: a lyrics head or row (its track, and
     /// the language it writes), or a part's header (the part); null for anywhere else — a lyric
     /// body's words among them. <c>Quoted</c> is false before any quote (<c>singer |</c>, owner's report
-    /// 2026-11-09, session 1196), where a name is still to be written. <c>Another</c>: names stand before
-    /// this one (<c>singer "a",|</c>).</summary>
-    internal static (string? Track, string? Part, string? Language, string? Gender, bool Quoted, bool Another)? SingerSlotAt(string text, int offset)
+    /// 2026-11-09, session 1196), where a name is still to be written.</summary>
+    internal static (string? Track, string? Part, string? Language, string? Gender, bool Quoted)? SingerSlotAt(string text, int offset)
     {
         int end = Math.Clamp(offset, 0, text.Length);
         int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
         string line = text[lineStart..end];
-        var quote = System.Text.RegularExpressions.Regex.Match(line, @"(?:^|[\s{}])singer[ \t]+(?:(?<gender>male|female)[ \t]+)?(?<earlier>(?:""[^""]*""[ \t]*,[ \t]*)*)(?:""[^""]*|(?<bare>[^\s""{},]*))$");
+        var quote = System.Text.RegularExpressions.Regex.Match(line, @"(?:^|[\s{}])singer[ \t]+(?:(?<gender>male|female)[ \t]+)?(?:""[^""]*|(?<bare>[^\s""{},]*))$");
         if (!quote.Success)
             return null;
         bool quoted = !quote.Groups["bare"].Success;
-        bool another = quote.Groups["earlier"].Length > 0;
         // Before any quote a `singer` could be a comment's word or a string's.
         if (!quoted && (line.Contains("//", StringComparison.Ordinal) || line[..quote.Index].Count(c => c == '"') % 2 == 1))
             return null;
         string? gender = quote.Groups["gender"].Success ? quote.Groups["gender"].Value : null;
-        // At the top level only: `singer [S] sings [NAME] [on PART]`. The words may be written
-        // after the caret; with none yet the file's language is the one to offer for.
+        // At the top level or in a score: `singer [S] sings [NAME] [on PART]`. The words may be
+        // written after the caret; with none yet the file's language is the one to offer for.
         var stack = new BlockContextScan(text, offset).Stack;
-        if (stack.Count == 0 && line[..quote.Index].Trim().Length == 0)
+        if (TakesASingerLine(stack) && line[..quote.Index].Trim().Length == 0)
         {
             int lineEnd = text.IndexOf('\n', end);
             string rest = text[end..(lineEnd < 0 ? text.Length : lineEnd)];
             var sings = System.Text.RegularExpressions.Regex.Match(rest, @"\bsings[ \t]+(?<t>(?!on\b)[^\s{}""]+)");
             bool wrote = System.Text.RegularExpressions.Regex.IsMatch(rest, @"\bsings\b");
             string? track = sings.Success ? sings.Groups["t"].Value : wrote ? LilySharp.Core.Music.LyricSinger.UnnamedTrack : null;
-            return (track, null, null, gender, quoted, another);
+            return (track, null, null, gender, quoted);
         }
         return null;
     }
 
-    /// <summary>What a top-level <c>singer</c> line takes next once its voice is written:
+    /// <summary>Whether a <c>singer</c> line may stand here: the top level, or directly in a score.</summary>
+    private static bool TakesASingerLine(List<OpenBlock> stack)
+        => stack.Count == 0 || (stack.Count == 1 && (stack[0].IsScoreOpener || stack[0].Frame.Name == "score" || stack[0].Frame.Prefix == "score"));
+
+    /// <summary>What a <c>singer</c> line takes next once its voice is written:
     /// <c>singer male ▮</c> the word <c>sings</c>, <c>… sings ▮</c> the words, <c>… sings w ▮</c>
     /// the <c>on</c>, <c>… on ▮</c> the part. Null anywhere else, and while the voice is still
     /// being written (<see cref="SingerSlotAt"/>'s).</summary>
     private static CompletionContext? SingerLineStepAt(string text, int offset, List<OpenBlock> stack)
     {
-        if (stack.Count != 0)
+        if (!TakesASingerLine(stack))
             return null;
         static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
         int end = Math.Clamp(offset, 0, text.Length);
         while (end > 0 && IsWordChar(text[end - 1])) end--;     // a partial word is not a written one
         int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
         var line = System.Text.RegularExpressions.Regex.Match(text[lineStart..end],
-            @"^[ \t]*singer(?<voice>(?:[ \t]+(?:male|female))?(?:[ \t]+""[^""]*""(?:[ \t]*,[ \t]*""[^""]*"")*)?)(?:[ \t]+(?<sings>sings)(?:[ \t]+(?<w>[^\s{}""]+))*)?[ \t]+$");
+            @"^[ \t]*singer(?<voice>(?:[ \t]+(?:male|female))?(?:[ \t]+""[^""]*"")?)(?:[ \t]+(?<sings>sings)(?:[ \t]+(?<w>[^\s{}""]+))*)?[ \t]+$");
         if (!line.Success)
             return null;
         if (!line.Groups["sings"].Success)
@@ -1113,7 +1115,7 @@ public sealed partial class LilySharpLanguageServer
 
         // A `singer`'s name: the voices are the editor's to list (lilysharp/singerSlot). After a bare
         // `singer male ` the name is optional, so the clauses that may follow are still offered below.
-        if (SingerSlotAt(text, offset) is { } singerSlot && (singerSlot.Quoted || singerSlot.Gender == null || singerSlot.Another))
+        if (SingerSlotAt(text, offset) is { } singerSlot && (singerSlot.Quoted || singerSlot.Gender == null))
             return CompletionContext.AfterSinger;
 
         // The rest of a `singer` line: `sings`, the words, `on`, the part.

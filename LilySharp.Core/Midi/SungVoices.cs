@@ -34,7 +34,9 @@ public sealed record SungNote(double Start, double Duration, double Pitch, strin
 /// <paramref name="Singer"/> is who the file says sings it, as written, or null for the engine's default.
 /// <paramref name="Gender"/> is the gender of the engine's default voice for it (<see cref="Music.LyricSinger.GenderReaderOf"/>).
 /// <paramref name="Track"/> is the name of the lyrics track it sings (its first words'), or null.
-public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungNote> Notes, IReadOnlyList<string> Warnings, string? Singer = null, string? Gender = null, string? Track = null);
+/// <paramref name="Key"/> tells this voice from the others of its part: the part's name for its first
+/// <c>singer</c> line, <c>part#2</c> and so on for the rest (null is the part's name).
+public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungNote> Notes, IReadOnlyList<string> Warnings, string? Singer = null, string? Gender = null, string? Track = null, string? Key = null);
 
 /// <summary>
 /// The sung voices of an exported piece: one per part a placed lyrics row sings with a voice asked for (<see cref="Music.LyricSinger.SungReaderOf"/>). Which note a
@@ -134,7 +136,14 @@ public static class SungVoices
             if (strange.Count > 0)
                 warnings.Add($"{strange.Count} syllable(s) are not kana, which the Japanese voice needs: "
                     + string.Join(" ", strange.Take(8)) + (strange.Count > 8 ? " …" : ""));
-            voices.Add(new SungVoice(part, language, notes, warnings, first.Singer, first.Gender, first.Track));
+            // One voice for each `singer` line on these words, each sung by itself (docs/lyrics-singer-design.md §2).
+            var singers = (first.Singer ?? "").Split(Music.LyricSinger.Joiner);
+            for (int s = 0; s < singers.Length; s++)
+            {
+                string? singer = singers[s].Length == 0 ? null : singers[s];
+                string? gender = singer is "male" or "female" ? singer : first.Gender;
+                voices.Add(new SungVoice(part, language, notes, warnings, singer, gender, first.Track, s == 0 ? part : $"{part}#{s + 1}"));
+            }
         }
         return voices;
     }

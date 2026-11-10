@@ -40,19 +40,10 @@ public static class LyricSinger
     /// <summary>The track name of the file's unnamed lyrics, for the language server's reading of a head.</summary>
     public const string UnnamedTrack = SyntaxFacts.UnnamedLyricsName;
 
-    /// <summary>What joins the voices of one <c>singer "a","b"</c> (owner's request 2026-11-09, sessions
-    /// 1197 and 1198: several voices on one part) in the string the engine is given.</summary>
+    /// <summary>What joins, in a part's one lyric event, the voices of several <c>singer</c> lines on
+    /// its words; <see cref="Midi.SungVoices"/> makes one voice of each again. A line that names no
+    /// voice is the empty piece.</summary>
     public const char Joiner = '+';
-
-    /// <summary>The singer written from the token at <paramref name="index"/>: the name, and every
-    /// <c>,"…"</c> after it, as one string for the engine.</summary>
-    internal static string Joined(SyntaxTokenNode first, int index, Func<int, SyntaxNode?> child, int end)
-    {
-        var names = new List<string> { ValueOf(first.Text) };
-        for (int i = index + 1; i + 1 < end && child(i) is SyntaxTokenNode { Kind: SyntaxKind.Comma } && child(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } next; i += 2)
-            names.Add(ValueOf(next.Text));
-        return string.Join(Joiner, names);
-    }
 
     /// <summary>The text between a string token's quotes.</summary>
     public static string ValueOf(string token)
@@ -89,19 +80,32 @@ public static class LyricSinger
             ?? (clef is "bass" or "bass_8" or "baritone" or "tenor" or "treble_8" ? Male : Female);
 
     /// <summary>One <c>singer</c> line, resolved: who (null for the part's default), which track,
-    /// the part whose notes it sings (null when nothing says: an error), and the voice of that
-    /// part it names (null when it names the part).</summary>
-    public sealed record Line(string? Singer, string Track, string? Part, string? Voice, SingerDeclarationSyntax Node);
+    /// the part whose notes it sings (null when nothing says: an error), the voice of that
+    /// part it names (null when it names the part), and the source start of the score it is written
+    /// in (<see cref="RenderSpec.SourceStart"/>; -1 at the top level, where it is every score's default).</summary>
+    public sealed record Line(string? Singer, string Track, string? Part, string? Voice, SingerDeclarationSyntax Node, int Score = -1);
 
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SyntaxNode, IReadOnlyList<Line>> Lines = new();
 
-    /// <summary>The file's <c>singer</c> lines, each resolved (§4 of the design: its <c>on</c>, the
-    /// file's only part, or the one part every score prints the words under).</summary>
+    /// <summary>The file's <c>singer</c> lines, wherever written, each resolved (§4 of the design: its
+    /// <c>on</c>, the file's only part, or the one part every score of its scope prints the words under).</summary>
     public static IReadOnlyList<Line> LinesOf(SyntaxNode root)
     {
         while (root.Parent != null)
             root = root.Parent;
         return Lines.GetValue(root, BuildLines);
+    }
+
+    /// <summary>The lines that sing in <paramref name="spec"/>: its own, and the top level's for every
+    /// part it writes none for (owner's decision 2026-11-10).</summary>
+    public static IReadOnlyList<Line> LinesFor(SyntaxNode root, RenderSpec? spec)
+    {
+        var lines = LinesOf(root);
+        if (!lines.Any(l => l.Score >= 0))
+            return lines;
+        var own = lines.Where(l => spec != null && spec.SourceStart >= 0 && l.Score == spec.SourceStart).ToList();
+        var replaced = own.Select(l => l.Part).ToHashSet();
+        return [.. lines.Where(l => l.Score < 0 && !replaced.Contains(l.Part)), .. own];
     }
 
     private static IReadOnlyList<Line> BuildLines(SyntaxNode root)
@@ -118,17 +122,21 @@ public static class LyricSinger
         foreach (var declaration in declarations)
         {
             string track = declaration.TrackName;
+            int score = -1;
+            for (SyntaxNode? n = declaration.Parent; n != null; n = n.Parent)
+                if (n is RenderDeclarationSyntax render)
+                    score = render.Span.Start;
             string? target = declaration.OnToken?.Text
                 ?? (parts.Count == 1 ? parts.First()
                     : parts.Count == 0 ? SyntaxFacts.UnnamedPartName
-                    : PrintedOn(specs, track));
+                    : PrintedOn(score < 0 ? specs : specs.Where(s => s.SourceStart == score).ToList(), track));
             string? part = target, voice = null;
             if (target != null && parts.Count > 0 && !parts.Contains(target))
             {
                 voice = target;
                 part = parts.FirstOrDefault(p => LyricBindings.VoicesOfPart(root, p).Contains(target));
             }
-            lines.Add(new Line(declaration.Singer, track, part, voice, declaration));
+            lines.Add(new Line(declaration.Singer, track, part, voice, declaration, score));
         }
         return lines;
     }
@@ -155,7 +163,7 @@ public static class LyricSinger
     /// </summary>
     public static Func<string?, string?, bool> SungReaderOf(SyntaxNode root, RenderSpec? spec)
     {
-        var lines = LinesOf(root);
+        var lines = LinesFor(root, spec);
         if (lines.Count == 0 || spec == null)
             return static (_, _) => false;
         var sounds = SungStaves.Of(root, spec);
@@ -168,7 +176,7 @@ public static class LyricSinger
     /// sing whether the page shows them or not (docs/lyrics-singer-design.md §2).</summary>
     public static RenderSpec WithSungWords(SyntaxNode root, RenderSpec spec)
     {
-        var lines = LinesOf(root);
+        var lines = LinesFor(root, spec);
         if (lines.Count == 0)
             return spec;
         var placed = new HashSet<(string Track, string On)>();
@@ -185,11 +193,15 @@ public static class LyricSinger
         return added.Count == 0 ? spec : spec with { Items = spec.Items.AddRange(added) };
     }
 
-    /// <summary>A reader of who sings a track on a part: the <c>singer</c> line's string, or null
-    /// (the part's default voice).</summary>
+    /// <summary>A reader of who sings a track on a part: the <c>singer</c> line's string, the lines'
+    /// joined by <see cref="Joiner"/> where several sing it, or null (the part's default voice).</summary>
     public static Func<string?, string?, string?> ReaderOf(SyntaxNode root, RenderSpec? spec)
     {
-        var lines = LinesOf(root);
-        return (track, part) => lines.FirstOrDefault(l => l.Part == part && l.Track == track)?.Singer;
+        var lines = LinesFor(root, spec);
+        return (track, part) =>
+        {
+            var singers = lines.Where(l => l.Part == part && l.Track == track).Select(l => l.Singer).Distinct().ToList();
+            return singers.Count <= 1 ? singers.FirstOrDefault() : string.Join(Joiner, singers.Select(s => s ?? ""));
+        };
     }
 }

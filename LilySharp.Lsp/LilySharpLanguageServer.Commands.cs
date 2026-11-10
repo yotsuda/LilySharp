@@ -1037,7 +1037,7 @@ public sealed partial class LilySharpLanguageServer
         // No words named yet: the file's language, or every voice where its lyrics differ.
         bool anyLanguage = track == null && slot.Language == null
             && root.DescendantNodes<LilySharp.Core.Syntax.LyricsBlockSyntax>().Select(b => languageOf(b.VoiceName)).Distinct(StringComparer.Ordinal).Count() > 1;
-        return new SingerSlotResponse { InSlot = true, Language = LilySharp.Core.Music.LyricLanguage.CodeOf(slot.Language) ?? languageOf(track), AnyLanguage = anyLanguage, Gender = slot.Gender, Quoted = slot.Quoted, Another = slot.Another };
+        return new SingerSlotResponse { InSlot = true, Language = LilySharp.Core.Music.LyricLanguage.CodeOf(slot.Language) ?? languageOf(track), AnyLanguage = anyLanguage, Gender = slot.Gender, Quoted = slot.Quoted };
     }
 
     [JsonRpcMethod("lilysharp/sung", UseSingleObjectParameterDeserialization = true)]
@@ -1071,7 +1071,7 @@ public sealed partial class LilySharpLanguageServer
             {
                 var hidden = score.HiddenStaves.IsDefault ? [] : score.HiddenStaves;
                 var seen = new HashSet<string>(StringComparer.Ordinal);
-                foreach (var line in LilySharp.Core.Music.LyricSinger.LinesOf(root))
+                foreach (var line in LilySharp.Core.Music.LyricSinger.LinesFor(root, score))
                 {
                     if (line.Part is not { } part || inScore!.Contains(part) || !seen.Add(part))
                         continue;
@@ -1087,6 +1087,7 @@ public sealed partial class LilySharpLanguageServer
                 Voices = voices.Select(v => new SungVoiceDto
                 {
                     Part = v.Part,
+                    Key = v.Key ?? v.Part,
                     Language = v.Language,
                     Warnings = v.Warnings.ToArray(),
                     InScore = inScore == null || inScore.Contains(v.Part),

@@ -2496,6 +2496,16 @@ public sealed partial class LilySharpLanguageServer
         Command = new Command { Title = "Suggest singer", CommandIdentifier = "editor.action.triggerSuggest" },
     };
 
+    /// <summary>A score's list with <c>singer</c> where a line of its own can start: the word is not
+    /// reserved and is no render item, so it is offered only at the head of a line.</summary>
+    private static CompletionList WithSingerOnAFreshLine(CompletionList list, string text, int offset)
+    {
+        int end = Math.Clamp(offset, 0, text.Length);
+        while (end > 0 && (char.IsLetterOrDigit(text[end - 1]) || text[end - 1] is '_' or '-')) end--;
+        int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
+        return text[lineStart..end].Trim().Length > 0 ? list : new CompletionList { Items = [.. list.Items, SingerItem("~singer")] };
+    }
+
     /// <summary>Not yet written in the head, an item's first word being its clause (<c>singer male</c> is a <c>singer</c>).</summary>
     private static bool IsUnwritten(CompletionItem item, System.Collections.Generic.IReadOnlySet<string>? written)
         => written?.Contains(item.Label.Split(' ')[0]) != true;

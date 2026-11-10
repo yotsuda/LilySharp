@@ -225,8 +225,8 @@ internal sealed partial class Parser
         return value;
     }
 
-    /// <summary><c>singer [S] sings …</c> at the top level: the word with <c>sings</c>, a name or a
-    /// gender after it, so a bare word <c>singer</c> keeps its other readings.</summary>
+    /// <summary><c>singer [S] sings …</c> at the top level or in a score: the word with <c>sings</c>,
+    /// a name or a gender after it, so a bare word <c>singer</c> keeps its other readings.</summary>
     private bool IsSingerDeclaration()
         => Current.Text == Music.LyricSinger.Keyword && Peek(1) is { } next
             && (next.Text == "sings" || next.Kind == SyntaxKind.StringLiteral
@@ -248,11 +248,6 @@ internal sealed partial class Parser
             if (Check(SyntaxKind.StringLiteral))
             {
                 tokens.Add(ParseSingerName(allowEmpty: gendered));
-                while (Check(SyntaxKind.Comma) && Peek(1)?.Kind == SyntaxKind.StringLiteral)
-                {
-                    tokens.Add(Advance());
-                    tokens.Add(ParseSingerName(allowEmpty: false));
-                }
             }
         }
         if (Check(SyntaxKind.Identifier) && Current.Text == "sings")

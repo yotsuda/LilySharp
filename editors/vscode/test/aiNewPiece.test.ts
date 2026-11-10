@@ -473,7 +473,7 @@ describe('the composing guide', () => {
         assert.match(guide, /To name a voice, call `lilysharp_listVoices` first and copy a name it answers; never guess one\./);
         assert.match(guide, /narrow it with `language`[\s\S]*`gender`[\s\S]*`provider`/);
         assert.match(guide, /singer "neutrino\/MERROW" sings words on sop/);
-        assert.match(guide, /Names with commas between them sing the\s+part together \(`singer "neutrino\/MERROW","diffsinger\/TIGER" sings words`\)\./);
+        assert.match(guide, /Two lines with the same words on one part\s+sing it together\./);
     });
     // Owner's trials 2026-10-29: a jazz trio's drums came as a rock backbeat, its bass the chord's
     // notes in a row; the next time they swung — the guide said only "swinging on the ride".

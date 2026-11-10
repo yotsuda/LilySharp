@@ -268,7 +268,8 @@ public static class RenderSpecParser
             LayoutRef: layoutRef,
             MidiOnlyParts: [.. midiOnlyParts],
             StaffPitch: LilySharp.Core.Semantics.ConcertPitch.StaffModes(render),
-            HiddenStaves: HiddenStavesOf(render));
+            HiddenStaves: HiddenStavesOf(render),
+            SourceStart: render.Span.Start);
     }
 
     /// <summary>
