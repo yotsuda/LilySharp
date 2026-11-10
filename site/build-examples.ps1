@@ -177,19 +177,18 @@ key f major
 part melody { clef treble }
 section A {
   melody { f'4 g a bes | c2 a4 f4 | g4 a bes a | f1 | }
-  lyrics words sings melody {
+  lyrics words {
     Sing- ing all the | day ~ long, |
     ev- ery word a | song |
   }
 }
 form { ~A }
-score { staff melody  lyrics words }
+score { staff melody  lyrics words on melody }
 '@
 
 'sings' = @'
-// `sings` is a property of the lyric TRACK, and it can be spelled at either site:
-// on the definition, on the score row, or both. Spelling it on the ROW is what lets
-// ONE set of words serve several staves — here the same track is placed twice.
+// A lyrics track holds its words; a score's row prints them under the staff above it.
+// ONE set of words can serve several staves: here the same track is placed twice.
 time 4/4
 key c major
 part sop { clef treble }
@@ -202,10 +201,26 @@ section A {
 form { ~A }
 score {
   staff sop "Soprano"
-  lyrics verse sings sop
+  lyrics verse on sop
   staff alt "Alto"
-  lyrics verse sings alt
+  lyrics verse on alt
 }
+'@
+
+'sing-first' = @'
+// A part, its words, and the line that sings them. The score's row prints the words;
+// the singer line is what makes them heard.
+time 4/4
+key c major
+tempo 96
+part melody { instrument soprano }
+section A {
+  melody { c'4 d e f | g2 e | a4 g f e | d1 | }
+  lyrics words { あ さ の ひ | か り | は な が さ | く | }
+}
+form { ~A }
+singer female sings words on melody
+score { staff melody  lyrics words }
 '@
 
 'instrument' = @'

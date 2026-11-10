@@ -7,6 +7,7 @@
 #   editor.html   <- editor-body.html   the VS Code extension and its AI features
 #   commands.html <- commands-body.html every editor command, one by one (under Editor)
 #   scan.html     <- scan-body.html     Calamo: the reader extension, reading and checking a scan (under Editor)
+#   sing.html     <- sing-body.html     having the words sung: Cantoria, voices, the singer line (under Editor)
 #   about.html    <- about-body.html    lineage, licence, speed, architecture
 # and the learn pages from the lessons themselves.
 # Shares its stylesheet with the showcase page: the CSS is lifted out of
@@ -123,6 +124,11 @@ $pages = @(
        Desc = 'Calamo reads a scan or PDF of printed music into editable Lily# text, marks what it was unsure of, opens the page beside the score to check against, and has the AI propose fixes for the marked bars.'
        Sub = 'Calamo — printed music read from a scan or PDF (Beta)'
        Authority = 'The two extensions are the authority: where this page and Lily# Studio or Calamo disagree, the extension is right and this page is a bug.' },
+    @{ Out = 'sing.html'; Body = 'sing-body.html'; Section = 'editor.html'
+       Title = 'Lily# — singing the words'
+       Desc = 'Have the lyrics of a Lily# score sung: install Cantoria and a voice, add a singer line, and press Play. Choose voices, hum or sing the note names, and export the song.'
+       Sub = 'Singing — have the words of a score sung'
+       Authority = 'Lily# Studio and Cantoria are the authority: where this page and the extensions disagree, the extensions are right and this page is a bug.' },
     @{ Out = 'about.html'; Body = 'about-body.html'; Section = 'about.html'
        Title = 'Lily# — about'
        Desc = 'What Lily# owes LilyPond, its licence and fonts, how it is put together, and why the preview keeps up.'

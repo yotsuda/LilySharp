@@ -177,6 +177,7 @@ $template = @'
     <li><a href="learn.html">Learn it lesson by lesson &rarr;</a></li>
     <li><a href="scan.html">Bring in printed music from a scan or PDF &rarr;</a>
       <span class="entry-note">Windows · beta</span></li>
+    <li><a href="sing.html">Have the words of a score sung &rarr;</a></li>
   </ul>
   {{HERO_SHOT}}
   <p class="caption">The source and the engraving, side by side. The preview follows your
@@ -214,8 +215,8 @@ $template = @'
       engraved with what changed in green. A candidate that adds errors is never shown. It uses
       the models VS Code offers you, such as GitHub Copilot's.</p></div>
     <div class="pillar"><span class="n">05</span><h3>Lily# Studio knows the grammar</h3>
-      <p>Completion offers what can actually come next — after <code>lyrics&nbsp;NAME</code>
-      it proposes <code>sings</code>, then the part names that exist in your file. Rename a
+      <p>Completion offers what can actually come next — after <code>singer&nbsp;sings&nbsp;NAME</code>
+      it proposes <code>on</code>, then the part names that exist in your file. Rename a
       part and every reference to it moves with it. Hover a chord and it names itself — symbol,
       degree and pitches. An octave mark or a duration typed anywhere on a note lands in its
       slot, <code>Ctrl+Shift+Up/Down</code> steps to the next note of the key (PageUp/PageDown an octave) or a chord shape — and on a tempo, key, clef, dynamic, articulation, time, octave, transpose or shift changes it, no typing — and the note you
@@ -243,7 +244,7 @@ $template = @'
   <div class="card">
     <h3>Choral octavo</h3>
     <p class="what">An die Freude — Beethoven, four voices with a verse under every staff.</p>
-    <ul class="tags"><li>choirStaff</li><li>lyrics … sings</li><li>treble_8</li><li>four parts</li></ul>
+    <ul class="tags"><li>choirStaff</li><li>lyrics rows</li><li>treble_8</li><li>four parts</li></ul>
     <div class="paper"><img src="ode-to-joy.svg" alt="SATB chorale"></div>
     <details><summary>Show the source</summary><pre>{{ODE_LYS}}</pre></details>
   </div>

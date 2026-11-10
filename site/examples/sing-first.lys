@@ -1,0 +1,13 @@
+// A part, its words, and the line that sings them. The score's row prints the words;
+// the singer line is what makes them heard.
+time 4/4
+key c major
+tempo 96
+part melody { instrument soprano }
+section A {
+  melody { c'4 d e f | g2 e | a4 g f e | d1 | }
+  lyrics words { あ さ の ひ | か り | は な が さ | く | }
+}
+form { ~A }
+singer female sings words on melody
+score { staff melody  lyrics words }

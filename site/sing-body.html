@@ -1,0 +1,193 @@
+<div class="layout">
+
+<nav class="toc">
+  <p class="grp">Singing</p>
+  <ol>
+    <li><a href="#what">What it does</a></li>
+    <li><a href="#install">Install a voice</a></li>
+    <li><a href="#first">A first song</a></li>
+    <li><a href="#who">Choose who sings</a></li>
+    <li><a href="#words">Write words a voice can read</a></li>
+    <li><a href="#sound">Voice, instrument, or both</a></li>
+    <li><a href="#generated">Humming and note names</a></li>
+    <li><a href="#part-words">A part's own words</a></li>
+    <li><a href="#editor">In the editor</a></li>
+    <li><a href="#export">Export the song</a></li>
+    <li><a href="#terms">Voices and their terms</a></li>
+  </ol>
+</nav>
+
+<article>
+
+<section id="what">
+  <h2>What it does</h2>
+  <p>A <code>lyrics</code> track in a Lily# score can be <b>sung</b>: press ▶ in the preview and a
+  synthetic voice sings the words on their notes, in time with the other parts. You change a word or
+  a note and the voice follows, singing again only the phrase you touched.</p>
+  <p>Singing is optional, and it comes from a <b>separate free extension</b>,
+  <a href="https://marketplace.visualstudio.com/items?itemName=yotsuda.cantoria">Cantoria Singing
+  Voice</a>. Cantoria drives singing engines you install yourself; no voice comes with it. Everything
+  runs on your own computer, and nothing is sent anywhere.</p>
+</section>
+
+<section id="install">
+  <h2>Install a voice</h2>
+  <ol class="llist">
+    <li>In VS Code's Extensions view (<kbd>Ctrl+Shift+X</kbd>), search for <b>Cantoria</b> and install
+    <i>Cantoria Singing Voice</i>. If you write a <code>singer</code> line without it, Lily# Studio
+    offers to install it.</li>
+    <li>Set up at least one of the three engines below.</li>
+    <li>Run <b>Cantoria: Check Setup</b> from the command palette (<kbd>Ctrl+Shift+P</kbd>) to see that
+    all is well.</li>
+  </ol>
+  <table class="g">
+    <tr><th>Engine</th><th>What to install</th><th>Then run</th><th>Sings</th></tr>
+    <tr><td><b>DiffSinger</b></td>
+      <td>Voices in the OpenUtau format, each a folder holding a <code>dsconfig.yaml</code>, side by
+      side in one folder</td>
+      <td><i>Cantoria: Choose Voices Folder… (DiffSinger)</i></td>
+      <td>Japanese, and English, Chinese or Korean where the voice has a dictionary for them</td></tr>
+    <tr><td><b>VOICEVOX</b></td>
+      <td><a href="https://voicevox.hiroshiba.jp/">VOICEVOX</a></td>
+      <td><i>Cantoria: Choose VOICEVOX Folder…</i> — Cantoria then starts it when one of its voices is
+      needed, and stops it when VS Code closes</td>
+      <td>Japanese</td></tr>
+    <tr><td><b>NEUTRINO</b></td>
+      <td><a href="https://studio-neutrino.com/">NEUTRINO</a> (Tau, v3.2 or later), Windows only</td>
+      <td><i>Cantoria: Choose NEUTRINO Folder…</i></td>
+      <td>Japanese</td></tr>
+  </table>
+  <p>A voice is named <code>engine/name</code>: <code>neutrino/MERROW</code>,
+  <code>diffsinger/TIGER</code>, <code>voicevox/ずんだもん-ノーマル</code>. <b>Cantoria: Choose Default
+  Female Voice…</b> and <b>Choose Default Male Voice…</b> pick the voices used when a score does not
+  name one.</p>
+</section>
+
+<section id="first">
+  <h2>A first song</h2>
+  <p>Three statements, one job each. <code>lyrics</code> holds the words. A <code>lyrics</code> row in a
+  score <b>prints</b> them. A <code>singer</code> line <b>sings</b> them.</p>
+  <!--EXAMPLE:sing-first-->
+  <p>The line stands at the top level of the file, and its order is fixed:
+  <code>singer WHO sings WORDS on PART</code>. Without it the words are only printed, and the part
+  plays its instrument. <code>on PART</code> can be left out when the file has one part, or when every
+  score prints the words under one part.</p>
+  <p>Press ▶. The first time takes a moment while the engine loads its models. Until the voice is
+  ready, the part's instrument plays in its place.</p>
+</section>
+
+<section id="who">
+  <h2>Choose who sings</h2>
+  <table class="g">
+    <tr><th>Written</th><th>Who sings</th></tr>
+    <tr><td><code>singer sings words</code></td><td>the default voice for the part: a man's for a bass, baritone or tenor part, otherwise a woman's</td></tr>
+    <tr><td><code>singer female sings words</code></td><td>the default female voice (<code>male</code> for the default male voice)</td></tr>
+    <tr><td><code>singer "neutrino/MERROW" sings words</code></td><td>that voice</td></tr>
+    <tr><td><code>singer male "neutrino/SOMA" sings words</code></td><td>that voice; the word before it narrows what the editor offers to voices of that gender</td></tr>
+  </table>
+  <p>A voice this computer does not have is replaced by the default voice of the part's gender, and
+  Lily# Studio says so once, so a score you share still sings for someone with other voices.</p>
+  <p><b>A choir</b> takes one line a part. <b>Two lines with the same words on one part</b> sing it
+  together, and the voices may come from different engines:</p>
+<pre>singer female "diffsinger/Nishiren" sings words on sop
+singer female "voicevox/ずんだもん-ノーマル" sings words on sop
+singer male "neutrino/SOMA" sings words on bas</pre>
+  <p>A line inside a <code>score { }</code> replaces the top-level lines for its part in that score, so
+  one score can sing the Japanese words and another the English ones.</p>
+</section>
+
+<section id="words">
+  <h2>Write words a voice can read</h2>
+  <p>For Japanese, write <b>kana</b>. A kanji word prints as written but is sung only with a reading
+  glued to it in square brackets: <code>漢[かん]</code> prints 漢 and sings かん.</p>
+  <p>Words are <code>japanese</code> unless the file says otherwise, with a line of its own for the whole
+  file or on a track. The names are <code>japanese</code>, <code>english</code>, <code>chinese</code> and
+  <code>korean</code>. With the caret on a language, <kbd>Ctrl+Shift+Up</kbd> and
+  <kbd>Ctrl+Shift+Down</kbd> change it.</p>
+<pre>language english
+lyrics ja language japanese { さ く ら | }</pre>
+  <p>Slurs, ties and melismas are read as they are for printing: see
+  <a href="grammar.html#lyrics">Lyrics</a> in the reference. <code>@breath</code> on a sung note is a
+  breath, and dynamics, accents and hairpins set how loud the voice is.</p>
+</section>
+
+<section id="sound">
+  <h2>Voice, instrument, or both</h2>
+  <p>A part a <code>singer</code> line sings is heard as its voice, and any other part as its
+  instrument. A staff can say otherwise for its score:</p>
+  <table class="g">
+    <tr><th>Written in the score</th><th>What you hear</th></tr>
+    <tr><td><code>staff sop</code></td><td>the voice if the part has a singer, otherwise the instrument</td></tr>
+    <tr><td><code>staff sop sounds both</code></td><td>voice and instrument together</td></tr>
+    <tr><td><code>staff sop sounds instrument</code></td><td>the instrument only</td></tr>
+    <tr><td><code>staff sop hidden</code></td><td>sounds as usual, and the staff is not drawn: a sung line the page does not show</td></tr>
+  </table>
+  <p>Only a part with a <code>staff</code> or <code>tab</code> line in the score sounds.</p>
+</section>
+
+<section id="generated">
+  <h2>Humming and note names</h2>
+  <p>Two track names need no <code>lyrics { }</code> block, because they are made from the notes:</p>
+<pre>singer female sings hum on sop        // hums on ん
+singer female sings solfege on alt    // sings the note names
+score { staff alt  lyrics solfege }   // prints the names under the notes</pre>
+  <p>Solfege is movable do, in the file's <code>language</code>.</p>
+</section>
+
+<section id="part-words">
+  <h2>A part's own words</h2>
+  <p>Where parts sing different words, say so in each part's header. It defines nothing; it names the
+  track, with no braces:</p>
+<pre>part sop { instrument soprano  lyrics words }
+part ten { instrument baritone lyrics mw }
+
+singer female sings on sop     // sings the words the part names
+singer male sings on ten</pre>
+  <p>A <code>singer</code> line or a row that gives that part some other track is then warned about,
+  which catches a part printing one set of words and singing another. A part may list several tracks;
+  a <code>singer</code> line must then name the one it sings.</p>
+</section>
+
+<section id="editor">
+  <h2>In the editor</h2>
+  <ul>
+    <li><b>Voices as you type.</b> Between the quotes of a <code>singer</code>, completion lists the
+    installed voices that sing the words' language.</li>
+    <li><b>Hear a voice.</b> Click a <code>singer</code> line and the voice says a short phrase, at the
+    pitch of the line's gender. <kbd>Ctrl+Shift+Up</kbd> and <kbd>Ctrl+Shift+Down</kbd> go through the
+    voices, each heard as you reach it; <kbd>Ctrl+Shift+PageUp</kbd> and <kbd>PageDown</kbd> go to the
+    first voice of another engine. While the piece plays, a click stays silent.</li>
+    <li><b>The microphone over ▶</b> is grey and still while a voice is not sung yet, pulses while the
+    engine sings it, and turns blue when it is ready. A Play meanwhile plays the part's instrument.</li>
+    <li><b>Edits sing only what changed.</b> About a second and a half after you stop typing, the
+    engine sings the phrases you changed and keeps the rest. A phrase ends at a rest. If it was still
+    singing an older text, it finishes the phrase it is on and moves on; pressing ▶ skips the wait.
+    On a slow computer, set <code>lilysharp.playback.singerPrepare</code> to <code>onPlay</code> so that
+    the voice is sung only when you press ▶.</li>
+    <li><b>The practice menu</b> has a line for each voice, with a switch, a fader and a microphone of
+    its own (<a href="editor.html#practice">Practice</a>).</li>
+    <li><b>What is kept.</b> Sung phrases stay on disk between sessions, up to
+    <code>cantoria.cacheSizeMB</code> (1000 MB by default), the ones unused longest going first.
+    <b>Cantoria: Forget Rendered Voices</b> clears them.</li>
+  </ul>
+</section>
+
+<section id="export">
+  <h2>Export the song</h2>
+  <p>The preview's <b>Export</b> as WAV mixes the voices in with the instruments. From the command line,
+  <code>lysc wav</code> does the same when it is given a <code>cantoria</code> program
+  (<a href="https://github.com/yotsuda/Cantoria">Cantoria's repository</a> has it), with a sound font
+  for the instruments:</p>
+<pre>lysc wav --soundfont GeneralUser.sf2 --singer cantoria song.lys</pre>
+</section>
+
+<section id="terms">
+  <h2>Voices and their terms</h2>
+  <p>Each voice is its author's work under its author's terms, and Lily# and Cantoria bundle none. Read
+  those terms before you publish what a voice sang. VOICEVOX has
+  <a href="https://voicevox.hiroshiba.jp/term/">terms of its own</a>, each character has its own, and a
+  published work credits <code>VOICEVOX:name</code>.</p>
+</section>
+
+</article>
+</div>
