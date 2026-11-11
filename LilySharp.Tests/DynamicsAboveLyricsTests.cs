@@ -252,6 +252,39 @@ public class DynamicsAboveLyricsTests
         Assert.False(hairpins[1].IsAbove);
     }
 
+    /// <summary>
+    /// The room: a line above a sung staff is ink of that staff's UP profile, so the staff
+    /// over it is spaced off the wedge and the level — the rule, not a value (what is asserted
+    /// is that the distance RESPONDS, and that the drawn wedge then stands clear of the staff
+    /// above). MEASURED (LilyPond 2.26.0, Lab sessions/p1225/dyn choir): four sung staves 11.62 /
+    /// 12.08 / 13.40 apart on both pages; before the wedge entered the UP profile the page stood
+    /// them 13.52 / 13.24 / 14.96 apart, the wedge reserved BELOW the staff it stands above.
+    /// </summary>
+    [Fact]
+    public void TheStaffAbove_IsSpacedOffTheLineOverASungStaff()
+    {
+        static (double Gap, ScoreLayout Layout) Of(string low)
+        {
+            var tree = SyntaxTree.Parse(
+                "time 4/4\noctave absolute\npart up { clef treble }\npart low { clef treble }\n" +
+                $"section A {{\n  up {{ c'4 b a b | c'1 | }}\n  low {{ {low} }}\n}}\n" +
+                "lyrics w { la la la la | la | }\nform { A }\n" +
+                "score { staff up  staff low  lyrics w }\n");
+            Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+            var layout = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+            var staves = layout.Systems[0].StaffGroups.SelectMany(g => g.Staves).OrderBy(s => s.StaffIndex).ToList();
+            return (staves[0].Y - staves[1].Y, layout);
+        }
+        var (plain, _) = Of("a''4 b'' c''' b'' | a''1 |");
+        var (sung, layout) = Of("a''4@p@cresc b'' c''' b'' | a''1@f |");
+        Assert.True(sung > plain + 0.5, $"the staves must open for the line: plain {plain:F6}, with it {sung:F6}");
+        var hp = Assert.Single(layout.HairpinLayouts);
+        Assert.True(hp.IsAbove);
+        // System-relative Y-up: the upper staff's bottom line is 4 below the system top.
+        Assert.True(hp.YUp + hp.EndOpening < -2 * EngravingDefaults.StaffMiddle,
+            $"the wedge stands under the upper staff: centre {hp.YUp:F6}");
+    }
+
     /// <summary>The twin's staff takes LilyPond's <c>\dynamicUp</c> exactly where the page
     /// stands the dynamics above: the staff with the lyrics row under it.</summary>
     [Fact]
