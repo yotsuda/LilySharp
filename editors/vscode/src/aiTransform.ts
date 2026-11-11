@@ -41,7 +41,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, newPieceOverScore, guidePages, guideContents, CandidateSynth, playsItself, headerLanguageNote, diagLines,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, newPieceOverScore, guidePages, guideContents, CandidateSynth, playsItself, hasSynth, headerLanguageNote, diagLines,
     lastUserMessageAt, heldClashesOf, noTuneOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
     applyDraft, draftSummary, DraftInput, FROM_DRAFT_NOTE,
     applyScoreEdits, ScoreEdit, scorePartView, scorePages,
@@ -73,6 +73,11 @@ export interface AiTransformDeps {
     /** The synth's files as `webview` reaches them (its bundle, its worklet processor, the sound
      *  font — '' for none), and the MIDI output the sounds go to ('' for the synth). */
     synthFor?: (webview: vscode.Webview) => CandidateSynth;
+    /** Plays a note list from its start on the MIDI output `port` (the server's): whether it
+     *  started, the wall-clock time of its zero, where it ends in seconds, and why not. */
+    midiPlay?: (port: string, notes: unknown[]) => Promise<{ started: boolean; t0Ms: number; end: number; error: string | null }>;
+    /** Stops what the MIDI output plays. */
+    midiStop?: () => void;
     /** Stops what the preview of `uri` is playing. */
     stopOnPreview?: (uri: vscode.Uri) => void;
     /** The score the preview of `uri` shows (its picker), or undefined for the first. */
@@ -2761,6 +2766,7 @@ function ensureCandidatePanel(deps: AiTransformDeps, uri: vscode.Uri): vscode.We
         pendingDecision = undefined;
         // A decision ends a candidate's Play: the music changes, or the panel goes.
         if (audible) { deps.stopOnPreview?.(currentUri(audible.uri)); }
+        stopCandidateMidi(deps);
         resolve?.(d);
     };
     panel.webview.onDidReceiveMessage((m: any) => {
@@ -2769,6 +2775,8 @@ function ensureCandidatePanel(deps: AiTransformDeps, uri: vscode.Uri): vscode.We
         } else if (m?.action === 'play') {
             void playCandidate(deps, panel, m.which === 'before' ? 'before' : 'after',
                 typeof m.from === 'number' ? m.from : undefined, typeof m.to === 'number' ? m.to : undefined);
+        } else if (m?.action === 'stop' && candidateOnMidi) {
+            stopCandidateMidi(deps);
         } else if (m?.action === 'stop' && audible) {
             deps.stopOnPreview?.(currentUri(audible.uri));
         }
@@ -2820,7 +2828,27 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
         // over memory spared). Its Play is a click on its own page, so its audio may start; the
         // preview's may not until the preview has been clicked, and a panel over the preview hides
         // it. The MIDI output stays the preview's: a port is the server's, and needs no click.
-        if (playsItself(deps.synthFor?.(panel.webview))) {
+        const synth = deps.synthFor?.(panel.webview);
+        // A MIDI output chosen: the host asks the port of the server itself (owner's request
+        // 2026-11-11: with no preview open the panel said to open one) and the panel follows the
+        // port's clock. A port that is not there is said, and the panel's own synth plays instead.
+        if (synth && synth.midiOutput.length > 0 && deps.midiPlay) {
+            stopCandidateMidi(deps);
+            const sent = await deps.midiPlay(synth.midiOutput, notes);
+            if (sent.started) {
+                candidateOnMidi = true;
+                void panel.webview.postMessage({ type: 'playMidi', which, notes, t0Ms: sent.t0Ms, end: sent.end });
+                return;
+            }
+            if (hasSynth(synth)) {
+                void panel.webview.postMessage({ type: 'playNotes', which, notes,
+                    said: `MIDI output ${synth.midiOutput}: ${sent.error ?? 'not started'} — played here instead.` });
+                return;
+            }
+            say(`MIDI output ${synth.midiOutput}: ${sent.error ?? 'not started'}`);
+            return;
+        }
+        if (playsItself(synth)) {
             void panel.webview.postMessage({ type: 'playNotes', which, notes });
             return;
         }
@@ -2836,6 +2864,15 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
     }
 }
 
+
+/** A candidate's Play is sounding on the MIDI output, asked by the host: a Stop or a decision ends it there. */
+let candidateOnMidi = false;
+function stopCandidateMidi(deps: AiTransformDeps): void {
+    if (candidateOnMidi) {
+        candidateOnMidi = false;
+        deps.midiStop?.();
+    }
+}
 
 /** The pane the candidate panel's Play sounds — its notes' offsets are that text's. */
 let playingPane: 'before' | 'after' = 'after';
@@ -2871,7 +2908,7 @@ function getCandidateHtml(
     /** The synth the panel plays with; none, or a MIDI output chosen: the preview plays (playsItself). */
     synth?: CandidateSynth,
 ): string {
-    const own = playsItself(synth);
+    const own = hasSynth(synth);
     // What the page's player is made with, or null where the preview plays.
     const synthJson = own ? JSON.stringify({ processor: synth!.processor, soundFont: synth!.soundFont }) : 'null';
     const afterBody = svgAfter
@@ -3257,6 +3294,21 @@ button:disabled { opacity:0.45; cursor:default; }
       if (status.state === 'failed') say('Sound: ' + (status.detail || 'the sound font did not load'));
     });
   }
+  // On the MIDI output (the host asked the port): the notes light by the port's own clock, the
+  // wall-clock time of its zero, which Date.now() counts too.
+  function playMidi(w, notes, t0Ms, end) {
+    stopOwn();
+    if (!decided) say('');
+    ownPane = w;
+    if (window.LysSynth && window.LysSynth.SoundingCursor) {
+      const cursor = new window.LysSynth.SoundingCursor(notes.map(n => ({ t: n.T, d: n.D, s: n.R, o: n.O || 0 })));
+      ownTick = setInterval(() => {
+        const r = cursor.at((Date.now() - t0Ms) / 1000);
+        if (r.changed) lightSounding(w, r.sounding.map(x => ({ pos: x.pos, occ: x.occ })));
+      }, 50);
+    }
+    ownEnd = setTimeout(stopOwn, Math.max(0, t0Ms - Date.now() + (end + 0.5) * 1000));
+  }
   function stopOwn() {
     ownGen++;
     clearInterval(ownTick); clearTimeout(ownEnd);
@@ -3389,7 +3441,12 @@ button:disabled { opacity:0.45; cursor:default; }
   window.addEventListener('message', (e) => {
     if (!e.data) return;
     if (e.data.type === 'sounding') { lightSounding(e.data.which, e.data.sounding || []); return; }
-    if (e.data.type === 'playNotes') { playOwn(e.data.which === 'before' ? 'before' : 'after', e.data.notes || []); return; }
+    if (e.data.type === 'playNotes') {
+      playOwn(e.data.which === 'before' ? 'before' : 'after', e.data.notes || []);
+      if (e.data.said && !decided) say(e.data.said);
+      return;
+    }
+    if (e.data.type === 'playMidi') { playMidi(e.data.which === 'before' ? 'before' : 'after', e.data.notes || [], e.data.t0Ms || Date.now(), e.data.end || 0); return; }
     // Playback news is not shown over a decision being carried out.
     if (e.data.type === 'playState' && !decided) { say(e.data.text); }
     else if (e.data.type === 'status') { say(e.data.text, true); }

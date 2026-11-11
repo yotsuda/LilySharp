@@ -972,6 +972,15 @@ export function activate(context: vscode.ExtensionContext) {
         // page reaches them, where they are read from, and the MIDI output, which stays the preview's.
         synthRoots: () => previewResourceRoots(context.extensionUri),
         synthFor: (webview: vscode.Webview) => ({ ...synthUrls(webview, context.extensionUri), midiOutput: midiOutputSetting() }),
+        // …and with a MIDI output chosen, the port plays it, asked here: no preview is needed for it.
+        midiPlay: async (port: string, notes: unknown[]) => {
+            const r = await midiOutRequest<{ Started?: boolean; StartedAtMs?: number; EndSeconds?: number; Error?: string | null }>(
+                'lilysharp/midiOut/play', { port, notes, offset: 0 });
+            if (r.Error) { reportMidiOutError(port, r.Error); }
+            outputChannel.appendLine(`MIDI out (candidate): ${notes.length} notes, to ${Number(r.EndSeconds ?? 0).toFixed(3)} s`);
+            return { started: !!r.Started, t0Ms: r.StartedAtMs ?? 0, end: r.EndSeconds ?? 0, error: r.Error ?? null };
+        },
+        midiStop: () => { void midiOutRequest('lilysharp/midiOut/stop', {}); },
         stopOnPreview: (uri: vscode.Uri) => {
             void previewPanels.get(uri.toString())?.webview.postMessage({ type: 'ctxStop' });
         },

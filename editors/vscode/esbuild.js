@@ -130,6 +130,7 @@ function copyGrammar() {
             'never a file viewer: it gives the score as it stands in the editor, and what Lily# says of it.',
             'Run no script or terminal on a score.',
             'Before writing a chord for a guitar, bass or string part, ask lilysharp_chordVoicings what its player can hold, its midiInstrument as sound.',
+            'To change a score\'s music (a part, some bars, a new part): lilysharp_writePart; to know its chords: lilysharp_readChords.',
             'Leave this aside for anything else.',
             '',
         ].join('\n');

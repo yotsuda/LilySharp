@@ -491,7 +491,12 @@ describe('the composing guide', () => {
         assert.match(read, /const shown = absolute \?\? text;/);
         assert.match(read, /\$\{pages\[page - 1\]\}\$\{paging\}\$\{last \? said : ''\}`;/);
         assert.match(transform, /return diagLines\(diags, d => text \? spotOf\(d, text\) \+ rangeFixOf\(d, text\) : ''\);/);
-        assert.ok(here.length < 2000, 'kept to a few lines');
+        // The tools that change a score's music and read its chords are named here too (owner's run
+        // 2026-11-11: asked to rewrite a bass line, the chat searched the tools by the names this file
+        // gave it — readScore, readGuide, proposeScore — read the whole score in three pages and thought
+        // for three minutes; the file that names writePart and readChords goes only with a .lys attached).
+        assert.match(here, /'To change a score\\'s music \(a part, some bars, a new part\): lilysharp_writePart; to know its chords: lilysharp_readChords\.',/);
+        assert.ok(here.length < 2150, 'kept to a few lines');
         // Asked how to write Lily#, the chat teaches from the path (owner's request 2026-11-02), wherever it is asked.
         assert.match(here, /'Asked how to write Lily# or \.lys, or to be taught it, read that tool with topic "learn" and teach from it\.',/);
         assert.match(build, /'\*\*Teaching Lily#\*\*: asked how to write it, or to be taught it, read the `lilysharp_readGuide` tool, topic `learn`, and teach from that path\.',/);

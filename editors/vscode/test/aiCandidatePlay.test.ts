@@ -40,7 +40,7 @@ describe('an AI candidate plays before it is accepted', () => {
         assert.match(transform, /sendRequest<[^>]*>\('lilysharp\/playbackText', \{\s*Text: which === 'after' \? play\.after : play\.before,/);
         assert.match(transform, /deps\.playOnPreview\?\.\(play\.uri, notes\)/);
         // A decision stops it.
-        assert.match(transform, /if \(audible\) \{ deps\.stopOnPreview\?\.\(currentUri\(audible\.uri\)\); \}\s*resolve\?\.\(d\);/);
+        assert.match(transform, /if \(audible\) \{ deps\.stopOnPreview\?\.\(currentUri\(audible\.uri\)\); \}\s*stopCandidateMidi\(deps\);\s*resolve\?\.\(d\);/);
         // An untitled score saved under review: the preview it plays on went with it.
         assert.match(transform, /const play = \{ \.\.\.audible, uri: currentUri\(audible\.uri\) \};/);
     });
@@ -293,13 +293,35 @@ describe('the AI candidate panel\'s page script', () => {
         // the notes to the panel that plays itself, and keeps the MIDI output with the preview.
         assert.match(page, /document\.getElementById\('play'\)\.addEventListener\('click', \(\) => \{ wakeAudio\(\); play\(\); \}\);/);
         assert.match(page, /decided = true;\s*stopOwn\(\);/);
-        assert.match(page, /if \(e\.data\.type === 'playNotes'\) \{ playOwn\(/);
-        assert.match(transform, /if \(playsItself\(deps\.synthFor\?\.\(panel\.webview\)\)\) \{\s*void panel\.webview\.postMessage\(\{ type: 'playNotes', which, notes \}\);\s*return;/);
+        assert.match(page, /if \(e\.data\.type === 'playNotes'\) \{\s*playOwn\(/);
+        assert.match(page, /if \(e\.data\.type === 'playMidi'\) \{ playMidi\(/);
+        assert.match(transform, /if \(playsItself\(synth\)\) \{\s*void panel\.webview\.postMessage\(\{ type: 'playNotes', which, notes \}\);\s*return;/);
+        // Owner's request 2026-11-11: with a MIDI output chosen, the port plays it with no preview
+        // open — the host asks the server, and the panel lights the notes by the port's clock.
+        assert.match(transform, /if \(synth && synth\.midiOutput\.length > 0 && deps\.midiPlay\) \{\s*stopCandidateMidi\(deps\);\s*const sent = await deps\.midiPlay\(synth\.midiOutput, notes\);\s*if \(sent\.started\) \{\s*candidateOnMidi = true;\s*void panel\.webview\.postMessage\(\{ type: 'playMidi', which, notes, t0Ms: sent\.t0Ms, end: sent\.end \}\);/);
+        // …a port that is not there is said, and the panel's own synth plays instead.
+        assert.match(transform, /if \(hasSynth\(synth\)\) \{\s*void panel\.webview\.postMessage\(\{ type: 'playNotes', which, notes,\s*said: `MIDI output \$\{synth\.midiOutput\}: \$\{sent\.error \?\? 'not started'\} — played here instead\.` \}\);/);
+        assert.match(transform, /\} else if \(m\?\.action === 'stop' && candidateOnMidi\) \{\s*stopCandidateMidi\(deps\);/);
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /midiPlay: async \(port: string, notes: unknown\[\]\) => \{[\s\S]{0,260}'lilysharp\/midiOut\/play', \{ port, notes, offset: 0 \}\);/);
+        assert.match(ext, /midiStop: \(\) => \{ void midiOutRequest\('lilysharp\/midiOut\/stop', \{\}\); \},/);
+        new vm.Script(cut('function playMidi(w, notes, t0Ms, end)')).runInContext(context);
+        context.Date = { now: () => 5000 };
+        tick = undefined;
+        run("playMidi('after', notes, 4500, 2)");
+        // Half a second into the list by the port's clock: the first note sounds.
+        tick!();
+        assert.deepEqual(lit.at(-1), { w: 'after', n: 1 });
+        assert.equal(played.length, 1, 'the panel\'s own synth is not struck');
+        run('stopOwn()');
         const core = require('../src/aiTransformCore') as { playsItself: (s?: { script: string; processor: string; soundFont: string; midiOutput: string }) => boolean };
         assert.equal(core.playsItself({ script: 'a', processor: 'b', soundFont: 'c', midiOutput: '' }), true);
         assert.equal(core.playsItself({ script: 'a', processor: 'b', soundFont: 'c', midiOutput: 'Port 1' }), false);
         assert.equal(core.playsItself({ script: 'a', processor: 'b', soundFont: '', midiOutput: '' }), false);
         assert.equal(core.playsItself(undefined), false);
+        const has = (require('../src/aiTransformCore') as { hasSynth: (s?: { script: string; processor: string; soundFont: string; midiOutput: string }) => boolean }).hasSynth;
+        assert.equal(has({ script: 'a', processor: 'b', soundFont: 'c', midiOutput: 'Port 1' }), true);
+        assert.equal(has({ script: 'a', processor: 'b', soundFont: '', midiOutput: 'Port 1' }), false);
     });
     it('splits a note\'s copies by their bars, whatever the order of the DOM', () => {
         const page = scripts.join('\n');
