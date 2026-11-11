@@ -481,8 +481,10 @@ c4@f.up      // forte above the staff
 d4@p.down    // piano below (the default on a staff with no lyrics under it)
 ```
 
-A written side moves that mark alone: a hairpin beside it keeps the staff's own side, and so
-does the next level.
+A written side gives the mark's *line* its direction, as in LilyPond: the marks joined by a
+running hairpin ride one line, and those after the written one that write no side follow it.
+In `c4@ff.down@decresc d e f@p` the `p` closing the hairpin stands below with the `ff`; once the
+hairpin has ended, the next mark is on the staff's own side again.
 
 A **subito** dynamic adds `.subito`: the level prints with an italic *sub.* before it, stands where
 the plain level would, and plays as the plain level (the LilyPond twin writes it with
@@ -531,9 +533,11 @@ plain. A note struck at it plays at velocity 43, as softly as pppp, so it is sti
 `niente="yes"` or the `<n/>` dynamic, and LilyPond writes the hairpin with `circled-tip`.
 
 A hairpin stands on the staff's own side, as a level does: below, and above a staff with a
-lyrics row directly under it. `.up` / `.down` sends that one hairpin to the other side
-(`c4@cresc.up`, `c4@decresc.down`); the level that ends it keeps its own. The `.ly` twin
-writes `\dynamicUp` on such a staff and `^` / `_` for a written side; MusicXML writes
+lyrics row directly under it. `.up` / `.down` sends it to the other side (`c4@cresc.up`,
+`c4@decresc.down`), and the level that ends it, writing no side, goes with it. A hairpin
+starting on a note whose level writes a side keeps the staff's own (`c4@ff.down@decresc`: the
+`ff` below, the hairpin above), as LilyPond reads a note's hairpin before its level. The `.ly`
+twin writes `\dynamicUp` on such a staff and `^` / `_` for a written side; MusicXML writes
 the placement.
 
 ## Ties and Slurs

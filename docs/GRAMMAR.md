@@ -2905,7 +2905,8 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @sfp @rfz @fz   (default below, above over a lyrics row directly under the staff; @f.up / @f.down forces side; @p.subito prints "sub. p", plays p)
    - Hairpins:      @cresc @decresc @dim  (start note → next dynamic, or to @!cresc / @!decresc /
                  @!dim on a later note — LilyPond's \! — which ends whichever is open; written after
-                 the start on ONE note, @cresc@!cresc, it spans that note's length; the staff's side as a level's, @cresc.up / @cresc.down for that hairpin alone)
+                 the start on ONE note, @cresc@!cresc, it spans that note's length; the staff's side as a level's; @cresc.up / @cresc.down gives its line the side,
+                 and the marks after it on that line that write none follow, as LilyPond's do)
    - Niente:        @niente  (a hairpin's thin end on it is a circle: @decresc … @niente,
                     @niente@cresc; alone the italic word; at the thick end LYS4029)
    - Stem:          @stemUp @stemDown      (a beam's shared direction wins)

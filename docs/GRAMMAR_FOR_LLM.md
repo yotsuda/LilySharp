@@ -586,7 +586,8 @@ c4@cresc d e f@!cresc | g1 | // a crescendo that ends on f, no dynamic after it
 ```
 
 A hairpin stands on its staff's own side like a level: below, and above a staff with a lyrics
-row directly under it. `@cresc.up` / `@decresc.down` sends that one hairpin to the other side.
+row directly under it. `@cresc.up` / `@decresc.down` sends it to the other side, and the marks
+after it on the same line (until the hairpin has ended) that write no side follow, as in LilyPond.
 
 ## Bar handling
 
