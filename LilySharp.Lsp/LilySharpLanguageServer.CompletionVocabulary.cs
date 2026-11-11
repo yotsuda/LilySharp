@@ -2476,6 +2476,32 @@ public sealed partial class LilySharpLanguageServer
         Command = new Command { Title = "Suggest lyrics", CommandIdentifier = "editor.action.triggerSuggest" },
     };
 
+    /// <summary>
+    /// The words a <c>singer … sings ▮</c> line may name, each going on to <c>on</c> and the list
+    /// of parts (owner's request 2026-11-11: the line is written from lists — the voice, the words,
+    /// the part — with no word typed between): the item writes the name and <c> on </c>, and asks
+    /// the list again, where <see cref="CompletionContext.AfterSingsTarget"/> names the parts. A
+    /// line that already says something after the caret (its <c>on PART</c>, when the words alone
+    /// are changed) keeps the plain name.
+    /// </summary>
+    internal static CompletionItem[] SingerWordsGoOnToOn(CompletionItem[] words, string text, int offset)
+    {
+        int at = Math.Clamp(offset, 0, text.Length);
+        int end = text.IndexOf('\n', at);
+        string rest = text[at..(end < 0 ? text.Length : end)];
+        int comment = rest.IndexOf("//", StringComparison.Ordinal);
+        if (comment >= 0)
+            rest = rest[..comment];
+        if (rest.Trim().Length > 0)
+            return words;
+        foreach (var item in words)
+        {
+            item.InsertText = item.Label + " on ";
+            item.Command = new Command { Title = "Suggest the part", CommandIdentifier = "editor.action.triggerSuggest" };
+        }
+        return words;
+    }
+
     private static CompletionItem RowOnItem(string sort)
     {
         var item = RowSingsItem();

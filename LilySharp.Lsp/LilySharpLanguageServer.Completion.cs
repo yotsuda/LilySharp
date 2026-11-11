@@ -441,7 +441,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLanguage => GetLanguageNameCompletions(),
             CompletionContext.AfterSinger => new CompletionList { Items = [] },
             CompletionContext.AfterSingerVoice => new CompletionList { Items = [SingsKeywordItem()] },
-            CompletionContext.AfterSingerSings => new CompletionList { Items = [.. GetDeclaredNameCompletions(doc.Text, "lyrics", "The words this voice sings").Items, .. GeneratedLyricsItems(forSinger: true), RowOnItem("9")] },
+            CompletionContext.AfterSingerSings => new CompletionList { Items = [.. SingerWordsGoOnToOn([.. GetDeclaredNameCompletions(doc.Text, "lyrics", "The words this voice sings").Items, .. GeneratedLyricsItems(forSinger: true)], doc.Text, offset), RowOnItem("9")] },
             CompletionContext.AfterSingerWords => new CompletionList { Items = [RowOnItem("0")] },
             CompletionContext.AfterSingsTarget => GetVoiceBindingNameCompletions(doc.Text,
                 "The part - or named voice - this lyrics track sings"),

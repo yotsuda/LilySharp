@@ -262,6 +262,61 @@ public class LyricLanguageTests
     public void TheLine_OffersWhatComesNext(string line, string offered)
         => Assert.Contains(offered, Offered(Declared + line));
 
+    /// <summary>The items offered where <paramref name="text"/> has a <c>▮</c> (else at its end).</summary>
+    private static CompletionItem[] ItemsAt(string text)
+    {
+        int at = text.IndexOf('▮');
+        if (at >= 0)
+            text = text.Remove(at, 1);
+        else
+            at = text.Length;
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///head.lys");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = text, Version = 1, LanguageId = "lilysharp" },
+        });
+        var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(text, at);
+        return server.Completion(new CompletionParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Position = new Position(line, character),
+        })?.Items ?? [];
+    }
+
+    // Owner's request 2026-11-11: the words taken after `sings` go on to `on` and the list of
+    // parts, so the line is written from lists — the voice, the words, the part.
+    [Fact]
+    public void TheWordsTaken_GoOnToOn_AndTheListOfParts()
+    {
+        const string File = Declared + "lyrics words { la | }\n";
+        var items = ItemsAt(File + "singer \"a/b\" sings ");
+        var words = Assert.Single(items, i => i.Label == "words");
+        Assert.Equal("words on ", words.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", words.Command!.CommandIdentifier);
+        // The words made from the notes are sung on a part too.
+        Assert.All(items.Where(i => i.Label != "on"), i =>
+        {
+            Assert.Equal(i.Label + " on ", i.InsertText);
+            Assert.NotNull(i.Command);
+        });
+        // What the item writes is where the parts are listed.
+        Assert.Contains("sop", Offered(File + "singer \"a/b\" sings words on "));
+
+        // A name half typed is replaced by the same item.
+        Assert.Equal("words on ", Assert.Single(ItemsAt(File + "singer \"a/b\" sings wo"), i => i.Label == "words").InsertText);
+
+        // The line has its part already: the words alone are changed.
+        var kept = Assert.Single(ItemsAt(File + "singer \"a/b\" sings ▮ on sop\n"), i => i.Label == "words");
+        Assert.Null(kept.InsertText);
+        Assert.Null(kept.Command);
+        // …and a comment after the caret is not a part.
+        Assert.Equal("words on ", Assert.Single(ItemsAt(File + "singer \"a/b\" sings ▮  // who\n"), i => i.Label == "words").InsertText);
+
+        // Where a part names its own words (`part p { lyrics words }`), no `on` follows.
+        Assert.All(ItemsAt(File + "part alt { lyrics ").Where(i => i.Label == "words"), i => Assert.Null(i.InsertText));
+    }
+
     [Fact]
     public void TheFile_OffersTheLine()
     {

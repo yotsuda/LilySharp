@@ -727,6 +727,6 @@ describe('a voice taken at the top level goes on to sings', () => {
         assert.match(ext, /\} else \{\s*if \(!slot\.Quoted\) \{ item\.insertText = new vscode\.SnippetString\(`"\$\{c\.label\}\$0"`\); \}\s*item\.command = \{ command: 'lilysharp\.hearSinger'/);
         // What the list after `sings ` holds is the server's: the file's lyrics.
         const server = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'LilySharp.Lsp', 'LilySharpLanguageServer.Completion.cs'), 'utf8');
-        assert.match(server, /CompletionContext\.AfterSingerSings => new CompletionList \{ Items = \[\.\. GetDeclaredNameCompletions\(doc\.Text, "lyrics"/);
+        assert.match(server, /CompletionContext\.AfterSingerSings => new CompletionList \{ Items = \[\.\. SingerWordsGoOnToOn\(\[\.\. GetDeclaredNameCompletions\(doc\.Text, "lyrics"/);
     });
 });
