@@ -6746,6 +6746,20 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             ctx.decodeAudioData(copy).then(buffer => {
                 const decoded = Date.now();
                 if (voiceSampleSource) { try { voiceSampleSource.stop(); } catch (e) { /* ended */ } }
+                voiceSampleSource = null;
+                // Not while the page's audio may not run (owner's report 2026-11-11: a voice taken
+                // before the preview had been clicked said nothing, and its phrase came out over
+                // the song at the next Play). A source started on a suspended context is not
+                // dropped: its start is the context's frozen time, so it sounds the moment a
+                // click — the Play button's — lets the context run. The phrase is for the moment
+                // the voice is chosen; later it is noise. audio() has asked the context to resume
+                // and tells the host when it will not (the status bar says to click the preview).
+                // Nor over a Play that began while the phrase was on its way.
+                if (ctx.state !== 'running' || playClock !== null || midiPlaying) {
+                    vscode.postMessage({ type: 'webviewPerf', text: 'voice sample ' + message.id + ': not said ('
+                        + (ctx.state !== 'running' ? 'AudioContext ' + ctx.state : 'the score is playing') + ')' });
+                    return;
+                }
                 const src = ctx.createBufferSource();
                 src.buffer = buffer;
                 src.connect(voiceOutput(ctx));
@@ -7315,6 +7329,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function startPlayback(notes, offset, plainTones, here, countFix) {
             offset = offset || 0;
             stopPlayback();
+            // A voice's phrase still sounding gives way to the score (playVoiceSample).
+            if (voiceSampleSource) { try { voiceSampleSource.stop(); } catch (e) { /* ended */ } voiceSampleSource = null; }
             countInFix = countFix || 0;
             // A list with no note still plays when a voice sings (owner's report 2026-11-09,
             // session 1164: the part's button off and its voice on - the voice alone - gave

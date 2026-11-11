@@ -184,3 +184,71 @@ describe('a voice that lands while the preview plays', () => {
         assert.match(extension, /playbackNotes = null;\s*playingNotes = null;\s*collectPages\(\);/);
     });
 });
+
+// Owner's report 2026-11-11: a voice chosen before the preview had been clicked said nothing, and
+// its phrase (こんにちは) came out over the song at the next Play.
+describe('a chosen voice\'s phrase on the preview', () => {
+    const extension = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const head = 'function playVoiceSample(message)';
+    const at = extension.indexOf(head);
+    let depth = 0, end = -1;
+    for (let i = extension.indexOf('{', at); i < extension.length; i++) {
+        if (extension[i] === '{') depth++;
+        else if (extension[i] === '}' && --depth === 0) { end = i + 1; break; }
+    }
+    const source = extension.slice(at, end);
+
+    function page(state: string, over: Record<string, unknown> = {}) {
+        const started: number[] = [];
+        const said: string[] = [];
+        let stopped = 0;
+        const ctx = {
+            state, baseLatency: 0, outputLatency: 0,
+            decodeAudioData: () => Promise.resolve({}),
+            createBufferSource: () => ({ buffer: null as unknown, connect: () => { /* out */ }, start: () => { started.push(1); }, stop: () => { stopped++; } }),
+        };
+        const context = vm.createContext({
+            Date, Math, Promise, audio: () => ctx, voiceOutput: () => ({}), voiceSampleSource: null, playClock: null, midiPlaying: false,
+            vscode: { postMessage: (m: { text: string }) => { said.push(m.text); } }, ...over,
+        });
+        new vm.Script(source).runInContext(context);
+        const play = async () => {
+            new vm.Script("playVoiceSample({ bytes: new Uint8Array(8), id: 'v', sentAt: 0, pressedAt: 0 })").runInContext(context);
+            await new Promise<void>(resolve => setImmediate(resolve));
+        };
+        return { context, ctx, started, said, play, stops: () => stopped };
+    }
+
+    it('is said when the page\'s audio runs', async () => {
+        const p = page('running');
+        await p.play();
+        assert.equal(p.started.length, 1);
+        assert.ok(p.context.voiceSampleSource);
+        // The next one cuts it off.
+        await p.play();
+        assert.equal(p.stops(), 1);
+        assert.equal(p.started.length, 2);
+    });
+
+    it('is not kept for later when the audio may not run yet', async () => {
+        const p = page('suspended');
+        await p.play();
+        assert.equal(p.started.length, 0, 'a source started on a suspended context sounds at the next click');
+        assert.equal(p.context.voiceSampleSource, null);
+        assert.match(p.said.at(-1)!, /voice sample v: not said \(AudioContext suspended\)/);
+        // Once the preview has been clicked the phrase of the NEXT voice is said, and only that one.
+        p.ctx.state = 'running';
+        await p.play();
+        assert.equal(p.started.length, 1);
+    });
+
+    it('is not said over a score that is playing, and a Play ends one that sounds', async () => {
+        for (const over of [{ playClock: () => 0 }, { midiPlaying: true }]) {
+            const p = page('running', over);
+            await p.play();
+            assert.equal(p.started.length, 0);
+            assert.match(p.said.at(-1)!, /not said \(the score is playing\)/);
+        }
+        assert.match(extension, /stopPlayback\(\);\s*\/\/ A voice's phrase still sounding gives way to the score \(playVoiceSample\)\.\s*if \(voiceSampleSource\) \{ try \{ voiceSampleSource\.stop\(\); \} catch \(e\) \{ \/\* ended \*\/ \} voiceSampleSource = null; \}/);
+    });
+});
