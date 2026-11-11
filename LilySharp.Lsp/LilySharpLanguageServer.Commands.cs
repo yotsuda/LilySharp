@@ -1743,6 +1743,21 @@ public sealed partial class LilySharpLanguageServer
             Text = LilySharp.Core.Harmony.ChordHarmonizer.DescribeProgression(@params.Text ?? "", @params.RenderName, @params.Parts),
         }, token);
 
+    /// <summary>
+    /// Music written into a score by place — a part's section, some of its bars, a new part
+    /// (<see cref="LilySharp.Core.Editing.PartWriter"/>; owner's proposal 2026-11-11) — for the
+    /// arranging chat's tool. The text alone is made: the document is not touched.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/writePart", UseSingleObjectParameterDeserialization = true)]
+    public Task<WritePartResponse> WritePartAsync(WritePartParams @params, CancellationToken token)
+        => OffDispatch(() =>
+        {
+            var result = LilySharp.Core.Editing.PartWriter.Apply(@params.Text ?? "",
+                [.. (@params.Write ?? []).Select(w => new LilySharp.Core.Editing.PartWriter.Write(w.Part ?? "", w.Section ?? "", w.Music ?? "", w.Bars, w.Lyrics))],
+                [.. (@params.NewParts ?? []).Select(p => new LilySharp.Core.Editing.PartWriter.NewPart(p.Part ?? "", p.Title, p.Short, p.Body, p.After))]);
+            return new WritePartResponse { Text = result.Text, Problems = [.. result.Problems], Done = [.. result.Done] };
+        }, token);
+
     public CheckCandidateResponse CheckCandidate(CheckCandidateParams @params)
     {
         var text = @params.Text ?? "";

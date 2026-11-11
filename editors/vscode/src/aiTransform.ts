@@ -260,6 +260,73 @@ interface ProposeScoreInput {
     edits?: ScoreEdit[];
     /** With `edits`: the part they keep to — its own block, its music in each section, the phrases it calls. */
     part?: string;
+    /** Not the chat's to give: set by lilysharp_writePart, whose new warnings go back once, unseen. */
+    sendBackWarnings?: boolean;
+}
+
+/** What Copilot's chat hands the tool that writes music by place. */
+interface WritePartInput {
+    /** The .lys file, its absolute path. */
+    file: string;
+    /** Music for a part in a section: all of it, or `bars` of it; `lyrics` its words there. */
+    write?: { part?: string; section?: string; bars?: string; music?: string; lyrics?: string }[];
+    /** Parts the score does not have yet; their music stands in `write`. */
+    newParts?: { part?: string; title?: string; short?: string; body?: string; after?: string }[];
+    /** A sentence or two to the musician about the change. */
+    note?: string;
+}
+
+/** Added to what a write by place says, where it asks for the whole text again. */
+const FROM_WRITE_NOTE = '\n\nThis was written by place. Where this says to call lilysharp_proposeScore again with the whole '
+    + 'text, call lilysharp_writePart again instead — all of it, corrected: the one turned down changed nothing.';
+
+/** The warnings a write by place has been sent back for, by file: the same ones again are shown. */
+const writeWarnedFor = new Set<string>();
+
+/**
+ * Music written into a score by place (owner's proposal 2026-11-11; lilysharp/writePart): a
+ * part's section, some of its bars, its words, a new part — nothing of the old text copied. All
+ * of it is placed or every problem is said; the text then goes on as a proposal's whole text
+ * does (it compiles, its bars add up, its notes can be played), and a warning it brings goes
+ * back once, unseen, before the musician is shown the change with it.
+ */
+async function writePart(deps: AiTransformDeps, input: WritePartInput | undefined, token: vscode.CancellationToken): Promise<string> {
+    const writes = Array.isArray(input?.write) ? input.write : [];
+    const fresh = Array.isArray(input?.newParts) ? input.newParts : [];
+    if (!input || typeof input.file !== 'string' || writes.length + fresh.length === 0) {
+        return 'Nothing shown: give `file` (the .lys file\'s absolute path) and `write` (a part\'s music in a section), or `newParts`.';
+    }
+    await deps.ensureReady?.();
+    const client = deps.getClient();
+    if (!client || !deps.isReady()) {
+        return 'Nothing shown: the Lily# language server is not running.';
+    }
+    const doc = await scoreDocument(input.file);
+    if (!doc) {
+        return `Nothing shown: no score ${input.file} is open in the editor or on the disk to write into. A new piece is given whole (lilysharp_proposeScore).`;
+    }
+    const standing = doc.getText();
+    let placed: { Text?: string | null; Problems?: string[]; Done?: string[] };
+    try {
+        placed = await client.sendRequest('lilysharp/writePart', {
+            Text: await chatAbsolute(deps, standing) ?? standing,
+            Write: writes.map(w => ({ Part: w?.part, Section: w?.section, Bars: w?.bars, Music: w?.music, Lyrics: w?.lyrics })),
+            NewParts: fresh.map(p => ({ Part: p?.part, Title: p?.title, Short: p?.short, Body: p?.body, After: p?.after })),
+        });
+    } catch (e) {
+        return `Nothing shown: the Lily# language server did not answer (${e instanceof Error ? e.message : String(e)}).`;
+    }
+    if (typeof placed.Text !== 'string') {
+        deps.log(`AI write by place (chat): turned down — ${(placed.Problems ?? []).length} problem(s).`);
+        return 'Nothing shown, and nothing changed:\n' + (placed.Problems ?? ['the music could not be placed']).map(p => `- ${p}`).join('\n')
+            + '\nMend these and call lilysharp_writePart again with all of it.';
+    }
+    deps.log(`AI write by place (chat): ${(placed.Done ?? []).join(' / ')}`);
+    const said = await proposeScore(deps, { file: input.file, text: placed.Text, note: input.note, sendBackWarnings: true }, token);
+    const where = (placed.Done ?? []).map(d => `- ${d}`).join('\n');
+    return /^(Not shown|Nothing shown|Not written)/.test(said)
+        ? said + FROM_WRITE_NOTE
+        : `${said}\nWhat was written, by place:\n${where}`;
 }
 
 /** Added to what proposing by edits says, where it asks for the whole text again. */
@@ -343,6 +410,15 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
         }),
         invoke: async options => new vscode.LanguageModelToolResult([
             new vscode.LanguageModelTextPart(await reviewScore(deps, options.input)),
+        ]),
+    }));
+    // Music written by place (owner's proposal 2026-11-11): a part's section, some bars, a new part.
+    context.subscriptions.push(lm.registerTool<WritePartInput>('lilysharp_writePart', {
+        prepareInvocation: options => ({
+            invocationMessage: `Writing ${[...new Set((options.input?.write ?? []).map(w => w?.part).filter(Boolean))].join(', ') || 'a part'} into ${path.basename(options.input?.file ?? 'the score')}…`,
+        }),
+        invoke: async (options, token) => new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(await writePart(deps, options.input, token)),
         ]),
     }));
     // The harmony of a score, read once (owner's request 2026-11-11: asked to revoice a guitar, the chat
@@ -1140,6 +1216,21 @@ async function proposeScore(deps: AiTransformDeps, given: ProposeScoreInput, tok
                   + kept.map(m => `- ${m}`).join('\n')
                 : '')
             + rangesSaid(ranges);
+    }
+    // Written by place, a warning the score did not have goes back once, unseen: mended, or sent
+    // again as it is and shown with it — no flag to set, so none to set from the start (the tool's
+    // own user's wish, 2026-11-11: a tool that refuses every warning is mended by changing the music
+    // to please it, and one with a switch is used with the switch on).
+    if (given.sendBackWarnings === true && added.length > 0) {
+        const key = `${uri.toString()}|${added.map(w => findingKey(w.Message)).sort().join('|')}`;
+        if (!writeWarnedFor.has(key)) {
+            writeWarnedFor.add(key);
+            deps.log(`AI write by place (chat): sent back once — ${added.length} new warning(s).`);
+            return 'Not shown to the musician yet. The Lily# compiler warns of this in what you wrote, not in the score before it:\n'
+                + `${formatDiags(added, text)}\n`
+                + 'Mend what is not meant. Sent again as it is, the change is shown to the musician with these warnings: '
+                + 'say then in `note` why they stand.';
+        }
     }
     const snapshot: Snapshot = {
         version: doc?.version ?? 0, startOffset: 0, endOffset: current.length,

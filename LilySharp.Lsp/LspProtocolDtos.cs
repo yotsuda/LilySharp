@@ -981,6 +981,44 @@ public class ReviewScoreResponse
     public string Report { get; set; } = "";
 }
 
+/// <summary>Parameters for lilysharp/writePart: a score's text, the music to write into it by
+/// place and the parts to add (<see cref="LilySharp.Core.Editing.PartWriter"/>).</summary>
+public class WritePartParams
+{
+    public string? Text { get; set; }
+    public WritePartItem[]? Write { get; set; }
+    public WritePartNew[]? NewParts { get; set; }
+}
+
+/// <summary>Music for a part in a section: all of it, or the bars named.</summary>
+public class WritePartItem
+{
+    public string? Part { get; set; }
+    public string? Section { get; set; }
+    public string? Bars { get; set; }
+    public string? Music { get; set; }
+    public string? Lyrics { get; set; }
+}
+
+/// <summary>A part the score does not have yet.</summary>
+public class WritePartNew
+{
+    public string? Part { get; set; }
+    public string? Title { get; set; }
+    public string? Short { get; set; }
+    public string? Body { get; set; }
+    public string? After { get; set; }
+}
+
+/// <summary>Response for lilysharp/writePart: the score with all of it placed, or what kept it.</summary>
+public class WritePartResponse
+{
+    /// <summary>Null when a problem kept the text from being made.</summary>
+    public string? Text { get; set; }
+    public string[] Problems { get; set; } = System.Array.Empty<string>();
+    public string[] Done { get; set; } = System.Array.Empty<string>();
+}
+
 /// <summary>Parameters for lilysharp/readChords: a score's text, the score of it to read (as the
 /// preview picks it), and the parts to read — none for all.</summary>
 public class ReadChordsParams

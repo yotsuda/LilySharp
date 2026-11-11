@@ -37,6 +37,7 @@
     "onLanguageModelTool:lilysharp_fixScanBars",
     "onLanguageModelTool:lilysharp_chordVoicings",
     "onLanguageModelTool:lilysharp_readChords",
+    "onLanguageModelTool:lilysharp_writePart",
     "onLanguageModelTool:lilysharp_listVoices"
   ],
   "main": "./out/extension.js",
@@ -119,6 +120,38 @@
             "audience": { "type": "string", "enum": ["beginner", "intermediate", "advanced"], "description": "Who the review is for, judged from how the person writes; ask if it is not clear. A beginner may not know what a key is." },
             "focus": { "type": "string", "enum": ["key", "rhythm", "form", "parts", "notation"], "description": "Keep the findings of one theme alone, when the person asks about one." }
           }
+        }
+      },
+      {
+        "name": "lilysharp_writePart",
+        "toolReferenceName": "writePart",
+        "displayName": "Write a part's music by place",
+        "icon": "$(edit)",
+        "canBeReferencedInPrompt": true,
+        "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song", "arrange", "part"],
+        "userDescription": "Writes music into a .lys score by place — a part's section, some of its bars, a new part — shown beside the score to accept or reject.",
+        "modelDescription": "Use this to change the MUSIC of a Lily# (.lys) score by place, in place of lilysharp_proposeScore's `edits`: rewrite a part in a section (`write`: part, section, music), several parts or sections in one call, some bars of it (`bars`: \"5-8\", counted in the section from 1), a singing part's words with its notes (`lyrics`), or add a new part (`newParts`, its music in `write`; a section left out is silent). Nothing of the old text is copied. Write `music` as lilysharp_readScore shows the score (in absolute octaves where it shows them), a bar line after every bar, as many bars as it replaces. All of it is placed or none, and what does not fit comes back, every point at once: a part or a section the score has not, bars that cut through a phrase of several bars, a score that would not compile, a bar that does not add up, a section left longer or shorter than the other parts'. A warning the compiler did not give before comes back to you once, unseen; sent again as it is, the change is shown to the musician with the warning. The musician sees the change beside the score as it stands and accepts or rejects it; the answer says what was written where. For a section added or removed, the form, a phrase's own text, or anything that is no part's music, use lilysharp_proposeScore.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file": { "type": "string", "description": "The .lys file's absolute path — for a score open in the editor and not saved yet, the path it is named by." },
+            "write": { "type": "array", "description": "The music to write, one item for a part in a section. They are placed together or not at all.", "items": { "type": "object", "properties": {
+              "part": { "type": "string", "description": "The part's name, as it stands after `part` — or a new part's, declared in `newParts`." },
+              "section": { "type": "string", "description": "The section's name, as it stands after `section`." },
+              "bars": { "type": "string", "description": "The bars to replace, counted in the section from 1: \"5-8\", or \"3\". Leave it out to write the part's whole section." },
+              "music": { "type": "string", "description": "The music, as it stands between the braces of the part's block: notes and bar lines, a phrase the score has by its name. As many bars as it replaces." },
+              "lyrics": { "type": "string", "description": "A singing part's words for that section (the text of its lyrics row), written with its notes. Leave it out to keep the words." }
+            }, "required": ["part", "section", "music"] } },
+            "newParts": { "type": "array", "description": "Parts the score does not have yet. Each is declared, and given a staff in every score that shows the part it stands after.", "items": { "type": "object", "properties": {
+              "part": { "type": "string", "description": "The new part's name: letters and digits, as `str`." },
+              "title": { "type": "string", "description": "The name printed at its staff, as \"Strings\"." },
+              "short": { "type": "string", "description": "The short name printed from the second system on, as \"Str.\"." },
+              "body": { "type": "string", "description": "The lines of its part block, as the grammar writes them, a line each: `instrument violin`, `midiInstrument \"string ensemble 1\"`." },
+              "after": { "type": "string", "description": "The part it stands after, in the file and in the scores. Leave it out to stand last." }
+            }, "required": ["part"] } },
+            "note": { "type": "string", "description": "One or two sentences to the musician about the change, in their language." }
+          },
+          "required": ["file"]
         }
       },
       {

@@ -379,6 +379,32 @@ describe('the composing guide', () => {
         assert.match(REVIEW_READING, /Do not change the score/);
         assert.match(REVIEW_READING, /If `compiles` is false/);
     });
+    // Owner's proposal 2026-11-11: music written by place — a part's section, some bars, a new part —
+    // all of it or none, and a warning it brings sent back once before the musician is shown it.
+    it('gives Copilot\'s chat a tool to write a part\'s music by place, shown as a proposal is', () => {
+        const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
+        assert.match(pkg, /"name": "lilysharp_writePart",\s*"toolReferenceName": "writePart"/);
+        assert.match(pkg, /"onLanguageModelTool:lilysharp_writePart"/);
+        assert.match(pkg, /"required": \["part", "section", "music"\]/);
+        assert.match(pkg, /A warning the compiler did not give before comes back to you once, unseen; sent again as it is, the change is shown to the musician with the warning\./);
+        // No switch to keep a warning: one would be set from the start.
+        const tool = pkg.slice(pkg.indexOf('"name": "lilysharp_writePart"'), pkg.indexOf('"name": "lilysharp_readChords"'));
+        assert.doesNotMatch(tool, /keepWarnings|acceptWarnings|force/);
+        assert.match(transform, /lm\.registerTool<WritePartInput>\('lilysharp_writePart'/);
+        const fn = transform.slice(transform.indexOf('async function writePart('), transform.indexOf('const FROM_EDITS_NOTE'));
+        // Placed on the text the reading tool shows (absolute octaves), by the server.
+        assert.match(fn, /Text: await chatAbsolute\(deps, standing\) \?\? standing,/);
+        assert.match(fn, /'lilysharp\/writePart'/);
+        // Problems go back with nothing changed, and the text goes on as a proposal's whole text.
+        assert.match(fn, /if \(typeof placed\.Text !== 'string'\) \{[\s\S]*?'Nothing shown, and nothing changed:\\n'/);
+        assert.match(fn, /await proposeScore\(deps, \{ file: input\.file, text: placed\.Text, note: input\.note, sendBackWarnings: true \}, token\)/);
+        assert.match(fn, /\? said \+ FROM_WRITE_NOTE/);
+        assert.doesNotMatch(fn, /\.edit\(|applyEdit|writeFile/);
+        // The once: by the file and the warnings themselves, so the same ones again are shown.
+        assert.match(transform, /if \(given\.sendBackWarnings === true && added\.length > 0\) \{\s*const key = `\$\{uri\.toString\(\)\}\|\$\{added\.map\(w => findingKey\(w\.Message\)\)\.sort\(\)\.join\('\|'\)\}`;\s*if \(!writeWarnedFor\.has\(key\)\) \{\s*writeWarnedFor\.add\(key\);/);
+        const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
+        assert.match(build, /'\*\*Changing a part\\'s music\*\*: use `lilysharp_writePart` \(#writePart\)/);
+    });
     // Owner's request 2026-11-11: the harmony of a score read once, what it names kept as written.
     it('gives Copilot\'s chat a tool to read a score\'s chords, which writes nothing', () => {
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
