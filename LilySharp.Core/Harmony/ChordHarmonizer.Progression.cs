@@ -76,6 +76,8 @@ public static partial class ChordHarmonizer
         var lines = new List<(string Section, string Bars, string How)>();
         var silent = new List<string>();
         var remarks = new List<string>();
+        // The chords the parts asked write out, by the chord each is read as: what an edit of them replaces.
+        var writtenOut = new List<(string Part, string Symbol, string Text, int Position)>();
         var order = new List<string>();
         foreach (var section in root.DescendantNodes<SectionDeclarationSyntax>())
         {
@@ -93,7 +95,12 @@ public static partial class ChordHarmonizer
                 silent.Add(sectionName);
                 continue;
             }
-            var (beats, symbols, isWritten, barOf, readings, dense) = read;
+            var (beats, symbols, isWritten, barOf, readings, dense, struck) = read;
+            if (!every)
+                foreach (var (part, position, symbol) in struck)
+                    if (symbol != "r" && position >= 0 && position < source.Length && source[position] == '<'
+                        && source.IndexOf('>', position) is > 0 and var close && !writtenOut.Any(w => w.Position == position))
+                        writtenOut.Add((part, symbol, source[position..(close + 1)], position));
             ChordReading? ReadingAt(int tick) => readings.FirstOrDefault(r => r.StartTick <= tick && tick < r.EndTick);
             string how = !isWritten.Contains(true) ? "read from the notes"
                 : isWritten.All(w => w) || dense && Enumerable.Range(0, beats.Count).All(i => isWritten[i] || symbols[i] == "r") ? "as written"
@@ -151,6 +158,20 @@ public static partial class ChordHarmonizer
             text.Append("Nothing ").Append(every ? "" : "of these parts ").Append("sounds in ").Append(string.Join(", ", silent)).Append(".\n");
         if (!every && rows.Count > 0)
             text.Append("The score also writes a chords row, left out here as it is no part's: ask without `parts` to read it.\n");
+        // One line a chord as it is written, most places first within its name: copied into an edit's
+        // `old`, kept to the part, the chords of a part are replaced without the part being read for them.
+        foreach (var byPart in writtenOut.GroupBy(w => w.Part))
+        {
+            text.Append("As ").Append(byPart.Key).Append(" writes them (each the text of an `<…>` chord — give it as `old` to lilysharp_proposeScore's `edits`, with `part: \"")
+                .Append(byPart.Key).Append("\"` and `all: true`):\n");
+            foreach (var chord in byPart.GroupBy(w => (w.Symbol, w.Text)).OrderBy(g => distinct.IndexOf(g.Key.Symbol) is >= 0 and var at ? at : int.MaxValue)
+                .ThenByDescending(g => g.Count()).Take(MostWrittenOut))
+                text.Append("  ").Append(chord.Key.Symbol).Append(" = ").Append(chord.Key.Text)
+                    .Append(chord.Count() == 1 ? " (1 place)" : $" ({chord.Count()} places)").Append('\n');
+            int more = byPart.GroupBy(w => (w.Symbol, w.Text)).Count() - MostWrittenOut;
+            if (more > 0)
+                text.Append("  … and ").Append(more).Append(" more: read the part (lilysharp_readScore, `part`) for them.\n");
+        }
         foreach (string remark in remarks)
             text.Append(remark).Append('\n');
         var ranges = PartRanges.Lines(source).Where(l => every || asked.Any(a => l.StartsWith(a + ":", System.StringComparison.Ordinal))).ToList();
@@ -167,8 +188,14 @@ public static partial class ChordHarmonizer
     /// <param name="BarOf">The bar each beat is in, from 0.</param>
     /// <param name="Readings">The chords read from the notes.</param>
     /// <param name="Dense">The score names a chord in half the section's bars or more.</param>
+    /// <param name="Struck">The chords the parts strike (two notes or more written at one place), each
+    /// with the part, where it is written and the chord its beat is read as.</param>
     private sealed record SectionChords(IReadOnlyList<(int Tick, bool Accent)> Beats, string[] Symbols, bool[] Written,
-        int[] BarOf, IReadOnlyList<ChordReading> Readings, bool Dense);
+        int[] BarOf, IReadOnlyList<ChordReading> Readings, bool Dense,
+        IReadOnlyList<(string Part, int Position, string Symbol)> Struck);
+
+    /// <summary>The most written-out chords listed for a part.</summary>
+    private const int MostWrittenOut = 24;
 
     /// <summary>
     /// Reads one section as the score plays it alone — the one reading behind the editor's
@@ -199,6 +226,8 @@ public static partial class ChordHarmonizer
         var (tonic, sharps) = SectionKey(tree, sectionName) ?? home;
 
         var heard = new List<SoundingNote>();
+        // Each place a part writes, with the instant it first sounds and how many notes sound there then.
+        var together = new Dictionary<(string Part, int Position), (int Tick, int Notes)>();
         var written = new SortedDictionary<int, string>();
         var sounding = new Dictionary<(int Tick, int Position), List<int>>();
         foreach (var track in midi.Tracks)
@@ -211,6 +240,8 @@ public static partial class ChordHarmonizer
                 if (part.EndsWith(ChordRowPart, System.StringComparison.Ordinal) || !reads(part))
                     continue;
                 heard.Add(new SoundingNote(n.StartTick, System.Math.Max(1, n.DurationTicks), n.Pitch));
+                var place = (part, n.SourcePos);
+                together[place] = together.TryGetValue(place, out var seen) ? (seen.Tick, seen.Notes + (n.StartTick == seen.Tick ? 1 : 0)) : (n.StartTick, 1);
                 if (names is not { } written1)
                     continue;
                 if (written1.Named.TryGetValue(n.SourcePos, out var symbol))
@@ -260,7 +291,9 @@ public static partial class ChordHarmonizer
                 isWritten[i] = true;
             }
         }
-        return new SectionChords(beats, symbols, isWritten, barOf, readings, dense);
+        var struck = together.Where(p => p.Value.Notes >= 2).OrderBy(p => p.Value.Tick)
+            .Select(p => (p.Key.Part, p.Key.Position, symbols[BeatOf(p.Value.Tick)])).ToList();
+        return new SectionChords(beats, symbols, isWritten, barOf, readings, dense, struck);
     }
 
     private static string BarList(SortedSet<int> bars)

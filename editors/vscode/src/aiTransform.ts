@@ -2432,7 +2432,10 @@ async function readChords(deps: AiTransformDeps, input: ReadChordsInput | undefi
     }
     try {
         const parts = Array.isArray(input?.parts) ? input.parts.filter(p => typeof p === 'string' && p.trim().length > 0) : [];
-        const answer = await client.sendRequest<{ Text: string }>('lilysharp/readChords', { Text: doc.getText(), Parts: parts });
+        // In the octaves lilysharp_readScore shows the score in: the chords it lists as written are
+        // copied into an edit's `old`, which is matched against that text.
+        const standing = doc.getText();
+        const answer = await client.sendRequest<{ Text: string }>('lilysharp/readChords', { Text: await chatAbsolute(deps, standing) ?? standing, Parts: parts });
         return `${path.basename(doc.uri.fsPath)}, as it stands in the editor. ${answer.Text}`;
     } catch (e) {
         return `No chords read: the Lily# language server did not answer (${e instanceof Error ? e.message : String(e)}).`;

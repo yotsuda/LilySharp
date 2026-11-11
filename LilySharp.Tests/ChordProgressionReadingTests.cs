@@ -103,6 +103,40 @@ public class ChordProgressionReadingTests
         Assert.EndsWith("a name the score writes always stands.", text);
     }
 
+    // Owner's runs 2026-11-11: with the shapes in hand, the chat still spent a minute and a half
+    // matching them to the chords the part writes. Read for a part, the answer lists each chord as
+    // the part writes it — the text an edit replaces — and in how many places.
+    [Fact]
+    public void ReadForAPart_TheChordsAreListedAsItWritesThem_WithTheirPlaces()
+    {
+        const string band = """
+            octave absolute
+            key bes major
+            part gtr "Guitar" { instrument guitar }
+            part keys "Keys" { instrument piano-right }
+            phrase gBb { r8 <bes, f bes d' f'>8 r8 q r8 q r8 q | }
+            section A {
+              gtr { gBb <g, d g bes d' g'>1 | gBb <f a c' f'>2 <f a c' f'>2 | }
+              keys { <bes d' f'>1 | <bes d' g'>1 | <bes d' f'>1 | <a c' f'>1 | }
+            }
+            section B {
+              gtr { gBb <bes, f bes d' f'>1 | }
+              keys { <bes d' f'>1 | <bes d' f'>1 | }
+            }
+            """;
+        string gtr = ChordHarmonizer.DescribeProgression(band, null, ["gtr"]);
+        Assert.Contains("As gtr writes them (each the text of an `<…>` chord — give it as `old` to lilysharp_proposeScore's `edits`, with `part: \"gtr\"` and `all: true`):\n"
+            + "  Bb = <bes, f bes d' f'> (2 places)\n"      // the phrase's, called three times, and section B's own
+            + "  Gm = <g, d g bes d' g'> (1 place)\n"
+            + "  F = <f a c' f'> (2 places)\n", gtr);
+        Assert.DoesNotContain("As keys writes them", gtr);
+        // Each part asked has its own list; read whole, the score has none (it is every part's).
+        string both = ChordHarmonizer.DescribeProgression(band, null, ["gtr", "keys"]);
+        Assert.Contains("As keys writes them", both);
+        Assert.Contains("  Bb = <bes d' f'> (4 places)\n", both);
+        Assert.DoesNotContain("writes them", ChordHarmonizer.DescribeProgression(band));
+    }
+
     // The parts named are the parts read: their notes and the chords written on them, no row.
     [Fact]
     public void WithParts_OnlyTheirNotesAndNamesAreRead()

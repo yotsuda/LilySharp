@@ -414,7 +414,7 @@ describe('the composing guide', () => {
         assert.match(pkg, /A chord the score names stands as written: a `chords` row, an `@chord\(…\)`, the chord an `@diagram\(…\)` shape sounds/);
         assert.match(transform, /lm\.registerTool<ReadChordsInput>\('lilysharp_readChords'/);
         const fn = transform.slice(transform.indexOf('async function readChords('), transform.indexOf('interface ReviewScoreInput'));
-        assert.match(fn, /'lilysharp\/readChords', \{ Text: doc\.getText\(\), Parts: parts \}/);
+        assert.match(fn, /'lilysharp\/readChords', \{ Text: await chatAbsolute\(deps, standing\) \?\? standing, Parts: parts \}/);
         assert.match(fn, /active\?\.languageId === 'lilysharp' \? active : undefined/);
         assert.doesNotMatch(fn, /\.edit\(|applyEdit|writeFile|proposeScore\(/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
