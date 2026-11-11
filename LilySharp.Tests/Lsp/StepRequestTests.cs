@@ -1408,6 +1408,50 @@ public class StepRequestTests
         Assert.Equal(S("condensedStaff { melody drums }"), Step(S("condensedStaff { melody ‸bass }"), -1, semitone: true).After);
     }
 
+    // Owner's request 2026-11-11, on `singer female "diffsinger/Nishiren/2P" sings words on lead`:
+    // the step keys on its `sings` walk the file's lyrics.
+    [Fact]
+    public void ASingerLinesWords_StepThroughTheFilesLyrics_OnItsSingsOrOnTheName()
+    {
+        const string Book = "part lead {{ }}\nsection A {{ lead {{ c'1 }} }}\n" +
+            "lyrics words {{ la }}\nlyrics verse2 {{ la }}\nlyrics chorus {{ la }}\n{0}\nform {{ A }}\nscore {{ staff lead  lyrics words }}\n";
+        string S(string line) => string.Format(Book, line);
+        const string Who = "singer female \"diffsinger/Nishiren/2P\" ";
+
+        // On the `sings`: Down is the next of the file's lyrics, the voice and the part kept.
+        var (down, after) = Step(S(Who + "si‸ngs words on lead"), -1, semitone: true);
+        Assert.False(down.Fallback, down.Error);
+        Assert.Equal(S(Who + "sings verse2 on lead"), after);
+        Assert.Contains("sings verse2: lyrics 2 of 5 (words, verse2, chorus, hum, solfege)", down.Message);
+        Assert.Equal(S(Who + "sings chorus on lead"), Step(S(Who + "‸sings verse2 on lead"), -1).After);
+        Assert.Equal(S(Who + "sings words on lead"), Step(S(Who + "sings‸ verse2 on lead"), +1, semitone: true).After);
+        // On the name itself, anywhere in it.
+        Assert.Equal(S(Who + "sings verse2 on lead"), Step(S(Who + "sings wo‸rds on lead"), -1, semitone: true).After);
+        Assert.Equal(S(Who + "sings verse2 on lead"), Step(S(Who + "sings chorus‸ on lead"), +1, semitone: true).After);
+        // Past the file's own come the two made from the notes, as the list offers them.
+        Assert.Equal(S(Who + "sings hum on lead"), Step(S(Who + "‸sings chorus on lead"), -1, semitone: true).After);
+        Assert.Equal(S(Who + "sings solfege on lead"), Step(S(Who + "‸sings hum on lead"), -1, semitone: true).After);
+
+        // The ends stop, and say so.
+        var (first, same) = Step(S(Who + "‸sings words on lead"), +1, semitone: true);
+        Assert.Equal(S(Who + "sings words on lead"), same);
+        Assert.Contains("already the first lyrics", first.Message);
+        Assert.Contains("already the last lyrics", Step(S(Who + "‸sings solfege on lead"), -1, semitone: true).Response.Message);
+
+        // The unnamed words (`sings on lead`): a name is written, the first on Down.
+        Assert.Equal(S(Who + "sings words on lead"), Step(S(Who + "‸sings on lead"), -1, semitone: true).After);
+        Assert.Equal(S(Who + "sings solfege on lead"), Step(S(Who + "‸sings on lead"), +1, semitone: true).After);
+        // A name the file does not declare steps from the ends.
+        Assert.Equal(S(Who + "sings words on lead"), Step(S(Who + "‸sings nothere on lead"), -1, semitone: true).After);
+
+        // The part after `on` is not the words: its own step (or none) is untouched by this one.
+        Assert.DoesNotContain("lyrics", Step(S(Who + "sings words on le‸ad"), -1, semitone: true).Response.Message ?? "");
+        // In a score the line steps the same way.
+        const string InScore = "part lead {{ }}\nsection A {{ lead {{ c'1 }} }}\nlyrics words {{ la }}\nlyrics verse2 {{ la }}\nform {{ A }}\nscore {{ staff lead  lyrics words\n  {0}\n}}\n";
+        Assert.Equal(string.Format(InScore, "singer \"a/b\" sings verse2 on lead"),
+            Step(string.Format(InScore, "singer \"a/b\" ‸sings words on lead"), -1, semitone: true).After);
+    }
+
     [Fact]
     public void AStaffRowsLineCount_StepsByOneLine()
     {

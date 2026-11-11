@@ -504,6 +504,17 @@ public static partial class NoteStepper
     private static (TargetKind Kind, SyntaxTokenNode Name)? NameReferenceAt(SyntaxTree tree, int offset)
     {
         var root = tree.GetRoot();
+        // A `singer … sings NAME` line, the caret on its `sings` or on the name (owner's request
+        // 2026-11-11): the words step. The token carried is the `sings`, which every such line
+        // has — a line that sings the unnamed words has no name to carry.
+        foreach (var singer in root.DescendantNodes<SingerDeclarationSyntax>())
+        {
+            if (singer.SingsKeyword is not { } sings)
+                continue;
+            int end = singer.TrackToken?.Span.End ?? sings.Span.End;
+            if (sings.Span.Start <= offset && offset <= end)
+                return (TargetKind.SingerWords, sings);
+        }
         foreach (var node in root.DescendantNodesOfKinds(SectionSymbols.ReferencingKinds))
             if (SectionSymbols.ReferencedName(node) is { Text.Length: > 0 } name && name.Span.Start <= offset && offset <= name.Span.End)
                 return (TargetKind.FormSection, name);
@@ -549,6 +560,43 @@ public static partial class NoteStepper
         if (to < 0 || to >= names.Count)
             return (null, $"{name.Text}: already the {(to < 0 ? "first" : "last")} {what}{list}");
         return (new Edit(name.Span.Start, name.Span.End, names[to]), $"{names[to]}: {what} {to + 1} of {names.Count}{list}");
+    }
+
+    /// <summary>The words a <c>singer</c> line may sing, as its list offers them: the file's named
+    /// lyrics in the order written, then the two made from the notes.</summary>
+    private static List<string> SingerWordsOf(SyntaxTree tree)
+    {
+        var names = new List<string>();
+        foreach (var block in tree.GetRoot().DescendantNodes<LyricsBlockSyntax>())
+            if (block.NameToken is { Text.Length: > 0 } name && !names.Contains(name.Text))
+                names.Add(name.Text);
+        names.Add(Music.GeneratedLyrics.Hum);
+        names.Add(Music.GeneratedLyrics.Solfege);
+        return names;
+    }
+
+    /// <summary>
+    /// One step of the words a <c>singer … sings NAME</c> line sings (owner's request 2026-11-11,
+    /// on <c>singer female "…" sings words on lead</c>): the next (Down) or previous (Up) of
+    /// <see cref="SingerWordsOf"/>, stopping at either end. Only the name changes — its
+    /// <c>on PART</c> stays; a line that sings the unnamed words (<c>sings on lead</c>) is given
+    /// the first name on Down and the last on Up, as a name the file does not declare is.
+    /// </summary>
+    private static (Edit? Edit, string Message) SingerWordsEdit(SyntaxTree tree, SyntaxTokenNode sings, int dir)
+    {
+        if (sings.Parent is not SingerDeclarationSyntax singer)
+            return (null, "sings: write a singer line (singer \"…\" sings words on part)");
+        var names = SingerWordsOf(tree);
+        var written = singer.TrackToken;
+        int at = written == null ? -1 : names.IndexOf(written.Text);
+        int to = at < 0 ? (dir < 0 ? 0 : names.Count - 1) : at - dir;
+        string list = names.Count <= 8 ? $" ({string.Join(", ", names)})" : "";
+        if (to < 0 || to >= names.Count)
+            return (null, $"sings {written!.Text}: already the {(to < 0 ? "first" : "last")} lyrics{list}");
+        var edit = written != null
+            ? new Edit(written.Span.Start, written.Span.End, names[to])
+            : new Edit(sings.Span.End, sings.Span.End, " " + names[to]);
+        return (edit, $"sings {names[to]}: lyrics {to + 1} of {names.Count}{list}");
     }
 
     // ------------------------------------------------------------------ selections: a duration, a chord's quality
