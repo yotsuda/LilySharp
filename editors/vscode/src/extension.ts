@@ -968,6 +968,10 @@ export function activate(context: vscode.ExtensionContext) {
             return true;
         },
         previewColumnOf: (uri: vscode.Uri) => previewPanels.get(uri.toString())?.viewColumn,
+        // A candidate's panel plays itself (owner's decision 2026-11-11): the synth's files as its
+        // page reaches them, where they are read from, and the MIDI output, which stays the preview's.
+        synthRoots: () => previewResourceRoots(context.extensionUri),
+        synthFor: (webview: vscode.Webview) => ({ ...synthUrls(webview, context.extensionUri), midiOutput: midiOutputSetting() }),
         stopOnPreview: (uri: vscode.Uri) => {
             void previewPanels.get(uri.toString())?.webview.postMessage({ type: 'ctxStop' });
         },

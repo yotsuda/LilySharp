@@ -229,6 +229,78 @@ describe('the AI candidate panel\'s page script', () => {
         assert.ok(scripts.length > 0);
         for (const s of scripts) assert.doesNotThrow(() => new vm.Script(s));
     });
+    // Owner's decision 2026-11-11: the panel sounds its own Play — a click on it may start its
+    // audio, where the preview's stayed silent until the preview itself had been clicked.
+    it('plays the notes the host answers on its own synth, lights them, and stops', () => {
+        const page = scripts.join('\n');
+        const cut = (head: string) => {
+            const at = page.indexOf(head);
+            assert.ok(at >= 0, head);
+            let depth = 0;
+            for (let i = page.indexOf('{', at); i < page.length; i++) {
+                if (page[i] === '{') depth++;
+                else if (page[i] === '}' && --depth === 0) return page.slice(at, i + 1);
+            }
+            throw new Error(head);
+        };
+        const lit: { w: string; n: number }[] = [];
+        const said: (string | undefined)[] = [];
+        let tick: (() => void) | undefined, ended = false, stopped = 0;
+        const played: { notes: unknown[]; offset: number; t0: number }[] = [];
+        const ctx = { currentTime: 10, state: 'running', resume: () => Promise.resolve() };
+        const synth = {
+            state: 'ready', ready: true, stop: () => { stopped++; },
+            whenReady: () => Promise.resolve(true),
+            play: (notes: unknown[], offset: number, t0: number) => { played.push({ notes, offset, t0 }); return { t0, end: 2 }; },
+        };
+        class SoundingCursor {
+            constructor(private readonly list: { t: number; d: number; s: number; o: number }[]) {}
+            at(t: number) { return { changed: true, sounding: this.list.filter(n => n.t <= t && t < n.t + n.d).map(n => ({ pos: n.s, occ: n.o })) }; }
+        }
+        const context = vm.createContext({
+            window: { LysSynth: { SoundingCursor, create: () => synth } }, SYNTH: { processor: 'p', soundFont: 's' },
+            AudioContext: function () { return ctx; }, Math, decided: false,
+            ownCtx: null, ownSynth: null, ownPlayer: null, ownTick: null, ownEnd: null, ownGen: 0, ownPane: 'after',
+            say: (text?: string) => { said.push(text); },
+            lightSounding: (w: string, sounding: unknown[]) => { lit.push({ w, n: sounding.length }); },
+            setInterval: (f: () => void) => { tick = f; return 1; }, clearInterval: () => { tick = undefined; },
+            setTimeout: () => { ended = true; return 2; }, clearTimeout: () => { /* none */ },
+        });
+        new vm.Script([cut('function wakeAudio()'), cut('function stopOwn()'), cut('function playOwn(w, notes)')].join('\n')).runInContext(context);
+        const run = (code: string) => new vm.Script(code).runInContext(context);
+        const notes = [{ T: 0, D: 1, R: 40, O: 0 }, { T: 1, D: 1, R: 44, O: 1 }];
+        context.notes = notes;
+        run("playOwn('before', notes)");
+        // On its own synth, from the list's start, a moment after now; the pane it plays is the one asked.
+        assert.equal(played.length, 1);
+        assert.deepEqual([played[0].offset, played[0].t0], [0, 10.15]);
+        assert.equal(played[0].notes, notes);
+        assert.ok(ended, 'an end is set');
+        ctx.currentTime = 10.15 + 1.5;
+        tick!();
+        assert.deepEqual(lit.at(-1), { w: 'before', n: 1 });
+        // Stop: the synth stops, the timer goes, and nothing stays lit.
+        run('stopOwn()');
+        assert.equal(tick, undefined);
+        assert.ok(stopped >= 1);
+        assert.deepEqual(lit.at(-1), { w: 'before', n: 0 });
+        // A font that does not come is said, and nothing plays.
+        synth.ready = false;
+        run("playOwn('after', notes)");
+        assert.equal(played.length, 1);
+        assert.match(String(said.at(-1)), /sound font is not ready/);
+        // The click wakes the audio before the notes come; a decision stops the Play; the host sends
+        // the notes to the panel that plays itself, and keeps the MIDI output with the preview.
+        assert.match(page, /document\.getElementById\('play'\)\.addEventListener\('click', \(\) => \{ wakeAudio\(\); play\(\); \}\);/);
+        assert.match(page, /decided = true;\s*stopOwn\(\);/);
+        assert.match(page, /if \(e\.data\.type === 'playNotes'\) \{ playOwn\(/);
+        assert.match(transform, /if \(playsItself\(deps\.synthFor\?\.\(panel\.webview\)\)\) \{\s*void panel\.webview\.postMessage\(\{ type: 'playNotes', which, notes \}\);\s*return;/);
+        const core = require('../src/aiTransformCore') as { playsItself: (s?: { script: string; processor: string; soundFont: string; midiOutput: string }) => boolean };
+        assert.equal(core.playsItself({ script: 'a', processor: 'b', soundFont: 'c', midiOutput: '' }), true);
+        assert.equal(core.playsItself({ script: 'a', processor: 'b', soundFont: 'c', midiOutput: 'Port 1' }), false);
+        assert.equal(core.playsItself({ script: 'a', processor: 'b', soundFont: '', midiOutput: '' }), false);
+        assert.equal(core.playsItself(undefined), false);
+    });
     it('splits a note\'s copies by their bars, whatever the order of the DOM', () => {
         const page = scripts.join('\n');
         const head = page.indexOf('function copiesOf(');

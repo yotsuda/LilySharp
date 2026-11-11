@@ -41,7 +41,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, newPieceOverScore, guidePages, guideContents, headerLanguageNote, diagLines,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, newPieceOverScore, guidePages, guideContents, CandidateSynth, playsItself, headerLanguageNote, diagLines,
     lastUserMessageAt, heldClashesOf, noTuneOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
     applyDraft, draftSummary, DraftInput, FROM_DRAFT_NOTE,
     applyScoreEdits, ScoreEdit, scorePartView, scorePages,
@@ -68,6 +68,11 @@ export interface AiTransformDeps {
     playOnPreview?: (uri: vscode.Uri, notes: unknown[]) => boolean;
     /** The editor column the preview of `uri` stands in, or undefined with no preview open. */
     previewColumnOf?: (uri: vscode.Uri) => vscode.ViewColumn | undefined;
+    /** Where the synth's files are read from, for a candidate panel that plays itself. */
+    synthRoots?: () => vscode.Uri[];
+    /** The synth's files as `webview` reaches them (its bundle, its worklet processor, the sound
+     *  font — '' for none), and the MIDI output the sounds go to ('' for the synth). */
+    synthFor?: (webview: vscode.Webview) => CandidateSynth;
     /** Stops what the preview of `uri` is playing. */
     stopOnPreview?: (uri: vscode.Uri) => void;
     /** The score the preview of `uri` shows (its picker), or undefined for the first. */
@@ -2717,7 +2722,7 @@ async function reviewOnScore(
     panel.webview.html = getCandidateHtml(
         fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(),
         renderBefore.Svg, renderAfter.Svg, renderAfter.Error, caption, candidateHtml, changed,
-        textFontFaceCss(panel.webview, deps.extensionUri), note, fromChat);
+        textFontFaceCss(panel.webview, deps.extensionUri), note, fromChat, deps.synthFor?.(panel.webview));
     // Where it stands: Beside would be beside the panel itself once Ask Again is clicked in it,
     // a new column for every round (owner, 2026-10-25). Only a new panel goes Beside.
     panel.reveal(panel.viewColumn ?? vscode.ViewColumn.Beside, true);
@@ -2746,7 +2751,7 @@ function ensureCandidatePanel(deps: AiTransformDeps, uri: vscode.Uri): vscode.We
         'Lily# — AI candidate',
         { viewColumn: column, preserveFocus: true },
         { enableScripts: true, retainContextWhenHidden: true,
-          localResourceRoots: [fontsUri, textFontsRoot(deps.extensionUri)] });
+          localResourceRoots: [fontsUri, textFontsRoot(deps.extensionUri), ...(deps.synthRoots?.() ?? [])] });
 
     // One persistent message pump for the panel's whole lifetime. Registering the
     // listener once — before any html is set — guarantees it receives Accept/
@@ -2811,6 +2816,14 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
             .filter(n => ((n as { T?: number }).T ?? 0) >= start - 1e-6)
             .map(n => ({ ...n, T: ((n as { T?: number }).T ?? 0) - start, S: -1, R: n.S ?? -1 }));
         playingPane = which;
+        // The panel plays it itself where it can (owner's decision 2026-11-11: sound that works
+        // over memory spared). Its Play is a click on its own page, so its audio may start; the
+        // preview's may not until the preview has been clicked, and a panel over the preview hides
+        // it. The MIDI output stays the preview's: a port is the server's, and needs no click.
+        if (playsItself(deps.synthFor?.(panel.webview))) {
+            void panel.webview.postMessage({ type: 'playNotes', which, notes });
+            return;
+        }
         if (!deps.playOnPreview?.(play.uri, notes)) {
             say('Open the preview of this file to hear it (the preview is the player).');
             return;
@@ -2822,6 +2835,7 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
         say(`Cannot play: ${String(e)}`);
     }
 }
+
 
 /** The pane the candidate panel's Play sounds — its notes' offsets are that text's. */
 let playingPane: 'before' | 'after' = 'after';
@@ -2854,7 +2868,12 @@ function getCandidateHtml(
     /** Proposed by Copilot's chat: no Ask Again — what to change is said in the chat (owner's
      *  request 2026-10-29). */
     fromChat = false,
+    /** The synth the panel plays with; none, or a MIDI output chosen: the preview plays (playsItself). */
+    synth?: CandidateSynth,
 ): string {
+    const own = playsItself(synth);
+    // What the page's player is made with, or null where the preview plays.
+    const synthJson = own ? JSON.stringify({ processor: synth!.processor, soundFont: synth!.soundFont }) : 'null';
     const afterBody = svgAfter
         ? `<div class="score">${svgAfter}</div>`
         : `<div class="err">Could not render candidate.${error ? `<pre>${escapeHtml(error)}</pre>` : ''}</div>`;
@@ -2870,7 +2889,8 @@ function getCandidateHtml(
 <html>
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src ${cspSource}; script-src 'nonce-${nonce}';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src ${cspSource}; script-src 'nonce-${nonce}'${own ? ` ${cspSource} 'wasm-unsafe-eval' blob:; connect-src ${cspSource}` : ''};">
+${own ? `<script nonce="${nonce}" src="${synth!.script}"></script>` : ''}
 <style>
 @font-face { font-family: 'Emmentaler'; src: url('${fontUri}') format('woff2'); }
 @font-face { font-family: 'Emmentaler-Brace'; src: url('${braceFontUri}') format('woff2'); }
@@ -2981,7 +3001,7 @@ button:disabled { opacity:0.45; cursor:default; }
 <div class="footer">
   <button class="primary" id="accept" title="Write this candidate into the file (Ctrl+Z in the editor undoes it)">Accept (Enter)</button>
   <button id="iterate" title="Tell the AI what to change about this candidate — it answers with a new one, shown here"${fromChat ? ' hidden' : ''}>Ask Again…</button>
-  <button id="play" title="Play the pane shown — After or Before — in the preview, from the selected bar if one is (Space). Click a bar to select it; click a note to play from it.">▶ Play</button>
+  <button id="play" title="Play the pane shown — After or Before — from the selected bar if one is (Space). Click a bar to select it; click a note to play from it.">▶ Play</button>
   <button id="stop">■ Stop</button>
   <span id="playState" class="playstate"></span>
   <button id="reject" title="Drop this candidate and close the panel — the file stays as it is">Reject (Esc)</button>
@@ -3188,6 +3208,7 @@ button:disabled { opacity:0.45; cursor:default; }
   const decide = (action) => {
     if (decided) return;
     decided = true;
+    stopOwn();   // a decision ends the panel's own Play, as it ends the preview's
     for (const id of ['accept', 'iterate', 'reject']) document.getElementById(id).disabled = true;
     say(SAY[action], true);
     send(action);
@@ -3221,19 +3242,69 @@ button:disabled { opacity:0.45; cursor:default; }
     const span = r ? r.getAttribute('data-span').split(' ').map(Number) : null;
     vscode.postMessage(span ? { action: 'play', which: which(), from: span[0], to: span[1] } : { action: 'play', which: which() });
   };
-  document.getElementById('play').addEventListener('click', play);
+  // The panel sounds its own Play (owner's decision 2026-11-11: a Play that works over memory
+  // spared). A page may start its audio only once it has been clicked, and a click here is not
+  // a click on the preview, which played the notes before — silent until the preview had been
+  // clicked, and hidden under this panel. So the panel has the synth and the sound font too: the
+  // audio is woken in the click itself, and the notes the host answers play when they come.
+  const SYNTH = ${synthJson};
+  let ownCtx = null, ownSynth = null, ownPlayer = null, ownTick = null, ownEnd = null, ownGen = 0, ownPane = 'after';
+  function wakeAudio() {
+    if (!SYNTH || !window.LysSynth) return;
+    if (!ownCtx) ownCtx = new AudioContext();
+    if (ownCtx.state !== 'running') ownCtx.resume().catch(() => {});
+    if (!ownSynth) ownSynth = window.LysSynth.create(ownCtx, SYNTH.processor, SYNTH.soundFont, (status) => {
+      if (status.state === 'failed') say('Sound: ' + (status.detail || 'the sound font did not load'));
+    });
+  }
+  function stopOwn() {
+    ownGen++;
+    clearInterval(ownTick); clearTimeout(ownEnd);
+    ownTick = ownEnd = null;
+    if (ownPlayer) { ownPlayer = null; if (ownSynth) ownSynth.stop(); }
+    lightSounding(ownPane, []);
+  }
+  function playOwn(w, notes) {
+    stopOwn();
+    wakeAudio();
+    if (!ownSynth || !notes || notes.length === 0) return;
+    const gen = ++ownGen;
+    const go = (ok) => {
+      if (gen !== ownGen) return;
+      if (!ok || !ownSynth.ready) { say('The sound font is not ready: press Play again in a moment.'); return; }
+      if (!decided) say('');
+      ownPane = w;
+      ownPlayer = ownSynth.play(notes, 0, ownCtx.currentTime + 0.15);
+      const t0 = ownPlayer.t0;
+      const cursor = new window.LysSynth.SoundingCursor(notes.map(n => ({ t: n.T, d: n.D, s: n.R, o: n.O || 0 })));
+      ownTick = setInterval(() => {
+        const r = cursor.at(ownCtx.currentTime - t0);
+        if (r.changed) lightSounding(w, r.sounding.map(x => ({ pos: x.pos, occ: x.occ })));
+      }, 50);
+      const end = Math.max(ownPlayer.end, notes.reduce((e, n) => Math.max(e, n.T + n.D), 0));
+      ownEnd = setTimeout(stopOwn, (end + 0.5) * 1000);
+    };
+    if (ownSynth.state === 'loading') {
+      if (!decided) say('Loading the sound font…', true);
+      ownSynth.whenReady(8000).then(go);
+    } else {
+      go(true);
+    }
+  }
+  document.getElementById('play').addEventListener('click', () => { wakeAudio(); play(); });
   // A click on a note (anything the score ties to the source) plays the pane from there; on a
   // bar, selects it; elsewhere, clears the selection.
   document.querySelector('.main').addEventListener('click', (e) => {
     const el = e.target && e.target.closest ? e.target.closest('[data-pos]') : null;
     const from = el ? parseInt(el.getAttribute('data-pos'), 10) : NaN;
     if (!isNaN(from)) {
+      wakeAudio();
       vscode.postMessage({ action: 'play', which: which(), from });
       return;
     }
     selectBar(barAt(which() === 'after' ? paneAfter : paneBefore, e.clientX, e.clientY));
   });
-  document.getElementById('stop').addEventListener('click', () => send('stop'));
+  document.getElementById('stop').addEventListener('click', () => { stopOwn(); send('stop'); });
   // Play lights the notes sounding now (owner's request 2026-10-25), on the pane it plays, as the
   // preview playing them follows them; the newest stays in view.
   let lit = [];
@@ -3318,6 +3389,7 @@ button:disabled { opacity:0.45; cursor:default; }
   window.addEventListener('message', (e) => {
     if (!e.data) return;
     if (e.data.type === 'sounding') { lightSounding(e.data.which, e.data.sounding || []); return; }
+    if (e.data.type === 'playNotes') { playOwn(e.data.which === 'before' ? 'before' : 'after', e.data.notes || []); return; }
     // Playback news is not shown over a decision being carried out.
     if (e.data.type === 'playState' && !decided) { say(e.data.text); }
     else if (e.data.type === 'status') { say(e.data.text, true); }
@@ -3331,7 +3403,7 @@ button:disabled { opacity:0.45; cursor:default; }
     if (e.key === 'Enter') { e.preventDefault(); decide('accept'); }
     else if (e.key === 'Escape') { e.preventDefault(); decide('reject'); }
     else if (e.key === 'Tab') { e.preventDefault(); show(!paneAfter.classList.contains('show')); }
-    else if (e.key === ' ') { e.preventDefault(); play(); }
+    else if (e.key === ' ') { e.preventDefault(); wakeAudio(); play(); }
   });
 </script>
 </body>

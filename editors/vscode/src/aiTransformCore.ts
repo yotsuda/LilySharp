@@ -987,6 +987,14 @@ export function headerLanguageNote(text: string): string | undefined {
           + 'the request\'s language.';
 }
 
+/** The synth a candidate panel plays with (AiTransformDeps.synthFor). */
+export interface CandidateSynth { script: string; processor: string; soundFont: string; midiOutput: string }
+
+/** Whether a candidate panel sounds its own Play: the synth and a sound font are there, and no
+ *  MIDI output is chosen. Else the preview plays it, as before. */
+export function playsItself(synth: CandidateSynth | undefined): boolean {
+    return !!synth && synth.script.length > 0 && synth.processor.length > 0 && synth.soundFont.length > 0 && synth.midiOutput.length === 0;
+}
 /**
  * What each part of a paged guide is about, a line a part: its headings (`#`, `##`). For the first
  * part of the grammar (owner's run 2026-11-11: to add a strings pad to a score, the chat read all
