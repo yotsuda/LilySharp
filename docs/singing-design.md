@@ -410,7 +410,7 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
    (`Player.silence`); `extension.ts candidateVoices` and the panel page's `startVoices` /
    `joinVoice`. The preview does the same since the same day (its own `joinVoice`, asked when a
    `voice` is decoded: a whole-piece Play on the synth only — not a stretch, a loop, the MIDI
-   output or the plain tones — and not after the score was edited under the Play)) and after a
+   output or the plain tones. A score edited under the Play (`playEdited`) is the usual case of a voice landing mid-Play — the singer or a word changed — and its voice is cut in where it still fits: every note it sings begins with a note of its part in the list played (`voiceFitsPlay`); the voice that was singing stops there (`voiceKey` on its sources)) and after a
    count-in (`countInFix`); a span's voice was cut
    where the stretch ends only by the instruments' end timer — the buffer played on to the piece's
    end if the stretch was shorter, until session 1132 (§5, `voiceCues`). Nets:

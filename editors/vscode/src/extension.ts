@@ -6976,20 +6976,38 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // Left to the next Play: a stretch or a loop (their voices are cut by voiceCues), the
         // MIDI output and the plain tones (their instruments cannot be taken back), a Play with
         // no sung note left. (No backticks in this script: it lives in a template literal.)
+        //
+        // ANOTHER voice of the part may be singing already (owner's report 2026-11-11: the singer
+        // changed while the score played - the new voice was ready and the old one sang on to
+        // the end): it stops where the new one comes in, and no instrument is taken back, since
+        // none stood in. The score was edited under the Play then (playEdited), so the voice is
+        // the new text's and the Play the old one's: it is cut in only where it still fits -
+        // every note it sings beginning with a note of its part in the list played. A singer
+        // changed leaves the notes as they were; a rhythm rewritten waits for the next Play.
         let playingNotes = null;    // the list startPlayback sounds
+        let playEdited = false;     // the score changed since that Play began
+        function voiceFitsPlay(key, list) {
+            if (!playEdited) { return true; }
+            const track = rawParts ? rawParts.indexOf(key.split('#')[0]) : -1;
+            const onsets = playingNotes.filter(n => n.N === track && !(n.P < 0)).map(n => n.T);
+            if (onsets.length === 0) { return false; }
+            return list.every(e => e.at < playOffset - 1e-6 || onsets.some(t => Math.abs(t - e.at) < 0.002));
+        }
         function joinVoice(key, entries, sungBefore) {
             if (playClock === null || !playingNotes || midiPlaying || loopList || !voicePlan || voicePlan.pieces
                 || !audioCtx || !window.LysSynth || !window.LysSynth.nextVoiceEntry || !window.LysSynth.voiceEntryEarly) { return; }
             if (!soundingVoices().includes(key)) { return; }
             const v = voices.get(key);
+            const list = (entries || []).map(e => ({ at: countInFix + e.at / v.speed, room: e.room / v.speed }));
+            if (!voiceFitsPlay(key, list)) { return; }
+            const replaced = voiceSources.filter(s => s.voiceKey === key);
             const sungAfter = sungTracks();
             const tracks = new Set();
-            for (const n of playingNotes) {
+            for (const n of (replaced.length > 0 ? [] : playingNotes)) {
                 if (typeof n.N === 'number' && !tracks.has(n.N) && instrumentSounds(n.N, sungBefore) && !instrumentSounds(n.N, sungAfter)) { tracks.add(n.N); }
             }
             if (tracks.size > 0 && !sfPlayer) { return; }
             const now = playOffset + playClock();
-            const list = (entries || []).map(e => ({ at: countInFix + e.at / v.speed, room: e.room / v.speed }));
             const entry = window.LysSynth.nextVoiceEntry(list, 0, now, sfPlayer ? playOffset + sfPlayer.handedOutUntil : -1);
             if (!entry) { return; }
             const lead = v.lead || 0;
@@ -7006,6 +7024,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             src.buffer = v.buffer;
             src.connect(g);
             src.start(when, lead + (entry.at - countInFix) - early);
+            src.voiceKey = key;
+            // The voice that sang this part until now ends as the new one fades in.
+            for (const old of replaced) { try { old.stop(when + 0.03); } catch (e) { /* ended */ } }
             voiceSources.push(src);
             if (tracks.size > 0) { sfPlayer.silence(playingNotes.filter(n => tracks.has(n.N) && n.T >= entry.at - 1e-6)); }
             flashInfo('The voice of ' + (menuVoiceNames[key] || key) + ' comes in', 3000);
@@ -7079,6 +7100,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     src.connect(out);
                     if (cue.duration === undefined) { src.start(when + cue.at, cue.offset); }
                     else { src.start(when + cue.at, cue.offset, cue.duration); }
+                    src.voiceKey = key;     // which voice sings here, for one that replaces it (joinVoice)
                     voiceSources.push(src);
                 }
             }
@@ -7397,6 +7419,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             playEndTimer = setTimeout(playEnded, (end - offset + (loopList ? 0 : 0.5)) * 1000);
             playOffset = offset;
             playingNotes = notes;
+            playEdited = false;
             playClock = () => audioCtx ? audioCtx.currentTime - t0 : 0;
             followAlong(notes, offset, playClock);
         }
@@ -8342,9 +8365,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         invalidateSourcePositions();
                         // The score changed: the cached note list is stale, so the
                         // next audition / Play refetches fresh events. A Play still sounding
-                        // is the old text's: a voice of the new one is not cut into it (joinVoice).
+                        // is the old text's: a voice of the new one is cut into it only where
+                        // it still fits (joinVoice, voiceFitsPlay).
                         playbackNotes = null;
-                        playingNotes = null;
+                        playEdited = true;
                         collectPages();
                         applyBarFlags();
                         lightCaretBar();

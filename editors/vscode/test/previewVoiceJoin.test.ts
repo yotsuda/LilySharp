@@ -66,7 +66,7 @@ describe('a voice that lands while the preview plays', () => {
             rawParts: ['melody', 'alto', 'bass'], rawSung: ['melody', 'alto'], rawPlayed: ['alto', 'bass'],
             practice: { speed: 1, voicesOff: [], voicesOn: [], instrumentsOn: [], voiceLevels: {} },
             voicePlan: { pieces: null, rounds: 1 }, menuVoiceKeys: [], menuVoiceNames: { melody: 'Melody' },
-            voiceSources: [], loopList: null, midiPlaying: false, countInFix: 0, playOffset: 0,
+            voiceSources: [], loopList: null, midiPlaying: false, countInFix: 0, playOffset: 0, playEdited: false,
             playClock: () => audioCtx.currentTime - 100,
             playingNotes: [
                 { T: 0, D: 1, N: 0 }, { T: 0, D: 8, N: 2 }, { T: 3, D: 1, N: 0 }, { T: 3, D: 1, N: 1 }, { T: 6, D: 1, N: 0 },
@@ -79,7 +79,8 @@ describe('a voice that lands while the preview plays', () => {
         });
         new vm.Script([
             cut('function voiceKeysOf(part)'), cut('function soundingVoices()'), cut('function sungTracks()'),
-            cut('function menuVoicesOf(part)'), cut('function instrumentSounds(i, sung)'), cut('function joinVoice(key, entries, sungBefore)'),
+            cut('function menuVoicesOf(part)'), cut('function instrumentSounds(i, sung)'), cut('function voiceFitsPlay(key, list)'),
+            cut('function joinVoice(key, entries, sungBefore)'),
         ].join('\n')).runInContext(context);
         const join = (entries: { at: number; room: number }[], sungBefore: number[] = []) => {
             context.entries = entries;
@@ -145,7 +146,8 @@ describe('a voice that lands while the preview plays', () => {
     it('leaves the instrument playing where the voice cannot be brought in', () => {
         const cases: [string, Record<string, unknown>][] = [
             ['nothing plays', { playClock: null }],
-            ['the score was edited since the Play began', { playingNotes: null }],
+            ['the score was edited and its rhythm is another', { playEdited: true, playingNotes: [{ T: 0, D: 1, N: 0 }, { T: 2.5, D: 1, N: 0 }, { T: 6, D: 1, N: 0 }] }],
+            ['the score was edited and the part is not in the list played', { playEdited: true, playingNotes: [{ T: 0, D: 8, N: 2 }] }],
             ['a loop', { loopList: [] }],
             ['a stretch', { voicePlan: { pieces: [[0, 4]], rounds: 1 } }],
             ['the MIDI output', { midiPlaying: true }],
@@ -175,13 +177,43 @@ describe('a voice that lands while the preview plays', () => {
         assert.equal(plainBoth.sources.length, 1);
     });
 
+    // Owner's report 2026-11-11: the singer changed while the score played - the new voice was
+    // ready, and the old one sang on to the end of the Play.
+    it('takes over from the voice that was singing when the singer is changed under the Play', () => {
+        const p = page({ playEdited: true });
+        // The old voice sings (started with the Play); its buffer is forgotten when the text changes.
+        const stops: number[] = [];
+        const old = { voiceKey: 'melody', stop: (t: number) => { stops.push(t); } };
+        (p.context.voiceSources as unknown[]).push(old, { voiceKey: 'alto', stop: () => { throw new Error('another part\'s voice'); } });
+        p.join(entries);
+        // The new voice comes in at the next note it sings, and the old one ends as it fades in.
+        assert.equal(p.sources.length, 1);
+        assert.ok(Math.abs(p.sources[0].when - 102.7) < 1e-9);
+        assert.equal(stops.length, 1);
+        assert.ok(Math.abs(stops[0] - 102.73) < 1e-9);
+        // No instrument stood in, so none is taken back - and none is needed to take one back from.
+        assert.equal(p.silenced.length, 0);
+        const plain = page({ playEdited: true, sfPlayer: null });
+        (plain.context.voiceSources as unknown[]).push({ voiceKey: 'melody', stop: () => { /* ends */ } });
+        plain.join(entries);
+        assert.equal(plain.sources.length, 1, 'with the plain tones too: only the voices change');
+        // The same notes with another word on them fit as well: what is compared is where the notes begin.
+        const later = page({ playEdited: true });
+        later.join([{ at: 6, room: 2 }]);
+        assert.equal(later.sources.length, 1);
+    });
+
     it('is asked when a voice is decoded, with the entries the host read from its notes', () => {
         assert.match(extension, /const sungBefore = sungTracks\(\);\s*voices\.set\(message\.part, \{[^\n]+\}\);\s*setVoiceState\(message\.part, 'ready'\);\s*joinVoice\(message\.part, message\.entries, sungBefore\);/);
         assert.match(extension, /type: 'voice', part: id, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array\(bytes\), entries: voiceEntries\(voice\.Notes\) \}\);/);
         assert.match(extension, /playOffset = offset;\s*playingNotes = notes;/);
         assert.match(extension, /playClock = null;\s*playingNotes = null;/);
-        // A score edited while it plays: the Play is the old text's, and the new text's voice is not cut into it.
-        assert.match(extension, /playbackNotes = null;\s*playingNotes = null;\s*collectPages\(\);/);
+        // A score edited while it plays: the Play is the old text's, and the new text's voice is
+        // cut into it only where it still fits.
+        assert.match(extension, /playbackNotes = null;\s*playEdited = true;\s*collectPages\(\);/);
+        assert.match(extension, /playingNotes = notes;\s*playEdited = false;/);
+        // Each voice's sources say whose they are, for the one that replaces them.
+        assert.match(extension, /src\.voiceKey = key;     \/\/ which voice sings here/);
     });
 });
 
