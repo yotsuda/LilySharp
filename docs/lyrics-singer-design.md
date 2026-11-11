@@ -20,7 +20,7 @@ A track's name only names it. `on` says which part's notes the words follow.
 ```
 lyrics [NAME] [language L] { … }                       // definition: the words only
 part PART { lyrics NAME }                              // the words this part sings (section 10)
-singer [S] sings [NAME] [on PART]                      // at the top level, or inside a score
+singer [S] sings [NAME] [on PART] [with NAME VALUE …]  // at the top level, or inside a score
 
 score {
   staff PART [hidden] [sounds voice|instrument|both]   // tab takes the same clauses
@@ -171,3 +171,33 @@ score { staff sop  lyrics words  staff alt  lyrics words  staff ten  lyrics mw }
 Rejected: `lyrics words on sop { … }` on the definition, which a file defining its words section by section
 would repeat on each block and could contradict, and which section 4 refuses; and binding by name
 (`lyrics sop { … }`), which cannot share words between parts and is LYS7008.
+
+## 11. How a voice sings (owner's decisions 2026-11-12; `with` built the same day)
+
+Three layers, so that nothing a voice can do is lost and nothing has to be written:
+
+1. **Nothing written**: the voice sings as its engine makes it. The default, and usually enough.
+2. **Music's own words** on notes (`@vibrato`, a trial so far): one meaning whatever the engine;
+   Cantoria makes each engine do it, and an engine that cannot is told to the writer.
+3. **The engine's own settings**, by name and value, passed through:
+   - for the whole voice, on its singer line — `singer "…" sings words on lead with breathiness 3 gender -0.2`
+     (built: `SingerDeclarationSyntax.Settings`, `LyricSinger.SettingsReaderOf`, `SungVoice.Sing`,
+     Cantoria's score `sing` and `parameters(voice)`);
+   - inside the music, on notes — `c4@sing(breathiness 6)` holds until the next one, as a dynamic
+     does; `@sing(breathiness default)` gives it back to the singer line's value; `g2@sing(breathiness to 9)`
+     arrives there gliding from the value before (NOT built yet).
+
+Decided: the gate on notes is `@sing(…)`; a setting is `NAME VALUE`, settings follow one another
+with no comma (as a part's own settings do — `@vibrato(40, 6)`'s nameless arguments keep theirs);
+a name may be dotted (`mix.Sweet 0.3`, `diffsinger.velocity 1.2` to name an engine's own); a value
+is a number, a word (`support KIRITAN`, `default`) or a string. The settings end with the line.
+
+Names and units are the ENGINE's where a setting is that engine's alone. Where two engines mean
+one thing by different names or scales, Cantoria owns one name and one scale and translates
+(none yet: only DiffSinger has such settings today). Each setting has a scope the voice reports —
+`curve` (changes at any note, can glide), `phrase` (changes where a phrase ends: NEUTRINO's
+transpose `-f`), `voice` (once a score: NEUTRINO's support model `-S`, whose value is a NAME) —
+and the editor's list shows it. Measured 2026-11-12: NEUTRINO v3.2.6 has those two and its
+intermediate files (timing, f0, melspec) and nothing like breathiness; VOICEVOX has frame pitch
+and volume only. A DiffSinger voice's breathiness, tension, energy and voicing are OFFSETS on
+what its variance model predicts — the voice's own expression stays under the setting.

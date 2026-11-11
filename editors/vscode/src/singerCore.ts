@@ -30,11 +30,13 @@ export interface SungNoteDto { T: number; D: number; P: number; L?: string | nul
 
 /** A part's words on its notes, as the server answers `lilysharp/sung`. */
 /** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
-export interface SungVoiceDto { Part: string; Key?: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null; Gender?: string | null; Track?: string | null }
+export interface SungVoiceDto { Part: string; Key?: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null; Gender?: string | null; Track?: string | null;
+    /** How the voice sings, as its singer line's `with …` writes it: a name its number or its word, by the names the voice's engine takes. */
+    Sing?: Record<string, number | string> | null }
 
 /** The score Cantoria reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
 export interface CantoriaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean; vibrato?: number; vibratoRate?: number }
-export interface CantoriaScore { sampleRate: number; language: string; notes: CantoriaNote[] }
+export interface CantoriaScore { sampleRate: number; language: string; sing?: Record<string, number | string>; notes: CantoriaNote[] }
 
 /** The rate the voice is asked for — NEUTRINO's own, so nothing is resampled on the way. */
 export const VOICE_SAMPLE_RATE = 48000;
@@ -63,6 +65,8 @@ export interface CantoriaApi {
     /** `options.onProgress` (a Cantoria after 0.4.0; an older one never calls it) hears how far the
      *  render is: what has to be sung anew, and how much of it is done (SingProgress). */
     sing(score: CantoriaScore, options?: { voice?: string; signal?: AbortSignal; onProgress?: (progress: SingProgress) => void }): Promise<{ wav: string; duration: number; cached?: boolean }>;
+    /** The settings a voice takes in a score's `sing` (a Cantoria after 0.4.0; an older one has none). */
+    parameters?(voice?: string): Promise<SingParameter[]>;
     release(): void;
     /** The voice a `.lys` file's `singer` string comes to on this machine, and what to tell the
      *  writer when it was not the one asked for. Cantoria 0.4 on. */
@@ -488,9 +492,14 @@ const round = (x: number): number => Math.round(x * 1e4) / 1e4;
  */
 export function cantoriaScore(voice: SungVoiceDto, speed: number): CantoriaScore {
     const k = 1 / (speed > 0 ? speed : 1);
+    // How the voice sings (its singer line's `with …`), by the engine's own names; the names in
+    // one order, so the same settings are the same key however the line wrote them.
+    const sing = voice.Sing && Object.keys(voice.Sing).length > 0
+        ? Object.fromEntries(Object.entries(voice.Sing).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) : undefined;
     return {
         sampleRate: VOICE_SAMPLE_RATE,
         language: voice.Language || 'ja',
+        ...(sing ? { sing } : {}),
         notes: voice.Notes.map(n => {
             // Rounded at the note's ends, not its length: a start and a duration rounded apart can
             // put the next note's start a ten-thousandth before this one's end (16ths at 132 are
@@ -612,6 +621,44 @@ export interface ServeAnswer {
     id?: string; wav?: string; duration?: number; sampleRate?: number; seconds?: number; error?: string;
     /** How far a request is — not an answer: the request's id is inside it. */
     progress?: { id: string } & SingProgress;
+}
+
+/** A setting a voice takes on its singer line's `with …` (Cantoria's `parameters`): its name;
+ *  where it can change — `curve` at any note, `phrase` where a phrase ends, `voice` once a score;
+ *  what it does; and for a number its range, the value that changes nothing, its unit. */
+export interface SingParameter { name: string; scope: 'curve' | 'phrase' | 'voice'; what: string; min?: number; max?: number; default?: number; unit?: string }
+
+/**
+ * Where the caret stands in a singer line's settings (owner's decisions 2026-11-12:
+ * `singer … with breathiness 0.3 gender -0.2`, a name and a value each, no commas), for the
+ * editor's list: `with` — the word itself may be written here (a whole line with no settings
+ * yet, the caret after a space); `name` — a setting's name is expected (after `with`, or after a
+ * value); `value` — the value of `of`. Undefined anywhere else, and in a comment.
+ */
+export function singerSettingSlot(before: string): { kind: 'with' } | { kind: 'name'; written: string[] } | { kind: 'value'; of: string } | undefined {
+    if (before.includes('//')) { return undefined; }
+    const line = /^[ \t]*singer(?![\w-])(.*)$/.exec(before);
+    if (!line || !/(?<![\w-])sings(?![\w-])/.test(line[1])) { return undefined; }
+    // The line up to `with`, quoted strings set aside so that a voice's name is no word of it.
+    const rest = line[1].replace(/"[^"]*"/g, '""');
+    const at = /(?<![\w.-])with[ \t]+(?!on(?![\w-]))/.exec(rest);
+    const ends = /[ \t]$/.test(rest);
+    if (!at) {
+        // `singer "x" sings words on lead ▮`: after the words or the part, a space, nothing begun.
+        return ends && /(?<![\w-])sings[ \t]+(?:[\w-]+[ \t]+)?(?:on[ \t]+[\w-]+[ \t]+)?$/.test(rest) && !/(?<![\w-])(?:sings|on)[ \t]+$/.test(rest)
+            ? { kind: 'with' } : undefined;
+    }
+    const words = rest.slice(at.index + at[0].length).split(/[ \t]+/).filter(w => w.length > 0);
+    const complete = ends ? words : words.slice(0, -1);
+    const names = complete.filter((_, i) => i % 2 === 0);
+    return complete.length % 2 === 0 ? { kind: 'name', written: names } : { kind: 'value', of: complete[complete.length - 1] };
+}
+
+/** One line of the list for a setting: its name, and what it does with its range. */
+export function singParameterDetail(p: SingParameter): string {
+    const range = p.min !== undefined && p.max !== undefined ? `${p.min} to ${p.max}${p.unit ? ' ' + p.unit : ''}` : '';
+    const where = p.scope === 'curve' ? '' : p.scope === 'phrase' ? 'changes where a phrase ends' : 'one value for the voice';
+    return [p.what, range && `${range}${p.default !== undefined ? `, ${p.default} as it is` : ''}`, where].filter(Boolean).join(' — ');
 }
 
 /**

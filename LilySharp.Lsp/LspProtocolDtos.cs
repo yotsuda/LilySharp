@@ -424,6 +424,9 @@ public class SungVoiceDto
     public string? Gender { get; set; }
     /// <summary>The name of the lyrics track it sings, or null.</summary>
     public string? Track { get; set; }
+    /// <summary>How the voice sings, as its singer line's <c>with …</c> writes it: a name its
+    /// number or its word, by the names the voice's engine takes; null where it sets nothing.</summary>
+    public System.Collections.Generic.Dictionary<string, object>? Sing { get; set; }
 }
 
 /// <summary>Parameters for lilysharp/singerSlot: the caret in an open document.</summary>

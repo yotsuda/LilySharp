@@ -50,6 +50,11 @@ public sealed class PartLyricsDeclarationSyntax : SyntaxNode
     public SyntaxTokenNode NameToken => (SyntaxTokenNode)GetChild(1)!;
 }
 
+/// <summary>One setting of a singer line's <c>with</c>: its name, where the name and the value
+/// stand, and the value - <paramref name="Number"/>, or <paramref name="Word"/> (a word or a
+/// quoted string, unquoted).</summary>
+public readonly record struct SingerSetting(string Name, SyntaxTokenNode NameToken, SyntaxTokenNode ValueToken, double? Number, string? Word);
+
 /// <summary>Who sings what, at the top level of a file: <c>singer [S] sings [NAME] [on PART]</c>
 /// (owner's decisions 2026-11-10, docs/lyrics-singer-design.md).</summary>
 public sealed class SingerDeclarationSyntax : SyntaxNode
@@ -100,10 +105,73 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
 
     /// <summary>The token naming the words, or null for the file's unnamed track.</summary>
     public SyntaxTokenNode? TrackToken =>
-        SingsIndex is var i and >= 0 && GetChild(i + 1) is SyntaxTokenNode t && t.Text != "on" ? t : null;
+        SingsIndex is var i and >= 0 && GetChild(i + 1) is SyntaxTokenNode t && t.Text != "on" && !ReferenceEquals(t, WithKeyword) ? t : null;
 
     /// <summary>The track sung: its name, or the unnamed track's.</summary>
     public string TrackName => TrackToken?.Text ?? SyntaxFacts.UnnamedLyricsName;
+
+    /// <summary>The <c>with</c> that begins the voice's settings, or null.</summary>
+    public SyntaxTokenNode? WithKeyword
+    {
+        get
+        {
+            // The word, a setting's name after it - not the lyrics track or the part of that name
+            // (`sings with on lead`, `on with`), which no name follows.
+            for (int i = Math.Max(1, SingsIndex + 1); i + 1 < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text: SyntaxFacts.SingerWithWord } with
+                    && GetChild(i - 1) is not SyntaxTokenNode { Text: "on" }
+                    && GetChild(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text: not "on" })
+                    return with;
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// How the voice sings, as the line writes it after <c>with</c>: each setting's name (its
+    /// dotted words joined), the name's first token, and the value - a number, or the word or
+    /// string written. In the order written; a name written twice is there twice.
+    /// </summary>
+    public IReadOnlyList<SingerSetting> Settings
+    {
+        get
+        {
+            if (WithKeyword is not { } with)
+                return [];
+            var list = new List<SingerSetting>();
+            int i = 0;
+            while (i < SlotCount && !ReferenceEquals(GetChild(i), with)) i++;
+            i++;
+            while (i < SlotCount && GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } first)
+            {
+                string name = first.Text;
+                i++;
+                while (i + 1 < SlotCount && GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Dot }
+                    && GetChild(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } more)
+                {
+                    name += "." + more.Text;
+                    i += 2;
+                }
+                if (i >= SlotCount || GetChild(i) is not SyntaxTokenNode value)
+                    break;
+                bool minus = value.Kind == SyntaxKind.Minus;
+                if (minus)
+                {
+                    if (++i >= SlotCount || GetChild(i) is not SyntaxTokenNode number)
+                        break;
+                    value = number;
+                }
+                i++;
+                bool isNumber = value.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral
+                    && double.TryParse(value.Text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _);
+                double? numberValue = isNumber
+                    ? (minus ? -1 : 1) * double.Parse(value.Text, System.Globalization.CultureInfo.InvariantCulture) : null;
+                string? word = isNumber ? null
+                    : value.Kind == SyntaxKind.StringLiteral ? Music.LyricSinger.ValueOf(value.Text) : value.Text;
+                list.Add(new SingerSetting(name, first, value, numberValue, word));
+            }
+            return list;
+        }
+    }
 
     /// <summary>The token after <c>on</c>: the part or voice whose notes are sung, or null.</summary>
     public SyntaxTokenNode? OnToken

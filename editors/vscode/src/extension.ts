@@ -56,7 +56,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { singerGoesOnToSings, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { singerGoesOnToSings, singerSettingSlot, singParameterDetail, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1099,6 +1099,7 @@ export function activate(context: vscode.ExtensionContext) {
         (use?: unknown) => pickAiModel(use === 'edit' || use === 'ghost' ? use : undefined)));
 
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singerCompletion, '"', ' ', ','));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singerSettingCompletion, ' '));
     voiceSamplesDir = path.join(context.globalStorageUri.fsPath, 'voice-samples');
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.hearSinger', hearSinger));
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.singerTaken', singerTaken));
@@ -3978,6 +3979,49 @@ const singerCompletion: vscode.CompletionItemProvider = {
     },
 };
 
+/**
+ * The list on a singer line's settings (owner's decisions 2026-11-12: `singer … with breathiness
+ * 0.3 gender -0.2`): the word `with` where the line has none yet, and after it the settings the
+ * line's own voice takes, as the voice's engine names them — each with what it does and its range
+ * (Cantoria's `parameters`). Nothing is listed that the voice does not take, and what the line
+ * has already set is left out. A value is the writer's to type: its range is in the name's line.
+ */
+const singerSettingCompletion: vscode.CompletionItemProvider = {
+    async provideCompletionItems(document, position) {
+        const before = document.lineAt(position.line).text.slice(0, position.character);
+        const slot = singerSettingSlot(before);
+        if (!slot || slot.kind === 'value') { return undefined; }
+        const engine = await renderer();
+        const backend = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend : undefined;
+        if (!backend) { return undefined; }
+        // The line's voice: the name it writes, else the gender it says, else the default voice.
+        const named = /^[ \t]*singer[ \t]+(?:(male|female)[ \t]+)?(?:"([^"]*)")?/.exec(before);
+        let taken: SingParameter[];
+        try {
+            taken = await backend.parameters(await backend.voiceName(named?.[2] || named?.[1] || null));
+        } catch (e) {
+            outputChannel.appendLine(`singer: the voice's settings could not be listed — ${String(e)}`);
+            return undefined;
+        }
+        if (slot.kind === 'with') {
+            if (taken.length === 0) { return undefined; }
+            const item = new vscode.CompletionItem('with', vscode.CompletionItemKind.Keyword);
+            item.detail = `How the voice sings: ${taken.map(p => p.name).join(', ')}`;
+            item.insertText = 'with ';
+            item.sortText = '~with';     // after what the line still needs (`on`)
+            item.command = { command: 'editor.action.triggerSuggest', title: 'List the voice\'s settings' };
+            return [item];
+        }
+        return taken.filter(p => !slot.written.includes(p.name)).map((p, i) => {
+            const item = new vscode.CompletionItem(p.name, vscode.CompletionItemKind.Property);
+            item.detail = singParameterDetail(p);
+            item.insertText = p.name + ' ';
+            item.sortText = String(i).padStart(3, '0');
+            return item;
+        });
+    },
+};
+
 /** The first line of the `singer` list when no voice is installed (owner's request 2026-11-10): it
  *  says so and inserts nothing, the text under it kept, and taking it goes on to the setup. */
 function noVoiceItem(document: vscode.TextDocument, range: vscode.Range, guide: VoiceGuide): vscode.CompletionItem {
@@ -4275,6 +4319,16 @@ function forgetVoices(panel: vscode.WebviewPanel): void {
 }
 /** What was said once per preview (a warning of the server's, a voice that was not sung). */
 const singerTold = new WeakMap<vscode.WebviewPanel, Set<string>>();
+/** What the engine said of a singer line's settings, shown once a session each: a setting written
+ *  and not sung is a mistake in the score, so it is a warning and not a line of the status bar. */
+const singerSettingsTold = new Set<string>();
+function tellSingerSetting(text: string): void {
+    outputChannel.appendLine(`singer: ${text}`);
+    if (singerSettingsTold.has(text)) { return; }
+    singerSettingsTold.add(text);
+    void vscode.window.showWarningMessage(`Lily#: ${text}`);
+}
+
 function tellSingerOnce(panel: vscode.WebviewPanel, text: string): void {
     outputChannel.appendLine(`singer: ${text}`);
     let told = singerTold.get(panel);
@@ -4433,7 +4487,7 @@ async function renderVoice(job: PrepareJob): Promise<void> {
         && (sungParts.get(panel)?.has(id) ?? true);
     const engine = voiceRenderer;
     if (!engine || !wanted()) { return; }
-    let key: string, rendered: Promise<{ wav: string; duration: number }>, cached: boolean;
+    let key: string, rendered: Promise<{ wav: string; duration: number; notes?: string[] }>, cached: boolean;
     // What the engine says of this render (owner's request 2026-11-11): the seconds of music it
     // has to sing ANEW - it keeps every phrase it sang, so after an edit that is the phrases
     // changed - and how many are done. The page's bar is counted on these; `msPerSecond` is the
@@ -4465,6 +4519,9 @@ async function renderVoice(job: PrepareJob): Promise<void> {
     const singing = (async () => {
         try {
             const v = await Promise.race([rendered, timeout]);
+            // What the engine had to say of the score: a setting of the singer line the voice
+            // does not take is not sung, and the writer is told which - once, where it is seen.
+            for (const note of v.notes ?? []) { tellSingerSetting(note); }
             if (!cached) {
                 // The engine sings one at a time: this voice's time began when the last one landed.
                 const now = Date.now();

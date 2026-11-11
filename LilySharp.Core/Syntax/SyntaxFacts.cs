@@ -706,6 +706,10 @@ internal static class SyntaxFacts
     /// writing perfectly ordinary music.
     /// </remarks>
     // Case-sensitive, like every annotation name (owner's decision 2026-09-27).
+    /// <summary>The word that begins a singer line's settings: <c>singer … with breathiness 0.3</c>.
+    /// Contextual - a word only there.</summary>
+    public const string SingerWithWord = "with";
+
     private static readonly HashSet<string> ArgumentTakingAnnotations =
         new(StringComparer.Ordinal)
         {

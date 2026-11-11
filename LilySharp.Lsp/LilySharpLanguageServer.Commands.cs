@@ -1103,6 +1103,7 @@ public sealed partial class LilySharpLanguageServer
                     Singer = v.Singer,
                     Gender = v.Gender,
                     Track = v.Track,
+                    Sing = v.Sing?.ToDictionary(p => p.Key, p => p.Value.Number is { } number ? (object)number : p.Value.Word ?? ""),
                     Notes = v.Notes.Select(n => new SungNoteDto
                     {
                         T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos, V = n.Level, E = n.LevelEnd, I = n.Inhale, H = n.Hyphen, Vb = n.Vibrato, Vr = n.VibratoRate,

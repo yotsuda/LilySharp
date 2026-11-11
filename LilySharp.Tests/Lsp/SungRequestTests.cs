@@ -80,6 +80,67 @@ public class SungRequestTests
         Assert.Equal(melody.Select(n => n.S), voice.Notes.Select(n => n.S));
     }
 
+    // Owner's decisions 2026-11-12: how the voice sings is written on its singer line after
+    // `with`, a name and a value each, no commas - the names the voice's own engine takes.
+    [Fact]
+    public void ASingerLinesWith_SaysHowTheVoiceSings()
+    {
+        static SungResponse Sung(string line)
+        {
+            var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+            var uri = new Uri("file:///with.lys");
+            server.DidOpen(new DidOpenTextDocumentParams
+            {
+                TextDocument = new TextDocumentItem { Uri = uri, Text = Doc.Replace("singer sings verse on melody", line), Version = 1, LanguageId = "lilysharp" },
+            });
+            return server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        }
+
+        // A number (signed, whole or decimal), a word, a quoted string; a name of several words joined by dots.
+        var sung = Sung("singer \"a/b\" sings verse on melody with breathiness 3 gender -0.2 support KIRITAN mix.Sweet 0.3 note \"two words\"");
+        Assert.Null(sung.Error);
+        var sing = Assert.Single(sung.Voices!).Sing!;
+        Assert.Equal(new[] { "breathiness", "gender", "mix.Sweet", "note", "support" }, sing.Keys.OrderBy(k => k, StringComparer.Ordinal));
+        Assert.Equal(3.0, sing["breathiness"]);
+        Assert.Equal(-0.2, sing["gender"]);
+        Assert.Equal(0.3, sing["mix.Sweet"]);
+        Assert.Equal("KIRITAN", sing["support"]);
+        Assert.Equal("two words", sing["note"]);
+        // A name written twice keeps its last value; a line with no `with` sets nothing.
+        Assert.Equal(5.0, Assert.Single(Sung("singer \"a/b\" sings verse on melody with breathiness 3 breathiness 5").Voices!).Sing!["breathiness"]);
+        Assert.Null(Assert.Single(Sung("singer \"a/b\" sings verse on melody").Voices!).Sing);
+        // The settings follow the words where no part is named, and the unnamed part's words.
+        Assert.Equal(1.5, Assert.Single(Sung("singer \"a/b\" sings verse with velocity 1.5").Voices!).Sing!["velocity"]);
+
+        // The settings end with the line: the next line's two words are not one more setting.
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(Doc.Replace("singer sings verse on melody", "singer \"a/b\" sings verse on melody with support KIRITAN"));
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var line = tree.GetRoot().DescendantNodes<LilySharp.Core.Syntax.SingerDeclarationSyntax>().Single();
+        Assert.Equal("KIRITAN", Assert.Single(line.Settings).Word);
+        Assert.Equal("verse", line.TrackName);
+        Assert.Equal("melody", line.OnToken!.Text);
+
+        // A name with no value, and `with` with nothing after it on the line, are said.
+        foreach (string bad in new[] { "with breathiness", "with breathiness 3 gender" })
+        {
+            var broken = LilySharp.Core.Syntax.SyntaxTree.Parse(Doc.Replace("singer sings verse on melody", "singer \"a/b\" sings verse on melody " + bad));
+            Assert.Contains(broken.Diagnostics, d => d.Code == LilySharp.Core.Syntax.DiagnosticCodes.SingerSettingMalformed);
+        }
+
+        // A lyrics track may still be called with, and so may a part.
+        const string Named = "part with { clef treble }\nsection A { with { c'1 } lyrics with { la } }\nform { A }\nscore { staff with  lyrics with }\n";
+        var odd = LilySharp.Core.Syntax.SyntaxTree.Parse(Named + "singer \"a/b\" sings with on with\n");
+        Assert.False(odd.HasErrors, string.Join(", ", odd.Diagnostics.Select(d => d.Message)));
+        var oddLine = odd.GetRoot().DescendantNodes<LilySharp.Core.Syntax.SingerDeclarationSyntax>().Single();
+        Assert.Equal("with", oddLine.TrackName);
+        Assert.Equal("with", oddLine.OnToken!.Text);
+        Assert.Empty(oddLine.Settings);
+        var both = LilySharp.Core.Syntax.SyntaxTree.Parse(Named + "singer \"a/b\" sings with on with with tension 2\n")
+            .GetRoot().DescendantNodes<LilySharp.Core.Syntax.SingerDeclarationSyntax>().Single();
+        Assert.Equal(2.0, Assert.Single(both.Settings).Number);
+        Assert.Equal("with", both.TrackName);
+    }
+
     // Owner's request 2026-11-12, a trial: `@vibrato` on a sung note is told to the singing engine
     // (a DiffSinger voice lays it on its pitch curve) - the swing each way in cents, and the swings
     // a second where written. It draws nothing, and the MIDI does not know it.

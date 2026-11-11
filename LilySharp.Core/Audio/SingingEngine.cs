@@ -201,6 +201,19 @@ public static class SungScoreJson
             w.WriteStartObject();
             w.WriteNumber("sampleRate", sampleRate);
             w.WriteString("language", voice.Language);
+            // How the voice sings, as its singer line's `with …` writes it: the engine's own names.
+            if (voice.Sing is { Count: > 0 } sing)
+            {
+                w.WriteStartObject("sing");
+                foreach (var (name, value) in sing.OrderBy(p => p.Key, StringComparer.Ordinal))
+                {
+                    if (value.Number is { } number)
+                        w.WriteNumber(name, number);
+                    else
+                        w.WriteString(name, value.Word);
+                }
+                w.WriteEndObject();
+            }
             w.WriteStartArray("notes");
             foreach (var n in voice.Notes)
             {

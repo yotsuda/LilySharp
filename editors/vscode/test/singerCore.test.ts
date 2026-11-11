@@ -847,3 +847,71 @@ describe('a vibrato written on a note goes to the engine', () => {
         assert.ok(!JSON.stringify(cantoriaScore(plain, 1)).includes('vibrato'));
     });
 });
+
+// Owner's decisions 2026-11-12: how a voice sings is written on its singer line after `with`, a
+// name and a value each, by the names the voice's own engine takes; the editor lists them.
+describe('a singer line\'s settings', () => {
+    const { singerSettingSlot, singParameterDetail } = require('../src/singerCore') as {
+        singerSettingSlot: (before: string) => { kind: string; written?: string[]; of?: string } | undefined;
+        singParameterDetail: (p: { name: string; scope: string; what: string; min?: number; max?: number; default?: number; unit?: string }) => string;
+    };
+    const line = 'singer female "diffsinger/Nishiren/2P" sings words on lead ';
+
+    it('go to the engine with the score, in one order whatever the line\'s', () => {
+        const voice: SungVoiceDto = { Part: 'lead', Language: 'ja', Notes: [{ T: 0, D: 1, P: 60, L: 'ら' }], Sing: { tension: -2, breathiness: 3, support: 'KIRITAN' } };
+        const score = cantoriaScore(voice, 1);
+        assert.deepEqual(score.sing, { breathiness: 3, support: 'KIRITAN', tension: -2 });
+        assert.deepEqual(Object.keys(score.sing!), ['breathiness', 'support', 'tension']);
+        // The same settings written the other way round are the same voice (its key is the score's text).
+        const other = cantoriaScore({ ...voice, Sing: { support: 'KIRITAN', breathiness: 3, tension: -2 } }, 1);
+        assert.equal(JSON.stringify(other), JSON.stringify(score));
+        // A line that sets nothing says nothing: the voices sung before it could are still found.
+        assert.ok(!('sing' in cantoriaScore({ ...voice, Sing: null }, 1)));
+        assert.ok(!('sing' in cantoriaScore({ ...voice, Sing: {} }, 1)));
+        assert.notEqual(JSON.stringify(cantoriaScore({ ...voice, Sing: null }, 1)), JSON.stringify(score));
+    });
+
+    it('are listed where a name is expected, and `with` where the line has none', () => {
+        // After the words or the part and a space: the word itself.
+        assert.deepEqual(singerSettingSlot(line), { kind: 'with' });
+        assert.deepEqual(singerSettingSlot('singer "a/b" sings words '), { kind: 'with' });
+        // Not where the line still needs its words or its part, nor while a word is being typed.
+        assert.equal(singerSettingSlot('singer "a/b" sings '), undefined);
+        assert.equal(singerSettingSlot('singer "a/b" sings words on '), undefined);
+        assert.equal(singerSettingSlot('singer "a/b" sings words on lead'), undefined);
+        assert.equal(singerSettingSlot('singer "a/b" '), undefined);
+        // After `with`, and after each value: a name, what is written already left out of the list.
+        assert.deepEqual(singerSettingSlot(line + 'with '), { kind: 'name', written: [] });
+        assert.deepEqual(singerSettingSlot(line + 'with bre'), { kind: 'name', written: [] });
+        assert.deepEqual(singerSettingSlot(line + 'with breathiness 3 '), { kind: 'name', written: ['breathiness'] });
+        assert.deepEqual(singerSettingSlot(line + 'with breathiness 3 gender -0.2 te'), { kind: 'name', written: ['breathiness', 'gender'] });
+        // After a name: its value, which is the writer's to type.
+        assert.deepEqual(singerSettingSlot(line + 'with breathiness '), { kind: 'value', of: 'breathiness' });
+        assert.deepEqual(singerSettingSlot(line + 'with breathiness 3 gender -0'), { kind: 'value', of: 'gender' });
+        // A voice whose name holds the word, a track or a part called with, a comment, another line.
+        assert.deepEqual(singerSettingSlot('singer "x/with y" sings words on lead '), { kind: 'with' });
+        assert.equal(singerSettingSlot('singer "a/b" sings with on '), undefined);
+        assert.equal(singerSettingSlot(line + 'with breathiness 3 // '), undefined);
+        assert.equal(singerSettingSlot('lyrics words with '), undefined);
+    });
+
+    it('say what each does, its range, and where it can change', () => {
+        assert.equal(singParameterDetail({ name: 'breathiness', scope: 'curve', what: 'How much breath is in the voice', min: -12, max: 12, default: 0, unit: 'dB' }),
+            'How much breath is in the voice — -12 to 12 dB, 0 as it is');
+        assert.equal(singParameterDetail({ name: 'transpose', scope: 'phrase', what: 'Sung as if the key were shifted', min: -12, max: 12 }),
+            'Sung as if the key were shifted — -12 to 12 — changes where a phrase ends');
+        assert.equal(singParameterDetail({ name: 'support', scope: 'voice', what: 'Another voice\'s model as support' }),
+            'Another voice\'s model as support — one value for the voice');
+    });
+
+    it('are the voice\'s own to list, and what it does not take is said as a warning', () => {
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /registerCompletionItemProvider\(\{ language: 'lilysharp' \}, singerSettingCompletion, ' '\)/);
+        assert.match(ext, /taken = await backend\.parameters\(await backend\.voiceName\(named\?\.\[2\] \|\| named\?\.\[1\] \|\| null\)\);/);
+        assert.match(ext, /return taken\.filter\(p => !slot\.written\.includes\(p\.name\)\)\.map\(/);
+        assert.match(ext, /for \(const note of v\.notes \?\? \[\]\) \{ tellSingerSetting\(note\); \}/);
+        assert.match(ext, /void vscode\.window\.showWarningMessage\(`Lily#: \$\{text\}`\);/);
+        const singer = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'singer.ts'), 'utf8');
+        assert.match(singer, /return this\.api\.parameters \? await this\.api\.parameters\(voice\) : \[\];/);
+    });
+});

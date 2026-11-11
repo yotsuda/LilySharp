@@ -1633,6 +1633,10 @@ public static class DiagnosticCodes
     /// <summary>A <c>singer</c> line with no <c>sings</c> (docs/lyrics-singer-design.md).</summary>
     public const string SingerNeedsSings = "LYS4041";
 
+    /// <summary>A <c>singer … with</c> setting that is not a name and a value
+    /// (<c>with breathiness 3 gender -0.2</c>). The parser.</summary>
+    public const string SingerSettingMalformed = "LYS4056";
+
     /// <summary><c>singer … sings NAME</c> where no lyrics track has that name.</summary>
     public const string SingerWordsUnknown = "LYS4042";
 

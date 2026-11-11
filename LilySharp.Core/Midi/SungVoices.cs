@@ -38,7 +38,10 @@ public sealed record SungNote(double Start, double Duration, double Pitch, strin
 /// <paramref name="Track"/> is the name of the lyrics track it sings (its first words'), or null.
 /// <paramref name="Key"/> tells this voice from the others of its part: the part's name for its first
 /// <c>singer</c> line, <c>part#2</c> and so on for the rest (null is the part's name).
-public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungNote> Notes, IReadOnlyList<string> Warnings, string? Singer = null, string? Gender = null, string? Track = null, string? Key = null);
+/// <paramref name="Sing"/> is how the voice sings, as its <c>singer</c> line's <c>with …</c> writes it: a name its
+/// number or its word, by the names the voice's engine takes; null where the line sets nothing.
+public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungNote> Notes, IReadOnlyList<string> Warnings, string? Singer = null, string? Gender = null, string? Track = null, string? Key = null,
+    IReadOnlyDictionary<string, (double? Number, string? Word)>? Sing = null);
 
 /// <summary>
 /// The sung voices of an exported piece: one per part a placed lyrics row sings with a voice asked for (<see cref="Music.LyricSinger.SungReaderOf"/>). Which note a
@@ -140,11 +143,15 @@ public static class SungVoices
                     + string.Join(" ", strange.Take(8)) + (strange.Count > 8 ? " …" : ""));
             // One voice for each `singer` line on these words, each sung by itself (docs/lyrics-singer-design.md §2).
             var singers = (first.Singer ?? "").Split(Music.LyricSinger.Joiner);
+            // How each sings, beside who: the same order and number (LyricSinger.SettingsReaderOf).
+            var settings = (first.Sing ?? "").Split(Music.LyricSinger.SettingsJoiner);
             for (int s = 0; s < singers.Length; s++)
             {
                 string? singer = singers[s].Length == 0 ? null : singers[s];
                 string? gender = singer is "male" or "female" ? singer : first.Gender;
-                voices.Add(new SungVoice(part, language, notes, warnings, singer, gender, first.Track, s == 0 ? part : $"{part}#{s + 1}"));
+                var sing = s < settings.Length ? Music.LyricSinger.SettingsOf(settings[s]) : null;
+                voices.Add(new SungVoice(part, language, notes, warnings, singer, gender, first.Track, s == 0 ? part : $"{part}#{s + 1}",
+                    sing is { Count: > 0 } ? sing : null));
             }
         }
         return voices;

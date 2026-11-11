@@ -259,14 +259,79 @@ internal sealed partial class Parser
                 "A singer line reads 'singer S sings WORDS on PART'; 'sings' is missing here.");
             return new SingerDeclarationGreen([.. tokens]);
         }
-        if (IsPartNameToken(Current) && Current.Text != "on" && !IsLanguageDeclaration())
+        if (IsPartNameToken(Current) && Current.Text != "on" && !IsLanguageDeclaration() && !IsSingerWith())
             tokens.Add(Advance());
         if (Current.Text == "on")
         {
             tokens.Add(Advance());
             tokens.Add(ExpectPartName());
         }
+        if (IsSingerWith())
+            ParseSingerSettings(tokens);
         return new SingerDeclarationGreen([.. tokens]);
+    }
+
+    /// <summary><c>with NAME …</c> on the singer's own line: the word, and a setting's name after it
+    /// on the same line (a lyrics track may still be called with: <c>sings with on lead</c>).</summary>
+    private bool IsSingerWith()
+        => Current.Text == SyntaxFacts.SingerWithWord && Check(SyntaxKind.Identifier) && !BeginsLine()
+            && Peek(1) is { Kind: SyntaxKind.Identifier, Text: not "on" } && !BeginsLine(1);
+
+    /// <summary>True when a line break stands between the token <paramref name="ahead"/> of the
+    /// current one and the token before it.</summary>
+    private bool BeginsLine(int ahead = 0)
+    {
+        int at = _position + ahead;
+        return at > 0 && at < _tokens.Count
+            && ((_tokens[at - 1].TrailingTrivia?.ToFullString().Contains('\n') ?? false)
+                || (_tokens[at].LeadingTrivia?.ToFullString().Contains('\n') ?? false));
+    }
+
+    /// <summary>
+    /// <c>with NAME VALUE NAME VALUE …</c> at the end of a singer line (owner's decisions
+    /// 2026-11-12): how the voice sings, by the names its engine takes. A name is a word, or
+    /// words joined by dots (<c>mix.Sweet</c>, <c>diffsinger.velocity</c>); a value is a number
+    /// (signed, whole or decimal), a word or a quoted string. No commas: name and value
+    /// alternate, as a part's own settings do. The settings end with the LINE - a value may be a
+    /// word, so the next line's first two words would read as one more setting.
+    /// </summary>
+    private void ParseSingerSettings(List<SyntaxToken> tokens)
+    {
+        tokens.Add(Advance());      // with
+        bool any = false;
+        while (Check(SyntaxKind.Identifier) && !BeginsLine())
+        {
+            any = true;
+            int nameAt = _textPosition + Current.LeadingTriviaWidth;
+            string name = Current.Text;
+            tokens.Add(Advance());
+            while (Check(SyntaxKind.Dot) && Peek(1) is { Kind: SyntaxKind.Identifier } && !BeginsLine())
+            {
+                tokens.Add(Advance());
+                name += "." + Current.Text;
+                tokens.Add(Advance());
+            }
+            bool here = !BeginsLine();
+            if (here && Check(SyntaxKind.Minus) && Peek(1) is { Kind: SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral })
+            {
+                tokens.Add(Advance());
+                tokens.Add(Advance());
+            }
+            else if (here && (Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DecimalLiteral)
+                || Check(SyntaxKind.StringLiteral) || Check(SyntaxKind.Identifier)))
+            {
+                tokens.Add(Advance());
+            }
+            else
+            {
+                _diagnostics.Error(new TextSpan(nameAt, Math.Max(1, name.Length)), DiagnosticCodes.SingerSettingMalformed,
+                    $"'{name}' needs its value: a setting is a name and a value, with {name} 0.3 (a number, a word, or \"default\").");
+                return;
+            }
+        }
+        if (!any)
+            _diagnostics.Error(new TextSpan(_textPosition - 1, 1), DiagnosticCodes.SingerSettingMalformed,
+                "'with' is followed by the voice's settings, each a name and a value: with breathiness 0.3.");
     }
 
     /// <summary><c>on PART</c> on a score's lyrics row: the word with a part's name after it.</summary>

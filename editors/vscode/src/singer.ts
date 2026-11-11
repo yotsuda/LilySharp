@@ -26,10 +26,11 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as readline from 'readline';
-import { CantoriaApi, CantoriaScore, SingProgress, SungVoiceDto, cantoriaScore, parseServeLine, serveCancelLine, serveRequestLine, voiceKey } from './singerCore';
+import { CantoriaApi, CantoriaScore, SingParameter, SingProgress, SungVoiceDto, cantoriaScore, parseServeLine, serveCancelLine, serveRequestLine, voiceKey } from './singerCore';
 
 /** A voice the engine rendered: the WAV's path and its length. */
-export interface RenderedVoice { wav: string; duration: number }
+/** `notes`: what the engine had to say of the score it sang (a setting the voice does not take). */
+export interface RenderedVoice { wav: string; duration: number; notes?: string[] }
 
 /** What sings: the extension's API, or the program here. */
 export interface VoiceBackend {
@@ -60,7 +61,11 @@ export class CantoriaExtensionBackend implements VoiceBackend {
     }
     async sing(_key: string, score: CantoriaScore, voice: string, signal?: AbortSignal, onProgress?: (progress: SingProgress) => void): Promise<RenderedVoice> {
         const v = await this.api.sing(score, { voice, signal, onProgress });
-        return { wav: v.wav, duration: v.duration };
+        return { wav: v.wav, duration: v.duration, notes: (v as { notes?: string[] }).notes };
+    }
+    /** The settings `voice` takes on a singer line's `with …`; none from an older Cantoria. */
+    async parameters(voice: string): Promise<SingParameter[]> {
+        return this.api.parameters ? await this.api.parameters(voice) : [];
     }
     dispose(): void { /* the extension's engine is its own to keep */ }
 }

@@ -123,5 +123,6 @@ public readonly record struct LyricEvent(
     string? Gender = null,      // the gender of the default voice for them (Music.LyricSinger); not written to .mid
     bool Hyphen = false,        // the next syllable is of the same word; not written to .mid
     bool Voiced = true,         // a voice was asked for them (Music.LyricSinger.SungReaderOf); not written to .mid
-    string? Track = null        // the lyrics track they are written in, as named there; not written to .mid
+    string? Track = null,       // the lyrics track they are written in, as named there; not written to .mid
+    string? Sing = null         // how each voice sings them, its line's `with …` (Music.LyricSinger.SettingsReaderOf); not written to .mid
 );

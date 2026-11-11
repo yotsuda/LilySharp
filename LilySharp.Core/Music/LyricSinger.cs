@@ -268,8 +268,62 @@ public static class LyricSinger
         var lines = LinesFor(root, spec);
         return (track, part) =>
         {
-            var singers = lines.Where(l => l.Part == part && l.Track == track).Select(l => l.Singer).Distinct().ToList();
+            var singers = Voices(lines, track, part).Select(v => v.Singer).ToList();
             return singers.Count <= 1 ? singers.FirstOrDefault() : string.Join(Joiner, singers.Select(s => s ?? ""));
         };
+    }
+
+    /// <summary>What separates the settings of several voices singing one track on one part
+    /// (<see cref="SettingsReaderOf"/>): a character no setting holds.</summary>
+    public const char SettingsJoiner = '\u001F';
+
+    /// <summary>A reader of HOW each of those voices sings (its line's <c>with …</c>), beside
+    /// <see cref="ReaderOf"/>: the settings of each voice as <see cref="SettingsText"/>, in the
+    /// same order and number, joined by <see cref="SettingsJoiner"/>; null where none sets any.</summary>
+    public static Func<string?, string?, string?> SettingsReaderOf(SyntaxNode root, RenderSpec? spec)
+    {
+        var lines = LinesFor(root, spec);
+        return (track, part) =>
+        {
+            var settings = Voices(lines, track, part).Select(v => v.Settings).ToList();
+            return settings.All(s => s.Length == 0) ? null : string.Join(SettingsJoiner, settings);
+        };
+    }
+
+    /// <summary>The voices that sing a track on a part: one for each line that differs in who
+    /// sings or in how, in the order written.</summary>
+    private static List<(string? Singer, string Settings)> Voices(IReadOnlyList<Line> lines, string? track, string? part)
+        => lines.Where(l => l.Part == part && l.Track == track).Select(l => (l.Singer, Settings: SettingsText(l.Node))).Distinct().ToList();
+
+    /// <summary>
+    /// A singer line's settings as one text: <c>name=value</c> a line, a number as written in
+    /// the invariant culture, a word or a string between quotes; a name written twice keeps its
+    /// last value. Empty with no <c>with</c>. Read back by <see cref="SettingsOf"/>.
+    /// </summary>
+    public static string SettingsText(SingerDeclarationSyntax line)
+    {
+        var last = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var setting in line.Settings)
+            last[setting.Name] = setting.Number is { } number
+                ? number.ToString("R", System.Globalization.CultureInfo.InvariantCulture)
+                : "\"" + setting.Word + "\"";
+        return string.Join('\n', last.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "=" + p.Value));
+    }
+
+    /// <summary>The settings of one voice's <see cref="SettingsText"/>: a name its number, or its word.</summary>
+    public static IReadOnlyDictionary<string, (double? Number, string? Word)> SettingsOf(string? text)
+    {
+        var settings = new Dictionary<string, (double? Number, string? Word)>(StringComparer.Ordinal);
+        foreach (string line in (text ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int at = line.IndexOf('=');
+            if (at <= 0)
+                continue;
+            string value = line[(at + 1)..];
+            settings[line[..at]] = value.StartsWith('"')
+                ? (null, value.Trim('"'))
+                : (double.Parse(value, System.Globalization.CultureInfo.InvariantCulture), null);
+        }
+        return settings;
     }
 }
