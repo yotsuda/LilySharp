@@ -1590,6 +1590,13 @@ public static class DiagnosticCodes
     /// value), rests, ties, bar lines and repeat marks may stand (<c>Semantics.StrokesContentValidator</c>).</summary>
     public const string StrokesHoldNoPitch = "LYS2021";
 
+    /// <summary>Warning: a section opens on a <c>partial</c> right after a section played before it ends
+    /// on a whole bar, so the pickup is a short bar of its own in the middle of the piece and the beat
+    /// stumbles (Zundamon-to-Metan-no-Jikoshoukai, 2026-11-11: a chorus's eighth-note pickup after the
+    /// pre-chorus's full last bar; <c>Semantics.MeasureValidator.ReportPickupsAfterWholeBars</c>). A
+    /// predecessor ending a pickup short is the split bar <c>SectionBoundaryBars</c> already accepts.</summary>
+    public const string PickupAfterAWholeBar = "LYS2022";
+
     /// <summary>Warning: a key whose signature has more than seven sharps or flats — <c>key des
     /// minor</c> is eight flats, B double-flat in the signature — named with the enharmonic key that
     /// sounds the same (<c>key cis minor</c>, four sharps). Owner's review 2026-10-30: a composed

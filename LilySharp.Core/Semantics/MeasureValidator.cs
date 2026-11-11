@@ -135,6 +135,59 @@ internal sealed class MeasureValidator : ISemanticValidator
         // warned spans, so a fullness warning suppresses a mismatch report.
         new CrossPartMeasureValidator(_diagnostics, _warnedSpans, _phraseBodies, _meterPlan).Validate(root);
         ReportBlankScore(root);
+        ReportPickupsAfterWholeBars(root);
+    }
+
+    /// <summary>
+    /// Warns (LYS2022) at a section's header <c>partial</c> when a section the form plays right before it
+    /// ends on a whole bar: the pickup is then a short bar of its own in the middle of the piece, and the
+    /// beat stumbles (Zundamon-to-Metan-no-Jikoshoukai, 2026-11-11). A pickup belongs to the opening of
+    /// the piece, or to a section whose predecessor ends that much short — the split bar
+    /// <see cref="SectionBoundaryBars"/> already reads as one. Each section in its header meter, else the
+    /// file's; under <c>time none</c> there is no bar to stumble.
+    /// </summary>
+    private void ReportPickupsAfterWholeBars(SyntaxNode root)
+    {
+        if (_boundaries == null || _sectionHeaders.Partials.Count == 0)
+            return;
+        var fileTime = TopLevelNodes.OfRoot<TimeSignatureSyntax>(root).FirstOrDefault();
+        if (fileTime is { IsSenzaMisura: true })
+            return;
+        var fileMeter = fileTime is { } t ? new Fraction(t.Beats, t.BeatType) : new Fraction(4, 4);
+        Fraction MeterOf(string section) => _sectionHeaders.Times.TryGetValue(section, out var time) && !time.IsSenzaMisura
+            ? new Fraction(time.Beats, time.BeatType) : fileMeter;
+        foreach (var (section, partial) in _sectionHeaders.Partials)
+        {
+            var after = PartsWithACell(root, section)
+                .SelectMany(part => _boundaries.PredecessorsEndingOnAWholeBar(section, part, MeterOf))
+                .Distinct().ToList();
+            if (after.Count == 0 || !_warnedSpans.Add((partial.Span.Start, partial.Span.Length)))
+                continue;
+            string before = string.Join("', '", after);
+            _diagnostics.Warning(partial.Span, DiagnosticCodes.PickupAfterAWholeBar,
+                $"This pickup opens section '{section}' right after '{before}' ends on a whole bar, so it is a short bar of its own "
+                + $"in the middle of the piece and the beat stumbles there. Write the upbeat in the last bar of '{before}', or end "
+                + $"'{before}' that much short; a 'partial' opens the piece, or a section after a bar left open for it.");
+        }
+    }
+
+    /// <summary>The parts with music in section <paramref name="section"/>: its by-section part blocks and
+    /// the parts that write it by-part.</summary>
+    private static List<string> PartsWithACell(SyntaxNode root, string section)
+    {
+        var parts = new List<string>();
+        foreach (var sec in root.DescendantNodes<SectionDeclarationSyntax>())
+        {
+            if (sec.SectionName != section)
+                continue;
+            if (sec.Parent is PartDeclarationSyntax owner)
+                parts.Add(owner.Name.Text);
+            else
+                for (int i = 0; i < sec.SlotCount; i++)
+                    if (sec.GetChild(i) is PartBlockSyntax block)
+                        parts.Add(block.Name);
+        }
+        return parts.Distinct().ToList();
     }
 
     /// <summary>

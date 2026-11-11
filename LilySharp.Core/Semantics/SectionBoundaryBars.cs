@@ -119,6 +119,21 @@ internal sealed class SectionBoundaryBars
         return true;
     }
 
+    /// <summary>The sections played right before <paramref name="section"/> whose last bar, in
+    /// <paramref name="part"/>'s cell, is a whole bar of its meter (<paramref name="meterOf"/>, by
+    /// section): after one of them a pickup opening the section is a short bar of its own.</summary>
+    public List<string> PredecessorsEndingOnAWholeBar(string section, string part, System.Func<string, Fraction> meterOf)
+    {
+        var whole = new List<string>();
+        foreach (var other in Neighbours(section, before: true).OrderBy(n => n, StringComparer.Ordinal))
+        {
+            var meter = meterOf(other);
+            if (BarsOf(other, part, meter) is { Count: > 0 } bars && !bars[^1].IsEmpty && bars[^1].Duration == meter)
+                whole.Add(other);
+        }
+        return whole;
+    }
+
     private bool Complements((string Section, string Part) cell, Fraction bar, Fraction meter, Fraction? target, bool before)
     {
         if (bar <= Fraction.Zero || bar >= (target ?? meter))

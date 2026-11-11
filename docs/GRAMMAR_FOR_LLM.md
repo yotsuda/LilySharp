@@ -67,6 +67,9 @@ section Main {                  // a section binds music to each part by name
   partial 8                     // optional pickup: shortens THIS section's opening bar
                                 // for every part at once — the ONLY place for it (the top
                                 // level, a part header and a part's first bar reject it).
+                                // Only the piece's first section opens on one, or a section
+                                // after a bar left that much short: after a whole bar it is a
+                                // short bar mid-piece (LYS2022) — write the upbeat in the bar before.
                                 // Later in a part's music, `| partial 2. r2. |` makes THAT
                                 // bar 3 beats long — written in every part sharing the bar
   rightHand { g8 | motif g2 g | }

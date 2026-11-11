@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **A section opening on a `partial` right after a whole bar is warned about** (LYS2022): the pickup is a short bar of its own in the middle of the piece. A pickup opening the piece, or completing a bar the section before leaves open, is as before.
 - **The chord voicing tool takes the strings to play** (`strings: "1-4"`, 1 the highest): only shapes on those strings are answered, and the root need not be lowest, as a band's bass plays it. Without it the list is as before.
 - **A band's electric guitar striking its chords on the low strings is told** (`voicing.band-low-chords`): the low strings are the bass's. A power chord may stay low, and a guitar outside a band is not read.
 - **A piece heard in the relative key, and ending on its tonic, is told about its `key` line**, not its ending (`key.relative`): a scan of a piece in E minor read as `key g major` was told to end on G.
