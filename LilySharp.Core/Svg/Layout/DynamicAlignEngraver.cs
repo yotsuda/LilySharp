@@ -250,10 +250,11 @@ internal static class DynamicAlignEngraver
                 foreach (var (pi, hi) in sysWedges)
                 {
                     // The same staff-middle → system-top conversion HairpinEngraver
-                    // spends, with ITS convention for the within-system offset (one
-                    // lookup per item, at the item's own start measure).
+                    // spends, with ITS convention for the within-system offset: the
+                    // PIECE's own first measure (its system's — not the item's start,
+                    // which is another system's for a piece carried over a break).
                     double staffOffset = staffYAt?.Invoke(
-                        hairpinItems[hi].StartMeasureIndex, line.StaffIndex) ?? 0;
+                        hpBuilder[pi].StartMeasureIndex, line.StaffIndex) ?? 0;
                     hpBuilder[pi] = hpBuilder[pi] with
                     {
                         YUp = spannerY - EngravingDefaults.StaffMiddle - staffOffset,

@@ -188,8 +188,9 @@ internal static class HairpinEngraver
             // The wedge hangs below ITS staff; add the staff's within-system offset so a
             // hairpin on staff 2 sits under staff 2, not staff 1. Staff 0 (or a single
             // staff) has offset 0 -> unchanged. The per-staff stacker then keeps it clear
-            // of that staff's dynamics only.
-            double staffOffset = staffYAt?.Invoke(hairpin.StartMeasureIndex, hairpin.StaffIndex) ?? 0;
+            // of that staff's dynamics only. The offset is each PIECE's own system's
+            // (below, in the loop over the pieces): a staff does not stand at one depth in
+            // every system.
 
             // This hairpin's own staff: its voices (to support off the right heads and
             // stems) and its measures (to place the columns in X).
@@ -239,8 +240,17 @@ internal static class HairpinEngraver
                 ?? EngravingDefaults.DefaultStaffLines;
             foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
                 hairpin.StartMeasureIndex, endMeasureIdx, systems, measureToSystemIdx))
+            {
+                // Read at the piece's own first measure. Until 2026-11-11 it was read once, at
+                // the hairpin's start, and spent on every piece: a piece carried over a line
+                // break stood where the staff was in the system BEFORE. With a chord-name row
+                // over the staff, whose height differs from system to system, a crescendo's
+                // second piece rose through the chord names and into the lyrics above (owner's
+                // report, a song's `@mf@cresc … | … @ff` over a break under `D7`).
+                double staffOffset = staffYAt?.Invoke(segment.StartMeasureIndex, hairpin.StaffIndex) ?? 0;
                 layouts.Add(LayoutPiece(hairpin, segment, system, endMeasureIdx, measureLayouts,
                     staffOffset, hpVoices, hpMeasures, beamMembers, dynamicAt, staffLines, graceNotes));
+            }
         }
 
         return layouts.ToImmutable();

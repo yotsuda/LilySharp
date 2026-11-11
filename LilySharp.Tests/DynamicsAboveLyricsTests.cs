@@ -102,6 +102,57 @@ public class DynamicsAboveLyricsTests
         Assert.True(Assert.Single(played.DynamicLayouts).YUp < -EngravingDefaults.StaffMiddle);
     }
 
+    /// <summary>A sung staff under a chord-name row, two bars a system apart: the first ends
+    /// with <paramref name="barOneEnd"/>, the second is <paramref name="barTwo"/>.</summary>
+    private static ScoreLayout UnderChordNames(string barOneEnd, string barTwo)
+    {
+        string source = "time 4/4\noctave absolute\npart m { clef treble }\n" +
+            "section A {\n  chords h { G | D7 | C | }\n" +
+            $"  m {{ r8 b'8~ b'4 d''8 b' {barOneEnd} | break {barTwo} | g'4 a' c'' b' | }}\n" +
+            "  lyrics w { la la la la | la la la la | la la la la | }\n}\n" +
+            "form { A }\nscore { chords h  staff m  lyrics w }\n";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        return new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+    }
+
+    /// <summary>
+    /// A wedge carried over a line break stands in ITS OWN system: the piece after the break is
+    /// placed from where the staff is there, not from where it was in the system before.
+    /// Owner's report 2026-11-11 (a song, `g4@mf@cresc | a4 b4 c'4 b4@ff` broken after the first
+    /// bar, under the chord name D7): the second piece was drawn through the chord name and
+    /// into the lyrics of the system above, 4 staff spaces over the ff that ends it. The staff's
+    /// depth in its system was read once, at the hairpin's start, and spent on every piece —
+    /// and under a chord-name row that depth differs from system to system (here the high
+    /// notes and the ff of the second bar push the row up).
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1226/cresc/min.ly): the piece after the break
+    /// and the ff stand on one line, the chord name clear above them.
+    /// </summary>
+    [Fact]
+    public void AWedgeBrokenUnderChordNames_StandsInItsOwnSystem_OnTheLineOfTheLevelEndingIt()
+    {
+        const string Second = "a'4 b' c''' b''@ff";
+        var broken = UnderChordNames("g'4@mf@cresc", Second);
+        Assert.Equal(2, broken.HairpinLayouts.Length);
+        var after = broken.HairpinLayouts.OrderBy(h => h.StartMeasureIndex).Last();
+        var ff = broken.DynamicLayouts.Single(d => d.Text == "ff");
+        Assert.True(after.IsAbove && ff.IsAbove);
+
+        // The same second bar with the wedge BEGINNING in it: one piece, in one system — where
+        // the piece after the break must stand too. (A crescendo is tallest at its right end
+        // either way; what differs is its left tip, closed here and open after a break, which
+        // may move the chord-name row a hair.)
+        var whole = UnderChordNames("g'4@mf", Second.Replace("a'4 ", "a'4@cresc "));
+        var one = Assert.Single(whole.HairpinLayouts);
+        var ffWhole = whole.DynamicLayouts.Single(d => d.Text == "ff");
+        // The fault was 3.7 staff spaces: the piece stood that far over its level's line.
+        Assert.InRange(after.YUp - one.YUp, -0.4, 0.4);
+        // …and on the line of its level, as far from it as in the unbroken bar. (The wedge's
+        // frame is the system's and the text's is the staff's, so the open tip's hair is in
+        // this difference too: 0.28 here, the row's own move.)
+        Assert.InRange((after.YUp - ff.YUp) - (one.YUp - ffWhole.YUp), -0.4, 0.4);
+    }
+
     /// <summary>
     /// WHERE the line stands, pinned to LilyPond's own numbers — the side alone is not enough
     /// of a net, since a line sided the wrong way is pushed back above the staff by the

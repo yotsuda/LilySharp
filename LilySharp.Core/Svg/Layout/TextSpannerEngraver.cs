@@ -299,7 +299,9 @@ internal static class TextSpannerEngraver
 
                 // Below THIS spanner's staff, clear of the SAME staff's dynamics
                 // only. The staff's within-system offset moves the whole band down.
-                double staffOffset = staffYAt?.Invoke(spanner.StartMeasureIndex, spanner.StaffIndex) ?? 0;
+                // …read at the SEGMENT's own first measure: a staff does not stand at one
+                // depth in every system (as HairpinEngraver, 2026-11-11).
+                double staffOffset = staffYAt?.Invoke(segment.StartMeasureIndex, spanner.StaffIndex) ?? 0;
                 var sameStaffDynamics = dynamicLayouts.IsDefaultOrEmpty
                     ? dynamicLayouts
                     : dynamicLayouts.Where(d => d.StaffIndex == spanner.StaffIndex).ToImmutableArray();
