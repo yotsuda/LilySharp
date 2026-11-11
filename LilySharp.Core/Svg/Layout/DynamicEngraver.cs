@@ -249,14 +249,6 @@ internal static class DynamicEngraver
 
         var fallbackVoices = voices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice) : voices;
 
-        // Two voices can carry a dynamic on the SAME note column (e.g. an upper
-        // voice @f and a lower voice @p in a << \\ >>). They share (measure,
-        // item) and would draw on top of each other; stack the 2nd+ downward so
-        // both stay legible. Keyed by staff too: same-column dynamics on
-        // DIFFERENT staves are independent and must not stack onto each other.
-        // Keyed by side too (IsAbove): a column may carry one dynamic above and one
-        // below, each stacking AWAY from the staff independently.
-        var stackAt = new Dictionary<(int, int, int, bool), int>();
 
         // A niente a hairpin's circled tip stands for is not printed as a word (al / dal
         // niente). Asked of the whole score's tables, as the hairpins are paired, so a subset
@@ -374,17 +366,12 @@ internal static class DynamicEngraver
                 vi => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b) ? b : null,
                 staffLines);
 
-            // Stack each successive same-column dynamic ABOVE the staff away from it (+ in
-            // the native Y-up frame). BELOW, no step: each stays at its own side-position and
-            // OutsideStaffStacker's 250 turn separates them, in LilyPond's left-edge order —
-            // a fixed 2.0 in source order put the wrong one by the staff (Lab sessions/p851/dyn).
-            if (dynamic.IsAbove)
-            {
-                var key = (dynamic.MeasureIndex, dynamic.ItemIndex, dynamic.StaffIndex, dynamic.IsAbove);
-                int depth = stackAt.GetValueOrDefault(key, 0);
-                stackAt[key] = depth + 1;
-                y += depth * StackStep;
-            }
+            // No step between two dynamics of one column, on either side: each stays at its
+            // own side-position and OutsideStaffStacker's 250 turn separates them, in
+            // LilyPond's left-edge order — a fixed 2.0 in source order put the wrong one by
+            // the staff (below: Lab sessions/p851/dyn; above, until session 1225: Lab
+            // sessions/p1225/dyn/lp/abv, where LilyPond seats the lower voice's p by the staff
+            // and the upper voice's f close over it, and the step stood the f under the p).
 
             // y is already in the LilyPond-native Y-up frame (staff-spaces above the
             // staff middle); no staff offset is baked — the renderer/stacker resolve
@@ -893,6 +880,21 @@ internal static class DynamicEngraver
     {
         double d = myUp.Distance(profileDown) + padding;
         return d > 0 ? -d : 0.0;
+    }
+
+    /// <summary>
+    /// <see cref="BelowCollisionMove"/>'s mirror: the move (≥ 0, upward) that clears an
+    /// above-staff grob's DOWN profile off a staff's UP profile by <paramref name="padding"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:648-676 avoid_outside_staff_collisions
+    ///   — one routine for both directions.
+    /// </remarks>
+    internal static double AboveCollisionMove(
+        VerticalSkyline profileUp, VerticalSkyline myDown, double padding)
+    {
+        double d = myDown.Distance(profileUp) + padding;
+        return d > 0 ? d : 0.0;
     }
 
     /// <summary>

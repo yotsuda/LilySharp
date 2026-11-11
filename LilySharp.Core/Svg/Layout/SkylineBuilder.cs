@@ -2425,7 +2425,8 @@ internal sealed class SkylineBuilder
     }
 
     /// <summary>
-    /// Seeds the drawn WEDGES into the staff's DOWN profile — the hairpin half of
+    /// Seeds the drawn WEDGES into the staff's profile on their own side (DOWN for a wedge
+    /// that hangs below, UP for one that stands above its staff) — the hairpin half of
     /// <see cref="AddDynamicsToSkyline"/>, run after it: each wedge's real sloped outline
     /// (<see cref="HairpinEngraver.WedgeSkylines"/>) at the level its engraver gave it, pushed
     /// by the collision pass over everything accumulated before it, then merged — so the
@@ -2445,7 +2446,8 @@ internal sealed class SkylineBuilder
     ///   measured regime, and it reserved no wedge before this either.
     /// </remarks>
     internal static void AddHairpinsToSkyline(
-        ImmutableArray<HairpinLayout> hairpins, StaffSize size, VerticalSkyline downSkyline)
+        ImmutableArray<HairpinLayout> hairpins, StaffSize size,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
         if (hairpins.IsDefaultOrEmpty || size.Span(1.0) != 1.0)
             return;
@@ -2454,6 +2456,15 @@ internal sealed class SkylineBuilder
             var my = HairpinEngraver.WedgeSkylines(
                 hp.StartX, hp.EndX, hp.StartOpening, hp.EndOpening,
                 hp.YUp + EngravingDefaults.StaffMiddle, hp.CircleX);
+            if (hp.IsAbove)
+            {
+                // The same pass on the other side: the staff ABOVE is spaced off the wedge.
+                double up = DynamicEngraver.AboveCollisionMove(upSkyline, my.Down, OutsideStaffPadding);
+                if (up != 0)
+                    my.Up.Raise(up);
+                upSkyline.Merge(my.Up);
+                continue;
+            }
             double move = DynamicEngraver.BelowCollisionMove(downSkyline, my.Up, OutsideStaffPadding);
             if (move != 0)
             {
@@ -2892,9 +2903,23 @@ internal sealed class SkylineBuilder
             if (dyn.IsAbove)
             {
                 // Upward reach (text ascends from the above baseline); reserve room
-                // toward the staff above; stacking pushes it further UP (+). The above
-                // side keeps the box reservation (the above-staff DRAW pass is the
-                // stacker's, which runs its own pointwise placement).
+                // toward the staff above; stacking pushes it further UP (+).
+                // At full size the label's own outline, pushed off the accumulated UP
+                // profile by the collision pass — the below arm's mirror. A dynamic above
+                // its staff is the ordinary case on a staff with lyrics under it, where the
+                // old 1.3 × 0.5 box (kept for an ossia's mixed scale, as below) let the
+                // letters' real width and the pass's push go unreserved.
+                if (size.Span(1.0) == 1.0 && !dyn.IsExpressiveText)
+                {
+                    var mine = DynamicEngraver.LabelSkylines(_fonts, dyn.Text, false, xLabel,
+                        baselineUp + staffMiddleUp, dyn.IsSubito);
+                    double up = DynamicEngraver.AboveCollisionMove(
+                        upSkyline, mine.Down, OutsideStaffPadding);
+                    if (up != 0)
+                        mine.Up.Raise(up);
+                    upSkyline.Merge(mine.Up);
+                    continue;
+                }
                 double topUp = size.Span(baselineUp + depth * DynamicEngraver.StackStep
                     + ascent) + staffMiddleUp;
                 double dynamicWidth = size.Span(1.3);

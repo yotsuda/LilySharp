@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // Parts of this file are ported from LilyPond, the GNU music typesetter.
@@ -69,7 +69,10 @@ public readonly record struct HairpinLayout(
     // X of the CENTRE of the circle drawn at a niente tip (al / dal niente), or NaN for none.
     // StartX / EndX are then the ARMS' ends, already short of the circle.
     // LILYPOND-REF: lily/hairpin.cc:323-355 Hairpin::print — circled_tip
-    double CircleX = double.NaN
+    double CircleX = double.NaN,
+    // The wedge stands ABOVE its staff (HairpinItem.IsAbove): the side its line spanner was
+    // side-positioned on, and the outside-staff pass that moves it (above or below).
+    bool IsAbove = false
 );
 
 /// <summary>
@@ -261,7 +264,7 @@ internal static class HairpinEngraver
     ///   bar_), the same rewrite the whole-score path reads.
     /// ⚠️ Two things the trivial system cannot say, both disclosed: it has no delimiter, so
     ///   a piece broken at the line end does not back off the span bar's half padding
-    ///   (<see cref="SpanBarBelowOnSystem"/>) — 0.5 of length, never of height; and the
+    ///   (<see cref="SpanBarBesideOnSystem"/>) — 0.5 of length, never of height; and the
     ///   DynamicLineSpanner GROUPING (a text seated on its wedge's line,
     ///   <see cref="DynamicAlignEngraver"/>) is not replayed, so the room reserves each
     ///   text where its own column puts it. Both under-reserve by construction and neither
@@ -335,7 +338,7 @@ internal static class HairpinEngraver
         ImmutableArray<Voice> hpVoices, ImmutableArray<Measure> hpMeasures,
         Dictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
-        Dictionary<(int Measure, int Item, int Staff), DynamicLayout> dynamicAt,
+        Dictionary<(int Measure, int Item, int Staff, bool Above), DynamicLayout> dynamicAt,
         int staffLines, ImmutableArray<GraceNoteItem> graceNotes)
     {
         int staffIdx = hairpin.StaffIndex;
@@ -365,7 +368,7 @@ internal static class HairpinEngraver
                 }
             }
             else if (hairpin.AdjacentAtEnd && !(hairpin.TipAdjacent && hairpin.Direction == HairpinDirection.Decrescendo)
-                     && !dynamicAt.ContainsKey((hairpin.EndMeasureIndex, hairpin.EndItemIndex, hairpin.StaffIndex))
+                     && BoundText(dynamicAt, hairpin.EndMeasureIndex, hairpin.EndItemIndex, hairpin) is null
                      && ColumnExtent(hairpin.EndMeasureIndex, hairpin.EndItemIndex, hpMeasures,
                          measureLayouts) is { } metColumn)
             {
@@ -392,9 +395,7 @@ internal static class HairpinEngraver
                     ? (endColumn.Left + endColumn.Right) / 2 + (CircleRadius - CircleThickness / 2.0)
                     : endColumn.IsRest ? endColumn.Left : endColumn.Right;
             }
-            else if (dynamicAt.TryGetValue(
-                         (hairpin.EndMeasureIndex, hairpin.EndItemIndex, hairpin.StaffIndex),
-                         out var endDyn)
+            else if (BoundText(dynamicAt, hairpin.EndMeasureIndex, hairpin.EndItemIndex, hairpin) is { } endDyn
                      && (endDyn.GlyphRunWidth ?? DynamicOutline.AdvanceWidth(endDyn.Text)) is { } endW)
             {
                 ownEndX = endDyn.X - endW / 2.0 - BoundPadding;
@@ -423,7 +424,7 @@ internal static class HairpinEngraver
             //   e.center () - (rad - thick / 2.0)
             ownStartX = (startColumn.Left + startColumn.Right) / 2 - (CircleRadius - CircleThickness / 2.0);
         else if (segment.IsFirst && hairpin.AdjacentAtStart
-            && !dynamicAt.ContainsKey((hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin.StaffIndex))
+            && BoundText(dynamicAt, hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin) is null
             && ColumnExtent(hairpin.StartMeasureIndex, hairpin.StartItemIndex, hpMeasures,
                 measureLayouts) is { } metColumn)
             // Back to back with the hairpin ending on this note: a third of the padding past the
@@ -432,9 +433,7 @@ internal static class HairpinEngraver
             ownStartX = (metColumn.Left + metColumn.Right) / 2 + BoundPadding / 3;
         else if (segment.IsFirst)
             ownStartX =
-                dynamicAt.TryGetValue(
-                    (hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin.StaffIndex),
-                    out var startDyn)
+                BoundText(dynamicAt, hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin) is { } startDyn
                 && (startDyn.GlyphRunWidth ?? DynamicOutline.AdvanceWidth(startDyn.Text)) is { } startW
                 ? startDyn.X + startW / 2.0 + BoundPadding
                 : GraceColumnX(graceNotes, hpVoices, staffIdx, hairpin.StartMeasureIndex,
@@ -459,12 +458,11 @@ internal static class HairpinEngraver
                 // only when that neighbor is VISIBLE on this system (a hara-kiri'd
                 // neighbor takes the span bar with it, and the wedge runs to the line
                 // end — that contrast is regression hairpin-span-bar.ly's claim).
-                // Lily#'s hairpin hangs below its staff, so the neighbor side is
-                // always DOWN (LilyPond reads the DynamicLineSpanner's direction; UP
-                // — HairpinItem.IsAbove, carried since session 1224 — is not placed
-                // yet, docs/dynamics-above-lyrics-design.md §3.2). Measured:
-                // hairpin-span-bar twin, line-end 101.93 = 102.43 − 0.5 with the span
-                // bar, 102.43 without.
+                // The neighbor is the one on the hairpin's own side, as LilyPond reads
+                // the DynamicLineSpanner's direction: the staff below a wedge that hangs
+                // below, the staff above one that stands above (HairpinItem.IsAbove).
+                // Measured: hairpin-span-bar twin, line-end 101.93 = 102.43 − 0.5 with
+                // the span bar, 102.43 without.
                 // ⚠️ UNPORTED (disclosed): LilyPond takes the MAX of this padding
                 //   across all CONCURRENT hairpins broken at the same line end, so
                 //   simultaneously broken wedges keep their right ends ALIGNED even
@@ -481,7 +479,7 @@ internal static class HairpinEngraver
                 // LILYPOND-REF: lily/hairpin.cc:53-109 Hairpin::broken_bound_padding — bound-padding / 2.0 when both staves' line-end bars share one span bar
                 // LILYPOND-REF: lily/hairpin.cc:195-210 Hairpin::print — x_points[RIGHT] -= broken_bound_padding at the broken RIGHT bound
                 // LILYPOND-REF: scm/define-grobs.scm:1780-1781 Hairpin — bound-padding 1.0 and the broken-bound-padding callback
-                if (!segment.IsLast && SpanBarBelowOnSystem(system, staffIdx))
+                if (!segment.IsLast && SpanBarBesideOnSystem(system, staffIdx, hairpin.IsAbove))
                     segEndX -= BoundPadding / 2.0;
 
                 // Crossed bounds draw as a point — LilyPond warns "(de)crescendo too
@@ -556,7 +554,13 @@ internal static class HairpinEngraver
                     (vi, mi, ii) => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b)
                         ? b : null,
                     staffLines);
-                double spannerY = DynamicEngraver.SpannerOffsetY(dir: -1.0, support,
+                // The side is the hairpin's own (aligned_side is one computation, dir its
+                // sign): above its staff the wedge sides off the UP supports — the heads and
+                // the up stems — and the staff's top line.
+                // LILYPOND-REF: lily/side-position-interface.cc:188-455 aligned_side — dir is the
+                //   DynamicLineSpanner's direction, which \dynamicUp (ly/property-init.ly) overrides to UP
+                double spannerY = DynamicEngraver.SpannerOffsetY(
+                    dir: hairpin.IsAbove ? 1.0 : -1.0, support,
                     WedgeSkylines(segStartX, segEndX, startOpening, endOpening, 0.0, circleX),
                     staffLines);
                 // spannerY is Y-up about the staff middle; the layout frame is Y-up from
@@ -566,7 +570,7 @@ internal static class HairpinEngraver
                 return new HairpinLayout(
                     segment.StartMeasureIndex, segStartX, segEndX, hairpinYUp,
                     startOpening, endOpening, hairpin.Direction, hairpin.SourcePosition,
-                    hairpin.SourceIndex, hairpin.StaffIndex, circleX);
+                    hairpin.SourceIndex, hairpin.StaffIndex, circleX, hairpin.IsAbove);
             }
         }
     }
@@ -720,15 +724,16 @@ internal static class HairpinEngraver
     }
 
     /// <summary>
-    /// Whether a span bar stands between the given staff and the next staff below it
-    /// on this system: the staff's group must be delimited (the renderer's span-bar
-    /// gate, <c>DrawSpanBars</c>) and a staff of the same group must be VISIBLE below
-    /// it there — hara-kiri hides a staff together with its share of the span bar.
+    /// Whether a span bar stands between the given staff and its neighbor on the hairpin's
+    /// side on this system — the next staff below a wedge that hangs below, the one above a
+    /// wedge that stands above: the staff's group must be delimited (the renderer's span-bar
+    /// gate, <c>DrawSpanBars</c>) and a staff of the same group must be VISIBLE on that side
+    /// of it there — hara-kiri hides a staff together with its share of the span bar.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/hairpin.cc:53-109 Hairpin::broken_bound_padding — get_neighboring_staff (DOWN) and the shared has-span-bar grob
+    /// LILYPOND-REF: lily/hairpin.cc:53-109 Hairpin::broken_bound_padding — get_neighboring_staff (dir) for the DynamicLineSpanner's direction, and the shared has-span-bar grob
     /// </remarks>
-    private static bool SpanBarBelowOnSystem(SystemLayout system, int staffIdx)
+    private static bool SpanBarBesideOnSystem(SystemLayout system, int staffIdx, bool above)
     {
         if (system.StaffGroups.IsDefaultOrEmpty)
             return false;
@@ -741,13 +746,13 @@ internal static class HairpinEngraver
             {
                 if (staves[i].StaffIndex != staffIdx || staves[i].IsHidden)
                     continue;
-                for (int j = i + 1; j < staves.Length; j++)
+                for (int j = above ? i - 1 : i + 1; j >= 0 && j < staves.Length; j += above ? -1 : 1)
                     if (!staves[j].IsHidden)
                         return true;
                 break;
             }
         }
-        // An outer group's span bar runs below a staff that has a visible staff after it
+        // An outer group's span bar runs beside a staff that has a visible staff on that side
         // anywhere in the group's run, not only in its own leaf group — when that group, or any
         // group around it, draws bar lines through (SharedRenderer.DrawStaffConnectors).
         foreach (var run in MultiStaffLayouter.OuterRuns(system))
@@ -756,7 +761,7 @@ internal static class HairpinEngraver
                 continue;
             var runStaves = run.Leaves.SelectMany(l => l.Staves).ToList();
             int at = runStaves.FindIndex(s => s.StaffIndex == staffIdx && !s.IsHidden);
-            if (at >= 0 && runStaves.Skip(at + 1).Any(s => !s.IsHidden))
+            if (at >= 0 && (above ? runStaves.Take(at) : runStaves.Skip(at + 1)).Any(s => !s.IsHidden))
                 return true;
         }
         return false;
@@ -828,20 +833,43 @@ internal static class HairpinEngraver
 
     /// <summary>
     /// The dynamic texts a hairpin bound can stand against, indexed by their moment —
-    /// same staff, below the staff, a real level (expressive text rides the dynamics
-    /// table but is a different grob). First entry per key wins.
+    /// same staff, the hairpin's own side of it, a real level (expressive text rides the
+    /// dynamics table but is a different grob). First entry per key wins.
     /// </summary>
-    private static Dictionary<(int Measure, int Item, int Staff), DynamicLayout> BuildDynamicIndex(
+    /// <remarks>Keyed by side so that <see cref="BoundText"/> can prefer the hairpin's own.</remarks>
+    private static Dictionary<(int Measure, int Item, int Staff, bool Above), DynamicLayout> BuildDynamicIndex(
         ImmutableArray<DynamicLayout> dynamicLayouts)
     {
-        var index = new Dictionary<(int, int, int), DynamicLayout>();
+        var index = new Dictionary<(int, int, int, bool), DynamicLayout>();
         if (dynamicLayouts.IsDefaultOrEmpty)
             return index;
         foreach (var d in dynamicLayouts)
-            if (!d.IsAbove && !d.IsExpressiveText)
-                index.TryAdd((d.MeasureIndex, d.ItemIndex, d.StaffIndex), d);
+            if (!d.IsExpressiveText)
+                index.TryAdd((d.MeasureIndex, d.ItemIndex, d.StaffIndex, d.IsAbove), d);
         return index;
     }
+
+    /// <summary>
+    /// The dynamic text a hairpin bound stands against at a moment of its staff: the one on
+    /// the hairpin's own side, else the one on the other side of the staff — the bound is the
+    /// text whichever side it was sent to, and only its X is read.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1225/dyn/lp/d3.ly, \dynamicUp): after
+    /// <c>c''4_\ff\&gt;</c> the wedge, above the staff, opens at 28.504 — the ff below the staff
+    /// ends 1.0 left of it — and before <c>f''_\ff</c> it stops at 46.115, 1.0 short of that ff.
+    /// Until session 1225 a text forced above was no bound of the (always lower) wedge.
+    /// LILYPOND-REF: lily/dynamic-engraver.cc:168-177 Dynamic_engraver::process_music — the
+    ///   DynamicText made in a timestep is set as the bound of the spanner ending there
+    ///   (finished_spanner_->set_bound (RIGHT, script_)) or starting there
+    ///   (current_spanner_->set_bound (LEFT, script_)); no direction is read.
+    /// </remarks>
+    private static DynamicLayout? BoundText(
+        Dictionary<(int Measure, int Item, int Staff, bool Above), DynamicLayout> dynamicAt,
+        int measure, int item, HairpinItem hairpin)
+        => dynamicAt.TryGetValue((measure, item, hairpin.StaffIndex, hairpin.IsAbove), out var own) ? own
+            : dynamicAt.TryGetValue((measure, item, hairpin.StaffIndex, !hairpin.IsAbove), out var other) ? other
+            : null;
 
     /// <summary>
     /// The items of the hairpin's own staff in <paramref name="measure"/>: the layout's on a

@@ -49,10 +49,12 @@ namespace LilySharp.Core.Svg.Layout;
 /// ⚠️ NOT PORTED, DISCLOSED (no pair measures either) — both are LP behaviours this
 ///   grouping does not reproduce, not Lily#-own quantities (§5.2 audit, session 158):
 ///   ⑴ LilyPond BREAKS the line when a new dynamic carries an explicit direction
-///     differing from the line's (:125-138). Lily#'s hairpins are still all PLACED
-///     below (HairpinItem.IsAbove is carried since session 1224 and not read here
-///     yet, docs/dynamics-above-lyrics-design.md §3.2), so a forced-above text is
-///     simply left OUT of the group here instead of breaking it.
+///     differing from the line's (:125-138). Here a line is built per staff AND side
+///     (<see cref="DynamicLine.IsAbove"/>): the hairpins of one side chain, the texts of
+///     that side inside the span join, and a member of the other side is left OUT of the
+///     group instead of breaking it — the hairpin keeps its own side, where LilyPond's
+///     follows a text written on the same note (owner's decision D3,
+///     docs/dynamics-above-lyrics-design.md §3.6).
 ///   ⑵ Same-column stacking (two voices' dynamics on one column,
 ///     <see cref="DynamicEngraver.StackStep"/>) is not re-applied to a grouped text —
 ///     in LilyPond those come from two Voice contexts and ride two separate lines.
@@ -61,15 +63,17 @@ internal static class DynamicAlignEngraver
 {
     /// <summary>
     /// One DynamicLineSpanner: the chained hairpins (indices into the detected
-    /// hairpin items) and the below-staff dynamic texts (indices into the dynamic
-    /// layouts) that ride it, spanning [Start..End] moments on one staff.
+    /// hairpin items) and the dynamic texts of the same side (indices into the dynamic
+    /// layouts) that ride it, spanning [Start..End] moments on one staff, below it or —
+    /// <paramref name="IsAbove"/> — above.
     /// </summary>
     internal readonly record struct DynamicLine(
         int StaffIndex,
         int StartMeasureIndex, int StartItemIndex,
         int EndMeasureIndex, int EndItemIndex,
         ImmutableArray<int> HairpinItemIndices,
-        ImmutableArray<int> DynamicLayoutIndices);
+        ImmutableArray<int> DynamicLayoutIndices,
+        bool IsAbove = false);
 
     /// <summary>
     /// One BROKEN PIECE of a multi-member line, in layout-index terms: the members
@@ -78,10 +82,13 @@ internal static class DynamicAlignEngraver
     /// pass places the DynamicLineSpanner, not its children one by one.
     /// LILYPOND-REF: scm/define-grobs.scm:1407 DynamicLineSpanner outside-staff-priority
     ///   = 250 — the priority is the SPANNER's.
+    /// <paramref name="IsAbove"/>: the line stands above its staff, so the ABOVE pass moves
+    /// it (<see cref="OutsideStaffStacker.StackAboveStaff"/>) and the below pass leaves it.
     /// </summary>
     public readonly record struct AlignedLineGroup(
         ImmutableArray<int> DynamicIndices,
-        ImmutableArray<int> HairpinIndices);
+        ImmutableArray<int> HairpinIndices,
+        bool IsAbove = false);
 
     /// <summary>
     /// Rewrites the Y of every grouped member so texts and wedges linked by running
@@ -229,7 +236,11 @@ internal static class DynamicAlignEngraver
                     (vi, mi, ii) => beamMembers.TryGetValue((line.StaffIndex, vi, mi, ii), out var b)
                         ? b : null,
                     staffLines);
-                double spannerY = DynamicEngraver.SpannerOffsetY(dir: -1.0, support, my, staffLines);
+                // The line's own side: one computation, dir its sign. The text hangs
+                // TextOffsetInSpanner BELOW the spanner on either side (define-grobs.scm:1450
+                // is a plain Y-offset, not a side position).
+                double spannerY = DynamicEngraver.SpannerOffsetY(
+                    dir: line.IsAbove ? 1.0 : -1.0, support, my, staffLines);
 
                 foreach (int di in sysTexts)
                     dynBuilder![di] = dynBuilder[di] with
@@ -250,7 +261,8 @@ internal static class DynamicAlignEngraver
                 }
                 groups.Add(new AlignedLineGroup(
                     sysTexts.ToImmutableArray(),
-                    sysWedges.Select(w => w.LayoutIdx).ToImmutableArray()));
+                    sysWedges.Select(w => w.LayoutIdx).ToImmutableArray(),
+                    line.IsAbove));
             }
         }
 
@@ -259,9 +271,9 @@ internal static class DynamicAlignEngraver
     }
 
     /// <summary>
-    /// Builds the lines: per staff, hairpins sorted by start moment chain while each
+    /// Builds the lines: per staff and side, hairpins sorted by start moment chain while each
     /// starts no later than the running end (:210 — the set of running spanners never
-    /// empties at a shared timestep), and every below-staff dynamic text whose moment
+    /// empties at a shared timestep), and every dynamic text of that side whose moment
     /// falls inside the chained span [start..end] (both ends inclusive: the start
     /// text and the terminating text are acknowledged while the line is alive) joins.
     /// </summary>
@@ -272,7 +284,7 @@ internal static class DynamicAlignEngraver
         var lines = ImmutableArray.CreateBuilder<DynamicLine>();
         foreach (var staffGroup in hairpinItems
             .Select((hp, i) => (Item: hp, Index: i))
-            .GroupBy(x => x.Item.StaffIndex))
+            .GroupBy(x => (Staff: x.Item.StaffIndex, Above: x.Item.IsAbove)))
         {
             var ordered = staffGroup
                 .OrderBy(x => x.Item.StartMeasureIndex)
@@ -303,16 +315,17 @@ internal static class DynamicAlignEngraver
                 for (int di = 0; di < dynamicLayouts.Length; di++)
                 {
                     var d = dynamicLayouts[di];
-                    if (d.IsAbove || d.IsExpressiveText || d.StaffIndex != staffGroup.Key)
+                    if (d.IsAbove != staffGroup.Key.Above || d.IsExpressiveText
+                        || d.StaffIndex != staffGroup.Key.Staff)
                         continue;
                     var moment = (d.MeasureIndex, d.ItemIndex);
                     if (Cmp(moment, start) >= 0 && Cmp(moment, end) <= 0)
                         texts.Add(di);
                 }
 
-                lines.Add(new DynamicLine(staffGroup.Key,
+                lines.Add(new DynamicLine(staffGroup.Key.Staff,
                     start.M, start.I, end.M, end.I,
-                    members.ToImmutable(), texts.ToImmutable()));
+                    members.ToImmutable(), texts.ToImmutable(), staffGroup.Key.Above));
             }
         }
         return lines.ToImmutable();

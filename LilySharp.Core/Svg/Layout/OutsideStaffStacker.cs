@@ -323,7 +323,7 @@ internal static class OutsideStaffStacker
                     placedStaves.Add((ds, dyn.StaffIndex));
         if (!hairpins.IsDefaultOrEmpty)
             foreach (var hp in hairpins)
-                if (measureToSystem.TryGetValue(hp.StartMeasureIndex, out int hs))
+                if (!hp.IsAbove && measureToSystem.TryGetValue(hp.StartMeasureIndex, out int hs))
                     placedStaves.Add((hs, hp.StaffIndex));
         // A below-staff script that declares a priority is itself placed here, so its
         // (system, staff) needs a tracker whatever else is on that staff.
@@ -439,6 +439,9 @@ internal static class OutsideStaffStacker
 
         // --- Priority 250: DynamicLineSpanner (dynamics + hairpins) ---
         // LILYPOND-REF: scm/define-grobs.scm:1407 DynamicLineSpanner.outside-staff-priority = 250
+        // A line that stands ABOVE its staff — a lone wedge or a group — is the above pass's
+        // (StackAboveStaff's 250 turn): it passes through here untouched and is no occupier
+        // below, as a forced-above text always has.
         var groupedDynIdx = new HashSet<int>();
         var groupedHpIdx = new HashSet<int>();
         if (!lineGroups.IsDefaultOrEmpty)
@@ -468,6 +471,8 @@ internal static class OutsideStaffStacker
         if (!lineGroups.IsDefaultOrEmpty)
             for (int gi = 0; gi < lineGroups.Length; gi++)
             {
+                if (lineGroups[gi].IsAbove)
+                    continue;
                 double left = double.PositiveInfinity;
                 foreach (int di in lineGroups[gi].DynamicIndices)
                     if (dynB != null)
@@ -483,7 +488,7 @@ internal static class OutsideStaffStacker
                     turn.Add((LabelLeft(dynB[i]), turn.Count, 1, i));
         if (hpB != null)
             for (int i = 0; i < hpB.Count; i++)
-                if (!groupedHpIdx.Contains(i))
+                if (!groupedHpIdx.Contains(i) && !hpB[i].IsAbove)
                     turn.Add((hpB[i].StartX, turn.Count, 2, i));
         turn.Sort(static (a, b) => a.Left != b.Left ? a.Left.CompareTo(b.Left) : a.Seq.CompareTo(b.Seq));
         foreach (var e in turn)
@@ -1052,7 +1057,8 @@ internal static class OutsideStaffStacker
             if (!dynamics[i].IsAbove)
                 used.Add(dynamics[i].StaffIndex);
         foreach (int i in part.Hairpins)
-            used.Add(hairpins[i].StaffIndex);
+            if (!hairpins[i].IsAbove)
+                used.Add(hairpins[i].StaffIndex);
         foreach (int i in part.Articulations)
             if (!articulations[i].IsAbove && articulations[i].OutsideStaffPriority is not null)
                 used.Add(articulations[i].StaffIndex);
@@ -1207,7 +1213,8 @@ internal static class OutsideStaffStacker
                    ImmutableArray<DynamicLayout> Dynamics,
                    ImmutableArray<TextSpannerLayout> TextSpanners,
                    ImmutableArray<ArticulationLayout> Articulations,
-                   ImmutableArray<PartCombineLayout> PartCombineTexts)
+                   ImmutableArray<PartCombineLayout> PartCombineTexts,
+                   ImmutableArray<HairpinLayout> Hairpins)
         StackAboveStaff(
             ScoreTextMetrics fonts,
             ImmutableArray<SystemLayout> systems,
@@ -1229,7 +1236,12 @@ internal static class OutsideStaffStacker
             Func<int, int, (object Up, object Down)?>? profileIdentity = null,
             ImmutableArray<PartCombineLayout> partCombineTexts = default,
             IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null,
-            Func<int, int>? staffLinesOf = null)
+            Func<int, int>? staffLinesOf = null,
+            // The hairpins (all of them — the ones that stand ABOVE their staff are placed at
+            // the dynamics' 250, the rest pass through) and the aligned lines
+            // (DynamicAlignEngraver's groups; the above ones move as one grob here).
+            ImmutableArray<HairpinLayout> hairpins = default,
+            ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups = default)
     {
         // ⚠️ A BOOK WITH PART-COMBINE LABELS STACKS LIVE: the memo's program does not carry
         // them (AboveStackMemo.SystemEntry has no field for the family), and a replayed
@@ -1240,30 +1252,33 @@ internal static class OutsideStaffStacker
             return StackAboveStaffCore(fonts, systems, systemSkylines, tupletBrackets, trills,
                 barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
                 aboveDynamics, textSpanners, chordNames, chordItems, staffProfile,
-                partCombineTexts, prebuiltMeasureToSystem, staffLinesOf);
+                partCombineTexts, prebuiltMeasureToSystem, staffLinesOf, hairpins, lineGroups);
         var m = StackAboveStaffMemoized(fonts, systems, systemSkylines, tupletBrackets, trills,
             barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
             aboveDynamics, textSpanners, chordNames, chordItems, staffProfile, memo,
-            profileIdentity, prebuiltMeasureToSystem, staffLinesOf);
+            profileIdentity, prebuiltMeasureToSystem, staffLinesOf, hairpins, lineGroups);
         return (m.Trills, m.BarNumbers, m.Ottavas, m.CustomTexts, m.Voltas, m.MusicMarks,
-            m.Dynamics, m.TextSpanners, m.Articulations, partCombineTexts);
+            m.Dynamics, m.TextSpanners, m.Articulations, partCombineTexts, m.Hairpins);
     }
 
-    /// <summary>Per-system index lists into the pass's ten input arrays — one system's
-    /// slice of each family, in array order.</summary>
+    /// <summary>Per-system index lists into the pass's input arrays — one system's
+    /// slice of each family, in array order — plus the ABOVE line groups anchored in that
+    /// system (indices into the line groups).</summary>
     private sealed class SysPart
     {
         public readonly List<int> Trills = new(), BarNumbers = new(), Ottavas = new(),
             CustomTexts = new(), Voltas = new(), MusicMarks = new(), Articulations = new(),
-            Dynamics = new(), TextSpanners = new(), TupletBrackets = new(), ChordNames = new();
+            Dynamics = new(), TextSpanners = new(), TupletBrackets = new(), ChordNames = new(),
+            Hairpins = new(), Groups = new();
 
-        /// <summary>Empties all eleven lists, keeping their capacity (see
+        /// <summary>Empties every list, keeping its capacity (see
         /// <see cref="t_spareParts"/>).</summary>
         public void Clear()
         {
             Trills.Clear(); BarNumbers.Clear(); Ottavas.Clear(); CustomTexts.Clear();
             Voltas.Clear(); MusicMarks.Clear(); Articulations.Clear(); Dynamics.Clear();
             TextSpanners.Clear(); TupletBrackets.Clear(); ChordNames.Clear();
+            Hairpins.Clear(); Groups.Clear();
         }
     }
 
@@ -1283,7 +1298,8 @@ internal static class OutsideStaffStacker
                    ImmutableArray<MusicMarkLayout> MusicMarks,
                    ImmutableArray<DynamicLayout> Dynamics,
                    ImmutableArray<TextSpannerLayout> TextSpanners,
-                   ImmutableArray<ArticulationLayout> Articulations)
+                   ImmutableArray<ArticulationLayout> Articulations,
+                   ImmutableArray<HairpinLayout> Hairpins)
         StackAboveStaffMemoized(
             ScoreTextMetrics fonts,
             ImmutableArray<SystemLayout> systems,
@@ -1304,7 +1320,9 @@ internal static class OutsideStaffStacker
             AboveStackMemo memo,
             Func<int, int, (object Up, object Down)?> profileIdentity,
             IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null,
-            Func<int, int>? staffLinesOf = null)
+            Func<int, int>? staffLinesOf = null,
+            ImmutableArray<HairpinLayout> hairpins = default,
+            ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups = default)
     {
         // The same measure→system map the core needs — so it is built ONCE and handed on
         // (this remark used to say "the same map the core builds (cheap)", which is how one
@@ -1342,6 +1360,59 @@ internal static class OutsideStaffStacker
         Collect(textSpanners, ts => ts.StartMeasureIndex, p => p.TextSpanners);
         Collect(tupletBrackets, tb => tb.MeasureIndex, p => p.TupletBrackets);
         Collect(chordNames, cn => cn.MeasureIndex, p => p.ChordNames);
+        Collect(hairpins, h => h.StartMeasureIndex, p => p.Hairpins);
+
+        // 1b. Assign each ABOVE line group to its members' one system — the below pass's
+        // wrinkle (StackBelowStaffMemoized), on this side: a line couples its members into
+        // one placement, so a group whose members straddle systems, or mix mapped and
+        // unmapped members, forces every mapped system it touches onto the live path.
+        HashSet<int>? forcedLive = null;
+        bool anyAboveGroup = false;
+        if (!lineGroups.IsDefaultOrEmpty)
+        {
+            for (int gi = 0; gi < lineGroups.Length; gi++)
+            {
+                var g = lineGroups[gi];
+                if (!g.IsAbove)
+                    continue;
+                anyAboveGroup = true;
+                int first = -1;
+                bool oneSystem = true, any = false;
+                void Touch(bool mapped, int s)
+                {
+                    if (!mapped)
+                    {
+                        oneSystem = false;
+                        return;
+                    }
+                    if (!any)
+                    {
+                        any = true;
+                        first = s;
+                    }
+                    else if (s != first)
+                        oneSystem = false;
+                }
+                foreach (int di in g.DynamicIndices)
+                    Touch(measureToSystem.TryGetValue(aboveDynamics[di].MeasureIndex, out int ds), ds);
+                foreach (int hi in g.HairpinIndices)
+                    Touch(measureToSystem.TryGetValue(hairpins[hi].StartMeasureIndex, out int hs), hs);
+                if (!any)
+                    continue;   // fully unmapped: its members are passthroughs on the live path
+                if (oneSystem)
+                {
+                    PartOf(first).Groups.Add(gi);
+                    continue;
+                }
+                forcedLive ??= new HashSet<int>();
+                foreach (int di in g.DynamicIndices)
+                    if (measureToSystem.TryGetValue(aboveDynamics[di].MeasureIndex, out int ds))
+                        forcedLive.Add(ds);
+                foreach (int hi in g.HairpinIndices)
+                    if (measureToSystem.TryGetValue(hairpins[hi].StartMeasureIndex, out int hs))
+                        forcedLive.Add(hs);
+            }
+        }
 
         // 2. Build each occupied system's program and consult the memo.
         // The hit set is BOUNDED by the partition — every system it holds came out of `parts`
@@ -1361,10 +1432,12 @@ internal static class OutsideStaffStacker
         t_aboveProbe = null;
         foreach (var (s, part) in parts)
         {
+            if (forcedLive != null && forcedLive.Contains(s))
+                continue;
             if (!FillProgram(probe, systems, systemSkylines, s, part, topStaff,
                     profileIdentity, tupletBrackets, trills, barNumbers, ottavas, customTexts,
                     voltas, musicMarks, articulations, aboveDynamics, textSpanners,
-                    chordNames, chordItems))
+                    chordNames, chordItems, hairpins, lineGroups))
                 continue; // a profile with no stable identity: never memoized
             if (memo.TryMatch(s, probe))
                 hits.Add(s);
@@ -1386,11 +1459,12 @@ internal static class OutsideStaffStacker
         // MoveToImmutable rather than returning a quietly short array.
         int skipTuplets = 0, skipTrills = 0, skipBarNumbers = 0, skipOttavas = 0,
             skipCustomTexts = 0, skipVoltas = 0, skipMarks = 0, skipArtics = 0,
-            skipDynamics = 0, skipTextSpanners = 0, skipChordNames = 0;
+            skipDynamics = 0, skipTextSpanners = 0, skipChordNames = 0, skipHairpins = 0;
         foreach (int s in hits)
         {
             if (!parts.TryGetValue(s, out var hitPart))
                 continue;
+            skipHairpins += hitPart.Hairpins.Count;
             skipTuplets += hitPart.TupletBrackets.Count;
             skipTrills += hitPart.Trills.Count;
             skipBarNumbers += hitPart.BarNumbers.Count;
@@ -1403,8 +1477,11 @@ internal static class OutsideStaffStacker
             skipTextSpanners += hitPart.TextSpanners.Count;
             skipChordNames += hitPart.ChordNames.Count;
         }
+        // The two families the above line groups read through also get an old→live index
+        // dictionary — only when a group stands above at all.
+        Dictionary<int, int>? remapDyn = null, remapHp = null;
         (ImmutableArray<T> Live, int[] Map) Filter<T>(ImmutableArray<T> arr,
-            Func<T, int> measureOf, int skipped)
+            Func<T, int> measureOf, int skipped, Dictionary<int, int>? remap = null)
         {
             if (arr.IsDefaultOrEmpty || hits.Count == 0)
                 return (arr, Array.Empty<int>());
@@ -1415,10 +1492,16 @@ internal static class OutsideStaffStacker
             {
                 if (measureToSystem.TryGetValue(measureOf(arr[i]), out int s) && hits.Contains(s))
                     continue;
+                remap?.Add(i, live.Count);
                 map[live.Count] = i;
                 live.Add(arr[i]);
             }
             return (live.MoveToImmutable(), map);
+        }
+        if (anyAboveGroup && hits.Count > 0)
+        {
+            remapDyn = new Dictionary<int, int>();
+            remapHp = new Dictionary<int, int>();
         }
         var (liveTuplets, _) = Filter(tupletBrackets, tb => tb.MeasureIndex, skipTuplets);
         var (liveTrills, mapTrills) = Filter(trills, t => t.StartMeasureIndex, skipTrills);
@@ -1430,7 +1513,10 @@ internal static class OutsideStaffStacker
         var (liveVoltas, mapVoltas) = Filter(voltas, v => v.StartMeasureIndex, skipVoltas);
         var (liveMarks, mapMarks) = Filter(musicMarks, m => m.MeasureIndex, skipMarks);
         var (liveArtics, mapArtics) = Filter(articulations, a => a.MeasureIndex, skipArtics);
-        var (liveDynamics, mapDynamics) = Filter(aboveDynamics, d => d.MeasureIndex, skipDynamics);
+        var (liveDynamics, mapDynamics) =
+            Filter(aboveDynamics, d => d.MeasureIndex, skipDynamics, remapDyn);
+        var (liveHairpins, mapHairpins) =
+            Filter(hairpins, h => h.StartMeasureIndex, skipHairpins, remapHp);
         var (liveTextSpanners, mapTextSpanners) =
             Filter(textSpanners, ts => ts.StartMeasureIndex, skipTextSpanners);
         // A seed-only family filters like the rest and is never scattered back: a hit
@@ -1439,12 +1525,54 @@ internal static class OutsideStaffStacker
         // ChordNameLayout.SourceIndex — filtering the items alongside would renumber them.
         var (liveChordNames, _) = Filter(chordNames, cn => cn.MeasureIndex, skipChordNames);
 
+        // 3b. The live above groups: every one not anchored in a hit system, its indices
+        // remapped into the filtered arrays (the forced-live guard is what makes "anchored
+        // in a live system" imply "every member is in the live arrays"). The below groups
+        // are not this pass's and are left out.
+        var liveGroups = lineGroups;
+        if (remapDyn != null && remapHp != null)
+        {
+            static ImmutableArray<int> RemapAll(ImmutableArray<int> indices, Dictionary<int, int> remap)
+            {
+                if (indices.IsEmpty)
+                    return ImmutableArray<int>.Empty;
+                var remapped = new int[indices.Length];
+                for (int k = 0; k < remapped.Length; k++)
+                    remapped[k] = remap.TryGetValue(indices[k], out int v) ? v : indices[k];
+                return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(remapped);
+            }
+            var gb = ImmutableArray.CreateBuilder<DynamicAlignEngraver.AlignedLineGroup>();
+            foreach (var g in lineGroups)
+            {
+                if (!g.IsAbove)
+                    continue;
+                bool inHit = false;
+                foreach (int di in g.DynamicIndices)
+                    if (measureToSystem.TryGetValue(aboveDynamics[di].MeasureIndex, out int ds)
+                        && hits.Contains(ds))
+                        inHit = true;
+                foreach (int hi in g.HairpinIndices)
+                    if (measureToSystem.TryGetValue(hairpins[hi].StartMeasureIndex, out int hs)
+                        && hits.Contains(hs))
+                        inHit = true;
+                if (inHit)
+                    continue;   // replayed with its system
+                gb.Add(g with
+                {
+                    DynamicIndices = RemapAll(g.DynamicIndices, remapDyn),
+                    HairpinIndices = RemapAll(g.HairpinIndices, remapHp),
+                });
+            }
+            liveGroups = gb.ToImmutable();
+        }
+
         // 4. Stack the live systems (byte-identical to stacking them in the full call:
         // a system's grobs are all-in or all-out, and only same-system grobs interact).
         var core = StackAboveStaffCore(fonts, systems, systemSkylines, liveTuplets, liveTrills,
             liveBarNumbers, liveOttavas, liveCustomTexts, liveVoltas, liveMarks, liveArtics,
             liveDynamics, liveTextSpanners, liveChordNames, chordItems, staffProfile,
-            prebuiltMeasureToSystem: measureToSystem, staffLinesOf: staffLinesOf);
+            prebuiltMeasureToSystem: measureToSystem, staffLinesOf: staffLinesOf,
+            hairpins: liveHairpins, lineGroups: liveGroups);
 
         // 5. Reassemble: live results scatter back by index; hit systems replay their
         // stored outputs, positionally parallel to the (equal) stored inputs.
@@ -1484,11 +1612,14 @@ internal static class OutsideStaffStacker
             p => p.TextSpanners, e => e.OutTextSpanners);
         var resArtics = Rebuild(articulations, core.Articulations, mapArtics,
             p => p.Articulations, e => e.OutArticulations);
+        var resHairpins = Rebuild(hairpins, core.Hairpins, mapHairpins,
+            p => p.Hairpins, e => e.OutHairpins);
 
         // 6. Store the missed systems' outputs for the next keystroke.
         foreach (var (s, entry) in toStore)
         {
             var part = parts[s];
+            entry.OutHairpins = Gather(resHairpins, part.Hairpins);
             entry.OutTrills = Gather(resTrills, part.Trills);
             entry.OutBarNumbers = Gather(resBarNumbers, part.BarNumbers);
             entry.OutOttavas = Gather(resOttavas, part.Ottavas);
@@ -1504,7 +1635,7 @@ internal static class OutsideStaffStacker
         GiveParts(parts);
 
         return (resTrills, resBarNumbers, resOttavas, resCustomTexts, resVoltas, resMarks,
-            resDynamics, resTextSpanners, resArtics);
+            resDynamics, resTextSpanners, resArtics, resHairpins);
     }
 
     /// <summary>
@@ -1628,7 +1759,9 @@ internal static class OutsideStaffStacker
         ImmutableArray<DynamicLayout> aboveDynamics,
         ImmutableArray<TextSpannerLayout> textSpanners,
         ImmutableArray<ChordNameLayout> chordNames,
-        ImmutableArray<ChordNameItem> chordItems)
+        ImmutableArray<ChordNameItem> chordItems,
+        ImmutableArray<HairpinLayout> hairpins,
+        ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups)
     {
         probe.Clear();
         var sys = systems[s];
@@ -1655,6 +1788,11 @@ internal static class OutsideStaffStacker
         foreach (int i in part.Dynamics) used.Add(Resolve(aboveDynamics[i].StaffIndex));
         foreach (int i in part.TextSpanners) used.Add(Resolve(textSpanners[i].StaffIndex));
         foreach (int i in part.TupletBrackets) used.Add(Resolve(tupletBrackets[i].StaffIndex));
+        // A wedge that stands above is placed on its own staff's tracker (one that hangs
+        // below passes through this pass and asks for none).
+        foreach (int i in part.Hairpins)
+            if (hairpins[i].IsAbove)
+                used.Add(Resolve(hairpins[i].StaffIndex));
         // A seeded chord symbol asks for its OWN staff's tracker, so that staff's profile is
         // part of this system's program too — otherwise a book whose only above-staff ink is
         // a chord symbol could replay a stack built against a profile that has since changed.
@@ -1695,6 +1833,30 @@ internal static class OutsideStaffStacker
         GatherInto(probe.TextSpanners, textSpanners, part.TextSpanners);
         GatherInto(probe.TupletBrackets, tupletBrackets, part.TupletBrackets);
         GatherInto(probe.ChordNames, chordNames, part.ChordNames);
+        GatherInto(probe.Hairpins, hairpins, part.Hairpins);
+
+        // The above line groups anchored here, as per-system ordinals into this system's
+        // dynamics / hairpins — immune to global index shifts (BelowStackMemo's fold).
+        for (int k = 0; k < part.Groups.Count; k++)
+        {
+            var g = lineGroups[part.Groups[k]];
+            for (int j = 0; j < g.DynamicIndices.Length; j++)
+            {
+                int ordinal = part.Dynamics.IndexOf(g.DynamicIndices[j]);
+                if (ordinal < 0)
+                    return false; // a member outside this system's slice: stack live
+                probe.GroupDynamics.Add(ordinal);
+            }
+            probe.GroupDynamicLengths.Add(g.DynamicIndices.Length);
+            for (int j = 0; j < g.HairpinIndices.Length; j++)
+            {
+                int ordinal = part.Hairpins.IndexOf(g.HairpinIndices[j]);
+                if (ordinal < 0)
+                    return false;
+                probe.GroupHairpins.Add(ordinal);
+            }
+            probe.GroupHairpinLengths.Add(g.HairpinIndices.Length);
+        }
         return true;
     }
 
@@ -1727,7 +1889,8 @@ internal static class OutsideStaffStacker
                    ImmutableArray<DynamicLayout> Dynamics,
                    ImmutableArray<TextSpannerLayout> TextSpanners,
                    ImmutableArray<ArticulationLayout> Articulations,
-                   ImmutableArray<PartCombineLayout> PartCombineTexts)
+                   ImmutableArray<PartCombineLayout> PartCombineTexts,
+                   ImmutableArray<HairpinLayout> Hairpins)
         StackAboveStaffCore(
             ScoreTextMetrics fonts,
             ImmutableArray<SystemLayout> systems,
@@ -1747,11 +1910,13 @@ internal static class OutsideStaffStacker
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
             ImmutableArray<PartCombineLayout> partCombineTexts = default,
             IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null,
-            Func<int, int>? staffLinesOf = null)
+            Func<int, int>? staffLinesOf = null,
+            ImmutableArray<HairpinLayout> hairpins = default,
+            ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups = default)
     {
         if (systems.IsDefaultOrEmpty)
             return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks,
-                aboveDynamics, textSpanners, articulations, partCombineTexts);
+                aboveDynamics, textSpanners, articulations, partCombineTexts, hairpins);
 
         var measureToSystem = prebuiltMeasureToSystem
             ?? SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
@@ -1767,8 +1932,8 @@ internal static class OutsideStaffStacker
         var adjArticulations = PlaceArticulations(
             articulations, trackers, measureToSystem, systems, textScriptStage: false);
         var adjBarNumbers = PlaceBarNumbers(fonts, barNumbers, trackers, measureToSystem, topStaff, systems);
-        var adjDynamics = PlaceAboveDynamics(fonts, aboveDynamics, trackers, measureToSystem, systems,
-            expressive: false);
+        var (adjDynamics, adjHairpins) = PlaceAboveDynamicLines(fonts, aboveDynamics, hairpins,
+            lineGroups, trackers, measureToSystem, systems);
         var adjTextSpanners = PlaceTextSpanners(fonts, textSpanners, trackers, measureToSystem, systems);
         var adjOttavas = PlaceOttavas(fonts, ottavas, trackers, measureToSystem);
         // 450: TextScript — free expressive text (@text.up), then a chord diagram (@diagram),
@@ -1786,7 +1951,7 @@ internal static class OutsideStaffStacker
         var adjMarks = PlaceMusicMarks(fonts, musicMarks, trackers, measureToSystem, systems, rowSupport, staffLinesOf);
 
         return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks,
-            adjDynamics, adjTextSpanners, adjArticulations, adjPartCombine);
+            adjDynamics, adjTextSpanners, adjArticulations, adjPartCombine, adjHairpins);
     }
 
     /// <summary>
@@ -2542,13 +2707,175 @@ internal static class OutsideStaffStacker
         return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
+    /// <summary>
+    /// The above side's 250 turn: every DynamicLineSpanner that stands ABOVE its staff — an
+    /// aligned line (texts and wedges linked by running hairpins, one grob), a lone dynamic
+    /// text, a lone wedge — placed in the order of its left edge, as the below pass places
+    /// the ones that hang below (<see cref="StackBelowStaffCore"/>'s 250 turn, whose mirror
+    /// this is; the order's address and measurement are there).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1401-1416 DynamicLineSpanner outside-staff-priority 250 — the
+    ///   grob the pass places is the line, whichever side its direction puts it on
+    ///   (ly/property-init.ly:338-341 dynamicUp sets DynamicLineSpanner.direction UP).
+    /// LILYPOND-REF: lily/axis-group-interface.cc:880-907 skyline_spacing — one sort by
+    ///   (priority, left extent) over the grobs of both directions; :945-972 places them.
+    /// A wedge's YUp is already system-relative (the tracker's frame); a text's is about its
+    /// staff middle and is carried there and back.
+    /// </remarks>
+    private static (ImmutableArray<DynamicLayout> Dynamics, ImmutableArray<HairpinLayout> Hairpins)
+        PlaceAboveDynamicLines(
+            ScoreTextMetrics fonts,
+            ImmutableArray<DynamicLayout> dynamics, ImmutableArray<HairpinLayout> hairpins,
+            ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups,
+            Func<int, int, OutsideStaffSkylines> trackers,
+            IReadOnlyDictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+    {
+        // The turn first, off the arrays as handed in: most systems hold nothing of it, and
+        // then nothing is copied.
+        HashSet<int>? groupedDyn = null, groupedHp = null;
+        List<(double Left, int Seq, int Kind, int Index)>? turn = null;
+        if (!lineGroups.IsDefaultOrEmpty)
+            for (int gi = 0; gi < lineGroups.Length; gi++)
+            {
+                var g = lineGroups[gi];
+                if (!g.IsAbove)
+                    continue;
+                double left = double.PositiveInfinity;
+                foreach (int di in g.DynamicIndices)
+                {
+                    (groupedDyn ??= new HashSet<int>()).Add(di);
+                    if (!dynamics.IsDefaultOrEmpty)
+                        left = Math.Min(left, DynamicEngraver.LabelExtentX(fonts, dynamics[di]).Left);
+                }
+                foreach (int hi in g.HairpinIndices)
+                {
+                    (groupedHp ??= new HashSet<int>()).Add(hi);
+                    if (!hairpins.IsDefaultOrEmpty)
+                        left = Math.Min(left, hairpins[hi].StartX);
+                }
+                (turn ??= new()).Add((left, turn.Count, 0, gi));
+            }
+        if (!dynamics.IsDefaultOrEmpty)
+            for (int i = 0; i < dynamics.Length; i++)
+                if (dynamics[i].IsAbove && !dynamics[i].IsExpressiveText
+                    && !(groupedDyn?.Contains(i) ?? false))
+                    (turn ??= new()).Add(
+                        (DynamicEngraver.LabelExtentX(fonts, dynamics[i]).Left, turn.Count, 1, i));
+        if (!hairpins.IsDefaultOrEmpty)
+            for (int i = 0; i < hairpins.Length; i++)
+                if (hairpins[i].IsAbove && !(groupedHp?.Contains(i) ?? false))
+                    (turn ??= new()).Add((hairpins[i].StartX, turn.Count, 2, i));
+        if (turn is null)
+            return (dynamics, hairpins);
+        turn.Sort(static (a, b) => a.Left != b.Left ? a.Left.CompareTo(b.Left) : a.Seq.CompareTo(b.Seq));
+        var dynB = dynamics.IsDefaultOrEmpty ? null : dynamics.ToBuilder();
+        var hpB = hairpins.IsDefaultOrEmpty ? null : hairpins.ToBuilder();
+
+        foreach (var e in turn)
+        {
+            switch (e.Kind)
+            {
+                case 0:
+                {
+                    var g = lineGroups[e.Index];
+                    int sysIdx, staffIdx;
+                    if (g.DynamicIndices.Length > 0 && dynB != null)
+                    {
+                        var d0 = dynB[g.DynamicIndices[0]];
+                        if (!measureToSystem.TryGetValue(d0.MeasureIndex, out sysIdx))
+                            break;
+                        staffIdx = d0.StaffIndex;
+                    }
+                    else if (g.HairpinIndices.Length > 0 && hpB != null)
+                    {
+                        var h0 = hpB[g.HairpinIndices[0]];
+                        if (!measureToSystem.TryGetValue(h0.StartMeasureIndex, out sysIdx))
+                            break;
+                        staffIdx = h0.StaffIndex;
+                    }
+                    else
+                        break;
+                    // The members' combined outline in the tracker's frame — one Place and one
+                    // move for the whole line, so its members stay aligned.
+                    double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], staffIdx);
+                    (VerticalSkyline Up, VerticalSkyline Down)? dim = null;
+                    void Fold((VerticalSkyline Up, VerticalSkyline Down) part)
+                    {
+                        if (dim is { } d)
+                        {
+                            d.Up.Merge(part.Up);
+                            d.Down.Merge(part.Down);
+                        }
+                        else
+                            dim = part;
+                    }
+                    if (dynB != null)
+                        foreach (int di in g.DynamicIndices)
+                        {
+                            var dyn = dynB[di];
+                            Fold(DynamicEngraver.LabelSkylines(fonts, dyn.Text, dyn.IsExpressiveText,
+                                dyn.X, dyn.YUp + midUp, dyn.IsSubito));
+                        }
+                    if (hpB != null)
+                        foreach (int hi in g.HairpinIndices)
+                        {
+                            var hp = hpB[hi];
+                            Fold(HairpinEngraver.WedgeSkylines(hp.StartX, hp.EndX, hp.StartOpening,
+                                hp.EndOpening, hp.YUp, hp.CircleX));
+                        }
+                    if (dim is not { } my)
+                        break;
+                    double move = trackers(sysIdx, staffIdx).Place(my.Up, my.Down, OutsideStaffPadding);
+                    if (move != 0)
+                    {
+                        if (dynB != null)
+                            foreach (int di in g.DynamicIndices)
+                                dynB[di] = dynB[di] with { YUp = dynB[di].YUp + move };
+                        if (hpB != null)
+                            foreach (int hi in g.HairpinIndices)
+                                hpB[hi] = hpB[hi] with { YUp = hpB[hi].YUp + move };
+                    }
+                    break;
+                }
+                case 1:
+                {
+                    var dyn = dynB![e.Index];
+                    if (!measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
+                        break;
+                    double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], dyn.StaffIndex);
+                    var (myUp, myDown) = DynamicEngraver.LabelSkylines(
+                        fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp, dyn.IsSubito);
+                    double move = trackers(sysIdx, dyn.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
+                    dynB[e.Index] = dyn with { YUp = dyn.YUp + move };
+                    break;
+                }
+                default:
+                {
+                    var hp = hpB![e.Index];
+                    if (!measureToSystem.TryGetValue(hp.StartMeasureIndex, out int sysIdx))
+                        break;
+                    var (wedgeUp, wedgeDown) = HairpinEngraver.WedgeSkylines(
+                        hp.StartX, hp.EndX, hp.StartOpening, hp.EndOpening, hp.YUp, hp.CircleX);
+                    double move = trackers(sysIdx, hp.StaffIndex).Place(wedgeUp, wedgeDown, OutsideStaffPadding);
+                    if (move != 0)
+                        hpB[e.Index] = hp with { YUp = hp.YUp + move };
+                    break;
+                }
+            }
+        }
+        return (dynB?.MoveToImmutable() ?? dynamics, hpB?.MoveToImmutable() ?? hairpins);
+    }
+
     // ---- 250: DynamicText forced ABOVE (@f.up); 450: free expressive text (@text.up) ----
     // LILYPOND-REF: scm/define-grobs.scm:1298 DynamicText.outside-staff-priority = 250
     // LILYPOND-REF: scm/define-grobs.scm:3800-3807 TextScript outside-staff-priority 450
     // Below-staff dynamics are handled by StackBelowStaff; here the FORCED-above ones
     // stack outward from the staff and push higher-priority above-staff grobs (ottava,
-    // marks, …) clear of them. Text ascends UP from its baseline anchor. Called twice:
-    // the dynamics (<paramref name="expressive"/> false) in the 250 turn, the @text in the 450.
+    // marks, …) clear of them. Text ascends UP from its baseline anchor. The dynamics' own
+    // 250 turn is PlaceAboveDynamicLines (with the wedges and the aligned lines, in the
+    // order of their left edges); this places the @text (<paramref name="expressive"/>
+    // true) in the 450.
     private static ImmutableArray<DynamicLayout> PlaceAboveDynamics(
         ScoreTextMetrics fonts,
         ImmutableArray<DynamicLayout> aboveDynamics, Func<int, int, OutsideStaffSkylines> trackers,
@@ -2756,7 +3083,7 @@ internal static class OutsideStaffStacker
                             d.X, d.YUp - off - EngravingDefaults.StaffMiddle, d.IsSubito).Down);
             if (!hairpins.IsDefaultOrEmpty)
                 foreach (var h in hairpins)
-                    if (h.StaffIndex == staff
+                    if (!h.IsAbove && h.StaffIndex == staff
                         && measureToSystem.TryGetValue(h.StartMeasureIndex, out int hs) && hs == sys)
                         t.MergeSupport(down: HairpinEngraver.WedgeSkylines(
                             h.StartX, h.EndX, h.StartOpening, h.EndOpening, h.YUp, h.CircleX).Down);

@@ -1645,9 +1645,11 @@ internal static class LpGeometryProbes
     private static readonly string PLYM =
         PedalLyricScore("PLYM", "c4 d@sustain e f@!sustain | g2 g |", "pedal mixed");
 
-    /// <summary>A forte on the sung staff — the mirror of book PLD.</summary>
+    /// <summary>A forte UNDER the sung staff — the mirror of book PLD. Written <c>.down</c> since
+    /// session 1225: a staff with lyrics under it stands its dynamics above (owner's decision
+    /// 2026-11-11), and the book measures the one that hangs between the staff and its syllables.</summary>
     private static readonly string PLYD =
-        PedalLyricScore("PLYD", "c4 d e f | g2@f g |");
+        PedalLyricScore("PLYD", "c4 d e f | g2@f.down g |");
 
     /// <summary>
     /// All three pedal families struck together, text style, bass clef whole notes —

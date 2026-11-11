@@ -126,7 +126,7 @@ public class MeasureToSystemHandoffTests
         (ImmutableArray<CustomTextLayout>, ImmutableArray<BarNumberLayout>) Run(
             IReadOnlyDictionary<int, int>? prebuilt, AboveStackMemo? memo)
         {
-            var (_, bn, _, tx, _, _, _, _, _, _) = OutsideStaffStacker.StackAboveStaff(
+            var (_, bn, _, tx, _, _, _, _, _, _, _) = OutsideStaffStacker.StackAboveStaff(
                 ScoreTextMetrics.Bundled, systems, systemSkylines: null,
                 ImmutableArray<TupletBracketLayout>.Empty,
                 ImmutableArray<TrillSpannerLayout>.Empty,

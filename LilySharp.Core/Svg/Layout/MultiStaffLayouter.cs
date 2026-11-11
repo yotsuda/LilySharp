@@ -4232,7 +4232,7 @@ internal sealed class MultiStaffLayouter
                     // the room saw nothing to open it for.
                     // LILYPOND-REF: lily/axis-group-interface.cc:952-972 add_grobs_of_one_priority
                     //   — a placed outside-staff grob's skyline is merged into the group's.
-                    SkylineBuilder.AddHairpinsToSkyline(hairpins, StaffSize.Of(staff), sky.Down);
+                    SkylineBuilder.AddHairpinsToSkyline(hairpins, StaffSize.Of(staff), sky.Up, sky.Down);
 
                     // The staff's own accel./rit. spanner is OUTSIDE-STAFF INK ABOVE IT, and a
                     // row standing above the staff has to clear it exactly as the staff below a

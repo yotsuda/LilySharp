@@ -425,7 +425,9 @@ public class LyricStaffOrderTests
         var (plainLyrics, plainStaff) = LayoutOf(
             "part melody { section A { c'4 d e f } }\n" + tail);
         var (dynLyrics, dynStaff) = LayoutOf(
-            "part melody { section A { c'4@f d e f } }\n" + tail);
+            // .down: a staff with lyrics under it stands its dynamics ABOVE since session 1225,
+            // and this is the dynamic that hangs between the staff and its syllables.
+            "part melody { section A { c'4@f.down d e f } }\n" + tail);
 
         // The room does respond, and has all along — this is the control. If it ever stops
         // responding, the two assertions below agree for the wrong reason.

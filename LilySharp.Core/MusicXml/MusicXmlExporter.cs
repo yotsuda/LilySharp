@@ -1258,7 +1258,7 @@ public sealed class MusicXmlExporter
         measure.Directions.Add(new MusicXmlDirection
         {
             WedgeType = "stop",
-            Placement = "below",
+            Placement = _openWedge?.Placement ?? "below",
             Offset = CurrentMeasurePosition(measure),
         });
     }
@@ -2731,7 +2731,7 @@ public sealed class MusicXmlExporter
                 break;
 
             case DynamicSyntax dynamic:
-                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart, dynamic.IsSubito);
+                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart, dynamic.IsSubito, dynamic.ForcedAbove);
                 break;
 
             case TieSyntax:
@@ -3579,7 +3579,7 @@ public sealed class MusicXmlExporter
         // through the shared dynamic/wedge funnel and emit before the first member.
         foreach (var a in arpeggio.Articulations)
             if (a is DynamicSyntax dyn)
-                HandleDynamicText(dyn.DynamicToken.Text, subito: dyn.IsSubito);
+                HandleDynamicText(dyn.DynamicToken.Text, subito: dyn.IsSubito, written: dyn.ForcedAbove);
         EmitPendingDynamic();
         // A string number on the group (`>>4\3`) is every pitched / degree member's that
         // names none of its own — the collector's groupString (a chord member inside the
@@ -5276,7 +5276,7 @@ public sealed class MusicXmlExporter
             }
             else if (artic is DynamicSyntax dynamic)
             {
-                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart, dynamic.IsSubito);
+                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart, dynamic.IsSubito, dynamic.ForcedAbove);
             }
             else if (artic is StringNumberAnnotationSyntax stringNumber)
             {
@@ -5362,8 +5362,11 @@ public sealed class MusicXmlExporter
     /// <summary>A dynamic word: cresc/decresc/dim OPEN a &lt;wedge&gt; (they
     /// used to leak into &lt;dynamics&gt; as invalid &lt;cresc/&gt;); a level
     /// mark closes any open wedge, then emits as a dynamics direction.</summary>
-    private void HandleDynamicText(string text, int position = -1, bool subito = false)
+    /// <param name="written">The side the mark writes (<c>.up</c> true, <c>.down</c> false),
+    /// null for none: the staff's own then (<see cref="StaffDynamicsUp"/>).</param>
+    private void HandleDynamicText(string text, int position = -1, bool subito = false, bool? written = null)
     {
+        string placement = (written ?? StaffDynamicsUp) ? "above" : "below";
         if (text == "niente")
         {
             HandleNiente();
@@ -5374,7 +5377,7 @@ public sealed class MusicXmlExporter
             var wedge = new MusicXmlDirection
             {
                 WedgeType = text == "cresc" ? "crescendo" : "diminuendo",
-                Placement = "below",
+                Placement = placement,
             };
             // A crescendo from a niente on the same note grows from nothing: the circle is the
             // wedge's own niente="yes", and the <n/> written for it goes.
@@ -5388,7 +5391,7 @@ public sealed class MusicXmlExporter
             }
             // A hairpin the next one ends stops there, or the file leaves it open.
             if (_wedgeOpen)
-                AddDirection(new MusicXmlDirection { WedgeType = "stop", Placement = "below" });
+                AddDirection(new MusicXmlDirection { WedgeType = "stop", Placement = _openWedge?.Placement ?? "below" });
             AddDirection(wedge);
             _openWedge = wedge;
             _wedgeOpen = true;
@@ -5399,21 +5402,47 @@ public sealed class MusicXmlExporter
         }
         if (_wedgeOpen)
         {
+            // A wedge's stop stands on the side its start did.
             AddDirection(new MusicXmlDirection
             {
                 WedgeType = "stop",
-                Placement = "below",
+                Placement = _openWedge?.Placement ?? "below",
             });
             _wedgeOpen = false;
         }
         // Written where it stands — its note's onset (a note's marks are read before the note
         // is added) — rather than held for the next note: a dynamic on a bar's last note used
         // to be written at the next bar's head, and one on a part's last note never (2026-09-29).
-        AddDirection(new MusicXmlDirection { DynamicType = text, Placement = "below", Subito = subito });
+        AddDirection(new MusicXmlDirection { DynamicType = text, Placement = placement, Subito = subito });
     }
 
     /// <summary>The open wedge's start direction, while <see cref="_wedgeOpen"/>.</summary>
     private MusicXmlDirection? _openWedge;
+
+    /// <summary>
+    /// Whether the part being written stands its dynamics and wedges ABOVE its staff on the
+    /// page: a lyrics row folded directly under its staff in the played score — the page's own
+    /// rule (MeasureCollector's <c>_staffDynamicsUp</c>, read off the same bindings; owner's
+    /// decision 2026-11-11, docs/dynamics-above-lyrics-design.md D1).
+    /// </summary>
+    private bool StaffDynamicsUp
+    {
+        get
+        {
+            if (_currentPartName == null || _playedSpec == null)
+                return false;
+            if (_dynamicsUpParts == null)
+            {
+                _dynamicsUpParts = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var binding in _playedSpec.GetVoiceBindings())
+                    if (!binding.WithLyrics.IsDefaultOrEmpty)
+                        _dynamicsUpParts.Add(binding.VoiceName);
+            }
+            return _dynamicsUpParts.Contains(_currentPartName);
+        }
+    }
+
+    private HashSet<string>? _dynamicsUpParts;
 
     /// <summary>The last niente seen — its measure and offset, and the <c>&lt;n/&gt;</c> written
     /// for it if one was — so a crescendo starting on the same note takes it as its circle.</summary>
@@ -5440,7 +5469,7 @@ public sealed class MusicXmlExporter
         if (_wedgeOpen)
         {
             bool alNiente = _openWedge?.WedgeType == "diminuendo";
-            AddDirection(new MusicXmlDirection { WedgeType = "stop", Placement = "below", WedgeNiente = alNiente });
+            AddDirection(new MusicXmlDirection { WedgeType = "stop", Placement = _openWedge?.Placement ?? "below", WedgeNiente = alNiente });
             _wedgeOpen = false;
             _openWedge = null;
             consumed = alNiente;
@@ -5759,7 +5788,7 @@ public sealed class MusicXmlExporter
                     // Until 2026-11-04 it stood at the note's start, a note short.
                     case Svg.Model.MusicMarkType.HairpinStop when _wedgeOpen:
                     {
-                        var stop = new MusicXmlDirection { WedgeType = "stop", Placement = "below" };
+                        var stop = new MusicXmlDirection { WedgeType = "stop", Placement = _openWedge?.Placement ?? "below" };
                         AddDirection(stop);
                         stop.Offset += _markedNoteLength;
                         _wedgeOpen = false;

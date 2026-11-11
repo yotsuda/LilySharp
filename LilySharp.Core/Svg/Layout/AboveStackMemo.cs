@@ -121,8 +121,16 @@ internal sealed class AboveStackMemo
         // StaffIndex and IsChordRow: a symbol that changed staff or became a row changes the
         // staff offset baked into its YUp, so no such edit can leave a layout byte-identical.
         public ChordNameLayout[] ChordNames = Array.Empty<ChordNameLayout>();
+        // The hairpins (the ones that stand above are movers of the 250 turn; the rest pass
+        // through), and per ABOVE line group anchored in this system its members as ordinals
+        // into the per-system Dynamics / Hairpins lists — BelowStackMemo's fold of the same
+        // structure.
+        public HairpinLayout[] Hairpins = Array.Empty<HairpinLayout>();
+        public int[][] GroupDynamics = Array.Empty<int[]>();
+        public int[][] GroupHairpins = Array.Empty<int[]>();
 
         // --- value: the pass's outputs for this system's grobs ---
+        public HairpinLayout[] OutHairpins = Array.Empty<HairpinLayout>();
         public TrillSpannerLayout[] OutTrills = Array.Empty<TrillSpannerLayout>();
         public BarNumberLayout[] OutBarNumbers = Array.Empty<BarNumberLayout>();
         public OttavaBracketLayout[] OutOttavas = Array.Empty<OttavaBracketLayout>();
@@ -178,6 +186,10 @@ internal sealed class AboveStackMemo
         public readonly List<TextSpannerLayout> TextSpanners = new();
         public readonly List<TupletBracketLayout> TupletBrackets = new();
         public readonly List<ChordNameLayout> ChordNames = new();
+        public readonly List<HairpinLayout> Hairpins = new();
+        // The above line groups' ordinals, held flat, each group's run length beside them.
+        public readonly List<int> GroupDynamics = new(), GroupDynamicLengths = new();
+        public readonly List<int> GroupHairpins = new(), GroupHairpinLengths = new();
 
         /// <summary>Scratch for the builder: the staves the system consumes a profile for,
         /// before they are sorted and made distinct. Not part of the program.</summary>
@@ -203,6 +215,11 @@ internal sealed class AboveStackMemo
             TextSpanners.Clear();
             TupletBrackets.Clear();
             ChordNames.Clear();
+            Hairpins.Clear();
+            GroupDynamics.Clear();
+            GroupDynamicLengths.Clear();
+            GroupHairpins.Clear();
+            GroupHairpinLengths.Clear();
             Used.Clear();
         }
 
@@ -227,7 +244,24 @@ internal sealed class AboveStackMemo
             TextSpanners = TextSpanners.ToArray(),
             TupletBrackets = TupletBrackets.ToArray(),
             ChordNames = ChordNames.ToArray(),
+            Hairpins = Hairpins.Count == 0 ? Array.Empty<HairpinLayout>() : Hairpins.ToArray(),
+            GroupDynamics = Unflatten(GroupDynamics, GroupDynamicLengths),
+            GroupHairpins = Unflatten(GroupHairpins, GroupHairpinLengths),
         };
+
+        private static int[][] Unflatten(List<int> flat, List<int> lengths)
+        {
+            if (lengths.Count == 0)
+                return Array.Empty<int[]>();
+            var result = new int[lengths.Count][];
+            int at = 0;
+            for (int k = 0; k < lengths.Count; k++)
+            {
+                result[k] = flat.GetRange(at, lengths[k]).ToArray();
+                at += lengths[k];
+            }
+            return result;
+        }
     }
 
     /// <summary>Whether either room stored for <paramref name="systemIndex"/> matches
@@ -286,7 +320,27 @@ internal sealed class AboveStackMemo
             && a.Dynamics.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Dynamics))
             && a.TextSpanners.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.TextSpanners))
             && a.TupletBrackets.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.TupletBrackets))
-            && a.ChordNames.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.ChordNames));
+            && a.ChordNames.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.ChordNames))
+            && a.Hairpins.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Hairpins))
+            && JaggedEqual(a.GroupDynamics, b.GroupDynamics, b.GroupDynamicLengths)
+            && JaggedEqual(a.GroupHairpins, b.GroupHairpins, b.GroupHairpinLengths);
+
+    /// <summary>A stored group list against the probe's flat one: the same number of
+    /// groups, each the same run of ordinals.</summary>
+    private static bool JaggedEqual(int[][] a, List<int> flat, List<int> lengths)
+    {
+        if (a.Length != lengths.Count)
+            return false;
+        var all = CollectionsMarshal.AsSpan(flat);
+        int at = 0;
+        for (int i = 0; i < a.Length; i++)
+        {
+            if (!a[i].AsSpan().SequenceEqual(all.Slice(at, lengths[i])))
+                return false;
+            at += lengths[i];
+        }
+        return true;
+    }
 
     private static bool RefSequenceEqual(object[] a, ReadOnlySpan<object> b)
     {

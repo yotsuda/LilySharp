@@ -581,6 +581,36 @@ public sealed partial class LilyPondExporter
             : "midiInstrument = " + QuoteLilyPondString(Midi.GeneralMidi.InstrumentNames[program]);
     }
 
+    /// <summary>
+    /// Whether the part's staff stands its dynamics and hairpins ABOVE it on the page — a
+    /// lyrics row folded directly under it (the page's own rule, MeasureCollector's
+    /// <c>_staffDynamicsUp</c>, read off the same bindings) — so the twin's staff takes
+    /// LilyPond's <c>\dynamicUp</c>.
+    /// </summary>
+    /// <remarks>
+    /// Written in the staff's <c>\with</c>, where it reaches every voice of the staff (set in
+    /// the music it would stop at the voices a <c>&lt;&lt; \\ &gt;&gt;</c> creates).
+    /// LilyPond's own spelling (ly/property-init.ly, dynamicUp): the pair of overrides
+    ///   DynamicText.direction and DynamicLineSpanner.direction, both UP.
+    /// ⚠️ THE TWIN IS NOT THE PAGE where a level or a hairpin of such a staff is written
+    ///   <c>.down</c>: on the page that mark goes alone (owner's decision D3,
+    ///   docs/dynamics-above-lyrics-design.md), while LilyPond's line spanner takes the
+    ///   written direction and the marks after it that write none follow it down. MEASURED
+    ///   (2.26.0, Lab sessions/p1225/dyn/lp/d3): after <c>c''4_\ff\&gt;</c> the closing
+    ///   <c>\p</c> is below, and after <c>c''4\p_\&lt;</c> the closing <c>\f</c> is.
+    ///   departs from: lily/dynamic-align-engraver.cc:119-160 acknowledge_dynamic —
+    ///     set_grob_direction (line_, d) for the event's own direction.
+    /// </remarks>
+    private bool StandsDynamicsUp(string? partName)
+    {
+        if (partName == null || _renderSpec == null)
+            return false;
+        foreach (var binding in _renderSpec.GetVoiceBindings())
+            if (binding.VoiceName == partName && !binding.WithLyrics.IsDefaultOrEmpty)
+                return true;
+        return false;
+    }
+
     /// <param name="selectors">The staff item's own <c>as lines N removeEmpty V</c>, read by
     /// the renderer's scan (<see cref="RenderSpecParser.ParseStaffSpec"/>); null for a staff
     /// no score item names (the fallback row).</param>
@@ -697,6 +727,8 @@ public sealed partial class LilyPondExporter
             //   Clef_engraver, \remove Key_engraver.
             if (selectors is { Lines: 1 })
                 staffWith.Add("\\remove \"Clef_engraver\" \\remove \"Key_engraver\"");
+            if (StandsDynamicsUp(partName))
+                staffWith.Add("\\dynamicUp");
             if (staffWith.Count > 0)
                 sb.Append(" \\with { ").Append(string.Join(" ", staffWith)).Append(" }");
             sb.Append(" { ");

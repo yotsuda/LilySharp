@@ -1,7 +1,7 @@
 // input-order-alignment.ly twin — 吊り2度和音の lyrics/dynamics/text/articulation
 // の X 揃えが入力順 (<b c'> vs <c' b>) に依らないこと。main notehead 基準。
 // 綴り: Lily# c = LP c' (octave absolute)。^"Text" = @text("Text").up・
-// -! = @staccatissimo・\f = @f。
+// -! = @staccatissimo・\f = @f.down（歌詞のある譜表の強弱記号は既定で上＝第1225。LP の \f は下）。
 octave absolute
 time 4/4
 
@@ -12,8 +12,8 @@ lyrics wa { section Main { blah | | | | } }
 lyrics wb { section Main { blah | | | | } }
 
 section Main {
-  one { <b' c''>2 s2 | <b' c''>2@f s2 | <b' c''>2@text("Text").up s2 | <b' c''>2@staccatissimo s2 | }
-  two { <c'' b'>2 s2 | <c'' b'>2@f s2 | <c'' b'>2@text("Text").up s2 | <c'' b'>2@staccatissimo s2 | }
+  one { <b' c''>2 s2 | <b' c''>2@f.down s2 | <b' c''>2@text("Text").up s2 | <b' c''>2@staccatissimo s2 | }
+  two { <c'' b'>2 s2 | <c'' b'>2@f.down s2 | <c'' b'>2@text("Text").up s2 | <c'' b'>2@staccatissimo s2 | }
 }
 
 form { ~Main }

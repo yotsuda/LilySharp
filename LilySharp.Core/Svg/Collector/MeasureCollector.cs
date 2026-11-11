@@ -6179,7 +6179,11 @@ public sealed partial class MeasureCollector
                     levelTaken = true;
                     _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.SourceStart, _v.Cursor.StaffIndex)
                     {
-                        IsAbove = dynamicSyntax.ForcedAbove == true,
+                        // A niente is printed as a word (a TextScript, which \dynamicUp does
+                        // not move) or stands as its hairpin's circle: the written side only.
+                        IsAbove = level == DynamicLevel.Niente
+                            ? dynamicSyntax.ForcedAbove == true
+                            : DynamicSideAbove(dynamicSyntax.ForcedAbove),
                         VoiceIndex = _v.Cursor.VoiceIndex,
                         IsSubito = dynamicSyntax.IsSubito,
                     });
@@ -6215,10 +6219,8 @@ public sealed partial class MeasureCollector
     /// (<c>.up</c> / <c>.down</c>), else the staff's (<see cref="_staffDynamicsUp"/>). A written
     /// side moves that mark alone — a hairpin does not follow the dynamic beside it (D3).
     /// </summary>
-    /// <remarks>⚠️ Only the hairpin's start reads it yet (session 1224, step 2 of
-    /// docs/dynamics-above-lyrics-design.md §5): a dynamic LEVEL keeps its
-    /// <c>ForcedAbove == true</c> until the above side of the hairpin is drawn (step 3), since
-    /// a level above with its hairpin below is the broken picture the design starts from.</remarks>
+    /// <remarks>Read by a dynamic LEVEL and by a hairpin's start alike
+    /// (docs/dynamics-above-lyrics-design.md §5, steps 2 and 3).</remarks>
     private bool DynamicSideAbove(bool? written) => written ?? _staffDynamicsUp;
 
     /// <summary>

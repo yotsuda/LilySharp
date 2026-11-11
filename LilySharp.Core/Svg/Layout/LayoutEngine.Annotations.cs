@@ -1321,7 +1321,7 @@ internal sealed partial class LayoutEngine
         // StackBelowStaff and pass through untouched.
         var (stackedTrills, stackedBarNumbers, stackedOttavas, stackedCustomTexts,
              stackedVoltas, stackedMarks, stackedDynamicsAbove, stackedTextSpanners,
-             stackedArticulationsAbove, stackedPartCombine) = OutsideStaffStacker.StackAboveStaff(
+             stackedArticulationsAbove, stackedPartCombine, stackedHairpinsAbove) = OutsideStaffStacker.StackAboveStaff(
             ctx.Fonts,
             systems, systemSkylines, tupletBracketLayouts,
             belowStackedTrills, barNumberLayouts, ottavaLayouts,
@@ -1342,9 +1342,14 @@ internal sealed partial class LayoutEngine
             // preliminary extents reserve what the final pass draws.
             partCombineTexts: PartCombineLayoutsOf(ctx.MultiScore, ml, beamLayouts ?? default),
             prebuiltMeasureToSystem: measureToSystem,
-            staffLinesOf: staffLinesOf);
+            staffLinesOf: staffLinesOf,
+            // The wedges and aligned lines that stand ABOVE their staff (a staff with lyrics
+            // under it, or a written .up) are movers of this pass's 250 turn; the below pass
+            // left them where their engravers put them.
+            hairpins: stackedHairpins, lineGroups: dynamicLineGroups);
         stackedDynamics = stackedDynamicsAbove;
         stackedArticulations = stackedArticulationsAbove;
+        stackedHairpins = stackedHairpinsAbove;
         // (No To-Coda/label co-placement here any more: the pass above owns it. A
         // boundary "To Coda" is paired with the section label it shares a barline
         // with INSIDE PlaceMusicMarks — moved beside it before either is priced,
