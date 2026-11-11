@@ -9,7 +9,8 @@ For whoever publishes it (the owner). Nothing here is in the package (`.vscodeig
    33 MB): say so in docs/HANDOFF.md and the plan is to be thought again.
 3. Install the VSIX in a VS Code that has Lily#, open a score and Play: the status of the synth
    in the Lily# Extension output names `MuseScore_General.sf3`, and **Lily#: Choose Sound Font…**
-   lists it as "(the Lily# Sound Font extension)".
+   lists it as "(the Lily# Sound Font extension)". (Done for 1.0.0 on the owner's machine 2026-11-11:
+   the log read `Preview synth ready: 38.1 MB in 117 ms: …/yotsuda.lilysharp-soundfont-1.0.0/soundfont/MuseScore_General.sf3`.)
 4. Publish it (`npx @vscode/vsce publish`).
 5. ONLY THEN release the Lily# that names it. Lily#'s package.json carries `"extensionPack":
    ["yotsuda.lilysharp-soundfont"]` (owner's decision 2026-11-11: a pack, not a dependency — Lily#
