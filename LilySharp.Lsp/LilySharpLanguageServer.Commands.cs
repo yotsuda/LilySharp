@@ -1730,6 +1730,19 @@ public sealed partial class LilySharpLanguageServer
             Report = LilySharp.Core.Editing.ScoreReview.Json(@params.Text ?? "", @params.Audience ?? "beginner", @params.Focus),
         }, token);
 
+    /// <summary>
+    /// The chord progression of a score, section by section as a chords block
+    /// (<see cref="LilySharp.Core.Harmony.ChordHarmonizer.DescribeProgression"/>; owner's request
+    /// 2026-11-11), for the AI that arranges it: what the score names kept as written, the rest
+    /// read from the notes. Read-only.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/readChords", UseSingleObjectParameterDeserialization = true)]
+    public Task<ReadChordsResponse> ReadChordsAsync(ReadChordsParams @params, CancellationToken token)
+        => OffDispatch(() => new ReadChordsResponse
+        {
+            Text = LilySharp.Core.Harmony.ChordHarmonizer.DescribeProgression(@params.Text ?? "", @params.RenderName, @params.Parts),
+        }, token);
+
     public CheckCandidateResponse CheckCandidate(CheckCandidateParams @params)
     {
         var text = @params.Text ?? "";

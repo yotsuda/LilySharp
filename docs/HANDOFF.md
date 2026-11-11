@@ -144,19 +144,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ### 1.1 第1226セッション（2026-11-11・YT-DELL2）
 
 オーナーの依頼: Copilot Chat が「ギターをハイコードでルート抜きに」に 12.2 分かかった件の調べと、提案 1〜4 の実装（base `9d5c995ff`）。OMR の `open` は 0。
-- **調べ**（ログ `~\.copilot\session-state\` の 2026-11-11 14:04 のセッションの `events.jsonl`・ツール呼び出しと時刻だけを読んだ）: `chordVoicings` は 10 回使われた（各 0.1〜0.2 秒）が、答えが全部ルート入り・低いポジションからなので 4 分半は手でのふるい分け。`readScore` の 12.8 KB は一時ファイルに落ちて 13 回読み直し。`proposeScore` は全文（出力 21,700 トークン・196 秒）。
+- **調べ**（Copilot のログ `~\.copilot\session-state\`・ツール呼び出しと時刻だけを読んだ）: `chordVoicings` を 1 コードずつ呼び、全文を読んで全文を書き直していたのが遅さの元。
 - **1 `chordVoicings`**（`Editing/ChordVoicingFinder`）: `omitRoot`（ルートの音高を許す音・要る音から外す。2 音も形・ただし 2 つの*違う*音）と `fromFret`（そのフレット未満と開放弦なし）。どちらかがあれば弦の指定がなくても全弦を探す。答えの頭に読んだ構成音（`Bbmaj — its tones bes d f a`）。コード図は `ChordVoicings.Spell` の綴り `diagram(xx-12-10-x-10)`（オーナー指摘・前は `xx(12)(10)x(10)`）。鳴らす弦のあいだにミュートがある形は後ろへ回して注記（オーナーの見立て「押さえられなくはない」＝除外しない・`MutedBetween`）。ルートなしでは、隣り合う弦の形はミュート越しに 1 音足せても残す。
 - **2 進行**: `chords`（`DescribeProgression`）＝各コード 12 候補から、最高音の移動＋最低音の半分＋音数の差＋ポジションの移動＋候補の順位×0.75＋ミュート越し 8 の最小の道（LILYSHARP-OWN）。
 - **3 `proposeScore` の `edits`**（`applyScoreEdits`）: `old` は `readScore` が見せた文字（絶対オクターブ）で 1 回だけ、`all: true` で全部。絶対オクターブの全文に当ててから今までの道（コンパイル・相対へ戻す）へ。差し戻しには「edits で送り直す」注記。
 - **4 `readScore` の `part`／`page`**（`scorePartView`・`scorePages`）: パートのブロック・各 section の中のそのパート・呼んでいるフレーズだけ（`[lines a-b]` と `…` の印）。6,500 B を超える読みはページに分ける（Copilot は 8 KB を超える答えをファイルに落とす）。実ファイルで全文 12,005 B → 2 ページ、`gtr` だけなら 2,819 B。
-- 網: `ChordVoicingFinderTests` に 4 本、`aiTransformCore.test.ts` に 3 組、`aiNewPiece.test.ts` の固定文字を新しい形に。毒 7 本のうち 6 本が赤（Lab `sessions/p1226/poisons.log`・R3 は網を足して赤）、緑は R4（道のミュート越しの値段）＝観測者なし。
+- 網: `ChordVoicingFinderTests`・`aiTransformCore.test.ts`・`aiNewPiece.test.ts`。
 - 7.6: 移植は無い（道具とツール・LILYSHARP-OWN）。7.7 の匂い: **実物の Copilot では未確認**（`edits` を絶対オクターブの文字に当てて相対へ戻す道は単体の網だけ・`MANUAL-CHECKS` 第1226）／`scorePartView` は波括弧の文字読み（パーサではない）／進行の値段は耳で確かめていない／`OnStrings` の「隣り合う弦を残す」はルートなしのときだけ（エディタのコード図送りの順は変えていない）。⚠️ **`-Start p1226` は私の `dotnet build` と並走して build が落ちた**（開始時の full は使えない＝基準は同じ HEAD の第1225 `-End`）。`-Start` 中はビルドしない。探りの `Add-Type` は写しの dll で（bin の dll はコンソールが掴む）。
 - 指示ファイル（`esbuild.js` が書く `lilysharp.instructions.md` の頭）も「変更は `edits`・全文は大半を書き直すときだけ」「パートは `part` で読む」「コードは進行をまとめて 1 回」に直した＝ツールの説明だけでは、常に渡る指示の「WHOLE new text」に負ける。
-- 門（`-End`、base `9d5c995ff`）: 開始時は第1225 の終了時と同じ HEAD＝full 15217 合格 / 0 失敗 / skip 2 / 合計 15219、終了時 full 15223 合格 / 0 失敗 / skip 2 / 合計 15225（+6 は足した網。途中の `-End` は、HANDOFF のログのフォルダ名が SHA に見えて `DeadCitationsDoNotGrow` が 1 赤＝直した）。拡張の `npm test` 合格。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` と REF/OWN は `-End` が commit 前に数えて 0（実際の OWN は 1＝`DescribeProgression`）。棚卸し OWN 308 → 309。未 push 88 件（この締めの commit を含む）。
+- 門（`-End`、base `9d5c995ff`）: 開始時は第1225 の終了時と同じ HEAD＝full 15217 合格 / 0 失敗 / skip 2 / 合計 15219、終了時 full 15230 合格 / 0 失敗 / skip 2 / 合計 15232（+13 は足した網。途中の `-End` は、HANDOFF のログのフォルダ名が SHA に見えて `DeadCitationsDoNotGrow` が 1 赤＝直した）。拡張の `npm test` 合格。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` と REF/OWN は `-End` が commit 前に数えて 0（実際の OWN は 1＝`DescribeProgression`）。棚卸し OWN 308 → 309。未 push 89 件（この締めの commit を含む）。
 - **コードの形のステップの向きを反転（オーナー決定 2026-11-11）**: Ctrl+Shift+↓ が次の形（ハイポジションへ）、↑ が前。本体は `NoteStepper` の 2 つの入口（`VoicingEdit`・`DiagramFingeringStep`）に `-dir` を渡すだけで、文言（ステータスバー・ホバー・文法書・サイト・レッスン 8・SHOTLIST）と網 30 本の向きを合わせた。コードの種類や値の語は前から「↓ が次」。⚠️ サイトの動画（SHOTLIST 16 付近）は古い向きで撮ってあれば撮り直し（オーナー）。開放弦より低い弦を高いポジションで押さえる形（`13-0-15-14-15-x`）は後ろへ回さない（オーナー決定・同日）。
-- **転回形は元のコードの形も巡る（オーナー依頼 2026-11-11）**: `NoteStepper.ShapeOrder` が、ベースがコードの構成音の slash chord（`Dm/A`）では、ベース最低の形（先頭＝既定はそのまま）に加えて、ベースを外した `Dm` の形と上 4 弦の形をポジション順に差し込む。LYS1039 はコードの構成音のベースを問わないので警告は出ない。構成音でないベース（`C/D`）は今までどおり全部の形にベースが入る。網 `AnInversion_WalksTheChordsOtherShapesToo`・毒 2 本赤。ホバーの `shape n of N` も同じ順を読む。
-- **プレビューの Ctrl+ホイール＝ポインターの位置を保つ（オーナー報告 2026-11-11）**: `extension.ts` の `zoomKeeping`（シートの箱の中でのポインターの割合を、拡大の前後で同じ場所に＝`mainContent` をその差だけスクロール）。網は `aiCandidatePlay.test.ts`（3 ページ目で 1.5 倍と往復）。実機は未確認（`MANUAL-CHECKS` 第1226）。
+- **転回形は元のコードの形も巡る（オーナー依頼 2026-11-11）**: `NoteStepper.ShapeOrder`＝ベースが構成音の slash chord（`Dm/A`）は、ベースを外した `Dm` の形と上 4 弦の形もポジション順に差し込む。`C/D` は今までどおり。網 `AnInversion_WalksTheChordsOtherShapesToo`。
+- **プレビューの Ctrl+ホイール＝ポインターの位置を保つ（オーナー報告 2026-11-11）**: `extension.ts` の `zoomKeeping`。網 `aiCandidatePlay.test.ts`。実機は未確認（`MANUAL-CHECKS` 第1226）。
 - **自分で同じ依頼を回して進行モードを直した**: 1 コード 1 形（隣どうしの値段を全部足し、動かなくなるまで選び直す）・ポジションの移動 2 倍・2 音は 3 音以上の形があれば +4。`omitRoot` は三和音（ルートを抜くと 2 音）ではルートを残す読み替え（オーナー決定・同日）＝上 3 弦か `strings` の弦・`Answer.RootKept`・答えに印。7th 以上は抜く。オーナーの Zunda はこの答えで書き直した（Lab `sessions/p1226/zunda`・`before.lys` が元）。
+- **`readChords`＝コード進行を読むツール（オーナー依頼 2026-11-11）**: `ChordHarmonizer.DescribeProgression`（`Harmony/ChordHarmonizer.Progression.cs`）・`lilysharp/readChords`・`lilysharp_readChords`。セクションごとの `chords` 形式＋Form＋コードの一覧＋音域。**書かれた名前が先**（コード行はそのまま・`@chord`・形だけの `@chord`/`@diagram` は形の音・裸は乗っている音）、半分以上の小節に名前があれば名前だけ、少なければ名前の所以外を `HarmonyReader` で読む。`parts` はそのパートの音と名前だけ（コード行は外す）。⚠️ コード行は score が置かないと MIDI に鳴らない＝行は構文から読む。拍より細かい変化は拍に丸める。耳と実機は未確認。
 
 ## 以下は第1225セッションの経緯
 

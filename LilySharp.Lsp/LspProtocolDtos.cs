@@ -981,6 +981,21 @@ public class ReviewScoreResponse
     public string Report { get; set; } = "";
 }
 
+/// <summary>Parameters for lilysharp/readChords: a score's text, the score of it to read (as the
+/// preview picks it), and the parts to read — none for all.</summary>
+public class ReadChordsParams
+{
+    public string? Text { get; set; }
+    public string? RenderName { get; set; }
+    public string[]? Parts { get; set; }
+}
+
+/// <summary>Response for lilysharp/readChords: the progression, as the AI reads it.</summary>
+public class ReadChordsResponse
+{
+    public string Text { get; set; } = "";
+}
+
 /// <summary>Parameters for lilysharp/renderText: render an arbitrary candidate
 /// source string to preview SVG without touching the open document (the "decide on
 /// the score" preview of §3/§7 — an offscreen compile of the candidate).</summary>

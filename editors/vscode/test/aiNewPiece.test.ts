@@ -379,6 +379,21 @@ describe('the composing guide', () => {
         assert.match(REVIEW_READING, /Do not change the score/);
         assert.match(REVIEW_READING, /If `compiles` is false/);
     });
+    // Owner's request 2026-11-11: the harmony of a score read once, what it names kept as written.
+    it('gives Copilot\'s chat a tool to read a score\'s chords, which writes nothing', () => {
+        const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
+        assert.match(pkg, /"name": "lilysharp_readChords",\s*"toolReferenceName": "readChords"/);
+        assert.match(pkg, /"onLanguageModelTool:lilysharp_readChords"/);
+        assert.match(pkg, /"parts": \{ "type": "array", "items": \{ "type": "string" \}/);
+        assert.match(pkg, /A chord the score names stands as written: a `chords` row, an `@chord\(…\)`, the chord an `@diagram\(…\)` shape sounds/);
+        assert.match(transform, /lm\.registerTool<ReadChordsInput>\('lilysharp_readChords'/);
+        const fn = transform.slice(transform.indexOf('async function readChords('), transform.indexOf('interface ReviewScoreInput'));
+        assert.match(fn, /'lilysharp\/readChords', \{ Text: doc\.getText\(\), Parts: parts \}/);
+        assert.match(fn, /active\?\.languageId === 'lilysharp' \? active : undefined/);
+        assert.doesNotMatch(fn, /\.edit\(|applyEdit|writeFile|proposeScore\(/);
+        const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
+        assert.match(build, /'\*\*Arranging a score\*\*: to know its harmony, ask `lilysharp_readChords` \(#readChords\) first:/);
+    });
     // Owner's request 2026-10-29: the instructions files go only with a request about a .lys, so a
     // piece asked for in the chat with none open was written without them — a tool gives them.
     it('gives Copilot\'s chat the grammar and the composing guide by a tool, found by what it is for', () => {

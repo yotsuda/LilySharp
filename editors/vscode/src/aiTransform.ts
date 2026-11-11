@@ -343,6 +343,16 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
             new vscode.LanguageModelTextPart(await reviewScore(deps, options.input)),
         ]),
     }));
+    // The harmony of a score, read once (owner's request 2026-11-11: asked to revoice a guitar, the chat
+    // named every chord from the notes by itself).
+    context.subscriptions.push(lm.registerTool<ReadChordsInput>('lilysharp_readChords', {
+        prepareInvocation: options => ({
+            invocationMessage: `Reading the chords of ${options.input?.file ? path.basename(options.input.file) : 'the score'}…`,
+        }),
+        invoke: async options => new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(await readChords(deps, options.input)),
+        ]),
+    }));
     // The voicings a player can hold (owner's request 2026-10-30: a composed guitar part wrote a chord
     // no hand could hold — a tool to ask before writing one, rather than a rule refusing it after).
     context.subscriptions.push(lm.registerTool<ChordVoicingsInput>('lilysharp_chordVoicings', {
@@ -2297,6 +2307,40 @@ async function titleFor(chat: ChatClient, piece: string, asked: string): Promise
         return cleanTitle(reply);
     } catch {
         return null;
+    }
+}
+
+/** What Copilot's chat hands the chords tool. */
+interface ReadChordsInput {
+    /** The .lys file's absolute path; none: the score open in the editor. */
+    file?: string;
+    /** The parts to read, by name; none: all of them, and the chords rows. */
+    parts?: string[];
+}
+
+/**
+ * A score's chord progression, section by section as a chords block, from the server
+ * (lilysharp/readChords): what the score names kept as written, the rest read from the notes.
+ * It writes nothing.
+ */
+async function readChords(deps: AiTransformDeps, input: ReadChordsInput | undefined): Promise<string> {
+    const active = vscode.window.activeTextEditor?.document;
+    const doc = input?.file ? await scoreDocument(input.file)
+        : active?.languageId === 'lilysharp' ? active : undefined;
+    if (!doc) {
+        return input?.file ? `No chords read: no score ${input.file} is open in the editor or on the disk.`
+            : 'No chords read: no score is open in the editor. Give `file` (the .lys file\'s absolute path).';
+    }
+    const client = deps.getClient();
+    if (!client) {
+        return 'No chords read: the Lily# language server is not running.';
+    }
+    try {
+        const parts = Array.isArray(input?.parts) ? input.parts.filter(p => typeof p === 'string' && p.trim().length > 0) : [];
+        const answer = await client.sendRequest<{ Text: string }>('lilysharp/readChords', { Text: doc.getText(), Parts: parts });
+        return `${path.basename(doc.uri.fsPath)}, as it stands in the editor. ${answer.Text}`;
+    } catch (e) {
+        return `No chords read: the Lily# language server did not answer (${e instanceof Error ? e.message : String(e)}).`;
     }
 }
 
