@@ -102,6 +102,77 @@ public class DynamicsAboveLyricsTests
         Assert.True(Assert.Single(played.DynamicLayouts).YUp < -EngravingDefaults.StaffMiddle);
     }
 
+    /// <summary>
+    /// WHERE the line stands, pinned to LilyPond's own numbers — the side alone is not enough
+    /// of a net, since a line sided the wrong way is pushed back above the staff by the
+    /// outside-staff pass and lands near, not on, its place (padding 0.46 where the side
+    /// position spends 0.6).
+    /// MEASURED (LilyPond 2.26.0, \dynamicUp, Lab sessions/p1225/dyn/lp/r.svg — the design's
+    /// own bar, §6): staff middle 12.2846, the crescendo's centre 8.2608, the ff ending it
+    /// 8.8608 (0.6 under the centre), the next bar's lone ff 8.9426.
+    /// </summary>
+    [Fact]
+    public void TheDesignsBar_StandsWhereLilyPondsDynamicUpStandsIt()
+    {
+        var tree = SyntaxTree.Parse(
+            "time 4/4\noctave absolute\npart m { clef treble }\n" +
+            "section A {\n  m { b'8@cresc cis'' d'' e'' d'' a'4. | d''8 b' b'4 d''4@ff~ d''4 | g'4@ff a' b' r4 | }\n}\n" +
+            "lyrics w { ず ん だ も ん と | ろ し く ー | な の よ | }\nform { A }\nscore { staff m  lyrics w }\n");
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var layout = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+        var hp = Assert.Single(layout.HairpinLayouts);
+        var levels = layout.DynamicLayouts.OrderBy(d => d.X).ToList();
+        Assert.Equal(2, levels.Count);
+        // The wedge's frame is the system top, half a staff over the middle the texts read.
+        Assert.Equal(12.2846 - 8.2608, hp.YUp + EngravingDefaults.StaffMiddle, 3);
+        Assert.Equal(12.2846 - 8.8608, levels[0].YUp, 3);
+        Assert.Equal(12.2846 - 8.9426, levels[1].YUp, 3);
+    }
+
+    /// <summary>
+    /// A wedge alone above a quiet staff: the staff's top line, the side position's padding,
+    /// the wedge's own half height — the mirror of the 3.3666 it hangs at below.
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1225/dyn/lp/d3.svg, bar 2: <c>c''4\&lt; … f''_\ff</c>
+    /// under \dynamicUp): staff middle 12.2846, the wedge's centre 8.9180.
+    /// </summary>
+    [Fact]
+    public void AWedgeAloneAboveAQuietStaff_StandsAtTheSidePositionsOwnHeight()
+    {
+        var layout = LayoutOf("c''4@cresc d'' e'' f''@ff.down |", lyrics: true);
+        var hp = Assert.Single(layout.HairpinLayouts);
+        Assert.True(hp.IsAbove);
+        Assert.Equal(12.2846 - 8.9180, hp.YUp + EngravingDefaults.StaffMiddle, 3);
+    }
+
+    /// <summary>
+    /// Four sung staves, each with a crescendo, a level and a decrescendo above it: the
+    /// distances between the staves are the room's reading of those lines.
+    /// MEASURED (LilyPond 2.26.0, \dynamicUp on each staff, Lab sessions/p1225/dyn/lp/choir.svg):
+    /// top lines at 11.9229, 23.5426, 35.6181 and 49.0212.
+    /// </summary>
+    [Fact]
+    public void FourSungStaves_StandAsFarApartAsLilyPondsDo()
+    {
+        var tree = SyntaxTree.Parse(
+            "time 4/4\noctave absolute\n" +
+            "part sop { clef treble }\npart alt { clef treble }\npart ten { clef treble }\npart bas { clef bass }\n" +
+            "section A {\n" +
+            "  sop { e''4@p@cresc f'' g'' a'' | b''2@f a''2@decresc | g''1@p | }\n" +
+            "  alt { c''4@p@cresc c'' d'' e'' | f''2@f e''2@decresc | e''1@p | }\n" +
+            "  ten { g'4@p@cresc a' b' c'' | d''2@f c''2@decresc | c''1@p | }\n" +
+            "  bas { c4@p@cresc f g a | b2@f a2@decresc | c1@p | }\n}\n" +
+            "lyrics w { la la la la | la la | la | }\nform { A }\n" +
+            "score { choirStaff { staff sop lyrics w  staff alt lyrics w  staff ten lyrics w  staff bas lyrics w } }\n");
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var layout = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+        var tops = layout.Systems[0].StaffGroups.SelectMany(g => g.Staves)
+            .OrderBy(s => s.StaffIndex).Select(s => -s.Y).ToList();
+        Assert.Equal(4, tops.Count);
+        Assert.Equal(23.5426 - 11.9229, tops[1] - tops[0], 2);
+        Assert.Equal(35.6181 - 23.5426, tops[2] - tops[1], 2);
+        Assert.Equal(49.0212 - 35.6181, tops[3] - tops[2], 2);
+    }
+
     [Fact]
     public void WrittenDown_OverLyrics_HangsBelow()
     {
@@ -283,6 +354,14 @@ public class DynamicsAboveLyricsTests
         // System-relative Y-up: the upper staff's bottom line is 4 below the system top.
         Assert.True(hp.YUp + hp.EndOpening < -2 * EngravingDefaults.StaffMiddle,
             $"the wedge stands under the upper staff: centre {hp.YUp:F6}");
+
+        // A wedge with no level on its line is reserved by its own outline alone.
+        var (wedgeOnly, alone) = Of("a''4@cresc b'' c''' b''@!cresc | a''1 |");
+        Assert.True(wedgeOnly > plain + 0.5,
+            $"the staves must open for the wedge alone: plain {plain:F6}, with it {wedgeOnly:F6}");
+        var lone = Assert.Single(alone.HairpinLayouts);
+        Assert.True(lone.YUp + lone.EndOpening < -2 * EngravingDefaults.StaffMiddle,
+            $"the lone wedge stands under the upper staff: centre {lone.YUp:F6}");
     }
 
     /// <summary>The twin's staff takes LilyPond's <c>\dynamicUp</c> exactly where the page
