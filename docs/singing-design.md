@@ -395,7 +395,7 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
    two rows on one part) and `SungRequestTests` (the voice's seconds are the playback's).
    End to end: the owner's `雪やこんこ.lys` through Core to Cantoria's JSON and NEUTRINO's WAV
    (Lab `sessions/p1125/e2e`).
-3. **The editor** — done 2026-11-08 (session 1126), as §5 says, with these notes: the host
+3. **The editor** — done 2026-11-08 (session 1126), as §5 says, with these notes (and, 2026-11-11, the bar under Play: counted on what the engine says it has to sing ANEW — Cantoria's `onProgress` / `serve`'s `progress` lines, `SingProgress`, `voiceBar` / `voiceRound` / `voiceToldFraction` in playbackCore — not on the score's length, and only on the voices sung in this showing of the bar; an engine that says nothing keeps the estimate): the host
    renders when the preview fetches its notes (`requestPlayback`) and when its tempo changes
    (`practiceState`); a voice is keyed by its score at the speed and the voice name
    (`singerCore.voiceKey`) and the WAV named by the key under the temp folder

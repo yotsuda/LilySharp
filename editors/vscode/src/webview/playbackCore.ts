@@ -614,15 +614,83 @@ export function voiceProgress(parts: readonly { state: VoiceState; estimateMs?: 
 }
 
 /**
- * How far one voice is, 0 to 1, for the bar on its line in the practice menu; null while the engine
- * is not singing it. The engine sings one at a time, so `elapsedMs` (since the last one landed) is
- * the first singing voice's; another that is singing waits at 0.
+ * What the engine said of a voice it is singing (singerCore's SingProgress): the seconds of music
+ * it has to sing ANEW and how many are done, when it said so and when it first spoke of this
+ * render (`at`, `firstAt`: the page's clock, ms), and how long a second of music takes it by the
+ * host's reckoning (`msPerSecond`), for the time before the first phrase is in.
  */
-export function voiceRowProgress(parts: readonly { part: string; state: VoiceState; singing?: boolean; estimateMs?: number }[], part: string, elapsedMs: number): number | null {
+export interface VoiceTold { toSing: number; sung: number; at: number; firstAt: number; msPerSecond: number }
+
+/** A voice as the bars read it. */
+export interface VoiceBarPart { part: string; state: VoiceState; singing?: boolean; estimateMs?: number; told?: VoiceTold }
+
+/** How long a second of music takes the engine in this render: measured once a phrase is in, the host's guess before. */
+function toldRate(t: VoiceTold): number {
+    return t.sung > 0 && t.at > t.firstAt ? (t.at - t.firstAt) / t.sung : t.msPerSecond;
+}
+
+/**
+ * How far one voice is by what the engine SAID, 0 to 1 (owner's request 2026-11-11: the bar was
+ * counted on the whole score, though after an edit the engine sings only the phrases changed — it
+ * stood a tenth full when the voice landed). The count is the engine's own: 0 before the first
+ * phrase, 1 when the last is in. Between two phrases it creeps on at the engine's pace, short of
+ * what is left, so a phrase of half a minute does not look stalled. Nothing to sing: full.
+ */
+export function voiceToldFraction(t: VoiceTold, now: number): number {
+    if (t.toSing <= 0) { return 1; }
+    const rate = toldRate(t);
+    const creep = rate > 0 ? Math.max(0, now - t.at) / rate : 0;
+    return Math.min(1, (t.sung + Math.min(creep, (t.toSing - t.sung) * VOICE_ESTIMATE_CEILING)) / t.toSing);
+}
+
+/**
+ * The voices the bar counts: the ones being sung in THIS showing of it (owner's request
+ * 2026-11-11). A voice that was ready before the bar came up is not in its count — it cost
+ * nothing — so the bar begins empty; one that becomes ready while the bar shows stays in, done.
+ * `showing`: the bar is already up, so `round` is kept and what is preparing now joins it.
+ */
+export function voiceRound(round: readonly string[], parts: readonly Pick<VoiceBarPart, 'part' | 'state'>[], showing: boolean): string[] {
+    const preparing = parts.filter(p => p.state === 'preparing').map(p => p.part);
+    if (!showing) { return preparing; }
+    const known = new Set(parts.map(p => p.part));
+    return [...new Set([...round.filter(r => known.has(r)), ...preparing])];
+}
+
+/**
+ * How far the voices of the bar's round are, 0 to 1: each by what the engine said of it
+ * (voiceToldFraction), or — an engine that says nothing — the one being sung by `elapsedMs`
+ * against its estimate, as before (voiceProgress); each weighed by the work it is, which for a
+ * voice the engine spoke of is the seconds to sing anew, not the score's.
+ */
+export function voiceBar(parts: readonly VoiceBarPart[], now: number, elapsedMs: number): number {
+    const counted = parts.filter(p => p.state !== 'failed');
+    const guessed = counted.find(p => p.state === 'preparing' && !p.told);
+    let total = 0, done = 0;
+    for (const p of counted) {
+        const weight = p.told ? Math.max(1, p.told.toSing * toldRate(p.told))
+            : p.estimateMs && p.estimateMs > 0 ? p.estimateMs : VOICE_DEFAULT_ESTIMATE_MS;
+        const fraction = p.state === 'ready' ? 1
+            : p.state !== 'preparing' ? 0
+            : p.told ? voiceToldFraction(p.told, now)
+            : p === guessed ? voiceProgress([p], elapsedMs) : 0;
+        total += weight;
+        done += weight * fraction;
+    }
+    return total === 0 ? 0 : Math.min(1, done / total);
+}
+
+/**
+ * How far one voice is, 0 to 1, for the bar on its line in the practice menu; null while the engine
+ * is not singing it. By what the engine said of it (`now`, the page's clock), else: the engine
+ * sings one at a time, so `elapsedMs` (since the last one landed) is the first singing voice's;
+ * another that is singing waits at 0.
+ */
+export function voiceRowProgress(parts: readonly VoiceBarPart[], part: string, elapsedMs: number, now = 0): number | null {
     const singing = parts.filter(p => p.state === 'preparing' && p.singing === true);
     const me = singing.find(p => p.part === part);
     if (!me) { return null; }
-    return me === singing[0] ? voiceProgress([me], elapsedMs) : 0;
+    if (me.told) { return voiceToldFraction(me.told, now); }
+    return me === singing.find(p => !p.told) ? voiceProgress([me], elapsedMs) : 0;
 }
 
 /** The channels `events` touch — what a stop has to silence. */

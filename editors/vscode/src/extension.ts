@@ -56,7 +56,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { singerGoesOnToSings, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { singerGoesOnToSings, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -4411,7 +4411,7 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
             prepareQueue.cancelSlot(slot);
             continue;
         }
-        void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: rests ? 'waiting' : 'preparing', estimateMs: voiceEstimateMs(voice, speed) });
+        void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: rests ? 'waiting' : 'preparing', estimateMs: voiceEstimateMs(voice, speed), key });
         const busy = prepareQueue.busy(slot);
         prepareQueue.schedule(slot, { panel, voice, speed, mine, key, letGo: new AbortController() }, rests ? PREPARE_IDLE_MS : 0);
         log(`${id}: ${rests ? `waits for the text to rest ${PREPARE_IDLE_MS} ms` : 'goes now'}${busy ? ', after what is being sung lets go' : ''}`);
@@ -4434,9 +4434,20 @@ async function renderVoice(job: PrepareJob): Promise<void> {
     const engine = voiceRenderer;
     if (!engine || !wanted()) { return; }
     let key: string, rendered: Promise<{ wav: string; duration: number }>, cached: boolean;
+    // What the engine says of this render (owner's request 2026-11-11): the seconds of music it
+    // has to sing ANEW - it keeps every phrase it sang, so after an edit that is the phrases
+    // changed - and how many are done. The page's bar is counted on these; `msPerSecond` is the
+    // pace learnt so far, for the time before the first phrase is in. The key is the job's own,
+    // which the page holds its count by.
+    let told: SingProgress | undefined;
+    const onProgress = (p: SingProgress) => {
+        told = p;
+        if (!wanted()) { return; }
+        void panel.webview.postMessage({ type: 'voiceProgress', part: id, key: job.key, toSing: p.toSing, sung: p.sung, msPerSecond: voiceRenderRate });
+    };
     try {
         outputChannel.appendLine(`singer: ${clockNow()} ${id}: to the engine`);
-        ({ key, rendered, cached } = await engine.render(voice, speed, job.letGo.signal));
+        ({ key, rendered, cached } = await engine.render(voice, speed, job.letGo.signal, onProgress));
     } catch (e) {
         if (wanted()) { failVoice(panel, id, speed, String(e)); }
         return;
@@ -4445,7 +4456,7 @@ async function renderVoice(job: PrepareJob): Promise<void> {
     // meanwhile, whose empty `voiceParts` had already gone out — a `preparing` landing after it
     // kept the microphone pulsing for ever (owner's report 2026-11-09, session 1160).
     if (!wanted()) { return; }
-    if (!cached) { void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: 'preparing', estimateMs: voiceEstimateMs(voice, speed), singing: true }); }
+    if (!cached) { void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: 'preparing', estimateMs: voiceEstimateMs(voice, speed), singing: true, key: job.key }); }
     const askedAt = Date.now();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
@@ -4457,7 +4468,13 @@ async function renderVoice(job: PrepareJob): Promise<void> {
             if (!cached) {
                 // The engine sings one at a time: this voice's time began when the last one landed.
                 const now = Date.now();
-                voiceRenderRate = learnRenderRate(voiceRenderRate, now - Math.max(askedAt, voiceLastLanded), v.duration);
+                // The pace is learnt on what was SUNG: the engine's own count where it gave one
+                // (a render that laid kept phrases and sang two seconds says nothing of its pace
+                // over the whole score, and one that sang next to nothing teaches nothing).
+                const sungSecondsNow = told ? told.toSing : v.duration;
+                if (!told || told.toSing >= 1) {
+                    voiceRenderRate = learnRenderRate(voiceRenderRate, now - Math.max(askedAt, voiceLastLanded), sungSecondsNow);
+                }
                 voiceLastLanded = now;
             }
             if (!wanted()) { return; }
@@ -6844,7 +6861,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         const voiceStates = new Map();      // voice key -> { state, detail }
         let menuVoiceKeys = [];             // the voices the practice menu lists (partsData)
         let menuVoiceNames = {};            // what its lines call them
-        function setVoiceState(part, state, detail, estimateMs, singing) {
+        function setVoiceState(part, state, detail, estimateMs, singing, key) {
             if (!sungNowHas(part)) { return; }      // a part this score does not sing: a late word of another text
             if (state === 'ready' || state === 'failed') { voiceBarFrom = Date.now(); }     // the next one's time begins
             // A voice told waiting or preparing is of a text that is gone (the host compares the
@@ -6852,26 +6869,49 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // old words (session 1148).
             if (state === 'waiting' || state === 'preparing') { voices.delete(part); }
             const before = voiceStates.get(part) || {};
-            voiceStates.set(part, { state, detail, estimateMs: estimateMs || before.estimateMs, singing: window.LysSynth.voiceStillSinging(before.singing, state, singing) });
+            // What the engine said of the render (told) stays while the word is of the same render
+            // (its key): a Play pressed meanwhile repeats "preparing", and the count must not go back.
+            const told = state === 'preparing' && before.told && key && before.told.key === key ? before.told : undefined;
+            voiceStates.set(part, { state, detail, estimateMs: estimateMs || before.estimateMs, singing: window.LysSynth.voiceStillSinging(before.singing, state, singing), told });
+            renderVoiceBadge();
+        }
+        // The engine's own count of a voice it is singing (the host's 'voiceProgress'; owner's
+        // request 2026-11-11): the seconds to sing ANEW and how many are done. The bar is counted
+        // on these, not on the score's length.
+        function setVoiceTold(message) {
+            const s = voiceStates.get(message.part);
+            if (!s || s.state !== 'preparing' || !sungNowHas(message.part)) { return; }
+            const now = Date.now();
+            const same = s.told && s.told.key === message.key && message.sung > 0;
+            s.told = { key: message.key, toSing: message.toSing, sung: message.sung, at: now, firstAt: same ? s.told.firstAt : now, msPerSecond: message.msPerSecond || 0 };
+            s.singing = true;
             renderVoiceBadge();
         }
         // The bar under Play, for as long as the engine is singing a voice (voiceBarShown).
         let voiceBarTimer = null, voiceBarStarted = 0, voiceBarFrom = 0;
+        // The voices this showing of the bar counts (voiceRound: the ones being sung now, not the
+        // ones that were ready before it came up), and how far it has been drawn: it never goes back.
+        let voiceBarRound = [], voiceBarDrawn = 0;
+        function voiceBarParts() {
+            return [...voiceStates].map(([part, s]) => ({ part, state: s.state, singing: s.singing, estimateMs: s.estimateMs, told: s.told }));
+        }
         function paintVoiceBar() {
             const bar = document.getElementById('voiceBar');
             const now = Date.now();
             bar.hidden = false;
-            const parts = [...voiceStates.values()].map(s => ({ state: s.state, estimateMs: s.estimateMs }));
-            bar.firstElementChild.style.width = Math.round(window.LysSynth.voiceProgress(parts, now - voiceBarFrom) * 100) + '%';
+            const parts = voiceBarParts();
+            voiceBarRound = window.LysSynth.voiceRound(voiceBarRound, parts, true);
+            voiceBarDrawn = Math.max(voiceBarDrawn, window.LysSynth.voiceBar(parts.filter(p => voiceBarRound.includes(p.part)), now, now - voiceBarFrom));
+            bar.firstElementChild.style.width = Math.round(voiceBarDrawn * 100) + '%';
             paintVoiceRows();
         }
         // Each voice's own bar in the practice menu, for as long as the engine is singing it.
         function paintVoiceRows() {
-            const states = [...voiceStates].map(([part, s]) => ({ part, state: s.state, singing: s.singing, estimateMs: s.estimateMs }));
+            const states = voiceBarParts();
             for (const btn of document.querySelectorAll('#partsList button.voice')) {
                 const bar = btn.querySelector('.voice-row-bar');
                 if (!bar) { continue; }
-                const done = window.LysSynth.voiceRowProgress(states, btn.dataset.part, Date.now() - voiceBarFrom);
+                const done = window.LysSynth.voiceRowProgress(states, btn.dataset.part, Date.now() - voiceBarFrom, Date.now());
                 bar.hidden = done === null;
                 bar.firstElementChild.style.width = done === null ? '0' : Math.round(done * 100) + '%';
             }
@@ -6881,11 +6921,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!singing) {
                 if (voiceBarTimer) { clearInterval(voiceBarTimer); voiceBarTimer = null; }
                 voiceBarStarted = 0;
+                voiceBarRound = [];
+                voiceBarDrawn = 0;
                 bar.hidden = true;
                 bar.firstElementChild.style.width = '0';
                 return;
             }
-            if (!voiceBarStarted) { voiceBarStarted = voiceBarFrom = Date.now(); }
+            if (!voiceBarStarted) {
+                voiceBarStarted = voiceBarFrom = Date.now();
+                voiceBarRound = window.LysSynth.voiceRound([], voiceBarParts(), false);
+                voiceBarDrawn = 0;
+            }
             if (!voiceBarTimer) { voiceBarTimer = setInterval(paintVoiceBar, 100); }
             paintVoiceBar();
         }
@@ -8486,7 +8532,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     playVoiceSample(message);
                     break;
                 case 'voiceState':
-                    setVoiceState(message.part, message.state, message.detail, message.estimateMs, message.singing);
+                    setVoiceState(message.part, message.state, message.detail, message.estimateMs, message.singing, message.key);
+                    break;
+                case 'voiceProgress':
+                    setVoiceTold(message);
                     break;
                 case 'voiceParts':
                     keepVoices(message.parts);

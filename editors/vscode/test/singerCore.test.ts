@@ -19,7 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveCancelLine, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
-import { voiceBarShown, voiceProgress, voiceRowProgress, voiceStillSinging } from '../src/webview/playbackCore';
+import { VoiceBarPart, voiceBar, voiceBarShown, voiceProgress, voiceRound, voiceRowProgress, voiceStillSinging, voiceToldFraction } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
 // engine's score, the key names the render, the engine's lines are read, and the Cantoria
@@ -728,5 +728,103 @@ describe('a voice taken at the top level goes on to sings', () => {
         // What the list after `sings ` holds is the server's: the file's lyrics.
         const server = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'LilySharp.Lsp', 'LilySharpLanguageServer.Completion.cs'), 'utf8');
         assert.match(server, /CompletionContext\.AfterSingerSings => new CompletionList \{ Items = \[\.\. SingerWordsGoOnToOn\(\[\.\. GetDeclaredNameCompletions\(doc\.Text, "lyrics"/);
+    });
+});
+
+// Owner's request 2026-11-11: the bar that shows a voice being prepared was counted on the whole
+// score - and on the voices already there. It is counted on what has to be sung anew, so it begins
+// empty and is full when the voice is ready.
+describe('the voice bar counts what is sung anew', () => {
+    // A voice the engine spoke of at `at`: `sung` of `toSing` seconds done, the first word at 1000.
+    const told = (toSing: number, sung: number, at = 1000, msPerSecond = 500) => ({ toSing, sung, at, firstAt: 1000, msPerSecond });
+
+    it('counts a voice by the engine\'s own count: empty before the first phrase, full after the last', () => {
+        assert.equal(voiceToldFraction(told(6, 0), 1000), 0);
+        assert.equal(voiceToldFraction(told(6, 6, 9000), 9000), 1);
+        assert.ok(Math.abs(voiceToldFraction(told(6, 2, 2000), 2000) - 1 / 3) < 1e-9);
+        // Nothing to sing anew (every phrase kept): full at once.
+        assert.equal(voiceToldFraction(told(0, 0), 1000), 1);
+    });
+
+    it('creeps on between two phrases at the engine\'s pace, never past what is left', () => {
+        // Before the first phrase is in, at the host's pace: 500 ms a second of music.
+        assert.ok(Math.abs(voiceToldFraction(told(6, 0), 2000) - 2 / 6) < 1e-9);
+        // Once a phrase is in, at the pace measured: 2 s of music in 4000 ms, so 1 s more 2000 ms on.
+        assert.ok(Math.abs(voiceToldFraction(told(6, 2, 5000), 7000) - 3 / 6) < 1e-9);
+        // A long wait does not fill it: the engine's word does.
+        const late = voiceToldFraction(told(6, 2, 5000), 500000);
+        assert.ok(late < 1 && late > 0.9);
+        assert.ok(voiceToldFraction(told(6, 0, 1000, 0), 999999) === 0, 'no pace known: it waits for the first phrase');
+    });
+
+    it('leaves out the voices that were ready before the bar came up', () => {
+        const parts = [{ part: 'sop', state: 'ready' as const }, { part: 'alt', state: 'preparing' as const }, { part: 'ten', state: 'waiting' as const }];
+        // The bar comes up: only what is being sung.
+        assert.deepEqual(voiceRound([], parts, false), ['alt']);
+        // While it shows: what becomes ready stays in (done), what begins joins, what the score sings no more goes.
+        const later = [{ part: 'sop', state: 'ready' as const }, { part: 'alt', state: 'ready' as const }, { part: 'ten', state: 'preparing' as const }];
+        assert.deepEqual(voiceRound(['alt'], later, true), ['alt', 'ten']);
+        assert.deepEqual(voiceRound(['alt', 'gone'], later, true), ['alt', 'ten']);
+    });
+
+    it('begins at 0 and ends at 1 over the round, each voice weighed by its own work', () => {
+        const bar = (parts: VoiceBarPart[], now: number) => voiceBar(parts, now, 0);
+        // One voice with one phrase of ten to sing again: the whole bar is that phrase.
+        const one: VoiceBarPart[] = [{ part: 'alt', state: 'preparing', singing: true, estimateMs: 60000, told: told(2, 0) }];
+        assert.equal(bar(one, 1000), 0);
+        one[0].told = told(2, 2, 3000);
+        assert.equal(bar(one, 3000), 1);
+        // Two voices: 2 s and 6 s to sing at one pace - the first done is a quarter of the bar.
+        const two: VoiceBarPart[] = [
+            { part: 'alt', state: 'ready', told: told(2, 2, 2000) },
+            { part: 'ten', state: 'preparing', singing: true, told: told(6, 0, 2000) },
+        ];
+        assert.ok(Math.abs(bar(two, 2000) - 0.25) < 1e-9);
+        // A voice that failed is not waited for.
+        assert.equal(bar([{ part: 'alt', state: 'failed' }, { part: 'ten', state: 'ready' }], 0), 1);
+        assert.equal(bar([], 0), 0);
+    });
+
+    it('falls back on the estimate for an engine that says nothing', () => {
+        // An older Cantoria: the voice being sung by the time gone against its estimate, as before.
+        const quiet: VoiceBarPart[] = [{ part: 'alt', state: 'preparing', singing: true, estimateMs: 4000 }];
+        assert.equal(voiceBar(quiet, 0, 1000), 0.25);
+        assert.equal(voiceBar(quiet, 0, 0), 0);
+        assert.equal(voiceBar(quiet, 0, 999999), 0.95);
+        // Two such: the engine sings one at a time, the second waits at 0.
+        assert.equal(voiceBar([...quiet, { part: 'ten', state: 'preparing', singing: true, estimateMs: 4000 }], 0, 2000), 0.25);
+    });
+
+    it('draws each voice\'s own line by the same count', () => {
+        const parts: VoiceBarPart[] = [
+            { part: 'alt', state: 'preparing', singing: true, told: told(6, 3, 4000) },
+            { part: 'ten', state: 'preparing', singing: true, estimateMs: 4000 },
+            { part: 'sop', state: 'ready' },
+        ];
+        assert.equal(voiceRowProgress(parts, 'alt', 0, 4000), 0.5);
+        assert.equal(voiceRowProgress(parts, 'ten', 1000, 4000), 0.25, 'the first voice the engine has not spoken of');
+        assert.equal(voiceRowProgress(parts, 'sop', 0, 4000), null);
+    });
+
+    it('is told by the engine through the host, the count held by the render\'s key', () => {
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        // The host: every word of the engine goes to the page with the job's key and the pace learnt.
+        assert.match(ext, /void panel\.webview\.postMessage\(\{ type: 'voiceProgress', part: id, key: job\.key, toSing: p\.toSing, sung: p\.sung, msPerSecond: voiceRenderRate \}\);/);
+        assert.match(ext, /await engine\.render\(voice, speed, job\.letGo\.signal, onProgress\)\);/);
+        // The pace is learnt on the seconds sung anew, and not at all from next to nothing.
+        assert.match(ext, /const sungSecondsNow = told \? told\.toSing : v\.duration;\s*if \(!told \|\| told\.toSing >= 1\) \{/);
+        // The page: the count survives a repeated "preparing" of the same render, and goes with another's.
+        assert.match(ext, /const told = state === 'preparing' && before\.told && key && before\.told\.key === key \? before\.told : undefined;/);
+        assert.match(ext, /case 'voiceProgress':\s*setVoiceTold\(message\);/);
+        // …and the bar: the round's voices only, never drawn back.
+        assert.match(ext, /voiceBarRound = window\.LysSynth\.voiceRound\(voiceBarRound, parts, true\);\s*voiceBarDrawn = Math\.max\(voiceBarDrawn, window\.LysSynth\.voiceBar\(parts\.filter\(p => voiceBarRound\.includes\(p\.part\)\), now, now - voiceBarFrom\)\);/);
+        assert.match(ext, /voiceBarRound = window\.LysSynth\.voiceRound\(\[\], voiceBarParts\(\), false\);\s*voiceBarDrawn = 0;/);
+        // The backends pass the engine's word on: the extension's API, and the program's lines.
+        const singer = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'singer.ts'), 'utf8');
+        assert.match(singer, /await this\.api\.sing\(score, \{ voice, signal, onProgress \}\);/);
+        assert.match(singer, /if \(answer\.progress\) \{\s*this\.pending\.get\(answer\.progress\.id\)\?\.onProgress\?\.\(\{ toSing: answer\.progress\.toSing, sung: answer\.progress\.sung \}\);\s*return;/);
+        const { parseServeLine } = require('../src/singerCore') as { parseServeLine: (line: string) => { id?: string; progress?: { id: string; toSing: number; sung: number } } | null };
+        const line = parseServeLine('{"progress":{"id":"k.1","toSing":6,"sung":2}}');
+        assert.deepEqual(line, { progress: { id: 'k.1', toSing: 6, sung: 2 } });
     });
 });

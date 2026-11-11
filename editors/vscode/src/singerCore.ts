@@ -58,7 +58,9 @@ export interface CantoriaApi {
     status(): Promise<{ ready: boolean; voice: string; problems: string[] }>;
     voices?(): Promise<CantoriaVoice[]>;
     /** `options.signal` lets go of a render no longer wanted (a Cantoria that does not know it sings on). */
-    sing(score: CantoriaScore, options?: { voice?: string; signal?: AbortSignal }): Promise<{ wav: string; duration: number; cached?: boolean }>;
+    /** `options.onProgress` (a Cantoria after 0.4.0; an older one never calls it) hears how far the
+     *  render is: what has to be sung anew, and how much of it is done (SingProgress). */
+    sing(score: CantoriaScore, options?: { voice?: string; signal?: AbortSignal; onProgress?: (progress: SingProgress) => void }): Promise<{ wav: string; duration: number; cached?: boolean }>;
     release(): void;
     /** The voice a `.lys` file's `singer` string comes to on this machine, and what to tell the
      *  writer when it was not the one asked for. Cantoria 0.4 on. */
@@ -603,7 +605,18 @@ export function voiceKey(score: CantoriaScore, voice: string): string {
 export interface ServeAnswer {
     ready?: boolean; voices?: string[];
     id?: string; wav?: string; duration?: number; sampleRate?: number; seconds?: number; error?: string;
+    /** How far a request is — not an answer: the request's id is inside it. */
+    progress?: { id: string } & SingProgress;
 }
+
+/**
+ * How far a voice is while the engine sings it, in seconds of MUSIC: what has to be sung anew —
+ * the engine keeps every phrase it sang, so after an edit that is the phrases changed, not the
+ * score — and how much of it is done. Told once before the first phrase and after each, so a bar
+ * from 0 to `toSing` begins empty and is full when the voice is (owner's request 2026-11-11: the
+ * bar was counted on the whole score, and stood a tenth full when the voice landed).
+ */
+export interface SingProgress { toSing: number; sung: number }
 
 /** The answer a line holds, or null for a line that is not one (the engine's own chatter). */
 export function parseServeLine(line: string): ServeAnswer | null {

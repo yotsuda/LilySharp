@@ -26,7 +26,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as readline from 'readline';
-import { CantoriaApi, CantoriaScore, SungVoiceDto, cantoriaScore, parseServeLine, serveCancelLine, serveRequestLine, voiceKey } from './singerCore';
+import { CantoriaApi, CantoriaScore, SingProgress, SungVoiceDto, cantoriaScore, parseServeLine, serveCancelLine, serveRequestLine, voiceKey } from './singerCore';
 
 /** A voice the engine rendered: the WAV's path and its length. */
 export interface RenderedVoice { wav: string; duration: number }
@@ -39,8 +39,9 @@ export interface VoiceBackend {
      *  `language`: the words', for a `singer male`, whose voice must sing them. */
     voiceName(singer?: string | null, language?: string, gender?: string | null): Promise<string>;
     /** Sings `score` in `voice` (from voiceName); `key` names the file where the backend lets the caller name it.
-     *  `signal` lets go of a render no longer wanted: the engine stops at its next phrase. */
-    sing(key: string, score: CantoriaScore, voice: string, signal?: AbortSignal): Promise<RenderedVoice>;
+     *  `signal` lets go of a render no longer wanted: the engine stops at its next phrase.
+     *  `onProgress` hears how far it is, from an engine that says (SingProgress). */
+    sing(key: string, score: CantoriaScore, voice: string, signal?: AbortSignal, onProgress?: (progress: SingProgress) => void): Promise<RenderedVoice>;
     dispose(): void;
 }
 
@@ -57,8 +58,8 @@ export class CantoriaExtensionBackend implements VoiceBackend {
         }
         return singer?.includes('/') ? singer : (await this.api.status()).voice;
     }
-    async sing(_key: string, score: CantoriaScore, voice: string, signal?: AbortSignal): Promise<RenderedVoice> {
-        const v = await this.api.sing(score, { voice, signal });
+    async sing(_key: string, score: CantoriaScore, voice: string, signal?: AbortSignal, onProgress?: (progress: SingProgress) => void): Promise<RenderedVoice> {
+        const v = await this.api.sing(score, { voice, signal, onProgress });
         return { wav: v.wav, duration: v.duration };
     }
     dispose(): void { /* the extension's engine is its own to keep */ }
@@ -72,7 +73,7 @@ export class CantoriaExtensionBackend implements VoiceBackend {
  */
 export class SingerProcess implements VoiceBackend {
     private child: cp.ChildProcess | undefined;
-    private readonly pending = new Map<string, { resolve: (v: RenderedVoice) => void; reject: (e: Error) => void }>();
+    private readonly pending = new Map<string, { resolve: (v: RenderedVoice) => void; reject: (e: Error) => void; onProgress?: (progress: SingProgress) => void }>();
     private requests = 0;
     readonly outDir: string;
     readonly name: string;
@@ -102,6 +103,10 @@ export class SingerProcess implements VoiceBackend {
         const answer = parseServeLine(line);
         if (!answer) { this.log(`singer: ${line}`); return; }
         if (answer.ready) { this.log(`singer ready: ${(answer.voices ?? []).join(', ') || 'no voice installed'}`); return; }
+        if (answer.progress) {
+            this.pending.get(answer.progress.id)?.onProgress?.({ toSing: answer.progress.toSing, sung: answer.progress.sung });
+            return;
+        }
         const waiting = answer.id ? this.pending.get(answer.id) : undefined;
         if (!waiting || !answer.id) { return; }
         this.pending.delete(answer.id);
@@ -119,12 +124,12 @@ export class SingerProcess implements VoiceBackend {
 
     /** Sings `score` into `<outDir>/<key>.wav`; the answer when the engine has. Each request has
      *  its own id: a render let go of and asked again is another request. */
-    sing(key: string, score: CantoriaScore, voice: string, signal?: AbortSignal): Promise<RenderedVoice> {
+    sing(key: string, score: CantoriaScore, voice: string, signal?: AbortSignal, onProgress?: (progress: SingProgress) => void): Promise<RenderedVoice> {
         const child = this.child ?? this.start();
         const output = path.join(this.outDir, `${key}.wav`);
         const id = `${key}.${++this.requests}`;
         return new Promise<RenderedVoice>((resolve, reject) => {
-            this.pending.set(id, { resolve, reject });
+            this.pending.set(id, { resolve, reject, onProgress });
             signal?.addEventListener('abort', () => {
                 if (!this.pending.delete(id)) { return; }
                 reject(new Error('cancelled'));
@@ -158,6 +163,7 @@ export class SingerProcess implements VoiceBackend {
 export class VoiceRenderer {
     private readonly done = new Map<string, RenderedVoice>();
     private readonly inFlight = new Map<string, Promise<RenderedVoice>>();
+    private readonly hearing = new Map<string, Set<(progress: SingProgress) => void>>();
 
     constructor(readonly backend: VoiceBackend) {}
 
@@ -183,7 +189,7 @@ export class VoiceRenderer {
      * before, else when the engine has sung it. A second ask for a voice in flight joins the first.
      * `signal` lets go of the render when a newer text has come.
      */
-    async render(dto: SungVoiceDto, speed: number, signal?: AbortSignal): Promise<{ key: string; rendered: Promise<RenderedVoice>; cached: boolean }> {
+    async render(dto: SungVoiceDto, speed: number, signal?: AbortSignal, onProgress?: (progress: SingProgress) => void): Promise<{ key: string; rendered: Promise<RenderedVoice>; cached: boolean }> {
         const score = cantoriaScore(dto, speed);
         const voice = await this.backend.voiceName(dto.Singer, dto.Language, dto.Gender);
         const key = voiceKey(score, voice);
@@ -191,11 +197,19 @@ export class VoiceRenderer {
         if (hit && fs.existsSync(hit.wav)) { return { key, rendered: Promise.resolve(hit), cached: true }; }
         let rendered = this.inFlight.get(key);
         if (!rendered) {
-            const asked: Promise<RenderedVoice> = this.backend.sing(key, score, voice, signal).then(v => { this.done.set(key, v); return v; });
+            // Whoever asks a render in flight hears how far it is too (hearing), from where it is.
+            const heard = new Set<(progress: SingProgress) => void>();
+            this.hearing.set(key, heard);
+            const asked: Promise<RenderedVoice> = this.backend.sing(key, score, voice, signal, p => { for (const hear of heard) { hear(p); } })
+                .then(v => { this.done.set(key, v); return v; });
             rendered = asked;
             this.inFlight.set(key, asked);
-            asked.finally(() => { if (this.inFlight.get(key) === asked) { this.inFlight.delete(key); } }).catch(() => undefined);
+            asked.finally(() => {
+                if (this.inFlight.get(key) === asked) { this.inFlight.delete(key); }
+                if (this.hearing.get(key) === heard) { this.hearing.delete(key); }
+            }).catch(() => undefined);
         }
+        if (onProgress) { this.hearing.get(key)?.add(onProgress); }
         return { key, rendered, cached: false };
     }
 
