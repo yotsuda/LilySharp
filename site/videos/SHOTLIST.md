@@ -139,11 +139,11 @@ section A { m { c'1@chord(Cm7) | f1@chord(F7) | } }
 form { ~A }
 score { staff m }
 ```
-1. `Cm7` の中にキャレット。`Ctrl+Shift+Up`: `@chord(Cm7 x35343)` — ダイアグラムが出て和音が鳴る。
+1. `Cm7` の中にキャレット。`Ctrl+Shift+Down`: `@chord(Cm7 x35343)` — ダイアグラムが出て和音が鳴る。
    ステータスバーに `Cm7: shape 1 of …`。
-2. `Ctrl+Shift+Up` をさらに 3 回 — 形とダイアグラムが変わり、そのたびに鳴る。
+2. `Ctrl+Shift+Down` をさらに 3 回 — 形とダイアグラムが変わり、そのたびに鳴る。
 3. `Ctrl+Shift+Down` で `x35343` まで戻し、もう 1 回: 形が消え、ダイアグラムも消える。
-4. 任意: `F7` にマウスを乗せる — *Ctrl+Shift+↑ adds a chord diagram (guitar: …)*。
+4. 任意: `F7` にマウスを乗せる — *Ctrl+Shift+↓ adds a chord diagram (guitar: …)*。
 
 ### 9. `ai-transform` — Ask AI（旧 Transform Selection with AI。ファイル名はそのまま）
 VS Code で GitHub Copilot（または別のモデル提供元）にサインインしている必要がある。

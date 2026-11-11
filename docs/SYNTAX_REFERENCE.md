@@ -2562,13 +2562,13 @@ fretted ones within four frets, the shape a player reaches for (no crossed strin
 position, the fewest fingers). A chord no hand can hold draws none, and a fretted part warns it
 (LYS1055, naming a voicing of its notes that can be held). On a single note a bare `@diagram`
 draws where that note is held, its lowest fret first (`c'1@diagram` is `xxxx1x` on a guitar), and
-`Ctrl+Shift+Up` walks the other places (`xxx5xx`, `xx-10-xxx`, …). A shape written over a single
+`Ctrl+Shift+Down` walks the other places (`xxx5xx`, `xx-10-xxx`, …). A shape written over a single
 note that is not where the note is held — a chord's diagram over a melody note — is an
 illustration, and its keys walk its chord's shapes instead.
 
 **Right-click a `<…>` chord → *Add Guitar Diagram*** writes that shape out:
 `<g b d' f'>1` becomes `<g b d' f'>1@diagram(xx5431)` (a bare `@diagram` there is the one
-written out). The notes stay as they are; the shape shows in the source, and `Ctrl+Shift+Up` walks
+written out). The notes stay as they are; the shape shows in the source, and `Ctrl+Shift+Down` walks
 it. On a fretted part, an `@diagram(SHAPE)` on a `<…>` chord whose shape does not sound the chord's
 notes — notes edited after the shape was written — warns (LYS1057), and the quick fix writes the
 chord's own shape. Every note moved alike (a capo, a transposing part) is not a difference.
@@ -2595,7 +2595,7 @@ prints its name and diagram once, where the chord changes, and again at the head
 the repeats take no room. An `@diagram` does the same (`<f a c>4@chord@diagram` strum after
 strum: the diagram where it changes, the `@chord` name on every chord). A
 name alone (`G`, `@chord(G)`, a bare `@chord`) draws no diagram — save in a score whose
-layout writes `all` (below). The editor writes shapes for you: `Ctrl+Shift+Up` on a chord adds
+layout writes `all` (below). The editor writes shapes for you: `Ctrl+Shift+Down` on a chord adds
 its usual shape (below).
 
 **Every chord: `chordDiagrams all`.** In a score whose layout says `chordDiagrams all` EVERY
@@ -2784,7 +2784,7 @@ that tuning is the diagram's. `@chord` takes the same words after its symbol:
   `chordDiagrams none` one. On a part with a
   fretted instrument its shape must have that instrument's string count (LYS1038).
 
-**The usual shape** — what `Ctrl+Shift+Up` writes first on a chord with none, what the
+**The usual shape** — what `Ctrl+Shift+Down` writes first on a chord with none, what the
 hover offers, and what an `all` score draws for a name alone — is LilyPond's predefined shape for the tuning (its tables for the guitar: 136
 chords and 17 ninth chords; the ukulele: 306; the mandolin: 204 — less nine, below — C `x32010`, F `133211`,
 Cm7 `x35343`, ukulele C `0003`, F `2010`; a table serves only the tuning it was made for, and
@@ -2835,7 +2835,7 @@ C♯dim7/D♭dim7 `3210`, only B♭ and E): those chords take the first shape of
 ukulele's Bsus2 has none). Every other predefined shape passes.
 
 **Lily#'s order.** For the usual shape of the chords LilyPond's tables lack, and for the
-editor's `Ctrl+Shift+Up`/`Down` (which rewrites a chord's shape to the next / previous: the
+editor's `Ctrl+Shift+Down`/`Up` (which rewrites a chord's shape to the next / previous: the
 usual shape first, then this order), Lily# lists a chord's shapes on every tuning.
 A shape assigns each string muted or a fret. A shape is VALID when:
 
@@ -2870,11 +2870,11 @@ editor steps through the order without stretch shapes unless the VS Code setting
 source names a shape by its place in it, so it may be improved without moving any book's
 diagram.
 
-**Stepping.** `Ctrl+Shift+Up` on a chord — an `@chord(G)` or a row entry `G` — with no shape
-writes the usual shape (`@chord(G 320003)`, `G(320003)`) and the diagram appears; further Ups
+**Stepping.** `Ctrl+Shift+Down` on a chord — an `@chord(G)` or a row entry `G` — with no shape
+writes the usual shape (`@chord(G 320003)`, `G(320003)`) and the diagram appears; further Downs
 walk the order — frets 10–15 included, a `-` around each two-digit fret (Cm goes on past
-`8xx888` to `8xx88-11` … `x-15-13-x-13-15`, its 29th); `Down` back AT the usual shape removes it again (the diagram goes, a row's
-empty `( )` with it); `Down` on a name alone does nothing. With several shapes written, the
+`8xx888` to `8xx88-11` … `x-15-13-x-13-15`, its 29th); `Up` back AT the usual shape removes it again (the diagram goes, a row's
+empty `( )` with it); `Up` on a name alone does nothing. With several shapes written, the
 one for the chord's tuning steps and the others stay — unless the caret is ON one of them
 (2026-10-31): then that one steps, on its own tuning (the word before it, else the scores', the
 part's or the guitar's with its string count), and the status bar names it —
@@ -2884,20 +2884,20 @@ its tuning before it. The chord's tuning is the rule above read in
 the FIRST score that renders the chord (for a row, the first score placing it); when another
 score draws it on another tuning, the status bar says so. When that first score writes
 `chordDiagrams all`, a name alone already SHOWS the usual shape, so the step counts from it:
-`Up` on the name writes the NEXT shape after the usual one, and `Down` at the usual shape —
+`Down` on the name writes the NEXT shape after the usual one, and `Up` at the usual shape —
 written or not — does nothing (the status bar says why). The same where the file's
-`chordShapes { }` lists the chord (*Listed chords*): the name alone shows the table's shape, `Up` writes
-the shape after it, and `Down` at the written table shape removes it (the page keeps showing it).
+`chordShapes { }` lists the chord (*Listed chords*): the name alone shows the table's shape, `Down` writes
+the shape after it, and `Up` at the written table shape removes it (the page keeps showing it).
 
 A `diagram(…)` item with **no symbol** steps too (2026-10-31): `diagram(x32010)` walks the order
 of the chord the shape sounds on the part's tuning (x32010 is C; above a capo, the pressed
 shape's sounding chord), and only the shape is rewritten, no symbol added. The status bar names
-the chord (`C: shape 2 of N`). `Down` at its first shape keeps it. A shape whose notes name no
+the chord (`C: shape 2 of N`). `Up` at its first shape keeps it. A shape whose notes name no
 chord is not stepped, and the status bar says to write its symbol. A symbol-less
 `@chord(x32010)` steps the same way, with the caret on the word or the shape, and so does an
 `@diagram(133211)` on a single note or a rest (F: *shape 2 of 29*). On a `<…>` chord,
 `@diagram(SHAPE)` walks the other ways to hold that chord's own notes instead (*fingering 2 of 3*).
-A bare `@diagram` there already draws the first of them: `Up` writes that one out (the page stays as it is; the source shows the shape), and `Down`
+A bare `@diagram` there already draws the first of them: `Down` writes that one out (the page stays as it is; the source shows the shape), and `Up`
 at the first written one takes the shape away again — back to the bare mark, which follows the
 notes.
 `Ctrl+Shift+PageUp`/`PageDown` still places an `@diagram` (`.up` / `.down`).
@@ -2910,7 +2910,7 @@ its natural-minor sevenths; with no `key` written, C major. A shape the entry wr
 old chord. A root outside the key, or a Roman degree, steps nothing and says why.
 
 **Hover** a `@chord` or a `chords` row entry with no shape: one line says how to add a diagram
-and what it would be — `Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)`; in an `all` score,
+and what it would be — `Ctrl+Shift+↓ adds a chord diagram (guitar: 320003)`; in an `all` score,
 the usual shape it draws instead — `guitar: 320003 (default) — shape 1 of N`; for a chord the
 layout table lists, the table's shape — `guitar: xx3211 (layout)`. With a shape
 written: the shape each tuning its scores draw on shows — `guitar: x3x546 (written)`,
@@ -3000,8 +3000,8 @@ diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the
   (`<c\5 e\4 g\3 c'\2 g'\1>1`), and `\omit StringNumber` on the staff.
 - **Editor.** Hover lists the notes it sounds on each tuning that plays it —
   `guitar: x32013 — C3 E3 G3 C4 G4 — shape n of N`; `Ctrl+Shift+Up`/`Down` on the item steps its
-  shape through the order above on the PART's tuning (from `diagram(C)`, Up writes the usual shape),
-  sounding each. Down at the usual shape takes the item's shape away — `chord(F 133211)` →
+  shape through the order above on the PART's tuning (from `diagram(C)`, Down writes the usual shape),
+  sounding each. Up at the usual shape takes the item's shape away — `chord(F 133211)` →
   `chord(F)`, the name alone, played close; `diagram(Cmaj7 x32000)` → `diagram(Cmaj7)`, which still
   draws and plays the usual shape — and stops a shape with no symbol (`diagram(x32010)`); inside `chord(` and
   `diagram(` the completion offers the chord symbols `@chord(` does. Hover on a symbol-less item

@@ -197,19 +197,19 @@ public class StepRequestTests
     [Fact]
     public void TheStep_WalksIntoFretsTenToFifteen_AndSpellsEachInItsForm()
     {
-        var (response, after) = Step(Guitar("c'1@chord(Cm 8xx888‸)"), +1, semitone: true);
+        var (response, after) = Step(Guitar("c'1@chord(Cm 8xx888‸)"), -1, semitone: true);
         Assert.Equal(Guitar("c'1@chord(Cm 8xx88-11)"), after);
         Assert.Equal("Cm: shape 20 of 35 (8xx88-11)", response.Message);
-        Assert.Equal(Guitar("c'1@chord(Cm 8xx888)"), Down("c'1@chord(Cm 8xx88-11‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar("c'1@chord(Cm 8xx888)"), Up("c'1@chord(Cm 8xx88-11‸)", Guitar, semitone: true));
         // The full-dash spelling of the same shape steps from the same place.
-        Assert.Equal(Guitar("c'1@chord(Cm 8xx888)"), Down("c'1@chord(Cm 8-x-x-8-8-11‸)", Guitar, semitone: true));
-        Assert.Equal(Guitar("c'1@chord(Cm x-15-13-12-13-x)"), Up("c'1@chord(Cm x-15-13-12-x-15‸)", Guitar, semitone: true));
-        Assert.Equal(Guitar("c'1@chord(Cm xx-10-12-13-11)"), Up("c'1@chord(Cm 8-10-10-8-8-11‸)", Guitar, semitone: true));
-        Assert.Equal(Guitar("c'1@chord(Cm 8-10-10-888)"), Up("c'1@chord(Cm xx-10-8-8-11‸)", Guitar, semitone: true));
-        // A written x-3-5-5-4-3 is the default x35543: Up writes the next one-character shape.
-        Assert.Equal(Guitar("c'1@chord(Cm x31013)"), Up("c'1@chord(Cm x-3-5-5-4-3‸)", Guitar, semitone: true));
-        Assert.Equal(Row("Cm(8xx88-11) |"), Up("Cm(8xx888‸) |", Row, semitone: true));
-        Assert.Equal(Row("Cm(8xx888) |"), Down("Cm(8xx88-11‸) |", Row, semitone: true));
+        Assert.Equal(Guitar("c'1@chord(Cm 8xx888)"), Up("c'1@chord(Cm 8-x-x-8-8-11‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar("c'1@chord(Cm x-15-13-12-13-x)"), Down("c'1@chord(Cm x-15-13-12-x-15‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar("c'1@chord(Cm xx-10-12-13-11)"), Down("c'1@chord(Cm 8-10-10-8-8-11‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar("c'1@chord(Cm 8-10-10-888)"), Down("c'1@chord(Cm xx-10-8-8-11‸)", Guitar, semitone: true));
+        // A written x-3-5-5-4-3 is the default x35543: Down writes the next one-character shape.
+        Assert.Equal(Guitar("c'1@chord(Cm x31013)"), Down("c'1@chord(Cm x-3-5-5-4-3‸)", Guitar, semitone: true));
+        Assert.Equal(Row("Cm(8xx88-11) |"), Down("Cm(8xx888‸) |", Row, semitone: true));
+        Assert.Equal(Row("Cm(8xx888) |"), Up("Cm(8xx88-11‸) |", Row, semitone: true));
     }
 
     [Fact]
@@ -227,28 +227,28 @@ public class StepRequestTests
     public void TheNameAlone_UpWritesTheDefault_DownDoesNothing()
     {
         var order = Cm7Order();
-        var (up, after) = Step(Guitar("c'1@chord(Cm7‸)"), +1, semitone: true);
+        var (up, after) = Step(Guitar("c'1@chord(Cm7‸)"), -1, semitone: true);
         Assert.Equal(Guitar("c'1@chord(Cm7 x35343)"), after);
         Assert.Equal($"Cm7: shape 1 of {order.Count} (x35343)", up.Message);
-        var (down, same) = Step(Guitar("c'1@chord(Cm7‸)"), -1, semitone: true);
+        var (down, same) = Step(Guitar("c'1@chord(Cm7‸)"), +1, semitone: true);
         Assert.False(down.Fallback);   // on a chord: handled, just no move
         Assert.Empty(down.Edits);
         Assert.Equal(Guitar("c'1@chord(Cm7)"), same);
-        Assert.Contains("Up adds one", down.Message);
+        Assert.Contains("Down adds one", down.Message);
     }
 
     [Fact]
     public void AWrittenShape_StepsToItsNeighbour_AndDownAtTheDefaultRemovesIt()
     {
         var order = Cm7Order();
-        Assert.Equal(Guitar($"c'1@chord(Cm7 {order[3]})"), Up($"c'1@chord(Cm7 {order[2]}‸)", Guitar, semitone: true));
-        Assert.Equal(Guitar($"c'1@chord(Cm7 {order[1]})"), Down($"c'1@chord(C‸m7 {order[2]})", Guitar, semitone: true));
-        // Down to the default writes it; Down AT it removes the shape, and the diagram goes.
-        Assert.Equal(Guitar("c'1@chord(Cm7 x35343)"), Down($"c'1@chord(Cm7 {order[1]}‸)", Guitar, semitone: true));
-        var (removed, after) = Step(Guitar("c'1@chord(Cm7 x35343‸)"), -1, semitone: true);
+        Assert.Equal(Guitar($"c'1@chord(Cm7 {order[3]})"), Down($"c'1@chord(Cm7 {order[2]}‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar($"c'1@chord(Cm7 {order[1]})"), Up($"c'1@chord(C‸m7 {order[2]})", Guitar, semitone: true));
+        // Up to the default writes it; Up AT it removes the shape, and the diagram goes.
+        Assert.Equal(Guitar("c'1@chord(Cm7 x35343)"), Up($"c'1@chord(Cm7 {order[1]}‸)", Guitar, semitone: true));
+        var (removed, after) = Step(Guitar("c'1@chord(Cm7 x35343‸)"), +1, semitone: true);
         Assert.Equal(Guitar("c'1@chord(Cm7)"), after);
         Assert.Contains("shape removed, no diagram", removed.Message);
-        Assert.Equal(Guitar($"c'1@chord(Cm7 {order[1]})"), Up("c'1@chord(Cm7 x35343‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar($"c'1@chord(Cm7 {order[1]})"), Down("c'1@chord(Cm7 x35343‸)", Guitar, semitone: true));
     }
 
     /// <summary>On a ukulele part the step writes the ukulele's shape (the part's instrument,
@@ -263,15 +263,15 @@ public class StepRequestTests
             form { A }
             score { staff uk }
             """;
-        Assert.Equal(Uke("c'1@chord(C 0003)"), Up("c'1@chord(C‸)", Uke, semitone: true));
-        Assert.Equal(Uke("c'1@chord(C x32010)"), Down("c'1@chord(C x32010 0003‸)", Uke, semitone: true));
+        Assert.Equal(Uke("c'1@chord(C 0003)"), Down("c'1@chord(C‸)", Uke, semitone: true));
+        Assert.Equal(Uke("c'1@chord(C x32010)"), Up("c'1@chord(C x32010 0003‸)", Uke, semitone: true));
         // The ukulele's order past the table (2026-09-29, K5 ⑥: the rules less V4): 0003 → 0403;
         // a chord the table lacks starts on the order's first shape.
-        Assert.Equal(Uke("c'1@chord(C 0403)"), Up("c'1@chord(C 0003‸)", Uke, semitone: true));
-        Assert.Equal(Uke("c'1@chord(C 0003)"), Down("c'1@chord(C 0403‸)", Uke, semitone: true));
-        Assert.Equal(Uke("c'1@chord(Cmaj9 4203)"), Up("c'1@chord(Cmaj9‸)", Uke, semitone: true));
-        Assert.Equal(Guitar("c'1@chord(C 0003)"), Down("c'1@chord(C 0003 x32010‸)", Guitar, semitone: true));
-        Assert.Equal(Guitar("c'1@chord(C 0003 x32010)"), Up("c'1@chord(C 0003‸)", Guitar, semitone: true));
+        Assert.Equal(Uke("c'1@chord(C 0403)"), Down("c'1@chord(C 0003‸)", Uke, semitone: true));
+        Assert.Equal(Uke("c'1@chord(C 0003)"), Up("c'1@chord(C 0403‸)", Uke, semitone: true));
+        Assert.Equal(Uke("c'1@chord(Cmaj9 4203)"), Down("c'1@chord(Cmaj9‸)", Uke, semitone: true));
+        Assert.Equal(Guitar("c'1@chord(C 0003)"), Up("c'1@chord(C 0003 x32010‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar("c'1@chord(C 0003 x32010)"), Down("c'1@chord(C 0003‸)", Guitar, semitone: true));
     }
 
     // ---- a layout shape table (2026-09-29): a listed name alone draws the table's shape
@@ -286,20 +286,20 @@ public class StepRequestTests
     public void InATableScore_TheNameAloneStandsAtTheTablesShape()
     {
         var order = Cm7Order();
-        var (up, after) = Step(TableGuitar("c'1@chord(Cm7‸)"), +1, semitone: true);
+        var (up, after) = Step(TableGuitar("c'1@chord(Cm7‸)"), -1, semitone: true);
         Assert.Equal(TableGuitar($"c'1@chord(Cm7 {order[1]})"), after);
         Assert.Equal($"Cm7: shape 2 of {order.Count} ({order[1]})", up.Message);
 
-        var (down, same) = Step(TableGuitar("c'1@chord(Cm7‸)"), -1, semitone: true);
+        var (down, same) = Step(TableGuitar("c'1@chord(Cm7‸)"), +1, semitone: true);
         Assert.Empty(down.Edits);
         Assert.Equal(TableGuitar("c'1@chord(Cm7)"), same);
         Assert.Contains("this score's layout table lists it, so it shows (guitar: x35343)", down.Message);
 
-        var (atTable, removed) = Step(TableGuitar("c'1@chord(Cm7 x35343‸)"), -1, semitone: true);
+        var (atTable, removed) = Step(TableGuitar("c'1@chord(Cm7 x35343‸)"), +1, semitone: true);
         Assert.Equal(TableGuitar("c'1@chord(Cm7)"), removed);
         Assert.Contains("layout table lists it, so the name alone still shows it", atTable.Message);
 
-        Assert.Equal(TableGuitar("c'1@chord(G 320003)"), Up("c'1@chord(G‸)", TableGuitar, semitone: true));
+        Assert.Equal(TableGuitar("c'1@chord(G 320003)"), Down("c'1@chord(G‸)", TableGuitar, semitone: true));
     }
 
     // ---- chordDiagrams … all (owner's decision 2026-09-28): a name alone already draws the default
@@ -313,30 +313,30 @@ public class StepRequestTests
     public void InAnAllScore_UpFromTheNameWritesTheNextShape_AndDownAtAWrittenDefaultRemovesIt()
     {
         var order = Cm7Order();
-        var (up, after) = Step(AllGuitar("c'1@chord(Cm7‸)"), +1, semitone: true);
+        var (up, after) = Step(AllGuitar("c'1@chord(Cm7‸)"), -1, semitone: true);
         Assert.Equal(AllGuitar($"c'1@chord(Cm7 {order[1]})"), after);
         Assert.Equal($"Cm7: shape 2 of {order.Count} ({order[1]})", up.Message);
 
-        var (down, same) = Step(AllGuitar("c'1@chord(Cm7‸)"), -1, semitone: true);
+        var (down, same) = Step(AllGuitar("c'1@chord(Cm7‸)"), +1, semitone: true);
         Assert.False(down.Fallback);
         Assert.Empty(down.Edits);
         Assert.Equal(AllGuitar("c'1@chord(Cm7)"), same);
         Assert.Contains("this score draws every chord, so it shows the default (guitar: x35343)", down.Message);
 
-        var (atDefault, removed) = Step(AllGuitar("c'1@chord(Cm7 x35343‸)"), -1, semitone: true);
+        var (atDefault, removed) = Step(AllGuitar("c'1@chord(Cm7 x35343‸)"), +1, semitone: true);
         Assert.False(atDefault.Fallback);
         Assert.Equal(AllGuitar("c'1@chord(Cm7)"), removed);
         Assert.Contains("shape removed", atDefault.Message);
 
-        // From the next shape Down still writes the default, and Up walks on as elsewhere.
-        Assert.Equal(AllGuitar("c'1@chord(Cm7 x35343)"), Down($"c'1@chord(Cm7 {order[1]}‸)", AllGuitar, semitone: true));
-        Assert.Equal(AllGuitar($"c'1@chord(Cm7 {order[2]})"), Up($"c'1@chord(Cm7 {order[1]}‸)", AllGuitar, semitone: true));
+        // From the next shape Up still writes the default, and Down walks on as elsewhere.
+        Assert.Equal(AllGuitar("c'1@chord(Cm7 x35343)"), Up($"c'1@chord(Cm7 {order[1]}‸)", AllGuitar, semitone: true));
+        Assert.Equal(AllGuitar($"c'1@chord(Cm7 {order[2]})"), Down($"c'1@chord(Cm7 {order[1]}‸)", AllGuitar, semitone: true));
 
         // A row entry of an `all` score steps the same way.
         static string AllRow(string row) => "layout { chordDiagrams all }\n" + Row(row);
         var gOrder = Order("G", includeStretch: false);
-        Assert.Equal(AllRow($"G({gOrder[1]}) | C |"), Up("G‸ | C |", AllRow, semitone: true));
-        Assert.Equal(AllRow("G | C |"), Down("G(320003‸) | C |", AllRow, semitone: true));
+        Assert.Equal(AllRow($"G({gOrder[1]}) | C |"), Down("G‸ | C |", AllRow, semitone: true));
+        Assert.Equal(AllRow("G | C |"), Up("G(320003‸) | C |", AllRow, semitone: true));
     }
 
     // ---------------------------------------------------------------- chords-row entries
@@ -360,19 +360,19 @@ public class StepRequestTests
     {
         var gOrder = Order("G", includeStretch: false);
         Assert.Equal("320003", gOrder[0]);
-        var (up, after) = Step(Row("G‸ | C |"), +1, semitone: true);
+        var (up, after) = Step(Row("G‸ | C |"), -1, semitone: true);
         Assert.Equal(Row("G(320003) | C |"), after);
         Assert.Equal($"G: shape 1 of {gOrder.Count} (320003)", up.Message);
-        Assert.Equal(Row($"G({gOrder[1]}) | C |"), Up("G(320003‸) | C |", Row, semitone: true));
-        Assert.Equal(Row("G | C |"), Down("G(3‸20003) | C |", Row, semitone: true));
-        var (down, same) = Step(Row("G‸ | C |"), -1, semitone: true);
+        Assert.Equal(Row($"G({gOrder[1]}) | C |"), Down("G(320003‸) | C |", Row, semitone: true));
+        Assert.Equal(Row("G | C |"), Up("G(3‸20003) | C |", Row, semitone: true));
+        var (down, same) = Step(Row("G‸ | C |"), +1, semitone: true);
         Assert.False(down.Fallback);
         Assert.Empty(down.Edits);
         Assert.Equal(Row("G | C |"), same);
         // Several shapes: the guitar's steps; removing it keeps the other.
-        Assert.Equal(Row("F(2010) |"), Down("F(133211‸ 2010) |", Row, semitone: true));
-        Assert.Equal(Row("F(2010) |"), Down("F(2010 ‸133211) |", Row, semitone: true));
-        Assert.Equal(Row("F(2010 133211) |"), Up("F(2010‸) |", Row, semitone: true));
+        Assert.Equal(Row("F(2010) |"), Up("F(133211‸ 2010) |", Row, semitone: true));
+        Assert.Equal(Row("F(2010) |"), Up("F(2010 ‸133211) |", Row, semitone: true));
+        Assert.Equal(Row("F(2010 133211) |"), Down("F(2010‸) |", Row, semitone: true));
     }
 
     /// <summary>The same walk on a named @chord in a part (owner's request 2026-11-03): the note is
@@ -436,7 +436,7 @@ public class StepRequestTests
     public void AChordMarkWithNoName_KeepsItsSteps_AndTheSemitonePairTheShape()
     {
         string Book(string m) => "key c major\npart gt { clef treble }\nsection A { gt { " + m + " e f | } }\nform { A }\nscore { staff gt }\n";
-        // A shape alone: nothing moves on this pair, and it says why; Up and Down step its shape.
+        // A shape alone: nothing moves on this pair, and it says why; Down and Up step its shape.
         foreach (string at in new[] { "c'4@chord(x32010‸) d", "c'4@chord(x32‸010) d", "c'4@cho‸rd(x32010) d", "r4@chord(x32010‸) d" })
             foreach (int direction in new[] { +1, -1 })
             {
@@ -445,13 +445,13 @@ public class StepRequestTests
                 Assert.Equal(Book(at.Replace("‸", "")), same);
                 Assert.Contains("no chord name", said.Message);
             }
-        Assert.NotEqual(Book("c'4@chord(x32010) d"), Step(Book("c'4@chord(x32010‸) d"), +1, semitone: true).After);
+        Assert.NotEqual(Book("c'4@chord(x32010) d"), Step(Book("c'4@chord(x32010‸) d"), -1, semitone: true).After);
         // A bare @chord on <…> is its chord's: the octave pair moves the chord, as it did.
-        var (_, bare) = Step(Book("<c' e g>4@chord‸ d"), +1);
+        var (_, bare) = Step(Book("<c' e g>4@chord‸ d"), -1);
         Assert.Contains("@chord d", bare);
         Assert.DoesNotContain("Dm7", bare);
-        // Up / Down on a named one: its shape.
-        var (_, shape) = Step(Book("c'4@chord(C‸) d"), +1, semitone: true);
+        // Down / Up on a named one: its shape.
+        var (_, shape) = Step(Book("c'4@chord(C‸) d"), -1, semitone: true);
         Assert.Contains("@chord(C ", shape);
         Assert.DoesNotContain("Dm7", shape);
     }
@@ -507,11 +507,11 @@ public class StepRequestTests
                 Assert.Contains("no chord name", said.Message);
             }
         // Its shape is the semitone pair's.
-        Assert.NotEqual(Book("diagram(x32010)1 |"), Step(Book("diagram(x32‸010)1 |"), +1, semitone: true).After);
+        Assert.NotEqual(Book("diagram(x32010)1 |"), Step(Book("diagram(x32‸010)1 |"), -1, semitone: true).After);
         // An @diagram: its placement.
         Assert.Equal(Book("c'1@diagram(133211).up |"), Step(Book("c'1@diagram(133‸211) |"), +1).After);
-        // Up / Down on a named item: its shape.
-        var (_, shape) = Step(Book("diagram(Cmaj7‸)1 |"), +1, semitone: true);
+        // Down / Up on a named item: its shape.
+        var (_, shape) = Step(Book("diagram(Cmaj7‸)1 |"), -1, semitone: true);
         Assert.Contains("diagram(Cmaj7 ", shape);
     }
 
@@ -593,7 +593,7 @@ public class StepRequestTests
             score u { layout uke  chords prog  staff gt }
             score g { chords prog  staff gt }
             """;
-        var (response, after) = Step(TwoScores("G‸ |"), +1, semitone: true);
+        var (response, after) = Step(TwoScores("G‸ |"), -1, semitone: true);
         Assert.Equal(TwoScores("G(0232) |"), after);
         Assert.Contains("another draws guitar", response.Message);
     }
@@ -602,7 +602,7 @@ public class StepRequestTests
     public void UpAtTheLastShape_ChangesNothing_AndSaysWhereItIs()
     {
         var order = Cm7Order();
-        var (response, after) = Step(Guitar($"c'1@chord(Cm7 {order[^1]}‸)"), +1, semitone: true);
+        var (response, after) = Step(Guitar($"c'1@chord(Cm7 {order[^1]}‸)"), -1, semitone: true);
         Assert.False(response.Fallback);
         Assert.Empty(response.Edits);
         Assert.Equal($"Cm7: shape {order.Count} of {order.Count} ({order[^1]})", response.Message);
@@ -615,7 +615,7 @@ public class StepRequestTests
     {
         // x3534x is the default x35343 with its top string muted: it stands where x35343 does.
         var order = Cm7Order();
-        Assert.Equal(Guitar($"c'1@chord(Cm7 {order[1]})"), Up("c'1@chord(Cm7 x3534x‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar($"c'1@chord(Cm7 {order[1]})"), Down("c'1@chord(Cm7 x3534x‸)", Guitar, semitone: true));
     }
 
     // ---- stretch shapes (owner's decision 2026-09-28: off by default, a setting turns them on)
@@ -649,22 +649,22 @@ public class StepRequestTests
         var on = Cm7Order(includeStretch: true);
         Assert.Equal("xx5546", off[off.IndexOf("x35346") + 1]);
         Assert.Equal("8xx546", on[on.IndexOf("x35346") + 1]);
-        Assert.Equal(Guitar("c'1@chord(Cm7 xx5546)"), Step(Guitar("c'1@chord(Cm7 x35346‸)"), +1, semitone: true).After);
-        var (response, after) = Step(Guitar("c'1@chord(Cm7 x35346‸)"), +1, includeStretch: true, semitone: true);
+        Assert.Equal(Guitar("c'1@chord(Cm7 xx5546)"), Step(Guitar("c'1@chord(Cm7 x35346‸)"), -1, semitone: true).After);
+        var (response, after) = Step(Guitar("c'1@chord(Cm7 x35346‸)"), -1, includeStretch: true, semitone: true);
         Assert.Equal(Guitar("c'1@chord(Cm7 8xx546)"), after);
         Assert.Equal($"Cm7: shape {on.IndexOf("8xx546") + 1} of {on.Count} (8xx546)", response.Message);
     }
 
     /// <summary>A WRITTEN stretch shape with the setting off is not in the order, yet steps from
-    /// where it would sort: 8xx546 (position 4) goes Up to the first normal shape after it,
-    /// 8x58x6 (position 5), and Down to the last before it, xx5546 (position 4, on the upper strings).</summary>
+    /// where it would sort: 8xx546 (position 4) goes Down to the first normal shape after it,
+    /// 8x58x6 (position 5), and Up to the last before it, xx5546 (position 4, on the upper strings).</summary>
     [Fact]
     public void AWrittenStretchShape_StepsToTheNormalShapesAroundIt()
     {
-        Assert.Equal(Guitar("c'1@chord(Cm7 8x58x6)"), Up("c'1@chord(Cm7 8xx546‸)", Guitar, semitone: true));
-        Assert.Equal(Guitar("c'1@chord(Cm7 xx5546)"), Down("c'1@chord(Cm7 8xx546‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar("c'1@chord(Cm7 8x58x6)"), Down("c'1@chord(Cm7 8xx546‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar("c'1@chord(Cm7 xx5546)"), Up("c'1@chord(Cm7 8xx546‸)", Guitar, semitone: true));
         // A muted copy of it sorts as the stretch shape it mutes.
-        Assert.Equal(Guitar("c'1@chord(Cm7 8x58x6)"), Up("c'1@chord(Cm7 8xx54x‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar("c'1@chord(Cm7 8x58x6)"), Down("c'1@chord(Cm7 8xx54x‸)", Guitar, semitone: true));
     }
 
     /// <summary>An <c>@chord</c> with no symbol — a bare shape — steps its shape through the shapes
@@ -673,11 +673,11 @@ public class StepRequestTests
     [Fact]
     public void AShapeWithNoSymbol_StepsItsShape()
     {
-        Assert.Equal(Guitar("c'1@chord(x32013)"), Step(Guitar("c'1@ch‸ord(x32010)"), +1, semitone: true).After);
-        Assert.Equal(Guitar("c'1@chord(x32013)"), Step(Guitar("c'1@chord(x32‸010)"), +1, semitone: true).After);
-        Assert.Equal(Guitar("c'1@chord(x35046)"), Step(Guitar("c'1@chord(x3x5‸46)"), +1, semitone: true).After);
-        // Down at the chord's first shape keeps it: no symbol is written, the shape is all there is.
-        Assert.Equal(Guitar("c'1@chord(x32010)"), Step(Guitar("c'1@chord(x32‸010)"), -1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@chord(x32013)"), Step(Guitar("c'1@ch‸ord(x32010)"), -1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@chord(x32013)"), Step(Guitar("c'1@chord(x32‸010)"), -1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@chord(x35046)"), Step(Guitar("c'1@chord(x3x5‸46)"), -1, semitone: true).After);
+        // Up at the chord's first shape keeps it: no symbol is written, the shape is all there is.
+        Assert.Equal(Guitar("c'1@chord(x32010)"), Step(Guitar("c'1@chord(x32‸010)"), +1, semitone: true).After);
     }
 
     /// <summary>An <c>@diagram(SHAPE)</c> on a single note or a rest steps its shape through the
@@ -687,10 +687,10 @@ public class StepRequestTests
     [Fact]
     public void ADiagramOnANote_StepsItsShape()
     {
-        Assert.Equal(Guitar("c'1@diagram(xx3211)"), Step(Guitar("c'1@diagram(133‸211)"), +1, semitone: true).After);
-        Assert.Equal(Guitar("c'1@diagram(xx3211)"), Step(Guitar("c'1@di‸agram(133211)"), +1, semitone: true).After);
-        Assert.Equal(Guitar("r1@diagram(x32013)"), Step(Guitar("r1@diagram(x32‸010)"), +1, semitone: true).After);
-        Assert.Equal(Guitar("c'1@diagram(133211)"), Step(Guitar("c'1@diagram(133‸211)"), -1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram(xx3211)"), Step(Guitar("c'1@diagram(133‸211)"), -1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram(xx3211)"), Step(Guitar("c'1@di‸agram(133211)"), -1, semitone: true).After);
+        Assert.Equal(Guitar("r1@diagram(x32013)"), Step(Guitar("r1@diagram(x32‸010)"), -1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram(133211)"), Step(Guitar("c'1@diagram(133‸211)"), +1, semitone: true).After);
         Assert.Equal(Guitar("c'1@diagram(133211).up"), Up("c'1@diagram(133‸211)", Guitar));
     }
 
@@ -701,18 +701,18 @@ public class StepRequestTests
     [Fact]
     public void ADiagramOnASingleNote_WalksWhereTheNoteIsHeld()
     {
-        Assert.Equal(Guitar("c'1@diagram(xxxx1x)"), Step(Guitar("c'1@diag‸ram"), +1, semitone: true).After);
-        Assert.Equal(Guitar("c'1@diagram(xx-10-xxx)"), Step(Guitar("c'1@diagram(xxx‸5xx)"), +1, semitone: true).After);
-        Assert.Equal(Guitar("c'1@diagram(xxx5xx)"), Step(Guitar("c'1@diagram(xx-1‸0-xxx)"), -1, semitone: true).After);
-        Assert.Equal(Guitar("c'1@diagram"), Step(Guitar("c'1@diagram(xxxx‸1x)"), -1, semitone: true).After);
-        Assert.Equal(Guitar("c'1@diagram"), Step(Guitar("c'1@diag‸ram"), -1, semitone: true).After);
-        // Just past the ')' — where the editor leaves the caret after Up wrote the shape in — the
-        // keys go on walking (owner's report 2026-10-31: the second Up did nothing there).
-        Assert.Equal(Guitar("c'1@diagram(xxx5xx)"), Step(Guitar("c'1@diagram(xxxx1x)‸"), +1, semitone: true).After);
-        Assert.Equal(Guitar("c'1@diagram"), Step(Guitar("c'1@diagram(xxxx1x)‸"), -1, semitone: true).After);
-        string inside = Step(Guitar("<c' e'>1@diagram(x320‸1x)"), +1, semitone: true).After;
+        Assert.Equal(Guitar("c'1@diagram(xxxx1x)"), Step(Guitar("c'1@diag‸ram"), -1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram(xx-10-xxx)"), Step(Guitar("c'1@diagram(xxx‸5xx)"), -1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram(xxx5xx)"), Step(Guitar("c'1@diagram(xx-1‸0-xxx)"), +1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram"), Step(Guitar("c'1@diagram(xxxx‸1x)"), +1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram"), Step(Guitar("c'1@diag‸ram"), +1, semitone: true).After);
+        // Just past the ')' — where the editor leaves the caret after Down wrote the shape in — the
+        // keys go on walking (owner's report 2026-10-31: the second Down did nothing there).
+        Assert.Equal(Guitar("c'1@diagram(xxx5xx)"), Step(Guitar("c'1@diagram(xxxx1x)‸"), -1, semitone: true).After);
+        Assert.Equal(Guitar("c'1@diagram"), Step(Guitar("c'1@diagram(xxxx1x)‸"), +1, semitone: true).After);
+        string inside = Step(Guitar("<c' e'>1@diagram(x320‸1x)"), -1, semitone: true).After;
         Assert.NotEqual(Guitar("<c' e'>1@diagram(x3201x)"), inside);
-        Assert.Equal(inside, Step(Guitar("<c' e'>1@diagram(x3201x)‸"), +1, semitone: true).After);
+        Assert.Equal(inside, Step(Guitar("<c' e'>1@diagram(x3201x)‸"), -1, semitone: true).After);
         // A space after the ')' is no longer the mark: the next note steps.
         Assert.Equal(Guitar("c'1@diagram(xxxx1x) d''4"), Step(Guitar("c'1@diagram(xxxx1x) ‸d'4"), +1).After);
         // The page draws it: one dot, the B string's first fret.
@@ -722,7 +722,7 @@ public class StepRequestTests
             a => a.Type == LilySharp.Core.Syntax.ArticulationType.FretFrame).FrameSpec);
     }
 
-    /// <summary>Down at a chord(…) item's usual shape takes the shape away — chord(F 133211) →
+    /// <summary>Up at a chord(…) item's usual shape takes the shape away — chord(F 133211) →
     /// chord(F), the name alone, played close — as at an @chord's; a diagram(…) item's too
     /// (diagram(Cmaj7 x32000) → diagram(Cmaj7), which still draws and plays the usual shape;
     /// owner's requests 2026-10-31). A shape with no symbol stays.</summary>
@@ -735,12 +735,12 @@ public class StepRequestTests
             form { A }
             score { staff gt }
             """;
-        Assert.Equal(Gt("chord(F)1 |"), Step(Gt("chord(F 1332‸11)1 |"), -1, semitone: true).After);
-        Assert.Equal(Gt("chord(F 133211)1 |"), Step(Gt("chord(‸F)1 |"), +1, semitone: true).After);
-        Assert.Equal(Gt("diagram(F)1 |"), Step(Gt("diagram(F 1332‸11)1 |"), -1, semitone: true).After);
-        Assert.Equal(Gt("diagram(Cmaj7)1 |"), Step(Gt("diagram(Cmaj7 x320‸00)1 |"), -1, semitone: true).After);
-        Assert.Equal(Gt("diagram(Cmaj7 x32000)1 |"), Step(Gt("diagram(Cmaj‸7)1 |"), +1, semitone: true).After);
-        Assert.Equal(Gt("diagram(x32010)1 |"), Step(Gt("diagram(x320‸10)1 |"), -1, semitone: true).After);
+        Assert.Equal(Gt("chord(F)1 |"), Step(Gt("chord(F 1332‸11)1 |"), +1, semitone: true).After);
+        Assert.Equal(Gt("chord(F 133211)1 |"), Step(Gt("chord(‸F)1 |"), -1, semitone: true).After);
+        Assert.Equal(Gt("diagram(F)1 |"), Step(Gt("diagram(F 1332‸11)1 |"), +1, semitone: true).After);
+        Assert.Equal(Gt("diagram(Cmaj7)1 |"), Step(Gt("diagram(Cmaj7 x320‸00)1 |"), +1, semitone: true).After);
+        Assert.Equal(Gt("diagram(Cmaj7 x32000)1 |"), Step(Gt("diagram(Cmaj‸7)1 |"), -1, semitone: true).After);
+        Assert.Equal(Gt("diagram(x32010)1 |"), Step(Gt("diagram(x320‸10)1 |"), +1, semitone: true).After);
     }
 
     // ---------------------------------------------------------------- notes
@@ -930,7 +930,7 @@ public class StepRequestTests
     [Fact]
     public void ASemitone_OnAShape_StepsTheShape()
         => Assert.Equal(Guitar("c'1@chord(Cm7 x35343)"),
-            Step(Guitar("c'1@chord(Cm7‸)"), +1, semitone: true).After);
+            Step(Guitar("c'1@chord(Cm7‸)"), -1, semitone: true).After);
 
     // ---------------------------------------------------------------- a tempo
 
@@ -1860,7 +1860,7 @@ public class StepRequestTests
         // The root and a bass stay.
         Assert.Equal(S("Fm/A"), Step(S("«F/A»"), -1, semitone: true).After);
         // A caret on the entry still steps its diagram's shape (it writes one).
-        Assert.Contains("{ C(", Step(S("C‸"), +1, semitone: true).After);
+        Assert.Contains("{ C(", Step(S("C‸"), -1, semitone: true).After);
         // On an @chord in the music too.
         Assert.Equal(Guitar("c'1@chord(C7)"), Step(Guitar("c'1@chord(«Cm»)"), -1, semitone: true).After);
     }
@@ -2477,8 +2477,8 @@ public class StepRequestTests
     [Fact]
     public void AStepToAShape_SoundsItsStrings()
     {
-        // Down from the second shape writes the default: x35343 sounds.
-        var (response, _) = Step(Guitar($"c'1@chord(Cm7 {Cm7Order()[1]}‸)"), -1, semitone: true);
+        // Up from the second shape writes the default: x35343 sounds.
+        var (response, _) = Step(Guitar($"c'1@chord(Cm7 {Cm7Order()[1]}‸)"), +1, semitone: true);
         Assert.Equal(Cm7X35343, response.Pitches);
     }
 
@@ -2597,9 +2597,9 @@ public class StepRequestTests
     public void AnAtChordOnARestOrASpacer_StepsAndSounds()
     {
         var order = Cm7Order();
-        Assert.Equal(Guitar("r1@chord(Cm7 x35343)"), Up("r1@chord(Cm7‸)", Guitar, semitone: true));
-        Assert.Equal(Guitar($"s1@chord(Cm7 {order[1]})"), Up("s1@chord(Cm7 x35343‸)", Guitar, semitone: true));
-        Assert.Equal(Guitar("s1@chord(Cm7)"), Down("s1@chord(Cm7 x35343‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar("r1@chord(Cm7 x35343)"), Down("r1@chord(Cm7‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar($"s1@chord(Cm7 {order[1]})"), Down("s1@chord(Cm7 x35343‸)", Guitar, semitone: true));
+        Assert.Equal(Guitar("s1@chord(Cm7)"), Up("s1@chord(Cm7 x35343‸)", Guitar, semitone: true));
         var voicing = AuditionAt(Guitar("r1@chord(Cm7 ‸x35343)"));
         Assert.Equal("voicing", voicing.Kind);
         Assert.Equal(Cm7X35343, voicing.Pitches);

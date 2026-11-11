@@ -136,7 +136,7 @@ public class ChordRowTodoTests
     [Fact]
     public void TheSteppingKey_WritesTheShapeBeforeTheMark()
     {
-        // Ctrl+Shift+Up on a marked name writes its usual shape after the SYMBOL — the mark
+        // Ctrl+Shift+Down on a marked name writes its usual shape after the SYMBOL — the mark
         // stays where it was, after the new group.
         string text = Sheet("C | G@todo(\"check\") |");
         var server = Open(text, out var uri);
@@ -145,8 +145,8 @@ public class ChordRowTodoTests
         {
             TextDocument = new TextDocumentIdentifier { Uri = uri },
             Selections = [new StepSelection { Start = caret, End = caret }],
-            Direction = 1,
-            Semitone = true,   // the Up / Down pair: the shape (the octave pair walks the key's chords)
+            Direction = -1,
+            Semitone = true,   // the Down / Up pair: the shape (the octave pair walks the key's chords)
         });
         string after = text;
         foreach (var e in response.Edits.OrderByDescending(e => e.Start))

@@ -35,7 +35,7 @@
 | 5 | `lesson-05-expression` | 強弱・ヘアピン・スラー・`@tenuto` `@fermata`・`@rit`…`@!rit` | Silent Night（Gruber・6/8） |
 | 6 | `lesson-06-form` | section・form・`\|: :\|`・1 番 2 番括弧・`~`・**同じ名前＝同じ時間** | Jingle Bells（Pierpont・サビ） |
 | 7 | `lesson-07-lyrics` | `lyrics … sings`・ハイフン・`\|`・2 言語の 2 行 | Frère Jacques（英・仏） |
-| 8 | `lesson-08-chords` | `chords` 行・リードシート・（TRY で Ctrl+Shift+↑ のダイアグラム・`chordDiagrams all`） | Evening Walk（オリジナル） |
+| 8 | `lesson-08-chords` | `chords` 行・リードシート・（TRY で Ctrl+Shift+↓ のダイアグラム・`chordDiagrams all`） | Evening Walk（オリジナル） |
 | 9 | `lesson-09-piano` | 大譜表・`octave 3`・`phrase`・（TRY で和音・3 連符・2 声） | Minuet in G（両手・左手は簡略） |
 | 10 | `lesson-10-drums` | **ドラム**（2026-10-11 ユーザー決定「作って。前に入れて」）: `drums { }` の行＝phrase・手は上／足は下・ホバーでビートの格子・**STEP 1 = bar 4 の `kick` の後で Ctrl+Space → 定番パターン `fillTriplet`**（宣言が上に自動で入る）・**STEP 2 = `groove` の `back` を `ghost` に**（括弧付きのゴーストノート）・TRY で `hho`・フラム | Back Beat（オリジナル） |
 | 11 | `lesson-11-band` | **移調楽器**（`pitch concert`＋`instrument trumpet`＝書く文字は実音・全体の楽譜は実音、`score trumpet pitch transposed` が奏者の調＝ニ長調。鳴る音はハ長調のまま。2026-10-11 ユーザー決定＝score は `pitch` を受け継ぐ）・`tab`/`tuning bass`・`clef percussion` とドラム・score を 3 つ（`midiInstrument` は TRY の補完だけ） | Saturday（オリジナル） |

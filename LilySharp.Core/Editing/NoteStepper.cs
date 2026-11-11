@@ -295,7 +295,7 @@ public static partial class NoteStepper
         int dir = direction >= 0 ? 1 : -1;
         // On the shape of an @diagram(SHAPE) over a <…> chord: the other fingerings of its notes.
         if (semitone && selections is [var (caretAt, caretTo)] && caretAt == caretTo
-            && DiagramFingeringStep(text, tree, caretAt, dir) is { } fingering)
+            && DiagramFingeringStep(text, tree, caretAt, -dir) is { } fingering)
             return fingering;
         var targets = new List<Target>();
         // A selected chord symbol's span, by its node (TargetKind.ChordQuality).
@@ -564,7 +564,10 @@ public static partial class NoteStepper
                     && s.Start <= t.Node.SourceStart + t.Node.Width)
                 .Select(s => (int?)s.Start).FirstOrDefault();
             var (edit, said, handled) = t.Kind == TargetKind.Voicing
-                ? VoicingEdit(t.Node, dir, includeStretch, caret)
+                // A chord's shapes are a LIST, the usual low shape at its top: Down walks down it, up the
+                // neck; Up comes back, and off its top takes the shape away (owner's decision 2026-11-11 —
+                // until then Up went on and Down came back). The two shape steps take the key reversed.
+                ? VoicingEdit(t.Node, -dir, includeStretch, caret)
                 : (MarkEdit(text, MarksStart(t), dir), null, true);
             if (!handled)
                 continue;
@@ -1009,18 +1012,18 @@ public static partial class NoteStepper
     /// decisions 2026-09-28), a status-bar message, and whether it is steppable at all (a chord
     /// symbol — not a symbol-less shape, quoted text or the bare <c>@chord</c>). The step walks
     /// <see cref="ShapeOrder"/> on <see cref="StepTuning"/>, stepping the shape written for that
-    /// tuning (the others in the group stay): with none written, Up writes the order's first —
-    /// the default, so the diagram APPEARS (<c>G</c> → <c>G(320003)</c>) — and Down does
-    /// nothing; from a written shape Up / Down write its neighbour — a shape with muted strings
+    /// tuning (the others in the group stay): with none written, Down writes the order's first —
+    /// the default, so the diagram APPEARS (<c>G</c> → <c>G(320003)</c>) — and Up does
+    /// nothing; from a written shape Down / Up write its neighbour — a shape with muted strings
     /// steps from the order's shape it mutes, and loses its <c>x</c> (the owner: mutes are put
-    /// back once the shape is chosen); Down AT the default REMOVES the shape, and the diagram
+    /// back once the shape is chosen); Up AT the default REMOVES the shape, and the diagram
     /// goes (a row's group left empty goes whole). A steppable one that cannot move answers no
     /// edit.
     /// <para>
     /// ★ IN A <c>chordDiagrams … all</c> SCORE (the first rendering the chord,
     /// <see cref="DrawsEveryChord"/>) a name alone already draws the default, so the step
-    /// counts from there (owner's decision 2026-09-28): Up from the name writes the shape AFTER
-    /// the default; Down on the name alone does nothing, and Down at a WRITTEN default removes it
+    /// counts from there (owner's decision 2026-09-28): Down from the name writes the shape AFTER
+    /// the default; Up on the name alone does nothing, and Up at a WRITTEN default removes it
     /// like in any score (the page keeps showing it); the status bar says why.
     /// </para>
     /// </summary>
@@ -1028,8 +1031,8 @@ public static partial class NoteStepper
     /// A written shape the order does not hold — a STRETCH shape while
     /// <paramref name="includeStretch"/> is off (owner's decision 2026-09-28), or a shape no rule
     /// allows — steps by where it would SORT (<see cref="Music.ChordVoicings.CompareInOrder"/>;
-    /// a muted copy sorts as the stretch shape it mutes): Up to the first shape of the order
-    /// after it, Down to the last before it, or back to the default.
+    /// a muted copy sorts as the stretch shape it mutes): Down to the first shape of the order
+    /// after it, Up to the last before it, or back to the default.
     /// </remarks>
     private static (Edit? Edit, string? Message, bool Handled) VoicingEdit(SyntaxNode node, int dir,
         bool includeStretch, int? caret = null)
@@ -1106,9 +1109,9 @@ public static partial class NoteStepper
 
         // In a `chordDiagrams … all` score (the first rendering this chord) a name alone already
         // DRAWS the default (Music.ChordShapes.Drawn), so the default is where an unwritten name
-        // stands — Lily#'s reading of the owner's decision 2026-09-28: Up from the name writes the
+        // stands — Lily#'s reading of the owner's decision 2026-09-28: Down from the name writes the
         // shape AFTER the default (writing the default itself would change nothing on the page);
-        // Down at a written default removes it (below), the name alone drawing it all the same.
+        // Up at a written default removes it (below), the name alone drawing it all the same.
         // The same where the score's layout TABLE lists the chord (2026-09-29): the name alone
         // draws the table's shape, and the step counts from it.
         // A symbol-less shape has no name to stand alone: its shape is all there is.
@@ -1127,17 +1130,17 @@ public static partial class NoteStepper
                 string shown = Music.ChordVoicings.Spell(order[defaultAt]);
                 if (dir < 0)
                     return (null, $"{symbol}: no shape written - {shows} "
-                        + $"({word}: {shown}); Down does nothing, Up writes the next shape{note}", true);
+                        + $"({word}: {shown}); Up does nothing, Down writes the next shape{note}", true);
                 if (defaultAt + 1 >= order.Count)
                     return (null, $"{symbol}: the shape shown ({word}: {shown}) is the last - this score "
                         + $"already draws it{note}", true);
                 return (Insert(site, Music.ChordVoicings.Spell(order[defaultAt + 1])),
                     ShapeMessage(symbol, defaultAt + 1, order) + note, true);
             }
-            // No shape for this tuning: Up writes the drawn default, so the diagram appears;
-            // Down has nothing to take away.
+            // No shape for this tuning: Down writes the drawn default, so the diagram appears;
+            // Up has nothing to take away.
             if (dir < 0)
-                return (null, $"{symbol}: no shape written, no diagram - Up adds one ({word}: "
+                return (null, $"{symbol}: no shape written, no diagram - Down adds one ({word}: "
                     + $"{Music.ChordVoicings.Spell(order[0])}){note}", true);
             return (Insert(site, Music.ChordVoicings.Spell(order[0])), ShapeMessage(symbol, 0, order) + note, true);
         }
@@ -1153,10 +1156,10 @@ public static partial class NoteStepper
         }
         else if (dir < 0 && at == defaultAt)
         {
-            // Down at the default of an `all` score REMOVES the written shape, as in any score
-            // (owner, 2026-09-28: "@chord(Cm7 x35343) + Down should give @chord(Cm7)"). The page
+            // Up at the default of an `all` score REMOVES the written shape, as in any score
+            // (owner, 2026-09-28: "@chord(Cm7 x35343) + Up should give @chord(Cm7)"). The page
             // does not change — the name alone draws the same default — but the source loses a
-            // shape that says nothing, which is what Down at the default means everywhere else.
+            // shape that says nothing, which is what Up at the default means everywhere else.
             return (Remove(site, namedAt >= 0 ? namedAt : shapeAt, shapeAt),
                 $"{symbol}: shape removed - {(drawsAll
                     ? "this score draws every chord, so the name alone still shows the default"
@@ -1170,7 +1173,7 @@ public static partial class NoteStepper
         }
         else if (dir < 0 && at == 0)
         {
-            // Down at the default: the shape goes. An @chord's or a chord(…) item's diagram goes
+            // Up at the default: the shape goes. An @chord's or a chord(…) item's diagram goes
             // with it (chord(F 133211) → chord(F), the name alone — F A C close; owner's request
             // 2026-10-31); a diagram(…) item's name alone still draws and plays the usual shape
             // (diagram(Cmaj7 x32000) → diagram(Cmaj7); owner's request the same day — it used to
@@ -1178,7 +1181,7 @@ public static partial class NoteStepper
             string first = Music.ChordVoicings.Spell(order[0]);
             return (Remove(site, namedAt >= 0 ? namedAt : shapeAt, shapeAt), site.IsItem && !site.ShowsName
                 ? $"{symbol}: shape removed - diagram({symbol}) still draws and plays the usual shape ({first}){note}"
-                : $"{symbol}: shape removed, no diagram (Up adds {first}){note}", true);
+                : $"{symbol}: shape removed, no diagram (Down adds {first}){note}", true);
         }
         else
         {

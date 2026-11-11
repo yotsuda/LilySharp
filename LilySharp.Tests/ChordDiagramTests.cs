@@ -1296,9 +1296,9 @@ public class ChordDiagramTests
             form { A }
             score { chords prog  staff gt  staff uk }
             """;
-        Assert.Equal("Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)", HoverAt(doc, "@chord(G)"));
-        Assert.Equal("Ctrl+Shift+↑ adds a chord diagram (ukulele: 0003)", HoverAt(doc, "@chord(C)"));
-        Assert.Contains("Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)", HoverAt(doc, "G |", 0));
+        Assert.Equal("Ctrl+Shift+↓ adds a chord diagram (guitar: 320003)", HoverAt(doc, "@chord(G)"));
+        Assert.Equal("Ctrl+Shift+↓ adds a chord diagram (ukulele: 0003)", HoverAt(doc, "@chord(C)"));
+        Assert.Contains("Ctrl+Shift+↓ adds a chord diagram (guitar: 320003)", HoverAt(doc, "G |", 0));
     }
 
     /// <summary>

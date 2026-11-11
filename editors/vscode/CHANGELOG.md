@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Ctrl+Shift+Down walks a chord's shapes up the neck, and Up comes back**: the usual low shape is the top of the list. On a name with no shape, Down writes the usual shape; Up at the usual shape takes it away. It was the other way round, and the other way round from a chord's qualities and a value word, where Down was already the next one. Notes, tempos and the rest step as before.
 - **Copilot changes a score by edits, not by writing the file again**: `#proposeScore` takes `edits` — a chord, a bar or a line as `#readScore` shows it, and what replaces it; `all: true` changes every place it stands. Revoicing eight chords in thirty places of a 435-line score was the whole file written again, three minutes of a twelve-minute answer.
 - **`#readScore` reads one part alone, and a long score in pages**: `part: "gtr"` answers that part's block, its music in each section and the phrases it calls; a longer reading comes in pages small enough to be read in the answer, where a 12 KB score went to a temp file and was read back piece by piece.
 - **`#chordVoicings` takes a progression**, shapes without the root and shapes from a fret up; its diagrams are written as `@diagram( )` reads them.

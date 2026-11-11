@@ -655,26 +655,26 @@ public class ShapeChordItemTests
         var stale = Assert.Single(Diagnostics(book), d => d.Code == DiagnosticCodes.DiagramNotTheChord);
         Assert.Equal("@diagram(x32010)", book.Substring(stale.Span.Start, stale.Span.Length));
         Assert.Contains("own shape: @diagram(", stale.Message);
-        // Ctrl+Shift+Up on the written shape: another hand for the same notes; nothing else moves.
+        // Ctrl+Shift+Down on the written shape: another hand for the same notes; nothing else moves.
         string written = Book("instrument guitar", "<g b d' f'>1@diagram(xx5431) |", top: "octave absolute\n");
         int caret = written.IndexOf("5431", StringComparison.Ordinal);
-        var step = LilySharp.Core.Editing.NoteStepper.Step(written, SyntaxTree.Parse(written), [(caret, caret)], 1, semitone: true);
+        var step = LilySharp.Core.Editing.NoteStepper.Step(written, SyntaxTree.Parse(written), [(caret, caret)], -1, semitone: true);
         var edit = Assert.Single(step.Edits);
         Assert.Equal("xx5431", written[edit.Start..edit.End]);
         Assert.Equal("x-10-976x", edit.NewText);
         Assert.Contains("fingering 2 of", step.Message);
-        // Down at the first fingering takes the shape away: back to the bare mark, which follows the notes.
+        // Up at the first fingering takes the shape away: back to the bare mark, which follows the notes.
         string first = Book("instrument guitar", "<g b d' f'>1@diagram(xx5431) |", top: "octave absolute\n");
         int at = first.IndexOf("5431", StringComparison.Ordinal);
-        var down = Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(first, SyntaxTree.Parse(first), [(at, at)], -1, semitone: true).Edits);
+        var down = Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(first, SyntaxTree.Parse(first), [(at, at)], +1, semitone: true).Edits);
         Assert.Equal("(xx5431)", first[down.Start..down.End]);
         Assert.Equal("", down.NewText);
-        // A bare @diagram shows the first fingering: Up writes it out; Down stays.
+        // A bare @diagram shows the first fingering: Down writes it out; Up stays.
         string plain = Book("instrument guitar", "<g b d' f'>1@diagram |", top: "octave absolute\n");
         int on = plain.IndexOf("diagram", StringComparison.Ordinal) + 2;
-        var up = Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(plain, SyntaxTree.Parse(plain), [(on, on)], 1, semitone: true).Edits);
+        var up = Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(plain, SyntaxTree.Parse(plain), [(on, on)], -1, semitone: true).Edits);
         Assert.Contains("<g b d' f'>1@diagram(xx5431) |", plain[..up.Start] + up.NewText + plain[up.End..]);
-        var stay = LilySharp.Core.Editing.NoteStepper.Step(plain, SyntaxTree.Parse(plain), [(on, on)], -1, semitone: true);
+        var stay = LilySharp.Core.Editing.NoteStepper.Step(plain, SyntaxTree.Parse(plain), [(on, on)], +1, semitone: true);
         Assert.Empty(stay.Edits);
         Assert.Contains("drawn from the notes", stay.Message);
         // The shape the notes sound, written out: no warning.
@@ -718,9 +718,9 @@ public class ShapeChordItemTests
             """;
         var tree = SyntaxTree.Parse(book);
         int shape = book.IndexOf("33211", StringComparison.Ordinal);
-        Assert.Equal("xx3211", Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(book, tree, [(shape, shape)], 1, semitone: true).Edits).NewText);
+        Assert.Equal("xx3211", Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(book, tree, [(shape, shape)], -1, semitone: true).Edits).NewText);
         int bare = book.IndexOf("diagram |", StringComparison.Ordinal) + 2;
-        Assert.StartsWith("(", Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(book, tree, [(bare, bare)], 1, semitone: true).Edits).NewText);
+        Assert.StartsWith("(", Assert.Single(LilySharp.Core.Editing.NoteStepper.Step(book, tree, [(bare, bare)], -1, semitone: true).Edits).NewText);
         Assert.Equal("@diagram(xx321x)", ShapeChordConverter.AddDiagram(book, book.IndexOf("<f a", StringComparison.Ordinal)).Replacement);
 
         // The checks read the same notes: a chord no hand holds (LYS1055), a diagram its notes left (LYS1057).
@@ -960,45 +960,45 @@ public class ShapeChordItemTests
     {
         string Doc(string words) => Book("instrument guitar", $"diagram({words})1 |");
         string text = Doc("C");
-        var (after, up) = Step(text, text.IndexOf("diagram(C", StringComparison.Ordinal) + 9, +1, semitone: true);
+        var (after, up) = Step(text, text.IndexOf("diagram(C", StringComparison.Ordinal) + 9, -1, semitone: true);
         Assert.Equal(Doc("C x32010"), after);
         Assert.StartsWith("C: shape 1 of", up.Message);
         Assert.Equal(new[] { 48, 52, 55, 60, 64 }, up.Pitches);
         text = Doc("C x32010");
-        var (next, _) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, +1, semitone: true);
+        var (next, _) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, -1, semitone: true);
         Assert.NotEqual(text, next);
         Assert.Matches(@"diagram\(C [x0-9-]+\)1", next);
-        var (bare, down) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, -1, semitone: true);
+        var (bare, down) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, +1, semitone: true);
         Assert.Equal(Doc("C"), bare);
         Assert.False(down.Fallback);
         Assert.Contains("still draws and plays the usual shape (x32010)", down.Message);
         // On a ukulele part it steps the ukulele's shapes.
         string uke = Book("instrument ukulele", "diagram(C)1 |");
         Assert.Equal(Book("instrument ukulele", "diagram(C 0003)1 |"),
-            Step(uke, uke.IndexOf("diagram(C", StringComparison.Ordinal) + 9, +1, semitone: true).After);
+            Step(uke, uke.IndexOf("diagram(C", StringComparison.Ordinal) + 9, -1, semitone: true).After);
     }
 
     /// <summary>Owner's request 2026-10-31: a shape with no symbol steps too — through the order
-    /// of the chord its notes sound (x32010 is C), writing shapes only; Down at the first keeps
+    /// of the chord its notes sound (x32010 is C), writing shapes only; Up at the first keeps
     /// it. (A symbol-less @chord steps its note instead: StepRequestTests.)</summary>
     [Fact]
     public void TheStep_OnAShapeWithNoSymbol_WalksTheChordItSounds()
     {
         string text = Book("instrument guitar", "diagram(x32010)1 |");
         int caret = text.IndexOf("x32010", StringComparison.Ordinal) + 2;
-        var (after, up) = Step(text, caret, +1, semitone: true);
+        var (after, up) = Step(text, caret, -1, semitone: true);
         Assert.Matches(@"diagram\([x0-9-]+\)1 \|", after);
         Assert.DoesNotContain("x32010", after);
         Assert.StartsWith("C: shape 2 of", up.Message);
         Assert.NotEmpty(up.Pitches);   // the new shape sounds, as a named one does
-        var (same, down) = Step(text, caret, -1, semitone: true);
+        var (same, down) = Step(text, caret, +1, semitone: true);
         Assert.Equal(text, same);
         Assert.Contains("keeps its shape", down.Message);
         // Back down from the second shape is the first again.
-        Assert.Equal(text, Step(after, after.IndexOf("diagram(", StringComparison.Ordinal) + 9, -1, semitone: true).After);
+        Assert.Equal(text, Step(after, after.IndexOf("diagram(", StringComparison.Ordinal) + 9, +1, semitone: true).After);
 
         string am = Book("instrument guitar", "diagram(x02210)1 |");
-        var (amAfter, said) = Step(am, am.IndexOf("x02210", StringComparison.Ordinal) + 2, +1, semitone: true);
+        var (amAfter, said) = Step(am, am.IndexOf("x02210", StringComparison.Ordinal) + 2, -1, semitone: true);
         Assert.DoesNotContain("x02210", amAfter);
         Assert.StartsWith("Am: shape 2 of", said.Message);
     }
@@ -1083,15 +1083,15 @@ public class ShapeChordItemTests
         const string both = "layout uke { chordTuning ukulele }\npart melody { clef treble }\n"
             + "section A { melody { e''1@chord(C x32010 0003) | } }\nform { A }\n"
             + "score { staff melody }\nscore uke { layout uke  staff melody }\n";
-        var (uke, said) = Step(both, both.IndexOf("0003", StringComparison.Ordinal) + 1, +1, semitone: true);
+        var (uke, said) = Step(both, both.IndexOf("0003", StringComparison.Ordinal) + 1, -1, semitone: true);
         Assert.Contains("@chord(C x32010 0403)", uke);
         Assert.StartsWith("C (ukulele): shape 2 of", said.Message);
-        var (gtr, saidGtr) = Step(both, both.IndexOf("x32010", StringComparison.Ordinal) + 1, +1, semitone: true);
+        var (gtr, saidGtr) = Step(both, both.IndexOf("x32010", StringComparison.Ordinal) + 1, -1, semitone: true);
         Assert.Contains("@chord(C x32013 0003)", gtr);
         Assert.StartsWith("C (guitar): shape 2 of", saidGtr.Message);
 
         string guitarOnly = both.Replace("score uke { layout uke  staff melody }\n", "");
-        var (stepped, told) = Step(guitarOnly, guitarOnly.IndexOf("0003", StringComparison.Ordinal) + 1, +1, semitone: true);
+        var (stepped, told) = Step(guitarOnly, guitarOnly.IndexOf("0003", StringComparison.Ordinal) + 1, -1, semitone: true);
         Assert.Contains("@chord(C x32013 0003)", stepped);
         Assert.Contains("'0003' is drawn by no score here", told.Message);
     }

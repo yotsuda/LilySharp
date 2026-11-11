@@ -23,19 +23,19 @@ namespace LilySharp.Core.Editing;
 public static partial class NoteStepper
 {
     /// <summary>
-    /// Ctrl+Shift+Up/Down with the caret on the shape of an <c>@diagram(SHAPE)</c> over a
+    /// Ctrl+Shift+Down/Up with the caret on the shape of an <c>@diagram(SHAPE)</c> over a
     /// <c>&lt;…&gt;</c> chord, or over a single note it is held by (owner's decisions 2026-10-31;
-    /// <c>c@diagram</c> is xxxx1x, Up xxx5xx), with "Add Guitar Diagram": the
+    /// <c>c@diagram</c> is xxxx1x, Down xxx5xx), with "Add Guitar Diagram": the
     /// other ways a hand holds the SAME notes, the one a player reaches for first
     /// (<see cref="ChordFingering.Fingerings"/>) — the notes never change, only the strings and
     /// the frets. A shape that is none of them (the notes edited since; LYS1057) steps to the
     /// first. Null when the caret is not there: the step goes on as before.
     /// <para>
-    /// A bare <c>@diagram</c> already draws the first fingering: Up writes THAT one out (the page does
-    /// not change; the shape shows in the source, as "Add Guitar Diagram" writes it), and Down at the
+    /// A bare <c>@diagram</c> already draws the first fingering: Down writes THAT one out (the page does
+    /// not change; the shape shows in the source, as "Add Guitar Diagram" writes it), and Up at the
     /// first written one takes the shape away again — back to the bare mark, whose diagram follows
-    /// the notes. Down on the bare mark stays. One line: bare ⇄ first ⇄ second ⇄ … (owner's
-    /// decisions 2026-10-31; Up wrote the second at first, which made the walk skip a step).
+    /// the notes. Up on the bare mark stays. One line: bare ⇄ first ⇄ second ⇄ … (owner's
+    /// decisions 2026-10-31; Down wrote the second at first, which made the walk skip a step).
     /// </para>
     /// </summary>
     private static StepResult? DiagramFingeringStep(string text, SyntaxTree tree, int caret, int dir)
@@ -50,9 +50,9 @@ public static partial class NoteStepper
             bool bare = mark.Arguments.IsEmpty;
             int open = bare ? -1 : text.IndexOf('(', mark.Span.Start, mark.Span.Length);
             int close = open < 0 ? -1 : text.IndexOf(')', open);
-            // The caret just past the ')' steps too (owner's report 2026-10-31): Up on the bare
+            // The caret just past the ')' steps too (owner's report 2026-10-31): Down on the bare
             // mark inserts "(SHAPE)" at the caret, which the editor then leaves right after it, so
-            // the next Up has to answer there — as it does just past an @chord's ')'.
+            // the next Down has to answer there — as it does just past an @chord's ')'.
             if (!bare && (open < 0 || close < 0 || caret > close + 1))
                 return null;
             if (ShapeChordConverter.PlayedPitches(tree, chord) is not { } pitches)
@@ -73,8 +73,8 @@ public static partial class NoteStepper
             ImmutableArray<int> sound = [.. pitches.Take(MaxAuditionPitches)];
             if (bare)
             {
-                // The bare mark shows the first fingering: Up writes it out — the page does not
-                // change, the source shows the shape — and Down stays.
+                // The bare mark shows the first fingering: Down writes it out — the page does not
+                // change, the source shows the shape — and Up stays.
                 string first = ChordVoicings.Spell(options[0]);
                 string firstAt = $"@diagram: fingering 1 of {options.Count} ({first})";
                 if (dir < 0)
@@ -85,7 +85,7 @@ public static partial class NoteStepper
             }
             int at = Semantics.AnnotationValues.DiagramFrets(mark) is { } now
                 ? options.FindIndex(o => o.SequenceEqual(now)) : -1;
-            // Down at the first written fingering: back to the bare mark, which shows it and
+            // Up at the first written fingering: back to the bare mark, which shows it and
             // follows the notes.
             if (at == 0 && dir < 0)
                 return new StepResult(false, [new Edit(open, close + 1, "")],

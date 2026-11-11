@@ -75,12 +75,12 @@ public class ChordHoverTests
         "score { chords harmony  staff melody }\n";
 
     /// <summary>The chord line of a row entry's hover \u2014 the paragraph before the chord-diagram
-    /// line an entry with no shape adds (<c>Ctrl+Shift+\u2191 adds a chord diagram (guitar: \u2026)</c>,
+    /// line an entry with no shape adds (<c>Ctrl+Shift+\u2193 adds a chord diagram (guitar: \u2026)</c>,
     /// owner's decision 2026-09-28; ChordDiagramTests pins that line).</summary>
     private static string? ChordLine(string needle)
     {
         var hover = HoverAt(needle, doc: ChordRowDoc);
-        Assert.Contains("\n\nCtrl+Shift+\u2191 adds a chord diagram (guitar: ", hover);
+        Assert.Contains("\n\nCtrl+Shift+\u2193 adds a chord diagram (guitar: ", hover);
         return hover!.Split("\n\n")[0];
     }
 

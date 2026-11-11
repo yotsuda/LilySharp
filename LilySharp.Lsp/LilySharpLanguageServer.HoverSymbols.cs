@@ -140,7 +140,7 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// An <c>@chord</c>'s chord-diagram hover. With NO shape written — so no diagram draws
     /// (owner's decision 2026-09-28) — one line that says how to add one and what it would be:
-    /// <c>Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)</c> (<see cref="AddHint"/>). With a
+    /// <c>Ctrl+Shift+↓ adds a chord diagram (guitar: 320003)</c> (<see cref="AddHint"/>). With a
     /// shape written: the name, then the shape each tuning its scores draw on shows —
     /// <c>**Chord diagram** `C`</c>, <c>guitar: `x32010` (written) — shape 1 of 12</c>,
     /// <c>ukulele: no diagram</c> — or why none is.
@@ -261,7 +261,7 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// The discoverability line of a chord with no shape written (owner's decision 2026-09-28):
-    /// <c>Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)</c> — the tuning the step writes on
+    /// <c>Ctrl+Shift+↓ adds a chord diagram (guitar: 320003)</c> — the tuning the step writes on
     /// and the default it would write (<see cref="NoteStepper.ShapeOrder"/>'s first); when that
     /// tuning has no shape for the chord, that the shape has to be written by hand. Not where a
     /// score writes <c>chordDiagrams … all</c>: the name draws the default there, and the hover
@@ -272,7 +272,7 @@ public sealed partial class LilySharpLanguageServer
         var (word, _) = NoteStepper.StepTuning(site);
         var (tuning, order) = NoteStepper.ShapeOrder(site, chord, includeStretch: false);
         return order.Count > 0
-            ? $"Ctrl+Shift+↑ adds a chord diagram ({word}: {ChordVoicings.Spell(order[0])})"
+            ? $"Ctrl+Shift+↓ adds a chord diagram ({word}: {ChordVoicings.Spell(order[0])})"
             : $"No chord diagram: no shape found for this chord on {word} - write one "
               + $"({new string('x', tuning.Count)} with the frets filled in).";
     }

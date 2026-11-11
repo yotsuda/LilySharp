@@ -59,8 +59,8 @@ a guitarist reads. Writing the notes a chord plays is on
   </table>
   <details><summary>Show the whole file</summary><pre>// The table's spellings, one score for each group of rows.
 // Switch between them with the preview's Score: list. The bars follow the table's rows.
-// On a chord name, Ctrl+Shift+Up adds the diagram of its usual shape.
-// On a diagram, Ctrl+Shift+Up shows another way to hold the same chord.
+// On a chord name, Ctrl+Shift+Down adds the diagram of its usual shape.
+// On a diagram, Ctrl+Shift+Down shows another way to hold the same chord.
 // On a chord(…), Ctrl+. → Convert to Chord Notes rewrites it as its notes, &lt;…&gt;.
 time 4/4
 part gt { instrument guitar }
@@ -363,21 +363,21 @@ score piano { layout piano  chords prog  staff melody } // no diagrams</pre>
 <section id="editor">
   <h2>Let the editor write the shapes</h2>
   <p>You rarely need to type a shape. In VS Code, put the caret on a chord — an
-  <code>@chord(Cm7)</code> or a row's <code>Cm7</code> — and press <kbd>Ctrl+Shift+Up</kbd>:
+  <code>@chord(Cm7)</code> or a row's <code>Cm7</code> — and press <kbd>Ctrl+Shift+Down</kbd>:
   its usual shape is written and the diagram appears. Press it again to walk through the
-  other playable shapes, each one sounded as you go; <kbd>Ctrl+Shift+Down</kbd> walks back,
+  other playable shapes, each one sounded as you go; <kbd>Ctrl+Shift+Up</kbd> walks back,
   and at the usual shape removes it again. Hovering a chord shows what it would draw — for
   a listed chord, the table's shape (<i>guitar: xx3211 (layout)</i>) — and which of the order
   it is (<i>shape 2 of 39</i>). It works on a ukulele part too. Hard stretch shapes are left
   out unless you ask for them.</p>
   <!-- VIDEO chords-shape-step: caret on @chord(Cm7) in a melody with the preview open.
-       Ctrl+Shift+Up four or five times: the shape appears (x35343), then steps; the preview's
-       diagram changes and each shape sounds. Ctrl+Shift+Down back to the usual shape, once
+       Ctrl+Shift+Down four or five times: the shape appears (x35343), then steps; the preview's
+       diagram changes and each shape sounds. Ctrl+Shift+Up back to the usual shape, once
        more: the shape is removed and the diagram goes. ~15 s, with sound. -->
   <figure class="demo-video" data-pending>
     <video src="videos/chords-shape-step.mp4" controls playsinline preload="none"></video>
-    <figcaption>Ctrl+Shift+Up on <code>@chord(Cm7)</code> writes its usual shape, then steps
-    through the others; Down at the usual shape removes it.</figcaption>
+    <figcaption>Ctrl+Shift+Down on <code>@chord(Cm7)</code> writes its usual shape, then steps
+    through the others; Up at the usual shape removes it.</figcaption>
   </figure>
   <p>With shapes for two instruments written (<code>@chord(C x32010 0003)</code>), the one under
   the caret steps on its own instrument: <i>C (ukulele): shape 2 of 39 (0403)</i>. On a

@@ -40,7 +40,7 @@ What a book shows beyond that is the layout's, per score (§4).
 
 Every combination is ONE word but one: on a `<…>` chord, `@chord@diagram` reads both the name and the
 fingering off the chord's own notes — no one word says that (`@chord(F x875xx)` would fix the name
-F instead of reading it), and it is what Ctrl+Shift+Up writes from a bare `@diagram` (owner's
+F instead of reading it), and it is what Ctrl+Shift+Down writes from a bare `@diagram` (owner's
 review 2026-10-31; LYS1056 does not warn it there).
 
 - A `chords` row is unchanged: `F` is a name, `F(133211)` a name over its diagram — the rule 1

@@ -258,7 +258,7 @@ score {
 - A chord row: symbols as printed (`C`, `Am`, `G7`, `F#m`, `Bb`), no lengths. The chords in a bar share it.
 - A chord as notes in a part is `<c e g>2`.
 
-**Try:** press Ctrl+Shift+Up on `G7`: a guitar diagram appears. **Lesson:** `lesson-08-chords`.
+**Try:** press Ctrl+Shift+Down on `G7`: a guitar diagram appears. **Lesson:** `lesson-08-chords`.
 
 ### Stage 11 — Piano and voices
 

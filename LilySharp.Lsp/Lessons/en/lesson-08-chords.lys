@@ -16,7 +16,7 @@ part melody {
 
 chords prog {
   section A {
-    C | Am | F | G@todo("Ctrl+Shift+Up on G") |
+    C | Am | F | G@todo("Ctrl+Shift+Down on G") |
     C | Am | Dm7 G7 | C |.
   }
 }
