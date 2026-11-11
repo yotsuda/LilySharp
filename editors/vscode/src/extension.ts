@@ -967,6 +967,7 @@ export function activate(context: vscode.ExtensionContext) {
             void panel.webview.postMessage({ type: 'playNotes', notes });
             return true;
         },
+        previewColumnOf: (uri: vscode.Uri) => previewPanels.get(uri.toString())?.viewColumn,
         stopOnPreview: (uri: vscode.Uri) => {
             void previewPanels.get(uri.toString())?.webview.postMessage({ type: 'ctxStop' });
         },

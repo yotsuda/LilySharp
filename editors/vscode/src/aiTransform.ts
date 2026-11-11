@@ -66,6 +66,8 @@ export interface AiTransformDeps {
     /** Plays a note list (lilysharp/playback's) on the open preview of `uri` — its synth, its
      *  sound font, its MIDI output; false when no preview of it is open. */
     playOnPreview?: (uri: vscode.Uri, notes: unknown[]) => boolean;
+    /** The editor column the preview of `uri` stands in, or undefined with no preview open. */
+    previewColumnOf?: (uri: vscode.Uri) => vscode.ViewColumn | undefined;
     /** Stops what the preview of `uri` is playing. */
     stopOnPreview?: (uri: vscode.Uri) => void;
     /** The score the preview of `uri` shows (its picker), or undefined for the first. */
@@ -2705,7 +2707,7 @@ async function reviewOnScore(
     /** Proposed by Copilot's chat (getCandidateHtml). */
     fromChat = false,
 ): Promise<Decision> {
-    const panel = ensureCandidatePanel(deps);
+    const panel = ensureCandidatePanel(deps, play.uri);
     audible = play;
     const fontUri = panel.webview.asWebviewUri(
         vscode.Uri.joinPath(deps.extensionUri, 'media', 'fonts', 'emmentaler-20.woff2'));
@@ -2729,15 +2731,20 @@ async function reviewOnScore(
     });
 }
 
-function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
+function ensureCandidatePanel(deps: AiTransformDeps, uri: vscode.Uri): vscode.WebviewPanel {
     if (candidatePanel) {
         return candidatePanel;
     }
+    // Over the score's preview, a tab in its column, where a preview is open (owner's request
+    // 2026-11-11: the proposal opened a third column beside the preview): the proposal is that score
+    // as it would be, and takes its place while it is decided. The preview goes on playing under it
+    // (retainContextWhenHidden). With no preview, beside the editor as before.
+    const column = deps.previewColumnOf?.(currentUri(uri)) ?? vscode.ViewColumn.Beside;
     const fontsUri = vscode.Uri.joinPath(deps.extensionUri, 'media', 'fonts');
     const panel = vscode.window.createWebviewPanel(
         'lilysharpAiCandidate',
         'Lily# — AI candidate',
-        { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
+        { viewColumn: column, preserveFocus: true },
         { enableScripts: true, retainContextWhenHidden: true,
           localResourceRoots: [fontsUri, textFontsRoot(deps.extensionUri)] });
 

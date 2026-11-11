@@ -194,6 +194,12 @@ describe('an AI candidate plays before it is accepted', () => {
         const transformSource = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
         assert.match(transformSource, /export function tellCandidateAudioBlocked\(\): boolean \{\s*if \(!candidatePanel\) \{ return false; \}/);
         assert.match(transformSource, /No sound yet: click the preview once/);
+        // Owner's request 2026-11-11: the proposal opens over the score's preview, a tab in its
+        // column, not in a third column beside it; with no preview open, beside the editor.
+        assert.match(transformSource, /const column = deps\.previewColumnOf\?\.\(currentUri\(uri\)\) \?\? vscode\.ViewColumn\.Beside;/);
+        assert.match(transformSource, /'Lily# — AI candidate',\s*\{ viewColumn: column, preserveFocus: true \},/);
+        assert.match(transformSource, /const panel = ensureCandidatePanel\(deps, play\.uri\);/);
+        assert.match(extension, /previewColumnOf: \(uri: vscode\.Uri\) => previewPanels\.get\(uri\.toString\(\)\)\?\.viewColumn,/);
         assert.match(transform, /if \(e\.data\.type === 'sounding'\) \{ lightSounding\(e\.data\.which, e\.data\.sounding \|\| \[\]\); return; \}/);
         // A chord sounds at its '<', which its heads carry as data-alt: they light too (owner's report
         // 2026-10-29: a song's right-hand chords stayed dark in the panel), the click target and the
