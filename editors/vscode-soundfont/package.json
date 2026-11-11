@@ -12,6 +12,12 @@
     "url": "https://github.com/yotsuda/LilySharp.git",
     "directory": "editors/vscode-soundfont"
   },
+  "bugs": {
+    "url": "https://github.com/yotsuda/LilySharp/issues"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
   "engines": {
     "vscode": "^1.90.0"
   },

@@ -37,6 +37,24 @@ describe('the Lily# Sound Font extension', () => {
         assert.equal(pkg.activationEvents, undefined);
     });
 
+    // Owner's decision 2026-11-11, before 1.0.0. A package without code is put where the window is;
+    // Lily# runs where the files are (it has a language server), and reads this package's folder
+    // from there. So the font says it goes where Lily# goes — in WSL, over SSH, in a container.
+    // Reasoned, NOT tried on a remote machine (RELEASING.md).
+    it('is installed on the side Lily# runs on', () => {
+        assert.deepEqual(pkg.extensionKind, ['workspace']);
+        const lily = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8')) as Record<string, unknown>;
+        assert.ok(lily.main);
+        assert.deepEqual(pkg.engines, lily.engines);
+    });
+
+    it('says what the font holds and where a complaint goes', () => {
+        const readme = read('README.md');
+        assert.match(readme, /every General MIDI\s+instrument — the 128 from piano to sound effects, and the drum kits/);
+        assert.match(readme, /## Something wrong\?/);
+        assert.equal((pkg.bugs as { url: string }).url, 'https://github.com/yotsuda/LilySharp/issues');
+    });
+
     // Owner's decisions 2026-11-11: the family's dark tile, a hue none of the three has (Lily# blue, Calamo
     // green, Cantoria amber), and Emmentaler's `sf` — sforzando, and the sound font's own initials.
     it('has the family\'s tile in a colour of its own', () => {

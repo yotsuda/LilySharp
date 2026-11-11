@@ -21,6 +21,10 @@ For whoever publishes it (the owner). Nothing here is in the package (`.vscodeig
    the member's removal ("… depends on this"). NOT tried, because it needs the Marketplace: that
    installing or updating Lily# there brings the member — look at that on the first release.
 
+NOT tried either: a remote window (WSL, SSH, a container). The package says `"extensionKind":
+["workspace"]` so that it is installed where Lily# runs and Lily# can read its folder; that is
+reasoned from how VS Code places a package without code, not seen.
+
 A new version of the font: read its changelog upstream, change the hash in `Get-SoundFont.ps1` and
 in the README together with the version here and in CHANGELOG.md, and copy the upstream license,
 README and changelog files again.

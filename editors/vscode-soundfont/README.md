@@ -6,7 +6,9 @@ your scores with. It is one file and nothing else: no commands, no settings, no 
 **What is in it.** `MuseScore_General.sf3`, version 0.2 — the General MIDI sound font that
 MuseScore 2.2 and 3 shipped as their default — **exactly as its authors published it**
 (SHA-256 `5b85b6c2c61d10b2b91cddd41efcce7b25cd31c8271d511c73afafbef20b6fa3`, the file at
-<https://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/>).
+<https://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/>). It holds every General MIDI
+instrument — the 128 from piano to sound effects, and the drum kits — with some more from Roland GS
+and variations of its own; its authors' README, below, lists them.
 
 **Whose work it is.** Not ours. MuseScore_General was made by S. Christian Collins from
 FluidR3Mono (Michael Cowgill), itself from Fluid R3 (Frank Wen), with instruments from Ethan Winer
@@ -39,3 +41,8 @@ copyright notice go with "copies or substantial portions" of the font; whether a
 your own music is such a portion is not for this page to settle. MuseScore's users have published
 recordings made with this font for years. If it matters to you, credit the font — "MuseScore_General
 sound font, S. Christian Collins et al., MIT license" — or ask someone who can advise you.
+
+## Something wrong?
+
+How Lily# plays is Lily#'s to answer for: <https://github.com/yotsuda/LilySharp/issues>. The font
+itself is its authors' work, and this package does not change it.
