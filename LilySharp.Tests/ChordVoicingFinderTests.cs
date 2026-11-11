@@ -275,6 +275,22 @@ public class ChordVoicingFinderTests
         string twice = ChordVoicingFinder.DescribeProgression(["Am", "Am", "Dm"], "guitar", null, null, null, "1-4");
         var two = twice.Split('\n').Where(l => l.StartsWith("1. ") || l.StartsWith("2. ")).Select(l => l[(l.IndexOf('<'))..]).ToList();
         Assert.Equal(two[0], two[1]);
+        // A chord that comes more than once takes ONE shape (a part writes it once and calls it by
+        // name), and the hand stays in a few frets: no shape of this song's part starts above fret 9.
+        string[] song = ["Bb", "Gm", "Eb", "F", "Bb", "D7", "Gm", "C7", "Eb", "Ebm", "Bb", "F", "Gm", "Eb", "Cm7", "F", "Bb"];
+        var sung = ChordVoicingFinder.DescribeProgression(song, "guitar", null, null, "electric guitar (clean)", "1-3", omitRoot: false, fromFret: 5)
+            .Split('\n').Where(l => System.Text.RegularExpressions.Regex.IsMatch(l, @"^\d+\. ")).ToList();
+        var byChord = sung.Select((l, i) => (Chord: song[i], Shape: l[l.IndexOf('<')..])).GroupBy(x => x.Chord).ToList();
+        Assert.All(byChord, g => Assert.Single(g.Select(x => x.Shape).Distinct()));
+        // The upper-string triads a band's guitar plays, the root in an upper voice.
+        Assert.Contains(sung, l => l.StartsWith("1. Bb ") && l.Contains("<d' f' bes'> — diagram(xxx766)"));
+        Assert.Contains(sung, l => l.Contains("Gm ") && l.Contains("diagram(xxx786)"));
+        Assert.Contains(sung, l => l.Contains("F ") && l.Contains("diagram(xxx565)"));
+        // Asked without the root, a triad is two notes, and the answer says what to ask instead.
+        string thin = ChordVoicingFinder.DescribeProgression(["Bb", "Ebm"], "guitar", null, null, null, "1-4", omitRoot: true, fromFret: 5);
+        Assert.Contains("A triad without its root is two notes", thin);
+        Assert.DoesNotContain("A triad without its root", ChordVoicingFinder.DescribeProgression(["D7", "Cm7"], "guitar", null, null, null, "1-4", omitRoot: true, fromFret: 5));
+        Assert.Contains("A triad without its root is two notes", ChordVoicingFinder.Describe("Bb", "guitar", null, null, 6, null, "1-4", omitRoot: true, fromFret: 5));
         // A symbol that is no chord says so on its own line and breaks nothing after it.
         string broken = ChordVoicingFinder.DescribeProgression(["C", "Xyz", "G"], "guitar", null, null);
         Assert.Contains("2. Xyz — no voicing", broken);

@@ -176,6 +176,14 @@ public static class ChordVoicingFinder
         return new Answer([.. ordered.Take(System.Math.Max(1, count))], outside, bowed, names, distorted, power.Count > 0);
     }
 
+    /// <summary>Said where a shape without its root is two notes (owner's question 2026-11-11: is it
+    /// usual for a band's guitar to leave the root out? — no: it keeps the root out of the BASS's
+    /// register, and a triad without its root is its third and fifth alone).</summary>
+    private const string ThinWithoutRoot = " ⚠ A triad without its root is two notes, thin for strummed chords: in a band the "
+        + "guitar need only keep the root out of the bass's register. For full shapes ask again without `omitRoot`, with "
+        + "`strings: \"1-3\"` (or \"1-4\") and `fromFret` — the root then sounds in an upper voice. `omitRoot` suits seventh "
+        + "and ninth chords, which keep three notes or more.";
+
     /// <summary>Whether a shape mutes a string between two it sounds.</summary>
     internal static bool MutedBetween(IReadOnlyList<int> frets)
     {
@@ -240,6 +248,8 @@ public static class ChordVoicingFinder
             text.Append("A diagram is its frets, lowest string first, x not played, as `@diagram( )` writes it. ");
         text.Append("The notes are as they sound, in absolute octaves (c' is middle C): write them so under `octave absolute`, or the "
             + "same notes in relative octaves.");
+        if (rootless && answer.Voicings.Any(v => v.Pitches.Count < 3))
+            text.Append(ThinWithoutRoot);
         if (InstrumentWord(instrument) is "bass" or "bass4" or "bass5" or "bass6" or "bassDropD" or "doubleBass")
             text.Append(" A bass part reads an octave above it sounds: without `pitch concert`, write each an octave higher.");
         return text.ToString();
@@ -259,73 +269,111 @@ public static class ChordVoicingFinder
     }
 
     /// <summary>
-    /// One voicing for each chord of a progression, chosen so that the hand moves little from one
-    /// to the next: among each chord's voicings (<see cref="Find"/>, the same options) the path
-    /// whose top and bottom notes travel least, the earlier shapes of each list preferred.
+    /// One voicing for each chord of a progression — the SAME one wherever the chord comes, as a
+    /// part writes a chord's shape once — chosen so that the hand moves little between
+    /// neighbours: among each chord's voicings (<see cref="Find"/>, the same options) those whose
+    /// top and bottom notes and whose position travel least, the earlier shapes of each list and
+    /// the fuller ones preferred.
     /// </summary>
     /// <remarks>
     /// LILYSHARP-OWN (owner's request 2026-11-11): the composing chat asked eight chords one by
-    /// one and chose among forty-eight shapes by hand. The cost of a step is the top notes'
-    /// distance, half the bottom notes', one for each note more or fewer and one for each fret the
-    /// its own list adds three quarters of a semitone, so that among equal paths the commoner,
-    /// lower shape stands.
+    /// one and chose among forty-eight shapes by hand. A step between neighbours costs the top
+    /// notes' distance, half the bottom notes', one for each note more or fewer and two for each
+    /// fret the hand's position shifts; a shape's own price is three quarters of a semitone for
+    /// each place down its list, eight for a string muted between sounding ones, and four for two
+    /// notes where the chord has a fuller shape. Each chord starts on its cheapest shape and takes,
+    /// in turn, the one that costs least against its neighbours as they stand, until none moves —
+    /// the first version walked one path chord by chord, which gave a chord two shapes in two
+    /// places and climbed to frets 13–15 after the top note (the author's own trial, the same day).
     /// </remarks>
     public static string DescribeProgression(IReadOnlyList<string> symbols, string instrument, string? low, string? high,
         string? sound = null, string? onStrings = null, bool omitRoot = false, int fromFret = 0)
     {
         const int Candidates = 12;
         static int PositionOf(Voicing v) => v.Frets.Where(f => f > 0).DefaultIfEmpty(0).Min();
-        var answers = symbols.Select(s => Find(s, instrument, low, high, Candidates, sound, onStrings, omitRoot, fromFret)).ToList();
+        var answers = symbols.Select(s => Find(s.Trim(), instrument, low, high, Candidates, sound, onStrings, omitRoot, fromFret)).ToList();
         var text = new System.Text.StringBuilder();
         string where = (onStrings is { Length: > 0 } ? $", on strings {onStrings}" : "")
             + (fromFret > 0 ? $", from fret {fromFret} up" : "") + (omitRoot ? ", the root left to the bass" : "");
         text.Append($"{symbols.Count} chords on the {instrument}{where} — one voicing each, chosen so that the hand moves "
             + "little from chord to chord:\n");
-        // The cheapest path over the chords that have voicings; one without any breaks the path.
-        var best = new double[answers.Count][];
-        var from = new int[answers.Count][];
-        int previous = -1;
+        // ONE SHAPE A CHORD, wherever it comes in the progression (a part writes a chord's shape
+        // once and calls it by name), chosen so that every step between neighbours is short: each
+        // chord starts on its first shape and, in turn, takes the shape that costs least against
+        // the shapes its neighbours hold now, until none changes.
+        var distinct = new List<string>();
+        var slotOf = new int[answers.Count];
         for (int i = 0; i < answers.Count; i++)
         {
-            int n = answers[i].Voicings.Count;
-            best[i] = new double[n];
-            from[i] = new int[n];
-            for (int k = 0; k < n; k++)
+            int slot = distinct.FindIndex(s => string.Equals(s, symbols[i].Trim(), System.StringComparison.Ordinal));
+            if (slot < 0)
             {
-                var v = answers[i].Voicings[k];
-                // A string muted between sounding ones costs as much as a long shift of the hand.
-                double own = 0.75 * k + (MutedBetween(v.Frets) ? 8 : 0);
-                best[i][k] = own;
-                from[i][k] = -1;
-                if (previous < 0)
-                    continue;
-                double least = double.MaxValue;
-                for (int j = 0; j < answers[previous].Voicings.Count; j++)
-                {
-                    var u = answers[previous].Voicings[j];
-                    double step = System.Math.Abs(u.Pitches[^1] - v.Pitches[^1]) + 0.5 * System.Math.Abs(u.Pitches[0] - v.Pitches[0])
-                        + System.Math.Abs(u.Pitches.Count - v.Pitches.Count) + System.Math.Abs(PositionOf(u) - PositionOf(v));
-                    if (best[previous][j] + step < least)
-                    {
-                        least = best[previous][j] + step;
-                        from[i][k] = j;
-                    }
-                }
-                best[i][k] = own + least;
+                slot = distinct.Count;
+                distinct.Add(symbols[i].Trim());
             }
-            if (n > 0)
-                previous = i;
+            slotOf[i] = slot;
+        }
+        var shapes = new IReadOnlyList<Voicing>[distinct.Count];
+        for (int i = 0; i < answers.Count; i++)
+            shapes[slotOf[i]] = answers[i].Voicings;
+        // A shape's own price: its place in its list, a string muted between sounding ones (as
+        // much as a long shift of the hand), and two notes where the chord has shapes of three.
+        double Own(int slot, int k)
+        {
+            var v = shapes[slot][k];
+            return 0.75 * k + (MutedBetween(v.Frets) ? 8 : 0)
+                + (v.Pitches.Count < 3 && shapes[slot].Any(o => o.Pitches.Count >= 3 && !MutedBetween(o.Frets)) ? 4 : 0);
+        }
+        // A step's price: the top notes' distance, half the bottom notes', a note more or fewer,
+        // and two for each fret the hand's position shifts.
+        static double Step(Voicing u, Voicing v)
+            => System.Math.Abs(u.Pitches[^1] - v.Pitches[^1]) + 0.5 * System.Math.Abs(u.Pitches[0] - v.Pitches[0])
+                + System.Math.Abs(u.Pitches.Count - v.Pitches.Count) + 2.0 * System.Math.Abs(PositionOf(u) - PositionOf(v));
+        var pick = new int[distinct.Count];
+        for (int slot = 0; slot < pick.Length; slot++)
+            pick[slot] = shapes[slot].Count == 0 ? -1
+                : Enumerable.Range(0, shapes[slot].Count).OrderBy(k => Own(slot, k)).First();
+        // The neighbours of each chord, counted as often as they stand side by side.
+        var pairs = new List<(int A, int B)>();
+        int before = -1;
+        for (int i = 0; i < answers.Count; i++)
+        {
+            if (shapes[slotOf[i]].Count == 0)
+                continue;
+            if (before >= 0 && slotOf[before] != slotOf[i])
+                pairs.Add((slotOf[before], slotOf[i]));
+            before = i;
+        }
+        for (int round = 0, moved = 1; round < 24 && moved > 0; round++)
+        {
+            moved = 0;
+            for (int slot = 0; slot < pick.Length; slot++)
+            {
+                if (pick[slot] < 0)
+                    continue;
+                double Cost(int k)
+                {
+                    double cost = Own(slot, k);
+                    foreach (var (a, b) in pairs)
+                    {
+                        if (a == slot && pick[b] >= 0)
+                            cost += Step(shapes[slot][k], shapes[b][pick[b]]);
+                        else if (b == slot && pick[a] >= 0)
+                            cost += Step(shapes[a][pick[a]], shapes[slot][k]);
+                    }
+                    return cost;
+                }
+                int bestK = Enumerable.Range(0, shapes[slot].Count).OrderBy(Cost).First();
+                if (Cost(bestK) < Cost(pick[slot]) - 1e-9)
+                {
+                    pick[slot] = bestK;
+                    moved++;
+                }
+            }
         }
         var chosen = new int[answers.Count];
-        System.Array.Fill(chosen, -1);
-        int at = -1;
-        for (int i = answers.Count - 1; i >= 0; i--)
-        {
-            if (answers[i].Voicings.Count == 0)
-                continue;
-            chosen[i] = at >= 0 ? at : System.Array.IndexOf(best[i], best[i].Min());
-            at = from[i][chosen[i]];
-        }
+        for (int i = 0; i < answers.Count; i++)
+            chosen[i] = pick[slotOf[i]];
         for (int i = 0; i < answers.Count; i++)
         {
             string tones = TonesOf(symbols[i]);
@@ -339,10 +387,12 @@ public static class ChordVoicingFinder
                 ? string.Join(", ", v.Frets.Select((f, s) => (f, s)).Where(x => x.f >= 0)
                     .Select(x => $"{answers[i].Strings[x.s]} string {(x.f == 0 ? "open" : $"{x.f} up")}"))
                 : $"diagram({v.Diagram})";
-            text.Append($"{i + 1}. {symbols[i]} ({tones}) — {v.Chord} — {how}\n");
+            text.Append($"{i + 1}. {symbols[i]} ({tones}) — {v.Chord} — {how}{(!answers[i].Bowed && MutedBetween(v.Frets) ? " (a string muted between the sounding ones: harder to strum)" : "")}\n");
         }
         text.Append("A diagram is its frets, lowest string first, x not played, as `@diagram( )` writes it. The notes are as they sound, in absolute octaves (c' is middle C): "
             + "write them so under `octave absolute`. For a chord's other voicings, ask it alone (`chord`).");
+        if (omitRoot && Enumerable.Range(0, answers.Count).Any(i => chosen[i] >= 0 && answers[i].Voicings[chosen[i]].Pitches.Count < 3))
+            text.Append(ThinWithoutRoot);
         if (InstrumentWord(instrument) is "bass" or "bass4" or "bass5" or "bass6" or "bassDropD" or "doubleBass")
             text.Append(" A bass part reads an octave above it sounds: without `pitch concert`, write each an octave higher.");
         return text.ToString();
