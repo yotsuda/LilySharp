@@ -52,6 +52,7 @@ import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { PLAIN_TONES_JS } from './plainTones';
+import { FOLLOW_SCROLL_CSS, FOLLOW_SCROLL_JS } from './followScroll';
 export { cleanCandidate }; // aiComplete reads it from here
 
 // ---- Dependencies wired in from extension.ts (keeps the LSP client global there) ----
@@ -2988,6 +2989,8 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 /* Dark around the sheets and between them (the server leaves a gap between two pages), as in
    the preview. */
 .main { flex:1; overflow:auto; background:#2b2b2b; padding:16px; }
+/* The button that brings a Play's view back to the notes sounding (followScroll.ts). */
+${FOLLOW_SCROLL_CSS}
 /* The sheets are dragged to scroll, as the preview's (installDragScroll): an open hand over them,
    a closed one while they move (owner's request 2026-10-26). */
 .main { cursor: grab; }
@@ -3065,6 +3068,7 @@ button:disabled { opacity:0.45; cursor:default; }
     <button id="tBefore">Before</button>
   </div>
 </div>
+<button id="followBtn" class="follow-btn" type="button" title="Scroll back to the notes sounding, and follow them again" hidden>↓ Follow</button>
 <div class="main">
   <div id="paneAfter" class="pane show">${afterBody}</div>
   <div id="paneBefore" class="pane">${beforeBody}</div>
@@ -3319,6 +3323,11 @@ button:disabled { opacity:0.45; cursor:default; }
   // a click on the preview, which played the notes before — silent until the preview had been
   // clicked, and hidden under this panel. So the panel has the synth and the sound font too: the
   // audio is woken in the click itself, and the notes the host answers play when they come.
+  // Whether the view follows the notes sounding (owner's request 2026-11-11): a scroll of the
+  // user's own that leaves them out of the view ends it, and the Follow button, the notes
+  // scrolled back into view, or the next Play brings it back (followScroll.ts, the preview's too).
+${FOLLOW_SCROLL_JS}
+  const follow = installFollowScroll(document.querySelector('.main'), document.getElementById('followBtn'));
   const SYNTH = ${synthJson};
   let ownCtx = null, ownSynth = null, ownPlayer = null, ownTick = null, ownEnd = null, ownGen = 0, ownPane = 'after';
   // With no sound font (SYNTH null — none set, and the OS has none), the plain tones the preview
@@ -3338,6 +3347,7 @@ ${PLAIN_TONES_JS}
     stopOwn();
     if (!decided) say('');
     ownPane = w;
+    follow.start();
     if (window.LysSynth && window.LysSynth.SoundingCursor) {
       const cursor = new window.LysSynth.SoundingCursor(notes.map(n => ({ t: n.T, d: n.D, s: n.R, o: n.O || 0 })));
       ownTick = setInterval(() => {
@@ -3418,6 +3428,7 @@ ${PLAIN_TONES_JS}
     for (const s of ownVoices) { try { s.stop(); } catch (e) { /* ended already */ } }
     ownVoices = [];
     ownPlay = null;
+    follow.stop();
     if (ownPlayer) { ownPlayer = null; if (ownSynth) ownSynth.stop(); }
     for (const o of playingOscs) { try { o.stop(); } catch (e) { /* ended already */ } }
     playingOscs = [];
@@ -3434,9 +3445,10 @@ ${PLAIN_TONES_JS}
     const start = sung && sung.start > 0 ? sung.start : 0;
     let struck = notes, voices = [], pre = 0;
     // The notes sounding light by the audio's own clock, and the Play ends with the last of them.
-    const follow = (t0, end) => {
+    const lightFrom = (t0, end) => {
       ownPane = w;
       ownPlay = { w, notes, start, t0 };
+      follow.start();
       if (window.LysSynth && window.LysSynth.SoundingCursor) {
         const cursor = new window.LysSynth.SoundingCursor(notes.map(n => ({ t: n.T, d: n.D, s: n.R, o: n.O || 0 })));
         ownTick = setInterval(() => {
@@ -3451,14 +3463,14 @@ ${PLAIN_TONES_JS}
       if (gen !== ownGen) return;
       if (!decided) say(why || (sung && sung.said) || '');
       const t0 = ownCtx.currentTime + 0.15 + pre;
-      follow(t0, startOscillators(ownCtx, struck, 0, t0));
+      lightFrom(t0, startOscillators(ownCtx, struck, 0, t0));
     };
     const go = (ok) => {
       if (gen !== ownGen) return;
       if (!ok || !ownSynth.ready) { plain('The sound font is not ready: plain tones this time.'); return; }
       if (!decided) say((sung && sung.said) || '');
       ownPlayer = ownSynth.play(struck, 0, ownCtx.currentTime + 0.15 + pre);
-      follow(ownPlayer.t0, ownPlayer.end);
+      lightFrom(ownPlayer.t0, ownPlayer.end);
     };
     const begin = () => {
       if (!ownSynth) { plain(''); return; }
@@ -3561,18 +3573,21 @@ ${PLAIN_TONES_JS}
     const copies = copiesOf(w, els);
     return copies[Math.min(s.occ, copies.length - 1)] || els;
   }
+  function bringIntoView(el) {
+    follow.auto(() => { try { el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' }); } catch (e) {} });
+  }
+  follow.onResume = (els) => { if (els.length > 0) bringIntoView(els[0]); };
   function lightSounding(w, sounding) {
     lit.forEach(el => el.classList.remove('playing'));
     lit = [];
     for (const s of sounding) lit.push(...soundingAt(w, s));
     lit.forEach(el => el.classList.add('playing'));
+    if (lit.length > 0) follow.sounding(lit);
     const el = sounding.length > 0 ? soundingAt(w, sounding[0])[0] : null;
-    if (el) {
+    if (el && follow.follows()) {
       const r = el.getBoundingClientRect();
       const m = document.querySelector('.main').getBoundingClientRect();
-      if (r.top < m.top + 30 || r.bottom > m.bottom - 30 || r.left < m.left + 30 || r.right > m.right - 30) {
-        try { el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' }); } catch (e) {}
-      }
+      if (r.top < m.top + 30 || r.bottom > m.bottom - 30 || r.left < m.left + 30 || r.right > m.right - 30) bringIntoView(el);
     }
   }
   window.addEventListener('message', (e) => {

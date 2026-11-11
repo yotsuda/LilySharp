@@ -45,6 +45,7 @@ import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { PLAIN_TONES_JS } from './plainTones';
+import { FOLLOW_SCROLL_CSS, FOLLOW_SCROLL_JS } from './followScroll';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
 import { onAngleChord, onShapeItem, shapeItemAt, sameDocumentUri } from './shapeItemCore';
 import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
@@ -4995,6 +4996,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             font-family: system-ui, sans-serif; font-size: 12px; color: #555;
             font-variant-numeric: tabular-nums;
         }
+        /* The button that brings a Play's view back to the notes sounding (followScroll.ts). */
+        ${FOLLOW_SCROLL_CSS}
         /* The Range panel (owner's request 2026-10-25): each part's lowest and highest note over
            the score, top right under the toolbar; a click on one shows it on the score. */
         .range-panel {
@@ -5143,6 +5146,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </span>
     </div>
     <div id="errorBanner" class="error-banner" role="alert"></div>
+    <button id="followBtn" class="follow-btn" type="button" title="Scroll back to the notes sounding, and follow them again" hidden>↓ Follow</button>
     <div id="rangePanel" class="range-panel" hidden><button type="button" id="rangeClose" class="panel-close" title="Close" aria-label="Close">×</button><div id="rangeBody"></div></div>
     <div id="practicePanel" class="range-panel practice-panel" hidden>
         <button type="button" id="practiceClose" class="panel-close" title="Close" aria-label="Close">×</button>
@@ -7194,6 +7198,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             playEndTimer = null;
             clearInterval(playheadTimer);
             playheadTimer = null;
+            follow.stop();
             followTick = null;
             playClock = null;
             if (tickWatch && tickWatch.ticks > 0) {
@@ -7340,11 +7345,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // for the synth here, the wall clock from the server's zero for the MIDI output.
         // Another text's notes (an AI candidate, playNotes) carry their own offsets as R: those
         // are followed for the candidate panel, which lights them on its score — here nothing.
+        // Whether the view follows the notes sounding (owner's request 2026-11-11): a scroll of
+        // the user's own that leaves them out of the view ends it, and the Follow button, the
+        // notes scrolled back into view, or the next Play brings it back (followScroll.ts).
+        ${FOLLOW_SCROLL_JS}
+        const follow = installFollowScroll(mainContent, document.getElementById('followBtn'));
+        follow.onResume = (els) => { if (els.length > 0) follow.auto(() => keepSoundingInView(els)); };
         function followAlong(notes, offset, elapsed) {
             const Cursor = window.LysSynth ? window.LysSynth.SoundingCursor : null;
             if (!Cursor) { return; }
             const relay = notes.some(n => n.R !== undefined);
             relaying = relay;
+            if (!relay) follow.start();
             const cursor = new Cursor(notes.map(n => ({ t: n.T - offset, d: n.D, s: relay ? n.R : n.S, o: n.O || 0 })));
             // How evenly the 50 ms tick came (owner's report 2026-10-25: one eighth note lit in
             // four — the tick a second apart, as a browser throttles a page it thinks hidden):
@@ -7371,7 +7383,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     lastHighlightPos = r.sounding[0].pos;
                     lastResolvedPos = r.sounding[0].pos;
                 }
-                if (r.hadNew && painted.length > 0) keepSoundingInView(painted);
+                if (painted.length > 0) follow.sounding(painted);
+                if (r.hadNew && painted.length > 0 && follow.follows()) follow.auto(() => keepSoundingInView(painted));
             };
             followTick = tick;
             playheadTimer = setInterval(tick, 50);

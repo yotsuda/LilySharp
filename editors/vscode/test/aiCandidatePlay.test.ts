@@ -246,6 +246,7 @@ describe('the AI candidate panel\'s page script', () => {
             throw new Error(head);
         };
         const lit: { w: string; n: number }[] = [];
+        const followed: string[] = [];
         const plainPlayed: { n: number; offset: number; t0: number }[] = [];
         let plainStopped = 0;
         const said: (string | undefined)[] = [];
@@ -266,6 +267,7 @@ describe('the AI candidate panel\'s page script', () => {
             AudioContext: function () { return ctx; }, Math, decided: false,
             ownCtx: null, ownSynth: null, ownPlayer: null, ownTick: null, ownEnd: null, ownGen: 0, ownPane: 'after',
             ownVoices: [], ownPlay: null, startVoices: () => 0,
+            follow: { start: () => { followed.push('start'); }, stop: () => { followed.push('stop'); } },
             playingOscs: [] as { stop: () => void }[],
             // The plain tones (plainTones.ts), stood in for: what they were asked to play, and a source to stop.
             startOscillators: (_ctx: unknown, list: unknown[], offset: number, t0: number) => {
@@ -291,8 +293,11 @@ describe('the AI candidate panel\'s page script', () => {
         ctx.currentTime = 10.15 + 1.5;
         tick!();
         assert.deepEqual(lit.at(-1), { w: 'before', n: 1 });
+        // The view follows from the start of the Play (the stop before it is the Play's own).
+        assert.deepEqual(followed, ['stop', 'start']);
         // Stop: the synth stops, the timer goes, and nothing stays lit.
         run('stopOwn()');
+        assert.equal(followed.at(-1), 'stop');
         assert.equal(tick, undefined);
         assert.ok(stopped >= 1);
         assert.deepEqual(lit.at(-1), { w: 'before', n: 0 });
@@ -403,6 +408,7 @@ describe('the AI candidate panel\'s page script', () => {
             window: { LysSynth: { SoundingCursor, create: () => synth, soundStart: () => 0.2, nextVoiceEntry } }, SYNTH: { processor: 'p', soundFont: 's' },
             AudioContext: function () { return ctx; }, Math, Promise, decided: false,
             ownCtx: null, ownSynth: null, ownPlayer: null, ownTick: null, ownEnd: null, ownGen: 0, ownPane: 'after', ownVoices: [], ownPlay: null,
+            follow: { start: () => { /* none */ }, stop: () => { /* none */ } },
             playingOscs: [], startOscillators: () => 2, say: (text: string) => { said.push(text); }, lightSounding: () => { /* none */ },
             setInterval: () => 1, clearInterval: () => { /* none */ }, setTimeout: () => 2, clearTimeout: () => { /* none */ },
         });
