@@ -2056,6 +2056,8 @@ public sealed class MusicXmlExporter
         _tieToNextNote = false;
         _tieOpen.Clear();
         _currentPartName = partName;
+        _line = default;
+        _lineMoment = default;
         if (_openAtEnd.Remove((partName, _xmlPlaySerial), out var samePlay))
         {
             _tieOpen.AddRange(samePlay);
@@ -5366,14 +5368,39 @@ public sealed class MusicXmlExporter
     /// null for none: the staff's own then (<see cref="StaffDynamicsUp"/>).</param>
     private void HandleDynamicText(string text, int position = -1, bool subito = false, bool? written = null)
     {
-        string placement = (written ?? StaffDynamicsUp) ? "above" : "below";
         if (text == "niente")
         {
             HandleNiente();
             return;
         }
+        // The side is the line's (Svg.Collector.DynamicLineSides, the page's rule): a new
+        // moment first closes a line no hairpin keeps open.
+        var here = (_currentMeasure, _currentMeasure == null ? 0 : CurrentMeasurePosition(_currentMeasure));
+        if (here != _lineMoment)
+        {
+            _line.MomentEnds();
+            _lineMoment = here;
+            _momentLevel = null;
+            _momentHairpin = false;
+        }
+        string placement;
         if (text is "cresc" or "decresc" or "dim")
         {
+            if (_momentLevel is { } level)
+            {
+                // The level of this note was written first; LilyPond takes the hairpin of
+                // a moment before its text, so the two join in that order.
+                _line = _lineBeforeLevel;
+                placement = _line.Join(written, StaffDynamicsUp) ? "above" : "below";
+                _line.HairpinStarts();
+                level.Placement = _line.Join(_momentLevelWritten, StaffDynamicsUp) ? "above" : "below";
+            }
+            else
+            {
+                placement = _line.Join(written, StaffDynamicsUp) ? "above" : "below";
+                _line.HairpinStarts();
+            }
+            _momentHairpin = true;
             var wedge = new MusicXmlDirection
             {
                 WedgeType = text == "cresc" ? "crescendo" : "diminuendo",
@@ -5413,8 +5440,22 @@ public sealed class MusicXmlExporter
         // Written where it stands — its note's onset (a note's marks are read before the note
         // is added) — rather than held for the next note: a dynamic on a bar's last note used
         // to be written at the next bar's head, and one on a part's last note never (2026-09-29).
-        AddDirection(new MusicXmlDirection { DynamicType = text, Placement = placement, Subito = subito });
+        _lineBeforeLevel = _line;
+        placement = _line.Join(written, StaffDynamicsUp) ? "above" : "below";
+        if (!_momentHairpin)
+            _line.HairpinEnds();
+        _momentLevelWritten = written;
+        _momentLevel = new MusicXmlDirection { DynamicType = text, Placement = placement, Subito = subito };
+        AddDirection(_momentLevel);
     }
+
+    // The line the part's dynamics ride, as the page reads it, and what the current moment
+    // has written so far (a level written before its note's hairpin is re-read after it).
+    private Svg.Collector.DynamicLineSides _line, _lineBeforeLevel;
+    private (MusicXmlMeasure? Measure, int Offset) _lineMoment;
+    private MusicXmlDirection? _momentLevel;
+    private bool? _momentLevelWritten;
+    private bool _momentHairpin;
 
     /// <summary>The open wedge's start direction, while <see cref="_wedgeOpen"/>.</summary>
     private MusicXmlDirection? _openWedge;
@@ -5470,6 +5511,7 @@ public sealed class MusicXmlExporter
         {
             bool alNiente = _openWedge?.WedgeType == "diminuendo";
             AddDirection(new MusicXmlDirection { WedgeType = "stop", Placement = _openWedge?.Placement ?? "below", WedgeNiente = alNiente });
+            _line.HairpinEnds();
             _wedgeOpen = false;
             _openWedge = null;
             consumed = alNiente;
@@ -5789,6 +5831,7 @@ public sealed class MusicXmlExporter
                     case Svg.Model.MusicMarkType.HairpinStop when _wedgeOpen:
                     {
                         var stop = new MusicXmlDirection { WedgeType = "stop", Placement = _openWedge?.Placement ?? "below" };
+                        _line.HairpinEnds();
                         AddDirection(stop);
                         stop.Offset += _markedNoteLength;
                         _wedgeOpen = false;

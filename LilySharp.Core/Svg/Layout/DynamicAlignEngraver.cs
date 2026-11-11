@@ -48,13 +48,13 @@ namespace LilySharp.Core.Svg.Layout;
 ///   letters' size) inside the group profile and the wedge spends nothing.
 /// ⚠️ NOT PORTED, DISCLOSED (no pair measures either) — both are LP behaviours this
 ///   grouping does not reproduce, not Lily#-own quantities (§5.2 audit, session 158):
-///   ⑴ LilyPond BREAKS the line when a new dynamic carries an explicit direction
-///     differing from the line's (:125-138). Here a line is built per staff AND side
+///   ⑴ (PORTED, session 1225) LilyPond BREAKS the line when a new dynamic carries an explicit
+///     direction differing from the line's (:125-138), and the marks after it follow the
+///     line they join. The SIDES are settled where the score is gathered
+///     (Svg.Collector.DynamicLineSides); here a line is built per staff AND side
 ///     (<see cref="DynamicLine.IsAbove"/>): the hairpins of one side chain, the texts of
-///     that side inside the span join, and a member of the other side is left OUT of the
-///     group instead of breaking it — the hairpin keeps its own side, where LilyPond's
-///     follows a text written on the same note (owner's decision D3,
-///     docs/dynamics-above-lyrics-design.md §3.6).
+///     that side inside the span join, and the texts a hairpin left behind on the other
+///     side are a line of their own (<see cref="BuildLines"/>, the numbered lines).
 ///   ⑵ Same-column stacking (two voices' dynamics on one column,
 ///     <see cref="DynamicEngraver.StackStep"/>) is not re-applied to a grouped text —
 ///     in LilyPond those come from two Voice contexts and ride two separate lines.
@@ -118,7 +118,7 @@ internal static class DynamicAlignEngraver
         if (hairpinItems.IsDefaultOrEmpty || hairpinLayouts.IsDefaultOrEmpty)
             return (dynamicLayouts, hairpinLayouts, ImmutableArray<AlignedLineGroup>.Empty);
 
-        var lines = BuildLines(hairpinItems, dynamicLayouts);
+        var lines = BuildLines(hairpinItems, dynamicLayouts, dynamics);
         // A line with one wedge and no text is the answer HairpinEngraver already
         // computed (same span supports, same wedge outline) — leave it untouched.
         var grouped = lines.Where(l =>
@@ -277,11 +277,20 @@ internal static class DynamicAlignEngraver
     /// falls inside the chained span [start..end] (both ends inclusive: the start
     /// text and the terminating text are acknowledged while the line is alive) joins.
     /// </summary>
+    /// <param name="dynamics">The score's dynamics, the layouts' sources: where they number
+    /// their lines (<see cref="DynamicItem.LineId"/>), the texts of one number that no hairpin
+    /// of their side joins are a line too — the line a hairpin left when the level at its
+    /// start wrote the other side keeps that level and the one closing the hairpin.
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1225/dyn/lp/d3, <c>c''4_\ff\&gt; … f''\p</c>
+    /// under \dynamicUp): the ff and the p stand on one baseline, 17.2776, below the staff,
+    /// the hairpin between them above it.</param>
     internal static ImmutableArray<DynamicLine> BuildLines(
         ImmutableArray<HairpinItem> hairpinItems,
-        ImmutableArray<DynamicLayout> dynamicLayouts)
+        ImmutableArray<DynamicLayout> dynamicLayouts,
+        ImmutableArray<DynamicItem> dynamics = default)
     {
         var lines = ImmutableArray.CreateBuilder<DynamicLine>();
+        HashSet<int>? chained = null;
         foreach (var staffGroup in hairpinItems
             .Select((hp, i) => (Item: hp, Index: i))
             .GroupBy(x => (Staff: x.Item.StaffIndex, Above: x.Item.IsAbove)))
@@ -320,13 +329,52 @@ internal static class DynamicAlignEngraver
                         continue;
                     var moment = (d.MeasureIndex, d.ItemIndex);
                     if (Cmp(moment, start) >= 0 && Cmp(moment, end) <= 0)
+                    {
                         texts.Add(di);
+                        (chained ??= new HashSet<int>()).Add(di);
+                    }
                 }
 
                 lines.Add(new DynamicLine(staffGroup.Key.Staff,
                     start.M, start.I, end.M, end.I,
                     members.ToImmutable(), texts.ToImmutable(), staffGroup.Key.Above));
             }
+        }
+
+        // The numbered lines' texts that no chain took: two or more of one number are a line
+        // with no wedge on it, from its first text's moment to its last.
+        if (!dynamics.IsDefaultOrEmpty)
+        {
+            Dictionary<(int Staff, int Line, bool Above), List<int>>? loose = null;
+            for (int di = 0; di < dynamicLayouts.Length; di++)
+            {
+                var d = dynamicLayouts[di];
+                if (d.IsExpressiveText || d.SourceIndex < 0 || d.SourceIndex >= dynamics.Length
+                    || dynamics[d.SourceIndex].LineId is not (> 0 and var id)
+                    || (chained?.Contains(di) ?? false))
+                    continue;
+                loose ??= new();
+                if (!loose.TryGetValue((d.StaffIndex, id, d.IsAbove), out var list))
+                    loose[(d.StaffIndex, id, d.IsAbove)] = list = new List<int>();
+                list.Add(di);
+            }
+            if (loose != null)
+                foreach (var (key, list) in loose)
+                {
+                    if (list.Count < 2)
+                        continue;
+                    (int M, int I) first = (int.MaxValue, int.MaxValue), last = (-1, -1);
+                    foreach (int di in list)
+                    {
+                        var moment = (dynamicLayouts[di].MeasureIndex, dynamicLayouts[di].ItemIndex);
+                        if (Cmp(moment, first) < 0)
+                            first = moment;
+                        if (Cmp(moment, last) > 0)
+                            last = moment;
+                    }
+                    lines.Add(new DynamicLine(key.Staff, first.M, first.I, last.M, last.I,
+                        ImmutableArray<int>.Empty, list.ToImmutableArray(), key.Above));
+                }
         }
         return lines.ToImmutable();
     }

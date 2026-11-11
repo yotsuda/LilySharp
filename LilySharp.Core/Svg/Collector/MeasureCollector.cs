@@ -872,7 +872,15 @@ public sealed partial class MeasureCollector
     /// </summary>
     /// <param name="measureCount">Total measures collected — the virtual stop an
     /// unterminated trill spanner runs to (one past the last measure).</param>
-    private ScoreContent CaptureScoreContent(int measureCount) => new(
+    private ScoreContent CaptureScoreContent(int measureCount)
+    {
+        // The dynamics' and the hairpins' sides, by the line each rides (DynamicLineSides).
+        var (dynamics, musicMarks) = DynamicLineSides.Resolve(_dynamics, _musicMarks);
+        return CaptureScoreContent(measureCount, dynamics, musicMarks);
+    }
+
+    private ScoreContent CaptureScoreContent(int measureCount,
+        ImmutableArray<DynamicItem> dynamics, ImmutableArray<MusicMarkItem> musicMarks) => new(
         new TimeSignature(_v.Meta.TimeBeats, _v.Meta.TimeBeatType, _v.Meta.TimeBeatsText, _v.Meta.TimeSenzaMisura, _v.Meta.TimeGrouping),
         new KeySignature(_v.Meta.InitialKeySharps, _v.Meta.InitialKeyCustom), // initial key, not the post-change state
         _v.Meta.InitialClef, // initial clef, not the post-change state
@@ -880,11 +888,11 @@ public sealed partial class MeasureCollector
         _v.Meta.Title,
         _v.Meta.Composer,
         _v.Meta.SwingSubdivision,
-        _dynamics.ToImmutableArray(),
+        dynamics,
         _articulations.ToImmutableArray(),
         _graceNotes.ToImmutableArray(),
         _lyricsCollector.Lyrics.ToImmutableArray(),
-        _musicMarks.ToImmutableArray(),
+        musicMarks,
         _customTexts.ToImmutableArray(),
         _voltaBrackets.ToImmutableArray(),
         _tupletBrackets.ToImmutableArray(),
@@ -6184,6 +6192,7 @@ public sealed partial class MeasureCollector
                         IsAbove = level == DynamicLevel.Niente
                             ? dynamicSyntax.ForcedAbove == true
                             : DynamicSideAbove(dynamicSyntax.ForcedAbove),
+                        WrittenAbove = dynamicSyntax.ForcedAbove,
                         VoiceIndex = _v.Cursor.VoiceIndex,
                         IsSubito = dynamicSyntax.IsSubito,
                     });
@@ -6207,6 +6216,7 @@ public sealed partial class MeasureCollector
                         {
                             StaffIndex = _v.Cursor.StaffIndex,
                             HairpinAbove = DynamicSideAbove(dynamicSyntax.ForcedAbove),
+                            HairpinWritten = dynamicSyntax.ForcedAbove,
                         });
                     }
                 }
@@ -6216,8 +6226,10 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// The side a dynamic or a hairpin of the staff being collected stands on: the written one
-    /// (<c>.up</c> / <c>.down</c>), else the staff's (<see cref="_staffDynamicsUp"/>). A written
-    /// side moves that mark alone — a hairpin does not follow the dynamic beside it (D3).
+    /// (<c>.up</c> / <c>.down</c>), else the staff's (<see cref="_staffDynamicsUp"/>) — as the
+    /// walk records it. The side it is DRAWN on is its line's, settled once the whole score is
+    /// gathered (<see cref="DynamicLineSides.Resolve"/>, where the score's content is captured):
+    /// a mark that writes none follows the line a written one gave a direction.
     /// </summary>
     /// <remarks>Read by a dynamic LEVEL and by a hairpin's start alike
     /// (docs/dynamics-above-lyrics-design.md §5, steps 2 and 3).</remarks>

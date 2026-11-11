@@ -248,6 +248,11 @@ public sealed record MusicMarkItem
     /// </summary>
     public bool HairpinAbove { get; init; }
 
+    /// <summary>For a hairpin's start: the side it writes itself (<c>@cresc.up</c> true,
+    /// <c>@cresc.down</c> false, null for none) — what <c>DynamicLineSides</c> reads to give
+    /// its line a direction.</summary>
+    public bool? HairpinWritten { get; init; }
+
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; init; }
 

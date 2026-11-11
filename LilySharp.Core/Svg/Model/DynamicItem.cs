@@ -59,8 +59,19 @@ public sealed record DynamicItem
     /// </summary>
     public int StaffIndex { get; }
 
-    /// <summary>Forced ABOVE the staff (from <c>@f.up</c>); default is below.</summary>
+    /// <summary>The dynamic stands ABOVE its staff: the side of the line it rides
+    /// (<c>DynamicLineSides</c>) — written (<c>@f.up</c>), its line's, or its staff's own.</summary>
     public bool IsAbove { get; init; }
+
+    /// <summary>The side the dynamic itself writes: <c>.up</c> true, <c>.down</c> false, null
+    /// for none. What <c>DynamicLineSides</c> reads to give its line a direction.</summary>
+    public bool? WrittenAbove { get; init; }
+
+    /// <summary>The line this level rides, numbered within the score (0 = not numbered: no
+    /// mark of the score writes a side, and the lines are the hairpins' chains). Two levels
+    /// of one number align though no hairpin of their side joins them — the line a hairpin
+    /// left when a level beside it wrote the other side (<c>DynamicLineSides</c>).</summary>
+    public int LineId { get; init; }
 
     /// <summary>
     /// Zero-based voice index within the staff this dynamic was written in. LilyPond's

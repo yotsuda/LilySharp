@@ -184,26 +184,53 @@ public class DynamicsAboveLyricsTests
     }
 
     /// <summary>
-    /// D3 on the page: a level written <c>.down</c> hangs below alone; the wedge starting on its
-    /// note and the level ending it keep the staff's side, above. The wedge still OPENS right of
-    /// the level's ink — the bound is the text whichever side it was sent to.
-    /// MEASURED (LilyPond 2.26.0, Lab sessions/p1225/dyn/lp/d3.ly): the wedge above opens at
-    /// 28.504, 1.0 right of the ff below (HairpinEngraver.BoundText).
+    /// A written side gives its LINE a direction, as LilyPond's does: the level written
+    /// <c>.down</c> breaks off the staff's line (which the hairpin of its note has joined — a
+    /// moment's hairpin is read before its text), and the level closing the hairpin, writing no
+    /// side, follows that line below and stands on the first one's baseline. The wedge above
+    /// still OPENS right of the level's ink — the bound is the text whichever side it is on.
+    /// MEASURED (LilyPond 2.26.0, \dynamicUp, Lab sessions/p1225/dyn/lp/d3.svg): the wedge above
+    /// opens at 28.504, 1.0 right of the ff; the ff and the closing p share the baseline 17.2776
+    /// below the staff (middle 12.2846).
     /// </summary>
     [Fact]
-    public void ALevelWrittenDown_GoesAlone_AndStillBoundsTheWedgeAbove()
+    public void ALevelWrittenDown_TakesItsLineBelow_AndTheWedgeOfItsNoteStaysAbove()
     {
         var layout = LayoutOf("c''4@ff.down@decresc d'' e'' f''@p |", lyrics: true);
         var hp = Assert.Single(layout.HairpinLayouts);
         var ff = layout.DynamicLayouts.Single(d => d.Text == "ff");
         var p = layout.DynamicLayouts.Single(d => d.Text == "p");
-        Assert.True(hp.IsAbove && p.IsAbove && !ff.IsAbove);
-        Assert.True(ff.YUp < -EngravingDefaults.StaffMiddle && p.YUp > EngravingDefaults.StaffMiddle);
+        Assert.True(hp.IsAbove && !ff.IsAbove && !p.IsAbove);
+        Assert.Equal(12.2846 - 17.2776, ff.YUp, 3);
+        Assert.Equal(ff.YUp, p.YUp, 6);
         Assert.True(hp.StartX > ff.X + 1.0, $"the wedge opens past the ff: {hp.StartX:F4} vs {ff.X:F4}");
 
         // The control: with the ff on the wedge's side the bound is the same text.
         var same = LayoutOf("c''4@ff@decresc d'' e'' f''@p |", lyrics: true);
         Assert.Equal(Assert.Single(same.HairpinLayouts).StartX, hp.StartX, 6);
+    }
+
+    /// <summary>
+    /// A hairpin written <c>.down</c> gives the line its direction too: the level on its own
+    /// note and the level closing it, writing none, stand below with it. And a level written
+    /// against a running hairpin's line goes alone; the next line is the staff's again.
+    /// MEASURED (same twin): <c>c''4\p_\&lt; … f''\f</c> — p, wedge and f all below, the wedge's
+    /// centre 16.4073; <c>c''4\&lt; … f''_\ff</c> — the wedge above at 8.9180, the ff below.
+    /// </summary>
+    [Fact]
+    public void AHairpinWrittenDown_TakesTheLevelsOfItsLineWithIt()
+    {
+        var layout = LayoutOf("c''4@p@cresc.down d'' e'' f''@f | c''4@cresc d'' e'' f''@ff.down | g'1@mf |", lyrics: true);
+        var wedges = layout.HairpinLayouts.OrderBy(h => h.StartX).ToList();
+        Assert.Equal(2, wedges.Count);
+        Assert.False(wedges[0].IsAbove);
+        Assert.Equal(12.2846 - 16.4073, wedges[0].YUp + EngravingDefaults.StaffMiddle, 3);
+        Assert.False(layout.DynamicLayouts.Single(d => d.Text == "p").IsAbove);
+        Assert.False(layout.DynamicLayouts.Single(d => d.Text == "f").IsAbove);
+        Assert.True(wedges[1].IsAbove);
+        Assert.False(layout.DynamicLayouts.Single(d => d.Text == "ff").IsAbove);
+        // The line ended with its hairpin: the next level is on the staff's own side.
+        Assert.True(layout.DynamicLayouts.Single(d => d.Text == "mf").IsAbove);
     }
 
     /// <summary>
@@ -236,6 +263,26 @@ public class DynamicsAboveLyricsTests
         const string music = "c''4@p@cresc d'' e'' f'' | g''2@f a''2@decresc | g''1@p |";
         string before = Book(music, lyricsFirst, "la la la la | la la | la |");
         string after = Book(music, !lyricsFirst, "la la la la | la la | la |");
+        var session = new IncrementalCompiler(SyntaxTree.Parse(before), Opt);
+        session.Render();
+        var incremental = session.RenderIncremental(SyntaxTree.Parse(after)).Replace("\r\n", "\n");
+        Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(after), Opt).Replace("\r\n", "\n"), incremental);
+    }
+
+    /// <summary>
+    /// A side written on one note moves a mark in ANOTHER bar — the level closing the hairpin
+    /// follows the line — though that bar's own text did not change: the preview redraws it
+    /// as the full render does, in both directions of the edit.
+    /// </summary>
+    [Theory]
+    [InlineData("@ff@decresc", "@ff.down@decresc")]
+    [InlineData("@ff.down@decresc", "@ff@decresc")]
+    [InlineData("@ff@decresc", "@ff@decresc.down")]
+    public void ASideWrittenOnOneNote_MovesTheLevelClosingItsHairpin_InThePreviewToo(string from, string to)
+    {
+        string Bars(string start) => $"c''4{start} d'' e'' f'' | g''2 a''2 | g''1@p | c''1@mf |";
+        string before = Book(Bars(from), lyrics: true, "la la la la | la la | la | la |");
+        string after = Book(Bars(to), lyrics: true, "la la la la | la la | la | la |");
         var session = new IncrementalCompiler(SyntaxTree.Parse(before), Opt);
         session.Render();
         var incremental = session.RenderIncremental(SyntaxTree.Parse(after)).Replace("\r\n", "\n");
@@ -306,7 +353,7 @@ public class DynamicsAboveLyricsTests
     [Fact]
     public void ADynamicsWrittenSide_DoesNotMoveTheHairpinBesideIt()
     {
-        // D3: `@f.down` moves that f alone; the hairpin starting on the same note keeps the
+        // `@f.down` breaks off into a line of its own; the hairpin starting on the same note keeps the
         // staff's side.
         var hairpins = Hairpins(
             "c''4@f.down@decresc d'' e'' f''@p |", Plain, "staff sop  lyrics w  staff alt");
@@ -380,8 +427,9 @@ public class DynamicsAboveLyricsTests
     [Theory]
     [InlineData("c''4@cresc d'' e'' f''@f |", true, "above", "above")]
     [InlineData("c''4@cresc d'' e'' f''@f |", false, "below", "below")]
-    [InlineData("c''4@cresc.down d'' e'' f''@f |", true, "below", "above")]
-    [InlineData("c''4@cresc d'' e'' f''@f.up |", false, "below", "above")]
+    [InlineData("c''4@cresc.down d'' e'' f''@f |", true, "below", "below")]   // the f follows its line
+    [InlineData("c''4@cresc d'' e'' f''@f.up |", false, "below", "above")]    // the f breaks off
+    [InlineData("c''4@ff.down@decresc d'' e'' f''@p |", true, "above", "below")]   // both levels follow the ff
     public void MusicXml_WritesTheSideThePageDraws(string music, bool lyrics, string wedge, string level)
     {
         var part = new LilySharp.Core.MusicXml.MusicXmlExporter()
@@ -389,7 +437,8 @@ public class DynamicsAboveLyricsTests
         var directions = part.Measures.SelectMany(m => m.Directions).ToList();
         Assert.All(directions.Where(d => d.WedgeType != null), d => Assert.Equal(wedge, d.Placement));
         Assert.Equal(2, directions.Count(d => d.WedgeType != null));
-        Assert.Equal(level, directions.Single(d => d.DynamicType != null).Placement);
+        Assert.NotEmpty(directions.Where(d => d.DynamicType != null));
+        Assert.All(directions.Where(d => d.DynamicType != null), d => Assert.Equal(level, d.Placement));
     }
 
     [Theory]

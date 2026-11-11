@@ -592,14 +592,9 @@ public sealed partial class LilyPondExporter
     /// the music it would stop at the voices a <c>&lt;&lt; \\ &gt;&gt;</c> creates).
     /// LilyPond's own spelling (ly/property-init.ly, dynamicUp): the pair of overrides
     ///   DynamicText.direction and DynamicLineSpanner.direction, both UP.
-    /// ⚠️ THE TWIN IS NOT THE PAGE where a level or a hairpin of such a staff is written
-    ///   <c>.down</c>: on the page that mark goes alone (owner's decision D3,
-    ///   docs/dynamics-above-lyrics-design.md), while LilyPond's line spanner takes the
-    ///   written direction and the marks after it that write none follow it down. MEASURED
-    ///   (2.26.0, Lab sessions/p1225/dyn/lp/d3): after <c>c''4_\ff\&gt;</c> the closing
-    ///   <c>\p</c> is below, and after <c>c''4\p_\&lt;</c> the closing <c>\f</c> is.
-    ///   departs from: lily/dynamic-align-engraver.cc:119-160 acknowledge_dynamic —
-    ///     set_grob_direction (line_, d) for the event's own direction.
+    /// A side written on a level or a hairpin (<c>^</c> / <c>_</c>, EmitDynamic) then acts in the
+    /// twin as it does on the page: it gives its line a direction, and the marks after it that
+    /// write none follow (Svg.Collector.DynamicLineSides, the page's port of that rule).
     /// </remarks>
     private bool StandsDynamicsUp(string? partName)
     {
