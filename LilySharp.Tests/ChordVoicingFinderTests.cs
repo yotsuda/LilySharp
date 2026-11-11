@@ -199,4 +199,85 @@ public class ChordVoicingFinderTests
         Assert.Empty(Fingered("violin", "<b g'>"));          // G string +4, D string +5
         Assert.Contains(Fingered("violin", "<a e''>"), d => d.Message.Contains("do not lie on neighbouring strings"));
     }
+
+    // Owner's report 2026-11-11: asked for "high chords with the root left out", the composing chat
+    // had a tool that answered rooted shapes from the nut, asked it eight times and sifted by hand.
+    [Fact]
+    public void WithoutTheRoot_NoShapeSoundsIt_AndFromAFret_NoneLiesBelowIt()
+    {
+        var bb = ChordVoicingFinder.Find("Bb", "guitar", null, null, 12, "electric guitar (clean)", "1-4", omitRoot: true, fromFret: 5);
+        Assert.Null(bb.Problem);
+        Assert.NotEmpty(bb.Voicings);
+        Assert.All(bb.Voicings, v => Assert.DoesNotContain(v.Pitches, p => p % 12 == 10));
+        Assert.All(bb.Voicings, v => Assert.All(v.Frets, f => Assert.True(f < 0 || f >= 5, v.Diagram)));
+        // Two TONES at least — the third and the fifth side by side — never one tone and its octave.
+        Assert.Contains(bb.Voicings, v => v.Diagram == "xxx76x" && v.Chord == "<d' f'>");
+        Assert.All(bb.Voicings, v => Assert.True(v.Pitches.Select(p => p % 12).Distinct().Count() >= 2, v.Chord));
+        // Every one can be held.
+        Assert.All(bb.Voicings, v => Assert.NotNull(ChordFingeringValidator.Fingering(v.Pitches, LilySharp.Core.Tablature.Tunings.Guitar)));
+        // A power chord is its root: none without it.
+        Assert.False(ChordVoicingFinder.Find("E", "guitar", null, null, 6, "overdriven guitar", null, omitRoot: true).Powered);
+        // With no strings named, the whole neck is searched from the fret.
+        var cm7 = ChordVoicingFinder.Find("Cm7", "guitar", null, null, 12, null, null, omitRoot: false, fromFret: 7);
+        Assert.All(cm7.Voicings, v => Assert.All(v.Frets, f => Assert.True(f < 0 || f >= 7, v.Diagram)));
+    }
+
+    // Owner's correction and question 2026-11-11: the answer wrote `xx(12)(10)x(10)`, which nothing
+    // reads; and a shape strummed across a string muted between its sounding ones is no common grip.
+    [Fact]
+    public void ADiagramIsSpelledAsLilySharpReadsIt_AndAShapeMutedBetweenComesAfterTheOthers()
+    {
+        string text = ChordVoicingFinder.Describe("Bb", "guitar", null, null, 6, null, "1-4", omitRoot: true, fromFret: 5);
+        Assert.Contains("diagram(xx-12-10-x-10) (a string muted between the sounding ones", text);
+        Assert.DoesNotContain("(12)", text);
+        Assert.True(text.IndexOf("diagram(xxx76x)", StringComparison.Ordinal) < text.IndexOf("diagram(xx-12-10-x-10)", StringComparison.Ordinal));
+        // …in every list: the shapes on neighbouring strings all come before the first one muted between.
+        foreach (string chord in new[] { "Gm", "Eb", "F", "C7" })
+        {
+            var shapes = ChordVoicingFinder.Find(chord, "guitar", null, null, 12, null, "1-4", omitRoot: true, fromFret: 5).Voicings;
+            int firstMuted = shapes.ToList().FindIndex(v => ChordVoicingFinder.MutedBetween(v.Frets));
+            Assert.True(firstMuted < 0 || shapes.Skip(firstMuted).All(v => ChordVoicingFinder.MutedBetween(v.Frets)), chord);
+            Assert.False(ChordVoicingFinder.MutedBetween(shapes[0].Frets), chord);
+        }
+        Assert.True(ChordVoicingFinder.MutedBetween([-1, -1, 12, 10, -1, 10]));
+        Assert.False(ChordVoicingFinder.MutedBetween([-1, -1, -1, 7, 6, -1]));
+        // What it writes, the diagram's reader takes back.
+        var voicing = ChordVoicingFinder.Find("Bb", "guitar", null, null, 12, null, "1-4", omitRoot: true, fromFret: 5)
+            .Voicings.First(v => v.Frets.Any(f => f > 9));
+        Assert.Equal(LilySharp.Core.Music.ChordVoicings.Spell(voicing.Frets), voicing.Diagram);
+    }
+
+    // `Bbmaj` is B-flat major SEVENTH here: the answer says the tones it read, so that it is not asked twice.
+    [Fact]
+    public void TheAnswerNamesTheTonesItReadTheSymbolAs()
+    {
+        Assert.Contains("Bbmaj — its tones bes d f a", ChordVoicingFinder.Describe("Bbmaj", "guitar", null, null));
+        Assert.Contains("Bb — its tones bes d f —", ChordVoicingFinder.Describe("Bb", "guitar", null, null));
+        Assert.Contains("the root left to the bass", ChordVoicingFinder.Describe("Cm7", "guitar", null, null, 6, null, "1-4", omitRoot: true));
+    }
+
+    // One call for a part's chords: a voicing each, the hand moving little.
+    [Fact]
+    public void AProgression_AnswersOneVoicingAChord_NearItsNeighbours()
+    {
+        string[] chords = ["Bb", "Gm", "Eb", "F", "D7", "C7", "Ebm", "Cm7"];
+        string text = ChordVoicingFinder.DescribeProgression(chords, "guitar", null, null, "electric guitar (clean)", "1-4", omitRoot: true, fromFret: 5);
+        var lines = text.Split('\n').Where(l => System.Text.RegularExpressions.Regex.IsMatch(l, @"^\d+\. ")).ToList();
+        Assert.Equal(8, lines.Count);
+        for (int i = 0; i < chords.Length; i++)
+        {
+            Assert.StartsWith($"{i + 1}. {chords[i]} (", lines[i]);
+            Assert.Contains("diagram(", lines[i]);
+        }
+        // No shape of the path is strummed across a muted string where one on neighbouring strings was to be had.
+        Assert.DoesNotContain("-x-", string.Join("\n", lines));
+        // The same chord twice in a row keeps its shape.
+        string twice = ChordVoicingFinder.DescribeProgression(["Am", "Am", "Dm"], "guitar", null, null, null, "1-4");
+        var two = twice.Split('\n').Where(l => l.StartsWith("1. ") || l.StartsWith("2. ")).Select(l => l[(l.IndexOf('<'))..]).ToList();
+        Assert.Equal(two[0], two[1]);
+        // A symbol that is no chord says so on its own line and breaks nothing after it.
+        string broken = ChordVoicingFinder.DescribeProgression(["C", "Xyz", "G"], "guitar", null, null);
+        Assert.Contains("2. Xyz — no voicing", broken);
+        Assert.Contains("3. G (g b d)", broken);
+    }
 }

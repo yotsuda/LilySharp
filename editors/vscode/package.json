@@ -49,12 +49,13 @@
         "canBeReferencedInPrompt": true,
         "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"],
         "userDescription": "Shows the AI's new version of a .lys file beside the score as it stands, to play and to accept or reject.",
-        "modelDescription": "Use this to write or change a Lily# (.lys) file, instead of editing the file yourself. Give the file's absolute path and the WHOLE new text of the file — or, for a new piece written with lilysharp_draftScore, `draft: true` and no text. A NEW piece goes to a new file (name it with lilysharp_checkName), never over a score that is open or attached, unless the musician asks for that file in so many words. Lily# compiles it first: if it has errors they come back and nothing is shown — fix them and call again. Otherwise a new piece (the file empty) is written straight into the file; a change to a score is shown to the musician beside the score as it stands, to play and to accept or reject, and the result says which. Accepted, it is in the editor, not saved: read it with lilysharp_readScore, not from the disk. What to change next, the musician says in the chat; call it again with the whole new text.",
+        "modelDescription": "Use this to write or change a Lily# (.lys) file, instead of editing the file yourself. Give the file's absolute path and, to change a score that is there, `edits`: each `old` a chord, a bar or a line copied from the score as lilysharp_readScore shows it, with its `new`; `all: true` changes every place `old` stands, so one chord revoiced throughout a part is one edit. Do NOT write the whole file again to change part of it. `text`, the WHOLE new text, is for rewriting most of a file; a new piece written with lilysharp_draftScore takes `draft: true` and no text. A NEW piece goes to a new file (name it with lilysharp_checkName), never over a score that is open or attached, unless the musician asks for that file in so many words. Lily# compiles it first: if it has errors they come back and nothing is shown — fix them and call again. Otherwise a new piece (the file empty) is written straight into the file; a change to a score is shown to the musician beside the score as it stands, to play and to accept or reject, and the result says which. Accepted, it is in the editor, not saved: read it with lilysharp_readScore, not from the disk. What to change next, the musician says in the chat; call it again with the edits for that.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "file": { "type": "string", "description": "The .lys file's absolute path — for a score open in the editor and not saved yet, the path it is named by." },
-            "text": { "type": "string", "description": "The whole new text of the file. Leave it out with `draft`." },
+            "text": { "type": "string", "description": "The whole new text of the file, for rewriting most of it. Leave it out with `edits` or `draft`." },
+            "edits": { "type": "array", "description": "Changes to the score as it stands, in place of its whole text. They apply in order; nothing is shown unless all apply.", "items": { "type": "object", "properties": { "old": { "type": "string", "description": "Text of the score exactly as lilysharp_readScore shows it: a chord, a bar, a line or several." }, "new": { "type": "string", "description": "What stands there instead (empty to remove it)." }, "all": { "type": "boolean", "description": "true: change every place `old` stands. Without it `old` must be there exactly once." } }, "required": ["old", "new"] } },
             "note": { "type": "string", "description": "One or two sentences to the musician about the change, in their language." },
             "draft": { "type": "boolean", "description": "true: propose the piece written into this file's draft with lilysharp_draftScore, instead of a text given here." }
           },
@@ -89,11 +90,13 @@
         "canBeReferencedInPrompt": true,
         "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"],
         "userDescription": "Reads a .lys score as it stands in the editor, saved or not.",
-        "modelDescription": "Use this to read a Lily# (.lys) file before changing it, instead of reading the file from the disk: it gives the text as it stands in the editor — a score not saved yet is not on the disk at all, and a saved one may have changes the disk does not. Give the file's absolute path (for a score not saved yet, the path it is named by).",
+        "modelDescription": "Use this to read a Lily# (.lys) file before changing it, instead of reading the file from the disk: it gives the text as it stands in the editor — a score not saved yet is not on the disk at all, and a saved one may have changes the disk does not. Give the file's absolute path (for a score not saved yet, the path it is named by). To work on one part, give `part` (its name, as `gtr`): it answers that part alone — its own block, its music in each section and the phrases it calls — a fraction of the score. A long reading comes in pages: the answer says how to read the next (`page`).",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "file": { "type": "string", "description": "The .lys file's absolute path — for a score open in the editor and not saved yet, the path it is named by." }
+            "file": { "type": "string", "description": "The .lys file's absolute path — for a score open in the editor and not saved yet, the path it is named by." },
+            "part": { "type": "string", "description": "A part's name (as it stands after `part`): read that part alone (optional)." },
+            "page": { "type": "number", "description": "Which page of a long reading, from 1 (optional)." }
           },
           "required": ["file"]
         }
@@ -124,7 +127,7 @@
         "canBeReferencedInPrompt": true,
         "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song", "guitar", "chord"],
         "userDescription": "Lists the voicings of a chord a guitarist, bassist or string player can hold, in a register, as Lily# notes and chord diagrams.",
-        "modelDescription": "Use this BEFORE writing a chord for a guitar, bass, ukulele, banjo, violin, viola, cello or double bass part, to know which notes its player can hold — not every stack of a chord's notes can be fingered. Give the chord symbol (Cm7, G7/B, F#m7-5, Bbmaj7), the instrument, the part's sound (its midiInstrument) and the register you want it in (two note names, as C3 and C5 or c and c''). It answers the voicings, commonest first, each as the Lily# chord to write (<c g bes ees' g'>, in absolute octaves) with its chord diagram (x35343); on a distorted sound (overdriven guitar, distortion guitar) its power chords of two or three notes come first, since a full chord blurs there; for a bowed string, the double stops it can sound (two notes at once). Give strings (\"1-4\": the four highest, 1 the highest) to have only shapes on those strings, the root not always lowest — a band's clean guitar plays its chords there, the bass having the low strings.",
+        "modelDescription": "Use this BEFORE writing a chord for a guitar, bass, ukulele, banjo, violin, viola, cello or double bass part, to know which notes its player can hold — not every stack of a chord's notes can be fingered. Give the chord symbol (Cm7, G7/B, F#m7-5, Bbmaj7), the instrument, the part's sound (its midiInstrument) and the register you want it in (two note names, as C3 and C5 or c and c''). It answers the voicings, commonest first, each as the Lily# chord to write (<c g bes ees' g'>, in absolute octaves) with its chord diagram (x35343); on a distorted sound (overdriven guitar, distortion guitar) its power chords of two or three notes come first, since a full chord blurs there; for a bowed string, the double stops it can sound (two notes at once). Give strings (\"1-4\": the four highest, 1 the highest) to have only shapes on those strings, the root not always lowest — a band's clean guitar plays its chords there, the bass having the low strings. Give `omitRoot: true` for shapes without the root (the bass plays it), and `fromFret` (as 5) for shapes up the neck, no open string. For several chords, give `chords` (the symbols of the progression, in order) in place of `chord`: it answers ONE voicing for each, chosen so that the hand moves little from chord to chord — one call for a whole part's chords, not one a chord.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -134,9 +137,12 @@
             "high": { "type": "string", "description": "The register's highest note, as C5 or c'' (optional)." },
             "count": { "type": "number", "description": "How many voicings at most (default 6)." },
             "sound": { "type": "string", "description": "The part's midiInstrument (\"overdriven guitar\", \"electric guitar (clean)\" …): on a distorted sound, power chords of two or three notes come first (optional)." },
-            "strings": { "type": "string", "description": "A fretted instrument's strings to play, by number, 1 the highest: \"1-4\" (the four highest), \"2-5\", \"1,2,3\" (optional). A band's clean guitar: \"1-4\"." }
+            "strings": { "type": "string", "description": "A fretted instrument's strings to play, by number, 1 the highest: \"1-4\" (the four highest), \"2-5\", \"1,2,3\" (optional). A band's clean guitar: \"1-4\"." },
+            "chords": { "type": "array", "items": { "type": "string" }, "description": "A progression's chord symbols, in order, in place of `chord`: one voicing each, the hand moving little between them." },
+            "omitRoot": { "type": "boolean", "description": "true: shapes without the chord's root, which the band's bass plays." },
+            "fromFret": { "type": "number", "description": "The lowest fret a shape may press, no open string then: 5 for the shapes from the fifth position up." }
           },
-          "required": ["chord"]
+          "required": []
         }
       },
       {

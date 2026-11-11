@@ -58,7 +58,10 @@ function copyGrammar() {
             // Copilot's chat proposes a score through Lily#'s tool, the musician deciding on the
             // score as Ask AI's review has them (owner's request 2026-10-29).
             '**Changing or writing a .lys file**: do it through the `lilysharp_proposeScore` tool (#proposeScore) —',
-            'the file\'s absolute path (for a score not saved yet, the path it is named by) and its WHOLE new text —',
+            'the file\'s absolute path (for a score not saved yet, the path it is named by) and, to change a score that is there,',
+            '`edits`: each `old` a chord, a bar or a line as #readScore shows it, with its `new` (`all: true` for every place it stands) —',
+            'never the whole file written again to change part of it (owner\'s report 2026-11-11: three minutes of a twelve-minute answer);',
+            'its WHOLE new text only to rewrite most of it —',
             'or, for a NEW piece, write it first a part at a time with `lilysharp_draftScore` (#draftScore) and propose it with',
             '`draft: true`: one reply that runs long is cut off and lost.',
             'Lily# compiles it; a new piece (the file empty)',
@@ -67,6 +70,9 @@ function copyGrammar() {
             'tool is there.',
             '**Reading a .lys file**: read it through the `lilysharp_readScore` tool (#readScore), not from the disk —',
             'it gives the text as it stands in the editor; a score not saved yet is not on the disk at all.',
+            'To work on one part, give `part` (its name): that part alone comes back, a fraction of the score.',
+            '**A guitar\'s or a string player\'s chords**: ask `lilysharp_chordVoicings` (#chordVoicings) once for the whole progression (`chords`),',
+            'with `strings`, `omitRoot` and `fromFret` as the request has it, and write the shapes it answers.',
             '**Reviewing a piece**: asked to review a .lys file or give feedback on it, use the `lilysharp_reviewScore` tool (#reviewScore)',
             'and explain its report in plain words.',
             '**Teaching Lily#**: asked how to write it, or to be taught it, read the `lilysharp_readGuide` tool, topic `learn`, and teach from that path.',

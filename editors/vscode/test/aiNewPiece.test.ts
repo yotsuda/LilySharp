@@ -348,7 +348,11 @@ describe('the composing guide', () => {
         assert.match(transform, /lm\.registerTool<ReadScoreInput>\('lilysharp_readScore'/);
         const fn = transform.slice(transform.indexOf('async function readScore'), transform.indexOf('const musicCheckedFor'));
         assert.match(fn, /const doc = await scoreDocument\(input\.file\);/);
-        assert.match(fn, /return `\$\{path\.basename\(doc\.uri\.fsPath\)\} \(\$\{state\}\), \$\{doc\.lineCount\} lines, as it stands:\\n\$\{text\}\$\{said\}`;/);
+        assert.match(fn, /return `\$\{name\} \(\$\{state\}\), \$\{doc\.lineCount\} lines, as it stands\$\{how\}\\n\$\{pages\[page - 1\]\}\$\{paging\}\$\{last \? said : ''\}`;/);
+        // One part alone, and a long reading in pages under the size past which the agent keeps an answer in a file (owner's report 2026-11-11).
+        assert.match(fn, /const view = wanted \? scorePartView\(shown, wanted\) : undefined;/);
+        assert.match(fn, /const pages = scorePages\(view \?\? shown, SCORE_PAGE_BYTES\);/);
+        assert.match(transform, /const SCORE_PAGE_BYTES = 6500;/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         assert.match(build, /'\*\*Reading a \.lys file\*\*: read it through the `lilysharp_readScore` tool \(#readScore\), not from the disk —',/);
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
@@ -429,8 +433,8 @@ describe('the composing guide', () => {
         assert.match(transform, /client\.sendRequest<\{ Text: string \}>\('lilysharp\/chordVoicings'/);
         const read = transform.slice(transform.indexOf('async function readScore('), transform.indexOf('async function checkName('));
         assert.match(read, /const said = await saidOf\(deps, text\);/);
-        assert.match(read, /\+ absolute \+ said;/);
-        assert.match(read, /as it stands:\\n\$\{text\}\$\{said\}`;/);
+        assert.match(read, /const shown = absolute \?\? text;/);
+        assert.match(read, /\$\{pages\[page - 1\]\}\$\{paging\}\$\{last \? said : ''\}`;/);
         assert.match(transform, /return diagLines\(diags, d => text \? spotOf\(d, text\) \+ rangeFixOf\(d, text\) : ''\);/);
         assert.ok(here.length < 2000, 'kept to a few lines');
         // Asked how to write Lily#, the chat teaches from the path (owner's request 2026-11-02), wherever it is asked.

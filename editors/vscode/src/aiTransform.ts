@@ -44,6 +44,7 @@ import {
     cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, newPieceOverScore, guidePages, headerLanguageNote, diagLines,
     lastUserMessageAt, heldClashesOf, noTuneOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
     applyDraft, draftSummary, DraftInput, FROM_DRAFT_NOTE,
+    applyScoreEdits, ScoreEdit, scorePartView, scorePages,
 } from './aiTransformCore';
 import { CANTORIA_EXTENSION_ID, cantoriaApiOf, voiceListText } from './singerCore';
 import { withTodoMark } from './omrAiFixCore';
@@ -254,7 +255,15 @@ interface ProposeScoreInput {
     note?: string;
     /** Propose the piece written into the file's draft (lilysharp_draftScore), not a text given here. */
     draft?: boolean;
+    /** Changes to the score as it stands, in place of its whole text: each `old`, as
+     *  lilysharp_readScore shows it, becomes `new` (owner's request 2026-11-11). */
+    edits?: ScoreEdit[];
 }
+
+/** Added to what proposing by edits says, where it asks for the whole text again. */
+const FROM_EDITS_NOTE = '\n\nThis was proposed as edits. Where this says to call lilysharp_proposeScore again with the whole '
+    + 'text, send `edits` again instead — all of them, corrected: they apply to the score as it stands, which the '
+    + 'refused proposal did not change.';
 
 /** Each new piece's draft, by its file (draftKey): written a part at a time with lilysharp_draftScore,
  *  never shown nor compiled, until lilysharp_proposeScore proposes it with `draft: true`. Kept after,
@@ -301,7 +310,11 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
             const said = await proposeScore(deps, options.input, token);
             // From the draft, mended in the draft: not the whole piece written again in one reply.
             const fromDraft = options.input?.draft === true && !said.startsWith('Nothing shown');
-            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(fromDraft ? said + FROM_DRAFT_NOTE : said)]);
+            // …and from edits, mended as edits.
+            const fromEdits = !fromDraft && typeof options.input?.text !== 'string' && Array.isArray(options.input?.edits)
+                && said.startsWith('Not shown');
+            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(
+                fromDraft ? said + FROM_DRAFT_NOTE : fromEdits ? said + FROM_EDITS_NOTE : said)]);
         },
     }));
     // A new piece written a part at a time (owner's report 2026-11-08: a choir piece written in one
@@ -334,7 +347,8 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
     // no hand could hold — a tool to ask before writing one, rather than a rule refusing it after).
     context.subscriptions.push(lm.registerTool<ChordVoicingsInput>('lilysharp_chordVoicings', {
         prepareInvocation: options => ({
-            invocationMessage: `Finding ${options.input?.chord ?? 'the chord'}'s voicings on the ${options.input?.instrument ?? 'guitar'}…`,
+            invocationMessage: `Finding ${Array.isArray(options.input?.chords) && options.input.chords.length > 0
+                ? `${options.input.chords.length} chords'` : `${options.input?.chord ?? 'the chord'}'s`} voicings on the ${options.input?.instrument ?? 'guitar'}…`,
         }),
         invoke: async options => new vscode.LanguageModelToolResult([
             new vscode.LanguageModelTextPart(await chordVoicings(deps, options.input)),
@@ -601,7 +615,13 @@ async function scoreDocument(file: string): Promise<vscode.TextDocument | undefi
 
 /** What Copilot's chat hands the voicing tool. */
 interface ChordVoicingsInput {
-    chord: string;
+    chord?: string;
+    /** A progression: one voicing each, the hand moving little between them (owner's request 2026-11-11). */
+    chords?: string[];
+    /** Shapes without the root, which the band's bass plays. */
+    omitRoot?: boolean;
+    /** The lowest fret a shape may press: 5 for the shapes from the fifth position up. */
+    fromFret?: number;
     instrument?: string;
     low?: string;
     high?: string;
@@ -614,8 +634,9 @@ interface ChordVoicingsInput {
 
 /** A chord's voicings a player can hold, from the server (lilysharp/chordVoicings). */
 async function chordVoicings(deps: AiTransformDeps, input: ChordVoicingsInput): Promise<string> {
-    if (!input || typeof input.chord !== 'string' || input.chord.trim().length === 0) {
-        return 'Nothing found: give `chord`, a chord symbol (Cm7, G7/B …).';
+    const chords = Array.isArray(input?.chords) ? input.chords.filter(c => typeof c === 'string' && c.trim().length > 0) : [];
+    if (!input || (chords.length === 0 && (typeof input.chord !== 'string' || input.chord.trim().length === 0))) {
+        return 'Nothing found: give `chord`, a chord symbol (Cm7, G7/B …), or `chords`, the symbols of a progression.';
     }
     await deps.ensureReady?.();
     const client = deps.getClient();
@@ -624,7 +645,9 @@ async function chordVoicings(deps: AiTransformDeps, input: ChordVoicingsInput): 
     }
     try {
         const answer = await client.sendRequest<{ Text: string }>('lilysharp/chordVoicings', {
-            Chord: input.chord, Instrument: input.instrument ?? 'guitar', Low: input.low ?? null, High: input.high ?? null,
+            Chord: input.chord ?? null, Chords: chords.length > 0 ? chords : null,
+            OmitRoot: input.omitRoot === true, FromFret: typeof input.fromFret === 'number' ? Math.floor(input.fromFret) : null,
+            Instrument: input.instrument ?? 'guitar', Low: input.low ?? null, High: input.high ?? null,
             Count: typeof input.count === 'number' ? input.count : null,
             Sound: typeof input.sound === 'string' ? input.sound : null,
             Strings: typeof input.strings === 'string' ? input.strings : null,
@@ -639,7 +662,16 @@ async function chordVoicings(deps: AiTransformDeps, input: ChordVoicingsInput): 
 interface ReadScoreInput {
     /** The .lys file, its absolute path — an unsaved one's, the path it is named by. */
     file: string;
+    /** One part's share alone: its block, its music in each section, the phrases it calls (scorePartView). */
+    part?: string;
+    /** Which part of a long answer, from 1 (scorePages). */
+    page?: number;
 }
+
+/** A reading's most in one answer: under the 8 KB past which Copilot's agent keeps a tool's answer
+ *  in a file (owner's report 2026-11-11: a 12.8 KB score went there, and was read back in thirteen
+ *  view and grep calls). */
+const SCORE_PAGE_BYTES = 6500;
 
 /** The score as it stands in the editor, saved or not (owner's request 2026-10-29: the chat's agent
  *  reads the disk, where an unsaved score is not and a saved one may be behind the editor). */
@@ -659,12 +691,35 @@ async function readScore(deps: AiTransformDeps, input: ReadScoreInput): Promise<
     const absolute = await chatAbsolute(deps, text);
     if (absolute !== undefined) {
         deps.log('AI proposal (chat): the score read in absolute octaves.');
-        return `${path.basename(doc.uri.fsPath)} (${state}), ${doc.lineCount} lines, as it stands — shown in absolute octaves `
-            + '(the file itself is in relative octaves; every pitch here says its own octave). Propose your change in '
-            + 'absolute octaves, keeping `octave absolute`: Lily# brings it back to the file\'s relative octaves.\n'
-            + absolute + said;
     }
-    return `${path.basename(doc.uri.fsPath)} (${state}), ${doc.lineCount} lines, as it stands:\n${text}${said}`;
+    const shown = absolute ?? text;
+    const name = path.basename(doc.uri.fsPath);
+    // One part's share, where one is asked for.
+    const wanted = typeof input.part === 'string' && input.part.trim().length > 0 ? input.part.trim() : undefined;
+    const view = wanted ? scorePartView(shown, wanted) : undefined;
+    if (wanted && view === undefined) {
+        const parts = [...shown.matchAll(/^\s*part\s+([A-Za-z_][\w-]*)/gm)].map(m => m[1]);
+        return `Nothing read: ${name} has no part \`${wanted}\`. Its parts: ${parts.join(', ') || 'none'}. Leave \`part\` out to read the whole score.`;
+    }
+    const how = (absolute !== undefined
+        ? ' — shown in absolute octaves (the file itself is in relative octaves; every pitch here says its own octave). '
+            + 'To change it, call lilysharp_proposeScore with `edits`, each `old` copied from this text and its `new` in '
+            + 'absolute octaves too (or with the whole text, keeping `octave absolute`): Lily# brings it back to the file\'s relative octaves.'
+        : '. To change it, call lilysharp_proposeScore with `edits`, each `old` copied from this text (or with the whole new text).')
+        + (view !== undefined
+            ? ` This is part \`${wanted}\` alone: its own block, its music in each section and the phrases it calls. `
+                + '`[lines a-b]` says where a block stands in the file and `…` marks lines left out; neither is in the file.'
+            : '');
+    const pages = scorePages(view ?? shown, SCORE_PAGE_BYTES);
+    const page = Math.max(1, Math.floor(Number(input.page) || 1));
+    if (page > pages.length) {
+        return `Nothing read: this reading of ${name} has ${pages.length} part(s); there is no page ${page}.`;
+    }
+    const last = page === pages.length;
+    const paging = pages.length === 1 ? ''
+        : `\n\n[Page ${page} of ${pages.length}. ` + (last ? 'The end.]'
+            : `Read the next with lilysharp_readScore, the same file${wanted ? ' and part' : ''}, \`page: ${page + 1}\`${view === undefined ? ' — or give `part` (a part\'s name) to read one part alone' : ''}.]`);
+    return `${name} (${state}), ${doc.lineCount} lines, as it stands${how}\n${pages[page - 1]}${paging}${last ? said : ''}`;
 }
 
 /** What Lily# says of the score as it stands, after its text (owner's report 2026-10-30: asked to
@@ -794,15 +849,32 @@ async function proposeScore(deps: AiTransformDeps, given: ProposeScoreInput, tok
         }
         given = { ...given, text: draft };
     }
-    if (typeof given.text !== 'string') {
-        return 'Nothing shown: give `file` (the .lys file\'s absolute path) and `text` (its whole new text), or `draft: true`.';
+    const edits = typeof given.text !== 'string' && Array.isArray(given.edits) && given.edits.length > 0 ? given.edits : undefined;
+    if (typeof given.text !== 'string' && edits === undefined) {
+        return 'Nothing shown: give `file` (the .lys file\'s absolute path) and `edits` (the changes to the score as it stands), '
+            + 'or `text` (its whole new text), or `draft: true`.';
     }
-    const input = { ...given, text: given.text };
     await deps.ensureReady?.();
     const client = deps.getClient();
     if (!client || !deps.isReady()) {
         return 'Nothing shown: the Lily# language server is not running. Write the file directly instead.';
     }
+    // Edits change the score as the reading tool shows it — in absolute octaves where it showed
+    // them — and the text they make goes on as a whole text would.
+    if (edits !== undefined) {
+        const standingDoc = await scoreDocument(given.file);
+        if (!standingDoc) {
+            return `Nothing shown: no score ${given.file} is open in the editor or on the disk for \`edits\` to change. A new piece is given whole (\`text\`, or its draft).`;
+        }
+        const standing = standingDoc.getText();
+        const applied = applyScoreEdits(await chatAbsolute(deps, standing) ?? standing, edits);
+        if ('error' in applied) {
+            return applied.error + ' Read the score again with lilysharp_readScore if it may have changed.';
+        }
+        deps.log(`AI proposal (chat): ${edits.length} edit(s), ${applied.changed} place(s) changed.`);
+        given = { ...given, text: applied.text };
+    }
+    const input = { ...given, text: given.text as string };
     const doc = await scoreDocument(input.file);
     const uri = doc?.uri ?? vscode.Uri.file(input.file);
     const exists = doc !== undefined;

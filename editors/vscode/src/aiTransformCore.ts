@@ -1291,3 +1291,181 @@ export const FROM_DRAFT_NOTE = '\n\nThis was proposed from your draft. Where thi
     + 'whole text, mend the draft instead with lilysharp_draftScore\'s `edits` — only what changes, not the piece again — '
     + 'and call lilysharp_proposeScore with `draft: true`.';
 
+
+/** A change to a score, proposed as an edit: `old`, as lilysharp_readScore shows it, becomes `new` —
+ *  found once, or with `all` wherever it stands. */
+export interface ScoreEdit {
+    old: string;
+    new: string;
+    all?: boolean;
+}
+
+/**
+ * A score after the chat's edits (owner's report 2026-11-11: thirty chords of a guitar part, eight
+ * different ones, were changed by writing all 435 lines of the file again — three minutes of a
+ * twelve-minute answer). Each `old` is text of the score as the reading tool showed it; it must be
+ * there exactly once, or any number of times with `all`. The edits apply in order, each to what the
+ * one before left. Nothing changes unless all apply: the reason goes back instead.
+ */
+export function applyScoreEdits(base: string, edits: ScoreEdit[]): { text: string; changed: number } | { error: string } {
+    const eol = base.includes('\r\n') ? '\r\n' : '\n';
+    const sameEol = (s: string) => s.replace(/\r?\n/g, eol);
+    let text = base;
+    let changed = 0;
+    for (const [i, edit] of edits.entries()) {
+        if (!edit || typeof edit.old !== 'string' || typeof edit.new !== 'string' || edit.old.length === 0) {
+            return { error: `Nothing shown: edit ${i + 1} needs \`old\` (text of the score as lilysharp_readScore shows it) and \`new\`.` };
+        }
+        const old = sameEol(edit.old);
+        const neu = sameEol(edit.new);
+        let count = 0;
+        for (let at = text.indexOf(old); at >= 0; at = text.indexOf(old, at + old.length)) { count++; }
+        if (count === 0) {
+            return { error: `Nothing shown: edit ${i + 1}'s \`old\` is not in the score — copy it exactly as lilysharp_readScore shows it `
+                + '(the notes in the octaves shown there), a whole chord or a whole line at a time.' };
+        }
+        if (count > 1 && edit.all !== true) {
+            return { error: `Nothing shown: edit ${i + 1}'s \`old\` is in the score ${count} times — give \`all: true\` to change every one, `
+                + 'or more of its line, found once.' };
+        }
+        text = text.split(old).join(neu);
+        changed += count;
+    }
+    return text === base ? { error: 'Nothing shown: the edits leave the score as it is.' } : { text, changed };
+}
+
+/** A `{ … }` block of a score: its header (the line's text before the brace), where it stands and
+ *  the blocks inside it. */
+interface ScoreBlock { header: string; open: number; close: number; inner: ScoreBlock[] }
+
+/** The blocks of a score's text, comments and strings skipped: top level, and one level inside. */
+function scoreBlocks(text: string): ScoreBlock[] {
+    const top: ScoreBlock[] = [];
+    const stack: ScoreBlock[] = [];
+    // Where the statement a brace opens began: after the last `{`, `}` or line break before it.
+    let from = 0;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (c === '/' && text[i + 1] === '/') {
+            const end = text.indexOf('\n', i);
+            i = end < 0 ? text.length : end;
+            from = i + 1;
+        } else if (c === '"') {
+            const end = text.indexOf('"', i + 1);
+            i = end < 0 ? text.length : end;
+        } else if (c === '\n') {
+            from = i + 1;
+        } else if (c === '{') {
+            const block: ScoreBlock = { header: text.slice(from, i).trim(), open: i, close: text.length, inner: [] };
+            if (stack.length === 0) { top.push(block); } else if (stack.length === 1) { stack[0].inner.push(block); }
+            stack.push(block);
+            from = i + 1;
+        } else if (c === '}') {
+            const block = stack.pop();
+            if (block) { block.close = i; }
+            from = i + 1;
+        }
+    }
+    return top;
+}
+
+/**
+ * One part's share of a score, for the chat to read without the rest (owner's report 2026-11-11:
+ * to change the guitar, the chat read a 12.8 KB score kept in a temp file thirteen times over):
+ * the lines before the first block (title, tempo, meter, key), the part's own block, its block in
+ * each section — the section's other lines left out, marked `…` — and the named blocks (phrases)
+ * it calls. Each block is headed `[lines a-b]`, where it stands in the file. Undefined when the
+ * score has no such part.
+ */
+export function scorePartView(text: string, part: string): string | undefined {
+    const name = part.trim();
+    if (!/^[A-Za-z_][\w-]*$/.test(name)) {
+        return undefined;
+    }
+    const lines = text.split('\n');
+    const starts: number[] = [];
+    for (let at = 0, i = 0; i < lines.length; at += lines[i].length + 1, i++) { starts.push(at); }
+    const lineOf = (offset: number) => {
+        let lo = 0, hi = starts.length - 1;
+        while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (starts[mid] <= offset) { lo = mid; } else { hi = mid - 1; } }
+        return lo;
+    };
+    const isPart = (b: ScoreBlock) => new RegExp(`^part\\s+${name}\\b`).test(b.header);
+    const isMine = (b: ScoreBlock) => b.header === name;
+    const blocks = scoreBlocks(text);
+    const own = blocks.filter(b => isPart(b) || b.inner.some(isMine));
+    if (own.length === 0) {
+        return undefined;
+    }
+    // What the part's music calls: the named blocks whose name stands in it as a word.
+    const music = own.map(b => isPart(b) ? text.slice(b.open, b.close) : b.inner.filter(isMine).map(i => text.slice(i.open, i.close)).join(' ')).join(' ');
+    const called = (b: ScoreBlock) => {
+        const m = /^([a-z]\w*)\s+([A-Za-z_]\w*)$/.exec(b.header);
+        return m !== null && !/^(part|section|score|form|lyrics|chords|layout|paper|fonts|header|singer)$/.test(m[1])
+            && new RegExp(`(^|[^\\w'])${m[2]}(?![\\w'])`).test(music);
+    };
+    const out: string[] = [];
+    // Whole blocks that follow one another stand under one heading.
+    let run: { a: number; z: number; at: number } | undefined;
+    const whole = (a: number, z: number) => {
+        const body = lines.slice(a, z + 1).join('\n');
+        if (run && run.z + 1 === a) {
+            run.z = z;
+            out[run.at] = `[lines ${run.a + 1}-${z + 1}]`;
+            out.push(body);
+        } else {
+            run = { a, z, at: out.length };
+            out.push(a === z ? `[line ${a + 1}]` : `[lines ${a + 1}-${z + 1}]`, body);
+        }
+    };
+    const first = blocks.length > 0 ? lineOf(blocks[0].open) : lines.length;
+    const head = lines.slice(0, first).join('\n').replace(/\s+$/, '');
+    if (head.length > 0) { out.push(`[lines 1-${first}]`, head); }
+    for (const b of blocks) {
+        const a = lineOf(b.open), z = lineOf(b.close);
+        if (isPart(b) || called(b)) {
+            whole(a, z);
+        } else if (b.inner.some(isMine)) {
+            run = undefined;
+            out.push(`[lines ${a + 1}-${z + 1}]`, lines[a]);
+            let at = a + 1;
+            for (const inner of b.inner.filter(isMine)) {
+                const ia = lineOf(inner.open), iz = lineOf(inner.close);
+                if (ia > at) { out.push('  …'); }
+                out.push(lines.slice(Math.max(ia, at), iz + 1).join('\n'));
+                at = iz + 1;
+            }
+            if (z > at) { out.push('  …'); }
+            if (z >= at) { out.push(lines[z]); }
+        }
+    }
+    return out.join('\n');
+}
+
+/** A text in parts of at most `maxBytes` (UTF-8), cut at line ends — at an empty line where one
+ *  stands in the part's second half — so that each is read whole in a tool's answer. */
+export function scorePages(text: string, maxBytes: number): string[] {
+    const size = (s: string) => Buffer.byteLength(s, 'utf8');
+    if (size(text) <= maxBytes) {
+        return [text];
+    }
+    const pages: string[] = [];
+    let page: string[] = [];
+    let bytes = 0;
+    for (const line of text.split('\n')) {
+        const n = size(line) + 1;
+        if (page.length > 0 && bytes + n > maxBytes) {
+            let cut = page.length;
+            for (let k = page.length - 1; k > page.length / 2; k--) {
+                if (page[k].trim().length === 0) { cut = k + 1; break; }
+            }
+            pages.push(page.slice(0, cut).join('\n'));
+            page = page.slice(cut);
+            bytes = page.reduce((sum, l) => sum + size(l) + 1, 0);
+        }
+        page.push(line);
+        bytes += n;
+    }
+    if (page.length > 0) { pages.push(page.join('\n')); }
+    return pages;
+}

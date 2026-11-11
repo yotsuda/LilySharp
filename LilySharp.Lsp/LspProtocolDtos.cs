@@ -626,6 +626,13 @@ public class ChordVoicingsParams
     public string? Sound { get; set; }
     /// <summary>A fretted instrument's strings to play, by number, 1 the highest ("1-4", "1,2,3").</summary>
     public string? Strings { get; set; }
+    /// <summary>Several chords at once, a progression: one voicing each, the hand moving little
+    /// between them (ChordVoicingFinder.DescribeProgression). <see cref="Chord"/> is then left out.</summary>
+    public string[]? Chords { get; set; }
+    /// <summary>Shapes without the chord's root, which the bass plays.</summary>
+    public bool? OmitRoot { get; set; }
+    /// <summary>The lowest fret a shape may press (no open string then); 0 or none for any.</summary>
+    public int? FromFret { get; set; }
 }
 
 /// <summary>Response for lilysharp/chordVoicings: the voicings, as the AI reads them.</summary>

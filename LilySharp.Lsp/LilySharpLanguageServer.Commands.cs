@@ -1460,8 +1460,13 @@ public sealed partial class LilySharpLanguageServer
     public Task<ChordVoicingsResponse> ChordVoicingsAsync(ChordVoicingsParams @params, CancellationToken token)
         => OffDispatch(() => new ChordVoicingsResponse
         {
-            Text = LilySharp.Core.Editing.ChordVoicingFinder.Describe(@params.Chord ?? "", @params.Instrument ?? "guitar",
-                @params.Low, @params.High, @params.Count is int n and > 0 ? n : 6, @params.Sound, @params.Strings),
+            Text = @params.Chords is { Length: > 0 } chords
+                ? LilySharp.Core.Editing.ChordVoicingFinder.DescribeProgression(chords, @params.Instrument ?? "guitar",
+                    @params.Low, @params.High, @params.Sound, @params.Strings, @params.OmitRoot == true,
+                    @params.FromFret is int from and > 0 ? from : 0)
+                : LilySharp.Core.Editing.ChordVoicingFinder.Describe(@params.Chord ?? "", @params.Instrument ?? "guitar",
+                    @params.Low, @params.High, @params.Count is int n and > 0 ? n : 6, @params.Sound, @params.Strings,
+                    @params.OmitRoot == true, @params.FromFret is int fret and > 0 ? fret : 0),
         }, token);
 
     [JsonRpcMethod("lilysharp/aiOctaves", UseSingleObjectParameterDeserialization = true)]

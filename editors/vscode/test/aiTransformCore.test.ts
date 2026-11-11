@@ -919,3 +919,71 @@ describe('draftSummary limit', () => {
     });
 });
 
+// Owner's report 2026-11-11: to revoice a guitar part's chords the chat read a 12.8 KB score from a
+// temp file thirteen times and wrote all 435 lines of it again — the reading by part and in pages,
+// and the change as edits.
+import { applyScoreEdits, scorePartView, scorePages } from '../src/aiTransformCore';
+describe('applyScoreEdits', () => {
+    const score = "phrase gBb { r8 <bes, f bes d' f'>8 r8 q | }\nsection A {\n  gtr { gBb gBb }\n  keys { <bes, f bes d' f'>1 | }\n}\n";
+    it('changes a text found once, and every place with `all`', () => {
+        assert.deepEqual(applyScoreEdits(score, [{ old: 'gtr { gBb gBb }', new: 'gtr { gBb }' }]),
+            { text: score.replace('gtr { gBb gBb }', 'gtr { gBb }'), changed: 1 });
+        const all = applyScoreEdits(score, [{ old: "<bes, f bes d' f'>", new: "<f d' f'>", all: true }]);
+        assert.ok('text' in all && all.changed === 2 && !all.text.includes('bes,'));
+    });
+    it('refuses, changing nothing, a text that is not there or is there more than once', () => {
+        const missing = applyScoreEdits(score, [{ old: 'gBb gBb', new: 'gBb' }, { old: 'nothing', new: 'y' }]);
+        assert.ok('error' in missing && /edit 2's `old` is not in the score/.test(missing.error));
+        const twice = applyScoreEdits(score, [{ old: "<bes, f bes d' f'>", new: 'x' }]);
+        assert.ok('error' in twice && /2 times/.test(twice.error) && /all: true/.test(twice.error));
+        const same = applyScoreEdits(score, [{ old: 'gBb gBb', new: 'gBb gBb' }]);
+        assert.ok('error' in same && /leave the score as it is/.test(same.error));
+        assert.ok('error' in applyScoreEdits(score, [{ old: '', new: 'x' }]));
+    });
+    it('takes a later edit against what the one before left, and a line break as the file writes it', () => {
+        const crlf = score.replace(/\n/g, '\r\n');
+        const done = applyScoreEdits(crlf, [{ old: 'section A {\n  gtr { gBb gBb }', new: 'section A {\n  gtr { gBb }' }, { old: 'gtr { gBb }', new: 'gtr { r1 | }' }]);
+        assert.ok('text' in done && done.text.includes('section A {\r\n  gtr { r1 | }\r\n') && !/[^\r]\n/.test(done.text));
+    });
+});
+describe('scorePartView', () => {
+    const score = [
+        'title "T"', 'key bes major', '',
+        'part gtr "Guitar" {', '  instrument guitar', '}',
+        'part bass "Bass" { instrument bass }',
+        "phrase gBb { r8 <bes, f bes d' f'>8 | }",
+        'phrase bBb { bes,,4 | }',
+        'section A {',
+        '  bass { bBb }', '  // gtr { } in a comment is not the part\'s',
+        '  gtr { gBb gBb }',
+        '  lyrics w { la | }',
+        '}',
+        'section B {', '  bass { bBb }', '}',
+        'score { staff gtr  staff bass }',
+    ].join('\n');
+    it('gives the part its header lines, its block, its music in each section and the phrases it calls', () => {
+        const view = scorePartView(score, 'gtr');
+        assert.ok(view !== undefined);
+        assert.match(view, /^\[lines 1-3\]\ntitle "T"\nkey bes major\n\[lines 4-6\]\npart gtr "Guitar" \{/);
+        assert.ok(view.includes("[line 8]\nphrase gBb { r8 <bes, f bes d' f'>8 | }"));
+        assert.ok(view.includes('[lines 10-15]\nsection A {\n  …\n  gtr { gBb gBb }\n  …\n}'));
+        assert.ok(!view.includes('bBb') && !view.includes('section B') && !view.includes('staff gtr') && !view.includes('in a comment'));
+    });
+    it('answers nothing for a part the score has not', () => {
+        assert.equal(scorePartView(score, 'drums'), undefined);
+        assert.equal(scorePartView(score, 'gtr {'), undefined);
+    });
+});
+describe('scorePages', () => {
+    it('leaves a short text whole and cuts a long one at line ends, at an empty line where it can', () => {
+        assert.deepEqual(scorePages('a\nb', 100), ['a\nb']);
+        const block = (n: number) => Array.from({ length: 10 }, (_, i) => `line ${n}.${i} of the score, some notes`).join('\n');
+        const text = [block(1), block(2), block(3)].join('\n\n');
+        const pages = scorePages(text, 500);
+        assert.ok(pages.length >= 2);
+        assert.ok(pages.every(p => Buffer.byteLength(p, 'utf8') <= 500));
+        assert.equal(pages.join('\n'), text);
+        // A multi-byte score is measured in bytes.
+        assert.ok(scorePages('あ'.repeat(300) + '\n' + 'い'.repeat(300), 1000).length === 2);
+    });
+});
