@@ -685,3 +685,48 @@ describe('voiceMenuLabels', () => {
         assert.equal(voiceMenuTitle('MERROW', 'lyrics', 'melody'), 'MERROW sings melody');
     });
 });
+
+// Owner's request 2026-11-11: a voice taken from a top-level `singer`'s list goes on to `sings`
+// and the list of the file's lyrics, without a key between.
+describe('a voice taken at the top level goes on to sings', () => {
+    const { atTopLevel, singerGoesOnToSings } = require('../src/singerCore') as {
+        atTopLevel: (before: string) => boolean;
+        singerGoesOnToSings: (before: string, line: string, after: string) => boolean;
+    };
+    it('knows the top level by its braces, comments and quoted text aside', () => {
+        assert.equal(atTopLevel(''), true);
+        assert.equal(atTopLevel('part lead { instrument soprano }\n'), true);
+        assert.equal(atTopLevel('section A {\n  lead { c4 d |\n'), false);
+        assert.equal(atTopLevel('section A {\n  lead { c4 d | }\n}\n'), true);
+        assert.equal(atTopLevel('// a brace in a comment {\ntitle "a { in a title"\n'), true);
+        assert.equal(atTopLevel('score {\n  staff lead\n'), false);
+    });
+    it('goes on from a singer line of the top level that says no sings yet', () => {
+        const top = 'part lead { instrument soprano }\n';
+        assert.equal(singerGoesOnToSings(top, 'singer ', ''), true);
+        assert.equal(singerGoesOnToSings(top, 'singer female "', ''), true);
+        assert.equal(singerGoesOnToSings(top, 'singer "neu"', ''), true, 'the caret in quotes with nothing after the closing one');
+        assert.equal(singerGoesOnToSings(top, 'singer "neu"   // who', '   // who'), true, 'a comment after is not text');
+        // The line is whole already: the name alone is changed, the caret in it as before.
+        assert.equal(singerGoesOnToSings(top, 'singer "neu" sings words on lead', ' sings words on lead'), false);
+        assert.equal(singerGoesOnToSings(top, 'singer "neu" on lead', ' on lead'), false, 'something follows the name');
+        // In a score or a part the line is that block's.
+        assert.equal(singerGoesOnToSings('score {\n  staff lead\n', '  singer "neu"', ''), false);
+        assert.equal(singerGoesOnToSings(top, 'lyrics words singer ', ''), false, 'not a singer line');
+        assert.equal(singerGoesOnToSings(top, 'singers ', ''), false);
+    });
+    it('writes the name closed and ` sings ` after it, asks the list again and hears the voice where the name stands', () => {
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        // The closing quote is part of what the item replaces, so ` sings ` lands past it.
+        assert.match(ext, /close >= 0 \? close \+ \(goesOn \? 1 : 0\) : position\.character\)/);
+        assert.match(ext, /new vscode\.SnippetString\(\)\.appendText\(`\$\{slot\.Quoted \? '' : '"'\}\$\{c\.label\}" sings `\)\.appendTabstop\(0\);/);
+        assert.match(ext, /command: 'lilysharp\.singerTaken', title: '[^']+', arguments: \[c\.label, nameColumn\]/);
+        assert.match(ext, /async function singerTaken\(label: unknown, nameColumn: unknown\): Promise<void> \{\s*void vscode\.commands\.executeCommand\('editor\.action\.triggerSuggest'\);\s*await hearSinger\(label, nameColumn\);/);
+        assert.match(ext, /registerCommand\('lilysharp\.singerTaken', singerTaken\)/);
+        // Off the top level, and on a line that has its `sings`, the item is what it was.
+        assert.match(ext, /\} else \{\s*if \(!slot\.Quoted\) \{ item\.insertText = new vscode\.SnippetString\(`"\$\{c\.label\}\$0"`\); \}\s*item\.command = \{ command: 'lilysharp\.hearSinger'/);
+        // What the list after `sings ` holds is the server's: the file's lyrics.
+        const server = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'LilySharp.Lsp', 'LilySharpLanguageServer.Completion.cs'), 'utf8');
+        assert.match(server, /CompletionContext\.AfterSingerSings => new CompletionList \{ Items = \[\.\. GetDeclaredNameCompletions\(doc\.Text, "lyrics"/);
+    });
+});

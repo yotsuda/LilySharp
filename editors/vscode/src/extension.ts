@@ -56,7 +56,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { singerGoesOnToSings, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1101,6 +1101,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singerCompletion, '"', ' ', ','));
     voiceSamplesDir = path.join(context.globalStorageUri.fsPath, 'voice-samples');
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.hearSinger', hearSinger));
+    context.subscriptions.push(vscode.commands.registerCommand('lilysharp.singerTaken', singerTaken));
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.setUpVoices', setUpVoices));
 
     // The Explorer's batch export: right-click one or more .lys → the format
@@ -3925,9 +3926,17 @@ const singerCompletion: vscode.CompletionItemProvider = {
         const line = document.lineAt(position.line).text;
         const open = line.lastIndexOf('"', position.character - 1);
         const close = line.indexOf('"', position.character);
+        // At the top level, a voice taken goes on to `sings` and the list of the file's lyrics
+        // (owner's request 2026-11-11): the name is closed, ` sings ` written after it and the
+        // list asked again — the server's, which names the lyrics there. The closing quote is
+        // then part of what the item replaces.
+        const goesOn = singerGoesOnToSings(document.getText(new vscode.Range(0, 0, position.line, 0)), line,
+            line.slice(slot.Quoted && close >= 0 ? close + 1 : position.character));
         const range = slot.Quoted
-            ? new vscode.Range(position.line, open + 1, position.line, close >= 0 ? close : position.character)
+            ? new vscode.Range(position.line, open + 1, position.line, close >= 0 ? close + (goesOn ? 1 : 0) : position.character)
             : new vscode.Range(position.line, position.character - (/[^\s,"]*$/.exec(line.slice(0, position.character))?.[0].length ?? 0), position.line, position.character);
+        // Where the name stands once written: what hearing it asks the words' language by.
+        const nameColumn = slot.Quoted ? open + 1 : range.start.character + 1;
         if (!api?.voices) {
             offerCantoria();
             return vscode.extensions.getExtension(CANTORIA_EXTENSION_ID) || singerSetting() ? undefined : [noVoiceItem(document, range, noVoiceGuide(false))];
@@ -3944,8 +3953,13 @@ const singerCompletion: vscode.CompletionItemProvider = {
             item.range = range;
             item.filterText = c.label;
             item.sortText = String(i).padStart(3, '0');
-            if (!slot.Quoted) { item.insertText = new vscode.SnippetString(`"${c.label}$0"`); }
-            item.command = { command: 'lilysharp.hearSinger', title: 'Hear this voice', arguments: [c.label] };
+            if (goesOn) {
+                item.insertText = new vscode.SnippetString().appendText(`${slot.Quoted ? '' : '"'}${c.label}" sings `).appendTabstop(0);
+                item.command = { command: 'lilysharp.singerTaken', title: 'Hear this voice, and list the lyrics', arguments: [c.label, nameColumn] };
+            } else {
+                if (!slot.Quoted) { item.insertText = new vscode.SnippetString(`"${c.label}$0"`); }
+                item.command = { command: 'lilysharp.hearSinger', title: 'Hear this voice', arguments: [c.label] };
+            }
             return item;
         });
         if (!slot.Quoted && !slot.Gender) {
@@ -4036,8 +4050,16 @@ async function auditionVoice(uri: string, id: string, clock: StageClock, languag
     void panel.webview.postMessage({ type: 'playVoiceSample', bytes: new Uint8Array(bytes), id, pressedAt: clock.startedAt, sentAt: Date.now() });
 }
 
+/** A name taken from the `singer` list at the top level (owner's request 2026-11-11): ` sings ` is
+ *  written after it, so the list is asked again — the file's lyrics — and the voice is heard
+ *  meanwhile, its words' language asked where the name stands (`nameColumn`), not at the caret. */
+async function singerTaken(label: unknown, nameColumn: unknown): Promise<void> {
+    void vscode.commands.executeCommand('editor.action.triggerSuggest');
+    await hearSinger(label, nameColumn);
+}
+
 /** A name taken from the `singer` list: heard at once. A gender or a role is heard as the default voice it comes to. */
-async function hearSinger(label: unknown): Promise<void> {
+async function hearSinger(label: unknown, nameColumn?: unknown): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (typeof label !== 'string' || !editor) { return; }
     const clock = new StageClock(Date.now());
@@ -4047,7 +4069,8 @@ async function hearSinger(label: unknown): Promise<void> {
     const voice = await engine.backend.voiceName(label);
     clock.mark('name');
     const caret = editor.selection.active;
-    const asked = new vscode.Position(caret.line, singerLanguageColumn(editor.document.lineAt(caret.line).text, caret.character));
+    const asked = new vscode.Position(caret.line, singerLanguageColumn(editor.document.lineAt(caret.line).text,
+        typeof nameColumn === 'number' ? nameColumn : caret.character));
     const slot = client && clientReady ? await client.sendRequest<{ Language?: string | null; Gender?: string | null }>('lilysharp/singerSlot',
         { textDocument: { uri: editor.document.uri.toString() }, offset: editor.document.offsetAt(asked) }).then(s => s, () => undefined) : undefined;
     await auditionVoice(editor.document.uri.toString(), voice, clock, slot?.Language ?? undefined, slot?.Gender);

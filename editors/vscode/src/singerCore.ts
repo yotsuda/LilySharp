@@ -228,6 +228,31 @@ export function afterSingerWord(before: string): boolean {
     return /(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?$/.test(before) && !before.includes('//');
 }
 
+/** Whether the text before a line leaves it at the top level: every brace opened is closed
+ *  (comments and quoted text left out of the count). */
+export function atTopLevel(before: string): boolean {
+    let depth = 0;
+    for (const line of before.split('\n')) {
+        for (const c of line.split('//')[0].replace(/"[^"]*"?/g, '')) {
+            if (c === '{') { depth++; } else if (c === '}') { depth--; }
+        }
+    }
+    return depth <= 0;
+}
+
+/**
+ * Whether a voice taken from a `singer`'s list goes on to `sings` and the list of the file's
+ * lyrics (owner's request 2026-11-11): on a `singer` line of the top level that says no `sings`
+ * yet and has nothing after the name being written — `after` is the line from the caret, or from
+ * past the closing quote when the caret is inside quotes. A `singer` in a score or a part, and a
+ * line whose `sings` is there already, keep the caret in the name as before.
+ */
+export function singerGoesOnToSings(before: string, line: string, after: string): boolean {
+    return atTopLevel(before) && /^[ \t]*singer(?![\w-])/.test(line)
+        && !/(?<![\w-])sings(?![\w-])/.test(line.split('//')[0])
+        && after.split('//')[0].trim() === '';
+}
+
 /** The name of a `singer "…"` the caret stands on, anywhere on the `singer`: where it is on the line. */
 export function singerValueAt(line: string, character: number): { start: number; end: number; value: string } | undefined {
     for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?"([^"]*)"/g)) {
