@@ -50,6 +50,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             "cross",
             "arpeggio",
             "laissezVibrer", "repeatTie",
+            // A sung note's vibrato (a trial: heard from a DiffSinger voice, not drawn; AnnotationValues.Vibrato).
+            "vibrato",
             "dead",
             // A head in parentheses — a drummer's ghost note (MeasureCollector.IsParenthesizeMark).
             "parenthesize",
@@ -385,6 +387,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         if (AnnotationValues.Finger(mark) is not null
             || AnnotationValues.Pluck(mark) is not null
             || AnnotationValues.Bend(mark) is not null
+            || AnnotationValues.Vibrato(mark) is not null
             || AnnotationValues.Notehead(mark) is not null
             || AnnotationValues.IsTextAnnotation(mark)
             || AnnotationValues.IsTextSpanAnnotation(mark)

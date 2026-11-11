@@ -74,6 +74,11 @@ public readonly record struct MidiNote(
     int Swell = 0,
     // `@!cresc` or `@!decresc` was written on this note. Not written to .mid files.
     bool SwellEnds = false,
+    // `@vibrato` was written on this note: how far a singer's pitch swings each way in cents, and
+    // how many swings a second (null: the engine's own). A trial, sung by DiffSinger voices
+    // (SungVoices; AnnotationValues.Vibrato). Not written to .mid files, and an instrument plays plain.
+    double? Vibrato = null,
+    double? VibratoRate = null,
     // An `afterGrace` run's note: it ends the note before it, where a leading grace begins the
     // note after it. Not written to .mid files.
     bool IsAfterGrace = false

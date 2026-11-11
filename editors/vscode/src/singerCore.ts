@@ -24,14 +24,16 @@ import { VOICE_LEAD_S } from './webview/playbackCore';
 
 /** One note of `lilysharp/sung`, in seconds: its syllable `L` (null on a melisma), `M` a melisma
  *  carrying the previous syllable's vowel on, `B` a breath after it, `S` the source offset. */
-export interface SungNoteDto { T: number; D: number; P: number; L?: string | null; M?: boolean; B?: boolean; S?: number; V?: number | null; E?: number | null; I?: boolean; H?: boolean }
+export interface SungNoteDto { T: number; D: number; P: number; L?: string | null; M?: boolean; B?: boolean; S?: number; V?: number | null; E?: number | null; I?: boolean; H?: boolean;
+    /** A written vibrato (`@vibrato`, a trial sung by DiffSinger voices): its swing each way in cents, its swings a second. */
+    Vb?: number | null; Vr?: number | null }
 
 /** A part's words on its notes, as the server answers `lilysharp/sung`. */
 /** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
 export interface SungVoiceDto { Part: string; Key?: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null; Gender?: string | null; Track?: string | null }
 
 /** The score Cantoria reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
-export interface CantoriaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean }
+export interface CantoriaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean; vibrato?: number; vibratoRate?: number }
 export interface CantoriaScore { sampleRate: number; language: string; notes: CantoriaNote[] }
 
 /** The rate the voice is asked for — NEUTRINO's own, so nothing is resampled on the way. */
@@ -504,6 +506,9 @@ export function cantoriaScore(voice: SungVoiceDto, speed: number): CantoriaScore
             if (n.E != null) { note.levelEnd = n.E; }
             if (n.I) { note.inhale = true; }
             if (n.H) { note.hyphen = true; }
+            // A vibrato's swings a second are the singer's, not the tempo's: a practice speed leaves them.
+            if (n.Vb != null) { note.vibrato = n.Vb; }
+            if (n.Vr != null) { note.vibratoRate = n.Vr; }
             return note;
         }),
     };

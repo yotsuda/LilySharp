@@ -227,6 +227,11 @@ public static class SungScoreJson
                     w.WriteBoolean("inhale", true);
                 if (n.Hyphen)
                     w.WriteBoolean("hyphen", true);
+                // A written vibrato (a trial: a DiffSinger voice sings it; AnnotationValues.Vibrato).
+                if (n.Vibrato is { } vibrato)
+                    w.WriteNumber("vibrato", vibrato);
+                if (n.VibratoRate is { } vibratoRate)
+                    w.WriteNumber("vibratoRate", vibratoRate);
                 w.WriteEndObject();
             }
             w.WriteEndArray();

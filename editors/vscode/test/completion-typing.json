@@ -181,6 +181,7 @@
     ["music-at", "shortFermata"],
     ["music-at", "longFermata"],
     ["music-at", "breath"],
+    ["music-at", "vibrato"],
     ["music-at", "caesura"],
     ["music-at", "stopped"],
     ["music-at", "thumb"],

@@ -95,6 +95,35 @@ public static class AnnotationValues
             ? argument.Text
             : null;
 
+    /// <summary>How far a bare <c>@vibrato</c> swings the pitch each way, in cents.</summary>
+    public const double VibratoDefaultDepth = 40;
+
+    /// <summary>
+    /// The vibrato a sung note writes — <c>@vibrato</c>, <c>@vibrato(depth)</c>,
+    /// <c>@vibrato(depth, rate)</c> — or null when the annotation is not one: how far the pitch
+    /// swings each way in cents (1 to 200; <see cref="VibratoDefaultDepth"/> when not written) and
+    /// how many swings a second (1 to 12; null leaves it to the voice's engine).
+    /// </summary>
+    /// <remarks>
+    /// A TRIAL (owner's request 2026-11-12, "try @vibrato on DiffSinger only"): it is for the
+    /// singer and draws nothing yet, and only a DiffSinger voice sings it — Cantoria lays it on
+    /// the pitch curve; a NEUTRINO or VOICEVOX voice, an instrument and the MIDI ignore it.
+    /// LILYSHARP-OWN: LilyPond has no vibrato script; what is written here is heard, not engraved.
+    /// </remarks>
+    public static (double Depth, double? Rate)? Vibrato(MusicMarkSyntax mark)
+    {
+        if (!Named(mark, "vibrato"))
+            return null;
+        var arguments = mark.Arguments;
+        if (arguments.Length == 0)
+            return (VibratoDefaultDepth, null);
+        if (arguments.Length > 2 || arguments[0].Value?.AsDouble is not { } depth || depth < 1 || depth > 200)
+            return null;
+        if (arguments.Length == 1)
+            return (depth, null);
+        return arguments[1].Value?.AsDouble is { } rate && rate >= 1 && rate <= 12 ? (depth, rate) : null;
+    }
+
     /// <summary>
     /// The semitones of a guitar bend-up, <c>@bend(half|full|N)</c>, or null.
     /// </summary>

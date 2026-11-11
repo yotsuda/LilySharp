@@ -828,3 +828,22 @@ describe('the voice bar counts what is sung anew', () => {
         assert.deepEqual(line, { progress: { id: 'k.1', toSing: 6, sung: 2 } });
     });
 });
+
+// Owner's request 2026-11-12, a trial: `@vibrato` on a sung note, sung by a DiffSinger voice.
+describe('a vibrato written on a note goes to the engine', () => {
+    it('as its swing in cents and its swings a second, whatever the practice speed', () => {
+        const voice: SungVoiceDto = { Part: 'lead', Language: 'ja', Notes: [
+            { T: 0, D: 1, P: 60, L: 'ら', Vb: 40 },
+            { T: 1, D: 1, P: 62, L: 'ら', Vb: 70, Vr: 6 },
+            { T: 2, D: 1, P: 64, L: 'ら' },
+        ] };
+        const notes = cantoriaScore(voice, 1).notes;
+        assert.deepEqual(notes.map(n => [n.vibrato, n.vibratoRate]), [[40, undefined], [70, 6], [undefined, undefined]]);
+        // At half speed the notes are twice as long; the swings a second are the singer's own.
+        assert.deepEqual(cantoriaScore(voice, 0.5).notes.map(n => [n.vibrato, n.vibratoRate]), [[40, undefined], [70, 6], [undefined, undefined]]);
+        // It is in the voice's key: a note given a vibrato is sung anew, and one left plain is not.
+        const plain = { ...voice, Notes: voice.Notes.map(n => ({ ...n, Vb: undefined, Vr: undefined })) };
+        assert.notEqual(JSON.stringify(cantoriaScore(voice, 1)), JSON.stringify(cantoriaScore(plain, 1)));
+        assert.ok(!JSON.stringify(cantoriaScore(plain, 1)).includes('vibrato'));
+    });
+});

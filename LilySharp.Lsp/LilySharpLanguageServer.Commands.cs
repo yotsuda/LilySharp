@@ -1105,7 +1105,7 @@ public sealed partial class LilySharpLanguageServer
                     Track = v.Track,
                     Notes = v.Notes.Select(n => new SungNoteDto
                     {
-                        T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos, V = n.Level, E = n.LevelEnd, I = n.Inhale, H = n.Hyphen,
+                        T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos, V = n.Level, E = n.LevelEnd, I = n.Inhale, H = n.Hyphen, Vb = n.Vibrato, Vr = n.VibratoRate,
                     }).ToArray(),
                 }).OrderByDescending(v => v.InScore).ToArray(),
                 PrintedWords = shownSounds?.PrintedWords?.ToArray() ?? [],

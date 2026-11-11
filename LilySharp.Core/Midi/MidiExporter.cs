@@ -397,6 +397,7 @@ public sealed class MidiExporter
     {
         bool breath = false, inhale = false, ends = false;
         int swell = 0;
+        (double Depth, double? Rate)? vibrato = null;
         foreach (var mark in marks)
         {
             switch (mark)
@@ -413,12 +414,23 @@ public sealed class MidiExporter
                 case MusicMarkSyntax { IsSpanEnd: true } end when SyntaxFacts.IsDynamicSpannerName(end.Name):
                     ends = true;
                     break;
+                case MusicMarkSyntax written when AnnotationValues.Vibrato(written) is { } v:
+                    vibrato = v;
+                    break;
+                // The bare word is an articulation's node (a name with no argument list).
+                case ArticulationSyntax { Type: ArticulationType.None, Name: "vibrato" }:
+                    vibrato = (AnnotationValues.VibratoDefaultDepth, null);
+                    break;
             }
         }
-        if (!breath && !ends && swell == 0)
+        if (!breath && !ends && swell == 0 && vibrato == null)
             return;
         foreach (int i in onset)
-            track.Notes[i] = track.Notes[i] with { BreathAfter = breath, Inhale = inhale, Swell = swell, SwellEnds = ends };
+            track.Notes[i] = track.Notes[i] with
+            {
+                BreathAfter = breath, Inhale = inhale, Swell = swell, SwellEnds = ends,
+                Vibrato = vibrato?.Depth, VibratoRate = vibrato?.Rate,
+            };
     }
 
     /// <summary>A silence (a rest, a slash) ends the tie memory both ways: no tie is pending

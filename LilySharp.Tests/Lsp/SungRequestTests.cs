@@ -80,6 +80,45 @@ public class SungRequestTests
         Assert.Equal(melody.Select(n => n.S), voice.Notes.Select(n => n.S));
     }
 
+    // Owner's request 2026-11-12, a trial: `@vibrato` on a sung note is told to the singing engine
+    // (a DiffSinger voice lays it on its pitch curve) - the swing each way in cents, and the swings
+    // a second where written. It draws nothing, and the MIDI does not know it.
+    [Fact]
+    public void AVibratoWrittenOnANote_IsToldToTheSinger()
+    {
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///vib.lys");
+        string text = Doc.Replace("c'8. d16 c8. d16 | c4 a8 r |", "c'8.@vibrato d16 c8.@vibrato(60) d16 | c4@vibrato(70, 6) a8 r |");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = text, Version = 1, LanguageId = "lilysharp" },
+        });
+        var sung = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        Assert.Null(sung.Error);
+        var notes = Assert.Single(sung.Voices!).Notes;
+        // Bare: the default depth, the rate left to the engine. Then a depth, then both.
+        Assert.Equal(new double?[] { 40, null, 60, null, 70, null }, notes.Select(n => n.Vb));
+        Assert.Equal(new double?[] { null, null, null, null, 6, null }, notes.Select(n => n.Vr));
+        // The words and the times are what they were without it.
+        var plain = Assert.Single(Open(out var plainUri) .GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = plainUri } }).Voices!).Notes;
+        Assert.Equal(plain.Select(n => (n.T, n.D, n.P, n.L)), notes.Select(n => (n.T, n.D, n.P, n.L)));
+
+        // Known where it is written - no "unknown annotation" - and out of its range, said.
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(text);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        // The bare word is an articulation's node; with an argument, a mark's.
+        var marks = tree.GetRoot().DescendantNodes<LilySharp.Core.Syntax.MusicMarkSyntax>().Where(m => m.Name == "vibrato").ToList();
+        Assert.Equal(2, marks.Count);
+        Assert.True(LilySharp.Core.Semantics.AnnotationNameValidator.IsKnownPlainName("vibrato"));
+        Assert.All(marks, m => Assert.True(LilySharp.Core.Semantics.AnnotationNameValidator.IsKnownCompoundName(m)));
+        var wide = LilySharp.Core.Syntax.SyntaxTree.Parse(Doc.Replace("c4 a8 r |", "c4@vibrato(300) a8 r |"))
+            .GetRoot().DescendantNodes<LilySharp.Core.Syntax.MusicMarkSyntax>().Single(m => m.Name == "vibrato");
+        Assert.Null(LilySharp.Core.Semantics.AnnotationValues.Vibrato(wide));
+        Assert.False(LilySharp.Core.Semantics.AnnotationNameValidator.IsKnownCompoundName(wide));
+        // …and the slur a reader writes after it is still a slur where no argument is meant: the
+        // name takes an argument, so `@vibrato (` is one - the price `@arpeggio` and `@todo` pay too.
+    }
+
     // Owner's request 2026-11-11: a candidate's Play sings. The text is the candidate's, not the
     // document's — read as lilysharp/playbackText reads it, so the two answers agree note for note.
     [Fact]

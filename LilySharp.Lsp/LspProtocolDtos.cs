@@ -399,6 +399,10 @@ public class SungNoteDto
     public bool I { get; set; }
     /// <summary>The next syllable is of the same word (<c>Twin- kle</c>).</summary>
     public bool H { get; set; }
+    /// <summary>A written vibrato (<c>@vibrato</c>, a trial): its swing each way in cents, and
+    /// its swings a second, each null where not written.</summary>
+    public double? Vb { get; set; }
+    public double? Vr { get; set; }
 }
 
 /// <summary>A part's words on its notes: what the editor hands a singing engine, with what the
