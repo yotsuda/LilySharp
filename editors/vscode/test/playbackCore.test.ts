@@ -19,7 +19,7 @@ import * as assert from 'node:assert/strict';
 import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
     CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, loopRounds, playSpan, playSpanWindow, practiceNotes,
-    programOf, toEvents,
+    programOf, toEvents, nextVoiceEntry, strikeKey, strikeKeys, voiceEntries, VOICE_ENTRY_NOTICE_S,
     fromOffset, exportNotes, practiceSummary, PracticeState, voiceCues, voiceBadge, soundStart, withVoiceLead,
     levelOf, velocityAt,
 } from '../src/webview/playbackCore';
@@ -538,6 +538,47 @@ describe('the lookahead', () => {
         assert.ok(!look.done);
         look.take(10);
         assert.ok(look.done);
+    });
+});
+
+// Owner's request 2026-11-11: a voice that is ready while the piece plays comes in after the
+// next rest, its instrument giving way there.
+describe('a voice that comes in while its part plays', () => {
+    it('may enter at each sung note that follows a rest', () => {
+        // Two notes joined, a rest of half a second, a note, a hair's gap (no rest), a note, a long rest, a note.
+        const sung = [{ T: 0, D: 1 }, { T: 1, D: 1 }, { T: 2.5, D: 0.5 }, { T: 3.01, D: 0.99 }, { T: 6, D: 1 }];
+        assert.deepEqual(voiceEntries(sung).map(e => [e.at, Math.round(e.room * 100) / 100]), [[2.5, 0.5], [6, 2]]);
+        assert.deepEqual(voiceEntries([]), []);
+        assert.deepEqual(voiceEntries([{ T: 4, D: 1 }]), [], 'the first note of all is not an entry');
+        // Given out of order, and a note held under the others: its end is what the rest is counted from.
+        assert.deepEqual(voiceEntries([{ T: 3, D: 1 }, { T: 0, D: 2.5 }, { T: 1, D: 0.5 }]).map(e => e.at), [3]);
+    });
+    it('takes the first entry there is time for, past what the synth already holds', () => {
+        const entries = [{ at: 2.5, room: 0.5 }, { at: 6, room: 2 }, { at: 9, room: 1 }];
+        assert.equal(nextVoiceEntry(entries, 0, 1, 1.2)?.at, 2.5);
+        // Too close to bring a voice in: the one after.
+        assert.equal(nextVoiceEntry(entries, 0, 2.5 - VOICE_ENTRY_NOTICE_S + 0.01, 2.4)?.at, 6);
+        // The synth already has the strikes up to 6 (a hidden page looks further ahead): the one after.
+        assert.equal(nextVoiceEntry(entries, 0, 1, 6)?.at, 9);
+        // A Play from 2 s into the score: the list's time is the score's less 2.
+        assert.equal(nextVoiceEntry(entries, 2, 0.2, 0.4)?.at, 6);
+        assert.equal(nextVoiceEntry(entries, 2, 0, 0.05)?.at, 2.5);
+        // No rest left: the instrument plays to the end.
+        assert.equal(nextVoiceEntry(entries, 0, 9, 9), undefined);
+    });
+    it('leaves the part\'s later strikes out, and no one else\'s', () => {
+        const melody = [note(0, 1, 60, { C: 0, N: 0 }), note(2, 1, 62, { C: 0, N: 0 }), note(3, 1, 64, { C: 0, N: 0 })];
+        const bass = [note(0, 4, 36, { C: 1, N: 1 }), note(2, 1, 62, { C: 1, N: 1 })];   // the melody's D at 2, on its own channel
+        const silent = new Set(strikeKeys(melody.filter(n => n.T >= 2)));
+        const struck = toEvents([...melody, ...bass]).filter(e => e.kind === 'on' && !silent.has(strikeKey(e)));
+        assert.deepEqual(struck.map(e => e.kind === 'on' ? [e.t, e.c, e.p] : []), [[0, 0, 60], [0, 1, 36], [2, 1, 62]]);
+        // From an offset the times are the played list's, as the player's events are.
+        assert.deepEqual(strikeKeys([melody[1]], 1.5), [strikeKey({ c: 0, p: 62, t: 0.5 })]);
+        // The player asks before each strike, and says how far the synth already holds.
+        const src = readFileSync(join(__dirname, '..', '..', 'src', 'webview', 'previewSynth.ts'), 'utf8');
+        assert.match(src, /if \(e\.kind === 'on' && this\.silent\.has\(strikeKey\(e\)\)\) \{ continue; \}/);
+        assert.match(src, /get handedOutUntil\(\): number \{ return this\.look\.handedOutUntil; \}/);
+        assert.match(src, /for \(const key of strikeKeys\(notes, this\.offset\)\) \{ this\.silent\.add\(key\); \}/);
     });
 });
 

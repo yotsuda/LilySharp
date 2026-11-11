@@ -17,6 +17,8 @@
 // The editor-free half of the AI transform: reading the model's reply into the edit it
 // makes. No `vscode` here, so `npm test` drives it under plain node.
 
+import { VoiceEntry } from './webview/playbackCore';
+
 /** The markers the prompt puts around the selection inside the file it shows the model. */
 export const SEL_OPEN = '⟦SELECTION⟧';
 export const SEL_CLOSE = '⟦/SELECTION⟧';
@@ -1003,11 +1005,18 @@ export function playsItself(synth: CandidateSynth | undefined): boolean {
 
 /** A voice a candidate's Play sings: its part, the WAV, and how long the WAV runs before the
  *  score's 0 (the first consonant's room, VOICE_LEAD_S). */
-export interface CandidateVoice { part: string; bytes: Uint8Array; lead: number }
+export interface CandidateVoice {
+    part: string; bytes: Uint8Array; lead: number;
+    /** The track whose instrument the voice replaces (candidateSilencedTrack), or -1. */
+    track: number;
+    /** Where the voice may come in while its part is already playing (voiceEntries). */
+    entries: VoiceEntry[];
+}
 
 /** What the engine has for a candidate's Play (AiTransformDeps.voicesFor): the voices there now,
  *  the tracks (indices in the playback's Parts) whose instrument gives way to them, and the parts
- *  whose voice is still being sung — their instruments play this time. */
+ *  whose voice is still being sung — their instruments play until it is there (the panel takes
+ *  it in after the part's next rest, or the next Play sings it). */
 export interface CandidateVoices { voices: CandidateVoice[]; silenced: number[]; waiting: string[] }
 
 /** Which parts a played text sings and plays, as `lilysharp/playbackText` answers. */
@@ -1035,8 +1044,8 @@ export function candidateSilencedTrack(part: string, sounds: CandidateSounds): n
 export function candidateWaitingNote(waiting: readonly string[]): string | undefined {
     if (waiting.length === 0) { return undefined; }
     return waiting.length === 1
-        ? `The voice of ${waiting[0]} is being sung: its instrument plays this time.`
-        : `The voices of ${waiting.join(', ')} are being sung: their instruments play this time.`;
+        ? `The voice of ${waiting[0]} is being sung: its instrument plays until it is ready.`
+        : `The voices of ${waiting.join(', ')} are being sung: their instruments play until they are ready.`;
 }
 /**
  * What each part of a paged guide is about, a line a part: its headings (`#`, `##`). For the first

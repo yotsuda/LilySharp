@@ -29,7 +29,7 @@ import { WorkletSynthesizer } from 'spessasynth_lib';
 import {
     BEND_CENTRE, DRUM_CHANNEL, Lookahead, MidiEvent, PlaybackNote, SoundingCursor,
     channelsOf, countIn, endOf, fromOffset, loopNotes, playSpan, playSpanWindow, practiceNotes, programOf, toEvents,
-    soundStart, voiceBadge, voiceBarShown, voiceCues, voiceProgress, voiceRowProgress, voiceStillSinging, withVoiceLead,
+    nextVoiceEntry, soundStart, strikeKey, strikeKeys, voiceBadge, voiceBarShown, voiceCues, voiceProgress, voiceRowProgress, voiceStillSinging, withVoiceLead,
 } from './playbackCore';
 
 export type SynthState = 'loading' | 'ready' | 'failed' | 'none';
@@ -65,6 +65,7 @@ async function addProcessor(ctx: AudioContext, url: string): Promise<void> {
     }
 }
 
+
 /** One playback: the events of a note list from an offset, pumped to the synth ahead
  *  of the clock, from the audio time t0. */
 export class Player {
@@ -74,10 +75,11 @@ export class Player {
     private readonly channels: number[];
     private timer: ReturnType<typeof setInterval> | null;
     private scheduledUntil = 0;   // audio time of the last event handed out
+    private readonly silent = new Set<string>();   // the strikes left out from now on (silence)
 
     /** The audio time the piece's `offset` sounds at — the page's highlight clock. */
     constructor(private readonly synth: WorkletSynthesizer, private readonly ctx: AudioContext,
-                notes: readonly PlaybackNote[], offset: number, readonly t0: number) {
+                notes: readonly PlaybackNote[], private readonly offset: number, readonly t0: number) {
         const events = toEvents(notes, offset);
         this.look = new Lookahead(events);
         this.channels = channelsOf(events);
@@ -91,6 +93,7 @@ export class Player {
         const hidden = typeof document !== 'undefined' && document.hidden;
         const upTo = this.ctx.currentTime - this.t0 + (hidden ? HORIZON_HIDDEN_S : HORIZON_VISIBLE_S);
         for (const e of this.look.take(upTo)) {
+            if (e.kind === 'on' && this.silent.has(strikeKey(e))) { continue; }
             const time = this.t0 + e.t;
             this.scheduledUntil = Math.max(this.scheduledUntil, time);
             this.dispatch(e, time);
@@ -107,6 +110,17 @@ export class Player {
             case 'on': this.synth.noteOn(e.c, e.p, e.v, at); break;
             case 'off': this.synth.noteOff(e.c, e.p, at); break;
         }
+    }
+
+    /** Seconds from t0 up to which the events are already with the synth (-1 before any): what
+     *  `silence` can no longer take back. */
+    get handedOutUntil(): number { return this.look.handedOutUntil; }
+
+    /** Leaves `notes` (of the list played) unstruck from here on — a part whose voice comes in
+     *  while it plays (owner's request 2026-11-11). Their ends still go out, and silence nothing
+     *  that sounds; a strike already handed to the synth sounds. */
+    silence(notes: readonly PlaybackNote[]): void {
+        for (const key of strikeKeys(notes, this.offset)) { this.silent.add(key); }
     }
 
     /** Stops now, and silences what was already queued ahead of the clock: the synth
@@ -331,6 +345,7 @@ const api = {
     voiceStillSinging,
     withVoiceLead,
     soundStart,
+    nextVoiceEntry,
 };
 
 declare global {

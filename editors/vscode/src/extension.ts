@@ -26,7 +26,7 @@ import {
     TransportKind
 } from 'vscode-languageclient/node';
 import { registerAiTransform, showCandidateSounding, tellCandidateAudioBlocked } from './aiTransform';
-import { CandidateSounds, CandidateVoices, candidateSilencedTrack, candidateSings } from './aiTransformCore';
+import { CandidateSounds, CandidateVoice, CandidateVoices, candidateSilencedTrack, candidateSings } from './aiTransformCore';
 import { registerAiComplete } from './aiComplete';
 import { findCopilotLogFrom, pickAiModel, rememberRefusalsIn } from './modelClient';
 import { reviewPointsOf } from './reviewCore';
@@ -51,7 +51,7 @@ import { TodoMark, parseStarts, todoDeletions } from './todoResolveCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
 import { AudioFormat, AudioJob, renderAudioFiles } from './audioRender';
 import { VoiceTrack, decodeWav } from './audioRenderCore';
-import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soundStart } from './webview/playbackCore';
+import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soundStart, voiceEntries } from './webview/playbackCore';
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
@@ -4466,7 +4466,7 @@ const CANDIDATE_VOICE_WAIT_MS = 600;
  * text that sings nothing, nothing is asked.
  */
 async function candidateVoices(text: string, uri: vscode.Uri, renderName: string | undefined, sounds: CandidateSounds,
-    onSung: (part: string) => void): Promise<CandidateVoices> {
+    onSung: (voice: CandidateVoice) => void): Promise<CandidateVoices> {
     const out: CandidateVoices = { voices: [], silenced: [], waiting: [] };
     if (!client || !clientReady || (sounds.Sung ?? []).length === 0) { return out; }
     const engine = await renderer();
@@ -4481,6 +4481,12 @@ async function candidateVoices(text: string, uri: vscode.Uri, renderName: string
     }
     if (sung.Error || !sung.Voices) { log(`no voices (${sung.Error ?? 'none'})`); return out; }
     const silenced = new Set<number>();
+    // The voice as the panel takes it: its WAV, the instrument it replaces, and the notes after a
+    // rest, where it may come in while its part already plays.
+    const handed = async (voice: SungVoiceDto, wav: string): Promise<CandidateVoice> => ({
+        part: voice.Part, bytes: new Uint8Array(await fs.promises.readFile(wav)), lead: VOICE_LEAD_S,
+        track: candidateSilencedTrack(voice.Part, sounds), entries: voiceEntries(voice.Notes),
+    });
     for (const voice of candidateSings(sung.Voices, sounds)) {
         try {
             const { rendered, cached } = await engine.render(voice, 1);
@@ -4493,12 +4499,13 @@ async function candidateVoices(text: string, uri: vscode.Uri, renderName: string
             if (!v) {
                 out.waiting.push(voice.Part);
                 log(`${voice.Part}: to the engine; its instrument plays this time`);
-                rendered.then(() => onSung(voice.Part), e => log(`${voice.Part} was not sung — ${String(e)}`));
+                rendered.then(async sungNow => { log(`${voice.Part}: sung (${sungNow.duration.toFixed(1)} s)`); onSung(await handed(voice, sungNow.wav)); })
+                    .catch(e => log(`${voice.Part} was not sung — ${String(e)}`));
                 continue;
             }
-            out.voices.push({ part: voice.Part, bytes: new Uint8Array(await fs.promises.readFile(v.wav)), lead: VOICE_LEAD_S });
-            const track = candidateSilencedTrack(voice.Part, sounds);
-            if (track >= 0) { silenced.add(track); }
+            const there = await handed(voice, v.wav);
+            out.voices.push(there);
+            if (there.track >= 0) { silenced.add(there.track); }
             log(`${voice.Part}: ${cached ? 'the voice the preview had' : 'from the engine\'s store'} (${v.duration.toFixed(1)} s)`);
         } catch (e) {
             log(`${voice.Part} was not sung — ${String(e)}; its instrument plays`);

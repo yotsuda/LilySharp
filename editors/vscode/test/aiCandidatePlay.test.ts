@@ -20,6 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import { PLAIN_TONES_JS } from '../src/plainTones';
+import { nextVoiceEntry } from '../src/webview/playbackCore';
 
 // An AI candidate can be heard before it is accepted (owner's request 2026-10-25): the candidate
 // panel's Play asks the server for the notes of the text shown (lilysharp/playbackText) and the
@@ -264,7 +265,7 @@ describe('the AI candidate panel\'s page script', () => {
             window: { LysSynth: { SoundingCursor, create: () => synth } }, SYNTH: { processor: 'p', soundFont: 's' },
             AudioContext: function () { return ctx; }, Math, decided: false,
             ownCtx: null, ownSynth: null, ownPlayer: null, ownTick: null, ownEnd: null, ownGen: 0, ownPane: 'after',
-            ownVoices: [], startVoices: () => 0,
+            ownVoices: [], ownPlay: null, startVoices: () => 0,
             playingOscs: [] as { stop: () => void }[],
             // The plain tones (plainTones.ts), stood in for: what they were asked to play, and a source to stop.
             startOscillators: (_ctx: unknown, list: unknown[], offset: number, t0: number) => {
@@ -369,6 +370,9 @@ describe('the AI candidate panel\'s page script', () => {
         };
         const sources: { when?: number; offset?: number; stopped: boolean; gain?: number }[] = [];
         const played: { notes: { N: number }[]; t0: number }[] = [];
+        const said: string[] = [];
+        const silencedNotes: { T: number; N: number }[][] = [];
+        let handedOut = 0;
         let litNotes = 0, decodes = 0, failDecode = false;
         const ctx = {
             currentTime: 10, state: 'running', destination: {}, resume: () => Promise.resolve(),
@@ -386,20 +390,24 @@ describe('the AI candidate panel\'s page script', () => {
         };
         const synth = {
             state: 'ready', ready: true, stop: () => { /* none */ }, whenReady: () => Promise.resolve(true),
-            play: (notes: { N: number }[], _offset: number, t0: number) => { played.push({ notes, t0 }); return { t0, end: 2 }; },
+            play: (notes: { N: number }[], _offset: number, t0: number) => {
+                played.push({ notes, t0 });
+                return { t0, end: 2, get handedOutUntil() { return handedOut; }, silence: (list: { T: number; N: number }[]) => { silencedNotes.push(list); } };
+            },
         };
         class SoundingCursor {
             constructor(readonly list: unknown[]) { litNotes = list.length; }
             at() { return { changed: false, sounding: [] }; }
         }
         const context = vm.createContext({
-            window: { LysSynth: { SoundingCursor, create: () => synth, soundStart: () => 0.2 } }, SYNTH: { processor: 'p', soundFont: 's' },
+            window: { LysSynth: { SoundingCursor, create: () => synth, soundStart: () => 0.2, nextVoiceEntry } }, SYNTH: { processor: 'p', soundFont: 's' },
             AudioContext: function () { return ctx; }, Math, Promise, decided: false,
-            ownCtx: null, ownSynth: null, ownPlayer: null, ownTick: null, ownEnd: null, ownGen: 0, ownPane: 'after', ownVoices: [],
-            playingOscs: [], startOscillators: () => 2, say: () => { /* none */ }, lightSounding: () => { /* none */ },
+            ownCtx: null, ownSynth: null, ownPlayer: null, ownTick: null, ownEnd: null, ownGen: 0, ownPane: 'after', ownVoices: [], ownPlay: null,
+            playingOscs: [], startOscillators: () => 2, say: (text: string) => { said.push(text); }, lightSounding: () => { /* none */ },
             setInterval: () => 1, clearInterval: () => { /* none */ }, setTimeout: () => 2, clearTimeout: () => { /* none */ },
         });
-        new vm.Script([cut('function wakeAudio()'), cut('function decodeVoices(list)'), cut('function startVoices(decoded, t0, start, pre)'),
+        new vm.Script([cut('function wakeAudio()'), cut('function decodeVoices(list)'), cut('function voiceSource(v, when, offset)'),
+            cut('function startVoices(decoded, t0, start, pre)'), cut('function joinVoice(w, voice)'),
             cut('function stopOwn()'), cut('function playOwn(w, notes, sung)')].join('\n')).runInContext(context);
         const run = (code: string) => new vm.Script(code).runInContext(context);
         const settle = () => new Promise<void>(resolve => setImmediate(resolve));
@@ -437,15 +445,63 @@ describe('the AI candidate panel\'s page script', () => {
         assert.deepEqual(played[2].notes.map(n => n.N), [0, 1, 0]);
         assert.equal(sources.length, 2);
         assert.ok(decodes >= 4);
+        // Owner's request 2026-11-11: a voice that is ready while the piece plays comes in after
+        // the next rest. The melody plays on its instrument (nothing silenced, no voice yet)…
+        failDecode = false;
+        ctx.currentTime = 30;
+        context.long = [{ T: 0, D: 1, R: 40, N: 0 }, { T: 0, D: 8, R: 60, N: 1 }, { T: 3, D: 1, R: 44, N: 0 }, { T: 6, D: 1, R: 48, N: 0 }];
+        run("playOwn('after', long, { voices: [], silenced: [], start: 0 })");
+        assert.deepEqual(played[3].notes.map(n => n.N), [0, 1, 0, 0]);
+        const before = sources.length;
+        // …and 1 s in its voice lands, with rests before 3 s (2 s long) and before 6 s.
+        ctx.currentTime = 30.15 + 1;
+        handedOut = 1.25;
+        context.late = { part: 'melody', bytes: new Uint8Array(16), lead: 0.3, track: 0, entries: [{ at: 3, room: 2 }, { at: 6, room: 2 }] };
+        run("joinVoice('after', late)");
+        await settle();
+        // The voice is cut in for the note at 3 s, its lead's 0.3 s before the beat; the melody's
+        // instrument is struck no more from there, and the bass is left alone.
+        assert.equal(sources.length, before + 1);
+        assert.ok(Math.abs(sources.at(-1)!.when! - (30.15 + 3 - 0.3)) < 1e-9 && Math.abs(sources.at(-1)!.offset! - 3) < 1e-9);
+        assert.deepEqual(silencedNotes.at(-1)!.map(n => [n.T, n.N]), [[3, 0], [6, 0]]);
+        assert.match(said.at(-1)!, /^The voice of melody comes in after the next rest\.$/);
+        // A voice for the other pane, or with no rest left, or after the Play has ended, waits for the next Play.
+        run("joinVoice('before', late)");
+        await settle();
+        assert.match(said.at(-1)!, /^The voice of melody is ready: Play sings it\.$/);
+        ctx.currentTime = 30.15 + 7;
+        said.length = 0;
+        run("joinVoice('after', late)");
+        await settle();
+        assert.match(said.at(-1)!, /is ready: Play sings it\.$/);
+        assert.equal(sources.length, before + 1);
+        run('stopOwn()');
+        assert.ok(sources.at(-1)!.stopped);
+        run("joinVoice('after', late)");
+        await settle();
+        assert.equal(sources.length, before + 1);
+        // A Play from 2 s in: the entry at 3 s is 1 s away in the list's time.
+        ctx.currentTime = 50;
+        handedOut = 0.25;
+        run("playOwn('after', long.filter(n => n.T >= 2).map(n => Object.assign({}, n, { T: n.T - 2 })), { voices: [], silenced: [], start: 2 })");
+        ctx.currentTime = 50.15 + 0.3;
+        run("joinVoice('after', late)");
+        await settle();
+        assert.ok(Math.abs(sources.at(-1)!.when! - (50.15 + 1 - 0.3)) < 1e-9 && Math.abs(sources.at(-1)!.offset! - 3) < 1e-9);
+        assert.deepEqual(silencedNotes.at(-1)!.map(n => n.T), [1, 4]);
+        run('stopOwn()');
+        assert.match(page, /if \(e\.data\.type === 'voiceReady'\) \{ if \(e\.data\.voice\) joinVoice\(e\.data\.which === 'before' \? 'before' : 'after', e\.data\.voice\); return; \}/);
+        assert.match(transform, /void panel\.webview\.postMessage\(\{ type: 'voiceReady', which, voice \}\);/);
         // The host: the voices of the text played, asked with what its playback sings and plays.
         assert.match(page, /playOwn\(e\.data\.which === 'before' \? 'before' : 'after', e\.data\.notes \|\| \[\],\s*\{ voices: e\.data\.voices \|\| \[\], silenced: e\.data\.silenced \|\| \[\], start: e\.data\.start \|\| 0, said: e\.data\.said \|\| '' \}\);/);
-        assert.match(transform, /const sung = await deps\.voicesFor\?\.\(text, play\.uri, deps\.renderNameOf\?\.\(play\.uri\), sounds, part => \{/);
+        assert.match(transform, /const sung = await deps\.voicesFor\?\.\(text, play\.uri, deps\.renderNameOf\?\.\(play\.uri\), sounds, voice => \{/);
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(ext, /voicesFor: candidateVoices,/);
         assert.match(ext, /sendRequest\('lilysharp\/sung', \{ textDocument: \{ uri: uri\.toString\(\) \}, text, renderName: renderName \?\? null \}\);/);
         // A voice the renderer holds is there at once; one to be sung is waited for briefly, then left to land later.
         assert.match(ext, /const \{ rendered, cached \} = await engine\.render\(voice, 1\);/);
-        assert.match(ext, /out\.waiting\.push\(voice\.Part\);[\s\S]{0,160}rendered\.then\(\(\) => onSung\(voice\.Part\)/);
+        assert.match(ext, /out\.waiting\.push\(voice\.Part\);[\s\S]{0,160}rendered\.then\(async sungNow => \{[^\n]*onSung\(await handed\(voice, sungNow\.wav\)\); \}\)/);
+        assert.match(ext, /track: candidateSilencedTrack\(voice\.Part, sounds\), entries: voiceEntries\(voice\.Notes\),/);
     });
     it('names the voices a candidate\'s Play sings and the instruments they replace', () => {
         const core = require('../src/aiTransformCore') as {
@@ -467,8 +523,8 @@ describe('the AI candidate panel\'s page script', () => {
         assert.equal(core.candidateSilencedTrack('bass', sounds), -1);
         assert.equal(core.candidateSilencedTrack('melody', {}), -1);
         assert.equal(core.candidateWaitingNote([]), undefined);
-        assert.equal(core.candidateWaitingNote(['melody']), 'The voice of melody is being sung: its instrument plays this time.');
-        assert.match(core.candidateWaitingNote(['sop', 'alto'])!, /^The voices of sop, alto are being sung: their instruments/);
+        assert.equal(core.candidateWaitingNote(['melody']), 'The voice of melody is being sung: its instrument plays until it is ready.');
+        assert.match(core.candidateWaitingNote(['sop', 'alto'])!, /^The voices of sop, alto are being sung: their instruments play until they are ready\.$/);
     });
     it('splits a note\'s copies by their bars, whatever the order of the DOM', () => {
         const page = scripts.join('\n');

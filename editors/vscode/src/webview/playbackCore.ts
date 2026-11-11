@@ -700,3 +700,59 @@ export class SoundingCursor {
         return { sounding, changed, hadNew };
     }
 }
+
+/** A note a voice sings after a rest, in the score's seconds: where it starts, and how long the
+ *  rest before it is — the room its consonant has before the beat. */
+export interface VoiceEntry { at: number; room: number }
+
+/** The shortest silence between two sung notes that counts as a rest: shorter is a slip of
+ *  arithmetic or an articulation, and a voice cut in there would start inside a phrase. */
+export const VOICE_ENTRY_REST_S = 0.05;
+
+/**
+ * Where a voice may take over from its instrument in the middle of a Play (owner's request
+ * 2026-11-11: a voice that is ready while the piece plays comes in after the next rest): each
+ * sung note that follows a rest. The first note of all is not one — a Play from the top sings it,
+ * or it is past.
+ */
+export function voiceEntries(notes: readonly { T: number; D: number }[]): VoiceEntry[] {
+    const sorted = [...notes].sort((a, b) => a.T - b.T);
+    const out: VoiceEntry[] = [];
+    let end = -Infinity;
+    for (const n of sorted) {
+        if (end > -Infinity && n.T - end >= VOICE_ENTRY_REST_S) { out.push({ at: n.T, room: n.T - end }); }
+        end = Math.max(end, n.T + n.D);
+    }
+    return out;
+}
+
+/** The earliest a voice can be brought in after it is asked for, in seconds: its WAV is decoded
+ *  and the synth has its next strikes already (the player's look-ahead). */
+export const VOICE_ENTRY_NOTICE_S = 0.4;
+
+/**
+ * The entry a voice that became ready takes: the first one at least VOICE_ENTRY_NOTICE_S after
+ * `now` and after what the synth already holds (`handedOut`), both in the played list's time —
+ * the score's time less `start`. Undefined when no rest is left: the instrument plays to the end.
+ */
+export function nextVoiceEntry(entries: readonly VoiceEntry[], start: number, now: number, handedOut: number): VoiceEntry | undefined {
+    return entries.find(e => e.at - start >= now + VOICE_ENTRY_NOTICE_S && e.at - start > handedOut + 1e-6);
+}
+
+/** A strike's name among a playback's events: its channel, key and time. */
+export function strikeKey(e: { c: number; p: number; t: number }): string {
+    return e.c + '|' + e.p + '|' + e.t;
+}
+
+/**
+ * The strikes of `notes` as a playback from `offset` names them: what a player leaves out when a
+ * part's voice takes over from its instrument in the middle of a Play (owner's request
+ * 2026-11-11). The notes are ones of the list played, so their events are the list's own.
+ */
+export function strikeKeys(notes: readonly PlaybackNote[], offset = 0): string[] {
+    const keys: string[] = [];
+    for (const e of toEvents(notes, offset)) {
+        if (e.kind === 'on') { keys.push(strikeKey(e)); }
+    }
+    return keys;
+}

@@ -42,7 +42,7 @@ import {
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
     cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, newPieceOverScore, guidePages, guideContents, CandidateSynth, playsItself, hasSynth, headerLanguageNote, diagLines,
-    CandidateSounds, CandidateVoices, candidateWaitingNote,
+    CandidateSounds, CandidateVoice, CandidateVoices, candidateWaitingNote,
     lastUserMessageAt, heldClashesOf, noTuneOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
     applyDraft, draftSummary, DraftInput, FROM_DRAFT_NOTE,
     applyScoreEdits, ScoreEdit, scorePartView, scorePages,
@@ -84,7 +84,7 @@ export interface AiTransformDeps {
      *  played the song's melody on an instrument): what the engine has now, and for a voice it has
      *  yet to sing, `onSung` once it is there. Empty with no engine, or nothing sung. */
     voicesFor?: (text: string, uri: vscode.Uri, renderName: string | undefined, sounds: CandidateSounds,
-        onSung: (part: string) => void) => Promise<CandidateVoices>;
+        onSung: (voice: CandidateVoice) => void) => Promise<CandidateVoices>;
     /** Stops what the preview of `uri` is playing. */
     stopOnPreview?: (uri: vscode.Uri) => void;
     /** The score the preview of `uri` shows (its picker), or undefined for the first. */
@@ -2866,9 +2866,12 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
             // standing in this time, and the panel says when the voice is there.
             const text = which === 'after' ? play.after : play.before;
             const sounds = pb as CandidateSounds;
-            const sung = await deps.voicesFor?.(text, play.uri, deps.renderNameOf?.(play.uri), sounds, part => {
+            const sung = await deps.voicesFor?.(text, play.uri, deps.renderNameOf?.(play.uri), sounds, voice => {
+                // The voice is there (owner's request 2026-11-11): a Play still sounding takes it
+                // in after its part's next rest, the instrument giving way there; the page says
+                // which, or that the next Play sings it.
                 if (candidatePanel === panel && audible && (which === 'after' ? audible.after : audible.before) === text) {
-                    say(`The voice of ${part} is ready: Play sings it.`);
+                    void panel.webview.postMessage({ type: 'voiceReady', which, voice });
                 }
             }).catch(e => { deps.log(`candidate voices: ${String(e)}`); return undefined; });
             const silenced = new Set(sung?.silenced ?? []);
@@ -2876,7 +2879,7 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
                 type: 'playNotes', which, notes,
                 // What the synth strikes: a part its voice sings is lit, not played.
                 silenced: [...silenced],
-                voices: (sung?.voices ?? []).map(v => ({ part: v.part, bytes: v.bytes, lead: v.lead })),
+                voices: sung?.voices ?? [],
                 start,
                 said: candidateWaitingNote(sung?.waiting ?? []),
             });
@@ -3364,22 +3367,49 @@ ${PLAIN_TONES_JS}
   }
   // Starts the voices so that the score's time start sounds at the context's time t0; answers
   // where the last of them ends, in the list's time.
+  function voiceSource(v, when, offset) {
+    const src = ownCtx.createBufferSource();
+    src.buffer = v.buffer;
+    const gain = ownCtx.createGain();
+    gain.gain.value = 0.9;
+    src.connect(gain);
+    gain.connect(ownCtx.destination);
+    src.start(when, Math.max(0, offset));
+    ownVoices.push(src);
+  }
   function startVoices(decoded, t0, start, pre) {
     let end = 0;
     for (const v of decoded) {
       const from = v.lead + start - (start > 0 ? 0 : pre);
       if (from >= v.buffer.duration) continue;
-      const src = ownCtx.createBufferSource();
-      src.buffer = v.buffer;
-      const gain = ownCtx.createGain();
-      gain.gain.value = 0.9;
-      src.connect(gain);
-      gain.connect(ownCtx.destination);
-      src.start(t0 - (start > 0 ? 0 : pre), Math.max(0, from));
-      ownVoices.push(src);
+      voiceSource(v, t0 - (start > 0 ? 0 : pre), from);
       end = Math.max(end, v.buffer.duration - v.lead - start);
     }
     return end;
+  }
+  // A voice that is ready while its part already plays (owner's request 2026-11-11) comes in
+  // after the part's next rest: its instrument is struck no more from there, and the voice is cut
+  // in with what room the rest gives its consonant. With no rest left, or where the instrument
+  // cannot be taken back (the plain tones are struck all at once), the instrument plays on and
+  // the next Play sings.
+  let ownPlay = null;       // the Play sounding: { w, notes, start, t0 }
+  function joinVoice(w, voice) {
+    const name = voice && voice.part ? voice.part : 'the part';
+    const later = () => { if (!decided) say('The voice of ' + name + ' is ready: Play sings it.'); };
+    const p = ownPlay;
+    if (!p || p.w !== w || !window.LysSynth || !window.LysSynth.nextVoiceEntry
+        || (voice.track >= 0 && !ownPlayer)) { later(); return; }
+    decodeVoices([voice]).then(done => {
+      if (ownPlay !== p || done.length === 0) { later(); return; }
+      const now = ownCtx.currentTime - p.t0;
+      const entry = window.LysSynth.nextVoiceEntry(voice.entries || [], p.start, now, ownPlayer ? ownPlayer.handedOutUntil : -1);
+      if (!entry) { later(); return; }
+      const v = done[0], at = entry.at - p.start;
+      const early = Math.max(0, Math.min(v.lead, entry.room, at - now - 0.1));
+      voiceSource(v, p.t0 + at - early, v.lead + entry.at - early);
+      if (voice.track >= 0) ownPlayer.silence(p.notes.filter(n => n.N === voice.track && n.T >= at - 1e-6));
+      if (!decided) say('The voice of ' + name + ' comes in after the next rest.');
+    });
   }
   function stopOwn() {
     ownGen++;
@@ -3387,6 +3417,7 @@ ${PLAIN_TONES_JS}
     ownTick = ownEnd = null;
     for (const s of ownVoices) { try { s.stop(); } catch (e) { /* ended already */ } }
     ownVoices = [];
+    ownPlay = null;
     if (ownPlayer) { ownPlayer = null; if (ownSynth) ownSynth.stop(); }
     for (const o of playingOscs) { try { o.stop(); } catch (e) { /* ended already */ } }
     playingOscs = [];
@@ -3405,6 +3436,7 @@ ${PLAIN_TONES_JS}
     // The notes sounding light by the audio's own clock, and the Play ends with the last of them.
     const follow = (t0, end) => {
       ownPane = w;
+      ownPlay = { w, notes, start, t0 };
       if (window.LysSynth && window.LysSynth.SoundingCursor) {
         const cursor = new window.LysSynth.SoundingCursor(notes.map(n => ({ t: n.T, d: n.D, s: n.R, o: n.O || 0 })));
         ownTick = setInterval(() => {
@@ -3412,7 +3444,7 @@ ${PLAIN_TONES_JS}
           if (r.changed) lightSounding(w, r.sounding.map(x => ({ pos: x.pos, occ: x.occ })));
         }, 50);
       }
-      const last = Math.max(end, startVoices(voices, t0, start, pre), notes.reduce((e, n) => Math.max(e, n.T + n.D), 0));
+      const last =Math.max(end, startVoices(voices, t0, start, pre), notes.reduce((e, n) => Math.max(e, n.T + n.D), 0));
       ownEnd = setTimeout(stopOwn, (pre + last + 0.5) * 1000);
     };
     const plain = (why) => {
@@ -3552,6 +3584,7 @@ ${PLAIN_TONES_JS}
       if (e.data.said && !decided) say(e.data.said);
       return;
     }
+    if (e.data.type === 'voiceReady') { if (e.data.voice) joinVoice(e.data.which === 'before' ? 'before' : 'after', e.data.voice); return; }
     if (e.data.type === 'playMidi') { playMidi(e.data.which === 'before' ? 'before' : 'after', e.data.notes || [], e.data.t0Ms || Date.now(), e.data.end || 0); return; }
     // Playback news is not shown over a decision being carried out.
     if (e.data.type === 'playState' && !decided) { say(e.data.text); }
