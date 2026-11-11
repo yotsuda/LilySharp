@@ -2721,6 +2721,19 @@ export function showCandidateSounding(sounding: { pos: number; occ: number }[]):
     void candidatePanel?.webview.postMessage({ type: 'sounding', which: playingPane, sounding });
 }
 
+/**
+ * Says on the candidate panel why its Play is silent: the preview that plays it may not sound
+ * until it has been clicked once (the browser's autoplay policy — a click on this panel's Play is
+ * another page's). Owner's report 2026-11-11: Play did nothing and said nothing; the status bar's
+ * eight seconds were not where the eyes were. False when no candidate is shown.
+ */
+export function tellCandidateAudioBlocked(): boolean {
+    if (!candidatePanel) { return false; }
+    void candidatePanel.webview.postMessage({ type: 'playState',
+        text: 'No sound yet: click the preview once (it may play only after a click there), then press Play again.' });
+    return true;
+}
+
 function getCandidateHtml(
     fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
     svgBefore: string | null, svgAfter: string | null, error: string | null,

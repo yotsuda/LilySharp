@@ -51,7 +51,7 @@ describe('an AI candidate plays before it is accepted', () => {
         const html = new vm.Script(extension.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
         // Never round the header's loop: a candidate plays once — and without this score's
         // singing voice (docs/singing-design.md §5: voicePlan null).
-        assert.match(html, /case 'playNotes':\s*loopList = null;\s*voicePlan = null;[^\n]*\n\s*startPlayback\(message\.notes, 0\);/);
+        assert.match(html, /case 'playNotes':\s*loopList = null;\s*voicePlan = null;[^\n]*\n[\s\S]{0,300}?audioBlockedTold = false;\s*startPlayback\(message\.notes, 0\);/);
         assert.match(extension, /void panel\.webview\.postMessage\(\{ type: 'playNotes', notes \}\);/);
     });
 
@@ -187,6 +187,13 @@ describe('an AI candidate plays before it is accepted', () => {
         // A stop clears the panel's light.
         assert.match(extension, /if \(relaying\) \{\s*relaying = false;\s*vscode\.postMessage\(\{ type: 'candidateSounding', sounding: \[\] \}\);/);
         assert.match(extension, /if \(message\.type === 'candidateSounding'\) \{\s*showCandidateSounding\(message\.sounding\);/);
+        // Owner's report 2026-11-11: Play was silent and said nothing — the preview, not clicked
+        // since it loaded, may not sound. The panel says so, at every silent press.
+        assert.match(extension, /setStatusBarMessage\('Lily#: click the preview once to enable its sound', 8000\);[\s\S]{0,160}tellCandidateAudioBlocked\(\);/);
+        assert.match(extension, /case 'playNotes':[\s\S]{0,400}audioBlockedTold = false;\s*startPlayback\(message\.notes, 0\);/);
+        const transformSource = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+        assert.match(transformSource, /export function tellCandidateAudioBlocked\(\): boolean \{\s*if \(!candidatePanel\) \{ return false; \}/);
+        assert.match(transformSource, /No sound yet: click the preview once/);
         assert.match(transform, /if \(e\.data\.type === 'sounding'\) \{ lightSounding\(e\.data\.which, e\.data\.sounding \|\| \[\]\); return; \}/);
         // A chord sounds at its '<', which its heads carry as data-alt: they light too (owner's report
         // 2026-10-29: a song's right-hand chords stayed dark in the panel), the click target and the

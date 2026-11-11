@@ -25,7 +25,7 @@ import {
     ServerOptions,
     TransportKind
 } from 'vscode-languageclient/node';
-import { registerAiTransform, showCandidateSounding } from './aiTransform';
+import { registerAiTransform, showCandidateSounding, tellCandidateAudioBlocked } from './aiTransform';
 import { registerAiComplete } from './aiComplete';
 import { findCopilotLogFrom, pickAiModel, rememberRefusalsIn } from './modelClient';
 import { reviewPointsOf } from './reviewCore';
@@ -1660,6 +1660,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // when sound gets through.
                 outputChannel.appendLine(`Audio blocked in the preview (AudioContext ${message.state}): click the preview once`);
                 vscode.window.setStatusBarMessage('Lily#: click the preview once to enable its sound', 8000);
+                // A candidate's Play is pressed on its own panel: said there too, where the eyes are.
+                tellCandidateAudioBlocked();
                 return;
             }
             if (message.type === 'synthStatus') {
@@ -8335,6 +8337,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'playNotes':
                     loopList = null;
                     voicePlan = null;       // another text's notes: no voice of this score's
+                    // Pressed on another panel, so no click here lets the sound through: said at
+                    // every silent press, not once.
+                    audioBlockedTold = false;
                     startPlayback(message.notes, 0);
                     break;
                 case 'setSoundFont':
