@@ -192,7 +192,7 @@
             "strings": { "type": "string", "description": "A fretted instrument's strings to play, by number, 1 the highest: \"1-4\" (the four highest), \"2-5\", \"1,2,3\" (optional). A band's clean guitar: \"1-4\"." },
             "chords": { "type": "array", "items": { "type": "string" }, "description": "A progression's chord symbols, in order, in place of `chord`: one voicing each, the hand moving little between them." },
             "omitRoot": { "type": "boolean", "description": "true: shapes without the chord's root, which the band's bass plays. A triad keeps its root, in an upper voice on the upper strings." },
-            "fromFret": { "type": "number", "description": "The lowest fret a shape may press, no open string then: 5 for the shapes from the fifth position up." }
+            "fromFret": { "type": "number", "description": "The lowest fret a shape may press, no open string then: 5 for the shapes from the fifth position up. Give it when high chords or a higher position are asked for (5, or 7): without it the lowest positions come first." }
           },
           "required": []
         }

@@ -423,6 +423,15 @@ public static class ChordVoicingFinder
         if (Enumerable.Range(0, answers.Count).Any(i => chosen[i] >= 0 && !answers[i].Voicings.Any(Inside)))
             text.Append("⚠ The register asked holds no shape of the chords so marked on these strings from this fret: the nearest are given. "
                 + "They are sound shapes; for shapes in the register, ask a wider one, or fewer strings.\n");
+        // Where on the neck the answer lies, in frets (owner's run 2026-11-11 16:59: "high chords"
+        // asked with no fret named came back in frets 1–6, were written, and were called a high position).
+        var pressed = Enumerable.Range(0, answers.Count).Where(i => chosen[i] >= 0 && !answers[i].Bowed)
+            .SelectMany(i => answers[i].Voicings[chosen[i]].Frets).Where(f => f > 0).ToList();
+        if (pressed.Count > 0)
+            text.Append($"These shapes lie in frets {pressed.Min()}–{pressed.Max()}"
+                + (fromFret == 0 && pressed.Min() < 5
+                    ? ": the low positions. For shapes up the neck (\"high chords\", a higher position), ask again with `fromFret` (5, or 7).\n"
+                    : ".\n"));
         text.Append("A diagram is its frets, lowest string first, x not played, as `@diagram( )` writes it. The notes are as they sound, in absolute octaves (c' is middle C): "
             + "write them so under `octave absolute`. For a chord's other voicings, ask it alone (`chord`).");
         if (omitRoot && Enumerable.Range(0, answers.Count).Any(i => chosen[i] >= 0 && !answers[i].RootKept && answers[i].Voicings[chosen[i]].Pitches.Count < 3))

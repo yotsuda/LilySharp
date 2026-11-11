@@ -319,6 +319,13 @@ public class ChordVoicingFinderTests
         Assert.Contains("D7 (d fis a c) — <a c' fis' a'> — diagram(xx7575)\n", kept);
         Assert.Contains("KEEP the root", kept);
         Assert.DoesNotContain("KEEP the root", ChordVoicingFinder.DescribeProgression(["D7", "Cm7"], "guitar", null, null, null, "1-4", omitRoot: true, fromFret: 5));
+        // Owner's run 2026-11-11 16:59: "high chords" asked with no fret named came back in the low
+        // positions and were written as a high position. The answer says where on the neck it lies.
+        string low = ChordVoicingFinder.DescribeProgression(["Bb", "Gm", "Eb", "F"], "guitar", "F3", "D5", null, "1-4", omitRoot: true);
+        Assert.Matches(@"These shapes lie in frets [1-4]–\d+: the low positions\. For shapes up the neck \(""high chords"", a higher position\), ask again with `fromFret` \(5, or 7\)\.", low);
+        string up = ChordVoicingFinder.DescribeProgression(["Bb", "Gm", "Eb", "F"], "guitar", null, null, null, "1-4", omitRoot: true, fromFret: 5);
+        Assert.Matches(@"These shapes lie in frets [5-9]–\d+\.\n", up);
+        Assert.DoesNotContain("the low positions", up);
         // Owner's run 2026-11-11: a register no four-string shape fits (C4–C5) was answered with
         // shapes from B♭3, and nothing said so. Each such line says it, and the answer once.
         string narrow = ChordVoicingFinder.DescribeProgression(["Bb", "Gm", "F"], "guitar", "C4", "C5", null, "1-4", omitRoot: true, fromFret: 3);

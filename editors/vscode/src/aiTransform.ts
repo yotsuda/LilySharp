@@ -802,7 +802,7 @@ async function readScore(deps: AiTransformDeps, input: ReadScoreInput): Promise<
     const pages = scorePages(view ?? shown, SCORE_PAGE_BYTES);
     const page = Math.max(1, Math.floor(Number(input.page) || 1));
     if (page > pages.length) {
-        return `Nothing read: this reading of ${name} has ${pages.length} part(s); there is no page ${page}.`;
+        return `Nothing read: this reading of ${name} has ${pages.length} page(s); there is no page ${page}.`;
     }
     const last = page === pages.length;
     const paging = pages.length === 1 ? ''
