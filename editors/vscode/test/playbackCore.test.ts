@@ -510,7 +510,8 @@ describe('the sustain pedal in the list (docs/pedal-playback-design.md)', () => 
         assert.match(src, /this\.synth\.controllerChange\(c, SUSTAIN, 0, \{ time: quietAt \}\)/);
         const page = readFileSync(join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(page, /window\.LysSynth\.fromOffset\(notes, offset\)/);
-        assert.match(page, /if \(n\.P < 0\) \{ continue; \}/);
+        // The plain tones are one text for the preview and the candidate panel (plainTones.ts).
+        assert.match(readFileSync(join(__dirname, '..', '..', 'src', 'plainTones.ts'), 'utf8'), /if \(n\.P < 0\) \{ continue; \}/);
     });
 });
 

@@ -19,6 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
+import { PLAIN_TONES_JS } from '../src/plainTones';
 
 // An AI candidate can be heard before it is accepted (owner's request 2026-10-25): the candidate
 // panel's Play asks the server for the notes of the text shown (lilysharp/playbackText) and the
@@ -244,6 +245,8 @@ describe('the AI candidate panel\'s page script', () => {
             throw new Error(head);
         };
         const lit: { w: string; n: number }[] = [];
+        const plainPlayed: { n: number; offset: number; t0: number }[] = [];
+        let plainStopped = 0;
         const said: (string | undefined)[] = [];
         let tick: (() => void) | undefined, ended = false, stopped = 0;
         const played: { notes: unknown[]; offset: number; t0: number }[] = [];
@@ -261,6 +264,13 @@ describe('the AI candidate panel\'s page script', () => {
             window: { LysSynth: { SoundingCursor, create: () => synth } }, SYNTH: { processor: 'p', soundFont: 's' },
             AudioContext: function () { return ctx; }, Math, decided: false,
             ownCtx: null, ownSynth: null, ownPlayer: null, ownTick: null, ownEnd: null, ownGen: 0, ownPane: 'after',
+            playingOscs: [] as { stop: () => void }[],
+            // The plain tones (plainTones.ts), stood in for: what they were asked to play, and a source to stop.
+            startOscillators: (_ctx: unknown, list: unknown[], offset: number, t0: number) => {
+                plainPlayed.push({ n: list.length, offset, t0 });
+                (context.playingOscs as { stop: () => void }[]).push({ stop: () => { plainStopped++; } });
+                return 2;
+            },
             say: (text?: string) => { said.push(text); },
             lightSounding: (w: string, sounding: unknown[]) => { lit.push({ w, n: sounding.length }); },
             setInterval: (f: () => void) => { tick = f; return 1; }, clearInterval: () => { tick = undefined; },
@@ -284,23 +294,42 @@ describe('the AI candidate panel\'s page script', () => {
         assert.equal(tick, undefined);
         assert.ok(stopped >= 1);
         assert.deepEqual(lit.at(-1), { w: 'before', n: 0 });
-        // A font that does not come is said, and nothing plays.
+        // A font that does not come is said, and the plain tones play in its place.
         synth.ready = false;
+        ctx.currentTime = 20;
         run("playOwn('after', notes)");
         assert.equal(played.length, 1);
-        assert.match(String(said.at(-1)), /sound font is not ready/);
+        assert.match(String(said.at(-1)), /sound font is not ready: plain tones this time/);
+        assert.deepEqual(plainPlayed, [{ n: 2, offset: 0, t0: 20.15 }]);
+        tick!();
+        run('stopOwn()');
+        assert.equal(plainStopped, 1, 'a Stop ends the plain tones');
+        // With no sound font at all (a release carries none, and Linux has none of its own) there
+        // is no synth to make: the plain tones play at once, and nothing is said of it.
+        context.ownSynth = null;
+        context.SYNTH = null;
+        run("playOwn('before', notes)");
+        assert.equal(plainPlayed.length, 2);
+        assert.equal(said.at(-1), '');
+        run('stopOwn()');
         // The click wakes the audio before the notes come; a decision stops the Play; the host sends
         // the notes to the panel that plays itself, and keeps the MIDI output with the preview.
         assert.match(page, /document\.getElementById\('play'\)\.addEventListener\('click', \(\) => \{ wakeAudio\(\); play\(\); \}\);/);
         assert.match(page, /decided = true;\s*stopOwn\(\);/);
         assert.match(page, /if \(e\.data\.type === 'playNotes'\) \{\s*playOwn\(/);
         assert.match(page, /if \(e\.data\.type === 'playMidi'\) \{ playMidi\(/);
-        assert.match(transform, /if \(playsItself\(synth\)\) \{\s*void panel\.webview\.postMessage\(\{ type: 'playNotes', which, notes \}\);\s*return;/);
+        assert.match(transform, /if \(synth && synth\.script\.length > 0\) \{\s*void panel\.webview\.postMessage\(\{ type: 'playNotes', which, notes \}\);\s*return;/);
+        // The plain tones are one text for the preview and the panel.
+        assert.match(transform, /let playingOscs = \[\];\s*\$\{PLAIN_TONES_JS\}/);
+        assert.match(fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8'), /\n {8}\$\{PLAIN_TONES_JS\}\r?\n/);
+        const tones = PLAIN_TONES_JS;
+        assert.doesNotThrow(() => new vm.Script('let playingOscs = [];\n' + tones));
+        assert.match(tones, /function startOscillators\(ctx, notes, offset, t0\)/);
         // Owner's request 2026-11-11: with a MIDI output chosen, the port plays it with no preview
         // open — the host asks the server, and the panel lights the notes by the port's clock.
         assert.match(transform, /if \(synth && synth\.midiOutput\.length > 0 && deps\.midiPlay\) \{\s*stopCandidateMidi\(deps\);\s*const sent = await deps\.midiPlay\(synth\.midiOutput, notes\);\s*if \(sent\.started\) \{\s*candidateOnMidi = true;\s*void panel\.webview\.postMessage\(\{ type: 'playMidi', which, notes, t0Ms: sent\.t0Ms, end: sent\.end \}\);/);
         // …a port that is not there is said, and the panel's own synth plays instead.
-        assert.match(transform, /if \(hasSynth\(synth\)\) \{\s*void panel\.webview\.postMessage\(\{ type: 'playNotes', which, notes,\s*said: `MIDI output \$\{synth\.midiOutput\}: \$\{sent\.error \?\? 'not started'\} — played here instead\.` \}\);/);
+        assert.match(transform, /if \(synth\.script\.length > 0\) \{\s*void panel\.webview\.postMessage\(\{ type: 'playNotes', which, notes,\s*said: `MIDI output \$\{synth\.midiOutput\}: \$\{sent\.error \?\? 'not started'\} — played here instead\.` \}\);/);
         assert.match(transform, /\} else if \(m\?\.action === 'stop' && candidateOnMidi\) \{\s*stopCandidateMidi\(deps\);/);
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(ext, /midiPlay: async \(port: string, notes: unknown\[\]\) => \{[\s\S]{0,260}'lilysharp\/midiOut\/play', \{ port, notes, offset: 0 \}\);/);

@@ -50,6 +50,7 @@ import { CANTORIA_EXTENSION_ID, cantoriaApiOf, voiceListText } from './singerCor
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
+import { PLAIN_TONES_JS } from './plainTones';
 export { cleanCandidate }; // aiComplete reads it from here
 
 // ---- Dependencies wired in from extension.ts (keeps the LSP client global there) ----
@@ -2840,7 +2841,7 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
                 void panel.webview.postMessage({ type: 'playMidi', which, notes, t0Ms: sent.t0Ms, end: sent.end });
                 return;
             }
-            if (hasSynth(synth)) {
+            if (synth.script.length > 0) {
                 void panel.webview.postMessage({ type: 'playNotes', which, notes,
                     said: `MIDI output ${synth.midiOutput}: ${sent.error ?? 'not started'} — played here instead.` });
                 return;
@@ -2848,7 +2849,11 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
             say(`MIDI output ${synth.midiOutput}: ${sent.error ?? 'not started'}`);
             return;
         }
-        if (playsItself(synth)) {
+        // On its own synth where a sound font is there, and in plain tones where none is (a release
+        // carries no font: the OS's bank by default, and Linux has none — owner's decision
+        // 2026-11-11: there too the Play is to sound). The preview plays only for a host that
+        // hands the panel no synth at all.
+        if (synth && synth.script.length > 0) {
             void panel.webview.postMessage({ type: 'playNotes', which, notes });
             return;
         }
@@ -2908,9 +2913,11 @@ function getCandidateHtml(
     /** The synth the panel plays with; none, or a MIDI output chosen: the preview plays (playsItself). */
     synth?: CandidateSynth,
 ): string {
-    const own = hasSynth(synth);
-    // What the page's player is made with, or null where the preview plays.
-    const synthJson = own ? JSON.stringify({ processor: synth!.processor, soundFont: synth!.soundFont }) : 'null';
+    // The synth's bundle goes with the page whenever there is one (it holds the cursor the lit
+    // notes follow, too); the synth itself is made only with a sound font to play.
+    const own = !!synth && synth.script.length > 0;
+    // What the page's synth is made with, or null: no sound font, and the plain tones play.
+    const synthJson = hasSynth(synth) ? JSON.stringify({ processor: synth!.processor, soundFont: synth!.soundFont }) : 'null';
     const afterBody = svgAfter
         ? `<div class="score">${svgAfter}</div>`
         : `<div class="err">Could not render candidate.${error ? `<pre>${escapeHtml(error)}</pre>` : ''}</div>`;
@@ -3286,11 +3293,14 @@ button:disabled { opacity:0.45; cursor:default; }
   // audio is woken in the click itself, and the notes the host answers play when they come.
   const SYNTH = ${synthJson};
   let ownCtx = null, ownSynth = null, ownPlayer = null, ownTick = null, ownEnd = null, ownGen = 0, ownPane = 'after';
+  // With no sound font (SYNTH null — none set, and the OS has none), the plain tones the preview
+  // falls back on: the same patches (plainTones.ts).
+  let playingOscs = [];
+${PLAIN_TONES_JS}
   function wakeAudio() {
-    if (!SYNTH || !window.LysSynth) return;
     if (!ownCtx) ownCtx = new AudioContext();
     if (ownCtx.state !== 'running') ownCtx.resume().catch(() => {});
-    if (!ownSynth) ownSynth = window.LysSynth.create(ownCtx, SYNTH.processor, SYNTH.soundFont, (status) => {
+    if (SYNTH && window.LysSynth && !ownSynth) ownSynth = window.LysSynth.create(ownCtx, SYNTH.processor, SYNTH.soundFont, (status) => {
       if (status.state === 'failed') say('Sound: ' + (status.detail || 'the sound font did not load'));
     });
   }
@@ -3314,27 +3324,40 @@ button:disabled { opacity:0.45; cursor:default; }
     clearInterval(ownTick); clearTimeout(ownEnd);
     ownTick = ownEnd = null;
     if (ownPlayer) { ownPlayer = null; if (ownSynth) ownSynth.stop(); }
+    for (const o of playingOscs) { try { o.stop(); } catch (e) { /* ended already */ } }
+    playingOscs = [];
     lightSounding(ownPane, []);
   }
   function playOwn(w, notes) {
     stopOwn();
     wakeAudio();
-    if (!ownSynth || !notes || notes.length === 0) return;
+    if (!notes || notes.length === 0) return;
     const gen = ++ownGen;
+    // The notes sounding light by the audio's own clock, and the Play ends with the last of them.
+    const follow = (t0, end) => {
+      ownPane = w;
+      if (window.LysSynth && window.LysSynth.SoundingCursor) {
+        const cursor = new window.LysSynth.SoundingCursor(notes.map(n => ({ t: n.T, d: n.D, s: n.R, o: n.O || 0 })));
+        ownTick = setInterval(() => {
+          const r = cursor.at(ownCtx.currentTime - t0);
+          if (r.changed) lightSounding(w, r.sounding.map(x => ({ pos: x.pos, occ: x.occ })));
+        }, 50);
+      }
+      ownEnd = setTimeout(stopOwn, (end + 0.5) * 1000);
+    };
+    const plain = (why) => {
+      if (gen !== ownGen) return;
+      if (!decided) say(why);
+      const t0 = ownCtx.currentTime + 0.15;
+      follow(t0, startOscillators(ownCtx, notes, 0, t0));
+    };
+    if (!ownSynth) { plain(''); return; }
     const go = (ok) => {
       if (gen !== ownGen) return;
-      if (!ok || !ownSynth.ready) { say('The sound font is not ready: press Play again in a moment.'); return; }
+      if (!ok || !ownSynth.ready) { plain('The sound font is not ready: plain tones this time.'); return; }
       if (!decided) say('');
-      ownPane = w;
       ownPlayer = ownSynth.play(notes, 0, ownCtx.currentTime + 0.15);
-      const t0 = ownPlayer.t0;
-      const cursor = new window.LysSynth.SoundingCursor(notes.map(n => ({ t: n.T, d: n.D, s: n.R, o: n.O || 0 })));
-      ownTick = setInterval(() => {
-        const r = cursor.at(ownCtx.currentTime - t0);
-        if (r.changed) lightSounding(w, r.sounding.map(x => ({ pos: x.pos, occ: x.occ })));
-      }, 50);
-      const end = Math.max(ownPlayer.end, notes.reduce((e, n) => Math.max(e, n.T + n.D), 0));
-      ownEnd = setTimeout(stopOwn, (end + 0.5) * 1000);
+      follow(ownPlayer.t0, Math.max(ownPlayer.end, notes.reduce((e, n) => Math.max(e, n.T + n.D), 0)));
     };
     if (ownSynth.state === 'loading') {
       if (!decided) say('Loading the sound font…', true);
