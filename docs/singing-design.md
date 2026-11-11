@@ -401,7 +401,11 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
    (`singerCore.voiceKey`) and the WAV named by the key under the temp folder
    (`lilysharp-voice/`); the page plays it from `voiceOrigin` (the score time of the played
    list's 0: 0 for a plain Play, the stretch's start for a span, null for a loop or a candidate's
-   notes, where the voice stays out) and after a count-in (`countInFix`); a span's voice was cut
+   notes, where the voice stays out — on the PREVIEW; the candidate panel, which plays itself
+   since 2026-11-11, sings its own: `lilysharp/sung` with the candidate's `Text`, the voices the
+   renderer holds or the engine's store answers within `CANDIDATE_VOICE_WAIT_MS`, a part to be
+   sung anew played by its instrument that once, `extension.ts candidateVoices` and the panel
+   page's `startVoices`) and after a count-in (`countInFix`); a span's voice was cut
    where the stretch ends only by the instruments' end timer — the buffer played on to the piece's
    end if the stretch was shorter, until session 1132 (§5, `voiceCues`). Nets:
    `test/singerCore.test.ts` (the score, the key, the wire, the manifest); the engine itself was

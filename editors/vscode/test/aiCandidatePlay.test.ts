@@ -264,6 +264,7 @@ describe('the AI candidate panel\'s page script', () => {
             window: { LysSynth: { SoundingCursor, create: () => synth } }, SYNTH: { processor: 'p', soundFont: 's' },
             AudioContext: function () { return ctx; }, Math, decided: false,
             ownCtx: null, ownSynth: null, ownPlayer: null, ownTick: null, ownEnd: null, ownGen: 0, ownPane: 'after',
+            ownVoices: [], startVoices: () => 0,
             playingOscs: [] as { stop: () => void }[],
             // The plain tones (plainTones.ts), stood in for: what they were asked to play, and a source to stop.
             startOscillators: (_ctx: unknown, list: unknown[], offset: number, t0: number) => {
@@ -276,7 +277,7 @@ describe('the AI candidate panel\'s page script', () => {
             setInterval: (f: () => void) => { tick = f; return 1; }, clearInterval: () => { tick = undefined; },
             setTimeout: () => { ended = true; return 2; }, clearTimeout: () => { /* none */ },
         });
-        new vm.Script([cut('function wakeAudio()'), cut('function stopOwn()'), cut('function playOwn(w, notes)')].join('\n')).runInContext(context);
+        new vm.Script([cut('function wakeAudio()'), cut('function stopOwn()'), cut('function playOwn(w, notes, sung)')].join('\n')).runInContext(context);
         const run = (code: string) => new vm.Script(code).runInContext(context);
         const notes = [{ T: 0, D: 1, R: 40, O: 0 }, { T: 1, D: 1, R: 44, O: 1 }];
         context.notes = notes;
@@ -318,7 +319,7 @@ describe('the AI candidate panel\'s page script', () => {
         assert.match(page, /decided = true;\s*stopOwn\(\);/);
         assert.match(page, /if \(e\.data\.type === 'playNotes'\) \{\s*playOwn\(/);
         assert.match(page, /if \(e\.data\.type === 'playMidi'\) \{ playMidi\(/);
-        assert.match(transform, /if \(synth && synth\.script\.length > 0\) \{\s*void panel\.webview\.postMessage\(\{ type: 'playNotes', which, notes \}\);\s*return;/);
+        assert.match(transform, /if \(synth && synth\.script\.length > 0\) \{[\s\S]{0,1400}void panel\.webview\.postMessage\(\{\s*type: 'playNotes', which, notes,/);
         // The plain tones are one text for the preview and the panel.
         assert.match(transform, /let playingOscs = \[\];\s*\$\{PLAIN_TONES_JS\}/);
         assert.match(fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8'), /\n {8}\$\{PLAIN_TONES_JS\}\r?\n/);
@@ -351,6 +352,123 @@ describe('the AI candidate panel\'s page script', () => {
         const has = (require('../src/aiTransformCore') as { hasSynth: (s?: { script: string; processor: string; soundFont: string; midiOutput: string }) => boolean }).hasSynth;
         assert.equal(has({ script: 'a', processor: 'b', soundFont: 'c', midiOutput: 'Port 1' }), true);
         assert.equal(has({ script: 'a', processor: 'b', soundFont: '', midiOutput: 'Port 1' }), false);
+    });
+    // Owner's request 2026-11-11: the panel played a song's melody on an instrument. The voices the
+    // engine has are sung in the panel, on the clock its instruments play by.
+    it('sings the voices the host hands it, the sung part lit and not struck', async () => {
+        const page = scripts.join('\n');
+        const cut = (head: string) => {
+            const at = page.indexOf(head);
+            assert.ok(at >= 0, head);
+            let depth = 0;
+            for (let i = page.indexOf('{', at); i < page.length; i++) {
+                if (page[i] === '{') depth++;
+                else if (page[i] === '}' && --depth === 0) return page.slice(at, i + 1);
+            }
+            throw new Error(head);
+        };
+        const sources: { when?: number; offset?: number; stopped: boolean; gain?: number }[] = [];
+        const played: { notes: { N: number }[]; t0: number }[] = [];
+        let litNotes = 0, decodes = 0, failDecode = false;
+        const ctx = {
+            currentTime: 10, state: 'running', destination: {}, resume: () => Promise.resolve(),
+            // A WAV of 8 s whose first sound is 0.2 s in: 0.1 s of consonant before the beat (lead 0.3).
+            decodeAudioData: () => { decodes++; return failDecode ? Promise.reject(new Error('bad')) : Promise.resolve({ duration: 8, sampleRate: 48000, getChannelData: () => new Float32Array(4) }); },
+            createBufferSource: () => {
+                const s: { when?: number; offset?: number; stopped: boolean; gain?: number; buffer?: unknown; connect: (g: { value: number }) => void; start: (w: number, o: number) => void; stop: () => void } = {
+                    stopped: false, connect: () => { /* to its gain */ },
+                    start(w: number, o: number) { this.when = w; this.offset = o; }, stop() { this.stopped = true; },
+                };
+                sources.push(s);
+                return s;
+            },
+            createGain: () => ({ gain: { value: 1 }, connect: () => { /* to the output */ } }),
+        };
+        const synth = {
+            state: 'ready', ready: true, stop: () => { /* none */ }, whenReady: () => Promise.resolve(true),
+            play: (notes: { N: number }[], _offset: number, t0: number) => { played.push({ notes, t0 }); return { t0, end: 2 }; },
+        };
+        class SoundingCursor {
+            constructor(readonly list: unknown[]) { litNotes = list.length; }
+            at() { return { changed: false, sounding: [] }; }
+        }
+        const context = vm.createContext({
+            window: { LysSynth: { SoundingCursor, create: () => synth, soundStart: () => 0.2 } }, SYNTH: { processor: 'p', soundFont: 's' },
+            AudioContext: function () { return ctx; }, Math, Promise, decided: false,
+            ownCtx: null, ownSynth: null, ownPlayer: null, ownTick: null, ownEnd: null, ownGen: 0, ownPane: 'after', ownVoices: [],
+            playingOscs: [], startOscillators: () => 2, say: () => { /* none */ }, lightSounding: () => { /* none */ },
+            setInterval: () => 1, clearInterval: () => { /* none */ }, setTimeout: () => 2, clearTimeout: () => { /* none */ },
+        });
+        new vm.Script([cut('function wakeAudio()'), cut('function decodeVoices(list)'), cut('function startVoices(decoded, t0, start, pre)'),
+            cut('function stopOwn()'), cut('function playOwn(w, notes, sung)')].join('\n')).runInContext(context);
+        const run = (code: string) => new vm.Script(code).runInContext(context);
+        const settle = () => new Promise<void>(resolve => setImmediate(resolve));
+        // Track 0 is the sung melody, track 1 the bass.
+        context.notes = [{ T: 0, D: 1, R: 40, N: 0 }, { T: 0, D: 2, R: 60, N: 1 }, { T: 1, D: 1, R: 44, N: 0 }];
+        context.voice = { part: 'melody', bytes: new Uint8Array(16), lead: 0.3 };
+        run("playOwn('after', notes, { voices: [voice], silenced: [0], start: 0 })");
+        assert.equal(played.length, 0, 'nothing sounds until the voice is decoded');
+        await settle();
+        // The instruments wait the consonant's 0.1 s; the bass alone is struck, and every note is lit.
+        assert.equal(played.length, 1);
+        assert.ok(Math.abs(played[0].t0 - 10.25) < 1e-9);
+        assert.deepEqual(played[0].notes.map(n => n.N), [1]);
+        assert.equal(litNotes, 3);
+        // The voice begins where its sound does, so its time 0.3 (the score's 0) falls on the instruments' t0.
+        assert.equal(sources.length, 1);
+        assert.ok(Math.abs(sources[0].when! - 10.15) < 1e-9 && Math.abs(sources[0].offset! - 0.2) < 1e-9);
+        run('stopOwn()');
+        assert.ok(sources[0].stopped, 'a Stop ends the voice');
+        // From inside the score (a click on a note 2 s in): no wait, and the voice is cut in there.
+        ctx.currentTime = 20;
+        run("playOwn('after', notes, { voices: [voice], silenced: [0], start: 2 })");
+        await settle();
+        assert.ok(Math.abs(played[1].t0 - 20.15) < 1e-9);
+        assert.ok(Math.abs(sources[1].when! - 20.15) < 1e-9 && Math.abs(sources[1].offset! - 2.3) < 1e-9);
+        // A newer Play while a voice decodes: the older one never starts.
+        run('stopOwn()');
+        run("playOwn('after', notes, { voices: [voice], silenced: [0], start: 0 }); stopOwn()");
+        await settle();
+        assert.equal(played.length, 2);
+        // A WAV that will not decode: the melody's instrument plays after all.
+        failDecode = true;
+        run("playOwn('after', notes, { voices: [voice], silenced: [0], start: 0 })");
+        await settle();
+        assert.deepEqual(played[2].notes.map(n => n.N), [0, 1, 0]);
+        assert.equal(sources.length, 2);
+        assert.ok(decodes >= 4);
+        // The host: the voices of the text played, asked with what its playback sings and plays.
+        assert.match(page, /playOwn\(e\.data\.which === 'before' \? 'before' : 'after', e\.data\.notes \|\| \[\],\s*\{ voices: e\.data\.voices \|\| \[\], silenced: e\.data\.silenced \|\| \[\], start: e\.data\.start \|\| 0, said: e\.data\.said \|\| '' \}\);/);
+        assert.match(transform, /const sung = await deps\.voicesFor\?\.\(text, play\.uri, deps\.renderNameOf\?\.\(play\.uri\), sounds, part => \{/);
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /voicesFor: candidateVoices,/);
+        assert.match(ext, /sendRequest\('lilysharp\/sung', \{ textDocument: \{ uri: uri\.toString\(\) \}, text, renderName: renderName \?\? null \}\);/);
+        // A voice the renderer holds is there at once; one to be sung is waited for briefly, then left to land later.
+        assert.match(ext, /const \{ rendered, cached \} = await engine\.render\(voice, 1\);/);
+        assert.match(ext, /out\.waiting\.push\(voice\.Part\);[\s\S]{0,160}rendered\.then\(\(\) => onSung\(voice\.Part\)/);
+    });
+    it('names the voices a candidate\'s Play sings and the instruments they replace', () => {
+        const core = require('../src/aiTransformCore') as {
+            candidateSings: (v: { Part: string; InScore?: boolean; Notes: unknown[] }[], s: object) => { Part: string }[];
+            candidateSilencedTrack: (part: string, s: object) => number;
+            candidateWaitingNote: (w: string[]) => string | undefined;
+        };
+        const sounds = { Parts: ['bass', 'melody', 'alto'], Sung: ['melody', 'alto'], Played: ['bass', 'alto'] };
+        const voices = [
+            { Part: 'melody', Notes: [1] }, { Part: 'alto', Notes: [1] },
+            { Part: 'tenor', Notes: [1], InScore: false },      // the practice menu's, not the score's
+            { Part: 'melody', Notes: [] },                       // words with no notes
+            { Part: 'bass', Notes: [1] },                        // not sung by this score
+        ];
+        assert.deepEqual(core.candidateSings(voices, sounds).map(v => v.Part), ['melody', 'alto']);
+        // A part only sung gives its instrument up; one played too sounds both ways.
+        assert.equal(core.candidateSilencedTrack('melody', sounds), 1);
+        assert.equal(core.candidateSilencedTrack('alto', sounds), -1);
+        assert.equal(core.candidateSilencedTrack('bass', sounds), -1);
+        assert.equal(core.candidateSilencedTrack('melody', {}), -1);
+        assert.equal(core.candidateWaitingNote([]), undefined);
+        assert.equal(core.candidateWaitingNote(['melody']), 'The voice of melody is being sung: its instrument plays this time.');
+        assert.match(core.candidateWaitingNote(['sop', 'alto'])!, /^The voices of sop, alto are being sung: their instruments/);
     });
     it('splits a note\'s copies by their bars, whatever the order of the DOM', () => {
         const page = scripts.join('\n');

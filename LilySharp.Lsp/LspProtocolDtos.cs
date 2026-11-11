@@ -366,6 +366,10 @@ public class SungParams
     /// <see cref="ExportParams"/> names them.</summary>
     public TextDocumentIdentifier? TextDocument { get; set; }
     public string? Path { get; set; }
+    /// <summary>A text of its own to read instead of the document's — an AI candidate not applied
+    /// yet (as <see cref="PlaybackTextParams.Text"/>); its <c>using</c>s resolve beside
+    /// <see cref="TextDocument"/>'s file. Read-only; nothing is opened.</summary>
+    public string? Text { get; set; }
     public string? RenderName { get; set; }
     /// <summary>True: every singable lyrics track of the FILE, not only the rows the score places
     /// (the practice menu lists them all, session 1163) — a track the score does not place is read

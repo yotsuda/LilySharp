@@ -26,6 +26,7 @@ import {
     TransportKind
 } from 'vscode-languageclient/node';
 import { registerAiTransform, showCandidateSounding, tellCandidateAudioBlocked } from './aiTransform';
+import { CandidateSounds, CandidateVoices, candidateSilencedTrack, candidateSings } from './aiTransformCore';
 import { registerAiComplete } from './aiComplete';
 import { findCopilotLogFrom, pickAiModel, rememberRefusalsIn } from './modelClient';
 import { reviewPointsOf } from './reviewCore';
@@ -982,6 +983,8 @@ export function activate(context: vscode.ExtensionContext) {
             return { started: !!r.Started, t0Ms: r.StartedAtMs ?? 0, end: r.EndSeconds ?? 0, error: r.Error ?? null };
         },
         midiStop: () => { void midiOutRequest('lilysharp/midiOut/stop', {}); },
+        // …and sings (owner's request 2026-11-11): the voices the engine has for the text played.
+        voicesFor: candidateVoices,
         stopOnPreview: (uri: vscode.Uri) => {
             void previewPanels.get(uri.toString())?.webview.postMessage({ type: 'ctxStop' });
         },
@@ -4447,6 +4450,62 @@ async function renderVoice(job: PrepareJob): Promise<void> {
     })();
     if (!cached) { vscode.window.setStatusBarMessage(`Lily#: singing ${voice.Part}…`, singing); }
     await singing;
+}
+
+/** How long a candidate's Play waits for a voice the renderer does not hold: the engine's own
+ *  store answers within it (a voice sung in an earlier session), a voice to be sung does not. */
+const CANDIDATE_VOICE_WAIT_MS = 600;
+
+/**
+ * The voices of a text for a candidate panel's Play (AiTransformDeps.voicesFor; owner's request
+ * 2026-11-11). A voice is kept by its notes, its words and its singer, so a candidate that left a
+ * sung part alone finds the voice the preview had sung — at once, with no work for the engine. A
+ * part the candidate changed is sung now, at the score's own speed; its instrument stands in for
+ * this Play and `onSung` says when the voice is there. The practice menu's switches are the
+ * preview's and are not read: the panel plays the score as written. With no engine, no server or a
+ * text that sings nothing, nothing is asked.
+ */
+async function candidateVoices(text: string, uri: vscode.Uri, renderName: string | undefined, sounds: CandidateSounds,
+    onSung: (part: string) => void): Promise<CandidateVoices> {
+    const out: CandidateVoices = { voices: [], silenced: [], waiting: [] };
+    if (!client || !clientReady || (sounds.Sung ?? []).length === 0) { return out; }
+    const engine = await renderer();
+    if (!engine) { return out; }
+    const log = (what: string) => outputChannel.appendLine(`singer: ${clockNow()} candidate: ${what}`);
+    let sung: { Voices?: SungVoiceDto[] | null; Error?: string | null };
+    try {
+        sung = await client.sendRequest('lilysharp/sung', { textDocument: { uri: uri.toString() }, text, renderName: renderName ?? null });
+    } catch (e) {
+        log(`lilysharp/sung failed: ${String(e)}`);
+        return out;
+    }
+    if (sung.Error || !sung.Voices) { log(`no voices (${sung.Error ?? 'none'})`); return out; }
+    const silenced = new Set<number>();
+    for (const voice of candidateSings(sung.Voices, sounds)) {
+        try {
+            const { rendered, cached } = await engine.render(voice, 1);
+            let late: ReturnType<typeof setTimeout> | undefined;
+            const v = cached ? await rendered : await Promise.race([
+                rendered,
+                new Promise<undefined>(resolve => { late = setTimeout(() => resolve(undefined), CANDIDATE_VOICE_WAIT_MS); }),
+            ]);
+            if (late !== undefined) { clearTimeout(late); }
+            if (!v) {
+                out.waiting.push(voice.Part);
+                log(`${voice.Part}: to the engine; its instrument plays this time`);
+                rendered.then(() => onSung(voice.Part), e => log(`${voice.Part} was not sung — ${String(e)}`));
+                continue;
+            }
+            out.voices.push({ part: voice.Part, bytes: new Uint8Array(await fs.promises.readFile(v.wav)), lead: VOICE_LEAD_S });
+            const track = candidateSilencedTrack(voice.Part, sounds);
+            if (track >= 0) { silenced.add(track); }
+            log(`${voice.Part}: ${cached ? 'the voice the preview had' : 'from the engine\'s store'} (${v.duration.toFixed(1)} s)`);
+        } catch (e) {
+            log(`${voice.Part} was not sung — ${String(e)}; its instrument plays`);
+        }
+    }
+    out.silenced = [...silenced];
+    return out;
 }
 
 /** The picker behind `Lily#: Choose MIDI Output…` and the setting's link: the preview's

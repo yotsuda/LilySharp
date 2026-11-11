@@ -42,6 +42,7 @@ import {
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
     cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, newPieceOverScore, guidePages, guideContents, CandidateSynth, playsItself, hasSynth, headerLanguageNote, diagLines,
+    CandidateSounds, CandidateVoices, candidateWaitingNote,
     lastUserMessageAt, heldClashesOf, noTuneOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
     applyDraft, draftSummary, DraftInput, FROM_DRAFT_NOTE,
     applyScoreEdits, ScoreEdit, scorePartView, scorePages,
@@ -79,6 +80,11 @@ export interface AiTransformDeps {
     midiPlay?: (port: string, notes: unknown[]) => Promise<{ started: boolean; t0Ms: number; end: number; error: string | null }>;
     /** Stops what the MIDI output plays. */
     midiStop?: () => void;
+    /** The voices of `text`'s score for a candidate's Play (owner's request 2026-11-11: the panel
+     *  played the song's melody on an instrument): what the engine has now, and for a voice it has
+     *  yet to sing, `onSung` once it is there. Empty with no engine, or nothing sung. */
+    voicesFor?: (text: string, uri: vscode.Uri, renderName: string | undefined, sounds: CandidateSounds,
+        onSung: (part: string) => void) => Promise<CandidateVoices>;
     /** Stops what the preview of `uri` is playing. */
     stopOnPreview?: (uri: vscode.Uri) => void;
     /** The score the preview of `uri` shows (its picker), or undefined for the first. */
@@ -2854,7 +2860,26 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
         // 2026-11-11: there too the Play is to sound). The preview plays only for a host that
         // hands the panel no synth at all.
         if (synth && synth.script.length > 0) {
-            void panel.webview.postMessage({ type: 'playNotes', which, notes });
+            // The words are sung where the engine has their voice (owner's request 2026-11-11). A
+            // voice is kept by its notes and words, so a candidate that left the sung part alone
+            // has the document's voice at once; one that changed it is sung now, its instrument
+            // standing in this time, and the panel says when the voice is there.
+            const text = which === 'after' ? play.after : play.before;
+            const sounds = pb as CandidateSounds;
+            const sung = await deps.voicesFor?.(text, play.uri, deps.renderNameOf?.(play.uri), sounds, part => {
+                if (candidatePanel === panel && audible && (which === 'after' ? audible.after : audible.before) === text) {
+                    say(`The voice of ${part} is ready: Play sings it.`);
+                }
+            }).catch(e => { deps.log(`candidate voices: ${String(e)}`); return undefined; });
+            const silenced = new Set(sung?.silenced ?? []);
+            void panel.webview.postMessage({
+                type: 'playNotes', which, notes,
+                // What the synth strikes: a part its voice sings is lit, not played.
+                silenced: [...silenced],
+                voices: (sung?.voices ?? []).map(v => ({ part: v.part, bytes: v.bytes, lead: v.lead })),
+                start,
+                said: candidateWaitingNote(sung?.waiting ?? []),
+            });
             return;
         }
         if (!deps.playOnPreview?.(play.uri, notes)) {
@@ -3319,20 +3344,64 @@ ${PLAIN_TONES_JS}
     }
     ownEnd = setTimeout(stopOwn, Math.max(0, t0Ms - Date.now() + (end + 0.5) * 1000));
   }
+  // The voices of a Play (owner's request 2026-11-11: the panel played a song's melody on an
+  // instrument). Each WAV begins lead seconds before the score's 0, its first consonant in that
+  // lead; the instruments wait for the earliest of them on a Play from the top (as the preview's
+  // voicePreroll), and a Play from inside the score cuts the voice in where it starts.
+  let ownVoices = [];
+  function decodeVoices(list) {
+    return Promise.all((list || []).map(v => {
+      const bytes = v.bytes;
+      if (!bytes || !bytes.buffer) return null;
+      const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+      return ownCtx.decodeAudioData(copy).then(buffer => {
+        const lead = v.lead || 0;
+        const s = lead > 0 && window.LysSynth && window.LysSynth.soundStart
+          ? window.LysSynth.soundStart(buffer.getChannelData(0), buffer.sampleRate, lead) : null;
+        return { buffer, lead, pre: s === null ? 0 : Math.max(0, lead - s) };
+      }, () => null);
+    })).then(done => done.filter(v => v));
+  }
+  // Starts the voices so that the score's time start sounds at the context's time t0; answers
+  // where the last of them ends, in the list's time.
+  function startVoices(decoded, t0, start, pre) {
+    let end = 0;
+    for (const v of decoded) {
+      const from = v.lead + start - (start > 0 ? 0 : pre);
+      if (from >= v.buffer.duration) continue;
+      const src = ownCtx.createBufferSource();
+      src.buffer = v.buffer;
+      const gain = ownCtx.createGain();
+      gain.gain.value = 0.9;
+      src.connect(gain);
+      gain.connect(ownCtx.destination);
+      src.start(t0 - (start > 0 ? 0 : pre), Math.max(0, from));
+      ownVoices.push(src);
+      end = Math.max(end, v.buffer.duration - v.lead - start);
+    }
+    return end;
+  }
   function stopOwn() {
     ownGen++;
     clearInterval(ownTick); clearTimeout(ownEnd);
     ownTick = ownEnd = null;
+    for (const s of ownVoices) { try { s.stop(); } catch (e) { /* ended already */ } }
+    ownVoices = [];
     if (ownPlayer) { ownPlayer = null; if (ownSynth) ownSynth.stop(); }
     for (const o of playingOscs) { try { o.stop(); } catch (e) { /* ended already */ } }
     playingOscs = [];
     lightSounding(ownPane, []);
   }
-  function playOwn(w, notes) {
+  function playOwn(w, notes, sung) {
     stopOwn();
     wakeAudio();
     if (!notes || notes.length === 0) return;
     const gen = ++ownGen;
+    // What the synth strikes: a part its voice sings is lit by the list, and not played. The
+    // voices sing from start, the score's time the list's 0 stands at; pre is how long the
+    // instruments wait for a consonant before the beat.
+    const start = sung && sung.start > 0 ? sung.start : 0;
+    let struck = notes, voices = [], pre = 0;
     // The notes sounding light by the audio's own clock, and the Play ends with the last of them.
     const follow = (t0, end) => {
       ownPane = w;
@@ -3343,28 +3412,41 @@ ${PLAIN_TONES_JS}
           if (r.changed) lightSounding(w, r.sounding.map(x => ({ pos: x.pos, occ: x.occ })));
         }, 50);
       }
-      ownEnd = setTimeout(stopOwn, (end + 0.5) * 1000);
+      const last = Math.max(end, startVoices(voices, t0, start, pre), notes.reduce((e, n) => Math.max(e, n.T + n.D), 0));
+      ownEnd = setTimeout(stopOwn, (pre + last + 0.5) * 1000);
     };
     const plain = (why) => {
       if (gen !== ownGen) return;
-      if (!decided) say(why);
-      const t0 = ownCtx.currentTime + 0.15;
-      follow(t0, startOscillators(ownCtx, notes, 0, t0));
+      if (!decided) say(why || (sung && sung.said) || '');
+      const t0 = ownCtx.currentTime + 0.15 + pre;
+      follow(t0, startOscillators(ownCtx, struck, 0, t0));
     };
-    if (!ownSynth) { plain(''); return; }
     const go = (ok) => {
       if (gen !== ownGen) return;
       if (!ok || !ownSynth.ready) { plain('The sound font is not ready: plain tones this time.'); return; }
-      if (!decided) say('');
-      ownPlayer = ownSynth.play(notes, 0, ownCtx.currentTime + 0.15);
-      follow(ownPlayer.t0, Math.max(ownPlayer.end, notes.reduce((e, n) => Math.max(e, n.T + n.D), 0)));
+      if (!decided) say((sung && sung.said) || '');
+      ownPlayer = ownSynth.play(struck, 0, ownCtx.currentTime + 0.15 + pre);
+      follow(ownPlayer.t0, ownPlayer.end);
     };
-    if (ownSynth.state === 'loading') {
-      if (!decided) say('Loading the sound font…', true);
-      ownSynth.whenReady(8000).then(go);
-    } else {
-      go(true);
-    }
+    const begin = () => {
+      if (!ownSynth) { plain(''); return; }
+      if (ownSynth.state === 'loading') {
+        if (!decided) say('Loading the sound font…', true);
+        ownSynth.whenReady(8000).then(go);
+      } else {
+        go(true);
+      }
+    };
+    if (!sung || !sung.voices || sung.voices.length === 0) { begin(); return; }
+    decodeVoices(sung.voices).then(done => {
+      if (gen !== ownGen) return;
+      // A WAV that would not decode: every instrument plays, and what did decode is sung over it.
+      const off = done.length === sung.voices.length ? (sung.silenced || []) : [];
+      voices = done;
+      if (off.length > 0) struck = notes.filter(n => !off.includes(n.N));
+      if (start === 0) pre = done.reduce((p, v) => Math.max(p, v.pre), 0);
+      begin();
+    });
   }
   document.getElementById('play').addEventListener('click', () => { wakeAudio(); play(); });
   // A click on a note (anything the score ties to the source) plays the pane from there; on a
@@ -3465,7 +3547,8 @@ ${PLAIN_TONES_JS}
     if (!e.data) return;
     if (e.data.type === 'sounding') { lightSounding(e.data.which, e.data.sounding || []); return; }
     if (e.data.type === 'playNotes') {
-      playOwn(e.data.which === 'before' ? 'before' : 'after', e.data.notes || []);
+      playOwn(e.data.which === 'before' ? 'before' : 'after', e.data.notes || [],
+        { voices: e.data.voices || [], silenced: e.data.silenced || [], start: e.data.start || 0, said: e.data.said || '' });
       if (e.data.said && !decided) say(e.data.said);
       return;
     }

@@ -1046,8 +1046,17 @@ public sealed partial class LilySharpLanguageServer
 
     public SungResponse GetSung(SungParams @params)
     {
+        SyntaxTree tree;
+        if (@params.Text is { } text)
+        {
+            // A text of its own (a candidate's Play, owner's request 2026-11-11): read as
+            // lilysharp/playbackText reads it, so the voices land on the notes that answer gives.
+            string basePath = @params.TextDocument?.Uri is { IsFile: true } beside ? beside.LocalPath : string.Empty;
+            tree = ExpandUsings(text, SyntaxTree.Parse(text), basePath,
+                p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree;
+        }
         // The open document, or a file on the disk the folder export names (session 1153).
-        if (ExportTreeOf(@params.TextDocument, @params.Path, out var tree, out _) is { } problem)
+        else if (ExportTreeOf(@params.TextDocument, @params.Path, out tree, out _) is { } problem)
             return new SungResponse { Error = problem };
         if (tree.HasErrors)
             return new SungResponse { Error = "Score has errors" };

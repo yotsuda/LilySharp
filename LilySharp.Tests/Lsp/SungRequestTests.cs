@@ -80,6 +80,35 @@ public class SungRequestTests
         Assert.Equal(melody.Select(n => n.S), voice.Notes.Select(n => n.S));
     }
 
+    // Owner's request 2026-11-11: a candidate's Play sings. The text is the candidate's, not the
+    // document's — read as lilysharp/playbackText reads it, so the two answers agree note for note.
+    [Fact]
+    public void ATextOfItsOwn_IsSungInsteadOfTheDocument()
+    {
+        var server = Open(out var uri);
+        string candidate = Doc.Replace("bass { c,2 | f,2 | }", "bass { c,4 g, | f,2 | }");
+        var sung = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Text = candidate });
+        Assert.Null(sung.Error);
+        var voice = Assert.Single(sung.Voices!);
+        // The melody is as it was: the same notes and words as the document's voice — the key the
+        // engine keeps its voice under is the same, and nothing is sung anew.
+        var ofDocument = Assert.Single(server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri } }).Voices!);
+        Assert.Equal(ofDocument.Notes.Select(n => (n.T, n.D, n.P, n.L)), voice.Notes.Select(n => (n.T, n.D, n.P, n.L)));
+
+        // Another melody: its voice is the candidate's, on the candidate's own offsets.
+        string resung = Doc.Replace("ゆ _ き や", "は _ る の");
+        var other = Assert.Single(server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Text = resung }).Voices!);
+        Assert.Equal(new[] { "は", null, "る", "の", "こん", "こ" }, other.Notes.Select(n => n.L));
+        var playback = server.GetPlaybackText(new PlaybackTextParams { Text = resung, Uri = uri });
+        var melody = playback.Notes!.Where(n => n.P != PlaybackNote.PedalPitch && playback.Parts![n.N] == "melody").ToArray();
+        Assert.Equal(melody.Select(n => n.T), other.Notes.Select(n => n.T));
+        Assert.Equal(new[] { "melody" }, playback.Sung);
+
+        // A text with no document beside it, and one with an error.
+        Assert.Single(new LilySharpLanguageServer(Stream.Null, Stream.Null).GetSung(new SungParams { Text = Doc }).Voices!);
+        Assert.Equal("Score has errors", server.GetSung(new SungParams { Text = Doc.Replace("form { A }", "form { A") }).Error);
+    }
+
     /// <summary>Owner's decision 2026-11-09 (雪やこんこ.lys: <c>staff m2  lyrics verse sings melody</c>,
     /// no staff of the melody): the melody is sung, not drawn, not played — the voice has its
     /// words, the playback carries its notes as a sung part (the stand-in while there is no

@@ -1000,6 +1000,44 @@ export function hasSynth(synth: CandidateSynth | undefined): boolean {
 export function playsItself(synth: CandidateSynth | undefined): boolean {
     return hasSynth(synth) && synth!.midiOutput.length === 0;
 }
+
+/** A voice a candidate's Play sings: its part, the WAV, and how long the WAV runs before the
+ *  score's 0 (the first consonant's room, VOICE_LEAD_S). */
+export interface CandidateVoice { part: string; bytes: Uint8Array; lead: number }
+
+/** What the engine has for a candidate's Play (AiTransformDeps.voicesFor): the voices there now,
+ *  the tracks (indices in the playback's Parts) whose instrument gives way to them, and the parts
+ *  whose voice is still being sung — their instruments play this time. */
+export interface CandidateVoices { voices: CandidateVoice[]; silenced: number[]; waiting: string[] }
+
+/** Which parts a played text sings and plays, as `lilysharp/playbackText` answers. */
+export interface CandidateSounds { Parts?: string[] | null; Sung?: string[] | null; Played?: string[] | null }
+
+/**
+ * Of a text's voices (`lilysharp/sung`), the ones a candidate's Play sings: the score's own, with
+ * notes, of a part the score sings. The practice menu's switches are the preview's and are not read
+ * here: the panel plays the score as written.
+ */
+export function candidateSings<V extends { Part: string; InScore?: boolean; Notes: readonly unknown[] }>(
+    voices: readonly V[], sounds: CandidateSounds): V[] {
+    const sung = new Set(sounds.Sung ?? []);
+    return voices.filter(v => v.Notes.length > 0 && v.InScore !== false && sung.has(v.Part));
+}
+
+/** The track whose instrument a part's voice replaces, or -1: a part the score only sings (one it
+ *  plays too sounds both ways — the export's rule, extension.ts). */
+export function candidateSilencedTrack(part: string, sounds: CandidateSounds): number {
+    if (!(sounds.Sung ?? []).includes(part) || (sounds.Played ?? []).includes(part)) { return -1; }
+    return (sounds.Parts ?? []).indexOf(part);
+}
+
+/** What the panel says of the voices not there yet, or undefined with none waiting. */
+export function candidateWaitingNote(waiting: readonly string[]): string | undefined {
+    if (waiting.length === 0) { return undefined; }
+    return waiting.length === 1
+        ? `The voice of ${waiting[0]} is being sung: its instrument plays this time.`
+        : `The voices of ${waiting.join(', ')} are being sung: their instruments play this time.`;
+}
 /**
  * What each part of a paged guide is about, a line a part: its headings (`#`, `##`). For the first
  * part of the grammar (owner's run 2026-11-11: to add a strings pad to a score, the chat read all
