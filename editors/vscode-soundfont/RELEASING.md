@@ -4,7 +4,7 @@ For whoever publishes it (the owner). Nothing here is in the package (`.vscodeig
 
 1. `./Get-SoundFont.ps1` — brings `soundfont/MuseScore_General.sf3` from the MuseScore project's
    mirror and checks its SHA-256 against the one the README gives. The font is not in git.
-2. `npx @vscode/vsce package` in this folder — a VSIX of about 38 MB. If the Marketplace turns it
+2. `npx @vscode/vsce package` in this folder — a VSIX of 34 MB (built and installed on the owner's machine 2026-11-11; Lily#'s own is 33). If the Marketplace turns it
    down for its size, that is the limit this package was not tried against (Lily#'s own VSIX is
    33 MB): say so in docs/HANDOFF.md and the plan is to be thought again.
 3. Install the VSIX in a VS Code that has Lily#, open a score and Play: the status of the synth
