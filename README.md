@@ -271,6 +271,11 @@ Lily#'s and are marked in the files that carry them.
 The per-file headers name the copyright holder without an address; this line is the
 one place the address is kept, so it stays correct if it ever changes.
 
+**One folder under another licence.** `editors/vscode-soundfont` — the Lily# Sound Font
+extension, which carries the MuseScore_General sound font unchanged — is under the MIT
+license, the font's own and its packaging's alike; see its `LICENSE.md`. The font file
+is not kept in this repository.
+
 **Source for the binaries.** The CLI archives and the VS Code extension are built
 from this repository. The complete corresponding source for any released binary is
 the tagged commit it was built from, available at
