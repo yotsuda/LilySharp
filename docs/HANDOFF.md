@@ -140,6 +140,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1224セッション（2026-11-11・YT-DELL2）
+
+（`-Start p1224`: full 15184 合格 / 0 失敗 / skip 2 / 合計 15186・`p1224/run1.trx`。base `294e0b1d4`。語りは便の終わりに書く）
+
+## 以下は第1223セッションの経緯
+
 ### 1.1 第1223セッション（2026-11-10〜11・YT-DELL2）
 
 オーナーが Copilot に作曲させた曲を送り、監査と直しを重ねた便（`-Start` は回していない＝開始時の full は無い。base `e08a9d32d`）。
@@ -152,21 +158,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **OMR への依頼**: Calamo `docs/repro/REQUESTS.md` の「Lily# からの連絡」2026-11-11（読み手が `key` を常に長調で書く）。Calamo 側は未 commit。
 - 7.6: 各項はオーナーの報告から（曲のパスは各 commit の本文）。7.7 の匂い: `key.outside` の新しい指摘はコーパスで 15 → 16 冊・小節が変わった本 7 冊のうち当否を見たのは 2 冊だけ／実物の Copilot での確認は未（`MANUAL-CHECKS` C64・C65）／perf ベンチは未実行。
 - 門（`-End`、base `e08a9d32d`）: 終了時 full 15184 合格 / 0 失敗 / skip 2 / 合計 15186（`p1223/run1.trx`）。拡張 npm 973 合格。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` 433 行 / LILYPOND-REF 0 / OWN 1（7.5: 検査と道具の便で移植は無い。OWN は niente の velocity）。棚卸しの増減 0。未 push 71 件。
-
-## 以下は第1222セッションの経緯
-
-### 1.1 第1222セッション（2026-11-10・YT-DELL2）
-
-- **設計 §10 を実装した**（`part sop { lyrics words }`、§9 の⑤）。新しい節 `PartLyricsDeclaration`、`LyricBindings.TracksOfPart`／`OnlyPartNaming`。`singer … sings on PART` は名前なしでパートの歌詞を歌い（1 つのとき）、複数なら LYS4054、挙げていない歌詞の `singer` 行と score の行は警告 LYS4055。譜の無い `lyrics NAME` 行は、その歌詞を挙げるパートが 1 つならそのリズムに付く（`RenderSpecParser.RowTarget`）。名前の無い定義の参照は既存の LYS1007 が言う。本文つきの `lyrics` は今までどおり LYS4049。設計に書いていなかった読み: `hum`・`solfege`・名前の無い行も LYS4055 では歌詞として数える（設計 §10 に 1 行足した）。
-- **エディタ**: part の中の補完（`lyrics`、続けて歌詞名と `hum`・`solfege`）、色、F12、リネーム。⚠️ リネームと F12 は今まで `singer` 行の歌詞名を見ていなかったので一緒に足した（設計 §7）。`singer "` の声の絞り込みは `sings on PART` のときパートの歌詞の言語を読む。実機は未（`MANUAL-CHECKS` 第1222）。
-- パーサの歌詞の範囲の事前走査（`Parser.cs` の `lyricsHead`）は `section` で解除する。`part p { lyrics w  section A { … } }` の `{` を歌詞の本文と読むため。
-- **第1221 の残る欠陥を閉じた**（オーナー指示）: 歌う言葉を読む spec（`LyricSinger.WithSungWords`、描画しない）では、歌われる歌詞の行を全部、その行が従うパートの譜へ移す（`WithoutRows`）。行は歌詞名だけで引かれるので、行が残ると譜の歌詞が読み飛ばされ、同名の行は 1 本になっていた。譜より上の行・名前の無い行・行が 2 本・tab・condensed・combined で再現し、全部 4 声になる。tab と condensed・combined のパートには読むだけの譜を足す（`DrawnOnASharedStaff` は撤去）。`ScoreRowFoldingTests.ASingerLineReadsTheRowStandingInAGroup` は「spec が同じインスタンス」の断言を「歌詞がそのパートに 1 回」に書き換えた。
-- **描画と `lysc ly` も、1 つの歌詞の置き場所ごとに別物にした**（オーナー指示）。⑴ 行と同名の譜の歌詞を読み飛ばす `_lyricsRowNames` の枝を撤去（`CollectAttached` は名指された歌詞だけ読む）。⑵ 行の声は `RowKey`（2 本目以降は track 名に制御文字＋番号）で別の `staffVoices` の項にして、旋律が譜に無い行もそれぞれのリズムが間隔に入る。barline の同期が声を名前で引くので、`VoicesFor` で渡すまで声の名前も key にしておく。⑶ `lysc ly` は行ごとに書いた場所へ（`LyricsRowSpec.SourceStart`・`_standingRowKeys`。等値には含めない）。⑷ `SungSyllables` の行の対応と `RowMelodies` を譜の番号で引く。⑸ **別の欠陥**: `SingsTargetToken` が `Identifier` だけ受けていて、`s`・`a`・`bass` などのパート名の `on` が黙って無視されていた。LP 2.26.0 の双子と絵で照合（`p1222/rows`）。
-- **譜をまたぐ小節線と歌詞の重なりを直した**（オーナー報告 `Harukaze-no-Mukou-e.lys` の `きょ`）。LP の `SpanBarStub` の移植（`LyricSpacing.ReserveAgainstSpanBarStubs`・`SpanBarCrossedStaves`）: span bar が通る段（ChoirStaff 以外の group で、最後の譜より上）の最初と最後の音節に、左は Staff_spacing の床、右は rod。LP の実測は小節線から左 0.40・右 0.20 で Lily# も同じ。掃き 1263 枚で動いたのは `showcase/08-chorale` の 1 枚で、LP の双子と絵で照合してオーナー承認のうえ snapshot を更新。台帳の点は足していない（網は `LyricSpanBarStubTests`、毒 7 本すべて赤＝`p1222/poisons4.ps1`）。行の途中で hara-kiri に隠れる譜は段の判定に入れていない。
-- **強弱記号も同じ**（`LyricSpacing.ReserveDynamicsAgainstSpanBars`、`engraver-init.ly:475-477`）。`fff`・`sfz`・`mf` の小節の広がりは LP と 0.01 以内。掃きで動いたのは `canon-in-d`・`nocturne`（snapshot なし）。残り: 同じ隙間の隣り合う強弱記号どうしの rod は未移植。`sub. p` は LP が全体を音の中央に置き（`p` は符頭より右）、Lily# は `p` を符頭の下に置く＝オーナー決定 2026-11-10 で今のまま（`SubitoWidth` の LILYSHARP-OWN）。毒 10 本すべて赤＝`p1222/poisons5.ps1`（緑の 1 本から LP の広がりの網を足した）。
-- **試聴の `こんにちわ` の高さ**（オーナー決定）: `singer` 行の性別、なければ声の性別、どちらもなければ低い音域（`singerCore.sampleOctave`）。キャッシュの名前に高さが入る。実機は未（`MANUAL-CHECKS` 第1222）。
-- 全 svg の掃き 1263 枚で差 0（§10 の分。Lab `sessions/p1222/sweep`、base は HEAD の worktree から。描画の修正の後も 1263 枚で差 0＝既存の本には同じ歌詞の二重の置き方が無い。`.mid` の前後比較は `singer` を書く本が 1 冊だけで差 0＝`p1222/mid-compare.ps1`）。毒は §10 が 16 本・歌う言葉が 7 本・描画と双子が 10 本ですべて赤（`p1222/poisons.ps1`・`poisons2.ps1`・`poisons3.ps1`。1 回目の緑 2 本から `RowTarget` の null と事前走査の網を足した）。⚠️ perf ベンチは未実行。
-- 門（`-End`、base `883b7afcb`）: 開始時 full 15080 合格 / 0 失敗 / skip 2 / 合計 15082、終了時 full 15158 合格 / 0 失敗 / skip 2 / 合計 15160（`p1222` の trx）。拡張 npm 961 合格。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` 522 行 / LILYPOND-REF 12 / OWN 0（7.5: REF は span bar まわりの移植だけ）。棚卸しの増減 0。未 push 40 件（この締めの commit を除く）。
 
 ## 2. 開いている作業
 
