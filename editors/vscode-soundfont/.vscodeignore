@@ -1,0 +1,4 @@
+# What builds the package is not in it.
+Get-SoundFont.ps1
+.gitignore
+*.vsixRELEASING.md

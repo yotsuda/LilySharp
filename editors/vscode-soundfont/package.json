@@ -1,0 +1,30 @@
+{
+  "name": "lilysharp-soundfont",
+  "displayName": "Lily# Sound Font (MuseScore General)",
+  "description": "The sound Lily# plays scores with: the MuseScore_General sound font (by S. Christian Collins and others, MIT license), unchanged. Not an official MuseScore distribution.",
+  "version": "1.0.0",
+  "publisher": "yotsuda",
+  "author": "Yoshifumi Tsuda",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yotsuda/LilySharp.git",
+    "directory": "editors/vscode-soundfont"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "lilysharp",
+    "soundfont",
+    "sf3",
+    "general midi",
+    "music"
+  ],
+  "extensionKind": [
+    "ui"
+  ]
+}

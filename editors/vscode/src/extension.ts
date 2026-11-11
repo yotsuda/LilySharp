@@ -3551,7 +3551,8 @@ function soundFontFile(extensionUri: vscode.Uri): { file: vscode.Uri; root: vsco
 }
 
 /** What plays when the setting is empty, named as the picker shows it: a font under
- *  media/soundfont (a developer's local build — a release carries none), else the OS's bank.
+ *  media/soundfont (a developer's local build — a release carries none), else the Lily# Sound
+ *  Font extension's when that is installed (packagedSoundFont), else the OS's bank.
  *  ONE answer for the player and the picker: the picker said "gm.dls" while a local build
  *  played its MuseScore_General, which then had no name in the list (owner's report
  *  2026-10-12). */
@@ -3563,7 +3564,30 @@ function defaultSoundFont(extensionUri: vscode.Uri): { label: string; path: stri
             return { label: `${files[0]} (this build's own, under media/soundfont)`, path: path.join(dir.fsPath, files[0]) };
         }
     } catch { /* none here — a release carries none */ }
-    return osSoundFonts()[0] ?? null;
+    return packagedSoundFont() ?? osSoundFonts()[0] ?? null;
+}
+
+/** The Lily# Sound Font extension (editors/vscode-soundfont): MuseScore_General.sf3 as its authors
+ *  published it (MIT), in a package of its own. Owner's decision 2026-11-11, revising the one of
+ *  2026-10-12 (no font in the VSIX; the OS's bank by default): a thin sound makes the whole
+ *  product look thin, so a good one is to be there from the start — but not in THIS package,
+ *  which is downloaded whole at every update: a font does not change, and in its own package it
+ *  is downloaded once. */
+const SOUND_FONT_EXTENSION = 'yotsuda.lilysharp-soundfont';
+
+/** The font that extension carries, when it is installed: what plays by default then, ahead of
+ *  the OS's bank. */
+function packagedSoundFont(): { label: string; path: string } | null {
+    const packaged = vscode.extensions.getExtension(SOUND_FONT_EXTENSION);
+    if (!packaged) { return null; }
+    const dir = path.join(packaged.extensionPath, 'soundfont');
+    try {
+        const files = fs.readdirSync(dir).filter(f => /\.(sf2|sf3|dls)$/i.test(f)).sort();
+        if (files.length > 0) {
+            return { label: `${files[0]} (the Lily# Sound Font extension)`, path: path.join(dir, files[0]) };
+        }
+    } catch { /* installed without its font: the OS's bank */ }
+    return null;
 }
 
 /** The General MIDI banks an OS ships for its own synth, where present: Windows' Microsoft GS

@@ -1,0 +1,4 @@
+# The sound font itself is fetched, not kept in git (40 MB): Get-SoundFont.ps1 brings it and
+# checks it against the hash the README gives.
+soundfont/*.sf3
+*.vsix

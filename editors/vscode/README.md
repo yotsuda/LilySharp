@@ -168,7 +168,9 @@ exported MIDI does — drums on the drum channel, a quarter tone as a pitch bend
 step keys and the caret strike the part's instrument too. By default it plays the General
 MIDI bank your computer already has (Windows' `gm.dls`, macOS's DLS bank; simple tones on
 Linux); `"lilysharp.playback.soundFont"` names an `.sf2`, `.sf3` or `.dls` of your own
-(**Lily#: Choose Sound Font…**) and takes effect in open previews. While no font is loaded the
+(**Lily#: Choose Sound Font…**) and takes effect in open previews. With the **Lily# Sound Font
+(MuseScore General)** extension installed, the default is its MuseScore_General instead of the
+computer's bank — a fuller sound, and the same on every system. While no font is loaded the
 preview plays plain oscillator tones instead. The sound is allowed to start only once you have
 clicked or typed in the preview itself (the browser's autoplay rule); the status bar says so
 when a strike comes first.
