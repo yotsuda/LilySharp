@@ -74,7 +74,7 @@ D3 のとおりに作ると、後者（`c@ff.down@cresc`）で Lily# はヘア�
 ## 5. 作業順
 
 1. **済（第1224）** 調べ（§3 の各所の現状、ヘアピンの `.up` を拒む LYS 番号、MusicXML のウェッジの placement、LilyPond の上側の計算の出典）を確定し、この文書の §3 を正確な行番号で更新する。LilyPond の目標の svg は Lab `sessions/p1224/dynamics-up/rup.svg`（下向きの対照は `r.svg`）。
-2. Collector と Parser（D1・D2）。描画はまだ下のまま、向きの情報だけを通す。網: 向きの判定。
+2. **済（第1224・`efbc9c149`）** Collector と Parser（D1・D2）。描画はまだ下のまま、向きの情報だけを通す。網: 向きの判定（`DynamicsAboveLyricsTests`）。ヘアピンの向きは `HairpinItem.IsAbove` に届いている。強弱記号の `IsAbove` は 3 で `MeasureCollector.DynamicSideAbove` に替える（今は書いた `.up` だけ）。
 3. HairpinEngraver と DynamicAlignEngraver の上側。§6 の譜で LilyPond の双子と照合。
 4. BuildAllStaffSkylines の場所取り。段の間隔を照合。
 5. LilyPondExporter（`\dynamicUp`）と MusicXML。
