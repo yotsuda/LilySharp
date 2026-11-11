@@ -37,6 +37,19 @@ describe('the Lily# Sound Font extension', () => {
         assert.equal(pkg.activationEvents, undefined);
     });
 
+    // Owner's decisions 2026-11-11: the family's dark tile, a hue none of the three has (Lily# blue, Calamo
+    // green, Cantoria amber), and Emmentaler's `sf` — sforzando, and the sound font's own initials.
+    it('has the family\'s tile in a colour of its own', () => {
+        assert.equal(pkg.icon, 'icon.png');
+        assert.ok(fs.statSync(path.join(root, 'icon.png')).size > 1000);
+        const icon = read('icon.svg');
+        assert.match(icon, /<stop offset="0%" stop-color="#2d2d30"\/><stop offset="100%" stop-color="#1e1e1e"\/>/);
+        assert.match(icon, /<path fill="#e86a9a" d="M/);
+        const lily = fs.readFileSync(path.join(__dirname, '..', '..', 'icon.svg'), 'utf8');
+        assert.match(lily, /<path fill="#5aa7e8"/);
+        assert.ok(lily.includes('stop-color="#2d2d30"') && lily.includes('stop-color="#1e1e1e"'));
+    });
+
     it('says whose work the font is, that it is unchanged, and that it is no official MuseScore package', () => {
         const readme = read('README.md');
         assert.match(String(pkg.description), /MuseScore_General sound font \(by S\. Christian Collins and others, MIT license\), unchanged\. Not an official MuseScore distribution\./);

@@ -6,6 +6,7 @@
   "publisher": "yotsuda",
   "author": "Yoshifumi Tsuda",
   "license": "MIT",
+  "icon": "icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/yotsuda/LilySharp.git",
