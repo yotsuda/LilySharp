@@ -11,7 +11,7 @@
 
 この変更は LILYSHARP-OWN（既定の向きを LilyPond の `\dynamicUp` の慣習に寄せる）。上に置いたときの位置そのものは LilyPond の上側の計算を移植し、`\dynamicUp` の双子と照合する。
 
-## 2. 決めること（オーナー判断）
+## 2. 決めたこと（オーナー判断・2026-11-11 に D1〜D4 とも推奨どおりで確定）
 
 | # | 問い | 推奨 |
 |---|---|---|
@@ -49,7 +49,7 @@
 5. LilyPondExporter（`\dynamicUp`）と MusicXML。
 6. 全 svg の掃き、ドキュメント、CHANGELOG。
 
-## 6. 今回の測定の譜
+## 6. 今回の測定の譜（Lab `sessions/p1223/dynamics-up/`: `r.lys`、`r.ly`、`\dynamicUp` を足した `rup.ly`、LP の `rup.cropped.png`）
 
 ```
 time 4/4

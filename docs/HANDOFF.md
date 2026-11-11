@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
-- **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）**: 設計は `docs/dynamics-above-lyrics-design.md`（§2 の D1〜D3 はオーナーの確認待ち、§5 が作業順）。ヘアピンは今は常に下＝上側の配置の移植から。同日の小さな変更（変奏の長さと弱起、平行調 `key.relative`、バンドのギター `voicing.band-low-chords`、コード表の `strings`、エディタのダイアグラム送り、LYS2022）は commit 済み・HANDOFF の語りは未記入。
+- **★ 次の便はこれ＝歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）**: 設計は `docs/dynamics-above-lyrics-design.md`、§5 の 1 から。D1〜D3 は推奨どおりで確定（オーナー 2026-11-11）。ヘアピンは今は常に下＝上側の配置の移植から。測定の譜と LP の目標は Lab `sessions/p1223/dynamics-up/`。第1223 の他の変更は §1.1 第1223。
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **★ 歌わせる（Cantilena）＝第1124 設計・第1125 段 2（`lilysharp/sung`）・第1126 段 3（エディタ）・第1127 で Cantilena は拡張 `yotsuda.cantilena` になり Lily# は API で呼ぶ（§1.1 第1127）**: 第1128 で practice メニューに声（`♪ part`）と score に無いパート（既定オフ・`Extra`）のトグル。**第1129 オーナー決定＝歌うパートは歌い手・1 パート 1 音**（声が鳴れば楽器は鳴らない・楽器は代役・無名の歌い手は Choir Aahs・`♪` は歌う／弾くの切り替え）。**第1130＝1 段 1 音・言葉はその上の譜のもの**（`SungStaves`・`Sung`／`Played`・同じパートの言葉の無い段は楽器＝両方鳴らせる）。第1131 で段 4＝Export（WAV/MP3/MP4）に声を混ぜた。**第1132 で span の終わり・ループ・count-in の声を閉じ、ロードマップを `docs/singing-roadmap.md`（長期 A〜G・短期 8 行・オーナーの決定 5 つ）と Cantilena `docs/roadmap.md` に書いた。**第1133 で `engine/voice` の命名と `voices()`（Cantilena 0.2.0・VSIX の入れ直しはオーナー）**・第1134〜1136 で DiffSinger（Cantilena roadmap B1・B2・B4）・**第1137 で `lysc wav --singer <cantilena>`**・**第1138 で漢字の読み `漢[かん]`**（オーナー決定 2026-11-08・`.mid` は漢字・ルビは刷らない）・**第1139 で B3＝DirectML・第1140 で B5＝linux-x64／osx-arm64 の VSIX**（Cantilena 0.4.0・3 target・未公開・Linux／mac は未聴）＝次は Cantilena の公開（オーナー）・ローマ字→かな（Cantilena 側）・Phase C（歌詞ブロックの言語）。**第1141〜1148 でエディタの声のバッジ（▶ の隅のマイク）・本の切り替え・曲頭の子音・声を用意する時機（1.5 s の休み・`lilysharp.playback.singerPrepare`・`waiting`）＝singing-design §3・§5・実機は MANUAL-CHECKS §3.7（オーナー）**。****実機確認はオーナー（MANUAL-CHECKS §3.7）・Cantilena の VSIX の公開もオーナー**。問い 3 つ（漢字歌詞のかな・複数パート・置き換えか重ねか）はオーナー＝仮置きはかなだけ・全部・置き換え。Cantilena は `C:\MyProj\cantilena`（Apache-2.0・未 push）。**OMR #23 は `question`**（オーナー決定 2026-10-14 の規則そのもの＝オーナー判断待ち）。
 - **★ 打鍵の増加の監査＝第1108〜1110 で閉じた（§1.1 第1109・第1110）。** 1000 小節の本の床は `fingbeam1k` 118 → 44 ms／`plain1k`＋小節の挿入 98 → 63 ms／`plain1k` 36 → 30 ms／`v2bow1k` 67 → 52 ms。518 冊の打鍵は第1110 の分で 3.69 → 3.59 ms。第1107 の最悪ケースの増分（`perf-3vdot300`・`perf-kitmix300`、数 ms）は受け入れた（オーナー決定 2026-11-06）。**skyline の残りは急がない**（`docs/skyline-merge-design.md` §3・§4）。**Release の lysc は `8fc8e2be1`**（オーナー決定 2026-11-06。前は `0d09b8f61`。全 svg 1262 枚のうち前の Release と違うのは `Untitled-1.lys` の 1 枚で、第1108〜1110 の高速化の分は差 0。OMR の REQUESTS にお知らせを書いた＝OMR の repo では未 commit）。
@@ -140,6 +140,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1223セッション（2026-11-10〜11・YT-DELL2）
+
+オーナーが Copilot に作曲させた曲を送り、監査と直しを重ねた便（`-Start` は回していない＝開始時の full は無い。base `e08a9d32d`）。
+- **再生**: `@niente` で打つ音は pppp（velocity 43）で鳴る（`dc65fb39c`、enum の値は 1 のまま `DynamicSyntax.Velocity` で読み替え・LILYSHARP-OWN）。velocity 1 では `@decresc … @niente` の最後の和音が無音だった（`Dorian-Mist`）。
+- **MP4**: 枠は紙の形（`afb801292`）。縦長の紙は 1240×1754、横長は 1920×1080 の内側。短い 1 ページは音楽の下で切られるので、紙の寸法は `CollectScore` の `Paper` から読む。`lys-to-mp4` も同じ（`-Width`／`-Height` は両方書いたときだけ固定）。
+- **作曲ガイド**: 模倣する曲（フーガ・カノン）の 1 項目と計画の入りの表（`1cb754459`）。変奏はリズム以外も変える（`fd1938a0e`）。`partial` の置き場所（`e087e45ea`）。
+- **レビューと作曲の検査**: `form.variation-short`（主題より短い変奏・`fd1938a0e`、弱起は小節に数えない `47d5a557d`）。`key.outside` を作曲の流れにも渡し、半音で着いて全音で離れる音を拾い、同じ音名の打ち直しのバスを 1 つの和音と読む（`fd1938a0e`）。`key.relative`（平行調に聞こえてその主音で終わるなら `key` の行を言う・`e031f4cf0`）。`voicing.band-low-chords`（バンドのエレキの D3 より下の 3 音以上・パワーコードは除く・`02e965d95`）。主題が他のパートへ移った変奏はその変奏を旋律の読みから外す（`fd0c1c77d`）。
+- **コード表**: ツールに `strings`（`"1-4"`、転回形も・`0beecd333`）。エディタのダイアグラム送りに上の 4 弦の形（既存の形の消音で作れるものは出さない・既定の図は不変・`3afcf5097`）。Cm の順は 29 → 35 で、固定していたテスト 6 本を書き換えた。
+- **LYS2022**（`e087e45ea`）: セクション頭の `partial` が丸ごとの小節の直後。掃き 715 冊で 3 冊（`Zundamon-to-Metan`・`Shudai-to-Hensou`・Lab `dogfood/big/choir-chorale` は直していない）。
+- **OMR への依頼**: Calamo `docs/repro/REQUESTS.md` の「Lily# からの連絡」2026-11-11（読み手が `key` を常に長調で書く）。Calamo 側は未 commit。
+- 7.6: 各項はオーナーの報告から（曲のパスは各 commit の本文）。7.7 の匂い: `key.outside` の新しい指摘はコーパスで 15 → 16 冊・小節が変わった本 7 冊のうち当否を見たのは 2 冊だけ／実物の Copilot での確認は未（`MANUAL-CHECKS` C64・C65）／perf ベンチは未実行。
+- 門（`-End`、base `e08a9d32d`）: 終了時 full 15184 合格 / 0 失敗 / skip 2 / 合計 15186（`p1223/run1.trx`）。拡張 npm 973 合格。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` 433 行 / LILYPOND-REF 0 / OWN 1（7.5: 検査と道具の便で移植は無い。OWN は niente の velocity）。棚卸しの増減 0。未 push 71 件。
+
+## 以下は第1222セッションの経緯
+
 ### 1.1 第1222セッション（2026-11-10・YT-DELL2）
 
 - **設計 §10 を実装した**（`part sop { lyrics words }`、§9 の⑤）。新しい節 `PartLyricsDeclaration`、`LyricBindings.TracksOfPart`／`OnlyPartNaming`。`singer … sings on PART` は名前なしでパートの歌詞を歌い（1 つのとき）、複数なら LYS4054、挙げていない歌詞の `singer` 行と score の行は警告 LYS4055。譜の無い `lyrics NAME` 行は、その歌詞を挙げるパートが 1 つならそのリズムに付く（`RenderSpecParser.RowTarget`）。名前の無い定義の参照は既存の LYS1007 が言う。本文つきの `lyrics` は今までどおり LYS4049。設計に書いていなかった読み: `hum`・`solfege`・名前の無い行も LYS4055 では歌詞として数える（設計 §10 に 1 行足した）。
@@ -152,17 +167,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **試聴の `こんにちわ` の高さ**（オーナー決定）: `singer` 行の性別、なければ声の性別、どちらもなければ低い音域（`singerCore.sampleOctave`）。キャッシュの名前に高さが入る。実機は未（`MANUAL-CHECKS` 第1222）。
 - 全 svg の掃き 1263 枚で差 0（§10 の分。Lab `sessions/p1222/sweep`、base は HEAD の worktree から。描画の修正の後も 1263 枚で差 0＝既存の本には同じ歌詞の二重の置き方が無い。`.mid` の前後比較は `singer` を書く本が 1 冊だけで差 0＝`p1222/mid-compare.ps1`）。毒は §10 が 16 本・歌う言葉が 7 本・描画と双子が 10 本ですべて赤（`p1222/poisons.ps1`・`poisons2.ps1`・`poisons3.ps1`。1 回目の緑 2 本から `RowTarget` の null と事前走査の網を足した）。⚠️ perf ベンチは未実行。
 - 門（`-End`、base `883b7afcb`）: 開始時 full 15080 合格 / 0 失敗 / skip 2 / 合計 15082、終了時 full 15158 合格 / 0 失敗 / skip 2 / 合計 15160（`p1222` の trx）。拡張 npm 961 合格。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` 522 行 / LILYPOND-REF 12 / OWN 0（7.5: REF は span bar まわりの移植だけ）。棚卸しの増減 0。未 push 40 件（この締めの commit を除く）。
-
-## 以下は第1221セッションの経緯
-
-### 1.1 第1221セッション（2026-11-10・YT-DELL2）
-
-- **1 つの歌詞を複数パートで歌うと 1 声になっていたのを直した**（オーナー報告 2026-11-10、四部合唱で練習メニューにテノールしか出ない）。`singer` の歌詞をそのパートが印刷していないとき `LyricSinger.WithSungWords` が同名の行を足していて、行は track 名だけで引かれるので、印刷している譜の歌詞が読み飛ばされ（`_lyricsRowNames`）、足した行どうしも 1 本になっていた（`SungSyllables.rowTargets`）。足す先をパート自身の譜の歌詞に変え、score が描かないパートには譜を足す（この spec は読むだけで描かない）。⚠️ **残る欠陥（実測）**: `staff sop  staff alt  lyrics w on sop` のように同じ歌詞が譜に畳まれない行で印刷され、`singer` が別パートでも歌うと、その声は今も落ちる（行が残るので `_lyricsRowNames` が畳んだ歌詞を読み飛ばす）。tab・condensed・combined のパートも同じ行の経路のまま。
-- **練習メニューの声の行にプログレスバー**（`playbackCore.voiceRowProgress`、歌わせている声だけ伸びる）。プレビューのヘッダのマイクのバーは右端を 4px 短くした。⚠️ どちらも実機は未（`MANUAL-CHECKS` 第1221）。
-- **設計 §10 を決めた**（オーナー決定・未実装）: 歌詞とパートの結びつきは `part { lyrics NAME }` に書く。`singer … sings on PART` は名前を省ける。パートが挙げていない歌詞は警告。
-- オーナーに残している判断: `singer male` の直後（空白なし）の補完で性別の絞り込みが効かない件／`singer` を予約語にするか（どちらも第1220 以前からの話で未決）。
-- 全 svg の掃きは回していない（`WithSungWords` の呼び手は `MidiExporter.SingLyrics` だけで、描画の経路に入らない）。毒は 1 本（`WithSungWords` を元に戻す）で新規 3 本すべて赤。⚠️ perf ベンチは未実行。
-- 門（`-End`、base `9d059108b`）: 開始時・終了時とも full 15080 合格 / 0 失敗 / skip 2 / 合計 15082（`p1221` の `run1`・`run2` の trx。開始前に修正の commit を済ませたので同数）。拡張 npm 961 合格。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` 51 行 / LILYPOND-REF 0 / OWN 0（7.5: 歌う言葉の経路で LP に対応物なし）。棚卸しの増減 0。未 push 30 件（この締めの commit を除く）。
 
 ## 2. 開いている作業
 
