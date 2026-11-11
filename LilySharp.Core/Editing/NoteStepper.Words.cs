@@ -562,6 +562,57 @@ public static partial class NoteStepper
         return (new Edit(name.Span.Start, name.Span.End, names[to]), $"{names[to]}: {what} {to + 1} of {names.Count}{list}");
     }
 
+    /// <summary>The number of a voice's setting the caret is on - a singer line's
+    /// <c>with NAME 3</c>, a note's <c>@sing(NAME 3)</c> or <c>@sing(NAME to 3)</c>, its sign
+    /// included - or null.</summary>
+    private static SyntaxTokenNode? SingValueAt(SyntaxTree tree, int offset)
+    {
+        static bool On(SyntaxTokenNode number, int offset)
+            => number.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral
+                && number.Span.Start - 1 <= offset && offset <= number.Span.End;
+        var root = tree.GetRoot();
+        foreach (var singer in root.DescendantNodes<SingerDeclarationSyntax>())
+            foreach (var setting in singer.Settings)
+                if (setting.Number != null && On(setting.ValueToken, offset))
+                    return setting.ValueToken;
+        foreach (var mark in root.DescendantNodes<MusicMarkSyntax>())
+        {
+            if (mark.Name != "sing" || offset < mark.Span.Start || offset > mark.Span.End)
+                continue;
+            foreach (var token in mark.ArgumentTokens)
+                if (On(token, offset))
+                    return token;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// One step of such a number (owner's request 2026-11-12): by one of its LAST WRITTEN PLACE -
+    /// 3 to 4, 0.3 to 0.4, 0.25 to 0.26 - up on Up and down on Down, ten of them on the octave
+    /// pair; the sign is kept or written as the value crosses 0. What the setting's range is, is
+    /// its voice's to know: a value past it is said when it is sung, not here.
+    /// </summary>
+    private static (Edit? Edit, string Message) SingValueEdit(string text, SyntaxTokenNode number, int dir, bool semitone)
+    {
+        if (!double.TryParse(number.Text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value))
+            return (null, "write a number");
+        int dot = number.Text.IndexOf('.');
+        int places = dot < 0 ? 0 : number.Text.Length - dot - 1;
+        int start = number.Span.Start;
+        bool negative = start > 0 && text[start - 1] == '-';
+        if (negative)
+        {
+            value = -value;
+            start--;
+        }
+        double unit = Math.Pow(10, -places) * (semitone ? 1 : 10);
+        double stepped = Math.Round(value + dir * unit, places);
+        if (stepped == 0)
+            stepped = 0;        // no "-0"
+        string written = stepped.ToString("F" + places, System.Globalization.CultureInfo.InvariantCulture);
+        return (new Edit(start, number.Span.End, written), written);
+    }
+
     /// <summary>The words a <c>singer</c> line may sing, as its list offers them: the file's named
     /// lyrics in the order written, then the two made from the notes.</summary>
     private static List<string> SingerWordsOf(SyntaxTree tree)

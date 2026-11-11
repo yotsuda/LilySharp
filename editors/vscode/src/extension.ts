@@ -3991,7 +3991,7 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
     async provideCompletionItems(document, position) {
         const before = document.lineAt(position.line).text.slice(0, position.character);
         const slot = singerSettingSlot(before);
-        if (!slot || slot.kind === 'value') { return undefined; }
+        if (!slot) { return undefined; }
         const engine = await renderer();
         const backend = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend : undefined;
         if (!backend) { return undefined; }
@@ -4003,6 +4003,15 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
         } catch (e) {
             outputChannel.appendLine(`singer: the voice's settings could not be listed — ${String(e)}`);
             return undefined;
+        }
+        if (slot.kind === 'value') {
+            // A number is the writer's to type; a setting that takes a NAME lists its names.
+            const names = taken.find(p => p.name === slot.of)?.values ?? [];
+            return names.map((name, i) => {
+                const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.Value);
+                item.sortText = String(i).padStart(3, '0');
+                return item;
+            });
         }
         if (slot.kind === 'with') {
             if (taken.length === 0) { return undefined; }

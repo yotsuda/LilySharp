@@ -902,6 +902,11 @@ describe('a singer line\'s settings', () => {
             'Sung as if the key were shifted — -12 to 12 — changes where a phrase ends');
         assert.equal(singParameterDetail({ name: 'support', scope: 'voice', what: 'Another voice\'s model as support' }),
             'Another voice\'s model as support — one value for the voice');
+        // A setting that takes a name says so, with the first of its names.
+        const named = singParameterDetail({ name: 'support', scope: 'voice', what: 'Support', word: true, values: ['A', 'B', 'C', 'D', 'E', 'F', 'G'] } as never);
+        assert.equal(named, 'Support — a name: A, B, C, D, E, F, … — one value for the voice');
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /const names = taken\.find\(p => p\.name === slot\.of\)\?\.values \?\? \[\];/);
     });
 
     it('are the voice\'s own to list, and what it does not take is said as a warning', () => {

@@ -202,3 +202,11 @@ and the editor's list shows it. Measured 2026-11-12: NEUTRINO v3.2.6 has those t
 intermediate files (timing, f0, melspec) and nothing like breathiness; VOICEVOX has frame pitch
 and volume only. A DiffSinger voice's breathiness, tension, energy and voicing are OFFSETS on
 what its variance model predicts — the voice's own expression stays under the setting.
+
+Built after that, the same day: NEUTRINO's two (`transpose`, scope phrase; `support`, scope voice,
+a NAME — `-S` wants the model's folder, measured), listed with the names a `support` may be;
+the step keys on a setting's number, on the singer line and on a note (`NoteStepper`'s
+`SingValue`: one of the number's last written place, ten on the octave pair). Open: which way a
+DiffSinger voice's `gender` goes (measured brighter at +0.6, undecided at −0.6: by ear); a glide
+for a phrase-scope setting; one name and one scale across engines, when a second engine has a
+setting the first one has.

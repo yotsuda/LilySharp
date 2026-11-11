@@ -633,7 +633,11 @@ export interface ServeAnswer {
 /** A setting a voice takes on its singer line's `with …` (Cantoria's `parameters`): its name;
  *  where it can change — `curve` at any note, `phrase` where a phrase ends, `voice` once a score;
  *  what it does; and for a number its range, the value that changes nothing, its unit. */
-export interface SingParameter { name: string; scope: 'curve' | 'phrase' | 'voice'; what: string; min?: number; max?: number; default?: number; unit?: string }
+export interface SingParameter {
+    name: string; scope: 'curve' | 'phrase' | 'voice'; what: string; min?: number; max?: number; default?: number; unit?: string;
+    /** The value is a NAME, not a number (NEUTRINO's support voice); `values` lists the names that mean something. */
+    word?: boolean; values?: string[];
+}
 
 /**
  * Where the caret stands in a singer line's settings (owner's decisions 2026-11-12:
@@ -696,7 +700,8 @@ export function singersWritten(text: string): string[] {
 
 /** One line of the list for a setting: its name, and what it does with its range. */
 export function singParameterDetail(p: SingParameter): string {
-    const range = p.min !== undefined && p.max !== undefined ? `${p.min} to ${p.max}${p.unit ? ' ' + p.unit : ''}` : '';
+    const range = p.min !== undefined && p.max !== undefined ? `${p.min} to ${p.max}${p.unit ? ' ' + p.unit : ''}`
+        : p.word ? 'a name' + (p.values && p.values.length > 0 ? `: ${p.values.slice(0, 6).join(', ')}${p.values.length > 6 ? ', …' : ''}` : '') : '';
     const where = p.scope === 'curve' ? '' : p.scope === 'phrase' ? 'changes where a phrase ends' : 'one value for the voice';
     return [p.what, range && `${range}${p.default !== undefined ? `, ${p.default} as it is` : ''}`, where].filter(Boolean).join(' — ');
 }

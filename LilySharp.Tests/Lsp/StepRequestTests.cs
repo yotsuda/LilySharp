@@ -1452,6 +1452,38 @@ public class StepRequestTests
             Step(string.Format(InScore, "singer \"a/b\" ‸sings words on lead"), -1, semitone: true).After);
     }
 
+    // Owner's request 2026-11-12: the numbers of how a voice sings step under the step keys, on
+    // the singer line and on a note.
+    [Fact]
+    public void AVoicesSettingsNumber_StepsByItsLastWrittenPlace()
+    {
+        const string Book = "part lead {{ }}\nsection A {{ lead {{ {1} }} }}\nlyrics words {{ la }}\n{0}\nform {{ A }}\nscore {{ staff lead  lyrics words }}\n";
+        string S(string line, string music = "c'1") => string.Format(Book, line, music);
+        const string Who = "singer \"a/b\" sings words on lead with ";
+
+        // A whole number by one, a decimal by one of its last place; the octave pair by ten of them.
+        var (up, after) = Step(S(Who + "breathiness ‸3 gender -0.2"), +1, semitone: true);
+        Assert.False(up.Fallback, up.Error);
+        Assert.Equal(S(Who + "breathiness 4 gender -0.2"), after);
+        Assert.Equal(S(Who + "breathiness 2 gender -0.2"), Step(S(Who + "breathiness 3‸ gender -0.2"), -1, semitone: true).After);
+        Assert.Equal(S(Who + "breathiness 13 gender -0.2"), Step(S(Who + "breathiness ‸3 gender -0.2"), +1).After);
+        Assert.Equal(S(Who + "breathiness 3 gender -0.1"), Step(S(Who + "breathiness 3 gender -0.‸2"), +1, semitone: true).After);
+        Assert.Equal(S(Who + "breathiness 3 gender -0.3"), Step(S(Who + "breathiness 3 gender ‸-0.2"), -1, semitone: true).After);
+        Assert.Equal(S(Who + "velocity 1.26"), Step(S(Who + "velocity 1.2‸5"), +1, semitone: true).After);
+        // Across 0 the sign is written or dropped, and 0 has none.
+        Assert.Equal(S(Who + "gender 0.0"), Step(S(Who + "gender -0.‸1"), +1, semitone: true).After);
+        Assert.Equal(S(Who + "gender -0.1"), Step(S(Who + "gender 0.‸0"), -1, semitone: true).After);
+        Assert.Equal(S(Who + "breathiness -1"), Step(S(Who + "breathiness ‸0"), -1, semitone: true).After);
+
+        // On a note: held, and arrived at.
+        const string Line = "singer \"a/b\" sings words on lead";
+        Assert.Equal(S(Line, "c'1@sing(breathiness 7 tension -2)"), Step(S(Line, "c'1@sing(breathiness ‸6 tension -2)"), +1, semitone: true).After);
+        Assert.Equal(S(Line, "c'1@sing(breathiness 6 tension -3)"), Step(S(Line, "c'1@sing(breathiness 6 tension -‸2)"), -1, semitone: true).After);
+        Assert.Equal(S(Line, "c'1@sing(breathiness to 8.5)"), Step(S(Line, "c'1@sing(breathiness to 9.‸5)"), -1).After);
+        // A setting's name or word is no number: the note under the caret keeps its own step.
+        Assert.Equal(S(Who + "support KIRITAN"), Step(S(Who + "support KIRI‸TAN"), +1, semitone: true).After);
+    }
+
     [Fact]
     public void AStaffRowsLineCount_StepsByOneLine()
     {
