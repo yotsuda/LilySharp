@@ -19,7 +19,7 @@ import * as assert from 'node:assert/strict';
 import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
     CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, loopRounds, playSpan, playSpanWindow, practiceNotes,
-    programOf, toEvents, nextVoiceEntry, strikeKey, strikeKeys, voiceEntries, VOICE_ENTRY_NOTICE_S,
+    programOf, toEvents, nextVoiceEntry, strikeKey, strikeKeys, voiceEntries, voiceEntryEarly, VOICE_ENTRY_NOTICE_S, VOICE_ENTRY_EARLY_S,
     fromOffset, exportNotes, practiceSummary, PracticeState, voiceCues, voiceBadge, soundStart, withVoiceLead,
     levelOf, velocityAt,
 } from '../src/webview/playbackCore';
@@ -541,17 +541,30 @@ describe('the lookahead', () => {
     });
 });
 
-// Owner's request 2026-11-11: a voice that is ready while the piece plays comes in after the
-// next rest, its instrument giving way there.
+// Owner's request 2026-11-11: a voice that is ready while the piece plays comes in, its
+// instrument giving way there — at the next note it sings (the first build waited for a rest,
+// and in the owner's song the voice came in bars later than expected).
 describe('a voice that comes in while its part plays', () => {
-    it('may enter at each sung note that follows a rest', () => {
-        // Two notes joined, a rest of half a second, a note, a hair's gap (no rest), a note, a long rest, a note.
-        const sung = [{ T: 0, D: 1 }, { T: 1, D: 1 }, { T: 2.5, D: 0.5 }, { T: 3.01, D: 0.99 }, { T: 6, D: 1 }];
-        assert.deepEqual(voiceEntries(sung).map(e => [e.at, Math.round(e.room * 100) / 100]), [[2.5, 0.5], [6, 2]]);
+    it('may enter at each note it sings, with the silence before it as its room', () => {
+        // Two notes joined, a rest of half a second, a note, another joined, a long rest, a note.
+        const sung = [{ T: 0, D: 1 }, { T: 1, D: 1 }, { T: 2.5, D: 0.5 }, { T: 3, D: 1 }, { T: 6, D: 1 }];
+        assert.deepEqual(voiceEntries(sung).map(e => [e.at, e.room]), [[0, 0], [1, 0], [2.5, 0.5], [3, 0], [6, 2]]);
         assert.deepEqual(voiceEntries([]), []);
-        assert.deepEqual(voiceEntries([{ T: 4, D: 1 }]), [], 'the first note of all is not an entry');
-        // Given out of order, and a note held under the others: its end is what the rest is counted from.
-        assert.deepEqual(voiceEntries([{ T: 3, D: 1 }, { T: 0, D: 2.5 }, { T: 1, D: 0.5 }]).map(e => e.at), [3]);
+        // A first note that is not at the score's 0 has the silence before it.
+        assert.deepEqual(voiceEntries([{ T: 4, D: 1 }]), [{ at: 4, room: 4 }]);
+        // Given out of order, and a note held under the others: its end is what the silence is counted from.
+        assert.deepEqual(voiceEntries([{ T: 3, D: 1 }, { T: 0, D: 2.5 }, { T: 1, D: 0.5 }]).map(e => [e.at, e.room]), [[0, 0], [1, 0], [3, 0.5]]);
+    });
+    it('starts before the beat: the rest up to the lead, a consonant\'s worth inside a phrase', () => {
+        // After a long rest: the whole lead, where the first consonant is.
+        assert.equal(voiceEntryEarly({ at: 6, room: 2 }, 0.3, 3), 0.3);
+        // After a short one: what it gives.
+        assert.equal(voiceEntryEarly({ at: 6, room: 0.2 }, 0.3, 3), 0.2);
+        // Inside a phrase: a consonant's worth, over the tail of the instrument's note before.
+        assert.equal(voiceEntryEarly({ at: 6, room: 0 }, 0.3, 3), VOICE_ENTRY_EARLY_S);
+        // Never sooner than a tenth of a second from now.
+        assert.ok(Math.abs(voiceEntryEarly({ at: 6, room: 2 }, 0.3, 0.25) - 0.15) < 1e-9);
+        assert.equal(voiceEntryEarly({ at: 6, room: 2 }, 0.3, 0.05), 0);
     });
     it('takes the first entry there is time for, past what the synth already holds', () => {
         const entries = [{ at: 2.5, room: 0.5 }, { at: 6, room: 2 }, { at: 9, room: 1 }];
@@ -563,7 +576,7 @@ describe('a voice that comes in while its part plays', () => {
         // A Play from 2 s into the score: the list's time is the score's less 2.
         assert.equal(nextVoiceEntry(entries, 2, 0.2, 0.4)?.at, 6);
         assert.equal(nextVoiceEntry(entries, 2, 0, 0.05)?.at, 2.5);
-        // No rest left: the instrument plays to the end.
+        // No sung note left: the instrument plays to the end.
         assert.equal(nextVoiceEntry(entries, 0, 9, 9), undefined);
     });
     it('leaves the part\'s later strikes out, and no one else\'s', () => {

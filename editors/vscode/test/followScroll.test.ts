@@ -55,63 +55,78 @@ describe('whether a Play\'s view follows the notes sounding', () => {
         assert.match(FOLLOW_SCROLL_CSS, /\.follow-btn\[hidden\] \{ display: none; \}/);
     });
 
-    it('follows from the start of a Play, and while the sounding notes stay in view', () => {
+    it('follows from the start of a Play, and through scrolls no hand made', () => {
         const { follow, button, fire, note } = page();
         assert.ok(follow.follows(), 'with nothing playing the page moves the view as it always did');
         follow.start();
         follow.sounding([note]);
         assert.ok(follow.follows());
-        // A scroll of the user's own that keeps the note in the view changes nothing.
-        note.r = rect(450, 470);
+        // The page laid out again, a view restored: a scroll with no pointer, wheel or key behind it.
+        note.r = rect(40, 60);
         fire('s:scroll');
         assert.ok(follow.follows());
         assert.ok(button.hidden);
     });
 
-    it('stops following when the user scrolls the sounding notes out of view, and shows where they are', () => {
+    // Owner's report 2026-11-11, on the first build: the following ended only once the sounding
+    // notes were out of the view, and until then the page and the hand pulled the score to and fro.
+    it('stops following at the user\'s first scroll, wherever the sounding notes are', () => {
+        for (const hand of ['s:wheel', 'w:keydown']) {
+            const { follow, button, fire, note } = page();
+            follow.start();
+            follow.sounding([note]);
+            fire(hand);
+            assert.ok(follow.follows(), 'a wheel or a key that scrolled nothing ends nothing');
+            fire('s:scroll');
+            assert.ok(!follow.follows(), hand);
+            assert.ok(!button.hidden);
+            // The notes are still in the view: no arrow.
+            assert.equal(button.textContent, 'Follow');
+            // At the foot of the view, in its middle.
+            assert.deepEqual([button.style.left, button.style.top], ['400px', '456px']);
+        }
+    });
+
+    it('shows where the music is once it is out of the view', () => {
         const { follow, button, fire, note } = page();
         follow.start();
         follow.sounding([note]);
-        // Scrolled down the score: the note is now above the view.
-        note.r = rect(40, 60);
+        fire('s:wheel');
+        note.r = rect(40, 60);          // scrolled down the score: the note is above the view
         fire('s:scroll');
-        assert.ok(!follow.follows());
-        assert.ok(!button.hidden);
         assert.equal(button.textContent, '↑ Follow');
-        // At the foot of the view, in its middle.
-        assert.deepEqual([button.style.left, button.style.top], ['400px', '456px']);
         // The music goes on: the arrow follows the notes (here, a later system below the view).
-        const later = { getBoundingClientRect: () => rect(700, 720) };
-        follow.sounding([later]);
+        follow.sounding([{ getBoundingClientRect: () => rect(700, 720) }]);
         assert.equal(button.textContent, '↓ Follow');
         // A rest, or a note the page does not draw: the arrow stays as it was.
         follow.sounding([]);
         assert.equal(button.textContent, '↓ Follow');
-        assert.ok(!follow.follows());
-        // Off to the side of a wide page.
+        // Off to the side of a wide page, and back in the view.
         follow.sounding([{ getBoundingClientRect: () => rect(300, 320, 900, 920) }]);
         assert.equal(button.textContent, '→ Follow');
+        follow.sounding([{ getBoundingClientRect: () => rect(300, 320) }]);
+        assert.equal(button.textContent, 'Follow');
+        assert.ok(!follow.follows(), 'in the view again, and still the user\'s to scroll');
     });
 
-    it('follows again by the button, by scrolling the notes back into view, and with the next Play', () => {
+    it('follows again by the button and with the next Play, not by itself', () => {
         const { follow, button, fire, note } = page();
         const resumed: unknown[][] = [];
         follow.onResume = els => { resumed.push(els); };
-        const away = () => { note.r = rect(40, 60); fire('s:scroll'); assert.ok(!follow.follows()); };
+        const away = () => { fire('s:wheel'); note.r = rect(40, 60); fire('s:scroll'); assert.ok(!follow.follows()); };
         follow.start();
         follow.sounding([note]);
         away();
+        // Scrolled back by hand until the note is in view: still the user's.
+        note.r = rect(200, 220);
+        fire('s:scroll');
+        assert.ok(!follow.follows());
+        assert.ok(!button.hidden);
         // The button: the page is handed the sounding notes to scroll to.
         fire('b:click');
         assert.ok(follow.follows());
         assert.ok(button.hidden);
         assert.deepEqual(resumed, [[note]]);
-        // Scrolled back by hand until the note is in view.
-        away();
-        note.r = rect(200, 220);
-        fire('s:scroll');
-        assert.ok(follow.follows());
-        assert.ok(button.hidden);
         // The next Play.
         away();
         follow.start();
@@ -129,39 +144,41 @@ describe('whether a Play\'s view follows the notes sounding', () => {
         const { follow, button, fire, note } = page();
         follow.start();
         follow.sounding([note]);
-        // The page scrolls to the next system: on the way the old note passes out of view.
+        // The page scrolls to the next system.
         follow.auto(() => { note.r = rect(40, 60); });
         fire('s:scroll');
         assert.ok(follow.follows(), 'a scroll of the page\'s own');
         fire('s:scrollend');
-        // The wheel in the middle of a smooth scroll: from there the scroll is the user's.
+        // A key that was pressed a moment ago (Space, to play) does not make that scroll the user's.
+        fire('w:keydown');
         follow.auto(() => { /* a smooth scroll begins */ });
+        fire('s:scroll');
+        assert.ok(follow.follows());
+        // The wheel in the middle of a smooth scroll: from there the scroll is the user's.
         fire('s:wheel');
         fire('s:scroll');
         assert.ok(!follow.follows());
         assert.ok(!button.hidden);
-        // A scroll that moved nothing sends no scrollend: the timer ends it.
-        fire('b:click');
-        const { timers } = page();
-        assert.equal(timers.length, 0);
     });
 
-    it('never moves the view under a pointer held down on the score', () => {
-        const { follow, fire, note } = page();
+    it('ends at a drag\'s first move, and never moves the view under a pointer held down', () => {
+        const { follow, button, fire, note } = page();
         follow.start();
         follow.sounding([note]);
         fire('s:pointerdown');
-        assert.ok(!follow.follows(), 'a drag in progress');
+        assert.ok(!follow.follows(), 'a pointer held: the view is not moved under it');
         fire('w:pointerup');
-        assert.ok(follow.follows(), 'dropped with the notes still in view');
-        // Dragged until the notes are out of view, then dropped: the view stays where it was put.
+        assert.ok(follow.follows(), 'a click that scrolled nothing (a note, to play from it)');
+        assert.ok(button.hidden);
+        // A drag: its first scroll ends the following, the notes still in view, and the drop keeps it so.
         fire('s:pointerdown');
-        note.r = rect(600, 620);
+        note.r = rect(310, 330);
         fire('s:scroll');
+        assert.ok(!button.hidden);
         fire('w:pointerup');
         assert.ok(!follow.follows());
+        assert.equal(button.textContent, 'Follow');
     });
-
     it('is one text for the preview and the candidate panel, each asking before it moves the view', () => {
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         const panel = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');

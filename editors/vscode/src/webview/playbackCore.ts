@@ -701,29 +701,35 @@ export class SoundingCursor {
     }
 }
 
-/** A note a voice sings after a rest, in the score's seconds: where it starts, and how long the
- *  rest before it is — the room its consonant has before the beat. */
+/** A note a voice sings, in the score's seconds: where it starts, and how long the silence
+ *  before it is (0 inside a phrase) — the room its consonant has before the beat. */
 export interface VoiceEntry { at: number; room: number }
 
-/** The shortest silence between two sung notes that counts as a rest: shorter is a slip of
- *  arithmetic or an articulation, and a voice cut in there would start inside a phrase. */
-export const VOICE_ENTRY_REST_S = 0.05;
+/** How long before the beat a voice is cut in where no rest gives it room: a consonant's worth,
+ *  over the tail of the instrument's note before. */
+export const VOICE_ENTRY_EARLY_S = 0.08;
 
 /**
  * Where a voice may take over from its instrument in the middle of a Play (owner's request
- * 2026-11-11: a voice that is ready while the piece plays comes in after the next rest): each
- * sung note that follows a rest. The first note of all is not one — a Play from the top sings it,
- * or it is past.
+ * 2026-11-11): at each note it sings — the next one, whether or not a rest comes before it
+ * (the first build waited for a rest, and the owner's song has few: the voice came in bars
+ * later than expected, the same day).
  */
 export function voiceEntries(notes: readonly { T: number; D: number }[]): VoiceEntry[] {
     const sorted = [...notes].sort((a, b) => a.T - b.T);
     const out: VoiceEntry[] = [];
     let end = -Infinity;
     for (const n of sorted) {
-        if (end > -Infinity && n.T - end >= VOICE_ENTRY_REST_S) { out.push({ at: n.T, room: n.T - end }); }
+        out.push({ at: n.T, room: end === -Infinity ? n.T : Math.max(0, n.T - end) });
         end = Math.max(end, n.T + n.D);
     }
     return out;
+}
+
+/** How long before an entry's beat the voice starts: the rest before it up to the WAV's lead,
+ *  a consonant's worth where there is none, and never sooner than a tenth of a second from now. */
+export function voiceEntryEarly(entry: VoiceEntry, lead: number, untilEntry: number): number {
+    return Math.max(0, Math.min(lead, Math.max(entry.room, VOICE_ENTRY_EARLY_S), untilEntry - 0.1));
 }
 
 /** The earliest a voice can be brought in after it is asked for, in seconds: its WAV is decoded
@@ -733,7 +739,7 @@ export const VOICE_ENTRY_NOTICE_S = 0.4;
 /**
  * The entry a voice that became ready takes: the first one at least VOICE_ENTRY_NOTICE_S after
  * `now` and after what the synth already holds (`handedOut`), both in the played list's time —
- * the score's time less `start`. Undefined when no rest is left: the instrument plays to the end.
+ * the score's time less `start`. Undefined when no sung note is left: the instrument plays to the end.
  */
 export function nextVoiceEntry(entries: readonly VoiceEntry[], start: number, now: number, handedOut: number): VoiceEntry | undefined {
     return entries.find(e => e.at - start >= now + VOICE_ENTRY_NOTICE_S && e.at - start > handedOut + 1e-6);

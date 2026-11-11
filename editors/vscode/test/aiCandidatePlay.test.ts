@@ -20,7 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import { PLAIN_TONES_JS } from '../src/plainTones';
-import { nextVoiceEntry } from '../src/webview/playbackCore';
+import { nextVoiceEntry, voiceEntryEarly } from '../src/webview/playbackCore';
 
 // An AI candidate can be heard before it is accepted (owner's request 2026-10-25): the candidate
 // panel's Play asks the server for the notes of the text shown (lilysharp/playbackText) and the
@@ -378,7 +378,7 @@ describe('the AI candidate panel\'s page script', () => {
         const said: string[] = [];
         const silencedNotes: { T: number; N: number }[][] = [];
         let handedOut = 0;
-        let litNotes = 0, decodes = 0, failDecode = false;
+        let litNotes = 0, decodes = 0, failDecode = false, fades = 0;
         const ctx = {
             currentTime: 10, state: 'running', destination: {}, resume: () => Promise.resolve(),
             // A WAV of 8 s whose first sound is 0.2 s in: 0.1 s of consonant before the beat (lead 0.3).
@@ -391,7 +391,7 @@ describe('the AI candidate panel\'s page script', () => {
                 sources.push(s);
                 return s;
             },
-            createGain: () => ({ gain: { value: 1 }, connect: () => { /* to the output */ } }),
+            createGain: () => ({ gain: { value: 1, setValueAtTime: () => { fades++; }, linearRampToValueAtTime: () => { /* to its level */ } }, connect: () => { /* to the output */ } }),
         };
         const synth = {
             state: 'ready', ready: true, stop: () => { /* none */ }, whenReady: () => Promise.resolve(true),
@@ -405,14 +405,14 @@ describe('the AI candidate panel\'s page script', () => {
             at() { return { changed: false, sounding: [] }; }
         }
         const context = vm.createContext({
-            window: { LysSynth: { SoundingCursor, create: () => synth, soundStart: () => 0.2, nextVoiceEntry } }, SYNTH: { processor: 'p', soundFont: 's' },
+            window: { LysSynth: { SoundingCursor, create: () => synth, soundStart: () => 0.2, nextVoiceEntry, voiceEntryEarly } }, SYNTH: { processor: 'p', soundFont: 's' },
             AudioContext: function () { return ctx; }, Math, Promise, decided: false,
             ownCtx: null, ownSynth: null, ownPlayer: null, ownTick: null, ownEnd: null, ownGen: 0, ownPane: 'after', ownVoices: [], ownPlay: null,
             follow: { start: () => { /* none */ }, stop: () => { /* none */ } },
             playingOscs: [], startOscillators: () => 2, say: (text: string) => { said.push(text); }, lightSounding: () => { /* none */ },
             setInterval: () => 1, clearInterval: () => { /* none */ }, setTimeout: () => 2, clearTimeout: () => { /* none */ },
         });
-        new vm.Script([cut('function wakeAudio()'), cut('function decodeVoices(list)'), cut('function voiceSource(v, when, offset)'),
+        new vm.Script([cut('function wakeAudio()'), cut('function decodeVoices(list)'), cut('function voiceSource(v, when, offset, fadeIn)'),
             cut('function startVoices(decoded, t0, start, pre)'), cut('function joinVoice(w, voice)'),
             cut('function stopOwn()'), cut('function playOwn(w, notes, sung)')].join('\n')).runInContext(context);
         const run = (code: string) => new vm.Script(code).runInContext(context);
@@ -470,7 +470,8 @@ describe('the AI candidate panel\'s page script', () => {
         assert.equal(sources.length, before + 1);
         assert.ok(Math.abs(sources.at(-1)!.when! - (30.15 + 3 - 0.3)) < 1e-9 && Math.abs(sources.at(-1)!.offset! - 3) < 1e-9);
         assert.deepEqual(silencedNotes.at(-1)!.map(n => [n.T, n.N]), [[3, 0], [6, 0]]);
-        assert.match(said.at(-1)!, /^The voice of melody comes in after the next rest\.$/);
+        assert.match(said.at(-1)!, /^The voice of melody comes in\.$/);
+        assert.equal(fades, 1, 'a voice cut in while its part plays is faded in; one sung from the start of a Play is not');
         // A voice for the other pane, or with no rest left, or after the Play has ended, waits for the next Play.
         run("joinVoice('before', late)");
         await settle();

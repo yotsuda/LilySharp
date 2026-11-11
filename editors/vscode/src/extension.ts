@@ -6929,18 +6929,20 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             voiceSources = [];
         }
         // A voice that lands while its part already plays on the instrument standing in for it
-        // (owner's request 2026-11-11) comes in after the part's next rest: the instrument is
-        // struck no more from there (the tracks that sounded without the voice and would not
-        // with it, instrumentSounds), and the voice is cut in with what room the rest gives its
-        // consonant. entries are the sung notes that follow a rest, in the score's seconds
-        // (voiceEntries); the list's time is the score's at the voice's speed, after a count-in.
+        // (owner's request 2026-11-11) comes in at the next note it sings - no rest is waited
+        // for (the first build did; the owner's song had few). The instrument is struck no
+        // more from there (the tracks that sounded without the voice and would not with it,
+        // instrumentSounds), and the voice is cut in a consonant's worth before the beat, or
+        // with what room a rest gives, fading in over a moment so that a vowel cut into does
+        // not click. entries are the sung notes, in the score's seconds (voiceEntries); the
+        // list's time is the score's at the voice's speed, after a count-in.
         // Left to the next Play: a stretch or a loop (their voices are cut by voiceCues), the
         // MIDI output and the plain tones (their instruments cannot be taken back), a Play with
-        // no rest left. (No backticks in this script: it lives in a template literal.)
+        // no sung note left. (No backticks in this script: it lives in a template literal.)
         let playingNotes = null;    // the list startPlayback sounds
         function joinVoice(key, entries, sungBefore) {
             if (playClock === null || !playingNotes || midiPlaying || loopList || !voicePlan || voicePlan.pieces
-                || !audioCtx || !window.LysSynth || !window.LysSynth.nextVoiceEntry) { return; }
+                || !audioCtx || !window.LysSynth || !window.LysSynth.nextVoiceEntry || !window.LysSynth.voiceEntryEarly) { return; }
             if (!soundingVoices().includes(key)) { return; }
             const v = voices.get(key);
             const sungAfter = sungTracks();
@@ -6954,23 +6956,22 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const entry = window.LysSynth.nextVoiceEntry(list, 0, now, sfPlayer ? playOffset + sfPlayer.handedOutUntil : -1);
             if (!entry) { return; }
             const lead = v.lead || 0;
-            const early = Math.max(0, Math.min(lead, entry.room, entry.at - now - 0.1));
+            const early = window.LysSynth.voiceEntryEarly(entry, lead, entry.at - now);
             const t0 = audioCtx.currentTime - playClock();
-            const level = levelIn(practice.voiceLevels, key);
-            let out = voiceOutput(audioCtx);
-            if (level < 1) {
-                const g = audioCtx.createGain();
-                g.gain.value = level;
-                g.connect(out);
-                out = g;
-            }
+            const when = t0 + (entry.at - playOffset) - early;
+            // The menu's fader for the voice (at most 1 here, as startVoices), faded in.
+            const level = Math.min(1, levelIn(practice.voiceLevels, key));
+            const g = audioCtx.createGain();
+            g.gain.setValueAtTime(0, when);
+            g.gain.linearRampToValueAtTime(level, when + 0.03);
+            g.connect(voiceOutput(audioCtx));
             const src = audioCtx.createBufferSource();
             src.buffer = v.buffer;
-            src.connect(out);
-            src.start(t0 + (entry.at - playOffset) - early, lead + (entry.at - countInFix) - early);
+            src.connect(g);
+            src.start(when, lead + (entry.at - countInFix) - early);
             voiceSources.push(src);
             if (tracks.size > 0) { sfPlayer.silence(playingNotes.filter(n => tracks.has(n.N) && n.T >= entry.at - 1e-6)); }
-            flashInfo('The voice of ' + (menuVoiceNames[key] || key) + ' comes in after the next rest', 4000);
+            flashInfo('The voice of ' + (menuVoiceNames[key] || key) + ' comes in', 3000);
         }
         // Starts every voice so that the list's time listTime sounds at the context's time when:
         // after a count-in (countInFix), each stretch of the score the list plays cut from the

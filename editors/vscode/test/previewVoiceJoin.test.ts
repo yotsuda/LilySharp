@@ -19,7 +19,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
-import { nextVoiceEntry } from '../src/webview/playbackCore';
+import { nextVoiceEntry, voiceEntryEarly } from '../src/webview/playbackCore';
 
 // Owner's request 2026-11-11: a Play starts while a voice is still being sung, its part on the
 // instrument that stands in; when the voice lands, it comes in after the part's next rest and the
@@ -44,7 +44,14 @@ describe('a voice that lands while the preview plays', () => {
         let handedOut = 0.25;
         const audioCtx = {
             currentTime: 101,   // one second into a Play whose list's offset sounded at 100
-            createGain: () => ({ gain: { value: 1 }, connect: () => { /* to the output */ } }),
+            // The voice's own gain: silent at its start, at the fader's level 30 ms on.
+            createGain: () => {
+                const g = { level: -1, from: [0, 0], to: [0, 0], connect: () => { /* to the output */ }, gain: {
+                    setValueAtTime(v: number, t: number) { g.from = [v, t]; },
+                    linearRampToValueAtTime(v: number, t: number) { g.to = [v, t]; g.level = v; },
+                } };
+                return g;
+            },
             createBufferSource: () => {
                 const s = { when: 0, offset: 0, level: 1, buffer: null as unknown, connect(out: { level?: number }) { this.level = out.level ?? -1; }, start(w: number, o: number) { this.when = w; this.offset = o; } };
                 sources.push(s);
@@ -55,7 +62,7 @@ describe('a voice that lands while the preview plays', () => {
         const voices = new Map<string, unknown>([['melody', { buffer: {}, speed: 1, lead: 0.3 }]]);
         const context = vm.createContext({
             Math, Set, Map, audioCtx, voices,
-            window: { LysSynth: { nextVoiceEntry } },
+            window: { LysSynth: { nextVoiceEntry, voiceEntryEarly } },
             rawParts: ['melody', 'alto', 'bass'], rawSung: ['melody', 'alto'], rawPlayed: ['alto', 'bass'],
             practice: { speed: 1, voicesOff: [], voicesOn: [], instrumentsOn: [], voiceLevels: {} },
             voicePlan: { pieces: null, rounds: 1 }, menuVoiceKeys: [], menuVoiceNames: { melody: 'Melody' },
@@ -92,7 +99,17 @@ describe('a voice that lands while the preview plays', () => {
         // The melody's instrument alone is taken back, from the entry on: the alto is played as
         // well as sung, the bass is no singer's.
         assert.deepEqual(silenced, [[{ T: 3, D: 1, N: 0 }, { T: 6, D: 1, N: 0 }]]);
-        assert.deepEqual(flashed, ['The voice of Melody comes in after the next rest']);
+        assert.deepEqual(flashed, ['The voice of Melody comes in']);
+        assert.equal(sources[0].level, 1);
+    });
+
+    it('does not wait for a rest: the next note it sings, a consonant\'s worth before the beat', () => {
+        // The owner's song, 2026-11-11: eighth notes joined for bars. Every sung note is an entry.
+        const { sources, silenced, join } = page();
+        join([{ at: 0, room: 0 }, { at: 1, room: 0 }, { at: 1.5, room: 0 }, { at: 2, room: 0 }, { at: 3, room: 0 }]);
+        // One second in: the note at 1.5 s is the first there is time for (0.4 s of notice).
+        assert.ok(Math.abs(sources[0].when - (101.5 - 0.08)) < 1e-9 && Math.abs(sources[0].offset - (0.3 + 1.5 - 0.08)) < 1e-9);
+        assert.deepEqual(silenced[0].map(n => n.T), [3, 6]);
     });
 
     it('takes the entry after, when the next is too near or already with the synth', () => {
@@ -116,8 +133,8 @@ describe('a voice that lands while the preview plays', () => {
         assert.ok(Math.abs(slow.sources[0].when - (100 + 8 - 0.3)) < 1e-9);
         assert.ok(Math.abs(slow.sources[0].offset - (0.3 + 6 - 0.3)) < 1e-9);
         assert.deepEqual(slow.silenced[0].map(n => n.T), [8]);
-        // The menu's fader for the voice is a gain of its own before the output.
-        assert.equal(slow.sources[0].level, -1);
+        // The menu's fader for the voice is the level its gain fades in to.
+        assert.equal(slow.sources[0].level, 0.5);
         // A Play from 2 s in: the list's 2 sounded at 100, so its 3 sounds at 101.
         const mid = page({ playOffset: 2 });
         mid.audioCtx.currentTime = 100.2;

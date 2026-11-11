@@ -20,11 +20,17 @@
  * moment it was dropped).
  *
  * The view follows from the start of each Play. A scroll of the user's own — a drag, the wheel,
- * the scroll bar, a key — that leaves the sounding notes OUT of the view ends the following: the
- * page then moves only by the user's hand, and a small button appears at the foot of the score,
- * "↓ Follow" with the arrow towards where the music is. The following comes back by that button,
- * by scrolling the sounding notes back into view, and with the next Play. While a pointer is held
- * down on the score the view is never moved under it.
+ * the scroll bar, a key — ends the following AT ONCE, wherever the sounding notes are (owner's
+ * report the same day, on the first build: it ended only once they were out of the view, and
+ * until then the page and the hand pulled the score to and fro). The page then moves only by the
+ * user's hand, and a small button appears at the foot of the score: "Follow", with an arrow
+ * towards the music when it is out of the view. The following comes back by that button and with
+ * the next Play — not by itself. While a pointer is held down on the score the view is never
+ * moved under it.
+ *
+ * A scroll is the user's when a hand was at it: a pointer held on the scroller (a drag, the
+ * scroll bar), or a wheel or a key within the last moment. Any other scroll — the page laid out
+ * again, a view restored — is not, and ends nothing.
  *
  * installFollowScroll(scroller, button) answers:
  *   start()        a Play begins: following, the button away
@@ -42,7 +48,7 @@
  * page script, not extension code: no template substitution stands in it, and no backtick.
  */
 export const FOLLOW_SCROLL_JS = `        function installFollowScroll(scroller, button) {
-            let playing = false, off = false, auto = false, autoTimer = null, held = false, els = [];
+            let playing = false, off = false, auto = false, autoTimer = null, held = false, handUntil = 0, els = [];
             // Where the sounding notes are: '' in the view, an arrow towards them when out of
             // it, null when nothing drawn sounds (a rest, a note on another page).
             function where() {
@@ -61,13 +67,14 @@ export const FOLLOW_SCROLL_JS = `        function installFollowScroll(scroller, 
                 if (left >= m.right) return '\\u2192';
                 return '';
             }
-            let arrow = '\\u2193';
+            let arrow = '';
             function show() {
                 const shown = off && playing;
                 if (shown) {
+                    // In the view: no arrow. A rest, or a note not drawn: the arrow it had.
                     const w = where();
-                    if (w) arrow = w;
-                    button.textContent = arrow + ' Follow';
+                    if (w !== null) arrow = w;
+                    button.textContent = arrow ? arrow + ' Follow' : 'Follow';
                     // At the foot of the score, in its middle, wherever the page puts the score.
                     const m = scroller.getBoundingClientRect();
                     button.style.left = Math.round(m.left + m.width / 2) + 'px';
@@ -79,24 +86,23 @@ export const FOLLOW_SCROLL_JS = `        function installFollowScroll(scroller, 
                 auto = false;
                 if (autoTimer !== null) { clearTimeout(autoTimer); autoTimer = null; }
             }
+            function hand() { endAuto(); handUntil = Date.now() + 500; }
             scroller.addEventListener('scroll', function () {
                 if (auto || !playing) return;
-                const w = where();
-                if (w === null) return;
-                const was = off;
-                off = w !== '';
-                if (off || was) show();
+                if (!off && !held && Date.now() > handUntil) return;    // not a hand's scroll
+                off = true;
+                show();
             });
             scroller.addEventListener('scrollend', endAuto);
-            scroller.addEventListener('wheel', endAuto, { passive: true });
+            scroller.addEventListener('wheel', hand, { passive: true });
             scroller.addEventListener('pointerdown', function () { endAuto(); held = true; });
             window.addEventListener('pointerup', function () { held = false; });
             window.addEventListener('pointercancel', function () { held = false; });
-            window.addEventListener('keydown', endAuto);
+            window.addEventListener('keydown', hand);
             window.addEventListener('resize', function () { if (off && playing) show(); });
             const api = {
                 onResume: null,
-                start: function () { playing = true; off = false; els = []; show(); },
+                start: function () { playing = true; off = false; els = []; arrow = ''; show(); },
                 stop: function () { playing = false; off = false; els = []; endAuto(); show(); },
                 sounding: function (list) { els = list || []; if (off && playing) show(); },
                 follows: function () { return !playing || (!off && !held); },

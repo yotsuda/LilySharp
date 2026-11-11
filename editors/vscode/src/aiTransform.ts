@@ -2869,7 +2869,7 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
             const sounds = pb as CandidateSounds;
             const sung = await deps.voicesFor?.(text, play.uri, deps.renderNameOf?.(play.uri), sounds, voice => {
                 // The voice is there (owner's request 2026-11-11): a Play still sounding takes it
-                // in after its part's next rest, the instrument giving way there; the page says
+                // in at the next note it sings, the instrument giving way there; the page says
                 // which, or that the next Play sings it.
                 if (candidatePanel === panel && audible && (which === 'after' ? audible.after : audible.before) === text) {
                     void panel.webview.postMessage({ type: 'voiceReady', which, voice });
@@ -3377,11 +3377,13 @@ ${PLAIN_TONES_JS}
   }
   // Starts the voices so that the score's time start sounds at the context's time t0; answers
   // where the last of them ends, in the list's time.
-  function voiceSource(v, when, offset) {
+  function voiceSource(v, when, offset, fadeIn) {
     const src = ownCtx.createBufferSource();
     src.buffer = v.buffer;
     const gain = ownCtx.createGain();
     gain.gain.value = 0.9;
+    // Cut in inside a phrase (joinVoice): faded in over a moment, so a vowel cut into does not click.
+    if (fadeIn) { gain.gain.setValueAtTime(0, when); gain.gain.linearRampToValueAtTime(0.9, when + 0.03); }
     src.connect(gain);
     gain.connect(ownCtx.destination);
     src.start(when, Math.max(0, offset));
@@ -3398,16 +3400,17 @@ ${PLAIN_TONES_JS}
     return end;
   }
   // A voice that is ready while its part already plays (owner's request 2026-11-11) comes in
-  // after the part's next rest: its instrument is struck no more from there, and the voice is cut
-  // in with what room the rest gives its consonant. With no rest left, or where the instrument
-  // cannot be taken back (the plain tones are struck all at once), the instrument plays on and
-  // the next Play sings.
+  // at the next note it sings - no rest is waited for (the first build did; the owner's song had
+  // few). Its instrument is struck no more from there, and the voice is cut in a consonant's worth
+  // before the beat, or with what room a rest gives. With no sung note left, or where the
+  // instrument cannot be taken back (the plain tones are struck all at once), the instrument
+  // plays on and the next Play sings.
   let ownPlay = null;       // the Play sounding: { w, notes, start, t0 }
   function joinVoice(w, voice) {
     const name = voice && voice.part ? voice.part : 'the part';
     const later = () => { if (!decided) say('The voice of ' + name + ' is ready: Play sings it.'); };
     const p = ownPlay;
-    if (!p || p.w !== w || !window.LysSynth || !window.LysSynth.nextVoiceEntry
+    if (!p || p.w !== w || !window.LysSynth || !window.LysSynth.nextVoiceEntry || !window.LysSynth.voiceEntryEarly
         || (voice.track >= 0 && !ownPlayer)) { later(); return; }
     decodeVoices([voice]).then(done => {
       if (ownPlay !== p || done.length === 0) { later(); return; }
@@ -3415,10 +3418,10 @@ ${PLAIN_TONES_JS}
       const entry = window.LysSynth.nextVoiceEntry(voice.entries || [], p.start, now, ownPlayer ? ownPlayer.handedOutUntil : -1);
       if (!entry) { later(); return; }
       const v = done[0], at = entry.at - p.start;
-      const early = Math.max(0, Math.min(v.lead, entry.room, at - now - 0.1));
-      voiceSource(v, p.t0 + at - early, v.lead + entry.at - early);
+      const early = window.LysSynth.voiceEntryEarly(entry, v.lead, at - now);
+      voiceSource(v, p.t0 + at - early, v.lead + entry.at - early, true);
       if (voice.track >= 0) ownPlayer.silence(p.notes.filter(n => n.N === voice.track && n.T >= at - 1e-6));
-      if (!decided) say('The voice of ' + name + ' comes in after the next rest.');
+      if (!decided) say('The voice of ' + name + ' comes in.');
     });
   }
   function stopOwn() {

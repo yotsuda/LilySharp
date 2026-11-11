@@ -29,7 +29,7 @@ import { WorkletSynthesizer } from 'spessasynth_lib';
 import {
     BEND_CENTRE, DRUM_CHANNEL, Lookahead, MidiEvent, PlaybackNote, SoundingCursor,
     channelsOf, countIn, endOf, fromOffset, loopNotes, playSpan, playSpanWindow, practiceNotes, programOf, toEvents,
-    nextVoiceEntry, soundStart, strikeKey, strikeKeys, voiceBadge, voiceBarShown, voiceCues, voiceProgress, voiceRowProgress, voiceStillSinging, withVoiceLead,
+    nextVoiceEntry, soundStart, strikeKey, strikeKeys, voiceBadge, voiceEntryEarly, voiceBarShown, voiceCues, voiceProgress, voiceRowProgress, voiceStillSinging, withVoiceLead,
 } from './playbackCore';
 
 export type SynthState = 'loading' | 'ready' | 'failed' | 'none';
@@ -346,6 +346,7 @@ const api = {
     withVoiceLead,
     soundStart,
     nextVoiceEntry,
+    voiceEntryEarly,
 };
 
 declare global {
