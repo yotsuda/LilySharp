@@ -63,7 +63,7 @@ public static class ChordVoicingFinder
     /// whether the sound asked for distorts, and whether the chord has power chords (two or three
     /// notes) that then lead the list.</summary>
     public sealed record Answer(IReadOnlyList<Voicing> Voicings, string? Problem, bool Bowed, IReadOnlyList<string> Strings,
-        bool Distorted = false, bool Powered = false);
+        bool Distorted = false, bool Powered = false, bool RootKept = false);
 
     /// <summary>A sound that distorts — an overdriven or distortion guitar, a fuzz — on which a full
     /// chord blurs and two or three notes ring clear (owner's report 2026-11-01: an overdriven guitar
@@ -94,7 +94,10 @@ public static class ChordVoicingFinder
     /// <param name="omitRoot">A fretted instrument's shapes WITHOUT the chord's root, which the
     /// band's bass plays: the third, the fifth and the tones above it only (owner's request
     /// 2026-11-11: "high chords with the root left out" took the composing chat four minutes of
-    /// sifting six rooted shapes a chord by hand).</param>
+    /// sifting six rooted shapes a chord by hand). A chord that would be left two tones — a triad —
+    /// is read as the band's guitar plays it instead: its root kept, in an upper voice, on the
+    /// strings named or the highest three (<see cref="Answer.RootKept"/>; owner's decision
+    /// 2026-11-11: the two-note answer and its warning cost a second call every time).</param>
     /// <param name="fromFret">The lowest fret a fretted instrument's shape may press, no open
     /// string then: 5 answers the shapes from the fifth position up. 0 for any.</param>
     public static Answer Find(string symbol, string instrument, string? low, string? high, int count = 6, string? sound = null,
@@ -127,12 +130,22 @@ public static class ChordVoicingFinder
 
         var spelled = Spellings(chord);
         bool distorted = !bowed && IsDistorted(sound);
+        bool withoutRoot = omitRoot;
+        int rootPc = ((Natural(((chord.RootStep % 7) + 7) % 7) + chord.RootAlter) % 12 + 12) % 12;
+        // Without its root a triad is its third and fifth alone, thin for strummed chords: the
+        // root stays, on the upper strings, where it is out of the bass's register.
+        bool rootKept = !bowed && omitRoot && System.Numerics.BitOperations.PopCount((uint)(allowed & ~(1 << rootPc))) < 3;
+        if (rootKept)
+        {
+            omitRoot = false;
+            use ??= [.. Enumerable.Range(0, strings.Length).Select(s => s >= strings.Length - UpperStrings)];
+        }
         // Without the root, or from a fret up, the shapes are searched on the strings (all of
         // them where none are named): the diagrams' list holds the root and starts at the nut.
         if (!bowed && (omitRoot || fromFret > 0))
             use ??= [.. Enumerable.Repeat(true, strings.Length)];
         // A power chord IS its root and fifth: none without the root.
-        List<int[]> power = distorted && !omitRoot ? PowerChords(strings, chord, bassPc) : [];
+        List<int[]> power = distorted && !withoutRoot ? PowerChords(strings, chord, bassPc) : [];
         if (fromFret > 0)
             power = [.. power.Where(p => p.All(f => f < 0 || f >= fromFret))];
         List<int[]> shapes = bowed
@@ -173,16 +186,22 @@ public static class ChordVoicingFinder
                 : "no voicing of it within the diagrams' rules (every needed tone, the root lowest, four frets, four fingers) that "
                   + "sounds no pitch on two strings", bowed, names);
         string? outside = ordered.Any(Inside) ? null : "none lies wholly in the register asked: the nearest are given";
-        return new Answer([.. ordered.Take(System.Math.Max(1, count))], outside, bowed, names, distorted, power.Count > 0);
+        return new Answer([.. ordered.Take(System.Math.Max(1, count))], outside, bowed, names, distorted, power.Count > 0, rootKept);
     }
 
     /// <summary>Said where a shape without its root is two notes (owner's question 2026-11-11: is it
     /// usual for a band's guitar to leave the root out? — no: it keeps the root out of the BASS's
     /// register, and a triad without its root is its third and fifth alone).</summary>
-    private const string ThinWithoutRoot = " ⚠ A triad without its root is two notes, thin for strummed chords: in a band the "
-        + "guitar need only keep the root out of the bass's register. For full shapes ask again without `omitRoot`, with "
-        + "`strings: \"1-3\"` (or \"1-4\") and `fromFret` — the root then sounds in an upper voice. `omitRoot` suits seventh "
-        + "and ninth chords, which keep three notes or more.";
+    private const string ThinWithoutRoot = " ⚠ A shape of two notes is thin for strummed chords: take a fuller one where "
+        + "there is one.";
+
+    /// <summary>The strings a triad asked without its root is answered on, where none are named.</summary>
+    private const int UpperStrings = 3;
+
+    /// <summary>Said where a chord asked without its root kept it (<see cref="Answer.RootKept"/>).</summary>
+    private const string RootKeptNote = " ⚠ A triad without its root is two notes, thin for strummed chords, so a triad's shapes here "
+        + "KEEP the root, in an upper voice on the upper strings: out of the bass's register, as a band's guitar plays it. "
+        + "Seventh and ninth chords, which keep three notes or more, are answered without their root.";
 
     /// <summary>Whether a shape mutes a string between two it sounds.</summary>
     internal static bool MutedBetween(IReadOnlyList<int> frets)
@@ -214,7 +233,9 @@ public static class ChordVoicingFinder
             register += $", on strings {onStrings}";
         if (fromFret > 0 && !answer.Bowed)
             register += $", from fret {fromFret} up";
-        bool rootless = omitRoot && !answer.Bowed;
+        bool rootless = omitRoot && !answer.Bowed && !answer.RootKept;
+        if (answer.RootKept && onStrings is not { Length: > 0 })
+            register += $", on strings 1-{UpperStrings}";
         bool searched = !answer.Bowed && (onStrings is { Length: > 0 } || omitRoot || fromFret > 0);
         var text = new System.Text.StringBuilder();
         // The tones the symbol was read as stand first: `Bbmaj` is B-flat major SEVENTH here, and
@@ -225,7 +246,7 @@ public static class ChordVoicingFinder
                 : answer.Distorted && answer.Powered
                 ? $"on a distorted sound ({sound}) a full chord blurs and two or three notes ring clear: its power chords first, "
                   + "the root and its fifth with the octave above, lowest first, then the full shapes:\n"
-                : answer.Distorted
+                : answer.Distorted && !omitRoot
                 ? $"on a distorted sound ({sound}) a full chord blurs, but this chord has no perfect fifth over its root, so no power "
                   + "chord: these are its full shapes — strike two or three of their notes, or leave the chord to a clean sound:\n"
                 : rootless
@@ -250,6 +271,8 @@ public static class ChordVoicingFinder
             + "same notes in relative octaves.");
         if (rootless && answer.Voicings.Any(v => v.Pitches.Count < 3))
             text.Append(ThinWithoutRoot);
+        if (answer.RootKept)
+            text.Append(RootKeptNote);
         if (InstrumentWord(instrument) is "bass" or "bass4" or "bass5" or "bass6" or "bassDropD" or "doubleBass")
             text.Append(" A bass part reads an octave above it sounds: without `pitch concert`, write each an octave higher.");
         return text.ToString();
@@ -294,7 +317,7 @@ public static class ChordVoicingFinder
         var answers = symbols.Select(s => Find(s.Trim(), instrument, low, high, Candidates, sound, onStrings, omitRoot, fromFret)).ToList();
         var text = new System.Text.StringBuilder();
         string where = (onStrings is { Length: > 0 } ? $", on strings {onStrings}" : "")
-            + (fromFret > 0 ? $", from fret {fromFret} up" : "") + (omitRoot ? ", the root left to the bass" : "");
+            + (fromFret > 0 ? $", from fret {fromFret} up" : "") + (omitRoot ? ", the root left to the bass (a triad keeps it, in an upper voice)" : "");
         text.Append($"{symbols.Count} chords on the {instrument}{where} — one voicing each, chosen so that the hand moves "
             + "little from chord to chord:\n");
         // ONE SHAPE A CHORD, wherever it comes in the progression (a part writes a chord's shape
@@ -387,12 +410,14 @@ public static class ChordVoicingFinder
                 ? string.Join(", ", v.Frets.Select((f, s) => (f, s)).Where(x => x.f >= 0)
                     .Select(x => $"{answers[i].Strings[x.s]} string {(x.f == 0 ? "open" : $"{x.f} up")}"))
                 : $"diagram({v.Diagram})";
-            text.Append($"{i + 1}. {symbols[i]} ({tones}) — {v.Chord} — {how}{(!answers[i].Bowed && MutedBetween(v.Frets) ? " (a string muted between the sounding ones: harder to strum)" : "")}\n");
+            text.Append($"{i + 1}. {symbols[i]} ({tones}) — {v.Chord} — {how}{(!answers[i].Bowed && MutedBetween(v.Frets) ? " (a string muted between the sounding ones: harder to strum)" : "")}{(answers[i].RootKept ? " (a triad: its root kept)" : "")}\n");
         }
         text.Append("A diagram is its frets, lowest string first, x not played, as `@diagram( )` writes it. The notes are as they sound, in absolute octaves (c' is middle C): "
             + "write them so under `octave absolute`. For a chord's other voicings, ask it alone (`chord`).");
-        if (omitRoot && Enumerable.Range(0, answers.Count).Any(i => chosen[i] >= 0 && answers[i].Voicings[chosen[i]].Pitches.Count < 3))
+        if (omitRoot && Enumerable.Range(0, answers.Count).Any(i => chosen[i] >= 0 && !answers[i].RootKept && answers[i].Voicings[chosen[i]].Pitches.Count < 3))
             text.Append(ThinWithoutRoot);
+        if (answers.Any(a => a.RootKept))
+            text.Append(RootKeptNote);
         if (InstrumentWord(instrument) is "bass" or "bass4" or "bass5" or "bass6" or "bassDropD" or "doubleBass")
             text.Append(" A bass part reads an octave above it sounds: without `pitch concert`, write each an octave higher.");
         return text.ToString();

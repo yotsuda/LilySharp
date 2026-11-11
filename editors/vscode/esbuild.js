@@ -72,7 +72,7 @@ function copyGrammar() {
             'it gives the text as it stands in the editor; a score not saved yet is not on the disk at all.',
             'To work on one part, give `part` (its name): that part alone comes back, a fraction of the score.',
             '**A guitar\'s or a string player\'s chords**: ask `lilysharp_chordVoicings` (#chordVoicings) once for the whole progression (`chords`),',
-            'with `strings` and `fromFret` as the request has it (a band\'s guitar: `strings: "1-3"`, the root in an upper voice; `omitRoot` for its seventh chords), and write the shapes it answers.',
+            'with `strings` and `fromFret` as the request has it (a band\'s guitar: `strings: "1-3"`, the root in an upper voice; asked "without the root", `omitRoot: true` for the whole progression — its triads keep the root in an upper voice), and write the shapes it answers.',
             '**Reviewing a piece**: asked to review a .lys file or give feedback on it, use the `lilysharp_reviewScore` tool (#reviewScore)',
             'and explain its report in plain words.',
             '**Teaching Lily#**: asked how to write it, or to be taught it, read the `lilysharp_readGuide` tool, topic `learn`, and teach from that path.',

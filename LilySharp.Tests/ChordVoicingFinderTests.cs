@@ -205,16 +205,17 @@ public class ChordVoicingFinderTests
     [Fact]
     public void WithoutTheRoot_NoShapeSoundsIt_AndFromAFret_NoneLiesBelowIt()
     {
-        var bb = ChordVoicingFinder.Find("Bb", "guitar", null, null, 12, "electric guitar (clean)", "1-4", omitRoot: true, fromFret: 5);
-        Assert.Null(bb.Problem);
-        Assert.NotEmpty(bb.Voicings);
-        Assert.All(bb.Voicings, v => Assert.DoesNotContain(v.Pitches, p => p % 12 == 10));
-        Assert.All(bb.Voicings, v => Assert.All(v.Frets, f => Assert.True(f < 0 || f >= 5, v.Diagram)));
-        // Two TONES at least — the third and the fifth side by side — never one tone and its octave.
-        Assert.Contains(bb.Voicings, v => v.Diagram == "xxx76x" && v.Chord == "<d' f'>");
-        Assert.All(bb.Voicings, v => Assert.True(v.Pitches.Select(p => p % 12).Distinct().Count() >= 2, v.Chord));
+        var cm = ChordVoicingFinder.Find("Cm7", "guitar", null, null, 12, "electric guitar (clean)", "1-4", omitRoot: true, fromFret: 5);
+        Assert.Null(cm.Problem);
+        Assert.False(cm.RootKept);
+        Assert.NotEmpty(cm.Voicings);
+        Assert.All(cm.Voicings, v => Assert.DoesNotContain(v.Pitches, p => p % 12 == 0));
+        Assert.All(cm.Voicings, v => Assert.All(v.Frets, f => Assert.True(f < 0 || f >= 5, v.Diagram)));
+        Assert.Contains(cm.Voicings, v => v.Diagram == "xx5886" && v.Chord == "<g ees' g' bes'>");
+        // Two TONES at least, never one tone and its octave.
+        Assert.All(cm.Voicings, v => Assert.True(v.Pitches.Select(p => p % 12).Distinct().Count() >= 2, v.Chord));
         // Every one can be held.
-        Assert.All(bb.Voicings, v => Assert.NotNull(ChordFingeringValidator.Fingering(v.Pitches, LilySharp.Core.Tablature.Tunings.Guitar)));
+        Assert.All(cm.Voicings, v => Assert.NotNull(ChordFingeringValidator.Fingering(v.Pitches, LilySharp.Core.Tablature.Tunings.Guitar)));
         // A power chord is its root: none without it.
         Assert.False(ChordVoicingFinder.Find("E", "guitar", null, null, 6, "overdriven guitar", null, omitRoot: true).Powered);
         // With no strings named, the whole neck is searched from the fret.
@@ -222,15 +223,40 @@ public class ChordVoicingFinderTests
         Assert.All(cm7.Voicings, v => Assert.All(v.Frets, f => Assert.True(f < 0 || f >= 7, v.Diagram)));
     }
 
+    // Owner's decision 2026-11-11: without its root a triad is two notes, and the answer that said
+    // so cost a second call. A triad asked without its root keeps it, on the upper strings.
+    [Fact]
+    public void ATriadAskedWithoutItsRoot_KeepsIt_OnTheUpperStrings()
+    {
+        var bb = ChordVoicingFinder.Find("Bb", "guitar", null, null, 12, null, null, omitRoot: true, fromFret: 5);
+        Assert.True(bb.RootKept);
+        Assert.Equal("xxx766", bb.Voicings[0].Diagram);
+        Assert.All(bb.Voicings, v => Assert.Contains(v.Pitches, p => p % 12 == 10));
+        Assert.All(bb.Voicings, v => Assert.Equal(3, v.Pitches.Count));
+        Assert.All(bb.Voicings, v => Assert.All(v.Frets.Take(3), f => Assert.Equal(-1, f)));
+        // The strings named are the strings searched.
+        Assert.Equal("xx8766", ChordVoicingFinder.Find("Bb", "guitar", null, null, 12, null, "1-4", omitRoot: true, fromFret: 5).Voicings[0].Diagram);
+        // A suspended chord is three tones too; a seventh keeps three without its root.
+        Assert.True(ChordVoicingFinder.Find("Csus4", "guitar", null, null, 6, null, null, omitRoot: true).RootKept);
+        Assert.False(ChordVoicingFinder.Find("D7", "guitar", null, null, 6, null, null, omitRoot: true).RootKept);
+        // Not asked without the root, nothing is read anew.
+        Assert.False(ChordVoicingFinder.Find("Bb", "guitar", null, null, 6).RootKept);
+        string text = ChordVoicingFinder.Describe("Bb", "guitar", null, null, 6, null, null, omitRoot: true, fromFret: 5);
+        Assert.Contains("on strings 1-3", text);
+        Assert.Contains("KEEP the root", text);
+        Assert.DoesNotContain("the root left to the bass", text);
+        Assert.DoesNotContain("no perfect fifth", ChordVoicingFinder.Describe("E", "guitar", null, null, 6, "overdriven guitar", null, omitRoot: true));
+    }
+
     // Owner's correction and question 2026-11-11: the answer wrote `xx(12)(10)x(10)`, which nothing
     // reads; and a shape strummed across a string muted between its sounding ones is no common grip.
     [Fact]
     public void ADiagramIsSpelledAsLilySharpReadsIt_AndAShapeMutedBetweenComesAfterTheOthers()
     {
-        string text = ChordVoicingFinder.Describe("Bb", "guitar", null, null, 6, null, "1-4", omitRoot: true, fromFret: 5);
-        Assert.Contains("diagram(xx-12-10-x-10) (a string muted between the sounding ones", text);
+        string text = ChordVoicingFinder.Describe("C7", "guitar", null, null, 12, null, "1-4", omitRoot: true, fromFret: 5);
+        Assert.Contains("diagram(xx-14-15-x-12) (a string muted between the sounding ones", text);
         Assert.DoesNotContain("(12)", text);
-        Assert.True(text.IndexOf("diagram(xxx76x)", StringComparison.Ordinal) < text.IndexOf("diagram(xx-12-10-x-10)", StringComparison.Ordinal));
+        Assert.True(text.IndexOf("diagram(xx8986)", StringComparison.Ordinal) < text.IndexOf("diagram(xx5x56)", StringComparison.Ordinal));
         // …in every list: the shapes on neighbouring strings all come before the first one muted between.
         foreach (string chord in new[] { "Gm", "Eb", "F", "C7" })
         {
@@ -286,11 +312,13 @@ public class ChordVoicingFinderTests
         Assert.Contains(sung, l => l.StartsWith("1. Bb ") && l.Contains("<d' f' bes'> — diagram(xxx766)"));
         Assert.Contains(sung, l => l.Contains("Gm ") && l.Contains("diagram(xxx786)"));
         Assert.Contains(sung, l => l.Contains("F ") && l.Contains("diagram(xxx565)"));
-        // Asked without the root, a triad is two notes, and the answer says what to ask instead.
-        string thin = ChordVoicingFinder.DescribeProgression(["Bb", "Ebm"], "guitar", null, null, null, "1-4", omitRoot: true, fromFret: 5);
-        Assert.Contains("A triad without its root is two notes", thin);
-        Assert.DoesNotContain("A triad without its root", ChordVoicingFinder.DescribeProgression(["D7", "Cm7"], "guitar", null, null, null, "1-4", omitRoot: true, fromFret: 5));
-        Assert.Contains("A triad without its root is two notes", ChordVoicingFinder.Describe("Bb", "guitar", null, null, 6, null, "1-4", omitRoot: true, fromFret: 5));
+        // Asked without the root, the song's triads keep it and its sevenths leave it out: the
+        // same shapes in ONE call, and the answer says which is which.
+        var kept = ChordVoicingFinder.DescribeProgression(song, "guitar", null, null, "electric guitar (clean)", null, omitRoot: true, fromFret: 5);
+        Assert.Contains("Bb (bes d f) — <d' f' bes'> — diagram(xxx766) (a triad: its root kept)", kept);
+        Assert.Contains("D7 (d fis a c) — <a c' fis' a'> — diagram(xx7575)\n", kept);
+        Assert.Contains("KEEP the root", kept);
+        Assert.DoesNotContain("KEEP the root", ChordVoicingFinder.DescribeProgression(["D7", "Cm7"], "guitar", null, null, null, "1-4", omitRoot: true, fromFret: 5));
         // A symbol that is no chord says so on its own line and breaks nothing after it.
         string broken = ChordVoicingFinder.DescribeProgression(["C", "Xyz", "G"], "guitar", null, null);
         Assert.Contains("2. Xyz — no voicing", broken);
