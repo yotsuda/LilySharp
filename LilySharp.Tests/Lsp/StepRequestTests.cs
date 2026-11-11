@@ -158,6 +158,58 @@ public class StepRequestTests
     }
 
     /// <summary>
+    /// An inversion walks the chord's other shapes too (owner's decision 2026-11-11: a band's
+    /// bass plays the bass note, so on the guitar it is the chord's tones that matter): Dm/A's
+    /// order holds its own shapes, A lowest, the first of them still the default, and Dm's — D
+    /// or F lowest — each after the shapes of its position. None of them is warned under the
+    /// name Dm/A (LYS1039 does not ask the bass of a chord tone). A bass outside the chord is
+    /// the reason for its slash: C/D keeps D in every shape.
+    /// </summary>
+    [Fact]
+    public void AnInversion_WalksTheChordsOtherShapesToo()
+    {
+        var slash = Order("Dm/A", includeStretch: false);
+        var plain = Order("Dm", includeStretch: false);
+        // Its own first, as before; and every shape of Dm is in it.
+        Assert.Equal("x00231", slash[0]);
+        // …or a muted copy of one that is (xx0231 is x00231 with the fifth string damped: the player's to make).
+        static bool Holds(string full, string part)
+        {
+            var a = LilySharp.Core.Music.ChordShapes.Frets(full);
+            var b = LilySharp.Core.Music.ChordShapes.Frets(part);
+            return a.Length == b.Length && b.Select((fret, s) => fret < 0 || fret == a[s]).All(held => held);
+        }
+        Assert.All(plain, shape => Assert.Contains(slash, s => Holds(s, shape)));
+        var own = Order("Dm/A", includeStretch: false).Where(s =>
+        {
+            var frets = LilySharp.Core.Music.ChordShapes.Frets(s);
+            var guitarStrings = LilySharp.Core.Tablature.Tunings.GetTuning(LilySharp.Core.Tablature.Tunings.Parse("guitar"));
+            return Enumerable.Range(0, frets.Length).Where(i => frets[i] >= 0).Min(i => guitarStrings[i] + frets[i]) % 12 == 9;
+        }).ToList();
+        Assert.True(own.Count > 0 && own.Count < slash.Count, $"{own.Count} with A lowest of {slash.Count}");
+        Assert.Equal(slash.Count, slash.Distinct().Count());
+        // After the default, the positions only rise.
+        var positions = slash.Skip(1).Select(s => LilySharp.Core.Music.ChordVoicings.Position(LilySharp.Core.Music.ChordShapes.Frets(s))).ToList();
+        Assert.Equal(positions.OrderBy(p => p), positions);
+        // None is warned under the slash chord's name.
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(Guitar("c'1@chord(Dm/A)"));
+        var chord = LilySharp.Core.Semantics.ChordAnnotation.Of(tree.GetNodes<LilySharp.Core.Syntax.MusicMarkSyntax>().Single())!.Structure!;
+        var guitar = LilySharp.Core.Tablature.Tunings.GetTuning(LilySharp.Core.Tablature.Tunings.Parse("guitar"));
+        Assert.All(slash, s => Assert.Null(LilySharp.Core.Music.ChordShapes.Mismatch(LilySharp.Core.Music.ChordShapes.Frets(s), guitar, chord)));
+        // The keys reach them: Down from the default goes on through the list.
+        Assert.Equal(Guitar($"c'1@chord(Dm/A {slash[1]})"), Step(Guitar("c'1@chord(Dm/A x00‸231)"), -1, semitone: true).After);
+
+        // A bass that is no tone of the chord stays in every shape.
+        var outside = Order("C/D", includeStretch: false);
+        Assert.NotEmpty(outside);
+        Assert.All(outside, s =>
+        {
+            var frets = LilySharp.Core.Music.ChordShapes.Frets(s);
+            Assert.Contains(Enumerable.Range(0, frets.Length), i => frets[i] >= 0 && (guitar[i] + frets[i]) % 12 == 2);
+        });
+    }
+
+    /// <summary>
     /// Cm's normal-rule bases on the guitar, PINNED (owner's decision 2026-09-28): position →
     /// fingers → lexicographic among the maximal shapes, frets 0–15 — the Python prototype's
     /// 29 (scratchpad cm_list.py), frets 10–15 written in the compact form (a '-' on each side

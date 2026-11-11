@@ -1422,16 +1422,38 @@ public static partial class NoteStepper
         // guitar plays while the bass has the root (owner's decision 2026-11-11): those no shape
         // already offered holds — a muted copy is the player's to make — each after the shapes of
         // its position, so the root lowest comes first there. The default stays the first.
-        if (tuning.Count >= 6 && Music.ChordVoicings.TryTones(pressed, out int allowed, out int required, out int bassPc))
+        // …each after the shapes of its position, unless a shape already offered holds it.
+        void Offer(IReadOnlyList<int> shape)
         {
-            var upper = Enumerable.Range(0, tuning.Count).Select(s => s >= tuning.Count - 4).ToArray();
+            if (order.Any(o => o.Length == shape.Count && shape.Select((f, s) => f < 0 || f == o[s]).All(held => held)))
+                return;
+            int position = Music.ChordVoicings.Position(shape);
+            int at = order.FindIndex(System.Math.Min(1, order.Count), o => Music.ChordVoicings.Position(o) > position);
+            order.Insert(at < 0 ? order.Count : at, [.. shape]);
+        }
+        var upper = Enumerable.Range(0, tuning.Count).Select(s => s >= tuning.Count - 4).ToArray();
+        if (tuning.Count >= 6 && Music.ChordVoicings.TryTones(pressed, out int allowed, out int required, out int bassPc))
             foreach (var shape in ChordVoicingFinder.OnStrings([.. tuning], upper, pressed, allowed, required, bassPc))
+                Offer(shape);
+        // An INVERSION — a slash chord whose bass is one of the chord's own tones (Dm/A) — walks
+        // the chord's other shapes too, the root or any tone lowest (owner's decision 2026-11-11:
+        // a band's bass plays the bass note, so what matters on the guitar is the chord's tones,
+        // and the step should reach every way to hold them). The shapes with the written bass
+        // lowest keep their places, the first of them the default; the rest stand after the
+        // shapes of their position. A bass OUTSIDE the chord (C/D) is the reason for the slash
+        // and a shape without it is warned (LYS1039), so there the bass stays in every shape.
+        if (pressed.BassStep != null)
+        {
+            var plain = pressed with { BassStep = null, BassAlter = null };
+            if (Music.ChordVoicings.TryTones(plain, out int plainAllowed, out int plainRequired, out int rootPc)
+                && Music.ChordVoicings.TryTones(pressed, out _, out _, out int writtenBass)
+                && (plainAllowed & (1 << writtenBass)) != 0)
             {
-                if (order.Any(o => o.Length == shape.Length && shape.Select((f, s) => f < 0 || f == o[s]).All(held => held)))
-                    continue;
-                int position = Music.ChordVoicings.Position(shape);
-                int at = order.FindIndex(System.Math.Min(1, order.Count), o => Music.ChordVoicings.Position(o) > position);
-                order.Insert(at < 0 ? order.Count : at, [.. shape]);
+                foreach (var b in Music.ChordVoicings.For(tuning, plain, includeStretch).Bases)
+                    Offer(b);
+                if (tuning.Count >= 6)
+                    foreach (var shape in ChordVoicingFinder.OnStrings([.. tuning], upper, plain, plainAllowed, plainRequired, rootPc))
+                        Offer(shape);
             }
         }
         return (tuning, order);

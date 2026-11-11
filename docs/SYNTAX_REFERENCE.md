@@ -2889,6 +2889,13 @@ written or not — does nothing (the status bar says why). The same where the fi
 `chordShapes { }` lists the chord (*Listed chords*): the name alone shows the table's shape, `Down` writes
 the shape after it, and `Up` at the written table shape removes it (the page keeps showing it).
 
+An **inversion** — a slash chord whose bass is one of the chord's own tones, as `Dm/A` — walks the
+chord's other shapes as well (2026-11-11): its own shapes, the written bass lowest, keep their places and the
+first of them is still the usual shape; the shapes of `Dm` with D or F lowest stand among them, each after
+the shapes of its position. In a band the bass plays the bass note, and the guitar the chord's tones. None of
+them is warned under the slash chord's name. A bass that is no tone of the chord (`C/D`) is the reason for
+its slash, and stays in every shape.
+
 A `diagram(…)` item with **no symbol** steps too (2026-10-31): `diagram(x32010)` walks the order
 of the chord the shape sounds on the part's tuning (x32010 is C; above a capo, the pressed
 shape's sounding chord), and only the shape is rewritten, no symbol added. The status bar names
