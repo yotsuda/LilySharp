@@ -267,6 +267,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1224セッションの経緯
+
+### 1.1 第1224セッション（2026-11-11・YT-DELL2）
+
+設計 `docs/dynamics-above-lyrics-design.md` §5 の 1 と 2（base `294e0b1d4`）。OMR の `open` は 0。
+- **1（調べ・`b70708e9c`）**: 設計 §3 を行番号つきで書き直した。`@cresc.up` を拒んでいたのは汎用の LYS0002。D1 は新しい判定を作らず `StaffSpec.WithLyrics`（直下の行が畳まれた譜表）で足りる。ヘアピンの始まりは `MusicMarkItem` で向きの欄が無かった。上の積み（`StackAboveStaffCore`）はヘアピンも整列の組も知らない。上の強弱記号の段の場所取りは 1.3×0.5 の箱（既定が上になると普通の道になる）。MusicXML のウェッジは `below` 固定。LP の上下の計算は 1 つ（aligned_side）で、Lily# の `SpannerOffsetY`・`SpanSupportSkylines`・`WedgeSkylines` はすでに上下対称。
+- **D3 と LP の違い**（設計 §3.6・オーナー未確認）: ヘアピンが走っている途中の `_\ff` はその記号だけ下、同じ音の `_\ff\<` はヘアピンも下。Lily# は D3 のとおり（追随しない）で作ってある。
+- **2（向きを通す・`efbc9c149`）**: Parser が `@cresc.up`／`.down` を読む。`MusicMarkItem.HairpinAbove` → `HairpinItem.IsAbove`（書いた向き、なければ譜表の既定＝`MeasureCollector._staffDynamicsUp`・`DynamicSideAbove`）。エディタの補完はヘアピンにも `.up`／`.down`（`.subito` は出さない・`LanguageVocabulary.IsHairpinName`）。**描画は変えていない**: `HairpinEngraver` は `IsAbove` を読まず、強弱記号の `IsAbove` も今までどおり `ForcedAbove == true`（上の記号と下のヘアピンの絵を途中で出さないため。3 で 1 行を `DynamicSideAbove` に替える）。札 2 枚（`HairpinEngraver` の span bar・`DynamicAlignEngraver` の注）は「parser が拒む」から「まだ置いていない」に書き直した。
+- 網は `DynamicsAboveLyricsTests`（歌詞のある譜表とない譜表・書いた向き・`on` の行・D3・choirStaff・双子の `^\<`）。毒 7 本すべて赤（Lab `sessions/p1224/poisons.ps1`）。全 svg の掃き 1038 冊 1264 枚で差 0（`p1224/sweep`、base は worktree）。
+- 7.6: 移植は無い（向きの判定は LILYSHARP-OWN のオーナー決定、文法は D2）。7.7 の匂い: `HairpinItem.IsAbove` は運ぶだけで読み手がいない（3 まで・remarks に明記）／増分描画で歌詞の行を足したとき向きが替わるかは未確認（設計 §3.5、3 で網）／`@cresc.up` を書いた本は今は下に描かれる。perf: 走査もキャッシュの鍵も足していない（ヘアピンの始まり 1 個に bool 1 つ）＝測っていない。拡張の npm テストは回していない（TS は不変）。
+- 門（`-End`、base `294e0b1d4`）: 開始時 full 15184 合格 / 0 失敗 / skip 2 / 合計 15186、終了時 full 15196 合格 / 0 失敗 / skip 2 / 合計 15198（`p1224` の trx・+12 は足した網）。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` 71 行 / LILYPOND-REF 0 / OWN 1。棚卸し OWN 307 → 308（`_staffDynamicsUp`）。未 push 75 件（この締めの commit を含む）。
+
 ## 以下は第1223セッションの経緯
 
 ### 1.1 第1223セッション（2026-11-10〜11・YT-DELL2）

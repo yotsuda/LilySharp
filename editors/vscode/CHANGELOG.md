@@ -4,6 +4,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Copilot changes a score by edits, not by writing the file again**: `#proposeScore` takes `edits` — a chord, a bar or a line as `#readScore` shows it, and what replaces it; `all: true` changes every place it stands. Revoicing eight chords in thirty places of a 435-line score was the whole file written again, three minutes of a twelve-minute answer.
+- **`#readScore` reads one part alone, and a long score in pages**: `part: "gtr"` answers that part's block, its music in each section and the phrases it calls; a longer reading comes in pages small enough to be read in the answer, where a 12 KB score went to a temp file and was read back piece by piece.
+- **`#chordVoicings` takes a progression**, shapes without the root and shapes from a fret up; its diagrams are written as `@diagram( )` reads them.
 - **A staff with lyrics under it shows its dynamics and hairpins above it**, where the words leave room. `.down` after `@` sends a mark back below, with the marks after it on its line, and `.up` / `.down` are offered on a hairpin as on a level.
 - **Ctrl+Shift+Up and Down on a chord diagram also offer the guitar's four highest strings**, inversions included, as a band's guitar plays them (`xx2553` for C, `xx3231` for Dm). A shape another one offered already holds is not offered again (A minor's upper-string shapes all are), and the default diagram is the same.
 - **#chordVoicings takes the strings to play** (`strings: "1-4"`): a band's clean guitar finds its chords on the upper strings, inversions included.

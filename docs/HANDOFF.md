@@ -96,6 +96,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`@cross` の音が別の段に描かれる＝第1093 で実装（OMR の REQUESTS #20）**: 設計は §1.1 第1093。**OMR の返事（`..\LilySharp-Omr\docs\repro\lilysharp-feedback-2026-11-04.md`）: #19〜#21 は `done`・今直してほしい不具合はない。**段をまたぐタイ・同音や 2 度の重なり・MusicXML は OMR が生成器で避ける＝今は依頼なし（必要なら OMR が行を足す）。読み手が段をまたぐ形をまだ読めないのは OMR 側の宿題。 残りの制限: ⑴ 弧は実装済み（下の語り）・移った音のスクリプト・付点・臨時記号は第1112 でスラーが移った先の段で読む（`925d850ee`）／⑵ 段をまたぐタイは最初の音の段に描く＝**オーナー決定 2026-11-06: 将来の実装の余地は残すが、すぐには着手しない**（今のまま。必要が出たら頭から頭への斜めのタイを LILYSHARP-OWN として設計する案が第一候補。OMR の要請は無い＝`lilysharp-feedback-2026-11-04.md` で「生成器で避ける」。音のつながり＝再生・MusicXML は今も正しい。第1111 の実測: LP 2.26.0 自身が `programming error: My pure_y_common is a VerticalAlignment` と循環依存を出し、タイは段の外へ浮く＝写す形がない・Lab `sessions/p1111/t1`。斜めに描くなら LILYSHARP-OWN）／⑶ 連桁の採点は実装済み（下の語り）・移った音が全部同じ段なら第1111 でその段の連桁（`725146d03`）・段の普通の連桁は移ってきた音を避ける（第1111 `8f20b95db`・`c1` で LP と同じ 16.88）・段をまたぐ連桁も、移った先の段へ別の声部が移した音を避ける（`e8d0a4875`・`e1` の残差の内訳は §1.1 第1111 ⑷）・**連桁どうしは第1113 で移植**（`277a391d7`＝先に始まる連桁が後から始まる連桁を避ける・同時に始まる 2 本は避けない・段をまたぐ連桁は避けられないが避ける。§1.1 第1113）／⑷ 移った先の段の音との衝突は第1111 で実装（§1.1 第1111）・付点は第1112 で移った先の段の付点の列に入る（`a13347513`・§1.1 第1112）／⑸ 臨時記号は実装済み（下の語り）・LP が落とす再確認の記号は残す（オーナー決定 2026-10-02 の ⑴ と同じ扱い）／⑹ 観測者なし＝連桁のない棒を移った先の輪郭へ入れる行と、弧の端の棒の枠の行は、8 冊の探り譜で出力が動かず毒が緑（LP の規則なので残した）／⑻ 双子は譜の最初の瞬間の `\change Staff` が LP で効かない（`k1`）／⑼ プレビューの実機は未確認（増分はフルと一致＝網 4 本）。
 - **チャットで Lily# を教わる＝第1043 で実装（`docs/LEARN_FOR_LLM.md`・`HANDOFF-LEARNING.md`）**: 残りは実物の Copilot での確認（MANUAL-CHECKS C59）。
 - **ペダルの音＝第1041 で実装（`@sustain` だけ・`docs/pedal-playback-design.md`）**: 残りは耳の確認（MANUAL-CHECKS C57）。`@sostenuto`・`@unaCorda` は描くだけのまま。
+- **チャットのツール 4 点（オーナー指示 2026-11-11・第1226）＝実装済み・実機は未確認**: `chordVoicings` の `omitRoot`／`fromFret`／`chords`（進行をまとめて）、`proposeScore` の `edits`、`readScore` の `part`／`page`（§1.1 第1226）。残り: 実物の Copilot での確認（`MANUAL-CHECKS` 第1226）と、作曲ガイドに手順を 1 行足す案（提案 5・指示待ち）。⚠️ 作曲ガイダンスの*講評のループと検査の追加*は下の行のとおり止めたまま。
 - **作曲ガイダンスの改善＝クローズ（オーナー決定 2026-11-02・第1042）**: 「ユーザーが使う機会が少ない機能にかなり投資している。どうしても入れるべき内容でなければクローズして別の課題へ」。**講評のループと検査の追加を、オーナーが言うまで再開しない・提案しない。** 入れなかったもの: W3（section の中の急な落ち込み・試作は Lab `sessions/p1042/proto-w3.ps1`）。未調査のまま: 書き込みの後の再提案で差し戻しが最初からやり直しになる動き。
 - **作曲ガイダンス（Copilot のチャットで作曲 → Lily# が音楽として検査）＝第1042 でクローズ（上の行）**: 流れ・検査の一覧・差し戻しの規則・**講評の手順**（オーナーが Downloads の .lys を送る → ログ `~\.copilot\session-state\*\events.jsonl` → 検査を DLL で → `lysc octave --absolute` → 日本語で講評し「入れて」で実装）・残りは **`docs/compose-in-chat-design.md`**。
 - **人間の曲のレビュー（オーナーの設計 2026-10-30）＝第1038 で §6 の 1〜4 を実装**: ツールとコマンドは実物の VS Code で確認済み。残りは Copilot の AI の振る舞い（MANUAL-CHECKS C55）・目視（C56）・§6-5（消音・頼まれてから）。設計との差は **`docs/review-tool-design.md` §7**（`what` と `fix.say` が 1 文のまま・`fix.edit`／`ask` なし）。
@@ -140,6 +141,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1226セッション（2026-11-11・YT-DELL2）
+
+オーナーの依頼: Copilot Chat が「ギターをハイコードでルート抜きに」に 12.2 分かかった件の調べと、提案 1〜4 の実装（base `9d5c995ff`）。OMR の `open` は 0。
+- **調べ**（ログ `~\.copilot\session-state\` の 2026-11-11 14:04 のセッションの `events.jsonl`・ツール呼び出しと時刻だけを読んだ）: `chordVoicings` は 10 回使われた（各 0.1〜0.2 秒）が、答えが全部ルート入り・低いポジションからなので 4 分半は手でのふるい分け。`readScore` の 12.8 KB は一時ファイルに落ちて 13 回読み直し。`proposeScore` は全文（出力 21,700 トークン・196 秒）。
+- **1 `chordVoicings`**（`Editing/ChordVoicingFinder`）: `omitRoot`（ルートの音高を許す音・要る音から外す。2 音も形・ただし 2 つの*違う*音）と `fromFret`（そのフレット未満と開放弦なし）。どちらかがあれば弦の指定がなくても全弦を探す。答えの頭に読んだ構成音（`Bbmaj — its tones bes d f a`）。コード図は `ChordVoicings.Spell` の綴り `diagram(xx-12-10-x-10)`（オーナー指摘・前は `xx(12)(10)x(10)`）。鳴らす弦のあいだにミュートがある形は後ろへ回して注記（オーナーの見立て「押さえられなくはない」＝除外しない・`MutedBetween`）。ルートなしでは、隣り合う弦の形はミュート越しに 1 音足せても残す。
+- **2 進行**: `chords`（`DescribeProgression`）＝各コード 12 候補から、最高音の移動＋最低音の半分＋音数の差＋ポジションの移動＋候補の順位×0.75＋ミュート越し 8 の最小の道（LILYSHARP-OWN）。
+- **3 `proposeScore` の `edits`**（`applyScoreEdits`）: `old` は `readScore` が見せた文字（絶対オクターブ）で 1 回だけ、`all: true` で全部。絶対オクターブの全文に当ててから今までの道（コンパイル・相対へ戻す）へ。差し戻しには「edits で送り直す」注記。
+- **4 `readScore` の `part`／`page`**（`scorePartView`・`scorePages`）: パートのブロック・各 section の中のそのパート・呼んでいるフレーズだけ（`[lines a-b]` と `…` の印）。6,500 B を超える読みはページに分ける（Copilot は 8 KB を超える答えをファイルに落とす）。実ファイルで全文 12,005 B → 2 ページ、`gtr` だけなら 2,819 B。
+- 網: `ChordVoicingFinderTests` に 4 本、`aiTransformCore.test.ts` に 3 組、`aiNewPiece.test.ts` の固定文字を新しい形に。毒 7 本のうち 6 本が赤（Lab `sessions/p1226/poisons.log`・R3 は網を足して赤）、緑は R4（道のミュート越しの値段）＝観測者なし。
+- 7.6: 移植は無い（道具とツール・LILYSHARP-OWN）。7.7 の匂い: **実物の Copilot では未確認**（`edits` を絶対オクターブの文字に当てて相対へ戻す道は単体の網だけ・`MANUAL-CHECKS` 第1226）／`scorePartView` は波括弧の文字読み（パーサではない）／進行の値段は耳で確かめていない／`OnStrings` の「隣り合う弦を残す」はルートなしのときだけ（エディタのコード図送りの順は変えていない）。⚠️ **`-Start p1226` は私の `dotnet build` と並走して build が落ちた**（開始時の full は使えない＝基準は同じ HEAD の第1225 `-End`）。教訓は CLAUDE-OPERATIONS §1 の掃きの項と同じ: `-Start` が回っているあいだはビルドしない。もう 1 つ: 探りで `Add-Type` に Tests の bin の dll を直接渡してコンソールが掴み、コンソールを閉じた＝探りは写しの dll で。
+- 指示ファイル（`esbuild.js` が書く `lilysharp.instructions.md` の頭）も「変更は `edits`・全文は大半を書き直すときだけ」「パートは `part` で読む」「コードは進行をまとめて 1 回」に直した＝ツールの説明だけでは、常に渡る指示の「WHOLE new text」に負ける。
+- 門（`-End`、base `9d5c995ff`）: 開始時は第1225 の終了時と同じ HEAD＝full 15217 合格 / 0 失敗 / skip 2 / 合計 15219、終了時 full 15221 合格 / 0 失敗 / skip 2 / 合計 15223（`p1226` の `run2.trx` は 15220 / 1＝HANDOFF に書いたログのフォルダ名が SHA に見えて `DeadCitationsDoNotGrow` が赤、直して該当の網を回し直した。+4 は足した網）。拡張の `npm test` 合格。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` と REF/OWN は `-End` が commit 前に数えて 0（実際の OWN は 1＝`DescribeProgression`）。棚卸し OWN 308 → 309。未 push 83 件（この締めの commit を含む）。
+
+## 以下は第1225セッションの経緯
+
 ### 1.1 第1225セッション（2026-11-11・YT-DELL2）
 
 設計 `docs/dynamics-above-lyrics-design.md` §5 の 3〜6（base `a36a9b749`）。OMR の `open` は 0。
@@ -152,18 +168,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 網は `DynamicsAboveLyricsTests`（LP の値で止める 3 本＝§6・単独のヘアピン 3.3666・合唱の段間、D3 と端、2 声部の積み順、歌詞の行の出し入れの増分＝フル、memo の再利用、双子、MusicXML）。毒は Lab `sessions/p1225/poisons.ps1`（結果は門の行）。
 - 7.6: 上下の配置は LP の aligned_side と skyline_spacing の移植の向き違い（REF は各所・`BoundText` は dynamic-engraver.cc:168-177）。向きの既定は LILYSHARP-OWN（オーナー決定）、線の規則は dynamic-align-engraver.cc:119-160・:194-235 の移植。7.7 の匂い: 2 声部の譜表で線が声部を見ない（上の行）／上の積みの順は「上向きは来た順」のまま場所取り側（`AddDynamicsToSkyline` の `InTurnOrder`）に残る＝絵の側は左端の順／増分描画の網は 1 段と 8 段の 2 形だけ／実機のプレビューは未確認。perf: 上向きの線が無いシステムでは走査 1 回（配列を読むだけ・複製なし）、memo の鍵にヘアピンの配列 1 本＝測っていない（オーナーの指示待ち）。拡張の npm テストは回していない（TS は不変）。
 - 門（`-End`、base `a36a9b749`）: 開始時 full 15196 合格 / 0 失敗 / skip 2 / 合計 15198、終了時 full 15217 合格 / 0 失敗 / skip 2 / 合計 15219（`p1225` の `run4.trx`・+21 は足した網）。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚（1 枚更新）。Core `+` 958 行 / LILYPOND-REF 8 / OWN 0。棚卸しの差分なし。毒: 配置の 15 本のうち 14 本が赤（`p1225/poisons.log`・P11 は網を足して別に赤を確認）、緑は P9（memo がヘアピンを比べない）＝観測者なし（ヘアピンが変わる編集はその段の輪郭の identity も変えるので memo はどのみち外れる）。線の規則の 7 本は全部赤（`poisons2.log`）。掃き 2 回目（`sweep2`）: 第1224 との差は 5 枚＝既定の向きで動いた本だけ（線の規則で動く本は 0）。未 push 81 件（この締めの commit を含む）。
-
-## 以下は第1224セッションの経緯
-
-### 1.1 第1224セッション（2026-11-11・YT-DELL2）
-
-設計 `docs/dynamics-above-lyrics-design.md` §5 の 1 と 2（base `294e0b1d4`）。OMR の `open` は 0。
-- **1（調べ・`b70708e9c`）**: 設計 §3 を行番号つきで書き直した。`@cresc.up` を拒んでいたのは汎用の LYS0002。D1 は新しい判定を作らず `StaffSpec.WithLyrics`（直下の行が畳まれた譜表）で足りる。ヘアピンの始まりは `MusicMarkItem` で向きの欄が無かった。上の積み（`StackAboveStaffCore`）はヘアピンも整列の組も知らない。上の強弱記号の段の場所取りは 1.3×0.5 の箱（既定が上になると普通の道になる）。MusicXML のウェッジは `below` 固定。LP の上下の計算は 1 つ（aligned_side）で、Lily# の `SpannerOffsetY`・`SpanSupportSkylines`・`WedgeSkylines` はすでに上下対称。
-- **D3 と LP の違い**（設計 §3.6・オーナー未確認）: ヘアピンが走っている途中の `_\ff` はその記号だけ下、同じ音の `_\ff\<` はヘアピンも下。Lily# は D3 のとおり（追随しない）で作ってある。
-- **2（向きを通す・`efbc9c149`）**: Parser が `@cresc.up`／`.down` を読む。`MusicMarkItem.HairpinAbove` → `HairpinItem.IsAbove`（書いた向き、なければ譜表の既定＝`MeasureCollector._staffDynamicsUp`・`DynamicSideAbove`）。エディタの補完はヘアピンにも `.up`／`.down`（`.subito` は出さない・`LanguageVocabulary.IsHairpinName`）。**描画は変えていない**: `HairpinEngraver` は `IsAbove` を読まず、強弱記号の `IsAbove` も今までどおり `ForcedAbove == true`（上の記号と下のヘアピンの絵を途中で出さないため。3 で 1 行を `DynamicSideAbove` に替える）。札 2 枚（`HairpinEngraver` の span bar・`DynamicAlignEngraver` の注）は「parser が拒む」から「まだ置いていない」に書き直した。
-- 網は `DynamicsAboveLyricsTests`（歌詞のある譜表とない譜表・書いた向き・`on` の行・D3・choirStaff・双子の `^\<`）。毒 7 本すべて赤（Lab `sessions/p1224/poisons.ps1`）。全 svg の掃き 1038 冊 1264 枚で差 0（`p1224/sweep`、base は worktree）。
-- 7.6: 移植は無い（向きの判定は LILYSHARP-OWN のオーナー決定、文法は D2）。7.7 の匂い: `HairpinItem.IsAbove` は運ぶだけで読み手がいない（3 まで・remarks に明記）／増分描画で歌詞の行を足したとき向きが替わるかは未確認（設計 §3.5、3 で網）／`@cresc.up` を書いた本は今は下に描かれる。perf: 走査もキャッシュの鍵も足していない（ヘアピンの始まり 1 個に bool 1 つ）＝測っていない。拡張の npm テストは回していない（TS は不変）。
-- 門（`-End`、base `294e0b1d4`）: 開始時 full 15184 合格 / 0 失敗 / skip 2 / 合計 15186、終了時 full 15196 合格 / 0 失敗 / skip 2 / 合計 15198（`p1224` の trx・+12 は足した網）。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` 71 行 / LILYPOND-REF 0 / OWN 1。棚卸し OWN 307 → 308（`_staffDynamicsUp`）。未 push 75 件（この締めの commit を含む）。
 
 ## 2. 開いている作業
 
