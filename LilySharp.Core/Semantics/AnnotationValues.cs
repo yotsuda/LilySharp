@@ -95,6 +95,96 @@ public static class AnnotationValues
             ? argument.Text
             : null;
 
+    /// <summary>One setting of an <c>@sing(…)</c>: its name (dotted words joined), its value - a
+    /// number, or a word or a string - and whether the value is ARRIVED at with the note
+    /// (<c>NAME to VALUE</c>), gliding from where the value before was written.</summary>
+    public readonly record struct SingSetting(string Name, double? Number, string? Word, bool Arrives);
+
+    /// <summary>The word that gives a setting back to the singer line's value: <c>@sing(breathiness default)</c>.</summary>
+    public const string SingDefaultWord = "default";
+
+    /// <summary>
+    /// The settings of an <c>@sing(NAME VALUE NAME VALUE …)</c> on a sung note, or null when the
+    /// annotation is not one or is not written as names and values: how the voice sings from
+    /// this note on, by the names its engine takes (owner's decisions 2026-11-12,
+    /// docs/lyrics-singer-design.md §11). A value holds until the next one written for its name,
+    /// as a dynamic does; <see cref="SingDefaultWord"/> gives the name back to the singer line's
+    /// value; <c>NAME to VALUE</c> arrives at the value with this note. No commas: name and
+    /// value alternate, as on the singer line's <c>with</c>.
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN: LilyPond writes no sound; what is written here is heard from a
+    /// singing engine and draws nothing.</remarks>
+    public static IReadOnlyList<SingSetting>? Sing(MusicMarkSyntax mark)
+    {
+        if (!Named(mark, "sing"))
+            return null;
+        var tokens = mark.ArgumentTokens.ToList();
+        var settings = new List<SingSetting>();
+        int i = 0;
+        while (i < tokens.Count)
+        {
+            if (tokens[i].Kind != SyntaxKind.Identifier)
+                return null;
+            string name = tokens[i++].Text;
+            while (i + 1 < tokens.Count && tokens[i].Kind == SyntaxKind.Dot && tokens[i + 1].Kind == SyntaxKind.Identifier)
+            {
+                name += "." + tokens[i + 1].Text;
+                i += 2;
+            }
+            // `to` before a value: the value is arrived at. A setting whose own value is the word
+            // "to" has nothing after it.
+            bool arrives = i + 1 < tokens.Count && tokens[i].Text == "to"
+                && tokens[i + 1].Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral or SyntaxKind.Minus;
+            if (arrives)
+                i++;
+            if (i >= tokens.Count)
+                return null;
+            bool minus = tokens[i].Kind == SyntaxKind.Minus;
+            if (minus && ++i >= tokens.Count)
+                return null;
+            var value = tokens[i++];
+            if (value.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral
+                && double.TryParse(value.Text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double number))
+                settings.Add(new SingSetting(name, minus ? -number : number, null, arrives));
+            else if (!minus && value.Kind == SyntaxKind.Identifier)
+                settings.Add(new SingSetting(name, null, value.Text, false));
+            else if (!minus && value.Kind == SyntaxKind.StringLiteral)
+                settings.Add(new SingSetting(name, null, Music.LyricSinger.ValueOf(value.Text), false));
+            else
+                return null;
+        }
+        return settings.Count > 0 ? settings : null;
+    }
+
+    /// <summary>Settings as one text for a note to carry: a line a setting, <c>name=value</c> held
+    /// from the note or <c>name&gt;value</c> arrived at, a word between quotes; a name written
+    /// twice keeps its last. Read back by <see cref="SingOf"/>.</summary>
+    public static string SingText(IEnumerable<SingSetting> settings)
+    {
+        var last = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var s in settings)
+            last[s.Name] = (s.Arrives ? ">" : "=") + (s.Number is { } n
+                ? n.ToString("R", System.Globalization.CultureInfo.InvariantCulture) : "\"" + s.Word + "\"");
+        return string.Join('\n', last.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + p.Value));
+    }
+
+    /// <summary>The settings of a <see cref="SingText"/>.</summary>
+    public static IReadOnlyList<SingSetting> SingOf(string? text)
+    {
+        var settings = new List<SingSetting>();
+        foreach (string line in (text ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int at = line.IndexOfAny(['=', '>']);
+            if (at <= 0)
+                continue;
+            string value = line[(at + 1)..];
+            settings.Add(value.StartsWith('"')
+                ? new SingSetting(line[..at], null, value.Trim('"'), false)
+                : new SingSetting(line[..at], double.Parse(value, System.Globalization.CultureInfo.InvariantCulture), null, line[at] == '>'));
+        }
+        return settings;
+    }
+
     /// <summary>How far a bare <c>@vibrato</c> swings the pitch each way, in cents. (40 at first:
     /// the owner heard it as put on, 2026-11-12; Cantoria's own default is the same 25.)</summary>
     public const double VibratoDefaultDepth = 25;

@@ -185,7 +185,8 @@ Three layers, so that nothing a voice can do is lost and nothing has to be writt
      Cantoria's score `sing` and `parameters(voice)`);
    - inside the music, on notes — `c4@sing(breathiness 6)` holds until the next one, as a dynamic
      does; `@sing(breathiness default)` gives it back to the singer line's value; `g2@sing(breathiness to 9)`
-     arrives there gliding from the value before (NOT built yet).
+     arrives there gliding from the value before (built: `AnnotationValues.Sing`, a note's `Sing`
+     text, the sung request's `Sg` / `St`, Cantoria's note `sing` / `singTo` and `SingCurves`).
 
 Decided: the gate on notes is `@sing(…)`; a setting is `NAME VALUE`, settings follow one another
 with no comma (as a part's own settings do — `@vibrato(40, 6)`'s nameless arguments keep theirs);

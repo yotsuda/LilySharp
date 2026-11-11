@@ -728,6 +728,9 @@ internal static class SyntaxFacts
             // @vibrato / @vibrato(60) / @vibrato(60, 6) — a sung note's vibrato (a trial;
             // AnnotationValues.Vibrato): plain too.
             "vibrato",
+            // @sing(breathiness 6 tension -2) — how the voice sings from this note on
+            // (AnnotationValues.Sing): names and values, no commas.
+            "sing",
         };
 
     /// <summary>

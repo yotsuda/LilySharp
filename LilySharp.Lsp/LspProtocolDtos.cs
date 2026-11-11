@@ -403,6 +403,11 @@ public class SungNoteDto
     /// its swings a second, each null where not written.</summary>
     public double? Vb { get; set; }
     public double? Vr { get; set; }
+    /// <summary>What an <c>@sing(…)</c> writes on the note: the settings held from it
+    /// (<see cref="Sg"/>, a name its number or its word) and the ones arrived at with it
+    /// (<see cref="St"/>, <c>NAME to VALUE</c>); each null where there is none.</summary>
+    public System.Collections.Generic.Dictionary<string, object>? Sg { get; set; }
+    public System.Collections.Generic.Dictionary<string, object>? St { get; set; }
 }
 
 /// <summary>A part's words on its notes: what the editor hands a singing engine, with what the

@@ -1044,6 +1044,14 @@ public sealed partial class LilySharpLanguageServer
     public Task<SungResponse> GetSungAsync(SungParams @params, CancellationToken token)
         => OffDispatch(() => GetSung(@params), token);
 
+    /// <summary>The settings of a note's <c>@sing(…)</c> for the editor: the ones held from the
+    /// note, or the ones arrived at; null with none.</summary>
+    private static System.Collections.Generic.Dictionary<string, object>? SingDto(string? sing, bool arrives)
+    {
+        var some = LilySharp.Core.Semantics.AnnotationValues.SingOf(sing).Where(s => s.Arrives == arrives).ToList();
+        return some.Count == 0 ? null : some.ToDictionary(s => s.Name, s => s.Number is { } number ? (object)number : s.Word ?? "");
+    }
+
     public SungResponse GetSung(SungParams @params)
     {
         SyntaxTree tree;
@@ -1106,7 +1114,7 @@ public sealed partial class LilySharpLanguageServer
                     Sing = v.Sing?.ToDictionary(p => p.Key, p => p.Value.Number is { } number ? (object)number : p.Value.Word ?? ""),
                     Notes = v.Notes.Select(n => new SungNoteDto
                     {
-                        T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos, V = n.Level, E = n.LevelEnd, I = n.Inhale, H = n.Hyphen, Vb = n.Vibrato, Vr = n.VibratoRate,
+                        T = n.Start, D = n.Duration, P = n.Pitch, L = n.Lyric, M = n.Melisma, B = n.Breath, S = n.SourcePos, V = n.Level, E = n.LevelEnd, I = n.Inhale, H = n.Hyphen, Vb = n.Vibrato, Vr = n.VibratoRate, Sg = SingDto(n.Sing, arrives: false), St = SingDto(n.Sing, arrives: true),
                     }).ToArray(),
                 }).OrderByDescending(v => v.InScore).ToArray(),
                 PrintedWords = shownSounds?.PrintedWords?.ToArray() ?? [],

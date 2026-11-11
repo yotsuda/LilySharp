@@ -141,6 +141,55 @@ public class SungRequestTests
         Assert.Equal("with", both.TrackName);
     }
 
+    // Owner's decisions 2026-11-12: inside the music, how the voice sings is written on a note
+    // with `@sing(…)` - held from the note as a dynamic is, given back with `default`, or
+    // arrived at with `to`.
+    [Fact]
+    public void ASingOnANote_IsToldToTheSinger_HeldOrArrivedAt()
+    {
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///sing.lys");
+        string text = Doc.Replace("c'8. d16 c8. d16 | c4 a8 r |",
+            "c'8.@sing(breathiness 6.5 tension -2) d16 c8.@sing(breathiness to 9 mix.Sweet 0.3) d16 | c4@sing(breathiness default support KIRITAN) a8@sing(tension 1)@sing(tension 3 note \"a b\") r |");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = text, Version = 1, LanguageId = "lilysharp" },
+        });
+        var sung = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        Assert.Null(sung.Error);
+        var notes = Assert.Single(sung.Voices!).Notes;
+        static string Show(System.Collections.Generic.Dictionary<string, object>? d)
+            => d == null ? "" : string.Join(" ", d.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => $"{p.Key}={p.Value}"));
+        // Held from the note: numbers signed and decimal, a dotted name, a word, a string, `default`.
+        Assert.Equal(new[] { "breathiness=6.5 tension=-2", "", "mix.Sweet=0.3", "", "breathiness=default support=KIRITAN", "note=a b tension=3" },
+            notes.Select(n => Show(n.Sg)));
+        // Arrived at with the note: `NAME to VALUE`.
+        Assert.Equal(new[] { "", "", "breathiness=9", "", "", "" }, notes.Select(n => Show(n.St)));
+        // The notes themselves are what they were.
+        var plain = Assert.Single(Open(out var plainUri).GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = plainUri } }).Voices!).Notes;
+        Assert.Equal(plain.Select(n => (n.T, n.D, n.P, n.L)), notes.Select(n => (n.T, n.D, n.P, n.L)));
+
+        // Known as written; what is not names and values is not one.
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(text);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        Assert.All(tree.GetRoot().DescendantNodes<LilySharp.Core.Syntax.MusicMarkSyntax>().Where(m => m.Name == "sing"),
+            m => Assert.True(LilySharp.Core.Semantics.AnnotationNameValidator.IsKnownCompoundName(m)));
+        foreach (string bad in new[] { "@sing(breathiness)", "@sing(6)", "@sing(breathiness to)", "@sing(breathiness 6, tension 2)" })
+        {
+            var mark = LilySharp.Core.Syntax.SyntaxTree.Parse(Doc.Replace("c4 a8 r |", $"c4{bad} a8 r |"))
+                .GetRoot().DescendantNodes<LilySharp.Core.Syntax.MusicMarkSyntax>().FirstOrDefault(m => m.Name == "sing");
+            Assert.True(mark == null || LilySharp.Core.Semantics.AnnotationValues.Sing(mark) == null, bad);
+        }
+        // The text a note carries reads back as it was written.
+        var settings = LilySharp.Core.Semantics.AnnotationValues.SingOf(LilySharp.Core.Semantics.AnnotationValues.SingText(
+        [
+            new("breathiness", 6.5, null, false), new("tension", -2, null, true), new("support", null, "KIRITAN", false),
+        ]));
+        Assert.Equal(3, settings.Count);
+        Assert.Contains(settings, s => s is { Name: "tension", Number: -2, Arrives: true });
+        Assert.Contains(settings, s => s is { Name: "support", Word: "KIRITAN", Arrives: false });
+    }
+
     // Owner's request 2026-11-12, a trial: `@vibrato` on a sung note is told to the singing engine
     // (a DiffSinger voice lays it on its pitch curve) - the swing each way in cents, and the swings
     // a second where written. It draws nothing, and the MIDI does not know it.

@@ -26,7 +26,9 @@ import { VOICE_LEAD_S } from './webview/playbackCore';
  *  carrying the previous syllable's vowel on, `B` a breath after it, `S` the source offset. */
 export interface SungNoteDto { T: number; D: number; P: number; L?: string | null; M?: boolean; B?: boolean; S?: number; V?: number | null; E?: number | null; I?: boolean; H?: boolean;
     /** A written vibrato (`@vibrato`, a trial sung by DiffSinger voices): its swing each way in cents, its swings a second. */
-    Vb?: number | null; Vr?: number | null }
+    Vb?: number | null; Vr?: number | null;
+    /** What an `@sing(…)` writes on the note: settings held from it (`Sg`), and arrived at with it (`St`, `NAME to VALUE`). */
+    Sg?: Record<string, number | string> | null; St?: Record<string, number | string> | null }
 
 /** A part's words on its notes, as the server answers `lilysharp/sung`. */
 /** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
@@ -35,7 +37,8 @@ export interface SungVoiceDto { Part: string; Key?: string; Language: string; No
     Sing?: Record<string, number | string> | null }
 
 /** The score Cantoria reads (its README): seconds, MIDI pitch, the syllable as pronounced. */
-export interface CantoriaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean; vibrato?: number; vibratoRate?: number }
+export interface CantoriaNote { start: number; duration: number; pitch: number; lyric?: string; melisma?: boolean; breath?: boolean; level?: number; levelEnd?: number; inhale?: boolean; hyphen?: boolean; vibrato?: number; vibratoRate?: number;
+    sing?: Record<string, number | string>; singTo?: Record<string, number | string> }
 export interface CantoriaScore { sampleRate: number; language: string; sing?: Record<string, number | string>; notes: CantoriaNote[] }
 
 /** The rate the voice is asked for — NEUTRINO's own, so nothing is resampled on the way. */
@@ -518,6 +521,10 @@ export function cantoriaScore(voice: SungVoiceDto, speed: number): CantoriaScore
             // A vibrato's swings a second are the singer's, not the tempo's: a practice speed leaves them.
             if (n.Vb != null) { note.vibrato = n.Vb; }
             if (n.Vr != null) { note.vibratoRate = n.Vr; }
+            // The settings written on the note, the names in one order (the voice's key is this text).
+            const ordered = (s: Record<string, number | string>) => Object.fromEntries(Object.entries(s).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
+            if (n.Sg && Object.keys(n.Sg).length > 0) { note.sing = ordered(n.Sg); }
+            if (n.St && Object.keys(n.St).length > 0) { note.singTo = ordered(n.St); }
             return note;
         }),
     };
@@ -652,6 +659,39 @@ export function singerSettingSlot(before: string): { kind: 'with' } | { kind: 'n
     const complete = ends ? words : words.slice(0, -1);
     const names = complete.filter((_, i) => i % 2 === 0);
     return complete.length % 2 === 0 ? { kind: 'name', written: names } : { kind: 'value', of: complete[complete.length - 1] };
+}
+
+/**
+ * Where the caret stands inside a note's `@sing(…)` (owner's decisions 2026-11-12:
+ * `c4@sing(breathiness 6 tension to -2)`), for the editor's list: `name` — a setting's name is
+ * expected (after the parenthesis, or after a value), with the names already written; `value` —
+ * the value of `of`, where `default` and `to` may be written. Undefined outside one, and in a comment.
+ */
+export function singMarkSlot(before: string): { kind: 'name'; written: string[] } | { kind: 'value'; of: string } | undefined {
+    if (before.includes('//')) { return undefined; }
+    const open = /@sing\(([^()]*)$/.exec(before);
+    if (!open) { return undefined; }
+    const inside = open[1].replace(/"[^"]*"/g, '""');
+    const words = inside.split(/[ \t]+/).filter(w => w.length > 0);
+    const complete = /[ \t]$/.test(inside) || inside.length === 0 ? words : words.slice(0, -1);
+    // Names and values alternate; a `to` before a value belongs to the value.
+    const names: string[] = [];
+    let expectsName = true, last = '';
+    for (const word of complete) {
+        if (expectsName) { names.push(word); last = word; expectsName = false; }
+        else if (word !== 'to') { expectsName = true; }
+    }
+    return expectsName ? { kind: 'name', written: names } : { kind: 'value', of: last };
+}
+
+/** The voices a file's singer lines name, as written: a quoted name, else the gender. */
+export function singersWritten(text: string): string[] {
+    const found: string[] = [];
+    for (const line of text.split('\n')) {
+        const m = /^[ \t]*singer[ \t]+(?:(male|female)[ \t]+)?(?:"([^"]*)")?[ \t]*sings(?![\w-])/.exec(line.split('//')[0]);
+        if (m) { const who = m[2] || m[1] || ''; if (!found.includes(who)) { found.push(who); } }
+    }
+    return found;
 }
 
 /** One line of the list for a setting: its name, and what it does with its range. */

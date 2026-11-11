@@ -245,6 +245,23 @@ public static class SungScoreJson
                     w.WriteNumber("vibrato", vibrato);
                 if (n.VibratoRate is { } vibratoRate)
                     w.WriteNumber("vibratoRate", vibratoRate);
+                // What an `@sing(…)` writes on the note: held from it ("sing"), or arrived at ("singTo").
+                var settings = Semantics.AnnotationValues.SingOf(n.Sing);
+                foreach (bool arrives in new[] { false, true })
+                {
+                    var some = settings.Where(s => s.Arrives == arrives).ToList();
+                    if (some.Count == 0)
+                        continue;
+                    w.WriteStartObject(arrives ? "singTo" : "sing");
+                    foreach (var s in some)
+                    {
+                        if (s.Number is { } number)
+                            w.WriteNumber(s.Name, number);
+                        else
+                            w.WriteString(s.Name, s.Word);
+                    }
+                    w.WriteEndObject();
+                }
                 w.WriteEndObject();
             }
             w.WriteEndArray();

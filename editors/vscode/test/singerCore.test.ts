@@ -915,3 +915,56 @@ describe('a singer line\'s settings', () => {
         assert.match(singer, /return this\.api\.parameters \? await this\.api\.parameters\(voice\) : \[\];/);
     });
 });
+
+// Owner's decisions 2026-11-12: inside the music a setting is written on a note with `@sing(…)`,
+// held from the note as a dynamic is, given back with `default`, arrived at with `to`.
+describe('a note\'s @sing', () => {
+    const { singMarkSlot, singersWritten } = require('../src/singerCore') as {
+        singMarkSlot: (before: string) => { kind: string; written?: string[]; of?: string } | undefined;
+        singersWritten: (text: string) => string[];
+    };
+
+    it('goes to the engine as what is held from the note and what is arrived at', () => {
+        const voice: SungVoiceDto = { Part: 'lead', Language: 'ja', Notes: [
+            { T: 0, D: 1, P: 60, L: 'ら', Sg: { tension: -2, breathiness: 6.5 } },
+            { T: 1, D: 1, P: 62, L: 'ら', St: { breathiness: 9 }, Sg: { 'mix.Sweet': 0.3 } },
+            { T: 2, D: 1, P: 64, L: 'ら', Sg: { breathiness: 'default' } },
+            { T: 3, D: 1, P: 65, L: 'ら' },
+        ] };
+        const notes = cantoriaScore(voice, 1).notes;
+        assert.deepEqual(notes[0].sing, { breathiness: 6.5, tension: -2 });
+        assert.deepEqual(Object.keys(notes[0].sing!), ['breathiness', 'tension']);
+        assert.deepEqual([notes[1].sing, notes[1].singTo], [{ 'mix.Sweet': 0.3 }, { breathiness: 9 }]);
+        assert.deepEqual(notes[2].sing, { breathiness: 'default' });
+        assert.ok(!('sing' in notes[3]) && !('singTo' in notes[3]));
+        // A note that writes nothing is the note it was: the voices sung before are still found.
+        const plain = { ...voice, Notes: voice.Notes.map(n => ({ T: n.T, D: n.D, P: n.P, L: n.L })) };
+        assert.ok(!JSON.stringify(cantoriaScore(plain, 1)).includes('sing'));
+    });
+
+    it('lists a name where one is expected, and default and to where a value is', () => {
+        assert.deepEqual(singMarkSlot('  c4@sing('), { kind: 'name', written: [] });
+        assert.deepEqual(singMarkSlot('  c4@sing(bre'), { kind: 'name', written: [] });
+        assert.deepEqual(singMarkSlot('  c4@sing(breathiness '), { kind: 'value', of: 'breathiness' });
+        assert.deepEqual(singMarkSlot('  c4@sing(breathiness 6'), { kind: 'value', of: 'breathiness' });
+        assert.deepEqual(singMarkSlot('  c4@sing(breathiness 6 '), { kind: 'name', written: ['breathiness'] });
+        // `to` belongs to the value: after it the value is still to come.
+        assert.deepEqual(singMarkSlot('  c4@sing(breathiness to '), { kind: 'value', of: 'breathiness' });
+        assert.deepEqual(singMarkSlot('  c4@sing(breathiness to 9 ten'), { kind: 'name', written: ['breathiness'] });
+        assert.deepEqual(singMarkSlot('  c4@sing(breathiness default tension -2 '), { kind: 'name', written: ['breathiness', 'tension'] });
+        // Closed, another annotation's parenthesis, a comment: not one.
+        assert.equal(singMarkSlot('  c4@sing(breathiness 6) d'), undefined);
+        assert.equal(singMarkSlot('  c4@finger('), undefined);
+        assert.equal(singMarkSlot('  // c4@sing('), undefined);
+    });
+
+    it('lists what the voices of the file\'s singer lines take', () => {
+        const file = 'part lead { }\nsinger female "diffsinger/Nishiren/2P" sings words on lead\n// singer "x/y" sings z\nsinger male sings other on bass\nsinger "diffsinger/Nishiren/2P" sings third\nsinger sings fourth\n';
+        assert.deepEqual(singersWritten(file), ['diffsinger/Nishiren/2P', 'male', '']);
+        assert.deepEqual(singersWritten('part lead { }\n'), []);
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /registerCompletionItemProvider\(\{ language: 'lilysharp' \}, singMarkCompletion, '\(', ' '\)/);
+        // Inside the music only what can change there: the settings of scope curve.
+        assert.match(ext, /if \(p\.scope === 'curve' && !taken\.has\(p\.name\)\) \{ taken\.set\(p\.name, p\); \}/);
+    });
+});

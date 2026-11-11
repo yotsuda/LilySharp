@@ -27,8 +27,9 @@ namespace LilySharp.Core.Midi;
 /// <paramref name="LevelEnd"/> the factor at its end, where a hairpin crosses it; <paramref name="Inhale"/>
 /// an audible breath before the note right after it (<c>@breath</c>; a rest is only silence);
 /// <paramref name="Vibrato"/> a written vibrato's swing each way in cents and <paramref name="VibratoRate"/>
-/// its swings a second (<c>@vibrato</c>, a trial: a DiffSinger voice sings it).
-public sealed record SungNote(double Start, double Duration, double Pitch, string? Lyric, bool Melisma, bool Breath, int SourcePos, double? Level = null, double? LevelEnd = null, bool Inhale = false, bool Hyphen = false, double? Vibrato = null, double? VibratoRate = null);
+/// its swings a second (<c>@vibrato</c>, a trial: a DiffSinger voice sings it); <paramref name="Sing"/>
+/// the settings an <c>@sing(…)</c> writes on it, as <c>Semantics.AnnotationValues.SingText</c>.
+public sealed record SungNote(double Start, double Duration, double Pitch, string? Lyric, bool Melisma, bool Breath, int SourcePos, double? Level = null, double? LevelEnd = null, bool Inhale = false, bool Hyphen = false, double? Vibrato = null, double? VibratoRate = null, string? Sing = null);
 
 /// <summary>A part's words on its notes, as a singing engine takes them: the score in seconds
 /// that <c>cantoria</c> reads. <paramref name="Warnings"/> says what the engine will not sing
@@ -133,7 +134,7 @@ public static class SungVoices
                 // the next one still starts on its beat.
                 if (joined && note.BreathAfter)
                     duration -= Math.Min(BreathSeconds, duration / 3);
-                notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos, levels[i].Level, levels[i].End, joined && note.Inhale, lyric != null && hyphens.Contains(note.StartTick), note.Vibrato, note.VibratoRate));
+                notes.Add(new SungNote(start, duration, note.Pitch + 0.5 * note.QuarterBend, lyric, melisma, breath, note.SourcePos, levels[i].Level, levels[i].End, joined && note.Inhale, lyric != null && hyphens.Contains(note.StartTick), note.Vibrato, note.VibratoRate, note.Sing));
                 if (lyric != null && language == Japanese && !IsKana(lyric) && !strange.Contains(lyric, StringComparer.Ordinal))
                     strange.Add(lyric);
             }

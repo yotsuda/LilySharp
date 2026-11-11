@@ -79,6 +79,9 @@ public readonly record struct MidiNote(
     // (SungVoices; AnnotationValues.Vibrato). Not written to .mid files, and an instrument plays plain.
     double? Vibrato = null,
     double? VibratoRate = null,
+    // `@sing(…)` was written on this note: how the voice sings from here on, as
+    // AnnotationValues.SingText writes it (SungVoices). Not written to .mid files.
+    string? Sing = null,
     // An `afterGrace` run's note: it ends the note before it, where a leading grace begins the
     // note after it. Not written to .mid files.
     bool IsAfterGrace = false

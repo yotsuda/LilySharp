@@ -5014,6 +5014,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "shortFermata", Kind = CompletionItemKind.Value, Detail = "Short fermata (angular)", SortText = "0shortFermata" },
                 new CompletionItem { Label = "longFermata", Kind = CompletionItemKind.Value, Detail = "Long fermata (square)", SortText = "0longFermata" },
                 new CompletionItem { Label = "breath", Kind = CompletionItemKind.Value, Detail = "Breath mark after the note", SortText = "0breath" },
+            new CompletionItem { Label = "sing", Kind = CompletionItemKind.Value, Detail = "How the voice sings from this note on, by its engine's own settings — @sing(breathiness 6), @sing(breathiness default), @sing(breathiness to 9)", SortText = "0sing", InsertTextFormat = InsertTextFormat.Snippet, InsertText = "sing($0)", Command = new Command { Title = "List the settings", CommandIdentifier = "editor.action.triggerSuggest" } },
             new CompletionItem { Label = "vibrato", Kind = CompletionItemKind.Value, Detail = "A sung note's vibrato (a trial: a DiffSinger voice sings it; not drawn) — @vibrato(cents, swings a second)", SortText = "0vibrato" },
                 new CompletionItem { Label = "caesura", Kind = CompletionItemKind.Value, Detail = "Caesura (railroad tracks) after the note", SortText = "0caesura" },
                 new CompletionItem { Label = "stopped", Kind = CompletionItemKind.Value, Detail = "Stopped note + (brass hand-stop / left-hand pizz.)", SortText = "0stopped" },

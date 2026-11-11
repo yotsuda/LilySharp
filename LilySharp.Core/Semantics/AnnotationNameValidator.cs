@@ -388,6 +388,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.Pluck(mark) is not null
             || AnnotationValues.Bend(mark) is not null
             || AnnotationValues.Vibrato(mark) is not null
+            || AnnotationValues.Sing(mark) is not null
             || AnnotationValues.Notehead(mark) is not null
             || AnnotationValues.IsTextAnnotation(mark)
             || AnnotationValues.IsTextSpanAnnotation(mark)

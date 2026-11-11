@@ -398,6 +398,7 @@ public sealed class MidiExporter
         bool breath = false, inhale = false, ends = false;
         int swell = 0;
         (double Depth, double? Rate)? vibrato = null;
+        string? sing = null;
         foreach (var mark in marks)
         {
             switch (mark)
@@ -417,19 +418,23 @@ public sealed class MidiExporter
                 case MusicMarkSyntax written when AnnotationValues.Vibrato(written) is { } v:
                     vibrato = v;
                     break;
+                // Several `@sing(…)` on one note are one: a name's last value stands.
+                case MusicMarkSyntax settings when AnnotationValues.Sing(settings) is { } s:
+                    sing = AnnotationValues.SingText([.. AnnotationValues.SingOf(sing), .. s]);
+                    break;
                 // The bare word is an articulation's node (a name with no argument list).
                 case ArticulationSyntax { Type: ArticulationType.None, Name: "vibrato" }:
                     vibrato = (AnnotationValues.VibratoDefaultDepth, null);
                     break;
             }
         }
-        if (!breath && !ends && swell == 0 && vibrato == null)
+        if (!breath && !ends && swell == 0 && vibrato == null && sing == null)
             return;
         foreach (int i in onset)
             track.Notes[i] = track.Notes[i] with
             {
                 BreathAfter = breath, Inhale = inhale, Swell = swell, SwellEnds = ends,
-                Vibrato = vibrato?.Depth, VibratoRate = vibrato?.Rate,
+                Vibrato = vibrato?.Depth, VibratoRate = vibrato?.Rate, Sing = sing,
             };
     }
 

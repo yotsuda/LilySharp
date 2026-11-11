@@ -56,7 +56,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { singerGoesOnToSings, singerSettingSlot, singParameterDetail, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { singerGoesOnToSings, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1100,6 +1100,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singerCompletion, '"', ' ', ','));
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singerSettingCompletion, ' '));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singMarkCompletion, '(', ' '));
     voiceSamplesDir = path.join(context.globalStorageUri.fsPath, 'voice-samples');
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.hearSinger', hearSinger));
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.singerTaken', singerTaken));
@@ -4013,6 +4014,49 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
             return [item];
         }
         return taken.filter(p => !slot.written.includes(p.name)).map((p, i) => {
+            const item = new vscode.CompletionItem(p.name, vscode.CompletionItemKind.Property);
+            item.detail = singParameterDetail(p);
+            item.insertText = p.name + ' ';
+            item.sortText = String(i).padStart(3, '0');
+            return item;
+        });
+    },
+};
+
+/**
+ * The list inside a note's `@sing(…)` (owner's decisions 2026-11-12): the settings that can change
+ * inside the music — the ones of scope `curve` — that any voice the file's singer lines name
+ * takes, each with what it does and its range; and where a value is expected, the two words a
+ * value may be: `default` (the singer line's value again) and `to` (arrive at the value that
+ * follows, gliding).
+ */
+const singMarkCompletion: vscode.CompletionItemProvider = {
+    async provideCompletionItems(document, position) {
+        const slot = singMarkSlot(document.lineAt(position.line).text.slice(0, position.character));
+        if (!slot) { return undefined; }
+        if (slot.kind === 'value') {
+            const back = new vscode.CompletionItem('default', vscode.CompletionItemKind.Keyword);
+            back.detail = `${slot.of} as the singer line has it again (or as the voice does by itself)`;
+            const to = new vscode.CompletionItem('to', vscode.CompletionItemKind.Keyword);
+            to.detail = `Arrive at the value written after it with this note, gliding from the ${slot.of} before`;
+            to.insertText = 'to ';
+            return [back, to];
+        }
+        const engine = await renderer();
+        const backend = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend : undefined;
+        if (!backend) { return undefined; }
+        const taken = new Map<string, SingParameter>();
+        const singers = singersWritten(document.getText());
+        for (const who of singers.length > 0 ? singers : ['']) {
+            try {
+                for (const p of await backend.parameters(await backend.voiceName(who || null))) {
+                    if (p.scope === 'curve' && !taken.has(p.name)) { taken.set(p.name, p); }
+                }
+            } catch (e) {
+                outputChannel.appendLine(`singer: the settings of ${who || 'the default voice'} could not be listed — ${String(e)}`);
+            }
+        }
+        return [...taken.values()].filter(p => !slot.written.includes(p.name)).map((p, i) => {
             const item = new vscode.CompletionItem(p.name, vscode.CompletionItemKind.Property);
             item.detail = singParameterDetail(p);
             item.insertText = p.name + ' ';

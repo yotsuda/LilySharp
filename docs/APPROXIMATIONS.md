@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 310 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **436** | |
+| `OWN` | 311 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **437** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（310 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（311 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -376,6 +376,7 @@
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
 - **`AnnotationNameValidator.Written`** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/AnnotationValues.cs`
+- **`AnnotationValues.Sing`** LILYSHARP-OWN: LilyPond writes no sound; what is written here is heard from a
 - **`AnnotationValues.Vibrato`** LILYSHARP-OWN: LilyPond has no vibrato script; what is written here is heard, not engraved.
 ### `LilySharp.Core/Semantics/CapoAdvisor.cs`
 - **`CapoAdvisor`** the barres and before the fret itself in the ranking. LILYSHARP-OWN: LilyPond has nothing
