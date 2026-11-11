@@ -5008,10 +5008,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .voice-badge[hidden] { display: none; }
         .voice-badge svg { width: 12px; height: 12px; display: block; }
         /* The voices' progress (owner's requests 2026-11-09, sessions 1178 and 1179): a thin bar under
-           Play while the engine sings, running in under the microphone, its goal. An estimate: the
-           engine says nothing until a voice is done. */
+           Play while the engine sings, running in under the microphone, its goal. Counted on what
+           the engine says it has to sing anew (voiceBar), an estimate where it says nothing. Its
+           right end stops a little short of the microphone's (owner's request 2026-11-11: 6px was
+           a touch long). */
         .toolbar .voice-bar {
-            position: absolute; left: 0; right: 6px; bottom: -5px; height: 3px;
+            position: absolute; left: 0; right: 8px; bottom: -5px; height: 3px;
             border-radius: 2px; background: rgba(128, 128, 128, 0.3); overflow: hidden; pointer-events: none;
         }
         .toolbar .voice-bar[hidden] { display: none; }
