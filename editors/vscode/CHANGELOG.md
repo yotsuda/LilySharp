@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A staff with lyrics under it shows its dynamics and hairpins above it**, where the words leave room. `.down` after `@` sends one back below, and `.up` / `.down` are offered on a hairpin as on a level.
 - **Ctrl+Shift+Up and Down on a chord diagram also offer the guitar's four highest strings**, inversions included, as a band's guitar plays them (`xx2553` for C, `xx3231` for Dm). A shape another one offered already holds is not offered again (A minor's upper-string shapes all are), and the default diagram is the same.
 - **#chordVoicings takes the strings to play** (`strings: "1-4"`): a band's clean guitar finds its chords on the upper strings, inversions included.
 - **Copilot's composing hears when a band's electric guitar strikes its chords on the low strings**, and the guide puts a clean guitar's chords on the upper strings.

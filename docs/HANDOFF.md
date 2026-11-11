@@ -88,7 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 - **★ 歌詞と歌い手の文法の作り直し（オーナー決定 2026-11-10・第1217）**: `docs/lyrics-singer-design.md` が全部（§9 が作業順）。①②③④は済み（§1.1 第1217〜第1219）。⚠️ ④の `ん` の聞こえ方はオーナーの実聴待ち（`MANUAL-CHECKS` 第1219）。Cantoria の master は zh／ko を歌う（VSIX の入れ直しはオーナー）。`singer` は 1 行 1 声で score の中にも書ける（第1220）。古い書き方を案内する専用エラーは作らない（オーナー指示）。設計 §10「パート自身の歌詞」（`part sop { lyrics words }`）は第1222 で実装（§1.1 第1222・実機は `MANUAL-CHECKS` 第1222）＝§9 は全部済み。**次の一手の指示はまだ無い＝下の積み残しから選ぶならオーナーに訊く**。積み残し: Calamo の生成コードが `lyrics … sings` のまま（`docs\repro\REQUESTS.md` に連絡済み・Calamo 側は未 commit）／実機確認（`MANUAL-CHECKS` 第1217）／perf ベンチ／コーパス外のオーナーのファイル（Downloads の Tabidachi・Rose Garden など）は未移行で、`LilySharp-Lab\sessions\p1217\migrate\migrate.ps1 -Lys -Files` で書き換えられる／Rose Garden のオクターブ変換はオーナーの回答待ち。
-- **★ 次の便はこれ＝歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）**: 設計は `docs/dynamics-above-lyrics-design.md`。§5 の 1・2 は第1224 で済み（§1.1）＝**次は 3（上側の配置）**で、場所は設計 §3.2（一番大きいのは `OutsideStaffStacker` の上の積みがヘアピンと整列の組を知らないこと）。LP の目標の svg は Lab `sessions/p1224/dynamics-up/rup.svg`（下向きの対照 `r.svg`）。⚠️ **今は `@cresc.up` を読むが下に描く・歌詞のある譜表の強弱記号もまだ下＝3 が済むまで release しない**（文法書と CHANGELOG も 6 まで古いまま）。⚠️ **3 の照合のときオーナーに見せる**: 同じ音に `@ff.down@cresc` と書くと LilyPond はヘアピンも下へ連れていく（D3 と違う・設計 §3.6）。
+- **★ 歌詞のある譜表では強弱記号とヘアピンを譜表の上に（オーナー決定 2026-11-11）＝設計 `docs/dynamics-above-lyrics-design.md` §5 の 1〜6 は全部済み（第1224〜第1225・§1.1）**。残りはオーナー: ⑴ **D3 と LilyPond の違いの絵を見る**（設計 §3.6 の表・Lab `sessions/p1225/dyn/out/d3.png` と `lp/d3.png`）＝LilyPond は `.down` を書いた記号と同じ線の、向きを書いていない後続も下へ連れていく。Lily# は D3 のとおり譜表の既定（上）で、双子（`\with { \dynamicUp }`）はこの形でだけ紙面と違う。D3 のままでよいか、LilyPond に合わせるか／⑵ 実機のプレビュー（`MANUAL-CHECKS` 第1225）／⑶ release（CHANGELOG は 2 つとも `## Unreleased` に書いた・`[engraving]`）。残る穴: 2 声部の譜表で上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（ヘアピンが声部を持たない既知の穴＝`DynamicAlignEngraver` の注 ⑵・上向きでも同じ・Lab `p1225/dyn/out/vv.png`）。**次の一手の指示はまだ無い＝上の行の積み残しから選ぶならオーナーに訊く**。
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **★ 歌わせる（Cantilena）＝第1124 設計・第1125 段 2（`lilysharp/sung`）・第1126 段 3（エディタ）・第1127 で Cantilena は拡張 `yotsuda.cantilena` になり Lily# は API で呼ぶ（§1.1 第1127）**: 第1128 で practice メニューに声（`♪ part`）と score に無いパート（既定オフ・`Extra`）のトグル。**第1129 オーナー決定＝歌うパートは歌い手・1 パート 1 音**（声が鳴れば楽器は鳴らない・楽器は代役・無名の歌い手は Choir Aahs・`♪` は歌う／弾くの切り替え）。**第1130＝1 段 1 音・言葉はその上の譜のもの**（`SungStaves`・`Sung`／`Played`・同じパートの言葉の無い段は楽器＝両方鳴らせる）。第1131 で段 4＝Export（WAV/MP3/MP4）に声を混ぜた。**第1132 で span の終わり・ループ・count-in の声を閉じ、ロードマップを `docs/singing-roadmap.md`（長期 A〜G・短期 8 行・オーナーの決定 5 つ）と Cantilena `docs/roadmap.md` に書いた。**第1133 で `engine/voice` の命名と `voices()`（Cantilena 0.2.0・VSIX の入れ直しはオーナー）**・第1134〜1136 で DiffSinger（Cantilena roadmap B1・B2・B4）・**第1137 で `lysc wav --singer <cantilena>`**・**第1138 で漢字の読み `漢[かん]`**（オーナー決定 2026-11-08・`.mid` は漢字・ルビは刷らない）・**第1139 で B3＝DirectML・第1140 で B5＝linux-x64／osx-arm64 の VSIX**（Cantilena 0.4.0・3 target・未公開・Linux／mac は未聴）＝次は Cantilena の公開（オーナー）・ローマ字→かな（Cantilena 側）・Phase C（歌詞ブロックの言語）。**第1141〜1148 でエディタの声のバッジ（▶ の隅のマイク）・本の切り替え・曲頭の子音・声を用意する時機（1.5 s の休み・`lilysharp.playback.singerPrepare`・`waiting`）＝singing-design §3・§5・実機は MANUAL-CHECKS §3.7（オーナー）**。****実機確認はオーナー（MANUAL-CHECKS §3.7）・Cantilena の VSIX の公開もオーナー**。問い 3 つ（漢字歌詞のかな・複数パート・置き換えか重ねか）はオーナー＝仮置きはかなだけ・全部・置き換え。Cantilena は `C:\MyProj\cantilena`（Apache-2.0・未 push）。**OMR #23 は `question`**（オーナー決定 2026-10-14 の規則そのもの＝オーナー判断待ち）。
 - **★ 打鍵の増加の監査＝第1108〜1110 で閉じた（§1.1 第1109・第1110）。** 1000 小節の本の床は `fingbeam1k` 118 → 44 ms／`plain1k`＋小節の挿入 98 → 63 ms／`plain1k` 36 → 30 ms／`v2bow1k` 67 → 52 ms。518 冊の打鍵は第1110 の分で 3.69 → 3.59 ms。第1107 の最悪ケースの増分（`perf-3vdot300`・`perf-kitmix300`、数 ms）は受け入れた（オーナー決定 2026-11-06）。**skyline の残りは急がない**（`docs/skyline-merge-design.md` §3・§4）。**Release の lysc は `8fc8e2be1`**（オーナー決定 2026-11-06。前は `0d09b8f61`。全 svg 1262 枚のうち前の Release と違うのは `Untitled-1.lys` の 1 枚で、第1108〜1110 の高速化の分は差 0。OMR の REQUESTS にお知らせを書いた＝OMR の repo では未 commit）。
@@ -140,6 +140,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1225セッション（2026-11-11・YT-DELL2）
+
+設計 `docs/dynamics-above-lyrics-design.md` §5 の 3〜6（base `a36a9b749`）。OMR の `open` は 0。
+- **3（上側の配置・`b8c979fa5`）**: `HairpinEngraver` は `dir` をヘアピンの向きから渡す（span bar の隣の譜表も向きの側）。`DynamicAlignEngraver` の線は譜表と向きの組ごと（`DynamicLine.IsAbove`・`AlignedLineGroup.IsAbove`）。強弱記号の `IsAbove` は `DynamicSideAbove`（niente は書いた向きだけ＝TextScript）。`OutsideStaffStacker`: 下の積みは上向きの線・ヘアピンを通すだけ、上の 250 の番 `PlaceAboveDynamicLines` が線・単独の記号・単独のヘアピンを左端の順に置く。`AboveStackMemo` はヘアピンと上向きの組（システム内の序数）を鍵に持つ。
+- **LP の実測で直したもの**: ⑴ ヘアピンの X の端は向きの違う文字にも付く（`HairpinEngraver.BoundText`・LP は bound を向きを読まずに決める。今まで `@f.up@decresc` は文字を無視していた）。⑵ 同じ列の上向きの 2 声部は左端の順で詰めて積む＝上側に残っていた固定 2.0 段差（`StackStep`）を外した（`test/above-dynamics` の snapshot 1 枚・LP と一致）。
+- **4（場所取り・同 commit）**: 上向きのヘアピンと強弱記号を譜表の UP の輪郭へ字形どおりに（`SkylineBuilder.AddHairpinsToSkyline`・`AddDynamicsToSkyline`・`DynamicEngraver.AboveCollisionMove`）。直す前は上向きのヘアピンが*下*の輪郭に幻の場所を取り、合唱 4 段の段間が LP より 1.5〜1.9 広かった。
+- **5（書き出し・同 commit）**: `.ly` は `\new Staff \with { \dynamicUp }`（`StandsDynamicsUp`＝collector と同じ `GetVoiceBindings().WithLyrics`）。MusicXML は強弱記号とウェッジの placement を紙面の向きで書く（今まで `.up` も `below` だった）。
+- **照合**（Lab `sessions/p1225/dyn`・LP 2.26.0）: §6 の譜（ヘアピン中心 8.2608・ff 8.8608／8.9426）、強弱記号だけ 11 個、合唱 4 段（段の上端 11.9229／23.5426／35.6181／49.0212）、段またぎ（`brkup`）が 3 桁で一致。**D3 と LP の違い**は設計 §3.6 に表で書き直した（第1224 の読みは外れていた）＝オーナー未確認。
+- **6**: 全 svg の掃き 1038 冊 1264 枚で動いたのは 7 枚＝歌詞のある譜表に強弱記号がある本 6（`inporder` 2 冊は LP の双子なので `@f.down` に直した・`harbour-lights`・`morning-light`・`site/ode-to-joy`・Lab `がくふ`）と `test/above-dynamics`。文法書 3 つと CHANGELOG 2 つ。網 2 本（`LyricStaffOrderTests`・台帳 `lyrics.dynamic.staff-to-lyric` の本 PLYD）は「歌詞の上の譜表の*下*の強弱記号」を測る本なので `.down` を書いた。
+- 網は `DynamicsAboveLyricsTests`（LP の値で止める 3 本＝§6・単独のヘアピン 3.3666・合唱の段間、D3 と端、2 声部の積み順、歌詞の行の出し入れの増分＝フル、memo の再利用、双子、MusicXML）。毒は Lab `sessions/p1225/poisons.ps1`（結果は門の行）。
+- 7.6: 上下の配置は LP の aligned_side と skyline_spacing の移植の向き違い（REF は各所・`BoundText` は dynamic-engraver.cc:168-177）。向きの既定と D3 は LILYSHARP-OWN（オーナー決定）。7.7 の匂い: 2 声部の譜表で線が声部を見ない（上の行）／上の積みの順は「上向きは来た順」のまま場所取り側（`AddDynamicsToSkyline` の `InTurnOrder`）に残る＝絵の側は左端の順／増分描画の網は 1 段と 8 段の 2 形だけ／実機のプレビューは未確認。perf: 上向きの線が無いシステムでは走査 1 回（配列を読むだけ・複製なし）、memo の鍵にヘアピンの配列 1 本＝測っていない（オーナーの指示待ち）。拡張の npm テストは回していない（TS は不変）。
+- 門（`-End`、base `a36a9b749`）: 開始時 full 15196 合格 / 0 失敗 / skip 2 / 合計 15198、終了時 full 15212 合格 / 0 失敗 / skip 2 / 合計 15214（`p1225` の `run3.trx`・+16 は足した網）。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚（1 枚更新）。Core `+` 643 行 / LILYPOND-REF 6 / OWN 0。棚卸しの差分なし。毒 15 本のうち 14 本が赤（`p1225/poisons.log`・P11 は網を足して別に赤を確認）、緑は P9（memo がヘアピンを比べない）＝観測者なし: ヘアピンが変わる編集はその段の輪郭の identity も変えるので、memo はどのみち外れる。未 push 78 件（この締めの commit を含む）。
+
+## 以下は第1224セッションの経緯
+
 ### 1.1 第1224セッション（2026-11-11・YT-DELL2）
 
 設計 `docs/dynamics-above-lyrics-design.md` §5 の 1 と 2（base `294e0b1d4`）。OMR の `open` は 0。
@@ -149,21 +164,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 網は `DynamicsAboveLyricsTests`（歌詞のある譜表とない譜表・書いた向き・`on` の行・D3・choirStaff・双子の `^\<`）。毒 7 本すべて赤（Lab `sessions/p1224/poisons.ps1`）。全 svg の掃き 1038 冊 1264 枚で差 0（`p1224/sweep`、base は worktree）。
 - 7.6: 移植は無い（向きの判定は LILYSHARP-OWN のオーナー決定、文法は D2）。7.7 の匂い: `HairpinItem.IsAbove` は運ぶだけで読み手がいない（3 まで・remarks に明記）／増分描画で歌詞の行を足したとき向きが替わるかは未確認（設計 §3.5、3 で網）／`@cresc.up` を書いた本は今は下に描かれる。perf: 走査もキャッシュの鍵も足していない（ヘアピンの始まり 1 個に bool 1 つ）＝測っていない。拡張の npm テストは回していない（TS は不変）。
 - 門（`-End`、base `294e0b1d4`）: 開始時 full 15184 合格 / 0 失敗 / skip 2 / 合計 15186、終了時 full 15196 合格 / 0 失敗 / skip 2 / 合計 15198（`p1224` の trx・+12 は足した網）。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` 71 行 / LILYPOND-REF 0 / OWN 1。棚卸し OWN 307 → 308（`_staffDynamicsUp`）。未 push 75 件（この締めの commit を含む）。
-
-## 以下は第1223セッションの経緯
-
-### 1.1 第1223セッション（2026-11-10〜11・YT-DELL2）
-
-オーナーが Copilot に作曲させた曲を送り、監査と直しを重ねた便（`-Start` は回していない＝開始時の full は無い。base `e08a9d32d`）。
-- **再生**: `@niente` で打つ音は pppp（velocity 43）で鳴る（`dc65fb39c`、enum の値は 1 のまま `DynamicSyntax.Velocity` で読み替え・LILYSHARP-OWN）。velocity 1 では `@decresc … @niente` の最後の和音が無音だった（`Dorian-Mist`）。
-- **MP4**: 枠は紙の形（`afb801292`）。縦長の紙は 1240×1754、横長は 1920×1080 の内側。短い 1 ページは音楽の下で切られるので、紙の寸法は `CollectScore` の `Paper` から読む。`lys-to-mp4` も同じ（`-Width`／`-Height` は両方書いたときだけ固定）。
-- **作曲ガイド**: 模倣する曲（フーガ・カノン）の 1 項目と計画の入りの表（`1cb754459`）。変奏はリズム以外も変える（`fd1938a0e`）。`partial` の置き場所（`e087e45ea`）。
-- **レビューと作曲の検査**: `form.variation-short`（主題より短い変奏・`fd1938a0e`、弱起は小節に数えない `47d5a557d`）。`key.outside` を作曲の流れにも渡し、半音で着いて全音で離れる音を拾い、同じ音名の打ち直しのバスを 1 つの和音と読む（`fd1938a0e`）。`key.relative`（平行調に聞こえてその主音で終わるなら `key` の行を言う・`e031f4cf0`）。`voicing.band-low-chords`（バンドのエレキの D3 より下の 3 音以上・パワーコードは除く・`02e965d95`）。主題が他のパートへ移った変奏はその変奏を旋律の読みから外す（`fd0c1c77d`）。
-- **コード表**: ツールに `strings`（`"1-4"`、転回形も・`0beecd333`）。エディタのダイアグラム送りに上の 4 弦の形（既存の形の消音で作れるものは出さない・既定の図は不変・`3afcf5097`）。Cm の順は 29 → 35 で、固定していたテスト 6 本を書き換えた。
-- **LYS2022**（`e087e45ea`）: セクション頭の `partial` が丸ごとの小節の直後。掃き 715 冊で 3 冊（`Zundamon-to-Metan`・`Shudai-to-Hensou`・Lab `dogfood/big/choir-chorale` は直していない）。
-- **OMR への依頼**: Calamo `docs/repro/REQUESTS.md` の「Lily# からの連絡」2026-11-11（読み手が `key` を常に長調で書く）。Calamo 側は未 commit。
-- 7.6: 各項はオーナーの報告から（曲のパスは各 commit の本文）。7.7 の匂い: `key.outside` の新しい指摘はコーパスで 15 → 16 冊・小節が変わった本 7 冊のうち当否を見たのは 2 冊だけ／実物の Copilot での確認は未（`MANUAL-CHECKS` C64・C65）／perf ベンチは未実行。
-- 門（`-End`、base `e08a9d32d`）: 終了時 full 15184 合格 / 0 失敗 / skip 2 / 合計 15186（`p1223/run1.trx`）。拡張 npm 973 合格。台帳 1440 点 / ss 非ゼロ 302 総和 18.15959129 / OPEN 0。snapshot 251 枚。Core `+` 433 行 / LILYPOND-REF 0 / OWN 1（7.5: 検査と道具の便で移植は無い。OWN は niente の velocity）。棚卸しの増減 0。未 push 71 件。
 
 ## 2. 開いている作業
 

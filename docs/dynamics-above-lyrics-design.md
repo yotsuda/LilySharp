@@ -62,7 +62,15 @@ D3 は「強弱記号だけ `.down` と書いても、ヘアピンは追随し�
 - ヘアピンが**先に走っていて**、その終わりに `_\ff` が来る: 線が切れて `ff` だけが下に行く。ヘアピンは上のまま。D3 と同じ。
 - **同じ音に** `_\ff\<` と書く: `ff` が線の向きを下に変え、向きを書いていないヘアピンは同じ線に乗るので、**ヘアピンも下に行く**。D3 と違う。
 
-D3 のとおりに作ると、後者（`c@ff.down@cresc`）で Lily# はヘアピンを上、双子は下に描く。書き出しでそのヘアピンに `^\<` を付ければ双子は Lily# と同じ絵になる。作業順 3 まではどちらでも進められるので、D3 のままで進め、作業順 3 の照合のときにこの形の絵を並べてオーナーに見せる。
+**第1225 の実測（LilyPond 2.26.0・`\dynamicUp`・Lab `sessions/p1225/dyn/lp/d3`）で、上の 2 行の読みは外れていた。** 実際の規則は「向きを書いた記号が線の向きを決め、*そのあと*の向きを書いていない記号がその線についていく」:
+
+| 書き方 | LilyPond | Lily#（D3） |
+|---|---|---|
+| `c''4_\ff\> … f''\p` | ff 下・ヘアピン**上**・終わりの p **下** | ff 下・ヘアピン上・p **上** |
+| `c''4\< … f''_\ff` | ヘアピン上・ff 下 | 同じ |
+| `c''4\p_\< … f''\f` | p **下**・ヘアピン下・終わりの f **下** | p **上**・ヘアピン下・f **上** |
+
+つまり違いが出るのは「`.down` を書いた記号と同じ線に乗る、向きを書いていない記号」で、Lily# は D3 のとおり譜表の既定（上）に置く。双子（`\with { \dynamicUp }`）はこの形でだけ紙面と違う絵になる（`LilyPondExporter.StandsDynamicsUp` の注）。**オーナーに見せる絵**: Lab `sessions/p1225/dyn/out/d3.png`（Lily#）と `lp/d3.png`（LilyPond）。X の端は LilyPond に合わせた: ヘアピンは向きの違う文字にも付く（`HairpinEngraver.BoundText`）。
 
 ## 4. 照合と門
 
@@ -75,10 +83,12 @@ D3 のとおりに作ると、後者（`c@ff.down@cresc`）で Lily# はヘア�
 
 1. **済（第1224）** 調べ（§3 の各所の現状、ヘアピンの `.up` を拒む LYS 番号、MusicXML のウェッジの placement、LilyPond の上側の計算の出典）を確定し、この文書の §3 を正確な行番号で更新する。LilyPond の目標の svg は Lab `sessions/p1224/dynamics-up/rup.svg`（下向きの対照は `r.svg`）。
 2. **済（第1224・`efbc9c149`）** Collector と Parser（D1・D2）。描画はまだ下のまま、向きの情報だけを通す。網: 向きの判定（`DynamicsAboveLyricsTests`）。ヘアピンの向きは `HairpinItem.IsAbove` に届いている。強弱記号の `IsAbove` は 3 で `MeasureCollector.DynamicSideAbove` に替える（今は書いた `.up` だけ）。
-3. HairpinEngraver と DynamicAlignEngraver の上側。§6 の譜で LilyPond の双子と照合。
-4. BuildAllStaffSkylines の場所取り。段の間隔を照合。
-5. LilyPondExporter（`\dynamicUp`）と MusicXML。
-6. 全 svg の掃き、ドキュメント、CHANGELOG。
+3. **済（第1225・`b8c979fa5`）** HairpinEngraver と DynamicAlignEngraver の上側、`OutsideStaffStacker` の上の 250 の番（線・単独の記号・単独のヘアピンを左端の順に）と `AboveStackMemo`。§6 の譜・強弱記号だけ・合唱 4 段・段またぎで LilyPond の双子と座標が一致（Lab `sessions/p1225/dyn`）。同じ列の上向きの 2 声部の固定 2.0 段差は外した。
+4. **済（同）** 段の場所取り: 上向きのヘアピンと強弱記号を譜表の UP の輪郭へ字形どおりに（`SkylineBuilder.AddHairpinsToSkyline`・`AddDynamicsToSkyline`）。合唱 4 段の段間が LilyPond と一致。
+5. **済（同）** `LilyPondExporter`: `\new Staff \with { \dynamicUp }`。MusicXML: 強弱記号とウェッジの placement は紙面の向き。
+6. **済（第1225）** 全 svg の掃き（1264 枚のうち 7 枚＝歌詞のある譜表に強弱記号がある本 6 冊と `test/above-dynamics`）、`SYNTAX_REFERENCE`・`GRAMMAR`・`GRAMMAR_FOR_LLM`、CHANGELOG 2 つ。
+
+残り: §3.6 の絵をオーナーに見せる／2 声部の譜表で、上の声部のヘアピンの線に下の声部の同じ拍の強弱記号も乗る（`DynamicAlignEngraver` の注 ⑵＝ヘアピンが声部を持たない既知の穴。上向きでも同じ・Lab `sessions/p1225/dyn/out/vv.png`）／実機のプレビュー。
 
 ## 6. 今回の測定の譜（Lab `sessions/p1223/dynamics-up/`: `r.lys`、`r.ly`、`\dynamicUp` を足した `rup.ly`、LP の `rup.cropped.png`）
 

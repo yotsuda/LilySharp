@@ -472,12 +472,17 @@ c4@ff    // Fortissimo
 c4@fff | // Fortississimo
 ```
 
-Dynamics sit below the staff by default. Append `.up` / `.down` to force the side:
+Dynamics sit below the staff — and above it on a staff with a lyrics row directly under it
+(`staff sop  lyrics words`), where the words have the space below, as vocal music is written.
+Append `.up` / `.down` to force the side:
 
 ```
 c4@f.up      // forte above the staff
-d4@p.down    // piano below (the default)
+d4@p.down    // piano below (the default on a staff with no lyrics under it)
 ```
+
+A written side moves that mark alone: a hairpin beside it keeps the staff's own side, and so
+does the next level.
 
 A **subito** dynamic adds `.subito`: the level prints with an italic *sub.* before it, stands where
 the plain level would, and plays as the plain level (the LilyPond twin writes it with
@@ -525,9 +530,11 @@ ending on it, a decrescendo starting from it) it warns (LYS4029) and the wedge i
 plain. A note struck at it plays at velocity 43, as softly as pppp, so it is still heard; in MusicXML it is the wedge's
 `niente="yes"` or the `<n/>` dynamic, and LilyPond writes the hairpin with `circled-tip`.
 
-`.up` / `.down` cannot be applied to `@cresc` / `@decresc` / `@dim` — a hairpin is
-always engraved below the staff, so a placement suffix there is rejected as an error
-rather than silently ignored. (Placement works on dynamic *levels* like `@f.up`.)
+A hairpin stands on the staff's own side, as a level does: below, and above a staff with a
+lyrics row directly under it. `.up` / `.down` sends that one hairpin to the other side
+(`c4@cresc.up`, `c4@decresc.down`); the level that ends it keeps its own. The `.ly` twin
+writes `\dynamicUp` on such a staff and `^` / `_` for a written side; MusicXML writes
+the placement.
 
 ## Ties and Slurs
 

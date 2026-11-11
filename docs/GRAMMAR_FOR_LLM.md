@@ -465,7 +465,7 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   `@snapPizz` (Bartók pizzicato) - always above
 - Right-hand finger (plucked strings): `c4@pluck(p)` — `p i m a`
 - Ornaments: `@trill @mordent @prall @turn @reverseTurn`
-- Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` and the accent dynamics `@sfz @sf @fp @sfp @rfz @fz` (default below the staff; `.up` / `.down`
+- Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` and the accent dynamics `@sfz @sf @fp @sfp @rfz @fz` (default below the staff, above it on a staff with a lyrics row directly under it; `.up` / `.down`
   forces the side, e.g. `@f.up`). Subito: `@p.subito` prints an italic "sub." before the p and plays as `@p`;
   a side goes after it (`@ff.subito.up`)
 - Niente: `@niente` — `c4@p@decresc d e f | g1@niente` fades to nothing (circled tip), `c4@niente@cresc …` grows
@@ -585,8 +585,8 @@ g4@f@decresc a b c@p |      // decrescendo
 c4@cresc d e f@!cresc | g1 | // a crescendo that ends on f, no dynamic after it
 ```
 
-`.up` / `.down` is NOT allowed on `@cresc` / `@decresc` / `@dim` (a hairpin is always
-below the staff — the parser rejects it). Placement applies only to dynamic levels: `@f.up`.
+A hairpin stands on its staff's own side like a level: below, and above a staff with a lyrics
+row directly under it. `@cresc.up` / `@decresc.down` sends that one hairpin to the other side.
 
 ## Bar handling
 
