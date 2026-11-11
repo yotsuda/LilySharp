@@ -25,8 +25,9 @@ and Lily#'s own updates stay small.
 
 ## Using it
 
-Install it beside Lily#. Lily# versions after 0.16.0 look for it and play through it by default;
-earlier ones play as before. It gives way to a font you choose yourself
+Lily# versions after 0.16.0 bring it with them and play through it by default; with an earlier
+one, installing it changes nothing. It is Lily#'s to bring and yours to keep: remove it on its own
+and Lily# plays on without it; remove Lily# and it goes too. It gives way to a font you choose yourself
 (`lilysharp.playback.soundFont`, **Lily#: Choose Sound Font…**) and to a MIDI port
 (`lilysharp.playback.midiOutput`, **Lily#: Choose MIDI Output…**). Without it, Lily# plays the
 General MIDI bank your computer has (Windows, macOS) or plain tones.

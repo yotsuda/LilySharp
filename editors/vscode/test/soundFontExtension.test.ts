@@ -87,4 +87,14 @@ describe('the Lily# Sound Font extension', () => {
         const chosen = ext.slice(ext.indexOf('function defaultSoundFont('), ext.indexOf('const SOUND_FONT_EXTENSION'));
         assert.ok(chosen.indexOf("'media', 'soundfont'") < chosen.indexOf('packagedSoundFont()'));
     });
+
+    // Owner's decision 2026-11-11: a pack, not a dependency. Lily# plays without the font, so the
+    // font's package must never be what keeps Lily# from being installed, and it can be removed alone
+    // (tried with dummy parents from VSIX files: RELEASING.md).
+    it('is brought by Lily# as a pack member, not as a dependency', () => {
+        const lily = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8')) as Record<string, unknown>;
+        assert.deepEqual(lily.extensionPack, ['yotsuda.lilysharp-soundfont']);
+        assert.equal(lily.extensionDependencies, undefined);
+        assert.match(read('README.md'), /remove it on its own\s+and Lily# plays on without it; remove Lily# and it goes too\./);
+    });
 });

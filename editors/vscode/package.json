@@ -13,6 +13,9 @@
   "engines": {
     "vscode": "^1.90.0"
   },
+  "extensionPack": [
+    "yotsuda.lilysharp-soundfont"
+  ],
   "categories": [
     "Programming Languages"
   ],
