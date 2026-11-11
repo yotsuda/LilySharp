@@ -11,7 +11,9 @@ For whoever publishes it (the owner). Nothing here is in the package (`.vscodeig
    in the Lily# Extension output names `MuseScore_General.sf3`, and **Lily#: Choose Sound Font…**
    lists it as "(the Lily# Sound Font extension)". (Done for 1.0.0 on the owner's machine 2026-11-11:
    the log read `Preview synth ready: 38.1 MB in 117 ms: …/yotsuda.lilysharp-soundfont-1.0.0/soundfont/MuseScore_General.sf3`.)
-4. Publish it (`npx @vscode/vsce publish`).
+4. Publish it (`npx @vscode/vsce publish --packagePath <the VSIX that was tried>`, with `VSCE_PAT`
+   set: see editors/vscode/DEPLOY.md for the token). **1.0.0 was published 2026-11-11**; the
+   Marketplace took the 34 MB without a word.
 5. ONLY THEN release the Lily# that names it. Lily#'s package.json carries `"extensionPack":
    ["yotsuda.lilysharp-soundfont"]` (owner's decision 2026-11-11: a pack, not a dependency — Lily#
    plays without the font, so the font's package must never be what keeps Lily# from being
