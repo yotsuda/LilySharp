@@ -319,6 +319,17 @@ public class ChordVoicingFinderTests
         Assert.Contains("D7 (d fis a c) — <a c' fis' a'> — diagram(xx7575)\n", kept);
         Assert.Contains("KEEP the root", kept);
         Assert.DoesNotContain("KEEP the root", ChordVoicingFinder.DescribeProgression(["D7", "Cm7"], "guitar", null, null, null, "1-4", omitRoot: true, fromFret: 5));
+        // Owner's run 2026-11-11: a register no four-string shape fits (C4–C5) was answered with
+        // shapes from B♭3, and nothing said so. Each such line says it, and the answer once.
+        string narrow = ChordVoicingFinder.DescribeProgression(["Bb", "Gm", "F"], "guitar", "C4", "C5", null, "1-4", omitRoot: true, fromFret: 3);
+        Assert.Contains("(a triad: its root kept) (outside the register asked, ", narrow);
+        Assert.Contains(": no shape of it lies wholly in it there)", narrow);
+        Assert.Contains("⚠ The register asked holds no shape of the chords so marked", narrow);
+        // A register the shapes fit is not spoken of, nor is none.
+        string fits = ChordVoicingFinder.DescribeProgression(["Bb", "Gm", "F"], "guitar", "C4", "C5", null, "1-3", omitRoot: true, fromFret: 3);
+        Assert.DoesNotContain("outside the register", fits);
+        Assert.DoesNotContain("The register asked holds no shape", fits);
+        Assert.DoesNotContain("outside the register", ChordVoicingFinder.DescribeProgression(["Bb", "Gm", "F"], "guitar", null, null, null, "1-4"));
         // A symbol that is no chord says so on its own line and breaks nothing after it.
         string broken = ChordVoicingFinder.DescribeProgression(["C", "Xyz", "G"], "guitar", null, null);
         Assert.Contains("2. Xyz — no voicing", broken);

@@ -315,6 +315,11 @@ public static class ChordVoicingFinder
         const int Candidates = 12;
         static int PositionOf(Voicing v) => v.Frets.Where(f => f > 0).DefaultIfEmpty(0).Min();
         var answers = symbols.Select(s => Find(s.Trim(), instrument, low, high, Candidates, sound, onStrings, omitRoot, fromFret)).ToList();
+        // The register asked, as Find reads it: a shape outside it is said to be, on its line (owner's
+        // run 2026-11-11: asked C4–C5, six of eight shapes began on B♭3 and the answer said nothing —
+        // the chat spent 83 seconds on an answer it then copied whole).
+        int? lowest = low is { Length: > 0 } ? PitchOf(low) : null, highest = high is { Length: > 0 } ? PitchOf(high) : null;
+        bool Inside(Voicing v) => (lowest is not int l || v.Pitches[0] >= l) && (highest is not int h || v.Pitches[^1] <= h);
         var text = new System.Text.StringBuilder();
         string where = (onStrings is { Length: > 0 } ? $", on strings {onStrings}" : "")
             + (fromFret > 0 ? $", from fret {fromFret} up" : "") + (omitRoot ? ", the root left to the bass (a triad keeps it, in an upper voice)" : "");
@@ -345,7 +350,9 @@ public static class ChordVoicingFinder
         {
             var v = shapes[slot][k];
             return 0.75 * k + (MutedBetween(v.Frets) ? 8 : 0)
-                + (v.Pitches.Count < 3 && shapes[slot].Any(o => o.Pitches.Count >= 3 && !MutedBetween(o.Frets)) ? 4 : 0);
+                + (v.Pitches.Count < 3 && shapes[slot].Any(o => o.Pitches.Count >= 3 && !MutedBetween(o.Frets)) ? 4 : 0)
+                // A shape in the register asked before one outside it, as much as a muted string.
+                + (!Inside(v) && shapes[slot].Any(Inside) ? 8 : 0);
         }
         // A step's price: the top notes' distance, half the bottom notes', a note more or fewer,
         // and two for each fret the hand's position shifts.
@@ -410,8 +417,12 @@ public static class ChordVoicingFinder
                 ? string.Join(", ", v.Frets.Select((f, s) => (f, s)).Where(x => x.f >= 0)
                     .Select(x => $"{answers[i].Strings[x.s]} string {(x.f == 0 ? "open" : $"{x.f} up")}"))
                 : $"diagram({v.Diagram})";
-            text.Append($"{i + 1}. {symbols[i]} ({tones}) — {v.Chord} — {how}{(!answers[i].Bowed && MutedBetween(v.Frets) ? " (a string muted between the sounding ones: harder to strum)" : "")}{(answers[i].RootKept ? " (a triad: its root kept)" : "")}\n");
+            text.Append($"{i + 1}. {symbols[i]} ({tones}) — {v.Chord} — {how}{(!answers[i].Bowed && MutedBetween(v.Frets) ? " (a string muted between the sounding ones: harder to strum)" : "")}{(answers[i].RootKept ? " (a triad: its root kept)" : "")}"
+                + (Inside(v) ? "" : $" (outside the register asked, {v.Notes[0]} to {v.Notes[^1]}{(answers[i].Voicings.Any(Inside) ? "" : ": no shape of it lies wholly in it there")})") + "\n");
         }
+        if (Enumerable.Range(0, answers.Count).Any(i => chosen[i] >= 0 && !answers[i].Voicings.Any(Inside)))
+            text.Append("⚠ The register asked holds no shape of the chords so marked on these strings from this fret: the nearest are given. "
+                + "They are sound shapes; for shapes in the register, ask a wider one, or fewer strings.\n");
         text.Append("A diagram is its frets, lowest string first, x not played, as `@diagram( )` writes it. The notes are as they sound, in absolute octaves (c' is middle C): "
             + "write them so under `octave absolute`. For a chord's other voicings, ask it alone (`chord`).");
         if (omitRoot && Enumerable.Range(0, answers.Count).Any(i => chosen[i] >= 0 && !answers[i].RootKept && answers[i].Voicings[chosen[i]].Pitches.Count < 3))
