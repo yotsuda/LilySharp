@@ -56,7 +56,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { singerGoesOnToSings, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { singerGoesOnToSings, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1101,6 +1101,13 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singerCompletion, '"', ' ', ','));
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singerSettingCompletion, ' '));
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ language: 'lilysharp' }, singMarkCompletion, '(', ' '));
+    // …and what a voice does not take is marked where it is written (markSingProblems).
+    context.subscriptions.push(singDiagnostics,
+        vscode.workspace.onDidOpenTextDocument(scheduleSingProblems),
+        vscode.workspace.onDidChangeTextDocument(e => scheduleSingProblems(e.document)),
+        vscode.workspace.onDidCloseTextDocument(d => singDiagnostics.delete(d.uri)),
+        vscode.extensions.onDidChange(() => { for (const d of vscode.workspace.textDocuments) { scheduleSingProblems(d); } }));
+    for (const d of vscode.workspace.textDocuments) { scheduleSingProblems(d); }
     voiceSamplesDir = path.join(context.globalStorageUri.fsPath, 'voice-samples');
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.hearSinger', hearSinger));
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.singerTaken', singerTaken));
@@ -4034,7 +4041,8 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
 
 /**
  * The list inside a note's `@sing(…)` (owner's decisions 2026-11-12): the settings that can change
- * inside the music — the ones of scope `curve` — that any voice the file's singer lines name
+ * inside the music — every one but those that are one value for the voice; one value a phrase
+ * steps where a phrase begins, and its line says so — that any voice the file's singer lines name
  * takes, each with what it does and its range; and where a value is expected, the two words a
  * value may be: `default` (the singer line's value again) and `to` (arrive at the value that
  * follows, gliding).
@@ -4059,7 +4067,7 @@ const singMarkCompletion: vscode.CompletionItemProvider = {
         for (const who of singers.length > 0 ? singers : ['']) {
             try {
                 for (const p of await backend.parameters(await backend.voiceName(who || null))) {
-                    if (p.scope === 'curve' && !taken.has(p.name)) { taken.set(p.name, p); }
+                    if (p.scope !== 'voice' && !taken.has(p.name)) { taken.set(p.name, p); }
                 }
             } catch (e) {
                 outputChannel.appendLine(`singer: the settings of ${who || 'the default voice'} could not be listed — ${String(e)}`);
@@ -4074,6 +4082,61 @@ const singMarkCompletion: vscode.CompletionItemProvider = {
         });
     },
 };
+
+/**
+ * A voice's settings marked where they are written (owner's decisions 2026-11-12): what the
+ * document's singer lines and notes set (`lilysharp/singSettings`), against what the voices'
+ * engine says each takes (Cantoria's `parameters`) — a name it does not take, a value out of its
+ * range, a setting that cannot change inside the music. The server does not know the engines and
+ * the engine does not know the document, so the two are joined here, a moment after the text
+ * rests. Nothing is marked without a Cantoria that says what a voice takes: its silence would
+ * read as "takes nothing". A document that sets nothing asks no engine.
+ */
+const singDiagnostics = vscode.languages.createDiagnosticCollection('Lily# singer');
+const singTimers = new Map<string, ReturnType<typeof setTimeout>>();
+function scheduleSingProblems(document: vscode.TextDocument): void {
+    if (document.languageId !== 'lilysharp') { return; }
+    const key = document.uri.toString();
+    const pending = singTimers.get(key);
+    if (pending) { clearTimeout(pending); }
+    singTimers.set(key, setTimeout(() => { singTimers.delete(key); void markSingProblems(document); }, 700));
+}
+async function markSingProblems(document: vscode.TextDocument, tries = 0): Promise<void> {
+    if (document.isClosed) { return; }
+    // A file open before the server is up (the window's start): asked again when it is, a few times.
+    if (!client || !clientReady) {
+        if (tries < 5) { setTimeout(() => void markSingProblems(document, tries + 1), 2000); }
+        return;
+    }
+    const version = document.version;
+    let written: { Settings?: SingSettingDto[] | null; Singers?: (string | null)[] | null };
+    try {
+        written = await client.sendRequest('lilysharp/singSettings', { textDocument: { uri: document.uri.toString() } });
+    } catch {
+        return;
+    }
+    if (document.version !== version) { return; }
+    if (!written.Settings || written.Settings.length === 0) { singDiagnostics.delete(document.uri); return; }
+    const engine = await renderer();
+    const backend = engine?.backend instanceof CantoriaExtensionBackend && engine.backend.listsParameters ? engine.backend : undefined;
+    if (!backend) { singDiagnostics.delete(document.uri); return; }
+    const takenBy = new Map<string, SingParameter[]>();
+    try {
+        const singers = written.Singers && written.Singers.length > 0 ? written.Singers : [null];
+        for (const who of singers) { takenBy.set(who ?? '', await backend.parameters(await backend.voiceName(who))); }
+    } catch (e) {
+        // A voice that is not installed, an engine that did not start: nothing can be said of the settings.
+        outputChannel.appendLine(`singer: the voices' settings could not be checked — ${String(e)}`);
+        singDiagnostics.delete(document.uri);
+        return;
+    }
+    if (document.version !== version) { return; }
+    singDiagnostics.set(document.uri, singProblems(written.Settings, takenBy).map(p => {
+        const d = new vscode.Diagnostic(new vscode.Range(document.positionAt(p.start), document.positionAt(p.end)), p.message, vscode.DiagnosticSeverity.Warning);
+        d.source = 'Lily# singer';
+        return d;
+    }));
+}
 
 /** The first line of the `singer` list when no voice is installed (owner's request 2026-11-10): it
  *  says so and inserts nothing, the text under it kept, and taking it goes on to the setup. */

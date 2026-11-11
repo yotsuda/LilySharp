@@ -899,7 +899,7 @@ describe('a singer line\'s settings', () => {
         assert.equal(singParameterDetail({ name: 'breathiness', scope: 'curve', what: 'How much breath is in the voice', min: -12, max: 12, default: 0, unit: 'dB' }),
             'How much breath is in the voice — -12 to 12 dB, 0 as it is');
         assert.equal(singParameterDetail({ name: 'transpose', scope: 'phrase', what: 'Sung as if the key were shifted', min: -12, max: 12 }),
-            'Sung as if the key were shifted — -12 to 12 — changes where a phrase ends');
+            'Sung as if the key were shifted — -12 to 12 — one value a phrase: it changes where a phrase begins');
         assert.equal(singParameterDetail({ name: 'support', scope: 'voice', what: 'Another voice\'s model as support' }),
             'Another voice\'s model as support — one value for the voice');
         // A setting that takes a name says so, with the first of its names.
@@ -969,7 +969,68 @@ describe('a note\'s @sing', () => {
         assert.deepEqual(singersWritten('part lead { }\n'), []);
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(ext, /registerCompletionItemProvider\(\{ language: 'lilysharp' \}, singMarkCompletion, '\(', ' '\)/);
-        // Inside the music only what can change there: the settings of scope curve.
-        assert.match(ext, /if \(p\.scope === 'curve' && !taken\.has\(p\.name\)\) \{ taken\.set\(p\.name, p\); \}/);
+        // Inside the music what can change there: all but the settings that are one value for the voice.
+        assert.match(ext, /if \(p\.scope !== 'voice' && !taken\.has\(p\.name\)\) \{ taken\.set\(p\.name, p\); \}/);
+    });
+});
+
+// Owner's decisions 2026-11-12: a setting the voice does not take is the score's mistake, and is
+// shown where it is written.
+describe('a voice\'s settings are checked where they are written', () => {
+    const { singProblems } = require('../src/singerCore') as {
+        singProblems: (settings: object[], takenBy: Map<string, object[]>) => { start: number; end: number; message: string }[];
+    };
+    const diff = [
+        { name: 'breathiness', scope: 'curve', what: '', min: -12, max: 12, default: 0, unit: 'dB' },
+        { name: 'gender', scope: 'curve', what: '', min: -1, max: 1, default: 0 },
+    ];
+    const neutrino = [
+        { name: 'transpose', scope: 'phrase', what: '', min: -12, max: 12, default: 0 },
+        { name: 'support', scope: 'voice', what: '', word: true, values: ['KIRITAN', 'SOMA'] },
+    ];
+    const at = (name: string, over: object = {}) => ({ Name: name, Start: 10, End: 10 + name.length, ValueStart: 30, ValueEnd: 33, ...over });
+
+    it('on a singer line, against that line\'s own voice', () => {
+        const takenBy = new Map<string, object[]>([['diffsinger/X', diff], ['neutrino/M', neutrino]]);
+        // Taken, in range: nothing to say.
+        assert.deepEqual(singProblems([at('breathiness', { Number: 3, Singer: 'diffsinger/X' }), at('support', { Word: 'kiritan', Singer: 'neutrino/M' })], takenBy), []);
+        // Another voice's setting is not this one's.
+        const other = singProblems([at('transpose', { Number: 2, Singer: 'diffsinger/X' })], takenBy);
+        assert.deepEqual([other[0].start, other[0].end], [10, 19]);
+        assert.equal(other[0].message, '"diffsinger/X" does not take the setting "transpose" (it takes breathiness, gender): it is not sung');
+        // Out of range, on the value; a word for a number; a number for a name; a name that is none of them.
+        const wide = singProblems([at('breathiness', { Number: 99, Singer: 'diffsinger/X' })], takenBy);
+        assert.deepEqual([wide[0].start, wide[0].end], [30, 33]);
+        assert.equal(wide[0].message, '99 is outside what "breathiness" takes, -12 to 12 dB: it is sung as 12');
+        assert.match(singProblems([at('gender', { Word: 'low', Singer: 'diffsinger/X' })], takenBy)[0].message, /"gender" takes a number, -1 to 1, not "low"/);
+        assert.match(singProblems([at('support', { Number: 2, Singer: 'neutrino/M' })], takenBy)[0].message, /"support" takes a name, not a number/);
+        assert.match(singProblems([at('support', { Word: 'NOBODY', Singer: 'neutrino/M' })], takenBy)[0].message, /"NOBODY" is none of the names "support" takes: KIRITAN, SOMA/);
+        // A voice with no setting at all, and the default voice.
+        assert.match(singProblems([at('breathiness', { Number: 3, Singer: 'voicevox/Z' })], new Map([['voicevox/Z', []]]))[0].message, /"voicevox\/Z" does not take the setting "breathiness" \(it takes no setting\)/);
+        assert.match(singProblems([at('zzz', { Number: 3 })], new Map([['', diff]]))[0].message, /^the default voice does not take the setting "zzz"/);
+    });
+
+    it('on a note, against any voice of the file, and against where a setting can change', () => {
+        const takenBy = new Map<string, object[]>([['diffsinger/X', diff], ['neutrino/M', neutrino]]);
+        assert.deepEqual(singProblems([at('breathiness', { Number: 3, OnNote: true }), at('transpose', { Number: 2, OnNote: true }), at('gender', { Word: 'default', OnNote: true })], takenBy), []);
+        assert.match(singProblems([at('zzz', { Number: 1, OnNote: true })], takenBy)[0].message, /^no voice of this file takes the setting "zzz" \(they take breathiness, gender, transpose, support\)/);
+        assert.match(singProblems([at('zzz', { Number: 1, OnNote: true })], new Map([['diffsinger/X', diff]]))[0].message, /^this file's voice does not take the setting "zzz" \(it takes breathiness, gender\)/);
+        // One value for the voice belongs on the singer line; one value a phrase cannot glide.
+        assert.match(singProblems([at('support', { Word: 'SOMA', OnNote: true })], takenBy)[0].message, /"support" is one value for the voice: write it on the singer line/);
+        const glide = singProblems([at('transpose', { Number: 2, Arrives: true, OnNote: true })], takenBy);
+        assert.match(glide[0].message, /"transpose" is one value a phrase and cannot glide/);
+        assert.deepEqual([glide[0].start, glide[0].end], [30, 33]);
+        assert.deepEqual(singProblems([at('breathiness', { Number: 3, Arrives: true, OnNote: true })], takenBy), []);
+    });
+
+    it('is asked a moment after the text rests, of a Cantoria that says what a voice takes', () => {
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /client\.sendRequest\('lilysharp\/singSettings', \{ textDocument: \{ uri: document\.uri\.toString\(\) \} \}\);/);
+        // A document that sets nothing asks no engine; an older Cantoria's silence is not "takes nothing".
+        assert.match(ext, /if \(!written\.Settings \|\| written\.Settings\.length === 0\) \{ singDiagnostics\.delete\(document\.uri\); return; \}\s*const engine = await renderer\(\);/);
+        assert.match(ext, /engine\.backend\.listsParameters \? engine\.backend : undefined;/);
+        assert.match(ext, /vscode\.workspace\.onDidChangeTextDocument\(e => scheduleSingProblems\(e\.document\)\)/);
+        const singer = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'singer.ts'), 'utf8');
+        assert.match(singer, /get listsParameters\(\): boolean \{ return typeof this\.api\.parameters === 'function'; \}/);
     });
 });

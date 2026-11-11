@@ -357,6 +357,43 @@ public class PlaybackTextParams
     public string? RenderName { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/singSettings: the document.</summary>
+public class SingSettingsParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+}
+
+/// <summary>
+/// One setting of how a voice sings, where the document writes it (owner's decisions 2026-11-12):
+/// on a singer line's <c>with</c> (<see cref="OnNote"/> false, with <see cref="Singer"/> as the
+/// line names its voice) or in a note's <c>@sing(…)</c>. The editor asks the voice's engine what
+/// it takes and marks what it does not: the server does not know the engines.
+/// </summary>
+public class SingSettingDto
+{
+    public string Name { get; set; } = "";
+    /// <summary>The name's span, and the value's (a number's sign included).</summary>
+    public int Start { get; set; }
+    public int End { get; set; }
+    public int ValueStart { get; set; }
+    public int ValueEnd { get; set; }
+    public double? Number { get; set; }
+    public string? Word { get; set; }
+    /// <summary><c>NAME to VALUE</c>: arrived at, gliding.</summary>
+    public bool Arrives { get; set; }
+    public bool OnNote { get; set; }
+    /// <summary>A singer line's voice as written: a name, a gender, or null for the default voice.</summary>
+    public string? Singer { get; set; }
+}
+
+public class SingSettingsResponse
+{
+    public SingSettingDto[] Settings { get; set; } = [];
+    /// <summary>The voices the document's singer lines name, as written (null: the default voice).</summary>
+    public string?[] Singers { get; set; } = [];
+    public int Version { get; set; }
+}
+
 /// <summary>Parameters for lilysharp/sung: the score the preview shows, as
 /// <see cref="PlaybackParams"/>.</summary>
 public class SungParams

@@ -63,6 +63,8 @@ export class CantoriaExtensionBackend implements VoiceBackend {
         const v = await this.api.sing(score, { voice, signal, onProgress });
         return { wav: v.wav, duration: v.duration, notes: (v as { notes?: string[] }).notes };
     }
+    /** Whether this Cantoria says what a voice takes (after 0.4.0): an older one's silence is not "nothing". */
+    get listsParameters(): boolean { return typeof this.api.parameters === 'function'; }
     /** The settings `voice` takes on a singer line's `with …`; none from an older Cantoria. */
     async parameters(voice: string): Promise<SingParameter[]> {
         return this.api.parameters ? await this.api.parameters(voice) : [];

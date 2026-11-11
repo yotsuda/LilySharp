@@ -1044,6 +1044,56 @@ public sealed partial class LilySharpLanguageServer
     public Task<SungResponse> GetSungAsync(SungParams @params, CancellationToken token)
         => OffDispatch(() => GetSung(@params), token);
 
+    /// <summary>
+    /// Every setting of how a voice sings that the document writes, with where it stands: the
+    /// singer lines' <c>with …</c> and the notes' <c>@sing(…)</c>. What a voice TAKES is its
+    /// engine's to say, so the editor asks the engine and marks what it does not take; this is
+    /// only what is written.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/singSettings", UseSingleObjectParameterDeserialization = true)]
+    public Task<SingSettingsResponse> GetSingSettingsAsync(SingSettingsParams @params, CancellationToken token)
+        => OffDispatch(() => GetSingSettings(@params), token);
+
+    public SingSettingsResponse GetSingSettings(SingSettingsParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new SingSettingsResponse();
+        var root = doc.Tree.GetRoot();
+        string text = doc.Text;
+        var settings = new List<SingSettingDto>();
+        var singers = new List<string?>();
+        // A number's span takes its sign with it.
+        int Signed(int start) => start > 0 && text[start - 1] == '-' ? start - 1 : start;
+        foreach (var line in root.DescendantNodes<LilySharp.Core.Syntax.SingerDeclarationSyntax>())
+        {
+            if (line.SingsKeyword == null)
+                continue;
+            if (!singers.Contains(line.Singer))
+                singers.Add(line.Singer);
+            foreach (var s in line.Settings)
+                settings.Add(new SingSettingDto
+                {
+                    Name = s.Name, Start = s.NameToken.Span.Start, End = s.NameToken.Span.Start + s.Name.Length,
+                    ValueStart = s.Number != null ? Signed(s.ValueToken.Span.Start) : s.ValueToken.Span.Start, ValueEnd = s.ValueToken.Span.End,
+                    Number = s.Number, Word = s.Word, Singer = line.Singer,
+                });
+        }
+        foreach (var mark in root.DescendantNodes<LilySharp.Core.Syntax.MusicMarkSyntax>())
+        {
+            if (LilySharp.Core.Semantics.AnnotationValues.SingWritten(mark) is not { } written)
+                continue;
+            foreach (var (s, name, value) in written)
+                settings.Add(new SingSettingDto
+                {
+                    Name = s.Name, Start = name.Span.Start, End = name.Span.Start + s.Name.Length,
+                    ValueStart = s.Number != null ? Signed(value.Span.Start) : value.Span.Start, ValueEnd = value.Span.End,
+                    Number = s.Number, Word = s.Word, Arrives = s.Arrives, OnNote = true,
+                });
+        }
+        return new SingSettingsResponse { Settings = [.. settings], Singers = [.. singers], Version = doc.Version };
+    }
+
     /// <summary>The settings of a note's <c>@sing(…)</c> for the editor: the ones held from the
     /// note, or the ones arrived at; null with none.</summary>
     private static System.Collections.Generic.Dictionary<string, object>? SingDto(string? sing, bool arrives)

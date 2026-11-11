@@ -698,11 +698,69 @@ export function singersWritten(text: string): string[] {
     return found;
 }
 
+/** A setting as a document writes it (`lilysharp/singSettings`): where its name and its value
+ *  stand, the value, and whose it is — a singer line's (`Singer` as the line names its voice) or a note's. */
+export interface SingSettingDto {
+    Name: string; Start: number; End: number; ValueStart: number; ValueEnd: number;
+    Number?: number | null; Word?: string | null; Arrives?: boolean; OnNote?: boolean; Singer?: string | null;
+}
+
+/** What is wrong with a written setting, and where: on its name, or on its value. */
+export interface SingProblem { start: number; end: number; message: string }
+
+/**
+ * What the voices' engines would not sing of the settings a document writes (owner's decisions
+ * 2026-11-12: a setting the voice does not take is the score's mistake, and is shown where it is
+ * written — not only when the voice is sung). `takenBy` is what each voice named on a singer line
+ * takes, by the name as written ('' for the default voice). A singer line's setting is its own
+ * voice's; a note's is any of the file's voices' — the editor does not follow a note to its singer.
+ * Checked: a name no voice takes; a number where a name is wanted and the reverse; a name that is
+ * none of the setting's; a number out of its range; on a note, a setting that is one value for
+ * the voice, and a glide (`to`) of one that is one value a phrase.
+ */
+export function singProblems(settings: readonly SingSettingDto[], takenBy: ReadonlyMap<string, readonly SingParameter[]>): SingProblem[] {
+    const problems: SingProblem[] = [];
+    const all = [...takenBy.values()].flat();
+    const listed = (taken: readonly SingParameter[]) => taken.length === 0 ? 'takes no setting' : `takes ${[...new Set(taken.map(p => p.name))].join(', ')}`;
+    for (const s of settings) {
+        const taken = s.OnNote ? all : takenBy.get(s.Singer ?? '') ?? [];
+        const who = s.OnNote ? (takenBy.size === 1 ? 'this file\'s voice' : 'no voice of this file') : (s.Singer ? `"${s.Singer}"` : 'the default voice');
+        const p = taken.find(x => x.name === s.Name);
+        if (!p) {
+            problems.push({ start: s.Start, end: s.End, message: s.OnNote && takenBy.size !== 1
+                ? `${who} takes the setting "${s.Name}" (they take ${[...new Set(all.map(x => x.name))].join(', ') || 'none'}): it is not sung`
+                : `${who} does not take the setting "${s.Name}" (it ${listed(taken)}): it is not sung` });
+            continue;
+        }
+        const isDefault = s.Word === 'default';
+        if (s.OnNote && p.scope === 'voice') {
+            problems.push({ start: s.Start, end: s.End, message: `"${s.Name}" is one value for the voice: write it on the singer line (with ${s.Name} …), it cannot change inside the music` });
+            continue;
+        }
+        if (s.OnNote && s.Arrives && p.scope === 'phrase') {
+            problems.push({ start: s.ValueStart, end: s.ValueEnd, message: `"${s.Name}" is one value a phrase and cannot glide: "to" is taken as from this note` });
+        }
+        if (isDefault) { continue; }
+        if (p.word) {
+            if (s.Word == null) { problems.push({ start: s.ValueStart, end: s.ValueEnd, message: `"${s.Name}" takes a name, not a number` }); }
+            else if (p.values && p.values.length > 0 && !p.values.some(v => v.toLowerCase() === s.Word!.toLowerCase())) {
+                problems.push({ start: s.ValueStart, end: s.ValueEnd, message: `"${s.Word}" is none of the names "${s.Name}" takes: ${p.values.join(', ')}` });
+            }
+        } else if (s.Number == null) {
+            problems.push({ start: s.ValueStart, end: s.ValueEnd, message: `"${s.Name}" takes a number${p.min !== undefined && p.max !== undefined ? `, ${p.min} to ${p.max}` : ''}, not "${s.Word}"` });
+        } else if ((p.min !== undefined && s.Number < p.min) || (p.max !== undefined && s.Number > p.max)) {
+            const sung = Math.min(p.max ?? s.Number, Math.max(p.min ?? s.Number, s.Number));
+            problems.push({ start: s.ValueStart, end: s.ValueEnd, message: `${s.Number} is outside what "${s.Name}" takes, ${p.min} to ${p.max}${p.unit ? ' ' + p.unit : ''}: it is sung as ${sung}` });
+        }
+    }
+    return problems;
+}
+
 /** One line of the list for a setting: its name, and what it does with its range. */
 export function singParameterDetail(p: SingParameter): string {
     const range = p.min !== undefined && p.max !== undefined ? `${p.min} to ${p.max}${p.unit ? ' ' + p.unit : ''}`
         : p.word ? 'a name' + (p.values && p.values.length > 0 ? `: ${p.values.slice(0, 6).join(', ')}${p.values.length > 6 ? ', …' : ''}` : '') : '';
-    const where = p.scope === 'curve' ? '' : p.scope === 'phrase' ? 'changes where a phrase ends' : 'one value for the voice';
+    const where = p.scope === 'curve' ? '' : p.scope === 'phrase' ? 'one value a phrase: it changes where a phrase begins' : 'one value for the voice';
     return [p.what, range && `${range}${p.default !== undefined ? `, ${p.default} as it is` : ''}`, where].filter(Boolean).join(' — ');
 }
 

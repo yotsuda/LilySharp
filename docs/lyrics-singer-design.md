@@ -210,3 +210,11 @@ the step keys on a setting's number, on the singer line and on a note (`NoteStep
 DiffSinger voice's `gender` goes (measured brighter at +0.6, undecided at −0.6: by ear); a glide
 for a phrase-scope setting; one name and one scale across engines, when a second engine has a
 setting the first one has.
+
+And then: a phrase-scope setting may be written on a note — it steps, each phrase sung with the
+value at its first note (Cantoria's `SingCurves.PhraseValues`), and cannot glide. What a voice
+does not take is marked where it is written: the server lists what the document writes with its
+spans (`lilysharp/singSettings`), the extension asks the engine what each voice takes and joins
+the two (`singProblems`, the `Lily# singer` diagnostics) — the server does not know the engines,
+and the engine does not know the document. A note is checked against every voice of the file:
+the editor does not follow a note to its singer.

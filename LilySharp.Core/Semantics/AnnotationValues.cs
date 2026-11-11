@@ -115,16 +115,22 @@ public static class AnnotationValues
     /// <remarks>LILYSHARP-OWN: LilyPond writes no sound; what is written here is heard from a
     /// singing engine and draws nothing.</remarks>
     public static IReadOnlyList<SingSetting>? Sing(MusicMarkSyntax mark)
+        => SingWritten(mark)?.Select(w => w.Setting).ToList();
+
+    /// <summary>The same with where each is written: the name's first token and the value's token
+    /// (the number without its sign), for an editor that marks one.</summary>
+    public static IReadOnlyList<(SingSetting Setting, SyntaxTokenNode Name, SyntaxTokenNode Value)>? SingWritten(MusicMarkSyntax mark)
     {
         if (!Named(mark, "sing"))
             return null;
         var tokens = mark.ArgumentTokens.ToList();
-        var settings = new List<SingSetting>();
+        var settings = new List<(SingSetting Setting, SyntaxTokenNode Name, SyntaxTokenNode Value)>();
         int i = 0;
         while (i < tokens.Count)
         {
             if (tokens[i].Kind != SyntaxKind.Identifier)
                 return null;
+            var first = tokens[i];
             string name = tokens[i++].Text;
             while (i + 1 < tokens.Count && tokens[i].Kind == SyntaxKind.Dot && tokens[i + 1].Kind == SyntaxKind.Identifier)
             {
@@ -145,11 +151,11 @@ public static class AnnotationValues
             var value = tokens[i++];
             if (value.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral
                 && double.TryParse(value.Text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double number))
-                settings.Add(new SingSetting(name, minus ? -number : number, null, arrives));
+                settings.Add((new SingSetting(name, minus ? -number : number, null, arrives), first, value));
             else if (!minus && value.Kind == SyntaxKind.Identifier)
-                settings.Add(new SingSetting(name, null, value.Text, false));
+                settings.Add((new SingSetting(name, null, value.Text, false), first, value));
             else if (!minus && value.Kind == SyntaxKind.StringLiteral)
-                settings.Add(new SingSetting(name, null, Music.LyricSinger.ValueOf(value.Text), false));
+                settings.Add((new SingSetting(name, null, Music.LyricSinger.ValueOf(value.Text), false), first, value));
             else
                 return null;
         }

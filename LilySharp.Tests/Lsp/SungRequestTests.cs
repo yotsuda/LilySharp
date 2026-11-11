@@ -190,6 +190,44 @@ public class SungRequestTests
         Assert.Contains(settings, s => s is { Name: "support", Word: "KIRITAN", Arrives: false });
     }
 
+    // What the document writes of how its voices sing, with where it stands: for the editor to
+    // mark what the voice's engine does not take (the server does not know the engines).
+    [Fact]
+    public void TheSettingsWritten_AreListedWithWhereTheyStand()
+    {
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///written.lys");
+        string text = Doc.Replace("singer sings verse on melody", "singer female \"a/b\" sings verse on melody with breathiness 3 gender -0.2 support KIRITAN")
+            .Replace("c4 a8 r |", "c4@sing(tension to -2 mix.Sweet 0.3) a8@sing(breathiness default) r |");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = text, Version = 7, LanguageId = "lilysharp" },
+        });
+        var written = server.GetSingSettings(new SingSettingsParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        Assert.Equal(7, written.Version);
+        Assert.Equal(new string?[] { "a/b" }, written.Singers);
+        string At(int start, int end) => text[start..end];
+        // The singer line's: its voice as written, each name and each value where it stands, a sign with its number.
+        var line = written.Settings.Where(s => !s.OnNote).ToArray();
+        Assert.Equal(new[] { "breathiness", "gender", "support" }, line.Select(s => s.Name));
+        Assert.All(line, s => Assert.Equal("a/b", s.Singer));
+        Assert.Equal(new[] { "breathiness", "gender", "support" }, line.Select(s => At(s.Start, s.End)));
+        Assert.Equal(new[] { "3", "-0.2", "KIRITAN" }, line.Select(s => At(s.ValueStart, s.ValueEnd)));
+        Assert.Equal(new double?[] { 3, -0.2, null }, line.Select(s => s.Number));
+        Assert.Equal("KIRITAN", line[2].Word);
+        // The notes': held or arrived at, a dotted name whole.
+        var notes = written.Settings.Where(s => s.OnNote).ToArray();
+        Assert.Equal(new[] { "tension", "mix.Sweet", "breathiness" }, notes.Select(s => s.Name));
+        Assert.Equal(new[] { "tension", "mix.Sweet", "breathiness" }, notes.Select(s => At(s.Start, s.End)));
+        Assert.Equal(new[] { "-2", "0.3", "default" }, notes.Select(s => At(s.ValueStart, s.ValueEnd)));
+        Assert.Equal(new[] { true, false, false }, notes.Select(s => s.Arrives));
+        Assert.All(notes, s => Assert.Null(s.Singer));
+        // A document that sets nothing; the default voice is a voice too.
+        var plain = Open(out var plainUri).GetSingSettings(new SingSettingsParams { TextDocument = new TextDocumentIdentifier { Uri = plainUri } });
+        Assert.Empty(plain.Settings);
+        Assert.Equal(new string?[] { null }, plain.Singers);
+    }
+
     // Owner's request 2026-11-12, a trial: `@vibrato` on a sung note is told to the singing engine
     // (a DiffSinger voice lays it on its pitch curve) - the swing each way in cents, and the swings
     // a second where written. It draws nothing, and the MIDI does not know it.
