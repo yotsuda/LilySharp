@@ -83,9 +83,14 @@ describe('the Lily# Sound Font extension', () => {
         assert.match(ext, /return packagedSoundFont\(\) \?\? osSoundFonts\(\)\[0\] \?\? null;/);
         assert.match(ext, /vscode\.extensions\.getExtension\(SOUND_FONT_EXTENSION\)/);
         assert.match(ext, /path\.join\(packaged\.extensionPath, 'soundfont'\)/);
-        // A developer's own font under media/soundfont still comes first, and the setting before both.
+        // Owner's decision 2026-11-11: a developer's build reads no font of its own any more (it used to,
+        // under media/soundfont, before the extension's) — a developer's machine takes the road a user's
+        // does. The folder stays out of the package and out of git, lest one left over be carried.
         const chosen = ext.slice(ext.indexOf('function defaultSoundFont('), ext.indexOf('const SOUND_FONT_EXTENSION'));
-        assert.ok(chosen.indexOf("'media', 'soundfont'") < chosen.indexOf('packagedSoundFont()'));
+        assert.doesNotMatch(chosen, /joinPath\(|readdirSync|'media'/);
+        assert.doesNotMatch(ext, /this build's own, under media\/soundfont/);
+        assert.match(fs.readFileSync(path.join(__dirname, '..', '..', '.vscodeignore'), 'utf8'), /^media\/soundfont\/\*\*$/m);
+        assert.match(fs.readFileSync(path.join(__dirname, '..', '..', '.gitignore'), 'utf8'), /^media\/soundfont\/$/m);
     });
 
     // Owner's decision 2026-11-11: a pack, not a dependency. Lily# plays without the font, so the

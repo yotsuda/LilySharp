@@ -3532,12 +3532,12 @@ function synthRoot(extensionUri: vscode.Uri): vscode.Uri {
 }
 
 /** The sound font the preview plays with: `lilysharp.playback.soundFont` when it names a
- *  file on this machine (a missing one is logged and the default used); else a font under
- *  media/soundfont, which a release does not carry (a developer's own build may); else the
- *  General MIDI bank the OS ships (Windows' gm.dls, macOS's DLS bank). Null when there is
- *  none — Linux without a font set: the preview then plays its oscillator patches.
- *  Owner's decision 2026-10-12: no font in the VSIX; the OS's bank by default, and a better
- *  one is the user's to install (the editor page names three and how). */
+ *  file on this machine (a missing one is logged and the default used); else the Lily# Sound
+ *  Font extension's, which Lily# brings with it (packagedSoundFont); else the General MIDI bank
+ *  the OS ships (Windows' gm.dls, macOS's DLS bank). Null when there is none — Linux with
+ *  neither: the preview then plays its oscillator patches.
+ *  Owner's decisions: no font in THIS package (2026-10-12), and a good one from the start in a
+ *  package of its own (2026-11-11). */
 function soundFontFile(extensionUri: vscode.Uri): { file: vscode.Uri; root: vscode.Uri } | null {
     const setting = vscode.workspace.getConfiguration('lilysharp').get<string>('playback.soundFont', '').trim();
     if (setting) {
@@ -3550,20 +3550,15 @@ function soundFontFile(extensionUri: vscode.Uri): { file: vscode.Uri; root: vsco
     return fallback ? { file: vscode.Uri.file(fallback.path), root: vscode.Uri.file(path.dirname(fallback.path)) } : null;
 }
 
-/** What plays when the setting is empty, named as the picker shows it: a font under
- *  media/soundfont (a developer's local build — a release carries none), else the Lily# Sound
- *  Font extension's when that is installed (packagedSoundFont), else the OS's bank.
+/** What plays when the setting is empty, named as the picker shows it: the Lily# Sound Font
+ *  extension's font when that is installed (packagedSoundFont), else the OS's bank.
  *  ONE answer for the player and the picker: the picker said "gm.dls" while a local build
  *  played its MuseScore_General, which then had no name in the list (owner's report
- *  2026-10-12). */
-function defaultSoundFont(extensionUri: vscode.Uri): { label: string; path: string } | null {
-    const dir = vscode.Uri.joinPath(extensionUri, 'media', 'soundfont');
-    try {
-        const files = fs.readdirSync(dir.fsPath).filter(f => /\.(sf2|sf3|dls)$/i.test(f)).sort();
-        if (files.length > 0) {
-            return { label: `${files[0]} (this build's own, under media/soundfont)`, path: path.join(dir.fsPath, files[0]) };
-        }
-    } catch { /* none here — a release carries none */ }
+ *  2026-10-12).
+ *  A developer's build used to read a font under its own media/soundfont first. That is gone
+ *  (owner's decision 2026-11-11): with the Sound Font extension there, it served nothing a
+ *  setting does not, and it kept a developer's machine off the road every user's takes. */
+function defaultSoundFont(_extensionUri: vscode.Uri): { label: string; path: string } | null {
     return packagedSoundFont() ?? osSoundFonts()[0] ?? null;
 }
 
@@ -3738,7 +3733,7 @@ async function videoFfmpeg(): Promise<string | undefined> {
 }
 
 /** The sound font a WAV, MP3 or MP4 export plays the score through: the one the preview plays
- *  (soundFontFile — the setting, else this build's own, else the OS's bank), so the file sounds
+ *  (soundFontFile — the setting, else the Sound Font extension's, else the OS's bank), so the file sounds
  *  as Play does (owner's request 2026-11-07; until then the server's synth rendered it and read
  *  `.sf2` only, so the default gm.dls and a `.sf3` were refused). Only when the preview has none
  *  (Linux with no font set: it plays its oscillator patches, which no file can) does the writer

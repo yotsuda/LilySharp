@@ -90,10 +90,12 @@ Now:
 ## 4. The sound font
 
 - **Where it comes from**: `lilysharp.playback.soundFont` (machine-overridable) names an
-  `.sf2`, `.sf3` or `.dls` on this machine; empty, the first such file under the extension's
-  `media/soundfont/` (a developer's local build only — a release carries none), else the
+  `.sf2`, `.sf3` or `.dls` on this machine; empty, the font of the Lily# Sound Font extension
+  (`packagedSoundFont`: MuseScore_General, a package of its own that Lily# brings as a pack
+  member — owner's decision 2026-11-11, `editors/vscode-soundfont`), else the
   General MIDI bank the OS ships (`osSoundFonts`: Windows' `gm.dls`, macOS's
-  `gs_instruments.dls`). A missing file is logged and the default used. Changing the
+  `gs_instruments.dls`). (Until 2026-11-11 a developer's build read a font under its own
+  `media/soundfont/` first; that is gone, so a developer's machine takes the road a user's does.) A missing file is logged and the default used. Changing the
   setting re-roots the open previews' webviews and swaps the font in place
   (`previewResourceRoots`, `synthUrls`, the `setSoundFont` message). No font at all: the
   oscillator patches, and the output channel says so (`Preview synth none`). The setting's
@@ -101,7 +103,10 @@ Now:
   bundled font, the General MIDI bank the OS ships for its own synth where present
   (Windows' `gm.dls`, macOS's `gs_instruments.dls` — Roland GS, DLS, small and dated; read
   in place, never copied), the current file, or a file dialog filtered to the three formats.
-- **Which one — DECIDED 2026-10-12 (owner): none is bundled.** "Windows ships one, small as it
+- **Which one — DECIDED 2026-10-12 (owner): none is bundled; REVISED 2026-11-11: MuseScore_General
+  comes as an extension of its own** (a thin sound makes the whole product look thin; a font in
+  this package would be downloaded again at every update). What follows is the 2026-10-12 state,
+  which is what plays where the Sound Font extension is not installed. "Windows ships one, small as it
   is; whoever wants better installs it — document the recommended fonts and the steps." So the
   default is the OS's bank (Windows' `gm.dls`: 3.4 MB, 235 presets with the GS drum kits,
   parsed by spessasynth_core 4.3.22 in 45 ms — measured), simple tones on Linux, and
