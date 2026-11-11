@@ -56,7 +56,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { singerGoesOnToSings, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -4160,8 +4160,22 @@ let voiceSampleQueue: VoiceSampleQueue | undefined;
 /** The voice last asked to be heard: a sample landing after another was chosen stays silent. */
 let voiceSampleWanted = '';
 
+/** A voice's sample; one sung with a line's settings (its key has a `!`) in a folder of its own,
+ *  which keeps the newest few: every value a setting is stepped through is one more. */
+const TRIED_SAMPLES_KEPT = 40;
 function voiceSampleFile(id: string): string {
-    return path.join(voiceSamplesDir ?? '', voiceSampleFileName(id));
+    return id.includes('!')
+        ? path.join(voiceSamplesDir ?? '', 'tried', voiceSampleFileName(id))
+        : path.join(voiceSamplesDir ?? '', voiceSampleFileName(id));
+}
+/** Lets go of the oldest samples sung with settings, past TRIED_SAMPLES_KEPT. */
+function trimTriedSamples(): void {
+    const folder = path.join(voiceSamplesDir ?? '', 'tried');
+    try {
+        const files = fs.readdirSync(folder).map(name => ({ file: path.join(folder, name), at: fs.statSync(path.join(folder, name)).mtimeMs }))
+            .sort((a, b) => b.at - a.at);
+        for (const old of files.slice(TRIED_SAMPLES_KEPT)) { try { fs.unlinkSync(old.file); } catch { /* in use */ } }
+    } catch { /* no such folder yet */ }
 }
 
 function samples(): VoiceSampleQueue {
@@ -4173,31 +4187,38 @@ async function singVoiceSample(key: string): Promise<void> {
     const engine = await renderer();
     const backend = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend : undefined;
     if (!backend?.api.voices) { throw new Error('no engine that lists its voices'); }
-    const { id, language: asked, octave } = parseVoiceSampleKey(key);
+    const { id, language: asked, octave, sing } = parseVoiceSampleKey(key);
     const first = id.split('+')[0].trim();      // voices singing together: the first says the language
     const voice = (await backend.api.voices()).find(v => v.id === first);
     const language = asked ?? voice?.language;
     const score = language ? voiceSampleScore(language, octave) : undefined;
     if (!score) { throw new Error(`no sample phrase for the language ${language ?? 'it does not name'}`); }
+    // The phrase as the line says the voice sings (its `with …`): what a setting does is heard.
+    if (sing && Object.keys(sing).length > 0) { score.sing = sing; }
     const v = await backend.sing(`sample-${key}`, score, id);
+    for (const note of v.notes ?? []) { tellSingerSetting(note); }
     await fs.promises.mkdir(path.dirname(voiceSampleFile(key)), { recursive: true });
     await fs.promises.copyFile(v.wav, voiceSampleFile(key));
+    if (key.includes('!')) { trimTriedSamples(); }
 }
 
 /** Lets the document's preview say a short phrase in `id` (with no preview open it is silent, as every audition is). */
-async function auditionVoice(uri: string, id: string, clock: StageClock, language?: string, lineGender?: string | null): Promise<void> {
+async function auditionVoice(uri: string, id: string, clock: StageClock, language?: string, lineGender?: string | null,
+    sing?: Record<string, number | string>): Promise<void> {
     // Voices singing together: the first says the octave, as it says the language.
     const first = id.split('+')[0].trim();
     const engine = await renderer();
     const voice = engine?.backend instanceof CantoriaExtensionBackend ? (await engine.backend.api.voices?.())?.find(v => v.id === first) : undefined;
-    const key = voiceSampleKey(id, sampleOctave(voice?.gender, lineGender), language);
+    const key = voiceSampleKey(id, sampleOctave(voice?.gender, lineGender), language, sing);
     voiceSampleWanted = key;
     const songAtStart = voiceRenderer?.singing ? 'being sung' : 'not being sung';
     const say = (end: string) => outputChannel.appendLine(`singer: hear ${id}: ${clock}${end} (the song was ${songAtStart} at the start)`);
     if (!vscode.workspace.getConfiguration('lilysharp').get<boolean>('audition.enabled', true)) { say(', auditions are off'); return; }
     if (!previewPanels.get(uri)) { say(', no preview is open'); return; }
     const onDisk = fs.existsSync(voiceSampleFile(key));
-    const ready = await samples().ask(key);
+    // A sample with the line's settings takes the place of the ones of that voice still waiting:
+    // stepping a value asks one a step, and only the last is wanted.
+    const ready = await samples().ask(key, sing ? other => other.includes('!') && other.slice(0, other.indexOf('!')) === key.slice(0, key.indexOf('!')) : undefined);
     clock.mark(onDisk ? 'sample on disk' : 'sample sung');
     if (!ready) { say(', the sample could not be sung'); return; }
     if (voiceSampleWanted !== key) { say(', another voice was chosen meanwhile'); return; }
@@ -4229,11 +4250,17 @@ async function hearSinger(label: unknown, nameColumn?: unknown): Promise<void> {
     const voice = await engine.backend.voiceName(label);
     clock.mark('name');
     const caret = editor.selection.active;
-    const asked = new vscode.Position(caret.line, singerLanguageColumn(editor.document.lineAt(caret.line).text,
-        typeof nameColumn === 'number' ? nameColumn : caret.character));
+    const lineText = editor.document.lineAt(caret.line).text;
+    // The line as it stands: how it says the voice sings (its `with …`) is heard with the voice,
+    // and with the caret in those settings the words' language is asked at the voice's name.
+    const line = singerLineOf(lineText);
+    const inSettings = line && line.withAt >= 0 && caret.character >= line.withAt;
+    const asked = new vscode.Position(caret.line, singerLanguageColumn(lineText,
+        typeof nameColumn === 'number' ? nameColumn : inSettings ? line.askColumn : caret.character));
     const slot = client && clientReady ? await client.sendRequest<{ Language?: string | null; Gender?: string | null }>('lilysharp/singerSlot',
         { textDocument: { uri: editor.document.uri.toString() }, offset: editor.document.offsetAt(asked) }).then(s => s, () => undefined) : undefined;
-    await auditionVoice(editor.document.uri.toString(), voice, clock, slot?.Language ?? undefined, slot?.Gender);
+    await auditionVoice(editor.document.uri.toString(), voice, clock, slot?.Language ?? undefined, slot?.Gender,
+        line && Object.keys(line.sing).length > 0 ? line.sing : undefined);
 }
 
 /**

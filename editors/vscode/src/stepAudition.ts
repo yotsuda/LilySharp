@@ -34,7 +34,7 @@ import {
     auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument, reselectAfterStep,
     stepFallbackCommand, strumGapMs,
 } from './auditionCore';
-import { singerWrittenAt } from './singerCore';
+import { singerLineOf, singerWrittenAt } from './singerCore';
 
 export interface StepAuditionDeps {
     getClient: () => LanguageClient | undefined;
@@ -210,6 +210,17 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         if (response.Message) {
             vscode.window.setStatusBarMessage(`Lily#: ${response.Message}`, 4000);
         }
+        // A step on a singer line's setting (`with transpose 3`, owner's request 2026-11-12): the
+        // voice says its phrase as the line now has it, as a stepped note sounds.
+        if (response.Edits.length > 0 && editor.selections.length === 1 && auditionEnabled()) {
+            const uri = doc.uri.toString();
+            const caret = editor.selection.active;
+            const line = singerLineOf(doc.lineAt(caret.line).text);
+            if (line && line.withAt >= 0 && caret.character >= line.withAt && deps.getPreview(uri) && !deps.isPlaying(uri)) {
+                singerLanded.set(uri, `${caret.line}:with:${JSON.stringify(line.sing)}`);
+                void deps.hearSinger(line.voice);
+            }
+        }
         if (auditionEnabled() && response.Pitches.length > 0) {
             const uri = doc.uri.toString();
             play(uri, response.Pitches, response.Timbre, response.Program, response.Strum, response.Apart);
@@ -274,12 +285,22 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             // The caret or a selection coming to a `singer` (owner's request 2026-11-09, session
             // 1180): its voice says its phrase. A step or an edit landing there has its own say.
             const one = event.selections.length === 1 && event.selections[0].isSingleLine ? event.selections[0] : undefined;
-            const written = one ? singerWrittenAt(doc.lineAt(one.start.line).text, one.start.character, one.end.character) : undefined;
+            let written = one ? singerWrittenAt(doc.lineAt(one.start.line).text, one.start.character, one.end.character) : undefined;
+            // …and coming to the line's settings (`with …`): the voice as the line has it
+            // (owner's request 2026-11-12). One landing a line's settings, wherever in them.
+            let landedOn = written;
+            if (written === undefined && one) {
+                const line = singerLineOf(doc.lineAt(one.start.line).text);
+                if (line && line.withAt >= 0 && one.start.character >= line.withAt) {
+                    written = line.voice;
+                    landedOn = `with:${JSON.stringify(line.sing)}`;
+                }
+            }
             if (written === undefined) {
                 singerLanded.delete(uri);
                 singerWait.cancel();
             } else {
-                const landed = `${one!.start.line}:${written}`;
+                const landed = `${one!.start.line}:${landedOn}`;
                 if (singerLanded.get(uri) !== landed) {
                     singerLanded.set(uri, landed);
                     const byHand = event.kind === vscode.TextEditorSelectionChangeKind.Keyboard || event.kind === vscode.TextEditorSelectionChangeKind.Mouse;

@@ -218,3 +218,11 @@ spans (`lilysharp/singSettings`), the extension asks the engine what each voice 
 the two (`singProblems`, the `Lily# singer` diagnostics) — the server does not know the engines,
 and the engine does not know the document. A note is checked against every voice of the file:
 the editor does not follow a note to its singer.
+
+A singer line's settings are HEARD (owner's request 2026-11-12): the phrase a voice is heard by
+is sung with what the line writes after `with` — when the caret comes to the line (its name or
+its settings) and at each step of a value. The extension reads the line itself (`singerLineOf`),
+keeps such a sample by the voice and the settings (`voiceSampleKey`'s `!name=value;…`, in a
+`tried` folder that holds the newest 40), and a value asked while another of the same voice
+waits takes its place, so a run of steps sings its last. A note's `@sing` is not heard this way:
+the phrase has no place for it, and the note's own bar would have to be sung.

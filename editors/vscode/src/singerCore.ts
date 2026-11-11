@@ -387,15 +387,59 @@ export function sampleOctave(voiceGender?: string | null, lineGender?: string | 
 
 /** What a voice's sample is kept under: the voice, its language after an `@` where that is not
  *  Japanese, and the octave after a `~`, a voice that says no gender being heard in both. */
-export function voiceSampleKey(id: string, octave: SampleOctave, language?: string): string {
-    return `${language && language !== 'ja' ? `${id}@${language}` : id}~${octave}`;
+export function voiceSampleKey(id: string, octave: SampleOctave, language?: string, sing?: Record<string, number | string>): string {
+    // …and, after a `!`, how the line says the voice sings (its `with …`), the names in one
+    // order: a voice is heard as its line has it (owner's request 2026-11-12: hear what
+    // `transpose` does as a note or a voice is heard).
+    const settings = sing ? Object.entries(sing).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([name, value]) => `${name}=${value}`).join(';') : '';
+    return `${language && language !== 'ja' ? `${id}@${language}` : id}~${octave}${settings ? '!' + settings : ''}`;
 }
 
-/** The three parts of a {@link voiceSampleKey}. */
-export function parseVoiceSampleKey(key: string): { id: string; language?: string; octave: SampleOctave } {
-    const mark = key.lastIndexOf('~');
-    const [id, language] = key.slice(0, mark).split('@');
-    return { id, language, octave: key.slice(mark + 1) === 'high' ? 'high' : 'low' };
+/** The parts of a {@link voiceSampleKey}. */
+export function parseVoiceSampleKey(key: string): { id: string; language?: string; octave: SampleOctave; sing?: Record<string, number | string> } {
+    const bang = key.indexOf('!', key.lastIndexOf('~'));
+    const plain = bang < 0 ? key : key.slice(0, bang);
+    const mark = plain.lastIndexOf('~');
+    const [id, language] = plain.slice(0, mark).split('@');
+    const parsed: { id: string; language?: string; octave: SampleOctave; sing?: Record<string, number | string> } =
+        { id, language, octave: plain.slice(mark + 1) === 'high' ? 'high' : 'low' };
+    if (bang >= 0) {
+        parsed.sing = Object.fromEntries(key.slice(bang + 1).split(';').filter(Boolean).map(pair => {
+            const at = pair.indexOf('=');
+            const value = pair.slice(at + 1);
+            return [pair.slice(0, at), value !== '' && !isNaN(Number(value)) ? Number(value) : value];
+        }));
+    }
+    return parsed;
+}
+
+/**
+ * A singer line as its text reads, for hearing it: the voice as written (a name, else a gender,
+ * else '' for the default voice), where on the line to ask what language its words are in, the
+ * settings after `with` (a number, or a word or a string unquoted; a name written twice keeps its
+ * last), and where the settings begin (-1 with none). Undefined off a singer line and in a
+ * comment. The grammar's own reading is the server's; this is the line alone, for the editor.
+ */
+export function singerLineOf(line: string): { voice: string; askColumn: number; sing: Record<string, number | string>; withAt: number } | undefined {
+    const code = line.split('//')[0];
+    const head = /^([ \t]*singer[ \t]+)(?:(male|female)(?![\w-])[ \t]*)?(?:"([^"]*)")?/.exec(code);
+    if (!head || !/(?<![\w-])sings(?![\w-])/.test(code.replace(/"[^"]*"/g, '""'))) { return undefined; }
+    const quote = code.indexOf('"', head[1].length);
+    const askColumn = head[3] !== undefined && quote >= 0 ? quote + 1 : head[1].length + (head[2]?.length ?? 0);
+    const sing: Record<string, number | string> = {};
+    // `with` and a name after it, not the track or the part of that name (`sings with on lead`).
+    const masked = code.replace(/"[^"]*"/g, m => '"' + ' '.repeat(Math.max(0, m.length - 2)) + '"');
+    // The line in its order: sings, the words, on and the part, then with.
+    const at = /^[ \t]*sings(?![\w-])[ \t]+(?:"[^"]*"|[^\s"]+)(?:[ \t]+on[ \t]+(?:"[^"]*"|[^\s"]+))?[ \t]+with([ \t]+)(?=[A-Za-z_])/.exec(masked.slice(head[0].length));
+    const withAt = at ? head[0].length + at[0].length - at[1].length - 4 : -1;
+    if (at) {
+        const words = code.slice(head[0].length + at[0].length).match(/"[^"]*"|[^\s"]+/g) ?? [];
+        for (let i = 0; i + 1 < words.length; i += 2) {
+            const value = words[i + 1];
+            sing[words[i]] = value.startsWith('"') ? value.slice(1, -1) : value !== '' && !isNaN(Number(value)) ? Number(value) : value;
+        }
+    }
+    return { voice: head[3] || head[2] || '', askColumn, sing, withAt };
 }
 
 /** The short phrase a voice is heard by when it is chosen (owner's requests 2026-11-09, session 1177,
@@ -445,7 +489,16 @@ export class VoiceSampleQueue {
         void this.pump();
     }
 
-    ask(id: string): Promise<boolean> {
+    /** `supersedes`: the waiting samples this one takes the place of - they are not sung, and
+     *  whoever asked for them hears false. */
+    ask(id: string, supersedes?: (other: string) => boolean): Promise<boolean> {
+        if (supersedes) {
+            for (const other of this.waiting.filter(w => w !== id && supersedes(w))) {
+                this.waiting.splice(this.waiting.indexOf(other), 1);
+                for (const resolve of this.callers.get(other) ?? []) { resolve(false); }
+                this.callers.delete(other);
+            }
+        }
         if (this.has(id)) { return Promise.resolve(true); }
         return new Promise<boolean>(resolve => {
             this.callers.set(id, [...(this.callers.get(id) ?? []), resolve]);

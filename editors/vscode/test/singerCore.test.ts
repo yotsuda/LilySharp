@@ -1034,3 +1034,90 @@ describe('a voice\'s settings are checked where they are written', () => {
         assert.match(singer, /get listsParameters\(\): boolean \{ return typeof this\.api\.parameters === 'function'; \}/);
     });
 });
+
+// Owner's request 2026-11-12: what a setting does (transpose…) is heard as a note or a voice is
+// heard - the voice says its phrase as the line has it, when a value is stepped and when the
+// caret comes to the line's settings.
+describe('a singer line is heard as it says the voice sings', () => {
+    const core = require('../src/singerCore') as {
+        singerLineOf: (line: string) => { voice: string; askColumn: number; sing: Record<string, number | string>; withAt: number } | undefined;
+        voiceSampleKey: (id: string, octave: string, language?: string, sing?: Record<string, number | string>) => string;
+        parseVoiceSampleKey: (key: string) => { id: string; language?: string; octave: string; sing?: Record<string, number | string> };
+        voiceSampleFileName: (key: string) => string;
+    };
+
+    it('reads the line: its voice, its settings, and where they begin', () => {
+        const line = 'singer female "neutrino/MERROW" sings words on lead with transpose 3 support KIRITAN gender -0.2 note "a b"';
+        const read = core.singerLineOf(line)!;
+        assert.equal(read.voice, 'neutrino/MERROW');
+        assert.deepEqual(read.sing, { transpose: 3, support: 'KIRITAN', gender: -0.2, note: 'a b' });
+        assert.equal(line.slice(read.withAt, read.withAt + 4), 'with');
+        assert.equal(line.slice(read.askColumn, read.askColumn + 8), 'neutrino');
+        // A gender alone, no voice at all, no settings; a track or a part called with.
+        assert.deepEqual(core.singerLineOf('singer male sings words with transpose 2'), { voice: 'male', askColumn: 11, sing: { transpose: 2 }, withAt: 24 });
+        assert.equal(core.singerLineOf('singer sings words on lead')!.voice, '');
+        assert.equal(core.singerLineOf('singer "a/b" sings words on lead')!.withAt, -1);
+        assert.deepEqual(core.singerLineOf('singer "a/b" sings with on with')!.sing, {});
+        assert.deepEqual(core.singerLineOf('singer "a/b" sings with on with with x 1')!.sing, { x: 1 });
+        // A name that holds the word; a name written twice keeps its last; a comment; another line.
+        assert.deepEqual(core.singerLineOf('singer "x/with y" sings words with a 1 a 2')!.sing, { a: 2 });
+        assert.deepEqual(core.singerLineOf('singer "a/b" sings words // with a 1')!.sing, {});
+        assert.equal(core.singerLineOf('lyrics words { la }'), undefined);
+        assert.equal(core.singerLineOf('singer "a/b"'), undefined);
+    });
+
+    it('keeps a sample by the voice AND the settings it was sung with', () => {
+        const plain = core.voiceSampleKey('neutrino/MERROW', 'high');
+        const set = core.voiceSampleKey('neutrino/MERROW', 'high', undefined, { transpose: 3, support: 'KIRITAN' });
+        assert.equal(plain, 'neutrino/MERROW~high');
+        assert.equal(set, 'neutrino/MERROW~high!support=KIRITAN;transpose=3');
+        // The same settings in another order are the same sample; another value another.
+        assert.equal(core.voiceSampleKey('neutrino/MERROW', 'high', undefined, { support: 'KIRITAN', transpose: 3 }), set);
+        assert.notEqual(core.voiceSampleKey('neutrino/MERROW', 'high', undefined, { transpose: 4, support: 'KIRITAN' }), set);
+        assert.equal(core.voiceSampleKey('neutrino/MERROW', 'high', undefined, {}), plain);
+        assert.deepEqual(core.parseVoiceSampleKey(set), { id: 'neutrino/MERROW', language: undefined, octave: 'high', sing: { support: 'KIRITAN', transpose: 3 } });
+        assert.deepEqual(core.parseVoiceSampleKey(core.voiceSampleKey('diffsinger/X/Y', 'low', 'en', { gender: -0.2 })),
+            { id: 'diffsinger/X/Y', language: 'en', octave: 'low', sing: { gender: -0.2 } });
+        assert.equal(core.parseVoiceSampleKey(plain).sing, undefined);
+        // Two values are two files.
+        assert.notEqual(core.voiceSampleFileName(set), core.voiceSampleFileName(core.voiceSampleKey('neutrino/MERROW', 'high', undefined, { transpose: -3, support: 'KIRITAN' })));
+    });
+
+    it('sings only the last of the values a step runs through', async () => {
+        const sung: string[] = [];
+        let release: (() => void) | undefined;
+        const queue = new VoiceSampleQueue(() => false, id => new Promise<void>(resolve => { sung.push(id); release = resolve; }));
+        const same = (key: string) => (other: string) => other.includes('!') && other.slice(0, other.indexOf('!')) === key.slice(0, key.indexOf('!'));
+        const first = queue.ask('v~high!transpose=1', same('v~high!transpose=1'));      // being sung
+        const second = queue.ask('v~high!transpose=2', same('v~high!transpose=2'));     // waiting
+        const other = queue.ask('w~high');                                               // another voice's: not of these
+        const third = queue.ask('v~high!transpose=3', same('v~high!transpose=3'));      // takes the second's place
+        assert.equal(await second, false);
+        release!();
+        assert.equal(await first, true);
+        await new Promise<void>(resolve => setImmediate(resolve));
+        release!();
+        assert.equal(await third, true);
+        await new Promise<void>(resolve => setImmediate(resolve));
+        release!();
+        assert.equal(await other, true);
+        assert.deepEqual(sung, ['v~high!transpose=1', 'v~high!transpose=3', 'w~high']);
+    });
+
+    it('is asked when a value is stepped and when the caret comes to the settings', () => {
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        const step = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'stepAudition.ts'), 'utf8');
+        // The phrase is sung with the line's settings, and kept by them.
+        assert.match(ext, /if \(sing && Object\.keys\(sing\)\.length > 0\) \{ score\.sing = sing; \}/);
+        assert.match(ext, /const key = voiceSampleKey\(id, sampleOctave\(voice\?\.gender, lineGender\), language, sing\);/);
+        assert.match(ext, /line && Object\.keys\(line\.sing\)\.length > 0 \? line\.sing : undefined\);/);
+        // With the caret in the settings the words' language is asked at the voice's name.
+        assert.match(ext, /typeof nameColumn === 'number' \? nameColumn : inSettings \? line\.askColumn : caret\.character\)\);/);
+        // Samples sung with settings are in a folder of their own, which keeps the newest few.
+        assert.match(ext, /\? path\.join\(voiceSamplesDir \?\? '', 'tried', voiceSampleFileName\(id\)\)/);
+        assert.match(ext, /if \(key\.includes\('!'\)\) \{ trimTriedSamples\(\); \}/);
+        // A step on a setting, and the caret coming to the settings - not over a Play.
+        assert.match(step, /if \(line && line\.withAt >= 0 && caret\.character >= line\.withAt && deps\.getPreview\(uri\) && !deps\.isPlaying\(uri\)\) \{[\s\S]{0,160}void deps\.hearSinger\(line\.voice\);/);
+        assert.match(step, /if \(line && line\.withAt >= 0 && one\.start\.character >= line\.withAt\) \{\s*written = line\.voice;/);
+    });
+});
