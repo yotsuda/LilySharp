@@ -8485,13 +8485,31 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         installDragScroll(mainContent, document);
 
+        // Resizes the sheet keeping the sheet point under (x, y) — the pointer — where it is: the
+        // point's share of the sheet's box before is where it stands after, and the scroller moves
+        // by the difference. (Owner's report 2026-11-11: on a lower page of a long score Ctrl+wheel
+        // slid the view back toward the pages before — the sheet grew under a scroll offset that
+        // stayed, so the same offset was an earlier place.)
+        function zoomKeeping(scroller, sheetRect, resize, x, y) {
+            const b = sheetRect();
+            const fx = b.width > 0 ? (x - b.left) / b.width : 0;
+            const fy = b.height > 0 ? (y - b.top) / b.height : 0;
+            resize();
+            const a = sheetRect();
+            scroller.scrollLeft += a.left + fx * a.width - x;
+            scroller.scrollTop += a.top + fy * a.height - y;
+        }
+
         document.addEventListener('wheel', (e) => {
             if (e.ctrlKey) {
                 e.preventDefault();
                 const delta = e.deltaY > 0 ? -scaleStep : scaleStep;
-                scale = Math.min(maxScale, Math.max(minScale, scale + delta));
+                const next = Math.min(maxScale, Math.max(minScale, scale + delta));
                 fitMode = null; // manual zoom overrides a fit mode
-                updateZoom();
+                const sheet = svgContainer.querySelector('svg');
+                const resize = () => { scale = next; updateZoom(); };
+                if (sheet && next !== scale) zoomKeeping(mainContent, () => sheet.getBoundingClientRect(), resize, e.clientX, e.clientY);
+                else resize();
             }
         }, { passive: false });
 

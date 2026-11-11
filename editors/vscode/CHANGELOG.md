@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Ctrl+wheel on the preview zooms about the pointer**: the place under the mouse stays under it. On a lower page of a long score the view slid back toward the pages before.
 - **The step keys on an inversion reach every way to hold the chord**: on `Dm/A`, Ctrl+Shift+Down goes through Dm's shapes with D or F lowest too, not only those with A lowest — in a band the bass plays the bass note. `C/D`, whose bass is no tone of the chord, keeps D in every shape.
 - **Ctrl+Shift+Down walks a chord's shapes up the neck, and Up comes back**: the usual low shape is the top of the list. On a name with no shape, Down writes the usual shape; Up at the usual shape takes it away. It was the other way round, and the other way round from a chord's qualities and a value word, where Down was already the next one. Notes, tempos and the rest step as before.
 - **Copilot changes a score by edits, not by writing the file again**: `#proposeScore` takes `edits` — a chord, a bar or a line as `#readScore` shows it, and what replaces it; `all: true` changes every place it stands. Revoicing eight chords in thirty places of a 435-line score was the whole file written again, three minutes of a twelve-minute answer.

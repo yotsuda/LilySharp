@@ -115,6 +115,29 @@ describe('an AI candidate plays before it is accepted', () => {
         assert.match(transform, /\}, \{ passive: false \}\);\s*window\.addEventListener\('resize'/);
     });
 
+    // Owner's report 2026-11-11: on a lower page of a long score, Ctrl+wheel on the PREVIEW slid the
+    // view back toward the pages before — the sheet grew under a scroll offset that stayed.
+    it('the preview zooms about the point under the pointer too, whatever page it is on', () => {
+        const zoomKeeping = fn(extension, 'function zoomKeeping(').run as
+            (s: unknown, rect: () => unknown, resize: () => void, x: number, y: number) => void;
+        // A sheet 1000 × 9000 (three pages), scrolled to its third page: its box starts 6200 above
+        // the view, 40 from its left. The pointer at 300, 250 is on the sheet's point 260, 6450.
+        const s = { scrollLeft: 0, scrollTop: 6200 };
+        let size = 1;
+        const rect = () => ({ left: 40 - s.scrollLeft, top: -s.scrollTop, width: 1000 * size, height: 9000 * size });
+        zoomKeeping(s, rect, () => { size = 1.5; }, 300, 250);
+        // At one and a half times the size that point is 390, 9675 into the sheet — still under the pointer.
+        const after = rect();
+        assert.ok(Math.abs((300 - after.left) - 390) < 1e-9 && Math.abs((250 - after.top) - 9675) < 1e-9);
+        assert.equal(s.scrollTop, 9675 - 250);
+        // Zooming back out returns to where it was.
+        zoomKeeping(s, rect, () => { size = 1; }, 300, 250);
+        assert.ok(Math.abs(s.scrollTop - 6200) < 1e-9 && Math.abs(s.scrollLeft) < 1e-9);
+        // The wheel hands it the scroller that scrolls the sheet, the sheet's own box and the pointer.
+        assert.match(extension, /zoomKeeping\(mainContent, \(\) => sheet\.getBoundingClientRect\(\), resize, e\.clientX, e\.clientY\);/);
+        assert.match(extension, /installDragScroll\(mainContent, document\);/);
+    });
+
     it('scrolls when the sheets are dragged, with the preview\'s own code', () => {
         const words = (t: string) => t.split('\n').map(l => l.trim()).filter(l => l !== '' && !l.startsWith('//')).join('\n');
         const mine = fn(transform, 'function installDragScroll(').text;
