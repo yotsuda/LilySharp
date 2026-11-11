@@ -97,7 +97,7 @@ public class SungRequestTests
         Assert.Null(sung.Error);
         var notes = Assert.Single(sung.Voices!).Notes;
         // Bare: the default depth, the rate left to the engine. Then a depth, then both.
-        Assert.Equal(new double?[] { 40, null, 60, null, 70, null }, notes.Select(n => n.Vb));
+        Assert.Equal(new double?[] { 25, null, 60, null, 70, null }, notes.Select(n => n.Vb));
         Assert.Equal(new double?[] { null, null, null, null, 6, null }, notes.Select(n => n.Vr));
         // The words and the times are what they were without it.
         var plain = Assert.Single(Open(out var plainUri) .GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = plainUri } }).Voices!).Notes;

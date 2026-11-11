@@ -95,13 +95,14 @@ public static class AnnotationValues
             ? argument.Text
             : null;
 
-    /// <summary>How far a bare <c>@vibrato</c> swings the pitch each way, in cents.</summary>
-    public const double VibratoDefaultDepth = 40;
+    /// <summary>How far a bare <c>@vibrato</c> swings the pitch each way, in cents. (40 at first:
+    /// the owner heard it as put on, 2026-11-12; Cantoria's own default is the same 25.)</summary>
+    public const double VibratoDefaultDepth = 25;
 
     /// <summary>
     /// The vibrato a sung note writes — <c>@vibrato</c>, <c>@vibrato(depth)</c>,
     /// <c>@vibrato(depth, rate)</c> — or null when the annotation is not one: how far the pitch
-    /// swings each way in cents (1 to 200; <see cref="VibratoDefaultDepth"/> when not written) and
+    /// swings each way in cents (1 to 200; <see cref="VibratoDefaultDepth"/>, 25, when not written) and
     /// how many swings a second (1 to 12; null leaves it to the voice's engine).
     /// </summary>
     /// <remarks>
