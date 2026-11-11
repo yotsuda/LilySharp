@@ -69,6 +69,18 @@ public class ChordTrackReadingTests
         Assert.Contains("score tune {\n  staff rh\n}", text.Replace("\r\n", "\n"));
     }
 
+    // Owner's decision 2026-11-11: the command and the arranging chat's progression share one
+    // reading, so a chord the score names on a note stands in the track too — the left hand's
+    // third bar is G7 by its notes and is named G7sus4; a harmonization from the melody alone
+    // is asked anew and reads no name.
+    [Fact]
+    public void AChordTheScoreNamesOnANote_StandsInTheTrack_ButNotInAMelodyOnlyReading()
+    {
+        string named = Piano.Replace("<g b d' f'>1 |", "<g b d' f'>1@chord(G7sus4) |");
+        Assert.NotEqual(Piano, named);
+        Assert.Contains("chords harmony { C | Dm | G7sus4 | C | }", Added(named));
+        Assert.DoesNotContain("G7sus4 |", Added(named, null, melodyOnly: true).Replace("@chord(G7sus4) |", ""));
+    }
     [Fact]
     public void OnlyTheChosenScoresParts_AreRead()
     {

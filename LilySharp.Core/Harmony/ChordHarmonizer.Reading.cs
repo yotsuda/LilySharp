@@ -51,6 +51,7 @@ public static partial class ChordHarmonizer
             ?? DetectVoice(root);
         string name = FreeTrackName(root);
         var (homeTonic, homeSharps) = ReadKey(source);
+        var names = WrittenChords(root, homeSharps);
 
         // Each section once, in the order written, read as that score plays it alone.
         var bars = new Dictionary<string, string>(System.StringComparer.Ordinal);
@@ -61,18 +62,18 @@ public static partial class ChordHarmonizer
             string sectionName = section.Name.Text;
             if (bars.ContainsKey(sectionName) || unwritten.Contains(sectionName))
                 continue;
-            var midi = MidiOfSection(source, scoreName, sectionName);
-            var beats = MetronomeBeats.Of(midi, midi.TicksPerQuarterNote, out int end);
-            var notes = melodyOnly ? NotesOfPart(midi, topPart) : HarmonyReader.NotesOf(midi, chordRows: false);
-            if (notes.Count == 0 || beats.Count == 0)
+            // The one reading the arranging chat's progression has too (ReadSection): a chord the
+            // score names on a note stands (owner's decision 2026-11-11) — but not in a
+            // harmonization asked from the melody alone, which is asked for anew.
+            var read = ReadSection(source, tree, scoreName, sectionName, (homeTonic, homeSharps),
+                part => !melodyOnly || part == topPart, melodyOnly ? null : names,
+                (tonic, sharps) => MelodyChords.OfKey(tonic, sharps, everywhere: melodyOnly, richness));
+            if (read == null)
             {
                 unwritten.Add(sectionName);
                 continue;
             }
-            var (tonic, sharps) = SectionKey(tree, sectionName) ?? (homeTonic, homeSharps);
-            var readings = HarmonyReader.Read(notes, beats, end,
-                melody: MelodyChords.OfKey(tonic, sharps, everywhere: melodyOnly, richness));
-            bars[sectionName] = BarsOf(readings, beats, sharps);
+            bars[sectionName] = BarsOfSymbols(read.Symbols, read.Beats);
             order.Add(sectionName);
         }
         if (bars.Count == 0)
@@ -183,19 +184,6 @@ public static partial class ChordHarmonizer
             || n.DescendantNodes<StaffRenderSyntax>().Any() || n.DescendantNodes<TabRenderSyntax>().Any())
             ?.Span.Start;
 
-    // The notes one part plays (the melody-only reading: the score's top staff).
-    private static List<SoundingNote> NotesOfPart(MidiFile midi, string? part)
-    {
-        var notes = new List<SoundingNote>();
-        if (part == null)
-            return notes;
-        foreach (var track in midi.Tracks)
-            foreach (var n in track.Notes)
-                if (n.Channel != 9 && (n.Part ?? track.Name) == part)
-                    notes.Add(new SoundingNote(n.StartTick, System.Math.Max(1, n.DurationTicks), n.Pitch));
-        return notes;
-    }
-
     // The key a section writes first (in any of its part blocks), else none.
     private static (char Tonic, int Sharps)? SectionKey(SyntaxTree tree, string sectionName)
     {
@@ -209,42 +197,5 @@ public static partial class ChordHarmonizer
                     KeySpelling.SharpsFor(m.Groups[1].Value, m.Groups[2].Value) ?? 0);
         }
         return null;
-    }
-
-    /// <summary>
-    /// The readings as a chords row's bars: a bar per accented beat (a pickup's beats one bar),
-    /// each divided into as few equal slots as its changes need — one, two (on an even count of
-    /// beats) or one a beat — a held chord a <c>.</c>, no chord an <c>r</c>.
-    /// </summary>
-    internal static string BarsOf(IReadOnlyList<ChordReading> readings, IReadOnlyList<(int Tick, bool Accent)> beats, int sharps)
-    {
-        string At(int tick)
-        {
-            foreach (var r in readings)
-                if (r.StartTick <= tick && tick < r.EndTick)
-                    return r.Symbol(sharps);
-            return "r";
-        }
-        var starts = new List<int>();
-        for (int i = 0; i < beats.Count; i++)
-            if (i == 0 || beats[i].Accent)
-                starts.Add(i);
-        var bars = new List<string>();
-        for (int b = 0; b < starts.Count; b++)
-        {
-            int first = starts[b], n = (b + 1 < starts.Count ? starts[b + 1] : beats.Count) - first;
-            var symbols = Enumerable.Range(first, n).Select(i => At(beats[i].Tick)).ToList();
-            int slots = 1;
-            if (symbols.Distinct().Count() > 1)
-                slots = n % 2 == 0 && Enumerable.Range(0, n).All(k => k % (n / 2) == 0 || symbols[k] == symbols[k - 1]) ? 2 : n;
-            var cells = new List<string>();
-            for (int s = 0; s < slots; s++)
-            {
-                string symbol = symbols[s * (n / slots)];
-                cells.Add(s > 0 && symbol == symbols[(s - 1) * (n / slots)] ? "." : symbol);
-            }
-            bars.Add(string.Join(" ", cells));
-        }
-        return string.Join(" | ", bars) + " |";
     }
 }

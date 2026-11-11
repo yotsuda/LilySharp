@@ -87,84 +87,14 @@ public static partial class ChordHarmonizer
                 lines.Add((sectionName, row.Bars, $"as written (the chords row `{row.Name}`)"));
                 continue;
             }
-            MidiFile midi;
-            try
-            {
-                midi = MidiOfSection(source, scoreName, sectionName);
-            }
-            catch
+            if (ReadSection(source, tree, scoreName, sectionName, (homeTonic, homeSharps),
+                    part => every || asked.Contains(part), (named, fromNotes), (tonic, sharps) => MelodyChords.OfKey(tonic, sharps)) is not { } read)
             {
                 silent.Add(sectionName);
                 continue;
             }
-            var beats = MetronomeBeats.Of(midi, midi.TicksPerQuarterNote, out int end);
-            var (tonic, sharps) = SectionKey(tree, sectionName) ?? (homeTonic, homeSharps);
-
-            var heard = new List<SoundingNote>();
-            var written = new SortedDictionary<int, string>();
-            var sounding = new Dictionary<(int Tick, int Position), List<int>>();
-            foreach (var track in midi.Tracks)
-                foreach (var n in track.Notes)
-                {
-                    if (n.Channel == 9)
-                        continue;
-                    string part = n.Part ?? track.Name;
-                    // A row a score sounds is no part: its section was answered above, or the parts alone are asked.
-                    if (part.EndsWith(ChordRowPart, System.StringComparison.Ordinal) || !every && !asked.Contains(part))
-                        continue;
-                    heard.Add(new SoundingNote(n.StartTick, System.Math.Max(1, n.DurationTicks), n.Pitch));
-                    if (named.TryGetValue(n.SourcePos, out var symbol))
-                        written.TryAdd(n.StartTick, symbol);
-                    else if (fromNotes.Contains(n.SourcePos))
-                    {
-                        if (!sounding.TryGetValue((n.StartTick, n.SourcePos), out var pitches))
-                            sounding[(n.StartTick, n.SourcePos)] = pitches = [];
-                        pitches.Add(n.Pitch);
-                    }
-                }
-            foreach (var ((tick, _), pitches) in sounding)
-                if (!written.ContainsKey(tick) && NameOfPitches(pitches, sharps) is { } derived)
-                    written[tick] = derived;
-            if (beats.Count == 0 || heard.Count == 0 && written.Count == 0)
-            {
-                silent.Add(sectionName);
-                continue;
-            }
-
-            var readings = heard.Count == 0 ? []
-                : HarmonyReader.Read(heard, beats, end, melody: MelodyChords.OfKey(tonic, sharps));
+            var (beats, symbols, isWritten, barOf, readings, dense) = read;
             ChordReading? ReadingAt(int tick) => readings.FirstOrDefault(r => r.StartTick <= tick && tick < r.EndTick);
-            int BeatOf(int tick)
-            {
-                int at = 0;
-                for (int i = 0; i < beats.Count && beats[i].Tick <= tick; i++)
-                    at = i;
-                return at;
-            }
-            var barOf = new int[beats.Count];
-            for (int i = 0, bar = 0; i < beats.Count; i++)
-                barOf[i] = i > 0 && beats[i].Accent ? ++bar : bar;
-            int barCount = barOf[^1] + 1;
-
-            var symbols = new string[beats.Count];
-            var isWritten = new bool[beats.Count];
-            for (int i = 0; i < beats.Count; i++)
-                symbols[i] = ReadingAt(beats[i].Tick) is { Root: >= 0 } r ? r.Symbol(sharps) : "r";
-            var onsets = written.Select(w => (Beat: BeatOf(w.Key), Symbol: w.Value)).ToList();
-            bool dense = onsets.Select(o => barOf[o.Beat]).Distinct().Count() * 2 >= barCount;
-            for (int k = 0; k < onsets.Count; k++)
-            {
-                int from = onsets[k].Beat, next = k + 1 < onsets.Count ? onsets[k + 1].Beat : beats.Count;
-                // Named sparsely, a name holds while the notes stay on the chord read where it stands.
-                int until = dense || ReadingAt(beats[from].Tick) is not { } here ? (dense ? next : from + 1)
-                    : System.Math.Min(next, 1 + Enumerable.Range(from, beats.Count - from).TakeWhile(i => beats[i].Tick < here.EndTick).Last());
-                for (int i = from; i < System.Math.Max(until, from + 1) && i < beats.Count; i++)
-                {
-                    symbols[i] = onsets[k].Symbol;
-                    isWritten[i] = true;
-                }
-            }
-
             string how = !isWritten.Contains(true) ? "read from the notes"
                 : isWritten.All(w => w) || dense && Enumerable.Range(0, beats.Count).All(i => isWritten[i] || symbols[i] == "r") ? "as written"
                 : "as written where a chord is named, the rest read from the notes";
@@ -228,6 +158,109 @@ public static partial class ChordHarmonizer
             text.Append("Ranges, as the parts sound: ").Append(string.Join("; ", ranges)).Append(".\n");
         text.Append("The chords read from the notes are a reading, not the writer's word: a name the score writes always stands.");
         return text.ToString();
+    }
+
+    /// <summary>One section's chords, a symbol a beat: what its notes name, and the rest as read.</summary>
+    /// <param name="Beats">The section's beats, a bar at each accent.</param>
+    /// <param name="Symbols">The chord on each beat, <c>r</c> for none.</param>
+    /// <param name="Written">Whether the beat's chord is one the score names.</param>
+    /// <param name="BarOf">The bar each beat is in, from 0.</param>
+    /// <param name="Readings">The chords read from the notes.</param>
+    /// <param name="Dense">The score names a chord in half the section's bars or more.</param>
+    private sealed record SectionChords(IReadOnlyList<(int Tick, bool Accent)> Beats, string[] Symbols, bool[] Written,
+        int[] BarOf, IReadOnlyList<ChordReading> Readings, bool Dense);
+
+    /// <summary>
+    /// Reads one section as the score plays it alone — the one reading behind the editor's
+    /// "Add Chord Track" (<see cref="AddReadChordTracks"/>) and the arranging chat's progression
+    /// (<see cref="DescribeProgression"/>; owner's decision 2026-11-11: the two share it, so that
+    /// a score is not read two ways). The notes of the parts <paramref name="reads"/> takes are
+    /// read beat by beat (<see cref="HarmonyReader"/>); with <paramref name="names"/>, a chord
+    /// the score names on one of those notes stands: named in half the bars or more, the names
+    /// alone, each held to the next; in fewer, each over the stretch the notes read as one chord
+    /// where it stands. Null when nothing of those parts sounds.
+    /// </summary>
+    /// <param name="names">The names written on notes (<see cref="WrittenChords"/>), or null to read the notes alone.</param>
+    /// <param name="melody">The chords a line alone is given, for the section's key.</param>
+    private static SectionChords? ReadSection(string source, SyntaxTree tree, string? scoreName, string sectionName,
+        (char Tonic, int Sharps) home, System.Func<string, bool> reads,
+        (Dictionary<int, string> Named, HashSet<int> FromNotes)? names, System.Func<char, int, MelodyChords> melody)
+    {
+        MidiFile midi;
+        try
+        {
+            midi = MidiOfSection(source, scoreName, sectionName);
+        }
+        catch
+        {
+            return null;
+        }
+        var beats = MetronomeBeats.Of(midi, midi.TicksPerQuarterNote, out int end);
+        var (tonic, sharps) = SectionKey(tree, sectionName) ?? home;
+
+        var heard = new List<SoundingNote>();
+        var written = new SortedDictionary<int, string>();
+        var sounding = new Dictionary<(int Tick, int Position), List<int>>();
+        foreach (var track in midi.Tracks)
+            foreach (var n in track.Notes)
+            {
+                if (n.Channel == 9)
+                    continue;
+                string part = n.Part ?? track.Name;
+                // A row a score sounds is no part.
+                if (part.EndsWith(ChordRowPart, System.StringComparison.Ordinal) || !reads(part))
+                    continue;
+                heard.Add(new SoundingNote(n.StartTick, System.Math.Max(1, n.DurationTicks), n.Pitch));
+                if (names is not { } written1)
+                    continue;
+                if (written1.Named.TryGetValue(n.SourcePos, out var symbol))
+                    written.TryAdd(n.StartTick, symbol);
+                else if (written1.FromNotes.Contains(n.SourcePos))
+                {
+                    if (!sounding.TryGetValue((n.StartTick, n.SourcePos), out var pitches))
+                        sounding[(n.StartTick, n.SourcePos)] = pitches = [];
+                    pitches.Add(n.Pitch);
+                }
+            }
+        foreach (var ((tick, _), pitches) in sounding)
+            if (!written.ContainsKey(tick) && NameOfPitches(pitches, sharps) is { } derived)
+                written[tick] = derived;
+        if (beats.Count == 0 || heard.Count == 0)
+            return null;
+
+        var readings = HarmonyReader.Read(heard, beats, end, melody: melody(tonic, sharps));
+        ChordReading? ReadingAt(int tick) => readings.FirstOrDefault(r => r.StartTick <= tick && tick < r.EndTick);
+        int BeatOf(int tick)
+        {
+            int at = 0;
+            for (int i = 0; i < beats.Count && beats[i].Tick <= tick; i++)
+                at = i;
+            return at;
+        }
+        var barOf = new int[beats.Count];
+        for (int i = 0, bar = 0; i < beats.Count; i++)
+            barOf[i] = i > 0 && beats[i].Accent ? ++bar : bar;
+        int barCount = barOf[^1] + 1;
+
+        var symbols = new string[beats.Count];
+        var isWritten = new bool[beats.Count];
+        for (int i = 0; i < beats.Count; i++)
+            symbols[i] = ReadingAt(beats[i].Tick) is { Root: >= 0 } r ? r.Symbol(sharps) : "r";
+        var onsets = written.Select(w => (Beat: BeatOf(w.Key), Symbol: w.Value)).ToList();
+        bool dense = onsets.Count > 0 && onsets.Select(o => barOf[o.Beat]).Distinct().Count() * 2 >= barCount;
+        for (int k = 0; k < onsets.Count; k++)
+        {
+            int from = onsets[k].Beat, next = k + 1 < onsets.Count ? onsets[k + 1].Beat : beats.Count;
+            // Named sparsely, a name holds while the notes stay on the chord read where it stands.
+            int until = dense || ReadingAt(beats[from].Tick) is not { } here ? (dense ? next : from + 1)
+                : System.Math.Min(next, 1 + Enumerable.Range(from, beats.Count - from).TakeWhile(i => beats[i].Tick < here.EndTick).Last());
+            for (int i = from; i < System.Math.Max(until, from + 1) && i < beats.Count; i++)
+            {
+                symbols[i] = onsets[k].Symbol;
+                isWritten[i] = true;
+            }
+        }
+        return new SectionChords(beats, symbols, isWritten, barOf, readings, dense);
     }
 
     private static string BarList(SortedSet<int> bars)
@@ -312,8 +345,9 @@ public static partial class ChordHarmonizer
         return ChordStructure.TryRecognize(members, out var chord) && chord != null ? Printed(chord, sharps) : null;
     }
 
-    /// <summary>A symbol a beat as a chords row's bars (<see cref="BarsOf"/>, for symbols that are
-    /// not all readings): a bar per accented beat, in as few equal slots as its changes need.</summary>
+    /// <summary>A symbol a beat as a chords row's bars: a bar per accented beat (a pickup's beats
+    /// one bar), each divided into as few equal slots as its changes need — one, two (on an even
+    /// count of beats) or one a beat — a held chord a <c>.</c>, no chord an <c>r</c>.</summary>
     internal static string BarsOfSymbols(IReadOnlyList<string> symbols, IReadOnlyList<(int Tick, bool Accent)> beats)
     {
         var starts = new List<int>();
