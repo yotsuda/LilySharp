@@ -422,6 +422,8 @@ describe('the composing guide', () => {
         // Owner's report 2026-11-11: read from every part, the list held the keyboard's Gm7 and the
         // bass's Bb/F beside the guitar's own eight chords; and the edits keep to the part read.
         assert.match(pkg, /To rewrite or revoice ONE part, give `parts` with that part/);
+        // …a view of the reading, not another one: a part that leaves the root to the bass is named by the bass.
+        assert.match(pkg, /its chords still named from every part's notes \(the bass says the root of a chord the guitar plays without it\)/);
         assert.match(pkg, /"part": \{ "type": "string", "description": "With `edits`: a part's name\. The edits then change that part's text alone/);
         assert.match(transform, /applyScoreEdits\(await chatAbsolute\(deps, standing\) \?\? standing, edits,\s*typeof given\.part === 'string' \? given\.part : undefined\)/);
         assert.match(transform, /With \\`part: "\$\{wanted\}"\\` beside \\`edits\\`, they change this part's text alone/);

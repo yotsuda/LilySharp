@@ -137,12 +137,60 @@ public class ChordProgressionReadingTests
         Assert.DoesNotContain("writes them", ChordHarmonizer.DescribeProgression(band));
     }
 
-    // The parts named are the parts read: their notes and the chords written on them, no row.
+    // Owner's run 2026-11-11: a guitar revoiced to leave the root to the bass was read alone as
+    // G♭dim, Gdim7 and E♭/G. A part is a view of the reading: the chord is named from every part.
+    [Fact]
+    public void APartThatLeavesTheRootToTheBass_IsNamedByTheBass()
+    {
+        const string band = """
+            octave absolute
+            key bes major
+            part gtr "Guitar" { instrument guitar }
+            part bass "Bass" { instrument bass }
+            section A {
+              gtr { R | <fis c' fis' a'>1 | <g bes d' g'>1 | <g bes e' bes'>1 | <f bes d' bes'>1 | }
+              bass { g,,1 | d,,1 | g,,1 | c,,1 | f,,1 | }
+            }
+            """;
+        string gtr = ChordHarmonizer.DescribeProgression(band, null, ["gtr"]);
+        Assert.StartsWith("The chords where gtr plays (named from every part's notes), in B♭ major", gtr);
+        // Where the guitar rests there is no chord of its own; D7 and C7 are the bass's word; and the
+        // bass's F under a B♭ chord is the bass's note, not the guitar's inversion.
+        Assert.Contains("  section A { r | D7 | Gm | C7 | Bb | }   // read from the notes\n", gtr);
+        Assert.Contains("  D7 = <fis c' fis' a'> (1 place)\n", gtr);
+        Assert.Contains("  C7 = <g bes e' bes'> (1 place)\n", gtr);
+        Assert.DoesNotContain("dim", gtr);
+        // Read whole, the bar the bass plays alone has its chord, and the bass its inversion.
+        string whole = ChordHarmonizer.DescribeProgression(band);
+        Assert.Contains("| D7 | Gm | C7 | Bb/F | }", whole);
+        Assert.DoesNotContain("section A { r |", whole);
+    }
+
+    // The owner's question, the same day: without the bass, is a three-note chord to be read as a
+    // seventh chord without its root? Not on the notes' word alone — every triad is one. The name
+    // stands as heard; a diminished triad alone is offered its other reading.
+    [Fact]
+    public void WithNoRootSounding_TheNameIsAsHeard_AndADiminishedTriadIsOfferedItsDominant()
+    {
+        string alone = ChordHarmonizer.DescribeProgression("""
+            octave absolute
+            key bes major
+            part gtr "Guitar" { instrument guitar }
+            section A { gtr { <fis c' fis' a'>1 | <g bes d' g'>1 | <f a c' f'>1 | } }
+            """);
+        Assert.Contains("  section A { Gbdim | Gm | F | }   // read from the notes\n", alone);
+        Assert.Contains("A, bar 1: Gbdim may be D7 with its root left out — no part sounds a D there to say so.\n", alone);
+        // A major or a minor triad is not doubted, nor renamed a seventh chord.
+        Assert.DoesNotContain(" may be", alone.Replace("Gbdim may be", ""));
+        Assert.DoesNotContain("Gm7", alone);
+    }
+
+    // The parts named are the parts shown: the bars they play in, the names written anywhere, no row.
     [Fact]
     public void WithParts_OnlyTheirNotesAndNamesAreRead()
     {
         string gtr = ChordHarmonizer.DescribeProgression(Song, null, ["gtr"]);
-        Assert.StartsWith("The chords of gtr, in C major", gtr);
+        Assert.StartsWith("The chords where gtr plays (named from every part's notes), in C major", gtr);
         Assert.Contains("  section A { C | Am | F | G7 | }   // as written\n", gtr);
         Assert.DoesNotContain("section C {", gtr);
         Assert.Contains("Nothing of these parts sounds in C, D.\n", gtr);
@@ -151,10 +199,11 @@ public class ChordProgressionReadingTests
         Assert.DoesNotContain("mel:", gtr);
 
         string mel = ChordHarmonizer.DescribeProgression(Song, null, ["mel"]);
-        // The guitar's names are the guitar's: the melody alone is read from its notes.
-        Assert.Contains("  section A { C | ", mel);
-        Assert.Contains("// read from the notes", mel);
-        Assert.DoesNotContain("as written", mel);
+        // A name the score writes is the writer's word on the harmony, whichever part it stands on:
+        // where the melody plays, the chords are the ones named on the guitar.
+        Assert.Contains("  section A { C | Am | F | G7 | }   // as written\n", mel);
+        Assert.Contains("  section D { C | Fmaj7 | }   // read from the notes\n", mel);
+        Assert.Contains("Ranges, as the parts sound: mel:", mel);
     }
 
     [Fact]
