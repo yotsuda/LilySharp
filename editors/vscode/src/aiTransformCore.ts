@@ -988,6 +988,19 @@ export function headerLanguageNote(text: string): string | undefined {
 }
 
 /**
+ * What each part of a paged guide is about, a line a part: its headings (`#`, `##`). For the first
+ * part of the grammar (owner's run 2026-11-11: to add a strings pad to a score, the chat read all
+ * fourteen parts of it, 100 KB and over a minute, each part having said "read the next" and none
+ * what the next held).
+ */
+export function guideContents(pages: string[]): string {
+    return pages.map((page, i) => {
+        const heads = [...page.matchAll(/^#{1,2} +(.+)$/gm)].map(m => m[1].replace(/`/g, '').replace(/\s*\(.*$/, '').trim()).filter(h => h.length > 0);
+        return `- part ${i + 1}: ${heads.length > 0 ? heads.join('; ') : '(goes on)'}`;
+    }).join('\n');
+}
+
+/**
  * A guide cut into parts of at most `limit` UTF-8 bytes, at blank lines where it can be (a
  * paragraph, a list item, a code block whole), else at line ends. For Copilot's chat (owner's
  * report 2026-10-29): its agent keeps a tool's answer over about 8 KB in a temp file and reads that

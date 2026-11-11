@@ -442,7 +442,12 @@ describe('the composing guide', () => {
         assert.match(transform, /lm\.registerTool<ReadGuideInput>\('lilysharp_readGuide'/);
         const fn = transform.slice(transform.indexOf('async function readGuide('), transform.indexOf('function newPieceSteps('));
         // The instructions files Copilot is given with a .lys in hand, their front matter left out.
-        assert.match(fn, /guidePages\(built\('lilysharp\.instructions\.md'\) \?\? await loadGrammar\(deps\), GUIDE_PAGE_BYTES\)/);
+        assert.match(fn, /guidePages\(built\('lilysharp\.instructions\.md'\) \?\? await loadGrammar\(deps\), GUIDE_PAGE_BYTES, GUIDE_PAGE_BYTES - GUIDE_CONTENTS_BYTES\)/);
+        // Owner's run 2026-11-11: to add a strings pad the chat read all fourteen parts of the grammar,
+        // each having said "read the next". The first part says what each holds, and that a change needs few.
+        assert.match(fn, /return paged\('Lily# grammar', pages, part === 1\s*\? 'The Lily# grammar, in parts/);
+        assert.match(fn, /\+ guideContents\(pages\) \+ '\\n\\n'/);
+        assert.match(fn, /'write a new piece; to change a score that is there, the parts its contents \(part 1\) name for what you write'/);
         // "start" is how a new piece begins alone; "composing" is that and the composing guide.
         assert.match(fn, /guidePages\(built\('lilysharp-compose\.instructions\.md'\) \?\? await loadComposeGuide\(deps\),/);
         assert.match(fn, /return topic === 'start' \? start : paged\('composing guide', await guide\(\), start \+ '\\n'\);/);

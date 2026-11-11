@@ -41,7 +41,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, newPieceOverScore, guidePages, headerLanguageNote, diagLines,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, newPieceOverScore, guidePages, guideContents, headerLanguageNote, diagLines,
     lastUserMessageAt, heldClashesOf, noTuneOf, CLASHES_TURNED_DOWN, singersInOneLineOf, unfingerableOf, UNFINGERABLE_TURNED_DOWN, REVIEW_READING,
     applyDraft, draftSummary, DraftInput, FROM_DRAFT_NOTE,
     applyScoreEdits, ScoreEdit, scorePartView, scorePages,
@@ -496,6 +496,8 @@ interface ReadGuideInput {
 
 /** A guide part's most: under the 8 KB past which Copilot's agent keeps a tool's answer in a file. */
 const GUIDE_PAGE_BYTES = 7000;
+/** Room for the grammar's contents, before its first part. */
+const GUIDE_CONTENTS_BYTES = 1200;
 /** Room for how a new piece begins, before the composing guide's first part. */
 const GUIDE_START_BYTES = 2500;
 
@@ -529,7 +531,7 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
         return pages.length === 1 ? body
             : `${body}\n\n[Part ${part} of ${pages.length} of the ${name}. `
                 + (part < pages.length
-                    ? `Read part ${part + 1} next: lilysharp_readGuide, topic "${topic === 'start' || topic === 'composing' ? 'composing' : topic === 'learn' ? 'learn' : 'grammar'}", part ${part + 1} — every part before you ${topic === 'learn' ? 'teach' : 'write'}.]`
+                    ? `Read part ${part + 1} next: lilysharp_readGuide, topic "${topic === 'start' || topic === 'composing' ? 'composing' : topic === 'learn' ? 'learn' : 'grammar'}", part ${part + 1} — every part before you ${topic === 'learn' ? 'teach' : topic === 'composing' || topic === 'start' ? 'write' : 'write a new piece; to change a score that is there, the parts its contents (part 1) name for what you write'}.]`
                     : 'The end.]');
     };
     // Owner's request 2026-11-02: asked how to write Lily#, the chat had a 100 KB grammar and a guide to composing.
@@ -538,7 +540,13 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
         return teaching ? paged('teaching path', guidePages(teaching, GUIDE_PAGE_BYTES)) : 'The teaching path is not in this build: read topic "grammar".';
     }
     if (topic !== 'composing' && topic !== 'start') {
-        return paged('Lily# grammar', guidePages(built('lilysharp.instructions.md') ?? await loadGrammar(deps), GUIDE_PAGE_BYTES));
+        const pages = guidePages(built('lilysharp.instructions.md') ?? await loadGrammar(deps), GUIDE_PAGE_BYTES, GUIDE_PAGE_BYTES - GUIDE_CONTENTS_BYTES);
+        // What each part holds, said before the first: a change to a score needs a part or two, not all.
+        return paged('Lily# grammar', pages, part === 1
+            ? 'The Lily# grammar, in parts (lilysharp_readGuide, topic "grammar", part N). To write a NEW piece, read them all. To change a score '
+                + 'that is there, the score itself shows how it is written (lilysharp_readScore): read only the parts that hold what you do not find in it.\n'
+                + guideContents(pages) + '\n\n'
+            : '');
     }
     // Its first part has room for how a new piece begins, which goes before it.
     const guide = async () => guidePages(built('lilysharp-compose.instructions.md') ?? await loadComposeGuide(deps),
