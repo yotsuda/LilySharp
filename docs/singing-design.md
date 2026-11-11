@@ -407,8 +407,10 @@ The score spellings here (`lyrics NAME sings PART`) were replaced on 2026-11-10:
    sung anew played by its instrument until its voice lands — then cut in at the next sung note
    after a rest (`voiceEntries`, `nextVoiceEntry`), the instrument's later strikes left out
    (`Player.silence`); `extension.ts candidateVoices` and the panel page's `startVoices` /
-   `joinVoice`. The preview does NOT do this yet: its stand-in instrument plays to the end of
-   the Play) and after a count-in (`countInFix`); a span's voice was cut
+   `joinVoice`. The preview does the same since the same day (its own `joinVoice`, asked when a
+   `voice` is decoded: a whole-piece Play on the synth only — not a stretch, a loop, the MIDI
+   output or the plain tones — and not after the score was edited under the Play)) and after a
+   count-in (`countInFix`); a span's voice was cut
    where the stretch ends only by the instruments' end timer — the buffer played on to the piece's
    end if the stretch was shorter, until session 1132 (§5, `voiceCues`). Nets:
    `test/singerCore.test.ts` (the score, the key, the wire, the manifest); the engine itself was

@@ -4441,7 +4441,8 @@ async function renderVoice(job: PrepareJob): Promise<void> {
             const bytes = await fs.promises.readFile(v.wav);
             if (!wanted()) { return; }
             mine.set(id, key);
-            void panel.webview.postMessage({ type: 'voice', part: id, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array(bytes) });
+            // entries: where the voice may come in if its part is already playing (joinVoice).
+            void panel.webview.postMessage({ type: 'voice', part: id, key, speed, lead: VOICE_LEAD_S, bytes: new Uint8Array(bytes), entries: voiceEntries(voice.Notes) });
             outputChannel.appendLine(`singer: ${clockNow()} ${id} ${cached ? 'from the cache' : 'sung'} (${v.duration.toFixed(1)} s at speed ${speed})`);
         } catch (e) {
             if (wanted()) { failVoice(panel, id, speed, e instanceof Error ? e.message : String(e)); }
@@ -6749,8 +6750,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const lead = message.lead || 0;
                 const s = lead > 0 && window.LysSynth && window.LysSynth.soundStart
                     ? window.LysSynth.soundStart(buffer.getChannelData(0), buffer.sampleRate, lead) : null;
+                const sungBefore = sungTracks();
                 voices.set(message.part, { buffer, speed: message.speed || 1, key: message.key, lead, pre: s === null ? 0 : Math.max(0, lead - s) });
                 setVoiceState(message.part, 'ready');
+                joinVoice(message.part, message.entries, sungBefore);
             }, e => {
                 vscode.postMessage({ type: 'webviewPerf', text: 'voice: ' + message.part + ' could not be decoded: ' + e });
                 setVoiceState(message.part, 'failed', 'the WAV could not be decoded');
@@ -6924,6 +6927,50 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function stopVoices() {
             for (const s of voiceSources) { try { s.stop(); } catch (e) { /* ended */ } }
             voiceSources = [];
+        }
+        // A voice that lands while its part already plays on the instrument standing in for it
+        // (owner's request 2026-11-11) comes in after the part's next rest: the instrument is
+        // struck no more from there (the tracks that sounded without the voice and would not
+        // with it, instrumentSounds), and the voice is cut in with what room the rest gives its
+        // consonant. entries are the sung notes that follow a rest, in the score's seconds
+        // (voiceEntries); the list's time is the score's at the voice's speed, after a count-in.
+        // Left to the next Play: a stretch or a loop (their voices are cut by voiceCues), the
+        // MIDI output and the plain tones (their instruments cannot be taken back), a Play with
+        // no rest left. (No backticks in this script: it lives in a template literal.)
+        let playingNotes = null;    // the list startPlayback sounds
+        function joinVoice(key, entries, sungBefore) {
+            if (playClock === null || !playingNotes || midiPlaying || loopList || !voicePlan || voicePlan.pieces
+                || !audioCtx || !window.LysSynth || !window.LysSynth.nextVoiceEntry) { return; }
+            if (!soundingVoices().includes(key)) { return; }
+            const v = voices.get(key);
+            const sungAfter = sungTracks();
+            const tracks = new Set();
+            for (const n of playingNotes) {
+                if (typeof n.N === 'number' && !tracks.has(n.N) && instrumentSounds(n.N, sungBefore) && !instrumentSounds(n.N, sungAfter)) { tracks.add(n.N); }
+            }
+            if (tracks.size > 0 && !sfPlayer) { return; }
+            const now = playOffset + playClock();
+            const list = (entries || []).map(e => ({ at: countInFix + e.at / v.speed, room: e.room / v.speed }));
+            const entry = window.LysSynth.nextVoiceEntry(list, 0, now, sfPlayer ? playOffset + sfPlayer.handedOutUntil : -1);
+            if (!entry) { return; }
+            const lead = v.lead || 0;
+            const early = Math.max(0, Math.min(lead, entry.room, entry.at - now - 0.1));
+            const t0 = audioCtx.currentTime - playClock();
+            const level = levelIn(practice.voiceLevels, key);
+            let out = voiceOutput(audioCtx);
+            if (level < 1) {
+                const g = audioCtx.createGain();
+                g.gain.value = level;
+                g.connect(out);
+                out = g;
+            }
+            const src = audioCtx.createBufferSource();
+            src.buffer = v.buffer;
+            src.connect(out);
+            src.start(t0 + (entry.at - playOffset) - early, lead + (entry.at - countInFix) - early);
+            voiceSources.push(src);
+            if (tracks.size > 0) { sfPlayer.silence(playingNotes.filter(n => tracks.has(n.N) && n.T >= entry.at - 1e-6)); }
+            flashInfo('The voice of ' + (menuVoiceNames[key] || key) + ' comes in after the next rest', 4000);
         }
         // Starts every voice so that the list's time listTime sounds at the context's time when:
         // after a count-in (countInFix), each stretch of the score the list plays cut from the
@@ -7201,6 +7248,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             follow.stop();
             followTick = null;
             playClock = null;
+            playingNotes = null;
             if (tickWatch && tickWatch.ticks > 0) {
                 vscode.postMessage({ type: 'webviewPerf', text: 'follow-along: ' + tickWatch.ticks + ' ticks, longest gap '
                     + Math.round(tickWatch.longest) + ' ms' + (tickWatch.hidden ? ', page hidden' : '') });
@@ -7308,6 +7356,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // A loop goes round when the last note ends; a plain playback lets it ring a moment.
             playEndTimer = setTimeout(playEnded, (end - offset + (loopList ? 0 : 0.5)) * 1000);
             playOffset = offset;
+            playingNotes = notes;
             playClock = () => audioCtx ? audioCtx.currentTime - t0 : 0;
             followAlong(notes, offset, playClock);
         }
@@ -8252,8 +8301,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         }
                         invalidateSourcePositions();
                         // The score changed: the cached note list is stale, so the
-                        // next audition / Play refetches fresh events.
+                        // next audition / Play refetches fresh events. A Play still sounding
+                        // is the old text's: a voice of the new one is not cut into it (joinVoice).
                         playbackNotes = null;
+                        playingNotes = null;
                         collectPages();
                         applyBarFlags();
                         lightCaretBar();
