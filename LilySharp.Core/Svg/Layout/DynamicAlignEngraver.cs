@@ -49,9 +49,10 @@ namespace LilySharp.Core.Svg.Layout;
 /// ⚠️ NOT PORTED, DISCLOSED (no pair measures either) — both are LP behaviours this
 ///   grouping does not reproduce, not Lily#-own quantities (§5.2 audit, session 158):
 ///   ⑴ LilyPond BREAKS the line when a new dynamic carries an explicit direction
-///     differing from the line's (:125-138). Lily#'s hairpins are always below
-///     (the grammar rejects .up on a wedge), so a forced-above text is simply left
-///     OUT of the group here instead of breaking it.
+///     differing from the line's (:125-138). Lily#'s hairpins are still all PLACED
+///     below (HairpinItem.IsAbove is carried since session 1224 and not read here
+///     yet, docs/dynamics-above-lyrics-design.md §3.2), so a forced-above text is
+///     simply left OUT of the group here instead of breaking it.
 ///   ⑵ Same-column stacking (two voices' dynamics on one column,
 ///     <see cref="DynamicEngraver.StackStep"/>) is not re-applied to a grouped text —
 ///     in LilyPond those come from two Voice contexts and ride two separate lines.

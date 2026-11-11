@@ -79,13 +79,12 @@ public sealed class DynamicSyntax : SyntaxNode
     public SyntaxTokenNode DynamicToken => (SyntaxTokenNode)GetChild(1)!;
 
     /// <summary>
-    /// Forced placement from a <c>.up</c> / <c>.down</c> qualifier (<c>@f.up</c>):
-    /// <c>true</c> = above, <c>false</c> = below, <c>null</c> = default (below).
+    /// Forced placement from a <c>.up</c> / <c>.down</c> qualifier (<c>@f.up</c>,
+    /// <c>@cresc.down</c>): <c>true</c> = above, <c>false</c> = below, <c>null</c> = the
+    /// staff's side (below; above on a staff with lyrics under it).
     /// </summary>
     /// <remarks>Slot 3 — slot 2 is the qualifier's '.', see ArticulationSyntax. After a
-    /// <c>.subito</c> (slots 2-3) the placement is slot 5 (<c>@p.subito.up</c>). A rejected
-    /// placement on a hairpin trigger also lands in slots 4-5, with slot 3 empty, so it is
-    /// never read here.</remarks>
+    /// <c>.subito</c> (slots 2-3) the placement is slot 5 (<c>@p.subito.up</c>).</remarks>
     public bool? ForcedAbove => PlacementOf(Green.GetSlot(3) is { IsToken: true, Text: "subito" }
         ? Green.GetSlot(5) : Green.GetSlot(3));
 

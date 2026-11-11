@@ -461,7 +461,8 @@ internal static class HairpinEngraver
                 // end — that contrast is regression hairpin-span-bar.ly's claim).
                 // Lily#'s hairpin hangs below its staff, so the neighbor side is
                 // always DOWN (LilyPond reads the DynamicLineSpanner's direction; UP
-                // is unreachable here — the parser rejects '@cresc.up'). Measured:
+                // — HairpinItem.IsAbove, carried since session 1224 — is not placed
+                // yet, docs/dynamics-above-lyrics-design.md §3.2). Measured:
                 // hairpin-span-bar twin, line-end 101.93 = 102.43 − 0.5 with the span
                 // bar, 102.43 without.
                 // ⚠️ UNPORTED (disclosed): LilyPond takes the MAX of this padding
@@ -1030,6 +1031,7 @@ internal static class HairpinEngraver
                     StaffIndex: mark.StaffIndex
                 )
                 {
+                    IsAbove = mark.HairpinAbove,
                     NienteAtStart = sortedDynamics.FirstOrDefault(d =>
                         d.Level == DynamicLevel.Niente && d.StaffIndex == mark.StaffIndex
                         && d.MeasureIndex == mark.MeasureIndex && d.ItemIndex == startItem),
@@ -1109,6 +1111,7 @@ internal static class HairpinEngraver
                     StaffIndex: mark.StaffIndex
                 )
                 {
+                    IsAbove = mark.HairpinAbove,
                     // The dynamic at the start moment is this hairpin's opening text (the
                     // terminator search above passes over it); a niente there is where a
                     // crescendo grows from.

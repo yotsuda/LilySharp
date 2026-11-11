@@ -2375,13 +2375,14 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>Whether a bare annotation name takes the <c>.up</c> / <c>.down</c> qualifier:
-    /// an articulation, or a dynamic level — the parser reads <c>@mp.up</c> as it reads
-    /// <c>@fermata.up</c> (Parser.Music, IsDynamicName), refusing it only on the hairpin
-    /// triggers <c>cresc</c> / <c>decresc</c> / <c>dim</c>, which are no dynamic LEVEL.
+    /// an articulation, a dynamic level, or a hairpin (<c>cresc</c> / <c>decresc</c> /
+    /// <c>dim</c>) — the parser reads <c>@mp.up</c> and <c>@cresc.up</c> as it reads
+    /// <c>@fermata.up</c> (Parser.Music, IsDynamicName).
     /// The dynamics were missing until 2026-10-11 (owner report: <c>@mp|</c> offered no
-    /// placement while <c>@staccato|</c> did).</summary>
+    /// placement while <c>@staccato|</c> did); the hairpins took none until 2026-11-11.</summary>
     internal static bool TakesPlacement(string name)
-        => ArticulationRegistry.IsKnown(name) || LanguageVocabulary.IsDynamicLevel(name);
+        => ArticulationRegistry.IsKnown(name) || LanguageVocabulary.IsDynamicLevel(name)
+            || LanguageVocabulary.IsHairpinName(name);
 
     /// <summary>
     /// True when <paramref name="offset"/> sits right after a complete articulation

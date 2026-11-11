@@ -669,16 +669,16 @@ internal sealed class ArticulationGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class DynamicGreen : GreenSyntaxNode
 {
-    // Slots: '@', name, '.', direction, then any tokens the parser REJECTED but
-    // still consumed ('.up' on a hairpin trigger — an error, not a silent drop).
+    // Slots: '@', name, '.', direction (or 'subito'), then the '.' and the direction
+    // written after a '.subito' (`@p.subito.up`).
     // dotToken exists for the same reason as ArticulationGreen's: see there.
     public DynamicGreen(
         SyntaxToken backslashToken,
         SyntaxToken dynamicToken,
         SyntaxToken? dotToken = null,
         SyntaxToken? directionToken = null,
-        params SyntaxToken[] rejectedTokens)
-        : base(SyntaxKind.Dynamic, [backslashToken, dynamicToken, dotToken, directionToken, .. rejectedTokens])
+        params SyntaxToken[] placementAfterSubito)
+        : base(SyntaxKind.Dynamic, [backslashToken, dynamicToken, dotToken, directionToken, .. placementAfterSubito])
     {
     }
 }

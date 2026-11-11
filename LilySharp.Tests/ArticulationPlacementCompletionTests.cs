@@ -47,6 +47,9 @@ public class ArticulationPlacementCompletionTests
     [InlineData("c4@sfz")]
     [InlineData("c4@mf.")]
     [InlineData("c4@ff.u")]
+    [InlineData("c4@cresc")]       // a hairpin takes it too since 2026-11-11 (@cresc.up)
+    [InlineData("c4@decresc.")]
+    [InlineData("c4@dim.d")]
     public void AfterADynamicLevel_OffersPlacement(string text) =>
         // Owner report 2026-10-11: `@mp|` offered no .up / .down while `@staccato|` did —
         // the check knew the articulation registry only. The parser reads both alike.
@@ -66,10 +69,16 @@ public class ArticulationPlacementCompletionTests
     [InlineData("c4@ferm")]       // partial name → keep the '@' list
     [InlineData("c4@finger")]     // arg-taking, not a placement articulation
     [InlineData("c4@fermata ")]   // trailing space → the user moved on
-    [InlineData("c4@cresc")]      // a hairpin: always below, the parser refuses .up / .down
-    [InlineData("c4@decresc")]
     public void PartialOrArgOrSpaced_NotPlacement(string text) =>
         Assert.NotEqual("AfterArticulationPlacement", Ctx(text));
+
+    [Fact]
+    public void AHairpinsPlacement_SaysItIsAHairpin_AndOffersNoSubito()
+    {
+        var items = LilySharpLanguageServer.GetArticulationPlacementCompletions("c4@cresc", 8).Items;
+        Assert.Equal(new[] { ".down", ".up" }, items.Select(i => i.Label).OrderBy(l => l, System.StringComparer.Ordinal));
+        Assert.All(items, i => Assert.Contains("hairpin", i.Detail));
+    }
 
     [Fact]
     public void NoDot_OffersDottedUpAndDown()

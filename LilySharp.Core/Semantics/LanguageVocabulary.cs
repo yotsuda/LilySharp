@@ -283,6 +283,11 @@ public static class LanguageVocabulary
     /// <c>dim</c>) are not levels. Published 2026-10-11 for the editor's placement completion.</summary>
     public static bool IsDynamicLevel(string name) => SyntaxFacts.IsDynamicText(name);
 
+    /// <summary>Whether <c>@name</c> starts a hairpin (<c>cresc</c>, <c>decresc</c>, <c>dim</c>) —
+    /// <see cref="SyntaxFacts.IsDynamicSpannerName"/>. It takes a <c>.up</c> / <c>.down</c> as a
+    /// level does, and no <c>.subito</c>. Published 2026-11-11 for the editor's placement completion.</summary>
+    public static bool IsHairpinName(string name) => SyntaxFacts.IsDynamicSpannerName(name);
+
     /// <summary>Whether <c>@name</c> is complete without an argument and also takes one, so a
     /// glued <c>(</c> followed by a space opens a slur rather than the argument —
     /// <see cref="SyntaxFacts.AnnotationArgumentIsOptional"/>.</summary>

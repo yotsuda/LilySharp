@@ -60,15 +60,19 @@ public class DynamicPlacementTests
     }
 
     [Fact]
-    public void Placement_OnHairpinTrigger_IsRejected_NotSilentlyDropped()
+    public void Placement_OnHairpinTrigger_IsRead()
     {
-        // cresc/decresc/dim drive a hairpin (always below); '.up'/'.down' is meaningless
-        // there and must be flagged, not silently swallowed.
+        // cresc/decresc/dim take the side as a level does (LilyPond's ^\< / _\<). Until
+        // 2026-11-11 it was an error, a hairpin standing below always; what the side then
+        // decides is DynamicsAboveLyricsTests'.
         var tree = SyntaxTree.Parse(
             "part m { clef treble } section S { m { c''4@p@cresc.up d e f@f } }\n" +
             "form { S } score o { staff m }\n");
-        Assert.True(tree.HasErrors);
-        Assert.Contains(tree.Diagnostics, d => d.Message.Contains("cresc"));
+        Assert.False(tree.HasErrors,
+            string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var hairpin = tree.GetRoot().DescendantNodes<DynamicSyntax>()
+            .Single(d => d.DynamicToken.Text == "cresc");
+        Assert.True(hairpin.ForcedAbove);
 
         // A dynamic LEVEL placement is fine.
         Assert.False(SyntaxTree.Parse(

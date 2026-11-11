@@ -57,6 +57,14 @@ public sealed record HairpinItem(
     int StaffIndex = 0
 )
 {
+    /// <summary>
+    /// The hairpin stands above its staff: its start's <see cref="MusicMarkItem.HairpinAbove"/>.
+    /// </summary>
+    /// <remarks>⚠️ Carried, not yet drawn (session 1224, step 2 of
+    /// docs/dynamics-above-lyrics-design.md §5): <c>HairpinEngraver</c> still places every
+    /// hairpin below its staff. The above side is step 3.</remarks>
+    public bool IsAbove { get; init; }
+
     /// <summary>The <c>@niente</c> at the hairpin's start moment (<c>c@niente@cresc</c>), or null.</summary>
     public DynamicItem? NienteAtStart { get; init; }
 

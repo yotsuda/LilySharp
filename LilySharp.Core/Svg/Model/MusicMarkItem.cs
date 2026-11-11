@@ -240,6 +240,14 @@ public sealed record MusicMarkItem
     /// </remarks>
     public int VoiceIndex { get; init; }
 
+    /// <summary>
+    /// For a hairpin's start (<c>@cresc</c> / <c>@decresc</c> / <c>@dim</c>): the hairpin stands
+    /// above its staff — written (<c>@cresc.up</c>), else the staff's own side, which is above
+    /// on a staff with lyrics under it (docs/dynamics-above-lyrics-design.md, D1 and D2).
+    /// <see cref="HairpinItem.IsAbove"/> is read from it.
+    /// </summary>
+    public bool HairpinAbove { get; init; }
+
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; init; }
 

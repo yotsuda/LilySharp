@@ -38,7 +38,7 @@ public class AnnotationRoundTripTests
     [InlineData("c4@f.up d4 e4 f4 |")]            // dynamic
     [InlineData("c4@feather.up d4 e4 f4 |")]      // unknown name — still spelled back
     [InlineData("c4@staccato.up.down d4 e4 f4 |")] // rejected second side, kept anyway
-    [InlineData("c4@cresc.up d4 e4 f4 |")]        // rejected on a hairpin, kept anyway
+    [InlineData("c4@cresc.up d4 e4 f4 |")]        // a hairpin (an error until 2026-11-11, kept then too)
     public void ADottedPlacementQualifier_SurvivesTheTree(string source)
         => Assert.Equal(source, SyntaxTree.Parse(source).GetRoot().ToFullString());
 

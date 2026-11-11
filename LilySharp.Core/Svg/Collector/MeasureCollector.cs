@@ -44,6 +44,16 @@ public sealed partial class MeasureCollector
     private SyntaxNode? _root;
 
     /// <summary>
+    /// The staff being collected carries lyrics directly under it (a verse folded into
+    /// <see cref="StaffSpec.WithLyrics"/>), so its dynamics and hairpins stand above it unless
+    /// written otherwise (<see cref="DynamicSideAbove"/>).
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN (owner's decision 2026-11-11, docs/dynamics-above-lyrics-design.md
+    /// D1): LilyPond's own default is below on every staff; a vocal staff takes its
+    /// <c>\dynamicUp</c> (ly/property-init.ly:338-341), which a score writes by hand there.</remarks>
+    private bool _staffDynamicsUp;
+
+    /// <summary>
     /// A per-score transpose (from <c>score Bb transpose d { ... }</c>) composed on
     /// top of each part's own transpose. Set by the render pipeline before collecting.
     /// </summary>
@@ -937,6 +947,7 @@ public sealed partial class MeasureCollector
     {
         _voiceName = voiceName;
         Reset();
+        _staffDynamicsUp = attachedLyricParts is { Count: > 0 };
 
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
@@ -1728,6 +1739,7 @@ public sealed partial class MeasureCollector
             // under THIS staff (post-loop, once section starts are registered).
             foreach (var lyName in withLyrics)
                 attachedLyrics.Add((lyName, _v.Cursor.StaffIndex, voiceName));
+            _staffDynamicsUp = !withLyrics.IsDefaultOrEmpty;
 
             // An independent chord row (`chords name [as roman]` in the score).
             // Defer its collection until AFTER the music voices: the section start
@@ -4615,6 +4627,7 @@ public sealed partial class MeasureCollector
         _v.Cursor.StaffIndex = 0;
         _v.Cursor.VoiceIndex = 0;
         _v.Cursor.VoiceScope = null;
+        _staffDynamicsUp = false;
         _chordNameCollector.Clear(); // grid warnings; its item list is registry-cleared
         _lyricsCollector.Clear();
         // The rows cut their bars by the same table the builders do (set for THIS pass by
@@ -6186,12 +6199,27 @@ public sealed partial class MeasureCollector
                     if (markType != null)
                     {
                         _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex,
-                            dynamicSyntax.SourceStart, itemIndex) { StaffIndex = _v.Cursor.StaffIndex });
+                            dynamicSyntax.SourceStart, itemIndex)
+                        {
+                            StaffIndex = _v.Cursor.StaffIndex,
+                            HairpinAbove = DynamicSideAbove(dynamicSyntax.ForcedAbove),
+                        });
                     }
                 }
             }
         }
     }
+
+    /// <summary>
+    /// The side a dynamic or a hairpin of the staff being collected stands on: the written one
+    /// (<c>.up</c> / <c>.down</c>), else the staff's (<see cref="_staffDynamicsUp"/>). A written
+    /// side moves that mark alone — a hairpin does not follow the dynamic beside it (D3).
+    /// </summary>
+    /// <remarks>⚠️ Only the hairpin's start reads it yet (session 1224, step 2 of
+    /// docs/dynamics-above-lyrics-design.md §5): a dynamic LEVEL keeps its
+    /// <c>ForcedAbove == true</c> until the above side of the hairpin is drawn (step 3), since
+    /// a level above with its hairpin below is the broken picture the design starts from.</remarks>
+    private bool DynamicSideAbove(bool? written) => written ?? _staffDynamicsUp;
 
     /// <summary>
     /// Checks if a chord has an @arpeggio articulation.

@@ -4693,8 +4693,11 @@ public sealed partial class LilySharpLanguageServer
         // a default side of its own (below the staff), an articulation follows its stem.
         int nameEnd = afterDot ? j - 1 : offset - 1, nameStart = nameEnd;
         while (nameStart >= 0 && (char.IsLetterOrDigit(text[nameStart]) || text[nameStart] == '-')) nameStart--;
-        bool dynamic = valueAnnotation == null && nameStart >= 0 && text[nameStart] == '@'
-            && LanguageVocabulary.IsDynamicLevel(text[(nameStart + 1)..(nameEnd + 1)]);
+        string bareName = valueAnnotation == null && nameStart >= 0 && text[nameStart] == '@'
+            ? text[(nameStart + 1)..(nameEnd + 1)] : "";
+        bool dynamic = LanguageVocabulary.IsDynamicLevel(bareName);
+        // A hairpin takes the side as a level does, and no `.subito`.
+        bool hairpin = LanguageVocabulary.IsHairpinName(bareName);
 
         // The value annotations' own sides (Parser.Music: @text below by default, @diagram
         // and @todo above): the qualifier that moves the mark is listed first.
@@ -4704,6 +4707,7 @@ public sealed partial class LilySharpLanguageServer
             "text" => ("Put the text ABOVE the note", "The text below the note (the default)", false),
             "diagram" => ("The fret diagram above the staff (the default)", "Put the fret diagram BELOW the staff", true),
             _ when dynamic => ("Put the dynamic ABOVE the staff", "The dynamic below the staff (the default)", false),
+            _ when hairpin => ("Put the hairpin ABOVE the staff", "Put the hairpin BELOW the staff", false),
             _ => ("Force this articulation ABOVE the note", "Force this articulation BELOW the note", false),
         };
 

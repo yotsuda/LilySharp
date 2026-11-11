@@ -1539,27 +1539,13 @@ internal sealed partial class Parser
                         && IsPlacementWord(Peek(1))
                         && Peek(2)?.Kind != SyntaxKind.Dot)
                     {
-                        // cresc/decresc/dim drive a HAIRPIN (always below); '.up' / '.down'
-                        // is a dynamic-text placement and is not meaningful there. Flag it
-                        // explicitly (no silent drop) and recover as a plain trigger.
-                        bool isHairpinTrigger = name.Text is "cresc" or "decresc" or "dim";
-                        int qStart = _textPosition;
+                        // A level and a hairpin (cresc / decresc / dim) take the side alike:
+                        // `@cresc.up` is LilyPond's `^\<`. Until 2026-11-11 the hairpin's was
+                        // an error (LYS0002), a hairpin standing below the staff always
+                        // (docs/dynamics-above-lyrics-design.md, D2).
                         var dot = Advance();   // .
                         var dir = Advance();   // up / down
-                        if (isHairpinTrigger)
-                        {
-                            var span = new TextSpan(qStart, System.Math.Max(1, _textPosition - qStart));
-                            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                                $"'.{dir.Text}' placement is not supported on '@{name.Text}' (a hairpin is always below the staff).");
-                            // The qualifier is REJECTED, not forgotten: it stays on the node
-                            // (after the direction slot, which stays null so the reading is
-                            // unchanged) so the tree still spells the source.
-                            GreenRun.Take(new DynamicGreen(at, name, null, null, dot, dir), ref first, ref second, ref more);
-                        }
-                        else
-                        {
-                            GreenRun.Take(new DynamicGreen(at, name, dot, dir), ref first, ref second, ref more);
-                        }
+                        GreenRun.Take(new DynamicGreen(at, name, dot, dir), ref first, ref second, ref more);
                     }
                     else
                     {
