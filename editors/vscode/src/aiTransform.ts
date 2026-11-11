@@ -258,6 +258,8 @@ interface ProposeScoreInput {
     /** Changes to the score as it stands, in place of its whole text: each `old`, as
      *  lilysharp_readScore shows it, becomes `new` (owner's request 2026-11-11). */
     edits?: ScoreEdit[];
+    /** With `edits`: the part they keep to — its own block, its music in each section, the phrases it calls. */
+    part?: string;
 }
 
 /** Added to what proposing by edits says, where it asks for the whole text again. */
@@ -718,6 +720,7 @@ async function readScore(deps: AiTransformDeps, input: ReadScoreInput): Promise<
         : '. To change it, call lilysharp_proposeScore with `edits`, each `old` copied from this text (or with the whole new text).')
         + (view !== undefined
             ? ` This is part \`${wanted}\` alone: its own block, its music in each section and the phrases it calls. `
+                + `With \`part: "${wanted}"\` beside \`edits\`, they change this part's text alone: the rest of the score need not be read. `
                 + '`[lines a-b]` says where a block stands in the file and `…` marks lines left out; neither is in the file.'
             : '');
     const pages = scorePages(view ?? shown, SCORE_PAGE_BYTES);
@@ -877,7 +880,8 @@ async function proposeScore(deps: AiTransformDeps, given: ProposeScoreInput, tok
             return `Nothing shown: no score ${given.file} is open in the editor or on the disk for \`edits\` to change. A new piece is given whole (\`text\`, or its draft).`;
         }
         const standing = standingDoc.getText();
-        const applied = applyScoreEdits(await chatAbsolute(deps, standing) ?? standing, edits);
+        const applied = applyScoreEdits(await chatAbsolute(deps, standing) ?? standing, edits,
+            typeof given.part === 'string' ? given.part : undefined);
         if ('error' in applied) {
             return applied.error + ' Read the score again with lilysharp_readScore if it may have changed.';
         }

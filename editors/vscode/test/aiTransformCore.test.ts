@@ -945,6 +945,28 @@ describe('applyScoreEdits', () => {
         const done = applyScoreEdits(crlf, [{ old: 'section A {\n  gtr { gBb gBb }', new: 'section A {\n  gtr { gBb }' }, { old: 'gtr { gBb }', new: 'gtr { r1 | }' }]);
         assert.ok('text' in done && done.text.includes('section A {\r\n  gtr { r1 | }\r\n') && !/[^\r]\n/.test(done.text));
     });
+    // Owner's report 2026-11-11: with `all`, the same chord in another part would change too, so the
+    // chat read the whole score to see; `part` keeps the edits to the part it read.
+    it('keeps the edits to one part with `part`: its music, its phrases, nothing of another part', () => {
+        const scoped = applyScoreEdits(score, [{ old: "<bes, f bes d' f'>", new: "<d' f' bes'>", all: true }], 'gtr');
+        assert.ok('text' in scoped);
+        assert.equal(scoped.changed, 1);
+        assert.match(scoped.text, /phrase gBb \{ r8 <d' f' bes'>8 r8 q \| \}/);
+        assert.match(scoped.text, /keys \{ <bes, f bes d' f'>1 \| \}/);
+        // Once in the part is once, whatever the other parts hold: no `all` needed.
+        const once = applyScoreEdits(score, [{ old: "<bes, f bes d' f'>", new: "<d' f' bes'>" }], 'gtr');
+        assert.ok('text' in once && once.text === scoped.text);
+        const keys = applyScoreEdits(score, [{ old: "<bes, f bes d' f'>", new: 'r' }], 'keys');
+        assert.ok('text' in keys && /phrase gBb \{ r8 <bes, f bes d' f'>8/.test(keys.text) && /keys \{ r1 \| \}/.test(keys.text));
+        // What is not the part's is not found, and a part the score has not is said.
+        const outside = applyScoreEdits(score, [{ old: 'keys {', new: 'x {' }], 'gtr');
+        assert.ok('error' in outside && /is not in part `gtr`/.test(outside.error));
+        const none = applyScoreEdits(score, [{ old: 'gBb', new: 'x' }], 'drums');
+        assert.ok('error' in none && /no part `drums`/.test(none.error));
+        // A later edit is taken against what the one before left, the part's place found again.
+        const two = applyScoreEdits(score, [{ old: 'gtr { gBb gBb }', new: "gtr { gBb <bes, f bes d' f'>1 | }" }, { old: "<bes, f bes d' f'>", new: 'r', all: true }], 'gtr');
+        assert.ok('text' in two && two.changed === 3 && /gtr \{ gBb r1 \| \}/.test(two.text) && /keys \{ <bes, f bes d' f'>1/.test(two.text));
+    });
 });
 describe('scorePartView', () => {
     const score = [

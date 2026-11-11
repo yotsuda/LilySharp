@@ -1306,12 +1306,47 @@ export interface ScoreEdit {
  * twelve-minute answer). Each `old` is text of the score as the reading tool showed it; it must be
  * there exactly once, or any number of times with `all`. The edits apply in order, each to what the
  * one before left. Nothing changes unless all apply: the reason goes back instead.
+ *
+ * With `part`, only that part's text is changed — its own block, its music in each section and
+ * the phrases it calls, what lilysharp_readScore shows of it (owner's report 2026-11-11: having
+ * read the guitar alone, the chat read the whole score in two pages before sending `all: true`
+ * edits, to see that no other part held the same chord).
  */
-export function applyScoreEdits(base: string, edits: ScoreEdit[]): { text: string; changed: number } | { error: string } {
+export function applyScoreEdits(base: string, edits: ScoreEdit[], part?: string): { text: string; changed: number } | { error: string } {
     const eol = base.includes('\r\n') ? '\r\n' : '\n';
     const sameEol = (s: string) => s.replace(/\r?\n/g, eol);
     let text = base;
     let changed = 0;
+    const scoped = typeof part === 'string' && part.trim().length > 0 ? part.trim() : undefined;
+    if (scoped !== undefined) {
+        if (scorePartSpans(base, scoped) === undefined) {
+            return { error: `Nothing shown: the score has no part \`${scoped}\` for the edits to keep to.` };
+        }
+        for (const [i, edit] of edits.entries()) {
+            if (!edit || typeof edit.old !== 'string' || typeof edit.new !== 'string' || edit.old.length === 0) {
+                return { error: `Nothing shown: edit ${i + 1} needs \`old\` (text of the score as lilysharp_readScore shows it) and \`new\`.` };
+            }
+            const old = sameEol(edit.old);
+            const neu = sameEol(edit.new);
+            // The part's text as the edits before left it: a place counts when it lies wholly in it.
+            const spans = scorePartSpans(text, scoped) ?? [];
+            const places: number[] = [];
+            for (let at = text.indexOf(old); at >= 0; at = text.indexOf(old, at + old.length)) {
+                if (spans.some(([a, z]) => a <= at && at + old.length <= z)) { places.push(at); }
+            }
+            if (places.length === 0) {
+                return { error: `Nothing shown: edit ${i + 1}'s \`old\` is not in part \`${scoped}\` — copy it exactly as lilysharp_readScore `
+                    + 'shows that part (the notes in the octaves shown there), a whole chord or a whole line at a time.' };
+            }
+            if (places.length > 1 && edit.all !== true) {
+                return { error: `Nothing shown: edit ${i + 1}'s \`old\` is in part \`${scoped}\` ${places.length} times — give \`all: true\` to change every one, `
+                    + 'or more of its line, found once.' };
+            }
+            for (const at of places.reverse()) { text = text.slice(0, at) + neu + text.slice(at + old.length); }
+            changed += places.length;
+        }
+        return text === base ? { error: 'Nothing shown: the edits leave the score as it is.' } : { text, changed };
+    }
     for (const [i, edit] of edits.entries()) {
         if (!edit || typeof edit.old !== 'string' || typeof edit.new !== 'string' || edit.old.length === 0) {
             return { error: `Nothing shown: edit ${i + 1} needs \`old\` (text of the score as lilysharp_readScore shows it) and \`new\`.` };
@@ -1367,6 +1402,38 @@ function scoreBlocks(text: string): ScoreBlock[] {
         }
     }
     return top;
+}
+
+/** Where a part's text stands in a score, as offsets: its own block, its block in each section
+ *  and the named blocks (phrases) it calls — what {@link scorePartView} shows of it. Undefined
+ *  when the score has no such part. */
+export function scorePartSpans(text: string, part: string): [number, number][] | undefined {
+    const name = part.trim();
+    if (!/^[A-Za-z_][\w-]*$/.test(name)) {
+        return undefined;
+    }
+    const isPart = (b: ScoreBlock) => new RegExp(`^part\\s+${name}\\b`).test(b.header);
+    const isMine = (b: ScoreBlock) => b.header === name;
+    const blocks = scoreBlocks(text);
+    const own = blocks.filter(b => isPart(b) || b.inner.some(isMine));
+    if (own.length === 0) {
+        return undefined;
+    }
+    const music = own.map(b => isPart(b) ? text.slice(b.open, b.close) : b.inner.filter(isMine).map(i => text.slice(i.open, i.close)).join(' ')).join(' ');
+    const spans: [number, number][] = [];
+    // A block with its header: from after the brace or line break before it.
+    const from = (open: number) => 1 + Math.max(text.lastIndexOf('\n', open - 1), text.lastIndexOf('{', open - 1), text.lastIndexOf('}', open - 1));
+    for (const b of blocks) {
+        const m = /^([a-z]\w*)\s+([A-Za-z_]\w*)$/.exec(b.header);
+        const called = m !== null && !/^(part|section|score|form|lyrics|chords|layout|paper|fonts|header|singer)$/.test(m[1])
+            && new RegExp(`(^|[^\\w'])${m[2]}(?![\\w'])`).test(music);
+        if (isPart(b) || called) {
+            spans.push([from(b.open), b.close + 1]);
+        } else {
+            for (const inner of b.inner.filter(isMine)) { spans.push([from(inner.open), inner.close + 1]); }
+        }
+    }
+    return spans;
 }
 
 /**

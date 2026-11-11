@@ -393,6 +393,13 @@ describe('the composing guide', () => {
         assert.doesNotMatch(fn, /\.edit\(|applyEdit|writeFile|proposeScore\(/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         assert.match(build, /'\*\*Arranging a score\*\*: to know its harmony, ask `lilysharp_readChords` \(#readChords\) first:/);
+        // Owner's report 2026-11-11: read from every part, the list held the keyboard's Gm7 and the
+        // bass's Bb/F beside the guitar's own eight chords; and the edits keep to the part read.
+        assert.match(pkg, /To rewrite or revoice ONE part, give `parts` with that part/);
+        assert.match(pkg, /"part": \{ "type": "string", "description": "With `edits`: a part's name\. The edits then change that part's text alone/);
+        assert.match(transform, /applyScoreEdits\(await chatAbsolute\(deps, standing\) \?\? standing, edits,\s*typeof given\.part === 'string' \? given\.part : undefined\)/);
+        assert.match(transform, /With \\`part: "\$\{wanted\}"\\` beside \\`edits\\`, they change this part's text alone/);
+        assert.match(build, /change it with `edits` and the same `part`, which keeps them to that part/);
     });
     // Owner's request 2026-10-29: the instructions files go only with a request about a .lys, so a
     // piece asked for in the chat with none open was written without them — a tool gives them.
