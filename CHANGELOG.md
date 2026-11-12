@@ -7,6 +7,7 @@ workflow attaches that section to the GitHub Release verbatim.
 ## Unreleased
 
 - **Leftovers of the same evaluation**:
+  - **A VOCALOID file has one voice**: a part with `voice { } { }` went to `.vsqx` with the second voice's notes after the first's — a held note a bar long — and every later note that much late. The line is each bar's first voice. (The other exports were checked for the empty bar after a voice span: VSQX had it, through the MusicXML it is built on.)
   - **The LilyPond twin has the empty bar after a voice span too**: `voice { c'1 | } { e'1 | } | d'1` wrote no spacer for the bar the second bar line opens, a bar short of the page — the last of the three exports to get it.
   - **The bar line after a drum chart confirms the bar its lines closed**: `drums { { cymr4 cymr cymr cymr | } { r4 hhp r hhp | } } | % |` is the three bars the same chart of one-bar phrases is. The section was counted a bar too long (LYS2007) and every other part padded by a bar; a chart drawn a voice a line drew the empty bar too. A `voice { … | } { … | } |` span is unchanged: its bar lines are the staff's own.
   - **`bare` is offered after a tempo's feel word**: `tempo "Swing" 4 = 120 swing ` lists `bare` beside `8` and `16` (not after `tempo swing`, which has no count to hide).

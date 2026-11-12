@@ -95,4 +95,21 @@ public class VsqxExportShapeTests
         Assert.Equal(Ns, root.Name.Namespace);
         Assert.NotEmpty(root.Descendants(Ns + "note"));
     }
+    /// <summary>A vocal line is one voice: the second voice of a span stood AFTER the first in
+    /// the line (a held "-" a bar long) and pushed every later note a bar late; and the bar line
+    /// after a span that ended on its own is the empty bar the page draws (found 2026-11-13,
+    /// checking each export for that bar — the MIDI, MusicXML and LilyPond walks had it wrong).</summary>
+    [Theory]
+    [InlineData("voice { c'1 } { e'1 } | d'1 | g'1 |", "あ | い | う |", new[] { 0, 1920, 3840 })]
+    [InlineData("voice { c'1 | } { e'1 | } | d'1 | g'1 |", "あ | | い | う |", new[] { 0, 3840, 5760 })]
+    [InlineData("c'1 | | d'1 | g'1 |", "あ | | い | う |", new[] { 0, 3840, 5760 })]
+    [InlineData("c'1 | voice { c'2 d'2 } { e'1 } | g'1 |", "あ | い う | え |", new[] { 0, 1920, 2880, 3840 })]
+    [InlineData("c'1 | voice { c'2 } { e'2 } d'2 | g'1 |", "あ | い う | え |", new[] { 0, 1920, 2880, 3840 })]
+    public void ASecondVoice_IsNotInTheVocalLine_AndTakesNoTime(string music, string words, int[] ticks)
+    {
+        var notes = Notes(Export("octave absolute\nlanguage japanese\ntime 4/4\npart m { lyrics w }\n"
+            + $"section A {{ m {{ {music} }} lyrics w {{ {words} }} }}\nform {{ A }}\nscore {{ staff m  lyrics w }}\n"));
+        Assert.Equal(ticks, notes.Select(n => Int(n, "t")));
+        Assert.DoesNotContain("-", notes.Select(Lyric));
+    }
 }

@@ -72,8 +72,20 @@ public sealed class VsqxExporter
             int tick = 0;
             foreach (var measure in part.Measures)
             {
+                // ⚠️ A VOCAL LINE IS ONE VOICE. The MusicXML model writes a bar's second voice
+                // after a <backup> that rewinds to the bar's start; read as one stream the
+                // second voice's notes came AFTER the first's — a held "-" a bar long for
+                // `voice { c'1 } { e'1 }` — and every note after them a bar late (found
+                // 2026-11-13, checking the exports for the empty bar after a voice span:
+                // い at tick 3840 where the page has it at 1920). The line is the bar's first
+                // voice; what follows a backup is left out, and takes no time.
+                bool pastTheFirstVoice = false;
                 foreach (var n in measure.Notes)
                 {
+                    if (n.IsBackup)
+                        pastTheFirstVoice = true;
+                    if (pastTheFirstVoice && n.RawElement == null)
+                        continue;
                     if (n.IsGrace || n.IsChord)
                         continue; // no metric time / stacked pitch — not a vocal event
                     // Pseudo-entries the MusicXML model keeps in the note stream for their
