@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **The part before the words on a singer line**: `singer alice female on lead` is a whole line (it sings the words the part names), and `… on lead sings ` lists the words that part names, with their language. After the voice the list offers `on` first; a voice taken from the list goes on to ` on ` and the parts. The older order still works, and its lists are as they were.
 - **A part may sing other words in other sections**: a verse in Japanese (`… japanese sings on lead in Verse`) and a chorus in English (`… sings on lead in Chorus`) play as written, each voice in its own language; it was an error.
 - **A singer says a language as it says a gender**: `singer alice female japanese sings on lead` — the list of voices after it holds the ones that sing Japanese, and of a part's several lyrics the line sings the ones in that language (the file's, with none written), so it need not name them. The languages are offered beside the genders and after one.
 - **A named singer's line is a singer line to the editor**: on `singer alice female sings ▮` the list of words had no `solfege` or `hum`, and the other steps of the line (`sings`, `on`, the part, `up` / `down` / `octave` / `in`), the list of voices, the step keys on the gender and the voice, the settings after `with` and their audition did not know a line that begins with the singer's own name. They do now, a name such as ようこ included.

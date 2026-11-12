@@ -198,10 +198,10 @@ public static class HarmonyPartWriter
         var head = lines.FirstOrDefault(l => l.NameToken != null || l.GenderToken != null) ?? lines[0];
         foreach (var line in lines)
         {
-            if (ReferenceEquals(line, lines[0]) && head.SingsKeyword is { } sings)
+            if (ReferenceEquals(line, lines[0]) && head.ClauseToken is { } clause)
             {
                 string settings = head.WithKeyword is { } with ? " " + text[with.Span.Start..head.Span.End] : "";
-                edits.Add((line.Span.Start, line.Span.End, text[head.Span.Start..sings.Span.End] + " on " + person + settings));
+                edits.Add((line.Span.Start, line.Span.End, text[head.Span.Start..clause.Span.Start].TrimEnd() + " on " + person + settings));
                 continue;
             }
             int start = line.Span.Start, end = line.Span.End;

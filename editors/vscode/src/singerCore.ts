@@ -106,7 +106,7 @@ export function voiceListText(voices: readonly CantoriaVoice[], filter: { provid
             languages.length > 0 ? `sings ${languages.join(', ')}` : 'languages not stated', v.licence].filter(Boolean).join(' · ').replace(': · ', ': ');
     });
     return [`${found.length} voice${found.length === 1 ? '' : 's'}${asked ? ` (${asked})` : ''}:`, ...lines, '',
-        'Write a name after singer, on a line of its own at the top level: singer "neutrino/MERROW" sings words on melody. Two lines with the same words on one part sing it together. A voice sings only the languages it lists.'].join('\n');
+        'Write a name after singer, on a line of its own at the top level: singer "neutrino/MERROW" on melody. Two lines with the same words on one part sing it together. A voice sings only the languages it lists.'].join('\n');
 }
 
 /** What the editor says when a voice cannot be listed, and the buttons that go on from it. */
@@ -236,7 +236,7 @@ export function voiceMenuKey(voices: readonly Pick<SungVoiceDto, 'Part' | 'Key' 
 
 /** What the status bar says, once, of a part with words in the score and no voice asked for them. */
 export function printedWordsNote(part: string): string {
-    return `the words of ${part} are printed, not sung: add a line of its own, singer sings WORDS on ${part}`;
+    return `the words of ${part} are printed, not sung: add a line of its own, singer on ${part}`;
 }
 
 /** One choice between a `singer`'s quotes. */
@@ -268,7 +268,7 @@ export const SINGER_NAME = String.raw`(?:(?!(?:male|female|sings|${SINGER_LANGUA
 
 /** Whether a score names who sings: a `singer` followed by a name or a gender, off a comment. */
 export function writesSinger(text: string): boolean {
-    return text.split('\n').some(line => /^[ \t]*singer\b.*\bsings\b/.test(line.split('//')[0]));
+    return text.split('\n').some(line => /^[ \t]*singer\b.*\b(?:sings|on)\b/.test(line.split('//')[0]));
 }
 
 /** Whether a line's text before the caret ends with `singer ` or `singer male `: a space that opens the list of voices. */
@@ -297,7 +297,7 @@ export function atTopLevel(before: string): boolean {
  */
 export function singerGoesOnToSings(before: string, line: string, after: string): boolean {
     return atTopLevel(before) && /^[ \t]*singer(?![\w-])/.test(line)
-        && !/(?<![\w-])sings(?![\w-])/.test(line.split('//')[0])
+        && !/(?<![\w-])(?:sings|on)(?![\w-])/.test(line.split('//')[0].replace(/"[^"]*"/g, '""'))
         && after.split('//')[0].trim() === '';
 }
 
@@ -470,14 +470,16 @@ export function parseVoiceSampleKey(key: string): { id: string; language?: strin
 export function singerLineOf(line: string): { voice: string; askColumn: number; sing: Record<string, number | string>; withAt: number } | undefined {
     const code = line.split('//')[0];
     const head = new RegExp(String.raw`^([ \t]*singer[ \t]+${SINGER_NAME})(?:(male|female)(?![\w-])[ \t]*)?${SINGER_LANGUAGE}(?:"([^"]*)")?`).exec(code);
-    if (!head || !/(?<![\w-])sings(?![\w-])/.test(code.replace(/"[^"]*"/g, '""'))) { return undefined; }
+    // A singer line by its `on PART` or its `sings` (the part comes first since 2026-11-12, and a
+    // line that names no words has no `sings`).
+    if (!head || !/(?<![\w-])(?:sings|on)(?![\w-])/.test(code.replace(/"[^"]*"/g, '""'))) { return undefined; }
     const quote = code.indexOf('"', head[1].length);
     const askColumn = head[3] !== undefined && quote >= 0 ? quote + 1 : head[1].length + (head[2]?.length ?? 0);
     const sing: Record<string, number | string> = {};
     // `with` and a name after it, not the track or the part of that name (`sings with on lead`).
     const masked = code.replace(/"[^"]*"/g, m => '"' + ' '.repeat(Math.max(0, m.length - 2)) + '"');
     // The line in its order: sings, the words, on and the part, then with.
-    const at = new RegExp(String.raw`^[ \t]*sings(?![\w-])(?:[ \t]+on[ \t]+(?:"[^"]*"|[^\s"]+)|[ \t]+(?:"[^"]*"|[^\s"]+)(?:[ \t]+on[ \t]+(?:"[^"]*"|[^\s"]+))?)${SINGER_PLACE}[ \t]+with([ \t]+)(?=[A-Za-z_])`).exec(masked.slice(head[0].length));
+    const at = new RegExp(String.raw`^[ \t]*(?:on(?![\w-])[ \t]+(?:"[^"]*"|[^\s"]+)(?:[ \t]+sings(?![\w-])[ \t]+(?:"[^"]*"|[^\s"]+))?|sings(?![\w-])(?:[ \t]+on[ \t]+(?:"[^"]*"|[^\s"]+)|[ \t]+(?:"[^"]*"|[^\s"]+)(?:[ \t]+on[ \t]+(?:"[^"]*"|[^\s"]+))?))${SINGER_PLACE}[ \t]+with([ \t]+)(?=[A-Za-z_])`).exec(masked.slice(head[0].length));
     const withAt = at ? head[0].length + at[0].length - at[1].length - 4 : -1;
     if (at) {
         const words = code.slice(head[0].length + at[0].length).match(/"[^"]*"|[^\s"]+/g) ?? [];
@@ -754,7 +756,7 @@ const SINGER_PLACE = String.raw`(?:[ \t]+(?:up|down)[ \t]+\d+)?(?:[ \t]+octave[ 
 export function singerSettingSlot(before: string): { kind: 'with' } | { kind: 'name'; written: string[] } | { kind: 'value'; of: string } | undefined {
     if (before.includes('//')) { return undefined; }
     const line = /^[ \t]*singer(?![\w-])(.*)$/.exec(before);
-    if (!line || !/(?<![\w-])sings(?![\w-])/.test(line[1])) { return undefined; }
+    if (!line || !/(?<![\w-])(?:sings|on)(?![\w-])/.test(line[1].replace(/"[^"]*"/g, '""'))) { return undefined; }
     // The line up to `with`, quoted strings set aside so that a voice's name is no word of it.
     const rest = line[1].replace(/"[^"]*"/g, '""');
     const at = /(?<![\w.-])with[ \t]+(?!on(?![\w-]))/.exec(rest);
@@ -762,7 +764,7 @@ export function singerSettingSlot(before: string): { kind: 'with' } | { kind: 'n
     if (!at) {
         // `singer "x" sings words on lead ▮`: after the words or the part, a space, nothing begun.
         // …or after what of the part it sings (`up 3`, `octave -1`, `in Chorus Bridge`), each whole.
-        return ends && new RegExp(String.raw`(?<![\w-])sings(?:[ \t]+(?!on(?![\w-]))[\w-]+)?(?:[ \t]+on[ \t]+[\w-]+)?${SINGER_PLACE}[ \t]+$`).test(rest)
+        return ends && new RegExp(String.raw`(?<![\w-])(?:on[ \t]+[\w-]+(?:[ \t]+sings[ \t]+[\w-]+)?|sings(?:[ \t]+(?!on(?![\w-]))[\w-]+)?(?:[ \t]+on[ \t]+[\w-]+)?)${SINGER_PLACE}[ \t]+$`).test(rest)
             && !/(?<![\w-])(?:sings|on|up|down|octave|in)[ \t]+$/.test(rest)
             ? { kind: 'with' } : undefined;
     }
@@ -799,7 +801,7 @@ export function singMarkSlot(before: string): { kind: 'name'; written: string[] 
 export function singersWritten(text: string): string[] {
     const found: string[] = [];
     for (const line of text.split('\n')) {
-        const m = new RegExp(String.raw`^[ \t]*singer[ \t]+${SINGER_NAME}(?:(male|female)[ \t]+)?${SINGER_LANGUAGE}(?:"([^"]*)")?[ \t]*sings(?![\w-])`).exec(line.split('//')[0]);
+        const m = new RegExp(String.raw`^[ \t]*singer[ \t]+${SINGER_NAME}(?:(male|female)[ \t]+)?${SINGER_LANGUAGE}(?:"([^"]*)")?[ \t]*(?:sings|on)(?![\w-])`).exec(line.split('//')[0]);
         if (m) { const who = m[2] || m[1] || ''; if (!found.includes(who)) { found.push(who); } }
     }
     return found;

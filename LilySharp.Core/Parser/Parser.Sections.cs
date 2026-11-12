@@ -248,9 +248,12 @@ internal sealed partial class Parser
     {
         for (int ahead = 1; ahead <= 7 && !BeginsLine(ahead) && Peek(ahead) is { } token; ahead++)
         {
-            if (token.Kind == SyntaxKind.Identifier && token.Text == "sings")
+            // …or by its `on` (`singer alice female on lead`): the part first, and no words named.
+            if (token.Kind == SyntaxKind.Identifier && token.Text is "sings" or "on")
                 return true;
-            if (token.Kind is SyntaxKind.OpenBrace or SyntaxKind.CloseBrace or SyntaxKind.EndOfFile)
+            // The head holds bare words and a voice's string: anything else is another statement's
+            // (a score's `singer staff lead lyrics w on lead` is two MIDI-only parts and a row).
+            if (token.Kind is not (SyntaxKind.Identifier or SyntaxKind.StringLiteral))
                 return false;
         }
         return false;
@@ -294,15 +297,31 @@ internal sealed partial class Parser
                 tokens.Add(ParseSingerName(allowEmpty: gendered));
             }
         }
-        if (Check(SyntaxKind.Identifier) && Current.Text == "sings")
+        // The line's two clauses: `on PART`, whose notes are sung, and `sings [WORDS]`, which words.
+        // THE PART FIRST (owner's decision 2026-11-12: "the part before the words — once the part
+        // is said, the words it names can be listed"): `singer alice female on lead`, and
+        // `… on lead sings en` where the words have to be named. Then `sings` is only for naming
+        // them: a part that names its words needs none. The older order, `sings [WORDS] [on
+        // PART]`, is read as it was.
+        bool partFirst = Current.Text == "on" && !BeginsLine();
+        if (partFirst)
+        {
             tokens.Add(Advance());
+            tokens.Add(ExpectPartName());
+        }
+        if (Check(SyntaxKind.Identifier) && Current.Text == "sings" && !(partFirst && BeginsLine()))
+            tokens.Add(Advance());
+        else if (partFirst)
+        {
+            // `on PART` and no `sings`: the words the part names (Music.LyricSinger.LinesOf).
+            goto place;
+        }
         else
         {
             _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Math.Max(1, Current.Text.Length)),
                 DiagnosticCodes.SingerNeedsSings,
-                Current.Text == "on"
-                    ? "'sings' is missing before 'on': a singer line reads 'singer S sings [WORDS] on PART' — write 'sings on " + (Peek(1)?.Text ?? "PART") + "'."
-                    : "A singer line reads 'singer S sings WORDS on PART'; 'sings' is missing here.");
+                "A singer line says whose notes are sung, and the words where they have to be named: "
+                + "'singer S on PART', 'singer S on PART sings WORDS'. Neither 'on' nor 'sings' is here.");
             // The rest of the line is the line's: read as statements of their own, `on lead in
             // Verse` was music at the top level and seven errors about it (owner's report 2026-11-12).
             while (endsItsLine && !BeginsLine() && !Check(SyntaxKind.EndOfFile))
@@ -311,11 +330,12 @@ internal sealed partial class Parser
         }
         if (IsPartNameToken(Current) && Current.Text != "on" && !IsLanguageDeclaration() && !IsSingerWith() && !IsSingerPlace())
             tokens.Add(Advance());
-        if (Current.Text == "on")
+        if (!partFirst && Current.Text == "on")
         {
             tokens.Add(Advance());
             tokens.Add(ExpectPartName());
         }
+    place:
         ParseSingerPlace(tokens);
         if (IsSingerWith())
             ParseSingerSettings(tokens);

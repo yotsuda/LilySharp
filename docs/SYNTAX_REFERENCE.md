@@ -1933,7 +1933,7 @@ on a line of its own for the whole file, or on a track, `lyrics en language engl
 (the track's wins). The names are `japanese`, `english`,
 `chinese` and `korean`; another word is an error (LYS4038). The kana check is for Japanese words only.
 
-**Who sings** is a top-level line of its own: `singer "neutrino/MERROW" sings verse on melody`,
+**Who sings** is a top-level line of its own: `singer "neutrino/MERROW" on melody sings verse`,
 in that order. A score's `lyrics` row prints the words and sounds nothing; only a `singer` line
 sings, whether the page shows the words or not. A name with a `/` is a voice. Each line is one
 voice: several lines with the same words on one part sing it together.
@@ -1953,7 +1953,7 @@ on a `singer "…"`, `Ctrl+Shift+Up` / `Down` step through those voices and `Ctr
 ```
 part sop { instrument soprano  lyrics words }
 part ten { instrument baritone lyrics mw }
-singer female sings on sop        // sings the words the part names
+singer female on sop        // sings the words the part names
 ```
 
 With no name a `singer` line sings the track its part names; where the part names several that is
@@ -1963,7 +1963,7 @@ track a part does not list, named on a `singer` line or on a row for that part, 
 is not checked. Words themselves (`lyrics NAME { … }`) are not written inside a part (LYS4049).
 
 **Words the file does not write**: `hum` and `solfege` are track names made from the notes, with no
-`lyrics { }` block. `singer female sings hum on sop` hums on ん; `singer female sings solfege on alt`
+`lyrics { }` block. `singer female on sop sings hum` hums on ん; `singer female on alt sings solfege`
 sings the note names, and the row `lyrics solfege` prints them under the notes (`lyrics hum` is an
 error, LYS4050: there is nothing to print). Solfege is movable do, in the file's `language`.
 

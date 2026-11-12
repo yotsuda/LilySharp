@@ -4068,9 +4068,10 @@ const singerCompletion: vscode.CompletionItemProvider = {
         const line = document.lineAt(position.line).text;
         const open = line.lastIndexOf('"', position.character - 1);
         const close = line.indexOf('"', position.character);
-        // At the top level, a voice taken goes on to `sings` and the list of the file's lyrics
-        // (owner's request 2026-11-11): the name is closed, ` sings ` written after it and the
-        // list asked again — the server's, which names the lyrics there. The closing quote is
+        // At the top level, a voice taken goes on to `on` and the list of the file's parts
+        // (owner's request 2026-11-11, and the part before the words since 2026-11-12): the name
+        // is closed, ` on ` written after it and the list asked again — the server's, which
+        // names the parts there, and after the part what the line may say next. The closing quote is
         // then part of what the item replaces.
         const goesOn = singerGoesOnToSings(document.getText(new vscode.Range(0, 0, position.line, 0)), line,
             line.slice(slot.Quoted && close >= 0 ? close + 1 : position.character));
@@ -4096,8 +4097,8 @@ const singerCompletion: vscode.CompletionItemProvider = {
             item.filterText = c.label;
             item.sortText = String(i).padStart(3, '0');
             if (goesOn) {
-                item.insertText = new vscode.SnippetString().appendText(`${slot.Quoted ? '' : '"'}${c.label}" sings `).appendTabstop(0);
-                item.command = { command: 'lilysharp.singerTaken', title: 'Hear this voice, and list the lyrics', arguments: [c.label, nameColumn] };
+                item.insertText = new vscode.SnippetString().appendText(`${slot.Quoted ? '' : '"'}${c.label}" on `).appendTabstop(0);
+                item.command = { command: 'lilysharp.singerTaken', title: 'Hear this voice, and list the parts', arguments: [c.label, nameColumn] };
             } else {
                 if (!slot.Quoted) { item.insertText = new vscode.SnippetString(`"${c.label}$0"`); }
                 item.command = { command: 'lilysharp.hearSinger', title: 'Hear this voice', arguments: [c.label] };

@@ -144,7 +144,7 @@ public class HarmonyPartWriterTests
         Assert.Contains("  carol { b'4 b c b | }\n  lyrics carolWords { la la la la | }", text);
         Assert.Contains("  carol { R*1 }", text);
         // One line, on the written part, its voice and settings kept; its place is in the notes now.
-        Assert.Contains("singer carol female \"x/y\" sings on carol with breathiness 2\n", text);
+        Assert.Contains("singer carol female \"x/y\" on carol with breathiness 2\n", text);
         Assert.DoesNotContain("up 3", text);
         // The score that printed the singer keeps her staff where it stood — now the written part —
         // and its row of her words names the track they are now; the other takes the staff and its words.

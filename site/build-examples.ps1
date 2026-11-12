@@ -237,7 +237,7 @@ section A {
   }
 }
 form { ~A }
-singer female sings on melody
+singer female on melody
 score {
   staff melody  lyrics words
   grandStaff { staff rh  staff lh }
@@ -263,9 +263,9 @@ section Chorus {
   lyrics words { Sing it o- ver, | o- ver- now, | sing it loud- er, | a- ny- how. | }
 }
 form { Verse Chorus }
-singer female sings on lead in Verse
-singer male sings on lead octave -1 in Chorus
-singer female sings on lead up 3 in Chorus
+singer female on lead in Verse
+singer male on lead octave -1 in Chorus
+singer female on lead up 3 in Chorus
 score { staff lead  lyrics words }
 '@
 
@@ -289,9 +289,9 @@ section Chorus {
   lyrics words { Sing it o- ver, | o- ver- now, | sing it loud- er, | a- ny- how. | }
 }
 form { Verse Chorus }
-singer alice female sings on lead in Verse
-singer bob   male   sings on lead octave -1 in Chorus
-singer carol female sings on lead up 3 in Chorus
+singer alice female on lead in Verse
+singer bob   male   on lead octave -1 in Chorus
+singer carol female on lead up 3 in Chorus
 score { staff lead  lyrics words  staff carol  staff bob  lyrics bob }
 '@
 
@@ -320,9 +320,9 @@ form { Verse Chorus }
 // The English score's singers: every score's default. They name no words: of the part's two
 // tracks each sings the one in the singer's language, here the file's (english). They name no words: of the part's two
 // tracks each sings the one in the singer's language, here the file's (english).
-singer alice female sings on lead in Verse
-singer bob   male   sings on lead octave -1 in Chorus
-singer carol female sings on lead up 3 in Chorus
+singer alice female on lead in Verse
+singer bob   male   on lead octave -1 in Chorus
+singer carol female on lead up 3 in Chorus
 
 score {
   staff lead
@@ -333,9 +333,9 @@ score {
 // Each says its language as it says its gender, and so sings the Japanese words.
 // Each says its language as it says its gender, and so sings the Japanese words.
 score 日本語 {
-  singer alice female japanese sings on lead in Verse
-  singer bob   male   japanese sings on lead octave -1 in Chorus
-  singer carol female japanese sings on lead up 3 in Chorus
+  singer alice female japanese on lead in Verse
+  singer bob   male   japanese on lead octave -1 in Chorus
+  singer carol female japanese on lead up 3 in Chorus
   staff lead
   lyrics jp
 }

@@ -99,7 +99,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             if (kind != null)
                 _diagnostics.Error(token.Span, DiagnosticCodes.LyricsNamedAsSinger,
                     $"lyrics '{token.Text}' has the name of a {kind}. Give the words a name of their own and say who sings them on its own line: "
-                    + $"'lyrics words {{ … }}' and 'singer sings words on {token.Text}'.");
+                    + $"'lyrics words {{ … }}' and 'singer on {token.Text} sings words'.");
         }
 
         // (The `with lyrics` attachment checks — LYS6009/LYS6010 — died with the
@@ -116,7 +116,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         {
             if (row.PartName == GeneratedLyrics.Hum)
                 _diagnostics.Error(row.LyricsKeyword.Span, DiagnosticCodes.LyricsHumNotPrinted,
-                    "Humming has no words to print: 'singer sings hum on PART' sings it.");
+                    "Humming has no words to print: 'singer on PART sings hum' sings it.");
             else if (row.PartName == GeneratedLyrics.Solfege && RenderSpecParser.RowTarget(row) == null)
                 _diagnostics.Error(row.LyricsKeyword.Span, DiagnosticCodes.LyricsRowNeedsOn,
                     "The note names follow notes: say whose, 'lyrics solfege on PART'.");
@@ -265,7 +265,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         foreach (var line in lines)
         {
             var node = line.Node;
-            if (node.SingsKeyword == null)
+            if (node.ClauseToken == null)
                 continue;   // the parser said so
             // A singer called as a PART is: a score's `staff NAME` is then that part, never what
             // she sings, so her harmony could not be printed and nothing would say why. Allowed
@@ -275,9 +275,9 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                 && !(line.Part == person.Text && line.Voice == null && node.Interval is >= -1 and <= 1 && node.Octaves == 0))
                 _diagnostics.Error(person.Span, DiagnosticCodes.SingerNamedAsPart,
                     $"'{person.Text}' is a part's name, so it cannot be this singer's: in a score, 'staff {person.Text}' is that part. "
-                    + "Give the singer another name. (A singer may be called as a part is only where the part is her own notes, written out: 'sings on "
+                    + "Give the singer another name. (A singer may be called as a part is only where the part is her own notes, written out: 'on "
                     + person.Text + "' with no 'up', 'down' or 'octave'.)");
-            var at = node.TrackToken ?? node.SingsKeyword;
+            var at = node.TrackToken ?? node.SingsKeyword ?? node.ClauseToken;
             var own = line.Part is { } sungPart ? LyricBindings.TracksOfPart(root, sungPart) : [];
             // Of several the part names, the one in the singer's language is sung (LyricSinger.LinesOf);
             // with none or several in it, the line has to say which.
@@ -291,8 +291,8 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                     $"'{line.Part}' names several lyrics ({string.Join(", ", own)}), and "
                     + (fitting == 0 ? $"none of them is in {name}" : $"{fitting} of them are in {name}")
                     + (node.LanguageToken != null ? ", the language this line says" : ", the file's language")
-                    + $": say which, 'singer sings {own[0]} on {line.Part}'"
-                    + (node.LanguageToken == null ? ", or say the singer's language as its gender is said, 'singer japanese sings on " + line.Part + "'." : "."));
+                    + $": say which, 'singer on {line.Part} sings {own[0]}'"
+                    + (node.LanguageToken == null ? ", or say the singer's language as its gender is said, 'singer japanese on " + line.Part + "'." : "."));
                 continue;
             }
             // A name the part lists and no block defines is already said at the part (LYS1007).
@@ -394,7 +394,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                 _diagnostics.Error(word.Span, DiagnosticCodes.StaffSoundUnknown, $"'sounds' takes voice, instrument or both, not '{word.Text}'.");
             else if (word.Text != "instrument" && (part == null || !lines.Any(l => l.Part == part && (l.Score < 0 || l.Score == score))))
                 _diagnostics.Error(word.Span, DiagnosticCodes.StaffSoundNeedsSinger,
-                    $"No singer sings '{part}'. Add a line: 'singer S sings WORDS on {part}'.");
+                    $"No singer sings '{part}'. Add a line: 'singer S on {part}'.");
         }
         foreach (var render in root.DescendantNodes<RenderDeclarationSyntax>())
             if (RenderSpecParser.Parse(render) is { Items.IsEmpty: true, HiddenStaves.IsDefaultOrEmpty: false })

@@ -110,7 +110,25 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
         }
     }
 
-    /// <summary>The <c>sings</c> word, or null where it is missing (an error).</summary>
+    /// <summary>Where the line's head ends: its first <c>on</c> or <c>sings</c>, whichever the line
+    /// writes first (<c>singer alice on lead sings en</c>, or the older <c>… sings en on lead</c>);
+    /// -1 with neither (an error).</summary>
+    private int ClauseIndex
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text: "sings" or "on" })
+                    return i;
+            return -1;
+        }
+    }
+
+    /// <summary>The line's first <c>on</c> or <c>sings</c>, where its head ends; null with neither.</summary>
+    public SyntaxTokenNode? ClauseToken => ClauseIndex is var c and >= 0 ? (SyntaxTokenNode)GetChild(c)! : null;
+
+    /// <summary>The <c>sings</c> word, or null: a line that names its part and no words
+    /// (<c>singer alice on lead</c>) needs none.</summary>
     public SyntaxTokenNode? SingsKeyword => SingsIndex is var i and >= 0 ? (SyntaxTokenNode)GetChild(i)! : null;
 
     /// <summary>The written name, or null.</summary>
@@ -118,7 +136,7 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
     {
         get
         {
-            int end = SingsIndex >= 0 ? SingsIndex : SlotCount;
+            int end = ClauseIndex >= 0 ? ClauseIndex : SlotCount;
             for (int i = 1; i < end; i++)
                 if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } t)
                     return t;
@@ -174,7 +192,7 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
     /// section's name — not the part of that name (<c>on in</c>) nor the track (<c>sings in on lead</c>).</summary>
     private bool IsPlaceWordAt(int i)
     {
-        if (i <= SingsIndex || i + 1 >= SlotCount
+        if (i <= ClauseIndex || ClauseIndex < 0 || i + 1 >= SlotCount
             || GetChild(i) is not SyntaxTokenNode { Kind: SyntaxKind.Identifier } word
             || GetChild(i + 1) is not SyntaxTokenNode next
             || GetChild(i - 1) is SyntaxTokenNode { Text: "on" })
@@ -190,7 +208,7 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
 
     private int PlaceIndex(params string[] words)
     {
-        for (int i = SingsIndex + 1; i >= 1 && i + 1 < SlotCount; i++)
+        for (int i = ClauseIndex + 1; i >= 1 && i + 1 < SlotCount; i++)
         {
             if (ReferenceEquals(GetChild(i), WithKeyword))
                 break;
@@ -279,7 +297,7 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
         {
             // The word, a setting's name after it - not the lyrics track or the part of that name
             // (`sings with on lead`, `on with`), which no name follows.
-            for (int i = Math.Max(1, SingsIndex + 1); i + 1 < SlotCount; i++)
+            for (int i = Math.Max(1, ClauseIndex + 1); i + 1 < SlotCount; i++)
                 if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text: SyntaxFacts.SingerWithWord } with
                     && GetChild(i - 1) is not SyntaxTokenNode { Text: "on" }
                     && GetChild(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text: not "on" })
@@ -340,7 +358,7 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
     {
         get
         {
-            for (int i = SingsIndex + 1; i >= 1 && i + 1 < SlotCount; i++)
+            for (int i = ClauseIndex; i >= 1 && i + 1 < SlotCount; i++)
                 if (GetChild(i) is SyntaxTokenNode { Text: "on" })
                     return GetChild(i + 1) as SyntaxTokenNode;
             return null;

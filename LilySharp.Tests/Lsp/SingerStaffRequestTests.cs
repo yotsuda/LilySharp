@@ -182,6 +182,15 @@ public class SingerStaffRequestTests
     [InlineData("singer alice female ", "sings")]
     [InlineData("singer alice female sings words ", "on")]
     [InlineData("singer alice female sings words on ", "lead")]
+    [InlineData("singer alice female ", "on")]
+    [InlineData("singer alice female on ", "lead")]
+    [InlineData("singer alice female on lead ", "sings")]
+    [InlineData("singer alice female on lead ", "up")]
+    [InlineData("singer alice female on lead ", "in")]
+    [InlineData("singer alice female on lead sings ", "words")]
+    [InlineData("singer alice female on lead sings ", "solfege")]
+    [InlineData("singer alice female on lead sings words ", "up")]
+    [InlineData("singer alice female on lead up 3 in ", "Chorus")]
     [InlineData("singer alice female ", "japanese")]
     [InlineData("singer alice ", "english")]
     [InlineData("singer alice female japanese ", "sings")]
@@ -193,6 +202,24 @@ public class SingerStaffRequestTests
     {
         string source = Book + "\n" + line;
         Assert.Contains(offered, LabelsAt(source, source.Length));
+    }
+
+    /// <summary>The owner's reason for the part before the words (2026-11-12): once the part is
+    /// said, the words IT names are the list — and not the file's other lyrics.</summary>
+    [Fact]
+    public void AfterThePartAndSings_TheWordsThatPartNamesAreListed()
+    {
+        string source = Book.Replace("part lead { instrument alto  lyrics words }", "part lead { instrument alto  lyrics words }\npart other { instrument alto  lyrics theirs }")
+            .Replace("section Verse {", "section Verse {\n  other { c'1 | }\n  lyrics theirs { oh | }")
+            + "\nsinger dora female on lead sings ";
+        var labels = LabelsAt(source, source.Length);
+        Assert.Contains("words", labels);
+        Assert.DoesNotContain("theirs", labels);
+        Assert.DoesNotContain("on", labels);
+
+        // The older order lists every lyrics track, as it did: the part is not said yet.
+        string older = source[..^"singer dora female on lead sings ".Length] + "singer dora female sings ";
+        Assert.Contains("theirs", LabelsAt(older, older.Length));
     }
 
     [Fact]
@@ -232,7 +259,7 @@ public class SingerStaffRequestTests
         var written = server.HarmonyPart(new HarmonyPartParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Singer = "carol" });
         Assert.Null(written.Error);
         Assert.Contains("part carol \"Carol\" {", written.NewText);
-        Assert.Contains("singer carol female sings on carol", written.NewText);
+        Assert.Contains("singer carol female on carol", written.NewText);
     }
 
     [Fact]

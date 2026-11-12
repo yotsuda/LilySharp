@@ -588,9 +588,15 @@ public sealed partial class LilySharpLanguageServer
         var line = System.Text.RegularExpressions.Regex.Match(text[lineStart..end],
             // The singer's own name may stand first (`singer alice female "…" sings`, 2026-11-12): a word
             // that is neither a gender nor `sings`.
-            @"^[ \t]*singer(?<voice>(?:[ \t]+(?!(?:male|female|sings|" + SingerLanguages + @")\b)[\p{L}_][\w-]*)?(?:[ \t]+(?:male|female|" + SingerLanguages + @")){0,2}(?:[ \t]+""[^""]*"")?)(?:[ \t]+(?<sings>sings)(?:[ \t]+(?<w>[^\s{}""]+))*)?[ \t]+$");
+            @"^[ \t]*singer(?<voice>(?:[ \t]+(?!(?:male|female|sings|" + SingerLanguages + @")\b)[\p{L}_][\w-]*)?(?:[ \t]+(?:male|female|" + SingerLanguages + @")){0,2}(?:[ \t]+""[^""]*"")?)(?:[ \t]+(?<on>on)(?:[ \t]+(?<part>[^\s{}""]+))?)?(?:[ \t]+(?<sings>sings)(?:[ \t]+(?<w>[^\s{}""]+))*)?[ \t]+$");
         if (!line.Success)
             return null;
+        // The part first (owner's decision 2026-11-12): `… on ▮` the parts; `… on lead ▮` is the
+        // place list's (SingerPlaceItems, which offers `sings` too); `… on lead sings ▮` the words.
+        if (line.Groups["on"].Success && !line.Groups["sings"].Success)
+            return line.Groups["part"].Success ? null : CompletionContext.AfterSingsTarget;
+        if (line.Groups["on"].Success)
+            return line.Groups["w"].Captures.Count == 0 ? CompletionContext.AfterSingerSings : null;
         if (!line.Groups["sings"].Success)
             return line.Groups["voice"].Length > 0 ? CompletionContext.AfterSingerVoice : null;
         var words = line.Groups["w"].Captures.Select(c => c.Value).ToList();

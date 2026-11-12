@@ -281,22 +281,54 @@ public class SingerPartsTests
         Assert.All(voice.Notes, n => Assert.False(string.IsNullOrEmpty(n.Lyric)));
     }
 
-    /// <summary>Owner's report 2026-11-12: <c>singer alice female on lead in Verse</c> — the
-    /// <c>sings</c> forgotten — was read as music at the top level: eight errors, one of them
-    /// underlining the comment line above, and three more at the score's items. A named singer's
-    /// line that lacks its <c>sings</c> is a singer line, and says the one thing.</summary>
-    [Theory]
-    [InlineData("singer carol female on lead up 3 in Chorus")]
-    [InlineData("singer carol on lead up 3 in Chorus")]
-    [InlineData("singer female on lead")]
-    public void ASingerLineThatForgotItsSings_SaysThatOnce(string line)
+    /// <summary>Owner's decision 2026-11-12: the part before the words. <c>singer alice female on
+    /// lead in Verse</c> is a singer line — twice that day the owner wrote it so, and twice it
+    /// was an error for its missing <c>sings</c>. <c>on PART</c> comes first; <c>sings WORDS</c>
+    /// follows it only where the words have to be named; the older order is read as it was.</summary>
+    [Fact]
+    public void ThePartComesFirst_AndSingsOnlyNamesTheWords()
     {
-        string source = Book("// the singers\n" + line, "score { staff lead  lyrics words  staff carol }");
+        SingerDeclarationSyntax Line(string line)
+        {
+            var tree = SyntaxTree.Parse(Book("// the singers\n" + line, "score { staff lead  lyrics words }"));
+            Assert.Empty(tree.Diagnostics.Select(d => d.Message));
+            Assert.Empty(SemanticValidation.Run(tree).Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Message));
+            return tree.GetRoot().DescendantNodes<SingerDeclarationSyntax>().Single();
+        }
+
+        var plain = Line("singer carol female on lead");
+        Assert.Equal(("carol", "female", "lead"), (plain.PersonToken?.Text, plain.GenderToken?.Text, plain.OnToken?.Text));
+        Assert.Null(plain.SingsKeyword);
+        Assert.Null(plain.TrackToken);
+
+        var placed = Line("singer carol female \"x/y\" on lead up 3 octave -1 in Chorus with breathiness 2");
+        Assert.Equal(("x/y", "lead", 3, -1), (placed.Singer, placed.OnToken?.Text, placed.Interval, placed.Octaves));
+        Assert.Equal(["Chorus"], placed.Sections.Select(s => s.Text));
+        Assert.Equal("breathiness", Assert.Single(placed.Settings).Name);
+
+        var named = Line("singer carol on lead sings words up 3 in Chorus");
+        Assert.Equal(("lead", "words", 3), (named.OnToken?.Text, named.TrackToken?.Text, named.Interval));
+        Assert.Equal(["Chorus"], named.Sections.Select(s => s.Text));
+
+        // The older order, as it was.
+        var older = Line("singer carol female sings words on lead up 3 in Chorus");
+        Assert.Equal(("lead", "words", 3), (older.OnToken?.Text, older.TrackToken?.Text, older.Interval));
+
+        // …and the two orders are one line to everything that reads it.
+        var a = LilySharp.Core.Music.LyricSinger.LinesOf(SyntaxTree.Parse(Book("singer carol female on lead up 3 in Chorus", "")).GetRoot())[0];
+        var b = LilySharp.Core.Music.LyricSinger.LinesOf(SyntaxTree.Parse(Book("singer carol female sings words on lead up 3 in Chorus", "")).GetRoot())[0];
+        Assert.Equal((b.Singer, b.Track, b.Part, b.Person), (a.Singer, a.Track, a.Part, a.Person));
+    }
+
+    [Theory]
+    [InlineData("singer carol female lead")]
+    [InlineData("singer carol female \"x/y\"")]
+    public void ALineWithNeitherOnNorSings_SaysSoOnce(string line)
+    {
+        string source = Book("// the singers\n" + line, "score { staff lead  lyrics words }");
         var tree = SyntaxTree.Parse(source);
-        var problem = Assert.Single(tree.Diagnostics);
-        Assert.Equal(DiagnosticCodes.SingerNeedsSings, problem.Code);
-        Assert.Equal("on", source.Substring(problem.Span.Start, problem.Span.Length));
-        // …and nothing is made of a file that does not parse, nor said at the score's items.
+        Assert.Contains(tree.Diagnostics, d => d.Code is DiagnosticCodes.SingerNeedsSings or DiagnosticCodes.SingerGenderUnknown);
+        // Nothing is made of a file that does not parse, nor said at the score's items.
         Assert.Same(source, SingerParts.Expand(source, tree, out var said));
         Assert.Empty(said);
     }

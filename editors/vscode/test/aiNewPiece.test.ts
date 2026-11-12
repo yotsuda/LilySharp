@@ -536,7 +536,7 @@ describe('the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /To name a voice, call `lilysharp_listVoices` first and copy a name it answers; never guess one\./);
         assert.match(guide, /narrow it with `language`[\s\S]*`gender`[\s\S]*`provider`/);
-        assert.match(guide, /singer "neutrino\/MERROW" sings words on sop/);
+        assert.match(guide, /singer "neutrino\/MERROW" on sop sings words/);
         assert.match(guide, /Two lines with the same words on one part\s+sing it together\./);
     });
     // Owner's trials 2026-10-29: a jazz trio's drums came as a rock backbeat, its bass the chord's

@@ -347,7 +347,7 @@ What makes it music:
   - Count every bar: as many units as notes, less the notes a slur or a tie carries over.
   - Words the request gives are set as they stand. Words written for it tell their story in the
     verses and come back unchanged in the chorus, its hook the title.
-  - **Who sings**: a top-level `singer` line sings the words: `singer sings words on sop`. A `lyrics`
+  - **Who sings**: a top-level `singer` line sings the words: `singer on sop sings words`. A `lyrics`
     row only prints them, and words with no `singer` line are not sung: the part plays its instrument.
     A song meant to be heard sung has the line, for every part with words to sing. With no voice named
     this machine's default voice of the part's gender sings, and the name is left out unless the
@@ -363,7 +363,7 @@ What makes it music:
     ```
     part sop { instrument soprano }
     lyrics words { … }
-    singer "neutrino/MERROW" sings words on sop
+    singer "neutrino/MERROW" on sop sings words
     score { staff sop  lyrics words }
     ```
     A choir's voices each take their own line, one a part. Two lines with the same words on one part
@@ -374,7 +374,7 @@ What makes it music:
     what the editor offers. `staff sop sounds both` plays the instrument with the voice;
     `staff sop hidden` sings without drawing the staff.
     Where parts have different words, name each part's in its header, `part ten { instrument
-    baritone  lyrics mw }`, and `singer male sings on ten` sings them: a row or a line that gives
+    baritone  lyrics mw }`, and `singer male on ten` sings them: a row or a line that gives
     that part other words is then warned about.
 - **A song to sing and play yourself** (弾き語り; "a song with chords and lyrics", "for guitar and
   voice"): a lead sheet with the guitar's chord diagrams, not a written guitar staff.
@@ -406,7 +406,7 @@ What makes it music:
   - **The bridge is a change**: a chord the verse and the chorus do not use (Am, Bm, D7, a borrowed
     chord), a tune of its own, or the strum's pattern changed there — not the same four chords
     walked from another one of them under the verse's tune again.
-  - **Who sings**: as *A song with words* says: `singer "…" sings words on melody`, a name
+  - **Who sings**: as *A song with words* says: `singer "…" on melody sings words`, a name
     `lilysharp_listVoices` gave. A part with no words to sing can hum (`singer "…" sings hum on
     harmony`) or sing the note names (`sings solfege on harmony`), with no lyrics block.
   - **The singer breathes**: every line of words ends on a longer note with a rest after it (a

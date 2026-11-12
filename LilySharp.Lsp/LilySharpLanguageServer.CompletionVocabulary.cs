@@ -2487,6 +2487,41 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { Items = [.. list.Items, .. singers] };
     }
 
+    /// <summary>The part a singer line names BEFORE its <c>sings</c> (<c>singer alice on lead sings ▮</c>),
+    /// or null: the older order, whose part comes after the words.</summary>
+    private static string? SingerPartBefore(string text, int offset)
+    {
+        int end = Math.Clamp(offset, 0, text.Length);
+        int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
+        var m = System.Text.RegularExpressions.Regex.Match(text[lineStart..end], @"[ \t]on[ \t]+(?<part>[^\s{}""]+)[ \t]+sings[ \t]+[^\s{}""]*$");
+        return m.Success ? m.Groups["part"].Value : null;
+    }
+
+    /// <summary>The words a line that sings <paramref name="part"/> may name: the tracks the part
+    /// names, in its order; with none, every lyrics track of the file; then the words made from
+    /// the notes.</summary>
+    private static CompletionItem[] SingerWordsOfPart(Document doc, string part)
+    {
+        var root = doc.Tree.GetRoot();
+        var own = LilySharp.Core.Music.LyricBindings.TracksOfPart(root, part);
+        var languageOf = LilySharp.Core.Music.LyricLanguage.ReaderOf(root);
+        var names = own.Count > 0 ? own
+            : root.DescendantNodes<LyricsBlockSyntax>().Select(b => b.VoiceName).OfType<string>().Distinct(StringComparer.Ordinal).ToList();
+        string LanguageName(string track)
+            => LilySharp.Core.Music.LyricLanguage.Names.FirstOrDefault(n => LilySharp.Core.Music.LyricLanguage.CodeOf(n) == languageOf(track)) ?? languageOf(track);
+        return
+        [
+            .. names.Where(n => !LilySharp.Core.Music.GeneratedLyrics.IsGenerated(n) && n != LilySharp.Core.Music.LyricSinger.UnnamedTrack).Select((n, i) => new CompletionItem
+            {
+                Label = n,
+                Kind = CompletionItemKind.Reference,
+                Detail = (own.Count > 0 ? "The words " + part + " names" : "Lyrics") + " (" + LanguageName(n) + ")",
+                SortText = "0" + i.ToString("D3"),
+            }),
+            .. GeneratedLyricsItems(forSinger: true),
+        ];
+    }
+
     /// <summary>After a singer line's voice (<c>singer alice female ▮</c>): <c>sings</c>, and —
     /// until the line says one — <c>language</c>, the language the singer sings: which of a
     /// part's several lyrics a line that names none sings (owner's decision 2026-11-12).</summary>
@@ -2497,9 +2532,10 @@ public sealed partial class LilySharpLanguageServer
         string line = text[lineStart..end];
         var names = LilySharp.Core.Music.LyricLanguage.Names;
         if (names.Any(n => System.Text.RegularExpressions.Regex.IsMatch(line, @"[ \t]" + n + @"[ \t]")))
-            return [SingsKeywordItem()];
+            return [SingerOnItem(), SingsKeywordItem()];
         return
         [
+            SingerOnItem(),
             SingsKeywordItem(),
             .. names.Select((n, i) => new CompletionItem
             {
@@ -2513,6 +2549,19 @@ public sealed partial class LilySharpLanguageServer
             }),
         ];
     }
+
+    /// <summary>The <c>on</c> of a <c>singer</c> line, first in its list (the part before the words,
+    /// owner's decision 2026-11-12), the list of the parts opening after it.</summary>
+    private static CompletionItem SingerOnItem() => new()
+    {
+        Label = "on",
+        Kind = CompletionItemKind.Keyword,
+        InsertTextFormat = InsertTextFormat.Snippet,
+        InsertText = "on $0",
+        Detail = "Whose notes this voice sings: the part",
+        SortText = " 0",
+        Command = new Command { Title = "Suggest part", CommandIdentifier = "editor.action.triggerSuggest" },
+    };
 
     /// <summary>The <c>sings</c> of a <c>singer</c> line, the list of the words opening after it.</summary>
     private static CompletionItem SingsKeywordItem() => new()

@@ -17,7 +17,7 @@ section Chorus {
   lyrics words { Sing it o- ver, | o- ver- now, | sing it loud- er, | a- ny- how. | }
 }
 form { Verse Chorus }
-singer alice female sings on lead in Verse
-singer bob   male   sings on lead octave -1 in Chorus
-singer carol female sings on lead up 3 in Chorus
+singer alice female on lead in Verse
+singer bob   male   on lead octave -1 in Chorus
+singer carol female on lead up 3 in Chorus
 score { staff lead  lyrics words  staff carol  staff bob  lyrics bob }

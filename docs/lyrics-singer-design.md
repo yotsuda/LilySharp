@@ -20,7 +20,8 @@ A track's name only names it. `on` says which part's notes the words follow.
 ```
 lyrics [NAME] [language L] { … }                       // definition: the words only
 part PART { lyrics NAME }                              // the words this part sings (section 10)
-singer [S] sings [NAME] [on PART] [with NAME VALUE …]  // at the top level, or inside a score
+singer [S] on PART [sings NAME] [with NAME VALUE …]    // at the top level, or inside a score (section 15;
+                                                       // until 2026-11-12 `sings [NAME] [on PART]`, still read)
 
 score {
   staff PART [hidden] [sounds voice|instrument|both]   // tab takes the same clauses
@@ -454,4 +455,33 @@ voice: a second violin a third under the first is the same request.
 Not written: a singer who sings one voice of a part, or whose moved music calls a phrase
 (section 13's refusals, said in the answer); lines of one singer with different settings keep
 the first's.
+
+
+## 15. The part before the words (owner's decision 2026-11-12; built the same day)
+
+```
+singer alice female japanese "diffsinger/Nishiren" on lead in Verse
+singer carol female on lead sings en up 3 in Chorus
+```
+
+Twice in one day the owner wrote a singer line with no `sings` — `singer alice female on lead
+in Verse` — and twice it was an error. The line was right and the grammar was not: since the
+part names its words (section 10) and a line picks among several by its language (section 10),
+`sings` usually had nothing to say. And the owner's reason for the order: once the part is
+said, the words IT names can be listed.
+
+- `singer [S] on PART [sings NAME] [up N | down N] [octave N] [in SECTION …] [with …]`: whose
+  notes, then — only where they have to be named — which words. A part that names its words
+  needs no `sings`.
+- The older order, `sings [NAME] [on PART]`, is read as it was: every file written before
+  this holds. The two are one line to everything that reads it
+  (`SingerDeclarationSyntax.ClauseToken`: the head ends at the first `on` or `sings`). A line
+  with neither is LYS4041.
+- The editor: after the voice the list holds `on` first; after `on` the parts; after the part
+  `sings` beside `up` / `down` / `octave` / `in`; after `on PART sings` the words THAT PART
+  names (and, where it names none, the file's), with their language, then `hum` and `solfege`.
+  A voice taken from the list goes on to ` on `. The grammar colours the part-first line; the
+  extension's readers know a singer line by its `on` as by its `sings`.
+- "Write NAME's notes out as a part" leaves `singer carol female on carol`.
+- The docs and the site write the part first; the tests keep both orders.
 

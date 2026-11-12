@@ -285,10 +285,17 @@ CheckRule      = 'voiceLeading' ;
 CapoDecl       = 'capo' , Integer ;                    (* 1..11; to the end of its line *)
 ChordShapesDecl = 'chordShapes' , ShapeTable ;
 LanguageDecl   = 'language' , LanguageName ;
-SingerDecl     = 'singer' , [ SingerValue ] , 'sings' , [ Identifier ] , [ 'on' , PartRef ] ,   (* SingerValue: below *)
+SingerDecl     = 'singer' , [ SingerValue ] , SingerSung ,                                      (* SingerValue: below *)
                  [ ( 'up' | 'down' ) , Integer ] , [ 'octave' , [ '-' | '+' ] , Integer ] ,
                  [ 'in' , Identifier , { Identifier } ] ,
                  [ 'with' , SingerSetting , { SingerSetting } ] ;
+SingerSung     = 'on' , PartRef , [ 'sings' , [ Identifier ] ]      (* THE PART FIRST — the standard *)
+               | 'sings' , [ Identifier ] , [ 'on' , PartRef ] ;    (* the older order, read as it was *)
+                 (* WHOSE NOTES, THEN WHICH WORDS (owner's decision 2026-11-12): 'singer alice
+                    female on lead', and 'sings NAME' after the part only where the words have to
+                    be named — a part that names its words needs no 'sings'. Once the part is
+                    said the editor lists the words that part names. A line with neither 'on' nor
+                    'sings' is LYS4041. *)
 SingerSetting  = Word , { '.' , Word } , ( [ '-' ] , Number | Word | String ) ;
                  (* WHAT OF THE PART THE VOICE SINGS (owner's decisions 2026-11-12,
                     docs/lyrics-singer-design.md §12) — a band's way of saying it: this section A
@@ -312,7 +319,7 @@ SingerSetting  = Word , { '.' , Word } , ( [ '-' ] , Number | Word | String ) ;
                     one — a word Lily# keeps for itself too. *)
 SingerValue    = [ SingerName ] , { SingerGender | LanguageName } , [ String ] ;
                  (* What the singer is, in bare words before the voice: the gender, and the
-                    LANGUAGE sung ('singer alice female japanese "neutrino/SEVEN" sings on lead'),
+                    LANGUAGE sung ('singer alice female japanese "neutrino/SEVEN" on lead'),
                     each once, in either order. The language narrows the voices the editor
                     offers, as the gender does, and — of a part that names SEVERAL lyrics — a
                     line that names none sings the ones in it: the line's own language, else the
@@ -1524,8 +1531,8 @@ PartBlock      = PartName , MusicBlock ;
    when exactly one does, and otherwise keeps the even-spread lead-sheet reading (§7).
 
    'hum' and 'solfege' need no definition: they are made from the notes they follow.
-   'singer S sings hum on PART' hums each note on ん ('lyrics hum' is LYS4050: there is
-   nothing to print). 'singer S sings solfege on PART' sings the note names, and the row
+   'singer S on PART sings hum' hums each note on ん ('lyrics hum' is LYS4050: there is
+   nothing to print). 'singer S on PART sings solfege' sings the note names, and the row
    'lyrics solfege' prints them under the notes (it needs a staff above it or 'on', LYS4051).
    Movable do: the key signature's major tonic is do, so a minor key's tonic is la, and a
    'key' change moves it. An altered note takes the name of its letter. The file's

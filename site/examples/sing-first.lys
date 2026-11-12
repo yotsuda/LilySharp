@@ -27,7 +27,7 @@ section A {
   }
 }
 form { ~A }
-singer female sings on melody
+singer female on melody
 score {
   staff melody  lyrics words
   grandStaff { staff rh  staff lh }

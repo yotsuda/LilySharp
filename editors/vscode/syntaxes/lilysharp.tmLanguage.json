@@ -13,6 +13,7 @@
         { "include": "#layout-block" },
         { "include": "#capo-directive" },
         { "include": "#language-directive" },
+        { "include": "#singer-line-part-first" },
         { "include": "#singer-line" },
         { "include": "#singer-line-unfinished" },
         { "include": "#chord-shapes-block" },
@@ -438,6 +439,18 @@
             "captures": {
                 "1": { "name": "keyword.other.lilysharp" },
                 "2": { "name": "constant.numeric.lilysharp" }
+            }
+        },
+        "singer-line-part-first": {
+            "comment": "`singer [S] on PART [sings NAME]` — the part before the words (owner's decision 2026-11-12), and no `sings` where the part's own words are sung. The head holds no `sings`: a line that writes `sings` first is the older order's, the rule below.",
+            "match": "^[ \\t]*(singer)\\b((?:\"(?:[^\"\\\\\\n]|\\\\.)*\"|(?!\\bsings\\b)[^\\n\"/])*?)\\b(on)[ \\t]+([A-Za-z_][A-Za-z0-9_-]*)(?:[ \\t]+(sings)\\b(?:[ \\t]+(?!(?:up|down|octave|in|with)\\b)([A-Za-z_][A-Za-z0-9_-]*))?)?",
+            "captures": {
+                "1": { "name": "keyword.control.lilysharp" },
+                "2": { "patterns": [ { "include": "#comments" }, { "include": "#strings" }, { "match": "\\b(?:male|female)\\b", "name": "constant.language.lilysharp" }, { "match": "\\b(?:japanese|english|chinese|korean)\\b", "name": "constant.language.lilysharp" } ] },
+                "3": { "name": "keyword.control.lilysharp" },
+                "4": { "name": "entity.name.voice.lilysharp" },
+                "5": { "name": "keyword.control.lilysharp" },
+                "6": { "patterns": [ { "match": "^(?:hum|solfege)$", "name": "constant.language.lilysharp" }, { "match": "^.+$", "name": "entity.name.voice.lilysharp" } ] }
             }
         },
         "singer-line": {

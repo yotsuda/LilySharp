@@ -77,14 +77,14 @@
     <figcaption>The example above, sung: the preview's Export as MP4.</figcaption>
   </figure>
   <p>The <code>singer</code> line stands at the top level of the file, on a line of its own, and its
-  order is fixed: <code>singer WHO sings WORDS on PART</code>. Here the part has said which words are
-  its own, so the line needs no name for them: <code>singer female sings on melody</code>. Without a
+  order is fixed: <code>singer WHO on PART sings WORDS</code>. Here the part has said which words are
+  its own, so the line needs no name for them: <code>singer female on melody</code>. Without a
   <code>singer</code> line the words are only printed, and the part plays its instrument. The piano has
   none, so it plays as usual, and the voice sings over it.</p>
   <p><code>language english</code> says what the words are written in, and <code>mel- o- dy</code> is
   one word in three syllables. English needs a voice that sings it: a DiffSinger voice with an English
   dictionary. <code>singer female</code> takes the default female voice for the words' language; to
-  name one, write <code>singer "diffsinger/TIGER" sings on melody</code>.</p>
+  name one, write <code>singer "diffsinger/TIGER" on melody</code>.</p>
   <p>Press ▶. The first time takes a moment while the engine loads its models. Until the voice is
   ready, the part's instrument plays in its place.</p>
 </section>
@@ -97,8 +97,8 @@
 <pre>part sop { instrument soprano  lyrics words }
 part ten { instrument baritone lyrics mw }
 
-singer female sings on sop     // sings the words the part names
-singer male sings on ten</pre>
+singer female on sop     // sings the words the part names
+singer male on ten</pre>
   <p>The same statement in a file written part by part, where each part holds its own sections: it
   stands with the header's properties, before the first section.</p>
 <pre>part sop {
@@ -109,7 +109,7 @@ singer male sings on ten</pre>
 lyrics words {
   section Verse { la la la la | }
 }
-singer female sings on sop</pre>
+singer female on sop</pre>
   <p>A file may also say it only by where a score puts the row (<code>staff sop  lyrics words</code>:
   the row under a staff is that staff's) or by a singer line's <code>on PART</code>, and it works. But
   those say it for one score or for one voice. Once the part names its words, a <code>singer</code>
@@ -136,9 +136,9 @@ singer female sings on sop</pre>
   Lily# Studio says so once, so a score you share still sings for someone with other voices.</p>
   <p><b>A choir</b> takes one line a part. <b>Two lines with the same words on one part</b> sing it
   together, and the voices may come from different engines:</p>
-<pre>singer female "diffsinger/Nishiren" sings words on sop
-singer female "voicevox/ずんだもん-ノーマル" sings words on sop
-singer male "neutrino/SOMA" sings words on bas</pre>
+<pre>singer female "diffsinger/Nishiren" on sop sings words
+singer female "voicevox/ずんだもん-ノーマル" on sop sings words
+singer male "neutrino/SOMA" on bas sings words</pre>
   <p>A line inside a <code>score { }</code> replaces the top-level lines for its part in that score, so
   one score can sing the Japanese words and another the English ones.</p>
 
@@ -197,8 +197,8 @@ singer male "neutrino/SOMA" sings words on bas</pre>
   of its own — the Japanese score of <a href="#who">One song in two languages</a> — a singer's staff
   and words are the ones those lines say.</p>
   <p>Lines of one name are one singer. Write the voice on one of them
-  (<code>singer alice female "diffsinger/…" sings on lead in Verse</code>) and leave it off the others
-  (<code>singer alice sings on lead up 3 in Chorus</code>). A singer cannot have a part's name: in a
+  (<code>singer alice female "diffsinger/…" on lead in Verse</code>) and leave it off the others
+  (<code>singer alice on lead up 3 in Chorus</code>). A singer cannot have a part's name: in a
   score that name is the part.</p>
   <p>Where a third is not the note, write the harmony out and mend it. On a named singer's line the
   light bulb offers <b>Write carol's notes out as a part</b>: the notes become a part called
@@ -213,7 +213,7 @@ singer male "neutrino/SOMA" sings words on bas</pre>
   <p>Leave this out and a voice sings as it does by itself, which is usually what you want. To change
   it, write <code>with</code> at the end of the <code>singer</code> line and, after it, a name and a
   value for each setting, with no commas:</p>
-<pre>singer "diffsinger/Nishiren/2P" sings on melody with breathiness 3 gender -0.2</pre>
+<pre>singer "diffsinger/Nishiren/2P" on melody with breathiness 3 gender -0.2</pre>
   <p>The names are the <b>engine's own</b>, so what you can write depends on the voice. The editor
   lists what the line's voice takes, each with its range, and marks a name the voice does not take.</p>
   <table class="g">
@@ -264,8 +264,8 @@ lyrics ja language japanese { さ く ら | }</pre>
 <section id="generated">
   <h2>Humming and note names</h2>
   <p>Two track names need no <code>lyrics { }</code> block, because they are made from the notes:</p>
-<pre>singer female sings hum on sop        // hums on ん
-singer female sings solfege on alt    // sings the note names
+<pre>singer female on sop sings hum        // hums on ん
+singer female on alt sings solfege    // sings the note names
 score { staff alt  lyrics solfege }   // prints the names under the notes</pre>
   <p>Solfege is movable do, in the file's <code>language</code>.</p>
 </section>

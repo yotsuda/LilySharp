@@ -742,6 +742,10 @@ export function withLyricsRows(text: string): { text: string; added: string[] } 
     for (const m of text.matchAll(/^[ \t]*singer\b[^\n]*?\bsings[ \t]+(\w+)[ \t]+on[ \t]+(\w+)/gm)) {
         if (!tracks.has(m[1])) { tracks.set(m[1], m[2]); }
     }
+    // …and the part before the words (`singer … on lead sings words`, since 2026-11-12).
+    for (const m of text.matchAll(/^[ \t]*singer\b[^\n]*?\bon[ \t]+(\w+)[ \t]+sings[ \t]+(\w+)/gm)) {
+        if (!tracks.has(m[2])) { tracks.set(m[2], m[1]); }
+    }
     const added: string[] = [];
     if (tracks.size === 0) {
         return { text, added };

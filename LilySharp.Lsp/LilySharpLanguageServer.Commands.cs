@@ -1090,7 +1090,7 @@ public sealed partial class LilySharpLanguageServer
         int Signed(int start) => start > 0 && text[start - 1] == '-' ? start - 1 : start;
         foreach (var line in root.DescendantNodes<LilySharp.Core.Syntax.SingerDeclarationSyntax>())
         {
-            if (line.SingsKeyword == null)
+            if (line.ClauseToken == null)
                 continue;
             if (!singers.Contains(line.Singer))
                 singers.Add(line.Singer);

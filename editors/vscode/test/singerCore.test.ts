@@ -609,7 +609,7 @@ describe('printedWordsNote', () => {
         const note = printedWordsNote('melody');
         assert.match(note, /melody/);
         assert.match(note, /singer/);
-        assert.match(note, /singer sings WORDS on melody/);
+        assert.match(note, /singer on melody/);
     });
 });
 
@@ -739,18 +739,21 @@ describe('a voice taken at the top level goes on to sings', () => {
         assert.equal(singerGoesOnToSings(top, 'lyrics words singer ', ''), false, 'not a singer line');
         assert.equal(singerGoesOnToSings(top, 'singers ', ''), false);
     });
-    it('writes the name closed and ` sings ` after it, asks the list again and hears the voice where the name stands', () => {
+    const server0 = () => fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'LilySharp.Lsp', 'LilySharpLanguageServer.Completion.cs'), 'utf8');
+    it('writes the name closed and ` on ` after it, asks the list again and hears the voice where the name stands', () => {
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
-        // The closing quote is part of what the item replaces, so ` sings ` lands past it.
+        // The closing quote is part of what the item replaces, so ` on ` lands past it (the part
+        // before the words, since 2026-11-12: after the voice the line goes on to its part).
         assert.match(ext, /close >= 0 \? close \+ \(goesOn \? 1 : 0\) : position\.character\)/);
-        assert.match(ext, /new vscode\.SnippetString\(\)\.appendText\(`\$\{slot\.Quoted \? '' : '"'\}\$\{c\.label\}" sings `\)\.appendTabstop\(0\);/);
+        assert.match(ext, /new vscode\.SnippetString\(\)\.appendText\(`\$\{slot\.Quoted \? '' : '"'\}\$\{c\.label\}" on `\)\.appendTabstop\(0\);/);
         assert.match(ext, /command: 'lilysharp\.singerTaken', title: '[^']+', arguments: \[c\.label, nameColumn\]/);
         assert.match(ext, /async function singerTaken\(label: unknown, nameColumn: unknown\): Promise<void> \{\s*void vscode\.commands\.executeCommand\('editor\.action\.triggerSuggest'\);\s*await hearSinger\(label, nameColumn\);/);
         assert.match(ext, /registerCommand\('lilysharp\.singerTaken', singerTaken\)/);
         // Off the top level, and on a line that has its `sings`, the item is what it was.
         assert.match(ext, /\} else \{\s*if \(!slot\.Quoted\) \{ item\.insertText = new vscode\.SnippetString\(`"\$\{c\.label\}\$0"`\); \}\s*item\.command = \{ command: 'lilysharp\.hearSinger'/);
-        // What the list after `sings ` holds is the server's: the file's lyrics.
-        const server = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'LilySharp.Lsp', 'LilySharpLanguageServer.Completion.cs'), 'utf8');
+        // What the list after `on ` holds is the server's — the parts — and after `sings ` the lyrics.
+        assert.match(server0(), /CompletionContext\.AfterSingsTarget => /);
+        const server = server0();
         assert.match(server, /CompletionContext\.AfterSingerSings => new CompletionList \{ Items = \[\.\. SingerWordsGoOnToOn\(\[\.\. GetDeclaredNameCompletions\(doc\.Text, "lyrics"/);
     });
 });
@@ -1363,4 +1366,24 @@ describe('a singer line that says a language', () => {
         assert.equal(singerWrittenAt('singer alice female japanese "neutrino/SEVEN" sings', 31, 31), 'neutrino/SEVEN');
         assert.deepEqual(singersWritten('singer alice female japanese "a/b" sings on lead\nsinger bob english male sings on lead'), ['a/b', 'male']);
     });
+});
+
+// Owner's decision 2026-11-12: the part before the words — `singer alice female on lead`, and
+// `… on lead sings en` where the words have to be named. The readers of a singer line know it by
+// its `on` as by its `sings`.
+describe('a singer line that names its part first', () => {
+    it('is a singer line with no sings', () => {
+        assert.equal(singerLineOf('singer alice female "neutrino/SEVEN" on lead in Verse')?.voice, 'neutrino/SEVEN');
+        assert.equal(singerLineOf('singer alice on lead')?.voice, '');
+        assert.equal(singerLineOf('singer alice female lead'), undefined);
+    });
+    it('has its settings read after the part, the words and the place', () => {
+        const line = 'singer alice female on lead sings en up 3 in Chorus with breathiness 2';
+        const read = singerLineOf(line)!;
+        assert.deepEqual(read.sing, { breathiness: 2 });
+        assert.equal(line.slice(read.withAt, read.withAt + 4), 'with');
+        assert.deepEqual(singerLineOf('singer alice on lead with breathiness 2')?.sing, { breathiness: 2 });
+    });
+    it('lists the voices such lines write', () => assert.deepEqual(
+        singersWritten('singer alice female "a/b" on lead\nsinger bob male on lead in Chorus\nsinger carol sings en on lead'), ['a/b', 'male', '']));
 });

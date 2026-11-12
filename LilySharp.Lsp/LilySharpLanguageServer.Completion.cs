@@ -225,7 +225,7 @@ public sealed partial class LilySharpLanguageServer
         // Quoted strings set aside, so that a voice's name is no word of the line.
         string rest = System.Text.RegularExpressions.Regex.Replace(line.Groups[1].Value, "\"[^\"]*\"", "\"\"");
         bool Has(string pattern) => System.Text.RegularExpressions.Regex.IsMatch(rest, pattern);
-        if (!Has(@"(?<![\w-])sings(?![\w-])"))
+        if (!Has(@"(?<![\w-])(?:sings|on)(?![\w-])"))
             return false;
         // Only after its `with`: before it the line still takes words of this server's —
         // `on`, then `up` / `octave` / `in` (SingerPlaceItems) — and the extension's `with`
@@ -250,13 +250,33 @@ public sealed partial class LilySharpLanguageServer
         if (!line.Success)
             return null;
         string rest = System.Text.RegularExpressions.Regex.Replace(line.Groups[1].Value, "\"[^\"]*\"", "\"\"");
-        var part = System.Text.RegularExpressions.Regex.Match(rest, @"(?<![\w-])sings[ \t]+(?:[\w-]+[ \t]+)?on[ \t]+[\w-]+");
+        // The part first (`singer alice on lead ▮`, owner's decision 2026-11-12), or the older
+        // order (`singer alice sings words on lead ▮`): whichever clause the line writes first.
+        var first = System.Text.RegularExpressions.Regex.Match(rest, @"(?<![\w-])(on|sings)(?![\w-])");
+        if (!first.Success)
+            return null;
+        bool partFirst = first.Groups[1].Value == "on";
+        var part = System.Text.RegularExpressions.Regex.Match(rest[first.Index..], partFirst
+            ? @"^on[ \t]+[\w-]+"
+            : @"^sings[ \t]+(?:[\w-]+[ \t]+)?on[ \t]+[\w-]+");
         if (!part.Success)
             return null;
-        string tail = rest[(part.Index + part.Length)..];
+        string tail = rest[(first.Index + part.Length)..];
         if (tail.Length == 0 || !char.IsWhiteSpace(tail[0]))
             return null;        // still in the part's name
-        var words = tail.Split([(' '), ('\t')], StringSplitOptions.RemoveEmptyEntries);
+        // …and after the part its `sings WORDS`, where the line names its words: the words'
+        // list is the line's step (SingerLineStepAt), what follows them this list.
+        bool mayNameWords = partFirst;
+        if (partFirst && System.Text.RegularExpressions.Regex.Match(tail, @"^[ \t]+sings(?![\w-])") is { Success: true } sings)
+        {
+            var track = System.Text.RegularExpressions.Regex.Match(tail[sings.Length..], @"^[ \t]+[\w-]+(?=[ \t])");
+            if (!track.Success)
+                return null;
+            tail = tail[(sings.Length + track.Length)..];
+            mayNameWords = false;
+        }
+        var placeWords = tail.Split([(' '), ('\t')], StringSplitOptions.RemoveEmptyEntries);
+        var words = placeWords;
         // The word being written is the editor's to match against the list.
         int complete = char.IsWhiteSpace(tail[^1]) ? words.Length : words.Length - 1;
         bool interval = false, octave = false;
@@ -308,6 +328,9 @@ public sealed partial class LilySharpLanguageServer
             SortText = items.Count.ToString("000"),
             Command = new Command { Title = "Suggest what follows", CommandIdentifier = "editor.action.triggerSuggest" },
         });
+        // Right after the part: `sings`, to name the words where the part names several, or none.
+        if (mayNameWords && complete == 0)
+            Word("sings", "Name the words this voice sings, where the part does not say which");
         if (!interval && !octave)
         {
             Word(LilySharp.Core.Music.LyricSinger.UpWord, "Sing above the part's notes, in the key: up 3 is a third above");
@@ -594,8 +617,12 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLanguage => GetLanguageNameCompletions(),
             // `singer ▮` / `singer alice ▮`: the voices and the genders are the extension's to list;
             // the languages a singer may say are listed here, beside them.
-            CompletionContext.AfterSinger => new CompletionList { Items = [.. SingerVoiceItems(doc.Text, offset).Where(i => i.Label != "sings")] },
+            CompletionContext.AfterSinger => new CompletionList { Items = [.. SingerVoiceItems(doc.Text, offset).Where(i => i.Label is not ("sings" or "on"))] },
             CompletionContext.AfterSingerVoice => new CompletionList { Items = SingerVoiceItems(doc.Text, offset) },
+            // `… on lead sings ▮` (the part first): the words THAT PART names — the owner's reason
+            // for the order — and, where it names none, the file's; the made words after them.
+            CompletionContext.AfterSingerSings when SingerPartBefore(doc.Text, offset) is { } sungPart
+                => new CompletionList { Items = SingerWordsOfPart(doc, sungPart) },
             CompletionContext.AfterSingerSings => new CompletionList { Items = [.. SingerWordsGoOnToOn([.. GetDeclaredNameCompletions(doc.Text, "lyrics", "The words this voice sings").Items, .. GeneratedLyricsItems(forSinger: true)], doc.Text, offset), RowOnItem("9")] },
             CompletionContext.AfterSingerWords => new CompletionList { Items = [RowOnItem("0")] },
             CompletionContext.AfterSingsTarget => GetVoiceBindingNameCompletions(doc.Text,
