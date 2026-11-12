@@ -655,9 +655,11 @@ public static partial class NoteStepper
 
     /// <summary>
     /// The other gender of a <c>singer male …</c> line (owner's request 2026-11-12, on
-    /// <c>singer male sings words on lead</c>): there are two, so either key goes to the other.
+    /// <c>singer male sings words on lead</c>): Up on <c>male</c> writes <c>female</c>, Down on
+    /// <c>female</c> writes <c>male</c>, and the keys stop at either end — they do not go round
+    /// (owner's request the same day).
     /// </summary>
-    private static (Edit? Edit, string Message) SingerGenderEdit(SyntaxTokenNode gender)
+    private static (Edit? Edit, string Message) SingerGenderEdit(SyntaxTokenNode gender, int dir)
     {
         var genders = Music.LyricSinger.Genders;
         int at = -1;
@@ -668,7 +670,10 @@ public static partial class NoteStepper
         }
         if (at < 0)
             return (null, $"singer {gender.Text}: a singer is {string.Join(" or ", genders)}");
-        string to = genders[(at + 1) % genders.Count];
+        int next = at + (dir > 0 ? 1 : -1);
+        if (next < 0 || next >= genders.Count)
+            return (null, $"singer {gender.Text}: already the {(next < 0 ? "first" : "last")} ({string.Join(", ", genders)})");
+        string to = genders[next];
         return (new Edit(gender.Span.Start, gender.Span.End, to), $"singer {to} ({string.Join(", ", genders)})");
     }
 

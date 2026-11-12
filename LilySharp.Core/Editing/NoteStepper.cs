@@ -464,7 +464,7 @@ public static partial class NoteStepper
                     TargetKind.FormSection or TargetKind.SingsTarget =>
                         NameReferenceEdit(tree, t.Kind, (SyntaxTokenNode)t.Node, dir),
                     TargetKind.SingerWords => SingerWordsEdit(tree, (SyntaxTokenNode)t.Node, dir),
-                    TargetKind.SingerGender => SingerGenderEdit((SyntaxTokenNode)t.Node),
+                    TargetKind.SingerGender => SingerGenderEdit((SyntaxTokenNode)t.Node, dir),
                     TargetKind.SingValue => SingValueEdit(text, (SyntaxTokenNode)t.Node, dir, semitone),
                     TargetKind.Duration => DurationEdit(t.Node, dir),
                     TargetKind.Barline => BarlineEdit((SyntaxTokenNode)t.Node, dir),

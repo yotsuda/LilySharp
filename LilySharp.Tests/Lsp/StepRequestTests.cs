@@ -1409,9 +1409,10 @@ public class StepRequestTests
     }
 
     // Owner's request 2026-11-12, on `singer male sings words on lead`: the step keys on its
-    // `male` go to `female`, and back.
+    // `male` go to `female`, and back - Up to female, Down to male, stopping at either end (the
+    // same day: "they must not go round").
     [Fact]
-    public void ASingerLinesGender_GoesToTheOther_OnEitherKey()
+    public void ASingerLinesGender_StepsUpToFemaleAndDownToMale_AndStops()
     {
         const string Book = "part lead {{ }}\nsection A {{ lead {{ c'1 }} }}\n" +
             "lyrics words {{ la }}\n{0}\nform {{ A }}\nscore {{ staff lead  lyrics words }}\n";
@@ -1421,10 +1422,15 @@ public class StepRequestTests
         Assert.False(up.Fallback, up.Error);
         Assert.Equal(S("singer female sings words on lead"), after);
         Assert.Contains("singer female (male, female)", up.Message);
-        Assert.Equal(S("singer male sings words on lead"), Step(S("singer ‸female sings words on lead"), +1, semitone: true).After);
-        // Down too: there are two.
-        Assert.Equal(S("singer female sings words on lead"), Step(S("singer male‸ sings words on lead"), -1, semitone: true).After);
+        Assert.Equal(S("singer male sings words on lead"), Step(S("singer ‸female sings words on lead"), -1, semitone: true).After);
         Assert.Equal(S("singer male sings words on lead"), Step(S("singer female‸ sings words on lead"), -1).After);
+        // They stop at either end.
+        var top = Step(S("singer fe‸male sings words on lead"), +1, semitone: true);
+        Assert.Equal(S("singer female sings words on lead"), top.After);
+        Assert.Contains("singer female: already the last (male, female)", top.Response.Message);
+        var bottom = Step(S("singer male‸ sings words on lead"), -1, semitone: true);
+        Assert.Equal(S("singer male sings words on lead"), bottom.After);
+        Assert.Contains("singer male: already the first (male, female)", bottom.Response.Message);
         // The octave keys as well.
         Assert.Equal(S("singer female sings words on lead"), Step(S("singer ‸male sings words on lead"), +1).After);
         // Before a name, in a score, with settings: only the word changes.
