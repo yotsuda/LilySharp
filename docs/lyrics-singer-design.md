@@ -219,6 +219,13 @@ the two (`singProblems`, the `Lily# singer` diagnostics) — the server does not
 and the engine does not know the document. A note is checked against every voice of the file:
 the editor does not follow a note to its singer.
 
+NEUTRINO's `transpose` MOVES THE NOTES (measured 2026-11-12 on v3.2.6, an A4 held two seconds:
+440.4 Hz with none, 527.5 with 3, 369.2 with -3; its own help says `-f i : transpose (key)`).
+The first description — "the colour of the voice moves, the notes stay" — was written without
+measuring and was wrong. So the word means on a singer line what it means in Lily#, for that
+voice alone. A setting may be named by a keyword (the parser, the same day): `with transpose 3`
+ended the line at `with` and transposed the FILE until then.
+
 A singer line's settings are HEARD (owner's request 2026-11-12): the phrase a voice is heard by
 is sung with what the line writes after `with` — when the caret comes to the line (its name or
 its settings) and at each step of a value. The extension reads the line itself (`singerLineOf`),
