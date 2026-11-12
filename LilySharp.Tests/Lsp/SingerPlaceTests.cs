@@ -260,6 +260,28 @@ public class SingerPlaceTests
         Assert.Single(tree.GetRoot().DescendantNodes<FormDeclarationSyntax>());
     }
 
+    // The same report, the other spelling: `singer female "neutrino/SEVEN" sings words on lead
+    // with transpose 3` was written and SUNG, by semitones, out of the key (an engine that takes
+    // the name). Lily# refuses the name whatever the engine, and no voice is told of it.
+    [Fact]
+    public void WithTranspose_IsRefused_AndReachesNoVoice()
+    {
+        string source = Book("singer female \"neutrino/SEVEN\" sings words on lead with transpose 3 support KIRITAN");
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+        var d = Assert.Single(SemanticValidation.Run(tree), d => d.Code == DiagnosticCodes.SingerPlaceMalformed);
+        Assert.Equal(DiagnosticSeverity.Error, d.Severity);
+        Assert.Equal(source.IndexOf("transpose", StringComparison.Ordinal), d.Span.Start);
+        Assert.Contains("up 3", d.Message);
+        // What the voice is told: the other setting, and the notes where the part has them.
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///refused.lys");
+        server.DidOpen(new DidOpenTextDocumentParams { TextDocument = new TextDocumentItem { Uri = uri, Text = source, Version = 1, LanguageId = "lilysharp" } });
+        var voice = Assert.Single(server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri } }).Voices!);
+        Assert.Equal(["support"], voice.Sing!.Keys);
+        Assert.Equal(60, voice.Notes[0].P);
+    }
+
     [Fact]
     public void InAScore_TheItemsStillFollowOneAnotherOnALine()
     {

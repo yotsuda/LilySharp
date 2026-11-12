@@ -314,6 +314,11 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         if (node.OctaveToken is { } octave && Math.Abs(node.Octaves) is < 1 or > 3)
             _diagnostics.Error(octave.Span, DiagnosticCodes.SingerPlaceMalformed,
                 $"'octave {octave.Text}': a voice sings one to three octaves above (octave 1) or below (octave -1) its part.");
+        foreach (var setting in node.Settings)
+            if (setting.Name == LyricSinger.RefusedSetting)
+                _diagnostics.Error(setting.NameToken.Span, DiagnosticCodes.SingerPlaceMalformed,
+                    "'transpose' is not a setting of a singer line: it would move the voice by semitones, out of the key. "
+                    + "Write 'up 3' (a third above, in the key), 'down 6' or 'octave -1' after the part, before 'with'.");
         if (node.Sections.Count == 0)
             return;
         var declared = new HashSet<string>(StringComparer.Ordinal);

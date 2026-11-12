@@ -67,7 +67,9 @@ export class CantoriaExtensionBackend implements VoiceBackend {
     get listsParameters(): boolean { return typeof this.api.parameters === 'function'; }
     /** The settings `voice` takes on a singer line's `with …`; none from an older Cantoria. */
     async parameters(voice: string): Promise<SingParameter[]> {
-        return this.api.parameters ? await this.api.parameters(voice) : [];
+        // `transpose` is never a singer line's setting (Lily# refuses it: its own up / octave
+        // move a voice's notes), so a Cantoria that still offers NEUTRINO's is not passed on.
+        return this.api.parameters ? (await this.api.parameters(voice)).filter(p => p.name !== 'transpose') : [];
     }
     dispose(): void { /* the extension's engine is its own to keep */ }
 }

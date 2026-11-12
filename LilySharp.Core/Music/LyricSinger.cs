@@ -304,9 +304,14 @@ public static class LyricSinger
     {
         var last = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var setting in line.Settings)
+        {
+            // Not an engine's to hear: said as an error where it is written (LyricSingsValidator).
+            if (setting.Name == RefusedSetting)
+                continue;
             last[setting.Name] = setting.Number is { } number
                 ? number.ToString("R", System.Globalization.CultureInfo.InvariantCulture)
                 : "\"" + setting.Word + "\"";
+        }
         // …and what of the part the line sings (its up / down / octave / in), under names no
         // engine has: Midi.SungVoices takes them out again before the settings go to a voice.
         // They ride here so that two lines that differ only in these are two voices (Voices).
@@ -318,6 +323,14 @@ public static class LyricSinger
             last[PlaceSections] = "\"" + string.Join(",", line.Sections.Select(s => s.Text)) + "\"";
         return string.Join('\n', last.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "=" + p.Value));
     }
+
+    /// <summary>
+    /// The one setting name Lily# refuses after <c>with</c>, whatever engine sings (owner's
+    /// decision 2026-11-12): moving a voice's notes is the singer line's own work — <c>up 3</c>
+    /// along the key, <c>octave -1</c> — and an engine's semitone transpose (NEUTRINO's -f) is a
+    /// harmony out of the key. It is an error where written and never reaches a voice.
+    /// </summary>
+    public const string RefusedSetting = "transpose";
 
     /// <summary>The words of a singer line that say what of its part the voice sings
     /// (docs/lyrics-singer-design.md §12), for the editor.</summary>

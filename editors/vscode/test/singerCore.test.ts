@@ -917,7 +917,7 @@ describe('a singer line\'s settings', () => {
         assert.match(ext, /for \(const note of v\.notes \?\? \[\]\) \{ tellSingerSetting\(note\); \}/);
         assert.match(ext, /void vscode\.window\.showWarningMessage\(`Lily#: \$\{text\}`\);/);
         const singer = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'singer.ts'), 'utf8');
-        assert.match(singer, /return this\.api\.parameters \? await this\.api\.parameters\(voice\) : \[\];/);
+        assert.match(singer, /return this\.api\.parameters \? \(await this\.api\.parameters\(voice\)\)\.filter\(p => p\.name !== 'transpose'\) : \[\];/);
     });
 });
 
