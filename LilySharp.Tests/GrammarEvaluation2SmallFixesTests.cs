@@ -353,6 +353,12 @@ public class GrammarEvaluation2SmallFixesTests
         var (lys, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(document.ToXml().ToString());
         Assert.Empty(Said(lys).Select(d => d.Message));
         Assert.Equal(bars, PageBars(lys));
+
+        // …and the LilyPond twin, the last of the walks to get the rule (2026-11-13): each empty
+        // bar is the spacer `s1` a plain `| |` writes, and LilyPond's `|` is a check that takes
+        // no time, so the spacers are the whole difference between the twin's bars and the page's.
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
+        Assert.Equal(empty, System.Text.RegularExpressions.Regex.Matches(ly, @"(?<![\w'])s1(?![\w.])").Count);
     }
 
     /// <summary>A drum chart is no voice span: the bar line after it confirms the bar its lines

@@ -349,7 +349,15 @@ public sealed partial class LilyPondExporter
             }
             else if (TakesMeasureTime(item))
             {
-                _timeSinceBoundary = true;
+                // ⚠️ A VOICE SPAN WHOSE FIRST VOICE ENDED ON ITS OWN BAR LINE has closed the
+                // staff's bar: the `|` written after it is the second of a pair — an empty
+                // bar on the page — and not the line that closes the span's bar.
+                // `voice { c'1 | } { e'1 | } | d'1 | g'1 |` is four bars on the page and was
+                // three here, with no spacer (found 2026-11-12, grammar evaluation 2; the MIDI
+                // and MusicXML walks were given the same rule that day: MidiExporter._spanClosedAt,
+                // MusicXmlExporter._spanEndedOnBarLine). Never a drum chart's (the line after
+                // one confirms its bar), and never a span a later voice outruns.
+                _timeSinceBoundary = !(item is ParallelExpressionSyntax { IsDrums: false } span && EndedOnItsOwnBarLine(span));
             }
 
             // Inline |: … :| repeat span → \repeat volta N { … } \alternative { … }
@@ -2347,6 +2355,18 @@ public sealed partial class LilyPondExporter
         // The caller writes the duration(s) and the chord's own post-events: a chord
         // holding several shares is written once per part, tied.
         return sb.ToString();
+    }
+
+    /// <summary>Whether a voice span's first voice ends on a bare bar line it wrote itself, with
+    /// no later voice writing more bars than it (see the caller).</summary>
+    private static bool EndedOnItsOwnBarLine(ParallelExpressionSyntax span)
+    {
+        static List<SyntaxNode> Music(SyntaxNode voice) => voice.ChildNodes().Where(n => n is not SyntaxTokenNode).ToList();
+        static int Bars(List<SyntaxNode> music) => music.Count(n => n is BarlineSyntax { BarToken.Kind: SyntaxKind.Bar });
+        var voices = span.Voices.Select(Music).ToList();
+        return voices.Count > 0
+            && voices[0] is [.., BarlineSyntax { BarToken.Kind: SyntaxKind.Bar }]
+            && voices.Skip(1).All(v => Bars(v) <= Bars(voices[0]));
     }
 
     /// <summary>

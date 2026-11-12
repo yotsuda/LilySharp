@@ -7,6 +7,7 @@ workflow attaches that section to the GitHub Release verbatim.
 ## Unreleased
 
 - **Leftovers of the same evaluation**:
+  - **The LilyPond twin has the empty bar after a voice span too**: `voice { c'1 | } { e'1 | } | d'1` wrote no spacer for the bar the second bar line opens, a bar short of the page — the last of the three exports to get it.
   - **The bar line after a drum chart confirms the bar its lines closed**: `drums { { cymr4 cymr cymr cymr | } { r4 hhp r hhp | } } | % |` is the three bars the same chart of one-bar phrases is. The section was counted a bar too long (LYS2007) and every other part padded by a bar; a chart drawn a voice a line drew the empty bar too. A `voice { … | } { … | } |` span is unchanged: its bar lines are the staff's own.
   - **`bare` is offered after a tempo's feel word**: `tempo "Swing" 4 = 120 swing ` lists `bare` beside `8` and `16` (not after `tempo swing`, which has no count to hide).
   - **Stepping the opening of a run of marks renames its end**: on `c'8@staccato d' e' f'@!staccato` the step keys make `@tenuto … @!tenuto` in one edit, where `@!staccato` was left ending nothing. A run's opening steps along the marks that may run (staccatissimo, staccato, tenuto; accent, marcato); the end follows its opening and is not stepped.
