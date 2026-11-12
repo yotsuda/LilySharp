@@ -702,7 +702,7 @@ describe('voiceMenuLabels', () => {
     });
     it('says on hover the voice that sings a named singer', () => {
         assert.equal(voiceMenuTitleOf({ Part: 'lead', Singer: 'neutrino/SEVEN', Name: 'carol', Track: 'words' }, 'carol'), 'carol (SEVEN) sings words on lead');
-        assert.equal(voiceMenuTitleOf({ Part: 'carol', Singer: 'female', Name: 'carol', Track: '__words_carol' }, 'carol'), 'carol (female) sings the staff the score prints for carol');
+        assert.equal(voiceMenuTitleOf({ Part: 'carol', Singer: 'female', Name: 'carol', Track: '__words_carol' }, 'carol'), 'carol (female)');
         assert.equal(voiceMenuTitleOf({ Part: 'melody', Singer: 'neutrino/MERROW', Name: null, Track: 'verse' }, 'MERROW'), 'MERROW sings verse on melody');
     });
     it('a singer renamed changes the menu', () => assert.notEqual(

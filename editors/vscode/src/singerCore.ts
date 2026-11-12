@@ -215,7 +215,9 @@ export function voiceMenuTitleOf(voice: Pick<SungVoiceDto, 'Part' | 'Singer' | '
     if (!voice.Name) { return voiceMenuTitle(label, voice.Track, voice.Part); }
     const by = voiceMenuName(voice.Singer);
     const who = by ? `${label} (${by})` : label;
-    return voice.Part === voice.Name ? `${who} sings the staff the score prints for ${voice.Name}` : voiceMenuTitle(who, voice.Track, voice.Part);
+    // Short (owner's report 2026-11-12: the text over a voice's button was long and hard to
+    // read): on the staff a score prints for her there is nothing more to say than who.
+    return voice.Part === voice.Name ? who : voiceMenuTitle(who, voice.Track, voice.Part);
 }
 
 /** All the practice menu's voice lines say, for telling that an edit changed them: who sings

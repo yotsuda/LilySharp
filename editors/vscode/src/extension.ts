@@ -8402,7 +8402,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const voiceTitle = name => voiceTitles[name] || voiceLabel(name);
             for (const name of voices) {
                 if (!inScore.has(name)) continue;
-                toggle(voiceLabel(name), voiceTitle(name) + ': its voice, on or off (the part button beside it is its instrument)', () => !practice.voicesOff.includes(name),
+                toggle(voiceLabel(name), voiceTitle(name), () => !practice.voicesOff.includes(name),
                     () => { practice.voicesOff = practice.voicesOff.includes(name) ? without(practice.voicesOff, name) : practice.voicesOff.concat([name]); },
                     'voice', name, practice.voiceLevels, name);
             }
