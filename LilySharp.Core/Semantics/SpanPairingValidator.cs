@@ -157,8 +157,8 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
             // transposition with its bracket.
             SpanPairingFault.Unterminated => ottava
                 ? noun + " is never closed, so no bracket is drawn and the notes "
-                  + "under it are not transposed; write " + ends + " on the first note back "
-                  + "at written pitch - a span with no end has no length to draw"
+                  + "under it are not transposed; write " + ends + " on the last note the bracket "
+                  + "covers - a span with no end has no length to draw"
                 : noun + " is never closed, so neither its word nor its line is "
                   + "drawn; write " + ends + " on the note it should reach "
                   + "- a span with no end has no length to draw",

@@ -254,6 +254,11 @@ internal sealed partial class Parser
             "relative" => "Lily# is relative by default — drop '\\relative …'; switch modes "
                 + "with 'octave absolute'.",
             "addlyrics" => "Lily# writes lyrics as 'lyrics { … }', not '\\addlyrics'.",
+            // The fraction is the other way up, which no "drop the backslash" can say (found
+            // writing a piano piece to try the grammar, 2026-11-12: seven errors, none of them this).
+            "times" => "A tuplet is 'tuplet 3/2 { … }' in Lily#: three in the time of two — the fraction of "
+                + "'\\times 2/3' turned over, as LilyPond's own '\\tuplet 3/2' has it.",
+            "tuplet" => "Lily# commands take no leading backslash — write 'tuplet 3/2 { … }', not '\\tuplet 3/2 { … }'.",
             // The break family is LilyPond's own spelling minus the backslash (`noBreak`,
             // `pageBreak`, `noPageBreak` — owner's decision 2026-09-02, which retired the
             // lowercase `nobreak`), so it takes the general command hint like `tempo` does.

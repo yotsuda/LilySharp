@@ -650,6 +650,20 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         _diagnostics.Warning(mark.Span, DiagnosticCodes.UnknownAnnotation, message);
     }
 
+    /// <summary>What another program's word for a mark is in Lily#, where no spelling guess
+    /// finds it (found writing a piano piece to try the grammar, 2026-11-12: <c>@ped</c> and
+    /// <c>@atempo</c> were "unknown, ignored" and the mark left the page in silence).</summary>
+    private static string? OtherSpelling(string name) => name.ToLowerInvariant() switch
+    {
+        "ped" or "pedal" or "sustainon" => "The sustain pedal is '@sustain' … '@!sustain' ('@sustain' again where it is changed).",
+        "atempo" or "tempoprimo" or "tempoi" => "A tempo word is a tempo: tempo \"a tempo\" before the note (words alone print and change no speed).",
+        "8" or "ottava" or "octava" => "An ottava is '@8va' … '@!8va' (also '@8vb', '@15ma', '@15mb').",
+        "stacc" or "staccatto" => "Did you mean '@staccato'?",
+        "ten" => "Did you mean '@tenuto'?",
+        "legato" or "slur" => "A slur is written with parentheses: c4( d e f).",
+        _ => null,
+    };
+
     private void WarnUnknown(SyntaxNode node, string name)
     {
         // A REAL name written without its argument — '@bend', or the '@bend.half' that
@@ -689,8 +703,13 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             message += " " + (SameHead(corrected, Written(node, name))
                 ? $"Values are case-sensitive: write '{corrected}'."
                 : CaseHint(corrected));
+        else if (OtherSpelling(name) is { } spelled)
+            message += " " + spelled;
         else if (FindSuggestion(name) is { } suggestion)
             message += $" Did you mean '@{SourceSpelling(suggestion)}'?";
+        // A word the page was to print — dolce, espressivo — is no annotation of its own.
+        else if (name.All(char.IsLetter) && name.Length > 2)
+            message += $" A word to print at the note is '@text(\"{name}\")'.";
 
         _diagnostics.Warning(
             node.Span,

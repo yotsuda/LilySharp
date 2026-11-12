@@ -39,7 +39,7 @@ poet "Poet"             // optional: the left end of the composer's line (\heade
                         // lines between ```md and ``` are printed under the title (paragraphs, **bold**,
                         // *italic*); ```md end prints them under the last system. Nothing between the
                         // fences is Lily#. Inside score { } a fence replaces the file's for that score.
-tempo 120               // optional; also: tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit), tempo "Lively" 4. = 116 (dotted unit), tempo Comodo 4 = 84 (a bare word is the marking); 'tempo 120 swing' adds a shuffle-feel equation, and plays it from there on ('swing 16' = 16th swing; only 8 or 16; 'tempo swing' = the equation alone)
+tempo 120               // optional; also: tempo "a tempo" (words alone: printed, the speed unchanged — for "a tempo", "Tempo I", "Meno mosso"), tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit), tempo "Lively" 4. = 116 (dotted unit), tempo Comodo 4 = 84 (a bare word is the marking); 'tempo 120 swing' adds a shuffle-feel equation, and plays it from there on ('swing 16' = 16th swing; only 8 or 16; 'tempo swing' = the equation alone)
 time 4/4                // optional (default 4/4); 4/4 engraves as the C
                         // An ADDITIVE numerator groups the beats: 'time 3+2+2/8' prints 3+2+2 over 8
                         // and beams the eighths 3+2+2 (a plain 'time 7/8' beams nothing, as LilyPond);
@@ -127,8 +127,11 @@ The staff's clef is the first part's unless one is written before the brace:
 `condensedStaff bass { viola cello }` (also `combinedStaff bass { … }`). Every part is drawn
 under that clef, at its own pitches.
 
-**Several staves as ONE GROUP** — `grandStaff`, `staffGroup` and `choirStaff` all take
-`staff` items and nothing else, and differ only in the left edge:
+**Several staves as ONE GROUP** — `grandStaff`, `staffGroup` and `choirStaff` take `staff`
+items (and the `lyrics` rows under them); a `staffGroup` or `choirStaff` may also hold a group
+one level inside it, `staffGroup { grandStaff { staff vn1  staff vn2 }  staff vc }` (a bracket
+around a brace). A group of ONE staff is that staff, with no bracket. They differ only in the
+left edge:
 
 | | left edge | bar lines between staves | pick it for |
 |---|---|---|---|
@@ -566,7 +569,7 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   the name still draws. A written shape that disagrees with its symbol (a non-chord tone, or a
   missing 3rd/7th/altered fifth/tension — the root and the perfect fifth may be left out; the
   bass is not checked) warns LYS1039 naming the fix. There is no voicing index and no `mute` word.
-- Fingering (per chord note): `<c@finger(1) e@finger(3)>4`
+- Fingering: on a note, `d''4.@finger(5)`; per chord note, `<c@finger(1) e@finger(3)>4`
 - Rehearsal mark: `c4@mark("A")`
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
 - Effects: `@dead` (x notehead; `@notehead(cross)` is the same head — `@cross` is NOT: it moves the
@@ -680,7 +683,9 @@ score { staff melody }
   warns otherwise). A slur, phrasing slur or hairpin may NOT cross a repeat sign, a volta
   ending's edge or a jump mark — an error. A TIE may: it reaches the first note of every section
   PLAYED next (the body again, the next ending), which must repeat its pitch (LYS4007); the page
-  adds the repeat tie itself. Beams and other spans never cross a section.
+  adds the repeat tie itself. A beam never crosses a section. A sustain pedal still down
+  (`@sustain` with no `@!sustain` yet) is carried into the next section, as a slur is: do not
+  lift and press it again at a section's edge unless the music does.
   The relative frame still resets at the boundary, so a tie's target writes its octave.
 - Line breaks: `break` / `noBreak` force / forbid a system break after the bar they stand
   in; `pageBreak` / `noPageBreak` do the same for the page. **A `break` written INSIDE a bar

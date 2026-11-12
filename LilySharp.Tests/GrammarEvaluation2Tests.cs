@@ -182,6 +182,18 @@ public class GrammarEvaluation2Tests
         Assert.Equal(source, SyntaxTree.Parse(source).GetRoot().ToFullString());
     }
 
+    /// <summary>Another program's word for a mark, and a word to print, each get the spelling
+    /// Lily# has — "unknown, ignored" left the mark off the page with nothing to go on.</summary>
+    [Theory]
+    [InlineData("c'4@ped d' e' f' |", "'@sustain'")]
+    [InlineData("c'4@dolce d' e' f' |", "@text(\"dolce\")")]
+    [InlineData("c'4@atempo d' e' f' |", "tempo \"a tempo\"")]
+    [InlineData("c'4@8va d' e' f' |", "on the last note the bracket covers")]
+    [InlineData("\\times 2/3 { c'8 d' e' } f'4 g'2 |", "tuplet 3/2 { … }")]
+    public void AWordLilySharpSpellsAnotherWay_IsNamed(string music, string says)
+        => Assert.Contains(Said($"octave absolute\ntime 4/4\npart a {{ }}\nsection A {{ a {{ {music} }} }}\nform {{ A }}\nscore {{ staff a }}\n"),
+            d => d.Message.Contains(says));
+
     /// <summary>A section whose music changes the meter ends in THAT meter: three beats into a
     /// 4/4 bar is not "a whole bar" of the file's 3/4.</summary>
     [Fact]
