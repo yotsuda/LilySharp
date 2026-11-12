@@ -300,7 +300,9 @@ internal sealed partial class Parser
         {
             _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Math.Max(1, Current.Text.Length)),
                 DiagnosticCodes.SingerNeedsSings,
-                "A singer line reads 'singer S sings WORDS on PART'; 'sings' is missing here.");
+                Current.Text == "on"
+                    ? "'sings' is missing before 'on': a singer line reads 'singer S sings [WORDS] on PART' — write 'sings on " + (Peek(1)?.Text ?? "PART") + "'."
+                    : "A singer line reads 'singer S sings WORDS on PART'; 'sings' is missing here.");
             // The rest of the line is the line's: read as statements of their own, `on lead in
             // Verse` was music at the top level and seven errors about it (owner's report 2026-11-12).
             while (endsItsLine && !BeginsLine() && !Check(SyntaxKind.EndOfFile))
