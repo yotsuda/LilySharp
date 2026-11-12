@@ -203,6 +203,14 @@ public static class Tunings
     /// for its callers, which read it as "what the clef adds between page and sound".</remarks>
     public static int ClefOctaveShift(Svg.Model.ClefType clef) => 0;
 
+    /// <summary>
+    /// The fret the file's capo (<c>capo N</c>, one for the whole file) is on for an instrument
+    /// in this tuning: the file's, except on a bass, which wears none — a band score's capo is
+    /// the guitar's, and its bass tab still counts from the nut. LILYSHARP-OWN (2026-11-13,
+    /// with the capoed tab; a capo of a part's own is not a spelling yet, docs/ROADMAP.md).
+    /// </summary>
+    public static int CapoOn(TuningType type, int fileCapo) => IsBass(type) ? 0 : fileCapo;
+
     /// <summary>The total written→sounding shift for a tab staff: the clef octave plus
     /// the part's resolved <c>transposition</c> (which already folds in the bass/preset
     /// default). Both the fret calculation and MIDI playback read this one value, so a

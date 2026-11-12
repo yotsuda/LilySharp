@@ -273,8 +273,20 @@ public static class ChordShapesDirective
                 string? pressedShape = capo > 0 ? ChordShapes.Default(tuning, pressed)?.Spelled : null;
                 string message = ChordShapes.MismatchMessage(mismatch, shape, tuningName, symbol, inRow: false, inTable: true,
                     capo: capo, pressedShape: pressedShape);
+                // WHOSE tuning the shape was tried on (found 2026-11-13, grammar evaluation 3:
+                // `G 320003` warned "sounds F G B D, which is G7/F" with no word that the F was
+                // another part's drop-D sixth string): a shape with no instrument word is tried
+                // on every tuning the file's diagrams can draw on, so the message names the one
+                // that failed, and the entry that keeps the shape to its own instrument.
+                if (tuningName == null && checkTunings.Count > 1)
+                {
+                    var (word, owner) = TuningOwner(root, tuning);
+                    message += $" (Tried on {word}{(owner != null ? $", the tuning of part '{owner}'" : "")}: a shape with no instrument word is for "
+                        + $"every fretted tuning of the file - '{symbol} guitar {shape}' keeps it to the guitar's.)";
+                }
                 var at = entryWords.First(w => w.Text == shape).Span;
-                if (!found.Any(f => f.Span.Start == at.Start && f.Message == message))
+                // One warning a shape: the first tuning it fails on is the one named.
+                if (!found.Any(f => f.Span.Start == at.Start && f.Code == DiagnosticCodes.ChordShapeMismatch))
                     Warn(at, DiagnosticCodes.ChordShapeMismatch, message);
             }
             if (scope.Any(e => ChordShapeTable.SameChord(e.Chord, chord)))
@@ -446,6 +458,17 @@ public static class ChordShapesDirective
                 && Tablature.Tunings.Parse(word) is var t && !tunings.Contains(t))
                 tunings.Add(t);
         return tunings;
+    }
+
+    /// <summary>The word a tuning of <see cref="CheckTunings"/> is written with, and the first
+    /// part that plays it (null for the guitar every file is checked on, or a layout's
+    /// <c>chordTuning</c>) — for the mismatch message to say whose tuning a shape failed on.</summary>
+    private static (string Word, string? Part) TuningOwner(SyntaxNode root, TuningType tuning)
+    {
+        foreach (var part in TopLevelNodes.OfRoot<PartDeclarationSyntax>(root))
+            if (PartHeaderDefaults.Read(part) is { FrettedTuning: { } fretted, FrettedTuningWord: { } word } && fretted == tuning)
+                return (word, part.Name.Text);
+        return (Tablature.Tunings.Names.FirstOrDefault(n => Tablature.Tunings.Parse(n) == tuning) ?? "guitar", null);
     }
 }
 

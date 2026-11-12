@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CantoriaApi, CantoriaVoice, PlanAsk, SungVoiceDto, VOICE_INSTALL_GUIDE, languageRefusal, planAsked, unsingableGuide, unsingableIn, unsingableReason } from '../src/singerCore';
+import { CantoriaApi, CantoriaVoice, PlanAsk, SungVoiceDto, VOICE_INSTALL_GUIDE, languageRefusal, leftToTheInstrument, planAsked, unsingableGuide, unsingableIn, unsingableReason } from '../src/singerCore';
 import { CantoriaExtensionBackend, PLAN_KEPT_MS, VoiceRenderer } from '../src/singer';
 
 // Owner's decisions 2026-11-13: a line no installed voice can sing (a Latin alto, with no voice
@@ -147,6 +147,37 @@ describe('what is said of a line nobody can sing', () => {
     });
 });
 
+// Found 2026-11-13: a verse line that sings and a chorus line nobody can sing, on one part - the
+// chorus was silent in Play and in the export, the server's unsung mark (U) being of all the
+// file's lines. The notes say whose each section is (W), and the editor marks.
+describe('the sections of a line that is not sung here', () => {
+    const verse = { T: 0, N: 0, W: ['her'] }, chorus = { T: 2, N: 0, W: ['her#2'] }, both = { T: 4, N: 0, W: ['her', 'her#2'] };
+    const coda = { T: 6, N: 0, U: true }, bass = { T: 0, N: 1 };
+    const notes = [verse, bass, chorus, both, coda];
+
+    it('are the instrument\'s where another line of the part sings', () => {
+        const marked = leftToTheInstrument(notes, ['her#2']);
+        assert.deepEqual(marked.map(n => !!(n as { U?: boolean }).U), [false, false, true, false, true]);
+        // The other way round, and the notes handed in are not written on.
+        assert.deepEqual(leftToTheInstrument(notes, new Set(['her'])).map(n => !!(n as { U?: boolean }).U), [true, false, false, false, true]);
+        assert.equal((chorus as { U?: boolean }).U, undefined);
+        // What rides on a note stays on it.
+        assert.deepEqual(marked[2], { T: 2, N: 0, W: ['her#2'], U: true });
+    });
+
+    it('are left alone when every line of the part is missing: it has no voice, and its instrument stands in whole', () => {
+        assert.equal(leftToTheInstrument(notes, ['her', 'her#2']), notes);
+    });
+
+    it('are the same list with nobody missing, or a key no note knows', () => {
+        assert.equal(leftToTheInstrument(notes, []), notes);
+        assert.equal(leftToTheInstrument(notes, ['alto']), notes);
+        // Another part's line says nothing of this one, track by track.
+        const two = [verse, chorus, { T: 0, N: 2, W: ['him'] }, { T: 2, N: 2, W: ['him#2'] }];
+        assert.deepEqual(leftToTheInstrument(two, ['her#2', 'him', 'him#2']).map(n => !!(n as { U?: boolean }).U), [false, true, false, false]);
+    });
+});
+
 describe('the editor and a line nobody can sing', () => {
     const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
 
@@ -157,10 +188,25 @@ describe('the editor and a line nobody can sing', () => {
 
     it('never hands such a line to the engine: Play, Export and a proposal\'s Play', () => {
         // Play: shown as not sung on its line of the menu, with the reason; no voice, so the instrument stands in.
-        assert.match(ext, /const unsingable = await engine\.unsingable\(active\);[\s\S]{0,600}tellUnsingable\(id, nobody\);\s+void panel\.webview\.postMessage\(\{ type: 'voiceState', part: id, speed, state: 'failed', detail: nobody \}\);\s+continue;/);
+        assert.match(ext, /const unsingable = await engine\.unsingable\(active\);[\s\S]{0,900}tellUnsingable\(id, nobody\);\s+void panel\.webview\.postMessage\(\{ type: 'voiceState', part: id, speed, state: 'failed', detail: nobody \}\);\s+continue;/);
         // Export: skipped before the render, so its track is not silenced.
-        assert.match(ext, /if \(nobody !== undefined\) \{ tellUnsingable\(key, nobody\); continue; \}\s+try \{\s+const \{ rendered \} = await engine\.render\(voice, speed\);/);
+        assert.match(ext, /if \(nobody !== undefined\) \{ tellUnsingable\(key, nobody\); notSung\.add\(key\); continue; \}\s+try \{\s+const \{ rendered \} = await engine\.render\(voice, speed\);/);
         assert.match(ext, /const unsingable = await engine\.unsingable\(candidates\);/);
+    });
+
+    // Found 2026-11-13: where ANOTHER line of the part sings, the line's sections were silent.
+    it('leaves such a line\'s sections to the instrument where another line of its part sings', () => {
+        // Play: the preview's missing voices mark the notes it hands the page.
+        assert.match(ext, /missingVoices\.set\(panel, new Set\(unsingable\.keys\(\)\)\);/);
+        assert.match(ext, /const notes = pb\.Notes \? leftToTheInstrument\(pb\.Notes, missingVoices\.get\(panel\) \?\? \[\]\) : null;\s+panel\.webview\.postMessage\(\{ type: 'playbackData', notes,/);
+        // Another document or score: the last one's missing voices are forgotten with its voices.
+        assert.match(ext, /function followVoices\([^)]*\): boolean \{[\s\S]{0,300}missingVoices\.delete\(panel\);/);
+        // Export: the voices asked that did not sing, then the same marking before the part's notes leave.
+        assert.match(ext, /const written = leftToTheInstrument\(job\.Notes, notSung\);\s+const notes = silenced\.size > 0 \? written\.filter\(/);
+        // A proposal's Play: the keys ride with its voices.
+        assert.match(ext, /tellUnsingable\(sungKey\(voice\), nobody\); notSung\.push\(sungKey\(voice\)\); continue;/);
+        const ai = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+        assert.match(ai, /notes = leftToTheInstrument\(notes, sung\?\.notSung \?\? \[\]\);\s+void panel\.webview\.postMessage\(\{\s+type: 'playNotes', which, notes,/);
     });
 
     it('says what a refusing engine threw the same way, not only in the status bar', () => {

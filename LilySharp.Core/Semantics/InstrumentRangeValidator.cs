@@ -41,10 +41,13 @@ internal sealed class InstrumentRangeValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var presets = new Dictionary<string, string>(System.StringComparer.Ordinal);
+        var ranges = new Dictionary<string, (int Low, int High)>(System.StringComparer.Ordinal);
         foreach (var part in tree.GetRoot().ChildNodes().OfType<PartDeclarationSyntax>())
         {
-            if (PartHeaderDefaults.Read(part).Preset is { } preset && InstrumentDefaults.SoundingRange(preset) != null)
-                presets.TryAdd(part.Name.Text, preset);
+            var header = PartHeaderDefaults.Read(part);
+            if (header.Preset is { } preset && InstrumentDefaults.SoundingRange(preset) is { } range
+                && presets.TryAdd(part.Name.Text, preset))
+                ranges[part.Name.Text] = Retuned(range, preset, header.Tuning);
         }
         if (presets.Count == 0)
             return;
@@ -64,7 +67,7 @@ internal sealed class InstrumentRangeValidator : ISemanticValidator
         {
             if (n.SourcePos < 0 || n.Part is not { } part || !presets.TryGetValue(part, out var preset))
                 continue;
-            var (low, high) = InstrumentDefaults.SoundingRange(preset)!.Value;
+            var (low, high) = ranges[part];
             if (n.Pitch >= low && n.Pitch <= high || !seen.Add(n.SourcePos))
                 continue;
             string printed = InstrumentDefaults.PrintedName(preset) ?? preset;
@@ -72,6 +75,26 @@ internal sealed class InstrumentRangeValidator : ISemanticValidator
                 $"this note sounds {Spell(n.Pitch)}, {(n.Pitch < low ? "below" : "above")} the range of the "
                 + $"{printed} ({Spell(low)}-{Spell(high)}, as it sounds) - check its octave, or the part's instrument");
         }
+    }
+
+    /// <summary>
+    /// A string instrument's range on the strings the part TUNES it to (found 2026-11-13,
+    /// grammar evaluation 3: <c>instrument guitar  tuning guitarDropD</c> warned that its open
+    /// sixth string, D2, was "below the range of the Guitar" while the tab fretted it 0). The
+    /// preset's range is its usual tuning's — the lowest open string to the top of the highest —
+    /// so the low end is the lowest string of the part's tuning, and the top moves with the
+    /// highest string. A preset with no tuning, or a part on its usual one, keeps its range.
+    /// LILYSHARP-OWN.
+    /// </summary>
+    private static (int Low, int High) Retuned((int Low, int High) range, string preset, TuningType tuning)
+    {
+        if (InstrumentDefaults.GetTuning(preset) is not { } usualWord)
+            return range;
+        var usual = Tablature.Tunings.Parse(usualWord);
+        if (usual == tuning)
+            return range;
+        int[] open = Tablature.Tunings.GetTuning(tuning), usualOpen = Tablature.Tunings.GetTuning(usual);
+        return (open.Min(), range.High + open.Max() - usualOpen.Max());
     }
 
     private static string Spell(int midi)

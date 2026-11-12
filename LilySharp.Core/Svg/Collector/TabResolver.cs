@@ -54,8 +54,15 @@ internal sealed class TabResolver
     /// string at all).</summary>
     private void CheckWrittenString(int sourcePosition, int sounding, int? written, int[] tun)
     {
-        if (written is not int s || s < 1 || s > tun.Length)
+        if (written is not int s)
             return;
+        if (s < 1 || s > tun.Length)
+        {
+            // A string the tuning does not have (found 2026-11-13, grammar evaluation 3: `\7`
+            // and `\9` on a six-string guitar passed with no word, the string chosen again).
+            _stringWarnings.Add(new TabStringUnplayableWarning(sourcePosition, s, 0, tun.Length));
+            return;
+        }
         int fret = sounding - tun[tun.Length - s];
         if (fret < 0 || fret > 24)
             _stringWarnings.Add(new TabStringUnplayableWarning(sourcePosition, s, fret));
@@ -365,8 +372,10 @@ internal sealed class TabResolver
     /// </para>
     /// </remarks>
     public Voice ResolveTabStrings(Voice voice, TuningType tuning, ClefType clef = ClefType.Treble,
-        int transposition = 0, IReadOnlySet<(int Measure, int Item)>? falls = null)
+        int transposition = 0, IReadOnlySet<(int Measure, int Item)>? falls = null, int capo = 0)
     {
+        // `capo` is for the WORDS of a range warning only: the frets already count from it,
+        // through `transposition` (RenderSpecParser.ParseTab takes the capo off the shift).
         int[] tun = Tunings.GetTuning(tuning);
         int shift = Tunings.SoundingShift(clef, transposition);
         int lowestOpen = tun.Min();
@@ -391,7 +400,7 @@ internal sealed class TabResolver
 
         double time = 0, previousOnset = double.NaN;
         int? previousMidi = null;
-        bool restSince = false, previousSlurStart = false, previousFall = false;
+        bool restSince = false, previousSlurStart = false, previousFall = false, previousSlide = false;
 
         var barWritten = new Dictionary<int, int>(); // written MIDI -> its written string, this bar
         var sounding = new List<int>();
@@ -422,14 +431,23 @@ internal sealed class TabResolver
                         if (IsTabPlaceable(cn.Midi + shift, tun))
                             CheckWrittenString(chord.SourcePosition, cn.Midi + shift, cn.StringNumber, tun);
                     CheckChordStrings(chord, shift, tun);
-                    var newNotes = AssignChordStrings(chord.Notes, tun, shift);
-                    Work(mi)[ii] = chord with { Notes = newNotes };
-                    foreach (var cn in newNotes)
+                    foreach (var cn in chord.Notes)
                     {
                         sounding.Add(cn.Midi + shift);
                         if (!IsTabPlaceable(cn.Midi + shift, tun))
-                            _rangeWarnings.Add(new TabRangeWarning(chord.SourcePosition, cn.Midi + shift < lowestOpen));
+                            _rangeWarnings.Add(new TabRangeWarning(chord.SourcePosition, cn.Midi + shift < lowestOpen, capo, cn.Midi + shift + capo));
                     }
+                    // A member below the lowest string leaves the TAB's copy of the chord, as a
+                    // single note below it is hidden (TabBelowRange) and as LYS5002 says ("was
+                    // omitted from the tab"). Found 2026-11-13: it was clamped to fret 0 of the
+                    // lowest string — under `capo 2` the open low E of an E chord printed 0, the
+                    // capo's fret, on top of the member that string really plays. A chord wholly
+                    // below the strings is left as it was.
+                    var members = chord.Notes;
+                    if (members.Any(cn => cn.Midi + shift < lowestOpen) && members.Any(cn => cn.Midi + shift >= lowestOpen))
+                        members = members.RemoveAll(cn => cn.Midi + shift < lowestOpen);
+                    var newNotes = AssignChordStrings(members, tun, shift);
+                    Work(mi)[ii] = chord with { Notes = newNotes };
                     if (newNotes.Length == 0) continue;
                     var low = newNotes.MinBy(cn => cn.Midi)!;
                     midi = low.Midi + shift;
@@ -459,7 +477,7 @@ internal sealed class TabResolver
                         // it is no note written an octave too low — no LYS5002 (2026-10-01;
                         // LilySharp-Omr's report #14: a comping bar warned once per slash).
                         if (!note.IsPitchlessSlash)
-                            _rangeWarnings.Add(new TabRangeWarning(note.SourcePosition, below));
+                            _rangeWarnings.Add(new TabRangeWarning(note.SourcePosition, below, capo, midi + capo));
                         // Below the lowest string it would clamp to a wrong open string
                         // (fret 0) — hide it on the tab entirely instead (see NoteItem).
                         if (below && !note.TabBelowRange)
@@ -494,12 +512,14 @@ internal sealed class TabResolver
                     HandFree: restSince || previousFall || leapt,
                     SlurFromPrevious: previousSlurStart && slurEnd && !leapt,
                     ChordLow: chordLow, ChordHigh: chordHigh,
-                    TiedFromPrevious: tied, AfterFall: previousFall));
+                    TiedFromPrevious: tied, AfterFall: previousFall,
+                    SlideFromPrevious: previousSlide && item is NoteItem && !restSince));
                 refs.Add((mi, ii));
 
                 previousOnset = onset;
                 previousMidi = midi;
                 previousSlurStart = slurStart;
+                previousSlide = item is NoteItem { HasGlissando: true };
                 previousFall = falls != null && falls.Contains((mi, ii));
                 restSince = false;
             }

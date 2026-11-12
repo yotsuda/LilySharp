@@ -2760,7 +2760,19 @@ a player reads follows the capo:
   pressed names (`chordNames shape` or `both`); a score of sounding names with no diagrams
   shows the capo nowhere, so it prints no line;
 - a `chord(Eb x32010)` item's strings sound three semitones higher (E♭ major), on the staff,
-  in the MIDI and in the twin — in every score.
+  in the MIDI and in the twin — in every score;
+- a **tab** counts its frets from the capo: 0 is the capo, as on the diagram above it. Notes
+  are written at the pitch they sound, like the chords (the staff and the MIDI are what is
+  written), so under `capo 2` a sounding `fis,` is fret 0 of the sixth string, and
+  `diagram(D x32010)` prints x32010 on the tab too. A note below the capo on every string —
+  an open low `e,` under `capo 2` — cannot be played with the capo on: it is warned by name
+  (LYS5002: "E2 cannot be played with the capo on fret 2 …") and left off the tab, in a chord
+  as alone. MusicXML's `<fret>`s are the same numbers (beside its `<capo>`), and the LilyPond
+  twin transposes its `TabStaff` by the capo. A bass's tab ignores the capo.
+
+The capo is the file's — one for every fretted part of the piece. A part cannot take one of its
+own (`part g { capo 2 }` is refused as an unknown property): two guitars, one capoed, are not
+written yet (docs/ROADMAP.md).
 
 `capo 0` is refused (leave the line out), as is a fret above 11, a word, or a second value
 (LYS1058); a second `capo` line is LYS4005 and the last wins. The `.ly` twin writes the pressed

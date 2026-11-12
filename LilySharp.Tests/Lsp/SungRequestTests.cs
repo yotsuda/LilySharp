@@ -372,6 +372,80 @@ public class SungRequestTests
         }
     }
 
+    /// <summary>Found 2026-11-13: a part with several singer lines, one of which this machine
+    /// cannot sing (a chorus in Latin beside a verse in Japanese). The server does not know what
+    /// is installed, and its unsung mark (<c>U</c>) is of ALL the file's lines, so the chorus stayed
+    /// silent where the verse's voice took the instrument's place. The notes now say whose each
+    /// section is (<c>W</c>), and the editor leaves to the instrument the sections whose singers
+    /// are all missing — which must be the sections <c>SungVoices.Unsung</c> answers for the
+    /// voices that did sing (what <c>lysc wav --singer</c> asks).</summary>
+    [Fact]
+    public void InAPartWithSeveralSingerLines_TheNotesSayWhoseEachSectionIs()
+    {
+        const string source = """
+            tempo 4 = 120
+            time 2/4
+            part her { clef treble  instrument soprano }
+            part bass { clef bass }
+            section Verse {
+              her { c'4 d | e f | }
+              bass { c,2 | f,2 | }
+              lyrics words { ゆ き や こ | }
+            }
+            section Chorus {
+              her { g'4 a | b c' | }
+              bass { g,2 | c,2 | }
+              lyrics words { a ve ma ri | }
+            }
+            section Coda {
+              her { c'2 | }
+              bass { c,2 | }
+            }
+            singer aya female sings words on her in Verse
+            singer bea female sings words on her in Chorus
+            form { Verse Chorus Coda }
+            score { staff her  lyrics words on her  staff bass }
+            """;
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///two-lines.lys");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = source, Version = 1, LanguageId = "lilysharp" },
+        });
+        var sung = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, AllLyrics = true });
+        Assert.Null(sung.Error);
+        Assert.Equal(new[] { "her", "her#2" }, sung.Voices!.Select(v => v.Key));
+
+        var playback = server.GetPlayback(new PlaybackParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        Assert.Null(playback.Error);
+        var her = playback.Notes!.Where(n => n.P != PlaybackNote.PedalPitch && playback.Parts![n.N] == "her").OrderBy(n => n.T).ToArray();
+        Assert.Equal(9, her.Length);
+        // The verse is the first line's, the chorus the second's - by the keys lilysharp/sung
+        // gives them - and neither is unsung; the coda nobody sings is, and is nobody's.
+        Assert.All(her[..4], n => Assert.Equal(new[] { "her" }, n.W));
+        Assert.All(her[4..8], n => Assert.Equal(new[] { "her#2" }, n.W));
+        Assert.All(her[..8], n => Assert.False(n.U));
+        Assert.True(her[8].U);
+        Assert.Null(her[8].W);
+        // A played part, and a part with one voice, say nothing (and nothing is written for them).
+        Assert.All(playback.Notes!.Where(n => playback.Parts![n.N] == "bass"), n => Assert.Null(n.W));
+        var single = Open(out var singleUri).GetPlayback(new PlaybackParams { TextDocument = new TextDocumentIdentifier { Uri = singleUri } });
+        Assert.All(single.Notes!, n => Assert.Null(n.W));
+        Assert.DoesNotContain("\"W\"", Newtonsoft.Json.JsonConvert.SerializeObject(single.Notes));
+
+        // With the second line not sung, the sections W leaves with no singer are the ones Unsung
+        // answers for the voices that sang: the chorus (and the coda, as before), not the verse.
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(source);
+        var midi = new LilySharp.Core.Midi.MidiExporter().Export(tree);
+        var clock = LilySharp.Core.Midi.MidiClock.SecondsOf(midi);
+        var voices = LilySharp.Core.Midi.SungVoices.Read(midi, clock);
+        var free = LilySharp.Core.Midi.SungVoices.Unsung(midi, voices.Where(v => v.Key != "her#2").ToList(), clock)["her"];
+        var herTrack = midi.Tracks.Single(t => t.Name == "her");
+        var left = herTrack.Notes.OrderBy(n => n.StartTick).Select(n => free.Any(r => n.StartTick >= r.From && n.StartTick < r.To)).ToArray();
+        Assert.Equal(her.Select(n => n.U || (n.W != null && n.W.All(k => k == "her#2"))), left);
+        Assert.Equal(new[] { false, false, false, false, true, true, true, true, true }, left);
+    }
+
     [Fact]
     public void AScoreWithNoWords_HasNoVoice()
     {

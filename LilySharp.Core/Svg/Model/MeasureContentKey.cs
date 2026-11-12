@@ -488,6 +488,7 @@ public readonly record struct MeasureContentKey(long Hash)
         hc.Add(staff.TabSourceClef);
         hc.Add(staff.Transposition);
         hc.Add(staff.TabNumbersOnly);
+        hc.Add(staff.TabCapo);          // the frets count from it (already in Transposition; folded for the field's own sake)
         hc.Add(staff.Lines);
         hc.Add((int)staff.PedalStyle);
 

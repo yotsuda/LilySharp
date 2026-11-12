@@ -236,6 +236,41 @@ public static class SungVoices
         return unsung;
     }
 
+    /// <summary>
+    /// WHICH of a part's voices sing each section, for the parts with several (a verse line and a
+    /// chorus line, a lead and a harmony): the stretches of <see cref="Unsung"/>'s kind — a
+    /// section as it is played, in ticks — that somebody sings, each with the keys
+    /// (<see cref="SungVoice.Key"/>, the part's name for a null one) of the voices that have a
+    /// note there. Found 2026-11-13: the editor learns who can sing on this machine AFTER the
+    /// server has answered the notes (and a line nobody installed can sing is not sung), so the
+    /// notes say whose each section is, and the editor leaves to the instrument a section all of
+    /// whose singers are missing — the same answer <see cref="Unsung"/> gives for the voices
+    /// that did sing, which is what <c>lysc wav --singer</c> asks. A part with one voice is not
+    /// here: without it the part has no voice at all, and its instrument stands in whole.
+    /// LILYSHARP-OWN.
+    /// </summary>
+    public static IReadOnlyDictionary<string, List<(int From, int To, string[] Keys)>> SungBy(MidiFile midi, IReadOnlyList<SungVoice> voices, Func<int, double> secondsAt)
+    {
+        var sung = new Dictionary<string, List<(int From, int To, string[] Keys)>>(StringComparer.Ordinal);
+        if (midi.SectionStarts.Count == 0)
+            return sung;
+        var starts = midi.SectionStarts.Keys.ToList();
+        foreach (var part in voices.GroupBy(v => v.Part, StringComparer.Ordinal).Where(g => g.Count() > 1))
+        {
+            var list = new List<(int From, int To, string[] Keys)>();
+            for (int s = 0; s < starts.Count; s++)
+            {
+                int from = starts[s], to = s + 1 < starts.Count ? starts[s + 1] : int.MaxValue;
+                double a = secondsAt(from) - 1e-6, b = to == int.MaxValue ? double.MaxValue : secondsAt(to) - 1e-6;
+                var keys = part.Where(v => v.Notes.Any(n => n.Start >= a && n.Start < b)).Select(v => v.Key ?? v.Part).ToArray();
+                if (keys.Length > 0)
+                    list.Add((from, to, keys));
+            }
+            sung[part.Key] = list;
+        }
+        return sung;
+    }
+
     /// <summary>The steps of a major scale above its tonic, in semitones.</summary>
     private static readonly int[] MajorScale = [0, 2, 4, 5, 7, 9, 11];
 

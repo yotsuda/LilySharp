@@ -254,6 +254,10 @@ public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning, int Transp
 {
     /// <summary>The folded chord row's own <c>for</c>, as <see cref="StaffSpec.ChordFor"/>.</summary>
     public string? ChordFor { get; init; }
+
+    /// <summary>The fret the capo is on for this tab (<see cref="Tablature.Tunings.CapoOn"/>), 0 for
+    /// none. Already taken off <see cref="Transposition"/>, the shift the frets are read with.</summary>
+    public int Capo { get; init; }
 }
 
 /// <summary>
@@ -1027,7 +1031,7 @@ public sealed record RenderSpec(
                     if (tabVoices.Length == 0)
                         tabVoices = ImmutableArray.Create(
                             new Voice(tab.Staff.VoiceName, ImmutableArray<Measure>.Empty));
-                    var tabStaff = Staff.CreateTab(tab.Tuning, tabVoices, tab.Staff.Clef, tab.Transposition, tab.NumbersOnly);
+                    var tabStaff = Staff.CreateTab(tab.Tuning, tabVoices, tab.Staff.Clef, tab.Transposition, tab.NumbersOnly) with { TabCapo = tab.Capo };
                     yield return StaffGroup.CreateSingle(tabStaff);
                     break;
 

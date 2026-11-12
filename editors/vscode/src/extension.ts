@@ -56,7 +56,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { VOICE_INSTALL_GUIDE, SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
+import { VOICE_INSTALL_GUIDE, leftToTheInstrument, SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -1749,14 +1749,17 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     // Name the score the preview is showing, so Play sounds ITS parts and
                     // form: with `score p2 { staff p2 }` picked, p1 stayed audible
                     // until the server was told which score (user report 2026-09-29).
-                    const pb = await client.sendRequest<{ Notes?: { T: number, D: number, P: number, V: number }[], Error?: string,
+                    const pb = await client.sendRequest<{ Notes?: { T: number, D: number, P: number, V: number, N?: number, U?: boolean, W?: string[] | null }[], Error?: string,
                         Parts?: string[] | null, Extra?: string[] | null, Sung?: string[] | null, Played?: string[] | null,
                         Beats?: { T: number; A: boolean }[] | null; BarEnd?: number }>(
                         'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
                     // The tracks and the beats ride along for the practice menu's parts and metronome;
                     // the parts the score does not sound (Extra) too, off until the menu turns them on;
                     // and which parts the score sings and plays (docs/singing-design.md §3).
-                    panel.webview.postMessage({ type: 'playbackData', notes: pb.Notes ?? null, error: pb.Error ?? null,
+                    // A line of a part that is not sung here (nobody installed can sing it) leaves
+                    // its sections to the instrument where another line of the part sings.
+                    const notes = pb.Notes ? leftToTheInstrument(pb.Notes, missingVoices.get(panel) ?? []) : null;
+                    panel.webview.postMessage({ type: 'playbackData', notes, error: pb.Error ?? null,
                         parts: pb.Parts ?? null, extra: pb.Extra ?? null, sung: pb.Sung ?? null, played: pb.Played ?? null,
                         beats: pb.Beats ?? null, barEnd: pb.BarEnd ?? null });
                     // The lyrics' voice, rendered now — a voice the text's rest had not yet sent to
@@ -3809,6 +3812,7 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
         // A line nobody installed can sing is not asked of the engine: it is said, and its part's
         // instrument stays in the mix (owner's decision 2026-11-13).
         const unsingable = await engine.unsingable((sung.Voices ?? []).filter(v => v.Notes.length > 0));
+        const notSung = new Set<string>();      // the voices asked to sing that did not: nobody can, or the engine failed
         for (const voice of sung.Voices ?? []) {
             // The menu's fader for the voice (owner's request 2026-11-09): its gain in the mix; at 0 it is as switched off.
             const key = sungKey(voice);
@@ -3824,7 +3828,7 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
             }
             if (voice.Notes.length === 0 || !sings || gain <= 0) { continue; }
             const nobody = unsingable.get(key);
-            if (nobody !== undefined) { tellUnsingable(key, nobody); continue; }
+            if (nobody !== undefined) { tellUnsingable(key, nobody); notSung.add(key); continue; }
             try {
                 const { rendered } = await engine.render(voice, speed);
                 const v = await rendered;
@@ -3840,6 +3844,7 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
                 const refused = unsingableReason(e);
                 if (refused) { tellUnsingable(key, refused); }
                 else { outputChannel.appendLine(`singer: export: the voice of ${voice.Part} was not sung — ${String(e)}; its instrument plays`); }
+                notSung.add(key);
             }
         }
         // A consonant before the beat (in the lead) that would fall before the file's start: the
@@ -3857,7 +3862,9 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
         pre = Math.max(0, pre);
         const later = <T extends { T: number }>(list: T[]): T[] => pre > 0 ? list.map(n => ({ ...n, T: n.T + pre })) : list;
         // A note in a section none of the part's voices sings (U) is the instrument's: it stays.
-        const notes = silenced.size > 0 ? job.Notes.filter(n => !(typeof n.N === 'number' && silenced.has(n.N) && !(n.U && !allOffTracks.has(n.N)))) : job.Notes;
+        // So is one in a section whose every singer was not sung here, while another line of its part was.
+        const written = leftToTheInstrument(job.Notes, notSung);
+        const notes = silenced.size > 0 ? written.filter(n => !(typeof n.N === 'number' && silenced.has(n.N) && !(n.U && !allOffTracks.has(n.N)))) : job.Notes;
         out.push({
             ...job, Voices: voices.map(v => ({ ...v, at: v.at + pre })), Lit: later(job.Notes),
             Notes: later(notes), Lead: (job.Lead ?? 0) + pre,
@@ -4624,6 +4631,11 @@ const voiceTurned = new WeakSet<vscode.WebviewPanel>();
  *  the lyrics row commented out, the microphone stayed — the engine's answer to the earlier text
  *  arrived after the page had emptied, and lit it again). Unknown until the first answer. */
 const sungParts = new WeakMap<vscode.WebviewPanel, Set<string>>();
+/** The voices of each preview's score that are NOT sung here, by key: a line nobody installed can
+ *  sing (prepareVoices), a voice the engine failed (failVoice). A Play's notes leave their sections
+ *  to the instrument where another line of the part sings (leftToTheInstrument; found 2026-11-13:
+ *  they stayed silent). Of the preview's document and score: emptied with its voices. */
+const missingVoices = new WeakMap<vscode.WebviewPanel, Set<string>>();
 /** A number per preview, for the prepare queue's slots (`<id>/<part>`). */
 const panelIds = new WeakMap<vscode.WebviewPanel, number>();
 let nextPanelId = 0;
@@ -4647,6 +4659,7 @@ function followVoices(panel: vscode.WebviewPanel, uri: string): boolean {
     voiceDocs.set(panel, voiceDoc);
     postedVoices.delete(panel);
     sungParts.delete(panel);
+    missingVoices.delete(panel);
     voiceTurned.add(panel);
     prepareQueue.cancel(`${panelId(panel)}/`);
     void panel.webview.postMessage({ type: 'clearVoices', pending: true });
@@ -4657,6 +4670,7 @@ function forgetVoices(panel: vscode.WebviewPanel): void {
     voiceDocs.delete(panel);
     postedVoices.delete(panel);
     sungParts.delete(panel);
+    missingVoices.delete(panel);
     voiceTurned.delete(panel);
     prepareQueue.cancel(`${panelId(panel)}/`);
 }
@@ -4689,6 +4703,7 @@ function failVoice(panel: vscode.WebviewPanel, part: string, speed: number, why:
     const unsingable = unsingableReason(why);
     if (unsingable) { tellUnsingable(part, unsingable); }
     else { tellSingerOnce(panel, `the voice of ${part} was not sung — ${why} (see Lily# Extension output)`); }
+    missingVoices.get(panel)?.add(part);
     void panel.webview.postMessage({ type: 'voiceState', part, speed, state: 'failed', detail: unsingable ?? why });
 }
 
@@ -4809,6 +4824,9 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     // line of the practice menu, and its part's instrument stands in, having no voice.
     const unsingable = await engine.unsingable(active);
     if (!current()) { return; }
+    // …and where another line of its part sings, its sections are the instrument's in the next
+    // Play's notes (missingVoices): anew each time, a voice that failed before being asked again below.
+    missingVoices.set(panel, new Set(unsingable.keys()));
     for (const voice of active) {
         for (const warning of voice.Warnings ?? []) { tellSingerOnce(panel, `${voice.Part}: ${warning}`); }
         const id = sungKey(voice);
@@ -4938,7 +4956,8 @@ const CANDIDATE_VOICE_WAIT_MS = 600;
  */
 async function candidateVoices(text: string, uri: vscode.Uri, renderName: string | undefined, sounds: CandidateSounds,
     onSung: (voice: CandidateVoice) => void): Promise<CandidateVoices> {
-    const out: CandidateVoices = { voices: [], silenced: [], waiting: [] };
+    const notSung: string[] = [];
+    const out: CandidateVoices = { voices: [], silenced: [], waiting: [], notSung };
     if (!client || !clientReady || (sounds.Sung ?? []).length === 0) { return out; }
     const engine = await renderer();
     if (!engine) { return out; }
@@ -4963,7 +4982,7 @@ async function candidateVoices(text: string, uri: vscode.Uri, renderName: string
     for (const voice of candidates) {
         // Nobody installed can sing it: its instrument plays, and the writer is told as the preview tells it.
         const nobody = unsingable.get(sungKey(voice));
-        if (nobody !== undefined) { tellUnsingable(sungKey(voice), nobody); continue; }
+        if (nobody !== undefined) { tellUnsingable(sungKey(voice), nobody); notSung.push(sungKey(voice)); continue; }
         try {
             const { rendered, cached } = await engine.render(voice, 1);
             let late: ReturnType<typeof setTimeout> | undefined;

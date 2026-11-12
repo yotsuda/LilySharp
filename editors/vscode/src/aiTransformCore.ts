@@ -1020,8 +1020,10 @@ export interface CandidateVoice {
 /** What the engine has for a candidate's Play (AiTransformDeps.voicesFor): the voices there now,
  *  the tracks (indices in the playback's Parts) whose instrument gives way to them, and the parts
  *  whose voice is still being sung — their instruments play until it is there (the panel takes
- *  it in after the part's next rest, or the next Play sings it). */
-export interface CandidateVoices { voices: CandidateVoice[]; silenced: number[]; waiting: string[] }
+ *  it in after the part's next rest, or the next Play sings it). `notSung`: the voices nobody
+ *  installed can sing, by key - their sections are the instrument's where another line of the
+ *  part sings (singerCore.leftToTheInstrument). */
+export interface CandidateVoices { voices: CandidateVoice[]; silenced: number[]; waiting: string[]; notSung?: string[] }
 
 /** Which parts a played text sings and plays, as `lilysharp/playbackText` answers. */
 export interface CandidateSounds { Parts?: string[] | null; Sung?: string[] | null; Played?: string[] | null }

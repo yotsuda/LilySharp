@@ -37,9 +37,15 @@ namespace LilySharp.Core.Tablature;
 /// it stays on that string.</param>
 /// <param name="AfterFall">The previous event ends in a fall: the finger slid off the string, so
 /// the hand is not only free but already away (<see cref="HandFree"/> is set too).</param>
+/// <param name="SlideFromPrevious">A glissando (<c>@glissando</c>, <c>@slide</c>) runs from the
+/// previous note to this one: a slide is one finger along one string, so the two stay on a
+/// string where one can play both (found 2026-11-13, grammar evaluation 3: its two ends were
+/// put on neighbouring strings, the line drawn between them). The general planner reads it;
+/// the bass's, frozen, does not.</param>
 public readonly record struct TabEvent(
     int Midi, int FixedString, double TimeToMove, bool HandFree, bool SlurFromPrevious,
-    int ChordLow = 0, int ChordHigh = 0, bool TiedFromPrevious = false, bool AfterFall = false);
+    int ChordLow = 0, int ChordHigh = 0, bool TiedFromPrevious = false, bool AfterFall = false,
+    bool SlideFromPrevious = false);
 
 /// <summary>
 /// The costs the fingering planner weighs.
@@ -392,6 +398,7 @@ public static class TabFingeringPlanner
 
             bool free = ev.HandFree;
             bool tied = ev.TiedFromPrevious;
+            bool slid = ev.SlideFromPrevious;
             double bestCost = double.MaxValue;
             int bestPrev = -1;
             for (int j = prevStart; j < prevEnd; j++)
@@ -417,8 +424,10 @@ public static class TabFingeringPlanner
                          && (s.String < p.String ? s.Fret - p.Fret : p.Fret - s.Fret) == 2))
                     cost += _w.Skip;
 
-                // A tie holds one string.
-                if (tied && s.String != p.String)
+                // A tie holds one string, and a slide runs along one (where no string plays
+                // both ends, or a written \N says otherwise, every way pays the same and the
+                // rest decides).
+                if ((tied || slid) && s.String != p.String)
                     cost += 1_000_000;
 
                 double c = _cost[j] + cost;

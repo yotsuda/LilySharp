@@ -1337,7 +1337,13 @@ public sealed partial class LilySharpLanguageServer
 
             // Where a sung part is sung by nobody (a singer line's `in` leaves a section out):
             // its notes there are marked, and the editor plays them on the instrument.
-            var unsung = LilySharp.Core.Midi.SungVoices.Unsung(midi, LilySharp.Core.Midi.SungVoices.Read(midi, SecondsAt), SecondsAt);
+            var voices = LilySharp.Core.Midi.SungVoices.Read(midi, SecondsAt);
+            var unsung = LilySharp.Core.Midi.SungVoices.Unsung(midi, voices, SecondsAt);
+            // …and whose each sung section is, in a part with several singer lines: the server
+            // does not know which of them this machine can sing, so the editor, which asks, marks
+            // the sections all of whose singers are missing (PlaybackNote.W; found 2026-11-13: a
+            // verse line that sang kept the chorus of a line nobody could sing silent).
+            var sungBy = LilySharp.Core.Midi.SungVoices.SungBy(midi, voices, SecondsAt);
 
             // Each note with its track: the channel and the program the .mid would play it
             // with (SplitIntoPartTracks gave every part a track and a channel), so the
@@ -1363,6 +1369,8 @@ public sealed partial class LilySharpLanguageServer
                         N = x.Index,
                         K = n.Strike,
                         U = unsung.TryGetValue(x.Track.Name, out var free) && free.Any(r => n.StartTick >= r.From && n.StartTick < r.To),
+                        W = sungBy.TryGetValue(x.Track.Name, out var lines)
+                            ? lines.FirstOrDefault(r => n.StartTick >= r.From && n.StartTick < r.To).Keys : null,
                     };
                 })
                 .Concat(tracks.SelectMany((x, ti) => x.Track.Pedals.Select(c => new PlaybackNote

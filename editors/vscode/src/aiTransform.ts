@@ -47,7 +47,7 @@ import {
     applyDraft, draftSummary, DraftInput, FROM_DRAFT_NOTE,
     applyScoreEdits, ScoreEdit, scorePartView, scorePages,
 } from './aiTransformCore';
-import { CANTORIA_EXTENSION_ID, cantoriaApiOf, voiceListText } from './singerCore';
+import { CANTORIA_EXTENSION_ID, cantoriaApiOf, leftToTheInstrument, voiceListText } from './singerCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -2815,7 +2815,7 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
     const play = { ...audible, uri: currentUri(audible.uri) };
     const say = (text: string | null) => void panel.webview.postMessage({ type: 'playState', text });
     try {
-        const pb = await client.sendRequest<{ Notes?: { S?: number }[] | null; Error?: string | null }>('lilysharp/playbackText', {
+        const pb = await client.sendRequest<{ Notes?: { S?: number; N?: number; U?: boolean; W?: string[] | null }[] | null; Error?: string | null }>('lilysharp/playbackText', {
             Text: which === 'after' ? play.after : play.before,
             Uri: play.uri.toString(),
             RenderName: deps.renderNameOf?.(play.uri) ?? null,
@@ -2828,7 +2828,7 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
         const start = from === undefined ? 0 : to === undefined ? startTimeAt(timed, from) : startTimeAt(timed, from, to);
         // S is the preview's own offsets, so it is -1 here; R carries the candidate text's, which
         // the preview follows for this panel (showCandidateSounding).
-        const notes = pb.Notes
+        let notes = pb.Notes
             .filter(n => ((n as { T?: number }).T ?? 0) >= start - 1e-6)
             .map(n => ({ ...n, T: ((n as { T?: number }).T ?? 0) - start, S: -1, R: n.S ?? -1 }));
         playingPane = which;
@@ -2876,6 +2876,9 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
                 }
             }).catch(e => { deps.log(`candidate voices: ${String(e)}`); return undefined; });
             const silenced = new Set(sung?.silenced ?? []);
+            // A line nobody installed can sing leaves its sections to the instrument (n.U) where
+            // another line of its part sings (found 2026-11-13: they were silent).
+            notes = leftToTheInstrument(notes, sung?.notSung ?? []);
             void panel.webview.postMessage({
                 type: 'playNotes', which, notes,
                 // What the synth strikes: a part its voice sings is lit, not played.

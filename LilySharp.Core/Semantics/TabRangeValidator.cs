@@ -70,7 +70,13 @@ internal sealed class TabRangeValidator : ISemanticValidator
                 if (!seen.Add(w.SourcePosition)) continue; // one note, one warning
                 _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
                     DiagnosticCodes.TabOutOfRange,
-                    w.BelowRange
+                    // Under a capo the lowest note is the capo's, not the open string's (found
+                    // 2026-11-13: an open low E under `capo 2` printed fret 0, behind the capo).
+                    w.BelowRange && w.Capo > 0
+                        ? $"{LilySharp.Core.Midi.PartRanges.SpelledFromPitch(w.Midi)} cannot be played with the capo on fret {w.Capo}: " +
+                          "it is below the capo on every string, and was omitted from the tab " +
+                          "(it shows only on the notation staff) - the notes are written as they sound"
+                    : w.BelowRange
                         ? "note is below the tab's lowest string and was omitted from the tab " +
                           "(it shows only on the notation staff) — likely an octave too low"
                         : "note is above the tab's range (no fret 0-24 on any string) — likely an octave too high");
@@ -85,6 +91,15 @@ internal sealed class TabRangeValidator : ISemanticValidator
             foreach (var w in stringWarnings)
             {
                 if (!seenStrings.Add((w.SourcePosition, w.StringNumber, w.Fret))) continue;
+                if (w.StringCount > 0)
+                {
+                    _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
+                        DiagnosticCodes.TabStringUnplayable,
+                        $"there is no string {w.StringNumber}: this tab's tuning has {w.StringCount} strings, "
+                        + $"1 (the highest) to {w.StringCount} - the \\" + w.StringNumber
+                        + " is ignored and the string chosen for the note");
+                    continue;
+                }
                 _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
                     DiagnosticCodes.TabStringUnplayable,
                     $"string {w.StringNumber} cannot play this pitch (it would be fret {w.Fret}), "

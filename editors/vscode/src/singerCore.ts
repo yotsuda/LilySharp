@@ -142,6 +142,36 @@ export function unsingableGuide(reason: string): Pick<VoiceGuide, 'message' | 'a
     return { message: `Lily#: a singer line is not sung: ${reason.trim().replace(/\.$/, '')}. The part's instrument plays instead.`, actions: [HOW_TO_INSTALL] };
 }
 
+/**
+ * The notes with the sections NOBODY SINGS HERE left to the instrument (found 2026-11-13: in a
+ * part with several singer lines where one sings - a Japanese verse - the chorus of a line nobody
+ * installed can sing stayed silent, because the server marks the unsung sections (`U`) without
+ * knowing what this machine can sing). The server says whose each section is (`W`, the keys of the
+ * voices that sing there, in a part with several); a note all of whose singers are in `notSung` is
+ * marked `U`, as one in a section no line sings. A part ALL of whose voices are missing is left as
+ * it is: it has no voice at all, and its instrument stands in whole (the rule that was; Core's
+ * SungVoices.Unsung of the voices that did sing answers the same for `lysc wav --singer`).
+ * The same list when nothing changes.
+ */
+export function leftToTheInstrument<T extends { N?: number; U?: boolean; W?: readonly string[] | null }>(
+    notes: readonly T[], notSung: Iterable<string>): T[] {
+    const missing = new Set(notSung);
+    const list = notes as T[];
+    if (missing.size === 0) { return list; }
+    // The tracks with a singer left: only there does a voice take the instrument's place.
+    const sings = new Set<number | undefined>();
+    for (const n of notes) {
+        if (n.W && n.W.some(k => !missing.has(k))) { sings.add(n.N); }
+    }
+    let changed = false;
+    const out = notes.map(n => {
+        if (n.U || !n.W || n.W.length === 0 || !sings.has(n.N) || n.W.some(k => !missing.has(k))) { return n; }
+        changed = true;
+        return { ...n, U: true };
+    });
+    return changed ? out : list;
+}
+
 /** Whether a `singer`'s written gender lets this voice be offered: no gender written, a voice that names none, or the same one. */
 export function fitsGender(voice: Pick<CantoriaVoice, 'gender'>, gender?: string | null): boolean {
     return !gender || !voice.gender || voice.gender === gender;

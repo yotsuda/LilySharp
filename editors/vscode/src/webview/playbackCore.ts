@@ -33,6 +33,8 @@ export interface PlaybackNote {
     K?: number;
     /** A note of a sung part in a section none of its voices sings: its instrument plays it. */
     U?: boolean;
+    /** Who sings the note's section, in a sung part with several singer lines: the voices' keys. */
+    W?: string[] | null;
 }
 
 /** A metronome beat as the server sends it: seconds, and whether it opens a bar. */

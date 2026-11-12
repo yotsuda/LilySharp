@@ -325,7 +325,7 @@ describe('the AI candidate panel\'s page script', () => {
         assert.match(page, /decided = true;\s*stopOwn\(\);/);
         assert.match(page, /if \(e\.data\.type === 'playNotes'\) \{\s*playOwn\(/);
         assert.match(page, /if \(e\.data\.type === 'playMidi'\) \{ playMidi\(/);
-        assert.match(transform, /if \(synth && synth\.script\.length > 0\) \{[\s\S]{0,1400}void panel\.webview\.postMessage\(\{\s*type: 'playNotes', which, notes,/);
+        assert.match(transform, /if \(synth && synth\.script\.length > 0\) \{[\s\S]{0,1700}void panel\.webview\.postMessage\(\{\s*type: 'playNotes', which, notes,/);
         // The plain tones are one text for the preview and the panel.
         assert.match(transform, /let playingOscs = \[\];\s*\$\{PLAIN_TONES_JS\}/);
         assert.match(fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8'), /\n {8}\$\{PLAIN_TONES_JS\}\r?\n/);

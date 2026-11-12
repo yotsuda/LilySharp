@@ -450,7 +450,7 @@ public class IncrementalReuseSoundnessTests
             nameof(Staff.RemoveEmpty), nameof(Staff.RemoveFirst), nameof(Staff.StaffAffinity),
             nameof(Staff.PerStaffKeySignature), nameof(Staff.IsTextRow), nameof(Staff.TextRowVerses),
             nameof(Staff.IsLyricsTextRow),
-        nameof(Staff.TabSourceClef), nameof(Staff.Transposition), nameof(Staff.TabNumbersOnly),
+        nameof(Staff.TabSourceClef), nameof(Staff.Transposition), nameof(Staff.TabNumbersOnly), nameof(Staff.TabCapo),
         nameof(Staff.Lines), nameof(Staff.PedalStyle), nameof(Staff.PartCombineMarks),
         };
         // CrossedIn is derived: the notes it names are items of another staff's voices, which the key holds.

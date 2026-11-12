@@ -406,4 +406,199 @@ public class GrammarEvaluation3Tests
         Assert.Single(new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(Book("@slide"))).ToXml().Descendants("slide"),
             e => (string?)e.Attribute("type") == "start");
     }
+
+    // ── The guitar score: tablature and the capo ────────────────────────────────────────────
+
+    /// <summary>The tab staff's fret numbers as the page reads them, one array an item that
+    /// prints any, each (string, fret) from the lowest string up.</summary>
+    private static (int String, int Fret)[][] TabFrets(string source)
+    {
+        var tab = Page(source).StaffGroups.SelectMany(g => g.Staves).Single(s => s.IsTab);
+        int[] tuning = LilySharp.Core.Tablature.Tunings.GetTuning(tab.Tuning!.Value);
+        int shift = LilySharp.Core.Tablature.Tunings.SoundingShift(tab.TabSourceClef, tab.Transposition);
+        (int, int) At(int midi, int? written) => LilySharp.Core.Tablature.Tunings.CalculateFret(midi + shift, tuning, written ?? 0);
+        return [.. tab.Voices[0].Measures.SelectMany(m => m.Items).Select(i => i switch
+        {
+            LilySharp.Core.Svg.Model.NoteItem { TabHidden: false } n => new[] { At(n.Midi, n.StringNumber) },
+            LilySharp.Core.Svg.Model.ChordItem c => [.. c.Notes.Select(n => At(n.Midi, n.StringNumber)).OrderByDescending(x => x.Item1)],
+            _ => [],
+        }).Where(a => a.Length > 0)];
+    }
+
+    private static string Guitar(string music, string head = "", string score = "staff g  tab g", string header = "instrument guitar")
+        => "octave absolute\n" + head + "part g { " + header + " }\nsection A { g { " + music + " } }\nform { ~A }\nscore { " + score + " }\n";
+
+    /// <summary>Under <c>capo 2</c> the tab counts its frets from the capo, as the diagram over it
+    /// does: a <c>diagram(D x32010)</c> drew x32010 with x54232 under it, and an open low E printed
+    /// 0 — behind the capo. The notes are written as they sound; one below the capo on every
+    /// string is said, by name, and left off the tab.</summary>
+    [Fact]
+    public void ACapoedTab_CountsItsFretsFromTheCapo()
+    {
+        string capoed = Guitar("diagram(D x32010)1 | <e, b, e gis b e'>1 | fis,4 e'' r2 |", "capo 2\n");
+        var frets = TabFrets(capoed);
+        // The shape as written, string 5 up to string 1 (the sixth is not played).
+        Assert.Equal([(5, 3), (4, 2), (3, 0), (2, 1), (1, 0)], frets[0]);
+        // The E chord without its open low E, each member where it sounds: open + capo + fret.
+        int[] open = [64, 59, 55, 50, 45, 40];
+        Assert.Equal([47, 52, 56, 59, 64], frets[1].Select(f => open[f.String - 1] + 2 + f.Fret));
+        Assert.All(frets[1], f => Assert.True(f.Fret >= 0));
+        Assert.Equal(frets[1].Length, frets[1].Select(f => f.String).Distinct().Count());
+        // The capo's own note is fret 0, and the top of the first string is still reached.
+        Assert.Equal([(6, 0)], frets[2]);
+        Assert.Equal([(1, 10)], frets[3]);
+        var low = Assert.Single(Said(capoed), d => d.Code == DiagnosticCodes.TabOutOfRange);
+        Assert.Contains("E2 cannot be played with the capo on fret 2", low.Message);
+        Assert.Equal('<', capoed[low.Span.Start]);    // at its chord
+
+        // Without the line the same notes are fretted from the nut, the low E open.
+        var plain = TabFrets(Guitar("diagram(D x32010)1 | <e, b, e gis b e'>1 | fis,4 e'' r2 |"));
+        Assert.Equal(6, plain[1].Length);
+        Assert.Contains((6, 0), plain[1]);
+        Assert.Equal([(6, 2)], plain[2]);
+
+        // The other pages tell the same story: MusicXML's frets (beside its <capo>), the twin's shift.
+        var xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(capoed)).ToXml();
+        Assert.Equal(["3", "2", "0", "1", "0"], xml.Descendants("fret").Take(5).Select(e => e.Value));
+        Assert.Equal("2", xml.Descendants("capo").First().Value);
+        Assert.Contains("\\transpose c bes, ", new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(capoed)));
+
+        // A bass wears no capo: the band's bass tab counts from the nut as it did.
+        static string Band(string head) => "octave absolute\n" + head + "part b { instrument bass }\nsection A { b { e,4 a, d g | } }\nform { ~A }\nscore { tab b }\n";
+        Assert.Equal(TabFrets(Band("")), TabFrets(Band("capo 2\n")));
+        Assert.DoesNotContain(Said(Band("capo 2\n")), d => d.Code == DiagnosticCodes.TabOutOfRange);
+    }
+
+    /// <summary>A member of a chord below the tab's lowest string leaves the tab, as LYS5002 says
+    /// and as a single note does: it was clamped to fret 0 of the lowest string, on top of the
+    /// member that string plays.</summary>
+    [Fact]
+    public void AChordMemberBelowTheStrings_IsLeftOffTheTab()
+    {
+        string source = Guitar("<d, a, d fis>1 |");
+        var chord = Assert.Single(TabFrets(source));
+        Assert.Equal(3, chord.Length);
+        Assert.Equal(3, chord.Select(f => f.String).Distinct().Count());
+        Assert.Contains(Said(source), d => d.Code == DiagnosticCodes.TabOutOfRange && d.Message.Contains("omitted from the tab"));
+    }
+
+    /// <summary><c>instrument guitar  tuning guitarDropD</c>: the open sixth string was "below the
+    /// range of the Guitar". The range is the tuning's strings.</summary>
+    [Fact]
+    public void ARetunedPartsRange_IsItsOwnStrings()
+    {
+        static IEnumerable<string> Range(string header, string music)
+            => Said(Guitar(music, header: header, score: "staff g")).Where(d => d.Code == DiagnosticCodes.NoteOutsideInstrumentRange).Select(d => d.Message);
+        Assert.Empty(Range("instrument guitar  tuning guitarDropD", "d,4 a, d e''' |"));
+        Assert.Contains("D2-E6", Assert.Single(Range("instrument guitar  tuning guitarDropD", "cis,4 a, d e''' |")));
+        // The top moves with the first string: drop C is a tone lower throughout.
+        Assert.Equal(2, Range("instrument guitar  tuning guitarDropC", "c,4 b,, d''' ees''' |").Count());
+        Assert.Contains("C2-D6", Range("instrument guitar  tuning guitarDropC", "b,,1 |").Single());
+        // The usual tuning is as it was.
+        Assert.Contains("E2-E6", Assert.Single(Range("instrument guitar", "d,4 e, e''' r |")));
+    }
+
+    /// <summary>A glissando is one finger along one string: its two ends were put on neighbouring
+    /// strings, the line drawn between them. A written string still decides, and notes with no
+    /// slide are chosen as they were.</summary>
+    [Fact]
+    public void AGlissando_KeepsItsTwoNotesOnOneString()
+    {
+        var slid = TabFrets(Guitar("cis'4@glissando fis' d'@glissando e' |")).Select(f => f[0]).ToArray();
+        Assert.Equal(slid[0].String, slid[1].String);
+        Assert.Equal(slid[2].String, slid[3].String);
+        Assert.Equal(5, slid[1].Fret - slid[0].Fret);
+        var slide = TabFrets(Guitar("cis'4@slide fis' r2 |")).Select(f => f[0]).ToArray();
+        Assert.Equal(slide[0].String, slide[1].String);
+        // The same notes with no slide: the strings the planner chose before.
+        var plain = TabFrets(Guitar("cis'4 fis' d' e' |")).Select(f => f[0]).ToArray();
+        Assert.Equal([(2, 2), (1, 2), (2, 3), (1, 0)], plain);
+        // A written \N wins over the slide.
+        var written = TabFrets(Guitar("cis'4@glissando\\2 fis'\\1 r2 |")).Select(f => f[0]).ToArray();
+        Assert.Equal([(2, 2), (1, 2)], written);
+        // Across a rest there is no slide to keep.
+        var apart = TabFrets(Guitar("cis'4@glissando r fis' r |")).Select(f => f[0]).ToArray();
+        Assert.Equal((1, 2), apart[1]);
+    }
+
+    /// <summary><c>&lt;c f@notehead(diamond)&gt;</c> — a stopped note and the touched fourth over it —
+    /// drew two ordinary heads; a single note's style was read.</summary>
+    [Fact]
+    public void ANoteheadOnAChordMember_IsThatMembersHead()
+    {
+        string source = "octave absolute\npart v { clef treble }\nsection A { v { <c' f'@notehead(diamond)>2 <c' f'>2@notehead(x) | } }\nform { ~A }\nscore { staff v }\n";
+        Assert.Empty(Said(source).Select(d => d.Message));
+        var chords = Page(source).StaffGroups.SelectMany(g => g.Staves).Single().Voices[0].Measures
+            .SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.ChordItem>().ToArray();
+        Assert.Equal([LilySharp.Core.Svg.Model.NoteheadStyle.Default, LilySharp.Core.Svg.Model.NoteheadStyle.Diamond], chords[0].Notes.Select(n => n.Notehead));
+        Assert.Equal(LilySharp.Core.Svg.Model.NoteheadStyle.Default, chords[0].Notehead);
+        // The chord's own mark still styles every head.
+        Assert.Equal(LilySharp.Core.Svg.Model.NoteheadStyle.Cross, chords[1].Notehead);
+        var notes = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().Descendants("note").ToArray();
+        Assert.Equal([null, "diamond", "x", "x"], notes.Select(n => (string?)n.Element("notehead")));
+        Assert.Contains("<c' \\tweak style #'diamond f'>2", new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(source)));
+    }
+
+    /// <summary><c>chordShapes { A7(b9) x02323 }</c> was refused at the parentheses (LYS9103) that
+    /// a chords row and <c>chord()</c> take: the table reads the same chord names.</summary>
+    [Theory]
+    [InlineData("A7(b9) x02323", null)]
+    [InlineData("A7(b9) x02223", "for A7(b9) lacks")]
+    [InlineData("section A { A7(b9) x02323 }", null)]
+    public void AShapeTable_TakesAParenthesisedAlteration(string entry, string? warned)
+    {
+        string source = "chordShapes { " + entry + " }\npart g { instrument guitar }\nsection A { chords h { A7(b9) | } g { a1 | } }\n"
+            + "form { ~A }\nscore { chords h  staff g }\n";
+        var said = Said(source);
+        Assert.DoesNotContain(said, d => d.Severity == DiagnosticSeverity.Error);
+        if (warned == null)
+            Assert.Empty(said.Select(d => d.Message));
+        else
+            Assert.Contains(warned, Assert.Single(said, d => d.Code == DiagnosticCodes.ChordShapeMismatch).Message);
+    }
+
+    /// <summary><c>\7</c> on six strings passed with no word.</summary>
+    [Fact]
+    public void AStringTheTuningDoesNotHave_IsSaidWithItsCount()
+    {
+        var said = Said(Guitar("d4\\7 a\\9 d'2\\2 |")).Where(d => d.Code == DiagnosticCodes.TabStringUnplayable).ToList();
+        Assert.Equal(2, said.Count);
+        Assert.Contains("there is no string 7: this tab's tuning has 6 strings", said[0].Message);
+        Assert.Contains("there is no string 9", said[1].Message);
+        Assert.DoesNotContain(Said(Guitar("d4\\6 a\\5 d'2\\2 |")), d => d.Code == DiagnosticCodes.TabStringUnplayable);
+    }
+
+    /// <summary><c>tab g tuning guitarDropD</c> asked for a part named 'tuning'.</summary>
+    [Fact]
+    public void ATabItemsTuningWord_IsToldWhereTheTuningStands()
+    {
+        var said = Said(Guitar("d1 |", score: "staff g  tab g tuning guitarDropD")).Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
+        Assert.Contains(said, d => d.Message.Contains("A tab item has no 'tuning' word") && d.Message.Contains("'tab guitarDropD g'"));
+        Assert.Contains(said, d => d.Message.Contains("'guitarDropD' is a tuning's name"));
+        Assert.DoesNotContain(said, d => d.Message.Contains("Undefined part: 'tuning'"));
+        // The spelling the message names is read.
+        Assert.Empty(Said(Guitar("d,1 |", score: "staff g  tab guitarDropD g")).Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Message));
+        // A part that IS named tuning is a part.
+        Assert.DoesNotContain(Said("octave absolute\npart g { instrument guitar }\npart tuning { clef treble }\nsection A { g { d1 | } tuning { c'1 | } }\n"
+            + "form { ~A }\nscore { staff g  tab g tuning }\n"), d => d.Code == DiagnosticCodes.UndefinedPart);
+    }
+
+    /// <summary>A table shape with no instrument word is tried on every fretted tuning of the file:
+    /// <c>G 320003</c> "sounds F G B D, which is G7/F" because another part is in drop D, and the
+    /// message did not say whose tuning that was.</summary>
+    [Fact]
+    public void AShapeThatFailsOnAnotherPartsTuning_NamesThePartAndTheTuning()
+    {
+        static string Book(string entry) => "chordShapes { " + entry + " }\npart g { instrument guitar  tuning guitarDropD }\npart h { instrument guitar }\n"
+            + "section A { chords k { G | } g { g1 | } h { g1 | } }\nform { ~A }\nscore { chords k  staff h }\n";
+        var warned = Assert.Single(Said(Book("G 320003")), d => d.Code == DiagnosticCodes.ChordShapeMismatch);
+        Assert.Contains("Tried on guitarDropD, the tuning of part 'g'", warned.Message);
+        Assert.Contains("'G guitar 320003'", warned.Message);
+        // The entry the message names is the guitar's alone.
+        Assert.DoesNotContain(Said(Book("G guitar 320003")), d => d.Code == DiagnosticCodes.ChordShapeMismatch);
+        // A file with one tuning says nothing more than it did.
+        var one = Assert.Single(Said("chordShapes { G 320002 }\npart h { instrument guitar }\nsection A { chords k { G | } h { g1 | } }\nform { ~A }\nscore { chords k  staff h }\n"),
+            d => d.Code == DiagnosticCodes.ChordShapeMismatch);
+        Assert.DoesNotContain("Tried on", one.Message);
+    }
 }

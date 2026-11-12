@@ -1035,6 +1035,20 @@ public static class RenderSpecParser
         // its notes are fretted, never what the part sounds or its staff prints.
         var transposition = ResolvePartTransposition(tab, voiceName, tuning)
             + Semantics.TabRenderVocabularyValidator.OctaveSemitones(tab);
+        // …and the file's capo (`capo 2`), which the tab counts its frets FROM: 0 is the capo,
+        // as on the diagram over it (found 2026-11-13, grammar evaluation 3: under `capo 2` a
+        // `diagram(D x32010)` drew x32010 and the tab under it x54232, and an open low E printed
+        // 0 — behind the capo — with "Capo 2" at the head). The notes are written at the pitch
+        // they sound, as the chords are, so the capo comes off the shift the frets are read with
+        // (as it does for a shape's notes, MidiExporter's and the twin's `shift - Capo`), and
+        // every reader of the tab's frets follows: the page, the spacing, MusicXML (whose
+        // <capo> says the same), the twin.
+        // LILYSHARP-OWN: LilyPond's TabStaff has no capo; standard tablature counts from it.
+        var root = (SyntaxNode)tab;
+        while (root.Parent != null)
+            root = root.Parent;
+        int capo = Tablature.Tunings.CapoOn(tuning, Semantics.CapoDirective.CapoOf(root));
+        transposition -= capo;
         var staffSpec = new StaffSpec(sourceClef, voiceName, Sounds: tab.SoundsToken?.Text);
         // The STYLE: an explicit `as` wins; otherwise the score answers. A tab beside a
         // notation staff of the same part is fret digits only, because that staff already
@@ -1042,7 +1056,7 @@ public static class RenderSpecParser
         // alone has to carry them itself (user decision, 2026-08-29 — see
         // StaffRenderedParts for what counts as "on a notation staff").
         bool numbersOnly = explicitStyle ?? staffParts.Contains(voiceName);
-        return new TabStaffSpec(staffSpec, tuning, transposition, numbersOnly);
+        return new TabStaffSpec(staffSpec, tuning, transposition, numbersOnly) { Capo = capo };
     }
 
     /// <summary>

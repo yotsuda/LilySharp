@@ -1096,7 +1096,12 @@ internal sealed partial class Parser
             if (Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DecimalLiteral)
                 || Check(SyntaxKind.StringLiteral) || IsWordLikeToken(Current)
                 || Check(SyntaxKind.Minus) || Check(SyntaxKind.Plus) || Check(SyntaxKind.Slash)
-                || (Check(SyntaxKind.BadToken) && Current.Text == "#"))
+                || (Check(SyntaxKind.BadToken) && Current.Text == "#")
+                // A symbol's parenthesised alterations — A7(b9), C7(#9,b13) — as a chords row
+                // and `chord()` take them (found 2026-11-13, grammar evaluation 3: the table
+                // refused '(' and ')', LYS9103). Glued back into the symbol with the rest, and
+                // read by the one reader of chord names (ChordStructure.TryParseChordEntry).
+                || Check(SyntaxKind.OpenParen) || Check(SyntaxKind.CloseParen) || Check(SyntaxKind.Comma))
             {
                 tokens.Add(Advance());
                 continue;

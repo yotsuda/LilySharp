@@ -71,9 +71,16 @@ public record TabTieStringWarning(
 /// string) or above the 24th fret of every string. Almost always an octave slip.
 /// <see cref="SourcePosition"/> points at the note.
 /// </summary>
+/// <param name="SourcePosition">The note.</param>
+/// <param name="BelowRange">True = below the lowest string; false = above the top fret.</param>
+/// <param name="Capo">The fret the tab's capo is on, 0 for none: with one, "below the lowest
+/// string" is below the capo on it, and the message says so.</param>
+/// <param name="Midi">The pitch the note sounds (with a capo, for the message's note name).</param>
 public record TabRangeWarning(
     int SourcePosition,
-    bool BelowRange   // true = below the lowest string; false = above the top fret
+    bool BelowRange,
+    int Capo = 0,
+    int Midi = 0
 );
 
 /// <summary>
@@ -92,7 +99,9 @@ public readonly record struct TabFit(string Voice, TuningType Tuning, IReadOnlyL
 /// </summary>
 /// <remarks>LILYPOND-REF: scm/translation-functions.scm:745-756 determine-frets-and-strings —
 /// handle-negative 'recalculate, "Requested string for pitch requires negative fret".</remarks>
-public record TabStringUnplayableWarning(int SourcePosition, int StringNumber, int Fret);
+/// <param name="StringCount">0 for that; for a string number the tuning does not HAVE
+/// (<c>\7</c> on six strings), how many strings it has — the fret then says nothing.</param>
+public record TabStringUnplayableWarning(int SourcePosition, int StringNumber, int Fret, int StringCount = 0);
 
 /// <summary>Two notes of a chord written on one string, both playable on it (LYS1063): both are
 /// kept there as written, so the tab draws two frets on one line. <see cref="SourcePosition"/>

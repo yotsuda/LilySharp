@@ -649,9 +649,15 @@ public sealed partial class MeasureCollector
                         memberRt = la;
                 }
 
+            // A member's own `@notehead(…)` (found 2026-11-13, grammar evaluation 3:
+            // `<c f@notehead(diamond)>2` — a touched fourth over a stopped note, a string
+            // player's artificial harmonic — drew two ordinary heads, while a single note's
+            // style was read). The chord's own `@notehead` still styles every member.
+            var memberHead = ExtractNoteheadStyle(pitch);
             notes.Add(new ChordNoteInfo(
                 staffPosition, accidental,
                 IsCourtesy: memberCourtesy || styleCourtesy,
+                Notehead: memberHead,
                 Fingering: pitchFingering,
                 StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
@@ -671,7 +677,7 @@ public sealed partial class MeasureCollector
                 WrittenPitch: pitch.QuarterOffset != 0 ? 0
                     : WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
             members.Add(new ResolvedChordMember(staffPosition, rp.DisplayStep, rp.DisplayAlteration,
-                rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
+                rp.DisplayOctave, memberHead, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
 
         // diagram(SYMBOL SHAPE): the shape's strings on the part's tuning, ABSOLUTE and each with

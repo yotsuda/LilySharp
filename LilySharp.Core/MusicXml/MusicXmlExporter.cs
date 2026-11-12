@@ -759,6 +759,10 @@ public sealed class MusicXmlExporter
             if (part == null || part.Tab != null)
                 continue;
             part.Tab = new MusicXmlTab(tuning.ToArray(), notationParts.Contains(tabSpecs[t].Staff.VoiceName));
+            // The tab's frets count from the capo (2026-11-13), so its <staff-details> says
+            // where the capo is, whether or not the part carries a chord frame (WriteCapo).
+            if (staff.TabCapo > 0 && part.Measures.Count > 0)
+                (part.Measures[0].Attributes ??= new MusicXmlAttributes { Divisions = null }).Capo = staff.TabCapo;
 
             var bySource = byPart[part];
             var seen = new Dictionary<int, int>();
@@ -4523,6 +4527,9 @@ public sealed class MusicXmlExporter
                 // MusicXML parenthesizes a HEAD, not a chord: a whole chord's one pair
                 // (ChordItem.Parenthesized) is each member's here.
                 NoteheadParentheses = WritesParenthesize(chord.Articulations) || WritesParenthesize(pitch.Articulations),
+                // A member's own head style, else the chord's (found 2026-11-13: neither was
+                // written — `<c f@notehead(diamond)>`, a harmonic's touched note, lost its diamond).
+                Notehead = NoteheadFromMarks(pitch.Articulations) ?? NoteheadFromMarks(chord.Articulations),
             };
 
             // The member's own <technical> marks: its fingering, and its string number

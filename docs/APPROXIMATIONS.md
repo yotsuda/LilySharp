@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 345 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **471** | |
+| `OWN` | 349 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **475** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（345 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（349 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -301,6 +301,7 @@
 - **`MidiForFile`** (). LILYSHARP-OWN: LilyPond writes no singer.
 ### `LilySharp.Core/Midi/SungVoices.cs`
 - **`SungVoices`** drifted from the page). LILYSHARP-OWN: LilyPond writes no sound.
+- **`SungVoices.SungBy`** LILYSHARP-OWN.
 - **`SungVoices.Placed`** LILYSHARP-OWN: no engine is asked — the notes are moved before any voice sees them, so
 - **`SungVoices.Step`** LILYSHARP-OWN, a reading and not a fact: a note that is NOT of the scale is taken for
 ### `LilySharp.Core/Music/ArpeggioSpread.cs`
@@ -424,6 +425,8 @@
 - **`GraceBodySupport.IsCarriedGesture`** LILYSHARP-OWN: LilyPond has no scoop or plop, and its guitar bend is the unported
 - **`GraceBodySupport.IsCarriedTabTechnique`** LILYSHARP-OWN: the letters are Lily#'s own tablature ink (LilyPond's \rightHandFinger is
 - **`GraceBodySupport.IsCarriedTodo`** LILYSHARP-OWN: an editor's mark with no LilyPond counterpart (docs/todo-memo-design.md);
+### `LilySharp.Core/Semantics/InstrumentRangeValidator.cs`
+- **`InstrumentRangeValidator.Retuned`** LILYSHARP-OWN.
 ### `LilySharp.Core/Semantics/LayoutPlan.cs`
 - **`ChordNameMode`** LILYSHARP-OWN: LilyPond 2.26 has no capo property on its ChordNames context (its
 - **`ChordListKey`** LILYSHARP-OWN: LilyPond has no such list; the twin writes a \markup line of
@@ -489,6 +492,8 @@
 - **`PartCombiner.WithVoiceDirection`** the mark wrote .up (owner's decision 2026-10-17; LILYSHARP-OWN — the preview's ink).
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **`StaffSpec.MaxLines`** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
+### `LilySharp.Core/Svg/Collector/RenderSpecParser.cs`
+- **`RenderSpecParser.ParseTab`** LILYSHARP-OWN: LilyPond's TabStaff has no capo; standard tablature counts from it.
 ### `LilySharp.Core/Svg/Collector/ScoreAssembler.cs`
 - **`ScoreAssembler`** omission. LILYSHARP-OWN: a `|:` that opens the piece IS printed. LilyPond's default
 ### `LilySharp.Core/Svg/Collector/SectionPlayCarry.cs`
@@ -762,6 +767,7 @@
 ### `LilySharp.Core/Tablature/TabFingeringPlanner.cs`
 - **`TabFingeringPlanner`** LILYSHARP-OWN, USER APPROVED (2026-09-14). A dynamic programme (Viterbi) over states
 ### `LilySharp.Core/Tablature/Tunings.cs`
+- **`Tunings.CapoOn`** the guitar's, and its bass tab still counts from the nut. LILYSHARP-OWN (2026-11-13,
 - **`Tunings.HandSpan`** LILYSHARP-OWN, USER SPECIFIED (2026-09-14). A bass — electric or double — is fingered
 - **`Tunings.OneFingerPerFretSpan`** LILYSHARP-OWN, USER SPECIFIED (2026-09-14): "on a guitar the four fingers play four
 - **`Tunings.LowPositionTop`** LILYSHARP-OWN, USER SPECIFIED (2026-09-14): "low position is the open string up to about

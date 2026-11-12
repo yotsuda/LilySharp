@@ -229,6 +229,14 @@ public sealed record Staff(
     public bool TabNumbersOnly { get; init; }
 
     /// <summary>
+    /// The fret a capo is on for this tab staff, 0 for none (the file's <c>capo N</c>;
+    /// <see cref="Tablature.Tunings.CapoOn"/>). The tab's fret numbers are counted FROM it —
+    /// that is already in <see cref="Transposition"/>, which every fret reader reads — and
+    /// this says so to whoever words a message (a note below the capo).
+    /// </summary>
+    public int TabCapo { get; init; }
+
+    /// <summary>
     /// Creates a tablature staff with the specified tuning, carrying EVERY voice of its
     /// part: LilyPond's TabStaff holds TabVoices the same way Staff holds Voices, so a
     /// <c>voice { } { }</c> span's second voice prints fret digits too. Until 2026-08-09

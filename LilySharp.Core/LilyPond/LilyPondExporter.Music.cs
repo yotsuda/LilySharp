@@ -1263,6 +1263,16 @@ public sealed partial class LilyPondExporter
             // member, so it stands before the pitch, not among the post-events.
             if (p.Articulations.Any(a => a is ArticulationSyntax pa && IsParenthesize(pa)))
                 sb.Append("\\parenthesize ");
+            // A member's own `@notehead(diamond)` is a tweak of that one head (found 2026-11-13:
+            // the twin, as the page, drew the member plain).
+            // LILYPOND-REF: Notation Reference 5.3.4 "The \tweak command" — `<c \tweak style #'diamond f>`
+            //   changes one note head of a chord, where an \override would change them all.
+            foreach (var a in p.Articulations)
+                if (a is MusicMarkSyntax nh && Semantics.AnnotationValues.Notehead(nh) is { } memberStyle)
+                {
+                    sb.Append("\\tweak style #'").Append(memberStyle == "x" ? "cross" : memberStyle).Append(' ');
+                    break;
+                }
             if (first && !_octaveAbsolute)
             {
                 // The root, written where Lily# sounds it: the anchor.

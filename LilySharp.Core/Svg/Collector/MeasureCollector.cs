@@ -2377,7 +2377,7 @@ public sealed partial class MeasureCollector
                                 .ToHashSet();
                             var resolved = st with { Voices = st.Voices.SetItem(0, TabResolver.RemoveAccidentals(
                                 _tabResolver.ResolveTabStrings(st.PrimaryVoice, st.Tuning.Value,
-                                    st.TabSourceClef, st.Transposition, falls))) };
+                                    st.TabSourceClef, st.Transposition, falls, st.TabCapo))) };
                             bool tabOnly = true;
                             foreach (var v in resolved.Voices)
                                 if (notationParts.Contains(v.Name))

@@ -505,9 +505,9 @@ public sealed partial class LilyPondExporter
     /// <c>TabResolver</c> reads — rather than restated here.
     /// </summary>
     /// <remarks>
-    /// Only whole octaves are written (<c>\transpose c c,</c>), which is every shift the
-    /// tunings and clefs produce. Anything else is REPORTED rather than dropped: a twin
-    /// silently fretting other pitches is the shape that hid this hole in the first place.
+    /// A whole octave (<c>\transpose c c,</c>) is every shift the tunings and clefs produce;
+    /// the file's capo, which the tab counts its frets from, adds its own
+    /// (<c>RenderSpecParser.ParseTab</c>), and so the step is written whatever it is.
     /// </remarks>
     private void AppendTabTranspose(StringBuilder sb, PartDeclarationSyntax? part, string? partName,
         Svg.Collector.TabStaffSpec? tabSpec = null)
@@ -518,16 +518,18 @@ public sealed partial class LilyPondExporter
                     + (tabSpec?.Transposition ?? PartTransposition(part));
         if (shift == 0)
             return;
-        if (shift % 12 != 0)
-        {
-            _warnings.Add($"tab part '{partName ?? "?"}' sounds {shift} semitones from what is "
-                          + "written, which is not a whole octave — the twin frets the written "
-                          + "pitch and its fret numbers will not be the score's");
-            return;
-        }
-        sb.Append("\\transpose c ").Append('c')
-          .Append(new string(shift < 0 ? ',' : '\'', Math.Abs(shift) / 12)).Append(' ');
+        // Any shift is written since 2026-11-13: a capo's is not a whole octave (`capo 2` frets
+        // two semitones lower, `\transpose c bes,`), and until then such a shift was a warning
+        // and a twin fretting the written pitch. A tab draws no accidental, so how the step is
+        // spelled shows nowhere.
+        int octave = (int)Math.Floor(shift / 12.0), step = shift - 12 * octave;
+        sb.Append("\\transpose c ").Append(TabTransposeSteps[step])
+          .Append(new string(octave < 0 ? ',' : '\'', Math.Abs(octave))).Append(' ');
     }
+
+    // The twelve steps above c that AppendTabTranspose writes, by semitone.
+    private static readonly string[] TabTransposeSteps =
+        ["c", "cis", "d", "ees", "e", "f", "fis", "g", "aes", "a", "bes", "b"];
 
     /// <summary>
     /// The part's <c>instrument</c> PRESET — the bare words, lowercased — or null when the

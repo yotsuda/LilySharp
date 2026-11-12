@@ -85,10 +85,26 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
             // A score's `staff NAME` may name a singer: the part is then made of the singer's lines
             // (Editing.SingerParts), which says, at the item, what it could not make (LYS4060).
             if (!_definedParts.Contains(reference.Text) && reference.Parent is not StaffRenderSyntax { IsSinger: true })
-                _diagnostics.Error(reference.Span, DiagnosticCodes.UndefinedPart,
-                    $"Undefined part: '{reference.Text}'. Define it with a section body "
-                    + $"('{reference.Text} {{ … }}' in a section) or a header "
-                    + $"('part {reference.Text} {{ … }}').");
+            {
+                // `tab g tuning guitarDropD` (found 2026-11-13, grammar evaluation 3): the words
+                // after a tab's part are read as parts, so the writer was told to define a part
+                // named 'tuning'. What a tab item takes is said instead, with its spelling.
+                if (reference.Text == "tuning" && reference.Parent is TabRenderSyntax { PartToken: { } tabPart } && tabPart != reference)
+                    _diagnostics.Error(reference.Span, DiagnosticCodes.UndefinedPart,
+                        $"A tab item has no 'tuning' word: the tuning's name stands before the part - 'tab guitarDropD {tabPart.Text}' - "
+                        + $"or the part says it once for every score ('part {tabPart.Text} {{ tuning guitarDropD }}').");
+                else if (Tablature.Tunings.Names.Contains(reference.Text) && reference.Parent is not TabRenderSyntax)
+                    _diagnostics.Error(reference.Span, DiagnosticCodes.UndefinedPart,
+                        $"Undefined part: '{reference.Text}'. Define it with a section body "
+                        + $"('{reference.Text} {{ … }}' in a section) or a header "
+                        + $"('part {reference.Text} {{ … }}'). ('{reference.Text}' is a tuning's name: a tab item "
+                        + $"takes it before its part, 'tab {reference.Text} PART'.)");
+                else
+                    _diagnostics.Error(reference.Span, DiagnosticCodes.UndefinedPart,
+                        $"Undefined part: '{reference.Text}'. Define it with a section body "
+                        + $"('{reference.Text} {{ … }}' in a section) or a header "
+                        + $"('part {reference.Text} {{ … }}').");
+            }
 
         ValidateUnnamedPart(root);
 

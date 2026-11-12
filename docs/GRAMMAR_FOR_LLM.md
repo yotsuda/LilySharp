@@ -1316,6 +1316,12 @@ score { staff melody }
 frets itself: write a string number (`\4`) only where a particular string is asked for. Two notes
 of a chord written on one string warn (LYS1063): `<e'\1 b\2>`, not `<e' g'>\1`, which numbers both.
 One pitch twice in a chord warns too (LYS1064), unless on two strings: `<e'\1 e\2>`.
+A `@glissando` / `@slide` keeps its two notes on one string where one string plays both (a
+written `\N` still decides); a slur does not. A string the tuning does not have (`\7` on a
+guitar) warns and is chosen again (LYS5003). The tab's tuning is the part's (`part g { tuning
+guitarDropD }`, which also moves the part's range: its low D is in range) or the word BEFORE the
+part in the score — `tab guitarDropD g`, never `tab g tuning guitarDropD`. Under the file's
+`capo N` the frets count from the capo (see `capo`).
 
 ```
 part guitar { instrument guitar }          // added: instrument guitar
@@ -1656,7 +1662,14 @@ layout {
   the pressed chord), the printed name is the pressed chord's (`C`), spelled in the key N
   semitones below the key at the bar, "Capo N" stands at the head of a score that prints
   diagrams or pressed names, and a `chord(Eb x32010)` / `diagram(Eb x32010)` item sounds N
-  semitones higher in every score. There is no `capo auto`.
+  semitones higher in every score. There is no `capo auto`. NOTES under a capo are written,
+  like the chords, at the pitch they SOUND (the staff and the MIDI are what is written); a
+  `tab` counts its frets FROM the capo — 0 is the capo, as on the diagrams — so with `capo 2`
+  a sounding `fis,` is fret 0 of the sixth string and `diagram(D x32010)` shows x32010 on the
+  tab too. A note below the capo on every string (an open low `e,` under `capo 2`) cannot be
+  played: it warns by name (LYS5002) and is left off the tab. The capo is the FILE's, one for
+  every fretted part — `part g { capo 2 }` is not a property (a bass's tab alone ignores the
+  capo and counts from the nut).
 - `chordNames shape` (the default) names the pressed chord under a capo, `sounding` the
   sounding chord, `both` both — `E♭m7 (Cm7)`. Without a capo all three print the same name.
 - `chordList true` puts every chord the score names at its head under the title, each once in
