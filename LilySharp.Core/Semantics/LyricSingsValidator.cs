@@ -243,6 +243,11 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         var listed = LyricBindings.TracksOfPart(root, part);
         if (listed.Count == 0 || listed.Contains(track))
             return;
+        // Words Lily# makes from the notes — the hum, the note names — are no track for a part
+        // to list (evaluation 2026-11-12: `singer taro male on him sings hum in Verse` warned
+        // that part him did not list 'hum', and adding it there is an error).
+        if (GeneratedLyrics.IsGenerated(track))
+            return;
         // The staff of what a singer sings is a part Lily# makes (Editing.SingerParts): its
         // header is not the writer's to add a track to, and its name is not the writer's to
         // read (owner's report 2026-11-12: `lyrics solfege` under `staff alice` warned that
@@ -340,6 +345,53 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                 _diagnostics.Warning(node.Keyword.Span, DiagnosticCodes.SingerRepeated,
                     $"This voice already sings '{line.Track}' on '{part}'.");
             CheckPlace(root, node);
+        }
+        WarnWhereOneSingerIsSaidTwoWays(root, lines);
+    }
+
+    /// <summary>What a singer line says of its singer that cannot be so (evaluation 2026-11-12,
+    /// both silent until then): a language its words are not in (LYS4063), and — of lines of
+    /// one name, in one scope — a second gender, or a second voice in a language (LYS4062).</summary>
+    private void WarnWhereOneSingerIsSaidTwoWays(SyntaxNode root, IReadOnlyList<LyricSinger.Line> lines)
+    {
+        var languageOfTrack = LyricLanguage.ReaderOf(root);
+        var sungIn = LyricSinger.SungLanguageReaderOf(root);
+        var tracks = root.DescendantNodes<LyricsBlockSyntax>().Select(b => b.VoiceName).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        static string NameOf(string code) => LyricLanguage.Names.FirstOrDefault(n => LyricLanguage.CodeOf(n) == code) ?? code;
+        foreach (var line in lines)
+        {
+            if (line.Node.LanguageToken is { } said && LyricLanguage.CodeOf(said.Text) is { } code
+                && tracks.Contains(line.Track) && languageOfTrack(line.Track) is var words && words != code)
+                _diagnostics.Warning(said.Span, DiagnosticCodes.SingerLanguageNotTheWords,
+                    $"The words this line sings ('{line.Track}') are in {NameOf(words)}, not {NameOf(code)}, and are sung as {NameOf(words)}. "
+                    + $"Say the words' language where they are written ('lyrics {line.Track} language {NameOf(code)}'), or drop '{said.Text}' here.");
+        }
+        foreach (var singer in lines.Where(l => l.Person != null).GroupBy(l => (l.Score, l.Person)))
+        {
+            SyntaxTokenNode? gender = null;
+            var voices = new List<(string? Language, string Voice)>();
+            foreach (var line in singer)
+            {
+                var node = line.Node;
+                if (node.GenderToken is { } g)
+                {
+                    if (gender == null)
+                        gender = g;
+                    else if (!string.Equals(gender.Text, g.Text, StringComparison.OrdinalIgnoreCase))
+                        _diagnostics.Warning(g.Span, DiagnosticCodes.SingerSaidTwoWays,
+                            $"'{singer.Key.Person}' is {gender.Text.ToLowerInvariant()} on another line: lines of one name are one singer. Give this one another name if it is another singer.");
+                }
+                if (LyricSinger.VoiceOf(node) is not { } voice || node.NameToken is not { } at)
+                    continue;
+                string? language = sungIn(line);
+                var other = voices.FirstOrDefault(v => v.Voice != voice && (v.Language == null || language == null || v.Language == language));
+                if (other.Voice != null)
+                    _diagnostics.Warning(at.Span, DiagnosticCodes.SingerSaidTwoWays,
+                        $"'{singer.Key.Person}' sings with \"{other.Voice}\" on another line"
+                        + (language != null ? $", in {NameOf(language)} too" : "")
+                        + ": lines of one name are one singer, with one voice in a language. Leave the voice out here to sing with that one, or give this singer another name.");
+                voices.Add((language, voice));
+            }
         }
     }
 

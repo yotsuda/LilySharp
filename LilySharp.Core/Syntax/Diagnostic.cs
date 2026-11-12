@@ -1666,6 +1666,14 @@ public static class DiagnosticCodes
     /// (docs/lyrics-singer-design.md §13).</summary>
     public const string SingerNamedAsPart = "LYS4061";
 
+    /// <summary>Lines of one singer's name that say two genders, or two voices in one language
+    /// (a warning): one of them is a slip, or they are two singers.</summary>
+    public const string SingerSaidTwoWays = "LYS4062";
+
+    /// <summary>A singer line that says a language its words are not in (a warning):
+    /// <c>singer aya english on her</c> where her words are Japanese.</summary>
+    public const string SingerLanguageNotTheWords = "LYS4063";
+
     /// <summary><c>singer … sings NAME</c> where no lyrics track has that name.</summary>
     public const string SingerWordsUnknown = "LYS4042";
 

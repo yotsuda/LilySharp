@@ -331,7 +331,11 @@ SingerValue    = [ SingerName ] , { SingerGender | LanguageName } , [ String ] ;
                     a gender nor a language is LYS4040. *)
 SingerName     = Identifier ;   (* the singer's OWN name: a word that is no gender, or the
                                    first of two words. Lines of one name are one singer — the
-                                   voice said on one is the others' too — and a score prints
+                                   voice said on one is the others' too, where they sing the
+                                   language that line sings (a voice is a voice of a language),
+                                   and so is the gender. Two genders, or two voices in one
+                                   language, under one name are a warning (LYS4062), as is a
+                                   language the line's words are not in (LYS4063) — and a score prints
                                    what a named singer sings ('staff NAME' and 'lyrics NAME';
                                    a part's name is LYS4061, but for the part that is the
                                    singer's notes written out, sung as it stands;

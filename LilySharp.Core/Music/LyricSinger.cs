@@ -343,12 +343,43 @@ public static class LyricSinger
                     lines[i] = line with { Track = fits };
             }
         }
-        // Lines of one name are one singer: the voice is said on one of them and is the others' too.
-        for (int i = 0; i < lines.Count; i++)
-            if (lines[i] is { Person: { } person, Singer: null }
-                && lines.FirstOrDefault(l => l.Person == person && l.Singer != null) is { } named)
-                lines[i] = lines[i] with { Singer = named.Singer };
+        // Lines of one name are one singer: the voice is said on one of them and is the others' too
+        // — in the language that line sings, for a voice is a voice of a language: she who sings
+        // the verse in Japanese with one voice sings the English chorus with another, or with
+        // the one her gender picks (evaluation 2026-11-12: a line that wrote `female` again had
+        // lost the voice, the gender standing in for it). The gender is hers on every line.
+        if (lines.Any(l => l.Person != null))
+        {
+            var languageOf = SungLanguageReaderOf(root);
+            var said = lines.ToList();
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (lines[i] is not { Person: { } person } line || VoiceOf(line.Node) != null)
+                    continue;
+                string? language = languageOf(line);
+                if (said.FirstOrDefault(l => l.Person == person && VoiceOf(l.Node) != null
+                        && (language == null || languageOf(l) is not { } other || other == language)) is { } named)
+                    lines[i] = line with { Singer = named.Singer };
+                else if (line.Singer == null && said.FirstOrDefault(l => l.Person == person && l.Node.GenderToken != null) is { } gendered)
+                    lines[i] = line with { Singer = gendered.Node.GenderToken!.Text };
+            }
+        }
         return lines;
+    }
+
+    /// <summary>The voice a singer line names (<c>"neutrino/MERROW"</c>), or null: a line that
+    /// says a gender alone names none.</summary>
+    public static string? VoiceOf(SingerDeclarationSyntax line)
+        => line.NameToken is { } name && ValueOf(name.Text) is { Length: > 0 } voice ? voice : null;
+
+    /// <summary>A reader of the language a singer line sings in: the one it says, else its
+    /// words' — and null for words made from the notes (a hum is of no language), which go with
+    /// any.</summary>
+    public static Func<Line, string?> SungLanguageReaderOf(SyntaxNode root)
+    {
+        var languageOf = LyricLanguage.ReaderOf(root);
+        return line => LyricLanguage.CodeOf(line.Node.LanguageToken?.Text)
+            ?? (GeneratedLyrics.IsGenerated(line.Track) ? null : languageOf(line.Track));
     }
 
     /// <summary>The one part every score prints <paramref name="track"/> under, or null.</summary>

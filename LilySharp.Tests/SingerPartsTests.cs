@@ -254,9 +254,10 @@ public class SingerPartsTests
         Assert.Empty(said.Select(d => d.Message));
         Assert.Empty(SingerParts.OwnOf(SemanticValidation.Run(tree), tree.Text).Select(d => d.Message));
 
-        // …while a part the file writes is still asked.
+        // …and the note names are asked of no part: they are made from the notes, and a part
+        // cannot list them (the evaluation of the same day; PartOwnWordsTests has the rest).
         var plain = SyntaxTree.Parse(Book(Band, "score { staff lead  lyrics solfege }"));
-        Assert.Contains(SemanticValidation.Run(plain), d => d.Code == DiagnosticCodes.TrackNotListedByPart);
+        Assert.DoesNotContain(SemanticValidation.Run(plain), d => d.Code == DiagnosticCodes.TrackNotListedByPart);
     }
 
     /// <summary>Owner's question 2026-11-12 (how a score has alice sing solfege): a singer line

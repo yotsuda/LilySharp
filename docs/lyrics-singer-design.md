@@ -332,8 +332,13 @@ the singer gets a name, and the score names the singer.
 - `singer NAME [male|female] ["engine/voice"] sings …`: a word before `sings` that is no
   gender is the singer's own name; of two words the first is the name and the second the
   gender. Lines of one name are ONE singer: the voice is said on one of them and is the
-  others' too (`singer alice sings on lead up 3 in Chorus` on a second line). A line with no
-  name sings as before and is not printed.
+  others' too (`singer alice sings on lead up 3 in Chorus` on a second line) — where they
+  sing the language that line sings, for a voice is a voice of a language; a line that says
+  the gender again keeps the voice, and a line with no gender takes hers (2026-11-12, after
+  the evaluation scores). Two genders, or two voices in one language, under one name in one
+  scope are a warning (LYS4062); a language the line's words are not in is one too (LYS4063).
+  Words made from the notes (`hum`, `solfege`) are of no language and are not asked of the
+  part (no LYS4055). A line with no name sings as before and is not printed.
 - `staff NAME` in a score (and in a staff group), where NAME is a singer and no part, is the
   staff of what that singer sings: the notes of the singer's lines, moved as they say, in the
   sections they say; whole bars of rest where the singer does not sing. It is a staff item

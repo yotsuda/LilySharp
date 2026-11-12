@@ -186,6 +186,54 @@ public class PartOwnWordsTests
         Assert.DoesNotContain(Validate("part sop { lyrics words }\n" + Music + "singer sings words on alt\nscore { staff alt  lyrics words }\n"), d => d.Code == DiagnosticCodes.TrackNotListedByPart);
     }
 
+    /// <summary>Evaluation 2026-11-12: `singer taro male on him sings hum` warned that part him
+    /// "does not list lyrics 'hum'" and told the writer to add it — which is an error. The hum
+    /// and the note names are made from the notes: no part lists them.</summary>
+    [Theory]
+    [InlineData("singer on alt sings hum\nscore { staff sop  staff alt }\n")]
+    [InlineData("singer on alt sings solfege\nscore { staff sop  staff alt }\n")]
+    [InlineData("score { staff sop  staff alt  lyrics solfege }\n")]
+    [InlineData("score { staff sop  lyrics solfege on alt  staff alt }\n")]
+    public void WordsMadeFromTheNotes_AreNotWarned(string rest) =>
+        Assert.DoesNotContain(Validate(Parts + Music + rest), d => d.Code == DiagnosticCodes.TrackNotListedByPart);
+
+    private const string TwoTongues = "language english\npart her { lyrics jp  lyrics en }\npart him { clef bass }\n"
+        + "section Verse { her { e'4 e d c | } him { c4 c b a | } lyrics jp language japanese { あ さ の み | } }\n"
+        + "section Chorus { her { g'4 g a g | } him { e4 e f e | } lyrics en { Sing it o- ver, | } }\nform { Verse Chorus }\n";
+
+    /// <summary>Evaluation 2026-11-12, both silent until then: lines of one name that say two
+    /// genders or two voices in one language (LYS4062), and a language the line's words are
+    /// not in (LYS4063). A voice a language is one singer's as it stands.</summary>
+    [Theory]
+    [InlineData("singer aya female on her in Verse\nsinger aya male on her sings jp up 3 in Verse\n", DiagnosticCodes.SingerSaidTwoWays, "'aya' is female on another line")]
+    [InlineData("singer aya \"a/b\" on her in Chorus\nsinger aya \"c/d\" on her sings en up 3 in Chorus\n", DiagnosticCodes.SingerSaidTwoWays, "sings with \"a/b\" on another line, in english too")]
+    [InlineData("singer aya \"a/b\" on him sings hum\nsinger aya \"c/d\" on her in Chorus\n", DiagnosticCodes.SingerSaidTwoWays, "sings with \"a/b\"")]
+    [InlineData("singer taro male english on her sings jp in Verse\n", DiagnosticCodes.SingerLanguageNotTheWords, "are in japanese, not english")]
+    public void WhatCannotBeSoOfOneSinger_IsWarned(string lines, string code, string says)
+    {
+        var d = Assert.Single(Validate(TwoTongues + lines + "score { staff her  lyrics jp  lyrics en  staff him }\n"), d => d.Code is DiagnosticCodes.SingerSaidTwoWays or DiagnosticCodes.SingerLanguageNotTheWords);
+        Assert.Equal(code, d.Code);
+        Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+        Assert.Contains(says, d.Message);
+    }
+
+    [Theory]
+    [InlineData("singer aya female japanese \"a/b\" on her in Verse\nsinger aya female english \"c/d\" on her in Chorus\n")]   // a voice a language
+    [InlineData("singer aya female \"a/b\" on her in Verse\nsinger aya female on her in Chorus\n")]
+    [InlineData("singer aya female \"a/b\" on her in Verse\nscore x { singer aya male \"c/d\" on her in Verse\n staff her }\n")]   // another score's own line
+    public void OneSingerSaidOneWay_IsSilent(string lines) =>
+        Assert.DoesNotContain(Validate(TwoTongues + lines + "score { staff her  lyrics jp  lyrics en  staff him }\n"), d => d.Code is DiagnosticCodes.SingerSaidTwoWays or DiagnosticCodes.SingerLanguageNotTheWords);
+
+    /// <summary>The voice said on one line is the singer's on her others — where they sing the
+    /// language that line sings; a line that says her gender again had lost it (2026-11-12).</summary>
+    [Fact]
+    public void ASingersVoice_IsHersOnHerOtherLines_InItsLanguage()
+    {
+        var lines = LyricSinger.LinesOf(SyntaxTree.Parse(TwoTongues
+            + "singer aya female japanese \"a/b\" on her in Verse\nsinger aya female on her sings jp up 3 in Verse\nsinger aya on her in Chorus\nsinger aya on him sings hum\n").GetRoot());
+        Assert.Equal(["a/b", "a/b", "female", "a/b"], lines.Select(l => l.Singer));
+    }
+
     [Fact]
     public void AnotherScoreSingingOtherWords_IsSilent_OnceThePartListsBoth()
     {
