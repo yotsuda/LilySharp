@@ -26,7 +26,7 @@ namespace LilySharp.Tests;
 /// <summary>
 /// A named singer and the staff of what that singer sings (owner's decisions 2026-11-12,
 /// docs/lyrics-singer-design.md §13): <c>singer carol female sings on lead up 3 in Chorus</c>
-/// and <c>score { lyricsStaff carol }</c> — the harmony's notes are the singer line's to know, and
+/// and <c>score { staff carol  lyrics carol }</c> — the harmony's notes are the singer line's to know, and
 /// the score prints them, with the words, where it says so.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -99,11 +99,11 @@ public class SingerPartsTests
     [Fact]
     public void TheStaffOfASinger_IsTheLinesNotesMovedAlongTheKey_AndRestsElsewhere()
     {
-        string made = Made(Book(Band, "score { staff lead  lyrics words  lyricsStaff carol }"));
-        Assert.Contains("part carol \"Carol\" { instrument alto lyrics __words_carol", made);
+        string made = Made(Book(Band, "score { staff lead  lyrics words  staff carol  lyrics carol }"));
+        Assert.Contains("part carol__0 \"Carol\" { instrument alto lyrics __words_carol__0", made);
         Assert.Contains("section Verse { R*1 }", made);
         Assert.Contains("section Chorus { b'4 b c b | }", made);
-        Assert.Contains("lyrics __words_carol {", made);
+        Assert.Contains("lyrics __words_carol__0 {", made);
         Assert.Contains("section Chorus { la la la la | }", made);
         // Only the singers a score prints are made.
         Assert.DoesNotContain("part bob", made);
@@ -115,12 +115,12 @@ public class SingerPartsTests
     {
         foreach (string mode in new[] { "octave relative", "octave absolute" })
         {
-            var (_, tree, said) = Expanded(Book(Band, "score { staff lead  lyricsStaff carol }", mode: mode,
+            var (_, tree, said) = Expanded(Book(Band, "score { staff lead  staff carol  lyrics carol }", mode: mode,
                 chorus: mode == "octave relative" ? "g'4 b c a |" : "g'4 b' c'' a' |"));
             Assert.Empty(said.Select(d => d.Message));
             Assert.Empty(SingerParts.OwnOf(SemanticValidation.Run(tree), tree.Text).Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Message));
             // g b c' a → b d' e' c'
-            Assert.Equal([71, 74, 76, 72], PitchesOf(Midi(tree), "carol"));
+            Assert.Equal([71, 74, 76, 72], PitchesOf(Midi(tree), "carol__0"));
         }
     }
 
@@ -128,25 +128,25 @@ public class SingerPartsTests
     public void TheKeysOwnNoteIsLandedOn_AndAnAlteredNoteIsReadByItsLetter()
     {
         // G major: over d a third above is f-sharp; over c-sharp (letter c) it is e.
-        var (text, tree, said) = Expanded(Book(Band, "score { lyricsStaff carol }", key: "key g major", chorus: "d'4 cis d b |"));
+        var (text, tree, said) = Expanded(Book(Band, "score { staff carol  lyrics carol }", key: "key g major", chorus: "d'4 cis d b |"));
         Assert.Empty(said.Select(d => d.Message));
         Assert.Contains("section Chorus { fis'4 e fis d | }", text);
-        Assert.Equal([66, 64, 66, 62], PitchesOf(Midi(tree), "carol"));
+        Assert.Equal([66, 64, 66, 62], PitchesOf(Midi(tree), "carol__0"));
     }
 
     [Fact]
     public void AnOctaveDown_IsWrittenInTheTrebleClefAnOctaveDown()
     {
-        var (text, tree, said) = Expanded(Book(Band, "score { lyricsStaff bob }"));
+        var (text, tree, said) = Expanded(Book(Band, "score { staff bob  lyrics bob }"));
         Assert.Empty(said.Select(d => d.Message));
-        Assert.Contains("part bob \"Bob\" { instrument alto clef treble_8 lyrics __words_bob", text);
-        Assert.Equal([55, 55, 57, 55], PitchesOf(Midi(tree), "bob"));
+        Assert.Contains("part bob__0 \"Bob\" { instrument alto clef treble_8 lyrics __words_bob__0", text);
+        Assert.Equal([55, 55, 57, 55], PitchesOf(Midi(tree), "bob__0"));
     }
 
     [Fact]
     public void SeveralLinesOfOneSinger_AreOneStaff()
     {
-        string made = Made(Book("singer alice female sings on lead in Verse\nsinger alice sings on lead up 3 in Chorus", "score { lyricsStaff alice }"));
+        string made = Made(Book("singer alice female sings on lead in Verse\nsinger alice sings on lead up 3 in Chorus", "score { staff alice  lyrics alice }"));
         Assert.Contains("section Verse { e'4 e d c | }", made);
         Assert.Contains("section Chorus { b'4 b c b | }", made);
         Assert.Contains("section Verse { one two three four | }", made);
@@ -155,7 +155,7 @@ public class SingerPartsTests
     [Fact]
     public void AScoreThatPrintsASinger_SingsWhatItShows_AndOneThatDoesNotSingsTheLine()
     {
-        var (_, tree, _) = Expanded(Book(Band, "score { staff lead  lyrics words  lyricsStaff carol }\nscore plain { staff lead  lyrics words }"));
+        var (_, tree, _) = Expanded(Book(Band, "score { staff lead  lyrics words  staff carol  lyrics carol }\nscore plain { staff lead  lyrics words }"));
         List<SungVoice> Sung(string? score)
         {
             var midi = Midi(tree, score);
@@ -163,8 +163,8 @@ public class SingerPartsTests
         }
 
         var printed = Sung(null);
-        Assert.Equal(["lead", "lead", "carol"], printed.Select(v => v.Part).OrderBy(p => p == "carol"));
-        var carol = Assert.Single(printed, v => v.Part == "carol");
+        Assert.Equal(["lead", "lead", "carol__0"], printed.Select(v => v.Part).OrderBy(p => p == "carol__0"));
+        var carol = Assert.Single(printed, v => v.Part == "carol__0");
         Assert.Equal("female", carol.Singer);
         Assert.Equal([71.0, 71, 72, 71], carol.Notes.Select(n => n.Pitch));
         Assert.Equal(["la", "la", "la", "la"], carol.Notes.Select(n => n.Lyric));
@@ -175,17 +175,63 @@ public class SingerPartsTests
         Assert.Contains(plain, v => v.Notes.Select(n => n.Pitch).SequenceEqual([71.0, 71, 72, 71]));
     }
 
-    [Theory]
-    [InlineData("score { lyricsStaff dave }", "No singer is called dave")]
-    [InlineData("part carol { instrument alto }\nscore { lyricsStaff carol }", "is a part and a singer")]
-    public void WhatCannotBeMade_IsSaidAtTheScoresItem(string scores, string says)
+    /// <summary>Owner's decision 2026-11-12: a score prints what it says, of a singer as of a
+    /// part — <c>staff carol</c> her notes, <c>lyrics carol</c> her words, either without the other.</summary>
+    [Fact]
+    public void TheStaffAlone_TheWordsAlone_OrBoth()
     {
-        string source = Book(Band, scores);
+        IReadOnlyList<RenderItemSpec> Items(string scores)
+        {
+            var (_, tree, said) = Expanded(Book(Band, scores));
+            Assert.Empty(said.Select(d => d.Message));
+            Assert.Empty(SingerParts.OwnOf(SemanticValidation.Run(tree), tree.Text).Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Message));
+            return RenderSpecParser.FindAll(tree)[0].Items;
+        }
+
+        // The staff alone: her notes, no words under them.
+        var alone = Assert.IsType<SingleStaffSpec>(Items("score { staff lead  lyrics words  staff carol }")[1]).Staff;
+        Assert.Equal("carol__0", alone.VoiceName);
+        Assert.Empty(alone.WithLyrics);
+
+        // Both: the row under her staff is her staff's verse.
+        var both = Assert.IsType<SingleStaffSpec>(Items("score { staff carol  lyrics carol }")[0]).Staff;
+        Assert.Equal("carol__0", both.VoiceName);
+        Assert.Equal(["__words_carol__0"], both.WithLyrics);
+
+        // The words alone, under the lead: a row of its own, at her rhythm.
+        var items = Items("score { staff lead  lyrics carol }");
+        Assert.Equal("lead", Assert.IsType<SingleStaffSpec>(items[0]).Staff.VoiceName);
+        var row = Assert.IsType<LyricsRowSpec>(items[1]);
+        Assert.Equal("__words_carol__0", row.PartName);
+        Assert.Equal("carol__0", row.Sings);
+    }
+
+    [Fact]
+    public void APartCalledAsASingerIs_IsThePart_AndANameNobodyHasIsAnUndefinedPart()
+    {
+        // The part: nothing is made (it is what her notes written out are).
+        string written = Book(Band, "part carol { instrument alto }\nscore { staff lead  staff carol }");
+        var tree = SyntaxTree.Parse(written);
+        Assert.False(SingerParts.Wanted(tree));
+        Assert.Same(written, SingerParts.Expand(written, tree, out var said));
+        Assert.Empty(said);
+
+        string nobody = Book(Band, "score { staff lead  staff dave }");
+        var other = SyntaxTree.Parse(nobody);
+        Assert.False(SingerParts.Wanted(other));
+        Assert.Contains(SemanticValidation.Run(other), d => d.Code == DiagnosticCodes.UndefinedPart && d.Message.Contains("'dave'"));
+    }
+
+    [Fact]
+    public void ASingerTheScoresOwnLinesLeaveOut_IsSaidAtTheItem()
+    {
+        // The score's line for lead takes the place of the file's lines for it: carol sings nothing there.
+        string source = Book(Band, "score { singer female sings on lead\n staff lead  staff carol }");
         var (text, _, said) = Expanded(source);
         var problem = Assert.Single(said);
         Assert.Equal(DiagnosticCodes.SingerNotPrinted, problem.Code);
-        Assert.Contains(says, problem.Message);
-        Assert.Equal("lyricsStaff " + (scores.Contains("dave") ? "dave" : "carol"), source.Substring(problem.Span.Start, problem.Span.Length));
+        Assert.Contains("carol sings nothing in this score", problem.Message);
+        Assert.Equal("staff carol", source.Substring(problem.Span.Start, problem.Span.Length));
         Assert.Same(source, text);
     }
 
@@ -214,20 +260,20 @@ public class SingerPartsTests
             form { Verse Chorus }
             singer alice female sings en on lead in Verse
             singer carol female sings en on lead up 3 in Chorus
-            score { staff lead  lyrics en  lyricsStaff alice }
+            score { staff lead  lyrics en  staff alice  lyrics alice }
             score jp {
               singer alice female sings jp on lead in Verse
               singer carol female sings jp on lead up 3 in Chorus
-              staff lead  lyrics jp  lyricsStaff alice  lyricsStaff carol
+              staff lead  lyrics jp  staff alice  lyrics alice  staff carol  lyrics carol
             }
             """;
         var (text, tree, said) = Expanded(source);
         Assert.Empty(said.Select(d => d.Message));
         string made = text[SingerParts.MadeFrom(text)..];
         // Two staves of alice: the top level's, and the second score's own.
-        Assert.Contains("part alice \"Alice\"", made);
+        Assert.Contains("part alice__0 \"Alice\"", made);
         Assert.Contains("part alice__2 \"Alice\"", made);
-        Assert.Contains("lyrics __words_alice {", made);
+        Assert.Contains("lyrics __words_alice__0 {", made);
         Assert.Contains("section Verse { one two three four | }", made);
         Assert.Contains("lyrics __words_alice__2 language japanese {", made);
         Assert.Contains("section Verse { あ さ の み | }", made);
@@ -241,35 +287,7 @@ public class SingerPartsTests
         Assert.Equal(["alice__2", "carol__2"], sung.Select(v => v.Part).OrderBy(p => p, StringComparer.Ordinal));
         Assert.Equal(["あ", "さ", "の", "み"], sung.Single(v => v.Part == "alice__2").Notes.Select(n => n.Lyric));
         var english = Midi(tree);
-        Assert.Equal(["one", "two", "three", "four"], SungVoices.Read(english, MidiClock.SecondsOf(english)).Single(v => v.Part == "alice").Notes.Select(n => n.Lyric));
-    }
-
-    [Fact]
-    public void OfAPart_TheItemIsThatPartsStaffWithTheWordsItNames()
-    {
-        string source = Book(Band, "score { lyricsStaff lead }");
-        var tree = SyntaxTree.Parse(source);
-        Assert.Same(source, SingerParts.Expand(source, tree, out var said));
-        Assert.Empty(said);
-        var staff = Assert.IsType<SingleStaffSpec>(Assert.Single(RenderSpecParser.FindAll(tree)[0].Items)).Staff;
-        Assert.Equal("lead", staff.VoiceName);
-        Assert.Equal(["words"], staff.WithLyrics);
-    }
-
-    [Fact]
-    public void AFileWithAPartCalledSinger_KeepsItsTwoMidiOnlyParts()
-    {
-        var tree = SyntaxTree.Parse("""
-            time 4/4
-            part singer { instrument alto }
-            part click { instrument alto }
-            section A { singer { c'1 | }  click { c'1 | } }
-            form { A }
-            score { singer click }
-            """);
-        Assert.False(tree.HasErrors);
-        Assert.False(SingerParts.Wanted(tree));
-        Assert.Equal(["singer", "click"], RenderSpecParser.FindAll(tree)[0].MidiOnlyParts);
+        Assert.Equal(["one", "two", "three", "four"], SungVoices.Read(english, MidiClock.SecondsOf(english)).Single(v => v.Part == "alice__0").Notes.Select(n => n.Lyric));
     }
 
     [Fact]

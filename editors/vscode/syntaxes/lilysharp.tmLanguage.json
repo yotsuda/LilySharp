@@ -15,7 +15,6 @@
         { "include": "#language-directive" },
         { "include": "#singer-line" },
         { "include": "#singer-line-unfinished" },
-        { "include": "#lyrics-staff-item" },
         { "include": "#chord-shapes-block" },
         { "include": "#part-body" },
         { "include": "#instrument-value" },
@@ -459,13 +458,6 @@
             "captures": {
                 "1": { "name": "keyword.control.lilysharp" },
                 "2": { "name": "constant.language.lilysharp" }
-            }
-        },
-        "lyrics-staff-item": {
-            "comment": "A score's `lyricsStaff NAME` — a staff with its words: what a named singer sings, or a part (StaffRenderSyntax.IsSinger). The word is not reserved (a part may be called it), so it is a keyword only with a name after it; the name's colour is the server's (it resolves against the singers the lines name, and the parts).",
-            "match": "\\b(lyricsStaff)(?=[ \\t]+[A-Za-z_][A-Za-z0-9_]*\\b(?![ \\t]*\\{))",
-            "captures": {
-                "1": { "name": "keyword.control.lilysharp" }
             }
         },
         "language-directive": {

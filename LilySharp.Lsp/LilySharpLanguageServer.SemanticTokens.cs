@@ -115,15 +115,16 @@ public sealed partial class LilySharpLanguageServer
         // the squiggle LYS1005 / LYS1007 puts under it. Colouring it would have the editor
         // assert the name means something at the same moment the diagnostics say it does not.
         Resolve(names.SectionReferences, names.Sections, TokenTypeSection);
-        Resolve(names.PartReferences, names.Parts, TokenTypePart);
+        // A score's `staff carol` and `lyrics carol` may name a SINGER (the staff of what she
+        // sings, her words): the names the singer lines give resolve beside the parts and tracks.
+        Resolve(names.PartReferences, [.. names.Parts, .. names.Singers], TokenTypePart);
         Resolve(names.ChordTrackReferences, names.ChordTracks, TokenTypePart);
-        Resolve(names.LyricTrackReferences, names.LyricTracks, TokenTypePart);
+        Resolve(names.LyricTrackReferences, [.. names.LyricTracks, .. names.Singers], TokenTypePart);
         // ⚠️ The wider set: a `sings` target may name a part OR a named voice, which is what
         // LYS6011 checks it against. Resolving it against the parts alone would leave plain
         // a name the diagnostics accept — a quieter disagreement than colouring a bad one,
         // and the reason PartReferenceFinder.SingsTargetToken carries the warning it does.
         Resolve(names.SingsTargets, [.. names.Parts, .. names.Voices], TokenTypePart);
-        Resolve(names.SingerReferences, [.. names.Singers, .. names.Parts], TokenTypePart);
 
         return tokens.OrderBy(t => t.Line).ThenBy(t => t.Character);
 
@@ -159,10 +160,9 @@ public sealed partial class LilySharpLanguageServer
         public readonly List<SyntaxTokenNode> LyricTrackReferences = [];
         public readonly List<SyntaxTokenNode> SingsTargets = [];
 
-        // The singers the file's lines name (`singer carol …`), and the scores' `lyricsStaff NAME`
-        // items that print one: a namespace of its own beside the parts.
+        // The singers the file's lines name (`singer carol …`): a score's `staff carol` and
+        // `lyrics carol` may name one.
         public readonly HashSet<string> Singers = new(StringComparer.Ordinal);
-        public readonly List<SyntaxTokenNode> SingerReferences = [];
     }
 
     private static void CollectTokensRecursive(
@@ -209,17 +209,7 @@ public sealed partial class LilySharpLanguageServer
             // `staff NAME`, `ossia NAME`, `tab NAME`, the members of a condensed or combined
             // staff, and a bare part name — every place a score names a part. Deferred: the
             // part may be declared below the score.
-            // …but a score's `lyricsStaff NAME` names a SINGER (the staff of what that one sings):
-            // the word is the item's keyword, as `staff` is, and the name resolves against the
-            // singers the lines name — or a part of that name, the singer's notes written out.
-            if (node is StaffRenderSyntax { IsSinger: true } singerItem)
-            {
-                Paint(singerItem.StaffKeyword, 0);
-                if (singerItem.PartToken is { } who)
-                    names.SingerReferences.Add(who);
-            }
-            else
-                PartReferenceFinder.CollectReferenceTokens(node, names.PartReferences);
+            PartReferenceFinder.CollectReferenceTokens(node, names.PartReferences);
 
             // The score's track rows, deferred and resolved against their own namespace.
             if (PartReferenceFinder.ReferencedTrackName(node) is { } row)
@@ -247,7 +237,7 @@ public sealed partial class LilySharpLanguageServer
         PartReferenceFinder.CollectVoiceNames(node, names.Voices);
 
         // A singer's own name on its line (`singer carol female sings …`): a declaration, coloured
-        // as a part's is — it is what a score's `lyricsStaff carol` is checked against.
+        // as a part's is — it is what a score's `staff carol  lyrics carol` is checked against.
         if (node is SingerDeclarationSyntax { PersonToken: { } person })
         {
             names.Singers.Add(person.Text);

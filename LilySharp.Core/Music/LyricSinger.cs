@@ -52,16 +52,59 @@ public static class LyricSinger
     }
 
     /// <summary>
-    /// The name of the part a score's <c>lyricsStaff NAME</c> item is the staff of: the singer's name
+    /// The name of the part a score's <c>staff NAME</c> item is the staff of: the singer's name
     /// where the score reads her lines as the file's top level writes them, and a name of the
     /// score's own (<c>NAME__2</c>: the second score) where its own singer lines say what she —
     /// or her part — sings there. So one singer has one staff for the English score and another
     /// for the Japanese. Read off the syntax alone: the resolved lines read the scores
     /// (<see cref="LinesOf"/>), and a score's items are read by this.
     /// </summary>
-    public static string PartOfItem(StaffRenderSyntax item)
+    public static string PartOfItem(StaffRenderSyntax item) => PartOfSinger(item, item.PartToken?.Text ?? "");
+
+    private sealed record SingerNameSets(HashSet<string> Staves, HashSet<string> Words);
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SyntaxNode, SingerNameSets> Names = new();
+
+    private static SingerNameSets NamesOf(SyntaxNode node)
     {
-        string person = item.PartToken?.Text ?? "";
+        while (node.Parent != null)
+            node = node.Parent;
+        return Names.GetValue(node, static root =>
+        {
+            var persons = root.SitesOfKinds(SyntaxKind.SingerDeclaration).OfType<SingerDeclarationSyntax>()
+                .Select(l => l.PersonToken?.Text).OfType<string>().ToHashSet(StringComparer.Ordinal);
+            var staves = new HashSet<string>(persons, StringComparer.Ordinal);
+            var words = new HashSet<string>(persons, StringComparer.Ordinal);
+            if (persons.Count > 0)
+            {
+                foreach (var n in root.SitesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
+                    if (Editing.PartReferenceFinder.DeclaredName(n) is { } declared)
+                        staves.Remove(declared.Text);
+                foreach (var block in root.SitesOfKinds(SyntaxKind.LyricsBlock).OfType<LyricsBlockSyntax>())
+                    if (block.VoiceName is { } track)
+                        words.Remove(track);
+            }
+            return new SingerNameSets(staves, words);
+        });
+    }
+
+    /// <summary>
+    /// The names a score's <c>staff NAME</c> reads as a SINGER (owner's decision 2026-11-12:
+    /// <c>staff carol</c> is the staff of what the singer carol sings, <c>lyrics carol</c> her
+    /// words — a score prints what it says, of a singer as of a part): the names the singer
+    /// lines give, but for those a part is called. A part of that name is the part — which is
+    /// what a singer's notes written out are.
+    /// </summary>
+    public static IReadOnlySet<string> SingerNames(SyntaxNode node) => NamesOf(node).Staves;
+
+    /// <summary>The names a score's <c>lyrics NAME</c> reads as a singer's words: the singers'
+    /// names, but for those a lyrics track is called.</summary>
+    public static IReadOnlySet<string> SingerWordNames(SyntaxNode node) => NamesOf(node).Words;
+
+    /// <summary>The part made of the singer <paramref name="person"/>'s lines for the score
+    /// <paramref name="item"/> stands in (<see cref="PartOfItem"/>).</summary>
+    public static string PartOfSinger(SyntaxNode item, string person)
+    {
         SyntaxNode root = item;
         RenderDeclarationSyntax? score = null;
         while (root.Parent != null)
@@ -69,24 +112,20 @@ public static class LyricSinger
             score ??= root as RenderDeclarationSyntax;
             root = root.Parent;
         }
+        // ⚠️ Never the singer's bare name: a part called as she is is HER NOTES WRITTEN OUT, and
+        // `staff carol` then means that part (SingerNames). A made part of that name would turn
+        // the item that asked for it into a staff of a part — in the very text that makes it.
         if (score == null)
-            return person;
+            return person + ScopedMark + "0";
         var own = score.ChildNodes().OfType<SingerDeclarationSyntax>().ToList();
         var replaced = own.Select(l => l.OnToken?.Text).ToHashSet();
         bool scoped = own.Any(l => l.PersonToken?.Text == person)
             || root.ChildNodes().OfType<SingerDeclarationSyntax>().Any(l => l.PersonToken?.Text == person && replaced.Contains(l.OnToken?.Text));
         if (!scoped)
-            return person;
+            return person + ScopedMark + "0";
         int index = root.ChildNodes().OfType<RenderDeclarationSyntax>().TakeWhile(r => r.Span.Start != score.Span.Start).Count() + 1;
         return person + ScopedMark + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
-
-    /// <summary>The word of the score's item that prints a staff WITH its words (owner's decision
-    /// 2026-11-12, after a day as <c>singer NAME</c>: one word meant the line that says who sings and
-    /// the item that prints her, and a score holding both read badly): <c>lyricsStaff carol</c> is
-    /// the staff of what the singer carol sings, <c>lyricsStaff lead</c> the part lead with the
-    /// words it names. Contextual, as <c>singer</c> is.</summary>
-    public const string LyricsStaffWord = "lyricsStaff";
 
     /// <summary>What stands between a singer's name and a score's number in the name of a part
     /// made for that score alone (<see cref="PartOfItem"/>).</summary>
@@ -149,7 +188,7 @@ public static class LyricSinger
     /// in (<see cref="RenderSpec.SourceStart"/>; -1 at the top level, where it is every score's default).</summary>
     /// <paramref name="Person"/> is the singer's own name (<c>singer carol …</c>), or null;
     /// <paramref name="Printed"/> says the line is read in a score that prints that singer
-    /// (<c>score { lyricsStaff carol }</c>): its part is then the singer's own, made of the lines
+    /// (<c>score { staff carol  lyrics carol }</c>): its part is then the singer's own, made of the lines
     /// (<see cref="Editing.SingerParts"/>), and what the line says of its place is in those notes already.
     public sealed record Line(string? Singer, string Track, string? Part, string? Voice, SingerDeclarationSyntax Node, int Score = -1,
         string? Person = null, bool Printed = false);
@@ -180,7 +219,7 @@ public static class LyricSinger
     }
 
     /// <summary>
-    /// <paramref name="lines"/> with those of a singer the score PRINTS (<c>lyricsStaff carol</c>)
+    /// <paramref name="lines"/> with those of a singer the score PRINTS (<c>staff carol  lyrics carol</c>)
     /// moved onto that singer's own part: the score sings what it shows, the notes of the
     /// printed staff, and not the line's part moved once more. Several lines of one singer
     /// become one voice there. A score that does not print the singer sings the line as written.
@@ -195,7 +234,7 @@ public static class LyricSinger
         var printed = spec.GetVoiceBindings().Select(b => b.VoiceName).Where(made.Contains).ToHashSet(StringComparer.Ordinal);
         // The staff the score prints for a singer: called as she is, or the score's own (PartOfItem).
         string? StaffOf(string person)
-            => printed.FirstOrDefault(n => n == person || n.StartsWith(person + ScopedMark, StringComparison.Ordinal));
+            => printed.FirstOrDefault(n => n.StartsWith(person + ScopedMark, StringComparison.Ordinal));
         if (!lines.Any(l => l.Person != null && StaffOf(l.Person) != null))
             return lines;
         return lines.Select(l => l.Person is { } person && StaffOf(person) is { } staff

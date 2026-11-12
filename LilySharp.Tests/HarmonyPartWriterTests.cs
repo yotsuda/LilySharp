@@ -128,7 +128,7 @@ public class HarmonyPartWriterTests
         form { Verse Chorus }
         singer alice female sings on lead in Verse
         singer carol female "x/y" sings on lead up 3 in Chorus with breathiness 2
-        score { staff lead  lyrics words  lyricsStaff carol }
+        score { staff lead  lyrics words  staff carol  lyrics carol }
         score plain { staff lead  lyrics words }
         """;
 
@@ -146,8 +146,9 @@ public class HarmonyPartWriterTests
         // One line, on the written part, its voice and settings kept; its place is in the notes now.
         Assert.Contains("singer carol female \"x/y\" sings on carol with breathiness 2\n", text);
         Assert.DoesNotContain("up 3", text);
-        // The score that printed the singer goes on printing her; the other takes the staff and its words.
-        Assert.Contains("score { staff lead  lyrics words  lyricsStaff carol }", text);
+        // The score that printed the singer keeps her staff where it stood — now the written part —
+        // and its row of her words names the track they are now; the other takes the staff and its words.
+        Assert.Contains("score { staff lead  lyrics words  staff carol  lyrics carolWords }", text);
         Assert.Contains("score plain { staff lead  lyrics words  staff carol  lyrics carolWords }", text);
 
         // Nothing is left to make, and nothing more to write out.

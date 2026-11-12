@@ -270,8 +270,9 @@ score { staff lead  lyrics words }
 '@
 
 'sing-print' = @'
-// The singers have names, and the score prints what each one sings: under the lead, carol's
-// third above and bob's octave below, each with the words, at rest where they do not sing.
+// The singers have names, and the score prints what it names: under the lead, the staff of
+// what carol sings (a third above; the words are the lead's, printed once) and the staff of what
+// bob sings with his words (an octave below), each at rest where its singer does not sing.
 // Nobody writes those notes: the singer lines know them.
 octave relative
 time 4/4
@@ -291,7 +292,7 @@ form { Verse Chorus }
 singer alice female sings on lead in Verse
 singer bob   male   sings on lead octave -1 in Chorus
 singer carol female sings on lead up 3 in Chorus
-score { staff lead  lyrics words  lyricsStaff carol  lyricsStaff bob }
+score { staff lead  lyrics words  staff carol  staff bob  lyrics bob }
 '@
 
 'sing-bilingual' = @'

@@ -302,7 +302,7 @@ SingerSetting  = Word , { '.' , Word } , ( [ '-' ] , Number | Word | String ) ;
                     with the scale's own note. 'octave -1' sings octaves below (1 to 3 either
                     way). Lily# moves the notes before any voice sees them, so every engine
                     sings it alike; a score prints the harmony where it names the singer
-                    ('lyricsStaff NAME', a ScoreItem). Several lines on one
+                    ('staff NAME', a ScoreItem). Several lines on one
                     part sing together, each its own sections and its own interval.
                     An interval or an octave that is none, and a section the file does not
                     have, are LYS4059. The four words are words only here: a track or a part may
@@ -314,7 +314,7 @@ SingerValue    = [ SingerName ] , ( String | SingerGender , [ String ] ) | Singe
 SingerName     = Identifier ;   (* the singer's OWN name: a word that is no gender, or the
                                    first of two words. Lines of one name are one singer — the
                                    voice said on one is the others' too — and a score prints
-                                   what a named singer sings ('lyricsStaff NAME', a ScoreItem;
+                                   what a named singer sings ('staff NAME' and 'lyrics NAME';
                                    docs/lyrics-singer-design.md §13) *)
 SingerGender   = 'male' | 'female' ;
                  (* WHO SINGS WHAT, in this order (docs/lyrics-singer-design.md). 'lyrics' rows
@@ -1927,7 +1927,18 @@ ScoreOption    = 'transpose' , PitchToken       (* this score's transpose, compo
                     At least one render item is required — a score with an empty body
                     engraves a page with no music, so it is an error (LYS6002). *)
 
-ScoreItem      = StaffRender                        (* staff partName — BARE, no braces *)
+ScoreItem      = StaffRender                        (* staff partName — BARE, no braces.
+                                                        The name may be a SINGER's (SingerName,
+                                                        no part being called so): the staff of
+                                                        what that singer sings — the notes of the
+                                                        singer's lines, moved as they say, in the
+                                                        sections they say, bars of rest elsewhere.
+                                                        A 'lyrics' row may name a singer too: the
+                                                        words that singer sings, a verse under
+                                                        the singer's staff and a row of its own
+                                                        elsewhere. A score prints what it says:
+                                                        the staff, the words, or both. LYS4060
+                                                        where the staff cannot be made *)
                | 'strokes' , PartRef , [ DisplayName ] , [ 'as' , StaffSelector , { StaffSelector } ]
                                                      (* a strokes part on ONE line, no clef, key
                                                         or name - a StaffRender under its own
@@ -1935,24 +1946,6 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         a String names it). The only item that
                                                         DRAWS a strokes part: a row's 'plays'
                                                         sounds it and draws nothing *)
-               | 'lyricsStaff' , PartRef , [ DisplayName ] , [ 'as' , StaffSelector , { StaffSelector } ] , StaffSound
-                                                     (* A STAFF WITH ITS WORDS. The name is a part
-                                                        or a SingerName. Of a part, that
-                                                        part and the words it names. Of a singer,
-                                                        WHAT THAT SINGER SINGS (2026-11-12): the
-                                                        notes of the SingerDecl lines of that
-                                                        name, moved as they say (up 3 along the
-                                                        key, octave -1), in the sections they say,
-                                                        bars of rest elsewhere. The line knows the
-                                                        notes and the words, so the score writes
-                                                        neither again, and a group takes the item.
-                                                        Such a score SINGS what it shows. LYS4060
-                                                        where the staff cannot be made: nobody is
-                                                        called so, a part is, the line sings one
-                                                        voice of a part, or a moved line calls a
-                                                        phrase. In a file with a part called
-                                                        singer the two words are two MIDI-only
-                                                        PartRefs, as before *)
                | 'grandStaff' , StaffGroupBody      (* a BRACE  — one instrument, two staves *)
                | 'staffGroup' , StaffGroupBody      (* a BRACKET, bar lines drawn through *)
                | 'choirStaff' , StaffGroupBody      (* a BRACKET, bar lines NOT drawn through *)

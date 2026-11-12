@@ -550,18 +550,13 @@ public sealed partial class LilySharpLanguageServer
             // The render items, then the declared parts as bare MIDI-only items (GRAMMAR §7:
             // "a bare part name renders that part to MIDI only").
             // A keyword typed in front of a written body writes the keyword alone.
-            // `lyricsStaff |`: the named singers (the item prints what one sings, with the words),
-            // then the parts that name words. Whatever list the caret's place would have had —
-            // the word is not reserved, so the place is read as a score's or as the row's before it.
-            _ when WordBeforeCursor(doc.Text, offset) == LilySharp.Core.Music.LyricSinger.LyricsStaffWord
-                && doc.Tree.GetRoot().ChildNodes().OfType<RenderDeclarationSyntax>().Any(r => r.Span.Start < offset && offset <= r.Span.End)
-                && LyricsStaffItems(doc) is { Length: > 0 } named => new CompletionList { Items = named },
             CompletionContext.ScoreBlock => WithSingerOnAFreshLine(KeywordOnlyBeforeAWrittenBody(
                 WithMidiOnlyParts(GetScoreBlockCompletions(), doc.Text), doc.Text, offset), doc.Text, offset),
             CompletionContext.StaffGroupBlock => KeywordOnlyBeforeAWrittenBody(
                 GetStaffGroupBlockCompletions(), doc.Text, offset),
             // `staff |` / `ossia |`: the parts, and the five clefs that may precede one.
-            CompletionContext.AfterStaffRef => GetStaffRefCompletions(doc.Text),
+            // …and the singers the file names: `staff carol` is the staff of what carol sings.
+            CompletionContext.AfterStaffRef => WithSingers(GetStaffRefCompletions(doc.Text), doc, staves: true),
             // `staff CLEF |`: the parts, and — the clef word being a legal part name too —
             // the selectors.
             // The clef word itself decides whether the selectors belong beside the parts:
@@ -592,7 +587,8 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
             CompletionContext.AfterStrokesRef => GetDeclaredNameCompletions(doc.Text, "strokes", "Strokes part — drawn as a one-line staff of slash heads"),
             CompletionContext.AfterPlaysTarget => GetDeclaredNameCompletions(doc.Text, "strokes", "Strokes part the row plays — its chords struck at the strokes"),
-            CompletionContext.AfterLyricsRef => GetLyricsRowNameCompletions(doc.Text, offset),
+            // …and the singers the file names: `lyrics carol` is the words carol sings.
+            CompletionContext.AfterLyricsRef => WithSingers(GetLyricsRowNameCompletions(doc.Text, offset), doc, staves: false),
             CompletionContext.AfterLyricsName => GetVoiceBindingNameCompletions(doc.Text),
             CompletionContext.AfterLyricsTrackName => GetLyricsTrackNameCompletions(LyricsHeadAt(doc.Text, offset)?.Written),
             CompletionContext.AfterLanguage => GetLanguageNameCompletions(),

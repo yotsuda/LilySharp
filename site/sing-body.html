@@ -182,15 +182,20 @@ singer male "neutrino/SOMA" sings words on bas</pre>
   <p>The page shows the part as written; the harmony above is only heard. To print it, give the singer a
   <b>name</b> — a word before the gender or the voice — and name the singer in the score:</p>
   <!--EXAMPLE:sing-print-->
-  <p><code>lyricsStaff carol</code> in a score is carol's staff <b>and</b> her words: the notes of her lines,
-  moved as they say, in the sections they say, and whole bars of rest elsewhere. The score writes neither
-  a <code>staff</code> nor a <code>lyrics</code> row for it. A singer who sings an octave below
-  throughout is written in the treble clef an octave down, so the notes stand where the part's do.
-  Such a score sings what it shows. A sheet for one singer is a score of its own:
-  <code>score carol { lyricsStaff carol }</code>.</p>
+  <p>A singer's name stands where a part's or a track's does. <code>staff carol</code> is the staff of
+  what carol sings: the notes of her lines, moved as they say, in the sections they say, and whole bars
+  of rest elsewhere. <code>lyrics carol</code> is the words she sings. A score prints what it says, so
+  you choose: above, carol's staff has no words (they are the lead's, printed once) and bob's has his.
+  A row of a singer's words can also stand without her staff, under the lead's.</p>
+  <p>A singer who sings an octave below throughout is written in the treble clef an octave down, so the
+  notes stand where the part's do. Such a score sings what it shows. A sheet for one singer is a score
+  of its own: <code>score carol { staff carol  lyrics carol }</code>. In a score that has singer lines
+  of its own — the Japanese score of <a href="#who">One song in two languages</a> — a singer's staff
+  and words are the ones those lines say.</p>
   <p>Lines of one name are one singer. Write the voice on one of them
   (<code>singer alice female "diffsinger/…" sings on lead in Verse</code>) and leave it off the others
-  (<code>singer alice sings on lead up 3 in Chorus</code>). A singer's name must not be a part's.</p>
+  (<code>singer alice sings on lead up 3 in Chorus</code>). Do not give a singer a part's name: a part
+  of that name is the part.</p>
   <p>Where a third is not the note, write the harmony out and mend it. On a named singer's line the
   light bulb offers <b>Write carol's notes out as a part</b>: the notes become a part called
   <code>carol</code> beside the lead, her words a track of her own, and her lines one line that sings

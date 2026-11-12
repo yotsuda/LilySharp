@@ -82,7 +82,7 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
         // and `condensedStaff { fl1 fl22 }` silently dropped the misspelt part's voice while
         // reporting nothing (measured: its SVG differs from the correctly-spelt one).
         foreach (var reference in PartReferenceFinder.ReferenceTokens(root))
-            // A score's `lyricsStaff NAME` names a singer: its part is made of the singer's lines
+            // A score's `staff NAME` may name a singer: the part is then made of the singer's lines
             // (Editing.SingerParts), which says, at the item, what it could not make (LYS4060).
             if (!_definedParts.Contains(reference.Text) && reference.Parent is not StaffRenderSyntax { IsSinger: true })
                 _diagnostics.Error(reference.Span, DiagnosticCodes.UndefinedPart,
@@ -122,7 +122,8 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
         {
             string keyword = isChord ? "chords" : "lyrics";
             if ((isChord ? tracks.ChordTracks : tracks.LyricTracks).Contains(token.Text)
-                || (!isChord && Music.GeneratedLyrics.IsGenerated(token.Text)))     // made from the notes: nothing to define
+                || (!isChord && Music.GeneratedLyrics.IsGenerated(token.Text))      // made from the notes: nothing to define
+                || (!isChord && token.Parent is LyricsRowRenderSyntax { IsSingerWords: true }))   // a singer's words: Editing.SingerParts writes the track
                 continue;
             _diagnostics.Error(token.Span, DiagnosticCodes.UndefinedPart,
                 $"Undefined {keyword} part: '{token.Text}'. Define it with a named block "

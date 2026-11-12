@@ -816,12 +816,16 @@ public sealed partial class StaffRenderSyntax : SyntaxNode
     /// lines 1</c> would be (RenderSpecParser.ParseStaff).</summary>
     public bool IsStrokes => StaffKeyword.Kind == SyntaxKind.StrokesKeyword;
 
-    /// <summary>A <c>lyricsStaff NAME</c> item (owner's decisions 2026-11-12): a staff WITH its
-    /// words. Of a named singer, the staff of what that singer sings — the notes of the singer's
-    /// lines, moved as they say, in the sections they say — its part the one
-    /// <c>Editing.SingerParts</c> makes of those lines (<c>Music.LyricSinger.PartOfItem</c>); of a
-    /// part, that part and the words it names.</summary>
-    public bool IsSinger => StaffKeyword.Kind == SyntaxKind.Identifier && StaffKeyword.Text == Music.LyricSinger.LyricsStaffWord;
+    /// <summary>A staff that names a SINGER (<c>staff carol</c>, where carol is a singer and no
+    /// part; owner's decisions 2026-11-12): the staff of what that singer sings — the notes of
+    /// the singer's lines, moved as they say, in the sections they say. Its part is the one
+    /// <c>Editing.SingerParts</c> makes of those lines (<c>Music.LyricSinger.PartOfItem</c>). Her
+    /// words are a row of their own, <c>lyrics carol</c>: a score prints what it says.</summary>
+    public bool IsSinger => !IsStrokes && PartToken is { } part && Music.LyricSinger.SingerNames(this).Contains(part.Text);
+
+    /// <summary>The part this staff engraves, by name: the token's, or — of a singer — the part
+    /// made of her lines for this score.</summary>
+    public string PartName => IsSinger ? Music.LyricSinger.PartOfItem(this) : PartToken?.Text ?? SyntaxFacts.UnnamedPartName;
 
     /// <summary>The clef word of <c>staff [clef] part</c> (<c>staff bass melody</c>), or null —
     /// <see cref="StaffTargets"/>'s reading.</summary>
@@ -1078,7 +1082,14 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
 
     /// <summary>The lyrics part name to place (e.g. <c>lyrics verse</c> → "verse"; a bare
     /// <c>lyrics</c> → <see cref="SyntaxFacts.UnnamedLyricsName"/>).</summary>
-    public string PartName => NameToken?.Text ?? SyntaxFacts.UnnamedLyricsName;
+    /// <remarks>A row that names a SINGER (<c>lyrics carol</c>, where carol is a singer and no
+    /// track; owner's decision 2026-11-12) places that singer's words: the track
+    /// <c>Editing.SingerParts</c> writes for her, as this row's score reads her lines.</remarks>
+    public string PartName => NameToken is not { } name ? SyntaxFacts.UnnamedLyricsName
+        : IsSingerWords ? Music.LyricSinger.WordsOf(Music.LyricSinger.PartOfSinger(this, name.Text)) : name.Text;
+
+    /// <summary>Whether the row names a singer and not a track: her words, as she sings them.</summary>
+    public bool IsSingerWords => NameToken is { } name && Music.LyricSinger.SingerWordNames(this).Contains(name.Text);
 
     /// <summary>The <c>on</c> of a row that names its melody (<c>lyrics verse on melody</c>), or null.</summary>
     public SyntaxTokenNode? SingsKeyword =>

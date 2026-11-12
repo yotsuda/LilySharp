@@ -236,7 +236,7 @@ public sealed partial class LilySharpLanguageServer
         string text, SyntaxTree unexpanded, string basePath, Func<string, string?> readFile)
     {
         var (tree, diagnostics) = ExpandUsingsAlone(text, unexpanded, basePath, readFile);
-        // …and the staff of what a named singer sings (`score { lyricsStaff carol }`), written after
+        // …and the staff of what a named singer sings (`score { staff carol  lyrics carol }`), written after
         // the text the same way (Core's Editing.SingerParts): the same house, so the preview,
         // the exports, the playback and the Problems panel read one piece. Asked of the scores
         // alone; a file that prints no singer pays one look at them.

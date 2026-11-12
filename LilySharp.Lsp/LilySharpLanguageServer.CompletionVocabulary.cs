@@ -2464,32 +2464,27 @@ public sealed partial class LilySharpLanguageServer
         },
     };
 
-    /// <summary>After <c>lyricsStaff </c> in a score: the singers the file's lines name, each the
-    /// staff of what that singer sings with the words under it (docs/lyrics-singer-design.md §13),
-    /// then the parts that name words of their own.</summary>
-    private static CompletionItem[] LyricsStaffItems(Document doc)
+    /// <summary>A score's list of parts (after <c>staff</c>) or of lyrics tracks (after
+    /// <c>lyrics</c>) with the singers the file's lines name (docs/lyrics-singer-design.md §13):
+    /// <c>staff carol</c> is the staff of what carol sings, <c>lyrics carol</c> her words. A name
+    /// a part (or a track) has is that part's, and is in the list already.</summary>
+    private static CompletionList WithSingers(CompletionList list, Document doc, bool staves)
     {
         var root = doc.Tree.GetRoot();
-        var singers = LilySharp.Core.Music.LyricSinger.LinesOf(root).Where(l => l.Person != null)
+        var names = staves ? LilySharp.Core.Music.LyricSinger.SingerNames(root) : LilySharp.Core.Music.LyricSinger.SingerWordNames(root);
+        if (names.Count == 0)
+            return list;
+        var singers = LilySharp.Core.Music.LyricSinger.LinesOf(root).Where(l => l.Person != null && names.Contains(l.Person))
             .GroupBy(l => l.Person!, StringComparer.Ordinal)
             .Select((g, i) => new CompletionItem
             {
                 Label = g.Key,
                 Kind = CompletionItemKind.Reference,
-                Detail = "what " + g.Key + " sings, as a staff with the words"
+                Detail = (staves ? "The staff of what " + g.Key + " sings" : "The words " + g.Key + " sings")
                     + (g.First().Part is { } part ? " (on " + part + ")" : ""),
-                SortText = "0" + i.ToString("D3"),
-            }).ToList();
-        var parts = root.ChildNodes().OfType<PartDeclarationSyntax>().Select(p => p.Name.Text).Distinct(StringComparer.Ordinal)
-            .Where(p => singers.All(s => s.Label != p) && LilySharp.Core.Music.LyricBindings.TracksOfPart(root, p).Count > 0)
-            .Select((p, i) => new CompletionItem
-            {
-                Label = p,
-                Kind = CompletionItemKind.Reference,
-                Detail = "the part " + p + ", with the words it names",
-                SortText = "1" + i.ToString("D3"),
+                SortText = "4" + i.ToString("D3"),
             });
-        return [.. singers, .. parts];
+        return new CompletionList { Items = [.. list.Items, .. singers] };
     }
 
     /// <summary>The <c>sings</c> of a <c>singer</c> line, the list of the words opening after it.</summary>
@@ -2558,32 +2553,8 @@ public sealed partial class LilySharpLanguageServer
         int end = Math.Clamp(offset, 0, text.Length);
         while (end > 0 && (char.IsLetterOrDigit(text[end - 1]) || text[end - 1] is '_' or '-')) end--;
         int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
-        list = WithLyricsStaff(list);
         return text[lineStart..end].Trim().Length > 0 ? list : new CompletionList { Items = [.. list.Items, SingerItem("~singer")] };
     }
-
-    /// <summary>A score's (or a staff group's) list with <c>lyricsStaff</c>: the staff of what a
-    /// named singer sings — or a part — with its words under it (docs/lyrics-singer-design.md §13).
-    /// Beside <c>staff</c> in the list; the word is not reserved, so it is no entry of the
-    /// reserved items' table.</summary>
-    private static CompletionList WithLyricsStaff(CompletionList list)
-        => list.Items.Any(i => i.Label == LilySharp.Core.Music.LyricSinger.LyricsStaffWord) ? list : new CompletionList
-        {
-            Items =
-            [
-                .. list.Items,
-                new CompletionItem
-                {
-                    Label = LilySharp.Core.Music.LyricSinger.LyricsStaffWord,
-                    Kind = CompletionItemKind.Keyword,
-                    InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = LilySharp.Core.Music.LyricSinger.LyricsStaffWord + " $0",
-                    Detail = "A staff with its words: what a named singer sings, or a part",
-                    SortText = (list.Items.FirstOrDefault(i => i.Label == "staff")?.SortText ?? "0") + "~",
-                    Command = new Command { Title = "Suggest singer", CommandIdentifier = "editor.action.triggerSuggest" },
-                },
-            ],
-        };
 
     /// <summary>Not yet written in the head, an item's first word being its clause (<c>singer male</c> is a <c>singer</c>).</summary>
     private static bool IsUnwritten(CompletionItem item, System.Collections.Generic.IReadOnlySet<string>? written)

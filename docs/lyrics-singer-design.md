@@ -304,8 +304,8 @@ singer alice female sings on lead in Verse
 singer bob   male   sings on lead octave -1 in Chorus
 singer carol female sings on lead up 3 in Chorus
 
-score { staff lead  lyrics words  lyricsStaff carol }   // the lead, and carol's harmony under it
-score carol { lyricsStaff carol }                       // carol's own sheet
+score { staff lead  lyrics words  staff carol  lyrics carol }   // the lead, and carol's harmony under it
+score carol { staff carol  lyrics carol }                       // carol's own sheet
 ```
 
 The owner's two points: the notes of a harmony are the SINGER LINE's to know — nothing
@@ -317,32 +317,43 @@ the singer gets a name, and the score names the singer.
   gender. Lines of one name are ONE singer: the voice is said on one of them and is the
   others' too (`singer alice sings on lead up 3 in Chorus` on a second line). A line with no
   name sings as before and is not printed.
-- `lyricsStaff NAME` in a score (and in a staff group) is the staff of what that singer sings AND
-  the words under it: the notes of the singer's lines, moved as they say, in the sections they
-  say; whole bars of rest where the singer does not sing. It takes what a staff item takes
-  after its part (a name in quotes, `as …`, `hidden`, `sounds …`). The staff is named as the
-  singer, capitalised. A file that declares a part called singer keeps the two words as they
-  were: two parts played to MIDI only.
+- `staff NAME` in a score (and in a staff group), where NAME is a singer and no part, is the
+  staff of what that singer sings: the notes of the singer's lines, moved as they say, in the
+  sections they say; whole bars of rest where the singer does not sing. It is a staff item
+  like any other (a name in quotes, `as …`, `hidden`, `sounds …`). The staff is named as the
+  singer, capitalised.
+- `lyrics NAME`, where NAME is a singer and no lyrics track, is that singer's WORDS: the
+  words of the sections she sings. Under her staff it is that staff's verse; anywhere else it
+  is a row of its own, at her rhythm (her words under the lead's staff).
+- A score prints what it says, of a singer as of a part: `staff carol` alone is her notes
+  with no words (a harmony under a lead that carries the same words), `staff carol  lyrics
+  carol` both, `lyrics carol` her words alone.
+- A PART called as a singer is, is the part: `staff carol` then engraves it and nothing is
+  made. That is what her notes written out are (section 14).
 - A singer who sings the part an octave down in every line is written in the treble clef an
   octave down (a tenor's), unless the part writes a clef: the notes stand where the part's do.
 - A score that prints a singer SINGS WHAT IT SHOWS: the singer's lines are read there on the
   made part, as they stand, so the page and the voice cannot differ. A score that does not
-  print the singer sings the line as section 12 says. `score { lyricsStaff carol }` therefore
+  print the singer sings the line as section 12 says. `score { staff carol  lyrics carol }` therefore
   plays carol alone.
 
-**The item's word** (owner's decision the same day, after some hours as `singer NAME`): one
-word meant the line that says who sings and the item that prints her, and a score that held
-both — a score with singer lines of its own — read badly. The item is `lyricsStaff NAME`: a
-staff with its words. Of a singer, what she sings; of a part, that part with the words it
-names. The word is not reserved (a part may be called it).
+**No word of its own** (owner's decisions the same day). The item was `singer NAME` for
+some hours — one word then meant the line that says who sings and the item that prints her,
+and a score holding both read badly — and `lyricsStaff NAME` for one more, a staff that
+always came with its words. The owner asked for the staff without the words, and the words
+without the staff; the answer needed no keyword: a singer's name stands where a part's does
+after `staff`, and where a track's does after `lyrics`.
 
 **A score reads its own singer lines** (owner's report the same day: a Japanese score with
-its own lines, `lyricsStaff alice` added, printed alice with the English words). A singer's
+its own lines, `staff alice  lyrics alice` added, printed alice with the English words). A singer's
 staff is made of the lines THE SCORE reads — its own, and the top level's for the parts it
 writes no line for, the rule a score sings by (`LyricSinger.LinesOfSingerIn`). Where those
-are not the top level's, the part made is the score's own (`alice__2`, the second score:
-`LyricSinger.PartOfItem`, read off the syntax alone since the resolved lines read the
-scores), so one file holds alice's English staff and her Japanese one.
+are not the top level's, the part made is the score's own (`alice__2`, the second score;
+`alice__0` is the one made of the top level's lines: `LyricSinger.PartOfSinger`, read off
+the syntax alone since the resolved lines read the scores), so one file holds alice's English
+staff and her Japanese one. ⚠️ A made part is never called by the singer's bare name: a part
+of that name is her notes written out, and the text that makes the part would turn the item
+that asked for it into a staff of a part.
 
 **How it is made** (`Editing.SingerParts`): the part is WRITTEN, as Lily# text, after the
 file's own — the way `using` adds a file, the document staying the prefix so that every
@@ -353,11 +364,11 @@ look at its scores. What is written:
 
 ```
 // (written by Lily#, not the file's own text: …)
-part carol "Carol" { instrument alto lyrics __words_carol
+part carol__0 "Carol" { instrument alto lyrics __words_carol__0
   section Verse { R*4 }
   section Chorus { b'4 b c b | g4 f e2 | }
 }
-lyrics __words_carol {
+lyrics __words_carol__0 {
   section Chorus { Sing it o- ver, | o- ver- now, | }
 }
 ```
@@ -379,10 +390,10 @@ g-sharp in a minor a third above is b, over c-sharp in G it is e. The two readin
 for a note spelled against its usual alteration (d-flat in C: the page lands on f, the
 unprinted voice on e). LILYSHARP-OWN, a reading.
 
-Not made, and said at the score's item (LYS4060): a singer nobody names; a singer called as
-a part is (the made part takes the singer's name) — unless that part IS the singer's notes,
-written out, every line singing it as it stands; a line that sings one voice of a part; a
-moved line whose music calls a phrase (the phrase's notes are shared, not the copy's to move).
+Not made, and said at the score's item (LYS4060): a singer the score's own singer lines leave
+out (they take the place of the file's for their part); a line that sings one voice of a part;
+a moved line whose music calls a phrase (the phrase's notes are shared, not the copy's to
+move). A name no singer and no part has is an unknown part (LYS1007), as ever.
 
 Limits kept: a click on a made note leads nowhere in the document (its position is past the
 text); words written for the whole piece with no sections (`lyrics words { … }` at the top
@@ -403,10 +414,10 @@ voice: a second violin a third under the first is the same request.
   bars of rest where the singer does not sing; the words of the sung sections as a track of
   the singer's own (`carolWords`), named in the new part's header; the singer's lines made
   ONE line that sings the written part as it stands (`singer carol female "x/y" sings on carol
-  with …`, the first line's voice and settings kept). A score that prints the singer keeps its
-  `lyricsStaff carol` — section 13 reads a singer whose part is written as that part's staff and
-  words, and makes nothing; a score that shows the sung part takes `staff carol  lyrics
-  carolWords` after it.
+  with …`, the first line's voice and settings kept). A score that printed the singer keeps its
+  `staff carol` where it stood — the name is the written part's now, and nothing is made — and
+  its `lyrics carol` becomes `lyrics carolWords`; a score that showed only the sung part takes
+  `staff carol  lyrics carolWords` after it.
 - **"Lily#: Write a Harmony Part…"** (the command palette; `HarmonyPartWriter.WritePart`)
   asks which part (the caret's first), how far (a third, a fourth, a fifth, a sixth, a tenth,
   above or below along the key, or an octave), which sections, and the new part's name, and

@@ -165,7 +165,7 @@ public static class RenderSpecParser
                 case StaffRenderSyntax staff when !IsInsideGrandStaff(staff) && !staff.Hidden:
                     var staffSpec = ParseStaff(staff);
                     if (staffSpec != null)
-                        items.Add(new SingleStaffSpec(WithSingerWords(staff, staffSpec)));
+                        items.Add(new SingleStaffSpec(staffSpec));
                     break;
 
                 case TabRenderSyntax tab when !tab.Hidden:
@@ -290,6 +290,9 @@ public static class RenderSpecParser
     {
         if (row.SingsTarget is { } written)
             return written;
+        // A singer's words (`lyrics carol`) follow the singer's own notes: the part made of her lines.
+        if (row.IsSingerWords)
+            return Music.LyricSinger.PartOfSinger(row, row.NameToken!.Text);
         SyntaxNode root = row;
         while (root.Parent != null)
             root = root.Parent;
@@ -315,7 +318,7 @@ public static class RenderSpecParser
             switch (member)
             {
                 case StaffRenderSyntax staff:
-                    found = staff.PartToken?.Text ?? SyntaxFacts.UnnamedPartName;
+                    found = staff.PartName;
                     severalParts = false;
                     break;
                 case TabRenderSyntax tab:
@@ -324,7 +327,7 @@ public static class RenderSpecParser
                     break;
                 case GrandStaffRenderSyntax group:
                     found = group.ChildNodes().OfType<StaffRenderSyntax>().LastOrDefault() is { } last
-                        ? last.PartToken?.Text ?? SyntaxFacts.UnnamedPartName
+                        ? last.PartName
                         : null;
                     severalParts = found == null;
                     break;
@@ -343,7 +346,7 @@ public static class RenderSpecParser
         var hidden = ImmutableArray.CreateBuilder<HiddenStaffSpec>();
         foreach (var node in render.DescendantNodes())
             if (node is StaffRenderSyntax { Hidden: true } staff)
-                hidden.Add(new HiddenStaffSpec(staff.PartToken?.Text ?? SyntaxFacts.UnnamedPartName, staff.SoundsToken?.Text));
+                hidden.Add(new HiddenStaffSpec(staff.PartName, staff.SoundsToken?.Text));
             else if (node is TabRenderSyntax { Hidden: true } tab)
                 hidden.Add(new HiddenStaffSpec(tab.PartToken?.Text ?? SyntaxFacts.UnnamedPartName, tab.SoundsToken?.Text));
         return hidden.ToImmutable();
@@ -511,23 +514,6 @@ public static class RenderSpecParser
                     : staff.VerseVoices).Add((track, sings)),
             }
             : staff with { WithLyrics = verses };
-    }
-
-    /// <summary>
-    /// A <c>lyricsStaff NAME</c> item's staff with the singer's words under it: the tracks the
-    /// singer's part names (Editing.SingerParts writes them there). The item is the staff AND
-    /// its words — the singer line knows both, so the score does not say them again.
-    /// </summary>
-    private static StaffSpec WithSingerWords(StaffRenderSyntax staff, StaffSpec spec)
-    {
-        if (!staff.IsSinger)
-            return spec;
-        SyntaxNode root = staff;
-        while (root.Parent != null)
-            root = root.Parent;
-        foreach (string track in Music.LyricBindings.TracksOfPart(root, spec.VoiceName))
-            spec = WithFoldedVerse(root, spec, track, spec.VoiceName);
-        return spec;
     }
 
     /// <summary>
@@ -777,7 +763,7 @@ public static class RenderSpecParser
                 case StaffRenderSyntax staff when !staff.Hidden:
                     var staffSpec = ParseStaff(staff);
                     if (staffSpec != null)
-                        members.Add(new SingleStaffSpec(WithSingerWords(staff, staffSpec)));
+                        members.Add(new SingleStaffSpec(staffSpec));
                     break;
                 case CondensedStaffRenderSyntax condensed:
                     members.Add(ParseCondensedStaff(condensed));
@@ -895,11 +881,10 @@ public static class RenderSpecParser
         // played to MIDI only (collected in Parse). No word at all is a bare `staff`: the
         // file's unnamed part (SyntaxFacts.UnnamedPartName, 2026-10-09).
         ClefType? explicitClef = ClefOfKeyword(staff.ClefToken);
-        // …and a `lyricsStaff NAME` item's part is the one made of that singer's lines AS THIS SCORE
+        // …and a `staff NAME` item's part is the one made of that singer's lines AS THIS SCORE
         // READS THEM (Music.LyricSinger.PartOfItem): the singer's name, or one of the score's own
         // where its own singer lines say what she sings there.
-        string voiceName = staff.IsSinger ? Music.LyricSinger.PartOfItem(staff)
-            : staff.PartToken?.Text ?? SyntaxFacts.UnnamedPartName;
+        string voiceName = staff.PartName;
 
         // No explicit clef in the render block → take it from the part definition.
         ClefType clef = explicitClef ?? GetPartClef(staff, voiceName) ?? ClefType.Treble;

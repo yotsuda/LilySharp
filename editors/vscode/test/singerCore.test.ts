@@ -698,11 +698,11 @@ describe('voiceMenuLabels', () => {
             { Part: 'lead', Key: 'lead', Singer: 'female', Name: 'alice' },
             { Part: 'alto', Key: 'alto', Singer: 'female', Name: 'alice' },
         ]), { lead: 'alice (lead)', alto: 'alice (alto)' });
-        assert.deepEqual(voiceMenuLabels([{ Part: 'carol', Key: 'carol', Singer: 'female', Name: 'carol' }]), { carol: 'carol' });
+        assert.deepEqual(voiceMenuLabels([{ Part: 'carol__0', Key: 'carol__0', Singer: 'female', Name: 'carol' }]), { carol__0: 'carol' });
     });
     it('says on hover the voice that sings a named singer', () => {
         assert.equal(voiceMenuTitleOf({ Part: 'lead', Singer: 'neutrino/SEVEN', Name: 'carol', Track: 'words' }, 'carol'), 'carol (SEVEN) sings words on lead');
-        assert.equal(voiceMenuTitleOf({ Part: 'carol', Singer: 'female', Name: 'carol', Track: '__words_carol' }, 'carol'), 'carol (female)');
+        assert.equal(voiceMenuTitleOf({ Part: 'carol__0', Singer: 'female', Name: 'carol', Track: '__words_carol__0' }, 'carol'), 'carol (female)');
         assert.equal(voiceMenuTitleOf({ Part: 'melody', Singer: 'neutrino/MERROW', Name: null, Track: 'verse' }, 'MERROW'), 'MERROW sings verse on melody');
     });
     it('a singer renamed changes the menu', () => assert.notEqual(

@@ -101,7 +101,7 @@ public static class HarmonyPartWriter
     /// <summary>
     /// What the singer <paramref name="person"/> sings, written out as a part called as the
     /// singer is: the notes, the words as a track of the singer's own, the singer's lines made
-    /// one line that sings that part as it stands. A score's <c>lyricsStaff NAME</c> goes on
+    /// one line that sings that part as it stands. A score's <c>staff NAME</c> goes on
     /// printing it — now the written part.
     /// </summary>
     public static Result WriteSinger(string source, string person)
@@ -148,23 +148,48 @@ public static class HarmonyPartWriter
         if (byPart.Length > 0 && top.ChildNodes().OfType<PartDeclarationSyntax>().FirstOrDefault(p => p.Name.Text == person) is { } part)
             edits.Add((part.Span.End, part.Span.End, nl + "lyrics " + track + " {" + nl + byPart + "}"));
 
-        // ⑵ The scores: one that prints the singer keeps its `lyricsStaff NAME` (now the written
+        // ⑵ The scores: one that prints the singer keeps its `staff NAME` (now the written
         // part) and wants no second staff; one that shows the staff takes the words under it.
-        foreach (var score in top.ChildNodes().OfType<RenderDeclarationSyntax>())
+        // The scores of the file as it was, by their order: which showed the singer's staff
+        // (`staff carol`, then her made part) and which her words (`lyrics carol`).
+        var before = root.ChildNodes().OfType<RenderDeclarationSyntax>().ToList();
+        var scores = top.ChildNodes().OfType<RenderDeclarationSyntax>().ToList();
+        for (int s = 0; s < scores.Count; s++)
         {
-            var staves = score.DescendantNodes<StaffRenderSyntax>().Where(s => s.PartToken?.Text == person).ToList();
-            var staff = staves.FirstOrDefault(s => !s.IsSinger);
-            if (staff == null)
-                continue;
-            if (staves.Any(s => s.IsSinger))
+            var score = scores[s];
+            bool showed = s < before.Count && before[s].DescendantNodes<StaffRenderSyntax>().Any(st => st.PartToken?.Text == person);
+            var staves = score.DescendantNodes<StaffRenderSyntax>().Where(st => st.PartToken?.Text == person).ToList();
+            var rows = score.DescendantNodes<LyricsRowRenderSyntax>().Where(r => r.NameToken?.Text == person).ToList();
+            // Her words were a row of her name; the name is the part's now, and the words a track's.
+            foreach (var row in rows)
+                edits.Add((row.NameToken!.Span.Start, row.NameToken.Span.End, track));
+            if (showed && staves.Count > 1)
             {
-                int from0 = staff.Span.Start;
+                // The staff the placing added stands after the sung part's rows; the score's
+                // own stays where its writer put it.
+                var added = staves.FirstOrDefault(st => PrecededBy(st, from)) ?? staves[^1];
+                int from0 = added.Span.Start;
                 while (from0 > 0 && char.IsWhiteSpace(text[from0 - 1]))
                     from0--;
-                edits.Add((from0, staff.Span.End, ""));
+                edits.Add((from0, added.Span.End, ""));
             }
-            else if (made.Words.Count > 0)
-                edits.Add((staff.Span.End, staff.Span.End, "  lyrics " + track));
+            else if (!showed && staves.Count > 0 && made.Words.Count > 0 && rows.Count == 0)
+                edits.Add((staves[0].Span.End, staves[0].Span.End, "  lyrics " + track));
+        }
+
+        // Whether the nearest staff before this one among its siblings — lyrics and chords rows
+        // passed over — is the part's.
+        static bool PrecededBy(StaffRenderSyntax staff, string part)
+        {
+            SyntaxNode? previous = null;
+            foreach (var sibling in staff.Parent!.ChildNodes())
+            {
+                if (ReferenceEquals(sibling, staff))
+                    break;
+                if (sibling is StaffRenderSyntax or TabRenderSyntax or GrandStaffRenderSyntax or CondensedStaffRenderSyntax or CombinedStaffRenderSyntax)
+                    previous = sibling;
+            }
+            return previous is StaffRenderSyntax { PartToken.Text: var name } && name == part;
         }
 
         // ⑶ The singer's lines: one line, singing the written part as it stands (its words are
@@ -209,7 +234,7 @@ public static class HarmonyPartWriter
         error = null;
         string nl = source.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
         string asked = source + (source.EndsWith('\n') ? "" : nl) + (line != null ? line + nl : "")
-            + "score " + AskingScore + " { " + LyricSinger.LyricsStaffWord + " " + name + " }" + nl;
+            + "score " + AskingScore + " { staff " + name + " }" + nl;
         var tree = SyntaxTree.Parse(asked);
         string text = SingerParts.Expand(asked, tree, out var said);
         if (said.Count > 0 || ReferenceEquals(text, asked))
@@ -219,7 +244,7 @@ public static class HarmonyPartWriter
         }
         var root = SyntaxTree.Parse(text).GetRoot();
         int from = SingerParts.MadeFrom(text);
-        var part = root.ChildNodes().OfType<PartDeclarationSyntax>().FirstOrDefault(p => p.Name.Text == name && p.Span.Start >= from);
+        var part = root.ChildNodes().OfType<PartDeclarationSyntax>().FirstOrDefault(p => p.Name.Text == name + LyricSinger.ScopedMark + "0" && p.Span.Start >= from);
         if (part == null)
         {
             error = "Nothing was written: the notes could not be made.";
@@ -233,7 +258,7 @@ public static class HarmonyPartWriter
             if (Inner(text, section) is { } inner)
                 music.Add((section.SectionName, inner));
         var words = new List<(string, string)>();
-        string track = LyricSinger.WordsOf(name);
+        string track = LyricSinger.WordsOf(name + LyricSinger.ScopedMark + "0");
         foreach (var block in root.ChildNodes().OfType<LyricsBlockSyntax>().Where(b => b.VoiceName == track && b.Span.Start >= from))
             foreach (var section in block.ChildNodes().OfType<SectionDeclarationSyntax>())
                 if (Inner(text, section) is { } inner)

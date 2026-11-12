@@ -185,6 +185,12 @@ function voiceMenuName(singer: string | null | undefined): string | undefined {
     return singer.includes('/') ? singer.slice(singer.indexOf('/') + 1) : singer;
 }
 
+/** Whether a named singer's voice is on the staff a score prints for her: the part made of her lines
+ *  (Core's LyricSinger.PartOfSinger: her name, a mark, a number). */
+function onOwnStaff(voice: Pick<SungVoiceDto, 'Part' | 'Name'>): boolean {
+    return !!voice.Name && voice.Part.startsWith(voice.Name + '__');
+}
+
 /** Each voice's line in the practice menu, by its key: who sings it, with the part beside a voice
  *  that sings several; the part alone for its default voice. */
 export function voiceMenuLabels(voices: readonly Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer' | 'Name'>[]): Record<string, string> {
@@ -199,7 +205,7 @@ export function voiceMenuLabels(voices: readonly Pick<SungVoiceDto, 'Part' | 'Ke
     return Object.fromEntries(voices.map(v => {
         const name = called(v);
         // A named singer on the staff a score prints for her (the part is called as she is) needs no part beside the name.
-        return [sungKey(v), !name ? v.Part : (uses.get(name) ?? 0) > 1 && v.Part !== v.Name ? `${name} (${v.Part})` : name];
+        return [sungKey(v), !name ? v.Part : (uses.get(name) ?? 0) > 1 && !onOwnStaff(v) ? `${name} (${v.Part})` : name];
     }));
 }
 
@@ -217,7 +223,7 @@ export function voiceMenuTitleOf(voice: Pick<SungVoiceDto, 'Part' | 'Singer' | '
     const who = by ? `${label} (${by})` : label;
     // Short (owner's report 2026-11-12: the text over a voice's button was long and hard to
     // read): on the staff a score prints for her there is nothing more to say than who.
-    return voice.Part === voice.Name ? who : voiceMenuTitle(who, voice.Track, voice.Part);
+    return onOwnStaff(voice) ? who : voiceMenuTitle(who, voice.Track, voice.Part);
 }
 
 /** All the practice menu's voice lines say, for telling that an edit changed them: who sings
