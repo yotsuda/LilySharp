@@ -359,6 +359,59 @@ public class SingerPartsTests
         Assert.Null(node.TrackToken);
     }
 
+    /// <summary>Owner's decision 2026-11-12: a verse in Japanese and a chorus in English is one
+    /// song. A part sings one set of words IN A SECTION; lines that sing other words in other
+    /// sections stand together, each its own voice in its own language.</summary>
+    [Fact]
+    public void APartSingsOtherWordsInOtherSections()
+    {
+        string Song(string singers) => $$"""
+            octave relative
+            time 4/4
+            language english
+            part lead { instrument alto  lyrics en  lyrics jp }
+            section Verse {
+              lead { e'4 e d c | }
+              lyrics en { one two three four | }
+              lyrics jp language japanese { あ さ の み | }
+            }
+            section Chorus {
+              lead { g'4 g a g | }
+              lyrics en { la la la la | }
+              lyrics jp language japanese { う た お う | }
+            }
+            form { Verse Chorus }
+            {{singers}}
+            score { staff lead  lyrics en }
+            """;
+        IEnumerable<Diagnostic> Collisions(string singers)
+            => SemanticValidation.Run(SyntaxTree.Parse(Song(singers))).Where(d => d.Code == DiagnosticCodes.SingerDuplicatePart);
+
+        string mixed = "singer alice female japanese sings on lead in Verse\nsinger bob male sings on lead in Chorus\nsinger carol female sings on lead up 3 in Chorus";
+        Assert.Empty(Collisions(mixed));
+        var tree = SyntaxTree.Parse(Song(mixed));
+        Assert.Empty(SemanticValidation.Run(tree).Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Message));
+        var midi = Midi(tree);
+        var voices = SungVoices.Read(midi, MidiClock.SecondsOf(midi));
+        // Three voices of the one part, each with its own key, its own words and their language.
+        Assert.Equal(3, voices.Select(v => v.Key).Distinct().Count());
+        Assert.All(voices, v => Assert.Equal("lead", v.Part));
+        var japanese = Assert.Single(voices, v => v.Language == "ja");
+        Assert.Equal("jp", japanese.Track);
+        Assert.Equal(["あ", "さ", "の", "み"], japanese.Notes.Select(n => n.Lyric));
+        var english = voices.Where(v => v.Language == "en").ToList();
+        Assert.Equal(2, english.Count);
+        Assert.All(english, v => Assert.Equal(["la", "la", "la", "la"], v.Notes.Select(n => n.Lyric)));
+        Assert.Equal([0, 1], english.Select(v => v.Line));
+
+        // Two sets of words in one section are still refused, and the message says where.
+        var same = Assert.Single(Collisions("singer alice female japanese sings on lead in Verse\nsinger bob male sings on lead in Verse Chorus"));
+        Assert.Contains("already sings 'jp' in Verse", same.Message);
+        // …and so is a line that names no sections beside one that sings other words.
+        var whole = Assert.Single(Collisions("singer alice female japanese sings on lead\nsinger bob male sings on lead in Chorus"));
+        Assert.Contains("say which on both lines", whole.Message);
+    }
+
     [Fact]
     public void ASingerTheScoresOwnLinesLeaveOut_IsSaidAtTheItem()
     {

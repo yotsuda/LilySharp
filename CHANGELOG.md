@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **A part may sing other words in other sections**: `singer alice female japanese sings on lead in Verse` beside `singer bob male sings on lead in Chorus` — a verse in Japanese and a chorus in English — was refused ("lead already sings jp"). One part sings one set of words in a section; each track's singer lines are their own voices, in their own language. Two sets of words in one section are still LYS4044, and the message says which section.
 - **Of a part's several lyrics, a singer line that names none sings the ones in its language**: with `part lead { lyrics en  lyrics jp }`, `singer alice female sings on lead` was an error (which words?). It sings the one track in the singer's language — the file's, or the line's own, said as the gender is: `singer alice female japanese sings on lead`. The language narrows the voices the editor offers too. None or several tracks in that language is still LYS4054, and says the language it looked for.
 - **A singer line that forgot its `sings` says so, once**: `singer alice female on lead in Verse` was read as music at the top level — eight errors, one underlining the comment above it, and three more at the score's singer staves. It is one error at the word where `sings` belongs.
 - **`lyrics carol` for a singer who sings the note names prints the note names**: with `singer carol … sings solfege …`, the row of her words under her staff was empty — no track is written for words made from the notes.

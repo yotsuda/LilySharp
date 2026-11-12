@@ -41,8 +41,9 @@ public sealed record SungNote(double Start, double Duration, double Pitch, strin
 /// <c>singer</c> line, <c>part#2</c> and so on for the rest (null is the part's name).
 /// <paramref name="Sing"/> is how the voice sings, as its <c>singer</c> line's <c>with …</c> writes it: a name its
 /// number or its word, by the names the voice's engine takes; null where the line sets nothing.
+/// <paramref name="Line"/> is its place among the singer lines on these words of this part, from 0.
 public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungNote> Notes, IReadOnlyList<string> Warnings, string? Singer = null, string? Gender = null, string? Track = null, string? Key = null,
-    IReadOnlyDictionary<string, (double? Number, string? Word)>? Sing = null);
+    IReadOnlyDictionary<string, (double? Number, string? Word)>? Sing = null, int Line = 0);
 
 /// <summary>
 /// The sung voices of an exported piece: one per part a placed lyrics row sings with a voice asked for (<see cref="Music.LyricSinger.SungReaderOf"/>). Which note a
@@ -81,17 +82,22 @@ public static class SungVoices
     {
         var voices = new List<SungVoice>();
         var lyrics = midi.Tracks.SelectMany(t => t.Lyrics).Where(l => l.Part != null && l.Voiced).ToList();
-        foreach (var part in lyrics.Select(l => l.Part!).Distinct(StringComparer.Ordinal))
+        // One set of voices for each TRACK a part sings (owner's decision 2026-11-12: a verse in
+        // Japanese and a chorus in English — the singer lines of each track say their sections,
+        // and the validator keeps two tracks of a part out of one section): the words, their
+        // language and who sings them are the track's.
+        var slots = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var (part, track) in lyrics.Select(l => (l.Part, l.Track)).Distinct())
         {
-            // The part's language: its first words' (one voice a part; the first words at an onset win).
-            var first = lyrics.First(l => l.Part == part);
+            // The track's language: its first words' (the first words at an onset win).
+            var first = lyrics.First(l => l.Part == part && l.Track == track);
             string language = first.Language ?? Japanese;
             var words = new Dictionary<int, string>();
             var hyphens = new HashSet<int>();
             foreach (var l in lyrics)
-                if (l.Part == part && words.TryAdd(l.Tick, l.Sung ?? l.Text) && l.Hyphen)     // a reading (漢[かん]) sings かん
+                if (l.Part == part && l.Track == track && words.TryAdd(l.Tick, l.Sung ?? l.Text) && l.Hyphen)     // a reading (漢[かん]) sings かん
                     hyphens.Add(l.Tick);
-            var line = Line(midi, part, words);
+            var line = Line(midi, part!, words);
             MoveWordsOntoGraces(line, words, hyphens);
 
             // A vowel is not carried into a section that sings no word (owner's report
@@ -169,6 +175,9 @@ public static class SungVoices
                     + string.Join(" ", strange.Take(8)) + (strange.Count > 8 ? " …" : ""));
             // One voice for each `singer` line on these words, each sung by itself (docs/lyrics-singer-design.md §2).
             var singers = (first.Singer ?? "").Split(Music.LyricSinger.Joiner);
+            // The voices of the part's tracks before this one keep their keys: this track's go on from them.
+            int before = slots.GetValueOrDefault(part!);
+            slots[part!] = before + singers.Length;
             // How each sings, beside who: the same order and number (LyricSinger.SettingsReaderOf).
             var settings = (first.Sing ?? "").Split(Music.LyricSinger.SettingsJoiner);
             var ticks = sung.Select(n => n.Note.StartTick).ToList();
@@ -183,8 +192,9 @@ public static class SungVoices
                 var own = Placed(midi, notes, ticks, written);
                 if (own.Count == 0)
                     continue;       // it sings in sections the piece does not play these words in
-                voices.Add(new SungVoice(part, language, own, warnings, singer, gender, first.Track, s == 0 ? part : $"{part}#{s + 1}",
-                    sing is { Count: > 0 } ? sing : null));
+                int nth = before + s;
+                voices.Add(new SungVoice(part!, language, own, warnings, singer, gender, first.Track, nth == 0 ? part : $"{part}#{nth + 1}",
+                    sing is { Count: > 0 } ? sing : null, s));
             }
         }
         return voices;

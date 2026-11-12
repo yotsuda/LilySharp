@@ -260,7 +260,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         if (lines.Count == 0)
             return;
         var tracks = root.DescendantNodes<LyricsBlockSyntax>().Select(b => b.VoiceName).OfType<string>().ToHashSet(StringComparer.Ordinal);
-        var wordsOfPart = new Dictionary<(int Score, string Part), string>();
+        var wordsOfPart = new Dictionary<(int Score, string Part), List<(string Track, HashSet<string>? Sections)>>();
         var voicesOnPart = new HashSet<(int Score, string Part, string? Singer)>();
         foreach (var line in lines)
         {
@@ -313,11 +313,27 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                 continue;
             if (node.TrackToken is { } named)
                 WarnIfNotListed(root, part, named.Text, line.Track, named.Span);
-            // One scope, one set of words a part; a second voice on the same words sings along.
-            if (!wordsOfPart.TryAdd((line.Score, part), line.Track) && wordsOfPart[(line.Score, part)] != line.Track)
-                _diagnostics.Error(node.Keyword.Span, DiagnosticCodes.SingerDuplicatePart, line.Score < 0
-                    ? $"'{part}' already sings '{wordsOfPart[(line.Score, part)]}'. To have another score sing '{line.Track}' on it, write this line inside that score."
-                    : $"'{part}' already sings '{wordsOfPart[(line.Score, part)]}' in this score, and one part sings one set of words.");
+            // One scope, one set of words a part IN A SECTION (owner's decision 2026-11-12: a verse
+            // in Japanese and a chorus in English is one song); a second voice on the same words
+            // sings along. Two sets of words collide where their lines share a section — a line
+            // with no `in` sings every section.
+            if (!wordsOfPart.TryGetValue((line.Score, part), out var sungThere))
+                wordsOfPart[(line.Score, part)] = sungThere = [];
+            var sections = node.Sections.Count > 0 ? node.Sections.Select(s => s.Text).ToHashSet(StringComparer.Ordinal) : null;
+            var other = sungThere.FirstOrDefault(w => w.Track != line.Track
+                && (w.Sections == null || sections == null || w.Sections.Overlaps(sections)));
+            sungThere.Add((line.Track, sections));
+            if (other.Track != null)
+            {
+                string where = other.Sections != null && sections != null
+                    ? " in " + string.Join(", ", other.Sections.Intersect(sections)) : "";
+                _diagnostics.Error(node.Keyword.Span, DiagnosticCodes.SingerDuplicatePart,
+                    $"'{part}' already sings '{other.Track}'{where}, and a part sings one set of words in a section. "
+                    + (other.Sections == null || sections == null
+                        ? $"To sing '{line.Track}' in some sections and '{other.Track}' in others, say which on both lines: 'in Verse', 'in Chorus'."
+                        : "Name other sections on one of the two lines.")
+                    + (line.Score < 0 ? $" To have another score sing '{line.Track}' on it, write this line inside that score." : ""));
+            }
             // …unless it sings another line of it (up 3), or in other sections.
             else if (!voicesOnPart.Add((line.Score, part, line.Singer + "\u0001" + node.Interval + "\u0001" + node.Octaves
                          + "\u0001" + string.Join(",", node.Sections.Select(s => s.Text)))))

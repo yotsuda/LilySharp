@@ -1183,7 +1183,7 @@ public sealed partial class LilySharpLanguageServer
                     Warnings = v.Warnings.ToArray(),
                     InScore = inScore == null || inScore.Contains(v.Part),
                     Singer = v.Singer,
-                    Name = names(v.Track, v.Part, v.Key),
+                    Name = names(v.Track, v.Part, v.Line),
                     Gender = v.Gender,
                     Track = v.Track,
                     Sing = v.Sing?.ToDictionary(p => p.Key, p => p.Value.Number is { } number ? (object)number : p.Value.Word ?? ""),

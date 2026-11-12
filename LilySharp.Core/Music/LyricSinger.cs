@@ -468,16 +468,15 @@ public static class LyricSinger
 
     /// <summary>
     /// A reader of the singer's OWN name (<c>singer carol …</c>) for one voice of a part — its
-    /// track, its part and its key among the part's voices (<c>part</c>, <c>part#2</c> …, as
-    /// <see cref="Midi.SungVoice.Key"/> counts them: one for each line that differs in who sings
-    /// or in how, in the order written). Null for a voice whose line gives no name.
+    /// track, its part and its place among the voices on those words (<see cref="Midi.SungVoice.Line"/>:
+    /// one for each line that differs in who sings or in how, in the order written). Null for a
+    /// voice whose line gives no name.
     /// </summary>
-    public static Func<string?, string?, string?, string?> NamesReaderOf(SyntaxNode root, RenderSpec? spec)
+    public static Func<string?, string?, int, string?> NamesReaderOf(SyntaxNode root, RenderSpec? spec)
     {
         var lines = LinesFor(root, spec);
-        return (track, part, key) =>
+        return (track, part, at) =>
         {
-            int at = key != null && key.LastIndexOf('#') is var hash and > 0 && int.TryParse(key[(hash + 1)..], out int n) ? n - 1 : 0;
             // By the track too where the voice says one the lines know; else by the part alone.
             var sung = lines.Where(l => l.Part == part && l.Track == track).ToList();
             if (sung.Count == 0)

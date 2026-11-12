@@ -1672,7 +1672,8 @@ public static class DiagnosticCodes
     /// <summary><c>singer … sings NAME</c> with no <c>on</c>, and nothing says whose notes it sings.</summary>
     public const string SingerPartUnresolved = "LYS4043";
 
-    /// <summary>Two <c>singer</c> lines giving one part different words in one scope.</summary>
+    /// <summary>Two <c>singer</c> lines giving one part different words in one section, in one
+    /// scope. Other words in other sections (<c>in Verse</c>, <c>in Chorus</c>) stand together.</summary>
     public const string SingerDuplicatePart = "LYS4044";
 
     /// <summary><c>on NAME</c> where NAME is a voice two parts share.</summary>

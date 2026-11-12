@@ -343,8 +343,10 @@ SingerGender   = 'male' | 'female' ;
                     LYS4054 if it names several), else the unnamed lyrics. A name the part does
                     not list, where it lists any, is warned about (LYS4055). 'on' names the part,
                     or a voice of one; with none, the file's only part, else the one part every score prints
-                    the words under, else LYS4043. One part sings one set of words in a scope
-                    (LYS4044; the same voice twice on them is warned about, LYS4053); a voice
+                    the words under, else LYS4043. One part sings one set of words IN A SECTION, in a
+                    scope: lines that sing other words in other sections ('in Verse', 'in Chorus')
+                    stand together — a verse in Japanese, a chorus in English — and two sets in
+                    one section are LYS4044 (the same voice twice on them is warned about, LYS4053); a voice
                     two parts share is LYS4045, words no lyrics defines LYS4042. *)
 LanguageName   = 'japanese' | 'english' | 'chinese' | 'korean' ;
                  (* What the lyrics are written in: a fact of the words, not of who sings them.

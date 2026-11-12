@@ -96,7 +96,7 @@ public class SingerLineTests
     {
         var d = Assert.Single(Validate(Music + "score { singer \"n/A\" sings ja on m\nsinger \"n/B\" sings en on m\nstaff m  lyrics ja }\n"),
             d => d.Code == DiagnosticCodes.SingerDuplicatePart);
-        Assert.Contains("in this score", d.Message);
+        Assert.Contains("a part sings one set of words in a section", d.Message);
     }
 
     [Fact]

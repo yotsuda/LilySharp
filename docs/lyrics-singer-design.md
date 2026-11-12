@@ -46,7 +46,11 @@ score { staff sop  lyrics words }
 - `on`, `hum` and `solfege` as a track's name.
 - `lyrics` inside a `part { }` block or inside a part's `{ }` in a section. At the top level or directly
   in a section it may be written. (`part { }` takes a `lyrics NAME` with no body, section 10.)
-- Two `singer` lines giving one part different words in one scope (LYS4044): the top level, or one score. To
+- Two `singer` lines giving one part different words IN ONE SECTION, in one scope (LYS4044): the top level,
+  or one score. Other words in other sections stand together (owner's decision 2026-11-12: a verse in
+  Japanese and a chorus in English is one song — `in Verse` on one line, `in Chorus` on the other; a line
+  with no `in` sings every section). `SungVoices.Read` makes the voices of a part track by track: the
+  words, their language and who sings them are the track's. To
   have another score sing other words on a part, its line goes inside that score. The same voice on the same
   words of a part twice is warned about (LYS4053).
 - `on NAME` where NAME is a voice name two parts share.
