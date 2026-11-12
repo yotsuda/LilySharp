@@ -70,6 +70,12 @@
   <p>Four statements, one job each. The <b>part</b> names its words. <code>lyrics</code> holds them. A
   <code>lyrics</code> row in a score <b>prints</b> them. A <code>singer</code> line <b>sings</b> them.</p>
   <!--EXAMPLE:sing-first-->
+  <!-- VIDEO sing-first: SHOTLIST 18. The preview's Export as MP4 of examples/sing-first.lys, the
+       voice mixed in: the page lit note by note while it is sung. Sound: controls, no autoplay. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/sing-first.mp4" controls playsinline preload="none"></video>
+    <figcaption>The example above, sung: the preview's Export as MP4.</figcaption>
+  </figure>
   <p>The <code>singer</code> line stands at the top level of the file, on a line of its own, and its
   order is fixed: <code>singer WHO sings WORDS on PART</code>. Here the part has said which words are
   its own, so the line needs no name for them: <code>singer female sings on melody</code>. Without a
@@ -149,6 +155,12 @@ singer male "neutrino/SOMA" sings words on bas</pre>
   <code>in</code>. Several lines on one part sing together, each with its own sections and its own
   interval:</p>
   <!--EXAMPLE:sing-band-->
+  <!-- VIDEO sing-band: SHOTLIST 19. The preview's Export as MP4 of examples/sing-band.lys: one
+       voice in the Verse, another an octave below in the Chorus with a third above it. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/sing-band.mp4" controls playsinline preload="none"></video>
+    <figcaption>The example above, sung: one voice takes the verse; in the chorus another sings an octave below and a third voice a third above.</figcaption>
+  </figure>
   <p>Lily# moves the notes before any voice sees them, so every engine sings a harmony alike. The
   third follows the key in force where the note is, a key change included. A note outside the scale is
   answered with the scale's own note: over g-sharp in A minor, a third above is b. Where that is not

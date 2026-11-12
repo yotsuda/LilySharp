@@ -52,6 +52,8 @@
 | 15 | `about-speed.mp4` | About — Why the preview keeps up | なし | 約 15 秒 |
 | 16 | `scan-read.mp4` | scan — Read a scan | なし | 約 25 秒 |
 | 17 | `scan-transform.mp4` | scan — Check what it read | なし | 約 20 秒 |
+| 18 | `sing-first.mp4` | sing — A first song | **あり** | 約 20 秒（曲の長さ） |
+| 19 | `sing-band.mp4` | sing — Who sings which section, and harmony | **あり** | 約 20 秒（曲の長さ） |
 
 **一部だけ撮るなら 11・12・13 を先に**（2026-10-12 追加）: 11 と 12 は初めての人が最初に見るページ
 （Get started・Learn）、13 は静止画では説明できないコマンド。10 と 15 はあれば良い程度。
@@ -248,3 +250,26 @@ PDF 1 ページ。Lily# と Calamo を入れた VS Code、フォルダにその 
 2. 元の横に彫られた候補が出るのを待つ。After/Before を 1 回切り替える。
 3. Accept。ファイルが変わり、プレビューも変わる。終わり。
 待ち時間が長ければ切る。
+
+### 18. `sing-first` — 最初の歌（音あり・プレビューの Export）
+
+画面の録画ではなく、**プレビューの Export → MP4** で書き出す（楽譜が光り、声が混ざる）。
+
+1. `site/examples/sing-first.lys` を開き、プレビューを開く。
+2. マイクが青（声の準備完了）になるのを待つ。英語の歌詞なので、英語を歌える女声が要る
+   （`singer female` はその既定の声）。
+3. プレビューの Export → MP4。`site/videos/sing-first.mp4` として保存。
+4. `site/sing-body.html` の `<!-- VIDEO sing-first` の下の figure から `data-pending` を消す。
+
+5 MB を超えたら解像度を下げて書き出し直す。声のクレジットが要る声なら、ページの
+「Voices and their terms」の節か動画の説明に入れる。
+
+### 19. `sing-band` — セクションごとの歌い手とハモり（音あり・プレビューの Export）
+
+18 と同じ手順で `site/examples/sing-band.lys` → `site/videos/sing-band.mp4`。
+`<!-- VIDEO sing-band` の下の figure から `data-pending` を消す。
+
+歌い手は 3 行: Verse を女声、Chorus を男声（1 オクターブ下）、Chorus に女声の 3 度上。
+英語を歌える男声が無いと、既定の別の声に替わる（出力チャネルにその旨が出る）。
+その場合は例の歌い手の行を、手元にある声に合わせて書き直す（例は `site/build-examples.ps1` の
+`sing-band`。直したら `build-site.ps1` を回す）。
