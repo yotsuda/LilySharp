@@ -233,3 +233,48 @@ keeps such a sample by the voice and the settings (`voiceSampleKey`'s `!name=val
 `tried` folder that holds the newest 40), and a value asked while another of the same voice
 waits takes its place, so a run of steps sings its last. A note's `@sing` is not heard this way:
 the phrase has no place for it, and the note's own bar would have to be sung.
+
+## 12. What of its part a voice sings (owner's decisions 2026-11-12; built the same day)
+
+```
+singer [S] sings [NAME] [on PART] [up N | down N] [octave N] [in SECTION …] [with NAME VALUE …]
+```
+
+A band says: this section A sings, this one B, and here C comes in a third above. So does a
+singer line. `in Verse Bridge` names the sections the voice sings in, every time they are
+played (a number of the time is left for when it is asked). `up 3` / `down 6` is an interval
+ALONG THE KEY; `octave -1` an octave. Several lines on one part sing together (section 2), each
+its own sections and its own interval:
+
+```
+singer "diffsinger/Nishiren/2P" sings words on lead in Verse
+singer "neutrino/MERROW" sings words on lead in Chorus
+singer "diffsinger/Nishiren/Soft" sings words on lead up 3 in Chorus
+```
+
+How it came about: NEUTRINO's `-f` had been offered as `with transpose N`. Measured, it moves
+every note by N semitones whatever the key (an A4: 440.4 Hz, 527.5 with 3) — a harmony nobody
+writes, the owner said, where a third along the scale is asked for all the time, and for a
+section, not a piece. Moving notes is Lily#'s work, not an engine's: Cantoria offers `-f` no
+more, and every engine sings a line's interval alike.
+
+- `Midi.SungVoices.Placed` makes each line's notes from its part's: those whose tick is in a
+  named section (`MidiFile.SectionStarts`), stepped by `Step` along the major scale whose tonic
+  sounds at that tick (`MidiFile.KeyStarts`, the file's `shift` and the score's `transpose` in;
+  a minor key is its relative major's scale). A voice that leaves a section ends its phrase
+  there; a note that only holds the syllable of the section before is not its to sing.
+- The interval and the sections ride with the line's settings under names no engine has
+  (`LyricSinger.PlaceInterval` …), so two lines that differ only in them are two voices, and are
+  taken out before the settings go to a voice.
+- A note that is not of the scale: its pitch alone is known here, not how it was spelled. It is
+  read as the degree it most often alters — a raised first, fourth or fifth (a minor key's
+  leading note), a lowered third or seventh — and the voice lands on the scale's own note the
+  interval away: over g-sharp in a minor a third above is b. LILYSHARP-OWN, a reading.
+- Refused (LYS4059): an interval under a second or over two octaves, an octave of 0 or past 3,
+  a section the file has not. The same voice on the same words in other sections, or at
+  another interval, is not a repeat (LYS4053).
+- The editor: after the part the server lists `up`, `down`, `octave`, `in` in their order,
+  each once, their numbers, and the sections not yet named; the step keys move the numbers.
+
+Not built: the harmony is HEARD, not printed (a part made from another, to print, is the
+other half); `in Chorus 2` for one playing of a section; a part of its own transposition.

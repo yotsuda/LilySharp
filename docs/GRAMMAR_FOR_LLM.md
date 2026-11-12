@@ -17,6 +17,13 @@ title "Song"            // optional metadata
 composer "Composer"     // optional
 subtitle "Subtitle"     // optional: the line under the title (LilyPond's \header subtitle)
 poet "Poet"             // optional: the left end of the composer's line (\header poet)
+                        // WHO SINGS WHICH SECTIONS, AND A HARMONY: after the part a singer line may say
+                        //   singer "a/b" sings words on lead in Verse Bridge     — only in those sections
+                        //   singer "c/d" sings words on lead up 3 in Chorus      — a third above, in the key, in the Chorus
+                        //   singer male sings words on lead octave -1            — an octave below
+                        // (order: up/down N, octave N, in SECTIONS, then `with` and the voice's settings).
+                        // Several singer lines on one part sing together. Do not write a harmony part
+                        // by hand when it is a third or a sixth along the key: write `up 3` / `down 6`.
                         // A TEXT FOR THE PAGE, written as Markdown in a fence at the top level: the
                         // lines between ```md and ``` are printed under the title (paragraphs, **bold**,
                         // *italic*); ```md end prints them under the last system. Nothing between the

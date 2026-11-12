@@ -512,6 +512,10 @@ public static partial class NoteStepper
             // The caret on its `male` / `female` (owner's request 2026-11-12): the other one.
             if (singer.GenderToken is { } gender && gender.Span.Start <= offset && offset <= gender.Span.End)
                 return (TargetKind.SingerGender, gender);
+            // …and on the number of its `up 3` / `octave -1` (the same day): the next interval.
+            foreach (var number in new[] { singer.IntervalToken, singer.OctaveToken })
+                if (number != null && number.Span.Start - 1 <= offset && offset <= number.Span.End)
+                    return (TargetKind.SingerPlace, number);
             if (singer.SingsKeyword is not { } sings)
                 continue;
             int end = singer.TrackToken?.Span.End ?? sings.Span.End;
@@ -652,6 +656,43 @@ public static partial class NoteStepper
             : new Edit(sings.Span.End, sings.Span.End, " " + names[to]);
         return (edit, $"sings {names[to]}: lyrics {to + 1} of {names.Count}{list}");
     }
+
+    /// <summary>
+    /// One step of the number of a singer line's <c>up N</c> / <c>down N</c> — the next interval,
+    /// from a second to two octaves — or of its <c>octave N</c>: one more octave up on Up, one
+    /// down on Down, through −3 … 3 with no 0 (which is no octave at all). They stop at the ends.
+    /// </summary>
+    private static (Edit? Edit, string Message) SingerPlaceEdit(string text, SyntaxTokenNode number, int dir)
+    {
+        if (number.Parent is not SingerDeclarationSyntax singer || !int.TryParse(number.Text, out int n))
+            return (null, "write a number");
+        int step = dir > 0 ? 1 : -1;
+        if (ReferenceEquals(number, singer.IntervalToken))
+        {
+            string way = singer.Interval < 0 ? SyntaxFacts.SingerDownWord : SyntaxFacts.SingerUpWord;
+            int to = n + step;
+            if (to is < 2 or > 15)
+                return (null, $"{way} {n}: already the {(to < 2 ? "least" : "most")} (2 to 15)");
+            return (new Edit(number.Span.Start, number.Span.End, to.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                $"{way} {to}: {IntervalName(to)} {(singer.Interval < 0 ? "below" : "above")}, in the key");
+        }
+        int start = number.Span.Start;
+        bool signed = start > 0 && text[start - 1] is '-' or '+';
+        int value = signed && text[start - 1] == '-' ? -n : n;
+        int next = value + step;
+        if (next == 0)
+            next += step;
+        if (next is < -3 or > 3)
+            return (null, $"octave {value}: already the {(next < 0 ? "lowest" : "highest")} (-3 to 3)");
+        return (new Edit(signed ? start - 1 : start, number.Span.End, next.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            $"octave {next}: {Math.Abs(next)} octave{(Math.Abs(next) == 1 ? "" : "s")} {(next < 0 ? "below" : "above")}");
+    }
+
+    private static string IntervalName(int n) => n switch
+    {
+        2 => "a second", 3 => "a third", 4 => "a fourth", 5 => "a fifth", 6 => "a sixth", 7 => "a seventh",
+        8 => "an octave", 9 => "a ninth", 10 => "a tenth", _ => $"interval {n}",
+    };
 
     /// <summary>
     /// The other gender of a <c>singer male …</c> line (owner's request 2026-11-12, on

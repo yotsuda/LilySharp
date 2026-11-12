@@ -146,16 +146,121 @@ public static class SungVoices
             var singers = (first.Singer ?? "").Split(Music.LyricSinger.Joiner);
             // How each sings, beside who: the same order and number (LyricSinger.SettingsReaderOf).
             var settings = (first.Sing ?? "").Split(Music.LyricSinger.SettingsJoiner);
+            var ticks = sung.Select(n => n.Note.StartTick).ToList();
             for (int s = 0; s < singers.Length; s++)
             {
                 string? singer = singers[s].Length == 0 ? null : singers[s];
                 string? gender = singer is "male" or "female" ? singer : first.Gender;
-                var sing = s < settings.Length ? Music.LyricSinger.SettingsOf(settings[s]) : null;
-                voices.Add(new SungVoice(part, language, notes, warnings, singer, gender, first.Track, s == 0 ? part : $"{part}#{s + 1}",
+                var written = s < settings.Length ? Music.LyricSinger.SettingsOf(settings[s]) : null;
+                // What of the part this line sings (its up / down / octave / in) rides with the
+                // settings and is taken out here: the rest is the voice's engine's.
+                var sing = written?.Where(p => !p.Key.StartsWith('\u0001')).ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
+                var own = Placed(midi, notes, ticks, written);
+                if (own.Count == 0)
+                    continue;       // it sings in sections the piece does not play these words in
+                voices.Add(new SungVoice(part, language, own, warnings, singer, gender, first.Track, s == 0 ? part : $"{part}#{s + 1}",
                     sing is { Count: > 0 } ? sing : null));
             }
         }
         return voices;
+    }
+
+    /// <summary>The steps of a major scale above its tonic, in semitones.</summary>
+    private static readonly int[] MajorScale = [0, 2, 4, 5, 7, 9, 11];
+
+    /// <summary>
+    /// The notes one singer line sings of its part's (owner's decisions 2026-11-12,
+    /// docs/lyrics-singer-design.md §12): those in the sections its <c>in</c> names, each moved by
+    /// its <c>up N</c> / <c>down N</c> along the key in force there and by its <c>octave N</c>.
+    /// With none of the three, the part's notes as they are (the same list).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: no engine is asked — the notes are moved before any voice sees them, so
+    /// every engine sings a harmony alike.
+    /// A voice that comes in for a section breathes where it leaves it; a note held over from
+    /// the section before, with no syllable of its own, is not its to sing.
+    /// </remarks>
+    private static IReadOnlyList<SungNote> Placed(MidiFile midi, List<SungNote> notes, List<int> ticks,
+        IReadOnlyDictionary<string, (double? Number, string? Word)>? written)
+    {
+        if (written == null)
+            return notes;
+        int interval = written.TryGetValue(Music.LyricSinger.PlaceInterval, out var i) ? (int)(i.Number ?? 0) : 0;
+        int octaves = written.TryGetValue(Music.LyricSinger.PlaceOctaves, out var o) ? (int)(o.Number ?? 0) : 0;
+        var sections = written.TryGetValue(Music.LyricSinger.PlaceSections, out var names) && names.Word is { Length: > 0 } list
+            ? list.Split(',').ToHashSet(StringComparer.Ordinal) : null;
+        if (interval == 0 && octaves == 0 && sections == null)
+            return notes;
+
+        var own = new List<SungNote>(notes.Count);
+        bool inside = false;
+        for (int n = 0; n < notes.Count; n++)
+        {
+            var note = notes[n];
+            if (sections != null && !sections.Contains(At(midi.SectionStarts, ticks[n]) ?? ""))
+            {
+                // Leaving its sections: the last note it sang ends its phrase.
+                if (inside && own.Count > 0)
+                    own[^1] = own[^1] with { Breath = true };
+                inside = false;
+                continue;
+            }
+            // Coming in on a note that only holds the syllable before: not this voice's.
+            if (!inside && note.Lyric == null)
+                continue;
+            inside = true;
+            double pitch = Step(note.Pitch, interval, At(midi.KeyStarts, ticks[n])) + 12 * octaves;
+            own.Add(note with { Pitch = pitch });
+        }
+        return own;
+    }
+
+    /// <summary>The value in force at <paramref name="tick"/>: the last one begun at or before it.</summary>
+    private static T? At<T>(SortedDictionary<int, T> starts, int tick)
+    {
+        T? found = default;
+        foreach (var (start, value) in starts)
+        {
+            if (start > tick)
+                break;
+            found = value;
+        }
+        return found;
+    }
+
+    /// <summary>
+    /// <paramref name="pitch"/> moved by <paramref name="interval"/> along the major scale whose
+    /// tonic's pitch class is <paramref name="tonic"/>: 3 is a third above (two steps), −3 a third
+    /// below; 0 and ±1 move nothing; a whole number of octaves moves the note as it is. A
+    /// quarter-tone keeps its bend.
+    /// </summary>
+    /// <remarks>
+    /// By the key SIGNATURE: a minor key steps along its natural scale.
+    /// LILYSHARP-OWN, a reading and not a fact: a note that is NOT of the scale is taken for
+    /// the degree it most often alters — a raised first, a lowered third, a raised fourth, a
+    /// raised fifth (a minor key's leading note), a lowered seventh — and the voice lands on
+    /// the scale's own note the interval away from that degree, the alteration not carried:
+    /// over g-sharp in a minor a third above is b (the chord of e), over b-flat in C it is d.
+    /// The pitch alone is known here, not how the note was spelled; where the reading is not
+    /// the music's, the harmony is the writer's to write out as a part.
+    /// </remarks>
+    internal static double Step(double pitch, int interval, int tonic)
+    {
+        int steps = interval > 1 ? interval - 1 : interval < -1 ? interval + 1 : 0;
+        if (steps == 0)
+            return pitch;
+        int whole = (int)Math.Floor(pitch);
+        double bend = pitch - whole;
+        int above = ((whole - tonic) % 12 + 12) % 12;
+        int octave = (whole - tonic - above) / 12;
+        if (steps % 7 == 0)
+            return pitch + 12 * (steps / 7);
+        int degree = Array.IndexOf(MajorScale, above);
+        if (degree < 0)
+            degree = above switch { 1 => 0, 3 => 2, 6 => 3, 8 => 4, _ => 6 };
+        int target = degree + steps;
+        int turns = (int)Math.Floor(target / 7.0);
+        return tonic + 12 * (octave + turns) + MajorScale[target - 7 * turns] + bend;
     }
 
     /// <summary>How far a hairpin that names no end goes, in MIDI velocity: about two dynamics.</summary>

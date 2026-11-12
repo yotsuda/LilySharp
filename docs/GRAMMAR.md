@@ -285,7 +285,30 @@ CheckRule      = 'voiceLeading' ;
 CapoDecl       = 'capo' , Integer ;                    (* 1..11; to the end of its line *)
 ChordShapesDecl = 'chordShapes' , ShapeTable ;
 LanguageDecl   = 'language' , LanguageName ;
-SingerDecl     = 'singer' , [ SingerValue ] , 'sings' , [ Identifier ] , [ 'on' , PartRef ] ;
+SingerDecl     = 'singer' , [ SingerValue ] , 'sings' , [ Identifier ] , [ 'on' , PartRef ] ,
+                 [ ( 'up' | 'down' ) , Integer ] , [ 'octave' , [ '-' | '+' ] , Integer ] ,
+                 [ 'in' , Identifier , { Identifier } ] ,
+                 [ 'with' , SingerSetting , { SingerSetting } ] ;
+SingerSetting  = Word , { '.' , Word } , ( [ '-' ] , Number | Word | String ) ;
+                 (* WHAT OF THE PART THE VOICE SINGS (owner's decisions 2026-11-12,
+                    docs/lyrics-singer-design.md §12) — a band's way of saying it: this section A
+                    sings, this one B, and here C comes in a third above.
+                    'in A B' names the sections the voice sings in, every time they are played;
+                    with none, the whole part. 'up 3' / 'down 3' sings an interval above or
+                    below the part's notes ALONG THE KEY in force (a third is 3; 2 to 15) — by
+                    the key signature, so a minor key steps along its natural scale, and a note
+                    that is not of the scale is read as the degree it most often alters (a
+                    raised first, fourth or fifth, a lowered third or seventh) and answered
+                    with the scale's own note. 'octave -1' sings octaves below (1 to 3 either
+                    way). Lily# moves the notes before any voice sees them, so every engine
+                    sings it alike; the harmony is heard and not printed. Several lines on one
+                    part sing together, each its own sections and its own interval.
+                    An interval or an octave that is none, and a section the file does not
+                    have, are LYS4059. The four words are words only here: a track or a part may
+                    still be called up, down or in.
+                    'with' and after it the voice's own SETTINGS, each a name and a value, to the
+                    end of the line: the names are the voice's ENGINE's, so any bare word names
+                    one — a word Lily# keeps for itself too. *)
 SingerValue    = String | SingerGender , [ String ] ;
 SingerGender   = 'male' | 'female' ;
                  (* WHO SINGS WHAT, in this order (docs/lyrics-singer-design.md). 'lyrics' rows

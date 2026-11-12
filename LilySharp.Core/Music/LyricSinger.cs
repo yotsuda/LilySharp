@@ -307,8 +307,44 @@ public static class LyricSinger
             last[setting.Name] = setting.Number is { } number
                 ? number.ToString("R", System.Globalization.CultureInfo.InvariantCulture)
                 : "\"" + setting.Word + "\"";
+        // …and what of the part the line sings (its up / down / octave / in), under names no
+        // engine has: Midi.SungVoices takes them out again before the settings go to a voice.
+        // They ride here so that two lines that differ only in these are two voices (Voices).
+        if (line.Interval != 0)
+            last[PlaceInterval] = line.Interval.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (line.Octaves != 0)
+            last[PlaceOctaves] = line.Octaves.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (line.Sections.Count > 0)
+            last[PlaceSections] = "\"" + string.Join(",", line.Sections.Select(s => s.Text)) + "\"";
         return string.Join('\n', last.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "=" + p.Value));
     }
+
+    /// <summary>The words of a singer line that say what of its part the voice sings
+    /// (docs/lyrics-singer-design.md §12), for the editor.</summary>
+    public const string UpWord = SyntaxFacts.SingerUpWord;
+
+    /// <inheritdoc cref="UpWord"/>
+    public const string DownWord = SyntaxFacts.SingerDownWord;
+
+    /// <inheritdoc cref="UpWord"/>
+    public const string OctaveWord = SyntaxFacts.SingerOctaveWord;
+
+    /// <inheritdoc cref="UpWord"/>
+    public const string InWord = SyntaxFacts.SingerInWord;
+
+    /// <inheritdoc cref="UpWord"/>
+    public const string WithWord = SyntaxFacts.SingerWithWord;
+
+    /// <summary>The names <see cref="SettingsText"/> carries a line's place under: the interval of
+    /// <c>up N</c> / <c>down N</c> (signed), the octaves of <c>octave N</c>, the sections of
+    /// <c>in A B</c> joined by commas. A control character begins each: no setting is so named.</summary>
+    public const string PlaceInterval = "\u0001interval";
+
+    /// <inheritdoc cref="PlaceInterval"/>
+    public const string PlaceOctaves = "\u0001octaves";
+
+    /// <inheritdoc cref="PlaceInterval"/>
+    public const string PlaceSections = "\u0001in";
 
     /// <summary>The settings of one voice's <see cref="SettingsText"/>: a name its number, or its word.</summary>
     public static IReadOnlyDictionary<string, (double? Number, string? Word)> SettingsOf(string? text)

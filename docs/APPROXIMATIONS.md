@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 317 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **443** | |
+| `OWN` | 319 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **445** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（317 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（319 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -291,6 +291,8 @@
 - **`MidiExporter.ProcessGrace`** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Midi/SungVoices.cs`
 - **`SungVoices`** drifted from the page). LILYSHARP-OWN: LilyPond writes no sound.
+- **`SungVoices.Placed`** LILYSHARP-OWN: no engine is asked — the notes are moved before any voice sees them, so
+- **`SungVoices.Step`** LILYSHARP-OWN, a reading and not a fact: a note that is NOT of the scale is taken for
 ### `LilySharp.Core/Music/ArpeggioSpread.cs`
 - **`ArpeggioSpread`** LILYSHARP-OWN: the owner's decision (2026-09-30) — &lt;&lt; diagram(C x32010) &gt;&gt;2
 ### `LilySharp.Core/Music/BarRest.cs`

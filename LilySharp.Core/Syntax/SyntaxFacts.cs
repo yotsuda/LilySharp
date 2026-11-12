@@ -710,6 +710,20 @@ internal static class SyntaxFacts
     /// Contextual - a word only there.</summary>
     public const string SingerWithWord = "with";
 
+    /// <summary>The words of a singer line that say what of the part the voice sings (owner's
+    /// decisions 2026-11-12, docs/lyrics-singer-design.md §12): <c>up 3</c> / <c>down 3</c> an
+    /// interval in the key, <c>octave -1</c>, <c>in Chorus Bridge</c> the sections. Contextual.</summary>
+    public const string SingerUpWord = "up";
+
+    /// <inheritdoc cref="SingerUpWord"/>
+    public const string SingerDownWord = "down";
+
+    /// <inheritdoc cref="SingerUpWord"/>
+    public const string SingerOctaveWord = "octave";
+
+    /// <inheritdoc cref="SingerUpWord"/>
+    public const string SingerInWord = "in";
+
     private static readonly HashSet<string> ArgumentTakingAnnotations =
         new(StringComparer.Ordinal)
         {

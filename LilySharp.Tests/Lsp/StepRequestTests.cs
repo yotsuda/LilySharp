@@ -1467,6 +1467,27 @@ public class StepRequestTests
         Assert.Contains(next.GetRoot().ChildNodes(), n => n.Kind == LilySharp.Core.Syntax.SyntaxKind.PropertyAssignment);
     }
 
+    // Owner's decisions 2026-11-12: a singer line's `up 3` / `octave -1` — the numbers step.
+    [Theory]
+    [InlineData("singer sings words on lead up 3‸ in A", +1, "singer sings words on lead up 4 in A", "up 4: a fourth above")]
+    [InlineData("singer sings words on lead up ‸3", -1, "singer sings words on lead up 2", "a second above")]
+    [InlineData("singer sings words on lead up 2‸", -1, "singer sings words on lead up 2", "already the least")]
+    [InlineData("singer sings words on lead down 6‸", +1, "singer sings words on lead down 7", "a seventh below")]
+    [InlineData("singer sings words on lead down 15‸", +1, "singer sings words on lead down 15", "already the most")]
+    [InlineData("singer sings words on lead octave -1‸", +1, "singer sings words on lead octave 1", "1 octave above")]
+    [InlineData("singer sings words on lead octave 1‸", -1, "singer sings words on lead octave -1", "1 octave below")]
+    [InlineData("singer sings words on lead octave -1‸", -1, "singer sings words on lead octave -2", "2 octaves below")]
+    [InlineData("singer sings words on lead octave 3‸", +1, "singer sings words on lead octave 3", "already the highest")]
+    [InlineData("singer sings words on lead up 3 octave ‸-1 in A", +1, "singer sings words on lead up 3 octave 1 in A", "1 octave above")]
+    public void ASingerLinesInterval_AndItsOctave_Step(string line, int direction, string expected, string says)
+    {
+        const string Book = "part lead {{ }}\nsection A {{ lead {{ c'1 }} }}\nlyrics words {{ la }}\n{0}\nform {{ A }}\nscore {{ staff lead  lyrics words }}\n";
+        var (reply, after) = Step(string.Format(Book, line), direction, semitone: true);
+        Assert.False(reply.Fallback, reply.Error);
+        Assert.Equal(string.Format(Book, expected), after);
+        Assert.Contains(says, reply.Message);
+    }
+
     // Owner's request 2026-11-12, on `singer male sings words on lead`: the step keys on its
     // `male` go to `female`, and back - Up to female, Down to male, stopping at either end (the
     // same day: "they must not go round").

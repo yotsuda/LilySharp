@@ -261,16 +261,69 @@ internal sealed partial class Parser
                 "A singer line reads 'singer S sings WORDS on PART'; 'sings' is missing here.");
             return new SingerDeclarationGreen([.. tokens]);
         }
-        if (IsPartNameToken(Current) && Current.Text != "on" && !IsLanguageDeclaration() && !IsSingerWith())
+        if (IsPartNameToken(Current) && Current.Text != "on" && !IsLanguageDeclaration() && !IsSingerWith() && !IsSingerPlace())
             tokens.Add(Advance());
         if (Current.Text == "on")
         {
             tokens.Add(Advance());
             tokens.Add(ExpectPartName());
         }
+        ParseSingerPlace(tokens);
         if (IsSingerWith())
             ParseSingerSettings(tokens);
         return new SingerDeclarationGreen([.. tokens]);
+    }
+
+    /// <summary>
+    /// Whether the current word begins one of the clauses that say WHAT of the part a voice
+    /// sings (owner's decisions 2026-11-12): <c>up N</c> / <c>down N</c> with a number after
+    /// it, <c>octave N</c> with a number or a sign, <c>in NAME</c> with a section's name — each
+    /// on the singer's own line. So a lyrics track may still be called up, down or in
+    /// (<c>sings up on lead</c>): no number follows it.
+    /// </summary>
+    private bool IsSingerPlace()
+    {
+        if (BeginsLine() || BeginsLine(1) || Peek(1) is not { } next)
+            return false;
+        return Current.Text switch
+        {
+            SyntaxFacts.SingerUpWord or SyntaxFacts.SingerDownWord => next.Kind == SyntaxKind.IntegerLiteral,
+            SyntaxFacts.SingerOctaveWord => next.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.Minus or SyntaxKind.Plus,
+            SyntaxFacts.SingerInWord => IsSettingWord(next) && next.Text != "on",
+            _ => false,
+        };
+    }
+
+    /// <summary>
+    /// <c>[up N | down N] [octave N] [in SECTION …]</c> after the part, in that order, each a
+    /// word of the line and its value made plain identifiers and numbers for the readers
+    /// (<see cref="SingerDeclarationSyntax.Interval"/>, <c>Octaves</c>, <c>Sections</c>).
+    /// </summary>
+    private void ParseSingerPlace(List<SyntaxToken> tokens)
+    {
+        if (IsSingerPlace() && Current.Text is SyntaxFacts.SingerUpWord or SyntaxFacts.SingerDownWord)
+        {
+            tokens.Add(AdvanceAsWord());
+            tokens.Add(Advance());
+        }
+        if (IsSingerPlace() && Current.Text == SyntaxFacts.SingerOctaveWord)
+        {
+            tokens.Add(AdvanceAsWord());
+            if (Check(SyntaxKind.Minus) || Check(SyntaxKind.Plus))
+                tokens.Add(Advance());
+            if (Check(SyntaxKind.IntegerLiteral) && !BeginsLine())
+                tokens.Add(Advance());
+            else
+                _diagnostics.Error(new TextSpan(_textPosition - 1, 1), DiagnosticCodes.SingerPlaceMalformed,
+                    "'octave' on a singer line takes how many: octave -1 sings an octave lower.");
+        }
+        if (IsSingerPlace() && Current.Text == SyntaxFacts.SingerInWord)
+        {
+            tokens.Add(AdvanceAsWord());
+            // Every section named, to the end of the line or to the voice's settings.
+            while (IsSettingWord(Current) && !BeginsLine() && !IsSingerWith())
+                tokens.Add(AdvanceAsWord());
+        }
     }
 
     /// <summary><c>with NAME …</c> on the singer's own line: the word, and a setting's name after it

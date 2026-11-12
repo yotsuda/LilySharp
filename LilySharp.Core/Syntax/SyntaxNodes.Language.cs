@@ -137,7 +137,108 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
 
     /// <summary>The token naming the words, or null for the file's unnamed track.</summary>
     public SyntaxTokenNode? TrackToken =>
-        SingsIndex is var i and >= 0 && GetChild(i + 1) is SyntaxTokenNode t && t.Text != "on" && !ReferenceEquals(t, WithKeyword) ? t : null;
+        SingsIndex is var i and >= 0 && GetChild(i + 1) is SyntaxTokenNode t && t.Text != "on" && !ReferenceEquals(t, WithKeyword)
+            && !IsPlaceWordAt(i + 1) ? t : null;
+
+    /// <summary>Whether the token at <paramref name="i"/> begins one of the line's place clauses:
+    /// <c>up</c> / <c>down</c> / <c>octave</c> with a number (or a sign) after it, <c>in</c> with a
+    /// section's name — not the part of that name (<c>on in</c>) nor the track (<c>sings in on lead</c>).</summary>
+    private bool IsPlaceWordAt(int i)
+    {
+        if (i <= SingsIndex || i + 1 >= SlotCount
+            || GetChild(i) is not SyntaxTokenNode { Kind: SyntaxKind.Identifier } word
+            || GetChild(i + 1) is not SyntaxTokenNode next
+            || GetChild(i - 1) is SyntaxTokenNode { Text: "on" })
+            return false;
+        return word.Text switch
+        {
+            SyntaxFacts.SingerUpWord or SyntaxFacts.SingerDownWord => next.Kind == SyntaxKind.IntegerLiteral,
+            SyntaxFacts.SingerOctaveWord => next.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.Minus or SyntaxKind.Plus,
+            SyntaxFacts.SingerInWord => next.Kind == SyntaxKind.Identifier && next.Text != "on",
+            _ => false,
+        };
+    }
+
+    private int PlaceIndex(params string[] words)
+    {
+        for (int i = SingsIndex + 1; i >= 1 && i + 1 < SlotCount; i++)
+        {
+            if (ReferenceEquals(GetChild(i), WithKeyword))
+                break;
+            if (IsPlaceWordAt(i) && Array.IndexOf(words, ((SyntaxTokenNode)GetChild(i)!).Text) >= 0)
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>The number of <c>up N</c> / <c>down N</c>, or null: the token the step keys move.</summary>
+    public SyntaxTokenNode? IntervalToken =>
+        PlaceIndex(SyntaxFacts.SingerUpWord, SyntaxFacts.SingerDownWord) is var i and >= 0 ? GetChild(i + 1) as SyntaxTokenNode : null;
+
+    /// <summary>
+    /// The interval the voice sings above its part's notes, in the key: 3 for <c>up 3</c> (a
+    /// third above), −3 for <c>down 3</c>; 0 with neither, and for a number that is no interval.
+    /// </summary>
+    public int Interval
+    {
+        get
+        {
+            int i = PlaceIndex(SyntaxFacts.SingerUpWord, SyntaxFacts.SingerDownWord);
+            if (i < 0 || GetChild(i + 1) is not SyntaxTokenNode number || !int.TryParse(number.Text, out int n))
+                return 0;
+            return ((SyntaxTokenNode)GetChild(i)!).Text == SyntaxFacts.SingerDownWord ? -n : n;
+        }
+    }
+
+    /// <summary>The number of <c>octave N</c> (its digits; the sign is the token before), or null.</summary>
+    public SyntaxTokenNode? OctaveToken
+    {
+        get
+        {
+            int i = PlaceIndex(SyntaxFacts.SingerOctaveWord);
+            if (i < 0)
+                return null;
+            for (int k = i + 1; k < SlotCount && k <= i + 2; k++)
+                if (GetChild(k) is SyntaxTokenNode { Kind: SyntaxKind.IntegerLiteral } number)
+                    return number;
+            return null;
+        }
+    }
+
+    /// <summary>How many octaves above its part's notes the voice sings: −1 for <c>octave -1</c>; 0 with none.</summary>
+    public int Octaves
+    {
+        get
+        {
+            int i = PlaceIndex(SyntaxFacts.SingerOctaveWord);
+            if (i < 0 || OctaveToken is not { } number || !int.TryParse(number.Text, out int n))
+                return 0;
+            return GetChild(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.Minus } ? -n : n;
+        }
+    }
+
+    /// <summary>The <c>in</c> of <c>in SECTION …</c>, or null.</summary>
+    public SyntaxTokenNode? InKeyword => PlaceIndex(SyntaxFacts.SingerInWord) is var i and >= 0 ? (SyntaxTokenNode)GetChild(i)! : null;
+
+    /// <summary>The sections the voice sings in, as <c>in A B</c> names them; empty with no
+    /// <c>in</c>: the whole part.</summary>
+    public IReadOnlyList<SyntaxTokenNode> Sections
+    {
+        get
+        {
+            int i = PlaceIndex(SyntaxFacts.SingerInWord);
+            if (i < 0)
+                return [];
+            var names = new List<SyntaxTokenNode>();
+            for (int k = i + 1; k < SlotCount; k++)
+            {
+                if (GetChild(k) is not SyntaxTokenNode { Kind: SyntaxKind.Identifier } name || ReferenceEquals(name, WithKeyword))
+                    break;
+                names.Add(name);
+            }
+            return names;
+        }
+    }
 
     /// <summary>The track sung: its name, or the unnamed track's.</summary>
     public string TrackName => TrackToken?.Text ?? SyntaxFacts.UnnamedLyricsName;

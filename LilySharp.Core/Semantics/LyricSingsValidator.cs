@@ -292,9 +292,42 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                 _diagnostics.Error(node.Keyword.Span, DiagnosticCodes.SingerDuplicatePart, line.Score < 0
                     ? $"'{part}' already sings '{wordsOfPart[(line.Score, part)]}'. To have another score sing '{line.Track}' on it, write this line inside that score."
                     : $"'{part}' already sings '{wordsOfPart[(line.Score, part)]}' in this score, and one part sings one set of words.");
-            else if (!voicesOnPart.Add((line.Score, part, line.Singer)))
+            // …unless it sings another line of it (up 3), or in other sections.
+            else if (!voicesOnPart.Add((line.Score, part, line.Singer + "\u0001" + node.Interval + "\u0001" + node.Octaves
+                         + "\u0001" + string.Join(",", node.Sections.Select(s => s.Text)))))
                 _diagnostics.Warning(node.Keyword.Span, DiagnosticCodes.SingerRepeated,
                     $"This voice already sings '{line.Track}' on '{part}'.");
+            CheckPlace(root, node);
+        }
+    }
+
+    /// <summary>
+    /// A singer line's <c>up N</c> / <c>down N</c> / <c>octave N</c> / <c>in SECTION …</c>
+    /// (docs/lyrics-singer-design.md §12): an interval from a second to two octaves, an octave
+    /// or three either way, sections the file has, each named once.
+    /// </summary>
+    private void CheckPlace(SyntaxNode root, SingerDeclarationSyntax node)
+    {
+        if (node.IntervalToken is { } interval && Math.Abs(node.Interval) is < 2 or > 15)
+            _diagnostics.Error(interval.Span, DiagnosticCodes.SingerPlaceMalformed,
+                $"'{interval.Text}' is no interval to sing at: up 3 is a third above in the key, down 6 a sixth below (2 to 15).");
+        if (node.OctaveToken is { } octave && Math.Abs(node.Octaves) is < 1 or > 3)
+            _diagnostics.Error(octave.Span, DiagnosticCodes.SingerPlaceMalformed,
+                $"'octave {octave.Text}': a voice sings one to three octaves above (octave 1) or below (octave -1) its part.");
+        if (node.Sections.Count == 0)
+            return;
+        var declared = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var section in root.SitesOfKinds(SyntaxKind.SectionDeclaration).OfType<SectionDeclarationSyntax>())
+            declared.Add(section.SectionName);
+        var named = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var section in node.Sections)
+        {
+            if (!declared.Contains(section.Text))
+                _diagnostics.Error(section.Span, DiagnosticCodes.SingerPlaceMalformed,
+                    $"No section is named '{section.Text}'"
+                    + (declared.Count is > 0 and <= 12 ? $" (there is: {string.Join(", ", declared)})." : "."));
+            else if (!named.Add(section.Text))
+                _diagnostics.Warning(section.Span, DiagnosticCodes.SingerPlaceMalformed, $"'{section.Text}' is named twice.");
         }
     }
 

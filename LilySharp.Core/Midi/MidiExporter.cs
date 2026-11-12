@@ -604,6 +604,7 @@ public sealed class MidiExporter
         var midi = new MidiFile { TicksPerQuarterNote = _ticksPerQuarter };
         _barTicks = midi.BarTicks;
         _sectionStarts = midi.SectionStarts;
+        _keyStarts = midi.KeyStarts;
 
         var conductorTrack = new MidiTrack { Name = "Tempo", Channel = 0 };
         // The default tempo at tick 0; a book's own `tempo` replaces it there (SetTempo:
@@ -1049,6 +1050,7 @@ public sealed class MidiExporter
                 _keySharps = keySig.IsCustom ? 0 : KeySpelling.SharpsFor(
                     keySig.Pitch.ToFullString().Trim().ToLowerInvariant(),
                     keySig.Mode.Text.ToLowerInvariant()) ?? 0;
+                NoteKey();
                 break;
 
             case TempoDeclarationSyntax tempo:
@@ -1345,6 +1347,7 @@ public sealed class MidiExporter
                 headerKey.Pitch.ToFullString().Trim().ToLowerInvariant(),
                 headerKey.Mode.Text.ToLowerInvariant()) ?? 0;
         }
+        NoteKey();
 
         // ⚠️ THE METER AND THE PICKUP ARE THE SAME QUESTION, asked of the same registry
         // (Semantics.BarContext.OpenSection has the rule): the section's own `time` if it
@@ -2543,6 +2546,15 @@ public sealed class MidiExporter
 
     // The sections' starting ticks of the file being exported (MidiFile.SectionStarts).
     private SortedDictionary<int, string>? _sectionStarts;
+
+    // The keys' starting ticks of the file being exported (MidiFile.KeyStarts), and the one
+    // place that writes them: the scale in force from here on, as it sounds.
+    private SortedDictionary<int, int>? _keyStarts;
+    private void NoteKey()
+    {
+        if (_keyStarts != null)
+            _keyStarts[_currentTick] = (((_keySharps * 7 + _fileShiftSemitones + _scoreTransposeSemitones) % 12) + 12) % 12;
+    }
 
     /// <summary>A bar line at the current tick: the next bar opens here.</summary>
     private void MarkBarLine(MidiTrack track)

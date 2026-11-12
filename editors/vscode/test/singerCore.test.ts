@@ -1218,3 +1218,49 @@ describe('the values offered where a setting\'s number is written', () => {
         assert.equal([...ext.matchAll(/item\.command = \{ command: 'editor\.action\.triggerSuggest', title: 'List values to begin from' \};/g)].length, 2);
     });
 });
+
+// Owner's decisions 2026-11-12: a singer line says what of its part the voice sings - `up 3`,
+// `octave -1`, `in Chorus Bridge` - between the part and `with`. The extension's reading of the
+// line goes past them.
+describe('a singer line that says what of the part it sings', () => {
+    const core = require('../src/singerCore') as {
+        singerLineOf: (line: string) => { voice: string; askColumn: number; sing: Record<string, number | string>; withAt: number } | undefined;
+        singerSettingSlot: (before: string) => { kind: string; written?: string[]; of?: string } | undefined;
+    };
+
+    it('still finds its settings after them', () => {
+        const line = 'singer "neutrino/B" sings words on lead up 3 octave -1 in Chorus Bridge with breathiness 3';
+        const read = core.singerLineOf(line)!;
+        assert.equal(read.voice, 'neutrino/B');
+        assert.deepEqual(read.sing, { breathiness: 3 });
+        assert.equal(line.slice(read.withAt, read.withAt + 4), 'with');
+        assert.deepEqual(core.singerLineOf('singer male sings words on lead in Chorus with gender 0.2')!.sing, { gender: 0.2 });
+        assert.deepEqual(core.singerLineOf('singer male sings words on lead down 6 with gender 0.2')!.sing, { gender: 0.2 });
+        // With none of its own, as before.
+        assert.equal(core.singerLineOf('singer male sings words on lead up 3 in Chorus')!.withAt, -1);
+    });
+
+    it('offers `with` after them, each whole', () => {
+        for (const before of [
+            'singer "a/b" sings words on lead ',
+            'singer "a/b" sings words on lead up 3 ',
+            'singer "a/b" sings words on lead octave -1 ',
+            'singer "a/b" sings words on lead up 3 octave 1 in Chorus ',
+            'singer "a/b" sings words on lead in Chorus Bridge ',
+            'singer "a/b" sings up 3 ',
+        ]) {
+            assert.deepEqual(core.singerSettingSlot(before), { kind: 'with' }, before);
+        }
+        for (const before of [
+            'singer "a/b" sings words on lead up ',
+            'singer "a/b" sings words on lead octave ',
+            'singer "a/b" sings words on lead in ',
+            'singer "a/b" sings words on ',
+        ]) {
+            assert.equal(core.singerSettingSlot(before), undefined, before);
+        }
+        // And past `with`, the settings as before.
+        assert.deepEqual(core.singerSettingSlot('singer "a/b" sings words on lead up 3 in Chorus with '), { kind: 'name', written: [] });
+        assert.deepEqual(core.singerSettingSlot('singer "a/b" sings words on lead in Chorus with breathiness '), { kind: 'value', of: 'breathiness' });
+    });
+});

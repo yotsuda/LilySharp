@@ -1650,6 +1650,11 @@ public static class DiagnosticCodes
     /// none yet (docs/markdown-text-design.md). A warning: it is read, and said.</summary>
     public const string FencedTextNotDrawn = "LYS4058";
 
+    /// <summary>A singer line's <c>up N</c> / <c>down N</c> / <c>octave N</c> / <c>in SECTION …</c>
+    /// that cannot be sung as written: no number, an interval that is none, a section the file
+    /// does not have (docs/lyrics-singer-design.md §12).</summary>
+    public const string SingerPlaceMalformed = "LYS4059";
+
     /// <summary><c>singer … sings NAME</c> where no lyrics track has that name.</summary>
     public const string SingerWordsUnknown = "LYS4042";
 

@@ -139,6 +139,12 @@ public class MidiFile
     /// the composition checks read a section's end by them. Not written to .mid files.</summary>
     public SortedDictionary<int, string> SectionStarts { get; } = [];
 
+    /// <summary>The ticks a key begins at as the music plays, each with the pitch class of its
+    /// major scale's tonic AS IT SOUNDS (the file's <c>shift</c> and the score's <c>transpose</c>
+    /// in; a minor key's is its relative major's) — the scale a voice that sings a third above
+    /// steps along (<see cref="SungVoices"/>). Not written to .mid files.</summary>
+    public SortedDictionary<int, int> KeyStarts { get; } = [];
+
     /// <summary>The piece's end: the last tick any track sounds or says anything at.
     /// Every track's end-of-track stands here (<see cref="WriteTo"/>).</summary>
     public int EndTick => Tracks.Count == 0 ? 0 : Tracks.Max(t => t.LastTick);

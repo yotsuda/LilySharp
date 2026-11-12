@@ -440,7 +440,7 @@ export function singerLineOf(line: string): { voice: string; askColumn: number; 
     // `with` and a name after it, not the track or the part of that name (`sings with on lead`).
     const masked = code.replace(/"[^"]*"/g, m => '"' + ' '.repeat(Math.max(0, m.length - 2)) + '"');
     // The line in its order: sings, the words, on and the part, then with.
-    const at = /^[ \t]*sings(?![\w-])[ \t]+(?:"[^"]*"|[^\s"]+)(?:[ \t]+on[ \t]+(?:"[^"]*"|[^\s"]+))?[ \t]+with([ \t]+)(?=[A-Za-z_])/.exec(masked.slice(head[0].length));
+    const at = new RegExp(String.raw`^[ \t]*sings(?![\w-])[ \t]+(?:"[^"]*"|[^\s"]+)(?:[ \t]+on[ \t]+(?:"[^"]*"|[^\s"]+))?${SINGER_PLACE}[ \t]+with([ \t]+)(?=[A-Za-z_])`).exec(masked.slice(head[0].length));
     const withAt = at ? head[0].length + at[0].length - at[1].length - 4 : -1;
     if (at) {
         const words = code.slice(head[0].length + at[0].length).match(/"[^"]*"|[^\s"]+/g) ?? [];
@@ -702,6 +702,11 @@ export interface SingParameter {
     word?: boolean; values?: string[];
 }
 
+/** What of its part a singer line sings, as it stands between the part and `with` (owner's
+ *  decisions 2026-11-12): `up 3` / `down 3`, `octave -1`, `in Chorus Bridge` — each optional, in
+ *  that order; a section is never called with. */
+const SINGER_PLACE = String.raw`(?:[ \t]+(?:up|down)[ \t]+\d+)?(?:[ \t]+octave[ \t]+[-+]?\d+)?(?:[ \t]+in(?:[ \t]+(?!with(?![\w-]))[\w-]+)+)?`;
+
 /**
  * Where the caret stands in a singer line's settings (owner's decisions 2026-11-12:
  * `singer … with breathiness 0.3 gender -0.2`, a name and a value each, no commas), for the
@@ -719,7 +724,9 @@ export function singerSettingSlot(before: string): { kind: 'with' } | { kind: 'n
     const ends = /[ \t]$/.test(rest);
     if (!at) {
         // `singer "x" sings words on lead ▮`: after the words or the part, a space, nothing begun.
-        return ends && /(?<![\w-])sings[ \t]+(?:[\w-]+[ \t]+)?(?:on[ \t]+[\w-]+[ \t]+)?$/.test(rest) && !/(?<![\w-])(?:sings|on)[ \t]+$/.test(rest)
+        // …or after what of the part it sings (`up 3`, `octave -1`, `in Chorus Bridge`), each whole.
+        return ends && new RegExp(String.raw`(?<![\w-])sings(?:[ \t]+(?!on(?![\w-]))[\w-]+)?(?:[ \t]+on[ \t]+[\w-]+)?${SINGER_PLACE}[ \t]+$`).test(rest)
+            && !/(?<![\w-])(?:sings|on|up|down|octave|in)[ \t]+$/.test(rest)
             ? { kind: 'with' } : undefined;
     }
     const words = rest.slice(at.index + at[0].length).split(/[ \t]+/).filter(w => w.length > 0);

@@ -160,8 +160,8 @@ public class LyricsTrackBodyCompletionTests
     // lead ` the list was the file level's 31 words, and the extension's one `with` stood under
     // all of them. A singer line's settings are the voice's engine's to name: nothing here.
     [Theory]
-    [InlineData("singer female \"diffsinger/Nishiren/2P\" sings words on lead ▮")]
     [InlineData("singer sings words on lead with ▮")]
+    [InlineData("singer sings words on lead up 3 in A with ▮")]
     [InlineData("singer \"a/b\" sings words on lead with breath▮")]
     [InlineData("singer \"a/b\" sings words on lead with breathiness 3 ▮")]
     [InlineData("singer \"a/b\" sings words on lead with support ▮")]
@@ -176,6 +176,7 @@ public class LyricsTrackBodyCompletionTests
     [InlineData("singer female \"diffsinger/Nishiren/2P\" sings ▮")]             // the lyrics
     [InlineData("singer female \"diffsinger/Nishiren/2P\" sings words on ▮")]    // the parts
     [InlineData("singer male sings words ▮")]                                      // `on` is still to come
+    [InlineData("singer sings words on lead up 3 ▮")]                              // the line's own words: listed (below)
     [InlineData("singer ▮")]
     [InlineData("singer \"with x\" ▮")]
     [InlineData("▮")]                                                              // a new line: the file level
@@ -194,6 +195,26 @@ public class LyricsTrackBodyCompletionTests
         Assert.Contains("words", CompletionLabelsAt(text, offset));
         (text, offset) = At("part lead { }\nsection A { lead { c'1 | } }\nlyrics words { la | }\nsinger \"a/b\" sings words on ▮\nform { A }\nscore { staff lead }\n");
         Assert.Contains("lead", CompletionLabelsAt(text, offset));
+    }
+
+    // What of the part the line sings is this server's to list (owner's decisions 2026-11-12):
+    // the words in their order, each once, the numbers, the sections not yet named.
+    [Theory]
+    [InlineData("singer \"a/b\" sings words on lead ▮", "up down octave in")]
+    [InlineData("singer \"a/b\" sings words on lead u▮", "up down octave in")]          // the editor matches the letters
+    [InlineData("singer \"a/b\" sings words on lead up ▮", "3 6 4 5 2 8")]
+    [InlineData("singer \"a/b\" sings words on lead up 3 ▮", "octave in")]
+    [InlineData("singer \"a/b\" sings words on lead octave ▮", "-1 1 -2 2")]
+    [InlineData("singer \"a/b\" sings words on lead octave -1 ▮", "in")]
+    [InlineData("singer \"a/b\" sings words on lead down 6 octave 1 ▮", "in")]
+    [InlineData("singer \"a/b\" sings words on lead in ▮", "A B")]
+    [InlineData("singer \"a/b\" sings words on lead up 3 in A ▮", "B")]
+    [InlineData("singer \"a/b\" sings words on lead in A B ▮", "")]
+    public void WhatOfThePartALineSings_IsListedInItsOrder(string line, string offered)
+    {
+        var (text, offset) = At("part lead { }\nsection A { lead { c'1 | } }\nsection B { lead { c'1 | } }\nlyrics words { la | }\n" + line + "\nform { A B }\nscore { staff lead }\n");
+        Assert.Equal(offered, string.Join(" ", CompletionLabelsAt(text, offset)));
+        Assert.False(LilySharpLanguageServer.InSingerSettings(text, offset));
     }
 
     // The same inside a note's `@sing(…)`: the music block's 92 words stood among the settings.

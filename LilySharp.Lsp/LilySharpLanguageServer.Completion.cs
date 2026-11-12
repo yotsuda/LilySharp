@@ -209,10 +209,8 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// Whether <paramref name="offset"/> stands where a singer line's settings are written: after
-    /// its <c>on PART</c> and a space with no <c>with</c> yet, or anywhere after its <c>with</c>.
-    /// The line up to the caret alone decides, as the extension's own reading does
-    /// (singerCore.ts singerSettingSlot) — which says yes after the words alone too, where
-    /// this server still has <c>on</c> to offer and so does not.
+    /// its <c>with</c>. The line up to the caret alone decides, as the extension's own reading
+    /// does (singerCore.ts singerSettingSlot).
     /// </summary>
     internal static bool InSingerSettings(string text, int offset)
     {
@@ -229,11 +227,109 @@ public sealed partial class LilySharpLanguageServer
         bool Has(string pattern) => System.Text.RegularExpressions.Regex.IsMatch(rest, pattern);
         if (!Has(@"(?<![\w-])sings(?![\w-])"))
             return false;
-        if (Has(@"(?<![\w.-])with[ \t]+(?!on(?![\w-]))"))
-            return true;
-        // With no `with` yet: only once the part is written. Before that the line still takes
-        // `on`, which is this server's to offer (the extension's `with` stands beside it).
-        return Has(@"(?<![\w-])sings[ \t]+(?:[\w-]+[ \t]+)?on[ \t]+[\w-]+[ \t]+$");
+        // Only after its `with`: before it the line still takes words of this server's —
+        // `on`, then `up` / `octave` / `in` (SingerPlaceItems) — and the extension's `with`
+        // stands beside them.
+        return Has(@"(?<![\w.-])with[ \t]+(?!on(?![\w-]))");
+    }
+
+    /// <summary>
+    /// The list after a singer line's part (docs/lyrics-singer-design.md §12): the words that
+    /// say what of the part the voice sings — <c>up</c> / <c>down</c>, <c>octave</c>, <c>in</c>, in
+    /// that order, each once — the numbers after the first three, and after <c>in</c> the file's
+    /// sections not yet named. Null anywhere else, and once the line's <c>with</c> is written.
+    /// </summary>
+    internal static CompletionItem[]? SingerPlaceItems(string text, int offset)
+    {
+        offset = Math.Clamp(offset, 0, text.Length);
+        int start = offset > 0 ? text.LastIndexOf('\n', offset - 1) + 1 : 0;
+        string before = text[start..offset];
+        if (before.Contains("//", StringComparison.Ordinal))
+            return null;
+        var line = System.Text.RegularExpressions.Regex.Match(before, @"^[ \t]*singer(?![\w-])(.*)$");
+        if (!line.Success)
+            return null;
+        string rest = System.Text.RegularExpressions.Regex.Replace(line.Groups[1].Value, "\"[^\"]*\"", "\"\"");
+        var part = System.Text.RegularExpressions.Regex.Match(rest, @"(?<![\w-])sings[ \t]+(?:[\w-]+[ \t]+)?on[ \t]+[\w-]+");
+        if (!part.Success)
+            return null;
+        string tail = rest[(part.Index + part.Length)..];
+        if (tail.Length == 0 || !char.IsWhiteSpace(tail[0]))
+            return null;        // still in the part's name
+        var words = tail.Split([(' '), ('\t')], StringSplitOptions.RemoveEmptyEntries);
+        // The word being written is the editor's to match against the list.
+        int complete = char.IsWhiteSpace(tail[^1]) ? words.Length : words.Length - 1;
+        bool interval = false, octave = false;
+        for (int i = 0; i < complete;)
+        {
+            string word = words[i];
+            if (!interval && !octave && word is LilySharp.Core.Music.LyricSinger.UpWord or LilySharp.Core.Music.LyricSinger.DownWord)
+            {
+                if (i + 1 >= complete)
+                    return Numbers(["3", "6", "4", "5", "2", "8"], word == LilySharp.Core.Music.LyricSinger.UpWord
+                        ? "above the part's notes, in the key: 3 is a third" : "below the part's notes, in the key: 3 is a third");
+                interval = true;
+                i += 2;
+            }
+            else if (!octave && word == LilySharp.Core.Music.LyricSinger.OctaveWord)
+            {
+                if (i + 1 >= complete)
+                    return Numbers(["-1", "1", "-2", "2"], "octaves above the part's notes (below with a minus)");
+                octave = true;
+                i += 2;
+            }
+            else if (word == LilySharp.Core.Music.LyricSinger.InWord)
+            {
+                var named = new HashSet<string>(words[(i + 1)..complete], StringComparer.Ordinal);
+                if (named.Contains(LilySharp.Core.Music.LyricSinger.WithWord))
+                    return null;
+                var sections = new List<CompletionItem>();
+                foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(text, @"(?m)^[ \t]*section[ \t]+([\w-]+)"))
+                {
+                    string name = m.Groups[1].Value;
+                    if (named.Add(name))
+                        sections.Add(new CompletionItem
+                        {
+                            Label = name, Kind = CompletionItemKind.Reference,
+                            Detail = "The voice sings in this section", SortText = sections.Count.ToString("000"),
+                        });
+                }
+                return [.. sections];
+            }
+            else
+            {
+                return null;    // `with`, or a word that is none of these: not this list's
+            }
+        }
+        var items = new List<CompletionItem>();
+        void Word(string word, string detail) => items.Add(new CompletionItem
+        {
+            Label = word, Kind = CompletionItemKind.Keyword, Detail = detail, InsertText = word + " ",
+            SortText = items.Count.ToString("000"),
+            Command = new Command { Title = "Suggest what follows", CommandIdentifier = "editor.action.triggerSuggest" },
+        });
+        if (!interval && !octave)
+        {
+            Word(LilySharp.Core.Music.LyricSinger.UpWord, "Sing above the part's notes, in the key: up 3 is a third above");
+            Word(LilySharp.Core.Music.LyricSinger.DownWord, "Sing below the part's notes, in the key: down 6 is a sixth below");
+        }
+        if (!octave)
+            Word(LilySharp.Core.Music.LyricSinger.OctaveWord, "Sing octaves above the part's notes, or below: octave -1");
+        Word(LilySharp.Core.Music.LyricSinger.InWord, "Sing only in the sections named: in Chorus Bridge");
+        return [.. items];
+
+        static CompletionItem[] Numbers(string[] values, string detail)
+        {
+            var list = new CompletionItem[values.Length];
+            for (int n = 0; n < values.Length; n++)
+                list[n] = new CompletionItem
+                {
+                    Label = values[n], Kind = CompletionItemKind.Value, Detail = detail, InsertText = values[n] + " ",
+                    SortText = n.ToString("000"),
+                    Command = new Command { Title = "Suggest what follows", CommandIdentifier = "editor.action.triggerSuggest" },
+                };
+            return list;
+        }
     }
 
     /// <summary>Whether <paramref name="offset"/> stands inside a note's <c>@sing(…)</c>, its
@@ -263,6 +359,11 @@ public sealed partial class LilySharpLanguageServer
         // Nothing of this server's belongs there. ⚠️ It answered the file level's 31 words, the
         // line being whole to the parser, and the one `with` stood under all of them (owner's
         // report 2026-11-12, on the first build of `with`).
+        // …but what of the PART the line sings is this server's: `up 3`, `octave -1`,
+        // `in Chorus Bridge` (owner's decisions 2026-11-12), each word in its order, the
+        // sections by name.
+        if (SingerPlaceItems(doc.Text, offset) is { } place)
+            return new CompletionList { Items = place };
         // …and inside a note's `@sing(…)` the same: the music block's 92 words stood there.
         if (InSingerSettings(doc.Text, offset) || InSingMark(doc.Text, offset))
             return new CompletionList { Items = [] };
