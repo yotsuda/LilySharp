@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 335 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **461** | |
+| `OWN` | 338 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **464** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（335 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（338 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -334,8 +334,10 @@
 ### `LilySharp.Core/Music/ShapeChords.cs`
 - **`ShapeChords`** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
+- **`MusicXmlExporter._spanEndedOnBarLine`** (MEASURED 2026-11-12, Lab sessions/p1226/md/eval2/left3). LILYSHARP-OWN. Never a drum
 - **`MusicXmlExporter._printedPlays`** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
 - **`MusicXmlExporter.WriteCrossArpeggio`** LILYSHARP-OWN: the number. MusicXML says of it that chords "arpeggiated
+- **`MusicXmlExporter.AddBracketEnds`** LILYSHARP-OWN: a bracket one note tall — c'2@arpeggio(bracket) — carries BOTH
 - **`MusicXmlExporter.PendingChordRow`** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/MusicXmlImport/LysWriter.cs`
 - **`LysWriter.CuttableMarks`** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
@@ -344,6 +346,7 @@
 ### `LilySharp.Core/MusicXmlImport/MusicXmlReader.cs`
 - **`MusicXmlReader.ConnectArpeggios`** LILYSHARP-OWN: the 2. MusicXML's number tells chords "arpeggiated together" (the
 - **`MusicXmlReader.ReadArpeggioBrackets`** LILYSHARP-OWN: what one bracket on two staves is. The ends that begin at one moment
+- **`MusicXmlReader.TempoWordsAlone`** LILYSHARP-OWN: MusicXML has no element for a tempo word, so the reading goes by the
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **`Parser.ParseChordRepetition`** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **`Parser.ParseChord`** LILYSHARP-OWN: members' ties and the whole chord's say two things about the same notes; LilyPond takes both.

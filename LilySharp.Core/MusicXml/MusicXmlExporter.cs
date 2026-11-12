@@ -84,6 +84,14 @@ public sealed class MusicXmlExporter
     // two-bar repro exported four measures). Cleared at the next barline and by
     // FlushCurrentMeasure.
     private bool _barClosedByBlock;
+    // …and that last bar was closed by the span's OWN bar line, the first voice's, which is
+    // the staff's (the page: MeasureModel.IsInsideNonLeadVoice; the MIDI: MidiExporter.
+    // _spanClosedAt). A `|` written after the span is then the second of a pair — an EMPTY bar
+    // — and not the line that closes the span's bar: `voice { c'1 | } { e'1 | } | d'1 | g'1 |`
+    // is four bars on the page and was three measures here, a bar short from there on
+    // (MEASURED 2026-11-12, Lab sessions/p1226/md/eval2/left3). LILYSHARP-OWN. Never a drum
+    // chart's (the line after one confirms its bar) and never a span a later voice outruns.
+    private bool _spanEndedOnBarLine;
     // Whether a bar line has been met since this scope (part / section) opened — a `|:`
     // that opens the scope closes nothing, one met later pairs like a bare `|`
     // (MidiExporter.ProcessSequence's atScopeStart, MeasureBuilder._atScopeStart).
@@ -333,6 +341,7 @@ public sealed class MusicXmlExporter
         _document = new MusicXmlDocument { Divisions = _divisions };
         _pageModel = null;
         _tempoStated = false;
+        _tempoWordsAlone = null;
 
         var root = tree.GetRoot();
         _root = root;
@@ -2204,6 +2213,7 @@ public sealed class MusicXmlExporter
         _bars.SpendPartial();
         _justAutoClosedPickup = false;
         _barClosedByBlock = false;
+        _spanEndedOnBarLine = false;
         _barSeenInScope = false;
     }
 
@@ -2324,6 +2334,7 @@ public sealed class MusicXmlExporter
         _currentPart.Measures.Add(open);
         StartNewMeasure();
         _barClosedByBlock = true;
+        _spanEndedOnBarLine = false;
     }
 
     // The time a measure's notes fill: the furthest point any voice reaches (a <backup>
@@ -2727,10 +2738,12 @@ public sealed class MusicXmlExporter
                         _barSeenInScope = true;
                     // Right after a voice span the bar behind this line is the span's last,
                     // already written: this line closes IT (see _barClosedByBlock).
-                    bool closesSpan = _barClosedByBlock && !inChordRow
+                    // …unless the span's own bar line closed it and this one pairs with that:
+                    // then it is the empty bar below (see _spanEndedOnBarLine).
+                    bool closesSpan = _barClosedByBlock && !inChordRow && !(pairsHere && _spanEndedOnBarLine)
                         && _currentMeasure is { Notes.Count: 0 } && _currentPart is { Measures.Count: > 0 };
                     if (!inChordRow)
-                        _barClosedByBlock = false;
+                        _barClosedByBlock = _spanEndedOnBarLine = false;
                     bool timePassed = closesSpan || _currentMeasure is { Notes.Count: > 0 };
                     if (pairsHere && !closesSpan && _currentMeasure != null && _currentPart != null
                         && _currentMeasure.Notes.Count == 0)
@@ -2927,7 +2940,20 @@ public sealed class MusicXmlExporter
                         ? ShapeAnchorOf(anchorShape) : null;
                     if (anchorStep == LilySharp.Core.Music.PhraseAnchor.Shape)
                         anchorStep = null;
+                    int barsBeforePhrase = _currentPart?.Measures.Count ?? 0;
                     ProcessNode(varBody);
+                    // A phrase that ends on its own bar line: the `|` written after the
+                    // reference CONFIRMS that bar (the page: MeasureBuilder._confirmableBoundary;
+                    // the MIDI's sequence around the reference finds time passed) — it is not
+                    // the second of a pair. Until 2026-11-12 `p | d'1 | g'1 |` with
+                    // `phrase p { c'1 | }` wrote four measures, a bar of rest after the phrase,
+                    // where the page draws three (Lab sessions/p1226/md/eval2/left3).
+                    if (_currentPart != null && _currentMeasure is { Notes.Count: 0 }
+                        && _currentPart.Measures.Count > barsBeforePhrase && !_justAutoClosedPickup)
+                    {
+                        _barClosedByBlock = true;
+                        _spanEndedOnBarLine = false;
+                    }
                     _currentTranspose = savedTranspose;
                     _octaveAnchor = savedAnchor;
                     // Frame hand-off at the phrase's ANCHOR (matches the
@@ -3026,6 +3052,12 @@ public sealed class MusicXmlExporter
 
         int startMeasure = _currentPart.Measures.Count;
         ProcessNode(voices[0]);
+        // Did the first voice end on a bar line of its own (read before the flush clears it)?
+        // An empty open bar behind a written one, that no pickup's auto-close and no block
+        // but a span that itself ended on its line handed over (_spanEndedOnBarLine).
+        bool leadEndedOnBarLine = !parallel.IsDrums
+            && _currentMeasure is { Notes.Count: 0 } && _currentPart.Measures.Count > startMeasure
+            && !_justAutoClosedPickup && (!_barClosedByBlock || _spanEndedOnBarLine);
         FlushCurrentMeasure(); // voice blocks are bar-aligned; settle voice 1
         int endMeasure = _currentPart.Measures.Count;
 
@@ -3078,6 +3110,8 @@ public sealed class MusicXmlExporter
         // page pads it with empty ones (ProcessParallelSpan; owner's decision 2026-10-30) — until
         // then those bars were dropped here.
         int longest = temps.Select(t => t.Measures.Count).DefaultIfEmpty(0).Max();
+        if (longest > endMeasure - startMeasure)
+            leadEndedOnBarLine = false; // the span ends later than the first voice's line
         for (int i = endMeasure - startMeasure; i < longest; i++)
         {
             StartNewMeasure();
@@ -3122,6 +3156,7 @@ public sealed class MusicXmlExporter
         // reuses it rather than emitting a blank bar.
         StartNewMeasure();
         _barClosedByBlock = true;
+        _spanEndedOnBarLine = leadEndedOnBarLine;
         // ... and in the frame the span opened in, which is where the page reads the next
         // note from. Leaving voice 1's end here read `d` two octaves off in the probe.
         _currentOctave = spanOctave;
@@ -3143,7 +3178,19 @@ public sealed class MusicXmlExporter
     {
         var value = tempo.Value;
         if (value.Bpm is not int bpm)
+        {
+            // Words and no count — `tempo "Largo"`, `tempo "a tempo"`: the page prints them
+            // and the speed stays. Until 2026-11-12 this walk returned here and the document
+            // carried nothing (Lab sessions/p1226/md/eval2/left3): they are a direction of
+            // their own, at the opening (SetOpeningTempo), a section's head and in the music.
+            if (string.IsNullOrEmpty(value.Marking))
+                return;
+            _tempoWordsAlone = value.Marking;
+            if (_currentMeasure != null && (_currentMeasure.Notes.Count > 0 || _currentMeasure.Number > 1))
+                AddDirection(new MusicXmlDirection { TempoWordsAlone = value.Marking });
             return;
+        }
+        _tempoWordsAlone = null;
         _tempo = bpm;
         _tempoStated = true;
         _tempoBeatUnit = value.BeatUnit ?? 4;
@@ -3195,11 +3242,21 @@ public sealed class MusicXmlExporter
     /// </remarks>
     private void SetOpeningTempo(MusicXmlMeasure measure)
     {
-        if (_tempoStated)
+        if (_tempoWordsAlone != null)
+        {
+            // Words alone open the part: the words, and the running speed as the bare sound.
+            measure.Direction = new MusicXmlDirection { TempoWordsAlone = _tempoWordsAlone };
+            measure.SoundTempo = _tempo;
+        }
+        else if (_tempoStated)
             measure.Direction = TempoDirection();
         else
             measure.SoundTempo = _tempo;
     }
+
+    /// <summary>The words of the running tempo when it is words alone (<c>tempo "Largo"</c>),
+    /// or null: a counted tempo after it takes the mark over.</summary>
+    private string? _tempoWordsAlone;
 
     private void ProcessMetadata(MetadataDeclarationSyntax metadata)
     {
@@ -3596,6 +3653,12 @@ public sealed class MusicXmlExporter
             && note.Articulations.Any(a => a is ArticulationSyntax { Name: "arpeggio" }))
             xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("arpeggiate",
                 new System.Xml.Linq.XAttribute("number", 1)));
+        // …and its own bracket, one head tall on the page and in LilyPond 2.26: until 2026-11-12
+        // `c'2@arpeggio(bracket)` wrote nothing, a bracket's two ends wanting two chord members
+        // (Lab sessions/p1226/md/eval2/left3).
+        if (note.ChildNodes().OfType<MusicMarkSyntax>()
+                .Any(mm => Semantics.AnnotationValues.ArpeggioWords(mm) is { Bracket: true, Cross: false }))
+            AddBracketEnds(xmlNote, xmlNote, 1);
         _currentMeasure.Notes.Add(xmlNote);
         _lastPitchedNote = xmlNote;
         _lastEmittedNotes.Clear();
@@ -3658,21 +3721,31 @@ public sealed class MusicXmlExporter
                     new System.Xml.Linq.XAttribute("number", number)));
             return;
         }
-        // The members stand lowest first, as the chord's own bracket reads them.
-        if (!connected || !isUpper)
-        {
-            if (connected || members.Count >= 2)
-                members[0].ExtraNotations.Add(new System.Xml.Linq.XElement("non-arpeggiate",
-                    new System.Xml.Linq.XAttribute("type", "bottom"),
-                    new System.Xml.Linq.XAttribute("number", number)));
-        }
-        if (!connected || isUpper)
-        {
-            if (connected || members.Count >= 2)
-                members[^1].ExtraNotations.Add(new System.Xml.Linq.XElement("non-arpeggiate",
-                    new System.Xml.Linq.XAttribute("type", "top"),
-                    new System.Xml.Linq.XAttribute("number", number)));
-        }
+        // The members stand lowest first, as the chord's own bracket reads them. (A bracket
+        // drawn on its own single note has both ends on it — AddBracketEnds; until 2026-11-12
+        // it was not written.)
+        AddBracketEnds(!connected || !isUpper ? members[0] : null, !connected || isUpper ? members[^1] : null, number);
+    }
+
+    /// <summary>
+    /// Writes an arpeggio bracket's ends, <c>&lt;non-arpeggiate type="bottom"&gt;</c> on its
+    /// lowest note and <c>type="top"</c> on its highest (null: the end is another staff's).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: a bracket one note tall — <c>c'2@arpeggio(bracket)</c> — carries BOTH
+    /// ends on that note. MusicXML gives the element a required <c>type</c> of top or bottom
+    /// and has no spelling for a one-note bracket; its <c>&lt;notations&gt;</c> is a repeatable
+    /// choice (musicxml.xsd 4.0, complexType "notations"), so the two stand in one, and
+    /// MusicXmlReader.ReadArpeggioBrackets reads them back as the bracket of that note.
+    /// </remarks>
+    private static void AddBracketEnds(MusicXmlNote? bottom, MusicXmlNote? top, int number)
+    {
+        bottom?.ExtraNotations.Add(new System.Xml.Linq.XElement("non-arpeggiate",
+            new System.Xml.Linq.XAttribute("type", "bottom"),
+            new System.Xml.Linq.XAttribute("number", number)));
+        top?.ExtraNotations.Add(new System.Xml.Linq.XElement("non-arpeggiate",
+            new System.Xml.Linq.XAttribute("type", "top"),
+            new System.Xml.Linq.XAttribute("number", number)));
     }
 
     /// <summary>
@@ -4620,15 +4693,9 @@ public sealed class MusicXmlExporter
         }
 
         WriteCrossArpeggio(chord, _chordMembers);
-        if (_chordArpeggio == "non-arpeggiate" && _chordMembers.Count >= 2)
-        {
-            _chordMembers[0].ExtraNotations.Add(new System.Xml.Linq.XElement("non-arpeggiate",
-                new System.Xml.Linq.XAttribute("type", "bottom"),
-                new System.Xml.Linq.XAttribute("number", 1)));
-            _chordMembers[^1].ExtraNotations.Add(new System.Xml.Linq.XElement("non-arpeggiate",
-                new System.Xml.Linq.XAttribute("type", "top"),
-                new System.Xml.Linq.XAttribute("number", 1)));
-        }
+        // (A chord of one member has both ends on it, as a single note has — AddBracketEnds.)
+        if (_chordArpeggio == "non-arpeggiate" && _chordMembers.Count >= 1)
+            AddBracketEnds(_chordMembers[0], _chordMembers[^1], 1);
         _resolvedChordXmlNotes[chord] = resolved;
 
         // A chord-level half-tie ties EVERY head (the page's SemiTiesOf); ProcessArticulations

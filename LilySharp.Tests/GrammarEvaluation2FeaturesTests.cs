@@ -252,6 +252,60 @@ public class GrammarEvaluation2FeaturesTests
         Assert.Contains("tempo 92 c'1", new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(alone).Item1);
     }
 
+    /// <summary>A tempo that is words alone — <c>tempo "Largo"</c>, <c>tempo "a tempo"</c> — was
+    /// not exported to MusicXML at all (a leftover of the same day). It is a direction of bold
+    /// words above the staff, as a counted tempo's words are, with no metronome and no sound: it
+    /// changes no speed. Read back it is the tempo again — not a <c>bare</c> one, which has a
+    /// sound, and not a <c>@text</c>, whose words Lily# writes plain.</summary>
+    [Fact]
+    public void ATempoOfWordsAlone_GoesToMusicXmlAsBoldWords_AndComesBack()
+    {
+        string source = "octave absolute\ntime 4/4\ntempo \"Largo\"\npart m { }\npart b { clef bass }\n"
+            + "section A { m { c'1 | d'1 | } b { c1 | d1 | } }\n"
+            + "section B { tempo \"Vivo\"\n m { c'1 | tempo \"a tempo\" d'1@text(\"dolce\").up | tempo \"Presto\" 4 = 150 e'1 | tempo \"meno\" f'1@text(\"sotto\") | }"
+            + " b { c1 | d1 | e1 | f1 | } }\n"
+            + "form { A B }\nscore { staff m  staff b }\n";
+        Clean(source);
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter { Form = spec?.Form, Score = spec }.Export(tree).ToXml()
+            .ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
+        // The words alone in their direction: no metronome, no sound in it. (The opening's is
+        // followed by the measure's own bare sound, the speed the piece plays at.)
+        foreach (string words in new[] { "Vivo", "a tempo", "meno" })
+            Assert.Contains($"<direction placement=\"above\"><direction-type><words font-weight=\"bold\">{words}</words></direction-type></direction>", xml);
+        Assert.Contains("<direction placement=\"above\"><direction-type><words font-weight=\"bold\">Largo</words></direction-type></direction><sound tempo=\"120\" />", xml);
+        // Each part's opening and section head carry them; the words in the music are that part's.
+        Assert.Equal(2, xml.Split(">Largo</words>").Length - 1);
+        Assert.Equal(2, xml.Split(">Vivo</words>").Length - 1);
+        Assert.Equal(1, xml.Split(">a tempo</words>").Length - 1);
+        Assert.Equal(1, xml.Split("<metronome>").Length - 1);
+
+        var (lys, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml);
+        Assert.Contains("\ntempo \"Largo\"\n", lys);
+        Assert.Contains("tempo \"Vivo\" c'1", lys);
+        Assert.Contains("| tempo \"a tempo\" d'1@text(\"dolce\").up | tempo \"Presto\" 4 = 150 e'1 | tempo \"meno\" f'1@text(\"sotto\") |", lys);
+        Assert.DoesNotContain("bare", lys);
+        Assert.DoesNotContain("@text(\"Largo\")", lys);
+        Clean(lys);
+        var tempos = SyntaxTree.Parse(lys).GetRoot().DescendantNodes().OfType<TempoDeclarationSyntax>().Select(t => t.Value).ToList();
+        Assert.Equal([("Largo", null), ("Vivo", null), ("a tempo", null), ("Presto", 150), ("meno", null), ("Vivo", null)],
+            tempos.Select(v => (v.Marking!, v.Bpm)));
+
+        // Another program's words — plain, or bold but below the staff — are the text they were.
+        var importer = new LilySharp.Core.MusicXmlImport.MusicXmlImporter();
+        string plain = xml.Replace("<words font-weight=\"bold\">a tempo</words>", "<words>a tempo</words>");
+        Assert.Contains("| d'1@text(\"a tempo\").up@text(\"dolce\").up |", importer.Import(plain).Item1);
+        string below = xml.Replace("<direction placement=\"above\"><direction-type><words font-weight=\"bold\">a tempo</words>",
+            "<direction placement=\"below\"><direction-type><words font-weight=\"bold\">a tempo</words>");
+        Assert.Contains("| d'1@text(\"a tempo\")@text(\"dolce\").up |", importer.Import(below).Item1);
+        // …and bold words in a direction of their own before a metronome's are that tempo's words.
+        string split = xml.Replace("<words font-weight=\"bold\">a tempo</words></direction-type></direction>",
+            "<words font-weight=\"bold\">a tempo</words></direction-type></direction><direction placement=\"above\"><direction-type>"
+            + "<metronome><beat-unit>quarter</beat-unit><per-minute>66</per-minute></metronome></direction-type><sound tempo=\"66\" /></direction>");
+        Assert.Contains("| tempo \"a tempo\" 4 = 66 d'1@text(\"dolce\").up |", importer.Import(split).Item1);
+    }
+
 
     /// <summary>A lead sheet's twin writes its tempos on a timing track built from the page's
     /// marks, and a mark with a hidden count has none: the words were written alone and LilyPond
@@ -891,7 +945,42 @@ public class GrammarEvaluation2FeaturesTests
         Assert.Contains("g'2\\arpeggio", new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree));
         string xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).ToXml().ToString();
         Assert.Contains("<arpeggiate number=\"1\" />", xml);
-        Assert.Contains("@arpeggio e'2 |", new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml).Item1);
+        Assert.Contains("@arpeggio e'2@arpeggio(bracket) |", new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml).Item1);
+    }
+
+    /// <summary>…but the bracket of a single note was not exported (a leftover of the same day):
+    /// MusicXML's <c>&lt;non-arpeggiate&gt;</c> is a bracket's top or its bottom, and the export
+    /// wanted two chord members for the two. One note carries both ends, and a note that does
+    /// reads back as its <c>@arpeggio(bracket)</c> — a single note's, a one-note chord's, and the
+    /// cross bracket's with nothing below it, which is drawn on its own note.</summary>
+    [Fact]
+    public void ABracketOnASingleNote_GoesToMusicXmlAsBothEndsOnIt_AndComesBack()
+    {
+        const string head = "octave absolute\ntime 4/4\npart m { }\nsection A { m { ";
+        const string tail = " } }\nform { A }\nscore { staff m }\n";
+        string source = head + "c'2@arpeggio(bracket) <e' g'>2@arpeggio(bracket) | <c'>2@arpeggio(bracket) e'2@arpeggio |" + tail;
+        Clean(source);
+        // The page draws each: three brackets and a wavy line.
+        Assert.Equal([true, true, true, false], Collected(source).Arpeggios.Select(a => a.Bracket));
+
+        const string both = "<notations><non-arpeggiate type=\"bottom\" number=\"1\" /><non-arpeggiate type=\"top\" number=\"1\" /></notations>";
+        string Xml(string s) => new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(s)).ToXml()
+            .ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
+        string xml = Xml(source);
+        // Both ends on the single note and on the one-note chord; one end on each note of the chord of two.
+        Assert.Equal(2, xml.Split(both).Length - 1);
+        Assert.Equal(3, xml.Split("<non-arpeggiate type=\"top\"").Length - 1);
+        Assert.Equal(3, xml.Split("<non-arpeggiate type=\"bottom\"").Length - 1);
+
+        var (lys, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml);
+        Assert.Contains("c'2@mark(\"A\")@arpeggio(bracket) <e' g'>2@arpeggio(bracket) | c'2@arpeggio(bracket) e'2@arpeggio |", lys);
+        Clean(lys);
+        Assert.Equal([true, true, true, false], Collected(lys).Arpeggios.Select(a => a.Bracket));
+
+        // The cross bracket with no staff to run down to is its own note's (LYS4064 says so).
+        string alone = Xml(head + "g'1@arpeggio(cross bracket) |" + tail);
+        Assert.Contains(both, alone);
+        Assert.Contains("g'1@mark(\"A\")@arpeggio(bracket) |", new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(alone).Item1);
     }
 
     /// <summary>…and MusicXML read back is the one line again: the shared number on both staves

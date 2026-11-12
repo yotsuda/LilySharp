@@ -342,11 +342,29 @@ internal static class MusicXmlReader
                         {
                             tempoWords = TempoWords(el, out bool countHidden);
                             bool opens = doc.Tempo == null;
-                            doc.Tempo ??= bpm;
-                            if (measureNo > 1 || measure.HasAnyItems)
-                                (measure.Tempo, measure.TempoWords, measure.TempoCountHidden) = (bpm, tempoWords, countHidden);
+                            bool inTheMusic = measureNo > 1 || measure.HasAnyItems;
+                            // (Words alone at the opening keep the top of the file: a count
+                            // first met later is its own bar's — TempoWordsAlone.)
+                            if (!inTheMusic || doc.TempoWordsAlone == null)
+                                doc.Tempo ??= bpm;
+                            // (…and bold words in a direction of their own just before the
+                            // count's are its words, as in the one direction.)
+                            if (inTheMusic)
+                                (measure.Tempo, measure.TempoWords, measure.TempoCountHidden)
+                                    = (bpm, tempoWords ?? (measure.Tempo == null ? measure.TempoWords : null), countHidden);
                             else if (opens)
                                 (doc.TempoWords, doc.TempoCountHidden) = (tempoWords, countHidden);
+                        }
+                        else if (TempoWordsAlone(el) is { } wordsAlone
+                                 && (measureNo > 1 || measure.HasAnyItems || doc.Tempo == null))
+                        {
+                            // A tempo that is words alone: no count to carry, here or at the
+                            // opening (where a count already read leaves them the text they were).
+                            tempoWords = wordsAlone;
+                            if (measureNo > 1 || measure.HasAnyItems)
+                                measure.TempoWords = wordsAlone;
+                            else
+                                doc.TempoWordsAlone ??= wordsAlone;
                         }
                         int at = position + (int.TryParse(Local(el, "offset")?.Value, out int off) ? off : 0);
                         int? dirStaff = int.TryParse(Local(el, "staff")?.Value, out int ds) ? ds : null;
@@ -1838,6 +1856,35 @@ internal static class MusicXmlReader
             return null;
         countHidden = !dir.Descendants().Any(d => d.Name.LocalName == "metronome");
         return text;
+    }
+
+    /// <summary>
+    /// The words of a tempo that is words alone — <c>tempo "Largo"</c>, <c>tempo "a tempo"</c> —
+    /// or null: a direction above the staff that holds bold <c>&lt;words&gt;</c> and nothing
+    /// else, no <c>&lt;metronome&gt;</c> and no <c>&lt;sound&gt;</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: MusicXML has no element for a tempo word, so the reading goes by the
+    /// font. It is what Lily# writes for one (MusicXmlDirection.TempoWordsAlone: bold, above,
+    /// as a counted tempo's words are), and its expressive <c>@text</c> is written plain —
+    /// which, like another program's plain or italic words, stays a <c>@text</c>. Until
+    /// 2026-11-12 the exporter wrote nothing for such a tempo and bold words alone came back
+    /// as text.
+    /// </remarks>
+    private static string? TempoWordsAlone(XElement dir)
+    {
+        if ((string?)dir.Attribute("placement") != "above" || Local(dir, "sound") != null)
+            return null;
+        var types = Els(dir, "direction-type").ToList();
+        if (types.Any(t => t.Elements().Any(e => e.Name.LocalName != "words")))
+            return null;
+        var words = types.SelectMany(t => Els(t, "words")).ToList();
+        if (words.Count == 0 || words.Any(w => (string?)w.Attribute("font-weight") != "bold"
+                || (string?)w.Attribute("font-style") == "italic"))
+            return null;
+        string text = string.Join(" ", string.Concat(words.Select(w => w.Value))
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return text.Length == 0 ? null : text;
     }
 
     private static int? ReadDirectionTempo(XElement el)

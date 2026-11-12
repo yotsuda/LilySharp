@@ -724,6 +724,11 @@ internal sealed class MusicXmlDirection
     /// the shape other programs write a tempo mark in. Null for a count alone. Until
     /// 2026-11-12 the metronome was written alone and the words were lost.</summary>
     public string? TempoMarking { get; set; }
+    /// <summary>A tempo that is words alone (<c>tempo "Largo"</c>, <c>tempo "a tempo"</c>): bold
+    /// <c>&lt;words&gt;</c> above the staff, as a counted tempo's are, with no
+    /// <c>&lt;metronome&gt;</c> and no <c>&lt;sound&gt;</c> — it changes no speed. Until
+    /// 2026-11-12 nothing was written for it.</summary>
+    public string? TempoWordsAlone { get; set; }
     public string? Placement { get; set; }
     /// <summary>Hairpin: "crescendo" / "diminuendo" / "stop".</summary>
     public string? WedgeType { get; set; }
@@ -810,6 +815,10 @@ internal sealed class MusicXmlDirection
             direction.Add(new XElement("direction-type", new XElement("rehearsal",
                 RehearsalEnclosure != null ? new XAttribute("enclosure", RehearsalEnclosure) : null,
                 Rehearsal)));
+
+        if (TempoWordsAlone != null)
+            direction.Add(new XElement("direction-type",
+                new XElement("words", new XAttribute("font-weight", "bold"), TempoWordsAlone)));
 
         XElement? sound = null;
         if (Tempo.HasValue)

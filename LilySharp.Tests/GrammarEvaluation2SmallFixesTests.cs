@@ -311,4 +311,60 @@ public class GrammarEvaluation2SmallFixesTests
         Assert.Equal(Sounds(Book(spelled)), Sounds(Book(written)));
     }
 
+    /// <summary>…and the MusicXML wrote none either (a leftover of the same day): three measures
+    /// for the page's four, the file a bar short from there on. It writes the bar the page draws,
+    /// the bar of rest a plain <c>| |</c> is — and, the other way round, the bar line after a
+    /// phrase that ends in its own confirms that bar, where a bar of rest was written after every
+    /// such phrase. The shapes that gain no bar gain none, and the file read back is the page's bars.</summary>
+    [Theory]
+    [InlineData("voice { c'1 | } { e'1 | } | d'1 | g'1 |", 4, 1)]
+    [InlineData("voice { c'1 | } { e'1 | } | | d'1 | g'1 |", 5, 2)]
+    [InlineData("voice { c'1 | d'1 | } { e'1 | f'1 | } | g'1 | a'1 |", 5, 1)]
+    [InlineData("voice { c'1 | d'1 | } { e'1 | } | g'1 | a'1 |", 5, 1)]
+    [InlineData("d'1 | voice { c'1 | } { e'1 | } |", 3, 1)]
+    [InlineData("voice { c'1 } { e'1 } | d'1 | g'1 |", 3, 0)]
+    [InlineData("voice { c'1 | d'1 } { e'1 | f'1 } | g'1 | a'1 |", 4, 0)]
+    [InlineData("voice { c'1 } { e'1 | } | d'1 | g'1 |", 3, 0)]
+    [InlineData("voice { c'1 | } { e'1 | } d'1 | g'1 |", 3, 0)]
+    [InlineData("voice { c'1 | } { e'1 | } || d'1 | g'1 |", 3, 0)]
+    [InlineData("one | d'1 | g'1 |", 3, 0)]
+    [InlineData("one one | d'1 | g'1 |", 4, 0)]
+    [InlineData("one | | d'1 | g'1 |", 4, 1)]
+    [InlineData("two | d'1 | g'1 |", 3, 0)]
+    [InlineData("voice { one } { e'1 | } | d'1 | g'1 |", 3, 0)]
+    [InlineData("c'1 | | d'1 | g'1 |", 4, 1)]
+    public void TheBarLineAfterAVoiceSpan_IsTheBarThePageDraws_InMusicXml(string written, int bars, int empty)
+    {
+        string source = "octave absolute\ntime 4/4\nphrase one { c'1 | }\nphrase two { voice { c'1 | } { e'1 | } }\n"
+            + "part m { }\nsection A { m { " + written + " } }\nform { A }\nscore { staff m }\n";
+        Assert.Empty(Said(source).Select(d => d.Message));
+        static int PageBars(string s) => Condensed(s).EnumerateStaves().First().Staff.Voices[0].Measures.Length;
+        Assert.Equal(bars, PageBars(source));
+
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var document = new LilySharp.Core.MusicXml.MusicXmlExporter { Form = spec?.Form, Score = spec }.Export(tree);
+        var measures = Assert.Single(document.Parts).Measures;
+        Assert.Equal(Enumerable.Range(1, bars), measures.Select(m => m.Number));
+        // An empty bar is one whole-bar rest and nothing else, as `c'1 | | d'1` writes it.
+        Assert.Equal(empty, measures.Count(m => m.Notes.Count == 1 && m.Notes[0] is { IsRest: true, Type: "whole" }));
+        Assert.Equal(bars - empty, measures.Count(m => m.Notes.Any(n => !n.IsRest && !n.IsBackup)));
+
+        var (lys, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(document.ToXml().ToString());
+        Assert.Empty(Said(lys).Select(d => d.Message));
+        Assert.Equal(bars, PageBars(lys));
+    }
+
+    /// <summary>A drum chart is no voice span: the bar line after it confirms the bar its lines
+    /// closed, in the MusicXML as on the page — no bar of rest.</summary>
+    [Fact]
+    public void TheBarLineAfterADrumChart_IsNoBarInMusicXml()
+    {
+        string source = KitBook("drums { { cymr4 cymr cymr cymr | } { r4 hhp r hhp | } } | sn1 | sn1 |");
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var document = new LilySharp.Core.MusicXml.MusicXmlExporter { Form = spec?.Form, Score = spec }.Export(tree);
+        Assert.All(document.Parts, p => Assert.Equal(3, p.Measures.Count));
+        Assert.All(document.Parts[1].Measures, m => Assert.Contains(m.Notes, n => !n.IsRest && !n.IsBackup));
+    }
 }

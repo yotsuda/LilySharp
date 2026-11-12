@@ -76,7 +76,9 @@ internal static class LysWriter
         WritePaper(sb, doc.Paper);
 
         if (doc.Tempo is int tempo)
-            sb.Append(TempoText(tempo, doc.TempoWords, doc.TempoCountHidden)).Append('\n');
+            sb.Append(TempoText(tempo, doc.TempoWords ?? doc.TempoWordsAlone, doc.TempoCountHidden)).Append('\n');
+        else if (doc.TempoWordsAlone is { } wordsAlone)
+            sb.Append(TempoText(null, wordsAlone, false)).Append('\n');
 
         // Opening time/key/clef come from the first measure that declares them.
         var (firstTime, firstKey) = header;
@@ -1309,6 +1311,9 @@ internal static class LysWriter
                 tempo = bpm;
                 State(true, true, TempoText(bpm, m.TempoWords, m.TempoCountHidden) + " ");
             }
+            else if (m.Tempo == null && m.TempoWords != null)
+                State(true, true, TempoText(null, m.TempoWords, false) + " "); // words alone: the count stays
+
             changes[i] = sb.ToString();
             opening[i] = open.ToString();
         }
@@ -1318,9 +1323,11 @@ internal static class LysWriter
     /// <summary>A tempo as written: <c>tempo N</c>, or — the source printing words
     /// (<see cref="ImportDocument.TempoWords"/>) — <c>tempo "…" 4 = N</c>, with <c>bare</c> when it
     /// prints no count beside them. The count is the quarter's: MusicXML's
-    /// <c>&lt;sound tempo&gt;</c> is, which is what the reader takes it from.</summary>
-    private static string TempoText(int bpm, string? words, bool countHidden)
+    /// <c>&lt;sound tempo&gt;</c> is, which is what the reader takes it from. Words and no count
+    /// (<see cref="ImportDocument.TempoWordsAlone"/>) are <c>tempo "…"</c>.</summary>
+    private static string TempoText(int? bpm, string? words, bool countHidden)
         => words == null ? $"tempo {bpm}"
+            : bpm == null ? $"tempo \"{EscapeString(words)}\""
             : $"tempo \"{EscapeString(words)}\" 4 = {bpm}" + (countHidden ? " " + Syntax.TempoValue.BareWord : "");
 
     private static RelativeOctave? Rel(bool relative) => relative ? new RelativeOctave() : null;

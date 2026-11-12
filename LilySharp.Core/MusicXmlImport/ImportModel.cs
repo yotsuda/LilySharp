@@ -39,6 +39,9 @@ internal sealed class ImportDocument
     /// <summary>The source prints the opening tempo's words and no count (<c>&lt;words&gt;</c>
     /// with a <c>&lt;sound tempo&gt;</c> and no <c>&lt;metronome&gt;</c>).</summary>
     public bool TempoCountHidden { get; set; }
+    /// <summary>The source opens with a tempo that is words alone — no count, no sound
+    /// (<c>MusicXmlReader.TempoWordsAlone</c>): written back as <c>tempo "…"</c>.</summary>
+    public string? TempoWordsAlone { get; set; }
     /// <summary>The page the document states (<c>&lt;defaults&gt;&lt;page-layout&gt;</c>),
     /// or null when it states none.</summary>
     public ImportPaper? Paper { get; set; }
@@ -146,7 +149,9 @@ internal sealed class ImportMeasure
     public ImportTime? Time { get; set; }
     public string? Clef { get; set; }
     public int? Tempo { get; set; }
-    /// <summary>The words of a tempo stated here, as <see cref="ImportDocument.TempoWords"/>.</summary>
+    /// <summary>The words of a tempo stated here, as <see cref="ImportDocument.TempoWords"/> —
+    /// or, with no <see cref="Tempo"/>, a tempo that is words alone
+    /// (<see cref="ImportDocument.TempoWordsAlone"/>).</summary>
     public string? TempoWords { get; set; }
     /// <summary>Its count is not printed, as <see cref="ImportDocument.TempoCountHidden"/>.</summary>
     public bool TempoCountHidden { get; set; }
