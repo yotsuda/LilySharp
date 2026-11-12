@@ -4036,7 +4036,7 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
             // Whose settings they are is said — by the engine, which is what decides them
             // (owner's decision 2026-11-12: the voice's whole name is more than is needed).
             const item = new vscode.CompletionItem({ label: 'with', description: engineName }, vscode.CompletionItemKind.Keyword);
-            item.detail = `How ${voice} sings: ${taken.map(p => p.name).join(', ')}`;
+            item.detail = `How the voice sings: ${taken.map(p => p.name).join(', ')}`;
             item.insertText = 'with ';
             item.sortText = '~with';     // after what the line still needs (`on`)
             item.command = { command: 'editor.action.triggerSuggest', title: 'List the voice\'s settings' };

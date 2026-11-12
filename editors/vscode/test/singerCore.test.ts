@@ -1163,7 +1163,7 @@ describe('whose settings a singer line lists', () => {
     it('names the engine on `with` and on each setting', () => {
         assert.match(ext, /const engineName = voice\.includes\('\/'\) \? voice\.slice\(0, voice\.indexOf\('\/'\)\) : voice;/);
         assert.match(ext, /new vscode\.CompletionItem\(\{ label: 'with', description: engineName \}, vscode\.CompletionItemKind\.Keyword\);/);
-        assert.match(ext, /item\.detail = `How \$\{voice\} sings: /);
+        assert.match(ext, /item\.detail = `How the voice sings: /);
         assert.match(ext, /new vscode\.CompletionItem\(\{ label: p\.name, description: engineName \}, vscode\.CompletionItemKind\.Property\);/);
     });
 });
