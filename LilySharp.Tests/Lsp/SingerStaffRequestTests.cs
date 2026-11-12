@@ -87,6 +87,55 @@ public class SingerStaffRequestTests
     }
 
     [Fact]
+    public void ANamedSingersLine_OffersToWriteTheNotesOut_AndTheServerWritesThem()
+    {
+        var (server, uri) = Opened(Book);
+        var doc = server.DocumentAt(uri)!;
+        int onCarol = Book.IndexOf("singer carol female", StringComparison.Ordinal) + 3;
+        var action = LilySharpLanguageServer.WriteSingerPartAction(doc, uri, onCarol);
+        Assert.Equal("Write carol's notes out as a part", action!.Title);
+        Assert.Equal(LilySharpLanguageServer.WriteSingerPartCommand, action.Command!.CommandIdentifier);
+        Assert.Equal([uri.ToString(), "carol"], action.Command.Arguments!.Select(a => a?.ToString()));
+        // Not on the score's item, nor on a line with no name.
+        Assert.Null(LilySharpLanguageServer.WriteSingerPartAction(doc, uri, Book.IndexOf("singer carol  singer bob", StringComparison.Ordinal) + 3));
+
+        var written = server.HarmonyPart(new HarmonyPartParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Singer = "carol" });
+        Assert.Null(written.Error);
+        Assert.Contains("part carol \"Carol\" {", written.NewText);
+        Assert.Contains("singer carol female sings on carol", written.NewText);
+    }
+
+    [Fact]
+    public void AHarmonyPartOfAnInstrument_IsAskedAndWritten()
+    {
+        var (server, uri) = Opened(Book);
+        var choices = server.HarmonyPartChoices(new HarmonyPartChoicesParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Offset = Book.IndexOf("lead { g'4", StringComparison.Ordinal) + 8,
+        });
+        Assert.Equal(["lead"], choices.Parts);
+        Assert.Equal("lead", choices.Part);
+        Assert.Equal(["Verse", "Chorus"], choices.Sections);
+        Assert.Equal(["lead", "alice", "bob", "carol"], choices.Taken);
+
+        var written = server.HarmonyPart(new HarmonyPartParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri }, From = "lead", Name = "lead2", Interval = -3, Sections = ["Chorus"],
+        });
+        Assert.Null(written.Error);
+        Assert.Contains("lead2 { e'4 e f e | }", written.NewText);
+        Assert.Contains("lead2 { R*1 }", written.NewText);
+
+        var refused = server.HarmonyPart(new HarmonyPartParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri }, From = "lead", Name = "carol", Interval = 3,
+        });
+        Assert.Null(refused.NewText);
+        Assert.Contains("is in the score already", refused.Error);
+    }
+
+    [Fact]
     public void TheProblemsPanel_SaysNothingOfTheMadeText_AndSaysASingerNobodyNames()
     {
         var (server, uri) = Opened(Book);

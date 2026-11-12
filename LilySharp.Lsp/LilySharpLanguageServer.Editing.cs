@@ -413,6 +413,8 @@ public sealed partial class LilySharpLanguageServer
             actions.Add(notesToChord);
         if (NamePartWordsAction(doc, uri, startOffset) is { } partWords)
             actions.Add(partWords);
+        if (WriteSingerPartAction(doc, uri, startOffset) is { } singerPart)
+            actions.Add(singerPart);
 
         return actions.ToArray();
     }
@@ -442,6 +444,35 @@ public sealed partial class LilySharpLanguageServer
     internal const string ConvertNotesToChordCommand = "lilysharp.convertNotesToChord";
 
     internal const string ConvertNotesToChordTitle = "Convert to Chord Symbol chord(…)";
+
+    /// <summary>The command "Write NAME's notes out as a part" runs — the extension's, which
+    /// asks the server for the rewrite (lilysharp/harmonyPart) and applies it.</summary>
+    internal const string WriteSingerPartCommand = "lilysharp.writeSingerPart";
+
+    /// <summary>On a line of a NAMED singer whose notes are not a part yet: "Write NAME's notes
+    /// out as a part" (owner's decision 2026-11-12) — the harmony the line says becomes notes
+    /// to mend by hand (<see cref="LilySharp.Core.Editing.HarmonyPartWriter.WriteSinger"/>).
+    /// Offered on sight, worked out when picked (the notes need the file played).</summary>
+    internal static CodeAction? WriteSingerPartAction(Document doc, Uri uri, int offset)
+    {
+        var line = doc.Tree.GetNodes<SingerDeclarationSyntax>()
+            .FirstOrDefault(l => l.Span.Start <= offset && offset <= l.Span.End);
+        if (line?.PersonToken?.Text is not { } person
+            || !LilySharp.Core.Editing.HarmonyPartWriter.CanWriteSinger(doc.Tree.GetRoot(), person))
+            return null;
+        string title = $"Write {person}'s notes out as a part";
+        return new CodeAction
+        {
+            Title = title,
+            Kind = CodeActionKind.RefactorRewrite,
+            Command = new Command
+            {
+                Title = title,
+                CommandIdentifier = WriteSingerPartCommand,
+                Arguments = [uri.ToString(), person],
+            },
+        };
+    }
 
     /// <summary>On a <c>singer</c> line or a <c>lyrics NAME { … }</c> block whose part does not
     /// name the words: "Name these words on the part" — <c>lyrics NAME</c> into the part's

@@ -641,6 +641,16 @@
         "title": "Respell Notes to Key…"
       },
       {
+        "command": "lilysharp.writeHarmonyPart",
+        "category": "Lily#",
+        "title": "Write a Harmony Part…"
+      },
+      {
+        "command": "lilysharp.writeSingerPart",
+        "category": "Lily#",
+        "title": "Write a Singer's Notes Out as a Part"
+      },
+      {
         "command": "lilysharp.newScore",
         "category": "Lily#",
         "icon": "$(new-file)",
@@ -1051,6 +1061,14 @@
         {
           "command": "lilysharp.respellNotesToKey",
           "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.writeHarmonyPart",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.writeSingerPart",
+          "when": "false"
         },
         {
           "command": "lilysharp.importMusicXml"

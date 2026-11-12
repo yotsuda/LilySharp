@@ -376,3 +376,38 @@ with no `section`) are not cut by section and are not printed under a singer's s
 of one name that say different voices are not refused; the harmony drawn as small notes on
 the lead's own staff is later work.
 
+
+## 14. A harmony written out as a part (owner's decisions 2026-11-12; built the same day)
+
+A third along the key is not always the note, and the place to mend a note is a part. So
+what a line says can be WRITTEN OUT — and, the owner's point, for an instrument as for a
+voice: a second violin a third under the first is the same request.
+
+- On a named singer's line the light bulb offers **"Write NAME's notes out as a part"**
+  (`HarmonyPartWriter.WriteSinger`): a part called as the singer is, after the part sung — a
+  block beside that part's in each section, or sections of its own in a file written by part,
+  bars of rest where the singer does not sing; the words of the sung sections as a track of
+  the singer's own (`carolWords`), named in the new part's header; the singer's lines made
+  ONE line that sings the written part as it stands (`singer carol female "x/y" sings on carol
+  with …`, the first line's voice and settings kept). A score that prints the singer keeps its
+  `singer carol` — section 13 reads a singer whose part is written as that part's staff and
+  words, and makes nothing; a score that shows the sung part takes `staff carol  lyrics
+  carolWords` after it.
+- **"Lily#: Write a Harmony Part…"** (the command palette; `HarmonyPartWriter.WritePart`)
+  asks which part (the caret's first), how far (a third, a fourth, a fifth, a sixth, a tenth,
+  above or below along the key, or an octave), which sections, and the new part's name, and
+  writes that part the same way, with a staff after the part it follows in every score that
+  shows it. No words, no singer line: it is an instrument's.
+- The notes are section 13's, note for note: the writer asks `SingerParts` for the part of
+  that singer (for an instrument, of a line it writes for the asking, in a score it adds for
+  the asking) and takes the made part's music section by section; `PartWriter` places it as
+  it places any new part. An instrument an octave down keeps its clef (the treble clef an
+  octave down is a voice's).
+- The server: `lilysharp/harmonyPartChoices` (the parts, the caret's, the sections, the names
+  taken) and `lilysharp/harmonyPart` (the rewritten text, or why nothing was written); the
+  code action carries the command `lilysharp.writeSingerPart`, worked out when picked.
+
+Not written: a singer who sings one voice of a part, or whose moved music calls a phrase
+(section 13's refusals, said in the answer); lines of one singer with different settings keep
+the first's.
+

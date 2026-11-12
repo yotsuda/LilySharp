@@ -872,6 +872,10 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.guessSectionKey', () => guessSectionKey()),
         vscode.commands.registerCommand('lilysharp.reviewScore', () => reviewScoreCommand(context)),
         vscode.commands.registerCommand('lilysharp.respellNotesToKey', () => respellNotesToKey()),
+        vscode.commands.registerCommand('lilysharp.writeHarmonyPart', () => writeHarmonyPart()),
+        vscode.commands.registerCommand('lilysharp.writeSingerPart',
+            (uri?: string, singer?: string) => writeSingerPart(
+                typeof uri === 'string' ? uri : undefined, typeof singer === 'string' ? singer : undefined)),
         vscode.commands.registerCommand('lilysharp.newScore', async () => {
             outputChannel.appendLine('newScore command triggered');
             const doc = await vscode.workspace.openTextDocument({
@@ -3224,6 +3228,128 @@ async function respellNotesToKey() {
     }
 }
 
+
+interface HarmonyPartChoices {
+    Parts: string[];
+    Part: string | null;
+    Sections: string[];
+    Taken: string[];
+}
+
+interface HarmonyPartResponse {
+    NewText: string | null;
+    Error: string | null;
+}
+
+/** The harmonies "Write a Harmony Part…" offers: an interval along the key, an octave, or both. */
+const HARMONY_CHOICES: { label: string; description: string; interval: number; octaves: number }[] = [
+    { label: 'A third above', description: 'up 3, along the key', interval: 3, octaves: 0 },
+    { label: 'A third below', description: 'down 3', interval: -3, octaves: 0 },
+    { label: 'A sixth above', description: 'up 6', interval: 6, octaves: 0 },
+    { label: 'A sixth below', description: 'down 6', interval: -6, octaves: 0 },
+    { label: 'A fourth above', description: 'up 4', interval: 4, octaves: 0 },
+    { label: 'A fourth below', description: 'down 4', interval: -4, octaves: 0 },
+    { label: 'A fifth above', description: 'up 5', interval: 5, octaves: 0 },
+    { label: 'A fifth below', description: 'down 5', interval: -5, octaves: 0 },
+    { label: 'An octave above', description: 'octave 1', interval: 0, octaves: 1 },
+    { label: 'An octave below', description: 'octave -1', interval: 0, octaves: -1 },
+    { label: 'A tenth above', description: 'up 10 (a third and an octave)', interval: 10, octaves: 0 },
+    { label: 'A tenth below', description: 'down 10', interval: -10, octaves: 0 },
+];
+
+/**
+ * "Lily#: Write a Harmony Part…" (owner's decision 2026-11-12): a new part of another part's
+ * notes an interval away along the key — a second violin a third under the first, a horn an
+ * octave below — written into the file beside the part it follows, to be mended by hand where
+ * the interval is not the note. Asks which part (the caret's first), how far, which sections
+ * and the new part's name; the server writes it (lilysharp/harmonyPart).
+ */
+async function writeHarmonyPart() {
+    const editor = lysEditorFor('write a harmony part');
+    if (!editor) { return; }
+    const doc = editor.document;
+    try {
+        const choices = await client!.sendRequest<HarmonyPartChoices>('lilysharp/harmonyPartChoices', {
+            textDocument: { uri: doc.uri.toString() }, offset: doc.offsetAt(editor.selection.active),
+        });
+        if (choices.Parts.length === 0) {
+            vscode.window.showInformationMessage('Lily#: the score has no named part to write a harmony of.');
+            return;
+        }
+        const parts = choices.Part ? [choices.Part, ...choices.Parts.filter(p => p !== choices.Part)] : choices.Parts;
+        const from = parts.length === 1 ? parts[0] : await vscode.window.showQuickPick(parts, {
+            title: 'Lily#: Write a Harmony Part (1/4)', placeHolder: 'The part the harmony follows',
+        });
+        if (!from) { return; }
+        const how = await vscode.window.showQuickPick(HARMONY_CHOICES, {
+            title: `Lily#: Write a Harmony Part (2/4) — of ${from}`, placeHolder: 'How far from its notes, along the key',
+            matchOnDescription: true,
+        });
+        if (!how) { return; }
+        let sections: string[] | undefined;
+        if (choices.Sections.length > 1) {
+            const picked = await vscode.window.showQuickPick(
+                choices.Sections.map(s => ({ label: s, picked: true })), {
+                    title: 'Lily#: Write a Harmony Part (3/4)', canPickMany: true,
+                    placeHolder: 'The sections it plays in; it rests in the others',
+                });
+            if (!picked || picked.length === 0) { return; }
+            sections = picked.length === choices.Sections.length ? undefined : picked.map(p => p.label);
+        }
+        let suggested = from + '2';
+        for (let n = 3; choices.Taken.includes(suggested); n++) { suggested = from + n; }
+        const name = await vscode.window.showInputBox({
+            title: 'Lily#: Write a Harmony Part (4/4)', prompt: 'The new part\'s name', value: suggested,
+            validateInput: v => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(v) ? 'Letters, digits and _; it begins with a letter.'
+                : choices.Taken.includes(v) ? `'${v}' is in the score already.` : undefined,
+        });
+        if (!name) { return; }
+        const response = await client!.sendRequest<HarmonyPartResponse>('lilysharp/harmonyPart', {
+            textDocument: { uri: doc.uri.toString() }, from, name,
+            interval: how.interval, octaves: how.octaves, sections,
+        });
+        if (response.NewText == null) {
+            vscode.window.showErrorMessage(`Lily#: ${response.Error ?? 'the harmony could not be written.'}`);
+            return;
+        }
+        await replaceDocument(doc, response.NewText);
+        vscode.window.showInformationMessage(`Lily#: wrote part ${name}, ${how.label.toLowerCase()} ${from}.`);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: writing the harmony part failed: ${err}`);
+    }
+}
+
+/**
+ * "Write NAME's notes out as a part" — the quick fix on a named singer's line: what the lines
+ * of that singer say (a third above in the Chorus) becomes a part called as the singer is, its
+ * words a track of its own, and the lines one line that sings it (lilysharp/harmonyPart).
+ */
+async function writeSingerPart(uri?: string, singer?: string) {
+    if (!client) {
+        vscode.window.showErrorMessage('Lily#: language server not ready.');
+        return;
+    }
+    const doc = uri !== undefined
+        ? vscode.workspace.textDocuments.find(d => sameDocumentUri(d.uri.toString(), uri))
+        : vscode.window.activeTextEditor?.document;
+    if (!doc || doc.languageId !== 'lilysharp' || !singer) {
+        vscode.window.showInformationMessage('Lily#: put the caret on a named singer\'s line (singer carol … sings …) and use the light bulb.');
+        return;
+    }
+    try {
+        const response = await client.sendRequest<HarmonyPartResponse>('lilysharp/harmonyPart', {
+            textDocument: { uri: doc.uri.toString() }, singer,
+        });
+        if (response.NewText == null) {
+            vscode.window.showErrorMessage(`Lily#: ${response.Error ?? 'the notes could not be written out.'}`);
+            return;
+        }
+        await replaceDocument(doc, response.NewText);
+        vscode.window.showInformationMessage(`Lily#: wrote what ${singer} sings as part ${singer}.`);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: writing the singer's part failed: ${err}`);
+    }
+}
 
 interface ImportMusicXmlResponse {
     Lys: string | null;

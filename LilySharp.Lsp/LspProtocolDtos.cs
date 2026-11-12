@@ -858,6 +858,46 @@ public class SetSectionKeyResponse
     public string? Error { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/harmonyPartChoices: the document, and where the caret is.</summary>
+public class HarmonyPartChoicesParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public int Offset { get; set; }
+}
+
+/// <summary>Response for lilysharp/harmonyPartChoices: the parts a harmony may be written of
+/// (<see cref="Part"/> the one the caret is in, or null), the sections, and the names taken.</summary>
+public class HarmonyPartChoicesResponse
+{
+    public string[] Parts { get; set; } = [];
+    public string? Part { get; set; }
+    public string[] Sections { get; set; } = [];
+    public string[] Taken { get; set; } = [];
+}
+
+/// <summary>Parameters for lilysharp/harmonyPart (<c>LilySharp.Core.Editing.HarmonyPartWriter</c>):
+/// write <see cref="Singer"/>'s notes out as a part — or, with no singer, a new part
+/// <see cref="Name"/> of <see cref="From"/>'s notes <see cref="Interval"/> away along the key
+/// (3 a third above, -6 a sixth below, 0 none) and <see cref="Octaves"/> octaves, in
+/// <see cref="Sections"/> (all when null or empty).</summary>
+public class HarmonyPartParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public string? Singer { get; set; }
+    public string? From { get; set; }
+    public string? Name { get; set; }
+    public int Interval { get; set; }
+    public int Octaves { get; set; }
+    public string[]? Sections { get; set; }
+}
+
+/// <summary>Response for lilysharp/harmonyPart: the rewritten source, or why nothing was written.</summary>
+public class HarmonyPartResponse
+{
+    public string? NewText { get; set; }
+    public string? Error { get; set; }
+}
+
 /// <summary>Parameters for lilysharp/planRespell and lilysharp/respellToKey: respell
 /// <see cref="Section"/>'s notes to <see cref="Key"/> (<c>ges major</c>); for the latter,
 /// only the changes whose id is in <see cref="Accepted"/> (all when null).</summary>

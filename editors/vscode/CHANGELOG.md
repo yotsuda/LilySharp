@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A harmony can be written out as a part, for a voice and for an instrument**: on a named singer's line the light bulb offers "Write carol's notes out as a part"; "Lily#: Write a Harmony Part…" in the command palette asks which part, how far (a third, a sixth … above or below along the key, an octave), which sections and the new part's name. The part is written beside the one it follows, to be mended by hand where the interval is not the note.
 - **A singer has a name, and a score prints what the singer sings**: `singer carol female sings on lead up 3 in Chorus`, then `singer carol` in a score — the preview shows carol's staff under the lead (the Chorus a third above along the key, rests where she does not sing, her words), and `score carol { singer carol }` is her own sheet. Play sings the staves the score shows.
 - **Ctrl+wheel on the preview zooms about the pointer**: the place under the mouse stays under it. On a lower page of a long score the view slid back toward the pages before.
 - **Where nobody sings a section, the part's instrument plays it**: a part with a singer line is a voice, its instrument off — so `singer … in Chorus` alone left the verses silent. A section none of the part's voices sings is now played on its instrument, in the preview, in an exported WAV / MP3 / MP4, in a proposal's Play and in `lysc wav --singer`.

@@ -1477,6 +1477,48 @@ public sealed partial class LilySharpLanguageServer
             : new SetSectionKeyResponse { Error = $"Could not write key {@params.Key} into section {@params.Section}." };
     }
 
+    /// <summary>What "Write a Harmony Part…" asks before it writes: the file's parts, the one
+    /// the caret is in, its sections, and the names a new part cannot take.</summary>
+    [JsonRpcMethod("lilysharp/harmonyPartChoices", UseSingleObjectParameterDeserialization = true)]
+    public HarmonyPartChoicesResponse HarmonyPartChoices(HarmonyPartChoicesParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new HarmonyPartChoicesResponse();
+        var root = doc.Tree.GetRoot();
+        var parts = root.ChildNodes().OfType<PartDeclarationSyntax>().Where(p => !p.IsUnnamed && !p.IsStrokes)
+            .Select(p => p.Name.Text).Distinct(StringComparer.Ordinal).ToArray();
+        string? at = null;
+        for (var n = doc.Tree.FindNode(@params.Offset); n != null && at == null; n = n.Parent)
+            at = n switch { PartBlockSyntax block => block.Name, PartDeclarationSyntax part => part.Name.Text, _ => null };
+        return new HarmonyPartChoicesResponse
+        {
+            Parts = parts,
+            Part = at != null && parts.Contains(at) ? at : null,
+            Sections = root.DescendantNodes<SectionDeclarationSyntax>().Select(s => s.SectionName)
+                .Where(s => s.Length > 0).Distinct(StringComparer.Ordinal).ToArray(),
+            Taken = [.. parts, .. LilySharp.Core.Music.LyricSinger.LinesOf(root).Select(l => l.Person).OfType<string>().Distinct(StringComparer.Ordinal)],
+        };
+    }
+
+    /// <summary>Writes a harmony out as a part: a singer's notes, or a part's an interval away
+    /// (<see cref="LilySharp.Core.Editing.HarmonyPartWriter"/>).</summary>
+    [JsonRpcMethod("lilysharp/harmonyPart", UseSingleObjectParameterDeserialization = true)]
+    public Task<HarmonyPartResponse> HarmonyPartAsync(HarmonyPartParams @params, CancellationToken token)
+        => OffDispatch(() => HarmonyPart(@params), token);
+
+    public HarmonyPartResponse HarmonyPart(HarmonyPartParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new HarmonyPartResponse { Error = "Document not found." };
+        var result = @params.Singer is { Length: > 0 } singer
+            ? LilySharp.Core.Editing.HarmonyPartWriter.WriteSinger(doc.Text, singer)
+            : LilySharp.Core.Editing.HarmonyPartWriter.WritePart(doc.Text, @params.From ?? "", @params.Name ?? "",
+                @params.Interval, @params.Octaves, @params.Sections);
+        return new HarmonyPartResponse { NewText = result.Text, Error = result.Error };
+    }
+
     /// <summary>The respellings "Respell Notes to Key" would make in a section
     /// (<see cref="LilySharp.Core.Editing.KeyRespeller.Plan"/>).</summary>
     [JsonRpcMethod("lilysharp/planRespell", UseSingleObjectParameterDeserialization = true)]
