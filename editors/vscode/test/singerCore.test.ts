@@ -1159,9 +1159,11 @@ describe('whose settings a singer line lists', () => {
         assert.match(ext, /singerLanguageColumn\(lineText, singerLineOf\(lineText\)\?\.askColumn \?\? position\.character\)/);
     });
 
-    it('names the voice on `with` and on each setting', () => {
-        assert.match(ext, /new vscode\.CompletionItem\(\{ label: 'with', description: voice \}, vscode\.CompletionItemKind\.Keyword\);/);
+    // The same day: the engine's name is enough there, not the voice's whole name.
+    it('names the engine on `with` and on each setting', () => {
+        assert.match(ext, /const engineName = voice\.includes\('\/'\) \? voice\.slice\(0, voice\.indexOf\('\/'\)\) : voice;/);
+        assert.match(ext, /new vscode\.CompletionItem\(\{ label: 'with', description: engineName \}, vscode\.CompletionItemKind\.Keyword\);/);
         assert.match(ext, /item\.detail = `How \$\{voice\} sings: /);
-        assert.match(ext, /new vscode\.CompletionItem\(\{ label: p\.name, description: voice \}, vscode\.CompletionItemKind\.Property\);/);
+        assert.match(ext, /new vscode\.CompletionItem\(\{ label: p\.name, description: engineName \}, vscode\.CompletionItemKind\.Property\);/);
     });
 });

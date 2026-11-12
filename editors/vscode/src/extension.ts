@@ -4020,6 +4020,8 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
             outputChannel.appendLine(`singer: the voice's settings could not be listed — ${String(e)}`);
             return undefined;
         }
+        // `neutrino/MERROW` → neutrino: the engine the settings are of.
+        const engineName = voice.includes('/') ? voice.slice(0, voice.indexOf('/')) : voice;
         if (slot.kind === 'value') {
             // A number is the writer's to type; a setting that takes a NAME lists its names.
             const names = taken.find(p => p.name === slot.of)?.values ?? [];
@@ -4031,8 +4033,9 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
         }
         if (slot.kind === 'with') {
             if (taken.length === 0) { return undefined; }
-            // Whose settings they are is said: a line that names no voice sings with a default one.
-            const item = new vscode.CompletionItem({ label: 'with', description: voice }, vscode.CompletionItemKind.Keyword);
+            // Whose settings they are is said — by the engine, which is what decides them
+            // (owner's decision 2026-11-12: the voice's whole name is more than is needed).
+            const item = new vscode.CompletionItem({ label: 'with', description: engineName }, vscode.CompletionItemKind.Keyword);
             item.detail = `How ${voice} sings: ${taken.map(p => p.name).join(', ')}`;
             item.insertText = 'with ';
             item.sortText = '~with';     // after what the line still needs (`on`)
@@ -4040,7 +4043,7 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
             return [item];
         }
         return taken.filter(p => !slot.written.includes(p.name)).map((p, i) => {
-            const item = new vscode.CompletionItem({ label: p.name, description: voice }, vscode.CompletionItemKind.Property);
+            const item = new vscode.CompletionItem({ label: p.name, description: engineName }, vscode.CompletionItemKind.Property);
             item.detail = singParameterDetail(p);
             item.insertText = p.name + ' ';
             item.filterText = p.name;
