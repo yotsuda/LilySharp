@@ -41,6 +41,18 @@ public sealed class MusicXmlImporter
     public (string Lys, ImportReport Report) ImportBytes(byte[] bytes, bool relativeOctave = false)
     {
         var report = new ImportReport();
+        if (MidiReader.IsMidi(bytes))
+        {
+            // A Standard MIDI File through the same model and writer (owner's request 2026-11-12).
+            var midi = MidiReader.Read(bytes, report, out var singers);
+            var sung = midi.Parts.Where(p => p.Measures.Any(m => m.PrimaryItems.OfType<ImportNote>().Any(n => n.Lyrics.Count > 0))).ToList();
+            var text = new System.Text.StringBuilder(LysWriter.Write(midi, report, relativeOctave));
+            // Who sings a track, where the file says (Lily#'s own .mid does, Midi.MidiForFile).
+            foreach (var (part, voice) in singers)
+                text.Append("singer ").Append(Music.LyricSinger.Genders.Contains(voice.ToLowerInvariant()) ? voice.ToLowerInvariant() : '"' + LysWriter.EscapeString(voice) + '"')
+                    .Append(" on ").Append(part).Append(" sings words").Append(sung.Count > 0 && sung[0].SafeName == part ? "" : "_" + part).Append('\n');
+            return (text.ToString(), report);
+        }
         var doc = MusicXmlReader.ReadBytes(bytes, report);
         return (LysWriter.Write(doc, report, relativeOctave), report);
     }

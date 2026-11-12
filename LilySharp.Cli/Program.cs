@@ -110,7 +110,7 @@ static void ShowHelp()
 
           xml        Convert to MusicXML
           ly         Convert to LilyPond (.ly) source
-          import     Import MusicXML (.xml/.musicxml/.mxl) to a Lily# source file
+          import     Import MusicXML (.xml/.musicxml/.mxl) or MIDI (.mid) to a Lily# source file
           octave     Rewrite a Lily# file into absolute or relative octaves
 
           harmonize  Suggest a diatonic chord track for the melody (prints a chords part)
@@ -745,15 +745,20 @@ static int RunImport(string[] args)
     if (WantsHelp(args))
     {
         Console.WriteLine("""
-            Import MusicXML into a Lily# source file
+            Import MusicXML or a MIDI file into a Lily# source file
 
-            Usage: lysc import [options] <input.(xml|musicxml|mxl)>
+            Usage: lysc import [options] <input.(xml|musicxml|mxl|mid)>
 
             Reads a MusicXML score (or an .mxl zip) and writes an idiomatic Lily#
             source file, <input>.lys, that renders the same music. Import is an
             opinionated, non-unique mapping: the result is a faithful STARTING POINT
             to edit, not a byte round-trip. Anything not representable is reported,
             never emitted wrong.
+
+            A Standard MIDI File (.mid) is read too. It is a performance, not a page:
+            its notes are brought to sixteenths and triplet eighths, a part is read as
+            two voices at most, and spelling, key (where none is stated) and clefs are
+            Lily#'s reading. Its tracks' names, sounds, words and tempos are kept.
 
             Options:
               -d, --out-dir <folder> Write into this folder (default: the input's folder)
@@ -764,6 +769,7 @@ static int RunImport(string[] args)
               lysc import song.xml
               lysc import -d books song.mxl
               lysc import --relative song.xml
+              lysc import song.mid
             """);
         return 0;
     }

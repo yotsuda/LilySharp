@@ -675,7 +675,7 @@
       {
         "command": "lilysharp.importMusicXml",
         "category": "Lily#",
-        "title": "Import MusicXML…"
+        "title": "Import MusicXML or MIDI…"
       },
       {
         "command": "lilysharp.importImage",
@@ -1265,7 +1265,7 @@
       "explorer/context": [
         {
           "command": "lilysharp.importMusicXml",
-          "when": "resourceExtname == .xml || resourceExtname == .musicxml || resourceExtname == .mxl",
+          "when": "resourceExtname == .xml || resourceExtname == .musicxml || resourceExtname == .mxl || resourceExtname == .mid || resourceExtname == .midi",
           "group": "7_modification"
         },
         {

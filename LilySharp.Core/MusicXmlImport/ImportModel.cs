@@ -72,6 +72,9 @@ internal sealed class ImportPart
     public string? Label { get; set; }
     /// <summary>A sanitized Lily# identifier the scaffolding refers to (e.g. "melody", "part1").</summary>
     public string SafeName { get; set; } = "";
+    /// <summary>The part's General MIDI sound by name, written <c>midiInstrument "…"</c>, or null
+    /// (a .mid's program change, <see cref="MidiReader"/>).</summary>
+    public string? MidiInstrument { get; set; }
     /// <summary>The part's opening clef as a Lily# clef name ("treble", "bass", ...).</summary>
     public string Clef { get; set; } = "treble";
 
@@ -191,6 +194,9 @@ internal sealed class ImportNote : ImportItem
     /// <summary>A <c>&lt;rest measure="yes"/&gt;</c>: the whole bar, written <c>R</c>. Only
     /// read when <see cref="IsRest"/>.</summary>
     public bool IsMeasureRest { get; set; }
+    /// <summary>A drum, by its Lily# name (<c>bd</c>, <c>sn</c>, <c>hh</c>), written in place of
+    /// a pitch; null for a pitched note (a .mid's channel 10, <see cref="MidiReader"/>).</summary>
+    public string? DrumName { get; set; }
     /// <summary>Diatonic step, 0=C .. 6=B.</summary>
     public int Step { get; set; }
     /// <summary>Chromatic alteration in semitones (-2..+2).</summary>

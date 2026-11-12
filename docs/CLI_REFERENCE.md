@@ -462,16 +462,34 @@ phonemes, ties merge, and rests become gaps.
 lysc vsqx song.lys                    # Creates song.vsqx
 ```
 
-### import - Import MusicXML
+### import - Import MusicXML or MIDI
 
 ```bash
-lysc import [options] <input.(xml|musicxml|mxl)>
+lysc import [options] <input.(xml|musicxml|mxl|mid)>
 ```
 
 Reads a MusicXML score (or an `.mxl` zip) and writes an idiomatic Lily# source file,
 `song.lys`, that renders the same music. Import is an opinionated, non-unique mapping: the result is a
 faithful **starting point to edit**, not a byte round-trip. Anything not representable is
 reported, never emitted wrong.
+
+**A Standard MIDI File** (`.mid`, told by its header, not its name) is read through the same
+writer. A .mid is a performance and not a page, so more of the result is a reading:
+
+- **Kept as stated**: the notes, the meters, the tempos, the key signatures, and each track's
+  name, sound (`midiInstrument`), words (`lyrics`) and — where the file names it as Lily#'s own
+  .mid does — the voice that sings it (`singer`). Channel 10 is a drum part.
+- **Rhythm**: onsets and ends go to the nearer of a sixteenth's grid and an eighth triplet's;
+  a beat with a triplet point in it is a `tuplet 3/2 { }`. A written file comes back as it was;
+  a played one is quantized, and the report counts the notes that moved. Nothing shorter than a
+  sixteenth survives.
+- **Voices**: a part is one voice, and a second where notes overlap (a held bass under a tune);
+  what overlaps past two is written with the upper voice, and counted in the report.
+- **Spelling, key, clef**: letters and accidentals from the key signature; with no key stated,
+  the major key whose scale holds most of the notes (said in the report); bass clef for a part
+  that lies under middle C.
+- **Not read**: dynamics from velocities, the pedal, pitch bends, a pickup bar (a .mid has no
+  partial bar), repeats (a .mid is played out: the result is one section).
 
 **Options:**
 | Option | Description |
@@ -485,6 +503,7 @@ reported, never emitted wrong.
 lysc import song.xml                  # Creates song.lys
 lysc import -d books song.mxl         # From a compressed MusicXML, into books/
 lysc import --relative song.xml       # Relative-octave output
+lysc import song.mid                  # From a MIDI file
 ```
 
 ### octave - Convert between absolute and relative octaves

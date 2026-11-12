@@ -484,6 +484,13 @@ internal static class MeasureModel
             if (IsInsideNonLeadVoice(n, scope))
                 continue;
 
+            // A drum chord's members are drum notes themselves (`<bd hh>4`), where a pitched
+            // chord's are pitches: counted beside their chord they made a bar of four such
+            // chords last three bars (LYS2004, found importing a .mid 2026-11-12). The chord
+            // is the item.
+            if (n is DrumNoteSyntax && n.Parent is ChordSyntax)
+                continue;
+
             switch (n)
             {
                 case NoteSyntax:

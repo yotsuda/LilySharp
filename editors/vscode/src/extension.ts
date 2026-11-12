@@ -3386,7 +3386,8 @@ async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vsco
         const picked = await vscode.window.showOpenDialog({
             canSelectMany: false,
             openLabel: 'Import',
-            filters: { 'MusicXML': ['xml', 'musicxml', 'mxl'] },
+            // A Standard MIDI File goes through the same request: the server tells it by its header.
+            filters: { 'MusicXML or MIDI': ['xml', 'musicxml', 'mxl', 'mid', 'midi'], 'MusicXML': ['xml', 'musicxml', 'mxl'], 'MIDI': ['mid', 'midi'] },
         });
         if (!picked || picked.length === 0) {
             return;
@@ -3417,7 +3418,7 @@ async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vsco
         if (fromExplorer) {
             // Write <name>.lys next to the source and open it.
             const targetUri = fileUri.with({
-                path: fileUri.path.replace(/\.(xml|musicxml|mxl)$/i, '') + '.lys',
+                path: fileUri.path.replace(/\.(xml|musicxml|mxl|mid|midi)$/i, '') + '.lys',
             });
             await vscode.workspace.fs.writeFile(targetUri, Buffer.from(response.Lys, 'utf8'));
             doc = await vscode.workspace.openTextDocument(targetUri);

@@ -91,6 +91,8 @@ internal static class LysWriter
         {
             sb.Append("part ").Append(part.SafeName)
               .Append(" { clef ").Append(part.Clef);
+            if (part.MidiInstrument is { } sound)
+                sb.Append(" midiInstrument \"").Append(EscapeString(sound)).Append('"');
             if (part.PedalStyle is { } pedalStyle)
                 sb.Append(" pedal ").Append(pedalStyle);
             // <transpose> comes back as `transposition`, the same knob that produced it.
@@ -1439,9 +1441,11 @@ internal static class LysWriter
             // A chord member's string number and fingering are its own, so they are written
             // inside the brackets (<e\5 dis'\4>); a single note's follow its duration (c4\3),
             // the canonical post-event order (HANDOFF §3: `核 \N @… ] ) ( [ ~`).
+            // A drum is a name, in either octave mode.
+            var octaves = note.DrumName != null ? null : rel;
             string body = members.Count == 1
-                ? (rel != null ? rel.Note(note.Step, note.Alter, note.Octave) : Pitch(note))
-                : (rel != null ? rel.Chord(members)
+                ? (octaves != null ? octaves.Note(note.Step, note.Alter, note.Octave) : Pitch(note))
+                : (octaves != null ? octaves.Chord(members)
                                : "<" + string.Join(" ", members.Select(m => Pitch(m) + MemberMarks(m))) + ">");
             string token = body + Value(note.NoteValue, note.Dots);
             if (members.Count == 1)
@@ -1507,7 +1511,7 @@ internal static class LysWriter
     }
 
     // A Lily# absolute-octave pitch token: letter + accidental + octave marks.
-    private static string Pitch(ImportNote note) => PitchToken(note.Step, note.Alter, note.Octave);
+    private static string Pitch(ImportNote note) => note.DrumName ?? PitchToken(note.Step, note.Alter, note.Octave);
 
     /// <summary>The marks a note carries on its own pitch: <c>\N</c>, <c>@finger(N)</c>, and the
     /// tie of a chord's head tied without the others.</summary>

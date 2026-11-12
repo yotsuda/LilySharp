@@ -37,6 +37,10 @@ public class MidiTrack
     public List<TempoChange> TempoChanges { get; } = [];
     /// <summary>The time-signature changes on this track.</summary>
     public List<TimeSignatureChange> TimeSignatures { get; } = [];
+    /// <summary>The key signatures on this track, each a tick and its sharps (flats below zero),
+    /// written as key-signature meta events (0x59, major). Only a written file has them
+    /// (<see cref="MidiForFile"/>): what reads a .mid spells its notes by them.</summary>
+    public List<(int Tick, int Fifths)> KeySignatures { get; } = [];
     /// <summary>The lyric events on this track.</summary>
     public List<LyricEvent> Lyrics { get; } = [];
     /// <summary>The sustain pedal's changes on this track's channel, in tick order. The notes keep
@@ -318,6 +322,13 @@ public class MidiFile
                         trackWriter.Write(instrumentBytes);
                     }
                     break;
+                case MidiEventType.KeySignature:
+                    trackWriter.Write((byte)0xFF);
+                    trackWriter.Write((byte)0x59);
+                    trackWriter.Write((byte)0x02);
+                    trackWriter.Write(unchecked((byte)(sbyte)evt.Data1));
+                    trackWriter.Write((byte)0x00);
+                    break;
                 case MidiEventType.Lyric:
                     trackWriter.Write((byte)0xFF);
                     trackWriter.Write((byte)0x05); // Lyric meta event
@@ -413,6 +424,9 @@ public class MidiFile
             events.Add(new MidiEvent(note.StartTick + note.DurationTicks, MidiEventType.NoteOff, channel, note.Pitch, 0));
         }
 
+        foreach (var (tick, fifths) in track.KeySignatures)
+            events.Add(new MidiEvent(tick, MidiEventType.KeySignature, 0, fifths, 0));
+
         foreach (var lyric in track.Lyrics)
             events.Add(new MidiEvent(lyric.Tick, MidiEventType.Lyric, 0, 0, 0, lyric.Text));
 
@@ -458,6 +472,6 @@ public class MidiFile
     // before the first note-on — and a bend before the note-on it bends. A pedal changed on a
     // note lifts before the old notes end and presses before the new one starts, so it catches
     // the new chord and not the old.
-    private enum MidiEventType { TrackName = 0, ProgramChange = 1, PedalUp = 2, NoteOff = 3, PitchBend = 4, PedalDown = 5, NoteOn = 6, Tempo = 7, TimeSignature = 8, Lyric = 9 }
+    private enum MidiEventType { TrackName = 0, ProgramChange = 1, PedalUp = 2, NoteOff = 3, PitchBend = 4, PedalDown = 5, NoteOn = 6, Tempo = 7, TimeSignature = 8, Lyric = 9, KeySignature = 10 }
     private readonly record struct MidiEvent(int Tick, MidiEventType Type, int Channel, int Data1, int Data2, string? Text = null);
 }

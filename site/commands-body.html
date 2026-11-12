@@ -9,7 +9,7 @@
   <p class="grp">Starting a score</p>
   <ol>
     <li><a href="#new-score">New Score</a></li>
-    <li><a href="#import-musicxml">Import MusicXML…</a></li>
+    <li><a href="#import-musicxml">Import MusicXML or MIDI…</a></li>
     <li><a href="#import-image">Convert Image/PDF to Lily# (.lys)…</a></li>
   </ol>
   <p class="grp">Reshaping the file</p>
@@ -46,7 +46,7 @@
   <table class="g">
     <tr><th>Where</th><th>What is there</th></tr>
     <tr><td>Right-click in a <code>.lys</code> editor</td><td>Ask AI… · Regroup · Split Sections to Match a Part · Convert Octaves to Absolute / to Relative · Remove All String Numbers · Extract Phrase from Section · Add Chord Track · Guess Section Key… · Respell Notes to Key… — and, in a score read from a scan, Fix OMR Marks with AI… · Edit Bars Beside the Scan</td></tr>
-    <tr><td>Right-click a file in the Explorer</td><td>on a <code>.lys</code>: the <i>Lily#: Export</i> submenu · on a <code>.xml</code> / <code>.musicxml</code> / <code>.mxl</code>: Import MusicXML… · on a scan or PDF: Convert Image/PDF to Lily# (.lys)… (when the reader is installed)</td></tr>
+    <tr><td>Right-click a file in the Explorer</td><td>on a <code>.lys</code>: the <i>Lily#: Export</i> submenu · on a <code>.xml</code> / <code>.musicxml</code> / <code>.mxl</code>: Import MusicXML or MIDI… · on a scan or PDF: Convert Image/PDF to Lily# (.lys)… (when the reader is installed)</td></tr>
     <tr><td>Right-click in the preview</td><td>Ask AI… with the note, bar or selection under the pointer as its hint · Select Chord (on a note of a chord: the caret just after its <code>&gt;</code>) · Select This Bar · Clear Selection · Play from Here (on a note or a bar) · Stop Playback · Fit Width · Reset Zoom (100%) — and, in a score read from a scan, Edit Bars Beside the Scan on the bar</td></tr>
     <tr><td>The editor's title bar</td><td>Open Preview to Side · the lock that keeps the preview on one file</td></tr>
     <tr><td><i>File → New File…</i></td><td>Lily# Score (.lys)</td></tr>
@@ -85,7 +85,7 @@
 </section>
 
 <section id="import-musicxml">
-  <h2>Import MusicXML…</h2>
+  <h2>Import MusicXML or MIDI…</h2>
   <p>Turns a MusicXML file — <code>.xml</code>, <code>.musicxml</code> or the compressed
   <code>.mxl</code> — into Lily#. From the command palette it asks for the file and opens the
   result as a new untitled <code>.lys</code>; from the Explorer's right-click menu it writes
@@ -96,6 +96,11 @@
   written with absolute octaves (<code>c'</code>, <code>d''</code>); set
   <code>lilysharp.import.relativeOctave</code> for relative ones. The command line does the
   same: <code>lysc import score.musicxml</code>.</p>
+  <p>A MIDI file (<code>.mid</code>) is imported by the same command. It is a performance, not a
+  page, so more is Lily#'s reading: the notes are brought to sixteenths and triplet eighths (a
+  played file is quantized), a part is read as two voices at most, and the spelling, the clefs
+  and — where the file states none — the key are worked out. The tracks' names, sounds, words
+  and tempos are kept, drums come back as a drum part, and the result is one section.</p>
 </section>
 
 <section id="import-image">

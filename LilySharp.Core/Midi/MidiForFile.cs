@@ -40,11 +40,13 @@ namespace LilySharp.Core.Midi;
 /// </para>
 /// <para>
 /// Here: each part's words go to that part's track, one word a note (the row a voice sings
-/// first, then the first placed), as SUNG; each voice that sings other notes than its part's —
+/// first, then the first placed), as SUNG, a syllable that goes on in the next ending in a
+/// hyphen (<c>Morn-</c> <c>ing</c>, as other programs write and read it); each voice that sings other notes than its part's —
 /// an interval, an octave — is a track of its own, named as the singer is (else as the voice's
 /// key, <c>lead#2</c>), on its part's channel and sound, with its notes and its words; and a
 /// track a voice sings says the voice as its instrument name (meta 0x04,
-/// <see cref="MidiTrack.Instrument"/>). A staff Lily# made of a singer's lines
+/// <see cref="MidiTrack.Instrument"/>). The keys are key-signature events on the first track (as
+/// their major scale: a .mid's reader spells the notes by them). A staff Lily# made of a singer's lines
 /// (<c>staff alice</c>, <see cref="Editing.SingerParts"/>) is named as the singer.
 /// What a voice's <c>with …</c> and <c>@vibrato</c> say has no place in a .mid and is not written.
 /// </para>
@@ -65,13 +67,24 @@ public static class MidiForFile
             file.Tracks.Add(copy);
         }
 
+        // The keys, on the first track with the tempos: the signature of each key's major scale.
+        int stated = int.MinValue;
+        foreach (var (tick, tonic) in midi.KeyStarts)
+        {
+            int fifths = tonic * 7 % 12;
+            if (fifths > 6)
+                fifths -= 12;
+            if (fifths != stated && file.Tracks.Count > 0)
+                file.Tracks[0].KeySignatures.Add((tick, stated = fifths));
+        }
+
         // The words, each to its part's track, one a note.
         var taken = new HashSet<(MidiTrack, int)>();
         foreach (var (lyric, from) in midi.Tracks.SelectMany((t, i) => t.Lyrics.Select(l => (l, i))).OrderByDescending(x => x.l.Voiced))
         {
             var to = file.Tracks.FirstOrDefault(t => lyric.Part != null && t.Name == lyric.Part) ?? file.Tracks[from];
             if (taken.Add((to, lyric.Tick)))
-                to.Lyrics.Add(new LyricEvent(lyric.Tick, lyric.Sung ?? lyric.Text));
+                to.Lyrics.Add(new LyricEvent(lyric.Tick, (lyric.Sung ?? lyric.Text) + (lyric.Hyphen ? "-" : "")));
         }
         foreach (var track in file.Tracks)
             track.Lyrics.Sort((a, b) => a.Tick.CompareTo(b.Tick));
@@ -114,7 +127,7 @@ public static class MidiForFile
                 int velocity = ownAt[tick].Select(n => n.Velocity).DefaultIfEmpty(MidiExporter.DefaultVelocity).First();
                 track.Notes.Add(new MidiNote(own.Channel, pitch, velocity, tick, to - tick));
                 if (!string.IsNullOrEmpty(note.Lyric))
-                    track.Lyrics.Add(new LyricEvent(tick, note.Lyric));
+                    track.Lyrics.Add(new LyricEvent(tick, note.Lyric + (note.Hyphen ? "-" : "")));
             }
             if (track.Notes.Count > 0)
                 harmonies.Add(track);

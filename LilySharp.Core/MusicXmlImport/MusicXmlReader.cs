@@ -1897,7 +1897,7 @@ internal static class MusicXmlReader
 
     /// <summary>Turns a MusicXML part name into a valid, unique Lily# identifier
     /// (letters/digits, starting with a letter), falling back to <c>part{index}</c>.</summary>
-    private static string SafeIdentifier(string? name, int index, HashSet<string> used)
+    internal static string SafeIdentifier(string? name, int index, HashSet<string> used)
     {
         string cleaned = new string((name ?? "")
             .Where(char.IsLetterOrDigit).ToArray());
