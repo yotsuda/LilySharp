@@ -1408,6 +1408,65 @@ public class StepRequestTests
         Assert.Equal(S("condensedStaff { melody drums }"), Step(S("condensedStaff { melody ‸bass }"), -1, semitone: true).After);
     }
 
+    // Owner's report 2026-11-12: "make the number after `transpose` step with Ctrl+Shift+Up".
+    [Theory]
+    [InlineData("singer \"neutrino/MERROW\" sings words on lead with transpose 3‸", +1, "singer \"neutrino/MERROW\" sings words on lead with transpose 4")]
+    [InlineData("singer \"neutrino/MERROW\" sings words on lead with transpose ‸3", -1, "singer \"neutrino/MERROW\" sings words on lead with transpose 2")]
+    [InlineData("singer male sings words on lead with transpose 0‸", +1, "singer male sings words on lead with transpose 1")]
+    [InlineData("singer male sings words on lead with transpose 0‸", -1, "singer male sings words on lead with transpose -1")]
+    [InlineData("singer sings words on lead with transpose -3‸", +1, "singer sings words on lead with transpose -2")]
+    [InlineData("singer sings words with transpose 12‸", +1, "singer sings words with transpose 13")]
+    [InlineData("singer female \"neutrino/MERROW\" sings words on lead with transpose 3‸ support KIRITAN", +1, "singer female \"neutrino/MERROW\" sings words on lead with transpose 4 support KIRITAN")]
+    [InlineData("singer \"a/b\" sings words on lead with key 2‸ tempo 3", +1, "singer \"a/b\" sings words on lead with key 3 tempo 3")]
+    public void TheNumberAfterTranspose_Steps(string line, int direction, string expected)
+    {
+        const string Book = "part lead {{ }}\nsection A {{ lead {{ c'1 }} }}\nlyrics words {{ la }}\n{0}\nform {{ A }}\nscore {{ staff lead  lyrics words }}\n";
+        var (reply, after) = Step(string.Format(Book, line), direction, semitone: true);
+        Assert.False(reply.Fallback, reply.Error);
+        Assert.Equal(string.Format(Book, expected), after);
+        // The same with Windows line ends, and as the file's last line.
+        var (crlf, afterCrlf) = Step(string.Format(Book, line).Replace("\n", "\r\n"), direction, semitone: true);
+        Assert.False(crlf.Fallback, crlf.Error);
+        Assert.Equal(string.Format(Book, expected).Replace("\n", "\r\n"), afterCrlf);
+    }
+
+    // The same name inside a note's mark.
+    [Fact]
+    public void TheNumberAfterTranspose_StepsInsideANotesSingMarkToo()
+    {
+        const string Book = "part lead {{ }}\nsection A {{ lead {{ {0} }} }}\nlyrics words {{ la }}\nsinger \"neutrino/MERROW\" sings words on lead\nform {{ A }}\nscore {{ staff lead  lyrics words }}\n";
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(string.Format(Book, "c'1@sing(transpose 2)"));
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+        var (reply, after) = Step(string.Format(Book, "c'1@sing(transpose 2‸)"), +1, semitone: true);
+        Assert.False(reply.Fallback, reply.Error);
+        Assert.Equal(string.Format(Book, "c'1@sing(transpose 3)"), after);
+        Assert.Equal(string.Format(Book, "c'1@sing(transpose to -1)"), Step(string.Format(Book, "c'1@sing(transpose to ‸0)"), -1, semitone: true).After);
+    }
+
+    // What the report uncovered: `transpose` is a keyword, and a singer line took only identifiers
+    // after `with` — so the line ended at `with` and the FILE was transposed by the number.
+    [Fact]
+    public void ASettingNamedByAKeyword_IsTheSingerLines_NotTheFiles()
+    {
+        const string Source = "part lead { }\nsection A { lead { c'1 } }\nlyrics words { la }\n" +
+            "singer \"neutrino/MERROW\" sings words on lead with transpose 3 support KIRITAN\nform { A }\nscore { staff lead  lyrics words }\n";
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(Source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+        Assert.Equal(Source, tree.GetRoot().ToFullString());
+        var singer = Assert.Single(tree.GetRoot().DescendantNodes<LilySharp.Core.Syntax.SingerDeclarationSyntax>());
+        Assert.Equal(["transpose", "support"], singer.Settings.Select(s => s.Name));
+        Assert.Equal(3, singer.Settings[0].Number);
+        // Nothing at the file level transposes.
+        Assert.DoesNotContain(tree.GetRoot().ChildNodes(), n => n.Kind == LilySharp.Core.Syntax.SyntaxKind.PropertyAssignment);
+        // A word value that is a keyword too, and a keyword after a dot.
+        var other = LilySharp.Core.Syntax.SyntaxTree.Parse(Source.Replace("with transpose 3 support KIRITAN", "with mix.key 0.3 mode major"));
+        Assert.False(other.HasErrors, string.Join("\n", other.Diagnostics.Select(d => d.Message)));
+        Assert.Equal(["mix.key", "mode"], Assert.Single(other.GetRoot().DescendantNodes<LilySharp.Core.Syntax.SingerDeclarationSyntax>()).Settings.Select(s => s.Name));
+        // The next line is still its own.
+        var next = LilySharp.Core.Syntax.SyntaxTree.Parse(Source.Replace("\nform { A }", "\ntranspose d\nform { A }"));
+        Assert.Contains(next.GetRoot().ChildNodes(), n => n.Kind == LilySharp.Core.Syntax.SyntaxKind.PropertyAssignment);
+    }
+
     // Owner's request 2026-11-12, on `singer male sings words on lead`: the step keys on its
     // `male` go to `female`, and back - Up to female, Down to male, stopping at either end (the
     // same day: "they must not go round").

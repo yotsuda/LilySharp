@@ -277,7 +277,40 @@ internal sealed partial class Parser
     /// on the same line (a lyrics track may still be called with: <c>sings with on lead</c>).</summary>
     private bool IsSingerWith()
         => Current.Text == SyntaxFacts.SingerWithWord && Check(SyntaxKind.Identifier) && !BeginsLine()
-            && Peek(1) is { Kind: SyntaxKind.Identifier, Text: not "on" } && !BeginsLine(1);
+            && Peek(1) is { Text: not "on" } next && IsSettingWord(next) && !BeginsLine(1);
+
+    /// <summary>
+    /// Whether <paramref name="token"/> is a bare word: what a setting's name or its word value
+    /// may be. ⚠️ A word the language keeps for itself too — <c>transpose</c> is NEUTRINO's own
+    /// setting and a keyword here — because the names after <c>with</c> are the ENGINE's, not
+    /// Lily#'s. Until 2026-11-12 only an identifier was taken: <c>with transpose 3</c> ended the
+    /// singer line at <c>with</c> (LYS4056) and the rest was read as the FILE's <c>transpose 3</c>,
+    /// which moved every note of the piece (found on the owner's report that the number would
+    /// not step).
+    /// </summary>
+    private static bool IsSettingWord(SyntaxToken token)
+    {
+        if (token.Kind == SyntaxKind.StringLiteral || token.Text.Length == 0)
+            return false;
+        if (!char.IsLetter(token.Text[0]) && token.Text[0] != '_')
+            return false;
+        foreach (char c in token.Text)
+        {
+            if (!char.IsLetterOrDigit(c) && c != '_')
+                return false;
+        }
+        return true;
+    }
+
+    /// <summary>Takes the current token as a plain word: an identifier, whatever the lexer made
+    /// of its spelling (<see cref="IsSettingWord"/>), so that every reader of the line meets one kind.</summary>
+    private SyntaxToken AdvanceAsWord()
+    {
+        var token = Advance();
+        return token.Kind == SyntaxKind.Identifier
+            ? token
+            : new SyntaxToken(SyntaxKind.Identifier, token.Text, token.LeadingTrivia, token.TrailingTrivia);
+    }
 
     /// <summary>True when a line break stands between the token <paramref name="ahead"/> of the
     /// current one and the token before it.</summary>
@@ -301,17 +334,17 @@ internal sealed partial class Parser
     {
         tokens.Add(Advance());      // with
         bool any = false;
-        while (Check(SyntaxKind.Identifier) && !BeginsLine())
+        while (IsSettingWord(Current) && !BeginsLine())
         {
             any = true;
             int nameAt = _textPosition + Current.LeadingTriviaWidth;
             string name = Current.Text;
-            tokens.Add(Advance());
-            while (Check(SyntaxKind.Dot) && Peek(1) is { Kind: SyntaxKind.Identifier } && !BeginsLine())
+            tokens.Add(AdvanceAsWord());
+            while (Check(SyntaxKind.Dot) && Peek(1) is { } part && IsSettingWord(part) && !BeginsLine())
             {
                 tokens.Add(Advance());
                 name += "." + Current.Text;
-                tokens.Add(Advance());
+                tokens.Add(AdvanceAsWord());
             }
             bool here = !BeginsLine();
             if (here && Check(SyntaxKind.Minus) && Peek(1) is { Kind: SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral })
@@ -320,9 +353,13 @@ internal sealed partial class Parser
                 tokens.Add(Advance());
             }
             else if (here && (Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DecimalLiteral)
-                || Check(SyntaxKind.StringLiteral) || Check(SyntaxKind.Identifier)))
+                || Check(SyntaxKind.StringLiteral)))
             {
                 tokens.Add(Advance());
+            }
+            else if (here && IsSettingWord(Current))
+            {
+                tokens.Add(AdvanceAsWord());
             }
             else
             {
