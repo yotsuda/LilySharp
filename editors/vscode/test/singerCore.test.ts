@@ -906,7 +906,7 @@ describe('a singer line\'s settings', () => {
         const named = singParameterDetail({ name: 'support', scope: 'voice', what: 'Support', word: true, values: ['A', 'B', 'C', 'D', 'E', 'F', 'G'] } as never);
         assert.equal(named, 'Support — a name: A, B, C, D, E, F, … — one value for the voice');
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
-        assert.match(ext, /const names = taken\.find\(p => p\.name === slot\.of\)\?\.values \?\? \[\];/);
+        assert.match(ext, /const of = taken\.find\(p => p\.name === slot\.of\);[\s\S]{0,200}return \(of\.values \?\? \[\]\)\.map\(/);
     });
 
     it('are the voice\'s own to list, and what it does not take is said as a warning', () => {
@@ -1165,5 +1165,56 @@ describe('whose settings a singer line lists', () => {
         assert.match(ext, /new vscode\.CompletionItem\(\{ label: 'with', description: engineName \}, vscode\.CompletionItemKind\.Keyword\);/);
         assert.match(ext, /item\.detail = `How the voice sings: /);
         assert.match(ext, /new vscode\.CompletionItem\(\{ label: p\.name, description: engineName \}, vscode\.CompletionItemKind\.Property\);/);
+    });
+});
+
+// Owner's request 2026-11-12: "after `with transpose ` too, list what fits." A number's values,
+// across its range, to begin from.
+describe('the values offered where a setting\'s number is written', () => {
+    const { singValueChoices } = require('../src/singerCore') as {
+        singValueChoices: (p: { name: string; scope: string; what: string; min?: number; max?: number; default?: number; unit?: string; word?: boolean; values?: string[] })
+            => { text: string; detail: string; isDefault: boolean }[];
+    };
+    const p = (name: string, min: number, max: number, def: number | undefined, unit?: string) => ({ name, scope: 'curve', what: '', min, max, default: def, unit });
+
+    it('is every semitone for a setting counted in semitones', () => {
+        const choices = singValueChoices(p('transpose', -12, 12, 0, 'semitones'));
+        assert.deepEqual(choices.map(c => c.text), Array.from({ length: 25 }, (_, i) => String(i - 12)));
+        assert.deepEqual(choices.filter(c => c.isDefault).map(c => c.text), ['0']);
+        assert.equal(choices.find(c => c.text === '0')!.detail, 'transpose as the voice does by itself');
+        assert.equal(choices.find(c => c.text === '3')!.detail, '-12 to 12 semitones');
+    });
+
+    it('is a round step that gives about a dozen for the others, the unchanged value among them', () => {
+        assert.deepEqual(singValueChoices(p('breathiness', -12, 12, 0, 'dB')).map(c => c.text),
+            ['-12', '-10', '-8', '-6', '-4', '-2', '0', '2', '4', '6', '8', '10', '12']);
+        assert.deepEqual(singValueChoices(p('gender', -1, 1, 0)).map(c => c.text),
+            ['-1', '-0.8', '-0.6', '-0.4', '-0.2', '0', '0.2', '0.4', '0.6', '0.8', '1']);
+        assert.deepEqual(singValueChoices(p('tension', -10, 10, 0)).map(c => c.text),
+            ['-10', '-8', '-6', '-4', '-2', '0', '2', '4', '6', '8', '10']);
+        // A range that does not begin at a step from its unchanged value: both ends are still there.
+        const velocity = singValueChoices(p('velocity', 0.5, 2, 1)).map(c => c.text);
+        assert.equal(velocity[0], '0.5');
+        assert.equal(velocity[velocity.length - 1], '2');
+        assert.ok(velocity.includes('1'));
+        assert.ok(velocity.length <= 16, velocity.join(' '));
+        // No unchanged value said: counted from the least.
+        assert.deepEqual(singValueChoices(p('x', 0, 4, undefined)).map(c => c.text), ['0', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4']);
+    });
+
+    it('is none for a name, and none with no range', () => {
+        assert.deepEqual(singValueChoices({ name: 'support', scope: 'voice', what: '', word: true, values: ['KIRITAN'] }), []);
+        assert.deepEqual(singValueChoices({ name: 'y', scope: 'curve', what: '' }), []);
+    });
+
+    it('is listed on a singer line and inside a note\'s @sing, the sign written so far replaced with the item', () => {
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /if \(!of\) \{ return undefined; \}\s*if \(of\.word\) \{[\s\S]{0,400}\}\s*return singValueItems\(of, document, position\);/);
+        assert.match(ext, /if \(of\) \{ numbers = singValueItems\(of, document, position\); break; \}/);
+        assert.match(ext, /return \[\.\.\.numbers, back, to\];/);
+        assert.match(ext, /const begun = \/\[\^\\s\(\]\*\$\/\.exec\(/);
+        assert.match(ext, /item\.preselect = c\.isDefault;/);
+        // A setting's name taken from the list opens its values, on the line and in the mark.
+        assert.equal([...ext.matchAll(/item\.command = \{ command: 'editor\.action\.triggerSuggest', title: 'List values to begin from' \};/g)].length, 2);
     });
 });

@@ -819,6 +819,41 @@ export function singProblems(settings: readonly SingSettingDto[], takenBy: Reado
     return problems;
 }
 
+/**
+ * The values offered where a setting's number is written (owner's request 2026-11-12, after
+ * `with transpose `): from the least to the most the voice takes, in steps — every semitone for a
+ * setting counted in them, else a round step that gives about a dozen — always with the value
+ * that changes nothing, which says so. A place to begin from: the step keys move it finer. None
+ * for a setting that takes a name, or one that says no range.
+ */
+export function singValueChoices(p: SingParameter): { text: string; detail: string; isDefault: boolean }[] {
+    if (p.word || p.min === undefined || p.max === undefined || !(p.max > p.min)) { return []; }
+    const min = p.min, max = p.max;
+    const span = max - min;
+    let step = 1;
+    if (p.unit !== 'semitones') {
+        const raw = span / 12;
+        const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
+        step = [1, 2, 2.5, 5, 10].map(m => m * magnitude).find(s => s >= raw - 1e-12) ?? raw;
+    }
+    // Counted from the value that changes nothing, so that it is one of them.
+    const origin = p.default !== undefined && p.default >= min && p.default <= max ? p.default : min;
+    const decimals = (n: number) => (String(n).split('.')[1] ?? '').length;
+    const places = Math.min(6, Math.max(decimals(Number(step.toPrecision(6))), decimals(origin)));
+    const values = new Set<number>();
+    for (let k = Math.ceil((min - origin) / step - 1e-9); origin + k * step <= max + 1e-9; k++) {
+        values.add(Number((origin + k * step).toFixed(places)));
+    }
+    values.add(min);
+    values.add(max);
+    const unit = p.unit ? ' ' + p.unit : '';
+    return [...values].sort((a, b) => a - b).map(v => ({
+        text: String(v),
+        detail: v === p.default ? `${p.name} as the voice does by itself` : `${min} to ${max}${unit}`,
+        isDefault: v === p.default,
+    }));
+}
+
 /** One line of the list for a setting: its name, and what it does with its range. */
 export function singParameterDetail(p: SingParameter): string {
     const range = p.min !== undefined && p.max !== undefined ? `${p.min} to ${p.max}${p.unit ? ' ' + p.unit : ''}`

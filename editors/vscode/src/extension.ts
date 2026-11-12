@@ -56,7 +56,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { onSingerGender, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -4023,13 +4023,18 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
         // `neutrino/MERROW` → neutrino: the engine the settings are of.
         const engineName = voice.includes('/') ? voice.slice(0, voice.indexOf('/')) : voice;
         if (slot.kind === 'value') {
-            // A number is the writer's to type; a setting that takes a NAME lists its names.
-            const names = taken.find(p => p.name === slot.of)?.values ?? [];
-            return names.map((name, i) => {
-                const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.Value);
-                item.sortText = String(i).padStart(3, '0');
-                return item;
-            });
+            // A setting that takes a NAME lists its names; a number, values across its range
+            // to begin from (owner's request 2026-11-12, after `with transpose `).
+            const of = taken.find(p => p.name === slot.of);
+            if (!of) { return undefined; }
+            if (of.word) {
+                return (of.values ?? []).map((name, i) => {
+                    const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.Value);
+                    item.sortText = String(i).padStart(3, '0');
+                    return item;
+                });
+            }
+            return singValueItems(of, document, position);
         }
         if (slot.kind === 'with') {
             if (taken.length === 0) { return undefined; }
@@ -4048,10 +4053,29 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
             item.insertText = p.name + ' ';
             item.filterText = p.name;
             item.sortText = String(i).padStart(3, '0');
+            item.command = { command: 'editor.action.triggerSuggest', title: 'List values to begin from' };
             return item;
         });
     },
 };
+
+/** The values a number setting is begun from, least to most; the one that changes nothing is
+ *  where the list opens (singValueChoices). */
+function singValueItems(of: SingParameter, document: vscode.TextDocument, position: vscode.Position): vscode.CompletionItem[] {
+    // What is written of the value so far, its sign included: a `-` is no part of a word to the
+    // editor, and an item taken after one would stand behind it (`--3`).
+    const begun = /[^\s(]*$/.exec(document.lineAt(position.line).text.slice(0, position.character))?.[0].length ?? 0;
+    const range = new vscode.Range(position.line, position.character - begun, position.line, position.character);
+    return singValueChoices(of).map((c, i) => {
+        const item = new vscode.CompletionItem(c.text, vscode.CompletionItemKind.Value);
+        item.range = range;
+        item.detail = c.detail;
+        item.sortText = String(i).padStart(3, '0');
+        item.filterText = c.text;
+        item.preselect = c.isDefault;
+        return item;
+    });
+}
 
 /**
  * The list inside a note's `@sing(…)` (owner's decisions 2026-11-12): the settings that can change
@@ -4065,16 +4089,29 @@ const singMarkCompletion: vscode.CompletionItemProvider = {
     async provideCompletionItems(document, position) {
         const slot = singMarkSlot(document.lineAt(position.line).text.slice(0, position.character));
         if (!slot) { return undefined; }
+        const engine = await renderer();
+        const backend = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend : undefined;
         if (slot.kind === 'value') {
             const back = new vscode.CompletionItem('default', vscode.CompletionItemKind.Keyword);
             back.detail = `${slot.of} as the singer line has it again (or as the voice does by itself)`;
+            back.sortText = '~1';
             const to = new vscode.CompletionItem('to', vscode.CompletionItemKind.Keyword);
             to.detail = `Arrive at the value written after it with this note, gliding from the ${slot.of} before`;
             to.insertText = 'to ';
-            return [back, to];
+            to.sortText = '~2';
+            // …and before the two words, values across the setting's range to begin from.
+            let numbers: vscode.CompletionItem[] = [];
+            if (backend) {
+                const singers = singersWritten(document.getText());
+                for (const who of singers.length > 0 ? singers : ['']) {
+                    try {
+                        const of = (await backend.parameters(await backend.voiceName(who || null))).find(p => p.name === slot.of);
+                        if (of) { numbers = singValueItems(of, document, position); break; }
+                    } catch { /* that voice's settings could not be listed: the two words stand alone */ }
+                }
+            }
+            return [...numbers, back, to];
         }
-        const engine = await renderer();
-        const backend = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend : undefined;
         if (!backend) { return undefined; }
         const taken = new Map<string, SingParameter>();
         const singers = singersWritten(document.getText());
@@ -4092,6 +4129,7 @@ const singMarkCompletion: vscode.CompletionItemProvider = {
             item.detail = singParameterDetail(p);
             item.insertText = p.name + ' ';
             item.sortText = String(i).padStart(3, '0');
+            item.command = { command: 'editor.action.triggerSuggest', title: 'List values to begin from' };
             return item;
         });
     },
