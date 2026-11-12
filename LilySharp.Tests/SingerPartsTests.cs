@@ -444,6 +444,67 @@ public class SingerPartsTests
         Assert.Contains("say which on both lines", whole.Message);
     }
 
+    // ── Found writing five scores to try the grammar (owner's request 2026-11-12) ──
+
+    /// <summary>A singer who sings a verse in Japanese and a chorus in English: in the score that
+    /// prints her staff the chorus went to the voice as Japanese — her made words are one track,
+    /// and its language was the first section's.</summary>
+    [Fact]
+    public void OnHerOwnStaff_ASingerSingsEachSectionInItsLanguage()
+    {
+        string source = """
+            octave relative
+            time 4/4
+            language english
+            part her { instrument soprano  lyrics herJp  lyrics herEn }
+            section Verse {
+              her { e'4 e d c | }
+              lyrics herJp language japanese { あ さ の み | }
+            }
+            section Chorus {
+              her { g'4 g a g | }
+              lyrics herEn { Sing it o- ver | }
+            }
+            form { Verse Chorus }
+            singer aya female japanese on her in Verse
+            singer aya female english on her in Chorus
+            score { staff aya  lyrics aya }
+            """;
+        var (_, tree, said) = Expanded(source);
+        Assert.Empty(said.Select(d => d.Message));
+        Assert.Empty(SingerParts.OwnOf(SemanticValidation.Run(tree), tree.Text).Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Message));
+        var midi = Midi(tree);
+        var voices = SungVoices.Read(midi, MidiClock.SecondsOf(midi));
+        Assert.Equal(["ja", "en"], voices.Select(v => v.Language));
+        Assert.All(voices, v => Assert.Equal("aya__0", v.Part));
+        Assert.Equal(["あ", "さ", "の", "み"], voices[0].Notes.Select(n => n.Lyric));
+        Assert.Equal(["Sing", "it", "o", "ver"], voices[1].Notes.Select(n => n.Lyric));
+    }
+
+    /// <summary><c>with breathiness 2 in B</c> gave the voice a setting called in, and the line
+    /// sang every section: what of the part is sung is said before <c>with</c>.</summary>
+    [Theory]
+    [InlineData("singer aya female on lead with breathiness 2 in Chorus", "in")]
+    [InlineData("singer aya female on lead with breathiness 2 up 3", "up")]
+    [InlineData("singer aya female on lead with octave -1", "octave")]
+    public void APlaceWordAfterWith_IsSaid(string line, string word)
+    {
+        var said = Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(Book(line, "score { staff lead  lyrics words }"))),
+            d => d.Code == DiagnosticCodes.SingerPlaceMalformed);
+        Assert.Contains($"'{word}' after 'with' is read as a setting of the voice", said.Message);
+    }
+
+    /// <summary><c>singer aya</c> and nothing more was "music at the top level".</summary>
+    [Theory]
+    [InlineData("singer aya")]
+    [InlineData("singer aya female")]
+    [InlineData("singer aya female \"x/y\"")]
+    public void ASingersHeadAlone_IsASingerLineThatLacksItsPart(string line)
+    {
+        var tree = SyntaxTree.Parse(Book("// the singers\n" + line, "score { staff lead  lyrics words }"));
+        Assert.Equal(DiagnosticCodes.SingerNeedsSings, Assert.Single(tree.Diagnostics).Code);
+    }
+
     [Fact]
     public void ASingerTheScoresOwnLinesLeaveOut_IsSaidAtTheItem()
     {

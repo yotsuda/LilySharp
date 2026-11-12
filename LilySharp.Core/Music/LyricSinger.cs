@@ -276,8 +276,10 @@ public static class LyricSinger
         return lines.Select(l => l.Person is { } person && StaffOf(person) is { } staff
             ? l with
             {
+                // The words stay the line's own track: its language is the track's, so a singer
+                // who sings a verse in Japanese and a chorus in English is two voices on her
+                // staff, each in its language (the made words are one track, for the page).
                 Part = staff, Voice = null, Printed = true,
-                Track = LyricBindings.TracksOfPart(root, staff) is [var words] ? words : l.Track,
             }
             : l).ToList();
     }

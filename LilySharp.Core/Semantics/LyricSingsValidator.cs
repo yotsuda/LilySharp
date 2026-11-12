@@ -350,6 +350,14 @@ internal sealed class LyricSingsValidator : ISemanticValidator
     /// </summary>
     private void CheckPlace(SyntaxNode root, SingerDeclarationSyntax node)
     {
+        // What of the part is sung is said BEFORE `with`: after it every word is a setting of the
+        // voice, so `with breathiness 2 in B` gave the voice a setting called in and sang every
+        // section, with nothing said (found writing the evaluation scores, 2026-11-12).
+        foreach (var setting in node.Settings)
+            if (setting.Name is SyntaxFacts.SingerUpWord or SyntaxFacts.SingerDownWord or SyntaxFacts.SingerOctaveWord or SyntaxFacts.SingerInWord)
+                _diagnostics.Error(setting.NameToken.Span, DiagnosticCodes.SingerPlaceMalformed,
+                    $"'{setting.Name}' after 'with' is read as a setting of the voice. What of the part is sung comes before 'with': "
+                    + $"… on PART {setting.Name} … with …");
         if (node.IntervalToken is { } interval && Math.Abs(node.Interval) is < 2 or > 15)
             _diagnostics.Error(interval.Span, DiagnosticCodes.SingerPlaceMalformed,
                 $"'{interval.Text}' is no interval to sing at: up 3 is a third above in the key, down 6 a sixth below (2 to 15).");

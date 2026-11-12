@@ -242,6 +242,24 @@ internal sealed partial class Parser
                     || (Peek(2) is { Kind: SyntaxKind.Identifier, Text: not "sings" }
                         && (Peek(3)?.Text == "sings" || Peek(3)?.Kind == SyntaxKind.StringLiteral)))));
 
+    /// <summary>A line of the top level that is <c>singer</c> and bare words or a voice's string
+    /// to its end, with no <c>on</c> and no <c>sings</c>: a singer line still being written.</summary>
+    private bool IsLoneSingerHead()
+    {
+        if (Current.Text != Music.LyricSinger.Keyword || Current.Kind != SyntaxKind.Identifier || BeginsLine(1))
+            return false;
+        for (int ahead = 1; ahead <= 5; ahead++)
+        {
+            if (Peek(ahead) is not { } token || token.Kind == SyntaxKind.EndOfFile)
+                return ahead > 1;
+            if (BeginsLine(ahead))
+                return ahead > 1;
+            if (token.Kind is not (SyntaxKind.Identifier or SyntaxKind.StringLiteral))
+                return false;
+        }
+        return false;
+    }
+
     /// <summary>Whether <c>sings</c> stands among the next words of this line: a singer line by
     /// its verb, whatever the head before it holds (a name, a gender, a voice, a language).</summary>
     private bool SingsOnTheLine()

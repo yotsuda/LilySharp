@@ -574,7 +574,7 @@ internal sealed partial class Parser
         SyntaxKind.Identifier when Current.Text == Semantics.CapoDirective.Keyword => false,
         SyntaxKind.Identifier when Current.Text == Semantics.ChordShapesDirective.Keyword => false,
         SyntaxKind.Identifier when IsLanguageDeclaration() => false,
-        SyntaxKind.Identifier when IsSingerDeclaration() => false,
+        SyntaxKind.Identifier when IsSingerDeclaration() || IsLoneSingerHead() => false,
         // A bare clef or dynamic word is a phrase reference INSIDE a music stream
         // (IsBareReferenceKind), and nothing at the file level: it keeps falling to the
         // skip path, where `treble { … }` gets its grand-staff hint (LYS0011) and anything
@@ -647,7 +647,10 @@ internal sealed partial class Parser
             // `language japanese` — what the file's lyrics are written in (Music.LyricLanguage).
             SyntaxKind.Identifier when IsLanguageDeclaration() => new LanguageDeclarationGreen(Advance(), ParseLanguageName()),
             // `singer female sings words on sop` — who sings what (Music.LyricSinger).
-            SyntaxKind.Identifier when IsSingerDeclaration() => ParseSingerDeclaration(endsItsLine: true),
+            // …and a line that holds a singer's head and nothing else (`singer aya`, `singer aya
+            // female "x/y"`) is one too, at the file's top level: it is told what it lacks, where
+            // it was "music at the top level" (2026-11-12).
+            SyntaxKind.Identifier when IsSingerDeclaration() || IsLoneSingerHead() => ParseSingerDeclaration(endsItsLine: true),
 
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword
                 or SyntaxKind.SubtitleKeyword or SyntaxKind.PoetKeyword => ParseMetadataDeclaration(),
