@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Leftovers of the same evaluation**: `bare` is now really offered after a tempo's feel word (`tempo "Swing" 4 = 120 swing `, beside `8` and `16`). The step keys on the opening of a run of marks rename its end with it (`@staccato … @!staccato` to `@tenuto … @!tenuto`), so no stray end is left. A plain `@arpeggio` on a single note is drawn in the preview. The related places of a warning about a singer's staff open the singer's line, not a line past the file's end.
 - **`bare` after a tempo's count**: `tempo "Tempo I" 4 = 92 bare` plays the count and prints the words alone. The word is offered after the count and after `swing` / `shuffle`, and coloured as a keyword there.
 - **A mark over a run of notes**: `c'8@staccato d' e' f'@!staccato`. After `@!` the list offers `staccato`, `staccatissimo`, `tenuto`, `accent` and `marcato` beside the spans; an end with no opening is underlined with what to write.
 - **An accidental on an ornament**: inside `@trill(`, `@turn(`, `@mordent(`, `@prall(` the list offers `sharp`, `flat`, `natural`; another word is underlined with the three.

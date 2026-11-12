@@ -560,7 +560,7 @@ public sealed partial class LilyPondExporter
         var meters = Svg.Layout.ScoreSideTables.PrevailingMeters(score);
         var senza = SenzaMisuraByBar(score);
         var home = score.TimeSignature;
-        var marks = LeadSheetScoreMarks(score);
+        var marks = LeadSheetScoreMarks(score, tree);
 
         _leadSheetTimingVar = VarName("leadSheetTiming");
         _sb.Append(_leadSheetTimingVar).Append(" = {\n");
@@ -627,7 +627,7 @@ public sealed partial class LilyPondExporter
     ///   Mark_engraver hear a tempo-change or ad-hoc-mark event from ANY descendant, a Devnull
     ///   included.
     /// </remarks>
-    private Dictionary<int, List<string>> LeadSheetScoreMarks(Svg.Model.MultiStaffScore score)
+    private Dictionary<int, List<string>> LeadSheetScoreMarks(Svg.Model.MultiStaffScore score, SyntaxTree tree)
     {
         var byBar = new Dictionary<int, List<string>>();
         Svg.Model.Staff? firstRow = null;
@@ -641,14 +641,14 @@ public sealed partial class LilyPondExporter
             return byBar;
         var marks = Svg.Layout.MusicMarkEngraver.BuildAllMarks(
             score.MusicMarks, firstRow.PrimaryVoice.Measures, score.Tempo, score.SwingSubdivision,
-            score.TempoText, score.TempoBeatUnit, score.TempoDots, 0, _layoutPlan.SectionLabels);
+            score.TempoText, score.TempoBeatUnit, score.TempoDots, score.Header.Tempo, _layoutPlan.SectionLabels);
         foreach (var mark in marks)
         {
             string text;
             switch (mark.Type)
             {
                 case Svg.Model.MusicMarkType.Tempo:
-                    text = EmitTempo(mark);
+                    text = EmitTempo(mark, HiddenCountOf(mark, tree));
                     break;
                 case Svg.Model.MusicMarkType.SectionLabel:
                     text = _layoutPlan.SectionLabels == Semantics.SectionLabelStyle.Plain
@@ -665,6 +665,26 @@ public sealed partial class LilyPondExporter
             list.Add(text);
         }
         return byBar;
+    }
+
+    /// <summary>
+    /// The count a tempo mark of the page plays and does not print (<c>tempo "Tempo I" 4 = 92
+    /// bare</c>), with its unit — or null. A mark made in the music or at a section's head
+    /// carries it (<see cref="Svg.Model.MusicMarkItem.HiddenTempoCount"/>); the opening mark is
+    /// built from the score's header fields, which hold no count for a hidden one, so it is read
+    /// off the declaration the mark points at. Until 2026-11-12 the timing track wrote the words
+    /// alone and the twin played LilyPond's default tempo there.
+    /// </summary>
+    private static (int Bpm, int Unit, int Dots)? HiddenCountOf(Svg.Model.MusicMarkItem mark, SyntaxTree tree)
+    {
+        if (mark.HiddenTempoCount is { } carried)
+            return carried;
+        if (mark.Text.Length > 0)
+            return null;
+        foreach (var t in tree.GetNodes<TempoDeclarationSyntax>())
+            if (t.Value.CountHidden && t.Bpm is int bpm && t.Values.FirstOrDefault()?.Span.Start == mark.SourcePosition)
+                return (bpm, t.BeatUnit ?? 4, t.BeatDots);
+        return null;
     }
 
     /// <summary>The lead sheet's timing track, when the score is one (<see cref="EmitLeadSheetTiming"/>).</summary>

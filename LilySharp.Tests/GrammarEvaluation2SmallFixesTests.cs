@@ -191,4 +191,91 @@ public class GrammarEvaluation2SmallFixesTests
         Assert.True(jumpTop > stars[^1].Y,
             $"\"D.S. al Coda\" reaches up to {jumpTop:F3} and the release star down to {stars[^1].Y:F3}: the text has to stand under it.");
     }
+
+    // ── The leftovers of the same evaluation ────────────────────────────────────────────────
+
+    /// <summary>The notes of a warning about a singer's staff pointed into the part Lily# writes
+    /// after the file's text: an editor showed them at lines past the file's end. They point at
+    /// the singer line that made the part — the command line's and the editor's alike.</summary>
+    [Fact]
+    public void TheNotesOfAWarningAboutASingersStaff_PointAtTheSingerLine()
+    {
+        string source = "octave absolute\nlanguage english\n"
+            + "part lead { lyrics words\n  section I { r1 | r1 | }\n  section A { e'4 e' d' c' | e'1 | }\n}\n"
+            + "part b { clef bass\n  section I { c1 | c1 | c1 | }\n  section A { c1 | c1 | c1 | }\n}\n"
+            + "lyrics words { section A { Take the long way | round | } }\nsinger carol female on lead up 3 in A\n"
+            + "form { ~I ~A }\nscore { staff lead  lyrics words  staff carol  staff b }\n";
+        int carol = source.IndexOf("carol female", StringComparison.Ordinal);
+        string made = LilySharp.Core.Editing.SingerParts.Expand(source, SyntaxTree.Parse(source), out _);
+        Assert.True(made.Length > source.Length);
+
+        // As written they stand past the file's end…
+        var raw = Said(made).Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
+        Assert.Contains(raw.SelectMany(d => d.Related), r => r.Span.Start >= source.Length);
+        // …and what a reader is handed has none there: carol's name on her line, for her staff and her words.
+        foreach (var said in new[]
+                 {
+                     LilySharp.Core.Editing.SingerParts.OwnOf(Said(made), made),
+                     LilySharp.Lsp.LilySharpLanguageServer.DocumentDiagnostics(source, SyntaxTree.Parse(source), "", _ => null),
+                 })
+        {
+            var warnings = said.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
+            Assert.Equal(2, warnings.Count);
+            Assert.All(warnings.SelectMany(d => d.Related), r => Assert.True(r.Span.End <= source.Length, r.Message));
+            Assert.Equal([carol, carol, carol],
+                warnings.SelectMany(d => d.Related).Where(r => r.Message.Contains("singer 'carol'")).Select(r => r.Span.Start));
+            Assert.Equal(raw.Sum(d => d.Related.Count), warnings.Sum(d => d.Related.Count));
+        }
+        // A file with no singer's staff is handed its diagnostics as they are.
+        const string noSinger = "part a { }\npart b { }\nsection A { a { c1 | } b { c1 | c1 | } }\nform { A }\nscore { staff a  staff b }\n";
+        var plain = Said(noSinger);
+        Assert.Contains(plain, d => d.Related.Count > 0);
+        Assert.Equal(plain, LilySharp.Core.Editing.SingerParts.OwnOf(plain, noSinger), ReferenceEqualityComparer.Instance);
+    }
+
+    private static string KitBook(string kit, string melody = "c'1 | c'1 | c'1 |")
+        => "octave absolute\ntime 4/4\npart m { }\npart kit { clef percussion }\n"
+            + "phrase ride { cymr4 cymr cymr cymr | }\nphrase foot { r4 hhp r hhp | }\n"
+            + "section A { m { " + melody + " } kit { " + kit + " } }\nform { A }\nscore { staff m  staff kit }\n";
+
+    /// <summary>A chart's inline line with its own bar line, then the bar line after the chart:
+    /// the section was a bar too long (LYS2007) and the melody padded by a bar, where the same
+    /// chart of one-bar phrases was right. The page, the bar counts and the sound agree.</summary>
+    [Theory]
+    [InlineData("drums { { cymr4 cymr cymr cymr | } { r4 hhp r hhp | } } | % | % |")]
+    [InlineData("drums { { cymr4 cymr cymr cymr | } { r4 hhp r hhp | } } | sn1 | sn1 |")]
+    [InlineData("drums { { cymr4 cymr cymr cymr } { r4 hhp r hhp } } | sn1 | sn1 |")]
+    [InlineData("drums { ride foot } | sn1 | sn1 |")]
+    // A chart the merge does not take (a tuplet in a tuplet) is drawn a voice a line: the same.
+    [InlineData("drums { { cymr4 cymr cymr cymr | } { tuplet 3/2 { tuplet 3/2 { bd8 bd bd } bd4 bd4 } r2 | } } | sn1 | sn1 |")]
+    public void TheBarLineAfterADrumChart_ConfirmsTheBarItsLinesClosed(string kit)
+    {
+        string source = KitBook(kit);
+        Assert.Empty(Said(source).Select(d => d.Message));
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var score = SvgGenerator.CollectScore(tree, spec);
+        Assert.All(score.EnumerateStaves(), s => Assert.Equal(3, s.Staff.Voices[0].Measures.Length));
+        // The third bar's snare (or the mark's last cymbal) sounds in the third bar.
+        var midi = new LilySharp.Core.Midi.MidiExporter { Form = spec?.Form, Score = spec }.Export(tree);
+        int bar = midi.TicksPerQuarterNote * 4;
+        Assert.All(midi.Tracks.Where(t => t.Notes.Count > 0), t => Assert.InRange(t.Notes.Max(n => n.StartTick), 2 * bar, 3 * bar - 1));
+    }
+
+    /// <summary>What the chart's exit does not touch: a second bar line after the confirming one
+    /// is an empty bar still, and a voice span's own bar lines pair with the one after it.</summary>
+    [Fact]
+    public void AfterTheConfirmingBarLine_APairIsStillAnEmptyBar()
+    {
+        string source = KitBook("drums { { cymr4 cymr cymr cymr | } { r4 hhp r hhp | } } | | sn1 |");
+        Assert.Empty(Said(source).Select(d => d.Message));
+        var kit = Condensed(source).EnumerateStaves().Last().Staff.Voices[0].Measures;
+        Assert.Equal(3, kit.Length);
+        Assert.True(kit[1].IsEmptyPlaceholder);
+
+        string span = "octave absolute\ntime 4/4\npart m { }\npart n { }\n"
+            + "section A { m { c'1 | c'1 | c'1 | c'1 | } n { voice { c''1 | } { e'1 | } | c''1 | c''1 | } }\nform { A }\nscore { staff m  staff n }\n";
+        Assert.Empty(Said(span).Select(d => d.Message));
+        Assert.Equal(4, Condensed(span).EnumerateStaves().Last().Staff.Voices[0].Measures.Length);
+    }
 }

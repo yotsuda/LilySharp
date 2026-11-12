@@ -72,7 +72,7 @@ public static class SpanNames
         return new Mark(node, name, token, end, family);
     }
 
-    private static SyntaxTokenNode? NameTokenOf(MusicMarkSyntax mark)
+    internal static SyntaxTokenNode? NameTokenOf(MusicMarkSyntax mark)
     {
         for (int i = 0; i < mark.SlotCount; i++)
             if (mark.GetChild(i) is SyntaxTokenNode t && t.Kind is not (SyntaxKind.At or SyntaxKind.DashedBar))

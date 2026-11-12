@@ -190,12 +190,79 @@ public class GrammarEvaluation2FeaturesTests
         Assert.Contains("<sound tempo=\"80\"", xml);
     }
 
+    /// <summary>…and MusicXML read back writes them as they were: the words with a sound and no
+    /// metronome came back as <c>tempo 92</c> and a <c>@text</c> (a leftover of the same day).
+    /// The count comes back as the quarter's, which is what the sound holds.</summary>
+    [Fact]
+    public void ABareTempo_ComesBackFromMusicXmlAsWritten()
+    {
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(BareTempos)).ToXml().ToString();
+        var (lys, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml);
+        Assert.Contains("\ntempo \"Allegro\" 4 = 120 bare\n", lys);
+        Assert.Contains("| tempo \"Meno mosso\" 4 = 80 bare g", lys);
+        Assert.Contains("tempo \"Tempo I\" 4 = 92 bare c'1", lys);
+        Assert.DoesNotContain("@text", lys);
+        Clean(lys);
+        var tempos = SyntaxTree.Parse(lys).GetRoot().DescendantNodes().OfType<TempoDeclarationSyntax>().Select(t => t.Value).ToList();
+        Assert.Equal([("Allegro", 120, true), ("Meno mosso", 80, true), ("Tempo I", 92, true)],
+            tempos.Select(v => (v.Marking!, v.Bpm!.Value, v.CountHidden)));
+
+        // A printed count is a count still, and an italic word with a sound is an expression.
+        string printed = xml.Replace("<words font-weight=\"bold\">Tempo I</words>",
+            "<metronome><beat-unit>quarter</beat-unit><per-minute>92</per-minute></metronome>");
+        Assert.Contains("tempo 92 c'1", new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(printed).Item1);
+        string italic = xml.Replace("<words font-weight=\"bold\">Tempo I</words>", "<words font-style=\"italic\">meno</words>");
+        string read = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(italic).Item1;
+        Assert.Contains("tempo 92 c'1@text(\"meno\").up", read);
+    }
+
+    /// <summary>A lead sheet's twin writes its tempos on a timing track built from the page's
+    /// marks, and a mark with a hidden count has none: the words were written alone and LilyPond
+    /// played its default tempo (a leftover of the same day). At the opening, at a section's
+    /// head, and where a section with no tempo returns to the file's.</summary>
+    [Fact]
+    public void ALeadSheetsTwin_PlaysABareTempoAtItsCount()
+    {
+        string source = "time 4/4\ntempo \"Allegro\" 4 = 120 bare\n"
+            + "chords h {\n section A { C | F | }\n section B { G | C | }\n section C { Am | F | }\n}\n"
+            + "section B { tempo \"Meno mosso\" 2 = 40 bare }\nform { A B C }\nscore { chords h }\n";
+        Clean(source);
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(source));
+        string timing = ly[ly.IndexOf("leadSheetTiming = {", StringComparison.Ordinal)..];
+        timing = timing[..timing.IndexOf("\n}", StringComparison.Ordinal)];
+        Assert.Equal([
+                "\\once \\set Score.tempoHideNote = ##t \\tempo \"Allegro\" 4 = 120",
+                "\\once \\set Score.tempoHideNote = ##t \\tempo \"Meno mosso\" 2 = 40",
+                "\\once \\set Score.tempoHideNote = ##t \\tempo \"Allegro\" 4 = 120",
+            ],
+            System.Text.RegularExpressions.Regex.Matches(timing, @"\\once \\set Score\.tempoHideNote = ##t \\tempo ""[^""]*"" \d+ = \d+").Select(m => m.Value));
+        Assert.DoesNotMatch(@"\\tempo ""[^""]*"" (?!\d)", timing);
+        // A printed count is written as it was.
+        string printed = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(source.Replace(" bare", "")));
+        Assert.Contains("\\tempo \"Allegro\" 4 = 120 s1", printed);
+        Assert.DoesNotContain("tempoHideNote", printed);
+    }
+
     /// <summary>The editor offers the word after a tempo's count.</summary>
     [Theory]
     [InlineData("tempo \"Tempo I\" 4 = 92 ‸")]
     [InlineData("tempo 92 ‸")]
     [InlineData("part m { }\nsection A { tempo \"Tempo I\" 4 = 92 ‸\n m { c'1 | } }")]
     public void AfterATemposCount_BareIsOffered(string marked) => Assert.Contains("bare", Offered(marked));
+
+    /// <summary>…and after its feel word, where only 8 and 16 were (a leftover of the same day):
+    /// <c>tempo "Swing" 4 = 120 swing bare</c>. A run with no count has none to hide.</summary>
+    [Fact]
+    public void AfterATemposFeelWord_BareIsOfferedWhenThereIsACount()
+    {
+        Assert.Equal(["8", "16", "bare"], Offered("tempo \"Swing\" 4 = 120 swing ‸"));
+        Assert.Equal(["8", "16", "bare"], Offered("tempo 120 shuffle ‸"));
+        Assert.Equal(["8", "16"], Offered("tempo swing ‸"));
+        // Touching the word, the row writes the word again with it.
+        var item = LilySharpLanguageServer.GetTempoSubdivisionCompletions("swing", touching: true, bare: true).Items[^1];
+        Assert.Equal(("bare", "swing bare"), (item.Label, item.InsertText));
+        Clean("time 4/4\ntempo \"Swing\" 4 = 120 swing bare\npart m { }\nsection A { m { c'1 | } }\nform { A }\nscore { staff m }\n");
+    }
 
     // ───────────────────────── 2. c'8@staccato d' e' f'@!staccato ─────────────────────────
 
@@ -334,6 +401,49 @@ public class GrammarEvaluation2FeaturesTests
             Assert.Contains(name, offered);
         Assert.Contains("8va", offered);
         Assert.DoesNotContain("fermata", offered);
+    }
+
+    /// <summary>The text after the step keys are pressed with the caret at <c>‸</c>.</summary>
+    private static string Stepped(string marked, int direction)
+    {
+        int offset = marked.IndexOf('‸');
+        string text = marked.Remove(offset, 1);
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = DocUri, Text = text, LanguageId = "lilysharp", Version = 1 },
+        });
+        var response = server.Step(new StepParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = DocUri },
+            Selections = [new StepSelection { Start = offset, End = offset }],
+            Direction = direction,
+            Semitone = true,
+        });
+        foreach (var e in response.Edits.OrderByDescending(e => e.Start))
+            text = text[..e.Start] + e.NewText + text[e.End..];
+        return text;
+    }
+
+    /// <summary>The step keys on a run's opening rename its end in the same edit: <c>@staccato</c>
+    /// stepped to <c>@tenuto</c> left <c>@!staccato</c>, an end that closed nothing (a leftover
+    /// of the same day). A run's opening steps along the marks that may run — portato, which
+    /// stands between the two for one note's mark, is not one. The end follows and is not stepped.</summary>
+    [Fact]
+    public void SteppingARunsOpening_RenamesItsEnd()
+    {
+        static string Book(string music) => "octave absolute\ntime 4/4\npart m { }\nsection A { m { " + music + " } }\nform { A }\nscore { staff m }\n";
+        string stepped = Stepped(Book("c'8@stac‸cato d' e' f'@!staccato g'2 |"), +1);
+        Assert.Equal(Book("c'8@tenuto d' e' f'@!tenuto g'2 |"), stepped);
+        Clean(stepped);
+        Assert.Equal(Book("c'8@staccatissimo d' e' f'@!staccatissimo g'2 |"), Stepped(Book("c'8@stac‸cato d' e' f'@!staccato g'2 |"), -1));
+        Assert.Equal(Book("c'8@marcato d' e' f'@!marcato g'2 |"), Stepped(Book("c'8@acc‸ent d' e' f'@!accent g'2 |"), +1));
+        // Only its own end: a single mark before the run, and the run after it, keep theirs.
+        Assert.Equal(Book("c'8@portato d'@staccato e' f'@!staccato g'2 |"), Stepped(Book("c'8@stac‸cato d'@staccato e' f'@!staccato g'2 |"), +1));
+        // The end is not a step of its own: the run stays as written.
+        string onEnd = Stepped(Book("c'8@staccato d' e' f'@!stac‸cato g'2 |"), +1);
+        Assert.Contains("@staccato", onEnd);
+        Assert.Contains("@!staccato", onEnd);
     }
 
     // ───────────────────────── 3. c''2@trill(sharp) ─────────────────────────
@@ -716,6 +826,64 @@ public class GrammarEvaluation2FeaturesTests
         static List<(int, int, int, int)> Notes(string s)
             => [.. Midi(s).Tracks.SelectMany(t => t.Notes).Select(n => (n.Pitch, n.Velocity, n.StartTick, n.DurationTicks))];
         Assert.Equal(Notes(source.Replace("(cross bracket)", "").Replace("(cross)", "")), Notes(source));
+    }
+
+    /// <summary>A plain <c>@arpeggio</c> on a single note drew nothing and said nothing (a leftover
+    /// of the same day). LilyPond draws it (measured, 2.26.0): the wavy line — or the bracket —
+    /// one head tall, which is what the cross spelling drew on a note with nothing below it.
+    /// It takes its room, and goes to LilyPond and MusicXML and comes back.</summary>
+    [Fact]
+    public void APlainArpeggioOnASingleNote_IsDrawn()
+    {
+        const string head = "octave absolute\ntime 4/4\npart m { }\nsection A { m { ";
+        const string tail = " } }\nform { A }\nscore { staff m }\n";
+        string source = head + "g'2@arpeggio e'2@arpeggio(bracket) |" + tail;
+        Clean(source);
+        var score = Collected(source);
+        Assert.Equal([(false, false), (false, true)], score.Arpeggios.Select(a => (a.Cross, a.Bracket)));
+        Assert.Equal([LilySharp.Core.Svg.Model.SpanArpeggioPart.Wiggle, LilySharp.Core.Svg.Model.SpanArpeggioPart.Bracket],
+            score.StaffGroups[0].Staves[0].Voices[0].Measures[0].Items.OfType<LilySharp.Core.Svg.Model.NoteItem>().Select(n => n.SpanArpeggio));
+
+        // The wavy line is the one the cross spelling draws on its own note, where it stands.
+        var drawn = Assert.Single(RenderedGeometry.Render(head + "g'1@arpeggio |" + tail).ArpeggioPiles());
+        var cross = Assert.Single(RenderedGeometry.Render(head + "g'1@arpeggio(cross) |" + tail).ArpeggioPiles());
+        Assert.Equal(cross.Copies, drawn.Copies);
+        Assert.Empty(RenderedGeometry.Render(head + "g'1 |" + tail).ArpeggioPiles());
+
+        var tree = SyntaxTree.Parse(source);
+        Assert.Contains("g'2\\arpeggio", new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree));
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).ToXml().ToString();
+        Assert.Contains("<arpeggiate number=\"1\" />", xml);
+        Assert.Contains("@arpeggio e'2 |", new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml).Item1);
+    }
+
+    /// <summary>…and MusicXML read back is the one line again: the shared number on both staves
+    /// came back as a plain <c>@arpeggio</c> on each (a leftover of the same day). The chords
+    /// arpeggiated each for itself at one moment stay two, and so does a number one staff holds.</summary>
+    [Fact]
+    public void ACrossArpeggio_ComesBackFromMusicXmlOnTheUpperStaff()
+    {
+        string source = Piano("<c' e' g'>2@arpeggio(cross) <d' f'>2@arpeggio | g'1@arpeggio(cross) |", "<c e g>2 <d f>2@arpeggio | <c g>1 |");
+        Clean(source);
+        var tree = SyntaxTree.Parse(source);
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter { Score = RenderSpecParser.FindFirst(tree) }
+            .Export(tree).ToXml().ToString();
+        var (lys, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml);
+        Assert.Contains("@arpeggio(cross) <d' f'>2@arpeggio | g'1@arpeggio(cross) |", lys);
+        Assert.Contains("<c e g>2 <d f>2@arpeggio | <c g>1 |", lys);
+        Clean(lys);
+        // The page it draws is the one line again.
+        var back = SyntaxTree.Parse(lys);
+        var score = SvgGenerator.CollectScore(back, RenderSpecParser.FindFirst(back));
+        Assert.Equal([1, 1, -1, -1], score.Arpeggios.Select(a => a.PartnerStaffIndex).OrderDescending());
+
+        // A number of 2 on one staff alone is that staff's own arpeggio.
+        string oneStaff = System.Text.RegularExpressions.Regex.Replace(xml,
+            @"(<staff>2</staff>(?:(?!</note>).)*?)<arpeggiate number=""2"" />", "$1<arpeggiate number=\"3\" />",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+        string apart = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(oneStaff).Item1;
+        Assert.DoesNotContain("cross", apart);
+        Assert.Contains("<c e g>2@arpeggio", apart);
     }
 
     /// <summary>

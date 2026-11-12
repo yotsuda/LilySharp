@@ -1927,8 +1927,9 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>The <c>bare</c> row a tempo's count may be followed by:
-    /// <see cref="TempoValue.BareWord"/>, which ends the run. (Not offered after a feel word:
-    /// that list is the swung values', and <c>tempo swing</c> has no count to hide.)</summary>
+    /// <see cref="TempoValue.BareWord"/>, which ends the run. Offered after a feel word too when
+    /// the run has a count (<c>tempo "Swing" 4 = 120 swing bare</c>; until 2026-11-12 that list
+    /// was the swung values' alone) — <c>tempo swing</c> has no count to hide.</summary>
     /// <param name="touched">The item the caret still touches, which the row then replaces
     /// and filters by, or null when a space has been typed.</param>
     /// <param name="order">The row's place in the list.</param>
@@ -1950,7 +1951,9 @@ public sealed partial class LilySharpLanguageServer
     /// <param name="feel">The feel word before the caret, as written.</param>
     /// <param name="touching">Whether the caret still touches the word: the editor then
     /// filters by the WORD, so a row filters as <c>swing 16</c> and replaces it.</param>
-    internal static CompletionList GetTempoSubdivisionCompletions(string feel, bool touching)
+    /// <param name="bare">Whether the run has a count: <c>bare</c> is then offered after the
+    /// values (<see cref="TempoBareItem"/>).</param>
+    internal static CompletionList GetTempoSubdivisionCompletions(string feel, bool touching, bool bare = false)
     {
         string name = $"{char.ToUpperInvariant(feel[0])}{feel[1..]}";
         var values = new[] { ("8", "eighths"), ("16", "sixteenths") };
@@ -1964,7 +1967,7 @@ public sealed partial class LilySharpLanguageServer
                 InsertText = touching ? $"{feel} {v.Item1}" : v.Item1,
                 FilterText = touching ? $"{feel} {v.Item1}" : v.Item1,
                 SortText = i.ToString("D2"),
-            }).ToArray(),
+            }).Concat(bare ? [TempoBareItem(touching ? feel : null, values.Length)] : []).ToArray(),
         };
     }
 

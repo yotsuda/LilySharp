@@ -810,6 +810,16 @@ public sealed partial class MeasureCollector
             _v.Octave.Restore(spanFrame);
             (_v.DefaultDuration, _v.DefaultDots) = (spanDuration, spanDots);
         }
+        // The EXIT of a drum chart whose lines closed a bar hands that bar over as a phrase's
+        // exit does: the bar line after the chart confirms it and owns its bar line. A merged
+        // chart already stood so (its bar closed where the beats filled; the lines' own bar
+        // lines are not read); a chart drawn as written walked its first line's `|`, and the
+        // one after the chart then opened an empty bar the merged page does not have
+        // (2026-11-12). LILYSHARP-OWN. ⚠️ A CHART ONLY: a `voice { … | } { … | } |` span's
+        // bar line is written in this stream, and the one after it is the second of a pair
+        // (MeasureBuilder._confirmableBoundary; MeasureModel's ChartExitMarker is the twin).
+        if (parallel.IsDrums && drums == null && builder.CurrentMeasureIndex > spanStart)
+            builder.ResetMeasureBoundary(retargetableClose: true);
     }
 
     /// <summary>Whether a span's music may write a <c>key</c> or <c>clef</c>: written in it, or

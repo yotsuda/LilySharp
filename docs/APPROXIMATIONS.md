@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 330 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **456** | |
+| `OWN` | 333 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **459** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（330 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（333 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -256,6 +256,7 @@
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
 ### `LilySharp.Core/Editing/NoteStepper.Articulation.cs`
 - **`NoteStepper`** bar says so. LILYSHARP-OWN: an editor convenience with no LilyPond counterpart.
+- **`NoteStepper.RunEndOf`** nothing, an error. LILYSHARP-OWN. The end itself is not stepped — it follows its opening,
 ### `LilySharp.Core/Editing/NoteStepper.cs`
 - **`NoteStepper.NoProgram`** LILYSHARP-OWN: the editor's audition has no LilyPond counterpart (the performer
 ### `LilySharp.Core/Editing/SingerParts.cs`
@@ -339,6 +340,8 @@
 - **`LysWriter.CuttableMarks`** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
 ### `LilySharp.Core/MusicXmlImport/MidiReader.cs`
 - **`MidiReader`** LILYSHARP-OWN: a .mid is a performance, not a page, so every notated thing is a reading.
+### `LilySharp.Core/MusicXmlImport/MusicXmlReader.cs`
+- **`MusicXmlReader.ConnectArpeggios`** LILYSHARP-OWN: the 2. MusicXML's number tells chords "arpeggiated together" (the
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **`Parser.ParseChordRepetition`** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **`Parser.ParseChord`** LILYSHARP-OWN: members' ties and the whole chord's say two things about the same notes; LilyPond takes both.
@@ -416,6 +419,8 @@
 - **`ChordListKey`** LILYSHARP-OWN: LilyPond has no such list; the twin writes a \markup line of
 - **`CompressRestsKey`** LILYSHARP-OWN: LilyPond's \compressMMRests leaves separately written rests
 - **`ChordDiagramsKey`** LILYSHARP-OWN: LilyPond's FretBoards context carries its own stringTunings
+### `LilySharp.Core/Semantics/MeasureModel.cs`
+- **`MeasureModel.Split`** LILYSHARP-OWN. ⚠️ ONLY A CHART, and only one whose line wrote the bar line:
 ### `LilySharp.Core/Semantics/RepeatPasses.cs`
 - **`RepeatPasses.EndingFor`** LILYSHARP-OWN: a pass no ending names replays the LAST ending — |: A [1. B] :|*3 [2. C]
 ### `LilySharp.Core/Semantics/RestRunFractionValidator.cs`
@@ -445,6 +450,8 @@
 - **`ItemDiagramRuns`** LILYSHARP-OWN: LilyPond draws a markup diagram wherever it is written; the twin asks it the
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **`MeasureBuilder.SectionHead`** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
+### `LilySharp.Core/Svg/Collector/MeasureCollector.Clock.cs`
+- **`MeasureCollector.ProcessParallelSpan`** (2026-11-12). LILYSHARP-OWN. ⚠️ A CHART ONLY: a `voice { … | } { … | } |` span's
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **`MeasureCollector._staffDynamicsUp`** LILYSHARP-OWN (owner's decision 2026-11-11, docs/dynamics-above-lyrics-design.md
 - **`MeasureCollector.JunkCondensedStaffDuplicateDynamics`** LILYSHARP-OWN: LilyPond's Dynamic_engraver stands in the Voice context
@@ -460,7 +467,6 @@
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
 - **`MeasureCollector.ProcessMusicNode`** not against the reset the head already stands on (LILYSHARP-OWN): a
 - **`MeasureCollector.ApplyMeterChange`** (MeasureBuilder.SectionHead, LILYSHARP-OWN).
-- **`MeasureCollector.WithCrossArpeggio`** LILYSHARP-OWN: only the cross-staff spelling reaches a single note. A plain
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Stems.cs`
 - **`MeasureCollector.ResolveVoiceStemDirections`** LILYSHARP-OWN — the memo is the preview's ink, not an engraved grob).
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`

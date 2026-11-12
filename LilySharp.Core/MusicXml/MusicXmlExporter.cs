@@ -3581,6 +3581,11 @@ public sealed class MusicXmlExporter
         }
 
         WriteCrossArpeggio(note, [xmlNote]);
+        // A single note's own wavy line, drawn since 2026-11-12 (MeasureCollector.WithCrossArpeggio).
+        if (!xmlNote.ExtraNotations.Any(n => n.Name.LocalName is "arpeggiate" or "non-arpeggiate")
+            && note.Articulations.Any(a => a is ArticulationSyntax { Name: "arpeggio" }))
+            xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("arpeggiate",
+                new System.Xml.Linq.XAttribute("number", 1)));
         _currentMeasure.Notes.Add(xmlNote);
         _lastPitchedNote = xmlNote;
         _lastEmittedNotes.Clear();

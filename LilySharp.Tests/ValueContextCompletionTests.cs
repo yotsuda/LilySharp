@@ -163,7 +163,8 @@ public class ValueContextCompletionTests
     [Fact]
     public void TheSwungValues_AloneInAHeader_BesideTheNotesInMusic()
     {
-        Assert.Equal(["8", "16"], LabelsAtEnd("tempo 120 swing "));
+        // (With a count, `bare` follows the values since 2026-11-12: the count may be hidden.)
+        Assert.Equal(["8", "16", "bare"], LabelsAtEnd("tempo 120 swing "));
         Assert.Equal(["8", "16"], LabelsAtEnd("tempo swing "));
         var music = LabelsAtEnd("part m { clef treble }\nsection A { m { c4 tempo 96 swing ");
         Assert.Equal("8", music[0]);

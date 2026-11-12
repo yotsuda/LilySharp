@@ -870,9 +870,12 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
   repeats what stands between the two bar lines before it, so two charts (or two phrases,
   `riff riff | % |`) with no bar line between them are two bars before one mark — an error for
   phrases (LYS1049), a section one bar too long for charts (LYS2007). A one-bar phrase then a
-  mark is fine: `riff | % | % |`. An INLINE line carries no bar line of its own:
-  `drums { { cymr4 cymr cymr cymr } { r4 hhp r hhp } } | % |` — with `|` inside the braces
-  too, the one after the chart opens an empty bar.
+  mark is fine: `riff | % | % |`. An INLINE line may end its bar or not, as a phrase may:
+  `drums { { cymr4 cymr cymr cymr } { r4 hhp r hhp } } | % |` and
+  `drums { { cymr4 cymr cymr cymr | } { r4 hhp r hhp | } } | % |` are the same three bars —
+  the bar line after a chart confirms the bar its lines closed (a second one, `… } | |`, is an
+  empty bar). Not so a `voice { … | } { … | } |` span: its bar lines are the staff's own, and
+  the one after it opens an empty bar.
 - `drummap { NAME: position N notehead W midi K mark M … }`: position −9…9 (0 = middle
   line), notehead `x cross diamond triangle slash xcircle default`, midi 0…127, mark `open
   stopped staccato tenuto`. It only changes existing drums; a bad entry warns LYS0024.

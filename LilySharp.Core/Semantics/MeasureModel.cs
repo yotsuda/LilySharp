@@ -186,6 +186,22 @@ internal static class MeasureModel
                 }
                 continue;
             }
+            if (entry is ChartExitMarker chart)
+            {
+                // The bar line after a drum chart CONFIRMS the bar the chart's own lines closed,
+                // as it does after a phrase that ended its bar: a chart's inline line is a
+                // pattern like a phrase word's, and the page merges the lines without reading
+                // their bar lines (MeasureCollector.Drums), so its bar closes where the beats
+                // fill. Read as the second of a `| |` pair here, `drums { { … | } { … | } } | % |`
+                // was a section a bar too long (LYS2007) for a page that drew no such bar
+                // (found writing a band chart to try the grammar, 2026-11-12).
+                // LILYSHARP-OWN. ⚠️ ONLY A CHART, and only one whose line wrote the bar line:
+                // a `voice { … | } { … | } |` span's bar lines are written in the stream the
+                // outer one stands in, and stay the pair they are.
+                if (current.Count == 0 && prevBarEnd > chart.Span.Start && prevBarEnd <= chart.Span.End)
+                    confirmable = true;
+                continue;
+            }
             var node = (SyntaxNode)entry;
             if (plannedMeterAt != null && current.Count == 0 && plannedFor != bars.Count)
             {
@@ -365,6 +381,14 @@ internal static class MeasureModel
         public TextSpan Span { get; } = span;
     }
 
+    /// <summary>Marks the end of a drum chart (<c>drums { … }</c>), whose text is
+    /// <see cref="Span"/>: a bar its lines closed is confirmed by the bar line after the chart
+    /// (the collector's twin is ProcessParallelSpan's exit).</summary>
+    private sealed class ChartExitMarker(TextSpan span)
+    {
+        public TextSpan Span { get; } = span;
+    }
+
     /// <summary>Where bar <paramref name="bar"/> (0-based, as <see cref="Split"/> counts) begins in
     /// the scope an <paramref name="index"/> was filled for: the start of the written item its
     /// first music is — a note, or the phrase reference it was inlined through — and whether that
@@ -468,7 +492,9 @@ internal static class MeasureModel
     {
         // The spans whose first voice is being walked, innermost last, each with the bars a
         // later voice runs past it: emitted once the walk leaves the span.
-        Stack<(int End, SpanPadMarker Pad)>? pads = null;
+        // …and the drum charts being walked, each with its exit marker (the marker of a chart
+        // that is also padded follows its pad: the pad's bars are the chart's).
+        Stack<(int End, object Pad)>? pads = null;
         void EmitPadsBefore(int position)
         {
             while (pads is { Count: > 0 } && pads.Peek().End <= position)
@@ -577,7 +603,10 @@ internal static class MeasureModel
                     break;
 
                 // A span's later voice running past its first lengthens it (longestVoice).
-                case ParallelExpressionSyntax par when longestVoice:
+                case ParallelExpressionSyntax par when longestVoice || par.IsDrums:
+                    if (par.IsDrums)
+                        (pads ??= new()).Push((par.Span.End, new ChartExitMarker(par.Span)));
+                    if (longestVoice)
                     {
                         int first = -1, longest = 0;
                         foreach (var voice in par.Voices)

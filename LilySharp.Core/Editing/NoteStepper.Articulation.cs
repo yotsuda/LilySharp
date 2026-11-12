@@ -338,6 +338,10 @@ public static partial class NoteStepper
                 ? $"@{name}: in no group of marks to rotate through"
                 : $"@{name}: not an articulation Lily# knows");
         }
+        // The opening of a run (c8@staccato d e f@!staccato) steps along the marks that may run:
+        // its end is renamed with it (RunEndOf), and `@!portato` would end nothing.
+        if (RunEndOf(mark) != null)
+            group = [.. group.Where(ArticulationRuns.IsRunName)];
         string listed = string.Join(" / ", group.Reverse());
         int at = Array.IndexOf(group, spelling.Spelling);
         int to = at + dir;
@@ -428,6 +432,22 @@ public static partial class NoteStepper
             if (d.Parent == node && d is ArticulationSyntax or MusicMarkSyntax or DynamicSyntax)
                 end = Math.Max(end, d.Span.End);
         return end;
+    }
+
+    /// <summary>The <c>@!NAME</c> closing the run of marks <paramref name="mark"/> opens
+    /// (<see cref="ArticulationRuns"/>: <c>c8@staccato d e f@!staccato</c>), or null. Stepped, the
+    /// opening takes its end with it, as a span start does (<see cref="RenamedEnd"/>): until
+    /// 2026-11-12 <c>@staccato</c> stepped to <c>@tenuto</c> left <c>@!staccato</c> ending
+    /// nothing, an error. LILYSHARP-OWN. The end itself is not stepped — it follows its opening,
+    /// as every <c>@!</c> does (<see cref="SpellingOf"/>).</summary>
+    private static MusicMarkSyntax? RunEndOf(SyntaxNode mark)
+    {
+        if (mark is not ArticulationSyntax opener || !ArticulationRuns.IsRunName(opener.Name))
+            return null;
+        foreach (var run in ArticulationRuns.Of(mark).Runs)
+            if (ReferenceEquals(run.Opener, opener))
+                return run.End;
+        return null;
     }
 
     /// <summary>The name a stepped mark's <c>@!</c> end is to be renamed to — the head of its new

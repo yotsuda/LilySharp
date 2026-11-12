@@ -33,6 +33,10 @@ internal sealed class ImportDocument
     public string? Poet { get; set; }
     /// <summary>Opening tempo (quarter BPM), or null when the source gives none.</summary>
     public int? Tempo { get; set; }
+    /// <summary>The words of the opening tempo when the source prints them and no count
+    /// (<c>&lt;words&gt;</c> with a <c>&lt;sound tempo&gt;</c> and no <c>&lt;metronome&gt;</c>):
+    /// written back as <c>tempo "…" 4 = N bare</c>. Null when the count is printed.</summary>
+    public string? TempoWords { get; set; }
     /// <summary>The page the document states (<c>&lt;defaults&gt;&lt;page-layout&gt;</c>),
     /// or null when it states none.</summary>
     public ImportPaper? Paper { get; set; }
@@ -140,6 +144,8 @@ internal sealed class ImportMeasure
     public ImportTime? Time { get; set; }
     public string? Clef { get; set; }
     public int? Tempo { get; set; }
+    /// <summary>The words of a tempo whose count is not printed, as <see cref="ImportDocument.TempoWords"/>.</summary>
+    public string? TempoWords { get; set; }
     /// <summary>A repeat-start (<c>|:</c>) opens this measure.</summary>
     public bool RepeatForward { get; set; }
     /// <summary>The volta number whose bracket STARTS at this measure (a MusicXML

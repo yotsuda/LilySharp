@@ -204,6 +204,13 @@ public sealed record MusicMarkItem
     /// (<c>tempo "Lively" 4. = 116</c> → 1).</summary>
     public int TempoDots { get; init; }
 
+    /// <summary>For a Tempo mark of a <c>tempo "Tempo I" 4 = 92 bare</c>: the count it is played
+    /// at and does not print, with its beat unit and dots; null for every other mark. Nothing
+    /// on the page reads it — the mark is its words — but the LilyPond twin of a lead sheet
+    /// writes its tempos from these marks, and wrote the words with no count
+    /// (LilyPondExporter.LeadSheetScoreMarks, 2026-11-12).</summary>
+    public (int Bpm, int Unit, int Dots)? HiddenTempoCount { get; init; }
+
     /// <summary>The text representation of this mark.</summary>
     public string Text { get; }
 

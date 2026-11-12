@@ -1228,7 +1228,7 @@ public sealed partial class MeasureCollector
                         CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue, builder),
                         note, isCue), note);
                     await AddItemAsync(builder, WithBowSources(noteItem, m));
-                    AddNoteCrossArpeggio(noteItem, measureIndex, itemIndex, note.SourceStart);
+                    AddNoteCrossArpeggio(noteItem, measureIndex, itemIndex, note.SourceStart, CrossArpeggioOf(note) != SpanArpeggioPart.None);
                     await AddBreathingSignColumn(note.Articulations, builder, measureIndex);
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp,
@@ -1788,6 +1788,9 @@ public sealed partial class MeasureCollector
                             TempoText = tempoChange.Marking,
                             SwingSubdivision = tempoChange.SwingSubdivision,
                             TempoPieces = PiecePositions(tempoChange),
+                            // A `bare` count, for the twin alone (MusicMarkItem.HiddenTempoCount).
+                            HiddenTempoCount = tempoChange.Value.CountHidden && tempoChange.Bpm is int played
+                                ? (played, tempoChange.BeatUnit ?? 4, tempoChange.BeatDots) : null,
                         });
                 }
                 break;
@@ -2594,30 +2597,47 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
-    /// A SINGLE NOTE that writes <c>@arpeggio(cross)</c>: the note with the room an arpeggio
-    /// of its own takes (<see cref="MusicItem.SpanArpeggio"/> — set BEFORE the item is added,
-    /// as a chord's bracket is, because the spacing reads it off the item), or the note as it
-    /// is when it writes none. <see cref="AddNoteCrossArpeggio"/> lists the line.
+    /// A SINGLE NOTE that writes an arpeggio — <c>@arpeggio</c>, <c>@arpeggio(bracket)</c> or
+    /// the cross-staff spellings: the note with the room an arpeggio of its own takes
+    /// (<see cref="MusicItem.SpanArpeggio"/> — set BEFORE the item is added, as a chord's
+    /// bracket is, because the spacing reads it off the item), or the note as it is when it
+    /// writes none. <see cref="AddNoteCrossArpeggio"/> lists the line.
     /// </summary>
     /// <remarks>
-    /// LILYSHARP-OWN: only the cross-staff spelling reaches a single note. A plain
-    /// <c>@arpeggio</c> on one note draws nothing, as before; the melody note over a rolled
-    /// left-hand chord is the case the scores asked for.
+    /// Until 2026-11-12 only the cross-staff spelling reached a single note, and a plain
+    /// <c>@arpeggio</c> on one drew nothing and said nothing. LilyPond draws it: MEASURED
+    /// (2.26.0, Lab sessions/p1226/md/eval2/left/out/t7.ly), <c>g'2\arpeggio</c> is the wavy
+    /// line one head tall at the note's left and <c>e'4\nonArpeggiato</c> the bracket that
+    /// tall — what the cross spelling already drew on a note with nothing below it.
+    /// LILYPOND-REF: lily/arpeggio-engraver.cc:101-122 Arpeggio_engraver::acknowledge_stem — the
+    /// arpeggio takes the stem and the heads of whatever column carries the event, one head or many.
     /// </remarks>
     private static NoteItem WithCrossArpeggio(NoteItem noteItem, NoteSyntax note)
-        => CrossArpeggioOf(note) is var part && part != SpanArpeggioPart.None
+        => NoteArpeggioOf(note) is var part && part != SpanArpeggioPart.None
             ? noteItem with { SpanArpeggio = part }
             : noteItem;
 
-    /// <summary>Lists the line of a single note's <c>@arpeggio(cross)</c>
-    /// (<see cref="WithCrossArpeggio"/>): the note is its whole head interval.</summary>
-    private void AddNoteCrossArpeggio(NoteItem noteItem, int measureIndex, int itemIndex, int sourceStart)
+    /// <summary>The arpeggio a single note writes: the cross-staff one, else its own bracket
+    /// or wavy line (<see cref="WithCrossArpeggio"/>).</summary>
+    private static SpanArpeggioPart NoteArpeggioOf(NoteSyntax note)
+    {
+        if (CrossArpeggioOf(note) is var cross && cross != SpanArpeggioPart.None)
+            return cross;
+        if (note.Articulations.Any(art => art is MusicMarkSyntax mark && Semantics.AnnotationValues.IsArpeggioBracket(mark)))
+            return SpanArpeggioPart.Bracket;
+        return HasArpeggioArticulation(note) ? SpanArpeggioPart.Wiggle : SpanArpeggioPart.None;
+    }
+
+    /// <summary>Lists the line of a single note's arpeggio (<see cref="WithCrossArpeggio"/>):
+    /// the note is its whole head interval. <paramref name="cross"/> is whether it is written
+    /// to run on to the staff below (CrossArpeggios.Connect).</summary>
+    private void AddNoteCrossArpeggio(NoteItem noteItem, int measureIndex, int itemIndex, int sourceStart, bool cross)
     {
         if (noteItem.SpanArpeggio == SpanArpeggioPart.None)
             return;
         _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, noteItem.StaffPosition, noteItem.StaffPosition,
             sourceStart, _v.Cursor.StaffIndex, Bracket: noteItem.SpanArpeggio == SpanArpeggioPart.Bracket,
-            VoiceIndex: _v.Cursor.VoiceIndex, Cross: true));
+            VoiceIndex: _v.Cursor.VoiceIndex, Cross: cross));
     }
 
     /// <summary>
@@ -2695,7 +2715,7 @@ public sealed partial class MeasureCollector
                 Fraction written = noteItem.Duration;
                 noteItem = WithCrossArpeggio(DecorateSoundingItem(noteItem with { TimeScale = scale }, note, isCue), note);
                 await AddItemWithoutDurationAsync(builder, WithBowSources(noteItem, m));
-                AddNoteCrossArpeggio(noteItem, annMeasureIndex, annItemIndex, note.SourceStart);
+                AddNoteCrossArpeggio(noteItem, annMeasureIndex, annItemIndex, note.SourceStart, CrossArpeggioOf(note) != SpanArpeggioPart.None);
                 CollectDynamics(note, annMeasureIndex, annItemIndex);
                 CollectArticulations(note, annMeasureIndex, annItemIndex, noteItem.StemUp,
                     noteItem.EditorialAccidental, annAnchor);

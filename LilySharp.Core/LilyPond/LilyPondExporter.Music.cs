@@ -1764,9 +1764,14 @@ public sealed partial class LilyPondExporter
     /// <summary>The same spelling for a metronome mark the PAGE holds — a lead sheet's
     /// timing track writes the marks the page draws (<see cref="EmitLeadSheetTiming"/>),
     /// whose count is the mark's text.</summary>
-    private static string EmitTempo(Svg.Model.MusicMarkItem mark)
-        => EmitTempo(mark.TempoText, int.TryParse(mark.Text, out int bpm) ? bpm : null,
-            mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision);
+    /// <param name="mark">The page's mark.</param>
+    /// <param name="hidden">The count the mark plays and does not print, with its unit
+    /// (<c>tempo "Tempo I" 4 = 92 bare</c>, <see cref="HiddenCountOf"/>), or null.</param>
+    private static string EmitTempo(Svg.Model.MusicMarkItem mark, (int Bpm, int Unit, int Dots)? hidden = null)
+        => hidden is var (played, unit, dots)
+            ? EmitTempo(mark.TempoText, played, unit, dots, mark.SwingSubdivision, countHidden: true)
+            : EmitTempo(mark.TempoText, int.TryParse(mark.Text, out int bpm) ? bpm : null,
+                mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision);
 
     private static string EmitTempo(string? marking, int? bpm, int unit, int dots, int swingSubdivision,
         bool countHidden = false)

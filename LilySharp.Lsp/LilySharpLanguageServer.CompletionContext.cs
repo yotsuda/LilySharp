@@ -208,7 +208,17 @@ public sealed partial class LilySharpLanguageServer
         return (m.Groups["feel"].Value, m.Groups["space"].Length == 0);
     }
 
-    [GeneratedRegex("""(?:^|(?<=[\s{]))tempo\s+(?:"[^"\n]*"\s*|(?<word>[A-Za-z]\w*)\s+)?(?:(?:\d+\.*\s*=\s*)?\d+[ \t]+)?(?<feel>[A-Za-z]+)(?<space>[ \t]*)$""")]
+    /// <summary>Whether the run <see cref="TempoFeelBeforeCaret"/> matched has a count before
+    /// its feel word (<c>tempo "Swing" 4 = 120 swing |</c>, not <c>tempo swing |</c>): only a
+    /// count can be hidden, so only then is <c>bare</c> offered beside the swung values.</summary>
+    internal static bool TempoFeelRunHasCount(string text, int offset)
+    {
+        int lineStart = text.LastIndexOf('\n', Math.Max(0, offset - 1)) + 1;
+        return offset >= lineStart && TempoFeelBeforeCaret(text, offset) is not null
+            && TempoFeelRunRegex().Match(text, lineStart, offset - lineStart).Groups["bpm"].Success;
+    }
+
+    [GeneratedRegex("""(?:^|(?<=[\s{]))tempo\s+(?:"[^"\n]*"\s*|(?<word>[A-Za-z]\w*)\s+)?(?:(?:\d+\.*\s*=\s*)?(?<bpm>\d+)[ \t]+)?(?<feel>[A-Za-z]+)(?<space>[ \t]*)$""")]
     private static partial Regex TempoFeelRunRegex();
 
     /// <summary>

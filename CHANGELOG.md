@@ -6,6 +6,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Leftovers of the same evaluation**:
+  - **The bar line after a drum chart confirms the bar its lines closed**: `drums { { cymr4 cymr cymr cymr | } { r4 hhp r hhp | } } | % |` is the three bars the same chart of one-bar phrases is. The section was counted a bar too long (LYS2007) and every other part padded by a bar; a chart drawn a voice a line drew the empty bar too. A `voice { … | } { … | } |` span is unchanged: its bar lines are the staff's own.
+  - **`bare` is offered after a tempo's feel word**: `tempo "Swing" 4 = 120 swing ` lists `bare` beside `8` and `16` (not after `tempo swing`, which has no count to hide).
+  - **Stepping the opening of a run of marks renames its end**: on `c'8@staccato d' e' f'@!staccato` the step keys make `@tenuto … @!tenuto` in one edit, where `@!staccato` was left ending nothing. A run's opening steps along the marks that may run (staccatissimo, staccato, tenuto; accent, marcato); the end follows its opening and is not stepped.
+  - **A hidden tempo count comes back from MusicXML**: words with a sound and no metronome are read as `tempo "Tempo I" 4 = 92 bare`, where they were `tempo 92` and a `@text` (the count comes back as the quarter's). Italic words with a sound stay text.
+  - **A lead sheet's LilyPond file plays a hidden count**: its timing track wrote `\tempo "Tempo I"` alone; it writes the count with `tempoHideNote`, at the opening, at a section's head and where a section returns to the file's tempo.
+  - **A cross-staff arpeggio comes back from MusicXML**: the shared `number` on both staves is read as `@arpeggio(cross)` on the upper staff and nothing below, where it was a plain `@arpeggio` on each.
+  - **A plain `@arpeggio` on a single note is drawn**: the wavy line (or, with `(bracket)`, the bracket) one head tall, as LilyPond draws it — it drew nothing and said nothing. MusicXML writes and reads it.
+  - **The notes of a warning about a singer's staff point into the file**: LYS2007's "note:" lines about `the staff of singer 'carol'` pointed at lines past the file's end (the part Lily# writes after it); they point at the singer's name on the line that made it.
 - **A pickup survives a .mid**: Lily# writes an upbeat as a short bar of its own before the meter (`1/4`, then `3/4`), as a .mid says one, and `lysc import` reads such an opening as `partial`. A piece with an upbeat came back with every bar line a beat early.
 - **Four things those scores asked for**:
   - **A tempo whose count is played and not printed**: `tempo "Tempo I" 4 = 92 bare` sounds at 92 and prints the words alone — no metronome equation, no parentheses — at the top level, in a section header and in the music. `bare` is the word a tuplet takes for "no number, no bracket". It needs words and a count (LYS0044, a warning, otherwise). LilyPond gets `tempoHideNote`, MusicXML the words with the sound.

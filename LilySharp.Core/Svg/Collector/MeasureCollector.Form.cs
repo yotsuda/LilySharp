@@ -1479,6 +1479,12 @@ public sealed partial class MeasureCollector
                             bars = Math.Min(DefaultExpansionBudgetCap, before + longest);
                             confirmable = true;
                         }
+                        // A drum chart (the opener is slot 0) whose line closed a bar: the bar
+                        // line after the chart confirms it, as after a phrase that ended its bar
+                        // (ProcessParallelSpan's exit; MeasureModel's ChartExitMarker — counted
+                        // as a pair, the page padded every other part by a bar, 2026-11-12).
+                        if (child.GetSlot(0)?.Kind == SyntaxKind.DrumsOpener && !pendingMusic && bars > before)
+                            confirmable = true;
                     }
                     break;
                 default:
@@ -1610,6 +1616,9 @@ public sealed partial class MeasureCollector
                             bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)before + longest);
                             confirmable = true;
                         }
+                        // A drum chart's exit confirms the bar its line closed (WalkBars).
+                        if (parallel.IsDrums && !pendingMusic && bars > before)
+                            confirmable = true;
                     }
                     break;
                 default:
@@ -1882,6 +1891,9 @@ public sealed partial class MeasureCollector
                 TempoText = sectionTempo.Marking,
                 SwingSubdivision = sectionTempo.SwingSubdivision,
                 TempoPieces = PiecePositions(sectionTempo),
+                // A `bare` count, for the twin alone (MusicMarkItem.HiddenTempoCount).
+                HiddenTempoCount = sectionTempo.Value.CountHidden && sectionTempo.Bpm is int played
+                    ? (played, sectionTempo.BeatUnit ?? 4, sectionTempo.BeatDots) : null,
             };
         return null;
     }

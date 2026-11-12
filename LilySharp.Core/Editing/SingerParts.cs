@@ -97,10 +97,72 @@ public static class SingerParts
     /// of the music it copies (a note out of its instrument's range is the singer's octave,
     /// not a slip of the writer's).
     /// </summary>
-    public static IReadOnlyList<Diagnostic> OwnOf(IEnumerable<Diagnostic> diagnostics, string expanded)
+    /// <param name="diagnostics">What was said of the expanded text.</param>
+    /// <param name="expanded">The text <see cref="Expand"/> wrote.</param>
+    /// <param name="root">Its tree's root, when the caller holds it (<see cref="WithOwnNotes"/>).</param>
+    public static IReadOnlyList<Diagnostic> OwnOf(IEnumerable<Diagnostic> diagnostics, string expanded, SyntaxNode? root = null)
     {
         int end = MadeFrom(expanded);
-        return diagnostics.Where(d => d.Span.Start < end).ToList();
+        var own = new List<Diagnostic>();
+        foreach (var d in diagnostics)
+            if (d.Span.Start < end)
+                own.Add(WithOwnNotes(d, expanded, ref root));
+        return own;
+    }
+
+    /// <summary>
+    /// <paramref name="diagnostic"/> with the other places it names
+    /// (<see cref="Diagnostic.Related"/>) all in the file's own text: a place in a made part — a
+    /// section of the staff of singer 'carol', which LYS2007 lists beside the parts the file
+    /// writes — is the singer line that made it (her name there; the line that names that
+    /// section, where one does), and is left out where no line of hers is found. Until
+    /// 2026-11-12 such a note kept its span in the made text, and an editor showed it at a line
+    /// past the file's end. The diagnostic itself where it names no such place.
+    /// </summary>
+    /// <param name="diagnostic">A diagnostic of the expanded text.</param>
+    /// <param name="expanded">The text <see cref="Expand"/> wrote.</param>
+    /// <param name="root">Its tree's root, or null: parsed here the first time it is needed, and
+    /// handed back for the next diagnostic.</param>
+    public static Diagnostic WithOwnNotes(Diagnostic diagnostic, string expanded, ref SyntaxNode? root)
+    {
+        if (diagnostic.Related.Count == 0)
+            return diagnostic;
+        int end = MadeFrom(expanded);
+        if (end >= expanded.Length || !diagnostic.Related.Any(r => r.Span.Start >= end))
+            return diagnostic;
+        root ??= SyntaxTree.Parse(expanded).GetRoot();
+        var lines = LyricSinger.LinesOf(root);
+        var related = new List<DiagnosticRelated>();
+        foreach (var note in diagnostic.Related)
+        {
+            if (note.Span.Start < end)
+            {
+                related.Add(note);
+                continue;
+            }
+            // The made block the note stands in, and the singer it was made for.
+            string? made = null;
+            foreach (var block in root.ChildNodes())
+                if (block.Span.Start <= note.Span.Start && note.Span.Start < block.Span.End)
+                    made = block switch
+                    {
+                        PartDeclarationSyntax part => part.Name.Text,
+                        LyricsBlockSyntax { VoiceName: { } track } when track.StartsWith(LyricSinger.WordsOf(""), StringComparison.Ordinal)
+                            => track[LyricSinger.WordsOf("").Length..],
+                        _ => null,
+                    };
+            int mark = made?.LastIndexOf(LyricSinger.ScopedMark, StringComparison.Ordinal) ?? -1;
+            if (mark <= 0)
+                continue;
+            string person = made![..mark];
+            // (The note's own span is the section's name in the made part.)
+            string section = note.Span.End <= expanded.Length ? expanded[note.Span.Start..note.Span.End] : "";
+            var line = lines.Where(l => l.Person == person && l.Node.Span.Start < end)
+                .OrderBy(l => l.Node.Sections.Any(s => s.Text == section) ? 0 : 1).FirstOrDefault();
+            if (line != null)
+                related.Add(note with { Span = (line.Node.PersonToken ?? line.Node.Keyword).Span });
+        }
+        return new Diagnostic(diagnostic.Severity, diagnostic.Span, diagnostic.Code, diagnostic.Message, related);
     }
 
     /// <summary>

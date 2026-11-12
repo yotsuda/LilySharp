@@ -361,7 +361,12 @@ public sealed partial class LilySharpLanguageServer
         // instance method below); the validators otherwise collect the book again.
         Func<LilySharp.Core.Svg.Collector.MeasureCollector?>? lend =
             previewCollect == null ? null : () => previewCollect(tree);
-        result.AddRange(SemanticValidation.Run(tree, token, lend).Where(d => d.Span.Start < text.Length));
+        // (A note about a made singer's staff points at the singer line that made it, not past
+        // the document's end: SingerParts.WithOwnNotes.)
+        SyntaxNode? root = tree.GetRoot();
+        foreach (var d in SemanticValidation.Run(tree, token, lend))
+            if (d.Span.Start < text.Length)
+                result.Add(LilySharp.Core.Editing.SingerParts.WithOwnNotes(d, tree.Text, ref root));
         return result;
     }
 

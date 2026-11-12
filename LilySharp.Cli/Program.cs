@@ -1168,7 +1168,7 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(
     combined.AddRange(LilySharp.Core.Semantics.SemanticValidation.Run(tree));
     // What was written after the file for its printed singers is not the writer's to mend.
     return LilySharp.Core.Editing.SingerParts.Wanted(tree)
-        ? LilySharp.Core.Editing.SingerParts.OwnOf(combined, tree.Text)
+        ? LilySharp.Core.Editing.SingerParts.OwnOf(combined, tree.Text, tree.GetRoot())
         : combined;
 }
 
