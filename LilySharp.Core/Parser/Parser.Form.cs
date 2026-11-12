@@ -752,7 +752,7 @@ internal sealed partial class Parser
         {
             // Who sings in THIS score: over the top level's lines for the same part (Music.LyricSinger).
             SyntaxKind.Identifier when IsSingerDeclaration() => ParseSingerDeclaration(),
-            // `singer NAME`: what a named singer sings, as a staff with its words (StaffRenderSyntax.IsSinger).
+            // `lyricsStaff NAME`: what a named singer sings, as a staff with its words (StaffRenderSyntax.IsSinger).
             SyntaxKind.Identifier when IsSingerRender() => ParseSingerRender(),
             // THIS score's text, over the top level's for the same place (docs/markdown-text-design.md).
             SyntaxKind.FencedText => new MarkdownTextGreen(Advance()),
@@ -802,36 +802,22 @@ internal sealed partial class Parser
                     "A score body holds render items — 'staff NAME', 'tab NAME', 'strokes NAME', "
                     + "'grandStaff { … }', 'staffGroup { … }', 'choirStaff { … }', "
                     + "'condensedStaff { … }', 'combinedStaff { … }', 'ossia NAME', "
-                    + "'chords NAME', 'lyrics NAME', 'singer NAME' (what a named singer sings) — its own 'title'/'subtitle'/'composer'/'poet', "
+                    + "'chords NAME', 'lyrics NAME', 'lyricsStaff NAME' (a staff with its words: what a named singer sings) — its own 'title'/'subtitle'/'composer'/'poet', "
                     + "'form NAME' or 'form { … }', a 'fonts' / 'paper' / 'layout' reference or "
                     + "block, and a bare part name to render that part to MIDI only.")
         };
     }
 
-    private bool? _declaresPartCalledSinger;
-
     /// <summary>
-    /// <c>singer NAME</c> as a score's item (owner's decision 2026-11-12): the word with a name
-    /// after it, in a file that declares no part called singer — there the two words stay what
-    /// they were, two parts played to MIDI only.
+    /// <c>lyricsStaff NAME</c> as a score's item (owner's decisions 2026-11-12): the word with a
+    /// name after it. Not reserved: a part may be called lyricsStaff, and stands alone then.
     /// </summary>
     private bool IsSingerRender()
-    {
-        if (Current.Kind != SyntaxKind.Identifier || Current.Text != Music.LyricSinger.Keyword
-            || Peek(1) is not { Kind: SyntaxKind.Identifier } name || !IsPartNameToken(name))
-            return false;
-        if (_declaresPartCalledSinger is not { } declared)
-        {
-            declared = false;
-            for (int i = 0; i + 1 < _tokens.Count && !declared; i++)
-                declared = _tokens[i].Kind == SyntaxKind.PartKeyword && _tokens[i + 1].Text == Music.LyricSinger.Keyword;
-            _declaresPartCalledSinger = declared;
-        }
-        return !declared;
-    }
+        => Current.Kind == SyntaxKind.Identifier && Current.Text == Music.LyricSinger.LyricsStaffWord
+            && Peek(1) is { Kind: SyntaxKind.Identifier } name && IsPartNameToken(name);
 
-    /// <summary><c>singer NAME ["display name"] [as …] [hidden] [sounds …]</c>: a staff item under
-    /// the word singer, its part the one made of what that singer sings (Editing.SingerParts).</summary>
+    /// <summary><c>lyricsStaff NAME ["display name"] [as …] [hidden] [sounds …]</c>: a staff item under
+    /// its own word, its part the one made of what that singer sings (Editing.SingerParts).</summary>
     private StaffRenderGreen ParseSingerRender()
     {
         var tokens = new List<SyntaxToken> { Advance(), Advance() };

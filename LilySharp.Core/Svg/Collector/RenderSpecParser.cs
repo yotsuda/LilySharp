@@ -514,7 +514,7 @@ public static class RenderSpecParser
     }
 
     /// <summary>
-    /// A <c>singer NAME</c> item's staff with the singer's words under it: the tracks the
+    /// A <c>lyricsStaff NAME</c> item's staff with the singer's words under it: the tracks the
     /// singer's part names (Editing.SingerParts writes them there). The item is the staff AND
     /// its words — the singer line knows both, so the score does not say them again.
     /// </summary>
@@ -895,7 +895,11 @@ public static class RenderSpecParser
         // played to MIDI only (collected in Parse). No word at all is a bare `staff`: the
         // file's unnamed part (SyntaxFacts.UnnamedPartName, 2026-10-09).
         ClefType? explicitClef = ClefOfKeyword(staff.ClefToken);
-        string voiceName = staff.PartToken?.Text ?? SyntaxFacts.UnnamedPartName;
+        // …and a `lyricsStaff NAME` item's part is the one made of that singer's lines AS THIS SCORE
+        // READS THEM (Music.LyricSinger.PartOfItem): the singer's name, or one of the score's own
+        // where its own singer lines say what she sings there.
+        string voiceName = staff.IsSinger ? Music.LyricSinger.PartOfItem(staff)
+            : staff.PartToken?.Text ?? SyntaxFacts.UnnamedPartName;
 
         // No explicit clef in the render block → take it from the part definition.
         ClefType clef = explicitClef ?? GetPartClef(staff, voiceName) ?? ClefType.Treble;

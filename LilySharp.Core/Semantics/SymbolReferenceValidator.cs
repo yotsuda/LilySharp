@@ -82,7 +82,7 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
         // and `condensedStaff { fl1 fl22 }` silently dropped the misspelt part's voice while
         // reporting nothing (measured: its SVG differs from the correctly-spelt one).
         foreach (var reference in PartReferenceFinder.ReferenceTokens(root))
-            // A score's `singer NAME` names a singer: its part is made of the singer's lines
+            // A score's `lyricsStaff NAME` names a singer: its part is made of the singer's lines
             // (Editing.SingerParts), which says, at the item, what it could not make (LYS4060).
             if (!_definedParts.Contains(reference.Text) && reference.Parent is not StaffRenderSyntax { IsSinger: true })
                 _diagnostics.Error(reference.Span, DiagnosticCodes.UndefinedPart,

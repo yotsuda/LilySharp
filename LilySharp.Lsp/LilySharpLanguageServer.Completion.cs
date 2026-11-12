@@ -550,11 +550,12 @@ public sealed partial class LilySharpLanguageServer
             // The render items, then the declared parts as bare MIDI-only items (GRAMMAR §7:
             // "a bare part name renders that part to MIDI only").
             // A keyword typed in front of a written body writes the keyword alone.
-            // `… singer |` in the middle of a score's line: the named singers (the item that
-            // prints what one sings); with none named, the score's items as ever.
-            CompletionContext.ScoreBlock or CompletionContext.StaffGroupBlock
-                when WordBeforeCursor(doc.Text, offset) == LilySharp.Core.Music.LyricSinger.Keyword
-                    && NamedSingerItems(doc, offset) is { Length: > 0 } named => new CompletionList { Items = named },
+            // `lyricsStaff |`: the named singers (the item prints what one sings, with the words),
+            // then the parts that name words. Whatever list the caret's place would have had —
+            // the word is not reserved, so the place is read as a score's or as the row's before it.
+            _ when WordBeforeCursor(doc.Text, offset) == LilySharp.Core.Music.LyricSinger.LyricsStaffWord
+                && doc.Tree.GetRoot().ChildNodes().OfType<RenderDeclarationSyntax>().Any(r => r.Span.Start < offset && offset <= r.Span.End)
+                && LyricsStaffItems(doc) is { Length: > 0 } named => new CompletionList { Items = named },
             CompletionContext.ScoreBlock => WithSingerOnAFreshLine(KeywordOnlyBeforeAWrittenBody(
                 WithMidiOnlyParts(GetScoreBlockCompletions(), doc.Text), doc.Text, offset), doc.Text, offset),
             CompletionContext.StaffGroupBlock => KeywordOnlyBeforeAWrittenBody(
@@ -595,9 +596,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLyricsName => GetVoiceBindingNameCompletions(doc.Text),
             CompletionContext.AfterLyricsTrackName => GetLyricsTrackNameCompletions(LyricsHeadAt(doc.Text, offset)?.Written),
             CompletionContext.AfterLanguage => GetLanguageNameCompletions(),
-            // `singer |`: the voices are the extension's to list. In a score the word also begins
-            // the staff of what a named singer sings (`singer carol`): the names the lines give.
-            CompletionContext.AfterSinger => new CompletionList { Items = NamedSingerItems(doc, offset) },
+            CompletionContext.AfterSinger => new CompletionList { Items = [] },
             CompletionContext.AfterSingerVoice => new CompletionList { Items = [SingsKeywordItem()] },
             CompletionContext.AfterSingerSings => new CompletionList { Items = [.. SingerWordsGoOnToOn([.. GetDeclaredNameCompletions(doc.Text, "lyrics", "The words this voice sings").Items, .. GeneratedLyricsItems(forSinger: true)], doc.Text, offset), RowOnItem("9")] },
             CompletionContext.AfterSingerWords => new CompletionList { Items = [RowOnItem("0")] },

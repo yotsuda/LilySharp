@@ -304,8 +304,8 @@ singer alice female sings on lead in Verse
 singer bob   male   sings on lead octave -1 in Chorus
 singer carol female sings on lead up 3 in Chorus
 
-score { staff lead  lyrics words  singer carol }   // the lead, and carol's harmony under it
-score carol { singer carol }                       // carol's own sheet
+score { staff lead  lyrics words  lyricsStaff carol }   // the lead, and carol's harmony under it
+score carol { lyricsStaff carol }                       // carol's own sheet
 ```
 
 The owner's two points: the notes of a harmony are the SINGER LINE's to know — nothing
@@ -317,7 +317,7 @@ the singer gets a name, and the score names the singer.
   gender. Lines of one name are ONE singer: the voice is said on one of them and is the
   others' too (`singer alice sings on lead up 3 in Chorus` on a second line). A line with no
   name sings as before and is not printed.
-- `singer NAME` in a score (and in a staff group) is the staff of what that singer sings AND
+- `lyricsStaff NAME` in a score (and in a staff group) is the staff of what that singer sings AND
   the words under it: the notes of the singer's lines, moved as they say, in the sections they
   say; whole bars of rest where the singer does not sing. It takes what a staff item takes
   after its part (a name in quotes, `as …`, `hidden`, `sounds …`). The staff is named as the
@@ -327,8 +327,22 @@ the singer gets a name, and the score names the singer.
   octave down (a tenor's), unless the part writes a clef: the notes stand where the part's do.
 - A score that prints a singer SINGS WHAT IT SHOWS: the singer's lines are read there on the
   made part, as they stand, so the page and the voice cannot differ. A score that does not
-  print the singer sings the line as section 12 says. `score { singer carol }` therefore
+  print the singer sings the line as section 12 says. `score { lyricsStaff carol }` therefore
   plays carol alone.
+
+**The item's word** (owner's decision the same day, after some hours as `singer NAME`): one
+word meant the line that says who sings and the item that prints her, and a score that held
+both — a score with singer lines of its own — read badly. The item is `lyricsStaff NAME`: a
+staff with its words. Of a singer, what she sings; of a part, that part with the words it
+names. The word is not reserved (a part may be called it).
+
+**A score reads its own singer lines** (owner's report the same day: a Japanese score with
+its own lines, `lyricsStaff alice` added, printed alice with the English words). A singer's
+staff is made of the lines THE SCORE reads — its own, and the top level's for the parts it
+writes no line for, the rule a score sings by (`LyricSinger.LinesOfSingerIn`). Where those
+are not the top level's, the part made is the score's own (`alice__2`, the second score:
+`LyricSinger.PartOfItem`, read off the syntax alone since the resolved lines read the
+scores), so one file holds alice's English staff and her Japanese one.
 
 **How it is made** (`Editing.SingerParts`): the part is WRITTEN, as Lily# text, after the
 file's own — the way `using` adds a file, the document staying the prefix so that every
@@ -390,7 +404,7 @@ voice: a second violin a third under the first is the same request.
   the singer's own (`carolWords`), named in the new part's header; the singer's lines made
   ONE line that sings the written part as it stands (`singer carol female "x/y" sings on carol
   with …`, the first line's voice and settings kept). A score that prints the singer keeps its
-  `singer carol` — section 13 reads a singer whose part is written as that part's staff and
+  `lyricsStaff carol` — section 13 reads a singer whose part is written as that part's staff and
   words, and makes nothing; a score that shows the sung part takes `staff carol  lyrics
   carolWords` after it.
 - **"Lily#: Write a Harmony Part…"** (the command palette; `HarmonyPartWriter.WritePart`)

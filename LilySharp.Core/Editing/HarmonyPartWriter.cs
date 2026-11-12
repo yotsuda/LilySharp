@@ -101,7 +101,7 @@ public static class HarmonyPartWriter
     /// <summary>
     /// What the singer <paramref name="person"/> sings, written out as a part called as the
     /// singer is: the notes, the words as a track of the singer's own, the singer's lines made
-    /// one line that sings that part as it stands. A score's <c>singer NAME</c> goes on
+    /// one line that sings that part as it stands. A score's <c>lyricsStaff NAME</c> goes on
     /// printing it — now the written part.
     /// </summary>
     public static Result WriteSinger(string source, string person)
@@ -148,7 +148,7 @@ public static class HarmonyPartWriter
         if (byPart.Length > 0 && top.ChildNodes().OfType<PartDeclarationSyntax>().FirstOrDefault(p => p.Name.Text == person) is { } part)
             edits.Add((part.Span.End, part.Span.End, nl + "lyrics " + track + " {" + nl + byPart + "}"));
 
-        // ⑵ The scores: one that prints the singer keeps its `singer NAME` (now the written
+        // ⑵ The scores: one that prints the singer keeps its `lyricsStaff NAME` (now the written
         // part) and wants no second staff; one that shows the staff takes the words under it.
         foreach (var score in top.ChildNodes().OfType<RenderDeclarationSyntax>())
         {
@@ -209,7 +209,7 @@ public static class HarmonyPartWriter
         error = null;
         string nl = source.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
         string asked = source + (source.EndsWith('\n') ? "" : nl) + (line != null ? line + nl : "")
-            + "score " + AskingScore + " { singer " + name + " }" + nl;
+            + "score " + AskingScore + " { " + LyricSinger.LyricsStaffWord + " " + name + " }" + nl;
         var tree = SyntaxTree.Parse(asked);
         string text = SingerParts.Expand(asked, tree, out var said);
         if (said.Count > 0 || ReferenceEquals(text, asked))

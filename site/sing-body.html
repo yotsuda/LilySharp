@@ -182,12 +182,12 @@ singer male "neutrino/SOMA" sings words on bas</pre>
   <p>The page shows the part as written; the harmony above is only heard. To print it, give the singer a
   <b>name</b> — a word before the gender or the voice — and name the singer in the score:</p>
   <!--EXAMPLE:sing-print-->
-  <p><code>singer carol</code> in a score is carol's staff <b>and</b> her words: the notes of her lines,
+  <p><code>lyricsStaff carol</code> in a score is carol's staff <b>and</b> her words: the notes of her lines,
   moved as they say, in the sections they say, and whole bars of rest elsewhere. The score writes neither
   a <code>staff</code> nor a <code>lyrics</code> row for it. A singer who sings an octave below
   throughout is written in the treble clef an octave down, so the notes stand where the part's do.
   Such a score sings what it shows. A sheet for one singer is a score of its own:
-  <code>score carol { singer carol }</code>.</p>
+  <code>score carol { lyricsStaff carol }</code>.</p>
   <p>Lines of one name are one singer. Write the voice on one of them
   (<code>singer alice female "diffsinger/…" sings on lead in Verse</code>) and leave it off the others
   (<code>singer alice sings on lead up 3 in Chorus</code>). A singer's name must not be a part's.</p>

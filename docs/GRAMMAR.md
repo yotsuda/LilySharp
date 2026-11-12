@@ -302,7 +302,7 @@ SingerSetting  = Word , { '.' , Word } , ( [ '-' ] , Number | Word | String ) ;
                     with the scale's own note. 'octave -1' sings octaves below (1 to 3 either
                     way). Lily# moves the notes before any voice sees them, so every engine
                     sings it alike; a score prints the harmony where it names the singer
-                    ('singer NAME', a ScoreItem). Several lines on one
+                    ('lyricsStaff NAME', a ScoreItem). Several lines on one
                     part sing together, each its own sections and its own interval.
                     An interval or an octave that is none, and a section the file does not
                     have, are LYS4059. The four words are words only here: a track or a part may
@@ -314,7 +314,7 @@ SingerValue    = [ SingerName ] , ( String | SingerGender , [ String ] ) | Singe
 SingerName     = Identifier ;   (* the singer's OWN name: a word that is no gender, or the
                                    first of two words. Lines of one name are one singer — the
                                    voice said on one is the others' too — and a score prints
-                                   what a named singer sings ('singer NAME', a ScoreItem;
+                                   what a named singer sings ('lyricsStaff NAME', a ScoreItem;
                                    docs/lyrics-singer-design.md §13) *)
 SingerGender   = 'male' | 'female' ;
                  (* WHO SINGS WHAT, in this order (docs/lyrics-singer-design.md). 'lyrics' rows
@@ -1935,9 +1935,11 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         a String names it). The only item that
                                                         DRAWS a strokes part: a row's 'plays'
                                                         sounds it and draws nothing *)
-               | 'singer' , SingerName , [ DisplayName ] , [ 'as' , StaffSelector , { StaffSelector } ] , StaffSound
-                                                     (* WHAT A NAMED SINGER SINGS, as a staff
-                                                        with the words under it (2026-11-12): the
+               | 'lyricsStaff' , PartRef , [ DisplayName ] , [ 'as' , StaffSelector , { StaffSelector } ] , StaffSound
+                                                     (* A STAFF WITH ITS WORDS. The name is a part
+                                                        or a SingerName. Of a part, that
+                                                        part and the words it names. Of a singer,
+                                                        WHAT THAT SINGER SINGS (2026-11-12): the
                                                         notes of the SingerDecl lines of that
                                                         name, moved as they say (up 3 along the
                                                         key, octave -1), in the sections they say,

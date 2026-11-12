@@ -27,7 +27,7 @@ namespace LilySharp.Core.Editing;
 /// <summary>
 /// The part of a NAMED SINGER, made of that singer's lines (owner's decisions 2026-11-12,
 /// docs/lyrics-singer-design.md §13): <c>singer carol female sings on lead up 3 in Chorus</c>
-/// says what carol sings, and <c>score { singer carol }</c> prints it — the lead's notes of
+/// says what carol sings, and <c>score { lyricsStaff carol }</c> prints it — the lead's notes of
 /// the Chorus a third above along the key, bars of rest where carol does not sing, carol's
 /// words under them. The harmony's notes are the singer line's to know: nothing writes them twice.
 /// </summary>
@@ -117,12 +117,21 @@ public static class SingerParts
         var cells = new List<Cell>();
         int partsMade = 0;
 
-        foreach (string name in items.Select(i => i.PartToken!.Text).Distinct(StringComparer.Ordinal).ToList())
+        // One part for each staff asked for: a singer's, as the file's top level says what she
+        // sings, and one of a score's own where that score's singer lines say it (the Japanese
+        // score's alice sings the Japanese words: LyricSinger.PartOfItem names the two apart).
+        foreach (var item in items.GroupBy(LyricSinger.PartOfItem, StringComparer.Ordinal).Select(g => g.First()).ToList())
         {
-            var item = items.First(i => i.PartToken!.Text == name);
+            string name = item.PartToken!.Text, partName = LyricSinger.PartOfItem(item);
             void No(string why) => said.Add(Diagnostic.Error(item.Span, DiagnosticCodes.SingerNotPrinted, why));
 
-            var own = lines.Where(l => l.Person == name).ToList();
+            SyntaxNode? score = item;
+            while (score != null && score is not RenderDeclarationSyntax)
+                score = score.Parent;
+            var own = LyricSinger.LinesOfSingerIn(root, name, score as RenderDeclarationSyntax);
+            // A PART of that name and no singer: the item is that part's staff and its own words.
+            if (own.Count == 0 && partName == name && parts.Any(p => p.Name.Text == name))
+                continue;
             if (own.Count == 0)
             {
                 No($"No singer is called {name}. Name one on its line — singer {name} female sings on PART — and the score prints what {name} sings.");
@@ -131,7 +140,7 @@ public static class SingerParts
             // A singer whose notes are WRITTEN — a part called as the singer is, which every
             // line of the singer sings as it stands (what "Write … out as a part" leaves): the
             // item is that part's staff and its words, and nothing is made.
-            if (parts.Any(p => p.Name.Text == name)
+            if (partName == name && parts.Any(p => p.Name.Text == name)
                 && own.All(l => l.Part == name && l.Voice == null && l.Node.Interval is >= -1 and <= 1 && l.Node.Octaves == 0))
                 continue;
             if (parts.Any(p => p.Name.Text == name))
@@ -202,9 +211,9 @@ public static class SingerParts
             if (sung.Count > 0 && sung.All(l => l.Node.Octaves == -1) && !System.Text.RegularExpressions.Regex.IsMatch(header, @"\bclef\b")
                 && defaults.Clef == Svg.Model.ClefType.Treble)
                 header += " clef treble_8";
-            string track = LyricSinger.WordsOf(name);
+            string track = LyricSinger.WordsOf(partName);
             partsMade++;
-            made.Append("part ").Append(name).Append(" \"").Append(char.ToUpperInvariant(name[0])).Append(name, 1, name.Length - 1).Append("\" { ")
+            made.Append("part ").Append(partName).Append(" \"").Append(char.ToUpperInvariant(name[0])).Append(name, 1, name.Length - 1).Append("\" { ")
                 .Append(header);
             if (words.Length > 0)
                 made.Append(" lyrics ").Append(track);
@@ -244,7 +253,7 @@ public static class SingerParts
     {
         // Where each copied note stands is asked of the note it copies, so the parts the
         // singers sing on have to be played: a score of them alone goes after the text for the
-        // asking (a singer's own sheet, `score { singer carol }`, plays no part but the made one).
+        // asking (a singer's own sheet, `score { lyricsStaff carol }`, plays no part but the made one).
         var tree = SyntaxTree.Parse(written + "score __singers { " + string.Join(" ", sungParts.Select(p => "staff " + p)) + " }\n");
         if (tree.HasErrors)
             return null;

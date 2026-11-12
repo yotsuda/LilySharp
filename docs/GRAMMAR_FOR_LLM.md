@@ -26,9 +26,9 @@ poet "Poet"             // optional: the left end of the composer's line (\heade
                         // by hand when it is a third or a sixth along the key: write `up 3` / `down 6`.
                         // TO PRINT WHAT A SINGER SINGS, give the singer a name and name it in the score:
                         //   singer carol female sings words on lead up 3 in Chorus
-                        //   score { staff lead  lyrics words  singer carol }      — carol's staff, with her words, under the lead
-                        //   score carol { singer carol }                           — carol's own sheet
-                        // (`singer NAME` in a score is the staff AND its words: do not add `staff` or `lyrics` for it.
+                        //   score { staff lead  lyrics words  lyricsStaff carol }      — carol's staff, with her words, under the lead
+                        //   score carol { lyricsStaff carol }                           — carol's own sheet
+                        // (`lyricsStaff NAME` in a score is the staff AND its words: do not add `staff` or `lyrics` for it.
                         //  Lines of one name are one singer; the voice is written on one of them. A singer's
                         //  name must not be a part's name.)
                         // A TEXT FOR THE PAGE, written as Markdown in a fence at the top level: the

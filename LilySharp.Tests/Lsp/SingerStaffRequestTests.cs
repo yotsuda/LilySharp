@@ -25,7 +25,7 @@ using Xunit;
 namespace LilySharp.Tests.Lsp;
 
 /// <summary>
-/// A score's <c>singer NAME</c> through the server (docs/lyrics-singer-design.md §13): the
+/// A score's <c>lyricsStaff NAME</c> through the server (docs/lyrics-singer-design.md §13): the
 /// preview, the sung request and the Problems panel read the one expansion the server's house
 /// makes, so the page shows the singer's staff, the voice sings its notes, and nothing is said
 /// of the text the file does not write.
@@ -51,7 +51,7 @@ public class SingerStaffRequestTests
         singer alice female sings on lead in Verse
         singer bob male sings on lead octave -1 in Chorus
         singer carol female sings on lead up 3 in Chorus
-        score { staff lead  lyrics words  singer carol  singer bob }
+        score { staff lead  lyrics words  lyricsStaff carol  lyricsStaff bob }
         """;
 
     private static (LilySharpLanguageServer Server, Uri Uri) Opened(string text)
@@ -93,7 +93,7 @@ public class SingerStaffRequestTests
     [Fact]
     public void InAScoreThatPrintsNoSinger_EachVoiceOfThePartStillHasItsName_AndALineWithNoneHasNone()
     {
-        var (server, uri) = Opened(Book.Replace("score { staff lead  lyrics words  singer carol  singer bob }", "score { staff lead  lyrics words }")
+        var (server, uri) = Opened(Book.Replace("score { staff lead  lyrics words  lyricsStaff carol  lyricsStaff bob }", "score { staff lead  lyrics words }")
             .Replace("singer alice female sings on lead in Verse", "singer female sings on lead in Verse"));
         var sung = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
         Assert.Null(sung.Error);
@@ -102,13 +102,13 @@ public class SingerStaffRequestTests
     }
 
     /// <summary>Owner's report 2026-11-12: in a score written a line an item, <c>staff lead</c> and
-    /// <c>lyrics words</c> were coloured and <c>singer carol</c> was plain — the word is no
+    /// <c>lyrics words</c> were coloured and <c>lyricsStaff carol</c> was plain — the word is no
     /// reserved one, and the name was looked for among the parts.</summary>
     [Fact]
     public void AScoresSingerItem_IsColouredAsItsOtherItemsAre()
     {
-        string source = Book.Replace("score { staff lead  lyrics words  singer carol  singer bob }",
-            "score {\n   staff lead\n   lyrics words\n   singer carol\n   singer bob\n   singer dave\n}");
+        string source = Book.Replace("score { staff lead  lyrics words  lyricsStaff carol  lyricsStaff bob }",
+            "score {\n   staff lead\n   lyrics words\n   lyricsStaff carol\n   lyricsStaff bob\n   lyricsStaff dave\n}");
         var tokens = LilySharpLanguageServer.CollectSemanticTokens(LilySharp.Core.Syntax.SyntaxTree.Parse(source).GetRoot(), source).ToList();
         int TypeAt(string line, string word)
         {
@@ -121,27 +121,26 @@ public class SingerStaffRequestTests
         Assert.Equal(Keyword, TypeAt("   staff lead", "staff"));
         Assert.Equal(Part, TypeAt("   staff lead", "lead"));
         // The singer's item: the word as `staff` is, the name as a part's is.
-        Assert.Equal(Keyword, TypeAt("   singer carol", "singer"));
-        Assert.Equal(Part, TypeAt("   singer carol", "carol"));
-        Assert.Equal(Part, TypeAt("   singer bob", "bob"));
+        Assert.Equal(Keyword, TypeAt("   lyricsStaff carol", "lyricsStaff"));
+        Assert.Equal(Part, TypeAt("   lyricsStaff carol", "carol"));
+        Assert.Equal(Part, TypeAt("   lyricsStaff bob", "bob"));
         // A name nobody has stays plain beside its error, as an unknown part does.
-        Assert.Equal(Keyword, TypeAt("   singer dave", "singer"));
-        Assert.Equal(-1, TypeAt("   singer dave", "dave"));
+        Assert.Equal(Keyword, TypeAt("   lyricsStaff dave", "lyricsStaff"));
+        Assert.Equal(-1, TypeAt("   lyricsStaff dave", "dave"));
         // …and the name is coloured where the singer line gives it.
         Assert.Equal(Part, TypeAt("singer carol female sings", "carol"));
 
-        // The grammar paints the word before the server answers: `singer NAME` at a line's end,
+        // The grammar paints the word before the server answers: `lyricsStaff NAME` at a line's end,
         // before a brace or before the next item — and not a singer line, nor a part's block.
         using var grammar = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(RepoRoot(), "editors", "vscode", "syntaxes", "lilysharp.tmLanguage.json")));
         var item = new System.Text.RegularExpressions.Regex(
-            grammar.RootElement.GetProperty("repository").GetProperty("singer-item").GetProperty("match").GetString()!,
+            grammar.RootElement.GetProperty("repository").GetProperty("lyrics-staff-item").GetProperty("match").GetString()!,
             System.Text.RegularExpressions.RegexOptions.Multiline);
-        Assert.Matches(item, "   singer carol");
-        Assert.Matches(item, "score { staff lead  singer carol  singer bob }");
-        Assert.Matches(item, "  singer carol \"Carol K.\"");
-        Assert.DoesNotMatch(item, "singer female sings on lead");
+        Assert.Matches(item, "   lyricsStaff carol");
+        Assert.Matches(item, "score { staff lead  lyricsStaff carol  lyricsStaff bob }");
+        Assert.Matches(item, "  lyricsStaff carol \"Carol K.\"");
         Assert.DoesNotMatch(item, "singer carol female sings on lead");
-        Assert.DoesNotMatch(item, "  singer { c4 d e f | }");
+        Assert.DoesNotMatch(item, "  lyricsStaff { c4 d e f | }");
     }
 
     private static string RepoRoot()
@@ -155,7 +154,7 @@ public class SingerStaffRequestTests
     [Fact]
     public void OnAFreshLineOfAScore_SingerIsOffered()
     {
-        string source = Book.Replace("score { staff lead  lyrics words  singer carol  singer bob }",
+        string source = Book.Replace("score { staff lead  lyrics words  lyricsStaff carol  lyricsStaff bob }",
             "score {\n   staff lead\n   lyrics words\n   \n}");
         var (server, uri) = Opened(source);
         int at = source.IndexOf("lyrics words\n   ", StringComparison.Ordinal) + "lyrics words\n   ".Length;
@@ -167,6 +166,7 @@ public class SingerStaffRequestTests
         });
         Assert.Contains("singer", list!.Items.Select(i => i.Label));
         Assert.Contains("staff", list.Items.Select(i => i.Label));
+        Assert.Contains("lyricsStaff", list.Items.Select(i => i.Label));
 
         // …under a staff too, and not in the middle of a line, where the word would be the row's.
         string underStaff = source.Replace("   lyrics words\n   \n}", "   \n}");
@@ -182,10 +182,11 @@ public class SingerStaffRequestTests
         string spaced = source.Insert(midLine, " ");
         var (third, thirdUri) = Opened(spaced);
         var (l3, c3) = LilySharpLanguageServer.GetLineAndCharacter(spaced, midLine + 1);
-        Assert.DoesNotContain("singer", third.Completion(new CompletionParams
+        var midList = third.Completion(new CompletionParams
         {
             TextDocument = new TextDocumentIdentifier { Uri = thirdUri }, Position = new Position(l3, c3),
-        })!.Items.Select(i => i.Label));
+        })!.Items.Select(i => i.Label).ToList();
+        Assert.DoesNotContain("singer", midList);
     }
 
     [Fact]
@@ -203,8 +204,8 @@ public class SingerStaffRequestTests
             return list?.Items.Select(i => i.Label!).ToArray() ?? [];
         }
 
-        string inScore = Book.Replace("singer carol  singer bob }", "singer  }");
-        Assert.Equal(["alice", "bob", "carol"], LabelsAt(inScore, inScore.IndexOf("singer  }", StringComparison.Ordinal) + 7));
+        string inScore = Book.Replace("lyricsStaff carol  lyricsStaff bob }", "lyricsStaff  }");
+        Assert.Equal(["alice", "bob", "carol", "lead"], LabelsAt(inScore, inScore.IndexOf("lyricsStaff  }", StringComparison.Ordinal) + 12));
 
         string atTop = Book + "\nsinger ";
         Assert.Empty(LabelsAt(atTop, atTop.Length));
@@ -221,7 +222,7 @@ public class SingerStaffRequestTests
         Assert.Equal(LilySharpLanguageServer.WriteSingerPartCommand, action.Command!.CommandIdentifier);
         Assert.Equal([uri.ToString(), "carol"], action.Command.Arguments!.Select(a => a?.ToString()));
         // Not on the score's item, nor on a line with no name.
-        Assert.Null(LilySharpLanguageServer.WriteSingerPartAction(doc, uri, Book.IndexOf("singer carol  singer bob", StringComparison.Ordinal) + 3));
+        Assert.Null(LilySharpLanguageServer.WriteSingerPartAction(doc, uri, Book.IndexOf("lyricsStaff carol  lyricsStaff bob", StringComparison.Ordinal) + 3));
 
         var written = server.HarmonyPart(new HarmonyPartParams { TextDocument = new TextDocumentIdentifier { Uri = uri }, Singer = "carol" });
         Assert.Null(written.Error);
@@ -265,7 +266,7 @@ public class SingerStaffRequestTests
         var (server, uri) = Opened(Book);
         Assert.Empty(server.DocumentDiagnostics(server.DocumentAt(uri)!, CancellationToken.None, out _).Select(d => d.Message));
 
-        var (other, otherUri) = Opened(Book.Replace("singer bob }", "singer dave }"));
+        var (other, otherUri) = Opened(Book.Replace("lyricsStaff bob }", "lyricsStaff dave }"));
         var said = other.DocumentDiagnostics(other.DocumentAt(otherUri)!, CancellationToken.None, out _);
         Assert.Contains("No singer is called dave", Assert.Single(said).Message);
     }

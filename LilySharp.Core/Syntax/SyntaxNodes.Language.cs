@@ -139,7 +139,7 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
     /// <summary>The singer's OWN name (<c>singer carol female "…" sings …</c>, owner's decision
     /// 2026-11-12), or null: the word before <c>sings</c> that is no gender, or the first of two.
     /// Lines of one name are one singer; a score prints what a named singer sings
-    /// (<c>score { singer carol }</c>).</summary>
+    /// (<c>score { lyricsStaff carol }</c>).</summary>
     public SyntaxTokenNode? PersonToken
     {
         get

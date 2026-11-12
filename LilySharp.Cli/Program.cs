@@ -1257,7 +1257,7 @@ static (string Source, LilySharp.Core.Syntax.SyntaxTree Tree,
             out usingDiagnostics);
     }
     var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(source);
-    // The staff of what a named singer sings (`score { singer carol }`) is written after the
+    // The staff of what a named singer sings (`score { lyricsStaff carol }`) is written after the
     // file's own text, as an included file's is: one house, read by every output alike.
     if (LilySharp.Core.Editing.SingerParts.Wanted(tree))
     {
