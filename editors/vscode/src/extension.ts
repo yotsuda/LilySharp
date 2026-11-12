@@ -8409,7 +8409,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             for (const name of voices) {
                 if (inScore.has(name)) continue;
-                toggle(voiceLabel(name), voiceTitle(name) + ': this score does not sing it - silent unless pressed; pressed, the voice sings in place of the instrument', () => practice.voicesOn.includes(name),
+                toggle(voiceLabel(name), voiceTitle(name) + ' (not in this score)', () => practice.voicesOn.includes(name),
                     () => { practice.voicesOn = practice.voicesOn.includes(name) ? without(practice.voicesOn, name) : practice.voicesOn.concat([name]); },
                     'voice extra', name, practice.voiceLevels, name);
             }
