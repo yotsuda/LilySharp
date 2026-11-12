@@ -139,6 +139,16 @@ singer female "voicevox/ずんだもん-ノーマル" sings words on sop
 singer male "neutrino/SOMA" sings words on bas</pre>
   <p>A line inside a <code>score { }</code> replaces the top-level lines for its part in that score, so
   one score can sing the Japanese words and another the English ones.</p>
+
+  <h3>One song in two languages</h3>
+  <p>Three things make it. Each section writes both sets of words, the second one saying its own
+  language. The part names both tracks, so every <code>singer</code> line says which one it sings.
+  And the second score holds its own <code>singer</code> lines and its own <code>lyrics</code> row:</p>
+  <!--EXAMPLE:sing-bilingual-->
+  <p>The picture is the default score, the English one. Choose <b>日本語</b> in the preview's score
+  list and the page shows the Japanese words, and Play sings them: the same three singers, the same
+  sections and the same harmony, on the other track. A kana written with a reading, as
+  <code>う[お]</code> is here, prints the first and sings the second: the long vowel of うたおう.</p>
 </section>
 
 <section id="sections">

@@ -1,0 +1,39 @@
+// One melody, two languages: the default score prints and sings the English words, the score
+// 日本語 the Japanese ones. The part names both tracks; each score says which it prints, and
+// who sings it.
+octave relative
+time 4/4
+key c major
+tempo 100
+language english
+part lead { instrument alto  lyrics en  lyrics jp }
+section Verse {
+  lead   { e'4 e d c   | d4 e c2      | e4 e d c   | d4 d c2 | }
+  lyrics en { Morn- ing on the | wa- ter- side, | no- bod- y to | hear the tide. | }
+  lyrics jp language japanese { あ さ の み | ず べ に | だ れ も い | な い よ | }
+}
+section Chorus {
+  lead   { g'4 g a g   | e4 d c2      | g'4 g a g   | e4 d c2 | }
+  lyrics en { Sing it o- ver, | o- ver- now, | sing it loud- er, | a- ny- how. | }
+  lyrics jp language japanese { う た お う[お] | い ま を | お お き く | そ ら へ[え] | }
+}
+form { Verse Chorus }
+
+// The English score's singers: every score's default.
+singer alice female sings en on lead in Verse
+singer bob   male   sings en on lead octave -1 in Chorus
+singer carol female sings en on lead up 3 in Chorus
+
+score {
+  staff lead
+  lyrics en
+}
+
+// The Japanese score: its own singer lines replace the ones above for the part, in this score.
+score 日本語 {
+  singer alice female sings jp on lead in Verse
+  singer bob   male   sings jp on lead octave -1 in Chorus
+  singer carol female sings jp on lead up 3 in Chorus
+  staff lead
+  lyrics jp
+}
