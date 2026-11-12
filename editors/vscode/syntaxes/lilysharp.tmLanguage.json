@@ -15,6 +15,7 @@
         { "include": "#language-directive" },
         { "include": "#singer-line" },
         { "include": "#singer-line-unfinished" },
+        { "include": "#singer-item" },
         { "include": "#chord-shapes-block" },
         { "include": "#part-body" },
         { "include": "#instrument-value" },
@@ -458,6 +459,13 @@
             "captures": {
                 "1": { "name": "keyword.control.lilysharp" },
                 "2": { "name": "constant.language.lilysharp" }
+            }
+        },
+        "singer-item": {
+            "comment": "A score's `singer NAME` — the staff of what a named singer sings (StaffRenderSyntax.IsSinger): the word, a name that is no word of a singer line, and then the line's end, the closing brace, a display name or the next item. `singer` is not a reserved word, so what follows it says which it is; the name's colour is the server's (it resolves against the singers the lines name).",
+            "match": "\\b(singer)(?=[ \\t]+(?!(?:male|female|sings)\\b)[A-Za-z_][A-Za-z0-9_]*[ \\t]*(?:$|\\}|//|\"|(?:as|hidden|sounds|staff|strokes|tab|ossia|lyrics|chords|singer|grandStaff|staffGroup|choirStaff|condensedStaff|combinedStaff|form|title|subtitle|composer|poet|fonts|paper|layout)\\b))",
+            "captures": {
+                "1": { "name": "keyword.control.lilysharp" }
             }
         },
         "language-directive": {

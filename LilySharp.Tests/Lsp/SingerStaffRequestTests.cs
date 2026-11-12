@@ -86,6 +86,57 @@ public class SingerStaffRequestTests
         Assert.Equal([55.0, 55, 57, 55], sung.Voices!.Single(v => v.Part == "bob").Notes.Select(n => n.P));
     }
 
+    /// <summary>Owner's report 2026-11-12: in a score written a line an item, <c>staff lead</c> and
+    /// <c>lyrics words</c> were coloured and <c>singer carol</c> was plain — the word is no
+    /// reserved one, and the name was looked for among the parts.</summary>
+    [Fact]
+    public void AScoresSingerItem_IsColouredAsItsOtherItemsAre()
+    {
+        string source = Book.Replace("score { staff lead  lyrics words  singer carol  singer bob }",
+            "score {\n   staff lead\n   lyrics words\n   singer carol\n   singer bob\n   singer dave\n}");
+        var tokens = LilySharpLanguageServer.CollectSemanticTokens(LilySharp.Core.Syntax.SyntaxTree.Parse(source).GetRoot(), source).ToList();
+        int TypeAt(string line, string word)
+        {
+            int at = source.IndexOf(line, StringComparison.Ordinal) + line.IndexOf(word, StringComparison.Ordinal);
+            var (l, c) = LilySharpLanguageServer.GetLineAndCharacter(source, at);
+            return tokens.FirstOrDefault(t => t.Line == l && t.Character == c && t.Length == word.Length)?.TokenType ?? -1;
+        }
+
+        const int Keyword = 0, Part = 9;
+        Assert.Equal(Keyword, TypeAt("   staff lead", "staff"));
+        Assert.Equal(Part, TypeAt("   staff lead", "lead"));
+        // The singer's item: the word as `staff` is, the name as a part's is.
+        Assert.Equal(Keyword, TypeAt("   singer carol", "singer"));
+        Assert.Equal(Part, TypeAt("   singer carol", "carol"));
+        Assert.Equal(Part, TypeAt("   singer bob", "bob"));
+        // A name nobody has stays plain beside its error, as an unknown part does.
+        Assert.Equal(Keyword, TypeAt("   singer dave", "singer"));
+        Assert.Equal(-1, TypeAt("   singer dave", "dave"));
+        // …and the name is coloured where the singer line gives it.
+        Assert.Equal(Part, TypeAt("singer carol female sings", "carol"));
+
+        // The grammar paints the word before the server answers: `singer NAME` at a line's end,
+        // before a brace or before the next item — and not a singer line, nor a part's block.
+        using var grammar = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(RepoRoot(), "editors", "vscode", "syntaxes", "lilysharp.tmLanguage.json")));
+        var item = new System.Text.RegularExpressions.Regex(
+            grammar.RootElement.GetProperty("repository").GetProperty("singer-item").GetProperty("match").GetString()!,
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+        Assert.Matches(item, "   singer carol");
+        Assert.Matches(item, "score { staff lead  singer carol  singer bob }");
+        Assert.Matches(item, "  singer carol \"Carol K.\"");
+        Assert.DoesNotMatch(item, "singer female sings on lead");
+        Assert.DoesNotMatch(item, "singer carol female sings on lead");
+        Assert.DoesNotMatch(item, "  singer { c4 d e f | }");
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "editors", "vscode", "package.json")))
+            dir = dir.Parent;
+        return dir!.FullName;
+    }
+
     [Fact]
     public void AfterSingerInAScore_TheNamedSingersAreListed_AndNotAtTheTopLevel()
     {
