@@ -1931,7 +1931,7 @@ and is not sung — the voice says so once. (VSQX, VOCALOID's format, takes the 
 **The language of the words** is `japanese` unless the file says otherwise: `language english`
 on a line of its own for the whole file, or on a track, `lyrics en language english { … }`
 (the track's wins). The names are `japanese`, `english`,
-`chinese` and `korean`; another word is an error (LYS4038). The kana check is for Japanese words only.
+`chinese`, `korean` and `latin`; another word is an error (LYS4038). The kana check is for Japanese words only.
 
 **Who sings** is a top-level line of its own: `singer "neutrino/MERROW" on melody sings verse`,
 in that order. A score's `lyrics` row prints the words and sounds nothing; only a `singer` line

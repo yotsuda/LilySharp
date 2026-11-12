@@ -99,6 +99,11 @@ public static class InstrumentDefaults
             "horn" => (ClefType.Treble, 4),
             "trombone" => (ClefType.Bass, 3),
             "tuba" => (ClefType.Bass, 2),
+            // Asked for by an orchestral score and an anthem written to try the grammar
+            // (2026-11-12): each had a clef and a quoted sound instead, and no range check.
+            "timpani" => (ClefType.Bass, 3),
+            "organ-right" => (ClefType.Treble, 4),
+            "organ-left" or "organ-pedal" => (ClefType.Bass, 3),
             
             // Voice
             "soprano" => (ClefType.Treble, 4),
@@ -315,6 +320,8 @@ public static class InstrumentDefaults
         "trumpet" or "trumpet-c" => 56,
         "trombone" => 57,
         "tuba" => 58,
+        "timpani" => 47,
+        "organ-right" or "organ-left" or "organ-pedal" => 19,      // church organ
         "horn" => 60,
         "soprano" or "alto"
             or "tenor" or "baritone" or "voice-bass" => 52,
@@ -364,6 +371,9 @@ public static class InstrumentDefaults
         "horn" => "Horn",
         "trombone" => "Trombone",
         "tuba" => "Tuba",
+        "timpani" => "Timpani",
+        "organ-right" or "organ-left" => "Organ",
+        "organ-pedal" => "Pedal",
         "soprano" => "Soprano",
         "alto" => "Alto",
         "tenor" => "Tenor",
@@ -415,6 +425,9 @@ public static class InstrumentDefaults
         "horn" => (35, 77),             // B1 – F5 (written F♯2 – C6)
         "trombone" => (40, 77),         // E2 – F5
         "tuba" => (26, 65),             // D1 – F4
+        "timpani" => (38, 60),          // D2 – C4 (a 32″ drum's D to a piccolo drum's C)
+        "organ-right" or "organ-left" => (36, 96),   // C2 – C7, the manuals' 61 keys
+        "organ-pedal" => (36, 67),      // C2 – G4, the 32-note pedalboard (as written)
         "soprano" => (60, 84),          // C4 – C6
         "alto" => (53, 77),             // F3 – F5
         "tenor" => (48, 72),            // C3 – C5
@@ -490,6 +503,8 @@ public static class InstrumentDefaults
         "soprano-sax", "alto-sax", "tenor-sax", "baritone-sax",
         // Brass
         "trumpet", "trumpet-c", "horn", "trombone", "tuba",
+        // Timpani, and the organ's three staves
+        "timpani", "organ-right", "organ-left", "organ-pedal",
         // Voice ("voice-bass" because "bass" is the bass guitar; "baritone" the untrained man's
         // voice, G2–G4, for a song to sing and play yourself — owner's decision 2026-11-01)
         "soprano", "alto", "tenor", "baritone", "voice-bass",

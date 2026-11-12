@@ -1787,8 +1787,8 @@ public class StepRequestTests
         var (first, same) = Step($"language ‸japanese\n{LanguageBook}", +1, semitone: true);
         Assert.Equal($"language japanese\n{LanguageBook}", same);
         Assert.Contains("first", first.Message);
-        var (last, stays) = Step($"language ‸korean\n{LanguageBook}", -1, semitone: true);
-        Assert.Equal($"language korean\n{LanguageBook}", stays);
+        var (last, stays) = Step($"language ‸latin\n{LanguageBook}", -1, semitone: true);
+        Assert.Equal($"language latin\n{LanguageBook}", stays);
         Assert.Contains("last", last.Message);
     }
 

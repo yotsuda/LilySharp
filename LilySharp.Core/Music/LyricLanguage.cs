@@ -44,6 +44,10 @@ public static class LyricLanguage
         ("english", "en"),
         ("chinese", "zh"),
         ("korean", "ko"),
+        // The commonest language of sacred choral music (asked for by an anthem written to
+        // try the grammar, 2026-11-12). No engine Cantoria drives sings it: a voice asked to
+        // is told so, as for any language no installed voice sings.
+        ("latin", "la"),
     ];
 
     /// <summary>The names a score may write, in the order the editor offers them.</summary>

@@ -194,6 +194,22 @@ public class GrammarEvaluation2Tests
         => Assert.Contains(Said($"octave absolute\ntime 4/4\npart a {{ }}\nsection A {{ a {{ {music} }} }}\nform {{ A }}\nscore {{ staff a }}\n"),
             d => d.Message.Contains(says));
 
+    /// <summary>What an orchestra and a church choir asked for and had to spell by hand: the
+    /// timpani, the organ's three staves, and Latin words.</summary>
+    [Fact]
+    public void TimpaniOrganAndLatin_AreWritten()
+    {
+        string source = "octave absolute\ntime 4/4\npart s { instrument soprano  lyrics w }\npart t { instrument timpani }\n"
+            + "part o { instrument organ-right }\npart l { instrument organ-left }\npart p { instrument organ-pedal }\n"
+            + "section A { s { c''4 d'' e'' f'' | } t { d2 a,2 | } o { <c' e' g'>1 | } l { c1 | } p { c,1 | }\n"
+            + "  lyrics w language latin { Glo- ri- a De- | } }\nform { A }\nscore { staff s  lyrics w  staff t  staff o  staff l  staff p }\n";
+        Clean(source);
+        Assert.Equal((47, 19), (LilySharp.Core.Svg.Model.InstrumentDefaults.GetMidiProgram("timpani"), LilySharp.Core.Svg.Model.InstrumentDefaults.GetMidiProgram("organ-pedal")));
+        Assert.Equal("la", LilySharp.Core.Music.LyricLanguage.CodeOf("latin"));
+        // …and the timpani has a range for the range check to hold a note to.
+        Assert.Equal((38, 60), LilySharp.Core.Svg.Model.InstrumentDefaults.SoundingRange("timpani"));
+    }
+
     /// <summary>A section whose music changes the meter ends in THAT meter: three beats into a
     /// 4/4 bar is not "a whole bar" of the file's 3/4.</summary>
     [Fact]

@@ -83,7 +83,7 @@ export function fitsGender(voice: Pick<CantoriaVoice, 'gender'>, gender?: string
     return !gender || !voice.gender || voice.gender === gender;
 }
 
-const LANGUAGE_CODES: Record<string, string> = { japanese: 'ja', english: 'en', chinese: 'zh', korean: 'ko' };
+const LANGUAGE_CODES: Record<string, string> = { japanese: 'ja', english: 'en', chinese: 'zh', korean: 'ko', latin: 'la' };
 
 /** The answer of the chat's voice list (owner's request 2026-11-09, session 1202): the names a score can
  *  write, narrowed by provider, gender and language. As in the completion, a voice that does not state its
@@ -146,7 +146,7 @@ export function noVoiceGuide(cantoria: boolean): VoiceGuide {
         };
 }
 
-const LANGUAGE_NAMES: Record<string, string> = { ja: 'Japanese', en: 'English', zh: 'Chinese', ko: 'Korean' };
+const LANGUAGE_NAMES: Record<string, string> = { ja: 'Japanese', en: 'English', zh: 'Chinese', ko: 'Korean', la: 'Latin' };
 
 /** What the editor says when voices are installed and none sings the words' language (owner's
  *  request 2026-11-10): what they do sing, and what would sing this one — NEUTRINO and VOICEVOX sing
@@ -261,7 +261,7 @@ export function singerChoices(voices: readonly CantoriaVoice[], language: string
  *  decision 2026-11-12): a word before the gender or the voice that is neither a gender nor `sings`,
  *  and the space after it. Optional, and no group of its own: the readers of a singer line take
  *  the same groups with it or without. Not `\w`: a singer may be called ようこ. */
-export const SINGER_LANGUAGES = 'japanese|english|chinese|korean';
+export const SINGER_LANGUAGES = 'japanese|english|chinese|korean|latin';
 
 /** The language a singer line's head may say after the gender (`singer alice female japanese "…"`,
  *  owner's decisions 2026-11-12), and the space after it. Optional, no group of its own. */

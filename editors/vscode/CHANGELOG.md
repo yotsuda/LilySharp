@@ -4,6 +4,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **New words in the lists and the colours**: the instruments `timpani`, `organ-right`, `organ-left`, `organ-pedal`, and the language `latin`.
+- **Sharper messages**: `@ped`, `@atempo`, `@dolce`, `\times 2/3` and a mark on a phrase's name (`theme@mf`) each name what to write; a key changed in only some parts of a section is flagged; `riff | % |` is no longer an error.
 - **Import MusicXML or MIDI…**: the import command takes a `.mid` too (the file picker, and a right-click on a `.mid` in the Explorer). Tracks become parts with their names, sounds and words, drums a drum part; a played file is quantized to sixteenths and triplet eighths, and the warning lists what was read into it.
 - **No false "parts will not align" under a drum chord**: a bar of `<bd hh>4` chords was counted three times its length.
 - **Export as MIDI writes the singers**: each part's words on its own track, once a note and as sung (`は[わ]` is わ); a harmony singer (`up 3`, `octave -1`) as a track of its own with its notes and words; the voice's name on the track it sings.

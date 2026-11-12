@@ -801,6 +801,10 @@ Both hands write LilyPond's octaves: C3 is `c`, middle C `c'`, C5 `c''`.
 | `horn` | B1–F5 | `fis,` – `c'''` |
 | `trombone` | E2–F5 | `e,` – `f''` |
 | `tuba` | D1–F4 | `d,,` – `f'` |
+| `timpani` | D2–C4 | `d,` – `c'` |
+| `organ-right` | C2–C7 | `c,` – `c''''` |
+| `organ-left` | C2–C7 | `c,` – `c''''` |
+| `organ-pedal` | C2–G4 | `c,` – `g'` |
 | `soprano` | C4–C6 | `c'` – `c'''` |
 | `alto` | F3–F5 | `f` – `f''` |
 | `tenor` | C3–C5 | `c` – `c''` |
@@ -936,7 +940,7 @@ sings かん (the preview's voice and `lysc wav --singer`); `大[おお]空[ぞ�
 おおぞら. Write the reading in kana. The brackets must touch the word — `漢 [かん]` is an error
 (LYS4036) — and a kanji without a reading prints but is not sung (the voice says so once).
 Words are `japanese` unless a line `language english` says so for the file, or a track does:
-`lyrics en language english { … }` (the names: japanese english chinese korean).
+`lyrics en language english { … }` (the names: japanese english chinese korean latin — Latin is for the page and the check: no voice Cantoria drives sings it yet).
 **Who sings is a top-level line of its own**: `singer "neutrino/MERROW" on melody sings words`. A `lyrics` row only prints; only a `singer` line sings, whether the page shows the words or not. The voice is `"engine/name"`, `male` or `female` (each machine's default voice of that gender), a gender before a name (`singer male "neutrino/SOMA" sings words`), or nothing (`singer sings words`: the part's own default voice). The order is fixed. **How the voice sings** may follow, on the same line: `with NAME VALUE NAME VALUE …` — `singer "diffsinger/Nishiren/2P" on melody sings words with breathiness 3 gender -0.2`. The names are the voice's own engine's (the editor lists what the line's voice takes, with each one's range); a value is a number, a word or a string; no commas. A name the voice does not take is not sung, and said. Leave `with` out and the voice sings as it does by itself — write it only for what you want changed. **Inside the music** the same names go on a note: `c4@sing(breathiness 6)` holds from that note on, as a dynamic does, until the next `@sing` for that name; `@sing(breathiness default)` gives it back to the singer line's value; `g2@sing(breathiness to 9)` arrives at 9 with that note, gliding from where the value before was written. Several settings in one: `@sing(breathiness 6 tension -2)`. Leave out `on PART` when the file has one part or every score prints the words under one part; leave out the name for unnamed lyrics. Each line is one voice, and several lines with the same words on one part sing it together; a part takes one set of words (LYS4044). A `singer` line inside a score replaces, in that score, the top level's lines of the same named singer (with no name: every line for its part), so one score can sing Japanese words and another English ones. A staff with no `sounds` is its singer's voice if it has one and its instrument if not; `staff m sounds both` (or `voice`, `instrument`) says so in that score, and `staff m hidden` sounds without being drawn. A part with no `staff` in the score does not sound.
 
 ```

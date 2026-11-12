@@ -364,7 +364,7 @@ SingerGender   = 'male' | 'female' ;
                     stand together — a verse in Japanese, a chorus in English — and two sets in
                     one section are LYS4044 (the same voice twice on them is warned about, LYS4053); a voice
                     two parts share is LYS4045, words no lyrics defines LYS4042. *)
-LanguageName   = 'japanese' | 'english' | 'chinese' | 'korean' ;
+LanguageName   = 'japanese' | 'english' | 'chinese' | 'korean' | 'latin' ;
                  (* What the lyrics are written in: a fact of the words, not of who sings them.
                     A track's own 'language' (LyricsBlock) wins, nothing written is japanese, the
                     last line wins if the file repeats it. Another word is an error (LYS4038).

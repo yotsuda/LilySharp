@@ -446,7 +446,7 @@
             "match": "^[ \\t]*(singer)\\b((?:\"(?:[^\"\\\\\\n]|\\\\.)*\"|(?!\\bsings\\b)[^\\n\"/])*?)\\b(on)[ \\t]+([A-Za-z_][A-Za-z0-9_-]*)(?:[ \\t]+(sings)\\b(?:[ \\t]+(?!(?:up|down|octave|in|with)\\b)([A-Za-z_][A-Za-z0-9_-]*))?)?",
             "captures": {
                 "1": { "name": "keyword.control.lilysharp" },
-                "2": { "patterns": [ { "include": "#comments" }, { "include": "#strings" }, { "match": "\\b(?:male|female)\\b", "name": "constant.language.lilysharp" }, { "match": "\\b(?:japanese|english|chinese|korean)\\b", "name": "constant.language.lilysharp" } ] },
+                "2": { "patterns": [ { "include": "#comments" }, { "include": "#strings" }, { "match": "\\b(?:male|female)\\b", "name": "constant.language.lilysharp" }, { "match": "\\b(?:japanese|english|chinese|korean|latin)\\b", "name": "constant.language.lilysharp" } ] },
                 "3": { "name": "keyword.control.lilysharp" },
                 "4": { "name": "entity.name.voice.lilysharp" },
                 "5": { "name": "keyword.control.lilysharp" },
@@ -458,7 +458,7 @@
             "match": "^[ \\t]*(singer)\\b((?:\"(?:[^\"\\\\\\n]|\\\\.)*\"|[^\\n\"/])*?)\\b(sings)\\b(?:\\s+(?!on\\b)([A-Za-z_][A-Za-z0-9_-]*))?(?:\\s+(on)\\s+([A-Za-z_][A-Za-z0-9_-]*))?",
             "captures": {
                 "1": { "name": "keyword.control.lilysharp" },
-                "2": { "patterns": [ { "include": "#comments" }, { "include": "#strings" }, { "match": "\\b(?:male|female)\\b", "name": "constant.language.lilysharp" }, { "match": "\\b(?:japanese|english|chinese|korean)\\b", "name": "constant.language.lilysharp" } ] },
+                "2": { "patterns": [ { "include": "#comments" }, { "include": "#strings" }, { "match": "\\b(?:male|female)\\b", "name": "constant.language.lilysharp" }, { "match": "\\b(?:japanese|english|chinese|korean|latin)\\b", "name": "constant.language.lilysharp" } ] },
                 "3": { "name": "keyword.control.lilysharp" },
                 "4": { "patterns": [ { "match": "^(?:hum|solfege)$", "name": "constant.language.lilysharp" }, { "match": "^.+$", "name": "entity.name.voice.lilysharp" } ] },
                 "5": { "name": "keyword.control.lilysharp" },
@@ -475,7 +475,7 @@
         },
         "language-directive": {
             "comment": "The top-level `language NAME` (Music.LyricLanguage): anchored at the start of a line, as `capo` is, for `language` is not a reserved word.",
-            "match": "^[ \\t]*(language)\\s+(japanese|english|chinese|korean)\\b",
+            "match": "^[ \\t]*(language)\\s+(japanese|english|chinese|korean|latin)\\b",
             "captures": {
                 "1": { "name": "keyword.other.lilysharp" },
                 "2": { "name": "constant.language.lilysharp" }

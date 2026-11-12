@@ -590,7 +590,7 @@ public class LyricLanguageTests
     [Fact]
     public void TheNames_AreTheLowerCaseVocabulary()
     {
-        Assert.Equal(new[] { "japanese", "english", "chinese", "korean" }, LyricLanguage.Names);
+        Assert.Equal(new[] { "japanese", "english", "chinese", "korean", "latin" }, LyricLanguage.Names);
         Assert.Equal("ja", LyricLanguage.CodeOf("japanese"));
         Assert.Null(LyricLanguage.CodeOf("Japanese"));
     }
