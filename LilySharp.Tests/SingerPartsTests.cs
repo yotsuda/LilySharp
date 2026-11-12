@@ -245,6 +245,20 @@ public class SingerPartsTests
         Assert.Empty(Named("singer carol female sings on lead up 3 in Chorus"));
     }
 
+    /// <summary>Owner's report 2026-11-12: <c>lyrics solfege</c> under <c>staff alice</c> warned
+    /// that "part alice__2" did not list it — a part the writer neither wrote nor can add to.</summary>
+    [Fact]
+    public void ARowUnderASingersStaff_IsNotAskedOfThePartLilySharpMade()
+    {
+        var (_, tree, said) = Expanded(Book(Band, "score { staff lead  lyrics words  staff carol  lyrics carol  lyrics solfege }"));
+        Assert.Empty(said.Select(d => d.Message));
+        Assert.Empty(SingerParts.OwnOf(SemanticValidation.Run(tree), tree.Text).Select(d => d.Message));
+
+        // …while a part the file writes is still asked.
+        var plain = SyntaxTree.Parse(Book(Band, "score { staff lead  lyrics solfege }"));
+        Assert.Contains(SemanticValidation.Run(plain), d => d.Code == DiagnosticCodes.TrackNotListedByPart);
+    }
+
     [Fact]
     public void ASingerTheScoresOwnLinesLeaveOut_IsSaidAtTheItem()
     {

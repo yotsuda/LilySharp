@@ -127,6 +127,19 @@ public static class LyricSinger
         return person + ScopedMark + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    /// <summary>Whether <paramref name="part"/> is a part made of a singer's lines
+    /// (<see cref="PartOfSinger"/>: her name, the mark, a number) and not one the file writes.</summary>
+    public static bool IsMadePart(SyntaxNode node, string part)
+    {
+        int at = part.LastIndexOf(ScopedMark, StringComparison.Ordinal);
+        if (at <= 0 || at + ScopedMark.Length >= part.Length || !part[(at + ScopedMark.Length)..].All(char.IsAsciiDigit))
+            return false;
+        while (node.Parent != null)
+            node = node.Parent;
+        string person = part[..at];
+        return node.SitesOfKinds(SyntaxKind.SingerDeclaration).OfType<SingerDeclarationSyntax>().Any(l => l.PersonToken?.Text == person);
+    }
+
     /// <summary>What stands between a singer's name and a score's number in the name of a part
     /// made for that score alone (<see cref="PartOfItem"/>).</summary>
     public const string ScopedMark = "__";

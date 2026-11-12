@@ -243,6 +243,12 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         var listed = LyricBindings.TracksOfPart(root, part);
         if (listed.Count == 0 || listed.Contains(track))
             return;
+        // The staff of what a singer sings is a part Lily# makes (Editing.SingerParts): its
+        // header is not the writer's to add a track to, and its name is not the writer's to
+        // read (owner's report 2026-11-12: `lyrics solfege` under `staff alice` warned that
+        // "part alice__2" did not list it). Any row may stand under it.
+        if (LyricSinger.IsMadePart(root, part))
+            return;
         _diagnostics.Warning(at, DiagnosticCodes.TrackNotListedByPart, written == null
             ? $"Part '{part}' names {string.Join(", ", listed.Select(t => $"'{t}'"))}, not the unnamed lyrics."
             : $"Part '{part}' does not list lyrics '{written}'. If these are its words too, add 'lyrics {written}' to the part.");
