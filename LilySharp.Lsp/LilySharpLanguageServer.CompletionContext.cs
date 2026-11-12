@@ -526,6 +526,10 @@ public sealed partial class LilySharpLanguageServer
         if (stack.Count == 0
             && System.Text.RegularExpressions.Regex.IsMatch(line, @"^[ \t]*language[ \t]+\w*$"))
             return true;
+        // A singer line's own (`singer alice female language ▮`, 2026-11-12): before its `sings`.
+        if (TakesASingerLine(stack)
+            && System.Text.RegularExpressions.Regex.IsMatch(line, @"^[ \t]*singer[ \t]+(?:(?!sings\b)(?:""[^""]*""|[^\s""{}]+)[ \t]+)*language[ \t]+\w*$"))
+            return true;
         return !stack.Exists(o => o.IsScoreOpener || o.Frame.Name == "score" || o.Frame.Prefix == "score")
             && System.Text.RegularExpressions.Regex.IsMatch(line, @"(?:^|[\s{}])lyrics(?:[ \t]+(?:\w+|""[^""]*""(?:[ \t]*,[ \t]*""[^""]*"")*))*?[ \t]+language[ \t]+\w*$");
     }
@@ -583,7 +587,7 @@ public sealed partial class LilySharpLanguageServer
         var line = System.Text.RegularExpressions.Regex.Match(text[lineStart..end],
             // The singer's own name may stand first (`singer alice female "…" sings`, 2026-11-12): a word
             // that is neither a gender nor `sings`.
-            @"^[ \t]*singer(?<voice>(?:[ \t]+(?!(?:male|female|sings)\b)[\p{L}_][\w-]*)?(?:[ \t]+(?:male|female))?(?:[ \t]+""[^""]*"")?)(?:[ \t]+(?<sings>sings)(?:[ \t]+(?<w>[^\s{}""]+))*)?[ \t]+$");
+            @"^[ \t]*singer(?<voice>(?:[ \t]+(?!(?:male|female|sings)\b)[\p{L}_][\w-]*)?(?:[ \t]+(?:male|female))?(?:[ \t]+""[^""]*"")?(?:[ \t]+language[ \t]+\w+)?)(?:[ \t]+(?<sings>sings)(?:[ \t]+(?<w>[^\s{}""]+))*)?[ \t]+$");
         if (!line.Success)
             return null;
         if (!line.Groups["sings"].Success)

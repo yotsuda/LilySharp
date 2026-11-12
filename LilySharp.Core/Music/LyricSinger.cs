@@ -310,10 +310,27 @@ public static class LyricSinger
                 voice = target;
                 part = parts.FirstOrDefault(p => LyricBindings.VoicesOfPart(root, p).Contains(target));
             }
-            // No name written: the track the part names (§10). Several is an error, no name none.
+            // No name written: the track the part names (§10); of several, see below.
             if (declaration.TrackToken == null && part != null && LyricBindings.TracksOfPart(root, part) is [var own])
                 track = own;
             lines.Add(new Line(declaration.Singer, track, part, voice, declaration, score, declaration.PersonToken?.Text));
+        }
+        // …or, of several the part names, the ONE in the singer's language — the line's own
+        // `language`, else the file's (owner's decision 2026-11-12: "alice sings lead, and lead
+        // names its English words: the line need not say en"). None or several in it: an error,
+        // said by the validator (LYS4054), and the unnamed track meanwhile.
+        if (lines.Any(l => l.Node.TrackToken == null && l.Part != null && l.Track == SyntaxFacts.UnnamedLyricsName))
+        {
+            var languageOf = LyricLanguage.ReaderOf(root);
+            for (int i = 0; i < lines.Count; i++)
+            {
+                var line = lines[i];
+                if (line.Node.TrackToken != null || line.Part == null || LyricBindings.TracksOfPart(root, line.Part) is not { Count: > 1 } several)
+                    continue;
+                string language = LyricLanguage.CodeOf(line.Node.LanguageToken?.Text) ?? languageOf(null);
+                if (several.Where(t => languageOf(t) == language).ToList() is [var fits])
+                    lines[i] = line with { Track = fits };
+            }
         }
         // Lines of one name are one singer: the voice is said on one of them and is the others' too.
         for (int i = 0; i < lines.Count; i++)

@@ -31,6 +31,9 @@ poet "Poet"             // optional: the left end of the composer's line (\heade
                         // (`staff SINGER` is the staff of what that singer sings; `lyrics SINGER` the words she sings.
                         //  A score prints what it says: either one, or both. Lines of one name are one singer; the
                         //  voice is written on one of them. Do not give a singer a part's name.)
+                        // A PART WITH WORDS IN TWO LANGUAGES (`lyrics en  lyrics jp`): a singer line that names no
+                        // words sings the ones in the file's language; `singer alice female language japanese sings
+                        // on lead` sings the Japanese ones. (`language NAME` stands just before `sings`.)
                         // A TEXT FOR THE PAGE, written as Markdown in a fence at the top level: the
                         // lines between ```md and ``` are printed under the title (paragraphs, **bold**,
                         // *italic*); ```md end prints them under the last system. Nothing between the

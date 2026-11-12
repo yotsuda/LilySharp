@@ -149,13 +149,32 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
         }
     }
 
+    /// <summary>Where the head's <c>language</c> word stands (<c>singer alice female language
+    /// japanese sings …</c>), or -1: the word before <c>sings</c> with a word after it that is not
+    /// <c>sings</c> — the last two of the head.</summary>
+    private int LanguageIndex
+    {
+        get
+        {
+            int sings = SingsIndex;
+            return sings >= 3 && GetChild(sings - 2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text: Music.LyricLanguage.Keyword } ? sings - 2 : -1;
+        }
+    }
+
+    /// <summary>The name of the language the singer sings (<c>language japanese</c> in the line's
+    /// head, owner's decision 2026-11-12), or null: which of a part's several lyrics a line that
+    /// names none sings.</summary>
+    public SyntaxTokenNode? LanguageToken => LanguageIndex is var i and >= 0 ? (SyntaxTokenNode)GetChild(i + 1)! : null;
+
     /// <summary>The one or two bare words between <c>singer</c> and <c>sings</c> (or the voice's string).</summary>
     private (SyntaxTokenNode? First, SyntaxTokenNode? Second) HeadWords
     {
         get
         {
-            var first = GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } a && a.Text != "sings" ? a : null;
-            var second = first != null && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } b && b.Text != "sings" ? b : null;
+            // …up to the `language NAME` clause, whose two words are the clause's (LanguageToken).
+            int stop = LanguageIndex is var l and >= 0 ? l : int.MaxValue;
+            var first = 1 < stop && GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } a && a.Text != "sings" ? a : null;
+            var second = first != null && 2 < stop && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } b && b.Text != "sings" ? b : null;
             return (first, second);
         }
     }

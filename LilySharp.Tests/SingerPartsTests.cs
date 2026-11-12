@@ -301,6 +301,64 @@ public class SingerPartsTests
         Assert.Empty(said);
     }
 
+    /// <summary>Owner's decisions 2026-11-12: "alice sings lead, and lead names its English words:
+    /// the line need not say en" — of a part's several lyrics a line that names none sings the
+    /// one in the singer's language, the line's own <c>language</c> or the file's.</summary>
+    [Fact]
+    public void OfAPartsSeveralLyrics_ALineThatNamesNone_SingsTheOneInItsLanguage()
+    {
+        string Bilingual(string singers) => $$"""
+            octave relative
+            time 4/4
+            language english
+            part lead { instrument alto  lyrics en  lyrics jp  lyrics fr }
+            section Verse {
+              lead { e'4 e d c | }
+              lyrics en { one two three four | }
+              lyrics jp language japanese { あ さ の み | }
+              lyrics fr { un deux trois quatre | }
+            }
+            form { Verse }
+            {{singers}}
+            score { staff lead  lyrics en }
+            """;
+        string TrackOf(string singers)
+        {
+            var tree = SyntaxTree.Parse(Bilingual(singers));
+            Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+            return LilySharp.Core.Music.LyricSinger.LinesOf(tree.GetRoot())[0].Track;
+        }
+        IEnumerable<Diagnostic> Ambiguous(string singers)
+            => SemanticValidation.Run(SyntaxTree.Parse(Bilingual(singers))).Where(d => d.Code == DiagnosticCodes.SingerWordsAmbiguous);
+
+        // The line's own language: the one track in it.
+        Assert.Equal("jp", TrackOf("singer alice female language japanese sings on lead"));
+        Assert.Empty(Ambiguous("singer alice female language japanese sings on lead"));
+        Assert.Equal("jp", TrackOf("singer female \"neutrino/SEVEN\" language japanese sings on lead"));
+        Assert.Equal("jp", TrackOf("singer language japanese sings on lead"));
+        // A name written is the name, whatever the language.
+        Assert.Equal("en", TrackOf("singer alice female language japanese sings en on lead"));
+
+        // No language on the line: the file's — and here two tracks are in it (en, fr), so the line must say.
+        var two = Assert.Single(Ambiguous("singer alice female sings on lead"));
+        Assert.Contains("2 of them are in english, the file's language", two.Message);
+        Assert.Contains("say the singer's language", two.Message);
+        // A language no track is in.
+        var none = Assert.Single(Ambiguous("singer alice female language korean sings on lead"));
+        Assert.Contains("none of them is in korean, the language this line says", none.Message);
+
+        // A word that is no language.
+        var tree2 = SyntaxTree.Parse(Bilingual("singer alice female language klingon sings on lead"));
+        Assert.Contains(tree2.Diagnostics, d => d.Code == DiagnosticCodes.LyricLanguageUnknown);
+        // …and the head's other readers are not confused by the clause.
+        var node = SyntaxTree.Parse(Bilingual("singer alice female \"x/y\" language japanese sings on lead")).GetRoot().DescendantNodes<SingerDeclarationSyntax>().Single();
+        Assert.Equal("alice", node.PersonToken?.Text);
+        Assert.Equal("female", node.GenderToken?.Text);
+        Assert.Equal("x/y", node.Singer);
+        Assert.Equal("japanese", node.LanguageToken?.Text);
+        Assert.Null(node.TrackToken);
+    }
+
     [Fact]
     public void ASingerTheScoresOwnLinesLeaveOut_IsSaidAtTheItem()
     {

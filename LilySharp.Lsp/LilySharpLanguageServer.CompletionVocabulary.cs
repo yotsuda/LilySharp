@@ -2487,6 +2487,31 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { Items = [.. list.Items, .. singers] };
     }
 
+    /// <summary>After a singer line's voice (<c>singer alice female ▮</c>): <c>sings</c>, and —
+    /// until the line says one — <c>language</c>, the language the singer sings: which of a
+    /// part's several lyrics a line that names none sings (owner's decision 2026-11-12).</summary>
+    private static CompletionItem[] SingerVoiceItems(string text, int offset)
+    {
+        int end = Math.Clamp(offset, 0, text.Length);
+        int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
+        if (System.Text.RegularExpressions.Regex.IsMatch(text[lineStart..end], @"[ \t]language[ \t]+\w+[ \t]+$"))
+            return [SingsKeywordItem()];
+        return
+        [
+            SingsKeywordItem(),
+            new CompletionItem
+            {
+                Label = LilySharp.Core.Music.LyricLanguage.Keyword,
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = LilySharp.Core.Music.LyricLanguage.Keyword + " $0",
+                Detail = "The language this singer sings: of a part's several lyrics, the one in it",
+                SortText = "1",
+                Command = new Command { Title = "Suggest language", CommandIdentifier = "editor.action.triggerSuggest" },
+            },
+        ];
+    }
+
     /// <summary>The <c>sings</c> of a <c>singer</c> line, the list of the words opening after it.</summary>
     private static CompletionItem SingsKeywordItem() => new()
     {

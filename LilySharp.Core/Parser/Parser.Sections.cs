@@ -236,10 +236,31 @@ internal sealed partial class Parser
                     // singer NAME male "…" sings: the singer's own name before the gender.
                     // …and a line that forgot its `sings` (`singer alice female on lead`, `singer alice
                     // on lead`) is still a singer line, to be told so — not music at the top level.
+                    || SingsOnTheLine()
                     || (Peek(2) is { Kind: SyntaxKind.Identifier } gender && Music.LyricSinger.Genders.Contains(gender.Text))
                     || Peek(2)?.Text == "on"
                     || (Peek(2) is { Kind: SyntaxKind.Identifier, Text: not "sings" }
                         && (Peek(3)?.Text == "sings" || Peek(3)?.Kind == SyntaxKind.StringLiteral)))));
+
+    /// <summary>Whether <c>sings</c> stands among the next words of this line: a singer line by
+    /// its verb, whatever the head before it holds (a name, a gender, a voice, a language).</summary>
+    private bool SingsOnTheLine()
+    {
+        for (int ahead = 1; ahead <= 7 && !BeginsLine(ahead) && Peek(ahead) is { } token; ahead++)
+        {
+            if (token.Kind == SyntaxKind.Identifier && token.Text == "sings")
+                return true;
+            if (token.Kind is SyntaxKind.OpenBrace or SyntaxKind.CloseBrace or SyntaxKind.EndOfFile)
+                return false;
+        }
+        return false;
+    }
+
+    /// <summary><c>language NAME</c> in a singer line's head: the word with a bare word after it on
+    /// the same line (a singer may still be called language: <c>singer language sings …</c>).</summary>
+    private bool IsSingerLanguage()
+        => Current.Text == Music.LyricLanguage.Keyword && !BeginsLine(1)
+            && Peek(1) is { Kind: SyntaxKind.Identifier, Text: not ("sings" or "on") };
 
     /// <summary>Parses <c>singer [S] sings [NAME] [on PART]</c>; the order is fixed.</summary>
     /// <param name="endsItsLine">At the file's top level a singer line is the whole of its line:
@@ -255,11 +276,11 @@ internal sealed partial class Parser
             // singer [NAME] [male|female] ["voice"]: a word that is no gender is the singer's own
             // name (owner's decision 2026-11-12: a singer is somebody, and a score prints what
             // somebody sings); with two words the first is the name and the second the gender.
-            if (Check(SyntaxKind.Identifier) && Peek(1) is { Kind: SyntaxKind.Identifier, Text: not ("sings" or "on") })
+            if (!IsSingerLanguage() && Check(SyntaxKind.Identifier) && Peek(1) is { Kind: SyntaxKind.Identifier, Text: not ("sings" or "on" or Music.LyricLanguage.Keyword) })
                 tokens.Add(Advance());
-            else if (Check(SyntaxKind.Identifier) && !Music.LyricSinger.Genders.Contains(Current.Text.ToLowerInvariant()))
+            else if (!IsSingerLanguage() && Check(SyntaxKind.Identifier) && !Music.LyricSinger.Genders.Contains(Current.Text.ToLowerInvariant()))
                 tokens.Add(Advance());
-            bool gendered = Check(SyntaxKind.Identifier) && Current.Text is not ("sings" or "on");
+            bool gendered = !IsSingerLanguage() && Check(SyntaxKind.Identifier) && Current.Text is not ("sings" or "on");
             if (gendered)
             {
                 var gender = Advance();
@@ -269,6 +290,18 @@ internal sealed partial class Parser
             if (Check(SyntaxKind.StringLiteral))
             {
                 tokens.Add(ParseSingerName(allowEmpty: gendered));
+            }
+            // `language NAME`: the language the singer sings (owner's decision 2026-11-12) — which
+            // of a part's several lyrics a line that names none sings (Music.LyricSinger.LinesOf).
+            if (IsSingerLanguage())
+            {
+                tokens.Add(AdvanceAsWord());
+                var name = Advance();
+                if (Music.LyricLanguage.CodeOf(name.Text) == null)
+                    _diagnostics.Error(new TextSpan(_textPosition - name.FullWidth + name.LeadingTriviaWidth, Math.Max(1, name.Width)),
+                        DiagnosticCodes.LyricLanguageUnknown,
+                        $"'{name.Text}' is no language Lily# knows: {string.Join(", ", Music.LyricLanguage.Names)}.");
+                tokens.Add(name);
             }
         }
         if (Check(SyntaxKind.Identifier) && Current.Text == "sings")

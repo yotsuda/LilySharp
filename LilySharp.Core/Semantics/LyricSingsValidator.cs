@@ -279,10 +279,20 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                     + person.Text + "' with no 'up', 'down' or 'octave'.)");
             var at = node.TrackToken ?? node.SingsKeyword;
             var own = line.Part is { } sungPart ? LyricBindings.TracksOfPart(root, sungPart) : [];
-            if (node.TrackToken == null && own.Count > 1)
+            // Of several the part names, the one in the singer's language is sung (LyricSinger.LinesOf);
+            // with none or several in it, the line has to say which.
+            if (node.TrackToken == null && own.Count > 1 && !own.Contains(line.Track))
             {
+                var languageOf = LyricLanguage.ReaderOf(root);
+                string language = LyricLanguage.CodeOf(node.LanguageToken?.Text) ?? languageOf(null);
+                string name = LyricLanguage.Names.FirstOrDefault(n => LyricLanguage.CodeOf(n) == language) ?? language;
+                int fitting = own.Count(t => languageOf(t) == language);
                 _diagnostics.Error(at.Span, DiagnosticCodes.SingerWordsAmbiguous,
-                    $"'{line.Part}' names several lyrics ({string.Join(", ", own)}): say which, 'singer sings {own[0]} on {line.Part}'.");
+                    $"'{line.Part}' names several lyrics ({string.Join(", ", own)}), and "
+                    + (fitting == 0 ? $"none of them is in {name}" : $"{fitting} of them are in {name}")
+                    + (node.LanguageToken != null ? ", the language this line says" : ", the file's language")
+                    + $": say which, 'singer sings {own[0]} on {line.Part}'"
+                    + (node.LanguageToken == null ? ", or say the singer's language before 'sings', 'singer language japanese sings on " + line.Part + "'." : "."));
                 continue;
             }
             // A name the part lists and no block defines is already said at the part (LYS1007).

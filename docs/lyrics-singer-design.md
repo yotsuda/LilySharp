@@ -159,7 +159,11 @@ score { staff sop  lyrics words  staff alt  lyrics words  staff ten  lyrics mw }
 - `lyrics NAME` in a `part { }` has no braces of its own. It names a track and defines nothing, so
   section 3's refusal stays for a `lyrics` with a body. A part may name several tracks, one statement each.
 - A `singer … sings on PART` with no name sings the track the part names. Where the part names several,
-  leaving the name out is an error (LYS4054). Where it names none, it is the unnamed track, as today.
+  it sings the ONE in the singer's language — the line's own (`singer alice female language japanese
+  sings on lead`, a clause of the head before `sings`), else the file's (owner's decision 2026-11-12:
+  "alice sings lead, and lead names its English words; the line need not say en" — and not the first
+  listed: the language that fits). None or several in that language is an error (LYS4054), which says
+  the language it looked for. Where the part names none, it is the unnamed track, as today.
 - Naming a track a part does not list, on a `singer` line or on a row for that part, is a warning
   (LYS4055), and only for a part that lists any. `hum`, `solfege` and an unnamed row count as tracks
   here. Another score singing other words is written by listing both tracks.

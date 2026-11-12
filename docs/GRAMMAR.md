@@ -310,7 +310,11 @@ SingerSetting  = Word , { '.' , Word } , ( [ '-' ] , Number | Word | String ) ;
                     'with' and after it the voice's own SETTINGS, each a name and a value, to the
                     end of the line: the names are the voice's ENGINE's, so any bare word names
                     one — a word Lily# keeps for itself too. *)
-SingerValue    = [ SingerName ] , ( String | SingerGender , [ String ] ) | SingerName ;
+SingerValue    = ( [ SingerName ] , ( String | SingerGender , [ String ] ) | SingerName ) , [ 'language' , LanguageName ]
+               | 'language' , LanguageName ;
+                 (* 'language NAME' before 'sings': the language the singer sings. Of a part that
+                    names SEVERAL lyrics, a line that names none sings the one in that language —
+                    the line's own, else the file's (2026-11-12). None or several in it: LYS4054. *)
 SingerName     = Identifier ;   (* the singer's OWN name: a word that is no gender, or the
                                    first of two words. Lines of one name are one singer — the
                                    voice said on one is the others' too — and a score prints

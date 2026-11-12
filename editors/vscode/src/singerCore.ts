@@ -462,7 +462,7 @@ export function parseVoiceSampleKey(key: string): { id: string; language?: strin
  */
 export function singerLineOf(line: string): { voice: string; askColumn: number; sing: Record<string, number | string>; withAt: number } | undefined {
     const code = line.split('//')[0];
-    const head = new RegExp(String.raw`^([ \t]*singer[ \t]+${SINGER_NAME})(?:(male|female)(?![\w-])[ \t]*)?(?:"([^"]*)")?`).exec(code);
+    const head = new RegExp(String.raw`^([ \t]*singer[ \t]+${SINGER_NAME})(?:(male|female)(?![\w-])[ \t]*)?(?:"([^"]*)")?(?:[ \t]*language[ \t]+[A-Za-z]+)?`).exec(code);
     if (!head || !/(?<![\w-])sings(?![\w-])/.test(code.replace(/"[^"]*"/g, '""'))) { return undefined; }
     const quote = code.indexOf('"', head[1].length);
     const askColumn = head[3] !== undefined && quote >= 0 ? quote + 1 : head[1].length + (head[2]?.length ?? 0);
@@ -792,7 +792,7 @@ export function singMarkSlot(before: string): { kind: 'name'; written: string[] 
 export function singersWritten(text: string): string[] {
     const found: string[] = [];
     for (const line of text.split('\n')) {
-        const m = new RegExp(String.raw`^[ \t]*singer[ \t]+${SINGER_NAME}(?:(male|female)[ \t]+)?(?:"([^"]*)")?[ \t]*sings(?![\w-])`).exec(line.split('//')[0]);
+        const m = new RegExp(String.raw`^[ \t]*singer[ \t]+${SINGER_NAME}(?:(male|female)[ \t]+)?(?:"([^"]*)")?(?:[ \t]*language[ \t]+[A-Za-z]+)?[ \t]*sings(?![\w-])`).exec(line.split('//')[0]);
         if (m) { const who = m[2] || m[1] || ''; if (!found.includes(who)) { found.push(who); } }
     }
     return found;
