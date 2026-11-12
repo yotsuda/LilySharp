@@ -4003,10 +4003,19 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
         const backend = engine?.backend instanceof CantoriaExtensionBackend ? engine.backend : undefined;
         if (!backend) { return undefined; }
         // The line's voice: the name it writes, else the gender it says, else the default voice.
+        // ⚠️ As the score's own voice is found (VoiceRenderer): by the words' language and the part's
+        // gender too, or a line that names no voice lists another voice's settings than the one
+        // that sings it.
         const named = /^[ \t]*singer[ \t]+(?:(male|female)[ \t]+)?(?:"([^"]*)")?/.exec(before);
+        const lineText = document.lineAt(position.line).text;
+        const asked = new vscode.Position(position.line, singerLanguageColumn(lineText, singerLineOf(lineText)?.askColumn ?? position.character));
+        const where = client && clientReady ? await client.sendRequest<{ Language?: string | null; Gender?: string | null }>('lilysharp/singerSlot',
+            { textDocument: { uri: document.uri.toString() }, offset: document.offsetAt(asked) }).then(s => s, () => undefined) : undefined;
         let taken: SingParameter[];
+        let voice: string;
         try {
-            taken = await backend.parameters(await backend.voiceName(named?.[2] || named?.[1] || null));
+            voice = await backend.voiceName(named?.[2] || named?.[1] || null, where?.Language ?? undefined, where?.Gender);
+            taken = await backend.parameters(voice);
         } catch (e) {
             outputChannel.appendLine(`singer: the voice's settings could not be listed — ${String(e)}`);
             return undefined;
@@ -4022,17 +4031,19 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
         }
         if (slot.kind === 'with') {
             if (taken.length === 0) { return undefined; }
-            const item = new vscode.CompletionItem('with', vscode.CompletionItemKind.Keyword);
-            item.detail = `How the voice sings: ${taken.map(p => p.name).join(', ')}`;
+            // Whose settings they are is said: a line that names no voice sings with a default one.
+            const item = new vscode.CompletionItem({ label: 'with', description: voice }, vscode.CompletionItemKind.Keyword);
+            item.detail = `How ${voice} sings: ${taken.map(p => p.name).join(', ')}`;
             item.insertText = 'with ';
             item.sortText = '~with';     // after what the line still needs (`on`)
             item.command = { command: 'editor.action.triggerSuggest', title: 'List the voice\'s settings' };
             return [item];
         }
         return taken.filter(p => !slot.written.includes(p.name)).map((p, i) => {
-            const item = new vscode.CompletionItem(p.name, vscode.CompletionItemKind.Property);
+            const item = new vscode.CompletionItem({ label: p.name, description: voice }, vscode.CompletionItemKind.Property);
             item.detail = singParameterDetail(p);
             item.insertText = p.name + ' ';
+            item.filterText = p.name;
             item.sortText = String(i).padStart(3, '0');
             return item;
         });

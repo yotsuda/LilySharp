@@ -912,7 +912,7 @@ describe('a singer line\'s settings', () => {
     it('are the voice\'s own to list, and what it does not take is said as a warning', () => {
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(ext, /registerCompletionItemProvider\(\{ language: 'lilysharp' \}, singerSettingCompletion, ' '\)/);
-        assert.match(ext, /taken = await backend\.parameters\(await backend\.voiceName\(named\?\.\[2\] \|\| named\?\.\[1\] \|\| null\)\);/);
+        assert.match(ext, /voice = await backend\.voiceName\(named\?\.\[2\] \|\| named\?\.\[1\] \|\| null, where\?\.Language \?\? undefined, where\?\.Gender\);\s*taken = await backend\.parameters\(voice\);/);
         assert.match(ext, /return taken\.filter\(p => !slot\.written\.includes\(p\.name\)\)\.map\(/);
         assert.match(ext, /for \(const note of v\.notes \?\? \[\]\) \{ tellSingerSetting\(note\); \}/);
         assert.match(ext, /void vscode\.window\.showWarningMessage\(`Lily#: \$\{text\}`\);/);
@@ -1145,5 +1145,23 @@ describe('the step keys on a singer line\'s gender', () => {
     it('leaves the word to the server before it looks for a voice to step', () => {
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(ext, /if \(onSingerGender\(doc\.lineAt\(line\)\.text, editor\.selection\.active\.character\)\) \{ return false; \}\s*const at = singerValueAt\(/);
+    });
+});
+
+// Owner's report 2026-11-12: after `with` the list was transpose and support, where breathiness
+// and the rest were looked for. The list is the settings of the voice the LINE sings with, and it
+// says which voice that is.
+describe('whose settings a singer line lists', () => {
+    const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+
+    it('finds the line\'s voice as the score\'s own is found: by the words\' language and the part\'s gender too', () => {
+        assert.match(ext, /voice = await backend\.voiceName\(named\?\.\[2\] \|\| named\?\.\[1\] \|\| null, where\?\.Language \?\? undefined, where\?\.Gender\);\s*taken = await backend\.parameters\(voice\);/);
+        assert.match(ext, /singerLanguageColumn\(lineText, singerLineOf\(lineText\)\?\.askColumn \?\? position\.character\)/);
+    });
+
+    it('names the voice on `with` and on each setting', () => {
+        assert.match(ext, /new vscode\.CompletionItem\(\{ label: 'with', description: voice \}, vscode\.CompletionItemKind\.Keyword\);/);
+        assert.match(ext, /item\.detail = `How \$\{voice\} sings: /);
+        assert.match(ext, /new vscode\.CompletionItem\(\{ label: p\.name, description: voice \}, vscode\.CompletionItemKind\.Property\);/);
     });
 });
