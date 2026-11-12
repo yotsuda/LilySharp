@@ -2425,8 +2425,38 @@ c4@glissando d |      // Glissando from C to D
 ## Arpeggio
 
 ```
-<c e g>4@arpeggio     // Arpeggiate chord
+<c e g>4@arpeggio              // Arpeggiate chord: a wavy line left of it
+<c e g>4@arpeggio(bracket)     // A bracket instead: the notes together, not rolled
 ```
+
+### Across both staves of a grand staff
+
+```
+section A {
+  rightHand { <c' e' g'>2@arpeggio(cross)  c''2@arpeggio(cross) | }
+  leftHand  { <c e g>2                     <c, g, e>2 | }
+}
+score { grandStaff { staff rightHand  staff leftHand } }
+```
+
+`@arpeggio(cross)` is written on the **upper** staff's chord (or single note): **one** wavy
+line runs from it down through the chord or note that begins at the same moment on the staff
+directly below it in the same `grandStaff`. The lower staff writes nothing. The line stands
+left of whichever of the two chords, with its accidentals, reaches further left, and both
+columns keep the room for it.
+
+`@arpeggio(cross bracket)` (the two words spaced, in either order) is one bracket across both
+staves.
+
+With nothing to run down to, the arpeggio is drawn on its own chord and a warning (LYS4064)
+says why: the part is not in a `grandStaff`, it is the grand staff's lowest staff, or the
+staff below begins nothing at that moment (a rest, a held note, another rhythm). A word other
+than `cross` and `bracket`, or one of them twice, is reported (LYS1008) and the mark is
+ignored.
+
+Arpeggios are not played as a roll. LilyPond gets `connectArpeggios` (or
+`connectChordBrackets`) set once at the chord with `\arpeggio` on both staves; MusicXML gets
+`<arpeggiate>` on the notes of both staves with one `number`.
 
 ## Figured Bass
 

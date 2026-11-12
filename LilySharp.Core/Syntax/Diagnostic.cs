@@ -1579,6 +1579,13 @@ public static class DiagnosticCodes
     /// spellings (<c>@dead</c>, <c>@notehead(cross)</c>), the mistake that prompted it.</summary>
     public const string CrossStaffWithoutPartner = "LYS4031";
 
+    /// <summary>Semantic warning: an <c>@arpeggio(cross)</c> with nothing to run down to — its
+    /// part is not in a grand staff with a staff below it, or nothing begins on that staff at
+    /// the chord's moment (a rest, a held note, another rhythm). The arpeggio is drawn on its
+    /// own chord, and the message says which of the three it was (owner's decision 2026-11-12,
+    /// grammar evaluation 2; read off the collected score, <c>CrossArpeggios.WhyAlone</c>).</summary>
+    public const string CrossArpeggioWithoutPartner = "LYS4064";
+
     /// <summary>Error: a span end whose name is not the one the span was opened with —
     /// <c>@8va … @!15ma</c> (owner's decision 2026-10-28: a span is closed by its own name;
     /// <c>Semantics.SpanNames</c>). The quick fix writes the start's name.</summary>

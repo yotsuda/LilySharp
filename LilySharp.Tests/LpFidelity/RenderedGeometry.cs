@@ -3941,6 +3941,18 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// Every arpeggio wiggle the page draws, left to right, as its extent in device
+    /// coordinates (Y down: <c>Top</c> is the smaller) and its count of glyph copies — for a
+    /// page that draws several, or whose one runs across two staves.
+    /// </summary>
+    public IReadOnlyList<(double Left, double Right, double Bottom, double Top, int Copies)> ArpeggioPiles()
+        => _page.Glyphs.Any(g => g.Glyph == LilySharp.Core.Svg.EmmentalerGlyphs.Arpeggio) ? ArpeggioStacks() : [];
+
+    /// <summary>The ink LEFT edge of every accidental on the page (see
+    /// <see cref="ArpeggioRightToAccidentalLeft"/> for why ink and not the draw origin).</summary>
+    public IReadOnlyList<double> AccidentalInkLefts() => [.. Accidentals.Select(AccidentalInkLeft)];
+
+    /// <summary>
     /// The arpeggio wiggle's ink RIGHT edge → the chord's leftmost notehead ink LEFT edge:
     /// LilyPond's <c>Arpeggio</c> <c>padding</c>, 0.5, since the grob is placed by
     /// <c>side-position-interface</c> on the X axis toward <c>LEFT</c>

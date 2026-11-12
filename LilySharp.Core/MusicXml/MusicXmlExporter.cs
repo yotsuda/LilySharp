@@ -3580,11 +3580,84 @@ public sealed class MusicXmlExporter
             }
         }
 
+        WriteCrossArpeggio(note, [xmlNote]);
         _currentMeasure.Notes.Add(xmlNote);
         _lastPitchedNote = xmlNote;
         _lastEmittedNotes.Clear();
         _lastEmittedNotes.Add(xmlNote);
         MaybeClosePickup(duration);
+    }
+
+    /// <summary>The page's connected cross-staff arpeggios by source offset
+    /// (<see cref="Svg.Collector.CrossArpeggios.Sources"/>), the page collected only for a
+    /// book that writes <c>@arpeggio(cross)</c>; null for every other book.</summary>
+    private (HashSet<int> Uppers, Dictionary<int, Svg.Model.SpanArpeggioPart> Reached)? CrossArpeggioSources()
+    {
+        if (!_crossArpeggiosRead)
+        {
+            _crossArpeggiosRead = true;
+            _crossArpeggios = _tree is { } tree && _playedSpec is { } spec
+                && tree.GetRoot().DescendantNodes<MusicMarkSyntax>().Any(Semantics.AnnotationValues.IsArpeggioCross)
+                    ? Svg.Collector.CrossArpeggios.Sources(PageModel(tree, spec))
+                    : null;
+        }
+        return _crossArpeggios;
+    }
+
+    private (HashSet<int> Uppers, Dictionary<int, Svg.Model.SpanArpeggioPart> Reached)? _crossArpeggios;
+    private bool _crossArpeggiosRead;
+
+    /// <summary>
+    /// Writes the arpeggio of a note or chord that takes part in <c>@arpeggio(cross)</c> — the
+    /// one that wrote it, and the notes and chords of the staff below the page ran its line
+    /// down to (they wrote nothing): <c>&lt;arpeggiate&gt;</c> on every member, or, under a
+    /// bracket, <c>&lt;non-arpeggiate&gt;</c> at the line's two ends — the top on the upper
+    /// chord's highest note, the bottom on the lowest note below.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the <c>number</c>. MusicXML says of it that chords "arpeggiated
+    /// together" share one and chords arpeggiated separately take different ones, so the
+    /// notes of a connected line carry 2 on both staves and every other arpeggio keeps the
+    /// 1 this exporter always wrote. A mark with nothing below to connect to is written as
+    /// the page draws it: the plain arpeggio, number 1.
+    /// </remarks>
+    private void WriteCrossArpeggio(SyntaxNode host, IReadOnlyList<MusicXmlNote> members)
+    {
+        if (members.Count == 0 || CrossArpeggioSources() is not { } sources)
+            return;
+        var written = Svg.Model.SpanArpeggioPart.None;
+        foreach (var mark in host.ChildNodes().OfType<MusicMarkSyntax>())
+            if (Semantics.AnnotationValues.ArpeggioWords(mark) is { Cross: true } words)
+                written = words.Bracket ? Svg.Model.SpanArpeggioPart.Bracket : Svg.Model.SpanArpeggioPart.Wiggle;
+        sources.Reached.TryGetValue(host.SourceStart, out var reached);
+        if (written == Svg.Model.SpanArpeggioPart.None && reached == Svg.Model.SpanArpeggioPart.None)
+            return;
+
+        bool isUpper = written != Svg.Model.SpanArpeggioPart.None;
+        bool connected = isUpper ? sources.Uppers.Contains(host.SourceStart) : true;
+        int number = connected ? 2 : 1;
+        if ((isUpper ? written : reached) == Svg.Model.SpanArpeggioPart.Wiggle)
+        {
+            foreach (var member in members)
+                member.ExtraNotations.Add(new System.Xml.Linq.XElement("arpeggiate",
+                    new System.Xml.Linq.XAttribute("number", number)));
+            return;
+        }
+        // The members stand lowest first, as the chord's own bracket reads them.
+        if (!connected || !isUpper)
+        {
+            if (connected || members.Count >= 2)
+                members[0].ExtraNotations.Add(new System.Xml.Linq.XElement("non-arpeggiate",
+                    new System.Xml.Linq.XAttribute("type", "bottom"),
+                    new System.Xml.Linq.XAttribute("number", number)));
+        }
+        if (!connected || isUpper)
+        {
+            if (connected || members.Count >= 2)
+                members[^1].ExtraNotations.Add(new System.Xml.Linq.XElement("non-arpeggiate",
+                    new System.Xml.Linq.XAttribute("type", "top"),
+                    new System.Xml.Linq.XAttribute("number", number)));
+        }
     }
 
     /// <summary>
@@ -4400,9 +4473,10 @@ public sealed class MusicXmlExporter
                 bool hasArp = chord.Articulations.Any(a2 =>
                     a2 is ArticulationSyntax { Type: ArticulationType.None } na
                     && na.NameToken.Text.Equals("arpeggio", StringComparison.Ordinal));
+                // (A cross-staff spelling is WriteCrossArpeggio's, once the members stand.)
                 bool hasBracket = chord.Articulations.Any(a2 =>
                     a2 is MusicMarkSyntax mm
-                    && Semantics.AnnotationValues.IsArpeggioBracket(mm));
+                    && Semantics.AnnotationValues.ArpeggioWords(mm) is { Bracket: true, Cross: false });
                 if (hasArp)
                     _chordArpeggio = "arpeggiate";
                 else if (hasBracket)
@@ -4452,7 +4526,7 @@ public sealed class MusicXmlExporter
                         && na.NameToken.Text.Equals("arpeggio", StringComparison.Ordinal)))
                     _chordArpeggio = "arpeggiate";
                 else if (chord.Articulations.Any(a2 => a2 is MusicMarkSyntax mm
-                             && Semantics.AnnotationValues.IsArpeggioBracket(mm)))
+                             && Semantics.AnnotationValues.ArpeggioWords(mm) is { Bracket: true, Cross: false }))
                     _chordArpeggio = "non-arpeggiate";
                 // Every note carries its own string: an outside \N has nothing left to pair with.
                 ProcessArticulations(Semantics.ArticulationRuns.WithCovering(chord,
@@ -4530,6 +4604,7 @@ public sealed class MusicXmlExporter
             needsOnset = false;
         }
 
+        WriteCrossArpeggio(chord, _chordMembers);
         if (_chordArpeggio == "non-arpeggiate" && _chordMembers.Count >= 2)
         {
             _chordMembers[0].ExtraNotations.Add(new System.Xml.Linq.XElement("non-arpeggiate",
@@ -4644,6 +4719,7 @@ public sealed class MusicXmlExporter
             _chordMembers.Add(xmlNote);
         }
 
+        WriteCrossArpeggio(rep, _chordMembers);
         CloseTies(_chordMembers);
         if (rep.Articulations.OfType<TieSyntax>().Any()) OpenTies(_chordMembers);
 

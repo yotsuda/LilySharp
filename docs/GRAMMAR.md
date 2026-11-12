@@ -3048,7 +3048,21 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                     group's first slot instead of standing aside by its voice number; a third
                     voice's head can stand under the voice above. The twin writes \once \shiftOff)
    - Accidental:    @courtesy (cautionary) @editorial (musica ficta)
-   - Arpeggio:      <c e g>4@arpeggio
+   - Arpeggio:      <c e g>4@arpeggio , <c e g>4@arpeggio(bracket) , <c e g>4@arpeggio(cross)
+                    (* (bracket) is the chord NOT rolled, a straight bracket. (cross) is ONE
+                       line across both staves of a grandStaff [owner decision 2026-11-12]:
+                       written on the UPPER staff chord or single note, it runs down through
+                       every note or chord that begins at the same moment on the staff directly
+                       below it in the same grandStaff. The lower staff writes nothing. The two
+                       words combine, spaced, in either order: @arpeggio(cross bracket) is one
+                       bracket across both staves. With nothing to run down to - the part is in
+                       no grandStaff, it is the lowest staff, or the staff below begins nothing
+                       at that moment (a rest, a held note, another rhythm) - the arpeggio is
+                       drawn on its own chord and LYS4064 says which. Any other word, or one
+                       word twice, is LYS1008 and the mark is ignored. Not played as a roll
+                       (no arpeggio is). LilyPond: connectArpeggios or connectChordBrackets
+                       set once at the chord, and the arpeggio written on both staves.
+                       MusicXML: arpeggiate on the notes of both staves with one number. *)
    - Glissando:     c4@glissando d
    - Figured bass:  c4@figuredBass(6) , d4@figuredBass(6 4)
    - Chord diagram: c4@diagram(x32010) , c4@diagram(x32010).down

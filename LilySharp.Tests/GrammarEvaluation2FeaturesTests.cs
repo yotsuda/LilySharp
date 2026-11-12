@@ -455,4 +455,300 @@ public class GrammarEvaluation2FeaturesTests
     public void InsideAnOrnamentsParentheses_TheThreeWordsAreOffered(string ornament)
         => Assert.Equal(AnnotationValues.OrnamentAccidentalWords,
             Offered($"part m {{ }}\nsection A {{ m {{ c''2@{ornament}(‸) }} }}"));
+
+    // ───────────────────────── 4. <c' e' g'>2@arpeggio(cross) ─────────────────────────
+
+    private const string GrandStaff = "grandStaff { staff rh  staff lh }";
+
+    /// <summary>A right hand and a left hand, one bar each unless more is written.</summary>
+    private static string Piano(string rh, string lh, string score = GrandStaff)
+        => "octave absolute\ntime 4/4\npart rh { clef treble }\npart lh { clef bass }\n"
+           + $"section A {{\n  rh {{ {rh} }}\n  lh {{ {lh} }}\n}}\nform {{ A }}\nscore {{ {score} }}\n";
+
+    private static LilySharp.Core.Svg.Model.MultiStaffScore Collected(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        return SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+    }
+
+    /// <summary>The text: the word, with <c>bracket</c> in either order, is the mark's — read
+    /// by the one reader, kept to the character.</summary>
+    [Theory]
+    [InlineData("cross", true, false)]
+    [InlineData("cross bracket", true, true)]
+    [InlineData("bracket cross", true, true)]
+    [InlineData("bracket", false, true)]
+    public void TheWordsOfAnArpeggio_AreReadAndKept(string words, bool cross, bool bracket)
+    {
+        string source = Piano($"<c' e' g'>1@arpeggio({words}) |", "<c e g>1 |");
+        Clean(source);
+        RoundTrips(source);
+        var mark = SyntaxTree.Parse(source).GetRoot().DescendantNodes().OfType<MusicMarkSyntax>().Single();
+        Assert.Equal((cross, bracket), AnnotationValues.ArpeggioWords(mark));
+        Assert.Equal(cross, AnnotationValues.IsArpeggioCross(mark));
+        Assert.Equal(bracket, AnnotationValues.IsArpeggioBracket(mark));
+    }
+
+    /// <summary>The model: ONE arpeggio, the upper chord's, told the staff it runs down to and the
+    /// lowest head there; the lower chord — which wrote nothing — is stamped as a column the line
+    /// runs through. A lower chord that wrote an arpeggio of its own is taken into the line.</summary>
+    [Theory]
+    [InlineData("<e c g>1 |")]            // the lowest head, not the first written
+    [InlineData("c,1 |")]                 // a single note
+    [InlineData("<c e g>1@arpeggio |")]   // its own arpeggio is this one
+    public void ACrossArpeggio_IsConnectedToTheStaffBelow(string lh)
+    {
+        var score = Collected(Piano("<c' e' g'>1@arpeggio(cross) |", lh));
+        var arpeggio = Assert.Single(score.Arpeggios);
+        Assert.True(arpeggio.Cross);
+        var below = score.StaffGroups[0].Staves[1].Voices[0].Measures[0].Items[0];
+        int lowest = below switch
+        {
+            LilySharp.Core.Svg.Model.ChordItem chord => chord.Notes.Min(n => n.StaffPosition),
+            LilySharp.Core.Svg.Model.NoteItem note => note.StaffPosition,
+            _ => throw new InvalidOperationException("the staff below holds a note or a chord"),
+        };
+        Assert.Equal((0, 1, lowest), (arpeggio.StaffIndex, arpeggio.PartnerStaffIndex, arpeggio.PartnerLowestHead));
+
+        Assert.NotEqual(LilySharp.Core.Svg.Model.SpanArpeggioPart.None,
+            LilySharp.Core.Svg.Layout.SpacingRules.ArpeggioPartOf(below));
+        // The upper chord keeps its room as any rolled chord does, not by a stamp.
+        var above = score.StaffGroups[0].Staves[0].Voices[0].Measures[0].Items[0];
+        Assert.Equal(LilySharp.Core.Svg.Model.SpanArpeggioPart.None, above.SpanArpeggio);
+    }
+
+    /// <summary>
+    /// The page: ONE wavy line, from the upper chord's top note to the lower chord's bottom
+    /// note, left of both chords' ink — and when the staves stand further apart it is that much
+    /// longer, still reaching both.
+    /// </summary>
+    [Theory]
+    [InlineData("<cis' e' gis'>1@arpeggio(cross) |", "<cis e gis>1 |")]
+    [InlineData("<c' e' g'>1@arpeggio(cross) |", "<cis e gis>1 |")]   // only the lower chord reaches left
+    [InlineData("c''1@arpeggio(cross) |", "<c, g, e>1 |")]            // a single note above
+    [InlineData("<e' g' c''>1@arpeggio(cross) |", "bes,1 |")]         // a single note below
+    public void ACrossArpeggio_IsOneLineFromTheTopNoteToTheBottomNote(string rh, string lh)
+    {
+        var page = RenderedGeometry.Render(Piano(rh, lh));
+        var pile = Assert.Single(page.ArpeggioPiles());
+        var heads = page.Noteheads;
+
+        // Device Y grows down: the top head is the smallest Y, the bottom head the largest.
+        Assert.True(pile.Top <= heads.Min(h => h.Y) + 1e-6,
+            $"the line's top {pile.Top:F3} has to reach the top note at {heads.Min(h => h.Y):F3}.");
+        Assert.True(pile.Bottom >= heads.Max(h => h.Y) + 1e-6,
+            $"the line's foot {pile.Bottom:F3} has to reach under the bottom note at {heads.Max(h => h.Y):F3}.");
+        // …and no further than a glyph past either (whole glyphs are stacked up from the foot).
+        Assert.True(pile.Bottom <= heads.Max(h => h.Y) + 1.0 && pile.Top >= heads.Min(h => h.Y) - 1.0 - 1e-6);
+
+        // Left of every head and every accidental of BOTH staves, by the arpeggio's padding.
+        double leftmostInk = Math.Min(heads.Min(h => h.X), page.AccidentalInkLefts().DefaultIfEmpty(double.MaxValue).Min());
+        Assert.True(pile.Right <= leftmostInk - LilySharp.Core.Svg.Layout.ArpeggioEngraver.Padding + 1e-6,
+            $"the line's right edge {pile.Right:F3} has to stand the padding left of the leftmost ink {leftmostInk:F3}.");
+        Assert.True(pile.Right >= leftmostInk - LilySharp.Core.Svg.Layout.ArpeggioEngraver.Padding - 0.05,
+            "…and no further than that: it is placed against the chord that reaches furthest left.");
+
+        // The two chords each rolled on their own draw two lines, shorter together than the one.
+        var apart = RenderedGeometry.Render(Piano(rh.Replace("(cross)", ""), lh.Replace("1 |", "1@arpeggio |")));
+        if (rh.StartsWith('<') && lh.StartsWith('<'))
+            Assert.True(apart.ArpeggioPiles().Sum(p => p.Copies) < pile.Copies);
+    }
+
+    /// <summary>The line follows the distance between the staves the page gives them: with the
+    /// staves pushed apart it has more glyphs, and still reaches both chords.</summary>
+    [Fact]
+    public void ACrossArpeggio_FollowsTheDistanceBetweenTheStaves()
+    {
+        const string rh = "<c' e' g'>2@arpeggio(cross) ";
+        var close = RenderedGeometry.Render(Piano(rh + "g'2 |", "<c e g>2 c2 |"));
+        // A note far under the upper staff and one far over the lower one push them apart.
+        var far = RenderedGeometry.Render(Piano(rh + "c2 |", "<c e g>2 c''2 |"));
+        var near = Assert.Single(close.ArpeggioPiles());
+        var wide = Assert.Single(far.ArpeggioPiles());
+        Assert.True(wide.Copies > near.Copies, $"{wide.Copies} glyphs against {near.Copies}: the staves moved apart and the line did not.");
+
+        // The chord's own six heads are the leftmost column of each page.
+        foreach (var (page, pile) in new[] { (close, near), (far, wide) })
+        {
+            var chord = page.Noteheads.OrderBy(h => h.X).Take(6).ToList();
+            Assert.True(pile.Top <= chord.Min(h => h.Y) + 1e-6 && pile.Bottom >= chord.Max(h => h.Y));
+        }
+    }
+
+    /// <summary>The bracket across both staves: one spine with its two ticks, no wiggle, where the
+    /// two brackets of the chords bracketed apart are two.</summary>
+    [Fact]
+    public void ACrossBracket_IsOneBracket()
+    {
+        static int Strokes(string source) => RenderedGeometry.Render(source).Lines.Count;
+        int bare = Strokes(Piano("<c' e' g'>1 |", "<c e g>1 |"));
+        string crossed = Piano("<c' e' g'>1@arpeggio(cross bracket) |", "<c e g>1 |");
+        Clean(crossed);
+        Assert.Empty(RenderedGeometry.Render(crossed).ArpeggioPiles());
+        Assert.Equal(bare + 3, Strokes(crossed));
+        Assert.Equal(bare + 6, Strokes(Piano("<c' e' g'>1@arpeggio(bracket) |", "<c e g>1@arpeggio(bracket) |")));
+
+        // The spine is the one vertical stroke added: it runs from above the top head to under the bottom one.
+        var page = RenderedGeometry.Render(crossed);
+        var spine = page.Lines.Where(l => Math.Abs(l.X1 - l.X2) < 1e-9)
+            .OrderByDescending(l => Math.Abs(l.Y1 - l.Y2)).First(l => l.X1 < page.Noteheads.Min(h => h.X)
+                && Math.Abs(l.StrokeWidth - LilySharp.Core.Svg.Layout.ArpeggioEngraver.BracketThickness) < 1e-9);
+        Assert.True(Math.Min(spine.Y1, spine.Y2) < page.Noteheads.Min(h => h.Y)
+            && Math.Max(spine.Y1, spine.Y2) > page.Noteheads.Max(h => h.Y));
+    }
+
+    /// <summary>With nothing to run down to the arpeggio is its own chord's — the page of the plain
+    /// mark — and one warning at the mark says which of the three it was.</summary>
+    [Theory]
+    [InlineData("<c' e' g'>1@arpeggio(cross) |", "<c e g>1 |", "staff rh  staff lh", "in no grand staff")]
+    [InlineData("<c' e' g'>1 |", "<c e g>1@arpeggio(cross) |", GrandStaff, "lowest staff of its grand staff")]
+    [InlineData("<c' e' g'>1@arpeggio(cross) |", "r1 |", GrandStaff, "nothing begins on the staff below")]
+    [InlineData("c'2 <c' e' g'>2@arpeggio(cross) |", "<c e g>1 |", GrandStaff, "nothing begins on the staff below")]
+    [InlineData("c'2 <c' e' g'>2@arpeggio(cross) |", "c4 d2 e4 |", GrandStaff, "nothing begins on the staff below")]
+    public void ACrossArpeggioWithNothingBelow_IsItsOwnChords_AndSaysWhy(string rh, string lh, string score, string says)
+    {
+        string source = Piano(rh, lh, score);
+        var said = Assert.Single(Said(source));
+        Assert.Equal(DiagnosticCodes.CrossArpeggioWithoutPartner, said.Code);
+        Assert.Equal(DiagnosticSeverity.Warning, said.Severity);
+        Assert.Contains(says, said.Message);
+        Assert.Contains("drawn on its own chord", said.Message);
+        Assert.Equal("@arpeggio(cross)", source.Substring(said.Span.Start, said.Span.Length));
+        RoundTrips(source);
+
+        var arpeggio = Assert.Single(Collected(source).Arpeggios);
+        Assert.Equal((true, -1), (arpeggio.Cross, arpeggio.PartnerStaffIndex));
+        var drawn = Assert.Single(RenderedGeometry.Render(source).ArpeggioPiles());
+        var plain = Assert.Single(RenderedGeometry.Render(source.Replace("(cross)", "")).ArpeggioPiles());
+        Assert.Equal(plain.Copies, drawn.Copies);
+    }
+
+    /// <summary>A connected one says nothing; a word that is neither of the two, or one written
+    /// twice, is reported with what the parentheses take, and the mark is ignored.</summary>
+    [Theory]
+    [InlineData("cross cross")]
+    [InlineData("cross up")]
+    [InlineData("both")]
+    [InlineData("cross bracket bracket")]
+    public void AnArpeggiosWords_AreCrossAndBracket_EachOnce(string words)
+    {
+        string source = Piano($"<c' e' g'>1@arpeggio({words}) |", "<c e g>1 |");
+        var said = Assert.Single(Said(source));
+        Assert.Equal(DiagnosticCodes.UnknownAnnotation, said.Code);
+        Assert.Contains($"'{words}' is not a value of '@arpeggio'", said.Message);
+        Assert.Contains("'@arpeggio(cross bracket)'", said.Message);
+        RoundTrips(source);
+        Assert.Empty(Collected(source).Arpeggios);
+    }
+
+    /// <summary>The room: the column of the staff below keeps the arpeggio's reach past ITS ink —
+    /// the line stands the padding clear of the lower chord's accidentals, which the upper chord
+    /// has none of, and clear of the notes before it; in a bar too full to have that room to
+    /// spare, the columns move apart to make it.</summary>
+    [Fact]
+    public void TheLowerChordsAccidental_DoesNotTouchTheLine()
+    {
+        // Sixteen sixteenths in the bar: the columns stand as close as their ink allows.
+        const string run = "c'16 d' e' f' ";
+        const string low = "c16 d e f ";
+        string Book(string mark) => Piano(
+            $"{run}<c' e' g'>16{mark} d' e' f' {run}{run}|", $"{low}<cis eis gis>16 d e f {low}{low}|");
+        var with = RenderedGeometry.Render(Book("@arpeggio(cross)"));
+        var without = RenderedGeometry.Render(Book(""));
+        var piles = with.ArpeggioPiles();
+        Assert.Single(piles);
+
+        var accidentals = with.AccidentalInkLefts();
+        var heads = with.Noteheads;
+        foreach (var pile in piles)
+        {
+            // The chord's three sharps are the page's only accidentals.
+            double accidental = accidentals.Min();
+            Assert.True(accidental - pile.Right >= LilySharp.Core.Svg.Layout.ArpeggioEngraver.Padding - 1e-6,
+                $"the lower chord's accidental at {accidental:F3} stands {accidental - pile.Right:F3} from the line: it needs the padding.");
+            Assert.True(accidental - pile.Right < LilySharp.Core.Svg.Layout.ArpeggioEngraver.Padding + 0.05);
+            // The note before it: its head (the black head is 1.3 wide) ends left of the line.
+            double before = heads.Where(h => h.X < pile.Left).Max(h => h.X);
+            Assert.True(before + 1.3 <= pile.Left + 1e-6,
+                $"the head before the line at {before:F3} runs into it at {pile.Left:F3}.");
+        }
+
+        // The same music without the line: the chord's column stands closer to the note before it.
+        static double Tightest(RenderedGeometry g)
+        {
+            var xs = g.Noteheads.Select(h => Math.Round(h.X, 6)).Distinct().OrderBy(x => x).ToList();
+            return xs.Zip(xs.Skip(1), (a, b) => b - a).Where(d => d > 0.5).Min();
+        }
+        Assert.True(Tightest(with) > 0 && Tightest(without) > 0);
+        double RoomBefore(RenderedGeometry g, double accidentalLeft)
+            => accidentalLeft - g.Noteheads.Where(h => h.X < accidentalLeft).Max(h => h.X);
+        Assert.True(RoomBefore(with, accidentals.Min())
+            > RoomBefore(without, without.AccidentalInkLefts().Min()) + 0.5,
+            "the column moved right to make the arpeggio's room");
+    }
+
+    /// <summary>LilyPond is told to connect the arpeggios of that moment and no other, and both
+    /// staves write theirs; MusicXML numbers the notes of the one line alike; the sound is the
+    /// chords', as with the plain mark.</summary>
+    [Fact]
+    public void ACrossArpeggio_GoesToLilyPondAndMusicXmlOnBothStaves()
+    {
+        string source = Piano("<c' e' g'>2@arpeggio(cross) <c' e' g'>2@arpeggio(cross bracket) | <c' e' g'>2@arpeggio(cross) <c' e' g'>2@arpeggio |",
+            "<c e g>2 <c e g>2 | r2 <c e g>2@arpeggio |");
+        var tree = SyntaxTree.Parse(source);
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
+        Assert.Contains("\\once \\set GrandStaff.connectArpeggios = ##t <c' e' g'>2\\arpeggio "
+            + "\\once \\set GrandStaff.connectChordBrackets = ##t <c' e' g'>2\\nonArpeggiato |", ly);
+        Assert.Contains("<c e g>2\\arpeggio <c e g>2\\nonArpeggiato |", ly);
+        // The one over a rest is the plain arpeggio, and two plain ones at a moment stay two.
+        Assert.Contains("\n  <c' e' g'>2\\arpeggio <c' e' g'>2\\arpeggio |", ly);
+        Assert.Contains("r2 <c e g>2\\arpeggio |", ly);
+        Assert.Equal(2, ly.Split("\\once \\set GrandStaff.").Length - 1);
+
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).ToXml()
+            .ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
+        // Bar 1: three notes above and three below on the one line; bar 2: three alone, three and three apart.
+        Assert.Equal(6, xml.Split("<arpeggiate number=\"2\" />").Length - 1);
+        Assert.Equal(9, xml.Split("<arpeggiate number=\"1\" />").Length - 1);
+        Assert.Equal(1, xml.Split("<non-arpeggiate type=\"top\" number=\"2\" />").Length - 1);
+        Assert.Equal(1, xml.Split("<non-arpeggiate type=\"bottom\" number=\"2\" />").Length - 1);
+
+        static List<(int, int, int, int)> Notes(string s)
+            => [.. Midi(s).Tracks.SelectMany(t => t.Notes).Select(n => (n.Pitch, n.Velocity, n.StartTick, n.DurationTicks))];
+        Assert.Equal(Notes(source.Replace("(cross bracket)", "").Replace("(cross)", "")), Notes(source));
+    }
+
+    /// <summary>
+    /// What the lower staff plays decides what the upper staff draws, so an edit there redraws the
+    /// line: the edited file's preview is the page a fresh compile draws, each way — the chord
+    /// below taken away, put back, the word typed and deleted.
+    /// </summary>
+    [Fact]
+    public void EditingEitherStaff_RedrawsTheLine()
+    {
+        string bars = string.Concat(Enumerable.Repeat("c'4 d' e' f' | ", 6));
+        string low = string.Concat(Enumerable.Repeat("c4 d e f | ", 6));
+        string connected = Piano("<c' e' g'>2@arpeggio(cross) g'2 | " + bars, "<cis e g>2 c2 | " + low);
+        string alone = connected.Replace("<cis e g>2 c2 |", "r2 c2 |");
+        string plain = connected.Replace("@arpeggio(cross)", "@arpeggio");
+        string none = connected.Replace("@arpeggio(cross)", "");
+        var options = new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false };
+        var compiler = new IncrementalCompiler(SyntaxTree.Parse(connected), options);
+        compiler.Render();
+        foreach (string text in new[] { alone, connected, plain, connected, none, connected, alone, plain })
+            Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(text), options),
+                compiler.RenderIncremental(SyntaxTree.Parse(text)));
+    }
+
+    /// <summary>Inside an arpeggio's parentheses the editor offers its two words, and the '@' list
+    /// offers the cross-staff arpeggio beside the bracket.</summary>
+    [Fact]
+    public void TheEditorOffersCross()
+    {
+        Assert.Equal(AnnotationValues.ArpeggioArgumentWords,
+            Offered("part m { }\nsection A { m { <c' e' g'>2@arpeggio(‸) } }"));
+        var marks = Offered("part m { }\nsection A { m { <c' e' g'>2@‸ } }");
+        Assert.Contains("arpeggio(cross)", marks);
+        Assert.Contains("arpeggio(bracket)", marks);
+    }
 }

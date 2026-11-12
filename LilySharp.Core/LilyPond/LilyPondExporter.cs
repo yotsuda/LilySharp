@@ -389,6 +389,12 @@ public sealed partial class LilyPondExporter
         /// over the notation staves. Both staves of a pair are named for <c>\change Staff</c>.</summary>
         public readonly Dictionary<string, string> CrossTargets = new(StringComparer.Ordinal);
 
+        /// <summary>The source offsets of the chords whose <c>@arpeggio(cross)</c> the page
+        /// connected to the staff below, and of the notes and chords those lines run down to
+        /// with the kind of each (<c>Svg.Collector.CrossArpeggios.Sources</c>).</summary>
+        public HashSet<int> CrossArpeggioUppers = new();
+        public Dictionary<int, SpanArpeggioPart> CrossArpeggioReached = new();
+
         /// <summary>The source position of every <c>@chord</c> mark a ChordNames stream
         /// carries (<see cref="EmitInlineChordTracks"/>), and of every <c>@figuredBass</c>
         /// mark a FiguredBass stream carries (<see cref="EmitFiguredBassTracks"/>): what tells
@@ -619,6 +625,8 @@ public sealed partial class LilyPondExporter
         CollectNiente(tree, render);
         // ...and the @cross notes write \change Staff.
         CollectCrossTargets(tree, render);
+        // ...and the @arpeggio(cross) chords their \once \set, the chords below their \arpeggio.
+        CollectCrossArpeggios(tree, render);
 
         // One music variable per part. A by-part score keeps its sections inside
         // the part block; the form orders them.

@@ -998,7 +998,62 @@ internal static partial class SpacingRules
     /// <summary>True when the chord rolls (an Arpeggio) or is bracketed (a ChordBracket) —
     /// either way a conditional part standing LEFT of the column's other ink.</summary>
     private static bool HasArpeggio(MusicItem? item)
-        => item is ChordItem { HasArpeggio: true } or ChordItem { HasArpeggioBracket: true };
+        => ArpeggioPartOf(item) != SpanArpeggioPart.None;
+
+    /// <summary>
+    /// The arpeggio grob standing left of this column — the wavy line or the bracket, drawn
+    /// (a chord's own) or not (its part of a cross-staff one, <see cref="MusicItem.SpanArpeggio"/>)
+    /// — or <see cref="SpanArpeggioPart.None"/>. ONE HOME for the three readers of "does this
+    /// column keep an arpeggio's room": the reach (<see cref="CalculateLeftExtent"/>), the
+    /// leftmost grob's extra width (<see cref="LeftmostGrobExtraSpacingWidth"/>) and the
+    /// skyline part (<c>ItemSkylineFactory.AddArpeggio</c>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/span-arpeggio-engraver.cc:150-157 stop_translation_timestep — the
+    ///   arpeggios under a span one stay in their columns, transparent, so a column spaces
+    ///   for its own whether or not it is the one printed.
+    /// </remarks>
+    internal static SpanArpeggioPart ArpeggioPartOf(MusicItem? item) => item switch
+    {
+        ChordItem { HasArpeggioBracket: true } => SpanArpeggioPart.Bracket,
+        ChordItem { HasArpeggio: true } => SpanArpeggioPart.Wiggle,
+        NoteItem or ChordItem => item.SpanArpeggio,
+        _ => SpanArpeggioPart.None,
+    };
+
+    /// <summary>
+    /// How far LEFT of its column a note's or chord's own ink reaches — the support an
+    /// arpeggio clears: <see cref="ChordSupportLeftReach"/> for a chord, the accidental's
+    /// reach for a single note (what <see cref="CalculateLeftExtent"/> reserves for it).
+    /// </summary>
+    internal static double SupportLeftReach(MusicItem item) => item switch
+    {
+        ChordItem chord => ChordSupportLeftReach(chord),
+        NoteItem note => NoteAccidentalLeftReach(note),
+        _ => 0,
+    };
+
+    /// <summary>A single note's accidental's reach left of the column (0 without one): what the
+    /// placement and the drawing use (position_apes clears the note by right-padding + padding
+    /// = 0.35, and a courtesy adds its parenthesis ink), not a bare glyph width.</summary>
+    private static double NoteAccidentalLeftReach(NoteItem note)
+    {
+        if (note.Accidental == null)
+            return 0;
+        // A note sharing its column with another voice was packed against that voice's
+        // accidentals too (StaffAccidentalColumns), and the packing is measured from this
+        // same reference point.
+        double? x = note.AccidentalX;
+        if (x is null)
+        {
+            var placement = new AccidentalPlacement();
+            // A cue note's accidental is the cue font's, placed against the cue head —
+            // the solve the renderer draws by (MEASURED, Lab sessions/p691/cuespace b8:
+            // `| cue { fis4 …` stood 0.407 further from the bar line than LilyPond's).
+            x = placement.CalculateSinglePosition(note, CueFontOf(note), HeadFontOf(note))?.XOffset;
+        }
+        return x is { } offset && offset < 0 ? -offset : 0;
+    }
 
     /// <summary>
     /// The LEFTward <c>extra-spacing-width</c> of the column's LEFTMOST grob — the box a bar
@@ -1388,29 +1443,21 @@ internal static partial class SpacingRules
             //   ly:side-position-interface::x-aligned-side, with (side-axis . X)
             //   (direction . LEFT) (padding . 0.5) (X-extent . ly:arpeggio::width);
             //   :811-835 ChordBracket likewise.
-            if (chord.HasArpeggio || chord.HasArpeggioBracket)
-                extent += ArpeggioEngraver.ReachPastSupport(chord.HasArpeggioBracket);
+            // …its own, or its part of a cross-staff one (ArpeggioPartOf): the room is the same.
+            if (ArpeggioPartOf(chord) is var part && part != SpanArpeggioPart.None)
+                extent += ArpeggioEngraver.ReachPastSupport(part == SpanArpeggioPart.Bracket);
         }
-        else if (item is NoteItem note && note.Accidental != null)
+        else if (item is NoteItem note)
         {
-            // Single note with accidental: reserve what the placement/drawing actually uses
-            // (position_apes clears the note by right-padding + padding = 0.35, and a courtesy
-            // adds its parenthesis ink), NOT a bare glyph width — otherwise the accidental,
-            // and especially a courtesy's left parenthesis, spills left over the bar line.
-            // A note sharing its column with another voice was packed against that voice's
-            // accidentals too (StaffAccidentalColumns), and the packing is measured from
-            // this same reference point.
-            double? x = note.AccidentalX;
-            if (x is null)
-            {
-                var placement = new AccidentalPlacement();
-                // A cue note's accidental is the cue font's, placed against the cue head —
-                // the solve the renderer draws by (MEASURED, Lab sessions/p691/cuespace b8:
-                // `| cue { fis4 …` stood 0.407 further from the bar line than LilyPond's).
-                x = placement.CalculateSinglePosition(note, CueFontOf(note), HeadFontOf(note))?.XOffset;
-            }
-            if (x is { } offset && offset < 0)
-                extent = Math.Max(extent, -offset);
+            // Single note with accidental: reserve what the placement/drawing actually uses,
+            // NOT a bare glyph width — otherwise the accidental, and especially a courtesy's
+            // left parenthesis, spills left over the bar line (NoteAccidentalLeftReach).
+            extent = Math.Max(extent, NoteAccidentalLeftReach(note));
+            // A cross-staff arpeggio's line runs through this note's column (the single note
+            // of @arpeggio(cross), or the one the line runs down to): the column keeps an
+            // arpeggio's room past the note's own ink, as a chord's does above.
+            if (note.SpanArpeggio != SpanArpeggioPart.None)
+                extent += ArpeggioEngraver.ReachPastSupport(note.SpanArpeggio == SpanArpeggioPart.Bracket);
         }
 
         return extent;

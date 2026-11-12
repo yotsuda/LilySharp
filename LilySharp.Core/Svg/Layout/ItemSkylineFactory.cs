@@ -1021,7 +1021,11 @@ internal static class ItemSkylineFactory
                     noteheadLeftX, noteheadLeftX + noteheadWidth));
 
             if (item is NoteItem note)
+            {
                 AddAccidental(parts, note, noteheadLeftX, staffY, cueFont, headFont);
+                // A single note a cross-staff arpeggio runs through (AddArpeggio's remarks).
+                AddArpeggio(parts, note, noteheadLeftX, staffY);
+            }
         }
 
         AddStem(parts, item, noteheadLeftX, staffY, headFont);
@@ -1461,9 +1465,35 @@ internal static class ItemSkylineFactory
     /// LILYPOND-REF: scm/define-grobs.scm Arpeggio (direction . LEFT),
     ///   (X-extent . ly:arpeggio::width) — the grob participates in spacing.
     /// </remarks>
-    private static void AddArpeggio(List<ColumnPart> parts, ChordItem chord,
+    private static void AddArpeggio(List<ColumnPart> parts, MusicItem chord,
                                     double noteheadLeftX, double staffY)
     {
+        // ⚠️ A COLUMN A CROSS-STAFF ARPEGGIO RUNS THROUGH RESERVES ITS OWN — the lower staff's
+        // chord or single note, and a single note that writes @arpeggio(cross) — as if the
+        // arpeggio were its alone: its own head interval, the padding left of its own heads
+        // and accidentals (SpacingRules.ArpeggioPartOf). The one line that is drawn spans the
+        // staves and reserves NOTHING itself.
+        // LILYPOND-REF: lily/span-arpeggio-engraver.cc:150-157 stop_translation_timestep —
+        //   the children are kept, transparent, "since we don't want the previous note to
+        //   bump into the span arpeggio";
+        // LILYPOND-REF: lily/arpeggio.cc:321-330 Arpeggio::pure_height — a cross-staff
+        //   arpeggio's pure height is EMPTY, so the span grob puts no box in a column's
+        //   separation skyline (lily/separation-item.cc:120-148 boxes reads pure_y_extent).
+        var kind = SpacingRules.ArpeggioPartOf(chord);
+        int minPosition, maxPosition;
+        switch (chord)
+        {
+            case ChordItem { Notes.Length: > 0 } c:
+                minPosition = c.Notes.Min(n => n.StaffPosition);
+                maxPosition = c.Notes.Max(n => n.StaffPosition);
+                break;
+            case NoteItem n:
+                minPosition = maxPosition = n.StaffPosition;
+                break;
+            default:
+                return;
+        }
+
         // ⚠️ A BRACKET RESERVES TOO, and until 2026-08-03 this read only HasArpeggio — which
         // MeasureCollector.HasArpeggioArticulation sets for a plain @arpeggio and not for
         // @arpeggio(bracket) — so a bracketed chord returned here and was drawn with no room
@@ -1471,7 +1501,7 @@ internal static class ItemSkylineFactory
         // acknowledge_note_column adds whichever of Arpeggio / ChordBracket / ChordSlur
         // process_music built, blind to the type. Measured as audit/lp-geometry
         // chordbracket.x.previous-head-to-bracket.compressed: 0.300000 of column pitch.
-        if ((!chord.HasArpeggio && !chord.HasArpeggioBracket) || chord.Notes.Length == 0)
+        if (kind == SpanArpeggioPart.None)
             return;
 
         // Placed and sized by the SAME house the drawing goes through, so the two cannot
@@ -1490,10 +1520,8 @@ internal static class ItemSkylineFactory
         // stem-down one, the wiggle was drawn ON the previous chord's notehead. The one home
         // for that reach is SpacingRules.ChordSupportLeftReach, which ArpeggioEngraver
         // places by and CalculateLeftExtent prices by.
-        double arpRight = noteheadLeftX - SpacingRules.ChordSupportLeftReach(chord)
+        double arpRight = noteheadLeftX - SpacingRules.SupportLeftReach(chord)
                           - ArpeggioEngraver.Padding;
-        int minPosition = chord.Notes.Min(n => n.StaffPosition);
-        int maxPosition = chord.Notes.Max(n => n.StaffPosition);
 
         // The two grobs have different widths AND different lengths, so the reservation asks
         // the same house the drawing does for whichever one this chord has: a wiggle is the
@@ -1508,7 +1536,7 @@ internal static class ItemSkylineFactory
         // consumer, does NOT convert — it draws in Y-up and the output context flips.
         double arpLeft;
         double arpYBottom, arpYTop;
-        if (chord.HasArpeggioBracket)
+        if (kind == SpanArpeggioPart.Bracket)
         {
             arpLeft = arpRight - ArpeggioEngraver.BracketWidth;
             var (bracketBottomYUp, bracketTopYUp) =

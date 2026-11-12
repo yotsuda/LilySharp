@@ -74,6 +74,7 @@ public static class SemanticValidation
         new TodoValidator(),                // every @todo mark, its arguments, a key written twice
         new DrummapValidator(),             // drummap { } parts that are silently ignored
         new CrossStaffValidator(),          // an @cross on a part no score draws beside another staff
+        new CrossArpeggioValidator(),       // an @arpeggio(cross) with no chord below it to run down to
         new SymbolCaseValidator(),          // wrong-case / unknown header symbols
         new KeyTonicValidator(),            // `key WORD mode` where WORD is not a note
         new FormDeclarationValidator(),// at most one structure per scope

@@ -432,8 +432,48 @@ public static class AnnotationValues
     /// <c>LilyPondExporter.NonArpeggiato</c>; they are not repeated here.
     /// </remarks>
     public static bool IsArpeggioBracket(MusicMarkSyntax mark)
-        => Named(mark, "arpeggio")
-           && Sole(mark)?.Text == "bracket";
+        => ArpeggioWords(mark) is { Bracket: true };
+
+    /// <summary>
+    /// Whether this is <c>@arpeggio(cross)</c> or <c>@arpeggio(cross bracket)</c> — one line
+    /// from this chord down through what begins at the same moment on the staff below it in
+    /// its grand staff (owner's decision 2026-11-12, grammar evaluation 2).
+    /// </summary>
+    public static bool IsArpeggioCross(MusicMarkSyntax mark)
+        => ArpeggioWords(mark) is { Cross: true };
+
+    /// <summary>The words <c>@arpeggio(…)</c> takes, in the order the editor offers them.</summary>
+    public static IReadOnlyList<string> ArpeggioArgumentWords { get; } = ["cross", "bracket"];
+
+    /// <summary>
+    /// What the words of <c>@arpeggio(…)</c> say — <c>bracket</c> (the chord is NOT rolled),
+    /// <c>cross</c> (the line runs on to the staff below), or both in either order, spaced as
+    /// every several-word argument is — or null: another annotation, no words, a word that is
+    /// neither, or one written twice. The ONE reader of the family, so the page, the exports
+    /// and the validator cannot take different words.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the two words combine because the two things do — LilyPond connects
+    /// chord brackets across staves exactly as it connects arpeggios
+    /// (LILYPOND-REF: lily/span-arpeggio-engraver.cc:59-61 Chord_onset_info — "Arpeggio" /
+    /// connectArpeggios, "ChordBracket" / connectChordBrackets).
+    /// </remarks>
+    public static (bool Cross, bool Bracket)? ArpeggioWords(MusicMarkSyntax mark)
+    {
+        if (!Named(mark, "arpeggio") || mark.IsSpanEnd || mark.Arguments.Length is 0 or > 2)
+            return null;
+        bool cross = false, bracket = false;
+        foreach (var word in mark.Arguments)
+        {
+            if (word.Text == "cross" && !cross)
+                cross = true;
+            else if (word.Text == "bracket" && !bracket)
+                bracket = true;
+            else
+                return null;
+        }
+        return (cross, bracket);
+    }
 
     /// <summary>
     /// The fret-diagram position string of <c>@diagram(032010)</c>, or null. <c>x</c> and

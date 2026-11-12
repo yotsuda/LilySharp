@@ -5258,6 +5258,8 @@ public sealed partial class LilySharpLanguageServer
                 // \nonArpeggiato). The one argument the family takes, so a row rather than
                 // a stub — the `ottava(bassa)` shape.
                 new CompletionItem { Label = "arpeggio(bracket)", Kind = CompletionItemKind.Value, Detail = "Chord bracket — play the notes together, not arpeggiated (LilyPond \\nonArpeggiato)", SortText = "6arpeggio.bracket" },
+                // …and the cross-staff one (AnnotationValues.IsArpeggioCross; owner's decision 2026-11-12).
+                new CompletionItem { Label = "arpeggio(cross)", Kind = CompletionItemKind.Value, Detail = "Arpeggio across both staves of a grand staff — written on the upper chord, one line down through the chord below", SortText = "6arpeggio.cross" },
                 new CompletionItem { Label = "courtesy", Kind = CompletionItemKind.Value, Detail = "Force courtesy accidental", SortText = "6courtesy" },
             new CompletionItem { Label = "parenthesize", Kind = CompletionItemKind.Value, Detail = "Head in parentheses (ghost note)", SortText = "6parenthesize" },
                 new CompletionItem { Label = "editorial", Kind = CompletionItemKind.Value, Detail = "Editorial (suggestion) accidental above the note", SortText = "6editorial" },
@@ -5341,6 +5343,7 @@ public sealed partial class LilySharpLanguageServer
             "bend" => GetBendCompletions(),
             "feather" => GetFeatherCompletions(),
             "figuredBass" => GetFiguredBassCompletions(),
+            "arpeggio" => GetArpeggioCompletions(),
             _ when AnnotationValues.IsOrnamentName(annotation) => GetOrnamentAccidentalCompletions(),
             _ => null
         };
@@ -5444,6 +5447,18 @@ public sealed partial class LilySharpLanguageServer
             Argument("#", "Bare sharp — raises the third above the bass", 11),
             Argument("_", "Held figure — continuation line from the previous bass note", 12),
         ]
+    };
+
+    /// <summary>
+    /// The words of an arpeggio, inside <c>@arpeggio(…)</c>: <c>cross</c> (owner's decision
+    /// 2026-11-12) and <c>bracket</c> — <c>AnnotationValues.ArpeggioArgumentWords</c>, in its
+    /// order. The two combine, spaced: <c>@arpeggio(cross bracket)</c>.
+    /// </summary>
+    internal static CompletionList GetArpeggioCompletions() => new()
+    {
+        Items = [.. AnnotationValues.ArpeggioArgumentWords.Select((word, rank) => Argument(word, word == "cross"
+            ? "One line on through the chord of the staff below in a grand staff (the lower staff writes nothing)"
+            : "A bracket instead of the wavy line: the notes are played together, not rolled", rank))]
     };
 
     /// <summary>

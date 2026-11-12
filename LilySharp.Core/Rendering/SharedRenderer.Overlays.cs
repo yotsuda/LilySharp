@@ -1507,6 +1507,28 @@ internal static partial class SharedRenderer
             // carry the frame (…YUp) because a bare `topY` reads as device and cost a sign
             // error in the bracket's end ticks on 2026-08-03.
             double midYUp = os.StaffMiddleYUp(a.StaffIndex, a.MeasureIndex, StaffHeight);
+            // A CROSS-STAFF arpeggio (@arpeggio(cross)): its lower end is about ANOTHER
+            // staff's middle line, and here is the first place the distance between the two
+            // is known — the page spreads the staves after the engraver has run. Both ends
+            // are brought into this frame (about the upper staff's middle), and from there on
+            // the line is drawn exactly as one staff's is: the bracket between its two ends,
+            // the wiggle as whole glyphs stacked up from the lower one.
+            // LILYPOND-REF: lily/arpeggio.cc:83-115 calc_positions — each stem's head
+            //   positions are taken about its own staff symbol and moved by that symbol's
+            //   coordinate in the common Y parent (`iv + staff_y - my_y`); the print
+            //   callback is deferred for exactly this reason (:309-312, "print () triggers a
+            //   vertical alignment if it is cross-staff").
+            double topOffsetYUp = a.TopYUp, bottomOffsetYUp = a.BottomYUp;
+            int copies = a.Copies;
+            if (a.BottomStaffIndex >= 0)
+            {
+                double lowerMidYUp = os.StaffMiddleYUp(a.BottomStaffIndex, a.MeasureIndex, StaffHeight);
+                if (double.IsNaN(lowerMidYUp) || double.IsNaN(midYUp))
+                    continue;
+                bottomOffsetYUp = lowerMidYUp + a.BottomYUp - midYUp;
+                if (!a.Bracket)
+                    (bottomOffsetYUp, copies) = ArpeggioEngraver.Stack(bottomOffsetYUp, topOffsetYUp);
+            }
             // Non-arpeggiate: a straight vertical bracket with end ticks — the chord is NOT
             // rolled.
             // LILYPOND-REF: lily/lookup.cc:542-560 Lookup::bracket — three round_filled_box
@@ -1531,8 +1553,8 @@ internal static partial class SharedRenderer
             //   not take "covers exactly that box" for "is that stencil".
             if (a.Bracket)
             {
-                double topYUp = os.YUp(midYUp + a.TopYUp, a.StaffIndex, a.MeasureIndex);
-                double bottomYUp = os.YUp(midYUp + a.BottomYUp, a.StaffIndex, a.MeasureIndex);
+                double topYUp = os.YUp(midYUp + topOffsetYUp, a.StaffIndex, a.MeasureIndex);
+                double bottomYUp = os.YUp(midYUp + bottomOffsetYUp, a.StaffIndex, a.MeasureIndex);
                 double t = os.Size(ArpeggioEngraver.BracketThickness, a.StaffIndex);
                 double half = t / 2;
                 // The ticks span the grob's own X extent — the one place it is spelled.
@@ -1552,7 +1574,7 @@ internal static partial class SharedRenderer
                 }
                 continue;
             }
-            if (a.Copies <= 0) continue;
+            if (copies <= 0) continue;
             // The wiggle is the GLYPH, stacked upward from the pile's bottom one designed
             // height at a time — the same copies the engraver counted and the spacing
             // reserved, so what is drawn and what is spaced for are one calculation.
@@ -1569,10 +1591,10 @@ internal static partial class SharedRenderer
             double bottom = ArpeggioEngraver.WiggleBox.Bottom;
             using (gc.Source(a.SourcePosition))
             {
-                for (int i = 0; i < a.Copies; i++)
+                for (int i = 0; i < copies; i++)
                 {
                     double baseline = os.YUp(
-                        midYUp + a.BottomYUp + i * ArpeggioEngraver.WiggleHeight - bottom,
+                        midYUp + bottomOffsetYUp + i * ArpeggioEngraver.WiggleHeight - bottom,
                         a.StaffIndex, a.MeasureIndex);
                     if (turned)
                         gc.DrawGlyphTurned(Music(MusicGlyph.WiggleArpeggiatoUp), a.X, baseline, glyphSize);

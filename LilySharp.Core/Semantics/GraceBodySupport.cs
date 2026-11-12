@@ -520,7 +520,9 @@ internal static class GraceBodySupport
     /// </remarks>
     internal static bool IsCarriedArpeggio(SyntaxNode annotation)
         => annotation is ArticulationSyntax { Name: "arpeggio" }
-           || annotation is MusicMarkSyntax mark && AnnotationValues.IsArpeggioBracket(mark);
+           // …(cross) too: a grace chord's is drawn on its own chord (CrossArpeggios.Connect
+           // connects nothing in grace time, and LYS4064 says so).
+           || annotation is MusicMarkSyntax mark && AnnotationValues.ArpeggioWords(mark) is not null;
 
     /// <summary>
     /// True for a GLISSANDO a grace note starts — <c>@glissando</c> (or <c>@slide</c>): a line

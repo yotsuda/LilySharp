@@ -167,6 +167,7 @@ internal sealed record MusicItemRare
     public int CrossStaffIndex { get; init; } = -1;
     public bool ClosesWithoutWish { get; init; }
     public double DotColumnShift { get; init; }
+    public SpanArpeggioPart SpanArpeggio { get; init; }
 }
 
 /// <summary>
@@ -293,6 +294,25 @@ public abstract record MusicItem
     {
         get => _rareBase?.DotColumnShift ?? 0;
         init { if (value != DotColumnShift) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { DotColumnShift = value }; }
+    }
+
+    /// <summary>
+    /// The invisible arpeggio of its own this note or chord holds under a cross-staff one
+    /// (<c>@arpeggio(cross)</c>): the lower staff's chord or note the line runs down to, and a
+    /// single note that writes the mark. The column keeps the room an arpeggio of its own
+    /// would take; the one drawn line is the upper chord's <see cref="ArpeggioItem"/>.
+    /// </summary>
+    /// <remarks>
+    /// A chord that writes the mark itself says so with <c>ChordItem.HasArpeggio</c> /
+    /// <c>HasArpeggioBracket</c> as any rolled chord does; this is for the columns that have
+    /// neither. Stamped on the lower staff once every staff is collected
+    /// (<c>Collector.CrossArpeggios.Connect</c>), and public so that it enters
+    /// <c>MeasureContentKey</c>: an edit on the staff above can change it.
+    /// </remarks>
+    public SpanArpeggioPart SpanArpeggio
+    {
+        get => _rareBase?.SpanArpeggio ?? SpanArpeggioPart.None;
+        init { if (value != SpanArpeggio) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SpanArpeggio = value }; }
     }
 
     /// <summary>

@@ -27,6 +27,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -61,7 +62,14 @@ public readonly record struct ArpeggioLayout(
     int SourceIndex = -1,    // F3/B: index into score.Arpeggios (data-pos resolved at render)
     int MeasureIndex = -1,   // page membership for multi-page rendering (-1 = draw on every page)
     int StaffIndex = -1,     // owning staff (ossia shrink); -1 = unknown/test construction
-    bool Bracket = false);   // non-arpeggiate: straight bracket, not a wave
+    bool Bracket = false,    // non-arpeggiate: straight bracket, not a wave
+    // A CROSS-STAFF arpeggio (@arpeggio(cross)): the staff BottomYUp is about — the line runs
+    // from TopYUp about StaffIndex's middle down to BottomYUp about THIS staff's. -1 = both
+    // ends are StaffIndex's. The two are HEAD-INTERVAL ends, not a pile's: the distance
+    // between the staves is the page's (it stretches with the page), so the copies are
+    // counted where it is known, at draw time (SharedRenderer.DrawArpeggios); Copies is then
+    // ArpeggioEngraver.CountedWhenDrawn.
+    int BottomStaffIndex = -1);
 
 /// <summary>
 /// Calculates arpeggio layouts from detected arpeggio items.
@@ -197,9 +205,33 @@ internal static class ArpeggioEngraver
     /// </para>
     /// </remarks>
     internal static (double BottomYUp, int Copies) Pile(double minPosition, double maxPosition)
+        => Stack(minPosition * 0.5 - HeadDrop, maxPosition * 0.5);
+
+    // LILYPOND-REF: lily/arpeggio.cc:119-146 get_property, get_squiggle (Arpeggio::print) — its
+    // `heads[DOWN] -= 0.5`, "adjust lower position to include note head in interval".
+    internal const double HeadDrop = 0.5;
+
+    /// <summary>
+    /// An <see cref="ArpeggioLayout.Copies"/> that says the pile is counted at draw time: a
+    /// cross-staff arpeggio's, whose length is the distance between two staves on the page.
+    /// </summary>
+    internal const int CountedWhenDrawn = -1;
+
+    /// <summary>
+    /// The pile over a head interval already dropped at its lower end (<see cref="HeadDrop"/>):
+    /// <paramref name="lo"/>..<paramref name="hi"/> in staff spaces of ONE up-positive frame —
+    /// a staff's for a chord (<see cref="Pile"/>), the page's for a cross-staff arpeggio, whose
+    /// two ends are about different staves (<c>SharedRenderer.DrawArpeggios</c>). The widening
+    /// and the count are the same statement either way.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio.cc:83-115 calc_positions — the head interval is the union
+    ///   over every stem, each staff's positions moved into the common Y frame, so a span
+    ///   arpeggio's <c>positions</c> reach from one staff's heads to the other's, and
+    ///   :148-183 Arpeggio::print stacks over it exactly as over one chord's.
+    /// </remarks>
+    internal static (double BottomYUp, int Copies) Stack(double lo, double hi)
     {
-        double lo = minPosition * 0.5 - 0.5;
-        double hi = maxPosition * 0.5;
         if (hi - lo < 1.5)
         {
             lo -= 0.5;
@@ -348,13 +380,14 @@ internal static class ArpeggioEngraver
             //   printed straight over a sharp (Lab sessions/p568/arp-bar.lys, m3; ledger
             //   arpeggio.x.right-edge-to-accidental).
             // LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done (the reversed head).
+            // (A single note is here only as @arpeggio(cross)'s; its support is its accidental.)
             double supportReach = 0;
             if (!arpMeasures.IsDefaultOrEmpty
                 && arp.MeasureIndex < arpMeasures.Length
                 && arp.ItemIndex < arpMeasures[arp.MeasureIndex].Items.Length
-                && arpMeasures[arp.MeasureIndex].Items[arp.ItemIndex] is ChordItem arpChord)
+                && arpMeasures[arp.MeasureIndex].Items[arp.ItemIndex] is (ChordItem or NoteItem) and var arpChord)
             {
-                supportReach = SpacingRules.ChordSupportLeftReach(arpChord);
+                supportReach = SpacingRules.SupportLeftReach(arpChord);
             }
             // A GRACE CHORD'S arpeggio (session 919, HANDOFF §2 U8 ⒟) stands left of the GRACE
             // column — its X read off the run, its support reach out of the grace's own fonts —
@@ -367,6 +400,25 @@ internal static class ArpeggioEngraver
                 supportReach = GraceColumnHeads.SupportLeftReach(grace.Column);
             }
             double columnLeftX = itemX - supportReach;
+
+            // A CROSS-STAFF arpeggio (@arpeggio(cross), connected by CrossArpeggios.Connect)
+            // stands left of the supports of BOTH staves — whichever chord, with its
+            // accidentals, reaches further left — and runs from this chord's top head to the
+            // lowest head it reaches below.
+            // LILYPOND-REF: lily/span-arpeggio-engraver.cc:133-148 stop_translation_timestep —
+            //   every child's stems and side-support-elements are handed to the span
+            //   arpeggio, "very late, to make sure we also catch `extra' side-pos support
+            //   like accidentals".
+            int bottomStaff = -1;
+            if (arp.PartnerStaffIndex >= 0 && voicesByStaff != null
+                && voicesByStaff.TryGetValue(arp.PartnerStaffIndex, out var partnerVoices)
+                && arp.MeasureIndex < arpMeasures.Length
+                && PartnerColumnLeftX(partnerVoices, arp.MeasureIndex,
+                    LayoutUtilities.ItemOnset(arpMeasures[arp.MeasureIndex], arp.ItemIndex), measure) is { } partnerLeftX)
+            {
+                columnLeftX = Math.Min(columnLeftX, partnerLeftX);
+                bottomStaff = arp.PartnerStaffIndex;
+            }
 
             // Y-up staff-space from the staff middle line (frame B): a head at
             // staff-position p sits p/2 spaces above the middle. This reads
@@ -386,6 +438,17 @@ internal static class ArpeggioEngraver
                 copies = 0;
                 arpeggioX = columnLeftX - Padding - BracketXExtent.Right;
             }
+            if (bottomStaff >= 0)
+            {
+                // The two ends of the head interval, each about its own staff's middle: this
+                // chord's top head, and the lowest head below dropped as a pile's foot is (a
+                // bracket widens both by its 0.75 instead, as on one staff). What lies between
+                // them is the page's to say.
+                topYUp = arp.MaxStaffPosition * 0.5 + (arp.Bracket ? BracketWiden : 0);
+                bottomYUp = arp.PartnerLowestHead * 0.5 - (arp.Bracket ? BracketWiden : HeadDrop);
+                if (!arp.Bracket)
+                    copies = CountedWhenDrawn;
+            }
 
             layouts.Add(new ArpeggioLayout(
                 X: arpeggioX,
@@ -396,10 +459,42 @@ internal static class ArpeggioEngraver
                 SourceIndex: ai,
                 MeasureIndex: arp.MeasureIndex,
                 StaffIndex: arp.StaffIndex,
-                Bracket: arp.Bracket));
+                Bracket: arp.Bracket,
+                BottomStaffIndex: bottomStaff));
         }
 
         return layouts.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// The leftmost ink of the columns a cross-staff arpeggio runs down to — every note or
+    /// chord of the staff below that begins at <paramref name="onset"/> and was stamped as the
+    /// line's (<see cref="SpacingRules.ArpeggioPartOf"/>) — or null when there is none.
+    /// </summary>
+    private static double? PartnerColumnLeftX(ImmutableArray<Voice> voices, int measureIndex,
+        Fraction onset, MeasureLayout measure)
+    {
+        double? left = null;
+        foreach (var voice in voices)
+        {
+            if (measureIndex >= voice.Measures.Length)
+                continue;
+            var items = voice.Measures[measureIndex].Items;
+            var at = Fraction.Zero;
+            for (int i = 0; i < items.Length && at <= onset; i++)
+            {
+                var item = items[i];
+                if (at == onset && !item.GraceTime
+                    && SpacingRules.ArpeggioPartOf(item) != SpanArpeggioPart.None)
+                {
+                    double x = measure.X + LayoutUtilities.GetItemXOffset(voice.Measures, measureIndex, i, measure)
+                        - SpacingRules.SupportLeftReach(item);
+                    left = left is { } l ? Math.Min(l, x) : x;
+                }
+                at += item.Duration;
+            }
+        }
+        return left;
     }
 
     /// <summary>

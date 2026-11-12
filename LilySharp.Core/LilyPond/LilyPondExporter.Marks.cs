@@ -54,6 +54,37 @@ public sealed partial class LilyPondExporter
         }
     }
 
+    /// <summary>
+    /// Reads off the page which <c>@arpeggio(cross)</c> it connected, and to what
+    /// (<see cref="CrossArpeggios.Sources"/> — the pairing the page draws by), for a book that
+    /// writes one: <see cref="SplitAttachments"/> writes the upper chord's, and
+    /// <see cref="ArpeggioFromAbove"/> the lower staff's, which wrote nothing.
+    /// </summary>
+    private void CollectCrossArpeggios(SyntaxTree tree, RenderDeclarationSyntax? render)
+    {
+        _shared.CrossArpeggioUppers = new();
+        _shared.CrossArpeggioReached = new();
+        if (render is null
+            || !tree.GetRoot().DescendantNodes<MusicMarkSyntax>().Any(Semantics.AnnotationValues.IsArpeggioCross)
+            || PageModel(tree, render) is not { } score)
+            return;
+        (_shared.CrossArpeggioUppers, _shared.CrossArpeggioReached) = CrossArpeggios.Sources(score);
+    }
+
+    /// <summary>
+    /// The arpeggio a note or chord of the LOWER staff takes because a cross-staff one runs
+    /// down to it — <c>\arpeggio</c>, or <c>\nonArpeggiato</c> under a bracket — or nothing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/span-arpeggio-engraver.cc:94-110 process_acknowledged — the span
+    ///   is made of the arpeggios the staves HAVE at the moment ("items_.size () > 1"), so
+    ///   every staff the line crosses must write its own.
+    /// </remarks>
+    private string ArpeggioFromAbove(SyntaxNode host)
+        => _shared.CrossArpeggioReached.TryGetValue(host.SourceStart, out var part)
+            ? part == SpanArpeggioPart.Bracket ? "\\nonArpeggiato" : "\\arpeggio"
+            : "";
+
     private (string Prefix, string Suffix) SplitAttachments(IEnumerable<SyntaxNode> arts)
     {
         var prefix = new StringBuilder();
@@ -83,6 +114,22 @@ public sealed partial class LilyPondExporter
                     }
                     else if (_currentPartName is null)
                         _warnings.Add("@cross in a phrase is not written to the twin: the staff it leaves depends on the part playing it");
+                    break;
+                // @arpeggio(cross) / @arpeggio(cross bracket) (owner's decision 2026-11-12): the
+                // chord's own arpeggio or bracket, and — where the page found something below
+                // to run down to — the property that makes LilyPond span the two, for THIS
+                // moment only (\once): two plain @arpeggio at one moment stay two lines on the
+                // page, so the twin must not connect them. Unconnected, it is the plain one.
+                // LILYPOND-REF: lily/span-arpeggio-engraver.cc:59-61 Chord_onset_info — connectArpeggios
+                //   and connectChordBrackets, read (:106-109, in process_acknowledged) at the
+                //   moment the arpeggios are acknowledged;
+                //   ly/engraver-init.ly:479 — the engraver is StaffGroup's, which GrandStaff and
+                //   PianoStaff are made from.
+                case MusicMarkSyntax mk when Semantics.AnnotationValues.ArpeggioWords(mk) is { Cross: true } crossed:
+                    if (mk.Parent is { } crossHost && _shared.CrossArpeggioUppers.Contains(crossHost.SourceStart))
+                        prefix.Append("\\once \\set GrandStaff.")
+                            .Append(crossed.Bracket ? "connectChordBrackets" : "connectArpeggios").Append(" = ##t ");
+                    suffix.Append(crossed.Bracket ? "\\nonArpeggiato" : "\\arpeggio");
                     break;
                 // ⚠️ THE ONE MARK THAT TRAILS ITS NOTE. `\mark` is standalone music written
                 // BEFORE the note it stands over, which is why marks default to the prefix;

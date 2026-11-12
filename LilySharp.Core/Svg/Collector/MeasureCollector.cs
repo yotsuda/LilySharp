@@ -2491,6 +2491,13 @@ public sealed partial class MeasureCollector
         // the parts as they were collected, which is the space they are still in there.
         if (combinedAddressings.Count > 0)
             content = CombinedStaffReaddress.Apply(content, combinedAddressings);
+        // @arpeggio(cross): each one's line is run down to the staff below — on the finished
+        // staves and the final addresses, every collect (CrossArpeggios says why here).
+        if (CrossArpeggios.Any(content.Arpeggios))
+        {
+            (staffGroups, var connected) = CrossArpeggios.Connect(staffGroups, content.Arpeggios);
+            content = content with { Arpeggios = connected };
+        }
         var built = ScoreAssembler.BuildMultiStaffScore(staffGroups, content);
         // The rows' unseen melodies ride on the model for the files (almost always none: no copy then).
         return rowMelodies.Count == 0 ? built : built with { RowMelodies = rowMelodies.ToImmutable() };
@@ -6392,8 +6399,26 @@ public sealed partial class MeasureCollector
             if (art is ArticulationSyntax artSyntax &&
                 artSyntax.Name == "arpeggio")
                 return true;
+            // @arpeggio(cross) is the wavy line too — its own chord's part of it; the
+            // bracket spellings are the callers' arpBracket (IsArpeggioBracket).
+            if (art is MusicMarkSyntax mark
+                && Semantics.AnnotationValues.ArpeggioWords(mark) is { Cross: true, Bracket: false })
+                return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// Whether the note or chord writes <c>@arpeggio(cross)</c> / <c>@arpeggio(cross bracket)</c>
+    /// — and which: the line that runs on to the staff below (owner's decision 2026-11-12).
+    /// </summary>
+    private static Model.SpanArpeggioPart CrossArpeggioOf(SyntaxNode node)
+    {
+        foreach (var art in ArticulationsOf(node))
+            if (art is MusicMarkSyntax mark
+                && Semantics.AnnotationValues.ArpeggioWords(mark) is { Cross: true } words)
+                return words.Bracket ? Model.SpanArpeggioPart.Bracket : Model.SpanArpeggioPart.Wiggle;
+        return Model.SpanArpeggioPart.None;
     }
 
     /// <summary>

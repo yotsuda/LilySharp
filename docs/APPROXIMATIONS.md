@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 326 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **452** | |
+| `OWN` | 330 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **456** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（326 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（330 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -333,6 +333,7 @@
 - **`ShapeChords`** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **`MusicXmlExporter._printedPlays`** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
+- **`MusicXmlExporter.WriteCrossArpeggio`** LILYSHARP-OWN: the number. MusicXML says of it that chords "arpeggiated
 - **`MusicXmlExporter.PendingChordRow`** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/MusicXmlImport/LysWriter.cs`
 - **`LysWriter.CuttableMarks`** (MeasureBuilder.SectionHead, LILYSHARP-OWN, owner's decision; the twin omits it too).
@@ -390,6 +391,7 @@
 ### `LilySharp.Core/Semantics/AnnotationValues.cs`
 - **`AnnotationValues.Sing`** LILYSHARP-OWN: LilyPond writes no sound; what is written here is heard from a
 - **`AnnotationValues.Vibrato`** LILYSHARP-OWN: LilyPond has no vibrato script; what is written here is heard, not engraved.
+- **`AnnotationValues.ArpeggioWords`** LILYSHARP-OWN: the two words combine because the two things do — LilyPond connects
 ### `LilySharp.Core/Semantics/ArticulationRuns.cs`
 - **`ArticulationRuns`** LILYSHARP-OWN: LilyPond has no such spanner; its twin writes the script on each note.
 ### `LilySharp.Core/Semantics/CapoAdvisor.cs`
@@ -437,6 +439,8 @@
 - **`BeamingPattern.Options.For`** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/CompressRests.cs`
 - **`CompressRests`** LILYSHARP-OWN: LilyPond has no switch for this. MEASURED (2.26.0, Lab sessions/p903/b5):
+### `LilySharp.Core/Svg/Collector/CrossArpeggios.cs`
+- **`CrossArpeggios`** LILYSHARP-OWN: the pairing. LilyPond connects whatever arpeggios the staves WROTE at a
 ### `LilySharp.Core/Svg/Collector/ItemDiagramRuns.cs`
 - **`ItemDiagramRuns`** LILYSHARP-OWN: LilyPond draws a markup diagram wherever it is written; the twin asks it the
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
@@ -456,6 +460,7 @@
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
 - **`MeasureCollector.ProcessMusicNode`** not against the reset the head already stands on (LILYSHARP-OWN): a
 - **`MeasureCollector.ApplyMeterChange`** (MeasureBuilder.SectionHead, LILYSHARP-OWN).
+- **`MeasureCollector.WithCrossArpeggio`** LILYSHARP-OWN: only the cross-staff spelling reaches a single note. A plain
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Stems.cs`
 - **`MeasureCollector.ResolveVoiceStemDirections`** LILYSHARP-OWN — the memo is the preview's ink, not an engraved grob).
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`

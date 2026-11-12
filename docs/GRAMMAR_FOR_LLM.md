@@ -524,7 +524,13 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Niente: `@niente` — `c4@p@decresc d e f | g1@niente` fades to nothing (circled tip), `c4@niente@cresc …` grows
   from nothing; never at a hairpin's loud end (LYS4029)
 - Accidental style: `@courtesy` (cautionary, parenthesized), `@editorial` (musica ficta)
-- Arpeggio: `<c e g>4@arpeggio`
+- Arpeggio: `<c e g>4@arpeggio` (wavy line), `<c e g>4@arpeggio(bracket)` (a bracket: not rolled)
+- **Arpeggio across both staves** of a `grandStaff`: `<c' e' g'>2@arpeggio(cross)` on the UPPER
+  staff's chord (or single note) — one line runs down through the chord or note that begins at
+  the same moment on the staff directly below. The lower staff writes NOTHING (no `@arpeggio`
+  there). `@arpeggio(cross bracket)` is one bracket across both. If the part is not in a
+  `grandStaff` with a staff below, or the staff below has a rest / a held note / another rhythm
+  at that moment, it is drawn on its own chord and warns (LYS4064)
 - Glissando: `c4@glissando d` (line from this note to the next)
 - Figured bass: `c4@figuredBass(6)` , `d4@figuredBass(6 4)`
 - Chord diagram (guitar fret diagram): `c4@diagram(x32010)` — one character per string, low

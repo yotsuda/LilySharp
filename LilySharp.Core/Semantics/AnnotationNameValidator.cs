@@ -266,6 +266,17 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                             $"'{string.Join(" ", mark.Arguments.Select(a => a.Text))}' is not a value of '@{mark.Name}' - the mark is ignored. "
                             + $"An ornament takes its accidental, the small sign drawn above it: '@{mark.Name}(sharp)', "
                             + $"'@{mark.Name}(flat)' or '@{mark.Name}(natural)'; '@{mark.Name}' alone is the plain ornament.");
+                    // An arpeggio's words that are not its two (or one of them twice): the mark
+                    // is dropped whole, and the reader is told what the parentheses take.
+                    // (A word in the wrong case is WarnUnknown's: it names the spelling.)
+                    else if (string.Equals(mark.Name, "arpeggio", StringComparison.Ordinal) && mark.HasArgumentList
+                             && !mark.Arguments.Any(a => AnnotationValues.ArpeggioArgumentWords.Any(w =>
+                                 w != a.Text && w.Equals(a.Text, StringComparison.OrdinalIgnoreCase))))
+                        _diagnostics.Warning(mark.Span, DiagnosticCodes.UnknownAnnotation,
+                            $"'{string.Join(" ", mark.Arguments.Select(a => a.Text))}' is not a value of '@arpeggio' - the mark is ignored. "
+                            + "An arpeggio takes 'bracket' (the chord is not rolled: '@arpeggio(bracket)'), 'cross' (one line "
+                            + "on through the chord of the staff below in a grand staff: '@arpeggio(cross)'), or both, each "
+                            + "once: '@arpeggio(cross bracket)'; '@arpeggio' alone is the wavy line on its own chord.");
                     else
                         WarnUnknown(mark, mark.MarkName);
                 }
@@ -407,7 +418,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.IsTextAnnotation(mark)
             || AnnotationValues.IsTextSpanAnnotation(mark)
             || AnnotationValues.Feather(mark) != 0
-            || AnnotationValues.IsArpeggioBracket(mark)
+            || AnnotationValues.ArpeggioWords(mark) is not null
             || AnnotationValues.OrnamentAccidental(mark) is not null
             || AnnotationValues.Frame(mark) is not null
             || AnnotationValues.IsNotesDiagram(mark)

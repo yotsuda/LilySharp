@@ -963,7 +963,7 @@ public sealed partial class LilyPondExporter
         string trem = n.Tremolo is { } t ? t.Text : "";
         // `cis?4` / `cis!4`: the accidental marks stand between the pitch and the duration.
         return prefix + EmitMusicPitch(n.Pitch) + AccidentalMarks(n.Articulations)
-            + EmitEventDuration(n.Duration) + trem + suffix;
+            + EmitEventDuration(n.Duration) + trem + ArpeggioFromAbove(n) + suffix;
     }
 
     /// <summary>
@@ -997,7 +997,7 @@ public sealed partial class LilyPondExporter
     {
         var (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(q, q.Articulations));
         string trem = q.Tremolo is { } t ? t.Text : "";
-        string body = prefix + "q" + EmitEventDuration(q.Duration) + trem + suffix;
+        string body = prefix + "q" + EmitEventDuration(q.Duration) + trem + ArpeggioFromAbove(q) + suffix;
 
         // ⚠️ Lily#'s q takes octave marks and LilyPond's does not, so a displaced q
         // has to be SAID a different way: the chord is written out at its new octave.
@@ -1454,7 +1454,7 @@ public sealed partial class LilyPondExporter
         if (c.HasTiedMembers)
             chordArts = chordArts.Where(a => a is not TieSyntax).ToList();
         var (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(c, chordArts));
-        return prefix + sb.ToString() + suffix + memberFrames;
+        return prefix + sb.ToString() + ArpeggioFromAbove(c) + suffix + memberFrames;
     }
 
     /// <summary>
