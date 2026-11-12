@@ -1,18 +1,18 @@
 // Who sings which section, as a band says it: one voice takes the verse, another the chorus,
 // and a third comes in a third above for the chorus. All three sing the lead's words on the
 // lead's notes; Lily# moves the notes of the third along the key.
-octave absolute
+octave relative
 time 4/4
 key c major
 tempo 100
 language english
 part lead { instrument alto  lyrics words }
 section Verse {
-  lead   { e'4 e' d' c'   | d'4 e' c'2      | e'4 e' d' c'   | d'4 d' c'2 | }
+  lead   { e'4 e d c   | d4 e c2      | e4 e d c   | d4 d c2 | }
   lyrics words { Morn- ing on the | wa- ter- side, | no- bod- y to | hear the tide. | }
 }
 section Chorus {
-  lead   { g'4 g' a' g'   | e'4 d' c'2      | g'4 g' a' g'   | e'4 d' c'2 | }
+  lead   { g'4 g a g   | e4 d c2      | g'4 g a g   | e4 d c2 | }
   lyrics words { Sing it o- ver, | o- ver- now, | sing it loud- er, | a- ny- how. | }
 }
 form { Verse Chorus }

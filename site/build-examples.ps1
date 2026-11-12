@@ -210,7 +210,7 @@ score {
 'sing-first' = @'
 // A part that names its words, the words, and the line that sings them. The score's row prints
 // the words; the singer line is what makes them heard. The piano has no singer line, so it plays.
-octave absolute
+octave relative
 time 4/4
 key g major
 tempo 96
@@ -220,20 +220,20 @@ part rh { instrument piano-right }
 part lh { instrument piano-left }
 section A {
   melody {
-    g4 a b d'      | c'4 b a r      | b4 c' d' g'   | fis'4 e' d' r  |
-    e'4 fis' g' e' | d'4 b g r      | a4 b c' a     | b4 a g2        |
+    g4 a b d   | c4 b a r      | b4 c d g   | fis4 e d r  |
+    e4 fis g e | d4 b g r      | a4 b c a   | b4 a g2     |
   }
   lyrics words {
     Write a line of | words for me,  | set them on the | mel- o- dy;   |
     press the key and | lend an ear: | what you wrote is | what you hear. |
   }
   rh {
-    <b d' g'>2@mp <b d' g'>2 | <a c' e'>2 <a d' fis'>2 | <b d' g'>2 <b d' g'>2 | <a d' fis'>2 <a d' fis'>2 |
-    <c' e' g'>2 <c' e' g'>2  | <b d' g'>2 <b d' g'>2   | <a c' e'>2 <a d' fis'>2 | <b d' g'>4 <a d' fis'>4 <b d' g'>2 |
+    <b d g>2@mp <b d g>2 | <a c e>2 <a d fis>2 | <b d g>2 <b d g>2   | <a d fis>2 <a d fis>2 |
+    <c e g>2 <c e g>2    | <b d g>2 <b d g>2   | <a c e>2 <a d fis>2 | <b d g>4 <a d fis>4 <b d g>2 |
   }
   lh {
-    g,8@mp d g d g, d g d | a,8 e a e d a d' a | g,8 d g d g, d g d | d8 a d' a d a d' a |
-    c8 g c' g c g c' g    | g,8 d g d g, d g d | a,8 e a e d a d' a | g,8 d d a, g,2 |
+    g,8@mp d' g d g, d' g d | a8 e' a e d a' d a   | g,8 d' g d g, d' g d | d8 a' d a d, a' d a |
+    c,8 g' c g c, g' c g    | g,8 d' g d g, d' g d | a8 e' a e d a' d a   | g,8 d' d a g2 |
   }
 }
 form { ~A }
@@ -248,18 +248,18 @@ score {
 // Who sings which section, as a band says it: one voice takes the verse, another the chorus,
 // and a third comes in a third above for the chorus. All three sing the lead's words on the
 // lead's notes; Lily# moves the notes of the third along the key.
-octave absolute
+octave relative
 time 4/4
 key c major
 tempo 100
 language english
 part lead { instrument alto  lyrics words }
 section Verse {
-  lead   { e'4 e' d' c'   | d'4 e' c'2      | e'4 e' d' c'   | d'4 d' c'2 | }
+  lead   { e'4 e d c   | d4 e c2      | e4 e d c   | d4 d c2 | }
   lyrics words { Morn- ing on the | wa- ter- side, | no- bod- y to | hear the tide. | }
 }
 section Chorus {
-  lead   { g'4 g' a' g'   | e'4 d' c'2      | g'4 g' a' g'   | e'4 d' c'2 | }
+  lead   { g'4 g a g   | e4 d c2      | g'4 g a g   | e4 d c2 | }
   lyrics words { Sing it o- ver, | o- ver- now, | sing it loud- er, | a- ny- how. | }
 }
 form { Verse Chorus }
