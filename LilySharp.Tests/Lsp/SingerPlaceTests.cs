@@ -367,4 +367,29 @@ public class SingerPlaceTests
             "singer \"neutrino/A\" sings words on lead in Verse\nsinger \"neutrino/A\" sings words on lead in Verse")));
         Assert.Contains(same, d => d.Code == DiagnosticCodes.SingerRepeated);
     }
+
+    /// <summary>Owner's report 2026-11-12: a Coda of two bars with no words, right after the last
+    /// chorus, was sung "u— u— u—" — the chorus's last syllable held on, by the rule that the
+    /// notes after a phrase's last word are its melisma. The vowel stops where a section that
+    /// sings no word begins; that section is the instrument's.</summary>
+    [Fact]
+    public void AVowelIsNotCarriedIntoASectionThatSingsNoWord()
+    {
+        string coda = "section Coda {\n  lead { g'4 e d c | }\n}\nform { Verse Chorus Coda }";
+        string source = Book("singer female sings words on lead").Replace("form { Verse Chorus Verse }", coda);
+        var voice = Assert.Single(Sung(source));
+        // Verse and Chorus, four notes each; the Coda's four are not the voice's.
+        Assert.Equal(8, voice.Notes.Length);
+        Assert.Equal("な", voice.Notes[^1].L);
+        Assert.True(voice.Notes[^1].B);
+
+        // …while a held note inside a section that has words is still its syllable's.
+        var held = Assert.Single(Sung(source.Replace("な な な な |", "な _ な な |")));
+        Assert.Equal(8, held.Notes.Length);
+        Assert.True(held.Notes[5].M);
+
+        // And a section with words that begins on a held note takes the vowel over the section's line.
+        var over = Assert.Single(Sung(Book("singer female sings words on lead").Replace("な な な な |", "_ な な な |")));
+        Assert.True(over.Notes[4].M);
+    }
 }

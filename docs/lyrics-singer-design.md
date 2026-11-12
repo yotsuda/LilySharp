@@ -291,7 +291,11 @@ a voice and its instrument is off — but in a section as it is played where NON
 has a note, its instrument plays. `SungVoices.Unsung` finds those stretches by the sections'
 ticks; the playback list marks each such note (`PlaybackNote.U`) and the three places of the
 editor that keep a sung part's instrument out let them through (the preview's Play, the WAV /
-MP3 / MP4 export, a proposal's Play), as does `lysc wav --singer`. By SECTION, not by note: a
+MP3 / MP4 export, a proposal's Play), as does `lysc wav --singer`. A section with notes and NO
+word at all is such a section even right after a sung one (owner's report the same day: a
+two-bar Coda after the last chorus was sung "u— u—", the last syllable's vowel held on by the
+rule that the notes after a phrase's last word are its melisma): `SungVoices.Read` carries a
+vowel only as far as its section, or into one that has words of its own. By SECTION, not by note: a
 bar of a sung section with notes and no words is still the voice's silence (section 8).
 
 Printed since the same day: section 13. Not built: `in Chorus 2` for one playing of a

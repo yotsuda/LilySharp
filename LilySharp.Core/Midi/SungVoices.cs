@@ -58,7 +58,9 @@ public sealed record SungVoice(string Part, string Language, IReadOnlyList<SungN
 /// sings its kana while the file prints its kanji; an empty text at an onset is a held note (<c>_</c>, a detached <c>~</c>) and a melisma;
 /// a note with no words that begins exactly where the sung note before it ends is a melisma too
 /// (a slur's, a tie the export did not merge) — ⚠️ so are the notes of a phrase whose words ran
-/// out before it did, until a rest; a note after a rest with no words is not sung. A chord sings
+/// out before it did, until a rest or until a section that sings no word at all (a Coda with no
+/// words after the last chorus is the instrument's, not the last syllable's vowel held on); a
+/// note after a rest with no words is not sung. A chord sings
 /// its top note; a part in two voices sings the voice its words stand on most; grace notes and
 /// drums are not sung. A breath is after the last note before a gap, after the last note, and after a note marked <c>@breath</c>.
 /// The first words at an onset win: a second track on the same part (another verse printed
@@ -92,6 +94,29 @@ public static class SungVoices
             var line = Line(midi, part, words);
             MoveWordsOntoGraces(line, words, hyphens);
 
+            // A vowel is not carried into a section that sings no word (owner's report
+            // 2026-11-12: a Coda of two bars with no words, right after the last chorus, was
+            // sung "u— u— u—" on the chorus's last syllable): the notes of a phrase whose words
+            // ran out are a melisma only as far as the section goes — or into one that has words
+            // of its own, where a held first note (`_`) still reaches here wordless.
+            var sectionStarts = midi.SectionStarts.Keys.ToList();
+            var wordTicks = words.Keys.OrderBy(t => t).ToList();
+            bool SectionHasWords(int tick)
+            {
+                if (sectionStarts.Count == 0)
+                    return true;
+                int at = sectionStarts.BinarySearch(tick);
+                if (at < 0)
+                    at = ~at - 1;
+                if (at < 0)
+                    return true;
+                int from = sectionStarts[at], to = at + 1 < sectionStarts.Count ? sectionStarts[at + 1] : int.MaxValue;
+                int first = wordTicks.BinarySearch(from);
+                if (first < 0)
+                    first = ~first;
+                return first < wordTicks.Count && wordTicks[first] < to;
+            }
+
             var sung = new List<(MidiNote Note, int End, string? Lyric, bool Melisma)>();
             bool singing = false;
             int prevEnd = -1;
@@ -107,7 +132,7 @@ public static class SungVoices
                     sung.Add((note, end, held ? null : text, held));
                     singing = true;
                 }
-                else if (singing && note.StartTick == prevEnd)
+                else if (singing && note.StartTick == prevEnd && SectionHasWords(note.StartTick))
                 {
                     sung.Add((note, end, null, true));
                 }

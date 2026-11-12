@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A section with no words is not sung on the vowel before it**: a Coda with notes and no words, right after the last chorus, was sung "u— u—" — the chorus's last syllable held on. A voice carries a vowel only as far as its section, or into a section that has words of its own; the wordless one is played by the part's instrument.
 - **After `staff` and after `lyrics` in a score the list holds the singers the file names**, beside the parts and the tracks: `staff carol` is the staff of what carol sings, `lyrics carol` her words. A score with singer lines of its own now prints a singer with the words those lines say.
 - **The text over a voice's button in the practice menu is short**: who sings what on which part (`carol (SEVEN) sings words on lead`), and no more — "its voice, on or off (the part button beside it is its instrument)" is gone.
 - **The practice menu calls a named singer by her name**: `singer carol female "neutrino/SEVEN" sings …` is the line "carol" in the metronome's menu, not "SEVEN"; hovering says the voice (`carol (SEVEN) sings words on lead`). A line that names nobody goes by its voice, as before.
