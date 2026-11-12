@@ -254,6 +254,9 @@ public static class DiagnosticCodes
     public const string ExpectedToken = "LYS0002";
     /// <summary>Parser error: a string literal was not terminated.</summary>
     public const string UnterminatedString = "LYS0003";
+    /// <summary>A fenced text with no closing fence: it runs to the end of the file
+    /// (docs/markdown-text-design.md).</summary>
+    public const string UnterminatedFence = "LYS0043";
     /// <summary>Parser error: a comment was not terminated.</summary>
     public const string UnterminatedComment = "LYS0004";
     /// <summary>Parser error: a string literal holds an escape C# does not define (<c>"\p"</c>),
@@ -1636,6 +1639,11 @@ public static class DiagnosticCodes
     /// <summary>A <c>singer … with</c> setting that is not a name and a value
     /// (<c>with breathiness 3 gender -0.2</c>). The parser.</summary>
     public const string SingerSettingMalformed = "LYS4056";
+
+    /// <summary>A fenced text whose opening line is not one Lily# reads: no <c>md</c>, a word
+    /// that is none of its own, or one that does not belong where the fence stands
+    /// (docs/markdown-text-design.md).</summary>
+    public const string FencedTextWord = "LYS4057";
 
     /// <summary><c>singer … sings NAME</c> where no lyrics track has that name.</summary>
     public const string SingerWordsUnknown = "LYS4042";

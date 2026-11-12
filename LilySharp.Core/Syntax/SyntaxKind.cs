@@ -56,6 +56,9 @@ public enum SyntaxKind : ushort
     DecimalLiteral,
     /// <summary>A string literal token.</summary>
     StringLiteral,
+    /// <summary>A fenced text, whole: the opening backticks and words, the lines, the closing
+    /// backticks (docs/markdown-text-design.md).</summary>
+    FencedText,
 
     // === Identifiers ===
     /// <summary>An identifier token.</summary>
@@ -396,6 +399,8 @@ public enum SyntaxKind : ushort
     LanguageDeclaration,
     /// <summary>Who sings what, at the top level of a file (<c>singer female sings words on sop</c>).</summary>
     SingerDeclaration,
+    /// <summary>A text written as Markdown in a fence: at the top level, in a section, in a score.</summary>
+    MarkdownText,
     /// <summary>The words a part sings, in its header (<c>part sop { lyrics words }</c>).</summary>
     PartLyricsDeclaration,
     /// <summary>A variable declaration node (legacy, <c>name = { ... }</c>).</summary>

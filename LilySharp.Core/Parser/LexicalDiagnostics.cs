@@ -52,6 +52,18 @@ internal static class LexicalDiagnostics
                         new TextSpan(tokenStart + offset, length),
                         DiagnosticCodes.InvalidEscape, message));
 
+            if (token.Kind == SyntaxKind.FencedText && !FencedText.Read(token.Text).Closed)
+            {
+                int ticks = 0;
+                while (ticks < token.Text.Length && token.Text[ticks] == '`')
+                    ticks++;
+                diagnostics.Add(Diagnostic.Error(
+                    new TextSpan(tokenStart, ticks),
+                    DiagnosticCodes.UnterminatedFence,
+                    "This fence is never closed, so the rest of the file is its text. Close it with a line of "
+                    + new string('`', ticks) + "."));
+            }
+
             ScanTrivia(token.TrailingTrivia, tokenStart + token.Width, diagnostics);
 
             pos += token.FullWidth;

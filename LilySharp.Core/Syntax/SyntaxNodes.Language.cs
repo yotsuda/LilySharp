@@ -18,6 +18,38 @@ using LilySharp.Core.Syntax.InternalSyntax;
 
 namespace LilySharp.Core.Syntax;
 
+/// <summary>A text written as Markdown in a fence, at the top level, directly in a section, or
+/// in a score (docs/markdown-text-design.md).</summary>
+public sealed class MarkdownTextSyntax : SyntaxNode
+{
+    private FencedText? _value;
+
+    internal MarkdownTextSyntax(MarkdownTextGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The fence, whole: one token.</summary>
+    public SyntaxTokenNode Fence => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The opening line's words and the text between the fences.</summary>
+    public FencedText Value => _value ??= FencedText.Read(Fence.Text);
+
+    /// <summary>Whether the text stands under the last system (<c>end</c> on the opening line).</summary>
+    public bool IsEnd
+    {
+        get
+        {
+            foreach (var (text, _) in Value.Words)
+            {
+                if (text == FencedText.EndWord)
+                    return true;
+            }
+            return false;
+        }
+    }
+}
+
 /// <summary>The language the file's lyrics are written in: <c>language japanese</c>
 /// (<see cref="Music.LyricLanguage"/>).</summary>
 public sealed class LanguageDeclarationSyntax : SyntaxNode

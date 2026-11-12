@@ -618,6 +618,8 @@ internal sealed partial class Parser
         {
             // New section-oriented structure
             SyntaxKind.SectionKeyword => ParseSectionDeclaration(),
+            // A text for the page, written as Markdown (docs/markdown-text-design.md).
+            SyntaxKind.FencedText => new MarkdownTextGreen(Advance()),
             SyntaxKind.FormKeyword => ParseFormDeclaration(),
             SyntaxKind.UsingKeyword => ParseUsingDirective(),
             // `score [ "basename" ] { layout }` — a printable score (visual

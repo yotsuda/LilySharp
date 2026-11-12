@@ -752,6 +752,8 @@ internal sealed partial class Parser
         {
             // Who sings in THIS score: over the top level's lines for the same part (Music.LyricSinger).
             SyntaxKind.Identifier when IsSingerDeclaration() => ParseSingerDeclaration(),
+            // THIS score's text, over the top level's for the same place (docs/markdown-text-design.md).
+            SyntaxKind.FencedText => new MarkdownTextGreen(Advance()),
             SyntaxKind.StaffKeyword => ParseStaffRender(),
             // `strokes NAME`: the strokes part's one-line staff (2026-11-01) — a staff item
             // under its own keyword (StaffRenderSyntax.IsStrokes).

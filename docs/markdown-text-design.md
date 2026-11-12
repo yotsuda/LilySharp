@@ -48,7 +48,8 @@ section B {
 - The fence closes with a line that begins ```` ``` ````. Everything between is Markdown: `//`
   and `}` mean nothing there. A fence of four backticks holds a text that writes three
   (Markdown's own rule).
-- The opening line's indentation is taken off every line, so a fence may be indented in a section.
+- The CLOSING fence's indentation is taken off every line, so a fence may be indented in a
+  section (a C# raw string's rule: where the closing fence stands is the text's margin).
 - Two fences for one place print one after the other, in written order.
 - The backtick is new to the lexer (nothing uses it today).
 

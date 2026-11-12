@@ -148,6 +148,7 @@ public static class SemanticValidation
         new LayoutValidator(),              // a layout { } entry naming no such key, or a bad word
         new ChordShapesValidator(),         // a `capo N` line's fret; a chordShapes { } table's entries and its shape
         new CheckPragmaValidator(),         // a `check` line naming no check, or no such part
+        new MarkdownTextValidator(),        // a fenced text whose opening line says something Lily# does not read
         new VoiceLeadingValidator(),        // under `check voiceLeading`: parallels, crossing, spacing (information)
     };
 

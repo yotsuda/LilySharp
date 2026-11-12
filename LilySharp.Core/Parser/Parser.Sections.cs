@@ -95,6 +95,8 @@ internal sealed partial class Parser
             // and PARSED — falling through to ParseList's `else Advance()` dropped the
             // directive's width and slid every source offset after it (LYS0029).
             SyntaxKind.UsingKeyword => ParseMisplacedUsing("a section"),
+            // A text printed above the system this section begins (docs/markdown-text-design.md).
+            SyntaxKind.FencedText => new MarkdownTextGreen(Advance()),
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),

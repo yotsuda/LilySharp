@@ -233,6 +233,8 @@ internal sealed class Lexer
                 _position++;
                 return (SyntaxKind.Backslash, "\\");
             case '/': _position++; return (SyntaxKind.Slash, "/");
+            case '`' when Peek(1) == '`' && Peek(2) == '`':
+                return ScanFence();
             case '%':
                 // A percent mark, `%` or `%N` with the digits glued: one repetition of the N
                 // bars written before it (docs/percent-repeat-design.md).
@@ -334,6 +336,51 @@ internal sealed class Lexer
         // Unknown character - bad token
         _position++;
         return (SyntaxKind.BadToken, _text[start.._position]);
+    }
+
+    /// <summary>A fenced text (docs/markdown-text-design.md): three or more backticks, the
+    /// opening line's words, and every line down to one that begins with as many backticks.
+    /// ONE token, as a block comment is one trivia: nothing between the fences is Lily#.
+    /// A fence that never closes runs to the end of the file (LexicalDiagnostics says so).</summary>
+    private (SyntaxKind kind, string text) ScanFence()
+    {
+        int start = _position;
+        while (!IsAtEnd && Current == '`')
+            _position++;
+        int ticks = _position - start;
+        while (!IsAtEnd)
+        {
+            // To the end of this line, then look at how the next one begins.
+            while (!IsAtEnd && Current != '\n')
+                _position++;
+            if (IsAtEnd)
+                break;
+            _position++;
+            int line = _position;
+            while (!IsAtEnd && (Current == ' ' || Current == '\t'))
+                _position++;
+            int run = _position;
+            while (!IsAtEnd && Current == '`')
+                _position++;
+            if (_position - run >= ticks && FenceLineEndsHere())
+                return (SyntaxKind.FencedText, _text[start.._position]);
+            _position = line;
+        }
+        return (SyntaxKind.FencedText, _text[start.._position]);
+    }
+
+    /// <summary>Whether only blanks stand between here and the end of the line.</summary>
+    private bool FenceLineEndsHere()
+    {
+        for (int i = _position; i < _text.Length; i++)
+        {
+            char c = _text[i];
+            if (c == '\n' || c == '\r')
+                return true;
+            if (c != ' ' && c != '\t')
+                return false;
+        }
+        return true;
     }
 
     private (SyntaxKind kind, string text) ScanStringLiteral()

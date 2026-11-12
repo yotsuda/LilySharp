@@ -528,6 +528,15 @@ internal sealed class LanguageDeclarationGreen : GreenSyntaxNode
     }
 }
 
+/// <summary>A text written as Markdown in a fence (docs/markdown-text-design.md): the one token.</summary>
+internal sealed class MarkdownTextGreen : GreenSyntaxNode
+{
+    public MarkdownTextGreen(SyntaxToken fence)
+        : base(SyntaxKind.MarkdownText, [fence])
+    {
+    }
+}
+
 /// <summary>
 /// Variable declaration: name = expr (new style) or let name = expr (legacy)
 /// </summary>
