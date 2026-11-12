@@ -314,6 +314,8 @@ internal sealed class CrossPartMeasureValidator
             }
         }
 
+        WarnOfAKeySomePartsChangeAlone(blocks.Select(b => b.Block).ToList());
+
         if (blocks.Count + chordVoices.Count < 2)
             return time; // one voice has nothing to align with — and nothing to split for
         // Only now are the part blocks split into bars: the split is the whole cost of this
@@ -391,6 +393,40 @@ internal sealed class CrossPartMeasureValidator
         ReportGroupedBySectionBarCount(section, parts, chordVoices);
 
         return time;
+    }
+
+    /// <summary>
+    /// A <c>key</c> in the music is its part's alone — a <c>time</c> and a <c>tempo</c> are every
+    /// part's — so a change written in one part of twelve left eleven in the old key with
+    /// nothing said (found writing an orchestral score to try the grammar, 2026-11-12). Said
+    /// once a section, at the first such key, where a pitched part of the section changes key
+    /// nowhere in it. Two parts in two keys on purpose write a key each and are not told.
+    /// </summary>
+    private void WarnOfAKeySomePartsChangeAlone(List<PartBlockSyntax> blocks)
+    {
+        if (blocks.Count < 2)
+            return;
+        KeySignatureSyntax? first = null;
+        string? writer = null;
+        var silent = new List<string>();
+        foreach (var block in blocks)
+        {
+            var key = block.DescendantNodes<KeySignatureSyntax>().FirstOrDefault();
+            if (key != null)
+            {
+                first ??= key;
+                writer ??= block.Name;
+            }
+            else if ((block.DescendantNodes<NoteSyntax>().Any() || block.DescendantNodes<ChordSyntax>().Any())
+                     && !block.DescendantNodes<DrumNoteSyntax>().Any())
+                silent.Add(block.Name);
+        }
+        if (first == null || silent.Count == 0 || !_warnedSpans.Add((first.Span.Start, first.Span.Length)))
+            return;
+        _diagnostics.Warning(first.Span, DiagnosticCodes.KeyChangeInSomeParts,
+            $"Part '{writer}' changes key here, and {NameList(silent.Select(n => $"'{n}'").ToList())} of this section {(silent.Count == 1 ? "does" : "do")} not: "
+            + "a 'key' written in the music is that part's alone (a 'time' or a 'tempo' is every part's). "
+            + "Write it in each part at the same bar; where the section begins in the new key, write it once in the section header.");
     }
 
     /// <summary>The bar-count check of a by-section section over its part blocks AND

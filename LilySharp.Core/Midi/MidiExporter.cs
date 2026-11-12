@@ -126,6 +126,9 @@ public sealed class MidiExporter
     }
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _tempo = 120;
+    // The file's own tempo (its top-level `tempo`, with a count), in quarters a minute: what a
+    // section that states no tempo plays at (HomeTempo). Null: the file states none.
+    private double? _homeTempo;
     /// <summary>The velocity a note sounds at when it carries no dynamic of its own — the
     /// last dynamic written in the PART being played, else <see cref="DefaultVelocity"/>.</summary>
     private int _velocity = DefaultVelocity;
@@ -1336,6 +1339,19 @@ public sealed class MidiExporter
         // boundary into it — that is the whole of what "self-contained" means for pitch,
         // and it is the rule `test/section-octave-reset` names.
         _partPitchLanes.Clear();
+
+        // …and so does the tempo, where the file states one: a section with no tempo of its
+        // own plays at the file's, as it does in the file's key and meter. Until 2026-11-12 a
+        // tempo held to the next one across sections, so `form { A B A }` with `tempo 100` in
+        // B's header played the returning A at 100 with nothing printed (two of four writers
+        // trying the grammar met it). With no top-level tempo there is no home, and a tempo
+        // holds as it did. Every part's copy asks; the same tempo at the same tick is one event.
+        if (_homeTempo is double home && !_sectionHeaders.Tempos.ContainsKey(section.SectionName)
+            && _tempo != (int)System.Math.Round(home))
+        {
+            _tempo = (int)System.Math.Round(home);
+            conductorTrack.SetTempo(_currentTick, BpmToMicroseconds(home));
+        }
 
         // A section's own header key — stated beside the part blocks (by-section) or
         // in a standalone by-part header — is not walked with the part cell's music,
@@ -3534,6 +3550,8 @@ public sealed class MidiExporter
         // the written figure — half and two-thirds speed.
         if (tempo.Value.QuarterBpm is double quarterBpm)
         {
+            if (tempo.Parent?.Parent == null)
+                _homeTempo = quarterBpm;
             _tempo = (int)System.Math.Round(quarterBpm);
             conductorTrack.SetTempo(_currentTick, BpmToMicroseconds(quarterBpm));
         }

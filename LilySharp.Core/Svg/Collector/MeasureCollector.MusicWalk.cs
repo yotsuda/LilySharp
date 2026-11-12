@@ -1754,6 +1754,8 @@ public sealed partial class MeasureCollector
                     // CurrentDuration is the time elapsed in this measure, used
                     // to resolve the column X on a grand staff (where the voice's
                     // item index would point into the wrong staff's note list).
+                    if (tempoChange.Value.QuarterBpm is double changed)
+                        _tempoInForce = changed;
                     if (tempoChange.Bpm is int bpm)
                         _musicMarks.Add(new MusicMarkItem(
                             MusicMarkType.Tempo, bpm.ToString(),

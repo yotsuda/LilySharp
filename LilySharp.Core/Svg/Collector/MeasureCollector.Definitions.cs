@@ -321,7 +321,13 @@ public sealed partial class MeasureCollector
                     // mid-music tempo changes are handled in the music stream
                     // (a Tempo MusicMark at the change point).
                     if (!IsInsideMusicContent(tempoDecl))
+                    {
                         CollectTempo(tempoDecl);
+                        // The file's own tempo: what a section that states none returns to
+                        // (ReturnToHomeTempo; MidiExporter plays the same).
+                        if (tempoDecl.Parent?.Parent == null && tempoDecl.Value.QuarterBpm is double homeBpm)
+                            (_homeTempo, _tempoInForce) = (tempoDecl, homeBpm);
+                    }
                     break;
 
                 case TimeSignatureSyntax timeSig:
@@ -766,6 +772,27 @@ public sealed partial class MeasureCollector
             SyntaxTokenNode word => word.Span.Start,           // key custom …
             _ => key.KeyKeyword.Span.Start,
         };
+
+    // The file's top-level tempo (one with a count), and the count in force where the walk
+    // stands, in quarters a minute: a section that states no tempo returns to the file's.
+    private TempoDeclarationSyntax? _homeTempo;
+    private double? _tempoInForce;
+
+    /// <summary>
+    /// The mark a section with no tempo of its own prints where the music before it left another
+    /// tempo: the file's, back in force (as its key and its meter are — the 2026-11-12 decision,
+    /// MidiExporter.PlaySectionCore has the sound). Null where nothing changes. Every staff's walk
+    /// asks; <paramref name="already"/> is whether an earlier one printed it.
+    /// </summary>
+    private MusicMarkItem? ReturnToHomeTempo(bool atOpening, bool already, int measureIndex, int sectionPos,
+        int anchorItemIndex, Fraction anchorTiming)
+    {
+        if (_homeTempo is not { } home || home.Value.QuarterBpm is not double homeBpm)
+            return null;
+        bool changes = !atOpening && _tempoInForce != homeBpm;
+        _tempoInForce = homeBpm;
+        return changes && !already ? SectionTempoMark(home, measureIndex, sectionPos, anchorItemIndex, anchorTiming) : null;
+    }
 
     private void CollectTempo(TempoDeclarationSyntax tempoDecl)
     {

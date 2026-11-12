@@ -1600,6 +1600,11 @@ public static class DiagnosticCodes
     /// predecessor ending a pickup short is the split bar <c>SectionBoundaryBars</c> already accepts.</summary>
     public const string PickupAfterAWholeBar = "LYS2022";
 
+    /// <summary>A <c>key</c> written in the music of some parts of a section and not of the
+    /// others (a warning): a key in the music is that part's alone, where a <c>time</c> or a
+    /// <c>tempo</c> is every part's, so the others stay in the old key and say nothing.</summary>
+    public const string KeyChangeInSomeParts = "LYS2023";
+
     /// <summary>Warning: a key whose signature has more than seven sharps or flats — <c>key des
     /// minor</c> is eight flats, B double-flat in the signature — named with the enharmonic key that
     /// sounds the same (<c>key cis minor</c>, four sharps). Owner's review 2026-10-30: a composed

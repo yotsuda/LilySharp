@@ -223,6 +223,20 @@ continues in E♭ must say `key ees major` again, and that line is not engraved)
 anyway, put `!` right after the keyword: `key! ees major`, `time! 3/4`, `clef! bass`. A `!`
 after the value is the dashed barline (`key ees major !` = a key, then a dashed bar).
 
+**Who a mid-piece `key`, `time` and `tempo` reach, and for how long.** A `time` or a `tempo` is
+every part's, wherever it is written. A `key` written IN THE MUSIC is that part's alone: for a
+change every part makes, write it in each part at the same bar, or — where a section begins in
+the new key — once in the section header (a key some parts of a section change and others do
+not is warning LYS2023). All three go back to the file's at the next section: a section with no
+`tempo` of its own plays at the file's top-level tempo, and the mark is printed where that
+changes the tempo back (`form { A B A }` with `tempo 4 = 100` in B's header: the second A is at
+the file's tempo, marked). With no top-level `tempo` there is none to go back to, and a tempo
+holds until the next.
+
+**A mark on a phrase call** goes on an empty chord before it, which takes no time:
+`<>@mf theme`, `<>@p@text("dolce") theme` — the phrase's notes are the same at every call, so
+`theme@mf` is an error that says this.
+
 A key has at most seven sharps or flats: D♭ minor (eight flats, every A a B𝄫) is written
 `key cis minor`, G♯ major `key aes major`, F♭ major `key e major` — the key that sounds the same
 (LYS4034 warns otherwise). A hairpin goes the way its next level does: `@ff … @decresc … @fff`

@@ -123,6 +123,65 @@ public class GrammarEvaluation2Tests
         Clean(made);
     }
 
+    private const string ThreeTempos = "time 4/4\ntempo \"Andante\" 4 = 88\npart a { }\npart b { clef bass }\n"
+        + "section A { a { c'1 | c'1 | } b { c1 | c1 | } }\n"
+        + "section B { tempo \"Con moto\" 4 = 100\n a { d'1 | d'1 | } b { d1 | d1 | } }\n"
+        + "section C { a { e'1 | tempo 4 = 60 e'1 | } b { e1 | e1 | } }\n";
+
+    /// <summary>A section that states no tempo plays at the file's, as it is in the file's key and
+    /// meter: the returning A was played at B's tempo with nothing printed.</summary>
+    [Fact]
+    public void ASectionWithNoTempoOfItsOwn_ReturnsToTheFiles()
+    {
+        string source = ThreeTempos + "form { ~A ~B ~A ~C ~A ~A }\nscore { staff a  staff b }\n";
+        Clean(source);
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var midi = new LilySharp.Core.Midi.MidiExporter { Form = spec?.Form, Score = spec }.Export(tree);
+        Assert.Equal([88, 100, 88, 60, 88], midi.Tracks[0].TempoChanges.Select(t => (int)Math.Round(60_000_000.0 / t.MicrosecondsPerBeat)));
+
+        // The page says it where it changes back, once (not on each staff, not where nothing changes).
+        string svg = SvgGenerator.Generate(tree);
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(svg, ">Andante").Count);
+    }
+
+    /// <summary>With no tempo at the top of the file there is none to return to: a tempo holds.</summary>
+    [Fact]
+    public void WithNoFileTempo_ASectionsTempoHolds()
+    {
+        string source = ThreeTempos.Replace("tempo \"Andante\" 4 = 88\n", "") + "form { ~A ~B ~A }\nscore { staff a  staff b }\n";
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var midi = new LilySharp.Core.Midi.MidiExporter { Form = spec?.Form, Score = spec }.Export(tree);
+        Assert.Equal(100, (int)Math.Round(60_000_000.0 / midi.Tracks[0].TempoChanges[^1].MicrosecondsPerBeat));
+    }
+
+    /// <summary>A key written in the music of one part leaves the others in the old key: said.</summary>
+    [Fact]
+    public void AKeyChangedInSomePartsOfASection_IsSaid()
+    {
+        string head = "time 4/4\npart a { }\npart b { clef bass }\npart kit { clef percussion }\n";
+        string tail = "form { A }\nscore { staff a  staff b  staff kit }\n";
+        var said = Assert.Single(Said(head + "section A { a { c''1 | key d major d''1 | } b { c1 | d1 | } kit { bd1 | bd1 | } }\n" + tail));
+        Assert.Equal(DiagnosticCodes.KeyChangeInSomeParts, said.Code);
+        Assert.Contains("Part 'a' changes key here, and 'b' of this section does not", said.Message);
+        // Written in each pitched part, or in the header, nothing is said (the drums have no key).
+        Clean(head + "section A { a { c''1 | key d major d''1 | } b { c1 | key d major d1 | } kit { bd1 | bd1 | } }\n" + tail);
+        Clean(head + "section A { key d major  a { d''1 | d''1 | } b { d1 | d1 | } kit { bd1 | bd1 | } }\n" + tail);
+    }
+
+    /// <summary>A mark on a phrase's name says what to write, once.</summary>
+    [Fact]
+    public void AMarkOnAPhrasesName_NamesTheEmptyChord()
+    {
+        string source = "time 4/4\nphrase theme { d''4. e''8 f''4 a''4 | }\npart fl { }\nsection A { fl { theme@mf | } }\nform { A }\nscore { staff fl }\n";
+        var said = Assert.Single(Said(source));
+        Assert.Contains("<>@mf theme", said.Message);
+        Clean(source.Replace("theme@mf", "<>@mf theme"));
+        // The text the tree holds is the file's, to the character.
+        Assert.Equal(source, SyntaxTree.Parse(source).GetRoot().ToFullString());
+    }
+
     /// <summary>A section whose music changes the meter ends in THAT meter: three beats into a
     /// 4/4 bar is not "a whole bar" of the file's 3/4.</summary>
     [Fact]

@@ -96,8 +96,13 @@ public sealed class RowsOnlySectionTempoTests
         // piece's opening): one mark, reading the section's count.
         var staffless = RenderedGeometry.Render(Book("chords prog  lyrics words", headerA: "tempo 4 = 72", headerB: ""));
         var staffful = RenderedGeometry.Render(Book("chords prog  staff melody  lyrics words", headerA: "tempo 4 = 72", headerB: ""));
-        Assert.Equal(new[] { "= 72" }, Equations(staffful).Select(t => t.Text).ToArray());
-        Assert.Equal(new[] { "= 72" }, Equations(staffless).Select(t => t.Text).ToArray());
+        // …and the next section, which states none, goes back to the file's, marked there
+        // (2026-11-12: a section with no tempo of its own plays at the file's). Both walks alike.
+        var onStaves = Equations(staffful).Select(t => t.Text).ToArray();
+        Assert.Equal("= 72", onStaves[0]);
+        Assert.Equal(2, onStaves.Length);
+        Assert.NotEqual("= 72", onStaves[1]);
+        Assert.Equal(onStaves, Equations(staffless).Select(t => t.Text).ToArray());
     }
 
     [Fact]

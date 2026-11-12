@@ -415,6 +415,15 @@ internal sealed partial class Parser
             // `melody { "oops" c4 d e f | }`: `No errors found.`, and an SVG byte-identical
             // to the same book WITHOUT the token — data-pos included, which is to say every
             // later note reported the offset it has when the token is DELETED.
+            // A mark glued to a NAME — `theme@mf`, a phrase called with a dynamic. A mark
+            // belongs to a note, and the phrase's notes are its own at every call: the mark
+            // goes on an empty chord before the call, which takes no time. Until 2026-11-12
+            // this was "'@' is not something a music block can hold" and "Undefined variable
+            // or phrase: 'mf'", neither of which says what to write (found writing an
+            // orchestral score to try the grammar).
+            SyntaxKind.At when _position > 0 && _tokens[_position - 1].Kind == SyntaxKind.Identifier
+                               && _tokens[_position - 1].TrailingTriviaWidth == 0 && Current.LeadingTriviaWidth == 0
+                => ReportMarkOnAName(),
             _ => ReportStrayItem("a music block",
                     "A music block holds notes, rests, chords, barlines and the directives "
                     + "that act from a point in the music (key, clef, time, tempo, octave, "
@@ -458,6 +467,26 @@ internal sealed partial class Parser
             + "number is a value, and belongs in a value position such as an "
             + "override (override Stem.length = 3.5).");
         return Advance();
+    }
+
+    /// <summary>Reports a mark glued to a phrase's name (LYS0030) once, keeps the <c>@</c> and
+    /// has the mark's word kept silently after it.</summary>
+    private GreenNode ReportMarkOnAName()
+    {
+        string name = _tokens[_position - 1].Text;
+        string mark = Peek(1) is { LeadingTriviaWidth: 0, Text.Length: > 0 } word && char.IsLetter(word.Text[0]) && Current.TrailingTriviaWidth == 0 ? word.Text : "mf";
+        _diagnostics.Error(new TextSpan(_textPosition, Math.Max(1, Current.Text.Length)), DiagnosticCodes.StrayItemToken,
+            $"A mark stands on a note, and '{name}' is a phrase: its notes are the same at every call. "
+            + $"Write the mark on an empty chord before it, which takes no time: <>@{mark} {name}.");
+        bool glued = Peek(1) is { LeadingTriviaWidth: 0, Text.Length: > 0 } next && char.IsLetter(next.Text[0]) && Current.TrailingTriviaWidth == 0;
+        var at = Advance();
+        if (glued)
+        {
+            // The word stays in the tree, as no name: it is not a phrase to look up.
+            var said = Advance();
+            _pendingPostEventMarkers.Enqueue(new SyntaxToken(SyntaxKind.BadToken, said.Text, said.LeadingTrivia, said.TrailingTrivia));
+        }
+        return at;
     }
 
     /// <summary>The token index of the second character of a reported LilyPond script
