@@ -31,6 +31,10 @@ namespace LilySharp.Core.Music;
 /// </summary>
 public static class LyricSinger
 {
+    /// <summary>The name of the lyrics track <see cref="Editing.SingerParts"/> writes a named
+    /// singer's words under: no file writes such a name.</summary>
+    public static string WordsOf(string person) => "__words_" + person;
+
     /// <summary>The word that names a singer. Contextual: a part or a track may be called it.</summary>
     public const string Keyword = "singer";
 
@@ -86,7 +90,12 @@ public static class LyricSinger
     /// the part whose notes it sings (null when nothing says: an error), the voice of that
     /// part it names (null when it names the part), and the source start of the score it is written
     /// in (<see cref="RenderSpec.SourceStart"/>; -1 at the top level, where it is every score's default).</summary>
-    public sealed record Line(string? Singer, string Track, string? Part, string? Voice, SingerDeclarationSyntax Node, int Score = -1);
+    /// <paramref name="Person"/> is the singer's own name (<c>singer carol …</c>), or null;
+    /// <paramref name="Printed"/> says the line is read in a score that prints that singer
+    /// (<c>score { singer carol }</c>): its part is then the singer's own, made of the lines
+    /// (<see cref="Editing.SingerParts"/>), and what the line says of its place is in those notes already.
+    public sealed record Line(string? Singer, string Track, string? Part, string? Voice, SingerDeclarationSyntax Node, int Score = -1,
+        string? Person = null, bool Printed = false);
 
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SyntaxNode, IReadOnlyList<Line>> Lines = new();
 
@@ -104,11 +113,38 @@ public static class LyricSinger
     public static IReadOnlyList<Line> LinesFor(SyntaxNode root, RenderSpec? spec)
     {
         var lines = LinesOf(root);
-        if (!lines.Any(l => l.Score >= 0))
+        if (lines.Any(l => l.Score >= 0))
+        {
+            var own = lines.Where(l => spec != null && spec.SourceStart >= 0 && l.Score == spec.SourceStart).ToList();
+            var replaced = own.Select(l => l.Part).ToHashSet();
+            lines = [.. lines.Where(l => l.Score < 0 && !replaced.Contains(l.Part)), .. own];
+        }
+        return OnPrintedParts(root, spec, lines);
+    }
+
+    /// <summary>
+    /// <paramref name="lines"/> with those of a singer the score PRINTS (<c>singer carol</c>)
+    /// moved onto that singer's own part: the score sings what it shows, the notes of the
+    /// printed staff, and not the line's part moved once more. Several lines of one singer
+    /// become one voice there. A score that does not print the singer sings the line as written.
+    /// </summary>
+    private static IReadOnlyList<Line> OnPrintedParts(SyntaxNode root, RenderSpec? spec, IReadOnlyList<Line> lines)
+    {
+        if (spec == null || !lines.Any(l => l.Person != null))
             return lines;
-        var own = lines.Where(l => spec != null && spec.SourceStart >= 0 && l.Score == spec.SourceStart).ToList();
-        var replaced = own.Select(l => l.Part).ToHashSet();
-        return [.. lines.Where(l => l.Score < 0 && !replaced.Contains(l.Part)), .. own];
+        while (root.Parent != null)
+            root = root.Parent;
+        var made = root.ChildNodes().OfType<PartDeclarationSyntax>().Select(p => p.Name.Text).ToHashSet(StringComparer.Ordinal);
+        var printed = spec.GetVoiceBindings().Select(b => b.VoiceName).Where(made.Contains).ToHashSet(StringComparer.Ordinal);
+        if (!lines.Any(l => l.Person != null && printed.Contains(l.Person)))
+            return lines;
+        return lines.Select(l => l.Person is { } person && printed.Contains(person)
+            ? l with
+            {
+                Part = person, Voice = null, Printed = true,
+                Track = LyricBindings.TracksOfPart(root, person) is [var words] ? words : l.Track,
+            }
+            : l).ToList();
     }
 
     private static IReadOnlyList<Line> BuildLines(SyntaxNode root)
@@ -142,8 +178,13 @@ public static class LyricSinger
             // No name written: the track the part names (§10). Several is an error, no name none.
             if (declaration.TrackToken == null && part != null && LyricBindings.TracksOfPart(root, part) is [var own])
                 track = own;
-            lines.Add(new Line(declaration.Singer, track, part, voice, declaration, score));
+            lines.Add(new Line(declaration.Singer, track, part, voice, declaration, score, declaration.PersonToken?.Text));
         }
+        // Lines of one name are one singer: the voice is said on one of them and is the others' too.
+        for (int i = 0; i < lines.Count; i++)
+            if (lines[i] is { Person: { } person, Singer: null }
+                && lines.FirstOrDefault(l => l.Person == person && l.Singer != null) is { } named)
+                lines[i] = lines[i] with { Singer = named.Singer };
         return lines;
     }
 
@@ -293,14 +334,14 @@ public static class LyricSinger
     /// <summary>The voices that sing a track on a part: one for each line that differs in who
     /// sings or in how, in the order written.</summary>
     private static List<(string? Singer, string Settings)> Voices(IReadOnlyList<Line> lines, string? track, string? part)
-        => lines.Where(l => l.Part == part && l.Track == track).Select(l => (l.Singer, Settings: SettingsText(l.Node))).Distinct().ToList();
+        => lines.Where(l => l.Part == part && l.Track == track).Select(l => (l.Singer, Settings: SettingsText(l.Node, place: !l.Printed))).Distinct().ToList();
 
     /// <summary>
     /// A singer line's settings as one text: <c>name=value</c> a line, a number as written in
     /// the invariant culture, a word or a string between quotes; a name written twice keeps its
     /// last value. Empty with no <c>with</c>. Read back by <see cref="SettingsOf"/>.
     /// </summary>
-    public static string SettingsText(SingerDeclarationSyntax line)
+    public static string SettingsText(SingerDeclarationSyntax line, bool place = true)
     {
         var last = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var setting in line.Settings)
@@ -315,14 +356,19 @@ public static class LyricSinger
         // …and what of the part the line sings (its up / down / octave / in), under names no
         // engine has: Midi.SungVoices takes them out again before the settings go to a voice.
         // They ride here so that two lines that differ only in these are two voices (Voices).
+        if (!place)
+            return Joined(last);
         if (line.Interval != 0)
             last[PlaceInterval] = line.Interval.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (line.Octaves != 0)
             last[PlaceOctaves] = line.Octaves.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (line.Sections.Count > 0)
             last[PlaceSections] = "\"" + string.Join(",", line.Sections.Select(s => s.Text)) + "\"";
-        return string.Join('\n', last.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "=" + p.Value));
+        return Joined(last);
     }
+
+    private static string Joined(Dictionary<string, string> settings)
+        => string.Join('\n', settings.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "=" + p.Value));
 
     /// <summary>
     /// The one setting name Lily# refuses after <c>with</c>, whatever engine sings (owner's

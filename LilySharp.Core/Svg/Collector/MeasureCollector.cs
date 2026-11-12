@@ -301,6 +301,11 @@ public sealed partial class MeasureCollector
     /// as they inherit <see cref="RecordsPitchTrace"/>.
     /// </remarks>
     internal Func<int, int, int>? OctaveOverride { get; init; }
+    /// <summary>Called with every written pitch's source position and the sharps of the key it
+    /// is WRITTEN in (the part's transposition taken out: the key the writer's letters are of).
+    /// Null but for the maker of a singer's part (<see cref="Editing.SingerParts"/>), which
+    /// moves each note along that key. Nested collects inherit it.</summary>
+    internal Action<int, int>? WrittenKeyObserver { get; init; }
     /// <summary>Called with a <c>chord(…)</c> / <c>diagram(…)</c> item's source position and the
     /// notes it writes there, in the octave numbering <see cref="OctaveOverride"/> sees — which
     /// that hook never sees for them (their octave is the string's, not the writer's). Null but
@@ -2552,14 +2557,14 @@ public sealed partial class MeasureCollector
         var seeded = MidBarBreaks ?? MidBarBreakTable.Empty;
 
         if (NestedResume?.Begin(channelKey) is not { } begun)
-            return Finish(new MeasureCollector { BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride, ShapeNotesObserver = ShapeNotesObserver }
+            return Finish(new MeasureCollector { BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride, WrittenKeyObserver = WrittenKeyObserver, ShapeNotesObserver = ShapeNotesObserver }
                 .CollectMultiStaff(tree, spec, harvestStructureMarks));
 
         if (begun.IsResume)
         {
             try
             {
-                return Finish(new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride, ShapeNotesObserver = ShapeNotesObserver }
+                return Finish(new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride, WrittenKeyObserver = WrittenKeyObserver, ShapeNotesObserver = ShapeNotesObserver }
                     .CollectMultiStaff(tree, spec, harvestStructureMarks));
             }
             catch (CollectResumeAbortException)
@@ -2570,7 +2575,7 @@ public sealed partial class MeasureCollector
             begun = (CollectWalkProbe.Recorder(), false);
         }
 
-        var sub = new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride, ShapeNotesObserver = ShapeNotesObserver };
+        var sub = new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace, OctaveOverride = OctaveOverride, WrittenKeyObserver = WrittenKeyObserver, ShapeNotesObserver = ShapeNotesObserver };
         var result = sub.CollectMultiStaff(tree, spec, harvestStructureMarks);
         // A nested collect cut under a settled table must not be resumed under a later one.
         if (!seeded.IsEmpty)

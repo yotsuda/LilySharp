@@ -398,7 +398,7 @@ public class LyricLanguageTests
     }
 
     [Theory]
-    [InlineData("singer man \"x\" sings w", DiagnosticCodes.SingerGenderUnknown)]
+    [InlineData("singer carol man \"x\" sings w", DiagnosticCodes.SingerGenderUnknown)]
     [InlineData("singer Male \"x\" sings w", DiagnosticCodes.SingerGenderUnknown)]
     [InlineData("singer \"\" sings w", DiagnosticCodes.SingerEmpty)]
     public void ABadGenderOrAnEmptyName_IsAnError(string singer, string code)

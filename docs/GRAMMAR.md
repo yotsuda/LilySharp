@@ -285,7 +285,7 @@ CheckRule      = 'voiceLeading' ;
 CapoDecl       = 'capo' , Integer ;                    (* 1..11; to the end of its line *)
 ChordShapesDecl = 'chordShapes' , ShapeTable ;
 LanguageDecl   = 'language' , LanguageName ;
-SingerDecl     = 'singer' , [ SingerValue ] , 'sings' , [ Identifier ] , [ 'on' , PartRef ] ,
+SingerDecl     = 'singer' , [ SingerValue ] , 'sings' , [ Identifier ] , [ 'on' , PartRef ] ,   (* SingerValue: below *)
                  [ ( 'up' | 'down' ) , Integer ] , [ 'octave' , [ '-' | '+' ] , Integer ] ,
                  [ 'in' , Identifier , { Identifier } ] ,
                  [ 'with' , SingerSetting , { SingerSetting } ] ;
@@ -301,7 +301,8 @@ SingerSetting  = Word , { '.' , Word } , ( [ '-' ] , Number | Word | String ) ;
                     raised first, fourth or fifth, a lowered third or seventh) and answered
                     with the scale's own note. 'octave -1' sings octaves below (1 to 3 either
                     way). Lily# moves the notes before any voice sees them, so every engine
-                    sings it alike; the harmony is heard and not printed. Several lines on one
+                    sings it alike; a score prints the harmony where it names the singer
+                    ('singer NAME', a ScoreItem). Several lines on one
                     part sing together, each its own sections and its own interval.
                     An interval or an octave that is none, and a section the file does not
                     have, are LYS4059. The four words are words only here: a track or a part may
@@ -309,7 +310,12 @@ SingerSetting  = Word , { '.' , Word } , ( [ '-' ] , Number | Word | String ) ;
                     'with' and after it the voice's own SETTINGS, each a name and a value, to the
                     end of the line: the names are the voice's ENGINE's, so any bare word names
                     one — a word Lily# keeps for itself too. *)
-SingerValue    = String | SingerGender , [ String ] ;
+SingerValue    = [ SingerName ] , ( String | SingerGender , [ String ] ) | SingerName ;
+SingerName     = Identifier ;   (* the singer's OWN name: a word that is no gender, or the
+                                   first of two words. Lines of one name are one singer — the
+                                   voice said on one is the others' too — and a score prints
+                                   what a named singer sings ('singer NAME', a ScoreItem;
+                                   docs/lyrics-singer-design.md §13) *)
 SingerGender   = 'male' | 'female' ;
                  (* WHO SINGS WHAT, in this order (docs/lyrics-singer-design.md). 'lyrics' rows
                     print; only this line sings. At the file's top level it is every score's
@@ -1929,6 +1935,22 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         a String names it). The only item that
                                                         DRAWS a strokes part: a row's 'plays'
                                                         sounds it and draws nothing *)
+               | 'singer' , SingerName , [ DisplayName ] , [ 'as' , StaffSelector , { StaffSelector } ] , StaffSound
+                                                     (* WHAT A NAMED SINGER SINGS, as a staff
+                                                        with the words under it (2026-11-12): the
+                                                        notes of the SingerDecl lines of that
+                                                        name, moved as they say (up 3 along the
+                                                        key, octave -1), in the sections they say,
+                                                        bars of rest elsewhere. The line knows the
+                                                        notes and the words, so the score writes
+                                                        neither again, and a group takes the item.
+                                                        Such a score SINGS what it shows. LYS4060
+                                                        where the staff cannot be made: nobody is
+                                                        called so, a part is, the line sings one
+                                                        voice of a part, or a moved line calls a
+                                                        phrase. In a file with a part called
+                                                        singer the two words are two MIDI-only
+                                                        PartRefs, as before *)
                | 'grandStaff' , StaffGroupBody      (* a BRACE  — one instrument, two staves *)
                | 'staffGroup' , StaffGroupBody      (* a BRACKET, bar lines drawn through *)
                | 'choirStaff' , StaffGroupBody      (* a BRACKET, bar lines NOT drawn through *)

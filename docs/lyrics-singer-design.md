@@ -294,5 +294,85 @@ editor that keep a sung part's instrument out let them through (the preview's Pl
 MP3 / MP4 export, a proposal's Play), as does `lysc wav --singer`. By SECTION, not by note: a
 bar of a sung section with notes and no words is still the voice's silence (section 8).
 
-Not built: the harmony is HEARD, not printed (a part made from another, to print, is the
-other half); `in Chorus 2` for one playing of a section; a part of its own transposition.
+Printed since the same day: section 13. Not built: `in Chorus 2` for one playing of a
+section; a part of its own transposition.
+
+## 13. A singer has a name, and a score prints what the singer sings (owner's decisions 2026-11-12; built the same day)
+
+```
+singer alice female sings on lead in Verse
+singer bob   male   sings on lead octave -1 in Chorus
+singer carol female sings on lead up 3 in Chorus
+
+score { staff lead  lyrics words  singer carol }   // the lead, and carol's harmony under it
+score carol { singer carol }                       // carol's own sheet
+```
+
+The owner's two points: the notes of a harmony are the SINGER LINE's to know — nothing
+should write them a second time — and a sheet for that singer is the use that matters. So
+the singer gets a name, and the score names the singer.
+
+- `singer NAME [male|female] ["engine/voice"] sings …`: a word before `sings` that is no
+  gender is the singer's own name; of two words the first is the name and the second the
+  gender. Lines of one name are ONE singer: the voice is said on one of them and is the
+  others' too (`singer alice sings on lead up 3 in Chorus` on a second line). A line with no
+  name sings as before and is not printed.
+- `singer NAME` in a score (and in a staff group) is the staff of what that singer sings AND
+  the words under it: the notes of the singer's lines, moved as they say, in the sections they
+  say; whole bars of rest where the singer does not sing. It takes what a staff item takes
+  after its part (a name in quotes, `as …`, `hidden`, `sounds …`). The staff is named as the
+  singer, capitalised. A file that declares a part called singer keeps the two words as they
+  were: two parts played to MIDI only.
+- A singer who sings the part an octave down in every line is written in the treble clef an
+  octave down (a tenor's), unless the part writes a clef: the notes stand where the part's do.
+- A score that prints a singer SINGS WHAT IT SHOWS: the singer's lines are read there on the
+  made part, as they stand, so the page and the voice cannot differ. A score that does not
+  print the singer sings the line as section 12 says. `score { singer carol }` therefore
+  plays carol alone.
+
+**How it is made** (`Editing.SingerParts`): the part is WRITTEN, as Lily# text, after the
+file's own — the way `using` adds a file, the document staying the prefix so that every
+position in it holds — and every reader of a score (the page, the MIDI, the MusicXML, the
+LilyPond twin) reads it as any other part. The command line's `LoadAndParse` and the server's
+`ExpandUsings` are the two houses that call it; a file whose scores print no singer pays one
+look at its scores. What is written:
+
+```
+// (written by Lily#, not the file's own text: …)
+part carol "Carol" { instrument alto lyrics __words_carol
+  section Verse { R*4 }
+  section Chorus { b'4 b c b | g4 f e2 | }
+}
+lyrics __words_carol {
+  section Chorus { Sing it o- ver, | o- ver- now, | }
+}
+```
+
+The header is the sung part's (its instrument, its clef, its octave), the part's own words
+left out; the music of a section is the COPY of the part's there, its pitch names moved
+along the key each note is written in (`MeasureCollector.WrittenKeyObserver` says which,
+the part's transposition taken out) and its octave marks set so that each lands the interval
+from the note it copies (`OctaveModeConverter.Pin`, the forcing `Repin` does; the parts sung
+are played by a score added for the asking, since a singer's own sheet plays none of them).
+The words are a track of the singer's own, the sung sections' alone: the part's track under a
+staff that rests for a section would have words with no notes. Diagnostics that stand in the
+written text are dropped (`SingerParts.OwnOf`; the server already drops what lies past the
+document): a note below the alto's range there is the singer's octave, not a slip.
+
+BY THE LETTER, where section 12's sound goes by the pitch: a note the key does not hold is
+read as the letter it is written on and lands on the key's own note the interval away — over
+g-sharp in a minor a third above is b, over c-sharp in G it is e. The two readings agree but
+for a note spelled against its usual alteration (d-flat in C: the page lands on f, the
+unprinted voice on e). LILYSHARP-OWN, a reading.
+
+Not made, and said at the score's item (LYS4060): a singer nobody names; a singer called as
+a part is (the made part takes the singer's name) — unless that part IS the singer's notes,
+written out, every line singing it as it stands; a line that sings one voice of a part; a
+moved line whose music calls a phrase (the phrase's notes are shared, not the copy's to move).
+
+Limits kept: a click on a made note leads nowhere in the document (its position is past the
+text); words written for the whole piece with no sections (`lyrics words { … }` at the top
+with no `section`) are not cut by section and are not printed under a singer's staff; lines
+of one name that say different voices are not refused; the harmony drawn as small notes on
+the lead's own staff is later work.
+

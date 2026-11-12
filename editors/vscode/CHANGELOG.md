@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A singer has a name, and a score prints what the singer sings**: `singer carol female sings on lead up 3 in Chorus`, then `singer carol` in a score — the preview shows carol's staff under the lead (the Chorus a third above along the key, rests where she does not sing, her words), and `score carol { singer carol }` is her own sheet. Play sings the staves the score shows.
 - **Ctrl+wheel on the preview zooms about the pointer**: the place under the mouse stays under it. On a lower page of a long score the view slid back toward the pages before.
 - **Where nobody sings a section, the part's instrument plays it**: a part with a singer line is a voice, its instrument off — so `singer … in Chorus` alone left the verses silent. A section none of the part's voices sings is now played on its instrument, in the preview, in an exported WAV / MP3 / MP4, in a proposal's Play and in `lysc wav --singer`.
 - **A video of a one-page score is that page, not the sheet**: an MP4 of a short song was the whole paper, white above and below the music. A score of one page now takes the page's own shape, cut under its music as the PNG is (the SVG already was); a score of several pages keeps the paper's.

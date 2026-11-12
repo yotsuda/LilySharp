@@ -235,6 +235,29 @@ public sealed partial class LilySharpLanguageServer
     internal static (SyntaxTree Tree, IReadOnlyList<CoreDiagnostic> UsingDiagnostics) ExpandUsings(
         string text, SyntaxTree unexpanded, string basePath, Func<string, string?> readFile)
     {
+        var (tree, diagnostics) = ExpandUsingsAlone(text, unexpanded, basePath, readFile);
+        // …and the staff of what a named singer sings (`score { singer carol }`), written after
+        // the text the same way (Core's Editing.SingerParts): the same house, so the preview,
+        // the exports, the playback and the Problems panel read one piece. Asked of the scores
+        // alone; a file that prints no singer pays one look at them.
+        if (!LilySharp.Core.Editing.SingerParts.Wanted(tree))
+            return (tree, diagnostics);
+        var made = SingerPartsCache.GetValue(tree, static t =>
+        {
+            string written = LilySharp.Core.Editing.SingerParts.Expand(t.Text, t, out var said);
+            return new SingerPartsHolder(ReferenceEquals(written, t.Text) ? t : SyntaxTree.Parse(written), said);
+        });
+        return (made.Tree, made.Diagnostics.Count == 0 ? diagnostics : [.. diagnostics, .. made.Diagnostics]);
+    }
+
+    private sealed record SingerPartsHolder(SyntaxTree Tree, IReadOnlyList<CoreDiagnostic> Diagnostics);
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SyntaxTree, SingerPartsHolder>
+        SingerPartsCache = new();
+
+    private static (SyntaxTree Tree, IReadOnlyList<CoreDiagnostic> UsingDiagnostics) ExpandUsingsAlone(
+        string text, SyntaxTree unexpanded, string basePath, Func<string, string?> readFile)
+    {
         // Ask the tree we were handed, not the text: parsing it again here would be a whole
         // extra parse per keystroke, since both the preview and the Problems panel land here.
         if (!LilySharp.Core.Parser.UsingExpander.HasUsings(unexpanded))

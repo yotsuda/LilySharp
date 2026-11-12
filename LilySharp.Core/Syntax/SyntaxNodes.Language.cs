@@ -127,8 +127,38 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
     }
 
     /// <summary>The <c>male</c> or <c>female</c> written before the name, or null.</summary>
-    public SyntaxTokenNode? GenderToken =>
-        GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } t && t.Text != "sings" ? t : null;
+    public SyntaxTokenNode? GenderToken
+    {
+        get
+        {
+            var (first, second) = HeadWords;
+            return second ?? (first != null && Music.LyricSinger.Genders.Contains(first.Text.ToLowerInvariant()) ? first : null);
+        }
+    }
+
+    /// <summary>The singer's OWN name (<c>singer carol female "…" sings …</c>, owner's decision
+    /// 2026-11-12), or null: the word before <c>sings</c> that is no gender, or the first of two.
+    /// Lines of one name are one singer; a score prints what a named singer sings
+    /// (<c>score { singer carol }</c>).</summary>
+    public SyntaxTokenNode? PersonToken
+    {
+        get
+        {
+            var (first, second) = HeadWords;
+            return second != null || (first != null && !Music.LyricSinger.Genders.Contains(first.Text.ToLowerInvariant())) ? first : null;
+        }
+    }
+
+    /// <summary>The one or two bare words between <c>singer</c> and <c>sings</c> (or the voice's string).</summary>
+    private (SyntaxTokenNode? First, SyntaxTokenNode? Second) HeadWords
+    {
+        get
+        {
+            var first = GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } a && a.Text != "sings" ? a : null;
+            var second = first != null && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } b && b.Text != "sings" ? b : null;
+            return (first, second);
+        }
+    }
 
     /// <summary>Who sings, as the engine is told: the name, else the gender, else null (the part's
     /// gender decides).</summary>

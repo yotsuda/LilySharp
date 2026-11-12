@@ -1160,7 +1160,10 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(
     // the CLI and the LSP can never diverge on which validators run).
     combined.AddRange(tree.Diagnostics);
     combined.AddRange(LilySharp.Core.Semantics.SemanticValidation.Run(tree));
-    return combined;
+    // What was written after the file for its printed singers is not the writer's to mend.
+    return LilySharp.Core.Editing.SingerParts.Wanted(tree)
+        ? LilySharp.Core.Editing.SingerParts.OwnOf(combined, tree.Text)
+        : combined;
 }
 
 /// <summary>
@@ -1253,7 +1256,20 @@ static (string Source, LilySharp.Core.Syntax.SyntaxTree Tree,
             p => File.Exists(p) ? File.ReadAllText(p) : null,
             out usingDiagnostics);
     }
-    return (source, LilySharp.Core.Syntax.SyntaxTree.Parse(source), usingDiagnostics);
+    var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(source);
+    // The staff of what a named singer sings (`score { singer carol }`) is written after the
+    // file's own text, as an included file's is: one house, read by every output alike.
+    if (LilySharp.Core.Editing.SingerParts.Wanted(tree))
+    {
+        string made = LilySharp.Core.Editing.SingerParts.Expand(source, tree, out var singerDiagnostics);
+        usingDiagnostics = [.. usingDiagnostics, .. singerDiagnostics];
+        if (!ReferenceEquals(made, source))
+        {
+            source = made;
+            tree = LilySharp.Core.Syntax.SyntaxTree.Parse(source);
+        }
+    }
+    return (source, tree, usingDiagnostics);
 }
 
 // The shared skeleton behind every file-output command: load+parse, surface

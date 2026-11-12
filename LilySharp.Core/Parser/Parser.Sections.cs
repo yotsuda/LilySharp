@@ -232,7 +232,10 @@ internal sealed partial class Parser
     private bool IsSingerDeclaration()
         => Current.Text == Music.LyricSinger.Keyword && Peek(1) is { } next
             && (next.Text == "sings" || next.Kind == SyntaxKind.StringLiteral
-                || (next.Kind == SyntaxKind.Identifier && (Music.LyricSinger.Genders.Contains(next.Text) || Peek(2)?.Text == "sings" || Peek(2)?.Kind == SyntaxKind.StringLiteral)));
+                || (next.Kind == SyntaxKind.Identifier && (Music.LyricSinger.Genders.Contains(next.Text) || Peek(2)?.Text == "sings" || Peek(2)?.Kind == SyntaxKind.StringLiteral
+                    // singer NAME male "…" sings: the singer's own name before the gender.
+                    || (Peek(2) is { Kind: SyntaxKind.Identifier, Text: not "sings" }
+                        && (Peek(3)?.Text == "sings" || Peek(3)?.Kind == SyntaxKind.StringLiteral)))));
 
     /// <summary>Parses <c>singer [S] sings [NAME] [on PART]</c>; the order is fixed.</summary>
     /// <param name="endsItsLine">At the file's top level a singer line is the whole of its line:
@@ -245,7 +248,14 @@ internal sealed partial class Parser
         var tokens = new List<SyntaxToken> { Advance() };
         if (Current.Text != "sings")
         {
-            bool gendered = Check(SyntaxKind.Identifier);
+            // singer [NAME] [male|female] ["voice"]: a word that is no gender is the singer's own
+            // name (owner's decision 2026-11-12: a singer is somebody, and a score prints what
+            // somebody sings); with two words the first is the name and the second the gender.
+            if (Check(SyntaxKind.Identifier) && Peek(1) is { Kind: SyntaxKind.Identifier, Text: not "sings" })
+                tokens.Add(Advance());
+            else if (Check(SyntaxKind.Identifier) && !Music.LyricSinger.Genders.Contains(Current.Text.ToLowerInvariant()))
+                tokens.Add(Advance());
+            bool gendered = Check(SyntaxKind.Identifier) && Current.Text != "sings";
             if (gendered)
             {
                 var gender = Advance();

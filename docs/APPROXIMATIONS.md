@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 319 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **445** | |
+| `OWN` | 320 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **446** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（319 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（320 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -258,6 +258,8 @@
 - **`NoteStepper`** bar says so. LILYSHARP-OWN: an editor convenience with no LilyPond counterpart.
 ### `LilySharp.Core/Editing/NoteStepper.cs`
 - **`NoteStepper.NoProgram`** LILYSHARP-OWN: the editor's audition has no LilyPond counterpart (the performer
+### `LilySharp.Core/Editing/SingerParts.cs`
+- **`SingerParts`** over g-sharp in a minor a third above is b. LILYSHARP-OWN, a reading.
 ### `LilySharp.Core/Harmony/KeyEstimator.cs`
 - **`KeyEstimator`** LILYSHARP-OWN: an editor aid, not engraving — LilyPond has no key finder. The estimate is
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`

@@ -1655,6 +1655,11 @@ public static class DiagnosticCodes
     /// does not have (docs/lyrics-singer-design.md §12).</summary>
     public const string SingerPlaceMalformed = "LYS4059";
 
+    /// <summary>A score's <c>singer NAME</c> whose staff cannot be made of that singer's lines:
+    /// nobody is called so, a part is, the lines sing one voice of a part, or their music calls
+    /// a phrase (docs/lyrics-singer-design.md §13, <c>Editing.SingerParts</c>).</summary>
+    public const string SingerNotPrinted = "LYS4060";
+
     /// <summary><c>singer … sings NAME</c> where no lyrics track has that name.</summary>
     public const string SingerWordsUnknown = "LYS4042";
 

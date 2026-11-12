@@ -816,6 +816,12 @@ public sealed partial class StaffRenderSyntax : SyntaxNode
     /// lines 1</c> would be (RenderSpecParser.ParseStaff).</summary>
     public bool IsStrokes => StaffKeyword.Kind == SyntaxKind.StrokesKeyword;
 
+    /// <summary>A <c>singer NAME</c> item (owner's decision 2026-11-12): the staff of what a named
+    /// singer sings — the notes of the singer's lines, moved as they say, in the sections they
+    /// say — with the words under it. Its part is the one <c>Editing.SingerParts</c> makes of
+    /// those lines, called as the singer is.</summary>
+    public bool IsSinger => StaffKeyword.Kind == SyntaxKind.Identifier && StaffKeyword.Text == Music.LyricSinger.Keyword;
+
     /// <summary>The clef word of <c>staff [clef] part</c> (<c>staff bass melody</c>), or null —
     /// <see cref="StaffTargets"/>'s reading.</summary>
     public SyntaxTokenNode? ClefToken => StaffTargets.Of(this).Clef;

@@ -1029,6 +1029,35 @@ public static class OctaveModeConverter
         return new Result(result, null, changed);
     }
 
+    /// <summary>
+    /// <paramref name="candidate"/> with the octave marks of the pitches <paramref name="targets"/>
+    /// names (position → the octave of the pitch's letter) set so that each resolves there —
+    /// <see cref="Repin"/>'s forcing, for a rewrite that says itself where its notes land
+    /// (<see cref="SingerParts"/>: a copy moved by an interval). Null where the text cannot be
+    /// parsed or walked. A pitch no score plays keeps its marks.
+    /// </summary>
+    internal static string? Pin(string candidate, IReadOnlyDictionary<int, int> targets)
+    {
+        var tree = SyntaxTree.Parse(candidate);
+        if (tree.HasErrors)
+            return null;
+        var pitches = WrittenPitches(tree.GetRoot());
+        var newMarks = new Dictionary<int, int>();
+        if (!Walk(tree, (pos, octave) =>
+            {
+                if (!targets.TryGetValue(pos, out int target) || !pitches.TryGetValue(pos, out var written))
+                    return octave;
+                newMarks[pos] = target - (octave - written.Marks);
+                return target;
+            }))
+            return null;
+        var edits = new List<Edit>();
+        foreach (var (pos, marks) in newMarks)
+            if (marks != pitches[pos].Marks)
+                edits.Add(new Edit(pitches[pos].MarksStart, pitches[pos].MarksEnd, MarkText(marks)));
+        return Apply(candidate, edits);
+    }
+
     private static Result Fail(string error) => new(null, error, 0);
     private static (Result, List<Edit>) No(string error) => (Fail(error), []);
 
@@ -1109,7 +1138,8 @@ public static class OctaveModeConverter
     /// <paramref name="hook"/> on every written pitch. False when a score will not collect.
     /// </summary>
     internal static bool Walk(SyntaxTree tree, Func<int, int, int> hook,
-        Action<int, System.Collections.Immutable.ImmutableArray<Music.ShapeNote>>? shapeNotes = null)
+        Action<int, System.Collections.Immutable.ImmutableArray<Music.ShapeNote>>? shapeNotes = null,
+        Action<int, int>? writtenKey = null)
     {
         var specs = RenderSpecParser.FindAll(tree);
         IEnumerable<RenderSpec?> passes = specs;
@@ -1127,6 +1157,7 @@ public static class OctaveModeConverter
                     RecordsPitchTrace = false,
                     OctaveOverride = hook,
                     ShapeNotesObserver = shapeNotes,
+                    WrittenKeyObserver = writtenKey,
                 };
                 SvgGenerator.CollectScore(collector, tree, spec);
             }

@@ -1325,6 +1325,8 @@ public sealed partial class MeasureCollector
         // converter records and forces the octave (OctaveOverride's remarks).
         if (!fixedOctave && OctaveOverride is { } octaveOverride)
             actualOctave = octaveOverride(position, actualOctave);
+        if (!fixedOctave)
+            WrittenKeyObserver?.Invoke(position, WrittenKeySharps());
 
         // (A phrase reference's interval argument shifted the body by scale steps in the
         // WRITTEN key HERE — modal transposition, applied before the chromatic part

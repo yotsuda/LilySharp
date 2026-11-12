@@ -165,7 +165,7 @@ public static class RenderSpecParser
                 case StaffRenderSyntax staff when !IsInsideGrandStaff(staff) && !staff.Hidden:
                     var staffSpec = ParseStaff(staff);
                     if (staffSpec != null)
-                        items.Add(new SingleStaffSpec(staffSpec));
+                        items.Add(new SingleStaffSpec(WithSingerWords(staff, staffSpec)));
                     break;
 
                 case TabRenderSyntax tab when !tab.Hidden:
@@ -514,6 +514,23 @@ public static class RenderSpecParser
     }
 
     /// <summary>
+    /// A <c>singer NAME</c> item's staff with the singer's words under it: the tracks the
+    /// singer's part names (Editing.SingerParts writes them there). The item is the staff AND
+    /// its words — the singer line knows both, so the score does not say them again.
+    /// </summary>
+    private static StaffSpec WithSingerWords(StaffRenderSyntax staff, StaffSpec spec)
+    {
+        if (!staff.IsSinger)
+            return spec;
+        SyntaxNode root = staff;
+        while (root.Parent != null)
+            root = root.Parent;
+        foreach (string track in Music.LyricBindings.TracksOfPart(root, spec.VoiceName))
+            spec = WithFoldedVerse(root, spec, track, spec.VoiceName);
+        return spec;
+    }
+
+    /// <summary>
     /// Finds the first render declaration in a syntax tree.
     /// </summary>
     public static RenderSpec? FindFirst(SyntaxTree tree)
@@ -760,7 +777,7 @@ public static class RenderSpecParser
                 case StaffRenderSyntax staff when !staff.Hidden:
                     var staffSpec = ParseStaff(staff);
                     if (staffSpec != null)
-                        members.Add(new SingleStaffSpec(staffSpec));
+                        members.Add(new SingleStaffSpec(WithSingerWords(staff, staffSpec)));
                     break;
                 case CondensedStaffRenderSyntax condensed:
                     members.Add(ParseCondensedStaff(condensed));
