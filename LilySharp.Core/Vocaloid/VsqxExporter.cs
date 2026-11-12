@@ -69,34 +69,44 @@ public sealed class VsqxExporter
         var notes = new List<(int Tick, int Dur, int Pitch, string Lyric)>();
         if (part != null)
         {
-            int tick = 0;
+            // ⚠️ A VOCAL LINE IS ONE VOICE. The MusicXML model writes a bar's later voices each
+            // after a <backup> that rewinds to the bar's start; read as one stream the second
+            // voice's notes came AFTER the first's — a held "-" a bar long for
+            // `voice { c'1 } { e'1 }` — and every note after them a bar late (found 2026-11-13,
+            // checking the exports for the empty bar after a voice span: い at tick 3840 where
+            // the page has it at 1920). The line is the voice the WORDS stand on most, as the
+            // voice Cantoria sings is (Midi.SungVoices.Line: most syllables, then the first) —
+            // the first voice where the words are its, a named voice a `lyrics … on NAME` row
+            // sings where they are that one's (owner's decision the same day). A bar that has
+            // no such voice sings its first. The other voices are left out and take no time.
+            int sung = part.Measures.SelectMany(m => m.Notes)
+                .Where(n => !n.IsRest && !n.IsBackup && n.RawElement == null && n.Lyrics.Any(l => l.Verse == 1))
+                .GroupBy(n => n.Voice ?? 1)
+                .OrderByDescending(g => g.Count()).ThenBy(g => g.Key)
+                .Select(g => g.Key).FirstOrDefault(1);
+            int barStart = 0;
             foreach (var measure in part.Measures)
             {
-                // ⚠️ A VOCAL LINE IS ONE VOICE. The MusicXML model writes a bar's second voice
-                // after a <backup> that rewinds to the bar's start; read as one stream the
-                // second voice's notes came AFTER the first's — a held "-" a bar long for
-                // `voice { c'1 } { e'1 }` — and every note after them a bar late (found
-                // 2026-11-13, checking the exports for the empty bar after a voice span:
-                // い at tick 3840 where the page has it at 1920). The line is the bar's first
-                // voice; what follows a backup is left out, and takes no time.
-                bool pastTheFirstVoice = false;
+                // The bar's voices, each the entries between two backups.
+                var voices = new List<List<MusicXmlNote>> { new() };
                 foreach (var n in measure.Notes)
                 {
                     if (n.IsBackup)
-                        pastTheFirstVoice = true;
-                    if (pastTheFirstVoice && n.RawElement == null)
-                        continue;
-                    if (n.IsGrace || n.IsChord)
-                        continue; // no metric time / stacked pitch — not a vocal event
-                    // Pseudo-entries the MusicXML model keeps in the note stream for their
-                    // PLACE, not their sound: a <backup> (multi-voice rewind) and a verbatim
-                    // element (<harmony>, <figured-bass> before their note). Neither has a
-                    // Step, so until session 395 each came out as a C — a lead sheet with
-                    // @chord marks exported a zero-length C per chord symbol, and a two-voice
-                    // part exported its backup as a note.
-                    if (n.IsBackup || n.RawElement != null)
-                        continue;
-                    int dur = (int)((long)n.Duration * Resolution / xml.Divisions);
+                        voices.Add(new());
+                    else
+                        voices[^1].Add(n);
+                }
+                int Ticks(MusicXmlNote n) => (int)((long)n.Duration * Resolution / xml.Divisions);
+                // Pseudo-entries the MusicXML model keeps in the note stream for their PLACE, not
+                // their sound — a verbatim element (<harmony>, <figured-bass> before their note)
+                // has no Step, so until session 395 each came out as a C — and grace notes and
+                // chord members, which have no metric time of their own, are no vocal events.
+                static bool Timed(MusicXmlNote n) => !n.IsGrace && !n.IsChord && n.RawElement == null;
+                var line = voices.FirstOrDefault(v => v.Any(n => Timed(n) && (n.Voice ?? 1) == sung)) ?? voices[0];
+                int tick = barStart;
+                foreach (var n in line.Where(Timed))
+                {
+                    int dur = Ticks(n);
                     if (n.IsRest)
                     {
                         tick += dur;
@@ -120,9 +130,10 @@ public sealed class VsqxExporter
                     notes.Add((tick, dur, pitch, lyric));
                     tick += dur;
                 }
+                // The bar is as long as its first voice, the one the model writes whole.
+                barStart += voices[0].Where(Timed).Sum(Ticks);
             }
         }
-
         // A part whose extra voices were serialized after the melody would
         // append a lyric-less tail: keep nothing after the last sung syllable
         // (melismas BETWEEN syllables survive; the alto line does not).

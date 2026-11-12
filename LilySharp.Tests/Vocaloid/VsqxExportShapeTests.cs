@@ -112,4 +112,17 @@ public class VsqxExportShapeTests
         Assert.Equal(ticks, notes.Select(n => Int(n, "t")));
         Assert.DoesNotContain("-", notes.Select(Lyric));
     }
+    /// <summary>The line is the voice the words stand on, as the voice Cantoria sings is: words a
+    /// score places on a named second voice (`lyrics w on alt`) take that voice's notes, not the
+    /// first voice's (owner's decision 2026-11-13).</summary>
+    [Fact]
+    public void TheVocalLine_IsTheVoiceTheWordsStandOn()
+    {
+        var notes = Notes(Export("octave absolute\nlanguage japanese\ntime 4/4\npart m { }\n"
+            + "section A { m { voice sop { c''1 | d''2 e''2 | } alt { e'4 f' g' a' | g'2 f'2 | } } lyrics w { あ い う え | お か | } }\n"
+            + "form { A }\nscore { staff m  lyrics w on alt }\n"));
+        Assert.Equal(new[] { 64, 65, 67, 69, 67, 65 }, notes.Select(n => Int(n, "n")));
+        Assert.Equal(new[] { 0, 480, 960, 1440, 1920, 2880 }, notes.Select(n => Int(n, "t")));
+        Assert.Equal(new[] { "あ", "い", "う", "え", "お", "か" }, notes.Select(Lyric));
+    }
 }
