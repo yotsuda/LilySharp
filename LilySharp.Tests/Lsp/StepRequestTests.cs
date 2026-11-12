@@ -1488,6 +1488,25 @@ public class StepRequestTests
         Assert.Contains(says, reply.Message);
     }
 
+    // Owner's request 2026-11-12, on `singer alice female "diffsinger/Nishiren" on ▮`: the step
+    // keys write a part where the line has none yet — the first, whichever key — and step it after.
+    [Theory]
+    [InlineData("singer alice female \"diffsinger/Nishiren\" on ‸", +1, "singer alice female \"diffsinger/Nishiren\" on lead")]
+    [InlineData("singer alice female \"diffsinger/Nishiren\" on ‸", -1, "singer alice female \"diffsinger/Nishiren\" on lead")]
+    [InlineData("singer alice female on‸", +1, "singer alice female on lead")]
+    [InlineData("singer on ‸", -1, "singer on lead")]
+    public void ASingerLinesOnWithNoPartYet_TakesTheFirstPartAtAKey(string line, int direction, string expected)
+    {
+        const string Book = "part lead {{ }}\npart bass {{ }}\nsection A {{ lead {{ c'1 }}  bass {{ c1 }} }}\nlyrics words {{ la }}\n{0}\nsinger bob male on bass\nform {{ A }}\nscore {{ staff lead  lyrics words }}\n";
+        var (reply, after) = Step(string.Format(Book, line), direction, semitone: true);
+        Assert.False(reply.Fallback, reply.Error);
+        Assert.Equal(string.Format(Book, expected), after);
+        Assert.Contains("lead: part 1 of 2 (lead, bass)", reply.Message);
+        // …and the next key steps the part it wrote.
+        var (next, then) = Step(string.Format(Book, expected.Replace("on lead", "on lead‸")), -1, semitone: true);
+        Assert.Equal(string.Format(Book, expected.Replace("on lead", "on bass")), then);
+    }
+
     // Owner's request 2026-11-12, on `singer male sings words on lead`: the step keys on its
     // `male` go to `female`, and back - Up to female, Down to male, stopping at either end (the
     // same day: "they must not go round").

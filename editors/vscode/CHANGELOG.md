@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Ctrl+Shift+↑ / ↓ after a singer line's `on` writes a part**: on `singer alice female "diffsinger/Nishiren" on ▮`, with no part yet, either key writes the file's first part, and the keys step it from there — no list to open.
 - **The text over a voice the score does not sing is short too**: who sings what on which part, and "(not in this score)" — the sentence about pressing it is gone.
 - **The part before the words on a singer line**: `singer alice female on lead` is a whole line (it sings the words the part names), and `… on lead sings ` lists the words that part names, with their language. After the voice the list offers `on` first; a voice taken from the list goes on to ` on ` and the parts. The older order still works, and its lists are as they were.
 - **A part may sing other words in other sections**: a verse in Japanese (`… japanese sings on lead in Verse`) and a chorus in English (`… sings on lead in Chorus`) play as written, each voice in its own language; it was an error.

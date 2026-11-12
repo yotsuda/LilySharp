@@ -307,7 +307,16 @@ internal sealed partial class Parser
         if (partFirst)
         {
             tokens.Add(Advance());
-            tokens.Add(ExpectPartName());
+            // The part is on the line: `singer alice on` with nothing after it does not take the
+            // next line's first word for its part (the line below is often another singer's).
+            if (BeginsLine() || Check(SyntaxKind.EndOfFile))
+            {
+                _diagnostics.Error(new TextSpan(Math.Max(0, _textPosition - 1), 1), DiagnosticCodes.ExpectedToken,
+                    "'on' is followed by the part whose notes are sung: singer alice on lead.");
+                tokens.Add(new SyntaxToken(SyntaxKind.Identifier, "", null, null));
+            }
+            else
+                tokens.Add(ExpectPartName());
         }
         if (Check(SyntaxKind.Identifier) && Current.Text == "sings" && !(partFirst && BeginsLine()))
             tokens.Add(Advance());

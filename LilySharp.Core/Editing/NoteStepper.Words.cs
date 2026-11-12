@@ -516,6 +516,12 @@ public static partial class NoteStepper
             foreach (var number in new[] { singer.IntervalToken, singer.OctaveToken })
                 if (number != null && number.Span.Start - 1 <= offset && offset <= number.Span.End)
                     return (TargetKind.SingerPlace, number);
+            // …and where its `on` has no part yet (`singer alice female "…" on ▮`, owner's request
+            // 2026-11-12): the keys write one — the first, then the next — with no list opened.
+            if (singer.OnToken is { Text.Length: 0 } missing && singer.ClauseToken is { } clause
+                && OnKeywordBefore(singer, missing) is { } on && on.Span.End <= offset && offset <= LineEnd(tree.Text, on.Span.End)
+                && tree.Text[on.Span.End..Math.Min(offset, tree.Text.Length)].Trim().Length == 0)
+                return (TargetKind.SingsTarget, missing);
             if (singer.SingsKeyword is not { } sings)
                 continue;
             int end = singer.TrackToken?.Span.End ?? sings.Span.End;
@@ -529,6 +535,21 @@ public static partial class NoteStepper
             if (PartReferenceFinder.SingsTargetToken(node) is { Text.Length: > 0 } name && name.Span.Start <= offset && offset <= name.Span.End)
                 return (TargetKind.SingsTarget, name);
         return null;
+    }
+
+    /// <summary>The <c>on</c> word whose part <paramref name="part"/> is: the token before it.</summary>
+    private static SyntaxTokenNode? OnKeywordBefore(SingerDeclarationSyntax singer, SyntaxTokenNode part)
+    {
+        for (int i = 1; i < singer.SlotCount; i++)
+            if (ReferenceEquals(singer.GetChild(i), part))
+                return singer.GetChild(i - 1) as SyntaxTokenNode is { Text: "on" } on ? on : null;
+        return null;
+    }
+
+    private static int LineEnd(string text, int from)
+    {
+        int end = text.IndexOf('\n', Math.Clamp(from, 0, text.Length));
+        return end < 0 ? text.Length : end;
     }
 
     /// <summary>The names a reference walks: the sections the file declares, in the order written;
@@ -561,6 +582,18 @@ public static partial class NoteStepper
         string what = kind == TargetKind.FormSection ? "section" : "part";
         if (names.Count == 0)
             return (null, $"{name.Text}: the file declares no {what} to switch to");
+        // A reference not written yet (a singer line's `on ▮`): the first name, whichever key.
+        if (name.Text.Length == 0)
+        {
+            string firstList = names.Count <= 8 ? $" ({string.Join(", ", names)})" : "";
+            // Where the name goes: the end of the line the word before it stands on — the missing
+            // token itself stands past the line's end, where the next line begins.
+            int at0 = name.Span.Start;
+            while (at0 > 0 && tree.Text[at0 - 1] is '\n' or '\r')
+                at0--;
+            bool spaced = at0 == 0 || char.IsWhiteSpace(tree.Text[at0 - 1]);
+            return (new Edit(at0, at0, (spaced ? "" : " ") + names[0]), $"{names[0]}: {what} 1 of {names.Count}{firstList}");
+        }
         int at = names.IndexOf(name.Text);
         int to = at < 0 ? (dir < 0 ? 0 : names.Count - 1) : at - dir;
         string list = names.Count <= 8 ? $" ({string.Join(", ", names)})" : "";
