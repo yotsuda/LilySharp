@@ -281,6 +281,26 @@ public class SingerPartsTests
         Assert.All(voice.Notes, n => Assert.False(string.IsNullOrEmpty(n.Lyric)));
     }
 
+    /// <summary>Owner's report 2026-11-12: <c>singer alice female on lead in Verse</c> — the
+    /// <c>sings</c> forgotten — was read as music at the top level: eight errors, one of them
+    /// underlining the comment line above, and three more at the score's items. A named singer's
+    /// line that lacks its <c>sings</c> is a singer line, and says the one thing.</summary>
+    [Theory]
+    [InlineData("singer carol female on lead up 3 in Chorus")]
+    [InlineData("singer carol on lead up 3 in Chorus")]
+    [InlineData("singer female on lead")]
+    public void ASingerLineThatForgotItsSings_SaysThatOnce(string line)
+    {
+        string source = Book("// the singers\n" + line, "score { staff lead  lyrics words  staff carol }");
+        var tree = SyntaxTree.Parse(source);
+        var problem = Assert.Single(tree.Diagnostics);
+        Assert.Equal(DiagnosticCodes.SingerNeedsSings, problem.Code);
+        Assert.Equal("on", source.Substring(problem.Span.Start, problem.Span.Length));
+        // …and nothing is made of a file that does not parse, nor said at the score's items.
+        Assert.Same(source, SingerParts.Expand(source, tree, out var said));
+        Assert.Empty(said);
+    }
+
     [Fact]
     public void ASingerTheScoresOwnLinesLeaveOut_IsSaidAtTheItem()
     {

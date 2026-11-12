@@ -116,6 +116,11 @@ public static class SingerParts
         var items = Items(root).ToList();
         if (items.Count == 0)
             return text;
+        // A file that does not parse says so where it does not; nothing is made of it, and
+        // nothing more is said at each singer's staff (owner's report 2026-11-12: a singer line
+        // that forgot its `sings` came with three errors at the score's items besides its own).
+        if (tree.HasErrors)
+            return text;
 
         var lines = LyricSinger.LinesOf(root);
         var parts = root.ChildNodes().OfType<PartDeclarationSyntax>().ToList();

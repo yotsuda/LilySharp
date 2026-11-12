@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **A singer line that forgot its `sings` says so, once**: `singer alice female on lead in Verse` was read as music at the top level — eight errors, one underlining the comment above it, and three more at the score's singer staves. It is one error at the word where `sings` belongs.
 - **`lyrics carol` for a singer who sings the note names prints the note names**: with `singer carol … sings solfege …`, the row of her words under her staff was empty — no track is written for words made from the notes.
 - **A row under a singer's staff is not warned about**: `lyrics solfege` under `staff alice` said that "part alice__2" did not list it — the part Lily# makes of her lines, which the writer neither wrote nor can add a track to. Any row may stand under such a staff.
 - **A section with no words is not sung on the vowel before it**: a Coda with notes and no words, right after the last chorus, was sung "u— u—" — the chorus's last syllable held on. A voice carries a vowel only as far as its section, or into a section that has words of its own; the wordless one is played by the part's instrument.

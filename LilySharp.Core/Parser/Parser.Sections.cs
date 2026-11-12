@@ -234,6 +234,10 @@ internal sealed partial class Parser
             && (next.Text == "sings" || next.Kind == SyntaxKind.StringLiteral
                 || (next.Kind == SyntaxKind.Identifier && (Music.LyricSinger.Genders.Contains(next.Text) || Peek(2)?.Text == "sings" || Peek(2)?.Kind == SyntaxKind.StringLiteral
                     // singer NAME male "…" sings: the singer's own name before the gender.
+                    // …and a line that forgot its `sings` (`singer alice female on lead`, `singer alice
+                    // on lead`) is still a singer line, to be told so — not music at the top level.
+                    || (Peek(2) is { Kind: SyntaxKind.Identifier } gender && Music.LyricSinger.Genders.Contains(gender.Text))
+                    || Peek(2)?.Text == "on"
                     || (Peek(2) is { Kind: SyntaxKind.Identifier, Text: not "sings" }
                         && (Peek(3)?.Text == "sings" || Peek(3)?.Kind == SyntaxKind.StringLiteral)))));
 
@@ -251,11 +255,11 @@ internal sealed partial class Parser
             // singer [NAME] [male|female] ["voice"]: a word that is no gender is the singer's own
             // name (owner's decision 2026-11-12: a singer is somebody, and a score prints what
             // somebody sings); with two words the first is the name and the second the gender.
-            if (Check(SyntaxKind.Identifier) && Peek(1) is { Kind: SyntaxKind.Identifier, Text: not "sings" })
+            if (Check(SyntaxKind.Identifier) && Peek(1) is { Kind: SyntaxKind.Identifier, Text: not ("sings" or "on") })
                 tokens.Add(Advance());
             else if (Check(SyntaxKind.Identifier) && !Music.LyricSinger.Genders.Contains(Current.Text.ToLowerInvariant()))
                 tokens.Add(Advance());
-            bool gendered = Check(SyntaxKind.Identifier) && Current.Text != "sings";
+            bool gendered = Check(SyntaxKind.Identifier) && Current.Text is not ("sings" or "on");
             if (gendered)
             {
                 var gender = Advance();
@@ -274,6 +278,10 @@ internal sealed partial class Parser
             _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Math.Max(1, Current.Text.Length)),
                 DiagnosticCodes.SingerNeedsSings,
                 "A singer line reads 'singer S sings WORDS on PART'; 'sings' is missing here.");
+            // The rest of the line is the line's: read as statements of their own, `on lead in
+            // Verse` was music at the top level and seven errors about it (owner's report 2026-11-12).
+            while (endsItsLine && !BeginsLine() && !Check(SyntaxKind.EndOfFile))
+                tokens.Add(Advance());
             return new SingerDeclarationGreen([.. tokens]);
         }
         if (IsPartNameToken(Current) && Current.Text != "on" && !IsLanguageDeclaration() && !IsSingerWith() && !IsSingerPlace())
