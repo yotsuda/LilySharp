@@ -1894,6 +1894,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     // indentation, a title's opening quote, a mark's `@` — and the caret
                     // goes past it to the thing clicked (jumpOffsetFor).
                     const doc = targetEditor.document;
+                    // A note of a staff Lily# made (a score's singer NAME: what that singer
+                    // sings) stands past the file's own text: there is no place to go to.
+                    if (typeof message.position === 'number' && message.position >= doc.getText().length) {
+                        return;
+                    }
                     const position = doc.positionAt(jumpOffsetFor(doc.getText(), message.position));
                     targetEditor.selection = new vscode.Selection(position, position);
                     targetEditor.revealRange(

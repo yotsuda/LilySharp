@@ -165,9 +165,28 @@ singer male "neutrino/SOMA" sings words on bas</pre>
   third follows the key in force where the note is, a key change included. A note outside the scale is
   answered with the scale's own note: over g-sharp in A minor, a third above is b. Where that is not
   the harmony you want, write the line out as a part of its own.</p>
-  <p>Two things to know. The harmony is <b>heard, not printed</b>: the page shows the part as written.
-  And where none of a part's lines sings a section, the part's <b>instrument plays</b> it: a voice that
+  <p>Where none of a part's lines sings a section, the part's <b>instrument plays</b> it: a voice that
   comes in for the chorus alone leaves the verse to the instrument.</p>
+
+  <h3>Print what a singer sings</h3>
+  <p>The page shows the part as written; the harmony above is only heard. To print it, give the singer a
+  <b>name</b> — a word before the gender or the voice — and name the singer in the score:</p>
+  <!--EXAMPLE:sing-print-->
+  <p><code>singer carol</code> in a score is carol's staff <b>and</b> her words: the notes of her lines,
+  moved as they say, in the sections they say, and whole bars of rest elsewhere. The score writes neither
+  a <code>staff</code> nor a <code>lyrics</code> row for it. A singer who sings an octave below
+  throughout is written in the treble clef an octave down, so the notes stand where the part's do.
+  Such a score sings what it shows. A sheet for one singer is a score of its own:
+  <code>score carol { singer carol }</code>.</p>
+  <p>Lines of one name are one singer. Write the voice on one of them
+  (<code>singer alice female "diffsinger/…" sings on lead in Verse</code>) and leave it off the others
+  (<code>singer alice sings on lead up 3 in Chorus</code>). A singer's name must not be a part's.</p>
+  <p>Where a third is not the note, write the harmony out and mend it. On a named singer's line the
+  light bulb offers <b>Write carol's notes out as a part</b>: the notes become a part called
+  <code>carol</code> beside the lead, her words a track of her own, and her lines one line that sings
+  it. For an instrument — a second violin a third under the first — the command
+  <b>Lily#: Write a Harmony Part…</b> asks which part, how far, which sections and the new part's name,
+  and writes it the same way.</p>
 </section>
 
 <section id="how">

@@ -2464,6 +2464,26 @@ public sealed partial class LilySharpLanguageServer
         },
     };
 
+    /// <summary>After <c>singer </c> inside a score: the singers the file's lines name, each the
+    /// staff of what that singer sings with the words under it (docs/lyrics-singer-design.md §13).
+    /// None outside a score, where the word begins a singer line.</summary>
+    private static CompletionItem[] NamedSingerItems(Document doc, int offset)
+    {
+        var root = doc.Tree.GetRoot();
+        if (!root.ChildNodes().OfType<RenderDeclarationSyntax>().Any(r => r.Span.Start < offset && offset <= r.Span.End))
+            return [];
+        return [.. LilySharp.Core.Music.LyricSinger.LinesOf(root).Where(l => l.Person != null)
+            .GroupBy(l => l.Person!, StringComparer.Ordinal)
+            .Select((g, i) => new CompletionItem
+            {
+                Label = g.Key,
+                Kind = CompletionItemKind.Reference,
+                Detail = "what " + g.Key + " sings, as a staff with the words"
+                    + (g.First().Part is { } part ? " (on " + part + ")" : ""),
+                SortText = "0" + i.ToString("D3"),
+            })];
+    }
+
     /// <summary>The <c>sings</c> of a <c>singer</c> line, the list of the words opening after it.</summary>
     private static CompletionItem SingsKeywordItem() => new()
     {

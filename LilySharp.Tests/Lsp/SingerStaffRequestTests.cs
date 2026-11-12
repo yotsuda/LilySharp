@@ -87,6 +87,28 @@ public class SingerStaffRequestTests
     }
 
     [Fact]
+    public void AfterSingerInAScore_TheNamedSingersAreListed_AndNotAtTheTopLevel()
+    {
+        string[] LabelsAt(string text, int offset)
+        {
+            var (server, uri) = Opened(text);
+            var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(text, offset);
+            var list = server.Completion(new CompletionParams
+            {
+                TextDocument = new TextDocumentIdentifier { Uri = uri },
+                Position = new Position(line, character),
+            });
+            return list?.Items.Select(i => i.Label!).ToArray() ?? [];
+        }
+
+        string inScore = Book.Replace("singer carol  singer bob }", "singer  }");
+        Assert.Equal(["alice", "bob", "carol"], LabelsAt(inScore, inScore.IndexOf("singer  }", StringComparison.Ordinal) + 7));
+
+        string atTop = Book + "\nsinger ";
+        Assert.Empty(LabelsAt(atTop, atTop.Length));
+    }
+
+    [Fact]
     public void ANamedSingersLine_OffersToWriteTheNotesOut_AndTheServerWritesThem()
     {
         var (server, uri) = Opened(Book);

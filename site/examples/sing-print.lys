@@ -1,0 +1,22 @@
+// The singers have names, and the score prints what each one sings: under the lead, carol's
+// third above and bob's octave below, each with the words, at rest where they do not sing.
+// Nobody writes those notes: the singer lines know them.
+octave relative
+time 4/4
+key c major
+tempo 100
+language english
+part lead { instrument alto  lyrics words }
+section Verse {
+  lead   { e'4 e d c   | d4 e c2      | e4 e d c   | d4 d c2 | }
+  lyrics words { Morn- ing on the | wa- ter- side, | no- bod- y to | hear the tide. | }
+}
+section Chorus {
+  lead   { g'4 g a g   | e4 d c2      | g'4 g a g   | e4 d c2 | }
+  lyrics words { Sing it o- ver, | o- ver- now, | sing it loud- er, | a- ny- how. | }
+}
+form { Verse Chorus }
+singer alice female sings on lead in Verse
+singer bob   male   sings on lead octave -1 in Chorus
+singer carol female sings on lead up 3 in Chorus
+score { staff lead  lyrics words  singer carol  singer bob }
