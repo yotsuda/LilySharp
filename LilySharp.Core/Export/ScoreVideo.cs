@@ -113,10 +113,21 @@ public static class ScoreVideo
         if (pngs.Count != boxes.Count)
             throw new InvalidOperationException($"the pages ({pngs.Count}) and their boxes ({boxes.Count}) disagree");
 
-        // The paper's shape, not the first page's: a lone page is cut under its music (as the
-        // PNG's is). A content-driven paper has no height but the page's.
+        // A score of several pages: the paper's shape, every page shown whole in it. A score of
+        // ONE page: that page's own shape, which is cut under its music as the PNG's is — the
+        // picture has no paper above and below the music to show (owner's report 2026-11-12: a
+        // short song's video was the whole sheet, most of it white; until then the picture
+        // took the paper's shape whatever the page was). A content-driven paper has no height
+        // but the page's either.
+        // ⚠️ ONLY ON THE SHEET NOBODY CHOSE. A score that states its paper keeps it, one page or
+        // many: `paper yt { paperWidth 256mm paperHeight 144mm }` is a video's 16:9, written to
+        // have that picture (owner's report 2026-11-10: such a score came out upright). The
+        // default sheet is known by its size — a file that writes that very size is cut too.
         var paper = Svg.SvgGenerator.CollectScore(tree, score, settings: options.PaperOverrides).Paper;
-        var (w, h) = PictureSize(paper.PageWidth, paper.PageHeight > 0 ? paper.PageHeight : boxes[0].Height,
+        var sheet = Svg.Layout.LayoutOptions.Default;
+        bool chosen = Math.Abs(paper.PageWidth - sheet.PageWidth) > 1e-6 || Math.Abs(paper.PageHeight - sheet.PageHeight) > 1e-6;
+        var (w, h) = PictureSize(paper.PageWidth,
+            paper.PageHeight > 0 && (pngs.Count > 1 || chosen) ? paper.PageHeight : boxes[0].Height,
             options.Width, options.Height);
         var pages = new List<(SKBitmap Picture, double Scale, int X, int Y)>();
         try

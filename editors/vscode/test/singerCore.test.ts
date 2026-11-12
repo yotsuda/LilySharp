@@ -1264,3 +1264,30 @@ describe('a singer line that says what of the part it sings', () => {
         assert.deepEqual(core.singerSettingSlot('singer "a/b" sings words on lead in Chorus with breathiness '), { kind: 'value', of: 'breathiness' });
     });
 });
+
+// Owner's decision 2026-11-12: where nobody sings a section, the part's instrument plays. The
+// server marks those notes (PlaybackNote.U); every place that keeps a sung part's instrument out
+// lets them through.
+describe('a section none of a part\'s voices sings', () => {
+    const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const panel = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+
+    it('is played on the instrument in the preview, and not taken back when a voice comes in', () => {
+        assert.match(ext, /const played = notes\.filter\(n => n\.U \? unsungSounds\(n\.N\) : instrumentSounds\(n\.N, sung\)\);/);
+        // Silent only when the menu switched the part's voices off and its instrument is not on.
+        assert.match(ext, /function unsungSounds\(i\) \{[\s\S]{0,260}return practice\.instrumentsOn\.includes\(name\) \|\| !menuVoicesOf\(name\)\.every\(k => practice\.voicesOff\.includes\(k\)\);/);
+        assert.match(ext, /sfPlayer\.silence\(playingNotes\.filter\(n => tracks\.has\(n\.N\) && !n\.U && n\.T >= entry\.at - 1e-6\)\);/);
+    });
+
+    it('stays in an exported WAV, MP3 or MP4, and in a proposal\'s Play', () => {
+        assert.match(ext, /silenced\.has\(n\.N\) && !\(n\.U && !allOffTracks\.has\(n\.N\)\)\)\) : job\.Notes;/);
+        assert.match(ext, /if \(off >= 0\) \{ silenced\.add\(off\); allOffTracks\.add\(off\); \}/);
+        assert.match(panel, /struck = notes\.filter\(n => n\.U \|\| !off\.includes\(n\.N\)\);/);
+    });
+
+    it('keeps the page script free of backticks', () => {
+        // The preview's script lives in a template literal: a backtick in a comment ends it.
+        const from = ext.indexOf('function unsungSounds(i)');
+        assert.ok(!ext.slice(from - 2000, from + 800).includes('`'));
+    });
+});

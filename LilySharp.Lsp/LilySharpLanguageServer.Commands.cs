@@ -1305,6 +1305,10 @@ public sealed partial class LilySharpLanguageServer
                 }
             }
 
+            // Where a sung part is sung by nobody (a singer line's `in` leaves a section out):
+            // its notes there are marked, and the editor plays them on the instrument.
+            var unsung = LilySharp.Core.Midi.SungVoices.Unsung(midi, LilySharp.Core.Midi.SungVoices.Read(midi, SecondsAt), SecondsAt);
+
             // Each note with its track: the channel and the program the .mid would play it
             // with (SplitIntoPartTracks gave every part a track and a channel), so the
             // preview's SoundFont synth sounds the same instruments the export does.
@@ -1328,6 +1332,7 @@ public sealed partial class LilySharpLanguageServer
                         G = n.Channel == 9 ? 0 : x.Track.Program ?? 0,
                         N = x.Index,
                         K = n.Strike,
+                        U = unsung.TryGetValue(x.Track.Name, out var free) && free.Any(r => n.StartTick >= r.From && n.StartTick < r.To),
                     };
                 })
                 .Concat(tracks.SelectMany((x, ti) => x.Track.Pedals.Select(c => new PlaybackNote

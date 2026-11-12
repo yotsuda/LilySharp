@@ -3490,7 +3490,8 @@ ${PLAIN_TONES_JS}
       // A WAV that would not decode: every instrument plays, and what did decode is sung over it.
       const off = done.length === sung.voices.length ? (sung.silenced || []) : [];
       voices = done;
-      if (off.length > 0) struck = notes.filter(n => !off.includes(n.N));
+      // …but a note in a section none of the part's voices sings (n.U) is the instrument's.
+      if (off.length > 0) struck = notes.filter(n => n.U || !off.includes(n.N));
       if (start === 0) pre = done.reduce((p, v) => Math.max(p, v.pre), 0);
       begin();
     });

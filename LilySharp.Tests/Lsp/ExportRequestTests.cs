@@ -329,8 +329,13 @@ public sealed class ExportRequestTests : IDisposable
                 Assert.True(count > 0, $"something is lit in {file}");
                 return sum / count;
             }
+            // One page on the default sheet: the picture is the page, cut under its music as the
+            // PNG's is (owner's request 2026-11-12; it was the whole upright sheet, 1240 x 1754).
             using (var still = SkiaSharp.SKBitmap.Decode(At(0.5)))
-                Assert.Equal((1240, 1754), (still.Width, still.Height));
+            {
+                Assert.Equal(1920, still.Width);
+                Assert.True(still.Height < 700 && still.Height % 2 == 0, $"{still.Width} x {still.Height}");
+            }
             double first = LitX(At(1.5 + 0.25)), second = LitX(At(1.5 + 2.25));
             Assert.True(second > first + 100, $"the second c'' ({second:0}) is lit right of the first ({first:0})");
         }
@@ -377,7 +382,10 @@ public sealed class ExportRequestTests : IDisposable
         }
         Assert.Equal((1920, 1080), SizeOf("YT"));
         Assert.Equal((1528, 1080), SizeOf("Flat"));
-        Assert.Equal((1240, 1754), SizeOf(""));
+        // The sheet nobody chose, one page of music on it: the page, not the sheet (owner's
+        // request 2026-11-12; 1240 x 1754 until then).
+        var (width, height) = SizeOf("");
+        Assert.True(width == 1920 && height < 700, $"{width} x {height}");
     }
 
     // The pictures follow the notes the editor hands over — at the practice menu's half tempo the

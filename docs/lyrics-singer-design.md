@@ -286,5 +286,13 @@ more, and every engine sings a line's interval alike.
 - The editor: after the part the server lists `up`, `down`, `octave`, `in` in their order,
   each once, their numbers, and the sections not yet named; the step keys move the numbers.
 
+Where nobody sings (owner's decision 2026-11-12, the same day): a part with a singer line is
+a voice and its instrument is off — but in a section as it is played where NONE of its voices
+has a note, its instrument plays. `SungVoices.Unsung` finds those stretches by the sections'
+ticks; the playback list marks each such note (`PlaybackNote.U`) and the three places of the
+editor that keep a sung part's instrument out let them through (the preview's Play, the WAV /
+MP3 / MP4 export, a proposal's Play), as does `lysc wav --singer`. By SECTION, not by note: a
+bar of a sung section with notes and no words is still the voice's silence (section 8).
+
 Not built: the harmony is HEARD, not printed (a part made from another, to print, is the
 other half); `in Chorus 2` for one playing of a section; a part of its own transposition.

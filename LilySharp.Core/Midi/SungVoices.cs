@@ -165,6 +165,42 @@ public static class SungVoices
         return voices;
     }
 
+    /// <summary>
+    /// Where a sung part is NOT sung (owner's decision 2026-11-12: "where nobody sings a
+    /// section, the instrument plays"): for each part that has a voice, the stretches of the
+    /// playing — one a section as it is played, in ticks, the end not in it — in which none of
+    /// the part's voices has a note. Its instrument sounds there, the part being a voice
+    /// everywhere else. A part with no voice at all is not here: its instrument stands in whole,
+    /// by the rule that was.
+    /// </summary>
+    /// <remarks>
+    /// BY SECTION, not by note: a bar of a sung section that has notes and no words stays the
+    /// voice's silence, as it was (docs/lyrics-singer-design.md §8) — what is new is the section
+    /// a singer line's <c>in</c> leaves to nobody.
+    /// </remarks>
+    public static IReadOnlyDictionary<string, List<(int From, int To)>> Unsung(MidiFile midi, IReadOnlyList<SungVoice> voices, Func<int, double> secondsAt)
+    {
+        var unsung = new Dictionary<string, List<(int From, int To)>>(StringComparer.Ordinal);
+        if (voices.Count == 0 || midi.SectionStarts.Count == 0)
+            return unsung;
+        var starts = midi.SectionStarts.Keys.ToList();
+        foreach (var part in voices.Select(v => v.Part).Distinct(StringComparer.Ordinal))
+        {
+            var onsets = voices.Where(v => v.Part == part).SelectMany(v => v.Notes).Select(n => n.Start).ToList();
+            for (int s = 0; s < starts.Count; s++)
+            {
+                int from = starts[s], to = s + 1 < starts.Count ? starts[s + 1] : int.MaxValue;
+                double a = secondsAt(from) - 1e-6, b = to == int.MaxValue ? double.MaxValue : secondsAt(to) - 1e-6;
+                if (onsets.Any(t => t >= a && t < b))
+                    continue;
+                if (!unsung.TryGetValue(part, out var list))
+                    unsung[part] = list = [];
+                list.Add((from, to));
+            }
+        }
+        return unsung;
+    }
+
     /// <summary>The steps of a major scale above its tonic, in semitones.</summary>
     private static readonly int[] MajorScale = [0, 2, 4, 5, 7, 9, 11];
 

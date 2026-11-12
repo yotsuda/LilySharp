@@ -3669,6 +3669,7 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
         const voicesOn = new Set(practice?.voicesOn ?? []);
         const voices: VoiceTrack[] = [];
         const silenced = new Set<number>();
+        const allOffTracks = new Set<number>();     // silenced because the menu switched every voice off: their unsung notes too
         for (const voice of sung.Voices ?? []) {
             // The menu's fader for the voice (owner's request 2026-11-09): its gain in the mix; at 0 it is as switched off.
             const key = sungKey(voice);
@@ -3680,7 +3681,7 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
             const allOff = (sung.Voices ?? []).filter(v => v.Part === voice.Part).every(v => silentVoices.has(sungKey(v)));
             if (allOff && sungParts.has(voice.Part) && !playedParts.has(voice.Part) && !(practice?.instrumentsOn ?? []).includes(voice.Part)) {
                 const off = job.Parts?.indexOf(voice.Part) ?? -1;
-                if (off >= 0) { silenced.add(off); }
+                if (off >= 0) { silenced.add(off); allOffTracks.add(off); }
             }
             if (voice.Notes.length === 0 || !sings || gain <= 0) { continue; }
             try {
@@ -3712,7 +3713,8 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
         }
         pre = Math.max(0, pre);
         const later = <T extends { T: number }>(list: T[]): T[] => pre > 0 ? list.map(n => ({ ...n, T: n.T + pre })) : list;
-        const notes = silenced.size > 0 ? job.Notes.filter(n => !(typeof n.N === 'number' && silenced.has(n.N))) : job.Notes;
+        // A note in a section none of the part's voices sings (U) is the instrument's: it stays.
+        const notes = silenced.size > 0 ? job.Notes.filter(n => !(typeof n.N === 'number' && silenced.has(n.N) && !(n.U && !allOffTracks.has(n.N)))) : job.Notes;
         out.push({
             ...job, Voices: voices.map(v => ({ ...v, at: v.at + pre })), Lit: later(job.Notes),
             Notes: later(notes), Lead: (job.Lead ?? 0) + pre,
@@ -7330,7 +7332,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // The voice that sang this part until now ends as the new one fades in.
             for (const old of replaced) { try { old.stop(when + 0.03); } catch (e) { /* ended */ } }
             voiceSources.push(src);
-            if (tracks.size > 0) { sfPlayer.silence(playingNotes.filter(n => tracks.has(n.N) && n.T >= entry.at - 1e-6)); }
+            if (tracks.size > 0) { sfPlayer.silence(playingNotes.filter(n => tracks.has(n.N) && !n.U && n.T >= entry.at - 1e-6)); }
             flashInfo('The voice of ' + (menuVoiceNames[key] || key) + ' comes in', 3000);
         }
         // Starts every voice so that the list's time listTime sounds at the context's time when:
@@ -7350,6 +7352,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // sings keeps its instrument off unless the menu turned it on, standing in only while its
         // voice is not there (not sung now: off, not ready, or its fader at 0); every other part's
         // instrument sounds (the muted and the extras left off are already out of the list).
+        function unsungSounds(i) {
+            if (!rawParts || typeof i !== 'number' || i < 0) { return true; }
+            const name = rawParts[i];
+            return practice.instrumentsOn.includes(name) || !menuVoicesOf(name).every(k => practice.voicesOff.includes(k));
+        }
         function instrumentSounds(i, sung) {
             if (!rawParts || typeof i !== 'number' || i < 0) { return true; }
             const name = rawParts[i];
@@ -7675,7 +7682,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // there yet (owner's decision 2026-11-08: a Play never waits). The highlight follows
             // the whole list.
             const sung = sungTracks();
-            const played = notes.filter(n => instrumentSounds(n.N, sung));
+            // …and where NONE of a part's voices sings a section (n.U, the server's mark: a
+            // singer line's in-clause left it to nobody), the instrument plays it — unless the menu
+            // switched the part's voices off and its instrument is not on: silence, as above.
+            const played = notes.filter(n => n.U ? unsungSounds(n.N) : instrumentSounds(n.N, sung));
             if (midiOutput && !here && played.length > 0) {
                 // The MIDI output: the server plays the list from the offset and answers
                 // (midiStarted) with the clock the highlight follows; a port that is not

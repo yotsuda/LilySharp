@@ -31,6 +31,8 @@ export interface PlaybackNote {
     N?: number;
     /** Which stroke of its chord this is, in a chord row that plays a strokes part. */
     K?: number;
+    /** A note of a sung part in a section none of its voices sings: its instrument plays it. */
+    U?: boolean;
 }
 
 /** A metronome beat as the server sends it: seconds, and whether it opens a bar. */

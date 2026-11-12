@@ -280,7 +280,10 @@ public static class ScoreExport
         var tracks = new List<Audio.VoiceTrack>();
         var shown = spec ?? RenderSpecParser.PlayedSpec(tree, null, null);
         var sounds = shown != null ? SungStaves.Of(tree.GetRoot(), shown) : null;
-        foreach (var voice in SungVoices.Read(midi, MidiClock.SecondsOf(midi)))
+        var voices = SungVoices.Read(midi, MidiClock.SecondsOf(midi));
+        // Where none of a part's voices sings a section, its instrument stays (SungVoices.Unsung).
+        var unsung = SungVoices.Unsung(midi, voices, MidiClock.SecondsOf(midi));
+        foreach (var voice in voices)
         {
             // A file with no score block has no staff with words under it: the preview sings
             // nothing there (`lilysharp/playback` answers no Sung part), nor does this.
@@ -311,7 +314,8 @@ public static class ScoreExport
             bool played = sounds.Played.Contains(voice.Part, StringComparer.Ordinal);
             if (!played)
                 foreach (var track in midi.Tracks)
-                    track.Notes.RemoveAll(n => n.Part == voice.Part);
+                    track.Notes.RemoveAll(n => n.Part == voice.Part
+                        && !(unsung.TryGetValue(voice.Part, out var free) && free.Any(r => n.StartTick >= r.From && n.StartTick < r.To)));
             notes.Add($"Voice: {singer.Name} sings {voice.Part} ({voice.Notes.Count} notes, {Math.Max(0, sound.Seconds - Audio.SungScoreJson.Lead):0.0} s)"
                 + (played ? ", its instrument too" : ""));
         }

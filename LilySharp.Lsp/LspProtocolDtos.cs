@@ -532,6 +532,10 @@ public class PlaybackNote
     /// <summary>Which stroke of its chord this is (<c>MidiNote.Strike</c>), in a chord row that
     /// plays a strokes part — what the preview's loop tells a later stroke from a repeat by.</summary>
     public int K { get; set; }
+    /// <summary>A note of a SUNG part in a section none of its voices sings (a singer line's
+    /// <c>in</c> left it to nobody): the part's instrument plays it, though the part is a voice
+    /// (owner's decision 2026-11-12; <c>Midi.SungVoices.Unsung</c>). False everywhere else.</summary>
+    public bool U { get; set; }
 }
 
 /// <summary>One metronome beat: when (seconds) and whether it opens a bar.</summary>

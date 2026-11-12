@@ -185,6 +185,36 @@ public class SingerPlaceTests
     public void AQuarterToneKeepsItsBend()
         => Assert.Equal(64.5, SungVoices.Step(60.5, 3, 0));
 
+    // Owner's decision 2026-11-12: "where nobody sings a section, the instrument plays." A part
+    // with a singer line is a voice, its instrument off - but a section its lines' `in` leave to
+    // nobody is marked note by note, and the editor plays those on the instrument.
+    [Fact]
+    public void WhereNobodySingsASection_ThePartsNotesAreTheInstruments()
+    {
+        static PlaybackNote[] Lead(string singers)
+        {
+            string source = Book(singers);
+            var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+            var uri = new Uri("file:///unsung.lys");
+            server.DidOpen(new DidOpenTextDocumentParams { TextDocument = new TextDocumentItem { Uri = uri, Text = source, Version = 1, LanguageId = "lilysharp" } });
+            var playback = server.GetPlayback(new PlaybackParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+            Assert.Null(playback.Error);
+            Assert.Contains("lead", playback.Sung);
+            int lead = Array.IndexOf(playback.Parts, "lead");
+            return [.. playback.Notes.Where(n => n.N == lead && n.P >= 0).OrderBy(n => n.T)];
+        }
+
+        // Only the Chorus is sung: the two Verses (4 notes each side of it) are the instrument's.
+        var chorusOnly = Lead("singer female sings words on lead in Chorus");
+        Assert.Equal(12, chorusOnly.Length);
+        Assert.Equal([true, true, true, true, false, false, false, false, true, true, true, true], chorusOnly.Select(n => n.U));
+        // A harmony in the Chorus alone, over nobody: the same.
+        Assert.Equal(8, Lead("singer female sings words on lead up 3 in Chorus").Count(n => n.U));
+        // Every section has someone: none is the instrument's.
+        Assert.DoesNotContain(Lead("singer \"neutrino/A\" sings words on lead in Verse\nsinger \"neutrino/B\" sings words on lead in Chorus"), n => n.U);
+        Assert.DoesNotContain(Lead("singer female sings words on lead"), n => n.U);
+    }
+
     // Owner's note 2026-11-12: one grammar for both writings. A file written by part - each part
     // holding its own sections, the words in a block of their own - sings its sections the same.
     [Fact]
