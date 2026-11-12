@@ -2058,11 +2058,79 @@ internal sealed class SkylineBuilder
         // the only script that declares one, and the room reserves it where its engraver put
         // it (Lily#'s outside-staff pass runs later than this; see
         // AddArticulationLayoutsToSkyline's remark).
+        // …except over a chord diagram, where it is reserved where the pass WILL put it.
+        articulationLayouts = LiftMoversOverDiagrams(articulationLayouts, size, upSkyline);
         AddArticulationLayoutsToSkyline(articulationLayouts, staffMiddleUp: 0, size,
             upSkyline, downSkyline, moversInstead: true);
         AddDynamicsToSkyline(staff, dynamics, measureLayouts, staffMiddleUp: 0,
             size, upSkyline, downSkyline, beams);
         return (upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// The scripts with each above-staff 75 mover (the fermata family) that stands over a
+    /// chord diagram an <c>@chord</c> / <c>chord(…)</c> chose lifted to where the outside-staff
+    /// pass will draw it — clear of <paramref name="insideUp"/>, which holds the diagram, by
+    /// outside-staff-padding. Every other script is returned as it was (and so is the array,
+    /// on a staff with no such diagram).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN, found 2026-11-12 writing large scores to try the grammar:
+    /// <c>chord(Gmaj9 3x0202)1@fermata</c> under a <c>chords</c> row drew the fermata through
+    /// the row's symbol. The diagram is inside-staff ink here (the owner's decision of
+    /// 2026-09-27, <see cref="ArticulationSpacing.OutsideStaffPriority(Model.ArticulationItem)"/>)
+    /// and is placed over the head, so the fermata's engraver position is INSIDE the grid, and
+    /// the outside-staff pass then lifts it over the whole diagram
+    /// (<c>OutsideStaffStacker.PlaceArticulations</c>) — some six spaces. The room reserved it at
+    /// the engraver position, where the diagram's own ink hid it, so the chord row was set on
+    /// the diagram and the fermata arrived in the row.
+    /// ⚠️ NARROW ON PURPOSE: everywhere else the engraver position stays the room's reservation
+    /// (the standing approximation <see cref="AddArticulationLayoutsToSkyline"/> names), which
+    /// the LilyPond-pinned books were measured with; a diagram is the one support tall enough
+    /// that the two positions part by more than the row's padding.
+    /// ⚠️ LilyPond's own picture is the other order — fermata (75) on the head, the diagram
+    /// (a TextScript, 450) over it — and it is not reachable while the diagram is support:
+    ///   departs from: lily/axis-group-interface.cc:952-972 add_grobs_of_one_priority — 75
+    ///     is placed before 450, so the diagram clears the fermata.
+    ///   goes away when: the diagram under a name is placed AFTER the 75 stage (a mover the
+    ///     name line then stands over), which is the stacker's order to change, not the room's.
+    ///   observed by: EngravingCollisions2Tests.AFermataOnAChordItem_StandsClearOfTheChordRowOverIt.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:45 default_outside_staff_padding_ = 0.46.
+    /// </remarks>
+    private static ImmutableArray<ArticulationLayout> LiftMoversOverDiagrams(
+        ImmutableArray<ArticulationLayout> articulationLayouts, StaffSize size,
+        VerticalSkyline insideUp)
+    {
+        if (articulationLayouts.IsDefaultOrEmpty)
+            return articulationLayouts;
+        ImmutableArray<ArticulationLayout>.Builder? lifted = null;
+        for (int i = 0; i < articulationLayouts.Length; i++)
+        {
+            var a = articulationLayouts[i];
+            if (!a.IsAbove || a.OutsideStaffPriority is not { } priority
+                || ArticulationSpacing.IsTextScriptStage(priority))
+                continue;
+            double left = a.X + a.Ink.Left * size.Magnification;
+            double right = a.X + a.Ink.Right * size.Magnification;
+            bool overDiagram = false;
+            foreach (var d in articulationLayouts)
+                if (ArticulationEngraver.IsDiagramUnderName(d)
+                    && d.X + d.Ink.Left * size.Magnification < right
+                    && d.X + d.Ink.Right * size.Magnification > left)
+                {
+                    overDiagram = true;
+                    break;
+                }
+            if (!overDiagram)
+                continue;
+            var (_, myDown) = ArticulationEngraver.ScriptSkylines(a, size.Span(a.YUp), size.Magnification);
+            double push = myDown.Distance(insideUp) + OutsideStaffPadding;
+            if (double.IsInfinity(push) || push <= 0)
+                continue;
+            (lifted ??= articulationLayouts.ToBuilder())[i] =
+                a with { YUp = a.YUp + push / size.Magnification };
+        }
+        return lifted?.ToImmutable() ?? articulationLayouts;
     }
 
     /// <summary>An independent copy of a RESOLVED skyline — the cheap half of sharing one
@@ -3075,6 +3143,13 @@ internal sealed class SkylineBuilder
             case NoteItem note:
                 AddNoteToSkylines(note, x, staffMiddleUp, size,
                     upSkyline, downSkyline, forcedStemUp, reserveStem, staffLines);
+                // A STEMLESS note's tremolo strokes (see MergeStemlessTremolo).
+                if (note.HasTremolo && reserveStem && note.BeamId is null && !note.GraceTime)
+                    MergeStemlessTremolo(
+                        LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration),
+                        note.TremoloBeams, x, note.StaffPosition,
+                        note.ForcedStemUp ?? forcedStemUp ?? note.StemUp,
+                        staffMiddleUp, size, upSkyline, downSkyline);
                 // The augmentation dots the renderer draws, as their EXTENT boxes: a Dots
                 // grob declares no vertical-skylines, so it enters LilyPond's inside-staff
                 // profile through the default — a box from its extents — and the
@@ -3167,6 +3242,19 @@ internal sealed class SkylineBuilder
                         chordStemUp, chordNoteValue,
                         upSkyline, downSkyline, reserveStem, chord.Notehead,
                         graceItem: chord.GraceTime ? chord : null, staffLines: staffLines);
+                }
+                // A STEMLESS chord's tremolo strokes, off its outermost head on the would-be
+                // stem's side (see MergeStemlessTremolo).
+                if (chord.HasTremolo && reserveStem && chord.BeamId is null && !chord.GraceTime
+                    && chord.Notes.Length > 0)
+                {
+                    int outerHead = chord.Notes[0].StaffPosition;
+                    foreach (var chordNote in chord.Notes)
+                        outerHead = chordStemUp
+                            ? Math.Max(outerHead, chordNote.StaffPosition)
+                            : Math.Min(outerHead, chordNote.StaffPosition);
+                    MergeStemlessTremolo(chordNoteValue, chord.TremoloBeams, x, outerHead,
+                        chordStemUp, staffMiddleUp, size, upSkyline, downSkyline);
                 }
                 // Chord accidentals go through the REAL placement machinery
                 // (stagger columns, reversed-head offsets) so the skyline
@@ -3476,6 +3564,58 @@ internal sealed class SkylineBuilder
             headY + bbox.Bottom, headY + bbox.Top);
         downSkyline.MergeBox(inkLeft, inkLeft + bbox.Width,
             headY + bbox.Bottom, headY + bbox.Top);
+    }
+
+    /// <summary>
+    /// Merges the tremolo strokes of a STEMLESS note (a whole note or a breve) — the stack
+    /// <c>SharedRenderer.DrawStemlessTremolo</c> draws 1.5 beyond the head on the would-be
+    /// stem's side — as its extent box. Nothing for a stemmed duration: its strokes lie
+    /// inside the stem's own span, which is seeded.
+    /// </summary>
+    /// <remarks>
+    /// Found 2026-11-12, writing large scores to try the grammar: <c>d1:32@pp</c> in the bass
+    /// clef printed the <c>pp</c> on top of the strokes. They were in no skyline — with a stem
+    /// the stem's box happens to cover them, and the <c>a,1:32@ff</c> beside it has its strokes
+    /// on the other side of the head — so the below pass saw only the head and the staff's
+    /// bottom line under a stem-down whole note standing inside the staff.
+    /// LILYPOND-REF: scm/define-grobs.scm:3492-3512 StemTremolo (stem-tremolo-interface) — a
+    ///   Y-extent from the stencil and NO vertical-skylines entry, so it gets a box from its extents:
+    /// LILYPOND-REF: lily/grob.cc:81-85 simple_vertical_skylines_from_extents_proc.
+    /// LILYPOND-REF: lily/dynamic-align-engraver.cc:240-244 ADD_ACKNOWLEDGER (rhythmic_head) and
+    ///   its neighbours — dynamic, stem, footnote_spanner: a StemTremolo is NOT a side-position
+    ///   support of the DynamicLineSpanner, so what clears it is the outside-staff pass over
+    ///   the inside-staff skylines (lily/axis-group-interface.cc:937-950 skyline_spacing) —
+    ///   this profile.
+    /// LILYPOND-REF: lily/stem-tremolo.cc:349-366 y_offset (the whole-note branch: 1.5 off the
+    ///   head), :115-125 get_beam_translation (0.81 apart), :81-94 calc_width (1.5),
+    ///   :45-79 calc_slope (0.25), :127-169 raw_stencil (beam-thickness 0.48, vertical ends).
+    /// The geometry is the renderer's, constant for constant; the direction is the note's own
+    /// stem direction, as the renderer takes it (its remark on calc_direction).
+    /// </remarks>
+    private static void MergeStemlessTremolo(
+        int noteValue, int beamCount, double x, int headPosition, bool stemUp,
+        double staffMiddleUp, StaffSize size,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (noteValue >= 2 || beamCount <= 0)
+            return;
+        const double width = 1.5;
+        const double slope = 0.25;
+        const double translation = 0.81;
+        double dir = stemUp ? 1.0 : -1.0;
+        // Centred on the head, as the renderer centres it (the head's box width, halved).
+        double centreX = x + size.Span(GlyphMetrics.GetNoteheadBBox(noteValue).Width / 2);
+        double headUp = size.Span(headPosition * 0.5);
+        // A stroke rises width × slope across its span and is a beam thickness tall at each
+        // (vertical) end: half of each either way of its centre.
+        double halfHeight = size.Span(width / 2 * slope + EngravingDefaults.BeamThickness / 2);
+        double inner = headUp + dir * size.Span(1.5);
+        double outer = headUp + dir * size.Span(1.5 + translation * (beamCount - 1));
+        double bottom = staffMiddleUp + Math.Min(inner, outer) - halfHeight;
+        double top = staffMiddleUp + Math.Max(inner, outer) + halfHeight;
+        double halfWidth = size.Span(width / 2);
+        upSkyline.MergeBox(centreX - halfWidth, centreX + halfWidth, bottom, top);
+        downSkyline.MergeBox(centreX - halfWidth, centreX + halfWidth, bottom, top);
     }
 
     /// <summary>

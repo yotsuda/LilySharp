@@ -1293,7 +1293,8 @@ internal sealed partial class LayoutEngine
             gridBarTopAboveBandTop: gridBarTopAboveBandTop,
             staffLinesOf: staffLinesOf,
             staffInkOf: staffProfile,
-            belowDynamics: stackedDynamics);
+            belowDynamics: stackedDynamics,
+            belowPedalBrackets: pedalBracketLayouts);
         var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.

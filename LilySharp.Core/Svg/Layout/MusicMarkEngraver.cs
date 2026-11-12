@@ -579,7 +579,10 @@ internal static class MusicMarkEngraver
         // The dynamics as the below-staff stacker placed them: a below-staff text clears the
         // bottom staff's dynamics under it too (they are outside-staff grobs of lower
         // priority, so LilyPond has placed them before the jump text reaches that staff).
-        ImmutableArray<DynamicLayout> belowDynamics = default)
+        ImmutableArray<DynamicLayout> belowDynamics = default,
+        // The pedal brackets as drawn (Y device-down from their system's top): a below-staff
+        // text clears a bracket under it as it clears a dynamic — see BelowInkMarkUp.
+        ImmutableArray<PedalBracketLayout> belowPedalBrackets = default)
     {
         // Does THIS mark carry a frame? Only a SECTION label loses one, and only under
         // `plain`: a `@mark` rehearsal box is a different spelling with its own meaning,
@@ -789,6 +792,26 @@ internal static class MusicMarkEngraver
                     var (_, descent) = DynamicEngraver.InkOf(fonts, d);
                     systemUp = Math.Min(systemUp,
                         bottomStaff.Y + d.YUp - EngravingDefaults.StaffMiddle - descent);
+                }
+            // The system's pedal brackets under the text — found 2026-11-12, writing large
+            // scores to try the grammar: a form's "D.S. al Coda" under a grand staff was set on
+            // the left hand's sustain bracket's own row and printed through its release hook.
+            // The bracket is not in `staffInkOf` (that is the INSIDE profile; the bracket is
+            // seeded into the staff's down profile after it, PedalEngraver.SolveAndSeed), so it
+            // is read here as the dynamics are: the placed stencil's box, one spelling
+            // (PedalEngraver.BracketStencilBox), Y-up from the system top.
+            // LILYPOND-REF: scm/define-grobs.scm:3593-3598 SustainPedalLineSpanner's outside-staff-priority
+            //   1000, under JumpScript's 1350 (:1898-1926) — the bracket is placed first and
+            //   the jump text clears it by outside-staff-padding.
+            if (!belowPedalBrackets.IsDefaultOrEmpty)
+                foreach (var b in belowPedalBrackets)
+                {
+                    if (!measureToSystemIdx.TryGetValue(b.StartMeasureIndex, out int bs) || bs != sysIdx)
+                        continue;
+                    var (bLeft, bRight, bBottom, _) = PedalEngraver.BracketStencilBox(b.StartX, b.EndX, -b.Y);
+                    if (bRight < range.X0 || bLeft > range.X1)
+                        continue;
+                    systemUp = Math.Min(systemUp, bBottom);
                 }
             if (double.IsInfinity(systemUp))
                 return null;

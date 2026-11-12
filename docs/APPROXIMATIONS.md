@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 322 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **448** | |
+| `OWN` | 323 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **449** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -25,7 +25,7 @@
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 17 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 15 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
-| `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 9 |
+| `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（322 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（323 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -648,6 +648,7 @@
 - **`SkylineBuilder.OuterStaff`** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
 - **`SkylineBuilder.MiddleUp`** ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE DERIVED VALUE IS A SECOND ANSWER FOR ONE
 - **`SkylineBuilder.PlaceDiagramsUnderNames`** LILYSHARP-OWN (2026-09-28). Until then the diagram was merged with the other scripts at
+- **`SkylineBuilder.LiftMoversOverDiagrams`** LILYSHARP-OWN, found 2026-11-12 writing large scores to try the grammar:
 - **`SkylineBuilder.AddDynamicsToSkyline`** annotation pass). LILYSHARP-OWN, named: the inter-staff profile misses that label.
 ### `LilySharp.Core/Svg/Layout/SmuflMusicFont.cs`
 - **`SmuflMusicFont.Engrave`** LILYSHARP-OWN: LilyPond reads no SMuFL font, so this restatement is the engine's own, and

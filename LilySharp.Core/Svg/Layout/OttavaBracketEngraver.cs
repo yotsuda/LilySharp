@@ -372,19 +372,29 @@ internal static class OttavaBracketEngraver
                             graceNotes, bracket.StaffIndex) is { } startItemX
                     ? segStartMeasure.X + startItemX + LeftShorten
                     : segStartMeasure.X + LeftShorten;
+                var lastStaffColumn = segment.IsLast && bracket.EndMoment is { } staffEndMoment
+                    ? StaffLastColumnBefore(segEndMeasure, ottavaVoices, bracket.EndMeasureIndex, staffEndMoment)
+                    : null;
                 double endX = segment.IsLast && bracket.EndMoment is { } endMoment
-                        && (StaffLastColumnBefore(segEndMeasure, ottavaVoices, bracket.EndMeasureIndex, endMoment)
+                        && (lastStaffColumn?.X
                             ?? LastColumnBefore(segEndMeasure, endMoment, bracket.EndItemIndex)) is { } lastColX
                     // A span stopping INSIDE its last bar ends where LilyPond's does: just after
-                    // the last note head it covers, by the shorten-pair's right half.
+                    // the last note head it covers — and that head's dots — by the shorten-pair's
+                    // right half.
                     // LILYPOND-REF: lily/ottava-engraver.cc:168-191 typeset_all — the RIGHT bound
                     //   is the last note column; lily/ottava-bracket.cc:89-121 print —
-                    //   span_points[RIGHT] = the heads' X extent's right, minus RIGHT * shorten.
-                    // ⚠️ The head is read as a black note head's width at the column X; a
-                    //   whole or half note's wider head, a chord's shifted head and a dot are
-                    //   not read (LilyPond unites the heads and the dots). No book stops an
-                    //   ottava mid-bar after one yet.
-                    ? lastColX + GlyphMetrics.GetNoteheadBBox(4).Right - RightShorten
+                    //   span_points[RIGHT] = the heads' X extent's right (:100), united with
+                    //   their dots' on the right side (:101-104), minus RIGHT * shorten.
+                    // ⚠️ Until 2026-11-12 the head was read as a BLACK head's width whatever the
+                    //   column held, and the dots not at all — "no book stops an ottava mid-bar
+                    //   after one yet". One did, writing large scores to try the grammar:
+                    //   `a''2.@trill@!8va` stood its hook 0.96 left of LilyPond's (2.26.0, the same
+                    //   book: 2.88 right of the head's left edge against Lily#'s 1.91), inside the
+                    //   dot's column and down the side of the trill sign over the note.
+                    // ⚠️ Still not read: a REST as the last column (LilyPond takes the column's
+                    //   whole extent there, :108-109) and the timing-column fallback, which has
+                    //   no item — both keep the black head's width.
+                    ? lastColX + HeadsAndDotsRight(lastStaffColumn?.Item) - RightShorten
                     // ⚠️ A span running to its bar's end keeps the measure's right edge, pulled in
                     //   by the same 0.6 — the pre-existing approximation of "just after the last
                     //   head", which differs from LilyPond's by the room after that head.
@@ -492,13 +502,14 @@ internal static class OttavaBracketEngraver
     ///   its closing chord became the bound, and the hook stood past the chord — read as under
     ///   the line (OMR follow-up 2026-10-20, `ottava-hook-over-next-2026-10-20.lys`).
     /// </remarks>
-    private static double? StaffLastColumnBefore(MeasureLayout measure, ImmutableArray<Voice> voices,
+    private static (double X, MusicItem Item)? StaffLastColumnBefore(MeasureLayout measure, ImmutableArray<Voice> voices,
         int measureIndex, Fraction endMoment)
     {
         if (voices.IsDefaultOrEmpty)
             return null;
         Fraction? best = null;
         double bestX = 0;
+        MusicItem? bestItem = null;
         for (int vi = 0; vi < voices.Length; vi++)
         {
             var measures = voices[vi].Measures;
@@ -515,11 +526,54 @@ internal static class OttavaBracketEngraver
                 {
                     best = onset;
                     bestX = measure.X + LayoutUtilities.GetItemXOffset(measures, measureIndex, ii, measure);
+                    bestItem = item;
                 }
                 onset += item.Duration;
             }
         }
-        return best is null ? null : bestX;
+        return best is null || bestItem is null ? null : (bestX, bestItem);
+    }
+
+    /// <summary>
+    /// How far right of its column X the right bound's ink reaches: the heads' extent, united
+    /// with their dots' — what <c>Ottava_bracket::print</c> measures the bracket's right end
+    /// from. A black head's width for anything that is not a note or a chord (see the call).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/ottava-bracket.cc:96-106 Ottava_bracket::print — <c>ext.unite
+    ///   (h->extent (common, X_AXIS))</c> per head, then <c>if (dots &amp;&amp; d == RIGHT)
+    ///   ext.unite (dots->extent (common, X_AXIS))</c>.
+    /// The head and dot arithmetic is the staff profile's own (SkylineBuilder's NoteItem and
+    /// ChordItem dot seeds, which follow the renderer): the head's ink right — a chord's
+    /// pushed out by its reversed heads — then one dot padding, and the row's dots two dot
+    /// widths apart.
+    /// </remarks>
+    private static double HeadsAndDotsRight(MusicItem? item)
+    {
+        int dots;
+        double headRight;
+        switch (item)
+        {
+            case NoteItem note:
+                headRight = GlyphMetrics.GetNoteheadBBox(
+                    LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration)).Right;
+                dots = note.Dots;
+                break;
+            case ChordItem { Notes.Length: > 0 } chord:
+                int chordValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
+                headRight = GlyphMetrics.GetNoteheadBBox(chordValue).Right
+                    + Math.Max(0, ChordHeadPositioning.CalculateOffsets(
+                        chord.Notes, chord.ForcedStemUp ?? chord.StemUp, chordValue).Max());
+                dots = chord.Dots;
+                break;
+            default:
+                return GlyphMetrics.GetNoteheadBBox(4).Right;
+        }
+        if (dots <= 0)
+            return headRight;
+        var dotBox = MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot);
+        return headRight + EngravingDefaults.DotPadding(dotBox.Width)
+            + (dots - 1) * 2 * dotBox.Width + dotBox.Right;
     }
 
     /// <summary>
