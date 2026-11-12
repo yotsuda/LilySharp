@@ -28,6 +28,9 @@ public class MidiTrack
     /// <summary>The General MIDI program (0-based) sent at tick 0 on every channel the track's
     /// pitched notes use, or null to send none (the conductor track, a drum-only track).</summary>
     public int? Program { get; set; }
+    /// <summary>What sounds the track, by name (an instrument-name meta event, 0x04), or null:
+    /// the voice that sings it (<see cref="MidiForFile"/>). The preview does not read it.</summary>
+    public string? Instrument { get; set; }
     /// <summary>The notes played on this track.</summary>
     public List<MidiNote> Notes { get; } = [];
     /// <summary>The tempo changes on this track.</summary>
@@ -305,6 +308,15 @@ public class MidiFile
                     var nameBytes = System.Text.Encoding.UTF8.GetBytes(track.Name ?? "");
                     WriteVariableLength(trackWriter, nameBytes.Length);
                     trackWriter.Write(nameBytes);
+                    if (!string.IsNullOrEmpty(track.Instrument))
+                    {
+                        trackWriter.Write((byte)0x00);      // right after the name, at the same tick
+                        trackWriter.Write((byte)0xFF);
+                        trackWriter.Write((byte)0x04);
+                        var instrumentBytes = System.Text.Encoding.UTF8.GetBytes(track.Instrument);
+                        WriteVariableLength(trackWriter, instrumentBytes.Length);
+                        trackWriter.Write(instrumentBytes);
+                    }
                     break;
                 case MidiEventType.Lyric:
                     trackWriter.Write((byte)0xFF);

@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **Export as MIDI writes the singers**: each part's words on its own track, once a note and as sung (`は[わ]` is わ); a harmony singer (`up 3`, `octave -1`) as a track of its own with its notes and words; the voice's name on the track it sings.
 - **How to Install a Voice**: where the editor says no singing voice is installed — the notice, and the first line of the list after `singer "` — the first button opens the steps for each engine: what to download, where to unpack it, which Cantoria command to run. **Lily#: How to Install a Singing Voice** opens them from the command palette. It took the place of "Get NEUTRINO", which led to one engine's site.
 - **A score with `indent 0` shows the part names on its first system** (it showed the short names from the second system on, and none on the first).
 - **`up` / `down`, `octave` and `in` on a singer line in any order**: after any of them the list offers the ones not yet written, and the sections not yet named while an `in` is open.

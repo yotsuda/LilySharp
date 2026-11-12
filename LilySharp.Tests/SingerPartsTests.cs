@@ -80,6 +80,55 @@ public class SingerPartsTests
         return new MidiExporter { Form = spec?.Form, Score = spec }.Export(tree);
     }
 
+    /// <summary>Owner's question 2026-11-12 ("does the MIDI say the voices?") and "fix them all":
+    /// a .mid has each part's words on its own track, one a note, as sung; a singer who sings
+    /// other notes than the part's is a track of its own; a track a voice sings names the voice
+    /// (<see cref="MidiForFile"/>). The exporter's own file, which the preview plays, is as it was.</summary>
+    [Fact]
+    public void TheMidiFile_SaysWhoSings_OneWordANote_AndTheHarmony()
+    {
+        var (_, tree, _) = Expanded(Book(Band, "score { staff lead  lyrics words  lyrics solfege  staff alice  lyrics alice }"));
+        var spec = RenderSpecParser.FindFirst(tree);
+        var played = Midi(tree);
+        var file = MidiForFile.Shape(played, tree.GetRoot(), spec);
+
+        Assert.Equal(["Tempo", "lead", "bob", "carol", "alice"], file.Tracks.Select(t => t.Name));
+        var lead = file.Tracks[1];
+        Assert.Equal(["one", "two", "three", "four", "la", "la", "la", "la"], lead.Lyrics.Select(l => l.Text));   // not the note names too
+        Assert.Equal(lead.Notes.Select(n => n.StartTick).Order(), lead.Lyrics.Select(l => l.Tick));
+
+        var (bob, carol, alice) = (file.Tracks[2], file.Tracks[3], file.Tracks[4]);
+        Assert.Equal([55, 55, 57, 55], bob.Notes.Select(n => n.Pitch));       // g' g a g, an octave below
+        Assert.Equal([71, 71, 72, 71], carol.Notes.Select(n => n.Pitch));     // a third above, in C
+        Assert.Equal(["la", "la", "la", "la"], carol.Lyrics.Select(l => l.Text));
+        Assert.Equal(("male", "female", "female"), (bob.Instrument, carol.Instrument, alice.Instrument));
+        Assert.Equal((lead.Channel, lead.Program), (carol.Channel, carol.Program));
+        Assert.Equal(["one", "two", "three", "four"], alice.Lyrics.Select(l => l.Text));
+
+        // What the preview plays is not this: no harmony track, the words where they were.
+        Assert.DoesNotContain(played.Tracks, t => t.Name is "bob" or "carol");
+        Assert.All(played.Tracks, t => Assert.Null(t.Instrument));
+    }
+
+    [Fact]
+    public void TheMidiFile_WritesAReadingAsSung_AndTheVoiceOfAPartSungAsWritten()
+    {
+        string source = "language japanese\ntime 4/4\npart melody { lyrics words }\npart piano { }\n"
+            + "section A { piano { c1 | } melody { c'4 d' e' f' | } lyrics words { そ ら へ[え] 海[うみ] | } }\nform { A }\n"
+            + "singer \"neutrino/MERROW\" on melody\nscore { staff piano  staff melody  lyrics words }\n";
+        var tree = SyntaxTree.Parse(source);
+        var file = MidiForFile.Shape(Midi(tree), tree.GetRoot(), RenderSpecParser.FindFirst(tree));
+        var melody = Assert.Single(file.Tracks, t => t.Name == "melody");
+        Assert.Equal(["そ", "ら", "え", "うみ"], melody.Lyrics.Select(l => l.Text));     // on the melody's track, not the first
+        Assert.Equal("neutrino/MERROW", melody.Instrument);
+        Assert.Empty(Assert.Single(file.Tracks, t => t.Name == "piano").Lyrics);
+        Assert.Equal(3, file.Tracks.Count);      // no track of its own for a voice that sings the part as written
+
+        using var bytes = new MemoryStream();
+        file.WriteTo(bytes);
+        Assert.Contains("neutrino/MERROW", System.Text.Encoding.UTF8.GetString(bytes.ToArray()));
+    }
+
     private static int[] PitchesOf(MidiFile midi, string part)
         => [.. midi.Tracks.SelectMany(t => t.Notes).Where(n => n.Part == part).OrderBy(n => n.StartTick).Select(n => n.Pitch)];
 

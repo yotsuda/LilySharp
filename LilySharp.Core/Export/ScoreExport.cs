@@ -196,6 +196,9 @@ public static class ScoreExport
             {
                 var exporter = new MidiExporter { Form = form, Score = spec };
                 var midi = exporter.Export(tree);
+                // The file's own shape: words on their part's track, one a note, as sung; a
+                // singer's harmony as a track (MidiForFile). The preview plays `midi` as it is.
+                midi = MidiForFile.Shape(midi, tree.GetRoot(), spec);
                 midi.Save(outputPath);
                 // A note the file writes outside MIDI's 128 keys is the one thing this
                 // format loses that the page and the MusicXML keep — said in Warnings.

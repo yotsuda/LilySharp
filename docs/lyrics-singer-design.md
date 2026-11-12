@@ -498,3 +498,24 @@ said, the words IT names can be listed.
 - "Write NAME's notes out as a part" leaves `singer carol female on carol`.
 - The docs and the site write the part first; the tests keep both orders.
 
+
+## 16. What a .mid says of the singers (owner's question and decision 2026-11-12; built the same day)
+
+The exporter's `MidiFile` is shaped for the preview and the engine: every word on the first
+part's track with who sings it beside it, a singer's harmony worked out by `SungVoices` and
+never a note. Written out as it stood, a .mid had its words on the wrong track, a word for each
+lyrics row of the score on one note, the printed word where a reading is sung, no harmony, and
+no voice. `Midi.MidiForFile.Shape` makes the file's own shape, and only `lysc midi` / Export as
+MIDI call it — playback, WAV and the engine read the exporter's file as before:
+
+- a part's words on that part's track, one a note (the row a voice sings, else the first
+  placed), as sung (`LyricEvent.Sung`);
+- a voice that sings other notes than its part's is a track after it — the singer's name, else
+  the voice's key (`lead#2`) — on the part's channel and program, with its notes and words;
+- a track a voice sings carries the voice as an instrument-name event (meta 0x04,
+  `MidiTrack.Instrument`); a staff made of a singer's lines is named as the singer;
+- not written: `with …`, `@vibrato` (no place in a .mid).
+
+Open: a harmony track shares its part's channel, so two voices on the same pitch at once would
+cut each other in a player; and whether a karaoke player wants the printed word rather than the
+sung one was decided for the singing tools (the sung one), not measured.

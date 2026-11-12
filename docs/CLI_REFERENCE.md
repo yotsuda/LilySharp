@@ -324,6 +324,16 @@ One file holds one form, so every score writes its form to a file of its own. Sc
 share a form (`score`, `score tab`) write the same music under their own names.
 A file with no `score` block writes its primary form and names the others in a warning.
 
+**The words and who sings them.** Each part is a track. A part's words are lyric events (meta
+0x05, UTF-8) on that part's track, one a note, as they are SUNG: `は[わ]` writes わ, and a score
+that prints several rows under one tune (the words, a singer's words, the note names) writes the
+one a voice sings. A `singer` line that sings other notes than its part's (`singer carol on lead
+up 3`, `octave -1`) is a track of its own after that part, named as the singer is (else
+`lead#2`), on the part's channel and sound, with its notes and its words. A track a voice sings
+carries the voice as its instrument name (meta 0x04): `neutrino/MERROW`, or `female` where the
+line says only that. What a voice's `with …` and `@vibrato` say is not written: a .mid has no
+place for it. The sung sound itself is `lysc wav --singer`.
+
 **Examples:**
 ```bash
 lysc midi score.lys                   # Creates score.mid (+ score-<name>.mid)

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 320 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **446** | |
+| `OWN` | 321 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **447** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（320 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（321 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -291,6 +291,8 @@
 - **`MidiExporter.PlayChordRow`** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
 - **`MidiExporter.SwingNotes`** LILYSHARP-OWN: LilyPond's MIDI plays its swing equation straight unless the score asks for
 - **`MidiExporter.ProcessGrace`** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+### `LilySharp.Core/Midi/MidiForFile.cs`
+- **`MidiForFile`** (). LILYSHARP-OWN: LilyPond writes no singer.
 ### `LilySharp.Core/Midi/SungVoices.cs`
 - **`SungVoices`** drifted from the page). LILYSHARP-OWN: LilyPond writes no sound.
 - **`SungVoices.Placed`** LILYSHARP-OWN: no engine is asked — the notes are moved before any voice sees them, so
