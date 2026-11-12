@@ -317,10 +317,12 @@ section Chorus {
 }
 form { Verse Chorus }
 
-// The English score's singers: every score's default.
-singer alice female sings en on lead in Verse
-singer bob   male   sings en on lead octave -1 in Chorus
-singer carol female sings en on lead up 3 in Chorus
+// The English score's singers: every score's default. They name no words: of the part's two
+// tracks each sings the one in the singer's language, here the file's (english). They name no words: of the part's two
+// tracks each sings the one in the singer's language, here the file's (english).
+singer alice female sings on lead in Verse
+singer bob   male   sings on lead octave -1 in Chorus
+singer carol female sings on lead up 3 in Chorus
 
 score {
   staff lead
@@ -328,10 +330,12 @@ score {
 }
 
 // The Japanese score: its own singer lines replace the ones above for the part, in this score.
+// Each says its language as it says its gender, and so sings the Japanese words.
+// Each says its language as it says its gender, and so sings the Japanese words.
 score 日本語 {
-  singer alice female sings jp on lead in Verse
-  singer bob   male   sings jp on lead octave -1 in Chorus
-  singer carol female sings jp on lead up 3 in Chorus
+  singer alice female japanese sings on lead in Verse
+  singer bob   male   japanese sings on lead octave -1 in Chorus
+  singer carol female japanese sings on lead up 3 in Chorus
   staff lead
   lyrics jp
 }

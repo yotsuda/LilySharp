@@ -213,7 +213,7 @@ internal sealed partial class Parser
         if (!Music.LyricSinger.Genders.Contains(gender.Text))
             _diagnostics.Error(new TextSpan(_textPosition - gender.FullWidth + gender.LeadingTriviaWidth, Math.Max(1, gender.Width)),
                 DiagnosticCodes.SingerGenderUnknown,
-                $"'{gender.Text}' is no gender of a singer: write male or female before the name, singer male \"neutrino/SOMA\".");
+                $"'{gender.Text}' is no gender of a singer, and no language: write male or female, and a language ({string.Join(", ", Music.LyricLanguage.Names)}), before the voice — singer male \"neutrino/SOMA\", singer alice female japanese.");
     }
 
     /// <summary>The singer's string; an empty one is refused (LYS4039), a name is the engine's to resolve.</summary>
@@ -256,12 +256,6 @@ internal sealed partial class Parser
         return false;
     }
 
-    /// <summary><c>language NAME</c> in a singer line's head: the word with a bare word after it on
-    /// the same line (a singer may still be called language: <c>singer language sings …</c>).</summary>
-    private bool IsSingerLanguage()
-        => Current.Text == Music.LyricLanguage.Keyword && !BeginsLine(1)
-            && Peek(1) is { Kind: SyntaxKind.Identifier, Text: not ("sings" or "on") };
-
     /// <summary>Parses <c>singer [S] sings [NAME] [on PART]</c>; the order is fixed.</summary>
     /// <param name="endsItsLine">At the file's top level a singer line is the whole of its line:
     /// what else stands on it is an error, said at the word and kept in the line. ⚠️ Until
@@ -273,35 +267,31 @@ internal sealed partial class Parser
         var tokens = new List<SyntaxToken> { Advance() };
         if (Current.Text != "sings")
         {
-            // singer [NAME] [male|female] ["voice"]: a word that is no gender is the singer's own
-            // name (owner's decision 2026-11-12: a singer is somebody, and a score prints what
-            // somebody sings); with two words the first is the name and the second the gender.
-            if (!IsSingerLanguage() && Check(SyntaxKind.Identifier) && Peek(1) is { Kind: SyntaxKind.Identifier, Text: not ("sings" or "on" or Music.LyricLanguage.Keyword) })
+            // singer [NAME] [male|female] [LANGUAGE] ["voice"] (owner's decisions 2026-11-12). A
+            // first word that is neither a gender nor a language is the singer's own name — a
+            // singer is somebody, and a score prints what somebody sings. The words after it say
+            // what the singer is, each a bare word as the gender always was: `female`, and
+            // `japanese` — the language sung, which of a part's several lyrics a line that names
+            // none sings (Music.LyricSinger.LinesOf). In either order; a word that is neither is
+            // said (LYS4040).
+            bool IsHeadWord() => Check(SyntaxKind.Identifier) && Current.Text is not ("sings" or "on");
+            if (IsHeadWord() && !Music.LyricSinger.Genders.Contains(Current.Text.ToLowerInvariant())
+                && Music.LyricLanguage.CodeOf(Current.Text) == null)
                 tokens.Add(Advance());
-            else if (!IsSingerLanguage() && Check(SyntaxKind.Identifier) && !Music.LyricSinger.Genders.Contains(Current.Text.ToLowerInvariant()))
-                tokens.Add(Advance());
-            bool gendered = !IsSingerLanguage() && Check(SyntaxKind.Identifier) && Current.Text is not ("sings" or "on");
-            if (gendered)
+            bool gendered = false;
+            while (IsHeadWord())
             {
-                var gender = Advance();
-                CheckSingerGender(gender);
-                tokens.Add(gender);
+                var word = Advance();
+                if (Music.LyricLanguage.CodeOf(word.Text) == null)
+                {
+                    CheckSingerGender(word);
+                    gendered = true;
+                }
+                tokens.Add(word);
             }
             if (Check(SyntaxKind.StringLiteral))
             {
                 tokens.Add(ParseSingerName(allowEmpty: gendered));
-            }
-            // `language NAME`: the language the singer sings (owner's decision 2026-11-12) — which
-            // of a part's several lyrics a line that names none sings (Music.LyricSinger.LinesOf).
-            if (IsSingerLanguage())
-            {
-                tokens.Add(AdvanceAsWord());
-                var name = Advance();
-                if (Music.LyricLanguage.CodeOf(name.Text) == null)
-                    _diagnostics.Error(new TextSpan(_textPosition - name.FullWidth + name.LeadingTriviaWidth, Math.Max(1, name.Width)),
-                        DiagnosticCodes.LyricLanguageUnknown,
-                        $"'{name.Text}' is no language Lily# knows: {string.Join(", ", Music.LyricLanguage.Names)}.");
-                tokens.Add(name);
             }
         }
         if (Check(SyntaxKind.Identifier) && Current.Text == "sings")

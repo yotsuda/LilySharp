@@ -292,7 +292,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
                     + (fitting == 0 ? $"none of them is in {name}" : $"{fitting} of them are in {name}")
                     + (node.LanguageToken != null ? ", the language this line says" : ", the file's language")
                     + $": say which, 'singer sings {own[0]} on {line.Part}'"
-                    + (node.LanguageToken == null ? ", or say the singer's language before 'sings', 'singer language japanese sings on " + line.Part + "'." : "."));
+                    + (node.LanguageToken == null ? ", or say the singer's language as its gender is said, 'singer japanese sings on " + line.Part + "'." : "."));
                 continue;
             }
             // A name the part lists and no block defines is already said at the part (LYS1007).

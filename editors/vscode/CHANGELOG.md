@@ -4,7 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
-- **`language` on a singer line**: `singer alice female language japanese sings on lead` — of a part's several lyrics the line sings the ones in that language (the file's, with none written), so it need not name them. Offered after the voice, with the languages after it.
+- **A singer says a language as it says a gender**: `singer alice female japanese sings on lead` — the list of voices after it holds the ones that sing Japanese, and of a part's several lyrics the line sings the ones in that language (the file's, with none written), so it need not name them. The languages are offered beside the genders and after one.
 - **A named singer's line is a singer line to the editor**: on `singer alice female sings ▮` the list of words had no `solfege` or `hum`, and the other steps of the line (`sings`, `on`, the part, `up` / `down` / `octave` / `in`), the list of voices, the step keys on the gender and the voice, the settings after `with` and their audition did not know a line that begins with the singer's own name. They do now, a name such as ようこ included.
 - **A section with no words is not sung on the vowel before it**: a Coda with notes and no words, right after the last chorus, was sung "u— u—" — the chorus's last syllable held on. A voice carries a vowel only as far as its section, or into a section that has words of its own; the wordless one is played by the part's instrument.
 - **After `staff` and after `lyrics` in a score the list holds the singers the file names**, beside the parts and the tracks: `staff carol` is the staff of what carol sings, `lyrics carol` her words. A score with singer lines of its own now prints a singer with the words those lines say.

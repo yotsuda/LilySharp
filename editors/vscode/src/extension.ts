@@ -56,7 +56,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { SINGER_NAME, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -4139,7 +4139,7 @@ const singerSettingCompletion: vscode.CompletionItemProvider = {
         // ⚠️ As the score's own voice is found (VoiceRenderer): by the words' language and the part's
         // gender too, or a line that names no voice lists another voice's settings than the one
         // that sings it.
-        const named = new RegExp(String.raw`^[ \t]*singer[ \t]+${SINGER_NAME}(?:(male|female)[ \t]+)?(?:"([^"]*)")?`).exec(before);
+        const named = new RegExp(String.raw`^[ \t]*singer[ \t]+${SINGER_NAME}(?:(male|female)[ \t]+)?${SINGER_LANGUAGE}(?:"([^"]*)")?`).exec(before);
         const lineText = document.lineAt(position.line).text;
         const asked = new vscode.Position(position.line, singerLanguageColumn(lineText, singerLineOf(lineText)?.askColumn ?? position.character));
         const where = client && clientReady ? await client.sendRequest<{ Language?: string | null; Gender?: string | null }>('lilysharp/singerSlot',

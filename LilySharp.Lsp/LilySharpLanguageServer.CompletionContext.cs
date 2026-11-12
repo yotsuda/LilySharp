@@ -526,10 +526,6 @@ public sealed partial class LilySharpLanguageServer
         if (stack.Count == 0
             && System.Text.RegularExpressions.Regex.IsMatch(line, @"^[ \t]*language[ \t]+\w*$"))
             return true;
-        // A singer line's own (`singer alice female language ▮`, 2026-11-12): before its `sings`.
-        if (TakesASingerLine(stack)
-            && System.Text.RegularExpressions.Regex.IsMatch(line, @"^[ \t]*singer[ \t]+(?:(?!sings\b)(?:""[^""]*""|[^\s""{}]+)[ \t]+)*language[ \t]+\w*$"))
-            return true;
         return !stack.Exists(o => o.IsScoreOpener || o.Frame.Name == "score" || o.Frame.Prefix == "score")
             && System.Text.RegularExpressions.Regex.IsMatch(line, @"(?:^|[\s{}])lyrics(?:[ \t]+(?:\w+|""[^""]*""(?:[ \t]*,[ \t]*""[^""]*"")*))*?[ \t]+language[ \t]+\w*$");
     }
@@ -543,7 +539,7 @@ public sealed partial class LilySharpLanguageServer
         int end = Math.Clamp(offset, 0, text.Length);
         int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
         string line = text[lineStart..end];
-        var quote = System.Text.RegularExpressions.Regex.Match(line, @"(?:^|[\s{}])singer[ \t]+(?:(?!(?:male|female|sings)\b)[\p{L}_][\w-]*[ \t]+)?(?:(?<gender>male|female)[ \t]+)?(?:""[^""]*|(?<bare>[^\s""{},]*))$");
+        var quote = System.Text.RegularExpressions.Regex.Match(line, @"(?:^|[\s{}])singer[ \t]+(?:(?!(?:male|female|sings|" + SingerLanguages + @")\b)[\p{L}_][\w-]*[ \t]+)?(?:(?:(?<gender>male|female)|(?<lang>" + SingerLanguages + @"))[ \t]+){0,2}(?:""[^""]*|(?<bare>[^\s""{},]*))$");
         if (!quote.Success)
             return null;
         bool quoted = !quote.Groups["bare"].Success;
@@ -563,10 +559,15 @@ public sealed partial class LilySharpLanguageServer
             string? track = sings.Success ? sings.Groups["t"].Value : wrote ? LilySharp.Core.Music.LyricSinger.UnnamedTrack : null;
             // `sings on PART` with no name sings what the part names (GetSingerSlot reads it).
             var on = sings.Success ? null : System.Text.RegularExpressions.Regex.Match(rest, @"\bsings[ \t]+on[ \t]+(?<p>[^\s{}""]+)");
-            return (track, on is { Success: true } ? on.Groups["p"].Value : null, null, gender, quoted);
+            // The language the line says (`singer alice female japanese ▮`): the voices offered are
+            // the ones that sing it, as the gender narrows them (owner's point 2026-11-12).
+            return (track, on is { Success: true } ? on.Groups["p"].Value : null, quote.Groups["lang"].Success ? quote.Groups["lang"].Value : null, gender, quoted);
         }
         return null;
     }
+
+    /// <summary>The language names as a pattern's alternatives: a singer line's head may say one.</summary>
+    private static readonly string SingerLanguages = string.Join("|", LilySharp.Core.Music.LyricLanguage.Names);
 
     /// <summary>Whether a <c>singer</c> line may stand here: the top level, or directly in a score.</summary>
     private static bool TakesASingerLine(List<OpenBlock> stack)
@@ -587,7 +588,7 @@ public sealed partial class LilySharpLanguageServer
         var line = System.Text.RegularExpressions.Regex.Match(text[lineStart..end],
             // The singer's own name may stand first (`singer alice female "…" sings`, 2026-11-12): a word
             // that is neither a gender nor `sings`.
-            @"^[ \t]*singer(?<voice>(?:[ \t]+(?!(?:male|female|sings)\b)[\p{L}_][\w-]*)?(?:[ \t]+(?:male|female))?(?:[ \t]+""[^""]*"")?(?:[ \t]+language[ \t]+\w+)?)(?:[ \t]+(?<sings>sings)(?:[ \t]+(?<w>[^\s{}""]+))*)?[ \t]+$");
+            @"^[ \t]*singer(?<voice>(?:[ \t]+(?!(?:male|female|sings|" + SingerLanguages + @")\b)[\p{L}_][\w-]*)?(?:[ \t]+(?:male|female|" + SingerLanguages + @")){0,2}(?:[ \t]+""[^""]*"")?)(?:[ \t]+(?<sings>sings)(?:[ \t]+(?<w>[^\s{}""]+))*)?[ \t]+$");
         if (!line.Success)
             return null;
         if (!line.Groups["sings"].Success)

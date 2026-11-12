@@ -126,56 +126,36 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
         }
     }
 
-    /// <summary>The <c>male</c> or <c>female</c> written before the name, or null.</summary>
-    public SyntaxTokenNode? GenderToken
-    {
-        get
-        {
-            var (first, second) = HeadWords;
-            return second ?? (first != null && Music.LyricSinger.Genders.Contains(first.Text.ToLowerInvariant()) ? first : null);
-        }
-    }
+    /// <summary>The <c>male</c> or <c>female</c> written before the voice, or null: of the words
+    /// that say what the singer is, the first that is no language.</summary>
+    public SyntaxTokenNode? GenderToken => Attributes.FirstOrDefault(w => Music.LyricLanguage.CodeOf(w.Text) == null);
+
+    /// <summary>The language the singer sings (<c>singer alice female japanese sings on lead</c>,
+    /// owner's decisions 2026-11-12), or null: of a part's several lyrics, the ones a line that
+    /// names none sings. A bare word of the head, as the gender is.</summary>
+    public SyntaxTokenNode? LanguageToken => Attributes.FirstOrDefault(w => Music.LyricLanguage.CodeOf(w.Text) != null);
 
     /// <summary>The singer's OWN name (<c>singer carol female "…" sings …</c>, owner's decision
-    /// 2026-11-12), or null: the word before <c>sings</c> that is no gender, or the first of two.
+    /// 2026-11-12), or null: the first word of the head where it is neither a gender nor a language.
     /// Lines of one name are one singer; a score prints what a named singer sings
     /// (<c>score { staff carol  lyrics carol }</c>).</summary>
-    public SyntaxTokenNode? PersonToken
+    public SyntaxTokenNode? PersonToken => HeadWords is [var first, ..] && !IsAttribute(first) ? first : null;
+
+    private static bool IsAttribute(SyntaxTokenNode word)
+        => Music.LyricSinger.Genders.Contains(word.Text.ToLowerInvariant()) || Music.LyricLanguage.CodeOf(word.Text) != null;
+
+    /// <summary>The head's words after the singer's name: what the singer is.</summary>
+    private IEnumerable<SyntaxTokenNode> Attributes => HeadWords.Skip(PersonToken != null ? 1 : 0);
+
+    /// <summary>The bare words between <c>singer</c> and <c>sings</c> (or the voice's string).</summary>
+    private List<SyntaxTokenNode> HeadWords
     {
         get
         {
-            var (first, second) = HeadWords;
-            return second != null || (first != null && !Music.LyricSinger.Genders.Contains(first.Text.ToLowerInvariant())) ? first : null;
-        }
-    }
-
-    /// <summary>Where the head's <c>language</c> word stands (<c>singer alice female language
-    /// japanese sings …</c>), or -1: the word before <c>sings</c> with a word after it that is not
-    /// <c>sings</c> — the last two of the head.</summary>
-    private int LanguageIndex
-    {
-        get
-        {
-            int sings = SingsIndex;
-            return sings >= 3 && GetChild(sings - 2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier, Text: Music.LyricLanguage.Keyword } ? sings - 2 : -1;
-        }
-    }
-
-    /// <summary>The name of the language the singer sings (<c>language japanese</c> in the line's
-    /// head, owner's decision 2026-11-12), or null: which of a part's several lyrics a line that
-    /// names none sings.</summary>
-    public SyntaxTokenNode? LanguageToken => LanguageIndex is var i and >= 0 ? (SyntaxTokenNode)GetChild(i + 1)! : null;
-
-    /// <summary>The one or two bare words between <c>singer</c> and <c>sings</c> (or the voice's string).</summary>
-    private (SyntaxTokenNode? First, SyntaxTokenNode? Second) HeadWords
-    {
-        get
-        {
-            // …up to the `language NAME` clause, whose two words are the clause's (LanguageToken).
-            int stop = LanguageIndex is var l and >= 0 ? l : int.MaxValue;
-            var first = 1 < stop && GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } a && a.Text != "sings" ? a : null;
-            var second = first != null && 2 < stop && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } b && b.Text != "sings" ? b : null;
-            return (first, second);
+            var words = new List<SyntaxTokenNode>();
+            for (int i = 1; i < SlotCount && GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } word && word.Text is not ("sings" or "on"); i++)
+                words.Add(word);
+            return words;
         }
     }
 

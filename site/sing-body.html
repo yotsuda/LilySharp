@@ -142,8 +142,10 @@ singer male "neutrino/SOMA" sings words on bas</pre>
 
   <h3>One song in two languages</h3>
   <p>Three things make it. Each section writes both sets of words, the second one saying its own
-  language. The part names both tracks, so every <code>singer</code> line says which one it sings.
-  And the second score holds its own <code>singer</code> lines and its own <code>lyrics</code> row:</p>
+  language. The part names both tracks, and a <code>singer</code> line that names no words sings
+  the ones in the singer's language: the file's, unless the line says another, as it says a gender
+  (<code>singer alice female japanese …</code>). And the second score holds its own
+  <code>singer</code> lines and its own <code>lyrics</code> row:</p>
   <!--EXAMPLE:sing-bilingual-->
   <p>The picture is the default score, the English one. Choose <b>日本語</b> in the preview's score
   list and the page shows the Japanese words, and Play sings them: the same three singers, the same

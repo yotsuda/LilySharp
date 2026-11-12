@@ -1342,3 +1342,25 @@ describe('a singer line with the singer\'s own name', () => {
         singersWritten('singer alice female "a/b" sings en on lead\nsinger bob male sings en on lead\nsinger "c/d" sings en on lead'),
         ['a/b', 'male', 'c/d']));
 });
+
+// Owner's decisions 2026-11-12: a singer says a language as it says a gender, one bare word of the
+// line's head — `singer alice female japanese "…" sings on lead` — and the readers take it.
+describe('a singer line that says a language', () => {
+    it('is read as the line without it', () => {
+        assert.equal(singerLineOf('singer alice female japanese "neutrino/SEVEN" sings on lead with breathiness 2')?.voice, 'neutrino/SEVEN');
+        assert.deepEqual(singerLineOf('singer alice female japanese "neutrino/SEVEN" sings on lead with breathiness 2')?.sing, { breathiness: 2 });
+        assert.equal(singerLineOf('singer alice japanese female sings on lead')?.voice, 'female');
+        assert.equal(singerLineOf('singer english sings on lead')?.voice, '');
+    });
+    it('opens the list of voices after it', () => {
+        assert.equal(afterSingerWord('singer alice female japanese '), true);
+        assert.equal(afterSingerWord('singer japanese '), true);
+        assert.equal(afterSingerWord('singer alice japanese female '), true);
+    });
+    it('finds the gender and the voice around it', () => {
+        assert.equal(onSingerGender('singer alice japanese female sings on lead', 24), true);
+        assert.equal(singerValueAt('singer alice female japanese "neutrino/SEVEN" sings', 33)?.value, 'neutrino/SEVEN');
+        assert.equal(singerWrittenAt('singer alice female japanese "neutrino/SEVEN" sings', 31, 31), 'neutrino/SEVEN');
+        assert.deepEqual(singersWritten('singer alice female japanese "a/b" sings on lead\nsinger bob english male sings on lead'), ['a/b', 'male']);
+    });
+});

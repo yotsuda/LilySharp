@@ -465,8 +465,23 @@ public class LyricLanguageTests
     [InlineData("lyrics w { section A { singer §\n")]
     public void NotASlot(string source) => Assert.Null(Slot(source));
 
+    /// <summary>Owner's point 2026-11-12: the language a singer line says is a hint for choosing
+    /// the voice too — the slot carries it, and the editor lists the voices that sing it.</summary>
+    [Theory]
+    [InlineData("singer alice female japanese §\n", "japanese", "female")]
+    [InlineData("singer alice english female \"§\n", "english", "female")]
+    [InlineData("singer korean §\n", "korean", null)]
+    [InlineData("singer alice female §\n", null, "female")]
+    public void TheLanguageTheLineSays_IsTheSlots(string source, string? language, string? gender)
+    {
+        var slot = Assert.NotNull(Slot(source));
+        Assert.Equal(language, slot.Language);
+        Assert.Equal(gender, slot.Gender);
+    }
+
     [Fact]
-    public void BeforeAnyQuote_NoOtherWordsAreOffered() => Assert.Empty(Offered(Declared + "singer "));
+    public void BeforeAnyQuote_OnlyTheLanguagesASingerMaySayAreOffered()
+        => Assert.Equal(LilySharp.Core.Music.LyricLanguage.Names, Offered(Declared + "singer "));
 
     // ── one track under several staves, a singer each (owner's report, session 1176) ──
 

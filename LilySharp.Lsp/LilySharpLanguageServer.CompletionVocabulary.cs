@@ -2494,21 +2494,23 @@ public sealed partial class LilySharpLanguageServer
     {
         int end = Math.Clamp(offset, 0, text.Length);
         int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
-        if (System.Text.RegularExpressions.Regex.IsMatch(text[lineStart..end], @"[ \t]language[ \t]+\w+[ \t]+$"))
+        string line = text[lineStart..end];
+        var names = LilySharp.Core.Music.LyricLanguage.Names;
+        if (names.Any(n => System.Text.RegularExpressions.Regex.IsMatch(line, @"[ \t]" + n + @"[ \t]")))
             return [SingsKeywordItem()];
         return
         [
             SingsKeywordItem(),
-            new CompletionItem
+            .. names.Select((n, i) => new CompletionItem
             {
-                Label = LilySharp.Core.Music.LyricLanguage.Keyword,
-                Kind = CompletionItemKind.Keyword,
+                Label = n,
+                Kind = CompletionItemKind.EnumMember,
                 InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = LilySharp.Core.Music.LyricLanguage.Keyword + " $0",
-                Detail = "The language this singer sings: of a part's several lyrics, the one in it",
-                SortText = "1",
-                Command = new Command { Title = "Suggest language", CommandIdentifier = "editor.action.triggerSuggest" },
-            },
+                InsertText = n + " $0",
+                Detail = "The language this singer sings: narrows the voices, and of a part's several lyrics sings the ones in it",
+                SortText = "1" + i,
+                Command = new Command { Title = "Suggest voice", CommandIdentifier = "editor.action.triggerSuggest" },
+            }),
         ];
     }
 

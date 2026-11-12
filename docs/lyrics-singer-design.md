@@ -159,8 +159,10 @@ score { staff sop  lyrics words  staff alt  lyrics words  staff ten  lyrics mw }
 - `lyrics NAME` in a `part { }` has no braces of its own. It names a track and defines nothing, so
   section 3's refusal stays for a `lyrics` with a body. A part may name several tracks, one statement each.
 - A `singer … sings on PART` with no name sings the track the part names. Where the part names several,
-  it sings the ONE in the singer's language — the line's own (`singer alice female language japanese
-  sings on lead`, a clause of the head before `sings`), else the file's (owner's decision 2026-11-12:
+  it sings the ONE in the singer's language — the line's own (`singer alice female japanese sings on
+  lead`: a bare word of the head, said as the gender is, in either order with it — it was `language
+  japanese` for an hour, and the owner asked for it as short as the gender; it narrows the voices the
+  editor offers too, as the gender does), else the file's (owner's decision 2026-11-12:
   "alice sings lead, and lead names its English words; the line need not say en" — and not the first
   listed: the language that fits). None or several in that language is an error (LYS4054), which says
   the language it looked for. Where the part names none, it is the unnamed track, as today.
