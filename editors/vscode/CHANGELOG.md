@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **A score with `indent 0` shows the part names on its first system** (it showed the short names from the second system on, and none on the first).
 - **`up` / `down`, `octave` and `in` on a singer line in any order**: after any of them the list offers the ones not yet written, and the sections not yet named while an `in` is open.
 - **Ctrl+Shift+↑ / ↓ after a singer line's `on` writes a part**: on `singer alice female "diffsinger/Nishiren" on ▮`, with no part yet, either key writes the file's first part, and the keys step it from there — no list to open.
 - **The text over a voice the score does not sing is short too**: who sings what on which part, and "(not in this score)" — the sentence about pressing it is gone.

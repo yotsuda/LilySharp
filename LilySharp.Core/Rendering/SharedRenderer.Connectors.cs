@@ -87,7 +87,11 @@ internal static partial class SharedRenderer
         // Until now only `Indent <= 0` kept the long name off later systems, so a score that
         // set `shortIndent` printed the LONG name on every system.
         bool first = system.SystemIndex == 0;
-        if (first && system.Indent <= 0) return;
+        // ⚠️ UNTIL 2026-11-12 `indent 0` PRINTED NO LONG NAME (`if (first && system.Indent <= 0)
+        // return`), Lily#'s own reading — while `shortIndent 0`, the default, printed the short
+        // names on every later system: a video's score (`indent 0`) named its parts from the
+        // second system on and not on the first (owner's report). LilyPond prints the name at
+        // indent 0 too; the indent grows to keep it on the paper (LayoutEngine.EffectiveIndent).
         Dictionary<int, string?>? shortNames = null;
         if (!first)
         {

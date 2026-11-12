@@ -94,4 +94,19 @@ public class InstrumentNameOnPaperTests
         Assert.Equal(LayoutOptions.LilyPondDefaultIndent, first);
         Assert.Equal(0, later);
     }
+
+    /// <summary>Owner's report 2026-11-12: a video's score, <c>paper { indent 0 }</c>, named its
+    /// parts from the second system on and not on the first — <c>indent 0</c> printed no long
+    /// name while <c>shortIndent 0</c> printed the short ones. LilyPond prints the name at
+    /// indent 0; the indent grows as far as keeps it on the paper.</summary>
+    [Fact]
+    public void IndentZero_StillNamesThePartsOnTheFirstSystem()
+    {
+        string source = Band("\"Electric Guitar\" \"E. Gtr.\"", "\"Electric Bass\" \"E. Bass\"") + "\npaper { indent 0 }\n";
+        var (first, _, paper) = Indents(source);
+        Assert.True(first > 0, $"first indent {first}");
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(source));
+        Assert.True(paper.MarginLeft + LeftEdgeOf(svg, "Electric Guitar") >= 0.9);
+        Assert.Contains(">Piano</text>", svg);
+    }
 }

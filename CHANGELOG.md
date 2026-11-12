@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **`indent 0` still names the parts on the first system**: a score on a video's paper (`paper { indent 0 }`) printed the short names from the second system on and no name on the first — `indent 0` was read as "no long names" while `shortIndent 0` printed the short ones. The long names are printed, as LilyPond prints them, and the first system is indented as far as keeps them on the paper (not at all where they fit the margin). A score that names no part is as it was.
 - **A singer's voice is hers on every line that sings its language**: `singer emi female "a/b" on alt in A` beside `singer emi female on sop down 3 in B` sang the second with the default female voice — the gender written again stood in for the voice. The voice goes with the name; a line in another language (a Japanese verse, an English chorus) does not take it, for a voice is a voice of a language, and a line with no gender takes the singer's.
 - **What cannot be so of one singer is said** (warnings): lines of one name with two genders, or two voices in one language (LYS4062), and a language the line's words are not in — `singer taro english on him` where his words are Japanese (LYS4063).
 - **`sings hum` and `sings solfege` are not asked of the part**: on a part that names its words they warned that the part "does not list lyrics 'hum'" and said to add it, which is an error. Words made from the notes are no track for a part to list; `lyrics solfege` under such a staff is silent too.

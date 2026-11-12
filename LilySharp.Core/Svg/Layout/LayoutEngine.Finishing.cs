@@ -618,7 +618,7 @@ internal sealed partial class LayoutEngine
     /// it was.
     /// </para>
     internal static double EffectiveIndent(LayoutOptions options, MultiStaffScore? score = null)
-        => options.Indent <= 0 || score is null
+        => score is null
             ? options.Indent
             : Math.Max(options.Indent, NameFitIndent(options, score, shortNames: false));
 
