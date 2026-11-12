@@ -180,10 +180,12 @@ internal sealed class PageLayouter
         return new SystemDetails
         {
             Shape = new LineShape(0, 0, 0, 0),
-            Height = header.Depth,
+            // With a text under the rows the line is priced as one, rows and text: the page
+            // chain places the two apart (LayoutUtilities.HeaderSprings).
+            Height = header.PricedDepth(_options.VerticalSpacing),
             TopExtent = 0,
             BottomExtent = 0,
-            StaffHeight = header.Depth,
+            StaffHeight = header.PricedDepth(_options.VerticalSpacing),
             StaffCompression = 0,
             Padding = spec.Padding,
             MinDistance = spec.MinimumDistance,
@@ -344,7 +346,8 @@ internal sealed class PageLayouter
         bool onePage = false,
         Rendering.ScoreTextMetrics? fonts = null,
         IReadOnlyList<double>? systemBreakerUpExtents = null,
-        IReadOnlyList<double>? systemBreakerDownExtents = null)
+        IReadOnlyList<double>? systemBreakerDownExtents = null,
+        ProseBand? endText = null)
     {
         if (systems.Length == 0)
         {
@@ -397,6 +400,19 @@ internal sealed class PageLayouter
             double breakerDown = systemBreakerDownExtents is { } bd && i < bd.Count
                 ? bd[i]
                 : systemExtents[i].downExtent;
+            // The text after the last system rides that system's line for the breaker: it is
+            // never parted from it, and the page that takes the one has room for the other —
+            // what the chain below needs under the last refpoint (its box and the padding, or
+            // score-markup-spacing's distance), written as ink below the body.
+            // LILYSHARP-OWN, for now: LilyPond pages a trailing markup as a line of its own,
+            // which may go to the next page alone (docs/markdown-text-design.md, section 7).
+            if (endText is not null && i == systems.Length - 1)
+            {
+                double belowBody = staffHeight - Anchor(i).ToLast;
+                breakerDown = Math.Max(
+                    breakerDown + vs.ScoreMarkup.Padding + endText.Up + endText.Down,
+                    vs.ScoreMarkup.BasicDistance + endText.Down - belowBody);
+            }
             systemDetails.Add(BuildSystemDetails(
                 staffHeight, breakerUp, breakerDown,
                 systemShapes is { } sh && i < sh.Length ? sh[i] : null,
@@ -504,13 +520,15 @@ internal sealed class PageLayouter
             // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
             // When skylines are available, use Distance() for X-dependent collision detection
             var pageHeader = isFirstPage ? header : null;
+            var pageEndText = isLastPage ? endText : null;
             var pageSystems = PositionSystemsOnPage(
                 systems, systemExtents, systemDetails, systemStart, systemEnd,
                 pageHeader, isRagged, useFixedForce, lastPageForce,
                 vs, systemSkylines, systemBandUps, Anchor,
                 onePage || fonts is null ? 0.0 : PageNumbers.HeaderHeight(fonts, pageIdx),
+                pageEndText,
                 out double pageForce,
-                out double headerTop, out double overflow);
+                out double headerTop, out double headerTextY, out double endTextY, out double overflow);
 
             // LILYPOND-REF: lily/page-breaking.cc:577-582 — the force is carried forward
             // after every page, so "the previous page" always means the immediately
@@ -525,6 +543,9 @@ internal sealed class PageLayouter
                 Systems: pageSystems,
                 Header: pageHeader,
                 HeaderTop: headerTop,
+                HeaderTextY: headerTextY,
+                EndText: pageEndText,
+                EndTextY: endTextY,
                 Overflow: overflow,
                 Force: pageForce));
 
@@ -559,8 +580,11 @@ internal sealed class PageLayouter
         ImmutableArray<double>? systemBandUps,
         Func<int, (double ToFirst, double ToLast, double HalfFirst, double HalfLast)> anchor,
         double pageHeaderHeight,
+        ProseBand? endText,
         out double pageForce,
         out double headerTop,
+        out double headerTextY,
+        out double endTextY,
         out double overflow)
     {
         // Lent, and given back once copied out at the end — this method's only return.
@@ -607,16 +631,37 @@ internal sealed class PageLayouter
         // a lead sheet the chord row is already inside that extent"; it is not — the rows
         // stand BELOW the origin the extent is measured from, so their whole band fell out
         // of the floor and was spaced into the top margin (user report, session 255).
+        // …and a fenced text under the title rows, or opening the page with none, is one
+        // more line between: LayoutUtilities.HeaderSprings has the three shapes.
         bool titled = header is not null;
+        // Which entry of positions[] is the title rows' top, and which the text's reference
+        // point; −1 for the one the page does not have.
+        int rowsNode = -1, textNode = -1;
         if (titled)
         {
-            springs.Add(LayoutUtilities.TitleTopSpring(vs));
-            springLabels?.Add("top-markup → title top");
-            springs.Add(LayoutUtilities.TitleToSystemSpring(
-                header!, systemExtents[startIdx].upExtent, anchor(startIdx).ToFirst, vs));
-            springLabels?.Add($"markup-system → sys {startIdx + 1} refpoint "
-                + $"(title depth {header!.Depth:F3} + up {systemExtents[startIdx].upExtent:F3} "
-                + $"+ toFirst {anchor(startIdx).ToFirst:F3})");
+            foreach (var (spring, to) in LayoutUtilities.HeaderSprings(
+                         header!, systemExtents[startIdx].upExtent, anchor(startIdx).ToFirst, vs))
+            {
+                springs.Add(spring);
+                switch (to)
+                {
+                    case LayoutUtilities.HeaderNode.Rows:
+                        rowsNode = springs.Count;
+                        springLabels?.Add("top-markup → title top");
+                        break;
+                    case LayoutUtilities.HeaderNode.Text:
+                        textNode = springs.Count;
+                        springLabels?.Add(rowsNode < 0
+                            ? "top-markup → text refpoint"
+                            : $"markup-markup → text refpoint (title depth {header!.Depth:F3})");
+                        break;
+                    default:
+                        springLabels?.Add($"markup-system → sys {startIdx + 1} refpoint "
+                            + $"(title depth {header!.Depth:F3} + up {systemExtents[startIdx].upExtent:F3} "
+                            + $"+ toFirst {anchor(startIdx).ToFirst:F3})");
+                        break;
+                }
+            }
         }
         else
         {
@@ -778,17 +823,41 @@ internal sealed class PageLayouter
         // Lily# used to have NO spring here at all: it stretched the inter-system gaps
         // until the last system's INK touched the bottom margin, which drops both this
         // spring's padding and its stretchability out of the force calculation.
+        int endTextNode = -1;
         {
             var lastDetails = systemDetails[endIdx - 1];
             // Measured from the LAST SPACEABLE staff's refpoint, which is where this spring
             // attaches: StaffHeight is the whole body (the origin down to the last staff's
             // bottom line), so dropping the origin's distance to that staff's refpoint is
             // what hangs below it.
-            double inkBelowLastRefpoint = InkBelowLastRefpoint(lastDetails, endIdx - 1);
-            springs.Add(LayoutUtilities.CreateSpring(
-                vs.LastBottom, vs.LastBottom.Padding + inkBelowLastRefpoint));
-            springLabels?.Add($"last-bottom  from sys {endIdx} refpoint "
-                + $"(ink below {inkBelowLastRefpoint:F3} + padding {vs.LastBottom.Padding:F3})");
+            // ⚠️ The DRAWN ink: the breaker's copy of the last system carries the end text's
+            // room in its BottomExtent (CreatePagesWithOptimalBreaking), which is not ink.
+            double inkBelowLastRefpoint = DrawnBody(lastDetails) - originToLast[endIdx - 1 - startIdx]
+                + (endText is null ? lastDetails.BottomExtent : systemExtents[endIdx - 1].downExtent);
+            if (endText is not null)
+            {
+                // The text after the last system: a line of its own, score-markup-spacing
+                // down to its reference point (its first baseline), floored by the system's
+                // ink below its last refpoint, the text's box above that baseline and the
+                // padding — and the page's closing spring then leaves from the text.
+                // LILYPOND-REF: lily/page-layout-problem.cc:734-770 append_prob; :488-535.
+                // MEASURED 2026-11-12, LilyPond 2.26.0 (LilySharp-Lab sessions/p1226/md,
+                // e1.ly): the staff's middle line to the markup's baseline, 12.000000.
+                springs.Add(LayoutUtilities.CreateSpring(
+                    vs.ScoreMarkup, inkBelowLastRefpoint + endText.Up + vs.ScoreMarkup.Padding));
+                endTextNode = springs.Count;
+                springLabels?.Add($"score-markup → end text refpoint (ink below {inkBelowLastRefpoint:F3})");
+                springs.Add(LayoutUtilities.CreateSpring(
+                    vs.LastBottom, vs.LastBottom.Padding + endText.Down));
+                springLabels?.Add($"last-bottom  from the end text (box below {endText.Down:F3})");
+            }
+            else
+            {
+                springs.Add(LayoutUtilities.CreateSpring(
+                    vs.LastBottom, vs.LastBottom.Padding + inkBelowLastRefpoint));
+                springLabels?.Add($"last-bottom  from sys {endIdx} refpoint "
+                    + $"(ink below {inkBelowLastRefpoint:F3} + padding {vs.LastBottom.Padding:F3})");
+            }
         }
 
         // LILYPOND-REF: lily/page-layout-problem.cc:471-476 — page_height_ deliberately
@@ -880,7 +949,9 @@ internal sealed class PageLayouter
         // The title column's top, where the page's first spring ended — solved with the
         // page like every other node of the chain (LilyPond's title Prob gets its Y-offset
         // from the same solution_, page-layout-problem.cc:868-878 find_system_offsets).
-        headerTop = titled ? _options.MarginTop + positions[1] : 0;
+        headerTop = rowsNode >= 0 ? _options.MarginTop + positions[rowsNode] : 0;
+        headerTextY = textNode >= 0 ? _options.MarginTop + positions[textNode] : 0;
+        endTextY = endTextNode >= 0 ? _options.MarginTop + positions[endTextNode] : 0;
 
         for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
         {

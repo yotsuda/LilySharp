@@ -76,6 +76,9 @@ public class FontAttributeTests
         composer "Cmp"
         subtitle "Sbt"
         poet "Pht"
+        ```md
+        Mdt
+        ```
         tempo 120
         time 4/4
         part melody "Vln." { pedal text }
@@ -173,6 +176,7 @@ public class FontAttributeTests
         [TextRole.Composer] = "Cmp",
         [TextRole.Subtitle] = "Sbt",
         [TextRole.Poet] = "Pht",
+        [TextRole.Markdown] = "Mdt",
         [TextRole.Instrument] = "Vln.",
         [TextRole.LyricText] = "lyr",
         [TextRole.Stanza] = "3.",

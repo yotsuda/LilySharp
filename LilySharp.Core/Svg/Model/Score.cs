@@ -171,6 +171,9 @@ public sealed record Score
     /// <summary>Poet (optional) — see <see cref="MultiStaffScore.Poet"/>.</summary>
     public string? Poet { get; init; }
 
+    /// <summary>The fenced texts the score prints — see <see cref="MultiStaffScore.Texts"/>.</summary>
+    public ScoreTexts Texts { get; init; }
+
     /// <summary>The header's instrument line (optional) — see <see cref="MultiStaffScore.Instrument"/>.</summary>
     public string? Instrument { get; init; }
 

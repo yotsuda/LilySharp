@@ -724,7 +724,9 @@ public sealed partial class LilyPondExporter
 
         EmitChordTracks(root, render, form, sections);
         EmitChordList();
+        EmitText(before: true);
         EmitScore(render, parts, partVars);
+        EmitText(before: false);
         // `markTempo beside` is a Lily#-own arrangement (Semantics.MarkArrangement): LilyPond
         // stacks a RehearsalMark over a MetronomeMark and has no chart pair, so the twin
         // keeps LilyPond's picture and says so — the `fonts … size` rule, not a silent drop.

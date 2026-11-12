@@ -350,7 +350,11 @@ public sealed record RenderSpec(
     // `staff melody hidden`: parts that sound in this score and are not drawn.
     ImmutableArray<HiddenStaffSpec> HiddenStaves = default,
     // Where the score is written, which tells its own `singer` lines from another's (-1: no score block).
-    int SourceStart = -1
+    int SourceStart = -1,
+    // The fenced texts written INSIDE this score block (docs/markdown-text-design.md): each
+    // replaces the file's text for the same place, in this score alone. The same road as
+    // HeaderOverrides.
+    ImmutableArray<MarkdownTextSyntax> TextOverrides = default
 )
 {
     /// <summary>

@@ -193,6 +193,7 @@ TopLevelItem   = MetadataDecl                     (* title, subtitle, composer, 
                | ChordShapesDecl                  (* the chord-shape table: the shape each chord draws *)
                | LanguageDecl                     (* the language the file's lyrics are written in *)
                | SingerDecl                       (* who sings which words, on which part *)
+               | MarkdownText                     (* a text for the page, written as Markdown *)
                ;
 
 (* MUSIC IS NOT A TopLevelItem, and is rejected with LYS0020: a note stream, a bare
@@ -214,6 +215,49 @@ MetadataKey    = 'title' | 'subtitle' | 'composer' | 'poet' ;
    (ly/titling-init.ly:68-97): the title centred; the subtitle centred on the line below it,
    \large \bold; the poet at the left end and the composer at the right end of the next line,
    at text size. *)
+
+MarkdownText   = FenceOpen , [ 'end' ] , NewLine , { TextLine } , FenceClose ;
+FenceOpen      = '```' , { '`' } , ( 'md' | 'markdown' ) ;
+FenceClose     = (* a line that begins, after blanks, with as many backticks as the opening, and holds nothing else *) ;
+                 (* A TEXT FOR THE PAGE (owner's idea and decisions 2026-11-12,
+                    docs/markdown-text-design.md): the lines between the fences are read as
+                    Markdown (CommonMark), and NOTHING between them is Lily# — the fence is one
+                    token, so a brace, a '//' and a quote there mean nothing. The closing fence's
+                    indentation is taken off each line (a C# raw string's rule). A fence of four
+                    backticks holds a text that writes three.
+
+                    At the top level the text is printed under the title rows, above the first
+                    system; with 'end' on the opening line, under the last system. Two fences
+                    for one place print one after the other. Inside 'score { }' a fence replaces
+                    the file's text for the same place in that score (an empty one leaves that
+                    place with none) — the rule of a score's own 'title'. A text belongs to the
+                    piece, so it prints with nothing written in the score.
+
+                    PRINTED so far: paragraphs, **bold**, *italic*, a line ended by hand. What else
+                    the Markdown writes — a heading, a list, a table, a code block, an image, HTML
+                    — is read for what it is and said where it is written (LYS4058); a code span's
+                    words and a link's words stay in the sentence. A fence directly in a
+                    top-level section is read (its opening line takes a printing: '2', '1,3',
+                    '2-3', 'all') and not printed yet (LYS4058).
+
+                    THE PAGE: the text is set at the poet / composer line's size (fonts key 'md'),
+                    from the left margin to the line width, ragged right; the lines break at
+                    spaces, and between characters in Japanese, Chinese and Korean, never before
+                    a stop or a closing bracket, never after an opening one (LILYSHARP-OWN:
+                    LilyPond's \wordwrap breaks no text without spaces). It is a line of the
+                    page's chain, spaced as LilyPond spaces a top-level markup list — by the paper
+                    block's markupMarkupSpacing, markupSystemSpacing and scoreMarkupSpacing — each
+                    line a box two thirds of the baseline-skip (3) over its baseline and one third
+                    under; a paragraph stands half a skip further off (LILYSHARP-OWN). MEASURED
+                    2026-11-12 on LilyPond 2.26.0: the composer line to the first line 2.9705, the
+                    last system's middle line to the closing text 12.0000. The twin writes the
+                    page's own lines as '\markuplist \column-lines { … }'.
+                    A character the text's face does not have is reserved its em square, the
+                    machine's face drawing it unmeasured: under a face with narrower kana a line
+                    ends short of the margin.
+
+                    Not in MusicXML or MIDI. An opening line that is not 'md', or a word that is
+                    not its place's, is LYS4057; a fence never closed is LYS0043. *)
 
 UsingDecl      = 'using' , String ;
                  (* 'using "other.lys"': the named file's declarations join this file's

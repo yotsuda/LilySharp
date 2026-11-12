@@ -831,6 +831,8 @@ public sealed partial class MeasureCollector
             || !w.TryShift(rec.ComposerPosition, out int composer) || _v.Meta.ComposerPosition != composer
             || !w.TryShift(rec.SubtitlePosition, out int subtitle) || _v.Meta.SubtitlePosition != subtitle
             || !w.TryShift(rec.PoetPosition, out int poet) || _v.Meta.PoetPosition != poet
+            || !w.TryShift(rec.TextBeforePosition, out int textBefore) || _v.Meta.TextBeforePosition != textBefore
+            || !w.TryShift(rec.TextAfterPosition, out int textAfter) || _v.Meta.TextAfterPosition != textAfter
             || !w.TryShift(rec.TimePosition, out int time) || _v.Meta.TimePosition != time
             || !w.TryShift(rec.KeyPosition, out int key) || _v.Meta.KeyPosition != key
             || !w.TryShift(rec.ClefPosition, out int clef) || _v.Meta.ClefPosition != clef
@@ -845,6 +847,8 @@ public sealed partial class MeasureCollector
             && _v.Meta.Composer == rec.Composer
             && _v.Meta.Subtitle == rec.Subtitle
             && _v.Meta.Poet == rec.Poet
+            && _v.Meta.TextBefore == rec.TextBefore
+            && _v.Meta.TextAfter == rec.TextAfter
             && _v.Meta.Fonts.Equals(rec.Fonts)
             && _v.Meta.Paper.Equals(rec.Paper)
             && _v.Meta.LayoutPlan.Equals(rec.LayoutPlan)
@@ -877,6 +881,8 @@ public sealed partial class MeasureCollector
             || !w.TryShift(meta.ComposerPosition, out int composer)
             || !w.TryShift(meta.SubtitlePosition, out int subtitle)
             || !w.TryShift(meta.PoetPosition, out int poet)
+            || !w.TryShift(meta.TextBeforePosition, out int textBefore)
+            || !w.TryShift(meta.TextAfterPosition, out int textAfter)
             || !w.TryShift(meta.TimePosition, out int time)
             || !w.TryShift(meta.KeyPosition, out int key)
             || !w.TryShift(meta.ClefPosition, out int clef)
@@ -894,6 +900,8 @@ public sealed partial class MeasureCollector
         meta.ComposerPosition = composer;
         meta.SubtitlePosition = subtitle;
         meta.PoetPosition = poet;
+        meta.TextBeforePosition = textBefore;
+        meta.TextAfterPosition = textAfter;
         meta.TimePosition = time;
         meta.KeyPosition = key;
         meta.ClefPosition = clef;

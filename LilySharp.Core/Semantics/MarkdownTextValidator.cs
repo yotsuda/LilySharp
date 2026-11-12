@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using LilySharp.Core.Syntax;
@@ -77,6 +78,23 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
                         $"'{word}' is a second place for one text. Write one.");
                 }
                 placed |= known;
+            }
+
+            // What is read and not drawn is said where it is written, never dropped in silence.
+            if (inSection)
+            {
+                _diagnostics.Warning(new TextSpan(at, 3), DiagnosticCodes.FencedTextNotDrawn,
+                    "A section's text is read and not printed yet: the page prints the text under the title "
+                    + "and the text after the last system (```md end) so far.");
+                continue;
+            }
+            foreach (var note in Rendering.Prose.Read(value.Body).NotDrawn)
+            {
+                int start = value.TokenOffsetOf(note.Offset);
+                int lineEnd = value.Body.IndexOf('\n', note.Offset);
+                int length = Math.Max(1, Math.Min(note.Length, (lineEnd < 0 ? value.Body.Length : lineEnd) - note.Offset));
+                _diagnostics.Warning(new TextSpan(at + start, length), DiagnosticCodes.FencedTextNotDrawn,
+                    $"{note.What} is read and not drawn: a fenced text prints its paragraphs, bold and italic so far.");
             }
         }
     }

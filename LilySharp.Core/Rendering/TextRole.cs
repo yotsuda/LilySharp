@@ -60,6 +60,9 @@ public enum TextRole
     Subtitle,
     /// <summary>The score's poet, at the left end of the composer's line (<c>DrawHeader</c>).</summary>
     Poet,
+    /// <summary>A text written as Markdown in a fence, under the title or after the last
+    /// system (<c>DrawProse</c>; docs/markdown-text-design.md). LilyPond: a top-level markup.</summary>
+    Markdown,
     /// <summary>An instrument name at a system's left edge (<c>DrawInstrumentNames</c>).
     /// LilyPond grob: <c>InstrumentName</c>.</summary>
     Instrument,
@@ -219,6 +222,7 @@ public static class TextRoles
     public static TextRoleGroup? GroupOf(TextRole role) => role switch
     {
         TextRole.Title or TextRole.Composer or TextRole.Subtitle or TextRole.Poet
+            or TextRole.Markdown
             or TextRole.Instrument or TextRole.PageNumber => TextRoleGroup.Header,
         TextRole.LyricText or TextRole.Stanza => TextRoleGroup.Lyrics,
         TextRole.ChordName or TextRole.FretFrame or TextRole.FiguredBass => TextRoleGroup.Chords,
@@ -263,6 +267,7 @@ public static class TextRoles
     public static bool TakesMusicCompanionFace(TextRole role) =>
         role is TextRole.ChordName or TextRole.Mark
             or TextRole.Title or TextRole.Subtitle or TextRole.Composer or TextRole.Poet
+            or TextRole.Markdown
             or TextRole.Text or TextRole.Tempo or TextRole.Navigation
             or TextRole.Dynamics or TextRole.Pedal or TextRole.Instrument or TextRole.PartCombine;
 
@@ -324,6 +329,8 @@ public static class TextRoles
         TextRole.Composer => "composer",
         TextRole.Subtitle => "subtitle",
         TextRole.Poet => "poet",
+        // As the source writes it: ```md.
+        TextRole.Markdown => "md",
         TextRole.Instrument => "instrument",
         // Not a key (IsWritable); the spelling is for diagnostics only.
         TextRole.PageNumber => "pageNumber",
@@ -568,6 +575,7 @@ public static class TextRoles
     public static PlanReach PlanReachOf(TextRole role) => role switch
     {
         TextRole.Title or TextRole.Composer or TextRole.Subtitle or TextRole.Poet
+            or TextRole.Markdown
             or TextRole.Instrument or TextRole.PageNumber
             or TextRole.LyricText or TextRole.Stanza
             or TextRole.ChordName or TextRole.FretFrame

@@ -284,6 +284,13 @@ internal sealed record PageLayout(
     // sits: the page chain's top-markup spring solved with the rest of the page.
     HeaderBand? Header = null,
     double HeaderTop = 0,
+    // The header's text (HeaderBand.Text): how far below the page's top edge its reference
+    // point — its first baseline — sits, solved with the page.
+    double HeaderTextY = 0,
+    // The fenced text after the last system (docs/markdown-text-design.md), on the page that
+    // ends the piece, and its reference point below the page's top edge.
+    ProseBand? EndText = null,
+    double EndTextY = 0,
     // How far the page's chain overran it at its stiffest, taken out of the gaps so the
     // systems overlap on the page (PageLayouter.PositionSystemsOnPage, LilyPond's
     // "compressing over-full page by %.1f staff-spaces"); 0 when it fits.

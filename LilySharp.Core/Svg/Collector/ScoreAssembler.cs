@@ -66,7 +66,9 @@ internal sealed record ScoreContent(
     string? Poet = null,
     // The header's instrument line — "Capo 3" for a score whose layout writes a capo
     // (ChordSpelling.Capo; 2026-09-29), else null.
-    string? Instrument = null);
+    string? Instrument = null,
+    // The fenced texts the score prints (docs/markdown-text-design.md).
+    Model.ScoreTexts Texts = default);
 
 /// <summary>
 /// Turns a <see cref="ScoreContent"/> snapshot plus a set of voices / staff groups
@@ -121,6 +123,7 @@ internal static class ScoreAssembler
             TempoDots = c.TempoDots,
             Subtitle = c.Subtitle,
             Poet = c.Poet,
+            Texts = c.Texts,
             Instrument = c.Instrument,
             Fonts = c.Fonts,
             Paper = c.Paper,
@@ -171,6 +174,7 @@ internal static class ScoreAssembler
             TempoDots = c.TempoDots,
             Subtitle = c.Subtitle,
             Poet = c.Poet,
+            Texts = c.Texts,
             Instrument = c.Instrument,
             Fonts = c.Fonts,
             Paper = c.Paper,

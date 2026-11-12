@@ -1645,6 +1645,11 @@ public static class DiagnosticCodes
     /// (docs/markdown-text-design.md).</summary>
     public const string FencedTextWord = "LYS4057";
 
+    /// <summary>Something a fenced text writes that the page does not draw — a table, a code
+    /// block, a heading or a list until they are built — or a text in a place that prints
+    /// none yet (docs/markdown-text-design.md). A warning: it is read, and said.</summary>
+    public const string FencedTextNotDrawn = "LYS4058";
+
     /// <summary><c>singer … sings NAME</c> where no lyrics track has that name.</summary>
     public const string SingerWordsUnknown = "LYS4042";
 

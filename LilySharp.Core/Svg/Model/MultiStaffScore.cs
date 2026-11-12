@@ -104,6 +104,10 @@ public sealed record MultiStaffScore
     /// <summary>Poet (optional) — the left end of the composer's line.</summary>
     public string? Poet { get; init; }
 
+    /// <summary>The fenced texts the score prints: the Markdown under the title and the
+    /// Markdown after the last system (docs/markdown-text-design.md).</summary>
+    public ScoreTexts Texts { get; init; }
+
     /// <summary>The header's instrument line (optional) — the centre of the poet / composer
     /// row (LilyPond's bookTitleMarkup places <c>header:instrument</c> there): "Capo 3" for a
     /// score whose layout writes a capo (2026-09-29).</summary>
@@ -385,6 +389,7 @@ public sealed record MultiStaffScore
             TempoDots = score.TempoDots,
             Subtitle = score.Subtitle,
             Poet = score.Poet,
+            Texts = score.Texts,
             Instrument = score.Instrument,
             Fonts = score.Fonts,
             Paper = score.Paper,

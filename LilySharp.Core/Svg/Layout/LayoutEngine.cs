@@ -132,6 +132,13 @@ internal sealed partial class LayoutEngine
         // the page chain, the crop width and the draw see one band.
         header = HeaderBand.WithChordList(header, ChordListBand.EntriesOf(score), score.TextMetrics,
             _options.PageWidth, _options.MarginLeft, _options.ContentWidth);
+        // …and the fenced texts (docs/markdown-text-design.md): the one under the title is a
+        // line of the page's chain after the rows, carried by the band; the one after the last
+        // system goes to the pages with the systems.
+        header = HeaderBand.WithText(header, ProseBand.Build(
+            score.Texts.Before, score.Texts.BeforePosition, score.TextMetrics, _options.ContentWidth));
+        var endText = ProseBand.Build(
+            score.Texts.After, score.Texts.AfterPosition, score.TextMetrics, _options.ContentWidth);
 
         // LILYPOND-REF: lily/page-layout-problem.cc:656-717 alignment_distances
         // Apply user overrides for StaffGrouper spacing before layout
@@ -243,7 +250,7 @@ internal sealed partial class LayoutEngine
         var (pages, systemsArray) = CreatePages(
             score, prelim.Systems, header, perSystemExtents, systemHeight,
             prelim.PagingSkylines, perSystemHeights, perSystemBandUps, placed.CropDown,
-            PagePermissionsAfterSystems(score, systems), prelim);
+            PagePermissionsAfterSystems(score, systems), prelim, endText);
 
         return FinishLayout(score, systemCache, multiStaffLayouter, textRowStaves,
             systems, perSystemExtents, perSystemSkylines, placed, prelim, pages, systemsArray,

@@ -469,10 +469,67 @@ internal static class LayoutUtilities
         // Spring::length is max(min_distance_, ideal_distance_) (spring.cc:219-237), which
         // is why a system whose ink is smaller than top-system-spacing's basic-distance is
         // not measured by its ink at all.
-        => topMargin + (header is null
-            ? CreateTopSystemSpring(systemUpExtent, originToRefpoint, vs.TopSystem).Length(0)
-            : TitleTopSpring(vs).Length(0)
-              + TitleToSystemSpring(header, systemUpExtent, originToRefpoint, vs).Length(0));
+    {
+        if (header is null)
+            return topMargin + CreateTopSystemSpring(systemUpExtent, originToRefpoint, vs.TopSystem).Length(0);
+        double y = topMargin;
+        foreach (var (spring, _) in HeaderSprings(header, systemUpExtent, originToRefpoint, vs))
+            y += spring.Length(0);
+        return y;
+    }
+
+    /// <summary>
+    /// The springs of a page that opens with the header, from the top of the printable area
+    /// down to the first system's first staff refpoint, each with what it leads to.
+    /// </summary>
+    /// <remarks>
+    /// Rows alone: <see cref="TitleTopSpring"/>, <see cref="TitleToSystemSpring"/> — the
+    /// titled page as it has been. A fenced text under the rows is a line of its own, as a
+    /// top-level markup after LilyPond's book title is: <c>markup-markup-spacing</c> from the
+    /// rows' top to the text's reference point (its first baseline), floored by the rows'
+    /// depth, the text's box above that baseline and the padding; then
+    /// <c>markup-system-spacing</c> from there, floored by the text's box below, the system's
+    /// ink above its refpoint and the padding. A text with no rows over it takes the top
+    /// spring itself.
+    /// LILYPOND-REF: lily/page-layout-problem.cc:734-770 append_prob — the spring to a Prob is
+    /// floored by its extent above its reference point less the bottom of what stands over
+    /// it, plus the padding; :488-535 — which spec a pair of lines reads.
+    /// MEASURED 2026-11-12, LilyPond 2.26.0 (LilySharp-Lab sessions/p1226/md): a one-line
+    /// markup's baseline 5.000000 over the first staff's middle line (e1.ly); a markup list's
+    /// last baseline 3.276 over the staff's top line (e10.ly: 1.0 + 0.5 + the clef's 1.776).
+    /// </remarks>
+    public static IEnumerable<(Spring Spring, HeaderNode To)> HeaderSprings(
+        HeaderBand header, double systemUpExtent, double originToRefpoint, VerticalSpacingParameters vs)
+    {
+        if (header.Text is not { } text)
+        {
+            yield return (TitleTopSpring(vs), HeaderNode.Rows);
+            yield return (TitleToSystemSpring(header, systemUpExtent, originToRefpoint, vs), HeaderNode.System);
+            yield break;
+        }
+        if (header.HasRows)
+        {
+            yield return (TitleTopSpring(vs), HeaderNode.Rows);
+            yield return (CreateSpring(vs.MarkupMarkup, header.Depth + text.Up + vs.MarkupMarkup.Padding), HeaderNode.Text);
+        }
+        else
+        {
+            yield return (CreateSpring(vs.TopMarkup, text.Up + vs.TopMarkup.Padding), HeaderNode.Text);
+        }
+        yield return (CreateSpring(vs.MarkupSystem,
+            text.Down + systemUpExtent + originToRefpoint + vs.MarkupSystem.Padding), HeaderNode.System);
+    }
+
+    /// <summary>What a spring of <see cref="HeaderSprings"/> leads to.</summary>
+    public enum HeaderNode
+    {
+        /// <summary>The top of the title rows.</summary>
+        Rows,
+        /// <summary>The text's reference point: its first baseline.</summary>
+        Text,
+        /// <summary>The first system's first staff refpoint.</summary>
+        System,
+    }
 
     /// <summary>
     /// The spring from the top of the printable area down to the TITLE column's top — the

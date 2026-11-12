@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 311 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **437** | |
+| `OWN` | 317 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **443** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（311 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（317 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -278,6 +278,8 @@
 - **`LilyPondExporter.EmitStaff`** LILYSHARP-OWN: ±2, and −2…+4), where line-count alone spreads them one space apart
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Streams.cs`
 - **`LilyPondExporter.EmitLeadSheetTiming`** LILYSHARP-OWN: LilyPond has no lead sheet — a staff-less score prints no bar line,
+### `LilySharp.Core/LilyPond/LilyPondExporter.Text.cs`
+- **`LilyPondExporter.EmitText`** LILYSHARP-OWN: the breaking, and the white between paragraphs. Not written yet: a
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **`GeneralMidi.PreviewTimbreFamily`** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
@@ -342,6 +344,8 @@
 - **`PdfDrawingContext.DrawText`** LILYSHARP-OWN: the stand-in case has no LilyPond counterpart, and cannot have one.
 ### `LilySharp.Core/Rendering/Pdf/PdfReproducibility.cs`
 - **`PdfReproducibility`** LILYSHARP-OWN: the convention is reproducible-builds.org's, not LilyPond's (its PDFs
+### `LilySharp.Core/Rendering/Prose.cs`
+- **`Prose`** LILYSHARP-OWN: LilyPond has no Markdown; its markup is what the twin writes from this.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **`SharedRenderer.DrawBeam`** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
@@ -623,7 +627,12 @@
 - **`SystemDetails.Shape`** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 - **`SystemDetails.StaffCompression`** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's
 ### `LilySharp.Core/Svg/Layout/PageLayouter.cs`
+- **`PageLayouter.CreatePagesWithOptimalBreaking`** LILYSHARP-OWN, for now: LilyPond pages a trailing markup as a line of its own,
 - **`PageLayouter.PositionSystemsOnPage`** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
+### `LilySharp.Core/Svg/Layout/ProseBand.cs`
+- **`ProseBand`** LILYSHARP-OWN: the breaking itself (LilyPond's \wordwrap does not break a text
+- **`ProseBand.ParagraphGap`** LILYSHARP-OWN: half a line. LilyPond has no paragraph; the twin writes it as
+- **`ProseBand.Break`** LILYSHARP-OWN. A line ends at a space, or between two wide characters (kana,
 ### `LilySharp.Core/Svg/Layout/ScoreSideTables.cs`
 - **`ScoreSideTables.PercentSignBarRods`** LILYSHARP-OWN (the multi-bar sign is, PercentRepeatItem.Bars, session 905): LilyPond's
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`

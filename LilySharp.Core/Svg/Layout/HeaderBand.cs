@@ -79,8 +79,29 @@ internal sealed record HeaderBand(
     double? SubtitleBaseline = null,
     // The chord list under the title rows (chordList; owner's design 2026-09-29, HANDOFF §2 K5 ⑤),
     // or null. Its depth is in Depth, its widest row in Width.
-    ChordListLayout? ChordList = null)
+    ChordListLayout? ChordList = null,
+    // The fenced text under the rows (docs/markdown-text-design.md), or null. NOT in Depth:
+    // it is a line of the page's chain of its own, as a top-level markup after LilyPond's
+    // book title is (LayoutUtilities.AddHeaderSprings).
+    ProseBand? Text = null)
 {
+    /// <summary>Whether the band has rows of its own — a title, a subtitle, a poet / composer
+    /// line, a chord list — or is only the page's opening text.</summary>
+    public bool HasRows => Depth > 0;
+
+    /// <summary>
+    /// The band's depth as ONE line, for whoever prices a page without solving it (the page
+    /// breaker's title line): the rows, the least white under them, the text's box.
+    /// </summary>
+    public double PricedDepth(VerticalSpacingParameters vs) => Text is null
+        ? Depth
+        : (HasRows ? Depth + vs.MarkupMarkup.Padding : 0) + Text.Up + Text.Down;
+
+    /// <summary><paramref name="band"/> (or a fresh one with no rows) opening the page with
+    /// <paramref name="text"/> under its rows; unchanged when there is no text.</summary>
+    public static HeaderBand? WithText(HeaderBand? band, ProseBand? text)
+        => text is null ? band : (band ?? new HeaderBand(0, null, null)) with { Text = text };
+
     /// <summary>The white between the title rows and the chord list, and between its rows.</summary>
     /// <remarks>LILYSHARP-OWN: LilyPond has no chord list; the gap is Lily#'s, a little more
     /// than the padding a diagram keeps under its name (<c>ChordNameEngraver.DiagramUnderNamePadding</c>).</remarks>

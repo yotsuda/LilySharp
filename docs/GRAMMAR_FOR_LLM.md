@@ -17,6 +17,10 @@ title "Song"            // optional metadata
 composer "Composer"     // optional
 subtitle "Subtitle"     // optional: the line under the title (LilyPond's \header subtitle)
 poet "Poet"             // optional: the left end of the composer's line (\header poet)
+                        // A TEXT FOR THE PAGE, written as Markdown in a fence at the top level: the
+                        // lines between ```md and ``` are printed under the title (paragraphs, **bold**,
+                        // *italic*); ```md end prints them under the last system. Nothing between the
+                        // fences is Lily#. Inside score { } a fence replaces the file's for that score.
 tempo 120               // optional; also: tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit), tempo "Lively" 4. = 116 (dotted unit), tempo Comodo 4 = 84 (a bare word is the marking); 'tempo 120 swing' adds a shuffle-feel equation, and plays it from there on ('swing 16' = 16th swing; only 8 or 16; 'tempo swing' = the equation alone)
 time 4/4                // optional (default 4/4); 4/4 engraves as the C
                         // An ADDITIVE numerator groups the beats: 'time 3+2+2/8' prints 3+2+2 over 8

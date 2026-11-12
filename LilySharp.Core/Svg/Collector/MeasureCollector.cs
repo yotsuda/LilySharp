@@ -87,6 +87,13 @@ public sealed partial class MeasureCollector
     public ImmutableArray<MetadataDeclarationSyntax> HeaderOverrides { get; set; }
 
     /// <summary>
+    /// The fenced texts the score wrote in its own block (docs/markdown-text-design.md),
+    /// applied by <see cref="CollectDefinitions"/> after the file-level walk — the road of
+    /// <see cref="HeaderOverrides"/> — each replacing the file's text for the same place.
+    /// </summary>
+    public ImmutableArray<MarkdownTextSyntax> TextOverrides { get; set; }
+
+    /// <summary>
     /// The score's <c>fonts NAME [{ … }]</c> reference, when it wrote one. Set by the
     /// render pipeline before collecting, resolved by <see cref="CollectDefinitions"/>
     /// after the file-level walk — the same road as <see cref="HeaderOverrides"/> — so
@@ -921,7 +928,8 @@ public sealed partial class MeasureCollector
         // "Capo 3" at the score's head, on the header's instrument line (owner's design
         // HANDOFF §2 K2; the row LilyPond's bookTitleMarkup gives header:instrument) — only where
         // the score prints diagrams or pressed names (LayoutPlan.PrintsCapoLine, 2026-10-31).
-        _v.Meta.LayoutPlan.CapoLine);
+        _v.Meta.LayoutPlan.CapoLine,
+        new Model.ScoreTexts(_v.Meta.TextBefore, _v.Meta.TextBeforePosition, _v.Meta.TextAfter, _v.Meta.TextAfterPosition));
 
     /// <summary>
     /// Collects a Score from a syntax tree.

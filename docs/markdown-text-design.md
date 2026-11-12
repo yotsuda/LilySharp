@@ -1,7 +1,9 @@
 # Markdown text in a score: the design
 
-The owner's idea and decisions of 2026-11-12 (session 1226). **Nothing is built.** Section 6 is
-what LilyPond 2.26.0 was measured to do that day; section 7 is what Lily# has and lacks.
+The owner's idea and decisions of 2026-11-12 (session 1226). **Built that day: section 8's
+step 1** — the fence, and paragraphs with bold and italic under the title and after the last
+system (section 7.1). Section 6 is what LilyPond 2.26.0 was measured to do; section 7 is what
+Lily# had and lacked before it.
 
 ## 1. The idea
 
@@ -219,10 +221,42 @@ Lily#: a known difference, written into the twin as a comment where it happens.
 - A CommonMark reader is a new package for the core (it already takes its PDF and text-shaping
   ones).
 
+### 7.1 What step 1 built
+
+- `SyntaxKind.FencedText` (one token, `Lexer.ScanFence`), `MarkdownTextSyntax`, `FencedText`
+  (the opening line's words, the body, a place in it back to the file), `MarkdownTextValidator`
+  (LYS4057, LYS4058), LYS0043 in `LexicalDiagnostics`.
+- `Rendering.Prose` reads the body with Markdig (BSD-2-Clause, in the notices): paragraphs and
+  their runs, and what is not drawn, each with its place.
+- `Svg.Layout.ProseBand` sets it: Lily#'s own line breaking, and **every line a box** — two
+  thirds of the baseline-skip over its baseline, one third under — which is what a
+  `\markuplist \column-lines` gives a line (`scm/markup.scm` space-lines) and what a bare
+  `\markup` or a bare list of markups does NOT (those stand on their ink: 2.0 a line in
+  `t1tw.ly`). The twin writes that form (`LilyPondExporter.EmitText`), a paragraph's white as
+  its first line's taller box (`\with-dimension`).
+- The text under the title rides `HeaderBand.Text` and is a node of the page's chain of its
+  own (`LayoutUtilities.HeaderSprings`: rows, text, system); the text after the last system is
+  a node after it (`PageLayouter.PositionSystemsOnPage`), and `PageLayout` carries where both
+  were solved to. `SharedRenderer.DrawProse` draws them, SVG, PDF and PNG alike.
+- MEASURED, `t1.lys` against `t1tw2.ly` / `t1auto.ly`: composer line to the first line 2.95
+  (LilyPond 2.9705), line to line 3.00 (3.0000), paragraph to paragraph 4.50 (4.5000), the
+  last staff's middle line to the closing text 12.00 (12.0000). The text to the first staff is
+  5.09 against 4.93, and the same book WITHOUT a text is 4.54 against 4.40 (`t0.lys`): the
+  difference is the page's own in that book (a rehearsal mark over the clef), not the text's.
+- Approximations, said: the breaker prices the rows and the text as ONE title line, and the
+  closing text as ink under the last system (so the two never part, where LilyPond may send a
+  trailing markup to the next page alone); the system-count loop does not see the closing text;
+  a text is not broken over a page.
+- Open: a text's widths in the lab's LilyPond are about a tenth narrower than Lily# measures
+  them ("This piece is for " 14.75 against 16.56, "A. Composer" 11.72 against 12.87) — not
+  looked into; the twin's lines are the page's, so only where a piece begins inside a line
+  differs. A Japanese line under a face with narrow kana ends short of the margin (the
+  machine's face is not measured).
+
 ## 8. Order of work
 
-1. The fence, and paragraphs with bold and italic under the title and at the end: SVG, PDF, the
-   preview, the twin. The page's chain learns a markup line.
+1. DONE (section 7.1). The fence, and paragraphs with bold and italic under the title and at
+   the end: SVG, PDF, the preview, the twin. The page's chain learns a markup line.
 2. Lists, headings, links; what is read and not drawn is said.
 3. A section's text (section 6.1).
 4. Images.

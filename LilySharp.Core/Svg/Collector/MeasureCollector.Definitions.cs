@@ -271,6 +271,12 @@ public sealed partial class MeasureCollector
                     (drummaps ??= new List<DrummapDeclarationSyntax>()).Add(dm);
                     break;
 
+                case MarkdownTextSyntax text:
+                    // The file's texts; a score's own are applied below, as its header is.
+                    if (text.Parent is CompilationUnitSyntax)
+                        CollectText(text, replace: false);
+                    break;
+
                 case MetadataDeclarationSyntax metadata:
                     // A `title` / `composer` written inside a `score { … }` belongs to
                     // THAT score, not the file: it is applied below, for the score being
@@ -515,6 +521,19 @@ public sealed partial class MeasureCollector
             foreach (var meta in HeaderOverrides)
                 CollectMetadata(meta);
 
+        // ...and its texts: the first the score writes for a place takes the file's away, a
+        // second follows it (an empty fence leaves the place with none).
+        if (!TextOverrides.IsDefaultOrEmpty)
+        {
+            bool before = false, after = false;
+            foreach (var text in TextOverrides)
+            {
+                bool end = text.IsEnd;
+                CollectText(text, replace: end ? !after : !before);
+                if (end) after = true; else before = true;
+            }
+        }
+
         // The score's fonts/paper references ride the same road, and RESOLVED values
         // land in _v.Meta — deliberately, for the incremental gate: MetaMatchesShifted
         // compares _v.Meta, so an edit inside a referenced named block changes what is
@@ -588,6 +607,7 @@ public sealed partial class MeasureCollector
     /// every fixture book exercises the file defaults).</summary>
     private static bool IsDefinitionKind(SyntaxKind kind) => kind is
         SyntaxKind.MetadataDeclaration or SyntaxKind.FontDeclaration
+        or SyntaxKind.MarkdownText
         or SyntaxKind.PaperDeclaration or SyntaxKind.LayoutDeclaration
         or SyntaxKind.TempoDeclaration or SyntaxKind.TimeSignature
         or SyntaxKind.KeySignature or SyntaxKind.ClefDeclaration
@@ -623,6 +643,34 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private static IEnumerable<SyntaxNode> DefinitionSites(SyntaxNode root)
         => root.GreenSites(static g => (IsDefinitionKind(g.Kind), Descend: true));
+
+    /// <summary>
+    /// A fenced text for the page (docs/markdown-text-design.md): under the title, or after
+    /// the last system when its opening line says <c>end</c>. Two for one place print one
+    /// after the other, as two paragraphs.
+    /// </summary>
+    private void CollectText(MarkdownTextSyntax text, bool replace)
+    {
+        var value = text.Value;
+        if (!value.IsMarkdown)
+            return;     // said by MarkdownTextValidator
+        string body = value.Body;
+        int position = text.Fence.Span.Start;
+        if (text.IsEnd)
+        {
+            bool fresh = replace || string.IsNullOrEmpty(_v.Meta.TextAfter);
+            _v.Meta.TextAfter = fresh ? body : _v.Meta.TextAfter + "\n\n" + body;
+            if (fresh)
+                _v.Meta.TextAfterPosition = position;
+        }
+        else
+        {
+            bool fresh = replace || string.IsNullOrEmpty(_v.Meta.TextBefore);
+            _v.Meta.TextBefore = fresh ? body : _v.Meta.TextBefore + "\n\n" + body;
+            if (fresh)
+                _v.Meta.TextBeforePosition = position;
+        }
+    }
 
     private void CollectMetadata(MetadataDeclarationSyntax metadata)
     {

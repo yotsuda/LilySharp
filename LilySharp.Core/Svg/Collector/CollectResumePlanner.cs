@@ -936,7 +936,7 @@ internal static class CollectResumePlanner
                     continue;
 
                 case RenderDeclarationSyntax render
-                    when render.DescendantNodes().OfType<MetadataDeclarationSyntax>().Any()
+                    when render.DescendantNodes().Any(n => n is MetadataDeclarationSyntax or MarkdownTextSyntax)
                         ? SpanStable(render.FullSpan, prefix, suffixStart, delta)
                         : ValueStable(render.FullSpan):
                     continue;

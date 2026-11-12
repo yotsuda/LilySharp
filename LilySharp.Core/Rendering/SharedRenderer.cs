@@ -485,11 +485,39 @@ internal static partial class SharedRenderer
             : SpacingRules.LineEndCourtesy(score, system.Measures[^1].MeasureIndex + 1,
                 GetSystemEndTimeChange(score.PrimaryContentStaff, system));
 
+    /// <summary>
+    /// A fenced text (docs/markdown-text-design.md): each line from the left margin, its
+    /// pieces in their own weight and slant, about the reference point the page solved —
+    /// <paramref name="referenceY"/> below the page's top edge, the first line's baseline.
+    /// </summary>
+    private static void DrawProse(
+        MultiStaffScore score, ProseBand band, double referenceY, PageLayout page,
+        LayoutOptions options, IDrawingContext gc)
+    {
+        var fonts = score.TextMetrics;
+        double em = ProseBand.Em(fonts);
+        using (SourceScope(gc, band.Position))
+        {
+            foreach (var line in band.Lines)
+            {
+                double y = page.Height - (referenceY + line.Baseline);
+                foreach (var piece in line.Pieces)
+                    gc.DrawText(piece.Text, options.MarginLeft + piece.X, y, em,
+                        TextRole.Markdown, ProseBand.StyleOf(fonts, piece.Style), TextAnchor.Start);
+            }
+        }
+    }
+
     private static void DrawHeader(
         MultiStaffScore score, PageLayout page, LayoutOptions options, IDrawingContext gc)
     {
+        // The text after the last system stands on the page whether or not it has a header.
+        if (page.EndText is { } endText)
+            DrawProse(score, endText, page.EndTextY, page, options, gc);
         if (page.Header is not { } band)
             return;
+        if (band.Text is { } headerText)
+            DrawProse(score, headerText, page.HeaderTextY, page, options, gc);
         // Baselines accumulate DOWN the device; each is emitted in the page's Y-up frame
         // (page-bottom origin): the flipping context turns page.Height − y back into it.
         double top = page.HeaderTop;

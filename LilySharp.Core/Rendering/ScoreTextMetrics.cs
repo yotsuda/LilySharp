@@ -159,6 +159,12 @@ public sealed class ScoreTextMetrics
                  && TextFontMetrics.CompanionFaces.ContainsKey(names[0]));
     }
 
+    /// <summary>Whether the role's face has every glyph of <paramref name="text"/> — whether
+    /// <see cref="Advance"/> measures what will be drawn, or the renderer will reach for a
+    /// face of the machine's that this layout does not know.</summary>
+    public bool Spells(string text, double fontSize, TextRole role, FontStyle style = FontStyle.Regular)
+        => !TextFontMetrics.HasMissingGlyph(text, fontSize, Face(role, style));
+
     /// <summary>Advance width of <paramref name="text"/> in staff spaces.</summary>
     public double Advance(string text, double fontSize, TextRole role,
         FontStyle style = FontStyle.Regular)

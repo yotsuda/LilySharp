@@ -118,6 +118,7 @@ public static class RenderSpecParser
     {
         var items = new List<RenderItemSpec>();
         var headerOverrides = new List<MetadataDeclarationSyntax>();
+        var textOverrides = new List<MarkdownTextSyntax>();
         var midiOnlyParts = new List<string>();
         FontDeclarationSyntax? fontsRef = null;
         PaperDeclarationSyntax? paperRef = null;
@@ -210,6 +211,12 @@ public static class RenderSpecParser
                     headerOverrides.Add(meta);
                     break;
 
+                // A fenced text inside the score block: this score's own, over the file's
+                // for the same place.
+                case MarkdownTextSyntax text:
+                    textOverrides.Add(text);
+                    break;
+
                 // `fonts NAME [{ … }]` / `paper NAME [{ … }]` / a bare `fonts { … }`: this
                 // score's reference to a named top-level block, or its override of the default.
                 // The LAST wins, like every repeated single-value setting (the validator names the
@@ -269,7 +276,8 @@ public static class RenderSpecParser
             MidiOnlyParts: [.. midiOnlyParts],
             StaffPitch: LilySharp.Core.Semantics.ConcertPitch.StaffModes(render),
             HiddenStaves: HiddenStavesOf(render),
-            SourceStart: render.Span.Start);
+            SourceStart: render.Span.Start,
+            TextOverrides: [.. textOverrides]);
     }
 
     /// <summary>

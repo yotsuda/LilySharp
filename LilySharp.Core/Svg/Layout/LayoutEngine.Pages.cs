@@ -285,7 +285,8 @@ internal sealed partial class LayoutEngine
         List<double>? perSystemBandUps = null,
         List<double>? perSystemCropDown = null,
         ImmutableArray<BreakPermission>? perSystemPagePermissions = null,
-        PreliminaryPass? breakerView = null)
+        PreliminaryPass? breakerView = null,
+        ProseBand? endText = null)
     {
         // The down extent the CROP reads: the system's own, raised to clear its loose block
         // standing at REST rather than at its alignment minimum
@@ -384,7 +385,8 @@ internal sealed partial class LayoutEngine
                 onePage,
                 score.TextMetrics,
                 breakerUpExtents,
-                breakerDownExtents);
+                breakerDownExtents,
+                endText);
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
 
@@ -442,6 +444,9 @@ internal sealed partial class LayoutEngine
         // keeps its distance below it and the page ends under the last one.
         double totalHeight = onPaper.Height - onPaper.Systems[last].Y + SysHeight(last)
             + CropDown(last) + _options.MarginBottom;
+        // …or under the text that follows it (docs/markdown-text-design.md).
+        if (onPaper.EndText is { } closing)
+            totalHeight = Math.Max(totalHeight, onPaper.EndTextY + closing.Down + _options.MarginBottom);
         var systemsArray = onPaper.Systems
             .Select(s => s with { Y = totalHeight - (onPaper.Height - s.Y) })
             .ToImmutableArray();
@@ -454,7 +459,8 @@ internal sealed partial class LayoutEngine
         double pageWidth = _options.PageWidth;
         if (_options.CropWidth)
         {
-            double widest = header?.Width ?? 0;
+            double widest = Math.Max(header?.Width ?? 0,
+                Math.Max(header?.Text?.Width ?? 0, endText?.Width ?? 0));
             foreach (var s in systemsArray)
             {
                 var (_, notationRight, tabRight) = Rendering.SharedRenderer.StaffRightEdges(score, s);

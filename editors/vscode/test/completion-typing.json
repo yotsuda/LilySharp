@@ -723,6 +723,7 @@
     ["fonts", "composer"],
     ["fonts", "subtitle"],
     ["fonts", "poet"],
+    ["fonts", "md"],
     ["fonts", "instrument"],
     ["fonts", "stanza"],
     ["fonts", "chord"],

@@ -29,6 +29,14 @@ internal sealed class MetadataState
     public string? Subtitle;
     public string? Poet;
 
+    // The fenced texts the score prints (docs/markdown-text-design.md): the Markdown under
+    // the title and the Markdown after the last system, each the file's or the score's own,
+    // with where its first fence begins (0 = none).
+    public string? TextBefore;
+    public string? TextAfter;
+    public int TextBeforePosition;
+    public int TextAfterPosition;
+
     // Which face each kind of non-music text is drawn in, from the top-level
     // `fonts { … }` directive. Never null: a score without
     // one gets TextFontPlan.Default, so no reader has to spell the "nothing was asked
@@ -104,6 +112,10 @@ internal sealed class MetadataState
         Composer = other.Composer;
         Subtitle = other.Subtitle;
         Poet = other.Poet;
+        TextBefore = other.TextBefore;
+        TextAfter = other.TextAfter;
+        TextBeforePosition = other.TextBeforePosition;
+        TextAfterPosition = other.TextAfterPosition;
         Fonts = other.Fonts;
         Paper = other.Paper;
         LayoutPlan = other.LayoutPlan;
@@ -147,6 +159,10 @@ internal sealed class MetadataState
             && Composer == other.Composer
             && Subtitle == other.Subtitle
             && Poet == other.Poet
+            && TextBefore == other.TextBefore
+            && TextAfter == other.TextAfter
+            && TextBeforePosition == other.TextBeforePosition
+            && TextAfterPosition == other.TextAfterPosition
             && ReferenceEquals(Fonts, other.Fonts)
             && ReferenceEquals(Paper, other.Paper)
             && ReferenceEquals(LayoutPlan, other.LayoutPlan)
@@ -193,6 +209,10 @@ internal sealed class MetadataState
         Composer = null;
         Subtitle = null;
         Poet = null;
+        TextBefore = null;
+        TextAfter = null;
+        TextBeforePosition = 0;
+        TextAfterPosition = 0;
         // (Fonts, Paper and LayoutPlan are deliberately NOT reset: they are resolved once by
         // CollectDefinitions and read at capture, and a per-pass reset here would drop
         // them before the score is assembled — measured 2026-09-09 on `markTempo beside`.)
