@@ -169,21 +169,52 @@ What follows from it:
 - **Lily# breaks the lines, the twin writes them broken.** LilyPond cannot break Japanese, so the
   twin never asks it to: each line Lily# made is a `\line` of a `\markuplist`'s column. That
   form also runs over a page as Lily#'s text must.
-- **A section's text** is, in the twin, the score cut in two with the markup between. Bar
-  numbers, a repeat that spans the cut and a tie over it have not been tried: to measure before
-  that part is built.
 - **Images** are compared by their box, not their pixels.
+
+### 6.1 A section's text (`f1.ly` … `f5.ly`)
+
+LilyPond has two ways to put words between two systems, and they do not look alike.
+
+| | The score cut in two, a `\markup` between | One score, a `\textMark` after `\break` |
+|---|---|---|
+| Text → the staff above | 12.0000 from its middle line to the baseline (`score-markup-spacing`) | the systems stand as far apart as with no text (12.0000 between top lines); the text is in that gap |
+| Text → the staff below | 5.0000 baseline to middle line; 5.2013 where the bar number's ink is in the way | baseline 1.3531 above the top line |
+| Left edge, size | the left margin, 2.2000 | over the first column (11.9008), 2.3308, never wrapped by itself |
+| Two lines of text | room is made: the lower system moves down by the lines | the lower system moves 0.7238 for a second line and a padding of 2 |
+| The music | **cut**: bar numbers restart, the time signature prints again, the lower system takes the first-line indent and is not justified, a tie over the cut is dropped | continuous |
+
+Decided from it: **a section's text is spaced as a markup between two scores** — it belongs to
+the system under it (5), stands clear of the one over it (12), begins at the left margin at the
+text size and makes its own room — **and the music stays one piece**, as Lily# draws it: the bar
+numbers run on, no time signature is printed again, the lower system is an ordinary later
+system, ties and spanners cross.
+
+The twin writes the cut form with what mends it: `\set Score.currentBarNumber`, `\bar ""` (so
+the number prints), `\omit TimeSignature`, the later system's indent and names, and
+`ragged-right = ##f`. Measured with those: the number 5 prints and the spacing is the table's.
+What crosses the cut — a tie, a slur, a hairpin, a repeat — is lost in the twin and stays in
+Lily#: a known difference, written into the twin as a comment where it happens.
 
 ## 7. What Lily# has, and what it lacks
 
 - The title is one line of the page's chain, `HeaderBand`, placed by the top spring and
   `TitleToSystemSpring` (`LayoutUtilities`), and the chord list's diagrams are folded into its
   depth (`HeaderBand.WithChordList`). So the page knows exactly one markup, and it is first.
-- Missing: a markup after the title that is a line of its own (the page may break after it), a
-  markup after the last system, a markup between two systems, and one that continues on the next
-  page. This is the work; the fence, the Markdown reader and the text setter are small beside it.
-- Open: where the text stands against the chord list and the "Capo N" line when a score prints
-  both.
+- The page breaker already prices a title line anywhere in the chain: `SystemDetails.IsTitle`,
+  and `VerticalSpacingParameters` picks `MarkupMarkup` / `ScoreMarkup` / `MarkupSystem` between
+  two lines by which of them is a title, as LilyPond's `page-layout-problem.cc` does. Its note
+  says what is absent: "no markup-paragraph model in the breaker" (`PageBreaker`,
+  `PageBreakingParameters`).
+- Missing, then: making such lines from a text (one a paragraph line, so that a page may end
+  between two), handing them to the breaker in their places — after the header, between two
+  systems, after the last — and placing and drawing them in the page's chain. The header line
+  forbids a page break after it, and a text seems to do the same: with 13 systems filling a
+  page (`g13.ly`), the text after them went to page 2 with its system, though 12 systems, the
+  text and a 13th fit one page (`g12.ly`). One case, not a proof: to pin when it is built.
+- Where the text stands against the chord list and the "Capo N" line: **under them** (proposed,
+  the owner has not said). The capo and the diagrams are the piece's data, as the composer is,
+  and belong to the title's block; the prose follows the block. It also leaves `HeaderBand`,
+  measured to the digit, as it is.
 - A CommonMark reader is a new package for the core (it already takes its PDF and text-shaping
   ones).
 
@@ -192,7 +223,7 @@ What follows from it:
 1. The fence, and paragraphs with bold and italic under the title and at the end: SVG, PDF, the
    preview, the twin. The page's chain learns a markup line.
 2. Lists, headings, links; what is read and not drawn is said.
-3. A section's text, after its twin is measured.
+3. A section's text (section 6.1).
 4. Images.
 5. The editor: Markdown colours and completion inside the fence; a click on the text in the
    preview goes to its source.
