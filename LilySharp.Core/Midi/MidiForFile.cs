@@ -67,6 +67,28 @@ public static class MidiForFile
             file.Tracks.Add(copy);
         }
 
+        // A pickup, as a .mid says one: a short bar of its own before the meter (a .mid has
+        // no partial bar, and every reader bars it from tick 0 — Lily#'s own importer put each
+        // bar line a beat early in a piece with an upbeat, found 2026-11-12 on an anthem that
+        // went out and came back). The first bar line Lily# plays stands where the pickup ends.
+        if (file.Tracks.Count > 0 && midi.BarTicks.Count > 0 && midi.BarTicks.Min is > 0 and var pickup
+            && file.Tracks.SelectMany(t => t.TimeSignatures).OrderBy(t => t.Tick).FirstOrDefault() is { Tick: 0, Numerator: > 0, Denominator: > 0 } opening
+            && pickup < opening.Numerator * 4 * midi.TicksPerQuarterNote / opening.Denominator)
+        {
+            foreach (int unit in new[] { 4, 8, 16, 32 })
+            {
+                int one = 4 * midi.TicksPerQuarterNote / unit;
+                if (one == 0 || pickup % one != 0)
+                    continue;
+                var home = file.Tracks.First(t => t.TimeSignatures.Contains(opening));
+                home.TimeSignatures.Remove(opening);
+                home.TimeSignatures.Insert(0, new TimeSignatureChange(0, pickup / one, unit));
+                if (!home.TimeSignatures.Any(t => t.Tick == pickup))
+                    home.TimeSignatures.Insert(1, opening with { Tick = pickup });
+                break;
+            }
+        }
+
         // The keys, on the first track with the tempos: the signature of each key's major scale.
         int stated = int.MinValue;
         foreach (var (tick, tonic) in midi.KeyStarts)

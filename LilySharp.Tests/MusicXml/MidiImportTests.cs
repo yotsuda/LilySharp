@@ -121,6 +121,22 @@ public class MidiImportTests
         Assert.Contains("tempo 100", lys);
     }
 
+    /// <summary>A pickup goes out as a short bar of its own before the meter, which is how a .mid
+    /// says one, and comes back as `partial`: read from tick 0 every bar line stood a beat early
+    /// (found 2026-11-12 on an anthem that went out and came back).</summary>
+    [Fact]
+    public void APickup_ComesBackAsAPartial()
+    {
+        string source = "octave absolute\ntempo 96\ntime 3/4\nkey g major\npart m { }\npart low { clef bass }\n"
+            + "section A { partial 4\n m { d'4 | g'2 a'4 | b'2. | a'2 }\n low { r4 | g2. | d2. | d2 } }\nform { A }\nscore { staff m  staff low }\n";
+        var (lys, report) = RoundTrip(source);
+        Assert.Contains("partial 4", lys);
+        Assert.Contains("d'4 | g'2 a'4 | b'2. |", lys);
+        Assert.Contains("time 3/4", lys);
+        Assert.DoesNotContain("time 1/4", lys);
+        Assert.Contains(report.Warnings, w => w.Contains("read as a pickup"));
+    }
+
     /// <summary>A played file is not on the page's grid: its points go to the nearest sixteenth
     /// or triplet eighth, and the report says how many moved.</summary>
     [Fact]

@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **A pickup survives a .mid**: Lily# writes an upbeat as a short bar of its own before the meter (`1/4`, then `3/4`), as a .mid says one, and `lysc import` reads such an opening as `partial`. A piece with an upbeat came back with every bar line a beat early.
 - **Four things those scores asked for**:
   - **A tempo whose count is played and not printed**: `tempo "Tempo I" 4 = 92 bare` sounds at 92 and prints the words alone — no metronome equation, no parentheses — at the top level, in a section header and in the music. `bare` is the word a tuplet takes for "no number, no bracket". It needs words and a count (LYS0044, a warning, otherwise). LilyPond gets `tempoHideNote`, MusicXML the words with the sound.
   - **A mark over a run of notes**: `c'8@staccato d' e' f'@!staccato` — the end on the last note, as `@8va … @!8va` — puts the mark on every note and chord from the first to the last, drawn and played on each as if written there. For `@staccato`, `@staccatissimo`, `@tenuto`, `@accent`, `@marcato`; a mark with no end stays one note's. Rests carry nothing; a run closes in the music it opens in (one part in one section, a phrase, a voice), and an end with no opening is an error (LYS4018). MIDI, MusicXML and LilyPond get the mark on each note.

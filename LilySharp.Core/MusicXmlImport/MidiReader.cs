@@ -42,8 +42,9 @@ namespace LilySharp.Core.MusicXmlImport;
 /// <item>THE KEY, where the file states none: the major key whose scale holds most of the notes.</item>
 /// <item>THE CLEF: bass for a part that lies under middle C, else treble; percussion for channel 10.</item>
 /// </list>
-/// <para>Not read: dynamics from velocities, the pedal, pitch bends, pickup bars (a .mid has no
-/// partial bar: the first bar is a whole one with rests), repeats (a .mid is played out).</para>
+/// <para>Not read: dynamics from velocities, the pedal, pitch bends, repeats (a .mid is played
+/// out). A pickup is read where the file says one as a .mid can: one bar of a shorter meter
+/// before the piece's (see the bars, below).</para>
 /// </remarks>
 internal static class MidiReader
 {
@@ -260,6 +261,16 @@ internal static class MidiReader
             int length = meter.Beats * Quarter * 4 / meter.BeatType;
             bars.Add((at, length, meter));
             at += length;
+        }
+        // A PICKUP, as a .mid says one: a first bar of a shorter meter of its own, then the
+        // piece's meter (Lily# writes its own so, Midi.MidiForFile, and so do notation programs).
+        // It is read as a short first bar of the meter that follows — which the writer makes a
+        // `partial` — and not as a one-bar meter change. A piece that truly opens with one
+        // short bar of another meter reads the same; the report says which was taken.
+        if (bars.Count >= 2 && bars[0].Meter != bars[1].Meter && bars[0].Length < bars[1].Length)
+        {
+            bars[0] = (0, bars[0].Length, bars[1].Meter);
+            report.Warn($"the file opens with one bar of {meters[0].Beats}/{meters[0].BeatType} before its {bars[1].Meter.Beats}/{bars[1].Meter.BeatType}: read as a pickup.");
         }
         if (bars.Any(bar => bar.Length % 3 != 0))
             throw new InvalidDataException("This MIDI file has a meter finer than sixteenths (x/32 or x/64), which the import does not read.");

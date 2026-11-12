@@ -488,8 +488,10 @@ writer. A .mid is a performance and not a page, so more of the result is a readi
 - **Spelling, key, clef**: letters and accidentals from the key signature; with no key stated,
   the major key whose scale holds most of the notes (said in the report); bass clef for a part
   that lies under middle C.
-- **Not read**: dynamics from velocities, the pedal, pitch bends, a pickup bar (a .mid has no
-  partial bar), repeats (a .mid is played out: the result is one section).
+- **A pickup**: a file that opens with one bar of a shorter meter before its own (`1/4`, then
+  `3/4`) is read as a `partial` — the way a .mid says an upbeat, and the way Lily# writes its own.
+- **Not read**: dynamics from velocities, the pedal, pitch bends, repeats (a .mid is played
+  out: the result is one section).
 
 **Options:**
 | Option | Description |
