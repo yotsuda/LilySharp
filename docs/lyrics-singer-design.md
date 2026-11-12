@@ -168,6 +168,16 @@ score { staff sop  lyrics words  staff alt  lyrics words  staff ten  lyrics mw }
 - `lyrics` rows stay: a score prints only what it says (section 1). A file with no such statement behaves
   as it does now.
 
+**The standard** (owner's decision 2026-11-12): the part's statement is the way a file is
+taught to say whose words they are — in both writings, by section and by part (a part that
+holds its own sections names its words with its header's properties, before the first
+section). The relation can still be said by a score's row under a staff, or by a singer
+line's `on`, and a file that writes only those is read as before; nothing nags it. The editor
+offers "Name these words on the part" on a singer line and on a lyrics block's head
+(`Editing.PartWordsNamer`), and the composing guide writes the part's statement first. Why
+the question came up: looking at a part, the owner could not tell which words were its — the
+score had stacked the row under its staff, and that was the only place that said so.
+
 Rejected: `lyrics words on sop { … }` on the definition, which a file defining its words section by section
 would repeat on each block and could contradict, and which section 4 refuses; and binding by name
 (`lyrics sop { … }`), which cannot share words between parts and is LYS7008.

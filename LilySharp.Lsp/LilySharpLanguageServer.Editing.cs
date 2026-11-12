@@ -411,6 +411,8 @@ public sealed partial class LilySharpLanguageServer
             actions.Add(chordDiagram);
         if (NotesToChordAction(doc, uri, startOffset) is { } notesToChord)
             actions.Add(notesToChord);
+        if (NamePartWordsAction(doc, uri, startOffset) is { } partWords)
+            actions.Add(partWords);
 
         return actions.ToArray();
     }
@@ -440,6 +442,41 @@ public sealed partial class LilySharpLanguageServer
     internal const string ConvertNotesToChordCommand = "lilysharp.convertNotesToChord";
 
     internal const string ConvertNotesToChordTitle = "Convert to Chord Symbol chord(…)";
+
+    /// <summary>On a <c>singer</c> line or a <c>lyrics NAME { … }</c> block whose part does not
+    /// name the words: "Name these words on the part" — <c>lyrics NAME</c> into the part's
+    /// header, the standard place to say whose words they are (owner's decision 2026-11-12;
+    /// <see cref="LilySharp.Core.Editing.PartWordsNamer"/>). No squiggle asks for it.</summary>
+    internal static CodeAction? NamePartWordsAction(Document doc, Uri uri, int offset)
+    {
+        if (LilySharp.Core.Editing.PartWordsNamer.EditAt(doc.Tree, doc.Text, offset) is not { } edit)
+            return null;
+        var (startLine, startCharacter) = GetLineAndCharacter(doc.Text, edit.Start);
+        var (endLine, endCharacter) = GetLineAndCharacter(doc.Text, edit.End);
+        return new CodeAction
+        {
+            Title = edit.Title,
+            Kind = CodeActionKind.RefactorRewrite,
+            Edit = new WorkspaceEdit
+            {
+                Changes = new Dictionary<string, TextEdit[]>
+                {
+                    [uri.ToString()] =
+                    [
+                        new TextEdit
+                        {
+                            Range = new LspRange
+                            {
+                                Start = new Position { Line = startLine, Character = startCharacter },
+                                End = new Position { Line = endLine, Character = endCharacter },
+                            },
+                            NewText = edit.NewText,
+                        },
+                    ],
+                },
+            },
+        };
+    }
 
     /// <summary>On a pitched <c>&lt;…&gt;</c> chord, "Convert to Chord Symbol chord(…)" — offered on
     /// sight, worked out when picked (the name and the sound need the file played).</summary>

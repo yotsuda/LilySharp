@@ -817,6 +817,43 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
 
 ## Lyrics (a named track of words)
 
+**THE STANDARD WAY to say whose words they are: on the part.** `part melody { instrument soprano
+lyrics words }` — the part's header names its track (no braces; one statement a track). Write
+this whenever a part has words: it is the one place read off the part itself, the singer line
+then needs no name (`singer female sings on melody`), and a row or a singer line that names
+other words for the part is warned about (LYS4055). The same in both writings of a file:
+
+```
+// written by section
+part melody { instrument soprano  lyrics words }
+section Main {
+  melody { c4 d e f | g2 g | }
+  lyrics words { Hap- py birth- day | to you | }
+}
+singer female sings on melody
+form { Main }
+score { staff melody  lyrics words }
+```
+
+```
+// written by part: the same statement, with the header's properties
+part melody {
+  instrument soprano
+  lyrics words
+  section Main { c4 d e f | g2 g | }
+}
+lyrics words {
+  section Main { Hap- py birth- day | to you | }
+}
+singer female sings on melody
+form { Main }
+score { staff melody  lyrics words }
+```
+
+A score's row under a staff and a singer line's `on PART` say the same relation for ONE score
+or ONE voice, and a file that writes only those still works; the part's statement is what makes
+the file say it once.
+
 A lyrics track holds its words alone. A score row PRINTS them, and a top-level
 `singer` line SINGS them (below). The score places its row by ORDER (score = a
 vertical stack of bands): a `lyrics NAME` row directly below a staff is that
@@ -865,7 +902,7 @@ Words are `japanese` unless a line `language english` says so for the file, or a
 **Who sings is a top-level line of its own**: `singer "neutrino/MERROW" sings words on melody`. A `lyrics` row only prints; only a `singer` line sings, whether the page shows the words or not. The voice is `"engine/name"`, `male` or `female` (each machine's default voice of that gender), a gender before a name (`singer male "neutrino/SOMA" sings words`), or nothing (`singer sings words`: the part's own default voice). The order is fixed. **How the voice sings** may follow, on the same line: `with NAME VALUE NAME VALUE …` — `singer "diffsinger/Nishiren/2P" sings words on melody with breathiness 3 gender -0.2`. The names are the voice's own engine's (the editor lists what the line's voice takes, with each one's range); a value is a number, a word or a string; no commas. A name the voice does not take is not sung, and said. Leave `with` out and the voice sings as it does by itself — write it only for what you want changed. **Inside the music** the same names go on a note: `c4@sing(breathiness 6)` holds from that note on, as a dynamic does, until the next `@sing` for that name; `@sing(breathiness default)` gives it back to the singer line's value; `g2@sing(breathiness to 9)` arrives at 9 with that note, gliding from where the value before was written. Several settings in one: `@sing(breathiness 6 tension -2)`. Leave out `on PART` when the file has one part or every score prints the words under one part; leave out the name for unnamed lyrics. Each line is one voice, and several lines with the same words on one part sing it together; a part takes one set of words (LYS4044). A `singer` line inside a score replaces the top level's lines for its part in that score, so one score can sing Japanese words and another English ones. A staff with no `sounds` is its singer's voice if it has one and its instrument if not; `staff m sounds both` (or `voice`, `instrument`) says so in that score, and `staff m hidden` sounds without being drawn. A part with no `staff` in the score does not sound.
 
 ```
-part melody
+part melody { lyrics words }
 section Main {
   melody { c4 d e f | g2 g | }
   lyrics words { Hap- py birth- day | to you | }

@@ -185,6 +185,43 @@ public class SingerPlaceTests
     public void AQuarterToneKeepsItsBend()
         => Assert.Equal(64.5, SungVoices.Step(60.5, 3, 0));
 
+    // Owner's note 2026-11-12: one grammar for both writings. A file written by part - each part
+    // holding its own sections, the words in a block of their own - sings its sections the same.
+    [Fact]
+    public void InTheByPartWriting_TheSameLinesSingTheSameNotes()
+    {
+        const string ByPart = """
+            tempo 4 = 120
+            time 4/4
+            key c major
+            octave relative
+            part lead {
+              clef treble
+              instrument soprano
+              lyrics words
+              section Verse { c'4 d e f | }
+              section Chorus { g'4 a b c | }
+            }
+            lyrics words {
+              section Verse { ら ら ら ら | }
+              section Chorus { な な な な | }
+            }
+            singer "neutrino/A" sings on lead in Verse
+            singer "neutrino/B" sings on lead in Chorus
+            singer "neutrino/C" sings on lead up 3 in Chorus
+            form { Verse Chorus Verse }
+            score { staff lead  lyrics words }
+            """;
+        var voices = Sung(ByPart);
+        Assert.Equal([60, 62, 64, 65, 60, 62, 64, 65], Pitches(voices.Single(v => v.Singer == "neutrino/A")));
+        Assert.Equal([67, 69, 71, 72], Pitches(voices.Single(v => v.Singer == "neutrino/B")));
+        Assert.Equal([71, 72, 74, 76], Pitches(voices.Single(v => v.Singer == "neutrino/C")));
+        // The same voices as the by-section writing of the same piece.
+        var bySection = Sung(Book("singer \"neutrino/A\" sings words on lead in Verse\nsinger \"neutrino/B\" sings words on lead in Chorus\nsinger \"neutrino/C\" sings words on lead up 3 in Chorus"));
+        foreach (var voice in voices)
+            Assert.Equal(Pitches(bySection.Single(v => v.Singer == voice.Singer)), Pitches(voice));
+    }
+
     [Fact]
     public void AVoiceWhoseSectionsAreNotPlayed_SingsNothing()
     {
