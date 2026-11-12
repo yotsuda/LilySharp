@@ -6,6 +6,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **`lyrics carol` for a singer who sings the note names prints the note names**: with `singer carol … sings solfege …`, the row of her words under her staff was empty — no track is written for words made from the notes.
 - **A row under a singer's staff is not warned about**: `lyrics solfege` under `staff alice` said that "part alice__2" did not list it — the part Lily# makes of her lines, which the writer neither wrote nor can add a track to. Any row may stand under such a staff.
 - **A section with no words is not sung on the vowel before it**: a Coda with notes and no words, right after the last chorus, was sung "u— u—" — the chorus's last syllable held on. A voice carries a vowel only as far as its section, or into a section that has words of its own; the wordless one is played by the part's instrument.
 - **A score with singer lines of its own prints a singer by those lines**: a Japanese score that says `singer alice … sings jp …` printed alice's staff with the English words of the top level's lines. Her staff is made of the lines the score reads — its own, and the file's for the parts it writes none for.

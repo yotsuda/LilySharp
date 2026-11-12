@@ -1086,7 +1086,7 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
     /// track; owner's decision 2026-11-12) places that singer's words: the track
     /// <c>Editing.SingerParts</c> writes for her, as this row's score reads her lines.</remarks>
     public string PartName => NameToken is not { } name ? SyntaxFacts.UnnamedLyricsName
-        : IsSingerWords ? Music.LyricSinger.WordsOf(Music.LyricSinger.PartOfSinger(this, name.Text)) : name.Text;
+        : IsSingerWords ? Music.LyricSinger.WordsOfSingerAt(this, name.Text) : name.Text;
 
     /// <summary>Whether the row names a singer and not a track: her words, as she sings them.</summary>
     public bool IsSingerWords => NameToken is { } name && Music.LyricSinger.SingerWordNames(this).Contains(name.Text);

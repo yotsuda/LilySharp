@@ -259,6 +259,28 @@ public class SingerPartsTests
         Assert.Contains(SemanticValidation.Run(plain), d => d.Code == DiagnosticCodes.TrackNotListedByPart);
     }
 
+    /// <summary>Owner's question 2026-11-12 (how a score has alice sing solfege): a singer line
+    /// that sings the note names, and <c>lyrics alice</c> is then those names under her staff —
+    /// no track is written for words made from the notes.</summary>
+    [Fact]
+    public void ASingerWhoSingsTheNoteNames_HasThemForHerWords()
+    {
+        var (text, tree, said) = Expanded(Book("singer carol female sings solfege on lead up 3 in Chorus", "score { staff carol  lyrics carol }"));
+        Assert.Empty(said.Select(d => d.Message));
+        Assert.DoesNotContain("__words_carol", text);
+        Assert.Empty(SingerParts.OwnOf(SemanticValidation.Run(tree), tree.Text).Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Message));
+        var staff = Assert.IsType<SingleStaffSpec>(Assert.Single(RenderSpecParser.FindAll(tree)[0].Items)).Staff;
+        Assert.Equal("carol__0", staff.VoiceName);
+        Assert.Equal(["solfege"], staff.WithLyrics);
+
+        var midi = Midi(tree);
+        var voice = Assert.Single(SungVoices.Read(midi, MidiClock.SecondsOf(midi)));
+        Assert.Equal("carol__0", voice.Part);
+        // g g a g a third above: b b c b — ti ti do ti.
+        Assert.Equal(4, voice.Notes.Count);
+        Assert.All(voice.Notes, n => Assert.False(string.IsNullOrEmpty(n.Lyric)));
+    }
+
     [Fact]
     public void ASingerTheScoresOwnLinesLeaveOut_IsSaidAtTheItem()
     {

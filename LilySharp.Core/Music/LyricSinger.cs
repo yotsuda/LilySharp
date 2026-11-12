@@ -127,6 +127,29 @@ public static class LyricSinger
         return person + ScopedMark + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    /// <summary>
+    /// The track a score's <c>lyrics NAME</c> places for the singer <paramref name="person"/>:
+    /// the words written for her staff (<see cref="WordsOf"/> of <see cref="PartOfSinger"/>), or
+    /// — where her lines sing words made from the notes (<c>sings solfege</c>) — those, which no
+    /// track holds. Her lines are the score's own where it writes any for her, else the file's;
+    /// read off the syntax alone, as <see cref="PartOfSinger"/> is.
+    /// </summary>
+    public static string WordsOfSingerAt(SyntaxNode item, string person)
+    {
+        SyntaxNode root = item;
+        RenderDeclarationSyntax? score = null;
+        while (root.Parent != null)
+        {
+            score ??= root as RenderDeclarationSyntax;
+            root = root.Parent;
+        }
+        var lines = score?.ChildNodes().OfType<SingerDeclarationSyntax>().Where(l => l.PersonToken?.Text == person).ToList() ?? [];
+        if (lines.Count == 0)
+            lines = root.ChildNodes().OfType<SingerDeclarationSyntax>().Where(l => l.PersonToken?.Text == person).ToList();
+        return lines.Select(l => l.TrackToken?.Text).FirstOrDefault(t => t != null && GeneratedLyrics.IsGenerated(t))
+            ?? WordsOf(PartOfSinger(item, person));
+    }
+
     /// <summary>Whether <paramref name="part"/> is a part made of a singer's lines
     /// (<see cref="PartOfSinger"/>: her name, the mark, a number) and not one the file writes.</summary>
     public static bool IsMadePart(SyntaxNode node, string part)

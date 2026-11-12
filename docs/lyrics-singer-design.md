@@ -329,6 +329,8 @@ the singer gets a name, and the score names the singer.
 - `lyrics NAME`, where NAME is a singer and no lyrics track, is that singer's WORDS: the
   words of the sections she sings. Under her staff it is that staff's verse; anywhere else it
   is a row of its own, at her rhythm (her words under the lead's staff).
+- A singer whose lines sing words made from the notes (`sings solfege`) has those for her
+  words: `lyrics carol` is then the note names under her staff (`LyricSinger.WordsOfSingerAt`).
 - A score prints what it says, of a singer as of a part: `staff carol` alone is her notes
   with no words (a harmony under a lead that carries the same words), `staff carol  lyrics
   carol` both, `lyrics carol` her words alone.
