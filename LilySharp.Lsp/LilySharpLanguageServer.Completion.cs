@@ -603,14 +603,18 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterSingerWords => new CompletionList { Items = [RowOnItem("0")] },
             CompletionContext.AfterSingsTarget => GetVoiceBindingNameCompletions(doc.Text,
                 "The part - or named voice - this lyrics track sings"),
-            CompletionContext.AfterChordAttachName => GetChordAttachNameCompletions(),
+            // After a row or a staff a score goes on with its next item, and `singer` is one —
+            // the staff of what a named singer sings, or this score's own singer line — where
+            // a line of its own begins (owner's report 2026-11-12: under `lyrics words` on the
+            // next line the list held every item but that one).
+            CompletionContext.AfterChordAttachName => WithSingerOnAFreshLine(GetChordAttachNameCompletions(), doc.Text, offset),
             CompletionContext.AfterChordsTrackName => GetChordsTrackNameCompletions(),
             CompletionContext.AfterChordForTarget => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
-            CompletionContext.AfterStaffAttachName => WithoutOssiaPitch(GetStaffAttachNameCompletions(), doc.Text, offset),
-            CompletionContext.AfterTabAttachName => GetTabAttachNameCompletions(),
+            CompletionContext.AfterStaffAttachName => WithSingerOnAFreshLine(WithoutOssiaPitch(GetStaffAttachNameCompletions(), doc.Text, offset), doc.Text, offset),
+            CompletionContext.AfterTabAttachName => WithSingerOnAFreshLine(GetTabAttachNameCompletions(), doc.Text, offset),
             CompletionContext.AfterGroupStaffAttachName => WithoutOssiaPitch(GetGroupStaffAttachNameCompletions(), doc.Text, offset),
             CompletionContext.AfterPartLyrics => new CompletionList { Items = [.. GetDeclaredNameCompletions(doc.Text, "lyrics", "The words this part sings").Items, .. GeneratedLyricsItems(forSinger: true)] },
-            CompletionContext.AfterLyricsRowAttachName => GetLyricsRowAttachNameCompletions(LyricsHeadAt(doc.Text, offset)?.Written),
+            CompletionContext.AfterLyricsRowAttachName => WithSingerOnAFreshLine(GetLyricsRowAttachNameCompletions(LyricsHeadAt(doc.Text, offset)?.Written), doc.Text, offset),
             CompletionContext.AfterGroupLyricsRowAttachName => GetGroupLyricsRowAttachNameCompletions(LyricsHeadAt(doc.Text, offset)?.Written),
             CompletionContext.AfterStaffLinesAs => WithoutOssiaPitch(GetStaffLinesSelectorCompletions(), doc.Text, offset),
             // `as lines 1 |` — the chain may go on (bare, sharing the one `as`) or the row

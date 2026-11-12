@@ -138,6 +138,42 @@ public class SingerStaffRequestTests
     }
 
     [Fact]
+    public void OnAFreshLineOfAScore_SingerIsOffered()
+    {
+        string source = Book.Replace("score { staff lead  lyrics words  singer carol  singer bob }",
+            "score {\n   staff lead\n   lyrics words\n   \n}");
+        var (server, uri) = Opened(source);
+        int at = source.IndexOf("lyrics words\n   ", StringComparison.Ordinal) + "lyrics words\n   ".Length;
+        var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(source, at);
+        var list = server.Completion(new CompletionParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Position = new Position(line, character),
+        });
+        Assert.Contains("singer", list!.Items.Select(i => i.Label));
+        Assert.Contains("staff", list.Items.Select(i => i.Label));
+
+        // …under a staff too, and not in the middle of a line, where the word would be the row's.
+        string underStaff = source.Replace("   lyrics words\n   \n}", "   \n}");
+        var (other, otherUri) = Opened(underStaff);
+        int under = underStaff.IndexOf("staff lead\n   ", StringComparison.Ordinal) + "staff lead\n   ".Length;
+        var (l2, c2) = LilySharpLanguageServer.GetLineAndCharacter(underStaff, under);
+        Assert.Contains("singer", other.Completion(new CompletionParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = otherUri }, Position = new Position(l2, c2),
+        })!.Items.Select(i => i.Label));
+
+        int midLine = source.IndexOf("lyrics words", StringComparison.Ordinal) + "lyrics words".Length;
+        string spaced = source.Insert(midLine, " ");
+        var (third, thirdUri) = Opened(spaced);
+        var (l3, c3) = LilySharpLanguageServer.GetLineAndCharacter(spaced, midLine + 1);
+        Assert.DoesNotContain("singer", third.Completion(new CompletionParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = thirdUri }, Position = new Position(l3, c3),
+        })!.Items.Select(i => i.Label));
+    }
+
+    [Fact]
     public void AfterSingerInAScore_TheNamedSingersAreListed_AndNotAtTheTopLevel()
     {
         string[] LabelsAt(string text, int offset)

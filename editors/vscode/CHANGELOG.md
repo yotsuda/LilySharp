@@ -4,6 +4,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **`singer` is offered on a new line of a score, under a staff or a row too**: the list under `lyrics words` or `staff lead` held every item but that one. Picking it lists the singers the file names.
 - **A score's `singer carol` is coloured as its other items are**: the word as `staff` and `lyrics` are, the name as a part's name is — and the name on the singer's own line too. A name no singer has stays plain beside its error.
 - **A harmony can be written out as a part, for a voice and for an instrument**: on a named singer's line the light bulb offers "Write carol's notes out as a part"; "Lily#: Write a Harmony Part…" in the command palette asks which part, how far (a third, a sixth … above or below along the key, an octave), which sections and the new part's name. The part is written beside the one it follows, to be mended by hand where the interval is not the note.
 - **A singer has a name, and a score prints what the singer sings**: `singer carol female sings on lead up 3 in Chorus`, then `singer carol` in a score — the preview shows carol's staff under the lead (the Chorus a third above along the key, rests where she does not sing, her words), and `score carol { singer carol }` is her own sheet. Play sings the staves the score shows.
