@@ -6,6 +6,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Found writing four large scores to try the grammar** (an orchestral movement, a piano piece, a band chart, an anthem):
+  - **A group of one staff still places its staff**: `score { staffGroup { staff fl }  staffGroup { staff vn  staff vc } }` neither drew nor played the flute, and said nothing. The staff stands ungrouped (a bracket needs two staves, as in LilyPond).
+  - **A bare `R` lasts the pickup the other parts play**: `partial 4 … b { R | … }` beside a part's upbeat warned "lasts 1/4 but part 'b' has 1".
+  - **A phrase in a section with a pickup is judged as its notes written out are**: `partial 4  m { up d'2. | }`, the phrase opening with the upbeat, warned that the "pickup" was too long (LYS2002); a second phrase after it was held to the pickup too; and a phrase ending the section with the rest of the pickup was a short bar (LYS2001).
+  - **A section's last bar is of the meter its music writes**: a 3/4 section whose music goes into `time 4/4` and ends three beats into a bar "ended on a whole bar" (LYS2022), and the pickup it left room for was refused.
 - **A MIDI file is imported**: `lysc import song.mid`, and the editor's **Import MusicXML or MIDI…** (the command palette, or a right-click on a `.mid` in the Explorer). The notes, meters, tempos and key signatures are kept as stated, with each track's name, sound (`midiInstrument`), words (`lyrics`) and — as Lily#'s own .mid names it — its voice (`singer`); channel 10 is a drum part. A .mid is a performance, so the rest is a reading, said in the report where it changes the music: onsets and ends go to sixteenths and triplet eighths (a played file is quantized), a part is two voices at most, and the spelling, the clefs and a key the file does not state are worked out. Dynamics, the pedal, pitch bends, pickups and repeats are not read.
 - **A .mid states its keys and its hyphens**: key-signature events on the first track (the major of each key), and a syllable that goes on in the next ends in a hyphen (`Morn-` `ing`).
 - **A drum chord is one item in the bar count**: `<bd hh>4 <bd hh>4 <bd hh>4 <bd hh>4` beside another part's whole bar warned that the kit's measure "lasts 3" — the chord's members, drum notes themselves, were counted beside their chord.

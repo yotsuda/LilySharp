@@ -357,7 +357,11 @@ internal sealed class CrossPartMeasureValidator
             // about how long the other parts' bars are, and reading it as one would put
             // this pass's message on the wrong bar under `time none`, where it is still
             // worth zero.
-            var present = parts.Where(p => i < p.Measures.Count && !p.Measures[i].IsEmpty).ToList();
+            // …and so is a bar that is one bare `R`: it lasts its bar, whatever that is — the
+            // pickup the other parts play (until 2026-11-12 `partial 4 … b { R | … }` beside
+            // `a { g'4 | … }` was told "lasts 1/4 but part 'b' has 1", against what the
+            // grammar says of R; two of four writers trying the grammar met it).
+            var present = parts.Where(p => i < p.Measures.Count && !p.Measures[i].IsEmpty && !p.Measures[i].IsBareRest).ToList();
             if (present.Count < 2)
                 continue;
 

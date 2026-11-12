@@ -128,7 +128,11 @@ internal sealed class SectionBoundaryBars
         foreach (var other in Neighbours(section, before: true).OrderBy(n => n, StringComparer.Ordinal))
         {
             var meter = meterOf(other);
-            if (BarsOf(other, part, meter) is { Count: > 0 } bars && !bars[^1].IsEmpty && bars[^1].Duration == meter)
+            // …of the meter that bar is IN: a `time 4/4` written in the music of a 3/4 section
+            // makes its last bar a 4/4 one (until 2026-11-12 a section ending three beats into
+            // such a bar "ended on a whole bar", LYS2022, and the pickup it left room for was
+            // refused; found writing an anthem to try the grammar).
+            if (BarsOf(other, part, meter) is { Count: > 0 } bars && !bars[^1].IsEmpty && bars[^1].Duration == (bars[^1].Meter ?? meter))
                 whole.Add(other);
         }
         return whole;
@@ -151,7 +155,8 @@ internal sealed class SectionBoundaryBars
             // judging a first bar — the predecessor's declared pickup when its edge bar IS that
             // pickup (its only bar), else a bar of the meter.
             var whole = target
-                ?? (bars.Count == 1 && _headers.Partials.TryGetValue(other, out var pickup) ? pickup.ToFraction() : meter);
+                ?? (bars.Count == 1 && _headers.Partials.TryGetValue(other, out var pickup) ? pickup.ToFraction()
+                    : before ? edge.Meter ?? meter : meter);
             if (edge.IsEmpty || edge.Duration <= Fraction.Zero || edge.Duration + bar != whole)
                 return false;
         }

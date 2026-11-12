@@ -43,6 +43,9 @@ internal sealed class MeasureValidator : ISemanticValidator
     // Set by a top-level `partial N` — the declared pickup length for every
     // voice's first measure (mirrors MeasureCollector._filePartial).
     private Fraction? _filePartial;
+    // While a phrase body that ends its stream is judged: the stream's opening pickup (null:
+    // none met) and its section — what the body's short last bar may be the rest of.
+    private (Fraction? Pickup, string? Section)? _phraseTail;
     // The SECTION HEADERS — a section's `partial` (the pickup of THAT section's opening bar,
     // the only place a structured file can declare one since 2026-09-15) and its `time` (the
     // meter of THAT section's music only; a section without one reverts to the score meter),
@@ -592,8 +595,12 @@ internal sealed class MeasureValidator : ISemanticValidator
                             + "returning 'time N/M', or drop it.");
                 }
             }
+            bool pickupInherited = false;
             if (partialLength == null && i == 0 && streamPickup is { } pickup)
+            {
                 partialLength = pickup;
+                pickupInherited = true;
+            }
             // The score's meter (SectionMeterPlan, HANDOFF §2 F-partmeter ⒜): a `time` another
             // part writes at the start of this bar of the section is this bar's meter too.
             if (cell is { } planCell && cellContainer != null
@@ -673,10 +680,21 @@ internal sealed class MeasureValidator : ISemanticValidator
                     var phraseFront = itemIndex > 0
                         ? MeasureDurations.GetSpan(barItems.GetRange(0, itemIndex))
                         : (TextSpan?)null;
+                    // A phrase that ENDS the stream ends it with its own last bar: a short one
+                    // there may be the rest of the stream's pickup, as the same notes written
+                    // inline are (`a'4 | … | d'2 |` under `partial 4` in 3/4). The body is judged
+                    // with what the stream knows of its pickup (found 2026-11-12, as above).
+                    var tailBefore = _phraseTail;
+                    _phraseTail = itemIndex == barItems.Count - 1 && i == measures.Count - 1
+                        ? (openingPickupIndex >= 0 ? openingPickupDuration : streamPickup, cell?.Section)
+                        : null;
+                    // …and only a phrase that OPENS the stream is in its pickup: after a bar
+                    // line of an earlier phrase the pickup is behind (`head b'2 tail`).
                     ValidateItemsScoped(played.Block.Items, played.Block.Position,
                         total == Fraction.Zero ? null : total, Fraction.Quarter, openTail: true,
                         leadInSpan: UnionSpans(i == 0 ? leadInSpan : null, phraseFront),
-                        inheritedPickup: i == 0 ? partialLength : null);
+                        inheritedPickup: i == 0 && renderedBarsClosed == 0 ? partialLength : null);
+                    _phraseTail = tailBefore;
                     _phrasesCheckedInPlace.Add(played.Name);
                     defaultDuration = PricePhraseBody(played.Body, Fraction.Quarter, ref total, ref renderedBarsClosed);
                 }
@@ -685,6 +703,13 @@ internal sealed class MeasureValidator : ISemanticValidator
             total += MeasureDurations.CalculateMeasureDuration(
                 barItems.GetRange(from, barItems.Count - from), ref defaultDuration, JudgeTuplet);
             var duration = total;
+            // The section's pickup is the stream's FIRST bar, and a phrase that opens the stream
+            // has played it: what the written bar line closes after the phrase's own bar lines
+            // is a later bar, a whole one. Held to the pickup it was "Pickup measure duration
+            // 3/4 exceeds the declared partial 1/4" over music the page drew right (found
+            // writing an anthem to try the grammar, 2026-11-12: `partial 4  m { up d'2. | }`).
+            if (pickupInherited && renderedBarsClosed > 0)
+                partialLength = null;
 
             // A percent mark's bar is the bars it repeats — whole bars of the meter, by the
             // check below on the bars themselves — so there is nothing to hold it to.
@@ -719,7 +744,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             // only when that bar does not already fill the meter (a later
             // section's full first bar is not the pickup). An inline `partial`
             // in the bar always wins.
-            if (partialLength == null && i == 0 && _filePartial is { } fp
+            if (partialLength == null && i == 0 && _filePartial is { } fp && renderedBarsClosed == 0
                 && duration != _bars.MeterLength)
             {
                 partialLength = fp;
@@ -757,6 +782,12 @@ internal sealed class MeasureValidator : ISemanticValidator
                     bool completesOpeningPickup = isLast
                         && openingPickupIndex >= 0 && openingPickupIndex < i
                         && openingPickupDuration + duration == expected;
+                    // ... or the pickup of the stream this phrase body ends (_phraseTail)…
+                    if (!completesOpeningPickup && isLast && _phraseTail is { } ends
+                        && ((ends.Pickup is { } opened && opened + duration == expected)
+                            || (ends.Section is { } endedSection && _boundaries != null
+                                && _boundaries.LastBarCompletesTheOpeningPickup(endedSection, duration, expected))))
+                        completesOpeningPickup = true;
                     // ... or the pickup a form opens with, in the section before this one.
                     if (!completesOpeningPickup && partialLength == null && cell is { } lastCell && renderedBarsClosed == 0
                         && (isLast || TrailingMeasuresAreSilent(measures, i + 1, defaultDuration)))

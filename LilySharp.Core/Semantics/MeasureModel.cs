@@ -51,7 +51,7 @@ internal static class MeasureModel
     /// (<see cref="WrittenBar"/> holds every other bar to its bar lines) — and whether it holds
     /// music inlined from a phrase body (whose text lies outside the scope).</summary>
     internal readonly record struct Bar(Fraction Duration, TextSpan Span, bool IsEmpty = false, int BarLineEnd = -1,
-        bool Flowed = false, bool HasPhrase = false);
+        bool Flowed = false, bool HasPhrase = false, bool IsBareRest = false, Fraction? Meter = null);
 
     /// <summary>
     /// Flattens <paramref name="scope"/> (expanding phrase references via
@@ -126,8 +126,15 @@ internal static class MeasureModel
             if (current.Count == 0)
                 return;
             IndexTheBar();
+            // A bar that is one bare `R` and nothing else lasts whatever its bar does — a pickup
+            // too, which this model does not know (IsBareRest: the cross-part check leaves it
+            // out, as it does an empty bar).
             bars.Add(new Bar(total, MeasureDurations.GetSpan(current), BarLineEnd: barLineEnd, Flowed: flows,
-                HasPhrase: phraseInBar));
+                HasPhrase: phraseInBar,
+                IsBareRest: current is [RestSyntax { MeasureCount: <= 1 } only] && Music.BarRest.IsBare(only),
+                // The meter in force where the bar closed: a `time` written in the music is not
+                // the section header's (SectionBoundaryBars judges an edge bar by it).
+                Meter: senzaMisura ? null : meter));
             current = new List<SyntaxNode>();
             total = Fraction.Zero;
             confirmable = false;

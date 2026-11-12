@@ -149,9 +149,7 @@ public static class RenderSpecParser
             switch (child)
             {
                 case GrandStaffRenderSyntax grandStaff when !IsInsideGrandStaff(grandStaff):
-                    var grandSpec = ParseGrandStaff(grandStaff);
-                    if (grandSpec != null)
-                        items.Add(new GrandStaffRenderSpec(grandSpec));
+                    items.AddRange(GroupItems(grandStaff));
                     break;
 
                 case CondensedStaffRenderSyntax condensed when !IsInsideGrandStaff(condensed):
@@ -745,9 +743,26 @@ public static class RenderSpecParser
         return new CombinedStaffSpec(clef, names);
     }
 
-    private static GrandStaffSpec? ParseGrandStaff(GrandStaffRenderSyntax grandStaff)
+    /// <summary>
+    /// What a group block places: the group, or — of a group with fewer than two staves — what
+    /// it holds, ungrouped.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ UNTIL 2026-11-12 A GROUP OF ONE STAFF PLACED NOTHING: `score { staffGroup { staff fl }
+    /// staffGroup { staff vn  staff vc } }` neither drew nor played the flute, and said nothing
+    /// (found writing an orchestral score to try the grammar: the winds of a small band are one
+    /// player). A bracket needs two staves to be drawn — LilyPond draws none on one
+    /// (SystemStartBracket's collapse-height) — but the staff is still the score's.
+    /// </remarks>
+    private static IEnumerable<RenderItemSpec> GroupItems(GrandStaffRenderSyntax grandStaff)
     {
-        var members = new List<RenderItemSpec>();
+        var spec = ParseGrandStaff(grandStaff, out var members);
+        return spec != null ? [new GrandStaffRenderSpec(spec)] : members;
+    }
+
+    private static GrandStaffSpec? ParseGrandStaff(GrandStaffRenderSyntax grandStaff, out List<RenderItemSpec> members)
+    {
+        members = new List<RenderItemSpec>();
 
         // Members in written order: `staff`, `condensedStaff` and `combinedStaff` items
         // each open one staff (the same specs the top level builds), and a bound
@@ -772,10 +787,9 @@ public static class RenderSpecParser
                     members.Add(ParseCombinedStaff(combined));
                     break;
                 // A grandStaff one level inside a bracket (the parser admits it only there).
-                // A nested group of fewer than two staves is dropped, as a top-level one is.
+                // A nested group of fewer than two staves is its staff, as a top-level one is.
                 case GrandStaffRenderSyntax inner:
-                    if (ParseGrandStaff(inner) is { } innerSpec)
-                        members.Add(new GrandStaffRenderSpec(innerSpec));
+                    members.AddRange(GroupItems(inner));
                     break;
                 case LyricsRowRenderSyntax row when members.Count > 0
                     && members[^1] is SingleStaffSpec above
