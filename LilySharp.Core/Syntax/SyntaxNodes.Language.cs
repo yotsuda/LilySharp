@@ -279,7 +279,8 @@ public sealed class SingerDeclarationSyntax : SyntaxNode
             var names = new List<SyntaxTokenNode>();
             for (int k = i + 1; k < SlotCount; k++)
             {
-                if (GetChild(k) is not SyntaxTokenNode { Kind: SyntaxKind.Identifier } name || ReferenceEquals(name, WithKeyword))
+                // …to the line's settings, or to the next place clause (they come in any order).
+                if (GetChild(k) is not SyntaxTokenNode { Kind: SyntaxKind.Identifier } name || ReferenceEquals(name, WithKeyword) || IsPlaceWordAt(k))
                     break;
                 names.Add(name);
             }

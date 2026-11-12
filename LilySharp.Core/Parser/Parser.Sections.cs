@@ -299,20 +299,36 @@ internal sealed partial class Parser
             if (IsHeadWord() && !Music.LyricSinger.Genders.Contains(Current.Text.ToLowerInvariant())
                 && Music.LyricLanguage.CodeOf(Current.Text) == null)
                 tokens.Add(Advance());
-            bool gendered = false;
+            bool gendered = false, spoken = false;
             while (IsHeadWord())
             {
                 var word = Advance();
-                if (Music.LyricLanguage.CodeOf(word.Text) == null)
-                {
+                bool language = Music.LyricLanguage.CodeOf(word.Text) != null;
+                // Each once: `singer aya female male` said two genders and kept the first, unsaid.
+                if (language ? spoken : gendered && Music.LyricSinger.Genders.Contains(word.Text))
+                    _diagnostics.Error(new TextSpan(_textPosition - word.FullWidth + word.LeadingTriviaWidth, Math.Max(1, word.Width)),
+                        DiagnosticCodes.SingerGenderUnknown,
+                        language ? $"'{word.Text}': a singer line says one language." : $"'{word.Text}': a singer line says one gender.");
+                else if (!language)
                     CheckSingerGender(word);
+                if (language)
+                    spoken = true;
+                else
                     gendered = true;
-                }
                 tokens.Add(word);
             }
             if (Check(SyntaxKind.StringLiteral))
             {
                 tokens.Add(ParseSingerName(allowEmpty: gendered));
+                // What the singer is comes BEFORE the voice: said where it is written after it
+                // (`singer aya "x/y" female on lead` was "neither on nor sings is here").
+                while (IsHeadWord() && (Music.LyricSinger.Genders.Contains(Current.Text) || Music.LyricLanguage.CodeOf(Current.Text) != null))
+                {
+                    _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Math.Max(1, Current.Text.Length)),
+                        DiagnosticCodes.SingerGenderUnknown,
+                        $"'{Current.Text}' comes before the voice's name: singer aya {Current.Text} \"engine/voice\" on PART.");
+                    tokens.Add(Advance());
+                }
             }
         }
         // The line's two clauses: `on PART`, whose notes are sung, and `sings [WORDS]`, which words.
@@ -374,8 +390,12 @@ internal sealed partial class Parser
                 word == "transpose"
                     ? "'transpose' is not a word of a singer line. To have the voice sing higher or lower than its part, "
                       + "write 'up 3' (a third above, in the key), 'down 6' or 'octave -1' after the part."
-                    : $"'{word}' is not a word of a singer line: after the part come 'up N' or 'down N', 'octave N', "
-                      + "'in SECTION …', then 'with' and the voice's settings. Another statement goes on a line of its own.");
+                    : word == "sings"
+                    ? "'sings WORDS' comes right after the part, before what of it is sung: singer S on PART sings WORDS up 3 in Chorus."
+                    : word == "on"
+                    ? "'on PART' comes before what of the part is sung: singer S on PART up 3 in Chorus."
+                    : $"'{word}' is not a word of a singer line: after the part come 'up N' or 'down N', 'octave N' and "
+                      + "'in SECTION …', in any order, then 'with' and the voice's settings. Another statement goes on a line of its own.");
             while (!BeginsLine() && !Check(SyntaxKind.EndOfFile))
                 tokens.Add(Advance());
         }
@@ -403,34 +423,56 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// <c>[up N | down N] [octave N] [in SECTION …]</c> after the part, in that order, each a
-    /// word of the line and its value made plain identifiers and numbers for the readers
-    /// (<see cref="SingerDeclarationSyntax.Interval"/>, <c>Octaves</c>, <c>Sections</c>).
+    /// <c>[up N | down N] [octave N] [in SECTION …]</c> after the part and its words, IN ANY ORDER
+    /// (owner's decision 2026-11-12, after the evaluation scores: <c>in Chorus up 3</c> is how it
+    /// is said, and was two errors), each once: a word of the line and its value made plain
+    /// identifiers and numbers for the readers (<see cref="SingerDeclarationSyntax.Interval"/>,
+    /// <c>Octaves</c>, <c>Sections</c>).
     /// </summary>
     private void ParseSingerPlace(List<SyntaxToken> tokens)
     {
-        if (IsSingerPlace() && Current.Text is SyntaxFacts.SingerUpWord or SyntaxFacts.SingerDownWord)
+        bool interval = false, octave = false, sections = false;
+        while (IsSingerPlace())
         {
-            tokens.Add(AdvanceAsWord());
-            tokens.Add(Advance());
-        }
-        if (IsSingerPlace() && Current.Text == SyntaxFacts.SingerOctaveWord)
-        {
-            tokens.Add(AdvanceAsWord());
-            if (Check(SyntaxKind.Minus) || Check(SyntaxKind.Plus))
-                tokens.Add(Advance());
-            if (Check(SyntaxKind.IntegerLiteral) && !BeginsLine())
-                tokens.Add(Advance());
-            else
-                _diagnostics.Error(new TextSpan(_textPosition - 1, 1), DiagnosticCodes.SingerPlaceMalformed,
-                    "'octave' on a singer line takes how many: octave -1 sings an octave lower.");
-        }
-        if (IsSingerPlace() && Current.Text == SyntaxFacts.SingerInWord)
-        {
-            tokens.Add(AdvanceAsWord());
-            // Every section named, to the end of the line or to the voice's settings.
-            while (IsSettingWord(Current) && !BeginsLine() && !IsSingerWith())
+            string word = Current.Text;
+            bool again = word switch
+            {
+                SyntaxFacts.SingerUpWord or SyntaxFacts.SingerDownWord => interval,
+                SyntaxFacts.SingerOctaveWord => octave,
+                _ => sections,
+            };
+            if (again)
+                _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Math.Max(1, word.Length)), DiagnosticCodes.SingerPlaceMalformed,
+                    word is SyntaxFacts.SingerUpWord or SyntaxFacts.SingerDownWord
+                        ? "A singer line says one interval: 'up N' or 'down N', once."
+                        : $"'{word}' is written twice on this singer line.");
+            if (word is SyntaxFacts.SingerUpWord or SyntaxFacts.SingerDownWord)
+            {
+                interval = true;
                 tokens.Add(AdvanceAsWord());
+                tokens.Add(Advance());
+            }
+            else if (word == SyntaxFacts.SingerOctaveWord)
+            {
+                octave = true;
+                tokens.Add(AdvanceAsWord());
+                if (Check(SyntaxKind.Minus) || Check(SyntaxKind.Plus))
+                    tokens.Add(Advance());
+                if (Check(SyntaxKind.IntegerLiteral) && !BeginsLine())
+                    tokens.Add(Advance());
+                else
+                    _diagnostics.Error(new TextSpan(_textPosition - 1, 1), DiagnosticCodes.SingerPlaceMalformed,
+                        "'octave' on a singer line takes how many: octave -1 sings an octave lower.");
+            }
+            else
+            {
+                sections = true;
+                tokens.Add(AdvanceAsWord());
+                // Every section named: to the end of the line, to the voice's settings, or to
+                // the next of these clauses.
+                while (IsSettingWord(Current) && !BeginsLine() && !IsSingerWith() && !IsSingerPlace())
+                    tokens.Add(AdvanceAsWord());
+            }
         }
     }
 

@@ -530,6 +530,39 @@ public class SingerPartsTests
         Assert.Equal(8, one.Notes.Count);
     }
 
+    /// <summary><c>in Chorus up 3</c> is how it is said, and was two errors ("no section is named
+    /// up", "'3' is not a word of a singer line"): what of the part is sung comes in any order.</summary>
+    [Theory]
+    [InlineData("singer carol female on lead in Chorus up 3")]
+    [InlineData("singer carol female on lead octave -1 in Chorus up 3")]
+    [InlineData("singer carol female on lead up 3 octave -1 in Chorus")]
+    [InlineData("singer carol female on lead in Chorus octave -1 up 3 with breathiness 2")]
+    public void WhatOfThePartIsSung_ComesInAnyOrder(string line)
+    {
+        var tree = SyntaxTree.Parse(Book(line, "score { staff lead  lyrics words }"));
+        Assert.Empty(tree.Diagnostics.Select(d => d.Message));
+        Assert.Empty(SemanticValidation.Run(tree).Where(d => d.Severity == DiagnosticSeverity.Error).Select(d => d.Message));
+        var node = tree.GetRoot().DescendantNodes<SingerDeclarationSyntax>().Single();
+        Assert.Equal(3, node.Interval);
+        Assert.Equal(["Chorus"], node.Sections.Select(s => s.Text));
+        if (line.Contains("octave"))
+            Assert.Equal(-1, node.Octaves);
+    }
+
+    /// <summary>The slips the evaluation scores made, each said where it is and how to write it.</summary>
+    [Theory]
+    [InlineData("singer carol \"x/y\" female on lead", "'female' comes before the voice's name")]
+    [InlineData("singer carol female male on lead", "a singer line says one gender")]
+    [InlineData("singer carol japanese english on lead", "a singer line says one language")]
+    [InlineData("singer carol female on lead up 3 sings words", "'sings WORDS' comes right after the part")]
+    [InlineData("singer carol female on lead up 3 down 2", "one interval")]
+    [InlineData("singer carol female on lead in Verse in Chorus", "'in' is written twice")]
+    public void ASlipOfOrder_IsSaidAsWhatItIs(string line, string says)
+    {
+        var tree = SyntaxTree.Parse(Book(line, "score { staff lead  lyrics words }"));
+        Assert.Contains(says, Assert.Single(tree.Diagnostics).Message);
+    }
+
     [Fact]
     public void ASingerTheScoresOwnLinesLeaveOut_IsSaidAtTheItem()
     {

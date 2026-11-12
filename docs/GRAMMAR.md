@@ -286,8 +286,7 @@ CapoDecl       = 'capo' , Integer ;                    (* 1..11; to the end of i
 ChordShapesDecl = 'chordShapes' , ShapeTable ;
 LanguageDecl   = 'language' , LanguageName ;
 SingerDecl     = 'singer' , [ SingerValue ] , SingerSung ,                                      (* SingerValue: below *)
-                 [ ( 'up' | 'down' ) , Integer ] , [ 'octave' , [ '-' | '+' ] , Integer ] ,
-                 [ 'in' , Identifier , { Identifier } ] ,
+                 { SingerPlace } ,                      (* each of the three once, in any order *)
                  [ 'with' , SingerSetting , { SingerSetting } ] ;
 SingerSung     = 'on' , PartRef , [ 'sings' , [ Identifier ] ]      (* THE PART FIRST — the standard *)
                | 'sings' , [ Identifier ] , [ 'on' , PartRef ] ;    (* the older order, read as it was *)
@@ -296,6 +295,8 @@ SingerSung     = 'on' , PartRef , [ 'sings' , [ Identifier ] ]      (* THE PART 
                     be named — a part that names its words needs no 'sings'. Once the part is
                     said the editor lists the words that part names. A line with neither 'on' nor
                     'sings' is LYS4041. *)
+SingerPlace    = ( 'up' | 'down' ) , Integer | 'octave' , [ '-' | '+' ] , Integer
+               | 'in' , Identifier , { Identifier } ;
 SingerSetting  = Word , { '.' , Word } , ( [ '-' ] , Number | Word | String ) ;
                  (* WHAT OF THE PART THE VOICE SINGS (owner's decisions 2026-11-12,
                     docs/lyrics-singer-design.md §12) — a band's way of saying it: this section A
@@ -311,6 +312,9 @@ SingerSetting  = Word , { '.' , Word } , ( [ '-' ] , Number | Word | String ) ;
                     sings it alike; a score prints the harmony where it names the singer
                     ('staff NAME', a ScoreItem). Several lines on one
                     part sing together, each its own sections and its own interval.
+                    The three come in ANY ORDER, each once (2026-11-12: 'in Chorus up 3' reads as
+                    'up 3 in Chorus' does) — a second one, or a second 'on' or 'sings' after
+                    them, is an error that says so.
                     An interval or an octave that is none, and a section the file does not
                     have, are LYS4059. The four words are words only here: a track or a part may
                     still be called up, down or in.

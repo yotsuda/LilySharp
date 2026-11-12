@@ -744,7 +744,7 @@ export interface SingParameter {
 /** What of its part a singer line sings, as it stands between the part and `with` (owner's
  *  decisions 2026-11-12): `up 3` / `down 3`, `octave -1`, `in Chorus Bridge` — each optional, in
  *  that order; a section is never called with. */
-const SINGER_PLACE = String.raw`(?:[ \t]+(?:up|down)[ \t]+\d+)?(?:[ \t]+octave[ \t]+[-+]?\d+)?(?:[ \t]+in(?:[ \t]+(?!with(?![\w-]))[\w-]+)+)?`;
+const SINGER_PLACE = String.raw`(?:[ \t]+(?:(?:up|down)[ \t]+\d+|octave[ \t]+[-+]?\d+|in(?:[ \t]+(?!(?:with|up|down|octave)(?![\w-]))[\w-]+)+))*`;
 
 /**
  * Where the caret stands in a singer line's settings (owner's decisions 2026-11-12:

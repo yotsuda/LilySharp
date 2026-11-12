@@ -279,11 +279,17 @@ public sealed partial class LilySharpLanguageServer
         var words = placeWords;
         // The word being written is the editor's to match against the list.
         int complete = char.IsWhiteSpace(tail[^1]) ? words.Length : words.Length - 1;
-        bool interval = false, octave = false;
+        // The three clauses come in any order, each once (2026-11-12): the list holds the ones not
+        // yet written — and, while a list of sections is open, the sections not yet named too.
+        bool interval = false, octave = false, sections = false, listOpen = false;
+        var named = new HashSet<string>(StringComparer.Ordinal);
+        static bool IsPlaceWord(string w) => w is LilySharp.Core.Music.LyricSinger.UpWord or LilySharp.Core.Music.LyricSinger.DownWord
+            or LilySharp.Core.Music.LyricSinger.OctaveWord or LilySharp.Core.Music.LyricSinger.InWord;
         for (int i = 0; i < complete;)
         {
             string word = words[i];
-            if (!interval && !octave && word is LilySharp.Core.Music.LyricSinger.UpWord or LilySharp.Core.Music.LyricSinger.DownWord)
+            listOpen = false;
+            if (!interval && word is LilySharp.Core.Music.LyricSinger.UpWord or LilySharp.Core.Music.LyricSinger.DownWord)
             {
                 if (i + 1 >= complete)
                     return Numbers(["3", "6", "4", "5", "2", "8"], word == LilySharp.Core.Music.LyricSinger.UpWord
@@ -298,23 +304,17 @@ public sealed partial class LilySharpLanguageServer
                 octave = true;
                 i += 2;
             }
-            else if (word == LilySharp.Core.Music.LyricSinger.InWord)
+            else if (!sections && word == LilySharp.Core.Music.LyricSinger.InWord)
             {
-                var named = new HashSet<string>(words[(i + 1)..complete], StringComparer.Ordinal);
-                if (named.Contains(LilySharp.Core.Music.LyricSinger.WithWord))
-                    return null;
-                var sections = new List<CompletionItem>();
-                foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(text, @"(?m)^[ \t]*section[ \t]+([\w-]+)"))
+                sections = true;
+                i++;
+                while (i < complete && !IsPlaceWord(words[i]))
                 {
-                    string name = m.Groups[1].Value;
-                    if (named.Add(name))
-                        sections.Add(new CompletionItem
-                        {
-                            Label = name, Kind = CompletionItemKind.Reference,
-                            Detail = "The voice sings in this section", SortText = sections.Count.ToString("000"),
-                        });
+                    if (words[i] == LilySharp.Core.Music.LyricSinger.WithWord)
+                        return null;
+                    named.Add(words[i++]);
                 }
-                return [.. sections];
+                listOpen = i >= complete;
             }
             else
             {
@@ -322,6 +322,22 @@ public sealed partial class LilySharpLanguageServer
             }
         }
         var items = new List<CompletionItem>();
+        if (listOpen)
+        {
+            foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(text, @"(?m)^[ \t]*section[ \t]+([\w-]+)"))
+            {
+                string name = m.Groups[1].Value;
+                if (named.Add(name))
+                    items.Add(new CompletionItem
+                    {
+                        Label = name, Kind = CompletionItemKind.Reference,
+                        Detail = "The voice sings in this section", SortText = items.Count.ToString("000"),
+                    });
+            }
+            // No section named yet: only the sections belong here.
+            if (named.Count == items.Count)
+                return [.. items];
+        }
         void Word(string word, string detail) => items.Add(new CompletionItem
         {
             Label = word, Kind = CompletionItemKind.Keyword, Detail = detail, InsertText = word + " ",
@@ -331,14 +347,15 @@ public sealed partial class LilySharpLanguageServer
         // Right after the part: `sings`, to name the words where the part names several, or none.
         if (mayNameWords && complete == 0)
             Word("sings", "Name the words this voice sings, where the part does not say which");
-        if (!interval && !octave)
+        if (!interval)
         {
             Word(LilySharp.Core.Music.LyricSinger.UpWord, "Sing above the part's notes, in the key: up 3 is a third above");
             Word(LilySharp.Core.Music.LyricSinger.DownWord, "Sing below the part's notes, in the key: down 6 is a sixth below");
         }
         if (!octave)
             Word(LilySharp.Core.Music.LyricSinger.OctaveWord, "Sing octaves above the part's notes, or below: octave -1");
-        Word(LilySharp.Core.Music.LyricSinger.InWord, "Sing only in the sections named: in Chorus Bridge");
+        if (!sections)
+            Word(LilySharp.Core.Music.LyricSinger.InWord, "Sing only in the sections named: in Chorus Bridge");
         return [.. items];
 
         static CompletionItem[] Numbers(string[] values, string detail)

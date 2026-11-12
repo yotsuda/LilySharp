@@ -294,7 +294,9 @@ more, and every engine sings a line's interval alike.
 - Refused (LYS4059): an interval under a second or over two octaves, an octave of 0 or past 3,
   a section the file has not. The same voice on the same words in other sections, or at
   another interval, is not a repeat (LYS4053).
-- The editor: after the part the server lists `up`, `down`, `octave`, `in` in their order,
+- The three come in any order, each once (2026-11-12, after the evaluation scores: `in Chorus
+  up 3` was refused though it reads as well); a second one is an error that says which.
+- The editor: after the part the server lists those of `up`, `down`, `octave`, `in` not yet written,
   each once, their numbers, and the sections not yet named; the step keys move the numbers.
 
 Where nobody sings (owner's decision 2026-11-12, the same day): a part with a singer line is

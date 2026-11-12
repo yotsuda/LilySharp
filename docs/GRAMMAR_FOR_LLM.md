@@ -22,7 +22,7 @@ poet "Poet"             // optional: the left end of the composer's line (\heade
                         //   singer "c/d" on lead sings words up 3 in Chorus      — a third above, in the key, in the Chorus
                         //   singer male on lead sings words octave -1            — an octave below
                         // (order: the singer, `on PART`, `sings WORDS` only where the words must be named, then
-                        //  up/down N, octave N, in SECTIONS, then `with` and the voice's settings).
+                        //  up/down N, octave N, in SECTIONS in any order, each once, then `with` and the voice's settings).
                         // Several singer lines on one part sing together. Do not write a harmony part
                         // by hand when it is a third or a sixth along the key: write `up 3` / `down 6`.
                         // TO PRINT WHAT A SINGER SINGS, give the singer a name and name it in the score:

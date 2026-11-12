@@ -198,18 +198,22 @@ public class LyricsTrackBodyCompletionTests
     }
 
     // What of the part the line sings is this server's to list (owner's decisions 2026-11-12):
-    // the words in their order, each once, the numbers, the sections not yet named.
+    // the words, each once, the numbers, the sections not yet named. In any order since the same
+    // day's evening (`in Chorus up 3` is how it is said): what is not yet written is offered.
     [Theory]
     [InlineData("singer \"a/b\" sings words on lead ▮", "up down octave in")]
     [InlineData("singer \"a/b\" sings words on lead u▮", "up down octave in")]          // the editor matches the letters
     [InlineData("singer \"a/b\" sings words on lead up ▮", "3 6 4 5 2 8")]
     [InlineData("singer \"a/b\" sings words on lead up 3 ▮", "octave in")]
     [InlineData("singer \"a/b\" sings words on lead octave ▮", "-1 1 -2 2")]
-    [InlineData("singer \"a/b\" sings words on lead octave -1 ▮", "in")]
+    [InlineData("singer \"a/b\" sings words on lead octave -1 ▮", "up down in")]
     [InlineData("singer \"a/b\" sings words on lead down 6 octave 1 ▮", "in")]
     [InlineData("singer \"a/b\" sings words on lead in ▮", "A B")]
-    [InlineData("singer \"a/b\" sings words on lead up 3 in A ▮", "B")]
-    [InlineData("singer \"a/b\" sings words on lead in A B ▮", "")]
+    [InlineData("singer \"a/b\" sings words on lead up 3 in A ▮", "B octave")]
+    [InlineData("singer \"a/b\" sings words on lead in A B ▮", "up down octave")]
+    [InlineData("singer \"a/b\" sings words on lead in A up ▮", "3 6 4 5 2 8")]
+    [InlineData("singer \"a/b\" sings words on lead in A up 3 ▮", "octave")]
+    [InlineData("singer aya female on lead in B ▮", "A up down octave")]
     public void WhatOfThePartALineSings_IsListedInItsOrder(string line, string offered)
     {
         var (text, offset) = At("part lead { }\nsection A { lead { c'1 | } }\nsection B { lead { c'1 | } }\nlyrics words { la | }\n" + line + "\nform { A B }\nscore { staff lead }\n");
