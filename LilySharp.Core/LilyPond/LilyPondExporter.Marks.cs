@@ -99,6 +99,22 @@ public sealed partial class LilyPondExporter
                 case MusicMarkSyntax mk when Fingering(mk) is { } fg:
                     suffix.Append(fg);
                     break;
+                // @trill(sharp) (owner's decision 2026-11-12): the ornament, and its accidental
+                // as a small markup over it. LilyPond has no accidental on a Script, so the
+                // twin is the idiom its own documentation uses for an inflected ornament.
+                // LILYPOND-REF: scm/define-markup-commands.scm (sharp / flat / natural markups);
+                //   ly/script-init.ly trill, turn, reverseturn, mordent, prall, prallprall.
+                case MusicMarkSyntax mk when Semantics.AnnotationValues.OrnamentAccidental(mk) is { } orn:
+                    suffix.Append(orn.Ornament switch
+                    {
+                        ArticulationType.Trill => "\\trill",
+                        ArticulationType.Turn => "\\turn",
+                        ArticulationType.InvertedTurn => "\\reverseturn",
+                        ArticulationType.Mordent => "\\mordent",
+                        ArticulationType.PrallTriller => "\\prallprall",
+                        _ => "\\prall",
+                    }).Append("^\\markup { \\teeny \\").Append(orn.Accidental).Append(" }");
+                    break;
                 // A FEATHERED BEAM is a property of the Beam grob, not a post-event, so it is
                 // written before the note that opens the beam — the grob is created at that
                 // moment and takes the `\once` value. The same shape as the stem-direction

@@ -3148,6 +3148,7 @@ public sealed class MusicXmlExporter
         _tempoStated = true;
         _tempoBeatUnit = value.BeatUnit ?? 4;
         _tempoBeatDots = value.BeatDots;
+        _tempoHiddenWords = value.CountHidden ? value.Marking ?? "" : null;
         // A mid-piece tempo change emits a metronome direction at this point; the
         // initial tempo is carried by the first measure's attributes direction.
         if (_currentMeasure != null && (_currentMeasure.Notes.Count > 0 || _currentMeasure.Number > 1))
@@ -3162,7 +3163,11 @@ public sealed class MusicXmlExporter
 
     /// <summary>The running tempo as a direction — the ONE place the three numbers meet.</summary>
     private MusicXmlDirection TempoDirection()
-        => new() { Tempo = _tempo, TempoBeatUnit = _tempoBeatUnit, TempoBeatDots = _tempoBeatDots };
+        => new() { Tempo = _tempo, TempoBeatUnit = _tempoBeatUnit, TempoBeatDots = _tempoBeatDots, TempoHiddenWords = _tempoHiddenWords };
+
+    /// <summary>The words of the running tempo when its count is played and not printed
+    /// (<c>tempo "Tempo I" 4 = 92 bare</c>, 2026-11-12), or null for a printed count.</summary>
+    private string? _tempoHiddenWords;
 
     /// <summary>True once the source has stated a tempo. Until then the running
     /// <see cref="_tempo"/> is only the playback default, which the page does not print.</summary>
@@ -3544,7 +3549,7 @@ public sealed class MusicXmlExporter
 
         WriteStemTremolo(note.Tremolo, xmlNote);
         // Process articulations and slurs
-        ProcessArticulations(note.Articulations, xmlNote, host: note.SourceStart);
+        ProcessArticulations(Semantics.ArticulationRuns.WithCovering(note, note.Articulations), xmlNote, host: note.SourceStart);
 
         // Tie pairing: a preceding '~' ends on this note (tie-stop); a '~' on
         // this note (sibling or articulation) starts a tie to the next note.
@@ -3811,8 +3816,8 @@ public sealed class MusicXmlExporter
                 SourcePosition = pitch.SourceStart,
             };
             if (first)
-                ProcessArticulations(
-                    pitch.Articulations.Where(a => a is not StringNumberAnnotationSyntax), xmlNote);
+                ProcessArticulations(Semantics.ArticulationRuns.WithCovering(pitch,
+                    pitch.Articulations.Where(a => a is not StringNumberAnnotationSyntax)), xmlNote);
             if (stringNumber is { } s)
                 xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", s));
             if (first && slurStart) xmlNote.SlurStart = true;
@@ -3913,7 +3918,7 @@ public sealed class MusicXmlExporter
             NormalNotes = tupletNormal,
             Notehead = "slash",
         };
-        ProcessArticulations(slash.Articulations, xmlNote, host: slash.SourceStart);
+        ProcessArticulations(Semantics.ArticulationRuns.WithCovering(slash, slash.Articulations), xmlNote, host: slash.SourceStart);
         // A slash ties to the next slash exactly as a note ties to the next note (`/8~ | /4`,
         // the page's CreateSlashNoteItem reads the same `~`). ⚠️ Until 2026-09-29 (HANDOFF
         // §1.1 第662 ⑻) this arm paired no tie at all: the `~` on a slash wrote a start with
@@ -3958,7 +3963,7 @@ public sealed class MusicXmlExporter
                     var xmlNote = DrumChordMember(drum, durationTicks, type, dots, !isFirst,
                         tupletActual, tupletNormal, WritesParenthesize(drums.Articulations));
                     if (isFirst)
-                        ProcessArticulations(bare.Articulations, xmlNote, host: bare.SourceStart);
+                        ProcessArticulations(Semantics.ArticulationRuns.WithCovering(bare, bare.Articulations), xmlNote, host: bare.SourceStart);
                     isFirst = false;
                     _currentMeasure.Notes.Add(xmlNote);
                     _chordMembers.Add(xmlNote);
@@ -3984,7 +3989,7 @@ public sealed class MusicXmlExporter
                     ActualNotes = tupletActual,
                     NormalNotes = tupletNormal
                 };
-                ProcessArticulations(bare.Articulations, xmlNote, host: bare.SourceStart);
+                ProcessArticulations(Semantics.ArticulationRuns.WithCovering(bare, bare.Articulations), xmlNote, host: bare.SourceStart);
                 CloseTies([xmlNote]);
                 if (bare.Articulations.OfType<TieSyntax>().Any()) OpenTies([xmlNote]);
                 _currentMeasure.Notes.Add(xmlNote);
@@ -4018,7 +4023,7 @@ public sealed class MusicXmlExporter
                     };
                     if (isFirst)
                     {
-                        ProcessArticulations(bare.Articulations, xmlNote, host: bare.SourceStart);
+                        ProcessArticulations(Semantics.ArticulationRuns.WithCovering(bare, bare.Articulations), xmlNote, host: bare.SourceStart);
                         isFirst = false;
                     }
                     _currentMeasure.Notes.Add(xmlNote);
@@ -4076,7 +4081,7 @@ public sealed class MusicXmlExporter
                 };
                 // The repeated slash ties as ProcessSlashNote's does (`/2~ | 4`): the copy
                 // ends the tie the slash opened, and its own `~` opens the next.
-                ProcessArticulations(bare.Articulations, xmlNote, host: bare.SourceStart);
+                ProcessArticulations(Semantics.ArticulationRuns.WithCovering(bare, bare.Articulations), xmlNote, host: bare.SourceStart);
                 CloseTies([xmlNote]);
                 if (bare.Articulations.OfType<TieSyntax>().Any()) OpenTies([xmlNote]);
                 _currentMeasure.Notes.Add(xmlNote);
@@ -4405,8 +4410,8 @@ public sealed class MusicXmlExporter
                 // The outside string numbers were paired above, member by member.
                 var memberMarks = chord.MemberSlurs.Select(ms => ms.Mark.SourceStart).ToHashSet();
                 ProcessArticulations(
-                    chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax
-                        && !(a is SlurSyntax s && memberMarks.Contains(s.SourceStart))), xmlNote,
+                    Semantics.ArticulationRuns.WithCovering(chord, chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax
+                        && !(a is SlurSyntax s && memberMarks.Contains(s.SourceStart)))), xmlNote,
                     host: chord.SourceStart);
                 isFirst = false;
             }
@@ -4450,8 +4455,8 @@ public sealed class MusicXmlExporter
                              && Semantics.AnnotationValues.IsArpeggioBracket(mm)))
                     _chordArpeggio = "non-arpeggiate";
                 // Every note carries its own string: an outside \N has nothing left to pair with.
-                ProcessArticulations(
-                    chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax), xmlNote);
+                ProcessArticulations(Semantics.ArticulationRuns.WithCovering(chord,
+                    chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax)), xmlNote);
                 isFirst = false;
             }
             if (_chordArpeggio == "arpeggiate")
@@ -4516,7 +4521,7 @@ public sealed class MusicXmlExporter
             if (!chordMarksTaken)
             {
                 ProcessArticulations(
-                    chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax), xmlNote, host: chord.SourceStart);
+                    Semantics.ArticulationRuns.WithCovering(chord, chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax)), xmlNote, host: chord.SourceStart);
                 chordMarksTaken = true;
             }
             ProcessArticulations(drum.Articulations, xmlNote, host: drum.SourceStart);
@@ -4632,7 +4637,7 @@ public sealed class MusicXmlExporter
             {
                 // The repetition's OWN post-events only — LP copies note events,
                 // not the original's articulations.
-                ProcessArticulations(rep.Articulations, xmlNote, host: rep.SourceStart);
+                ProcessArticulations(Semantics.ArticulationRuns.WithCovering(rep, rep.Articulations), xmlNote, host: rep.SourceStart);
                 isFirst = false;
             }
             _currentMeasure.Notes.Add(xmlNote);
@@ -5332,6 +5337,14 @@ public sealed class MusicXmlExporter
                 // marks (pedal, ottava, chord symbol) go on to their own reader.
                 if (Semantics.AnnotationValues.Finger(mark) is { } finger)
                     xmlNote.Technicals.Add(new System.Xml.Linq.XElement("fingering", finger));
+                // @trill(sharp) (2026-11-12): the ornament and, after it, its accidental-mark —
+                // the pair MusicXML's <ornaments> holds (MusicXmlNote.ToXml splits the '=').
+                if (Semantics.AnnotationValues.OrnamentAccidental(mark) is { } ornament
+                    && MapOrnament(ornament.Ornament) is { } ornamentElement)
+                {
+                    xmlNote.Ornaments.Add(ornamentElement);
+                    xmlNote.Ornaments.Add("accidental-mark=" + ornament.Accidental);
+                }
                 if (mark.IsSpanEnd && Semantics.AnnotationValues.IsPhrasingSlurName(mark.Name)
                     && !RefusedSlur(mark.SourceStart, close: true))
                     xmlNote.ExtraNotations.Add(PhrasingSlurNotation("stop"));

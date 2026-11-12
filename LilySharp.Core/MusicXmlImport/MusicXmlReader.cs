@@ -1193,7 +1193,14 @@ internal static class MusicXmlReader
             foreach (var o in Local(notations, "ornaments")?.Elements() ?? Enumerable.Empty<XElement>())
             {
                 if (OrnamentMark(o.Name.LocalName) is { } mark && !note.Articulations.Contains(mark))
+                {
+                    // The accidental-mark after an ornament is its accidental: @trill(sharp)
+                    // (2026-11-12). Any other accidental is left to the plain ornament.
+                    if (o.ElementsAfterSelf().FirstOrDefault() is { } next && next.Name.LocalName == "accidental-mark"
+                        && next.Value.Trim() is "sharp" or "flat" or "natural")
+                        mark += "(" + next.Value.Trim() + ")";
                     note.Articulations.Add(mark);
+                }
                 // A single-note tremolo (<tremolo type="single">N</tremolo>): N beams
                 // print as a :value slash (1 beam = :8, 2 = :16, 3 = :32), on top of the note's
                 // own beams: one mark on an eighth is :16, where it read :8, shorter than nothing.

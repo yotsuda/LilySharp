@@ -615,6 +615,12 @@ public static class DiagnosticCodes
     /// sixteenths whatever it said (reported 2026-09-26).</remarks>
     public const string UnsupportedSwingValue = "LYS0034";
 
+    /// <summary>Warning: a tempo's <c>bare</c> that leaves nothing on the page or hides nothing —
+    /// <c>tempo 4 = 92 bare</c> (the count is hidden and there are no words: the tempo sounds and
+    /// prints nothing) or <c>tempo "Tempo I" bare</c> (no count to hide). The message says what to
+    /// write. Owner's decision 2026-11-12, grammar evaluation 2.</summary>
+    public const string TempoBareHidesNothing = "LYS0044";
+
     /// <summary>Error: octave marks after a chord-from-a-shape's <c>)</c> — <c>diagram(C x32013)'</c>.
     /// The item's notes are where the strings are (owner's decision 2026-09-28: absolute, never
     /// moved by marks, the relative frame or <c>octave absolute</c>); the marks are ignored and

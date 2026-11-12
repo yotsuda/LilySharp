@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 324 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **450** | |
+| `OWN` | 326 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **452** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（324 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（326 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -390,6 +390,8 @@
 ### `LilySharp.Core/Semantics/AnnotationValues.cs`
 - **`AnnotationValues.Sing`** LILYSHARP-OWN: LilyPond writes no sound; what is written here is heard from a
 - **`AnnotationValues.Vibrato`** LILYSHARP-OWN: LilyPond has no vibrato script; what is written here is heard, not engraved.
+### `LilySharp.Core/Semantics/ArticulationRuns.cs`
+- **`ArticulationRuns`** LILYSHARP-OWN: LilyPond has no such spanner; its twin writes the script on each note.
 ### `LilySharp.Core/Semantics/CapoAdvisor.cs`
 - **`CapoAdvisor`** the barres and before the fret itself in the ranking. LILYSHARP-OWN: LilyPond has nothing
 ### `LilySharp.Core/Semantics/ChordAnnotation.cs`
@@ -709,6 +711,8 @@
 ### `LilySharp.Core/Svg/Layout/VoltaBracketEngraver.cs`
 - **`VoltaBracketEngraver.Bounds`** ⚠️ LILYSHARP-OWN: that column's X extent is taken as EMPTY, where
 - **`VoltaBracketEngraver.BarWalk`** ⚠️ LILYSHARP-OWN: the plain bar lines inside a compressed multi-measure rest, which the
+### `LilySharp.Core/Svg/Model/ArticulationItem.cs`
+- **`ArticulationItem.AccidentalOfOrnament`** LILYSHARP-OWN: LilyPond has no accidental on a Script; its twin writes the accidental
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
 - **`FiguredBassItem.ParseFigures`** LILYSHARP-OWN: the @figuredBass(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`

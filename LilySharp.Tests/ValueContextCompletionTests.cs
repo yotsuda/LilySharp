@@ -125,7 +125,9 @@ public class ValueContextCompletionTests
     {
         var header = LabelsAtEnd("tempo 100 ");
         Assert.Equal("swing", header[0]);
-        Assert.All(header, l => Assert.Contains(l.Split(' ')[0], new[] { "swing", "shuffle" }));
+        // …and `bare`, the count played and not printed (2026-11-12), after them.
+        Assert.All(header, l => Assert.Contains(l.Split(' ')[0], new[] { "swing", "shuffle", "bare" }));
+        Assert.Equal("bare", header[^1]);
 
         var music = LabelsAtEnd("part m { clef treble }\nsection A { m { c4 tempo 96 ");
         Assert.Equal("swing", music[0]);

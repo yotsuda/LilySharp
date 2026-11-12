@@ -715,6 +715,10 @@ internal sealed class MusicXmlDirection
     /// <c>tempo 2 = 60</c> came out ♩ = 60 — half the speed.</summary>
     public int TempoBeatUnit { get; set; } = 4;
     public int TempoBeatDots { get; set; }
+    /// <summary>A tempo whose count is played and not printed (<c>tempo "Tempo I" 4 = 92 bare</c>,
+    /// owner's decision 2026-11-12): its words, written as <c>&lt;words&gt;</c> in place of the
+    /// <c>&lt;metronome&gt;</c>, with the same <c>&lt;sound tempo&gt;</c>. Null for a printed count.</summary>
+    public string? TempoHiddenWords { get; set; }
     public string? Placement { get; set; }
     /// <summary>Hairpin: "crescendo" / "diminuendo" / "stop".</summary>
     public string? WedgeType { get; set; }
@@ -805,11 +809,21 @@ internal sealed class MusicXmlDirection
         XElement? sound = null;
         if (Tempo.HasValue)
         {
-            var metronome = new XElement("metronome", new XElement("beat-unit", BeatUnitName(TempoBeatUnit)));
-            for (int i = 0; i < TempoBeatDots; i++)
-                metronome.Add(new XElement("beat-unit-dot"));
-            metronome.Add(new XElement("per-minute", Tempo.Value));
-            direction.Add(new XElement("direction-type", metronome));
+            if (TempoHiddenWords != null)
+            {
+                // The words stand where the metronome would: a direction needs a
+                // direction-type, and the sound below is what plays.
+                direction.Add(new XElement("direction-type",
+                    new XElement("words", new XAttribute("font-weight", "bold"), TempoHiddenWords)));
+            }
+            else
+            {
+                var metronome = new XElement("metronome", new XElement("beat-unit", BeatUnitName(TempoBeatUnit)));
+                for (int i = 0; i < TempoBeatDots; i++)
+                    metronome.Add(new XElement("beat-unit-dot"));
+                metronome.Add(new XElement("per-minute", Tempo.Value));
+                direction.Add(new XElement("direction-type", metronome));
+            }
             // <sound tempo> is in QUARTER notes per minute whatever the metronome's unit.
             var value = new Syntax.TempoValue(null, TempoBeatUnit, TempoBeatDots, Tempo.Value, 0);
             sound = new XElement("sound", new XAttribute("tempo",
@@ -1127,8 +1141,10 @@ internal sealed class MusicXmlNote
             if (ornaments.Count > 0 || tremolo != null)
             {
                 var orns = new XElement("ornaments");
+                // An entry "accidental-mark=sharp" is an ornament's accidental (@trill(sharp),
+                // 2026-11-12): MusicXML's <accidental-mark> after the ornament it belongs to.
                 foreach (var o in ornaments)
-                    orns.Add(new XElement(o));
+                    orns.Add(o.Split('=') is [var element, var value] ? new XElement(element, value) : new XElement(o));
                 if (tremolo is { } t)
                     orns.Add(new XElement("tremolo", new XAttribute("type", t.Type), t.Marks));
                 notations.Add(orns);

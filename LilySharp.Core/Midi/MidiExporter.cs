@@ -2911,6 +2911,7 @@ public sealed class MidiExporter
                     break;
             }
         }
+        (velocity, durationPercent) = ApplyRunMarks(pitch, velocity, durationPercent);
         int ticks = ClockTicks(_defaultDuration);
         int actualTicks = Math.Max(1, ticks * durationPercent / 100);
         track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, pitch.SourceStart), velocity,
@@ -2985,6 +2986,7 @@ public sealed class MidiExporter
         // duration-shortening articulation (e.g. staccato) rounds to 0, its NoteOff
         // would land on the same tick as its NoteOn and — because NoteOff sorts before
         // NoteOn — be emitted first, leaving a stuck note.
+        (velocity, durationPercent) = ApplyRunMarks(note, velocity, durationPercent);
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
 
         bool startsTie = note.Articulations.OfType<TieSyntax>().Any();
@@ -3045,6 +3047,7 @@ public sealed class MidiExporter
             }
         }
 
+        (velocity, durationPercent) = ApplyRunMarks(drum, velocity, durationPercent);
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
         track.Notes.Add(new MidiNote(9, info.GmKey, velocity, _currentTick, actualDuration,
             drum.SourceStart, SourceOrdinal: NextOrdinal(drum.SourceStart), Timbre: 9, Part: _currentPart));
@@ -3122,6 +3125,7 @@ public sealed class MidiExporter
                     break;
             }
         }
+        (velocity, durationPercent) = ApplyRunMarks(bare, velocity, durationPercent);
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
         bool startsTie = bare.Articulations.OfType<TieSyntax>().Any();
 
@@ -3345,6 +3349,7 @@ public sealed class MidiExporter
                     break;
             }
         }
+        (velocity, durationPercent) = ApplyRunMarks(chord, velocity, durationPercent);
         int soundTicks = Math.Max(1, durationTicks * durationPercent / 100);
 
         // The first member is the ROOT, read as a single note; where it SOUNDS is the
@@ -4015,6 +4020,16 @@ public sealed class MidiExporter
         int steal = Math.Min(_pendingGraceSteal, Math.Max(0, durationTicks - 1));
         _pendingGraceSteal = 0;
         return steal;
+    }
+
+    /// <summary>The marks of the runs <paramref name="item"/> stands in and did not open
+    /// (<c>c8@staccato d e f@!staccato</c>, owner's decision 2026-11-12), applied as marks written
+    /// on it are: the run is played note for note as the single marks would be.</summary>
+    private (int velocity, int durationPercent) ApplyRunMarks(SyntaxNode item, int velocity, int durationPercent)
+    {
+        foreach (var opener in Semantics.ArticulationRuns.Covering(item))
+            (velocity, durationPercent) = ApplyArticulationType(opener.Type, velocity, durationPercent);
+        return (velocity, durationPercent);
     }
 
     // LILYPOND-REF: ly/articulate.ly — duration factors: ac:staccatoFactor (1 . 2) = 50%,

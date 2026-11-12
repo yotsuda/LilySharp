@@ -39,7 +39,7 @@ poet "Poet"             // optional: the left end of the composer's line (\heade
                         // lines between ```md and ``` are printed under the title (paragraphs, **bold**,
                         // *italic*); ```md end prints them under the last system. Nothing between the
                         // fences is Lily#. Inside score { } a fence replaces the file's for that score.
-tempo 120               // optional; also: tempo "a tempo" (words alone: printed, the speed unchanged — for "a tempo", "Tempo I", "Meno mosso"), tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit), tempo "Lively" 4. = 116 (dotted unit), tempo Comodo 4 = 84 (a bare word is the marking); 'tempo 120 swing' adds a shuffle-feel equation, and plays it from there on ('swing 16' = 16th swing; only 8 or 16; 'tempo swing' = the equation alone)
+tempo 120               // optional; also: tempo "a tempo" (words alone: printed, the speed unchanged — for "a tempo", "Tempo I", "Meno mosso"), tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit), tempo "Lively" 4. = 116 (dotted unit), tempo Comodo 4 = 84 (a bare word is the marking); 'tempo 120 swing' adds a shuffle-feel equation, and plays it from there on ('swing 16' = 16th swing; only 8 or 16; 'tempo swing' = the equation alone); a last word 'bare' PLAYS the count and does NOT PRINT it: tempo "Tempo I" 4 = 92 bare sounds at 92 and prints only the words — for a "Tempo I", "Più mosso", "a tempo" that must change the speed without a metronome mark (anywhere a tempo goes; it needs both words and a count, LYS0044 otherwise)
 time 4/4                // optional (default 4/4); 4/4 engraves as the C
                         // An ADDITIVE numerator groups the beats: 'time 3+2+2/8' prints 3+2+2 over 8
                         // and beams the eighths 3+2+2 (a plain 'time 7/8' beams nothing, as LilyPond);
@@ -500,10 +500,24 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Voice column: `@shiftOff` keeps a note of a third or later voice in its group's first
   column, so it stands under the voice above instead of a column aside.
 - Articulations: `@staccato @staccatissimo @accent @tenuto @marcato @fermata @portato`
+- **A mark over a run of notes**: `c8@staccato d e f@!staccato` — the end `@!NAME` goes on the
+  LAST note of the run, and every note and chord from the opening one to that one carries the
+  mark (drawn and played on each, exactly as `c8@staccato d@staccato e@staccato f@staccato`).
+  For `@staccato @staccatissimo @tenuto @accent @marcato`. Without an `@!NAME` after it a mark is
+  one note's. Rests carry nothing. A run opens and closes in the same music — one part in one
+  section, one phrase, one branch of `voice { } { }` — and the end closes the nearest `@NAME`
+  before it there; an `@!staccato` with no `@staccato` before it is an error (LYS4018). Not
+  covered: grace notes, and the notes of a phrase called inside the run (write the run inside
+  the phrase). Use it for a passage marked throughout instead of a mark on every note.
 - String technique: `@upBow @downBow @flageolet` (`@harmonic` is the same mark) `@stopped` (+)
   `@snapPizz` (Bartók pizzicato) - always above
 - Right-hand finger (plucked strings): `c4@pluck(p)` — `p i m a`
 - Ornaments: `@trill @mordent @prall @turn @reverseTurn`
+- **An accidental on an ornament**: `c''2@trill(sharp)`, `@trill(flat)`, `@trill(natural)` — the
+  small accidental drawn above the sign (the trill's upper note is sharp / flat / natural). The
+  same argument on `@turn`, `@reverseTurn`, `@mordent`, `@prall`, `@pralltriller`. Only these
+  three words, glued: `@trill(sharp)`. (A slur starting on a trilled note is still
+  `c4@trill( d e)`.)
 - Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` and the accent dynamics `@sfz @sf @fp @sfp @rfz @fz` (default below the staff, above it on a staff with a lyrics row directly under it; `.up` / `.down`
   forces the side, e.g. `@f.up`). Subito: `@p.subito` prints an italic "sub." before the p and plays as `@p`;
   a side goes after it (`@ff.subito.up`)

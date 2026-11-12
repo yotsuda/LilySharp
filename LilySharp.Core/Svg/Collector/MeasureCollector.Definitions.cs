@@ -809,7 +809,15 @@ public sealed partial class MeasureCollector
         // a quarter, which is what the '=' with no unit means.
         var tempo = tempoDecl.Value;
         var pieces = tempoDecl.ValuePositions;
-        if (tempo.Bpm is int bpm)
+        if (tempo.CountHidden)
+        {
+            // `tempo "Tempo I" 4 = 92 bare`: the opening mark is the words alone, as
+            // `tempo "Tempo I"` draws it; the 92 is the sound's (the MIDI reads the syntax).
+            _v.Meta.Tempo = null;
+            _v.Meta.TempoCountPosition = 0;
+            _v.Meta.TempoUnitPosition = 0;
+        }
+        else if (tempo.Bpm is int bpm)
         {
             _v.Meta.Tempo = bpm;
             // The note and "= N" are this declaration's: a unit it does not write leaves

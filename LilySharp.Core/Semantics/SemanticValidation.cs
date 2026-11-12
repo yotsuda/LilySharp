@@ -91,6 +91,7 @@ public static class SemanticValidation
         new BeamPairingValidator(),         // a manual beam bracket that pairs with nothing
         new SpanPairingValidator(),         // a span mark ('@rit', '@ottava', '@!') that pairs with nothing
         new SpanEndNameValidator(),         // a '@!' not named as its span was opened ('@8va … @!15ma')
+        new ArticulationRunValidator(),     // a '@!staccato' with no '@staccato' before it; a phrase called inside a run
         new SectionCarryValidator(),        // a slur/tie/hairpin carried over a section boundary it may not cross (every score's form)
         new RehearsalMarkEngravedValidator(),// a written '@mark("A")' this score does not print
         new ShadowedRehearsalMarkValidator(),// a '@mark' at a bar a section label opens (the label is printed)

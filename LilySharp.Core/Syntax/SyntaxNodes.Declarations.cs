@@ -320,6 +320,10 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
     /// <summary>The BPM, if present.</summary>
     public int? Bpm => Value.Bpm;
 
+    /// <summary>The count the page prints: <see cref="Bpm"/>, or null when the run ends in
+    /// <c>bare</c> (<see cref="TempoValue.PrintedBpm"/>).</summary>
+    public int? PrintedBpm => Value.PrintedBpm;
+
     /// <summary>
     /// The beat unit (e.g., 4 for quarter note), or null when the run has no <c>=</c> —
     /// <c>tempo 140</c> is a bpm, and reading its 140 as a beat unit printed a

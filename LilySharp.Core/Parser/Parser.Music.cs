@@ -1634,10 +1634,18 @@ internal sealed partial class Parser
                     // For those names an argument is written against the '(' and a slur's
                     // next note after a space, so a '(' followed by whitespace is the slur. So is
                     // one glued to what only the note's own marks begin with: `<b d'>4@arpeggio(~ c)`.
+                    // ⚠️ An ORNAMENT's accidental, @trill(sharp) (owner's decision 2026-11-12), is
+                    // read only where a WORD stands against the '(': `c2@trill(d e)` is, as it
+                    // always was, a trill and the slur that starts on its note — a pitch is not
+                    // an identifier, so the two never meet. (The ornaments are therefore NOT in
+                    // SyntaxFacts' argument-taking list, whose names read any '(' glued to them.)
                     else if (Current.Kind == SyntaxKind.Identifier
                              && Peek(1) is { Kind: SyntaxKind.OpenParen } openParen
                              && GluedToPrevious(Current, openParen)
-                             && SyntaxFacts.AnnotationReadsAParenthesisedArgument(Current.Text)
+                             && (SyntaxFacts.AnnotationReadsAParenthesisedArgument(Current.Text)
+                                 || (Semantics.AnnotationValues.IsOrnamentName(Current.Text)
+                                     && Peek(2) is { Kind: SyntaxKind.Identifier } ornamentWord
+                                     && GluedToPrevious(openParen, ornamentWord)))
                              && !(SyntaxFacts.AnnotationArgumentIsOptional(Current.Text)
                                   && Peek(2) is { } afterParen
                                   && (!GluedToPrevious(openParen, afterParen)

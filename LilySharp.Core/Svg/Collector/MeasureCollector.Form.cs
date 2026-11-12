@@ -1864,7 +1864,8 @@ public sealed partial class MeasureCollector
     private static MusicMarkItem? SectionTempoMark(TempoDeclarationSyntax sectionTempo,
         int measureIndex, int sectionPos, int anchorItemIndex = -1, Fraction anchorTiming = default)
     {
-        if (sectionTempo.Bpm is int bpm)
+        // The PRINTED count: a `bare` tempo's mark is its words (TempoValue.PrintedBpm).
+        if (sectionTempo.PrintedBpm is int bpm)
             return new MusicMarkItem(MusicMarkType.Tempo, bpm.ToString(),
                 measureIndex, sectionPos, anchorItemIndex, anchorTiming)
             {

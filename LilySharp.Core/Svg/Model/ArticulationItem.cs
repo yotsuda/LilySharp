@@ -276,6 +276,22 @@ public sealed record ArticulationItem
         or ArticulationType.EditorialDoubleSharp or ArticulationType.EditorialDoubleFlat;
 
     /// <summary>
+    /// For the accidental of an ornament — <c>@trill(sharp)</c>, owner's decision 2026-11-12 —
+    /// the ornament it belongs to; null for every other script. The accidental is an item of
+    /// its own, of the editorial accidental's type (a small accidental centred over the note,
+    /// the size and the box that type already has), and this is what puts it in the script
+    /// column WITH its ornament: it takes the ornament's priority, and — collected right
+    /// after the ornament — the column's stable walk stands it on the sign.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no accidental on a Script; its twin writes the accidental
+    /// as a markup over the ornament (<c>\trill^\markup { \teeny \sharp }</c>), which is a
+    /// TextScript outside the script column. The distance from the sign is therefore the
+    /// script column's own padding, not a LilyPond measurement.
+    /// </remarks>
+    public ArticulationType? AccidentalOfOrnament { get; init; }
+
+    /// <summary>
     /// Maps a resolved accidental kind ("sharp", "flat", ...) to its editorial
     /// articulation type.
     /// </summary>

@@ -394,7 +394,10 @@ public sealed partial class LilySharpLanguageServer
             // the colour and the meaning from parting company.
             foreach (var value in tempoNode.Values.OfType<SyntaxTokenNode>())
             {
-                if (value.Kind != SyntaxKind.Identifier || !TempoValue.IsFeelWord(value.Text))
+                // …and `bare`, the run's last word (2026-11-12), read the same way: TempoValue
+                // takes it anywhere after the first position, where a bare word is the marking.
+                bool bareWord = value.Text == TempoValue.BareWord && value.Span.Start != tempoNode.Values.First().Span.Start;
+                if (value.Kind != SyntaxKind.Identifier || !(TempoValue.IsFeelWord(value.Text) || bareWord))
                     continue;
                 var (fline, fchar) = GetLineAndCharacter(text, value.Span.Start);
                 tokens.Add(new SemanticToken(fline, fchar, value.Width, 0));

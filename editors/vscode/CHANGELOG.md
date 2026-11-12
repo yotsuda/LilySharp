@@ -4,6 +4,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+- **`bare` after a tempo's count**: `tempo "Tempo I" 4 = 92 bare` plays the count and prints the words alone. The word is offered after the count and after `swing` / `shuffle`, and coloured as a keyword there.
+- **A mark over a run of notes**: `c'8@staccato d' e' f'@!staccato`. After `@!` the list offers `staccato`, `staccatissimo`, `tenuto`, `accent` and `marcato` beside the spans; an end with no opening is underlined with what to write.
+- **An accidental on an ornament**: inside `@trill(`, `@turn(`, `@mordent(`, `@prall(` the list offers `sharp`, `flat`, `natural`; another word is underlined with the three.
 - **New words in the lists and the colours**: the instruments `timpani`, `organ-right`, `organ-left`, `organ-pedal`, and the language `latin`.
 - **Sharper messages**: `@ped`, `@atempo`, `@dolce`, `\times 2/3` and a mark on a phrase's name (`theme@mf`) each name what to write; a key changed in only some parts of a section is flagged; `riff | % |` is no longer an error.
 - **Import MusicXML or MIDI…**: the import command takes a `.mid` too (the file picker, and a right-click on a `.mid` in the Explorer). Tracks become parts with their names, sounds and words, drums a drum part; a played file is quantized to sixteenths and triplet eighths, and the warning lists what was read into it.

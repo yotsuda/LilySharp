@@ -69,9 +69,10 @@ public class SpanEndCompletionTests
         var items = ItemsAt("c'4@rit d'4 e'4@!▮", "!");
         Assert.NotNull(items);
         Assert.All(items!, i => Assert.True(MusicMarkItem.IsSpanEndName(i.Label), i.Label));
-        foreach (var name in new[] { "rit", "accel", "textSpan", "8va", "8vb", "15ma", "15mb", "sustain", "unaCorda", "phrasingSlur", "cresc", "trillSpan" })
+        // …the marks that may run over several notes among them (`@staccato … @!staccato`, 2026-11-12).
+        foreach (var name in new[] { "rit", "accel", "textSpan", "8va", "8vb", "15ma", "15mb", "sustain", "unaCorda", "phrasingSlur", "cresc", "trillSpan", "staccato", "accent" })
             Assert.Contains(items!, i => i.Label == name);
-        Assert.DoesNotContain(items!, i => i.Label is "staccato" or "c" or "fermata");
+        Assert.DoesNotContain(items!, i => i.Label is "portato" or "c" or "fermata");
     }
 
     [Fact]

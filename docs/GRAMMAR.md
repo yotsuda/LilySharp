@@ -478,7 +478,7 @@ ShiftDecl      = 'shift' , [ '+' | '-' ] , Integer ;
                     only; 12 or more is refused at the number (an octave is 'octave N'). *)
 
 TempoDecl      = 'tempo' , [ Marking ] , [ DurationBase , [ Dots ] , '=' ] , [ Integer ] ,
-                 [ FeelWord , [ Integer ] ] ;
+                 [ FeelWord , [ Integer ] ] , [ 'bare' ] ;
 Marking        = String | Identifier ;      (* a bare word only in the FIRST position *)
 FeelWord       = 'swing' | 'shuffle' ;      (* contextual, NOT reserved words *)
                  (* tempo 120 / tempo "Allegro" / tempo "Allegro" 120 /
@@ -492,6 +492,18 @@ FeelWord       = 'swing' | 'shuffle' ;      (* contextual, NOT reserved words *)
                     shuffle') it prints alone or after the marking. A swung value other
                     than 8 or 16 is LYS0034 (a warning; drawn as the nearer of the two,
                     'swing 0' as none). *)
+                 (* 'bare', the run's LAST word (owner's decision 2026-11-12, the word a tuplet
+                    takes for no number and no bracket): the count is PLAYED and NOT PRINTED.
+                    tempo "Tempo I" 4 = 92 bare sounds at 92 and prints the words alone, with no
+                    metronome equation and no parentheses — at the top level, in a section
+                    header and in the music alike. A swing equation in the same run is still
+                    drawn. It needs words and a count: with no words the tempo would print
+                    nothing, with no count there is nothing to hide — LYS0044, a warning, either
+                    way. Contextual, NOT a reserved word: read only after the run's first value
+                    (in the first position it is a marking spelled that way) and not before an
+                    '=' (a variable of that name declared on the next line). LilyPond:
+                    \once \set Score.tempoHideNote = ##t. MusicXML: the words and the sound
+                    tempo, no metronome element. *)
                  (* HOW THE RUN IS READ (one pass, LysValue's neighbour TempoValue):
                     - bpm        = the LAST integer, stopping at a feel word, so the 16
                                    of `swing 16` is not the tempo. Last, not first,
@@ -3013,6 +3025,17 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
 (* - Articulations: @staccato @staccatissimo @accent @tenuto @marcato @fermata @portato  (.up/.down ok)
    - Strings:       @upBow @downBow @flageolet  (always above)
    - Ornaments:     @trill @mordent @prall @turn @reverseTurn
+                    (* an ACCIDENTAL on the ornament, in parentheses glued to the name:
+                       c2@trill(sharp) , @turn(flat) , @mordent(natural) — also @prall
+                       @reverseTurn @pralltriller [owner decision 2026-11-12]. The small
+                       accidental is drawn above the ornament sign, in its script column,
+                       and says how the auxiliary note is inflected. The three words are
+                       sharp , flat , natural — any other word is LYS1008 and the mark is
+                       ignored. Only a WORD against the parenthesis is the argument:
+                       c2@trill( d e) and c2@trill(d e) are a trill and a slur, as before.
+                       Ornaments are not played, so the sound is unchanged. MusicXML: the
+                       ornament and its accidental-mark, both ways. LilyPond: the ornament
+                       with a small accidental markup over it. LILYSHARP-OWN placement. *)
    - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @sfp @rfz @fz   (default below, above over a lyrics row directly under the staff; @f.up / @f.down forces side; @p.subito prints "sub. p", plays p)
    - Hairpins:      @cresc @decresc @dim  (start note → next dynamic, or to @!cresc / @!decresc /
                  @!dim on a later note — LilyPond's \! — which ends whichever is open; written after
@@ -3082,6 +3105,21 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                     a section's fall-off — where LilyPond draws none) , @breath @caesura
                     (* a CUE is not an annotation — it is a region, 'cue { … }', below *)
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
+   - A mark over a RUN of notes: c8@staccato d e f@!staccato   [owner decision 2026-11-12]
+                     (* @staccato @staccatissimo @tenuto @accent @marcato, each ended by
+                        @!NAME written on the LAST note of the run: every note and chord
+                        from the opening one to that one, both included, carries the mark,
+                        drawn and played on each exactly as if each had been written @NAME
+                        (a forced side, @staccato.up, is the whole run too). With no @!NAME
+                        after it a mark is one note, as it always was. The end closes the
+                        NEAREST @NAME before it in its own music — one part in one section,
+                        one phrase, one branch of voice { } { } — so a run opens and closes
+                        in the section it opens in, and an @!NAME with no @NAME before it
+                        there is an error (LYS4018). Rests in the run carry nothing. Grace
+                        notes, another voice, and the notes of a phrase CALLED inside the
+                        run are not covered (the call is warned of, LYS4018). Read on the
+                        syntax by Semantics.ArticulationRuns. LilyPond has no such span:
+                        its twin, and MusicXML, write the mark on each note. *)
    - Spanners:       @textSpan("poco rit.") … @!textSpan   [sugar: @rit @accel @rall,
                      each ended by @!rit / @!accel / @!rall — an end is REQUIRED]
                      @8va … @!8va, @8vb … @!8vb, @15ma … @!15ma, @15mb … @!15mb

@@ -959,7 +959,7 @@ public sealed partial class LilyPondExporter
 
     private string EmitNote(NoteSyntax n)
     {
-        var (prefix, suffix) = SplitAttachments(n.Articulations);
+        var (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(n, n.Articulations));
         string trem = n.Tremolo is { } t ? t.Text : "";
         // `cis?4` / `cis!4`: the accidental marks stand between the pitch and the duration.
         return prefix + EmitMusicPitch(n.Pitch) + AccidentalMarks(n.Articulations)
@@ -980,7 +980,7 @@ public sealed partial class LilyPondExporter
             _warnings.Add($"drum note '{d.DrumName}' is outside \\drummode and was dropped");
             return "";
         }
-        var (prefix, suffix) = SplitAttachments(d.Articulations);
+        var (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(d, d.Articulations));
         string trem = d.Tremolo is { } t ? t.Text : "";
         return prefix + d.DrumName + EmitEventDuration(d.Duration) + trem + suffix;
     }
@@ -995,7 +995,7 @@ public sealed partial class LilyPondExporter
     /// </summary>
     private string EmitChordRepetition(ChordRepetitionSyntax q)
     {
-        var (prefix, suffix) = SplitAttachments(q.Articulations);
+        var (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(q, q.Articulations));
         string trem = q.Tremolo is { } t ? t.Text : "";
         string body = prefix + "q" + EmitEventDuration(q.Duration) + trem + suffix;
 
@@ -1045,7 +1045,7 @@ public sealed partial class LilyPondExporter
     /// </summary>
     private string EmitSlashNote(SlashNoteSyntax slash)
     {
-        var (prefix, suffix) = SplitAttachments(slash.Articulations);
+        var (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(slash, slash.Articulations));
         string trem = slash.Tremolo is { } t ? t.Text : "";
         var (step, octave) = MiddleLinePitch(_lysClef);
         string pitchText;
@@ -1085,7 +1085,7 @@ public sealed partial class LilyPondExporter
     /// </summary>
     private string EmitBareDuration(BareDurationSyntax bare)
     {
-        var (prefix, suffix) = SplitAttachments(bare.Articulations);
+        var (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(bare, bare.Articulations));
         string trem = bare.Tremolo is { } t ? t.Text : "";
         return prefix + EmitEventDuration(bare.Duration) + trem + suffix;
     }
@@ -1453,7 +1453,7 @@ public sealed partial class LilyPondExporter
         }
         if (c.HasTiedMembers)
             chordArts = chordArts.Where(a => a is not TieSyntax).ToList();
-        var (prefix, suffix) = SplitAttachments(chordArts);
+        var (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(c, chordArts));
         return prefix + sb.ToString() + suffix + memberFrames;
     }
 
@@ -1497,7 +1497,7 @@ public sealed partial class LilyPondExporter
     private string EmitShapeChord(ChordSyntax c)
     {
         var notes = ShapeNotesOf(c, warn: true);
-        var (prefix, suffix) = SplitAttachments(c.Articulations);
+        var (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(c, c.Articulations));
         if (notes.IsEmpty)
             return prefix + "s" + EmitEventDuration(c.Duration) + suffix;
         if (!_octaveAbsolute && !_frameTracked)
@@ -1759,7 +1759,7 @@ public sealed partial class LilyPondExporter
     ///   ((text) duration tempo) — <c>\tempo [text] [duration = count]</c>, either part optional.
     /// </summary>
     private static string EmitTempo(TempoDeclarationSyntax t)
-        => EmitTempo(t.Marking, t.Bpm, t.BeatUnit ?? 4, t.BeatDots, t.SwingSubdivision);
+        => EmitTempo(t.Marking, t.Bpm, t.BeatUnit ?? 4, t.BeatDots, t.SwingSubdivision, t.Value.CountHidden);
 
     /// <summary>The same spelling for a metronome mark the PAGE holds — a lead sheet's
     /// timing track writes the marks the page draws (<see cref="EmitLeadSheetTiming"/>),
@@ -1768,11 +1768,18 @@ public sealed partial class LilyPondExporter
         => EmitTempo(mark.TempoText, int.TryParse(mark.Text, out int bpm) ? bpm : null,
             mark.TempoBeatUnit, mark.TempoDots, mark.SwingSubdivision);
 
-    private static string EmitTempo(string? marking, int? bpm, int unit, int dots, int swingSubdivision)
+    private static string EmitTempo(string? marking, int? bpm, int unit, int dots, int swingSubdivision,
+        bool countHidden = false)
     {
         string text = !string.IsNullOrEmpty(marking) ? " \"" + Escape(marking!) + "\"" : "";
         if (swingSubdivision != 0)
-            return EmitSwingTempo(text, bpm, unit, dots, swingSubdivision);
+            return EmitSwingTempo(text, bpm, unit, dots, swingSubdivision, countHidden);
+        // `tempo "Tempo I" 4 = 92 bare` (2026-11-12): the count sets the tempo and LilyPond's own
+        // property keeps it off the page — the mark is the text alone, with no parentheses.
+        // LILYPOND-REF: scm/translation-functions.scm:100-151 format-metronome-markup — with
+        //   hide-note and a text, the markup is the text; lily/metronome-engraver.cc reads tempoHideNote.
+        if (bpm is int hidden && countHidden)
+            return $"\\once \\set Score.tempoHideNote = ##t \\tempo{text} {unit}{new string('.', dots)} = {hidden}";
         if (bpm is int count)
             return $"\\tempo{text} {unit}{new string('.', dots)} = {count}";
         if (text.Length > 0)
@@ -1789,17 +1796,18 @@ public sealed partial class LilyPondExporter
     /// LILYPOND-REF: scm/define-markup-commands.scm:1920-1990 define-markup-command (rhythm …);
     /// scm/translation-functions.scm:100-151 format-metronome-markup (tempoHideNote).
     /// </summary>
-    private static string EmitSwingTempo(string text, int? bpm, int beatUnit, int dots, int swingSubdivision)
+    private static string EmitSwingTempo(string text, int? bpm, int beatUnit, int dots, int swingSubdivision,
+        bool countHidden = false)
     {
         var sb = new StringBuilder("\\tempo \\markup {");
         sb.Append(text);
         string unit = beatUnit + new string('.', dots);
-        if (bpm is int shown)
+        if (bpm is int shown && !countHidden)
             sb.Append(" \\normal-text \\concat { ")
               .Append(text.Length > 0 ? "\"(\" " : "")
               .Append("\\smaller \\general-align #Y #DOWN \\note {").Append(unit).Append("} #UP \" = ")
               .Append(shown).Append(text.Length > 0 ? ")" : "").Append("\" }");
-        if (text.Length > 0 || bpm != null)
+        if (text.Length > 0 || (bpm != null && !countHidden))
             sb.Append(" \\hspace #0.4");
         sb.Append(swingSubdivision >= 16
             ? " \\rhythm { 16[ 16] } = \\rhythm { \\tuplet 3/2 { 8 16 } } }"
@@ -2110,7 +2118,7 @@ public sealed partial class LilyPondExporter
                         // below the root's, plus its own marks.
                         want = anchorOctave + (step >= rootStep ? 0 : 1) + p.OctaveOffset;
                     }
-                    (prefix, suffix) = SplitAttachments(p.Articulations);
+                    (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(p, p.Articulations));
                     if (groupString != null && !p.Articulations.OfType<StringNumberAnnotationSyntax>().Any())
                         suffix += groupString;
                     head = p.PitchToken.Text + OctaveMarks(ArpeggioMarks(step, want));

@@ -225,6 +225,12 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         // The trill spanner's end — paired by the collector's trill events,
                         // not a MusicMarkItem, so ParseSpanEndName does not know it.
                     }
+                    else if (ArticulationRuns.IsRunName(name))
+                    {
+                        // The end of a run of marks, '@staccato … @!staccato' (2026-11-12) —
+                        // paired on the syntax by ArticulationRuns, whose validator says
+                        // when it closes nothing.
+                    }
                     else if (MusicMarkItem.ParseSpanEndName(name) is null
                         && AnnotationNames.CaseOnlyMatch(name) is { } canonical
                         && MusicMarkItem.ParseSpanEndName(canonical) is not null)
@@ -241,8 +247,9 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                             + "The spans with a terminator: a text spanner ('@!rit', '@!accel', "
                             + "'@!rall', '@!textSpan'), an ottava ('@!8va', '@!8vb', '@!15ma', '@!15mb'), "
                             + "a pedal ('@!sustain', '@!sostenuto', '@!unaCorda'), a phrasing "
-                            + "slur ('@!phrasingSlur'), a trill span ('@!trillSpan') and a hairpin "
-                            + "('@!cresc', '@!decresc', '@!dim').");
+                            + "slur ('@!phrasingSlur'), a trill span ('@!trillSpan'), a hairpin "
+                            + "('@!cresc', '@!decresc', '@!dim') and a run of marks ('@!staccato', "
+                            + "'@!staccatissimo', '@!tenuto', '@!accent', '@!marcato').");
                 }
                 else if (!IsKnownCompoundName(mark))
                 {
@@ -252,6 +259,13 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                     if (string.Equals(mark.Name, "chord", StringComparison.Ordinal)
                         && UnregisteredChordQuality(mark) is { } quality)
                         WarnUnregisteredChordQuality(mark, quality);
+                    // An ornament's argument that is not one of its three words: the mark is
+                    // dropped whole (no sign either), and the reader is told the words.
+                    else if (AnnotationValues.IsOrnamentName(mark.Name) && mark.HasArgumentList)
+                        _diagnostics.Warning(mark.Span, DiagnosticCodes.UnknownAnnotation,
+                            $"'{string.Join(" ", mark.Arguments.Select(a => a.Text))}' is not a value of '@{mark.Name}' - the mark is ignored. "
+                            + $"An ornament takes its accidental, the small sign drawn above it: '@{mark.Name}(sharp)', "
+                            + $"'@{mark.Name}(flat)' or '@{mark.Name}(natural)'; '@{mark.Name}' alone is the plain ornament.");
                     else
                         WarnUnknown(mark, mark.MarkName);
                 }
@@ -394,6 +408,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.IsTextSpanAnnotation(mark)
             || AnnotationValues.Feather(mark) != 0
             || AnnotationValues.IsArpeggioBracket(mark)
+            || AnnotationValues.OrnamentAccidental(mark) is not null
             || AnnotationValues.Frame(mark) is not null
             || AnnotationValues.IsNotesDiagram(mark)
             // The spelling cannot change WHETHER a mark names a chord, only how it prints.

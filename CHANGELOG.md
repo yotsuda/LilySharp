@@ -6,6 +6,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+- **Four things those scores asked for**:
+  - **A tempo whose count is played and not printed**: `tempo "Tempo I" 4 = 92 bare` sounds at 92 and prints the words alone — no metronome equation, no parentheses — at the top level, in a section header and in the music. `bare` is the word a tuplet takes for "no number, no bracket". It needs words and a count (LYS0044, a warning, otherwise). LilyPond gets `tempoHideNote`, MusicXML the words with the sound.
+  - **A mark over a run of notes**: `c'8@staccato d' e' f'@!staccato` — the end on the last note, as `@8va … @!8va` — puts the mark on every note and chord from the first to the last, drawn and played on each as if written there. For `@staccato`, `@staccatissimo`, `@tenuto`, `@accent`, `@marcato`; a mark with no end stays one note's. Rests carry nothing; a run closes in the music it opens in (one part in one section, a phrase, a voice), and an end with no opening is an error (LYS4018). MIDI, MusicXML and LilyPond get the mark on each note.
+  - **An accidental on an ornament**: `c''2@trill(sharp)`, `@trill(flat)`, `@trill(natural)` draw the small accidental above the sign; the same on `@turn`, `@reverseTurn`, `@mordent`, `@prall`, `@pralltriller`. Another word is reported with the three (LYS1008). MusicXML writes and reads it as the ornament's `<accidental-mark>`; LilyPond gets a small markup over the ornament. Ornaments are not played, so the sound is as before.
 - **Found writing four large scores to try the grammar** (an orchestral movement, a piano piece, a band chart, an anthem):
   - **A group of one staff still places its staff**: `score { staffGroup { staff fl }  staffGroup { staff vn  staff vc } }` neither drew nor played the flute, and said nothing. The staff stands ungrouped (a bracket needs two staves, as in LilyPond).
   - **A bare `R` lasts the pickup the other parts play**: `partial 4 … b { R | … }` beside a part's upbeat warned "lasts 1/4 but part 'b' has 1".

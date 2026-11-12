@@ -86,6 +86,13 @@ internal static class CollectResumePlanner
             || !TopLevelKindsAgree(baselineTree.GetRoot(), newTree.GetRoot()))
             return null;
 
+        // A run of marks (`c8@staccato d e f@!staccato`, 2026-11-12) makes a note's collected
+        // marks a function of the text AFTER it — the end that closes the run — which no
+        // checkpoint's read set holds. A file that writes one is collected whole (a missed plan
+        // costs speed, never truth).
+        if (Semantics.ArticulationRuns.Any(baselineTree.GetRoot()) || Semantics.ArticulationRuns.Any(newTree.GetRoot()))
+            return null;
+
         var resumer = CollectWalkProbe.Resumer();
         resumer.WindowPrefix = prefix;
         resumer.WindowSuffixStart = suffixStart;

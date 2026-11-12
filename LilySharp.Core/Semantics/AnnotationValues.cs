@@ -400,6 +400,28 @@ public static class AnnotationValues
             }
             : 0;
 
+    /// <summary>The words an ornament's accidental is written with: <c>@trill(sharp)</c>,
+    /// <c>@turn(flat)</c>, <c>@mordent(natural)</c> (owner's decision 2026-11-12, grammar
+    /// evaluation 2) — the three a small accidental over an ornament sign is in practice.</summary>
+    public static IReadOnlyList<string> OrnamentAccidentalWords { get; } = ["sharp", "flat", "natural"];
+
+    /// <summary>Whether <paramref name="name"/> is an ornament that takes an accidental in
+    /// parentheses: the trill, the turns, the mordent and the pralls
+    /// (<see cref="Svg.Model.ArticulationItem.IsOrnament"/>'s family, by name).</summary>
+    public static bool IsOrnamentName(string name)
+        => name is "trill" or "turn" or "reverseTurn" or "mordent" or "prall" or "pralltriller";
+
+    /// <summary>
+    /// The ornament and the accidental of <c>@trill(sharp)</c> — the sign, and the small
+    /// accidental drawn above it, which says how the ornament's auxiliary note is inflected —
+    /// or null when this is not an ornament with one of the three words
+    /// (<see cref="OrnamentAccidentalWords"/>).
+    /// </summary>
+    public static (ArticulationType Ornament, string Accidental)? OrnamentAccidental(MusicMarkSyntax mark)
+        => IsOrnamentName(mark.Name) && !mark.IsSpanEnd && Sole(mark)?.Text is "sharp" or "flat" or "natural"
+            ? (ArticulationRegistry.Resolve(mark.Name), Sole(mark)!.Text)
+            : null;
+
     /// <summary>
     /// Whether this is <c>@arpeggio(bracket)</c> — the non-arpeggiated chord bracket.
     /// </summary>

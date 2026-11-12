@@ -1921,8 +1921,26 @@ public sealed partial class LilySharpLanguageServer
                 });
             }
         }
+        // `tempo "Tempo I" 4 = 92 bare` (2026-11-12): the count is played and not printed.
+        items.Add(TempoBareItem(touching ? bpm : null, i));
         return new CompletionList { Items = items.ToArray() };
     }
+
+    /// <summary>The <c>bare</c> row a tempo's count may be followed by:
+    /// <see cref="TempoValue.BareWord"/>, which ends the run. (Not offered after a feel word:
+    /// that list is the swung values', and <c>tempo swing</c> has no count to hide.)</summary>
+    /// <param name="touched">The item the caret still touches, which the row then replaces
+    /// and filters by, or null when a space has been typed.</param>
+    /// <param name="order">The row's place in the list.</param>
+    private static CompletionItem TempoBareItem(string? touched, int order) => new()
+    {
+        Label = TempoValue.BareWord,
+        Kind = CompletionItemKind.Keyword,
+        Detail = "Play the count, print only the words: tempo \"Tempo I\" 4 = 92 bare",
+        InsertText = touched != null ? $"{touched} {TempoValue.BareWord}" : TempoValue.BareWord,
+        FilterText = touched != null ? $"{touched} {TempoValue.BareWord}" : TempoValue.BareWord,
+        SortText = order.ToString("D2"),
+    };
 
     /// <summary>
     /// The swung note value after a tempo's feel word (<c>tempo 120 swing |</c>,
@@ -5160,7 +5178,7 @@ public sealed partial class LilySharpLanguageServer
                 },
 
                 // Ornaments
-                new CompletionItem { Label = "trill", Kind = CompletionItemKind.Value, Detail = "Trill ornament", SortText = "1trill" },
+                new CompletionItem { Label = "trill", Kind = CompletionItemKind.Value, Detail = "Trill ornament; @trill(sharp) / (flat) / (natural) draws the accidental over it", SortText = "1trill" },
                 new CompletionItem { Label = "mordent", Kind = CompletionItemKind.Value, Detail = "Mordent ornament", SortText = "1mordent" },
                 new CompletionItem { Label = "prall", Kind = CompletionItemKind.Value, Detail = "Inverted mordent (pralltriller)", SortText = "1prall" },
                 new CompletionItem { Label = "turn", Kind = CompletionItemKind.Value, Detail = "Turn ornament", SortText = "1turn" },
@@ -5323,6 +5341,7 @@ public sealed partial class LilySharpLanguageServer
             "bend" => GetBendCompletions(),
             "feather" => GetFeatherCompletions(),
             "figuredBass" => GetFiguredBassCompletions(),
+            _ when AnnotationValues.IsOrnamentName(annotation) => GetOrnamentAccidentalCompletions(),
             _ => null
         };
 
@@ -5425,6 +5444,17 @@ public sealed partial class LilySharpLanguageServer
             Argument("#", "Bare sharp — raises the third above the bass", 11),
             Argument("_", "Held figure — continuation line from the previous bass note", 12),
         ]
+    };
+
+    /// <summary>
+    /// The accidental of an ornament, inside <c>@trill(…)</c>, <c>@turn(…)</c>,
+    /// <c>@mordent(…)</c>, <c>@prall(…)</c> (owner's decision 2026-11-12): the words
+    /// <c>AnnotationValues.OrnamentAccidentalWords</c> holds, in its order.
+    /// </summary>
+    internal static CompletionList GetOrnamentAccidentalCompletions() => new()
+    {
+        Items = [.. AnnotationValues.OrnamentAccidentalWords.Select((word, rank) =>
+            Argument(word, $"A small {word} over the ornament: its auxiliary note is {word}", rank))]
     };
 
     /// <summary>

@@ -1218,6 +1218,7 @@ internal sealed partial class Parser
         // whole run). These are NOT reserved words, so they stay usable as names.
         string? feelWord = null;
         bool subdivisionRead = false;
+        bool sawWords = valueTokens.Count > 0, sawCount = false;
         while (Check(SyntaxKind.StringLiteral) ||
                Check(SyntaxKind.IntegerLiteral) ||
                // a dotted beat unit: "tempo \"Lively\" 4. = 116" lexes as
@@ -1243,6 +1244,8 @@ internal sealed partial class Parser
             }
             // The swung note value — the FIRST integer after the feel word, as TempoValue
             // reads it — is 8 or 16; anything else used to be drawn as one of them silently.
+            sawWords |= Check(SyntaxKind.StringLiteral);
+            sawCount |= feelWord == null && Check(SyntaxKind.IntegerLiteral);
             if (Check(SyntaxKind.Identifier))
                 feelWord ??= Current.Text;
             else if (feelWord != null && !subdivisionRead && Check(SyntaxKind.IntegerLiteral))
@@ -1256,6 +1259,27 @@ internal sealed partial class Parser
                         + $"word, or '{feelWord} 8') and sixteenths ('{feelWord} 16') are swung.");
                 }
             }
+            valueTokens.Add(Advance());
+        }
+
+        // `bare` ends the run: the count is played and not printed — `tempo "Tempo I" 4 = 92
+        // bare` prints the words alone (owner's decision 2026-11-12, grammar evaluation 2; the
+        // word a tuplet takes for "no number, no bracket"). Not a reserved word, so it is read
+        // only HERE: after at least one value (in the first position a bare word is the
+        // marking, `tempo bare`), and not before an `=`, where it is a variable called `bare`
+        // being declared on the next line.
+        if (valueTokens.Count > 0 && Check(SyntaxKind.Identifier) && Current.Text == TempoValue.BareWord
+            && Peek(1)?.Kind != SyntaxKind.Equals)
+        {
+            var span = new TextSpan(_textPosition, System.Math.Max(1, Current.FullWidth));
+            if (!sawCount)
+                _diagnostics.Warning(span, DiagnosticCodes.TempoBareHidesNothing,
+                    "'bare' hides a tempo's count, and this tempo writes none - write the count it plays at "
+                    + "(tempo \"Tempo I\" 4 = 92 bare), or drop 'bare' (words alone are printed and leave the speed).");
+            else if (!sawWords && feelWord == null)
+                _diagnostics.Warning(span, DiagnosticCodes.TempoBareHidesNothing,
+                    "this tempo prints nothing: 'bare' hides the count and there are no words - write the words "
+                    + "the page shows (tempo \"Tempo I\" 4 = 92 bare), or drop 'bare' to print the count.");
             valueTokens.Add(Advance());
         }
 

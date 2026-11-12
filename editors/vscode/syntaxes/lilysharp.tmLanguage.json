@@ -703,6 +703,15 @@
                     }
                 },
                 {
+                    "comment": "A tempo's 'bare' (2026-11-12): the count is played and not printed — `tempo \"Tempo I\" 4 = 92 bare`. A keyword only as the LAST word of a tempo run that has its count, read on one line with the run spelled out (marking, unit =, count, feel word), so nothing but that run is claimed and the marking and the numbers keep their own colours through the capture's patterns. The semantic tokens colour it from the tree as well.",
+                    "match": "\\b(tempo)((?:\\s+(?:\"[^\"\\n]*\"|[A-Za-z]\\w*))?(?:\\s+\\d+\\.*\\s*=)?\\s+\\d+(?:\\s+(?:swing|shuffle)(?:\\s+\\d+)?)?)\\s+(bare)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "patterns": [ { "include": "#comments" }, { "include": "#strings" }, { "include": "#numbers" } ] },
+                        "3": { "name": "keyword.other.lilysharp" }
+                    }
+                },
+                {
                     "name": "keyword.control.lilysharp",
                     "match": "\\b(score|part|staff|grandStaff|staffGroup|choirStaff|condensedStaff|combinedStaff|tab|ossia|voice|phrase|section|form|using|drummap|transpose|shift|repeat|grace|cue|tuplet|acciaccatura|appoggiatura|afterGrace|override|revert|once|lyrics|chords|strokes)\\b"
                 },

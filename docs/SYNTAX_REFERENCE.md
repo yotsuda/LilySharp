@@ -392,6 +392,27 @@ c4@staccato.up     // staccato forced above
 d4@accent.down     // accent forced below
 ```
 
+### A mark over a run of notes
+
+```
+c8@staccato d e f@!staccato g4 a |     // four staccato eighths, then two plain quarters
+c4@accent.up <e g> q b@!accent |       // an accent over each, the chords too
+```
+
+`@staccato`, `@staccatissimo`, `@tenuto`, `@accent` and `@marcato` may be written once for a
+whole run: the mark on the first note and its end, `@!NAME`, on the **last** note (the shape
+of `@8va … @!8va`). Every note and chord from the first to the last carries the mark — drawn
+on each and played on each exactly as if each had been written `@NAME`; a forced side
+(`.up` / `.down`) is the whole run's. A mark with no `@!NAME` after it is one note's, as
+always. Rests inside the run carry nothing.
+
+A run opens and closes in the same music: one part's music in one section, one phrase, or
+one branch of `voice { } { }`. The end closes the nearest `@NAME` before it there, so marks
+written earlier stay single notes' marks. An `@!staccato` with no `@staccato` before it is an
+error (LYS4018). A run does not reach grace notes, or the notes of a phrase called between
+its ends (a warning says so — write the run inside the phrase). LilyPond and MusicXML have
+no such span: the exports write the mark on each note.
+
 ### Left to check (`@todo`)
 
 `@todo` marks a note, rest or chord to come back to — a reading you are unsure of, a bar to
@@ -456,6 +477,20 @@ e4@prall         // Inverted mordent (pralltriller)
 f4@turn          // Turn
 g4@reverseTurn   // Reverse (inverted) turn — LilyPond's \reverseturn
 ```
+
+```
+c2@trill(sharp)  // a trill with a small sharp over the sign
+d2@turn(flat)    // …a turn with a flat; (natural) is the third word
+```
+
+An ornament takes its **accidental** in parentheses: `@trill(sharp)`, `@trill(flat)`,
+`@trill(natural)`, and the same on `@turn`, `@reverseTurn`, `@mordent`, `@prall` and
+`@pralltriller`. The small accidental is drawn above the ornament sign and says how the
+ornament's auxiliary note is inflected (a trill to the sharpened upper note). Any other word
+is reported (LYS1008) and the mark is ignored. The word stands against the parenthesis; a
+slur that starts on an ornamented note is still `c4@trill( d e)`. Ornaments are not played,
+so the accidental changes the page, MusicXML (`<accidental-mark>`) and the LilyPond export,
+not the sound.
 
 ## Dynamics
 
@@ -849,7 +884,15 @@ tempo "Allegro" 4 = 120  // With text marking
 tempo 120 swing       // + swing/shuffle feel equation beside the mark
 tempo 120 swing 16    // sixteenth-note swing (double-beamed)
 tempo swing           // the swing equation alone, no metronome mark
+tempo "Tempo I" 4 = 92 bare  // played at 92, printed as the words alone
 ```
+
+A last word `bare` plays the count and does not print it: the page shows the words with no
+metronome equation and no parentheses, and the MIDI changes speed. It is the word a tuplet
+takes for "no number, no bracket" (`tuplet 3/2 bare { … }`), and it works wherever a tempo
+does — the top level, a section header, the music. It needs words and a count (`tempo 4 = 92
+bare` would print nothing, `tempo "Tempo I" bare` has nothing to hide: LYS0044, a warning).
+`tempo "Tempo I"` without a count stays what it was: words that leave the speed alone.
 
 Adding `swing` (or `shuffle`) after the tempo draws the swing equation — two beamed
 straight notes = a quarter and an eighth under a triplet `3` bracket, LilyPond's own

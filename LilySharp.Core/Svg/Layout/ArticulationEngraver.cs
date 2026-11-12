@@ -225,7 +225,7 @@ internal static class ArticulationEngraver
             {
                 var a = articulations[k];
                 note[k] = firstSeen[(a.StaffIndex, a.MeasureIndex, a.ItemIndex)];
-                priority[k] = ScriptPriority(a.Type);
+                priority[k] = ScriptPriority(a);
             }
             firstSeen.Clear();
             t_firstSeen = firstSeen;
@@ -1587,7 +1587,7 @@ internal static class ArticulationEngraver
             // column FIRST — they support this script, and this script's own walk
             // slot stays after them (the priority sort is the shared order).
             if (effArt.IsAbove)
-                FlushFingerings(stackKey, ScriptPriority(effArt.Type));
+                FlushFingerings(stackKey, ScriptPriority(effArt));
             double? declaredOsp = layout.OutsideStaffPriority;
             if (anyMover && lastOnKey is not null && lastOnKey.TryGetValue(stackKey, out var lastScript)
                 && lastScript.CurrentOsp is { } moverOsp)
@@ -2286,6 +2286,11 @@ internal static class ArticulationEngraver
     // ALL the declarations in scm/script.scm for types Lily# has a spelling for —
     // staccatissimo, portato, marcato and accent declare none and stay 0.
     // LILYPOND-REF: scm/script.scm; scm/define-grobs.scm Script.script-priority = 0.
+    internal static int ScriptPriority(in ArticulationItem a)
+        => ScriptPriority(a.AccidentalOfOrnament ?? a.Type);
+
+    // The order of the types alone; ScriptPriority(in ArticulationItem) above is what the
+    // column's walk asks, so an ornament's accidental stands with its ornament.
     internal static int ScriptPriority(ArticulationType type) => type switch
     {
         ArticulationType.Staccato => -100,

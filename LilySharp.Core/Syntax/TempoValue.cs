@@ -24,7 +24,7 @@ namespace LilySharp.Core.Syntax;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The run — <c>tempo ["marking"] [unit[.]] [=] [bpm] [swing|shuffle [n]]</c> — used to be
+/// The run — <c>tempo ["marking"] [unit[.]] [=] [bpm] [swing|shuffle [n]] [bare]</c> — used to be
 /// re-walked by a separate state machine per question. There were SIX of them:
 /// <c>Marking</c>, <c>SwingSubdivision</c>, <c>Bpm</c>, <c>BeatUnit</c> and
 /// <c>BeatDots</c> on the syntax node, plus a sixth, independent walk in
@@ -46,8 +46,22 @@ public sealed record TempoValue(
     int? BeatUnit,
     int BeatDots,
     int? Bpm,
-    int SwingSubdivision)
+    int SwingSubdivision,
+    bool CountHidden = false)
 {
+    /// <summary>The word that ends a tempo whose count is played and not printed:
+    /// <c>tempo "Tempo I" 4 = 92 bare</c> sounds at 92 and prints "Tempo I" alone — no
+    /// metronome equation, no parentheses (owner's decision 2026-11-12, grammar evaluation 2).
+    /// The word a tuplet takes for "no number, no bracket"
+    /// (<see cref="TupletExpressionSyntax.BareWord"/>). Not a reserved word: read only AFTER
+    /// the run's first position, where a bare word is still the marking.</summary>
+    public const string BareWord = TupletExpressionSyntax.BareWord;
+
+    /// <summary>The count the PAGE prints: <see cref="Bpm"/>, or null under <c>bare</c>. The
+    /// sound reads <see cref="Bpm"/> / <see cref="QuarterBpm"/>, which <c>bare</c> does not
+    /// touch — the two readers part here and nowhere else.</summary>
+    public int? PrintedBpm => CountHidden ? null : Bpm;
+
     /// <summary>A run with nothing readable in it (<c>tempo</c> alone).</summary>
     public static readonly TempoValue Empty = new(null, null, 0, null, 0);
 
@@ -94,7 +108,7 @@ public sealed record TempoValue(
         int? beatUnit = null;
         int? subdivision = null;
         int dots = 0, beatDots = 0;
-        bool sawUnit = false, sawEquals = false, sawFeelWord = false, first = true;
+        bool sawUnit = false, sawEquals = false, sawFeelWord = false, first = true, countHidden = false;
 
         foreach (var token in tokens)
         {
@@ -106,6 +120,11 @@ public sealed record TempoValue(
 
                 case SyntaxKind.Identifier when first:
                     marking ??= token.Text;
+                    break;
+
+                // `bare` after the first position (there it is a marking spelled that way).
+                case SyntaxKind.Identifier when token.Text == BareWord:
+                    countHidden = true;
                     break;
 
                 case SyntaxKind.StringLiteral:
@@ -148,7 +167,7 @@ public sealed record TempoValue(
         // for a subdivision and named zero, and the reading this replaces answered 0.
         int swing = subdivision ?? (sawFeelWord ? 8 : 0);
 
-        return new TempoValue(marking, beatUnit, beatDots, bpm, swing);
+        return new TempoValue(marking, beatUnit, beatDots, bpm, swing, countHidden);
     }
 
     /// <summary>

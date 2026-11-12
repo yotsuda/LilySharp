@@ -882,6 +882,12 @@ public sealed partial class MeasureCollector
                     Collect(a, isChordMember: false);
                 break;
         }
+        // A run of marks it stands in and did not open (`c8@staccato d e f@!staccato`, owner's
+        // decision 2026-11-12): the opening mark, read as if written on this note — the same
+        // type, the same forced side, this note's own stem side. The list is empty for every
+        // note of a file that writes no run (Semantics.ArticulationRuns).
+        foreach (var opener in Semantics.ArticulationRuns.Covering(node))
+            Collect(opener, isChordMember: false);
 
         void Collect(SyntaxNode articulation, bool isChordMember)
         {
@@ -1057,6 +1063,28 @@ public sealed partial class MeasureCollector
                             VoiceIndex = _v.Cursor.VoiceIndex,
                         });
                     }
+                }
+                else if (Semantics.AnnotationValues.OrnamentAccidental(markSyntax) is { } ornament)
+                {
+                    // @trill(sharp) (owner's decision 2026-11-12): the ornament as the bare
+                    // mark draws it, and over it its accidental — a second script of the same
+                    // column, at the AccidentalSuggestion's size, added right after its
+                    // ornament so the column's walk stacks it on the sign
+                    // (ArticulationItem.AccidentalOfOrnament).
+                    _articulations.Add(new ArticulationItem(ornament.Ornament, measureIndex, itemIndex, true,
+                        markSyntax.SourceStart, _v.Cursor.StaffIndex)
+                    {
+                        VoiceIndex = _v.Cursor.VoiceIndex,
+                        IsChordMember = isChordMember,
+                    });
+                    _articulations.Add(new ArticulationItem(
+                        ArticulationItem.EditorialTypeFor(ornament.Accidental), measureIndex, itemIndex, true,
+                        markSyntax.SourceStart, _v.Cursor.StaffIndex)
+                    {
+                        VoiceIndex = _v.Cursor.VoiceIndex,
+                        IsChordMember = isChordMember,
+                        AccidentalOfOrnament = ornament.Ornament,
+                    });
                 }
                 else if (Semantics.AnnotationValues.Pluck(markSyntax) is { } pluckLetter)
                 {
