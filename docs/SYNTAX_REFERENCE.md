@@ -1976,6 +1976,13 @@ on a line of its own for the whole file, or on a track, `lyrics en language engl
 (the track's wins). The names are `japanese`, `english`,
 `chinese`, `korean` and `latin`; another word is an error (LYS4038). The kana check is for Japanese words only.
 
+**Latin is printed and checked, and no voice sings it yet.** A `singer` line on Latin words —
+or on words in any language no voice installed on the machine sings — is not an error: where
+it is played, that part's **instrument plays instead**, and the editor and `lysc wav --singer`
+say so. Which lines have a singer depends on the machine, so the plain check does not say;
+`lysc check --singer cantoria FILE` does, with a warning at each line nobody installed can sing
+(`docs/CLI_REFERENCE.md`, *check*).
+
 **Who sings** is a top-level line of its own: `singer "neutrino/MERROW" on melody sings verse`,
 in that order. A score's `lyrics` row prints the words and sounds nothing; only a `singer` line
 sings, whether the page shows the words or not. A name with a `/` is a voice. Each line is one

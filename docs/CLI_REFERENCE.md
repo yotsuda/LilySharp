@@ -365,6 +365,22 @@ and a warning says why. `--voice` names the engine's voice as `engine/name` (`ne
 `diffsinger/TIGER`); without it the program's default sings. Where the engines and voices are is
 Cantoria's own configuration (its environment variables or `cantoria.json`).
 
+Before anything is sung, the program is asked **who would sing each `singer` line on this
+machine** (`cantoria plan`). The voice it answers is the one sung with — so a line that says a
+gender alone (`singer male on bass`) is sung by that gender's voice, and a line naming a voice
+that is not installed by the one that stands in, which a warning says. A line **no installed
+voice can sing** — Latin words, where no voice sings Latin — is a warning, the export goes on,
+and that part's **instrument plays** (for the whole part, or for the sections only that line
+sings):
+
+```
+  warning: singer female on alto sings la: No installed voice can sing this line: no installed voice sings Latin (la); installed voices sing ja, en, zh, ko. The part's instrument plays instead.
+```
+
+A voice the plan found and the engine then fails to sing is the warning it always was. A
+`cantoria` from before `plan` says so in one warning and sings as before. `lysc check --singer`
+asks the same without rendering.
+
 **Options:**
 | Option | Description |
 |--------|-------------|
@@ -567,10 +583,29 @@ lysc harmonize song.lys               # Prints a chords part
 ### check - Syntax Check
 
 ```bash
-lysc check <input.lys>
+lysc check [options] <input.lys>
 ```
 
 Validates syntax without producing output. Reports errors with line and column numbers.
+
+**Who would sing it here (`--singer`).** The check knows nothing of what is installed, so that
+it says the same on every machine. With `--singer` (or `LILYSHARP_SINGER`, as `lysc wav` reads
+it) it also asks a [`cantoria`](https://github.com/yotsuda/cantoria) program who would sing each
+`singer` line **on this machine**, without singing — once for every score's sung voices, or for
+`--score`'s. A line no installed voice can sing is a **warning at that line**, in the shape of
+the compiler's own; the lines that have a singer are listed with their voice, and with a note
+where that is not the voice asked for:
+
+```
+song.lys(19,1): warning: No installed voice can sing this line: no installed voice sings Latin (la); installed voices sing ja, en, zh, ko. The part's instrument plays instead.
+Singers:
+  line 18: singer "neutrino/MERROW" on melody sings ja -> neutrino/MERROW
+```
+
+These warnings do not change the exit code: the file is right, and the part plays on its
+instrument (in `lysc wav --singer` and in the editor). Where the engines are is Cantoria's own
+configuration, as for `wav`. A program that is missing, fails, or is from before `cantoria plan`
+is one line (`Singers: not asked (…)`), and the check's own result stands.
 
 **Options:**
 | Option | Description |
@@ -578,6 +613,9 @@ Validates syntax without producing output. Reports errors with line and column n
 | `-p, --pitches` | Also print each note's resolved absolute pitch (written → resolved), so relative-octave mistakes are visible before rendering |
 | `--todo-as-error` | Report each `@todo` mark (LYS4026) as an error, so the check fails while any is left |
 | `--no-todo` | Do not report `@todo` marks (a malformed or repeated one is still reported) |
+| `--singer <program>` | The `cantoria` program asked who would sing each `singer` line here (default: `LILYSHARP_SINGER`; none: not asked) |
+| `--voice <engine/name>` | The voice of the lines that name none, as `lysc wav --voice` |
+| `--score <name>` | Ask after the named score's singers only |
 | `-h, --help` | Show help |
 
 **Exit Codes:**
@@ -592,6 +630,7 @@ lysc check score.lys
 # Output: No errors. (12 measures, 48 notes)
 lysc check score.lys --pitches    # also print each note's resolved absolute pitch
 lysc check score.lys --todo-as-error    # fail while a @todo mark is left
+lysc check --singer cantoria song.lys   # also: which singer lines have a voice on this machine
 ```
 
 ### review - Review a Piece as Music

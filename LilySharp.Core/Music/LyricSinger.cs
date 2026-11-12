@@ -540,15 +540,39 @@ public static class LyricSinger
         var lines = LinesFor(root, spec);
         return (track, part, at) =>
         {
-            // By the track too where the voice says one the lines know; else by the part alone.
-            var sung = lines.Where(l => l.Part == part && l.Track == track).ToList();
-            if (sung.Count == 0)
-                sung = lines.Where(l => l.Part == part).ToList();
-            var voices = sung
-                .GroupBy(l => (l.Singer, Settings: SettingsText(l.Node, place: !l.Printed)))
-                .Select(g => g.Select(l => l.Person).FirstOrDefault(p => p != null)).ToList();
-            return at < voices.Count ? voices[at] : null;
+            var voices = LinesOfVoices(lines, track, part);
+            return at < voices.Count ? voices[at].Select(l => l.Person).FirstOrDefault(p => p != null) : null;
         };
+    }
+
+    /// <summary>
+    /// A reader of the <c>singer</c> LINE one voice of a part is written by — the first, where
+    /// several lines are one voice — by its track, its part and its place among the voices on
+    /// those words, as <see cref="NamesReaderOf"/> finds its name. For a message that is about
+    /// what the line asks for (owner's decision 2026-11-13: a line no installed voice can sing
+    /// is said at the line, <see cref="Audio.SingerPlan"/>). Null where no line is found.
+    /// </summary>
+    public static Func<string?, string?, int, SingerDeclarationSyntax?> LineReaderOf(SyntaxNode root, RenderSpec? spec)
+    {
+        var lines = LinesFor(root, spec);
+        return (track, part, at) =>
+        {
+            var voices = LinesOfVoices(lines, track, part);
+            return at < voices.Count ? voices[at][0].Node : null;
+        };
+    }
+
+    /// <summary>The lines of each voice that sings a track on a part, in the order of
+    /// <c>Voices</c>: by the track too where the voice says one the lines know; else by the
+    /// part alone.</summary>
+    private static List<List<Line>> LinesOfVoices(IReadOnlyList<Line> lines, string? track, string? part)
+    {
+        var sung = lines.Where(l => l.Part == part && l.Track == track).ToList();
+        if (sung.Count == 0)
+            sung = lines.Where(l => l.Part == part).ToList();
+        return sung
+            .GroupBy(l => (l.Singer, Settings: SettingsText(l.Node, place: !l.Printed)))
+            .Select(g => g.ToList()).ToList();
     }
 
     /// <summary>What separates the settings of several voices singing one track on one part

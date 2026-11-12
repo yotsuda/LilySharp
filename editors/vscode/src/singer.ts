@@ -26,7 +26,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as readline from 'readline';
-import { CantoriaApi, CantoriaScore, SingParameter, SingProgress, SungVoiceDto, cantoriaScore, parseServeLine, serveCancelLine, serveRequestLine, voiceKey } from './singerCore';
+import { CantoriaApi, CantoriaScore, SingParameter, SingProgress, SungVoiceDto, cantoriaScore, languageRefusal, parseServeLine, planAsked, serveCancelLine, serveRequestLine, sungKey, unsingableIn, voiceKey } from './singerCore';
 
 /** A voice the engine rendered: the WAV's path and its length. */
 /** `notes`: what the engine had to say of the score it sang (a setting the voice does not take). */
@@ -62,6 +62,28 @@ export class CantoriaExtensionBackend implements VoiceBackend {
     async sing(_key: string, score: CantoriaScore, voice: string, signal?: AbortSignal, onProgress?: (progress: SingProgress) => void): Promise<RenderedVoice> {
         const v = await this.api.sing(score, { voice, signal, onProgress });
         return { wav: v.wav, duration: v.duration, notes: (v as { notes?: string[] }).notes };
+    }
+    /**
+     * The voices of `voices` nobody installed can sing, by key, each with why (owner's decision
+     * 2026-11-13). Cantoria's own answer where it has one (`plan`, asked once for the lot; nothing
+     * is sung or loaded for it). An older Cantoria has none: then, as far as Lily# can tell by
+     * itself — the voice each singer comes to says what it sings, and the words' language is not
+     * among it. A question that fails says nothing: the voices go to the engine as before.
+     */
+    async unsingable(voices: readonly SungVoiceDto[]): Promise<Map<string, string>> {
+        if (voices.length === 0) { return new Map(); }
+        if (typeof this.api.plan === 'function') {
+            return unsingableIn(await this.api.plan({ asked: planAsked(voices) }), voices);
+        }
+        const out = new Map<string, string>();
+        if (!this.api.resolveSinger || !this.api.voices) { return out; }
+        const listed = await this.api.voices();
+        for (const v of voices) {
+            const voice = (await this.api.resolveSinger(v.Singer ?? '', { language: v.Language, gender: v.Gender ?? undefined })).voice;
+            const why = languageRefusal(voice, v.Language, listed);
+            if (why) { out.set(sungKey(v), why); }
+        }
+        return out;
     }
     /** Whether this Cantoria says what a voice takes (after 0.4.0): an older one's silence is not "nothing". */
     get listsParameters(): boolean { return typeof this.api.parameters === 'function'; }
@@ -164,6 +186,10 @@ export class SingerProcess implements VoiceBackend {
     }
 }
 
+/** How long an answer to "who would sing these voices" stands for the same voices: long enough
+ *  for a run of edits, short enough that a voice installed meanwhile is found by the next Play. */
+export const PLAN_KEPT_MS = 20000;
+
 /**
  * The voices rendered so far, by key, and the backend that renders what is missing. One per
  * extension host, remade when the setting that names the engine, or the extensions installed,
@@ -186,6 +212,25 @@ export class VoiceRenderer {
     async key(dto: SungVoiceDto, speed: number): Promise<string> {
         return voiceKey(cantoriaScore(dto, speed), await this.backend.voiceName(dto.Singer, dto.Language, dto.Gender));
     }
+
+    /** The voices nobody installed can sing, by key, each with why (CantoriaExtensionBackend.unsingable).
+     *  None from a program named in the setting (a developer's build), nor when the question fails:
+     *  what cannot be sung is then said by the engine as it refuses it. */
+    async unsingable(voices: readonly SungVoiceDto[], now: number = Date.now()): Promise<Map<string, string>> {
+        if (!(this.backend instanceof CantoriaExtensionBackend)) { return new Map(); }
+        // The same question within PLAN_KEPT_MS is answered from the last answer: the preview asks
+        // on every edit, and Cantoria may wait two seconds for a VOICEVOX that is not running.
+        const question = JSON.stringify(planAsked(voices));
+        if (this.planned && this.planned.question === question && now - this.planned.at < PLAN_KEPT_MS) { return this.planned.answer; }
+        try {
+            const answer = await this.backend.unsingable(voices);
+            this.planned = { question, at: now, answer };
+            return answer;
+        } catch {
+            return new Map();
+        }
+    }
+    private planned: { question: string; at: number; answer: Map<string, string> } | undefined;
 
     /** True when the voice of `key` was sung before and its WAV is still there. */
     has(key: string): boolean {

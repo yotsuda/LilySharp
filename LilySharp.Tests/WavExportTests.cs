@@ -191,6 +191,76 @@ public sealed class WavExportTests : IDisposable
         Assert.DoesNotContain(result.Notes, n => n.StartsWith("Voice:", StringComparison.Ordinal));
     }
 
+    // ---- Who sings is asked first (Audio.SingerPlan, owner's decisions 2026-11-13) ----
+
+    [Fact]
+    public void ALineNoInstalledVoiceCanSing_IsSaidOnce_AndItsInstrumentPlays()
+    {
+        // The engine is never asked to sing it: the plan said nobody can.
+        var singer = new FakeSinger
+        {
+            PlanJson = """{"ready":false,"singers":[{"part":"melody","asked":{"language":"ja"},"voice":null,"reason":"no installed voice sings Latin (la); installed voices sing ja, en"}]}""",
+        };
+        var (bytes, result) = Export(SungBook(), singer);
+
+        Assert.Null(singer.ScoreJson);
+        Assert.Contains("\"part\":\"melody\"", singer.AskedJson);
+        Assert.True(Peak(bytes, 0.0, 1.0) > 1000, "the instrument stands in");
+        Assert.Equal(["singer sings verse on melody: No installed voice can sing this line: no installed voice sings Latin (la); installed voices sing ja, en. The part's instrument plays instead."],
+            result.Warnings);
+        Assert.DoesNotContain(result.Notes, n => n.StartsWith("Voice:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void TheVoiceThePlanAnswers_IsTheOneSung_AndItsNoteIsSaid()
+    {
+        var singer = new FakeSinger
+        {
+            Seconds = 0.5,
+            PlanJson = """{"ready":true,"singers":[{"voice":"neutrino/MERROW","note":"neutrino/NOPE is not installed; singing with neutrino/MERROW","reason":null}]}""",
+        };
+        var (_, result) = Export(SungBook().Replace("singer sings", "singer \"neutrino/NOPE\" sings"), singer);
+
+        Assert.Equal(["neutrino/MERROW"], singer.VoicesSung);
+        Assert.Contains("\"voice\":\"neutrino/NOPE\"", singer.AskedJson);
+        Assert.Contains(result.Notes, n => n == "Voice: neutrino/MERROW sings melody (4 notes, 0.5 s)");
+        Assert.Equal(["singer \"neutrino/NOPE\" sings verse on melody: neutrino/NOPE is not installed; singing with neutrino/MERROW"], result.Warnings);
+    }
+
+    [Fact]
+    public void ASectionOnlyAnUnsingableLineSings_IsTheInstruments_TheRestTheVoices()
+    {
+        // Two bars, 2 s each. The first line sings A and has a voice (a silent one, so what is
+        // heard is the instrument alone); the second sings B and nobody installed can.
+        string book =
+            "tempo 4 = 120\ntime 4/4\npart melody { clef treble  instrument soprano }\n" +
+            "section A { melody { c'4 e4 g4 c4 | } lyrics verse { か き く け | } }\n" +
+            "section B { melody { c'4 e4 g4 c4 | } lyrics verse { さ し す せ | } }\n" +
+            "singer \"x/JA\" sings verse on melody in A\nsinger female sings verse on melody in B\nform { A B }\n" +
+            "score { staff melody  lyrics verse on melody }\n";
+        var singer = new FakeSinger
+        {
+            Seconds = 0.1, Amplitude = 0f,
+            PlanJson = """{"ready":false,"singers":[{"voice":"x/JA","reason":null},{"voice":null,"reason":"no installed voice sings Latin (la)"}]}""",
+        };
+        var (bytes, result) = Export(book, singer);
+
+        Assert.True(Peak(bytes, 0.1, 1.8) < 50, "section A is the voice's: its instrument is silent");
+        Assert.True(Peak(bytes, 2.1, 3.5) > 1000, "section B is nobody's: the instrument plays it");
+        Assert.Contains(result.Notes, n => n.StartsWith("Voice: x/JA sings melody", StringComparison.Ordinal));
+        Assert.Contains(result.Warnings, w => w.StartsWith("singer female sings verse on melody in B: No installed voice can sing this line", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AnEngineThatCannotSayWhoSings_SaysSo_AndSingsAsBefore()
+    {
+        var singer = new FakeSinger { Seconds = 0.5, PlanProblem = "cantoria did not say who would sing: it does not know `plan`" };
+        var (_, result) = Export(SungBook(), singer);
+
+        Assert.Equal(["cantoria did not say who would sing: it does not know `plan`"], result.Warnings);
+        Assert.Contains(result.Notes, n => n == "Voice: fake/voice sings melody (4 notes, 0.5 s)");
+    }
+
     [Fact]
     public void APartTheScoreSingsAndPlays_SoundsBothWays()
     {
@@ -261,8 +331,27 @@ internal sealed class FakeSinger : SingingEngine
     public double Consonant { get; init; }
     public string? Error { get; init; }
     public string? ScoreJson { get; private set; }
+    /// <summary>What it answers when asked who would sing (<c>cantoria plan --json</c>'s text);
+    /// null: an engine with no plan, as every engine was before 2026-11-13.</summary>
+    public string? PlanJson { get; init; }
+    public string? PlanProblem { get; init; }
+    /// <summary>The asked list it was handed, and the voices it was then told to sing with.</summary>
+    public string? AskedJson { get; private set; }
+    public System.Collections.Generic.List<string> VoicesSung { get; } = [];
 
     public override string Name => "fake/voice";
+
+    public override (string? Json, string? Problem) Plan(string askedJson)
+    {
+        AskedJson = askedJson;
+        return (PlanJson, PlanProblem);
+    }
+
+    public override SingingEngine WithVoice(string voice)
+    {
+        VoicesSung.Add(voice);
+        return this;
+    }
 
     public override string? Sing(string scoreJsonPath, string outputWavPath)
     {

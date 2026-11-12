@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 344 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **470** | |
+| `OWN` | 345 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **471** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,8 +246,10 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（344 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（345 件）
 
+### `LilySharp.Core/Audio/SingerPlan.cs`
+- **`SingerPlan`** LILYSHARP-OWN.
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
 ### `LilySharp.Core/Editing/ChordVoicingFinder.cs`

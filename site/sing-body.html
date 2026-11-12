@@ -276,7 +276,9 @@ c'4@sing(breathiness default) d' e' f' | // back to the singer line's value</pre
   glued to it in square brackets: <code>漢[かん]</code> prints 漢 and sings かん.</p>
   <p>Words are <code>japanese</code> unless the file says otherwise, with a line of its own for the whole
   file or on a track. The names are <code>japanese</code>, <code>english</code>, <code>chinese</code>,
-  <code>korean</code> and <code>latin</code> (Latin is printed and checked; no voice sings it yet). With the caret on a language, <kbd>Ctrl+Shift+Up</kbd> and
+  <code>korean</code> and <code>latin</code> (Latin is printed and checked; no voice sings it yet). A line no
+  installed voice can sing is played on its part's instrument, and the editor says why once;
+  <code>lysc check --singer cantoria song.lys</code> lists which singer lines have a voice on this machine. With the caret on a language, <kbd>Ctrl+Shift+Up</kbd> and
   <kbd>Ctrl+Shift+Down</kbd> change it.</p>
 <pre>language english
 lyrics ja language japanese { さ く ら | }</pre>

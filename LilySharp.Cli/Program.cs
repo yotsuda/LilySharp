@@ -590,7 +590,11 @@ static void ShowWavHelp()
         into the file in the instrument's place, as the preview's Export does. A part the
         score also plays on a staff without words sounds both ways. A voice that cannot
         be sung (no engine set up, syllables that are not kana) leaves the instrument,
-        with a warning.
+        with a warning. The program is first asked who would sing each `singer` line on
+        this machine: a line no installed voice can sing (Latin words, where no voice
+        sings Latin) is a warning and its part's instrument plays; a line that says a
+        gender alone is sung by that gender's voice. `lysc check --singer` asks the same
+        without rendering.
 
         Options:
           --soundfont <file>     The SoundFont 2 to play through (default: LILYSHARP_SOUNDFONT)
@@ -1004,10 +1008,24 @@ static int RunCheck(string[] args)
         .Flag("pitches", "-p", "--pitches")
         .Flag("todo-as-error", "--todo-as-error")
         .Flag("no-todo", "--no-todo")
+        .Value("singer", "--singer requires a cantoria program", "--singer")
+        .Value("voice", "--voice requires a voice name (engine/name)", "--voice")
+        .Value("score", "--score requires a score name", "--score")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "check");
     if (r.Has("todo-as-error") && r.Has("no-todo"))
         return OptionError("--todo-as-error and --no-todo cannot be used together", "check");
+
+    // Who would sing the file HERE is asked only where the user names the singer (owner's
+    // decision 2026-11-13: the compiler knows nothing of what is installed, so a plain `check`
+    // says the same on every machine): --singer, or LILYSHARP_SINGER, as `lysc wav` reads it.
+    string? singer = r.Get("singer") ?? Environment.GetEnvironmentVariable("LILYSHARP_SINGER");
+    if (string.IsNullOrWhiteSpace(singer))
+        singer = null;
+    if (singer == null && r.Get("voice") != null)
+        return OptionError("--voice names the singer's voice: name the singer too, with --singer <program> or LILYSHARP_SINGER", "check");
+    if (singer == null && r.Get("score") != null)
+        return OptionError("--score picks the score whose singers are asked after: name the singer too, with --singer <program> or LILYSHARP_SINGER", "check");
 
     if (r.Positionals.Count == 0)
         return OptionError("Input file required", "check");
@@ -1020,7 +1038,8 @@ static int RunCheck(string[] args)
     }
 
     return ExecuteCheck(inputPath, r.Has("pitches"),
-        r.Has("todo-as-error") ? TodoReport.AsError : r.Has("no-todo") ? TodoReport.Silent : TodoReport.AsInfo);
+        r.Has("todo-as-error") ? TodoReport.AsError : r.Has("no-todo") ? TodoReport.Silent : TodoReport.AsInfo,
+        singer != null ? new LilySharp.Core.Audio.CantoriaProgram(singer, r.Get("voice")) : null, r.Get("score"));
 }
 
 static void ShowCheckHelp()
@@ -1028,10 +1047,17 @@ static void ShowCheckHelp()
     Console.WriteLine("""
         Check Lily# source syntax
 
-        Usage: lysc check <input.lys>
+        Usage: lysc check [options] <input.lys>
 
         Arguments:
           <input.lys>      Input Lily# source file
+
+        With --singer, it also asks a cantoria program (https://github.com/yotsuda/cantoria)
+        who would sing each `singer` line on THIS machine, without singing: a line no
+        installed voice can sing (Latin words, where no voice sings Latin) is a warning at
+        that line - its part's instrument plays instead - and the lines that have a singer
+        are listed with their voice. The exit code is the check's own. Without --singer
+        (and LILYSHARP_SINGER), the check says the same on every machine.
 
         Options:
           -p, --pitches    Also print each note's resolved absolute pitch
@@ -1040,16 +1066,21 @@ static void ShowCheckHelp()
           --todo-as-error  Report each @todo mark as an error (exit code 1
                            while any is left)
           --no-todo        Do not report @todo marks
+          --singer <program>     The cantoria program asked who would sing (default: LILYSHARP_SINGER)
+          --voice <engine/name>  The voice of the lines that name none, as `lysc wav --voice`
+          --score <name>         Ask after the named score's singers only
           -h, --help       Show this help
 
         Examples:
           lysc check score.lys
           lysc check score.lys --pitches
           lysc check score.lys --todo-as-error
+          lysc check --singer cantoria song.lys
         """);
 }
 
-static int ExecuteCheck(string inputPath, bool showPitches = false, TodoReport todos = TodoReport.AsInfo)
+static int ExecuteCheck(string inputPath, bool showPitches = false, TodoReport todos = TodoReport.AsInfo,
+    LilySharp.Core.Audio.SingingEngine? singer = null, string? scoreName = null)
 {
     try
     {
@@ -1068,6 +1099,8 @@ static int ExecuteCheck(string inputPath, bool showPitches = false, TodoReport t
         {
             if (!showPitches)
                 Console.WriteLine("No errors found.");
+            if (singer != null)
+                ReportSingers(inputPath, source, tree, singer, scoreName, fileHasErrors: false);
             return 0;
         }
 
@@ -1087,12 +1120,81 @@ static int ExecuteCheck(string inputPath, bool showPitches = false, TodoReport t
                 Console.WriteLine($"  {inputPath}({LineCol(source, related.Span.Start)}): note: {related.Message}");
         }
 
+        if (singer != null)
+            ReportSingers(inputPath, source, tree, singer, scoreName, hasErrors);
         return hasErrors ? 1 : 0;
     }
     catch (Exception ex)
     {
         Console.Error.WriteLine(CliParser.Verbose ? ex.ToString() : $"Error: {ex.Message}");
         return 1;
+    }
+}
+
+/// <summary>
+/// <c>lysc check --singer</c>: who would sing the file's <c>singer</c> lines on this machine
+/// (owner's decisions 2026-11-13; <see cref="LilySharp.Core.Audio.SingerPlan"/>). One question
+/// to the cantoria program for every score's sung voices (or <c>--score</c>'s); a line with no
+/// singer is a warning AT THE LINE, in the shape of the compiler's own, and the lines that have
+/// one are listed with their voice. Nothing here changes the check's exit code: a line nobody
+/// can sing plays on its part's instrument, and the file is as right as it was. Whatever goes
+/// wrong with the asking is one line.
+/// </summary>
+static void ReportSingers(string inputPath, string source, SyntaxTree tree,
+    LilySharp.Core.Audio.SingingEngine singer, string? scoreName, bool fileHasErrors)
+{
+    if (fileHasErrors || tree.HasErrors)
+    {
+        Console.WriteLine("Singers: not asked (fix the errors above first).");
+        return;
+    }
+    try
+    {
+        var scores = scoreName == null
+            ? LilySharp.Core.Svg.Collector.RenderSpecParser.FindAllDeclared(tree).ToList()
+            : LilySharp.Core.Svg.Collector.RenderSpecParser.FindDeclaredByName(tree, scoreName) is { } one ? [one] : [];
+        if (scoreName != null && scores.Count == 0)
+        {
+            Console.WriteLine($"Singers: not asked (the file has no score '{scoreName}').");
+            return;
+        }
+        string? voice = (singer as LilySharp.Core.Audio.CantoriaProgram)?.Voice;
+        var asked = scores.SelectMany(s => LilySharp.Core.Audio.SingerPlan.AskedOfScore(tree, s.Spec, voice)).ToList();
+        if (asked.Count == 0)
+        {
+            Console.WriteLine("Singers: none (no score of this file sings a singer line).");
+            return;
+        }
+        var (plan, problem) = LilySharp.Core.Audio.SingerPlan.Ask(singer, asked);
+        if (plan == null)
+        {
+            Console.WriteLine($"Singers: not asked ({problem ?? $"{singer.Name} cannot say who would sing"}).");
+            return;
+        }
+        // A line several scores sing is asked once for each and said once.
+        var said = new HashSet<string>(StringComparer.Ordinal);
+        string Where(LilySharp.Core.Audio.SingerAsk ask)
+            => ask.Position >= 0 ? $"{inputPath}({LineCol(source, ask.Position)})" : $"{inputPath}: part '{ask.Part}'";
+        foreach (var s in plan.Singers.Where(s => s.Voice == null))
+        {
+            string line = $"{Where(s.Asked)}: warning: {LilySharp.Core.Audio.SingerPlan.NotSung(s.Reason)}";
+            if (said.Add(line))
+                Console.WriteLine(line);
+        }
+        var sung = plan.Singers.Where(s => s.Voice != null).ToList();
+        if (sung.Count > 0)
+            Console.WriteLine("Singers:");
+        foreach (var s in sung)
+        {
+            string line = $"  {(s.Asked.Position >= 0 ? $"line {LineColOf(source, s.Asked.Position).Line}: {s.Asked.Text}" : $"part '{s.Asked.Part}'")}"
+                + $" -> {s.Voice}{(s.Note != null ? $" ({s.Note})" : "")}";
+            if (said.Add(line))
+                Console.WriteLine(line);
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Singers: not asked ({ex.Message}).");
     }
 }
 

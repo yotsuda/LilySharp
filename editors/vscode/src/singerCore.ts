@@ -76,6 +76,70 @@ export interface CantoriaApi {
     /** The voice a `.lys` file's `singer` string comes to on this machine, and what to tell the
      *  writer when it was not the one asked for. Cantoria 0.4 on. */
     resolveSinger?(singer: string, options?: { language?: string; gender?: string }): Promise<{ voice: string; note?: string }>;
+    /** Who would sing what a score asks for, without singing (Cantoria's design §4.3, from
+     *  2026-11-13; an older extension has none): for each voice asked, the installed voice, or
+     *  `voice: null` and the `reason` in words for whoever wrote the score. */
+    plan?(input: { asked: PlanAsk[] }): Promise<SingerPlanAnswer>;
+}
+
+/** One voice asked of `plan`: by `voice` (an `engine/name`), or by `gender` alone, in a `language`;
+ *  `part` and `key` are the caller's own and come back. */
+export interface PlanAsk { part?: string; key?: string; voice?: string; gender?: string; language?: string }
+
+/** What `plan` answers: `ready` when each voice asked has a singer. */
+export interface SingerPlanAnswer {
+    ready: boolean;
+    singers: { part?: string; key?: string; voice: string | null; note?: string; reason?: string | null }[];
+}
+
+/** What a score's voices ask Cantoria's `plan` for, one entry a voice (Core's
+ *  Audio.SingerPlan.AskedOf is the same list for `lysc check --singer`): the voice its singer line
+ *  names, else the gender's default, in the language of its words. */
+export function planAsked(voices: readonly Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer' | 'Gender' | 'Language'>[]): PlanAsk[] {
+    return voices.map(v => {
+        const ask: PlanAsk = { part: v.Part, key: sungKey(v) };
+        if (v.Singer && v.Singer !== 'male' && v.Singer !== 'female') { ask.voice = v.Singer; }
+        if (v.Gender) { ask.gender = v.Gender; }
+        ask.language = v.Language;
+        return ask;
+    });
+}
+
+/** The voices of `voices` that `plan` says nobody installed can sing, by key, each with the reason
+ *  (owner's decision 2026-11-13: said to the writer, and the part's instrument plays). The answer
+ *  is read in the order asked; one that is not for these voices says nothing. */
+export function unsingableIn(answer: SingerPlanAnswer | undefined, voices: readonly Pick<SungVoiceDto, 'Part' | 'Key'>[]): Map<string, string> {
+    const out = new Map<string, string>();
+    const singers = answer?.singers;
+    if (!Array.isArray(singers) || singers.length !== voices.length) { return out; }
+    singers.forEach((s, i) => {
+        if (s && s.voice === null) { out.set(sungKey(voices[i]), (s.reason ?? '').trim() || 'no installed voice sings it'); }
+    });
+    return out;
+}
+
+/** With a Cantoria that has no `plan`: why the voice a singer came to (`resolveSinger`) cannot sing
+ *  words in `language` — it says what it sings, and this is not among it — or undefined. In the
+ *  words Cantoria's own `sing` refuses with. (An older Cantoria sang such words as silence, and the
+ *  silent voice took the instrument's place: owner's report 2026-11-13, a Latin alto.) */
+export function languageRefusal(voiceId: string, language: string, voices: readonly CantoriaVoice[]): string | undefined {
+    const voice = voices.find(v => v.id === voiceId);
+    if (!voice) { return undefined; }
+    const sings = voice.languages ?? (voice.language ? [voice.language] : []);
+    return sings.length > 0 && !sings.includes(language) ? `${voiceId} sings ${sings.join(', ')}, and these words are ${language}` : undefined;
+}
+
+/** Whether what an engine threw says the WORDS cannot be sung by what is installed — a language no
+ *  voice sings — and not that a render went wrong: its sentence then, without the error's wrapping. */
+export function unsingableReason(error: unknown): string | undefined {
+    const text = (error instanceof Error ? error.message : String(error)).replace(/^(Error: )+/, '').trim();
+    return /\bsings\b.*\band these words are\b/i.test(text) || /^no installed voice\b/i.test(text) ? text.replace(/\.$/, '') : undefined;
+}
+
+/** What the editor says, once a session for each reason, of a singer line nobody installed can
+ *  sing, with the way to a voice that could. */
+export function unsingableGuide(reason: string): Pick<VoiceGuide, 'message' | 'actions'> {
+    return { message: `Lily#: a singer line is not sung: ${reason.trim().replace(/\.$/, '')}. The part's instrument plays instead.`, actions: [HOW_TO_INSTALL] };
 }
 
 /** Whether a `singer`'s written gender lets this voice be offered: no gender written, a voice that names none, or the same one. */

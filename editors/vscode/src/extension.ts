@@ -56,7 +56,7 @@ import { PracticeState, VOICE_LEAD_S, exportPlan, levelOf, practiceSummary, soun
 import { DrawFrames, FramesAnswer, ffmpegRuns, writeVideos } from './videoExport';
 import { ffmpegMissing, ffmpegProgram } from './videoExportCore';
 import { CantoriaExtensionBackend, SingerProcess, VoiceRenderer } from './singer';
-import { VOICE_INSTALL_GUIDE, SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from './singerCore';
+import { VOICE_INSTALL_GUIDE, SINGER_NAME, SINGER_LANGUAGE, onSingerGender, singValueChoices, singerGoesOnToSings, singerLineOf, singerSettingSlot, singMarkSlot, singersWritten, singParameterDetail, singProblems, SingSettingDto, SingParameter, SingProgress, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PREPARE_TIMEOUT_MS, PrepareMode, PrepareQueue, StageClock, SungVoiceDto, sungKey, VOICE_RENDER_FIRST_RATE, VOICE_SAMPLE_VERSION, VoiceSampleQueue, byVoiceId, cantoriaApiOf, fitsGender, learnRenderRate, prepareModeOf, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, VoiceGuide, singerLanguageColumn, singerValueAt, singsLanguage, stepVoice, sungSeconds, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger, unsingableGuide, unsingableReason } from './singerCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -3806,6 +3806,9 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
         const voices: VoiceTrack[] = [];
         const silenced = new Set<number>();
         const allOffTracks = new Set<number>();     // silenced because the menu switched every voice off: their unsung notes too
+        // A line nobody installed can sing is not asked of the engine: it is said, and its part's
+        // instrument stays in the mix (owner's decision 2026-11-13).
+        const unsingable = await engine.unsingable((sung.Voices ?? []).filter(v => v.Notes.length > 0));
         for (const voice of sung.Voices ?? []) {
             // The menu's fader for the voice (owner's request 2026-11-09): its gain in the mix; at 0 it is as switched off.
             const key = sungKey(voice);
@@ -3820,6 +3823,8 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
                 if (off >= 0) { silenced.add(off); allOffTracks.add(off); }
             }
             if (voice.Notes.length === 0 || !sings || gain <= 0) { continue; }
+            const nobody = unsingable.get(key);
+            if (nobody !== undefined) { tellUnsingable(key, nobody); continue; }
             try {
                 const { rendered } = await engine.render(voice, speed);
                 const v = await rendered;
@@ -3832,7 +3837,9 @@ async function singJobs(jobs: readonly AudioJob[], source: { textDocument?: { ur
                 const sungOnly = sungParts.has(voice.Part) && !playedParts.has(voice.Part);
                 if (track >= 0 && sungOnly && !(practice?.instrumentsOn ?? []).includes(voice.Part)) { silenced.add(track); }
             } catch (e) {
-                outputChannel.appendLine(`singer: export: the voice of ${voice.Part} was not sung — ${String(e)}; its instrument plays`);
+                const refused = unsingableReason(e);
+                if (refused) { tellUnsingable(key, refused); }
+                else { outputChannel.appendLine(`singer: export: the voice of ${voice.Part} was not sung — ${String(e)}; its instrument plays`); }
             }
         }
         // A consonant before the beat (in the lead) that would fall before the file's start: the
@@ -4533,14 +4540,14 @@ async function installCantoria(): Promise<void> {
 const voiceSetupOffered = new Set<string>();
 
 /** Says, once a session for each thing to say, that no voice can be listed. The `singer` list says it every time. */
-function offerVoiceSetup(guide: VoiceGuide): void {
+function offerVoiceSetup(guide: Pick<VoiceGuide, 'message' | 'actions'>): void {
     if (voiceSetupOffered.has(guide.message)) { return; }
     voiceSetupOffered.add(guide.message);
     void showVoiceSetup(guide);
 }
 
 /** What would give a voice, as buttons on Cantoria's own commands. */
-async function showVoiceSetup(guide: VoiceGuide): Promise<void> {
+async function showVoiceSetup(guide: Pick<VoiceGuide, 'message' | 'actions'>): Promise<void> {
     const choice = await vscode.window.showInformationMessage(guide.message, ...guide.actions.map(a => a.label));
     const action = guide.actions.find(a => a.label === choice);
     if (action?.command) { await vscode.commands.executeCommand(action.command); }
@@ -4677,8 +4684,24 @@ function tellSingerOnce(panel: vscode.WebviewPanel, text: string): void {
 /** The pane's voice badge (owner's request 2026-11-08): a voice that will not be sung, with the
  *  engine's sentence (`ready` is the page's own, when it has decoded the WAV). */
 function failVoice(panel: vscode.WebviewPanel, part: string, speed: number, why: string): void {
-    tellSingerOnce(panel, `the voice of ${part} was not sung — ${why} (see Lily# Extension output)`);
-    void panel.webview.postMessage({ type: 'voiceState', part, speed, state: 'failed', detail: why });
+    // The words themselves cannot be sung by what is installed (a language no voice sings): that
+    // is the writer's to know, not a render gone wrong - said as tellUnsingable says it.
+    const unsingable = unsingableReason(why);
+    if (unsingable) { tellUnsingable(part, unsingable); }
+    else { tellSingerOnce(panel, `the voice of ${part} was not sung — ${why} (see Lily# Extension output)`); }
+    void panel.webview.postMessage({ type: 'voiceState', part, speed, state: 'failed', detail: unsingable ?? why });
+}
+
+/**
+ * A singer line nobody installed can sing (owner's decisions 2026-11-13: a Latin alto played with
+ * no voice, and only a line of the status bar - gone in eight seconds - said why): a line in the
+ * output channel each time, and ONE notification a session for each reason, with the way to a
+ * voice that could sing it. The reason is Cantoria's own (its plan, or what its sing refused
+ * with). The part's instrument plays: the page stands it in wherever a voice is not there.
+ */
+function tellUnsingable(voice: string, reason: string): void {
+    outputChannel.appendLine(`singer: ${clockNow()} ${voice} is not sung: ${reason}; its part's instrument plays`);
+    offerVoiceSetup(unsingableGuide(reason));
 }
 
 /** The engine's speed as last timed, and when it last answered: the bar's estimates (session 1178). */
@@ -4781,10 +4804,23 @@ async function prepareVoices(panel: vscode.WebviewPanel, uri: string, reason: Pr
     }
     const turned = voiceTurned.delete(panel);
     const mode = prepareModeSetting();
+    // Who would sing, asked before anything is sung (Cantoria's plan): a line nobody installed
+    // can sing never goes to the engine - it is said (tellUnsingable), shown as not sung on its
+    // line of the practice menu, and its part's instrument stands in, having no voice.
+    const unsingable = await engine.unsingable(active);
+    if (!current()) { return; }
     for (const voice of active) {
         for (const warning of voice.Warnings ?? []) { tellSingerOnce(panel, `${voice.Part}: ${warning}`); }
         const id = sungKey(voice);
         const slot = `${panelId(panel)}/${id}`;
+        const nobody = unsingable.get(id);
+        if (nobody !== undefined) {
+            mine.delete(id);
+            prepareQueue.cancelSlot(slot);
+            tellUnsingable(id, nobody);
+            void panel.webview.postMessage({ type: 'voiceState', part: id, speed, state: 'failed', detail: nobody });
+            continue;
+        }
         let key: string;
         try {
             key = await engine.key(voice, speed);
@@ -4922,7 +4958,12 @@ async function candidateVoices(text: string, uri: vscode.Uri, renderName: string
         part: voice.Part, bytes: new Uint8Array(await fs.promises.readFile(wav)), lead: VOICE_LEAD_S,
         track: candidateSilencedTrack(voice.Part, sounds), entries: voiceEntries(voice.Notes),
     });
-    for (const voice of candidateSings(sung.Voices, sounds)) {
+    const candidates = candidateSings(sung.Voices, sounds);
+    const unsingable = await engine.unsingable(candidates);
+    for (const voice of candidates) {
+        // Nobody installed can sing it: its instrument plays, and the writer is told as the preview tells it.
+        const nobody = unsingable.get(sungKey(voice));
+        if (nobody !== undefined) { tellUnsingable(sungKey(voice), nobody); continue; }
         try {
             const { rendered, cached } = await engine.render(voice, 1);
             let late: ReturnType<typeof setTimeout> | undefined;

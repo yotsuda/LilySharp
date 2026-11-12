@@ -49,6 +49,15 @@ public abstract class SingingEngine
     public virtual SingingEngine WithVoice(string voice) => this;
 
     /// <summary>
+    /// Who would sing what <paramref name="askedJson"/> asks for (<see cref="SingerPlan.AskedJson"/>)
+    /// on this machine, without singing: the engine's answer as JSON (<see cref="SingerPlan.Read"/>),
+    /// or one sentence saying why it gave none. Neither, here: an engine that does not know
+    /// (owner's decision 2026-11-13 — only Cantoria knows what is installed), and its caller
+    /// sings as it did before there was a plan.
+    /// </summary>
+    public virtual (string? Json, string? Problem) Plan(string askedJson) => (null, null);
+
+    /// <summary>
     /// Sings <paramref name="voice"/> and reads the sound back: the score written as Cantoria's
     /// JSON (<see cref="SungScoreJson"/>) under a folder of its own in the temp directory, the
     /// engine run, the WAV decoded (<see cref="WavReader"/>) and the folder removed. An engine
@@ -135,6 +144,61 @@ public sealed class CantoriaProgram : SingingEngine
 
     public override string? Sing(string scoreJsonPath, string outputWavPath)
     {
+        string[] arguments = Voice != null
+            ? ["sing", scoreJsonPath, "-o", outputWavPath, "--voice", Voice]
+            : ["sing", scoreJsonPath, "-o", outputWavPath];
+        var (exit, _, err) = Run(arguments);
+        if (exit == 0)
+            return null;
+        // Its last line is the sentence ("cantoria: …"); a silent failure gets the exit code.
+        return LastLine(err) ?? $"{Path.GetFileName(Program)} exited with code {exit}";
+    }
+
+    /// <summary>
+    /// <c>cantoria plan asked.json --json</c>: exit code 0 (each voice asked has a singer) and 3
+    /// (one has none) both print the plan. Where its engines are is its own configuration, as
+    /// for <c>sing</c> — nothing more is passed. Exit code 2 is its usage: a program from
+    /// before <c>plan</c> (2026-11-13) answers so, and the sentence says it.
+    /// </summary>
+    public override (string? Json, string? Problem) Plan(string askedJson)
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "lilysharp-sing", Guid.NewGuid().ToString("N"));
+        string name = Path.GetFileName(Program);
+        try
+        {
+            Directory.CreateDirectory(dir);
+            string asked = Path.Combine(dir, "asked.json");
+            File.WriteAllText(asked, askedJson, new UTF8Encoding(false));
+            var (exit, output, err) = Run(["plan", asked, "--json"]);
+            if (exit is 0 or 3 && output.TrimStart().StartsWith('{'))
+                return (output, null);
+            if (exit == 2)
+                return (null, $"{name} did not say who would sing: it does not know `plan` (a cantoria from 2026-11-13 on does)");
+            return (null, $"{name} did not say who would sing: {LastLine(err) ?? $"it exited with code {exit}"}");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return (null, $"{name} could not be asked who would sing: {e.Message}");
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    /// <summary>The last line of <paramref name="text"/> that says anything, or null.</summary>
+    private static string? LastLine(string text)
+    {
+        string last = "";
+        foreach (var line in text.Split('\n'))
+            if (line.Trim().Length > 0) last = line.Trim();
+        return last.Length > 0 ? last : null;
+    }
+
+    /// <summary>Runs the program with <paramref name="arguments"/> to its end: its exit code and
+    /// what it wrote.</summary>
+    private (int Exit, string Output, string Error) Run(string[] arguments)
+    {
         var start = new ProcessStartInfo(Program)
         {
             UseShellExecute = false,
@@ -145,15 +209,8 @@ public sealed class CantoriaProgram : SingingEngine
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8,
         };
-        start.ArgumentList.Add("sing");
-        start.ArgumentList.Add(scoreJsonPath);
-        start.ArgumentList.Add("-o");
-        start.ArgumentList.Add(outputWavPath);
-        if (Voice != null)
-        {
-            start.ArgumentList.Add("--voice");
-            start.ArgumentList.Add(Voice);
-        }
+        foreach (string argument in arguments)
+            start.ArgumentList.Add(argument);
         using var process = Process.Start(start) ?? throw new InvalidOperationException($"could not start {Program}");
         process.StandardInput.Close();
         // Both pipes drained while it runs, so a chatty engine cannot fill one and stall.
@@ -161,14 +218,8 @@ public sealed class CantoriaProgram : SingingEngine
         var stderr = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
         string err = stderr.GetAwaiter().GetResult();
-        _ = stdout.GetAwaiter().GetResult();
-        if (process.ExitCode == 0)
-            return null;
-        // Its last line is the sentence ("cantoria: …"); a silent failure gets the exit code.
-        string last = "";
-        foreach (var line in err.Split('\n'))
-            if (line.Trim().Length > 0) last = line.Trim();
-        return last.Length > 0 ? last : $"{Path.GetFileName(Program)} exited with code {process.ExitCode}";
+        string output = stdout.GetAwaiter().GetResult();
+        return (process.ExitCode, output, err);
     }
 }
 

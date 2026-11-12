@@ -277,41 +277,78 @@ public static class ScoreExport
     /// says why in <paramref name="warnings"/>; the voice's own warnings (syllables not kana) come
     /// along too. <paramref name="notes"/> gets one line per voice sung.
     /// </summary>
+    /// <remarks>
+    /// WHO SINGS is asked of the engine first, where it can say (<see cref="Audio.SingerPlan"/>,
+    /// owner's decisions 2026-11-13): a line no installed voice can sing — Latin words, with no
+    /// voice that sings Latin — is said once, in the plan's words, and is nobody's: the part's
+    /// instrument plays there, for the whole part or for the sections only that line sings
+    /// (<see cref="SungVoices.Unsung"/> reads the voices that DID sing). A voice the plan found
+    /// and the engine then failed to sing is the warning it was, and its instrument plays too.
+    /// An engine with no plan (an older cantoria, which says so in a warning) sings as before.
+    /// </remarks>
     private static List<Audio.VoiceTrack> SingTheSungParts(SyntaxTree tree, RenderSpec? spec, MidiFile midi,
         Audio.SingingEngine singer, List<string> notes, List<string> warnings)
     {
         var tracks = new List<Audio.VoiceTrack>();
+        var voices = SungVoicesOf(tree, spec, midi);
+        if (voices.Count == 0)
+            return tracks;
         var shown = spec ?? RenderSpecParser.PlayedSpec(tree, null, null);
-        var sounds = shown != null ? SungStaves.Of(tree.GetRoot(), shown) : null;
-        var voices = SungVoices.Read(midi, MidiClock.SecondsOf(midi));
-        // Where none of a part's voices sings a section, its instrument stays (SungVoices.Unsung).
-        var unsung = SungVoices.Unsung(midi, voices, MidiClock.SecondsOf(midi));
+        var sounds = SungStaves.Of(tree.GetRoot(), shown!);
+        var (plan, planProblem) = Audio.SingerPlan.Ask(singer,
+            Audio.SingerPlan.AskedOfScore(tree, spec, (singer as Audio.CantoriaProgram)?.Voice, midi));
+        if (planProblem != null)
+            warnings.Add(planProblem);
+        var sang = new List<(SungVoice Voice, Audio.MonoAudio Sound, string Name)>();
         foreach (var voice in voices)
         {
-            // A file with no score block has no staff with words under it: the preview sings
-            // nothing there (`lilysharp/playback` answers no Sung part), nor does this.
-            if (sounds == null || !sounds.Sung.Contains(voice.Part, StringComparer.Ordinal))
-                continue;
             foreach (var w in voice.Warnings)
                 warnings.Add($"{voice.Part}: {w}");
-            // The file's singer (Music.LyricSinger): a voice's own name is sung in, a role is the
-            // editor's settings' to cast; a voice that cannot be had falls to the default, as there.
             var (sound, error) = (default(Audio.MonoAudio), default(string));
-            if (voice.Singer is { } named && named.Contains('/'))
+            string name = singer.Name;
+            if (plan?.Of(voice) is { } planned)
             {
-                (sound, error) = singer.WithVoice(named).Sing(voice, Audio.WavRenderer.DefaultSampleRate);
-                if (sound == null)
-                    warnings.Add($"{voice.Part}: the singer \"{named}\" could not sing ({error}); singing with the default voice");
+                string line = planned.Asked.Text ?? voice.Part;
+                if (planned.Voice is not { } resolved)
+                {
+                    // Nobody installed sings it: said once, and the instrument stays.
+                    string nobody = $"{line}: {Audio.SingerPlan.NotSung(planned.Reason)}";
+                    if (!warnings.Contains(nobody))
+                        warnings.Add(nobody);
+                    continue;
+                }
+                if (planned.Note is { } note && !warnings.Contains($"{line}: {note}"))
+                    warnings.Add($"{line}: {note}");
+                (sound, error) = singer.WithVoice(resolved).Sing(voice, Audio.WavRenderer.DefaultSampleRate);
+                name = resolved;
             }
-            else if (voice.Singer is { } role)
-                warnings.Add($"{voice.Part}: the singer \"{role}\" is a role, which the command line does not cast; singing with the default voice");
-            if (sound == null)
-                (sound, error) = singer.Sing(voice, Audio.WavRenderer.DefaultSampleRate);
+            else
+            {
+                // No plan. The file's singer (Music.LyricSinger): a voice's own name is sung in, a
+                // role is the editor's settings' to cast; a voice that cannot be had falls to the default.
+                if (voice.Singer is { } named && named.Contains('/'))
+                {
+                    (sound, error) = singer.WithVoice(named).Sing(voice, Audio.WavRenderer.DefaultSampleRate);
+                    if (sound == null)
+                        warnings.Add($"{voice.Part}: the singer \"{named}\" could not sing ({error}); singing with the default voice");
+                }
+                else if (voice.Singer is { } role)
+                    warnings.Add($"{voice.Part}: the singer \"{role}\" is a role, which the command line does not cast; singing with the default voice");
+                if (sound == null)
+                    (sound, error) = singer.Sing(voice, Audio.WavRenderer.DefaultSampleRate);
+            }
             if (sound == null)
             {
                 warnings.Add($"{voice.Part} is not sung ({error}); its instrument plays");
                 continue;
             }
+            sang.Add((voice, sound, name));
+        }
+        // Where none of a part's voices sings a section, its instrument stays (SungVoices.Unsung)
+        // — of the voices that sang: a line nobody could sing leaves its sections to the instrument.
+        var unsung = SungVoices.Unsung(midi, sang.Select(s => s.Voice).ToList(), MidiClock.SecondsOf(midi));
+        foreach (var (voice, sound, name) in sang)
+        {
             // The engine's WAV begins SungScoreJson.Lead before the score's 0 (the first consonant's room).
             tracks.Add(new Audio.VoiceTrack(voice.Part, sound, -Audio.SungScoreJson.Lead));
             bool played = sounds.Played.Contains(voice.Part, StringComparer.Ordinal);
@@ -319,10 +356,28 @@ public static class ScoreExport
                 foreach (var track in midi.Tracks)
                     track.Notes.RemoveAll(n => n.Part == voice.Part
                         && !(unsung.TryGetValue(voice.Part, out var free) && free.Any(r => n.StartTick >= r.From && n.StartTick < r.To)));
-            notes.Add($"Voice: {singer.Name} sings {voice.Part} ({voice.Notes.Count} notes, {Math.Max(0, sound.Seconds - Audio.SungScoreJson.Lead):0.0} s)"
+            notes.Add($"Voice: {name} sings {voice.Part} ({voice.Notes.Count} notes, {Math.Max(0, sound.Seconds - Audio.SungScoreJson.Lead):0.0} s)"
                 + (played ? ", its instrument too" : ""));
         }
         return tracks;
+    }
+
+    /// <summary>
+    /// The voices a score SINGS, as <see cref="SingTheSungParts"/> sings them and
+    /// <c>lysc check --singer</c> asks after them: the sung voices of its export
+    /// (<see cref="SungVoices.Read"/> of <paramref name="midi"/>) whose part the score sounds as
+    /// a voice (<see cref="SungStaves"/>). A file with no score block has no staff with words
+    /// under it: the preview sings nothing there (<c>lilysharp/playback</c> answers no Sung
+    /// part), nor does this.
+    /// </summary>
+    public static IReadOnlyList<SungVoice> SungVoicesOf(SyntaxTree tree, RenderSpec? spec, MidiFile midi)
+    {
+        var shown = spec ?? RenderSpecParser.PlayedSpec(tree, null, null);
+        if (shown == null)
+            return [];
+        var sounds = SungStaves.Of(tree.GetRoot(), shown);
+        return SungVoices.Read(midi, MidiClock.SecondsOf(midi))
+            .Where(v => sounds.Sung.Contains(v.Part, StringComparer.Ordinal)).ToList();
     }
 
     /// <summary>
