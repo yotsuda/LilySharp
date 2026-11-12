@@ -579,6 +579,8 @@ public sealed partial class MeasureCollector
     private readonly ChordNameCollector _chordNameCollector = new();
     // Percent repeats
     private readonly List<PercentRepeatItem> _percentRepeats = new();
+    // The marks a shared staff writes out as notes (CondensedPercents), by source start; null: none.
+    private HashSet<int>? _writtenOutPercents;
     // Cross-staff items
     private readonly List<CrossStaffItem> _crossStaffItems = new();
     // Grob property overrides and reverts
@@ -1663,6 +1665,8 @@ public sealed partial class MeasureCollector
 
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
+        if (renderSpec.HasCondensedStaff || renderSpec.HasCombinedStaff)
+            _writtenOutPercents = CondensedPercents.WrittenOut(tree.GetRoot(), renderSpec);
         // This score renders its bound form (resolved by name in the RenderSpec).
         // Fall back to the primary form only when the reference is unresolved (a
         // validator error) so a typo still previews something.
@@ -4803,6 +4807,7 @@ public sealed partial class MeasureCollector
         _shadowedRehearsalMarks.Clear(); // refilled from the finished score (RecordShadowedRehearsalMarks)
         _condensedStaffChangeWarnings.Clear();
         _condensedStaffDuplicateDynamics.Clear();
+        _writtenOutPercents = null;
         _canonicalSectionBars.Clear();
         _canonicalByName = null;
         _writtenBars.Clear();
@@ -6843,6 +6848,9 @@ public sealed partial class MeasureCollector
         // (`repeat percent 2 { c16 d e f }` writes the value once). Captured BEFORE the
         // first pass, which advances it.
         var defaultAtBody = _v.DefaultDuration.Dotted(_v.DefaultDots);
+        // …and the relative frame, for a mark that is written out (below).
+        var frameAtBody = new OctaveSnapshot(_v.Octave.CurrentOctave, _v.Octave.LastPitchName);
+        var (frameDuration, frameDots) = (_v.DefaultDuration, _v.DefaultDots);
         await ProcessBodyOnce();
         int bodyMeasureCount = builder.LogicalMeasureIndex - startMeasure;
         var bodyLength = builder.CurrentDuration - openAtStart;
@@ -6991,6 +6999,20 @@ public sealed partial class MeasureCollector
             int at = mark.SourceStart;
             if (!ChargeExpansion(passCost, at))
                 break;
+
+            // A mark on a staff another part shares, in a bar where that part writes its own
+            // music: no sign can stand for the staff's bar, so the bars it repeats are drawn
+            // again as notes — the same music, from the frame the body opened in (as an
+            // unfolded repeat's copies are, ProcessRepeatExpression) — and the other part's
+            // notes stand (CondensedPercents; grammar evaluation 3, 2026-11-13). LILYSHARP-OWN.
+            if (_writtenOutPercents?.Contains(at) == true)
+            {
+                _v.Octave.CurrentOctave = frameAtBody.Octave;
+                _v.Octave.LastPitchName = frameAtBody.PitchName;
+                (_v.DefaultDuration, _v.DefaultDots) = (frameDuration, frameDots);
+                await ProcessMusicNodeSequence(bodyNodes, builder);
+                continue;
+            }
 
             if (isBeatSlashBody)
             {

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 338 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **464** | |
+| `OWN` | 344 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **470** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -26,13 +26,13 @@
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 15 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
+| `LilySharp.Core/Midi/MidiExporter.cs` | 8 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
-| `LilySharp.Core/Midi/MidiExporter.cs` | 7 |
+| `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
-| `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（338 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（344 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -261,6 +261,7 @@
 - **`NoteStepper.NoProgram`** LILYSHARP-OWN: the editor's audition has no LilyPond counterpart (the performer
 ### `LilySharp.Core/Editing/SingerParts.cs`
 - **`SingerParts`** over g-sharp in a minor a third above is b. LILYSHARP-OWN, a reading.
+- **`SingerParts.BarsAtRest`** LILYSHARP-OWN.
 ### `LilySharp.Core/Harmony/KeyEstimator.cs`
 - **`KeyEstimator`** LILYSHARP-OWN: an editor aid, not engraving — LilyPond has no key finder. The estimate is
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Chords.cs`
@@ -290,6 +291,7 @@
 - **`MidiExporter.AddPedals`** LILYSHARP-OWN: LilyPond's Piano_pedal_performer is consisted per Voice
 - **`MidiExporter.SplitIntoPartTracks`** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
 - **`MidiExporter.PlayChordRow`** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
+- **`MidiExporter.RowsAndLanesEnd`** 0 1 2 4 5 for 0 1 2 3 4). LILYSHARP-OWN: LilyPond performs no ChordNames context. The parts
 - **`MidiExporter._sequenceClosedAt`** part's bar 3 at 3840 — a bar early from there on. LILYSHARP-OWN. ⚠️ Not a drum chart: the
 - **`MidiExporter.SwingNotes`** LILYSHARP-OWN: LilyPond's MIDI plays its swing equation straight unless the score asks for
 - **`MidiExporter.ProcessGrace`** previous written duration), so this is LILYSHARP-OWN and Lily# used to
@@ -395,6 +397,7 @@
 ### `LilySharp.Core/Rendering/TextRole.cs`
 - **`TextRoles.TakesMusicCompanionFace`** LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
+- **`AnnotationNameValidator.WarnVibratoNobodySings`** vibrato is an everyday marking and the writer waited for a wavy line). LILYSHARP-OWN.
 - **`AnnotationNameValidator.Written`** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/AnnotationValues.cs`
 - **`AnnotationValues.Sing`** LILYSHARP-OWN: LilyPond writes no sound; what is written here is heard from a
@@ -449,6 +452,8 @@
 - **`BeamingPattern.Options.For`** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/CompressRests.cs`
 - **`CompressRests`** LILYSHARP-OWN: LilyPond has no switch for this. MEASURED (2.26.0, Lab sessions/p903/b5):
+### `LilySharp.Core/Svg/Collector/CondensedPercents.cs`
+- **`CondensedPercents`** quartet's two violins). LILYSHARP-OWN: such a mark is written out — the bars it repeats,
 ### `LilySharp.Core/Svg/Collector/CrossArpeggios.cs`
 - **`CrossArpeggios`** LILYSHARP-OWN: the pairing. LilyPond connects whatever arpeggios the staves WROTE at a
 ### `LilySharp.Core/Svg/Collector/ItemDiagramRuns.cs`
@@ -463,11 +468,13 @@
 - **`MeasureCollector.SolveCrossCollisions`** LILYSHARP-OWN: the moved voice's slot. LilyPond keeps the Voice's own horizontal-shift,
 - **`MeasureCollector.DefaultExpansionBudgetCap`** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
 - **`MeasureCollector.ProcessPercentRepeat`** LILYSHARP-OWN, owner's decision 2026-10-14, session 905). Whole bars: the body opens
+- **`MeasureCollector.ProcessPercentRepeat`** notes stand (CondensedPercents; grammar evaluation 3, 2026-11-13). LILYSHARP-OWN.
 - **`MeasureCollector.ProcessGraceRegion`** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Drums.cs`
 - **`MeasureCollector.PlanDrumChart`** LILYSHARP-OWN (owner's design 2026-10-11): LilyPond has no drum chart — its drum music
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
 - **`MeasureCollector.ProcessSectionPrologue`** `time!` (MeasureBuilder.SectionHead, LILYSHARP-OWN): no reset stands here yet, so
+- **`MeasureCollector.ProcessSectionBody`** of the name, played q (grammar evaluation 3, 2026-11-13). LILYSHARP-OWN: the grid's
 - **`MeasureCollector.ApplyKeySignatureChange`** is not drawn unless written `key!` (MeasureBuilder.SectionHead, LILYSHARP-OWN). At a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
 - **`MeasureCollector.ProcessMusicNode`** not against the reset the head already stands on (LILYSHARP-OWN): a

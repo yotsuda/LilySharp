@@ -166,6 +166,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
+        _root = root;
+        _sungParts = null;
         // root is a CompilationUnit — it never matches an annotation-bearing case,
         // so it is not checked separately (the old CheckNode(root) was a no-op).
         foreach (var node in root.DescendantNodesOfKinds(AnnotationKinds))
@@ -194,6 +196,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 // A bare '@todo' on the group rings its first member (owner's request 2026-10-31).
                 else if (OnArpeggioGroup(art) && TodoAnnotation.Of(art) == null)
                     WarnArpeggioUnsupported(art, name);
+                else if (name.Equals(VibratoName, StringComparison.Ordinal))
+                    WarnVibratoNobodySings(art);
                 break;
             }
             case MusicMarkSyntax mark when mark.Parent is FormAlternativeSyntax
@@ -202,6 +206,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 break;
             case MusicMarkSyntax mark:
             {
+                if (!mark.IsSpanEnd && AnnotationValues.Vibrato(mark) != null)
+                    WarnVibratoNobodySings(mark);
                 // ⚠️ The dotted MarkName is BUILT on every read — it joins the name tokens
                 // through a list — and every branch below that needs it is a branch that is
                 // about to report something. On the settled-keystroke path almost no mark
@@ -239,6 +245,11 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                             DiagnosticCodes.UnknownAnnotation,
                             $"Unknown annotation '@!{name}' — it is ignored. "
                             + CaseHint($"@!{canonical}"));
+                    // '@figuredBass(7!)': a '!' among the figures is no terminator of anything
+                    // — "'@!figuredBass.7' is ignored: nothing of that name can be ended" sent
+                    // the writer looking for a span (grammar evaluation 3, 2026-11-13).
+                    else if (mark is { Name: FiguredBassName, HasArgumentList: true })
+                        WarnUnknown(mark, name);
                     else if (MusicMarkItem.ParseSpanEndName(name) is null)
                         _diagnostics.Warning(
                             mark.Span,
@@ -690,6 +701,70 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         _ => null,
     };
 
+    private const string VibratoName = "vibrato";
+    private SyntaxNode? _root;
+    // The parts a voice sings or words are set to (WarnVibratoNobodySings), read when first asked.
+    private HashSet<string>? _sungParts;
+
+    /// <summary>
+    /// <c>@vibrato</c> on a part nobody sings: said, where it was accepted and did nothing.
+    /// </summary>
+    /// <remarks>
+    /// <c>@vibrato</c> is a SINGER's mark (<see cref="AnnotationValues.Vibrato"/>): a singing voice
+    /// performs it, and it draws nothing. On a guitar's note it was accepted without a word and
+    /// neither drew nor sounded (grammar evaluation 3, 2026-11-13, a guitar piece — where
+    /// vibrato is an everyday marking and the writer waited for a wavy line). LILYSHARP-OWN.
+    /// A part is taken as sung where a <c>singer</c> line sings it, words are set to it (its
+    /// header's <c>lyrics</c>, a score's lyrics row) or it is a part Lily# made of a singer's
+    /// lines; music in no part (a phrase's body) is not asked.
+    /// </remarks>
+    private void WarnVibratoNobodySings(SyntaxNode mark)
+    {
+        if (_root == null)
+            return;
+        string? part = null;
+        for (var p = mark.Parent; p != null && part == null; p = p.Parent)
+            part = p switch
+            {
+                PartBlockSyntax block => block.Name,
+                PartDeclarationSyntax declaration => declaration.Name.Text,
+                _ => null,
+            };
+        if (part == null)
+            return;
+        if (_sungParts == null)
+        {
+            _sungParts = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var row in _root.DescendantNodes<LyricsRowRenderSyntax>())
+                if (Svg.Collector.RenderSpecParser.RowTarget(row) is { } target)
+                    _sungParts.Add(target);
+            foreach (var line in Music.LyricSinger.LinesOf(_root))
+                if (line.Part is { } sung)
+                    _sungParts.Add(sung);
+            foreach (var declaration in _root.ChildNodes().OfType<PartDeclarationSyntax>())
+                if (declaration.ChildNodes().OfType<PartLyricsDeclarationSyntax>().Any()
+                    || Music.LyricSinger.IsMadePart(_root, declaration.Name.Text))
+                    _sungParts.Add(declaration.Name.Text);
+        }
+        if (_sungParts.Contains(part))
+            return;
+        _diagnostics.Warning(mark.Span, DiagnosticCodes.UnknownAnnotation,
+            $"'@vibrato' is a singer's mark — a singing voice performs it — and part '{part}' is not sung "
+            + "(no words are set to it and no 'singer' line sings it): it is ignored here, drawn nowhere and not played. "
+            + "For the word on the page write '@text(\"vib.\")'.");
+    }
+
+    private const string FiguredBassName = "figuredBass";
+
+    /// <summary>What <c>@figuredBass(…)</c> reads, as an unknown figure group's diagnostic says it
+    /// (and docs/GRAMMAR_FOR_LLM.md, word for word in substance).</summary>
+    internal const string FiguredBassVocabulary =
+        "Figures are written top to bottom with spaces between them: a digit 0-9 ('6', '6 4', '7 5 3'); "
+        + "'s', 'f' or 'n' after a digit for its sharp, flat or natural ('6 s', '4 f', '7 n'); "
+        + "'#' before a digit for its sharp ('#6'), or with no digit after it for a sharp alone, the raised third ('#', '7 #'); "
+        + "'_' for a figure held from the note before. "
+        + "Not read: 'b', '+', '-', '/', '!', '♯', '♭', the words 'sharp' and 'flat', and a letter with no digit before it.";
+
     private void WarnUnknown(SyntaxNode node, string name)
     {
         // A REAL name written without its argument — '@bend', or the '@bend.half' that
@@ -722,6 +797,15 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         // '@ds(al fien)'.) A candidate has no source text, so the suggestion below is
         // still rendered from its internal name, which is what that reconstruction is for.
         var message = $"Unknown annotation '{Written(node, name)}' — it is ignored.";
+
+        // Figures no reader of '@figuredBass(…)' takes: what it does take, in place of a guess
+        // ("Did you mean '@figuredBass(6)'?" answered '6+', '6 b', 'n' and '♭' alike —
+        // grammar evaluation 3, 2026-11-13). The vocabulary is FiguredBassItem.ParseFigures'.
+        if (node is MusicMarkSyntax { Name: FiguredBassName, HasArgumentList: true } && CaseCorrected(node, name) is null)
+        {
+            _diagnostics.Warning(node.Span, DiagnosticCodes.UnknownAnnotation, message + " " + FiguredBassVocabulary);
+            return;
+        }
 
         // A name that differs from a real one only in case gets that spelling, not a typo
         // guess: names are case-sensitive (owner's decision 2026-09-27).

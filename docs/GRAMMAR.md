@@ -3064,7 +3064,19 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                        set once at the chord, and the arpeggio written on both staves.
                        MusicXML: arpeggiate on the notes of both staves with one number. *)
    - Glissando:     c4@glissando d
+                    (* c4@slide d is the same line, a guitarist's name for it; MusicXML writes
+                       <slide> for it. *)
    - Figured bass:  c4@figuredBass(6) , d4@figuredBass(6 4)
+                    (* FigureGroup = { Figure } ;  top to bottom, spaces between
+                       Figure      = Digit [ 's' | 'f' | 'n' ]   — 6 , 6 s = 6 sharp, 4 f, 7 n
+                                   | '#' Digit                   — #6 = 6 s
+                                   | '#'                         — no digit after it: a sharp
+                                                                   alone, the raised third, at
+                                                                   any row: # , 7 # , 7 5 #
+                                   | '_' ;                       — held from the note before
+                       Digit = '0'..'9' ('0' an empty row). Anything else (b7, 6+, 6-, 6/, 7!,
+                       a bare s/f/n, a word) makes the whole group unknown: LYS1008, which
+                       lists this vocabulary, and the group is ignored. *)
    - Chord diagram: c4@diagram(x32010) , c4@diagram(x32010).down
                     (* a guitar fret diagram: a position string, one character per string
                     low -> high — a digit is the fret ('0' or 'o' open), 'x' muted — or the

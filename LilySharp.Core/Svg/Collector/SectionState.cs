@@ -33,6 +33,13 @@ internal sealed class SectionState
     /// <summary>By-part cells: <c>(section, part)</c> → its declaration.</summary>
     public Dictionary<(string section, string part), SectionDeclarationSyntax> GroupedByPartCells { get; } = new();
 
+    /// <summary>By-section cells: <c>(section, part)</c> → the part's block in a top-level
+    /// <c>section NAME { part { … } }</c>, the first where two declarations hold one. What finds
+    /// a part's music in a declaration of the name that is not the representative
+    /// (<see cref="Sections"/>): a section may gather its parts' music over several
+    /// declarations (the grid's rule, DuplicateCellValidator).</summary>
+    public Dictionary<(string section, string part), PartBlockSyntax> BySectionCells { get; } = new();
+
     /// <summary>By-part CHORD-TRACK cells: <c>(section, track)</c> → the inner section of
     /// <c>chords track { section NAME { … } }</c>. Kept apart from <see cref="GroupedByPartCells"/>
     /// (whose bodies are music) because a chord cell's bars are counted by the row's own
@@ -57,6 +64,7 @@ internal sealed class SectionState
     {
         Sections.Clear();
         GroupedByPartCells.Clear();
+        BySectionCells.Clear();
         ChordTrackCells.Clear();
         StartMeasure.Clear();
         AllStarts.Clear();

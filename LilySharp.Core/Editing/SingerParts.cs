@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using LilySharp.Core.Music;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
 
@@ -195,6 +196,7 @@ public static class SingerParts
             made.Append(nl);
         made.Append(Marker).Append(nl);
         var cells = new List<Cell>();
+        var phrases = SectionBarCounts.PhraseBodies(root);
         int partsMade = 0;
 
         // One part for each staff asked for: a singer's, as the file's top level says what she
@@ -244,7 +246,14 @@ public static class SingerParts
                     // lasts that bar), then the whole bars: as `R*5` the pickup was a bar of four
                     // quarter rests and the bars after it empty (found writing a band chart to
                     // try the grammar, 2026-11-12).
-                    if (bars.TryGetValue(section, out int count) && count > 0)
+                    // …and where the part she sings on writes the section, bar for bar as that
+                    // part is barred there (BarsAtRest): a count knew no `time` inside the
+                    // section and no short bar at its edge.
+                    if (MusicOf(root, first, section) is { } followed
+                        && BarsAtRest(root, followed, section, section == sections[0], text, phrases,
+                            bars.GetValueOrDefault(section)) is { } atRest)
+                        music.Append("  section ").Append(section).Append(" { ").Append(atRest).Append(" }").Append(nl);
+                    else if (bars.TryGetValue(section, out int count) && count > 0)
                     {
                         bool pickup = root.DescendantNodes<PartialDeclarationSyntax>().Any(p =>
                             p.Parent is SectionDeclarationSyntax { SectionName: var named } ? named == section
@@ -396,6 +405,97 @@ public static class SingerParts
             targets[at + grown] = octave;
         }
         return OctaveModeConverter.Pin(text.ToString(), targets);
+    }
+
+    /// <summary>
+    /// The bars of <paramref name="cell"/> — the music of the part a singer sings on, in a
+    /// section she does not sing — each as a rest of its own length, with the <c>time</c> changes
+    /// the part writes at its bars' starts: a whole bar is <c>R</c>, a bar the meter does not
+    /// fill (the pickup, the short bar a later pickup completes, an unmetered bar) rests what it
+    /// holds. Whole bars in a row with no change among them are one <c>R*N</c>, the bar of a
+    /// pickup apart (it lasts its own bar), and the bars other parts make the section longer by
+    /// after them. Null where there is nothing to copy that a count of the section's bars does
+    /// not say: every bar whole and no change.
+    /// </summary>
+    /// <remarks>Until 2026-11-13 the section was written as a count (<c>R*N</c>, or
+    /// <c>R | R*(N-1)</c> after a pickup): a <c>time 2/4</c> the part wrote inside it was not on
+    /// the singer's staff — which the MIDI then played four beats long, 4/4 never coming back —
+    /// and the short last bar before a <c>partial</c> was a whole bar of rest, reported as a
+    /// pickup after a whole bar (LYS2022) though the file had none (grammar evaluation 3).
+    /// LILYSHARP-OWN.</remarks>
+    private static string? BarsAtRest(SyntaxNode root, SyntaxNode cell, string section, bool opensThePiece,
+        string text, IReadOnlyDictionary<string, SyntaxNode> phrases, int sectionBars)
+    {
+        // The meter the section opens in: its header's, else the score's.
+        var meter = DurationCalculator.ParseTimeSignature(4, 4);
+        foreach (var time in root.ChildNodes().OfType<TimeSignatureSyntax>())
+            if (!time.IsSenzaMisura)
+                meter = DurationCalculator.ParseTimeSignature(time.Beats, time.BeatType);
+        foreach (var header in root.ChildNodes().OfType<SectionDeclarationSyntax>().Where(s => s.SectionName == section))
+            foreach (var time in header.ChildNodes().OfType<TimeSignatureSyntax>())
+                if (!time.IsSenzaMisura)
+                    meter = DurationCalculator.ParseTimeSignature(time.Beats, time.BeatType);
+
+        var changes = new List<(int Bar, TimeSignatureSyntax Time, bool MidBar)>();
+        var bars = Semantics.MeasureModel.Split(cell, phrases, meter, changes);
+        if (bars.Count == 0)
+            return null;
+        bool pickup = root.DescendantNodes<PartialDeclarationSyntax>().Any(p =>
+            p.Parent is SectionDeclarationSyntax { SectionName: var named } ? named == section
+            : p.Parent == root && opensThePiece);
+        var written = new StringBuilder();
+        int run = 0; // whole bars waiting to be written as one rest
+        bool plain = true; // every bar a whole one
+        void WriteRun()
+        {
+            if (run > 0)
+                written.Append(run == 1 ? "R | " : "R*" + run + " | ");
+            run = 0;
+        }
+        for (int i = 0; i < bars.Count; i++)
+        {
+            foreach (var (at, time, _) in changes)
+                if (at == i && time.Span.End <= text.Length)
+                {
+                    WriteRun();
+                    written.Append(text, time.Span.Start, time.Span.Length).Append(' ');
+                }
+            var bar = bars[i];
+            bool whole = bar.IsEmpty || bar.IsBareRest || bar.Flowed || (i == 0 && pickup)
+                || (bar.Meter is { } barMeter && bar.Duration == barMeter);
+            plain &= whole;
+            if (whole || Rests(bar.Duration) is not { } rests)
+            {
+                run++;
+                if (i == 0 && pickup)
+                    WriteRun();
+                continue;
+            }
+            WriteRun();
+            written.Append(rests).Append(" | ");
+        }
+        // Whole bars and no change: the count says it, the section's own (which other parts
+        // may make longer than this one writes it).
+        if (plain && changes.Count == 0)
+            return null;
+        run += Math.Max(0, sectionBars - bars.Count);
+        WriteRun();
+        return written.ToString().TrimEnd();
+
+        // A length as rests, the longest first; null for one no plain rests add up to.
+        static string? Rests(Fraction length)
+        {
+            if (length <= Fraction.Zero || (length.Denominator & (length.Denominator - 1)) != 0 || length.Denominator > 64)
+                return null;
+            var parts = new List<string>();
+            for (int value = 1; value <= 64 && length > Fraction.Zero; value *= 2)
+                while (length >= new Fraction(1, value))
+                {
+                    parts.Add("r" + value);
+                    length -= new Fraction(1, value);
+                }
+            return length == Fraction.Zero ? string.Join(" ", parts) : null;
+        }
     }
 
     /// <summary>What stands between the braces of a block that ends with its closing one (a

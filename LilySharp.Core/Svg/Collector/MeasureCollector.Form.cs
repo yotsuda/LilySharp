@@ -719,6 +719,21 @@ public sealed partial class MeasureCollector
             }
         }
 
+        // A SECOND DECLARATION of the name holds this voice's block: `section A { p { … } }`
+        // and, further down, `section A { q { … } }`. One declaration is the representative
+        // and only its blocks were walked, so q's staff was empty bars and nothing was said
+        // — where the MIDI, the MusicXML and the LilyPond twin, which gather every declaration
+        // of the name, played q (grammar evaluation 3, 2026-11-13). LILYSHARP-OWN: the grid's
+        // rule is that a section gathers its parts' music wherever it is declared, each
+        // (section, part) cell once (DuplicateCellValidator, LYS7001) — so the page gathers too.
+        if (!matched && _voiceName != null
+            && _sectionState.BySectionCells.TryGetValue((section.SectionName, _voiceName), out var elsewhere)
+            && elsewhere.Parent != section)
+        {
+            await ProcessMusicContainer(elsewhere, processNodes);
+            matched = true;
+        }
+
         // By-part fallback: this section's music for the current voice is not a
         // part-block here but lives inside `part <voice> { section <name> { ... } }`.
         if (!matched && _voiceName != null
@@ -813,6 +828,17 @@ public sealed partial class MeasureCollector
             {
                 // A padding bar is a bar of the score's meter there (SectionMeterPlan).
                 await ApplyPlannedMeter(builder);
+                // …and under `time none` a bar as long as the part that writes it makes it,
+                // closed here: no clock closes an unmetered bar (SectionMeterPlan.UnmeteredBarLength;
+                // grammar evaluation 3, 2026-11-13 — the padding ended a bar short).
+                if (builder.SenzaMisura)
+                {
+                    if (MeterPlan().UnmeteredBarLength(section.SectionName, builder.LogicalMeasureIndex - startMeasure) is { } unmetered
+                        && unmetered > Fraction.Zero)
+                        await AddItemAsync(builder, new RestItem(unmetered, 0, section.SourceStart) { IsSpacer = true });
+                    builder.HandleBarline(BarlineType.Single, section.SourceStart);
+                    continue;
+                }
                 await AddItemAsync(builder, new RestItem(builder.CurrentMeasureLength, 0, section.SourceStart) { IsSpacer = true });
             }
         }
@@ -833,6 +859,8 @@ public sealed partial class MeasureCollector
         foreach (var child in section.ChildNodes())
             if (child is PartBlockSyntax block && block.Name == _voiceName)
                 return block;
+        if (_voiceName != null && _sectionState.BySectionCells.TryGetValue((section.SectionName, _voiceName), out var elsewhere))
+            return elsewhere;
         return _voiceName != null
             && _sectionState.GroupedByPartCells.TryGetValue((section.SectionName, _voiceName), out var cell)
             ? cell : null;

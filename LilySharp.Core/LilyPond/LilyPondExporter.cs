@@ -416,6 +416,8 @@ public sealed partial class LilyPondExporter
         public readonly Dictionary<(string Part, string Key), List<Fraction>> GraceSyncEmptyBars = new();
         public readonly Dictionary<(string Part, string Key), int> GraceSyncEmptyBarsSeen = new();
         public readonly Dictionary<object, string> PaddingBarSections = new(ReferenceEqualityComparer.Instance);
+        // The length of a padding bar under another part's `time none` (SectionMeterPlan.UnmeteredBarLength).
+        public readonly Dictionary<object, Fraction> UnmeteredPaddingBars = new(ReferenceEqualityComparer.Instance);
 
         /// <summary>What the page pairs with a <c>@niente</c> (<see cref="CollectNiente"/>), by
         /// source position: the hairpin marks whose tip is circled, the nientes such a circle

@@ -197,8 +197,17 @@ public sealed record FiguredBassItem
             else if (part == "#")
             {
                 // '#' is the jazz / continuo sharp. Written before a number ('#6')
-                // it binds to the coming figure; alone ('#') it is a bare sharp.
-                // (Suffix sharp keeps the existing 's' spelling: '6.s'.)
+                // it binds to the coming figure; with no number after it ('#', '7 #') it is
+                // a bare sharp, a figure of its own. (Suffix sharp keeps the 's' spelling: '6 s'.)
+                // Two in a row: the first is a figure of its own.
+                if (pendingAlteration != 0)
+                {
+                    if (currentNumber >= 0)
+                        figures.Add(new FiguredBassFigure(currentNumber, currentAlteration));
+                    figures.Add(new FiguredBassFigure(0, pendingAlteration));
+                    currentNumber = -1;
+                    currentAlteration = 0;
+                }
                 pendingAlteration = 1;
             }
             else if (part == "_")
@@ -208,6 +217,9 @@ public sealed record FiguredBassItem
                 // current figure, then add the held slot.
                 if (currentNumber >= 0)
                     figures.Add(new FiguredBassFigure(currentNumber, currentAlteration));
+                // (A '#' written before it is a figure of its own: see the end of the walk.)
+                if (pendingAlteration != 0)
+                    figures.Add(new FiguredBassFigure(0, pendingAlteration));
                 figures.Add(new FiguredBassFigure(0, 0, Held: true));
                 currentNumber = -1;
                 currentAlteration = 0;
@@ -237,8 +249,12 @@ public sealed record FiguredBassItem
         if (currentNumber >= 0)
             figures.Add(new FiguredBassFigure(currentNumber, currentAlteration));
 
-        // A lone '#' with no figure at all is a standalone sharp (raised third).
-        if (pendingAlteration != 0 && currentNumber < 0)
+        // A '#' no digit follows is a figure of its own: the sharp alone (the raised third),
+        // at whatever row it is written. Until 2026-11-13 it was one only when the group held
+        // nothing else: `7 #`, `5 #` and `7 5 #` printed 7, 5 and 7/5 and said nothing — on
+        // the page, in the MusicXML and in the LilyPond twin (grammar evaluation 3, a cantata's
+        // continuo, where the sharp under a figure is the commonest figure there is).
+        if (pendingAlteration != 0)
             figures.Add(new FiguredBassFigure(0, pendingAlteration));
 
         return figures.Count > 0 ? figures.ToImmutable() : null;

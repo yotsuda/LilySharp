@@ -531,8 +531,30 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   there). `@arpeggio(cross bracket)` is one bracket across both. If the part is not in a
   `grandStaff` with a staff below, or the staff below has a rest / a held note / another rhythm
   at that moment, it is drawn on its own chord and warns (LYS4064)
-- Glissando: `c4@glissando d` (line from this note to the next)
-- Figured bass: `c4@figuredBass(6)` , `d4@figuredBass(6 4)`
+- Glissando: `c4@glissando d` (line from this note to the next). `c4@slide d` is the same line
+  under a guitarist's name for it — a straight line from this note to the next, short between
+  neighbouring notes — and nothing more: no bend, no change to the sound; MusicXML writes it as
+  `<slide>` where `@glissando` writes `<glissando>`
+- Vibrato is a SINGER's mark: `a'2@vibrato` (also `@vibrato(depth)`, `@vibrato(depth, rate)`) is
+  performed by a singing voice and draws nothing. On a part nobody sings (no `singer` line, no
+  words set to it) it warns (LYS1008) and is ignored; for the word on the page write
+  `@text("vib.")`
+- Figured bass: `c4@figuredBass(6)` , `d4@figuredBass(6 4)` — the figures of one bass note, top
+  to bottom, with spaces between them. The whole vocabulary:
+  - a digit `0`–`9` is a figure (`6`, `6 4`, `7 5 3`; `0` is an empty row);
+  - `s`, `f`, `n` AFTER a digit give it a sharp, a flat, a natural: `6 s` (6♯), `4 f` (4♭),
+    `7 n` (7♮) — also written closed up, `6s`, `4f`;
+  - `#` BEFORE a digit is that digit's sharp (`#6`, the same as `6 s`; it prints after the
+    digit); `#` with no digit after it is a figure of its own, the sharp alone — the raised
+    third — at any row: `#`, `7 #`, `5 #`, `7 5 #`. So `6 #` is 6 over a sharp, and `6 # 4` is
+    6 over ♯4;
+  - `_` is a figure held from the note before (an extension line): `_`, `6 _`.
+
+  Nothing else is read, and a group with anything else in it is ignored whole with a warning
+  (LYS1008) that lists the above: no `b`, `+`, `-`, `/`, `!`, `♯`, `♭`, no words (`sharp`,
+  `flat`), and no `s` / `f` / `n` without a digit before it (`b7`, `6+`, `6 b`, `n`, `f` are all
+  refused; a flat or a natural alone is not written yet). Several figures in a row under one long
+  note are not written either: one group a note
 - Chord diagram (guitar fret diagram): `c4@diagram(x32010)` — one character per string, low
   to high: a digit is the fret (`0` or `o` open), `x` muted — frets 10–15 with a `-` on each
   side (`@diagram(xx-10-12-13-11)`); 4–8 strings. Above the note

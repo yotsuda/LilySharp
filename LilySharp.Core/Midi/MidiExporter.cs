@@ -1400,7 +1400,9 @@ public sealed class MidiExporter
         // plays the music (a bare section's owner walks the children and never meets them
         // as cells) — and a row longer than every part (a chords-only section) still takes
         // its bars.
+        int rowNotes = track.Notes.Count;
         int rowsEnd = PlaySectionChordRows(section, track);
+        int rowsLastBar = _chordRowLastBar;
 
         // By-part grouping: the section lives INSIDE its part — arm that
         // part's anchor and play the children sequentially.
@@ -1432,12 +1434,12 @@ public sealed class MidiExporter
                     CloseLane(track);
                 },
                 octaveOffset);
-            _currentTick = Math.Max(_currentTick, rowsEnd);
+            _currentTick = RowsAndLanesEnd(_currentTick, rowsEnd, rowsLastBar, track, rowNotes);
             return;
         }
 
         int sectionStart = _currentTick;
-        int sectionEnd = rowsEnd;
+        int sectionEnd = sectionStart;
         var tickLanes = new Dictionary<string, int>();
         // The section's pickup belongs to EVERY part's first bar, as on the page (each part's
         // MeasureBuilder is armed at the boundary). One lane spends it at its first bar line,
@@ -1520,7 +1522,7 @@ public sealed class MidiExporter
                 sectionEnd = Math.Max(sectionEnd, _currentTick);
             }
         }
-        _currentTick = sectionEnd;
+        _currentTick = RowsAndLanesEnd(sectionEnd, rowsEnd, rowsLastBar, track, rowNotes);
     }
 
     private void PlaySectionByName(string name, MidiTrack track, MidiTrack conductorTrack,
@@ -1538,6 +1540,8 @@ public sealed class MidiExporter
             return;
         int start = _currentTick;
         int end = start;
+        // A by-part chord track's copy is a row, not a lane (RowsAndLanesEnd).
+        int rowsEnd = start, rowsLastBar = start, rowNotes = track.Notes.Count;
         // Each part's copy's first bar, when the copies disagree about it (AlignBarLine), asked
         // under the meter and pickup every copy opens with (PlaySectionCore's OpenSection).
         var firstBars = new Dictionary<SectionDeclarationSyntax, int>();
@@ -1564,9 +1568,15 @@ public sealed class MidiExporter
             if (section.Parent is PartDeclarationSyntax
                 || (_bareSectionOwner != null && !SectionHasPartBlock(section)))
                 _currentTick += PaddingTicks(section);
+            if (section.Parent is ChordPartBlockSyntax)
+            {
+                if (_currentTick > rowsEnd)
+                    (rowsEnd, rowsLastBar) = (_currentTick, _chordRowLastBar);
+                continue;
+            }
             end = Math.Max(end, _currentTick);
         }
-        _currentTick = end;
+        _currentTick = RowsAndLanesEnd(end, rowsEnd, rowsLastBar, track, rowNotes);
     }
 
     // The book's section voices (SectionBarCounts.BuildSemanticIndex), read once per Export.
@@ -1609,19 +1619,25 @@ public sealed class MidiExporter
     /// left where it was: the lanes start from it.</summary>
     private int PlaySectionChordRows(SectionDeclarationSyntax section, MidiTrack track)
     {
-        int start = _currentTick, end = _currentTick;
+        int start = _currentTick, end = _currentTick, lastBar = _currentTick;
         var meterOfBar = SectionMeterOfBar(section.SectionName);
+        void Row(int rowEnd)
+        {
+            if (rowEnd > end)
+                (end, lastBar) = (rowEnd, _chordRowLastBar);
+        }
         for (int i = 0; i < section.SlotCount; i++)
             if (section.GetChild(i) is ChordPartBlockSyntax { HasSections: false, PartName: { } row } cell
                 && _soundingChordRows.Contains(row))
-                end = Math.Max(end, PlayChordRow(cell.Items, row, start, track, _strokesByRow.GetValueOrDefault(row), meterOfBar));
+                Row(PlayChordRow(cell.Items, row, start, track, _strokesByRow.GetValueOrDefault(row), meterOfBar));
         // A flat chord track gives this play the bars it prints. A section declared twice is one play.
         if (_flatRowsPlay != _sectionPlaySerial)
         {
             _flatRowsPlay = _sectionPlaySerial;
             foreach (var (flat, items) in _flatRows.Take(_sectionBars.Canonical.GetValueOrDefault(section.SectionName)))
-                end = Math.Max(end, PlayChordRow(items, flat, start, track, _strokesByRow.GetValueOrDefault(flat), meterOfBar));
+                Row(PlayChordRow(items, flat, start, track, _strokesByRow.GetValueOrDefault(flat), meterOfBar));
         }
+        _chordRowLastBar = lastBar;
         return end;
     }
 
@@ -1889,9 +1905,11 @@ public sealed class MidiExporter
             bar.Clear();
         }
 
+        int thisBarTicksOfLast = 0;
         void Close()
         {
             Sound();
+            thisBarTicksOfLast = thisBarTicks;
             barStart += thisBarTicks;
             barIndex++;
             ArmBar();
@@ -1915,7 +1933,40 @@ public sealed class MidiExporter
         }
         if (bar.Count > 0)
             Close();
+        _chordRowLastBar = barIndex > 0 ? barStart - thisBarTicksOfLast : startTick;
         return barStart;
+    }
+
+    // Where the last bar of the chord row PlayChordRow (PlaySectionChordRows: the longest of
+    // them) just sounded opened — what RowsAndLanesEnd asks.
+    private int _chordRowLastBar;
+
+    /// <summary>Where a section's play ends, its part lanes ending at <paramref name="lanesEnd"/>
+    /// (padded to the section's bar count) and its chord rows at <paramref name="rowsEnd"/>: the
+    /// later of the two — except that lanes which end INSIDE the rows' last bar are that bar's
+    /// length, and the rows' notes (those from <paramref name="firstNote"/> on) stop there.</summary>
+    /// <remarks>A row's bar was always the meter's, so a section that ends partway into a bar the
+    /// next section's pickup completes (<c>section X { m { c'4 d' e' | } chords h { C | } }</c>
+    /// before <c>section Y { partial 4 … }</c> in 4/4) ran a beat past its parts: everything after
+    /// it sounded a beat late, where the page draws one bar there and the same file without the
+    /// row played it right (grammar evaluation 3, 2026-11-13; MEASURED: m's note-ons at beats
+    /// 0 1 2 4 5 for 0 1 2 3 4). LILYSHARP-OWN: LilyPond performs no ChordNames context. The parts
+    /// say how long a bar is; a row has no durations to say it with.</remarks>
+    private int RowsAndLanesEnd(int lanesEnd, int rowsEnd, int rowsLastBar, MidiTrack track, int firstNote)
+    {
+        if (lanesEnd >= rowsEnd || lanesEnd <= rowsLastBar)
+            return Math.Max(lanesEnd, rowsEnd);
+        for (int i = firstNote; i < track.Notes.Count; i++)
+        {
+            var n = track.Notes[i];
+            if (n.DurationTicks <= 0 || n.Part?.EndsWith(ChordRowTrackSuffix, StringComparison.Ordinal) != true)
+                continue;
+            if (n.StartTick >= lanesEnd)
+                track.Notes[i] = n with { DurationTicks = DroppedNote };
+            else if (n.StartTick + n.DurationTicks > lanesEnd)
+                track.Notes[i] = n with { DurationTicks = lanesEnd - n.StartTick };
+        }
+        return lanesEnd;
     }
 
     /// <summary>

@@ -464,6 +464,16 @@ public sealed partial class MeasureCollector
                     var owningPart = EnclosingPartName(section);
                     if (owningPart != null)
                         _sectionState.GroupedByPartCells[(section.SectionName, owningPart)] = section;
+                    // By-section: each part block of a top-level declaration, whichever
+                    // declaration of the name is the representative (ProcessSection's fallback).
+                    else if (section.Parent is CompilationUnitSyntax)
+                    {
+                        var green = section.Green;
+                        for (int slot = 0; slot < green.SlotCount; slot++)
+                            if (green.GetSlot(slot)?.Kind == SyntaxKind.PartBlock
+                                && section.GetChild(slot) is PartBlockSyntax cellBlock)
+                                _sectionState.BySectionCells.TryAdd((section.SectionName, cellBlock.Name), cellBlock);
+                    }
                     // (Its header key / time / tempo / partial is read after the loop:
                     // _sectionHeaders, from the same list in the same order.)
                     break;

@@ -59,12 +59,47 @@ internal sealed class SectionMeterPlan
 
     public bool IsEmpty => _changes.Count == 0;
 
+    // The book's phrase bodies, as Build read them (BarsOfItems splits a voice again by them).
+    private IReadOnlyDictionary<string, SyntaxNode> _phrases = new Dictionary<string, SyntaxNode>();
+
+    /// <summary>The bar of its section each item written at the top of <paramref name="container"/>'s
+    /// music lands in, by the item's source start — by <see cref="MeasureModel.Split"/>, the model
+    /// the plan's own bars were counted with.</summary>
+    /// <remarks>For a reader that walks a voice's WRITTEN bars and asks the plan bar by bar
+    /// (<see cref="WithForeignChanges"/>, <c>MeasureValidator</c>): an <c>R*N</c> is N bars in one
+    /// token with one bar line after it, and a count of bar lines was N−1 short from there on.
+    /// A <c>time</c> another part wrote after such a rest reached this part a bar or more late —
+    /// "Measure duration 1/2 is less than time signature 5/8" on a correct bar, and in the MIDI
+    /// a bare <c>R</c> four beats long under a 2/4 the page showed (grammar evaluation 3,
+    /// 2026-11-13). The collector counts the bars it builds and was right.</remarks>
+    public Dictionary<int, int> BarsOfItems(string section, SyntaxNode container)
+    {
+        var index = new Dictionary<(string Chain, int Position), int>();
+        var scope = Normalize(container);
+        MeasureModel.Split(scope, _phrases, null, null, bar => ForeignChangeAt(section, bar, scope), index: index);
+        var bars = new Dictionary<int, int>();
+        foreach (var ((chain, position), bar) in index)
+            if (chain.Length == 0)
+                bars[position] = bar;
+        return bars;
+    }
+
+    /// <summary>The bars a written item is beyond its first: an <c>R*N</c>'s or a <c>%N</c>'s
+    /// N−1, else none — what a count of bar lines misses until the next item
+    /// <see cref="BarsOfItems"/> places.</summary>
+    public static int BarsBeyondTheFirst(SyntaxNode item) => item switch
+    {
+        RestSyntax { RestText: "R" } rest => Math.Max(1, rest.MeasureCount) - 1,
+        PercentMarkSyntax mark => Math.Max(1, mark.Bars) - 1,
+        _ => 0,
+    };
+
     public static SectionMeterPlan Build(SyntaxNode root, IReadOnlyDictionary<string, SyntaxNode>? phraseBodies = null)
     {
         if (!WritesTimeInMusic(root))
             return Empty;
         var phrases = phraseBodies ?? SectionBarCounts.PhraseBodies(root);
-        var plan = new SectionMeterPlan();
+        var plan = new SectionMeterPlan { _phrases = phrases };
         // Which parts write each section, to tell a change every part writes itself (the
         // common spelling — nothing to apply, and the plan stays Empty) from one some part
         // does not.
@@ -78,9 +113,10 @@ internal sealed class SectionMeterPlan
             if (voice.IsChords || voice.IsLyrics)
                 continue;
             var written = new List<(int Bar, TimeSignatureSyntax Time, bool MidBar)>();
-            MeasureModel.Split(voice.Container, phrases, null, written);
+            var bars = MeasureModel.Split(voice.Container, phrases, null, written);
             if (written.Count == 0)
                 continue;
+            plan.NoteUnmeteredBars(voice.SectionName, bars, written);
             if (!plan._changes.TryGetValue(voice.SectionName, out var changes))
                 plan._changes[voice.SectionName] = changes = new SortedDictionary<int, TimeSignatureSyntax>();
             var own = new HashSet<int>();
@@ -139,6 +175,38 @@ internal sealed class SectionMeterPlan
         }
         return found;
     }
+
+    /// <summary>Per section name: bar index within the section → the length of the bar a voice
+    /// writes there under <c>time none</c> (the longest, when several do).</summary>
+    private readonly Dictionary<string, Dictionary<int, Fraction>> _unmetered = new(StringComparer.Ordinal);
+
+    private void NoteUnmeteredBars(string section, List<MeasureModel.Bar> bars,
+        List<(int Bar, TimeSignatureSyntax Time, bool MidBar)> written)
+    {
+        if (!written.Any(w => w.Time.IsSenzaMisura))
+            return;
+        if (!_unmetered.TryGetValue(section, out var lengths))
+            _unmetered[section] = lengths = new Dictionary<int, Fraction>();
+        bool senza = false;
+        int next = 0;
+        for (int bar = 0; bar < bars.Count; bar++)
+        {
+            for (; next < written.Count && written[next].Bar <= bar; next++)
+                senza = written[next].Time.IsSenzaMisura;
+            if (senza && (!lengths.TryGetValue(bar, out var standing) || standing < bars[bar].Duration))
+                lengths[bar] = bars[bar].Duration;
+        }
+    }
+
+    /// <summary>How long the unmetered bar at <paramref name="bar"/> of <paramref name="section"/>
+    /// is — what the part that writes it under <c>time none</c> puts in it — or null when no
+    /// part writes one there.</summary>
+    /// <remarks>An unmetered bar has no length but its music's, so a part that rests through it
+    /// (one the section does not write at all) has to be told: its padding bar there was a
+    /// spacer under a clock that stands still, which closed no bar — the staff came out a bar
+    /// short and every later bar of the part a bar early (grammar evaluation 3, 2026-11-13).</remarks>
+    public Fraction? UnmeteredBarLength(string section, int bar)
+        => _unmetered.TryGetValue(section, out var lengths) && lengths.TryGetValue(bar, out var length) ? length : null;
 
     /// <summary>The meter of each of the <paramref name="bars"/> bars of <paramref name="section"/>
     /// (<see cref="MeterOfBar"/>), as lengths.</summary>
@@ -202,18 +270,20 @@ internal sealed class SectionMeterPlan
     /// counted on the items' own bar lines (a bar line after music closes a bar; a bare
     /// <c>|</c> or <c>|:</c> with nothing timed before it is an empty bar), so a stream whose
     /// bars are not all written at its top level (a repeat, a phrase reference, a voice span)
-    /// is handed back as it is.
+    /// is handed back as it is. A percent repeat's bars and an <c>R*N</c>'s are counted
+    /// (<see cref="BarsOfItems"/>): the item after them is asked for the bar it stands in.
     /// </summary>
     public IReadOnlyList<SyntaxNode> WithForeignChanges(string section, SyntaxNode container, IReadOnlyList<SyntaxNode> items)
     {
         if (!_changes.TryGetValue(section, out var c) || c.Count == 0)
             return items;
         foreach (var item in items)
-            if (item is RepeatExpressionSyntax or PercentRepeatSyntax or PercentMarkSyntax
+            if (item is RepeatExpressionSyntax or PercentMarkSyntax
                 or ParallelExpressionSyntax or VariableReferenceSyntax)
                 return items;
         var result = new List<SyntaxNode>(items.Count + c.Count);
-        int bar = 0;
+        var barOf = BarsOfItems(section, container);
+        int bar = 0, beyond = 0;
         bool timed = false;
         bool pending = true; // the bar has not been opened yet
         foreach (var item in items)
@@ -224,6 +294,13 @@ internal sealed class SectionMeterPlan
             // that closes it empty — so the voice's own directives at the bar's head stay first
             // and nothing is put after its last bar.
             bool decoration = item is BarlineSyntax { BarToken.Text: not ("|" or "|:") } && !timed;
+            if (!directive && item is not BarlineSyntax)
+            {
+                // An `R*N` before it made the bar lines a short count (BarsOfItems).
+                if (!timed && barOf.TryGetValue(item.Span.Start, out int placed))
+                    bar = placed;
+                beyond += BarsBeyondTheFirst(item);
+            }
             if (pending && !directive && !decoration)
             {
                 if (ForeignChangeAt(section, bar, container) is { } t)
@@ -235,10 +312,11 @@ internal sealed class SectionMeterPlan
             {
                 if (timed || b.BarToken.Text is "|" or "|:")
                 {
-                    bar++;
+                    bar += 1 + beyond;
                     pending = true;
                 }
                 timed = false;
+                beyond = 0;
             }
             else if (!directive)
                 timed = true;

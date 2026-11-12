@@ -1042,6 +1042,9 @@ public sealed partial class LilyPondExporter
             // LILYPOND-REF: ly/declarations-init.ly:103-104 laissezVibrer / repeatTie
             //   = #(make-music 'LaissezVibrerEvent / 'RepeatTieEvent)
             case "glissando": return "\\glissando";
+            // The page draws '@slide' as the same line (MeasureCollector), and the twin wrote
+            // nothing for it (grammar evaluation 3, 2026-11-13).
+            case "slide": return "\\glissando";
             // The pedals' STARTS. A start is one word with no argument, so it arrives here as
             // an articulation while its terminator (`@!sustain`) is a MusicMarkSyntax that
             // SplitAttachments answers through PedalPostEvent — the same table, both ends.

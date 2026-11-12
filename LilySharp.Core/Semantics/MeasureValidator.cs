@@ -563,11 +563,30 @@ internal sealed class MeasureValidator : ISemanticValidator
         int openingPickupIndex = -1;
         var openingPickupDuration = Fraction.Zero;
         bool seenSounding = false;
+        // The bar of the SECTION each written bar is, for the meter plan: an `R*N` before it
+        // is N bars in one written one (SectionMeterPlan.BarsOfItems; grammar evaluation 3,
+        // 2026-11-13 — the plan was asked by the written bar's index, N−1 short after the rest).
+        var planBarOf = cell != null && cellContainer != null && !_meterPlan.IsEmpty
+            ? _meterPlan.BarsOfItems(cell.Value.Section, cellContainer) : null;
+        int planBar = -1;
 
         for (int i = 0; i < measures.Count; i++)
         {
             var measure = measures[i];
             var barItems = measure.Items;
+            planBar++;
+            if (planBarOf != null)
+            {
+                foreach (var item in barItems)
+                    if (planBarOf.TryGetValue(item.Span.Start, out int placed))
+                    {
+                        planBar = placed;
+                        break;
+                    }
+            }
+            int planBarHere = planBar;
+            foreach (var item in barItems)
+                planBar += Svg.Collector.SectionMeterPlan.BarsBeyondTheFirst(item);
 
             // A mid-piece \time takes effect at the bar it appears in
             // (LilyPond applies the new meter from that timestep), so adopt
@@ -604,7 +623,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             // The score's meter (SectionMeterPlan, HANDOFF §2 F-partmeter ⒜): a `time` another
             // part writes at the start of this bar of the section is this bar's meter too.
             if (cell is { } planCell && cellContainer != null
-                && _meterPlan.ForeignChangeAt(planCell.Section, i, cellContainer) is { } foreignTime)
+                && _meterPlan.ForeignChangeAt(planCell.Section, planBarHere, cellContainer) is { } foreignTime)
                 _bars.SetTime(foreignTime);
             // ⚠️ The meter is adopted IN ITEM ORDER, segment by segment around the phrase
             // cuts below — not for the whole written bar up front. A phrase body closes its

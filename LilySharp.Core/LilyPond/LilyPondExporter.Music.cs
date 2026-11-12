@@ -338,7 +338,8 @@ public sealed partial class LilyPondExporter
                     string gracePad = EmptyBarGracePad(gapBar);
                     if (gracePad.Length > 0)
                         AppendToken(line, gracePad, indent);
-                    AppendToken(line, "s" + ChordModeDuration(_bars.BarLength), indent);
+                    AppendToken(line, _shared.UnmeteredPaddingBars.TryGetValue(gapBar.Green, out var unmetered)
+                        ? $"s1*{unmetered.Numerator}/{unmetered.Denominator}" : "s" + ChordModeDuration(_bars.BarLength), indent);
                 }
                 // The bar behind this bar line closed (or was the empty bar just written), so
                 // a pending pickup is spent — as the page's MeasureBuilder.ResetPerMeasureState does.

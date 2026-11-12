@@ -1563,7 +1563,7 @@ public sealed class MusicXmlExporter
                 items.Add(bar);
             }
             EmitPartMusic(partName, items);
-            FitSilentPlayToWrittenBars(partName);
+            FitSilentPlayToWrittenBars(partName, sectionName);
         }
     }
 
@@ -1576,9 +1576,10 @@ public sealed class MusicXmlExporter
     /// bar, numbered on as a bar of its own (<see cref="ContinueSplitBar"/> reads the length),
     /// and about 25 "parts will not align" warnings when the file was imported again
     /// (grammar evaluation 2, 2026-11-12, anthem.lys). Only shortened, and only where every
-    /// writing part's bar is shorter: a bar somebody filled stays the meter's.
+    /// writing part's bar is shorter: a bar somebody filled stays the meter's — an unmetered
+    /// bar excepted, which has no meter to stay at.
     /// </summary>
-    private void FitSilentPlayToWrittenBars(string partName)
+    private void FitSilentPlayToWrittenBars(string partName, string sectionName)
     {
         if (!_partsByName.TryGetValue(partName, out var silent)
             || !_playStartMeasure.TryGetValue((partName, _xmlPlaySerial), out int start))
@@ -1596,7 +1597,11 @@ public sealed class MusicXmlExporter
                 written = Math.Max(written, ElapsedTicks(other.Measures[otherStart + i]));
             }
             var rests = silent.Measures[start + i].Notes.Where(n => n.RawElement == null).ToList();
-            if (written <= 0 || rests.Count != 1 || !rests[0].IsRest || rests[0].Duration <= written)
+            // …and a bar under `time none` is as long as its music, longer than the meter's rest
+            // too (grammar evaluation 3, 2026-11-13: five quarters against a whole rest).
+            bool unmetered = _meterPlan.UnmeteredBarLength(sectionName, i) != null;
+            if (written <= 0 || rests.Count != 1 || !rests[0].IsRest
+                || (unmetered ? rests[0].Duration == written : rests[0].Duration <= written))
                 continue;
             var (type, dots) = GetNoteType(new Fraction(written, 4 * _divisions));
             rests[0].Duration = written;

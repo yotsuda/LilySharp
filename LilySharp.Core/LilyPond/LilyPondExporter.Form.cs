@@ -499,7 +499,13 @@ public sealed partial class LilyPondExporter
             // Timing is the Score's, and an `s1` under another staff's 3/4 failed its bar check.
             if (_meterPlan.ForeignChangeAt(name, i, null) is { } time)
                 result.Add(time);
-            result.Add(SectionPaddingBar(name, 0));
+            var padding = SectionPaddingBar(name, 0);
+            // An unmetered bar is as long as the part that writes it makes it: `\cadenzaOn s1`
+            // beside five quarters put every later bar of this staff a quarter early
+            // (grammar evaluation 3, 2026-11-13).
+            if (_meterPlan.UnmeteredBarLength(name, i) is { } unmetered && unmetered > Fraction.Zero)
+                _shared.UnmeteredPaddingBars[padding.Green] = unmetered;
+            result.Add(padding);
         }
     }
 

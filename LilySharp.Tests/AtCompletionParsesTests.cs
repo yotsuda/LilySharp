@@ -67,6 +67,10 @@ public class AtCompletionParsesTests
             validator.Validate(tree);
             problems.AddRange(validator.Diagnostics
                 .Where(d => d.Code == DiagnosticCodes.UnknownAnnotation)
+                // '@vibrato' is a singer's mark, and this harness's part is nobody's to sing:
+                // since 2026-11-13 (grammar evaluation 3) that is said. The name is recognized;
+                // the list is not asked which part the cursor stands in.
+                .Where(d => !d.Message.Contains("singer's mark", System.StringComparison.Ordinal))
                 .Select(d => d.Message));
 
             if (problems.Count > 0)
