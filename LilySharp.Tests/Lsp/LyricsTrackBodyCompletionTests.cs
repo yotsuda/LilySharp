@@ -155,4 +155,60 @@ public class LyricsTrackBodyCompletionTests
         Assert.DoesNotContain("unfold", labels);
         Assert.DoesNotContain("percent", labels);
     }
-}
+
+    // Owner's report 2026-11-12 (the first build of `with`): after `singer … sings words on
+    // lead ` the list was the file level's 31 words, and the extension's one `with` stood under
+    // all of them. A singer line's settings are the voice's engine's to name: nothing here.
+    [Theory]
+    [InlineData("singer female \"diffsinger/Nishiren/2P\" sings words on lead ▮")]
+    [InlineData("singer sings words on lead with ▮")]
+    [InlineData("singer \"a/b\" sings words on lead with breath▮")]
+    [InlineData("singer \"a/b\" sings words on lead with breathiness 3 ▮")]
+    [InlineData("singer \"a/b\" sings words on lead with support ▮")]
+    public void ASingerLinesSettings_AreNotThisServersToList(string line)
+    {
+        var (text, offset) = At("part lead { }\nsection A { lead { c'1 | } }\nlyrics words { la | }\n" + line + "\nform { A }\nscore { staff lead }\n");
+        Assert.True(LilySharpLanguageServer.InSingerSettings(text, offset));
+        Assert.Empty(CompletionLabelsAt(text, offset));
+    }
+
+    [Theory]
+    [InlineData("singer female \"diffsinger/Nishiren/2P\" sings ▮")]             // the lyrics
+    [InlineData("singer female \"diffsinger/Nishiren/2P\" sings words on ▮")]    // the parts
+    [InlineData("singer male sings words ▮")]                                      // `on` is still to come
+    [InlineData("singer ▮")]
+    [InlineData("singer \"with x\" ▮")]
+    [InlineData("▮")]                                                              // a new line: the file level
+    [InlineData("part with { } ▮")]
+    [InlineData("singer \"a/b\" sings words on lead // with ▮")]
+    public void TheRestOfASingerLine_AndOtherLines_AreListedAsBefore(string line)
+    {
+        var (text, offset) = At("part lead { }\nsection A { lead { c'1 | } }\nlyrics words { la | }\n" + line + "\nform { A }\nscore { staff lead }\n");
+        Assert.False(LilySharpLanguageServer.InSingerSettings(text, offset));
+    }
+
+    [Fact]
+    public void TheWordsAndThePart_AreStillOffered()
+    {
+        var (text, offset) = At("part lead { }\nsection A { lead { c'1 | } }\nlyrics words { la | }\nsinger \"a/b\" sings ▮\nform { A }\nscore { staff lead }\n");
+        Assert.Contains("words", CompletionLabelsAt(text, offset));
+        (text, offset) = At("part lead { }\nsection A { lead { c'1 | } }\nlyrics words { la | }\nsinger \"a/b\" sings words on ▮\nform { A }\nscore { staff lead }\n");
+        Assert.Contains("lead", CompletionLabelsAt(text, offset));
+    }
+
+    // The same inside a note's `@sing(…)`: the music block's 92 words stood among the settings.
+    [Theory]
+    [InlineData("c'4@sing(▮) d |", true)]
+    [InlineData("c'4@sing(bre▮) d |", true)]
+    [InlineData("c'4@sing(breathiness ▮) d |", true)]
+    [InlineData("c'4@sing(breathiness 6 ▮) d |", true)]
+    [InlineData("c'4@sing(breathiness 6) ▮d |", false)]     // past the mark: music again
+    [InlineData("c'4@text(▮) d |", false)]
+    [InlineData("c'4 ▮d |", false)]
+    public void InsideASingMark_NothingOfTheMusicBlockIsListed(string music, bool inside)
+    {
+        var (text, offset) = At("part lead { }\nsection A { lead { " + music + " } }\nform { A }\nscore { staff lead }\n");
+        Assert.Equal(inside, LilySharpLanguageServer.InSingMark(text, offset));
+        if (inside)
+            Assert.Empty(CompletionLabelsAt(text, offset));
+    }}

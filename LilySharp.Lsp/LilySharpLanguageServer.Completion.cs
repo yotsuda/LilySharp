@@ -207,6 +207,46 @@ public sealed partial class LilySharpLanguageServer
         return (sb.ToString(), caret);
     }
 
+    /// <summary>
+    /// Whether <paramref name="offset"/> stands where a singer line's settings are written: after
+    /// its <c>on PART</c> and a space with no <c>with</c> yet, or anywhere after its <c>with</c>.
+    /// The line up to the caret alone decides, as the extension's own reading does
+    /// (singerCore.ts singerSettingSlot) — which says yes after the words alone too, where
+    /// this server still has <c>on</c> to offer and so does not.
+    /// </summary>
+    internal static bool InSingerSettings(string text, int offset)
+    {
+        offset = Math.Clamp(offset, 0, text.Length);
+        int start = offset > 0 ? text.LastIndexOf('\n', offset - 1) + 1 : 0;
+        string before = text[start..offset];
+        if (before.Contains("//", StringComparison.Ordinal))
+            return false;
+        var line = System.Text.RegularExpressions.Regex.Match(before, @"^[ \t]*singer(?![\w-])(.*)$");
+        if (!line.Success)
+            return false;
+        // Quoted strings set aside, so that a voice's name is no word of the line.
+        string rest = System.Text.RegularExpressions.Regex.Replace(line.Groups[1].Value, "\"[^\"]*\"", "\"\"");
+        bool Has(string pattern) => System.Text.RegularExpressions.Regex.IsMatch(rest, pattern);
+        if (!Has(@"(?<![\w-])sings(?![\w-])"))
+            return false;
+        if (Has(@"(?<![\w.-])with[ \t]+(?!on(?![\w-]))"))
+            return true;
+        // With no `with` yet: only once the part is written. Before that the line still takes
+        // `on`, which is this server's to offer (the extension's `with` stands beside it).
+        return Has(@"(?<![\w-])sings[ \t]+(?:[\w-]+[ \t]+)?on[ \t]+[\w-]+[ \t]+$");
+    }
+
+    /// <summary>Whether <paramref name="offset"/> stands inside a note's <c>@sing(…)</c>, its
+    /// parenthesis not yet closed before the caret (the extension's singMarkSlot).</summary>
+    internal static bool InSingMark(string text, int offset)
+    {
+        offset = Math.Clamp(offset, 0, text.Length);
+        int start = offset > 0 ? text.LastIndexOf('\n', offset - 1) + 1 : 0;
+        string before = text[start..offset];
+        return !before.Contains("//", StringComparison.Ordinal)
+            && System.Text.RegularExpressions.Regex.IsMatch(before, @"@sing\([^()]*$");
+    }
+
     /// <summary>The completion of <paramref name="doc"/> at the request's position — an open
     /// document's, or a text the client holds outside any editor (<c>lilysharp/completeText</c>).</summary>
     private CompletionList? CompletionIn(Document doc, CompletionParams @params)
@@ -216,6 +256,16 @@ public sealed partial class LilySharpLanguageServer
 
         // Determine context
         var context = GetCompletionContext(doc.Text, offset);
+
+        // A singer line past its words and its part — `singer "…" sings words on lead ▮`, and
+        // on into `with breathiness 3 ▮` — is where the line's own settings are written, and
+        // those are the voice's engine's to name: the extension lists them (it asks Cantoria).
+        // Nothing of this server's belongs there. ⚠️ It answered the file level's 31 words, the
+        // line being whole to the parser, and the one `with` stood under all of them (owner's
+        // report 2026-11-12, on the first build of `with`).
+        // …and inside a note's `@sing(…)` the same: the music block's 92 words stood there.
+        if (InSingerSettings(doc.Text, offset) || InSingMark(doc.Text, offset))
+            return new CompletionList { Items = [] };
 
         // '.' is a trigger for ONE thing: the placement after `@fermata.` / `@todo("memo").`
         // (owner's request 2026-10-11). Everywhere else a '.' is a dotted note value, a
