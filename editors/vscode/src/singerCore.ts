@@ -799,7 +799,8 @@ export function singProblems(settings: readonly SingSettingDto[], takenBy: Reado
         if (!p) {
             problems.push({ start: s.Start, end: s.End, message: s.OnNote && takenBy.size !== 1
                 ? `${who} takes the setting "${s.Name}" (they take ${[...new Set(all.map(x => x.name))].join(', ') || 'none'}): it is not sung`
-                : `${who} does not take the setting "${s.Name}" (it ${listed(taken)}): it is not sung` });
+                : `${who} does not take the setting "${s.Name}" (it ${listed(taken)}): it is not sung`
+                    + (s.Name === 'transpose' && !s.OnNote ? '. To sing higher or lower than the part, write up 3, down 6 or octave -1 after the part, before with' : '') });
             continue;
         }
         const isDefault = s.Word === 'default';

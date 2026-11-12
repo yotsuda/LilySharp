@@ -235,7 +235,12 @@ internal sealed partial class Parser
                 || (next.Kind == SyntaxKind.Identifier && (Music.LyricSinger.Genders.Contains(next.Text) || Peek(2)?.Text == "sings" || Peek(2)?.Kind == SyntaxKind.StringLiteral)));
 
     /// <summary>Parses <c>singer [S] sings [NAME] [on PART]</c>; the order is fixed.</summary>
-    private SingerDeclarationGreen ParseSingerDeclaration()
+    /// <param name="endsItsLine">At the file's top level a singer line is the whole of its line:
+    /// what else stands on it is an error, said at the word and kept in the line. ⚠️ Until
+    /// 2026-11-12 the rest was read as the NEXT statement — <c>singer … on lead transpose 3</c>
+    /// ended the singer line at <c>lead</c> and transposed the file by the 3, with no word said
+    /// (owner's report). Inside a score the items follow one another on a line.</param>
+    private SingerDeclarationGreen ParseSingerDeclaration(bool endsItsLine = false)
     {
         var tokens = new List<SyntaxToken> { Advance() };
         if (Current.Text != "sings")
@@ -271,6 +276,19 @@ internal sealed partial class Parser
         ParseSingerPlace(tokens);
         if (IsSingerWith())
             ParseSingerSettings(tokens);
+        if (endsItsLine && !BeginsLine() && !Check(SyntaxKind.EndOfFile))
+        {
+            string word = Current.Text;
+            _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Math.Max(1, word.Length)),
+                DiagnosticCodes.SingerPlaceMalformed,
+                word == "transpose"
+                    ? "'transpose' is not a word of a singer line. To have the voice sing higher or lower than its part, "
+                      + "write 'up 3' (a third above, in the key), 'down 6' or 'octave -1' after the part."
+                    : $"'{word}' is not a word of a singer line: after the part come 'up N' or 'down N', 'octave N', "
+                      + "'in SECTION …', then 'with' and the voice's settings. Another statement goes on a line of its own.");
+            while (!BeginsLine() && !Check(SyntaxKind.EndOfFile))
+                tokens.Add(Advance());
+        }
         return new SingerDeclarationGreen([.. tokens]);
     }
 

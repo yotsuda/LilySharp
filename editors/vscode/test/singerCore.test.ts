@@ -997,7 +997,7 @@ describe('a voice\'s settings are checked where they are written', () => {
         // Another voice's setting is not this one's.
         const other = singProblems([at('transpose', { Number: 2, Singer: 'diffsinger/X' })], takenBy);
         assert.deepEqual([other[0].start, other[0].end], [10, 19]);
-        assert.equal(other[0].message, '"diffsinger/X" does not take the setting "transpose" (it takes breathiness, gender): it is not sung');
+        assert.equal(other[0].message, '"diffsinger/X" does not take the setting "transpose" (it takes breathiness, gender): it is not sung. To sing higher or lower than the part, write up 3, down 6 or octave -1 after the part, before with');
         // Out of range, on the value; a word for a number; a number for a name; a name that is none of them.
         const wide = singProblems([at('breathiness', { Number: 99, Singer: 'diffsinger/X' })], takenBy);
         assert.deepEqual([wide[0].start, wide[0].end], [30, 33]);

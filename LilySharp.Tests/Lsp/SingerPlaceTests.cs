@@ -236,6 +236,38 @@ public class SingerPlaceTests
         Assert.Contains(says, d.Message);
     }
 
+    // Owner's report 2026-11-12: "`transpose 3` can still be written on the singer line." With no
+    // `with` the line ended at the part and the rest was the FILE's transpose, in silence.
+    [Theory]
+    [InlineData("singer female sings words on lead transpose 3", "transpose", "write 'up 3'")]
+    [InlineData("singer female sings words on lead up 3 transpose 3", "transpose", "write 'up 3'")]
+    [InlineData("singer female sings words on lead in Chorus tempo 90", "90", "is not a word of a singer line")]
+    [InlineData("singer female sings words on lead with breathiness 3 { }", "{", "is not a word of a singer line")]
+    public void WhatElseStandsOnASingerLine_IsAnError_AndIsNotAnotherStatement(string line, string at, string says)
+    {
+        string source = Book(line);
+        var tree = SyntaxTree.Parse(source);
+        Assert.Equal(source, tree.GetRoot().ToFullString());
+        var d = Assert.Single(tree.Diagnostics, d => d.Code == DiagnosticCodes.SingerPlaceMalformed);
+        Assert.Equal(DiagnosticSeverity.Error, d.Severity);
+        Assert.Contains(says, d.Message);
+        Assert.Equal(source.IndexOf(line, StringComparison.Ordinal) + line.LastIndexOf(at, StringComparison.Ordinal), d.Span.Start);
+        // The rest of the line is the singer line's, not a statement of the file's: nothing
+        // at the top level transposes or sets a tempo from it.
+        var singer = Assert.Single(tree.GetRoot().DescendantNodes<SingerDeclarationSyntax>());
+        Assert.EndsWith(line, singer.ToFullString().TrimEnd());
+        // The next line is still its own.
+        Assert.Single(tree.GetRoot().DescendantNodes<FormDeclarationSyntax>());
+    }
+
+    [Fact]
+    public void InAScore_TheItemsStillFollowOneAnotherOnALine()
+    {
+        string source = Book("").Replace("score { staff lead  lyrics words }", "score { singer female sings words on lead up 3  staff lead  lyrics words }");
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+    }
+
     [Fact]
     public void TheSameVoiceInOtherSections_OrAtAnotherInterval_IsNotARepeat()
     {

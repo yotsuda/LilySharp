@@ -647,7 +647,7 @@ internal sealed partial class Parser
             // `language japanese` — what the file's lyrics are written in (Music.LyricLanguage).
             SyntaxKind.Identifier when IsLanguageDeclaration() => new LanguageDeclarationGreen(Advance(), ParseLanguageName()),
             // `singer female sings words on sop` — who sings what (Music.LyricSinger).
-            SyntaxKind.Identifier when IsSingerDeclaration() => ParseSingerDeclaration(),
+            SyntaxKind.Identifier when IsSingerDeclaration() => ParseSingerDeclaration(endsItsLine: true),
 
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword
                 or SyntaxKind.SubtitleKeyword or SyntaxKind.PoetKeyword => ParseMetadataDeclaration(),
