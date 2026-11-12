@@ -222,7 +222,11 @@ internal sealed class LyricsCollector
             {
                 if (sectionAllStarts != null && sectionAllStarts.TryGetValue(sectionName, out var all) && all.Count > 0)
                     return all;
-                return new List<int> { sectionStartMeasure.GetValueOrDefault(sectionName, 0) };
+                // A section the form does not play has no bars: its words stand nowhere. They were
+                // set from bar 1, over the words that are sung there (found writing a band
+                // chart to try the grammar, 2026-11-12: a form shortened to find a fault drew the
+                // dropped section's words and warned of them).
+                return sectionStartMeasure.TryGetValue(sectionName, out int only) ? [only] : [];
             }
 
             // Place a section's verse(s). No `verse N { … }` → the same words repeat
@@ -636,7 +640,11 @@ internal sealed class LyricsCollector
         {
             if (sectionAllStarts != null && sectionAllStarts.TryGetValue(sectionName, out var all) && all.Count > 0)
                 return all;
-            return new List<int> { sectionStartMeasure.GetValueOrDefault(sectionName, 0) };
+            // A section the form does not play has no bars: its words stand nowhere. They were
+                // set from bar 1, over the words that are sung there (found writing a band
+                // chart to try the grammar, 2026-11-12: a form shortened to find a fault drew the
+                // dropped section's words and warned of them).
+                return sectionStartMeasure.TryGetValue(sectionName, out int only) ? [only] : [];
         }
 
         foreach (var block in blocks)
@@ -670,6 +678,9 @@ internal sealed class LyricsCollector
                 PlaceSectionOccurrences(block.Syllables.ToList(), StartsFor(enclosing), enclosing, PlaceVerse);
                 continue;
             }
+            // Written in a section the form does not play: no bars, no words (as above).
+            if (EnclosingSectionName(block) != null)
+                continue;
 
             // Top level, no section to repeat under: take the first verse only (also
             // flattens away any stray brackets so they never render as literal words)

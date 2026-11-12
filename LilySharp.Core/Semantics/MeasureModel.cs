@@ -109,6 +109,10 @@ internal static class MeasureModel
         bool flows = false;       // the bar under construction closes where its beats fill (Bar.Flowed)
         bool phraseInBar = false; // …holds music inlined from a phrase body (Bar.HasPhrase)
         var callSites = new List<int>();  // the phrase references being inlined, outermost first
+        // How many bars stood before each bar line the scope itself writes, and what each
+        // percent repeat's body turned out to hold (see the mark, below).
+        var barsAtWrittenLine = new List<(int End, int Count)>();
+        var heldByRepeat = new Dictionary<PercentRepeatSyntax, int>();
         string chain = "";                // …as the index's address prefix
         var pendingKeys = new List<(string, int)>();
 
@@ -252,6 +256,8 @@ internal static class MeasureModel
                         new TextSpan(start, Math.Max(1, barEnd - start)), IsEmpty: true));
                 }
                 prevBarEnd = barEnd;
+                if (callSites.Count == 0)
+                    barsAtWrittenLine.Add((barEnd, bars.Count));
                 continue;
             }
             var itemDuration = MeasureDurations.ItemDuration(node, ref defaultDuration);
@@ -275,6 +281,25 @@ internal static class MeasureModel
             // `R4*5` opening a 5/4 bar is ONE bar of it, `R4*40` eight (BarRest.WholeBars) — the
             // collector's reading (MeasureCollector.MusicWalk's RestSyntax arm); a run that is not
             // whole bars, or opens mid-bar, stays N bars of its value.
+            // ⚠️ A MARK REPEATS WHAT STANDS BETWEEN THE BAR LINES BEFORE IT (Parser.GroupPercentRepeats
+            // reads the written lines), and a phrase or a drum chart's line ends bars of its own:
+            // `drums { ride foot } drums { ride foot } | % |` is a mark over TWO bars, which the
+            // page repeats as two. Counted as one here, a section a bar longer than its other
+            // parts was told nothing (found writing a band chart to try the grammar, 2026-11-12:
+            // the only message was about words a section later). The mark is the bars its body holds.
+            if (node is PercentMarkSyntax { Parent: PercentRepeatSyntax repeat })
+            {
+                if (!heldByRepeat.TryGetValue(repeat, out int held))
+                {
+                    int before = 0;
+                    foreach (var (end, count) in barsAtWrittenLine)
+                        if (end <= repeat.Span.Start)
+                            before = count;
+                    heldByRepeat[repeat] = held = bars.Count - before;
+                }
+                if (held > written)
+                    written = held;
+            }
             if (written > 1 && node is RestSyntax { RestText: "R" } && !senzaMisura && total.Numerator == 0
                 && Music.BarRest.WholeBars(itemDuration, written, meter) is int wholeBars)
             {

@@ -69,6 +69,60 @@ public class GrammarEvaluation2Tests
     public void APhraseInASectionWithAPickup_IsJudgedAsItsNotesWrittenOutAre(string phrases, string music, string form)
         => Clean($"octave absolute\ntime 3/4\npart m {{ }}\n{phrases}\nsection A {{ partial 4  {music} }}\nform {{ {form} }}\nscore {{ staff m }}\n");
 
+    private static string Kit(string kit, string melody = "c'1 | c' | c' |")
+        => "time 4/4\npart kit { clef percussion }\npart m { }\nphrase ride { cymr4 cymr cymr cymr | }\nphrase foot { r4 hhp r hhp | }\n"
+            + $"section A {{ m {{ {melody} }} kit {{ {kit} }} }}\nform {{ A }}\nscore {{ staff m  staff kit }}\n";
+
+    /// <summary>The one-bar phrase the composing guide asks for, then a percent mark: the phrase's
+    /// own bar line closes the bar, and the mark repeats it ("This bar is 0 long" until now).</summary>
+    [Theory]
+    [InlineData("ride | % | % |")]
+    [InlineData("ride | ride | % |")]
+    [InlineData("drums { ride foot } | % | % |")]
+    [InlineData("drums { ride foot } | drums { ride foot } | % |")]
+    public void AMarkAfterABarThatIsAPhrase_RepeatsIt(string kit) => Clean(Kit(kit));
+
+    /// <summary>Two bars between the bar lines before a mark are what it repeats: phrases say so
+    /// at the mark, charts by the section's length — where nothing was said at all.</summary>
+    [Fact]
+    public void AMarkOverTwoBarsWrittenAsOne_IsSaid()
+    {
+        var phrases = Assert.Single(Said(Kit("ride ride | % |")), d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Equal(DiagnosticCodes.PercentBodyNotWholeBars, phrases.Code);
+        Assert.Contains("2 bars are written there", phrases.Message);
+        Assert.Contains(Said(Kit("drums { ride foot } drums { ride foot } | % |")),
+            d => d.Message.Contains("4 bar(s) in part 'kit'; 3 bar(s) in part 'm'"));
+    }
+
+    /// <summary>The words of a section the form does not play stood from bar 1, over the words
+    /// sung there, and were warned of.</summary>
+    [Fact]
+    public void WordsOfASectionTheFormDoesNotPlay_AreNotSet()
+    {
+        string source = "octave absolute\nlanguage english\npart lead { lyrics words }\n"
+            + "section A { lead { c'8 d' e' f' g'4 a' | }  lyrics words { one two three four five six | } }\n"
+            + "section B { lead { c'1 | }  lyrics words { la | } }\nform { ~B }\nscore { staff lead  lyrics words }\n";
+        Clean(source);
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(source));
+        Assert.Contains(">la</text>", svg);
+        Assert.DoesNotContain(">one</text>", svg);
+    }
+
+    /// <summary>A singer's staff rests a section that opens with a pickup as its part does: the
+    /// pickup bar, then the whole bars.</summary>
+    [Fact]
+    public void ASingersStaff_RestsThePickupBarApart()
+    {
+        string source = "octave absolute\nlanguage english\npart lead { lyrics words }\nsinger carol female on lead up 3 in A\n"
+            + "section I { partial 4  lead { r4 | R*4 | } }\n"
+            + "section A { lead { e'4 e' d' c' | e'1 | }  lyrics words { Take the long way | round | } }\n"
+            + "form { ~I ~A }\nscore { staff lead  lyrics words  staff carol }\n";
+        string made = LilySharp.Core.Editing.SingerParts.Expand(source, SyntaxTree.Parse(source), out var said);
+        Assert.Empty(said.Select(d => d.Message));
+        Assert.Contains("section I { R | R*4 }", made);
+        Clean(made);
+    }
+
     /// <summary>A section whose music changes the meter ends in THAT meter: three beats into a
     /// 4/4 bar is not "a whole bar" of the file's 3/4.</summary>
     [Fact]

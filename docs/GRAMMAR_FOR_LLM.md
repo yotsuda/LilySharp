@@ -822,6 +822,14 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
   `acciaccatura { sn16 } sn4`. The editor offers stock one-bar patterns (`hats8 hats16 hats4
   hatsOpen shuffle back halfTime ghost flam fourFloor kick8 kickSync fillToms fillTriplet`) and
   writes their `phrase` declarations into the file; outside the editor, declare them yourself.
+- **Bar lines around a chart and before `%`.** A chart of one-bar phrases is one bar: write a
+  bar line after EACH chart, `drums { hats back kick } | drums { hats back fill } | % |`. A `%`
+  repeats what stands between the two bar lines before it, so two charts (or two phrases,
+  `riff riff | % |`) with no bar line between them are two bars before one mark — an error for
+  phrases (LYS1049), a section one bar too long for charts (LYS2007). A one-bar phrase then a
+  mark is fine: `riff | % | % |`. An INLINE line carries no bar line of its own:
+  `drums { { cymr4 cymr cymr cymr } { r4 hhp r hhp } } | % |` — with `|` inside the braces
+  too, the one after the chart opens an empty bar.
 - `drummap { NAME: position N notehead W midi K mark M … }`: position −9…9 (0 = middle
   line), notehead `x cross diamond triangle slash xcircle default`, midi 0…127, mark `open
   stopped staccato tenuto`. It only changes existing drums; a bad entry warns LYS0024.

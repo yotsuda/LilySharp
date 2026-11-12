@@ -178,8 +178,19 @@ public static class SingerParts
                 if (line == null || cell == null || Inner(text, cell) is not { } braces)
                 {
                     // Where the singer does not sing: the section's bars, at rest.
+                    // A section that opens with a pickup rests its pickup bar apart (`R |`, which
+                    // lasts that bar), then the whole bars: as `R*5` the pickup was a bar of four
+                    // quarter rests and the bars after it empty (found writing a band chart to
+                    // try the grammar, 2026-11-12).
                     if (bars.TryGetValue(section, out int count) && count > 0)
-                        music.Append("  section ").Append(section).Append(" { R*").Append(count).Append(" }").Append(nl);
+                    {
+                        bool pickup = root.DescendantNodes<PartialDeclarationSyntax>().Any(p =>
+                            p.Parent is SectionDeclarationSyntax { SectionName: var named } ? named == section
+                            : p.Parent == root && section == sections[0]);
+                        music.Append("  section ").Append(section).Append(" { ")
+                            .Append(pickup && count > 1 ? "R | R*" + (count - 1) : pickup ? "R |" : "R*" + count)
+                            .Append(" }").Append(nl);
+                    }
                     continue;
                 }
                 bool moves = line.Node.Interval is > 1 or < -1 || line.Node.Octaves != 0;

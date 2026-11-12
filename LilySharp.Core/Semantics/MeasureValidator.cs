@@ -721,6 +721,28 @@ internal sealed class MeasureValidator : ISemanticValidator
             // A bar a mark repeats is a whole bar of the meter (LYS1049): the sign stands for
             // it, and the repetition is as long as it is. Reported once, in place of the fill
             // check — a pickup or a short bar repeated is the one mistake here.
+            // ⚠️ A PHRASE THAT IS THE BAR closes it with its own bar line, so nothing is left for
+            // the written one to close: `ride | % |` — the one-bar phrase the composing guide
+            // asks for — was "This bar is 0 long, and '%' repeats it" until 2026-11-12 (found
+            // writing a band chart to try the grammar). One bar closed inside and nothing
+            // after it IS a whole bar. Several are not one bar: said below.
+            if (!_bars.SenzaMisura && renderedBarsClosed == 1 && duration == Fraction.Zero
+                && barItems.Exists(n => n.Parent is PercentRepeatSyntax))
+            {
+                seenSounding = true;
+                continue;
+            }
+            if (!_bars.SenzaMisura && renderedBarsClosed > 0
+                && barItems.Find(n => n.Parent is PercentRepeatSyntax) is { Parent: PercentRepeatSyntax several })
+            {
+                int held = renderedBarsClosed + (duration > Fraction.Zero ? 1 : 0);
+                _diagnostics.Error(Reported(measure, i == 0 ? leadInSpan : null), DiagnosticCodes.PercentBodyNotWholeBars,
+                    $"'{several.Marks.First().Mark.Text}' repeats what stands between the two bar lines before it, and {held} bars are written there "
+                    + "with no bar line between them: a phrase ends its own bars. Write a bar line after each bar "
+                    + "('riff | riff | % |'), and the mark repeats the last one.");
+                seenSounding = true;
+                continue;
+            }
             if (!_bars.SenzaMisura && duration != _bars.MeterLength
                 && barItems.Find(n => n.Parent is PercentRepeatSyntax) is { Parent: PercentRepeatSyntax repeated }
                 && !barItems.Exists(n => n is RestSyntax r && Music.BarRest.IsBare(r)))
