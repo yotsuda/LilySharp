@@ -222,6 +222,29 @@ public class SingerPartsTests
         Assert.Contains(SemanticValidation.Run(other), d => d.Code == DiagnosticCodes.UndefinedPart && d.Message.Contains("'dave'"));
     }
 
+    /// <summary>Owner's question 2026-11-12 ("was a part's name not refused for a singer?"): it
+    /// is — where the name would hide what she sings. Not where the part is her notes written out.</summary>
+    [Fact]
+    public void ASingerCalledAsAPartIs_IsRefused_UnlessThePartIsHerNotesWrittenOut()
+    {
+        IEnumerable<Diagnostic> Named(string singers, string extra = "")
+            => SemanticValidation.Run(SyntaxTree.Parse(Book(singers, extra + "score { staff lead  lyrics words }")))
+                .Where(d => d.Code == DiagnosticCodes.SingerNamedAsPart);
+
+        // Called as the part she sings a third above: `staff lead` is the part, not her.
+        var refused = Assert.Single(Named("singer lead female sings on lead up 3 in Chorus"));
+        Assert.Equal(DiagnosticSeverity.Error, refused.Severity);
+        Assert.Contains("'lead' is a part's name", refused.Message);
+        // Called as another part.
+        Assert.Single(Named("singer pad female sings on lead", "part pad { instrument alto }\n"));
+        // Her notes written out: the part is hers, and she sings it as it stands.
+        Assert.Empty(Named("singer carol female sings words on carol", "part carol { instrument alto  lyrics words }\n"));
+        // …but not moved once more.
+        Assert.Single(Named("singer carol female sings words on carol up 3", "part carol { instrument alto  lyrics words }\n"));
+        // A name no part has.
+        Assert.Empty(Named("singer carol female sings on lead up 3 in Chorus"));
+    }
+
     [Fact]
     public void ASingerTheScoresOwnLinesLeaveOut_IsSaidAtTheItem()
     {

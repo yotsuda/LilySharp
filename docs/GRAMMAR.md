@@ -315,6 +315,8 @@ SingerName     = Identifier ;   (* the singer's OWN name: a word that is no gend
                                    first of two words. Lines of one name are one singer — the
                                    voice said on one is the others' too — and a score prints
                                    what a named singer sings ('staff NAME' and 'lyrics NAME';
+                                   a part's name is LYS4061, but for the part that is the
+                                   singer's notes written out, sung as it stands;
                                    docs/lyrics-singer-design.md §13) *)
 SingerGender   = 'male' | 'female' ;
                  (* WHO SINGS WHAT, in this order (docs/lyrics-singer-design.md). 'lyrics' rows

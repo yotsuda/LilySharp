@@ -329,7 +329,10 @@ the singer gets a name, and the score names the singer.
   with no words (a harmony under a lead that carries the same words), `staff carol  lyrics
   carol` both, `lyrics carol` her words alone.
 - A PART called as a singer is, is the part: `staff carol` then engraves it and nothing is
-  made. That is what her notes written out are (section 14).
+  made. That is what her notes written out are (section 14), and the one case in which a
+  singer may have a part's name: the line sings that part as it stands. Any other singer
+  called as a part is, is an error on her line (LYS4061) — her harmony could not be printed,
+  and nothing would say why.
 - A singer who sings the part an octave down in every line is written in the treble clef an
   octave down (a tenor's), unless the part writes a clef: the notes stand where the part's do.
 - A score that prints a singer SINGS WHAT IT SHOWS: the singer's lines are read there on the

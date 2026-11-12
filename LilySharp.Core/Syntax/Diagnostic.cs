@@ -1660,6 +1660,12 @@ public static class DiagnosticCodes
     /// a phrase (docs/lyrics-singer-design.md §13, <c>Editing.SingerParts</c>).</summary>
     public const string SingerNotPrinted = "LYS4060";
 
+    /// <summary>A singer whose own name is a part's (<c>singer lead female sings on lead up 3</c>
+    /// beside <c>part lead</c>): a score's <c>staff lead</c> is the part, so what she sings could
+    /// not be printed. Not said where the part is her notes written out, sung as it stands
+    /// (docs/lyrics-singer-design.md §13).</summary>
+    public const string SingerNamedAsPart = "LYS4061";
+
     /// <summary><c>singer … sings NAME</c> where no lyrics track has that name.</summary>
     public const string SingerWordsUnknown = "LYS4042";
 

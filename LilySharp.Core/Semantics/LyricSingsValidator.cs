@@ -261,6 +261,16 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             var node = line.Node;
             if (node.SingsKeyword == null)
                 continue;   // the parser said so
+            // A singer called as a PART is: a score's `staff NAME` is then that part, never what
+            // she sings, so her harmony could not be printed and nothing would say why. Allowed
+            // in the one case where the part IS her notes — written out, the line singing it as
+            // it stands (owner's question 2026-11-12: "was a part's name not refused?").
+            if (node.PersonToken is { } person && partNames.Contains(person.Text)
+                && !(line.Part == person.Text && line.Voice == null && node.Interval is >= -1 and <= 1 && node.Octaves == 0))
+                _diagnostics.Error(person.Span, DiagnosticCodes.SingerNamedAsPart,
+                    $"'{person.Text}' is a part's name, so it cannot be this singer's: in a score, 'staff {person.Text}' is that part. "
+                    + "Give the singer another name. (A singer may be called as a part is only where the part is her own notes, written out: 'sings on "
+                    + person.Text + "' with no 'up', 'down' or 'octave'.)");
             var at = node.TrackToken ?? node.SingsKeyword;
             var own = line.Part is { } sungPart ? LyricBindings.TracksOfPart(root, sungPart) : [];
             if (node.TrackToken == null && own.Count > 1)
