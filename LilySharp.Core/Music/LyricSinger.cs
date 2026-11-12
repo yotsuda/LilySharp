@@ -314,6 +314,29 @@ public static class LyricSinger
         };
     }
 
+    /// <summary>
+    /// A reader of the singer's OWN name (<c>singer carol …</c>) for one voice of a part — its
+    /// track, its part and its key among the part's voices (<c>part</c>, <c>part#2</c> …, as
+    /// <see cref="Midi.SungVoice.Key"/> counts them: one for each line that differs in who sings
+    /// or in how, in the order written). Null for a voice whose line gives no name.
+    /// </summary>
+    public static Func<string?, string?, string?, string?> NamesReaderOf(SyntaxNode root, RenderSpec? spec)
+    {
+        var lines = LinesFor(root, spec);
+        return (track, part, key) =>
+        {
+            int at = key != null && key.LastIndexOf('#') is var hash and > 0 && int.TryParse(key[(hash + 1)..], out int n) ? n - 1 : 0;
+            // By the track too where the voice says one the lines know; else by the part alone.
+            var sung = lines.Where(l => l.Part == part && l.Track == track).ToList();
+            if (sung.Count == 0)
+                sung = lines.Where(l => l.Part == part).ToList();
+            var voices = sung
+                .GroupBy(l => (l.Singer, Settings: SettingsText(l.Node, place: !l.Printed)))
+                .Select(g => g.Select(l => l.Person).FirstOrDefault(p => p != null)).ToList();
+            return at < voices.Count ? voices[at] : null;
+        };
+    }
+
     /// <summary>What separates the settings of several voices singing one track on one part
     /// (<see cref="SettingsReaderOf"/>): a character no setting holds.</summary>
     public const char SettingsJoiner = '\u001F';

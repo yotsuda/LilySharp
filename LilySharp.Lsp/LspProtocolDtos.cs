@@ -462,6 +462,9 @@ public class SungVoiceDto
     public bool InScore { get; set; } = true;
     /// <summary>Who the file says sings this voice, as written (a voice or a role), or null.</summary>
     public string? Singer { get; set; }
+    /// <summary>The singer's OWN name (<c>singer carol female …</c>), or null for a line that gives none:
+    /// what the practice menu calls the voice.</summary>
+    public string? Name { get; set; }
     /// <summary>The gender of the engine's default voice for it: what the singer says, else the part.</summary>
     public string? Gender { get; set; }
     /// <summary>The name of the lyrics track it sings, or null.</summary>

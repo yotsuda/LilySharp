@@ -33,6 +33,8 @@ export interface SungNoteDto { T: number; D: number; P: number; L?: string | nul
 /** A part's words on its notes, as the server answers `lilysharp/sung`. */
 /** `InScore`: the score shown sings this part itself; false for a voice the file's other lyrics could sing (off until the menu turns it on; session 1163). */
 export interface SungVoiceDto { Part: string; Key?: string; Language: string; Notes: SungNoteDto[]; Warnings?: string[] | null; InScore?: boolean; Singer?: string | null; Gender?: string | null; Track?: string | null;
+    /** The singer's own name (`singer carol female …`), or null for a line that gives none. */
+    Name?: string | null;
     /** How the voice sings, as its singer line's `with …` writes it: a name its number or its word, by the names the voice's engine takes. */
     Sing?: Record<string, number | string> | null }
 
@@ -185,15 +187,19 @@ function voiceMenuName(singer: string | null | undefined): string | undefined {
 
 /** Each voice's line in the practice menu, by its key: who sings it, with the part beside a voice
  *  that sings several; the part alone for its default voice. */
-export function voiceMenuLabels(voices: readonly Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer'>[]): Record<string, string> {
+export function voiceMenuLabels(voices: readonly Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer' | 'Name'>[]): Record<string, string> {
+    // A singer the file names goes by that name (owner's request 2026-11-12: `singer carol
+    // female "…" sings …` is carol in the menu, not her voice's name); the others by the voice.
+    const called = (v: Pick<SungVoiceDto, 'Singer' | 'Name'>) => v.Name || voiceMenuName(v.Singer);
     const uses = new Map<string, number>();
     for (const v of voices) {
-        const name = voiceMenuName(v.Singer);
+        const name = called(v);
         if (name) { uses.set(name, (uses.get(name) ?? 0) + 1); }
     }
     return Object.fromEntries(voices.map(v => {
-        const name = voiceMenuName(v.Singer);
-        return [sungKey(v), !name ? v.Part : (uses.get(name) ?? 0) > 1 ? `${name} (${v.Part})` : name];
+        const name = called(v);
+        // A named singer on the staff a score prints for her (the part is called as she is) needs no part beside the name.
+        return [sungKey(v), !name ? v.Part : (uses.get(name) ?? 0) > 1 && v.Part !== v.Name ? `${name} (${v.Part})` : name];
     }));
 }
 
@@ -202,10 +208,20 @@ export function voiceMenuTitle(label: string, track: string | null | undefined, 
     return !track || track === 'lyrics' ? `${label} sings ${part}` : `${label} sings ${track} on ${part}`;
 }
 
+/** What a voice's line says when hovered, of the voice itself: a named singer with the voice that
+ *  sings her beside the name (`carol (MERROW) sings words on lead`), and — on the staff a score
+ *  prints for her, whose part and words are made for it — only that it is her staff. */
+export function voiceMenuTitleOf(voice: Pick<SungVoiceDto, 'Part' | 'Singer' | 'Name' | 'Track'>, label: string): string {
+    if (!voice.Name) { return voiceMenuTitle(label, voice.Track, voice.Part); }
+    const by = voiceMenuName(voice.Singer);
+    const who = by ? `${label} (${by})` : label;
+    return voice.Part === voice.Name ? `${who} sings the staff the score prints for ${voice.Name}` : voiceMenuTitle(who, voice.Track, voice.Part);
+}
+
 /** All the practice menu's voice lines say, for telling that an edit changed them: who sings
  *  (owner's report 2026-11-10: a `singer` line rewritten, the open menu kept the old name), which
  *  lines there are, what each sings, and whether the score sings it. */
-export function voiceMenuKey(voices: readonly Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer' | 'Track' | 'InScore'>[]): string {
+export function voiceMenuKey(voices: readonly Pick<SungVoiceDto, 'Part' | 'Key' | 'Singer' | 'Name' | 'Track' | 'InScore'>[]): string {
     const labels = voiceMenuLabels(voices);
     return JSON.stringify(voices.map(v => [sungKey(v), labels[sungKey(v)], v.Track ?? null, v.InScore !== false]));
 }

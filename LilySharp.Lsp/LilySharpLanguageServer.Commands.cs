@@ -1172,6 +1172,7 @@ public sealed partial class LilySharpLanguageServer
             }
             var midi = new LilySharp.Core.Midi.MidiExporter { Form = spec?.Form, Score = spec, AllParts = @params.AllLyrics && spec != null }.Export(tree);
             var voices = LilySharp.Core.Midi.SungVoices.Read(midi, LilySharp.Core.Midi.MidiClock.SecondsOf(midi));
+            var names = LilySharp.Core.Music.LyricSinger.NamesReaderOf(tree.GetRoot(), spec);
             return new SungResponse
             {
                 Voices = voices.Select(v => new SungVoiceDto
@@ -1182,6 +1183,7 @@ public sealed partial class LilySharpLanguageServer
                     Warnings = v.Warnings.ToArray(),
                     InScore = inScore == null || inScore.Contains(v.Part),
                     Singer = v.Singer,
+                    Name = names(v.Track, v.Part, v.Key),
                     Gender = v.Gender,
                     Track = v.Track,
                     Sing = v.Sing?.ToDictionary(p => p.Key, p => p.Value.Number is { } number ? (object)number : p.Value.Word ?? ""),

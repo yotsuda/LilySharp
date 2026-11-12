@@ -84,6 +84,21 @@ public class SingerStaffRequestTests
         Assert.Equal(["bob", "carol", "lead"], sung.Voices!.Select(v => v.Part).OrderBy(p => p, StringComparer.Ordinal));
         Assert.Equal([71.0, 71, 72, 71], sung.Voices!.Single(v => v.Part == "carol").Notes.Select(n => n.P));
         Assert.Equal([55.0, 55, 57, 55], sung.Voices!.Single(v => v.Part == "bob").Notes.Select(n => n.P));
+        // Each voice carries its singer's own name: what the practice menu calls it.
+        Assert.Equal("carol", sung.Voices!.Single(v => v.Part == "carol").Name);
+        Assert.Equal("bob", sung.Voices!.Single(v => v.Part == "bob").Name);
+        Assert.Equal("alice", sung.Voices!.Single(v => v.Part == "lead").Name);
+    }
+
+    [Fact]
+    public void InAScoreThatPrintsNoSinger_EachVoiceOfThePartStillHasItsName_AndALineWithNoneHasNone()
+    {
+        var (server, uri) = Opened(Book.Replace("score { staff lead  lyrics words  singer carol  singer bob }", "score { staff lead  lyrics words }")
+            .Replace("singer alice female sings on lead in Verse", "singer female sings on lead in Verse"));
+        var sung = server.GetSung(new SungParams { TextDocument = new TextDocumentIdentifier { Uri = uri } });
+        Assert.Null(sung.Error);
+        Assert.Equal(["lead", "lead#2", "lead#3"], sung.Voices!.Select(v => v.Key));
+        Assert.Equal([null, "bob", "carol"], sung.Voices!.Select(v => v.Name));
     }
 
     /// <summary>Owner's report 2026-11-12: in a score written a line an item, <c>staff lead</c> and

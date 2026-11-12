@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveCancelLine, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
+import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveCancelLine, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
 import { VoiceBarPart, voiceBar, voiceBarShown, voiceProgress, voiceRound, voiceRowProgress, voiceStillSinging, voiceToldFraction } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -684,6 +684,29 @@ describe('voiceMenuLabels', () => {
         assert.equal(voiceMenuTitle('MERROW', 'verse', 'melody'), 'MERROW sings verse on melody');
         assert.equal(voiceMenuTitle('MERROW', 'lyrics', 'melody'), 'MERROW sings melody');
     });
+    // Owner's request 2026-11-12: a singer the file names (`singer carol female "…" sings …`)
+    // is carol in the menu, not her voice's name.
+    it('calls a named singer by her name, and the others by their voice', () => assert.deepEqual(
+        voiceMenuLabels([
+            { Part: 'lead', Key: 'lead', Singer: 'neutrino/SEVEN', Name: 'alice' },
+            { Part: 'lead', Key: 'lead#2', Singer: 'neutrino/SEVEN', Name: 'carol' },
+            { Part: 'lead', Key: 'lead#3', Singer: 'female', Name: 'dora' },
+            { Part: 'bass', Key: 'bass', Singer: 'neutrino/MERROW', Name: null },
+        ]), { lead: 'alice', 'lead#2': 'carol', 'lead#3': 'dora', bass: 'MERROW' }));
+    it('says the part beside a named singer with several lines, but not on the staff a score prints for her', () => {
+        assert.deepEqual(voiceMenuLabels([
+            { Part: 'lead', Key: 'lead', Singer: 'female', Name: 'alice' },
+            { Part: 'alto', Key: 'alto', Singer: 'female', Name: 'alice' },
+        ]), { lead: 'alice (lead)', alto: 'alice (alto)' });
+        assert.deepEqual(voiceMenuLabels([{ Part: 'carol', Key: 'carol', Singer: 'female', Name: 'carol' }]), { carol: 'carol' });
+    });
+    it('says on hover the voice that sings a named singer', () => {
+        assert.equal(voiceMenuTitleOf({ Part: 'lead', Singer: 'neutrino/SEVEN', Name: 'carol', Track: 'words' }, 'carol'), 'carol (SEVEN) sings words on lead');
+        assert.equal(voiceMenuTitleOf({ Part: 'carol', Singer: 'female', Name: 'carol', Track: '__words_carol' }, 'carol'), 'carol (female) sings the staff the score prints for carol');
+        assert.equal(voiceMenuTitleOf({ Part: 'melody', Singer: 'neutrino/MERROW', Name: null, Track: 'verse' }, 'MERROW'), 'MERROW sings verse on melody');
+    });
+    it('a singer renamed changes the menu', () => assert.notEqual(
+        voiceMenuKey([{ Part: 'lead', Singer: 'female', Name: 'carol' }]), voiceMenuKey([{ Part: 'lead', Singer: 'female', Name: 'carla' }])));
 });
 
 // Owner's request 2026-11-11: a voice taken from a top-level `singer`'s list goes on to `sings`
