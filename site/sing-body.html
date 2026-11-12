@@ -6,11 +6,13 @@
     <li><a href="#what">What it does</a></li>
     <li><a href="#install">Install a voice</a></li>
     <li><a href="#first">A first song</a></li>
+    <li><a href="#part-words">Whose words they are</a></li>
     <li><a href="#who">Choose who sings</a></li>
+    <li><a href="#sections">Who sings which section, and harmony</a></li>
+    <li><a href="#how">How a voice sings</a></li>
     <li><a href="#words">Write words a voice can read</a></li>
     <li><a href="#sound">Voice, instrument, or both</a></li>
     <li><a href="#generated">Humming and note names</a></li>
-    <li><a href="#part-words">A part's own words</a></li>
     <li><a href="#editor">In the editor</a></li>
     <li><a href="#export">Export the song</a></li>
     <li><a href="#terms">Voices and their terms</a></li>
@@ -65,20 +67,52 @@
 
 <section id="first">
   <h2>A first song</h2>
-  <p>Three statements, one job each. <code>lyrics</code> holds the words. A <code>lyrics</code> row in a
-  score <b>prints</b> them. A <code>singer</code> line <b>sings</b> them.</p>
+  <p>Four statements, one job each. The <b>part</b> names its words. <code>lyrics</code> holds them. A
+  <code>lyrics</code> row in a score <b>prints</b> them. A <code>singer</code> line <b>sings</b> them.</p>
   <!--EXAMPLE:sing-first-->
-  <p>The line stands at the top level of the file, and its order is fixed:
-  <code>singer WHO sings WORDS on PART</code>. Without it the words are only printed, and the part
-  plays its instrument. <code>on PART</code> can be left out when the file has one part, or when every
-  score prints the words under one part. The piano has no <code>singer</code> line, so it plays as
-  usual, and the voice sings over it.</p>
+  <p>The <code>singer</code> line stands at the top level of the file, on a line of its own, and its
+  order is fixed: <code>singer WHO sings WORDS on PART</code>. Here the part has said which words are
+  its own, so the line needs no name for them: <code>singer female sings on melody</code>. Without a
+  <code>singer</code> line the words are only printed, and the part plays its instrument. The piano has
+  none, so it plays as usual, and the voice sings over it.</p>
   <p><code>language english</code> says what the words are written in, and <code>mel- o- dy</code> is
   one word in three syllables. English needs a voice that sings it: a DiffSinger voice with an English
   dictionary. <code>singer female</code> takes the default female voice for the words' language; to
-  name one, write <code>singer "diffsinger/TIGER" sings words</code>.</p>
+  name one, write <code>singer "diffsinger/TIGER" sings on melody</code>.</p>
   <p>Press ▶. The first time takes a moment while the engine loads its models. Until the voice is
   ready, the part's instrument plays in its place.</p>
+</section>
+
+<section id="part-words">
+  <h2>Whose words they are</h2>
+  <p>Say it on the part: <code>lyrics NAME</code> in the part's header, with no braces. It defines
+  nothing; it names the track that is this part's. This is the standard way, and the one place you can
+  read it off the part itself.</p>
+<pre>part sop { instrument soprano  lyrics words }
+part ten { instrument baritone lyrics mw }
+
+singer female sings on sop     // sings the words the part names
+singer male sings on ten</pre>
+  <p>The same statement in a file written part by part, where each part holds its own sections: it
+  stands with the header's properties, before the first section.</p>
+<pre>part sop {
+  instrument soprano
+  lyrics words
+  section Verse { c'4 d' e' f' | }
+}
+lyrics words {
+  section Verse { la la la la | }
+}
+singer female sings on sop</pre>
+  <p>A file may also say it only by where a score puts the row (<code>staff sop  lyrics words</code>:
+  the row under a staff is that staff's) or by a singer line's <code>on PART</code>, and it works. But
+  those say it for one score or for one voice. Once the part names its words, a <code>singer</code>
+  line or a row that gives that part some other track is warned about, which catches a part printing
+  one set of words and singing another. A part may list several tracks; a <code>singer</code> line
+  must then name the one it sings.</p>
+  <p>With the caret on a <code>singer</code> line or on the head of a <code>lyrics</code> block whose
+  part does not say it yet, the lightbulb (<kbd>Ctrl+.</kbd>) offers <b>Name these words on the
+  part</b> and writes it for you.</p>
 </section>
 
 <section id="who">
@@ -99,6 +133,54 @@ singer female "voicevox/ずんだもん-ノーマル" sings words on sop
 singer male "neutrino/SOMA" sings words on bas</pre>
   <p>A line inside a <code>score { }</code> replaces the top-level lines for its part in that score, so
   one score can sing the Japanese words and another the English ones.</p>
+</section>
+
+<section id="sections">
+  <h2>Who sings which section, and harmony</h2>
+  <p>A band says: this section she sings, this one he sings, and here a third voice comes in above.
+  A <code>singer</code> line says the same, after its part:</p>
+  <table class="g">
+    <tr><th>Written after the part</th><th>What the voice sings</th></tr>
+    <tr><td><code>in Verse Bridge</code></td><td>only those sections, every time they are played. With no <code>in</code>, the whole part</td></tr>
+    <tr><td><code>up 3</code> / <code>down 6</code></td><td>a third above, a sixth below, <b>along the key</b>: the harmony a singer finds by ear. From 2 to 15</td></tr>
+    <tr><td><code>octave -1</code></td><td>an octave below (1 to 3 octaves, either way)</td></tr>
+  </table>
+  <p>Their order is fixed: <code>up</code> or <code>down</code>, then <code>octave</code>, then
+  <code>in</code>. Several lines on one part sing together, each with its own sections and its own
+  interval:</p>
+  <!--EXAMPLE:sing-band-->
+  <p>Lily# moves the notes before any voice sees them, so every engine sings a harmony alike. The
+  third follows the key in force where the note is, a key change included. A note outside the scale is
+  answered with the scale's own note: over g-sharp in A minor, a third above is b. Where that is not
+  the harmony you want, write the line out as a part of its own.</p>
+  <p>Two things to know. The harmony is <b>heard, not printed</b>: the page shows the part as written.
+  And a part with a <code>singer</code> line is a voice throughout, so in a section where none of its
+  lines sings, it is silent: give every section someone to sing it, or leave <code>in</code> off one
+  line.</p>
+</section>
+
+<section id="how">
+  <h2>How a voice sings</h2>
+  <p>Leave this out and a voice sings as it does by itself, which is usually what you want. To change
+  it, write <code>with</code> at the end of the <code>singer</code> line and, after it, a name and a
+  value for each setting, with no commas:</p>
+<pre>singer "diffsinger/Nishiren/2P" sings on melody with breathiness 3 gender -0.2</pre>
+  <p>The names are the <b>engine's own</b>, so what you can write depends on the voice. The editor
+  lists what the line's voice takes, each with its range, and marks a name the voice does not take.</p>
+  <table class="g">
+    <tr><th>Engine</th><th>Settings</th></tr>
+    <tr><td><b>DiffSinger</b></td><td>what the voice's model was trained with, commonly <code>breathiness</code>, <code>tension</code>, <code>voicing</code> (each added to what the voice does by itself), <code>gender</code>, <code>velocity</code></td></tr>
+    <tr><td><b>NEUTRINO</b></td><td><code>support</code>: another NEUTRINO voice by name, as a support model</td></tr>
+    <tr><td><b>VOICEVOX</b></td><td>none</td></tr>
+  </table>
+  <p><b>Inside the music</b> the same names go on a note, and hold from that note on as a dynamic
+  does:</p>
+<pre>c'4@sing(breathiness 6) d' e' f' |      // from here on
+g'2@sing(breathiness to 9) r2 |          // arrives at 9 with this note, gliding from 6
+c'4@sing(breathiness default) d' e' f' | // back to the singer line's value</pre>
+  <p>A setting that an engine takes once for the whole voice, such as <code>support</code>, belongs on
+  the <code>singer</code> line. <code>transpose</code> is not a setting: to sing higher or lower than
+  the part, use <code>up</code>, <code>down</code> or <code>octave</code> above.</p>
 </section>
 
 <section id="words">
@@ -139,31 +221,28 @@ score { staff alt  lyrics solfege }   // prints the names under the notes</pre>
   <p>Solfege is movable do, in the file's <code>language</code>.</p>
 </section>
 
-<section id="part-words">
-  <h2>A part's own words</h2>
-  <p>Where parts sing different words, say so in each part's header. It defines nothing; it names the
-  track, with no braces:</p>
-<pre>part sop { instrument soprano  lyrics words }
-part ten { instrument baritone lyrics mw }
-
-singer female sings on sop     // sings the words the part names
-singer male sings on ten</pre>
-  <p>A <code>singer</code> line or a row that gives that part some other track is then warned about,
-  which catches a part printing one set of words and singing another. A part may list several tracks;
-  a <code>singer</code> line must then name the one it sings.</p>
-</section>
-
 <section id="editor">
   <h2>In the editor</h2>
   <ul>
-    <li><b>Voices as you type.</b> Between the quotes of a <code>singer</code>, completion lists the
-    installed voices that sing the words' language.</li>
+    <li><b>The line writes itself.</b> Type <code>singer </code> and completion lists the installed
+    voices that sing the words' language. Choose one and <code>sings</code> is written, with the
+    file's lyrics listed; choose the words and <code>on</code> is written, with the parts. After the
+    part come <code>up</code>, <code>down</code>, <code>octave</code> and <code>in</code> (the sections
+    by name), then <code>with</code> and the settings the voice takes, with values to begin from.</li>
+    <li><b>The step keys.</b> <kbd>Ctrl+Shift+Up</kbd> and <kbd>Ctrl+Shift+Down</kbd> change what the
+    caret is on: the voice on its name, <code>male</code> and <code>female</code>, the words on
+    <code>sings</code>, the number of <code>up 3</code> or <code>octave -1</code>, and the number of a
+    setting.</li>
+    <li><b>Hear a setting.</b> With the caret in a line's <code>with …</code>, and at each step of one
+    of its numbers, the voice says its short phrase as the line has it sing.</li>
     <li><b>Hear a voice.</b> Click a <code>singer</code> line and the voice says a short phrase, at the
     pitch of the line's gender. <kbd>Ctrl+Shift+Up</kbd> and <kbd>Ctrl+Shift+Down</kbd> go through the
     voices, each heard as you reach it; <kbd>Ctrl+Shift+PageUp</kbd> and <kbd>PageDown</kbd> go to the
     first voice of another engine. While the piece plays, a click stays silent.</li>
     <li><b>The microphone over ▶</b> is grey and still while a voice is not sung yet, pulses while the
-    engine sings it, and turns blue when it is ready. A Play meanwhile plays the part's instrument.</li>
+    engine sings it, and turns blue when it is ready. The bar under it runs from empty to full over
+    what has to be sung anew. A Play meanwhile plays the part's instrument, and a voice that becomes
+    ready while the piece plays comes in at the next note it sings.</li>
     <li><b>Edits sing only what changed.</b> About a second and a half after you stop typing, the
     engine sings the phrases you changed and keeps the rest. A phrase ends at a rest. If it was still
     singing an older text, it finishes the phrase it is on and moves on; pressing ▶ skips the wait.
