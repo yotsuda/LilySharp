@@ -1408,6 +1408,32 @@ public class StepRequestTests
         Assert.Equal(S("condensedStaff { melody drums }"), Step(S("condensedStaff { melody ‸bass }"), -1, semitone: true).After);
     }
 
+    // Owner's request 2026-11-12, on `singer male sings words on lead`: the step keys on its
+    // `male` go to `female`, and back.
+    [Fact]
+    public void ASingerLinesGender_GoesToTheOther_OnEitherKey()
+    {
+        const string Book = "part lead {{ }}\nsection A {{ lead {{ c'1 }} }}\n" +
+            "lyrics words {{ la }}\n{0}\nform {{ A }}\nscore {{ staff lead  lyrics words }}\n";
+        string S(string line) => string.Format(Book, line);
+
+        var (up, after) = Step(S("singer ma‸le sings words on lead"), +1, semitone: true);
+        Assert.False(up.Fallback, up.Error);
+        Assert.Equal(S("singer female sings words on lead"), after);
+        Assert.Contains("singer female (male, female)", up.Message);
+        Assert.Equal(S("singer male sings words on lead"), Step(S("singer ‸female sings words on lead"), +1, semitone: true).After);
+        // Down too: there are two.
+        Assert.Equal(S("singer female sings words on lead"), Step(S("singer male‸ sings words on lead"), -1, semitone: true).After);
+        Assert.Equal(S("singer male sings words on lead"), Step(S("singer female‸ sings words on lead"), -1).After);
+        // The octave keys as well.
+        Assert.Equal(S("singer female sings words on lead"), Step(S("singer ‸male sings words on lead"), +1).After);
+        // Before a name, in a score, with settings: only the word changes.
+        Assert.Equal(S("singer female \"neutrino/SOMA\" sings words on lead with transpose 2"),
+            Step(S("singer ma‸le \"neutrino/SOMA\" sings words on lead with transpose 2"), +1, semitone: true).After);
+        // The `sings` beside it still steps the words, not the gender.
+        Assert.Equal(S("singer male sings hum on lead"), Step(S("singer male si‸ngs words on lead"), -1, semitone: true).After);
+    }
+
     // Owner's request 2026-11-11, on `singer female "diffsinger/Nishiren/2P" sings words on lead`:
     // the step keys on its `sings` walk the file's lyrics.
     [Fact]

@@ -509,6 +509,9 @@ public static partial class NoteStepper
         // has — a line that sings the unnamed words has no name to carry.
         foreach (var singer in root.DescendantNodes<SingerDeclarationSyntax>())
         {
+            // The caret on its `male` / `female` (owner's request 2026-11-12): the other one.
+            if (singer.GenderToken is { } gender && gender.Span.Start <= offset && offset <= gender.Span.End)
+                return (TargetKind.SingerGender, gender);
             if (singer.SingsKeyword is not { } sings)
                 continue;
             int end = singer.TrackToken?.Span.End ?? sings.Span.End;
@@ -648,6 +651,25 @@ public static partial class NoteStepper
             ? new Edit(written.Span.Start, written.Span.End, names[to])
             : new Edit(sings.Span.End, sings.Span.End, " " + names[to]);
         return (edit, $"sings {names[to]}: lyrics {to + 1} of {names.Count}{list}");
+    }
+
+    /// <summary>
+    /// The other gender of a <c>singer male …</c> line (owner's request 2026-11-12, on
+    /// <c>singer male sings words on lead</c>): there are two, so either key goes to the other.
+    /// </summary>
+    private static (Edit? Edit, string Message) SingerGenderEdit(SyntaxTokenNode gender)
+    {
+        var genders = Music.LyricSinger.Genders;
+        int at = -1;
+        for (int i = 0; i < genders.Count; i++)
+        {
+            if (genders[i] == gender.Text)
+                at = i;
+        }
+        if (at < 0)
+            return (null, $"singer {gender.Text}: a singer is {string.Join(" or ", genders)}");
+        string to = genders[(at + 1) % genders.Count];
+        return (new Edit(gender.Span.Start, gender.Span.End, to), $"singer {to} ({string.Join(", ", genders)})");
     }
 
     // ------------------------------------------------------------------ selections: a duration, a chord's quality

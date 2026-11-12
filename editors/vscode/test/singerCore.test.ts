@@ -1121,3 +1121,29 @@ describe('a singer line is heard as it says the voice sings', () => {
         assert.match(step, /if \(line && line\.withAt >= 0 && one\.start\.character >= line\.withAt\) \{\s*written = line\.voice;/);
     });
 });
+
+// Owner's request 2026-11-12, on `singer male sings words on lead`: the step keys on the `male`
+// change it to `female` - also on a line that names a voice, where they stepped the voice.
+describe('the step keys on a singer line\'s gender', () => {
+    const { onSingerGender } = require('../src/singerCore') as { onSingerGender: (line: string, character: number) => boolean };
+
+    it('knows the caret on the word, at either end of it', () => {
+        const line = 'singer male sings words on lead';
+        assert.equal(onSingerGender(line, 7), true);
+        assert.equal(onSingerGender(line, 9), true);
+        assert.equal(onSingerGender(line, 11), true);
+        assert.equal(onSingerGender(line, 6), false);      // on `singer`
+        assert.equal(onSingerGender(line, 13), false);     // on `sings`
+        const named = 'singer female "neutrino/MERROW" sings words';
+        assert.equal(onSingerGender(named, 10), true);
+        assert.equal(onSingerGender(named, 20), false);    // in the name: the voice steps
+        assert.equal(onSingerGender('singer "male" sings words', 9), false);
+        assert.equal(onSingerGender('// singer male sings words', 12), false);
+        assert.equal(onSingerGender('part male { }', 6), false);
+    });
+
+    it('leaves the word to the server before it looks for a voice to step', () => {
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /if \(onSingerGender\(doc\.lineAt\(line\)\.text, editor\.selection\.active\.character\)\) \{ return false; \}\s*const at = singerValueAt\(/);
+    });
+});

@@ -179,6 +179,9 @@ public static partial class NoteStepper
         FormSection,
         /// <summary>The part or voice a lyrics track <c>sings</c> (NoteStepper.Words.cs).</summary>
         SingsTarget,
+        /// <summary>The <c>male</c> / <c>female</c> of a <c>singer</c> line: the other one
+        /// (NoteStepper.Words.cs).</summary>
+        SingerGender,
         /// <summary>The words a <c>singer … sings NAME</c> line sings, the caret on its
         /// <c>sings</c> or on the name: the file's lyrics, one at a time (NoteStepper.Words.cs).</summary>
         SingerWords,
@@ -212,7 +215,7 @@ public static partial class NoteStepper
             or TargetKind.StaffOrTab or TargetKind.ScorePart or TargetKind.StaffLines
             or TargetKind.StaffSelector or TargetKind.KeywordValue or TargetKind.BarNumberEvery
             or TargetKind.LayoutNumber or TargetKind.PaperSize or TargetKind.TupletRatio or TargetKind.TupletAppearance or TargetKind.MusicCount or TargetKind.PartialLength
-            or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.SingerWords or TargetKind.SingValue or TargetKind.Duration or TargetKind.ChordQuality
+            or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.SingerWords or TargetKind.SingerGender or TargetKind.SingValue or TargetKind.Duration or TargetKind.ChordQuality
             or TargetKind.Barline or TargetKind.MusicKeyword or TargetKind.NavigationMark;
 
     /// <summary>A written thing the caret is on: its kind and its node (a
@@ -421,7 +424,7 @@ public static partial class NoteStepper
                 or TargetKind.StaffLines or TargetKind.StaffSelector or TargetKind.KeywordValue
                 or TargetKind.BarNumberEvery or TargetKind.LayoutNumber or TargetKind.PaperSize or TargetKind.InstrumentPreset
                 or TargetKind.TupletRatio or TargetKind.TupletAppearance or TargetKind.MusicCount or TargetKind.PartialLength
-                or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.SingerWords or TargetKind.SingValue or TargetKind.Duration or TargetKind.ChordQuality
+                or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.SingerWords or TargetKind.SingerGender or TargetKind.SingValue or TargetKind.Duration or TargetKind.ChordQuality
                 or TargetKind.Barline or TargetKind.MusicKeyword or TargetKind.NavigationMark)
             {
                 var (valueEdit, valueSaid) = t.Kind switch
@@ -461,6 +464,7 @@ public static partial class NoteStepper
                     TargetKind.FormSection or TargetKind.SingsTarget =>
                         NameReferenceEdit(tree, t.Kind, (SyntaxTokenNode)t.Node, dir),
                     TargetKind.SingerWords => SingerWordsEdit(tree, (SyntaxTokenNode)t.Node, dir),
+                    TargetKind.SingerGender => SingerGenderEdit((SyntaxTokenNode)t.Node),
                     TargetKind.SingValue => SingValueEdit(text, (SyntaxTokenNode)t.Node, dir, semitone),
                     TargetKind.Duration => DurationEdit(t.Node, dir),
                     TargetKind.Barline => BarlineEdit((SyntaxTokenNode)t.Node, dir),

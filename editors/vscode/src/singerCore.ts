@@ -274,6 +274,16 @@ export function singerValueAt(line: string, character: number): { start: number;
     return undefined;
 }
 
+/** Whether the caret stands on a `singer` line's `male` / `female` (owner's request 2026-11-12): the
+ *  step keys there change the word, not the voice named after it. */
+export function onSingerGender(line: string, character: number): boolean {
+    for (const m of line.split('//')[0].matchAll(/(?<![\w-])singer[ \t]+(male|female)(?![\w-])/g)) {
+        const end = m.index + m[0].length;
+        if (character >= end - m[1].length && character <= end) { return true; }
+    }
+    return false;
+}
+
 /** Where on the line to ask what language a `singer`'s words are in, wherever on the `singer` the caret
  *  is (owner's report 2026-11-09, session 1200: just past the closing quote the answer was none, and a voice
  *  of several languages said its first one's phrase): inside the name, or at the end of a bare gender. */
