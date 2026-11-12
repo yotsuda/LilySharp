@@ -216,6 +216,43 @@ public class GrammarEvaluation2FeaturesTests
         Assert.Contains("tempo 92 c'1@text(\"meno\").up", read);
     }
 
+    /// <summary>A tempo that prints its words and its count, <c>tempo "Andante" 4 = 88</c>, was
+    /// exported as the metronome alone and the words were lost (a leftover of the same day). It
+    /// is the words and the metronome in one direction — at the opening, at a section's head and
+    /// in the music — and read back it is the tempo with its marking, the count the quarter's.</summary>
+    [Fact]
+    public void ATemposWords_GoToMusicXmlWithItsCount_AndComeBack()
+    {
+        string source = BareTempos.Replace(" bare", "");
+        Clean(source);
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml()
+            .ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
+        foreach (var (words, unit, count, sound) in new[] { ("Allegro", "quarter", 120, 120), ("Meno mosso", "half", 40, 80), ("Tempo I", "quarter", 92, 92) })
+            Assert.Contains($"<direction-type><words font-weight=\"bold\">{words}</words></direction-type>"
+                + $"<direction-type><metronome><beat-unit>{unit}</beat-unit><per-minute>{count}</per-minute></metronome></direction-type>"
+                + $"<sound tempo=\"{sound}\" />", xml);
+
+        var (lys, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml);
+        Assert.Contains("\ntempo \"Allegro\" 4 = 120\n", lys);
+        Assert.Contains("| tempo \"Meno mosso\" 4 = 80 g", lys);
+        Assert.Contains("tempo \"Tempo I\" 4 = 92 c'1", lys);
+        Assert.DoesNotContain("@text", lys);
+        Assert.DoesNotContain("bare", lys);
+        Clean(lys);
+
+        // Another program's file: the words and the metronome in one direction, the words
+        // plain, with a space after them, no sound (the count is read off the metronome).
+        string other = xml.Replace("<words font-weight=\"bold\">Tempo I</words>", "<words>Tempo I </words>")
+            .Replace("<sound tempo=\"92\" />", "");
+        Assert.Contains("tempo \"Tempo I\" 4 = 92 c'1", new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(other).Item1);
+        // Italic words beside a metronome are an expression still, and a count alone a count.
+        string italic = xml.Replace("<words font-weight=\"bold\">Tempo I</words>", "<words font-style=\"italic\">meno</words>");
+        Assert.Contains("tempo 92 c'1@text(\"meno\").up", new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(italic).Item1);
+        string alone = xml.Replace("<direction-type><words font-weight=\"bold\">Tempo I</words></direction-type>", "");
+        Assert.Contains("tempo 92 c'1", new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(alone).Item1);
+    }
+
+
     /// <summary>A lead sheet's twin writes its tempos on a timing track built from the page's
     /// marks, and a mark with a hidden count has none: the words were written alone and LilyPond
     /// played its default tempo (a leftover of the same day). At the opening, at a section's
@@ -885,6 +922,37 @@ public class GrammarEvaluation2FeaturesTests
         Assert.DoesNotContain("cross", apart);
         Assert.Contains("<c e g>2@arpeggio", apart);
     }
+
+    /// <summary>An arpeggio bracket did not come back from MusicXML at all (a leftover of the same
+    /// day): <c>&lt;non-arpeggiate&gt;</c> on a chord's top and bottom notes is its
+    /// <c>@arpeggio(bracket)</c>, and one bracket through both staves — the top above, the bottom
+    /// below, one number — is <c>@arpeggio(cross bracket)</c> on the upper staff and nothing below.
+    /// A bracket on each staff at one moment stays two.</summary>
+    [Fact]
+    public void AnArpeggioBracket_ComesBackFromMusicXml()
+    {
+        string source = Piano("<c' e' g'>2@arpeggio(bracket) <d' f'>2@arpeggio(cross bracket) | <c' e' g'>2@arpeggio(bracket) g'2@arpeggio(cross bracket) |",
+            "<c e g>2 <d f>2 | <c e g>2@arpeggio(bracket) <c g>2 |");
+        Clean(source);
+        var tree = SyntaxTree.Parse(source);
+        string xml = new LilySharp.Core.MusicXml.MusicXmlExporter { Score = RenderSpecParser.FindFirst(tree) }
+            .Export(tree).ToXml().ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
+        var (lys, _) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(xml);
+        Assert.Contains("@arpeggio(bracket) <d' f'>2@arpeggio(cross bracket) | <c' e' g'>2@arpeggio(bracket) g'2@arpeggio(cross bracket) |", lys);
+        Assert.Contains("<c e g>2 <d f>2 | <c e g>2@arpeggio(bracket) <c g>2 |", lys);
+        Clean(lys);
+        // The page it draws is the page again: two brackets through both staves, three of one chord.
+        var back = SyntaxTree.Parse(lys);
+        Assert.Equal(Collected(source).Arpeggios.Select(a => (a.Cross, a.Bracket, a.PartnerStaffIndex)),
+            SvgGenerator.CollectScore(back, RenderSpecParser.FindFirst(back)).Arpeggios.Select(a => (a.Cross, a.Bracket, a.PartnerStaffIndex)));
+
+        // Another program's one bracket through both staves, with the number every bracket has:
+        // no staff holds both ends.
+        Assert.Equal(2, xml.Split("<non-arpeggiate type=\"top\" number=\"2\" />").Length - 1);
+        string defaulted = xml.Replace("number=\"2\" />", "number=\"1\" />");
+        Assert.Equal(lys, new LilySharp.Core.MusicXmlImport.MusicXmlImporter().Import(defaulted).Item1);
+    }
+
 
     /// <summary>
     /// What the lower staff plays decides what the upper staff draws, so an edit there redraws the

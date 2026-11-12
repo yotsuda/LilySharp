@@ -76,7 +76,7 @@ internal static class LysWriter
         WritePaper(sb, doc.Paper);
 
         if (doc.Tempo is int tempo)
-            sb.Append(TempoText(tempo, doc.TempoWords)).Append('\n');
+            sb.Append(TempoText(tempo, doc.TempoWords, doc.TempoCountHidden)).Append('\n');
 
         // Opening time/key/clef come from the first measure that declares them.
         var (firstTime, firstKey) = header;
@@ -1303,11 +1303,11 @@ internal static class LysWriter
             else
                 State(clefChanged, clef != part.Clef, clefText);
             // The tempo is not reset: written where it changes, whether a section opens or not.
-            // (Words with a hidden count are printed where they stand, at the same count too.)
+            // (A tempo's words are printed where they stand, at the same count too.)
             if (m.Tempo is int bpm && (bpm != tempo || m.TempoWords != null))
             {
                 tempo = bpm;
-                State(true, true, TempoText(bpm, m.TempoWords) + " ");
+                State(true, true, TempoText(bpm, m.TempoWords, m.TempoCountHidden) + " ");
             }
             changes[i] = sb.ToString();
             opening[i] = open.ToString();
@@ -1315,11 +1315,13 @@ internal static class LysWriter
         return new PartDirectives(changes, opening);
     }
 
-    /// <summary>A tempo as written: <c>tempo N</c>, or — the source printing words and no count
-    /// (<see cref="ImportDocument.TempoWords"/>) — <c>tempo "…" 4 = N bare</c>. The count is the
-    /// quarter's: MusicXML's <c>&lt;sound tempo&gt;</c> is, and no unit is printed to keep.</summary>
-    private static string TempoText(int bpm, string? words)
-        => words == null ? $"tempo {bpm}" : $"tempo \"{EscapeString(words)}\" 4 = {bpm} {Syntax.TempoValue.BareWord}";
+    /// <summary>A tempo as written: <c>tempo N</c>, or — the source printing words
+    /// (<see cref="ImportDocument.TempoWords"/>) — <c>tempo "…" 4 = N</c>, with <c>bare</c> when it
+    /// prints no count beside them. The count is the quarter's: MusicXML's
+    /// <c>&lt;sound tempo&gt;</c> is, which is what the reader takes it from.</summary>
+    private static string TempoText(int bpm, string? words, bool countHidden)
+        => words == null ? $"tempo {bpm}"
+            : $"tempo \"{EscapeString(words)}\" 4 = {bpm}" + (countHidden ? " " + Syntax.TempoValue.BareWord : "");
 
     private static RelativeOctave? Rel(bool relative) => relative ? new RelativeOctave() : null;
 

@@ -1124,6 +1124,7 @@ public sealed class MidiExporter
                 var gridAtStart = (_barStart, _barNotes, _barKnown, _firstBarTicks, _barFlows);
                 (int, int, bool, int?, bool)? gridAfterFirst = null;
                 int lane = 0;
+                int leadClosedAt = -1; // the bar line the first voice ended on (_spanClosedAt)
                 foreach (var voice in voices)
                 {
                     int notesBefore = track.Notes.Count;
@@ -1136,7 +1137,10 @@ public sealed class MidiExporter
                         _barNotes = Math.Max(_barNotes, track.Notes.Count);
                     _pendingGraceSteal = 0; // a lane opens with no grace debt (PlaySection says why)
                     _clockCarry = default;
+                    _sequenceClosedAt = -1;
                     ProcessNode(voice, track, conductorTrack);
+                    if (lane == 0)
+                        leadClosedAt = _sequenceClosedAt;
                     // Every note this voice added is the lane's (MidiNote.Voice), whatever path
                     // made it — a note, a chord, a grace, a repeated `q`; a nested span's own first
                     // voice takes the lane, its later voices keep their own number.
@@ -1153,6 +1157,7 @@ public sealed class MidiExporter
                 _pendingGraceSteal = 0;
                 _clockCarry = default;
                 _currentTick = voicesEndTick;
+                _spanClosedAt = !parallel.IsDrums && leadClosedAt == voicesEndTick ? voicesEndTick : -1;
                 // …and the music AFTER the span reads from the frame the span opened in
                 // too: no branch moves it, so which branch was written last cannot matter
                 // (MeasureCollector's _parallelSpans carries the same rule for the page).
@@ -2361,10 +2366,12 @@ public sealed class MidiExporter
         // A `|:` OPENING the scope closes nothing, so it leaves no silent bar behind it —
         // the one place `|` and `|:` part company (MeasureBuilder._atScopeStart is twin).
         bool atScopeStart = true;
+        bool sawBarLine = false;
         for (int i = 0; i < items.Count; i++)
         {
             if (items[i] is BarlineSyntax bar)
             {
+                sawBarLine = true;
                 // `|:` pairs like a bare `|` (it OPENS the next bar rather than
                 // decorating the one behind it), so `… | |: …` is a gap here too —
                 // MeasureBuilder.HandleBarline owns the rule.
@@ -2422,9 +2429,36 @@ public sealed class MidiExporter
                 ReplayPercentBody(track, conductorTrack);
                 continue;
             }
+            _spanClosedAt = -1;
             ProcessNode(items[i], track, conductorTrack);
+            // A voice span whose first voice ended on a bar line: that bar line is this
+            // stream's, so one written after the span is the second of a pair (_spanClosedAt).
+            // (The span itself, not a phrase that ends in one: a phrase's exit is confirmed.)
+            if (items[i] is ParallelExpressionSyntax && _spanClosedAt == _currentTick)
+            {
+                boundaryTick = _currentTick;
+                boundaryClaimed = true;
+                sawBarLine = true;
+            }
         }
+        // The bar line this sequence ended on, for the voice span it may be the first voice of
+        // (ProcessNode's ParallelExpressionSyntax arm): none when music followed its last one.
+        _sequenceClosedAt = sawBarLine && boundaryTick == _currentTick ? _currentTick : -1;
     }
+
+    // Where the sequence walked last ended on a bar line of its own, or -1; and where a voice
+    // span's FIRST voice did, when that is the span's end. The page reads a span's first voice
+    // as the staff's own stream (MeasureModel.IsInsideNonLeadVoice; MeasureBuilder.
+    // _confirmableBoundary): `voice { c'1 | } { e'1 | } | d'1 |` has written its `|` twice, and
+    // the second is an EMPTY bar there. This walk gave each voice a sequence of its own, whose
+    // bar line the sequence around it never saw — it found time passed and closed the bar again.
+    // MEASURED 2026-11-12 (Lab sessions/p1226/md/eval2/left2, beside `c1 | d1 | e1 | f1 |`):
+    // the page drew c'/e', an empty bar, d' in bar 3; the d' sounded at tick 1920, the other
+    // part's bar 3 at 3840 — a bar early from there on. LILYSHARP-OWN. ⚠️ Not a drum chart: the
+    // bar line after one confirms the bar its lines closed (MeasureModel.ChartExitMarker), and
+    // that is what this walk already played.
+    private int _sequenceClosedAt = -1;
+    private int _spanClosedAt = -1;
 
     /// <summary>The percent repeats being played, innermost last: each one's bars and the
     /// frame they opened in (<see cref="ProcessPercentRepeat"/>).</summary>

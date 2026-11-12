@@ -719,6 +719,11 @@ internal sealed class MusicXmlDirection
     /// owner's decision 2026-11-12): its words, written as <c>&lt;words&gt;</c> in place of the
     /// <c>&lt;metronome&gt;</c>, with the same <c>&lt;sound tempo&gt;</c>. Null for a printed count.</summary>
     public string? TempoHiddenWords { get; set; }
+    /// <summary>The words of a tempo that prints its count too (<c>tempo "Andante" 4 = 88</c>):
+    /// written as <c>&lt;words&gt;</c> before the <c>&lt;metronome&gt;</c> in the one direction,
+    /// the shape other programs write a tempo mark in. Null for a count alone. Until
+    /// 2026-11-12 the metronome was written alone and the words were lost.</summary>
+    public string? TempoMarking { get; set; }
     public string? Placement { get; set; }
     /// <summary>Hairpin: "crescendo" / "diminuendo" / "stop".</summary>
     public string? WedgeType { get; set; }
@@ -818,6 +823,9 @@ internal sealed class MusicXmlDirection
             }
             else
             {
+                if (!string.IsNullOrEmpty(TempoMarking))
+                    direction.Add(new XElement("direction-type",
+                        new XElement("words", new XAttribute("font-weight", "bold"), TempoMarking)));
                 var metronome = new XElement("metronome", new XElement("beat-unit", BeatUnitName(TempoBeatUnit)));
                 for (int i = 0; i < TempoBeatDots; i++)
                     metronome.Add(new XElement("beat-unit-dot"));

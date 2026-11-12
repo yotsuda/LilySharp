@@ -319,6 +319,9 @@ internal static class MusicXmlReader
             // The notes of this bar whose <arpeggiate> carries a number of 2 or more, with the
             // head of their chord, their staff and their onset (ConnectArpeggios).
             var arpeggiated = new List<(ImportNote Note, ImportNote Head, int Staff, int Onset, int Number)>();
+            // The ends of this bar's arpeggio brackets (<non-arpeggiate>), each with the head of
+            // its chord (ReadArpeggioBrackets).
+            var bracketed = new List<(ImportNote Head, int Staff, int Onset, int Number, bool Top)>();
             foreach (var el in measEl.Elements())
             {
                 switch (el.Name.LocalName)
@@ -333,17 +336,17 @@ internal static class MusicXmlReader
 
                     case "direction":
                     {
-                        // A tempo's words with its count played and not printed (HiddenCountWords).
+                        // A tempo's words, and whether its count is played and not printed (TempoWords).
                         string? tempoWords = null;
                         if (ReadDirectionTempo(el) is int bpm)
                         {
-                            tempoWords = HiddenCountWords(el);
+                            tempoWords = TempoWords(el, out bool countHidden);
                             bool opens = doc.Tempo == null;
                             doc.Tempo ??= bpm;
                             if (measureNo > 1 || measure.HasAnyItems)
-                                (measure.Tempo, measure.TempoWords) = (bpm, tempoWords);
+                                (measure.Tempo, measure.TempoWords, measure.TempoCountHidden) = (bpm, tempoWords, countHidden);
                             else if (opens)
-                                doc.TempoWords = tempoWords;
+                                (doc.TempoWords, doc.TempoCountHidden) = (tempoWords, countHidden);
                         }
                         int at = position + (int.TryParse(Local(el, "offset")?.Value, out int off) ? off : 0);
                         int? dirStaff = int.TryParse(Local(el, "staff")?.Value, out int ds) ? ds : null;
@@ -457,6 +460,10 @@ internal static class MusicXmlReader
                         if (int.TryParse((string?)Local(Local(el, "notations"), "arpeggiate")?.Attribute("number"), out int together)
                             && together >= 2)
                             arpeggiated.Add((note, slurHost, staff, slurOnset, together));
+                        foreach (var end in Els(Local(el, "notations"), "non-arpeggiate"))
+                            bracketed.Add((slurHost, staff, slurOnset,
+                                int.TryParse((string?)end.Attribute("number"), out int joined) ? joined : 1,
+                                (string?)end.Attribute("type") == "top"));
                         var target = measure.Voice(voice);
                         // A chord member folds onto the previous note; harmony /
                         // figured-bass / dynamics / grace attach to the head note only.
@@ -520,6 +527,7 @@ internal static class MusicXmlReader
             }
             pendingDynamics.Clear();
             ConnectArpeggios(arpeggiated);
+            ReadArpeggioBrackets(bracketed);
 
             part.Measures.Add(measure);
         }
@@ -950,7 +958,7 @@ internal static class MusicXmlReader
                     NewSystem = measure.NewSystem,
                     Key = measure.Key,
                     Time = measure.Time,
-                    Tempo = measure.Tempo, TempoWords = measure.TempoWords,
+                    Tempo = measure.Tempo, TempoWords = measure.TempoWords, TempoCountHidden = measure.TempoCountHidden,
                     RepeatForward = measure.RepeatForward,
                     BarlineRight = measure.BarlineRight,
                 };
@@ -1481,7 +1489,7 @@ internal static class MusicXmlReader
     /// (<c>dc</c>, <c>ds</c>, <c>fine</c>, <c>coda</c>), and the report says so.
     /// </remarks>
     /// <param name="wordsAreTheTempos">The words are a tempo's, read with it
-    /// (<see cref="HiddenCountWords"/>), and are no text mark.</param>
+    /// (<see cref="TempoWords"/>), and are no text mark.</param>
     private static IEnumerable<string> ReadDirectionTexts(XElement dir, ImportReport report, int measureNo,
         bool wordsAreTheTempos = false)
     {
@@ -1760,7 +1768,7 @@ internal static class MusicXmlReader
     /// (MusicXmlExporter.WriteCrossArpeggio) and most files write on every arpeggio, the
     /// separate ones of two staves included. So a shared 1 says nothing, and only a shared
     /// number somebody chose is read as one line. The bracket (<c>&lt;non-arpeggiate&gt;</c>)
-    /// is not read at all yet, connected or not.
+    /// is <see cref="ReadArpeggioBrackets"/>'s.
     /// </remarks>
     private static void ConnectArpeggios(List<(ImportNote Note, ImportNote Head, int Staff, int Onset, int Number)> arpeggiated)
     {
@@ -1777,23 +1785,59 @@ internal static class MusicXmlReader
     }
 
     /// <summary>
-    /// The words of a tempo direction that prints them and no count — <c>&lt;words&gt;</c> beside
-    /// a <c>&lt;sound tempo&gt;</c>, with no <c>&lt;metronome&gt;</c> — or null. It is what
+    /// Reads the arpeggio brackets of one bar (<c>&lt;non-arpeggiate&gt;</c>, which marks a
+    /// bracket's top and bottom notes) as <c>@arpeggio(bracket)</c> on each chord that holds
+    /// one — and as <c>@arpeggio(cross bracket)</c> on the upper staff's chord, the one below
+    /// taking nothing, where one bracket runs through two staves. Until 2026-11-12 the element
+    /// was not read, and a bracket exported (MusicXmlExporter.WriteCrossArpeggio and the
+    /// chord's own) did not come back.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: what one bracket on two staves is. The ends that begin at one moment
+    /// with one <c>number</c> on two staves are one bracket when the number is 2 or more
+    /// (<see cref="ConnectArpeggios"/> has why a shared 1 says nothing) — or when no staff
+    /// holds both a top and a bottom of its own, which a bracket on each staff would: the
+    /// shape another program writes with the default number.
+    /// </remarks>
+    private static void ReadArpeggioBrackets(List<(ImportNote Head, int Staff, int Onset, int Number, bool Top)> bracketed)
+    {
+        foreach (var line in bracketed.GroupBy(b => (b.Onset, b.Number)))
+        {
+            int upper = line.Min(b => b.Staff);
+            bool cross = line.Any(b => b.Staff != upper)
+                && (line.Key.Number >= 2
+                    || !line.GroupBy(b => b.Staff).Any(s => s.Any(b => b.Top) && s.Any(b => !b.Top)));
+            foreach (var head in line.Where(b => !cross || b.Staff == upper).Select(b => b.Head).Distinct())
+                if (!head.Articulations.Any(a => a.StartsWith("arpeggio", StringComparison.Ordinal)))
+                    head.Articulations.Add(cross ? "arpeggio(cross bracket)" : "arpeggio(bracket)");
+        }
+    }
+
+    /// <summary>
+    /// The words of a tempo direction, or null when it prints none. Words and no count —
+    /// <c>&lt;words&gt;</c> beside a <c>&lt;sound tempo&gt;</c>, with no <c>&lt;metronome&gt;</c> — is what
     /// <c>tempo "Tempo I" 4 = 92 bare</c> is exported as (MusicXmlExporter), and what another
     /// program writes for a tempo word alone; until 2026-11-12 it came back as <c>tempo 92</c>
     /// and a <c>@text</c>, the count printed and the words no tempo mark. Italic words are an
     /// expression that happens to move the tempo ("rit." with a sound), and stay text.
+    /// <para>Words beside a <c>&lt;metronome&gt;</c> in the one direction are the marking of a
+    /// tempo that prints its count too, <c>tempo "Andante" 4 = 88</c> (<paramref name="countHidden"/>
+    /// false) — what Lily# exports it as and what MuseScore and its kin write for "Andante ♩ = 88".
+    /// Until 2026-11-12 (the same day, later) those came back as <c>tempo 88</c> and a
+    /// <c>@text("Andante")</c>.</para>
     /// </summary>
-    private static string? HiddenCountWords(XElement dir)
+    private static string? TempoWords(XElement dir, out bool countHidden)
     {
-        if (dir.Descendants().Any(d => d.Name.LocalName == "metronome"))
-            return null;
+        countHidden = false;
         var words = Els(dir, "direction-type").SelectMany(t => Els(t, "words")).ToList();
         if (words.Any(w => (string?)w.Attribute("font-style") == "italic"))
             return null;
         string text = string.Join(" ", string.Concat(words.Select(w => w.Value))
             .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-        return text.Length > 0 ? text : null;
+        if (text.Length == 0)
+            return null;
+        countHidden = !dir.Descendants().Any(d => d.Name.LocalName == "metronome");
+        return text;
     }
 
     private static int? ReadDirectionTempo(XElement el)
@@ -1802,7 +1846,9 @@ internal static class MusicXmlReader
         // printed metronome mark.
         if (int.TryParse((string?)Local(el, "sound")?.Attribute("tempo"), out int t) && t > 0)
             return t;
-        var metro = Local(Local(el, "direction-type"), "metronome");
+        // (In any of its direction-types: the words of "Andante ♩ = 88" stand in one before it,
+        // and only the first was looked in until 2026-11-12.)
+        var metro = Els(el, "direction-type").Select(t => Local(t, "metronome")).FirstOrDefault(m => m != null);
         if (metro != null && int.TryParse(Local(metro, "per-minute")?.Value, out int pm) && pm > 0)
         {
             // <sound tempo> is always quarter-note BPM; a metronome mark counts

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 333 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **459** | |
+| `OWN` | 335 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **461** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -29,10 +29,10 @@
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
+| `LilySharp.Core/Midi/MidiExporter.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
-| `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（333 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（335 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -290,6 +290,7 @@
 - **`MidiExporter.AddPedals`** LILYSHARP-OWN: LilyPond's Piano_pedal_performer is consisted per Voice
 - **`MidiExporter.SplitIntoPartTracks`** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
 - **`MidiExporter.PlayChordRow`** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
+- **`MidiExporter._sequenceClosedAt`** part's bar 3 at 3840 — a bar early from there on. LILYSHARP-OWN. ⚠️ Not a drum chart: the
 - **`MidiExporter.SwingNotes`** LILYSHARP-OWN: LilyPond's MIDI plays its swing equation straight unless the score asks for
 - **`MidiExporter.ProcessGrace`** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Midi/MidiForFile.cs`
@@ -342,6 +343,7 @@
 - **`MidiReader`** LILYSHARP-OWN: a .mid is a performance, not a page, so every notated thing is a reading.
 ### `LilySharp.Core/MusicXmlImport/MusicXmlReader.cs`
 - **`MusicXmlReader.ConnectArpeggios`** LILYSHARP-OWN: the 2. MusicXML's number tells chords "arpeggiated together" (the
+- **`MusicXmlReader.ReadArpeggioBrackets`** LILYSHARP-OWN: what one bracket on two staves is. The ends that begin at one moment
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **`Parser.ParseChordRepetition`** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **`Parser.ParseChord`** LILYSHARP-OWN: members' ties and the whole chord's say two things about the same notes; LilyPond takes both.

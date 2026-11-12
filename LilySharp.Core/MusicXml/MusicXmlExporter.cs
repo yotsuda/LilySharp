@@ -3149,6 +3149,7 @@ public sealed class MusicXmlExporter
         _tempoBeatUnit = value.BeatUnit ?? 4;
         _tempoBeatDots = value.BeatDots;
         _tempoHiddenWords = value.CountHidden ? value.Marking ?? "" : null;
+        _tempoMarking = value.CountHidden ? null : value.Marking;
         // A mid-piece tempo change emits a metronome direction at this point; the
         // initial tempo is carried by the first measure's attributes direction.
         if (_currentMeasure != null && (_currentMeasure.Notes.Count > 0 || _currentMeasure.Number > 1))
@@ -3163,7 +3164,16 @@ public sealed class MusicXmlExporter
 
     /// <summary>The running tempo as a direction — the ONE place the three numbers meet.</summary>
     private MusicXmlDirection TempoDirection()
-        => new() { Tempo = _tempo, TempoBeatUnit = _tempoBeatUnit, TempoBeatDots = _tempoBeatDots, TempoHiddenWords = _tempoHiddenWords };
+        => new()
+        {
+            Tempo = _tempo, TempoBeatUnit = _tempoBeatUnit, TempoBeatDots = _tempoBeatDots,
+            TempoHiddenWords = _tempoHiddenWords, TempoMarking = _tempoMarking,
+        };
+
+    /// <summary>The words of the running tempo when its count is printed beside them
+    /// (<c>tempo "Andante" 4 = 88</c>), or null. Until 2026-11-12 only the metronome was
+    /// written — at the opening, at a section's head and in the music — and the words were lost.</summary>
+    private string? _tempoMarking;
 
     /// <summary>The words of the running tempo when its count is played and not printed
     /// (<c>tempo "Tempo I" 4 = 92 bare</c>, 2026-11-12), or null for a printed count.</summary>

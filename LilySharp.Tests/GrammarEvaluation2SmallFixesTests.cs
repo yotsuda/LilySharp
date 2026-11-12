@@ -278,4 +278,37 @@ public class GrammarEvaluation2SmallFixesTests
         Assert.Empty(Said(span).Select(d => d.Message));
         Assert.Equal(4, Condensed(span).EnumerateStaves().Last().Staff.Voices[0].Measures.Length);
     }
+
+    /// <summary>A voice span whose first voice ends in a bar line, then a bar line: the second
+    /// of a pair, an empty bar on the page — and the MIDI played none, a bar ahead of the page
+    /// and of the other parts from there. Each spelling sounds as the one an author would type
+    /// with <c>s1</c> for the empty bar, in the page's bars; a span that leaves its bar open, a
+    /// phrase (its exit is confirmed, a span inside it too) and a plain pair are as they were.</summary>
+    [Theory]
+    [InlineData("voice { c'1 | } { e'1 | } | d'1 | g'1 |", "voice { c'1 } { e'1 } | s1 | d'1 | g'1 |", 4)]
+    [InlineData("voice { c'1 | d'1 | } { e'1 | f'1 | } | | g'1 |", "voice { c'1 | d'1 } { e'1 | f'1 } | s1 | s1 | g'1 |", 5)]
+    [InlineData("voice { c'1 | } { e'1 | } || d'1 | g'1 |", "voice { c'1 } { e'1 } || d'1 | g'1 |", 3)]
+    [InlineData("voice { c'1 | } { e'1 | } d'1 | g'1 |", "voice { c'1 } { e'1 } | d'1 | g'1 |", 3)]
+    [InlineData("two | d'1 | g'1 |", "voice { c'1 } { e'1 } | d'1 | g'1 |", 3)]
+    [InlineData("one | d'1 | g'1 |", "c'1 | d'1 | g'1 |", 3)]
+    [InlineData("one | | d'1 | g'1 |", "c'1 | s1 | d'1 | g'1 |", 4)]
+    [InlineData("c'1 | | d'1 | g'1 |", "c'1 | s1 | d'1 | g'1 |", 4)]
+    public void TheBarLineAfterAVoiceSpan_SoundsTheBarThePageDraws(string written, string spelled, int bars)
+    {
+        string Book(string music) => "octave absolute\ntime 4/4\nphrase one { c'1 | }\nphrase two { voice { c'1 | } { e'1 | } }\n"
+            + "part m { }\npart b { clef bass }\nsection A { m { " + music + " } b { " + string.Concat(Enumerable.Repeat("c1 | ", bars))
+            + "} }\nform { A }\nscore { staff m  staff b }\n";
+        static List<(int, int)> Sounds(string source)
+        {
+            var tree = SyntaxTree.Parse(source);
+            var spec = RenderSpecParser.FindFirst(tree);
+            return [.. new LilySharp.Core.Midi.MidiExporter { Form = spec?.Form, Score = spec }.Export(tree)
+                .Tracks.SelectMany(t => t.Notes).Select(n => (n.Pitch, n.StartTick)).Order()];
+        }
+        // The page: the part is as many bars as the part beside it, which writes them plainly.
+        Assert.DoesNotContain(Said(Book(written)), d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+        Assert.Equal(bars, Condensed(Book(written)).EnumerateStaves().First().Staff.Voices[0].Measures.Length);
+        Assert.Equal(Sounds(Book(spelled)), Sounds(Book(written)));
+    }
+
 }
