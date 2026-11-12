@@ -646,6 +646,11 @@
         "title": "Write a Harmony Part…"
       },
       {
+        "command": "lilysharp.voiceInstallGuide",
+        "category": "Lily#",
+        "title": "How to Install a Singing Voice"
+      },
+      {
         "command": "lilysharp.writeSingerPart",
         "category": "Lily#",
         "title": "Write a Singer's Notes Out as a Part"

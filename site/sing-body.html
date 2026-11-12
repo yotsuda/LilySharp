@@ -38,27 +38,65 @@
     <li>In VS Code's Extensions view (<kbd>Ctrl+Shift+X</kbd>), search for <b>Cantoria</b> and install
     <i>Cantoria Singing Voice</i>. If you write a <code>singer</code> line without it, Lily# Studio
     offers to install it.</li>
-    <li>Set up at least one of the three engines below.</li>
+    <li>Set up at least one of the three engines below. Each is its makers' work, downloaded from
+    them: nothing here comes with Lily# or Cantoria.</li>
     <li>Run <b>Cantoria: Check Setup</b> from the command palette (<kbd>Ctrl+Shift+P</kbd>) to see that
     all is well.</li>
   </ol>
   <table class="g">
-    <tr><th>Engine</th><th>What to install</th><th>Then run</th><th>Sings</th></tr>
-    <tr><td><b>DiffSinger</b></td>
-      <td>Voices in the OpenUtau format, each a folder holding a <code>dsconfig.yaml</code>, side by
-      side in one folder</td>
-      <td><i>Cantoria: Choose Voices Folder… (DiffSinger)</i></td>
-      <td>Japanese, and English, Chinese or Korean where the voice has a dictionary for them</td></tr>
-    <tr><td><b>VOICEVOX</b></td>
-      <td><a href="https://voicevox.hiroshiba.jp/">VOICEVOX</a></td>
-      <td><i>Cantoria: Choose VOICEVOX Folder…</i> — Cantoria then starts it when one of its voices is
-      needed, and stops it when VS Code closes</td>
+    <tr><th>Engine</th><th>What it is</th><th>Sings</th></tr>
+    <tr><td><a href="#install-voicevox"><b>VOICEVOX</b></a></td>
+      <td>One installer, many voices. The quickest start</td>
       <td>Japanese</td></tr>
-    <tr><td><b>NEUTRINO</b></td>
-      <td><a href="https://studio-neutrino.com/">NEUTRINO</a> (Tau, v3.2 or later), Windows only</td>
-      <td><i>Cantoria: Choose NEUTRINO Folder…</i></td>
+    <tr><td><a href="#install-diffsinger"><b>DiffSinger</b></a></td>
+      <td>Voices published one by one by their authors, as folders</td>
+      <td>Japanese, and English, Chinese or Korean where the voice has a dictionary for them</td></tr>
+    <tr><td><a href="#install-neutrino"><b>NEUTRINO</b></a></td>
+      <td>One download with a voice in it; more voices from its site. Windows only</td>
       <td>Japanese</td></tr>
   </table>
+
+  <h3 id="install-voicevox">VOICEVOX</h3>
+  <ol class="llist">
+    <li>Download <a href="https://voicevox.hiroshiba.jp/">VOICEVOX</a> from its site and install it.
+    Read <a href="https://voicevox.hiroshiba.jp/term/">its terms</a>: each character has terms of its
+    own, and a published work credits <code>VOICEVOX:name</code>.</li>
+    <li>Run <b>Cantoria: Choose VOICEVOX Folder…</b> and choose the folder VOICEVOX was installed in,
+    the one that holds <code>vv-engine</code>. Cantoria then starts the engine when one of its voices
+    is needed and stops it when VS Code closes. You need not open VOICEVOX yourself.</li>
+    <li>Write a voice: <code>singer "voicevox/ずんだもん-ノーマル" on melody</code>. The list after
+    <code>singer "</code> shows every voice it has.</li>
+  </ol>
+
+  <h3 id="install-diffsinger">DiffSinger</h3>
+  <ol class="llist">
+    <li>Make a folder for voices, <code>C:\voices</code> for one.</li>
+    <li>Download a voice in the OpenUtau format from its author, and read the author's terms. Unpack it
+    into that folder, so that the voice is a folder of its own holding a <code>dsconfig.yaml</code>:
+    <code>C:\voices\TIGER\dsconfig.yaml</code>. OpenUtau's <code>Singers</code> folder, if you have one,
+    is such a folder already.</li>
+    <li>Run <b>Cantoria: Choose Voices Folder… (DiffSinger)</b> and choose <code>C:\voices</code>.</li>
+    <li>If the voice has no <code>dsvocoder</code> folder of its own, it needs a vocoder, the part
+    that turns what the voice computes into sound. Download the <code>.oudep</code> file of the one the
+    voice's readme names (for <code>nsf_hifigan</code>, the usual one,
+    <code>nsf_hifigan_44.1k_hop512_128bin_2024.02.oudep</code>) from
+    <a href="https://github.com/openvpi/vocoders/releases">the DiffSinger community vocoders</a>,
+    rename it to <code>.zip</code>, unpack it into a folder, and choose that folder with
+    <b>Cantoria: Choose Vocoder Folder…</b>. The vocoders have terms of their own, in the
+    <code>NOTICE.txt</code> they come with.</li>
+    <li>Write the voice by its folder's name: <code>singer "diffsinger/TIGER" on melody</code>.</li>
+  </ol>
+
+  <h3 id="install-neutrino">NEUTRINO</h3>
+  <ol class="llist">
+    <li>Download <a href="https://studio-neutrino.com/">NEUTRINO</a> (Tau, v3.2 or later) from its
+    site and unpack it. Cantoria drives it on Windows only. It is free under its own terms. It comes with the voice
+    MERROW; other voices from the same site go under its <code>model</code> folder.</li>
+    <li>Run <b>Cantoria: Choose NEUTRINO Folder…</b> and choose the folder that holds
+    <code>bin</code>, <code>model</code> and <code>settings</code>.</li>
+    <li>Write a voice: <code>singer "neutrino/MERROW" on melody</code>.</li>
+  </ol>
+
   <p>A voice is named <code>engine/name</code>: <code>neutrino/MERROW</code>,
   <code>diffsinger/TIGER</code>, <code>voicevox/ずんだもん-ノーマル</code>. <b>Cantoria: Choose Default
   Female Voice…</b> and <b>Choose Default Male Voice…</b> pick the voices used when a score does not

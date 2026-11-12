@@ -620,6 +620,11 @@ describe('noVoiceGuide', () => {
         for (const engine of ['NEUTRINO', 'DiffSinger', 'VOICEVOX']) { assert.match(guide.documentation, new RegExp(engine)); assert.match(guide.message, new RegExp(engine)); }
         assert.deepEqual(guide.actions.flatMap(a => a.command ? [a.command] : []), ['cantoria.chooseNeutrinoFolder', 'cantoria.chooseVoicesFolder', 'cantoria.chooseVoicevoxFolder']);
     });
+    it('leads with the guide to installing a voice (the owner asked, 2026-11-12)', () => {
+        const guide = noVoiceGuide(true);
+        assert.deepEqual(guide.actions[0], { label: 'How to Install a Voice', url: 'https://yotsuda.github.io/LilySharp/sing.html#install' });
+        for (const g of [guide, noVoiceGuide(false)]) { assert.match(g.documentation, /\[How to install a voice\]\(https:\/\/yotsuda\.github\.io\/LilySharp\/sing\.html#install\)/); }
+    });
     it('without Cantoria, says the extension is the first step', () => {
         const guide = noVoiceGuide(false);
         assert.match(guide.label, /Cantoria is not installed/);
