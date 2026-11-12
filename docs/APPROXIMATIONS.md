@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 323 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **449** | |
+| `OWN` | 324 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **450** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（323 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（324 件）
 
 ### `LilySharp.Core/Audio/SingingEngine.cs`
 - **`SingingEngine`** (singing-design §6). LILYSHARP-OWN.
@@ -441,6 +441,7 @@
 - **`MeasureBuilder.SectionHead`** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **`MeasureCollector._staffDynamicsUp`** LILYSHARP-OWN (owner's decision 2026-11-11, docs/dynamics-above-lyrics-design.md
+- **`MeasureCollector.JunkCondensedStaffDuplicateDynamics`** LILYSHARP-OWN: LilyPond's Dynamic_engraver stands in the Voice context
 - **`MeasureCollector.SolveCrossCollisions`** LILYSHARP-OWN: the moved voice's slot. LilyPond keeps the Voice's own horizontal-shift,
 - **`MeasureCollector.DefaultExpansionBudgetCap`** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
 - **`MeasureCollector.ProcessPercentRepeat`** LILYSHARP-OWN, owner's decision 2026-10-14, session 905). Whole bars: the body opens

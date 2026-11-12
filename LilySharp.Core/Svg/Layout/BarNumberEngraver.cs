@@ -372,8 +372,16 @@ internal static class BarNumberEngraver
                 // (= 0 (modulo barnum n)) — with break-visibility opened up, so a mid-line
                 // multiple is numbered and a line-start non-multiple is not (the remarks
                 // on this method cite both).
+                // ⚠️ `displayedNumber > 0`: a leading pickup is bar 0 in the table above, and 0 is
+                // a multiple of every N — `barNumbers every 4` printed "0" over the pickup
+                // (grammar evaluation 2, 2026-11-12, orchestra.lys). Bar 0 is Lily#'s own name
+                // for the pickup: LilyPond's count stands at 1 through a \partial (the measure
+                // position is negative there, the number is not stepped), so its every-nth
+                // function is never asked about a 0. ⚠️ Read, not measured in LilyPond this
+                // session; it replaces the "literal port prints the 0" this arm held until now
+                // (LayoutBlockTests.EveryN_CountsTheDisplayedNumber_NotTheMeasureIndex).
                 bool show = policy.Mode == Semantics.BarNumberMode.Every
-                    ? policy.Period > 0 && displayedNumber % policy.Period == 0
+                    ? policy.Period > 0 && displayedNumber > 0 && displayedNumber % policy.Period == 0
                     : isFirstInSystem && !isFirstSystem;
 
                 // A system that opens MID-BAR — the second half of a bar a line break split

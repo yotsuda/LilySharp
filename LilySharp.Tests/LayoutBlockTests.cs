@@ -432,16 +432,18 @@ public class LayoutBlockTests
         // A pickup is bar 0 (numberOffset −1): under every 2 the numbered bars are the even
         // DISPLAYED numbers, so the third measure (displayed 2) is numbered and the second
         // (displayed 1) is not.
-        // ⚠️ AND THE PICKUP ITSELF IS, because 0 is a multiple of 2 — LilyPond's function is
-        // `(= 0 (modulo barnum n))` with no guard on the first bar (the guard belongs to the
-        // DEFAULT function, first-bar-number-invisible-…, which every-nth replaces). The
-        // literal port prints the 0; suppressing it would be a Lily#-own rule.
+        // ⚠️ THE PICKUP ITSELF IS NOT. Until 2026-11-12 this test held a "0" over it — 0 is a
+        // multiple of 2, and LilyPond's function `(= 0 (modulo barnum n))` has no guard on the
+        // first bar — as the literal port. But bar 0 is Lily#'s own name for the pickup:
+        // LilyPond's function is never asked about a 0, and a writer who met the "0" over an
+        // orchestral score's pickup reported it as a defect (grammar evaluation 2;
+        // BarNumberEngraver.Calculate's remark at the `every` arm).
         string book = "part m { clef treble }\n"
             + "section A { partial 4  m { c'4 | c1 | c1 | c1 | } }\n"
             + "form { A }\nscore { staff m }\n";
         var layout = Lay("layout { barNumbers every 2 }\n" + book);
         var numbered = layout.BarNumberLayouts.Select(b => (b.MeasureIndex, b.Text)).ToArray();
-        Assert.Equal(new[] { (0, "0"), (2, "2") }, numbered);
+        Assert.Equal(new[] { (2, "2") }, numbered);
     }
 
     [Fact]

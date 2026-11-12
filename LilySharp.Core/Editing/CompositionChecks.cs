@@ -1251,23 +1251,28 @@ public static class CompositionChecks
             if (!singer && !Breathing.Contains(InstrumentOf(part)))
                 continue;
             var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9 && (n.Part ?? t.Name) == name))
-                .Select(n => (Start: n.StartTick, End: n.StartTick + n.DurationTicks)).OrderBy(n => n.Start).ToList();
+                .Select(n => (Start: n.StartTick, End: n.StartTick + n.DurationTicks, Breath: n.BreathAfter)).OrderBy(n => n.Start).ToList();
             if (notes.Count == 0)
                 continue;
-            // The longest run of bars sung through.
+            // The longest run of bars sung through. A written breath (`@breath`, `@caesura`) is a
+            // place to breathe as a rest is: the bar its note ends in is not sung through. Until
+            // 2026-11-12 only a rest counted, and a choir anthem with a breath mark at each phrase's
+            // end was told its sopranos sang 54 bars without one (grammar evaluation 2, anthem.lys).
             int run = 0, runStart = -1, best = 0, bestStart = -1;
             for (int b = 0; b + 1 < bars.Count; b++)
             {
                 int cursor = bars[b];
+                bool breath = false;
                 foreach (var n in notes)
                 {
+                    breath |= n.Breath && n.End > bars[b] && n.End <= bars[b + 1];
                     if (n.End <= cursor || n.Start >= bars[b + 1])
                         continue;
                     if (n.Start > cursor)
                         break;
                     cursor = System.Math.Max(cursor, n.End);
                 }
-                if (cursor >= bars[b + 1])
+                if (cursor >= bars[b + 1] && !breath)
                 {
                     if (run == 0)
                         runStart = b;
@@ -2983,7 +2988,12 @@ public static class CompositionChecks
         bool bass = instrument is "bass" or "bass5" or "bass6" || (sound.Contains("bass") && !sound.Contains("contrabass"));
         bool chords = instrument.StartsWith("guitar") || instrument.StartsWith("piano")
             || System.Text.RegularExpressions.Regex.IsMatch(sound, "guitar|piano|organ|clavi|synth|pad");
-        bool electric = System.Text.RegularExpressions.Regex.IsMatch(sound, "electric|overdriven|distortion|organ|synth");
+        // A band's organ is the drawbar, percussive or rock one. A church or reed organ is a
+        // choir's and a chapel's: a choir anthem with "church organ" was read as a band piece and
+        // told to keep one tempo and to add drums and an electric bass (grammar evaluation 2,
+        // 2026-11-12, anthem.lys). It stays a chord instrument.
+        bool electric = System.Text.RegularExpressions.Regex.IsMatch(sound, "electric|overdriven|distortion|organ|synth")
+            && !System.Text.RegularExpressions.Regex.IsMatch(sound, "church organ|reed organ");
         return new Role(drums, bass && !drums, chords && !drums, electric);
     }
 

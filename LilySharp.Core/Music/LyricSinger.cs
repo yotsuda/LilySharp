@@ -173,6 +173,27 @@ public static class LyricSinger
         return node.SitesOfKinds(SyntaxKind.SingerDeclaration).OfType<SingerDeclarationSyntax>().Any(l => l.PersonToken?.Text == person);
     }
 
+    /// <summary>
+    /// How a message names the part or the lyrics track <paramref name="name"/>:
+    /// <c>part 'lead'</c>, <c>lyrics 'words'</c> — and, for a part made of a singer's lines or
+    /// the words written under it, the singer: <c>the staff of singer 'carol'</c>,
+    /// <c>the words of singer 'carol'</c>. The made names (<c>carol__0</c>,
+    /// <c>__words_carol__0</c>) are in no file, and a writer told "5 bar(s) in part 'carol__0'"
+    /// had nothing of that name to look at (grammar evaluation 2, 2026-11-12). The ONE place a
+    /// message asks, so a made name is never printed by one message and hidden by another.
+    /// </summary>
+    /// <param name="node">Any node of the tree the name is read in.</param>
+    /// <param name="noun"><c>part</c> or <c>lyrics</c>: what the file calls a written one.</param>
+    public static string NameInMessages(SyntaxNode node, string noun, string name)
+    {
+        string words = WordsOf("");
+        bool track = noun == "lyrics" && name.StartsWith(words, StringComparison.Ordinal);
+        string part = track ? name[words.Length..] : name;
+        return (track || noun == "part") && IsMadePart(node, part)
+            ? $"the {(track ? "words" : "staff")} of singer '{part[..part.LastIndexOf(ScopedMark, StringComparison.Ordinal)]}'"
+            : $"{noun} '{name}'";
+    }
+
     /// <summary>What stands between a singer's name and a score's number in the name of a part
     /// made for that score alone (<see cref="PartOfItem"/>).</summary>
     public const string ScopedMark = "__";

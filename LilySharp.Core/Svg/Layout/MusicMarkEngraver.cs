@@ -755,6 +755,12 @@ internal static class MusicMarkEngraver
         // anchor staff's middle); null without a profile or with no ink there. The profile is
         // about the staff's reference point, which sits RefpointBelowTop under its top line
         // (st.Y, Y-up from the system top) — OutsideStaffStacker's conversion.
+        // The text-style pedal words placed on their solved rows so far (mark, X, baseline about
+        // the word's own staff middle), and the below texts placed beside them — read by
+        // BelowInkMarkUp's last arm and by the pass after the placement loop. Made only where
+        // a staff has solved pedal rows at all.
+        List<(MusicMarkItem Mark, double X, double YUp)>? placedPedalWords = null;
+        List<(int Layout, int Group, MusicMarkItem Mark, double X)>? placedBelowTexts = null;
         double? BelowInkMarkUp(MusicMarkItem mark, (double X0, double X1) range)
         {
             if (staffInkOf == null
@@ -812,6 +818,24 @@ internal static class MusicMarkEngraver
                     if (bRight < range.X0 || bLeft > range.X1)
                         continue;
                     systemUp = Math.Min(systemUp, bBottom);
+                }
+            // …and the TEXT-style pedal's words ("Ped.", "*"), which the same day's repair left:
+            // "D.S. al Coda" was printed over the release star (grammar evaluation 2,
+            // 2026-11-12). A word is a mark of this pass and its row was solved with the staff's
+            // skyline (PedalEngraver.SolvedPedalRow), so it is read off what the loop placed:
+            // its own outline (PedalEngraver.WordProfiles, the stencil the row was solved
+            // with) at its baseline, about its staff's middle. The same priority order as the
+            // bracket's — the pedal first, the jump text clear of it.
+            if (placedPedalWords != null)
+                foreach (var (word, wordX, wordYUp) in placedPedalWords)
+                {
+                    if (word.StaffIndex != bottomStaff.StaffIndex
+                        || !measureToSystemIdx.TryGetValue(word.MeasureIndex, out int ws) || ws != sysIdx)
+                        continue;
+                    double low = PedalEngraver.WordProfiles(fonts, word.Type, word.Text, wordX).Down
+                        .MaxHeightInRange(range.X0, range.X1);
+                    if (!double.IsInfinity(low))
+                        systemUp = Math.Min(systemUp, bottomStaff.Y + wordYUp - EngravingDefaults.StaffMiddle + low);
                 }
             if (double.IsInfinity(systemUp))
                 return null;
@@ -1488,6 +1512,10 @@ internal static class MusicMarkEngraver
                     stackBottomYUp = Math.Min(stackBottomYUp, yUp - halfExtent);
                 }
 
+                if (solvedPedalRow)
+                    (placedPedalWords ??= new()).Add((mark, x, yUp));
+                else if (solvedPedalRowUp != null && staffInkOf != null && !IsPedal(mark.Type))
+                    (placedBelowTexts ??= new()).Add((layouts.Count, groups.IndexOf(group), mark, x));
                 layouts.Add(new MusicMarkLayout(
                     mark.MeasureIndex, x, yUp, mark.Type, mark.Text,
                     mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision,
@@ -1496,6 +1524,40 @@ internal static class MusicMarkEngraver
                     // legacy stack stays in the top-staff frame (StaffIndex −1).
                     StaffIndex: solvedPedalRow ? mark.StaffIndex : -1,
                     Boxed: BoxedOf(mark.Type), MidMeasure: mark.IsMidMeasure));
+            }
+        }
+
+        // The below texts against EVERY pedal word of their system, now that all are placed: a
+        // word stands in its own note's group, which the loop may reach after the text's (a
+        // release on the bar's last note, the jump text at the bar's end). BelowInkMarkUp is
+        // asked again with the whole list — its other arms were satisfied in the loop and
+        // answer the same — and a text that moves takes the ones stacked under it along.
+        // Reached only by a score with a solved pedal row AND a below text.
+        if (placedPedalWords != null && placedBelowTexts != null)
+        {
+            int group = -1;
+            double lowered = 0;
+            foreach (var (index, textGroup, mark, x) in placedBelowTexts)
+            {
+                if (textGroup != group)
+                    (group, lowered) = (textGroup, 0);
+                var text = layouts[index];
+                double yUp = text.YUp - lowered;
+                if (BelowInkMarkUp(mark, MarkXExtent(fonts, mark, x, BoxedOf(mark.Type))) is double inkUp)
+                {
+                    double top = mark.IsSymbol || string.IsNullOrEmpty(mark.Text)
+                        || mark.Type is MusicMarkType.Rehearsal or MusicMarkType.SectionLabel
+                        ? GetMarkHalfExtent(fonts, mark.Type, mark.Text, BoxedOf(mark.Type))
+                        : fonts.Ink(mark.Text, PlainMarkEm(fonts, mark.Type), TextRoleOf(mark.Type),
+                            TextStyleOf(fonts, mark.Type)).Top;
+                    if (yUp + top > inkUp - OutsideStaffPadding)
+                    {
+                        lowered += yUp - (inkUp - OutsideStaffPadding - top);
+                        yUp = inkUp - OutsideStaffPadding - top;
+                    }
+                }
+                if (yUp != text.YUp)
+                    layouts[index] = text with { YUp = yUp };
             }
         }
 

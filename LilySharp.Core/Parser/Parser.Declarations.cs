@@ -268,12 +268,27 @@ internal sealed partial class Parser
     private SyntaxToken ReportStrayItem(string container, string vocabulary)
     {
         string text = Current.Text;
-        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth,
-                                Math.Max(1, text.Length));
+        int start = _textPosition + Current.LeadingTriviaWidth;
+        // A RUN of one token written with nothing between (`--------`, a divider line) is one
+        // mistake and is said once, over the run: until 2026-11-12 each character was its own
+        // error, eight identical lines for one line of the file (grammar evaluation 2). The
+        // later tokens of the run are still kept, one by one, as every stray token is.
+        if (start < _strayRunEnd)
+            return Advance();
+        int run = 1;
+        while (text.Length > 0 && _position + run < _tokens.Count - 1
+            && Peek(run).Kind == Current.Kind && Peek(run).Text == text
+            && Peek(run).LeadingTriviaWidth == 0 && Peek(run - 1).TrailingTriviaWidth == 0)
+            run++;
+        var span = new TextSpan(start, Math.Max(1, text.Length * run));
+        _strayRunEnd = span.End;
         _diagnostics.Error(span, DiagnosticCodes.StrayItemToken,
-            $"'{text}' is not something {container} can hold. {vocabulary}");
+            $"'{string.Concat(Enumerable.Repeat(text, run))}' is not something {container} can hold. {vocabulary}");
         return Advance();
     }
+
+    // Where the run of stray tokens ReportStrayItem last spoke of ends: its later tokens say nothing.
+    private int _strayRunEnd;
 
     /// <summary>
     /// Parses items with <paramref name="parseItem"/> until <paramref name="close"/>

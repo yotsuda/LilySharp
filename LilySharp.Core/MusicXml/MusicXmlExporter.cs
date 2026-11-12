@@ -1554,6 +1554,45 @@ public sealed class MusicXmlExporter
                 items.Add(bar);
             }
             EmitPartMusic(partName, items);
+            FitSilentPlayToWrittenBars(partName);
+        }
+    }
+
+    /// <summary>
+    /// A silent play's bars take the length the parts that WROTE the play gave them. The
+    /// padding writes each bar as a rest of the meter's length (<see cref="AddSilentBar"/>),
+    /// the pickup excepted — but a section may end on a short bar its next play's pickup
+    /// completes (<c>… | d'2 |</c> in 3/4, then <c>partial 4</c>), and the part with nothing
+    /// in that section got a full <c>r2.</c> there: one beat longer than every other part's
+    /// bar, numbered on as a bar of its own (<see cref="ContinueSplitBar"/> reads the length),
+    /// and about 25 "parts will not align" warnings when the file was imported again
+    /// (grammar evaluation 2, 2026-11-12, anthem.lys). Only shortened, and only where every
+    /// writing part's bar is shorter: a bar somebody filled stays the meter's.
+    /// </summary>
+    private void FitSilentPlayToWrittenBars(string partName)
+    {
+        if (!_partsByName.TryGetValue(partName, out var silent)
+            || !_playStartMeasure.TryGetValue((partName, _xmlPlaySerial), out int start))
+            return;
+        int count = silent.Measures.Count - start;
+        for (int i = 0; i < count; i++)
+        {
+            int written = 0;
+            foreach (var ((otherName, play), otherStart) in _playStartMeasure)
+            {
+                if (play != _xmlPlaySerial || otherName == partName
+                    || !_partsByName.TryGetValue(otherName, out var other)
+                    || other.Measures.Count - otherStart != count)
+                    continue;
+                written = Math.Max(written, ElapsedTicks(other.Measures[otherStart + i]));
+            }
+            var rests = silent.Measures[start + i].Notes.Where(n => n.RawElement == null).ToList();
+            if (written <= 0 || rests.Count != 1 || !rests[0].IsRest || rests[0].Duration <= written)
+                continue;
+            var (type, dots) = GetNoteType(new Fraction(written, 4 * _divisions));
+            rests[0].Duration = written;
+            rests[0].Type = type;
+            rests[0].Dots = dots;
         }
     }
 

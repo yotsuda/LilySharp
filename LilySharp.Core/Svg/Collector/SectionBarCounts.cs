@@ -141,7 +141,7 @@ internal static class SectionBarCounts
             switch (sec.Parent)
             {
                 case PartDeclarationSyntax part:
-                    voices.Add(Music(name, $"part '{part.Name.Text}'", sec, sec.Name.Span, time, phrases, groupedByPart: true));
+                    voices.Add(Music(name, LilySharp.Core.Music.LyricSinger.NameInMessages(part, "part", part.Name.Text), sec, sec.Name.Span, time, phrases, groupedByPart: true));
                     continue;
                 case ChordPartBlockSyntax { PartName: { } track }:
                     voices.Add(Chords(name, $"chords '{track}'", sec, sec.Name.Span, groupedByPart: true));
@@ -246,7 +246,7 @@ internal static class SectionBarCounts
     /// <summary>How a message names a lyrics track: <c>lyrics 'w'</c>, or <c>lyrics</c> for
     /// the nameless (first-voice) block.</summary>
     public static string LyricsLabel(LyricsBlockSyntax track)
-        => track.VoiceName is { } name ? $"lyrics '{name}'" : "lyrics";
+        => track.VoiceName is { } name ? LilySharp.Core.Music.LyricSinger.NameInMessages(track, "lyrics", name) : "lyrics";
 
     /// <summary>The span a by-section lyrics block's warning is anchored on: its track
     /// name token, or the <c>lyrics</c> keyword when it writes none. The editor's quick fix

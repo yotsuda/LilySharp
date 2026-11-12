@@ -496,6 +496,12 @@ public sealed partial class MeasureCollector
     /// <see cref="JunkCondensedStaffDuplicateChanges"/>, surfaced by <c>CondensedStaffChangeValidator</c>.</summary>
     public IReadOnlyList<CondensedStaffChangeWarning> CondensedStaffChangeWarnings => _condensedStaffChangeWarnings;
 
+    /// <summary>The dynamics and hairpin starts a condensed staff's later part wrote where an
+    /// earlier part of the staff already wrote the same one
+    /// (<see cref="JunkCondensedStaffDuplicateDynamics"/>): kept in <see cref="_dynamics"/> and
+    /// <see cref="_musicMarks"/> (the second is append-only), left out of the score's content.</summary>
+    private readonly HashSet<object> _condensedStaffDuplicateDynamics = new(ReferenceEqualityComparer.Instance);
+
     /// <summary>
     /// Records, from the score this collect produced, every rehearsal mark that
     /// <c>Layout.MusicMarkEngraver.MergeSectionLabels</c> will leave out for a section label
@@ -887,7 +893,12 @@ public sealed partial class MeasureCollector
     private ScoreContent CaptureScoreContent(int measureCount)
     {
         // The dynamics' and the hairpins' sides, by the line each rides (DynamicLineSides).
-        var (dynamics, musicMarks) = DynamicLineSides.Resolve(_dynamics, _musicMarks);
+        // …less the ones a condensed staff's parts wrote twice (JunkCondensedStaffDuplicateDynamics).
+        var (dynamics, musicMarks) = _condensedStaffDuplicateDynamics.Count == 0
+            ? DynamicLineSides.Resolve(_dynamics, _musicMarks)
+            : DynamicLineSides.Resolve(
+                _dynamics.Where(d => !_condensedStaffDuplicateDynamics.Contains(d)).ToList(),
+                _musicMarks.Where(m => !_condensedStaffDuplicateDynamics.Contains(m)).ToList());
         return CaptureScoreContent(measureCount, dynamics, musicMarks);
     }
 
@@ -1698,6 +1709,10 @@ public sealed partial class MeasureCollector
         // at the top of each turn, which is the one place every branch below passes through.
         int staffVoiceSlots = 0;
         string? previousBinding = null;
+        // What each binding's collection added to the dynamics and the marks, and the slot its
+        // voices start at: how a condensed staff's parts are told apart afterwards
+        // (JunkCondensedStaffDuplicateDynamics).
+        var staffCollections = new List<StaffCollection>();
         // Lyrics rows are collected AFTER the music, so the per-section bar count
         // (used to auto-wrap one block's verses) is known from the real content.
         // Sings = the row's OWN `sings` target (null = the track's default applies).
@@ -1860,7 +1875,11 @@ public sealed partial class MeasureCollector
 
             _openingKeyOverride = null;
             string collectedUnder = _v.Meta.Clef;
+            int dynamicsBefore = _dynamics.Count, marksBefore = _musicMarks.Count;
             staffVoices[voiceName] = CollectStaffVoices(voiceName);
+            staffCollections.Add(new StaffCollection(voiceName, _v.Cursor.StaffIndex, staffVoiceSlots,
+                slotting == VoiceSlotting.AppendedToStaff,
+                dynamicsBefore, _dynamics.Count, marksBefore, _musicMarks.Count));
             if (!collectedPerBinding.TryGetValue(voiceName, out var collections))
                 collectedPerBinding[voiceName] = collections = new List<(string, ImmutableArray<Voice>)>();
             collections.Add((collectedUnder, staffVoices[voiceName]));
@@ -2149,6 +2168,9 @@ public sealed partial class MeasureCollector
         var combinedAddressings = new List<CombinedStaffAddressing>();
         // A condensed staff's parts each walked their own key / time / clef: one staff
         // takes one of each at a moment (the first part's), the rest are junked here.
+        // …and one dynamic, one hairpin where its parts wrote the same one. Before the changes
+        // are junked: the dynamics' item indices count the items as they were collected.
+        JunkCondensedStaffDuplicateDynamics(staffCollections, staffVoices);
         JunkCondensedStaffDuplicateChanges(renderSpec, staffVoices, voiceKeyDict);
         ImmutableArray<StaffGroup> staffGroups;
         // A condensed staff packs its parts' accidentals into one column as it is built
@@ -3400,6 +3422,112 @@ public sealed partial class MeasureCollector
     /// a <c>time none</c> section, which engraves nothing.
     /// </summary>
     private readonly record struct RowsOnlyBar(Fraction Length, bool IsPickup, TimeSignature? Meter, int MeterPos);
+
+    /// <summary>One binding's collection, as <see cref="JunkCondensedStaffDuplicateDynamics"/>
+    /// reads it: the part, its staff, the slot its first voice takes there, whether it was
+    /// appended to a condensed staff, and the ranges it added to <see cref="_dynamics"/> and
+    /// <see cref="_musicMarks"/>.</summary>
+    private readonly record struct StaffCollection(string Part, int Staff, int FirstVoice, bool Appended,
+        int DynamicsFrom, int DynamicsTo, int MarksFrom, int MarksTo);
+
+    /// <summary>
+    /// ONE dynamic and ONE hairpin where the parts of a condensed staff wrote the same one at
+    /// the same moment. <c>condensedStaff { sop alt }</c> with <c>@mp</c> on both parts' first
+    /// note printed "mp" twice, one under the other, and the hairpin and the <c>@f</c> the two
+    /// shared were drawn twice on one place (grammar evaluation 2, 2026-11-12,
+    /// repro-condensed-dyn-lyrics.lys). The first part's stands; a later part's is left out of
+    /// the score's content when it has the same level (or text), the same side and the same
+    /// moment. A dynamic only one part writes, or a different one, is kept as it is.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond's Dynamic_engraver stands in the Voice context
+    /// (ly/engraver-init.ly), so two voices' equal dynamics are both engraved there and a
+    /// writer removes one by hand. A condensed staff is Lily#'s own item — two PARTS on one
+    /// staff, each written to stand alone — and the choir or desk it prints reads one dynamic
+    /// for both. The combined staff already says so of its own
+    /// (<c>CombinedStaffReaddress.Apply</c>'s duplicate key).
+    /// A hairpin is addressed by staff, bar and item (<see cref="HairpinItem"/> holds no
+    /// voice), so the later part's is a duplicate exactly when it is detected with the same
+    /// ends, direction and side as an earlier part's — the two that were drawn on one place.
+    /// </remarks>
+    private void JunkCondensedStaffDuplicateDynamics(
+        List<StaffCollection> collections, Dictionary<string, ImmutableArray<Voice>> staffVoices)
+    {
+        _condensedStaffDuplicateDynamics.Clear();
+        foreach (int staff in collections.Where(c => c.Appended).Select(c => c.Staff).Distinct().ToList())
+        {
+            var parts = collections.Where(c => c.Staff == staff).ToList();
+            // The moment of a part's dynamic: the lengths before its item, in its own voice.
+            Fraction? OnsetOf(StaffCollection part, DynamicItem d)
+            {
+                int voice = d.VoiceIndex - part.FirstVoice;
+                if (!staffVoices.TryGetValue(part.Part, out var voices) || voice < 0 || voice >= voices.Length
+                    || d.MeasureIndex < 0 || d.MeasureIndex >= voices[voice].Measures.Length)
+                    return null;
+                var items = voices[voice].Measures[d.MeasureIndex].Items;
+                if (d.ItemIndex < 0 || d.ItemIndex > items.Length)
+                    return null;
+                var at = Fraction.Zero;
+                for (int i = 0; i < d.ItemIndex; i++)
+                    at += items[i].Duration;
+                return at;
+            }
+            var standing = new List<(DynamicItem Dynamic, Fraction Onset)>();
+            for (int p = 0; p < parts.Count; p++)
+            {
+                int standingBefore = standing.Count;
+                for (int i = parts[p].DynamicsFrom; i < parts[p].DynamicsTo; i++)
+                {
+                    var d = _dynamics[i];
+                    if (OnsetOf(parts[p], d) is not { } onset)
+                        continue;
+                    bool written = false;
+                    for (int s = 0; s < standingBefore && !written; s++)
+                    {
+                        var (e, eOnset) = standing[s];
+                        written = e.MeasureIndex == d.MeasureIndex && eOnset == onset
+                            && e.Level == d.Level && e.Text == d.Text && e.IsAbove == d.IsAbove
+                            && e.IsExpressiveText == d.IsExpressiveText && e.IsSubito == d.IsSubito
+                            && e.OnMultiMeasureRest == d.OnMultiMeasureRest;
+                    }
+                    if (written)
+                        _condensedStaffDuplicateDynamics.Add(d);
+                    else
+                        standing.Add((d, onset));
+                }
+            }
+
+            static bool IsHairpinStart(MusicMarkItem m)
+                => m.Type is MusicMarkType.Cresc or MusicMarkType.Decresc or MusicMarkType.Dim;
+            int PartOfMark(int index) => parts.FindIndex(c => index >= c.MarksFrom && index < c.MarksTo);
+            bool laterPartOpensOne = false;
+            for (int p = 1; p < parts.Count && !laterPartOpensOne; p++)
+                for (int i = parts[p].MarksFrom; i < parts[p].MarksTo && !laterPartOpensOne; i++)
+                    laterPartOpensOne = IsHairpinStart(_musicMarks[i]);
+            if (!laterPartOpensOne)
+                continue;
+            var marks = _musicMarks.ToImmutableArray();
+            var hairpins = Layout.HairpinEngraver.DetectHairpins(marks,
+                _dynamics.Where(d => !_condensedStaffDuplicateDynamics.Contains(d)).ToImmutableArray());
+            foreach (var later in hairpins)
+            {
+                if (later.StaffIndex != staff || later.SourceIndex < 0 || PartOfMark(later.SourceIndex) is not (> 0 and var laterPart))
+                    continue;
+                foreach (var earlier in hairpins)
+                {
+                    if (earlier.StaffIndex != staff || earlier.SourceIndex < 0
+                        || PartOfMark(earlier.SourceIndex) is not (>= 0 and var earlierPart) || earlierPart >= laterPart
+                        || earlier.Direction != later.Direction || earlier.IsAbove != later.IsAbove
+                        || earlier.StartMeasureIndex != later.StartMeasureIndex || earlier.StartItemIndex != later.StartItemIndex
+                        || earlier.EndMeasureIndex != later.EndMeasureIndex || earlier.EndItemIndex != later.EndItemIndex
+                        || earlier.EndsAtStop != later.EndsAtStop || earlier.CircledTip != later.CircledTip)
+                        continue;
+                    _condensedStaffDuplicateDynamics.Add(marks[later.SourceIndex]);
+                    break;
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// ONE key, ONE time, ONE clef at a moment on a condensed staff. Every part of a
@@ -4667,6 +4795,7 @@ public sealed partial class MeasureCollector
         _voiceMeasuresByName.Clear();
         _shadowedRehearsalMarks.Clear(); // refilled from the finished score (RecordShadowedRehearsalMarks)
         _condensedStaffChangeWarnings.Clear();
+        _condensedStaffDuplicateDynamics.Clear();
         _canonicalSectionBars.Clear();
         _canonicalByName = null;
         _writtenBars.Clear();
