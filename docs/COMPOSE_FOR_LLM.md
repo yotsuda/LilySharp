@@ -367,7 +367,7 @@ What makes it music:
     score { staff sop  lyrics words }
     ```
     A choir's voices each take their own line, one a part. Two lines with the same words on one part
-    sing it together. A line inside a score replaces the top level's for its part there, which is how
+    sing it together. A line inside a score replaces the top level's there (a named singer's line that singer's, a line with no name every line for its part), which is how
     one score sings Japanese words and another English ones. `singer male sings
     words` or `singer female sings words` asks for that gender's default voice and needs no list.
     `singer male "neutrino/SOMA" sings words` is a voice with its gender said, the gender narrowing

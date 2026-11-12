@@ -1943,7 +1943,7 @@ voice, and the gender before a name (`singer male "neutrino/SOMA" sings verse`) 
 editor's offers the voices that say they are the other; another word there is an error (LYS4040).
 Leave out `on PART` when the file has one part, or every score prints the words under one part. A
 part sings one set of words in a scope (LYS4044): at the top level, or in one score, where a
-`singer` line replaces the top level's lines for its part. A voice that cannot be had sings as the default voice of the part's
+`singer` line replaces the top level's lines of the same singer (or, with no name, for its part). A voice that cannot be had sings as the default voice of the part's
 gender, said once. Between the quotes the editor offers the voices that sing the words' language;
 on a `singer "…"`, `Ctrl+Shift+Up` / `Down` step through those voices and `Ctrl+Shift+PageUp` /
 `PageDown` go to the first voice of another engine, the chosen voice heard in the preview.

@@ -505,6 +505,31 @@ public class SingerPartsTests
         Assert.Equal(DiagnosticCodes.SingerNeedsSings, Assert.Single(tree.Diagnostics).Code);
     }
 
+    /// <summary>To change one singer in a score the others are not written again: a named line of
+    /// the score replaces the file's lines of that name, and the file's other singers go on.</summary>
+    [Fact]
+    public void ANamedLineInAScore_ReplacesThatSingerAlone()
+    {
+        string scores = "score { staff lead  lyrics words }\n"
+            + "score practice {\n  singer alice female on lead sings solfege in Verse\n  staff lead  lyrics words  staff carol\n}";
+        var (_, tree, said) = Expanded(Book(Band, scores));
+        Assert.Empty(said.Select(d => d.Message));
+        var midi = Midi(tree, "practice");
+        var voices = SungVoices.Read(midi, MidiClock.SecondsOf(midi));
+        // alice is the score's (the note names), bob and carol the file's still.
+        Assert.Equal("solfege", Assert.Single(voices, v => v.Singer == "female" && v.Part == "lead").Track);
+        Assert.Contains(voices, v => v.Singer == "male" && v.Part == "lead");
+        Assert.Contains(voices, v => v.Part == "carol__0");
+        Assert.Equal(3, voices.Count);
+
+        // A line with no name still takes the place of every line for its part.
+        var (_, plain, _) = Expanded(Book(Band, "score { singer male on lead\n staff lead  lyrics words }"));
+        var all = Midi(plain);
+        var one = Assert.Single(SungVoices.Read(all, MidiClock.SecondsOf(all)));
+        Assert.Equal("male", one.Singer);
+        Assert.Equal(8, one.Notes.Count);
+    }
+
     [Fact]
     public void ASingerTheScoresOwnLinesLeaveOut_IsSaidAtTheItem()
     {

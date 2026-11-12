@@ -47,9 +47,18 @@ public static class LyricSinger
         var lines = LinesOf(root);
         int at = score?.Span.Start ?? -1;
         var own = lines.Where(l => at >= 0 && l.Score == at).ToList();
-        var replaced = own.Select(l => l.Part).ToHashSet();
-        return [.. lines.Where(l => l.Score < 0 && !replaced.Contains(l.Part) && l.Person == person), .. own.Where(l => l.Person == person)];
+        return [.. lines.Where(l => l.Score < 0 && !Replaces(own, l) && l.Person == person), .. own.Where(l => l.Person == person)];
     }
+
+    /// <summary>
+    /// Whether a score's own lines take the place of the top-level line <paramref name="top"/>
+    /// there (owner's decision 2026-11-12, after the evaluation scores: to change ONE singer in a
+    /// score, the others should not have to be written again): a NAMED line of the score replaces
+    /// the file's lines of that name; a line with no name replaces the file's lines for its part,
+    /// named or not, as it always did.
+    /// </summary>
+    private static bool Replaces(IReadOnlyList<Line> own, Line top)
+        => own.Any(l => l.Person != null ? l.Person == top.Person : l.Part == top.Part);
 
     /// <summary>
     /// The name of the part a score's <c>staff NAME</c> item is the staff of: the singer's name
@@ -118,7 +127,8 @@ public static class LyricSinger
         if (score == null)
             return person + ScopedMark + "0";
         var own = score.ChildNodes().OfType<SingerDeclarationSyntax>().ToList();
-        var replaced = own.Select(l => l.OnToken?.Text).ToHashSet();
+        // The score's lines with no name take the place of the file's for their part (Replaces).
+        var replaced = own.Where(l => l.PersonToken == null).Select(l => l.OnToken?.Text).ToHashSet();
         bool scoped = own.Any(l => l.PersonToken?.Text == person)
             || root.ChildNodes().OfType<SingerDeclarationSyntax>().Any(l => l.PersonToken?.Text == person && replaced.Contains(l.OnToken?.Text));
         if (!scoped)
@@ -248,8 +258,7 @@ public static class LyricSinger
         if (lines.Any(l => l.Score >= 0))
         {
             var own = lines.Where(l => spec != null && spec.SourceStart >= 0 && l.Score == spec.SourceStart).ToList();
-            var replaced = own.Select(l => l.Part).ToHashSet();
-            lines = [.. lines.Where(l => l.Score < 0 && !replaced.Contains(l.Part)), .. own];
+            lines = [.. lines.Where(l => l.Score < 0 && !Replaces(own, l)), .. own];
         }
         return OnPrintedParts(root, spec, lines);
     }

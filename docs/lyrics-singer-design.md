@@ -375,6 +375,12 @@ staff and her Japanese one. ⚠️ A made part is never called by the singer's b
 of that name is her notes written out, and the text that makes the part would turn the item
 that asked for it into a staff of a part.
 
+**A score's named line replaces that singer alone** (owner's decision 2026-11-12, after the
+evaluation scores): a score's own singer lines took the place of EVERY top-level line for
+their part, so changing one singer in a score meant writing the others again. A named line
+replaces the file's lines of that name; a line with no name replaces the file's lines for its
+part, as before (`LyricSinger.Replaces`).
+
 **How it is made** (`Editing.SingerParts`): the part is WRITTEN, as Lily# text, after the
 file's own — the way `using` adds a file, the document staying the prefix so that every
 position in it holds — and every reader of a score (the page, the MIDI, the MusicXML, the

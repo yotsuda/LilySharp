@@ -139,7 +139,8 @@ singer female on sop</pre>
 <pre>singer female "diffsinger/Nishiren" on sop sings words
 singer female "voicevox/ずんだもん-ノーマル" on sop sings words
 singer male "neutrino/SOMA" on bas sings words</pre>
-  <p>A line inside a <code>score { }</code> replaces the top-level lines for its part in that score, so
+  <p>A line inside a <code>score { }</code> takes the place of top-level lines in that score: a named
+  singer's line replaces that singer's, and the others go on; a line with no name replaces every line for its part. So
   one score can sing the Japanese words and another the English ones.</p>
 
   <h3>One song in two languages</h3>

@@ -335,8 +335,9 @@ SingerName     = Identifier ;   (* the singer's OWN name: a word that is no gend
 SingerGender   = 'male' | 'female' ;
                  (* WHO SINGS WHAT, in this order (docs/lyrics-singer-design.md). 'lyrics' rows
                     print; only this line sings. At the file's top level it is every score's
-                    default; inside a score it replaces the top level's lines for its part in
-                    that score. The value is a voice as engine/name ('neutrino/MERROW') or a
+                    default; inside a score it replaces, in that score, the top level's lines of the
+                    same singer where it is named (the file's other singers go on), and the top
+                    level's lines for its part where it is not. The value is a voice as engine/name ('neutrino/MERROW') or a
                     gender; with nothing, the part's own default voice. Each line is one voice:
                     several lines with the same words on one part sing it together.
                     A gender before a name narrows what the editor offers; with no name (or an
