@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveCancelLine, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
+import { singerLineOf, onSingerGender, singersWritten, CANTORIA_EXTENSION_ID, PREPARE_IDLE_MS, PrepareQueue, StageClock, SungNoteDto, SungVoiceDto, VoiceSampleQueue, cantoriaApiOf, cantoriaScore, fitsGender, learnRenderRate, parseServeLine, prepareModeOf, serveCancelLine, serveRequestLine, afterSingerWord, voiceMenuLabels, voiceMenuKey, voiceMenuTitle, voiceMenuTitleOf, noLanguageGuide, noVoiceGuide, printedWordsNote, singerChoices, singerLanguageColumn, singerValueAt, singerWrittenAt, singsLanguage, stepVoice, sungKey, sungSeconds, voiceKey, voiceListText, voiceRenderEstimateMs, voiceSampleFileName, voiceSampleKey, sampleOctave, parseVoiceSampleKey, voiceSampleScore, writesSinger } from '../src/singerCore';
 import { VoiceBarPart, voiceBar, voiceBarShown, voiceProgress, voiceRound, voiceRowProgress, voiceStillSinging, voiceToldFraction } from '../src/webview/playbackCore';
 
 // The singing voice's pure half (docs/singing-design.md §5): the server's voice becomes the
@@ -266,7 +266,8 @@ describe('choosing a voice with the step keys', () => {
         const whole = { start, end: start + 'neutrino/A'.length, value: 'neutrino/A' };
         assert.deepEqual(singerValueAt(line, line.indexOf('male')), whole);
         assert.deepEqual(singerValueAt(line, start), whole);
-        assert.equal(singerValueAt('singer man "x"', 8), undefined);
+        // A word that is no gender is the singer's own name (2026-11-12): the voice after it is read.
+        assert.equal(singerValueAt('singer man "x"', 8)?.value, 'x');
     });
 
     it('leaves out only a voice that says it is the other gender, in the list and for the keys', () => {
@@ -1313,4 +1314,31 @@ describe('a section none of a part\'s voices sings', () => {
         const from = ext.indexOf('function unsungSounds(i)');
         assert.ok(!ext.slice(from - 2000, from + 800).includes('`'));
     });
+});
+
+// Owner's report 2026-11-12: on `singer alice female sings ▮` the list of words had no solfege —
+// the readers of a singer line knew `singer [male|female] ["voice"]` and not the singer's own name
+// before them, so a named singer's line was no singer line to the editor.
+describe('a singer line with the singer\'s own name', () => {
+    it('is read as the line without it', () => {
+        assert.deepEqual(singerLineOf('singer alice female "neutrino/SEVEN" sings en on lead with breathiness 2')?.sing, { breathiness: 2 });
+        assert.equal(singerLineOf('singer alice female "neutrino/SEVEN" sings en on lead')?.voice, 'neutrino/SEVEN');
+        assert.equal(singerLineOf('singer ようこ female sings words on lead up 3')?.voice, 'female');
+        assert.equal(singerLineOf('singer alice sings en on lead')?.voice, '');
+    });
+    it('opens the list of voices after the name, and after the name and a gender', () => {
+        assert.equal(afterSingerWord('singer alice '), true);
+        assert.equal(afterSingerWord('singer ようこ female '), true);
+        assert.equal(afterSingerWord('singer alice sings '), false);
+    });
+    it('finds the gender, the voice and what is written past the name', () => {
+        assert.equal(onSingerGender('singer alice female sings en on lead', 15), true);
+        assert.equal(onSingerGender('singer alice female sings en on lead', 9), false);
+        assert.equal(singerValueAt('singer alice female "neutrino/SEVEN" sings', 25)?.value, 'neutrino/SEVEN');
+        assert.equal(singerWrittenAt('singer alice female "neutrino/SEVEN" sings', 22, 22), 'neutrino/SEVEN');
+        assert.equal(singerWrittenAt('singer ようこ male sings', 12, 12), 'male');
+    });
+    it('lists the voices the file\'s named singers write', () => assert.deepEqual(
+        singersWritten('singer alice female "a/b" sings en on lead\nsinger bob male sings en on lead\nsinger "c/d" sings en on lead'),
+        ['a/b', 'male', 'c/d']));
 });

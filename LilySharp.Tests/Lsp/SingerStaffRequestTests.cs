@@ -160,6 +160,36 @@ public class SingerStaffRequestTests
         Assert.DoesNotContain("singer", LabelsAt(source.Insert(midLine, " "), midLine + 1));
     }
 
+    /// <summary>Owner's report 2026-11-12: after the <c>sings</c> of <c>singer alice female sings</c>
+    /// the list had no solfege — the line's steps were read as <c>singer [gender] ["voice"]</c>, and
+    /// a line that begins with the singer's own name was no singer line.</summary>
+    [Theory]
+    [InlineData("singer alice female sings ")]
+    [InlineData("singer alice female \"neutrino/SEVEN\" sings ")]
+    [InlineData("singer ようこ sings ")]
+    [InlineData("singer female sings ")]
+    public void AfterSingsOnANamedSingersLine_TheWordsAreListed_SolfegeAmongThem(string line)
+    {
+        string source = Book + "\n" + line;
+        var labels = LabelsAt(source, source.Length);
+        Assert.Contains("words", labels);
+        Assert.Contains("solfege", labels);
+        Assert.Contains("hum", labels);
+        Assert.DoesNotContain("staff", labels);
+    }
+
+    [Theory]
+    [InlineData("singer alice female ", "sings")]
+    [InlineData("singer alice female sings words ", "on")]
+    [InlineData("singer alice female sings words on ", "lead")]
+    [InlineData("singer alice female sings words on lead ", "up")]
+    [InlineData("singer alice female sings words on lead up 3 in ", "Chorus")]
+    public void TheStepsOfANamedSingersLine_AreTheLinesOwn(string line, string offered)
+    {
+        string source = Book + "\n" + line;
+        Assert.Contains(offered, LabelsAt(source, source.Length));
+    }
+
     [Fact]
     public void AfterStaffAndAfterLyricsInAScore_TheNamedSingersAreListedBesideThePartsAndTheTracks()
     {

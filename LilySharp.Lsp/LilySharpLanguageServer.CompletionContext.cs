@@ -539,7 +539,7 @@ public sealed partial class LilySharpLanguageServer
         int end = Math.Clamp(offset, 0, text.Length);
         int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
         string line = text[lineStart..end];
-        var quote = System.Text.RegularExpressions.Regex.Match(line, @"(?:^|[\s{}])singer[ \t]+(?:(?<gender>male|female)[ \t]+)?(?:""[^""]*|(?<bare>[^\s""{},]*))$");
+        var quote = System.Text.RegularExpressions.Regex.Match(line, @"(?:^|[\s{}])singer[ \t]+(?:(?!(?:male|female|sings)\b)[\p{L}_][\w-]*[ \t]+)?(?:(?<gender>male|female)[ \t]+)?(?:""[^""]*|(?<bare>[^\s""{},]*))$");
         if (!quote.Success)
             return null;
         bool quoted = !quote.Groups["bare"].Success;
@@ -581,7 +581,9 @@ public sealed partial class LilySharpLanguageServer
         while (end > 0 && IsWordChar(text[end - 1])) end--;     // a partial word is not a written one
         int lineStart = end == 0 ? 0 : text.LastIndexOf('\n', end - 1) + 1;
         var line = System.Text.RegularExpressions.Regex.Match(text[lineStart..end],
-            @"^[ \t]*singer(?<voice>(?:[ \t]+(?:male|female))?(?:[ \t]+""[^""]*"")?)(?:[ \t]+(?<sings>sings)(?:[ \t]+(?<w>[^\s{}""]+))*)?[ \t]+$");
+            // The singer's own name may stand first (`singer alice female "…" sings`, 2026-11-12): a word
+            // that is neither a gender nor `sings`.
+            @"^[ \t]*singer(?<voice>(?:[ \t]+(?!(?:male|female|sings)\b)[\p{L}_][\w-]*)?(?:[ \t]+(?:male|female))?(?:[ \t]+""[^""]*"")?)(?:[ \t]+(?<sings>sings)(?:[ \t]+(?<w>[^\s{}""]+))*)?[ \t]+$");
         if (!line.Success)
             return null;
         if (!line.Groups["sings"].Success)

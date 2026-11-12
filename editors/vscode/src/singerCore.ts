@@ -253,6 +253,12 @@ export function singerChoices(voices: readonly CantoriaVoice[], language: string
         .map(v => ({ label: v.id, detail: v.label && v.label !== v.name ? v.label : v.name }));
 }
 
+/** The singer's OWN name on a singer line, where one stands (`singer alice female "…" sings`, owner's
+ *  decision 2026-11-12): a word before the gender or the voice that is neither a gender nor `sings`,
+ *  and the space after it. Optional, and no group of its own: the readers of a singer line take
+ *  the same groups with it or without. Not `\w`: a singer may be called ようこ. */
+export const SINGER_NAME = String.raw`(?:(?!(?:male|female|sings)(?![\w-]))[^\s"{},/]+[ \t]+)?`;
+
 /** Whether a score names who sings: a `singer` followed by a name or a gender, off a comment. */
 export function writesSinger(text: string): boolean {
     return text.split('\n').some(line => /^[ \t]*singer\b.*\bsings\b/.test(line.split('//')[0]));
@@ -260,7 +266,7 @@ export function writesSinger(text: string): boolean {
 
 /** Whether a line's text before the caret ends with `singer ` or `singer male `: a space that opens the list of voices. */
 export function afterSingerWord(before: string): boolean {
-    return /(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?$/.test(before) && !before.includes('//');
+    return new RegExp(String.raw`(?<![\w-])singer[ \t]+${SINGER_NAME}(?:(?:male|female)[ \t]+)?$`).test(before) && !before.includes('//');
 }
 
 /** Whether the text before a line leaves it at the top level: every brace opened is closed
@@ -290,7 +296,7 @@ export function singerGoesOnToSings(before: string, line: string, after: string)
 
 /** The name of a `singer "…"` the caret stands on, anywhere on the `singer`: where it is on the line. */
 export function singerValueAt(line: string, character: number): { start: number; end: number; value: string } | undefined {
-    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:(?:male|female)[ \t]+)?"([^"]*)"/g)) {
+    for (const m of line.matchAll(new RegExp(String.raw`(?<![\w-])singer[ \t]+${SINGER_NAME}(?:(?:male|female)[ \t]+)?"([^"]*)"`, 'g'))) {
         if (character < m.index || character > m.index + m[0].length) { continue; }
         const end = m.index + m[0].length - 1;
         return { start: end - m[1].length, end, value: m[1] };
@@ -301,7 +307,7 @@ export function singerValueAt(line: string, character: number): { start: number;
 /** Whether the caret stands on a `singer` line's `male` / `female` (owner's request 2026-11-12): the
  *  step keys there change the word, not the voice named after it. */
 export function onSingerGender(line: string, character: number): boolean {
-    for (const m of line.split('//')[0].matchAll(/(?<![\w-])singer[ \t]+(male|female)(?![\w-])/g)) {
+    for (const m of line.split('//')[0].matchAll(new RegExp(String.raw`(?<![\w-])singer[ \t]+${SINGER_NAME}(male|female)(?![\w-])`, 'g'))) {
         const end = m.index + m[0].length;
         if (character >= end - m[1].length && character <= end) { return true; }
     }
@@ -314,7 +320,7 @@ export function onSingerGender(line: string, character: number): boolean {
 export function singerLanguageColumn(line: string, character: number): number {
     const named = singerValueAt(line, character);
     if (named) { return named.start; }
-    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:male|female)(?![\w-])/g)) {
+    for (const m of line.matchAll(new RegExp(String.raw`(?<![\w-])singer[ \t]+${SINGER_NAME}(?:male|female)(?![\w-])`, 'g'))) {
         if (character >= m.index && character <= m.index + m[0].length) { return m.index + m[0].length; }
     }
     return character;
@@ -326,7 +332,7 @@ export function singerLanguageColumn(line: string, character: number): number {
  * one, in a comment and inside another string.
  */
 export function singerWrittenAt(line: string, from: number, to: number): string | undefined {
-    for (const m of line.matchAll(/(?<![\w-])singer[ \t]+(?:(male|female)(?![\w-])(?:[ \t]+"([^"]*)")?|"([^"]*)")/g)) {
+    for (const m of line.matchAll(new RegExp(String.raw`(?<![\w-])singer[ \t]+${SINGER_NAME}(?:(male|female)(?![\w-])(?:[ \t]+"([^"]*)")?|"([^"]*)")`, 'g'))) {
         const before = line.slice(0, m.index);
         if (before.includes('//') || (before.split('"').length - 1) % 2 === 1) { continue; }
         if (from >= m.index && to <= m.index + m[0].length) { return m[2] || m[3] || m[1] || ''; }
@@ -456,7 +462,7 @@ export function parseVoiceSampleKey(key: string): { id: string; language?: strin
  */
 export function singerLineOf(line: string): { voice: string; askColumn: number; sing: Record<string, number | string>; withAt: number } | undefined {
     const code = line.split('//')[0];
-    const head = /^([ \t]*singer[ \t]+)(?:(male|female)(?![\w-])[ \t]*)?(?:"([^"]*)")?/.exec(code);
+    const head = new RegExp(String.raw`^([ \t]*singer[ \t]+${SINGER_NAME})(?:(male|female)(?![\w-])[ \t]*)?(?:"([^"]*)")?`).exec(code);
     if (!head || !/(?<![\w-])sings(?![\w-])/.test(code.replace(/"[^"]*"/g, '""'))) { return undefined; }
     const quote = code.indexOf('"', head[1].length);
     const askColumn = head[3] !== undefined && quote >= 0 ? quote + 1 : head[1].length + (head[2]?.length ?? 0);
@@ -786,7 +792,7 @@ export function singMarkSlot(before: string): { kind: 'name'; written: string[] 
 export function singersWritten(text: string): string[] {
     const found: string[] = [];
     for (const line of text.split('\n')) {
-        const m = /^[ \t]*singer[ \t]+(?:(male|female)[ \t]+)?(?:"([^"]*)")?[ \t]*sings(?![\w-])/.exec(line.split('//')[0]);
+        const m = new RegExp(String.raw`^[ \t]*singer[ \t]+${SINGER_NAME}(?:(male|female)[ \t]+)?(?:"([^"]*)")?[ \t]*sings(?![\w-])`).exec(line.split('//')[0]);
         if (m) { const who = m[2] || m[1] || ''; if (!found.includes(who)) { found.push(who); } }
     }
     return found;
