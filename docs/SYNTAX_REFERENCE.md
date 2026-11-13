@@ -203,6 +203,11 @@ three-bar rest, as LilyPond engraves `R1 | R1 | R1` and `R1*3`. The LilyPond twi
 bar's own duration (`R1`, `R2.`, `R4*5`), and the MusicXML import writes every whole-measure
 rest this way.
 
+Under `time none` (senza misura) a part that is silent while another plays its cadenza writes
+an empty bar — `|` alone, which is as long as the other parts' bar and draws nothing — or is
+left out of the section; or it writes rests that add up to that bar (`r1 r1 |`, or the bar
+rests `R1 R1 |` with their durations; a different total is LYS2004).
+
 A rest normally finds its own height: on the middle line alone, up or down inside a
 `voice { } { }` span, and out of the way of whatever the other voices are playing at
 that moment. **Writing a pitch with `@rest` decides that height instead** — the rest
@@ -272,6 +277,15 @@ Notes enclosed in angle brackets share a duration (written after the `>`):
 <c e g>'4      // C4 E4 G4 — the same, written after the >
 <c' e' g'>4    // C4 E5 G5 — each later mark counts from its stacked spot: a spread chord
 ```
+
+**On a bowed string** (`instrument violin`, `viola`, `cello`, `contrabass`) a chord is a double
+stop: two notes on neighbouring strings within the hand's reach. Three or four notes starting
+at one moment warn (**LYS1055**, "cannot be bowed at once … keep two of its notes (a double
+stop), or break the chord, the low notes first"), and so does a pair no two neighbouring
+strings hold; `@arpeggio` or a `@text("pizz.")` on the chord does not change that. A triple or
+quadruple stop is written broken, as it is played — `grace { <g d'>8 } <b' g''>2`,
+`acciaccatura { g16 d' } <b' g''>2`, in time as `<g d'>8 <b' g''>4.`, or as the arpeggio group
+`<< g d' b' g'' >>2` — none of which warns.
 
 ### Arpeggios (`<< … >>`)
 
@@ -575,6 +589,11 @@ starting on a note whose level writes a side keeps the staff's own (`c4@ff.down@
 twin writes `\dynamicUp` on such a staff and `^` / `_` for a written side; MusicXML writes
 the placement.
 
+On a `condensedStaff`, where two parts have different dynamics at one moment (`@mf` over `@p`,
+a crescendo against a diminuendo), the upper part's level and hairpin stand above the staff and
+the lower part's below (LilyPond's `\dynamicUp` on the upper voice). What the parts share is
+printed once, and a written side is kept.
+
 ## Ties and Slurs
 
 ### Ties
@@ -787,6 +806,16 @@ clef bass        // Bass clef (F clef)
 clef alto        // Alto clef (C clef, line 3)
 clef tenor       // Tenor clef (C clef, line 4)
 ```
+
+A part header's `clef` takes eleven names: those four, `treble_8` (a treble clef sounding an
+octave lower — the guitar's and the tenor voice's), `treble^8` (an octave higher), `bass_8`,
+the three other C clefs `soprano` (line 1), `mezzosoprano` (line 2) and `baritone` (line 5),
+and `percussion`. A `clef` written in the music, and the clef word of a score's
+`staff bass NAME`, take `treble` `bass` `alto` `tenor` `treble_8` only; the error names both
+lists. `clef baritone` is the C clef on the top line — a baritone singer's part is
+`instrument baritone` (which brings `treble_8`) or `clef bass`. LilyPond's `varbaritone`,
+`subbass` and `french` are not clef names here.
+
 ## Drums
 
 `clef percussion` makes a drum part. It writes drum names instead of pitches, draws no key
@@ -1810,6 +1839,61 @@ A score's name is a bare word, like a part's or a form's. `score "tab"` is an er
 printed on the page, and a name with spaces or hyphens is written in one word
 (`score guitarChart`).
 
+### Tablature — `tab`
+
+`tab NAME` draws a part as fret numbers. The part is written as ordinary notes at the pitch it
+sounds; the tab is the score's reading of them.
+
+```
+octave absolute
+part gtr { instrument guitar }
+section A {
+  gtr { e,4 a, d g | c'4\3 c'\2 e'@dead a@glissando | d'4 a'8@hammerOn( b') b'@pullOff( a') a'4@bend(full) | }
+}
+form { ~A }
+score { staff gtr  tab gtr }
+```
+
+| | |
+|---|---|
+| Style | Beside a notation staff of the same part: fret numbers only. Alone: stems, flags, rests and the meter. `as numbers` / `as full` decides by hand. |
+| Tuning | The part's `instrument` (`guitar` `bass` `bass5` `bass6` `ukulele` `mandolin` `banjo`, and the bowed strings), else the part's `tuning WORD`, else — for one score — the word before the part: `tab guitarDropD gtr`. No instrument: a guitar. `tab gtr tuning guitarDropD` is an error naming the two right spellings. |
+| Dropped tunings | `part gtr { instrument guitar  tuning guitarDropD }` also moves the part's range (LYS1052) to the tuning's strings: its low D is in range. |
+| Strings and frets | Chosen by the tab: low positions, the hand kept where it is, one string a chord note, frets 0–24. A tie keeps its string (and the held note's number is dropped); a `@glissando` / `@slide` keeps both notes on one string where one can play both; a slur does not. |
+| `\N` | Asks for string N (1 = the highest): `c'4\3`; on chord members, `<e'\1 b\2>`. Two members on one string are LYS1063, one pitch twice without two strings LYS1064. A string the tuning lacks (`\7`), or one that cannot play the note, warns and is chosen again (**LYS5003**). |
+| Out of the strings | A note below the lowest string or above fret 24 warns (**LYS5002**) and is left off the tab, in a chord too. A tab in another instrument's tuning names its octave: `tab bass5 melody as 8vb` (LYS5004 proposes it). |
+| Capo | Under the file's `capo N` the frets count from the capo; a note below the capo on every string is LYS5002 and left off. A bass's tab ignores the capo. See *Chord Diagrams*. |
+| Marks | Drawn on the tab: slurs, `@hammerOn` `@pullOff` `@tap`, `@bend(…)`, the `@glissando` / `@slide` line, `@arpeggio`, and `@dead` on a single note (a × for the number). `@notehead(…)` changes the staff's head only. `@dead` on a chord or a chord member draws nothing: write `<c e@notehead(cross)>4`. |
+
+The tuning words are listed under `TuningName` in `GRAMMAR.md`.
+
+### An alternative reading — `ossia`
+
+`ossia NAME` draws a part as a small staff, with no clef and no meter, over the bars where that
+part has notes. The part holds the alternative alone: music in the bars that have one, an empty
+bar (`|`) everywhere else.
+
+```
+part solo { instrument violin }
+part alt  { clef treble }
+section A {
+  solo { c''4 d e f | g4 a b c | c1 | }
+  alt  { | g''8 a b c d2 | | }
+}
+form { ~A }
+score { staff solo  ossia alt }
+```
+
+**Where it stands follows from where it is written: directly above the staff written BEFORE
+it** — the nearest `staff`, `tab` or staff group before the item, a `lyrics` row between them
+not counting. `staff ob  staff alto  ossia orn` is an ossia over the alto, between the two
+staves; `staff ob  ossia orn  staff alto` is one over the oboe. Before any staff, it is the top
+of the system. An ossia may not stand inside a group's braces (LYS6011); after the group, it
+is above the whole group. This is LilyPond's `alignAboveContext`, which the twin writes.
+
+A bar of the ossia part with only spacers or `r` rests is not drawn; a bar rest `R` is drawn
+with no staff under it, so the silent bars are left empty.
+
 ### Staff groups — `grandStaff`, `staffGroup`, `choirStaff`
 
 Three ways to engrave several staves as one group. All three take `staff` items and
@@ -2028,6 +2112,14 @@ too). With no `sounds` a part a `singer` line sings is a voice, any other its in
 of one part add up. `hidden` sounds the part and draws nothing. A part with no `staff` in the
 score does not sound.
 An `@breath` on a sung note is a breath: the singer stops a little early, and the next note starts on its beat; `@caesura` the same. Dynamics, accents and hairpins set how loud the voice is, and a grace note is sung on the syllable of its note.
+
+**An elision** — two syllables under one note — is a `~` glued between them, as in LilyPond:
+`Glo- ri~a in ex- cel- sis` sets "ri" and "a" on one note and prints them joined by an
+undertie (ri‿a); `wa~o~a` joins three. It counts as one syllable and may carry its hyphen
+(`ri~a-`). MusicXML writes it as two `<text>`s with an `<elision>` between them and reads
+it back; the LilyPond twin writes the undertie. A singing voice is given the pair as one
+syllable, and the VOCALOID export sings the first of the two. A `~` with a space on either
+side is the melisma below.
 
 **Melismas** follow LilyPond's `\lyricsto`. A **slur** or a **tie** makes one on its own:
 the syllable on the slur's first note is sung over every note up to the one that closes
@@ -2476,6 +2568,10 @@ Arpeggios are not played as a roll. LilyPond gets `connectArpeggios` (or
 ```
 c4@figuredBass(6) d@figuredBass(6 4) e@figuredBass(5 3) |
 ```
+
+One group a note: a second `@figuredBass` on the same note is an error (**LYS1067**). A change
+of figure over a held bass is two tied notes with a figure each —
+`a4@figuredBass(4)~ a4@figuredBass(3)`, not `a2@figuredBass(4)@figuredBass(3)`.
 
 ## Chord Names
 

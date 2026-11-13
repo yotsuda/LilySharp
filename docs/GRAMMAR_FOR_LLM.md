@@ -50,7 +50,12 @@ time 4/4                // optional (default 4/4); 4/4 engraves as the C
                         // no meter is drawn, no automatic beams from a span opened at a bar
                         // line (write c8[ d e f]; a beam already building when 'time none'
                         // arrives mid-bar runs on), no length checks, a 'partial' inside it
-                        // does nothing (LYS2015), and the bar number does not advance across it
+                        // does nothing (LYS2015), and the bar number does not advance across it.
+                        // A part SILENT under it writes an empty bar — '|' alone, which is as
+                        // long as the other parts' bar and draws nothing — or leaves the section
+                        // out, or writes rests that add up to the others' bar ('r1 r1 |'; a
+                        // shorter one is LYS2004). A bare 'R' has no bar to last there (LYS2016):
+                        // write its duration, 'R1 R1 |', adding up the same way
 key c major             // optional (default c major); all church modes work:
                         // major minor ionian dorian phrygian lydian mixolydian aeolian locrian
                         // (key d dorian = no accidentals, key e dorian = 2 sharps)
@@ -125,7 +130,10 @@ drawn once, and a later part's `key` / `time` / `clef` that differs from the fir
 the same moment is not applied and warns (LYS4024) — write the same change in every part.
 The staff's clef is the first part's unless one is written before the brace:
 `condensedStaff bass { viola cello }` (also `combinedStaff bass { … }`). Every part is drawn
-under that clef, at its own pitches.
+under that clef, at its own pitches. Dynamics the parts share at a moment are printed once;
+where two parts differ (`@mf` in one over `@p` in the other, a crescendo against a diminuendo)
+the upper part's level and hairpin stand ABOVE the staff and the lower part's below. A side
+you write (`@p.up`) is kept.
 
 **Several staves as ONE GROUP** — `grandStaff`, `staffGroup` and `choirStaff` take `staff`
 items (and the `lyrics` rows under them); a `staffGroup` or `choirStaff` may also hold a group
@@ -166,6 +174,34 @@ score full { combinedStaff { flute1 flute2 } }
 ⚠️ The chord case is the usual outcome, not a corner: two parts a third or a sixth apart in
 the same rhythm become chords in one voice. Use `condensedStaff` when the two lines must stay
 visibly separate.
+
+**An alternative reading over a staff — `ossia`.** The alternative is a PART of its own
+(any clef; no instrument needed) with music only in the bars that have one — every other bar
+an empty `|`, so it is as many bars as the others. The score item `ossia NAME` is written
+**right AFTER the staff it belongs to** and is drawn directly ABOVE that staff: a small staff
+with no clef and no meter, present only over the bars where the part has notes.
+
+```
+part solo { instrument violin }
+part alt  { clef treble }                       // the alternative reading
+section A {
+  solo { c''4 d e f | g4 a b c | c1 | }
+  alt  { | g''8 a b c d2 | | }                  // bar 2 only: empty bars around it
+}
+form { ~A }
+score { staff solo  ossia alt }                 // after its staff = drawn above it
+```
+
+- **The place is the staff BEFORE it** (the nearest `staff`, `tab` or staff group written
+  before the item): `staff ob  staff alto  ossia orn` puts it over alto, between the two staves;
+  `staff ob  ossia orn  staff alto` puts it over the oboe, at the top. A `lyrics` row between the
+  staff and its ossia changes nothing (`staff alto  lyrics words  ossia orn`). Written before any
+  staff it stands at the top of the system.
+- Not inside a group's braces (LYS6011): for a staff in a `staffGroup` the ossia goes after the
+  group and stands above the whole group.
+- Silent bars are EMPTY bars (`|`). A bar of spacers or of `r` rests alone is not drawn
+  either; a bar rest `R` IS drawn, floating with no staff lines under it — do not write one.
+- The notes are read in the ossia part's own clef (`part alt { clef bass }`).
 
 **A score's own header, and parts that only play** — `title` / `subtitle` / `composer` /
 `poet` written inside a score restate the file's metadata for that score alone, and a **bare part name** renders
@@ -623,7 +659,11 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
 - Effects: `@dead` (x notehead; `@notehead(cross)` is the same head — `@cross` is NOT: it moves the
   note to the other staff of a grand staff; on a part drawn with no staff beside it = warning
-  LYS4031 and the note stays), `@parenthesize` (head in parentheses, a ghost note:
+  LYS4031 and the note stays). `@dead` is a SINGLE note's mark: on a chord or a chord member
+  (`<c e>4@dead`, `<c e@dead>4`) it draws nothing and says nothing — there write the head,
+  `<c e@notehead(cross)>4` (one member) or `<c e>4@notehead(cross)` (every head). Other heads the
+  same way: `c2@notehead(diamond)`, `<c f@notehead(diamond)>2` (a stopped note and the touched
+  fourth over it). Also `@parenthesize` (head in parentheses, a ghost note:
   `sn16@parenthesize`; `<c e g>2@parenthesize` = one pair round the chord), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
 - Cue notes: `cue { … }` — a REGION, not an annotation, so there is no `@cue`:
   `c4 d cue { e4 f } g4 |` (it maps onto LilyPond's CueVoice context). Name the quoted
@@ -661,6 +701,9 @@ c8( d e( f) g) r4. | // WRONG: one slur at a time (the inner '(' is ignored); an
 c8[ d e f]           // manual beam; beaming is automatic otherwise
 r8[ c d e] |         // a manual beam may open or close on a rest, and reaches it
 ```
+
+A `[ … ]` only JOINS notes. There is no spelling that leaves a note unbeamed (a singer's
+syllabic flags): `c8[] d[] e[]` is accepted and beamed like `c8 d e`.
 
 ## Hairpins (spanners over several notes)
 
@@ -765,6 +808,10 @@ tuplet 3/2 { c8 d e }                 // triplet: 3 in the time of 2
 tuplet 3/2 { c8 d tuplet 3/2 { e16 f g } | }   // nesting allowed
 ```
 
+A tuplet lies inside ONE bar. A group that runs over the bar line is two tuplets, tied:
+`c4 tuplet 3/2 { d4 e8~ } | tuplet 3/2 { e8 f4 } g4 |` in 2/4 (a `|` in the middle of the braces
+closes no bar: LYS2017 says a bar line is missing).
+
 ## Repetition shorthand
 
 A phrase written N times is its music N times - the shorthand for music that is played again
@@ -860,6 +907,97 @@ Both hands write LilyPond's octaves: C3 is `c`, middle C `c'`, C5 `c''`.
 | `baritone` | G2–G4 | `g,` – `g'` |
 | `voice-bass` | E2–E4 | `e,` – `e'` |
 <!-- END instrument ranges -->
+
+**Chords on a bowed string** (`violin`, `viola`, `cello`, `contrabass`). The bow sounds two
+neighbouring strings at once, so only a DOUBLE STOP within the hand's reach is a chord there.
+Three or four notes struck at one moment warn — LYS1055, "this chord (G3 D4 B4) cannot be bowed
+at once … keep two of its notes (a double stop), or break the chord, the low notes first" — and
+so does a pair that is not on neighbouring strings. The warning counts the notes that START
+together, whatever is marked on them: `@arpeggio` and `@text("pizz.")` do not quiet it. A triple
+or quadruple stop is written the way it is played, BROKEN, the low strings first:
+
+```
+octave absolute
+part vn { instrument violin }
+section A {
+  vn {
+    grace { <g d'>8 } <b' g''>2  acciaccatura { g16 d' } <b' g''>2 |   // two and two; one at a time
+    <g d'>8 <b' g''>4. << g d' b' g'' >>2 |                            // in time; an arpeggio group
+  }
+}
+form { ~A }
+score { staff vn }
+```
+
+All four spellings are clean. Keep the stacked `<g d' b'>4` only where the warning is accepted.
+
+## Tablature (`tab`)
+
+A tab is a SCORE item: the part is written as ordinary notes, at the pitch it sounds on its
+staff, and `tab NAME` draws the same music as fret numbers. Nothing in the music changes.
+
+```
+octave absolute
+part gtr { instrument guitar }
+section A {
+  gtr {
+    e,4 a, d g | b4 e' <e, b, e gis b e'>2 |          // open strings; a six-string chord
+    c'4\3 c'\2 e'4@dead <c' e'@notehead(cross)>4 |    // \N = on string N; a dead note
+    a'8@hammerOn( b') b'@pullOff( a') a'4@tap a'@bend(full) |
+    a4@glissando d' a'@slide b' |
+  }
+}
+form { ~A }
+score { staff gtr  tab gtr }
+```
+
+- **Asking for it**: `tab NAME` in the score, usually right under `staff NAME`. Beside a
+  notation staff of the same part it is fret numbers only (the staff carries the rhythm);
+  alone (`score { tab gtr }`) it draws stems, flags, rests and the meter itself. `tab gtr as
+  numbers` / `tab gtr as full` says so by hand.
+- **Tuning**: the part's `instrument` (`guitar`, `bass`, `bass5`, `bass6`, `ukulele`,
+  `mandolin`, `banjo` = open G; a part with no instrument is fretted as a guitar), or the part's
+  `tuning WORD`, or — for one score — the word BEFORE the part: `tab guitarDropD gtr`. Never
+  `tab gtr tuning guitarDropD` (an error that says so). The words: `guitar guitar7 guitarDropD
+  guitarDropC guitarOpenG guitarOpenD guitarDadgad guitarLute guitarAsus4 bass bass4 bassDropD
+  bass5 bass6 violin viola cello doubleBass mandolin banjoOpenG banjoC banjoModal banjoOpenD
+  banjoOpenDm banjoDoubleC banjoDoubleD ukulele ukuleleD tenorUkulele baritoneUkulele` — exactly
+  these (`dropD` is an unknown tuning; the error lists them).
+- **A dropped tuning is the part's**: `part gtr { instrument guitar  tuning guitarDropD }` frets
+  on D A D G B E and moves the part's RANGE with it — the low `d,` is in range (LYS1052 measures
+  from the tuning's lowest string to its highest string's top).
+- **Strings and frets are chosen for you**: low positions first, the hand kept where it is, a
+  chord's notes on a string each; frets 0–24. A TIE stays on its string (its second note prints
+  no number), and a `@glissando` / `@slide` keeps both notes on one string where one string
+  plays both. A slur does not hold a string.
+- **`\N` after a note asks for string N** (1 = the highest): `c'4\3`. Write it only where the
+  string matters. In a chord, on the members — `<e'\1 b\2>` — because `<e' g'>\1` numbers both
+  (two notes on one string, LYS1063); one pitch twice needs two strings, `<e'\1 e'\2>`
+  (LYS1064 otherwise). A string that cannot play the note — no such string (`\7` on a guitar),
+  or the note out of that string's frets — warns and is chosen again (LYS5003).
+- **A note the strings do not have** (below the lowest string, above fret 24) warns LYS5002
+  and is left off the tab — in a chord too; the staff still shows it. Usually an octave slip. A
+  tab in ANOTHER instrument's tuning says the octave it is played in: `tab bass5 melody as 8vb`
+  (`8vb 15mb 8va 15ma`; LYS5004 proposes it).
+- **Capo**: the file's top-level `capo N` (1–11). Notes are still written as they SOUND; the
+  tab counts its frets FROM the capo (0 = the capo, as on the chord diagrams), so under `capo 2`
+  a sounding `fis,` is fret 0 of the sixth string. A note below the capo on every string — an
+  open low `e,` under `capo 2` — cannot be played: LYS5002 names it and it is left off the tab.
+  One capo for every fretted part (`part g { capo 2 }` is refused); a BASS's tab ignores it and
+  counts from the nut.
+- **What a tab shows of the marks**: slurs, ties (the held note's number is dropped),
+  `@hammerOn` / `@pullOff` / `@tap` (the letters H P T — a slur is still written for the curve:
+  `a'8@hammerOn( b')`), `@bend(half|full|N)` (the arrow), `@glissando` / `@slide` (the line
+  between two fret numbers), `@arpeggio`, and `@dead` on a single note (a × in place of the
+  number). `@notehead(cross)` / `@notehead(diamond)` change the STAFF's head only: the tab keeps
+  the number, so a dead note in a chord is × on the staff and a number on the tab. A slash `/`
+  has no number.
+- **Chord shapes are not tab**: `chord(C x32010)`, `diagram(…)`, `@diagram`, the top-level
+  `chordShapes { A7(b9) x02323  G }` table (a name may carry its parenthesised alteration) and
+  `capo` draw fret DIAGRAMS over a staff — see *Annotations* and *Layout*. A `chord(…)` /
+  `diagram(…)` item's notes carry their strings, so a tab under it shows the shape.
+- `@vibrato` is a singer's mark (LYS1008 on an instrument): the word on the page is
+  `@text("vib.")`.
 
 ## Drums (`clef percussion`)
 
@@ -986,6 +1124,14 @@ covers by itself (`c4( d e) f` with `la lu` puts `lu` on f — do NOT add marker
 slurred notes). `__` only draws the extender line and takes NO note; `_` takes ONE note
 with no syllable (a melisma without a slur: `c4 d e f` with `la _ lu li`) and draws the
 extender line under it; a standalone `~` takes one note the same way with NO line.
+
+**Two syllables under ONE note (an elision)** — a `~` GLUED between them, no spaces:
+`Glo- ri~a in ex- cel- sis` puts "ri" and "a" on one note and prints them joined by an
+undertie, ri‿a (`e~il`, `de~i`, `きょ~う` the same; more than two: `wa~o~a`). It is one syllable
+to the count — one note — and may still take its hyphen (`ri~a-`). MusicXML writes an
+`<elision>`, the LilyPond twin the same undertie. A sung voice is handed the pair as one
+syllable; the VOCALOID export sings only the first of the two. With spaces (`ri ~ a`) the `~`
+is the melisma above, a note of its own.
 
 **A reading for a kanji word** is glued to it in square brackets: `漢[かん]` prints 漢 and
 sings かん (the preview's voice and `lysc wav --singer`); `大[おお]空[ぞら]` prints 大空 and sings
@@ -1328,7 +1474,7 @@ written `\N` still decides); a slur does not. A string the tuning does not have 
 guitar) warns and is chosen again (LYS5003). The tab's tuning is the part's (`part g { tuning
 guitarDropD }`, which also moves the part's range: its low D is in range) or the word BEFORE the
 part in the score — `tab guitarDropD g`, never `tab g tuning guitarDropD`. Under the file's
-`capo N` the frets count from the capo (see `capo`).
+`capo N` the frets count from the capo (see `capo`). Everything a tab does is in *Tablature*.
 
 ```
 part guitar { instrument guitar }          // added: instrument guitar
@@ -1377,6 +1523,14 @@ with the `lilysharp_readGuide` tool, topic `composing` (`docs/COMPOSE_FOR_LLM.md
   cello }`, not `{ instrument cello clef bass }`, and a piano is `instrument piano-right` /
   `instrument piano-left`. Write `clef` only for a part no preset fits (a melody for no
   instrument in particular, drums' `clef percussion`). Leave the parts already in the file as they are unless asked to change them.
+- **Clef words.** A part header's `clef` takes eleven: `treble` `bass` `alto` `tenor`
+  `treble_8` (an octave lower: guitar, tenor voice) `treble^8` (an octave higher) `bass_8`
+  `soprano` `mezzosoprano` `baritone` (the C clef on the first, second and FIFTH line)
+  `percussion`. A `clef` change IN THE MUSIC, and the clef word of a score's `staff bass NAME`,
+  take only `treble` `bass` `alto` `tenor` `treble_8`. ⚠️ `clef baritone` is the old C clef on
+  the top line, not what a baritone reads: a baritone singer is `instrument baritone` (a
+  `treble_8` clef, as a tenor's) or `clef bass`. No other name is a clef (`varbaritone`,
+  `subbass`, `french`, `tab` are unknown — a tab is a score item).
 - Each **phrase body** evaluates in a fresh frame (default octave/pitch/duration), so a
   phrase means the same notes at every call. **Section boundaries also reset the frame.**
   A reference is ONE item to the relative chain (the chord rule): the next note is

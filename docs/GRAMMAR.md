@@ -550,6 +550,13 @@ BeatGrouping   = '(' , Integer , { '+' , Integer } , ')' ;
                     '|' inside it as \bar "|", and \cadenzaOff before the returning \time
                     — followed by \partial <bar> when the span opened mid-bar, since
                     LilyPond's frozen measurePosition is not reset by \cadenzaOff. *)
+                 (* RESTS UNDER 'time none'. A part silent while another plays its unmetered
+                    bar writes an EMPTY bar — '|' alone — which is as long as that bar is in
+                    the other parts and draws nothing (2026-11-13: it was a bar of the meter before), or is
+                    left out of the section and padded the same way. Rests are counted like
+                    notes: r1 r1 | against two whole notes of cadenza, a different total being
+                    LYS2004. A bare R has no bar to last (LYS2016) and takes its duration
+                    there: R1 R1 | . *)
                  (* A 'time' IN THE MUSIC IS THE SCORE'S METER (owner's decision 2026-10-06):
                     written at the start of a bar in ONE part, it is the meter of every part
                     from that bar to the end of the section (the next section starts on its
@@ -1366,6 +1373,12 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    control that proves the instrument can see `octave`). Nothing bound that alternation
    to anything, so nothing said so. *)
 
+(* The three C clefs beyond alto and tenor are named for their line: `soprano` the first,
+   `mezzosoprano` the second, `baritone` the FIFTH (MusicXML C on line 5). `clef baritone` is
+   therefore not what a baritone singer reads — that is `instrument baritone`, whose preset
+   brings treble_8, or `clef bass`. LilyPond's varbaritone, subbass and french are not names
+   here. *)
+
 (* ⚠️ ClefName and PartClefName are two vocabularies and were one production until
    2026-08-19, when the difference was measured in both directions. A PART HEADER takes
    all eleven; `clef` INSIDE MUSIC, and `staff`/`ossia` in a score, take the five of
@@ -2019,6 +2032,17 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | 'ossia' , [ ClefName ] , PartRef , [ 'as' , StaffSelector , { StaffSelector } ]
                                                      (* ossia partName — BARE, like staff,
                                                         with the same selectors (StaffRender).
+                                                        PLACE: directly ABOVE the nearest
+                                                        staff, tab or staff group written
+                                                        BEFORE it in the score (LilyPond
+                                                        alignAboveContext) — a lyrics row
+                                                        between them does not count, and one
+                                                        written before any staff is the top
+                                                        of the system. Never inside a group
+                                                        (LYS6011). Drawn small, with no clef
+                                                        or meter, only over the bars where
+                                                        the part has notes: its other bars
+                                                        are written empty.
                                                         ⚠️ keep semicolons out of comments
                                                         inside this production — the doc
                                                         tests cut the block at the first *)
@@ -2103,6 +2127,15 @@ TabStyle       = 'numbers' | 'full' ;
                     counts as a notation staff; an ossia does not.
                     NOT YET DRAWN in 'full': beams. Stems, flags, dots, rests, the time
                     signature and ties are all there. *)
+                 (* WHAT A TAB FRETS. The tuning is the item's own word, else the part's
+                    `tuning`, else its instrument's, else the guitar's. Strings are chosen by
+                    the tab (frets 0-24). A written \N asks for string N, 1 the highest — one
+                    the tuning lacks, or one that cannot play the note, is LYS5003 and the
+                    string is chosen again. A tie keeps its string, and so does a @glissando
+                    or @slide where one string plays both notes. A slur does not. Under the
+                    file's `capo N` the frets count FROM the capo (2026-11-13), a note below
+                    the capo on every string is LYS5002 and left off, and the tab of a bass
+                    ignores the capo. @dead on a single note prints a cross for its number. *)
 
 
 StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
@@ -2191,7 +2224,13 @@ CondensedStaff = 'condensedStaff' , [ ClefName ] , '{' , PartRef , PartRef , { P
                     Staff's. `condensedStaff bass { vla vc }` puts both on a bass
                     staff, as `staff bass x` does for one part (user decision 2026-10-13);
                     the brace that must follow tells the clef from a part named `bass`
-                    (`condensedStaff { bass vc }`). *)
+                    (`condensedStaff { bass vc }`).
+
+                    DYNAMICS (2026-11-13): what the parts share at a moment is printed once.
+                    Where two parts differ — @mf in one over @p in the other, a crescendo
+                    against a diminuendo — the upper part takes the side above the staff for
+                    its level and hairpin and the lower part the side below, as LilyPond does
+                    with \dynamicUp on the upper voice. A side the writer chose is kept. *)
 
 CombinedStaff  = 'combinedStaff' , [ ClefName ] , '{' , PartRef , PartRef , '}' ;
                  (* The clef as for `condensedStaff`: written, else the first part's. *)
@@ -3081,7 +3120,10 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                                    | '_' ;                       — held from the note before
                        Digit = '0'..'9' ('0' an empty row). Anything else (b7, 6+, 6-, 6/, 7!,
                        a bare s/f/n, a word) makes the whole group unknown: LYS1008, which
-                       lists this vocabulary, and the group is ignored. *)
+                       lists this vocabulary, and the group is ignored. ONE group a note: a
+                       second @figuredBass on the same note is an error (LYS1067) — a change of
+                       figure over a held bass is two tied notes with a figure each,
+                       a4@figuredBass(4)~ a4@figuredBass(3). *)
    - Chord diagram: c4@diagram(x32010) , c4@diagram(x32010).down
                     (* a guitar fret diagram: a position string, one character per string
                     low -> high — a digit is the fret ('0' or 'o' open), 'x' muted — or the
