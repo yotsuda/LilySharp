@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 385 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **513** | |
+| `OWN` | 394 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **522** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -24,6 +24,7 @@
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 20 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 18 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
+| `LilySharp.Core/Svg/Layout/ProseBand.cs` | 13 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Midi/MidiExporter.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
@@ -32,7 +33,6 @@
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
 | `LilySharp.Core/Tablature/Tunings.cs` | 8 |
-| `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（63 件）
 
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（385 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（394 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -297,6 +297,7 @@
 - **`LilyPondExporter.EmitLeadSheetTiming`** LILYSHARP-OWN: LilyPond has no lead sheet — a staff-less score prints no bar line,
 ### `LilySharp.Core/LilyPond/LilyPondExporter.Text.cs`
 - **`LilyPondExporter.EmitText`** LILYSHARP-OWN: the breaking, and the white between paragraphs. Not written yet: a
+- **`LilyPondExporter.EmitMarker`** LILYSHARP-OWN: the indent and the gap (ProseBand.ListIndent, MarkerGap).
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **`GeneralMidi.PreviewTimbreFamily`** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
@@ -383,6 +384,7 @@
 - **`PdfReproducibility`** LILYSHARP-OWN: the convention is reproducible-builds.org's, not LilyPond's (its PDFs
 ### `LilySharp.Core/Rendering/Prose.cs`
 - **`Prose`** LILYSHARP-OWN: LilyPond has no Markdown; its markup is what the twin writes from this.
+- **`Prose.HeadingLevels`** LILYSHARP-OWN (docs/markdown-text-design.md section 3: "headings, two
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **`SharedRenderer.DrawBeam`** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
@@ -715,6 +717,13 @@
 - **`ProseBand.BoxMargin`** LILYSHARP-OWN. A text's line is spaced from its neighbours by its box of
 - **`ProseBand.MinimumWidth`** LILYSHARP-OWN: ten staff spaces — four or five ems of the text, a short word
 - **`ProseBand.ParagraphGap`** LILYSHARP-OWN: half a line. LilyPond has no paragraph; the twin writes it as
+- **`ProseBand.HeadingSteps`** LILYSHARP-OWN: which steps. Bold at +2 is 2.77, the size (and weight) of the piece's
+- **`ProseBand.HeadingGapAbove`** LILYSHARP-OWN: a whole line, twice a paragraph's — the heading belongs to
+- **`ProseBand.HeadingGapBelow`** LILYSHARP-OWN: a quarter of a line, half a paragraph's.
+- **`ProseBand.ListIndent`** LILYSHARP-OWN: 1.5 em (3.3 staff spaces at the text's 2.2).
+- **`ProseBand.MarkerGap`** LILYSHARP-OWN: half an em.
+- **`ProseBand.MarkerGlyph`** LILYSHARP-OWN. The second level's mark differs from the first's, as is the
+- **`ProseBand.Build`** a list keeps its hanging shape from the text's left edge. LILYSHARP-OWN.
 - **`ProseBand.Break`** LILYSHARP-OWN. A line ends at a space, or between two wide characters (kana,
 ### `LilySharp.Core/Svg/Layout/ScoreSideTables.cs`
 - **`ScoreSideTables.PercentSignBarRods`** LILYSHARP-OWN (the multi-bar sign is, PercentRepeatItem.Bars, session 905): LilyPond's

@@ -35,16 +35,32 @@ internal sealed record ProseRun(string Text, FontStyle Style, int Offset)
     public const string Break = "\n";
 }
 
-/// <summary>One paragraph: its runs in order.</summary>
-internal sealed record ProseBlock(ImmutableArray<ProseRun> Runs);
+/// <summary>One paragraph, one heading, or one paragraph of a list's item: its runs in order,
+/// and what it is (owner's request 2026-11-13: headings and lists are drawn).</summary>
+/// <param name="Runs">The runs in order. Empty for an item that writes nothing the page
+/// draws: its marker stands alone.</param>
+/// <param name="Heading">0 for a paragraph; 1 or 2 for a heading (a deeper level is read as 2).</param>
+/// <param name="Lists">The lists the block stands in, outermost first — each by its WIDEST
+/// marker as written (<see cref="Prose.Bullet"/> for a bullet list), which is what the list's
+/// indent is measured from. Empty outside a list.</param>
+/// <param name="Marker">The marker of the item this block begins (<see cref="Prose.Bullet"/>,
+/// or <c>3.</c> / <c>3)</c>), or null: a later paragraph of an item, or no item.</param>
+/// <param name="Tight">No white over this block: it follows the block before it in a tight
+/// list (CommonMark: a list with no blank line between its items).</param>
+internal sealed record ProseBlock(ImmutableArray<ProseRun> Runs, int Heading = 0,
+    ImmutableArray<string> Lists = default, string? Marker = null, bool Tight = false)
+{
+    /// <summary>How many lists deep the block stands: 0 outside a list.</summary>
+    public int Depth => Lists.IsDefaultOrEmpty ? 0 : Lists.Length;
+}
 
 /// <summary>Something the text writes that the page does not draw: where, how long, and what
 /// it is called in the sentence that says so.</summary>
 internal sealed record ProseNote(int Offset, int Length, string What);
 
 /// <summary>
-/// A fenced text as the page takes it (docs/markdown-text-design.md): its paragraphs, and
-/// what it writes that is read and not drawn.
+/// A fenced text as the page takes it (docs/markdown-text-design.md): its paragraphs,
+/// headings and lists' items, and what it writes that is read and not drawn.
 /// </summary>
 /// <remarks>
 /// The text is read as CommonMark WHOLE (Markdig), tables included, so that a table or a code
@@ -56,21 +72,67 @@ internal sealed record Prose(ImmutableArray<ProseBlock> Blocks, ImmutableArray<P
     private static readonly MarkdownPipeline Pipeline =
         new MarkdownPipelineBuilder().UsePreciseSourceLocation().UsePipeTables().Build();
 
+    /// <summary>A bullet list's marker as a block carries it. The glyph drawn is the page's
+    /// to choose by the list's depth (Svg.Layout.ProseBand.MarkerGlyph).</summary>
+    public const string Bullet = "•";
+
+    /// <summary>The deepest heading drawn as its own level: <c>#</c> and <c>##</c>. A deeper
+    /// one (<c>###</c> … <c>######</c>) is drawn as this level.</summary>
+    /// <remarks>LILYSHARP-OWN (docs/markdown-text-design.md section 3: "headings, two
+    /// levels"). A text that accompanies a score has a heading and a heading under it; a
+    /// third size between 2.47 and the text's 2.2 would not be told from bold text.</remarks>
+    public const int HeadingLevels = 2;
+
     /// <summary>Reads <paramref name="markdown"/>: a fenced text's body.</summary>
     public static Prose Read(string markdown)
     {
         var blocks = ImmutableArray.CreateBuilder<ProseBlock>();
         var notes = ImmutableArray.CreateBuilder<ProseNote>();
-        foreach (var block in Markdown.Parse(markdown, Pipeline))
+        AddBlocks(Markdown.Parse(markdown, Pipeline), ImmutableArray<string>.Empty, null, false, false, blocks, notes);
+        return new Prose(blocks.ToImmutable(), notes.ToImmutable());
+    }
+
+    /// <summary>
+    /// The blocks of <paramref name="container"/> — the text, or one item of a list — in
+    /// order. The first one drawn begins the item (<paramref name="marker"/>) and takes
+    /// <paramref name="tightFirst"/>; the later ones take <paramref name="tightRest"/>.
+    /// </summary>
+    /// <remarks>
+    /// What is not drawn (a block quote, a code block, a rule, a table, HTML) is noted
+    /// WHOLE, with what stands inside it: a list in a block quote is the quote's, and is said
+    /// once as "A block quote". A task item (<c>- [ ] todo</c>) is an item whose words begin
+    /// with the brackets, as CommonMark reads it (the task list is an extension Lily# does not
+    /// switch on).
+    /// </remarks>
+    private static void AddBlocks(IEnumerable<Block> container, ImmutableArray<string> lists, string? marker,
+        bool tightFirst, bool tightRest, ImmutableArray<ProseBlock>.Builder blocks, ImmutableArray<ProseNote>.Builder notes)
+    {
+        bool first = true;      // nothing of this container is drawn yet
+        foreach (var block in container)
         {
+            int before = blocks.Count;
             switch (block)
             {
-                case ParagraphBlock paragraph:
+                case ParagraphBlock or HeadingBlock:
                     var runs = ImmutableArray.CreateBuilder<ProseRun>();
-                    if (paragraph.Inline is { } inline)
+                    if (((LeafBlock)block).Inline is { } inline)
                         AddRuns(inline, FontStyle.Regular, runs, notes);
                     if (runs.Count > 0)
-                        blocks.Add(new ProseBlock(runs.ToImmutable()));
+                    {
+                        blocks.Add(new ProseBlock(runs.ToImmutable(),
+                            block is HeadingBlock heading ? System.Math.Clamp(heading.Level, 1, HeadingLevels) : 0,
+                            lists, first ? marker : null, first ? tightFirst : tightRest));
+                    }
+                    break;
+                case ListBlock list:
+                    // An item that begins with a list of its own (`- - a`): its marker
+                    // stands on a line by itself, the inner list under it.
+                    if (first && marker is not null)
+                    {
+                        blocks.Add(new ProseBlock(ImmutableArray<ProseRun>.Empty, 0, lists, marker, tightFirst));
+                        first = false;
+                    }
+                    AddList(list, lists, first ? tightFirst : tightRest, blocks, notes);
                     break;
                 case LinkReferenceDefinitionGroup:
                     break;      // a link's address, written apart: nothing of its own to draw
@@ -78,14 +140,45 @@ internal sealed record Prose(ImmutableArray<ProseBlock> Blocks, ImmutableArray<P
                     notes.Add(new ProseNote(block.Span.Start, System.Math.Max(1, block.Span.Length), NameOf(block)));
                     break;
             }
+            if (blocks.Count > before)
+                first = false;
         }
-        return new Prose(blocks.ToImmutable(), notes.ToImmutable());
+        // An item with nothing the page draws (`-` alone, or only an image): its marker.
+        if (first && marker is not null)
+            blocks.Add(new ProseBlock(ImmutableArray<ProseRun>.Empty, 0, lists, marker, tightFirst));
+    }
+
+    /// <summary>
+    /// One list: each item's blocks, the item's first carrying its marker. A numbered list
+    /// counts on from the number its first item writes, whatever the later items write
+    /// (CommonMark: <c>3. 3. 3.</c> is 3, 4, 5), and keeps the delimiter written (<c>1.</c> or
+    /// <c>1)</c>). A tight list's items follow each other with no white; a loose one's — a
+    /// blank line between two items, or in one — stand a paragraph apart.
+    /// </summary>
+    private static void AddList(ListBlock list, ImmutableArray<string> lists, bool tightFirst,
+        ImmutableArray<ProseBlock>.Builder blocks, ImmutableArray<ProseNote>.Builder notes)
+    {
+        int start = 1;
+        if (list.IsOrdered && !int.TryParse(list.OrderedStart, System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out start))
+            start = 1;
+        string MarkerOf(int index) => list.IsOrdered
+            ? (start + index).ToString(System.Globalization.CultureInfo.InvariantCulture) + list.OrderedDelimiter
+            : Bullet;
+        // The widest marker is the last one: the numbers only grow.
+        var inner = lists.Add(MarkerOf(System.Math.Max(0, list.Count - 1)));
+        bool tight = !list.IsLoose;
+        int i = 0;
+        foreach (var item in list)
+        {
+            if (item is ListItemBlock listItem)
+                AddBlocks(listItem, inner, MarkerOf(i), i == 0 ? tightFirst : tight, tight, blocks, notes);
+            i++;
+        }
     }
 
     private static string NameOf(Block block) => block switch
     {
-        HeadingBlock => "A heading",
-        ListBlock => "A list",
         QuoteBlock => "A block quote",
         CodeBlock => "A code block",
         ThematicBreakBlock => "A rule",

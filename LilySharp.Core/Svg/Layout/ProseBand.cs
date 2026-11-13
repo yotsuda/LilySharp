@@ -32,7 +32,18 @@ internal sealed record ProsePiece(string Text, double X, FontStyle Style, int Of
 /// <param name="Width">The line's own width.</param>
 /// <param name="Left">The line's left end from the left margin: 0 for a text with no shape,
 /// else the indent, the frame's inset and, centred, half the white the line leaves.</param>
-internal sealed record ProseLine(double Baseline, ImmutableArray<ProsePiece> Pieces, double Width, double Left = 0);
+/// <param name="Scale">The line's size over the text's: 1, or a heading's
+/// (<see cref="ProseBand.HeadingScale"/>). Its box grows with it.</param>
+/// <param name="Marker">The marker of the list item the line begins — its X from the line's
+/// left end, so negative: it hangs in the indent — or null.</param>
+/// <param name="Indent">The hanging indent of the list the line stands in, from the text's
+/// left edge to the item's words; 0 outside a list.</param>
+internal sealed record ProseLine(double Baseline, ImmutableArray<ProsePiece> Pieces, double Width, double Left = 0,
+    double Scale = 1, ProsePiece? Marker = null, double Indent = 0)
+{
+    /// <summary>Whether the line is a list item's: it keeps its hanging shape under <c>center</c>.</summary>
+    public bool InList => Indent > 0 || Marker is not null;
+}
 
 /// <summary>
 /// A fenced text's shape in staff spaces (owner-approved 2026-11-13): the opening line's
@@ -68,6 +79,9 @@ internal sealed record ProseFrame(double Left, double Right, double Thickness);
 /// below the baseline, the padding 0.5, the clef's 1.776 over the top line.
 /// LILYSHARP-OWN: the breaking itself (LilyPond's <c>\wordwrap</c> does not break a text
 /// with no spaces — <c>e5.ly</c>), and the white between two paragraphs.
+/// Headings and lists (owner's request 2026-11-13) are lines of the same kind: a heading's
+/// line is larger (<see cref="HeadingScale"/>) and its box with it; a list item's lines
+/// begin at the list's indent and its first carries the marker.
 /// </remarks>
 /// <param name="Lines">The lines, top to bottom.</param>
 /// <param name="Up">How far the band reaches above its reference point.</param>
@@ -136,6 +150,58 @@ internal sealed record ProseBand(
     /// the first line's taller box.</remarks>
     public const double ParagraphGap = 0.5;
 
+    /// <summary>A heading's size in LilyPond's font-size steps over the text: <c>#</c> two,
+    /// <c>##</c> one (owner's request 2026-11-13: headings are drawn).</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-markup-commands.scm fontsize — each step a magstep of
+    /// 2^(1/6); MEASURED 2026-11-12 (docs/markdown-text-design.md section 6):
+    /// <c>\fontsize #2</c> on the text's 2.2000 is 2.7719.
+    /// LILYSHARP-OWN: which steps. Bold at +2 is 2.77, the size (and weight) of the piece's
+    /// SUBTITLE (HeaderBand.SubtitleFontSize) and clearly under its title's 3.49; bold at +1
+    /// is 2.47, between that and the text. A heading in a page text never reaches the title.
+    /// </remarks>
+    public static int HeadingSteps(int level) => level switch { 1 => 2, 2 => 1, _ => 0 };
+
+    /// <summary>A heading's size over the text's: 2^(steps/6). 1 for a paragraph.</summary>
+    public static double HeadingScale(int level) => level == 0 ? 1 : Math.Pow(2, HeadingSteps(level) / 6.0);
+
+    /// <summary>The white over a heading that is not the text's first line, in baseline-skips.</summary>
+    /// <remarks>LILYSHARP-OWN: a whole line, twice a paragraph's — the heading belongs to
+    /// what follows it. LilyPond has no heading; the twin writes the white as the line's
+    /// taller box.</remarks>
+    public const double HeadingGapAbove = 1.0;
+
+    /// <summary>The white under a heading, in baseline-skips.</summary>
+    /// <remarks>LILYSHARP-OWN: a quarter of a line, half a paragraph's.</remarks>
+    public const double HeadingGapBelow = 0.25;
+
+    /// <summary>A list level's indent in ems of the text: from the level's left edge to its
+    /// items' words. A numbered list whose widest number needs more takes more.</summary>
+    /// <remarks>LILYSHARP-OWN: 1.5 em (3.3 staff spaces at the text's 2.2).</remarks>
+    public const double ListIndent = 1.5;
+
+    /// <summary>The white between a marker's right end and its item's words, in ems. Markers
+    /// are set flush RIGHT against it, so the stops of <c>9.</c> and <c>10.</c> align.</summary>
+    /// <remarks>LILYSHARP-OWN: half an em.</remarks>
+    public const double MarkerGap = 0.5;
+
+    /// <summary>
+    /// The marker drawn for <paramref name="marker"/> in a list <paramref name="depth"/>
+    /// lists deep: a number as written; for a bullet list a bullet (U+2022) at the odd depths
+    /// and an en dash (U+2013) at the even ones, or a hyphen where the text's face has neither.
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN. The second level's mark differs from the first's, as is the
+    /// custom; an open circle (U+25E6) is not in the bundled text face, the dash is.</remarks>
+    public static string MarkerGlyph(string marker, int depth, ScoreTextMetrics fonts)
+    {
+        if (marker != Prose.Bullet)
+            return marker;
+        double em = Em(fonts);
+        var style = StyleOf(fonts, FontStyle.Regular);
+        string glyph = depth % 2 == 1 ? Prose.Bullet : "–";
+        return fonts.Spells(glyph, em, TextRole.Markdown, style) ? glyph : "-";
+    }
+
     /// <summary>The text's em for THIS score.</summary>
     public static double Em(ScoreTextMetrics fonts) => fonts.Size(TextRole.Markdown, FontSize);
 
@@ -192,30 +258,92 @@ internal sealed record ProseBand(
 
         double em = Em(fonts);
         double skip = Skip(fonts);
+        var regular = StyleOf(fonts, FontStyle.Regular);
         var lines = ImmutableArray.CreateBuilder<ProseLine>();
         double baseline = 0;
         bool first = true;
         double widest = 0;
+        ProseBlock? previous = null;
+        double previousScale = 1;
         foreach (var block in prose.Blocks)
         {
-            var broken = Break(block, fonts, em, textWidth);
+            // A heading (owner's request 2026-11-13): bold, larger, its box grown as it is.
+            double scale = HeadingScale(block.Heading);
+            var set = block.Heading == 0 ? block : block with
+            {
+                Runs = ImmutableArray.CreateRange(block.Runs, r => r with { Style = r.Style | FontStyle.Bold }),
+            };
+
+            // A list's item (same request): each list it stands in indents it — by
+            // ListIndent, or by that list's widest marker and the gap when that is more — and
+            // the marker hangs in the indent, flush right. Every line of the item begins at
+            // the indent, so a wrapped line stands under the item's words.
+            double indent = 0;
+            for (int level = 0; level < block.Depth; level++)
+            {
+                string widestMarker = MarkerGlyph(block.Lists[level], level + 1, fonts);
+                indent += Math.Max(ListIndent * em,
+                    fonts.Advance(widestMarker, em, TextRole.Markdown, regular) + MarkerGap * em);
+            }
+            ProsePiece? marker = null;
+            if (block.Marker is not null)
+            {
+                string glyph = MarkerGlyph(block.Marker, block.Depth, fonts);
+                marker = new ProsePiece(glyph,
+                    -MarkerGap * em - fonts.Advance(glyph, em, TextRole.Markdown, regular), FontStyle.Regular, -1);
+            }
+
+            // (A list nested until nothing is left keeps an em: its words run over, as one long word does.)
+            var broken = Break(set, fonts, em * scale, Math.Max(em, textWidth - indent));
+            if (broken.Count == 0 && marker is not null)
+                broken.Add(new ProseLine(0, ImmutableArray<ProsePiece>.Empty, 0));      // a marker with no words
             for (int i = 0; i < broken.Count; i++)
             {
                 if (!first)
-                    baseline += skip + (i == 0 ? ParagraphGap * skip : 0);
+                {
+                    // Box to box: the line above's third of its skip, this line's two thirds
+                    // — the skip itself between two lines of the text's size, written so, so
+                    // that a text of paragraphs is to the last digit what it was.
+                    double step = previousScale == 1 && scale == 1
+                        ? skip
+                        : LineDown(fonts) * previousScale + LineUp(fonts) * scale;
+                    baseline += step + (i == 0 ? GapOver(previous!, block) * skip : 0);
+                }
                 first = false;
-                double lineLeft = left + (shape.Center ? Math.Max(0, (textWidth - broken[i].Width) / 2) : 0);
-                lines.Add(broken[i] with { Baseline = baseline, Left = lineLeft });
+                previousScale = scale;
+                // Centred (docs/markdown-text-design.md section 5.1): a paragraph and a heading;
+                // a list keeps its hanging shape from the text's left edge. LILYSHARP-OWN.
+                bool centred = shape.Center && block.Depth == 0;
+                double lineLeft = left + indent + (centred ? Math.Max(0, (textWidth - broken[i].Width) / 2) : 0);
+                lines.Add(broken[i] with
+                {
+                    Baseline = baseline, Left = lineLeft, Scale = scale, Marker = i == 0 ? marker : null, Indent = indent,
+                });
                 widest = Math.Max(widest, lineLeft + broken[i].Width);
             }
+            if (broken.Count > 0)
+                previous = block;
         }
         if (lines.Count == 0)
             return null;
         var frame = shape.Box ? new ProseFrame(indentLeft, lineWidth - indentRight, BoxThickness) : null;
         double around = inset + (shape.Box ? BoxMargin : 0);
-        return new ProseBand(lines.ToImmutable(), LineUp(fonts) + around, baseline + LineDown(fonts) + around,
+        return new ProseBand(lines.ToImmutable(), LineUp(fonts) * lines[0].Scale + around,
+            baseline + LineDown(fonts) * lines[^1].Scale + around,
             frame is null ? widest : Math.Max(widest, frame.Right), position, left, textWidth, frame);
     }
+
+    /// <summary>
+    /// The white between <paramref name="above"/>'s last line and <paramref name="below"/>'s
+    /// first, in baseline-skips: a quarter under a heading, one over a heading, none between
+    /// the items of a tight list, half between two paragraphs — and so between a paragraph
+    /// and a list, either way round, and between the items of a loose list.
+    /// </summary>
+    private static double GapOver(ProseBlock above, ProseBlock below)
+        => above.Heading != 0 ? HeadingGapBelow
+            : below.Heading != 0 ? HeadingGapAbove
+            : below.Tight ? 0
+            : ParagraphGap;
 
     /// <summary>One thing a line is made of: a word, a run of spaces, one wide character (with
     /// the punctuation that may not leave it), or a break written by hand.</summary>

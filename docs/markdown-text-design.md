@@ -157,6 +157,13 @@ The text is read as CommonMark, whole. Drawn:
 
 Nothing is dropped in silence.
 
+**As built (2026-11-13, section 5.2):** paragraphs, hard breaks, bold, italic, headings and
+lists are drawn. Still LYS4058: tables, code blocks, block quotes (with whatever stands in
+them — a list in a quote is said once, as the quote), rules, HTML, images; a code span's words
+are drawn and the span is said. A link's words are drawn as they have been since step 1, with
+no link in the PDF or SVG and **no** LYS4058: the address is the one thing still dropped
+without a word (open — the link itself was not nearly free, and is left for a later step).
+
 ## 4. Images
 
 - `![alt](hand.png)`. Its own size, or the text's width when wider. A size is written as
@@ -182,10 +189,10 @@ Nothing is dropped in silence.
   the line width less both. The lines are broken to that width.
 - **`center`**: each line stands in the middle of the text's width — a paragraph's lines and a
   line ended by hand alike. The breaking is the ragged text's; a line wider than the text (one
-  long word) keeps the left edge and runs over as it always has. Headings and lists are not
-  drawn yet (section 8 step 2), so there was nothing to decide for them; proposed for that
-  step: a heading is centred as a paragraph is, a list keeps its hanging shape from the text's
-  left edge and is not centred.
+  long word) keeps the left edge and runs over as it always has. **A heading is centred as a
+  paragraph is; a list keeps its hanging shape from the text's left edge and is not centred**
+  (built 2026-11-13 with section 5.2; LILYSHARP-OWN — a centred hanging list cannot be read —
+  **for the owner to confirm**).
 - **`box`**: LilyPond's `\box`. The rule is 0.1 thick (`thickness` 1 × the layout's
   line-thickness) and is drawn OUTSIDE the extent widened by the padding (`scm/stencil.scm`
   box-stencil). The padding is **1.0** on all four sides (LILYSHARP-OWN; LilyPond's
@@ -246,6 +253,97 @@ The twin's forms:
   (first written to the frame's edge, the whole box stood 1.1 left of the margin).
 - Found on the way: the twin of a score's OWN fence wrote the file's text (its page model was
   collected without the score's fences). Mended with this.
+
+### 5.2 Headings and lists (built 2026-11-13)
+
+The owner's request: "箇条書きと見出しも描けるようにして". LilyPond has neither; every number
+here is LILYSHARP-OWN unless it says LILYPOND-REF, and the twin writes each as markup so the
+two engines can be compared.
+
+**Headings.** Bold, in the text's face, larger by LilyPond's font-size steps (LILYPOND-REF:
+`\fontsize`, a step is 2^(1/6)):
+
+| Written | Size | Against the header |
+|---|---|---|
+| `#` (and a setext `===`) | +2 steps: 2.2 × 2^(2/6) = 2.77 | the SUBTITLE's size and weight; the title is 3.49 |
+| `##` (and `---` under a line) | +1 step: 2.2 × 2^(1/6) = 2.47 | between the subtitle and the text |
+| `###` … `######` | drawn as `##` | "two levels": no warning, no third size (a size between 2.47 and 2.2 is not told from bold text) |
+
+- A heading's line is the text's line box grown as the heading is: 2 × scale over the
+  baseline, 1 × scale under (2.52 / 1.26 and 2.24 / 1.12). A long heading wraps at its own
+  size; its lines step by 3 × scale.
+- White: **a whole baseline-skip (3.0) over a heading**, **a quarter (0.75) under it** — the
+  heading belongs to what follows. A heading that is the text's first line has no white over
+  it: the band's `Up` is its taller box, and the page's springs place it by that.
+- A heading in a list item (`- # x`) is set at the item's indent.
+
+**Lists.**
+
+- The marker: a bullet `•` (U+2022) for a bullet list, an en dash `–` (U+2013) one level
+  down, alternating deeper (a hyphen where the text's face has neither; the open circle of
+  HTML's second level is not in the bundled face). A numbered list's marker is its number and
+  the delimiter written (`1.` or `1)`), counting on from the FIRST item's number whatever the
+  later items write (CommonMark's start number).
+- The indent: each list level moves its items' words **1.5 em (3.3)** right; the marker hangs
+  in the indent, flush RIGHT, **0.5 em (1.1)** short of the words, so the stops of `9.` and
+  `10.` align. A numbered list whose widest number does not fit takes that number's width and
+  the gap instead, for the whole list. Every line of an item begins at the indent (the
+  hanging indent): a wrapped line stands under the item's words, and the lines are broken to
+  the width the indent leaves — Japanese between characters, as in a paragraph.
+- Nesting is as deep as written (tested to three).
+- Tight and loose are CommonMark's: with no blank line between items they step by the
+  baseline-skip (3.0); with one, the items — and two paragraphs of one item — stand a
+  paragraph's white apart (4.5). A list stands a paragraph's white off the paragraph over it
+  and the one under it.
+- An item that writes no words keeps its marker on a line of its own; so does an item that
+  begins with a list of its own (`- - a`).
+- A task item (`- [ ] todo`) is an item whose words begin with the brackets: the task-list
+  extension is not switched on. A list inside a block quote is the quote's (LYS4058 once).
+
+**With the shape words.** `indent` and `box` narrow the width the items wrap to and move the
+list right with the text; the frame is around the lines' boxes, a heading's taller one
+included. `center`: section 5.1.
+
+**The twin** (in the `\markuplist \column-lines` of section 7.1, the page's own lines):
+
+- a heading: `\with-dimension #Y #'(-DOWN . UP) \fontsize #2 \concat { \bold "…" }` — its box
+  and the white over it written as the line's extent, since LilyPond would stand a larger
+  line on its ink;
+- an item's first line: `\concat { \with-dimension #X #'(0 . INDENT) \translate #'(INDENT−GAP . 0)
+  \right-align "•" "…" }` — a box as wide as the hanging indent, so the words begin where the
+  page begins them whatever LilyPond measures the marker, the marker right-aligned by
+  LilyPond's own measure;
+- its later lines: `\concat { \hspace #INDENT "…" }`;
+- in a box (`\column`): the same lines, and everything a line stands lower than one
+  baseline-skip as a `\vspace`.
+
+MEASURED 2026-11-13, LilyPond 2.26.0, `LilySharp-Lab` `sessions/p1226/md/lists`
+(`showcase.lys`, its `lysc ly` twin engraved as `lp-showcase.ly`; staff spaces, y down):
+
+| What | Lily# | LilyPond |
+|---|---|---|
+| `#` heading: size, left edge | 2.77, 8.54 | 2.7719, 8.5358 |
+| `##` heading: size | 2.47 | 2.4697 |
+| Composer's baseline → a `#` heading first in the text | 3.47 | 3.4903 (the unboxed paragraph's 2.95 / 2.9705 and 0.52) |
+| `#` heading → the paragraph under it | 4.01 | 4.0099 |
+| Paragraph → the list's first item | 4.50 | 4.5000 |
+| Item → item (tight), a wrapped item's lines | 3.00 | 3.0000 |
+| Last item → a `##` heading | 6.24 | 6.2449 |
+| `##` heading → the numbered list's first item | 3.87 | 3.8725 |
+| Item's words, level 1 / level 2: left edge | 11.84 / 15.14 | 11.8358 / 15.1358 |
+| Marker's RIGHT end, level 1 (by construction) | 10.74 | 10.7358 |
+| Bullet's left edge | 9.40 | 9.9505 |
+| En dash's left edge (level 2) | 12.81 | 12.9432 |
+| `1.`'s left edge | 8.93 | 9.0969 |
+| Boxed `end` text: `##` heading's left edge, item's words | 9.64, 12.94 | 9.6358, 12.9358 |
+| …heading → first item, item lines, list → paragraph | 3.87, 3.00, 4.50 | 3.8725, 3.0000, 4.5000 |
+| …frame's top over the first (heading's) baseline | 3.34 | 3.3449 |
+| …the system's rehearsal mark → the boxed heading's baseline | 15.20 | 15.2020 |
+
+The markers' LEFT edges differ because the two engines measure the glyphs differently (the
+bullet 1.34 against 0.79, the en dash 1.23 against 1.09, `1.` 1.81 against 1.64): the open
+difference of the text widths in section 7.1, at its largest on the bullet. Their right ends
+and the words are the page's.
 
 ## 6. Measured: LilyPond 2.26.0 (2026-11-12)
 
@@ -371,7 +469,11 @@ Lily#: a known difference, written into the twin as a comment where it happens.
    the end: SVG, PDF, the preview, the twin. The page's chain learns a markup line.
    DONE 2026-11-13 (sections 2.3, 5.1): `indent`, `center`, `box` on the opening line, and
    their completion.
-2. Lists, headings, links; what is read and not drawn is said.
+2. DONE 2026-11-13 (section 5.2): headings (two levels) and bullet and numbered lists —
+   `Prose` reads them into its flat blocks (`Heading`, `Lists`, `Marker`, `Tight`),
+   `ProseBand` sets them (`ProseLine.Scale`, `Marker`, `Indent`), `SharedRenderer.DrawProse`
+   and the twin (`EmitMarker`) carry them; LYS4058 no longer names them. NOT done: links (a
+   link's words are drawn, the link itself is not made — and nothing says so yet).
 3. A section's text (section 6.1).
 4. Images.
 5. The editor: Markdown colours and completion inside the fence; a click on the text in the

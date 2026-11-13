@@ -1027,9 +1027,40 @@ Practise the right hand alone first.
 ````
 
 The text is printed under the title, above the first system; with `end` on the opening line,
-under the last system. Paragraphs, **bold**, *italic* and a line ended by hand are printed.
-Nothing between the two fence lines is Lily#. Inside `score { }` a fence is that score's own
-text and replaces the file's for the same place.
+under the last system. Nothing between the two fence lines is Lily#. Inside `score { }` a
+fence is that score's own text and replaces the file's for the same place.
+
+What a page text draws:
+
+| Markdown | On the page |
+|---|---|
+| paragraphs, `**bold**`, `*italic*`, a line ended by hand | as written, the lines broken to the text's width |
+| `# Heading` | bold at the subtitle's size, a line of white above it |
+| `## Heading` (deeper levels are drawn the same) | bold, one size smaller |
+| `- item` | a bullet list: the bullet hangs before the item, and a long item's later lines stand under its words |
+| `1. item` | a numbered list, counting on from the first item's number |
+| a list indented under an item | a nested list, indented again (its bullet is a dash) |
+| a blank line between items | the items stand a paragraph apart; with none they follow line by line |
+
+````
+```md
+# Before you play
+
+Keep it slow.
+
+- Tune to the piano.
+- The repeat is played both times:
+  - first time *mf*
+  - second time *p*
+
+1. The right hand alone.
+2. Both hands.
+```
+````
+
+A table, a code block, a block quote, a rule, an image and HTML are read and not drawn yet,
+and Lily# says so where they are written (LYS4058). A link's words are printed; the address is
+not.
 
 The opening line may go on to say how the text is set, in any order, each word once:
 
@@ -1037,7 +1068,7 @@ The opening line may go on to say how the text is set, in any order, each word o
 |---|---|
 | `indent 20mm` | has that much white at its left and right, inside the line width: it is set narrower and begins further right |
 | `indent 20mm 10mm` | the same, 20 mm at the left and 10 mm at the right |
-| `center` | has each line centred in its width (the default is ragged right from the left edge) |
+| `center` | has each line centred in its width (the default is ragged right from the left edge); a heading is centred too, a list keeps its shape at the left edge |
 | `box` | has a thin ruled frame around it; the frame stands on the indent edges and the text is set inside it |
 
 A length is written as in `paper { }`: `20mm`, `2cm`, `0.5in`, or a bare number of staff

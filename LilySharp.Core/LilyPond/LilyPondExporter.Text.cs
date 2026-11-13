@@ -60,30 +60,39 @@ public sealed partial class LilyPondExporter
             _sb.Append(before ? "}\n\n" : "}\n");
             return;
         }
-        double previous = 0;
+        double previous = 0, previousScale = 1;
         for (int i = 0; i < band.Lines.Length; i++)
         {
             var line = band.Lines[i];
             _sb.Append("  ");
-            double white = i == 0 ? 0 : line.Baseline - previous - skip;
-            if (white > 1e-9)
-                _sb.Append("\\with-dimension #Y #'(").Append(Num(-down)).Append(" . ").Append(Num(up + white)).Append(") ");
+            // The line's box is the page's: the white over a paragraph, a heading or a loose
+            // item, and a heading's own larger box (LilyPond would stand a larger line on its
+            // ink, which depends on its letters).
+            double lineUp = up * line.Scale, lineDown = down * line.Scale;
+            double step = previousScale == 1 && line.Scale == 1 ? skip : down * previousScale + lineUp;
+            double white = i == 0 ? 0 : line.Baseline - previous - step;
+            if (white > 1e-9 || line.Scale != 1)
+                _sb.Append("\\with-dimension #Y #'(").Append(Num(-lineDown)).Append(" . ").Append(Num(lineUp + Math.Max(0, white))).Append(") ");
             previous = line.Baseline;
+            previousScale = line.Scale;
             // An indented line begins after its white; a centred one is LilyPond's to centre
             // in the text's width (\fill-line of one markup), so that its own measure of the
-            // words, not the page's, finds the middle.
-            bool wrapped = band.Left > 1e-9 || shape.Center;
+            // words, not the page's, finds the middle. A list's line is not centred.
+            bool centred = shape.Center && !line.InList;
+            double white0 = band.Left + (line.Marker is null ? line.Indent : 0);
+            bool wrapped = white0 > 1e-9 || centred || line.Marker is not null;
             if (wrapped)
             {
                 _sb.Append("\\concat { ");
-                if (band.Left > 1e-9)
-                    _sb.Append("\\hspace #").Append(Num(band.Left)).Append(' ');
-                if (shape.Center)
+                if (white0 > 1e-9)
+                    _sb.Append("\\hspace #").Append(Num(white0)).Append(' ');
+                EmitMarker(line);
+                if (centred)
                     _sb.Append("\\override #'(line-width . ").Append(Num(band.TextWidth)).Append(") \\fill-line { ");
             }
             EmitTextLine(line);
             if (wrapped)
-                _sb.Append(shape.Center ? " } }" : " }");
+                _sb.Append(centred ? " } }" : " }");
             _sb.Append('\n');
         }
         _sb.Append(before ? "}\n\n" : "}\n");
@@ -91,9 +100,36 @@ public sealed partial class LilyPondExporter
 
     private static string Num(double value) => Math.Round(value, 4).ToString("0.####", CultureInfo.InvariantCulture);
 
-    /// <summary>One line's words: a string, or its pieces in their weights and slants.</summary>
+    /// <summary>
+    /// A list item's marker (owner's request 2026-11-13), written before the item's first
+    /// line: a box as wide as the list's hanging indent — so the words begin where the page
+    /// begins them, whatever LilyPond's face measures the marker — with the marker flush right
+    /// in it, short of the words by the page's gap. Nothing for a line that begins no item.
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN: the indent and the gap (ProseBand.ListIndent, MarkerGap).
+    /// LilyPond right-aligns by ITS measure of the marker, as it centres a centred line by its
+    /// own: the marker's right end is the page's, its left end differs by what the two faces
+    /// measure it.</remarks>
+    private void EmitMarker(ProseLine line)
+    {
+        if (line.Marker is not { } marker)
+            return;
+        double gap = ProseBand.MarkerGap * ProseBand.Em(_page!.TextMetrics);
+        _sb.Append("\\with-dimension #X #'(0 . ").Append(Num(line.Indent)).Append(") \\translate #'(")
+            .Append(Num(line.Indent - gap)).Append(" . 0) \\right-align \"").Append(Escape(marker.Text)).Append("\" ");
+    }
+
+    /// <summary>One line's words: a string, or its pieces in their weights and slants; a
+    /// heading's at its size (<c>\fontsize</c>, LilyPond's steps of 2^(1/6)).</summary>
     private void EmitTextLine(ProseLine line)
     {
+        if (line.Scale != 1)
+            _sb.Append("\\fontsize #").Append(Num(Math.Round(6 * Math.Log2(line.Scale), 6))).Append(' ');
+        if (line.Pieces.Length == 0)
+        {
+            _sb.Append("\"\"");     // an item that writes no words: its marker alone
+            return;
+        }
         if (line.Pieces.Length == 1 && line.Pieces[0].Style == FontStyle.Regular)
         {
             _sb.Append('"').Append(Escape(line.Pieces[0].Text)).Append('"');
@@ -139,20 +175,32 @@ public sealed partial class LilyPondExporter
         _sb.Append("\\concat { \\hspace #").Append(Num(band.Left)).Append(' ');
         _sb.Append("\\override #'(box-padding . ").Append(Num(ProseBand.BoxPadding)).Append(") \\box\n");
         _sb.Append("    \\with-dimension #X #'(0 . ").Append(Num(band.TextWidth)).Append(") \\with-dimension #Y #'(")
-            .Append(Num(-(band.Lines[^1].Baseline + down))).Append(" . ").Append(Num(up)).Append(") \\column {\n");
+            .Append(Num(-(band.Lines[^1].Baseline + down * band.Lines[^1].Scale))).Append(" . ")
+            .Append(Num(up * band.Lines[0].Scale)).Append(") \\column {\n");
         double previous = 0;
         for (int i = 0; i < band.Lines.Length; i++)
         {
             var line = band.Lines[i];
+            // Whatever a line stands lower than one baseline-skip — a paragraph's white, a
+            // heading's and its larger box — is a \vspace: the column steps by the skip.
             double white = i == 0 ? 0 : line.Baseline - previous - skip;
             previous = line.Baseline;
             if (white > 1e-9)
                 _sb.Append("      \\vspace #").Append(Num(white / skip)).Append('\n');
             _sb.Append("      ");
-            if (center)
+            bool centred = center && !line.InList;
+            bool wrapped = line.InList;
+            if (wrapped)
+            {
+                _sb.Append("\\concat { ");
+                if (line.Marker is null)
+                    _sb.Append("\\hspace #").Append(Num(line.Indent)).Append(' ');
+                EmitMarker(line);
+            }
+            if (centred)
                 _sb.Append("\\override #'(line-width . ").Append(Num(band.TextWidth)).Append(") \\fill-line { ");
             EmitTextLine(line);
-            _sb.Append(center ? " }\n" : "\n");
+            _sb.Append(centred || wrapped ? " }\n" : "\n");
         }
         _sb.Append("    } }\n");
     }

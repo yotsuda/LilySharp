@@ -227,7 +227,7 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
                 int lineEnd = value.Body.IndexOf('\n', note.Offset);
                 int length = Math.Max(1, Math.Min(note.Length, (lineEnd < 0 ? value.Body.Length : lineEnd) - note.Offset));
                 _diagnostics.Warning(new TextSpan(at + start, length), DiagnosticCodes.FencedTextNotDrawn,
-                    $"{note.What} is read and not drawn: a fenced text prints its paragraphs, bold and italic so far.");
+                    $"{note.What} is read and not drawn: a fenced text prints its paragraphs, headings and lists, bold and italic so far.");
             }
         }
     }

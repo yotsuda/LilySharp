@@ -37,8 +37,10 @@ poet "Poet"             // optional: the left end of the composer's line (\heade
                         // sings the Japanese ones. (The language is a bare word before the voice, as the gender is.)
                         // A TEXT FOR THE PAGE, written as Markdown in a fence at the top level: the
                         // lines between ```md and ``` are printed under the title (paragraphs, **bold**,
-                        // *italic*); ```md end prints them under the last system. Nothing between the
-                        // fences is Lily#. Inside score { } a fence replaces the file's for that score.
+                        // *italic*, `# heading` and `## heading`, `- bullet` and `1. numbered` lists,
+                        // nested lists; NOT drawn, and warned about (LYS4058): tables, code blocks, block
+                        // quotes, rules, images, HTML); ```md end prints them under the last system. Nothing
+                        // between the fences is Lily#. Inside score { } a fence replaces the file's for that score.
                         // The opening line may go on, in any order, each word once: `box` (a ruled frame
                         // around the text), `center` (each line centred), `indent 20mm` (white at both
                         // sides, inside the line width) or `indent 20mm 10mm` (left, right) — e.g.

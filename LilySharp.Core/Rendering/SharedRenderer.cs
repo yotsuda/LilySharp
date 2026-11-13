@@ -490,7 +490,7 @@ internal static partial class SharedRenderer
     /// from where its shape puts it (<c>indent</c>, <c>center</c>; ProseLine.Left) — its
     /// pieces in their own weight and slant, about the reference point the page solved —
     /// <paramref name="referenceY"/> below the page's top edge, the first line's baseline;
-    /// and a boxed text's frame around them.
+    /// a list item's marker before its first line; and a boxed text's frame around them.
     /// </summary>
     private static void DrawProse(
         MultiStaffScore score, ProseBand band, double referenceY, PageLayout page,
@@ -517,8 +517,13 @@ internal static partial class SharedRenderer
             foreach (var line in band.Lines)
             {
                 double y = page.Height - (referenceY + line.Baseline);
+                // A list item's marker hangs in the indent, at the text's own size.
+                if (line.Marker is { } marker)
+                    gc.DrawText(marker.Text, options.MarginLeft + line.Left + marker.X, y, em,
+                        TextRole.Markdown, ProseBand.StyleOf(fonts, marker.Style), TextAnchor.Start);
+                // (A heading's line is larger; its pieces are already bold.)
                 foreach (var piece in line.Pieces)
-                    gc.DrawText(piece.Text, options.MarginLeft + line.Left + piece.X, y, em,
+                    gc.DrawText(piece.Text, options.MarginLeft + line.Left + piece.X, y, em * line.Scale,
                         TextRole.Markdown, ProseBand.StyleOf(fonts, piece.Style), TextAnchor.Start);
             }
         }

@@ -77,8 +77,6 @@ public class MarkdownTextPageTests
     }
 
     [Theory]
-    [InlineData("# A heading", "A heading")]
-    [InlineData("- one\n- two", "A list")]
     [InlineData("> quoted", "A block quote")]
     [InlineData("    indented code", "A code block")]
     [InlineData("---", "A rule")]
@@ -96,13 +94,14 @@ public class MarkdownTextPageTests
     [Fact]
     public void WhatIsNotDrawn_IsAWarningWhereItIsWritten()
     {
-        string source = Book(top: $"{F}md\nA paragraph.\n\n# A heading\n{F}");
+        // (Headings and lists are drawn since 2026-11-13: MarkdownTextListTests.)
+        string source = Book(top: $"{F}md\nA paragraph.\n\n> A quotation.\n{F}");
         var tree = SyntaxTree.Parse(source);
         var d = Assert.Single(SemanticValidation.Run(tree), d => d.Code == DiagnosticCodes.FencedTextNotDrawn);
         Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
-        Assert.Equal(source.IndexOf("# A heading", System.StringComparison.Ordinal), d.Span.Start);
-        Assert.Equal("# A heading".Length, d.Span.Length);
-        Assert.StartsWith("A heading is read and not drawn", d.Message);
+        Assert.Equal(source.IndexOf("> A quotation.", System.StringComparison.Ordinal), d.Span.Start);
+        Assert.Equal("> A quotation.".Length, d.Span.Length);
+        Assert.StartsWith("A block quote is read and not drawn", d.Message);
     }
 
     [Fact]
@@ -182,7 +181,7 @@ public class MarkdownTextPageTests
     {
         Assert.Null(ProseBand.Build("", 0, ScoreTextMetrics.Bundled, 100));
         Assert.Null(ProseBand.Build("\n\n", 0, ScoreTextMetrics.Bundled, 100));
-        Assert.Null(ProseBand.Build("# only a heading", 0, ScoreTextMetrics.Bundled, 100));
+        Assert.Null(ProseBand.Build("> only a quotation", 0, ScoreTextMetrics.Bundled, 100));
     }
 
     // ---- the page ----------------------------------------------------------------------

@@ -238,8 +238,14 @@ FenceClose     = (* a line that begins, after blanks, with as many backticks as 
                     place with none) — the rule of a score's own 'title'. A text belongs to the
                     piece, so it prints with nothing written in the score.
 
-                    PRINTED so far: paragraphs, **bold**, *italic*, a line ended by hand. What else
-                    the Markdown writes — a heading, a list, a table, a code block, an image, HTML
+                    PRINTED so far: paragraphs, **bold**, *italic*, a line ended by hand; headings
+                    ('#' bold at the subtitle's size, '##' and deeper bold one LilyPond font-size
+                    step smaller; a skip of white over one, a quarter under); bullet and numbered
+                    lists, nested, tight or loose as CommonMark reads them (each level 1.5 em in,
+                    the marker hanging flush right half an em before the words, a numbered list
+                    counting on from its first number) — LILYSHARP-OWN, 2026-11-13,
+                    docs/markdown-text-design.md section 5.2. What else the Markdown writes — a
+                    table, a code block, a block quote, a rule, an image, HTML
                     — is read for what it is and said where it is written (LYS4058); a code span's
                     words and a link's words stay in the sentence. A fence directly in a
                     top-level section is read (its opening line takes a printing: '2', '1,3',
