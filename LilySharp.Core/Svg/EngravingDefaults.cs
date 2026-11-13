@@ -1625,6 +1625,22 @@ internal static class EngravingDefaults
     /// lily/lookup.cc:415 bezier_sandwich(back, curve, linethick).</remarks>
     public static double BowEndRounding => 0.8 * LineThickness;
 
+    /// <summary>The share of each period a DASHED bow draws (<c>@slur(dashed)</c>,
+    /// <c>@tie(dashed)</c>; owner-approved 2026-11-13, grammar evaluation 3).</summary>
+    /// <remarks>LILYPOND-REF: ly/property-init.ly slurDashed, tieDashed — dash-definition ((0 1 0.4 0.75)).</remarks>
+    public const double BowDashFraction = 0.4;
+
+    /// <summary>The share of each period a DOTTED bow draws (<c>@slur(dotted)</c>).</summary>
+    /// <remarks>LILYPOND-REF: ly/property-init.ly slurDotted, tieDotted — dash-definition ((0 1 0.1 0.75)).</remarks>
+    public const double BowDotFraction = 0.1;
+
+    /// <summary>The period of a dashed or dotted bow, in staff spaces of its chord.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/property-init.ly slurDashed, slurDotted — the 0.75 of both dash-definitions.
+    /// LILYPOND-REF: lily/lookup.cc Lookup::slur — pattern_count = (int) (seg_length / dash_period).
+    /// </remarks>
+    public const double BowDashPeriod = 0.75;
+
 
     // === Conversion helpers ===
 

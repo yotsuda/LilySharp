@@ -301,6 +301,11 @@ internal static class FiguredBassEngraver
     /// </summary>
     private static double GroupX(FiguredBassItem fb, MeasureLayout measureLayout, ImmutableArray<Measure> staffMeasures)
     {
+        // A group inside its held bass note (`a2@figuredBass(4, 3)`, owner-approved 2026-11-13)
+        // stands on the column of its own moment, as a timing-placed chord symbol does
+        // (ChordNameEngraver.SymbolX).
+        if (fb.UseTiming)
+            return measureLayout.X + measureLayout.GetXForTiming(fb.Timing);
         if (!staffMeasures.IsDefault && fb.MeasureIndex < staffMeasures.Length
             && fb.ItemIndex < staffMeasures[fb.MeasureIndex].Items.Length
             && staffMeasures[fb.MeasureIndex].Items[fb.ItemIndex].GraceTime

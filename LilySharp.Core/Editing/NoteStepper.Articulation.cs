@@ -116,7 +116,8 @@ public static partial class NoteStepper
         ["feather"] = ["left", "right"],
         // The figures in the completion's order (continuo shorthand, most frequent first) — Down
         // walks it; a figure written otherwise is not stepped.
-        ["figuredBass"] = ["_", "#", "6 s", "2", "4", "9", "5 3", "4 2", "4 3", "6 5", "7", "6 4", "6"],
+        // (Its last row, the first here, is the comma form: 4 then 3 over one held note.)
+        ["figuredBass"] = ["4, 3", "_", "#", "6 s", "2", "4", "9", "5 3", "4 2", "4 3", "6 5", "7", "6 4", "6"],
     };
 
     /// <summary>A name the step may write: one the registry draws, or a plain annotation the

@@ -194,7 +194,8 @@ internal sealed class MeasureLayouter
         Measure? nextMeasure = null,
         BarlineType? leftBound = null,
         IReadOnlyList<Staff>? stavesOfMeasures = null,
-        bool? nextOpensWithGrace = null)
+        bool? nextOpensWithGrace = null,
+        ImmutableArray<FiguredBassItem> dividedFigures = default)
     {
         if (timings.Count == 0)
             return ImmutableArray<Spring>.Empty;
@@ -307,12 +308,12 @@ internal sealed class MeasureLayouter
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
         for (int i = 1; i < timings.Count; i++)
             springs[i] = CreateInterColumnSpring(fonts, i, timings, columns, measuresToScan,
-                so, looseRods, stavesOfMeasures, markColumns);
+                so, looseRods, stavesOfMeasures, markColumns, dividedFigures);
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
         springs[timings.Count] = CreateLastToBarlineSpring(fonts, timings, columns, measuresToScan, totalDuration,
             so, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure), stavesOfMeasures,
-            nextOpensWithGrace ?? SpacingRules.OpensWithLeadingGrace(nextMeasure));
+            nextOpensWithGrace ?? SpacingRules.OpensWithLeadingGrace(nextMeasure), dividedFigures);
 
         AddColumnReachRods(fonts, measuresToScan, timings, stavesOfMeasures, looseRods);
 
@@ -814,6 +815,43 @@ internal sealed class MeasureLayouter
     }
 
     /// <summary>
+    /// <paramref name="shortestPlaying"/> at moment <paramref name="t"/>, with the figure
+    /// events of the comma form (<c>a2@figuredBass(4, 3)</c>, owner-approved 2026-11-13) that
+    /// sound there: a BassFigure is a rhythmic grob, so the quarter-long <c>&lt;4&gt;</c> under a
+    /// half note makes a quarter the shortest thing playing at the note's column, and the
+    /// column the second figure stands on is a whole quarter's space away — not half of the
+    /// half note's.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED, 2.26.0 (LilySharp-Lab sessions/p1226/md/eval3/featI/f1.ly, ragged): `a2` over
+    /// `&lt;4&gt;4 &lt;3&gt;4` reads head 8.7034, second figure 11.6014, next head 14.4995 — two legs of
+    /// 2.898045 = (2 + log2 (1/4 ÷ 3/16)) × 1.2, the bare duration space of a quarter; a whole
+    /// note under `&lt;4&gt;4 &lt;3&gt;4 &lt;2&gt;2` the same two legs and then the half's.
+    /// LILYPOND-REF: lily/spacing-engraver.cc:200-253 — shortest_playing over every rhythmic grob sounding at the column.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:380-391 musical_column_spacing — no Note_spacing wish names the figure's column: the base spring, minimum 0.
+    /// <para>
+    /// LILYSHARP-OWN: a figure-only column that is the LAST of its system stands one bar-line
+    /// thickness (0.19) further from the closing bar than LilyPond's — measured in the same
+    /// books (f1c-d.ly: 57.852522 → bar 60.560567 = 2.708045 against 2.898045 here). Inside a
+    /// system the leg to the bar line is exact (f1e-d.ly: 4.098045 both).
+    ///   departs from: lily/spacing-spanner.cc standard_breakable_column_spacing at a line's end.
+    ///   goes away when: the wishless last column of a line is measured against the end-of-line bar's column.
+    ///   observed by: nothing — a ragged last system whose final bar ends on a figure inside a note.
+    /// </para>
+    /// </remarks>
+    private static Fraction ShortestWithFigures(
+        Fraction shortestPlaying, Fraction t, ImmutableArray<FiguredBassItem> dividedFigures)
+    {
+        if (dividedFigures.IsDefaultOrEmpty)
+            return shortestPlaying;
+        foreach (var fb in dividedFigures)
+            if (fb.Timing <= t && t < fb.Timing + fb.Duration
+                && (shortestPlaying <= Fraction.Zero || fb.Duration < shortestPlaying))
+                shortestPlaying = fb.Duration;
+        return shortestPlaying;
+    }
+
+    /// <summary>
     /// Spring connecting timing column <paramref name="i"/>-1 → <paramref name="i"/>:
     /// duration-proportional ideal refined by left-head width, stem-direction
     /// optical correction merged across voices, then skyline rods and hung-glyph
@@ -831,14 +869,16 @@ internal sealed class MeasureLayouter
         IReadOnlyList<Measure> measuresToScan, SpacingOptions spacing,
         List<(int Left, int Right, double Distance)> looseRods,
         IReadOnlyList<Staff>? stavesOfMeasures = null,
-        ImmutableArray<Fraction> markColumns = default)
+        ImmutableArray<Fraction> markColumns = default,
+        ImmutableArray<FiguredBassItem> dividedFigures = default)
     {
         // This spring connects timings[i-1] → timings[i]; its duration is
         // THAT segment. (A previous off-by-one used the FOLLOWING segment's
         // duration, clamping a half-note gap down to the next quarter's length.)
         Fraction segmentDuration = timings[i] - timings[i - 1];
         // LILYPOND-REF: lily/spacing-engraver.cc:200-253 — shortest_playing aggregated at the LEFT column.
-        var shortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[i - 1], measuresToScan);
+        var shortestPlaying = ShortestWithFigures(
+            SpacingRules.ComputeShortestPlayingAt(timings[i - 1], measuresToScan), timings[i - 1], dividedFigures);
         // LILYPOND-REF: lily/spacing-basic.cc:144 — measure length caps shortest_playing (mmrest guard).
         Fraction measureLength = Fraction.Zero;
         for (int vi = 0; vi < measuresToScan.Count; vi++)
@@ -1242,10 +1282,11 @@ internal sealed class MeasureLayouter
         List<Fraction> timings, ItemColumn[] columns,
         IReadOnlyList<Measure> measuresToScan, Fraction totalDuration, SpacingOptions spacing,
         double boundaryClefAllowance = 0, IReadOnlyList<Staff>? stavesOfMeasures = null,
-        bool nextOpensWithGrace = false)
+        bool nextOpensWithGrace = false, ImmutableArray<FiguredBassItem> dividedFigures = default)
     {
         var endDuration = totalDuration - timings[^1];
-        var endShortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[^1], measuresToScan);
+        var endShortestPlaying = ShortestWithFigures(
+            SpacingRules.ComputeShortestPlayingAt(timings[^1], measuresToScan), timings[^1], dividedFigures);
         var endSpring = SpacingRules.CreateTimingSpringMultiVoice(
             endDuration, endShortestPlaying, spacing);
 

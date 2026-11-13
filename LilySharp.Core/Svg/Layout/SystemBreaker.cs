@@ -261,7 +261,8 @@ internal sealed class SystemBreaker
                 i + 1 < measures.Length ? MultiStaffLayouter.MeasureForTheClosingGap(score, measures[i + 1], i + 1) : null,
                 SpacingRules.RunLeftBoundBarline(measures, i),
                 MultiStaffLayouter.CollectStavesOfMeasuresAtIndex(score, i),
-                MultiStaffLayouter.BarOpensWithLeadingGrace(score, i + 1));
+                MultiStaffLayouter.BarOpensWithLeadingGrace(score, i + 1),
+                ScoreSideTables.DividedFigures(score).At(i));
 
             // The shared-column reservations (lyrics, chords, tab digits, wide
             // scripts) — the SAME list the system layout applies, from the one home

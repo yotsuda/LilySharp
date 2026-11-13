@@ -724,6 +724,11 @@ public sealed partial class LilyPondExporter
                 staffWith.Add("\\remove \"Clef_engraver\" \\remove \"Key_engraver\"");
             if (StandsDynamicsUp(partName))
                 staffWith.Add("\\dynamicUp");
+            // `beaming syllabic`: no automatic beam in any voice of the staff; the page's
+            // beams are written by hand on their notes (CollectSyllabicBeams).
+            // LILYPOND-REF: ly/property-init.ly autoBeamOff — `\set autoBeaming = ##f`.
+            if (partName != null && _shared.SyllabicParts.Contains(partName))
+                staffWith.Add("autoBeaming = ##f");
             if (staffWith.Count > 0)
                 sb.Append(" \\with { ").Append(string.Join(" ", staffWith)).Append(" }");
             sb.Append(" { ");

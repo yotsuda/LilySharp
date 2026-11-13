@@ -49,7 +49,14 @@ public sealed partial class MeasureCollector
     /// first. The internal name is gone from this path as of §9.5.3 ⑴.
     /// </para>
     /// </remarks>
-    private void CollectFiguredBass(SyntaxNode node, int measureIndex, int itemIndex)
+    /// <param name="node">The note, chord or slash that carries the annotation.</param>
+    /// <param name="measureIndex">Its bar.</param>
+    /// <param name="itemIndex">Its item in that bar.</param>
+    /// <param name="anchorTiming">Its onset from the bar's start.</param>
+    /// <param name="duration">Its sounding length — what the comma form
+    /// (<c>a2@figuredBass(4, 3)</c>, owner-approved 2026-11-13) divides into equal parts.</param>
+    private void CollectFiguredBass(SyntaxNode node, int measureIndex, int itemIndex,
+        Fraction anchorTiming, Fraction duration)
     {
         // In grace time too (session 964, GraceBodySupport.IsCarriedFiguredBass): a grace
         // column is a measure item, and FiguredBassEngraver stands the group at the grace
@@ -61,15 +68,27 @@ public sealed partial class MeasureCollector
         {
             if (child is MusicMarkSyntax markSyntax)
             {
-                var figures = Semantics.AnnotationValues.Figures(markSyntax);
-                if (figures != null)
+                var groups = Semantics.AnnotationValues.FigureGroups(markSyntax);
+                if (groups != null)
                 {
-                    _figuredBasses.Add(new FiguredBassItem(
-                        figures.Value,
-                        measureIndex,
-                        itemIndex,
-                        markSyntax.SourceStart,
-                        _v.Cursor.StaffIndex));
+                    // The comma form: each part on an equal share of the note. The first is the
+                    // note's own group; the later ones stand INSIDE the note, each at the start
+                    // of its share (FiguredBassItem.UseTiming). A grace note has no length to
+                    // divide (LYS1068) and keeps its first group alone, undivided.
+                    bool divided = groups.Value.Length > 1 && _v.GraceDepth == 0 && duration > Fraction.Zero;
+                    var share = divided ? duration * new Fraction(1, groups.Value.Length) : Fraction.Zero;
+                    for (int part = 0; part < (divided ? groups.Value.Length : 1); part++)
+                        _figuredBasses.Add(new FiguredBassItem(
+                            groups.Value[part],
+                            measureIndex,
+                            itemIndex,
+                            markSyntax.SourceStart,
+                            _v.Cursor.StaffIndex)
+                        {
+                            UseTiming = part > 0,
+                            Timing = divided ? anchorTiming + share * new Fraction(part, 1) : default,
+                            Duration = share,
+                        });
                     // One group a note: a second one is refused (LYS1067) and was drawn on
                     // the first; the first stands, as in the exports.
                     break;
@@ -424,7 +443,12 @@ public sealed partial class MeasureCollector
         _partFrettedTuning = header?.FrettedTuning;
         _partShapeTuning = Music.ShapeChords.TuningOf(header);
         _partSoundingShift = header?.SoundingShiftSemitones ?? 0;
+        _partBeamingSyllabic = header?.BeamingSyllabic ?? false;
     }
+
+    /// <summary>Whether the part being collected is beamed by syllable (<c>beaming syllabic</c>,
+    /// <see cref="Semantics.PartHeaderDefaults.BeamingSyllabic"/>): set with its tuning.</summary>
+    private bool _partBeamingSyllabic;
 
     /// <summary>The tuning a <c>diagram(…)</c> item of the part being collected sounds on
     /// (<see cref="Music.ShapeChords.TuningOf"/>: its fretted instrument, else the guitar).</summary>

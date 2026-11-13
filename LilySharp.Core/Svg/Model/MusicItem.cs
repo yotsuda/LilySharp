@@ -167,6 +167,9 @@ internal sealed record MusicItemRare
     public bool HasPhrasingSlurStart { get; init; }
     public bool HasPhrasingSlurEnd { get; init; }
     public int PhrasingSlurDirection { get; init; }
+    public BowLine SlurLine { get; init; }
+    public BowLine TieLine { get; init; }
+    public bool BeamBreakBefore { get; init; }
     public int PhrasingSlurStartSourcePosition { get; init; } = MusicItem.NoSourcePosition;
     public int PhrasingSlurEndSourcePosition { get; init; } = MusicItem.NoSourcePosition;
     public int LaissezVibrerSourcePosition { get; init; } = MusicItem.NoSourcePosition;
@@ -704,6 +707,35 @@ public abstract record MusicItem
     {
         get => _rareBase?.PhrasingSlurDirection ?? 0;
         init { if (value != PhrasingSlurDirection) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { PhrasingSlurDirection = value }; }
+    }
+
+    /// <summary>No AUTOMATIC beam reaches this item from the one before it: it starts a
+    /// syllable in a <c>beaming syllabic</c> part (owner-approved 2026-11-13, grammar evaluation
+    /// 3; <c>PartHeaderDefaults.BeamingSyllabic</c>). Content — <c>BeamDetector</c>'s walk ends
+    /// its run here, and its memo folds the flag. A manual <c>[ ]</c> does not ask.</summary>
+    public bool BeamBreakBefore
+    {
+        get => _rareBase?.BeamBreakBefore ?? false;
+        init { if (value != BeamBreakBefore) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { BeamBreakBefore = value }; }
+    }
+
+    /// <summary>How the slur that BEGINS on this item is drawn — <c>c4@slur(dashed)( d e)</c>
+    /// (owner-approved 2026-11-13, grammar evaluation 3); <see cref="BowLine.Solid"/> for
+    /// every other. Content: the page differs by it. Read by <c>SlurDetector</c> onto
+    /// <see cref="SlurItem.Line"/>.</summary>
+    public BowLine SlurLine
+    {
+        get => _rareBase?.SlurLine ?? BowLine.Solid;
+        init { if (value != SlurLine) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SlurLine = value }; }
+    }
+
+    /// <summary>How the tie (a chord's ties) that begins on this item is drawn —
+    /// <c>c2@tie(dashed)~ c2</c>. See <see cref="SlurLine"/>; read by <c>TieDetector</c> onto
+    /// <see cref="TieItem.Line"/>.</summary>
+    public BowLine TieLine
+    {
+        get => _rareBase?.TieLine ?? BowLine.Solid;
+        init { if (value != TieLine) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { TieLine = value }; }
     }
 
     /// <summary>Source position of the <c>@</c> of the <c>@phrasingSlur</c> on this item, or

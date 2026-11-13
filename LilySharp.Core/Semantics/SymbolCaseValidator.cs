@@ -44,6 +44,9 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     {
         "clef", "instrument", "transpose", "transposition", "tuning",
         "octave", "pedal", "pitch", "midiInstrument",
+        // `beaming syllabic` (owner-approved 2026-11-13, grammar evaluation 3): a sung part's
+        // beams join only the notes of one syllable (PartHeaderDefaults.BeamingSyllabic).
+        "beaming",
     };
 
     /// <summary>The two words a part header's <c>pitch</c> takes (how its notes are typed),
@@ -55,6 +58,16 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     {
         "bracket", "text", "mixed",
     };
+
+    /// <summary>The one word <c>beaming</c> takes. The automatic beaming it replaces has no
+    /// word: a part without the property has it.</summary>
+    private static readonly HashSet<string> BeamingValues = new(StringComparer.Ordinal)
+    {
+        PartHeaderDefaults.SyllabicBeamingWord,
+    };
+
+    /// <summary>The words <c>beaming</c> takes, for the editor and the documents.</summary>
+    public static IReadOnlyCollection<string> BeamingValueVocabulary => BeamingValues;
 
     private static readonly HashSet<string> ClefValues = new(StringComparer.Ordinal)
     {
@@ -191,6 +204,9 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                 break;
             case "pedal":
                 CheckValue(valueTokens, PedalValues, "pedal");
+                break;
+            case "beaming":
+                CheckValue(valueTokens, BeamingValues, "beaming");
                 break;
             case "instrument":
                 // A quoted "…" label is free-text; only a bare preset is a symbol.

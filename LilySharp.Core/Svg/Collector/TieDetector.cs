@@ -88,6 +88,8 @@ internal sealed class TieDetector
                             // The `~` the reader can point at. It rides the START item,
                             // folded there by the collect's marker run (MarkerFlags).
                             SourcePosition = startNote.TieStartSourcePosition,
+                            // @tie(dashed) on the note the tie begins on (2026-11-13).
+                            Line = startNote.TieLine,
                         });
                     }
                 }
@@ -345,6 +347,8 @@ internal sealed class TieDetector
                 // chord's bows cite the same character — the shape a chord's heads
                 // already have with their shared data-pos.
                 SourcePosition = startChord.TieStartSourcePosition,
+                // …and one @tie(dashed) on the chord draws them all so (2026-11-13).
+                Line = startChord.TieLine,
             });
         }
     }

@@ -1564,6 +1564,31 @@ internal sealed partial class Parser
                         else
                             GreenRun.Take(new DynamicGreen(at, name, subDot, subito), ref first, ref second, ref more);
                     }
+                    // `@p(editorial)` (owner-approved 2026-11-13, grammar evaluation 3): the level
+                    // in parentheses, "(p)", sounding as the plain one. Read only where the word
+                    // itself stands glued between the parentheses - any other '(' after a level
+                    // is, as it always was, the slur that starts on the note (`c4@p( d e)`,
+                    // `c4@p(d e)`). The three tokens take slots 4-6 (2-3 stay empty), a
+                    // placement after them (`@p(editorial).up`) slots 7-8. A hairpin and a niente
+                    // are read the same way and refused by EditorialDynamicValidator (LYS4076).
+                    else if (Current.Kind == SyntaxKind.OpenParen && GluedToPrevious(name, Current)
+                        && Peek(1) is { Kind: SyntaxKind.Identifier, Text: DynamicSyntax.EditorialWord } editorialWord
+                        && GluedToPrevious(Current, editorialWord)
+                        && Peek(2) is { Kind: SyntaxKind.CloseParen } editorialClose
+                        && GluedToPrevious(editorialWord, editorialClose))
+                    {
+                        var open = Advance();
+                        var word = Advance();
+                        var close = Advance();
+                        if (Current.Kind == SyntaxKind.Dot && IsPlacementWord(Peek(1)))
+                        {
+                            var pDot = Advance();
+                            var pDir = Advance();
+                            GreenRun.Take(new DynamicGreen(at, name, null, null, open, word, close, pDot, pDir), ref first, ref second, ref more);
+                        }
+                        else
+                            GreenRun.Take(new DynamicGreen(at, name, null, null, open, word, close), ref first, ref second, ref more);
+                    }
                     else if (Current.Kind == SyntaxKind.Dot
                         && IsPlacementWord(Peek(1))
                         && Peek(2)?.Kind != SyntaxKind.Dot)
@@ -1646,6 +1671,15 @@ internal sealed partial class Parser
                                  || (Semantics.AnnotationValues.IsOrnamentName(Current.Text)
                                      && Peek(2) is { Kind: SyntaxKind.Identifier } ornamentWord
                                      && GluedToPrevious(openParen, ornamentWord))
+                                 // ⚠️ A slur's or a tie's line, @slur(dashed) / @tie(dotted)
+                                 // (owner-approved 2026-11-13, grammar evaluation 3), is read the
+                                 // same way, only where a WORD stands against the '(': the '('
+                                 // after these two names is otherwise the very slur they speak of
+                                 // (`c4@slur( d e)`, `c4@tie(d e)`), and a pitch is no identifier.
+                                 // (So they are NOT in SyntaxFacts' argument-taking list either.)
+                                 || (Current.Text is Semantics.AnnotationValues.SlurLineName or Semantics.AnnotationValues.TieLineName
+                                     && Peek(2) is { Kind: SyntaxKind.Identifier } lineWord
+                                     && GluedToPrevious(openParen, lineWord))
                                  // ⚠️ A natural harmonic's fret, @harmonic(12) (owner-approved
                                  // 2026-11-13, grammar evaluation 3), is read only where a NUMBER
                                  // stands against the '(' with something glued after it — its ')':

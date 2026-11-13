@@ -95,6 +95,11 @@ public sealed record TieItem
     /// </remarks>
     public int SourcePosition { get; init; } = MusicItem.NoSourcePosition;
 
+    /// <summary>How the curve is drawn: solid, or the dashes / dots of <c>@tie(dashed)</c> /
+    /// <c>@tie(dotted)</c> on the note the tie begins on (<see cref="MusicItem.TieLine"/>;
+    /// owner-approved 2026-11-13, grammar evaluation 3). A chord's ties all take it.</summary>
+    public BowLine Line { get; init; }
+
     /// <summary>Creates a tie between two notes of the same pitch.</summary>
     public TieItem(
         NoteItem startNote,
@@ -127,5 +132,5 @@ public sealed record TieItem
         => new(StartNote, EndNote, StaffPosition, ForcedCurveUp,
             StartMeasureIndex + delta, EndMeasureIndex + delta, StartItemIndex, EndItemIndex,
             VoiceIndex)
-        { SourcePosition = SourcePosition };
+        { SourcePosition = SourcePosition, Line = Line };
 }

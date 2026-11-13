@@ -369,8 +369,9 @@ internal sealed class BeamDetector
     /// (<see cref="ForcedStemUpOf"/>), <c>TremoloPairBeams</c>, head staff positions
     /// (<see cref="GetHeadRange"/> — direction, knees),
     /// <c>FeatherDirection</c> (grow direction), a rest's <c>IsSpacer</c>/
-    /// <c>IsMultiMeasure</c>, and a mid-measure \time item's <c>NewTime</c> (the
-    /// effective-signature update).
+    /// <c>IsMultiMeasure</c>, a mid-measure \time item's <c>NewTime</c> (the
+    /// effective-signature update), and every item's <c>BeamBreakBefore</c> (the walk: a
+    /// syllable's first note ends the run).
     /// <para>
     /// ⚠️ DRIFT GUARD: a hand-rolled read set can silently fall behind the readers
     /// (HANDOFF §2C's skip-list lesson), and a missing field here is a FALSE REUSE. Two
@@ -395,6 +396,8 @@ internal sealed class BeamDetector
         {
             // The engraving voice ends an auto-beam run when it changes (see the walk).
             hc.Add((int)item.VoiceContext);
+            // …and so does a note that starts a syllable in a `beaming syllabic` part.
+            hc.Add(item.BeamBreakBefore);
             switch (item)
             {
                 case NoteItem n:
@@ -1019,6 +1022,12 @@ internal sealed class BeamDetector
             // LILYPOND-REF: ly/music-functions-init.ly:1643-1651 make-directed-part-combine-music;
             // LILYPOND-REF: ly/engraver-init.ly:359,396 Voice — \consists Auto_beam_engraver.
             if (stems.Count > 0 && item.VoiceContext != stems[0].item.VoiceContext)
+                EndBeam();
+
+            // A note that starts a syllable in a `beaming syllabic` part (MusicItem.BeamBreakBefore,
+            // owner-approved 2026-11-13): no automatic beam reaches it from the note before —
+            // the vocal style, LilyPond's \autoBeamOff with the melismata beamed by hand.
+            if (stems.Count > 0 && item.BeamBreakBefore)
                 EndBeam();
 
             // LILYPOND-REF: lily/auto-beam-engraver.cc:392-395 consider_end / consider_begin —

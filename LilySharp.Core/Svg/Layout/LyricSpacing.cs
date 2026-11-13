@@ -333,9 +333,11 @@ internal static class LyricSpacing
                 continue;
             double half = DynamicEngraver.LevelHalfWidth(fonts, d.Text);
             double centre = DynamicEngraver.DynamicAnchorCentreOffset(voices, d.VoiceIndex, d.MeasureIndex, d.ItemIndex);
-            double left = half - centre + (d.IsSubito ? DynamicEngraver.SubitoWidth(fonts) : 0);
+            double left = half - centre + (d.IsSubito ? DynamicEngraver.SubitoWidth(fonts) : 0)
+                + (d.IsEditorial ? DynamicEngraver.EditorialReach(fonts, left: true) : 0);
+            double right = centre + half + (d.IsEditorial ? DynamicEngraver.EditorialReach(fonts, left: false) : 0);
             double spacing = 2 * SpacingRules.DefaultExtraSpacingWidth;
-            KeepOffTheBars(result, rods, column, left + spacing, column, centre + half + spacing, cols);
+            KeepOffTheBars(result, rods, column, left + spacing, column, right + spacing, cols);
         }
         return rods.Count > 0 ? SpringSolver.ApplyRods(result.ToImmutable(), rods) : result.ToImmutable();
     }

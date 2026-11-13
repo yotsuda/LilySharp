@@ -42,6 +42,10 @@ public static class AnnotationNames
         all.UnionWith(AnnotationNameValidator.PlainFeatureNames);
         all.UnionWith(SyntaxFacts.ArgumentTakingAnnotationNames);
         all.UnionWith(SyntaxFacts.DynamicTextLevels.Keys);
+        // @slur(dashed) / @tie(dashed) (2026-11-13): in no table above — they are no plain
+        // names and not in the argument-taking list (the parser reads their word itself).
+        all.Add(AnnotationValues.SlurLineName);
+        all.Add(AnnotationValues.TieLineName);
         return all;
     });
 

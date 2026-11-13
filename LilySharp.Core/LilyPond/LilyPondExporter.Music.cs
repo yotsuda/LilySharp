@@ -795,7 +795,8 @@ public sealed partial class LilyPondExporter
         },
         TieSyntax => "~",
         SlurSyntax s => s.IsOpen ? "(" : ")",
-        BeamMarkerSyntax bm => bm.IsStart ? "[" : "]",
+        // (In a `beaming syllabic` part every beam is the page's, written on its notes.)
+        BeamMarkerSyntax bm => InSyllabicPart ? "" : bm.IsStart ? "[" : "]",
         DynamicSyntax d => EmitDynamic(d),
         KeySignatureSyntax k => EmitKey(k),
         TimeSignatureSyntax ts => EmitTime(ts),
@@ -974,7 +975,8 @@ public sealed partial class LilyPondExporter
         var (harmonic, harmonicString) = NaturalHarmonic(n);
         // `cis?4` / `cis!4`: the accidental marks stand between the pitch and the duration.
         return prefix + harmonic + pitch + AccidentalMarks(n.Articulations)
-            + EmitEventDuration(n.Duration) + trem + ArpeggioFromAbove(n) + harmonicString + suffix;
+            + EmitEventDuration(n.Duration) + trem + ArpeggioFromAbove(n) + harmonicString + suffix
+            + SyllabicBeamMarks(n);
     }
 
     /// <summary>
@@ -1531,7 +1533,7 @@ public sealed partial class LilyPondExporter
         if (c.HasTiedMembers)
             chordArts = chordArts.Where(a => a is not TieSyntax).ToList();
         var (prefix, suffix) = SplitAttachments(Semantics.ArticulationRuns.WithCovering(c, chordArts));
-        return prefix + sb.ToString() + ArpeggioFromAbove(c) + suffix + memberFrames;
+        return prefix + sb.ToString() + ArpeggioFromAbove(c) + suffix + SyllabicBeamMarks(c) + memberFrames;
     }
 
     /// <summary>
@@ -1929,6 +1931,14 @@ public sealed partial class LilyPondExporter
         // LILYPOND-REF: ly/dynamic-scripts-init.ly:26-29 make-dynamic-script — the same constructor the built-in levels use.
         : d.IsSubito ? (d.ForcedAbove switch { true => "^", false => "_", null => "-" })
             + "#(make-dynamic-script (markup #:normal-text #:italic \"sub.\" #:dynamic \"" + d.DynamicToken.Text + "\"))"
+        // `@p(editorial)` (owner-approved 2026-11-13, grammar evaluation 3): LilyPond has no
+        // editorial dynamic either, and its manual's is the same constructor — the level
+        // between italic text parentheses two steps up, a pad off it (the page's picture;
+        // \parenthesize draws the small accidental parentheses instead).
+        // LILYPOND-REF: Documentation/notation "New dynamic marks", the \paren example.
+        : d.IsEditorial && d.Level != DynamicLevel.None ? (d.ForcedAbove switch { true => "^", false => "_", null => "-" })
+            + "#(make-dynamic-script (markup #:concat (#:normal-text #:italic #:fontsize 2 \"(\" #:pad-x 0.2 #:dynamic \""
+            + d.DynamicToken.Text + "\" #:normal-text #:italic #:fontsize 2 \")\")))"
         : (d.ForcedAbove switch
         {
             true => "^",

@@ -673,6 +673,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterMidiInstrument => GetMidiInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterTuning => GetTuningCompletions(),
             CompletionContext.AfterTransposition => GetTranspositionCompletions(),
+            CompletionContext.AfterBeaming => GetBeamingCompletions(),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterPitch => GetPitchModeCompletions(),
             CompletionContext.AfterPagePitch => GetPagePitchModeCompletions(),

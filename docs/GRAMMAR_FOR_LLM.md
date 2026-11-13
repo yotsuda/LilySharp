@@ -575,7 +575,10 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   `c4@trill( d e)`.)
 - Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` and the accent dynamics `@sfz @sf @fp @sfp @rfz @fz` (default below the staff, above it on a staff with a lyrics row directly under it; `.up` / `.down`
   forces the side, e.g. `@f.up`). Subito: `@p.subito` prints an italic "sub." before the p and plays as `@p`;
-  a side goes after it (`@ff.subito.up`)
+  a side goes after it (`@ff.subito.up`). Editorial (an editor's suggestion): `@p(editorial)` prints the
+  level in parentheses, "(p)", and plays as `@p` — any level (`@mf(editorial)`, `@sfz(editorial)`), a side
+  after it (`@f(editorial).up`); not on `@cresc` / `@decresc` / `@dim` / `@niente` (LYS4076), not with
+  `.subito`. Write exactly `(editorial)`, glued: any other `(` after a level opens a slur
 - Niente: `@niente` — `c4@p@decresc d e f | g1@niente` fades to nothing (circled tip), `c4@niente@cresc …` grows
   from nothing; never at a hairpin's loud end (LYS4029)
 - Accidental style: `@courtesy` (cautionary, parenthesized), `@editorial` (musica ficta)
@@ -603,10 +606,14 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   sings (no `singer` line, no words set to it) and that is not fretted it warns (LYS1008) and
   is ignored; for the word on the page write `@text("vib.")`
 - Figured bass: `c4@figuredBass(6)` , `d4@figuredBass(6 4)` — the figures of one bass note, top
-  to bottom, with spaces between them. ONE group a note: a second `@figuredBass` on the same
-  note is an error (LYS1067). A change of figure over a held bass — the 4–3 of a cadence — is
-  two tied notes with a figure each: `a4@figuredBass(4)~ a4@figuredBass(3)`, not
-  `a2@figuredBass(4)@figuredBass(3)`. The whole vocabulary:
+  to bottom, with spaces between them. A change of figure over ONE held bass — the 4–3 of a
+  cadence — is a COMMA between the groups: `a2@figuredBass(4, 3)`. The comma divides the note's
+  length into equal parts, one group each (4 on the first quarter, 3 on the second;
+  `a2.@figuredBass(6 4, 5 3, 7)` is three groups a quarter apart). So a comma is never a way
+  to stack: `6 4` is 6 over 4, `6, 4` is 6 then 4. ONE annotation a note: a second
+  `@figuredBass` on the same note is an error (LYS1067; write the comma form, not
+  `a2@figuredBass(4)@figuredBass(3)`), the comma form on a grace note is an error (LYS1068), and
+  an empty part (`4,`) makes the group unknown. The whole vocabulary:
   - a digit `0`–`9` is a figure (`6`, `6 4`, `7 5 3`; `0` is an empty row);
   - `s`, `f`, `n` AFTER a digit give it a sharp, a flat, a natural: `6 s` (6♯), `4 f` (4♭),
     `7 n` (7♮) — also written closed up, `6s`, `4f`;
@@ -619,8 +626,8 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   Nothing else is read, and a group with anything else in it is ignored whole with a warning
   (LYS1008) that lists the above: no `b`, `+`, `-`, `/`, `!`, `♯`, `♭`, no words (`sharp`,
   `flat`), and no `s` / `f` / `n` without a digit before it (`b7`, `6+`, `6 b`, `n`, `f` are all
-  refused; a flat or a natural alone is not written yet). Several figures in a row under one long
-  note are not written either: one group a note
+  refused; a flat or a natural alone is not written yet). Figures in a row under one long note
+  are the comma form above, in equal parts; unequal parts are tied notes with a figure each
 - Chord diagram (guitar fret diagram): `c4@diagram(x32010)` — one character per string, low
   to high: a digit is the fret (`0` or `o` open), `x` muted — frets 10–15 with a `-` on each
   side (`@diagram(xx-10-12-13-11)`); 4–8 strings. Above the note
@@ -713,7 +720,7 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   missing 3rd/7th/altered fifth/tension — the root and the perfect fifth may be left out; the
   bass is not checked) warns LYS1039 naming the fix. There is no voicing index and no `mute` word.
 - Fingering: on a note, `d''4.@finger(5)`; per chord note, `<c@finger(1) e@finger(3)>4`
-- Rehearsal mark: `c4@mark("A")`
+- Rehearsal mark: `c4@mark("A")` — written in ONE part it is the whole score's: every score of the piece prints it, a part sheet (`score vn2 { staff vn2 }`) of another part too. So is a `tempo` written inside one part's music, and on a part sheet a `@rit` / `@accel` / `@rall` / `@textSpan` of a part the sheet does not show (unless the sheet's own part writes one in that bar). Do not copy them into every part
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
 - Effects: `@dead` (x notehead; `@notehead(cross)` is the same head — `@cross` is NOT: it moves the
   note to the other staff of a grand staff; on a part drawn with no staff beside it = warning
@@ -756,12 +763,27 @@ c4~ | c4 d e f |     // tie (same pitch across the barline) with ~
 c4( d e f) |         // slur (different pitches) with ( )
 <c e>2( <d f>) |     // a slur may bind chords, not just single notes
 c8( d e( f) g) r4. | // WRONG: one slur at a time (the inner '(' is ignored); an outer phrase is @phrasingSlur
+c4@slur(dashed)( d e f) | // a DASHED slur: @slur(dashed) on the note where the slur begins (also @slur(dotted))
+c2@tie(dashed)~ c2 | // a dashed tie: @tie(dashed) on the note with the ~ (also @tie(dotted)); after a chord, all its ties
 c8[ d e f]           // manual beam; beaming is automatic otherwise
 r8[ c d e] |         // a manual beam may open or close on a rest, and reaches it
 ```
 
-A `[ … ]` only JOINS notes. There is no spelling that leaves a note unbeamed (a singer's
-syllabic flags): `c8[]` groups nothing — the note is beamed like `c8` — and warns (LYS4016).
+`@slur(dashed)` / `@tie(dashed)` say how the ONE slur / tie beginning on their note is drawn
+(an editor's suggestion, a slur for one verse only); they sound as the solid ones. The word
+is `dashed` or `dotted` and nothing else (LYS4074). On a note where no slur (no tie) begins —
+a rest, a note inside a chord's brackets, the slur's LAST note — it is an error (LYS4075).
+A phrasing slur has no dashed form.
+
+A `[ … ]` only JOINS notes: `c8[]` groups nothing — the note is beamed like `c8` — and warns
+(LYS4016). A SUNG part's beams are a part property: `part s { clef treble beaming syllabic }`
+beams the traditional vocal way — an automatic beam joins only the notes sung on ONE syllable,
+and every note that starts a syllable keeps its own flag. What holds a syllable is read off
+the NOTES (as LilyPond reads a melisma): the notes of a slur after its first, and a note tied
+into. So `c8 d e( f) g16( a b c')` is flag, flag, a beamed pair, a beamed four. The lyrics are
+not asked: a melisma written only in the words (`_`) needs a slur — or a manual `[ ]`, which
+still joins whatever it brackets. `syllabic` is the only word; leave the property out for the
+ordinary beams of the meter.
 
 ## Hairpins (spanners over several notes)
 
@@ -1652,6 +1674,7 @@ with the `lilysharp_readGuide` tool, topic `composing` (`docs/COMPOSE_FOR_LLM.md
   belongs an octave away: the boundary's frame reset stays, and the carry is written down.
 - Part header attributes are written **bare, no `=`**, like the top-level commands:
   `clef` `key` `octave` `instrument` `transpose` `transposition` `tuning` `pitch` `pedal`
+  `beaming syllabic` (a sung part: see Ties, slurs, beams)
   and `midiInstrument "acoustic bass"` (a quoted General MIDI sound — what playback sounds
   like, overriding the preset's). ⚠️ `time` and `tempo` are NOT part attributes: every
   part shares them, so `part m { time 3/4 }` is an error — write them at the top level or

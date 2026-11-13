@@ -1970,7 +1970,8 @@ internal sealed class MultiStaffLayouter
                     score.TextMetrics, primaryMeasure, allTimings, spacing, allMeasures, nextMeasure,
                     SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, i),
                     CollectStavesOfMeasuresAtIndex(score, i),
-                    BarOpensWithLeadingGrace(score, i + 1));
+                    BarOpensWithLeadingGrace(score, i + 1),
+                    ScoreSideTables.DividedFigures(score).At(i));
 
                 // An empty placeholder measure (`| |`) has no timing springs at all —
                 // without a floor it collapses to its barlines and reads as a double
@@ -2847,6 +2848,16 @@ internal sealed class MultiStaffLayouter
                 if (cn.UseTiming)
                     timings.Add(cn.Timing);
 
+        // A figure group INSIDE a held bass note (`a2@figuredBass(4, 3)`, owner-approved
+        // 2026-11-13) is a BassFigure in the paper column of its own moment, and that column is
+        // used: LilyPond spaces `<4>4 <3>4` under `a2` as two columns a quarter apart.
+        // MEASURED, 2.26.0 (LilySharp-Lab sessions/p1226/md/eval3/featI/f1.ly): head 8.7034,
+        // the second figure 11.6014, the next head 14.4995.
+        // LILYPOND-REF: lily/paper-column.cc:115-136 Paper_column::is_used — a column with an element in it stays.
+        if (!score.FiguredBasses.IsDefaultOrEmpty)
+            foreach (var fb in ScoreSideTables.DividedFigures(score).At(measureIndex))
+                timings.Add(fb.Timing);
+
         var sortedTimings = sawNotationSpacer
             ? PruneSpacerOnlyOnsets(score, measureIndex, timings)
             : timings.ToList();
@@ -2971,6 +2982,11 @@ internal sealed class MultiStaffLayouter
             foreach (var cn in ScoreSideTables.ChordNames(score).At(measureIndex))
                 if (cn.UseTiming)
                     anchoredOnsets.Add(cn.Timing);
+
+        // …and a figure group inside a held bass note (CollectAllTimingsForMeasure).
+        if (!score.FiguredBasses.IsDefaultOrEmpty)
+            foreach (var fb in ScoreSideTables.DividedFigures(score).At(measureIndex))
+                anchoredOnsets.Add(fb.Timing);
 
         var pruned = timings.Where(anchoredOnsets.Contains).ToList();
         return pruned.Count == 0 ? timings.ToList() : pruned;

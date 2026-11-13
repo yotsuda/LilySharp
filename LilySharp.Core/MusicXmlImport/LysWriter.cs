@@ -700,7 +700,8 @@ internal static class LysWriter
 
     // A dynamic mark as the reader spells one: it ends a hairpin.
     internal static bool IsDynamic(string articulation)
-        => System.Text.RegularExpressions.Regex.IsMatch(articulation, "^(p+|f+|m[pf]|s?f+z?|sfp+|fp|rf+z?|fz|sp+|n)$");
+        // (…or as an editor's level, `p(editorial)`, 2026-11-13.)
+        => System.Text.RegularExpressions.Regex.IsMatch(articulation, "^(p+|f+|m[pf]|s?f+z?|sfp+|fp|rf+z?|fz|sp+|n)(\\(editorial\\))?$");
 
     /// <summary>The text of a <c>mark("…")</c> articulation, or null for any other.</summary>
     private static string? MarkLabel(string articulation)
@@ -1338,6 +1339,7 @@ internal static class LysWriter
         var tokens = new List<string>();
         string? pendingChord = null;
         string? pendingFig = null;
+        int pendingFigDuration = 0;   // the <duration> of the group(s) held in pendingFig, or 0
 
         // ⚠️ MusicXML MARKS EACH NOTE; Lily# (like LilyPond) has a REGION. One region per
         // maximal run of consecutive cue notes is the only grouping that can round-trip: a
@@ -1390,7 +1392,21 @@ internal static class LysWriter
             }
             if (items[i] is ImportFiguredBass figuredBass)
             {
-                pendingFig = FigAnnotation(figuredBass, report);
+                var annotation = FigAnnotation(figuredBass, report);
+                // Several <figured-bass> before one note, each with a <duration>, are a change
+                // of figure under that note: the comma form, `a2@figuredBass(4, 3)` (2026-11-13).
+                // The comma divides the note EQUALLY, so unequal durations are said.
+                if (annotation != null && pendingFig != null && pendingFigDuration > 0 && figuredBass.Duration > 0)
+                {
+                    if (figuredBass.Duration != pendingFigDuration)
+                        report.Warn("figured-bass groups of unequal duration under one note are written as equal parts (@figuredBass(4, 3)).");
+                    pendingFig = pendingFig[..^1] + ", " + annotation["@figuredBass(".Length..];
+                }
+                else
+                {
+                    pendingFig = annotation;
+                    pendingFigDuration = figuredBass.Duration;
+                }
                 i++;
                 continue;
             }
@@ -1480,6 +1496,12 @@ internal static class LysWriter
             }
             foreach (var art in note.Articulations)
                 token += "@" + art;
+            // A dashed or dotted slur / tie is said on the note it begins on (2026-11-13); a
+            // chord's ties take one line, and a head tied alone keeps the solid one.
+            if (note.SlurStart && note.SlurLine != null)
+                token += "@slur(" + note.SlurLine + ")";
+            if (allTied && members.Select(m => m.TieLine).FirstOrDefault(l => l != null) is { } tieLine)
+                token += "@tie(" + tieLine + ")";
             // Close before open, the order both engines read them in.
             if (note.PhrasingSlurStop)
                 token += "@!phrasingSlur";

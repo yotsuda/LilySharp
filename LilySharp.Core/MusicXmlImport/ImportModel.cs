@@ -234,6 +234,12 @@ internal sealed class ImportNote : ImportItem
     public bool SlurStart { get; set; }
     /// <summary>A slur ends on this note (a <c>)</c> is emitted after it).</summary>
     public bool SlurStop { get; set; }
+    /// <summary><c>dashed</c> or <c>dotted</c> from the starting <c>&lt;slur line-type&gt;</c>, else
+    /// null: written as <c>@slur(dashed)</c> on the note (2026-11-13).</summary>
+    public string? SlurLine { get; set; }
+    /// <summary><c>dashed</c> or <c>dotted</c> from the starting <c>&lt;tied line-type&gt;</c>, else
+    /// null: written as <c>@tie(dashed)</c> on the note.</summary>
+    public string? TieLine { get; set; }
     /// <summary>A phrasing slur starts here (<c>@phrasingSlur</c>) — a <c>&lt;slur&gt;</c>
     /// numbered 2 or more. <see cref="PhrasingSlurPlacement"/> is its written side.</summary>
     public bool PhrasingSlurStart { get; set; }
@@ -328,6 +334,11 @@ internal readonly record struct ImportDegree(int Value, int Alter, string Type);
 internal sealed class ImportFiguredBass : ImportItem
 {
     public List<ImportFigure> Figures { get; } = new();
+
+    /// <summary>The group's <c>&lt;duration&gt;</c> in divisions, or 0 when it has none: MusicXML's
+    /// way to change figures under one note, which the writer turns into the comma form
+    /// (<c>@figuredBass(4, 3)</c>, 2026-11-13).</summary>
+    public int Duration { get; set; }
 }
 
 /// <summary>One figure in a figured-bass group.</summary>

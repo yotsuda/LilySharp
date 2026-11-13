@@ -105,6 +105,11 @@ public sealed record DynamicItem
     /// the level itself stands and sounds where the plain one would (DynamicEngraver.SubitoWidth).</summary>
     public bool IsSubito { get; init; }
 
+    /// <summary><c>@p(editorial)</c> (owner-approved 2026-11-13, grammar evaluation 3): the level
+    /// printed between parentheses, "(p)" — an editor's dynamic; the level itself stands and
+    /// sounds where the plain one would (DynamicEngraver.EditorialReach).</summary>
+    public bool IsEditorial { get; init; }
+
     /// <summary>Creates a dynamic marking of the given level.</summary>
     public DynamicItem(DynamicLevel level, int measureIndex, int itemIndex,
         int sourcePosition, int staffIndex = 0)

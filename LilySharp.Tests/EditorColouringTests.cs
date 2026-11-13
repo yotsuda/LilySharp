@@ -754,6 +754,8 @@ public class EditorColouringTests
             if (!IsColoured($"transposition {v}")) plain.Add($"transposition {v}");
         foreach (string v in LanguageVocabulary.PitchModes)
             if (!IsColoured($"pitch {v}")) plain.Add($"pitch {v}");
+        foreach (string v in LanguageVocabulary.BeamingModes)
+            if (!IsColoured($"beaming {v}")) plain.Add($"beaming {v}");
         foreach (string v in SymbolCaseValidator.TuningValueVocabulary)
         {
             // ⚠️ BOTH positions. A tuning name is also the value of `tab NAME` in a score
@@ -784,6 +786,7 @@ public class EditorColouringTests
             ["pedal"] = SymbolCaseValidator.PedalValueVocabulary,
             ["transposition"] = InstrumentDefaults.TranspositionMarkers,
             ["pitch"] = LanguageVocabulary.PitchModes,
+            ["beaming"] = LanguageVocabulary.BeamingModes,
         };
 
         string[] stray = [.. PartHeaderPairsInTheGrammar()

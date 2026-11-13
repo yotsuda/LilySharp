@@ -708,6 +708,13 @@ internal sealed class MusicXmlDirection
     /// <summary>`@p.subito`: the dynamic follows the words "sub." in the one direction, as
     /// the page prints them.</summary>
     public bool Subito { get; set; }
+    /// <summary>`@p(editorial)` (owner-approved 2026-11-13, grammar evaluation 3): the dynamic
+    /// stands between the words "(" and ")" in the one direction, as the page prints them.
+    /// MusicXML 4.0's <c>dynamics</c> element has no parentheses attribute (its attributes are
+    /// print-style-align, placement, text-decoration, enclosure and id, and no enclosure shape is
+    /// a pair of parentheses), and <c>other-dynamics</c> would give the level up as text — so
+    /// the level stays the element it is, and the parentheses are words beside it.</summary>
+    public bool Editorial { get; set; }
     /// <summary>The metronome's per-minute figure, in <see cref="TempoBeatUnit"/>s.</summary>
     public int? Tempo { get; set; }
     /// <summary>The metronome's beat unit as a note value (4 = quarter) and its dots. Until
@@ -793,9 +800,15 @@ internal sealed class MusicXmlDirection
             if (Subito)
                 direction.Add(new XElement("direction-type",
                     new XElement("words", new XAttribute("font-style", "italic"), "sub.")));
+            if (Editorial)
+                direction.Add(new XElement("direction-type",
+                    new XElement("words", new XAttribute("font-style", "italic"), "(")));
             direction.Add(new XElement("direction-type",
                 new XElement("dynamics",
                     new XElement(DynamicType))));
+            if (Editorial)
+                direction.Add(new XElement("direction-type",
+                    new XElement("words", new XAttribute("font-style", "italic"), ")")));
         }
 
         if (WedgeType != null)
@@ -959,6 +972,13 @@ internal sealed class MusicXmlNote
     public bool TieStop { get; set; }
     public bool SlurStart { get; set; }
     public bool SlurStop { get; set; }
+    /// <summary>The <c>line-type</c> of the slur that starts on this note — <c>dashed</c> or
+    /// <c>dotted</c> for <c>@slur(dashed)</c> / <c>@slur(dotted)</c> (owner-approved 2026-11-13,
+    /// grammar evaluation 3) — or null for the solid one, which writes no attribute.</summary>
+    public string? SlurLineType { get; set; }
+    /// <summary>The <c>line-type</c> of the tie that starts on this note (<c>@tie(dashed)</c>),
+    /// on its <c>&lt;tied type="start"&gt;</c>. See <see cref="SlurLineType"/>.</summary>
+    public string? TiedLineType { get; set; }
 
     /// <summary>The slur's <c>number</c>: 1, or 2 on a grand staff's lower staff, whose slurs
     /// run beside the upper staff's in the one part.</summary>
@@ -1153,13 +1173,16 @@ internal sealed class MusicXmlNote
 
             // Tied notations
             if (TieStart)
-                notations.Add(new XElement("tied", new XAttribute("type", "start")));
+                // line-type: MusicXML 4.0's tied element takes the %line-type attributes (solid | dashed | dotted | wavy).
+                notations.Add(new XElement("tied", new XAttribute("type", "start"),
+                    TiedLineType is null ? null : new XAttribute("line-type", TiedLineType)));
             if (TieStop)
                 notations.Add(new XElement("tied", new XAttribute("type", "stop")));
 
             // Slur notations
             if (slurStart)
-                notations.Add(new XElement("slur", new XAttribute("type", "start"), new XAttribute("number", SlurNumber)));
+                notations.Add(new XElement("slur", new XAttribute("type", "start"), new XAttribute("number", SlurNumber),
+                    SlurLineType is null ? null : new XAttribute("line-type", SlurLineType)));
             if (slurStop)
                 notations.Add(new XElement("slur", new XAttribute("type", "stop"), new XAttribute("number", SlurNumber)));
 

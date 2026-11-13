@@ -679,7 +679,9 @@ internal sealed class ArticulationGreen : GreenSyntaxNode
 internal sealed class DynamicGreen : GreenSyntaxNode
 {
     // Slots: '@', name, '.', direction (or 'subito'), then the '.' and the direction
-    // written after a '.subito' (`@p.subito.up`).
+    // written after a '.subito' (`@p.subito.up`). An editorial level (`@p(editorial)`,
+    // 2026-11-13) leaves slots 2-3 empty and holds '(', 'editorial', ')' in 4-6, with the
+    // '.' and the direction written after it (`@p(editorial).up`) in 7-8.
     // dotToken exists for the same reason as ArticulationGreen's: see there.
     public DynamicGreen(
         SyntaxToken backslashToken,

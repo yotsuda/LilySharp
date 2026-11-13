@@ -1201,7 +1201,11 @@ internal static class MusicXmlReader
         {
             switch ((string?)t.Attribute("type"))
             {
-                case "start": note.TieStart = true; break;
+                case "start":
+                    note.TieStart = true;
+                    if ((string?)t.Attribute("line-type") is "dashed" or "dotted")
+                        note.TieLine = (string?)t.Attribute("line-type");
+                    break;
                 case "stop": note.TieStop = true; break;
             }
         }
@@ -1224,7 +1228,11 @@ internal static class MusicXmlReader
                         note.PhrasingSlurPlacement = (string?)s.Attribute("placement");
                         break;
                     case "stop" when second: note.PhrasingSlurStop = true; break;
-                    case "start": note.SlurStart = true; break;
+                    case "start":
+                        note.SlurStart = true;
+                        if ((string?)s.Attribute("line-type") is "dashed" or "dotted")
+                            note.SlurLine = (string?)s.Attribute("line-type");
+                        break;
                     case "stop": note.SlurStop = true; break;
                 }
             }
@@ -1388,6 +1396,13 @@ internal static class MusicXmlReader
         };
     }
 
+    /// <summary>Whether <paramref name="dir"/> is an EDITORIAL dynamic as the exporter writes
+    /// one (<c>@p(editorial)</c>, 2026-11-13): one <c>&lt;dynamics&gt;</c> and words that say
+    /// exactly "(" and ")" about it. The two words are then no text of their own.</summary>
+    private static bool IsEditorialDynamics(XElement dir)
+        => Els(dir, "direction-type").SelectMany(t => Els(t, "dynamics")).Count() == 1
+           && string.Concat(Els(dir, "direction-type").SelectMany(t => Els(t, "words")).Select(w => w.Value.Trim())) == "()";
+
     /// <summary>Dynamic mark names from a &lt;direction&gt;: each &lt;dynamics&gt; level
     /// (f, ff, p, mf, …) and an OPENING hairpin wedge (crescendo → cresc, diminuendo →
     /// decresc). A wedge stop is read apart (<see cref="EndWedges"/>), but for a diminuendo's al
@@ -1396,13 +1411,16 @@ internal static class MusicXmlReader
     {
         // Every <direction-type>: one direction may hold "cresc." and its wedge side by side, and
         // until 2026-11-04 only the first was read, so the wedge after a word was lost.
+        // A level between the words "(" and ")" is an editor's: @p(editorial) (2026-11-13).
+        bool editorial = IsEditorialDynamics(dir);
         foreach (var dt in Els(dir, "direction-type"))
         {
             foreach (var dyn in Els(dt, "dynamics"))
                 foreach (var level in dyn.Elements())
                     if (level.Name.LocalName != "other-dynamics")
                         // <n/> is MusicXML's niente.
-                        yield return level.Name.LocalName == "n" ? "niente" : level.Name.LocalName;
+                        yield return level.Name.LocalName == "n" ? "niente"
+                            : level.Name.LocalName + (editorial ? "(editorial)" : "");
             foreach (var wedge in Els(dt, "wedge"))
             {
                 // niente="yes" is the circle at the tip: a crescendo from nothing, or the stop of
@@ -1530,7 +1548,7 @@ internal static class MusicXmlReader
         {
             string text = string.Join(" ", string.Concat(Els(dt, "words").Select(w => w.Value))
                 .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-            if (text.Length > 0 && !wordsAreTheTempos)
+            if (text.Length > 0 && !wordsAreTheTempos && !(text is "(" or ")" && IsEditorialDynamics(dir)))
             {
                 if (text == "una corda")
                     yield return "unaCorda";
@@ -1737,6 +1755,8 @@ internal static class MusicXmlReader
                 continue;
             fb.Figures.Add(new ImportFigure(number, alter, Held: false));
         }
+        if (int.TryParse(Local(el, "duration")?.Value, out int duration) && duration > 0)
+            fb.Duration = duration;
         return fb.Figures.Count > 0 ? fb : null;
     }
 

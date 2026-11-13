@@ -545,6 +545,23 @@ g4@p.subito         // sub. p
 c4@ff.subito.up     // sub. ff, above the staff: the side goes after .subito
 ```
 
+An **editorial** dynamic — an editor's, not the composer's — adds `(editorial)`: the level prints
+in parentheses, stands where the plain level would and plays as it. Every level takes it:
+
+```
+g4@p(editorial)       // (p)
+c4@mf(editorial).up   // (mf), above the staff: the side goes after the parentheses
+c4@sfz(editorial)     // (sfz)
+```
+
+The parentheses are italic text ones, two steps larger than text, a little off the letters — the
+picture of LilyPond's manual (`make-dynamic-script`, which the twin writes; `\parenthesize` draws
+small accidental parentheses instead). MusicXML keeps the level a `<dynamics>` element and writes
+the two parentheses as `<words>` beside it in the same direction (its `dynamics` element has no
+parentheses attribute), and reads the three back as one. The word must stand glued between the
+parentheses: any other `(` after a level is the slur that starts on the note (`c4@p( d e)`). A
+hairpin or `@niente` takes none (**LYS4076**), and `.subito` and `(editorial)` do not combine.
+
 A note takes one dynamic: in `c4@f@sfz` the `f` is printed and the `sfz` is not, and the
 second warns (LYS4022) — LilyPond keeps the first as well. A hairpin beside a dynamic is
 fine (`c4@p@cresc`).
@@ -625,6 +642,28 @@ that note head instead of the whole chord — LilyPond's `<c e( g>`:
 The bow then leaves the head's inner edge and stays close to it, as LilyPond draws it. The
 mark goes after a pitch member (after a scale degree or a drum name it is reported); a mark
 after `>` is the chord's own.
+
+### Dashed and dotted slurs and ties
+
+`@slur(dashed)` on the note where a slur BEGINS draws that slur dashed; `@tie(dashed)` on the
+note whose tie it is draws that tie dashed. `dotted` is the other word:
+
+```
+c4@slur(dashed)( d e f) |          // an editor's slur, or one for the second verse only
+c2@tie(dashed)~ c2 |               // a tie some verses sing through
+c4@slur(dotted)( e) g2@tie(dotted)~ | g1 |
+<c e g>2@tie(dashed)~ <c e g>2 |   // after a chord: all its ties
+```
+
+The curve is the solid one's, cut into dashes as LilyPond's `\slurDashed` / `\slurDotted` /
+`\tieDashed` / `\tieDotted` cut it; one annotation is one curve. It sounds as the solid one
+does. MusicXML writes `line-type="dashed"` (or `dotted`) on the starting `<slur>` / `<tied>`,
+the LilyPond twin `\once \slurDashed` before the note.
+
+The word is `dashed` or `dotted` (anything else: **LYS4074**). With no slur beginning on the
+note (`@slur`) or no tie (`@tie`) — a rest, or one note inside a chord's brackets, among them —
+the annotation would draw nothing, and is an error (**LYS4075**). A phrasing slur has no dashed
+form yet.
 
 ### Phrasing Slurs
 
@@ -1508,6 +1547,24 @@ A rest a manual beam covers keeps its place under the beam: it draws no stem, bu
 reaches it, so `r8[ c d e]` beams from the rest. Automatic beams still end at every rest —
 only a written bracket spans one.
 
+A bracket only joins: `c8[]` groups nothing and warns (LYS4016). Notes that each keep their
+own flag are a sung part's, and a part property:
+
+```
+part soprano { clef treble  beaming syllabic }
+section A { soprano { c''8 d'' e''( f'') g''8 a'' g''16( f'' e'' d'') | } }
+```
+
+With `beaming syllabic` an automatic beam joins only the notes sung on one syllable, and every
+note that starts a syllable has its own flag — the traditional vocal style (above: flag, flag,
+a beamed pair, flag, flag, a beamed four). A syllable's notes are read off the music, as
+LilyPond reads a melisma: the notes of a slur after its first, and a note tied into. The
+part's lyrics are not asked, so a melisma the words alone write (`_`) takes a slur, or a
+manual `[ ]`, which still joins what it brackets. Inside one syllable the beams are the
+meter's (a slur across a beat is beamed beat by beat). MusicXML's beams are the page's; the
+LilyPond twin writes the staff with `autoBeaming = ##f` and every beam by hand. `syllabic` is
+the property's only word: a part without it is beamed by the meter.
+
 ## Stem Direction
 
 A stem points up or down automatically from the note's staff position. Force it with
@@ -1574,7 +1631,7 @@ theme              // Insert the phrase's music here (bare name)
 
 Header attributes are written bare (no colon), the same as the top-level commands:
 `clef`, `key`, `octave`, `instrument`, `transpose`, `transposition`, `tuning`, `pitch`,
-`pedal` and `midiInstrument "acoustic bass"` (a quoted General MIDI sound for playback,
+`pedal`, `beaming syllabic` (a sung part's beams — see Beaming) and `midiInstrument "acoustic bass"` (a quoted General MIDI sound for playback,
 overriding the instrument preset's). `time` and `tempo` are not part attributes — every
 part shares them, so they go at the top level or in a section header:
 
@@ -2202,6 +2259,15 @@ section's label opens is not printed — the label is — and the mark warns (LY
 LilyPond keeps the first `\mark` of a moment and discards the second. Drop the `@mark`, or
 hide the label with `~Name` in the form (or `layout { sectionLabels none }`).
 
+Written in one part, a `@mark` is on every score that shows the piece: once above the system
+in a full score, and on the sheet of a part that does not write it (`score violin2 { staff
+v2 }`) — as LilyPond's RehearsalMark is the Score's and prints in every extracted part. A
+`tempo` written inside one part's music is the same. A tempo word's line — `@rit`, `@accel`,
+`@rall`, `@textSpan("poco rit.")` — belongs to its staff in a score of several staves; on a
+one-staff part sheet the line of a part the sheet does not show is printed too, over the
+sheet's own notes, unless its part writes one in that bar. (The page only, for now: a part
+sheet's LilyPond twin and MusicXML do not carry another part's mark or line.)
+
 ### Navigation Marks
 
 A navigation mark is **bare** and **form-only**: it is written between the section names of
@@ -2588,9 +2654,22 @@ Arpeggios are not played as a roll. LilyPond gets `connectArpeggios` (or
 c4@figuredBass(6) d@figuredBass(6 4) e@figuredBass(5 3) |
 ```
 
-One group a note: a second `@figuredBass` on the same note is an error (**LYS1067**). A change
-of figure over a held bass is two tied notes with a figure each —
-`a4@figuredBass(4)~ a4@figuredBass(3)`, not `a2@figuredBass(4)@figuredBass(3)`.
+A change of figure over one held note is a comma between the groups:
+
+```
+a2@figuredBass(4, 3) g2@figuredBass(6) | a2.@figuredBass(6 4, 5 3, 7) g4 |
+```
+
+The comma divides the note's length into equal parts, one group each: `(4, 3)` on a half note
+is 4 on the first quarter and 3 on the second; three groups are thirds. A later group stands
+at its moment inside the note, and the bar is spaced for it (as LilyPond spaces
+`<4>4 <3>4` under `a2`). MusicXML gets one `<figured-bass>` a group, each with its
+`<duration>`; the LilyPond twin writes figure-mode durations.
+
+One annotation a note: a second `@figuredBass` on the same note is an error (**LYS1067**) —
+write the comma form, not `a2@figuredBass(4)@figuredBass(3)`. The comma form on a grace note is
+an error too (**LYS1068**: a grace note has no length to divide), and an empty part
+(`@figuredBass(4,)`) is an unknown group (LYS1008).
 
 ## Chord Names
 

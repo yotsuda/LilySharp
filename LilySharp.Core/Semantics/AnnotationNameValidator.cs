@@ -213,7 +213,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 if (!mark.IsSpanEnd && AnnotationValues.Vibrato(mark) != null)
                     WarnVibratoNobodySings(mark);
                 if (mark is { Name: FiguredBassName, IsSpanEnd: false })
+                {
                     RefuseSecondFigureGroup(mark);
+                    RefuseDividedFiguresOnAGrace(mark);
+                }
                 // ⚠️ The dotted MarkName is BUILT on every read — it joins the name tokens
                 // through a list — and every branch below that needs it is a branch that is
                 // about to report something. On the settled-keystroke path almost no mark
@@ -443,6 +446,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || mark is { Name: MusicMarkItem.BarreName, IsSpanEnd: false }
             // A natural harmonic's fret, read or not: GuitarMarkValidator says why (LYS4070–4073).
             || AnnotationValues.IsFretHarmonic(mark)
+            // A slur's or a tie's line, read or not: BowLineValidator says what a miswritten one lacks (LYS4074, LYS4075).
+            || mark is { Name: AnnotationValues.SlurLineName or AnnotationValues.TieLineName, IsSpanEnd: false, HasArgumentList: true }
             || AnnotationValues.Feather(mark) != 0
             || AnnotationValues.ArpeggioWords(mark) is not null
             || AnnotationValues.OrnamentAccidental(mark) is not null
@@ -712,7 +717,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         "8" or "ottava" or "octava" => "An ottava is '@8va' … '@!8va' (also '@8vb', '@15ma', '@15mb').",
         "stacc" or "staccatto" => "Did you mean '@staccato'?",
         "ten" => "Did you mean '@tenuto'?",
-        "legato" or "slur" => "A slur is written with parentheses: c4( d e f).",
+        "legato" or "slur" => "A slur is written with parentheses: c4( d e f). A dashed one adds '@slur(dashed)' on its first note: c4@slur(dashed)( d e f).",
+        "tie" => "A tie is written with a tilde: c2~ c2. A dashed one adds '@tie(dashed)' on its first note: c2@tie(dashed)~ c2.",
         _ => null,
     };
 
@@ -781,12 +787,11 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     /// (<c>&lt;4&gt;4 &lt;3&gt;4</c> under <c>a2</c>).
     /// </summary>
     /// <remarks>
-    /// LILYSHARP-OWN: a figure group here belongs to a NOTE (FiguredBassItem is addressed by
-    /// bar and item; so are its MusicXML element and its place in the twin's figure stream), so
-    /// a figure at the middle of a note has nowhere to stand yet. An error that names the form
-    /// that says it — two tied notes with a figure each — was chosen over the mid-note figure
-    /// (page, MusicXML <c>&lt;duration&gt;</c>, the twin and the reader back from each). The
-    /// first group stands, as it did in the exports.
+    /// LILYSHARP-OWN: the change of figure is ONE annotation whose comma divides the note —
+    /// <c>a2@figuredBass(4, 3)</c> (owner-approved 2026-11-13, the same evaluation;
+    /// <c>FiguredBassItem.ParseGroups</c>) — so two annotations on one note stay an error, and
+    /// the message names that form. Until the comma form existed it advised two tied notes
+    /// with a figure each. The first annotation stands, as it did in the exports.
     /// </remarks>
     private void RefuseSecondFigureGroup(MusicMarkSyntax mark)
     {
@@ -798,8 +803,30 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             {
                 _diagnostics.Error(mark.Span, DiagnosticCodes.SecondFigureGroupOnANote,
                     "a second @figuredBass on one note - the figures of one bass note are ONE group, top to bottom "
-                    + "(@figuredBass(6 4)). For a change of figure over a held bass (4 then 3), write the bass as two "
-                    + "tied notes with a figure each: a4@figuredBass(4)~ a4@figuredBass(3).");
+                    + "(@figuredBass(6 4)). For a change of figure over a held bass (4 then 3), write ONE annotation "
+                    + "with a comma between the groups: a2@figuredBass(4, 3) - the comma divides the note's length "
+                    + "into equal parts, one group each.");
+                return;
+            }
+    }
+
+    /// <summary>
+    /// <c>grace { a8@figuredBass(4, 3) }</c>: the comma form on a grace note. The comma divides
+    /// the note's LENGTH into equal parts, and a grace note takes no time from its bar — there
+    /// is nothing to divide and no column for the second group to stand on (owner-approved
+    /// spelling 2026-11-13, grammar evaluation 3). The first group is drawn at the grace.
+    /// </summary>
+    private void RefuseDividedFiguresOnAGrace(MusicMarkSyntax mark)
+    {
+        if (AnnotationValues.FigureGroups(mark) is not { Length: > 1 })
+            return;
+        for (var p = mark.Parent; p != null; p = p.Parent)
+            if (p is GraceExpressionSyntax)
+            {
+                _diagnostics.Error(mark.Span, DiagnosticCodes.DividedFiguresOnAGraceNote,
+                    "@figuredBass with a comma on a grace note - the comma divides the note's length into equal "
+                    + "parts, one figure group each, and a grace note has no length to divide. Write one group "
+                    + "(@figuredBass(4)); only the first is drawn here.");
                 return;
             }
     }
@@ -810,7 +837,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         "Figures are written top to bottom with spaces between them: a digit 0-9 ('6', '6 4', '7 5 3'); "
         + "'s', 'f' or 'n' after a digit for its sharp, flat or natural ('6 s', '4 f', '7 n'); "
         + "'#' before a digit for its sharp ('#6'), or with no digit after it for a sharp alone, the raised third ('#', '7 #'); "
-        + "'_' for a figure held from the note before. "
+        + "'_' for a figure held from the note before; "
+        + "a ',' between groups for a change of figure over one held note ('4, 3': the note's length in equal parts, one group each). "
         + "Not read: 'b', '+', '-', '/', '!', '♯', '♭', the words 'sharp' and 'flat', and a letter with no digit before it.";
 
     private void WarnUnknown(SyntaxNode node, string name)

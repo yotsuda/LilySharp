@@ -1233,7 +1233,7 @@ public sealed partial class MeasureCollector
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp,
                         noteItem.EditorialAccidental, noteAnchorTiming);
-                    CollectFiguredBass(note, measureIndex, itemIndex);
+                    CollectFiguredBass(note, measureIndex, itemIndex, noteAnchorTiming, noteItem.Duration);
                     CollectChordNames(note, measureIndex, itemIndex, noteAnchorTiming);
                     CollectCrossStaff(note, measureIndex, itemIndex);
                 }
@@ -1466,7 +1466,7 @@ public sealed partial class MeasureCollector
                     CollectDynamics(chord, measureIndex, itemIndex);
                     // Use chord stem direction for articulation placement
                     CollectArticulations(chord, measureIndex, itemIndex, chordItem.StemUp, anchorTiming: chordAnchorTiming);
-                    CollectFiguredBass(chord, measureIndex, itemIndex);
+                    CollectFiguredBass(chord, measureIndex, itemIndex, chordAnchorTiming, chordItem.Duration);
                     CollectChordNames(chord, measureIndex, itemIndex, chordAnchorTiming);
                     CollectCrossStaff(chord, measureIndex, itemIndex);
                     // Collect arpeggio if present (bracket or wiggle — see arpBracket above).
@@ -1503,7 +1503,7 @@ public sealed partial class MeasureCollector
                     await AddItemAsync(builder, WithBowSources(chordCopy, m));
                     CollectDynamics(rep, measureIndex, itemIndex);
                     CollectArticulations(rep, measureIndex, itemIndex, chordCopy.StemUp, anchorTiming: repAnchorTiming);
-                    CollectFiguredBass(rep, measureIndex, itemIndex);
+                    CollectFiguredBass(rep, measureIndex, itemIndex, repAnchorTiming, chordCopy.Duration);
                     CollectChordNames(rep, measureIndex, itemIndex, repAnchorTiming);
                     CollectCrossStaff(rep, measureIndex, itemIndex);
                     AddArpeggio(chordCopy, hasArpeggio, arpBracket, measureIndex, itemIndex, rep.SourceStart,
@@ -1528,7 +1528,7 @@ public sealed partial class MeasureCollector
                     await AddItemAsync(builder, WithBowSources(slashItem, m));
                     CollectDynamics(slash, measureIndex, itemIndex);
                     CollectArticulations(slash, measureIndex, itemIndex, slashItem.StemUp, anchorTiming: slashAnchorTiming);
-                    CollectFiguredBass(slash, measureIndex, itemIndex);
+                    CollectFiguredBass(slash, measureIndex, itemIndex, slashAnchorTiming, slashItem.Duration);
                     CollectChordNames(slash, measureIndex, itemIndex, slashAnchorTiming);
                     CollectCrossStaff(slash, measureIndex, itemIndex);
                 }
@@ -1557,7 +1557,7 @@ public sealed partial class MeasureCollector
                     };
                     CollectDynamics(bare, measureIndex, itemIndex);
                     CollectArticulations(bare, measureIndex, itemIndex, bareStemUp, anchorTiming: bareAnchorTiming);
-                    CollectFiguredBass(bare, measureIndex, itemIndex);
+                    CollectFiguredBass(bare, measureIndex, itemIndex, bareAnchorTiming, bareItem.Duration);
                     CollectChordNames(bare, measureIndex, itemIndex, bareAnchorTiming);
                     CollectCrossStaff(bare, measureIndex, itemIndex);
                 }
@@ -2475,6 +2475,36 @@ public sealed partial class MeasureCollector
         // A grace run moves whole or not at all (VoiceState.GraceAllCross) — see CollectCrossStaff.
         if ((_v.GraceDepth == 0 || _v.GraceAllCross) && WritesCross(node))
             item = item with { CrossWritten = true };
+        // How the slur and the tie that begin here are drawn: c4@slur(dashed)( d e),
+        // c2@tie(dotted)~ c2 (owner-approved 2026-11-13, grammar evaluation 3). The detectors
+        // read them off the item (SlurDetector, TieDetector); with no slur or tie beginning
+        // here nothing reads them, and BowLineValidator says so (LYS4075).
+        foreach (var art in ArticulationsOf(node))
+            if (art is MusicMarkSyntax bowMark)
+            {
+                if (Semantics.AnnotationValues.BowLineOf(bowMark, Semantics.AnnotationValues.SlurLineName) is { } slurLine)
+                    item = item with { SlurLine = slurLine };
+                else if (Semantics.AnnotationValues.BowLineOf(bowMark, Semantics.AnnotationValues.TieLineName) is { } tieLine)
+                    item = item with { TieLine = tieLine };
+            }
+        // `beaming syllabic` (owner-approved 2026-11-13, grammar evaluation 3): a note that
+        // starts a syllable takes no automatic beam from the note before it. A note inside a
+        // slur (after its first) or tied into is held, as LilyPond's melismaBusy reads it; a
+        // grace note is no syllable's and leaves the state alone.
+        if (_partBeamingSyllabic && _v.GraceDepth == 0)
+        {
+            var (slurStart, slurEnd, tieStart) = item switch
+            {
+                NoteItem sn => (sn.HasSlurStart, sn.HasSlurEnd, sn.HasTieStart),
+                ChordItem sc => (sc.HasSlurStart, sc.HasSlurEnd, sc.HasTieStart),
+                _ => (false, false, false),
+            };
+            if (!_v.SyllableSlurOpen && !_v.SyllableTiedIn)
+                item = item with { BeamBreakBefore = true };
+            _v.SyllableTiedIn = tieStart;
+            if (slurEnd) _v.SyllableSlurOpen = false;
+            if (slurStart) _v.SyllableSlurOpen = true;
+        }
         switch (item)
         {
             case NoteItem n:
@@ -2726,7 +2756,7 @@ public sealed partial class MeasureCollector
                 CollectDynamics(note, annMeasureIndex, annItemIndex);
                 CollectArticulations(note, annMeasureIndex, annItemIndex, noteItem.StemUp,
                     noteItem.EditorialAccidental, annAnchor);
-                CollectFiguredBass(note, annMeasureIndex, annItemIndex);
+                CollectFiguredBass(note, annMeasureIndex, annItemIndex, annAnchor, noteItem.Duration);
                 CollectChordNames(note, annMeasureIndex, annItemIndex, annAnchor);
                 CollectCrossStaff(note, annMeasureIndex, annItemIndex);
                 return written;
@@ -2779,7 +2809,7 @@ public sealed partial class MeasureCollector
                 await AddItemWithoutDurationAsync(builder, WithBowSources(chordItem, m));
                 CollectDynamics(chord, annMeasureIndex, annItemIndex);
                 CollectArticulations(chord, annMeasureIndex, annItemIndex, chordItem.StemUp, anchorTiming: annAnchor);
-                CollectFiguredBass(chord, annMeasureIndex, annItemIndex);
+                CollectFiguredBass(chord, annMeasureIndex, annItemIndex, annAnchor, chordItem.Duration);
                 CollectChordNames(chord, annMeasureIndex, annItemIndex, annAnchor);
                 CollectCrossStaff(chord, annMeasureIndex, annItemIndex);
                 AddArpeggio(chordItem, hasArpeggio, arpBracket, annMeasureIndex, annItemIndex, chord.SourceStart,
@@ -2810,7 +2840,7 @@ public sealed partial class MeasureCollector
                         cross: CrossArpeggioOf(rep) != SpanArpeggioPart.None, arrow: ArpeggioArrowOf(rep));
                     CollectDynamics(rep, annMeasureIndex, annItemIndex);
                     CollectArticulations(rep, annMeasureIndex, annItemIndex, chordCopy.StemUp, anchorTiming: annAnchor);
-                    CollectFiguredBass(rep, annMeasureIndex, annItemIndex);
+                    CollectFiguredBass(rep, annMeasureIndex, annItemIndex, annAnchor, chordCopy.Duration);
                     CollectChordNames(rep, annMeasureIndex, annItemIndex, annAnchor);
                     CollectCrossStaff(rep, annMeasureIndex, annItemIndex);
                     return written;

@@ -77,6 +77,8 @@ public static class SemanticValidation
         new CrossArpeggioValidator(),       // an @arpeggio(cross) with no chord below it to run down to
         new GuitarMarkValidator(),          // a @barre that names no barre
         new HarmonicOpenStringValidator(),  // a @harmonic(12) on a note that is no open string
+        new EditorialDynamicValidator(),    // @cresc(editorial), @niente(editorial): the parentheses are a level's
+        new BowLineValidator(),             // a @slur(dashed) / @tie(dashed) that names no line, or with no slur / tie beginning there
         new ItemCapoValidator(),            // `staff NAME capo N` (a tab's clause), a tab's capo out of range or apart from its part's shapes
         new CustomTuningValidator(),        // a tuning written out ("d, a, d g a d'") that spells none
         new SymbolCaseValidator(),          // wrong-case / unknown header symbols

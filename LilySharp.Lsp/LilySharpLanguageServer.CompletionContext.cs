@@ -931,6 +931,8 @@ public sealed partial class LilySharpLanguageServer
         AfterTuning,
         /// <summary><c>transposition |</c> in a part header — the four octave markers.</summary>
         AfterTransposition,
+        /// <summary><c>beaming |</c> in a part header — <c>syllabic</c> (2026-11-13).</summary>
+        AfterBeaming,
         AfterRemoveEmpty,
         /// <summary><c>pitch |</c> where it says how notes are TYPED (top level, part header):
         /// written | concert.</summary>
@@ -1489,6 +1491,13 @@ public sealed partial class LilySharpLanguageServer
             && IsInsidePartBlock(scan.Stack)
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterTransposition;
+
+        // `beaming |` in a part header: its word (owner-approved 2026-11-13, grammar
+        // evaluation 3). Gated like `transposition`.
+        if (prevWord == "beaming"
+            && IsInsidePartBlock(scan.Stack)
+            && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.AfterBeaming;
 
         // (`removeEmpty` left the part header on 2026-09-08 — it is a score selector now,
         // `staff m as removeEmpty V`, served inside the score branch below.)

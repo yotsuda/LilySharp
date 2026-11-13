@@ -74,6 +74,7 @@ internal static partial class SharedRenderer
             hc.Add(os.StaffLayoutOf(tie.StaffIndex, mi)?.Y ?? 0.0);
             FoldBow(ref hc, tie.StartX, tie.StartYUp, tie.EndX, tie.EndYUp, tie.Control1, tie.Control2, tie.StaffIndex);
             hc.Add(tie.Tie.SourcePosition >= 0);
+            hc.Add((int)tie.Tie.Line);   // a dashed tie is other ink on the same curve
             anchors.Add(tie.Tie.SourcePosition);
         }
         long hash = hc.ToHashCode();
@@ -129,7 +130,7 @@ internal static partial class SharedRenderer
                 DrawBow(tie.StartX, syUp + tie.StartYUp, tie.EndX, syUp + tie.EndYUp,
                     (tie.Control1.X, syUp + tie.Control1.Y), (tie.Control2.X, syUp + tie.Control2.Y),
                     EngravingDefaults.TieMidThickness,
-                    tie.StaffIndex, mi, os, gc);
+                    tie.StaffIndex, mi, os, gc, tie.Tie.Line);
             }
         }
     }
@@ -163,6 +164,7 @@ internal static partial class SharedRenderer
             FoldBow(ref hc, slur.StartX, slur.StartYUp, slur.EndX, slur.EndYUp, slur.Control1, slur.Control2, slur.StaffIndex);
             hc.Add(slur.Slur.StartSourcePosition >= 0);
             hc.Add(slur.Slur.EndSourcePosition >= 0);
+            hc.Add((int)slur.Slur.Line);   // a dashed slur is other ink on the same curve
             anchors.Add(slur.Slur.StartSourcePosition);
             anchors.Add(slur.Slur.EndSourcePosition);
         }
@@ -208,7 +210,7 @@ internal static partial class SharedRenderer
                 DrawBow(slur.StartX, syUp + slur.StartYUp, slur.EndX, syUp + slur.EndYUp,
                     (slur.Control1.X, syUp + slur.Control1.Y), (slur.Control2.X, syUp + slur.Control2.Y),
                     EngravingDefaults.SlurMidThickness,
-                    slur.StaffIndex, mi, os, gc);
+                    slur.StaffIndex, mi, os, gc, slur.Slur.Line);
             }
         }
     }
@@ -227,7 +229,7 @@ internal static partial class SharedRenderer
         (double X, double Y) c1, (double X, double Y) c2,
         double midThickness,
         int staffIndex, int startMeasureIndex,
-        in OssiaShrink os, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc, BowLine line = BowLine.Solid)
     {
         // The bow's Y coordinates arrive already in the page Y-up frame (page-bottom
         // origin; the callers add the system-top Y-up before calling). Apply the ossia
@@ -237,7 +239,14 @@ internal static partial class SharedRenderer
         c1 = (c1.X, os.YUp(c1.Y, staffIndex, startMeasureIndex));
         c2 = (c2.X, os.YUp(c2.Y, staffIndex, startMeasureIndex));
         midThickness = os.Size(midThickness, staffIndex);
-        DrawCurve(startX, startY, endX, endY, c1, c2, midThickness, gc);
+        if (line == BowLine.Solid)
+            DrawCurve(startX, startY, endX, endY, c1, c2, midThickness, gc);
+        else
+            DrawDashedCurve(startX, startY, endX, endY, c1, c2, midThickness,
+                line == BowLine.Dotted ? EngravingDefaults.BowDotFraction : EngravingDefaults.BowDashFraction,
+                // (The period and the pen are not the ossia's: Lookup::slur reads the stencil's
+                // own units, and DrawCurve strokes with the same unscaled pen.)
+                EngravingDefaults.BowDashPeriod, EngravingDefaults.BowEndRounding, gc);
     }
 
     /// <summary>
@@ -286,6 +295,94 @@ internal static partial class SharedRenderer
             (startX, startY), c1a, c2a,
             (endX, endY), c2b, c1b,
             Color.Black, EngravingDefaults.BowEndRounding);
+    }
+
+    /// <summary>
+    /// Draws a DASHED or DOTTED bow (<c>@slur(dashed)</c>, <c>@tie(dotted)</c>; owner-approved
+    /// 2026-11-13, grammar evaluation 3): the same bezier sandwich as <see cref="DrawCurve"/>,
+    /// cut into dashes along the curve's parameter — each dash the piece of the sandwich
+    /// between two parameter values, filled and stroked with the same round pen.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lookup.cc Lookup::slur, the dash_details branch —
+    ///   seg_length = |control_[3] − control_[0]| (the CHORD, not the arc);
+    ///   pattern_count = (int) (seg_length / dash_period);
+    ///   pattern_length = 1.0 / (pattern_count + dash_fraction);
+    ///   for p in 0..pattern_count: the dash is back.extract (p·pattern_length,
+    ///   (p + dash_fraction)·pattern_length) sandwiched with curve.extract of the same range.
+    ///   So the first dash starts ON the bow's start and the last ends ON its end.
+    /// LILYPOND-REF: ly/property-init.ly slurDashed ((0 1 0.4 0.75)), slurDotted ((0 1 0.1 0.75)); tieDashed, tieDotted the same two.
+    /// MEASURED, 2.26.0 (LilySharp-Lab sessions/p1226/md/eval3/featI/f2.svg): a dotted tie
+    /// whose chord is 4.7838 long draws 7 pieces (pattern_count 6), the last from
+    /// t = 6/6.1 to 1.
+    /// <para>
+    /// LILYSHARP-OWN: each dash is a QUAD — the two edges' points at its two parameter values,
+    /// joined by straight lines and grown by half the pen on every side — where LilyPond draws
+    /// the two edge curves and rounds the corners with the pen. A dash is at most 0.3 of the
+    /// bow's parameter range long and usually far less, so the sagitta the straight edge
+    /// drops is under a hundredth of a staff space.
+    ///   departs from: lily/lookup.cc bezier_sandwich's curved edges and round pen corners, per dash.
+    ///   goes away when: the drawing contexts take a closed path with four distinct corners.
+    ///   observed by: GrammarEvaluation3FeaturesTests.ADashedSlur_IsLilyPondsDashes (the count and the reach).
+    /// </para>
+    /// </remarks>
+    private static void DrawDashedCurve(
+        double startX, double startY, double endX, double endY,
+        (double X, double Y) c1, (double X, double Y) c2,
+        double midThickness, double dashFraction, double dashPeriod, double pen, IDrawingContext gc)
+    {
+        double dx = endX - startX, dy = endY - startY;
+        double len = Math.Max(Math.Sqrt(dx * dx + dy * dy), 1e-6);
+        double half = 0.5 * midThickness;
+        double perpX = -dy / len * half, perpY = dx / len * half;
+        // The sandwich's two edges, as DrawCurve builds them.
+        var a1 = (X: c1.X + perpX, Y: c1.Y + perpY);
+        var a2 = (X: c2.X + perpX, Y: c2.Y + perpY);
+        var b1 = (X: c1.X - perpX, Y: c1.Y - perpY);
+        var b2 = (X: c2.X - perpX, Y: c2.Y - perpY);
+        var p0 = (X: startX, Y: startY);
+        var p3 = (X: endX, Y: endY);
+
+        int patternCount = (int)(len / dashPeriod);
+        double patternLength = 1.0 / (patternCount + dashFraction);
+        double grow = 0.5 * pen;
+        for (int p = 0; p <= patternCount; p++)
+        {
+            double t0 = p * patternLength, t1 = Math.Min(1.0, (p + dashFraction) * patternLength);
+            var aStart = BezierAt(p0, a1, a2, p3, t0);
+            var aEnd = BezierAt(p0, a1, a2, p3, t1);
+            var bStart = BezierAt(p0, b1, b2, p3, t0);
+            var bEnd = BezierAt(p0, b1, b2, p3, t1);
+            // The dash's own direction (along) and its normal toward edge a.
+            double ux = (aEnd.X + bEnd.X - aStart.X - bStart.X) * 0.5, uy = (aEnd.Y + bEnd.Y - aStart.Y - bStart.Y) * 0.5;
+            double ul = Math.Sqrt(ux * ux + uy * uy);
+            if (ul < 1e-9)
+                continue;
+            ux = ux / ul * grow;
+            uy = uy / ul * grow;
+            double nx = -uy, ny = ux;
+            if (nx * perpX + ny * perpY < 0)
+            {
+                nx = -nx;
+                ny = -ny;
+            }
+            gc.DrawFilledQuad(
+                (aStart.X - ux + nx, aStart.Y - uy + ny),
+                (aEnd.X + ux + nx, aEnd.Y + uy + ny),
+                (bEnd.X + ux - nx, bEnd.Y + uy - ny),
+                (bStart.X - ux - nx, bStart.Y - uy - ny),
+                Color.Black);
+        }
+    }
+
+    /// <summary>The point of the cubic Bézier <paramref name="p0"/> <paramref name="p1"/>
+    /// <paramref name="p2"/> <paramref name="p3"/> at <paramref name="t"/>.</summary>
+    private static (double X, double Y) BezierAt(
+        (double X, double Y) p0, (double X, double Y) p1, (double X, double Y) p2, (double X, double Y) p3, double t)
+    {
+        double u = 1 - t;
+        double w0 = u * u * u, w1 = 3 * u * u * t, w2 = 3 * u * t * t, w3 = t * t * t;
+        return (w0 * p0.X + w1 * p1.X + w2 * p2.X + w3 * p3.X, w0 * p0.Y + w1 * p1.Y + w2 * p2.Y + w3 * p3.Y);
     }
 
     /// <summary>

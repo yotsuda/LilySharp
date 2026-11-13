@@ -291,7 +291,7 @@ public sealed record MusicMarkItem
     /// (independent rhythms) it only flags "mid-measure" and <see cref="AnchorTiming"/>
     /// resolves the X via the shared timing columns.
     /// </remarks>
-    public int AnchorItemIndex { get; }
+    public int AnchorItemIndex { get; init; }
 
     /// <summary>
     /// Musical time elapsed from the measure start at this mark's moment. Used to

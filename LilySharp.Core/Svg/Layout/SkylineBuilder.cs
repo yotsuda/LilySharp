@@ -2987,7 +2987,7 @@ internal sealed class SkylineBuilder
                 if (size.Span(1.0) == 1.0)
                 {
                     var mine = DynamicEngraver.LabelSkylines(_fonts, dyn.Text, dyn.IsExpressiveText, xLabel,
-                        baselineUp + staffMiddleUp, dyn.IsSubito);
+                        baselineUp + staffMiddleUp, dyn.IsSubito, dyn.IsEditorial);
                     double up = DynamicEngraver.AboveCollisionMove(
                         upSkyline, mine.Down, OutsideStaffPadding);
                     if (up != 0)
@@ -3018,7 +3018,7 @@ internal sealed class SkylineBuilder
                 if (size.Span(1.0) == 1.0)
                 {
                     var my = DynamicEngraver.LabelSkylines(_fonts, 
-                        dyn.Text, dyn.IsExpressiveText, xLabel, baselineUp + staffMiddleUp, dyn.IsSubito);
+                        dyn.Text, dyn.IsExpressiveText, xLabel, baselineUp + staffMiddleUp, dyn.IsSubito, dyn.IsEditorial);
                     double move = DynamicEngraver.BelowCollisionMove(
                         downSkyline, my.Up, OutsideStaffPadding);
                     if (move != 0)
@@ -3071,7 +3071,8 @@ internal sealed class SkylineBuilder
                         ? half
                         : DynamicEngraver.DynamicAnchorCentreOffset(
                             voices, d.VoiceIndex, d.MeasureIndex, d.ItemIndex));
-                    left = xLabel - half - (d.IsSubito && !d.IsExpressiveText ? DynamicEngraver.SubitoWidth(_fonts) : 0);
+                    left = xLabel - half - (d.IsSubito && !d.IsExpressiveText ? DynamicEngraver.SubitoWidth(_fonts) : 0)
+                        - (d.IsEditorial && !d.IsExpressiveText ? DynamicEngraver.EditorialReach(_fonts, left: true) : 0);
                     break;
                 }
                 below ??= new();

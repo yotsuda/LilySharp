@@ -112,11 +112,14 @@ public sealed partial class LilyPondExporter
     /// entries' columns with their entries and the others silent — or null for an entry on a
     /// main column. The run is written ONCE, before the main entry at its moment (the entries
     /// of one run answer one string), and takes no time of the bar's.</param>
+    /// <param name="ownLength">An entry's own length when it has one shorter than the reach to
+    /// the next entry (a part of <c>a2@figuredBass(4, 3)</c> lasts its equal share of the note,
+    /// owner-approved 2026-11-13), or zero: the silence after it is written as any gap is.</param>
     private void EmitTimedStream<T>(string varName, string mode, string silence,
         System.Collections.Immutable.ImmutableArray<Svg.Model.Measure> measures,
         IReadOnlyList<Fraction> meters, List<(T Item, int Measure, Fraction Onset)> items,
         Action<StringBuilder, T, string> entry, bool[]? senza = null,
-        Func<T, string?>? graceRun = null)
+        Func<T, string?>? graceRun = null, Func<T, Fraction>? ownLength = null)
     {
         _sb.Append(varName).Append(" = \\").Append(mode).Append(" {\n");
         int k = 0;
@@ -155,6 +158,8 @@ public sealed partial class LilyPondExporter
                 for (int j = k; j < items.Count && items[j].Measure == m; j++)
                     if (items[j].Onset > at) { next = items[j].Onset; break; }
                 if (next > length) next = length;
+                if (ownLength?.Invoke(item) is { } own && own > Fraction.Zero && at + own < next)
+                    next = at + own;
                 entry(line, item, ChordModeDuration(next - at));
                 at = next;
             }
@@ -274,7 +279,9 @@ public sealed partial class LilyPondExporter
     /// the page's model like the inline chords (<see cref="EmitInlineChordTracks"/>): each
     /// group at its note's onset, lasting to the next group of the bar (or the bar's end),
     /// with silent <c>s</c> between, so LilyPond's FiguredBass context prints the figures the
-    /// page prints, under the staff, where it prints them.
+    /// page prints, under the staff, where it prints them. The parts of the comma form
+    /// (<c>a2@figuredBass(4, 3)</c>, owner-approved 2026-11-13, grammar evaluation 3) are each
+    /// an entry of its own, at its moment and of its share's length: <c>&lt;4&gt;4 &lt;3&gt;4</c>.
     /// </summary>
     /// <remarks>
     /// Until 2026-10-02 every <c>@figuredBass</c> was "dropped (out of scope)" — 13 of the 25
@@ -307,7 +314,10 @@ public sealed partial class LilyPondExporter
             var items = score.FiguredBasses
                 .Where(f => f.StaffIndex == idx && f.MeasureIndex < measures.Length
                             && f.ItemIndex < measures[f.MeasureIndex].Items.Length)
-                .Select(f => (Item: f, Measure: f.MeasureIndex, Onset: OnsetOf(measures[f.MeasureIndex], f.ItemIndex)))
+                // …and a group inside a held note (`a2@figuredBass(4, 3)`) carries its own moment,
+                // so the stream writes `<4>4 <3>4`: figure-mode durations, as LilyPond spells it.
+                .Select(f => (Item: f, Measure: f.MeasureIndex,
+                    Onset: f.UseTiming ? f.Timing : OnsetOf(measures[f.MeasureIndex], f.ItemIndex)))
                 .OrderBy(t => t.Measure).ThenBy(t => t.Onset)
                 .ToList();
             if (items.Count == 0)
@@ -348,9 +358,63 @@ public sealed partial class LilyPondExporter
                     int k = -1;
                     return GraceRunOf(measures, f.MeasureIndex, f.ItemIndex, "@figuredBass",
                         _ => ++k < columns.Length && columns[k] is { } group ? value => FigureGroup(group) + value : null);
-                });
+                },
+                // A part of the comma form lasts its share and no longer: `<4>4 <3>4 s2`. The
+                // length is what LilyPond spaces by (a BassFigure is a rhythmic grob).
+                f => f.Duration);
         }
     }
+
+    /// <summary>
+    /// A <c>beaming syllabic</c> part's beams (owner-approved 2026-11-13, grammar evaluation 3),
+    /// read off the PAGE: where the page's detector opens and closes a beam in such a part's
+    /// staff, by the note's source position. The twin writes the staff with automatic beaming
+    /// off and these by hand — LilyPond's own way to set vocal music — so its beams are the
+    /// page's, manual <c>[ ]</c> included (which is why the written markers are not written
+    /// again).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: Documentation/notation "Automatic beams" — <c>\autoBeamOff</c> for vocal music, the melismata beamed by hand.
+    /// </remarks>
+    private void CollectSyllabicBeams(SyntaxTree tree, RenderDeclarationSyntax? render,
+        IReadOnlyList<PartDeclarationSyntax> parts)
+    {
+        foreach (var part in parts)
+            if (Semantics.PartHeaderDefaults.Read(part).BeamingSyllabic)
+                _shared.SyllabicParts.Add(part.Name.Text);
+        if (_shared.SyllabicParts.Count == 0 || render == null || PageModel(tree, render) is not { } score)
+            return;
+        var detector = new Svg.Collector.BeamDetector();
+        foreach (var (_, staff, idx) in score.EnumerateStaves())
+        {
+            if (staff.IsTextRow || !_shared.SyllabicParts.Contains(staff.PrimaryVoice.Name))
+                continue;
+            for (int v = 0; v < staff.Voices.Length; v++)
+            {
+                int voiceIndex = v;
+                var tuplets = score.TupletBrackets.IsDefaultOrEmpty
+                    ? score.TupletBrackets
+                    : [.. score.TupletBrackets.Where(t => t.StaffIndex == idx && t.VoiceIndex == voiceIndex)];
+                foreach (var group in detector.DetectBeamGroups(staff.Voices[v], score.TimeSignature, tuplets, voiceIndex: v))
+                {
+                    if (group.Members.Length < 2)
+                        continue;
+                    _shared.SyllabicBeamOpens.Add(group.Members[0].DetectedItem.SourcePosition);
+                    _shared.SyllabicBeamCloses.Add(group.Members[^1].DetectedItem.SourcePosition);
+                }
+            }
+        }
+    }
+
+    /// <summary>Whether the part being written is beamed by syllable.</summary>
+    private bool InSyllabicPart => _currentPartName != null && _shared.SyllabicParts.Contains(_currentPartName);
+
+    /// <summary>The <c>[</c> / <c>]</c> the page's beams put on <paramref name="host"/> in a
+    /// <c>beaming syllabic</c> part, or nothing.</summary>
+    private string SyllabicBeamMarks(SyntaxNode host)
+        => !InSyllabicPart ? ""
+            : (_shared.SyllabicBeamCloses.Contains(host.SourceStart) ? "]" : "")
+              + (_shared.SyllabicBeamOpens.Contains(host.SourceStart) ? "[" : "");
 
     private static Fraction OnsetOf(Svg.Model.Measure measure, int itemIndex)
     {

@@ -883,7 +883,8 @@ public class GrammarEvaluation3Tests
         var said = Assert.Single(Said(Bass("a2@figuredBass(4)@figuredBass(3) a2 |")));
         Assert.Equal(DiagnosticCodes.SecondFigureGroupOnANote, said.Code);
         Assert.Equal(DiagnosticSeverity.Error, said.Severity);
-        Assert.Contains("a4@figuredBass(4)~ a4@figuredBass(3)", said.Message);
+        // (Until the comma form existed, the same day, it advised the two tied notes below.)
+        Assert.Contains("a2@figuredBass(4, 3)", said.Message);
         // The first stands alone on the page, as it did in the exports.
         Assert.Single(Page(Bass("a2@figuredBass(4)@figuredBass(3) a2 |")).FiguredBasses);
 

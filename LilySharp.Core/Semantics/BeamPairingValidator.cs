@@ -57,7 +57,8 @@ internal sealed class BeamPairingValidator : ISharedCollectValidator
                     ? "a manual beam '[]' opens and closes on the same note, so it groups nothing "
                       + "and the note is beamed automatically with its neighbours; a manual beam "
                       + "joins two or more notes - '[' after the first, ']' after the last "
-                      + "(c8[ d8 e8]) - so remove the '[]'"
+                      + "(c8[ d8 e8]) - so remove the '[]'. For notes that each keep their own flag, as "
+                    + "a sung part's syllables do, give the part 'beaming syllabic'"
                 : w.IsOpen
                     ? "a manual beam '[' is never closed, so the grouping is discarded and "
                       + "these notes are beamed automatically instead; add the matching ']' "

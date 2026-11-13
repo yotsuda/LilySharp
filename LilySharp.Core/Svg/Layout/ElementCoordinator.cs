@@ -3941,6 +3941,7 @@ internal sealed class ElementCoordinator
                 // 341 carry a tab staff and NONE of them writes a `voice { }` block, so no
                 // book reaches the wrong-voice read.
                 SourcePosition = tie.SourcePosition,
+                Line = tie.Line,
             };
         }
         else
@@ -3956,6 +3957,7 @@ internal sealed class ElementCoordinator
                     tie.VoiceIndex)
                 {
                     SourcePosition = tie.SourcePosition,
+                    Line = tie.Line,
                 };
             }
         }
@@ -6703,6 +6705,7 @@ internal sealed class ElementCoordinator
             StartSourcePosition = slur.StartSourcePosition,
             EndSourcePosition = slur.EndSourcePosition,
             IsPhrasing = slur.IsPhrasing,
+            Line = slur.Line,
         };
 
         var solved = SlurScoringProblem.SolveLent(

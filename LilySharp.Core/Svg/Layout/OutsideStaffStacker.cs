@@ -556,7 +556,7 @@ internal static class OutsideStaffStacker
                 var dyn = dynB![di];
                 Fold(DynamicEngraver.LabelSkylines(
                     fonts, dyn.Text, dyn.IsExpressiveText, dyn.X,
-                    dyn.YUp - off - EngravingDefaults.StaffMiddle, dyn.IsSubito));
+                    dyn.YUp - off - EngravingDefaults.StaffMiddle, dyn.IsSubito, dyn.IsEditorial));
             }
             foreach (int hi in g.HairpinIndices)
             {
@@ -610,7 +610,7 @@ internal static class OutsideStaffStacker
             // LILYPOND-REF: lily/axis-group-interface.cc:648-676,:747-749 avoid_outside_staff_collisions
             //   — padding = outside-staff-padding.
             var (myUp, myDown) = DynamicEngraver.LabelSkylines(
-                fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dynYup, dyn.IsSubito);
+                fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dynYup, dyn.IsSubito, dyn.IsEditorial);
             // @text is a TextScript: its horizontal padding (see PlaceAboveDynamics).
             double move = tracker.Place(myUp, myDown, OutsideStaffPadding,
                 dyn.IsExpressiveText ? OutsideStaffHorizontalPadding : 0.0);
@@ -2815,7 +2815,7 @@ internal static class OutsideStaffStacker
                         {
                             var dyn = dynB[di];
                             Fold(DynamicEngraver.LabelSkylines(fonts, dyn.Text, dyn.IsExpressiveText,
-                                dyn.X, dyn.YUp + midUp, dyn.IsSubito));
+                                dyn.X, dyn.YUp + midUp, dyn.IsSubito, dyn.IsEditorial));
                         }
                     if (hpB != null)
                         foreach (int hi in g.HairpinIndices)
@@ -2845,7 +2845,7 @@ internal static class OutsideStaffStacker
                         break;
                     double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], dyn.StaffIndex);
                     var (myUp, myDown) = DynamicEngraver.LabelSkylines(
-                        fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp, dyn.IsSubito);
+                        fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp, dyn.IsSubito, dyn.IsEditorial);
                     double move = trackers(sysIdx, dyn.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
                     dynB[e.Index] = dyn with { YUp = dyn.YUp + move };
                     break;
@@ -2898,7 +2898,7 @@ internal static class OutsideStaffStacker
             // LILYPOND-REF: scm/define-grobs.scm:1446 DynamicText Grob::vertical_skylines_from_stencil.
             double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], dyn.StaffIndex);
             var (myUp, myDown) = DynamicEngraver.LabelSkylines(
-                fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp, dyn.IsSubito);
+                fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp, dyn.IsSubito, dyn.IsEditorial);
             // Free expressive text is a TextScript, which declares the horizontal padding a
             // DynamicText does not (define-grobs.scm:3806 outside-staff-horizontal-padding 0.2).
             double move = trackers(sysIdx, dyn.StaffIndex).Place(myUp, myDown, OutsideStaffPadding,
@@ -3097,7 +3097,7 @@ internal static class OutsideStaffStacker
                     if (!d.IsAbove && !d.IsExpressiveText && d.StaffIndex == staff
                         && measureToSystem.TryGetValue(d.MeasureIndex, out int ds) && ds == sys)
                         t.MergeSupport(down: DynamicEngraver.LabelSkylines(fonts, d.Text, d.IsExpressiveText,
-                            d.X, d.YUp - off - EngravingDefaults.StaffMiddle, d.IsSubito).Down);
+                            d.X, d.YUp - off - EngravingDefaults.StaffMiddle, d.IsSubito, d.IsEditorial).Down);
             if (!hairpins.IsDefaultOrEmpty)
                 foreach (var h in hairpins)
                     if (!h.IsAbove && h.StaffIndex == staff
@@ -3186,7 +3186,7 @@ internal static class OutsideStaffStacker
                 double off = OffsetOf(ds, d.StaffIndex);
                 var (myUp, myDown) = DynamicEngraver.LabelSkylines(
                     fonts, d.Text, d.IsExpressiveText, d.X,
-                    d.YUp - off - EngravingDefaults.StaffMiddle, d.IsSubito);
+                    d.YUp - off - EngravingDefaults.StaffMiddle, d.IsSubito, d.IsEditorial);
                 double move = t.Place(myUp, myDown, OutsideStaffPadding, OutsideStaffHorizontalPadding);
                 if (move != 0)
                     (db ??= dynamics.ToBuilder())[i] = d with { YUp = d.YUp + move };

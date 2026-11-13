@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 371 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **499** | |
+| `OWN` | 376 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **504** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -28,7 +28,7 @@
 | `LilySharp.Core/Midi/MidiExporter.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 9 |
-| `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 8 |
+| `LilySharp.Core/Svg/Collector/MeasureCollector.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 8 |
 | `LilySharp.Core/Tablature/Tunings.cs` | 8 |
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（371 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（376 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -382,6 +382,8 @@
 - **`SharedRenderer.DrawBeam`** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
 - **`SharedRenderer.DrawSystem`** prefix — LILYSHARP-OWN, a decided divergence (user decision
+### `LilySharp.Core/Rendering/SharedRenderer.Curves.cs`
+- **`SharedRenderer.DrawDashedCurve`** LILYSHARP-OWN: each dash is a QUAD — the two edges' points at its two parameter values,
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **`SharedRenderer.DrawTabGraceNotes`** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
@@ -411,7 +413,7 @@
 - **`TextRoles.TakesMusicCompanionFace`** LILYSHARP-OWN: LilyPond pairs no text face with its one music font.
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
 - **`AnnotationNameValidator.WarnVibratoNobodySings`** vibrato is an everyday marking and the writer waited for a wavy line). LILYSHARP-OWN.
-- **`AnnotationNameValidator.RefuseSecondFigureGroup`** LILYSHARP-OWN: a figure group here belongs to a NOTE (FiguredBassItem is addressed by
+- **`AnnotationNameValidator.RefuseSecondFigureGroup`** LILYSHARP-OWN: the change of figure is ONE annotation whose comma divides the note —
 - **`AnnotationNameValidator.Written`** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/AnnotationValues.cs`
 - **`AnnotationValues.Sing`** LILYSHARP-OWN: LilyPond writes no sound; what is written here is heard from a
@@ -419,6 +421,8 @@
 - **`AnnotationValues.ArpeggioWords`** LILYSHARP-OWN: the two words combine because the two things do — LilyPond connects
 ### `LilySharp.Core/Semantics/ArticulationRuns.cs`
 - **`ArticulationRuns`** LILYSHARP-OWN: LilyPond has no such spanner; its twin writes the script on each note.
+### `LilySharp.Core/Semantics/BowLineValidator.cs`
+- **`BowLineValidator`** LILYSHARP-OWN: the spelling. LilyPond's is a switch before the music
 ### `LilySharp.Core/Semantics/CapoAdvisor.cs`
 - **`CapoAdvisor`** the barres and before the fret itself in the ranking. LILYSHARP-OWN: LilyPond has nothing
 ### `LilySharp.Core/Semantics/ChordAnnotation.cs`
@@ -488,6 +492,7 @@
 - **`MeasureCollector.ProcessParallelSpan`** (2026-11-12). LILYSHARP-OWN. ⚠️ A CHART ONLY: a `voice { … | } { … | } |` span's
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **`MeasureCollector._staffDynamicsUp`** LILYSHARP-OWN (owner's decision 2026-11-11, docs/dynamics-above-lyrics-design.md
+- **`MeasureCollector.HarvestOmittedStructure`** LILYSHARP-OWN, it is printed on a part SHEET whose part does not write one in
 - **`MeasureCollector.JunkCondensedStaffDuplicateDynamics`** a &gt; an X). LILYSHARP-OWN, after the reading LilyPond offers: its two voices' dynamics
 - **`MeasureCollector.JunkCondensedStaffDuplicateDynamics`** LILYSHARP-OWN: LilyPond's Dynamic_engraver stands in the Voice context
 - **`MeasureCollector.SolveCrossCollisions`** LILYSHARP-OWN: the moved voice's slot. LilyPond keeps the Voice's own horizontal-shift,
@@ -645,6 +650,7 @@
 - **`LyricSpacing.LyricLeftExtent`** of the first verse). LILYSHARP-OWN: LilyPond's StanzaNumber takes no part in
 ### `LilySharp.Core/Svg/Layout/MeasureLayouter.cs`
 - **`MeasureLayouter.AddColumnReachRods`** LILYSHARP-OWN: the walk stops four items back (LilyPond's overhang test runs until no
+- **`MeasureLayouter.ShortestWithFigures`** LILYSHARP-OWN: a figure-only column that is the LAST of its system stands one bar-line
 ### `LilySharp.Core/Svg/Layout/MeterGlyphRun.cs`
 - **`MeterGlyphRun.PlusEngravingEm`** LILYSHARP-OWN, a text character LilyPond spells with markup.
 - **`MeterGlyphRun.Pieces`** ⚠️ LILYSHARP-OWN: the fallback branch. The only non-digit that reaches here is the
@@ -773,6 +779,7 @@
 - **`ArticulationItem.AccidentalOfOrnament`** LILYSHARP-OWN: LilyPond has no accidental on a Script; its twin writes the accidental
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
 - **`FiguredBassItem.ParseFigures`** LILYSHARP-OWN: the @figuredBass(…) SPELLING is Lily#'s, not a port — LilyPond writes
+- **`FiguredBassItem.ParseGroups`** LILYSHARP-OWN: the comma spelling. LilyPond writes each figure event with its own
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`
 - **`InstrumentDefaults.GetMidiProgram`** LILYSHARP-OWN: LilyPond has no instrument presets, so which of its 128 sounds a preset
 - **`InstrumentDefaults.PrintedName`** LILYSHARP-OWN (owner's decision 2026-10-11): until then the preset WORD itself was the

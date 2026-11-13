@@ -175,7 +175,7 @@ public sealed partial class LilySharpLanguageServer
     private static readonly string[] PartPropertyOrder =
     {
         "clef", "instrument", "tuning", "octave", "transpose",
-        "transposition", "pitch", "pedal", "midiInstrument",
+        "transposition", "pitch", "pedal", "midiInstrument", "beaming",
     };
 
     // Prose per property, and whether the editor has a VALUE list to enumerate for it.
@@ -213,6 +213,8 @@ public sealed partial class LilySharpLanguageServer
             ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
             ["midiInstrument"] = ("General MIDI sound for the .mid and the preview — one of LilyPond's 128 names in quotes, "
                                   + "e.g. `midiInstrument \"flute\"`; the default is the preset's", true),
+            ["beaming"] = ($"How a sung part is beamed ({string.Join("/", LanguageVocabulary.BeamingModes)}) — each syllable's notes under one beam, "
+                           + "every other note its own flag; without it the meter beams", true),
             // (`removeEmpty` left this table 2026-09-08 with the property: hara-kiri is the
             // score's `staff m as removeEmpty V` — GetStaffAttachNameCompletions.)
         };
@@ -5386,6 +5388,11 @@ public sealed partial class LilySharpLanguageServer
                 // 2026-10-31: it used to glue "(x32010)" on), and Ctrl+Shift+Down writes the shape out.
                 new CompletionItem { Label = "diagram", Kind = CompletionItemKind.Value, Detail = "Chord diagram: the chord's own fingering; or a shape, @diagram(x32010) (x = muted, o = open, digit = fret)", SortText = "6diagram" },
 
+                // A dashed or dotted slur / tie (owner-approved 2026-11-13, grammar evaluation 3):
+                // on the note the curve begins on, c4@slur(dashed)( d e) and c2@tie(dashed)~ c2.
+                ArgumentStub(AnnotationValues.SlurLineName, "Dashed or dotted slur — on the note the slur begins on: c4@slur(dashed)( d e)", "6slur"),
+                ArgumentStub(AnnotationValues.TieLineName, "Dashed or dotted tie — on the note the tie begins on: c2@tie(dashed)~ c2", "6tie"),
+
                 // Figured bass — parenthesised, figures space-separated: @figuredBass(6 4).
                 ArgumentStub("figuredBass", "Figured bass — offers 6, 6 4, 7, 6 5, 4 3, … (space-separated)", "7fig"),
 
@@ -5448,8 +5455,16 @@ public sealed partial class LilySharpLanguageServer
             "figuredBass" => GetFiguredBassCompletions(),
             "arpeggio" => GetArpeggioCompletions(),
             "barre" => GetBarreCompletions(),
+            AnnotationValues.SlurLineName => GetBowLineCompletions("slur"),
+            AnnotationValues.TieLineName => GetBowLineCompletions("tie"),
             LilySharp.Core.Music.Harmonics.Name => GetHarmonicCompletions(),
             _ when AnnotationValues.IsOrnamentName(annotation) => GetOrnamentAccidentalCompletions(),
+            // @p(editorial) (owner-approved 2026-11-13, grammar evaluation 3): a level's one word.
+            _ when LanguageVocabulary.IsDynamicLevel(annotation) && annotation != "niente" => new CompletionList
+            {
+                Items = [Argument(LilySharp.Core.Syntax.DynamicSyntax.EditorialWord,
+                    $"An editor's dynamic: the level in parentheses, ({annotation}) - it sounds as the plain one", 0)],
+            },
             _ => null
         };
 
@@ -5467,6 +5482,15 @@ public sealed partial class LilySharpLanguageServer
             }),
             new CompletionItem { Label = "half", Kind = CompletionItemKind.Value, Detail = "Half barre, after the fret — @barre(7 half) prints ½CVII", SortText = "99half" },
         ],
+    };
+
+    /// <summary>Inside <c>@slur(…)</c> and <c>@tie(…)</c>: <c>dashed</c> and <c>dotted</c>
+    /// (<c>AnnotationValues.BowLineWords</c>; owner-approved 2026-11-13, grammar evaluation 3).</summary>
+    internal static CompletionList GetBowLineCompletions(string what) => new()
+    {
+        Items = [.. AnnotationValues.BowLineWords.Select((word, rank) => Argument(word,
+            word == "dashed" ? $"A dashed {what} — an editor's suggestion, or one that holds for some verses only"
+                             : $"A dotted {what}", rank))],
     };
 
     /// <summary>Inside <c>@harmonic(…)</c>: the frets a natural harmonic is most often written
@@ -5572,6 +5596,7 @@ public sealed partial class LilySharpLanguageServer
     /// offered is the continuo shorthand a score actually uses, most frequent
     /// first, plus the two non-numeric atoms (bare accidental, held line).
     /// Alterations are written after their figure: 6 s = 6♯, 4 f = 4♭, 7 n = 7♮.
+    /// The last row is the comma form, <c>4, 3</c>: a change of figure over one held note.
     /// </summary>
     internal static CompletionList GetFiguredBassCompletions() => new()
     {
@@ -5590,6 +5615,9 @@ public sealed partial class LilySharpLanguageServer
             Argument("6 s", "6♯ — an alteration follows its figure (s/f/n)", 10),
             Argument("#", "Bare sharp — raises the third above the bass", 11),
             Argument("_", "Held figure — continuation line from the previous bass note", 12),
+            // A change of figure over one held note (owner-approved 2026-11-13, grammar
+            // evaluation 3): the comma form, shown by the suspension it is most written for.
+            Argument("4, 3", "4 then 3 over one held note — a comma divides the note's length into equal parts, one group each", 13),
         ]
     };
 
@@ -5954,6 +5982,19 @@ public sealed partial class LilySharpLanguageServer
         ["8vb"] = "Sounds an octave lower than written - guitar, double bass",
         ["15ma"] = "Sounds two octaves higher than written",
         ["15mb"] = "Sounds two octaves lower than written",
+    };
+
+    /// <summary><c>beaming |</c> in a part header (owner-approved 2026-11-13, grammar evaluation
+    /// 3): its words, read from the compiler (<c>LanguageVocabulary.BeamingModes</c>).</summary>
+    internal static CompletionList GetBeamingCompletions() => new()
+    {
+        Items = LanguageVocabulary.BeamingModes.Select((name, i) => new CompletionItem
+        {
+            Label = name,
+            Kind = CompletionItemKind.EnumMember,
+            Detail = "Vocal beaming: a beam joins only the notes of one syllable (a slur or a tie holds it); every note that starts a syllable keeps its own flag",
+            SortText = i.ToString(),
+        }).ToArray()
     };
 
     /// <summary><c>transposition |</c> in a part header (owner's request 2026-10-26): the octave

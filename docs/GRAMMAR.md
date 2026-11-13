@@ -1295,6 +1295,14 @@ PartProperty   = 'clef'          , PartClefName
                | 'pitch'         , PitchMode        (* this part's convention — own wins
                                                        over the top-level PitchDecl, §2.3 *)
                | 'pedal'         , PedalStyleName
+               | 'beaming'       , 'syllabic'       (* a sung part: an automatic beam joins
+                                                       only the notes of one syllable - the
+                                                       notes a slur or a tie holds - and every
+                                                       note that starts a syllable keeps its
+                                                       own flag. A manual beam bracket still
+                                                       joins what it brackets. The notes are
+                                                       read, not the lyrics. Without the
+                                                       property the meter beams. *)
                | 'midiInstrument' , String         (* the General MIDI sound: one of
                                                        LilyPond's 128 names, e.g.
                                                        midiInstrument "acoustic guitar (nylon)";
@@ -3133,7 +3141,7 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                        Ornaments are not played, so the sound is unchanged. MusicXML: the
                        ornament and its accidental-mark, both ways. LilyPond: the ornament
                        with a small accidental markup over it. LILYSHARP-OWN placement. *)
-   - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @sfp @rfz @fz   (default below, above over a lyrics row directly under the staff; @f.up / @f.down forces side; @p.subito prints "sub. p", plays p)
+   - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @sfp @rfz @fz   (default below, above over a lyrics row directly under the staff; @f.up / @f.down forces side; @p.subito prints "sub. p", plays p - @p(editorial) prints the level in parentheses, plays p, and takes a side after it as @p(editorial).up - a hairpin or @niente takes no (editorial): LYS4076)
    - Hairpins:      @cresc @decresc @dim  (start note → next dynamic, or to @!cresc / @!decresc /
                  @!dim on a later note — LilyPond's \! — which ends whichever is open; written after
                  the start on ONE note, @cresc@!cresc, it spans that note's length; the staff's side as a level's; @cresc.up / @cresc.down gives its line the side,
@@ -3172,6 +3180,15 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    - Glissando:     c4@glissando d
                     (* c4@slide d is the same line, a guitarist's name for it; MusicXML writes
                        <slide> for it. *)
+   - Dashed curve:  c4@slur(dashed)( d e) , c2@tie(dashed)~ c2
+                    (* BowLine = '@slur' '(' Line ')' | '@tie' '(' Line ')'
+                       Line    = 'dashed' | 'dotted'
+                       On the note where the slur begins, or whose tie it is - after a chord, all
+                       its ties. One annotation is one curve, drawn as the dash-definition of
+                       slurDashed and slurDotted cuts it. Another word is LYS4074. With no slur
+                       or tie beginning on that note - a rest, one note inside a chord - it is
+                       an error (LYS4075). The word must stand against the parenthesis: after
+                       these two names any other parenthesis opens the slur itself. *)
    - Figured bass:  c4@figuredBass(6) , d4@figuredBass(6 4)
                     (* FigureGroup = { Figure } ;  top to bottom, spaces between
                        Figure      = Digit [ 's' | 'f' | 'n' ]   — 6 , 6 s = 6 sharp, 4 f, 7 n
@@ -3182,10 +3199,16 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                                    | '_' ;                       — held from the note before
                        Digit = '0'..'9' ('0' an empty row). Anything else (b7, 6+, 6-, 6/, 7!,
                        a bare s/f/n, a word) makes the whole group unknown: LYS1008, which
-                       lists this vocabulary, and the group is ignored. ONE group a note: a
-                       second @figuredBass on the same note is an error (LYS1067) — a change of
-                       figure over a held bass is two tied notes with a figure each,
-                       a4@figuredBass(4)~ a4@figuredBass(3). *)
+                       lists this vocabulary, and the group is ignored.
+                       A change of figure over ONE held note is a comma between groups:
+                       FigureArgument = FigureGroup { ',' FigureGroup }  — a2@figuredBass(4, 3)
+                       The comma divides the length of the note into equal parts, one group each
+                       (4 on the first half, 3 on the second - three groups are thirds), and
+                       a later group stands at its moment inside the note, on a column of its
+                       own. An empty part ( 4, ) is unknown (LYS1008) and on a grace note the
+                       comma form is an error (LYS1068). ONE annotation a note: a second
+                       @figuredBass on the same note is an error (LYS1067) that names the
+                       comma form. *)
    - Chord diagram: c4@diagram(x32010) , c4@diagram(x32010).down
                     (* a guitar fret diagram: a position string, one character per string
                     low -> high — a digit is the fret ('0' or 'o' open), 'x' muted — or the

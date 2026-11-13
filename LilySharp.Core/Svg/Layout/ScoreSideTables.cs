@@ -147,6 +147,30 @@ internal static class ScoreSideTables
             : _chordsByScore.GetValue(score, s => BucketChordNames(
                 TabStaffStencils.BlankAttachedChords(s, s.ChordNames)));
 
+    private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, IndexBuckets<FiguredBassItem>> _dividedFiguresByScore = new();
+
+    /// <summary>The figure groups of the comma form (<c>a2@figuredBass(4, 3)</c>,
+    /// owner-approved 2026-11-13: every part, <see cref="FiguredBassItem.Duration"/> above
+    /// zero) bucketed by measure (memoized per score): a part inside its note puts a column of
+    /// its own into its bar (<c>MultiStaffLayouter.CollectAllTimingsForMeasure</c>), and every
+    /// part's length is a rhythmic event the springs read
+    /// (<c>MeasureLayouter.CreateTimingSprings</c>). Empty for almost every score, and then
+    /// nothing is bucketed.</summary>
+    internal static IndexBuckets<FiguredBassItem> DividedFigures(MultiStaffScore score)
+        => score.FiguredBasses.IsDefaultOrEmpty
+            ? IndexBuckets<FiguredBassItem>.Empty
+            : _dividedFiguresByScore.GetValue(score, s =>
+            {
+                List<FiguredBassItem>? inside = null;
+                foreach (var fb in s.FiguredBasses)
+                    if (fb.Duration > Fraction.Zero)
+                        (inside ??= new()).Add(fb);
+                return inside == null
+                    ? IndexBuckets<FiguredBassItem>.Empty
+                    : IndexBuckets<FiguredBassItem>.Build(inside, fb => fb.MeasureIndex);
+            });
+
     /// <summary>The one bucketing spelling for chord symbols, as above.</summary>
     internal static IndexBuckets<ChordNameItem> BucketChordNames(IReadOnlyList<ChordNameItem> chordNames)
         => IndexBuckets<ChordNameItem>.Build(chordNames, cn => cn.MeasureIndex);

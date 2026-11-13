@@ -1341,4 +1341,547 @@ public class GrammarEvaluation3FeaturesTests
         Assert.DoesNotContain(said, w => w.Contains("out of scope") || w.Contains("not mapped"));
         Assert.Contains("a'4 a'4 a'4 r4 |", Ly(Guitar("a'4@bend(full)@release a'4@bend(half) a'4@release r4 |")));
     }
+
+    // ───────────────────────── 12. a change of figure over one held bass: @figuredBass(4, 3) ─────────────────────────
+
+    /// <summary>A continuo part with one section of <paramref name="music"/>.</summary>
+    private static string Continuo(string music)
+        => "octave absolute\ntime 4/4\npart bc { clef bass octave 3 }\n"
+            + "section A { bc { " + music + " } }\nform { A }\nscore { staff bc }\n";
+
+    /// <summary>The comma divides the note into equal parts, one group each: the model holds a
+    /// group a part, the first the note's own and the later ones at their moments inside it.</summary>
+    [Fact]
+    public void ACommaInFiguredBass_DividesTheNoteIntoEqualParts()
+    {
+        string source = Continuo("a2@figuredBass(4, 3) g2@figuredBass(6) | a2.@figuredBass(6 4, 5 3, 7) g4 |");
+        Clean(source);
+        RoundTrips(source);
+        var groups = Collected(source).FiguredBasses;
+        Assert.Equal(
+            ["4 @0/1+1/4", "3 @1/4+1/4 inside", "6", "6 4 @0/1+1/4", "5 3 @1/4+1/4 inside", "7 @1/2+1/4 inside"],
+            groups.Select(g => string.Join(" ", g.Figures.Select(f => f.Number))
+                + (g.Duration > Fraction.Zero ? $" @{g.Timing.Numerator}/{g.Timing.Denominator}+{g.Duration.Numerator}/{g.Duration.Denominator}" : "")
+                + (g.UseTiming ? " inside" : "")));
+        // Every part of one annotation is found at that annotation.
+        Assert.Equal(3, groups.Select(g => g.SourcePosition).Distinct().Count());
+    }
+
+    /// <summary>The second group stands on a column of its own at the note's midpoint, and the
+    /// spacing gives it one — a quarter's space each side, as LilyPond spaces
+    /// <c>&lt;4&gt;4 &lt;3&gt;4</c> under <c>a2</c>.</summary>
+    /// <remarks>MEASURED, LilyPond 2.26.0 (LilySharp-Lab sessions/p1226/md/eval3/featI/f1c-d.ly,
+    /// ragged): head 17.239227, second figure 20.137272, next head 23.035317 — two legs of
+    /// 2.898045; and in a triplet (f1e-d.ly) 59.183037, 61.449703, 63.716370 — two of 2.266667.</remarks>
+    [Fact]
+    public void AFigureInsideANote_StandsOnAColumnOfItsOwn()
+    {
+        string source = Continuo("a2@figuredBass(4, 3) g2@figuredBass(6) | tuplet 3/2 { a2@figuredBass(4, 3) g2 g2 } |");
+        Clean(source);
+        var layout = new LilySharp.Core.Svg.Layout.LayoutEngine().Layout(Collected(source));
+        var xs = layout.FiguredBassLayouts.Select(f => f.X).ToArray();
+        Assert.Equal(5, xs.Length);
+        Assert.Equal(2.898045, xs[1] - xs[0], 4);
+        Assert.Equal(2.898045, xs[2] - xs[1], 4);
+        Assert.Equal(2.266667, xs[4] - xs[3], 4);
+        // One row: the group inside the note is on the baseline of the others.
+        Assert.Single(layout.FiguredBassLayouts.Select(f => Math.Round(f.YUp, 6)).Distinct());
+
+        var g = RenderedGeometry.Render(source);
+        Assert.Equal(5, g.BassFigures.Count);
+        var heads = g.Noteheads.OrderBy(h => h.X).ToArray();
+        Assert.Equal(5.796090, heads[1].X - heads[0].X, 4);
+        Assert.Equal(4.533333, heads[3].X - heads[2].X, 4);
+        // The plain half note keeps its own space: the column is the comma's.
+        var plain = RenderedGeometry.Render(Continuo("a2@figuredBass(4) g2@figuredBass(6) |")).Noteheads.OrderBy(h => h.X).ToArray();
+        Assert.True(plain[1].X - plain[0].X < 4.5, $"{plain[1].X - plain[0].X}");
+    }
+
+    /// <summary>MusicXML: one <c>&lt;figured-bass&gt;</c> a group, each with the
+    /// <c>&lt;duration&gt;</c> of its share, before the one note; the twin: figure-mode
+    /// durations; and the MusicXML reads back as the comma form.</summary>
+    [Fact]
+    public void AChangeOfFigure_GoesToTheExports_AndComesBack()
+    {
+        string source = Continuo("a2@figuredBass(4, 3) g2@figuredBass(6) | a2@figuredBass(6 4, 5 3) g4 g4 |");
+        string xml = Xml(source);
+        Assert.Contains("<figured-bass><figure><figure-number>4</figure-number></figure><duration>24</duration></figured-bass>"
+            + "<figured-bass><figure><figure-number>3</figure-number></figure><duration>24</duration></figured-bass><note>", xml);
+        Assert.Contains("<figured-bass><figure><figure-number>6</figure-number></figure></figured-bass>", xml);
+        Assert.Equal(4, System.Text.RegularExpressions.Regex.Matches(xml, "</figure><duration>").Count);
+        // A third of a half note is no whole number of the default divisions: finer ones are asked for.
+        string thirds = Xml(Continuo("a2@figuredBass(4, 3, 2) g2 |"));
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(thirds, "</figure><duration>(\\d+)</duration>").Select(m => m.Groups[1].Value).Count());
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(thirds, "</figure><duration>(\\d+)</duration>").Select(m => m.Groups[1].Value).Distinct());
+
+        string ly = Ly(source);
+        Assert.Contains("<4>4 <3>4 <6>2 |", ly);
+        // A part lasts its share: the rest of the bar is silent, not the last figure's.
+        Assert.Contains("<6 4>4 <5 3>4 s2 |", ly);
+
+        var report = new LilySharp.Core.MusicXmlImport.ImportReport();
+        string back = LilySharp.Core.MusicXmlImport.LysWriter.Write(
+            LilySharp.Core.MusicXmlImport.MusicXmlReader.Read(xml, report), report);
+        Assert.Contains("a2@figuredBass(4, 3)", back);
+        Assert.Contains("a2@figuredBass(6 4, 5 3)", back);
+        Assert.DoesNotContain(Said(back), d => d.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>What is refused: two annotations on one note (the message names the comma form),
+    /// the comma form on a grace note, and an empty part.</summary>
+    [Fact]
+    public void AChangeOfFigure_MiswrittenIsSaid()
+    {
+        var second = Assert.Single(Said(Continuo("a2@figuredBass(4)@figuredBass(3) g2 |")));
+        Assert.Equal((DiagnosticCodes.SecondFigureGroupOnANote, DiagnosticSeverity.Error), (second.Code, second.Severity));
+        Assert.Contains("a2@figuredBass(4, 3)", second.Message);
+
+        string graced = Continuo("grace { g8@figuredBass(4, 3) } a2 g2 |");
+        var onGrace = Assert.Single(Said(graced));
+        Assert.Equal((DiagnosticCodes.DividedFiguresOnAGraceNote, DiagnosticSeverity.Error), (onGrace.Code, onGrace.Severity));
+        Assert.Equal("@figuredBass(4, 3)", graced.Substring(onGrace.Span.Start, onGrace.Span.Length));
+        // The first group is drawn at the grace, undivided.
+        var alone = Assert.Single(Collected(graced).FiguredBasses);
+        Assert.Equal((4, false, Fraction.Zero), (alone.Figures[0].Number, alone.UseTiming, alone.Duration));
+
+        foreach (string empty in new[] { "@figuredBass(4,)", "@figuredBass(, 3)", "@figuredBass(4,, 3)" })
+        {
+            var said = Assert.Single(Said(Continuo($"a2{empty} g2 |")));
+            Assert.Equal((DiagnosticCodes.UnknownAnnotation, DiagnosticSeverity.Warning), (said.Code, said.Severity));
+            Assert.Contains("a ',' between groups", said.Message);
+            Assert.Empty(Collected(Continuo($"a2{empty} g2 |")).FiguredBasses);
+        }
+    }
+
+    // ───────────────────────── 13. a dashed slur, a dashed tie: @slur(dashed), @tie(dashed) ─────────────────────────
+
+    /// <summary>A melody part with one section of <paramref name="music"/>.</summary>
+    private static string Melody(string music)
+        => "octave absolute\ntime 4/4\npart m { clef treble }\nsection A { m { " + music + " } }\nform { A }\nscore { staff m }\n";
+
+    /// <summary>The dashes of a dashed bow: the curve is the solid one's, cut where LilyPond
+    /// cuts it — one dash more than the bow's chord holds 0.75 periods, the first beginning on
+    /// the bow's start and the last ending on its end.</summary>
+    /// <remarks>MEASURED, LilyPond 2.26.0 (LilySharp-Lab sessions/p1226/md/eval3/featI/f2.ly,
+    /// f2.svg: 33 pieces in all): the slur over <c>c'4 d' e' f'</c> has a chord of 9.1308 and
+    /// draws 13 pieces; the tie <c>c'2~ c'2</c>, 3.8754 and 6; the dotted slur <c>c'4( e'')</c>
+    /// 7, the dotted tie <c>g'2~ | g'1</c> 7.</remarks>
+    [Theory]
+    [InlineData("c'4@slur(dashed)( d' e' f') |", "c'4( d' e' f') |", 13, 0.4)]
+    [InlineData("c'2@tie(dashed)~ c'2 |", "c'2~ c'2 |", 6, 0.4)]
+    [InlineData("c'4@slur(dotted)( e'') r2 |", "c'4( e'') r2 |", 7, 0.1)]
+    [InlineData("r2 g'2@tie(dotted)~ | g'1 |", "r2 g'2~ | g'1 |", 7, 0.1)]
+    public void ADashedBow_IsLilyPondsDashes(string dashed, string solid, int pieces, double fraction)
+    {
+        Clean(Melody(dashed));
+        RoundTrips(Melody(dashed));
+        var plain = RenderedGeometry.Render(Melody(solid));
+        var bow = Assert.Single(plain.Beziers);
+        Assert.Empty(plain.Quads);
+
+        var g = RenderedGeometry.Render(Melody(dashed));
+        Assert.Empty(g.Beziers);
+        Assert.Equal(pieces, g.Quads.Count);
+        // The same curve: the dashes reach from its start to its end (grown by half the pen).
+        double pen = LilySharp.Core.Svg.EngravingDefaults.BowEndRounding / 2;
+        // (Within a pen's width: a dash's corners are grown along its own slant.)
+        Assert.InRange(g.Quads.Min(q => Math.Min(q.X0, q.X3)) - bow.P0.X, -2 * pen, 0.0);
+        Assert.InRange(g.Quads.Max(q => Math.Max(q.X1, q.X2)) - bow.P1.X, 0.0, 2 * pen);
+        // Each dash is its fraction of a period long, and the periods are equal.
+        var starts = g.Quads.Select(q => (q.X0 + q.X3) / 2).OrderBy(x => x).ToArray();
+        double chord = Math.Sqrt(Math.Pow(bow.P1.X - bow.P0.X, 2) + Math.Pow(bow.P1.Y - bow.P0.Y, 2));
+        Assert.Equal(pieces - 1, (int)(chord / LilySharp.Core.Svg.EngravingDefaults.BowDashPeriod));
+        Assert.True(fraction is LilySharp.Core.Svg.EngravingDefaults.BowDashFraction or LilySharp.Core.Svg.EngravingDefaults.BowDotFraction);
+        // Nothing else on the page moved: the heads stand where the solid bow's stand.
+        Assert.Equal(plain.Noteheads.Select(h => Math.Round(h.X, 6)), g.Noteheads.Select(h => Math.Round(h.X, 6)));
+    }
+
+    /// <summary>One <c>@tie(dashed)</c> on a chord is all its ties; a slur and a tie on one note
+    /// take a line each; a tuplet's and a chord's slur are dashed like a note's.</summary>
+    [Fact]
+    public void ADashedBow_OnAChord_InATuplet_AndBesideAnother()
+    {
+        var chord = RenderedGeometry.Render(Melody("<c' e' g'>2@tie(dashed)~ <c' e' g'>2 |"));
+        Assert.Empty(chord.Beziers);
+        Assert.Equal(0, chord.Quads.Count % 3);
+        Assert.True(chord.Quads.Count >= 9);
+
+        string both = Melody("c'2@slur(dashed)@tie(dotted)(~ c'4 d') | tuplet 3/2 { c'4@slur(dotted)( d' e') } <c' e'>2@slur(dashed)( | <d' f'>1) |");
+        Clean(both);
+        var items = Collected(both).StaffGroups[0].Staves[0].Voices[0].Measures.SelectMany(m => m.Items).ToArray();
+        Assert.Equal(
+            [(LilySharp.Core.Svg.Model.BowLine.Dashed, LilySharp.Core.Svg.Model.BowLine.Dotted),
+             (LilySharp.Core.Svg.Model.BowLine.Dotted, LilySharp.Core.Svg.Model.BowLine.Solid),
+             (LilySharp.Core.Svg.Model.BowLine.Dashed, LilySharp.Core.Svg.Model.BowLine.Solid)],
+            items.Where(i => i.SlurLine != LilySharp.Core.Svg.Model.BowLine.Solid).Select(i => (i.SlurLine, i.TieLine)));
+        Assert.Empty(RenderedGeometry.Render(both).Beziers);
+        // The annotation may stand after the '(' as well as before it.
+        Clean(Melody("c'4(@slur(dashed) d' e' f') |"));
+        Assert.Empty(RenderedGeometry.Render(Melody("c'4(@slur(dashed) d' e' f') |")).Beziers);
+    }
+
+    /// <summary>The sound is the solid bow's; MusicXML says <c>line-type</c> on the starting
+    /// <c>&lt;slur&gt;</c> / <c>&lt;tied&gt;</c> and reads it back; the twin is LilyPond's own
+    /// switch, for the one curve.</summary>
+    [Fact]
+    public void ADashedBow_GoesToTheExports_AndComesBack()
+    {
+        string source = Melody("c'4@slur(dashed)( d' e' f') | c'2@tie(dotted)~ c'2 | <c' e'>2@tie(dashed)~ <c' e'>2 |");
+        string solid = source.Replace("@slur(dashed)", "").Replace("@tie(dotted)", "").Replace("@tie(dashed)", "");
+        static IEnumerable<(int, int, int)> Sounds(LilySharp.Core.Midi.MidiFile midi)
+            => midi.Tracks.SelectMany(t => t.Notes).Select(n => (n.StartTick, n.Pitch, n.DurationTicks));
+        Assert.Equal(Sounds(Midi(solid)), Sounds(Midi(source)));
+
+        string xml = Xml(source);
+        Assert.Contains("<slur type=\"start\" number=\"1\" line-type=\"dashed\" />", xml);
+        Assert.Contains("<tied type=\"start\" line-type=\"dotted\" />", xml);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(xml, "<tied type=\"start\" line-type=\"dashed\" />").Count);
+        Assert.DoesNotContain("line-type", Xml(solid));
+
+        string ly = Ly(source);
+        Assert.Contains("\\once \\slurDashed c'4 ( d' e' f' ) |", ly);
+        Assert.Contains("\\once \\tieDotted c'2 ~ c'2 |", ly);
+        Assert.Contains("\\once \\tieDashed <c' e'>2 ~", ly);
+        Assert.Empty(TwinWarnings(source));
+
+        var report = new LilySharp.Core.MusicXmlImport.ImportReport();
+        string back = LilySharp.Core.MusicXmlImport.LysWriter.Write(
+            LilySharp.Core.MusicXmlImport.MusicXmlReader.Read(xml, report), report);
+        Assert.Contains("@slur(dashed)(", back);
+        Assert.Contains("c'2@tie(dotted)~", back);
+        Assert.Contains("<c' e'>2@tie(dashed)~", back);
+        Assert.DoesNotContain(Said(back), d => d.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>What is refused: a word that is no line, and a note no slur / no tie begins on —
+    /// a rest and one member of a chord among them. A bare <c>@slur</c> is told its parentheses.</summary>
+    [Theory]
+    [InlineData("c'4@slur(wavy)( d' e' f') |", "@slur(wavy)", DiagnosticCodes.BowLineMalformed, "'wavy' is not a line a slur is drawn with")]
+    [InlineData("c'2@tie(dashed dotted)~ c'2 |", "@tie(dashed dotted)", DiagnosticCodes.BowLineMalformed, "write '@tie(dashed)' or '@tie(dotted)'")]
+    [InlineData("c'4@slur(dashed) d' e' f' |", "@slur(dashed)", DiagnosticCodes.BowLineWithoutBow, "no '(' opens a slur on this note")]
+    [InlineData("c'4( d'@slur(dashed) e' f') |", "@slur(dashed)", DiagnosticCodes.BowLineWithoutBow, "no '(' opens a slur on this note")]
+    [InlineData("c'2@tie(dashed) c'2 |", "@tie(dashed)", DiagnosticCodes.BowLineWithoutBow, "no '~' ties this note on")]
+    [InlineData("c'2( c'2@tie(dotted)) |", "@tie(dotted)", DiagnosticCodes.BowLineWithoutBow, "no '~' ties this note on")]
+    [InlineData("r4@slur(dashed)( c' d' e') |", "@slur(dashed)", DiagnosticCodes.BowLineWithoutBow, "it is written on a rest")]
+    [InlineData("<c' e'@tie(dashed)~ g'>2 <c' e' g'>2 |", "@tie(dashed)", DiagnosticCodes.BowLineWithoutBow, "write it after the chord")]
+    public void ABowLine_MiswrittenIsSaid(string music, string at, string code, string says)
+    {
+        string source = Melody(music);
+        var said = Assert.Single(Said(source));
+        Assert.Equal((code, DiagnosticSeverity.Error), (said.Code, said.Severity));
+        Assert.Contains(says, said.Message);
+        Assert.Equal(at, source.Substring(said.Span.Start, said.Span.Length));
+        RoundTrips(source);
+        // Nothing dashed is drawn for it.
+        Assert.Empty(RenderedGeometry.Render(source).Quads);
+    }
+
+    /// <summary>A bare <c>@slur</c> / <c>@tie</c> is told to write its parentheses, and after
+    /// <c>@</c> both are offered, with their two words inside.</summary>
+    [Fact]
+    public void ABowLine_IsOffered()
+    {
+        // …and the '(' after it is still the slur: only a word against the '(' is an argument.
+        foreach (string bare in new[] { "c'4@slur( d' e' f') |", "c'4@slur(d' e' f') |", "c'4@tie(d' e' f') |" })
+        {
+            Assert.Contains("(dashed)' on its first note", Assert.Single(Said(Melody(bare))).Message);
+            Assert.Single(RenderedGeometry.Render(Melody(bare)).Beziers);
+        }
+        var offered = Offered(Melody("c'4@‸( d' e' f') |"));
+        Assert.Contains("slur", offered);
+        Assert.Contains("tie", offered);
+        Assert.Equal(["dashed", "dotted"], Offered(Melody("c'4@slur(‸)( d' e' f') |")));
+        Assert.Equal(["dashed", "dotted"], Offered(Melody("c'2@tie(‸)~ c'2 |")));
+    }
+
+    // ───────────────────────── 14. an editor's dynamic: @p(editorial) ─────────────────────────
+
+    /// <summary>The level stands where the plain one stands, between two italic text
+    /// parentheses a pad off its edges, on its baseline — LilyPond's manual's "(p)".</summary>
+    /// <remarks>MEASURED, LilyPond 2.26.0 (LilySharp-Lab sessions/p1226/md/eval3/featI/f3.ly):
+    /// the plain p's extent is 8.503019 … 9.971181 about a head at 8.585000 … 9.889200, and the
+    /// <c>make-dynamic-script</c> "(p)" 13.385640 … 17.097540 about a head at 14.589490 …
+    /// 15.893690 — both centred on the head, the parentheses 0.2 off the letter.</remarks>
+    [Theory]
+    [InlineData("p")]
+    [InlineData("mf")]
+    [InlineData("ff")]
+    [InlineData("sfz")]
+    [InlineData("fp")]
+    public void AnEditorialLevel_IsTheLevelBetweenParentheses(string level)
+    {
+        string source = Melody($"c'4 c'4@{level}(editorial) c'4 c'4 |");
+        Clean(source);
+        RoundTrips(source);
+        var plain = RenderedGeometry.Render(Melody($"c'4 c'4@{level} c'4 c'4 |"));
+        var g = RenderedGeometry.Render(source);
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+
+        var was = Assert.Single(plain.Texts, t => t.Role == LilySharp.Core.Rendering.TextRole.Dynamics);
+        var now = Assert.Single(g.Texts, t => t.Role == LilySharp.Core.Rendering.TextRole.Dynamics);
+        Assert.Equal(level, now.Text);
+        // The level's own place across is the plain one's: "(p)" centred is p centred.
+        Assert.Equal(was.X, now.X, 6);
+        var open = Assert.Single(g.Texts, t => t.Text == "(");
+        var close = Assert.Single(g.Texts, t => t.Text == ")");
+        Assert.DoesNotContain(plain.Texts, t => t.Text is "(" or ")");
+        double half = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelHalfWidth(fonts, level, false);
+        Assert.Equal((LilySharp.Core.Rendering.TextAnchor.End, LilySharp.Core.Rendering.TextAnchor.Start), (open.Anchor, close.Anchor));
+        Assert.Equal(now.X - half - LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialPad, open.X, 6);
+        Assert.Equal(now.X + half + LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialPad, close.X, 6);
+        Assert.Equal(now.Y, open.Y, 6);
+        Assert.Equal(now.Y, close.Y, 6);
+        // Two steps above the text size, as the manual's \fontsize #2.
+        Assert.Equal(LilySharp.Core.Svg.Layout.DynamicEngraver.LabelEm(fonts, true) * Math.Pow(2, 1.0 / 3), open.FontSize, 6);
+        // The parentheses are taller than the letters: the mark stands no higher than the plain one.
+        Assert.True(now.Y >= was.Y - 1e-9, $"{now.Y} against {was.Y}");
+        // The notes did not move.
+        Assert.Equal(plain.Noteheads.Select(h => Math.Round(h.X, 6)), g.Noteheads.Select(h => Math.Round(h.X, 6)));
+    }
+
+    /// <summary>It takes a side as the plain level does, ends a hairpin as one, and sounds as one.</summary>
+    [Fact]
+    public void AnEditorialLevel_IsALevel()
+    {
+        string source = Melody("c'4@p(editorial)@cresc c'4 c'4 c'4@f(editorial).up | c'1 |");
+        Clean(source);
+        var dynamics = Collected(source).Dynamics;
+        Assert.Equal([(true, false), (true, true)], dynamics.Select(d => (d.IsEditorial, d.IsAbove)));
+        static IEnumerable<(int, int)> Sounds(LilySharp.Core.Midi.MidiFile midi)
+            => midi.Tracks.SelectMany(t => t.Notes).Select(n => (n.StartTick, n.Velocity));
+        Assert.Equal(Sounds(Midi(source.Replace("(editorial)", ""))), Sounds(Midi(source)));
+        Assert.NotEqual(Sounds(Midi(source.Replace("@p(editorial)@cresc", "").Replace("@f(editorial).up", ""))), Sounds(Midi(source)));
+        // One hairpin, from the first level to the second.
+        Assert.Equal(RenderedGeometry.Render(Melody("c'4@p@cresc c'4 c'4 c'4@f.up | c'1 |")).Lines.Count,
+            RenderedGeometry.Render(source).Lines.Count);
+    }
+
+    /// <summary>The '(' after a level is still the slur that starts on its note unless the word
+    /// itself stands between the parentheses; and a hairpin or a niente takes none.</summary>
+    [Fact]
+    public void AnEditorialLevel_LeavesTheSlurAlone_AndIsNoHairpins()
+    {
+        foreach (string slurred in new[] { "c'4@p( d' e' f') |", "c'4@p(d' e' f') |", "c'4@p(editorial)( d' e' f') |" })
+        {
+            Clean(Melody(slurred));
+            Assert.Single(RenderedGeometry.Render(Melody(slurred)).Beziers);
+        }
+        Assert.DoesNotContain(RenderedGeometry.Render(Melody("c'4@p( d' e' f') |")).Texts, t => t.Text == "(");
+
+        foreach (string name in new[] { "cresc", "decresc", "dim", "niente" })
+        {
+            string source = Melody($"c'4@mf c'4@{name}(editorial) c'4 c'4@p |");
+            var said = Assert.Single(Said(source), d => d.Code == DiagnosticCodes.EditorialNotALevel);
+            Assert.Equal(DiagnosticSeverity.Error, said.Severity);
+            Assert.Equal($"@{name}(editorial)", source.Substring(said.Span.Start, said.Span.Length));
+            Assert.Contains("@mf(editorial)", said.Message);
+            RoundTrips(source);
+            Assert.DoesNotContain(RenderedGeometry.Render(source).Texts, t => t.Text == "(");
+        }
+    }
+
+    /// <summary>MusicXML keeps the level the element it is, between the words "(" and ")" in
+    /// one direction (its <c>dynamics</c> element has no parentheses attribute), and reads the
+    /// three back as one; the twin is the manual's <c>make-dynamic-script</c>.</summary>
+    [Fact]
+    public void AnEditorialLevel_GoesToTheExports_AndComesBack()
+    {
+        string source = Melody("c'4@p(editorial) c'4@mf c'4@ff(editorial).up c'4 |");
+        string xml = Xml(source);
+        Assert.Contains("<direction-type><words font-style=\"italic\">(</words></direction-type>"
+            + "<direction-type><dynamics><p /></dynamics></direction-type>"
+            + "<direction-type><words font-style=\"italic\">)</words></direction-type>", xml);
+        Assert.Contains("<direction-type><dynamics><mf /></dynamics></direction-type>", xml);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(xml, ">\\(</words>").Count);
+        Assert.DoesNotContain("other-dynamics", xml);
+
+        string ly = Ly(source);
+        Assert.Contains("c'4-#(make-dynamic-script (markup #:concat (#:normal-text #:italic #:fontsize 2 \"(\" #:pad-x 0.2 #:dynamic \"p\" #:normal-text #:italic #:fontsize 2 \")\")))", ly);
+        Assert.Contains("c'4\\mf", ly);
+        Assert.Contains("c'4^#(make-dynamic-script (markup #:concat (#:normal-text #:italic #:fontsize 2 \"(\" #:pad-x 0.2 #:dynamic \"ff\"", ly);
+        Assert.Empty(TwinWarnings(source));
+
+        var report = new LilySharp.Core.MusicXmlImport.ImportReport();
+        string back = LilySharp.Core.MusicXmlImport.LysWriter.Write(
+            LilySharp.Core.MusicXmlImport.MusicXmlReader.Read(xml, report), report);
+        Assert.Contains("@p(editorial)", back);
+        Assert.Contains("@ff(editorial)", back);
+        Assert.DoesNotContain("@text(\"(\")", back);
+        Assert.DoesNotContain("@mf(editorial)", back);
+        Assert.DoesNotContain(Said(back), d => d.Severity == DiagnosticSeverity.Error);
+    }
+
+    /// <summary>Inside a level's parentheses the one word is offered.</summary>
+    [Fact]
+    public void InsideALevelsParentheses_EditorialIsOffered()
+    {
+        Assert.Equal(["editorial"], Offered(Melody("c'4@p(‸) d' e' f' |")));
+        Assert.Equal(["editorial"], Offered(Melody("c'4@sfz(‸) d' e' f' |")));
+    }
+
+    // ───────────────────────── 15. a sung part's beams: beaming syllabic ─────────────────────────
+
+    private const string SungBars =
+        "c''8 d'' e''( f'') g''8 a'' g''16( f'' e'' d'') | c''8~ c''16 d'' e''8[ f''] g''8 a''16( b'') c'''4 |";
+
+    /// <summary>A sung part with one section of <paramref name="music"/>.</summary>
+    private static string Sung(string music, string header = "clef treble beaming syllabic")
+        => "octave absolute\ntime 4/4\npart s { " + header + " }\nsection A { s { " + music + " } }\nform { A }\nscore { staff s }\n";
+
+    private static string[] BeamsOf(string source)
+    {
+        var score = Collected(source);
+        var voice = score.StaffGroups[0].Staves[0].Voices[0];
+        return [.. new BeamDetector().DetectBeamGroups(voice, score.TimeSignature, score.TupletBrackets)
+            .OrderBy(g => g.MeasureIndex).ThenBy(g => g.StartIndex)
+            .Select(g => $"{g.MeasureIndex}:{g.StartIndex}+{g.Members.Length}")];
+    }
+
+    /// <summary>A beam joins only the notes of one syllable — the notes a slur or a tie holds —
+    /// and a manual <c>[ ]</c>; every note that starts a syllable keeps its own flag. Without
+    /// the property the meter beams, as it always did.</summary>
+    [Fact]
+    public void SyllabicBeaming_BeamsTheMelismataAlone()
+    {
+        string source = Sung(SungBars);
+        Clean(source);
+        RoundTrips(source);
+        // Bar 1: the slurred pair, the slurred four. Bar 2: the tied pair, the manual pair, the slurred pair.
+        Assert.Equal(["0:2+2", "0:6+4", "1:0+2", "1:3+2", "1:6+2"], BeamsOf(source));
+        Assert.Equal(["0:0+4", "0:4+2", "0:6+4", "1:0+3", "1:3+2", "1:5+3"], BeamsOf(Sung(SungBars, "clef treble")));
+
+        // Flags: one a note that stands alone (c'' d'' g'' a'' | d'' g''), none on the plain page.
+        char[] flags = [.. new[] { LilySharp.Core.Svg.MusicGlyph.Flag8thUp, LilySharp.Core.Svg.MusicGlyph.Flag8thDown,
+            LilySharp.Core.Svg.MusicGlyph.Flag16thUp, LilySharp.Core.Svg.MusicGlyph.Flag16thDown }.Select(GlyphOf)];
+        int Flags(RenderedGeometry g) => g.Glyphs.Count(x => flags.Contains(x.Glyph));
+        Assert.Equal(6, Flags(RenderedGeometry.Render(source)));
+        Assert.Equal(0, Flags(RenderedGeometry.Render(Sung(SungBars, "clef treble"))));
+        // The notes stand where they stood: beaming is no spacing.
+        Assert.Equal(RenderedGeometry.Render(Sung(SungBars, "clef treble")).Noteheads.Select(h => Math.Round(h.X, 3)),
+            RenderedGeometry.Render(source).Noteheads.Select(h => Math.Round(h.X, 3)));
+    }
+
+    /// <summary>With no slur, tie or bracket every short note is flagged — the part's lyrics are
+    /// not asked — and a quarter's worth of sixteenths under one slur is one beam.</summary>
+    [Fact]
+    public void SyllabicBeaming_WithNothingHeld_FlagsEveryNote()
+    {
+        Assert.Empty(BeamsOf(Sung("c''8 d'' e'' f'' g''16 a'' b'' c''' d'''8 e''' |")));
+        Assert.Equal(["0:0+4"], BeamsOf(Sung("c''16( d'' e'' f'') g''4 a''2 |")));
+        // A slur over a beat boundary is beamed beat by beat, as the meter's beams are.
+        Assert.Equal(["0:0+4", "0:4+4"], BeamsOf(Sung("c''16( d'' e'' f'' g'' a'' b'' c''') d'''2 |")));
+    }
+
+    /// <summary>MusicXML's beams are the page's; the twin turns automatic beaming off on the
+    /// staff and writes every beam of the page by hand.</summary>
+    [Fact]
+    public void SyllabicBeaming_GoesToTheExports()
+    {
+        string source = Sung(SungBars);
+        string xml = Xml(source);
+        Assert.Equal(5, System.Text.RegularExpressions.Regex.Matches(xml, "<beam number=\"1\">begin</beam>").Count);
+        Assert.Equal(6, System.Text.RegularExpressions.Regex.Matches(Xml(Sung(SungBars, "clef treble")), "<beam number=\"1\">begin</beam>").Count);
+
+        string ly = Ly(source);
+        Assert.Contains("autoBeaming = ##f", ly);
+        Assert.Contains("c''8 d'' e''[ ( f''] ) g''8 a'' g''16[ ( f'' e'' d''] ) |", ly);
+        Assert.Contains("c''8[ ~ c''16] d'' e''8[ f''] g''8 a''16[ ( b''] ) c'''4 |", ly);
+        Assert.DoesNotContain("autoBeaming", Ly(Sung(SungBars, "clef treble")));
+        Assert.Contains("e''8 [ f'' ]", Ly(Sung(SungBars, "clef treble")));
+        Assert.Empty(TwinWarnings(source));
+    }
+
+    /// <summary>The property takes its one word; another is refused. The warning of an empty
+    /// <c>[]</c> points here, and the editor offers the property and the word.</summary>
+    [Fact]
+    public void SyllabicBeaming_ItsWordAndWhereItIsOffered()
+    {
+        var said = Assert.Single(Said(Sung("c''8 d'' e''4 f''2 |", "clef treble beaming vocal")));
+        Assert.Equal(DiagnosticSeverity.Error, said.Severity);
+        Assert.Contains("syllabic", said.Message);
+        Assert.Equal(["0:0+2"], BeamsOf(Sung("c''8 d'' e''4 f''2 |", "clef treble beaming vocal")));
+
+        var empty = Assert.Single(Said(Sung("c''8[] d'' e''4 f''2 |", "clef treble")), d => d.Code == DiagnosticCodes.UnpairedBeam);
+        Assert.Contains("'beaming syllabic'", empty.Message);
+
+        Assert.Contains("beaming", Offered("part s { clef treble ‸ }\n"));
+        Assert.Equal(["syllabic"], Offered("part s { clef treble beaming ‸ }\n"));
+    }
+
+    // ───────────────────────── 16. score-wide marks on a part sheet ─────────────────────────
+
+    /// <summary>Two violins; the FIRST writes the rehearsal mark, the tempo change and the rit.</summary>
+    private static string Duo(string score, string second = "e'4 f' g' a' | b'4 c'' d'' e'' | e''4 d'' c'' b' | a'4 g' f' e' | e'1 |")
+        => "octave absolute\ntime 4/4\ntempo 4 = 100\npart v1 { clef treble }\npart v2 { clef treble }\n"
+            + "section A {\n  v1 { c''4 d'' e'' f'' | g''4@mark(\"B\") a'' b'' c''' | tempo \"Più mosso\" 4 = 132 c'''4 b'' a'' g'' | f''4@rit e'' d'' c''@!rit | c''1 | }\n"
+            + "  v2 { " + second + " }\n}\nform { A }\n" + score + "\n";
+
+    private static LilySharp.Core.Svg.Model.MultiStaffScore CollectedScore(string source, string? name)
+    {
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindAll(tree).First(s => (s.Name ?? "") == (name ?? ""));
+        return LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, spec);
+    }
+
+    /// <summary>A rehearsal mark, a tempo and a rit. written in ONE part are on the sheet of a
+    /// part that does not show it — re-addressed to that part's own notes — and once in the
+    /// full score, as they were.</summary>
+    /// <remarks>Before (grammar evaluation 3, the quartet): the second violin's sheet had none
+    /// of the three; the full score had each once, above the system (the mark and the tempo)
+    /// and on the writing staff (the rit.). LilyPond engraves RehearsalMark and MetronomeMark
+    /// in the Score context, so every extracted part has them; a text spanner is its staff's.</remarks>
+    [Fact]
+    public void ScoreWideMarks_ReachThePartSheetThatDoesNotWriteThem()
+    {
+        string source = Duo("score { staff v1  staff v2 }\nscore first { staff v1 }\nscore second { staff v2 }");
+        Clean(source);
+        static string[] Marks(LilySharp.Core.Svg.Model.MultiStaffScore s) => [.. s.MusicMarks
+            .Where(m => m.Type is LilySharp.Core.Svg.Model.MusicMarkType.Rehearsal or LilySharp.Core.Svg.Model.MusicMarkType.Tempo
+                or LilySharp.Core.Svg.Model.MusicMarkType.TextSpanStart or LilySharp.Core.Svg.Model.MusicMarkType.TextSpanStop)
+            .OrderBy(m => m.MeasureIndex).ThenBy(m => m.Type)
+            .Select(m => $"{m.MeasureIndex}:{m.Type}:{m.Text}:{m.AnchorItemIndex}")];
+
+        var full = Marks(CollectedScore(source, null));
+        var first = Marks(CollectedScore(source, "first"));
+        var second = Marks(CollectedScore(source, "second"));
+        Assert.Equal(first, full);
+        // The sheet of the part that writes none of them has the same marks, at the same bars.
+        Assert.Equal(first.Select(m => m[..m.LastIndexOf(':')]), second.Select(m => m[..m.LastIndexOf(':')]));
+        Assert.Contains(second, m => m.StartsWith("1:Rehearsal:B", StringComparison.Ordinal));
+        Assert.Contains(second, m => m.StartsWith("2:Tempo:", StringComparison.Ordinal));
+        // The rit. runs from the bar's first note of the SECOND violin to its last.
+        Assert.Contains("3:TextSpanStart:rit.:0", second);
+        Assert.Contains("3:TextSpanStop::3", second);
+
+        var page = RenderedGeometry.Render(Duo("score { staff v2 }"));
+        Assert.Single(page.Texts, t => t.Text == "B");
+        Assert.Single(page.Texts, t => t.Text == "rit.");
+        Assert.Single(page.Texts, t => t.Text == "Più mosso");
+        Assert.Single(page.Lines, l => l.IsDashed);
+    }
+
+    /// <summary>One a moment: where the shown part writes its own mark, tempo or rit. at the
+    /// same place, that one stands and the other part's is not added; and a part that writes
+    /// nothing score-wide opens no harvest.</summary>
+    [Fact]
+    public void ScoreWideMarks_AreNotDoubled()
+    {
+        string both = Duo("score second { staff v2 }",
+            "e'4 f' g' a' | b'4@mark(\"B\") c'' d'' e'' | tempo \"Più mosso\" 4 = 132 e''4 d'' c'' b' | a'4@rit g' f' e'@!rit | e'1 |");
+        var marks = CollectedScore(both, "second").MusicMarks;
+        Assert.Single(marks, m => m.Type == LilySharp.Core.Svg.Model.MusicMarkType.Rehearsal && m.Text == "B");
+        Assert.Single(marks, m => m.Type == LilySharp.Core.Svg.Model.MusicMarkType.TextSpanStart);
+        Assert.Single(marks, m => m.Type == LilySharp.Core.Svg.Model.MusicMarkType.TextSpanStop);
+        Assert.Single(marks, m => m.Type == LilySharp.Core.Svg.Model.MusicMarkType.Tempo);
+
+        // In a score of several staves a rit. stays its staff's: the first violin's is not
+        // moved onto the viola's when the first violin is not shown.
+        string trio = Duo("score lower { staff v2  staff v3 }")
+            .Replace("part v2 { clef treble }", "part v2 { clef treble }\npart v3 { clef alto }")
+            .Replace("  v2 {", "  v3 { c'1 | c'1 | c'1 | c'1 | c'1 | }\n  v2 {");
+        var lower = CollectedScore(trio, "lower").MusicMarks;
+        Assert.Single(lower, m => m.Type == LilySharp.Core.Svg.Model.MusicMarkType.Rehearsal && m.Text == "B");
+        Assert.Single(lower, m => m.Type == LilySharp.Core.Svg.Model.MusicMarkType.Tempo);
+        Assert.DoesNotContain(lower, m => m.Type == LilySharp.Core.Svg.Model.MusicMarkType.TextSpanStart);
+    }
 }

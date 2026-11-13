@@ -113,8 +113,11 @@ public class FiguredBassTests
     [InlineData("6_", new[] { "6/0", "held" })]
     [InlineData("6#6", new[] { "6/0", "6/1" })]
     [InlineData("7 6s 4f", new[] { "7/0", "6/1", "4/-1" })]
-    // ',' separates arguments and says nothing about the figures.
-    [InlineData("6,4", new[] { "6/0", "4/0" })]
+    // ',' divides the note: each part is a group of its own, and this reader answers the
+    // first (owner-approved 2026-11-13, grammar evaluation 3; until then the comma said nothing
+    // and "6,4" stacked 6 over 4). The groups are FiguredBassItem.ParseGroups'.
+    [InlineData("6,4", new[] { "6/0" })]
+    [InlineData("6 4, 5 3", new[] { "6/0", "4/0" })]
     public void AWrittenFigure_StacksTheseFigures(string argument, string[] expected)
         => Assert.Equal(expected, Shape(Figures(argument)));
 

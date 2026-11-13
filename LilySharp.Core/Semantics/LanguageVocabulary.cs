@@ -68,6 +68,9 @@ public static class LanguageVocabulary
     /// <see cref="ClefNames"/> are refused in music with "Expected clef name".</summary>
     public static IReadOnlyCollection<string> PartClefNames => SymbolCaseValidator.ClefValueVocabulary;
 
+    /// <summary>Every word a part header's <c>beaming</c> takes (2026-11-13: <c>syllabic</c>).</summary>
+    public static IReadOnlyCollection<string> BeamingModes => SymbolCaseValidator.BeamingValueVocabulary;
+
     /// <summary>Every pedal style a part header takes.</summary>
     public static IReadOnlyCollection<string> PedalStyles => SymbolCaseValidator.PedalValueVocabulary;
 

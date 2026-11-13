@@ -761,7 +761,11 @@ internal static class SyntaxFacts
     /// </summary>
     public static bool AnnotationReadsAParenthesisedArgument(string name)
         => ArgumentTakingAnnotations.Contains(name)
-            || !Semantics.AnnotationNameValidator.IsKnownPlainName(name);
+            // (@slur / @tie are no plain names and still leave a '(' alone: after them it is the
+            // slur they speak of, and the parser reads their word only where one stands against
+            // the '(' — @slur(dashed), owner-approved 2026-11-13.)
+            || (!Semantics.AnnotationNameValidator.IsKnownPlainName(name)
+                && name is not (Semantics.AnnotationValues.SlurLineName or Semantics.AnnotationValues.TieLineName));
 
     /// <summary>
     /// Whether <paramref name="name"/>'s argument is OPTIONAL — the name is complete on its

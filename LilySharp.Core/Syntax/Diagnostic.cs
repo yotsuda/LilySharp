@@ -880,9 +880,16 @@ public static class DiagnosticCodes
     public const string VoiceInTuplet = "LYS1066";
 
     /// <summary>A second <c>@figuredBass</c> on one note: the figures of a bass note are one
-    /// group, and a change of figure over a held bass is two tied notes with a figure each
+    /// group, and a change of figure over a held bass is one annotation with a comma between
+    /// the groups, <c>a2@figuredBass(4, 3)</c>
     /// (grammar evaluation 3, 2026-11-13; <c>Semantics.AnnotationNameValidator</c>).</summary>
     public const string SecondFigureGroupOnANote = "LYS1067";
+
+    /// <summary>The comma form of <c>@figuredBass</c> (<c>(4, 3)</c>: the note's length in equal
+    /// parts, one figure group each) on a grace note, which has no length to divide
+    /// (owner-approved 2026-11-13, grammar evaluation 3; <c>Semantics.AnnotationNameValidator</c>).
+    /// The first group is drawn.</summary>
+    public const string DividedFiguresOnAGraceNote = "LYS1068";
 
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
@@ -1648,6 +1655,23 @@ public static class DiagnosticCodes
     /// (<c>Semantics.HarmonicOpenStringValidator</c>). The harmonic is drawn and sounded all
     /// the same, the partial above the note written.</summary>
     public const string HarmonicNotAnOpenString = "LYS4073";
+
+    /// <summary>Error: a <c>@slur(…)</c> or <c>@tie(…)</c> whose argument is not one word,
+    /// <c>dashed</c> or <c>dotted</c> (owner-approved 2026-11-13, grammar evaluation 3:
+    /// <c>c4@slur(dashed)( d e)</c>; <c>Semantics.BowLineValidator</c>). The curve is drawn solid.</summary>
+    public const string BowLineMalformed = "LYS4074";
+
+    /// <summary>Error: a <c>@slur(dashed)</c> on a note no slur begins on, or a
+    /// <c>@tie(dashed)</c> on a note no tie begins on — a rest and one member of a chord
+    /// included: the annotation says how the curve that BEGINS on its note is drawn, and there
+    /// is none (read off the collect, <c>Semantics.BowLineValidator</c>). Nothing is drawn by it.</summary>
+    public const string BowLineWithoutBow = "LYS4075";
+
+    /// <summary>Error: <c>(editorial)</c> on a hairpin or a niente — <c>@cresc(editorial)</c>,
+    /// <c>@niente(editorial)</c>: the parentheses are a dynamic LEVEL's, "(p)" (owner-approved
+    /// 2026-11-13, grammar evaluation 3; <c>Semantics.EditorialDynamicValidator</c>). The mark
+    /// is drawn as the plain one.</summary>
+    public const string EditorialNotALevel = "LYS4076";
 
     /// <summary>Error: a span end whose name is not the one the span was opened with —
     /// <c>@8va … @!15ma</c> (owner's decision 2026-10-28: a span is closed by its own name;

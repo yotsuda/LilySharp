@@ -154,6 +154,17 @@ public sealed partial class LilyPondExporter
                     prefix.Append(ArpeggioArrowOverride(arrow, ""));
                     suffix.Append("\\arpeggio");
                     break;
+                // @slur(dashed) / @tie(dotted) (owner-approved 2026-11-13, grammar evaluation 3):
+                // LilyPond's own switch, for the one curve that begins at this moment — the Slur
+                // and the Tie are made here and take the `\once` value, as the feathered beam's
+                // grob does below. With no slur or tie beginning (LYS4075) it sets nothing drawn.
+                // LILYPOND-REF: ly/property-init.ly slurDashed / slurDotted, tieDashed / tieDotted — `\override Slur.dash-definition = …`.
+                case MusicMarkSyntax mk when Semantics.AnnotationValues.BowLineOf(mk, Semantics.AnnotationValues.SlurLineName) is { } slurLine:
+                    prefix.Append(slurLine == BowLine.Dotted ? "\\once \\slurDotted " : "\\once \\slurDashed ");
+                    break;
+                case MusicMarkSyntax mk when Semantics.AnnotationValues.BowLineOf(mk, Semantics.AnnotationValues.TieLineName) is { } tieLine:
+                    prefix.Append(tieLine == BowLine.Dotted ? "\\once \\tieDotted " : "\\once \\tieDashed ");
+                    break;
                 // ⚠️ THE ONE MARK THAT TRAILS ITS NOTE. `\mark` is standalone music written
                 // BEFORE the note it stands over, which is why marks default to the prefix;
                 // `\nonArpeggiato` is a POST-EVENT (scm/define-music-types.scm:436-441 gives
@@ -1077,7 +1088,7 @@ public sealed partial class LilyPondExporter
         StringNumberAnnotationSyntax sn => sn.StringNumberToken.Text, // "\4" — LilyPond-valid
         TieSyntax => "~",
         SlurSyntax s => s.IsOpen ? "(" : ")",
-        BeamMarkerSyntax bm => bm.IsStart ? "[" : "]",
+        BeamMarkerSyntax bm => InSyllabicPart ? "" : bm.IsStart ? "[" : "]",
         DynamicSyntax d => EmitDynamic(d),
         ArticulationSyntax art => MapArticulation(art),
         MusicMarkSyntax mk => EmitMark(mk),

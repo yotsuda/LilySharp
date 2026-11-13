@@ -19,6 +19,26 @@ using System.Collections.Immutable;
 namespace LilySharp.Core.Svg.Model;
 
 /// <summary>
+/// How a slur's or a tie's curve is drawn (owner-approved 2026-11-13, grammar evaluation 3:
+/// <c>@slur(dashed)</c>, <c>@tie(dashed)</c>, and <c>dotted</c> for either) — an editor's
+/// suggestion, or a slur that holds for one verse and not another.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: ly/property-init.ly:739-760 make-simple-dash-definition, slurDashed / slurDotted / slurSolid and :947-953 tieDashed / tieDotted —
+///   <c>dash-definition</c> <c>((0 1 0.4 0.75))</c> and <c>((0 1 0.1 0.75))</c>: over the
+///   whole curve, a dash 0.4 (a dot 0.1) of each 0.75 period.
+/// </remarks>
+public enum BowLine : byte
+{
+    /// <summary>The ordinary curve.</summary>
+    Solid,
+    /// <summary><c>\slurDashed</c> / <c>\tieDashed</c>: dash-fraction 0.4.</summary>
+    Dashed,
+    /// <summary><c>\slurDotted</c> / <c>\tieDotted</c>: dash-fraction 0.1.</summary>
+    Dotted,
+}
+
+/// <summary>
 /// Represents a slur connecting multiple notes for phrasing.
 /// A slur is a curved line that groups notes together,
 /// indicating they should be played legato.
@@ -116,6 +136,11 @@ public sealed record SlurItem
     /// </remarks>
     public int StartGraceGroup { get; init; } = -1;
 
+    /// <summary>How the curve is drawn: solid, or the dashes / dots of <c>@slur(dashed)</c> /
+    /// <c>@slur(dotted)</c> on the note the slur begins on (<see cref="MusicItem.SlurLine"/>;
+    /// owner-approved 2026-11-13, grammar evaluation 3).</summary>
+    public BowLine Line { get; init; }
+
     /// <summary>Creates a slur spanning from a start note to an end note.</summary>
     public SlurItem(
         int startStaffPosition,
@@ -151,5 +176,6 @@ public sealed record SlurItem
             StartOnHead = StartOnHead,
             EndOnHead = EndOnHead,
             StartGraceGroup = StartGraceGroup,
+            Line = Line,
         };
 }

@@ -163,6 +163,27 @@ public sealed class PartHeaderDefaults
     private static readonly HashSet<string> Unfretted = new(StringComparer.Ordinal)
         { "violin", "viola", "cello", "contrabass", "contrabass5" };
 
+    /// <summary>The word of <c>beaming syllabic</c>.</summary>
+    public const string SyllabicBeamingWord = "syllabic";
+
+    /// <summary>
+    /// <c>beaming syllabic</c> (owner-approved 2026-11-13, grammar evaluation 3): the part is a
+    /// sung one, beamed the traditional vocal way — an automatic beam joins only the notes sung
+    /// on ONE syllable, and every note that starts a syllable keeps its own flag. A manual
+    /// <c>[ ]</c> still joins what it brackets.
+    /// </summary>
+    /// <remarks>
+    /// A syllable is read off the NOTES, as LilyPond's Lyric_combine_music_iterator reads it:
+    /// a note inside a slur (after its first) or tied into is held — a melisma — and every
+    /// other note starts a syllable. The lyrics are not asked: beams are decided while the
+    /// part is collected (their stems are baked there), before any lyric is set to it, and
+    /// LilyPond's own rule is the same one. So a melisma written in the words alone
+    /// (<c>_</c>, no slur) is given a slur or a manual beam.
+    /// LILYPOND-REF: ly/engraver-init.ly melismaBusyProperties — slurMelismaBusy, tieMelismaBusy (and the manual beam's beamMelismaBusy).
+    /// LILYPOND-REF: Documentation/notation "Automatic beams" — <c>\autoBeamOff</c> for vocal music, melismata beamed by hand: what the twin writes.
+    /// </remarks>
+    public bool BeamingSyllabic { get; private init; }
+
     /// <summary>The defaults of a part that declares nothing.</summary>
     public static readonly PartHeaderDefaults Empty = new();
 
@@ -174,6 +195,7 @@ public sealed class PartHeaderDefaults
 
         int? explicitOctave = null;
         string? preset = null, clefText = null, transText = null, tuningText = null, midiName = null;
+        bool syllabic = false;
 
         foreach (var prop in part.Properties)
         {
@@ -201,6 +223,9 @@ public sealed class PartHeaderDefaults
                     break;
                 case "tuning":
                     tuningText = Joined();   // as written: the words are camelCase (`banjoOpenD`)
+                    break;
+                case "beaming":
+                    syllabic = (prop.GetChild(2) as SyntaxTokenNode)?.Text == SyllabicBeamingWord;
                     break;
                 case "instrument":
                     // Token by token, as SplitInstrument reads them: joined into one string,
@@ -260,6 +285,7 @@ public sealed class PartHeaderDefaults
             MidiInstrument = midiName,
             Tuning = Tunings.Parse(tuningText ?? InstrumentDefaults.GetTuning(preset)),
             FrettedTuningWord = FrettedWord(tuningText, preset),
+            BeamingSyllabic = syllabic,
         };
     }
 

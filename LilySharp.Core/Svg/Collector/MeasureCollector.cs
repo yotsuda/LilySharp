@@ -1076,7 +1076,7 @@ public sealed partial class MeasureCollector
         // historical harvest-free shape.
         if (renderSpec != null)
         {
-            var harvestVoices = HarvestOmittedStructure(tree, renderSpec);
+            var harvestVoices = HarvestOmittedStructure(tree, renderSpec, drawnPart: measures);
             if (harvestVoices.Count > 0)
             {
                 // "" cannot be a part name, so the self key never collides with an
@@ -2526,7 +2526,14 @@ public sealed partial class MeasureCollector
     /// then propagates their repeat barlines onto the drawn rows. Voltas (spanning brackets, not a
     /// per-measure barline) remain a follow-up.
     /// </summary>
-    private IReadOnlyList<Voice> HarvestOmittedStructure(SyntaxTree tree, RenderSpec renderSpec)
+    /// <param name="tree">The file.</param>
+    /// <param name="renderSpec">The score being collected: what it binds is drawn.</param>
+    /// <param name="drawnPart">On the single-staff road — a part sheet — the one drawn part's
+    /// measures: an omitted part's tempo word and text spanner (<c>@rit</c>) are then printed on
+    /// it too, re-addressed to its notes (<see cref="OntoTheDrawnPart"/>). Null on the
+    /// multi-staff road, where the score-level marks alone are taken.</param>
+    private IReadOnlyList<Voice> HarvestOmittedStructure(SyntaxTree tree, RenderSpec renderSpec,
+        IReadOnlyList<Measure>? drawnPart = null)
     {
         // ⚠️ THE ANSWER IS ALMOST ALWAYS "NOTHING": 2,092 calls over the reader's corpus
         // (1.13 a keystroke), every one of them empty, at 1,224 B a call (measured session
@@ -2541,7 +2548,7 @@ public sealed partial class MeasureCollector
             var name = part.Name.Text;
             if (renderSpec.BindsVoice(name) || !IsFirstPartNamed(root, part, name))
                 continue;
-            if (PartHasStructure(root, name))
+            if (PartHasStructure(root, name) || PartHasScoreWideMarks(root, name))
                 (omitted ??= new List<string>()).Add(name);
         }
         if (omitted is null)
@@ -2559,13 +2566,51 @@ public sealed partial class MeasureCollector
         try { harvested = CollectNested("harvest", tree, renderSpec with { Items = items }, harvestStructureMarks: false); }
         catch { return System.Array.Empty<Voice>(); } // a harvest failure must never break the render
 
-        foreach (var mark in harvested.MusicMarks)
+        var harvestedPrimary = harvested.StaffGroups.SelectMany(g => g.Staves).Select(s => s.PrimaryVoice).ToList();
+        bool spanTaken = false;
+        foreach (var harvestedMark in harvested.MusicMarks)
         {
-            if (!IsStructuralMark(mark.Type))
+            var mark = harvestedMark;
+            bool scoreWide = mark.Type is MusicMarkType.Tempo
+                or MusicMarkType.TextSpanStart or MusicMarkType.TextSpanStop;
+            if (!IsStructuralMark(mark.Type) && !scoreWide)
                 continue;
             if (_musicMarks.Any(m => m.Type == mark.Type && m.MeasureIndex == mark.MeasureIndex
                     && m.SourcePosition == mark.SourcePosition))
                 continue;
+            // A rehearsal mark and a tempo are the SCORE's (LilyPond engraves RehearsalMark and
+            // MetronomeMark in the Score context, once above the system and on every extracted
+            // part), so a part sheet prints the ones written in a part it does not show
+            // (owner-approved 2026-11-13, grammar evaluation 3: the quartet's second violin
+            // lost the first violin's "A" and "Più mosso"). One a moment: where the drawn parts
+            // already write theirs there, that one stands.
+            // LILYPOND-REF: ly/engraver-init.ly \context Score — \consists Mark_engraver, \consists Metronome_mark_engraver.
+            if (mark.Type is MusicMarkType.Rehearsal or MusicMarkType.Tempo
+                && _musicMarks.Any(m => m.Type == mark.Type && m.MeasureIndex == mark.MeasureIndex
+                    && SameMoment(m.AnchorTiming, mark.AnchorTiming)))
+                continue;
+            if (scoreWide)
+            {
+                // A text spanner (rit., accel., poco rit.) belongs to its staff, in LilyPond too:
+                // LILYSHARP-OWN, it is printed on a part SHEET whose part does not write one in
+                // that bar, because the player of that part slows with the others. In a score of
+                // several staves the staff that wrote it carries it, or — unshown — nobody does.
+                // (An end is taken only with its start: one the sheet did not take closes nothing.)
+                if (mark.Type == MusicMarkType.TextSpanStart)
+                    spanTaken = drawnPart != null && mark.SpanFamily == default
+                        && !_musicMarks.Any(m => m.Type == MusicMarkType.TextSpanStart && m.MeasureIndex == mark.MeasureIndex);
+                if (mark.Type != MusicMarkType.Tempo && !spanTaken)
+                    continue;
+                if (drawnPart != null && OntoTheDrawnPart(mark, harvestedPrimary, drawnPart) is { } moved)
+                    mark = moved;
+                else if (mark.Type != MusicMarkType.Tempo)
+                {
+                    spanTaken = false;
+                    continue;
+                }
+                if (mark.Type == MusicMarkType.TextSpanStop)
+                    spanTaken = false;
+            }
             _musicMarks.Add(mark);
         }
 
@@ -2735,8 +2780,95 @@ public sealed partial class MeasureCollector
         return true;
     }
 
+    private static bool SameMoment(Fraction a, Fraction b)
+        => (a.Denominator == 0 ? Fraction.Zero : a) == (b.Denominator == 0 ? Fraction.Zero : b);
+
+    /// <summary>
+    /// <paramref name="mark"/> of an omitted part, re-addressed to the one drawn part of a part
+    /// sheet: its item index is the omitted part's, so it is moved to the drawn part's item
+    /// that sounds at (or first after) the same moment of the bar, on the drawn staff's first
+    /// voice. Null when the mark's own bar or item cannot be found.
+    /// </summary>
+    private MusicMarkItem? OntoTheDrawnPart(MusicMarkItem mark, List<Voice> harvestedPrimary,
+        IReadOnlyList<Measure> drawnPart)
+    {
+        if (mark.MeasureIndex < 0 || mark.MeasureIndex >= drawnPart.Count)
+            return null;
+        if (mark.AnchorItemIndex < 0)
+            return mark with { StaffIndex = _v.Cursor.StaffIndex, VoiceIndex = 0 };
+        // The moment the mark stands at in its own part: the first harvested voice whose bar
+        // holds that item (the nested collect numbers its staves from 0, one a part).
+        Fraction? moment = null;
+        int from = mark.StaffIndex >= 0 && mark.StaffIndex < harvestedPrimary.Count ? mark.StaffIndex : 0;
+        if (from < harvestedPrimary.Count && mark.MeasureIndex < harvestedPrimary[from].Measures.Length
+            && mark.AnchorItemIndex < harvestedPrimary[from].Measures[mark.MeasureIndex].Items.Length)
+            moment = Layout.LayoutUtilities.ItemOnset(harvestedPrimary[from].Measures[mark.MeasureIndex], mark.AnchorItemIndex);
+        if (moment is not { } at)
+            return null;
+        var items = drawnPart[mark.MeasureIndex].Items;
+        int target = -1;
+        var onset = Fraction.Zero;
+        for (int i = 0; i < items.Length && target < 0; i++)
+        {
+            if (!items[i].GraceTime && items[i].Duration > Fraction.Zero && onset >= at)
+                target = i;
+            onset += items[i].Duration;
+        }
+        // A span's end past the bar's last onset closes on the bar's last sounding item.
+        for (int i = items.Length - 1; i >= 0 && target < 0; i--)
+            if (!items[i].GraceTime && items[i].Duration > Fraction.Zero)
+                target = i;
+        return target < 0 ? null
+            : mark with { AnchorItemIndex = target, StaffIndex = _v.Cursor.StaffIndex, VoiceIndex = 0 };
+    }
+
+    /// <summary>
+    /// Whether <paramref name="partName"/> writes a mark every score of the piece shows though
+    /// the part is not drawn: a rehearsal mark (<c>@mark("A")</c>), a tempo inside its music,
+    /// or a tempo word's text spanner (<c>@rit</c>, <c>@accel</c>, <c>@rall</c>,
+    /// <c>@textSpan</c>) — the gate of the harvest beside <see cref="PartHasStructure"/>
+    /// (owner-approved 2026-11-13, grammar evaluation 3). Read in the part's own cells, both
+    /// spellings; a mark reached only through a phrase reference is not seen.
+    /// </summary>
+    private static bool PartHasScoreWideMarks(SyntaxNode root, string partName)
+    {
+        static bool Scan(SyntaxNode scope)
+        {
+            foreach (var n in scope.GreenSites(static g => (
+                    g.Kind is SyntaxKind.MusicMark or SyntaxKind.Articulation or SyntaxKind.TempoDeclaration,
+                    Descend: true)))
+            {
+                switch (n)
+                {
+                    case TempoDeclarationSyntax:
+                        return true;
+                    case MusicMarkSyntax { Name: "mark" or "textSpan" or "rit" or "accel" or "rall" }:
+                        return true;
+                    case ArticulationSyntax { Name: "rit" or "accel" or "rall" }:
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        foreach (var p in root.ChildNodesOfKind<PartDeclarationSyntax>())
+            if (p.Name.Text == partName)
+            {
+                // The header's own `tempo` is refused (LYS1026); a part body's sections hold music.
+                if (Scan(p))
+                    return true;
+                break;
+            }
+        foreach (var section in root.ChildNodesOfKind<SectionDeclarationSyntax>())
+            foreach (var child in section.ChildNodes())
+                if (child is PartBlockSyntax pb && pb.Name == partName && Scan(pb))
+                    return true;
+        return false;
+    }
+
     /// <summary>The score-level mark types worth harvesting from an unrendered part: navigation
-    /// and rehearsal marks (not per-staff dynamics or the piece-wide tempo).</summary>
+    /// and rehearsal marks (not per-staff dynamics; an in-music tempo and a tempo word's text
+    /// spanner are taken beside them, see <see cref="HarvestOmittedStructure"/>).</summary>
     private static bool IsStructuralMark(MusicMarkType t) => t is
         MusicMarkType.Segno or MusicMarkType.Coda or MusicMarkType.Fine or MusicMarkType.ToCoda
         or MusicMarkType.DalSegno or MusicMarkType.DaCapo
@@ -3523,7 +3655,7 @@ public sealed partial class MeasureCollector
                         var (e, eOnset) = standing[s];
                         written = e.MeasureIndex == d.MeasureIndex && eOnset == onset
                             && e.Level == d.Level && e.Text == d.Text && e.IsAbove == d.IsAbove
-                            && e.IsExpressiveText == d.IsExpressiveText && e.IsSubito == d.IsSubito
+                            && e.IsExpressiveText == d.IsExpressiveText && e.IsSubito == d.IsSubito && e.IsEditorial == d.IsEditorial
                             && e.OnMultiMeasureRest == d.OnMultiMeasureRest;
                     }
                     if (written)
@@ -6421,6 +6553,8 @@ public sealed partial class MeasureCollector
                         WrittenAbove = dynamicSyntax.ForcedAbove,
                         VoiceIndex = _v.Cursor.VoiceIndex,
                         IsSubito = dynamicSyntax.IsSubito,
+                        // (A niente is a word or its hairpin's circle: no parentheses, LYS4076.)
+                        IsEditorial = dynamicSyntax.IsEditorial && level != DynamicLevel.Niente,
                     });
                 }
                 else

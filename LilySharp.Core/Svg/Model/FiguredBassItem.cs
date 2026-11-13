@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 
 namespace LilySharp.Core.Svg.Model;
 
@@ -101,6 +102,38 @@ public sealed record FiguredBassItem
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
     public int StaffIndex { get; }
 
+    /// <summary>
+    /// True for a group that stands INSIDE its bass note — the second and later parts of
+    /// <c>a2@figuredBass(4, 3)</c> (owner-approved 2026-11-13, grammar evaluation 3): it is
+    /// placed at <see cref="Timing"/> on the bar's column grid, where nothing of the staff
+    /// starts, instead of at the note's item. The first part is the note's own group and
+    /// keeps this false.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/figured-bass-engraver.cc - a BassFigure is an Item in the paper column
+    /// of ITS moment, so <c>&lt;4&gt;4 &lt;3&gt;4</c> against <c>a2</c> puts a used musical column
+    /// at the note's midpoint (<c>MultiStaffLayouter.CollectAllTimingsForMeasure</c> keeps it).
+    /// </remarks>
+    public bool UseTiming { get; init; }
+
+    /// <summary>The group's moment from its bar's start — set for every part of the comma
+    /// form (the first part's is its note's onset), and unset (<c>default</c>) for an
+    /// undivided group.</summary>
+    public Fraction Timing { get; init; }
+
+    /// <summary>
+    /// The length of this group's equal share of its note — set for every part of the comma
+    /// form, zero for an undivided group. It is the figure EVENT's duration, which the spacing
+    /// reads as LilyPond does: a BassFigure is a rhythmic grob, so <c>&lt;4&gt;4</c> under
+    /// <c>a2</c> makes a quarter the shortest thing playing at that column
+    /// (<c>MeasureLayouter.CreateTimingSprings</c>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:352-364 BassFigure — rhythmic-grob-interface.
+    /// LILYPOND-REF: lily/spacing-engraver.cc:200-253 — shortest_playing over the rhythmic grobs sounding at the column.
+    /// </remarks>
+    public Fraction Duration { get; init; }
+
     /// <summary>Creates a figured bass group attached to a bass note.</summary>
     public FiguredBassItem(
         ImmutableArray<FiguredBassFigure> figures,
@@ -125,7 +158,8 @@ public sealed record FiguredBassItem
     /// Written <c>@figuredBass(6)</c> (single), <c>@figuredBass(5 3)</c> (two stacked), <c>@figuredBass(6 s)</c>
     /// (6♯; <c>f</c> flat, <c>n</c> natural), <c>@figuredBass(#)</c> (a bare sharp — the raised
     /// third), <c>@figuredBass(_)</c> (a held / continuation figure). A figure is a digit 0-9,
-    /// where 0 is the empty placeholder.
+    /// where 0 is the empty placeholder. This answers the FIRST group of the comma form
+    /// (<see cref="ParseGroups"/>) — the note's own.
     /// </para>
     /// <para>
     /// ★ A SUB-LANGUAGE, so it parses TOKENS (VALUE_SITE_AUDIT §9.2, §9.5.3 ⑴). It used
@@ -164,8 +198,47 @@ public sealed record FiguredBassItem
     /// </remarks>
     public static ImmutableArray<FiguredBassFigure>? ParseFigures(
         ImmutableArray<Syntax.SyntaxTokenNode> argumentTokens)
+        => ParseGroups(argumentTokens) is { } groups ? groups[0] : null;
+
+    /// <summary>
+    /// The figure groups of a <c>@figuredBass(…)</c> argument, in time order: ONE for
+    /// <c>@figuredBass(6 4)</c>, and one per part for the comma form —
+    /// <c>@figuredBass(4, 3)</c> is 4 then 3, <c>@figuredBass(6 4, 5 3)</c> two stacked groups,
+    /// each on an equal share of its note's length. Null when any part spells no figure group
+    /// (an empty part among them: <c>(4,)</c>, <c>(, 3)</c>).
+    /// </summary>
+    /// <remarks>
+    /// Owner-approved 2026-11-13 (grammar evaluation 3, the cantata's 4–3 over a held bass).
+    /// ⚠️ A BEHAVIOUR CHANGE, declared: until then a ',' between figures said nothing
+    /// (<c>@figuredBass(6, 4)</c> was 6 over 4, as <c>6 4</c>); no book on disk wrote one.
+    /// LILYSHARP-OWN: the comma spelling. LilyPond writes each figure event with its own
+    /// duration (<c>&lt;4&gt;4 &lt;3&gt;4</c>), which is what the twin emits.
+    /// </remarks>
+    public static ImmutableArray<ImmutableArray<FiguredBassFigure>>? ParseGroups(
+        ImmutableArray<Syntax.SyntaxTokenNode> argumentTokens)
     {
         if (argumentTokens.IsDefaultOrEmpty)
+            return null;
+
+        var groups = ImmutableArray.CreateBuilder<ImmutableArray<FiguredBassFigure>>(1);
+        int from = 0;
+        for (int i = 0; i <= argumentTokens.Length; i++)
+        {
+            if (i < argumentTokens.Length && argumentTokens[i].Kind != Syntax.SyntaxKind.Comma)
+                continue;
+            if (ParseOneGroup(argumentTokens, from, i) is not { } group)
+                return null;
+            groups.Add(group);
+            from = i + 1;
+        }
+        return groups.ToImmutable();
+    }
+
+    /// <summary>One group: the tokens <c>[from, to)</c> of the argument, which hold no comma.</summary>
+    private static ImmutableArray<FiguredBassFigure>? ParseOneGroup(
+        ImmutableArray<Syntax.SyntaxTokenNode> argumentTokens, int from, int to)
+    {
+        if (from >= to)
             return null;
 
         var figures = ImmutableArray.CreateBuilder<FiguredBassFigure>();
@@ -173,13 +246,9 @@ public sealed record FiguredBassItem
         int currentAlteration = 0;
         int pendingAlteration = 0; // a leading '#' seen BEFORE its figure number
 
-        foreach (var token in argumentTokens)
+        for (int t = from; t < to; t++)
         {
-            // ',' separates arguments and says nothing about the figures, exactly as it
-            // said nothing to MarkName (which left it out of the dotted string).
-            if (token.Kind == Syntax.SyntaxKind.Comma)
-                continue;
-
+            var token = argumentTokens[t];
             var part = token.Text;
             if (string.IsNullOrEmpty(part))
                 return null;

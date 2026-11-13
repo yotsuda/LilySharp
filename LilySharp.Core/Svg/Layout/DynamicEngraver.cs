@@ -47,7 +47,8 @@ public readonly record struct DynamicLayout(
     bool IsExpressiveText = false, // @text("…"): plain italic, not a dynamic level.
     bool OnMultiMeasureRest = false, // @text on an R: MultiMeasureRestText (DynamicItem.OnMultiMeasureRest).
     double? GlyphRunWidth = null, // A SMuFL score's level in the font's own glyphs: its width (DynamicEngraver.SmuflGlyphRun).
-    bool IsSubito = false   // @p.subito: an italic "sub." hangs left of the level (DynamicEngraver.SubitoWidth).
+    bool IsSubito = false,  // @p.subito: an italic "sub." hangs left of the level (DynamicEngraver.SubitoWidth).
+    bool IsEditorial = false // @p(editorial): the level between parentheses (DynamicEngraver.EditorialReach).
 );
 
 /// <summary>
@@ -391,7 +392,8 @@ internal static class DynamicEngraver
                 expressive,
                 dynamic.OnMultiMeasureRest,
                 expressive ? null : SmuflGlyphRun(score.TextMetrics, labelText)?.Width,
-                IsSubito: dynamic.IsSubito && !expressive
+                IsSubito: dynamic.IsSubito && !expressive,
+                IsEditorial: dynamic.IsEditorial && !expressive
             ));
         }
 
@@ -814,16 +816,33 @@ internal static class DynamicEngraver
     /// </summary>
     internal static (VerticalSkyline Up, VerticalSkyline Down) LabelSkylines(
         Rendering.ScoreTextMetrics fonts,
-        string? text, bool expressive, double xCentre, double yBaseline, bool subito)
+        string? text, bool expressive, double xCentre, double yBaseline, bool subito, bool editorial = false)
     {
         var level = LabelSkylines(fonts, text, expressive, xCentre, yBaseline);
+        // An editorial level's parentheses stand a pad off its two edges (EditorialReach), in
+        // the italic text face's own outline.
+        if (editorial && !expressive)
+        {
+            double parenEm = EditorialParenEm(fonts);
+            var parenFace = fonts.Face(LabelRole(true), LabelStyle(fonts, true));
+            double halfLevel = LabelHalfWidth(fonts, text ?? "", false);
+            var open = TextOutlineSkylines.Place("(", parenEm, parenFace,
+                xCentre - halfLevel - EditorialReach(fonts, left: true), yBaseline);
+            var close = TextOutlineSkylines.Place(")", parenEm, parenFace,
+                xCentre + halfLevel + EditorialPad, yBaseline);
+            level.Up.Merge(open.Up);
+            level.Down.Merge(open.Down);
+            level.Up.Merge(close.Up);
+            level.Down.Merge(close.Down);
+        }
         if (!subito || expressive)
             return level;
         // A subito's "sub." hangs left of the level, a word space off its left edge
         // (SubitoWidth), in the expressive text's own outline.
         double em = LabelEm(fonts, true);
         var face = fonts.Face(LabelRole(true), LabelStyle(fonts, true));
-        double left = xCentre - LabelHalfWidth(fonts, text ?? "", false) - SubitoWidth(fonts);
+        double left = xCentre - LabelHalfWidth(fonts, text ?? "", false) - SubitoWidth(fonts)
+            - (editorial ? EditorialReach(fonts, left: true) : 0);
         var word = TextOutlineSkylines.Place(SubitoWord, em, face, left, yBaseline);
         level.Up.Merge(word.Up);
         level.Down.Merge(word.Down);
@@ -1147,13 +1166,42 @@ internal static class DynamicEngraver
     internal static double SubitoWidth(Rendering.ScoreTextMetrics fonts)
         => fonts.Advance(SubitoWord, LabelEm(fonts, true), LabelRole(true), LabelStyle(fonts, true)) + SubitoGap;
 
+    /// <summary>The space between an editorial level and each of its parentheses.</summary>
+    /// <remarks>LILYPOND-REF: Documentation/notation "New dynamic marks", the <c>\paren</c> example — <c>\pad-x #0.2</c> about the dynamic.</remarks>
+    internal const double EditorialPad = 0.2;
+
+    /// <summary>
+    /// The em an editorial level's parentheses are set at (<c>@p(editorial)</c>, owner-approved
+    /// 2026-11-13, grammar evaluation 3): the text face two steps up, italic.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond has no editorial dynamic; of its two spellings the picture followed is the
+    /// manual's <c>make-dynamic-script</c> one — full-size italic text parentheses, the usual
+    /// editorial "(p)" — and not <c>\parenthesize</c>, whose Parentheses grob draws the small
+    /// accidental parentheses, one staff space tall.
+    /// LILYPOND-REF: Documentation/notation "New dynamic marks" — <c>\markup \concat { \normal-text \italic \fontsize #2 ( \pad-x #0.2 … \normal-text \italic \fontsize #2 ) }</c>.
+    /// MEASURED, 2.26.0 (LilySharp-Lab sessions/p1226/md/eval3/featI/f3.ly): the plain p is
+    /// 1.468162 wide and reaches 1.168008 above its baseline; "(p)" is 3.711901 wide — two
+    /// parentheses of 0.921869 and two pads — centred on the same head, and reaches 2.040133
+    /// above the baseline; \parenthesize's pair is 1.000000 tall.
+    /// </remarks>
+    internal static double EditorialParenEm(Rendering.ScoreTextMetrics fonts)
+        => LabelEm(fonts, true) * Math.Pow(2.0, 2.0 / 6.0);
+
+    /// <summary>How far an editorial level's parenthesis reaches past the level's own edge on
+    /// one side: the pad and the parenthesis. The level stands where the plain one does — the
+    /// two sides are equal, so centring "(p)" on the note centres the p.</summary>
+    internal static double EditorialReach(Rendering.ScoreTextMetrics fonts, bool left)
+        => EditorialPad + fonts.Advance(left ? "(" : ")", EditorialParenEm(fonts), LabelRole(true), LabelStyle(fonts, true));
+
     /// <summary>A placed dynamic's ink across, about its own X: the level's half-width each way,
     /// and on the left the subito's word as well. ONE HOME for every reader that boxes a
     /// dynamic (skylines, stacker, paging, the marks that avoid it).</summary>
     internal static (double Left, double Right) LabelExtentX(Rendering.ScoreTextMetrics fonts, in DynamicLayout d)
     {
         double half = LabelHalfWidth(fonts, d.Text ?? string.Empty, d.IsExpressiveText);
-        return (d.X - half - (d.IsSubito ? SubitoWidth(fonts) : 0), d.X + half);
+        return (d.X - half - (d.IsSubito ? SubitoWidth(fonts) : 0) - (d.IsEditorial ? EditorialReach(fonts, left: true) : 0),
+            d.X + half + (d.IsEditorial ? EditorialReach(fonts, left: false) : 0));
     }
 
     /// <summary>A placed dynamic's ink up and down about its baseline — <see cref="InkOf(Rendering.ScoreTextMetrics, string?, bool)"/>,
@@ -1161,6 +1209,11 @@ internal static class DynamicEngraver
     internal static (double Ascent, double Descent) InkOf(Rendering.ScoreTextMetrics fonts, in DynamicLayout d)
     {
         var (a, ds) = InkOf(fonts, d.Text, d.IsExpressiveText);
+        if (d.IsEditorial)
+        {
+            var (bottom, top) = fonts.Ink("()", EditorialParenEm(fonts), LabelRole(true), LabelStyle(fonts, true));
+            (a, ds) = (Math.Max(a, top), Math.Max(ds, -bottom));
+        }
         if (!d.IsSubito)
             return (a, ds);
         var (sa, sd) = InkOf(fonts, SubitoWord, true);

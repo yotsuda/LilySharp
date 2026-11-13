@@ -154,6 +154,8 @@ internal sealed class SlurDetector
                     EndSourcePosition = item.SlurEndSourcePosition,
                     StartOnHead = startHead is not null,
                     EndOnHead = endHead is not null,
+                    // @slur(dashed) on the note the slur begins on (2026-11-13).
+                    Line = startItem.SlurLine,
                 });
             }
 

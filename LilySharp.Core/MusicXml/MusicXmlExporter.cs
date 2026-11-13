@@ -2810,7 +2810,7 @@ public sealed class MusicXmlExporter
                 break;
 
             case DynamicSyntax dynamic:
-                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart, dynamic.IsSubito, dynamic.ForcedAbove);
+                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart, dynamic.IsSubito, dynamic.ForcedAbove, dynamic.IsEditorial);
                 break;
 
             case TieSyntax:
@@ -3867,7 +3867,7 @@ public sealed class MusicXmlExporter
         // through the shared dynamic/wedge funnel and emit before the first member.
         foreach (var a in arpeggio.Articulations)
             if (a is DynamicSyntax dyn)
-                HandleDynamicText(dyn.DynamicToken.Text, subito: dyn.IsSubito, written: dyn.ForcedAbove);
+                HandleDynamicText(dyn.DynamicToken.Text, subito: dyn.IsSubito, written: dyn.ForcedAbove, editorial: dyn.IsEditorial);
         EmitPendingDynamic();
         // A string number on the group (`>>4\3`) is every pitched / degree member's that
         // names none of its own — the collector's groupString (a chord member inside the
@@ -4922,7 +4922,10 @@ public sealed class MusicXmlExporter
     /// <summary>Start a tie on every member of the onset just written.</summary>
     private void OpenTies(IReadOnlyList<MusicXmlNote> from)
     {
-        foreach (var n in from) { n.TieStart = true; _tieOpen.Add(n); }
+        // One @tie(dashed) on a chord is every member's (the mark was read onto the first).
+        string? lineType = null;
+        foreach (var n in from) lineType ??= n.TiedLineType;
+        foreach (var n in from) { n.TieStart = true; n.TiedLineType = lineType; _tieOpen.Add(n); }
         _tieToNextNote = true;
     }
 
@@ -5591,7 +5594,7 @@ public sealed class MusicXmlExporter
             }
             else if (artic is DynamicSyntax dynamic)
             {
-                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart, dynamic.IsSubito, dynamic.ForcedAbove);
+                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart, dynamic.IsSubito, dynamic.ForcedAbove, dynamic.IsEditorial);
             }
             else if (artic is StringNumberAnnotationSyntax stringNumber)
             {
@@ -5606,6 +5609,12 @@ public sealed class MusicXmlExporter
                 // marks (pedal, ottava, chord symbol) go on to their own reader.
                 if (Semantics.AnnotationValues.Finger(mark) is { } finger)
                     xmlNote.Technicals.Add(new System.Xml.Linq.XElement("fingering", finger));
+                // @slur(dashed) / @tie(dotted) (owner-approved 2026-11-13): the line-type of the
+                // <slur> / <tied> that starts on this note. With none starting, nothing is written.
+                if (Semantics.AnnotationValues.BowLineOf(mark, Semantics.AnnotationValues.SlurLineName) is { } slurLine)
+                    xmlNote.SlurLineType = slurLine == Svg.Model.BowLine.Dotted ? "dotted" : "dashed";
+                if (Semantics.AnnotationValues.BowLineOf(mark, Semantics.AnnotationValues.TieLineName) is { } tieLine)
+                    xmlNote.TiedLineType = tieLine == Svg.Model.BowLine.Dotted ? "dotted" : "dashed";
                 // @bend(full) is the note's <technical><bend>, its amount in semitones. Until
                 // 2026-11-13 no bend reached the MusicXML; it is written now that its release is
                 // (a <release/> with no bend before it says nothing). Inserted before a release
@@ -5630,7 +5639,7 @@ public sealed class MusicXmlExporter
                 if (mark.IsSpanEnd && Semantics.AnnotationValues.IsPhrasingSlurName(mark.Name)
                     && !RefusedSlur(mark.SourceStart, close: true))
                     xmlNote.ExtraNotations.Add(PhrasingSlurNotation("stop"));
-                ProcessDirectionMark(mark);
+                ProcessDirectionMark(mark, xmlNote.IsGrace ? 0 : xmlNote.Duration);
             }
             else if (artic is SlurSyntax slur)
             {
@@ -5700,7 +5709,7 @@ public sealed class MusicXmlExporter
     /// mark closes any open wedge, then emits as a dynamics direction.</summary>
     /// <param name="written">The side the mark writes (<c>.up</c> true, <c>.down</c> false),
     /// null for none: the staff's own then (<see cref="StaffDynamicsUp"/>).</param>
-    private void HandleDynamicText(string text, int position = -1, bool subito = false, bool? written = null)
+    private void HandleDynamicText(string text, int position = -1, bool subito = false, bool? written = null, bool editorial = false)
     {
         if (text == "niente")
         {
@@ -5779,7 +5788,7 @@ public sealed class MusicXmlExporter
         if (!_momentHairpin)
             _line.HairpinEnds();
         _momentLevelWritten = written;
-        _momentLevel = new MusicXmlDirection { DynamicType = text, Placement = placement, Subito = subito };
+        _momentLevel = new MusicXmlDirection { DynamicType = text, Placement = placement, Subito = subito, Editorial = editorial && text != "niente" };
         AddDirection(_momentLevel);
     }
 
@@ -5992,7 +6001,10 @@ public sealed class MusicXmlExporter
     /// pedal (@sustain / @!sustain / @sostenuto / @!sostenuto), ottava lines
     /// (@ottava / @ottava.bassa / @loco) and chord symbols (@chord(...)).
     /// Everything else stays with its specialized consumer.</summary>
-    private void ProcessDirectionMark(MusicMarkSyntax mark)
+    /// <param name="mark">The annotation.</param>
+    /// <param name="noteTicks">The length of the note that carries it, in divisions — what the
+    /// comma form of <c>@figuredBass</c> divides; 0 for a grace note or when none is known.</param>
+    private void ProcessDirectionMark(MusicMarkSyntax mark, int noteTicks = 0)
     {
         // The chord symbol is read from the ANNOTATION, not from its dotted name:
         // its argument is a sub-language whose written text the argument node already
@@ -6027,9 +6039,30 @@ public sealed class MusicXmlExporter
         // the default arm of the dotted-name switch below, which is now left with the
         // marks that really are named by a dotted name.
         if (_currentMeasure != null
-            && LilySharp.Core.Semantics.AnnotationValues.Figures(mark) is { } figures
-            && BuildFiguredBass(figures) is { } figuredBass)
+            && LilySharp.Core.Semantics.AnnotationValues.FigureGroups(mark) is { } groups
+            && BuildFiguredBass(groups[0]) is { } figuredBass)
         {
+            // A change of figure over one held note (`a2@figuredBass(4, 3)`, owner-approved
+            // 2026-11-13): one <figured-bass> a group, each with the <duration> of its equal
+            // share — MusicXML's own way to say it ("the optional duration element is used to
+            // indicate changes of figures under a note", figured-bass in the 4.0 schema). A
+            // share that is no whole number of divisions asks for finer ones (NeedDivisions),
+            // as a tuplet's note does; on a grace note the first group stands alone (LYS1068).
+            if (groups.Length > 1 && noteTicks > 0)
+            {
+                NeedDivisions(noteTicks, (long)groups.Length * _divisions);
+                int given = 0;
+                for (int g = 0; g < groups.Length; g++)
+                {
+                    if (BuildFiguredBass(groups[g]) is not { } part)
+                        continue;
+                    int upTo = (int)((long)noteTicks * (g + 1) / groups.Length);
+                    part.Add(new System.Xml.Linq.XElement("duration", upTo - given));
+                    given = upTo;
+                    _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = part });
+                }
+                return;
+            }
             // <figured-bass> sits before its bass note, like <harmony>.
             _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = figuredBass });
             return;

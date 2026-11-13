@@ -714,6 +714,52 @@ public static class AnnotationValues
             ? Svg.Model.FiguredBassItem.ParseFigures(mark.ArgumentTokens)
             : null;
 
+    /// <summary>
+    /// The figure groups of <c>@figuredBass(4, 3)</c> in time order — one per comma-separated
+    /// part, each on an equal share of its note (<see cref="Svg.Model.FiguredBassItem.ParseGroups"/>;
+    /// owner-approved 2026-11-13, grammar evaluation 3) — or null as <see cref="Figures"/> answers
+    /// it. An annotation with no comma has one group, <see cref="Figures"/>' own.
+    /// </summary>
+    public static System.Collections.Immutable.ImmutableArray<System.Collections.Immutable.ImmutableArray<Svg.Model.FiguredBassFigure>>?
+        FigureGroups(MusicMarkSyntax mark)
+        => Named(mark, "figuredBass")
+            ? Svg.Model.FiguredBassItem.ParseGroups(mark.ArgumentTokens)
+            : null;
+
+    /// <summary>The annotation that says how a SLUR beginning on its note is drawn:
+    /// <c>c4@slur(dashed)( d e)</c>.</summary>
+    public const string SlurLineName = "slur";
+
+    /// <summary>The annotation that says how a TIE beginning on its note is drawn:
+    /// <c>c2@tie(dashed)~ c2</c>.</summary>
+    public const string TieLineName = "tie";
+
+    /// <summary>The words <c>@slur(…)</c> and <c>@tie(…)</c> take, in the order the editor
+    /// offers them.</summary>
+    public static readonly string[] BowLineWords = ["dashed", "dotted"];
+
+    /// <summary>
+    /// The line <c>@slur(dashed)</c> / <c>@slur(dotted)</c> (<paramref name="name"/>
+    /// <see cref="SlurLineName"/>) or <c>@tie(dashed)</c> / <c>@tie(dotted)</c>
+    /// (<see cref="TieLineName"/>) asks for, or null: another annotation, an end, no argument,
+    /// several, or a word that is neither (owner-approved 2026-11-13, grammar evaluation 3).
+    /// The one reader, so the page, the exports and the validator take the same.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/property-init.ly slurDashed / slurDotted, tieDashed / tieDotted.
+    /// </remarks>
+    public static Svg.Model.BowLine? BowLineOf(MusicMarkSyntax mark, string name)
+    {
+        if (!Named(mark, name) || mark.IsSpanEnd || mark.Arguments.Length != 1)
+            return null;
+        return mark.Arguments[0].Text switch
+        {
+            "dashed" => Svg.Model.BowLine.Dashed,
+            "dotted" => Svg.Model.BowLine.Dotted,
+            _ => null,
+        };
+    }
+
     // Case-sensitive, as every annotation name is (owner's decision 2026-09-27): a
     // wrong-case name is unknown, and the validator names the right spelling.
     private static bool Named(MusicMarkSyntax mark, string name)

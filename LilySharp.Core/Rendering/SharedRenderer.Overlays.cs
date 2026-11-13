@@ -77,6 +77,25 @@ internal static partial class SharedRenderer
                         LilySharp.Core.Svg.Layout.DynamicEngraver.LabelRole(true),
                         LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, true), TextAnchor.End, Color.Black);
             }
+            // @p(editorial) (owner-approved 2026-11-13): the level between italic text
+            // parentheses, a pad off its two edges; its own place is the plain one's
+            // (DynamicEngraver.EditorialParenEm — the manual's make-dynamic-script picture).
+            if (d.IsEditorial && !d.IsExpressiveText)
+            {
+                double scale = os.Size(1.0, d.StaffIndex);
+                double halfLevel = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelHalfWidth(fonts, text, false) * scale;
+                double pad = LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialPad * scale;
+                double parenEm = os.Size(LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialParenEm(fonts), d.StaffIndex);
+                using (gc.Source(d.SourcePosition))
+                {
+                    gc.DrawText("(", d.X - halfLevel - pad, y, parenEm,
+                        LilySharp.Core.Svg.Layout.DynamicEngraver.LabelRole(true),
+                        LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, true), TextAnchor.End, Color.Black);
+                    gc.DrawText(")", d.X + halfLevel + pad, y, parenEm,
+                        LilySharp.Core.Svg.Layout.DynamicEngraver.LabelRole(true),
+                        LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, true), TextAnchor.Start, Color.Black);
+                }
+            }
             // A SMuFL score's level in the font's own dynamic glyphs, centred where the text
             // would stand — the run the layout reserved (DynamicEngraver.SmuflGlyphRun).
             if (!d.IsExpressiveText

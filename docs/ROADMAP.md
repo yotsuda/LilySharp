@@ -9,13 +9,6 @@ to *Decided against* with the reason). What is being worked on now, and the next
 
 ## Proposed
 
-### A figure at the middle of a bass note (proposed 2026-11-13, grammar evaluation 3)
-
-`a2@figuredBass(4)@figuredBass(3)` — a change of figure over a held bass, the second at the
-middle of the note, as LilyPond's `<4>4 <3>4` against `a2`: on the page, in MusicXML
-(`<figured-bass>` with a `<duration>`), in the LilyPond twin and read back. Today a second group on
-one note is LYS1067, whose message says to write two tied notes with a figure each.
-
 ### Score review for people (proposed 2026-10-30, the owner's design)
 
 The composing checks, given a second entrance for a person's own piece: the AI tool
@@ -54,6 +47,39 @@ file's alone is the capo the chord SHAPES read — the diagrams, the pressed nam
 that writes shapes is warned (LYS4069). A part's own would be a part property (it changes a
 sound, so it cannot be a score item's). Not designed: what "Capo N" at the head says then, and
 which capo a chords row with no part reads.
+
+### Notation the grammar evaluation asked for, not built (listed 2026-11-13, grammar evaluation 3)
+
+The owner decided not to build these now. Every spelling here is a PROPOSAL of the writers who
+asked — none is decided.
+
+- **A section in another key, from the form**: `form { A  B up 2 }` — play a section again a
+  step or a key away without writing it out (a musical-theatre number's last chorus).
+- **Cue notes quoted from another part**: `cue from vn1 { … }` — the small notes taken from
+  the part named, at the moment they sound, where today a cue's notes are typed again.
+- **A vamp**: `repeat vamp { … }` — a bar or two repeated until a cue, with its "vamp" text and
+  repeat signs, played a set number of times.
+- **A spoken cue line**: a line of dialogue over the staff that tells the player where the
+  music resumes, with no notes of its own.
+- **A translation row of lyrics**: a second row of words under the sung one, in italics, that
+  no voice sings and no syllable count binds.
+- **Metric modulation marks**: ♩ = ♩. — the note value that keeps its speed across a change of
+  meter, printed over the bar line and played.
+- **A tuplet across a bar line**: a triplet whose notes straddle the bar, which today must
+  close before it.
+- **MusicXML import**: senza misura (`time none`), `fine` / `dc al fine`, and cue-size notes
+  are written by the exporter and not read back.
+- **MusicXML import of the new guitar marks**: palm mute, let ring and barre brackets, the
+  wavy vibrato line, a bend's release, harmonics at a fret.
+- **A LilyPond twin for `@bend` / `@release`**: the twin writes the note plain and says so;
+  LilyPond's bend spanner runs between two written notes.
+- **`@harmonic(N)` on a chord**: natural harmonics on several strings at once, today written
+  in voices (LYS4072).
+- **A dashed phrasing slur**: `@slur(dashed)` and `@tie(dashed)` shipped 2026-11-13; the
+  phrasing slur (`@phrasingSlur`) has no dashed form.
+- **Another part's marks in a part sheet's exports**: a part sheet's page prints the rehearsal
+  mark, tempo and rit. another part writes (2026-11-13); its LilyPond twin and MusicXML do
+  not yet carry the mark or the rit.
 
 ### MIDI keyboard input (deferred by the owner 2026-10-25)
 

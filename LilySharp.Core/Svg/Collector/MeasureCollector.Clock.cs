@@ -504,6 +504,12 @@ public sealed partial class MeasureCollector
         public (int Value, int Dots, int Beams, int GapCount)? TremoloPairShape;
         public bool TremoloPairFirst;
 
+        // `beaming syllabic` (2026-11-13): whether a slur is open over the note being walked,
+        // and whether the note before tied into it — LilyPond's slurMelismaBusy and
+        // tieMelismaBusy. A note inside either starts no syllable (DecorateSoundingItem).
+        public bool SyllableSlurOpen;
+        public bool SyllableTiedIn;
+
         // A slur mark written on an empty chord, waiting for the item that occupies the empty
         // chord's moment. See TakeEmptyChordSlurs.
         public bool PendingEmptyChordSlurStart;

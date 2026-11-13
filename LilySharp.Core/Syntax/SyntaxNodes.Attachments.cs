@@ -86,7 +86,17 @@ public sealed class DynamicSyntax : SyntaxNode
     /// <remarks>Slot 3 — slot 2 is the qualifier's '.', see ArticulationSyntax. After a
     /// <c>.subito</c> (slots 2-3) the placement is slot 5 (<c>@p.subito.up</c>).</remarks>
     public bool? ForcedAbove => PlacementOf(Green.GetSlot(3) is { IsToken: true, Text: "subito" }
-        ? Green.GetSlot(5) : Green.GetSlot(3));
+        ? Green.GetSlot(5)
+        : IsEditorial ? (Green.SlotCount > 8 ? Green.GetSlot(8) : null) : Green.GetSlot(3));
+
+    /// <summary>The word that makes a level an editor's: <c>@p(editorial)</c>.</summary>
+    public const string EditorialWord = "editorial";
+
+    /// <summary><c>@p(editorial)</c> (owner-approved 2026-11-13, grammar evaluation 3): the
+    /// level printed in parentheses, "(p)" — an editor's dynamic, not the composer's — and
+    /// sounding as the plain one. Slots 4-6 hold the parentheses and the word (the placement
+    /// after it, <c>@p(editorial).up</c>, slots 7-8).</summary>
+    public bool IsEditorial => Green.SlotCount > 5 && Green.GetSlot(4) is { IsToken: true, Text: "(" };
 
     private static bool? PlacementOf(InternalSyntax.GreenNode? dir) => dir is { IsToken: true }
         ? dir.Text == "up" ? true : dir.Text == "down" ? false : (bool?)null

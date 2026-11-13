@@ -402,6 +402,14 @@ public sealed partial class LilyPondExporter
         public readonly HashSet<int> InlineChordMarks = new();
         public readonly HashSet<int> FigureMarks = new();
 
+        /// <summary>The parts beamed by syllable (<c>beaming syllabic</c>, owner-approved
+        /// 2026-11-13) and, by a note's source position, where the PAGE opens and closes a
+        /// beam in them (<see cref="CollectSyllabicBeams"/>): such a part's staff is written
+        /// with automatic beaming off and every beam of the page by hand.</summary>
+        public readonly HashSet<string> SyllabicParts = new(StringComparer.Ordinal);
+        public readonly HashSet<int> SyllabicBeamOpens = new();
+        public readonly HashSet<int> SyllabicBeamCloses = new();
+
         /// <summary>The grace skips every voice owes LilyPond's grace synchronisation
         /// (<see cref="CollectGraceSync"/>): by a written event's source position, one entry per
         /// time the page plays it, in the page's order — the length of the skip to write in
@@ -629,6 +637,8 @@ public sealed partial class LilyPondExporter
         CollectCrossTargets(tree, render);
         // ...and the @arpeggio(cross) chords their \once \set, the chords below their \arpeggio.
         CollectCrossArpeggios(tree, render);
+        // ...and a `beaming syllabic` part its beams, as the page has them.
+        CollectSyllabicBeams(tree, render, parts);
 
         // One music variable per part. A by-part score keeps its sections inside
         // the part block; the form orders them.

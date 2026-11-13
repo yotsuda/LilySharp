@@ -588,6 +588,14 @@
                     }
                 },
                 {
+                    "comment": "`beaming syllabic` — a sung part's beams (LilySharp.Core PartHeaderDefaults.BeamingSyllabic, 2026-11-13).",
+                    "match": "\\b(beaming)\\s+(syllabic)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.lilysharp" },
+                        "2": { "name": "support.constant.beaming.lilysharp" }
+                    }
+                },
+                {
                     "comment": "`pitch concert|written` — this part's convention for a transposing instrument (LilySharp.Core ConcertPitch.NotesModes). The same pair the top-level directive takes; a page takes transposed|concert.",
                     "match": "\\b(pitch)\\s+(written|concert)\\b",
                     "captures": {
@@ -600,7 +608,7 @@
                 {
                     "comment": "The bare key, read AFTER every key/value pair above so the pair wins and the value is scoped as the value it is. `transposition` precedes `transpose`, which is a prefix of it.",
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(clef|instrument|transposition|transpose|tuning|octave|pitch|pedal|midiInstrument|key)\\b"
+                    "match": "\\b(clef|instrument|transposition|transpose|tuning|octave|pitch|pedal|beaming|midiInstrument|key)\\b"
                 },
                 { "include": "#keywords" },
                 { "include": "#pitches" },
