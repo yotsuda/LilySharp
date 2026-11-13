@@ -38,7 +38,8 @@ copyright "© 2026 Name" // optional: centred at the foot of the FIRST page only
                         // words sings the ones in the file's language; `singer alice female japanese on lead`
                         // sings the Japanese ones. (The language is a bare word before the voice, as the gender is.)
                         // A TEXT FOR THE PAGE, written as Markdown in a fence at the top level: the
-                        // lines between ```md and ``` are printed under the title (paragraphs, **bold**,
+                        // lines between ```md start (or a bare ```md, the same) and ``` are printed
+                        // under the title, above the first system (paragraphs, **bold**,
                         // *italic*, `# heading` and `## heading`, `- bullet` and `1. numbered` lists,
                         // nested lists; NOT drawn, and warned about (LYS4058): tables, code blocks, block
                         // quotes, rules, images, HTML); ```md end prints them under the last system. Nothing
@@ -1764,7 +1765,7 @@ the two lines is Lily# (`//`, `{`, `"` mean nothing there).
 title "Morning Song"
 composer "A. Composer"
 
-```md box
+```md start box
 # Performance note
 Keep the tempo **slow**; the left hand never rises above *piano*.
 
@@ -1772,7 +1773,7 @@ Keep the tempo **slow**; the left hand never rises above *piano*.
 - second time *p*
 ```
 
-```md center
+```md start center
 *for my choir*
 ```
 
@@ -1791,7 +1792,7 @@ score { staff m }
 
 | Written | Printed |
 |---|---|
-| at the top level, anywhere among the declarations: ```` ```md ```` | under the title (and the poet / composer line), above the first system |
+| at the top level, anywhere among the declarations: ```` ```md start ```` — or ```` ```md ```` with no place word, the same | under the title (and the poet / composer line), above the first system |
 | at the top level: ```` ```md end ```` | under the last system of the last page (on a page of its own after it when that page has no room) |
 | directly inside `score NAME { … }` | the same two places, in THAT score only: it replaces the file's text for the place (an empty fence = no text there in this score) |
 
@@ -1803,6 +1804,7 @@ and NOT printed yet (warned, LYS4058).
 
 | Word | Meaning |
 |---|---|
+| `start` | the place: under the title, above the first system — where a fence with no place word stands too (`end`'s counterpart; it changes nothing else) |
 | `end` | the place: under the last system instead of under the title |
 | `title`, `subtitle`, `composer`, `poet`, `arranger`, `copyright` | the place: that header line, written as Markdown — alone on the line (below: "A header line written as Markdown") |
 | `box` | a thin ruled frame around the text, the text in its middle; as wide as the text's width (next rows) |
@@ -1812,7 +1814,7 @@ and NOT printed yet (warned, LYS4058).
 | `yMargin 2` / `yMargin 3 1` | white above and below / above, below. Default 1 staff space each; `yMargin 0` is LilyPond's own tight spacing |
 
 A length is `20mm`, `2cm`, `0.5in` (the unit glued on) or a bare number of staff spaces. Any
-other word, a word twice, a negative length, an `xMargin` that leaves under 10 staff spaces of
+other word, a word twice, two place words (`start end`, `start title`), a negative length, an `xMargin` that leaves under 10 staff spaces of
 text, a `yMargin` over 50: LYS4057.
 
 **Two fences for one place** print one under the other in written order, and EACH HAS ITS OWN

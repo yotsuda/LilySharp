@@ -21,7 +21,7 @@ table of contents, no columns, no numbered figures.
 ````
 title "Morning Song"
 
-```md
+```md start
 This piece is for **four voices**. Keep it slow.
 
 - first time *mf*
@@ -42,11 +42,13 @@ section B {
 
 | Written | Opening line | Printed |
 |---|---|---|
-| at the top level | ```` ```md ```` | under the title (and the poet / composer line), above the first system |
+| at the top level | ```` ```md start ````, or ```` ```md ```` with no place word | under the title (and the poet / composer line), above the first system |
 | at the top level | ```` ```md end ```` | under the last system |
 | directly in a section | ```` ```md ```` | above the system that section begins |
 
 - The word is `md`; `markdown` means the same.
+- `start` names the place a bare ```` ```md ```` already takes, and changes nothing else: the
+  page, the exports and the LilyPond twin are the same with or without it (section 2.4).
 - The fence closes with a line that begins ```` ``` ````. Everything between is Markdown: `//`
   and `}` mean nothing there. A fence of four backticks holds a text that writes three
   (Markdown's own rule).
@@ -106,13 +108,13 @@ score clean {
 }
 ````
 
-`md` and `md end` are replaced separately. A section's text is not replaced from a score; a
+`md` (or `md start`) and `md end` are replaced separately. A section's text is not replaced from a score; a
 layout switch takes every text off a score (its word is open).
 
 ### 2.3 The shape: `xMargin`, `yMargin`, `center`, `box`
 
 Owner-approved spelling, 2026-11-13. More words on the opening line, after `md` and the
-optional `end`, in any order, each once:
+optional `start` or `end`, in any order, each once:
 
 ````
 ```md box
@@ -156,6 +158,41 @@ another thing and is as it was.)
 decorative border from a picture) was judged excessive and is not planned: for a text of any
 length it needs nine-slice scaling — the corners kept, the edges stretched or tiled — and that
 is a small layout engine for an ornament.
+
+### 2.4 The place under the title: `start` (owner's decision 2026-11-14)
+
+The text under the title, above the first system, had no word: it was the fence with no place
+word, while the text under the last system was ```` ```md end ````. It is now ```` ```md start ````
+— `end`'s counterpart. The owner, having weighed `start` against `preface` (and `preface`
+against renaming `end` to match): **"start と end で進めて"**. Why position names won: what
+stands there varies — performance notes, a dedication, a boxed instruction — and `preface`
+names one kind of it; a position names the place whatever is put there, and pairs with `end`,
+which is already a position.
+
+- A bare ```` ```md ```` keeps meaning exactly the same; no file changes. `start` is the same
+  place, and draws the same to the byte (`MarkdownTextShapeTests.Start_IsTheBareFencesPlace_AndDrawsExactlyAsIt`).
+- `start` takes the shape words as a bare fence does (```` ```md start box center ````).
+- One place per fence: `start` with `end`, or a second `start`, is LYS4057 ("'end' is a second
+  place for one text"); `start` with a header place is LYS4057 naming what the header line takes
+  ("'start' does not go with 'title' …").
+- A score's ```` ```md start ```` replaces the file's text under the title, as a bare one does.
+- The LilyPond twin and the exports: nothing changes (it is the bare fence's place).
+- The docs say what the place is — "under the title, above the first system" — not "the top
+  of the page" (a header stands above it).
+
+**In the editor.** Completion on an empty line (and after a backtick) offers ONE fence item,
+```` ```md ```` — the ```` ```md end ```` item is gone. Taking it writes the opening line
+```` ```md ```` and a space, an empty body line, and the closing fence, leaves the caret after
+`md ` on the opening line (the snippet's `$1`; the body is `$0`, a Tab away) and opens the list
+again there (`editor.action.triggerSuggest`), on `start`, `end`, `title`, `subtitle`,
+`composer`, `poet`, `arranger`, `copyright`, then `box`, `center`, `xMargin`, `yMargin`. A
+place word taken from that list moves the caret down onto the empty body line (the item's
+command is VS Code's `cursorDown`, which keeps the column or stops at the shorter line's end —
+the body line's indentation in a score); a shape word leaves it on the line for more words, and
+`xMargin` / `yMargin` open their lengths as before. Only where the line under the opening one
+is there and empty does a place word move the caret. A writer who moves on with no word leaves
+a bare ```` ```md ````. Hover on `start` (and on the other opening-line words) says what it does.
+The TextMate rule colours `start` as `end`.
 
 ## 3. What is drawn
 
@@ -726,7 +763,7 @@ what it does not bring is Lily#'s own code.
 
 **Colours** (`editors/vscode/syntaxes/lilysharp.tmLanguage.json`, `#fenced-text`).
 
-- The opening line: the backticks, `md` / `markdown`, the words `end` `box` `center`
+- The opening line: the backticks, `md` / `markdown`, the words `start` `end` `box` `center`
   `xMargin` `yMargin` (held to `FencedText` by `EditorColouringTests`), a length by `paper { }`'s own
   rule. The closing line: the backticks.
 - The body includes `text.html.markdown` — the grammar of VS Code's built-in
@@ -829,6 +866,8 @@ surround. What only a person in VS Code can see is `editors/vscode/MANUAL-CHECKS
    click on the text in the preview going to its source; hover.
 6. Later: a footnote (`@footnote("…")` on a note, its text at the page's foot), code blocks.
 7. DONE 2026-11-13 (section 9): the six header lines written as Markdown.
+8. DONE 2026-11-14 (section 2.4): `start`, the place under the title named; one fence item in
+   completion, its place chosen on its opening line.
 
 ## 9. Header places (owner's decisions 2026-11-13, built that day)
 
@@ -922,7 +961,8 @@ after ```` ```md ```` and a space, the place words first — `title`, `subtitle`
 `poet`, `arranger`, `copyright`, `end` — then `box`, `center`, `xMargin`, `yMargin`. Once a
 place word is written no other is offered; after a header place word nothing (it takes no
 shape); after a shape word no header place (decided here: it would be an error), `end` still.
-No new block snippets. **Colours**: the TextMate rule's keyword list takes the six words; the
+No new block snippets. → Since 2026-11-14 (section 2.4) the list begins `start`, `end`, then
+the six header places, and the one fence item opens it. **Colours**: the TextMate rule's keyword list takes the six words; the
 body stays embedded Markdown.
 
 Out of scope: a MusicXML title or creator of several lines is imported as a string, not a fence.

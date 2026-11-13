@@ -1065,7 +1065,7 @@ room. With both written, as the title above, the page draws the fence and the pl
 what MusicXML takes; a fence alone gives MusicXML and the .mid its words without the
 formatting, the lines joined by a space. Inside `score { }` such a fence is that score's own
 line and replaces the file's — its string and its fence. The opening line takes nothing more
-(no `box`, `center`, margins or `end`), one fence a line (LYS4057); a heading, list, quote, code
+(no `box`, `center`, margins, `start` or `end`), one fence a line (LYS4057); a heading, list, quote, code
 block or image in it is warned (LYS4058) and drawn as plain lines.
 
 ### A text for the page
@@ -1076,7 +1076,7 @@ as Markdown between a line ```` ```md ```` and a line ```` ``` ````, at the top 
 ````
 title "Morning Song"
 
-```md
+```md start
 Keep the tempo **slow**; the left hand never rises above *piano*.
 ```
 
@@ -1085,7 +1085,8 @@ Practise the right hand alone first.
 ```
 ````
 
-The text is printed under the title, above the first system; with `end` on the opening line,
+With `start` on the opening line — or with no place word, which is the same — the text is
+printed under the title, above the first system; with `end`, its counterpart,
 under the last system — of the last page, however many pages the score has; a text the last
 page has no room for takes a page of its own after it. It runs from the page's left margin
 to its right one — the edges of the poet's and the composer's lines — unless the opening
@@ -1094,15 +1095,16 @@ Lily#. Inside `score { }` a fence is that score's own text and replaces the file
 same place.
 
 A fence may stand at the top level (anywhere among the declarations — its place on the page is
-said by `end`, not by where it is written) or directly inside `score { }`. Two fences for one
+said by `start` or `end`, not by where it is written; one place word a fence, LYS4057) or
+directly inside `score { }`. Two fences for one
 place print one under the other, in written order, and each has its own shape (below):
 
 ````
-```md box
+```md start box
 # Performance note
 Sing the consonants early.
 ```
-```md center
+```md start center
 *for my choir*
 ```
 ````

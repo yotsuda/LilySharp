@@ -262,6 +262,8 @@ public sealed class MarkdownHeaderTests
     [InlineData("md copyright yMargin 2 1", "yMargin 2 1")]
     [InlineData("md title end", "end")]
     [InlineData("md end title", "end")]
+    [InlineData("md title start", "start")]          // `start` (owner's decision 2026-11-14) as `end`
+    [InlineData("md start composer", "start")]
     public void AHeaderPlace_TakesNoShapeAndNoEnd_AndSaysWhatItTakes(string opening, string flagged)
     {
         string source = Book($"{F}{opening}\nMorning Song\n{F}");
@@ -427,7 +429,8 @@ public sealed class MarkdownHeaderTests
     public void Completion_OffersThePlacesFirst_ThenTheShape()
     {
         Assert.Equal(
-            ["title", "subtitle", "composer", "poet", "arranger", "copyright", "end", "box", "center", "xMargin", "yMargin"],
+            // `start` and `end` first (owner's decision 2026-11-14), then the header places.
+            ["start", "end", "title", "subtitle", "composer", "poet", "arranger", "copyright", "box", "center", "xMargin", "yMargin"],
             Labels("```md ‸" + Rest));
     }
 
@@ -435,8 +438,9 @@ public sealed class MarkdownHeaderTests
     public void Completion_OncePlaced_OffersNoOtherPlace_AndAfterAHeaderPlaceNothing()
     {
         Assert.Equal(["box", "center", "xMargin", "yMargin"], Labels("```md end ‸" + Rest));
+        Assert.Equal(["box", "center", "xMargin", "yMargin"], Labels("```md start ‸" + Rest));
         Assert.Empty(Labels("```md title ‸" + Rest));
-        // After a shape word no header place (it would take none): `end` still.
-        Assert.Equal(["end", "center", "xMargin", "yMargin"], Labels("```md box ‸" + Rest));
+        // After a shape word no header place (it would take none): `start` and `end` still.
+        Assert.Equal(["start", "end", "center", "xMargin", "yMargin"], Labels("```md box ‸" + Rest));
     }
 }

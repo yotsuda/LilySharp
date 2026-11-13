@@ -27,14 +27,17 @@ namespace LilySharp.Lsp;
 // it: on a line of its own at the file's top level or directly in a `score { }`. Not in a
 // section (read and not printed yet, LYS4058), not in a part, music, lyrics, a string or a
 // comment.
-//   1. An empty line there: the two blocks, low in the list of keywords.
-//   2. After the backticks (`, `` or ```), and on into the first word: the same two.
-//   3. After ```md and a space, and after each further word: the places — `title`, `subtitle`,
-//      `composer`, `poet`, `arranger`, `copyright` (a header line as Markdown, owner's decision
-//      2026-11-13) and `end` — then `box`, `center`, `xMargin`, `yMargin` (owner-approved
-//      2026-11-13) — those not on the line yet, one place at most, nothing after a header place;
-//      and after a margin its lengths, which taking the word from the list opens at once
-//      (owner's request, same day).
+//   1. An empty line there: the one block, ```md, low in the list of keywords (owner's decision
+//      2026-11-14: one item, its place chosen on its opening line — taking it leaves the caret
+//      after `md ` and opens the list of 3. there).
+//   2. After the backticks (`, `` or ```), and on into the first word: the same one.
+//   3. After ```md and a space, and after each further word: the places — `start` and `end`
+//      (owner's decision 2026-11-14), then `title`, `subtitle`, `composer`, `poet`, `arranger`,
+//      `copyright` (a header line as Markdown, owner's decision 2026-11-13) — then `box`,
+//      `center`, `xMargin`, `yMargin` (owner-approved 2026-11-13) — those not on the line yet,
+//      one place at most, nothing after a header place; a place word taken from the list moves
+//      the caret down onto the empty body line; and after a margin its lengths, which taking
+//      the word from the list opens at once (owner's request 2026-11-13).
 // And between the fences nothing is Lily#, so nothing is offered there at all.
 public sealed partial class LilySharpLanguageServer
 {
@@ -43,6 +46,14 @@ public sealed partial class LilySharpLanguageServer
     internal const string FenceTrigger = "`";
 
     private const string FenceTicks = "```";
+
+    /// <summary>VS Code's command that opens the suggestion list again at the caret.</summary>
+    private const string SuggestCommand = "editor.action.triggerSuggest";
+
+    /// <summary>VS Code's command that moves the caret one line down (its column kept, or the
+    /// line's end where the line is shorter): what takes the caret from a fence's opening line,
+    /// once its place word is chosen, onto the empty body line under it.</summary>
+    internal const string CursorDownCommand = "cursorDown";
 
     /// <summary>Where a fenced text is printed from, or null where it is not.</summary>
     private enum FencePlace
@@ -123,14 +134,15 @@ public sealed partial class LilySharpLanguageServer
     /// The answer where the caret stands in or at a fenced text, or null where it does not and
     /// the lists go on as ever (over <paramref name="blanked"/>, the text with its fences blank).
     /// <list type="bullet">
-    /// <item>On the opening line, at the backticks or in the first word: <c>```md</c> and
-    /// <c>```md end</c>. Each writes the whole block — the opening line, an empty line with the
-    /// caret, the closing fence — unless the fence already closes below, where it writes the
-    /// opening line alone.</item>
-    /// <item>After <c>```md</c> and a space, and after each word that follows: <c>end</c>,
-    /// <c>box</c>, <c>center</c>, <c>xMargin</c>, <c>yMargin</c>, less those already on the
-    /// line; straight after a margin its lengths alone, and after its first length the
-    /// second's beside the words (<see cref="FenceLengthItems"/>).</item>
+    /// <item>On the opening line, at the backticks or in the first word: <c>```md</c>. It writes
+    /// the whole block — the opening line with the caret after <c>md </c>, an empty line, the
+    /// closing fence — unless the fence already closes below, where it writes the opening line
+    /// alone; and it opens the list again (<see cref="FenceItems"/>).</item>
+    /// <item>After <c>```md</c> and a space, and after each word that follows: <c>start</c>,
+    /// <c>end</c>, the header places, <c>box</c>, <c>center</c>, <c>xMargin</c>,
+    /// <c>yMargin</c>, less those already on the line or ruled out by them; straight after a
+    /// margin its lengths alone, and after its first length the second's beside the words
+    /// (<see cref="FenceLengthItems"/>).</item>
     /// <item>Between the fences, on the closing fence, and at a fence that stands where none is
     /// printed: an empty list. Nothing there is Lily#. ⚠️ Until this was written the body
     /// answered whatever list the text before the fence led to — the top level's keywords
@@ -191,7 +203,7 @@ public sealed partial class LilySharpLanguageServer
             return null;
         string[] before = text[ticksEnd..wordStart].Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
 
-        // ```▮ and ```m▮: the two openers, replacing the line from its first backtick.
+        // ```▮ and ```m▮: the opener, replacing the line from its first backtick.
         if (before.Length == 0 && wordStart == ticksEnd)
         {
             // A fence that already closes below takes its opening line alone. ⚠️ A fence typed
@@ -215,7 +227,7 @@ public sealed partial class LilySharpLanguageServer
         }
 
         // ```md ▮ and on along the line: the words a text's place takes here — where it is
-        // printed (`end`) and how it is set (`box`, `center`, `xMargin`, `yMargin`;
+        // printed (`start`, `end`, a header line) and how it is set (`box`, `center`, `xMargin`, `yMargin`;
         // owner-approved 2026-11-13) — in any order, each once, so a word already written is
         // not offered again. (A section's printings — `2`, `all` — are not offered: a
         // section's text is not printed yet.)
@@ -236,11 +248,12 @@ public sealed partial class LilySharpLanguageServer
                 : [];
             if (lengthsWritten == 0 || (lengths.Length > 0 && typed.Length > 0 && char.IsAsciiDigit(typed[0])))
                 return new CompletionList { Items = lengths };
-            // The PLACE words first — the six header lines (owner's decision 2026-11-13: ```md title
-            // is the title written as Markdown), then `end` — and the shape words after them.
-            // The owner: "あまり多いと、補完入力が使いにくくなる" — so the list stays short: once
-            // a place is written no other place is offered, and after a header place (which
-            // takes no shape) nor any shape word; after a shape word no header place.
+            // The PLACE words first — `start` and `end` (owner's decision 2026-11-14: the two
+            // positions, "start と end で進めて"), then the six header lines (owner's decision
+            // 2026-11-13: ```md title is the title written as Markdown) — and the shape words
+            // after them. The owner: "あまり多いと、補完入力が使いにくくなる" — so the list
+            // stays short: once a place is written no other place is offered, and after a header
+            // place (which takes no shape) nor any shape word; after a shape word no header place.
             bool placeWritten = before.Skip(1).Any(FencedText.IsPlaceWord);
             bool headerPlaceWritten = before.Skip(1).Any(w => FencedText.HeaderPlaceWords.Contains(w));
             bool shapeWritten = before.Skip(1).Any(w => FencedText.ShapeWords.Contains(w));
@@ -248,13 +261,24 @@ public sealed partial class LilySharpLanguageServer
                 return new CompletionList { Items = [] };
             string own = place == FencePlace.Score ? "this score's " : "the ";
             var words = new List<(string Word, string Detail)>();
+            if (!placeWritten)
+            {
+                words.Add((FencedText.StartWord, place == FencePlace.Score
+                    ? "Print this score's text under its title, above the first system (as with no place word)"
+                    : "Print the text under the title, above the first system (as with no place word)"));
+                words.Add((FencedText.EndWord, place == FencePlace.Score
+                    ? "Print this score's text under its last system"
+                    : "Print the text under the last system"));
+            }
             if (!placeWritten && !shapeWritten)
                 words.AddRange(FencedText.HeaderPlaceWords.Select(w => (w,
                     $"Write {own}{w} as Markdown: bold, italic and line breaks, set where and as the {w} is")));
-            if (!placeWritten)
-                words.Add((FencedText.EndWord, place == FencePlace.Score
-                    ? "Print this score's text under its last system instead of under the title"
-                    : "Print the text under the last system instead of under the title"));
+            // A place word ends what the writer has to say on the line: taking it from the list
+            // moves the caret down onto the body's line, where the text is written — when that
+            // line is there and empty, as the fence item writes it (the opening line, an empty
+            // line, the closing fence). A shape word may be followed by more, and stays.
+            int nextLine = lineEnd + 1;
+            bool bodyLineBelow = lineEnd < text.Length && IsBlank(text, nextLine, LineEndOf(text, nextLine));
             words.AddRange(
             [
                 (FencedText.BoxWord, "Rule a frame around the text"),
@@ -272,6 +296,7 @@ public sealed partial class LilySharpLanguageServer
                     // opens the list again, on the lengths (the same request), as a singer
                     // line's `up` opens its numbers.
                     bool takesLength = w.Word is FencedText.XMarginWord or FencedText.YMarginWord;
+                    bool toBody = bodyLineBelow && FencedText.IsPlaceWord(w.Word);
                     return new CompletionItem
                     {
                         Label = w.Word,
@@ -281,8 +306,10 @@ public sealed partial class LilySharpLanguageServer
                         SortText = "fence" + i.ToString("00", System.Globalization.CultureInfo.InvariantCulture),
                         TextEdit = new TextEdit { Range = range, NewText = takesLength ? w.Word + " " : w.Word },
                         Command = takesLength
-                            ? new Command { Title = "Suggest a length", CommandIdentifier = "editor.action.triggerSuggest" }
-                            : null,
+                            ? new Command { Title = "Suggest a length", CommandIdentifier = SuggestCommand }
+                            : toBody
+                                ? new Command { Title = "Go to the text", CommandIdentifier = CursorDownCommand }
+                                : null,
                     };
                 }), .. lengths],
             };
@@ -354,14 +381,20 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// The two fenced texts a place takes, <c>```md</c> (under the title) and <c>```md end</c>
-    /// (under the last system), each a snippet: the opening line, an empty line with the caret,
-    /// the closing fence — or the opening line alone (<paramref name="wholeBlock"/> false).
+    /// The one fenced text a place offers, <c>```md</c> (owner's decision 2026-11-14: one item;
+    /// the place is chosen on its opening line). A snippet: the opening line <c>```md</c> and a
+    /// space with the caret there (<c>$1</c>), an empty body line (<c>$0</c>, a Tab away), the
+    /// closing fence — or the opening line alone (<paramref name="wholeBlock"/> false). Either
+    /// way taking it opens the list again at the caret, on the place and shape words
+    /// (<c>start</c>, <c>end</c>, the header places, then <c>box</c>, <c>center</c>,
+    /// <c>xMargin</c>, <c>yMargin</c>); a place word taken from there moves the caret down to
+    /// the body line (<see cref="CursorDownCommand"/>). Moving on with none leaves a bare
+    /// <c>```md</c>, the text under the title.
     /// </summary>
     /// <remarks>
-    /// They sort after every keyword and after <c>singer</c> (a page text is rarer than a
+    /// It sorts after every keyword and after <c>singer</c> (a page text is rarer than a
     /// section), and a label that begins with a backtick would otherwise sort FIRST. The filter
-    /// text is what a writer types on an empty line to find them — <c>md</c>, <c>markdown</c>,
+    /// text is what a writer types on an empty line to find it — <c>md</c>, <c>markdown</c>,
     /// <c>text</c> — the backtick being no word character to the editor.
     /// </remarks>
     private static CompletionItem[] FenceItems(FencePlace place, string ticks, bool wholeBlock)
@@ -371,34 +404,32 @@ public sealed partial class LilySharpLanguageServer
             ? "Inside `score { }` the text is this score's alone: it replaces the file's text for the same place. "
             : "Every score of the file prints it; a fence inside `score { }` replaces it for that score. ")
             + "Write Markdown between the two fence lines — paragraphs, **bold** and *italic* are printed. "
-            + "Nothing between them is Lily#. The opening line may go on to say how the text is set: "
-            + "`box` (a ruled frame), `center`, `xMargin 20mm` (white at the sides), `yMargin 2` (white above and below). "
-            + "`title`, `subtitle`, `composer`, `poet`, `arranger` or `copyright` there makes the text that header line, "
-            + "written as Markdown.";
-        CompletionItem Item(string words, string detail, string sort) => new()
-        {
-            Label = ticks + words,
-            Kind = CompletionItemKind.Snippet,
-            InsertTextFormat = wholeBlock ? InsertTextFormat.Snippet : InsertTextFormat.Plaintext,
-            InsertText = wholeBlock ? ticks + words + "\n$0\n" + ticks : ticks + words,
-            FilterText = words + " markdown text",
-            SortText = sort,
-            Detail = detail,
-            Documentation = new MarkupContent { Kind = MarkupKind.Markdown, Value = documentation },
-        };
+            + "Nothing between them is Lily#. The opening line says where the text goes — `start` (under the title, "
+            + "above the first system: the same as no word), `end` (under the last system), or `title`, `subtitle`, "
+            + "`composer`, `poet`, `arranger` or `copyright` (that header line, written as Markdown) — and how it is set: "
+            + "`box` (a ruled frame), `center`, `xMargin 20mm` (white at the sides), `yMargin 2` (white above and below).";
+        string opening = ticks + FencedText.MarkdownWord + " ";
         return
         [
-            Item(FencedText.MarkdownWord, score
-                ? "This score's text, written as Markdown: printed under its title"
-                : "A text for the page, written as Markdown: printed under the title", "~text0"),
-            Item(FencedText.MarkdownWord + " " + FencedText.EndWord, score
-                ? "This score's text, written as Markdown: printed under its last system"
-                : "A text for the page, written as Markdown: printed under the last system", "~text1"),
+            new()
+            {
+                Label = ticks + FencedText.MarkdownWord,
+                Kind = CompletionItemKind.Snippet,
+                InsertTextFormat = wholeBlock ? InsertTextFormat.Snippet : InsertTextFormat.Plaintext,
+                InsertText = wholeBlock ? opening + "$1\n$0\n" + ticks : opening,
+                FilterText = FencedText.MarkdownWord + " markdown text",
+                SortText = "~text0",
+                Detail = score
+                    ? "This score's text, written as Markdown: say where it goes (start, end, a header line) on its first line"
+                    : "A text for the page, written as Markdown: say where it goes (start, end, a header line) on its first line",
+                Documentation = new MarkupContent { Kind = MarkupKind.Markdown, Value = documentation },
+                Command = new Command { Title = "Suggest where the text goes", CommandIdentifier = SuggestCommand },
+            },
         ];
     }
 
     /// <summary>
-    /// A list of the top level's keywords or of a score's items, with the two fenced texts
+    /// A list of the top level's keywords or of a score's items, with the fenced text
     /// after them where a fence may begin: the caret on a line that holds nothing else (the
     /// word being typed apart), at the file's top level or directly in a score.
     /// </summary>

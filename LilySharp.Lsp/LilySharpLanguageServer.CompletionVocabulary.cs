@@ -2680,7 +2680,7 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>A score's list with <c>singer</c> where a line of its own can start: the word is not
     /// reserved and is no render item, so it is offered only at the head of a line.
-    /// <para>…and after it this score's own text, the two fences, where the line holds nothing
+    /// <para>…and after it this score's own text, the fence, where the line holds nothing
     /// else (owner's request 2026-11-13, <see cref="WithFencedText"/>).</para></summary>
     private static CompletionList WithSingerOnAFreshLine(CompletionList list, string text, int offset)
     {

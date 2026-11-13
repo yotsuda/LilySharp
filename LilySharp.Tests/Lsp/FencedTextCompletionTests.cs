@@ -28,15 +28,19 @@ namespace LilySharp.Tests.Lsp;
 
 /// <summary>
 /// The fenced text in completion (owner's request 2026-11-13, docs/markdown-text-design.md):
-/// <c>```md</c> and <c>```md end</c> on a line of its own at the file's top level and directly
-/// in a <c>score { }</c> — the two places the page prints a text from — after the backticks
-/// there, <c>end</c> after <c>```md</c>, and nothing at all between the fences.
+/// <c>```md</c> — one item since the owner's decision of 2026-11-14 — on a line of its own at
+/// the file's top level and directly in a <c>score { }</c> — the two places the page prints a
+/// text from — and after the backticks there; the place and shape words after <c>```md</c>
+/// (the item opens them at once), and nothing at all between the fences.
 /// </summary>
 [Trait("Category", "Unit")]
 public class FencedTextCompletionTests
 {
     private const string Md = "```md";
-    private const string MdEnd = "```md end";
+
+    /// <summary>What the fence item writes: the opening line with the caret after <c>md </c>,
+    /// an empty body line a Tab away, the closing fence.</summary>
+    private const string Block = "```md $1\n$0\n```";
 
     /// <summary>A file with a place of every kind; each test puts its caret (‸) into one.</summary>
     private const string Piece =
@@ -88,30 +92,31 @@ public class FencedTextCompletionTests
         return [.. tree.Diagnostics.Concat(SemanticValidation.Run(tree)).Select(d => d.Code + " " + d.Message)];
     }
 
-    // ----- 1. an empty line: the two blocks -----
+    // ----- 1. an empty line: the one block (owner's decision 2026-11-14) -----
 
     [Theory]
     [InlineData("‸\n" + Piece)]                                     // the file's first line
     [InlineData("title \"T\"\n‸\npart p { clef treble }\n")]        // between two declarations
     [InlineData(Piece + "‸")]                                       // the file's last line
     [InlineData(Piece + "md‸")]                                     // the word on its way
-    public void OnALineOfItsOwnAtTheTopLevel_TheTwoFencesAreOffered(string marked)
+    public void OnALineOfItsOwnAtTheTopLevel_TheOneFenceIsOffered(string marked)
     {
         var items = Ask(marked)!;
         Assert.Contains(items, i => i.Label == "section");
-        var md = items.Single(i => i.Label == Md);
-        var end = items.Single(i => i.Label == MdEnd);
-        Assert.Equal("```md\n$0\n```", md.InsertText);
-        Assert.Equal("```md end\n$0\n```", end.InsertText);
+        var md = Assert.Single(items, i => i.Label!.StartsWith('`'));
+        Assert.Equal(Md, md.Label);
+        Assert.Equal(Block, md.InsertText);
         Assert.Equal(InsertTextFormat.Snippet, md.InsertTextFormat);
         Assert.Equal(CompletionItemKind.Snippet, md.Kind);
-        Assert.Contains("under the title", md.Detail);
-        Assert.Contains("under the last system", end.Detail);
+        // Taking it opens the list again at the caret, after `md `: where the text goes.
+        Assert.Equal("editor.action.triggerSuggest", md.Command!.CommandIdentifier);
+        Assert.Contains("start, end", md.Detail);
         Assert.Contains("score { }", ((MarkupContent)md.Documentation!).Value);
+        Assert.Contains("`start`", ((MarkupContent)md.Documentation!).Value);
     }
 
     [Fact]
-    public void TheyAreFoundByMdMarkdownAndText_AndStandLastInTheList()
+    public void ItIsFoundByMdMarkdownAndText_AndStandsLastInTheList()
     {
         var items = Ask("‸\n" + Piece)!;
         var md = items.Single(i => i.Label == Md);
@@ -119,11 +124,10 @@ public class FencedTextCompletionTests
         // word character, so the label alone would be found by nothing a writer types.
         foreach (string word in new[] { "md", "markdown", "text" })
             Assert.Contains(word, md.FilterText!.Split(' '));
-        Assert.Contains("end", items.Single(i => i.Label == MdEnd).FilterText!.Split(' '));
         // A label that begins with a backtick sorts before every letter: the sort text keeps a
         // page's text after the keywords.
         var sorted = items.OrderBy(i => (i.SortText ?? i.Label!).ToLowerInvariant(), StringComparer.Ordinal).Select(i => i.Label).ToArray();
-        Assert.Equal([Md, MdEnd], sorted[^2..]);
+        Assert.Equal(Md, sorted[^1]);
     }
 
     [Theory]
@@ -131,16 +135,16 @@ public class FencedTextCompletionTests
     [InlineData("part p { clef treble }\nscore {\n  staff p\n  ‸\n}\n")]          // after a staff
     [InlineData("part p { clef treble }\nscore parts {\n  ‸\n  staff p\n}\n")]    // before one, named score
     [InlineData("part p { }\nlyrics w { section A { la } }\nscore {\n  staff p\n  lyrics w\n  ‸\n}\n")]
-    public void OnALineOfItsOwnInAScore_TheTwoFencesAreOffered_AsThatScoresText(string marked)
+    public void OnALineOfItsOwnInAScore_TheOneFenceIsOffered_AsThatScoresText(string marked)
     {
         var items = Ask(marked)!;
         Assert.Contains(items, i => i.Label == "staff");
-        var md = items.Single(i => i.Label == Md);
-        Assert.Equal("```md\n$0\n```", md.InsertText);
+        var md = Assert.Single(items, i => i.Label!.StartsWith('`'));
+        Assert.Equal(Block, md.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", md.Command!.CommandIdentifier);
         Assert.StartsWith("This score's text", md.Detail);
-        Assert.StartsWith("This score's text", items.Single(i => i.Label == MdEnd).Detail);
         var sorted = items.OrderBy(i => (i.SortText ?? i.Label!).ToLowerInvariant(), StringComparer.Ordinal).Select(i => i.Label).ToArray();
-        Assert.Equal([Md, MdEnd], sorted[^2..]);
+        Assert.Equal(Md, sorted[^1]);
     }
 
     // ----- where no fence is printed from -----
@@ -189,12 +193,12 @@ public class FencedTextCompletionTests
     [InlineData("```")]
     [InlineData("```m")]
     [InlineData("```md")]
-    public void AfterTheBackticks_TheTwoFencesReplaceWhatIsTyped_WithTheWholeBlock(string typed)
+    public void AfterTheBackticks_TheOneFenceReplacesWhatIsTyped_WithTheWholeBlock(string typed)
     {
         foreach (string marked in new[] { "title \"T\"\n" + typed + "‸\npart p { clef treble }\n", "part p { }\nscore {\n  staff p\n  " + typed + "‸\n}\n" })
         {
             var items = Ask(marked, typed.EndsWith('`') ? "`" : null)!;
-            Assert.Equal([Md, MdEnd], items.Select(i => i.Label));
+            Assert.Equal([Md], items.Select(i => i.Label));
             int line = marked[..marked.IndexOf('‸')].Count(c => c == '\n');
             int column = marked.IndexOf('‸') - marked.LastIndexOf('\n', marked.IndexOf('‸')) - 1;
             foreach (var item in items)
@@ -205,8 +209,9 @@ public class FencedTextCompletionTests
                 Assert.Equal(column - typed.Length, item.TextEdit.Range.Start.Character);
                 Assert.Equal(column, item.TextEdit.Range.End.Character);
                 Assert.StartsWith(typed, item.FilterText);
-                Assert.Equal(item.Label + "\n$0\n```", item.TextEdit.NewText);
+                Assert.Equal(Block, item.TextEdit.NewText);
                 Assert.Equal(InsertTextFormat.Snippet, item.InsertTextFormat);
+                Assert.Equal("editor.action.triggerSuggest", item.Command!.CommandIdentifier);
             }
         }
     }
@@ -216,7 +221,7 @@ public class FencedTextCompletionTests
     {
         var md = Ask("````‸\n")!.First();
         Assert.Equal("````md", md.Label);
-        Assert.Equal("````md\n$0\n````", md.TextEdit!.NewText);
+        Assert.Equal("````md $1\n$0\n````", md.TextEdit!.NewText);
     }
 
     [Theory]
@@ -226,9 +231,10 @@ public class FencedTextCompletionTests
     public void AFenceThatAlreadyClosesBelow_TakesItsOpeningLineAlone(string marked)
     {
         var items = Ask(marked)!;
-        Assert.Equal([Md, MdEnd], items.Select(i => i.Label));
-        Assert.Equal([Md, MdEnd], items.Select(i => i.TextEdit!.NewText));
+        Assert.Equal([Md], items.Select(i => i.Label));
+        Assert.Equal(["```md "], items.Select(i => i.TextEdit!.NewText));
         Assert.All(items, i => Assert.Equal(InsertTextFormat.Plaintext, i.InsertTextFormat));
+        Assert.All(items, i => Assert.Equal("editor.action.triggerSuggest", i.Command!.CommandIdentifier));
     }
 
     [Fact]
@@ -237,7 +243,7 @@ public class FencedTextCompletionTests
         // The new fence closes on the old one's closing line and holds its opening line in
         // its body: that closing fence is not its own.
         var items = Ask("```‸\ntitle \"T\"\n```md\nA note.\n```\n")!;
-        Assert.Equal("```md\n$0\n```", items[0].TextEdit!.NewText);
+        Assert.Equal(Block, items[0].TextEdit!.NewText);
     }
 
     [Fact]
@@ -248,7 +254,7 @@ public class FencedTextCompletionTests
         Assert.Null(Ask("title \"T\" `‸\n", "`"));
     }
 
-    // ----- 3. after ```md -----
+    // ----- 3. after ```md (the fence item opens this list at once) -----
 
     [Theory]
     [InlineData("```md ‸\n", 6, 6)]
@@ -256,15 +262,17 @@ public class FencedTextCompletionTests
     [InlineData("```markdown ‸\n", 12, 12)]
     [InlineData("```md ‸\nA note.\n```\ntitle \"T\"\n", 6, 6)]
     [InlineData("part p { }\nscore {\n```md ‸\n```\n  staff p\n}\n", 6, 6)]
-    public void AfterMdAndASpace_EndAndTheShapeWordsAreOffered(string marked, int from, int to)
+    public void AfterMdAndASpace_ThePlacesAndTheShapeWordsAreOffered(string marked, int from, int to)
     {
         var items = Ask(marked, marked.Contains(" ‸") ? " " : null)!;
-        // The places — the six header lines (owner's decision 2026-11-13: ```md title), then
-        // `end` — then the shape (owner-approved 2026-11-13), in that order.
-        Assert.Equal(["title", "subtitle", "composer", "poet", "arranger", "copyright", "end", "box", "center", "xMargin", "yMargin"],
+        // The places — `start` and `end` (owner's decision 2026-11-14), then the six header
+        // lines (owner's decision 2026-11-13: ```md title) — then the shape (owner-approved
+        // 2026-11-13), in that order.
+        Assert.Equal(["start", "end", "title", "subtitle", "composer", "poet", "arranger", "copyright", "box", "center", "xMargin", "yMargin"],
             items.OrderBy(i => i.SortText, StringComparer.Ordinal).Select(i => i.Label));
         var end = items.Single(i => i.Label == "end");
         Assert.Equal("end", end.TextEdit!.NewText);
+        Assert.Contains("title, above the first system", items.Single(i => i.Label == "start").Detail);
         Assert.All(items, i => Assert.Equal((from, to), (i.TextEdit!.Range.Start.Character, i.TextEdit.Range.End.Character)));
         // Each word as it is, and a margin with the space its length follows (below).
         Assert.All(items, i => Assert.Equal(i.Label is "xMargin" or "yMargin" ? i.Label + " " : i.Label, i.TextEdit!.NewText));
@@ -275,14 +283,17 @@ public class FencedTextCompletionTests
 
     [Theory]
     [InlineData("```md end ‸\n", "box center xMargin yMargin")]
-    [InlineData("```md box ‸\n", "end center xMargin yMargin")]
+    [InlineData("```md start ‸\n", "box center xMargin yMargin")]
+    [InlineData("```md box ‸\n", "start end center xMargin yMargin")]
     [InlineData("```md end center b‸\n", "box xMargin yMargin")]                  // the editor filters by the word
-    [InlineData("```md xMargin 20mm box ‸\n", "end center yMargin")]
-    [InlineData("```md xMargin 20mm 10mm ‸\n", "end box center yMargin")]         // after two lengths, no third
-    [InlineData("```md xMargin 20mm 10mm box ‸\n", "end center yMargin")]
-    [InlineData("```md yMargin 2 1 xMargin 20mm 10mm box ‸\n", "end center")]
+    [InlineData("```md xMargin 20mm box ‸\n", "start end center yMargin")]
+    [InlineData("```md xMargin 20mm 10mm ‸\n", "start end box center yMargin")]   // after two lengths, no third
+    [InlineData("```md xMargin 20mm 10mm box ‸\n", "start end center yMargin")]
+    [InlineData("```md yMargin 2 1 xMargin 20mm 10mm box ‸\n", "start end center")]
     [InlineData("```md box center xMargin 2cm end ‸\n", "yMargin")]
-    [InlineData("part p { }\nscore {\n  ```md box ‸\n  ```\n  staff p\n}\n", "end center xMargin yMargin")]
+    [InlineData("```md box center xMargin 2cm start ‸\n", "yMargin")]
+    [InlineData("```md title ‸\n", "")]                                           // a header place takes nothing more
+    [InlineData("part p { }\nscore {\n  ```md box ‸\n  ```\n  staff p\n}\n", "start end center xMargin yMargin")]
     public void AWordAlreadyWritten_IsNotOfferedAgain(string marked, string offered)
         => Assert.Equal(offered.Split(' ', StringSplitOptions.RemoveEmptyEntries), Labels(marked, " "));
 
@@ -320,7 +331,8 @@ public class FencedTextCompletionTests
         Assert.Equal("xMargin ", xMargin.TextEdit!.NewText);
         Assert.Equal("editor.action.triggerSuggest", xMargin.Command!.CommandIdentifier);
         // No other word asks for the list again.
-        Assert.All(items.Where(i => i.Label is not ("xMargin" or "yMargin")), i => Assert.Null(i.Command));
+        Assert.All(items.Where(i => i.Label is not ("xMargin" or "yMargin")),
+            i => Assert.NotEqual("editor.action.triggerSuggest", i.Command?.CommandIdentifier));
 
         // Through the request a plain text field completes by: the text taken, and the list
         // it opens next at the caret it leaves.
@@ -334,11 +346,11 @@ public class FencedTextCompletionTests
     }
 
     [Theory]
-    [InlineData("```md xMargin 20mm ‸\n", "end box center yMargin " + Lengths)]      // the words, then the second length
-    [InlineData("```md box xMargin 2cm ‸\n", "end center yMargin " + Lengths)]
-    [InlineData("```md xMargin 5 ‸\n", "end box center yMargin " + Lengths)]         // after a bare number of staff spaces
+    [InlineData("```md xMargin 20mm ‸\n", "start end box center yMargin " + Lengths)]      // the words, then the second length
+    [InlineData("```md box xMargin 2cm ‸\n", "start end center yMargin " + Lengths)]
+    [InlineData("```md xMargin 5 ‸\n", "start end box center yMargin " + Lengths)]         // after a bare number of staff spaces
     [InlineData("```md xMargin 20mm 1‸\n", "1mm 1cm 1in 10mm 15mm")]         // a number on its way: the lengths alone
-    [InlineData("```md xMargin 20mm b‸\n", "end box center yMargin")]                // a word on its way: the editor filters
+    [InlineData("```md xMargin 20mm b‸\n", "start end box center yMargin")]                // a word on its way: the editor filters
     public void AfterTheFirstLength_TheSecondIsOfferedBesideTheWords(string marked, string listed)
     {
         Assert.Equal(listed, Listed(marked, marked.Contains(" ‸") ? " " : null));
@@ -371,10 +383,10 @@ public class FencedTextCompletionTests
     [Theory]
     [InlineData("```md yMargin ‸\n", YLengths)]                              // staff spaces first, then a few mm
     [InlineData("```md box yMargin ‸\n", YLengths)]
-    [InlineData("```md yMargin 3 ‸\n", "end box center xMargin " + YLengths)]   // the words, then the white below
+    [InlineData("```md yMargin 3 ‸\n", "start end box center xMargin " + YLengths)]   // the words, then the white below
     [InlineData("```md xMargin 20mm yMargin ‸\n", YLengths)]                 // the margin the caret follows
     [InlineData("```md yMargin 2 xMargin ‸\n", Lengths)]
-    [InlineData("```md yMargin 3 1 ‸\n", "end box center xMargin")]           // after two lengths, no third
+    [InlineData("```md yMargin 3 1 ‸\n", "start end box center xMargin")]           // after two lengths, no third
     [InlineData("```md yMargin 1‸\n", "1mm 1cm 1in 1 10mm 15mm")]
     public void AfterYMargin_ItsLengthsAreOffered_AsXMarginsAre(string marked, string listed)
     {
@@ -462,25 +474,99 @@ public class FencedTextCompletionTests
     // ----- the block that is written -----
 
     [Theory]
-    [InlineData("title \"T\"\n‸\npart p { clef treble }\nsection A { p { c'1 | } }\nscore { staff p }\n", Md)]
-    [InlineData("title \"T\"\n‸\npart p { clef treble }\nsection A { p { c'1 | } }\nscore { staff p }\n", MdEnd)]
-    [InlineData("title \"T\"\n```‸\npart p { clef treble }\nsection A { p { c'1 | } }\nscore { staff p }\n", Md)]
-    [InlineData("title \"T\"\n`‸\npart p { clef treble }\nsection A { p { c'1 | } }\nscore { staff p }\n", MdEnd)]
-    [InlineData("part p { clef treble }\nsection A { p { c'1 | } }\nscore {\n‸\nstaff p\n}\n", Md)]
-    [InlineData("part p { clef treble }\nsection A { p { c'1 | } }\nscore {\n‸\nstaff p\n}\n", MdEnd)]
-    [InlineData("part p { clef treble }\nsection A { p { c'1 | } }\nscore {\nstaff p\n``‸\n}\n", Md)]
-    public void TheBlockWritten_IsAFencedTextTheCompilerTakes(string marked, string label)
+    [InlineData("title \"T\"\n‸\npart p { clef treble }\nsection A { p { c'1 | } }\nscore { staff p }\n")]
+    [InlineData("title \"T\"\n```‸\npart p { clef treble }\nsection A { p { c'1 | } }\nscore { staff p }\n")]
+    [InlineData("title \"T\"\n`‸\npart p { clef treble }\nsection A { p { c'1 | } }\nscore { staff p }\n")]
+    [InlineData("part p { clef treble }\nsection A { p { c'1 | } }\nscore {\n‸\nstaff p\n}\n")]
+    [InlineData("part p { clef treble }\nsection A { p { c'1 | } }\nscore {\nstaff p\n``‸\n}\n")]
+    public void TheBlockWritten_IsAFencedTextTheCompilerTakes(string marked)
     {
         string before = marked.Replace("‸", "").Replace("\n```\n", "\n\n").Replace("\n``\n", "\n\n").Replace("\n`\n", "\n\n");
-        string after = Taken(marked, label);
-        string block = label + "\n\n```\n";
+        string after = Taken(marked, Md);
+        // A bare ```md and the space the place word would follow: the writer may move on.
+        string block = "```md \n\n```\n";
         Assert.Contains("\n" + block, after);
         Assert.Equal(before.Length - 1 + block.Length, after.Length);
         Assert.Empty(Said(after));
         var text = Assert.Single(SyntaxTree.Parse(after).GetRoot().DescendantNodes<MarkdownTextSyntax>());
         Assert.True(text.Value.Closed);
-        Assert.Equal(label == MdEnd, text.IsEnd);
+        Assert.False(text.IsEnd);
         Assert.Equal(marked.Contains("score {\n"), text.Parent is not CompilationUnitSyntax);
+    }
+
+    // ----- the caret after the block, and after a place word (owner's decision 2026-11-14) -----
+
+    [Theory]
+    [InlineData("title \"T\"\n‸\npart p { clef treble }\n")]
+    [InlineData("part p { }\nscore {\n  staff p\n  ```‸\n}\n")]
+    public void TakingTheBlock_LeavesTheCaretAfterMd_WhereThePlacesOpen(string marked)
+    {
+        int offset = marked.IndexOf('‸');
+        string text = marked.Remove(offset, 1);
+        var taken = new LilySharpLanguageServer(Stream.Null, Stream.Null)
+            .CompleteText(new CompleteTextParams { Text = text, Offset = offset })
+            .Items.Single(i => i.Label == Md);
+        Assert.True(taken.Again);
+        string after = text[..taken.Start] + taken.Insert + text[taken.End..];
+        int caret = taken.Start + taken.Caret;
+        Assert.EndsWith("```md ", after[..caret]);
+        Assert.Equal("start end title subtitle composer poet arranger copyright box center xMargin yMargin",
+            Listed(after.Insert(caret, "‸"), " "));
+    }
+
+    [Theory]
+    [InlineData("```md ‸\n\n```\ntitle \"T\"\n")]
+    [InlineData("```md box ‸\n\n```\ntitle \"T\"\n")]
+    [InlineData("part p { }\nscore {\n  ```md ‸\n  \n  ```\n  staff p\n}\n")]
+    public void APlaceWordTaken_MovesTheCaretDownOntoTheEmptyBodyLine(string marked)
+    {
+        var items = Ask(marked, " ")!;
+        foreach (var item in items.Where(i => FencedText.IsPlaceWord(i.Label!)))
+            Assert.Equal(LilySharpLanguageServer.CursorDownCommand, item.Command!.CommandIdentifier);
+        // A shape word may be followed by more: the caret stays on the line.
+        Assert.All(items.Where(i => i.Label is "box" or "center"), i => Assert.Null(i.Command));
+        Assert.Contains(items, i => i.Label == "start");
+    }
+
+    [Fact]
+    public void WithNoEmptyLineUnderIt_APlaceWordLeavesTheCaretWhereItIs()
+        => Assert.All(Ask("```md ‸\nA note.\n```\ntitle \"T\"\n", " ")!.Where(i => FencedText.IsPlaceWord(i.Label!)),
+            i => Assert.Null(i.Command));
+
+    // ----- hover on the opening line's words -----
+
+    private static (string? Text, LilySharp.Lsp.Protocol.Range? Range) Hovered(string marked)
+    {
+        int offset = marked.IndexOf('‸');
+        string text = marked.Remove(offset, 1);
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri($"file:///fencehover{System.Threading.Interlocked.Increment(ref _documents)}.lys");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = text, LanguageId = "lilysharp", Version = 1 },
+        });
+        var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(text, offset);
+        var hover = server.Hover(new TextDocumentPositionParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Position = new Position(line, character),
+        });
+        return (hover?.Contents.Value, hover?.Range);
+    }
+
+    [Fact]
+    public void HoverOnStart_SaysWhereTheTextStands()
+    {
+        var (text, range) = Hovered("title \"T\"\n```md st‸art box\nA note.\n```\n");
+        Assert.Contains("under the title, above the first system", text);
+        Assert.Contains("`end`", text);
+        Assert.Equal((1, 6, 11), (range!.Start.Line, range.Start.Character, range.End.Character));
+        Assert.Contains("this score's own", Hovered("part p { }\nscore {\n  ```md start‸\n  A note.\n  ```\n  staff p\n}\n").Text);
+        Assert.Contains("under the last system", Hovered("```md e‸nd\nA note.\n```\n").Text);
+        Assert.Contains("ruled frame", Hovered("```md start b‸ox\nA note.\n```\n").Text);
+        // Nothing in the body, nor on a section's fence.
+        Assert.DoesNotContain("above the first system", Hovered("```md start\nst‸art here.\n```\n").Text ?? "");
+        Assert.DoesNotContain("above the first system", Hovered("section A {\n  ```md st‸art\n  x\n  ```\n}\n").Text ?? "");
     }
 
     [Fact]

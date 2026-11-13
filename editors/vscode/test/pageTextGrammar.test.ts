@@ -121,6 +121,17 @@ describe('a page text\'s colours', () => {
         assert.ok(open.every(t => !t.scopes.includes(EMBEDDED)), 'the opening line is Lily#, not the text');
     });
 
+    it('colours start, the place a bare fence takes, as end', () => {
+        // Owner's decision 2026-11-14: ```md start, under the title, above the first system.
+        const lines = tokenize([F + 'md start box', 'A *note*.', F]);
+        assert.deepEqual(lilysharp(scopesOf(lines[0], 'start')), ['keyword.other.fenced-text.lilysharp']);
+        assert.deepEqual(lilysharp(scopesOf(lines[0], 'box')), ['keyword.other.fenced-text.lilysharp']);
+        assert.ok(lines[1].every(t => t.scopes.includes(EMBEDDED)), JSON.stringify(lines[1]));
+        // Only as a whole word.
+        const [open] = tokenize([F + 'md starts', F]);
+        assert.ok(open.every(t => !t.scopes.some(s => s.startsWith('keyword.'))), JSON.stringify(open));
+    });
+
     it('colours the six header places, and keeps such a body Markdown', () => {
         // Owner's decision 2026-11-13: ```md title … the title written as Markdown.
         for (const place of ['title', 'subtitle', 'composer', 'poet', 'arranger', 'copyright']) {

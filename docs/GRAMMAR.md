@@ -223,11 +223,15 @@ MetadataKey    = 'title' | 'subtitle' | 'composer' | 'poet' | 'arranger' | 'copy
 
 MarkdownText   = FenceOpen , { FenceWord } , NewLine , { TextLine } , FenceClose ;
 FenceOpen      = '```' , { '`' } , ( 'md' | 'markdown' ) ;
-FenceWord      = 'end' | 'box' | 'center'
+FenceWord      = 'start' | 'end' | 'box' | 'center'
                | 'xMargin' , FenceLength , [ FenceLength ]      (* left, right — one is both *)
                | 'yMargin' , FenceLength , [ FenceLength ]      (* above, below — one is both *)
                | HeaderPlace ;
-                 (* in any order, each at most once — at the top level and in a score *)
+                 (* in any order, each at most once — at the top level and in a score. One
+                    place word a fence: 'start', 'end' or a HeaderPlace (LYS4057 for a second).
+                    'start' (owner decision 2026-11-14) names the place a fence with no place
+                    word takes, under the title and above the first system, and changes nothing
+                    else. It takes the shape words as a bare fence does. *)
 HeaderPlace    = 'title' | 'subtitle' | 'composer' | 'poet' | 'arranger' | 'copyright' ;
                  (* A HEADER LINE WRITTEN AS MARKDOWN (owner decisions 2026-11-13,
                     docs/markdown-text-design.md section 9). A fence whose opening line names one
@@ -235,7 +239,7 @@ HeaderPlace    = 'title' | 'subtitle' | 'composer' | 'poet' | 'arranger' | 'copy
                     weight, with the emphasis the Markdown adds (italic, bold) and its lines ended
                     by hand, each aligned as the place is and a baseline-skip at that size apart.
                     The header grows (for the copyright, the first page footer) and the music
-                    moves. Alone on the opening line: no 'end', 'box', 'center' or margins, and
+                    moves. Alone on the opening line: no 'start', 'end', 'box', 'center' or margins, and
                     one place word (LYS4057). One fence a header line in the file and one in each
                     score (LYS4057 for a second). It takes inline text: a heading, a list, a quote,
                     code or an image is warned (LYS4058) and drawn as plain lines. With the
@@ -256,7 +260,8 @@ FenceClose     = (* a line that begins, after blanks, with as many backticks as 
                     backticks holds a text that writes three.
 
                     At the top level the text is printed under the title rows, above the first
-                    system; with 'end' on the opening line, under the last system — the last
+                    system ('start' on the opening line, or no place word); with 'end', under
+                    the last system — the last
                     system of the LAST page, or a page of its own after it when that page has
                     no room. Two fences
                     for one place print one after the other. Inside 'score { }' a fence replaces

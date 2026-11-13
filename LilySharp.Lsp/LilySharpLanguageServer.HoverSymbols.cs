@@ -52,6 +52,18 @@ public sealed partial class LilySharpLanguageServer
         if (node == null)
             return null;
 
+        // A word on a fenced text's opening line: where the text goes, or how it is set.
+        if (FenceWordHover(node, offset) is { } fenceWord)
+        {
+            var (wordLine, wordCol) = GetLineAndColumn(doc.Text, fenceWord.Start);
+            var (wordEndLine, wordEndCol) = GetLineAndColumn(doc.Text, fenceWord.End);
+            return new Hover
+            {
+                Contents = new MarkupContent { Kind = MarkupKind.Markdown, Value = fenceWord.Content },
+                Range = new LspRange { Start = new Position(wordLine, wordCol), End = new Position(wordEndLine, wordEndCol) },
+            };
+        }
+
         // An @chord hovers as its diagrams, or with no shape written as the line that says how to
         // add one — checked first, because the mark sits INSIDE a chord (`<c e g>@chord(C)`),
         // which would otherwise answer.
@@ -119,6 +131,51 @@ public sealed partial class LilySharpLanguageServer
                 return offset >= declaration.Name.Span.Start && offset <= declaration.Name.Span.End
                     ? (declaration.Name.Text, declaration.Name)
                     : null;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// The hover for a place word on a top-level or a score's fenced text's opening line —
+    /// <c>start</c> (owner's decision 2026-11-14), <c>end</c>, a header place — or a shape word,
+    /// with the word's span in the file; else null (the body, the backticks, <c>md</c>, a
+    /// section's fence).
+    /// </summary>
+    internal static (string Content, int Start, int End)? FenceWordHover(SyntaxNode node, int offset)
+    {
+        MarkdownTextSyntax? text = null;
+        for (var n = node; n != null && text == null; n = n.Parent)
+            text = n as MarkdownTextSyntax;
+        if (text is null || text.Parent is SectionDeclarationSyntax || !text.Value.IsMarkdown)
+            return null;
+        int at = text.Fence.Span.Start;
+        foreach (var (word, wordOffset) in text.Value.Words.Skip(1))
+        {
+            int start = at + wordOffset, end = start + word.Length;
+            if (offset < start || offset > end)
+                continue;
+            bool score = text.Parent is RenderDeclarationSyntax;
+            string? content = word switch
+            {
+                FencedText.StartWord => "**start** — the text stands under the title, above the first system: "
+                    + "where a fence with no place word stands too (`end` is its counterpart).",
+                FencedText.EndWord => "**end** — the text stands under the last system (`start` is its counterpart).",
+                FencedText.BoxWord => "**box** — a ruled frame around the whole text.",
+                FencedText.CenterWord => "**center** — each line centred in the text's width.",
+                FencedText.XMarginWord => "**xMargin** LEFT [RIGHT] — white at the text's left and right, inside the line width "
+                    + "(`xMargin 20mm`, or `xMargin 20mm 10mm`).",
+                FencedText.YMarginWord => "**yMargin** TOP [BOTTOM] — white above and below the text, 1 staff space where "
+                    + "nothing is written (`yMargin 2`, or `yMargin 3 1`).",
+                _ when FencedText.HeaderPlaceWords.Contains(word) =>
+                    $"**{word}** — the {word} written as Markdown: bold, italic and line breaks, set where and as the {word} is. "
+                    + "The opening line takes nothing more.",
+                _ => null,
+            };
+            if (content is null)
+                return null;
+            if (score)
+                content += "\n\nWritten in a `score { }`, the text is this score's own, over the file's.";
+            return (content, start, end);
         }
         return null;
     }

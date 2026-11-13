@@ -128,6 +128,12 @@ public sealed record FencedText(
     /// <summary>The word that puts a top-level or a score's text under the last system.</summary>
     public const string EndWord = "end";
 
+    /// <summary>The word that names the place a bare <c>```md</c> already takes: under the
+    /// title, above the first system — <see cref="EndWord"/>'s counterpart. It changes nothing
+    /// but the reading (owner's decision 2026-11-14, "start と end で進めて": the text there
+    /// varies, so a position names it).</summary>
+    public const string StartWord = "start";
+
     /// <summary>The word that prints a section's text at every printing of the section.</summary>
     public const string AllWord = "all";
 
@@ -184,8 +190,9 @@ public sealed record FencedText(
     }
 
     /// <summary>Whether <paramref name="word"/> says where a top-level or a score's text goes:
-    /// <c>end</c>, or a header place.</summary>
-    public static bool IsPlaceWord(string word) => word == EndWord || HeaderPlaceWords.Contains(word);
+    /// <c>start</c>, <c>end</c>, or a header place.</summary>
+    public static bool IsPlaceWord(string word)
+        => word == StartWord || word == EndWord || HeaderPlaceWords.Contains(word);
 
     /// <summary>The units a length after <c>xMargin</c> or <c>yMargin</c> is written in —
     /// <c>paper { }</c>'s own; a bare number is staff spaces.</summary>
@@ -201,7 +208,7 @@ public sealed record FencedText(
 
     /// <summary>
     /// Reads the opening line's words after <c>md</c> as a top-level or a score's text takes
-    /// them (owner-approved 2026-11-13): <c>end</c>, <c>box</c>, <c>center</c>,
+    /// them (owner-approved 2026-11-13): <c>start</c> or <c>end</c>, <c>box</c>, <c>center</c>,
     /// <c>xMargin LEFT [RIGHT]</c> and <c>yMargin TOP [BOTTOM]</c>, in any order, each once.
     /// </summary>
     /// <param name="problems">Receives what is wrong, where: the word's offset in the token,
@@ -218,6 +225,7 @@ public sealed record FencedText(
             var (word, offset) = Words[i];
             switch (word)
             {
+                case StartWord:
                 case EndWord:
                 case "title" or "subtitle" or "composer" or "poet" or "arranger" or "copyright":
                     break;      // the text's place, not its shape (HeaderPlaceWords)

@@ -23,7 +23,7 @@ namespace LilySharp.Core.Semantics;
 
 /// <summary>
 /// The opening line of a fenced text (docs/markdown-text-design.md): it says <c>md</c>, and
-/// then only the words its place takes — <c>end</c> and the shape (<c>box</c>, <c>center</c>,
+/// then only the words its place takes — <c>start</c> or <c>end</c> and the shape (<c>box</c>, <c>center</c>,
 /// <c>xMargin LEFT [RIGHT]</c>, <c>yMargin TOP [BOTTOM]</c>; owner-approved 2026-11-13) at
 /// the top level and in a score, a printing (<c>2</c>, <c>1,3</c>, <c>2-3</c>, <c>all</c>)
 /// directly in a top-level section.
@@ -39,7 +39,8 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
 
     /// <summary>The sentence's list of what a top-level or a score's opening line may say after <c>md</c>.</summary>
     internal const string PageWords =
-        "end (under the last system), title, subtitle, composer, poet, arranger or copyright "
+        "start (under the title, above the first system, as with no place word), end (under the last system), "
+        + "title, subtitle, composer, poet, arranger or copyright "
         + "(that header line, written as Markdown), box (a ruled frame), center (each line centred), "
         + "xMargin LEFT [RIGHT] (white at the sides: ```md xMargin 20mm), "
         + "yMargin TOP [BOTTOM] (white above and below: ```md yMargin 2)";
@@ -59,8 +60,8 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
         {
             if (!FencedText.IsPlaceWord(word))
                 continue;
-            // (`end` beside a header place is said below, in words that name what it takes.)
-            if (word == FencedText.EndWord && value.HeaderPlace is not null)
+            // (`start` or `end` beside a header place is said below, in words that name what it takes.)
+            if (word is FencedText.StartWord or FencedText.EndWord && value.HeaderPlace is not null)
                 continue;
             if (placed)
             {
@@ -151,6 +152,13 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
                 _diagnostics.Error(new TextSpan(at + offset, word.Length), DiagnosticCodes.FencedTextWord,
                     $"'end' does not go with '{place}': a header line written as Markdown stands where {SetAs(place)}. "
                     + $"Write ```md {place} alone, or ```md end for a text under the last system.");
+                continue;
+            }
+            if (word == FencedText.StartWord)
+            {
+                _diagnostics.Error(new TextSpan(at + offset, word.Length), DiagnosticCodes.FencedTextWord,
+                    $"'start' does not go with '{place}': a header line written as Markdown stands where {SetAs(place)}. "
+                    + $"Write ```md {place} alone, or ```md start for a text under the title, above the first system.");
                 continue;
             }
             if (FencedText.IsPlaceWord(word))

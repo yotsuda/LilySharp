@@ -109,6 +109,58 @@ public class MarkdownTextShapeTests
         Assert.False(ShapeOf("```md yMargin 0").IsPlain);
     }
 
+    // ---- start: the bare fence's place, named (owner's decision 2026-11-14) ---------------
+
+    /// <summary>
+    /// <c>```md start</c> is the place a bare <c>```md</c> takes — under the title, above the
+    /// first system — and changes nothing else: the page, the SVG and the twin are the same
+    /// to the byte. (The bare fence is padded with the spaces <c> start</c> takes, so every
+    /// offset the SVG writes after it is the same too.)
+    /// </summary>
+    [Theory]
+    [InlineData("", "A note under the title.")]
+    [InlineData(" box center xMargin 20mm yMargin 2", "A boxed note, centred.")]
+    [InlineData(" yMargin 3 1", "A note.\n\n- one\n- two")]
+    public void Start_IsTheBareFencesPlace_AndDrawsExactlyAsIt(string shape, string body)
+    {
+        string named = Book(top: $"{F}md start{shape}\n{body}\n{F}");
+        string bare = Book(top: $"{F}md{shape}      \n{body}\n{F}");
+        Assert.Equal(named.Length, bare.Length);
+        Assert.Empty(WordErrors(named));
+        Assert.Equal(ShapeOf($"{F}md{shape}"), ShapeOf($"{F}md start{shape}"));
+        var a = Laid(named).Pages[0];
+        var b = Laid(bare).Pages[0];
+        Assert.NotNull(a.Header!.Text);
+        Assert.Null(a.EndText);
+        Assert.Equal(b.HeaderTextY, a.HeaderTextY);
+        Assert.Equal(b.Header!.Text!.Lines.Select(l => (l.Left, l.Width, TextOf(l))), a.Header.Text.Lines.Select(l => (l.Left, l.Width, TextOf(l))));
+        Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(bare)), SvgGenerator.Generate(SyntaxTree.Parse(named)));
+        Assert.Equal(Twin(bare), Twin(named));
+    }
+
+    [Fact]
+    public void Start_InAScore_ReplacesTheFilesTextUnderTheTitle_AsABareFenceDoes()
+    {
+        string file = $"{F}md\nThe file's.\n{F}";
+        var page = Laid(Book(top: file, inScore: $"{F}md start box\nThis score's.\n{F}\n")).Pages[0];
+        Assert.Equal("This score's.", TextOf(page.Header!.Text!.Lines[0]));
+        Assert.NotNull(page.Header.Text.Frame);
+    }
+
+    [Theory]
+    [InlineData("```md start end", "end", "'end' is a second place for one text")]
+    [InlineData("```md end start", "start", "'start' is a second place for one text")]
+    [InlineData("```md start start", "start", "'start' is a second place for one text")]
+    [InlineData("```md start title", "start", "'start' does not go with 'title'")]
+    [InlineData("```md copyright start", "start", "'start' does not go with 'copyright'")]
+    public void Start_TakesNoOtherPlace(string openingLine, string flagged, string says)
+    {
+        string book = Book(top: $"{openingLine}\nA note.\n{F}");
+        var error = Assert.Single(WordErrors(book));
+        Assert.Equal(flagged, book.Substring(error.Span.Start, error.Span.Length));
+        Assert.Contains(says, error.Message);
+    }
+
     /// <summary>The units are <c>paper { }</c>'s, through its conversion; a bare number is staff spaces.</summary>
     [Theory]
     [InlineData("20mm", 20 * 72.27 / 127.0)]
