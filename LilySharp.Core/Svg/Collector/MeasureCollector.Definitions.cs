@@ -972,19 +972,19 @@ public sealed partial class MeasureCollector
         return LilySharp.Core.Music.KeySpelling.Alteration(step, _v.Meta.KeySharps);
     }
 
-    /// <summary>The accidental glyph name ("doubleSharp" / "sharp" / "natural" / "flat" /
-    /// "doubleFlat") the current key signature dictates for diatonic <paramref name="step"/>.
-    /// Forced onto a note that shows none when it is made a courtesy or editorial accidental.</summary>
-    private string KeySignatureAccidentalName(int step) => GetKeySignatureAlteration(step) switch
-    {
-        >= 2 => "doubleSharp", 1 => "sharp", <= -2 => "doubleFlat", -1 => "flat", _ => "natural"
-    };
-
     /// <summary>The accidental forced onto a note that shows none (<c>@courtesy</c>,
-    /// <c>@editorial</c>): a quarter tone's own — it is in no key — else the key's.</summary>
-    private string ForcedAccidentalName(int step, int semitones, int quarterOffset)
-        => quarterOffset != 0 && AlterationName(2 * semitones + quarterOffset) is { } own
-            ? own : KeySignatureAccidentalName(step);
+    /// <c>@editorial</c>): the note's own — a reminder of what the note IS.</summary>
+    /// <remarks>
+    /// Until 2026-11-14 it was the KEY's accidental for the step, so the second C sharp of
+    /// <c>cis'4 cis'@courtesy</c> in C major — its sharp left out because the bar remembers it —
+    /// was printed with a parenthesised NATURAL (owner's instruction 2026-11-14; found by
+    /// session 1229). The two agree only where the note is what the key says.
+    /// LILYPOND-REF: lily/accidental-engraver.cc:282-327 Accidental_engraver::make_standard_accidental — the
+    ///   accidental grob takes the note's own alteration, forced or not; the key decides only
+    ///   whether one is NEEDED.
+    /// </remarks>
+    private static string ForcedAccidentalName(int step, int semitones, int quarterOffset)
+        => AlterationName(2 * semitones + quarterOffset) ?? "natural";
 
     /// <summary>Starts a music walk's accidental memory: empty, at its first bar.</summary>
     private void ResetAccidentalMemory()

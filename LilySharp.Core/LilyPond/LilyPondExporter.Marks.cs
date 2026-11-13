@@ -484,8 +484,8 @@ public sealed partial class LilyPondExporter
     ///   :3767-3770 set_property — `?` sets cautionary AND force-accidental, `!` only the latter.
     /// LILYPOND-REF: lily/accidental-engraver.cc:233-236 process_acknowledged — a forced
     ///   accidental is printed when the rules would not print one, which is Lily#'s own rule
-    ///   for both annotations (MeasureCollector.ItemFactory: KeySignatureAccidentalName when
-    ///   nothing would print);
+    ///   for both annotations (MeasureCollector.ItemFactory: ForcedAccidentalName, the note's
+    ///   own sign, when nothing would print);
     ///   :293-296 make_standard_accidental — cautionary makes an AccidentalCautionary, the
     ///   parenthesized one the page draws for @courtesy.
     /// The `!` alone prints nothing new: with suggestAccidentals set before the note (the

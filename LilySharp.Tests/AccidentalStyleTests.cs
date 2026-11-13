@@ -324,4 +324,20 @@ public class AccidentalStyleTests
 
     private static string MaskDataPos(string svg)
         => System.Text.RegularExpressions.Regex.Replace(svg, @"data-pos=""\d+""", "data-pos=\"\"");
+
+    /// <summary>
+    /// A courtesy accidental on a note whose own sign the bar's memory left out is the NOTE's
+    /// sign: the second C sharp of <c>cis'4 cis'@courtesy</c> printed a parenthesised natural,
+    /// the key's (C major's) sign for the step (owner's instruction 2026-11-14; LilyPond 2.26.0
+    /// prints the sharp — Lab sessions/p1230/c).
+    /// </summary>
+    [Fact]
+    public void ACourtesyAccidental_IsTheNotesOwn_NotTheKeys()
+    {
+        Assert.Equal(new string?[] { "sharp", "sharp", "natural", "flat" }, Glyphs("cis'4 cis'@courtesy c'@courtesy bes'@courtesy |"));
+        Assert.Equal(new string?[] { "flat", "flat", "natural", "natural" }, Glyphs("bes'4 bes'@courtesy b' b'@courtesy |"));
+        // The control: where the note is what the key says, the two were always one.
+        Assert.Equal(new string?[] { "natural", null, null, null }, Glyphs("c'4@courtesy d' e' f' |"));
+    }
+
 }
