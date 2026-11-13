@@ -552,6 +552,43 @@ internal sealed class PageLayouter
             systemStart = systemEnd;
         }
 
+        // A CLOSING TEXT THE LAST PAGE HAS NO ROOM FOR goes to a page of its own after it.
+        // The breaker prices the text as ink under the last system (above), so the two share
+        // a page wherever one holds both; where none does — the text and that one system are
+        // taller than the paper — the page came out over-full, its system pressed up into the
+        // margin to make room for words. The music is paged again as if it had no text, and
+        // the text opens the page after (grammar evaluation 4, 2026-11-13).
+        // LILYPOND-REF: lily/page-breaking.cc — a top-level markup after the score is a line of
+        //   its own for the page breaker, which may put it alone on the next page.
+        // LILYSHARP-OWN: only when the shared page does not fit (LilyPond weighs the two
+        //   layouts by force); and the text is not broken over a page, so one taller than the
+        //   paper still runs off its own page — said there (LayoutWarnings), with no system harmed.
+        if (endText is not null && !onePage && pages[^1].Overflow > 0)
+        {
+            var music = CreatePagesWithOptimalBreaking(
+                systems, header, systemExtents, systemSkylines, systemBandUps, systemBodyHeights,
+                systemAnchors, systemShapes, systemPagePermissions, systemBreakerFrames, onePage,
+                fonts, systemBreakerUpExtents, systemBreakerDownExtents, endText: null);
+            // The text's reference point (its first baseline): top-markup-spacing from the top
+            // of the printable area, floored by the page number's header, the text's box above
+            // the baseline and the padding — the spring a text that opens page 1 takes
+            // (LayoutUtilities.HeaderSprings).
+            double pageHeader = fonts is null ? 0.0 : PageNumbers.HeaderHeight(fonts, music.Length);
+            double textY = _options.MarginTop + LayoutUtilities.CreateSpring(
+                vs.TopMarkup, pageHeader + endText.Up + vs.TopMarkup.Padding).Length(0);
+            double over = textY + endText.Down + vs.LastBottom.Padding
+                - (_options.PageHeight - _options.MarginBottom);
+            return music.Add(new PageLayout(
+                PageIndex: music.Length,
+                Width: _options.PageWidth,
+                Height: _options.PageHeight,
+                HeaderHeight: 0,
+                Systems: ImmutableArray<SystemLayout>.Empty,
+                EndText: endText,
+                EndTextY: textY,
+                Overflow: Math.Max(0, over)));
+        }
+
         return pages.ToImmutableArray();
     }
 

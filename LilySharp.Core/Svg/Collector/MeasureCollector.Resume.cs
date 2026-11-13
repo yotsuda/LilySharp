@@ -851,6 +851,8 @@ public sealed partial class MeasureCollector
             && _v.Meta.TextAfter == rec.TextAfter
             && _v.Meta.TextBeforeShape == rec.TextBeforeShape
             && _v.Meta.TextAfterShape == rec.TextAfterShape
+            && TryShiftBlocks(rec.TextBeforeMore, w, out var beforeMore) && Equals(_v.Meta.TextBeforeMore, beforeMore)
+            && TryShiftBlocks(rec.TextAfterMore, w, out var afterMore) && Equals(_v.Meta.TextAfterMore, afterMore)
             && _v.Meta.Fonts.Equals(rec.Fonts)
             && _v.Meta.Paper.Equals(rec.Paper)
             && _v.Meta.LayoutPlan.Equals(rec.LayoutPlan)
@@ -874,6 +876,24 @@ public sealed partial class MeasureCollector
             && _v.Meta.InitialClef == rec.InitialClef;
     }
 
+    /// <summary>A place's later text blocks with where each fence begins carried through the
+    /// window map (their Markdown and shapes are values); false when one cannot be.</summary>
+    private static bool TryShiftBlocks(Model.TextBlocks? blocks, in CollectTailShifter.Window w, out Model.TextBlocks? shifted)
+    {
+        shifted = blocks;
+        if (blocks is null)
+            return true;
+        var moved = ImmutableArray.CreateBuilder<Model.TextBlock>(blocks.Items.Length);
+        foreach (var block in blocks.Items)
+        {
+            if (!w.TryShift(block.Position, out int position))
+                return false;
+            moved.Add(block with { Position = position });
+        }
+        shifted = new Model.TextBlocks(moved.MoveToImmutable());
+        return true;
+    }
+
     /// <summary>Re-homes a cloned <see cref="MetadataState"/>'s eight header
     /// positions through the window map (the splice's end-state jump); false
     /// when one lies inside the dirty window.</summary>
@@ -892,8 +912,12 @@ public sealed partial class MeasureCollector
             || !w.TryShift(meta.TempoUnitPosition, out int unit)
             || !w.TryShift(meta.TempoCountPosition, out int count)
             || !w.TryShift(meta.SwingPosition, out int swing)
-            || !w.TryShift(meta.SwingValuePosition, out int swingValue))
+            || !w.TryShift(meta.SwingValuePosition, out int swingValue)
+            || !TryShiftBlocks(meta.TextBeforeMore, w, out var beforeMore)
+            || !TryShiftBlocks(meta.TextAfterMore, w, out var afterMore))
             return false;
+        meta.TextBeforeMore = beforeMore;
+        meta.TextAfterMore = afterMore;
         meta.TempoUnitPosition = unit;
         meta.TempoCountPosition = count;
         meta.SwingPosition = swing;

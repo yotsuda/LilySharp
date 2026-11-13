@@ -1027,8 +1027,42 @@ Practise the right hand alone first.
 ````
 
 The text is printed under the title, above the first system; with `end` on the opening line,
-under the last system. Nothing between the two fence lines is Lily#. Inside `score { }` a
-fence is that score's own text and replaces the file's for the same place.
+under the last system — of the last page, however many pages the score has; a text the last
+page has no room for takes a page of its own after it. Nothing between the two fence lines is
+Lily#. Inside `score { }` a fence is that score's own text and replaces the file's for the
+same place.
+
+A fence may stand at the top level (anywhere among the declarations — its place on the page is
+said by `end`, not by where it is written) or directly inside `score { }`. Two fences for one
+place print one under the other, in written order, and each has its own shape (below):
+
+````
+```md box
+# Performance note
+Sing the consonants early.
+```
+```md center
+*for my choir*
+```
+````
+
+is a boxed note with a centred dedication under it, both under the title. Two fences that
+write no shape word are simply one text, the second its next paragraph.
+
+In a Markdown document, a Lily# example that itself holds a page text is fenced with FOUR
+backticks, so that the three inside do not end it:
+
+`````
+````lys
+title "Morning Song"
+```md
+Keep it slow.
+```
+part m { clef treble }
+section A { m { c'1 | } }
+score { staff m }
+````
+`````
 
 What a page text draws:
 

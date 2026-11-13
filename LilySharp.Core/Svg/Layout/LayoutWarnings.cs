@@ -53,7 +53,13 @@ internal static class LayoutWarnings
         int systemNumber = 0;
         foreach (var page in layout.Pages)
         {
-            if (page.Overflow > 0)
+            // A page that holds only the closing text (PageLayouter: the text the last page
+            // had no room for) has no system to press: the text itself is taller than the paper.
+            if (page.Overflow > 0 && page.Systems.IsDefaultOrEmpty)
+                sink(string.Format(CultureInfo.InvariantCulture,
+                    "page {0} is over-full by {1:F1} staff spaces: the `md end` text is taller than the page, and a text is not broken over a page",
+                    page.PageIndex + 1, page.Overflow));
+            else if (page.Overflow > 0)
                 sink(string.Format(CultureInfo.InvariantCulture,
                     "page {0} is over-full by {1:F1} staff spaces: its systems were pressed together to fit it",
                     page.PageIndex + 1, page.Overflow));

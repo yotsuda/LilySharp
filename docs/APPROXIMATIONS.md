@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 395 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **523** | |
+| `OWN` | 399 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **527** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -24,7 +24,7 @@
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 20 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 18 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 16 |
-| `LilySharp.Core/Svg/Layout/ProseBand.cs` | 14 |
+| `LilySharp.Core/Svg/Layout/ProseBand.cs` | 16 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Midi/MidiExporter.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 10 |
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（395 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（399 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -508,6 +508,8 @@
 - **`MeasureCollector.ProcessPercentRepeat`** LILYSHARP-OWN, owner's decision 2026-10-14, session 905). Whole bars: the body opens
 - **`MeasureCollector.ProcessPercentRepeat`** notes stand (CondensedPercents; grammar evaluation 3, 2026-11-13). LILYSHARP-OWN.
 - **`MeasureCollector.ProcessGraceRegion`** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+### `LilySharp.Core/Svg/Collector/MeasureCollector.Definitions.cs`
+- **`MeasureCollector.CollectText`** LILYSHARP-OWN: a plain fence after a SHAPED one is a plain block under it (it was a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Drums.cs`
 - **`MeasureCollector.PlanDrumChart`** LILYSHARP-OWN (owner's design 2026-10-11): LilyPond has no drum chart — its drum music
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Form.cs`
@@ -710,9 +712,11 @@
 - **`SystemDetails.StaffCompression`** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's
 ### `LilySharp.Core/Svg/Layout/PageLayouter.cs`
 - **`PageLayouter.CreatePagesWithOptimalBreaking`** LILYSHARP-OWN, for now: LilyPond pages a trailing markup as a line of its own,
+- **`PageLayouter.CreatePagesWithOptimalBreaking`** LILYSHARP-OWN: only when the shared page does not fit (LilyPond weighs the two
 - **`PageLayouter.PositionSystemsOnPage`** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
 ### `LilySharp.Core/Svg/Layout/ProseBand.cs`
 - **`ProseBand`** LILYSHARP-OWN: the breaking itself (LilyPond's \wordwrap does not break a text
+- **`ProseBand.Stack`** LILYSHARP-OWN: the stacking. It is what LilyPond's \column-lines does with the
 - **`ProseBand.BoxPadding`** LILYSHARP-OWN (owner-approved 2026-11-13: a ruled frame; the padding is this
 - **`ProseBand.DefaultMargin`** LILYSHARP-OWN: one staff space each way. LilyPond's own spacing is yMargin 0.
 - **`ProseBand.MaximumMargin`** LILYSHARP-OWN: 50 — about 88 mm, under a third of an A4 page's height at the
@@ -726,6 +730,7 @@
 - **`ProseBand.MarkerGlyph`** LILYSHARP-OWN. The second level's mark differs from the first's, as is the
 - **`ProseBand.Build`** a list keeps its hanging shape from the text's left edge. LILYSHARP-OWN.
 - **`ProseBand.Break`** LILYSHARP-OWN. A line ends at a space, or between two wide characters (kana,
+- **`ProseBand.Break`** LILYSHARP-OWN: the em grid (LilyPond's twin is handed whole strings and sets
 ### `LilySharp.Core/Svg/Layout/ScoreSideTables.cs`
 - **`ScoreSideTables.PercentSignBarRods`** LILYSHARP-OWN (the multi-bar sign is, PercentRepeatItem.Bars, session 905): LilyPond's
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`

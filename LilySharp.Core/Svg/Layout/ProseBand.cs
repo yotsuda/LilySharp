@@ -109,10 +109,75 @@ internal sealed record ProseFrame(double Left, double Right, double Thickness);
 /// <see cref="DefaultMargin"/>), already in <paramref name="Up"/> — so the page's springs
 /// and the page breaker's priced depth see it.</param>
 /// <param name="MarginBottom">The white below it, already in <paramref name="Down"/>.</param>
+/// <param name="Center">Whether its paragraphs and headings are centred (<c>center</c>).</param>
+/// <param name="Later">The place's later blocks (<see cref="Stack"/>), each with how far its
+/// reference point stands below this one's; default for a text of one block. With them,
+/// <paramref name="Down"/> and <paramref name="Width"/> are the whole stack's, and every
+/// other member is the FIRST block's: read the blocks through <see cref="Blocks"/>.</param>
+/// <param name="OwnDown">The first block's own reach below its reference point, where
+/// <paramref name="Later"/> has blocks.</param>
 internal sealed record ProseBand(
     ImmutableArray<ProseLine> Lines, double Up, double Down, double Width, int Position,
-    double Left = 0, double TextWidth = 0, ProseFrame? Frame = null, double MarginTop = 0, double MarginBottom = 0)
+    double Left = 0, double TextWidth = 0, ProseFrame? Frame = null, double MarginTop = 0, double MarginBottom = 0,
+    bool Center = false, ImmutableArray<(ProseBand Band, double Offset)> Later = default, double OwnDown = 0)
 {
+    /// <summary>The blocks of the place, top to bottom, each as it was built alone and with
+    /// how far its reference point (its first baseline) stands below the band's.</summary>
+    public IEnumerable<(ProseBand Block, double Offset)> Blocks
+    {
+        get
+        {
+            if (Later.IsDefaultOrEmpty)
+            {
+                yield return (this, 0);
+                yield break;
+            }
+            yield return (this with { Down = OwnDown, Later = default, OwnDown = 0 }, 0);
+            foreach (var later in Later)
+                yield return later;
+        }
+    }
+
+    /// <summary>
+    /// The blocks of one place as ONE band of the page's chain, or null when none draws
+    /// anything: each block set as its own fence's opening line says, stacked in written
+    /// order extent to extent — so between two blocks stand the first one's white below
+    /// (its <c>yMargin</c>, or <see cref="DefaultMargin"/>) and the next one's white above.
+    /// </summary>
+    /// <remarks>
+    /// Grammar evaluation 4, 2026-11-13: a place was one text in one shape, and a boxed note
+    /// with a centred dedication under it could not be written.
+    /// LILYSHARP-OWN: the stacking. It is what LilyPond's <c>\column-lines</c> does with the
+    /// twin's lines (each block's first and last line carry its margins as their extent), so
+    /// the twin writes every block into the one list.
+    /// </remarks>
+    public static ProseBand? Stack(IEnumerable<Model.TextBlock> blocks, ScoreTextMetrics fonts, double lineWidth,
+        double staffSpaceMm)
+    {
+        ProseBand? first = null;
+        var later = ImmutableArray.CreateBuilder<(ProseBand Band, double Offset)>();
+        double bottom = 0, width = 0;
+        foreach (var block in blocks)
+        {
+            if (Build(block.Markdown, block.Position, fonts, lineWidth, ProseShape.Of(block.Shape, staffSpaceMm)) is not { } band)
+                continue;
+            if (first is null)
+            {
+                first = band;
+                bottom = band.Down;
+            }
+            else
+            {
+                later.Add((band, bottom + band.Up));
+                bottom += band.Up + band.Down;
+            }
+            width = Math.Max(width, band.Width);
+        }
+        return first is null || later.Count == 0
+            ? first
+            : first with { Down = bottom, Width = width, Later = later.ToImmutable(), OwnDown = first.Down };
+    }
+
     /// <summary>The rule of a boxed text's frame.</summary>
     /// <remarks>LILYPOND-REF: scm/define-markup-commands.scm box — <c>thickness</c> 1, times
     /// the layout's line-thickness 0.1; scm/stencil.scm box-stencil rules it OUTSIDE the
@@ -374,7 +439,7 @@ internal sealed record ProseBand(
         return new ProseBand(lines.ToImmutable(), LineUp(fonts) * lines[0].Scale + inset + marginTop,
             baseline + LineDown(fonts) * lines[^1].Scale + inset + marginBottom,
             frame is null ? widest : Math.Max(widest, frame.Right), position, left, textWidth, frame,
-            marginTop, marginBottom);
+            marginTop, marginBottom, shape.Center);
     }
 
     /// <summary>
@@ -404,16 +469,22 @@ internal sealed record ProseBand(
     {
         var atoms = Atoms(block);
         var lines = new List<ProseLine>();
-        var line = new List<(Atom Atom, double Width)>();
+        var line = new List<(Atom Atom, double Width, bool Cell)>();
         double width = 0;
+
+        // Whether an atom is ONE wide character the text's face does not have: it takes an em
+        // square, and the page sets it AT that square (a piece of its own, in Flush).
+        bool IsCell(Atom a)
+            => a.Text.Length == 1 && Prose.IsWide(a.Text[0])
+                && !fonts.Spells(a.Text, em, TextRole.Markdown, StyleOf(fonts, a.Style));
 
         double WidthOf(Atom a)
         {
             // A wide character the text's face does not have is its em square: the face that
             // draws it is the machine's, which this layout does not measure
             // (ScoreTextMetrics.InkOrFallbackBox's remark). ⚠️ So a line of such characters is
-            // as long as a face of full squares makes it; under a face with narrower kana it
-            // ends short of the margin, and a piece after a change of style stands off it.
+            // as long as a face of full squares makes it; under a face with narrower kana its
+            // characters stand a little apart, each at the left of its square.
             double w = 0;
             var style = StyleOf(fonts, a.Style);
             var narrow = new StringBuilder();
@@ -445,9 +516,21 @@ internal sealed record ProseBand(
             StringBuilder? text = null;
             FontStyle style = FontStyle.Regular;
             int offset = -1;
-            foreach (var (atom, w) in line)
+            // EVERY EM-SQUARE CHARACTER IS A PIECE OF ITS OWN, drawn at its own square. One
+            // piece a style used to hand the drawer a whole run — "ことばを大切に" in bold —
+            // which the machine's face then set by ITS advances: under a face with narrower
+            // kana the run ended short of where the next piece began, a wide gap after every
+            // bold or italic Japanese run (grammar evaluation 4, 2026-11-13; MEASURED on the
+            // PNG of choral/r-08, this machine's face: 7 bold characters reserved 9.64..25.04,
+            // their ink 9.80..22.30 and the next piece's from 25.20 — 2.9 of white; 4.3 after
+            // the 7 italic ones). A character at its square cannot drift: the layout's
+            // position IS the drawn one, in the SVG, the PDF and the PNG alike.
+            // LILYSHARP-OWN: the em grid (LilyPond's twin is handed whole strings and sets
+            // them by its own face: EmitTextLine joins the pieces again).
+            bool previousCell = false;
+            foreach (var (atom, w, cell) in line)
             {
-                if (text is null || atom.Style != style)
+                if (text is null || atom.Style != style || cell || previousCell)
                 {
                     if (text is not null)
                         pieces.Add(new ProsePiece(text.ToString(), pieceX, style, offset));
@@ -458,6 +541,7 @@ internal sealed record ProseBand(
                 }
                 text.Append(atom.Text);
                 x += w;
+                previousCell = cell;
             }
             if (text is not null)
                 pieces.Add(new ProsePiece(text.ToString(), pieceX, style, offset));
@@ -478,14 +562,14 @@ internal sealed record ProseBand(
             {
                 if (line.Count > 0)
                 {
-                    line.Add((atom, w));
+                    line.Add((atom, w, false));
                     width += w;
                 }
                 continue;
             }
             if (line.Count > 0 && atom.BreakBefore && width + w > lineWidth + 1e-9)
                 Flush();
-            line.Add((atom, w));
+            line.Add((atom, w, IsCell(atom)));
             width += w;
         }
         if (line.Count > 0)

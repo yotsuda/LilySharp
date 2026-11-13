@@ -317,7 +317,14 @@ internal static class MetronomeMarkGeometry
         pieces.Add(new SwingPiece(SwingPieceKind.Number, bC - 0.4301 * r, 4.5818 * r));
 
         double width = Math.Max(bR + bracketTh / 2, flagX + lastFlag.Right * r);
-        double top = Math.Max(bY + bracketTh / 2, FlagOriginU * r + lastFlag.Top * r);
+        // …and the bracket's NUMBER, which stands in the line's gap and reaches over it: the
+        // equation's highest ink. Left out until grammar evaluation 4 (2026-11-13), the "3"
+        // stood 0.49 over the top every reservation of the mark was given (MEASURED on the
+        // PNG of bigband/r-09: the bracket's line 6.83 over the staff's top line, the number
+        // 7.32).
+        double numberEm = Em(fonts) * Math.Pow(2.0, -4.0 / 6.0);    // TupletNumber font-size -2 inside -2
+        double numberTop = 4.5818 * r + fonts.Ink("3", numberEm, TextRole.Tempo, FontStyle.Italic).Top;
+        double top = Math.Max(Math.Max(bY + bracketTh / 2, numberTop), FlagOriginU * r + lastFlag.Top * r);
         double bottom = Math.Min(0.0, headCentre + MusicFont.Current.FullSize.Box(MusicGlyph.NoteheadBlack).Bottom * r);
         return new SwingEquation(pieces.ToArray(), SharedRenderer.FontSize * r, bracketTh,
             Em(fonts) * Math.Pow(2.0, -4.0 / 6.0),           // TupletNumber font-size -2 inside -2

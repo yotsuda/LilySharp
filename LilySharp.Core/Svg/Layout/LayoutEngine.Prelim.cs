@@ -173,7 +173,16 @@ internal sealed partial class LayoutEngine
         var prelimScore = new Score(
             prelimStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
             ClefToString(prelimStaff.Clef), score.Tempo, score.Title, score.Composer,
-            tupletBrackets: score.TupletBrackets, header: score.Header)
+            // The opening tempo's swing equation is part of the mark this pass prices: without
+            // it the systems' extents — the page chain's rods and the breaker's line heights —
+            // held the metronome mark's note and not the equation's taller triplet bracket,
+            // which the final pass (LayoutEngine.FinishLayout's primaryScore) then drew. On a
+            // multi-staff score the bracket overprinted whatever stood over the first system:
+            // a page text's last line (grammar evaluation 4, 2026-11-13; MEASURED on
+            // bigband/r-09 cut to eight staves: the first system's up extent 5.863, the
+            // bracket's number drawn 7.32 over the staff's top line).
+            tupletBrackets: score.TupletBrackets, header: score.Header,
+            swingSubdivision: score.SwingSubdivision)
         {
             TempoText = score.TempoText,
             TempoBeatUnit = score.TempoBeatUnit,

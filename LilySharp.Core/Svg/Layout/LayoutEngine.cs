@@ -136,12 +136,11 @@ internal sealed partial class LayoutEngine
         // line of the page's chain after the rows, carried by the band; the one after the last
         // system goes to the pages with the systems.
         // Each is set as its own opening line says (indent, center, box).
-        header = HeaderBand.WithText(header, ProseBand.Build(
-            score.Texts.Before, score.Texts.BeforePosition, score.TextMetrics, _options.ContentWidth,
-            ProseShape.Of(score.Texts.BeforeShape, _options.StaffSpaceMm)));
-        var endText = ProseBand.Build(
-            score.Texts.After, score.Texts.AfterPosition, score.TextMetrics, _options.ContentWidth,
-            ProseShape.Of(score.Texts.AfterShape, _options.StaffSpaceMm));
+        // …and each of its blocks (a later fence for the place with a shape of its own).
+        header = HeaderBand.WithText(header, ProseBand.Stack(
+            score.Texts.Blocks(before: true), score.TextMetrics, _options.ContentWidth, _options.StaffSpaceMm));
+        var endText = ProseBand.Stack(
+            score.Texts.Blocks(before: false), score.TextMetrics, _options.ContentWidth, _options.StaffSpaceMm);
 
         // LILYPOND-REF: lily/page-layout-problem.cc:656-717 alignment_distances
         // Apply user overrides for StaffGrouper spacing before layout

@@ -47,6 +47,8 @@ poet "Poet"             // optional: the left end of the composer's line (\heade
                         // (white above and below, in staff spaces unless a unit is glued on; default 1,
                         // `yMargin 0` is LilyPond's own spacing) or `yMargin 3 1` (above, below) — e.g.
                         // ```md end xMargin 30mm box. A length is 20mm, 2cm, 0.5in or bare staff spaces.
+                        // Two fences for one place stack, each with its own shape. The whole of it,
+                        // with examples: the section "A text for the page" below.
 tempo 120               // optional; also: tempo "a tempo" (words alone: printed, the speed unchanged — for "a tempo", "Tempo I", "Meno mosso"), tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit), tempo "Lively" 4. = 116 (dotted unit), tempo Comodo 4 = 84 (a bare word is the marking); 'tempo 120 swing' adds a shuffle-feel equation, and plays it from there on ('swing 16' = 16th swing; only 8 or 16; 'tempo swing' = the equation alone); a last word 'bare' PLAYS the count and does NOT PRINT it: tempo "Tempo I" 4 = 92 bare sounds at 92 and prints only the words — for a "Tempo I", "Più mosso", "a tempo" that must change the speed without a metronome mark (anywhere a tempo goes; it needs both words and a count, LYS0044 otherwise)
 time 4/4                // optional (default 4/4); 4/4 engraves as the C
                         // An ADDITIVE numerator groups the beats: 'time 3+2+2/8' prints 3+2+2 over 8
@@ -1112,8 +1114,10 @@ score { staff gtr  tab gtr }
   `chordShapes { A7(b9) x02323  G }` table (a name may carry its parenthesised alteration) and
   `capo` draw fret DIAGRAMS over a staff — see *Annotations* and *Layout*. A `chord(…)` /
   `diagram(…)` item's notes carry their strings, so a tab under it shows the shape.
-- `@vibrato` is a singer's mark (LYS1008 on an instrument): the word on the page is
-  `@text("vib.")`.
+- `@vibrato` on a fretted instrument's part (a part whose `instrument` or `tuning` gives it
+  strings with frets) is the WAVY LINE above the note, on the staff and on the tab alike — see
+  *Annotations*. (On a sung part it is the singer's vibrato and draws nothing; only on a part
+  that is neither does it warn, LYS1008.) The word "vib." is `@text("vib.")` anywhere.
 
 ## Drums (`clef percussion`)
 
@@ -1707,6 +1711,101 @@ with the `lilysharp_readGuide` tool, topic `composing` (`docs/COMPOSE_FOR_LLM.md
   instrument-preset / tuning names, key modes) are written in their canonical (lowercase)
   case. `Treble` is a different, unknown symbol from `treble` and is an error — not a
   silent fallback.
+## A text for the page (the ```` ```md ```` fence)
+
+A performance note, a dedication, the words of the song, practice instructions: Markdown
+between a line that begins ```` ```md ```` and a line that begins ```` ``` ````. Nothing between
+the two lines is Lily# (`//`, `{`, `"` mean nothing there).
+
+````
+title "Morning Song"
+composer "A. Composer"
+
+```md box
+# Performance note
+Keep the tempo **slow**; the left hand never rises above *piano*.
+
+- first time *mf*
+- second time *p*
+```
+
+```md center
+*for my choir*
+```
+
+```md end xMargin 30mm
+## Words
+Morning comes, the window opens.
+```
+
+part m { clef treble }
+section A { m { c'1 | } }
+form { A }
+score { staff m }
+````
+
+**Where a fence may stand** — two places only:
+
+| Written | Printed |
+|---|---|
+| at the top level, anywhere among the declarations: ```` ```md ```` | under the title (and the poet / composer line), above the first system |
+| at the top level: ```` ```md end ```` | under the last system of the last page (on a page of its own after it when that page has no room) |
+| directly inside `score NAME { … }` | the same two places, in THAT score only: it replaces the file's text for the place (an empty fence = no text there in this score) |
+
+A text prints in every score with nothing written in `score { }`. A fence inside a part, a
+section's music or a phrase is an error; a fence directly in a top-level `section` is read
+and NOT printed yet (warned, LYS4058).
+
+**The opening line's words** — after `md` (or `markdown`), in any order, each once:
+
+| Word | Meaning |
+|---|---|
+| `end` | the place: under the last system instead of under the title |
+| `box` | a thin ruled frame around the text |
+| `center` | each line centred (headings too; a list keeps its shape at the left) |
+| `xMargin 20mm` / `xMargin 20mm 10mm` | white at both sides / at the left and the right, inside the line width: the text is set narrower |
+| `yMargin 2` / `yMargin 3 1` | white above and below / above, below. Default 1 staff space each; `yMargin 0` is LilyPond's own tight spacing |
+
+A length is `20mm`, `2cm`, `0.5in` (the unit glued on) or a bare number of staff spaces. Any
+other word, a word twice, a negative length, an `xMargin` that leaves under 10 staff spaces of
+text, a `yMargin` over 50: LYS4057.
+
+**Two fences for one place** print one under the other in written order, and EACH HAS ITS OWN
+SHAPE — the boxed note and the centred dedication above. Between two blocks stands the upper
+one's white below and the lower one's white above (`yMargin`). Two fences that write no shape
+word are simply one text, the second its next paragraph.
+
+**What is drawn**: paragraphs (a blank line between them), `**bold**`, `*italic*`, a line ended
+by hand (two spaces or `\` at the line's end), `# Heading` (bold, the subtitle's size) and
+`## Heading` (bold, one size smaller; deeper levels the same), `- bullet` and `1. numbered`
+lists, nested by indenting. Lines break by themselves at the text's width — between words, and
+between characters in Japanese, Chinese and Korean. **Read and NOT drawn, each warned where it
+is written (LYS4058)**: tables, code blocks, block quotes, rules (`---`), images, HTML. A code
+span's and a link's words are printed as plain words (the link's address is not).
+
+There is no copyright or footer line: write it as an `md end` text.
+
+**In a Markdown file**, a Lily# example that holds a page text is fenced with FOUR backticks,
+because its own three would end a three-backtick block:
+
+`````
+````lys
+title "Morning Song"
+```md
+Keep it slow.
+```
+part m { clef treble }
+section A { m { c'1 | } }
+form { A }
+score { staff m }
+````
+`````
+
+(Inside a `.lys` file the same rule holds one level down: a fence opened with four backticks
+closes on four, so its text may write three.)
+
+Not in MusicXML or MIDI. The LilyPond export writes the text as a `\markuplist`.
+
 ## Text fonts (`fonts { … }`)
 
 A face, a size and a style per kind of text. Keys are a generic family, a group, or a
@@ -1821,6 +1920,10 @@ paper {
   raggedBottom             // bare flag: do not justify pages (default: only the last page is ragged)
   breaksOnly               // bare flag: break lines/pages only at the written break / pageBreak
   spacingIncrement 1.2     // horizontal note-spacing unit (staff spaces)
+  staffSpace 1.5mm         // THE STAFF'S SIZE: the distance between two staff lines (default 1.757299mm,
+                           // a 20pt staff). Smaller = smaller staves, more music on the page
+  systemsPerPage 4         // exactly 4 systems on every page (or minSystemsPerPage / maxSystemsPerPage)
+  measuresPerSystem 4      // exactly 4 bars on every system
   systemSystemSpacing { basicDistance 12  minimumDistance 8  padding 1  stretchability 60 }
   staffStaffSpacing   { basicDistance 9 }   // staves of a group
 }
@@ -1828,7 +1931,8 @@ paper {
 
 Rules worth knowing before emitting one:
 - Scalar keys: `paperWidth paperHeight leftMargin rightMargin topMargin bottomMargin
-  indent shortIndent spacingIncrement`. Flags: `raggedRight raggedBottom breaksOnly`. Spacing
+  indent shortIndent spacingIncrement shortestDurationSpace staffSpace systemsPerPage
+  minSystemsPerPage maxSystemsPerPage measuresPerSystem`. Flags: `raggedRight raggedBottom breaksOnly`. Spacing
   blocks: `systemSystemSpacing scoreSystemSpacing markupSystemSpacing scoreMarkupSpacing
   markupMarkupSpacing topSystemSpacing lastBottomSpacing staffStaffSpacing
   staffGroupStaffSpacing defaultStaffStaffSpacing nonStaffRelatedStaffSpacing
@@ -1845,7 +1949,23 @@ Rules worth knowing before emitting one:
 - ⚠️ A unit is glued to its number: `210 mm` (spaced) is an error naming the glued
   spelling. `stretchability` is unitless.
 - ⚠️ The staff-spacing family lives HERE, not in `override` (applied score-wide in one
-  pass). There is no staff-size key and no algorithm switch.
+  pass). There is no algorithm switch.
+- **Smaller staves / how much goes on a page** — three keys:
+  - `staffSpace 1.5mm` is the staff's size (LilyPond's `set-global-staff-size`): the distance
+    between two staff lines. The default is `1.757299mm` (a 20pt staff); `1.493704mm` is a 17pt
+    staff, about `1.2mm`–`1.4mm` suits a full score of 12–20 staves on A4. It NEEDS its unit
+    (`mm`, `cm`, `in`). The paper, the margins and every length written with a unit keep their
+    size; the staves, notes and text get smaller on it, so more bars fit a line and more
+    systems a page.
+  - `systemsPerPage 4` puts exactly 4 systems on every page (the lines are re-broken to fill
+    them); `minSystemsPerPage 3` / `maxSystemsPerPage 5` are a floor and a cap instead. More
+    than a page can hold are pressed together, with a warning.
+  - `measuresPerSystem 4` puts exactly 4 bars on every system (a lead sheet's layout).
+  ```
+  paper { size a4  staffSpace 1.3mm }            // a big score: smaller staves
+  ```
+  A page that warns "page N is over-full … its systems were pressed together" wants a smaller
+  `staffSpace` (or fewer staves: `removeEmpty`), not spacing overrides.
 - Unknown keys are an error; a key set twice is a warning (last wins).
 - **Named blocks, per score** — same shape as fonts: `paper wide { paperWidth 250mm }`
   at the top level, then `score { paper wide staff melody }`, or

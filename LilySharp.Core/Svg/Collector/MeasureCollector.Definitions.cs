@@ -665,10 +665,18 @@ public sealed partial class MeasureCollector
     /// <summary>
     /// A fenced text for the page (docs/markdown-text-design.md): under the title, or after
     /// the last system when its opening line says <c>end</c>. Two for one place print one
-    /// after the other, as two paragraphs — ONE text, set as the first of them says
-    /// (<c>xMargin</c>, <c>yMargin</c>, <c>center</c>, <c>box</c>; a later fence that writes a shape of its
-    /// own is refused by MarkdownTextValidator).
+    /// after the other, each a BLOCK set as its own opening line says (<c>xMargin</c>,
+    /// <c>yMargin</c>, <c>center</c>, <c>box</c>) — a boxed note, then a centred dedication.
+    /// Two plain fences in a row are one block, the second its next paragraph, as they have
+    /// always been.
     /// </summary>
+    /// <remarks>
+    /// Until grammar evaluation 4 (2026-11-13) the place was ONE text set as its first fence
+    /// said, and a shape word on a later fence was an error (LYS4057): the choral writer
+    /// could not put a boxed note and a centred dedication under one title.
+    /// LILYSHARP-OWN: a plain fence after a SHAPED one is a plain block under it (it was a
+    /// paragraph inside the first one's shape for the day the shapes had existed).
+    /// </remarks>
     private void CollectText(MarkdownTextSyntax text, bool replace)
     {
         var value = text.Value;
@@ -677,24 +685,35 @@ public sealed partial class MeasureCollector
         string body = value.Body;
         int position = text.Fence.Span.Start;
         if (text.IsEnd)
-        {
-            bool fresh = replace || string.IsNullOrEmpty(_v.Meta.TextAfter);
-            _v.Meta.TextAfter = fresh ? body : _v.Meta.TextAfter + "\n\n" + body;
-            if (fresh)
-            {
-                _v.Meta.TextAfterPosition = position;
-                _v.Meta.TextAfterShape = value.Shape;
-            }
-        }
+            Add(ref _v.Meta.TextAfter, ref _v.Meta.TextAfterPosition, ref _v.Meta.TextAfterShape, ref _v.Meta.TextAfterMore);
         else
+            Add(ref _v.Meta.TextBefore, ref _v.Meta.TextBeforePosition, ref _v.Meta.TextBeforeShape, ref _v.Meta.TextBeforeMore);
+
+        void Add(ref string? first, ref int firstPosition, ref TextShape firstShape, ref Model.TextBlocks? more)
         {
-            bool fresh = replace || string.IsNullOrEmpty(_v.Meta.TextBefore);
-            _v.Meta.TextBefore = fresh ? body : _v.Meta.TextBefore + "\n\n" + body;
-            if (fresh)
+            var shape = value.Shape;
+            // (An empty fence begins nothing: the next one is the place's first.)
+            if (replace || (string.IsNullOrEmpty(first) && more is null))
             {
-                _v.Meta.TextBeforePosition = position;
-                _v.Meta.TextBeforeShape = value.Shape;
+                first = body;
+                firstPosition = position;
+                firstShape = shape;
+                more = null;
+                return;
             }
+            // A plain fence after a plain block is that block's next paragraph.
+            var last = more is { } blocks ? blocks.Items[^1].Shape : firstShape;
+            if (shape.IsPlain && last.IsPlain)
+            {
+                if (more is null)
+                    first = first + "\n\n" + body;
+                else
+                    more = new Model.TextBlocks(more.Items.SetItem(more.Items.Length - 1,
+                        more.Items[^1] with { Markdown = more.Items[^1].Markdown + "\n\n" + body }));
+                return;
+            }
+            more = new Model.TextBlocks((more?.Items ?? ImmutableArray<Model.TextBlock>.Empty)
+                .Add(new Model.TextBlock(body, position, shape)));
         }
     }
 

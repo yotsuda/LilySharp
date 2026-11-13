@@ -173,6 +173,13 @@ internal static partial class SharedRenderer
             // The title/composer header belongs to the FIRST page only (later
             // pages reserve no header height, so re-printing it overlapped the
             // top system).
+            // The text after the last system stands on the page that HOLDS it — the last,
+            // whichever that is. It was drawn inside DrawHeader, so only where the last page
+            // was also the first: a score of two pages or more printed its closing text on no
+            // page and said nothing (grammar evaluation 4, 2026-11-13; the layout had placed
+            // it). Before the header, as it was drawn there: a one-page file is the same bytes.
+            if (page.EndText is { } endText)
+                DrawProse(score, endText, page.EndTextY, page, options, gc);
             if (firstPage)
                 DrawHeader(score, page, options, gc);
             firstPage = false;
@@ -493,6 +500,17 @@ internal static partial class SharedRenderer
     /// a list item's marker before its first line; and a boxed text's frame around them.
     /// </summary>
     private static void DrawProse(
+        MultiStaffScore score, ProseBand place, double referenceY, PageLayout page,
+        LayoutOptions options, IDrawingContext gc)
+    {
+        // Each block of the place — a fence with a shape of its own (grammar evaluation 4,
+        // 2026-11-13) — about its own reference point; a text of one block is itself.
+        foreach (var (block, offset) in place.Blocks)
+            DrawProseBlock(score, block, referenceY + offset, page, options, gc);
+    }
+
+    /// <summary>One block of a fenced text: its frame, its markers and its lines.</summary>
+    private static void DrawProseBlock(
         MultiStaffScore score, ProseBand band, double referenceY, PageLayout page,
         LayoutOptions options, IDrawingContext gc)
     {
@@ -525,8 +543,26 @@ internal static partial class SharedRenderer
                         TextRole.Markdown, ProseBand.StyleOf(fonts, marker.Style), TextAnchor.Start);
                 // (A heading's line is larger; its pieces are already bold.)
                 foreach (var piece in line.Pieces)
-                    gc.DrawText(piece.Text, options.MarginLeft + line.Left + piece.X, y, em * line.Scale,
-                        TextRole.Markdown, ProseBand.StyleOf(fonts, piece.Style), TextAnchor.Start);
+                {
+                    var style = ProseBand.StyleOf(fonts, piece.Style);
+                    double size = em * line.Scale;
+                    // A character the text's face lacks stands in a cell of one em
+                    // (ProseBand.Break), drawn by whatever face the machine has for it. That
+                    // face's own advance is not the cell's — a face with narrow kana left each
+                    // glyph at its cell's left edge, so the white fell unevenly after it
+                    // (seen 2026-11-13: "こ と ば を 大切に"). Set in the MIDDLE of its cell the
+                    // characters stand at one pitch whatever the face.
+                    bool cell = piece.Text.Length is 1 or 2 && char.ConvertToUtf32(piece.Text, 0) is var cp
+                        && char.ConvertFromUtf32(cp).Length == piece.Text.Length
+                        && LilySharp.Core.Rendering.Prose.IsWide(piece.Text[0])
+                        && !fonts.Spells(piece.Text, size, TextRole.Markdown, style);
+                    if (cell)
+                        gc.DrawText(piece.Text, options.MarginLeft + line.Left + piece.X + size / 2, y, size,
+                            TextRole.Markdown, style, TextAnchor.Middle);
+                    else
+                        gc.DrawText(piece.Text, options.MarginLeft + line.Left + piece.X, y, size,
+                            TextRole.Markdown, style, TextAnchor.Start);
+                }
             }
         }
     }
@@ -534,9 +570,6 @@ internal static partial class SharedRenderer
     private static void DrawHeader(
         MultiStaffScore score, PageLayout page, LayoutOptions options, IDrawingContext gc)
     {
-        // The text after the last system stands on the page whether or not it has a header.
-        if (page.EndText is { } endText)
-            DrawProse(score, endText, page.EndTextY, page, options, gc);
         if (page.Header is not { } band)
             return;
         if (band.Text is { } headerText)

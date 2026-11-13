@@ -234,7 +234,9 @@ FenceClose     = (* a line that begins, after blanks, with as many backticks as 
                     backticks holds a text that writes three.
 
                     At the top level the text is printed under the title rows, above the first
-                    system; with 'end' on the opening line, under the last system. Two fences
+                    system; with 'end' on the opening line, under the last system — the last
+                    system of the LAST page, or a page of its own after it when that page has
+                    no room. Two fences
                     for one place print one after the other. Inside 'score { }' a fence replaces
                     the file's text for the same place in that score (an empty one leaves that
                     place with none) — the rule of a score's own 'title'. A text belongs to the
@@ -266,9 +268,11 @@ FenceClose     = (* a line that begins, after blanks, with as many backticks as 
                     SHAPE, below): the composer line to the first line 2.9705, the
                     last system's middle line to the closing text 12.0000. The twin writes the
                     page's own lines as '\markuplist \column-lines { … }'.
-                    A character the text's face does not have is reserved its em square, the
-                    machine's face drawing it unmeasured: under a face with narrower kana a line
-                    ends short of the margin.
+                    A character the text's face does not have is reserved its em square and
+                    drawn AT that square, a piece of its own (grammar evaluation 4, 2026-11-13:
+                    a bold or italic Japanese run drawn as one string ended short under a face
+                    with narrower kana, a wide gap after it); the machine's face draws it
+                    unmeasured, so under such a face the characters stand a little apart.
 
                     THE SHAPE (owner-approved 2026-11-13). 'xMargin LEFT [RIGHT]' is white at the
                     text's left and right INSIDE the line width — the text is broken that much
@@ -289,7 +293,13 @@ FenceClose     = (* a line that begins, after blanks, with as many backticks as 
                     inset by 1.1 and broken narrower again; the margin above and below is outside
                     the frame. The words combine, and the text under the title and the
                     'end' text each read their own opening line. Two fences for one place are
-                    one text, set as the first says. The twin writes the side margin as \hspace,
+                    two BLOCKS, each set as its own opening line says and stacked in written
+                    order, extent to extent — the first one's white below and the next one's
+                    white above between them (a boxed note, then a centred dedication;
+                    LILYSHARP-OWN, grammar evaluation 4, 2026-11-13: it was one text set as the
+                    first said, a shape on the second an error). A fence with no shape word
+                    after a block with none is that block's next paragraph, as it always was.
+                    The twin writes every block into the one list. It writes the side margin as \hspace,
                     the centring as \fill-line in an overridden line-width, the frame as \box
                     around a \column given the page's extent, and the margin above and below as
                     the first and last lines' \with-dimension #Y. MEASURED 2026-11-13 on LilyPond
@@ -302,7 +312,7 @@ FenceClose     = (* a line that begins, after blanks, with as many backticks as 
                     not its place's — also a word written twice, a margin with no length, a
                     negative length, a unit that is not mm, cm or in, an xMargin that leaves the
                     text less than 10 staff spaces of the line width where the fence stands, a
-                    yMargin over 50 staff spaces, a shape on the second fence of one place — is
+                    yMargin over 50 staff spaces — is
                     LYS4057. A fence never closed is LYS0043. *)
 
 UsingDecl      = 'using' , String ;

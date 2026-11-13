@@ -170,17 +170,21 @@ public class MarkdownTextShapeTests
     }
 
     [Fact]
-    public void TwoFencesForOnePlace_AreOneText_SetAsTheFirstSays()
+    public void TwoFencesForOnePlace_AreTwoBlocks_EachSetAsItsOwnLineSays()
     {
+        // (Until grammar evaluation 4, 2026-11-13, the place was ONE text set as the first
+        // fence said, and a shape on the second an error: GrammarEvaluation4Tests has the
+        // stack's geometry.)
         string both = $"{F}md box\nFirst.\n{F}\n{F}md\nSecond.\n{F}";
         Assert.Empty(WordErrors(Book(top: both)));
-        var band = Laid(Book(top: both)).Pages[0].Header!.Text!;
-        Assert.NotNull(band.Frame);
-        Assert.Equal(["First.", "Second."], band.Lines.Select(TextOf));
+        var blocks = Laid(Book(top: both)).Pages[0].Header!.Text!.Blocks.Select(b => b.Block).ToArray();
+        Assert.Equal(2, blocks.Length);
+        Assert.NotNull(blocks[0].Frame);
+        Assert.Null(blocks[1].Frame);
+        Assert.Equal(["First.", "Second."], blocks.Select(b => TextOf(Assert.Single(b.Lines))));
 
-        // A shape on the second fence would set half a text another way.
-        var d = Assert.Single(WordErrors(Book(top: $"{F}md\nFirst.\n{F}\n{F}md center box\nSecond.\n{F}")));
-        Assert.Contains("'center' is on the second fence for this place", d.Message);
+        // A shape on the second fence is that block's.
+        Assert.Empty(WordErrors(Book(top: $"{F}md\nFirst.\n{F}\n{F}md center box\nSecond.\n{F}")));
         // The other place is another text, with a shape of its own.
         Assert.Empty(WordErrors(Book(top: $"{F}md box\nFirst.\n{F}\n{F}md end center\nLast.\n{F}")));
         // A score's fence begins that score's text.

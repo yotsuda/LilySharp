@@ -48,10 +48,10 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
     /// and the shape — <c>box</c>, <c>center</c>, <c>xMargin LEFT [RIGHT]</c>,
     /// <c>yMargin TOP [BOTTOM]</c> — each once, in any order; side margins that leave the text
     /// its least width on the paper the fence stands under, a margin above or below no
-    /// more than the most one may be; and one shape for one place.
+    /// more than the most one may be. Each fence is read alone: a later one for the same
+    /// place is a block with a shape of its own.
     /// </summary>
-    private void ValidatePageWords(SyntaxTree tree, MarkdownTextSyntax text, FencedText value, int at,
-        Dictionary<(SyntaxNode? Parent, bool End), bool> shapedPlaces)
+    private void ValidatePageWords(SyntaxTree tree, MarkdownTextSyntax text, FencedText value, int at)
     {
         bool placed = false;
         foreach (var (word, offset) in value.Words.Skip(1))
@@ -82,22 +82,9 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
             _diagnostics.Error(new TextSpan(at + offset, length), DiagnosticCodes.FencedTextWord, message ?? unknown);
         }
 
-        // Two fences for one place are ONE text, set as the first says: a later one that
-        // writes a shape of its own would set half a text another way.
-        var place = (text.Parent, text.IsEnd);
-        int firstShapeWord = FirstShapeWord(value);
-        if (shapedPlaces.ContainsKey(place) && firstShapeWord >= 0)
-        {
-            var (word, offset) = value.Words[firstShapeWord];
-            _diagnostics.Error(new TextSpan(at + offset, word.Length), DiagnosticCodes.FencedTextWord,
-                $"'{word}' is on the second fence for this place. Two fences for one place are one text, "
-                + "set as the first one's opening line says: write the shape there.");
-            return;
-        }
-        // (An empty fence begins nothing: the collector takes the next one as the first.)
-        if (!string.IsNullOrEmpty(value.Body))
-            shapedPlaces.TryAdd(place, true);
-
+        // (A later fence for the same place is a block of its own, with its own shape: until
+        // grammar evaluation 4, 2026-11-13, a shape word there was an error — "two fences for
+        // one place are one text" — and a boxed note with a centred dedication had no spelling.)
         if (problems.Count > 0)
             return;
         string Mm(double ss, Svg.Layout.LayoutOptions on)
@@ -184,16 +171,6 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
         return -1;
     }
 
-    private static int FirstShapeWord(FencedText value)
-    {
-        for (int i = 1; i < value.Words.Count; i++)
-        {
-            if (FencedText.ShapeWords.Contains(value.Words[i].Text))
-                return i;
-        }
-        return -1;
-    }
-
     /// <summary>The paper a fence's text is set on where it is written: the file's unnamed
     /// <c>paper { }</c>, or — in a score that writes <c>paper NAME</c> or its own block — that
     /// score's, read as the collector reads it.</summary>
@@ -210,8 +187,6 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        // The places a fence has already begun, by where it is written and which place.
-        var shapedPlaces = new Dictionary<(SyntaxNode? Parent, bool End), bool>();
         foreach (var node in tree.GetRoot().DescendantNodesOfKinds(Kinds))
         {
             if (node is not MarkdownTextSyntax text)
@@ -255,7 +230,7 @@ internal sealed class MarkdownTextValidator : ISemanticValidator
             }
             else
             {
-                ValidatePageWords(tree, text, value, at, shapedPlaces);
+                ValidatePageWords(tree, text, value, at);
             }
 
             // What is read and not drawn is said where it is written, never dropped in silence.

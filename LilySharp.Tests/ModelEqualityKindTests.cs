@@ -82,6 +82,10 @@ public class ModelEqualityKindTests
         // 1115): a COPY of that column with its shift and flags — a description, so two identical
         // ones are the same one (and the measure's content key reads them so).
         "GraceCompanion",
+        // one block of a page text (a fence's Markdown, where it begins, its shape; grammar
+        // evaluation 4, 2026-11-13): a description — ScoreTexts is a key of the incremental
+        // compiler's, and two blocks that say the same are the same.
+        "TextBlock",
     ];
 
     [Fact]

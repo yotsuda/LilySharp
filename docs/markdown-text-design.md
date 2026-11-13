@@ -52,7 +52,8 @@ section B {
   (Markdown's own rule).
 - The CLOSING fence's indentation is taken off every line, so a fence may be indented in a
   section (a C# raw string's rule: where the closing fence stands is the text's margin).
-- Two fences for one place print one after the other, in written order.
+- Two fences for one place print one after the other, in written order — each a block with
+  its own shape (section 5.3).
 - The backtick is new to the lexer (nothing uses it today).
 
 **A text is bound to music, never to a system.** "Between the second and third systems" moves
@@ -134,10 +135,9 @@ another thing and is as it was.)
   (`PaperPlanReader.ToStaffSpaces`; the list of units is one list). There is no `pt`: the
   language has none.
 - The three combine. The text under the title and the `end` text each read their own opening
-  line, at the top level and in a score's fence; a score's fence brings its own words with its
-  text (it does not inherit the file's shape).
-- Two fences for one place are ONE text, set as the first one says; a shape on the second is
-  an error.
+  line — each FENCE does (section 5.3) — at the top level and in a score's fence; a score's
+  fence brings its own words with its text (it does not inherit the file's shape).
+- Two fences for one place are two BLOCKS, each set as its own opening line says (section 5.3).
 - Errors, all LYS4057 on the word: a word that is none of these (the message lists them), a
   word twice, a margin with no length or with three, a negative length, a unit that is not
   `mm` / `cm` / `in`, an `xMargin` that leaves the text less than 10 staff spaces — judged on
@@ -310,6 +310,68 @@ The twin's forms:
   (first written to the frame's edge, the whole box stood 1.1 left of the margin).
 - Found on the way: the twin of a score's OWN fence wrote the file's text (its page model was
   collected without the score's fences). Mended with this.
+
+### 5.3 Blocks: two fences for one place (built 2026-11-13, grammar evaluation 4)
+
+The choral writer wanted a boxed performance note AND a centred dedication under the title,
+and met the rule of section 2.3 as first built: "two fences for one place are one text, set
+as the first says; a shape on the second is an error". The rule is gone.
+
+- **A place is a sequence of blocks.** Each fence for the place is a block, set as its own
+  opening line says (`box`, `center`, `xMargin`, `yMargin`); the blocks stand in written
+  order. `Model.ScoreTexts.Blocks`, `ProseBand.Stack` (the band's `Later`, read through
+  `Blocks`), `SharedRenderer.DrawProse` block by block.
+- **Stacked extent to extent** (LILYSHARP-OWN): the next block's reference point stands the
+  first one's `Down` and its own `Up` lower, so between two blocks stand the upper one's white
+  below and the lower one's white above (1.0 + 1.0 at the default; `yMargin` on either sets
+  its side). To the page the stack is ONE band — `Up` the first block's, `Down` the whole
+  stack's — so the springs and the breaker's priced depth are as for one text.
+- **Plain fences are one text, as before**: a fence with no shape word after a block with
+  none is that block's next paragraph (half a skip of white, not two margins) — two plain
+  fences are to the digit what they were. A plain fence after a SHAPED block is a plain block
+  under it (for the day the shapes had existed it was a paragraph inside the first one's
+  shape — changed with this; a text that wants two paragraphs in one box writes them in one
+  fence).
+- A score's first fence for a place replaces the file's whole sequence for that place; its
+  later ones follow it.
+- **The twin** writes every block into the ONE `\markuplist \column-lines`, a boxed block as
+  its one line, a plain block's lines each a line: the list stacks its lines extent to
+  extent, and each block's first and last line already carry its margins as their extent.
+
+MEASURED 2026-11-13, LilyPond 2.26.0 (`LilySharp-Lab` `sessions/p1226/md/eval4/fixA/i2`,
+`r02.lys` — `md box` with a heading and an item, then `md center` with one line — and its
+`lysc ly` twin; staff spaces, y down):
+
+| What | Lily# | LilyPond |
+|---|---|---|
+| Boxed heading → its item | 4.01 | 4.0098 |
+| The box's last baseline → the centred line under it (1 + 1.1 + 1 + 1 + 2) | 6.10 | 6.1001 |
+| The centred line's left edge | 53.74 | 54.3049 (LilyPond centres by its own measure: section 5.1) |
+
+### 5.4 What stands under the text (mended 2026-11-13, grammar evaluation 4)
+
+The big-band writer's page: a poet line, a text, and `tempo "Medium Swing" 4 = 138 swing`
+over nineteen staves — the swing equation's triplet bracket printed through the text's last
+line, the text close under the poet line.
+
+- **The equation was not in the system's extent.** The pass that prices the systems for the
+  page (`LayoutEngine.Prelim`'s score) was built without the opening tempo's swing
+  subdivision, which the final pass has; so on a multi-staff score the first system's ink
+  above the staff ended at the metronome note's stem, and whatever stood over the system —
+  a text, the title — was cleared by that and not by the bracket. And the equation's own top
+  (`MetronomeMarkGeometry.Swing`) left out the bracket's number, 0.49 over its line.
+  MEASURED (`eval4/fixA/i4`, the repro cut to eight staves so the page fits, `markTempo
+  beside`): the first system's up extent 5.863 → 7.317; the text band's bottom 29.21, the
+  number's top 28.25 before (0.96 INSIDE the band) and 29.70 after (the 0.5 of
+  markup-system-spacing's padding under it).
+- **What remains on the writer's own page is the over-full page**, and it is said: nineteen
+  staves at the default staff are 25 staff spaces taller than A4 ("page 1 is over-full …"),
+  and an over-full page takes the overflow out of EVERY gap of the chain, the title rows →
+  text and text → system ones included (LILYPOND-REF: lily/page-layout-problem.cc:806-822
+  solve_rod_spring_problem — the k-th position moved up by (k − 1) × overflow / (count − 2)).
+  The text therefore stands 1.19 nearer the poet line there (8.83 for a rod of 10.02); on a
+  page that fits it keeps its margin (3.95 from the poet / composer baseline). Not changed:
+  the cure is a smaller staff (`paper { staffSpace … }`), which GRAMMAR_FOR_LLM now gives.
 
 ### 5.2 Headings and lists (built 2026-11-13)
 
@@ -513,14 +575,45 @@ Lily#: a known difference, written into the twin as a comment where it happens.
   5.09 against 4.93, and the same book WITHOUT a text is 4.54 against 4.40 (`t0.lys`): the
   difference is the page's own in that book (a rehearsal mark over the clef), not the text's.
 - Approximations, said: the breaker prices the rows and the text as ONE title line, and the
-  closing text as ink under the last system (so the two never part, where LilyPond may send a
-  trailing markup to the next page alone); the system-count loop does not see the closing text;
-  a text is not broken over a page.
+  closing text as ink under the last system — so the two share a page wherever a page holds
+  both, where LilyPond weighs sending the markup to the next page alone; the system-count loop
+  does not see the closing text; a text is not broken over a page.
+- **Mended 2026-11-13 (grammar evaluation 4).** ⑴ The closing text was DRAWN only where the
+  title was — on page 1 — so a score of two pages or more printed it nowhere, without a
+  word; the layout had placed it on the last page all along (`PageLayout.EndText`). It is
+  drawn on the page that holds it (`SharedRenderer`, the page loop). ⑵ A closing text that
+  cannot share a page with even the last system (the two are taller than the paper) made
+  that page over-full, its system pressed into the top margin. The music is now paged as if
+  it had no text and the text opens a page of its own after it
+  (`PageLayouter.CreatePagesWithOptimalBreaking`; a `PageLayout` with no systems), its first
+  baseline top-markup-spacing under the top of the printable area. A text taller than the
+  paper itself still runs off that page (not broken over pages) and the warning says so.
+  MEASURED (LilyPond 2.26.0, `eval4/fixA/i1`, `v5.lys`: a forced `pageBreak`, one system a
+  page): the text's two baselines on page 2 at 119.00 / 122.87 against LilyPond's 116.34 /
+  120.21 — both engines stretch the last page by the first page's force
+  (ragged-last-bottom), which is why the text stands far under its system there; the 2.66 is
+  that force's, not the text's.
 - Open: a text's widths in the lab's LilyPond are about a tenth narrower than Lily# measures
   them ("This piece is for " 14.75 against 16.56, "A. Composer" 11.72 against 12.87) — not
   looked into; the twin's lines are the page's, so only where a piece begins inside a line
   differs. A Japanese line under a face with narrow kana ends short of the margin (the
   machine's face is not measured).
+- **A character the text's face lacks is set at its em square** (mended 2026-11-13, grammar
+  evaluation 4). The layout always reserved an em a character for kana, kanji and hangul the
+  bundled face does not have, but it handed the drawer one piece a STYLE, and the machine's
+  face set that run by its own advances: under a face with proportional kana a bold or
+  italic run ended short and the next piece stood off it (MEASURED on this machine's PNG,
+  `eval4/choral/r-08`: 2.9 of white after seven bold characters, 4.3 after seven italic).
+  `ProseBand.Break` now makes every such character a piece of its own at its square, so the
+  layout's x is the drawn x. What that guarantees, and what it cannot:
+  - **PNG, PDF**: each character begins at its square; no run can drift, and a change of
+    style leaves no gap (measured in the PNG: every character's ink begins 0.06–0.6 inside
+    its 2.2 square; the PDF takes the same calls and was not rasterised here).
+  - **SVG**: one `<text x=…>` a character, so the viewer cannot accumulate a drift either.
+    The viewer still chooses the face: one with narrower kana leaves a little white inside
+    each square (evenly, the look of a monospaced setting), one wider than an em would
+    touch its neighbour. That is not Lily#'s to rule without embedding a CJK face.
+  - The twin joins the pieces back into strings: LilyPond sets them by its own face.
 
 ### 7.2 What step 5 built: the editor (2026-11-13)
 

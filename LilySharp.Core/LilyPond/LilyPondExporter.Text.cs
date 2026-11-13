@@ -46,21 +46,30 @@ public sealed partial class LilyPondExporter
     {
         if (_page is not { } page)
             return;
-        var texts = page.Texts;
-        var shape = ProseShape.Of(before ? texts.BeforeShape : texts.AfterShape, page.Paper.StaffSpaceMm);
-        var band = ProseBand.Build(before ? texts.Before : texts.After,
-            before ? texts.BeforePosition : texts.AfterPosition, page.TextMetrics, page.Paper.ContentWidth, shape);
-        if (band is null)
+        var place = ProseBand.Stack(page.Texts.Blocks(before), page.TextMetrics, page.Paper.ContentWidth,
+            page.Paper.StaffSpaceMm);
+        if (place is null)
             return;
         double skip = ProseBand.Skip(page.TextMetrics);
         double up = ProseBand.LineUp(page.TextMetrics), down = ProseBand.LineDown(page.TextMetrics);
         _sb.Append(before ? "" : "\n").Append("\\markuplist \\column-lines {\n");
-        if (band.Frame is { } frame)
+        // Every block of the place in the ONE list, in written order (grammar evaluation 4,
+        // 2026-11-13: a later fence with a shape of its own is a block of its own). The list
+        // stacks its lines extent to extent, and each block's first and last line carry its
+        // margins as their extent — which is how the page stacks the blocks (ProseBand.Stack).
+        foreach (var (band, _) in place.Blocks)
         {
-            EmitBoxedText(band, frame, shape.Center, skip, up, down);
-            _sb.Append(before ? "}\n\n" : "}\n");
-            return;
+            if (band.Frame is { } frame)
+                EmitBoxedText(band, frame, band.Center, skip, up, down);
+            else
+                EmitPlainText(band, skip, up, down);
         }
+        _sb.Append(before ? "}\n\n" : "}\n");
+    }
+
+    /// <summary>A block with no frame: one markup a line of the list.</summary>
+    private void EmitPlainText(ProseBand band, double skip, double up, double down)
+    {
         double previous = 0, previousScale = 1;
         for (int i = 0; i < band.Lines.Length; i++)
         {
@@ -86,7 +95,7 @@ public sealed partial class LilyPondExporter
             // A line with white at its left (xMargin, a list's indent) begins after it; a centred one is LilyPond's to centre
             // in the text's width (\fill-line of one markup), so that its own measure of the
             // words, not the page's, finds the middle. A list's line is not centred.
-            bool centred = shape.Center && !line.InList;
+            bool centred = band.Center && !line.InList;
             double white0 = band.Left + (line.Marker is null ? line.Indent : 0);
             bool wrapped = white0 > 1e-9 || centred || line.Marker is not null;
             if (wrapped)
@@ -103,7 +112,6 @@ public sealed partial class LilyPondExporter
                 _sb.Append(centred ? " } }" : " }");
             _sb.Append('\n');
         }
-        _sb.Append(before ? "}\n\n" : "}\n");
     }
 
     private static string Num(double value) => Math.Round(value, 4).ToString("0.####", CultureInfo.InvariantCulture);
@@ -127,7 +135,7 @@ public sealed partial class LilyPondExporter
             .Append(Num(line.Indent - gap)).Append(" . 0) \\right-align \"").Append(Escape(marker.Text)).Append("\" ");
     }
 
-    /// <summary>One line's words: a string, or its pieces in their weights and slants; a
+    /// <summary>One line's words: a string, or its runs in their weights and slants; a
     /// heading's at its size (<c>\fontsize</c>, LilyPond's steps of 2^(1/6)).</summary>
     private void EmitTextLine(ProseLine line)
     {
@@ -138,13 +146,24 @@ public sealed partial class LilyPondExporter
             _sb.Append("\"\"");     // an item that writes no words: its marker alone
             return;
         }
-        if (line.Pieces.Length == 1 && line.Pieces[0].Style == FontStyle.Regular)
+        // The page sets a character its face lacks (kana, kanji) as a piece of its own, at its
+        // em square (ProseBand.Break, grammar evaluation 4, 2026-11-13); LilyPond sets a
+        // string by its own face, so neighbours of one style are one string again here.
+        var pieces = new System.Collections.Generic.List<(string Text, FontStyle Style)>();
+        foreach (var piece in line.Pieces)
         {
-            _sb.Append('"').Append(Escape(line.Pieces[0].Text)).Append('"');
+            if (pieces.Count > 0 && pieces[^1].Style == piece.Style)
+                pieces[^1] = (pieces[^1].Text + piece.Text, piece.Style);
+            else
+                pieces.Add((piece.Text, piece.Style));
+        }
+        if (pieces.Count == 1 && pieces[0].Style == FontStyle.Regular)
+        {
+            _sb.Append('"').Append(Escape(pieces[0].Text)).Append('"');
             return;
         }
         _sb.Append("\\concat {");
-        foreach (var piece in line.Pieces)
+        foreach (var piece in pieces)
         {
             _sb.Append(' ');
             if ((piece.Style & FontStyle.Bold) != 0)

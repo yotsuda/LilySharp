@@ -40,6 +40,10 @@ internal sealed class MetadataState
     // the shape of the fence that begins the place.
     public Syntax.TextShape TextBeforeShape;
     public Syntax.TextShape TextAfterShape;
+    // The blocks after each place's first: a later fence for the place that writes a shape
+    // of its own, or a plain one after it (grammar evaluation 4, 2026-11-13). Null = none.
+    public Model.TextBlocks? TextBeforeMore;
+    public Model.TextBlocks? TextAfterMore;
 
     // Which face each kind of non-music text is drawn in, from the top-level
     // `fonts { … }` directive. Never null: a score without
@@ -122,6 +126,8 @@ internal sealed class MetadataState
         TextAfterPosition = other.TextAfterPosition;
         TextBeforeShape = other.TextBeforeShape;
         TextAfterShape = other.TextAfterShape;
+        TextBeforeMore = other.TextBeforeMore;
+        TextAfterMore = other.TextAfterMore;
         Fonts = other.Fonts;
         Paper = other.Paper;
         LayoutPlan = other.LayoutPlan;
@@ -171,6 +177,8 @@ internal sealed class MetadataState
             && TextAfterPosition == other.TextAfterPosition
             && TextBeforeShape == other.TextBeforeShape
             && TextAfterShape == other.TextAfterShape
+            && Equals(TextBeforeMore, other.TextBeforeMore)
+            && Equals(TextAfterMore, other.TextAfterMore)
             && ReferenceEquals(Fonts, other.Fonts)
             && ReferenceEquals(Paper, other.Paper)
             && ReferenceEquals(LayoutPlan, other.LayoutPlan)
@@ -223,6 +231,8 @@ internal sealed class MetadataState
         TextAfterPosition = 0;
         TextBeforeShape = default;
         TextAfterShape = default;
+        TextBeforeMore = null;
+        TextAfterMore = null;
         // (Fonts, Paper and LayoutPlan are deliberately NOT reset: they are resolved once by
         // CollectDefinitions and read at capture, and a per-pass reset here would drop
         // them before the score is assembled — measured 2026-09-09 on `markTempo beside`.)
