@@ -171,11 +171,13 @@ public class MarkdownTextShapeTests
     public void ALengthIsWrittenAsPaperWritesOne(string length, double staffSpaces)
     {
         var shape = ProseShape.Of(ShapeOf($"```md xMargin {length}"), LayoutOptions.DefaultStaffSpaceMm);
-        Assert.Equal(staffSpaces, shape.MarginLeft, 5);
-        Assert.Equal(staffSpaces, shape.MarginRight, 5);
+        // A tolerance, not a count of decimals: Assert.Equal(…, precision) rounds both sides
+        // with Math.Round, whose midpoints .NET 11 rounds differently (CI ran on it, 2026-11-13).
+        Assert.Equal(staffSpaces, shape.MarginLeft, 1e-5);
+        Assert.Equal(staffSpaces, shape.MarginRight, 1e-5);
         // On a smaller staff the same millimetres are more staff spaces; a bare number is not.
         var small = ProseShape.Of(ShapeOf($"```md xMargin {length}"), LayoutOptions.DefaultStaffSpaceMm / 2);
-        Assert.Equal(length.Any(char.IsLetter) ? 2 * staffSpaces : staffSpaces, small.MarginLeft, 5);
+        Assert.Equal(length.Any(char.IsLetter) ? 2 * staffSpaces : staffSpaces, small.MarginLeft, 1e-5);
     }
 
     [Theory]

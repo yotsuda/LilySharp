@@ -265,8 +265,10 @@ public class TabTupletBracketTests
         // The stem's edge (half a stem thickness off the digit's centre), then 0.2 × the
         // tab's 1.5 line spacing further out.
         const double reach = 0.065 + 0.3;
-        Assert.Equal(firstCentre - reach, hooks[0].X, 2);
-        Assert.Equal(lastCentre + reach, hooks[1].X, 2);
+        // (A tolerance: the SVG writes two decimals, and centre − 0.365 is a midpoint of them —
+        // Assert.Equal(…, 2) rounds it one way on .NET 10 and the other on .NET 11.)
+        Assert.Equal(firstCentre - reach, hooks[0].X, 0.0051);
+        Assert.Equal(lastCentre + reach, hooks[1].X, 0.0051);
         // The hook is 0.7 × 1.5 tall, pointing at the staff.
         Assert.Equal(1.05, System.Math.Abs(hooks[0].Y2 - hooks[0].Y1), 2);
         // Above the tab when the strings stem up, below when they stem down (device y grows down).

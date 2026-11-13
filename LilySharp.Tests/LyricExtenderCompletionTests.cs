@@ -124,7 +124,9 @@ public class LyricExtenderCompletionTests
             .OrderBy(t => t.Y).Last();
         Assert.True(second.Y > first.Y + 5,
             $"second segment must be on the next system (got {first.Y} and {second.Y})");
-        Assert.Equal(eNext.Y - 0.04, second.Y, 1);
+        // (A tolerance, not one decimal: the value is a midpoint of that rounding, which
+        // .NET 10 and .NET 11 round apart.)
+        Assert.Equal(eNext.Y - 0.04, second.Y, 0.011);
         // And it ends before the "e" syllable it leads into.
         Assert.True(second.X2 < eNext.X,
             "the stub must stop before the syllable it leads into");

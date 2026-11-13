@@ -793,7 +793,7 @@ public class PercentRepeatTests
         var plain = PercentRepeatEngraver.Geometry(isBeatSlash: true, slashCount: 2, isDouble: false, staffSpace: 1.0);
         Assert.True(plain.PlainSlash);
         Assert.Equal(2, plain.Slashes);
-        Assert.Equal(1.1765, plain.SlashWidth, 3);
+        Assert.Equal(1.1765, plain.SlashWidth, 0.0001);
         Assert.Equal(2.0, plain.SlashHeight, 6);
         Assert.Equal(0.5569, plain.XWidth, 3);
         Assert.Equal(0.8834, plain.PairGap, 3);
