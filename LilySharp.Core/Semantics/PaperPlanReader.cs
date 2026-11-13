@@ -131,7 +131,39 @@ internal static class PaperPlanReader
     ];
 
     private static readonly string[] SubKeys =
-        ["basicDistance", "minimumDistance", "padding", "stretchability"];
+        ["basicDistance", "minimumDistance", "padding", StretchabilityKey];
+
+    /// <summary>The one sub-key that is no length: a spring's flexibility, a bare number.</summary>
+    private const string StretchabilityKey = "stretchability";
+
+    /// <summary>The scalar key that counts spacing increments: a bare number, no length.</summary>
+    private const string ShortestDurationSpaceKey = "shortestDurationSpace";
+
+    /// <summary>Whether <paramref name="key"/> is a scalar key whose value is a LENGTH — a number
+    /// of staff spaces, or one with a unit — which the step keys move as one (Editing.NoteStepper,
+    /// owner's request 2026-11-13). Not the counts, and not <c>shortestDurationSpace</c>.</summary>
+    internal static bool IsLengthKey(string key) =>
+        Exact(key, ScalarKeys) != null && Exact(key, CountKeys) == null && key != ShortestDurationSpaceKey;
+
+    /// <summary>Whether <paramref name="key"/> names a nested spacing block.</summary>
+    internal static bool IsSpacingKey(string key) => Exact(key, SpecKeys) != null;
+
+    /// <summary>Whether <paramref name="subKey"/> is a spacing block's line whose value is a
+    /// length: every one but <c>stretchability</c>.</summary>
+    internal static bool IsLengthSubKey(string subKey) =>
+        Exact(subKey, SubKeys) != null && subKey != StretchabilityKey;
+
+    /// <summary>
+    /// The paper a block stands for where it is written, as the collector reads it: a top-level
+    /// block over the defaults, a score's own block or reference over the file's unnamed one.
+    /// </summary>
+    internal static LayoutOptions WhereItStands(SyntaxNode root, PaperDeclarationSyntax paper)
+    {
+        if (paper.Parent is not RenderDeclarationSyntax)
+            return Read(paper, out _);
+        var file = FileDefault(root) is { } unnamed ? Read(unnamed, out _) : LayoutOptions.Default;
+        return ReadReference(root, paper, file);
+    }
 
     /// <summary>
     /// The bare flags, canonical spellings: writing one turns it on, and it takes no
@@ -432,7 +464,7 @@ internal static class PaperPlanReader
                 options = ReadCount(options, key, entry, span, boundKeys, found);
                 continue;
             }
-            if (key == "shortestDurationSpace")
+            if (key == ShortestDurationSpaceKey)
             {
                 // LILYPOND-REF: scm/define-grobs.scm SpacingSpanner (shortest-duration-space . 2.0),
                 // read by lily/spacing-options.cc:30-53 Spacing_options::init_from_grob — in
@@ -689,7 +721,7 @@ internal static class PaperPlanReader
             bound[key] = span;
 
             if (!TryReadLength(sub.MinusToken, sub.NumberToken, sub.UnitToken,
-                    unitless: key == "stretchability", span, key, staffSpaceMm, found, out double v))
+                    unitless: key == StretchabilityKey, span, key, staffSpaceMm, found, out double v))
                 continue;
             current = key switch
             {

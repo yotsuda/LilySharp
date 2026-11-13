@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 65 | 観測者がゼロだと自認しているもの |
-| `OWN` | 383 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **511** | |
+| `OWN` | 385 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **513** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -249,7 +249,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（383 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（385 件）
 
 ### `LilySharp.Core/Audio/SingerPlan.cs`
 - **`SingerPlan`** LILYSHARP-OWN.
@@ -264,8 +264,11 @@
 - **`NoteStepper.RunEndOf`** nothing, an error. LILYSHARP-OWN. The end itself is not stepped — it follows its opening,
 ### `LilySharp.Core/Editing/NoteStepper.cs`
 - **`NoteStepper.NoProgram`** LILYSHARP-OWN: the editor's audition has no LilyPond counterpart (the performer
-### `LilySharp.Core/Editing/NoteStepper.FenceIndent.cs`
-- **`NoteStepper.LengthSteps`** LILYSHARP-OWN: the physical units — no length with a unit stepped before this one
+### `LilySharp.Core/Editing/NoteStepper.Length.cs`
+- **`NoteStepper.LengthSteps`** LILYSHARP-OWN: the physical units — a millimetre and five, and about as much in the
+### `LilySharp.Core/Editing/NoteStepper.PaperLength.cs`
+- **`NoteStepper.StaffSpaceStepFraction`** LILYSHARP-OWN: a millimetre a press would double the staff.
+- **`NoteStepper.PaperTrouble`** LILYSHARP-OWN: the second — no diagnostic refuses margins wider than their paper, and the
 ### `LilySharp.Core/Editing/SingerParts.cs`
 - **`SingerParts`** over g-sharp in a minor a third above is b. LILYSHARP-OWN, a reading.
 - **`SingerParts.BarsAtRest`** LILYSHARP-OWN.

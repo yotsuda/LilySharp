@@ -3045,4 +3045,187 @@ public class StepRequestTests
         string inSection = "part m { clef treble }\nsection A {\n```md indent 20‸mm\nA note.\n```\n  m { c'1 | }\n}\nscore { staff m }\n";
         Assert.True(Step(inSection, +1, semitone: true).Response.Fallback);
     }
+
+    // ---------------------------------------------------------------- a paper block's lengths
+
+    /// <summary>A piece under a <c>paper { }</c> block of one entry.</summary>
+    private static string Paper(string entry)
+        => $"paper {{ {entry} }}\npart m {{ clef treble }}\nsection A {{ m {{ c'1 | }} }}\nscore {{ staff m }}\n";
+
+    /// <summary>Owner's request 2026-11-13: "paper { margin xx } も動くようにして" — a length of a
+    /// paper block steps as a fenced text's indent does: the same steps for each unit, the unit
+    /// kept, a bare number as staff spaces.</summary>
+    [Theory]
+    [InlineData("leftMargin 15‸mm", +1, true, "leftMargin 16mm")]
+    [InlineData("leftMargin ‸15mm", -1, true, "leftMargin 14mm")]
+    [InlineData("leftMargin 15mm‸", +1, false, "leftMargin 20mm")]                // touching its end; PageUp
+    [InlineData("rightMargin 15m‸m", -1, false, "rightMargin 10mm")]
+    [InlineData("topMargin 12.5‸mm", +1, true, "topMargin 13.5mm")]
+    [InlineData("bottomMargin 1‸cm", +1, true, "bottomMargin 1.1cm")]
+    [InlineData("paperWidth 21‸cm", -1, false, "paperWidth 20.5cm")]
+    [InlineData("paperHeight 11‸in", +1, true, "paperHeight 11.05in")]
+    [InlineData("topMargin 0.5‸in", +1, false, "topMargin 0.75in")]
+    // A bare number is staff spaces: a tenth and one.
+    [InlineData("indent 5‸", +1, true, "indent 5.1")]
+    [InlineData("indent 5‸", +1, false, "indent 6")]
+    [InlineData("shortIndent 5.1‸", -1, true, "shortIndent 5")]
+    [InlineData("spacingIncrement 1.2‸", +1, true, "spacingIncrement 1.3")]
+    // A spacing block's lengths, each its own.
+    [InlineData("systemSystemSpacing { basicDistance 12‸ padding 1 }", +1, false, "systemSystemSpacing { basicDistance 13 padding 1 }")]
+    [InlineData("systemSystemSpacing { basicDistance 12 padding 1‸mm }", +1, true, "systemSystemSpacing { basicDistance 12 padding 2mm }")]
+    [InlineData("staffStaffSpacing { minimumDistance ‸8 stretchability 60 }", -1, true, "staffStaffSpacing { minimumDistance 7.9 stretchability 60 }")]
+    // A length written negative is stepped where it is; Up brings it back through 0.
+    [InlineData("systemSystemSpacing { padding -‸1 }", +1, true, "systemSystemSpacing { padding -0.9 }")]
+    [InlineData("systemSystemSpacing { padding ‸-1 }", -1, false, "systemSystemSpacing { padding -2 }")]
+    [InlineData("systemSystemSpacing { padding -0.1‸ }", +1, true, "systemSystemSpacing { padding 0 }")]
+    // staffSpace is a staff space, not a margin: a tenth of those steps.
+    [InlineData("staffSpace 1.5‸mm", +1, true, "staffSpace 1.6mm")]
+    [InlineData("staffSpace 1.5‸mm", +1, false, "staffSpace 2mm")]
+    [InlineData("staffSpace 1.5‸mm", -1, true, "staffSpace 1.4mm")]
+    [InlineData("staffSpace 0.06‸in", +1, true, "staffSpace 0.065in")]
+    // A selection within the one length (a double-clicked number) steps it too.
+    [InlineData("leftMargin «15»mm", +1, true, "leftMargin 16mm")]
+    [InlineData("leftMargin «15mm»", -1, true, "leftMargin 14mm")]
+    // On the key the entry's one length steps, as the word `tempo` steps its number.
+    [InlineData("left‸Margin 15mm", +1, true, "leftMargin 16mm")]
+    [InlineData("leftMargin‸ 15mm", -1, false, "leftMargin 10mm")]
+    [InlineData("systemSystemSpacing { basic‸Distance 12 }", +1, true, "systemSystemSpacing { basicDistance 12.1 }")]
+    [InlineData("system‸SystemSpacing { basicDistance 12 stretchability 60 }", +1, true, "systemSystemSpacing { basicDistance 12.1 stretchability 60 }")]
+    public void OnAPapersLength_TheKeysStepIt_KeepingItsUnit(string marked, int direction, bool semitone, string after)
+    {
+        var (response, stepped) = Step(Paper(marked), direction, semitone: semitone);
+        Assert.False(response.Fallback, response.Error);
+        Assert.Equal(Paper(after), stepped);
+        // One edit, and of the number alone: the unit is not rewritten.
+        var edit = Assert.Single(response.Edits);
+        string source = Paper(marked).Replace("‸", "").Replace("«", "").Replace("»", "");
+        Assert.Matches(@"^-?[\d.]+$", source[edit.Start..edit.End]);
+        Assert.Matches(@"^-?[\d.]+$", edit.NewText);
+        Assert.StartsWith(after.Split(' ')[0], response.Message);
+        Assert.Empty(SaidOf(stepped));
+    }
+
+    [Fact]
+    public void APapersLength_SaysWhatItGives_AndStepsWhereverTheBlockStands()
+    {
+        Assert.Equal("leftMargin 16mm: the line 179 mm wide", Step(Paper("leftMargin 15‸mm"), +1, semitone: true).Response.Message);
+        Assert.Equal("staffSpace 1.6mm: a staff 6.4 mm high", Step(Paper("staffSpace 1.5‸mm"), +1, semitone: true).Response.Message);
+        Assert.Equal("systemSystemSpacing padding 1.1", Step(Paper("systemSystemSpacing { padding ‸1 }"), +1, semitone: true).Response.Message);
+
+        // A score's own block, and a named one.
+        const string Music = "part m { clef treble }\nsection A { m { c'1 | } }\n";
+        string InScore(string entry) => $"{Music}score {{ paper {{ {entry} }} staff m }}\n";
+        Assert.Equal(InScore("leftMargin 16mm"), Step(InScore("leftMargin 15‸mm"), +1, semitone: true).After);
+        Assert.Equal(InScore("indent 4"), Step(InScore("in‸dent 5"), -1, semitone: false).After);
+        string Named(string entry) => $"paper wide {{ {entry} }}\n{Music}score {{ paper wide staff m }}\n";
+        Assert.Equal(Named("rightMargin 2.1cm"), Step(Named("rightMargin 2‸cm"), +1, semitone: true).After);
+        Assert.Empty(SaidOf(Named("rightMargin 2.1cm")));
+    }
+
+    [Fact]
+    public void APapersLength_StopsAtZero_AndBeforeAPageWithNoLine()
+    {
+        // The floor: the large step stops on it, and then the keys say so.
+        Assert.Equal(Paper("leftMargin 0mm"), Step(Paper("leftMargin 3‸mm"), -1, semitone: false).After);
+        var (least, kept) = Step(Paper("leftMargin 0‸mm"), -1, semitone: true);
+        Assert.False(least.Fallback);
+        Assert.Equal(Paper("leftMargin 0mm"), kept);
+        Assert.Equal("leftMargin 0mm: already the least (0)", least.Message);
+
+        // staffSpace takes a POSITIVE length (LYS9003): the keys stop a step above 0.
+        Assert.Equal(Paper("staffSpace 0.1mm"), Step(Paper("staffSpace 0.3‸mm"), -1, semitone: false).After);
+        var (thin, same) = Step(Paper("staffSpace 0.1‸mm"), -1, semitone: true);
+        Assert.False(thin.Fallback);
+        Assert.Equal(Paper("staffSpace 0.1mm"), same);
+        Assert.Contains("already the least ('staffSpace' takes a positive length", thin.Message);
+        Assert.Contains(SaidOf(Paper("staffSpace 0mm")), s => s.StartsWith("LYS9003"));
+
+        // The ceiling: a margin stops while the page still has a line (a4 is 210 mm wide, the
+        // other margin 15), a page's width while its margins still fit, and so its height.
+        Assert.Equal(Paper("leftMargin 194mm"), Pressed(Paper("leftMargin 150‸mm"), +1, "already the most (the margins would leave the page no line)"));
+        Assert.Equal(Paper("paperWidth 31mm"), Pressed(Paper("paperWidth 60‸mm"), -1, "already the least (the margins would leave the page no line)"));
+        Assert.Equal(Paper("topMargin 286mm"), Pressed(Paper("topMargin 250‸mm"), +1, "already the most (the margins would leave the page no height)"));
+        // The large step from just under it takes the small steps that still fit.
+        Assert.Equal(Paper("leftMargin 194mm"), Step(Paper("leftMargin 192‸mm"), +1, semitone: false).After);
+    }
+
+    /// <summary>Presses the key (small and large steps in turn) until the text stays, which the
+    /// message must say with <paramref name="saying"/>; no press may write a book that says anything.</summary>
+    private static string Pressed(string marked, int direction, string saying)
+    {
+        string at = marked.Replace("‸", "");
+        int caret = marked.IndexOf(Caret);
+        for (int presses = 0; presses < 400; presses++)
+        {
+            var (response, next) = Step(at.Insert(caret, Caret.ToString()), direction, semitone: presses % 2 == 0);
+            Assert.False(response.Fallback);
+            Assert.Empty(SaidOf(next));
+            if (next == at)
+            {
+                Assert.Contains(saying, response.Message);
+                return at;
+            }
+            at = next;
+        }
+        Assert.Fail("the keys never stopped: " + at.Split('\n')[0]);
+        return at;
+    }
+
+    /// <summary>A margin is not stepped into a page on which a fenced text's indents leave it
+    /// less than its least width — what LYS4057 refuses on the fence.</summary>
+    [Fact]
+    public void APapersMargin_StopsBeforeTheWidthAFencedTextsIndentsNeed()
+    {
+        string Book(string margin) => Fenced("```md indent 60mm", paper: $"paper {{ leftMargin {margin} }}\n");
+        string at = Pressed(Book("15‸mm"), +1, "already the most (a text's indents would leave");
+        int reached = int.Parse(System.Text.RegularExpressions.Regex.Match(at, @"leftMargin (\d+)mm").Groups[1].Value);
+        Assert.True(reached > 15 && reached < 194, at.Split('\n')[0]);
+        Assert.Contains(SaidOf(Book($"{reached + 1}mm")), s => s.StartsWith("LYS4057"));
+        // A book the validator already refuses is stepped all the same: back out of it, or on.
+        Assert.Equal(Book($"{reached}mm"), Step(Book($"{reached + 1}‸mm"), -1, semitone: true).After);
+        Assert.Equal(Book($"{reached + 2}mm"), Step(Book($"{reached + 1}‸mm"), +1, semitone: true).After);
+    }
+
+    [Fact]
+    public void OnASpacingBlocksKey_SeveralLengthsAskForTheCaret_AndAKeyWithNoLengthSaysSo()
+    {
+        foreach (var (marked, saying) in new[]
+                 {
+                     ("system‸SystemSpacing { basicDistance 12 padding 1 }", "2 lengths - put the caret on the one to step"),
+                     ("system‸SystemSpacing { stretchability 60 }", "write a length in it first"),
+                     ("left‸Margin", "leftMargin: write its length first (leftMargin 15mm)"),
+                     ("systemSystemSpacing { pad‸ding }", "systemSystemSpacing padding: write its length first"),
+                     ("leftMargin 15‸MM", "'MM' is not a unit of this language"),
+                     ("staffSpace 1.5‸", "write its unit"),
+                 })
+        {
+            var (response, after) = Step(Paper(marked), +1, semitone: true);
+            Assert.False(response.Fallback, marked);
+            Assert.Empty(response.Edits);
+            Assert.Equal(Paper(marked.Replace("‸", "")), after);
+            Assert.Contains(saying, response.Message);
+        }
+    }
+
+    /// <summary>What stepped in a paper block before still steps as it did — <c>size</c> walks the
+    /// pages — and what is no length is left to the key's own command, as it was.</summary>
+    [Fact]
+    public void InAPaperBlock_TheSizeStillWalksThePages_AndWhatIsNoLengthIsLeftAlone()
+    {
+        var sizes = LilySharp.Core.Semantics.LanguageVocabulary.PaperSizeNames.ToList();
+        int a4 = sizes.FindIndex(s => s == "a4");
+        Assert.Equal(Paper($"size {sizes[a4 + 1]} leftMargin 15mm"), Step(Paper("size a‸4 leftMargin 15mm"), -1, semitone: true).After);
+        foreach (string marked in new[]
+                 {
+                     "si‸ze a4", "systemsPerPage ‸4", "measuresPerSystem 4‸", "shortestDurationSpace ‸2.5", "ragged‸Right",
+                     "systemSystemSpacing { stretchability ‸60 }", "systemSystemSpacing { stretch‸ability 60 }",
+                     "systemSystemSpacing { padding 1 ‸}", "leftMargin 15mm ‸ rightMargin 15mm", "‸leftMarginn 15mm",
+                 })
+        {
+            var (response, after) = Step(Paper(marked), +1, semitone: true);
+            Assert.True(response.Fallback, marked);
+            Assert.Equal(Paper(marked.Replace("‸", "")), after);
+        }
+        Assert.True(Step(Paper("leftMargin 15mm").Replace("paper", "pa‸per"), +1, semitone: true).Response.Fallback);
+    }
 }

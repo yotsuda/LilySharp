@@ -26,22 +26,6 @@ namespace LilySharp.Core.Editing;
 public static partial class NoteStepper
 {
     /// <summary>
-    /// The steps of a length by its unit, the small one (Ctrl+Shift+Up / Down) and the large
-    /// one (PageUp / PageDown). A bare number is staff spaces and steps as a <c>fonts { }</c>
-    /// entry's <c>size N</c> does (<see cref="FontSizeEdit"/>: a tenth, and one).
-    /// LILYSHARP-OWN: the physical units — no length with a unit stepped before this one
-    /// (a <c>paper { }</c> entry's does not), so these are the first: a millimetre and five,
-    /// and about as much in the other two — a millimetre in <c>cm</c>, 1.27 mm in <c>in</c>.
-    /// </summary>
-    private static (double Small, double Large) LengthSteps(string? unit) => unit switch
-    {
-        "mm" => (1, 5),
-        "cm" => (0.1, 0.5),
-        "in" => (0.05, 0.25),
-        _ => (0.1, 1),
-    };
-
-    /// <summary>
     /// The step keys on a length of a fenced text's <c>indent</c> (owner's request 2026-11-13:
     /// "数字を入力した後は、その数字を ctrl+shift+up/down で動かせるようにして"): Up is more white,
     /// Down less, by <see cref="LengthSteps"/>; the unit stays, and the number is written as a
@@ -108,8 +92,7 @@ public static partial class NoteStepper
         var (word, offset) = value.Words[target];
         if (!TextLength.TryRead(word, out var now, out string why))
             return IndentSays(why);
-        var (fine, coarse) = LengthSteps(now.Unit);
-        string Spelled(double v) => v.ToString("0.##", CultureInfo.InvariantCulture) + now.Unit;
+        string Spelled(double v) => SpelledLength(v, now.Unit);
         string Mm(double staffSpaces, Svg.Layout.LayoutOptions paper)
             => (staffSpaces * paper.StaffSpaceMm).ToString("0.#", CultureInfo.InvariantCulture);
 
@@ -125,31 +108,16 @@ public static partial class NoteStepper
                 : new TextShape(other, stepped, value.Shape.Center, value.Shape.Box);
         }
 
-        double next;
-        if (dir < 0)
+        // Never under 0, and Up never into a width the validator refuses (SteppedLength).
+        double? stepped = SteppedLength(now.Value, LengthSteps(now.Unit), dir, small, floor: 0,
+            dir > 0 ? to => MarkdownTextValidator.LeavesTooLittle(tree.GetRoot(), fence, With(to), out _, out _) : null);
+        if (stepped is not { } next)
         {
-            // A large step stops at the floor rather than refusing (CountEdit's rule).
-            next = Math.Round(Math.Max(0, now.Value - (small ? fine : coarse)), 2);
-            if (next == now.Value)
+            if (dir < 0)
                 return IndentSays($"indent {word}: already the least (0)");
-        }
-        else
-        {
-            // The largest of the step's small steps that leaves the text its least width.
-            int most = small ? 1 : (int)Math.Round(coarse / fine);
-            next = double.NaN;
-            for (int k = most; k >= 1 && double.IsNaN(next); k--)
-            {
-                double tried = Math.Round(now.Value + k * fine, 2);
-                if (!MarkdownTextValidator.LeavesTooLittle(tree.GetRoot(), fence, With(tried), out _, out _))
-                    next = tried;
-            }
-            if (double.IsNaN(next))
-            {
-                MarkdownTextValidator.LeavesTooLittle(tree.GetRoot(), fence, With(now.Value), out _, out var on);
-                return IndentSays($"indent {word}: already the most (a text keeps at least "
-                    + $"{Mm(Svg.Layout.ProseBand.MinimumWidth, on)} mm of the line's {Mm(on.ContentWidth, on)} mm)");
-            }
+            MarkdownTextValidator.LeavesTooLittle(tree.GetRoot(), fence, With(now.Value), out _, out var on);
+            return IndentSays($"indent {word}: already the most (a text keeps at least "
+                + $"{Mm(Svg.Layout.ProseBand.MinimumWidth, on)} mm of the line's {Mm(on.ContentWidth, on)} mm)");
         }
 
         MarkdownTextValidator.LeavesTooLittle(tree.GetRoot(), fence, With(next), out double width, out var paper);

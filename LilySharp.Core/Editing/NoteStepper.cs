@@ -314,6 +314,11 @@ public static partial class NoteStepper
         if (selections is [var (indentFrom, indentTo)]
             && FenceIndentStep(tree, Math.Min(indentFrom, indentTo), Math.Max(indentFrom, indentTo), dir, semitone) is { } indent)
             return indent;
+        // On a length of a paper { } block, or on its key: that length, the same way (owner's
+        // request 2026-11-13). Nothing stepped there before but `size`, which is no length.
+        if (selections is [var (paperFrom, paperTo)]
+            && PaperLengthStep(text, tree, Math.Min(paperFrom, paperTo), Math.Max(paperFrom, paperTo), dir, semitone) is { } paperLength)
+            return paperLength;
         var targets = new List<Target>();
         // A selected chord symbol's span, by its node (TargetKind.ChordQuality).
         var selectedSymbols = new Dictionary<int, (int Start, int End)>();
