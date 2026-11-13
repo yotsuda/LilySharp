@@ -463,6 +463,96 @@ Lily#: a known difference, written into the twin as a comment where it happens.
   differs. A Japanese line under a face with narrow kana ends short of the margin (the
   machine's face is not measured).
 
+### 7.2 What step 5 built: the editor (2026-11-13)
+
+The reference, approved by the owner that day after its licences were read: VS Code's own
+Markdown support (MIT). **Nothing of it is copied**: its grammar is embedded by name, and
+what it does not bring is Lily#'s own code.
+
+**Colours** (`editors/vscode/syntaxes/lilysharp.tmLanguage.json`, `#fenced-text`).
+
+- The opening line: the backticks, `md` / `markdown`, the words `end` `box` `center`
+  `indent` (held to `FencedText` by `EditorColouringTests`), a length by `paper { }`'s own
+  rule. The closing line: the backticks.
+- The body includes `text.html.markdown` — the grammar of VS Code's built-in
+  markdown-basics — under `meta.embedded.block.markdown`, which `package.json`'s
+  `embeddedLanguages` maps to the language `markdown`.
+- The shape is the one VS Code's Markdown grammar gives a fenced block of another language:
+  an outer begin/end whose `end` is the closing line, and in it a begin/WHILE rule. A
+  `while` is asked at each line's start before any rule of the embedded grammar, and
+  failing pops them all. MEASURED with VS Code's tokenizer and its real Markdown grammar
+  (`LilySharp-Lab` `sessions/p1226/md/fenceeditor`, `t2.lys`): with a plain begin/end, a
+  fence indented two spaces in a score and ending in a list never closed — the list kept
+  the closing line and read it as a code block's opening, and the rest of the file was
+  Markdown.
+- The `while` names the opening line's own backticks (four close on four; three inside
+  are the text's) and takes the opening line's indentation off each line before Markdown
+  reads it, as the compiler takes the closing fence's: a fence four spaces in would
+  otherwise be one indented code block. (The two indentations are the same in a text
+  written as section 2 writes it; where they differ the editor goes by the opening one.)
+- **Only where a text may begin**: `#fenced-text` is listed at the root and in
+  `#score-body`, a new region for `score NAME { … }`. For the grammar to know a line is
+  inside some OTHER brace, every brace no block of its own claims is now `#nested-braces`
+  (the top level was flat until this), and wherever a list reads the whole language
+  inside a brace, `#fenced-text-elsewhere` stands first: it takes the blanks and the
+  backticks and scopes nothing, so three backticks in a section's music colour as they
+  did. MEASURED on the repository's 702 `.lys` files, token by token against the grammar
+  before: one token differs — the `lyrics words` row of `samples/drunken-sailor.lys`'s
+  `score lyrics { … }`, which the lyrics block had been swallowing as syllables.
+- A section's text (step 3) will want `#fenced-text` listed directly in a section's brace:
+  today that brace is the generic `#nested-braces`.
+- Not recursive: a grammar included by name brings no injections with it (they are
+  gathered for the ROOT scope, `source.lilysharp`), so this extension's own injection of
+  Lily# into Markdown's ```` ```lily# ```` blocks does not fire inside a page text; a code
+  block there has Markdown's code colour.
+- Limits: a `score` whose `{` is on a later line is not the region (its text colours as
+  Lily#); a brace left open above a fence keeps it from beginning until it is closed.
+
+**Semantic tokens.** None stand on a text: the fence is one token of a kind the walk does
+not colour. `DeclaredNameTokenTests.APageText_GetsNoTokenOverItsMarkdown` holds it.
+
+**What the embedded language brings, and what it does not** (read in VS Code's source,
+`src/vs/editor`; not seen in a running editor):
+
+| Follows the language AT THE POSITION — Markdown's in a text | Follows the DOCUMENT's language — Lily#'s, also in a text |
+|---|---|
+| Toggle Comment (`<!-- -->`): `lineCommentCommand.ts`, `blockCommentCommand.ts` | the pairs a typed character closes: `cursorCommon.ts` builds them from `model.getLanguageId()` |
+| bracket matching: `bracketPairsImpl.ts` | the pairs a typed character surrounds a selection with: the same |
+| the word pattern, the Enter rules (`enterAction.ts`) | completion, hover and every other provider (the server answers nothing in a body) |
+
+Markdown has no Enter rule: VS Code's text editor does not continue a list
+(`markdown-basics/language-configuration.json` has no `onEnterRules`; the
+`markdown.editor.smartEnter` of markdown-language-features is its separate custom
+editor's). So both aids below are Lily#'s (`editors/vscode/src/pageTextCore.ts`, tested
+under node; `pageText.ts` carries them out), off with `lilysharp.typingAids.enabled`:
+
+- **Enter in a list.** On an item with words, the caret in or after them: the next line
+  begins with the item's indentation and the next marker (the same bullet; the next
+  number with its `.` or `)`), and takes what stood right of the caret. On an item with
+  no words the list ends: a nested item becomes an item of the list around it, an
+  outermost one an empty line at the text's indentation. The later items are not
+  renumbered (section 5.2: the count is from the first). Bound to Enter under a context
+  key (`lilysharp.inTextList`) set only while the caret is on a list item in a text's
+  body; the command asks the document again, and an Enter that is not its own is typed as
+  VS Code types it. Not under the suggestion list; an input method's Enter never reaches
+  a key binding.
+- **`*`, `_`, a backtick over a selection** surround it, the words left selected (a second
+  `*` makes `**strong**`). VS Code has replaced the selection by then — these three are
+  not Lily#'s surrounding pairs, and must not be in music — so the words are written back
+  in the keystroke's undo step.
+- **Lily#'s typing aids rest in a body** (`smartTyping.ts` asks `inPageText`): a digit, an
+  apostrophe, a bracket or a space at a line's end typed in prose is left as typed.
+
+Where a text is, for these, is read off the document's lines by the lexer's rule
+(`textBodies`: three backticks or more begin a line; the next line of as many and nothing
+else closes), once a version and only when a rule is about to act.
+
+**Tests.** `editors/vscode/test/pageTextGrammar.test.ts` runs VS Code's tokenizer
+(vscode-textmate, vscode-oniguruma: development dependencies, in no package) over the
+grammar, Markdown answered by a stand-in written for it — and by the real grammar where
+`LILYSHARP_VSCODE_REPO` names a checkout. `pageTextCore.test.ts`: the lines, Enter, the
+surround. What only a person in VS Code can see is `editors/vscode/MANUAL-CHECKS.md` 3.8.
+
 ## 8. Order of work
 
 1. DONE (section 7.1). The fence, and paragraphs with bold and italic under the title and at
@@ -476,6 +566,8 @@ Lily#: a known difference, written into the twin as a comment where it happens.
    link's words are drawn, the link itself is not made — and nothing says so yet).
 3. A section's text (section 6.1).
 4. Images.
-5. The editor: Markdown colours and completion inside the fence; a click on the text in the
-   preview goes to its source.
+5. The editor. DONE 2026-11-13 (section 7.2): Markdown colours inside the fence, the body
+   Markdown to VS Code (its comments and brackets), Enter continuing a list and `*`, `_`,
+   a backtick surrounding a selection. NOT done: Markdown completion inside the fence; a
+   click on the text in the preview going to its source; hover.
 6. Later: a footnote (`@footnote("…")` on a note, its text at the page's foot), code blocks.

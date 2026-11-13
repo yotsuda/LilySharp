@@ -319,7 +319,10 @@
       {
         "language": "lilysharp",
         "scopeName": "source.lilysharp",
-        "path": "./syntaxes/lilysharp.tmLanguage.json"
+        "path": "./syntaxes/lilysharp.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.markdown": "markdown"
+        }
       },
       {
         "scopeName": "markdown.lilysharp.codeblock",
@@ -491,7 +494,7 @@
           "lilysharp.typingAids.enabled": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Typing aids in `.lys` music: an octave mark, a duration digit, a dot, a string number (`\\`) or an annotation (`@`) typed anywhere on a note moves into its slot on that note; a digit always leaves a valid duration (`c1` + `2` → `c2`, `c4` + `6` → `c64`; 5, 7, 9 and 0 leave the note unchanged); `<` `>` `(` `)` `[` `]` `~` keep chords, slurs, beams and ties paired and on their notes. Off: every key is typed exactly as pressed. Ctrl+Shift+Up / Ctrl+Shift+Down are not affected."
+            "markdownDescription": "Typing aids in `.lys` music: an octave mark, a duration digit, a dot, a string number (`\\`) or an annotation (`@`) typed anywhere on a note moves into its slot on that note; a digit always leaves a valid duration (`c1` + `2` → `c2`, `c4` + `6` → `c64`; 5, 7, 9 and 0 leave the note unchanged); `<` `>` `(` `)` `[` `]` `~` keep chords, slurs, beams and ties paired and on their notes. In a page's text (a ```md fence): Enter on a list item begins the next one and on an empty item ends the list, and `*`, `_` or a backtick typed over a selection surrounds it. Off: every key is typed exactly as pressed. Ctrl+Shift+Up / Ctrl+Shift+Down are not affected."
           },
           "lilysharp.completion.flatSpelling": {
             "type": "string",
@@ -1429,6 +1432,11 @@
         "when": "editorTextFocus && !editorReadonly && editorLangId == lilysharp"
       },
       {
+        "command": "lilysharp.textEnter",
+        "key": "enter",
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && !editorHasSelection && !editorHasMultipleSelections && editorLangId == lilysharp && lilysharp.inTextList && config.lilysharp.typingAids.enabled"
+      },
+      {
         "command": "lilysharp.smartType",
         "key": "'",
         "args": {
@@ -1558,7 +1566,9 @@
     "@types/pngjs": "^6.0.5",
     "@types/vscode": "^1.90.0",
     "esbuild": "^0.28.1",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
   },
   "dependencies": {
     "@breezystack/lamejs": "1.2.7",

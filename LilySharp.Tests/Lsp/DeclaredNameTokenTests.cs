@@ -214,6 +214,39 @@ public class DeclaredNameTokenTests
         Assert.DoesNotContain(tokens, t => Span(source, t) == "singer");
     }
 
+    /// <summary>A page text is ONE token to the tree (docs/markdown-text-design.md), and none
+    /// of the kinds this colours: no semantic token may stand on its lines, or it would paint
+    /// over the Markdown colours the grammar gives the body (owner's decision 2026-11-13).
+    /// The text here holds everything the walk colours elsewhere — a keyword, a string, a
+    /// pitch, a number, the name of a part that exists.</summary>
+    [Theory]
+    [InlineData("```md box\ntitle \"x\" melody c'4 8 repeat { }\n- melody\n```\n")]
+    [InlineData("```md\nmelody\n")]
+    public void APageText_GetsNoTokenOverItsMarkdown(string text)
+    {
+        // A text that is closed stands at the top level and again in a score; one that is not
+        // runs to the end of the file, so it stands last.
+        bool closed = text.EndsWith("```\n", StringComparison.Ordinal);
+        const string music = "part melody { clef treble }\nsection A { melody { c'4 } }\nform { A }\n";
+        string source = "title \"T\"\n" + (closed
+            ? text + music + "score { staff melody\n  " + text.Replace("\n", "\n  ") + "\n}\n"
+            : music + "score { staff melody }\n" + text);
+        var tokens = LilySharpLanguageServer.CollectSemanticTokens(SyntaxTree.Parse(source).GetRoot(), source).ToList();
+
+        var fences = SyntaxTree.Parse(source).GetRoot().DescendantNodesOfKinds(SyntaxKind.FencedText)
+            .Select(n => n.Span).ToList();
+        Assert.Equal(closed ? 2 : 1, fences.Count);
+        var lineStarts = LilySharpLanguageServer.LineStartsOf(source);
+        foreach (var token in tokens)
+        {
+            int at = lineStarts[token.Line] + token.Character;
+            Assert.DoesNotContain(fences, f => at >= f.Start && at < f.End);
+        }
+        // …while the same words outside it keep theirs: the net is not green for want of tokens.
+        Assert.Contains(tokens, t => Span(source, t) == "melody");
+        Assert.Contains(tokens, t => Span(source, t) == "title");
+    }
+
     [Fact]
     public void APhraseCalledSinger_IsStillColouredWhereItIsUsed()
     {

@@ -451,6 +451,21 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **漢字の読み `漢[かん]`**（第1138・オーナー決定 2026-11-08）: 歌詞を `漢[かん] 字[じ] 雪[ゆき] や | こん 子[こ] |` と書く → プレビューは **漢 字 雪 や こん 子** と刷る（括弧も読みも描かない）・`[かん]` の中が文字列の色、`[` `]` が区切りの色・status bar に「not kana」は出ない・▶ で **かんじゆきや こんこ** と歌う。`漢 [かん]`（空白あり）→ その音節に LYS4036（赤）・`漢[kan]` → LYS4037（黄）で歌声は kan をそのまま渡す。Export as WAV も読みで歌い、Export as MusicXML の `<text>` は漢字・`lysc ly` も漢字。
 - [ ] Cantoria 拡張を無効にする → 次の ▶ から楽器だけ（Lily# の出力チャネルに何も言わない）。**Cantoria: Forget Rendered Voices** → 次の ▶ は歌い直す。VS Code を閉じる → `cantoria.exe`・`neutrino_server.exe` が残らない（タスクマネージャ）。
 
+### 3.8 頁の本文（```` ```md ````）の色と編集補助（2026-11-13・この節は全部未確認）
+
+機械が見たもの: 文法の scope（`npm test` の `pageTextGrammar.test.ts` が VS Code 自身の tokenizer＝vscode-textmate で回す。Markdown 文法は代役、`LILYSHARP_VSCODE_REPO` を指せば本物）・Enter と囲みの規則（`pageTextCore.test.ts`）・semantic token が本文に乗らないこと（`DeclaredNameTokenTests`）。**実機でしか見られないのは下の全部**（色そのもの・`embeddedLanguages` が効いているか・キーの束縛）。
+
+- [ ] **色**: 最上位に ```` ```md box ```` … ```` ``` ```` を書き、本文に `# 見出し`、`**太字**`、`*斜体*`、`- 箇条書き`、`1. 番号`、`[link](x)`、`{ }`、`"引用符"`、`// これはコメントではない`、`a key c4` → 見出し・太字・斜体・リストの記号が `.md` と同じ色、波括弧・引用符・`//`・`a`/`key`/`c4` に Lily# の色が付かない。開きの行は backtick・`md`・`box`（`end` `center` `indent`）・`20mm` に色。閉じの ```` ``` ```` の次の行から Lily# の色に戻る。
+- [ ] **score の中**: `score parts {` の中に 2 つ空白・4 つ空白で字下げした fence（箇条書きで終わる本文）→ 本文は Markdown の色、閉じの行の後の `staff piano` は Lily# の色（**4 つ空白でも全部がコードブロックの色にならない**）。`score` と `{` が別の行だと色が付かない（既知）。
+- [ ] **始まらない場所**: `section A { … }` の中・`score { staffGroup { … } }` の中の ```` ```md ```` は前と同じ色（本文が Lily# の色）。
+- [ ] **4 つの backtick**: ```` ````md ```` の中に ```` ```lilysharp ```` … ```` ``` ```` → 内側はコードブロックの色、外側は 4 つで閉じる。
+- [ ] **Markdown として扱われる**（`embeddedLanguages`）: 本文で Ctrl+/ → `<!-- … -->`（音楽の行では `//`）。本文の `(` `[` の対応括弧が光り、`<` `>` は光らない。Developer: Inspect Editor Tokens and Scopes で本文の language が `markdown`。
+- [ ] **Lily# の入力補助が休む**: 本文で `It's 4 c4.` と打つ → そのまま（`'` や数字が音符へ動かない・行末の空白で `|` が付かない）。選択して `(` → 普通に `(…)` で囲まれるだけ（スラーへ書き換わらない）。
+- [ ] **Enter でリストが続く**: `- first` の行末で Enter → 次の行に `- `。`1. one` → `2. `、`9) x` → `10) `。行の途中で Enter → 右側が次の項目へ。空の項目 `- ` で Enter → 記号が消えてリストが終わる。入れ子の空の項目 → 外側の項目になる。Ctrl+Z 1 回で戻る。**IME の変換確定の Enter では項目が増えない**。補完の一覧が出ているときの Enter は候補の確定のまま。段落の行・音楽の行の Enter は今まで通り（自動字下げも）。
+- [ ] **選択を囲む**: 本文で語を選んで `*` → `*語*`（語が選択されたまま）、もう一度 `*` → `**語**`。`_` と backtick も同じ。Ctrl+Z 1 回で元の語に戻る。音楽の行で音符を選んで `*` → 今まで通り置き換わる。
+- [ ] `lilysharp.typingAids.enabled` を off → Enter も囲みも素の VS Code の動き。
+- [ ] 本文の中で補完（Ctrl+Space）→ 何も出ない（サーバーは本文に答えない・Markdown の補完は未実装）。
+
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 
 - [x] 出力チャネル「Lily#」を開いたまま、1 頁の本で音を 1 つ打つ → epages kepte の行（頁が丸ごと届き直していない）。

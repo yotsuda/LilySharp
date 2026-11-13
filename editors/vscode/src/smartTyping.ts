@@ -20,6 +20,7 @@ import {
     isPlannedKey, isSelectionClose, isSmartInsert, multiCursorPlan, planFor, selectionClosePlan, surroundChange, surroundPlan,
     typedKeyOutcome, autoBarlinePlan,
 } from './smartTypingCore';
+import { inPageText } from './pageText';
 
 // `lilysharp.typingAids.enabled` (rule 31): false turns every aid off. Read
 // once and kept current, so a keystroke pays for no configuration lookup. The
@@ -206,7 +207,15 @@ export function registerSmartTyping(
 
             const editor = vscode.window.activeTextEditor;
             if (!editor || editor.document !== event.document) { return; }
+            // Nothing in the body of a page text is Lily# (owner's decision 2026-11-13): a
+            // digit, a `'`, a space at a line's end or a bracket typed there is prose, and
+            // every rule below leaves it as typed. ⚠️ Asked only where a rule is about to
+            // act — the document's fences are looked for once a version, and a letter typed
+            // in music must not pay for that.
+            const inText = () => inPageText(event.document,
+                (change ?? event.contentChanges[0])?.range.start.line ?? 0);
             if (!change) {
+                if (inText()) { return; }
                 // One selection surrounded with a pair (rule 34). The test reads no text,
                 // and the several carets' typing below is the only other change in parts.
                 const surround = editor.selections.length === 1 && !editor.selection.isEmpty
@@ -224,6 +233,7 @@ export function registerSmartTyping(
 
             // A closing key over the selection (rule 34): it has replaced the notes.
             if (change.rangeLength > 0 && isSelectionClose(change.text)) {
+                if (inText()) { return; }
                 const s = lastSelection;
                 if (s?.key === key && s.lo === offset && s.text.length === change.rangeLength) {
                     lastSelection = undefined;
@@ -235,7 +245,7 @@ export function registerSmartTyping(
             // Only a matched change needs the document text, so the full read
             // stays off the path a paste or an unrelated keystroke takes.
             if (change.rangeLength === 1 && change.text === '') {
-                if (deleted !== '<' && deleted !== '>') { return; }
+                if ((deleted !== '<' && deleted !== '>') || inText()) { return; }
                 const text = event.document.getText();
                 // The pre-change text, exactly: a one-character deletion is undone
                 // by putting that character back where it was.
@@ -253,7 +263,7 @@ export function registerSmartTyping(
                     log(`smartTyping: ${change.text} typed after an automatic bar line -> absorbed`);
                     return;
                 }
-                if (change.text === ' ' && mayEndBar(event.document, offset)) {
+                if (change.text === ' ' && mayEndBar(event.document, offset) && !inText()) {
                     const text = event.document.getText();
                     const plan = autoBarlinePlan(text, offset);
                     if (plan) {
@@ -275,7 +285,7 @@ export function registerSmartTyping(
                 }
                 return;
             }
-            if (change.rangeLength !== 0 || !isSmartInsert(change.text)) { return; }
+            if (change.rangeLength !== 0 || !isSmartInsert(change.text) || inText()) { return; }
             const text = event.document.getText();
             const typed = change.text;
 
@@ -344,6 +354,8 @@ function registerSmartTypeKeys(context: vscode.ExtensionContext, log: (msg: stri
                 || editor.selections.some(s => !s.isEmpty)) {
                 return plain();
             }
+            // A page text's body is prose: the key is typed as pressed.
+            if (editor.selections.some(s => inPageText(editor.document, s.active.line))) { return plain(); }
             if (editor.selections.length > 1) {
                 // Several carets: each gets its own aid, all in one edit (rule 30).
                 const text = editor.document.getText();

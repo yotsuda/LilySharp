@@ -32,6 +32,7 @@ import { findCopilotLogFrom, pickAiModel, rememberRefusalsIn } from './modelClie
 import { reviewPointsOf } from './reviewCore';
 import { chatPointer } from './chatPointerCore';
 import { registerSmartTyping } from './smartTyping';
+import { registerPageText } from './pageText';
 import { registerStaffGroupWrap, staffGroupsOffered } from './staffGroupWrap';
 import { registerStepAudition } from './stepAudition';
 import { registerCaretInfo } from './caretInfo';
@@ -1147,6 +1148,9 @@ export function activate(context: vscode.ExtensionContext) {
     // slurs, octave marks, beams, ties and durations — hence smartTyping, not
     // smartBrackets.
     registerSmartTyping(context, (msg: string) => outputChannel.appendLine(msg));
+    // A page text's body is Markdown: Enter continues its lists, and an asterisk, an
+    // underscore or a code mark typed over a selection surrounds it (pageText.ts).
+    registerPageText(context, (msg: string) => outputChannel.appendLine(msg));
     registerStaffGroupWrap(context);
 
     // The step keys (Ctrl+Shift+Up / Down: a note's semitone, Ctrl+Shift+PageUp / PageDown:

@@ -4,6 +4,9 @@
     "patterns": [
         { "include": "#comments" },
         { "include": "#strings" },
+        { "include": "#fenced-text" },
+        { "include": "#score-body" },
+        { "include": "#nested-braces" },
         { "include": "#override-declaration" },
         { "include": "#section-declaration" },
         { "include": "#phrase-declaration" },
@@ -78,6 +81,61 @@
                         }
                     ]
                 }
+            ]
+        },
+        "fenced-text": {
+            "comment": "A page text (docs/markdown-text-design.md; owner's decision 2026-11-13): a line that begins ```md — with its words, `end`, `box`, `center`, `indent 20mm` — every line down to one that begins with as many backticks, and that line. To the lexer the whole of it is ONE token (Lexer.ScanFence) and nothing between the fences is Lily#; here the body is handed to VS Code's own Markdown grammar by its scope name (`text.html.markdown`, the built-in markdown-basics extension — embedded, not copied), under `meta.embedded.block.markdown`, which package.json's embeddedLanguages maps to the language `markdown`: a brace, a quote and `//` there are Markdown's. ⚠️ The SHAPE is the one VS Code's Markdown grammar gives a fenced code block that holds another language (extensions/markdown-basics/syntaxes/markdown.tmLanguage.json, MIT, Copyright (c) Microsoft Corporation; the same shape as this extension's lilysharp.markdown.injection.json): an outer begin/end whose `end` is the closing line, and inside it a begin/WHILE rule. A `while` is asked at the start of every line BEFORE any rule of the embedded grammar, and when it fails everything above it is popped — which is the only way out of a Markdown list or quote, whose own rules would otherwise read the closing fence as the opening of a code block (measured: with a plain begin/end, a fence indented two spaces after a list never closed). ⚠️ The outer `begin` is a lookahead and takes nothing: the opening line is the INNER rule's begin, so that the inner `while` can name that line's own backticks (\\3 — a fence of four closes on four, and a line of three inside it is the text's) and its indentation (\\2). The while TAKES that indentation off each line before Markdown reads it, as the compiler takes the closing fence's off: without it a fence indented four spaces in a score would be all one indented code block. ⚠️ Listed only where a fence may begin — the root list and #score-body. Everything else in braces is #nested-braces or a block of its own, and #fenced-text-elsewhere stands before `$self` there.",
+            "begin": "^(?=[ \\t]*`{3,})",
+            "end": "^[ \\t]*(`{3,})[ \\t]*$",
+            "endCaptures": {
+                "1": { "name": "punctuation.definition.fenced-text.end.lilysharp" }
+            },
+            "patterns": [
+                {
+                    "name": "meta.fenced-text.lilysharp",
+                    "begin": "(^|\\G)([ \\t]*)(`{3,})[ \\t]*(?:(md|markdown)(?!\\S))?(.*)$",
+                    "beginCaptures": {
+                        "3": { "name": "punctuation.definition.fenced-text.begin.lilysharp" },
+                        "4": { "name": "entity.name.tag.fenced-text.lilysharp" },
+                        "5": {
+                            "patterns": [
+                                {
+                                    "comment": "The opening line's words (LilySharp.Core FencedText: EndWord and ShapeWords), each a whole word. They are words only on this line — `part box { … }` compiles. EditorColouringTests holds the list to FencedText in both directions.",
+                                    "name": "keyword.other.fenced-text.lilysharp",
+                                    "match": "(?<!\\S)(end|box|center|indent)(?!\\S)"
+                                },
+                                { "include": "#paper-length" }
+                            ]
+                        }
+                    },
+                    "while": "(^|\\G)(?![ \\t]*\\3`*[ \\t]*$)(?:\\2)?",
+                    "contentName": "meta.embedded.block.markdown",
+                    "patterns": [
+                        { "include": "text.html.markdown" }
+                    ]
+                }
+            ]
+        },
+        "fenced-text-elsewhere": {
+            "comment": "Three backticks at the start of a line where a page text may NOT begin — in a section's music, a form, any brace but a score's. The line keeps the colours it had before the grammar knew fences (the backticks plain, the rest Lily#): this rule takes the blanks and the backticks, scopes nothing, and by standing before `$self` keeps #fenced-text from beginning there. What the compiler says of such a line is the diagnostics' to say.",
+            "match": "^[ \\t]*`{3,}"
+        },
+        "score-body": {
+            "comment": "`score NAME { … }` — the one brace a page text may stand directly in (a score's own text replaces the file's). The keyword, what stands between it and the brace — a name, and words of its own as `transpose bes,` — and the braces keep the colours the flat rules gave them (#keywords, `$self`, #structures); the region exists to carry CONTEXT: #fenced-text is listed here and in the root list, and nowhere else. A brace inside the score is #nested-braces, where no fence begins. A `score` whose brace is on a later line is not read as this region: its text then colours as Lily#, as every fence did before 2026-11-13.",
+            "begin": "\\b(score)\\b([^{}\\n]*)(\\{)",
+            "beginCaptures": {
+                "1": { "name": "keyword.control.lilysharp" },
+                "2": { "patterns": [ { "include": "#fenced-text-elsewhere" }, { "include": "$self" } ] },
+                "3": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "patterns": [
+                { "include": "#fenced-text" },
+                { "include": "#nested-braces" },
+                { "include": "$self" }
             ]
         },
         "override-declaration": {
@@ -636,11 +694,12 @@
             },
             "patterns": [
                 { "include": "#nested-braces" },
+                { "include": "#fenced-text-elsewhere" },
                 { "include": "$self" }
             ]
         },
         "nested-braces": {
-            "comment": "A `{ … }` inside a block that must not end at it — `repeat 2 { … }`, `grace { … }`, a voice or a music block. The top level needs nothing like this because it is FLAT: braces there are punctuation (#structures) and no rule is waiting for one. It is only inside a begin/end block that an unclaimed `}` is a real event, and this rule claims the balanced ones first. ⚠️ Listed BEFORE $self wherever it is used: $self paints `{` as punctuation and moves on, which is the same thing this does except that it does not remember.",
+            "comment": "A `{ … }` inside a block that must not end at it — `repeat 2 { … }`, `grace { … }`, a voice or a music block. Inside a begin/end block an unclaimed `}` is a real event, and this rule claims the balanced ones first. ⚠️ Listed BEFORE $self wherever it is used: $self paints `{` as punctuation and moves on, which is the same thing this does except that it does not remember. ⚠️ Since 2026-11-13 the root list has it too (until then the top level was FLAT — braces there were #structures' punctuation and no rule waited for one): every brace no block of its own claims — a section's, a form's, a phrase's — is this region, so that the grammar knows a line is INSIDE one, which is where a page text may not begin (#fenced-text-elsewhere, before `$self`). Its colours are the flat rules' own: measured on the repository's 702 .lys files with VS Code's tokenizer, one token changed — the `lyrics words` row of a `score lyrics { … }`, which #lyrics-block had been reading as a lyrics block's syllables and #score-body now reads first.",
             "begin": "\\{",
             "end": "\\}",
             "beginCaptures": {
@@ -651,6 +710,7 @@
             },
             "patterns": [
                 { "include": "#nested-braces" },
+                { "include": "#fenced-text-elsewhere" },
                 { "include": "$self" }
             ]
         },

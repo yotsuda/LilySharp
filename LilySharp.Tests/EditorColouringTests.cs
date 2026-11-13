@@ -1027,6 +1027,69 @@ public class EditorColouringTests
             + "`repeat 2 { … }` ends the section the way the section was ending the part.");
     }
 
+    /// <summary>The page text's fence (docs/markdown-text-design.md, section 8 step 5; owner's
+    /// decision 2026-11-13): the words its opening line colours are exactly the compiler's,
+    /// its body is VS Code's Markdown grammar under the scope package.json maps to the
+    /// language <c>markdown</c>, and it is listed only where a text may begin.</summary>
+    /// <remarks>Structural, as the rest of this file is. What the rule does to a line — that a
+    /// brace in the body is not Lily#'s, that the fence closes after a list — is asked of VS
+    /// Code's own tokenizer in <c>editors/vscode/test/pageTextGrammar.test.ts</c>.</remarks>
+    [Fact]
+    public void ThePageTextsFence_ColoursTheCompilersWords_AndBeginsOnlyWhereATextMay()
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(GrammarPath));
+        var repository = doc.RootElement.GetProperty("repository");
+        var opening = repository.GetProperty("fenced-text").GetProperty("patterns")[0];
+
+        // The words, both directions: the tag, and what follows it.
+        string begin = opening.GetProperty("begin").GetString()!;
+        Assert.Equal(
+            new[] { FencedText.MarkdownWord, FencedText.MarkdownLongWord },
+            Regex.Match(begin, @"\(\?:\(([a-z|]+)\)").Groups[1].Value.Split('|'));
+        var words = opening.GetProperty("beginCaptures").GetProperty("5").GetProperty("patterns");
+        Assert.Equal(
+            FencedText.ShapeWords.Append(FencedText.EndWord).OrderBy(w => w, StringComparer.Ordinal),
+            Regex.Match(words[0].GetProperty("match").GetString()!, @"\)\(([a-z|]+)\)\(").Groups[1].Value
+                .Split('|').OrderBy(w => w, StringComparer.Ordinal));
+        //    …and a length is paper { }'s own, unit and all: one list of units, one rule.
+        Assert.Equal("#paper-length", words[1].GetProperty("include").GetString());
+        string length = repository.GetProperty("paper-length").GetProperty("match").GetString()!;
+        foreach (string unit in FencedText.LengthUnits)
+            Assert.True(Covers(length, "20" + unit), $"the unit {unit} of an indent is left plain");
+
+        // The body is Markdown's, by name: embedded, and the scope is the one the extension
+        // declares as the language `markdown` (which is what makes a brace there Markdown's).
+        Assert.Equal("text.html.markdown", opening.GetProperty("patterns")[0].GetProperty("include").GetString());
+        string embedded = opening.GetProperty("contentName").GetString()!;
+        using var package = JsonDocument.Parse(File.ReadAllText(
+            Path.Combine(CollectResumeTests.FindRepoRoot(), "editors", "vscode", "package.json")));
+        var grammar = package.RootElement.GetProperty("contributes").GetProperty("grammars").EnumerateArray()
+            .Single(g => g.TryGetProperty("language", out var l) && l.GetString() == "lilysharp");
+        Assert.Equal("markdown", grammar.GetProperty("embeddedLanguages").GetProperty(embedded).GetString());
+
+        // Where it may begin: the root list and a score's own brace, and nowhere else. Every
+        // other list that reaches the root list through $self puts the rule that takes the
+        // backticks first.
+        string[] listing = [.. PatternLists().Where(l => l.Contains("#fenced-text")).Select(l => string.Join(" ", l))];
+        Assert.Equal(2, listing.Length);
+        Assert.Contains("#fenced-text #nested-braces $self", listing);
+        foreach (var list in PatternLists().Where(l => l.Contains("$self") && !l.Contains("#fenced-text")))
+        {
+            Assert.True(Array.IndexOf(list, "#fenced-text-elsewhere") is var at && at >= 0 && at < Array.IndexOf(list, "$self"),
+                "a list that reads the whole language inside a brace begins a page text there unless "
+                + "#fenced-text-elsewhere stands before $self: [" + string.Join(" ", list) + "]");
+        }
+
+        // The lexer's rule, the same on both sides: three backticks or more, and a fence
+        // closes on a line that holds backticks and nothing else.
+        string source = "```md box\nA { brace } and \"a quote\" // and slashes\n```\ntitle \"x\"\n";
+        var tokens = new Lexer(source).ScanAllTokens().Where(t => t.Kind != SyntaxKind.EndOfFile).ToList();
+        Assert.Equal(SyntaxKind.FencedText, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.TitleKeyword, tokens[1].Kind);
+        Assert.Matches(repository.GetProperty("fenced-text").GetProperty("end").GetString()!, "  ````  ");
+        Assert.DoesNotMatch(repository.GetProperty("fenced-text").GetProperty("end").GetString()!, "```md");
+    }
+
     [Fact]
     public void TheGrammarCallsNothingInvalid()
     {
