@@ -78,20 +78,20 @@ internal static partial class SharedRenderer
                         LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, true), TextAnchor.End, Color.Black);
             }
             // @p(editorial) (owner-approved 2026-11-13): the level between italic text
-            // parentheses, a pad off its two edges; its own place is the plain one's
+            // parentheses, each a pad off the level's INK (DynamicEngraver.EditorialParenPens,
+            // the one home of where they stand); the level's own place is the plain one's
             // (DynamicEngraver.EditorialParenEm — the manual's make-dynamic-script picture).
             if (d.IsEditorial && !d.IsExpressiveText)
             {
                 double scale = os.Size(1.0, d.StaffIndex);
-                double halfLevel = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelHalfWidth(fonts, text, false) * scale;
-                double pad = LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialPad * scale;
+                var pens = LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialParenPens(fonts, text);
                 double parenEm = os.Size(LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialParenEm(fonts), d.StaffIndex);
                 using (gc.Source(d.SourcePosition))
                 {
-                    gc.DrawText("(", d.X - halfLevel - pad, y, parenEm,
+                    gc.DrawText("(", d.X + pens.Open * scale, y, parenEm,
                         LilySharp.Core.Svg.Layout.DynamicEngraver.LabelRole(true),
-                        LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, true), TextAnchor.End, Color.Black);
-                    gc.DrawText(")", d.X + halfLevel + pad, y, parenEm,
+                        LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, true), TextAnchor.Start, Color.Black);
+                    gc.DrawText(")", d.X + pens.Close * scale, y, parenEm,
                         LilySharp.Core.Svg.Layout.DynamicEngraver.LabelRole(true),
                         LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, true), TextAnchor.Start, Color.Black);
                 }

@@ -819,17 +819,15 @@ internal static class DynamicEngraver
         string? text, bool expressive, double xCentre, double yBaseline, bool subito, bool editorial = false)
     {
         var level = LabelSkylines(fonts, text, expressive, xCentre, yBaseline);
-        // An editorial level's parentheses stand a pad off its two edges (EditorialReach), in
-        // the italic text face's own outline.
+        // An editorial level's parentheses stand a pad off its ink (EditorialParenPens), in the
+        // italic text face's own outline.
         if (editorial && !expressive)
         {
             double parenEm = EditorialParenEm(fonts);
             var parenFace = fonts.Face(LabelRole(true), LabelStyle(fonts, true));
-            double halfLevel = LabelHalfWidth(fonts, text ?? "", false);
-            var open = TextOutlineSkylines.Place("(", parenEm, parenFace,
-                xCentre - halfLevel - EditorialReach(fonts, left: true), yBaseline);
-            var close = TextOutlineSkylines.Place(")", parenEm, parenFace,
-                xCentre + halfLevel + EditorialPad, yBaseline);
+            var pens = EditorialParenPens(fonts, text ?? "");
+            var open = TextOutlineSkylines.Place("(", parenEm, parenFace, xCentre + pens.Open, yBaseline);
+            var close = TextOutlineSkylines.Place(")", parenEm, parenFace, xCentre + pens.Close, yBaseline);
             level.Up.Merge(open.Up);
             level.Down.Merge(open.Down);
             level.Up.Merge(close.Up);
@@ -842,7 +840,7 @@ internal static class DynamicEngraver
         double em = LabelEm(fonts, true);
         var face = fonts.Face(LabelRole(true), LabelStyle(fonts, true));
         double left = xCentre - LabelHalfWidth(fonts, text ?? "", false) - SubitoWidth(fonts)
-            - (editorial ? EditorialReach(fonts, left: true) : 0);
+            - (editorial ? EditorialReach(fonts, text ?? "", left: true) : 0);
         var word = TextOutlineSkylines.Place(SubitoWord, em, face, left, yBaseline);
         level.Up.Merge(word.Up);
         level.Down.Merge(word.Down);
@@ -1166,9 +1164,19 @@ internal static class DynamicEngraver
     internal static double SubitoWidth(Rendering.ScoreTextMetrics fonts)
         => fonts.Advance(SubitoWord, LabelEm(fonts, true), LabelRole(true), LabelStyle(fonts, true)) + SubitoGap;
 
-    /// <summary>The space between an editorial level and each of its parentheses.</summary>
+    /// <summary>The optical gap between an editorial level and each of its parentheses
+    /// (<see cref="EditorialOpticalGap"/>) — the same on both sides, for every level.</summary>
+    /// <remarks>Lily#'s own number (<see cref="EditorialParenPens"/> has the rule and its
+    /// measurements). MEASURED: on LilyPond's advance-box rule this gap came out 0.70 to 0.77 wherever
+    /// no letter leans into the parenthesis and 0.46 to 0.50 before the ")" after an f. The
+    /// owner on "(mf)", 0.755 left and 0.459 right (2026-11-13): the left "a little too wide",
+    /// the right "a little too narrow". 0.6 is between the two.</remarks>
+    internal const double EditorialGap = 0.6;
+
+    /// <summary>The pad between an editorial level's advance box and its parentheses' — the
+    /// rule kept for a pair of outlines that share no height.</summary>
     /// <remarks>LILYPOND-REF: Documentation/notation "New dynamic marks", the <c>\paren</c> example — <c>\pad-x #0.2</c> about the dynamic.</remarks>
-    internal const double EditorialPad = 0.2;
+    internal const double EditorialBoxPad = 0.2;
 
     /// <summary>
     /// The em an editorial level's parentheses are set at (<c>@p(editorial)</c>, owner-approved
@@ -1189,11 +1197,175 @@ internal static class DynamicEngraver
     internal static double EditorialParenEm(Rendering.ScoreTextMetrics fonts)
         => LabelEm(fonts, true);
 
-    /// <summary>How far an editorial level's parenthesis reaches past the level's own edge on
-    /// one side: the pad and the parenthesis. The level stands where the plain one does — the
-    /// two sides are equal, so centring "(p)" on the note centres the p.</summary>
-    internal static double EditorialReach(Rendering.ScoreTextMetrics fonts, bool left)
-        => EditorialPad + fonts.Advance(left ? "(" : ")", EditorialParenEm(fonts), LabelRole(true), LabelStyle(fonts, true));
+    /// <summary>
+    /// Where an editorial level's two parentheses stand: the pen origin of "(" and of ")"
+    /// (a text drawn from its start), about the level's own centre X, in staff spaces. ONE
+    /// HOME — the draw (<c>SharedRenderer.DrawDynamics</c>), the skylines
+    /// (<see cref="LabelSkylines(Rendering.ScoreTextMetrics, string?, bool, double, double, bool, bool)"/>)
+    /// and the extent (<see cref="EditorialReach"/>) all read it. The level does not move.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: each parenthesis is set from the level's INK, not from its advance box:
+    /// it stands where the white between its outline and the level's facing outline
+    /// (<see cref="EditorialOpticalGap"/>) is <see cref="EditorialGap"/> — the same on both
+    /// sides, for every level — and nowhere nearer the level than <see cref="EditorialClearance"/>.
+    ///   departs from: LilyPond's <c>\concat</c> + <c>\pad-x #0.2</c>, which abuts ADVANCE
+    ///     boxes. Everything here is slanted, so equal boxes are unequal ink. MEASURED,
+    ///     LilyPond 2.26.0, the twin's own markup at 1200 dpi with the parentheses coloured
+    ///     (LilySharp-Lab sessions/p1226/md/eval3/featJ/lp.ly), closest ink approach left /
+    ///     right of the level: (p) 0.410 / 0.578, (mf) 0.458 / 0.000, (f) 0.157 / 0.000,
+    ///     (sfz) 0.735 / 0.361 — an f's hook touches the ")". Lily# on the same rule, before
+    ///     this, optical gap left / right (and closest approach): (p) 0.701 / 0.721
+    ///     (0.466 / 0.640), (mf) 0.755 / 0.459 (0.625 / 0.266), (f) 0.761 / 0.469
+    ///     (0.510 / 0.276), (sfz) 0.773 / 0.730 (0.653 / 0.561). Now 0.600 / 0.600 for every
+    ///     level, the closest approach 0.35 to 0.52.
+    ///   why: the owner on seeing "(mf)" (2026-11-13): "perhaps because the font is italic,
+    ///     the space right after ( is a little too wide and the space right before ) a little
+    ///     too narrow." The closest approach alone was tried and is not what the eye reads:
+    ///     set equal, it left a hole between a z and its ")" (they are nearest at one corner).
+    ///   goes away when: never — an engraving decision of Lily#'s own.
+    ///   observed by: GrammarEvaluation3FeaturesTests.AnEditorialLevel_HasTheSameGapOnBothSides.
+    /// The level's ink is the outline of what is drawn: the dynamics face's shaped string
+    /// about half its advance (a SMuFL score's glyph run is its design box, as it is reserved).
+    /// The LilyPond twin keeps <c>\pad-x #0.2</c>: markup has no ink-to-ink spacing to ask for.
+    /// </remarks>
+    internal static (double Open, double Close) EditorialParenPens(Rendering.ScoreTextMetrics fonts, string text)
+        => EditorialPens.GetValue(fonts, static _ => new())
+            .GetOrAdd(text, static (t, f) => ComputeEditorialParenPens(f, t), fonts);
+
+    // Per score's metrics (weakly held: a score's plan is rebuilt as it is edited), per level.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Rendering.ScoreTextMetrics,
+        System.Collections.Concurrent.ConcurrentDictionary<string, (double Open, double Close)>> EditorialPens = new();
+
+    private static (double Open, double Close) ComputeEditorialParenPens(Rendering.ScoreTextMetrics fonts, string text)
+    {
+        var (levelLeft, levelRight) = EditorialLevelInk(fonts, text);
+        var (openRight, _) = EditorialParenInk(fonts, open: true);
+        var (_, closeLeft) = EditorialParenInk(fonts, open: false);
+        double half = LabelHalfWidth(fonts, text, false);
+        // No height in common (no face here draws such a pair): the advance boxes, a pad apart.
+        return (-(EditorialParenShift(openRight, levelLeft, levelOnRight: true) ?? half + EditorialBoxPad + EditorialParenAdvance(fonts, true)),
+                EditorialParenShift(levelRight, closeLeft, levelOnRight: false) ?? half + EditorialBoxPad);
+    }
+
+    /// <summary>How much of an editorial level faces its parenthesis: the part of its edge
+    /// within this of its outermost point on that side. What stands further back — the air
+    /// over a short letter beside a tall one, a stem behind its own hook — is not the gap an
+    /// eye measures.</summary>
+    internal const double EditorialFrontDepth = 0.5;
+
+    /// <summary>The least an editorial parenthesis and its level's ink are apart anywhere,
+    /// whatever their optical gap (two outlines of another face may hook into each other; in
+    /// the bundled faces it never binds — the closest any level comes is 0.35).</summary>
+    internal const double EditorialClearance = 0.15;
+
+    // The heights the optical gap is sampled at, a step apart.
+    private const double EditorialGapStep = 0.02;
+
+    /// <summary>
+    /// The optical gap between an editorial parenthesis and its level, <paramref name="left"/>
+    /// being the RIGHT profile of the one that stands left and <paramref name="right"/> the
+    /// LEFT profile of the other: the white between the two per unit of height, over the
+    /// heights both have ink at and the level shows its front at
+    /// (<see cref="EditorialFrontDepth"/>). NaN when they share no height.
+    /// </summary>
+    internal static double EditorialOpticalGap(HorizontalSkyline left, HorizontalSkyline right, bool levelOnRight)
+    {
+        Span<double> gap = stackalloc double[401], edge = stackalloc double[401];
+        int rows = 0;
+        double front = double.NegativeInfinity;
+        for (int i = -150; i <= 250; i++)
+        {
+            double y = i * EditorialGapStep;
+            double a = left.X(y), b = right.X(y);
+            if (!double.IsFinite(a) || !double.IsFinite(b))
+                continue;
+            gap[rows] = b - a;
+            // How far out the level's edge is at this height, larger = nearer the parenthesis.
+            edge[rows] = levelOnRight ? -b : a;
+            front = Math.Max(front, edge[rows]);
+            rows++;
+        }
+        double sum = 0;
+        int counted = 0;
+        for (int i = 0; i < rows; i++)
+        {
+            if (edge[i] < front - EditorialFrontDepth)
+                continue;
+            sum += gap[i];
+            counted++;
+        }
+        return counted > 0 ? sum / counted : double.NaN;
+    }
+
+    // How far right of where it is `right` has to stand of `left` for their optical gap to be
+    // EditorialGap — and nowhere nearer than EditorialClearance. Null when they share no height.
+    private static double? EditorialParenShift(HorizontalSkyline left, HorizontalSkyline right, bool levelOnRight)
+    {
+        double gap = EditorialOpticalGap(left, right, levelOnRight);
+        if (double.IsNaN(gap))
+            return null;
+        // Skyline::distance is how far the two would have to part to touch.
+        return Math.Max(EditorialGap - gap, left.Distance(right, EditorialClearance) + EditorialClearance);
+    }
+
+
+    /// <summary>An editorial level's ink as the two horizontal skylines (the leftmost and the
+    /// rightmost ink at each height), about the level's centre X on its baseline.</summary>
+    internal static (HorizontalSkyline Left, HorizontalSkyline Right) EditorialLevelInk(
+        Rendering.ScoreTextMetrics fonts, string text)
+    {
+        if (SmuflGlyphRun(fonts, text) is { } run)
+            return (HorizontalSkyline.FromBox(run.Bottom, run.Top, -run.Width / 2, run.Width / 2, HorizontalDirection.Left),
+                    HorizontalSkyline.FromBox(run.Bottom, run.Top, -run.Width / 2, run.Width / 2, HorizontalDirection.Right));
+        double em = LabelEm(fonts);
+        double half = LabelHalfWidth(fonts, text, false);
+        return EditorialInk(fonts, text, em, false, -half, half);
+    }
+
+    /// <summary>One editorial parenthesis's ink as its two horizontal skylines, its pen at 0.</summary>
+    internal static (HorizontalSkyline Right, HorizontalSkyline Left) EditorialParenInk(
+        Rendering.ScoreTextMetrics fonts, bool open)
+    {
+        var (left, right) = EditorialInk(fonts, open ? "(" : ")", EditorialParenEm(fonts), true,
+            0, EditorialParenAdvance(fonts, open));
+        return (right, left);
+    }
+
+    private static double EditorialParenAdvance(Rendering.ScoreTextMetrics fonts, bool open)
+        => fonts.Advance(open ? "(" : ")", EditorialParenEm(fonts), LabelRole(true), LabelStyle(fonts, true));
+
+    // The string's outline at its pen (the walk TextOutlineSkylines runs, on the other
+    // horizon), or its advance box at its ink height when the face cannot spell it.
+    private static (HorizontalSkyline Left, HorizontalSkyline Right) EditorialInk(
+        Rendering.ScoreTextMetrics fonts, string text, double em, bool expressive, double pen, double boxRight)
+    {
+        var face = fonts.Face(LabelRole(expressive), LabelStyle(fonts, expressive));
+        if (text.Length > 0 && !HasMissingGlyph(text, em, face)
+            && Rendering.TextFontMetrics.OutlinePath(text, face) is { IsEmpty: false } path)
+        {
+            var (leftQuads, rightQuads) = TextOutlineSkylines.FlattenPathHorizontal(path, em / 1000.0);
+            var left = HorizontalSkyline.FromSignedBuildings(HorizontalDirection.Left, leftQuads);
+            var right = HorizontalSkyline.FromSignedBuildings(HorizontalDirection.Right, rightQuads);
+            left.Raise(pen);
+            right.Raise(pen);
+            return (left, right);
+        }
+        var (bottom, top) = fonts.InkOrFallbackBox(text, em, LabelRole(expressive), LabelStyle(fonts, expressive));
+        return (HorizontalSkyline.FromBox(bottom, top, pen, boxRight, HorizontalDirection.Left),
+                HorizontalSkyline.FromBox(bottom, top, pen, boxRight, HorizontalDirection.Right));
+    }
+
+    /// <summary>How far an editorial level's parenthesis reaches past the level's own edge (its
+    /// drawn advance, <see cref="LabelHalfWidth"/>) on one side — the parenthesis's advance box,
+    /// where <see cref="EditorialParenPens"/> stands it. The level stands where the plain one
+    /// does; the two sides differ by what the letters lean.</summary>
+    internal static double EditorialReach(Rendering.ScoreTextMetrics fonts, string text, bool left)
+    {
+        var (open, close) = EditorialParenPens(fonts, text);
+        double half = LabelHalfWidth(fonts, text, false);
+        return left ? -open - half : close + EditorialParenAdvance(fonts, false) - half;
+    }
 
     /// <summary>A placed dynamic's ink across, about its own X: the level's half-width each way,
     /// and on the left the subito's word as well. ONE HOME for every reader that boxes a
@@ -1201,8 +1373,8 @@ internal static class DynamicEngraver
     internal static (double Left, double Right) LabelExtentX(Rendering.ScoreTextMetrics fonts, in DynamicLayout d)
     {
         double half = LabelHalfWidth(fonts, d.Text ?? string.Empty, d.IsExpressiveText);
-        return (d.X - half - (d.IsSubito ? SubitoWidth(fonts) : 0) - (d.IsEditorial ? EditorialReach(fonts, left: true) : 0),
-            d.X + half + (d.IsEditorial ? EditorialReach(fonts, left: false) : 0));
+        return (d.X - half - (d.IsSubito ? SubitoWidth(fonts) : 0) - (d.IsEditorial ? EditorialReach(fonts, d.Text ?? string.Empty, left: true) : 0),
+            d.X + half + (d.IsEditorial ? EditorialReach(fonts, d.Text ?? string.Empty, left: false) : 0));
     }
 
     /// <summary>A placed dynamic's ink up and down about its baseline — <see cref="InkOf(Rendering.ScoreTextMetrics, string?, bool)"/>,

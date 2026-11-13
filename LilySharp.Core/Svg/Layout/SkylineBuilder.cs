@@ -3072,7 +3072,7 @@ internal sealed class SkylineBuilder
                         : DynamicEngraver.DynamicAnchorCentreOffset(
                             voices, d.VoiceIndex, d.MeasureIndex, d.ItemIndex));
                     left = xLabel - half - (d.IsSubito && !d.IsExpressiveText ? DynamicEngraver.SubitoWidth(_fonts) : 0)
-                        - (d.IsEditorial && !d.IsExpressiveText ? DynamicEngraver.EditorialReach(_fonts, left: true) : 0);
+                        - (d.IsEditorial && !d.IsExpressiveText ? DynamicEngraver.EditorialReach(_fonts, d.Text ?? string.Empty, left: true) : 0);
                     break;
                 }
                 below ??= new();

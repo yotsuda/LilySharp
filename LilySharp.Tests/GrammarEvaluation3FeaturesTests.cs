@@ -1625,10 +1625,13 @@ public class GrammarEvaluation3FeaturesTests
         var open = Assert.Single(g.Texts, t => t.Text == "(");
         var close = Assert.Single(g.Texts, t => t.Text == ")");
         Assert.DoesNotContain(plain.Texts, t => t.Text is "(" or ")");
-        double half = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelHalfWidth(fonts, level, false);
-        Assert.Equal((LilySharp.Core.Rendering.TextAnchor.End, LilySharp.Core.Rendering.TextAnchor.Start), (open.Anchor, close.Anchor));
-        Assert.Equal(now.X - half - LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialPad, open.X, 6);
-        Assert.Equal(now.X + half + LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialPad, close.X, 6);
+        // Each from its own pen, where the one home of their places says (the level's ink
+        // decides it, not its advance box — AnEditorialLevel_HasTheSameGapOnBothSides).
+        var pens = LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialParenPens(fonts, level);
+        Assert.Equal((LilySharp.Core.Rendering.TextAnchor.Start, LilySharp.Core.Rendering.TextAnchor.Start), (open.Anchor, close.Anchor));
+        Assert.Equal(now.X + pens.Open, open.X, 6);
+        Assert.Equal(now.X + pens.Close, close.X, 6);
+        Assert.True(open.X < now.X && now.X < close.X);
         Assert.Equal(now.Y, open.Y, 6);
         Assert.Equal(now.Y, close.Y, 6);
         // At the text size: the manual's \fontsize #2 made them nearly twice a p (owner, 2026-11-13).
@@ -1637,6 +1640,65 @@ public class GrammarEvaluation3FeaturesTests
         Assert.True(now.Y >= was.Y - 1e-9, $"{now.Y} against {was.Y}");
         // The notes did not move.
         Assert.Equal(plain.Noteheads.Select(h => Math.Round(h.X, 6)), g.Noteheads.Select(h => Math.Round(h.X, 6)));
+    }
+
+    /// <summary>The white between "(" and the level is the white between the level and ")",
+    /// for every level the language has: each parenthesis is set from the level's INK, so a
+    /// letter that leans (an f into its ")", a p's tail under its "(") does not make one side
+    /// tight and the other loose. The skyline and the extent stand where the draw does.</summary>
+    /// <remarks>The owner on "(mf)" set by advance boxes (2026-11-13): "the space right after
+    /// ( is a little too wide and the space right before ) a little too narrow" — the optical
+    /// gap was 0.755 against 0.459 (DynamicEngraver.EditorialParenPens).</remarks>
+    [Fact]
+    public void AnEditorialLevel_HasTheSameGapOnBothSides()
+    {
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        var role = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelRole(true);
+        var style = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, true);
+        double parenEm = LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialParenEm(fonts);
+        Assert.Equal(21, LilySharp.Core.Syntax.SyntaxFacts.DynamicTextLevels.Count);
+        foreach (var (level, kind) in LilySharp.Core.Syntax.SyntaxFacts.DynamicTextLevels)
+        {
+            if (kind == DynamicLevel.Niente)
+                continue;
+            var (open, close) = LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialParenPens(fonts, level);
+            var ink = LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialLevelInk(fonts, level);
+            var openInk = LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialParenInk(fonts, open: true);
+            var closeInk = LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialParenInk(fonts, open: false);
+            openInk.Right.Raise(open);
+            closeInk.Left.Raise(close);
+            double before = LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialOpticalGap(openInk.Right, ink.Left, levelOnRight: true);
+            double after = LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialOpticalGap(ink.Right, closeInk.Left, levelOnRight: false);
+            Assert.True(Math.Abs(before - after) < 1e-6, $"({level}): {before} before, {after} after");
+            Assert.Equal(LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialGap, before, 6);
+
+            // Nowhere do the outlines come nearer than the clearance, at any height both have ink.
+            double nearest = double.PositiveInfinity;
+            for (double y = -1.0; y <= 2.5; y += 0.01)
+            {
+                foreach (var (l, r) in new[] { (openInk.Right.X(y), ink.Left.X(y)), (ink.Right.X(y), closeInk.Left.X(y)) })
+                    if (double.IsFinite(l) && double.IsFinite(r))
+                        nearest = Math.Min(nearest, r - l);
+            }
+            Assert.True(nearest >= LilySharp.Core.Svg.Layout.DynamicEngraver.EditorialClearance, $"({level}): {nearest}");
+
+            // The extent boxes the two parentheses where they are drawn.
+            double half = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelHalfWidth(fonts, level, false);
+            var extent = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelExtentX(fonts,
+                new LilySharp.Core.Svg.Layout.DynamicLayout(0, 0, 10.0, 0.0, level, 0, IsEditorial: true));
+            Assert.Equal(10.0 + open, extent.Left, 9);
+            Assert.Equal(10.0 + close + fonts.Advance(")", parenEm, role, style), extent.Right, 9);
+            Assert.True(extent.Left < 10.0 - half && extent.Right > 10.0 + half);
+
+            // …and so does the skyline: the pair's outlines at those pens, over the plain level's.
+            var face = fonts.Face(role, style);
+            var plain = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelSkylines(fonts, level, false, 10.0, 0.0, false, false);
+            var sky = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelSkylines(fonts, level, false, 10.0, 0.0, false, true);
+            plain.Up.Merge(LilySharp.Core.Svg.Layout.TextOutlineSkylines.Place("(", parenEm, face, 10.0 + open, 0.0).Up);
+            plain.Up.Merge(LilySharp.Core.Svg.Layout.TextOutlineSkylines.Place(")", parenEm, face, 10.0 + close, 0.0).Up);
+            for (double x = 10.0 + open; x <= 10.0 + close + 1.0; x += 0.05)
+                Assert.Equal(plain.Up.Height(x), sky.Up.Height(x), 9);
+        }
     }
 
     /// <summary>It takes a side as the plain level does, ends a hairpin as one, and sounds as one.</summary>
