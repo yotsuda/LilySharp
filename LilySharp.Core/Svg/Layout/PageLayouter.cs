@@ -135,11 +135,16 @@ internal sealed class PageLayouter
     /// </remarks>
     /// <param name="fonts">The score's text metrics, which measure the page number every page
     /// after the first prints in its header (<see cref="PageNumbers"/>); null prices no number.</param>
-    internal PageBreaker CreateBreaker(Rendering.ScoreTextMetrics? fonts = null) => new(
+    /// <param name="firstFooterHeight">The height of the FIRST page's footer — the copyright
+    /// line's ink (owner's decision 2026-11-13) — or 0. It is taken out of that page's band
+    /// as a header's height is: the breaker reads the band's size alone.
+    /// LILYPOND-REF: scm/page.scm:303-321 calc-printable-height — the paper less the margins,
+    ///   the head stencil's height AND the foot stencil's.</param>
+    internal PageBreaker CreateBreaker(Rendering.ScoreTextMetrics? fonts = null, double firstFooterHeight = 0) => new(
         pageHeight: _options.PageHeight,
         topMargin: _options.MarginTop,
         bottomMargin: _options.MarginBottom,
-        headerHeight: 0,
+        headerHeight: firstFooterHeight,
         parameters: _options.PageBreaking,
         verticalSpacing: _options.VerticalSpacing,
         laterHeaderHeight: fonts is null ? null : HeaderHeights(fonts));
@@ -347,7 +352,8 @@ internal sealed class PageLayouter
         Rendering.ScoreTextMetrics? fonts = null,
         IReadOnlyList<double>? systemBreakerUpExtents = null,
         IReadOnlyList<double>? systemBreakerDownExtents = null,
-        ProseBand? endText = null)
+        ProseBand? endText = null,
+        HeaderLineSet? footer = null)
     {
         if (systems.Length == 0)
         {
@@ -427,7 +433,7 @@ internal sealed class PageLayouter
         // runs over its lines (the book title is line 0, paper-book.cc:570-580). The break
         // points come back as line indices; with a title in front, each is one more than
         // the system index it ends at.
-        var breaker = CreateBreaker(onePage ? null : fonts);
+        var breaker = CreateBreaker(onePage ? null : fonts, footer?.Height ?? 0);
         List<SystemDetails> lines;
         if (header is null)
         {
@@ -516,6 +522,12 @@ internal sealed class PageLayouter
             // (audit/lp-geometry/probes/page-vertical.ly, books L and J).
             bool useFixedForce = isRagged && !raggedAll;
 
+            // The copyright line: the first page's footer, and no other's (owner's decision
+            // 2026-11-13).
+            // LILYPOND-REF: ly/titling-init.ly oddFooterMarkup, lines 124-135 —
+            //   \if \on-first-page-of-part \fromproperty #'header:copyright.
+            var pageFooter = isFirstPage ? footer : null;
+
             // Position systems using context-aware spacing specs
             // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
             // When skylines are available, use Distance() for X-dependent collision detection
@@ -528,7 +540,7 @@ internal sealed class PageLayouter
                 onePage || fonts is null ? 0.0 : PageNumbers.HeaderHeight(fonts, pageIdx),
                 pageEndText,
                 out double pageForce,
-                out double headerTop, out double headerTextY, out double endTextY, out double overflow);
+                out double headerTop, out double headerTextY, out double endTextY, out double overflow, pageFooter?.Height ?? 0);
 
             // LILYPOND-REF: lily/page-breaking.cc:577-582 — the force is carried forward
             // after every page, so "the previous page" always means the immediately
@@ -547,7 +559,8 @@ internal sealed class PageLayouter
                 EndText: pageEndText,
                 EndTextY: endTextY,
                 Overflow: overflow,
-                Force: pageForce));
+                Force: pageForce,
+                Footer: pageFooter));
 
             systemStart = systemEnd;
         }
@@ -568,7 +581,7 @@ internal sealed class PageLayouter
             var music = CreatePagesWithOptimalBreaking(
                 systems, header, systemExtents, systemSkylines, systemBandUps, systemBodyHeights,
                 systemAnchors, systemShapes, systemPagePermissions, systemBreakerFrames, onePage,
-                fonts, systemBreakerUpExtents, systemBreakerDownExtents, endText: null);
+                fonts, systemBreakerUpExtents, systemBreakerDownExtents, endText: null, footer: footer);
             // The text's reference point (its first baseline): top-markup-spacing from the top
             // of the printable area, floored by the page number's header, the text's box above
             // the baseline and the padding — the spring a text that opens page 1 takes
@@ -622,7 +635,8 @@ internal sealed class PageLayouter
         out double headerTop,
         out double headerTextY,
         out double endTextY,
-        out double overflow)
+        out double overflow,
+        double pageFooterHeight = 0)
     {
         // Lent, and given back once copied out at the end — this method's only return.
         var pageSystems = ListPool<SystemLayout>.Rent();
@@ -856,7 +870,14 @@ internal sealed class PageLayouter
         // LILYPOND-REF: lily/page-layout-problem.cc:538-545 — last-bottom-spacing,
         // floored by `last_padding - bottom_skyline_.max_height () + footer_height_`.
         // bottom_skyline_ is the last system's DOWN skyline about its own refpoint, so
-        // -max_height() is the ink hanging below that refpoint. Lily# has no footer.
+        // -max_height() is the ink hanging below that refpoint. The footer is the copyright
+        // line's ink on the first page (pageFooterHeight; owner's decision 2026-11-13) and 0
+        // on every other: Lily# prints no tagline.
+        // MEASURED 2026-11-13, LilyPond 2.26.0 (LilySharp-Lab sessions/p1226/md/header, p3 /
+        // p4 / p5: twelve systems forced onto page 1): the last staff's bottom line at
+        // 160.7738 with no copyright, 158.6992 over "Copyright 2026 Somebody" (ink 2.07 tall)
+        // and 159.1194 over the same in capitals (1.69): the footer's INK height, as a text
+        // stencil's extent is. Lily# stands those lines within 0.002 of them (HeaderLinesTests).
         // Lily# used to have NO spring here at all: it stretched the inter-system gaps
         // until the last system's INK touched the bottom margin, which drops both this
         // spring's padding and its stretchability out of the force calculation.
@@ -885,13 +906,13 @@ internal sealed class PageLayouter
                 endTextNode = springs.Count;
                 springLabels?.Add($"score-markup → end text refpoint (ink below {inkBelowLastRefpoint:F3})");
                 springs.Add(LayoutUtilities.CreateSpring(
-                    vs.LastBottom, vs.LastBottom.Padding + endText.Down));
+                    vs.LastBottom, vs.LastBottom.Padding + endText.Down + pageFooterHeight));
                 springLabels?.Add($"last-bottom  from the end text (box below {endText.Down:F3})");
             }
             else
             {
                 springs.Add(LayoutUtilities.CreateSpring(
-                    vs.LastBottom, vs.LastBottom.Padding + inkBelowLastRefpoint));
+                    vs.LastBottom, vs.LastBottom.Padding + inkBelowLastRefpoint + pageFooterHeight));
                 springLabels?.Add($"last-bottom  from sys {endIdx} refpoint "
                     + $"(ink below {inkBelowLastRefpoint:F3} + padding {vs.LastBottom.Padding:F3})");
             }

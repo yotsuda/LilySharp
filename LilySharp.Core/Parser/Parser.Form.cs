@@ -772,12 +772,13 @@ internal sealed partial class Parser
             SyntaxKind.TabKeyword => ParseTabRender(),
             SyntaxKind.OssiaKeyword => ParseOssiaRender(),
             // A per-score header: `score { title "…" composer "…" staff … }`
-            // restates the file's title/subtitle/composer/poet for THIS score only. Parsed as
+            // restates the file's title/subtitle/composer/poet/arranger/copyright for THIS score only. Parsed as
             // the ordinary metadata node so it round-trips and keeps its source spans —
             // an unrecognised token here falls to ParseList's Advance(), which drops
             // the token's width and shifts every following source offset.
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword
-                or SyntaxKind.SubtitleKeyword or SyntaxKind.PoetKeyword => ParseMetadataDeclaration(),
+                or SyntaxKind.SubtitleKeyword or SyntaxKind.PoetKeyword
+                or SyntaxKind.ArrangerKeyword or SyntaxKind.CopyrightKeyword => ParseMetadataDeclaration(),
             // `fonts NAME` / `paper NAME` — this score's reference to a named top-level
             // block, optionally with an override block of its own. Parsed by the same
             // functions as the declarations (the node is one shape; position says which
@@ -804,7 +805,7 @@ internal sealed partial class Parser
                     "A score body holds render items — 'staff NAME', 'tab NAME', 'strokes NAME', "
                     + "'grandStaff { … }', 'staffGroup { … }', 'choirStaff { … }', "
                     + "'condensedStaff { … }', 'combinedStaff { … }', 'ossia NAME', "
-                    + "'chords NAME', 'lyrics NAME' — its own 'title'/'subtitle'/'composer'/'poet', "
+                    + "'chords NAME', 'lyrics NAME' — its own 'title'/'subtitle'/'composer'/'poet'/'arranger'/'copyright', "
                     + "'form NAME' or 'form { … }', a 'fonts' / 'paper' / 'layout' reference or "
                     + "block, and a bare part name to render that part to MIDI only.")
         };

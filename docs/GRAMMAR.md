@@ -110,7 +110,7 @@ DurationToken  = DurationBase , [ Dots ] , [ Tremolo ] ;
 
 ### Keywords
 
-Keyword = 'title' | 'subtitle' | 'composer' | 'poet' | 'tempo' | 'time' | 'key' | 'clef'
+Keyword = 'title' | 'subtitle' | 'composer' | 'poet' | 'arranger' | 'copyright' | 'tempo' | 'time' | 'key' | 'clef'
         | 'part' | 'strokes' | 'phrase' | 'section' | 'form' | 'score'
         | 'staff' | 'grandStaff' | 'staffGroup' | 'choirStaff'
         | 'condensedStaff' | 'combinedStaff' | 'tab' | 'ossia' | 'voice'
@@ -176,7 +176,7 @@ Punctuation    = '{' | '}' | '(' | ')' | '<' | '>' | '[' | ']'
 
 File           = { TopLevelItem } ;
 
-TopLevelItem   = MetadataDecl                     (* title, subtitle, composer, poet *)
+TopLevelItem   = MetadataDecl                     (* title, subtitle, composer, poet, arranger, copyright *)
                | FontDecl                         (* text fonts, per role *)
                | PaperDecl                        (* page dimensions *)
                | LayoutDecl                       (* display switches *)
@@ -209,12 +209,17 @@ TopLevelItem   = MetadataDecl                     (* title, subtitle, composer, 
 ### 2.2 Metadata
 
 MetadataDecl   = MetadataKey , String ;
-MetadataKey    = 'title' | 'subtitle' | 'composer' | 'poet' ;
+MetadataKey    = 'title' | 'subtitle' | 'composer' | 'poet' | 'arranger' | 'copyright' ;
 
 (* LilyPond's \header fields of the same names, drawn where its bookTitleMarkup draws them
-   (ly/titling-init.ly:68-97): the title centred; the subtitle centred on the line below it,
-   \large \bold; the poet at the left end and the composer at the right end of the next line,
-   at text size. *)
+   (ly/titling-init.ly:68-97): the title centred, the subtitle centred on the line below it,
+   \large \bold, the poet at the left end and the composer at the right end of the next line,
+   at text size, and the arranger at the right end of the line under that one, at the same
+   size (the left of that line is LilyPond's meter, which Lily# does not have).
+   The copyright is LilyPond's \header copyright, drawn where its oddFooterMarkup draws it:
+   centred at the foot of the FIRST page only, at text size, its lowest ink on the bottom
+   margin, and the systems of that page keep clear of it as of a footer
+   (owner's decision 2026-11-13). *)
 
 MarkdownText   = FenceOpen , { FenceWord } , NewLine , { TextLine } , FenceClose ;
 FenceOpen      = '```' , { '`' } , ( 'md' | 'markdown' ) ;
@@ -1359,7 +1364,7 @@ PartDecl       = ( 'part' | 'strokes' ) , [ PartName ] , [ String ] , [ PartBody
    of their own where a name could stand, and the section settings: voice lyrics chords
    section part phrase form score tab staff ossia grandStaff staffGroup choirStaff
    condensedStaff combinedStaff layout paper fonts grace acciaccatura appoggiatura afterGrace cue
-   key time tempo partial override revert once using title subtitle composer poet, and
+   key time tempo partial override revert once using title subtitle composer poet arranger copyright, and
    the words a form body reads as items of its own — segno fine coda dc ds al to and
    break noBreak pageBreak noPageBreak — since a section is named by the same rule
    (SyntaxFacts.PartNameReservedVocabulary — the refusal names the list). So 'part p', 'part bass',
@@ -2221,7 +2226,7 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         'on', the even-spread lead-sheet row.
                                                         Directly below a staff of several parts,
                                                         'on' is required (LYS4051). *)
-               | ( 'title' | 'subtitle' | 'composer' | 'poet' ) , String
+               | ( 'title' | 'subtitle' | 'composer' | 'poet' | 'arranger' | 'copyright' ) , String
                                                      (* THIS score's own header — see below *)
                | 'form' , ( Identifier | '{' , { StructureItem } , '}' )
                                                      (* THIS score's form: a named top-level
@@ -2509,7 +2514,7 @@ DisplayName    = String ;
                     reference; GRAMMAR_AUDIT §3.1. Also uniform with 'part X "Violin I"',
                     which was already quoted-only.) *)
 
-(* THIS SCORE'S OWN HEADER: 'title' / 'subtitle' / 'composer' / 'poet' written inside a score
+(* THIS SCORE'S OWN HEADER: 'title' / 'subtitle' / 'composer' / 'poet' / 'arranger' / 'copyright' written inside a score
    restate the file's metadata for that score alone — the same words as the top-level
    MetadataDecl, in a score body. A part-extract score can be headed with the part's name while the full score
    keeps the work's title. *)

@@ -184,6 +184,8 @@ internal static partial class SharedRenderer
                 DrawHeader(score, page, options, gc);
             firstPage = false;
             DrawPageNumber(score, page, pageIndex, options, gc);
+            // The copyright line, on the page that carries it (the first).
+            DrawFooter(page, options, gc);
             var marginScope = options.MarginLeft != 0
                 ? gc.BeginGroup(DrawingTransform.Translate(options.MarginLeft, 0))
                 : null;
@@ -617,6 +619,10 @@ internal static partial class SharedRenderer
             gc.DrawText(instrument, centerX, page.Height - (top + instrumentBaseline),
                 HeaderBand.ComposerEm(fonts), TextRole.Composer, HeaderBand.ComposerStyle(fonts), TextAnchor.Middle);
         }
+        // The right end of the meter / arranger \fill-line (owner's decision 2026-11-13): the
+        // right margin, as the composer's.
+        if (band.Arranger is { } arranger && band.ArrangerBaseline is { } arrangerBaseline)
+            DrawHeaderLine(arranger, page.Width - options.MarginLeft, top + arrangerBaseline, page, gc);
         if (band.ChordList is { } list)
         {
             // The chord list (chordList; 2026-09-29): each name in the chord symbol's own pieces
@@ -644,6 +650,46 @@ internal static partial class SharedRenderer
                     DrawFretFrame(fonts, cell.GridCentreX, page.Height - (top + cell.GridBottom), spec, gc);
             }
         }
+    }
+
+    /// <summary>
+    /// One of the header lines of 2026-11-13 (HeaderLineSet) about <paramref name="anchorX"/>
+    /// as it aligns — centred on it or ending at it — its baseline <paramref name="baseline"/>
+    /// below the page's top edge.
+    /// </summary>
+    private static void DrawHeaderLine(
+        HeaderLineSet line, double anchorX, double baseline, PageLayout page, IDrawingContext gc)
+    {
+        using (SourceScope(gc, line.Position))
+            gc.DrawText(line.Text, anchorX, page.Height - baseline, line.Em, line.Role, line.Style,
+                line.Align == HeaderAlign.Center ? TextAnchor.Middle : TextAnchor.End);
+    }
+
+    /// <summary>
+    /// The first page's footer: the copyright line, centred, the lowest of its ink on the
+    /// bottom margin (owner's decision 2026-11-13).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/titling-init.ly oddFooterMarkup, lines 124-135 — a \column of two
+    ///   \fill-line rows, the first <c>\if \on-first-page-of-part \fromproperty
+    ///   #'header:copyright</c> (one markup in a \fill-line is centred), the second the
+    ///   tagline, which Lily# does not print;
+    /// LILYPOND-REF: scm/page.scm:261-270 make-page-stencil — the foot stencil is translated
+    ///   so that its BOTTOM stands on the bottom margin.
+    /// MEASURED 2026-11-13, LilyPond 2.26.0 (LilySharp-Lab sessions/p1226/md/header; a4, 20 pt,
+    ///   the paper 169.0094 tall, its 10 mm bottom margin's edge at 163.3188): "Copyright 2026
+    ///   Somebody" at 2.2000, centred (46.5032 + 26.4951 / 2 = 59.7508, the page's middle),
+    ///   its baseline at 162.8656 — 6.1438 over the paper's bottom edge, its descenders' 0.4532
+    ///   on the margin; in capitals (p5.ly) the baseline at 163.2858, the round letters'
+    ///   0.0330 overshoot on the margin. The ink's, not the font's.
+    /// </remarks>
+    private static void DrawFooter(PageLayout page, LayoutOptions options, IDrawingContext gc)
+    {
+        if (page.Footer is not { } footer)
+            return;
+        // (InkBottom is about the baseline, up-positive: 0 or below.)
+        double baseline = page.Height - options.MarginBottom + footer.InkBottom;
+        DrawHeaderLine(footer, page.Width / 2, baseline, page, gc);
     }
 
     /// <summary>

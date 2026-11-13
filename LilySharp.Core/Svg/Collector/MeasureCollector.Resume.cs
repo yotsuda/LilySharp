@@ -847,6 +847,7 @@ public sealed partial class MeasureCollector
             && _v.Meta.Composer == rec.Composer
             && _v.Meta.Subtitle == rec.Subtitle
             && _v.Meta.Poet == rec.Poet
+            && TryShiftLines(rec.Lines, w, out var lines) && _v.Meta.Lines == lines
             && _v.Meta.TextBefore == rec.TextBefore
             && _v.Meta.TextAfter == rec.TextAfter
             && _v.Meta.TextBeforeShape == rec.TextBeforeShape
@@ -894,6 +895,22 @@ public sealed partial class MeasureCollector
         return true;
     }
 
+    /// <summary>The arranger and the copyright line with where each is written carried
+    /// through the window map; false when one cannot be.</summary>
+    private static bool TryShiftLines(Model.HeaderLines lines, in CollectTailShifter.Window w, out Model.HeaderLines shifted)
+    {
+        shifted = lines;
+        // (The keystroke path: a score with none of them allocates nothing here.)
+        return ReferenceEquals(lines, Model.HeaderLines.None) || Shift(lines, w, out shifted);
+
+        static bool Shift(Model.HeaderLines lines, CollectTailShifter.Window window, out Model.HeaderLines shifted)
+        {
+            var moved = lines.Shifted(position => window.TryShift(position, out int to) ? to : null);
+            shifted = moved ?? lines;
+            return moved is not null;
+        }
+    }
+
     /// <summary>Re-homes a cloned <see cref="MetadataState"/>'s eight header
     /// positions through the window map (the splice's end-state jump); false
     /// when one lies inside the dirty window.</summary>
@@ -914,8 +931,10 @@ public sealed partial class MeasureCollector
             || !w.TryShift(meta.SwingPosition, out int swing)
             || !w.TryShift(meta.SwingValuePosition, out int swingValue)
             || !TryShiftBlocks(meta.TextBeforeMore, w, out var beforeMore)
-            || !TryShiftBlocks(meta.TextAfterMore, w, out var afterMore))
+            || !TryShiftBlocks(meta.TextAfterMore, w, out var afterMore)
+            || !TryShiftLines(meta.Lines, w, out var lines))
             return false;
+        meta.Lines = lines;
         meta.TextBeforeMore = beforeMore;
         meta.TextAfterMore = afterMore;
         meta.TempoUnitPosition = unit;

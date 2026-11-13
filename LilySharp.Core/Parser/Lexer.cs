@@ -771,6 +771,10 @@ internal sealed class Lexer
             // LilyPond's \header fields of the same names (ly/titling-init.ly bookTitleMarkup).
             "subtitle" => SyntaxKind.SubtitleKeyword,
             "poet" => SyntaxKind.PoetKeyword,
+            // …and two more of them (owner's decision 2026-11-13): the arranger under the
+            // composer, the copyright at the first page's foot (oddFooterMarkup).
+            "arranger" => SyntaxKind.ArrangerKeyword,
+            "copyright" => SyntaxKind.CopyrightKeyword,
             // ⚠️ `fonts`, plural, and there is no `font`. The block is an alist of
             // family -> face, which is what LilyPond calls `fonts` too
             // (define-grob-properties.scm:395, paper-defaults-init.ly:169-178

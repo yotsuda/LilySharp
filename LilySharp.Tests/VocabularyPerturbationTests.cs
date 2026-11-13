@@ -407,6 +407,27 @@ public class VocabularyPerturbationTests
         AssertMoves(book, written, $"layout {key} {value}");
     }
 
+    // ===================== the file's header lines =====================
+
+    /// <summary>
+    /// Every header line moves the page, written at the top level and restated in a score —
+    /// the two of 2026-11-13 (owner's decision: <c>arranger</c> under the composer,
+    /// <c>copyright</c> at the first page's foot) beside the four before them.
+    /// </summary>
+    [Theory]
+    [InlineData("title")]
+    [InlineData("subtitle")]
+    [InlineData("composer")]
+    [InlineData("poet")]
+    [InlineData("arranger")]
+    [InlineData("copyright")]
+    public void EveryHeaderLineMovesThePage(string word)
+    {
+        AssertMoves(Plain, $"{word} \"Words\"\n" + Plain, word);
+        AssertMoves(Plain, Plain.Replace("score { staff m }", $"score {{ {word} \"Words\" staff m }}"),
+            word + " in a score");
+    }
+
     // ===================== the part header =====================
 
     /// <remarks>

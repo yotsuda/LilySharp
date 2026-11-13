@@ -43,8 +43,9 @@ internal sealed record ChordListLayout(ImmutableArray<ChordListCell> Cells, doub
 /// LILYPOND-REF: ly/titling-init.ly bookTitleMarkup (lines 68-97) — a \column with baseline-skip 3.5
 /// of \fill-line rows: the title in \huge \larger \larger \bold, the subtitle in
 /// \large \bold, the poet and the composer at the two ends of the poet / instrument /
-/// composer row at text size. The rows Lily# has no text for (dedication, subsubtitle,
-/// meter, arranger) are empty stencils and the column drops them, so it holds three rows
+/// composer row at text size, the arranger at the right end of the meter / arranger row
+/// under it (owner's decision 2026-11-13). The rows Lily# has no text for (dedication,
+/// subsubtitle, meter) are empty stencils and the column drops them, so it holds four rows
 /// at most.
 /// LILYPOND-REF: lily/paper-book.cc:443 Paper_book::book_title — <c>align_to (Y_AXIS, UP)</c>:
 /// the column's reference point is the TOP of its ink, so the paper system LilyPond pages
@@ -83,7 +84,11 @@ internal sealed record HeaderBand(
     // The fenced text under the rows (docs/markdown-text-design.md), or null. NOT in Depth:
     // it is a line of the page's chain of its own, as a top-level markup after LilyPond's
     // book title is (LayoutUtilities.AddHeaderSprings).
-    ProseBand? Text = null)
+    ProseBand? Text = null,
+    // The arranger (owner's decision 2026-11-13), or null: the right end of the row under
+    // the composer's, its baseline ArrangerBaseline below the column's top.
+    HeaderLineSet? Arranger = null,
+    double? ArrangerBaseline = null)
 {
     /// <summary>Whether the band has rows of its own — a title, a subtitle, a poet / composer
     /// line, a chord list — or is only the page's opening text.</summary>
@@ -267,6 +272,18 @@ internal sealed record HeaderBand(
     /// <summary>The poet's weight and slant: upright unless the score wrote a style.</summary>
     public static FontStyle PoetStyle(ScoreTextMetrics fonts) => fonts.Style(TextRole.Poet, FontStyle.Regular);
 
+    /// <summary>The copyright line's em for THIS score: the text size.</summary>
+    /// <remarks>LILYPOND-REF: ly/titling-init.ly oddFooterMarkup, lines 124-135 —
+    /// <c>\fromproperty #'header:copyright</c> carries no size command.
+    /// MEASURED 2026-11-13, LilyPond 2.26.0 (LilySharp-Lab sessions/p1226/md/header, p1.ly):
+    /// font-size 2.2000 — the composer's, not a smaller one. Set in the role of the page's own
+    /// header and footer (the page number's), which has no <c>fonts { }</c> key of its own:
+    /// the <c>header</c> group and the families reach it.</remarks>
+    public static double CopyrightEm(ScoreTextMetrics fonts) => fonts.Size(TextRole.PageNumber, ComposerFontSize);
+
+    /// <summary>The copyright line's weight and slant: upright unless the score wrote a style.</summary>
+    public static FontStyle CopyrightStyle(ScoreTextMetrics fonts) => fonts.Style(TextRole.PageNumber, FontStyle.Regular);
+
     /// <summary>
     /// The least room <c>\fill-line</c> leaves between the poet and the composer when the row
     /// is too full to spread them — the snippet page's width reads it.
@@ -286,10 +303,15 @@ internal sealed record HeaderBand(
     /// <param name="poet">The poet, or null.</param>
     /// <param name="instrument">The instrument line, or null — "Capo 3" for a capo score
     /// (2026-09-29): the centre of the poet / composer row, at the composer's size.</param>
+    /// <param name="arranger">The arranger (owner's decision 2026-11-13), or null: the row
+    /// under the poet / composer row. Null builds the header of every score before that day
+    /// exactly as it was.</param>
     public static HeaderBand? Build(string? title, string? composer, ScoreTextMetrics fonts,
-        string? subtitle = null, string? poet = null, string? instrument = null)
+        string? subtitle = null, string? poet = null, string? instrument = null,
+        HeaderLineSet? arranger = null)
     {
-        if (title is null && composer is null && subtitle is null && poet is null && instrument is null)
+        if (title is null && composer is null && subtitle is null && poet is null && instrument is null
+            && arranger is null)
             return null;
 
         double? previousBaseline = null;
@@ -313,6 +335,7 @@ internal sealed record HeaderBand(
         }
 
         // The same size and style the draw sets each string in (SharedRenderer.DrawHeader).
+        // (The arranger comes measured: HeaderLineSet.Arranger.)
         double? StackOne(string? text, double size, TextRole role, FontStyle style)
         {
             if (text is null)
@@ -351,6 +374,19 @@ internal sealed record HeaderBand(
             composerBaseline = Stack(inkBottom, inkTop, rowWidth);
         }
 
-        return new HeaderBand(depth, titleBaseline, composerBaseline, width, subtitleBaseline);
+        // The arranger's row, under the composer's: the right end of the meter / arranger
+        // \fill-line (Lily# has no meter: the left of the row is empty).
+        // LILYPOND-REF: ly/titling-init.ly bookTitleMarkup, lines 91-94 — \fill-line {
+        //   \fromproperty #'header:meter  \fromproperty #'header:arranger }.
+        // MEASURED 2026-11-13, LilyPond 2.26.0 (LilySharp-Lab sessions/p1226/md/header):
+        //   p1.ly — the arranger's baseline 3.5000 under the composer's (22.7642 − 19.2642),
+        //   at 2.2000, ending at the right margin (94.0648 + 16.9009 = 110.9657);
+        //   p2.ly — with no poet and no composer, 3.5000 under the title's (15.7642 − 12.2642).
+        double? arrangerBaseline = arranger is null
+            ? null
+            : Stack(arranger.InkBottom, arranger.InkTop, arranger.Width);
+
+        return new HeaderBand(depth, titleBaseline, composerBaseline, width, subtitleBaseline,
+            Arranger: arranger, ArrangerBaseline: arrangerBaseline);
     }
 }

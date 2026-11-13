@@ -752,6 +752,24 @@ public sealed partial class MeasureCollector
                     _v.Meta.PoetPosition = poetToken.Span.Start;
                 }
                 break;
+            // The two header lines of 2026-11-13 (owner's decision), kept in one value
+            // (Model.HeaderLines).
+            case "arranger":
+                if (values.Count > 0 && values[0] is SyntaxTokenNode arrangerToken)
+                    _v.Meta.Lines = _v.Meta.Lines with
+                    {
+                        Arranger = StringLiteral.Value(arrangerToken.Text),
+                        ArrangerPosition = arrangerToken.Span.Start,
+                    };
+                break;
+            case "copyright":
+                if (values.Count > 0 && values[0] is SyntaxTokenNode copyrightToken)
+                    _v.Meta.Lines = _v.Meta.Lines with
+                    {
+                        Copyright = StringLiteral.Value(copyrightToken.Text),
+                        CopyrightPosition = copyrightToken.Span.Start,
+                    };
+                break;
         }
     }
 

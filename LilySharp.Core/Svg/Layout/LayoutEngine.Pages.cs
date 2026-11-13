@@ -286,7 +286,8 @@ internal sealed partial class LayoutEngine
         List<double>? perSystemCropDown = null,
         ImmutableArray<BreakPermission>? perSystemPagePermissions = null,
         PreliminaryPass? breakerView = null,
-        ProseBand? endText = null)
+        ProseBand? endText = null,
+        HeaderLineSet? footer = null)
     {
         // The down extent the CROP reads: the system's own, raised to clear its loose block
         // standing at REST rather than at its alignment minimum
@@ -386,7 +387,8 @@ internal sealed partial class LayoutEngine
                 score.TextMetrics,
                 breakerUpExtents,
                 breakerDownExtents,
-                endText);
+                endText,
+                footer);
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
 
@@ -447,6 +449,11 @@ internal sealed partial class LayoutEngine
         // …or under the text that follows it (docs/markdown-text-design.md).
         if (onPaper.EndText is { } closing)
             totalHeight = Math.Max(totalHeight, onPaper.EndTextY + closing.Down + _options.MarginBottom);
+        // …and over the copyright line, which stands on the bottom margin of whatever page it
+        // is given (SharedRenderer.DrawFooter): the cut keeps last-bottom-spacing's padding
+        // between the ink above and the line, as the chain's closing spring does.
+        if (onPaper.Footer is { } foot)
+            totalHeight += _options.VerticalSpacing.LastBottom.Padding + foot.Height;
         var systemsArray = onPaper.Systems
             .Select(s => s with { Y = totalHeight - (onPaper.Height - s.Y) })
             .ToImmutableArray();
@@ -461,6 +468,7 @@ internal sealed partial class LayoutEngine
         {
             double widest = Math.Max(header?.Width ?? 0,
                 Math.Max(header?.Text?.Width ?? 0, endText?.Width ?? 0));
+            widest = Math.Max(widest, footer?.Width ?? 0);
             foreach (var s in systemsArray)
             {
                 var (_, notationRight, tabRight) = Rendering.SharedRenderer.StaffRightEdges(score, s);

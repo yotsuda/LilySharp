@@ -17,6 +17,8 @@ title "Song"            // optional metadata
 composer "Composer"     // optional
 subtitle "Subtitle"     // optional: the line under the title (LilyPond's \header subtitle)
 poet "Poet"             // optional: the left end of the composer's line (\header poet)
+arranger "Arr. Name"    // optional: right-aligned on the line under the composer, its size (\header arranger)
+copyright "© 2026 Name" // optional: centred at the foot of the FIRST page only; the systems keep clear of it (\header copyright)
                         // WHO SINGS WHICH SECTIONS, AND A HARMONY: after the part a singer line may say
                         //   singer "a/b" on lead sings words in Verse Bridge     — only in those sections
                         //   singer "c/d" on lead sings words up 3 in Chorus      — a third above, in the key, in the Chorus
@@ -225,7 +227,7 @@ score { staff solo  ossia alt }                 // after its staff = drawn above
   (`staff solo  ossia alt  alt`) or give it a score of its own.
 
 **A score's own header, and parts that only play** — `title` / `subtitle` / `composer` /
-`poet` written inside a score restate the file's metadata for that score alone, and a **bare part name** renders
+`poet` / `arranger` / `copyright` written inside a score restate the file's metadata for that score alone, and a **bare part name** renders
 that part to MIDI only (played, never engraved — a click track, a cue part):
 
 ```
@@ -1823,7 +1825,8 @@ between characters in Japanese, Chinese and Korean. **Read and NOT drawn, each w
 is written (LYS4058)**: tables, code blocks, block quotes, rules (`---`), images, HTML. A code
 span's and a link's words are printed as plain words (the link's address is not).
 
-There is no copyright or footer line: write it as an `md end` text.
+A copyright line is not a text: write `copyright "…"` at the top level (or in a score), and it is
+printed centred at the foot of the first page, as LilyPond prints `\header copyright`.
 
 **In a Markdown file**, a Lily# example that holds a page text is fenced with FOUR backticks,
 because its own three would end a three-backtick block:
@@ -2158,7 +2161,7 @@ layout {
 These are keywords. A PART or SECTION name may be any of them EXCEPT the structural ones
 (`voice lyrics chords strokes section part phrase form score tab staff ossia grandStaff staffGroup
 choirStaff condensedStaff combinedStaff layout paper fonts grace acciaccatura appoggiatura afterGrace
-cue key time tempo partial override revert once using title subtitle composer poet segno
+cue key time tempo partial override revert once using title subtitle composer poet arranger copyright segno
 fine coda dc ds al to break noBreak pageBreak noPageBreak`, and `as` — a score's `staff X as …` word) — so
 `part p`, `part bass`, `part q` are fine (2026-10-03). A PHRASE name is referenced bare in
 music, so it is an identifier, a clef word (`treble bass alto tenor`) or a dynamic word
@@ -2169,7 +2172,7 @@ Keywords:
 section form using tab ossia transpose shift octave pitch instrument percussion drummap
 score part strokes staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
 voice phrase repeat break noBreak pageBreak noPageBreak partial cue embedded fonts paper layout
-title subtitle composer poet tempo time key clef
+title subtitle composer poet arranger copyright tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone
 tuplet grace acciaccatura appoggiatura afterGrace lyrics chords tuning

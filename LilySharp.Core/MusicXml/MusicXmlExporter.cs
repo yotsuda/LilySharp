@@ -3351,6 +3351,10 @@ public sealed class MusicXmlExporter
             _document.Subtitle = subtitle;
         else if (keyword == "poet" && metadata.StringValue is string poet)
             _document.Poet = poet;
+        else if (keyword == "arranger" && metadata.StringValue is string arranger)
+            _document.Arranger = arranger;
+        else if (keyword == "copyright" && metadata.StringValue is string copyright)
+            _document.Rights = copyright;
     }
 
     private void ProcessKeySignature(KeySignatureSyntax key)

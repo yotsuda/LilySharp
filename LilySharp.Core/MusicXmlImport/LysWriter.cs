@@ -71,6 +71,10 @@ internal static class LysWriter
             sb.Append("composer \"").Append(EscapeString(doc.Composer!)).Append("\"\n");
         if (!string.IsNullOrWhiteSpace(doc.Poet))
             sb.Append("poet \"").Append(EscapeString(doc.Poet!)).Append("\"\n");
+        if (!string.IsNullOrWhiteSpace(doc.Arranger))
+            sb.Append("arranger \"").Append(EscapeString(doc.Arranger!)).Append("\"\n");
+        if (!string.IsNullOrWhiteSpace(doc.Copyright))
+            sb.Append("copyright \"").Append(EscapeString(doc.Copyright!)).Append("\"\n");
         sb.Append('\n');
 
         WritePaper(sb, doc.Paper);

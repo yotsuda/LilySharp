@@ -798,7 +798,7 @@
                 { "include": "#force-mark" },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|subtitle|composer|poet|tempo|time|partial|key|clef|fonts|paper|layout|embedded|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|pitch|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
+                    "match": "\\b(title|subtitle|composer|poet|arranger|copyright|tempo|time|partial|key|clef|fonts|paper|layout|embedded|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|pitch|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
                 }
             ]
         },

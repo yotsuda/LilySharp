@@ -186,6 +186,10 @@ public sealed record Score
     /// <summary>The fenced texts the score prints — see <see cref="MultiStaffScore.Texts"/>.</summary>
     public ScoreTexts Texts { get; init; }
 
+    /// <summary>The arranger and the copyright line —
+    /// see <see cref="MultiStaffScore.HeaderLines"/>.</summary>
+    public HeaderLines HeaderLines { get; init; } = HeaderLines.None;
+
     /// <summary>The header's instrument line (optional) — see <see cref="MultiStaffScore.Instrument"/>.</summary>
     public string? Instrument { get; init; }
 

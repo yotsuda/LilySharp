@@ -530,7 +530,8 @@ internal sealed partial class LayoutEngine
     /// </para>
     /// </remarks>
     private List<int>? ChooseSystemCount(
-        MultiStaffScore score, LineBreakSolutions lineBreaks, SystemPass ideal, HeaderBand? header)
+        MultiStaffScore score, LineBreakSolutions lineBreaks, SystemPass ideal, HeaderBand? header,
+        HeaderLineSet? footer = null)
     {
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         if (measures.Length == 0 || ideal.Systems.Count == 0)
@@ -547,7 +548,7 @@ internal sealed partial class LayoutEngine
         if (built.Count > 4 * measures.Length + 64)
             built.Clear();
         void GiveBuilt() => t_builtLines = built;
-        var breaker = _pageLayouter.CreateBreaker(score.TextMetrics);
+        var breaker = _pageLayouter.CreateBreaker(score.TextMetrics, footer?.Height ?? 0);
         // The book title is the page's first LINE (paper-book.cc:570-580), priced by the
         // same DP as the systems; the page loop below sees it in front of every candidate.
         var title = header is null ? null : _pageLayouter.BuildTitleDetails(header);

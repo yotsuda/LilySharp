@@ -298,7 +298,10 @@ internal sealed record PageLayout(
     // The force the page's chain solved to: 0 at rest (a ragged page that fits), above 0
     // stretched, below 0 compressed, −∞ over-full. LayoutEngine crops a lone page only at
     // or above rest.
-    double Force = 0
+    double Force = 0,
+    // The copyright line at this page's foot — the FIRST page only, its lowest ink on the
+    // bottom margin (owner's decision 2026-11-13; LilyPond's oddFooterMarkup) — or null.
+    HeaderLineSet? Footer = null
 );
 
 /// <summary>

@@ -1327,7 +1327,7 @@ public sealed partial class LilySharpLanguageServer
                 case "tempo": return CompletionContext.AfterTempo;
                 case "time": return CompletionContext.AfterTime;
                 case "partial": return CompletionContext.AfterPartial;
-                case "title" or "composer" or "subtitle" or "poet": return CompletionContext.AfterTitleText;
+                case "title" or "composer" or "subtitle" or "poet" or "arranger" or "copyright": return CompletionContext.AfterTitleText;
                 // `fonts |` with no block yet: offer the block forms — except inside a
                 // score, where the item is a REFERENCE and the declared names fit.
                 case "fonts":
@@ -1445,7 +1445,7 @@ public sealed partial class LilySharpLanguageServer
         // list now has exactly one home — inside `fonts { … }`, handled above.
         switch (KeywordBeforeCurrentString(text, offset))
         {
-            case "title" or "composer" or "subtitle" or "poet": return CompletionContext.AfterTitleText;
+            case "title" or "composer" or "subtitle" or "poet" or "arranger" or "copyright": return CompletionContext.AfterTitleText;
         }
 
         if (IsPitchName(prevWord) && SecondWordBeforeCursor(text, offset) == "key")

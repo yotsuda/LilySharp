@@ -28,6 +28,10 @@ internal sealed class MusicXmlDocument
     public string? Composer { get; set; }
     public string? Subtitle { get; set; }
     public string? Poet { get; set; }
+    /// <summary>The arranger (<c>arranger "…"</c>, owner's decision 2026-11-13), or null.</summary>
+    public string? Arranger { get; set; }
+    /// <summary>The copyright line (<c>copyright "…"</c>, owner's decision 2026-11-13), or null.</summary>
+    public string? Rights { get; set; }
     public List<MusicXmlPart> Parts { get; } = new();
     /// <summary>The divisions per quarter its notes' durations are counted in.</summary>
     public int Divisions { get; set; } = 24;
@@ -55,14 +59,20 @@ internal sealed class MusicXmlDocument
                 new XElement("work-title", Title)));
         }
 
-        // Identification: one <creator> per credited person, typed.
-        if (!string.IsNullOrEmpty(Composer) || !string.IsNullOrEmpty(Poet))
+        // Identification: one <creator> per credited person, typed, then the <rights> — the
+        // schema's order (creator*, rights*, encoding? …).
+        if (!string.IsNullOrEmpty(Composer) || !string.IsNullOrEmpty(Poet)
+            || !string.IsNullOrEmpty(Arranger) || !string.IsNullOrEmpty(Rights))
         {
             var identification = new XElement("identification");
             if (!string.IsNullOrEmpty(Composer))
                 identification.Add(new XElement("creator", new XAttribute("type", "composer"), Composer));
             if (!string.IsNullOrEmpty(Poet))
                 identification.Add(new XElement("creator", new XAttribute("type", "poet"), Poet));
+            if (!string.IsNullOrEmpty(Arranger))
+                identification.Add(new XElement("creator", new XAttribute("type", "arranger"), Arranger));
+            if (!string.IsNullOrEmpty(Rights))
+                identification.Add(new XElement("rights", Rights));
             scorePartwise.Add(identification);
         }
 

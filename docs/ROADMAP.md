@@ -79,6 +79,26 @@ asked — none is decided.
   mark, tempo and rit. another part writes (2026-11-13); its LilyPond twin and MusicXML do
   not yet carry the mark or the rit.
 
+### LilyPond's other header lines (listed 2026-11-13, the owner's decision)
+
+`arranger` and `copyright` were built on 2026-11-13 (CHANGELOG). The owner declined the rest of
+LilyPond's `\header` fields for now, to keep the completion list short. Each is a PROPOSAL,
+written here with where LilyPond 2.26.0 prints it (ly/titling-init.ly), so that building one is
+a matter of placing it where LilyPond does:
+
+- **`dedication`** — the first row of bookTitleMarkup, above the title: centred, at text size.
+- **`subsubtitle`** — the row under the subtitle: centred, `\smaller \bold`.
+- **`instrument`** — the middle of the poet / composer row, `\large \bold` (Lily# prints its own
+  "Capo N" there, at the composer's size); and in oddHeaderMarkup / evenHeaderMarkup, the
+  centre of every page's header after the first.
+- **`meter`** — the left end of the row the arranger ends (the meter / arranger `\fill-line`),
+  at text size.
+- **`piece`** and **`opus`** — scoreTitleMarkup, the row over each score: the piece at the left,
+  the opus at the right, at text size (a `score { }`'s own header in Lily#'s terms).
+- **`tagline`** — the second row of oddFooterMarkup, centred at the foot of the LAST page only;
+  LilyPond's default is "LilyPond v2.26.0", padded to a box 3 staff spaces tall. Lily# prints
+  none (the LilyPond export writes `tagline = ##f` when it pins the fonts for measuring).
+
 ### MIDI keyboard input (deferred by the owner 2026-10-25)
 
 Step input from a MIDI keyboard. Deferred until there is a keyboard to try it with.

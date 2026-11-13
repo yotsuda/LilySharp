@@ -68,7 +68,10 @@ internal sealed record ScoreContent(
     // (ChordSpelling.Capo; 2026-09-29), else null.
     string? Instrument = null,
     // The fenced texts the score prints (docs/markdown-text-design.md).
-    Model.ScoreTexts Texts = default);
+    Model.ScoreTexts Texts = default,
+    // The arranger and the copyright line (owner's
+    // decision 2026-11-13); null = none.
+    Model.HeaderLines? HeaderLines = null);
 
 /// <summary>
 /// Turns a <see cref="ScoreContent"/> snapshot plus a set of voices / staff groups
@@ -124,6 +127,7 @@ internal static class ScoreAssembler
             Subtitle = c.Subtitle,
             Poet = c.Poet,
             Texts = c.Texts,
+            HeaderLines = c.HeaderLines ?? Model.HeaderLines.None,
             Instrument = c.Instrument,
             Fonts = c.Fonts,
             Paper = c.Paper,
@@ -175,6 +179,7 @@ internal static class ScoreAssembler
             Subtitle = c.Subtitle,
             Poet = c.Poet,
             Texts = c.Texts,
+            HeaderLines = c.HeaderLines ?? Model.HeaderLines.None,
             Instrument = c.Instrument,
             Fonts = c.Fonts,
             Paper = c.Paper,

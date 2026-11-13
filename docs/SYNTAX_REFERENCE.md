@@ -1017,12 +1017,23 @@ title "Sonata in C"
 subtitle "K. 545"
 composer "W.A. Mozart"
 poet "Anonymous"
+arranger "Arr. J. Smith"
+copyright "© 2026 J. Smith"
 ```
 
-The four words are LilyPond's `\header` fields of the same names, and the page draws them
+The words are LilyPond's `\header` fields of the same names, and the page draws them
 where LilyPond's title block does: the title centred; the subtitle centred on the line below
 it, bold and a little smaller; the poet at the left end and the composer at the right end of
-the next line, at text size. Each is optional.
+the next line, at text size; the arranger at the right end of the line under the composer, at
+the same size (the left of that line is LilyPond's meter, which Lily# does not have). Each is
+optional.
+
+The **copyright** line is LilyPond's `\header copyright`, and it stands where LilyPond's page
+footer puts it: centred at the **foot of the first page only**, at text size, its lowest ink
+on the bottom margin. It takes its room from the page as a footer does — the systems of the
+first page keep clear of it — and a later page has none. It is the MusicXML's `<rights>` and
+the copyright notice of a .mid. LilyPond's other header fields — dedication, instrument, opus,
+piece, subsubtitle, meter, tagline — have no header line in Lily# (docs/ROADMAP.md).
 
 ### A text for the page
 
@@ -2141,7 +2152,7 @@ its own contexts the same way for the same reason: of its seventeen staff contex
 
 ### This score's own header, and parts that only play
 
-A `title` / `subtitle` / `composer` / `poet` inside a score restates the file's metadata for **that score
+A `title` / `subtitle` / `composer` / `poet` / `arranger` / `copyright` inside a score restates the file's metadata for **that score
 alone** — a part extract can be headed with the part's name while the full score keeps
 the work's title. A **bare part name** renders that part to MIDI only: played, never
 engraved, which is how a click track or a cue part rides along without appearing on the
@@ -3695,7 +3706,7 @@ name could stand — `voice` `lyrics` `chords` `strokes` `section` `part` `phras
 `staff` `ossia` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff`
 `layout` `paper` `fonts` `grace` `acciaccatura` `appoggiatura` `afterGrace` `cue` — plus the section
 settings and item-head directives `key` `time` `tempo` `partial` `override` `revert` `once`
-`using` `title` `subtitle` `composer` `poet`, and the words a form body reads as items of
+`using` `title` `subtitle` `composer` `poet` `arranger` `copyright`, and the words a form body reads as items of
 its own, `segno` `fine` `coda` `dc` `ds` `al` `to` `break` `noBreak` `pageBreak`
 `noPageBreak` (a section is named by the same rule). Everything else names a part: `part p`,
 `part bass`, `part percussion`, `part q`, `part c` all compile (the list is
@@ -3710,7 +3721,7 @@ phrase). Any other keyword — and `f`, which is the note F — is refused at th
 |-------|-------|
 | Structure | `section` `form` `using` `tab` `ossia` `transpose` `shift` `octave` `pitch` `instrument` `percussion` `drummap` |
 | Score / layout | `score` `part` `strokes` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `break` `noBreak` `pageBreak` `noPageBreak` `partial` `embedded` `fonts` `paper` `layout` |
-| Metadata | `title` `subtitle` `composer` `poet` `tempo` `time` `key` `clef` |
+| Metadata | `title` `subtitle` `composer` `poet` `arranger` `copyright` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |
 | Notation | `tuplet` `grace` `acciaccatura` `appoggiatura` `afterGrace` `cue` `lyrics` `chords` `tuning` |

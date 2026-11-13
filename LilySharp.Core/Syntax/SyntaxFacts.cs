@@ -465,7 +465,7 @@ internal static class SyntaxFacts
     [
         "staff", "grandStaff", "staffGroup", "choirStaff", "condensedStaff", "combinedStaff",
         "tab", "ossia", "chords", "lyrics", "strokes",
-        "title", "subtitle", "composer", "poet", "form", "fonts", "paper", "layout",
+        "title", "subtitle", "composer", "poet", "arranger", "copyright", "form", "fonts", "paper", "layout",
     ];
 
     /// <summary>The contextual word of a chord row that strums to a strokes part — <c>chords prog
@@ -556,7 +556,7 @@ internal static class SyntaxFacts
     /// shape of a part cell (<c>grace</c>, <c>acciaccatura</c>, <c>appoggiatura</c>,
     /// <c>cue</c>); the section settings and the directives a section or part body claims at
     /// the head of an item (<c>key</c> … <c>once</c>); the file-level words a score body
-    /// claims before its bare-name arm (<c>using</c>, <c>title</c> … <c>poet</c>); and the
+    /// claims before its bare-name arm (<c>using</c>, <c>title</c> … <c>copyright</c>); and the
     /// words a FORM body reads as items of its own — the navigation marks and the break
     /// directives — since a section is named by the same rule and referenced bare in a form.
     /// </para>
@@ -573,7 +573,7 @@ internal static class SyntaxFacts
         "condensedStaff", "combinedStaff", "layout", "paper", "fonts",
         "grace", "acciaccatura", "appoggiatura", "afterGrace", "cue",
         "key", "time", "tempo", "partial", "override", "revert", "once",
-        "using", "title", "subtitle", "composer", "poet",
+        "using", "title", "subtitle", "composer", "poet", "arranger", "copyright",
         "segno", "fine", "coda", "dc", "ds", "al", "to",
         "break", "noBreak", "pageBreak", "noPageBreak",
     ];

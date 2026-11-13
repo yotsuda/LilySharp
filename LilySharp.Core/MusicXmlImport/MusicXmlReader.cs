@@ -78,6 +78,11 @@ internal static class MusicXmlReader
             // "poet" is what Lily# (and MuseScore) write; "lyricist" is the schema's own word.
             Poet = Els(Local(root, "identification"), "creator")
                 .FirstOrDefault(c => (string?)c.Attribute("type") is "poet" or "lyricist")?.Value.Trim(),
+            // The two header lines of 2026-11-13 (owner's decision): the arranger's creator and
+            // the first <rights>.
+            Arranger = Els(Local(root, "identification"), "creator")
+                .FirstOrDefault(c => (string?)c.Attribute("type") == "arranger")?.Value.Trim(),
+            Copyright = Els(Local(root, "identification"), "rights").FirstOrDefault()?.Value.Trim(),
             Subtitle = Els(root, "credit")
                 .FirstOrDefault(c => Local(c, "credit-type")?.Value.Trim() == "subtitle")
                 is { } credit ? Local(credit, "credit-words")?.Value.Trim() : null,
@@ -2101,7 +2106,7 @@ internal static class MusicXmlReader
     private static readonly HashSet<string> Reserved = new(StringComparer.Ordinal)
     {
         "part", "section", "score", "staff", "structure", "chords", "lyrics",
-        "time", "key", "clef", "tempo", "octave", "title", "composer", "subtitle", "poet",
+        "time", "key", "clef", "tempo", "octave", "title", "composer", "subtitle", "poet", "arranger", "copyright",
         "phrase", "drummap", "grace", "partial", "repeat", "tuplet",
         "acciaccatura", "appoggiatura", "afterGrace",
         "a", "b", "c", "d", "e", "f", "g", "r", "s",

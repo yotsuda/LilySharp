@@ -126,8 +126,12 @@ internal sealed partial class LayoutEngine
         // The book title as LilyPond pages it — a top-aligned column at the head of the
         // page's chain, or nothing (HeaderBand). It reaches the first system's placement,
         // the count loop's page estimate and the page breaker as ONE value.
+        // The arranger (owner's decision 2026-11-13) is a row of the column; the copyright line
+        // is not — it is the first page's footer, which goes to the pages (CreatePages) and the
+        // page breaker (ChooseSystemCount).
+        var footer = HeaderLineSet.Copyright(score);
         var header = HeaderBand.Build(score.Title, score.Composer, score.TextMetrics,
-            score.Subtitle, score.Poet, score.Instrument);
+            score.Subtitle, score.Poet, score.Instrument, HeaderLineSet.Arranger(score));
         // …and the chord list under it (layout { chordList … }): part of the same column, so
         // the page chain, the crop width and the draw see one band.
         header = HeaderBand.WithChordList(header, ChordListBand.EntriesOf(score), score.TextMetrics,
@@ -233,7 +237,7 @@ internal sealed partial class LayoutEngine
         // is placed again on the chosen lines and the ideal placement is discarded.
         if (lineBreaks.HasAlternatives && _options.PageHeight > 0)
         {
-            var chosen = ChooseSystemCount(score, lineBreaks, pass, header);
+            var chosen = ChooseSystemCount(score, lineBreaks, pass, header, footer);
             if (chosen != null)
             {
                 systemMeasures = KnuthPlassBreaker.CreateMeasureGroups(primaryMeasures, chosen);
@@ -263,7 +267,7 @@ internal sealed partial class LayoutEngine
         var (pages, systemsArray) = CreatePages(
             score, prelim.Systems, header, perSystemExtents, systemHeight,
             prelim.PagingSkylines, perSystemHeights, perSystemBandUps, placed.CropDown,
-            PagePermissionsAfterSystems(score, systems), prelim, endText);
+            PagePermissionsAfterSystems(score, systems), prelim, endText, footer);
 
         return FinishLayout(score, systemCache, multiStaffLayouter, textRowStaves,
             systems, perSystemExtents, perSystemSkylines, placed, prelim, pages, systemsArray,

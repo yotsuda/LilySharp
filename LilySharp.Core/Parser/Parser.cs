@@ -424,7 +424,7 @@ internal sealed partial class Parser
                     members.Add(ReportStrayItem("a file",
                         "A file holds declarations — 'part', 'phrase', 'section', 'form', "
                         + "'score', 'using' — and the file-wide defaults 'title', 'subtitle', "
-                        + "'composer', 'poet', 'clef', 'key', 'time', 'tempo', 'octave'."));
+                        + "'composer', 'poet', 'arranger', 'copyright', 'clef', 'key', 'time', 'tempo', 'octave'."));
             }
         }
 
@@ -653,7 +653,8 @@ internal sealed partial class Parser
             SyntaxKind.Identifier when IsSingerDeclaration() || IsLoneSingerHead() => ParseSingerDeclaration(endsItsLine: true),
 
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword
-                or SyntaxKind.SubtitleKeyword or SyntaxKind.PoetKeyword => ParseMetadataDeclaration(),
+                or SyntaxKind.SubtitleKeyword or SyntaxKind.PoetKeyword
+                or SyntaxKind.ArrangerKeyword or SyntaxKind.CopyrightKeyword => ParseMetadataDeclaration(),
             SyntaxKind.FontsKeyword => ParseFontDeclaration(),
             SyntaxKind.PaperKeyword => ParsePaperDeclaration(),
             SyntaxKind.LayoutKeyword => ParseLayoutDeclaration(),

@@ -992,7 +992,8 @@ public sealed partial class MeasureCollector
         // the score prints diagrams or pressed names (LayoutPlan.PrintsCapoLine, 2026-10-31).
         _v.Meta.LayoutPlan.CapoLine,
         new Model.ScoreTexts(_v.Meta.TextBefore, _v.Meta.TextBeforePosition, _v.Meta.TextAfter, _v.Meta.TextAfterPosition,
-            _v.Meta.TextBeforeShape, _v.Meta.TextAfterShape, _v.Meta.TextBeforeMore, _v.Meta.TextAfterMore));
+            _v.Meta.TextBeforeShape, _v.Meta.TextAfterShape, _v.Meta.TextBeforeMore, _v.Meta.TextAfterMore),
+        _v.Meta.Lines);
 
     /// <summary>
     /// Collects a Score from a syntax tree.

@@ -130,6 +130,10 @@ public enum SyntaxKind : ushort
     SubtitleKeyword,
     /// <summary>The <c>poet</c> keyword.</summary>
     PoetKeyword,
+    /// <summary>The <c>arranger</c> keyword (owner's decision 2026-11-13).</summary>
+    ArrangerKeyword,
+    /// <summary>The <c>copyright</c> keyword (owner's decision 2026-11-13).</summary>
+    CopyrightKeyword,
     /// <summary>The <c>fonts</c> keyword — the block that binds a face per text role.</summary>
     FontsKeyword,
     /// <summary>The <c>paper</c> keyword — the block that sets the page's dimensions.</summary>

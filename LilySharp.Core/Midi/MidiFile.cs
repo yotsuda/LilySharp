@@ -31,6 +31,10 @@ public class MidiTrack
     /// <summary>What sounds the track, by name (an instrument-name meta event, 0x04), or null:
     /// the voice that sings it (<see cref="MidiForFile"/>). The preview does not read it.</summary>
     public string? Instrument { get; set; }
+    /// <summary>The piece's copyright line (a copyright-notice meta event, 0x02, the track's
+    /// first event at tick 0), or null — on the first track of a written file only
+    /// (<see cref="MidiForFile"/>; owner's decision 2026-11-13). The preview does not read it.</summary>
+    public string? Copyright { get; set; }
     /// <summary>The notes played on this track.</summary>
     public List<MidiNote> Notes { get; } = [];
     /// <summary>The tempo changes on this track.</summary>
@@ -257,6 +261,18 @@ public class MidiFile
         using var trackWriter = new BinaryWriter(trackStream);
 
         var events = BuildEventList(track, channelPlan);
+
+        // The copyright notice: the first event of the track, at tick 0 (the Standard MIDI
+        // File's place for it: the first track, before any other event).
+        if (!string.IsNullOrEmpty(track.Copyright))
+        {
+            WriteVariableLength(trackWriter, 0);
+            trackWriter.Write((byte)0xFF);
+            trackWriter.Write((byte)0x02);
+            var copyrightBytes = System.Text.Encoding.UTF8.GetBytes(track.Copyright);
+            WriteVariableLength(trackWriter, copyrightBytes.Length);
+            trackWriter.Write(copyrightBytes);
+        }
 
         int lastTick = 0;
         foreach (var evt in events)

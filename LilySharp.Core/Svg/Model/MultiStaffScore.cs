@@ -108,6 +108,10 @@ public sealed record MultiStaffScore
     /// Markdown after the last system (docs/markdown-text-design.md).</summary>
     public ScoreTexts Texts { get; init; }
 
+    /// <summary>The arranger and the copyright line (owner's decision 2026-11-13). Never
+    /// null: a score with neither carries <c>HeaderLines.None</c>.</summary>
+    public HeaderLines HeaderLines { get; init; } = HeaderLines.None;
+
     /// <summary>The header's instrument line (optional) — the centre of the poet / composer
     /// row (LilyPond's bookTitleMarkup places <c>header:instrument</c> there): "Capo 3" for a
     /// score whose layout writes a capo (2026-09-29).</summary>
@@ -390,6 +394,7 @@ public sealed record MultiStaffScore
             Subtitle = score.Subtitle,
             Poet = score.Poet,
             Texts = score.Texts,
+            HeaderLines = score.HeaderLines,
             Instrument = score.Instrument,
             Fonts = score.Fonts,
             Paper = score.Paper,

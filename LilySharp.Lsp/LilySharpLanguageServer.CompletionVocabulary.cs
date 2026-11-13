@@ -1046,7 +1046,7 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
-    /// <summary>After <c>title</c> / <c>subtitle</c> / <c>composer</c> / <c>poet</c>: one
+    /// <summary>After <c>title</c> / <c>subtitle</c> / <c>composer</c> / <c>poet</c> / <c>arranger</c> / <c>copyright</c>: one
     /// snippet that drops a quote pair and parks the caret inside — the text itself is typed.</summary>
     internal static CompletionList GetTitleTextCompletions(string keyword)
     {
@@ -1064,6 +1064,8 @@ public sealed partial class LilySharpLanguageServer
                     {
                         "composer" => "Quoted composer name",
                         "poet" => "Quoted poet name",
+                        "arranger" => "Quoted arranger name",
+                        "copyright" => "Quoted copyright line",
                         "subtitle" => "Quoted subtitle text",
                         _ => "Quoted title text",
                     },
@@ -2093,6 +2095,8 @@ public sealed partial class LilySharpLanguageServer
             ["subtitle"] = ("subtitle \"$0\"", "This score's own subtitle, overriding the file's", false),
             ["composer"] = ("composer \"$0\"", "This score's own composer, overriding the file's", false),
             ["poet"] = ("poet \"$0\"", "This score's own poet, overriding the file's", false),
+            ["arranger"] = ("arranger \"$0\"", "This score's own arranger, overriding the file's", false),
+            ["copyright"] = ("copyright \"$0\"", "This score's own copyright line, overriding the file's", false),
             ["fonts"] = ("fonts $0", "This score's faces: reference a named top-level fonts block", true),
             ["paper"] = ("paper $0", "This score's page: reference a named top-level paper block", true),
             ["layout"] = ("layout $0", "This score's display switches (marks, barNumbers): reference a named top-level layout block", true),
@@ -4161,6 +4165,8 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "subtitle", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "subtitle \"$0\"", Detail = "Subtitle metadata (the line under the title)" },
                 new CompletionItem { Label = "composer", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "composer \"$0\"", Detail = "Composer metadata" },
                 new CompletionItem { Label = "poet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "poet \"$0\"", Detail = "Poet metadata (left of the composer)" },
+                new CompletionItem { Label = "arranger", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "arranger \"$0\"", Detail = "Arranger metadata (under the composer)" },
+                new CompletionItem { Label = "copyright", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "copyright \"$0\"", Detail = "Copyright line (at the foot of the first page)" },
                 // ⚠️ This inserted `font "$0"` until 2026-08-18 — the removed one-liner —
                 // so completing the KEYWORD typed a diagnostic (LYS8007). It is the path a
                 // writer actually takes, and it survived the removal because the removal
@@ -4383,11 +4389,11 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>Top-level keywords that may appear only ONCE at the global scope — metadata
-    /// (title/subtitle/composer/poet/font/paper/layout) and the piece-wide defaults
-    /// (time/key/tempo/octave). Completion drops them once present; duplicable keywords are
-    /// NOT listed here.</summary>
+    /// (title/subtitle/composer/poet/arranger/copyright/font/paper/layout) and the piece-wide
+    /// defaults (time/key/tempo/octave). Completion drops them once present; duplicable
+    /// keywords are NOT listed here.</summary>
     private static readonly System.Collections.Generic.HashSet<string> GlobalSingletonKeywords =
-        new(StringComparer.Ordinal) { "title", "subtitle", "composer", "poet", "fonts", "paper", "layout", "tempo", "time", "key", "octave", "pitch", "transpose", "shift" };
+        new(StringComparer.Ordinal) { "title", "subtitle", "composer", "poet", "arranger", "copyright", "fonts", "paper", "layout", "tempo", "time", "key", "octave", "pitch", "transpose", "shift" };
 
     /// <summary>True when <paramref name="keyword"/> appears as a whole word at the GLOBAL
     /// scope (brace depth 0) in live code — not inside a block, a string, or a comment.</summary>

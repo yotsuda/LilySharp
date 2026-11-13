@@ -89,6 +89,12 @@ public static class MidiForFile
             }
         }
 
+        // The copyright line (owner's decision 2026-11-13): a copyright notice on the first
+        // track — the file's `copyright`, or the score's own where its block restates it (the
+        // collector's road: RenderSpec.HeaderOverrides last).
+        if (file.Tracks.Count > 0 && CopyrightOf(root, spec) is { } copyright)
+            file.Tracks[0].Copyright = copyright;
+
         // The keys, on the first track with the tempos: the signature of each key's major scale.
         int stated = int.MinValue;
         foreach (var (tick, tonic) in midi.KeyStarts)
@@ -162,5 +168,20 @@ public static class MidiForFile
             if (LyricSinger.IsMadePart(root, track.Name))
                 track.Name = track.Name[..track.Name.LastIndexOf(LyricSinger.ScopedMark, StringComparison.Ordinal)];
         return file;
+    }
+
+    /// <summary>The copyright line the score prints: its own <c>copyright</c>, else the file's,
+    /// else null.</summary>
+    private static string? CopyrightOf(SyntaxNode root, RenderSpec? spec)
+    {
+        string? copyright = null;
+        foreach (var meta in root.ChildNodes().OfType<MetadataDeclarationSyntax>())
+            if (meta.Keyword == "copyright" && meta.StringValue is { } value)
+                copyright = value;
+        if (spec is { HeaderOverrides: { IsDefaultOrEmpty: false } overrides })
+            foreach (var meta in overrides)
+                if (meta.Keyword == "copyright" && meta.StringValue is { } value)
+                    copyright = value;
+        return string.IsNullOrEmpty(copyright) ? null : copyright;
     }
 }

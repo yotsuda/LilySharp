@@ -335,6 +335,11 @@ public sealed partial class LilyPondExporter
             ("subtitle", Rendering.TextRole.Subtitle),
             ("poet", Rendering.TextRole.Poet),
             ("composer", Rendering.TextRole.Composer),
+            // …and the two of 2026-11-13 (owner's decision): the arranger, set in the
+            // composer's role (HeaderLineSet.Arranger), on the meter / arranger row; the
+            // copyright, in the page number's (HeaderLineSet.Copyright), in oddFooterMarkup.
+            ("arranger", Rendering.TextRole.Composer),
+            ("copyright", Rendering.TextRole.PageNumber),
         ];
         bool opened = false;
         foreach (var (field, role) in fields)

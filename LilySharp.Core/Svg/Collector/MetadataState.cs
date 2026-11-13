@@ -28,6 +28,9 @@ internal sealed class MetadataState
     public string? Composer;
     public string? Subtitle;
     public string? Poet;
+    // The arranger and the copyright line (owner's decision 2026-11-13): one value,
+    // compared and shifted as a whole. Never null.
+    public Model.HeaderLines Lines = Model.HeaderLines.None;
 
     // The fenced texts the score prints (docs/markdown-text-design.md): the Markdown under
     // the title and the Markdown after the last system, each the file's or the score's own,
@@ -120,6 +123,7 @@ internal sealed class MetadataState
         Composer = other.Composer;
         Subtitle = other.Subtitle;
         Poet = other.Poet;
+        Lines = other.Lines;
         TextBefore = other.TextBefore;
         TextAfter = other.TextAfter;
         TextBeforePosition = other.TextBeforePosition;
@@ -171,6 +175,7 @@ internal sealed class MetadataState
             && Composer == other.Composer
             && Subtitle == other.Subtitle
             && Poet == other.Poet
+            && Lines == other.Lines
             && TextBefore == other.TextBefore
             && TextAfter == other.TextAfter
             && TextBeforePosition == other.TextBeforePosition
@@ -225,6 +230,7 @@ internal sealed class MetadataState
         Composer = null;
         Subtitle = null;
         Poet = null;
+        Lines = Model.HeaderLines.None;
         TextBefore = null;
         TextAfter = null;
         TextBeforePosition = 0;

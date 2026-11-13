@@ -86,6 +86,10 @@ public class ModelEqualityKindTests
         // evaluation 4, 2026-11-13): a description — ScoreTexts is a key of the incremental
         // compiler's, and two blocks that say the same are the same.
         "TextBlock",
+        // the arranger and the copyright line with where each is written (owner's decision
+        // 2026-11-13): a description — it is a key of the incremental compiler's and a field
+        // MetadataState compares, so two that say the same are the same.
+        "HeaderLines",
     ];
 
     [Fact]

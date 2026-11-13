@@ -129,6 +129,8 @@ internal static class LanguageReference
             return preset;
         if (CheckPragmaHover(node) is { } check)
             return check;
+        if (HeaderLineHover(node) is { } header)
+            return header;
         return node switch
         {
             NoteSyntax note => $"**Note**: {note.Pitch.PitchName}\n\nOctave offset: {note.Pitch.OctaveOffset}\n\nDuration: {note.Duration?.Value.ToString() ?? "inherited"}",
@@ -162,6 +164,31 @@ internal static class LanguageReference
             ArticulationSyntax art => $"**Articulation**: @{art.NameToken.Text}",
             _ => null
         };
+    }
+
+    /// <summary>The hover for a header line — <c>title</c>, <c>subtitle</c>, <c>composer</c>,
+    /// <c>poet</c>, and the <c>arranger</c> and <c>copyright</c> of 2026-11-13 (owner's
+    /// decision): where the page prints it, and what restating it in a score does.</summary>
+    private static string? HeaderLineHover(SyntaxNode node)
+    {
+        var line = node as MetadataDeclarationSyntax ?? node.Parent as MetadataDeclarationSyntax;
+        if (line is null)
+            return null;
+        string? where = line.Keyword switch
+        {
+            "title" => "**Title** — centred at the head of the first page, the largest line (LilyPond's `\\header title`).",
+            "subtitle" => "**Subtitle** — centred under the title (LilyPond's `\\header subtitle`).",
+            "composer" => "**Composer** — at the right end of the line under the titles (LilyPond's `\\header composer`).",
+            "poet" => "**Poet** — at the left end of the composer's line (LilyPond's `\\header poet`).",
+            "arranger" => "**Arranger** — right-aligned on the line under the composer, at the composer's size (LilyPond's `\\header arranger`).",
+            "copyright" => "**Copyright** — centred at the foot of the first page only; the systems keep clear of it (LilyPond's `\\header copyright`). MusicXML writes it as `<rights>`, a .mid as its copyright notice.",
+            _ => null,
+        };
+        if (where is null)
+            return null;
+        return line.Parent is RenderDeclarationSyntax
+            ? where + "\n\nWritten in a `score { }`, it is this score's own, over the file's."
+            : where;
     }
 
     /// <summary>The hover for a top-level <c>check</c> line (Semantics.CheckPragma, 2026-10-28): the

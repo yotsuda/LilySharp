@@ -31,6 +31,10 @@ internal sealed class ImportDocument
     public string? Composer { get; set; }
     public string? Subtitle { get; set; }
     public string? Poet { get; set; }
+    /// <summary>The arranger (<c>&lt;creator type="arranger"&gt;</c>), or null.</summary>
+    public string? Arranger { get; set; }
+    /// <summary>The copyright line (the first <c>&lt;rights&gt;</c>), or null.</summary>
+    public string? Copyright { get; set; }
     /// <summary>Opening tempo (quarter BPM), or null when the source gives none.</summary>
     public int? Tempo { get; set; }
     /// <summary>The words of the opening tempo, or null when the source prints a count alone:
